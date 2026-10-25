@@ -29,7 +29,7 @@ Rulesets → New ruleset → Import a ruleset, or the API.
 ### `main` — `.github/rulesets/main.json`
 
 Builds on open-twin's "Protect main" ruleset (one approval, signed commits, no deletion,
-no force push, no bypass) and adds:
+no force push) and adds:
 
 - [ ] Squash merge only; linear history.
 - [ ] Code-owner approval; stale approvals dismissed on push; the last push approved by
@@ -40,8 +40,8 @@ no force push, no bypass) and adds:
       `test-isolation` and `ark-app`.
 - [ ] Signed commits on `main`. Squash merges made on GitHub are signed by GitHub; 24 of
       the last 30 commits on `main` already verify.
-- [ ] No bypass actors: admins follow the same rules (the classic protection already
-      enforces this for admins).
+- [x] Repository admins may bypass, so a maintainer can merge their own reviewed,
+      green change while they are the only code owner. Everyone else follows every rule.
 
 ```sh
 gh api -X POST "repos/$R/rulesets" --input .github/rulesets/main.json
