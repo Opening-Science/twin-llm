@@ -10,6 +10,10 @@ and versions follow [Semantic Versioning](https://semver.org/).
 - Repository admins can bypass the `main` rules only through a pull request; nobody pushes to `main` directly.
 - Personal data reaches Exoscale only with `EXOSCALE_PERSONAL_DATA=consented-pilot`, each such request is audited, and Infomaniak is synthetic-only.
 
+### Security
+
+- `next` and `eslint-config-next` 16.2.12 → 16.4.1, and `zod` 4.4.3 → 4.6.6, for published security advisories. Query-tool datetimes now need seconds, as RFC 3339 requires.
+
 ## [0.1.0] - 2026-10-25
 
 First public release.
