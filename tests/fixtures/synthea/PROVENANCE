@@ -1,0 +1,7 @@
+Opening-Science/open-twin@24179d8de0e38ca579adde55db65d13926ac6bac
+packages/fhir-r4/src/tests/fixtures/synthea/patient-{1,2,3}.json
+
+bp-panel.json: hand-made for TwinLLM (2026-10-15), not copied from open-twin.
+One synthetic Patient with the Synthea identifier system, two blood pressure
+panels (85354-9 with 8480-6 / 8462-4 components) and one HbA1c (4548-4),
+two years apart. No real person.

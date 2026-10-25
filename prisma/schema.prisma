@@ -1,0 +1,493 @@
+// TwinLLM database schema.
+//
+// Sections, top to bottom:
+//   1. People: an app user keyed by their Clerk id, plus first-run answers.
+//   2. Conversations: threads of turns. A turn stores the question once and
+//      gets one ModelResponse row per model that was asked.
+//   3. Personal wearable and body-scan context (Oura, Whoop, Google Health,
+//      BodyLoop). Tokens are AES-GCM ciphertext, never plain text.
+//   4. Research warehouse: synthetic Synthea cohorts only.
+//   5. Retrieval: guideline and OpenTwin knowledge chunks with pgvector.
+//   6. Tool audit log, hash-chained.
+//
+// Things Prisma cannot express live as hand-written SQL in the baseline
+// migration: the pgvector extension, vector(768), the HNSW index and the
+// warehouse source CHECK constraints. `bun run db:verify` checks all of them.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── 1. People ──────────────────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  /// Clerk user id, or the fixed local actor when auth is disabled.
+  clerkId   String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  onboardingProfile OnboardingProfile?
+  threads           Thread[]
+
+  ouraConnection         OuraConnection?
+  ouraSnapshots          OuraSnapshot[]
+  whoopConnection        WhoopConnection?
+  whoopSnapshots         WhoopSnapshot[]
+  googleHealthConnection GoogleHealthConnection?
+  googleHealthSnapshots  GoogleHealthSnapshot[]
+  vitronicConnection     VitronicConnection?
+  vitronicSubjects       VitronicSubject[]
+  vitronicSnapshots      VitronicSnapshot[]
+
+  @@map("users")
+}
+
+/// What a user said in the /start flow. At most one row per user.
+model OnboardingProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+
+  roles           String[]  @default([])
+  dataChoice      String?
+  interest        String?
+  /// Knowledge sources this user switched off. Stored as an opt-out list so a
+  /// source added later is on by default.
+  disabledSources String[]  @default([])
+  /// Last step reached, so the flow can resume.
+  step            Int       @default(0)
+  /// Set when the user finishes or skips the flow.
+  completedAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("onboarding_profiles")
+}
+
+// ─── 2. Conversations ───────────────────────────────────────────────────────
+
+/// A conversation belonging to one user.
+model Thread {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  turns Turn[]
+
+  @@index([userId, updatedAt])
+  @@map("threads")
+}
+
+/// One question in a thread. Each model asked gets its own ModelResponse.
+model Turn {
+  id        String   @id @default(cuid())
+  threadId  String
+  prompt    String
+  createdAt DateTime @default(now())
+
+  thread    Thread          @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  responses ModelResponse[]
+
+  @@index([threadId, createdAt])
+  @@map("turns")
+}
+
+enum ModelResponseStatus {
+  STREAMING
+  COMPLETE
+  FAILED
+
+  @@map("model_response_status")
+}
+
+/// The answer one model gave to one turn, with its measurements.
+model ModelResponse {
+  id        String @id @default(cuid())
+  turnId    String
+  modelId   String
+  modelName String
+
+  status ModelResponseStatus @default(STREAMING)
+  text   String              @default("")
+
+  /// The "## Reasoning" section, when the model used the expected format.
+  reasoningText    String?
+  /// Wearable metrics the answer cited: [{ metricKey, label, value, observationId? }].
+  attribution      Json?
+  /// Validated ResponseDocumentV1 (docs/response-schema.md). Null when it was
+  /// not built or the row predates it.
+  responseDocument Json?
+
+  // Measurements. Null means not measured, never zero.
+  timeToFirstTokenMs Int?
+  tokensPerSecond    Decimal? @db.Decimal(10, 2)
+  inputTokens        Int?
+  outputTokens       Int?
+  totalTokens        Int?
+  costUsd            Decimal  @default(0) @db.Decimal(10, 6)
+
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  turn Turn @relation(fields: [turnId], references: [id], onDelete: Cascade)
+
+  @@unique([turnId, modelId])
+  @@map("model_responses")
+}
+
+// ─── 3. Personal context ────────────────────────────────────────────────────
+
+/// Linked Oura account. Both tokens are encrypted at rest.
+model OuraConnection {
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  accessTokenEnc       String
+  refreshTokenEnc      String
+  /// Estimated expiry of the access token.
+  accessTokenExpiresAt DateTime
+  /// Stable non-identifying key used for FHIR subject ids.
+  subjectKey           String?
+
+  linkedAt   DateTime  @default(now())
+  lastSyncAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("oura_connections")
+}
+
+/// Oura data for a date window, condensed for the chat prompt.
+model OuraSnapshot {
+  id         String   @id @default(cuid())
+  userId     String
+  startDate  String
+  endDate    String
+  /// Metric values keyed so answers can cite them.
+  summary    Json
+  /// Full FHIR Bundle. Server-side only, never sent to a model.
+  fhirBundle Json?
+  syncedAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, syncedAt])
+  @@map("oura_snapshots")
+}
+
+/// Linked Whoop account. Both tokens are encrypted at rest.
+model WhoopConnection {
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  accessTokenEnc       String
+  refreshTokenEnc      String
+  accessTokenExpiresAt DateTime
+
+  linkedAt   DateTime  @default(now())
+  lastSyncAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("whoop_connections")
+}
+
+/// Whoop data for a date window, condensed for the chat prompt.
+model WhoopSnapshot {
+  id         String   @id @default(cuid())
+  userId     String
+  startDate  String
+  endDate    String
+  summary    Json
+  /// Full FHIR Bundle. Server-side only.
+  fhirBundle Json?
+  syncedAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, syncedAt])
+  @@map("whoop_snapshots")
+}
+
+/// Linked Google Health (Fitbit) account. Both tokens are encrypted at rest.
+model GoogleHealthConnection {
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  accessTokenEnc       String
+  refreshTokenEnc      String
+  accessTokenExpiresAt DateTime
+  /// Stable non-identifying key for FHIR subject ids. Never an email address.
+  subjectKey           String?
+
+  linkedAt   DateTime  @default(now())
+  lastSyncAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("google_health_connections")
+}
+
+/// Google Health data for a date window, condensed for the chat prompt.
+model GoogleHealthSnapshot {
+  id         String   @id @default(cuid())
+  userId     String
+  startDate  String
+  endDate    String
+  summary    Json
+  fhirBundle Json?
+  syncedAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, syncedAt])
+  @@map("google_health_snapshots")
+}
+
+/// A user's BodyLoop scanner link. Holds an encrypted per-user API token;
+/// no BodyLoop password is ever stored.
+model VitronicConnection {
+  id      String @id @default(cuid())
+  userId  String @unique
+  baseUrl String
+
+  apiTokenEnc          String
+  /// Encrypted shared secret for cloud_connect uploads.
+  uploadSecretEnc      String
+  /// Token name, when the token was minted with the host-only CLI.
+  apiTokenName         String?
+  /// SHA-256 of the scanner's TLS certificate (DER), pinned on first connect.
+  tlsFingerprintSha256 String?
+  /// BodyLoop proband id: a number, not a name.
+  probandId            Int
+
+  lastSyncAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("vitronic_connections")
+}
+
+/// A person whose body scans the user may view, with recorded consent.
+/// `label` is free text chosen by the operator and must not be a name.
+model VitronicSubject {
+  id     String @id @default(cuid())
+  userId String
+  label  String
+  source String
+
+  /// True for the user's own subject. `selfForUserId` equals `userId` exactly
+  /// when this is true; its unique index allows one self subject per user.
+  isSelf        Boolean @default(false)
+  selfForUserId String? @unique
+
+  /// BodyLoop proband id. Null for subjects imported from files only.
+  probandId       Int?
+  /// Scan the Digital Twin viewer opens first. Display preference only; chat
+  /// always uses the newest snapshot.
+  defaultViatarId Int?
+
+  consentRecordedAt DateTime
+  consentBy         String
+  consentNote       String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  snapshots VitronicSnapshot[]
+
+  @@index([userId, isSelf])
+  @@map("vitronic_subjects")
+}
+
+/// One BodyLoop scan (viatar) for a subject. The mesh file stays on disk under
+/// data/vitronic/<userId>/; only its hash is stored here.
+model VitronicSnapshot {
+  id        String @id @default(cuid())
+  userId    String
+  subjectId String
+  viatarId  Int
+
+  /// Numeric `vitronic.*` keys the chat prompt may read.
+  summary    Json
+  /// Viewer-only geometry. Never included in a prompt.
+  markers    Json?
+  measures   Json?
+  presetName String?
+  /// Intentionally left null: the provider maps BodyLoop lengths in metres and
+  /// angles in radians, while the BodyLoop UI shows cm and degrees.
+  fhirBundle Json?
+
+  glbSha256    String?
+  /// Which BodyLoop model file the mesh came from.
+  glbModelName String?
+
+  syncedAt DateTime @default(now())
+
+  user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject VitronicSubject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([subjectId, viatarId])
+  @@index([subjectId, syncedAt])
+  @@index([userId, syncedAt])
+  @@map("vitronic_snapshots")
+}
+
+// ─── 4. Research warehouse (synthetic only) ─────────────────────────────────
+
+/// A cohort member with an opaque reference. Personal wearable data never
+/// lands in the warehouse; ingest always sets `isSynthetic`.
+model Subject {
+  subjectRef  String  @id @map("subject_ref")
+  cohortId    String  @map("cohort_id")
+  isSynthetic Boolean @map("is_synthetic")
+
+  observations Observation[]
+  nonNumeric   ObservationNonNumeric[]
+
+  @@index([cohortId])
+  @@map("subjects")
+}
+
+/// An ingested Synthea Bundle, identified by the SHA-256 of its bytes.
+model Bundle {
+  sha            String   @id
+  cohortId       String   @map("cohort_id")
+  syntheaVersion String   @map("synthea_version")
+  ingestedAt     DateTime @default(now()) @map("ingested_at")
+
+  observations Observation[]
+  nonNumeric   ObservationNonNumeric[]
+
+  @@map("bundles")
+}
+
+/// A numeric Observation. A UCUM unit is required; a value without one is
+/// rejected at ingest rather than stored. `source` is limited to 'synthea' by
+/// a CHECK constraint in the migration.
+model Observation {
+  id          String   @id @default(cuid())
+  subjectRef  String   @map("subject_ref")
+  bundleSha   String   @map("bundle_sha")
+  fhirId      String   @map("fhir_id")
+  source      String
+  loinc       String
+  display     String
+  value       Decimal  @db.Decimal(20, 8)
+  unitUcum    String   @map("unit_ucum")
+  effectiveAt DateTime @map("effective_at")
+
+  subject Subject @relation(fields: [subjectRef], references: [subjectRef], onDelete: Cascade)
+  bundle  Bundle  @relation(fields: [bundleSha], references: [sha], onDelete: Cascade)
+
+  @@unique([bundleSha, fhirId])
+  @@index([subjectRef, loinc, effectiveAt])
+  @@map("observations")
+}
+
+/// An Observation whose value is not a number (coded, text, boolean, ...).
+/// Same 'synthea' CHECK on `source` as Observation.
+model ObservationNonNumeric {
+  id         String @id @default(cuid())
+  subjectRef String @map("subject_ref")
+  bundleSha  String @map("bundle_sha")
+  fhirId     String @map("fhir_id")
+  source     String
+  loinc      String
+  display    String
+  valueType  String @map("value_type")
+  rawValue   Json   @map("raw_value")
+
+  subject Subject @relation(fields: [subjectRef], references: [subjectRef], onDelete: Cascade)
+  bundle  Bundle  @relation(fields: [bundleSha], references: [sha], onDelete: Cascade)
+
+  @@unique([bundleSha, fhirId])
+  @@map("observation_non_numeric")
+}
+
+// ─── 5. Retrieval ───────────────────────────────────────────────────────────
+
+/// A searchable document: a published guideline or an OpenTwin knowledge note.
+/// Guideline full text is only kept (in gitignored data/guidelines/) when its
+/// licence allows; otherwise the row is cite-only.
+model GuidelineDocument {
+  id      String @id
+  /// "guideline" or "opentwin-knowledge". Each search tool filters on it.
+  source  String @default("guideline")
+  title   String
+  society String
+  year    Int
+  doi     String
+  url     String
+  licence String
+
+  ingestMode     String @map("ingest_mode")
+  embeddingModel String @map("embedding_model")
+  embeddingDim   Int    @map("embedding_dim")
+
+  chunks GuidelineChunk[]
+
+  @@index([source])
+  @@map("guideline_documents")
+}
+
+/// A verbatim passage with its embedding (nomic-embed-text, local Ollama).
+model GuidelineChunk {
+  id               String                @id
+  documentId       String                @map("document_id")
+  sectionHeading   String                @map("section_heading")
+  recommendationId String?               @map("recommendation_id")
+  recClass         String?               @map("rec_class")
+  evidenceLevel    String?               @map("evidence_level")
+  page             String?
+  text             String
+  /// vector(768) in the database. The column size and the HNSW cosine index
+  /// (guideline_chunks_embedding_hnsw) are set in migration SQL because Prisma
+  /// has no syntax for either.
+  embedding        Unsupported("vector")
+
+  document GuidelineDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@map("guideline_chunks")
+}
+
+// ─── 6. Audit ───────────────────────────────────────────────────────────────
+
+/// Append-only record of every data tool call. Each row's `hash` is
+/// sha256(prevHash + canonical JSON of the row without `hash`); the first row
+/// chains from 64 zeros. Writers serialise through a Postgres advisory lock.
+model AuditEvent {
+  seq        BigInt   @id @default(autoincrement())
+  ts         DateTime @default(now())
+  actor      String
+  sessionId  String   @map("session_id")
+  subjectRef String?  @map("subject_ref")
+  tool       String
+
+  argsSha256   String @map("args_sha256") @db.Char(64)
+  resultSha256 String @map("result_sha256") @db.Char(64)
+  rowCount     Int    @map("row_count")
+
+  prevHash String @map("prev_hash") @db.Char(64)
+  hash     String @db.Char(64)
+
+  @@map("audit_events")
+}

@@ -1,0 +1,46 @@
+# NOTICE
+
+TwinLLM
+Copyright 2026 Open Science Stiftung (Open Science Foundation)
+
+TwinLLM is released by Open Science Stiftung (Open Science Foundation) under the Apache License, Version 2.0 for TwinLLM original work (see `LICENSE`). Versions before the change to Apache-2.0 were released under the MIT License, and recipients of those versions keep the MIT terms for them.
+
+## Open Science Foundation logo
+
+The logo in `public/brand/` is the Open Science Foundation's artwork, copied unchanged from its brand guide. It is **not** covered by the Apache License: it is under the foundation's Brand Assets Permission (`LICENSES/LicenseRef-OSF-Brand-Assets.txt`). Do not recolour, crop, redraw or reuse it as another product's mark. Source and hashes: `PROVENANCE.md`.
+
+The typefaces Selecta (Maxitype) and ABC Diatype Semi Mono (Dinamo Typefaces) are licensed to the foundation and are not in this repository (`docs/brand.md`).
+
+## open-twin connectors
+
+Packages synced at a pinned SHA into the gitignored `.open-twin/` are from [Opening-Science/open-twin](https://github.com/Opening-Science/open-twin) (MIT). See `PROVENANCE.md` for the exact SHA and TwinLLM-only host patches.
+
+## Anchor biomarker catalogue
+
+The 67 Anchor biomarkers, their LOINC codes, UCUM units, body systems, regions and published reference intervals come from `@open-twin/anchor-layer` (MIT), compiled by open-twin from the Anchor workbook `2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx`. Each reference interval keeps its issuer and source URL. LOINC codes and names are © Regenstrief Institute, Inc., used under the LOINC licence (https://loinc.org/license/). Details and what TwinLLM adds: `docs/biomarkers.md`.
+
+## OpenTwin knowledge notes
+
+The Markdown notes in `knowledge/opentwin/` are © 2026 Open Science Foundation, licensed under Creative Commons Attribution 4.0 International (CC BY 4.0), not MIT. Credit: "OpenTwin knowledge notes, Open Science Foundation, CC BY 4.0". `biomarker-catalogue.md` there is generated from the Anchor catalogue above (MIT, LOINC licence). Details: `docs/knowledge.md`.
+
+## Reference anatomy atlases
+
+`bun run anatomy:fetch` downloads three model files into the gitignored `data/anatomy/`. They are not part of this repository and are licensed separately (CC BY 4.0); the viewer shows their credits whenever they are displayed:
+
+- BodyParts3D, © The Database Center for Life Science licensed under CC Attribution 4.0 International. (DBCLS's written confirmation of the 2025 relicence from CC BY-SA 2.1 JP is still pending.)
+- 3D anatomical structures from the HuBMAP Human Reference Atlas (HRA), humanatlas.io, CC BY 4.0.
+
+The files were merged, simplified and shaded (ambient occlusion) by the Open Science Foundation's open-twin-xr; TwinLLM only positions them. Pins and details: `docs/anatomy.md`.
+
+## Synthetic demo bodies
+
+`bun run anatomy:fetch` also downloads two synthetic demo bodies into the gitignored `data/anatomy/`. They are not part of this repository and are licensed separately (Apache-2.0 code over CC0-1.0 shape assets); the viewer shows this credit whenever the demo body is displayed:
+
+- ANNY, a free-to-use 3D human parametric model for all ages — NAVER LABS Europe / NAVER Corporation. Apache-2.0 code over CC0 shape assets derived from MakeHuman. Cite arXiv:2511.03589. Baked to static geometry by this repository; no scan of any person was used.
+
+"This repository" in that credit is the Open Science Foundation's open-twin-xr, which baked and posed the bodies; TwinLLM only positions them. Pins and details: `docs/anatomy.md`.
+
+## open-twin-xr (ported code)
+
+`packages/anatomy/hra-groups.ts` is ported from [Opening-Science/open-twin-xr](https://github.com/Opening-Science/open-twin-xr) `src/scene/anatomy/hraGroups.ts` at `7334c0bb0664e1f293f88971788520d64734466c` (MIT, Copyright (c) 2026 Martin Etzrodt, OSF Staff and Open Twin XR contributors). See `third_party/open-twin-xr/LICENSE`.
+

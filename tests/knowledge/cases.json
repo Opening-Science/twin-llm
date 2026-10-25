@@ -1,0 +1,122 @@
+[
+  {
+    "id": "hrv-what",
+    "question": "What does HRV measure?",
+    "file": "knowledge/opentwin/metric-glossary.md",
+    "section": "Heart rate variability (HRV)"
+  },
+  {
+    "id": "trend-minimum",
+    "question": "How many readings does the trend tool need before it gives a slope?",
+    "file": "knowledge/opentwin/system-limits.md",
+    "section": "What the analytics tools compute"
+  },
+  {
+    "id": "rhr-vs-sleep-hr",
+    "question": "What is the difference between resting heart rate and average heart rate during sleep?",
+    "file": "knowledge/opentwin/metric-glossary.md",
+    "section": "Heart rate during sleep and resting heart rate"
+  },
+  {
+    "id": "spo2-accuracy",
+    "question": "How accurate is the blood oxygen reading from a wearable?",
+    "file": "knowledge/opentwin/metric-glossary.md",
+    "section": "Blood oxygen saturation (SpO2)"
+  },
+  {
+    "id": "in-bed-vs-asleep",
+    "question": "Why is Whoop time in bed longer than Oura total sleep duration?",
+    "file": "knowledge/opentwin/metric-glossary.md",
+    "section": "Sleep duration and time in bed"
+  },
+  {
+    "id": "readiness",
+    "question": "How does Oura work out the readiness score?",
+    "file": "knowledge/opentwin/metric-glossary.md",
+    "section": "Oura readiness score and HRV balance"
+  },
+  {
+    "id": "strain-scale",
+    "question": "What is Whoop strain and what scale does it use?",
+    "file": "knowledge/opentwin/metric-glossary.md",
+    "section": "Whoop day strain"
+  },
+  {
+    "id": "loinc",
+    "question": "What is a LOINC code?",
+    "file": "knowledge/opentwin/units-and-codes.md",
+    "section": "What a LOINC code is"
+  },
+  {
+    "id": "ucum",
+    "question": "Which standard does TwinLLM use to write units like mm[Hg]?",
+    "file": "knowledge/opentwin/units-and-codes.md",
+    "section": "What a UCUM unit is"
+  },
+  {
+    "id": "ferritin-loinc",
+    "question": "Which LOINC code and unit does TwinLLM use for ferritin?",
+    "file": "knowledge/opentwin/biomarker-catalogue.md",
+    "section": "Metabolic system markers: bone marrow blood"
+  },
+  {
+    "id": "crp-no-location",
+    "question": "Why does hsCRP not light up any organ on the body twin?",
+    "file": "knowledge/opentwin/biomarker-catalogue.md",
+    "section": "Markers with no single body location"
+  },
+  {
+    "id": "bp-panel",
+    "question": "How do I look up systolic and diastolic blood pressure?",
+    "file": "knowledge/opentwin/units-and-codes.md",
+    "section": "Blood pressure panels"
+  },
+  {
+    "id": "unit-conversion",
+    "question": "Does TwinLLM convert glucose from mg/dL to mmol/L?",
+    "file": "knowledge/opentwin/units-and-codes.md",
+    "section": "No unit conversion"
+  },
+  {
+    "id": "metric-key",
+    "question": "What does a key like sleep.hrv.2026-10-14 mean?",
+    "file": "knowledge/opentwin/units-and-codes.md",
+    "section": "Wearable metric keys and dates"
+  },
+  {
+    "id": "dash",
+    "question": "Why is a value shown as a dash instead of zero?",
+    "file": "knowledge/opentwin/units-and-codes.md",
+    "section": "Missing values"
+  },
+  {
+    "id": "audit",
+    "question": "What does the audit log store about each tool call?",
+    "file": "knowledge/opentwin/provenance-and-audit.md",
+    "section": "What the audit log records"
+  },
+  {
+    "id": "synthea-real",
+    "question": "Is the synthetic cohort data about real people?",
+    "file": "knowledge/opentwin/provenance-and-audit.md",
+    "section": "Synthetic Synthea cohort"
+  },
+  {
+    "id": "personal-providers",
+    "question": "Which model providers are allowed in personal mode?",
+    "file": "knowledge/opentwin/provenance-and-audit.md",
+    "section": "Synthetic and personal mode"
+  },
+  {
+    "id": "withheld",
+    "question": "Why was the answer withheld with not enough data?",
+    "file": "knowledge/opentwin/system-limits.md",
+    "section": "Why an answer abstains"
+  },
+  {
+    "id": "dose-change",
+    "question": "Can TwinLLM tell me whether to change my medication dose?",
+    "file": "knowledge/opentwin/system-limits.md",
+    "section": "Why an answer is declined"
+  }
+]

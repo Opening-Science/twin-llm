@@ -1,0 +1,21 @@
+# Later lines win. Owners need write access to the repository.
+
+# Default: the maintainer reviews everything.
+*                               @CPD9
+
+# Licence, intended-use and claims rules: maintainer and foundation owner.
+/LICENSE                        @CPD9 @etzm
+/LICENSES/                      @CPD9 @etzm
+/NOTICE                         @CPD9 @etzm
+/PROVENANCE.md                  @CPD9 @etzm
+/README.md                      @CPD9 @etzm
+/docs/claims-allowlist.json     @CPD9 @etzm
+/scripts/lint-claims.ts         @CPD9 @etzm
+/third_party/                   @CPD9 @etzm
+/public/brand/                  @CPD9 @etzm
+
+# Governance, CI and secret scanning.
+/.github/                       @CPD9 @etzm
+/.gitleaks.toml                 @CPD9 @etzm
+/SECURITY.md                    @CPD9 @etzm
+/CONTRIBUTING.md                @CPD9 @etzm

@@ -1,0 +1,22 @@
+[package]
+name = "rsid-genotypes"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "Ark app: closed pharmacogenomics rsID panel, recorded genotypes only"
+publish = false
+
+[lib]
+name = "rsid_genotypes"
+path = "src/lib.rs"
+
+[[bin]]
+name = "rsid-genotypes"
+path = "src/main.rs"
+
+[profile.release]
+opt-level = "z"
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = "symbols"

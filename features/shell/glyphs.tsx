@@ -1,0 +1,125 @@
+import type { ReactNode } from "react";
+
+/**
+ * The handful of line glyphs the shell needs, drawn here rather than taken from
+ * an icon package that ships hundreds. They inherit `currentColor` and take
+ * their size from the caller, so an icon never decides a colour or a size, and
+ * they are always decorative: the text beside them carries the meaning.
+ */
+type GlyphProps = Readonly<{ className?: string }>;
+
+const Svg = ({
+  className = "size-4",
+  children,
+}: GlyphProps & { children: ReactNode }) => (
+  <svg
+    viewBox="0 0 20 20"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.6}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+    focusable="false"
+    className={className}
+  >
+    {children}
+  </svg>
+);
+
+/** Side-by-side answers: two speech panes. */
+export const CompareGlyph = (props: GlyphProps) => (
+  <Svg {...props}>
+    <>
+      <rect x="2.5" y="4" width="6.5" height="10" rx="1.5" />
+      <rect x="11" y="4" width="6.5" height="10" rx="1.5" />
+      <path d="M5 17h10" />
+    </>
+  </Svg>
+);
+
+/** A plug. */
+export const ConnectorsGlyph = (props: GlyphProps) => (
+  <Svg {...props}>
+    <>
+      <path d="M7.5 2.5v4M12.5 2.5v4" />
+      <path d="M5 6.5h10v3a5 5 0 0 1-10 0z" />
+      <path d="M10 14.5v3" />
+    </>
+  </Svg>
+);
+
+/** A head and shoulders. */
+export const TwinGlyph = (props: GlyphProps) => (
+  <Svg {...props}>
+    <>
+      <circle cx="10" cy="6" r="3" />
+      <path d="M4 17.5c.6-3.4 3-5.5 6-5.5s5.4 2.1 6 5.5" />
+    </>
+  </Svg>
+);
+
+/** A table. */
+export const DataGlyph = (props: GlyphProps) => (
+  <Svg {...props}>
+    <>
+      <rect x="3" y="3.5" width="14" height="13" rx="1.5" />
+      <path d="M3 8h14M3 12.3h14M8 8v8.5" />
+    </>
+  </Svg>
+);
+
+/** A chip with pins. */
+export const ModelsGlyph = (props: GlyphProps) => (
+  <Svg {...props}>
+    <>
+      <rect x="5" y="5" width="10" height="10" rx="1.5" />
+      <path d="M8 2.5v2.5M12 2.5v2.5M8 15v2.5M12 15v2.5M2.5 8H5M2.5 12H5M15 8h2.5M15 12h2.5" />
+    </>
+  </Svg>
+);
+
+/** A compass needle: where to begin. */
+export const StartGlyph = (props: GlyphProps) => (
+  <Svg {...props}>
+    <>
+      <circle cx="10" cy="10" r="7.5" />
+      <path d="m12.8 7.2-1.7 3.9-3.9 1.7 1.7-3.9z" />
+    </>
+  </Svg>
+);
+
+export const PlusGlyph = (props: GlyphProps) => (
+  <Svg {...props}>
+    <path d="M10 4.5v11M4.5 10h11" />
+  </Svg>
+);
+
+/** Three lines: the menu. */
+export const MenuGlyph = (props: GlyphProps) => (
+  <Svg {...props}>
+    <path d="M3.5 5.5h13M3.5 10h13M3.5 14.5h13" />
+  </Svg>
+);
+
+export const CrossGlyph = (props: GlyphProps) => (
+  <Svg {...props}>
+    <path d="m5 5 10 10M15 5 5 15" />
+  </Svg>
+);
+
+/** Two overlapping sheets: copy. */
+export const CopyGlyph = (props: GlyphProps) => (
+  <Svg {...props}>
+    <>
+      <rect x="7" y="7" width="9.5" height="9.5" rx="1.5" />
+      <path d="M13 4.5V4a1.5 1.5 0 0 0-1.5-1.5h-7A1.5 1.5 0 0 0 3 4v7a1.5 1.5 0 0 0 1.5 1.5H5" />
+    </>
+  </Svg>
+);
+
+export const TickGlyph = (props: GlyphProps) => (
+  <Svg {...props}>
+    <path d="m4 10.5 4 4 8-9" />
+  </Svg>
+);

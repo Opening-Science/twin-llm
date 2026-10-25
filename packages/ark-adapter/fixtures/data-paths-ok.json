@@ -1,0 +1,31 @@
+{
+  "paths": [
+    {
+      "path": "v1/genome",
+      "directory": true,
+      "grantable": false,
+      "available": false,
+      "description": "Genome data root",
+      "format": null,
+      "examples": []
+    },
+    {
+      "path": "v1/genome/variants",
+      "directory": true,
+      "grantable": true,
+      "available": false,
+      "description": "Variant call directory",
+      "format": null,
+      "examples": []
+    },
+    {
+      "path": "v1/genome/reference",
+      "directory": true,
+      "grantable": true,
+      "available": false,
+      "description": "Reference sequence directory",
+      "format": null,
+      "examples": []
+    }
+  ]
+}

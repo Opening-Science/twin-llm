@@ -1,0 +1,169 @@
+import { NextResponse } from "next/server";
+
+import { type AppendInput } from "@/packages/audit/append";
+import {
+  SUBJECT_SCOPE_VIOLATION,
+  subjectRowInScope,
+  type SessionScope,
+} from "@/packages/query-tools/scope";
+
+import { COHORT_VITAL_LOINCS } from "../live/live-rates";
+import { COHORT_FAILED } from "./biomarker-copy";
+
+/**
+ * Lab values for the Demo body, read from the synthetic B1 cohort. The same
+ * scope rule as the query tools applies: only in synthetic mode, only
+ * `is_synthetic` rows from an allowlisted cohort. Personal mode lists nobody.
+ *
+ * The rows are synthetic, but every read still gets an audit row, like any
+ * other subject read. A person is shown as "Synthetic person N" in subject_ref
+ * order, so the same seed gives the same numbering.
+ *
+ * The same read also returns the person's newest heart and respiratory rate
+ * (G4), apart from the Anchor values, for the live twin. One read, one audit row.
+ */
+export const COHORT_LIST_AUDIT_TOOL = "biomarkers.cohort.list";
+export const COHORT_VALUES_AUDIT_TOOL = "biomarkers.cohort.values";
+
+export const COHORT_SIGN_IN = "Sign in to see synthetic lab values.";
+export const COHORT_NOT_FOUND = "No synthetic lab values for this person.";
+
+export type CohortPerson = Readonly<{ ref: string; label: string }>;
+
+export type CohortValue = Readonly<{
+  loinc: string;
+  value: number;
+  unitUcum: string;
+  effectiveAt: string;
+}>;
+
+export type CohortRow = Readonly<{
+  id: string;
+  loinc: string;
+  value: number;
+  unitUcum: string;
+  effectiveAt: Date;
+}>;
+
+export type CohortDeps = Readonly<{
+  dataMode: () => SessionScope["mode"];
+  resolveActorId: () => Promise<string | null>;
+  /** Synthetic subjects of the allowlisted cohorts, sorted by subject_ref. */
+  listSubjectRefs: () => Promise<readonly string[]>;
+  findSubject: (
+    ref: string,
+  ) => Promise<Readonly<{ isSynthetic: boolean; cohortId: string }> | null>;
+  /** Every numeric row of the person for these LOINC codes. */
+  findValues: (ref: string, loincs: readonly string[]) => Promise<readonly CohortRow[]>;
+  /** The Anchor LOINC codes the tab can show. */
+  anchorLoincs: () => readonly string[];
+  appendAudit: (input: AppendInput) => Promise<unknown>;
+}>;
+
+type ValuesContext = { params: Promise<unknown> };
+
+const NO_STORE = { "Cache-Control": "no-store" };
+
+export const personLabel = (index: number): string => `Synthetic person ${index + 1}`;
+
+const newerFirst = (a: CohortRow, b: CohortRow): number =>
+  b.effectiveAt.getTime() - a.effectiveAt.getTime() ||
+  (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+
+/**
+ * The newest row per LOINC. Synthea writes several rows with the same
+ * timestamp, so a tie goes to the lower id: a reload always shows the same value.
+ */
+export const newestPerLoinc = (rows: readonly CohortRow[]): readonly CohortRow[] => {
+  const sorted = [...rows].sort(newerFirst);
+  return sorted.filter(
+    (row, index) => sorted.findIndex((other) => other.loinc === row.loinc) === index,
+  );
+};
+
+const failed = (where: string, error: unknown) => {
+  console.error(where, error instanceof Error ? error.name : "unknown");
+  return NextResponse.json({ error: COHORT_FAILED }, { status: 502, headers: NO_STORE });
+};
+
+/** GET /api/biomarkers/cohort: the synthetic people the Demo can borrow lab values from. */
+export const createCohortListHandler = (deps: CohortDeps) => async () => {
+  const actor = await deps.resolveActorId();
+  if (!actor) {
+    return NextResponse.json({ error: COHORT_SIGN_IN }, { status: 401 });
+  }
+  if (deps.dataMode() !== "synthetic") {
+    return NextResponse.json({ subjects: [] }, { headers: NO_STORE });
+  }
+  try {
+    const refs = await deps.listSubjectRefs();
+    const subjects: readonly CohortPerson[] = refs.map((ref, index) => ({
+      ref,
+      label: personLabel(index),
+    }));
+    await deps.appendAudit({
+      actor,
+      sessionId: actor,
+      subjectRef: null,
+      tool: COHORT_LIST_AUDIT_TOOL,
+      args: {},
+      result: subjects,
+      rowCount: subjects.length,
+    });
+    return NextResponse.json({ subjects }, { headers: NO_STORE });
+  } catch (error) {
+    return failed("[biomarkers] cohort list failed", error);
+  }
+};
+
+const VITAL_LOINCS: readonly string[] = Object.values(COHORT_VITAL_LOINCS);
+
+const toValue = (row: CohortRow): CohortValue => ({
+  loinc: row.loinc,
+  value: row.value,
+  unitUcum: row.unitUcum,
+  effectiveAt: row.effectiveAt.toISOString(),
+});
+
+/** GET /api/biomarkers/cohort/:subjectRef: the newest value per Anchor LOINC, and vitals. */
+export const createCohortValuesHandler =
+  (deps: CohortDeps) => async (_request: Request, context: ValuesContext) => {
+    const actor = await deps.resolveActorId();
+    if (!actor) {
+      return NextResponse.json({ error: COHORT_SIGN_IN }, { status: 401 });
+    }
+    const params = (await context.params) as Record<string, unknown>;
+    const ref = params.subjectRef;
+    const mode = deps.dataMode();
+    if (typeof ref !== "string" || mode !== "synthetic") {
+      return NextResponse.json({ error: COHORT_NOT_FOUND }, { status: 404 });
+    }
+    const anchor = deps.anchorLoincs();
+    const loincs = [...anchor, ...VITAL_LOINCS.filter((code) => !anchor.includes(code))];
+    const audit = (result: unknown, rowCount: number) =>
+      deps.appendAudit({
+        actor,
+        sessionId: actor,
+        subjectRef: ref,
+        tool: COHORT_VALUES_AUDIT_TOOL,
+        args: { loincs },
+        result,
+        rowCount,
+      });
+    try {
+      const scope: SessionScope = { actor, sessionId: actor, mode };
+      if (!subjectRowInScope(scope, await deps.findSubject(ref))) {
+        await audit(SUBJECT_SCOPE_VIOLATION, 0);
+        return NextResponse.json({ error: COHORT_NOT_FOUND }, { status: 404 });
+      }
+      const rows = newestPerLoinc(await deps.findValues(ref, loincs));
+      const values = rows.filter((row) => anchor.includes(row.loinc)).map(toValue);
+      const vitals = rows.filter((row) => VITAL_LOINCS.includes(row.loinc)).map(toValue);
+      await audit({ values, vitals }, values.length + vitals.length);
+      return NextResponse.json({ values, vitals }, { headers: NO_STORE });
+    } catch (error) {
+      // A read that threw still happened, so it is audited before the 502.
+      await audit({ error: "failed" }, 0).catch(() => undefined);
+      return failed("[biomarkers] cohort values failed", error);
+    }
+  };

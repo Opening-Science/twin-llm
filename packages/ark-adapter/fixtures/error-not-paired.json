@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "not-paired",
+    "message": "Ark is not paired"
+  }
+}

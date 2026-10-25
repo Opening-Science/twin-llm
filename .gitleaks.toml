@@ -1,0 +1,22 @@
+# Gitleaks config for Opening-Science/twin-llm.
+# Used by scripts/verify-import.sh and .github/workflows/ci.yml.
+
+title = "twin-llm"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Build artifacts, vendored trees, and dotted metric keys"
+paths = [
+  '''(^|/)\.next/''',
+  '''(^|/)node_modules/''',
+  '''(^|/)generated/''',
+  '''(^|/)third_party/''',
+]
+# Wearable/scan metric keys such as `sleep.hrv.2026-01-01` sit next to a
+# `key:` field in tests and trip generic-api-key. Lowercase dotted paths are
+# not credentials (tokens and JWTs are not shaped like this).
+regexes = [
+  '''^[a-z][a-z0-9_]*(\.[A-Za-z0-9_-]+)+$''',
+]

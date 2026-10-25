@@ -1,0 +1,27 @@
+[
+  {
+    "file": "features/shell/research-footer.tsx",
+    "line-pattern": "does not provide medical advice",
+    "reason": "required C4 footer"
+  },
+  {
+    "file": "features/chat/twin-system-prompt.ts",
+    "line-pattern": "Do not diagnose or prescribe",
+    "reason": "model instruction, not user-facing copy"
+  },
+  {
+    "file": "features/chat/twin-system-prompt.ts",
+    "line-pattern": "start your reply with REFUSE:",
+    "reason": "model instruction, not user-facing copy"
+  },
+  {
+    "file": "README.md",
+    "line-pattern": "TwinLLM gives no medical advice and is not for diagnostic use",
+    "reason": "intended-use disclaimer"
+  },
+  {
+    "file": "README.md",
+    "line-pattern": "must not be used for medical advice, diagnosis or diagnostic support",
+    "reason": "intended-use disclaimer"
+  }
+]

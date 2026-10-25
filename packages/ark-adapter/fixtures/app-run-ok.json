@@ -1,0 +1,8 @@
+{
+  "task": "1",
+  "app": "fixture.wasm",
+  "success": true,
+  "stdout": "# Finding\n\nSynthetic fixture report.\n",
+  "stderr": "",
+  "duration_seconds": 0.5
+}

@@ -1,0 +1,33 @@
+{
+  "app/**/*.{ts,tsx,mjs}": [
+    "eslint --fix --max-warnings=0 --no-warn-ignored",
+    "prettier --write"
+  ],
+  "features/**/*.{ts,tsx,mjs}": [
+    "eslint --fix --max-warnings=0 --no-warn-ignored",
+    "prettier --write"
+  ],
+  "infrastructure/**/*.{ts,tsx,mjs}": [
+    "eslint --fix --max-warnings=0 --no-warn-ignored",
+    "prettier --write"
+  ],
+  "scripts/**/*.{mjs,ts}": [
+    "eslint --fix --max-warnings=0 --no-warn-ignored",
+    "prettier --write"
+  ],
+  "proxy.ts": [
+    "eslint --fix --max-warnings=0 --no-warn-ignored",
+    "prettier --write"
+  ],
+  "instrumentation.ts": [
+    "eslint --fix --max-warnings=0 --no-warn-ignored",
+    "prettier --write"
+  ],
+  "eslint.config.mjs": [
+    "eslint --fix --max-warnings=0 --no-warn-ignored",
+    "prettier --write"
+  ],
+  "{app,features,infrastructure,scripts,docs}/**/*.{json,md,css}": "prettier --write",
+  "package.json": "prettier --write",
+  "*.{md,css}": "prettier --write"
+}

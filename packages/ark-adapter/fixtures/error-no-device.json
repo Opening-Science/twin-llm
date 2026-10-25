@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "no-device",
+    "message": "no Ark enclave found"
+  }
+}

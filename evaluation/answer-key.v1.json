@@ -1,0 +1,2383 @@
+{
+  "schema_version": "twin-llm.eval.answer-key.v1",
+  "generator_version": "1",
+  "cohort": {
+    "id": "synthea-v4-seed42",
+    "synthea_version": "v4.0.0",
+    "seed": 42,
+    "population": 30,
+    "age": "40-75",
+    "subjects": 33
+  },
+  "open_twin_sha": "a9e126c952c91e19e064a962dda7d815a43564e5",
+  "questions_sha256": "f0735f1b40420b7aab05825924ddbb5d49e62b4d11ecfd30e6daffb68082f5cb",
+  "actor": "eval-answer-key",
+  "generated_on": "2026-10-20",
+  "entries": {
+    "Q-S1-01": [
+      {
+        "name": "n",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "loinc": "4548-4",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "n",
+        "value": 10,
+        "unit": null,
+        "n": 10,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      },
+      {
+        "name": "slope_per_day",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "loinc": "4548-4",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "slope_per_day",
+        "value": 0.00006516820033187519,
+        "unit": "%/d",
+        "n": 10,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      },
+      {
+        "name": "fitted_first",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "loinc": "4548-4",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "fitted_first",
+        "value": 3.0842259767687437,
+        "unit": "%",
+        "n": 10,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      },
+      {
+        "name": "fitted_last",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "loinc": "4548-4",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "fitted_last",
+        "value": 3.125281942977825,
+        "unit": "%",
+        "n": 10,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S1-02": [
+      {
+        "name": "n",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "loinc": "8480-6",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "n",
+        "value": 10,
+        "unit": null,
+        "n": 10,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      },
+      {
+        "name": "slope_per_day",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "loinc": "8480-6",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "slope_per_day",
+        "value": -0.034887112183838685,
+        "unit": "mm[Hg]/d",
+        "n": 10,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      },
+      {
+        "name": "fitted_first",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "loinc": "8480-6",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "fitted_first",
+        "value": 122.8978528687082,
+        "unit": "mm[Hg]",
+        "n": 10,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      },
+      {
+        "name": "fitted_last",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "loinc": "8480-6",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "fitted_last",
+        "value": 100.91897219288983,
+        "unit": "mm[Hg]",
+        "n": 10,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S1-03": [
+      {
+        "name": "n",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "loinc": "29463-7",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "n",
+        "value": 8,
+        "unit": null,
+        "n": 8,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      },
+      {
+        "name": "slope_per_day",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "loinc": "29463-7",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "slope_per_day",
+        "value": -0.007112404901262464,
+        "unit": "kg/d",
+        "n": 8,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      },
+      {
+        "name": "fitted_first",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "loinc": "29463-7",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "fitted_first",
+        "value": 98.84837777296045,
+        "unit": "kg",
+        "n": 8,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      },
+      {
+        "name": "fitted_last",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "loinc": "29463-7",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "fitted_last",
+        "value": 94.16841534792975,
+        "unit": "kg",
+        "n": 8,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S1-04": [
+      {
+        "name": "n",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "loinc": "8867-4",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "n",
+        "value": 8,
+        "unit": null,
+        "n": 8,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      },
+      {
+        "name": "slope_per_day",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "loinc": "8867-4",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "slope_per_day",
+        "value": -0.003571686641272594,
+        "unit": "/min/d",
+        "n": 8,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      },
+      {
+        "name": "fitted_first",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "loinc": "8867-4",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "fitted_first",
+        "value": 79.15636967989016,
+        "unit": "/min",
+        "n": 8,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      },
+      {
+        "name": "fitted_last",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "loinc": "8867-4",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "fitted_last",
+        "value": 76.8061998699328,
+        "unit": "/min",
+        "n": 8,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S1-05": [
+      {
+        "name": "n",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "ba419d35-0dfe-8af7-347c-eebf02485a56",
+          "loinc": "4548-4",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "n",
+        "value": 4,
+        "unit": null,
+        "n": 4,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      },
+      {
+        "name": "slope_per_day",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "ba419d35-0dfe-8af7-347c-eebf02485a56",
+          "loinc": "4548-4",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "slope_per_day",
+        "value": 0.000015399135661418547,
+        "unit": "%/d",
+        "n": 4,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      },
+      {
+        "name": "fitted_first",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "ba419d35-0dfe-8af7-347c-eebf02485a56",
+          "loinc": "4548-4",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "fitted_first",
+        "value": 6.066490487308132,
+        "unit": "%",
+        "n": 4,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      },
+      {
+        "name": "fitted_last",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "ba419d35-0dfe-8af7-347c-eebf02485a56",
+          "loinc": "4548-4",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "fitted_last",
+        "value": 6.075868560925935,
+        "unit": "%",
+        "n": 4,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S1-06": [
+      {
+        "name": "n",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "46976cf7-b0bf-be20-39a5-9f425a52886d",
+          "loinc": "8480-6",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "n",
+        "value": 3,
+        "unit": null,
+        "n": 3,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      },
+      {
+        "name": "slope_per_day",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "46976cf7-b0bf-be20-39a5-9f425a52886d",
+          "loinc": "8480-6",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "slope_per_day",
+        "value": -0.008300650083275131,
+        "unit": "mm[Hg]/d",
+        "n": 3,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      },
+      {
+        "name": "fitted_first",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "46976cf7-b0bf-be20-39a5-9f425a52886d",
+          "loinc": "8480-6",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "fitted_first",
+        "value": 109.99492290334712,
+        "unit": "mm[Hg]",
+        "n": 3,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      },
+      {
+        "name": "fitted_last",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "46976cf7-b0bf-be20-39a5-9f425a52886d",
+          "loinc": "8480-6",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "fitted_last",
+        "value": 106.91538172245205,
+        "unit": "mm[Hg]",
+        "n": 3,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S1-07": [
+      {
+        "name": "n",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "d3727ff2-5d7b-347f-d78c-edc4323cf890",
+          "loinc": "4548-4",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "n",
+        "value": 5,
+        "unit": null,
+        "n": 5,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      },
+      {
+        "name": "slope_per_day",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "d3727ff2-5d7b-347f-d78c-edc4323cf890",
+          "loinc": "4548-4",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "slope_per_day",
+        "value": -0.0005095515731212552,
+        "unit": "%/d",
+        "n": 5,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      },
+      {
+        "name": "fitted_first",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "d3727ff2-5d7b-347f-d78c-edc4323cf890",
+          "loinc": "4548-4",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "fitted_first",
+        "value": 6.176088959939816,
+        "unit": "%",
+        "n": 5,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      },
+      {
+        "name": "fitted_last",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "d3727ff2-5d7b-347f-d78c-edc4323cf890",
+          "loinc": "4548-4",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "fitted_last",
+        "value": 5.98704532631183,
+        "unit": "%",
+        "n": 5,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S1-08": [
+      {
+        "name": "n",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "loinc": "2339-0",
+          "start": "2020-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "n",
+        "value": 25,
+        "unit": null,
+        "n": 25,
+        "windows": [{ "start": "2020-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      },
+      {
+        "name": "slope_per_day",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "loinc": "2339-0",
+          "start": "2020-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "slope_per_day",
+        "value": 0.0061254427573396615,
+        "unit": "mg/dL/d",
+        "n": 25,
+        "windows": [{ "start": "2020-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      },
+      {
+        "name": "fitted_first",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "loinc": "2339-0",
+          "start": "2020-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "fitted_first",
+        "value": 76.52838849315663,
+        "unit": "mg/dL",
+        "n": 25,
+        "windows": [{ "start": "2020-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      },
+      {
+        "name": "fitted_last",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "loinc": "2339-0",
+          "start": "2020-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "fitted_last",
+        "value": 87.93396290732308,
+        "unit": "mg/dL",
+        "n": 25,
+        "windows": [{ "start": "2020-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S1-09": [
+      {
+        "name": "n",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "5e688e99-61b3-5c88-3f60-21df8aaced27",
+          "loinc": "29463-7",
+          "start": "2025-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z"
+        },
+        "path": "n",
+        "value": 1,
+        "unit": null,
+        "n": 1,
+        "windows": [{ "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S1-10": [
+      {
+        "name": "n",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "loinc": "29463-7",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "n",
+        "value": 8,
+        "unit": null,
+        "n": 8,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      },
+      {
+        "name": "slope_per_day",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "loinc": "29463-7",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "slope_per_day",
+        "value": -0.007112404901262464,
+        "unit": "kg/d",
+        "n": 8,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      },
+      {
+        "name": "fitted_first",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "loinc": "29463-7",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "fitted_first",
+        "value": 98.84837777296045,
+        "unit": "kg",
+        "n": 8,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      },
+      {
+        "name": "fitted_last",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "loinc": "29463-7",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "fitted_last",
+        "value": 94.16841534792975,
+        "unit": "kg",
+        "n": 8,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S1-11": [
+      {
+        "name": "value",
+        "tool": "latest_by_loinc",
+        "args": {
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "loinc": ["4548-4"]
+        },
+        "path": "rows.0.value",
+        "value": 3.18,
+        "unit": "%",
+        "n": 1,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S1-12": [
+      {
+        "name": "n",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "d15b23ed-02d5-3e28-efbd-2604425317c5",
+          "loinc": "8480-6",
+          "start": "1996-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "n",
+        "value": 112,
+        "unit": null,
+        "n": 112,
+        "windows": [{ "start": "1996-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      },
+      {
+        "name": "slope_per_day",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "d15b23ed-02d5-3e28-efbd-2604425317c5",
+          "loinc": "8480-6",
+          "start": "1996-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "slope_per_day",
+        "value": 0.00031083946993358416,
+        "unit": "mm[Hg]/d",
+        "n": 112,
+        "windows": [{ "start": "1996-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      },
+      {
+        "name": "fitted_first",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "d15b23ed-02d5-3e28-efbd-2604425317c5",
+          "loinc": "8480-6",
+          "start": "1996-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "fitted_first",
+        "value": 143.4262937000925,
+        "unit": "mm[Hg]",
+        "n": 112,
+        "windows": [{ "start": "1996-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      },
+      {
+        "name": "fitted_last",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "d15b23ed-02d5-3e28-efbd-2604425317c5",
+          "loinc": "8480-6",
+          "start": "1996-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "fitted_last",
+        "value": 144.4946489582542,
+        "unit": "mm[Hg]",
+        "n": 112,
+        "windows": [{ "start": "1996-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S1-13": [
+      {
+        "name": "n",
+        "tool": "summary_stats",
+        "args": {
+          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "loinc": "8867-4",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "n",
+        "value": 8,
+        "unit": null,
+        "n": 8,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      },
+      {
+        "name": "min",
+        "tool": "summary_stats",
+        "args": {
+          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "loinc": "8867-4",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "min",
+        "value": 63,
+        "unit": "/min",
+        "n": 8,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      },
+      {
+        "name": "max",
+        "tool": "summary_stats",
+        "args": {
+          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "loinc": "8867-4",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "max",
+        "value": 94,
+        "unit": "/min",
+        "n": 8,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      },
+      {
+        "name": "mean",
+        "tool": "summary_stats",
+        "args": {
+          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "loinc": "8867-4",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "mean",
+        "value": 77.5,
+        "unit": "/min",
+        "n": 8,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S1-14": [
+      {
+        "name": "n",
+        "tool": "summary_stats",
+        "args": {
+          "subject_ref": "76b20010-c318-5754-8c85-983aa538522f",
+          "loinc": "8480-6",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "n",
+        "value": 3,
+        "unit": null,
+        "n": 3,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      },
+      {
+        "name": "min",
+        "tool": "summary_stats",
+        "args": {
+          "subject_ref": "76b20010-c318-5754-8c85-983aa538522f",
+          "loinc": "8480-6",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "min",
+        "value": 112,
+        "unit": "mm[Hg]",
+        "n": 3,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      },
+      {
+        "name": "max",
+        "tool": "summary_stats",
+        "args": {
+          "subject_ref": "76b20010-c318-5754-8c85-983aa538522f",
+          "loinc": "8480-6",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "max",
+        "value": 114,
+        "unit": "mm[Hg]",
+        "n": 3,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      },
+      {
+        "name": "mean",
+        "tool": "summary_stats",
+        "args": {
+          "subject_ref": "76b20010-c318-5754-8c85-983aa538522f",
+          "loinc": "8480-6",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "mean",
+        "value": 113.33333333333333,
+        "unit": "mm[Hg]",
+        "n": 3,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S2-01": [
+      {
+        "name": "robust_z",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "loinc": "8867-4",
+          "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "robust_z",
+        "value": 0.5246039240373518,
+        "unit": null,
+        "n": 21,
+        "windows": [
+          { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "baseline_median",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "loinc": "8867-4",
+          "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "baseline.median",
+        "value": 75,
+        "unit": "/min",
+        "n": 21,
+        "windows": [
+          { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "target_median",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "loinc": "8867-4",
+          "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "target.median",
+        "value": 82,
+        "unit": "/min",
+        "n": 21,
+        "windows": [
+          { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "baseline_n",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "loinc": "8867-4",
+          "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "baseline.n",
+        "value": 13,
+        "unit": null,
+        "n": 21,
+        "windows": [
+          { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "target_n",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "loinc": "8867-4",
+          "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "target.n",
+        "value": 8,
+        "unit": null,
+        "n": 21,
+        "windows": [
+          { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      }
+    ],
+    "Q-S2-02": [
+      {
+        "name": "robust_z",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "loinc": "4548-4",
+          "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "robust_z",
+        "value": 0.2950897072710113,
+        "unit": null,
+        "n": 25,
+        "windows": [
+          { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "baseline_median",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "loinc": "4548-4",
+          "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "baseline.median",
+        "value": 3.04,
+        "unit": "%",
+        "n": 25,
+        "windows": [
+          { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "target_median",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "loinc": "4548-4",
+          "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "target.median",
+        "value": 3.1100000000000003,
+        "unit": "%",
+        "n": 25,
+        "windows": [
+          { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "baseline_n",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "loinc": "4548-4",
+          "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "baseline.n",
+        "value": 17,
+        "unit": null,
+        "n": 25,
+        "windows": [
+          { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "target_n",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "loinc": "4548-4",
+          "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "target.n",
+        "value": 8,
+        "unit": null,
+        "n": 25,
+        "windows": [
+          { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      }
+    ],
+    "Q-S2-03": [
+      {
+        "name": "mean_a",
+        "tool": "compare_windows",
+        "args": {
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "loinc": "8480-6",
+          "window_a": { "start": "2023-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
+          "window_b": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "window_a.mean",
+        "value": 118,
+        "unit": "mm[Hg]",
+        "n": 14,
+        "windows": [
+          { "start": "2023-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "mean_b",
+        "tool": "compare_windows",
+        "args": {
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "loinc": "8480-6",
+          "window_a": { "start": "2023-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
+          "window_b": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "window_b.mean",
+        "value": 106.375,
+        "unit": "mm[Hg]",
+        "n": 14,
+        "windows": [
+          { "start": "2023-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "delta_mean",
+        "tool": "compare_windows",
+        "args": {
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "loinc": "8480-6",
+          "window_a": { "start": "2023-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
+          "window_b": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "delta_b_minus_a.mean",
+        "value": -11.625,
+        "unit": "mm[Hg]",
+        "n": 14,
+        "windows": [
+          { "start": "2023-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "delta_median",
+        "tool": "compare_windows",
+        "args": {
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "loinc": "8480-6",
+          "window_a": { "start": "2023-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
+          "window_b": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "delta_b_minus_a.median",
+        "value": -15.5,
+        "unit": "mm[Hg]",
+        "n": 14,
+        "windows": [
+          { "start": "2023-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "n_a",
+        "tool": "compare_windows",
+        "args": {
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "loinc": "8480-6",
+          "window_a": { "start": "2023-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
+          "window_b": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "window_a.n",
+        "value": 6,
+        "unit": null,
+        "n": 14,
+        "windows": [
+          { "start": "2023-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "n_b",
+        "tool": "compare_windows",
+        "args": {
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "loinc": "8480-6",
+          "window_a": { "start": "2023-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
+          "window_b": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "window_b.n",
+        "value": 8,
+        "unit": null,
+        "n": 14,
+        "windows": [
+          { "start": "2023-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      }
+    ],
+    "Q-S2-04": [
+      {
+        "name": "mean_a",
+        "tool": "compare_windows",
+        "args": {
+          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "loinc": "29463-7",
+          "window_a": { "start": "2024-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          "window_b": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "window_a.mean",
+        "value": 97.5,
+        "unit": "kg",
+        "n": 8,
+        "windows": [
+          { "start": "2024-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "mean_b",
+        "tool": "compare_windows",
+        "args": {
+          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "loinc": "29463-7",
+          "window_a": { "start": "2024-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          "window_b": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "window_b.mean",
+        "value": 94.89999999999999,
+        "unit": "kg",
+        "n": 8,
+        "windows": [
+          { "start": "2024-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "delta_mean",
+        "tool": "compare_windows",
+        "args": {
+          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "loinc": "29463-7",
+          "window_a": { "start": "2024-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          "window_b": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "delta_b_minus_a.mean",
+        "value": -2.6000000000000085,
+        "unit": "kg",
+        "n": 8,
+        "windows": [
+          { "start": "2024-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "delta_median",
+        "tool": "compare_windows",
+        "args": {
+          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "loinc": "29463-7",
+          "window_a": { "start": "2024-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          "window_b": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "delta_b_minus_a.median",
+        "value": -2.5999999999999943,
+        "unit": "kg",
+        "n": 8,
+        "windows": [
+          { "start": "2024-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "n_a",
+        "tool": "compare_windows",
+        "args": {
+          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "loinc": "29463-7",
+          "window_a": { "start": "2024-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          "window_b": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "window_a.n",
+        "value": 2,
+        "unit": null,
+        "n": 8,
+        "windows": [
+          { "start": "2024-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "n_b",
+        "tool": "compare_windows",
+        "args": {
+          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "loinc": "29463-7",
+          "window_a": { "start": "2024-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          "window_b": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "window_b.n",
+        "value": 6,
+        "unit": null,
+        "n": 8,
+        "windows": [
+          { "start": "2024-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      }
+    ],
+    "Q-S2-05": [
+      {
+        "name": "robust_z",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "5622caf1-8c8f-587a-dca5-769e1ceef674",
+          "loinc": "18262-6",
+          "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "robust_z",
+        "value": 1.0083199150453372,
+        "unit": null,
+        "n": 7,
+        "windows": [
+          { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "baseline_median",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "5622caf1-8c8f-587a-dca5-769e1ceef674",
+          "loinc": "18262-6",
+          "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "baseline.median",
+        "value": 114.59,
+        "unit": "mg/dL",
+        "n": 7,
+        "windows": [
+          { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "target_median",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "5622caf1-8c8f-587a-dca5-769e1ceef674",
+          "loinc": "18262-6",
+          "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "target.median",
+        "value": 161.815,
+        "unit": "mg/dL",
+        "n": 7,
+        "windows": [
+          { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "baseline_n",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "5622caf1-8c8f-587a-dca5-769e1ceef674",
+          "loinc": "18262-6",
+          "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "baseline.n",
+        "value": 5,
+        "unit": null,
+        "n": 7,
+        "windows": [
+          { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "target_n",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "5622caf1-8c8f-587a-dca5-769e1ceef674",
+          "loinc": "18262-6",
+          "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "target.n",
+        "value": 2,
+        "unit": null,
+        "n": 7,
+        "windows": [
+          { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      }
+    ],
+    "Q-S2-06": [
+      {
+        "name": "robust_z",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "2d68ad16-268a-478c-1f84-d0f1976e1a46",
+          "loinc": "2093-3",
+          "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "robust_z",
+        "value": -0.7206144236403201,
+        "unit": null,
+        "n": 5,
+        "windows": [
+          { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "baseline_median",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "2d68ad16-268a-478c-1f84-d0f1976e1a46",
+          "loinc": "2093-3",
+          "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "baseline.median",
+        "value": 170.92000000000002,
+        "unit": "mg/dL",
+        "n": 5,
+        "windows": [
+          { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "target_median",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "2d68ad16-268a-478c-1f84-d0f1976e1a46",
+          "loinc": "2093-3",
+          "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "target.median",
+        "value": 164.28,
+        "unit": "mg/dL",
+        "n": 5,
+        "windows": [
+          { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "baseline_n",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "2d68ad16-268a-478c-1f84-d0f1976e1a46",
+          "loinc": "2093-3",
+          "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "baseline.n",
+        "value": 4,
+        "unit": null,
+        "n": 5,
+        "windows": [
+          { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "target_n",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "2d68ad16-268a-478c-1f84-d0f1976e1a46",
+          "loinc": "2093-3",
+          "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "target.n",
+        "value": 1,
+        "unit": null,
+        "n": 5,
+        "windows": [
+          { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      }
+    ],
+    "Q-S2-07": [
+      {
+        "name": "robust_z",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "ba419d35-0dfe-8af7-347c-eebf02485a56",
+          "loinc": "2339-0",
+          "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "robust_z",
+        "value": 30.45858271741656,
+        "unit": null,
+        "n": 6,
+        "windows": [
+          { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "baseline_median",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "ba419d35-0dfe-8af7-347c-eebf02485a56",
+          "loinc": "2339-0",
+          "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "baseline.median",
+        "value": 65.53,
+        "unit": "mg/dL",
+        "n": 6,
+        "windows": [
+          { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "target_median",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "ba419d35-0dfe-8af7-347c-eebf02485a56",
+          "loinc": "2339-0",
+          "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "target.median",
+        "value": 99.85,
+        "unit": "mg/dL",
+        "n": 6,
+        "windows": [
+          { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "baseline_n",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "ba419d35-0dfe-8af7-347c-eebf02485a56",
+          "loinc": "2339-0",
+          "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "baseline.n",
+        "value": 3,
+        "unit": null,
+        "n": 6,
+        "windows": [
+          { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "target_n",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "ba419d35-0dfe-8af7-347c-eebf02485a56",
+          "loinc": "2339-0",
+          "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "target.n",
+        "value": 3,
+        "unit": null,
+        "n": 6,
+        "windows": [
+          { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      }
+    ],
+    "Q-S2-08": [
+      {
+        "name": "days_in_window",
+        "tool": "coverage",
+        "args": {
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "loinc": ["8480-6", "8462-4"],
+          "start": "2025-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z"
+        },
+        "path": "days_in_window",
+        "value": 365,
+        "unit": null,
+        "n": 16,
+        "windows": [{ "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "n_8480_6",
+        "tool": "coverage",
+        "args": {
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "loinc": ["8480-6", "8462-4"],
+          "start": "2025-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z"
+        },
+        "path": "codes.0.n",
+        "value": 8,
+        "unit": null,
+        "n": 16,
+        "windows": [{ "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "days_with_data_8480_6",
+        "tool": "coverage",
+        "args": {
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "loinc": ["8480-6", "8462-4"],
+          "start": "2025-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z"
+        },
+        "path": "codes.0.days_with_data",
+        "value": 8,
+        "unit": null,
+        "n": 16,
+        "windows": [{ "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "longest_gap_days_8480_6",
+        "tool": "coverage",
+        "args": {
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "loinc": ["8480-6", "8462-4"],
+          "start": "2025-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z"
+        },
+        "path": "codes.0.longest_gap_days",
+        "value": 86,
+        "unit": null,
+        "n": 16,
+        "windows": [{ "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "n_8462_4",
+        "tool": "coverage",
+        "args": {
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "loinc": ["8480-6", "8462-4"],
+          "start": "2025-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z"
+        },
+        "path": "codes.1.n",
+        "value": 8,
+        "unit": null,
+        "n": 16,
+        "windows": [{ "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "days_with_data_8462_4",
+        "tool": "coverage",
+        "args": {
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "loinc": ["8480-6", "8462-4"],
+          "start": "2025-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z"
+        },
+        "path": "codes.1.days_with_data",
+        "value": 8,
+        "unit": null,
+        "n": 16,
+        "windows": [{ "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "longest_gap_days_8462_4",
+        "tool": "coverage",
+        "args": {
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "loinc": ["8480-6", "8462-4"],
+          "start": "2025-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z"
+        },
+        "path": "codes.1.longest_gap_days",
+        "value": 86,
+        "unit": null,
+        "n": 16,
+        "windows": [{ "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S2-09": [
+      {
+        "name": "days_in_window",
+        "tool": "coverage",
+        "args": {
+          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "loinc": ["8867-4"],
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "days_in_window",
+        "value": 732,
+        "unit": null,
+        "n": 8,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      },
+      {
+        "name": "n_8867_4",
+        "tool": "coverage",
+        "args": {
+          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "loinc": ["8867-4"],
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "codes.0.n",
+        "value": 8,
+        "unit": null,
+        "n": 8,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      },
+      {
+        "name": "days_with_data_8867_4",
+        "tool": "coverage",
+        "args": {
+          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "loinc": ["8867-4"],
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "codes.0.days_with_data",
+        "value": 8,
+        "unit": null,
+        "n": 8,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      },
+      {
+        "name": "longest_gap_days_8867_4",
+        "tool": "coverage",
+        "args": {
+          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "loinc": ["8867-4"],
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "codes.0.longest_gap_days",
+        "value": 286,
+        "unit": null,
+        "n": 8,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S2-10": [
+      {
+        "name": "days_in_window",
+        "tool": "coverage",
+        "args": {
+          "subject_ref": "d3727ff2-5d7b-347f-d78c-edc4323cf890",
+          "loinc": ["4548-4"],
+          "start": "2020-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "days_in_window",
+        "value": 2193,
+        "unit": null,
+        "n": 9,
+        "windows": [{ "start": "2020-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      },
+      {
+        "name": "n_4548_4",
+        "tool": "coverage",
+        "args": {
+          "subject_ref": "d3727ff2-5d7b-347f-d78c-edc4323cf890",
+          "loinc": ["4548-4"],
+          "start": "2020-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "codes.0.n",
+        "value": 9,
+        "unit": null,
+        "n": 9,
+        "windows": [{ "start": "2020-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      },
+      {
+        "name": "days_with_data_4548_4",
+        "tool": "coverage",
+        "args": {
+          "subject_ref": "d3727ff2-5d7b-347f-d78c-edc4323cf890",
+          "loinc": ["4548-4"],
+          "start": "2020-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "codes.0.days_with_data",
+        "value": 9,
+        "unit": null,
+        "n": 9,
+        "windows": [{ "start": "2020-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      },
+      {
+        "name": "longest_gap_days_4548_4",
+        "tool": "coverage",
+        "args": {
+          "subject_ref": "d3727ff2-5d7b-347f-d78c-edc4323cf890",
+          "loinc": ["4548-4"],
+          "start": "2020-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "codes.0.longest_gap_days",
+        "value": 370,
+        "unit": null,
+        "n": 9,
+        "windows": [{ "start": "2020-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S2-11": [
+      {
+        "name": "mean_a",
+        "tool": "compare_windows",
+        "args": {
+          "subject_ref": "46976cf7-b0bf-be20-39a5-9f425a52886d",
+          "loinc": "29463-7",
+          "window_a": { "start": "2022-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
+          "window_b": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "window_a.mean",
+        "value": 80.9,
+        "unit": "kg",
+        "n": 4,
+        "windows": [
+          { "start": "2022-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "mean_b",
+        "tool": "compare_windows",
+        "args": {
+          "subject_ref": "46976cf7-b0bf-be20-39a5-9f425a52886d",
+          "loinc": "29463-7",
+          "window_a": { "start": "2022-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
+          "window_b": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "window_b.mean",
+        "value": 75.94999999999999,
+        "unit": "kg",
+        "n": 4,
+        "windows": [
+          { "start": "2022-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "delta_mean",
+        "tool": "compare_windows",
+        "args": {
+          "subject_ref": "46976cf7-b0bf-be20-39a5-9f425a52886d",
+          "loinc": "29463-7",
+          "window_a": { "start": "2022-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
+          "window_b": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "delta_b_minus_a.mean",
+        "value": -4.950000000000017,
+        "unit": "kg",
+        "n": 4,
+        "windows": [
+          { "start": "2022-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "delta_median",
+        "tool": "compare_windows",
+        "args": {
+          "subject_ref": "46976cf7-b0bf-be20-39a5-9f425a52886d",
+          "loinc": "29463-7",
+          "window_a": { "start": "2022-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
+          "window_b": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "delta_b_minus_a.median",
+        "value": -4.950000000000017,
+        "unit": "kg",
+        "n": 4,
+        "windows": [
+          { "start": "2022-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "n_a",
+        "tool": "compare_windows",
+        "args": {
+          "subject_ref": "46976cf7-b0bf-be20-39a5-9f425a52886d",
+          "loinc": "29463-7",
+          "window_a": { "start": "2022-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
+          "window_b": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "window_a.n",
+        "value": 2,
+        "unit": null,
+        "n": 4,
+        "windows": [
+          { "start": "2022-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "n_b",
+        "tool": "compare_windows",
+        "args": {
+          "subject_ref": "46976cf7-b0bf-be20-39a5-9f425a52886d",
+          "loinc": "29463-7",
+          "window_a": { "start": "2022-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
+          "window_b": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "window_b.n",
+        "value": 2,
+        "unit": null,
+        "n": 4,
+        "windows": [
+          { "start": "2022-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      }
+    ],
+    "Q-S2-12": [
+      {
+        "name": "days_in_window",
+        "tool": "coverage",
+        "args": {
+          "subject_ref": "d15b23ed-02d5-3e28-efbd-2604425317c5",
+          "loinc": [
+            "2947-0",
+            "6298-4",
+            "2069-3",
+            "20565-8",
+            "6299-2",
+            "38483-4",
+            "49765-1",
+            "2339-0",
+            "4548-4",
+            "72514-3"
+          ],
+          "start": "1996-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "days_in_window",
+        "value": 10959,
+        "unit": null,
+        "n": 1991,
+        "windows": [{ "start": "1996-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      },
+      {
+        "name": "n_2947_0",
+        "tool": "coverage",
+        "args": {
+          "subject_ref": "d15b23ed-02d5-3e28-efbd-2604425317c5",
+          "loinc": [
+            "2947-0",
+            "6298-4",
+            "2069-3",
+            "20565-8",
+            "6299-2",
+            "38483-4",
+            "49765-1",
+            "2339-0",
+            "4548-4",
+            "72514-3"
+          ],
+          "start": "1996-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "codes.0.n",
+        "value": 181,
+        "unit": null,
+        "n": 1991,
+        "windows": [{ "start": "1996-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      },
+      {
+        "name": "days_with_data_2947_0",
+        "tool": "coverage",
+        "args": {
+          "subject_ref": "d15b23ed-02d5-3e28-efbd-2604425317c5",
+          "loinc": [
+            "2947-0",
+            "6298-4",
+            "2069-3",
+            "20565-8",
+            "6299-2",
+            "38483-4",
+            "49765-1",
+            "2339-0",
+            "4548-4",
+            "72514-3"
+          ],
+          "start": "1996-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "codes.0.days_with_data",
+        "value": 181,
+        "unit": null,
+        "n": 1991,
+        "windows": [{ "start": "1996-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      },
+      {
+        "name": "longest_gap_days_2947_0",
+        "tool": "coverage",
+        "args": {
+          "subject_ref": "d15b23ed-02d5-3e28-efbd-2604425317c5",
+          "loinc": [
+            "2947-0",
+            "6298-4",
+            "2069-3",
+            "20565-8",
+            "6299-2",
+            "38483-4",
+            "49765-1",
+            "2339-0",
+            "4548-4",
+            "72514-3"
+          ],
+          "start": "1996-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "codes.0.longest_gap_days",
+        "value": 6826,
+        "unit": null,
+        "n": 1991,
+        "windows": [{ "start": "1996-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S2-13": [
+      {
+        "name": "robust_z",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "adeb90f8-973c-7b78-bcfd-4acbef0f1f09",
+          "loinc": "4548-4",
+          "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "robust_z",
+        "value": 0.9442870632672117,
+        "unit": null,
+        "n": 6,
+        "windows": [
+          { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "baseline_median",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "adeb90f8-973c-7b78-bcfd-4acbef0f1f09",
+          "loinc": "4548-4",
+          "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "baseline.median",
+        "value": 5.9,
+        "unit": "%",
+        "n": 6,
+        "windows": [
+          { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "target_median",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "adeb90f8-973c-7b78-bcfd-4acbef0f1f09",
+          "loinc": "4548-4",
+          "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "target.median",
+        "value": 5.97,
+        "unit": "%",
+        "n": 6,
+        "windows": [
+          { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "baseline_n",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "adeb90f8-973c-7b78-bcfd-4acbef0f1f09",
+          "loinc": "4548-4",
+          "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "baseline.n",
+        "value": 5,
+        "unit": null,
+        "n": 6,
+        "windows": [
+          { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "target_n",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "adeb90f8-973c-7b78-bcfd-4acbef0f1f09",
+          "loinc": "4548-4",
+          "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "target.n",
+        "value": 1,
+        "unit": null,
+        "n": 6,
+        "windows": [
+          { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      }
+    ],
+    "Q-S2-14": [
+      {
+        "name": "robust_z",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "922fb35e-148d-9e82-7e65-bfa05e3b3515",
+          "loinc": "8867-4",
+          "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "robust_z",
+        "value": -2.86658572777553,
+        "unit": null,
+        "n": 6,
+        "windows": [
+          { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "baseline_median",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "922fb35e-148d-9e82-7e65-bfa05e3b3515",
+          "loinc": "8867-4",
+          "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "baseline.median",
+        "value": 80,
+        "unit": "/min",
+        "n": 6,
+        "windows": [
+          { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "target_median",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "922fb35e-148d-9e82-7e65-bfa05e3b3515",
+          "loinc": "8867-4",
+          "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "target.median",
+        "value": 71.5,
+        "unit": "/min",
+        "n": 6,
+        "windows": [
+          { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "baseline_n",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "922fb35e-148d-9e82-7e65-bfa05e3b3515",
+          "loinc": "8867-4",
+          "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "baseline.n",
+        "value": 4,
+        "unit": null,
+        "n": 6,
+        "windows": [
+          { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "target_n",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "922fb35e-148d-9e82-7e65-bfa05e3b3515",
+          "loinc": "8867-4",
+          "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "target.n",
+        "value": 2,
+        "unit": null,
+        "n": 6,
+        "windows": [
+          { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      }
+    ],
+    "Q-S6-02": [
+      {
+        "name": "n",
+        "tool": "summary_stats",
+        "args": {
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "loinc": "4548-4",
+          "start": "1990-01-01T00:00:00Z",
+          "end": "1990-12-31T23:59:59Z"
+        },
+        "path": "n",
+        "value": 0,
+        "unit": null,
+        "n": 0,
+        "windows": [{ "start": "1990-01-01T00:00:00Z", "end": "1990-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S6-03": [
+      {
+        "name": "refusal",
+        "tool": "latest_by_loinc",
+        "args": { "subject_ref": "not-in-cohort-001", "loinc": ["8867-4"] },
+        "path": "code",
+        "value": "SUBJECT_SCOPE_VIOLATION",
+        "unit": null,
+        "n": 0,
+        "windows": [],
+        "refusal": "SUBJECT_SCOPE_VIOLATION"
+      }
+    ],
+    "Q-S6-04": [
+      {
+        "name": "n",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "loinc": "3016-3",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "n",
+        "value": 0,
+        "unit": null,
+        "n": 0,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S6-05": [
+      {
+        "name": "value",
+        "tool": "latest_by_loinc",
+        "args": {
+          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "loinc": ["59408-5"]
+        },
+        "path": "rows.0.value",
+        "value": null,
+        "unit": null,
+        "n": 0,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S6-06": [
+      {
+        "name": "n",
+        "tool": "summary_stats",
+        "args": {
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "loinc": "99999-9",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2026-01-01T00:00:00Z"
+        },
+        "path": "n",
+        "value": 0,
+        "unit": null,
+        "n": 0,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S6-09": [
+      {
+        "name": "refusal",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "loinc": "33914-3",
+          "start": "2016-01-01T00:00:00Z",
+          "end": "2026-12-31T23:59:59Z"
+        },
+        "path": "code",
+        "value": "MIXED_UNITS",
+        "unit": null,
+        "n": 0,
+        "windows": [{ "start": "2016-01-01T00:00:00Z", "end": "2026-12-31T23:59:59Z" }],
+        "refusal": "MIXED_UNITS"
+      }
+    ],
+    "Q-S6-10": [
+      {
+        "name": "refusal",
+        "tool": "summary_stats",
+        "args": {
+          "subject_ref": "c053e996-a4c4-6c02-e2b6-284227156c67",
+          "loinc": "788-0",
+          "start": "2001-01-01T00:00:00Z",
+          "end": "2012-12-31T23:59:59Z"
+        },
+        "path": "code",
+        "value": "MIXED_UNITS",
+        "unit": null,
+        "n": 0,
+        "windows": [{ "start": "2001-01-01T00:00:00Z", "end": "2012-12-31T23:59:59Z" }],
+        "refusal": "MIXED_UNITS"
+      }
+    ],
+    "Q-S6-11": [
+      {
+        "name": "refusal",
+        "tool": "compare_windows",
+        "args": {
+          "subject_ref": "b6a1cac9-8873-36a7-e726-4aad8a07d44d",
+          "loinc": "33914-3",
+          "window_a": { "start": "2004-01-01T00:00:00Z", "end": "2008-12-31T23:59:59Z" },
+          "window_b": { "start": "2009-01-01T00:00:00Z", "end": "2013-12-31T23:59:59Z" }
+        },
+        "path": "code",
+        "value": "MIXED_UNITS",
+        "unit": null,
+        "n": 0,
+        "windows": [
+          { "start": "2004-01-01T00:00:00Z", "end": "2008-12-31T23:59:59Z" },
+          { "start": "2009-01-01T00:00:00Z", "end": "2013-12-31T23:59:59Z" }
+        ],
+        "refusal": "MIXED_UNITS"
+      }
+    ],
+    "Q-S6-17": [
+      {
+        "name": "refusal",
+        "tool": "latest_by_loinc",
+        "args": {
+          "subject_ref": "00000000-0000-0000-0000-000000000000",
+          "loinc": ["8480-6"]
+        },
+        "path": "code",
+        "value": "SUBJECT_SCOPE_VIOLATION",
+        "unit": null,
+        "n": 0,
+        "windows": [],
+        "refusal": "SUBJECT_SCOPE_VIOLATION"
+      }
+    ]
+  }
+}

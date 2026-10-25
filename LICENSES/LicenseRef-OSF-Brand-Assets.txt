@@ -1,0 +1,55 @@
+OSF Brand Assets Permission, version 1.0, 8 September 2026
+SPDX identifier: LicenseRef-OSF-Brand-Assets
+
+This is a limited permission, not an open-source or open-content licence.
+
+1. Scope and rights
+Open Science Stiftung (Open Science Foundation, OSF) permits the uses below of
+the supplied logo artwork and stylised wordmark in assets/logo/, only to the
+extent OSF controls the necessary rights. All other rights are reserved by
+their respective holders. No assertion of registration in any jurisdiction is
+made. No copyright is asserted here over every ordinary textual reference to
+the organisation's name. Trademark rights are distinct from artwork copyright.
+
+2. Permission
+You may reproduce and display an unmodified supplied asset to truthfully
+identify, discuss or link to OSF and its actual activities, including in
+commercial or non-commercial factual reporting. You may reproduce an asset in
+communications you have separately been authorised to prepare on OSF's behalf.
+This permission does not itself authorise anyone to speak for OSF. You may
+redistribute unchanged source assets together with this permission and the
+provenance notice so recipients can exercise these same permitted uses.
+
+3. Conditions
+Preserve the full design, proportions and colours. Proportional resizing and
+faithful file-format conversion are allowed; recolouring, distortion, cropping
+of the artwork, redrawing and combining it into a new logo are not permitted
+under this grant. Use the supplied positive or negative asset on an appropriate
+surface and follow the brand guide for OSF-branded use. Removing unused outer
+canvas during faithful conversion is allowed if no artwork or clear space
+required in the final placement is removed.
+
+Do not imply sponsorship, endorsement, certification or affiliation that does
+not exist. Do not use an OSF mark as your own identity, product mark, domain name
+or account identity. Merchandise or fundraising that presents the mark as its
+own branding requires separate written permission. Where practical, identify
+the mark as belonging to Open Science Foundation; do not add a registered-mark
+symbol unless its registration and territorial applicability are verified.
+
+4. Limits, exceptions and revocation
+This grant does not include patent rights or third-party font, photograph or
+other media rights. It does not restrict truthful references, criticism,
+reporting or other uses independently permitted by applicable law.
+
+OSF may withdraw this discretionary permission prospectively by written notice
+to a user, normally allowing 30 days to stop new uses and remove uses within
+that user's control. Uses outside these conditions are not authorised by this
+grant. Withdrawal does not retroactively make a previously compliant use a
+breach, remove independent statutory rights, or revoke CC BY or Apache licences
+for separately licensed repository material. A separate signed permission may
+provide different terms. This grant does not require destruction of historical
+records retained under applicable law.
+
+5. No warranty and contact
+Assets are supplied as-is, without warranties, to the extent permitted by law.
+Questions or requests for additional permission: office@opening.science.

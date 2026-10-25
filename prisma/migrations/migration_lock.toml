@@ -1,0 +1,3 @@
+# Managed by Prisma Migrate. Records which database provider this
+# migration history was written for; change it only with a new baseline.
+provider = "postgresql"

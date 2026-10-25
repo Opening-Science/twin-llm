@@ -1,0 +1,342 @@
+import { describe, expect, test } from "bun:test";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+
+import type { WearableSummaries } from "@/infrastructure/parse-twin-answer";
+import {
+  ABSTAIN_BANNER,
+  DECLINED_BANNER,
+  GUIDELINE_ATTRIBUTION_LINE,
+  GUIDELINE_ONLY_BANNER,
+  UNVERIFIED_NARRATION,
+} from "@/infrastructure/response-document/copy";
+import {
+  STREAM_STATUS_LINES,
+  TOOL_PHASE_LINES,
+} from "@/infrastructure/response-document/stream-copy";
+import { toResponseDocument } from "@/infrastructure/response-document/parse";
+import { GBD_ATTRIBUTION_LINE } from "@/packages/gbd-mcp/constants";
+
+import { AnswerBody } from "./answer-body";
+import { toSavedResponseState } from "./saved-response-state";
+import { documentFromMetadata } from "./answer-stream";
+import {
+  makeResponseDocument,
+  syntheticGbdRow,
+  syntheticGuideline,
+  syntheticToolCall,
+} from "./response-document-fixture";
+import type { ResponseState } from "./conversation";
+
+const noWearables: WearableSummaries = {
+  oura: null,
+  whoop: null,
+  googleHealth: null,
+  vitronic: null,
+};
+
+const answerText = (answer: string): string =>
+  [
+    "## Reasoning",
+    "Synthetic reasoning line.",
+    "",
+    "## Evidence Used",
+    "- none",
+    "",
+    "## Answer",
+    answer,
+    "",
+    "## Uncertainty",
+    "Synthetic uncertainty line.",
+  ].join("\n");
+
+const render = (
+  response: Pick<
+    ResponseState,
+    "status" | "text" | "reasoningText" | "attribution" | "document" | "tools"
+  >,
+): string =>
+  renderToStaticMarkup(createElement(AnswerBody, { response, wearables: noWearables }));
+
+describe("answer body with a response document", () => {
+  test("abstained: answer text is withheld and the abstain banner is shown", () => {
+    const markup = render({
+      status: "COMPLETE",
+      text: answerText("Synthetic withheld sentence."),
+      document: makeResponseDocument({
+        sufficient_data: false,
+        abstained: true,
+        next_step: "more_data",
+        interpretation: { kind: "none" },
+      }),
+    });
+    expect(markup).toContain(ABSTAIN_BANNER);
+    expect(markup).not.toContain("Synthetic withheld sentence.");
+    expect(markup).not.toContain("Synthetic reasoning line.");
+    expect(markup).not.toContain(UNVERIFIED_NARRATION);
+  });
+
+  test("guideline-only: answer shown with the guideline banner and references", () => {
+    const markup = render({
+      status: "COMPLETE",
+      text: answerText("Synthetic guideline summary."),
+      document: makeResponseDocument({
+        sufficient_data: false,
+        next_step: "more_data",
+        interpretation: { kind: "none" },
+        data_basis: {
+          evidence_keys: [],
+          hallucinated_keys: [],
+          tool_calls: [syntheticToolCall(1)],
+          sources: { gbd: [], guidelines: [syntheticGuideline] },
+          gbd_rows: [],
+        },
+      }),
+    });
+    expect(markup).toContain("Synthetic guideline summary.");
+    expect(markup).toContain(GUIDELINE_ONLY_BANNER);
+    expect(markup).not.toContain(ABSTAIN_BANNER);
+    expect(markup).toContain("EAN/ERN EURO-NMD ALS · 2024 · 10.1111/ene.example");
+    expect(markup).toContain(GUIDELINE_ATTRIBUTION_LINE);
+    expect(markup).toContain("1 data lookup recorded for this answer.");
+  });
+
+  test("populated: sections render in the documented order", () => {
+    const markup = render({
+      status: "COMPLETE",
+      text: answerText("Synthetic populated answer."),
+      attribution: [
+        { metricKey: "whoop.recovery.score.2026-01-02", label: "Recovery", value: "64" },
+      ],
+      document: makeResponseDocument({
+        data_basis: {
+          evidence_keys: ["whoop.recovery.score.2026-01-02"],
+          hallucinated_keys: [],
+          tool_calls: [syntheticToolCall(1), syntheticToolCall(2), syntheticToolCall(3)],
+          sources: { gbd: [], guidelines: [syntheticGuideline] },
+          gbd_rows: [syntheticGbdRow],
+        },
+        uncertainty: { model_statement: "One synthetic day is not a trend." },
+        interpretation: { kind: "narration", text: "Synthetic populated answer." },
+      }),
+    });
+    expect(markup).toContain(UNVERIFIED_NARRATION);
+    expect(markup).toContain("Synthetic populated answer.");
+    expect(markup).toContain("One synthetic day is not a trend.");
+    expect(markup).toContain(GBD_ATTRIBUTION_LINE);
+
+    const order = [
+      "Evidence",
+      "Guideline references",
+      "Population context",
+      "Uncertainty",
+      "3 data lookups recorded for this answer.",
+    ].map((needle) => markup.indexOf(needle));
+    expect(order.every((index) => index >= 0)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+  });
+
+  test("malformed document is ignored: the answer renders without banners", () => {
+    const document = toResponseDocument({ abstained: "yes", data_basis: null });
+    expect(document).toBeNull();
+
+    const markup = render({
+      status: "COMPLETE",
+      text: answerText("Synthetic plain answer."),
+      document,
+    });
+    expect(markup).toContain("Synthetic plain answer.");
+    expect(markup).not.toContain(ABSTAIN_BANNER);
+    expect(markup).not.toContain(GUIDELINE_ONLY_BANNER);
+    expect(markup).not.toContain(UNVERIFIED_NARRATION);
+    expect(markup).not.toContain("no_interpreter_input");
+    expect(markup).not.toContain("data lookup");
+  });
+});
+
+describe("abstained answers withhold the model's uncertainty statement", () => {
+  const abstained = makeResponseDocument({
+    sufficient_data: false,
+    abstained: true,
+    next_step: "more_data",
+    interpretation: { kind: "none" },
+    uncertainty: { model_statement: "Synthetic model-written uncertainty." },
+  });
+  const text = answerText("Synthetic withheld sentence.");
+
+  const assertWithheld = (markup: string): void => {
+    expect(markup).toContain(ABSTAIN_BANNER);
+    expect(markup).not.toContain("Synthetic model-written uncertainty.");
+    expect(markup).not.toContain("Synthetic uncertainty line.");
+    expect(markup).not.toContain("Uncertainty");
+    expect(markup).not.toContain("Synthetic withheld sentence.");
+  };
+
+  test("live path: document read from the stream's message metadata", () => {
+    const metadata: unknown = {
+      modelId: "synthetic/model",
+      timeToFirstTokenMs: 100,
+      tokensPerSecond: 10,
+      inputTokens: 1,
+      outputTokens: 1,
+      totalTokens: 2,
+      costUsd: 0,
+      intended_use: "research_hypothesis_generation_n_of_1",
+      not_for_diagnostic_use: true,
+      document: abstained,
+    };
+    const document = documentFromMetadata(metadata);
+    expect(document?.uncertainty.model_statement).toBe(
+      "Synthetic model-written uncertainty.",
+    );
+    assertWithheld(render({ status: "COMPLETE", text, document }));
+  });
+
+  test("/t/[threadId] path: document read from the stored JSON column", () => {
+    const state = toSavedResponseState({
+      id: "response-1",
+      modelId: "synthetic/model",
+      modelName: "Synthetic",
+      status: "COMPLETE",
+      text,
+      reasoningText: "Synthetic reasoning line.",
+      attribution: null,
+      responseDocument: JSON.parse(JSON.stringify(abstained)) as unknown,
+      timeToFirstTokenMs: 100,
+      tokensPerSecond: 10,
+      inputTokens: 1,
+      outputTokens: 1,
+      totalTokens: 2,
+      costUsd: 0,
+    });
+    expect(state.document?.abstained).toBe(true);
+    assertWithheld(render(state));
+  });
+});
+
+describe("v1.1 answers", () => {
+  test("declined: the REFUSE reply is withheld; banner and clinician sentence shown", () => {
+    const markup = render({
+      status: "COMPLETE",
+      text: "REFUSE: Synthetic refusal sentence.",
+      document: makeResponseDocument({
+        sufficient_data: true,
+        abstained: false,
+        answer_class: "declined_decision_support",
+        data_basis: {
+          evidence_keys: [],
+          hallucinated_keys: [],
+          tool_calls: [syntheticToolCall(1)],
+          sources: { gbd: [], guidelines: [] },
+          gbd_rows: [],
+        },
+        uncertainty: { model_statement: null, level: "high", reasons: ["declined"] },
+        next_step: "consult_clinician",
+        interpretation: { kind: "none" },
+      }),
+    });
+    expect(markup).toContain(DECLINED_BANNER);
+    expect(markup).toContain("A clinician is the right person to ask about this.");
+    expect(markup).not.toContain("REFUSE");
+    expect(markup).not.toContain("Synthetic refusal sentence.");
+    expect(markup).not.toContain(ABSTAIN_BANNER);
+    expect(markup).not.toContain(UNVERIFIED_NARRATION);
+  });
+
+  test("abstained, level high: rating and reasons shown, model statement withheld", () => {
+    const markup = render({
+      status: "COMPLETE",
+      text: answerText("Synthetic withheld sentence."),
+      document: makeResponseDocument({
+        sufficient_data: false,
+        abstained: true,
+        answer_class: "information",
+        uncertainty: {
+          model_statement: "Synthetic model-written uncertainty.",
+          level: "high",
+          reasons: ["no_personal_data"],
+        },
+        next_step: "connect_wearable",
+        interpretation: { kind: "none" },
+      }),
+    });
+    expect(markup).toContain(ABSTAIN_BANNER);
+    expect(markup).toContain("Uncertainty: high (based on the data behind this answer).");
+    expect(markup).toContain("No person-level data was used.");
+    expect(markup).toContain(
+      "Connect and sync a wearable so answers can use your own data.",
+    );
+    expect(markup).not.toContain("Synthetic model-written uncertainty.");
+    expect(markup).not.toContain("Synthetic withheld sentence.");
+  });
+});
+
+const statusLine = (line: string): string =>
+  `<p role="status" class="text-muted-foreground text-sm">${line}</p>`;
+
+const SCAFFOLD = [
+  "## Reasoning",
+  "Synthetic reasoning line.",
+  "",
+  "## Evidence Used",
+  "- [oura.synthetic.key]",
+  "",
+].join("\n");
+
+describe("answer body while streaming", () => {
+  test("before any text: the waiting line", () => {
+    expect(render({ status: "STREAMING", text: "" })).toBe(
+      statusLine(STREAM_STATUS_LINES.waiting),
+    );
+  });
+
+  test("scaffolding before the Answer section is never shown", () => {
+    const markup = render({ status: "STREAMING", text: SCAFFOLD });
+    expect(markup).toBe(statusLine(STREAM_STATUS_LINES.preparing));
+    expect(markup).not.toContain("Reasoning");
+    expect(markup).not.toContain("oura.synthetic.key");
+  });
+
+  test("once the Answer section starts, only its text renders", () => {
+    const markup = render({
+      status: "STREAMING",
+      text: `${SCAFFOLD}## Answer\nSynthetic partial answer`,
+    });
+    expect(markup).toBe(
+      `<div class="flex flex-col gap-3 text-[15px] leading-relaxed"><div class="flex flex-col gap-3"><p class="whitespace-pre-wrap">Synthetic partial answer</p></div></div>`,
+    );
+  });
+
+  test("each running tool shows its own line, never its arguments", () => {
+    const cases = [
+      ["guideline_search", TOOL_PHASE_LINES.guidelines],
+      ["gbd_population", TOOL_PHASE_LINES.population],
+      ["observations_for_subject", TOOL_PHASE_LINES.cohort],
+    ] as const;
+    for (const [name, line] of cases) {
+      expect(
+        render({ status: "STREAMING", text: "", tools: [{ name, state: "running" }] }),
+      ).toBe(statusLine(line));
+    }
+  });
+
+  test("a running tool replaces the preparing line, not the answer", () => {
+    const tools = [{ name: "guideline_search", state: "running" }] as const;
+    expect(render({ status: "STREAMING", text: SCAFFOLD, tools })).toBe(
+      statusLine(TOOL_PHASE_LINES.guidelines),
+    );
+    expect(
+      render({ status: "STREAMING", text: `${SCAFFOLD}## Answer\nSynthetic.`, tools }),
+    ).not.toContain(TOOL_PHASE_LINES.guidelines);
+  });
+
+  test("a finished tool falls back to the stage line", () => {
+    expect(
+      render({
+        status: "STREAMING",
+        text: "",
+        tools: [{ name: "gbd_population", state: "done" }],
+      }),
+    ).toBe(statusLine(STREAM_STATUS_LINES.waiting));
+  });
+});

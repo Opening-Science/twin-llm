@@ -1,0 +1,588 @@
+@import "tailwindcss";
+
+/*
+  TwinLLM's design tokens and the few shared classes built on them.
+
+  Colours come from the Open Science Foundation brand guide (docs/brand.md),
+  expressed in OKLCH with the source hex beside each value; brand-tokens.test.ts
+  and chart-tokens.test.ts check every value and contrast pair against the
+  guide and WCAG AA. Components use these tokens, never raw colour values: a
+  colour that is not here yet is added here first.
+
+  Light mode follows the guide's "Open editorial" palette and dark mode its
+  "Evening stage" palette. Dark mode is a `.dark` class on <html>, set by the
+  theme toggle.
+*/
+
+@custom-variant dark {
+  &:where(.dark, .dark *) {
+    @slot;
+  }
+}
+
+/* Selecta and ABC Diatype Semi Mono are licensed fonts and stay out of git.
+   `bun run fonts:install` copies them into public/fonts/; without them the
+   stacks below fall back to system faces and the app still works. */
+@font-face {
+  font-family: "Selecta";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/Selecta-Regular.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Selecta";
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/Selecta-Italic.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Selecta";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/Selecta-Medium.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Selecta";
+  font-style: italic;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/Selecta-MediumItalic.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Selecta";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/Selecta-Bold.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Selecta";
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/Selecta-BoldItalic.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "ABCDiatypeSemiMono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/ABCDiatypeSemiMono-Regular.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "ABCDiatypeSemiMono";
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/ABCDiatypeSemiMono-RegularItalic.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "ABCDiatypeSemiMono";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/ABCDiatypeSemiMono-Bold.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "ABCDiatypeSemiMono";
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/ABCDiatypeSemiMono-BoldItalic.woff2") format("woff2");
+}
+
+:root {
+  /* Surfaces, lightest job to heaviest. */
+  --background: oklch(0.978 0.0053 106.5); /* cream-light #f8f8f4 */
+  --card: oklch(1 0 0); /* white #ffffff */
+  --popover: oklch(1 0 0); /* white */
+
+  /* Type. */
+  --foreground: oklch(0.2308 0 0); /* black #1d1d1d */
+  --muted-foreground: oklch(0.5006 0.0013 17.2); /* gray #646363 */
+
+  /* Lines. `border` divides, `input` outlines something you can operate,
+     which is why it is darker: a control edge owes 3:1, a divider does not.
+     The divider sits between cream and cream-dark on the same hue. */
+  --border: oklch(0.88 0.012 100);
+  --input: oklch(0.5366 0.0123 101); /* cream-darker #6f6e66 */
+
+  /* The one accent. Interactive only, never decoration. Charcoal is the
+     guide's button colour; the focus ring is blue-ink, its readable blue. */
+  --primary: oklch(0.3171 0 0); /* button #323232 */
+  --primary-foreground: oklch(1 0 0); /* white */
+  --ring: oklch(0.4272 0.12 256.5); /* blue-ink #1c4e8f */
+
+  /* Reserved meanings. Green marks a winner, red marks an error, and neither
+     is ever reused for anything else. The guide has no status colours, so
+     these stay TwinLLM's own. */
+  --winner: oklch(0.48 0.12 150);
+  --destructive: oklch(0.5 0.19 22);
+  --destructive-foreground: oklch(1 0 0);
+
+  /* Categorical data colours, for chart series only. Hues stay away from the
+     brand blue (about 257, the link and dark-mode accent), the winner green
+     (150) and the error red (22), so a line never reads as a control or a
+     verdict. The fifth is the guide's cream-darker. Each clears 3:1 against
+     --card; chart-tokens.test.ts measures it. */
+  --chart-1: oklch(0.52 0.08 195);
+  --chart-2: oklch(0.56 0.11 85);
+  --chart-3: oklch(0.52 0.15 330);
+  --chart-4: oklch(0.5 0.13 295);
+  --chart-5: oklch(0.5366 0.0123 101);
+
+  /* shadcn expects these; they are the quiet fill behind a hovered row or a
+     muted chip, never a third accent. */
+  --muted: oklch(0.948 0.0094 100); /* cream #efeee7 */
+  --accent: oklch(0.948 0.0094 100);
+  --accent-foreground: oklch(0.2308 0 0);
+  --secondary: oklch(0.948 0.0094 100);
+  --secondary-foreground: oklch(0.2308 0 0);
+  --card-foreground: oklch(0.2308 0 0);
+  --popover-foreground: oklch(0.2308 0 0);
+
+  --radius: 0.625rem;
+}
+
+.dark {
+  --background: oklch(0.2308 0 0); /* black #1d1d1d */
+  --card: oklch(0.26 0 0);
+  --popover: oklch(0.29 0 0);
+
+  --foreground: oklch(0.978 0.0053 106.5); /* cream-light #f8f8f4 */
+  --muted-foreground: oklch(0.7997 0.0167 99.1); /* cream-dark #c0beb2 */
+
+  --border: oklch(0.37 0 0);
+  --input: oklch(0.6 0.0123 101);
+
+  --primary: oklch(0.7422 0.1341 257.2); /* blue #73adff */
+  --primary-foreground: oklch(0.2308 0 0); /* black */
+  --ring: oklch(0.7422 0.1341 257.2);
+
+  --winner: oklch(0.7 0.13 150);
+  --destructive: oklch(0.72 0.16 20);
+  --destructive-foreground: oklch(0.2308 0 0);
+
+  --chart-1: oklch(0.74 0.1 195);
+  --chart-2: oklch(0.78 0.12 85);
+  --chart-3: oklch(0.72 0.13 330);
+  --chart-4: oklch(0.72 0.12 295);
+  --chart-5: oklch(0.7997 0.0167 99.1);
+
+  --muted: oklch(0.3171 0 0); /* button #323232 */
+  --accent: oklch(0.3171 0 0);
+  --accent-foreground: oklch(0.978 0.0053 106.5);
+  --secondary: oklch(0.3171 0 0);
+  --secondary-foreground: oklch(0.978 0.0053 106.5);
+  --card-foreground: oklch(0.978 0.0053 106.5);
+  --popover-foreground: oklch(0.978 0.0053 106.5);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-winner: var(--winner);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* Two faces, per the brand guide. Selecta sets titles and body; display
+     is the same face, kept as a role so headings can change in one place.
+     ABC Diatype Semi Mono sets labels, metadata and every measured number. */
+  --font-display: "Selecta", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Selecta", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "ABCDiatypeSemiMono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* --- Base ------------------------------------------------------------------ */
+
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: var(--color-border);
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    font-synthesis-weight: none;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* The focus ring is an outline, not a box-shadow: shadows are clipped by
+     any ancestor with hidden overflow, and cards and table rows have it. Any
+     component that removes the outline must provide its own visible focus. */
+  :focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+
+  /* Monospaced text is where numbers live; tabular figures keep a value that
+     updates while streaming from nudging its neighbours. */
+  .font-mono,
+  [class*="font-mono"] {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* --- Shared text and surface classes --------------------------------------- */
+
+@layer components {
+  /* Page titles: Selecta Regular, large and tight. */
+  .text-display {
+    font-family: var(--font-display);
+    font-size: var(--text-4xl);
+    font-weight: 400;
+    line-height: 1.05;
+    letter-spacing: var(--tracking-tight);
+  }
+
+  /* Small uppercase label above a heading or a value. */
+  .text-eyebrow {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    line-height: var(--text-xs--line-height);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-muted-foreground);
+  }
+
+  /* A large measured value; in this product the number is the headline. */
+  .text-readout {
+    font-family: var(--font-mono);
+    font-size: var(--text-4xl);
+    font-weight: 400;
+    line-height: 1;
+    letter-spacing: var(--tracking-tight);
+  }
+
+  /* Metrics in the instrument strip stay dim until measured, then fade to
+     full contrast. */
+  .metric {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    line-height: var(--text-xs--line-height);
+    color: var(--color-muted-foreground);
+    transition-property: color, opacity;
+    transition-duration: 150ms;
+    transition-timing-function: var(--default-transition-timing-function);
+  }
+  .metric-pending {
+    opacity: 0.45;
+  }
+  .metric-value {
+    color: var(--color-foreground);
+    font-weight: 700;
+  }
+
+  /* A card-like framed area. */
+  .surface {
+    background-color: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+  }
+
+  /* A toggle chip (anatomy depth stops, organ-system filters). Pressed state is
+     interactive, so it takes the accent. */
+  .chip {
+    @apply border-input text-muted-foreground rounded-md border px-2 py-1 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .chip[aria-pressed="true"] {
+    @apply border-primary text-foreground bg-[color-mix(in_oklab,var(--primary)_12%,transparent)];
+  }
+
+  /* A segmented control: mutually exclusive choices in one pill. The pressed
+     item is marked by `aria-pressed` (buttons) or `aria-current` (links), so the
+     selected look can never drift from what assistive tech is told. */
+  .segmented {
+    @apply border-border inline-flex rounded-full border p-0.5;
+  }
+
+  .segmented-item {
+    @apply text-muted-foreground hover:text-foreground rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors;
+  }
+
+  .segmented-item-sm {
+    @apply px-2.5 py-1 text-xs;
+  }
+
+  .segmented-item[aria-pressed="true"],
+  .segmented-item[aria-current]:not([aria-current="false"]) {
+    @apply bg-muted text-foreground;
+  }
+
+  /* Connector "Setup" disclosure: a quiet summary row that opens to env
+     names, the redirect URI and commands. Names and commands only. */
+  .setup-disclosure > summary {
+    @apply text-foreground cursor-pointer text-xs font-medium select-none;
+  }
+
+  .setup-code {
+    @apply bg-muted text-foreground rounded px-1.5 py-0.5 font-mono text-[11px] break-all;
+  }
+
+  .setup-link {
+    @apply text-foreground inline-block text-xs font-medium underline underline-offset-2;
+  }
+
+  /* Wearables hero: soft warm atmosphere without leaving the app’s hue family.
+     Inspired by Oura’s “today” hierarchy (rings → status → detail), not a clone. */
+  .wearables-hero {
+    background:
+      radial-gradient(
+        120% 80% at 50% -10%,
+        color-mix(in oklab, var(--primary) 14%, transparent),
+        transparent 55%
+      ),
+      linear-gradient(
+        180deg,
+        color-mix(in oklab, var(--muted) 80%, var(--card)),
+        var(--card)
+      );
+    border: 1px solid var(--border);
+  }
+
+  /* The Body twin's full-screen environment. The canvas fills every grid
+     cell; the toolbar and scene panel float top left, the rail top right, and
+     the research-use line sits in the bottom row. The same elements as the
+     inline viewer only change class (nothing remounts). Real full screen and
+     the overlay fallback look the same; `fixed` makes the fallback cover the
+     window. Collapsed panels are small buttons and open ones stay narrow, so
+     the body's centre stays clear. */
+  .twin-environment {
+    @apply bg-background fixed inset-0 z-50 grid grid-cols-[minmax(0,1fr)_auto] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden outline-none;
+  }
+
+  .twin-environment-view {
+    @apply col-span-full row-span-full h-full min-h-0;
+  }
+
+  .twin-environment-bar {
+    @apply z-10 col-start-1 row-start-1 flex max-w-full flex-col items-start gap-2 self-start justify-self-start p-3;
+  }
+
+  .twin-environment-bar > [role="group"] {
+    @apply bg-card/90 border-border m-0 rounded-md border p-1.5;
+  }
+
+  .twin-environment-rail {
+    @apply z-10 col-start-2 row-span-2 row-start-1 flex max-h-full min-h-0 flex-col items-end gap-2 self-start overflow-y-auto overscroll-contain p-3;
+  }
+
+  .twin-environment-panel {
+    @apply bg-card/95 border-border w-fit max-w-full min-w-0 shrink-0 rounded-md border;
+  }
+
+  .twin-environment-panel[data-open] {
+    @apply w-[min(18rem,calc(100vw-1.5rem))];
+  }
+
+  .twin-environment-panel-toggle {
+    @apply flex w-full items-center justify-between gap-3 rounded-md px-3 py-1.5 text-left text-xs font-medium;
+  }
+
+  .twin-research-line {
+    @apply text-muted-foreground bg-card/80 pointer-events-none z-10 col-span-full row-start-3 mx-3 mb-2 justify-self-center rounded px-2 py-0.5 text-center text-[11px] leading-snug;
+  }
+
+  /* On a phone the bottom is three rows, so nothing covers anything: the
+     live lines and the pick card, then the panel buttons with the one open
+     panel docked above them (at most 40% of the height), then the research
+     line, however many lines it wraps to. */
+  @media (max-width: 639px) {
+    .twin-environment {
+      @apply grid-rows-[auto_minmax(0,1fr)_auto_auto_auto];
+    }
+
+    .twin-environment-rail {
+      @apply col-span-full col-start-1 row-span-1 row-start-4 max-h-[40vh] flex-row flex-wrap-reverse content-start justify-end self-end overflow-visible py-0;
+    }
+
+    .twin-research-line {
+      @apply row-start-5;
+    }
+
+    .twin-environment-rail > .twin-environment-panel[data-open] {
+      @apply order-first flex max-h-[calc(40vh-2.5rem)] w-full flex-col overflow-y-auto;
+    }
+  }
+
+  /* Live vitals (G4): what moves and why, under the canvas inline and at the
+     bottom left inside the environment, beside the 3D view rather than in its
+     role="application". */
+  .twin-live-lines {
+    @apply text-muted-foreground mt-2 flex flex-col gap-0.5 text-xs leading-snug;
+  }
+
+  .twin-environment .twin-live-lines {
+    @apply bg-card/90 border-border absolute bottom-12 left-3 z-10 mt-0 max-w-80 rounded-md border p-2;
+  }
+
+  /* Shown once, when a plain wheel over the inline view scrolled the page instead of zooming. */
+  .twin-wheel-hint {
+    @apply pointer-events-none absolute bottom-3 left-1/2 z-10 -translate-x-1/2 rounded bg-black/60 px-2 py-1 text-xs text-white;
+  }
+
+  /* The card beside a picked part. Placed beside the point by inline left/top;
+     below 640 px it docks at the bottom instead, where it never covers the
+     toolbar. Above the rail, since it belongs to what was just clicked. */
+  .twin-pick-card {
+    @apply bg-card/95 border-border absolute z-20 flex max-h-[calc(100%-1.5rem)] w-72 flex-col gap-1 overflow-y-auto rounded-md border p-3 shadow-sm;
+  }
+
+  /* The live lines and the card share the bottom on a phone: one column,
+     lines above the card, so neither covers the other. Elsewhere the wrapper
+     has no box and each keeps its own place. */
+  .twin-bottom-stack {
+    display: contents;
+  }
+
+  @media (max-width: 639px) {
+    .twin-environment .twin-bottom-stack {
+      @apply z-20 col-span-full col-start-1 row-start-3 mx-3 mb-2 flex max-h-[30vh] flex-col gap-2 overflow-y-auto;
+    }
+
+    .twin-environment .twin-bottom-stack > .twin-live-lines,
+    .twin-environment .twin-bottom-stack > .twin-pick-card {
+      @apply static inset-auto m-0 w-auto max-w-none;
+    }
+
+    .twin-environment .twin-bottom-stack > .twin-pick-card {
+      @apply max-h-none shrink;
+    }
+
+    .twin-pick-dot {
+      @apply hidden;
+    }
+  }
+
+  .twin-pick-dot {
+    @apply border-primary pointer-events-none absolute z-20 size-3 -translate-1/2 rounded-full border-2;
+  }
+
+  .twin-environment-panel > [id] {
+    @apply px-1.5 pb-1.5;
+  }
+
+  /* Open panels shrink to fit the rail, so the Details title, tabs and
+     search stay put and only its list scrolls, inside the window. Anatomy
+     keeps its height, up to 45% of the window; Details takes the rest. The
+     rail scrolls as a whole only when even their minimums do not fit. */
+  .twin-environment .twin-environment-panel {
+    @apply flex min-h-0 shrink flex-col;
+  }
+
+  .twin-environment .twin-environment-panel > [id] {
+    @apply min-h-0 overflow-y-auto overscroll-contain;
+  }
+
+  /* From 640 px up only; below, the phone dock rules decide the heights. */
+  @media (min-width: 640px) {
+    .twin-environment .twin-environment-panel:not(:has(.twin-body-panel)) {
+      @apply max-h-[45vh] shrink-0;
+    }
+
+    .twin-environment .twin-environment-panel:has(.twin-body-panel) {
+      @apply min-h-56;
+    }
+  }
+
+  .twin-environment .twin-environment-panel > [id]:has(> .twin-body-panel) {
+    @apply flex flex-col overflow-hidden;
+  }
+
+  .twin-environment .twin-body-panel {
+    @apply min-h-0 flex-1;
+  }
+
+  .twin-environment .twin-body-panel-list {
+    @apply max-h-none min-h-0 flex-1;
+  }
+
+  /* A value drawn to scale (the context-window column on the models page).
+     Neutral grey on purpose: the accent colour is reserved for things you
+     can operate, and this bar is only read. */
+  .measure-bar {
+    display: block;
+    width: 100%;
+    height: 0.25rem;
+    overflow: hidden;
+    border-radius: 9999px;
+    background-color: var(--color-border);
+  }
+  .measure-bar > span {
+    display: block;
+    height: 100%;
+    border-radius: 9999px;
+    background-color: color-mix(in oklab, var(--color-muted-foreground) 70%, transparent);
+  }
+
+  /* Placeholder for content that is still loading. The instance sets size and
+     shape; this class gives the fill and a slow opacity pulse, so the block
+     reads as "arriving" rather than "broken". Reduced-motion users get no
+     pulse (see the end of this file). */
+  .skeleton {
+    border-radius: var(--radius-md);
+    background-color: var(--color-muted);
+    animation: placeholder-pulse 1.6s ease-in-out infinite;
+  }
+}
+
+@keyframes placeholder-pulse {
+  from,
+  to {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Honour the system's reduced-motion setting everywhere. */
+@media (prefers-reduced-motion: reduce) {
+  :where(*, ::before, ::after) {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}

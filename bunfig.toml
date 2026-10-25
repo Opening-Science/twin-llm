@@ -1,0 +1,3 @@
+[test]
+# Stub "server-only" for every bun test run so results do not depend on file order (#150).
+preload = ["./features/chat/response/preload-server-only.mjs"]

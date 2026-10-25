@@ -1,0 +1,64 @@
+{
+  "slots": [
+    {
+      "slot": 1,
+      "id": 1,
+      "name": "reference-genome",
+      "description": "Reference assembly sequences",
+      "format": "FASTA",
+      "state": "empty",
+      "origin": "reference",
+      "damage": null,
+      "requires": [],
+      "size_bytes": 0,
+      "build": null,
+      "version": null,
+      "download": null
+    },
+    {
+      "slot": 2,
+      "id": 2,
+      "name": "gene-annotations",
+      "description": "Gene annotation tracks",
+      "format": "GFF",
+      "state": "empty",
+      "origin": "reference",
+      "damage": null,
+      "requires": ["reference-genome"],
+      "size_bytes": 0,
+      "build": null,
+      "version": null,
+      "download": null
+    },
+    {
+      "slot": 3,
+      "id": 3,
+      "name": "snp-indel-calls",
+      "description": "Personal SNP and indel calls",
+      "format": "VCF 4.x",
+      "state": "empty",
+      "origin": "personal",
+      "damage": null,
+      "requires": [],
+      "size_bytes": 0,
+      "build": null,
+      "version": null,
+      "download": null
+    },
+    {
+      "slot": 4,
+      "id": 4,
+      "name": "variant-catalog",
+      "description": "Public variant catalog",
+      "format": "VCF",
+      "state": "empty",
+      "origin": "reference",
+      "damage": null,
+      "requires": [],
+      "size_bytes": 0,
+      "build": null,
+      "version": null,
+      "download": null
+    }
+  ]
+}

@@ -1,0 +1,99 @@
+# Ark adapter
+
+The Ark is a Dark Bio device that keeps the owner's genome on the hardware.
+Apps run next to that data; TwinLLM never copies VCF, FASTA, or GFF bytes off
+the device. The only bytes that leave are an app report the owner releases
+after a phone approval.
+
+Pinned CLI: **0.3.5** (firmware seen on hardware: 0.11.6). JSON field additions
+are allowed; this adapter uses Zod `looseObject` and pins the tool version here.
+
+## CLI today vs Ark Hub
+
+| Surface       | Genome                                                                                                                               | Lab / bloodwork                         |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------- |
+| Ark CLI 0.3.5 | Four slots (`reference-genome`, `gene-annotations`, `snp-indel-calls`, `variant-catalog`). All 53 data paths start with `v1/genome`. | Not present                             |
+| Ark Hub       | Same genome slots in the browser UI                                                                                                  | Hub exposes bloodwork; the CLI does not |
+
+Observation and lab slots on the CLI are a Dark Bio ask, not something TwinLLM
+can invent. Until that exists, wearables and lab FHIR stay in the local
+Postgres warehouse (`docs/storage.md`).
+
+## TwinLLM wiring
+
+`packages/ark-adapter` spawns `ark <argv> --json` with a fixed argv array (no
+shell) via `node:child_process` so it runs under Next's Node runtime.
+`GENOME_SOURCE` is `none` by default and refuses to spawn. Set
+`GENOME_SOURCE=ark` to allow it. Optional `ARK_DEVICE` is a locator (`hardware:…`,
+`emulator:…`, or a serial). Ark data is personal: keep `DATA_MODE=personal`.
+
+Methods: `status()` (works unpaired or locked), `dataList()` / `dataPaths()`
+(paired and unlocked; inventories only), `appRun({ app, grants, timeout })`.
+Grants are audit-only; Ark mounts the app manifest `datasets`. TwinLLM never
+passes `--unlock`.
+
+Every call appends an audit row (`ark.status`, `ark.data.list`, `ark.data.paths`,
+`ark.app.run`) with hashed argv and hashed parsed JSON, `row_count` 0.
+
+## Approval and concurrency
+
+Phone approval is **blocking**. The CLI waits until the Companion app answers;
+there is no mid-wait poll. `--timeout` bounds machine and network waits, not
+approval (plan on about a minute). `approval-denied` maps to `refused`;
+`approval-timeout` maps to `awaiting_approval` only after the process exits.
+
+Close the Ark Hub browser tab before any CLI command. A second `ark` process or
+an open Hub tab returns `device-busy` (exit 3). Run one command at a time.
+
+## What the Connectors card shows
+
+When `GENOME_SOURCE=ark`, the Connectors page calls `GET /api/ark/status` as
+the signed-in app actor. The card shows device state, hardware / firmware /
+trust, paired and unlocked, the four genome slots as empty or filled, and how
+many readable paths the inventory listed (and whether they all sit under
+`v1/genome`). It never shows pubkey, identity, path names, or dataset bytes.
+
+When `GENOME_SOURCE=none` the route answers `{ enabled: false }` and the card
+stays hidden. Busy, locked, unpaired, and other failures stay 200 with `state`
+and `error.code` only. Busy also hints to close the Ark Hub tab.
+
+## What the Digital Twin genome dashboard shows
+
+When `GENOME_SOURCE=ark` and status is enabled, Digital Twin shows a decorative
+helix (no sequence, VCF, or FASTA), the same slot inventory as empty or filled
+plus optional build and catalog version, and the last twenty `ark.*` audit rows
+for the signed-in actor as `{ seq, tool, ts, hash8 }`. The audit route never
+returns args, result, subject, actor, session, or the full hash. The
+rsid-genotypes Run control is not on the page yet. When
+`GENOME_SOURCE=none` the page stays on the existing coming-soon placeholder.
+
+## Apps
+
+`apps/ark/rsid-genotypes` is a WASI preview 1 module. Its closed panel is eleven
+public CPIC / PharmGKB star-allele defining rsIDs. Manifest `datasets` lists
+`v1/genome/rsids/<rsid>` for each site, matching `ark data paths` (keep the
+`v1/` prefix, no trailing slash). TwinLLM `appRun` passes that same list as
+audit grants. Ark mounts the manifest datasets; grants are not CLI flags.
+
+The run pass prints a TSV of recorded fields (`rsid`, `chromosome`, `position`,
+`reference`, `genotype` or `no call`) and this footer:
+
+`Research use only; genotypes as recorded in the loaded call file.`
+
+A missing genotype file is `no call`. That is not a homozygous-reference fill.
+Any other I/O error exits 1 with no report. The app does not interpret
+genotypes and does not name a product.
+
+Citation (allele definition tables, 2026-09-28):
+https://cpicpgx.org/guidelines/ and
+https://www.pharmgkb.org/page/cyp2c19RefMaterials
+
+Build with `bun run ark:build` (wasm stays gitignored). Fixture goldens:
+`bun run ark:test`. A live `appRun` is `RUN_ARK=1` after that build and a
+Companion approval. Close Hub first. The Digital Twin Run button stays
+disabled until a later UI slice.
+
+## Operations
+
+See `docs/runbook.md` for `bun test packages/ark-adapter` and the local-only
+`RUN_ARK=1` smoke (close Hub, one command at a time).

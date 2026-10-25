@@ -1,0 +1,18 @@
+{
+  "_note": "placeholder — replace with live tools/list",
+  "tools": [
+    {
+      "name": "gbd_query",
+      "description": "Query IHME GBD population estimates.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "question": {
+            "type": "string"
+          }
+        },
+        "required": ["question"]
+      }
+    }
+  ]
+}

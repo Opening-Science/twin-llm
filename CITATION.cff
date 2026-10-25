@@ -1,0 +1,29 @@
+cff-version: 1.2.0
+message: "If you use TwinLLM in your work, please cite it as below."
+type: software
+title: "TwinLLM: open models over coded health data, with every number traced to its source"
+abstract: >-
+  A research application for asking questions about wearable, body-scan and
+  synthetic cohort data with open language models. Answers are built from closed,
+  audited query tools over coded FHIR R4 observations, several models can answer
+  side by side, and every answer shows the data it used. Part of the Open Science
+  Foundation's open-twin work.
+authors:
+  - family-names: Dike
+    given-names: Peter
+    alias: CPD9
+  - family-names: Etzrodt
+    given-names: Martin
+    alias: etzm
+    orcid: "https://orcid.org/0000-0003-1928-3904"
+repository-code: "https://github.com/Opening-Science/twin-llm"
+license: Apache-2.0
+version: 0.1.0
+date-released: "2026-10-25"
+keywords:
+  - digital twin
+  - open models
+  - FHIR
+  - wearables
+  - synthetic data
+  - evaluation

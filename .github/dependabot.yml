@@ -1,0 +1,38 @@
+# Monthly, at most 2 open PRs per ecosystem. Every Dependabot PR is reviewed and
+# merged by a maintainer only when CI is green; it never merges on its own.
+version: 2
+updates:
+  # bun.lock at the root; .open-twin/ and third_party/ are pinned by SHA, not here.
+  - package-ecosystem: bun
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 2
+    cooldown:
+      default-days: 2
+    groups:
+      minor-and-patch:
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: cargo
+    directory: /apps/ark/rsid-genotypes
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 2
+    cooldown:
+      default-days: 2
+
+  # Keeps the SHA pins in .github/workflows current.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 2
+    cooldown:
+      default-days: 2
+    groups:
+      actions:
+        patterns:
+          - "*"

@@ -1,0 +1,21 @@
+{
+  "name": "fixture-ark",
+  "serial": "test-001",
+  "hardware": {
+    "version": "0.5.0",
+    "revision": "4035-1030",
+    "model": "Ark I"
+  },
+  "firmware": {
+    "version": "0.11.6-924f716",
+    "published": "2026-09-01T00:00:00Z"
+  },
+  "trust": "attested",
+  "environment": "release",
+  "realm": "hardware",
+  "synced": true,
+  "paired": true,
+  "unlocked": true,
+  "identity": "abcd1234",
+  "mismatch": null
+}

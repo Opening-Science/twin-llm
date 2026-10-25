@@ -1,0 +1,91 @@
+{
+  "schema_version": "interpretation-contract.v0.2",
+  "intended_use": "research_hypothesis_generation_n_of_1",
+  "not_for_diagnostic_use": true,
+  "subject_ref": "urn:uuid:aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+  "as_of": "2026-09-27T12:00:00.000Z",
+  "states": [
+    {
+      "system_id": "musculoskeletal",
+      "severity": "none",
+      "confidence": 0.4,
+      "sufficient_data": true,
+      "contributing": [{ "biomarker_id": "BM-101", "status": "present" }],
+      "interpretive_anatomy_source": "curated_table",
+      "geometry": { "fma_id": "FMA:1001" }
+    },
+    {
+      "system_id": "cardiovascular",
+      "severity": "borderline",
+      "confidence": 0.4,
+      "sufficient_data": true,
+      "contributing": [{ "biomarker_id": "BM-102", "status": "present" }],
+      "interpretive_anatomy_source": "curated_table",
+      "geometry": { "fma_id": "FMA:1002" }
+    },
+    {
+      "system_id": "nervous",
+      "severity": "mild",
+      "confidence": 0.4,
+      "sufficient_data": true,
+      "contributing": [{ "biomarker_id": "BM-103", "status": "present" }],
+      "interpretive_anatomy_source": "curated_table",
+      "geometry": { "fma_id": "FMA:1003" }
+    },
+    {
+      "system_id": "respiratory",
+      "severity": "moderate",
+      "confidence": 0.4,
+      "sufficient_data": true,
+      "contributing": [{ "biomarker_id": "BM-104", "status": "present" }],
+      "interpretive_anatomy_source": "curated_table",
+      "geometry": { "fma_id": "FMA:1004" }
+    },
+    {
+      "system_id": "metabolic",
+      "severity": "marked",
+      "confidence": 0.4,
+      "sufficient_data": true,
+      "contributing": [{ "biomarker_id": "BM-105", "status": "present" }],
+      "interpretive_anatomy_source": "curated_table",
+      "geometry": { "fma_id": "FMA:1005" }
+    },
+    {
+      "system_id": "digestive",
+      "severity": "indeterminate",
+      "confidence": 0.4,
+      "sufficient_data": true,
+      "contributing": [{ "biomarker_id": "BM-106", "status": "present" }],
+      "interpretive_anatomy_source": "curated_table",
+      "geometry": { "fma_id": "FMA:1006" }
+    },
+    {
+      "system_id": "endocrine",
+      "severity": "none",
+      "confidence": 0.4,
+      "sufficient_data": true,
+      "contributing": [{ "biomarker_id": "BM-107", "status": "present" }],
+      "interpretive_anatomy_source": "curated_table",
+      "geometry": { "fma_id": "FMA:1007" }
+    },
+    {
+      "system_id": "integumentary",
+      "severity": "borderline",
+      "confidence": 0.4,
+      "sufficient_data": true,
+      "contributing": [{ "biomarker_id": "BM-108", "status": "present" }],
+      "interpretive_anatomy_source": "curated_table",
+      "geometry": { "fma_id": "FMA:1008" }
+    },
+    {
+      "system_id": "reproductive",
+      "severity": "mild",
+      "confidence": 0.4,
+      "sufficient_data": true,
+      "contributing": [{ "biomarker_id": "BM-109", "status": "present" }],
+      "interpretive_anatomy_source": "curated_table",
+      "geometry": { "fma_id": "FMA:1009" }
+    }
+  ],
+  "unrenderable": []
+}

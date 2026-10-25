@@ -1,0 +1,352 @@
+# Training data
+
+Groundwork for fine-tuning an open model on TwinLLM's tool use. Nothing
+here trains a model yet. It builds the cohorts, the synthetic wearable series
+and the example conversations a training run would read.
+
+## Purpose
+
+The conversations teach behaviour, not medical knowledge:
+
+- **Tool use.** Pick the right closed query tool, with valid arguments, and
+  read the record window first when the question is about "the last five
+  years".
+- **Refusals.** Open with `REFUSE:` for a dose, a medicine change or a
+  question about whether someone has a condition. Call no tool for other
+  people. Report a tool refusal (`SUBJECT_SCOPE_VIOLATION`, `MIXED_UNITS`)
+  in plain words.
+- **Honest uncertainty.** Say "no rows" or "too few readings" instead of a
+  number, and never turn a missing value into zero.
+
+Every number in an answer was returned by the real closed tools
+(`packages/query-tools`) on the given cohort. No model wrote any answer
+text: the answers come from fixed templates filled with tool results. The
+four headings follow the Twin system prompt and `docs/response-schema.md`.
+Numbers, units and dates go through `infrastructure/format-measure.ts`.
+
+## Synthetic only
+
+Synthetic or Demo data only. The cohorts come from
+Synthea, the wearable series from a seeded generator, and the subjects are
+named by `subject_ref` only. Never point these scripts at a database that
+holds a real person's rows, a connected wearable or the Self subject. The
+generator refuses to run unless `DATA_MODE=synthetic`, reads only allowlisted
+synthetic cohorts, and the wearable generator reads only Synthea bundles.
+
+## Cohorts
+
+`bun run synthea:generate -- --preset <name>` (presets in
+`scripts/synthea/cohort-presets.ts`; flags `--population`, `--seed`, `--age`
+override them, and `--dry-run` prints the settings without running Java).
+
+| Preset     | Cohort id             | N      | Seed | Ages  | Role                                    |
+| ---------- | --------------------- | ------ | ---- | ----- | --------------------------------------- |
+| `training` | `synthea-v4-seed4242` | 10,000 | 4242 | 40–75 | Training conversations                  |
+| `held-out` | `synthea-v4-seed9001` | 1,000  | 9001 | 40–75 | Test conversations                      |
+| `eval`     | `synthea-v4-seed42`   | 30     | 42   | 40–75 | The 81-question evaluation, never train |
+
+Without a preset the defaults are unchanged (N=10, seed 42, `.synthea/fhir`).
+
+### The 1M cohort
+
+One million patients as 100 batches of 10,000, made outside this repository
+by a batch script that calls the same Synthea v4.0.0 recipe (open-twin's
+`tools/synthea`) once per batch and keeps one `batch-NNN.tar.zst` and
+`batch-NNN.manifest.json` per batch. Each batch is its own cohort, named by
+its seed (`SYNTHEA_1M_BATCHES` in `scripts/synthea/cohort-presets.ts`):
+
+| Cohort ids                                    | N per batch | Seed      | Clinician seed | Ages | Role     |
+| --------------------------------------------- | ----------- | --------- | -------------- | ---- | -------- |
+| `synthea-v4-seed1001` … `synthea-v4-seed1099` | 10,000      | 1001–1099 | seed + 1000    | all  | Training |
+| `synthea-v4-seed1100`                         | 10,000      | 1100      | 2100           | all  | Held-out |
+
+Massachusetts, `batch-NNN` is seed − 1000. Synthea also exports the deceased,
+so a batch has about 11,400 bundles. The ids are on the query-tool allowlist
+(generated, not written out) and never in the Demo cohorts; no batch seed or
+clinician seed is used by a preset above. The evaluation cohort is still
+`synthea-v4-seed42`.
+
+**Not byte-for-byte reproducible.** The batches were generated on 2026-10-24 and 25,
+before the Synthea recipe had a fixed end date, so Synthea ended each record
+on the day it ran. The same seed run on another day gives different
+bundles. Keep the archives; their manifests record the seeds, the jar sha256
+and the config hash, not the end date.
+
+**Train on `synthea-v4-seed4242`. Test on `synthea-v4-seed9001` and on the
+81-question set** (`docs/evaluation/question-set.md`). The generator refuses
+`synthea-v4-seed42` unless `--allow-eval-cohort`, which is for smoke runs
+only: training on it would leak the test set. Do not add wearable series to
+`synthea-v4-seed42` either; extra heart rate rows would change the answer
+key.
+
+Keep the training and held-out cohorts in their own database on the GPU
+machine, never the dev database: the Body twin's Demo values read every
+allowlisted cohort.
+
+## Synthetic wearable series
+
+`bun run wearables:generate -- --in .synthea/<cohort>/fhir` writes one FHIR
+bundle per living subject to `.synthea/<cohort>/wearables/` (deceased
+subjects are left out). The seed is the cohort's own, from `manifest.json`.
+Defaults: 90 days ending 2026-10-01 (`--end`, `--days`).
+
+| Metric             | Code                | Unit        |
+| ------------------ | ------------------- | ----------- |
+| Heart rate         | LOINC `8867-4`      | `/min`      |
+| Resting heart rate | LOINC `40443-4`     | `/min`      |
+| Sleep duration     | LOINC `93832-4`     | `min`       |
+| Steps in 24 hours  | LOINC `41950-7`     | `{steps}/d` |
+| Respiratory rate   | LOINC `9279-1`      | `/min`      |
+| HRV (RMSSD)        | local `hrv-rmssd`   | `ms`        |
+| Sleep score        | local `sleep-score` | `{score}`   |
+
+The LOINC and UCUM codes are the ones the open-twin Oura and Google Health
+mappers use. LOINC has no code for RMSSD or a vendor sleep score, and
+open-twin uses vendor-local codes for them, so these two use the local system
+`urn:twinllm:synthetic-wearable`. They are stored but no query tool can read
+them (the tools take LOINC only), so the conversations do not ask about them.
+
+Each subject gets fixed baselines, a share of worn days (one in twelve wears
+the device on about 15% of days), a slow resting heart rate drift and, for
+some, a few days with raised resting heart rate near the end. Every resource
+carries the HL7 test-data tag `HTEST` and a generator tag. The bundles reuse
+the subject's Synthea Patient id and identifier (nothing else), so
+`warehouse:ingest` stores them on the same `subject_ref`:
+
+```sh
+bun run warehouse:ingest .synthea/synthea-v4-seed4242/wearables --cohort synthea-v4-seed4242
+```
+
+## Conversations
+
+`bun run training:conversations -- --cohort <id> [--out <file>] [--seed <n>]
+[--anchor <day>] [--max-subjects <n>] [--families a,b] [--inline-tools]` reads
+`.env.training`, a copy of `.env.synthetic.example` with `DATABASE_URL` at
+the training database. Tool calls are audited as `training-conversations`.
+It prints counts only. For `--out training-data/out/<cohort>.jsonl` (the
+default, gitignored) it writes:
+
+| File                     | What                                               |
+| ------------------------ | -------------------------------------------------- |
+| `<cohort>.jsonl`         | One record per line: `messages` only               |
+| `<cohort>.meta.jsonl`    | One `meta` record per line, same order             |
+| `<cohort>.manifest.json` | Counts, seed, prompt id, and the `tools` list once |
+
+Both JSONL files are written as `.partial` and renamed only when the run
+finishes; a failed run keeps neither. `--inline-tools` also puts `tools` on
+every record, for trainers that want the OpenAI fine-tuning form.
+
+`messages` are system, user, one assistant turn per tool call with its tool
+result, then the final answer. `tools` are the nine query tools as OpenAI
+function definitions, from the same Zod schemas. `meta` holds the family,
+outcome, `subject_ref`, cohort id, seed, generator version, tool names,
+sha256 of the tool arguments, system prompt id and sha256, and the expected
+`answer_class`. The system prompt is the real Twin prompt in synthetic mode
+with no wearable linked, minus the line about the GBD, guideline and
+knowledge tools (variant id
+`twin-system-prompt/synthetic/no-wearables/query-tools-only`), so it offers
+exactly the tools the records define. The same cohort, database and seed
+give the same files byte for byte.
+
+| Family               | Share | Tools                                    |
+| -------------------- | ----- | ---------------------------------------- |
+| `latest_value`       | all   | `latest_by_loinc`                        |
+| `trend`              | all   | (`subject_window`), `trend`              |
+| `baseline_deviation` | all   | (`subject_window`), `baseline_deviation` |
+| `coverage`           | all   | (`subject_window`), `coverage`           |
+| `compare_windows`    | all   | (`subject_window`), `compare_windows`    |
+| `absent_code`        | 30%   | `latest_by_loinc` (ferritin, cortisol)   |
+| `unit_mismatch`      | 30%   | `subject_window`, `trend` (see below)    |
+| `out_of_cohort`      | 10%   | `latest_by_loinc` on an unknown ref      |
+| `decline_dose`       | 25%   | none, `REFUSE:`                          |
+| `decline_condition`  | 25%   | none, `REFUSE:`                          |
+| `other_person`       | 15%   | none                                     |
+
+Wearable measures use windows ending on the series' last day; clinical
+measures (weight, HbA1c, systolic pressure, cholesterol, BMI) use the
+subject's record window from `subject_window`. Each family draws from its
+own seeded stream, so `--families` never changes the other families'
+conversations.
+
+- **Wearable codes are shared.** Daily heart rate (`8867-4`) and respiratory
+  rate (`9279-1`) use the same LOINC codes as Synthea's clinic vitals, so a
+  wearable-window answer can include a clinic reading from those days. All
+  times are UTC.
+- **Subjects without a series.** Before a subject's conversations the
+  generator reads `subject_window` once (audited, not part of any
+  conversation). If the records end before the wearable window (deceased
+  subjects get no series), that subject gets clinical questions only.
+- **Mixed units.** `unit_mismatch` uses codes Synthea v4 writes in two units:
+  urine specific gravity (`5811-5`), urine pH (`5803-2`) and high-sensitivity
+  troponin I (`89579-7`). It is written only when the tool really returns
+  `MIXED_UNITS` for that subject, so it is rare.
+
+### Looking at the files
+
+The Data page's Training data tab (`/data/training`, synthetic mode only) lists the sets in `training-data/out/`, with counts per family and outcome from the meta file, and opens one conversation with its question, tool calls, tool results and answer. It reads the files only; nothing is audited because nothing is read from the warehouse.
+
+### No evaluation question is reused
+
+The evaluation's probes use TSH, SpO2, eGFR and RDW, so the training set uses
+other codes for the same cases. No question template equals an evaluation
+question after refs, dates and whitespace are normalised;
+`scripts/training-data/families.test.ts` checks every template against
+`evaluation/questions.v1.json` with every measure label.
+
+## Sizes
+
+From the smoke run (12 patients, 13 bundles): about 5.8 conversations per
+subject and about 4 KB per record plus a small meta line. `--inline-tools`
+adds about 7 KB per record.
+
+Batch 1001 of the 1M cohort, measured on 2026-10-25 (one machine, 8 cores,
+32 GB RAM, Postgres 18 on the same SSD; see "The 1M cohort, one batch at a
+time" below for the times):
+
+| What                    | Batch 1001                                                     |
+| ----------------------- | -------------------------------------------------------------- |
+| FHIR bundles            | 11,416 (10,000 living), 41.0 GB, about 3.6 MB each             |
+| Wearable series         | 10,000 subjects, 5,280,681 readings, 4.4 GB                    |
+| Warehouse rows          | 10,168,794 numeric (5,262,544 wearable), 1,243,744 non-numeric |
+| Database at its largest | 7.5 GB                                                         |
+| Conversations           | 68,906 from 11,380 subjects (6.1 per subject)                  |
+| JSONL / meta            | 254.0 MB / 35.5 MB (about 3.7 KB per record)                   |
+| Audit rows left behind  | 105,075 (about 46 MB)                                          |
+| Peak disk (logical)     | 53 GB: 45.4 GB unpacked, 7.5 GB database                       |
+
+The FHIR and database figures are file sizes. On a file system that
+compresses (btrfs with zstd here), the peak took about 10.5 GB of physical
+disk. The `training` and `held-out` presets have not been run; scaled from
+the 12-patient smoke run (about 4.6 MB of FHIR per patient, ages 40–75) they
+come to about 46 GB and 4.6 GB of FHIR, about 58,000 and 5,800 conversations.
+
+## On the GPU machine
+
+```sh
+bun run synthea:generate -- --preset training      # Java 21+
+bun run wearables:generate -- --in .synthea/synthea-v4-seed4242/fhir
+# a fresh Postgres with pgvector for this cohort only, then:
+cp .env.synthetic.example .env.training           # set DATABASE_URL to it
+DATABASE_URL="$(grep '^DATABASE_URL=' .env.training | cut -d= -f2-)" bunx prisma migrate deploy
+for dir in fhir wearables; do
+  bun --env-file=.env.training --preload ./features/chat/response/preload-server-only.mjs \
+    scripts/warehouse/ingest.ts .synthea/synthea-v4-seed4242/$dir --cohort synthea-v4-seed4242
+done
+bun run training:conversations -- --cohort synthea-v4-seed4242
+```
+
+Repeat with `--preset held-out` and `synthea-v4-seed9001` in a second
+database for the test file. Drop the databases when the files are written.
+For the 1M cohort, `training:batches` does all of this per batch (below).
+
+## The 1M cohort, one batch at a time
+
+```sh
+cp .env.synthetic.example .env.training   # DATABASE_URL at a database for training cohorts only
+DATABASE_URL="$(grep '^DATABASE_URL=' .env.training | cut -d= -f2-)" bunx prisma migrate deploy
+bun run training:batches -- --batches 1001-1010
+bun run training:batches -- --batches 1100 --archives <dir> --work <dir> --out training-data/out --keep
+```
+
+`--batches` takes seeds: `1001-1010`, `1100` or `1001,1005-1007`. Defaults:
+`--archives ../synthea-1m/batches` (the `batch-NNN.tar.zst` and
+`batch-NNN.manifest.json` files), `--work .synthea/batches`, `--out
+training-data/out`. Per batch, in order, one line per step with its time:
+
+1. **unpack** the archive to `<work>/<cohort>/fhir` and write the batch
+   manifest next to it as `manifest.json`, with the cohort id added (the seed,
+   clinician seed and N must match the batch).
+2. **wearables**: `wearables:generate` for that fhir dir (the seed comes from
+   the manifest).
+3. **ingest fhir** and 4. **ingest wearables**: `warehouse:ingest --cohort
+synthea-v4-seed<seed>`. Any rejected bundle stops the run; the line names
+   the reasons and the log.
+4. **conversations**: `training:conversations --cohort <id> --out
+<out>/<id>.jsonl`.
+5. **clear rows**: delete the cohort's observations, non-numeric rows, bundles
+   and subjects. Audit rows stay: the chain is append-only, and a deleted row
+   would break `verifyChain`. They hold no values (hashes and row counts), and
+   name the subject_refs of a cohort that is gone.
+6. **remove files**: delete `<work>/<cohort>` (not with `--keep`).
+
+Each step runs the existing CLI with `.env.training` and writes its output to
+`<work>/logs/<cohort>.<step>.log`. A batch whose conversation manifest exists
+is skipped (only its leftover rows and files are cleared); with `--keep`, a
+fully unpacked copy is reused. Every archive must be there before the first
+batch starts.
+
+It refuses to run unless `DATA_MODE=synthetic`, the database name differs from
+the one in `.env.local` and `.env.synthetic.example`, and the database holds
+no Demo cohort. Unpack one batch at a time: each needs about 53 GB free (see
+Sizes).
+
+### Batch 1001
+
+Measured on 2026-10-25 with the commands the runner uses:
+
+| Step             | Time    | Result                                                                     |
+| ---------------- | ------- | -------------------------------------------------------------------------- |
+| unpack           | 30 s    | 11,416 files, 41.0 GB                                                      |
+| wearables        | 1m 46s  | 10,000 subjects, 5,280,681 readings                                        |
+| ingest fhir      | 34m 59s | 11,380 bundles inserted, **36 rejected** (see below)                       |
+| ingest wearables | 17m 31s | 9,966 bundles inserted                                                     |
+| conversations    | 21m 22s | 68,906 conversations from 11,380 subjects, 254.0 MB                        |
+| clear rows       | 8m 48s  | 11,380 subjects, 10,168,794 numeric, 1,243,744 non-numeric, 21,346 bundles |
+| remove files     | 4 s     | 45.4 GB freed                                                              |
+
+About 85 minutes in all. A run of all 100 batches would take about 6 days
+on this machine, and leave about 29 GB of JSONL and meta files and about
+10 million audit rows.
+
+Ingest is two thirds of the time. It runs one bundle at a time in one
+process, at about one CPU core, while Postgres stays nearly idle, and it
+parses every file twice (the Synthea check reads them all before the first
+write). Splitting the fhir dir across several ingest processes would cut it
+most. The second largest cost, clearing rows, would be a `TRUNCATE` when the
+database only ever holds the one batch.
+
+**Rejected bundles.** All ages bring in Synthea's adolescent scoliosis
+screening (`AIS_From_School_Screening_to_SOSORT_Recommendations`). It writes
+three SNOMED-coded observations (body posture, Cobb angle, Risser sign) whose
+`valueQuantity` has a UCUM system but no unit or code. The open-twin
+normaliser refuses those bundles (`ot-unit-policy`, `ot-quantity-no-code`),
+so 36 of 11,416 bundles in batch 1001 were rejected and the runner stopped,
+as it should. Batch 1100 has 41 such bundles. Until that is settled (fix the
+recipe or the normaliser upstream, or agree to leave those subjects out), no
+batch runs to the end. The batch 1001 numbers above come from finishing the
+steps by hand with those 36 subjects (and 34 wearable series) left out; that
+file is not a training file.
+
+## Human check
+
+Before any training run, a person reads a random sample (at least 50
+conversations, every family present) and checks: the numbers match the tool
+result in the same conversation, units and dates are present, refusals are
+plain, nothing reads as a statement about a real person. Record who checked,
+the sample size and the file sha256 with the training run.
+
+## Licences
+
+- **Synthea** is Apache-2.0 (v4.0.0, pinned in `scripts/synthea/generate-local.sh`).
+  Its output is synthetic and ours to use.
+- **Base models**: the licence of each candidate is in `docs/models.md`.
+  Qwen 3 and the Apertus and Meditron models are Apache-2.0; Apertus v1.5
+  adds the Swiss AI Acceptable Use Policy.
+- **MedGemma** (HAI-DEF terms): a model fine-tuned from it is a model
+  derivative under those terms. The section 3.2 use restrictions carry over to
+  it and to anyone we share it with, together with a copy of the terms and
+  notice that the files were modified. Plain reading, not legal advice; read
+  `docs/models.md` and the terms before fine-tuning it.
+
+## Limits
+
+- The answers are templates. They teach shape and honesty, not varied
+  wording; a later step can paraphrase questions.
+- Only the nine query tools are in `tools`; guideline, GBD and knowledge
+  tools are not exercised.
+- The 1M batches stop at ingest until the scoliosis-screening bundles are
+  settled (see "Rejected bundles"), and they are not byte-for-byte
+  reproducible (see "The 1M cohort").
+- `list_subjects` caps at 200 rows, so the generator reads the subject list
+  directly from the cohort's subjects (refs only); every number still comes
+  through the audited tools.

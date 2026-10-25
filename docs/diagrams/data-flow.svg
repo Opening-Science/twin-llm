@@ -1,0 +1,245 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2048" height="1125" viewBox="0 0 2048 1125" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" role="img" aria-labelledby="title desc">
+<title id="title">TwinLLM data flow</title>
+<desc id="desc">Metro map of how data moves through TwinLLM. Wearable data is downloaded from Oura, Whoop and Google Health, converted to FHIR R4 and stored as snapshots. BodyLoop scans come from the local network into the Digital Twin viewer, which also shows pinned anatomy atlases, the 67 Anchor biomarkers and a full-screen environment. Guideline passages and OpenTwin knowledge notes are embedded locally into pgvector. A Synthea cohort (v4, seed 42) is loaded with warehouse:ingest into the synthetic warehouse, read by closed query and analytics tools. Summaries and tool results go to an open model served by Ollama on this machine, which writes the chat answer; the same pipeline runs the 81-question synthetic evaluation. Infomaniak (legacy), OpenRouter, the remote GPU and the GBD server are off this machine and refused in local-only mode; OpenRouter and the remote GPU take synthetic data only. Our own models on an Exoscale A30 instance in Switzerland are the default cloud provider; the instance and notifications are planned.</desc>
+<style>@media (prefers-reduced-motion: reduce) { .flow { display: none; } }</style>
+<rect x="0" y="0" width="2048" height="1125" fill="#2b2b2b"/>
+<text x="24" y="44" font-size="24" fill="#ffffff" text-anchor="start" font-weight="bold">TwinLLM data flow</text>
+<text x="24" y="68" font-size="13" fill="#aaaaaa" text-anchor="start" font-weight="normal">Built today and planned</text>
+<rect x="295" y="40" width="1420" height="1065" rx="14" ry="14" fill="none" stroke="#8a8a8a" stroke-width="2" stroke-dasharray="14 8"/>
+<text x="1005" y="30" font-size="13" fill="#cfcfcf" text-anchor="middle" font-weight="bold">THIS MACHINE</text>
+<rect x="20" y="112" width="260" height="92" rx="8" ry="8" fill="#373737" stroke="#595959" stroke-width="1"/>
+<text x="20" y="103" font-size="15" fill="#aaaaaa" text-anchor="start" font-weight="bold">Local network</text>
+<rect x="20" y="262" width="260" height="418" rx="8" ry="8" fill="#373737" stroke="#595959" stroke-width="1"/>
+<text x="20" y="253" font-size="15" fill="#aaaaaa" text-anchor="start" font-weight="bold">Internet</text>
+<rect x="1745" y="112" width="283" height="580" rx="8" ry="8" fill="#373737" stroke="#595959" stroke-width="1"/>
+<text x="1745" y="103" font-size="15" fill="#aaaaaa" text-anchor="start" font-weight="bold">Internet</text>
+<rect x="310" y="470" width="230" height="480" rx="8" ry="8" fill="#373737" stroke="#595959" stroke-width="1"/>
+<circle cx="321" cy="455" r="11" fill="#333333"/>
+<text x="321" y="459" font-size="12" fill="#ffffff" text-anchor="middle" font-weight="bold">1</text>
+<text x="339" y="460" font-size="17" fill="#aaaaaa" text-anchor="start" font-weight="bold">Sources</text>
+<rect x="570" y="112" width="235" height="838" rx="8" ry="8" fill="#373737" stroke="#595959" stroke-width="1"/>
+<circle cx="581" cy="97" r="11" fill="#333333"/>
+<text x="581" y="101" font-size="12" fill="#ffffff" text-anchor="middle" font-weight="bold">2</text>
+<text x="599" y="102" font-size="17" fill="#aaaaaa" text-anchor="start" font-weight="bold">Connect &amp; sync</text>
+<rect x="830" y="112" width="300" height="838" rx="8" ry="8" fill="#373737" stroke="#595959" stroke-width="1"/>
+<circle cx="841" cy="97" r="11" fill="#333333"/>
+<text x="841" y="101" font-size="12" fill="#ffffff" text-anchor="middle" font-weight="bold">3</text>
+<text x="859" y="102" font-size="17" fill="#aaaaaa" text-anchor="start" font-weight="bold">Convert &amp; store</text>
+<rect x="1160" y="112" width="230" height="838" rx="8" ry="8" fill="#373737" stroke="#595959" stroke-width="1"/>
+<circle cx="1171" cy="97" r="11" fill="#333333"/>
+<text x="1171" y="101" font-size="12" fill="#ffffff" text-anchor="middle" font-weight="bold">4</text>
+<text x="1189" y="102" font-size="17" fill="#aaaaaa" text-anchor="start" font-weight="bold">Context &amp; tools</text>
+<rect x="1410" y="112" width="290" height="838" rx="8" ry="8" fill="#373737" stroke="#595959" stroke-width="1"/>
+<circle cx="1421" cy="97" r="11" fill="#333333"/>
+<text x="1421" y="101" font-size="12" fill="#ffffff" text-anchor="middle" font-weight="bold">5</text>
+<text x="1439" y="102" font-size="17" fill="#aaaaaa" text-anchor="start" font-weight="bold">Model &amp; answers</text>
+<rect x="1160" y="985" width="540" height="105" rx="8" ry="8" fill="#373737" stroke="#595959" stroke-width="1"/>
+<circle cx="1171" cy="970" r="11" fill="#333333"/>
+<text x="1171" y="974" font-size="12" fill="#ffffff" text-anchor="middle" font-weight="bold">6</text>
+<text x="1189" y="975" font-size="17" fill="#aaaaaa" text-anchor="start" font-weight="bold">Notifications (planned)</text>
+<path d="M240 150 L1590 150" fill="none" stroke="#4CAF50" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M1060 150 L1130 150 C1150 150 1150 260 1172 260 L1438 260" fill="none" stroke="#4CAF50" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M1765 150 L1590 150" fill="none" stroke="#4CAF50" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M240 290 C300 290 300 330 360 330" fill="none" stroke="#ff9800" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M240 330 C300 330 300 330 360 330" fill="none" stroke="#ff9800" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M240 370 C300 370 300 330 360 330" fill="none" stroke="#ff9800" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M360 330 L1438 330" fill="none" stroke="#ff9800" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M425 520 L1438 520" fill="none" stroke="#03A9F4" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M425 578 C555 578 555 520 685 520" fill="none" stroke="#03A9F4" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M240 645 L1438 645" fill="none" stroke="#E53935" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M425 700 L1438 700" fill="none" stroke="#9e9e9e" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M1450 720 L1450 760 C1450 780 1460 780 1480 780 L1590 780" fill="none" stroke="#9e9e9e" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M425 880 L1590 880" fill="none" stroke="#AB47BC" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M1374 520 L1374 850 L1060 850 L1060 872" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M1462 470 L1590 470" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M1462 300 L1765 300" fill="none" stroke="#bdbdbd" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M1462 380 L1765 380" fill="none" stroke="#bdbdbd" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="10 7"/>
+<path d="M1462 580 L1765 580" fill="none" stroke="#bdbdbd" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M1462 650 L1765 650" fill="none" stroke="#bdbdbd" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M1053 336 C1020 345 990 350 990 400 L990 1005 C990 1030 1005 1030 1030 1030 L1590 1030" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="10 7"/>
+<circle class="flow" r="6.0" fill="#ffffff" stroke="#4CAF50" stroke-width="2" visibility="hidden"><set attributeName="visibility" to="visible" begin="0s"/><animateMotion dur="9.00s" begin="-0.00s" repeatCount="indefinite" path="M240 150 L1590 150"/></circle>
+<circle class="flow" r="6.0" fill="#ffffff" stroke="#4CAF50" stroke-width="2" visibility="hidden"><set attributeName="visibility" to="visible" begin="0s"/><animateMotion dur="9.00s" begin="-4.50s" repeatCount="indefinite" path="M240 150 L1590 150"/></circle>
+<circle class="flow" r="6.0" fill="#ffffff" stroke="#4CAF50" stroke-width="2" visibility="hidden"><set attributeName="visibility" to="visible" begin="0s"/><animateMotion dur="8.53s" begin="-5.12s" repeatCount="indefinite" path="M240 150 L1130 150 C1150 150 1150 260 1172 260 L1438 260"/></circle>
+<circle class="flow" r="6.0" fill="#ffffff" stroke="#ff9800" stroke-width="2" visibility="hidden"><set attributeName="visibility" to="visible" begin="0s"/><animateMotion dur="8.00s" begin="-0.00s" repeatCount="indefinite" path="M240 290 C300 290 300 330 360 330 L1438 330"/></circle>
+<circle class="flow" r="6.0" fill="#ffffff" stroke="#ff9800" stroke-width="2" visibility="hidden"><set attributeName="visibility" to="visible" begin="0s"/><animateMotion dur="8.00s" begin="-2.67s" repeatCount="indefinite" path="M240 330 C300 330 300 330 360 330 L1438 330"/></circle>
+<circle class="flow" r="6.0" fill="#ffffff" stroke="#ff9800" stroke-width="2" visibility="hidden"><set attributeName="visibility" to="visible" begin="0s"/><animateMotion dur="8.00s" begin="-5.33s" repeatCount="indefinite" path="M240 370 C300 370 300 330 360 330 L1438 330"/></circle>
+<circle class="flow" r="6.0" fill="#ffffff" stroke="#03A9F4" stroke-width="2" visibility="hidden"><set attributeName="visibility" to="visible" begin="0s"/><animateMotion dur="6.75s" begin="-1.69s" repeatCount="indefinite" path="M425 520 L1438 520"/></circle>
+<circle class="flow" r="6.0" fill="#ffffff" stroke="#03A9F4" stroke-width="2" visibility="hidden"><set attributeName="visibility" to="visible" begin="0s"/><animateMotion dur="6.75s" begin="-5.06s" repeatCount="indefinite" path="M425 520 L1438 520"/></circle>
+<circle class="flow" r="6.0" fill="#ffffff" stroke="#9e9e9e" stroke-width="2" visibility="hidden"><set attributeName="visibility" to="visible" begin="0s"/><animateMotion dur="6.75s" begin="-0.00s" repeatCount="indefinite" path="M425 700 L1438 700"/></circle>
+<circle class="flow" r="6.0" fill="#ffffff" stroke="#9e9e9e" stroke-width="2" visibility="hidden"><set attributeName="visibility" to="visible" begin="0s"/><animateMotion dur="6.75s" begin="-3.38s" repeatCount="indefinite" path="M425 700 L1438 700"/></circle>
+<circle class="flow" r="6.0" fill="#ffffff" stroke="#9e9e9e" stroke-width="2" visibility="hidden"><set attributeName="visibility" to="visible" begin="0s"/><animateMotion dur="2.00s" begin="-0.00s" repeatCount="indefinite" path="M1450 720 L1450 760 C1450 780 1460 780 1480 780 L1590 780"/></circle>
+<circle class="flow" r="6.0" fill="#ffffff" stroke="#03A9F4" stroke-width="2" visibility="hidden"><set attributeName="visibility" to="visible" begin="0s"/><animateMotion dur="6.75s" begin="-3.38s" repeatCount="indefinite" path="M425 578 C555 578 555 520 685 520 L1438 520"/></circle>
+<circle class="flow" r="6.0" fill="#ffffff" stroke="#AB47BC" stroke-width="2" visibility="hidden"><set attributeName="visibility" to="visible" begin="0s"/><animateMotion dur="7.77s" begin="-3.11s" repeatCount="indefinite" path="M425 880 L1590 880"/></circle>
+<circle class="flow" r="4.0" fill="#ffffff" stroke="#ffffff" stroke-width="2" visibility="hidden"><set attributeName="visibility" to="visible" begin="0s"/><animateMotion dur="4.29s" begin="-3.01s" repeatCount="indefinite" path="M1374 520 L1374 850 L1060 850 L1060 872"/></circle>
+<circle class="flow" r="6.0" fill="#ffffff" stroke="#ffffff" stroke-width="2" visibility="hidden"><set attributeName="visibility" to="visible" begin="0s"/><animateMotion dur="2.00s" begin="-0.00s" repeatCount="indefinite" path="M1462 470 L1590 470"/></circle>
+<circle cx="240" cy="150" r="7" fill="#ffffff" stroke="#2b2b2b" stroke-width="2"/>
+<text x="218" y="151" font-size="14" fill="#ffffff" text-anchor="end" font-weight="bold">BodyLoop scanner</text>
+<text x="218" y="167" font-size="12" fill="#bdbdbd" text-anchor="end" font-weight="normal">3D body scan on the LAN</text>
+<circle cx="240" cy="290" r="12" fill="none" stroke="#E53935" stroke-width="2"/>
+<circle cx="240" cy="290" r="7" fill="#ffffff" stroke="#2b2b2b" stroke-width="2"/>
+<text x="218" y="291" font-size="14" fill="#ffffff" text-anchor="end" font-weight="bold">Oura cloud</text>
+<circle cx="240" cy="330" r="12" fill="none" stroke="#E53935" stroke-width="2"/>
+<circle cx="240" cy="330" r="7" fill="#ffffff" stroke="#2b2b2b" stroke-width="2"/>
+<text x="218" y="331" font-size="14" fill="#ffffff" text-anchor="end" font-weight="bold">Whoop cloud</text>
+<circle cx="240" cy="370" r="12" fill="none" stroke="#E53935" stroke-width="2"/>
+<circle cx="240" cy="370" r="7" fill="#ffffff" stroke="#2b2b2b" stroke-width="2"/>
+<text x="218" y="371" font-size="14" fill="#ffffff" text-anchor="end" font-weight="bold">Google Health cloud</text>
+<circle cx="240" cy="645" r="12" fill="none" stroke="#E53935" stroke-width="2"/>
+<circle cx="240" cy="645" r="7" fill="#ffffff" stroke="#2b2b2b" stroke-width="2"/>
+<text x="218" y="646" font-size="14" fill="#ffffff" text-anchor="end" font-weight="bold">GBD server</text>
+<text x="218" y="662" font-size="12" fill="#bdbdbd" text-anchor="end" font-weight="normal">population data, remote MCP</text>
+<text x="218" y="676" font-size="12" fill="#bdbdbd" text-anchor="end" font-weight="normal">refused in local-only mode</text>
+<circle cx="1765" cy="150" r="12" fill="none" stroke="#E53935" stroke-width="2"/>
+<circle cx="1765" cy="150" r="7" fill="#ffffff" stroke="#2b2b2b" stroke-width="2"/>
+<text x="1787" y="151" font-size="14" fill="#ffffff" text-anchor="start" font-weight="bold">opentwin.opening.science</text>
+<text x="1787" y="167" font-size="12" fill="#bdbdbd" text-anchor="start" font-weight="normal">anatomy atlas files,</text>
+<text x="1787" y="181" font-size="12" fill="#bdbdbd" text-anchor="start" font-weight="normal">fetched once, pinned SHA-256</text>
+<circle cx="1765" cy="300" r="12" fill="none" stroke="#E53935" stroke-width="2"/>
+<circle cx="1765" cy="300" r="7" fill="#ffffff" stroke="#2b2b2b" stroke-width="2"/>
+<text x="1787" y="301" font-size="14" fill="#ffffff" text-anchor="start" font-weight="bold">Infomaniak (legacy)</text>
+<text x="1787" y="317" font-size="12" fill="#bdbdbd" text-anchor="start" font-weight="normal">only when named, personal data</text>
+<text x="1787" y="331" font-size="12" fill="#bdbdbd" text-anchor="start" font-weight="normal">allowed, LOCAL_ONLY=false</text>
+<circle cx="1765" cy="380" r="12" fill="none" stroke="#E53935" stroke-width="2"/>
+<circle cx="1765" cy="380" r="7" fill="#2b2b2b" stroke="#ffffff" stroke-width="2" stroke-dasharray="3 2"/>
+<text x="1787" y="381" font-size="14" fill="#bdbdbd" text-anchor="start" font-weight="bold">Exoscale A30, Switzerland</text>
+<text x="1787" y="397" font-size="12" fill="#bdbdbd" text-anchor="start" font-weight="normal">our own open models, the default</text>
+<text x="1787" y="411" font-size="12" fill="#bdbdbd" text-anchor="start" font-weight="normal">cloud provider (instance planned)</text>
+<text x="1787" y="425" font-size="12" fill="#bdbdbd" text-anchor="start" font-weight="normal">(zone to be confirmed; exoscale.com</text>
+<text x="1787" y="439" font-size="12" fill="#bdbdbd" text-anchor="start" font-weight="normal">lists A30 in CH-GVA-2)</text>
+<circle cx="1765" cy="580" r="12" fill="none" stroke="#E53935" stroke-width="2"/>
+<circle cx="1765" cy="580" r="7" fill="#ffffff" stroke="#2b2b2b" stroke-width="2"/>
+<text x="1787" y="581" font-size="14" fill="#ffffff" text-anchor="start" font-weight="bold">OpenRouter</text>
+<text x="1787" y="597" font-size="12" fill="#bdbdbd" text-anchor="start" font-weight="normal">cloud model, synthetic data only,</text>
+<text x="1787" y="611" font-size="12" fill="#bdbdbd" text-anchor="start" font-weight="normal">LOCAL_ONLY=false</text>
+<circle cx="1765" cy="650" r="12" fill="none" stroke="#E53935" stroke-width="2"/>
+<circle cx="1765" cy="650" r="7" fill="#ffffff" stroke="#2b2b2b" stroke-width="2"/>
+<text x="1787" y="651" font-size="14" fill="#ffffff" text-anchor="start" font-weight="bold">Remote GPU (vLLM)</text>
+<text x="1787" y="667" font-size="12" fill="#bdbdbd" text-anchor="start" font-weight="normal">rented pod over an SSH tunnel,</text>
+<text x="1787" y="681" font-size="12" fill="#bdbdbd" text-anchor="start" font-weight="normal">synthetic data only, LOCAL_ONLY=false</text>
+<circle cx="685" cy="150" r="7" fill="#ffffff" stroke="#2b2b2b" stroke-width="2"/>
+<text x="685" y="135" font-size="14" fill="#ffffff" text-anchor="middle" font-weight="bold">Scanner sync</text>
+<text x="685" y="175" font-size="12" fill="#bdbdbd" text-anchor="middle" font-weight="normal">or file upload</text>
+<circle cx="1060" cy="150" r="7" fill="#ffffff" stroke="#2b2b2b" stroke-width="2"/>
+<text x="1060" y="135" font-size="14" fill="#ffffff" text-anchor="middle" font-weight="bold">Mesh + measures</text>
+<text x="1060" y="175" font-size="12" fill="#bdbdbd" text-anchor="middle" font-weight="normal">GLB files and Postgres</text>
+<circle cx="1590" cy="150" r="7" fill="#ffffff" stroke="#2b2b2b" stroke-width="2"/>
+<text x="1590" y="135" font-size="14" fill="#ffffff" text-anchor="middle" font-weight="bold">Digital Twin viewer</text>
+<text x="1590" y="175" font-size="12" fill="#bdbdbd" text-anchor="middle" font-weight="normal">scan + anatomy layers,</text>
+<text x="1590" y="190" font-size="12" fill="#bdbdbd" text-anchor="middle" font-weight="normal">67 Anchor biomarkers (pinned),</text>
+<text x="1590" y="205" font-size="12" fill="#bdbdbd" text-anchor="middle" font-weight="normal">full-screen environment</text>
+<circle cx="1275" cy="260" r="7" fill="#ffffff" stroke="#2b2b2b" stroke-width="2"/>
+<text x="1275" y="245" font-size="14" fill="#ffffff" text-anchor="middle" font-weight="bold">Scan measurements</text>
+<text x="1275" y="285" font-size="12" fill="#bdbdbd" text-anchor="middle" font-weight="normal">numeric keys only</text>
+<circle cx="685" cy="330" r="7" fill="#ffffff" stroke="#2b2b2b" stroke-width="2"/>
+<text x="685" y="315" font-size="14" fill="#ffffff" text-anchor="middle" font-weight="bold">OAuth sync</text>
+<text x="685" y="355" font-size="12" fill="#bdbdbd" text-anchor="middle" font-weight="normal">on request, tokens encrypted</text>
+<circle cx="905" cy="330" r="7" fill="#ffffff" stroke="#2b2b2b" stroke-width="2"/>
+<text x="905" y="315" font-size="14" fill="#ffffff" text-anchor="middle" font-weight="bold">open-twin FHIR R4</text>
+<text x="905" y="355" font-size="12" fill="#bdbdbd" text-anchor="middle" font-weight="normal">LOINC + UCUM</text>
+<circle cx="1060" cy="330" r="7" fill="#ffffff" stroke="#2b2b2b" stroke-width="2"/>
+<text x="1060" y="315" font-size="14" fill="#ffffff" text-anchor="middle" font-weight="bold">Snapshots</text>
+<text x="1060" y="355" font-size="12" fill="#bdbdbd" text-anchor="middle" font-weight="normal">Postgres</text>
+<circle cx="1275" cy="330" r="7" fill="#ffffff" stroke="#2b2b2b" stroke-width="2"/>
+<text x="1275" y="315" font-size="14" fill="#ffffff" text-anchor="middle" font-weight="bold">Wearable summary</text>
+<text x="1275" y="355" font-size="12" fill="#bdbdbd" text-anchor="middle" font-weight="normal">narrative + metric keys</text>
+<circle cx="425" cy="520" r="7" fill="#ffffff" stroke="#2b2b2b" stroke-width="2"/>
+<text x="425" y="505" font-size="14" fill="#ffffff" text-anchor="middle" font-weight="bold">Guideline PDFs</text>
+<text x="425" y="545" font-size="12" fill="#bdbdbd" text-anchor="middle" font-weight="normal">open titles</text>
+<circle cx="685" cy="520" r="7" fill="#ffffff" stroke="#2b2b2b" stroke-width="2"/>
+<text x="685" y="505" font-size="14" fill="#ffffff" text-anchor="middle" font-weight="bold">Guideline + knowledge ingest</text>
+<text x="685" y="545" font-size="12" fill="#bdbdbd" text-anchor="middle" font-weight="normal">text to chunks</text>
+<circle cx="905" cy="520" r="7" fill="#ffffff" stroke="#2b2b2b" stroke-width="2"/>
+<text x="905" y="505" font-size="14" fill="#ffffff" text-anchor="middle" font-weight="bold">Local embeddings</text>
+<text x="905" y="545" font-size="12" fill="#bdbdbd" text-anchor="middle" font-weight="normal">nomic-embed-text</text>
+<circle cx="1060" cy="520" r="7" fill="#ffffff" stroke="#2b2b2b" stroke-width="2"/>
+<text x="1060" y="505" font-size="14" fill="#ffffff" text-anchor="middle" font-weight="bold">pgvector</text>
+<text x="1060" y="545" font-size="12" fill="#bdbdbd" text-anchor="middle" font-weight="normal">guideline and</text>
+<text x="1060" y="560" font-size="12" fill="#bdbdbd" text-anchor="middle" font-weight="normal">knowledge chunks</text>
+<circle cx="1275" cy="520" r="7" fill="#ffffff" stroke="#2b2b2b" stroke-width="2"/>
+<text x="1275" y="505" font-size="14" fill="#ffffff" text-anchor="middle" font-weight="bold">guideline_search</text>
+<text x="1275" y="545" font-size="12" fill="#bdbdbd" text-anchor="middle" font-weight="normal">and knowledge_search,</text>
+<text x="1275" y="560" font-size="12" fill="#bdbdbd" text-anchor="middle" font-weight="normal">each on its own source</text>
+<circle cx="1275" cy="645" r="7" fill="#ffffff" stroke="#2b2b2b" stroke-width="2"/>
+<text x="1275" y="630" font-size="14" fill="#ffffff" text-anchor="middle" font-weight="bold">gbd_population tool</text>
+<circle cx="425" cy="578" r="7" fill="#ffffff" stroke="#2b2b2b" stroke-width="2"/>
+<text x="425" y="603" font-size="14" fill="#ffffff" text-anchor="middle" font-weight="bold">OpenTwin knowledge</text>
+<text x="425" y="618" font-size="12" fill="#bdbdbd" text-anchor="middle" font-weight="normal">our notes, non-personal</text>
+<circle cx="425" cy="700" r="7" fill="#ffffff" stroke="#2b2b2b" stroke-width="2"/>
+<text x="425" y="685" font-size="14" fill="#ffffff" text-anchor="middle" font-weight="bold">Synthea cohort</text>
+<text x="425" y="725" font-size="12" fill="#bdbdbd" text-anchor="middle" font-weight="normal">v4, seed 42, generated here</text>
+<circle cx="685" cy="700" r="7" fill="#ffffff" stroke="#2b2b2b" stroke-width="2"/>
+<text x="685" y="685" font-size="14" fill="#ffffff" text-anchor="middle" font-weight="bold">warehouse:ingest</text>
+<text x="685" y="725" font-size="12" fill="#bdbdbd" text-anchor="middle" font-weight="normal">Synthea bundles only</text>
+<circle cx="1060" cy="700" r="7" fill="#ffffff" stroke="#2b2b2b" stroke-width="2"/>
+<text x="1060" y="685" font-size="14" fill="#ffffff" text-anchor="middle" font-weight="bold">Warehouse</text>
+<text x="1060" y="725" font-size="12" fill="#bdbdbd" text-anchor="middle" font-weight="normal">synthetic FHIR</text>
+<circle cx="1275" cy="700" r="7" fill="#ffffff" stroke="#2b2b2b" stroke-width="2"/>
+<text x="1275" y="685" font-size="14" fill="#ffffff" text-anchor="middle" font-weight="bold">Query tools</text>
+<text x="1275" y="725" font-size="12" fill="#bdbdbd" text-anchor="middle" font-weight="normal">reads, trend, baseline,</text>
+<text x="1275" y="740" font-size="12" fill="#bdbdbd" text-anchor="middle" font-weight="normal">coverage, compare windows;</text>
+<text x="1275" y="755" font-size="12" fill="#bdbdbd" text-anchor="middle" font-weight="normal">synthetic only</text>
+<circle cx="425" cy="880" r="7" fill="#ffffff" stroke="#2b2b2b" stroke-width="2"/>
+<text x="425" y="865" font-size="14" fill="#ffffff" text-anchor="middle" font-weight="bold">Ark device</text>
+<text x="425" y="905" font-size="12" fill="#bdbdbd" text-anchor="middle" font-weight="normal">genome stays on device</text>
+<text x="425" y="920" font-size="12" fill="#bdbdbd" text-anchor="middle" font-weight="normal">phone approval</text>
+<circle cx="685" cy="880" r="7" fill="#ffffff" stroke="#2b2b2b" stroke-width="2"/>
+<text x="685" y="865" font-size="14" fill="#ffffff" text-anchor="middle" font-weight="bold">Ark status</text>
+<text x="685" y="905" font-size="12" fill="#bdbdbd" text-anchor="middle" font-weight="normal">read-only CLI</text>
+<circle cx="1060" cy="880" r="7" fill="#ffffff" stroke="#2b2b2b" stroke-width="2"/>
+<text x="1060" y="907" font-size="14" fill="#ffffff" text-anchor="middle" font-weight="bold">Audit chain</text>
+<text x="1060" y="922" font-size="12" fill="#bdbdbd" text-anchor="middle" font-weight="normal">hash-linked rows</text>
+<circle cx="1590" cy="880" r="7" fill="#ffffff" stroke="#2b2b2b" stroke-width="2"/>
+<text x="1590" y="865" font-size="14" fill="#ffffff" text-anchor="middle" font-weight="bold">Genome panel</text>
+<text x="1590" y="905" font-size="12" fill="#bdbdbd" text-anchor="middle" font-weight="normal">status only, app run planned</text>
+<text x="1590" y="920" font-size="12" fill="#bdbdbd" text-anchor="middle" font-weight="normal">never reaches chat</text>
+<rect x="1438" y="240" width="24" height="480" rx="12" ry="12" fill="#ffffff" stroke="#2b2b2b" stroke-width="2"/>
+<text x="1478" y="256" font-size="15" fill="#ffffff" text-anchor="start" font-weight="bold">Ollama</text>
+<text x="1478" y="274" font-size="12.5" fill="#bdbdbd" text-anchor="start" font-weight="normal">open model on this machine</text>
+<text x="1478" y="716" font-size="12.5" fill="#bdbdbd" text-anchor="start" font-weight="normal">default with LOCAL_ONLY=true</text>
+<circle cx="1590" cy="470" r="7" fill="#ffffff" stroke="#2b2b2b" stroke-width="2"/>
+<text x="1590" y="455" font-size="14" fill="#ffffff" text-anchor="middle" font-weight="bold">Chat answer</text>
+<text x="1590" y="495" font-size="12" fill="#bdbdbd" text-anchor="middle" font-weight="normal">reasoning, evidence,</text>
+<text x="1590" y="510" font-size="12" fill="#bdbdbd" text-anchor="middle" font-weight="normal">uncertainty</text>
+<circle cx="1590" cy="780" r="7" fill="#ffffff" stroke="#2b2b2b" stroke-width="2"/>
+<text x="1590" y="765" font-size="14" fill="#ffffff" text-anchor="middle" font-weight="bold">Evaluation</text>
+<text x="1590" y="805" font-size="12" fill="#bdbdbd" text-anchor="middle" font-weight="normal">81 synthetic questions,</text>
+<text x="1590" y="820" font-size="12" fill="#bdbdbd" text-anchor="middle" font-weight="normal">scored, replayable</text>
+<circle cx="1275" cy="1030" r="7" fill="#2b2b2b" stroke="#ffffff" stroke-width="2" stroke-dasharray="3 2"/>
+<text x="1275" y="1059" font-size="13" fill="#bdbdbd" text-anchor="middle" font-weight="normal">Sync failed</text>
+<circle cx="1430" cy="1030" r="7" fill="#2b2b2b" stroke="#ffffff" stroke-width="2" stroke-dasharray="3 2"/>
+<text x="1430" y="1059" font-size="13" fill="#bdbdbd" text-anchor="middle" font-weight="normal">Data is stale</text>
+<circle cx="1590" cy="1030" r="7" fill="#2b2b2b" stroke="#ffffff" stroke-width="2" stroke-dasharray="3 2"/>
+<text x="1590" y="1059" font-size="13" fill="#bdbdbd" text-anchor="middle" font-weight="normal">Outside own recent range</text>
+<text x="1430" y="1010" font-size="12" fill="#aaaaaa" text-anchor="middle" font-weight="normal">notices about the data, not health predictions</text>
+<rect x="20" y="712" width="260" height="390" rx="8" ry="8" fill="#373737" stroke="#595959" stroke-width="1"/>
+<text x="20" y="703" font-size="15" fill="#aaaaaa" text-anchor="start" font-weight="bold">Legend</text>
+<path d="M36 742 L86 742" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="98" y="746" font-size="12.5" fill="#bdbdbd" text-anchor="start" font-weight="normal">Built today</text>
+<path d="M36 766 L86 766" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="10 7"/>
+<text x="98" y="770" font-size="12.5" fill="#bdbdbd" text-anchor="start" font-weight="normal">Planned</text>
+<circle cx="61" cy="792" r="12" fill="none" stroke="#E53935" stroke-width="2"/><circle cx="61" cy="792" r="7" fill="#ffffff" stroke="#2b2b2b" stroke-width="2"/>
+<text x="98" y="796" font-size="12.5" fill="#bdbdbd" text-anchor="start" font-weight="normal">Service off this machine</text>
+<rect x="36" y="810" width="50" height="18" rx="5" fill="none" stroke="#8a8a8a" stroke-width="2" stroke-dasharray="7 4"/>
+<text x="98" y="823" font-size="12.5" fill="#bdbdbd" text-anchor="start" font-weight="normal">This machine</text>
+<circle cx="61" cy="844" r="6" fill="#ffffff" stroke="#ff9800" stroke-width="2"/>
+<text x="98" y="848" font-size="12.5" fill="#bdbdbd" text-anchor="start" font-weight="normal">Moving dot: data flowing</text>
+<path d="M36 878 L66 878" fill="none" stroke="#ff9800" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="78" y="882" font-size="12.5" fill="#bdbdbd" text-anchor="start" font-weight="normal">Wearables</text>
+<path d="M36 898 L66 898" fill="none" stroke="#4CAF50" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="78" y="902" font-size="12.5" fill="#bdbdbd" text-anchor="start" font-weight="normal">Body scan</text>
+<path d="M36 918 L66 918" fill="none" stroke="#03A9F4" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="78" y="922" font-size="12.5" fill="#bdbdbd" text-anchor="start" font-weight="normal">Guidelines</text>
+<path d="M36 938 L66 938" fill="none" stroke="#E53935" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="78" y="942" font-size="12.5" fill="#bdbdbd" text-anchor="start" font-weight="normal">Population data</text>
+<path d="M36 958 L66 958" fill="none" stroke="#9e9e9e" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="78" y="962" font-size="12.5" fill="#bdbdbd" text-anchor="start" font-weight="normal">Synthetic data</text>
+<path d="M36 978 L66 978" fill="none" stroke="#AB47BC" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="78" y="982" font-size="12.5" fill="#bdbdbd" text-anchor="start" font-weight="normal">Genome</text>
+<path d="M36 998 L66 998" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="78" y="1002" font-size="12.5" fill="#bdbdbd" text-anchor="start" font-weight="normal">Audit</text>
+<text x="36" y="1030" font-size="11.5" fill="#aaaaaa" text-anchor="start" font-weight="normal">LOCAL_ONLY=true refuses cloud models,</text>
+<text x="36" y="1045" font-size="11.5" fill="#aaaaaa" text-anchor="start" font-weight="normal">the remote GPU, the GBD server and</text>
+<text x="36" y="1060" font-size="11.5" fill="#aaaaaa" text-anchor="start" font-weight="normal">cloud analytics at startup. Wearable</text>
+<text x="36" y="1075" font-size="11.5" fill="#aaaaaa" text-anchor="start" font-weight="normal">syncs still download from each</text>
+<text x="36" y="1090" font-size="11.5" fill="#aaaaaa" text-anchor="start" font-weight="normal">vendor's cloud.</text>
+</svg>

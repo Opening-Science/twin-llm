@@ -1,0 +1,9 @@
+{
+  "coarse_pointcloud_3d.ply": "/api/v2/viatars/1/models/coarse_pointcloud_3d.ply",
+  "mesh_3d.glb": "/api/v2/viatars/1/models/mesh_3d.glb",
+  "avatar_3d.glb": "/api/v2/viatars/1/models/avatar_3d.glb",
+  "avatar_3d.obj": "/api/v2/viatars/1/models/avatar_3d.obj",
+  "avatar_3d.stl": "/api/v2/viatars/1/models/avatar_3d.stl",
+  "avatar_3d.ply": "/api/v2/viatars/1/models/avatar_3d.ply",
+  "view.glb": "/api/v2/viatars/1/models/view.glb"
+}

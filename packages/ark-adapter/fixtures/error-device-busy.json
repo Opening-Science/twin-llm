@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "device-busy",
+    "message": "another ark process or an Ark Hub browser tab holds the USB session"
+  }
+}

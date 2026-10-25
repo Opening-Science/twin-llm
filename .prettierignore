@@ -1,0 +1,17 @@
+.next
+out
+build
+node_modules
+generated
+third_party
+pnpm-lock.yaml
+prisma/migrations
+next-env.d.ts
+tsconfig.tsbuildinfo
+public
+
+# Byte-identical copies of open-twin Synthea fixtures (see tests/fixtures/synthea/PROVENANCE)
+tests/fixtures/synthea/*.json
+
+# Ark fixture goldens are byte-exact TSV; Prettier must not rewrite them.
+apps/ark/**/goldens/

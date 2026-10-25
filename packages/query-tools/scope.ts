@@ -1,0 +1,71 @@
+const DIGITS = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"] as const;
+
+/**
+ * The 1M cohort's batches: seeds 1001 to 1100, one cohort per batch
+ * (`SYNTHEA_1M_BATCHES` in scripts/synthea/cohort-presets.ts has their roles).
+ * Built from digits rather than a number range so the type is exactly these
+ * hundred ids, not every `synthea-v4-seed${number}`.
+ */
+export const SYNTHEA_1M_COHORTS = [
+  ...DIGITS.flatMap((tens) =>
+    DIGITS.map((ones) => `synthea-v4-seed10${tens}${ones}` as const),
+  ).filter(
+    (id): id is Exclude<typeof id, "synthea-v4-seed1000"> => id !== "synthea-v4-seed1000",
+  ),
+  "synthea-v4-seed1100",
+] as const;
+
+/**
+ * Synthetic cohorts the query tools may read. A subject is in scope only when
+ * the session is synthetic, the row is `is_synthetic`, and its cohort is listed
+ * here. `bun run warehouse:ingest` refuses any other cohort label.
+ */
+export const SYNTHETIC_COHORTS = [
+  "open-twin-synthea-trimmed-3",
+  "synthea-v4-seed42",
+  // Training and held-out cohorts (scripts/synthea/cohort-presets.ts). They
+  // belong in their own database on the GPU machine, not the dev database.
+  "synthea-v4-seed4242",
+  "synthea-v4-seed9001",
+  ...SYNTHEA_1M_COHORTS,
+] as const;
+
+export type SyntheticCohortId = (typeof SYNTHETIC_COHORTS)[number];
+
+/**
+ * Cohorts the Body twin's Demo may borrow lab values from. The training and
+ * held-out cohorts, the 1M batches included, are for training data only, so
+ * the Demo never lists them.
+ */
+export const DEMO_COHORTS = [
+  "open-twin-synthea-trimmed-3",
+  "synthea-v4-seed42",
+] as const satisfies readonly SyntheticCohortId[];
+
+export const isDemoCohort = (cohortId: string): boolean =>
+  (DEMO_COHORTS as readonly string[]).includes(cohortId);
+
+export const isAllowedCohort = (cohortId: string): cohortId is SyntheticCohortId =>
+  (SYNTHETIC_COHORTS as readonly string[]).includes(cohortId);
+
+export const SUBJECT_SCOPE_VIOLATION = {
+  code: "SUBJECT_SCOPE_VIOLATION",
+  error: "subject_ref is not in this session scope",
+} as const;
+
+export type SubjectScopeViolation = typeof SUBJECT_SCOPE_VIOLATION;
+
+export type SessionScope = {
+  readonly actor: string;
+  readonly sessionId: string;
+  readonly mode: "synthetic" | "personal";
+};
+
+export const cohortInScope = (scope: SessionScope, cohortId: string): boolean =>
+  scope.mode === "synthetic" && isAllowedCohort(cohortId);
+
+export const subjectRowInScope = (
+  scope: SessionScope,
+  subject: { readonly isSynthetic: boolean; readonly cohortId: string } | null,
+): boolean =>
+  subject !== null && subject.isSynthetic && cohortInScope(scope, subject.cohortId);

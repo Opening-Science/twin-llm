@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "approval-timeout",
+    "message": "nobody answered in time"
+  }
+}

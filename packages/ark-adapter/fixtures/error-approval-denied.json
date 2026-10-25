@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "approval-denied",
+    "message": "the owner declined on the phone"
+  }
+}
