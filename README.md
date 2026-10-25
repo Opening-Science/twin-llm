@@ -22,6 +22,40 @@ Language models are good at sounding sure. Health data needs the opposite: numbe
 - **Honest by design.** Answers that do not rest on enough data are withheld, missing values are never turned into zero, and the interface copy is checked in CI for medical claims.
 - **Synthetic data to start with.** A built-in Synthea cohort lets anyone try the full app, run the evaluation or build training data without touching a real person's records.
 
+## Data privacy
+
+### Privacy by design, enforced in code
+
+Health data is among the most sensitive data a person has, and a digital twin concentrates
+it in one place. TwinLLM is built so that privacy does not depend on a policy page or on
+trusting an operator: the rules below are enforced by the code, checked by tests in CI, and
+visible in the source for anyone to audit.
+
+- **Local by default.** With `LOCAL_ONLY=true`, the models, the embeddings and the database
+  all run on your own machine. Nothing about you needs to leave it.
+- **No third-party model ever sees personal data.** External model services, such as
+  OpenRouter or a rented GPU, are refused for anything but synthetic data. Our own
+  Swiss-hosted models receive personal data only in an explicitly configured, consented
+  pilot, because the operator of a hosted GPU can in principle read a running machine's
+  memory.
+- **The model never reads your raw records.** It works through a small set of closed query
+  tools that return numbers with their units and dates, and body-scan data reaches it only
+  as numeric measurements, never as images or meshes.
+- **Every data read is on the record.** Each query a model makes is written to an
+  append-only, hash-linked audit log, so tampering with the history is detectable.
+- **Your conversations are yours.** Threads open only for their owner, wearable tokens are
+  encrypted at rest, logs are kept free of health values and secrets, and analytics, if
+  enabled at all, carry counts and timings, never your questions or answers.
+- **Synthetic first.** Development, evaluation and training data use synthetic patients
+  generated with Synthea. No model is trained on a real person's data.
+
+What remains unsolved is just as important to say. Wearable data still originates in each
+vendor's cloud, and no one, including us, can yet measure how much an answer or insight
+shared with a third party discloses about the one person a twin describes. That open problem
+is the focus of the Open Science Foundation's first funding call, "Sovereign AI on
+Sensitive Data". The full data-flow table is under
+[What leaves your machine](#what-leaves-your-machine).
+
 ## What you can do with it
 
 |                   |                                                                                                                              |
