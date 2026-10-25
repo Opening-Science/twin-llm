@@ -44,8 +44,10 @@ visible in the source for anyone to audit.
 - **Your conversations are yours.** Threads open only for their owner, wearable tokens are
   encrypted at rest, logs are kept free of health values and secrets, and analytics, if
   enabled at all, carry counts and timings, never your questions or answers.
-- **Synthetic first.** Development, evaluation and training data use synthetic patients
-  generated with Synthea. No model is trained on a real person's data.
+- **No model of you.** TwinLLM never fits or fine-tunes a model on one person's data, so
+  there is no per-person model that could memorise and leak that person. It answers
+  through audited queries over the person's own record. Development, evaluation and
+  training use synthetic patients generated with Synthea.
 
 What remains unsolved is just as important to say. Wearable data still originates in each
 vendor's cloud, and no one, including us, can yet measure how much an answer or insight
@@ -121,13 +123,13 @@ Details: [`docs/providers.md`](docs/providers.md).
 
 ### Models
 
-| `LLM_PROVIDER`                                | Notes                                                                                              |
-| --------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `ollama` (**default with `LOCAL_ONLY=true`**) | Local models on this machine, including MedGemma                                                   |
-| `exoscale` (**default otherwise**)            | Our own open models on vLLM, Exoscale A30 instance in Switzerland; needs `EXOSCALE_BASE_URLS`      |
-| `openrouter`                                  | Free OSS (`*:free`) — only when `DATA_MODE=synthetic` and no snapshot                              |
-| `remote-gpu`                                  | Your own vLLM (e.g. Apertus) over an SSH tunnel — synthetic data only                              |
-| `infomaniak` (legacy)                         | Swiss-hosted OSS, OpenAI-compatible (cloud); only when named, never a default; synthetic data only |
+| `LLM_PROVIDER`                                | Notes                                                                                               |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `ollama` (**default with `LOCAL_ONLY=true`**) | Local models on this machine, including MedGemma                                                    |
+| `exoscale` (**default otherwise**)            | Our own open models on vLLM, on an Exoscale GPU instance in Switzerland; needs `EXOSCALE_BASE_URLS` |
+| `openrouter`                                  | Free OSS (`*:free`) — only when `DATA_MODE=synthetic` and no snapshot                               |
+| `remote-gpu`                                  | Your own vLLM (e.g. Apertus) over an SSH tunnel — synthetic data only                               |
+| `infomaniak` (legacy)                         | Swiss-hosted OSS, OpenAI-compatible (cloud); only when named, never a default; synthetic data only  |
 
 The open-model lineup for comparisons is in [`docs/models.md`](docs/models.md).
 

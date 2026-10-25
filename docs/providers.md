@@ -35,9 +35,9 @@ bunx next telemetry disable
 
 `bun run dev` and `bun run start` bind Next.js to `127.0.0.1`. With auth off (`LOCAL_MVP` / `AUTH_DISABLED`) the app also refuses requests whose Host is not loopback and cross-site form or fetch posts, and will not start under `NODE_ENV=production` unless `ALLOW_AUTH_DISABLED_IN_PRODUCTION=true`. To serve other machines, turn sign-in on. Postgres should be published the same way (`-p 127.0.0.1:5432:5432`, see [guidelines.md](guidelines.md)).
 
-## Exoscale (A30)
+## Exoscale
 
-`LLM_PROVIDER=exoscale` sends chat to vLLM servers we run on an Exoscale A30 large instance in Switzerland (3× A30, 24 GB each). Exoscale lists the A30 in CH-GVA-2; our zone is to be confirmed. Which models fit, and their vLLM tool parsers, are in [models.md](models.md#where-they-run). No Exoscale instance exists yet, so nothing here has been run live.
+`LLM_PROVIDER=exoscale` sends chat to vLLM servers we run on an Exoscale GPU instance in Switzerland. The card depends on availability; the sizing below was planned for an A30 large instance (3× A30, 24 GB each). Exoscale lists the A30 in CH-GVA-2; our zone is to be confirmed. Which models fit, and their vLLM tool parsers, are in [models.md](models.md#where-they-run). No Exoscale instance exists yet, so nothing here has been run live.
 
 **One vLLM per GPU.** Three GPUs serve three models side by side, each on its own port, for example:
 
@@ -112,7 +112,7 @@ Chat injects only the summary narrative and `whoop.*` / Oura / Google Health cit
 
 Set `LLM_PROVIDER` to `exoscale`, `ollama`, `openrouter`, `remote-gpu` or (legacy) `infomaniak` in `.env.local`. Names only; values stay in `.env.local`.
 
-- Exoscale: `EXOSCALE_BASE_URLS`, optional `EXOSCALE_API_KEY` and `EXOSCALE_FIRST_BYTE_TIMEOUT_S`, `LOCAL_ONLY=false`. See [Exoscale (A30)](#exoscale-a30).
+- Exoscale: `EXOSCALE_BASE_URLS`, optional `EXOSCALE_API_KEY` and `EXOSCALE_FIRST_BYTE_TIMEOUT_S`, `LOCAL_ONLY=false`. See [Exoscale](#exoscale).
 - Infomaniak (legacy): `INFOMANIAK_API_TOKEN`, `INFOMANIAK_PRODUCT_ID`, optional `INFOMANIAK_BASE_URL` (default already ends in `/openai/v1`). Catalog is `GET {that base}/models`, not `{base}/v1/models`.
 - Ollama: `OLLAMA_BASE_URL` (default `http://127.0.0.1:11434/v1`).
 - OpenRouter: `OPENROUTER_API_KEY`, and `DATA_MODE=synthetic` with no linked snapshot.
