@@ -31,10 +31,17 @@ export type BatchArgs = Readonly<{
   work: string;
   out: string;
   keep: boolean;
+  /** Go on past rejected FHIR bundles, leaving those subjects out. */
+  skipRejected: boolean;
+  /** With skipRejected: the largest share of a batch's bundles that may be left out. */
+  maxRejectedShare: number;
 }>;
 
+/** More than this share of rejected bundles stops a batch even with --skip-rejected. */
+export const DEFAULT_MAX_REJECTED_SHARE = 0.01;
+
 const USAGE =
-  "Usage: bun run training:batches -- --batches 1001-1010 [--archives <dir>] [--work <dir>] [--out <dir>] [--keep]";
+  "Usage: bun run training:batches -- --batches 1001-1010 [--archives <dir>] [--work <dir>] [--out <dir>] [--keep] [--skip-rejected [--max-rejected-share 0.01]]";
 
 const flag = (argv: readonly string[], name: string): string | undefined => {
   const index = argv.indexOf(name);
@@ -81,12 +88,24 @@ export const parseBatchArgs = (argv: readonly string[]): BatchArgs | string => {
       return `${name} needs a directory.`;
     }
   }
+  const skipRejected = argv.includes("--skip-rejected");
+  const shareText = flag(argv, "--max-rejected-share");
+  if (argv.includes("--max-rejected-share")) {
+    if (!skipRejected) return "--max-rejected-share needs --skip-rejected.";
+    const share = Number(shareText);
+    if (shareText === undefined || !/^\d*\.?\d+$/.test(shareText) || share > 1) {
+      return `--max-rejected-share must be a share from 0 to 1, like 0.02 (got: ${shareText ?? ""}).`;
+    }
+  }
   return {
     batches,
     archives: flag(argv, "--archives") ?? DEFAULT_ARCHIVES,
     work: flag(argv, "--work") ?? DEFAULT_WORK,
     out: flag(argv, "--out") ?? DEFAULT_OUT,
     keep: argv.includes("--keep"),
+    skipRejected,
+    maxRejectedShare:
+      shareText === undefined ? DEFAULT_MAX_REJECTED_SHARE : Number(shareText),
   };
 };
 
@@ -101,6 +120,7 @@ export type BatchPaths = Readonly<{
   records: string;
   meta: string;
   conversationManifest: string;
+  rejected: string;
   logs: string;
 }>;
 
@@ -129,6 +149,7 @@ export const batchPaths = (
     records: out.records,
     meta: out.meta,
     conversationManifest: out.manifest,
+    rejected: join(args.out, `${batch.cohortId}.rejected.json`),
     logs: join(args.work, "logs"),
   };
 };
@@ -247,17 +268,93 @@ export const ingestCounts = (
     : null;
 };
 
-/** `a.json: rejected (ot-unit-policy)` lines, as `2 ot-unit-policy, 1 ingest-failed`. */
-export const rejectedReasons = (stdout: string): string => {
-  const reasons = [...stdout.matchAll(/: rejected \(([^)]+)\)$/gm)].map(
-    (match) => match[1] ?? "",
+/** One `<file>: rejected (<reason>)` line of warehouse:ingest. */
+export type RejectedBundle = Readonly<{ file: string; reason: string }>;
+
+export const rejectedBundles = (stdout: string): readonly RejectedBundle[] =>
+  [...stdout.matchAll(/^(.+\.json): rejected \(([^)]+)\)$/gm)].map((match) => ({
+    file: match[1] ?? "",
+    reason: match[2] ?? "",
+  }));
+
+/** Rejected bundles per reason code, sorted by code. */
+export const reasonCounts = (
+  rejected: readonly Readonly<{ reason: string }>[],
+): Readonly<Record<string, number>> =>
+  Object.fromEntries(
+    [...new Set(rejected.map((bundle) => bundle.reason))]
+      .sort()
+      .map((reason) => [
+        reason,
+        rejected.filter((bundle) => bundle.reason === reason).length,
+      ]),
   );
-  return [...new Set(reasons)]
-    .map((reason) => [reason, reasons.filter((r) => r === reason).length] as const)
+
+/**
+ * Why a batch with rejected bundles must stop, or null when --skip-rejected
+ * may leave them out. The share guard keeps a new kind of failure from
+ * quietly dropping many people.
+ */
+export const rejectionRefusal = (
+  counts: Readonly<{ inserted: number; already: number; rejected: number }>,
+  args: Pick<BatchArgs, "skipRejected" | "maxRejectedShare">,
+): string | null => {
+  if (counts.rejected === 0) return null;
+  if (!args.skipRejected) return "pass --skip-rejected to leave them out";
+  const total = counts.inserted + counts.already + counts.rejected;
+  return counts.rejected / total > args.maxRejectedShare
+    ? `more than ${formatNumber(args.maxRejectedShare * 100, 1)}% of ${total} bundles; check the log, or raise --max-rejected-share`
+    : null;
+};
+
+/** `<out>/<cohort>.rejected.json`: who was left out of a batch, and why. */
+export type RejectedRecord = Readonly<{
+  cohort_id: string;
+  bundles: number;
+  rejected: number;
+  reasons: Readonly<Record<string, number>>;
+  subjects: ReadonlyArray<
+    Readonly<{ subject_ref: string | null; file: string; reasons: readonly string[] }>
+  >;
+}>;
+
+export const rejectedRecord = (
+  cohortId: string,
+  bundles: number,
+  rejected: ReadonlyArray<RejectedBundle & Readonly<{ subjectRef: string | null }>>,
+): RejectedRecord => ({
+  cohort_id: cohortId,
+  bundles,
+  rejected: rejected.length,
+  reasons: reasonCounts(rejected),
+  subjects: [...rejected]
+    .sort((a, b) => a.file.localeCompare(b.file))
+    .map((bundle) => ({
+      subject_ref: bundle.subjectRef,
+      file: bundle.file,
+      reasons: [bundle.reason],
+    })),
+});
+
+/** The wearable bundle files `wearables:generate` wrote for these subjects. */
+export const wearableFilesFor = (
+  wearablesDir: string,
+  subjectRefs: readonly (string | null)[],
+): readonly string[] =>
+  subjectRefs
+    .filter((ref) => ref !== null)
+    .map((ref) => join(wearablesDir, `${ref}.wearables.json`));
+
+/** `a.json: rejected (ot-unit-policy)` lines, as `2 ot-unit-policy, 1 ingest-failed`. */
+export const rejectedReasons = (stdout: string): string =>
+  reasonsText(reasonCounts(rejectedBundles(stdout)));
+
+/** `{a: 1, b: 2}` as `2 b, 1 a`: most first, then by code. */
+export const reasonsText = (reasons: Readonly<Record<string, number>>): string =>
+  Object.entries(reasons)
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
     .map(([reason, n]) => `${n} ${reason}`)
     .join(", ");
-};
 
 /** `Subjects: 9, ...` and `Readings: 4500 ...` from wearables:generate. */
 export const wearableCounts = (

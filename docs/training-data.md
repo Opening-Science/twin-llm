@@ -244,7 +244,7 @@ For the 1M cohort, `training:batches` does all of this per batch (below).
 ```sh
 cp .env.synthetic.example .env.training   # DATABASE_URL at a database for training cohorts only
 DATABASE_URL="$(grep '^DATABASE_URL=' .env.training | cut -d= -f2-)" bunx prisma migrate deploy
-bun run training:batches -- --batches 1001-1010
+bun run training:batches -- --batches 1001-1010 --skip-rejected
 bun run training:batches -- --batches 1100 --archives <dir> --work <dir> --out training-data/out --keep
 ```
 
@@ -253,26 +253,29 @@ bun run training:batches -- --batches 1100 --archives <dir> --work <dir> --out t
 `batch-NNN.manifest.json` files), `--work .synthea/batches`, `--out
 training-data/out`. Per batch, in order, one line per step with its time:
 
-1. **unpack** the archive to `<work>/<cohort>/fhir` and write the batch
-   manifest next to it as `manifest.json`, with the cohort id added (the seed,
-   clinician seed and N must match the batch).
+1. **unpack**: the archive to `<work>/<cohort>/fhir`, and the batch manifest
+   next to it as `manifest.json` with the cohort id added (the seed, clinician
+   seed and N must match the batch).
 2. **wearables**: `wearables:generate` for that fhir dir (the seed comes from
    the manifest).
-3. **ingest fhir** and 4. **ingest wearables**: `warehouse:ingest --cohort
-synthea-v4-seed<seed>`. Any rejected bundle stops the run; the line names
-   the reasons and the log.
-4. **conversations**: `training:conversations --cohort <id> --out
-<out>/<id>.jsonl`.
-5. **clear rows**: delete the cohort's observations, non-numeric rows, bundles
+3. **ingest fhir**: `warehouse:ingest --cohort synthea-v4-seed<seed>`. A
+   rejected bundle stops the run unless `--skip-rejected` (below).
+4. **ingest wearables**: the same for the wearable series, leaving out the
+   series of any subject whose FHIR bundle was rejected. A rejected wearable
+   bundle always stops the run.
+5. **conversations**: `training:conversations --cohort <id> --out
+<out>/<id>.jsonl`, with `--rejected <out>/<id>.rejected.json` when there
+   is one.
+6. **clear rows**: delete the cohort's observations, non-numeric rows, bundles
    and subjects. Audit rows stay: the chain is append-only, and a deleted row
    would break `verifyChain`. They hold no values (hashes and row counts), and
    name the subject_refs of a cohort that is gone.
-6. **remove files**: delete `<work>/<cohort>` (not with `--keep`).
+7. **remove files**: delete `<work>/<cohort>` (not with `--keep`).
 
 Each step runs the existing CLI with `.env.training` and writes its output to
 `<work>/logs/<cohort>.<step>.log`. A batch whose conversation manifest exists
-is skipped (only its leftover rows and files are cleared); with `--keep`, a
-fully unpacked copy is reused. Every archive must be there before the first
+is skipped (only its leftover rows and files are cleared). A fully unpacked
+copy, kept by `--keep` or left by a run that stopped, is reused. Every archive must be there before the first
 batch starts.
 
 It refuses to run unless `DATA_MODE=synthetic`, the database name differs from
@@ -280,23 +283,57 @@ the one in `.env.local` and `.env.synthetic.example`, and the database holds
 no Demo cohort. Unpack one batch at a time: each needs about 53 GB free (see
 Sizes).
 
+### Rejected bundles and `--skip-rejected`
+
+All ages bring in Synthea's adolescent scoliosis screening
+(`AIS_From_School_Screening_to_SOSORT_Recommendations`). It writes three
+SNOMED-coded observations (body posture, Cobb angle, Risser sign) whose
+`valueQuantity` has a UCUM system but no unit or code. The open-twin
+normaliser refuses those bundles (`ot-unit-policy`, `ot-quantity-no-code`),
+and the warehouse writes nothing for them. Batch 1001 has 36 of 11,416,
+batch 1100 has 43 of 11,439: about 0.3%. The 40–75 presets never had them.
+
+By default a rejected bundle stops the batch. With `--skip-rejected` the
+batch goes on without those people:
+
+- the ingest line ends `skipped N of M bundles (reasons…)`;
+- `<out>/<cohort>.rejected.json` lists each rejected bundle's file,
+  subject_ref and reason codes, with the counts per reason;
+- their wearable series are not ingested, so no subject has wearable rows
+  only;
+- the conversation manifest gets `rejected_bundles` (`count`, `of`,
+  `reasons`, `file`).
+
+More than 1% of a batch's bundles rejected stops the batch even with the
+flag, so a new kind of failure cannot quietly drop many people. Raise the
+limit only after reading the log: `--max-rejected-share 0.02`.
+
 ### Batch 1001
 
-Measured on 2026-10-25 with the commands the runner uses:
+`bun run training:batches -- --batches 1001 --skip-rejected`, 2026-10-25,
+against a fresh database (8 cores, 32 GB RAM):
 
-| Step             | Time    | Result                                                                     |
-| ---------------- | ------- | -------------------------------------------------------------------------- |
-| unpack           | 30 s    | 11,416 files, 41.0 GB                                                      |
-| wearables        | 1m 46s  | 10,000 subjects, 5,280,681 readings                                        |
-| ingest fhir      | 34m 59s | 11,380 bundles inserted, **36 rejected** (see below)                       |
-| ingest wearables | 17m 31s | 9,966 bundles inserted                                                     |
-| conversations    | 21m 22s | 68,906 conversations from 11,380 subjects, 254.0 MB                        |
-| clear rows       | 8m 48s  | 11,380 subjects, 10,168,794 numeric, 1,243,744 non-numeric, 21,346 bundles |
-| remove files     | 4 s     | 45.4 GB freed                                                              |
+| Step             | Time    | Result                                                                                    |
+| ---------------- | ------- | ----------------------------------------------------------------------------------------- |
+| unpack           | 30 s    | 11,416 files, 41.0 GB                                                                     |
+| wearables        | 1m 50s  | 10,000 subjects, 5,280,681 readings                                                       |
+| ingest fhir      | 33m 52s | 11,380 bundles inserted; skipped 36 of 11,416 (22 ot-unit-policy, 14 ot-quantity-no-code) |
+| ingest wearables | 16m 52s | 9,966 bundles inserted, 34 series of skipped subjects left out                            |
+| conversations    | 20m 56s | 68,906 conversations from 11,380 subjects, 254.0 MB JSONL                                 |
+| clear rows       | 8m 43s  | 11,380 subjects, 10,168,794 numeric, 1,243,744 non-numeric, 21,346 bundles                |
+| remove files     | 3 s     | 45.4 GB freed                                                                             |
 
-About 85 minutes in all. A run of all 100 batches would take about 6 days
-on this machine, and leave about 29 GB of JSONL and meta files and about
-10 million audit rows.
+About 83 minutes in all (the unpack time is from an earlier run of the same
+batch; this run reused that copy). A second run prints `conversations already
+written, skipped`. The JSONL was byte-identical to an earlier run of the same
+steps. A run of all 100 batches would take about 6 days on this machine, and
+leave about 29 GB of JSONL and meta files and about 10 million audit rows.
+
+Batch 1100 (held-out), the same way: 36s, 1m 52s, 36m 17s (11,396
+inserted; skipped 43 of 11,439: 28 ot-unit-policy, 15 ot-quantity-no-code),
+16m 43s (42 series left out), 20m 54s (69,065 conversations from 11,396
+subjects, 254.6 MB JSONL), 9m 22s, 3 s: 1h 25m 49s in all. The audit table
+held 210,442 rows (91 MB) after the two batches.
 
 Ingest is two thirds of the time. It runs one bundle at a time in one
 process, at about one CPU core, while Postgres stays nearly idle, and it
@@ -304,18 +341,6 @@ parses every file twice (the Synthea check reads them all before the first
 write). Splitting the fhir dir across several ingest processes would cut it
 most. The second largest cost, clearing rows, would be a `TRUNCATE` when the
 database only ever holds the one batch.
-
-**Rejected bundles.** All ages bring in Synthea's adolescent scoliosis
-screening (`AIS_From_School_Screening_to_SOSORT_Recommendations`). It writes
-three SNOMED-coded observations (body posture, Cobb angle, Risser sign) whose
-`valueQuantity` has a UCUM system but no unit or code. The open-twin
-normaliser refuses those bundles (`ot-unit-policy`, `ot-quantity-no-code`),
-so 36 of 11,416 bundles in batch 1001 were rejected and the runner stopped,
-as it should. Batch 1100 has 41 such bundles. Until that is settled (fix the
-recipe or the normaliser upstream, or agree to leave those subjects out), no
-batch runs to the end. The batch 1001 numbers above come from finishing the
-steps by hand with those 36 subjects (and 34 wearable series) left out; that
-file is not a training file.
 
 ## Human check
 
@@ -344,8 +369,9 @@ the sample size and the file sha256 with the training run.
   wording; a later step can paraphrase questions.
 - Only the nine query tools are in `tools`; guideline, GBD and knowledge
   tools are not exercised.
-- The 1M batches stop at ingest until the scoliosis-screening bundles are
-  settled (see "Rejected bundles"), and they are not byte-for-byte
+- With `--skip-rejected`, the 1M batches leave out the people with
+  scoliosis-screening observations (about 0.3%), so the training data has
+  none of them. The batches are not byte-for-byte
   reproducible (see "The 1M cohort").
 - `list_subjects` caps at 200 rows, so the generator reads the subject list
   directly from the cohort's subjects (refs only); every number still comes

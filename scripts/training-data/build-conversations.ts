@@ -4,6 +4,7 @@
  *   bun run training:conversations -- --cohort synthea-v4-seed4242
  *   bun run training:conversations -- --cohort synthea-v4-seed4242 --out training-data/out/train.jsonl \
  *     --seed 4242 --anchor 2026-10-01 --max-subjects 500 --families trend,coverage --inline-tools
+ *   bun run training:conversations -- --cohort synthea-v4-seed1001 --rejected <out>/synthea-v4-seed1001.rejected.json
  *
  * Writes `<out>.jsonl` (messages only; tools too with --inline-tools),
  * `<out>.meta.jsonl` (one meta record per line, same order) and
@@ -18,7 +19,7 @@
  * (smoke runs only). Prints counts only, never values. See docs/training-data.md.
  */
 import { createWriteStream } from "node:fs";
-import { mkdir, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
 import { isAllowedCohort } from "../../packages/query-tools/scope";
@@ -69,6 +70,8 @@ export type BuildDeps = Readonly<{
   writeText: (path: string, text: string) => Promise<void>;
   rename: (from: string, to: string) => Promise<void>;
   remove: (path: string) => Promise<void>;
+  /** A file's text, or null when it cannot be read. */
+  readText: (path: string) => Promise<string | null>;
 }>;
 
 const TOOL_INPUTS = { ...KEYED_TOOLS, subject_window: subjectWindowInput } as const;
@@ -82,6 +85,8 @@ export type BuildArgs = Readonly<{
   families: ReadonlySet<Family>;
   allowEvalCohort: boolean;
   inlineTools: boolean;
+  /** `<cohort>.rejected.json` from training:batches, summarised in the manifest. */
+  rejected: string | null;
 }>;
 
 /** `x.jsonl` → `x.meta.jsonl`, `x.manifest.json`. */
@@ -138,7 +143,43 @@ export const parseBuildArgs = (argv: readonly string[]): BuildArgs | string => {
     families: new Set(names.filter(isFamily)),
     allowEvalCohort: argv.includes("--allow-eval-cohort"),
     inlineTools: argv.includes("--inline-tools"),
+    rejected: flag(argv, "--rejected") ?? null,
   };
+};
+
+export type RejectedSummary = Readonly<{
+  count: number;
+  of: number;
+  reasons: Readonly<Record<string, number>>;
+  file: string;
+}>;
+
+/** The counts of a `.rejected.json` file, or null when it is not one. */
+export const rejectedSummary = (
+  text: string | null,
+  file: string,
+): RejectedSummary | null => {
+  if (text === null) return null;
+  let value: unknown;
+  try {
+    value = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  if (typeof value !== "object" || value === null) return null;
+  const count = Reflect.get(value, "rejected");
+  const of = Reflect.get(value, "bundles");
+  const reasons = Reflect.get(value, "reasons");
+  if (
+    typeof count !== "number" ||
+    typeof of !== "number" ||
+    typeof reasons !== "object" ||
+    reasons === null ||
+    !Object.values(reasons).every((n) => typeof n === "number")
+  ) {
+    return null;
+  }
+  return { count, of, reasons: { ...(reasons as Record<string, number>) }, file };
 };
 
 /** A UUID-shaped subject_ref that is not in the cohort. */
@@ -187,6 +228,15 @@ export const runBuildConversations = async (
     io.stderr.write(
       `Cohort "${args.cohortId}" is the evaluation cohort; training on it would leak the test set. Use synthea-v4-seed4242 (pass --allow-eval-cohort for a smoke run only).\n`,
     );
+    return 1;
+  }
+
+  const rejected =
+    args.rejected === null
+      ? null
+      : rejectedSummary(await deps.readText(args.rejected), args.rejected);
+  if (args.rejected !== null && rejected === null) {
+    io.stderr.write(`--rejected ${args.rejected} is not a rejected-bundles file.\n`);
     return 1;
   }
 
@@ -275,6 +325,8 @@ export const runBuildConversations = async (
         system_prompt_id: prompt.id,
         files: { records: paths.records, meta: paths.meta },
         ...summary,
+        // Subjects whose FHIR bundle the warehouse refused (training:batches --skip-rejected).
+        ...(rejected === null ? {} : { rejected_bundles: rejected }),
         // One copy of the tool definitions; --inline-tools also puts them on every line.
         tools: toolSchemas(),
       },
@@ -371,6 +423,7 @@ if (isMain) {
     writeText: (path, text) => writeFile(path, text),
     rename: (from, to) => rename(from, to),
     remove: (path) => rm(path, { force: true }),
+    readText: (path) => readFile(path, "utf8").catch(() => null),
   });
   await database().$disconnect();
   process.exit(code);

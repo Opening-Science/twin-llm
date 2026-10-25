@@ -104,12 +104,14 @@ psql -h 127.0.0.1 -U postgres -c 'CREATE DATABASE twin_llm_training'
 psql -h 127.0.0.1 -U postgres -d twin_llm_training -c 'CREATE EXTENSION vector'
 cp .env.synthetic.example .env.training   # DATABASE_URL=.../twin_llm_training
 DATABASE_URL="$(grep '^DATABASE_URL=' .env.training | cut -d= -f2-)" bunx prisma migrate deploy
-bun run training:batches -- --batches 1001
+bun run training:batches -- --batches 1001 --skip-rejected
 ```
 
-- Good: seven lines per batch (unpack, wearables, ingest fhir, ingest wearables, conversations, clear rows, remove files), each with a time, then `done in …`; `training-data/out/synthea-v4-seed1001.{jsonl,meta.jsonl,manifest.json}`; no subjects left in the database; `.synthea/batches/synthea-v4-seed1001` gone. A second run prints `conversations already written, skipped`.
+- Good: one line per step (unpack, wearables, ingest fhir, ingest wearables, conversations, clear rows, remove files), each with a time, then `done in …`. The ingest fhir line ends `skipped 36 of 11416 bundles (22 ot-unit-policy, 14 ot-quantity-no-code)`. `training-data/out/synthea-v4-seed1001.{jsonl,meta.jsonl,manifest.json,rejected.json}`, with `rejected_bundles` in the manifest; no subjects left in the database; `.synthea/batches/synthea-v4-seed1001` gone. A second run prints `conversations already written, skipped`.
+- Without `--skip-rejected` the batch stops at ingest fhir and says to pass it. More than 1% rejected stops it even with the flag.
 - Against the dev database it prints `Refused: twin_llm_synthetic is the dev database …` and does nothing.
-- Last run: 2026-10-25 CET, batch 1001. Stopped at ingest fhir: `36 bundles rejected (22 ot-unit-policy, 14 ot-quantity-no-code)`, all from Synthea's scoliosis screening (see docs/training-data.md, "Rejected bundles"). The remaining steps, run by hand with those subjects left out: about 85 minutes, 68,906 conversations, 254.0 MB JSONL, 53 GB peak disk. Batch 1100 not run.
+- A training database made before the 2026-10-25 baseline holds only audit rows between batches: drop and recreate it rather than resolving the baseline.
+- Last run: 2026-10-25 CET, batch 1001 with `--skip-rejected` on a database made from the baseline: about 83 minutes, 36 bundles skipped, 68,906 conversations, 254.0 MB JSONL, 53 GB peak disk. Batch 1100 the same day: 1h 26m, 43 skipped, 69,065 conversations.
 
 ### `bun test packages/warehouse`
 
