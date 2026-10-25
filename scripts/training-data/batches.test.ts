@@ -12,9 +12,13 @@ import {
   ingestCounts,
   parseBatchArgs,
   parseBatchRange,
+  rejectedBundles,
   rejectedReasons,
+  rejectedRecord,
+  rejectionRefusal,
   stepPlan,
   wearableCounts,
+  wearableFilesFor,
   workManifest,
 } from "./batches";
 
@@ -76,6 +80,8 @@ describe("parseBatchArgs", () => {
       work: ".synthea/batches",
       out: "training-data/out",
       keep: false,
+      skipRejected: false,
+      maxRejectedShare: 0.01,
     });
   });
 
@@ -102,7 +108,7 @@ describe("parseBatchArgs", () => {
 
   test("usage and a flag without a value", () => {
     expect(parseBatchArgs([])).toBe(
-      "Usage: bun run training:batches -- --batches 1001-1010 [--archives <dir>] [--work <dir>] [--out <dir>] [--keep]",
+      "Usage: bun run training:batches -- --batches 1001-1010 [--archives <dir>] [--work <dir>] [--out <dir>] [--keep] [--skip-rejected [--max-rejected-share 0.01]]",
     );
     expect(parseBatchArgs(["--batches", "1001", "--work"])).toBe(
       "--work needs a directory.",
@@ -110,6 +116,96 @@ describe("parseBatchArgs", () => {
     expect(parseBatchArgs(["--batches", "1001", "--out", "--keep"])).toBe(
       "--out needs a directory.",
     );
+  });
+});
+
+describe("--skip-rejected flags", () => {
+  const parsed = (extra: readonly string[]) => {
+    const args = parseBatchArgs(["--batches", "1001", ...extra]);
+    return typeof args === "string" ? args : [args.skipRejected, args.maxRejectedShare];
+  };
+
+  test("the share defaults to 1% and takes 0 to 1", () => {
+    expect(parsed(["--skip-rejected"])).toEqual([true, 0.01]);
+    expect(parsed(["--skip-rejected", "--max-rejected-share", "0.05"])).toEqual([
+      true,
+      0.05,
+    ]);
+    expect(parsed(["--skip-rejected", "--max-rejected-share", "0"])).toEqual([true, 0]);
+  });
+
+  test("refuses a share without the flag or out of range", () => {
+    expect(parsed(["--max-rejected-share", "0.05"])).toBe(
+      "--max-rejected-share needs --skip-rejected.",
+    );
+    expect(parsed(["--skip-rejected", "--max-rejected-share", "5%"])).toBe(
+      "--max-rejected-share must be a share from 0 to 1, like 0.02 (got: 5%).",
+    );
+    expect(parsed(["--skip-rejected", "--max-rejected-share", "1.5"])).toBe(
+      "--max-rejected-share must be a share from 0 to 1, like 0.02 (got: 1.5).",
+    );
+    expect(parsed(["--skip-rejected", "--max-rejected-share"])).toBe(
+      "--max-rejected-share must be a share from 0 to 1, like 0.02 (got: ).",
+    );
+  });
+});
+
+describe("rejected bundles", () => {
+  const skip = { skipRejected: true, maxRejectedShare: 0.01 };
+
+  test("rejectionRefusal: none rejected, no flag, at the 1% line and over it", () => {
+    expect(rejectionRefusal({ inserted: 10, already: 0, rejected: 0 }, skip)).toBeNull();
+    expect(
+      rejectionRefusal(
+        { inserted: 99, already: 0, rejected: 1 },
+        { skipRejected: false, maxRejectedShare: 0.01 },
+      ),
+    ).toBe("pass --skip-rejected to leave them out");
+    expect(rejectionRefusal({ inserted: 90, already: 9, rejected: 1 }, skip)).toBeNull();
+    expect(
+      rejectionRefusal({ inserted: 11380, already: 0, rejected: 36 }, skip),
+    ).toBeNull();
+    expect(rejectionRefusal({ inserted: 98, already: 0, rejected: 2 }, skip)).toBe(
+      "more than 1.0% of 100 bundles; check the log, or raise --max-rejected-share",
+    );
+  });
+
+  test("rejectedBundles reads file and reason", () => {
+    expect(
+      rejectedBundles(
+        "O'Keefe54_b5c8.json: rejected (ot-unit-policy)\na.json: inserted 3 rows (0 non-numeric)\nb.json: rejected (ingest-failed)\n",
+      ),
+    ).toEqual([
+      { file: "O'Keefe54_b5c8.json", reason: "ot-unit-policy" },
+      { file: "b.json", reason: "ingest-failed" },
+    ]);
+  });
+
+  test("rejectedRecord: counts per reason, subjects sorted by file", () => {
+    expect(
+      rejectedRecord("synthea-v4-seed1001", 11416, [
+        { file: "z.json", reason: "ot-unit-policy", subjectRef: "ref-z" },
+        { file: "a.json", reason: "ot-quantity-no-code", subjectRef: null },
+        { file: "m.json", reason: "ot-unit-policy", subjectRef: "ref-m" },
+      ]),
+    ).toEqual({
+      cohort_id: "synthea-v4-seed1001",
+      bundles: 11416,
+      rejected: 3,
+      reasons: { "ot-quantity-no-code": 1, "ot-unit-policy": 2 },
+      subjects: [
+        { subject_ref: null, file: "a.json", reasons: ["ot-quantity-no-code"] },
+        { subject_ref: "ref-m", file: "m.json", reasons: ["ot-unit-policy"] },
+        { subject_ref: "ref-z", file: "z.json", reasons: ["ot-unit-policy"] },
+      ],
+    });
+  });
+
+  test("wearableFilesFor names each subject's series, skipping unknown refs", () => {
+    expect(wearableFilesFor("w", ["ref-a", null, "ref-b"])).toEqual([
+      "w/ref-a.wearables.json",
+      "w/ref-b.wearables.json",
+    ]);
   });
 });
 
@@ -128,6 +224,7 @@ describe("batchPaths", () => {
       records: "out/synthea-v4-seed1001.jsonl",
       meta: "out/synthea-v4-seed1001.meta.jsonl",
       conversationManifest: "out/synthea-v4-seed1001.manifest.json",
+      rejected: "out/synthea-v4-seed1001.rejected.json",
       logs: "work/logs",
     });
   });

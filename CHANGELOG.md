@@ -5,6 +5,10 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `training:batches --skip-rejected` continues past bundles the importer rejects, lists them per batch, and still stops above a 1% rejection share.
+
 ### Changed
 
 - Repository admins can bypass the `main` rules only through a pull request; nobody pushes to `main` directly.

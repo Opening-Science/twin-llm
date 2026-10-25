@@ -49,6 +49,7 @@ const harness = (overrides: Partial<BuildDeps> = {}) => {
     remove: async (path) => {
       files.delete(path);
     },
+    readText: async (path) => files.get(path) ?? null,
     ...overrides,
   };
   const io = {
@@ -193,6 +194,56 @@ describe("runBuildConversations output", () => {
     expect(result.out.join("")).toContain(
       `Cohort ${FAKE_COHORT}, seed 4242: 2 subjects, ${result.records.length} conversations`,
     );
+  });
+
+  test("--rejected puts the left-out bundles in the manifest", async () => {
+    const h = harness();
+    h.files.set(
+      "/tmp/out.rejected.json",
+      JSON.stringify({
+        cohort_id: FAKE_COHORT,
+        bundles: 11416,
+        rejected: 36,
+        reasons: { "ot-quantity-no-code": 14, "ot-unit-policy": 22 },
+        subjects: [],
+      }),
+    );
+    const code = await runBuildConversations(
+      ["--cohort", FAKE_COHORT, "--out", OUT, "--rejected", "/tmp/out.rejected.json"],
+      h.io,
+      h.deps,
+    );
+    expect(code).toBe(0);
+    const manifest = JSON.parse(h.files.get("/tmp/out.manifest.json") ?? "{}") as Record<
+      string,
+      unknown
+    >;
+    expect(manifest.rejected_bundles).toEqual({
+      count: 36,
+      of: 11416,
+      reasons: { "ot-quantity-no-code": 14, "ot-unit-policy": 22 },
+      file: "/tmp/out.rejected.json",
+    });
+    expect((await run()).manifest.rejected_bundles).toBeUndefined();
+  });
+
+  test("--rejected with a missing or wrong file writes nothing", async () => {
+    const h = harness();
+    h.files.set("/tmp/bad.json", JSON.stringify({ rejected: "36" }));
+    for (const file of ["/tmp/missing.json", "/tmp/bad.json"]) {
+      expect(
+        await runBuildConversations(
+          ["--cohort", FAKE_COHORT, "--out", OUT, "--rejected", file],
+          h.io,
+          h.deps,
+        ),
+      ).toBe(1);
+    }
+    expect(h.err).toEqual([
+      "--rejected /tmp/missing.json is not a rejected-bundles file.\n",
+      "--rejected /tmp/bad.json is not a rejected-bundles file.\n",
+    ]);
+    expect([...h.files.keys()]).toEqual(["/tmp/bad.json"]);
   });
 
   test("is deterministic for a seed and changes with another", async () => {

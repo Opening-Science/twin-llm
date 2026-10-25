@@ -5,6 +5,7 @@
  *   bun run training:batches -- --batches 1001-1010
  *   bun run training:batches -- --batches 1100 --archives ../synthea-1m/batches \
  *     --work .synthea/batches --out training-data/out --keep
+ *   bun run training:batches -- --batches 1001-1010 --skip-rejected [--max-rejected-share 0.02]
  *
  * Per batch: unpack the archive → wearables:generate → warehouse:ingest of the
  * FHIR and the wearables → training:conversations → delete the cohort's
@@ -15,16 +16,21 @@
  *
  * Refuses to run unless DATA_MODE=synthetic, the database is not the dev
  * database of `.env.local`, and it holds no Demo cohort. Stops at the first
- * failed step, including any rejected bundle. See docs/training-data.md.
+ * failed step, including any rejected bundle, unless --skip-rejected: then
+ * rejected FHIR bundles are listed in `<out>/<cohort>.rejected.json` and the
+ * conversation manifest, their subjects' wearable series are left out, and
+ * the batch still stops when more than --max-rejected-share (default 1%) of
+ * its bundles are rejected. See docs/training-data.md.
  */
 import { spawn } from "node:child_process";
 import { createWriteStream } from "node:fs";
 import { mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 import { type BatchCohort } from "../synthea/cohort-presets";
 
 import {
+  type BatchArgs,
   type BatchPaths,
   batchPaths,
   databaseRefusal,
@@ -33,11 +39,15 @@ import {
   formatDuration,
   ingestCounts,
   parseBatchArgs,
+  rejectedBundles,
   rejectedReasons,
+  rejectedRecord,
+  rejectionRefusal,
   type Step,
   stepPlan,
   TRAINING_ENV_FILE,
   wearableCounts,
+  wearableFilesFor,
   workManifest,
 } from "./batches";
 
@@ -71,6 +81,8 @@ export type BatchRunDeps = Readonly<{
   /** Runs a command; its stdout and stderr also go to `log`. */
   run: (command: readonly string[], log: string) => Promise<CommandResult>;
   clearCohort: (cohortId: string) => Promise<ClearedRows>;
+  /** The Patient id (subject_ref) in a FHIR bundle file, or null. */
+  subjectRefOf: (path: string) => Promise<string | null>;
   now: () => number;
 }>;
 
@@ -133,6 +145,7 @@ const runStep = async (
   step: Step,
   batch: BatchCohort,
   paths: BatchPaths,
+  args: Pick<BatchArgs, "skipRejected" | "maxRejectedShare">,
   bun: string,
   deps: BatchRunDeps,
 ): Promise<StepOutcome> => {
@@ -167,8 +180,64 @@ const runStep = async (
           : "written",
       };
     }
-    case "ingest fhir":
+    case "ingest fhir": {
+      const result = await deps.run(command ?? [], log);
+      const counts = ingestCounts(result.stdout);
+      if (counts === null || (result.code !== 0 && counts.rejected === 0)) {
+        return failed(result);
+      }
+      const inserted = `${counts.inserted} bundles inserted, ${counts.already} already ingested`;
+      if (counts.rejected === 0) {
+        // A stale list from an earlier run would leave people out for nothing.
+        await deps.remove(paths.rejected);
+        return { ok: true, detail: inserted };
+      }
+      const reasons = rejectedReasons(result.stdout);
+      const refusal = rejectionRefusal(counts, args);
+      if (refusal !== null) {
+        return {
+          ok: false,
+          error: `${counts.rejected} bundles rejected (${reasons}); ${refusal}; see ${log}`,
+        };
+      }
+      const rejected = await Promise.all(
+        rejectedBundles(result.stdout).map(async (bundle) => ({
+          ...bundle,
+          subjectRef: await deps.subjectRefOf(join(paths.fhir, bundle.file)),
+        })),
+      );
+      const total = counts.inserted + counts.already + counts.rejected;
+      await deps.writeJson(
+        paths.rejected,
+        rejectedRecord(batch.cohortId, total, rejected),
+      );
+      return {
+        ok: true,
+        detail: `${inserted}; skipped ${counts.rejected} of ${total} bundles (${reasons}), listed in ${paths.rejected}`,
+      };
+    }
     case "ingest wearables": {
+      // Leave out the series of subjects whose FHIR bundle was refused, so
+      // no subject has wearable rows only.
+      const record = (await deps.exists(paths.rejected))
+        ? await deps.readJson(paths.rejected)
+        : null;
+      const subjects = Reflect.get(Object(record), "subjects");
+      const refs = Array.isArray(subjects)
+        ? subjects.map((subject: unknown) => {
+            const ref = Reflect.get(Object(subject), "subject_ref");
+            return typeof ref === "string" ? ref : null;
+          })
+        : [];
+      const leftOut = (
+        await Promise.all(
+          wearableFilesFor(paths.wearables, refs).map(async (file) => {
+            if (!(await deps.exists(file))) return 0;
+            await deps.remove(file);
+            return 1;
+          }),
+        )
+      ).reduce((sum: number, n) => sum + n, 0);
       const result = await deps.run(command ?? [], log);
       const counts = ingestCounts(result.stdout);
       if (result.code !== 0 || counts === null || counts.rejected > 0) {
@@ -178,13 +247,18 @@ const runStep = async (
             : "";
         return { ok: false, error: `${rejected}exit ${result.code}; see ${log}` };
       }
+      const left =
+        refs.length > 0 ? `, ${leftOut} series of skipped subjects left out` : "";
       return {
         ok: true,
-        detail: `${counts.inserted} bundles inserted, ${counts.already} already ingested`,
+        detail: `${counts.inserted} bundles inserted, ${counts.already} already ingested${left}`,
       };
     }
     case "conversations": {
-      const result = await deps.run(command ?? [], log);
+      const withRejected = (await deps.exists(paths.rejected))
+        ? [...(command ?? []), "--rejected", paths.rejected]
+        : (command ?? []);
+      const result = await deps.run(withRejected, log);
       if (result.code !== 0) return failed(result);
       const manifest = await deps.readJson(paths.conversationManifest);
       const count = (key: string) =>
@@ -268,10 +342,11 @@ export const runTrainingBatches = async (
     const label = `${batch.cohortId} (${batch.role})`;
     if (done) io.stdout.write(`${label}: conversations already written, skipped\n`);
     await deps.mkdir(paths.logs);
+    await deps.mkdir(args.out);
     const batchStart = deps.now();
     for (const [index, step] of steps.entries()) {
       const start = deps.now();
-      const outcome = await runStep(step, batch, paths, bun, deps);
+      const outcome = await runStep(step, batch, paths, args, bun, deps);
       const took = formatDuration(deps.now() - start);
       const position = `[${index + 1}/${steps.length}] ${step}`;
       if (!outcome.ok) {
@@ -296,6 +371,7 @@ if (isMain) {
   const { serverEnv } = await import("../../infrastructure/env");
   const { database } = await import("../../infrastructure/database");
   const { DEMO_COHORTS } = await import("../../packages/query-tools/scope");
+  const { syntheaPatientOf } = await import("../synthetic-wearables/bundle");
 
   const readText = async (path: string): Promise<string | null> => {
     try {
@@ -345,7 +421,10 @@ if (isMain) {
           return null;
         }
       },
-      writeJson: (path, value) => writeFile(path, `${JSON.stringify(value, null, 2)}\n`),
+      writeJson: async (path, value) => {
+        await mkdir(dirname(path), { recursive: true });
+        await writeFile(path, `${JSON.stringify(value, null, 2)}\n`);
+      },
       remove: (path) => rm(path, { recursive: true, force: true }),
       mkdir: async (path) => {
         await mkdir(path, { recursive: true });
@@ -387,6 +466,15 @@ if (isMain) {
         return { subjects, observations, nonNumeric, bundles };
       },
       now: () => Date.now(),
+      subjectRefOf: async (path) => {
+        const text = await readText(path);
+        if (text === null) return null;
+        try {
+          return syntheaPatientOf(JSON.parse(text) as unknown)?.id ?? null;
+        } catch {
+          return null;
+        }
+      },
     },
     process.execPath,
   );

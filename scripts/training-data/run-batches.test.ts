@@ -50,6 +50,8 @@ const harness = (
   ]);
   const commands: string[] = [];
   const cleared: string[] = [];
+  const wearablesAtIngest: string[] = [];
+  const made: string[] = [];
   const out: string[] = [];
   const err: string[] = [];
   let clock = 0;
@@ -70,7 +72,9 @@ const harness = (
         if (key === path || key.startsWith(`${path}/`)) files.delete(key);
       }
     },
-    mkdir: async () => undefined,
+    mkdir: async (path) => {
+      made.push(path);
+    },
     dirSize: async (path) => {
       const under = [...files.keys()].filter((key) => key.startsWith(`${path}/`));
       return { files: under.length, bytes: under.length * 1_000_000 };
@@ -79,11 +83,24 @@ const harness = (
     run: async (command, log) => {
       commands.push(`${command.join(" ")} > ${log}`);
       const result = respond(command);
-      // tar writes the fhir files; training:conversations writes its manifest.
+      // tar writes the fhir files, wearables:generate one series per subject,
+      // training:conversations its manifest.
       if (command[0] === "tar" && result.code === 0) {
         const dir = command[command.length - 1];
         files.set(`${dir}/fhir/a.json`, {});
         files.set(`${dir}/fhir/b.json`, {});
+      }
+      const inDir = command[command.indexOf("--in") + 1] ?? "";
+      if (command.includes("scripts/synthetic-wearables/generate.ts")) {
+        const wearables = inDir.replace(/fhir$/, "wearables");
+        files.set(`${wearables}/subject-a.wearables.json`, {});
+        files.set(`${wearables}/subject-b.wearables.json`, {});
+      }
+      const ingestDir = command[command.indexOf("scripts/warehouse/ingest.ts") + 1] ?? "";
+      if (ingestDir.endsWith("/wearables")) {
+        wearablesAtIngest.push(
+          ...[...files.keys()].filter((key) => key.startsWith(`${ingestDir}/`)),
+        );
       }
       const outIndex = command.indexOf("--out");
       if (outIndex !== -1 && result.code === 0) {
@@ -100,13 +117,15 @@ const harness = (
       clock += 61_000;
       return clock;
     },
+    subjectRefOf: async (path) =>
+      `subject-${(path.split("/").pop() ?? "").replace(/\.json$/, "")}`,
     ...overrides,
   };
   const io = {
     stdout: { write: (chunk: string) => out.push(chunk) },
     stderr: { write: (chunk: string) => err.push(chunk) },
   };
-  return { deps, io, files, commands, cleared, out, err };
+  return { deps, io, files, commands, cleared, out, err, wearablesAtIngest, made };
 };
 
 const run = (h: ReturnType<typeof harness>, argv: readonly string[]) =>
@@ -125,7 +144,7 @@ describe("runTrainingBatches", () => {
         "synthea-v4-seed1001 (training) [4/7] ingest wearables: 11 bundles inserted, 0 already ingested (1m 01s)",
         "synthea-v4-seed1001 (training) [5/7] conversations: 54 conversations from 9 subjects, 4.0 KB JSONL (1m 01s)",
         "synthea-v4-seed1001 (training) [6/7] clear rows: deleted 11 subjects, 3000 numeric and 400 non-numeric rows, 20 bundles (1m 01s)",
-        "synthea-v4-seed1001 (training) [7/7] remove files: freed 4.0 MB (1m 01s)",
+        "synthea-v4-seed1001 (training) [7/7] remove files: freed 6.0 MB (1m 01s)",
         "synthea-v4-seed1001 (training): done in 15m 15s",
         "1 batches in 17m 17s",
         "",
@@ -194,7 +213,7 @@ describe("runTrainingBatches", () => {
     });
     expect(await run(h, ["--batches", "1001-1002"])).toBe(1);
     expect(h.err).toEqual([
-      "synthea-v4-seed1001 (training) [3/7] ingest fhir failed after 1m 01s: 1 bundles rejected (1 ot-unit-policy), exit 1; see work/logs/synthea-v4-seed1001.ingest-fhir.log\n",
+      "synthea-v4-seed1001 (training) [3/7] ingest fhir failed after 1m 01s: 1 bundles rejected (1 ot-unit-policy); pass --skip-rejected to leave them out; see work/logs/synthea-v4-seed1001.ingest-fhir.log\n",
     ]);
     expect(h.commands.length).toBe(3);
     expect(h.cleared).toEqual([]);
@@ -222,6 +241,99 @@ describe("runTrainingBatches", () => {
       "synthea-v4-seed1001 (training) [1/7] unpack failed after 1m 01s: The batch manifest for batch-001.tar.zst does not match seed 1001, clinician seed 2001, N=10000.\n",
     ]);
     expect(h.commands).toEqual([]);
+  });
+});
+
+/** warehouse:ingest output with `rejected` of `total` FHIR bundles refused. */
+const ingestWithRejects =
+  (rejected: readonly string[], total: number) =>
+  (command: readonly string[]): CommandResult => {
+    const dir = command[command.indexOf("scripts/warehouse/ingest.ts") + 1] ?? "";
+    if (!dir.endsWith("/fhir")) return outputFor(command);
+    const lines = rejected.map((line) => `${line}\n`).join("");
+    return {
+      code: rejected.length > 0 ? 1 : 0,
+      stdout: `${lines}\nBundles: ${total - rejected.length} inserted, 0 already ingested, ${rejected.length} rejected\n`,
+    };
+  };
+
+describe("--skip-rejected", () => {
+  const ONE_OF_200 = ingestWithRejects(["b.json: rejected (ot-unit-policy)"], 200);
+
+  test("without it, a rejected bundle stops the batch and says how to go on", async () => {
+    const h = harness({ respond: ONE_OF_200 });
+    expect(await run(h, ["--batches", "1001"])).toBe(1);
+    expect(h.err).toEqual([
+      "synthea-v4-seed1001 (training) [3/7] ingest fhir failed after 1m 01s: 1 bundles rejected (1 ot-unit-policy); pass --skip-rejected to leave them out; see work/logs/synthea-v4-seed1001.ingest-fhir.log\n",
+    ]);
+    expect(h.files.has("out/synthea-v4-seed1001.rejected.json")).toBe(false);
+  });
+
+  test("lists the rejected subjects, leaves out their series and names the file to conversations", async () => {
+    const h = harness({ respond: ONE_OF_200 });
+    expect(await run(h, ["--batches", "1001", "--skip-rejected"])).toBe(0);
+    expect(h.err).toEqual([]);
+    expect(h.out.slice(2, 5).join("")).toBe(
+      [
+        "synthea-v4-seed1001 (training) [3/7] ingest fhir: 199 bundles inserted, 0 already ingested; skipped 1 of 200 bundles (1 ot-unit-policy), listed in out/synthea-v4-seed1001.rejected.json (1m 01s)",
+        "synthea-v4-seed1001 (training) [4/7] ingest wearables: 11 bundles inserted, 0 already ingested, 1 series of skipped subjects left out (1m 01s)",
+        "synthea-v4-seed1001 (training) [5/7] conversations: 54 conversations from 9 subjects, 4.0 KB JSONL (1m 01s)",
+        "",
+      ].join("\n"),
+    );
+    expect(h.files.get("out/synthea-v4-seed1001.rejected.json")).toEqual({
+      cohort_id: "synthea-v4-seed1001",
+      bundles: 200,
+      rejected: 1,
+      reasons: { "ot-unit-policy": 1 },
+      subjects: [
+        { subject_ref: "subject-b", file: "b.json", reasons: ["ot-unit-policy"] },
+      ],
+    });
+    expect(h.wearablesAtIngest).toEqual([
+      "work/synthea-v4-seed1001/wearables/subject-a.wearables.json",
+    ]);
+    // The out dir exists before the list is written into it.
+    expect(h.made.slice(0, 2)).toEqual(["work/logs", "out"]);
+    expect(h.commands[4]).toBe(
+      "bun --env-file=.env.training --preload ./features/chat/response/preload-server-only.mjs scripts/training-data/build-conversations.ts --cohort synthea-v4-seed1001 --out out/synthea-v4-seed1001.jsonl --rejected out/synthea-v4-seed1001.rejected.json > work/logs/synthea-v4-seed1001.conversations.log",
+    );
+  });
+
+  test("more than 1% rejected stops the batch even with the flag", async () => {
+    const two = ingestWithRejects(
+      ["a.json: rejected (ingest-failed)", "b.json: rejected (ingest-failed)"],
+      100,
+    );
+    const h = harness({ respond: two });
+    expect(await run(h, ["--batches", "1001", "--skip-rejected"])).toBe(1);
+    expect(h.err).toEqual([
+      "synthea-v4-seed1001 (training) [3/7] ingest fhir failed after 1m 01s: 2 bundles rejected (2 ingest-failed); more than 1.0% of 100 bundles; check the log, or raise --max-rejected-share; see work/logs/synthea-v4-seed1001.ingest-fhir.log\n",
+    ]);
+    expect(h.files.has("out/synthea-v4-seed1001.rejected.json")).toBe(false);
+    expect(h.cleared).toEqual([]);
+
+    const raised = harness({ respond: two });
+    expect(
+      await run(raised, [
+        "--batches",
+        "1001",
+        "--skip-rejected",
+        "--max-rejected-share",
+        "0.02",
+      ]),
+    ).toBe(0);
+    expect(raised.wearablesAtIngest).toEqual([]);
+  });
+
+  test("a clean ingest removes a stale list, and conversations get no --rejected", async () => {
+    const h = harness({
+      files: [["out/synthea-v4-seed1001.rejected.json", { rejected: 1 }]],
+    });
+    expect(await run(h, ["--batches", "1001", "--skip-rejected"])).toBe(0);
+    expect(h.files.has("out/synthea-v4-seed1001.rejected.json")).toBe(false);
+    expect(h.commands[4]?.includes("--rejected")).toBe(false);
+    expect(h.wearablesAtIngest.length).toBe(2);
   });
 });
 
