@@ -106,13 +106,25 @@ describe("resolveLanguageModel DATA_MODE permit", () => {
     }
   });
 
-  test("infomaniak with hasWearableNarrative=true does not throw", async () => {
-    await applyEnv({ DATA_MODE: "personal", LLM_PROVIDER: "infomaniak" });
+  test("infomaniak with hasWearableNarrative=true throws the rule sentence", async () => {
+    await applyEnv({ DATA_MODE: "synthetic", LLM_PROVIDER: "infomaniak" });
+    const { ProviderNotPermittedError, resolveLanguageModel } =
+      await import("./resolve-language-model");
+    try {
+      resolveLanguageModel("synthetic-model", { hasWearableNarrative: true });
+      expect.unreachable();
+    } catch (error) {
+      expect(error).toBeInstanceOf(ProviderNotPermittedError);
+      expect((error as Error).message).toBe(PROVIDER_NOT_PERMITTED_ERROR);
+    }
+  });
+
+  test("infomaniak with synthetic data and no wearable context resolves", async () => {
+    await applyEnv({ DATA_MODE: "synthetic", LLM_PROVIDER: "infomaniak" });
     const { resolveLanguageModel } = await import("./resolve-language-model");
-    const model = resolveLanguageModel("synthetic-model", {
-      hasWearableNarrative: true,
-    });
-    expect(model).toBeDefined();
+    expect(() =>
+      resolveLanguageModel("synthetic-model", { hasWearableNarrative: false }),
+    ).not.toThrow();
   });
 
   for (const combo of COMBOS) {

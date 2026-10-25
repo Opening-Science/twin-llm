@@ -8,7 +8,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
 ### Changed
 
 - The repository rulesets let repository admins bypass, matching the applied settings.
-- Personal data reaches Exoscale only with `EXOSCALE_PERSONAL_DATA=consented-pilot`, and each such request is audited.
+- Personal data reaches Exoscale only with `EXOSCALE_PERSONAL_DATA=consented-pilot`, each such request is audited, and Infomaniak is synthetic-only.
 
 ## [0.1.0] - 2026-10-25
 

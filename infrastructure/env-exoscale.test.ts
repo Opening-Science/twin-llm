@@ -245,13 +245,23 @@ describe("LLM_PROVIDER=exoscale env", () => {
     );
   });
 
-  test("infomaniak still parses when named, as a legacy option", () => {
+  test("infomaniak still parses when named, as a legacy option for synthetic data", () => {
     const env = parseServerEnv({
       ...BASE,
+      DATA_MODE: "synthetic",
       LLM_PROVIDER: "infomaniak",
       EXOSCALE_BASE_URLS: undefined,
     });
     expect(env.LLM_PROVIDER).toBe("infomaniak");
     expect(env.EXOSCALE_BASE_URLS).toEqual([]);
+  });
+
+  test("personal data to infomaniak stops the boot, whatever the Exoscale setting", () => {
+    const expected =
+      "  - LLM_PROVIDER: DATA_MODE=personal forbids LLM_PROVIDER=infomaniak; Infomaniak is a third-party service and gets synthetic data only. Use local Ollama (LOCAL_ONLY=true) or set DATA_MODE=synthetic";
+    expect(parseError({ ...BASE, LLM_PROVIDER: "infomaniak" })).toContain(expected);
+    expect(
+      parseError({ ...BASE, LLM_PROVIDER: "infomaniak", DATA_MODE: undefined }),
+    ).toContain(expected);
   });
 });

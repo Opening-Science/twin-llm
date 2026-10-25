@@ -16,7 +16,7 @@ const PROVIDER_TEXT: Record<LlmProvider, string> = {
   exoscale:
     "Cloud model in use: our own open models on Exoscale (Switzerland), personal data only in a consented pilot.",
   ollama: "Model served by Ollama at the configured address.",
-  infomaniak: "Cloud model in use: Infomaniak (Switzerland).",
+  infomaniak: "Cloud model in use: Infomaniak (Switzerland, synthetic data only).",
   openrouter: "Cloud model in use: OpenRouter (synthetic data only).",
   "remote-gpu":
     "Model served on a remote GPU through an SSH tunnel (synthetic data only).",

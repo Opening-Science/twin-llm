@@ -87,7 +87,7 @@ describe("where your data goes", () => {
 
   test("the personal data sentence names every refusal", () => {
     expect(dataModeSentence("personal")).toBe(
-      "This server runs on personal data (DATA_MODE=personal). OpenRouter and the remote GPU are refused, and Exoscale is used only in a consented pilot.",
+      "This server runs on personal data (DATA_MODE=personal). OpenRouter, Infomaniak and the remote GPU are refused, and Exoscale is used only in a consented pilot.",
     );
     expect(dataModeSentence("synthetic")).toBe(
       "This server runs on synthetic data (DATA_MODE=synthetic).",

@@ -54,8 +54,8 @@ const MATRIX: readonly Row[] = [
   ["synthetic", true, "openrouter", "consented-pilot", DENIED, false],
   ["synthetic", true, "remote-gpu", "off", DENIED, false],
   ["synthetic", true, "remote-gpu", "consented-pilot", DENIED, false],
-  ["synthetic", true, "infomaniak", "off", ALLOWED, false],
-  ["synthetic", true, "infomaniak", "consented-pilot", ALLOWED, false],
+  ["synthetic", true, "infomaniak", "off", DENIED, false],
+  ["synthetic", true, "infomaniak", "consented-pilot", DENIED, false],
   // Personal, no wearable context.
   ["personal", false, "ollama", "off", ALLOWED, false],
   ["personal", false, "ollama", "consented-pilot", ALLOWED, false],
@@ -65,8 +65,8 @@ const MATRIX: readonly Row[] = [
   ["personal", false, "openrouter", "consented-pilot", DENIED, false],
   ["personal", false, "remote-gpu", "off", DENIED, false],
   ["personal", false, "remote-gpu", "consented-pilot", DENIED, false],
-  ["personal", false, "infomaniak", "off", ALLOWED, false],
-  ["personal", false, "infomaniak", "consented-pilot", ALLOWED, false],
+  ["personal", false, "infomaniak", "off", DENIED, false],
+  ["personal", false, "infomaniak", "consented-pilot", DENIED, false],
   // Personal with wearable context.
   ["personal", true, "ollama", "off", ALLOWED, false],
   ["personal", true, "ollama", "consented-pilot", ALLOWED, false],
@@ -76,8 +76,8 @@ const MATRIX: readonly Row[] = [
   ["personal", true, "openrouter", "consented-pilot", DENIED, false],
   ["personal", true, "remote-gpu", "off", DENIED, false],
   ["personal", true, "remote-gpu", "consented-pilot", DENIED, false],
-  ["personal", true, "infomaniak", "off", ALLOWED, false],
-  ["personal", true, "infomaniak", "consented-pilot", ALLOWED, false],
+  ["personal", true, "infomaniak", "off", DENIED, false],
+  ["personal", true, "infomaniak", "consented-pilot", DENIED, false],
 ];
 
 describe("permitProviderForRequest matrix", () => {
@@ -102,10 +102,11 @@ describe("assertProviderAllowedForDataMode", () => {
     ["personal", "exoscale", "off", true],
     ["personal", "exoscale", "consented-pilot", false],
     ["personal", "ollama", "off", false],
-    ["personal", "infomaniak", "off", false],
+    ["personal", "infomaniak", "consented-pilot", true],
     ["synthetic", "openrouter", "off", false],
     ["synthetic", "remote-gpu", "off", false],
     ["synthetic", "exoscale", "off", false],
+    ["synthetic", "infomaniak", "off", false],
   ] as const)("%s, %s, %s throws: %p", (mode, provider, setting, throws) => {
     const run = () => assertProviderAllowedForDataMode(mode, provider, setting);
     if (throws) {

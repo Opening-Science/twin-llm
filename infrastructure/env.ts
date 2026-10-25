@@ -31,8 +31,8 @@ import { isLoopbackUrl } from "./loopback";
  * fallback to another cloud. remote-gpu reaches a rented GPU through SSH
  * tunnels on loopback and, like openrouter, is for synthetic data only.
  * infomaniak is legacy and only used when named. DATA_MODE=personal (the
- * default) refuses openrouter and remote-gpu, and refuses exoscale unless
- * EXOSCALE_PERSONAL_DATA=consented-pilot (see data-mode-policy.ts).
+ * default) refuses openrouter, remote-gpu and infomaniak, and refuses exoscale
+ * unless EXOSCALE_PERSONAL_DATA=consented-pilot (see data-mode-policy.ts).
  */
 
 /** How long a cloud model may stay silent before the first byte of its answer. */
@@ -436,6 +436,14 @@ const serverEnvSchema = z
           message: "OPENROUTER_API_KEY is required when LLM_PROVIDER=openrouter",
         });
       }
+    }
+
+    if (env.LLM_PROVIDER === "infomaniak" && env.DATA_MODE === "personal") {
+      report({
+        path: "LLM_PROVIDER",
+        message:
+          "DATA_MODE=personal forbids LLM_PROVIDER=infomaniak; Infomaniak is a third-party service and gets synthetic data only. Use local Ollama (LOCAL_ONLY=true) or set DATA_MODE=synthetic",
+      });
     }
 
     // Legacy Infomaniak: an auth-off demo may boot without its tokens and only

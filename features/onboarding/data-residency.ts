@@ -51,7 +51,8 @@ const EXOSCALE_DESTINATION: Readonly<Record<ExoscalePersonalData, string>> = {
 
 const PROVIDER_DESTINATION: Readonly<Record<Exclude<LlmProvider, "exoscale">, string>> = {
   ollama: "Sent to the Ollama server at the configured address.",
-  infomaniak: "Sent to Infomaniak in Switzerland (legacy).",
+  infomaniak:
+    "Sent to Infomaniak in Switzerland (legacy), synthetic data only and never with a wearable snapshot.",
   openrouter:
     "Sent to OpenRouter, synthetic data only and never with a wearable snapshot.",
   "remote-gpu":
@@ -147,7 +148,7 @@ export const residencyRows = (config: ResidencyConfig): readonly ResidencyRow[] 
 export const dataModeSentence = (mode: DataMode): string =>
   mode === "synthetic"
     ? "This server runs on synthetic data (DATA_MODE=synthetic)."
-    : "This server runs on personal data (DATA_MODE=personal). OpenRouter and the remote GPU are refused, and Exoscale is used only in a consented pilot.";
+    : "This server runs on personal data (DATA_MODE=personal). OpenRouter, Infomaniak and the remote GPU are refused, and Exoscale is used only in a consented pilot.";
 
 /** The line under the "what do you want to explore" box. */
 export const interestHint = (config: ResidencyConfig): string => {

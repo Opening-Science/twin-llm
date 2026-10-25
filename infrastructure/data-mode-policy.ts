@@ -9,8 +9,8 @@
  *   is ours, but the hosting operator can technically read the memory of a
  *   running instance, so until confidential computing ships it may only see
  *   synthetic data or data from people who consented to a pilot.
- * - openrouter and remote-gpu: never. They are third parties and synthetic only.
- * - infomaniak (legacy, only when named): unchanged.
+ * - openrouter, remote-gpu and infomaniak (legacy): never. They are third-party
+ *   services, and no third-party model ever sees personal data.
  *
  * LOCAL_ONLY still refuses every provider but ollama at startup.
  */
@@ -29,6 +29,7 @@ export type ExoscalePersonalData = (typeof EXOSCALE_PERSONAL_DATA_SETTINGS)[numb
 const SYNTHETIC_ONLY_PROVIDERS: ReadonlySet<LlmProvider> = new Set([
   "openrouter",
   "remote-gpu",
+  "infomaniak",
 ]);
 
 export const PROVIDER_NOT_PERMITTED_FOR_DATA_MODE =

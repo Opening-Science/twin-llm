@@ -58,7 +58,7 @@ describe("ResearchFooter", () => {
       "Cloud model in use: our own open models on Exoscale (Switzerland), personal data only in a consented pilot.",
     );
     expect(residencyText({ localOnly: false, provider: "infomaniak" })).toBe(
-      "Cloud model in use: Infomaniak (Switzerland).",
+      "Cloud model in use: Infomaniak (Switzerland, synthetic data only).",
     );
     expect(residencyText({ localOnly: false, provider: "openrouter" })).toBe(
       "Cloud model in use: OpenRouter (synthetic data only).",

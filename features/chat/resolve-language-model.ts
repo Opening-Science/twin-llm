@@ -103,7 +103,7 @@ export const exoscaleTarget = (
  * - openrouter — free OSS catalog
  * - infomaniak — legacy; only when named explicitly
  *
- * openrouter and remote-gpu are forbidden when DATA_MODE=personal or when
+ * openrouter, remote-gpu and infomaniak are forbidden when DATA_MODE=personal or when
  * hasWearableNarrative is true, and so is exoscale unless
  * EXOSCALE_PERSONAL_DATA=consented-pilot. Same permitProviderForRequest check
  * as the chat route (defence in depth).

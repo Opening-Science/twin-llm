@@ -2,11 +2,10 @@ import {
   type DataMode,
   type ExoscalePersonalData,
   type LlmProvider,
-  PERSONAL_DATA_SENT_AUDIT_TOOL,
   permitProviderForRequest,
-  sendsPersonalDataToHostedModel,
 } from "@/infrastructure/data-mode-policy";
 import type { KnowledgeSourceId } from "@/infrastructure/knowledge-sources";
+import { personalDataSentEvent } from "@/infrastructure/personal-data-audit";
 import type { AppendInput } from "@/packages/audit/append";
 
 import type { ChatRequest } from "./chat-request";
@@ -53,17 +52,12 @@ export const createStartAnswer =
       return Response.json({ code: permit.code, error: permit.error }, { status: 400 });
     }
 
-    if (sendsPersonalDataToHostedModel(request)) {
-      await deps.appendAudit({
-        actor: actorId,
-        sessionId: call.turnId,
-        subjectRef: null,
-        tool: PERSONAL_DATA_SENT_AUDIT_TOOL,
-        args: { provider: settings.provider, modelId: call.modelId },
-        result: { sent: true },
-        rowCount: 0,
-      });
-    }
+    const event = personalDataSentEvent(request, {
+      actor: actorId,
+      sessionId: call.turnId,
+      modelId: call.modelId,
+    });
+    if (event !== null) await deps.appendAudit(event);
 
     return deps.stream(call, {
       clerkId: actorId,
