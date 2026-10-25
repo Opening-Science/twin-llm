@@ -556,3 +556,34 @@ describe("plain dates", () => {
     ).toBe(false);
   });
 });
+
+describe("UTC datetimes without seconds", () => {
+  const base = { subject_ref: SUBJECT, loinc: HR, end: "2024-01-09" };
+
+  test("minute, second and millisecond precision are accepted", () => {
+    for (const start of [
+      "2024-01-01T08:00Z",
+      "2024-01-01T08:00:00Z",
+      "2024-01-01T08:00:00.000Z",
+    ]) {
+      expect(trendInput.safeParse({ ...base, start }).success).toBe(true);
+    }
+  });
+
+  test("malformed datetimes are rejected", () => {
+    for (const start of ["2024-01-01T08Z", "2024-01-01T08:00", "2024-01-01T8:00Z"]) {
+      expect(trendInput.safeParse({ ...base, start }).success).toBe(false);
+    }
+  });
+
+  test("a minute-precision bound reads the same instant as one with seconds", async () => {
+    const { ports, queries } = fakePorts();
+    await runTrend(
+      synthetic,
+      { ...base, start: "2024-01-01T08:00Z", end: "2024-01-09T08:00Z" },
+      ports,
+    );
+    expect(queries[0]?.start.toISOString()).toBe("2024-01-01T08:00:00.000Z");
+    expect(queries[0]?.end.toISOString()).toBe("2024-01-09T08:00:00.000Z");
+  });
+});

@@ -19,13 +19,17 @@ export const windowStartDate = (value: string): Date =>
 export const windowEndDate = (value: string): Date =>
   new Date(DATE_ONLY.test(value) ? `${value}T23:59:59.999Z` : value);
 
-const windowStart = z
-  .union([z.iso.datetime(), z.iso.date()])
-  .describe("ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day");
+// zod 4.6 requires seconds in a UTC datetime (RFC 3339); models often write `…T08:00Z`, so accept that too.
+const windowBound = () =>
+  z.union([z.iso.datetime(), z.iso.datetime({ precision: -1 }), z.iso.date()]);
 
-const windowEnd = z
-  .union([z.iso.datetime(), z.iso.date()])
-  .describe("ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day");
+const windowStart = windowBound().describe(
+  "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day",
+);
+
+const windowEnd = windowBound().describe(
+  "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day",
+);
 
 export const listSubjectsInput = z
   .object({

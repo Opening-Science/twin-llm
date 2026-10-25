@@ -12,7 +12,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Security
 
-- `next` and `eslint-config-next` 16.2.12 → 16.4.1, and `zod` 4.4.3 → 4.6.6, for published security advisories. Query-tool datetimes now need seconds, as RFC 3339 requires.
+- `next` and `eslint-config-next` 16.2.12 → 16.4.1, and `zod` 4.4.3 → 4.6.6, for published security advisories; an `overrides` entry keeps every transitive zod on 4.6.6. Query-tool window bounds still accept a UTC datetime without seconds.
 
 ## [0.1.0] - 2026-10-25
 
