@@ -40,8 +40,9 @@ no force push) and adds:
       `test-isolation` and `ark-app`.
 - [ ] Signed commits on `main`. Squash merges made on GitHub are signed by GitHub; 24 of
       the last 30 commits on `main` already verify.
-- [x] Repository admins may bypass, so a maintainer can merge their own reviewed,
-      green change while they are the only code owner. Everyone else follows every rule.
+- [x] Repository admins may bypass only through a pull request (`bypass_mode:
+  pull_request`), so a maintainer can merge their own green change while they are the
+      only code owner, but nobody pushes to `main` directly.
 
 ```sh
 gh api -X POST "repos/$R/rulesets" --input .github/rulesets/main.json
