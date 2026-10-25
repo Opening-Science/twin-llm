@@ -36,12 +36,12 @@ Answers live in `onboarding_profiles`, one row per user. "Get started" in the si
 | `LLM_PROVIDER`                            | What it uses                                                                                   |
 | ----------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | `ollama` (default with `LOCAL_ONLY=true`) | Local models at `OLLAMA_BASE_URL`, including MedGemma                                          |
-| `exoscale` (default otherwise)            | Our own open models on vLLM, Exoscale A30 instance in Switzerland                              |
+| `exoscale` (default otherwise)            | Our own open models on vLLM, on an Exoscale GPU instance in Switzerland                        |
 | `openrouter`                              | Free OSS models (`*:free`) — only when `DATA_MODE=synthetic`, no snapshot                      |
 | `remote-gpu`                              | vLLM on a rented GPU over an SSH tunnel — synthetic data only                                  |
 | `infomaniak` (legacy)                     | Infomaniak AI (Swiss-hosted OSS, cloud); only when named, never a default; synthetic data only |
 
-Exoscale: set `EXOSCALE_BASE_URLS` (one vLLM `/v1` URL per GPU); without it, startup fails when `LOCAL_ONLY=false`. Setup and data policy: [providers.md](providers.md#exoscale-a30).
+Exoscale: set `EXOSCALE_BASE_URLS` (one vLLM `/v1` URL per GPU); without it, startup fails when `LOCAL_ONLY=false`. Setup and data policy: [providers.md](providers.md#exoscale).
 
 ## Wearables
 
