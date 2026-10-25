@@ -40,7 +40,7 @@ Language models are good at sounding sure. Health data needs the opposite: numbe
 </p>
 <p>
   <img src="docs/images/start-light.png" width="49%" alt="The first-run flow asking what brings you here, with roles to pick and a choice between the synthetic demo cohort and your own data.">
-  <img src="docs/images/connectors-light.png" width="49%" alt="The Connectors page with cards for Oura, Whoop, Google Health, BodyLoop, GBD and Guidelines, each showing its setup status.">
+  <img src="docs/images/connectors-dark.png" width="49%" alt="The Connectors page in dark mode, with cards for Oura, Whoop, Google Health, BodyLoop, GBD and Guidelines, each showing its setup status.">
 </p>
 
 ## Quick start
