@@ -52,8 +52,7 @@ visible in the source for anyone to audit.
 What remains unsolved is just as important to say. Wearable data still originates in each
 vendor's cloud, and no one, including us, can yet measure how much an answer or insight
 shared with a third party discloses about the one person a twin describes. That open problem
-is the focus of the Open Science Foundation's first funding call, "Sovereign AI on
-Sensitive Data". The full data-flow table is under
+is the focus of the Open Science Foundation's first funding call. The full data-flow table is under
 [What leaves your machine](#what-leaves-your-machine).
 
 ## What you can do with it
