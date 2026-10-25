@@ -94,7 +94,7 @@ use it only as a comparison point on synthetic data.
 **Exoscale A30 large:** 3× NVIDIA A30, 24 GB each, 72 GB VRAM in total. Exoscale lists
 the A30 in CH-GVA-2 (Geneva); our zone is to be confirmed. TwinLLM reaches it as
 `LLM_PROVIDER=exoscale`, one vLLM server per GPU: setup, URLs and the data policy are in
-[providers.md](providers.md#exoscale-a30).
+[providers.md](providers.md#exoscale).
 
 - One model per GPU. Tensor parallelism needs the attention-head count to divide by the
   GPU count, and 32 heads do not divide by 3. Three GPUs serve three models side by side.
