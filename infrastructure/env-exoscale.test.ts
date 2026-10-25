@@ -8,6 +8,7 @@ const BASE = {
   LOCAL_ONLY: "false",
   DATA_MODE: "personal",
   LLM_PROVIDER: "exoscale",
+  EXOSCALE_PERSONAL_DATA: "consented-pilot",
   DATABASE_URL: "postgresql://synthetic@localhost:1/none",
   EXOSCALE_BASE_URLS: "https://gpu1.example.invalid/v1, https://gpu2.example.invalid/v1/",
 } as const;
@@ -62,12 +63,54 @@ describe("LLM_PROVIDER=exoscale env", () => {
     );
   });
 
-  test("DATA_MODE=personal is allowed: the instance is our own", () => {
+  test("DATA_MODE=personal is allowed only with EXOSCALE_PERSONAL_DATA=consented-pilot", () => {
     expect(parseServerEnv(BASE).DATA_MODE).toBe("personal");
+    expect(parseServerEnv(BASE).EXOSCALE_PERSONAL_DATA).toBe("consented-pilot");
     expect(parseServerEnv({ ...BASE, DATA_MODE: undefined }).DATA_MODE).toBe("personal");
-    expect(parseServerEnv({ ...BASE, DATA_MODE: "synthetic" }).DATA_MODE).toBe(
-      "synthetic",
+  });
+
+  test("EXOSCALE_PERSONAL_DATA defaults to off, and synthetic data needs no setting", () => {
+    const env = parseServerEnv({
+      ...BASE,
+      DATA_MODE: "synthetic",
+      EXOSCALE_PERSONAL_DATA: undefined,
+    });
+    expect(env.DATA_MODE).toBe("synthetic");
+    expect(env.EXOSCALE_PERSONAL_DATA).toBe("off");
+    expect(
+      parseServerEnv({ ...BASE, DATA_MODE: "synthetic", EXOSCALE_PERSONAL_DATA: "" })
+        .EXOSCALE_PERSONAL_DATA,
+    ).toBe("off");
+  });
+
+  test("personal data to Exoscale without the consented pilot stops the boot, naming both fixes", () => {
+    const expected =
+      "  - EXOSCALE_PERSONAL_DATA: DATA_MODE=personal with LLM_PROVIDER=exoscale (the default with LOCAL_ONLY=false) needs EXOSCALE_PERSONAL_DATA=consented-pilot, for a pilot whose participants consented. Otherwise use local Ollama (LOCAL_ONLY=true) or set DATA_MODE=synthetic";
+    expect(parseError({ ...BASE, EXOSCALE_PERSONAL_DATA: undefined })).toContain(
+      expected,
     );
+    expect(parseError({ ...BASE, EXOSCALE_PERSONAL_DATA: "off" })).toContain(expected);
+    // DATA_MODE unset means personal.
+    expect(
+      parseError({ ...BASE, DATA_MODE: undefined, EXOSCALE_PERSONAL_DATA: undefined }),
+    ).toContain(expected);
+    // Exoscale as the default provider: LOCAL_ONLY=false and none named.
+    expect(
+      parseError({ ...BASE, LLM_PROVIDER: undefined, EXOSCALE_PERSONAL_DATA: "off" }),
+    ).toContain(expected);
+  });
+
+  test("EXOSCALE_PERSONAL_DATA takes only off or consented-pilot", () => {
+    expect(parseError({ ...BASE, EXOSCALE_PERSONAL_DATA: "on" })).toContain(
+      "  - EXOSCALE_PERSONAL_DATA: EXOSCALE_PERSONAL_DATA must be off or consented-pilot",
+    );
+  });
+
+  test("the setting does not matter when another provider is active", () => {
+    expect(
+      parseServerEnv({ ...BASE, LLM_PROVIDER: "ollama", EXOSCALE_PERSONAL_DATA: "off" })
+        .LLM_PROVIDER,
+    ).toBe("ollama");
   });
 
   test("refuses plain http off this machine, naming the entry by position", () => {
@@ -202,13 +245,23 @@ describe("LLM_PROVIDER=exoscale env", () => {
     );
   });
 
-  test("infomaniak still parses when named, as a legacy option", () => {
+  test("infomaniak still parses when named, as a legacy option for synthetic data", () => {
     const env = parseServerEnv({
       ...BASE,
+      DATA_MODE: "synthetic",
       LLM_PROVIDER: "infomaniak",
       EXOSCALE_BASE_URLS: undefined,
     });
     expect(env.LLM_PROVIDER).toBe("infomaniak");
     expect(env.EXOSCALE_BASE_URLS).toEqual([]);
+  });
+
+  test("personal data to infomaniak stops the boot, whatever the Exoscale setting", () => {
+    const expected =
+      "  - LLM_PROVIDER: DATA_MODE=personal forbids LLM_PROVIDER=infomaniak; Infomaniak is a third-party service and gets synthetic data only. Use local Ollama (LOCAL_ONLY=true) or set DATA_MODE=synthetic";
+    expect(parseError({ ...BASE, LLM_PROVIDER: "infomaniak" })).toContain(expected);
+    expect(
+      parseError({ ...BASE, LLM_PROVIDER: "infomaniak", DATA_MODE: undefined }),
+    ).toContain(expected);
   });
 });

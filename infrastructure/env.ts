@@ -2,6 +2,10 @@ import "server-only";
 
 import { z } from "zod";
 
+import {
+  EXOSCALE_PERSONAL_DATA_SETTINGS,
+  type ExoscalePersonalData,
+} from "./data-mode-policy";
 import { isLoopbackUrl } from "./loopback";
 
 /**
@@ -27,7 +31,8 @@ import { isLoopbackUrl } from "./loopback";
  * fallback to another cloud. remote-gpu reaches a rented GPU through SSH
  * tunnels on loopback and, like openrouter, is for synthetic data only.
  * infomaniak is legacy and only used when named. DATA_MODE=personal (the
- * default) refuses openrouter and remote-gpu.
+ * default) refuses openrouter, remote-gpu and infomaniak, and refuses exoscale
+ * unless EXOSCALE_PERSONAL_DATA=consented-pilot (see data-mode-policy.ts).
  */
 
 /** How long a cloud model may stay silent before the first byte of its answer. */
@@ -237,6 +242,8 @@ const exoscaleUrlProblem = (
 
 type ExoscaleView = Readonly<{
   LLM_PROVIDER: string;
+  DATA_MODE: string;
+  EXOSCALE_PERSONAL_DATA: ExoscalePersonalData;
   EXOSCALE_BASE_URLS: readonly string[];
   EXOSCALE_ALLOW_LOOPBACK_TUNNEL: boolean;
   REMOTE_GPU_BASE_URLS: readonly string[];
@@ -255,6 +262,17 @@ const checkExoscale = (env: ExoscaleView, report: Report): void => {
       path: "EXOSCALE_BASE_URLS",
       message:
         "EXOSCALE_BASE_URLS is required when LLM_PROVIDER=exoscale, the default with LOCAL_ONLY=false (comma list of vLLM URLs ending in /v1, one per GPU). For a model on this machine set LOCAL_ONLY=true",
+    });
+  }
+  if (
+    env.LLM_PROVIDER === "exoscale" &&
+    env.DATA_MODE === "personal" &&
+    env.EXOSCALE_PERSONAL_DATA !== "consented-pilot"
+  ) {
+    report({
+      path: "EXOSCALE_PERSONAL_DATA",
+      message:
+        "DATA_MODE=personal with LLM_PROVIDER=exoscale (the default with LOCAL_ONLY=false) needs EXOSCALE_PERSONAL_DATA=consented-pilot, for a pilot whose participants consented. Otherwise use local Ollama (LOCAL_ONLY=true) or set DATA_MODE=synthetic",
     });
   }
 };
@@ -350,6 +368,12 @@ const serverEnvSchema = z
     EXOSCALE_BASE_URLS: urlList(),
     EXOSCALE_API_KEY: maybeText(),
     EXOSCALE_ALLOW_LOOPBACK_TUNNEL: blankableFlag(),
+    EXOSCALE_PERSONAL_DATA: z.preprocess(
+      (raw) => blankAsMissing(raw) ?? EXOSCALE_PERSONAL_DATA_SETTINGS[0],
+      z.enum(EXOSCALE_PERSONAL_DATA_SETTINGS, {
+        message: "EXOSCALE_PERSONAL_DATA must be off or consented-pilot",
+      }),
+    ),
     EXOSCALE_FIRST_BYTE_TIMEOUT_S: z.preprocess(
       blankAsMissing,
       z.coerce
@@ -403,7 +427,7 @@ const serverEnvSchema = z
         report({
           path: "LLM_PROVIDER",
           message:
-            "DATA_MODE=personal forbids LLM_PROVIDER=openrouter; use exoscale or ollama",
+            "DATA_MODE=personal forbids LLM_PROVIDER=openrouter; use ollama, or exoscale with EXOSCALE_PERSONAL_DATA=consented-pilot",
         });
       }
       if (env.OPENROUTER_API_KEY === undefined) {
@@ -412,6 +436,14 @@ const serverEnvSchema = z
           message: "OPENROUTER_API_KEY is required when LLM_PROVIDER=openrouter",
         });
       }
+    }
+
+    if (env.LLM_PROVIDER === "infomaniak" && env.DATA_MODE === "personal") {
+      report({
+        path: "LLM_PROVIDER",
+        message:
+          "DATA_MODE=personal forbids LLM_PROVIDER=infomaniak; Infomaniak is a third-party service and gets synthetic data only. Use local Ollama (LOCAL_ONLY=true) or set DATA_MODE=synthetic",
+      });
     }
 
     // Legacy Infomaniak: an auth-off demo may boot without its tokens and only
@@ -559,6 +591,14 @@ export const exoscaleEnv = (): ExoscaleEnv => {
     firstByteTimeoutMs: env.EXOSCALE_FIRST_BYTE_TIMEOUT_S * 1000,
   });
 };
+
+/**
+ * Whether personal requests may go to Exoscale: `consented-pilot` only for a
+ * pilot whose participants consented, `off` (the default) otherwise.
+ */
+export const exoscalePersonalData = (
+  env: ServerEnv = serverEnv(),
+): ExoscalePersonalData => env.EXOSCALE_PERSONAL_DATA;
 
 /** The four settings every OAuth wearable needs before it can be offered. */
 type OAuthAppEnv = Readonly<{

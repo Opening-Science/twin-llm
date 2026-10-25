@@ -8,7 +8,12 @@ import {
 } from "@/features/onboarding/onboarding-store";
 import { resolveActorId } from "@/infrastructure/auth-actor";
 import { ensureAppUser, findAppUserId } from "@/infrastructure/current-user";
-import { gbdEnv, isAuthDisabled, serverEnv } from "@/infrastructure/env";
+import {
+  exoscalePersonalData,
+  gbdEnv,
+  isAuthDisabled,
+  serverEnv,
+} from "@/infrastructure/env";
 import { isLoopbackUrl } from "@/infrastructure/loopback";
 
 import { loadConnectFacts } from "../../api/onboarding/connect-facts";
@@ -54,6 +59,7 @@ export default async function StartPage() {
         ollamaOnLoopback: isLoopbackUrl(
           env.OLLAMA_BASE_URL ?? "http://127.0.0.1:11434/v1",
         ),
+        exoscalePersonalData: exoscalePersonalData(env),
       }}
       onStartThread={startStarterThread}
     />

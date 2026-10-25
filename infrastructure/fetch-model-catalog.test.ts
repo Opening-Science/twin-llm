@@ -12,7 +12,7 @@ beforeEach(async () => {
     LOCAL_MVP: "true",
     AUTH_DISABLED: "true",
     LLM_PROVIDER: "infomaniak",
-    DATA_MODE: "personal",
+    DATA_MODE: "synthetic",
     DATABASE_URL: "postgresql://synthetic@localhost:1/none",
     INFOMANIAK_API_TOKEN: "synthetic-infomaniak-token",
     INFOMANIAK_PRODUCT_ID: "synthetic-product",

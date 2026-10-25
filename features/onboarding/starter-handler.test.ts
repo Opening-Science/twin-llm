@@ -26,12 +26,14 @@ const deps = (overrides: Partial<StarterHandlerDeps> = {}): StarterHandlerDeps =
 describe("POST /api/onboarding/starters", () => {
   test("cleans the body and tells the provider whether data is linked", async () => {
     const linkedFlags: boolean[] = [];
+    const actors: string[] = [];
     const prompts: string[] = [];
     const handler = createStarterQuestionsHandler(
       deps({
         loadLinkedNames: async (id) => (id === "user-1" ? ["Oura", "Whoop"] : []),
-        generate: (hasLinkedData) => {
+        generate: (hasLinkedData, actor) => {
           linkedFlags.push(hasLinkedData);
+          actors.push(actor);
           return async ({ prompt }) => {
             prompts.push(prompt);
             return "What does HRV measure on my ring?";
@@ -52,6 +54,7 @@ describe("POST /api/onboarding/starters", () => {
       ],
     });
     expect(linkedFlags).toEqual([true]);
+    expect(actors).toEqual(["local"]);
     expect(prompts[0]).toBe(
       [
         "Roles: Self-tracker",

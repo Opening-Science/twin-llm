@@ -21,8 +21,11 @@ export type StarterHandlerDeps = Readonly<{
   findAppUserId: (clerkId: string) => Promise<string | null>;
   /** Display names of the sources this user has linked. */
   loadLinkedNames: (appUserId: string) => Promise<readonly string[]>;
-  /** The model call; `hasLinkedData` lets the provider policy refuse it. */
-  generate: (hasLinkedData: boolean) => StarterGenerate;
+  /**
+   * The model call; `hasLinkedData` lets the provider policy refuse it, and
+   * `actor` is who a personal-data audit event is written for.
+   */
+  generate: (hasLinkedData: boolean, actor: string) => StarterGenerate;
   timeoutMs: number;
   logError: (message: string, errorName: string) => void;
   /** Rate limit and bot check, as for chat; a Response means refused. */
@@ -78,7 +81,7 @@ export const createStarterQuestionsHandler =
         connected: linked,
       },
       {
-        generate: deps.generate(linked.length > 0),
+        generate: deps.generate(linked.length > 0, clerkId),
         timeoutMs: deps.timeoutMs,
         logError: deps.logError,
       },

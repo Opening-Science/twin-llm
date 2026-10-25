@@ -53,6 +53,7 @@ describe("LOCAL_ONLY env", () => {
         ...LOCAL_BASE,
         LOCAL_ONLY: "false",
         EXOSCALE_BASE_URLS: "https://gpu1.example.invalid/v1",
+        EXOSCALE_PERSONAL_DATA: "consented-pilot",
       }).LLM_PROVIDER,
     ).toBe("exoscale");
   });
