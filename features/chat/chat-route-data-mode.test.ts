@@ -135,7 +135,11 @@ beforeEach(async () => {
   streamWearables = null;
   whoopReads = 0;
   appendFail = false;
-  await useEnv({ LLM_PROVIDER: "openrouter", DATA_MODE: "synthetic" });
+  await useEnv({
+    LLM_PROVIDER: "openrouter",
+    DATA_MODE: "synthetic",
+    EXOSCALE_PERSONAL_DATA: "off",
+  });
 });
 
 describe("POST /api/chat DATA_MODE=synthetic", () => {
@@ -166,12 +170,13 @@ describe("POST /api/chat DATA_MODE=synthetic", () => {
 });
 
 describe("POST /api/chat with LLM_PROVIDER=exoscale", () => {
-  test("personal wearable context reaches our own Exoscale models", async () => {
+  test("personal wearable context reaches our own Exoscale models in a consented pilot", async () => {
     await useEnv({
       LLM_PROVIDER: "exoscale",
       DATA_MODE: "personal",
       LOCAL_ONLY: "false",
       EXOSCALE_BASE_URLS: "https://gpu1.example.invalid/v1",
+      EXOSCALE_PERSONAL_DATA: "consented-pilot",
     });
     const res = await POST(
       new Request("http://localhost:3000/api/chat", {

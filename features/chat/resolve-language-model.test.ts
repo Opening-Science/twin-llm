@@ -20,6 +20,7 @@ const applyEnv = async (values: {
   readonly INFOMANIAK_PRODUCT_ID?: string;
   readonly REMOTE_GPU_BASE_URLS?: string;
   readonly EXOSCALE_BASE_URLS?: string;
+  readonly EXOSCALE_PERSONAL_DATA?: string;
 }) => {
   Object.assign(process.env, {
     LOCAL_MVP: "true",
@@ -36,6 +37,7 @@ const applyEnv = async (values: {
     ...(values.EXOSCALE_BASE_URLS
       ? { LOCAL_ONLY: "false", EXOSCALE_BASE_URLS: values.EXOSCALE_BASE_URLS }
       : {}),
+    EXOSCALE_PERSONAL_DATA: values.EXOSCALE_PERSONAL_DATA ?? "off",
   });
   const { resetServerEnvCacheForTests } = await import("@/infrastructure/env");
   resetServerEnvCacheForTests();
@@ -119,6 +121,7 @@ describe("resolveLanguageModel DATA_MODE permit", () => {
         mode: combo.mode,
         provider: combo.provider,
         hasWearableNarrative: combo.hasWearableNarrative,
+        exoscalePersonalData: "off",
       });
 
       if (combo.allow) {
@@ -295,34 +298,75 @@ describe("exoscale routing and data policy", () => {
     ).toThrow(EXOSCALE_MODEL_NOT_LISTED);
   });
 
-  for (const mode of ["personal", "synthetic"] as const) {
-    for (const hasWearableNarrative of [true, false]) {
-      test(`${mode}, narrative ${String(hasWearableNarrative)}: route permit and resolver allow exoscale`, async () => {
-        expect(
-          permitProviderForRequest({ mode, provider: "exoscale", hasWearableNarrative }),
-        ).toEqual({ ok: true });
-        await applyEnv({
-          DATA_MODE: mode,
-          LLM_PROVIDER: "exoscale",
-          EXOSCALE_BASE_URLS: GPU_1,
+  const EXOSCALE_CASES = [
+    // [mode, wearable context, setting, permitted]
+    ["synthetic", false, "off", true],
+    ["synthetic", false, "consented-pilot", true],
+    ["synthetic", true, "off", false],
+    ["synthetic", true, "consented-pilot", true],
+    ["personal", false, "consented-pilot", true],
+    ["personal", true, "consented-pilot", true],
+  ] as const;
+
+  for (const [mode, hasWearableNarrative, setting, permitted] of EXOSCALE_CASES) {
+    test(`${mode}, narrative ${String(hasWearableNarrative)}, ${setting}: route permit and resolver agree on exoscale`, async () => {
+      const permit = permitProviderForRequest({
+        mode,
+        provider: "exoscale",
+        hasWearableNarrative,
+        exoscalePersonalData: setting,
+      });
+      expect(permit).toEqual(
+        permitted
+          ? { ok: true }
+          : {
+              ok: false,
+              code: PROVIDER_NOT_PERMITTED_FOR_DATA_MODE,
+              error: PROVIDER_NOT_PERMITTED_ERROR,
+            },
+      );
+      await applyEnv({
+        DATA_MODE: mode,
+        LLM_PROVIDER: "exoscale",
+        EXOSCALE_BASE_URLS: GPU_1,
+        EXOSCALE_PERSONAL_DATA: setting,
+      });
+      const {
+        EXOSCALE_MODEL_NOT_LISTED,
+        ProviderNotPermittedError,
+        resolveLanguageModel,
+      } = await import("./resolve-language-model");
+      try {
+        resolveLanguageModel("swiss-ai/Apertus-8B-Instruct-2509", {
+          hasWearableNarrative,
         });
-        const {
-          EXOSCALE_MODEL_NOT_LISTED,
-          ProviderNotPermittedError,
-          resolveLanguageModel,
-        } = await import("./resolve-language-model");
-        // No catalog has listed it in this process, so the permit passed and
-        // routing is what refuses.
-        try {
-          resolveLanguageModel("swiss-ai/Apertus-8B-Instruct-2509", {
-            hasWearableNarrative,
-          });
-          expect.unreachable();
-        } catch (error) {
+        expect.unreachable();
+      } catch (error) {
+        if (permitted) {
+          // No catalog has listed it in this process, so the permit passed and
+          // routing is what refuses.
           expect(error).not.toBeInstanceOf(ProviderNotPermittedError);
           expect((error as Error).message).toBe(EXOSCALE_MODEL_NOT_LISTED);
+        } else {
+          expect(error).toBeInstanceOf(ProviderNotPermittedError);
+          expect((error as Error).message).toBe(PROVIDER_NOT_PERMITTED_ERROR);
         }
-      });
-    }
+      }
+    });
   }
+
+  test("personal data with the setting off never reaches the resolver: startup refuses it", async () => {
+    await applyEnv({
+      DATA_MODE: "personal",
+      LLM_PROVIDER: "exoscale",
+      EXOSCALE_BASE_URLS: GPU_1,
+      EXOSCALE_PERSONAL_DATA: "off",
+    });
+    const { resolveLanguageModel } = await import("./resolve-language-model");
+    expect(() =>
+      resolveLanguageModel("swiss-ai/Apertus-8B-Instruct-2509", {
+        hasWearableNarrative: false,
+      }),
+    ).toThrow("EXOSCALE_PERSONAL_DATA=consented-pilot");
+  });
 });

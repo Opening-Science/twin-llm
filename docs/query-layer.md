@@ -70,6 +70,8 @@ A violation returns `{ code: "SUBJECT_SCOPE_VIOLATION", error: "subject_ref is n
 
 The audit row stores actor, session, subject_ref, tool name, and sha256 of args/result — not observation payloads.
 
+Outside the tools, the chat route writes `provider.personal_data_sent` (`subject_ref` null, `row_count` 0, args `{ provider, modelId }`) for each personal request it sends to Exoscale under `EXOSCALE_PERSONAL_DATA=consented-pilot`, before the model is called (`docs/providers.md`).
+
 ## Chat wiring
 
 `streamModelResponse` passes `createQueryTools(...)`, `createGbdTools(...)`,

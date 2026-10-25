@@ -1,6 +1,7 @@
 import { chatRequestSchema, type ChatRequest } from "@/features/chat/chat-request";
 import { guardChatRequest } from "@/features/chat/chat-protection";
 import { publicProviderFailure } from "@/features/chat/public-provider-failure";
+import { createStartAnswer } from "@/features/chat/start-answer";
 import { streamModelResponse } from "@/features/chat/stream-model-response";
 import { loadWearableContext } from "@/features/chat/wearable-context";
 import { getLatestGoogleHealthSummary } from "@/features/google-health/connection";
@@ -11,9 +12,9 @@ import { getLatestWhoopSummary } from "@/features/whoop/connection";
 import { resolveActorId } from "@/infrastructure/auth-actor";
 import { findAppUserId } from "@/infrastructure/current-user";
 import { database } from "@/infrastructure/database";
-import { permitProviderForRequest } from "@/infrastructure/data-mode";
-import { isAuthDisabled, serverEnv } from "@/infrastructure/env";
+import { exoscalePersonalData, isAuthDisabled, serverEnv } from "@/infrastructure/env";
 import { fetchActiveModelCatalog } from "@/infrastructure/fetch-model-catalog";
+import { append } from "@/packages/audit/append";
 
 /**
  * Starts one model's answer for an existing turn.
@@ -52,35 +53,26 @@ const ownershipOf = async (actorId: string, call: ChatRequest): Promise<Ownershi
     : { kind: "someone-else" };
 };
 
-const startAnswer = async (
-  actorId: string,
-  appUserId: string,
-  call: ChatRequest,
-): Promise<Response> => {
-  const { DATA_MODE, LLM_PROVIDER } = serverEnv();
-
-  const wearables = await loadWearableContext(DATA_MODE, appUserId, {
-    oura: getLatestOuraSummary,
-    whoop: getLatestWhoopSummary,
-    googleHealth: getLatestGoogleHealthSummary,
-    vitronic: getLatestVitronicSummary,
-  });
-  const anyWearable = Object.values(wearables).some((summary) => summary !== null);
-  const permit = permitProviderForRequest({
-    mode: DATA_MODE,
-    provider: LLM_PROVIDER,
-    hasWearableNarrative: anyWearable,
-  });
-  if (!permit.ok) {
-    return Response.json({ code: permit.code, error: permit.error }, { status: 400 });
-  }
-
-  return streamModelResponse(call, {
-    clerkId: actorId,
-    disabledSources: await loadDisabledSources(appUserId),
-    ...wearables,
-  });
-};
+const startAnswer = createStartAnswer({
+  settings: () => {
+    const env = serverEnv();
+    return {
+      dataMode: env.DATA_MODE,
+      provider: env.LLM_PROVIDER,
+      exoscalePersonalData: exoscalePersonalData(env),
+    };
+  },
+  loadWearables: (mode, appUserId) =>
+    loadWearableContext(mode, appUserId, {
+      oura: getLatestOuraSummary,
+      whoop: getLatestWhoopSummary,
+      googleHealth: getLatestGoogleHealthSummary,
+      vitronic: getLatestVitronicSummary,
+    }),
+  loadDisabledSources,
+  appendAudit: (input) => append(database(), input),
+  stream: streamModelResponse,
+});
 
 export const POST = async (request: Request): Promise<Response> => {
   const actorId = await resolveActorId();

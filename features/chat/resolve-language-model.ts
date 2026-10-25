@@ -8,7 +8,12 @@ import {
   PROVIDER_NOT_PERMITTED_ERROR,
   PROVIDER_NOT_PERMITTED_FOR_DATA_MODE,
 } from "@/infrastructure/data-mode";
-import { exoscaleEnv, infomaniakOpenAiBaseUrl, serverEnv } from "@/infrastructure/env";
+import {
+  exoscaleEnv,
+  exoscalePersonalData,
+  infomaniakOpenAiBaseUrl,
+  serverEnv,
+} from "@/infrastructure/env";
 import { vllmBaseUrlFor } from "@/infrastructure/fetch-model-catalog";
 import { withFirstByteTimeout } from "@/infrastructure/first-byte-timeout-fetch";
 
@@ -99,8 +104,9 @@ export const exoscaleTarget = (
  * - infomaniak — legacy; only when named explicitly
  *
  * openrouter and remote-gpu are forbidden when DATA_MODE=personal or when
- * hasWearableNarrative is true. Same permitProviderForRequest check as the
- * chat route (defence in depth).
+ * hasWearableNarrative is true, and so is exoscale unless
+ * EXOSCALE_PERSONAL_DATA=consented-pilot. Same permitProviderForRequest check
+ * as the chat route (defence in depth).
  */
 export const resolveLanguageModel = (
   modelId: string,
@@ -111,6 +117,7 @@ export const resolveLanguageModel = (
     mode: env.DATA_MODE,
     provider: env.LLM_PROVIDER,
     hasWearableNarrative,
+    exoscalePersonalData: exoscalePersonalData(env),
   });
   if (!permit.ok) {
     throw new ProviderNotPermittedError();

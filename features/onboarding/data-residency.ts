@@ -1,4 +1,8 @@
-import type { DataMode, LlmProvider } from "@/infrastructure/data-mode-policy";
+import type {
+  DataMode,
+  ExoscalePersonalData,
+  LlmProvider,
+} from "@/infrastructure/data-mode-policy";
 
 /**
  * "Where your data goes", from the server's real configuration.
@@ -16,6 +20,8 @@ export type ResidencyConfig = Readonly<{
   gbdConfigured: boolean;
   /** `OLLAMA_BASE_URL` is on loopback; only read when the provider is ollama. */
   ollamaOnLoopback: boolean;
+  /** `EXOSCALE_PERSONAL_DATA`; only read when the provider is exoscale. */
+  exoscalePersonalData: ExoscalePersonalData;
 }>;
 
 /** Where a row's data ends up, said in a word as well as a sentence. */
@@ -37,8 +43,13 @@ export const RESIDENCY_TONE_LABEL: Readonly<Record<ResidencyTone, string>> = {
   off: "Off",
 };
 
-const PROVIDER_DESTINATION: Readonly<Record<LlmProvider, string>> = {
-  exoscale: "Sent to our own open models on Exoscale in Switzerland.",
+const EXOSCALE_DESTINATION: Readonly<Record<ExoscalePersonalData, string>> = {
+  off: "Sent to our own open models on Exoscale in Switzerland, synthetic data only.",
+  "consented-pilot":
+    "Sent to our own open models on Exoscale in Switzerland. Personal data goes there only in a consented pilot, and each such request is written to the audit log.",
+};
+
+const PROVIDER_DESTINATION: Readonly<Record<Exclude<LlmProvider, "exoscale">, string>> = {
   ollama: "Sent to the Ollama server at the configured address.",
   infomaniak: "Sent to Infomaniak in Switzerland (legacy).",
   openrouter:
@@ -74,7 +85,9 @@ export const residencyRows = (config: ResidencyConfig): readonly ResidencyRow[] 
     label: "Chat prompt, wearable summaries, BodyLoop measurements, tool results",
     where: modelOnThisMachine(config)
       ? "Stays on this machine: Ollama on loopback."
-      : PROVIDER_DESTINATION[config.provider],
+      : config.provider === "exoscale"
+        ? EXOSCALE_DESTINATION[config.exoscalePersonalData]
+        : PROVIDER_DESTINATION[config.provider],
     tone: modelOnThisMachine(config) ? "stays" : "leaves",
   },
   {
@@ -134,7 +147,7 @@ export const residencyRows = (config: ResidencyConfig): readonly ResidencyRow[] 
 export const dataModeSentence = (mode: DataMode): string =>
   mode === "synthetic"
     ? "This server runs on synthetic data (DATA_MODE=synthetic)."
-    : "This server runs on personal data (DATA_MODE=personal). OpenRouter and the remote GPU are refused.";
+    : "This server runs on personal data (DATA_MODE=personal). OpenRouter and the remote GPU are refused, and Exoscale is used only in a consented pilot.";
 
 /** The line under the "what do you want to explore" box. */
 export const interestHint = (config: ResidencyConfig): string => {
