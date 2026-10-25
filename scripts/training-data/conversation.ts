@@ -7,14 +7,12 @@
  * earlier result (a window from `subject_window`). The final turn uses the
  * four headings of the Twin system prompt, or a `REFUSE:` line.
  */
-import { z } from "zod";
-
 import { sha256Hex, toCanonicalJson } from "../../packages/audit/hash";
 import { GBD_MODEL_TOOL } from "../../packages/gbd-mcp/constants";
 import { GUIDELINE_MODEL_TOOL } from "../../packages/guidelines/constants";
 import { KNOWLEDGE_MODEL_TOOL } from "../../packages/knowledge/constants";
+import { openaiToolList } from "../../packages/query-tools/manifests";
 import { isToolRefusal } from "../../packages/query-tools/refusals";
-import { TOOL_DEFINITIONS } from "../../packages/query-tools/schemas";
 import { type KeyedTool, KEYED_TOOLS } from "../evaluation/question-set";
 import { rowCountOf } from "../evaluation/build-answer-key";
 
@@ -78,28 +76,8 @@ export type ConversationRecord = Readonly<{
   meta: ConversationMeta;
 }>;
 
-/** JSON Schema minus the noise: no `$schema`, no regex beside a date-time format. */
-const tidySchema = (node: unknown): unknown => {
-  if (Array.isArray(node)) return node.map(tidySchema);
-  if (typeof node !== "object" || node === null) return node;
-  const entries = Object.entries(node).filter(
-    ([key]) =>
-      key !== "$schema" &&
-      !(key === "pattern" && Reflect.get(node, "format") === "date-time"),
-  );
-  return Object.fromEntries(entries.map(([key, value]) => [key, tidySchema(value)]));
-};
-
-/** The closed query tools as OpenAI function definitions, from the same Zod schemas. */
-export const toolSchemas = () =>
-  TOOL_DEFINITIONS.map((definition) => ({
-    type: "function" as const,
-    function: {
-      name: definition.name,
-      description: definition.description,
-      parameters: tidySchema(z.toJSONSchema(definition.input)),
-    },
-  }));
+/** The closed query tools as OpenAI function definitions, in the slim form models get. */
+export const toolSchemas = openaiToolList;
 
 export const renderSections = (sections: Sections): string =>
   [

@@ -138,7 +138,9 @@ every record, for trainers that want the OpenAI fine-tuning form.
 
 `messages` are system, user, one assistant turn per tool call with its tool
 result, then the final answer. `tools` are the nine query tools as OpenAI
-function definitions, from the same Zod schemas. `meta` holds the family,
+function definitions in the slim form models get in chat (`openaiToolList`,
+`docs/query-layer.md`, "Manifests"): no regex patterns or formats, window
+bounds as plain strings. `meta` holds the family,
 outcome, `subject_ref`, cohort id, seed, generator version, tool names,
 sha256 of the tool arguments, system prompt id and sha256, and the expected
 `answer_class`. The system prompt is the real Twin prompt in synthetic mode
