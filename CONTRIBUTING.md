@@ -93,6 +93,40 @@ gitleaks detect --source . --no-git --config .gitleaks.toml
 CI runs the same jobs plus `prisma` (migration check against Postgres) and `ark-app`.
 Workflows from forks may wait for a maintainer to approve them before they run.
 
+## How changes land
+
+TwinLLM works trunk-based: `main` is always releasable, and every change reaches it through
+a short-lived branch and one pull request.
+
+- One issue, one branch, one pull request. Aim to merge within a few days; split larger
+  work into small pull requests, and keep unfinished behaviour behind a setting rather than
+  on a long-lived branch.
+- Open a **draft** pull request early if you want feedback. Mark it ready for review when
+  CI is green.
+- Keep your branch current with `main` (GitHub's "Update branch" button, or a merge of
+  `main`). Required checks must pass on the up-to-date branch.
+- Pull requests are **squash-merged**, so the pull request title becomes the commit on
+  `main`. Write it like a commit subject: `type(#issue): summary`, where `type` is one of
+  `feat`, `fix`, `docs`, `refactor`, `test`, `chore` or `perf`.
+- `main` is protected: no direct pushes, no force pushes, signed commits, required review
+  and checks.
+
+## Releases
+
+TwinLLM follows [Semantic Versioning](https://semver.org/). Until 1.0, a minor version
+(`0.x.0`) may change behaviour; a patch version (`0.x.y`) only fixes.
+
+- Planned work is grouped in a [milestone](https://github.com/Opening-Science/twin-llm/milestones)
+  per release.
+- A maintainer releases by tagging `main` (`vX.Y.Z`), adding the release to
+  [`CHANGELOG.md`](CHANGELOG.md) from the squashed commit titles, and publishing the GitHub
+  release. Tags matching `v*` are protected and never move.
+- If a released version needs a fix after `main` has moved on, the fix lands on `main`
+  first and is then cherry-picked onto a `release/X.Y` branch cut from the tag, which is
+  tagged `vX.Y.Z+1`.
+- Database changes ship as Prisma migrations; deployments apply them with
+  `bunx prisma migrate deploy`. Release notes name any manual step.
+
 ## Pull requests
 
 Describe what changed, how you checked it and what is still limited, in a few lines.
