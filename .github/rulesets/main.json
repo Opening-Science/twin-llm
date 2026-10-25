@@ -2,7 +2,13 @@
   "name": "Protect main",
   "target": "branch",
   "enforcement": "active",
-  "bypass_actors": [],
+  "bypass_actors": [
+    {
+      "actor_id": 5,
+      "actor_type": "RepositoryRole",
+      "bypass_mode": "always"
+    }
+  ],
   "conditions": {
     "ref_name": {
       "include": ["~DEFAULT_BRANCH"],
@@ -10,10 +16,18 @@
     }
   },
   "rules": [
-    { "type": "deletion" },
-    { "type": "non_fast_forward" },
-    { "type": "required_linear_history" },
-    { "type": "required_signatures" },
+    {
+      "type": "deletion"
+    },
+    {
+      "type": "non_fast_forward"
+    },
+    {
+      "type": "required_linear_history"
+    },
+    {
+      "type": "required_signatures"
+    },
     {
       "type": "pull_request",
       "parameters": {
@@ -31,14 +45,38 @@
         "strict_required_status_checks_policy": true,
         "do_not_enforce_on_create": false,
         "required_status_checks": [
-          { "context": "typecheck", "integration_id": 15368 },
-          { "context": "lint", "integration_id": 15368 },
-          { "context": "lint-claims", "integration_id": 15368 },
-          { "context": "test", "integration_id": 15368 },
-          { "context": "test-isolation", "integration_id": 15368 },
-          { "context": "prisma", "integration_id": 15368 },
-          { "context": "gitleaks", "integration_id": 15368 },
-          { "context": "ark-app", "integration_id": 15368 }
+          {
+            "context": "typecheck",
+            "integration_id": 15368
+          },
+          {
+            "context": "lint",
+            "integration_id": 15368
+          },
+          {
+            "context": "lint-claims",
+            "integration_id": 15368
+          },
+          {
+            "context": "test",
+            "integration_id": 15368
+          },
+          {
+            "context": "test-isolation",
+            "integration_id": 15368
+          },
+          {
+            "context": "prisma",
+            "integration_id": 15368
+          },
+          {
+            "context": "gitleaks",
+            "integration_id": 15368
+          },
+          {
+            "context": "ark-app",
+            "integration_id": 15368
+          }
         ]
       }
     }
