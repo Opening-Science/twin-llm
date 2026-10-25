@@ -1,0 +1,31 @@
+# Changelog
+
+Notable changes to TwinLLM. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and versions follow [Semantic Versioning](https://semver.org/).
+
+## [Unreleased]
+
+### Changed
+
+- The repository rulesets let repository admins bypass, matching the applied settings.
+
+## [0.1.0] - 2026-10-25
+
+First public release.
+
+### Added
+
+- Chat over coded health data, with up to three open models answering side by side, each
+  with its reasoning, cited values and uncertainty.
+- Closed, audited query tools over coded FHIR R4 observations: latest value, trend,
+  baseline deviation, coverage and window comparison.
+- Digital Twin: a 3D body with reference anatomy, live vitals and biomarkers by organ
+  system.
+- Data explorer for synthetic cohorts and the training conversations made from them.
+- First-run flow for roles, data sources, knowledge sources and data residency.
+- Connectors for Oura, Whoop, Google Health and BodyLoop body scans.
+- Evaluation harness with 81 questions over a synthetic cohort, and tooling to build
+  tool-use training data from Synthea cohorts.
+
+[Unreleased]: https://github.com/Opening-Science/twin-llm/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/Opening-Science/twin-llm/releases/tag/v0.1.0
