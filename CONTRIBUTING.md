@@ -49,9 +49,10 @@ that publish no licence.
   ones. Fixtures are synthetic.
 - **Never commit secrets**: no tokens, keys, cookies, OAuth payloads or `.env*` values.
   `.env.local` stays local; only `.env.example` and `.env.synthetic.example` are tracked.
-- Keep the privacy posture in the README: personal context goes only to Ollama or
-  Exoscale (or legacy Infomaniak when named). OpenRouter and the remote GPU are permitted
-  only with `DATA_MODE=synthetic` and no wearable snapshot. Error messages carry no
+- Keep the privacy posture in the README: personal context goes only to Ollama, or to
+  Exoscale with `EXOSCALE_PERSONAL_DATA=consented-pilot`. OpenRouter, the remote GPU and
+  legacy Infomaniak are permitted only with `DATA_MODE=synthetic` and no wearable
+  snapshot. Error messages carry no
   provider response bodies.
 - Missing is not zero: an absent measurement stays absent, never `0`.
 
