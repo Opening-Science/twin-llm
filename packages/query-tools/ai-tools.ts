@@ -12,6 +12,7 @@ import {
   TOOL_DEFINITIONS,
   trendInput,
 } from "./schemas";
+import { modelInputSchema } from "./model-schema";
 import type { QueryToolPorts } from "./ports";
 import type { SessionScope } from "./scope";
 import {
@@ -37,47 +38,47 @@ const description = (name: (typeof TOOL_DEFINITIONS)[number]["name"]): string =>
 export const createQueryTools = (scope: SessionScope, ports?: QueryToolPorts) => ({
   list_subjects: tool({
     description: description("list_subjects"),
-    inputSchema: listSubjectsInput,
+    inputSchema: modelInputSchema(listSubjectsInput),
     execute: async (input) => runListSubjects(scope, input),
   }),
   subject_window: tool({
     description: description("subject_window"),
-    inputSchema: subjectWindowInput,
+    inputSchema: modelInputSchema(subjectWindowInput),
     execute: async (input) => runSubjectWindow(scope, input),
   }),
   observations_for_subject: tool({
     description: description("observations_for_subject"),
-    inputSchema: observationsForSubjectInput,
+    inputSchema: modelInputSchema(observationsForSubjectInput),
     execute: async (input) => runObservationsForSubject(scope, input),
   }),
   latest_by_loinc: tool({
     description: description("latest_by_loinc"),
-    inputSchema: latestByLoincInput,
+    inputSchema: modelInputSchema(latestByLoincInput),
     execute: async (input) => runLatestByLoinc(scope, input),
   }),
   summary_stats: tool({
     description: description("summary_stats"),
-    inputSchema: summaryStatsInput,
+    inputSchema: modelInputSchema(summaryStatsInput),
     execute: async (input) => runSummaryStats(scope, input),
   }),
   trend: tool({
     description: description("trend"),
-    inputSchema: trendInput,
+    inputSchema: modelInputSchema(trendInput),
     execute: async (input) => runTrend(scope, input, ports),
   }),
   baseline_deviation: tool({
     description: description("baseline_deviation"),
-    inputSchema: baselineDeviationInput,
+    inputSchema: modelInputSchema(baselineDeviationInput),
     execute: async (input) => runBaselineDeviation(scope, input, ports),
   }),
   coverage: tool({
     description: description("coverage"),
-    inputSchema: coverageInput,
+    inputSchema: modelInputSchema(coverageInput),
     execute: async (input) => runCoverage(scope, input, ports),
   }),
   compare_windows: tool({
     description: description("compare_windows"),
-    inputSchema: compareWindowsInput,
+    inputSchema: modelInputSchema(compareWindowsInput),
     execute: async (input) => runCompareWindows(scope, input, ports),
   }),
 });
