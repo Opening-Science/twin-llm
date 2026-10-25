@@ -24,8 +24,6 @@ Language models are good at sounding sure. Health data needs the opposite: numbe
 
 ## Data privacy
 
-### Privacy by design, enforced in code
-
 Health data is among the most sensitive data a person has, and a digital twin concentrates
 it in one place. TwinLLM is built so that privacy does not depend on a policy page or on
 trusting an operator: the rules below are enforced by the code, checked by tests in CI, and
