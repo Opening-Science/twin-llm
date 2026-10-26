@@ -53,6 +53,15 @@ export const COHORT_PRESETS = {
 export type CohortPresetName = keyof typeof COHORT_PRESETS;
 
 /**
+ * `contentSha256` of `--preset eval` (37 patient files), the cohort the
+ * evaluation answer key is built from. Two runs, the second under
+ * TZ=America/New_York, gave this value. A different value means a different
+ * cohort: rebuild the key (docs/evaluation/question-set.md) before changing it.
+ */
+export const EVAL_CONTENT_SHA256 =
+  "f4941fab7a56e17f9dd66b6b6e0fbed379dab8c564c6024831c5fd4aa0ba09eb";
+
+/**
  * How `generate-local.sh` runs Synthea for every cohort, so that the same seeds
  * and dates give the same files: the JVM in UTC (Synthea reads `-r`/`-e` in the
  * JVM's time zone) and one generator thread (more threads race in v4.0.0).
