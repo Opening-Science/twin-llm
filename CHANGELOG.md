@@ -7,6 +7,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- The Body twin can walk: Walk and Idle in the 3D toolbar play a generic, computed walk cycle (in place) and a standing breath with sway on a BodyLoop scan's skeleton or on a rigged demo body. No motion-capture data; the lines beside the view say it is not this person's gait. Anatomy layers fade out while the body moves, and reduced motion or a body without a skeleton disables both, with the reason.
+- `bun run anatomy:bake-rigged` bakes the ANNY demo bodies with their skeleton and skin weights from the pinned `anny` Python package (via uv) and installs them only when they match their SHA-256 pins; the viewer prefers them over the static bodies.
 - `training:batches --skip-rejected` continues past bundles the importer rejects, lists them per batch, and still stops above a 1% rejection share.
 
 ### Changed

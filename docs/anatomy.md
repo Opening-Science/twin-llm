@@ -112,8 +112,35 @@ The Body twin subject picker always offers **Demo (synthetic)** next to the Body
 
 - Served from `https://opentwin.opening.science/models/` (Last-Modified 18 Aug 2026). open-twin-xr bakes ANNY (NAVER LABS Europe) to static geometry posed to match BodyParts3D; no scan of any person was used. Licence: Apache-2.0 (code) over CC0-1.0 (shape assets derived from MakeHuman); cite arXiv:2511.03589. The pins live in `packages/anatomy/demo-bodies.ts`.
 - Measured on the pinned files (2026-10-15, decoded with three's meshopt decoder): one mesh, 13,718 vertices, 27,420 triangles, `POSITION` and `COLOR_0` only (no normals, no material, no skeleton), `EXT_meshopt_compression` and `KHR_mesh_quantization` required. Metres, +Y up, feet at y=0, faces +Z (nose at z=+0.137 m / +0.170 m, toes in front of heels). Left and right cannot be told apart from the geometry; the mesh is symmetric to within 7 mm, so a mirror would not show.
-- The demo body is the envelope, like a scan: normals are computed at load, the material is made matte like a scan's, and it is wrapped in the same `Rx(+90°)` as the atlases to reach the scan frame. The glass fade and `fitAtlasToScan` then run unchanged. It has no skeleton, so the fit always uses the bounding-box anchor, and the note under the slider says so.
+- The demo body is the envelope, like a scan: normals are computed at load, the material is made matte like a scan's, and it is wrapped in the same `Rx(+90°)` as the atlases to reach the scan frame. The glass fade and `fitAtlasToScan` then run unchanged. The fit always uses the bounding-box anchor (the static body has no skeleton, and the rigged body's ANNY joint names are not the scan's hip joints), and the note under the slider says the hips are not aligned.
 - The atlas picker stays independent of the demo body's sex.
+
+### Rigged demo bodies
+
+```bash
+bun run anatomy:bake-rigged            # both; --demo <id> for one, --check to report
+```
+
+- Needs [uv](https://docs.astral.sh/uv/). `scripts/anatomy/bake-anny-rigged.py` runs with `uv run --script` against `scripts/anatomy/bake-anny-rigged.py.lock` (anny 0.6.2, torch 2.14.1 CPU and every transitive dependency pinned; about 7 s per body once the environment is cached). It writes to a scratch file; `scripts/anatomy/bake-rigged.ts` installs it into `data/anatomy/` only when its bytes match the pin in `packages/anatomy/rigged-bodies.ts`, and otherwise prints the SHA-256 it got and writes nothing.
+- The static bodies are ANNY at gender 0 (male) or 1 (female), age 2/3 ("young"), every other phenotype 0.5: those reproduce their heights exactly (1.914 m, 1.772 m). The bake uses the same values and keeps ANNY's own 104-bone skeleton (`rig="anny"`) and skin weights (the four strongest per vertex). Bind pose: ANNY's rest pose with the upper arms lowered 30° (10° from vertical) and the forearms hanging 15° in front of the upper arm. The static files' exact pose could not be recovered (their vertex order differs from ANNY's), so the limbs differ a little; the fit uses the box either way.
+- Plain glTF 2.0, no extensions: 13,718 vertices, 27,420 triangles, `POSITION`, `JOINTS_0`, `WEIGHTS_0` (normalised bytes summing to 255), one skin, no normals and no `COLOR_0` (so no baked shading). Atlas frame like the static bodies. Positions are rounded to 10 µm and joint transforms to 1e-6 before writing, so the bytes do not depend on the last bits of float maths.
+
+| Body         | File                      | Bytes   | SHA-256                                                            |
+| ------------ | ------------------------- | ------- | ------------------------------------------------------------------ |
+| ANNY adult m | `anny-adult-m.rigged.glb` | 464,852 | `16d101090af7719069cd78d0a091d7d9c4975bc45df44201f23761ea89553589` |
+| ANNY adult f | `anny-adult-f.rigged.glb` | 464,816 | `9032bfeb29ba4be8aeb0eb38a81e72c5dd5420a38005913d907c83c4f87fdbe1` |
+
+- `GET /api/anatomy/status` also lists `riggedBodies: [{ id, installed }]`; `GET /api/anatomy/rigged/:bodyId` serves them under the same caching rules as the demo route. The viewer waits for the status before loading a demo body, then loads the rigged one when installed and the static one otherwise, so it never loads twice. The credit then says the body was baked with its skeleton by this repository.
+
+## Motion
+
+- **Walk** and **Idle** sit in the toolbar's Show group after Live vitals. One clip plays at a time; pressing the playing one stops it. Each blends in and out over 0.4 s and starts at its beginning.
+- The clips are pure functions of time in `features/digital-twin/motion/gait.ts`, with no motion-capture data. Walk: about 105 steps a minute, 1.3 m strides (both parameters), smooth curves shaped like textbook sagittal gait (hip 28° flexion at heel strike to 12° extension, knee up to 58° in swing, ankle push-off, arm swing opposite the leg, pelvis rotation and list, trunk counter-rotation). Idle: 12 breaths a minute in the chest and shoulders and a slow sway. The line beside the view says the walk is generic and not this person's gait.
+- `motion/rig-map.ts` maps the clips onto two rigs by joint name: ANNY's (`root`, `spine05`, `upperleg01.L`, `lowerleg01.L`, `foot.L`, `upperarm01.L`, `lowerarm01.L`, …) and the scans' Mixamo-style names (`Hips`, `Spine`, `LeftUpLeg`, `LeftLeg`, `LeftFoot`, `LeftArm`, `LeftForeArm`, …, any prefix). Required joints missing or ambiguous: no binding, the buttons are disabled and a line says why. The body frame is measured on the rig at rest (hips to shoulders, right hip to left hip), so bone axis conventions do not matter.
+- Walking is in place: after posing, the pelvis moves along the body's up axis so the lowest ankle or toe stays at its rest height.
+- Bones are set in the existing frame loop (`motion/body-motion.tsx`), not with an `AnimationMixer`, since the clips are functions rather than keyframes. Frames stay on demand: about 30 fps while the body moves, none off screen or in a hidden tab. Stopping, switching bodies or unmounting restores the bind pose.
+- The atlas layers cannot follow the bones, so while a clip plays the depth eases to the scan (the slider keeps its value and comes back when motion stops), and a line says so. Live vitals' organs are hidden with them.
+- With `prefers-reduced-motion` both buttons are disabled and a line says why.
 
 ## Privacy
 

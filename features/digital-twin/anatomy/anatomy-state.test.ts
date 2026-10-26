@@ -6,7 +6,7 @@ import {
   preferredAtlas,
   type AnatomyState,
 } from "./anatomy-state";
-import { parseAnatomyStatus } from "./use-anatomy-view";
+import { parseAnatomyStatus, parseRiggedStatus } from "./use-anatomy-view";
 
 const run = (state: AnatomyState, ...actions: Parameters<typeof anatomyReducer>[1][]) =>
   actions.reduce(anatomyReducer, state);
@@ -197,6 +197,28 @@ describe("parseAnatomyStatus", () => {
   test("returns null for a body that is not a status", () => {
     expect(parseAnatomyStatus(null)).toBeNull();
     expect(parseAnatomyStatus({ error: "nope" })).toBeNull();
+  });
+});
+
+describe("parseRiggedStatus", () => {
+  test("maps installed rigged bodies and treats anything else as not baked", () => {
+    expect(
+      parseRiggedStatus({
+        riggedBodies: [
+          { id: "anny-adult-f", installed: true },
+          { id: "anny-child", installed: true },
+          "junk",
+        ],
+      }),
+    ).toEqual({ "anny-adult-m": false, "anny-adult-f": true });
+    expect(parseRiggedStatus({ atlases: [] })).toEqual({
+      "anny-adult-m": false,
+      "anny-adult-f": false,
+    });
+    expect(parseRiggedStatus(null)).toEqual({
+      "anny-adult-m": false,
+      "anny-adult-f": false,
+    });
   });
 });
 

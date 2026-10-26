@@ -41,6 +41,7 @@ import {
   demoBodyIdFor,
 } from "@/packages/anatomy/demo-bodies";
 import { ATLASES } from "@/packages/anatomy/manifest";
+import { RIGGED_ATTRIBUTION, riggedBodyApiUrl } from "@/packages/anatomy/rigged-bodies";
 import { Button } from "@/infrastructure/ui-kit/button";
 import { Field } from "@/infrastructure/ui-kit/field";
 import { Legend } from "@/infrastructure/ui-kit/legend";
@@ -59,6 +60,9 @@ import {
 import { loadAtlasGltf } from "./anatomy/load-atlas";
 import { useAnatomyView } from "./anatomy/use-anatomy-view";
 import { prepareDemoBody } from "./demo-body";
+import { BodyMotion } from "./motion/body-motion";
+import { motionLines } from "./motion/motion-copy";
+import { useBodyMotion } from "./motion/use-body-motion";
 import {
   EnvironmentBar,
   EnvironmentPanel,
@@ -757,6 +761,7 @@ export const BodyLoopAvatar = ({
   const controlsRef = useRef<OrbitControls | null>(null);
   const camera = useMemo(() => new PerspectiveCamera(40, 1, 0.01, 40), []);
   const anatomy = useAnatomyView(preview === undefined);
+  const motion = useBodyMotion(scanScene, reducedMotion, isDemo ? "demo" : "scan");
   const onControls = useCallback((controls: OrbitControls | null) => {
     controlsRef.current = controls;
   }, []);
@@ -1082,8 +1087,16 @@ export const BodyLoopAvatar = ({
     );
   }
 
-  const demoUrl = demoBodyApiUrl(demoBodyIdFor(demoSex));
   const demoBody = DEMO_BODIES[demoBodyIdFor(demoSex)];
+  // The rigged bake replaces the static body when installed; until the status
+  // answers there is no URL, so the demo body is never loaded twice.
+  const demoRigged = anatomy.rigged?.[demoBody.id] === true;
+  const demoUrl =
+    anatomy.rigged === null && preview === undefined
+      ? null
+      : demoRigged
+        ? riggedBodyApiUrl(demoBody.id)
+        : demoBodyApiUrl(demoBody.id);
 
   const viewport = (body: Readonly<{ kind: "scan" | "demo"; url: string }>) => (
     <div
@@ -1151,6 +1164,7 @@ export const BodyLoopAvatar = ({
           walk={environment.active}
           getControls={getControls}
         />
+        <BodyMotion binding={motion.binding} clip={motion.clip} />
         {environment.active ? (
           <ProjectAnchor point={picked?.point ?? null} store={anchorStore} />
         ) : null}
@@ -1160,7 +1174,8 @@ export const BodyLoopAvatar = ({
           atlasId={anatomy.state.atlasId}
           requested={anatomy.state.requested}
           retry={anatomy.state.retry}
-          targetDepth={anatomy.state.targetDepth}
+          // The atlas cannot follow the bones, so it fades out while the body moves.
+          targetDepth={motion.clip ? 0 : anatomy.state.targetDepth}
           layers={anatomy.state.layers}
           hiddenSystems={anatomy.state.hiddenSystems}
           highlight={anatomy.state.highlight}
@@ -1252,6 +1267,7 @@ export const BodyLoopAvatar = ({
                   }
                 : undefined
             }
+            motion={motion.control}
             environment={{ active: inEnvironment, onToggle: environment.toggle }}
             environmentRef={environment.buttonRef}
             liveVitals={
@@ -1298,6 +1314,7 @@ export const BodyLoopAvatar = ({
               inEnvironment: environment.active,
               reducedMotion,
             }}
+            extra={motionLines(motion.control, anatomy.state.targetDepth > 0)}
           />
           {environment.active && picked ? (
             <PickCard
@@ -1388,12 +1405,13 @@ export const BodyLoopAvatar = ({
       {isDemo ? (
         <>
           <p className="text-muted-foreground mt-2 text-xs">{DEMO_BODY_NOTE}</p>
-          {demoErrorShown(demoFailedUrl, demoUrl) ? (
+          {demoUrl && demoErrorShown(demoFailedUrl, demoUrl) ? (
             <p className="text-muted-foreground mt-3 text-sm leading-relaxed">
               {DEMO_LOAD_ERROR}
             </p>
           ) : null}
           {showWebgl ? (
+            demoUrl &&
             viewer(
               { kind: "demo", url: demoUrl },
               {
@@ -1424,7 +1442,7 @@ export const BodyLoopAvatar = ({
             <p className="text-muted-foreground mt-3 text-sm">{DEMO_NEEDS_WEBGL}</p>
           )}
           <p className="text-muted-foreground mt-3 text-[11px] leading-relaxed">
-            {demoBody.attribution}{" "}
+            {demoRigged ? RIGGED_ATTRIBUTION : demoBody.attribution}{" "}
             <a
               href={ANNY_CODE_LICENCE_URL}
               target="_blank"

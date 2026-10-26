@@ -4,10 +4,13 @@ import { Button } from "@/infrastructure/ui-kit/button";
 
 import { ENTER_ENVIRONMENT, EXIT_ENVIRONMENT } from "./environment/environment-copy";
 import { LIVE_TOGGLE } from "./live/live-copy";
+import { type MotionClip } from "./motion/gait";
+import { MOTION_LABEL } from "./motion/motion-copy";
+import { type MotionControl } from "./motion/use-body-motion";
 
 /**
  * The 3D view controls, directly above the canvas, in three groups: View
- * (Reset, Pause, zoom), Show (Landmarks, Live vitals) and Enter/Exit. A row
+ * (Reset, Pause, zoom), Show (Landmarks, Live vitals, Walk, Idle) and Enter/Exit. A row
  * that runs out of room wraps between groups, never inside one.
  *
  * It renders only with a canvas: Reset or Pause with no view to act on did
@@ -15,8 +18,13 @@ import { LIVE_TOGGLE } from "./live/live-copy";
  * `aria-pressed`; Landmarks keeps one label and reports its state with
  * `aria-pressed` instead. Zoom is two glyphs with spoken names. Enter/Exit
  * environment names its action like Pause does, and stays in the row inside
- * the environment as the exit.
+ * the environment as the exit. Walk and Idle are one choice of at most one
+ * clip; pressing the playing one stops it. Without a rig or with reduced
+ * motion they stay in place, disabled, and the reason is the button title and
+ * a line beside the view.
  */
+
+const MOTION_CLIPS: readonly MotionClip[] = ["walk", "idle"];
 
 /** The same pressed look as `.chip[aria-pressed="true"]` in the anatomy controls. */
 const PRESSED =
@@ -31,6 +39,8 @@ export type ViewToolbarProps = Readonly<{
   landmarks?: Readonly<{ shown: boolean; onToggle: () => void }>;
   /** Live vitals (G4); only when the subject has a rate and motion is allowed. */
   liveVitals?: Readonly<{ on: boolean; onToggle: () => void }>;
+  /** Whole-body motion (#51), once a body has loaded. */
+  motion?: MotionControl;
   /** The full-screen environment; focus returns to this button on exit. */
   environment?: Readonly<{ active: boolean; onToggle: () => void }>;
   environmentRef?: Ref<HTMLButtonElement>;
@@ -43,6 +53,7 @@ export const ViewToolbar = ({
   onZoom,
   landmarks,
   liveVitals,
+  motion,
   environment,
   environmentRef,
 }: ViewToolbarProps) => (
@@ -65,7 +76,7 @@ export const ViewToolbar = ({
         −
       </Button>
     </div>
-    {landmarks || liveVitals ? (
+    {landmarks || liveVitals || motion ? (
       <div role="group" aria-label="Show" className="flex gap-1.5">
         {landmarks ? (
           <Button
@@ -87,6 +98,21 @@ export const ViewToolbar = ({
             {LIVE_TOGGLE}
           </Button>
         ) : null}
+        {motion
+          ? MOTION_CLIPS.map((clip) => (
+              <Button
+                key={clip}
+                size="sm"
+                aria-pressed={motion.clip === clip}
+                disabled={motion.unavailable !== null}
+                title={motion.unavailable ?? undefined}
+                onClick={() => motion.onSelect(motion.clip === clip ? null : clip)}
+                className={PRESSED}
+              >
+                {MOTION_LABEL[clip]}
+              </Button>
+            ))
+          : null}
       </div>
     ) : null}
     {environment ? (

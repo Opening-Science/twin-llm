@@ -40,6 +40,12 @@ The files were merged, simplified and shaded (ambient occlusion) by the Open Sci
 
 "This repository" in that credit is the Open Science Foundation's open-twin-xr, which baked and posed the bodies; TwinLLM only positions them. Pins and details: `docs/anatomy.md`.
 
+`bun run anatomy:bake-rigged` bakes rigged variants of the same two bodies locally, with ANNY's skeleton and skin weights, from the `anny` Python package (same licences). They are not part of this repository either; the viewer then shows this credit:
+
+- ANNY, a free-to-use 3D human parametric model for all ages — NAVER LABS Europe / NAVER Corporation. Apache-2.0 code over CC0 shape assets derived from MakeHuman. Cite arXiv:2511.03589. Baked with its skeleton by this repository; no scan of any person was used.
+
+Here "this repository" is TwinLLM (`scripts/anatomy/bake-anny-rigged.py`). The walk and idle clips use no motion-capture data.
+
 ## open-twin-xr (ported code)
 
 `packages/anatomy/hra-groups.ts` is ported from [Opening-Science/open-twin-xr](https://github.com/Opening-Science/open-twin-xr) `src/scene/anatomy/hraGroups.ts` at `7334c0bb0664e1f293f88971788520d64734466c` (MIT, Copyright (c) 2026 Martin Etzrodt, OSF Staff and Open Twin XR contributors). See `third_party/open-twin-xr/LICENSE`.

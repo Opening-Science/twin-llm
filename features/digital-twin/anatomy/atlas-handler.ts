@@ -10,9 +10,10 @@ import {
   isAtlasId,
   type AtlasId,
 } from "@/packages/anatomy/manifest";
+import { RIGGED_BODIES, riggedBodyVersion } from "@/packages/anatomy/rigged-bodies";
 
 import { ANATOMY_NOT_INSTALLED_API } from "./anatomy-copy";
-import { DEMO_NOT_INSTALLED_API } from "./demo-copy";
+import { DEMO_NOT_INSTALLED_API, RIGGED_NOT_INSTALLED_API } from "./demo-copy";
 import { createPinnedGlbHandler } from "./pinned-glb-handler";
 
 export { matchesEtag } from "./pinned-glb-handler";
@@ -51,4 +52,22 @@ export const createDemoBodyHandler = (deps: DemoBodyDeps) =>
     version: demoBodyVersion,
     open: deps.openDemoBody,
     notInstalled: DEMO_NOT_INSTALLED_API,
+  });
+
+/**
+ * GET /api/anatomy/rigged/:bodyId. The locally baked rigged demo bodies, keyed
+ * by the demo body they rig; same rules, their own pins.
+ */
+export type RiggedBodyDeps = Readonly<{
+  openRiggedBody: (id: DemoBodyId) => Promise<Uint8Array<ArrayBuffer> | null>;
+}>;
+
+export const createRiggedBodyHandler = (deps: RiggedBodyDeps) =>
+  createPinnedGlbHandler<DemoBodyId>({
+    param: "bodyId",
+    isId: isDemoBodyId,
+    sha256: (id) => RIGGED_BODIES[id].sha256,
+    version: riggedBodyVersion,
+    open: deps.openRiggedBody,
+    notInstalled: RIGGED_NOT_INSTALLED_API,
   });

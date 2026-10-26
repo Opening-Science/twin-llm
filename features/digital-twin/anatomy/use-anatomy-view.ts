@@ -2,6 +2,11 @@
 
 import { useCallback, useEffect, useReducer, useState } from "react";
 
+import {
+  DEMO_BODY_IDS,
+  isDemoBodyId,
+  type DemoBodyId,
+} from "@/packages/anatomy/demo-bodies";
 import { ATLAS_IDS, isAtlasId, type AtlasId } from "@/packages/anatomy/manifest";
 
 import { anatomyReducer, initialAnatomyState, type AnatomyLoad } from "./anatomy-state";
@@ -24,10 +29,34 @@ export const parseAnatomyStatus = (value: unknown): Record<AtlasId, boolean> | n
   return installed;
 };
 
-/** Anatomy UI state plus which atlases are installed (fetched once, skipped in previews). */
+/** Which demo bodies have a baked rigged variant; all false for an older or odd body. */
+export const parseRiggedStatus = (value: unknown): Record<DemoBodyId, boolean> => {
+  const rigged = Object.fromEntries(DEMO_BODY_IDS.map((id) => [id, false])) as Record<
+    DemoBodyId,
+    boolean
+  >;
+  const rows: unknown =
+    value && typeof value === "object"
+      ? (value as { riggedBodies?: unknown }).riggedBodies
+      : null;
+  if (!Array.isArray(rows)) return rigged;
+  for (const row of rows as readonly unknown[]) {
+    if (!row || typeof row !== "object") continue;
+    const { id, installed: present } = row as StatusRow;
+    if (isDemoBodyId(id) && present === true) rigged[id] = true;
+  }
+  return rigged;
+};
+
+/**
+ * Anatomy UI state plus which atlases and rigged demo bodies are installed
+ * (fetched once, skipped in previews). `rigged` stays null until the status
+ * answers, so the demo body is not loaded twice; a failed status counts as none.
+ */
 export const useAnatomyView = (enabled: boolean) => {
   const [state, dispatch] = useReducer(anatomyReducer, initialAnatomyState);
   const [installed, setInstalled] = useState<Record<AtlasId, boolean> | null>(null);
+  const [rigged, setRigged] = useState<Record<DemoBodyId, boolean> | null>(null);
 
   useEffect(() => {
     if (!enabled) return;
@@ -38,10 +67,13 @@ export const useAnatomyView = (enabled: boolean) => {
         if (cancelled) return;
         const status = parseAnatomyStatus(value);
         setInstalled(status);
+        setRigged(parseRiggedStatus(value));
         // A missing atlas should not leave the slider stuck when another one is here.
         dispatch({ type: "installed", installed: status });
       })
-      .catch(() => undefined);
+      .catch(() => {
+        if (!cancelled) setRigged(parseRiggedStatus(null));
+      });
     return () => {
       cancelled = true;
     };
@@ -49,5 +81,5 @@ export const useAnatomyView = (enabled: boolean) => {
 
   const onLoad = useCallback((load: AnatomyLoad) => dispatch({ type: "load", load }), []);
 
-  return { state, dispatch, installed, onLoad };
+  return { state, dispatch, installed, rigged, onLoad };
 };
