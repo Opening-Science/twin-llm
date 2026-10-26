@@ -4,6 +4,7 @@ import {
   type CatalogModel,
   defaultModelSelection,
   formatContextWindow,
+  formatModelWindow,
   parseFreeModels,
 } from "./model-catalog";
 
@@ -80,5 +81,14 @@ describe("formatContextWindow", () => {
     expect(formatContextWindow(1_000_000)).toBe("1M");
     expect(formatContextWindow(1_048_576)).toBe("1M");
     expect(formatContextWindow(2_500_000)).toBe("2.5M");
+  });
+});
+
+describe("formatModelWindow", () => {
+  test("says unknown instead of the placeholder window", () => {
+    expect(formatModelWindow({ contextTokens: 128_000, contextUnknown: true })).toBe(
+      "unknown",
+    );
+    expect(formatModelWindow({ contextTokens: 128_000 })).toBe("128K");
   });
 });

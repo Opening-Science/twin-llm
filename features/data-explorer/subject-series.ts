@@ -8,9 +8,8 @@
  * readings, distinct UTC days, first and last day. Pure.
  */
 
+import { utcDay } from "@/infrastructure/day-key";
 import { formatNumber } from "@/infrastructure/format-measure";
-
-import { utcDay } from "./cohort-stats";
 
 export type SubjectObservation = Readonly<{
   id: string;

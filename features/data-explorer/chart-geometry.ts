@@ -6,8 +6,6 @@
  * scaled down, so axis text stays readable on a phone.
  */
 
-export type Size = Readonly<{ width: number; height: number }>;
-
 /** A step of 1, 2, 2.5 or 5 times a power of ten, at least `raw`. */
 const niceStep = (raw: number): number => {
   if (!(raw > 0)) return 1;
@@ -47,33 +45,6 @@ export const tickDecimals = (ticks: readonly number[]): number => {
   if (ticks.length < 2) return 0;
   const step = Math.abs(ticks[1]! - ticks[0]!);
   return step >= 1 ? 0 : Math.min(4, Math.ceil(-Math.log10(step) - 1e-9));
-};
-
-/** Gap between the hovered point and the tooltip, in CSS pixels. */
-const TOOLTIP_GAP = 12;
-
-const clamp = (value: number, low: number, high: number): number =>
-  Math.min(Math.max(value, low), Math.max(low, high));
-
-/**
- * The tooltip's top-left corner for a hovered point: right of the point if it
- * fits, else left of it, else pinned inside the chart; vertically centred on
- * the point and kept inside the chart.
- */
-export const tooltipPosition = (
-  point: Readonly<{ x: number; y: number }>,
-  chart: Size,
-  tip: Size,
-): Readonly<{ left: number; top: number }> => {
-  const right = point.x + TOOLTIP_GAP;
-  const left = point.x - TOOLTIP_GAP - tip.width;
-  const x =
-    right + tip.width <= chart.width
-      ? right
-      : left >= 0
-        ? left
-        : clamp(right, 0, chart.width - tip.width);
-  return { left: x, top: clamp(point.y - tip.height / 2, 0, chart.height - tip.height) };
 };
 
 /** The index of the value nearest `target` (first one on a tie); -1 when empty. */

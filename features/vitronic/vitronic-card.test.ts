@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import { emptySetup } from "@/features/connectors/setup-fixture";
+import { emptySetup } from "@/features/connectors/fixtures/setup-fixture";
 
 import { VitronicCard } from "./vitronic-card";
 import type { VitronicStatusPayload } from "./vitronic-status-view";

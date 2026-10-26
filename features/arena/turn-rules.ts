@@ -13,7 +13,7 @@ import {
 export const TITLE_LENGTH = 80;
 
 export const TURN_COPY = {
-  signIn: "Sign in to send a prompt to the arena.",
+  signIn: "Sign in to send a prompt to TwinLLM.",
   emptyPrompt: "Write a prompt before sending.",
   modelCount: "Pick between one and three models.",
   noCatalog: "We can't reach the model list right now. Try again in a moment.",

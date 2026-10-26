@@ -2,7 +2,7 @@
 
 import { type ReactNode, type RefObject, useLayoutEffect, useRef, useState } from "react";
 
-import { type Size, tooltipPosition } from "./chart-geometry";
+import { type Size, tooltipPosition } from "@/infrastructure/chart-tooltip";
 
 /**
  * Shared pieces of the Data page's charts: the measured width they draw at,

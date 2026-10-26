@@ -8,6 +8,7 @@
  * converted: a code stored in two units is two series.
  */
 
+import { utcDay } from "@/infrastructure/day-key";
 import { formatNumber } from "@/infrastructure/format-measure";
 
 /** One (code, unit) group of a cohort's numeric observations. */
@@ -44,9 +45,6 @@ export type CohortTotals = Readonly<{
   firstDay: string | null;
   lastDay: string | null;
 }>;
-
-/** A UTC calendar day key (YYYY-MM-DD) for `formatDate`; data, not display. */
-export const utcDay = (date: Date): string => date.toISOString().slice(0, 10);
 
 const byShareThenRows = (a: CodeSummary, b: CodeSummary): number =>
   b.subjects - a.subjects || b.rows - a.rows || a.loinc.localeCompare(b.loinc);
