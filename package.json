@@ -35,6 +35,7 @@
     "db:verify": "bash scripts/db/verify-migrations.sh",
     "db:studio": "prisma studio",
     "verify:import": "bash scripts/verify-import.sh",
+    "skills:check": "bun scripts/skills/check.ts",
     "sync:open-twin": "bash scripts/sync-open-twin.sh",
     "sync:verify": "bun test infrastructure/open-twin-pins.test.ts",
     "flatten:open-twin": "bash scripts/flatten-open-twin.sh",

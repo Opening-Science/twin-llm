@@ -1,0 +1,21 @@
+{
+  "question": "What was my sleep trend this week?",
+  "dataMode": "personal",
+  "wearableContext": true,
+  "script": [
+    {
+      "tool": "trend",
+      "input": {
+        "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+        "loinc": "93832-4",
+        "start": "2025-10-30",
+        "end": "2025-10-24"
+      }
+    }
+  ],
+  "expect": {
+    "calls": [],
+    "views": [],
+    "refusals": ["invalid-tool-input"]
+  }
+}

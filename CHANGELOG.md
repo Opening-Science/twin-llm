@@ -7,6 +7,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Skill format: `skills/<name>/SKILL.md` lists the tools, sources, providers (local only by default) and views a skill may use, and `evals/` holds its cases. `bun run skills:check` and `bun test` validate every skill and run its cases against a scripted model, so a failing case fails CI. A skill cannot widen the data-mode policy. `skills/sleep` is the first. See `docs/skills.md`.
 - `training:batches --skip-rejected` continues past bundles the importer rejects, lists them per batch, and still stops above a 1% rejection share.
 
 ### Changed
