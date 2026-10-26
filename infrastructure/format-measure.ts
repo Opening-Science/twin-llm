@@ -232,6 +232,18 @@ const STEM_LABELS: Readonly<Record<string, string>> = {
   "whoop.sleep.efficiency": "Whoop sleep efficiency",
   "whoop.sleep.consistency": "Whoop sleep consistency",
   "whoop.sleep.in_bed_min": "Whoop time in bed",
+  "whoop.workout.duration": "Whoop workout duration",
+  "whoop.workout.strain": "Whoop workout strain",
+  "whoop.workout.avg_hr": "Whoop workout average HR",
+  "whoop.workout.max_hr": "Whoop workout max HR",
+  "whoop.workout.kilojoules": "Whoop workout energy",
+  "whoop.workout.distance": "Whoop workout distance",
+  "whoop.workout.hr_zone_0": "Whoop time in HR zone 0",
+  "whoop.workout.hr_zone_1": "Whoop time in HR zone 1",
+  "whoop.workout.hr_zone_2": "Whoop time in HR zone 2",
+  "whoop.workout.hr_zone_3": "Whoop time in HR zone 3",
+  "whoop.workout.hr_zone_4": "Whoop time in HR zone 4",
+  "whoop.workout.hr_zone_5": "Whoop time in HR zone 5",
 };
 
 const STEM_KINDS: Readonly<Record<string, MeasureKind>> = {
@@ -260,6 +272,16 @@ const STEM_KINDS: Readonly<Record<string, MeasureKind>> = {
   "whoop.sleep.efficiency": "percent",
   "whoop.sleep.consistency": "percent",
   "whoop.sleep.in_bed_min": "sleepMinutes",
+  "whoop.workout.duration": "sleepMinutes",
+  "whoop.workout.strain": "strain",
+  "whoop.workout.avg_hr": "heartRate",
+  "whoop.workout.max_hr": "heartRate",
+  "whoop.workout.hr_zone_0": "sleepMinutes",
+  "whoop.workout.hr_zone_1": "sleepMinutes",
+  "whoop.workout.hr_zone_2": "sleepMinutes",
+  "whoop.workout.hr_zone_3": "sleepMinutes",
+  "whoop.workout.hr_zone_4": "sleepMinutes",
+  "whoop.workout.hr_zone_5": "sleepMinutes",
   "google.steps": "steps",
   "google.heart-rate": "heartRate",
   "google.daily-resting-heart-rate": "heartRate",
@@ -286,14 +308,21 @@ const DATE_SUFFIX_LABEL = /\s*\(\d{4}-\d{2}-\d{2}\)\s*$/;
 /** Oura suffixes a period (`long_sleep`, `late_nap`) onto sleep keys. */
 const MAIN_SLEEP_PERIODS = new Set(["long_sleep", "sleep", "rest"]);
 
-/** Key families whose third segment is a period or an activity, not part of the stem. */
-const SUFFIXED_FAMILIES = new Set(["sleep", "workout"]);
+/** Key families whose last segment is a period or an activity, not part of the stem. */
+const SUFFIXED_FAMILIES = new Set(["sleep", "workout", "whoop.workout"]);
 
 const splitStem = (key: string): Readonly<{ stem: string; period: string | null }> => {
   const stem = key.replace(DATE_SUFFIX_KEY, "");
   const parts = stem.split(".");
-  if (parts[0] !== undefined && SUFFIXED_FAMILIES.has(parts[0]) && parts.length === 3) {
-    return { stem: parts.slice(0, 2).join("."), period: parts[2]! };
+  // `sleep.hr.<period>`, `workout.calories.<activity>`, `whoop.workout.strain.<sport>`.
+  const family = parts[0] === "whoop" ? parts.slice(0, 2).join(".") : parts[0];
+  const familyLength = family?.split(".").length ?? 1;
+  if (
+    family !== undefined &&
+    SUFFIXED_FAMILIES.has(family) &&
+    parts.length === familyLength + 2
+  ) {
+    return { stem: parts.slice(0, -1).join("."), period: parts.at(-1)! };
   }
   return { stem, period: null };
 };

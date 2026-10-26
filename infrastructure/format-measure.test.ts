@@ -211,6 +211,11 @@ describe("metricLabel", () => {
     ["vo2max.value.2026-10-16", "VO2 max"],
     ["whoop.recovery.hrv.2026-10-16", "Whoop HRV RMSSD"],
     ["whoop.sleep.in_bed_min.2026-10-16", "Whoop time in bed"],
+    ["whoop.workout.strain.running.2026-10-16", "Whoop workout strain (running)"],
+    [
+      "whoop.workout.hr_zone_3.functional_fitness_2.2026-10-16",
+      "Whoop time in HR zone 3 (functional fitness 2)",
+    ],
     ["google.daily-heart-rate-variability.2026-10-16", "Daily HRV"],
     ["vitronic.height.knee.2026-10-16", "BodyLoop height knee"],
     [
@@ -238,6 +243,9 @@ describe("measureKindFor", () => {
     ["sleep.score.", undefined, "score"],
     ["workout.calories.running.2026-10-16", "kcal", "kcal"],
     ["workout.distance.running.2026-10-16", "m", null],
+    ["whoop.workout.max_hr.running.2026-10-16", "bpm", "heartRate"],
+    ["whoop.workout.strain.", undefined, "strain"],
+    ["whoop.workout.kilojoules.running.2026-10-16", "kJ", null],
     ["spo2.average.2026-10-16", "%", "spo2"],
     ["stress.recovery_high.2026-10-16", "min", "sleepMinutes"],
     ["vo2max.value.2026-10-16", "mL/kg/min", null],

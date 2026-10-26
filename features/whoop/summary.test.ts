@@ -22,7 +22,41 @@ describe("buildWhoopSummary golden", () => {
       ["whoop.sleep.efficiency.2026-01-01", 91.3, "%"],
       ["whoop.sleep.consistency.2026-01-01", 77, "%"],
       ["whoop.sleep.in_bed_min.2026-01-01", 450, "min"],
+      ["whoop.workout.duration.running.2026-01-02", 46, "min"],
+      ["whoop.workout.strain.running.2026-01-02", 12.3, null],
+      ["whoop.workout.avg_hr.running.2026-01-02", 148, "bpm"],
+      ["whoop.workout.max_hr.running.2026-01-02", 176, "bpm"],
+      ["whoop.workout.kilojoules.running.2026-01-02", 2092, "kJ"],
+      ["whoop.workout.distance.running.2026-01-02", 8013, "m"],
+      ["whoop.workout.hr_zone_0.running.2026-01-02", 1, "min"],
+      ["whoop.workout.hr_zone_1.running.2026-01-02", 5, "min"],
+      ["whoop.workout.hr_zone_2.running.2026-01-02", 10, "min"],
+      ["whoop.workout.hr_zone_3.running.2026-01-02", 15, "min"],
+      ["whoop.workout.hr_zone_4.running.2026-01-02", 12, "min"],
+      ["whoop.workout.hr_zone_5.running.2026-01-02", 3, "min"],
+      ["whoop.workout.duration.running_2.2026-01-02", 30, "min"],
+      ["whoop.workout.strain.running_2.2026-01-02", 6, null],
+      ["whoop.workout.kilojoules.running_2.2026-01-02", 800, "kJ"],
     ]);
+  });
+
+  test("workout labels name the sport and the day", () => {
+    const strain = summary.metrics.find(
+      (m) => m.key === "whoop.workout.strain.running.2026-01-02",
+    );
+    expect(strain).toEqual({
+      key: "whoop.workout.strain.running.2026-01-02",
+      label: "Whoop workout strain, running (2026-01-02)",
+      value: 12.3,
+      date: "2026-01-02",
+    });
+  });
+
+  test("unscored workouts and absent workout fields produce no metric", () => {
+    const keys = summary.metrics.map((m) => m.key);
+    expect(keys.some((k) => k.includes("functional_fitness"))).toBe(false);
+    expect(keys).not.toContain("whoop.workout.distance.running_2.2026-01-02");
+    expect(keys).not.toContain("whoop.workout.avg_hr.running_2.2026-01-02");
   });
 
   test("labels and dates follow the metric day", () => {
@@ -75,7 +109,7 @@ describe("buildWhoopSummary golden", () => {
   test("empty payload abstains with the fixed narrative", () => {
     expect(
       buildWhoopSummary(
-        { recovery: [], cycles: [], sleep: [] },
+        { recovery: [], cycles: [], sleep: [], workouts: [] },
         { startDate: "2026-01-01", endDate: "2026-01-02" },
       ),
     ).toEqual({
