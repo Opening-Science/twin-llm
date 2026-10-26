@@ -1,10 +1,17 @@
 import "server-only";
 
+import { cache } from "react";
+
 import { resolveActorId } from "@/infrastructure/auth-actor";
 import { findAppUserId } from "@/infrastructure/current-user";
 import { database } from "@/infrastructure/database";
 
-import type { StoredThread, ThreadReads } from "./owned-thread";
+import {
+  type OwnedThread,
+  requireOwnedThread,
+  type StoredThread,
+  type ThreadReads,
+} from "./owned-thread";
 
 /** The real reads behind `loadOwnedThread`: the actor, their user row, and the thread. */
 const findThread = (threadId: string): Promise<StoredThread | null> =>
@@ -47,3 +54,11 @@ export const threadReads: ThreadReads = {
   appUserIdFor: findAppUserId,
   findThread,
 };
+
+/**
+ * The thread behind `/t/<id>`, read once per request: the layout checks it
+ * (and 404s) before anything streams, and the page gets the same result.
+ */
+export const ownedThread = cache((threadId: string): Promise<OwnedThread> =>
+  requireOwnedThread(threadId, threadReads),
+);
