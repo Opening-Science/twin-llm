@@ -19,7 +19,9 @@ import { createQueryTools } from "@/packages/query-tools/ai-tools";
 import type { QueryToolPorts } from "@/packages/query-tools/ports";
 import type { SessionScope } from "@/packages/query-tools/scope";
 
+import { loadThreadViews } from "./load-thread-views";
 import { createShowViewTool } from "./show-view-tool";
+import { createViewTools, type ViewToolDeps } from "./view-tools";
 
 const NO_WEARABLES: WearableSummaries = {
   oura: null,
@@ -53,6 +55,7 @@ const mcpServerPermitted = (
 export type ChatToolFactories = Readonly<{
   query: typeof createQueryTools;
   showView: typeof createShowViewTool;
+  views: typeof createViewTools;
   gbd: typeof createGbdTools;
   guidelines: typeof createGuidelineTools;
   knowledge: typeof createKnowledgeTools;
@@ -61,6 +64,7 @@ export type ChatToolFactories = Readonly<{
 const CHAT_TOOL_FACTORIES: ChatToolFactories = {
   query: createQueryTools,
   showView: createShowViewTool,
+  views: createViewTools,
   gbd: createGbdTools,
   guidelines: createGuidelineTools,
   knowledge: createKnowledgeTools,
@@ -75,6 +79,9 @@ const CHAT_TOOL_FACTORIES: ChatToolFactories = {
  * reads cohort rows only while the cohort record tools are on, and wearable
  * readings only from the snapshots this turn already loaded, which synthetic
  * mode never does. It is the only tool that receives those snapshots.
+ *
+ * `list_views` and `open_view` read the views this thread already showed
+ * (`thread-views.ts`); a synthetic request is not offered wearable ones.
  */
 export const createChatTools = (
   scope: SessionScope,
@@ -83,10 +90,12 @@ export const createChatTools = (
     hasWearableNarrative?: boolean;
     wearables?: WearableSummaries;
     disabledSources?: readonly KnowledgeSourceId[];
+    loadViews?: ViewToolDeps["loadViews"];
     factories?: ChatToolFactories;
   }>,
 ) => {
   const make = options?.factories ?? CHAT_TOOL_FACTORIES;
+  const hasWearableNarrative = options?.hasWearableNarrative ?? false;
   return {
     ...make.query(scope, options?.query),
     ...make.showView({
@@ -97,9 +106,13 @@ export const createChatTools = (
         "observations_for_subject",
       ),
     }),
-    ...(mcpServerPermitted("gbd", scope, options?.hasWearableNarrative ?? false)
-      ? make.gbd(scope)
-      : {}),
+    ...make.views({
+      scope,
+      ports: options?.query,
+      loadViews: options?.loadViews ?? loadThreadViews,
+      personal: requestDataMode(scope.mode, hasWearableNarrative) === "personal",
+    }),
+    ...(mcpServerPermitted("gbd", scope, hasWearableNarrative) ? make.gbd(scope) : {}),
     ...make.guidelines(scope),
     ...make.knowledge(scope),
   };

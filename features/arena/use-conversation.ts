@@ -110,6 +110,8 @@ export const useConversation = (
                 lost: result.ending === "LOST",
                 metrics: result.metrics,
                 document: result.document,
+                completedAt:
+                  result.ending === "COMPLETE" ? new Date().toISOString() : null,
                 reasoningText: parsed.reasoningText,
                 attribution: parsed.attribution,
               };

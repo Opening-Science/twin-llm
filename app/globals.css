@@ -350,6 +350,30 @@
     @apply bg-muted text-foreground;
   }
 
+  /* The thread's Outputs panel: a block above the answers on narrow screens, a
+     sticky column beside them from xl up. */
+  .outputs-panel {
+    @apply bg-card border-border mx-auto mb-6 flex w-full max-w-5xl flex-col gap-2 rounded-xl border p-2 xl:sticky xl:top-4 xl:mb-0 xl:max-h-[calc(100dvh-8rem)];
+  }
+
+  .outputs-reopen {
+    @apply mx-auto mb-4 flex w-full max-w-5xl justify-end xl:sticky xl:top-4 xl:mb-0;
+  }
+
+  .output-entry {
+    @apply border-border flex items-start gap-1 border-t py-1 first:border-t-0;
+  }
+
+  .output-entry-main {
+    @apply hover:bg-muted flex min-w-0 flex-1 flex-col gap-0.5 rounded-md px-1.5 py-1 text-left text-xs;
+  }
+
+  /* A chart scrolled to from the Outputs panel takes focus; show where. */
+  .view-figure:focus-visible,
+  .view-figure:focus {
+    @apply outline-primary outline-2 outline-offset-2;
+  }
+
   /* Connector "Setup" disclosure: a quiet summary row that opens to env
      names, the redirect URI and commands. Names and commands only. */
   .setup-disclosure > summary {

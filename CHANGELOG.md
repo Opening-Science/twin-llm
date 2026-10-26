@@ -7,6 +7,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- An Outputs panel per thread (#37) lists every chart its answers show, newest first, with title, kind, model and time. A row scrolls to the chart in its answer and Enlarge draws it large in the panel; the panel collapses or closes and remembers that in this browser. Two new model tools, `list_views` and `open_view`, let "show that chart again" reopen the stored chart instead of querying again; both are audited, and a synthetic request is not offered wearable charts.
+
 - The Body twin can walk: Walk and Idle in the 3D toolbar play a generic, computed walk cycle (in place) and a standing breath with sway on a BodyLoop scan's skeleton or on a rigged demo body. No motion-capture data; the lines beside the view say it is not this person's gait. Anatomy layers fade out while the body moves, and reduced motion or a body without a skeleton disables both, with the reason.
 - `bun run anatomy:bake-rigged` bakes the ANNY demo bodies with their skeleton and skin weights from the pinned `anny` Python package (via uv) and installs them only when they match their SHA-256 pins; the viewer prefers them over the static bodies.
 - Training conversations ask in several styles with typos, varied dates and units, add no-data families (measures no tool can read, vendor keys, periods outside the record, odd refs, similar-sounding measures) and unit families (mixed units, conversions), use the chat's twelve tools and system prompt, and write stats. `training:split` holds out whole template groups and LOINC codes for validation.

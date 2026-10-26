@@ -176,8 +176,10 @@ export const runShowView = async (
   return viewOf(input, series, audit.seqs);
 };
 
-/** What the model reads back: what was drawn, not the points again. */
-export const modelNoteOf = (output: ShowViewOutput): JSONValue =>
+/** What the model reads back: what was drawn, not the points again. `open_view` shares it. */
+export const modelNoteOf = (
+  output: ChatView | Readonly<{ code: string; error: string }>,
+): JSONValue =>
   "code" in output
     ? { code: output.code, error: output.error }
     : {

@@ -8,6 +8,16 @@
 
 export const DATA_VIEW_PART = "data-view";
 export const SHOW_VIEW_TOOL = "show_view";
+/** Lists the thread's views by id and title; draws nothing. */
+export const LIST_VIEWS_TOOL = "list_views";
+/** Returns a stored view again, unchanged, so it is drawn without a new query. */
+export const OPEN_VIEW_TOOL = "open_view";
+
+/** Tools whose output is a view (or a refusal), streamed on as a `data-view` part. */
+export const VIEW_OUTPUT_TOOLS: ReadonlySet<string> = new Set([
+  SHOW_VIEW_TOOL,
+  OPEN_VIEW_TOOL,
+]);
 
 export type ViewPoint = Readonly<{ at: string; value: number }>;
 
@@ -90,14 +100,18 @@ type PartLike = Readonly<{
   output?: unknown;
 }>;
 
+const isViewToolPart = (part: PartLike): boolean =>
+  part.type.startsWith("tool-") && VIEW_OUTPUT_TOOLS.has(part.type.slice("tool-".length));
+
 /**
  * The views of a message, in order, once each: from `data-view` parts while
- * it streams and from `show_view` tool outputs once it is stored.
+ * it streams and from `show_view` and `open_view` tool outputs once it is
+ * stored.
  */
 export const viewsOf = (parts: readonly PartLike[]): ChatView[] => {
   const found = parts.flatMap((part) => {
     if (part.type === DATA_VIEW_PART) return [toChatView(part.data)];
-    if (part.type === `tool-${SHOW_VIEW_TOOL}` && part.state === "output-available")
+    if (isViewToolPart(part) && part.state === "output-available")
       return [toChatView(part.output)];
     return [];
   });

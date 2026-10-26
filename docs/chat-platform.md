@@ -22,6 +22,8 @@ A `data-view` stream part `{id, kind, title, spec, sourceAuditIds}`, rendered in
 
 Since #36: `show_view` with `chart.timeseries` reads a LOINC code for a synthetic subject (audit tool `timeseries`) or a wearable key from the turn's loaded snapshot (audit tool `wearable_series`); `sourceAuditIds` are those rows' `seq`. The model reads back only what was drawn, not the points. A window with no readings gives a view that says so and draws nothing. `show_view` is in the model-facing tool list but not the MCP manifest.
 
+Since #37: an Outputs panel beside the thread (above it on narrow screens) lists every view its answers show, newest first, with title, kind, model and time; a row scrolls to the chart, Enlarge draws it large in the panel. It collapses or closes, and the choice is kept in the browser's local storage. `list_views` lists the thread's views (id, title, kind, model, time; no points) and `open_view(id)` returns a stored view unchanged, streamed as a `data-view` part with no new query. Both read the thread's stored tool parts, are audited (`open_view` with the view's subject and point count), and a synthetic request is not offered wearable views. The views come from the stored tool parts, so no table or migration was added.
+
 Issues: #35 stored tool parts, #36 `data-view` and `show_view`, #37 Outputs panel, #38 more kinds, #39 tool-call cards.
 
 ## 2. Skills and the command palette

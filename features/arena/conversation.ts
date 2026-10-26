@@ -41,6 +41,8 @@ export type AnswerFindings = Readonly<{
   reasoningText?: string | null;
   attribution?: readonly EvidenceAttribution[] | null;
   document?: ResponseDocumentV1 | null;
+  /** When the answer finished, ISO 8601; the Outputs panel shows it. */
+  completedAt?: string | null;
 }>;
 
 /** One model's answer to one prompt. */

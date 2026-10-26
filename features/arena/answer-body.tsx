@@ -19,14 +19,15 @@ import type { ResponseState } from "./conversation";
 const StreamingAnswer = ({
   response,
 }: {
-  readonly response: Pick<ResponseState, "text" | "tools" | "views">;
+  readonly response: Pick<ResponseState, "text" | "tools" | "views"> &
+    Partial<Pick<ResponseState, "id">>;
 }) => {
   const view = streamingView(response.text);
   if (view.kind === "answer") {
     return (
       <div className="flex flex-col gap-3 text-[15px] leading-relaxed">
         <RichText text={view.text} />
-        <AnswerViews views={response.views ?? []} />
+        <AnswerViews views={response.views ?? []} answerId={response.id} />
       </div>
     );
   }
@@ -52,7 +53,8 @@ export const AnswerBody = ({
   readonly response: Pick<
     ResponseState,
     "status" | "text" | "reasoningText" | "attribution" | "document" | "tools" | "views"
-  >;
+  > &
+    Partial<Pick<ResponseState, "id">>;
   readonly wearables: WearableSummaries;
 }) => {
   if (response.status === "STREAMING") return <StreamingAnswer response={response} />;
@@ -71,7 +73,7 @@ export const AnswerBody = ({
       {/* Prefer the Answer section when Twin structure is present; otherwise
           show the full reply. */}
       {!withheld && <RichText text={parsed.answerText || response.text} />}
-      {!withheld && <AnswerViews views={response.views ?? []} />}
+      {!withheld && <AnswerViews views={response.views ?? []} answerId={response.id} />}
       {response.status === "COMPLETE" && (
         <ExplainabilityPanel
           reasoningText={
