@@ -1,3 +1,5 @@
+import { EMPTY_VALUE, formatDate } from "./format-measure";
+
 /**
  * A view in an answer: a chart the server drew from audited rows. The model
  * asks for one with `show_view`; it never writes a point. `features/chat`
@@ -53,6 +55,18 @@ export type ChatView = Readonly<{
 export const viewId = (sourceAuditIds: readonly string[]): string =>
   `view-${sourceAuditIds.join("-")}`;
 
+/** A window bound as a calendar day, `1 Oct 2026`; a datetime keeps its day. */
+const titleDay = (bound: string): string => {
+  const day = formatDate(bound.slice(0, 10));
+  return day === EMPTY_VALUE ? bound : day;
+};
+
+/** `Heart rate, 1 Jan 2016 – 31 Oct 2026`: plain dates, never a raw timestamp. */
+export const viewTitle = (
+  label: string,
+  window: Readonly<{ start: string; end: string }>,
+): string => `${label}, ${titleDay(window.start)} – ${titleDay(window.end)}`;
+
 export const timeseriesView = (
   input: Readonly<{
     spec: TimeseriesSpec;
@@ -61,7 +75,7 @@ export const timeseriesView = (
 ): ChatView => ({
   id: viewId(input.sourceAuditIds),
   kind: "chart.timeseries",
-  title: `${input.spec.label}, ${input.spec.window.start} to ${input.spec.window.end}`,
+  title: viewTitle(input.spec.label, input.spec.window),
   spec: { ...input.spec, points: [...input.spec.points] },
   sourceAuditIds: [...input.sourceAuditIds],
 });

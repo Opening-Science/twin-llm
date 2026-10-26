@@ -30,6 +30,11 @@ const KIND_LABELS: Readonly<Record<ChatView["kind"], string>> = {
 
 export const viewKindLabel = (kind: ChatView["kind"]): string => KIND_LABELS[kind];
 
+/** A view whose window had no readings; the panel lists it dimmed. */
+export const isEmptyView = (view: ChatView): boolean => view.spec.points.length === 0;
+
+export const NO_READINGS_SHORT = "No readings";
+
 /** Later first; an answer still streaming (no time yet) is the newest. */
 const newestFirst = (a: OutputEntry, b: OutputEntry): number =>
   (b.at ?? "￿").localeCompare(a.at ?? "￿");

@@ -8,6 +8,8 @@ import { Button } from "@/infrastructure/ui-kit/button";
 import { ViewFigure } from "./answer-views";
 import { Mark } from "./marks";
 import {
+  isEmptyView,
+  NO_READINGS_SHORT,
   type OutputEntry,
   type PanelState,
   panelStorage,
@@ -53,18 +55,25 @@ const Chevron = ({ open }: Readonly<{ open: boolean }>) => (
   </svg>
 );
 
+/** A view with no points is listed dimmed and says so; it stays reachable. */
 const EntryRow = ({
   entry,
   onEnlarge,
 }: Readonly<{ entry: OutputEntry; onEnlarge: () => void }>) => (
-  <li className="output-entry">
+  <li className="output-entry" data-empty={isEmptyView(entry.view) || undefined}>
     <button
       type="button"
       className="output-entry-main"
       onClick={() => scrollToView(entry.anchorId)}
     >
-      <span className="text-foreground line-clamp-2 font-medium">{entry.view.title}</span>
+      {/* Dimmed with the muted text colour, not opacity, so it keeps its contrast. */}
+      <span
+        className={`line-clamp-2 ${isEmptyView(entry.view) ? "text-muted-foreground" : "text-foreground font-medium"}`}
+      >
+        {entry.view.title}
+      </span>
       <span className="text-muted-foreground">
+        {isEmptyView(entry.view) ? `${NO_READINGS_SHORT} · ` : ""}
         {viewKindLabel(entry.view.kind)} · {entry.modelName} ·{" "}
         <time dateTime={entry.at ?? undefined} suppressHydrationWarning>
           {entry.at === null ? "now" : formatRelative(entry.at)}

@@ -138,7 +138,7 @@ describe("open_view", () => {
     expect(modelNoteOf(output)).toEqual({
       shown: true,
       view_id: "view-41",
-      title: "Heart rate, 2026-10-01 to 2026-10-31",
+      title: "Heart rate, 1 Oct 2026 – 31 Oct 2026",
       readings: 2,
       unit: "/min",
     });
@@ -170,14 +170,14 @@ describe("list_views", () => {
       views: [
         {
           id: "view-52",
-          title: "Sleep score, 2026-10-01 to 2026-10-03",
+          title: "Sleep score, 1 Oct 2026 – 3 Oct 2026",
           kind: "chart.timeseries",
           model: "Model B",
           at: "2026-10-21T10:00:00.000Z",
         },
         {
           id: "view-41",
-          title: "Heart rate, 2026-10-01 to 2026-10-31",
+          title: "Heart rate, 1 Oct 2026 – 31 Oct 2026",
           kind: "chart.timeseries",
           model: "Model A",
           at: "2026-10-20T10:00:00.000Z",

@@ -103,19 +103,19 @@ describe("threadOutputs", () => {
       ]),
     ).toEqual([
       [
-        "Resting heart rate, 2026-10-01 to 2026-10-03",
+        "Resting heart rate, 1 Oct 2026 – 3 Oct 2026",
         "Model A",
         "2026-10-21T09:00:00.000Z",
         "output-r-2a-view-9",
       ],
       [
-        "Sleep score, 2026-10-01 to 2026-10-03",
+        "Sleep score, 1 Oct 2026 – 3 Oct 2026",
         "Model A",
         "2026-10-21T09:00:00.000Z",
         "output-r-2a-view-7",
       ],
       [
-        "HRV, 2026-10-01 to 2026-10-03",
+        "HRV, 1 Oct 2026 – 3 Oct 2026",
         "Model A",
         "2026-10-20T10:00:00.000Z",
         "output-r-1a-view-8",
