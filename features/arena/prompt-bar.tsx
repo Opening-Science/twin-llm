@@ -9,6 +9,7 @@ import {
   CommandPalette,
   commandOptionId,
   paletteKey,
+  unknownCommandHint,
 } from "@/features/commands/command-palette";
 import {
   BUILT_IN_COMMANDS,
@@ -68,6 +69,7 @@ export const PromptBar = ({
   const [slashDismissed, setSlashDismissed] = useState(false);
   const [picked, setPicked] = useState<Command | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [notice, setNotice] = useState<string | undefined>(undefined);
 
   const chosen = catalog ? chosenModels(catalog, modelIds) : [];
   const slashOpen = !slashDismissed && SLASH_COMMAND.test(draft);
@@ -98,6 +100,7 @@ export const PromptBar = ({
       event.preventDefault();
       if (action === "close") setSlashDismissed(true);
       else if (action === "pick") setPicked(commands[active] ?? null);
+      else if (action === "unknown") setNotice(unknownCommandHint(draft));
       else setActiveIndex(action.index);
       return;
     }
@@ -116,7 +119,12 @@ export const PromptBar = ({
     <div className="bg-background/90 sticky bottom-0 z-10 px-4 pt-2 pb-3 backdrop-blur sm:px-6">
       <form onSubmit={onFormSubmit} className="surface relative mx-auto max-w-5xl">
         {paletteOpen ? (
-          <CommandPalette commands={commands} activeIndex={active} onPick={setPicked} />
+          <CommandPalette
+            commands={commands}
+            activeIndex={active}
+            onPick={setPicked}
+            notice={notice}
+          />
         ) : null}
         <WearableSlashMenu
           open={connectOpen}
@@ -141,6 +149,7 @@ export const PromptBar = ({
             setSlashDismissed(false);
             setPicked(null);
             setActiveIndex(0);
+            setNotice(undefined);
           }}
           onKeyDown={onKeyDown}
           aria-activedescendant={

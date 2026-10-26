@@ -2,7 +2,12 @@ import { describe, expect, test } from "bun:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import { CommandPalette, commandOptionId, paletteKey } from "./command-palette";
+import {
+  CommandPalette,
+  commandOptionId,
+  paletteKey,
+  unknownCommandHint,
+} from "./command-palette";
 import { type Command } from "./registry";
 
 const commands: readonly Command[] = [
@@ -28,6 +33,11 @@ describe("paletteKey", () => {
     expect(paletteKey("Escape", 0, 2)).toBe("close");
     expect(paletteKey("a", 0, 2)).toBeNull();
     expect(paletteKey("Tab", 0, 2)).toBeNull();
+  });
+
+  test("enter on an empty list is unknown, not a pick", () => {
+    expect(paletteKey("Enter", 0, 0)).toBe("unknown");
+    expect(paletteKey("Escape", 0, 0)).toBe("close");
   });
 
   test("arrows do nothing on an empty list", () => {
@@ -61,5 +71,22 @@ describe("CommandPalette", () => {
     const html = render(0, []);
     expect(html).toContain("No command with that name.");
     expect(html).not.toContain('role="listbox"');
+  });
+
+  test("after enter on an unknown command it names the word and how to list commands", () => {
+    expect(unknownCommandHint("/sleeep")).toBe(
+      "No command /sleeep. Type / to see commands.",
+    );
+    const html = renderToStaticMarkup(
+      createElement(CommandPalette, {
+        commands: [],
+        activeIndex: 0,
+        onPick: () => {},
+        notice: unknownCommandHint("/sleeep"),
+      }),
+    );
+    expect(html).toContain(
+      '<p role="status" class="text-muted-foreground px-3 py-2 text-xs">No command /sleeep. Type / to see commands.</p>',
+    );
   });
 });
