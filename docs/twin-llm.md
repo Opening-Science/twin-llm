@@ -2,7 +2,7 @@
 
 Application companion to open-twin: coded FHIR R4 in, cited evidence out. Several models answer the same question side by side, with optional wearable context and explainability scaffolding.
 
-Research-use visualisation only.
+Research-use visualisation only. Where the chat goes next: [`chat-platform.md`](chat-platform.md).
 
 ## Quick start (local MVP)
 
