@@ -83,3 +83,8 @@ evaluation/cache/
 /public/fonts/*
 !/public/fonts/README.md
 
+
+# Python workspace (python/README.md)
+python/.venv/
+__pycache__/
+.pytest_cache/
