@@ -74,6 +74,8 @@ data/vitronic/
 data/guidelines/
 # Reference-anatomy atlases (CC BY 4.0, fetched by bun run anatomy:fetch; never commit)
 data/anatomy/
+# Synthetic genomes and reports (bun run genome:synth / genome:ingest)
+data/genome-synth/
 
 # eval harness output (C3a): runs and recorded model calls stay local
 evaluation/runs/

@@ -19,7 +19,7 @@ import type { Measure } from "./measures";
 export const STYLES = ["formal", "casual", "terse", "non_native"] as const;
 export type Style = (typeof STYLES)[number];
 
-type Bank = Readonly<Record<Style, readonly [string, ...string[]]>>;
+export type Bank = Readonly<Record<Style, readonly [string, ...string[]]>>;
 
 /** Placeholders: {label} {ref} {start} {end} {a} {b} {days} {key} {period} {who} {unit}. */
 export const BANK = {
@@ -431,14 +431,19 @@ const fill = (template: string, values: Readonly<Record<string, string>>): strin
 
 export type Asked = Readonly<{ question: string; template: TemplateRef }>;
 
-/** A question for a slot: a style, a template of that style, maybe a typo, then the values. */
-export const ask = (
+/**
+ * A question from any bank of the same shape (the genome families keep their
+ * own, `genome-questions.ts`): a style, a template of that style, maybe a
+ * typo, then the values.
+ */
+export const askFrom = <S extends string>(
+  bank: Readonly<Record<S, Bank>>,
   random: Random,
-  slot: Slot,
+  slot: S,
   values: Readonly<Record<string, string>>,
 ): Asked => {
   const style = pickStyle(random);
-  const texts = BANK[slot][style];
+  const texts = bank[slot][style];
   const index = Math.floor(random() * texts.length);
   const text = texts[index] ?? texts[0];
   const typo = random() < TYPO_SHARE;
@@ -452,6 +457,13 @@ export const ask = (
     },
   };
 };
+
+/** A question for a slot of the main bank. */
+export const ask = (
+  random: Random,
+  slot: Slot,
+  values: Readonly<Record<string, string>>,
+): Asked => askFrom(BANK, random, slot, values);
 
 const UNIT_SHARE = 0.2;
 

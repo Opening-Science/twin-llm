@@ -31,6 +31,15 @@ import {
   outsideRecord,
   wearableKey,
 } from "./no-data-families";
+import {
+  genomeDeclineDose,
+  genomeHostedProvider,
+  genomeNoCall,
+  genomeNotInReport,
+  genomeOtherPerson,
+  genomeVariant,
+  genomeVariants,
+} from "./genome-families";
 import { ask } from "./questions";
 import { conversionsFor, unitConversion, unitMismatch } from "./unit-families";
 
@@ -38,6 +47,7 @@ export {
   type Draft,
   type Family,
   FAMILIES,
+  GENOME_FAMILIES,
   type FamilyContext,
   type Outcome,
   type Sections,
@@ -111,6 +121,15 @@ export const FAMILY_SHARES: Readonly<Record<Family, number>> = {
   decline_dose: 0.25,
   decline_condition: 0.25,
   other_person: 0.15,
+  // Genome families (only with --genome). A family whose case the subject's
+  // synthetic genome does not have (no no-call on the panel) is skipped.
+  genome_variant: 0.5,
+  genome_variants: 0.25,
+  genome_no_call: 1,
+  genome_not_in_report: 0.3,
+  genome_decline_dose: 0.25,
+  genome_other_person: 0.15,
+  genome_hosted_provider: 0.15,
 };
 
 /**
@@ -149,6 +168,14 @@ export const draftsFor = async (
     ["decline_dose", async (own) => declineDose(own)],
     ["decline_condition", async (own) => declineCondition(own)],
     ["other_person", async (own) => otherPerson(own)],
+    // After every other family, so turning them on never reorders a run.
+    ["genome_variant", async (own) => genomeVariant(own)],
+    ["genome_variants", async (own) => genomeVariants(own)],
+    ["genome_no_call", async (own) => genomeNoCall(own)],
+    ["genome_not_in_report", async (own) => genomeNotInReport(own)],
+    ["genome_decline_dose", async (own) => genomeDeclineDose(own)],
+    ["genome_other_person", async (own) => genomeOtherPerson(own)],
+    ["genome_hosted_provider", async (own) => genomeHostedProvider(own)],
   ];
   const drafts: Draft[] = [];
   for (const [family, build] of plan) {

@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
 
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
+import { parseCatalog } from "../genome-synth/catalog";
+
 import {
   type BuildDeps,
   parseBuildArgs,
@@ -8,6 +13,7 @@ import {
 import type { OpenAiTool } from "./chat-tool-list";
 import type { ConversationRecord } from "./conversation";
 import { FAKE_COHORT, fakeTools, sampleRows } from "./fake-tools";
+import { DNA_ASK_TOOL, STAND_IN_LABEL } from "./genome-families";
 
 const PROMPT = {
   id: "test-prompt",
@@ -347,5 +353,96 @@ describe("runBuildConversations output", () => {
       meta.family === "trend" ? [index] : [],
     );
     expect(trendIndexes.map((index) => all.records[index])).toEqual(trendOnly.records);
+  });
+});
+
+describe("runBuildConversations --genome", () => {
+  const OUT = "/tmp/out.jsonl";
+  const catalog = async () => {
+    const parsed = parseCatalog(
+      readFileSync(join(import.meta.dir, "../genome-synth/variants.tsv"), "utf8"),
+    );
+    if (typeof parsed === "string") throw new Error(parsed);
+    return parsed;
+  };
+  const run = async (extra: readonly string[], withCatalog = true) => {
+    const h = harness(withCatalog ? { genomeCatalog: catalog } : {});
+    const code = await runBuildConversations(
+      ["--cohort", FAKE_COHORT, "--out", OUT, ...extra],
+      h.io,
+      h.deps,
+    );
+    return {
+      ...h,
+      code,
+      records: lines<Pick<ConversationRecord, "messages" | "tools">>(h.files.get(OUT)),
+      metas: lines<ConversationRecord["meta"]>(h.files.get("/tmp/out.meta.jsonl")),
+      manifest: JSON.parse(h.files.get("/tmp/out.manifest.json") ?? "{}") as Record<
+        string,
+        unknown
+      >,
+      stats: JSON.parse(h.files.get("/tmp/out.stats.json") ?? "{}") as Record<
+        string,
+        unknown
+      >,
+    };
+  };
+
+  test("genome families need the flag", () => {
+    expect(
+      parseBuildArgs(["--cohort", FAKE_COHORT, "--families", "genome_variant"]),
+    ).toBe("Genome families need --genome.");
+    const off = parseBuildArgs(["--cohort", FAKE_COHORT]);
+    if (typeof off === "string") throw new Error(off);
+    expect(off.genome).toBe(false);
+    expect([...off.families].some((family) => family.startsWith("genome_"))).toBe(false);
+  });
+
+  test("a run without --genome is byte-identical to the genome run minus its genome lines", async () => {
+    const off = await run([]);
+    const on = await run(["--genome"]);
+    expect(off.manifest.genome).toBeUndefined();
+    expect(off.manifest.tools).toEqual(TOOLS);
+    expect(off.stats.genome_share).toBeUndefined();
+    const keep = on.metas.flatMap((meta, index) =>
+      meta.family.startsWith("genome_") ? [] : [index],
+    );
+    expect(keep.map((index) => on.records[index])).toEqual(off.records);
+    expect(keep.map((index) => on.metas[index])).toEqual(off.metas);
+    expect(on.manifest.genome).toEqual({ catalog_version: "genome-synth-v1" });
+    expect(on.manifest.tools).toEqual([...TOOLS, DNA_ASK_TOOL]);
+    expect(on.metas.length - off.metas.length).toBe(
+      on.metas.filter((meta) => meta.family.startsWith("genome_")).length,
+    );
+    expect(on.stats.genome_share).toBe(
+      Math.round(((on.metas.length - off.metas.length) / on.metas.length) * 10_000) /
+        10_000,
+    );
+  });
+
+  test("a genome conversation calls dna_ask with an rsid and quotes the stand-in label", async () => {
+    const { records, metas } = await run([
+      "--genome",
+      "--families",
+      "genome_variant",
+      "--seed",
+      "1",
+    ]);
+    expect(metas.map((meta) => meta.family)).toEqual(["genome_variant"]);
+    for (const [index, record] of records.entries()) {
+      const call = record.messages[2];
+      if (!call || !("tool_calls" in call)) throw new Error("no tool call");
+      expect(call.tool_calls[0]?.function.name).toBe("dna_ask");
+      const args = JSON.parse(call.tool_calls[0]?.function.arguments ?? "{}") as unknown;
+      expect(Object.keys(Object(args))).toEqual(["rsid"]);
+      expect(String(record.messages[3]?.content)).toContain(STAND_IN_LABEL);
+      expect(metas[index]?.expected_answer_class).toBe("information");
+    }
+  });
+
+  test("--genome without the catalog stops with a plain sentence", async () => {
+    const result = await run(["--genome"], false);
+    expect(result.code).toBe(1);
+    expect(result.err).toEqual(["--genome needs the variant catalog.\n"]);
   });
 });

@@ -1,0 +1,105 @@
+# TwinLLM genome-synth variant catalog, version genome-synth-v1. SYNTHETIC USE ONLY.
+# Public summary data only: identifiers, positions, alleles and allele frequencies as plain numbers. No individual-level data.
+# Retrieved 2026-10-27 from the Ensembl REST API, release 116 (https://rest.ensembl.org; Ensembl data are free to use without restriction):
+#   chrom/pos/ref: GRCh38 mapping of the dbSNP build 156 rsID (dbSNP, NCBI: public domain);
+#   alt/alt_af: most frequent non-reference allele and its frequency in af_source: gnomADg:ALL = gnomAD genomes, all samples (gnomAD: CC0 1.0);
+#     1000G-phase3:ALL = 1000 Genomes phase 3, all 2,504 samples (IGSR: free to use without restriction);
+#   consequence: Ensembl's most severe Sequence Ontology consequence;
+#   clinvar: ClinVar clinical significance as imported by Ensembl (ClinVar 09/2025, NCBI: public domain; cite ClinVar).
+# Curated by hand: category, gene and note. Panel and pgx rsIDs are star-allele defining or annotated sites from public CPIC
+#   allele definition tables (https://cpicpgx.org/guidelines/, CC0 1.0) and PharmGKB variant pages (https://www.pharmgkb.org/);
+#   only the rsID and a short label are used, no PharmGKB annotation text.
+# Refresh with: bun scripts/genome-synth/refresh-catalog.ts [--write]. Changing a row changes the genotypes of every subject at that site.
+rsid	category	gene	chrom	pos	ref	alt	alt_af	af_source	consequence	clinvar	note
+rs4244285	panel	CYP2C19	chr10	94781859	G	A	0.1679	gnomADg:ALL	synonymous_variant	drug response;likely benign;other	CYP2C19*2 defining (CPIC)
+rs4986893	panel	CYP2C19	chr10	94780653	G	A	0.00255	gnomADg:ALL	stop_gained	benign;drug response;other	CYP2C19*3 defining (CPIC)
+rs12248560	panel	CYP2C19	chr10	94761900	C	T	0.2	gnomADg:ALL	intron_variant	benign;drug response;other	CYP2C19*17 defining (CPIC)
+rs1799853	panel	CYP2C9	chr10	94942290	C	T	0.08806	gnomADg:ALL	missense_variant	drug response;likely benign;other	CYP2C9*2 defining (CPIC)
+rs1057910	panel	CYP2C9	chr10	94981296	A	C	0.04937	gnomADg:ALL	missense_variant	drug response;other	CYP2C9*3 defining (CPIC)
+rs3892097	panel	CYP2D6	chr22	42128945	C	T	0.141	gnomADg:ALL	splice_acceptor_variant	drug response;likely benign;other	CYP2D6*4 defining (CPIC)
+rs1065852	panel	CYP2D6	chr22	42130692	G	A	0.1904	gnomADg:ALL	missense_variant	drug response;likely benign;other	CYP2D6*10 defining (CPIC)
+rs4149056	panel	SLCO1B1	chr12	21178615	T	C	0.1204	gnomADg:ALL	missense_variant	benign;drug response;likely benign;other;pathogenic	SLCO1B1*5 defining (CPIC)
+rs3918290	panel	DPYD	chr1	97450058	C	T	0.004558	gnomADg:ALL	splice_donor_variant	drug response;likely pathogenic;pathogenic	DPYD*2A defining (CPIC)
+rs1142345	panel	TPMT	chr6	18130687	T	C	0.04319	gnomADg:ALL	missense_variant	drug response;likely benign;other	TPMT*3C defining (CPIC)
+rs9923231	panel	VKORC1	chr16	31096368	C	T	0.319	gnomADg:ALL	intergenic_variant	benign;drug response;likely benign;other;pathogenic;protective;uncertain significance	VKORC1 c.-1639G>A (CPIC)
+rs28399504	pgx	CYP2C19	chr10	94762706	A	G	0.002377	gnomADg:ALL	start_lost	drug response;likely benign;other	CYP2C19*4 defining (CPIC)
+rs28371725	pgx	CYP2D6	chr22	42127803	C	T	0.06965	gnomADg:ALL	intron_variant	drug response;likely benign;other	CYP2D6*41 defining (CPIC)
+rs16947	pgx	CYP2D6	chr22	42127941	G	A	0.3857	gnomADg:ALL	stop_gained	benign;drug response;likely benign	CYP2D6 R296C (CPIC)
+rs1135840	pgx	CYP2D6	chr22	42126611	C	G	0.5766	gnomADg:ALL	missense_variant	benign;drug response;likely benign;other	CYP2D6 S486T (CPIC)
+rs28371686	pgx	CYP2C9	chr10	94981301	C	G	0.003218	gnomADg:ALL	missense_variant	benign;drug response;likely benign;other	CYP2C9*5 defining (CPIC)
+rs7900194	pgx	CYP2C9	chr10	94942309	G	A	0.01586	gnomADg:ALL	missense_variant	benign;drug response;likely benign	CYP2C9*8 defining (CPIC)
+rs1800462	pgx	TPMT	chr6	18143724	C	G	0.00203	gnomADg:ALL	missense_variant	drug response	TPMT*2 defining (CPIC)
+rs1800460	pgx	TPMT	chr6	18138997	C	T	0.02582	gnomADg:ALL	missense_variant	benign;drug response;likely benign;other	TPMT*3B defining (CPIC)
+rs116855232	pgx	NUDT15	chr13	48045719	C	T	0.01257	gnomADg:ALL	missense_variant	drug response;likely benign	NUDT15*3 defining (CPIC)
+rs55886062	pgx	DPYD	chr1	97515787	A	C	0.0003878	gnomADg:ALL	missense_variant	drug response;likely pathogenic;pathogenic	DPYD*13 defining (CPIC)
+rs67376798	pgx	DPYD	chr1	97082391	T	A	0.003278	gnomADg:ALL	missense_variant	drug response;likely pathogenic;other;pathogenic;uncertain significance	DPYD c.2846A>T (CPIC)
+rs75017182	pgx	DPYD	chr1	97579893	G	C	0.01309	gnomADg:ALL	intron_variant	benign;drug response;likely benign	DPYD HapB3 intronic (CPIC)
+rs1801265	pgx	DPYD	chr1	97883329	A	G	0.2736	gnomADg:ALL	missense_variant	benign;drug response;pathogenic;uncertain significance	DPYD*9A (CPIC)
+rs2297595	pgx	DPYD	chr1	97699535	T	C	0.08016	gnomADg:ALL	missense_variant	benign;drug response;uncertain significance	DPYD c.496A>G (CPIC)
+rs776746	pgx	CYP3A5	chr7	99672916	T	C	0.7286	gnomADg:ALL	intron_variant	association;benign;drug response;risk factor	CYP3A5*3 defining (CPIC)
+rs35599367	pgx	CYP3A4	chr7	99768693	G	A	0.03172	gnomADg:ALL	intron_variant		CYP3A4*22 defining (PharmGKB)
+rs2740574	pgx	CYP3A4	chr7	99784473	C	T	0.7906	gnomADg:ALL	intergenic_variant	benign	CYP3A4*1B (PharmGKB)
+rs3745274	pgx	CYP2B6	chr19	41006936	G	T	0.2842	gnomADg:ALL	missense_variant	drug response;likely benign	CYP2B6 c.516G>T (CPIC)
+rs2279343	pgx	CYP2B6	chr19	41009358	A	G	0.2931	gnomADg:ALL	missense_variant	benign;likely benign	CYP2B6 c.785A>G (CPIC)
+rs2108622	pgx	CYP4F2	chr19	15879621	C	T	0.2297	gnomADg:ALL	missense_variant	benign;drug response;likely benign	CYP4F2*3 (CPIC)
+rs4148323	pgx	UGT1A1	chr2	233760498	G	A	0.0113	gnomADg:ALL	missense_variant	association;drug response;likely pathogenic;pathogenic;uncertain significance	UGT1A1*6 defining (CPIC)
+rs887829	pgx	UGT1A1	chr2	233759924	C	T	0.3613	gnomADg:ALL	intron_variant		UGT1A1*80 (CPIC)
+rs2306283	pgx	SLCO1B1	chr12	21176804	A	G	0.5322	gnomADg:ALL	missense_variant	benign	SLCO1B1 c.388A>G (CPIC)
+rs2231142	pgx	ABCG2	chr4	88131171	G	T	0.09296	gnomADg:ALL	stop_gained	association;benign;drug response	ABCG2 Q141K (CPIC)
+rs1045642	pgx	ABCB1	chr7	87509329	A	G	0.5722	gnomADg:ALL	missense_variant	benign;drug response;likely benign	ABCB1 c.3435T>C (PharmGKB)
+rs762551	pgx	CYP1A2	chr15	74749576	C	A	0.6723	gnomADg:ALL	intron_variant	likely benign	CYP1A2*1F (PharmGKB)
+rs12979860	pgx	IFNL4	chr19	39248147	C	T	0.3862	gnomADg:ALL	intron_variant	benign;drug response	IFNL3/IFNL4 region (CPIC)
+rs1801280	pgx	NAT2	chr8	18400344	T	C	0.3816	gnomADg:ALL	missense_variant	benign;drug response	NAT2*5 (PharmGKB)
+rs1799930	pgx	NAT2	chr8	18400593	G	A	0.273	gnomADg:ALL	missense_variant	benign;drug response	NAT2*6 (PharmGKB)
+rs1799931	pgx	NAT2	chr8	18400860	G	A	0.04137	gnomADg:ALL	missense_variant	drug response	NAT2*7 (PharmGKB)
+rs1800566	pgx	NQO1	chr16	69711242	G	A	0.2165	gnomADg:ALL	missense_variant	benign;uncertain significance	NQO1*2 (PharmGKB)
+rs1799971	pgx	OPRM1	chr6	154039662	A	G	0.1296	gnomADg:ALL	missense_variant	drug response;uncertain significance	OPRM1 c.118A>G (PharmGKB)
+rs4680	pgx	COMT	chr22	19963748	G	A	0.4395	gnomADg:ALL	missense_variant	benign;drug response	COMT V158M (PharmGKB)
+rs2395029	pgx	HCP5	chr6	31464003	T	G	0.02466	gnomADg:ALL	non_coding_transcript_exon_variant	benign;likely risk allele	tag for HLA-B*57:01 (PharmGKB)
+rs1061235	pgx	HLA-A	chr6	29945521	A	T	0.02244	gnomADg:ALL	3_prime_UTR_variant	risk factor	tag for HLA-A*31:01 (PharmGKB)
+rs1801133	pgx	MTHFR	chr1	11796321	G	A	0.2752	gnomADg:ALL	missense_variant	association;benign;drug response;likely benign;other;uncertain significance	MTHFR c.665C>T (PharmGKB)
+rs1801131	pgx	MTHFR	chr1	11794419	T	G	0.2633	gnomADg:ALL	missense_variant	benign;likely benign;other;risk factor	MTHFR c.1286A>C (PharmGKB)
+rs6025	clinvar_pathogenic	F5	chr1	169549811	C	T	0.0173	gnomADg:ALL	missense_variant	benign;drug response;pathogenic;pathogenic low penetrance;risk factor;uncertain significance	Factor V Leiden
+rs1799963	clinvar_pathogenic	F2	chr11	46739505	G	A	0.009566	gnomADg:ALL	3_prime_UTR_variant	established risk allele;likely pathogenic;pathogenic;pathogenic low penetrance;risk factor	prothrombin G20210A
+rs1800562	clinvar_pathogenic	HFE	chr6	26092913	G	A	0.03729	gnomADg:ALL	missense_variant	not provided;other;pathogenic;pathogenic low penetrance;risk factor;uncertain significance	HFE C282Y
+rs1799945	clinvar_pathogenic	HFE	chr6	26090951	C	G	0.1015	gnomADg:ALL	missense_variant	not provided;other;pathogenic;pathogenic low penetrance;risk factor;uncertain significance	HFE H63D
+rs28929474	clinvar_pathogenic	SERPINA1	chr14	94378610	C	T	0.01216	gnomADg:ALL	missense_variant	likely pathogenic;other;pathogenic;risk factor;uncertain significance	SERPINA1 Z allele
+rs17580	clinvar_pathogenic	SERPINA1	chr14	94380925	T	A	0.02873	gnomADg:ALL	missense_variant	other;pathogenic;pathogenic low penetrance;risk factor	SERPINA1 S allele
+rs334	clinvar_pathogenic	HBB	chr11	5227002	T	A	0.01272	gnomADg:ALL	missense_variant	likely benign;not provided;other;pathogenic;protective	HBB sickle allele
+rs33930165	clinvar_pathogenic	HBB	chr11	5227003	C	T	0.003748	gnomADg:ALL	stop_gained	likely pathogenic;other;pathogenic;protective;uncertain significance	HBB HbC allele
+rs75527207	clinvar_pathogenic	CFTR	chr7	117587806	G	A	0.0002761	gnomADg:ALL	missense_variant	drug response;likely pathogenic;not provided;pathogenic	CFTR G551D
+rs28897672	clinvar_pathogenic	BRCA1	chr17	43106487	A	C	0.00003285	gnomADg:ALL	missense_variant	likely pathogenic;pathogenic	BRCA1 C61G
+rs5742904	clinvar_pathogenic	APOB	chr2	21006288	C	T	0.0006903	gnomADg:ALL	missense_variant	likely pathogenic;pathogenic	APOB R3527Q
+rs76763715	clinvar_pathogenic	GBA1	chr1	155235843	T	C	0.001855	gnomADg:ALL	missense_variant	likely pathogenic;not provided;pathogenic;risk factor;uncertain significance	GBA1 N370S
+rs1805007	clinvar_pathogenic	MC1R	chr16	89919709	C	T	0.04624	gnomADg:ALL	missense_variant	affects;association;benign;risk factor;uncertain significance	MC1R R151C
+rs11591147	clinvar_benign	PCSK9	chr1	55039974	G	T	0.01224	gnomADg:ALL	missense_variant	association;benign;likely benign;pathogenic	PCSK9 R46L
+rs1042522	clinvar_benign	TP53	chr17	7676154	G	C	0.6268	gnomADg:ALL	missense_variant	benign;likely benign;pathogenic;uncertain significance	TP53 P72R
+rs1801394	clinvar_benign	MTRR	chr5	7870860	A	G	0.4504	gnomADg:ALL	missense_variant	benign;drug response;likely benign;risk factor;uncertain significance	MTRR A66G
+rs1695	clinvar_benign	GSTP1	chr11	67585218	A	G	0.36	gnomADg:ALL	missense_variant	benign	GSTP1 I105V
+rs2228570	clinvar_benign	VDR	chr12	47879112	A	G	0.6621	gnomADg:ALL	start_lost	benign;uncertain significance	VDR FokI
+rs1799983	clinvar_benign	NOS3	chr7	150999023	T	G	0.7556	gnomADg:ALL	missense_variant	benign;pathogenic;risk factor	NOS3 E298D
+rs699	clinvar_benign	AGT	chr1	230710048	A	G	0.5782	gnomADg:ALL	missense_variant	benign	AGT M235T
+rs1042713	clinvar_benign	ADRB2	chr5	148826877	G	A	0.4259	gnomADg:ALL	missense_variant	benign;drug response	ADRB2 G16R
+rs1801252	clinvar_benign	ADRB1	chr10	114044277	A	G	0.1677	gnomADg:ALL	missense_variant	association;benign;likely benign	ADRB1 S49G
+rs1799990	clinvar_benign	PRNP	chr20	4699605	A	G	0.3293	gnomADg:ALL	missense_variant	benign;likely benign;pathogenic;risk factor;uncertain significance	PRNP M129V
+rs429358	trait	APOE	chr19	44908684	T	C	0.1574	gnomADg:ALL	missense_variant	association;benign;drug response;established risk allele;likely pathogenic;not provided;other;pathogenic;protective;risk factor;uncertain significance	APOE e4-defining
+rs7412	trait	APOE	chr19	44908822	C	T	0.07784	gnomADg:ALL	missense_variant	benign;drug response;likely benign;other;pathogenic;risk factor	APOE e2-defining
+rs4988235	trait	MCM6	chr2	135851076	G	A	0.3968	gnomADg:ALL	intron_variant	association	lactase persistence -13910
+rs182549	trait	MCM6	chr2	135859184	C	T	0.4011	gnomADg:ALL	intron_variant	association	lactase persistence -22018
+rs12913832	trait	HERC2	chr15	28120472	A	G	0.4865	gnomADg:ALL	intron_variant	association	eye colour
+rs16891982	trait	SLC45A2	chr5	33951588	C	G	0.6378	gnomADg:ALL	missense_variant	association;benign;protective	pigmentation
+rs1426654	trait	SLC24A5	chr15	48134287	A	G	0.2985	gnomADg:ALL	missense_variant	association;benign	pigmentation
+rs1805008	trait	MC1R	chr16	89919736	C	T	0.04628	gnomADg:ALL	missense_variant	affects;association;benign;likely benign;risk factor;uncertain significance	MC1R R160W
+rs713598	trait	TAS2R38	chr7	141973545	C	G	0.447	gnomADg:ALL	missense_variant	drug response	bitter taste
+rs1815739	trait	ACTN3	chr11	66560624	C	T	0.3751	gnomADg:ALL	stop_gained	affects;benign;pathogenic	ACTN3 R577X
+rs17822931	trait	ABCC11	chr16	48224287	C	T	0.1416	gnomADg:ALL	missense_variant	benign	earwax type
+rs671	trait	ALDH2	chr12	111803962	G	A	0.00784	gnomADg:ALL	missense_variant	drug response;pathogenic;protective;risk factor;uncertain significance	ALDH2*2
+rs1229984	trait	ADH1B	chr4	99318162	T	C	0.9398	gnomADg:ALL	missense_variant	protective	ADH1B R48H
+rs9939609	trait	FTO	chr16	53786615	T	A	0.4082	gnomADg:ALL	intron_variant		BMI association
+rs7903146	trait	TCF7L2	chr10	112998590	C	T	0.274	gnomADg:ALL	intron_variant	likely risk allele;risk factor	type 2 diabetes association
+rs1333049	trait	CDKN2B-AS1	chr9	22125504	G	C	0.4181	gnomADg:ALL	intergenic_variant	risk factor	9p21 coronary artery disease association
+rs10455872	trait	LPA	chr6	160589086	A	G	0.04245	gnomADg:ALL	intron_variant	benign	lipoprotein(a) association
+rs2187668	trait	HLA-DQA1	chr6	32638107	C	T	0.003347	gnomADg:ALL	intron_variant		tag for HLA-DQ2.5
+rs6265	trait	BDNF	chr11	27658369	C	T	0.1524	gnomADg:ALL	missense_variant	benign;likely risk allele;not provided	BDNF V66M
+rs1800795	trait	IL6	chr7	22727026	C	G	0.7163	gnomADg:ALL	5_prime_UTR_variant	other;risk factor	IL6 promoter -174
+rs2802292	trait	FOXO3	chr6	108587315	G	T	0.5027	gnomADg:ALL	intron_variant	benign	longevity association

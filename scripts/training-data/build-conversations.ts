@@ -39,7 +39,17 @@ import { DEFAULT_END_DAY } from "../synthetic-wearables/series";
 
 import type { OpenAiTool } from "./chat-tool-list";
 import { GENERATOR_VERSION, type SystemPrompt, toConversation } from "./conversation";
-import { draftsFor, type Family, FAMILIES, type ToolName } from "./families";
+import type { Variant } from "../genome-synth/catalog";
+import { CATALOG_VERSION } from "../genome-synth/genotypes";
+
+import {
+  draftsFor,
+  type Family,
+  FAMILIES,
+  GENOME_FAMILIES,
+  type ToolName,
+} from "./families";
+import { DNA_ASK_TOOL } from "./genome-families";
 import { conversationStats, messageChars, type StatsRow } from "./stats";
 
 export const TRAINING_ACTOR = "training-conversations";
@@ -73,6 +83,8 @@ export type BuildDeps = Readonly<{
   remove: (path: string) => Promise<void>;
   /** A file's text, or null when it cannot be read. */
   readText: (path: string) => Promise<string | null>;
+  /** The curated variant catalog (`scripts/genome-synth/variants.tsv`); read only with --genome. */
+  genomeCatalog?: () => Promise<readonly Variant[]>;
 }>;
 
 const TOOL_INPUTS = { ...KEYED_TOOLS, subject_window: subjectWindowInput } as const;
@@ -88,6 +100,8 @@ export type BuildArgs = Readonly<{
   inlineTools: boolean;
   /** `<cohort>.rejected.json` from training:batches, summarised in the manifest. */
   rejected: string | null;
+  /** Genome conversation families and the `dna_ask` tool (off by default). */
+  genome: boolean;
 }>;
 
 /** `x.jsonl` → `x.meta.jsonl`, `x.manifest.json`, `x.stats.json`. */
@@ -113,7 +127,10 @@ const presetSeed = (cohortId: string): number | null =>
   )?.seed ?? null;
 
 const isFamily = (name: string): name is Family =>
-  (FAMILIES as readonly string[]).includes(name);
+  ([...FAMILIES, ...GENOME_FAMILIES] as readonly string[]).includes(name);
+
+const isGenomeFamily = (name: string): boolean =>
+  (GENOME_FAMILIES as readonly string[]).includes(name);
 
 /** The parsed flags, or a plain message saying what is wrong. */
 export const parseBuildArgs = (argv: readonly string[]): BuildArgs | string => {
@@ -133,10 +150,20 @@ export const parseBuildArgs = (argv: readonly string[]): BuildArgs | string => {
   if (maxSubjects !== null && !(Number.isInteger(maxSubjects) && maxSubjects >= 1)) {
     return "--max-subjects must be a whole number of at least 1.";
   }
-  const names = (flag(argv, "--families") ?? FAMILIES.join(",")).split(",");
+  // Genome families are off unless --genome: a run without it is unchanged.
+  const genome = argv.includes("--genome");
+  const chosen = flag(argv, "--families");
+  const names =
+    chosen === undefined
+      ? [...FAMILIES, ...(genome ? GENOME_FAMILIES : [])]
+      : chosen.split(",");
   const unknown = names.filter((name) => !isFamily(name));
   if (unknown.length > 0) return `Unknown families: ${unknown.join(", ")}.`;
+  if (!genome && names.some(isGenomeFamily)) {
+    return "Genome families need --genome.";
+  }
   return {
+    genome,
     cohortId,
     out: flag(argv, "--out") ?? `training-data/out/${cohortId}.jsonl`,
     seed,
@@ -242,9 +269,16 @@ export const runBuildConversations = async (
     return 1;
   }
 
+  if (args.genome && deps.genomeCatalog === undefined) {
+    io.stderr.write("--genome needs the variant catalog.\n");
+    return 1;
+  }
+  const genomeCatalog =
+    args.genome && deps.genomeCatalog ? await deps.genomeCatalog() : undefined;
   const ports = await deps.ports();
   const prompt = await ports.systemPrompt();
-  const tools = await ports.tools();
+  // With --genome the records also offer `dna_ask`; without it the tools are the chat's.
+  const tools = [...(await ports.tools()), ...(args.genome ? [DNA_ASK_TOOL] : [])];
   const all = await ports.listSubjects(args.cohortId);
   if (all.length === 0) {
     io.stderr.write(`No subjects in cohort ${args.cohortId}.\n`);
@@ -278,6 +312,7 @@ export const runBuildConversations = async (
           outsideRef: outsideRefFor(args.seed, subjectRef, known),
           hasWearables,
           run,
+          ...(genomeCatalog === undefined ? {} : { genomeCatalog }),
         },
         (family) => randomFor(args.seed, `conversation:${subjectRef}:${family}`),
         args.families,
@@ -333,6 +368,8 @@ export const runBuildConversations = async (
         ...summary,
         // Subjects whose FHIR bundle the warehouse refused (training:batches --skip-rejected).
         ...(rejected === null ? {} : { rejected_bundles: rejected }),
+        // Synthetic genotypes (scripts/genome-synth) and stand-in dna_ask results.
+        ...(args.genome ? { genome: { catalog_version: CATALOG_VERSION } } : {}),
         // One copy of the tool definitions; --inline-tools also puts them on every line.
         tools,
       },
@@ -438,6 +475,8 @@ if (isMain) {
     rename: (from, to) => rename(from, to),
     remove: (path) => rm(path, { force: true }),
     readText: (path) => readFile(path, "utf8").catch(() => null),
+    genomeCatalog: async () =>
+      (await import("../genome-synth/read-catalog")).readCatalog(),
   });
   await database().$disconnect();
   process.exit(code);

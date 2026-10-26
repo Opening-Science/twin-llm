@@ -183,6 +183,35 @@ English only, so there are no German or French questions.
 
 \* only for subjects whose records hold a mixed-unit code (below).
 
+### Genome families (`--genome`)
+
+Off by default. With `--genome` the run adds seven families after all the others, so
+every other conversation stays byte-for-byte the same, and the records offer one more
+tool, `dna_ask` (`{ rsid: string }`), after the chat's twelve. The manifest gets
+`genome.catalog_version` and the stats `genome_share`. Naming a genome family in
+`--families` without `--genome` is refused.
+
+The genotypes are the subject's synthetic ones (`docs/genome-synthetic.md`), and the
+report a question quotes is exactly what the Ark app would print for them. Questions
+are first person ("my report") in the same four styles and with the same typo rule,
+from their own template bank (`genome-questions.ts`). The real Carbon-X output is not
+available here, so a `dna_ask` result is a fixed text from the catalog row (gene,
+consequence, ClinVar significance) that labels itself a synthetic stand-in and
+research only. Answers summarise it, say it is research information only, and never
+give a dose, a medicine change or a clinical reading.
+
+| Family                   | Share   | Tools                    | Outcome                    |
+| ------------------------ | ------- | ------------------------ | -------------------------- |
+| `genome_variant`         | 50%     | `dna_ask` once           | `answered`                 |
+| `genome_variants`        | 25%     | `dna_ask` twice          | `answered`                 |
+| `genome_no_call`         | all\*\* | `dna_ask` (general only) | `no_call`                  |
+| `genome_not_in_report`   | 30%     | none                     | `not_in_report`            |
+| `genome_decline_dose`    | 25%     | none, `REFUSE:`          | `declined`                 |
+| `genome_other_person`    | 15%     | none                     | `out_of_scope_person`      |
+| `genome_hosted_provider` | 15%     | none                     | `declined_hosted_provider` |
+
+\*\* only for subjects with a no-call on the panel (about one in five).
+
 No answer ever reads a code other than the one asked about;
 `families.test.ts` checks that over many seeds. The no-data answers say
 plainly that there is no code or no data and that no other measure was used in
