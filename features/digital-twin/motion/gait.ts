@@ -43,7 +43,7 @@ export type BodyPose = Readonly<{
   pelvisShift: number;
 }>;
 
-export type MotionClip = "walk" | "idle";
+export type MotionClip = "walk" | "idle" | "dance";
 
 export type WalkParams = Readonly<{
   /** Steps per minute; two steps make one gait cycle. */
@@ -95,6 +95,21 @@ export const bump = (phase: number, centre: number, halfWidth: number): number =
     : 0.5 * (1 + Math.cos((Math.PI * distance) / halfWidth));
 };
 
+/** How far below level the sole may point in the walk, degrees (toe down is negative). */
+export const FOOT_PITCH_FLOOR = -35;
+/** The ankle's range in the walk, degrees: plantar flexion negative. */
+export const ANKLE_RANGE: readonly [number, number] = [-12, 20];
+
+/**
+ * The ankle angle that keeps the sole from pointing down past
+ * `FOOT_PITCH_FLOOR` when the thigh is at `hip` and the knee bent by `knee`
+ * (the sole's pitch is hip − knee + ankle), within `ANKLE_RANGE`. Without it
+ * the push-off and the swing's bent knee pitch the trailing foot toe-down by
+ * more than 50°, which walking in place shows as a foot stabbing the floor.
+ */
+export const shapeAnkle = (hip: number, knee: number, ankle: number): number =>
+  clamp(Math.max(ankle, FOOT_PITCH_FLOOR - (hip - knee)), ANKLE_RANGE);
+
 /** Sagittal angles in degrees for one leg and the arm on the same side, at that leg's phase. */
 export const limbAngles = (
   phase: number,
@@ -106,16 +121,23 @@ export const limbAngles = (
   elbow: number;
 }> => {
   const swing = Math.cos(TAU * phase);
+  // Flexed about 28° at heel strike, extended about 12° before toe off.
+  const hip = 8 + 20 * swing;
+  // A small loading flexion early in stance, about 58° in mid swing.
+  const knee = 18 * bump(phase, 0.15, 0.15) + 58 * bump(phase, 0.72, 0.25);
   return {
-    // Flexed about 28° at heel strike, extended about 12° before toe off.
-    hip: 8 + 20 * swing,
-    // A small loading flexion early in stance, about 58° in mid swing.
-    knee: 18 * bump(phase, 0.15, 0.15) + 58 * bump(phase, 0.72, 0.25),
-    // Plantar flexion after heel strike, dorsiflexion late in stance, push off at toe off.
-    ankle:
+    hip,
+    knee,
+    // Plantar flexion after heel strike, dorsiflexion late in stance, a short push
+    // off at toe off; then shaped so the foot never points further down than
+    // FOOT_PITCH_FLOOR, and kept within the ankle's range.
+    ankle: shapeAnkle(
+      hip,
+      knee,
       -6 * bump(phase, 0.06, 0.08) +
-      10 * bump(phase, 0.42, 0.18) -
-      16 * bump(phase, 0.63, 0.1),
+        10 * bump(phase, 0.42, 0.18) -
+        10 * bump(phase, 0.6, 0.08),
+    ),
     // The arm swings opposite its own leg.
     shoulder: -16 * swing,
     // The elbow bends more as the arm comes forward.
@@ -183,10 +205,6 @@ export const idlePose = (t: number, params: IdleParams = DEFAULT_IDLE): BodyPose
     pelvisShift: 0.006 * sway,
   };
 };
-
-/** The pose of a clip at time `t`. */
-export const clipPose = (clip: MotionClip, t: number): BodyPose =>
-  clip === "walk" ? walkPose(t) : idlePose(t);
 
 /** Every angle and the shift times `weight`: 0 is the rest pose, 1 the clip. */
 export const weighPose = (pose: BodyPose, weight: number): BodyPose => ({

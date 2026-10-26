@@ -1179,7 +1179,7 @@ export const BodyLoopAvatar = ({
           walk={environment.active}
           getControls={getControls}
         />
-        <BodyMotion binding={motion.binding} clip={motion.clip} />
+        <BodyMotion binding={motion.binding} clip={motion.clip} tempo={motion.tempo} />
         {environment.active ? (
           <ProjectAnchor point={picked?.point ?? null} store={anchorStore} />
         ) : null}
