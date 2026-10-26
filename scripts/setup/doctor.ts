@@ -8,13 +8,25 @@ import { fileURLToPath } from "node:url";
 
 import { detectState } from "./detect";
 import {
+  dataPageFindings,
   type DetectedState,
   databaseSummary,
+  type Finding,
   pageReadiness,
+  type Readiness,
   SETUP_COMMAND,
   toolChecks,
 } from "./plan";
 import { TOOLS } from "./prerequisites";
+
+const FINDING_MARK: Readonly<Record<Finding["mark"], string>> = {
+  ok: "[ok]     ",
+  no: "[no]     ",
+  stale: "[stale]  ",
+};
+
+const readinessMark = (page: Readiness): string =>
+  page.stale === true ? "[stale]  " : page.ready ? "[ready]  " : "[missing]";
 
 /** The report as text. Pure. */
 export const formatDoctor = (state: DetectedState): string => {
@@ -29,9 +41,14 @@ export const formatDoctor = (state: DetectedState): string => {
       ? `  [ok]      open-twin packages at ${state.openTwin.pinned.slice(0, 7)}`
       : `  [missing] open-twin packages not at ${state.openTwin.pinned.slice(0, 7)}: bun run sync:open-twin`;
   const pages = pageReadiness(state).map(
-    (page) => `  ${page.ready ? "[ready]  " : "[missing]"} ${page.page}: ${page.detail}`,
+    (page) => `  ${readinessMark(page)} ${page.page}: ${page.detail}`,
   );
-  const open = pageReadiness(state).filter((page) => !page.ready).length;
+  const open = pageReadiness(state).filter(
+    (page) => !page.ready || page.stale === true,
+  ).length;
+  const dataPage = dataPageFindings(state).map(
+    (finding) => `  ${FINDING_MARK[finding.mark]} ${finding.text}`,
+  );
   return [
     `TwinLLM doctor (${state.platform}, read-only)`,
     "",
@@ -45,6 +62,9 @@ export const formatDoctor = (state: DetectedState): string => {
     "",
     "What each page needs",
     ...pages,
+    "",
+    "Data page (/data): it lists a cohort only when neither the DATA_MODE line nor that cohort's line is [no]",
+    ...dataPage,
     "",
     open === 0
       ? "Everything is ready."

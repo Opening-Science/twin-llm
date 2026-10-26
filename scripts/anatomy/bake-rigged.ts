@@ -6,12 +6,18 @@
  *   bun run anatomy:bake-rigged --demo anny-adult-f   # one body
  *   bun run anatomy:bake-rigged --check               # report, bake nothing
  *
- * The bake is `scripts/anatomy/bake-anny-rigged.py`, run by `uv run --script`
- * against its lockfile (anny 0.6.2, torch 2.14.1 CPU). It writes to a scratch
- * file; this script checks the bytes against the pin in
- * packages/anatomy/rigged-bodies.ts and only then installs them (`.partial`,
- * then rename) next to the atlases. A mismatch writes nothing and prints the
- * SHA-256 it got, so a pin bump is a deliberate edit.
+ * The fallback for `bun run anatomy:fetch`, which downloads the same pinned
+ * files from the anatomy-rigged-v1 release. The bake is
+ * `scripts/anatomy/bake-anny-rigged.py`, run by `uv run --script` against its
+ * lockfile (anny 0.6.2, torch 2.14.1: the CPU build on Linux and Windows, PyPI's
+ * on macOS). It writes to a scratch file; this script checks the bytes against
+ * the pin in packages/anatomy/rigged-bodies.ts and only then installs them
+ * (`.partial`, then rename) next to the atlases. A mismatch writes nothing and
+ * prints the SHA-256 it got, so a pin bump is a deliberate edit. It also says
+ * whether the body's content matches (`contentSha256`, see
+ * rigged-content-digest.ts): on a machine whose float maths differs from the
+ * Linux x86_64 bake in the last bits, the bytes can differ while the body is
+ * the same, and the download is then the way to the pinned file.
  */
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -32,6 +38,7 @@ import {
   RIGGED_BODIES,
   type RiggedBodyEntry,
 } from "../../packages/anatomy/rigged-bodies";
+import { riggedCanonicalContent } from "./rigged-content-digest";
 
 export const BAKE_SCRIPT = join("scripts", "anatomy", "bake-anny-rigged.py");
 
@@ -102,8 +109,14 @@ const bakeOne = async (
   }
   const got = deps.sha256(bytes);
   if (bytes.byteLength !== entry.bytes || got !== entry.sha256) {
+    const content = riggedCanonicalContent(bytes);
+    const contentSha = content === null ? null : deps.sha256(content);
+    const verdict =
+      contentSha === entry.contentSha256
+        ? "Its content matches the pin (content SHA-256 as pinned): the same body, with a few values encoded differently by this machine's float maths."
+        : `Its content differs from the pin too (content SHA-256 ${contentSha ?? "unreadable"}).`;
     io.stderr.write(
-      `${name}: the bake gave ${bytes.byteLength} bytes, SHA-256 ${got}, which is not the pin; nothing written.\n`,
+      `${name}: the bake gave ${bytes.byteLength} bytes, SHA-256 ${got}, which is not the pin; nothing written. ${verdict} bun run anatomy:fetch downloads the pinned file.\n`,
     );
     return "failed";
   }

@@ -21,7 +21,7 @@ describe("motionUnavailable", () => {
 
   test("a demo body without a rig names the bake command", () => {
     expect(motionUnavailable(false, false, "demo")).toBe(
-      "The demo body that can walk is not installed on this machine. Run bun run anatomy:bake-rigged (needs uv).",
+      "The demo body that can walk is not installed on this machine. Run bun run anatomy:fetch.",
     );
   });
 });

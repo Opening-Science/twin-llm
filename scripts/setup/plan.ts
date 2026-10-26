@@ -2,7 +2,13 @@
  * From what `detect.ts` found on this machine to what `setup:local` will do
  * and what `doctor` reports. Pure: no I/O, so every branch is unit tested.
  */
-import { DEMO_COHORTS, SYNTHETIC_COHORTS } from "../../packages/query-tools/scope";
+import { DEMO_BODY_IDS, type DemoBodyId } from "../../packages/anatomy/demo-bodies";
+import { RIGGED_BODIES, RIGGED_RELEASE_TAG } from "../../packages/anatomy/rigged-bodies";
+import {
+  DEMO_COHORTS,
+  isAllowedCohort,
+  SYNTHETIC_COHORTS,
+} from "../../packages/query-tools/scope";
 import { EVAL_COHORT, FIXTURE_COHORT, RELEASE_10K } from "./cohort-pins";
 import {
   checkTool,
@@ -14,6 +20,19 @@ import {
   type ToolId,
   type ToolProbe,
 } from "./prerequisites";
+
+/** One cohort id in the warehouse's `subjects` table, allowlisted or not. */
+export type CohortRows = Readonly<{
+  cohortId: string;
+  /** Subjects marked `is_synthetic`, the only ones any page reads. */
+  synthetic: number;
+  total: number;
+  /** At least one observation row belongs to this cohort's subjects. */
+  hasObservations: boolean;
+}>;
+
+/** The bundles ingested under one cohort id: how many, and their fingerprint (cohort-fingerprint.ts). */
+export type BundleSet = Readonly<{ count: number; sha256: string }>;
 
 export type DatabaseProbe =
   | Readonly<{ kind: "no-url" }>
@@ -32,8 +51,10 @@ export type DatabaseProbe =
       serverMajor: number | null;
       /** Applied migration names; empty when the database is new. */
       appliedMigrations: readonly string[];
-      /** Synthetic subjects per allowlisted cohort; empty when the table is missing. */
-      cohorts: Readonly<Record<string, number>>;
+      /** Every cohort in the warehouse; empty when the table is missing. */
+      warehouse: readonly CohortRows[];
+      /** The evaluation cohort's ingested bundles; null when it has none. */
+      evalBundles: BundleSet | null;
     }>;
 
 export type OllamaProbe =
@@ -61,7 +82,11 @@ export type DetectedState = Readonly<{
 
 export type CohortChoice = "eval" | "10k" | "none";
 
-export type SetupOptions = Readonly<{ cohort: CohortChoice }>;
+export type SetupOptions = Readonly<{
+  cohort: CohortChoice;
+  /** `--reload-cohort`: replace the evaluation cohort's warehouse rows with the pinned cohort. */
+  reloadCohort?: boolean;
+}>;
 
 export type StepId =
   | "env-file"
@@ -78,8 +103,15 @@ export type Action =
   | Readonly<{ kind: "command"; argv: readonly string[] }>
   | Readonly<{ kind: "create-database"; name: string }>
   | Readonly<{ kind: "load-eval" }>
+  | Readonly<{ kind: "reload-eval"; cohortId: string; subjects: number }>
   | Readonly<{ kind: "load-10k" }>
-  | Readonly<{ kind: "load-fixtures" }>;
+  | Readonly<{ kind: "load-fixtures" }>
+  | Readonly<{
+      kind: "install-rigged";
+      ids: readonly DemoBodyId[];
+      /** Why there is no bake fallback (uv missing), or null when there is one. */
+      noBake: string | null;
+    }>;
 
 export type Step = Readonly<{
   id: StepId;
@@ -89,19 +121,59 @@ export type Step = Readonly<{
 }> &
   (
     | Readonly<{ status: "run"; action: Action; note?: string }>
-    | Readonly<{ status: "skip" | "blocked" | "off"; reason: string }>
+    | Readonly<{ status: "skip" | "blocked" | "off" | "stale"; reason: string }>
   );
 
 export const SETUP_COMMAND = "bun run setup:local";
+export const RELOAD_COMMAND = "bun run setup:local -- --reload-cohort";
 
 const fixFor = (state: DetectedState, id: ToolId): string | null => {
   const check = checkTool(id, state.tools[id], state.platform);
   return check.status === "ok" ? null : `${check.detail}: ${check.fix}`;
 };
 
-/** Subjects in the allowlisted cohorts, by cohort. */
+/** Synthetic subjects in the allowlisted cohorts, by cohort. */
 const loadedCohorts = (database: DatabaseProbe): Readonly<Record<string, number>> =>
-  database.kind === "ok" ? database.cohorts : {};
+  database.kind === "ok"
+    ? Object.fromEntries(
+        database.warehouse
+          .filter((rows) => isAllowedCohort(rows.cohortId) && rows.synthetic > 0)
+          .map((rows) => [rows.cohortId, rows.synthetic]),
+      )
+    : {};
+
+export type EvalCohortState =
+  | Readonly<{ kind: "absent" }>
+  | Readonly<{ kind: "current"; subjects: number }>
+  | Readonly<{ kind: "stale"; subjects: number; why: string }>;
+
+/**
+ * Whether the warehouse's evaluation cohort is the pinned one: the subject
+ * count, and the ingested bundles' fingerprint when the database has bundles.
+ * A cohort ingested before the dates were fixed has the same id but other
+ * people (35 subjects instead of 37).
+ */
+export const evalCohortState = (database: DatabaseProbe): EvalCohortState => {
+  if (database.kind !== "ok") return { kind: "absent" };
+  const subjects =
+    database.warehouse.find((rows) => rows.cohortId === EVAL_COHORT.cohortId)?.total ?? 0;
+  if (subjects === 0) return { kind: "absent" };
+  const problems = [
+    subjects === EVAL_COHORT.subjectCount
+      ? null
+      : `${subjects} subjects, the pinned cohort has ${EVAL_COHORT.subjectCount}`,
+    database.evalBundles === null ||
+    database.evalBundles.sha256 === EVAL_COHORT.bundleSetSha256
+      ? null
+      : `its ${database.evalBundles.count} ingested bundles are not the pinned files`,
+  ].filter((problem) => problem !== null);
+  return problems.length === 0
+    ? { kind: "current", subjects }
+    : { kind: "stale", subjects, why: problems.join("; ") };
+};
+
+const staleReason = (why: string): string =>
+  `${EVAL_COHORT.cohortId} in the warehouse is an older copy (${why}). Fix: ${RELOAD_COMMAND} (replaces this cohort's warehouse rows and nothing else)`;
 
 const totalSubjects = (cohorts: Readonly<Record<string, number>>): number =>
   Object.values(cohorts).reduce((sum, n) => sum + n, 0);
@@ -178,31 +250,43 @@ const anatomyStep = (state: DetectedState): Step => {
     : {
         ...base,
         status: "run",
-        action: { kind: "command", argv: ["bun", "run", "anatomy:fetch"] },
+        action: {
+          kind: "command",
+          argv: ["bun", "run", "anatomy:fetch", "--skip-rigged"],
+        },
         note: `${state.anatomyMissing.length} file(s) to download`,
       };
 };
 
+/** Demo bodies whose rigged file is missing, from the file names detect reports. */
+const missingRiggedIds = (state: DetectedState): readonly DemoBodyId[] =>
+  DEMO_BODY_IDS.filter((id) => state.riggedMissing.includes(RIGGED_BODIES[id].fileName));
+
 const riggedStep = (state: DetectedState): Step => {
   const base = {
     id: "rigged",
-    title: "Rigged demo bodies for Walk/Idle (anatomy:bake-rigged)",
+    title: "Rigged demo bodies for Walk/Idle/Dance (anatomy:fetch, bake as fallback)",
     after: [],
   } as const;
-  if (state.riggedMissing.length === 0)
-    return { ...base, status: "skip", reason: "both installed" };
+  const ids = missingRiggedIds(state);
+  if (ids.length === 0) return { ...base, status: "skip", reason: "both installed" };
   const uv = fixFor(state, "uv");
-  return uv !== null
-    ? {
-        ...base,
-        status: "blocked",
-        reason: `${uv}. Then run bun run anatomy:bake-rigged (or ${SETUP_COMMAND} again). The demo bodies stay static until then.`,
-      }
-    : {
-        ...base,
-        status: "run",
-        action: { kind: "command", argv: ["bun", "run", "anatomy:bake-rigged"] },
-      };
+  return {
+    ...base,
+    status: "run",
+    action: {
+      kind: "install-rigged",
+      ids,
+      noBake:
+        uv === null
+          ? null
+          : `the download failed and the bake fallback needs uv (${uv}). Then run ${SETUP_COMMAND} again. The demo bodies stay static until then.`,
+    },
+    note:
+      uv === null
+        ? `download from release ${RIGGED_RELEASE_TAG}; bake locally only if that fails`
+        : `download from release ${RIGGED_RELEASE_TAG} (no uv, so no bake fallback)`,
+  };
 };
 
 const cohortStep = (state: DetectedState, options: SetupOptions): Step => {
@@ -241,6 +325,41 @@ const cohortStep = (state: DetectedState, options: SetupOptions): Step => {
       note: `download ${gigabytes(RELEASE_10K.archiveBytes)} from release ${RELEASE_10K.tag}, verify, unpack, ingest as ${RELEASE_10K.cohortId}`,
     };
   }
+  const evalState = evalCohortState(state.database);
+  const generateFix = [
+    fixFor(state, "java"),
+    fixFor(state, "curl"),
+    fixFor(state, "shasum"),
+  ].filter((fix) => fix !== null);
+  if (options.reloadCohort === true) {
+    if (generateFix.length > 0) {
+      return {
+        ...base,
+        status: "blocked",
+        reason: `${generateFix.join("; ")}. --reload-cohort generates ${EVAL_COHORT.cohortId} first; nothing was deleted.`,
+      };
+    }
+    return evalState.kind === "absent"
+      ? {
+          ...base,
+          status: "run",
+          action: { kind: "load-eval" },
+          note: `${EVAL_COHORT.cohortId} is not loaded, so nothing to delete: generate it with Synthea (fixed seed and dates), verify, ingest`,
+        }
+      : {
+          ...base,
+          status: "run",
+          action: {
+            kind: "reload-eval",
+            cohortId: EVAL_COHORT.cohortId,
+            subjects: evalState.subjects,
+          },
+          note: `generate and verify ${EVAL_COHORT.cohortId}, then delete its ${evalState.subjects} subjects' warehouse rows in one transaction and ingest the pinned cohort`,
+        };
+  }
+  if (evalState.kind === "stale") {
+    return { ...base, status: "stale", reason: staleReason(evalState.why) };
+  }
   const loaded = Object.entries(cohorts).filter(
     ([id, n]) => n > 0 && id !== FIXTURE_COHORT.cohortId,
   );
@@ -251,11 +370,7 @@ const cohortStep = (state: DetectedState, options: SetupOptions): Step => {
       reason: `warehouse already has ${loaded.map(([id, n]) => `${id} (${n} subjects)`).join(", ")}`,
     };
   }
-  const javaFix = [
-    fixFor(state, "java"),
-    fixFor(state, "curl"),
-    fixFor(state, "shasum"),
-  ].filter((fix) => fix !== null);
+  const javaFix = generateFix;
   if (javaFix.length === 0) {
     return {
       ...base,
@@ -347,8 +462,11 @@ export const planSetup = (
 export type Outcome = Readonly<{
   id: StepId;
   title: string;
-  /** `off`: left out on request (--skip-cohort), so not something to fix. */
-  result: "done" | "skipped" | "off" | "blocked" | "failed";
+  /**
+   * `off`: left out on request (--skip-cohort), so not something to fix.
+   * `stale`: present but not the pinned version; the detail says how to fix it.
+   */
+  result: "done" | "skipped" | "off" | "stale" | "blocked" | "failed";
   detail: string;
 }>;
 
@@ -372,6 +490,7 @@ const MARK: Readonly<Record<Outcome["result"], string>> = {
   done: "[ready]  ",
   skipped: "[ready]  ",
   off: "[off]    ",
+  stale: "[stale]  ",
   blocked: "[skipped]",
   failed: "[FAILED] ",
 };
@@ -382,7 +501,10 @@ export const formatChecklist = (outcomes: readonly Outcome[]): string => {
     (outcome) => `${MARK[outcome.result]} ${outcome.title}: ${outcome.detail}`,
   );
   const open = outcomes.filter(
-    (outcome) => outcome.result === "blocked" || outcome.result === "failed",
+    (outcome) =>
+      outcome.result === "blocked" ||
+      outcome.result === "failed" ||
+      outcome.result === "stale",
   );
   const tail =
     open.length === 0
@@ -391,7 +513,13 @@ export const formatChecklist = (outcomes: readonly Outcome[]): string => {
   return ["", "Setup checklist", ...lines, "", tail, ""].join("\n");
 };
 
-export type Readiness = Readonly<{ page: string; ready: boolean; detail: string }>;
+export type Readiness = Readonly<{
+  page: string;
+  ready: boolean;
+  detail: string;
+  /** Works, but on data that is not the pinned version (detail says how to fix it). */
+  stale?: boolean;
+}>;
 
 const CHAT_MODELS_HINT = "ollama pull qwen3:8b && ollama pull nomic-embed-text";
 
@@ -401,6 +529,7 @@ export const pageReadiness = (state: DetectedState): readonly Readiness[] => {
   const loaded = SYNTHETIC_COHORTS.filter((id) => (cohorts[id] ?? 0) > 0);
   const demo = DEMO_COHORTS.filter((id) => (cohorts[id] ?? 0) > 0);
   const dbProblem = databaseProblem(state);
+  const evalState = evalCohortState(state.database);
   const applied = state.database.kind === "ok" ? state.database.appliedMigrations : [];
   const pending = state.migrations.filter((name) => !applied.includes(name));
   const dataPage: Readiness =
@@ -418,11 +547,18 @@ export const pageReadiness = (state: DetectedState): readonly Readiness[] => {
               ready: false,
               detail: `no synthetic cohort loaded: ${SETUP_COMMAND}`,
             }
-          : {
-              page: "Data page (/data)",
-              ready: true,
-              detail: loaded.map((id) => `${id} (${cohorts[id]} subjects)`).join(", "),
-            };
+          : evalState.kind === "stale"
+            ? {
+                page: "Data page (/data)",
+                ready: true,
+                stale: true,
+                detail: staleReason(evalState.why),
+              }
+            : {
+                page: "Data page (/data)",
+                ready: true,
+                detail: loaded.map((id) => `${id} (${cohorts[id]} subjects)`).join(", "),
+              };
   const demoLabs: Readiness =
     demo.length > 0
       ? { page: "Body twin Demo lab values", ready: true, detail: demo.join(", ") }
@@ -454,7 +590,7 @@ export const pageReadiness = (state: DetectedState): readonly Readiness[] => {
       : {
           page: "Body twin Walk/Idle",
           ready: false,
-          detail: `rigged bodies missing (${state.riggedMissing.join(", ")}): bun run anatomy:bake-rigged${uv === null ? "" : ` after installing uv (${uv})`}`,
+          detail: `rigged bodies missing (${state.riggedMissing.join(", ")}): bun run anatomy:fetch downloads them from release ${RIGGED_RELEASE_TAG}; offline, bun run anatomy:bake-rigged${uv === null ? "" : ` after installing uv (${uv})`}`,
         };
   const chat = chatReadiness(state.ollama);
   return [dataPage, demoLabs, anatomy, walking, chat];
@@ -518,4 +654,60 @@ export const databaseSummary = (
     ok: true,
     detail: `reachable, pgvector available, ${total} synthetic subjects`,
   };
+};
+
+export type Finding = Readonly<{ mark: "ok" | "no" | "stale"; text: string }>;
+
+/**
+ * Why the Data page could be empty, one finding per condition it reads under:
+ * DATA_MODE, a reachable database, and per cohort whether it is in
+ * SYNTHETIC_COHORTS, has synthetic subjects and has observation rows.
+ */
+export const dataPageFindings = (state: DetectedState): readonly Finding[] => {
+  const mode: Finding =
+    state.dataMode === "synthetic"
+      ? { mark: "ok", text: "DATA_MODE=synthetic" }
+      : {
+          mark: "no",
+          text: `DATA_MODE=${state.dataMode ?? "unset"}: the page reads the warehouse only with DATA_MODE=synthetic (.env.local)`,
+        };
+  const problem = databaseProblem(state);
+  if (problem !== null) return [mode, { mark: "no", text: problem }];
+  if (state.database.kind !== "ok")
+    return [mode, { mark: "no", text: databaseSummary(state).detail }];
+  const { warehouse } = state.database;
+  if (warehouse.length === 0)
+    return [
+      mode,
+      {
+        mark: "no",
+        text: `the warehouse has no subjects: ${SETUP_COMMAND} loads ${EVAL_COHORT.cohortId}`,
+      },
+    ];
+  const evalState = evalCohortState(state.database);
+  const cohortFinding = (rows: CohortRows): Finding => {
+    const name = `${rows.cohortId}: ${rows.synthetic} synthetic subject(s)`;
+    if (!isAllowedCohort(rows.cohortId))
+      return {
+        mark: "no",
+        text: `${rows.cohortId}: ${rows.total} subject(s), not in SYNTHETIC_COHORTS (packages/query-tools/scope.ts), so the page never lists it`,
+      };
+    if (rows.synthetic === 0)
+      return {
+        mark: "no",
+        text: `${name} of ${rows.total}; only is_synthetic subjects are shown`,
+      };
+    if (!rows.hasObservations)
+      return {
+        mark: "no",
+        text: `${name}, in SYNTHETIC_COHORTS, but no observation rows: ingest it again with ${SETUP_COMMAND}`,
+      };
+    if (rows.cohortId === EVAL_COHORT.cohortId && evalState.kind === "stale")
+      return { mark: "stale", text: `${name}: ${staleReason(evalState.why)}` };
+    return {
+      mark: "ok",
+      text: `${name}, in SYNTHETIC_COHORTS, observation rows present`,
+    };
+  };
+  return [mode, ...warehouse.map(cohortFinding)];
 };

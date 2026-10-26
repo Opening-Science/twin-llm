@@ -78,7 +78,7 @@ is the focus of the Open Science Foundation's first funding call. The full data-
 
 ## Run it locally
 
-You need [Bun](https://bun.sh) 1.4, Node.js 26, PostgreSQL 16 or newer with [pgvector](https://github.com/pgvector/pgvector), Java 21 (for the Synthea cohort), [uv](https://docs.astral.sh/uv/) (for the demo bodies that walk) and [Ollama](https://ollama.com).
+You need [Bun](https://bun.sh) 1.4, Node.js 26, PostgreSQL 16 or newer with [pgvector](https://github.com/pgvector/pgvector), Java 21 (for the Synthea cohort), [uv](https://docs.astral.sh/uv/) (optional: bakes the demo bodies that walk when they cannot be downloaded) and [Ollama](https://ollama.com).
 
 ```bash
 git clone https://github.com/Opening-Science/twin-llm.git
@@ -88,7 +88,7 @@ ollama pull qwen3:8b && ollama pull nomic-embed-text
 bun run dev
 ```
 
-`setup:local` checks the prerequisites and prints the Homebrew or apt line for anything missing (it never installs system packages). It then writes `.env.local` from `.env.synthetic.example` if there is none, syncs the pinned open-twin packages, installs dependencies, creates the database if it does not exist, applies the migrations, downloads the anatomy atlases, bakes the rigged demo bodies, and generates and ingests the 30-person synthetic evaluation cohort (fixed seed and dates, checksum verified). It is safe to re-run: finished steps are skipped. It ends with a checklist of what is ready and what was skipped and why. `bun run doctor` prints the same checks and what each page needs, without changing anything.
+`setup:local` checks the prerequisites and prints the Homebrew or apt line for anything missing (it never installs system packages). It then writes `.env.local` from `.env.synthetic.example` if there is none, syncs the pinned open-twin packages, installs dependencies, creates the database if it does not exist, applies the migrations, downloads the anatomy atlases and the rigged demo bodies (from the `anatomy-rigged-v1` release; baked with uv only if that fails), and generates and ingests the 30-person synthetic evaluation cohort (fixed seed and dates, checksum verified). It is safe to re-run: finished steps are skipped. It ends with a checklist of what is ready and what was skipped and why. An evaluation cohort in the warehouse that is not the pinned one (an older copy with 35 subjects instead of 37) is marked `[stale]`; `bun run setup:local -- --reload-cohort` replaces that cohort's warehouse rows and nothing else. `bun run doctor` prints the same checks and what each page needs, without changing anything.
 
 On macOS with Homebrew:
 

@@ -14,7 +14,8 @@ import { DEMO_BODIES, DEMO_BODY_IDS } from "../../packages/anatomy/demo-bodies";
 import { ATLAS_IDS, ATLASES } from "../../packages/anatomy/manifest";
 import { resolveAnatomyDir } from "../../packages/anatomy/paths";
 import { RIGGED_BODIES } from "../../packages/anatomy/rigged-bodies";
-import { isAllowedCohort } from "../../packages/query-tools/scope";
+import { BUNDLE_SET_SQL } from "./cohort-fingerprint";
+import { EVAL_COHORT } from "./cohort-pins";
 import {
   defaultDatabaseUrl,
   databaseTarget,
@@ -22,14 +23,25 @@ import {
   envFileFromExample,
   parseEnvFile,
 } from "./env-file";
-import type { DatabaseProbe, DetectedState, OllamaProbe } from "./plan";
+import type {
+  BundleSet,
+  CohortRows,
+  DatabaseProbe,
+  DetectedState,
+  OllamaProbe,
+} from "./plan";
 import { type Platform, TOOL_IDS, type ToolId, type ToolProbe } from "./prerequisites";
 
 type SqlRow = Readonly<Record<string, unknown>>;
-export type SqlClient = Readonly<{
+export type SqlQuery = Readonly<{
   unsafe: (query: string, params?: readonly unknown[]) => Promise<readonly SqlRow[]>;
-  close: () => Promise<void>;
 }>;
+export type SqlClient = SqlQuery &
+  Readonly<{
+    /** Runs `work` in one transaction: committed when it resolves, rolled back when it throws. */
+    begin: <T>(work: (tx: SqlQuery) => Promise<T>) => Promise<T>;
+    close: () => Promise<void>;
+  }>;
 type SqlConstructor = new (
   url: string,
   options?: Readonly<{ max?: number; connectionTimeout?: number }>,
@@ -116,11 +128,48 @@ const serverFacts = async (
   };
 };
 
-const tableExists = async (sql: SqlClient, table: string): Promise<boolean> => {
+const tableExists = async (sql: SqlQuery, table: string): Promise<boolean> => {
   const [row] = await sql.unsafe("select to_regclass($1) is not null as present", [
     `public.${table}`,
   ]);
   return row?.present === true;
+};
+
+/** Every cohort id in `subjects`, with its synthetic and total subjects and whether it has observations. */
+const readWarehouse = async (sql: SqlQuery): Promise<readonly CohortRows[]> => {
+  if (!(await tableExists(sql, "subjects"))) return [];
+  const observations = await tableExists(sql, "observations");
+  const rows = await sql.unsafe(
+    "select cohort_id, count(*) filter (where is_synthetic)::int as synthetic, count(*)::int as total from subjects group by cohort_id order by cohort_id",
+  );
+  return Promise.all(
+    rows.map(async (row) => {
+      const cohortId = String(row.cohort_id);
+      const [found] = observations
+        ? await sql.unsafe(
+            "select exists(select 1 from observations o join subjects s on s.subject_ref = o.subject_ref where s.cohort_id = $1) as present",
+            [cohortId],
+          )
+        : [];
+      return {
+        cohortId,
+        synthetic: Number(row.synthetic),
+        total: Number(row.total),
+        hasObservations: found?.present === true,
+      };
+    }),
+  );
+};
+
+/** The fingerprint of the bundles ingested as `cohortId`, or null when there are none. */
+export const readBundleSet = async (
+  sql: SqlQuery,
+  cohortId: string,
+): Promise<BundleSet | null> => {
+  if (!(await tableExists(sql, "bundles"))) return null;
+  const [row] = await sql.unsafe(BUNDLE_SET_SQL, [cohortId]);
+  const count = Number(row?.n ?? 0);
+  return count > 0 ? { count, sha256: String(row?.digest) } : null;
 };
 
 /** What the database at `url` holds, without changing anything. */
@@ -139,18 +188,11 @@ export const probeDatabase = async (url: string | undefined): Promise<DatabasePr
           )
         ).map((row) => String(row.migration_name))
       : [];
-    const cohorts = (await tableExists(sql, "subjects"))
-      ? Object.fromEntries(
-          (
-            await sql.unsafe(
-              "select cohort_id, count(*)::int as n from subjects where is_synthetic group by cohort_id order by cohort_id",
-            )
-          )
-            .map((row) => [String(row.cohort_id), Number(row.n)] as const)
-            .filter(([id]) => isAllowedCohort(id)),
-        )
-      : {};
-    return { kind: "ok", ...facts, appliedMigrations, cohorts };
+    const warehouse = await readWarehouse(sql);
+    const evalBundles = warehouse.some((rows) => rows.cohortId === EVAL_COHORT.cohortId)
+      ? await readBundleSet(sql, EVAL_COHORT.cohortId)
+      : null;
+    return { kind: "ok", ...facts, appliedMigrations, warehouse, evalBundles };
   } catch (error) {
     const code = errorCode(error);
     if (code === "3D000" && target !== null) {

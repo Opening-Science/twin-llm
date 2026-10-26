@@ -28,10 +28,10 @@ export const MOTION_HIDES_ANATOMY =
 export const MOTION_REDUCED = "Motion is off because the system asks for reduced motion.";
 /**
  * The demo body loads without a skeleton only when the rigged copy was never
- * baked on this machine, so the reason names the command that bakes it.
+ * installed on this machine, so the reason names the command that downloads it.
  */
 export const MOTION_NO_RIG_DEMO =
-  "The demo body that can walk is not installed on this machine. Run bun run anatomy:bake-rigged (needs uv).";
+  "The demo body that can walk is not installed on this machine. Run bun run anatomy:fetch.";
 export const MOTION_NO_RIG_SCAN = "This scan has no skeleton the walk can drive.";
 
 /**
