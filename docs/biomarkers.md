@@ -190,6 +190,31 @@ Pituitary is not moved to `brain` and adrenal is not moved to `kidney`. A marker
 whose regions all map to none gets "No single body location". 32 of the 67
 markers light something.
 
+### Biomarker → organ (`organ-map.ts`): a reviewed research-use mapping
+
+A second, smaller table for reading values organ by organ. Unlike the region
+table it names one organ per marker, as an HRA organ-group key, and only where
+the marker clearly belongs to that organ. `organStatus(values)` returns, per
+organ, the marker furthest from its published range (above or below beats
+within; the first marker in the table keeps a tie) and that marker's name. A
+value with no position sets nothing. In the environment, an organ's info card
+shows that line ("Range position: Gamma-GT (GGT) · Above the published range");
+nothing is coloured, since the twin has no position colours.
+
+| Organ         | HRA group        | Markers                                                                                                                   | Note                                                                                                                                                            |
+| ------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Liver         | liver            | GPT (ALAT) 1742-6, GOT (ASAT) 1920-8, Gamma-GT (GGT) 2324-2                                                               | Anchor region liver. Bilirubin and albumin are not in Anchor v3.                                                                                                |
+| Kidney        | kidney           | Kreatinin 2160-0                                                                                                          | Anchor region kidney. D12 keeps its row from lighting; the card line is text only. No eGFR or urea in Anchor v3.                                                |
+| Pancreas      | pancreas         | HbA1c 4548-4, Glukose 1558-6                                                                                              | Anchor region metabolic_glycemic, flagged "region assigned by override, confirm"; Anchor's organ wording for HbA1c says pancreatic, for glucose only metabolic. |
+| Blood vessels | bloodvasculature | Cholesterin (gesamt) 2093-3, HDL-Cholesterin 2085-9, LDL-Cholesterin 2089-1, Triglyceride 2571-8, Lipoprotein (a) 10835-7 | Anchor region vasculature. LDL and Lp(a) have no reference interval, so they never set a position.                                                              |
+
+Left unmapped, on purpose: the thyroid (TSH, free T4: no atlas has the gland),
+the blood count and ferritin (no blood or marrow mesh; D12), bone (calcium,
+vitamin D: HRA has five bone groups and no single bone id), and lungs, heart and
+blood pressure (SpO2, resting heart rate and blood pressure are not Anchor
+markers). Every code in the table must exist in the catalogue and every organ
+in `hra-groups.ts`; `organ-map.test.ts` checks both.
+
 ### Wearable vitals → body system (`vitals.ts`)
 
 Vitals are not Anchor biomarkers, so Anchor has no system for them. The sources

@@ -202,6 +202,7 @@ describe("abstained answers withhold the model's uncertainty statement", () => {
       reasoningText: "Synthetic reasoning line.",
       attribution: null,
       responseDocument: JSON.parse(JSON.stringify(abstained)) as unknown,
+      toolParts: null,
       timeToFirstTokenMs: 100,
       tokensPerSecond: 10,
       inputTokens: 1,

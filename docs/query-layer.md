@@ -47,9 +47,28 @@ The same `TOOL_DEFINITIONS` emit:
 - OpenAI-compatible `{ type: "function", function: { name, description, parameters } }`
 - MCP `{ tools: [{ name, description, inputSchema }] }`
 
-Snapshots: `packages/query-tools/__snapshots__/`. There is no MCP server process in this change.
+Snapshots: `packages/query-tools/__snapshots__/`. The MCP manifest is what `bun run mcp:serve` lists (see "MCP server").
 
 Models get a slim form of each input schema, built in one place (`modelJsonSchema` in `packages/query-tools/model-schema.ts`) and used by chat, the eval harness, the OpenAI tool list and the training data. It is zod's draft-07 JSON Schema without `$schema`, regex `pattern`s, `format`s or the root description, so a window bound is a plain `string` with its description; every property, type, enum, bound and required list stays. zod's version spends about three quarters of its tokens on three date regexes per window bound: with the Qwen3 chat template the nine tools go from 11,947 tokens in chat (8,562 in the training data, which already dropped some patterns) to 2,157. Validation is unchanged: `modelInputSchema` parses every call with the zod schema before `execute`, so an impossible date such as `2024-02-30` is refused as before and never reaches the database or the audit chain. The MCP manifest keeps zod's full schema, patterns included, because it is the contract for external clients, which may validate arguments with it.
+
+## MCP server
+
+`bun run mcp:serve` (`scripts/mcp-server.ts`) serves the nine warehouse tools to an MCP client over stdio, with the env from `.env.local`. The tool list is `mcpToolManifest()`, so it equals the committed snapshot; every call is parsed with the tool's zod schema and then runs the same function chat runs (`packages/query-tools/mcp-server.ts`), so scope and audit are unchanged: a call outside the synthetic cohorts returns `SUBJECT_SCOPE_VIOLATION`, every call appends one audit event with `actor` `mcp` and one `session_id` per server process, and a call that throws is audited as `query-tool-failed` and answered with a fixed error text. Invalid arguments are refused before the tool runs and are not audited. Logs go to stderr; stdout is the protocol.
+
+Transport is stdio only. `DATA_MODE=personal` must stay that way: `assertTransportAllowedForDataMode` refuses a network transport (streamable HTTP, SSE) in personal mode, so anyone adding one has to go through that guard. In personal mode the warehouse scope is empty anyway (see "Scope").
+
+Claude Desktop (`claude_desktop_config.json`) and Claude Code (`.mcp.json`) use the same entry; replace the path:
+
+```json
+{
+  "mcpServers": {
+    "twinllm-query-tools": {
+      "command": "bun",
+      "args": ["--cwd", "/path/to/twin-llm", "run", "mcp:serve"]
+    }
+  }
+}
+```
 
 ## Scope
 

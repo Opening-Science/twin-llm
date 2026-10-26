@@ -1,6 +1,11 @@
 import { describe, expect, test } from "bun:test";
 
-import { loadOwnedThread, type StoredThread, type ThreadReads } from "./owned-thread";
+import {
+  loadOwnedThread,
+  requireOwnedThread,
+  type StoredThread,
+  type ThreadReads,
+} from "./owned-thread";
 import { makeResponseDocument } from "./response-document-fixture";
 
 /** Synthetic thread: a question about a synthetic subject's HRV, answered once and withheld once. */
@@ -22,6 +27,7 @@ const stored: StoredThread = {
           reasoningText: "Synthetic reasoning citing oura.hrv 48 ms.",
           attribution: [{ metricKey: "oura.hrv", label: "HRV", value: 48, unit: "ms" }],
           responseDocument: null,
+          toolParts: null,
           timeToFirstTokenMs: 900,
           tokensPerSecond: 12.5,
           inputTokens: 100,
@@ -38,6 +44,7 @@ const stored: StoredThread = {
           reasoningText: "Withheld synthetic reasoning.",
           attribution: null,
           responseDocument: makeResponseDocument({ abstained: true }),
+          toolParts: null,
           timeToFirstTokenMs: null,
           tokensPerSecond: null,
           inputTokens: null,
@@ -97,5 +104,33 @@ describe("loadOwnedThread", () => {
     expect(withheld?.text).toBe("");
     expect(withheld?.reasoningText).toBeNull();
     expect(JSON.stringify(thread)).not.toContain("Withheld synthetic");
+  });
+});
+
+describe("requireOwnedThread", () => {
+  const owner = reads("clerk-owner", { "clerk-owner": "user-owner" });
+  /** What Next's `notFound()` throws; thrown from the layout it sets the 404 status. */
+  const notFoundSignal = { digest: "NEXT_HTTP_ERROR_FALLBACK;404" };
+
+  test("the owner gets the thread", async () => {
+    const thread = await requireOwnedThread("thread-1", owner);
+    expect(thread.id).toBe("thread-1");
+    expect(thread.turns[0]?.answers[0]?.modelId).toBe("qwen3:8b");
+  });
+
+  test("anyone else, and an unknown id, gets Next's 404 signal", async () => {
+    const other = reads("clerk-other", {
+      "clerk-owner": "user-owner",
+      "clerk-other": "user-other",
+    });
+    await expect(requireOwnedThread("thread-1", other)).rejects.toMatchObject(
+      notFoundSignal,
+    );
+    await expect(requireOwnedThread("thread-1", reads(null, {}))).rejects.toMatchObject(
+      notFoundSignal,
+    );
+    await expect(requireOwnedThread("no-such-thread", owner)).rejects.toMatchObject(
+      notFoundSignal,
+    );
   });
 });

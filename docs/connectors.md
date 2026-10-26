@@ -17,6 +17,8 @@ Shared behaviour:
 
 - `GET /api/oura/authorize` (`app/api/oura/authorize/route.ts`) resolves the actor, creates the user row lazily, generates an 8-character host state (`createOuraOAuthState` in `features/oura/oauth-cookie.ts`), and sets it in the `oura_oauth_state` cookie (`httpOnly`, `sameSite: "lax"`, `maxAge` 600 s, `path: "/"`, `secure` unless the redirect URI contains `localhost`). It then redirects to the Oura authorization URL. `@open-twin/provider-oura` `getAuthorizationUrl` accepts optional `state`; the host adapter (`infrastructure/open-twin-adapters/oura-authorize.ts`) still appends it.
 - `GET /api/oura/callback` (`app/api/oura/callback/route.ts`) reads `code` and `state`, deletes the cookie immediately, and compares `state` to the cookie. Missing or mismatched state redirects to `/connectors?oura=expired` **before** any token exchange. A provider `error` or missing `code` redirects to `/connectors?oura=denied`. On match it exchanges `code`, persists encrypted tokens, runs an initial sync (a failure there is logged and swallowed), and redirects to `/connectors?oura=connected`.
+- Scopes requested (`OURA_OAUTH_SCOPES` in `features/oura/connection.ts`): `email`, `personal`, `daily`, `workout`, `spo2`. Oura names no scope of their own for `daily_stress` and `vO2_max`. An account linked before `workout` and `spo2` were added has to be unlinked and linked again before those collections return data.
+- Sync (`syncOuraForUser`) fetches eight v2 collections in one pass (`OURA_SYNC_TYPES`): `personal_info`, `sleep`, `daily_readiness`, `daily_activity`, `workout`, `daily_spo2`, `daily_stress`, `vO2_max`. A collection that fails or is empty is reported in the provider's issues and the others are still stored. The FHIR bundle is built from the same responses as the summary (`buildOuraFhirBundle`, `infrastructure/open-twin-adapters/oura-bundle.ts`).
 
 ### Local proxy
 
@@ -30,7 +32,7 @@ Shared behaviour:
 
 - `oura_oauth_state` cookie (10 minutes): the CSRF nonce only. Not written to the database.
 - `OuraConnection` (`oura_connections`): encrypted tokens, access-token expiry, optional subject key, `lastSyncAt`.
-- `OuraSnapshot` (`oura_snapshots`): window, `summary` (metrics + narrative), optional `fhirBundle` from `@open-twin/provider-oura`.
+- `OuraSnapshot` (`oura_snapshots`): window, `summary` (metrics + narrative), optional `fhirBundle` from `@open-twin/provider-oura`. Summary keys by collection: `personal.*`, `sleep.*`, `readiness.*`, `activity.*`, `workout.{duration,calories,distance}.<activity>.<day>`, `spo2.{average,breathing_disturbance_index}.<day>`, `stress.{summary,high,recovery_high}.<day>` and `vo2max.value.<day>`. Durations are whole minutes; a field Oura leaves out produces no metric. In the bundle a workout is an `oura|workout` Observation with LOINC `41981-2` calories (`kcal`) and `oura|workout-distance` (`m`) components, a SpO2 night an `oura|spo2-daily-summary` with LOINC `59408-5` (`%`) and `oura|breathing-disturbance-index` (`/h`), a stress day an `oura|daily-stress` with the day summary as its value and `oura|stress-high` / `oura|recovery-high` (`min`), and a VO2max reading LOINC `94122-9` (`mL/kg/min`). Wearable snapshots never write the warehouse tables.
 
 ### What is encrypted
 

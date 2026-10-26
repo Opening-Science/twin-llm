@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, test } from "bun:test";
 
 import type { OuraSummary } from "@/infrastructure/oura-types";
 
-import { getLatestOuraSummary } from "./connection";
+import { getLatestOuraSummary, OURA_OAUTH_SCOPES, OURA_SYNC_TYPES } from "./connection";
 
 const USER_ID = "user-synthetic-1";
 
@@ -58,6 +58,22 @@ const fakeDatabase = () => ({
 beforeEach(() => {
   recorded.snapshotQueries.length = 0;
   recorded.snapshotRows.length = 0;
+});
+
+describe("Oura sync request", () => {
+  test("fetches the eight collections and asks for the scopes they need", () => {
+    expect(OURA_SYNC_TYPES).toEqual([
+      "personal_info",
+      "sleep",
+      "daily_readiness",
+      "daily_activity",
+      "workout",
+      "daily_spo2",
+      "daily_stress",
+      "vO2_max",
+    ]);
+    expect(OURA_OAUTH_SCOPES).toEqual(["email", "personal", "daily", "workout", "spo2"]);
+  });
 });
 
 describe("getLatestOuraSummary", () => {

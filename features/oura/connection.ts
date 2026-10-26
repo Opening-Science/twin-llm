@@ -1,33 +1,43 @@
 import "server-only";
 
-import {
-  getFhirBundleFromOuraData,
-  getOuraData,
-  type SupportedScope,
-} from "@open-twin/provider-oura";
+import { getOuraData, type SupportedScope } from "@open-twin/provider-oura";
 
 import { database } from "@/infrastructure/database";
 import { ouraEnv } from "@/infrastructure/env";
 import { HostOuraTokenHandler } from "@/infrastructure/open-twin-adapters/oura";
+import { buildOuraFhirBundle } from "@/infrastructure/open-twin-adapters/oura-bundle";
 
 import { resolveSyncDateWindow } from "@/features/wearables/sync-window";
 
 import { buildOuraSummary, type OuraSummary } from "./summary";
 import { decryptSecret, encryptSecret } from "./token-crypto";
 
-const SYNC_TYPES: SupportedScope[] = [
+/** Oura v2 collections one sync fetches, in request order. */
+export const OURA_SYNC_TYPES = [
   "personal_info",
   "sleep",
   "daily_readiness",
   "daily_activity",
-];
+  "workout",
+  "daily_spo2",
+  "daily_stress",
+  "vO2_max",
+] as const satisfies readonly SupportedScope[];
 
 /**
  * Oura OAuth scopes (cloud.ouraring.com/docs/authentication).
- * Distinct from SYNC_TYPES — those are v2 API collection names used only when
- * fetching data. Sending collection names as `scope=` yields invalid_request.
+ * Distinct from OURA_SYNC_TYPES — those are v2 API collection names used only
+ * when fetching data. Sending collection names as `scope=` yields
+ * invalid_request. `workout` covers workouts and `spo2` the nightly SpO2
+ * average; Oura names no scope of their own for daily_stress and vO2_max.
  */
-const OAUTH_SCOPES = ["email", "personal", "daily"] as const;
+export const OURA_OAUTH_SCOPES = [
+  "email",
+  "personal",
+  "daily",
+  "workout",
+  "spo2",
+] as const;
 
 export const ouraAppConfig = () => {
   const env = ouraEnv();
@@ -38,7 +48,7 @@ export const ouraAppConfig = () => {
     clientSecret: env.clientSecret,
     redirectUri: env.redirectUri,
     // OpenTwin types `scopes` as API collections; OAuth needs email/personal/daily.
-    scopes: [...OAUTH_SCOPES] as never as SupportedScope[],
+    scopes: [...OURA_OAUTH_SCOPES] as never as SupportedScope[],
   };
 };
 
@@ -108,7 +118,7 @@ export const syncOuraForUser = async (
   const { startDate, endDate } = resolveSyncDateWindow(options);
 
   const request = {
-    types: SYNC_TYPES,
+    types: [...OURA_SYNC_TYPES],
     start_date: startDate,
     end_date: endDate,
   };
@@ -117,17 +127,14 @@ export const syncOuraForUser = async (
     ? await getOuraData(request, loaded.handler, { sandbox: true })
     : await getOuraData(request, loaded.handler);
 
+  // The bundle is built from the same responses as the summary, so one sync
+  // calls each endpoint once.
   let fhirBundle: unknown = null;
   try {
-    const bundleResult = options.sandbox
-      ? await getFhirBundleFromOuraData(request, loaded.handler, {
-          sandbox: true,
-          subjectKey: loaded.connection.subjectKey ?? userId,
-        })
-      : await getFhirBundleFromOuraData(request, loaded.handler, {
-          subjectKey: loaded.connection.subjectKey ?? userId,
-        });
-    fhirBundle = bundleResult.bundle;
+    fhirBundle = buildOuraFhirBundle(dataResult.data, request, {
+      subjectKey: loaded.connection.subjectKey ?? userId,
+      timestamp: new Date().toISOString(),
+    });
   } catch (error) {
     // Summary still works without a FHIR bundle (e.g. missing personal_info subject).
     console.warn(
