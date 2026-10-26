@@ -61,26 +61,6 @@ export const hrvLine = (hrv: HrvBelowUsual, scheme: AtlasScheme, today: string):
   `${formatMeasure("hrv", hrv.latest)}, ${lastReading(hrv.day, today)} · ` +
   `usual level ${formatMeasure("hrv", hrv.median)}, median of the previous 28 days · ${hrv.source}`;
 
-/** The schematic heart beside the view, always called a simulation. */
-export const HEART_TITLE = "Heart";
-export const HEART_CAVEAT =
-  "A simulation of a typical cardiac cycle, not your heart's mechanics. Schematic chambers, not this atlas's heart.";
-export const HEART_FLOW_TOGGLE = "Blood flow";
-export const HEART_STEADY = "Every beat the same length: no HRV value to vary it.";
-export const HEART_PHASE: Readonly<
-  Record<"atrialSystole" | "ventricularSystole" | "diastole", string>
-> = {
-  atrialSystole: "Atria contract",
-  ventricularSystole: "Ventricles contract",
-  diastole: "Relaxing and filling",
-};
-
-export const heartRateLine = (rate: LiveRate): string =>
-  `Paced at ${formatMeasure("heartRate", rate.perMinute)} · ${rate.source} ${RATE_NAME[rate.vital]}`;
-
-export const heartHrvLine = (hrv: HrvBelowUsual): string =>
-  `Beat-to-beat variation from HRV ${formatMeasure("hrv", hrv.latest)} · ${hrv.source}`;
-
 /** Night playback: a synthetic night replayed on the twin, said as such every time. */
 export const NIGHT_TOGGLE = "Night playback";
 export const NIGHT_NEEDS_READINGS =
