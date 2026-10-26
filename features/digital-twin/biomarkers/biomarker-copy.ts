@@ -51,7 +51,8 @@ export const COHORT_FAILED = "Could not load synthetic lab values.";
 export const LAB_SOURCE_NONE = "None";
 export const DEMO_LABS_NOTE =
   "Lab values of a synthetic cohort person, not of this body. No sex or age is stored, so ranges that depend on them get no position.";
-export const NO_COHORT = "No synthetic cohort here, so only the catalogue is listed.";
+export const NO_COHORT =
+  "No synthetic cohort loaded on this machine, so only the catalogue is listed. Run bun run setup:local to load one.";
 export const SELF_NO_LABS = "No lab source yet. Vitals come from connected wearables.";
 export const OTHER_NO_LABS =
   "No lab source for this subject; only the catalogue is listed.";

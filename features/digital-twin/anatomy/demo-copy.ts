@@ -11,7 +11,11 @@ export type DemoSex = "male" | "female";
 export const DEMO_SUBJECT_LABEL = "Demo (synthetic)";
 export const DEMO_BODY_NOTE = "Synthetic demo body, not a person.";
 export const DEMO_BODY_PICKER = "Body";
-/** The install step is in docs/anatomy.md; the page itself never names a command. */
+/**
+ * The install step is in docs/anatomy.md. The page names a command only where a
+ * missing local file is the sole cause (Walk/Idle without the rigged bodies,
+ * motion-copy.ts); a load error can have other causes, so it names none.
+ */
 export const DEMO_LOAD_ERROR = "Could not load the demo body.";
 /** API response, read by developers, so it may name the install command. */
 export const DEMO_NOT_INSTALLED_API =

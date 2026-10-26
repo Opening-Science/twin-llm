@@ -10,6 +10,7 @@ import {
   BlockedNotice,
   CohortPicker,
   ExplorerHeader,
+  NoCohortPanel,
   PageFrame,
 } from "./explorer-header";
 import { explorerDeps } from "./explorer-ports";
@@ -84,7 +85,7 @@ const CohortScreen = async ({
       {listed.kind !== "ok" ? (
         <BlockedView blocked={listed} />
       ) : cohort === null ? (
-        <BlockedNotice kind="no-cohorts" />
+        <NoCohortPanel />
       ) : (
         <>
           <CohortPicker cohorts={listed.cohorts} current={cohort.cohortId} path={path} />

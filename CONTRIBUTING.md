@@ -18,7 +18,7 @@ Security issues are not reported here: follow [`SECURITY.md`](SECURITY.md).
 
 ## Setup
 
-Follow **Quick start** in the README. Use **bun** (`bun.lock`); do not add
+Follow **Run it locally** in the README (`bun run setup:local`). Use **bun** (`bun.lock`); do not add
 `pnpm-lock.yaml` or `package-lock.json`. Run with `DATA_MODE=synthetic` unless you are
 working on your own wearable data on your own machine.
 

@@ -9,17 +9,18 @@ import {
 
 describe("cohort allowlist", () => {
   test("the 1M batches are seeds 1001 to 1100, after the named cohorts", () => {
-    expect(SYNTHETIC_COHORTS.slice(0, 5)).toEqual([
+    expect(SYNTHETIC_COHORTS.slice(0, 6)).toEqual([
       "open-twin-synthea-trimmed-3",
       "synthea-v4-seed42",
       "synthea-v4-seed4242",
       "synthea-v4-seed9001",
+      "synthea-v4-seed42-10k",
       "synthea-v4-seed1001",
     ]);
     expect(SYNTHEA_1M_COHORTS).toEqual(
       Array.from({ length: 100 }, (_, index) => `synthea-v4-seed${1001 + index}`),
     );
-    expect(SYNTHETIC_COHORTS.length).toBe(104);
+    expect(SYNTHETIC_COHORTS.length).toBe(105);
   });
 
   test("isAllowedCohort takes a batch and nothing next to the range", () => {

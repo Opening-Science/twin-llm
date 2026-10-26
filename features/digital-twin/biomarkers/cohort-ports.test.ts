@@ -16,7 +16,12 @@ describe("Demo cohorts", () => {
     });
     expect(
       SYNTHETIC_COHORTS.filter((id) => !(DEMO_COHORTS as readonly string[]).includes(id)),
-    ).toEqual(["synthea-v4-seed4242", "synthea-v4-seed9001", ...SYNTHEA_1M_COHORTS]);
+    ).toEqual([
+      "synthea-v4-seed4242",
+      "synthea-v4-seed9001",
+      "synthea-v4-seed42-10k",
+      ...SYNTHEA_1M_COHORTS,
+    ]);
   });
 
   test("a training or held-out subject reads as unknown", () => {

@@ -4,6 +4,7 @@ import { formatNumber } from "@/infrastructure/format-measure";
 import { cn } from "@/infrastructure/ui";
 import { buttonClassName } from "@/infrastructure/ui-kit/button";
 import { Card } from "@/infrastructure/ui-kit/card";
+import { SetupPanel } from "@/infrastructure/ui-kit/setup-panel";
 
 import { BarList } from "./bar-list";
 import { COHORT_ROLES, EVAL_COHORT_ID } from "./explorer-copy";
@@ -34,23 +35,25 @@ const Code = ({ children }: { readonly children: React.ReactNode }) => (
 );
 
 export const NoTrainingSets = () => (
-  <Card as="section" padding="lg" className="mt-6">
-    <h2 className="font-display text-xl">No training conversations yet</h2>
-    <p className="text-muted-foreground mt-2 max-w-2xl text-sm leading-relaxed">
+  <SetupPanel
+    title="No training conversations yet"
+    commands={[
+      "bun run setup:local   # first, if the Overview tab shows no cohort",
+      "",
+      "cp .env.synthetic.example .env.training   # DATABASE_URL at a synthetic-only database",
+      "bun run training:conversations -- --cohort synthea-v4-seed4242",
+      "",
+      "# a quick smoke set from the evaluation cohort (never train on it):",
+      "bun run training:conversations -- --cohort synthea-v4-seed42 \\",
+      "  --allow-eval-cohort --max-subjects 12 --out training-data/out/smoke-seed42.jsonl",
+    ]}
+  >
+    <p>
       The generator writes them to <Code>training-data/out/</Code> (gitignored) from a
-      synthetic cohort, using the real query tools. See docs/training-data.md.
+      synthetic cohort, using the real query tools. Setup does not make them; they need a
+      loaded cohort. See docs/training-data.md.
     </p>
-    <pre className="bg-muted mt-4 overflow-x-auto rounded-lg p-3 font-mono text-xs leading-relaxed">
-      {[
-        "cp .env.synthetic.example .env.training   # DATABASE_URL at a synthetic-only database",
-        "bun run training:conversations -- --cohort synthea-v4-seed4242",
-        "",
-        "# a quick smoke set from the evaluation cohort (never train on it):",
-        "bun run training:conversations -- --cohort synthea-v4-seed42 \\",
-        "  --allow-eval-cohort --max-subjects 12 --out training-data/out/smoke-seed42.jsonl",
-      ].join("\n")}
-    </pre>
-  </Card>
+  </SetupPanel>
 );
 
 const SetPicker = ({
