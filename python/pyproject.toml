@@ -1,0 +1,31 @@
+[project]
+name = "twinllm-python"
+version = "0.1.0"
+description = "Fine-tuning, the Carbon-X sidecar and evaluation analysis for TwinLLM. Nothing in the app imports this."
+requires-python = ">=3.11"
+dependencies = [
+  "pandas==3.1.0",
+  "pyarrow==26.0.0",
+]
+
+[dependency-groups]
+train = [
+  "torch==2.14.1",
+  "transformers==5.20.2",
+  "peft==0.21.2",
+  "trl==1.16.0",
+  "datasets==5.1.0",
+]
+analysis = [
+  "matplotlib==3.11.2",
+  "pytest==9.1.1",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = []
+
+[tool.pytest.ini_options]
+testpaths = ["analysis"]

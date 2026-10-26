@@ -352,6 +352,14 @@ result in the same conversation, units and dates are present, refusals are
 plain, nothing reads as a statement about a real person. Record who checked,
 the sample size and the file sha256 with the training run.
 
+## Training code
+
+The training run itself is Python and lives in `python/` (`python/README.md`):
+a uv project with a `train` dependency group (torch, transformers, peft, trl,
+datasets) and an `analysis` group for reading harness output. It reads the
+JSONL files above and the gitignored `evaluation/runs/`; the app never
+imports it, and skills and MCP servers stay TypeScript.
+
 ## Licences
 
 - **Synthea** is Apache-2.0 (v4.0.0, pinned in `scripts/synthea/generate-local.sh`).
