@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import { sha256Hex, toCanonicalJson } from "@/packages/audit/hash";
 
-import { storedToolParts } from "./tool-parts";
+import { inCallOrder, storedToolParts } from "./tool-parts";
 
 const at = new Date("2026-10-15T09:00:00.000Z");
 
@@ -63,5 +63,30 @@ describe("storedToolParts", () => {
 
   test("no tool results stores null", () => {
     expect(storedToolParts([], [], at)).toBeNull();
+  });
+});
+
+describe("inCallOrder", () => {
+  test("parallel results finishing out of order are stored in call order", () => {
+    const calls = [{ toolCallId: "a" }, { toolCallId: "b" }, { toolCallId: "c" }];
+    const results = [
+      { toolCallId: "c", toolName: "show_view" },
+      { toolCallId: "a", toolName: "latest_by_loinc" },
+      { toolCallId: "b", toolName: "trend" },
+    ];
+    expect(inCallOrder(calls, results).map((result) => result.toolCallId)).toEqual([
+      "a",
+      "b",
+      "c",
+    ]);
+  });
+
+  test("a result without a matching call goes last, others keep their order", () => {
+    expect(
+      inCallOrder(
+        [{ toolCallId: "a" }],
+        [{ toolCallId: "x" }, { toolCallId: "a" }, { toolCallId: "y" }],
+      ).map((result) => result.toolCallId),
+    ).toEqual(["a", "x", "y"]);
   });
 });

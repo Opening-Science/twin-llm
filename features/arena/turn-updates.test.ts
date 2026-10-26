@@ -22,7 +22,17 @@ const saved: TurnState = {
       text: "partial",
       metrics: null,
       lost: true,
-      tools: [{ name: "query_observations", state: "error" }],
+      tools: [
+        {
+          id: "c1",
+          tool: "query_observations",
+          title: "Query observations",
+          args: [],
+          state: "error",
+          rowCount: null,
+          note: null,
+        },
+      ],
     },
     {
       id: "r-b",

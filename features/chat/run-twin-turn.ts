@@ -18,6 +18,7 @@ import { drainKnowledgeTurn } from "@/packages/knowledge/collector";
 import type { ChatRequest } from "./chat-request";
 import { buildResponseDocumentV1 } from "./response/build-document";
 import type { ResponseDocumentV1, ResponseToolCall } from "./response/document-v1";
+import { inCallOrder } from "./tool-parts";
 import { buildTwinSystemPrompt } from "./twin-system-prompt";
 
 /**
@@ -70,7 +71,7 @@ export type TwinTurnFinish = Readonly<{
     totalTokens: number | undefined;
   }>;
   parsed: ParsedTwinAnswer;
-  /** Every tool result of the turn, in step order. */
+  /** Every tool result of the turn, in step order and, within a step, in call order. */
   toolResults: readonly TwinTurnToolResult[];
   /** Reads the audit and drains the collectors; call it once. */
   buildDocument: () => Promise<ResponseDocumentV1>;
@@ -121,7 +122,7 @@ export const runTwinTurn = (
         },
         parsed,
         toolResults: steps.flatMap((step) =>
-          step.toolResults.map((result) => ({
+          inCallOrder(step.toolCalls, step.toolResults).map((result) => ({
             toolName: result.toolName,
             input: result.input,
             output: result.output,

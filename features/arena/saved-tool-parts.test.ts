@@ -74,9 +74,15 @@ describe("toSavedResponseState", () => {
   };
 
   test("a saved answer carries its tools as a streamed one does", () => {
-    expect(toSavedResponseState({ ...row, toolParts: stored }).tools).toEqual([
-      { name: "query_observations", state: "done" },
-      { name: "guideline_search", state: "done" },
+    expect(
+      toSavedResponseState({ ...row, toolParts: stored }).tools?.map((card) => [
+        card.tool,
+        card.state,
+        card.rowCount,
+      ]),
+    ).toEqual([
+      ["query_observations", "done", 0],
+      ["guideline_search", "done", 1],
     ]);
   });
 
@@ -105,7 +111,7 @@ describe("toSavedResponseState", () => {
     };
     const state = toSavedResponseState({ ...row, toolParts: [...stored, showView] });
     expect(state.views).toEqual([view]);
-    expect(state.tools?.map((tool) => tool.name)).toEqual([
+    expect(state.tools?.map((tool) => tool.tool)).toEqual([
       "query_observations",
       "guideline_search",
       "show_view",

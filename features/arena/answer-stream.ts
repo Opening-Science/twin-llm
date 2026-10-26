@@ -16,6 +16,7 @@ import type { ResponseDocumentV1 } from "@/infrastructure/response-document/docu
 import { toResponseDocument } from "@/infrastructure/response-document/parse";
 
 import type { ToolActivity } from "./conversation";
+import { toolCard } from "./tool-cards";
 import type { HistoryMessage } from "./turn-history";
 
 /**
@@ -59,17 +60,29 @@ const FAILED: StreamResult = Object.freeze({
   document: null,
 });
 
-const STATE_OF: Readonly<Record<string, ToolActivity["state"]>> = {
-  "output-available": "done",
-  "output-error": "error",
-  "output-denied": "error",
-};
-
-/** Name and progress of each tool part, in order. Inputs and outputs stay behind. */
-export const toolActivity = (parts: ChatUIMessage["parts"]): ToolActivity[] =>
+/**
+ * A card per tool part, in order (`tool-cards.ts`). Named arguments and a row
+ * count are kept; outputs stay behind. `rowCounts` carries a saved answer's
+ * audit counts by call id.
+ */
+export const toolActivity = (
+  parts: ChatUIMessage["parts"],
+  rowCounts?: ReadonlyMap<string, number | null>,
+): ToolActivity[] =>
   parts.flatMap((part) =>
     isToolUIPart(part)
-      ? [{ name: getToolName(part), state: STATE_OF[part.state] ?? "running" }]
+      ? [
+          toolCard(
+            {
+              toolCallId: part.toolCallId,
+              tool: getToolName(part),
+              state: part.state,
+              input: part.input,
+              output: part.state === "output-available" ? part.output : undefined,
+            },
+            rowCounts?.get(part.toolCallId),
+          ),
+        ]
       : [],
   );
 

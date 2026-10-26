@@ -16,6 +16,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Tool calls show as folded cards above each answer instead of a one-line status (#39): the call in plain words, its measure, window or subject, running, done, refused or failed, and the rows it read. Expanding a card lists its arguments; tool outputs never show. A reloaded thread shows the same cards, and the "Thinking…" line stays while the model works.
 - Models get slimmer query-tool definitions: no regex patterns or formats, window bounds as plain strings. With the Qwen3 chat template the nine tools take about 2,200 tokens instead of 12,000 in chat and 8,600 in the training data; the server still validates every call as strictly as before, and the MCP manifest is unchanged.
 - Repository admins can bypass the `main` rules only through a pull request; nobody pushes to `main` directly.
 - Personal data reaches Exoscale only with `EXOSCALE_PERSONAL_DATA=consented-pilot`, each such request is audited, and Infomaniak is synthetic-only.
