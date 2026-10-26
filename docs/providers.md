@@ -97,6 +97,8 @@ Remote GPU (`LLM_PROVIDER=remote-gpu`, Apertus on vLLM, same prompt and cohort):
 
 `DATA_MODE=personal` (the default) forbids OpenRouter, Infomaniak and remote-gpu at env parse and at the chat route, and Exoscale unless `EXOSCALE_PERSONAL_DATA=consented-pilot`. Any other value, including the old `demo` and `real`, fails at startup.
 
+MCP servers follow the same rule by locality: `permitServerForDataMode` in `packages/mcp-client/policy.ts` allows a `local` server in both modes and a `remote` one only with `DATA_MODE=synthetic`. The registry lists each server with its locality; see [`gbd.md`](gbd.md).
+
 The first-run starter questions go to the same provider, through the same `permitProviderForRequest` check, from the first model of the default selection. The prompt holds the chosen roles, the data choice, the names of linked sources (no values) and what the person typed. With a linked source, OpenRouter, Infomaniak and the remote GPU refuse the call, as does Exoscale without the consented pilot, and fixed starters are shown. A personal starter request to Exoscale under the consented pilot writes the same `provider.personal_data_sent` audit event before the model call; if that write fails, the model is not called and fixed starters are shown.
 
 ## What never leaves
