@@ -401,7 +401,6 @@ export const pageReadiness = (state: DetectedState): readonly Readiness[] => {
   const loaded = SYNTHETIC_COHORTS.filter((id) => (cohorts[id] ?? 0) > 0);
   const demo = DEMO_COHORTS.filter((id) => (cohorts[id] ?? 0) > 0);
   const dbProblem = databaseProblem(state);
-  const synthetic = state.dataMode === "synthetic";
   const applied = state.database.kind === "ok" ? state.database.appliedMigrations : [];
   const pending = state.migrations.filter((name) => !applied.includes(name));
   const dataPage: Readiness =
@@ -413,30 +412,24 @@ export const pageReadiness = (state: DetectedState): readonly Readiness[] => {
             ready: false,
             detail: `${pending.length} migration(s) not applied: ${SETUP_COMMAND}`,
           }
-        : !synthetic
+        : loaded.length === 0
           ? {
               page: "Data page (/data)",
               ready: false,
-              detail: `DATA_MODE is ${state.dataMode ?? "unset"}; the page reads only with DATA_MODE=synthetic`,
+              detail: `no synthetic cohort loaded: ${SETUP_COMMAND}`,
             }
-          : loaded.length === 0
-            ? {
-                page: "Data page (/data)",
-                ready: false,
-                detail: `no synthetic cohort loaded: ${SETUP_COMMAND}`,
-              }
-            : {
-                page: "Data page (/data)",
-                ready: true,
-                detail: loaded.map((id) => `${id} (${cohorts[id]} subjects)`).join(", "),
-              };
+          : {
+              page: "Data page (/data)",
+              ready: true,
+              detail: loaded.map((id) => `${id} (${cohorts[id]} subjects)`).join(", "),
+            };
   const demoLabs: Readiness =
-    demo.length > 0 && synthetic
+    demo.length > 0
       ? { page: "Body twin Demo lab values", ready: true, detail: demo.join(", ") }
       : {
           page: "Body twin Demo lab values",
           ready: false,
-          detail: `needs ${DEMO_COHORTS.join(" or ")} with DATA_MODE=synthetic: ${SETUP_COMMAND}`,
+          detail: `needs ${DEMO_COHORTS.join(" or ")}: ${SETUP_COMMAND}`,
         };
   const anatomy: Readiness =
     state.anatomyMissing.length === 0

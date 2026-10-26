@@ -1,5 +1,3 @@
-import { type SessionScope } from "@/packages/query-tools/scope";
-
 import {
   type ConversationView,
   isSetName,
@@ -18,14 +16,14 @@ import {
  * read by streaming to its line, because a full training file is hundreds of
  * megabytes.
  *
- * Synthetic mode only, like the rest of the Data page: the files hold rows the
- * generator read from the warehouse. A missing directory is "no sets yet", not
+ * The files hold synthetic rows the generator read from the warehouse, so like
+ * the rest of the Data page they are shown in any DATA_MODE, to a signed-in
+ * actor. A missing directory is "no sets yet", not
  * an error. I/O comes in as `TrainingFileDeps`; `training-file-ports.ts` holds
  * the real file system calls.
  */
 
 export type TrainingFileDeps = Readonly<{
-  dataMode: () => SessionScope["mode"];
   /** The signed-in actor; with sign-in off, the local user. */
   resolveActorId: () => Promise<string | null>;
   /** File names in the output directory; [] when it does not exist. */
@@ -41,16 +39,11 @@ export type TrainingSet = Readonly<{
   manifest: TrainingManifest | null;
 }>;
 
-type Blocked =
-  | Readonly<{ kind: "personal" }>
-  | Readonly<{ kind: "sign-in" }>
-  | Readonly<{ kind: "failed" }>;
+type Blocked = Readonly<{ kind: "sign-in" }> | Readonly<{ kind: "failed" }>;
 
-/** Synthetic mode and an actor, like the cohort tabs; null when both hold. */
-const gate = async (deps: TrainingFileDeps): Promise<Blocked | null> => {
-  if (deps.dataMode() !== "synthetic") return { kind: "personal" };
-  return (await deps.resolveActorId()) ? null : { kind: "sign-in" };
-};
+/** An actor, like the cohort tabs; null when there is one. */
+const gate = async (deps: TrainingFileDeps): Promise<Blocked | null> =>
+  (await deps.resolveActorId()) ? null : { kind: "sign-in" };
 
 const failed = (where: string, error: unknown): Blocked => {
   console.error(

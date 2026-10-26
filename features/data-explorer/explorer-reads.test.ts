@@ -28,7 +28,6 @@ const fake = (overrides: Partial<ExplorerDeps> = {}): Fake => {
   return {
     audits,
     reads,
-    dataMode: () => "synthetic",
     resolveActorId: async () => "local",
     listCohorts: read("listCohorts", () => [
       { cohortId: "synthea-v4-seed4242", subjects: 3 },
@@ -129,15 +128,21 @@ const quietly = async <T>(run: () => Promise<T>): Promise<[T, unknown[][]]> => {
   }
 };
 
-describe("personal mode and sign-in", () => {
-  test("personal mode reads nothing and audits nothing", async () => {
-    const deps = fake({ dataMode: () => "personal" });
-    expect(await loadCohorts(deps)).toEqual({ kind: "personal" });
-    expect(await loadOverview(deps, "synthea-v4-seed42")).toEqual({ kind: "personal" });
-    expect(await loadSubjects(deps, "synthea-v4-seed42")).toEqual({ kind: "personal" });
-    expect(await loadSubject(deps, "s-1")).toEqual({ kind: "personal" });
-    expect(deps.reads).toEqual([]);
-    expect(deps.audits).toEqual([]);
+describe("sign-in and the synthetic display scope", () => {
+  test("a non-synthetic subject is not found, audited, and its rows never read", async () => {
+    const deps = fake();
+    expect(await loadSubject(deps, "not-synthetic")).toEqual({ kind: "not-found" });
+    expect(deps.reads).toEqual(["findSubject"]);
+    expect(deps.audits.map((audit) => [audit.subjectRef, audit.rowCount])).toEqual([
+      ["not-synthetic", 0],
+    ]);
+  });
+
+  test("a synthetic subject outside the allowlist is not found either", async () => {
+    const deps = fake({
+      findSubject: async () => ({ isSynthetic: true, cohortId: "someone-elses-cohort" }),
+    });
+    expect(await loadSubject(deps, "s-9")).toEqual({ kind: "not-found" });
   });
 
   test("no actor means sign in, before any read", async () => {

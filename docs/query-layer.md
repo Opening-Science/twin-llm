@@ -72,8 +72,8 @@ Claude Desktop (`claude_desktop_config.json`) and Claude Code (`.mcp.json`) use 
 
 ## Scope
 
-- `DATA_MODE=synthetic`: subjects with `is_synthetic = true` in a cohort listed in `SYNTHETIC_COHORTS` (`packages/query-tools/scope.ts`): `open-twin-synthea-trimmed-3`, `synthea-v4-seed42`, and the training and held-out cohorts `synthea-v4-seed4242` and `synthea-v4-seed9001`. The Body twin's Demo reads only `DEMO_COHORTS` (the first two). See `docs/warehouse.md`.
-- `DATA_MODE=personal`: empty warehouse scope (personal snapshots are not in these tables).
+- `DATA_MODE=synthetic`: subjects with `is_synthetic = true` in a cohort listed in `SYNTHETIC_COHORTS` (`packages/query-tools/scope.ts`): `open-twin-synthea-trimmed-3`, `synthea-v4-seed42`, and the training and held-out cohorts `synthea-v4-seed4242` and `synthea-v4-seed9001`. The Body twin's Demo reads only `DEMO_COHORTS` (the first two), through the separate synthetic display scope. See `docs/warehouse.md`.
+- `DATA_MODE=personal`: empty warehouse scope (personal snapshots are not in these tables). The Data page and the Demo still show the synthetic cohorts through their own display scope, which the chat tools never use.
 
 A violation returns `{ code: "SUBJECT_SCOPE_VIOLATION", error: "subject_ref is not in this session scope" }` and is written to the audit chain first (`row_count` 0, `result_sha256` of that JSON).
 

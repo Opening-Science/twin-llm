@@ -54,7 +54,13 @@ The Body twin's Demo lab values (`/api/biomarkers/cohort`, see `docs/biomarkers.
 
 ## Data page
 
-`/data` (`features/data-explorer/`) is where the team looks at what is in the warehouse. It reads only in `DATA_MODE=synthetic`, only `is_synthetic` subjects of a cohort in `SYNTHETIC_COHORTS`, under the same scope rule as the query tools; in personal mode it reads nothing and says so.
+`/data` (`features/data-explorer/`) is where the team looks at what is in the warehouse. It is labelled "Synthetic data" and reads only `is_synthetic` subjects of a cohort in `SYNTHETIC_COHORTS`, in any `DATA_MODE`.
+
+### Synthetic display scope
+
+The Data page and the Body twin's Demo lab values read through the synthetic display scope (`packages/query-tools/synthetic-display.ts`), not the chat's `SessionScope`. These screens show synthetic people to the person at the screen and send nothing to a model, so a personal-mode machine (one with its own Oura or Whoop) shows them too. The display scope takes no mode: its Prisma filters (`DISPLAY_SUBJECT_WHERE`, `DEMO_SUBJECT_WHERE`) and row checks select only `is_synthetic` rows of allowlisted cohorts (Demo cohorts for the Demo), and nothing can widen them. Every read is still audited.
+
+The chat stays strict. The query tools and `show_view` use `scope.ts`, which in personal mode refuses every synthetic subject; the chat tools never import the display scope. `synthetic-display.test.ts` checks both sides.
 
 - **Overview**: per cohort, subjects, numeric and text observations, distinct LOINC codes and the years covered; the most common codes with their units as a share of subjects; observations per year; and coverage (how many codes reach how many subjects, the codes at least 80% have and the sparse ones under 10%). Codes stored in more than one unit are listed.
 - **Subjects**: subject_refs with observation and code counts, first and last day; search, sort and pages are URL parameters. A subject page has one chart per code and unit (units are never converted) and a table of latest values, readings, days with data, first and last day.

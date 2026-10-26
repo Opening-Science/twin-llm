@@ -40,7 +40,7 @@ import { NoTrainingSets, TrainingBrowser } from "./training-browser";
 /**
  * The Data page's screens, one per route under `app/(shell)/data`. Each reads
  * through `explorer-reads.ts` or `training-files.ts`, which apply the
- * synthetic-only scope and the audit, and renders a plain notice for anything
+ * synthetic display scope and the audit, and renders a plain notice for anything
  * it may not or could not read.
  */
 
@@ -197,8 +197,7 @@ export const TrainingScreen = async ({
 }) => {
   const listed = await loadTrainingSets(deps);
   const content = async () => {
-    if (listed.kind === "personal" || listed.kind === "sign-in")
-      return <BlockedNotice kind={listed.kind} />;
+    if (listed.kind === "sign-in") return <BlockedNotice kind={listed.kind} />;
     if (listed.kind === "failed")
       return <p className="text-muted-foreground mt-6 text-sm">{TRAINING_FAILED}</p>;
     if (listed.sets.length === 0) return <NoTrainingSets />;
@@ -257,7 +256,7 @@ export const ConversationScreen = async ({
           conversation={result.conversation}
           total={total}
         />
-      ) : result.kind === "personal" || result.kind === "sign-in" ? (
+      ) : result.kind === "sign-in" ? (
         <BlockedNotice kind={result.kind} />
       ) : result.kind === "failed" ? (
         <p className="text-muted-foreground mt-6 text-sm">{TRAINING_FAILED}</p>

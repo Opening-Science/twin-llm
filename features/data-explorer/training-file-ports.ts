@@ -6,7 +6,6 @@ import { join } from "node:path";
 import { createInterface } from "node:readline";
 
 import { resolveActorId } from "@/infrastructure/auth-actor";
-import { serverEnv } from "@/infrastructure/env";
 
 import { type TrainingFileDeps } from "./training-files";
 
@@ -41,7 +40,6 @@ const readLineAt = async (path: string, index: number): Promise<string | null> =
 };
 
 export const trainingFileDeps: TrainingFileDeps = {
-  dataMode: () => serverEnv().DATA_MODE,
   resolveActorId,
   listFiles: async () => {
     try {
