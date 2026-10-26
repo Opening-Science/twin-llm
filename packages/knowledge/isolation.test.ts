@@ -26,7 +26,8 @@ describe("knowledge tool isolation", () => {
     const chatTools = read("../../features/chat/chat-tools.ts");
     // The drain lives in the turn the route and the eval harness share.
     const turn = read("../../features/chat/run-twin-turn.ts");
-    expect(chatTools).toContain("createKnowledgeTools(scope)");
+    expect(chatTools).toContain("knowledge: createKnowledgeTools,");
+    expect(chatTools).toContain("make.knowledge(scope)");
     expect(turn).toContain("drainKnowledgeTurn(turnId)");
     expect(turn).toContain("knowledgeSources: knowledge.sources");
   });

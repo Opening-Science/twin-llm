@@ -46,6 +46,27 @@ const mcpServerPermitted = (
 };
 
 /**
+ * The factories behind the chat tools. Only `showView` is handed the turn's
+ * wearable snapshots; every other factory gets the scope (and query ports)
+ * alone. Tests pass spies here to check that structurally.
+ */
+export type ChatToolFactories = Readonly<{
+  query: typeof createQueryTools;
+  showView: typeof createShowViewTool;
+  gbd: typeof createGbdTools;
+  guidelines: typeof createGuidelineTools;
+  knowledge: typeof createKnowledgeTools;
+}>;
+
+const CHAT_TOOL_FACTORIES: ChatToolFactories = {
+  query: createQueryTools,
+  showView: createShowViewTool,
+  gbd: createGbdTools,
+  guidelines: createGuidelineTools,
+  knowledge: createKnowledgeTools,
+};
+
+/**
  * Every tool a chat turn gets, in one place so the live tool-call smoke and the
  * eval harness send the same set. Tests pass fake query ports. Tools served by
  * a remote MCP server (GBD) are left out of a personal request.
@@ -53,7 +74,7 @@ const mcpServerPermitted = (
  * `show_view` belongs to no source: it is how any answer shows a chart. It
  * reads cohort rows only while the cohort record tools are on, and wearable
  * readings only from the snapshots this turn already loaded, which synthetic
- * mode never does.
+ * mode never does. It is the only tool that receives those snapshots.
  */
 export const createChatTools = (
   scope: SessionScope,
@@ -62,23 +83,27 @@ export const createChatTools = (
     hasWearableNarrative?: boolean;
     wearables?: WearableSummaries;
     disabledSources?: readonly KnowledgeSourceId[];
+    factories?: ChatToolFactories;
   }>,
-) => ({
-  ...createQueryTools(scope, options?.query),
-  ...createShowViewTool({
-    scope,
-    ports: options?.query,
-    wearables: options?.wearables ?? NO_WEARABLES,
-    cohortRecords: !disabledToolNames(options?.disabledSources ?? []).has(
-      "observations_for_subject",
-    ),
-  }),
-  ...(mcpServerPermitted("gbd", scope, options?.hasWearableNarrative ?? false)
-    ? createGbdTools(scope)
-    : {}),
-  ...createGuidelineTools(scope),
-  ...createKnowledgeTools(scope),
-});
+) => {
+  const make = options?.factories ?? CHAT_TOOL_FACTORIES;
+  return {
+    ...make.query(scope, options?.query),
+    ...make.showView({
+      scope,
+      ports: options?.query,
+      wearables: options?.wearables ?? NO_WEARABLES,
+      cohortRecords: !disabledToolNames(options?.disabledSources ?? []).has(
+        "observations_for_subject",
+      ),
+    }),
+    ...(mcpServerPermitted("gbd", scope, options?.hasWearableNarrative ?? false)
+      ? make.gbd(scope)
+      : {}),
+    ...make.guidelines(scope),
+    ...make.knowledge(scope),
+  };
+};
 
 /**
  * The tools a turn actually gets once a user's source choices are applied,
