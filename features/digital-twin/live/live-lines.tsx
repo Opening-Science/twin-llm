@@ -64,22 +64,26 @@ export const liveNote = (
 /**
  * Beside the 3D view, not inside its `role="application"`, so the lines read
  * as text. Shown while something moves or glows, or with the one note above.
+ * `extra` lines (whole-body motion) follow in the same box, so the two never
+ * overlap at the bottom left of the environment.
  */
 export const LiveLines = ({
   status,
   vitals,
   scheme,
   context,
+  extra = [],
 }: Readonly<{
   status: LiveStatus;
   vitals: LiveVitals;
   scheme: AtlasScheme;
   context: LiveContext;
+  extra?: readonly string[];
 }>) => {
   // The viewer's own calendar day, so "today" means today where they are.
   const moving = liveLines(status, vitals, scheme, isoLocalDate());
   const note = liveNote(status, vitals, context);
-  const lines = moving.length > 0 ? moving : note ? [note] : [];
+  const lines = [...(moving.length > 0 ? moving : note ? [note] : []), ...extra];
   if (lines.length === 0) return null;
   return (
     <div className="twin-live-lines">

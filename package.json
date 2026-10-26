@@ -47,6 +47,7 @@
     "vitronic:mint": "bun scripts/vitronic/mint-token.ts",
     "vitronic:cycle": "bun scripts/vitronic/cycle.ts",
     "anatomy:fetch": "bun scripts/anatomy/fetch.ts",
+    "anatomy:bake-rigged": "bun scripts/anatomy/bake-rigged.ts",
     "fonts:install": "bun scripts/fonts/install.ts",
     "synthea:generate": "bash scripts/synthea/generate-local.sh",
     "wearables:generate": "bun scripts/synthetic-wearables/generate.ts",

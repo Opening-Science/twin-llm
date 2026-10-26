@@ -164,4 +164,41 @@ describe("ViewToolbar", () => {
       "environment",
     ]);
   });
+
+  test("Walk and Idle sit in Show after Live vitals; pressing the playing clip stops it", () => {
+    const picked: (string | null)[] = [];
+    const motion = {
+      clip: "walk" as const,
+      onSelect: (clip: string | null) => void picked.push(clip),
+      unavailable: null,
+    };
+    expect(
+      groups({ ...BASE, liveVitals: { on: false, onToggle: noop }, motion }),
+    ).toEqual([
+      ["View", ["Reset view", "Pause", "+", "−"]],
+      ["Show", ["Live vitals", "Walk", "Idle"]],
+    ]);
+    expect(buttons({ ...BASE, motion }).slice(4)).toEqual([
+      ["Walk", null, "true"],
+      ["Idle", null, "false"],
+    ]);
+    for (const click of clickable(ViewToolbar({ ...BASE, motion })).slice(4)) click();
+    expect(picked).toEqual([null, "idle"]);
+  });
+
+  test("without a rig the clips are disabled and say why", () => {
+    const html = renderToStaticMarkup(
+      createElement(ViewToolbar, {
+        ...BASE,
+        motion: {
+          clip: null,
+          onSelect: noop,
+          unavailable: "This scan has no skeleton the walk can drive.",
+        },
+      }),
+    );
+    expect(html).toContain(
+      'disabled="" title="This scan has no skeleton the walk can drive."',
+    );
+  });
 });

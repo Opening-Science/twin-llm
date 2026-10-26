@@ -16,6 +16,8 @@ export const DEMO_LOAD_ERROR = "Could not load the demo body.";
 /** API response, read by developers, so it may name the install command. */
 export const DEMO_NOT_INSTALLED_API =
   "Demo body not installed. Run bun run anatomy:fetch.";
+export const RIGGED_NOT_INSTALLED_API =
+  "Rigged demo body not installed. Run bun run anatomy:bake-rigged.";
 
 const metres = (value: number): string => `${formatNumber(value, 2)} m`;
 
@@ -28,4 +30,4 @@ export const DEMO_TYPICAL_NOTE =
   "Body shape is synthetic. Organ positions and limb pose are typical, not measured.";
 
 export const DEMO_FIT_NOTE =
-  "Reference anatomy from a donor atlas, scaled to the demo body's height and centred on its outline. The demo body has no skeleton, so the hips are not aligned.";
+  "Reference anatomy from a donor atlas, scaled to the demo body's height and centred on its outline. The hips are not aligned.";

@@ -6,7 +6,13 @@ import { anatomyEnv } from "@/infrastructure/env";
 
 import { DEMO_BODIES, type DemoBodyId } from "./demo-bodies";
 import { ATLASES, type AtlasId } from "./manifest";
-import { atlasFilePath, demoBodyFilePath, resolveAnatomyDir } from "./paths";
+import {
+  atlasFilePath,
+  demoBodyFilePath,
+  resolveAnatomyDir,
+  riggedBodyFilePath,
+} from "./paths";
+import { RIGGED_BODIES } from "./rigged-bodies";
 
 const anatomyDir = (): string => resolveAnatomyDir(anatomyEnv().dataDir, process.cwd());
 
@@ -43,3 +49,11 @@ export const openAtlas = (id: AtlasId): Promise<Uint8Array<ArrayBuffer> | null> 
 /** The demo body's bytes, or null when it is not installed. */
 export const openDemoBody = (id: DemoBodyId): Promise<Uint8Array<ArrayBuffer> | null> =>
   openPinned(demoBodyFilePath(anatomyDir(), id), DEMO_BODIES[id].bytes);
+
+/** Whether the rigged variant of a demo body has been baked and matches its pin size. */
+export const statRiggedBody = (id: DemoBodyId): Promise<boolean> =>
+  statPinned(riggedBodyFilePath(anatomyDir(), id), RIGGED_BODIES[id].bytes);
+
+/** The rigged demo body's bytes, or null when it is not installed. */
+export const openRiggedBody = (id: DemoBodyId): Promise<Uint8Array<ArrayBuffer> | null> =>
+  openPinned(riggedBodyFilePath(anatomyDir(), id), RIGGED_BODIES[id].bytes);

@@ -53,6 +53,15 @@ Downloaded by `bun run anatomy:fetch` from `https://opentwin.opening.science/mod
 | ANNY adult (male)   | `anny-adult-m.pose-bodyparts3d.glb` | 108,908 | `c1723196c2075a7cfb26e4ca6311119c098e031d88ba5c2ba05b5f40cfe9de2b` | `"dkscw4cycge82c18"` | 2026-08-18    |
 | ANNY adult (female) | `anny-adult-f.pose-bodyparts3d.glb` | 110,004 | `72947c1fdcfc8df272f511989d587f04a2fd2d9a3a35d675a3e8bc0aaf75e190` | `"dkscw4cycge82cvo"` | 2026-08-18    |
 
+## Rigged demo bodies (baked locally, not committed)
+
+Baked by `bun run anatomy:bake-rigged` with `scripts/anatomy/bake-anny-rigged.py` from the `anny` 0.6.2 Python package (NAVER LABS Europe / NAVER Corporation, Apache-2.0 code over CC0-1.0 MakeHuman-derived assets; the package ships its assets) and torch 2.14.1 CPU, both pinned with every other dependency in `scripts/anatomy/bake-anny-rigged.py.lock`. Same phenotypes as the static demo bodies, ANNY's own 104-bone skeleton and skin weights. A bake is installed into gitignored `data/anatomy/` only when its bytes match the pin in `packages/anatomy/rigged-bodies.ts`. No motion-capture data is used anywhere: the walk and idle clips are computed (`features/digital-twin/motion/gait.ts`).
+
+| Body                | File                      | Bytes   | SHA-256                                                            |
+| ------------------- | ------------------------- | ------- | ------------------------------------------------------------------ |
+| ANNY adult (male)   | `anny-adult-m.rigged.glb` | 464,852 | `16d101090af7719069cd78d0a091d7d9c4975bc45df44201f23761ea89553589` |
+| ANNY adult (female) | `anny-adult-f.rigged.glb` | 464,816 | `9032bfeb29ba4be8aeb0eb38a81e72c5dd5420a38005913d907c83c4f87fdbe1` |
+
 ## open-twin-xr port
 
 - `packages/anatomy/hra-groups.ts` ← `src/scene/anatomy/hraGroups.ts` @ `7334c0bb0664e1f293f88971788520d64734466c` (MIT; `third_party/open-twin-xr/LICENSE`).

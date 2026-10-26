@@ -171,7 +171,7 @@ describe("AnatomyControls", () => {
       }),
     ).replaceAll("&#x27;", "'");
     expect(anatomyFitNote("bbox", "demo")).toBe(
-      "Reference anatomy from a donor atlas, scaled to the demo body's height and centred on its outline. The demo body has no skeleton, so the hips are not aligned.",
+      "Reference anatomy from a donor atlas, scaled to the demo body's height and centred on its outline. The hips are not aligned.",
     );
     expect(html).toContain(DEMO_FIT_NOTE);
     expect(html).toContain(DEMO_TYPICAL_NOTE);

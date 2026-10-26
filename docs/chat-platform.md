@@ -6,7 +6,7 @@ Plan for taking the chat from text answers to a surface that shows views, runs s
 
 The chat is a narrow pipe. Twelve closed tools (nine query tools, GBD, guidelines, knowledge) are built in `features/chat/chat-tools.ts`; every call lands on the hash-linked audit chain (`packages/audit`), and `infrastructure/data-mode-policy.ts` keeps personal data local. Answers are text in four sections plus an explainability panel.
 
-What is missing: no charts or cards in answers, tool calls show as one status line, and tool outputs are not stored (`ModelResponse` keeps hashes only). The `/` menu only connects wearables. There is no MCP server, no in-app docs page, and the 3D twin, the genome helix and the wearable charts are not reachable from chat. The scans load with a 31-joint skeleton that nothing animates; `live-motion.ts` scales the heart and lungs.
+What is missing: no charts or cards in answers, tool calls show as one status line, and tool outputs are not stored (`ModelResponse` keeps hashes only). The `/` menu only connects wearables. There is no MCP server, no in-app docs page, and the 3D twin, the genome helix and the wearable charts are not reachable from chat. A generic, computed walk and idle clip play on the scans' 31-joint skeleton and the rigged demo body (#51); `live-motion.ts` scales the heart and lungs.
 
 ## Principles
 
@@ -38,7 +38,7 @@ Issues: #45 workouts and mappers, #46 `/trainer`. Martin adds his ideas on #46.
 
 Each turn carries a short UI context block (open panel, organ, chart range, views), recorded in the audit row. A `twin.body` view focuses the twin on an organ with its biomarker state, and clicking an organ sets the context. A biomarker-to-organ table colours organs by range position. A timeline scrubber replays a day or night with the chart in sync.
 
-Whole-body motion comes in steps: a clip library on the 31-joint rig with `AnimationMixer` (CMU mocap; AMASS and SMPL are non-commercial and stay out), then clips driven by workouts and sleep, then the person's own gait from pose estimation on the device, then text-to-motion as research. The heart goes from a scaled pulse to four chambers moving in sequence at the measured rate. All of it is labelled a visual cue or a simulation, never the person's physiology.
+Whole-body motion comes in steps: generic clips on the rig (#51 ships a procedural walk and idle with no motion-capture data; any later mocap stays CMU only, since AMASS and SMPL are non-commercial), then clips driven by workouts and sleep, then the person's own gait from pose estimation on the device, then text-to-motion as research. The heart goes from a scaled pulse to four chambers moving in sequence at the measured rate. All of it is labelled a visual cue or a simulation, never the person's physiology.
 
 Issues: #47 context, #48 `twin.body`, #49 organ map, #50 playback, #51 clips, #52 motion from data, #53 heart.
 
