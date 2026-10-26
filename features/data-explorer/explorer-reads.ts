@@ -1,11 +1,9 @@
 import { type AppendInput } from "@/packages/audit/append";
+import { SUBJECT_SCOPE_VIOLATION, SYNTHETIC_COHORTS } from "@/packages/query-tools/scope";
 import {
-  cohortInScope,
-  SUBJECT_SCOPE_VIOLATION,
-  subjectRowInScope,
-  type SessionScope,
-  SYNTHETIC_COHORTS,
-} from "@/packages/query-tools/scope";
+  displayCohortInScope,
+  displaySubjectInScope,
+} from "@/packages/query-tools/synthetic-display";
 
 import {
   type CodeSubjectsRow,
@@ -25,9 +23,11 @@ import {
 } from "./subject-series";
 
 /**
- * Every warehouse read behind the Data page, under the query tools' scope rule:
- * only in synthetic mode, only `is_synthetic` subjects of an allowlisted cohort.
- * Personal mode reads nothing at all, so the page can never show a personal row.
+ * Every warehouse read behind the Data page, under the synthetic display scope
+ * (`packages/query-tools/synthetic-display.ts`): only `is_synthetic` subjects
+ * of an allowlisted cohort, in any DATA_MODE. The page shows synthetic people
+ * only and sends nothing to a model, so a personal-mode machine shows them too.
+ * The chat's query tools keep their own, stricter scope (`scope.ts`).
  *
  * The rows are synthetic, but each read still writes an audit row like the
  * chat tools and the Body twin's Demo do (refusals and failed reads too), so the
@@ -53,7 +53,6 @@ export type CohortAggregates = Readonly<{
 }>;
 
 export type ExplorerDeps = Readonly<{
-  dataMode: () => SessionScope["mode"];
   resolveActorId: () => Promise<string | null>;
   /** Synthetic subjects per allowlisted cohort present in this database. */
   listCohorts: () => Promise<readonly CohortCount[]>;
@@ -74,7 +73,6 @@ export type ExplorerDeps = Readonly<{
 }>;
 
 export type Blocked =
-  | Readonly<{ kind: "personal" }>
   | Readonly<{ kind: "sign-in" }>
   | Readonly<{ kind: "not-found" }>
   | Readonly<{ kind: "failed" }>
@@ -82,7 +80,7 @@ export type Blocked =
 
 type Ok<T> = Readonly<{ kind: "ok" } & T>;
 
-type Session = Readonly<{ actor: string; scope: SessionScope }>;
+type Session = Readonly<{ actor: string }>;
 
 const logFailure = (where: string, error: unknown) =>
   console.error(
@@ -91,11 +89,8 @@ const logFailure = (where: string, error: unknown) =>
   );
 
 const openSession = async (deps: ExplorerDeps): Promise<Session | Blocked> => {
-  const mode = deps.dataMode();
-  if (mode !== "synthetic") return { kind: "personal" };
   const actor = await deps.resolveActorId();
-  if (!actor) return { kind: "sign-in" };
-  return { actor, scope: { actor, sessionId: actor, mode } };
+  return actor ? { actor } : { kind: "sign-in" };
 };
 
 const isBlocked = (value: Session | Blocked): value is Blocked => "kind" in value;
@@ -111,7 +106,7 @@ export const loadCohorts = async (
   if (isBlocked(session)) return session;
   try {
     const cohorts = (await deps.listCohorts())
-      .filter((cohort) => cohortInScope(session.scope, cohort.cohortId))
+      .filter((cohort) => displayCohortInScope(cohort.cohortId))
       .filter((cohort) => cohort.subjects > 0)
       .toSorted((a, b) => cohortOrder(a.cohortId) - cohortOrder(b.cohortId));
     return { kind: "ok", cohorts };
@@ -162,7 +157,7 @@ export const loadOverview = async (
   const audit = auditFor(deps, session.actor, OVERVIEW_AUDIT_TOOL, null, {
     cohort_id: cohortId,
   });
-  if (!cohortInScope(session.scope, cohortId)) {
+  if (!displayCohortInScope(cohortId)) {
     // A refusal is audited too, as the query tools' list_subjects does.
     await audit(SUBJECT_SCOPE_VIOLATION, 0);
     return { kind: "not-found" };
@@ -193,7 +188,7 @@ export const loadSubjects = async (
   const audit = auditFor(deps, session.actor, SUBJECTS_AUDIT_TOOL, null, {
     cohort_id: cohortId,
   });
-  if (!cohortInScope(session.scope, cohortId)) {
+  if (!displayCohortInScope(cohortId)) {
     // A refusal is audited too, as the query tools' list_subjects does.
     await audit(SUBJECT_SCOPE_VIOLATION, 0);
     return { kind: "not-found" };
@@ -227,7 +222,7 @@ export const loadSubject = async (
   });
   try {
     const row = await deps.findSubject(ref);
-    if (!row || !subjectRowInScope(session.scope, row)) {
+    if (!displaySubjectInScope(row)) {
       await audit(SUBJECT_SCOPE_VIOLATION, 0);
       return { kind: "not-found" };
     }

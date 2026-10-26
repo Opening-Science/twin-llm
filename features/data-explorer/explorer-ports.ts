@@ -4,17 +4,17 @@ import { Prisma } from "@/generated/prisma/client";
 import { resolveActorId } from "@/infrastructure/auth-actor";
 import { database } from "@/infrastructure/database";
 import { utcDay } from "@/infrastructure/day-key";
-import { serverEnv } from "@/infrastructure/env";
 import { append } from "@/packages/audit/append";
 import { toNumber } from "@/packages/query-tools/ports";
-import { SYNTHETIC_COHORTS } from "@/packages/query-tools/scope";
+import { DISPLAY_SUBJECT_WHERE } from "@/packages/query-tools/synthetic-display";
 
 import { type ExplorerDeps } from "./explorer-reads";
 
 /**
  * The only database calls behind the Data page. Every query is fixed and takes
  * the cohort id or subject ref as a bound parameter, and every one is limited
- * to `is_synthetic` subjects. The cohort summaries use `$queryRaw` because
+ * to `is_synthetic` subjects (of an allowlisted cohort where the query names no
+ * cohort): the synthetic display scope, in any DATA_MODE. The cohort summaries use `$queryRaw` because
  * "distinct subjects per code" and "rows per year" have no Prisma `groupBy`
  * form; the per-subject read is a plain `findMany`. Scope and audit are applied
  * in `explorer-reads.ts`, which the tests drive with fakes instead of these.
@@ -42,12 +42,11 @@ type SubjectSql = {
 };
 
 export const explorerDeps: ExplorerDeps = {
-  dataMode: () => serverEnv().DATA_MODE,
   resolveActorId,
   listCohorts: async () => {
     const rows = await database().subject.groupBy({
       by: ["cohortId"],
-      where: { isSynthetic: true, cohortId: { in: [...SYNTHETIC_COHORTS] } },
+      where: DISPLAY_SUBJECT_WHERE,
       _count: { _all: true },
     });
     return rows.map((row) => ({ cohortId: row.cohortId, subjects: row._count._all }));
@@ -105,7 +104,7 @@ export const explorerDeps: ExplorerDeps = {
   subjectRowCap: SUBJECT_ROW_CAP,
   findSubjectObservations: async (ref, take) => {
     const rows = await database().observation.findMany({
-      where: { subjectRef: ref, subject: { isSynthetic: true } },
+      where: { subjectRef: ref, subject: DISPLAY_SUBJECT_WHERE },
       select: {
         id: true,
         loinc: true,
@@ -128,7 +127,7 @@ export const explorerDeps: ExplorerDeps = {
   },
   countSubjectNonNumeric: (ref) =>
     database().observationNonNumeric.count({
-      where: { subjectRef: ref, subject: { isSynthetic: true } },
+      where: { subjectRef: ref, subject: DISPLAY_SUBJECT_WHERE },
     }),
   appendAudit: (input) => append(database(), input),
 };

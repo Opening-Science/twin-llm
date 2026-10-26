@@ -6,7 +6,9 @@ import {
   SYNTHETIC_COHORTS,
 } from "@/packages/query-tools/scope";
 
-import { DEMO_SUBJECT_WHERE, demoSubjectOnly } from "./cohort-ports";
+import { DEMO_SUBJECT_WHERE } from "@/packages/query-tools/synthetic-display";
+
+import { demoSubjectOnly } from "./cohort-ports";
 
 describe("Demo cohorts", () => {
   test("lists the fixtures and the evaluation cohort, never training or held-out", () => {
@@ -30,6 +32,9 @@ describe("Demo cohorts", () => {
     expect(demoSubjectOnly(row("synthea-v4-seed4242"))).toBeNull();
     expect(demoSubjectOnly(row("synthea-v4-seed9001"))).toBeNull();
     expect(demoSubjectOnly(row("synthea-v4-seed1001"))).toBeNull();
+    expect(
+      demoSubjectOnly({ isSynthetic: false, cohortId: "synthea-v4-seed42" }),
+    ).toBeNull();
     expect(demoSubjectOnly(null)).toBeNull();
   });
 });

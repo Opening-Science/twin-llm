@@ -22,6 +22,10 @@ and versions follow [Semantic Versioning](https://semver.org/).
 - Repository admins can bypass the `main` rules only through a pull request; nobody pushes to `main` directly.
 - Personal data reaches Exoscale only with `EXOSCALE_PERSONAL_DATA=consented-pilot`, each such request is audited, and Infomaniak is synthetic-only.
 
+### Removed
+
+- The schematic four-chamber heart panel beside the live twin (#53): it looked crude and could not be closed. Live vitals still pulse the atlas heart.
+
 ### Fixed
 
 - The evaluation cohort and its answer key can be regenerated: `synthea-v4-seed42` was generated again with fixed dates (37 bundles, checksum `f4941fab…`, the same under another time zone) and the key rebuilt from it. The key records the dates and checksum, and the tests check them. 13 items got another subject by the rule in `docs/evaluation/question-set.md`, so results scored against the old key do not compare with new ones.

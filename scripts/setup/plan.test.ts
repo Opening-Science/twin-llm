@@ -482,14 +482,14 @@ describe("pageReadiness", () => {
     };
     expect(pageReadiness(state).map((page) => page.detail)).toEqual([
       "no synthetic cohort loaded: bun run setup:local",
-      "needs open-twin-synthea-trimmed-3 or synthea-v4-seed42 with DATA_MODE=synthetic: bun run setup:local",
+      "needs open-twin-synthea-trimmed-3 or synthea-v4-seed42: bun run setup:local",
       "all installed",
       "rigged bodies missing (anny-adult-f.rigged.glb): bun run anatomy:fetch downloads them from release anatomy-rigged-v1; offline, bun run anatomy:bake-rigged after installing uv (uv not found: brew install uv)",
       "Ollama not answering at http://127.0.0.1:11434: start it (ollama serve), then ollama pull qwen3:8b && ollama pull nomic-embed-text",
     ]);
   });
 
-  test("pending migrations and personal mode are named before the cohort", () => {
+  test("pending migrations are named before the cohort", () => {
     const pending: DetectedState = {
       ...ready,
       migrations: ["20261025000000_baseline", "20261026142947_model_response_tool_parts"],
@@ -497,9 +497,17 @@ describe("pageReadiness", () => {
     expect(pageReadiness(pending)[0]?.detail).toBe(
       "1 migration(s) not applied: bun run setup:local",
     );
-    expect(pageReadiness({ ...ready, dataMode: "personal" })[0]?.detail).toBe(
-      "DATA_MODE is personal; the page reads only with DATA_MODE=synthetic",
-    );
+  });
+
+  test("personal mode still shows the synthetic Data page and Demo lab values", () => {
+    expect(
+      pageReadiness({ ...ready, dataMode: "personal" })
+        .slice(0, 2)
+        .map((page) => [page.ready, page.detail]),
+    ).toEqual([
+      [true, "synthea-v4-seed42 (37 subjects)"],
+      [true, "synthea-v4-seed42"],
+    ]);
   });
 
   test("a stale evaluation cohort still shows, marked stale with the fix", () => {

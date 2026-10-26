@@ -545,65 +545,6 @@
     @apply w-full;
   }
 
-  /* The schematic four-chamber heart (#53): right heart in chart-1, left in chart-3. */
-  .twin-heart {
-    @apply bg-card border-border text-muted-foreground mt-3 flex max-w-64 flex-col gap-0.5 rounded-md border p-2 text-xs leading-snug;
-  }
-
-  .twin-heart-head {
-    @apply flex items-center justify-between gap-2;
-  }
-
-  .twin-heart-head h3 {
-    @apply text-foreground text-sm font-medium;
-  }
-
-  .twin-heart svg {
-    @apply my-1 h-auto w-full;
-  }
-
-  .twin-heart text {
-    @apply fill-foreground font-mono text-[11px];
-    text-anchor: middle;
-  }
-
-  .twin-heart-right {
-    fill: color-mix(in oklch, var(--chart-1) 45%, transparent);
-    stroke: var(--chart-1);
-  }
-
-  .twin-heart-left {
-    fill: color-mix(in oklch, var(--chart-3) 45%, transparent);
-    stroke: var(--chart-3);
-  }
-
-  .twin-heart-vessel {
-    fill-opacity: 0.6;
-  }
-
-  .twin-heart-valve {
-    @apply stroke-foreground;
-    fill: none;
-    stroke-width: 2.5;
-    stroke-linecap: round;
-  }
-
-  .twin-heart-dot-right {
-    fill: var(--chart-1);
-  }
-
-  .twin-heart-dot-left {
-    fill: var(--chart-3);
-  }
-
-  .twin-heart-phase {
-    @apply text-foreground font-medium;
-  }
-
-  .twin-environment .twin-heart {
-    @apply bg-card/90 absolute right-3 bottom-12 z-10 mt-0 w-56;
-  }
-
   .twin-environment .twin-live-lines {
     @apply bg-card/90 border-border absolute bottom-12 left-3 z-10 mt-0 max-w-80 rounded-md border p-2;
   }
@@ -633,7 +574,6 @@
     }
 
     .twin-environment .twin-bottom-stack > .twin-live-lines,
-    .twin-environment .twin-bottom-stack > .twin-heart,
     .twin-environment .twin-bottom-stack > .twin-pick-card {
       @apply static inset-auto m-0 w-auto max-w-none;
     }

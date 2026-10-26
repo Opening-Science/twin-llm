@@ -76,7 +76,6 @@ import {
   VIEW_LABEL,
 } from "./environment/environment-copy";
 import { PickCard, ProjectAnchor } from "./environment/pick-card";
-import { HeartInset } from "./live/heart-inset";
 import { IDLE_STATUS, type LiveStatus } from "./live/live-conditioning";
 import { LiveLines } from "./live/live-lines";
 import { NIGHT_NEEDS_READINGS } from "./live/live-copy";
@@ -1331,13 +1330,6 @@ export const BodyLoopAvatar = ({
             }}
             extra={motionLines(motion.control, anatomy.state.targetDepth > 0)}
           />
-          {liveOn && liveVitals.heart ? (
-            <HeartInset
-              rate={liveVitals.heart}
-              hrv={liveVitals.hrvBelow}
-              reducedMotion={reducedMotion}
-            />
-          ) : null}
           {environment.active ? null : nightSynthetic ? (
             <NightPlayback state={night} reducedMotion={reducedMotion} />
           ) : (
