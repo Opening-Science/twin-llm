@@ -41,6 +41,16 @@ export type OwnedThread = Readonly<{
   turns: readonly TurnState[];
 }>;
 
+/** Rows written before the position was stored sort after numbered rows. */
+const NO_POSITION = Number.MAX_SAFE_INTEGER;
+
+/**
+ * Rows in the order the models were picked. Rows without a position keep
+ * the order they came in.
+ */
+export const inPickOrder = (rows: readonly SavedResponseRow[]): SavedResponseRow[] =>
+  [...rows].sort((a, b) => (a.position ?? NO_POSITION) - (b.position ?? NO_POSITION));
+
 export const loadOwnedThread = async (
   threadId: string,
   reads: ThreadReads,
@@ -59,7 +69,7 @@ export const loadOwnedThread = async (
     turns: thread.turns.map((turn) => ({
       id: turn.id,
       prompt: turn.prompt,
-      answers: turn.responses.map(toSavedResponseState),
+      answers: inPickOrder(turn.responses).map(toSavedResponseState),
     })),
   };
 };

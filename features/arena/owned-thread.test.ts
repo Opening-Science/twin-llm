@@ -1,6 +1,11 @@
 import { describe, expect, test } from "bun:test";
 
-import { loadOwnedThread, type StoredThread, type ThreadReads } from "./owned-thread";
+import {
+  inPickOrder,
+  loadOwnedThread,
+  type StoredThread,
+  type ThreadReads,
+} from "./owned-thread";
 import { makeResponseDocument } from "./response-document-fixture";
 
 /** Synthetic thread: a question about a synthetic subject's HRV, answered once and withheld once. */
@@ -17,6 +22,7 @@ const stored: StoredThread = {
           id: "r-1",
           modelId: "qwen3:8b",
           modelName: "qwen3:8b",
+          position: 1,
           status: "COMPLETE",
           text: "## Answer\nHRV rose from 41 ms to 48 ms.",
           reasoningText: "Synthetic reasoning citing oura.hrv 48 ms.",
@@ -33,6 +39,7 @@ const stored: StoredThread = {
           id: "r-2",
           modelId: "medgemma:4b",
           modelName: "medgemma:4b",
+          position: 0,
           status: "COMPLETE",
           text: "## Answer\nWithheld synthetic text quoting 48 ms.",
           reasoningText: "Withheld synthetic reasoning.",
@@ -50,6 +57,29 @@ const stored: StoredThread = {
   ],
 };
 
+/** A saved answer row with nothing but its id, model and position. */
+const savedRow = (
+  id: string,
+  modelId: string,
+  position: number | null,
+): StoredThread["turns"][number]["responses"][number] => ({
+  id,
+  modelId,
+  modelName: modelId,
+  position,
+  status: "COMPLETE",
+  text: `## Answer\nSynthetic answer from ${modelId}.`,
+  reasoningText: null,
+  attribution: null,
+  responseDocument: null,
+  timeToFirstTokenMs: null,
+  tokensPerSecond: null,
+  inputTokens: null,
+  outputTokens: null,
+  totalTokens: null,
+  costUsd: 0,
+});
+
 const reads = (actorId: string | null, userIds: Record<string, string>): ThreadReads => ({
   actorId: async () => actorId,
   appUserIdFor: async (actor) => userIds[actor] ?? null,
@@ -63,12 +93,20 @@ describe("loadOwnedThread", () => {
       reads("clerk-owner", { "clerk-owner": "user-owner" }),
     );
     expect(thread?.title).toBe("Synthetic: HRV trend");
-    expect(thread?.turns[0]?.answers[0]?.text).toBe(
+    expect(thread?.turns[0]?.answers[1]?.text).toBe(
       "## Answer\nHRV rose from 41 ms to 48 ms.",
     );
-    expect(thread?.turns[0]?.answers[0]?.attribution).toEqual([
+    expect(thread?.turns[0]?.answers[1]?.attribution).toEqual([
       { metricKey: "oura.hrv", label: "HRV", value: 48, unit: "ms" },
     ]);
+  });
+
+  test("answers come back in the order the models were picked", async () => {
+    const thread = await loadOwnedThread(
+      "thread-1",
+      reads("clerk-owner", { "clerk-owner": "user-owner" }),
+    );
+    expect(thread?.turns[0]?.answers.map(({ id }) => id)).toEqual(["r-2", "r-1"]);
   });
 
   test("anyone else holding the link gets nothing, exactly like an unknown id", async () => {
@@ -92,10 +130,34 @@ describe("loadOwnedThread", () => {
       "thread-1",
       reads("clerk-owner", { "clerk-owner": "user-owner" }),
     );
-    const withheld = thread?.turns[0]?.answers[1];
+    const withheld = thread?.turns[0]?.answers[0];
     expect(withheld?.document?.abstained).toBe(true);
     expect(withheld?.text).toBe("");
     expect(withheld?.reasoningText).toBeNull();
     expect(JSON.stringify(thread)).not.toContain("Withheld synthetic");
+  });
+});
+
+describe("inPickOrder", () => {
+  test("positions 2, 0, 1 load as 0, 1, 2", () => {
+    const rows = [
+      savedRow("r-c", "model-c", 2),
+      savedRow("r-a", "model-a", 0),
+      savedRow("r-b", "model-b", 1),
+    ];
+    expect(inPickOrder(rows).map(({ id, position }) => [id, position])).toEqual([
+      ["r-a", 0],
+      ["r-b", 1],
+      ["r-c", 2],
+    ]);
+  });
+
+  test("rows without a position keep their creation order", () => {
+    const rows = [
+      savedRow("r-c", "model-c", null),
+      savedRow("r-a", "model-a", null),
+      savedRow("r-b", "model-b", null),
+    ];
+    expect(inPickOrder(rows).map(({ id }) => id)).toEqual(["r-c", "r-a", "r-b"]);
   });
 });
