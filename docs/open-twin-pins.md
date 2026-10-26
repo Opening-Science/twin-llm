@@ -61,6 +61,7 @@ Missing package exports are reached from `infrastructure/open-twin-adapters/` vi
 TwinLLM-only behaviour lives under `infrastructure/open-twin-adapters/`:
 
 - `oura.ts` / `oura-authorize.ts` — `HostOuraTokenHandler.lastTokens()`; re-export `getAuthorizationUrl` from `.open-twin/packages/provider-oura/src/api/client`
+- `oura-bundle.ts` — `buildOuraFhirBundle` over `buildOuraBundle` from `.open-twin/packages/provider-oura/src/fhir/bundleBuilder`, so a sync builds the bundle from the data it already fetched instead of calling every endpoint twice
 - `whoop.ts` — `fetchWhoopWindow` / `buildWhoopFhirBundle` over the public barrel (`getWhoopData`, `buildWhoopBundleFromPayload`); no longer needs `fetchWhoopSyncPayload` or any `.open-twin/.../src` import
 - `google-health.ts` — `setGoogleHealthCredentials` / `getGoogleHealthCredentials` / `ensureGoogleHealthAccessToken`
 - BodyLoop — host Bearer client in `packages/vitronic/` plus `buildBundleFromVitronicResponse` from the public barrel. The mapper now binds D15 SI units (`m` / `m2` / `m3` / `kg` / `kg/m2`); TwinLLM still does not persist `fhirBundle` and does not call `createBodyLoopClient` (password grant + `/probands`).
@@ -97,6 +98,13 @@ TwinLLM-only behaviour lives under `infrastructure/open-twin-adapters/`:
 ### 5. provider-vitronic: BodyLoop properties and lists are SI
 
 - **Status:** landed in this pin (open-twin #181). Exact `property_path` keys emit UCUM `m` / `m2` / `m3` / `kg` / `kg/m2`; unknown paths stay unitless. Host HTTP, TLS pinning, and display conversion stay on TwinLLM. TwinLLM still does not persist `fhirBundle` for Vitronic snapshots.
+
+### 6. provider-oura: export buildOuraBundle from the barrel
+
+- **In scope:** Re-export `buildOuraBundle` (`src/fhir/bundleBuilder.ts`) from `src/index.ts`, so a host that already called `getOuraData` can map without a second fetch.
+- **Out of scope:** Mapper or schema changes.
+- **Minimal diff:** one export line.
+- **Status:** host imports it from `src/` through `oura-bundle.ts` until it lands.
 
 ## Verify
 

@@ -89,6 +89,16 @@ export const StartGlyph = (props: GlyphProps) => (
   </Svg>
 );
 
+/** A page with lines of text. */
+export const DocsGlyph = (props: GlyphProps) => (
+  <Svg {...props}>
+    <>
+      <path d="M5.5 2.5h6l3 3v12h-9z" />
+      <path d="M11.5 2.5v3h3M8 9h4M8 12h4M8 15h3" />
+    </>
+  </Svg>
+);
+
 export const PlusGlyph = (props: GlyphProps) => (
   <Svg {...props}>
     <path d="M10 4.5v11M4.5 10h11" />

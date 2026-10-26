@@ -66,4 +66,5 @@ Exoscale: set `EXOSCALE_BASE_URLS` (one vLLM `/v1` URL per GPU); without it, sta
 | Oura / Whoop / Google Health | `features/oura/`, `features/whoop/`, `features/google-health/` |
 | System prompt / XAI          | `features/chat/twin-system-prompt.ts`                          |
 | First run (`/start`)         | `features/onboarding/`, `infrastructure/knowledge-sources.ts`  |
+| Docs (`/docs`)               | `features/docs/`: these pages rendered from `docs/*.md`        |
 | open-twin pins               | `.open-twin/` via `bun run sync:open-twin` (`PROVENANCE.md`)   |

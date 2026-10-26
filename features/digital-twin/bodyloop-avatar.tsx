@@ -1027,6 +1027,10 @@ export const BodyLoopAvatar = ({
     () => (picked ? linkedRows(picked.target, biomarkers.rows, scheme) : []),
     [picked, biomarkers.rows, scheme],
   );
+  // HRA parts carry a group key; BodyParts3D parts have none, so they get no line.
+  const pickedGroup = picked?.target.kind === "part" ? picked.target.group : null;
+  const pickedOrgan =
+    biomarkers.organs.find((status) => status.organ === pickedGroup) ?? null;
   // A card describes one part of one body on one atlas; any of those changing closes it.
   const bodyKey = isDemo ? `demo:${demoSex}` : `scan:${shownViatarId}`;
   useEffect(() => {
@@ -1303,6 +1307,7 @@ export const BodyLoopAvatar = ({
             <PickCard
               picked={picked}
               linked={linked}
+              organ={pickedOrgan}
               selectedId={biomarkers.selectedId}
               store={anchorStore}
               onSelectRow={(id) => {

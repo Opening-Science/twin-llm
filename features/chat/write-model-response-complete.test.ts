@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { toResponseDocument } from "@/infrastructure/response-document/parse";
+import { sha256Hex, toCanonicalJson } from "@/packages/audit/hash";
 
 import {
   type ModelResponseCompleteUpdate,
@@ -87,6 +88,71 @@ describe("writeModelResponseComplete", () => {
         },
       },
     ]);
+  });
+
+  test("stores each tool result with the hashes of its audit row", async () => {
+    const input = { subject_ref: "synthetic-subject-1", loinc: "8867-4" };
+    const output = { rows: [{ value: 62, unit_ucum: "/min" }] };
+    const argsSha256 = sha256Hex(toCanonicalJson(input));
+    const resultSha256 = sha256Hex(toCanonicalJson(output));
+    const audited = toResponseDocument({
+      ...document!,
+      data_basis: {
+        ...document!.data_basis,
+        tool_calls: [
+          {
+            seq: 7,
+            tool: "query_observations",
+            args_sha256: argsSha256,
+            result_sha256: resultSha256,
+            row_count: 1,
+            ts: "2026-10-15T08:59:58.000Z",
+          },
+        ],
+      },
+    });
+    const { calls, port } = capture();
+    await writeModelResponseComplete(
+      port,
+      {
+        turnId: "turn-4",
+        modelId: "synthetic/model",
+        text: "Synthetic text.",
+        metrics,
+        document: audited,
+        toolResults: [{ toolName: "query_observations", input, output }],
+      },
+      () => completedAt,
+    );
+    expect(calls[0]!.data.toolParts).toEqual([
+      {
+        seq: 1,
+        tool: "query_observations",
+        input,
+        output,
+        argsSha256,
+        resultSha256,
+        rowCount: 1,
+        at: "2026-10-15T09:00:00.000Z",
+      },
+    ]);
+  });
+
+  test("an answer that used no tool stores null tool parts", async () => {
+    const { calls, port } = capture();
+    await writeModelResponseComplete(
+      port,
+      {
+        turnId: "turn-5",
+        modelId: "synthetic/model",
+        text: "Synthetic text.",
+        metrics,
+        document,
+        toolResults: [],
+      },
+      () => completedAt,
+    );
+    expect(calls[0]!.data.toolParts).toBeNull();
   });
 
   test("leaves the column untouched when there is no document", async () => {

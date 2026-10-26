@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { type FormattableMetric } from "@/infrastructure/format-measure";
 import { ATLASES } from "@/packages/anatomy/manifest";
+import { organStatus, type OrganStatus } from "@/packages/biomarkers/organ-map";
 
 import { type AnatomyAction, type AnatomyState } from "../anatomy/anatomy-state";
 import {
@@ -39,6 +40,8 @@ export type BiomarkerStatus = "loading" | "ok" | "failed";
 
 export type BiomarkerTabModel = Readonly<{
   rows: readonly BiomarkerRow[];
+  /** Per mapped organ, the marker furthest from its published range (organ-map.ts). */
+  organs: readonly OrganStatus[];
   selectedId: string | null;
   /** Lines under the selected row. */
   notes: readonly string[];
@@ -169,6 +172,7 @@ export const useBiomarkerTab = ({
     () => [...markerRows(values), ...vitalRows(latestVitals(vitals ?? []))],
     [values, vitals],
   );
+  const organs = useMemo(() => organStatus(values ?? []), [values]);
 
   // The Demo borrows the chosen synthetic person's rates; Self uses its own summaries.
   const personLabel = people?.find((person) => person.ref === personRef)?.label ?? "";
@@ -214,6 +218,7 @@ export const useBiomarkerTab = ({
 
   return {
     rows,
+    organs,
     selectedId: selected?.id ?? null,
     notes,
     onSelect,

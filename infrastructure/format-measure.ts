@@ -213,6 +213,15 @@ const STEM_LABELS: Readonly<Record<string, string>> = {
   "activity.score": "Activity score",
   "activity.steps": "Steps",
   "activity.active_calories": "Active calories",
+  "workout.duration": "Workout duration",
+  "workout.calories": "Workout calories",
+  "workout.distance": "Workout distance",
+  "spo2.average": "Nightly SpO2 average",
+  "spo2.breathing_disturbance_index": "Breathing disturbance index",
+  "stress.summary": "Stress day summary",
+  "stress.high": "Time in high stress",
+  "stress.recovery_high": "Time in high recovery",
+  "vo2max.value": "VO2 max",
   "whoop.recovery.score": "Whoop recovery score",
   "whoop.recovery.hrv": "Whoop HRV RMSSD",
   "whoop.recovery.rhr": "Whoop resting HR",
@@ -236,6 +245,11 @@ const STEM_KINDS: Readonly<Record<string, MeasureKind>> = {
   "activity.score": "score",
   "activity.steps": "steps",
   "activity.active_calories": "kcal",
+  "workout.duration": "sleepMinutes",
+  "workout.calories": "kcal",
+  "spo2.average": "spo2",
+  "stress.high": "sleepMinutes",
+  "stress.recovery_high": "sleepMinutes",
   "whoop.recovery.score": "score",
   "whoop.recovery.hrv": "hrv",
   "whoop.recovery.rhr": "heartRate",
@@ -272,10 +286,13 @@ const DATE_SUFFIX_LABEL = /\s*\(\d{4}-\d{2}-\d{2}\)\s*$/;
 /** Oura suffixes a period (`long_sleep`, `late_nap`) onto sleep keys. */
 const MAIN_SLEEP_PERIODS = new Set(["long_sleep", "sleep", "rest"]);
 
+/** Key families whose third segment is a period or an activity, not part of the stem. */
+const SUFFIXED_FAMILIES = new Set(["sleep", "workout"]);
+
 const splitStem = (key: string): Readonly<{ stem: string; period: string | null }> => {
   const stem = key.replace(DATE_SUFFIX_KEY, "");
   const parts = stem.split(".");
-  if (parts[0] === "sleep" && parts.length === 3) {
+  if (parts[0] !== undefined && SUFFIXED_FAMILIES.has(parts[0]) && parts.length === 3) {
     return { stem: parts.slice(0, 2).join("."), period: parts[2]! };
   }
   return { stem, period: null };

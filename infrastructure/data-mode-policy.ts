@@ -52,8 +52,14 @@ export type ProviderRequest = Readonly<{
   exoscalePersonalData: ExoscalePersonalData;
 }>;
 
+/** The data mode one request runs under: wearable context makes it personal. */
+export const requestDataMode = (
+  mode: DataMode,
+  hasWearableNarrative: boolean,
+): DataMode => (mode === "personal" || hasWearableNarrative ? "personal" : "synthetic");
+
 const isPersonalRequest = (input: ProviderRequest): boolean =>
-  input.mode === "personal" || input.hasWearableNarrative;
+  requestDataMode(input.mode, input.hasWearableNarrative) === "personal";
 
 const providerTakesPersonalData = (
   provider: LlmProvider,

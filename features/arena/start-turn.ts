@@ -45,7 +45,11 @@ const newTurn = (plan: TurnPlan) => ({
   prompt: plan.prompt,
   responses: {
     createMany: {
-      data: plan.models.map(({ id, name }) => ({ modelId: id, modelName: name })),
+      data: plan.models.map(({ id, name }, position) => ({
+        modelId: id,
+        modelName: name,
+        position,
+      })),
     },
   },
 });

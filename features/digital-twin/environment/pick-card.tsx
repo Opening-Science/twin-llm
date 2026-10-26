@@ -5,9 +5,11 @@ import { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } fro
 import { Vector3 } from "three";
 
 import { Button } from "@/infrastructure/ui-kit/button";
+import { type OrganStatus } from "@/packages/biomarkers/organ-map";
 
 import { LAYER_LABEL, SYSTEM_LABEL } from "../anatomy/anatomy-copy";
 import { PanelRowButton } from "../body-panel";
+import { organStatusLine } from "../biomarkers/biomarker-copy";
 import { type BiomarkerRow } from "../biomarkers/biomarker-rows";
 import { type AnchorStore, cardPlacement } from "./card-anchor";
 import {
@@ -56,6 +58,8 @@ export type PickCardProps = Readonly<{
   picked: Picked;
   /** Biomarker rows whose own highlight lights this part. */
   linked: readonly BiomarkerRow[];
+  /** This organ's marker furthest from its published range, when the map has one. */
+  organ: OrganStatus | null;
   selectedId: string | null;
   store: AnchorStore;
   /** null when the selected row is clicked again, as in the Biomarkers tab. */
@@ -84,6 +88,7 @@ export const cardFacts = (picked: Picked): readonly string[] => {
 export const PickCard = ({
   picked,
   linked,
+  organ,
   selectedId,
   store,
   onSelectRow,
@@ -152,6 +157,7 @@ export const PickCard = ({
         </p>
         {part ? (
           <>
+            {organ ? <p className="text-xs">{organStatusLine(organ)}</p> : null}
             <h4 className="mt-1 text-xs font-medium">{LINKED_BIOMARKERS}</h4>
             {linked.length === 0 ? (
               <p className="text-muted-foreground text-xs">{NO_LINKED_BIOMARKERS}</p>
