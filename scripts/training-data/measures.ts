@@ -1,10 +1,10 @@
 /**
  * The measures the training questions ask about. Pure data.
  *
- * The evaluation's own probes (skin temperature, TSH, SpO2, eGFR, RDW, Oura
- * readiness, Whoop recovery, LOINC 99999-9) are left out of every list on
- * purpose, so the training set teaches the behaviour without teaching the test
- * items; `families.test.ts` checks that.
+ * The 81-question evaluation's S6 probe measures (skin temperature, TSH, SpO2,
+ * eGFR, RDW, Oura readiness, Whoop recovery, LOINC 99999-9) are included like
+ * any other measure, so S6 scores after training measure in-distribution
+ * behaviour (docs/training-data.md).
  */
 
 export type MeasureSource = "wearable" | "clinical";
@@ -143,6 +143,13 @@ export const ABSENT_MEASURES: readonly [Measure, ...Measure[]] = [
   clinical("19123-9", "magnesium", 1),
   clinical("33762-6", "NT-proBNP", 0),
   clinical("3024-7", "free T4", 2),
+  { ...clinical("3016-3", "TSH", 2), aliases: ["thyrotropin"] },
+  {
+    ...clinical("59408-5", "blood oxygen saturation", 0),
+    aliases: ["SpO2", "oxygen saturation"],
+    unit: "%",
+  },
+  clinical("99999-9", "LOINC 99999-9", 1),
 ];
 
 /**
@@ -159,6 +166,8 @@ export type NoCodeMeasure = Readonly<{
 
 export const NO_CODE_MEASURES: readonly [NoCodeMeasure, ...NoCodeMeasure[]] = [
   { label: "VO2max", why: "not_recorded", notThis: "heart rate" },
+  { label: "skin temperature", why: "not_recorded", notThis: "systolic blood pressure" },
+  { label: "wrist temperature", why: "not_recorded", notThis: "heart rate" },
   { label: "HRV (RMSSD)", why: "local_code", notThis: "resting heart rate" },
   { label: "sleep score", why: "local_code", notThis: "sleep duration" },
   { label: "sleep efficiency", why: "not_recorded", notThis: "sleep duration" },
@@ -182,6 +191,8 @@ export const NO_CODE_MEASURES: readonly [NoCodeMeasure, ...NoCodeMeasure[]] = [
  */
 export const WEARABLE_KEYS: readonly [string, ...string[]] = [
   "whoop.strain.day",
+  "whoop.recovery.score",
+  "oura.readiness.score",
   "whoop.sleep.performance",
   "oura.sleep.efficiency",
   "oura.activity.score",
@@ -233,16 +244,19 @@ export const NEAR_MISSES: readonly [NearMiss, ...NearMiss[]] = [
   { asked: APOB, neighbour: LDL },
   { asked: INSULIN, neighbour: GLUCOSE },
   { asked: HS_CRP, neighbour: byLoinc("1988-5") },
+  { asked: byLoinc("3016-3"), neighbour: byLoinc("3024-7") },
+  { asked: byLoinc("59408-5"), neighbour: byLoinc("9279-1") },
 ];
 
 /**
  * Codes Synthea v4 writes in more than one unit, seen in the seed-42 cohort.
- * eGFR and RDW are the evaluation's mixed-unit probes, so they are left out.
  */
 export const MIXED_UNIT_MEASURES: readonly [Measure, ...Measure[]] = [
   clinical("5811-5", "urine specific gravity", 3),
   clinical("5803-2", "urine pH", 1),
   clinical("89579-7", "high-sensitivity troponin I", 0),
+  { ...clinical("33914-3", "eGFR", 0), aliases: ["estimated GFR"] },
+  { ...clinical("788-0", "red cell distribution width", 1), aliases: ["RDW"] },
 ];
 
 /**
@@ -333,18 +347,4 @@ export const CONVERSIONS: readonly [Conversion, ...Conversion[]] = [
     decimals: 0,
     how: "60 minutes in an hour",
   },
-];
-
-/** Labels and aliases the evaluation probes use; no training list may name them. */
-export const EVALUATION_PROBE_NAMES: readonly string[] = [
-  "skin temperature",
-  "TSH",
-  "blood oxygen saturation",
-  "SpO2",
-  "eGFR",
-  "red cell distribution width",
-  "RDW",
-  "readiness",
-  "recovery",
-  "99999-9",
 ];

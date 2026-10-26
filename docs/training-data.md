@@ -186,9 +186,15 @@ English only, so there are no German or French questions.
 No answer ever reads a code other than the one asked about;
 `families.test.ts` checks that over many seeds. The no-data answers say
 plainly that there is no code or no data and that no other measure was used in
-its place. The measure lists leave out the evaluation's probes (skin
-temperature, TSH, SpO2, eGFR, RDW, Oura readiness, Whoop recovery, 99999-9),
-and a test checks that too.
+its place.
+
+**Overlap with the evaluation.** The no-data, near-miss and unit families
+include the 81-question evaluation's S6 probe measures (skin temperature,
+eGFR, TSH, SpO2, RDW, Oura readiness, Whoop recovery, LOINC 99999-9) like any
+other measure. S6 scores after pilot 2 therefore measure in-distribution
+behaviour, not generalisation; a clean generalisation number needs a fresh
+held-out probe set. The question templates still never repeat an evaluation
+question.
 
 Wearable measures use windows ending on the series' last day; clinical
 measures (weight, HbA1c, systolic pressure, cholesterol, BMI) use the

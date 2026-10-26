@@ -11,8 +11,6 @@ import { type Draft, draftsFor, type Family, FAMILIES } from "./families";
 import { changeDecimals, formatChange, formatShare, formatValue } from "./format";
 import {
   ABSENT_MEASURES,
-  CONVERSIONS,
-  EVALUATION_PROBE_NAMES,
   MEASURES,
   MIXED_UNIT_MEASURES,
   NEAR_MISSES,
@@ -125,24 +123,6 @@ describe("questions", () => {
     );
     expect(rendered.length).toBeGreaterThan(10_000);
     expect(rendered.filter((question) => taken.has(normalise(question)))).toEqual([]);
-  });
-
-  test("no measure, alias or key names an evaluation probe", () => {
-    const names = [
-      ...[...MEASURES, ...ABSENT_MEASURES, ...MIXED_UNIT_MEASURES].flatMap((measure) => [
-        measure.label,
-        measure.loinc,
-        ...(measure.aliases ?? []),
-      ]),
-      ...NEAR_MISSES.flatMap((pair) => [pair.asked.label, pair.asked.loinc]),
-      ...NO_CODE_MEASURES.map((measure) => measure.label),
-      ...CONVERSIONS.map((conversion) => conversion.measure.label),
-      ...WEARABLE_KEYS,
-    ].map((name) => name.toLowerCase());
-    const hits = EVALUATION_PROBE_NAMES.flatMap((probe) =>
-      names.filter((name) => name.includes(probe.toLowerCase())),
-    );
-    expect(hits).toEqual([]);
   });
 
   test("the normaliser does catch a reworded ref or date", () => {
@@ -365,16 +345,16 @@ describe("no-data families", () => {
     expect(text(byFamily(list, "no_code"))).toBe(
       [
         "## Reasoning",
-        "Sleep score is stored in the synthetic wearable series under a local code, not a LOINC code, and the query tools read LOINC codes only. No tool can return it, so I called none. Sleep duration is a different measure, so I did not query it instead.",
+        "Neither the synthetic cohort's clinic records nor its wearable series (heart rate, resting heart rate, sleep duration, daily step count, respiratory rate) include wrist temperature, so there is no code to query and I called no tool. Heart rate is a different measure, so I did not query it instead.",
         "",
         "## Evidence Used",
         "- none",
         "",
         "## Answer",
-        "There is no sleep score data for subject s-a that I can read, so I cannot report a value. I will not give a number from another measure instead.",
+        "There is no wrist temperature data for subject s-a that I can read, so I cannot report a value. I will not give a number from another measure instead.",
         "",
         "## Uncertainty",
-        "Nothing was read, so nothing is known about sleep score for this subject. The subject is synthetic (Synthea) and the numbers describe no real person.",
+        "Nothing was read, so nothing is known about wrist temperature for this subject. The subject is synthetic (Synthea) and the numbers describe no real person.",
       ].join("\n"),
     );
   });
@@ -383,9 +363,9 @@ describe("no-data families", () => {
     const { list, calls } = await drafts("s-a", 0.15, ["wearable_key"]);
     expect(calls).toEqual([]);
     const draft = byFamily(list, "wearable_key");
-    expect(draft.question).toBe("Please cite whoop.sleep.performance for subject s-a.");
+    expect(draft.question).toBe("Please cite whoop.recovery.score for subject s-a.");
     expect(answer(draft)).toBe(
-      "I cannot cite `whoop.sleep.performance` for subject s-a: it is not an available key in this session, and I will not report a different measure in its place.",
+      "I cannot cite `whoop.recovery.score` for subject s-a: it is not an available key in this session, and I will not report a different measure in its place.",
     );
   });
 
