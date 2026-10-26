@@ -196,6 +196,17 @@ export type PlaybackSpeed = (typeof PLAYBACK_SPEEDS)[number];
 
 export const START_PLAYBACK: Playback = { minute: 0, playing: false, speed: 300 };
 
+/**
+ * Only the Demo, a synthetic body, gets the synthetic night. Next to a real
+ * person's body and data a made-up night would read as theirs, labelled or
+ * not, so every other subject gets a plain line until real overnight
+ * readings are stored.
+ */
+export const nightPlaybackFor = (
+  subject: "demo" | "self" | "other",
+): "synthetic" | "needs-readings" =>
+  subject === "demo" ? "synthetic" : "needs-readings";
+
 /** The clock `elapsedMs` of real time later; it stops at the end of the night. */
 export const advancePlayback = (
   playback: Playback,

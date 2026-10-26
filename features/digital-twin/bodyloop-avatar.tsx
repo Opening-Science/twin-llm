@@ -74,7 +74,9 @@ import {
 import { PickCard, ProjectAnchor } from "./environment/pick-card";
 import { IDLE_STATUS, type LiveStatus } from "./live/live-conditioning";
 import { LiveLines } from "./live/live-lines";
+import { NIGHT_NEEDS_READINGS } from "./live/live-copy";
 import { NightPlayback, useNightPlayback } from "./live/night-playback";
+import { nightPlaybackFor } from "./live/night-series";
 import {
   linkedRows,
   pickHighlight,
@@ -994,7 +996,8 @@ export const BodyLoopAvatar = ({
   const { live: measuredVitals } = biomarkers;
   // Night playback replaces the newest readings while it is open, inline only.
   const night = useNightPlayback(biomarkerSubject, reducedMotion);
-  const playing = night.open && !environment.active;
+  const nightSynthetic = nightPlaybackFor(biomarkerSubject) === "synthetic";
+  const playing = nightSynthetic && night.open && !environment.active;
   const liveVitals = playing ? night.vitals : measuredVitals;
   const liveAvailable =
     !reducedMotion &&
@@ -1306,8 +1309,10 @@ export const BodyLoopAvatar = ({
               reducedMotion,
             }}
           />
-          {environment.active ? null : (
+          {environment.active ? null : nightSynthetic ? (
             <NightPlayback state={night} reducedMotion={reducedMotion} />
+          ) : (
+            <p className="twin-live-lines">{NIGHT_NEEDS_READINGS}</p>
           )}
           {environment.active && picked ? (
             <PickCard

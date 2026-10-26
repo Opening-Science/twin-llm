@@ -63,6 +63,8 @@ export const hrvLine = (hrv: HrvBelowUsual, scheme: AtlasScheme, today: string):
 
 /** Night playback: a synthetic night replayed on the twin, said as such every time. */
 export const NIGHT_TOGGLE = "Night playback";
+export const NIGHT_NEEDS_READINGS =
+  "Night playback needs readings through the night, which the wearable syncs don't store yet.";
 export const NIGHT_ABOUT =
   "A synthetic night made up by a seeded generator, not a recording of anyone: heart rate, breathing rate and sleep stage every five minutes drive the twin. A visual cue, not a physiological model.";
 export const NIGHT_GAP =

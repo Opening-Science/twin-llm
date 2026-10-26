@@ -7,6 +7,7 @@ import {
   NIGHT_EPOCHS,
   nightClock,
   nightMinutes,
+  nightPlaybackFor,
   nightVitals,
   type Night,
   seekPlayback,
@@ -155,5 +156,13 @@ describe("nightReadout", () => {
 
   test("says there is no reading in a gap", () => {
     expect(nightReadout("23:05", tiny.epochs[1]!)).toBe("23:05 · no reading");
+  });
+});
+
+describe("nightPlaybackFor", () => {
+  test("only the synthetic Demo body gets the synthetic night", () => {
+    expect(nightPlaybackFor("demo")).toBe("synthetic");
+    expect(nightPlaybackFor("self")).toBe("needs-readings");
+    expect(nightPlaybackFor("other")).toBe("needs-readings");
   });
 });
