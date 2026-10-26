@@ -5,7 +5,8 @@ import {
   parseBuildArgs,
   runBuildConversations,
 } from "./build-conversations";
-import { type ConversationRecord, toolSchemas } from "./conversation";
+import type { OpenAiTool } from "./chat-tool-list";
+import type { ConversationRecord } from "./conversation";
 import { FAKE_COHORT, fakeTools, sampleRows } from "./fake-tools";
 
 const PROMPT = {
@@ -16,7 +17,17 @@ const PROMPT = {
     "- Call `list_subjects` first.",
   ].join("\n"),
 };
-const TRAINING_PROMPT = "You are TwinLLM (test prompt).\n- Call `list_subjects` first.";
+
+const TOOLS: readonly OpenAiTool[] = [
+  {
+    type: "function",
+    function: {
+      name: "trend",
+      description: "Test tool.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+];
 
 const harness = (overrides: Partial<BuildDeps> = {}) => {
   const tools = fakeTools(sampleRows());
@@ -29,6 +40,7 @@ const harness = (overrides: Partial<BuildDeps> = {}) => {
       listSubjects: async (cohortId) => (cohortId === FAKE_COHORT ? ["s-a", "s-b"] : []),
       runTool: tools.run,
       systemPrompt: async () => PROMPT,
+      tools: async () => TOOLS,
     }),
     openOut: async (path) => {
       files.set(path, "");
@@ -179,16 +191,25 @@ describe("runBuildConversations output", () => {
     };
   };
 
-  test("writes records, a meta sidecar and a manifest, and no partial file", async () => {
+  test("writes records, a meta sidecar, a manifest and stats, and no partial file", async () => {
     const result = await run();
     expect(result.code).toBe(0);
     expect([...result.files.keys()].sort()).toEqual([
       "/tmp/out.jsonl",
       "/tmp/out.manifest.json",
       "/tmp/out.meta.jsonl",
+      "/tmp/out.stats.json",
     ]);
     expect(result.metas.length).toBe(result.records.length);
-    expect(result.manifest.tools).toEqual(toolSchemas());
+    expect(result.manifest.tools).toEqual(TOOLS);
+    const stats = JSON.parse(result.files.get("/tmp/out.stats.json") ?? "{}") as Record<
+      string,
+      unknown
+    >;
+    expect(stats.conversations).toBe(result.records.length);
+    expect(
+      Object.values(stats.by_family as Record<string, number>).reduce((a, b) => a + b),
+    ).toBe(result.records.length);
     expect(result.manifest.conversations).toBe(result.records.length);
     expect(result.manifest.subjects).toBe(2);
     expect(result.out.join("")).toContain(
@@ -265,13 +286,13 @@ describe("runBuildConversations output", () => {
       ["messages"],
     ]);
     const inline = await run(["--families", "trend", "--inline-tools"]);
-    expect(inline.records[0]?.tools).toEqual(toolSchemas());
+    expect(inline.records[0]?.tools).toEqual(TOOLS);
   });
 
-  test("the system prompt offers the query tools only, and meta names the variant", async () => {
+  test("the system prompt is the chat's, unchanged, and meta names it", async () => {
     const { records, metas } = await run(["--families", "trend"]);
-    expect(records[0]?.messages[0]).toEqual({ role: "system", content: TRAINING_PROMPT });
-    expect(metas[0]?.system_prompt_id).toBe("test-prompt/query-tools-only");
+    expect(records[0]?.messages[0]).toEqual({ role: "system", content: PROMPT.text });
+    expect(metas[0]?.system_prompt_id).toBe("test-prompt");
   });
 
   test("meta lines match their records in order", async () => {
@@ -291,9 +312,12 @@ describe("runBuildConversations output", () => {
       subject_ref: "s-a",
       cohort_id: FAKE_COHORT,
       seed: 4242,
-      generator_version: "1",
+      generator_version: "2",
+      measure_loinc: meta.measure_loinc,
       synthetic: true,
     });
+    expect(meta.template_id).toStartWith(`${meta.template_group}.`);
+    expect(meta.template_group).toMatch(/^trend(Wearable|Recent|Clinical)\./);
     expect(meta.tool_args_sha256).toMatch(/^[0-9a-f]{64}$/);
   });
 

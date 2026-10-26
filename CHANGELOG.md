@@ -7,6 +7,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Training conversations ask in several styles with typos, varied dates and units, add no-data families (measures no tool can read, vendor keys, periods outside the record, odd refs, similar-sounding measures) and unit families (mixed units, conversions), use the chat's twelve tools and system prompt, and write stats. `training:split` holds out whole template groups and LOINC codes for validation.
 - `training:batches --skip-rejected` continues past bundles the importer rejects, lists them per batch, and still stops above a 1% rejection share.
 
 ### Changed

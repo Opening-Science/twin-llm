@@ -126,43 +126,75 @@ the training database. Tool calls are audited as `training-conversations`.
 It prints counts only. For `--out training-data/out/<cohort>.jsonl` (the
 default, gitignored) it writes:
 
-| File                     | What                                               |
-| ------------------------ | -------------------------------------------------- |
-| `<cohort>.jsonl`         | One record per line: `messages` only               |
-| `<cohort>.meta.jsonl`    | One `meta` record per line, same order             |
-| `<cohort>.manifest.json` | Counts, seed, prompt id, and the `tools` list once |
+| File                     | What                                                            |
+| ------------------------ | --------------------------------------------------------------- |
+| `<cohort>.jsonl`         | One record per line: `messages` only                            |
+| `<cohort>.meta.jsonl`    | One `meta` record per line, same order                          |
+| `<cohort>.manifest.json` | Counts, seed, prompt id, and the `tools` list once              |
+| `<cohort>.stats.json`    | Counts per family, template, style and outcome; shares; lengths |
 
 Both JSONL files are written as `.partial` and renamed only when the run
 finishes; a failed run keeps neither. `--inline-tools` also puts `tools` on
 every record, for trainers that want the OpenAI fine-tuning form.
 
 `messages` are system, user, one assistant turn per tool call with its tool
-result, then the final answer. `tools` are the nine query tools as OpenAI
-function definitions in the slim form models get in chat (`openaiToolList`,
-`docs/query-layer.md`, "Manifests"): no regex patterns or formats, window
-bounds as plain strings. `meta` holds the family,
-outcome, `subject_ref`, cohort id, seed, generator version, tool names,
-sha256 of the tool arguments, system prompt id and sha256, and the expected
-`answer_class`. The system prompt is the real Twin prompt in synthetic mode
-with no wearable linked, minus the line about the GBD, guideline and
-knowledge tools (variant id
-`twin-system-prompt/synthetic/no-wearables/query-tools-only`), so it offers
-exactly the tools the records define. The same cohort, database and seed
-give the same files byte for byte.
+result, then the final answer. `tools` are the twelve tools a chat request
+sends (`createChatTools`): the nine query tools in the slim form
+(`openaiToolList`, `docs/query-layer.md`, "Manifests") plus `gbd_population`,
+`guideline_search` and `knowledge_search`, with the schemas the AI SDK sends.
+The system prompt is the real Twin prompt in synthetic mode with every tool
+offered and no wearable linked (`twin-system-prompt/synthetic/no-wearables`).
+`meta` holds the family, outcome, `subject_ref`, cohort id, seed, generator
+version (2), tool names, sha256 of the tool arguments, system prompt id and
+sha256, the expected `answer_class`, the template id and group, style, whether
+a typo was added, and the one LOINC the question is about (`measure_loinc`,
+null for coverage and questions with no code). The same cohort, database and
+seed give the same files byte for byte.
 
-| Family               | Share | Tools                                    |
-| -------------------- | ----- | ---------------------------------------- |
-| `latest_value`       | all   | `latest_by_loinc`                        |
-| `trend`              | all   | (`subject_window`), `trend`              |
-| `baseline_deviation` | all   | (`subject_window`), `baseline_deviation` |
-| `coverage`           | all   | (`subject_window`), `coverage`           |
-| `compare_windows`    | all   | (`subject_window`), `compare_windows`    |
-| `absent_code`        | 30%   | `latest_by_loinc` (ferritin, cortisol)   |
-| `unit_mismatch`      | 30%   | `subject_window`, `trend` (see below)    |
-| `out_of_cohort`      | 10%   | `latest_by_loinc` on an unknown ref      |
-| `decline_dose`       | 25%   | none, `REFUSE:`                          |
-| `decline_condition`  | 25%   | none, `REFUSE:`                          |
-| `other_person`       | 15%   | none                                     |
+### Questions
+
+Each family asks from a slot of templates (`questions.ts`) in four styles:
+formal, casual, terse and non-native English; about 10% get one keyboard typo.
+A template id is `slot.style.n` and its group `slot.style`. Measures are named
+by label or alias, sometimes with the unit; dates are written four ways
+(`3 Aug 2026`, `2026-08-03`, `3 August 2026`, `August 3, 2026`); some wearable
+questions say "the last N days" and read `subject_window` first. The app is
+English only, so there are no German or French questions.
+
+| Family               | Share | Tools                                                                  |
+| -------------------- | ----- | ---------------------------------------------------------------------- |
+| `latest_value`       | all   | `latest_by_loinc`                                                      |
+| `trend`              | all   | (`subject_window`), `trend`                                            |
+| `baseline_deviation` | all   | (`subject_window`), `baseline_deviation`                               |
+| `coverage`           | all   | (`subject_window`), `coverage`                                         |
+| `compare_windows`    | all   | (`subject_window`), `compare_windows`                                  |
+| `absent_code`        | 50%   | `latest_by_loinc` with the asked code (15 absent labs)                 |
+| `no_code`            | 40%   | none: a measure no tool can read (VO2max, HRV, …)                      |
+| `wearable_key`       | 25%   | none: a vendor key not in Available keys                               |
+| `outside_record`     | 40%   | `subject_window`; the period is before or after the record             |
+| `odd_ref`            | 30%   | `latest_by_loinc` with the ref as typed, or none (no ref)              |
+| `near_miss`          | 50%   | `latest_by_loinc` with the asked code, neighbour named                 |
+| `unit_mismatch`      | all\* | (`subject_window`), `trend`, `baseline_deviation` or `compare_windows` |
+| `unit_conversion`    | 60%   | `latest_by_loinc`, converted with a fixed factor                       |
+| `out_of_cohort`      | 10%   | `latest_by_loinc` on an unknown ref                                    |
+| `decline_dose`       | 25%   | none, `REFUSE:`                                                        |
+| `decline_condition`  | 25%   | none, `REFUSE:`                                                        |
+| `other_person`       | 15%   | none                                                                   |
+
+\* only for subjects whose records hold a mixed-unit code (below).
+
+No answer ever reads a code other than the one asked about;
+`families.test.ts` checks that over many seeds. The no-data answers say
+plainly that there is no code or no data and that no other measure was used in
+its place.
+
+**Overlap with the evaluation.** The no-data, near-miss and unit families
+include the 81-question evaluation's S6 probe measures (skin temperature,
+eGFR, TSH, SpO2, RDW, Oura readiness, Whoop recovery, LOINC 99999-9) like any
+other measure. S6 scores after pilot 2 therefore measure in-distribution
+behaviour, not generalisation; a clean generalisation number needs a fresh
+held-out probe set. The question templates still never repeat an evaluation
+question.
 
 Wearable measures use windows ending on the series' last day; clinical
 measures (weight, HbA1c, systolic pressure, cholesterol, BMI) use the
@@ -180,8 +212,26 @@ conversations.
   subjects get no series), that subject gets clinical questions only.
 - **Mixed units.** `unit_mismatch` uses codes Synthea v4 writes in two units:
   urine specific gravity (`5811-5`), urine pH (`5803-2`) and high-sensitivity
-  troponin I (`89579-7`). It is written only when the tool really returns
-  `MIXED_UNITS` for that subject, so it is rare.
+  troponin I (`89579-7`). A planning read (`subject_window`, then one
+  `coverage` over those codes for six years; audited, not part of the
+  conversation) finds a mixed code; the conversation then asks a trend,
+  baseline or comparison and reports what the tool returns, usually
+  `MIXED_UNITS`.
+- **Conversions.** `unit_conversion` converts a latest value only from the
+  unit it was written for (kg → lb, % → mmol/mol, mg/dL → mmol/L, min →
+  hours, cm → inches, mmHg → kPa, /min → per hour) and names the factor in
+  Reasoning. A reading in another unit is reported as stored.
+
+### Split
+
+`bun run training:split -- --in <out>.jsonl [--seed n] [--template-share 0.1]
+[--code-share 0.1] [--subject-share 0.02]` writes `<out>.train.jsonl`,
+`<out>.val.jsonl` (each with a `.meta.jsonl`) and `<out>.split.json`.
+Validation gets every conversation in a held-out template group, about a
+held-out LOINC code, or about a held-out subject, so it measures wording and
+codes the model never saw. Nothing is held out that would leave a family or a
+question slot without training data. The manifest lists the held-out groups
+and codes, counts per reason and stats for each part. It reads files only.
 
 ### Looking at the files
 
@@ -375,10 +425,10 @@ imports it, and skills and MCP servers stay TypeScript.
 
 ## Limits
 
-- The answers are templates. They teach shape and honesty, not varied
-  wording; a later step can paraphrase questions.
-- Only the nine query tools are in `tools`; guideline, GBD and knowledge
-  tools are not exercised.
+- The answers are templates; only the questions vary.
+- All twelve chat tools are offered, but no conversation calls the
+  guideline, GBD or knowledge tools.
+- Token counts in the stats are characters / 4, a rough estimate.
 - With `--skip-rejected`, the 1M batches leave out the people with
   scoliosis-screening observations (about 0.3%), so the training data has
   none of them. The batches are not byte-for-byte
