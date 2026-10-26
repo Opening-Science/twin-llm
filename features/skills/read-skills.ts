@@ -2,6 +2,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { type CaseResult, runSkillEvals } from "./run-skill-evals";
+import type { Skill } from "./skill-schema";
 import { type SkillFiles, validateSkill } from "./validate-skill";
 
 /**
@@ -12,6 +13,8 @@ import { type SkillFiles, validateSkill } from "./validate-skill";
 
 export type SkillsCheck = Readonly<{
   skills: readonly string[];
+  /** Skills that passed validation; their eval results are in `results`. */
+  valid: readonly Skill[];
   errors: readonly string[];
   results: readonly CaseResult[];
 }>;
@@ -64,11 +67,11 @@ export const checkSkills = (
   const validated = folders.map((folder) =>
     validateSkill(readSkillFolder(root, folder), syntheticSubjects),
   );
+  const valid = validated.flatMap((result) => (result.ok ? [result.skill] : []));
   return {
     skills: folders,
+    valid,
     errors: validated.flatMap((result) => (result.ok ? [] : result.errors)),
-    results: validated.flatMap((result) =>
-      result.ok ? runSkillEvals(result.skill) : [],
-    ),
+    results: valid.flatMap(runSkillEvals),
   };
 };

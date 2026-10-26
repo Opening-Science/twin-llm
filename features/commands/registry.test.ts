@@ -1,6 +1,15 @@
 import { describe, expect, test } from "bun:test";
 
-import { BUILT_IN_COMMANDS, type Command, matchCommands, readsLine } from "./registry";
+import {
+  BUILT_IN_COMMANDS,
+  type Command,
+  matchCommands,
+  paletteCommands,
+  readsLine,
+  skillCommand,
+  skillDraft,
+  toolsLine,
+} from "./registry";
 
 const commands: readonly Command[] = [
   { name: "sleep", description: "Sleep summary", reads: ["oura", "whoop"] },
@@ -40,5 +49,64 @@ describe("readsLine", () => {
   test("names what a command reads, or says it reads nothing", () => {
     expect(readsLine([])).toBe("reads nothing");
     expect(readsLine(["oura", "whoop"])).toBe("reads: oura, whoop");
+  });
+});
+
+const SLEEP_COMMAND = skillCommand({
+  name: "sleep",
+  description: "Chart the last 7 or 30 nights of sleep.",
+  sources: ["cohort-records", "wearable-context"],
+  tools: ["coverage", "baseline_deviation"],
+});
+
+describe("skills in the palette", () => {
+  test("a skill lists its sources by label and its tools by name", () => {
+    expect(SLEEP_COMMAND).toEqual({
+      name: "sleep",
+      description: "Chart the last 7 or 30 nights of sleep.",
+      reads: ["Subjects and observations", "Your linked wearables"],
+      tools: ["coverage", "baseline_deviation"],
+      kind: "skill",
+    });
+    expect(toolsLine(SLEEP_COMMAND.tools ?? [])).toBe(
+      "may call: coverage, baseline_deviation",
+    );
+    expect(toolsLine([])).toBe("calls no tools");
+  });
+
+  test("built-ins come first, and a skill cannot take a built-in's name", () => {
+    const clash = { ...SLEEP_COMMAND, name: "connect" };
+    expect(paletteCommands([SLEEP_COMMAND, clash]).map((c) => [c.name, c.kind])).toEqual([
+      ["connect", undefined],
+      ["sleep", "skill"],
+    ]);
+  });
+});
+
+describe("skillDraft", () => {
+  const skills = paletteCommands([SLEEP_COMMAND]);
+
+  test("a prompt starting with a listed skill is that skill and the rest", () => {
+    expect(skillDraft("/sleep last 30 nights", skills)).toEqual({
+      skill: SLEEP_COMMAND,
+      prompt: "last 30 nights",
+    });
+    expect(skillDraft("  /sleep\nlast 30 nights  ", skills)?.prompt).toBe(
+      "last 30 nights",
+    );
+  });
+
+  test("the bare command asks the skill's own description", () => {
+    expect(skillDraft("/sleep ", skills)).toEqual({
+      skill: SLEEP_COMMAND,
+      prompt: "Chart the last 7 or 30 nights of sleep.",
+    });
+  });
+
+  test("anything else is an ordinary prompt", () => {
+    expect(skillDraft("/sleepy last nights", skills)).toBeNull();
+    expect(skillDraft("/connect oura", skills)).toBeNull();
+    expect(skillDraft("how did I sleep? /sleep", skills)).toBeNull();
+    expect(skillDraft("/sleep last nights", [])).toBeNull();
   });
 });

@@ -54,4 +54,16 @@ describe("historyFor", () => {
       { role: "user", content: "Synthetic question one" },
     ]);
   });
+
+  test("an earlier skill turn reads back with its command; the current one does not", () => {
+    const skillTurns: TurnState[] = [
+      { ...turns[0]!, skill: "sleep", prompt: "last 30 nights" },
+      { ...turns[2]!, skill: "sleep", prompt: "last 7 nights" },
+    ];
+    expect(historyFor(skillTurns, 1, "model-a")).toEqual([
+      { role: "user", content: "/sleep last 30 nights" },
+      { role: "assistant", content: "A answers one" },
+      { role: "user", content: "last 7 nights" },
+    ]);
+  });
 });

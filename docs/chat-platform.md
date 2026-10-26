@@ -28,6 +28,8 @@ Issues: #35 stored tool parts, #36 `data-view` and `show_view`, #37 Outputs pane
 
 The slash menu becomes a palette: built-in commands and skills, each showing what it may read. A skill is `skills/<name>/SKILL.md` (name, description, allowed tools, sources, providers, views) plus `evals/`, run in CI like the question set. Built-ins: `/sleep`, `/compact` (a twin note in a per-user memory the person edits), `/report` (PDF or FHIR DocumentReference). `/connect` keeps the wearable rows.
 
+Since #42: the palette lists every offered skill with what it reads and may call, and a prompt sent as `/sleep …` runs under the skill's tool, provider and view allowlists with its instructions in the system prompt. The run is audited as `skill.<name>` and the response document carries `skill` ([skills.md](skills.md)).
+
 Issues: #40 palette, #41 skill format, #42 `/sleep`, #43 `/compact`, #44 `/report`.
 
 ## 3. `/trainer`, descriptive

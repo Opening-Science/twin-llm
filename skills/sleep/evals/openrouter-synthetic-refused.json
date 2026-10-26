@@ -1,0 +1,21 @@
+{
+  "question": "Show the last 7 nights of sleep for subject 9661a432-4630-2cd9-142c-386845fae837.",
+  "provider": "openrouter",
+  "script": [
+    {
+      "tool": "coverage",
+      "input": {
+        "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+        "loinc": ["93832-4"],
+        "start": "2025-10-24",
+        "end": "2025-10-30"
+      }
+    },
+    { "view": "chart.timeseries" }
+  ],
+  "expect": {
+    "calls": [],
+    "views": [],
+    "refusals": ["provider-not-allowed-by-skill"]
+  }
+}

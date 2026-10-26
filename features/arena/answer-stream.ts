@@ -14,6 +14,7 @@ import type {
 } from "@/infrastructure/model-response-metrics";
 import type { ResponseDocumentV1 } from "@/infrastructure/response-document/document-v1";
 import { toResponseDocument } from "@/infrastructure/response-document/parse";
+import { isSkillRefusalCode } from "@/infrastructure/skill-gate";
 
 import type { ToolActivity } from "./conversation";
 import type { HistoryMessage } from "./turn-history";
@@ -37,6 +38,8 @@ export type StreamResult = Readonly<{
   ending: StreamEnding;
   metrics: ModelResponseMetrics | null;
   document: ResponseDocumentV1 | null;
+  /** The server's sentence when it refused a skill turn; only ever set with FAILED. */
+  refusal?: string;
 }>;
 
 export type StreamProgress = Readonly<{
@@ -49,6 +52,8 @@ export type AnswerRequest = Readonly<{
   modelId: string;
   turnId: string;
   messages: readonly HistoryMessage[];
+  /** The skill the turn was sent with; left out for an ordinary prompt. */
+  skill?: string;
 }>;
 
 type Fetcher = (input: string, init: RequestInit) => Promise<Response>;
@@ -72,6 +77,23 @@ export const toolActivity = (parts: ChatUIMessage["parts"]): ToolActivity[] =>
       ? [{ name: getToolName(part), state: STATE_OF[part.state] ?? "running" }]
       : [],
   );
+
+/**
+ * The sentence of a refused skill turn. Only skill refusal codes qualify:
+ * their text is written by TwinLLM itself, never by a provider.
+ */
+export const skillRefusalOf = async (response: Response): Promise<string | null> => {
+  if (response.status !== 400) return null;
+  const body: unknown = await response.json().catch(() => null);
+  return typeof body === "object" &&
+    body !== null &&
+    "code" in body &&
+    isSkillRefusalCode(body.code) &&
+    "error" in body &&
+    typeof body.error === "string"
+    ? body.error
+    : null;
+};
 
 /** The response document carried in a message's metadata, if it is a valid one. */
 export const documentFromMetadata = (metadata: unknown): ResponseDocumentV1 | null => {
@@ -111,7 +133,10 @@ export const streamAnswer = async (
       headers: { "content-type": "application/json" },
       body: JSON.stringify(request),
     });
-    if (!response.ok || !response.body) return FAILED;
+    if (!response.ok || !response.body) {
+      const refusal = await skillRefusalOf(response);
+      return refusal === null ? FAILED : { ...FAILED, refusal };
+    }
 
     // Stream bookkeeping: the reader reports finish and errors through
     // callbacks, so these four are written from them and read once at the end.

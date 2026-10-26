@@ -40,7 +40,12 @@ const refuse = (error: string): TurnCheck => ({ ok: false, error });
  * catalog: what the browser says a model is called is never stored.
  */
 export const checkTurnRequest = (
-  request: Readonly<{ prompt: string; modelIds: readonly string[] }>,
+  request: Readonly<{
+    prompt: string;
+    modelIds: readonly string[];
+    /** A skill turn's title starts with its command, `/sleep last 30 nights`. */
+    skill?: string | null;
+  }>,
   catalog: readonly CatalogModel[] | null,
   provider: string,
 ): TurnCheck => {
@@ -64,7 +69,10 @@ export const checkTurnRequest = (
     ok: true,
     plan: {
       prompt,
-      title: prompt.slice(0, TITLE_LENGTH),
+      title: (request.skill ? `/${request.skill} ${prompt}` : prompt).slice(
+        0,
+        TITLE_LENGTH,
+      ),
       models: models.flatMap((model) =>
         model ? [{ id: model.id, name: model.name }] : [],
       ),

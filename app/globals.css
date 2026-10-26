@@ -326,6 +326,12 @@
     @apply border-input text-muted-foreground rounded-md border px-2 py-1 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-50;
   }
 
+  /* The skill a prompt was sent with, on the prompt bubble: `/sleep`. A label,
+     not a control, so it stays muted. */
+  .skill-chip {
+    @apply border-input text-muted-foreground bg-background inline-flex items-center rounded-full border px-2 py-0.5 font-mono text-xs;
+  }
+
   .chip[aria-pressed="true"] {
     @apply border-primary text-foreground bg-[color-mix(in_oklab,var(--primary)_12%,transparent)];
   }

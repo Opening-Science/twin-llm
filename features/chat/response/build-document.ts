@@ -121,6 +121,8 @@ export const buildResponseDocumentV1 = (input: {
   readonly gbdRows?: readonly GbdRow[];
   readonly guidelineSources?: readonly GuidelineCitation[];
   readonly knowledgeSources?: readonly KnowledgeCitation[];
+  /** The skill the turn ran under (`sleep`), or null. */
+  readonly skill?: string | null;
 }): ResponseDocumentV1 => {
   // Only keys the prompt offered count; an invented key cannot stop abstaining.
   const evidence_keys = [...input.parsed.evidenceKeys];
@@ -184,6 +186,8 @@ export const buildResponseDocumentV1 = (input: {
             narration_is_unverified: true as const,
           }
         : { kind: "none" as const },
+    // Only present on a skill turn, so documents without one are unchanged.
+    ...(input.skill ? { skill: input.skill } : {}),
   };
 
   return responseDocumentV1Schema.parse(document);

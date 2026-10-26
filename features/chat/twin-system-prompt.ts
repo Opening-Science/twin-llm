@@ -5,6 +5,7 @@ import { SHOW_VIEW_TOOL } from "@/infrastructure/chat-view";
 import { formatForPrompt } from "@/infrastructure/format-measure";
 import type { GoogleHealthSummary } from "@/infrastructure/google-health-types";
 import { offeredSummaries } from "@/infrastructure/offered-keys";
+import type { TurnSkill } from "@/infrastructure/skill-gate";
 import type { OuraSummary } from "@/infrastructure/oura-types";
 import type { VitronicSummary } from "@/infrastructure/vitronic-types";
 import type { WhoopSummary } from "@/infrastructure/whoop-types";
@@ -37,6 +38,20 @@ type QueryToolName = (typeof TOOL_DEFINITIONS)[number]["name"];
 /** Typed so a renamed query tool fails typecheck instead of leaving a stale name in the prompt. */
 const queryTool = (name: QueryToolName): string => `\`${name}\``;
 
+/** The cohort fetch tools, in the order the prompt names them. */
+const FETCH_TOOLS: readonly QueryToolName[] = [
+  "latest_by_loinc",
+  "observations_for_subject",
+  "subject_window",
+  "summary_stats",
+];
+
+/** "a, b and c", as the prompt has always written the fetch tools. */
+const andList = (items: readonly string[]): string =>
+  items.length <= 1
+    ? (items[0] ?? "")
+    : `${items.slice(0, -1).join(", ")} and ${items.at(-1) ?? ""}`;
+
 const REFERENCE_TOOL_LINES: readonly Readonly<{ tool: string; text: string }>[] = [
   {
     tool: GBD_MODEL_TOOL,
@@ -67,14 +82,21 @@ const syntheticCohortSection = (
 ): readonly string[] => {
   if (mode !== "synthetic") return [];
   const references = REFERENCE_TOOL_LINES.filter((line) => offered(line.tool));
-  const cohortOn = offered("list_subjects");
+  const fetchTools = FETCH_TOOLS.filter(offered);
+  const cohortOn = offered("list_subjects") || fetchTools.length > 0;
   return [
     "## Data mode: synthetic research cohort",
     "This session reads a synthetic research cohort generated with Synthea. The rows describe no real person.",
     ...(cohortOn
       ? [
-          `- Call ${queryTool("list_subjects")} to get \`subject_ref\` values. Never invent one.`,
-          `- Fetch rows with ${queryTool("latest_by_loinc")}, ${queryTool("observations_for_subject")}, ${queryTool("subject_window")} and ${queryTool("summary_stats")}. Observations use LOINC codes and UCUM units.`,
+          offered("list_subjects")
+            ? `- Call ${queryTool("list_subjects")} to get \`subject_ref\` values. Never invent one.`
+            : "- Use the `subject_ref` the question names. Never invent one.",
+          ...(fetchTools.length > 0
+            ? [
+                `- Fetch rows with ${andList(fetchTools.map(queryTool))}. Observations use LOINC codes and UCUM units.`,
+              ]
+            : []),
         ]
       : [
           "- The cohort record tools are turned off for this user. If a question needs cohort rows, say so under Uncertainty and do not guess values.",
@@ -87,6 +109,22 @@ const syntheticCohortSection = (
     "",
   ];
 };
+
+/**
+ * The skill the person ran, after everything else so its instructions are
+ * the last word on what to do. Its tools are already the only ones offered.
+ */
+const skillSection = (skill: TurnSkill | null): readonly string[] =>
+  skill === null
+    ? []
+    : [
+        "",
+        `## Skill: /${skill.name}`,
+        `The person ran /${skill.name}: ${skill.description}`,
+        "Follow these instructions for this turn. They do not change the headings above.",
+        "",
+        skill.instructions,
+      ];
 
 /** One line on charts, when this request carries `show_view`. */
 const viewSection = (offered: (tool: string) => boolean): readonly string[] =>
@@ -106,6 +144,8 @@ export const buildTwinSystemPrompt = (params: {
   readonly vitronic: VitronicSummary | null;
   /** Tool names this request carries; left out, every tool is assumed. */
   readonly offeredTools?: ReadonlySet<string>;
+  /** The skill this turn runs under, if any. */
+  readonly skill?: TurnSkill | null;
 }): string => {
   const hasAny = Boolean(
     params.oura || params.whoop || params.googleHealth || params.vitronic,
@@ -204,5 +244,6 @@ export const buildTwinSystemPrompt = (params: {
     hasAny
       ? "If a question needs a metric you do not have in Available keys, say so under Uncertainty."
       : "Under Evidence Used write `- none` until a wearable is connected and synced.",
+    ...skillSection(params.skill ?? null),
   ].join("\n");
 };
