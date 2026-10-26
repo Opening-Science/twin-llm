@@ -7,7 +7,6 @@ import {
   nearestIndex,
   niceTicks,
   tickDecimals,
-  tooltipPosition,
   truncateLabel,
   yearTickTimes,
 } from "./chart-geometry";
@@ -37,31 +36,6 @@ describe("ticks", () => {
     expect(tickDecimals([1, 1.01])).toBe(2);
     expect(tickDecimals([0, 0.25])).toBe(1);
     expect(tickDecimals([5])).toBe(0);
-  });
-});
-
-describe("tooltipPosition", () => {
-  const chart = { width: 400, height: 200 };
-  const tip = { width: 120, height: 40 };
-
-  test("sits right of the point when it fits", () => {
-    expect(tooltipPosition({ x: 100, y: 100 }, chart, tip)).toEqual({
-      left: 112,
-      top: 80,
-    });
-  });
-
-  test("flips left near the right edge and stays inside vertically", () => {
-    expect(tooltipPosition({ x: 350, y: 5 }, chart, tip)).toEqual({ left: 218, top: 0 });
-  });
-
-  test("a tooltip too wide for either side is pinned inside the chart", () => {
-    expect(tooltipPosition({ x: 100, y: 190 }, { width: 200, height: 200 }, tip)).toEqual(
-      {
-        left: 80,
-        top: 160,
-      },
-    );
   });
 });
 

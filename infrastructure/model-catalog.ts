@@ -262,3 +262,9 @@ export const formatContextWindow = (tokens: number): string => {
   const scaled = millions ? roundTo(tokens / 1_000_000, 1) : roundTo(tokens / 1_000, 0);
   return `${String(scaled)}${millions ? "M" : "K"}`;
 };
+
+/** A model's window as shown to people: "unknown" when the provider sent none. */
+export const formatModelWindow = (
+  model: Pick<CatalogModel, "contextTokens" | "contextUnknown">,
+): string =>
+  model.contextUnknown ? "unknown" : formatContextWindow(model.contextTokens);

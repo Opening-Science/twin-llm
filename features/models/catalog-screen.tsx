@@ -1,6 +1,10 @@
 import type { LlmProvider } from "@/infrastructure/data-mode";
 import { formatMeasure, formatNumber } from "@/infrastructure/format-measure";
-import { type CatalogModel, formatContextWindow } from "@/infrastructure/model-catalog";
+import {
+  type CatalogModel,
+  formatContextWindow,
+  formatModelWindow,
+} from "@/infrastructure/model-catalog";
 import { buttonClassName } from "@/infrastructure/ui-kit/button";
 
 import { costCopy } from "./cost-copy";
@@ -43,11 +47,28 @@ const intro = (
     .filter((part) => part)
     .join(" ");
 
+/** Cost only where the provider's calls really are priced per model; else unknown. */
+const CostCell = ({ known }: Readonly<{ known: boolean }>) =>
+  known ? (
+    <>{formatMeasure("costUsd", 0)}</>
+  ) : (
+    <>
+      <span aria-hidden="true">—</span>
+      <span className="sr-only">unknown</span>
+    </>
+  );
+
 const ModelRow = ({
   model,
   widest,
   isDefault,
-}: Readonly<{ model: CatalogModel; widest: number; isDefault: boolean }>) => (
+  costKnown,
+}: Readonly<{
+  model: CatalogModel;
+  widest: number;
+  isDefault: boolean;
+  costKnown: boolean;
+}>) => (
   <tr className="border-border border-t first:border-t-0">
     <th scope="row" className="px-4 py-3 text-left font-normal">
       <div className="flex items-center gap-3">
@@ -75,15 +96,15 @@ const ModelRow = ({
       </div>
     </th>
     <td className="hidden px-4 py-3 text-right font-mono text-sm sm:table-cell">
-      {formatMeasure("costUsd", 0)}
+      <CostCell known={costKnown} />
     </td>
     <td className="w-32 px-4 py-3 text-right sm:w-44">
-      <span className="font-mono text-sm font-bold">
-        {formatContextWindow(model.contextTokens)}
-      </span>
-      <span aria-hidden="true" className="measure-bar mt-1.5 block">
-        <span style={{ width: `${(model.contextTokens / widest) * 100}%` }} />
-      </span>
+      <span className="font-mono text-sm font-bold">{formatModelWindow(model)}</span>
+      {!model.contextUnknown && (
+        <span aria-hidden="true" className="measure-bar mt-1.5 block">
+          <span style={{ width: `${(model.contextTokens / widest) * 100}%` }} />
+        </span>
+      )}
     </td>
   </tr>
 );
@@ -97,7 +118,9 @@ export const CatalogScreen = ({
   defaultModelIds: readonly string[];
   provider: LlmProvider;
 }>) => {
-  const widest = Math.max(1, ...(catalog ?? []).map((model) => model.contextTokens));
+  const measured = (catalog ?? []).filter((model) => !model.contextUnknown);
+  const widest = Math.max(1, ...measured.map((model) => model.contextTokens));
+  const costKnown = costCopy(provider)?.perModel === true;
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-10 sm:px-6">
       <h1 className="text-display">Models</h1>
@@ -110,8 +133,8 @@ export const CatalogScreen = ({
           </p>
           <p className="font-mono text-xs">
             {formatNumber(catalog.length, 0)} {catalog.length === 1 ? "model" : "models"}{" "}
-            · {formatContextWindow(widest)} widest window
-            {costCopy(provider)?.perModel ? ` · ${formatMeasure("costUsd", 0)} each` : ""}
+            {measured.length > 0 ? ` · ${formatContextWindow(widest)} widest window` : ""}
+            {costKnown ? ` · ${formatMeasure("costUsd", 0)} each` : ""}
           </p>
           <div className="surface overflow-hidden">
             <table className="w-full table-fixed">
@@ -144,6 +167,7 @@ export const CatalogScreen = ({
                     model={model}
                     widest={widest}
                     isDefault={defaultModelIds.includes(model.id)}
+                    costKnown={costKnown}
                   />
                 ))}
               </tbody>

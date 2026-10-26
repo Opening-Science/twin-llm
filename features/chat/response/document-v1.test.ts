@@ -14,8 +14,8 @@ import {
   type ResponseDocumentV1,
   type ResponseToolCall,
   responseDocumentV1Schema,
+  UNRENDERABLE_NO_INTERPRETER_INPUT,
 } from "./document-v1";
-import { unrenderableInterpretation } from "./interpretation-stub";
 
 const HASH_A = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const HASH_B = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
@@ -281,9 +281,9 @@ describe("ResponseDocument v1 abstain", () => {
   });
 });
 
-describe("interpretation stub", () => {
+describe("unrenderable interpretation", () => {
   test("unrenderable carries no_interpreter_input and the schema accepts it", () => {
-    const stub = unrenderableInterpretation();
+    const stub = UNRENDERABLE_NO_INTERPRETER_INPUT;
     expect(stub).toEqual({
       kind: "unrenderable",
       reason: "no_interpreter_input",

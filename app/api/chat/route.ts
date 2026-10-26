@@ -76,7 +76,7 @@ const startAnswer = createStartAnswer({
 
 export const POST = async (request: Request): Promise<Response> => {
   const actorId = await resolveActorId();
-  if (!actorId) return refuse(401, "Sign in to send a prompt to the arena.");
+  if (!actorId) return refuse(401, "Sign in to send a prompt to TwinLLM.");
 
   const throttled = isAuthDisabled() ? null : await guardChatRequest(request, actorId);
   if (throttled !== null) return throttled;
@@ -94,7 +94,7 @@ export const POST = async (request: Request): Promise<Response> => {
     return refuse(
       400,
       serverEnv().LLM_PROVIDER === "openrouter"
-        ? "That model isn't one of the free models the arena runs."
+        ? "That model isn't one of the free models TwinLLM offers."
         : "That model isn't available for the active LLM provider.",
     );
   }

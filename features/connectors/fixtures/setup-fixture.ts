@@ -1,6 +1,6 @@
 import { parseServerEnv } from "@/infrastructure/env";
 
-import { connectorSetupView, type ConnectorId } from "./connector-setup";
+import { connectorSetupView, type ConnectorId } from "../connector-setup";
 
 /** Test-only: the setup view for an env with no connector configured. */
 export const emptySetup = (id: ConnectorId) =>

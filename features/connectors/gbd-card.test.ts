@@ -3,7 +3,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { GBD_PENDING_NOTE, GbdCard, type GbdStatusPayload } from "./gbd-card";
-import { emptySetup } from "./setup-fixture";
+import { emptySetup } from "./fixtures/setup-fixture";
 
 const html = (preview: GbdStatusPayload | "failed") =>
   renderToStaticMarkup(createElement(GbdCard, { preview, setup: emptySetup("gbd") }));

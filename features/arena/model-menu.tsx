@@ -1,7 +1,7 @@
 "use client";
 
 import { MAX_SELECTED_MODELS, type CatalogModel } from "@/infrastructure/model-catalog";
-import { formatContextWindow } from "@/infrastructure/model-catalog";
+import { formatModelWindow } from "@/infrastructure/model-catalog";
 import { buttonClassName } from "@/infrastructure/ui-kit/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/infrastructure/ui-kit/popover";
 
@@ -80,9 +80,7 @@ export const ModelMenu = ({
                         {model.provider}
                       </span>
                     </span>
-                    <span className="metric">
-                      {formatContextWindow(model.contextTokens)}
-                    </span>
+                    <span className="metric">{formatModelWindow(model)}</span>
                   </label>
                 </li>
               );

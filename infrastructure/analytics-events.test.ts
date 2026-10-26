@@ -4,7 +4,6 @@ import {
   type FunnelEvent,
   trackModelAnswered,
   trackPromptSent,
-  trackVoteCast,
 } from "./analytics-events";
 
 const collect = () => {
@@ -33,20 +32,18 @@ describe("funnel events", () => {
     ]);
   });
 
-  test("model_answered and vote_cast", () => {
+  test("model_answered", () => {
     const { events, sink } = collect();
     trackModelAnswered(
       { clerkId: "u1", turnId: "t1", modelId: "a", status: "FAILED" },
       sink,
     );
-    trackVoteCast({ clerkId: "u1", turnId: "t1", modelResponseId: "r1" }, sink);
-    expect(events.map((event) => event.event)).toEqual(["model_answered", "vote_cast"]);
+    expect(events.map((event) => event.event)).toEqual(["model_answered"]);
     expect(events[0]?.properties).toEqual({
       turnId: "t1",
       modelId: "a",
       status: "FAILED",
     });
-    expect(events[1]?.properties).toEqual({ turnId: "t1", modelResponseId: "r1" });
   });
 
   test("no sink means nothing is sent and nothing throws", () => {

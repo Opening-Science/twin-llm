@@ -3,12 +3,12 @@ import "server-only";
 import { Prisma } from "@/generated/prisma/client";
 import { resolveActorId } from "@/infrastructure/auth-actor";
 import { database } from "@/infrastructure/database";
+import { utcDay } from "@/infrastructure/day-key";
 import { serverEnv } from "@/infrastructure/env";
 import { append } from "@/packages/audit/append";
 import { toNumber } from "@/packages/query-tools/ports";
 import { SYNTHETIC_COHORTS } from "@/packages/query-tools/scope";
 
-import { utcDay } from "./cohort-stats";
 import { type ExplorerDeps } from "./explorer-reads";
 
 /**

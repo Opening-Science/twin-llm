@@ -43,15 +43,15 @@ export const ORDER_COPY: Readonly<
 > = {
   window: {
     lead: "Every model the active provider can reach, largest context window first.",
-    caption: "Models available in the arena, sorted by context window, largest first.",
+    caption: "Models available in TwinLLM, sorted by context window, largest first.",
   },
   mixed: {
     lead: "Every model the active provider can reach, largest reported context window first, then those that report none.",
     caption:
-      "Models available in the arena, sorted by reported context window, largest first, then those that report none in the provider's order.",
+      "Models available in TwinLLM, sorted by reported context window, largest first, then those that report none in the provider's order.",
   },
   server: {
     lead: "Every model the active provider can reach, in the order it lists them.",
-    caption: "Models available in the arena, in the order the provider lists them.",
+    caption: "Models available in TwinLLM, in the order the provider lists them.",
   },
 };

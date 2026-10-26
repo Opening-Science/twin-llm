@@ -33,6 +33,26 @@ jobs:
           LLM_PROVIDER: ollama
           DATA_MODE: synthetic
 
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.4.2
+      - run: bun run sync:open-twin
+      - run: bun install --frozen-lockfile
+      # Placeholder values, not secrets: the build reads no config at module top level.
+      - run: bun run build
+        env:
+          LOCAL_MVP: "true"
+          AUTH_DISABLED: "true"
+          DATABASE_URL: postgresql://user:pass@localhost:5432/twin_llm
+          LLM_PROVIDER: ollama
+          DATA_MODE: synthetic
+
   lint:
     runs-on: ubuntu-latest
     steps:
