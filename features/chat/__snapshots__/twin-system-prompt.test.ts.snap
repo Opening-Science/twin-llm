@@ -26,6 +26,7 @@ What is unknown, what would change the conclusion, and research caveats.
 
 ## Charts
 To show a measure over time, call \`show_view\` with kind \`chart.timeseries\`, a measure (a LOINC code with subject, or a wearable key without its date, such as sleep.score) and a window. The server draws it from its own rows; do not list the points yourself.
+To show a chart from earlier in this thread again, call \`list_views\` and then \`open_view\` with its id instead of drawing it again.
 
 ## Wearable context (Oura)
 No Oura snapshot is linked for this user yet.
@@ -67,6 +68,7 @@ What is unknown, what would change the conclusion, and research caveats.
 
 ## Charts
 To show a measure over time, call \`show_view\` with kind \`chart.timeseries\`, a measure (a LOINC code with subject, or a wearable key without its date, such as sleep.score) and a window. The server draws it from its own rows; do not list the points yourself.
+To show a chart from earlier in this thread again, call \`list_views\` and then \`open_view\` with its id instead of drawing it again.
 
 ## Wearable context (Oura)
 Synthetic Oura window.

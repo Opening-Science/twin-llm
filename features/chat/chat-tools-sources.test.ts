@@ -78,9 +78,9 @@ const sentTo = async (
 };
 
 describe("chat tools and knowledge sources", () => {
-  test("every chat tool but show_view is owned by exactly one source", () => {
+  test("every chat tool but the view tools is owned by exactly one source", () => {
     const owned = ALL_KNOWLEDGE_SOURCES.flatMap((source) => source.tools);
-    expect([...owned, "show_view"].sort()).toEqual(
+    expect([...owned, "show_view", "list_views", "open_view"].sort()).toEqual(
       Object.keys(createChatTools(SCOPE, { query: ports })).sort(),
     );
     expect(new Set(owned).size).toBe(owned.length);
@@ -123,6 +123,8 @@ describe("chat tools and knowledge sources", () => {
       "gbd_population",
       "guideline_search",
       "knowledge_search",
+      "list_views",
+      "open_view",
       "show_view",
     ]);
   });

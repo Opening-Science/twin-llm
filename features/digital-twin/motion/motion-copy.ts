@@ -9,15 +9,25 @@ import { type MotionClip } from "./gait";
  */
 export const MOTION_LABEL: Readonly<Record<MotionClip, string>> = {
   walk: "Walk",
+  run: "Run",
   idle: "Idle",
-  dance: "Dance",
+  dance: "Dance loop",
+  video: "Dance (video)",
 };
 
 export const MOTION_LINE: Readonly<Record<MotionClip, string>> = {
   walk: "A generic walk cycle, computed from typical joint angles, not this person's gait. Walking in place.",
+  run: "A generic easy run, computed from typical joint angles, not this person's running. Running in place.",
   idle: "A generic standing breath and sway, not this person's breathing.",
   dance: "A computed dance loop, not motion capture and not this person's movement.",
+  video:
+    "A dance traced from a video by pose estimation on this machine, approximate and not this person's movement. Dancing in place.",
 };
+
+export const MOTION_CLIP_NOT_INSTALLED_API =
+  "Motion clip not installed. Make one with python/motion/video_to_clip.py.";
+export const MOTION_CLIP_UNREADABLE_API =
+  "The motion clip on this machine could not be read. Make it again with python/motion/video_to_clip.py.";
 
 export const TEMPO_LABEL = "Tempo";
 export const tempoOption = (bpm: number): string => `${formatNumber(bpm, 0)} BPM`;

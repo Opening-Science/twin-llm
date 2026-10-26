@@ -1,7 +1,11 @@
 import "server-only";
 
 import type { DataMode } from "@/infrastructure/data-mode-policy";
-import { SHOW_VIEW_TOOL } from "@/infrastructure/chat-view";
+import {
+  LIST_VIEWS_TOOL,
+  OPEN_VIEW_TOOL,
+  SHOW_VIEW_TOOL,
+} from "@/infrastructure/chat-view";
 import { formatForPrompt } from "@/infrastructure/format-measure";
 import type { GoogleHealthSummary } from "@/infrastructure/google-health-types";
 import { offeredSummaries } from "@/infrastructure/offered-keys";
@@ -132,6 +136,11 @@ const viewSection = (offered: (tool: string) => boolean): readonly string[] =>
     ? [
         "## Charts",
         `To show a measure over time, call \`${SHOW_VIEW_TOOL}\` with kind \`chart.timeseries\`, a measure (a LOINC code with subject, or a wearable key without its date, such as sleep.score) and a window. The server draws it from its own rows; do not list the points yourself.`,
+        ...(offered(OPEN_VIEW_TOOL)
+          ? [
+              `To show a chart from earlier in this thread again, call \`${LIST_VIEWS_TOOL}\` and then \`${OPEN_VIEW_TOOL}\` with its id instead of drawing it again.`,
+            ]
+          : []),
         "",
       ]
     : [];

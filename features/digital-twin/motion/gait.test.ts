@@ -10,6 +10,11 @@ import {
   idlePose,
   JOINT_IDS,
   limbAngles,
+  RUN_FLIGHT_LIFT,
+  RUN_FOOT_PITCH_FLOOR,
+  runLift,
+  runLimbAngles,
+  runPose,
   shapeAnkle,
   stepWeight,
   walkPose,
@@ -138,6 +143,73 @@ describe("walkPose", () => {
     const slow = walkPose(0.5, { cadence: 60, stride: 1.3 });
     const fast = walkPose(0.25, { cadence: 120, stride: 1.3 });
     expect(round(fast.joints.upperLegL.pitch)).toBe(round(slow.joints.upperLegL.pitch));
+  });
+});
+
+describe("runPose", () => {
+  test("170 steps a minute: a stride cycle every 0.705882 s", () => {
+    expect(round(gaitPeriod(170))).toBe(0.705882);
+  });
+
+  test("hip from 12° extension at 0.4 to 44° flexion late in swing; knee 40° loading, 100° in swing", () => {
+    expect(round(runLimbAngles(0.4).hip)).toBe(-12);
+    expect(round(runLimbAngles(0.9).hip)).toBe(44);
+    expect(round(runLimbAngles(0).hip, 3)).toBe(38.652);
+    expect(runLimbAngles(0.15).knee).toBe(40);
+    expect(runLimbAngles(0.68).knee).toBe(100);
+    expect(round(runLimbAngles(0).knee, 2)).toBe(15.84);
+  });
+
+  test("more knee and arm bend than the walk", () => {
+    const most = (f: (phase: number) => number) =>
+      Math.max(...Array.from({ length: 200 }, (_, i) => f(i / 200)));
+    expect(most((p) => runLimbAngles(p).knee)).toBeGreaterThan(
+      most((p) => limbAngles(p).knee) + 40,
+    );
+    expect(round(runLimbAngles(0.4).elbow)).toBe(105);
+    expect(round(runLimbAngles(0.9).elbow)).toBe(85);
+    expect(round(runLimbAngles(0.4).shoulder)).toBe(30);
+  });
+
+  test("up to toe off the sole points at most 50° down; the ankle pushes off about 20°", () => {
+    const sole = (phase: number) => {
+      const { hip, knee, ankle } = runLimbAngles(phase);
+      return hip - knee + ankle;
+    };
+    const lowest = (from: number, to: number) =>
+      Math.min(
+        ...Array.from({ length: 501 }, (_, i) => sole(from + ((to - from) * i) / 500)),
+      );
+    expect(round(lowest(0, 0.5), 1)).toBe(RUN_FOOT_PITCH_FLOOR);
+    // In mid swing, foot off the ground behind, the ankle's range runs out.
+    expect(round(lowest(0.5, 1), 1)).toBe(-62.1);
+    expect(round(runLimbAngles(0.42).ankle, 1)).toBe(-19.5);
+  });
+
+  test("a flight phase after each toe off: the body lifts 5 cm half way, and never in stance", () => {
+    expect(round(runLift(0.44))).toBe(RUN_FLIGHT_LIFT);
+    expect(round(runLift(0.94))).toBe(RUN_FLIGHT_LIFT);
+    for (const phase of [0, 0.1, 0.2, 0.3, 0.38, 0.5, 0.6, 0.7, 0.8, 0.88]) {
+      expect(runLift(phase)).toBe(0);
+    }
+    expect(runPose(0.44 * gaitPeriod(170)).pelvisLift).toBe(runLift(0.44));
+  });
+
+  test("leans about 9° forward and the sides swap half a cycle later", () => {
+    const pose = runPose(0.1);
+    expect(
+      degrees(pose.joints.spineLower.pitch) + degrees(pose.joints.spineUpper.pitch),
+    ).toBe(-9);
+    const later = runPose(0.1 + gaitPeriod(170) / 2);
+    expect(round(later.joints.upperLegL.pitch)).toBe(round(pose.joints.upperLegR.pitch));
+    expect(round(later.joints.lowerArmR.pitch)).toBe(round(pose.joints.lowerArmL.pitch));
+  });
+
+  test("blending scales the lift too", () => {
+    const pose = runPose(0.44 * gaitPeriod(170));
+    expect(round(weighPose(pose, 0.5).pelvisLift ?? NaN)).toBe(
+      round(RUN_FLIGHT_LIFT / 2),
+    );
   });
 });
 

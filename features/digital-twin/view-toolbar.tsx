@@ -5,13 +5,12 @@ import { Button } from "@/infrastructure/ui-kit/button";
 import { ENTER_ENVIRONMENT, EXIT_ENVIRONMENT } from "./environment/environment-copy";
 import { LIVE_TOGGLE } from "./live/live-copy";
 import { DANCE_TEMPOS } from "./motion/dance";
-import { type MotionClip } from "./motion/gait";
 import { MOTION_LABEL, TEMPO_LABEL, tempoOption } from "./motion/motion-copy";
 import { type MotionControl } from "./motion/use-body-motion";
 
 /**
  * The 3D view controls, directly above the canvas, in three groups: View
- * (Reset, Pause, zoom), Show (Landmarks, Live vitals, Walk, Idle, Dance) and Enter/Exit. A row
+ * (Reset, Pause, zoom), Show (Landmarks, Live vitals, the motion clips) and Enter/Exit. A row
  * that runs out of room wraps between groups, never inside one.
  *
  * It renders only with a canvas: Reset or Pause with no view to act on did
@@ -19,14 +18,13 @@ import { type MotionControl } from "./motion/use-body-motion";
  * `aria-pressed`; Landmarks keeps one label and reports its state with
  * `aria-pressed` instead. Zoom is two glyphs with spoken names. Enter/Exit
  * environment names its action like Pause does, and stays in the row inside
- * the environment as the exit. Walk, Idle and Dance are one choice of at most
- * one clip; pressing the playing one stops it. While the dance plays a small
+ * the environment as the exit. Walk, Run, Idle, Dance loop and, when a clip
+ * made from a video is installed, Dance (video) are one choice of at most one
+ * clip; pressing the playing one stops it. While the dance loop plays a small
  * Tempo select follows it. Without a rig or with reduced motion the clips
  * stay in place, disabled, and the reason is the button title and a line
  * beside the view.
  */
-
-const MOTION_CLIPS: readonly MotionClip[] = ["walk", "idle", "dance"];
 
 /** The same pressed look as `.chip[aria-pressed="true"]` in the anatomy controls. */
 const PRESSED =
@@ -101,7 +99,7 @@ export const ViewToolbar = ({
           </Button>
         ) : null}
         {motion
-          ? MOTION_CLIPS.map((clip) => (
+          ? motion.clips.map((clip) => (
               <Button
                 key={clip}
                 size="sm"

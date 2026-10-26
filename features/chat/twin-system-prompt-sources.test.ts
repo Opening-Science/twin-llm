@@ -60,6 +60,8 @@ describe("system prompt with sources turned off", () => {
       "guideline_search",
       "knowledge_search",
       "show_view",
+      "list_views",
+      "open_view",
     ]);
     expect(
       buildTwinSystemPrompt({ ...noWearables, mode: "synthetic", offeredTools: all }),
@@ -71,8 +73,20 @@ describe("system prompt with sources turned off", () => {
       buildTwinSystemPrompt({
         ...noWearables,
         mode: "personal",
-        offeredTools: new Set(["show_view"]),
+        offeredTools: new Set(["show_view", "list_views", "open_view"]),
       }),
     ).toBe(buildTwinSystemPrompt({ ...noWearables, mode: "personal" }));
+  });
+
+  test("the reopen line is there only when open_view is offered", () => {
+    const line = "call `list_views` and then `open_view` with its id";
+    const prompt = (tools: readonly string[]) =>
+      buildTwinSystemPrompt({
+        ...noWearables,
+        mode: "personal",
+        offeredTools: new Set(tools),
+      });
+    expect(prompt(["show_view", "list_views", "open_view"])).toContain(line);
+    expect(prompt(["show_view"])).not.toContain(line);
   });
 });
