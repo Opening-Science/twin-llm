@@ -23,7 +23,7 @@ export type AnswerStatus = "STREAMING" | "COMPLETE" | "FAILED";
 /** The `model_responses` row an answer lives in, and the model writing it. */
 export type AnswerSource = Readonly<{ id: string; modelId: string; modelName: string }>;
 
-/** What arrives while the answer streams. `tools` exists only during streaming. */
+/** What arrives while the answer streams. A saved answer carries `tools` from its stored tool parts. */
 export type AnswerProgress = Readonly<{
   status: AnswerStatus;
   text: string;

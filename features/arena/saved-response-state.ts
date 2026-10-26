@@ -1,7 +1,9 @@
 import type { EvidenceAttribution } from "@/infrastructure/oura-types";
 import { toResponseDocument } from "@/infrastructure/response-document/parse";
 
+import { toolActivity } from "./answer-stream";
 import type { ResponseState } from "./conversation";
+import { savedToolParts } from "./saved-tool-parts";
 
 /** Prisma `Decimal` or a plain number; both convert with `Number()`. */
 type NumericLike = number | Readonly<{ toString: () => string }>;
@@ -15,6 +17,7 @@ export type SavedResponseRow = Readonly<{
   reasoningText: string | null;
   attribution: unknown;
   responseDocument: unknown;
+  toolParts: unknown;
   timeToFirstTokenMs: number | null;
   tokensPerSecond: NumericLike | null;
   inputTokens: number | null;
@@ -30,6 +33,9 @@ export type SavedResponseRow = Readonly<{
  * An answer the document withholds (abstained or declined) leaves the server
  * without its text or reasoning: the column only ever shows the banner for it,
  * so the words have no reason to reach the browser.
+ *
+ * The stored tool parts are replayed as the stream's tool parts and reduced to
+ * name and state the same way, so inputs and outputs stay on the server.
  */
 export const toSavedResponseState = (row: SavedResponseRow): ResponseState => {
   const document = toResponseDocument(row.responseDocument);
@@ -45,6 +51,7 @@ export const toSavedResponseState = (row: SavedResponseRow): ResponseState => {
     reasoningText: withheld ? null : row.reasoningText,
     attribution: (row.attribution as EvidenceAttribution[] | null) ?? null,
     document,
+    tools: toolActivity(savedToolParts(row.toolParts)),
     metrics:
       row.status === "COMPLETE"
         ? {

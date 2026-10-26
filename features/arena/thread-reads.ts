@@ -29,6 +29,7 @@ const findThread = (threadId: string): Promise<StoredThread | null> =>
               reasoningText: true,
               attribution: true,
               responseDocument: true,
+              toolParts: true,
               timeToFirstTokenMs: true,
               tokensPerSecond: true,
               inputTokens: true,
