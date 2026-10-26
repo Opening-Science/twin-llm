@@ -21,6 +21,7 @@ const ports: QueryToolPorts = {
 };
 
 const SCOPE = { actor: "test", sessionId: "turn-src", mode: "synthetic" } as const;
+const PERSONAL = { actor: "test", sessionId: "turn-src", mode: "personal" } as const;
 const NO_WEARABLES = { oura: null, whoop: null, googleHealth: null, vitronic: null };
 
 const usage = {
@@ -42,10 +43,13 @@ const answer = () => ({
   }),
 });
 
-const sentTo = async (disabled: Parameters<typeof forSources>[1]) => {
+const sentTo = async (
+  disabled: Parameters<typeof forSources>[1],
+  hasWearableNarrative = false,
+) => {
   const model = new MockLanguageModelV4({ doStream: async () => answer() });
   const { tools, offeredTools } = forSources(
-    createChatTools(SCOPE, { query: ports }),
+    createChatTools(SCOPE, { query: ports, hasWearableNarrative }),
     disabled,
   );
   await new Promise<void>((resolve, reject) => {
@@ -91,6 +95,26 @@ describe("chat tools and knowledge sources", () => {
     );
     expect(all.system).toContain("`guideline_search` gives guideline passages");
     expect(withoutGuidelines.system).not.toContain("guideline_search");
+  });
+
+  test("a personal request never gets the remote GBD server's tool", () => {
+    const names = (scope: typeof SCOPE | typeof PERSONAL, wearables: boolean) =>
+      Object.keys(
+        createChatTools(scope, { query: ports, hasWearableNarrative: wearables }),
+      ).sort();
+    expect(names(SCOPE, false)).toContain("gbd_population");
+    expect(names(SCOPE, true)).not.toContain("gbd_population");
+    expect(names(PERSONAL, false)).not.toContain("gbd_population");
+    expect(names(SCOPE, true)).toEqual(
+      names(SCOPE, false).filter((name) => name !== "gbd_population"),
+    );
+  });
+
+  test("the prompt does not name a withheld tool", async () => {
+    const { tools, system } = await sentTo([], true);
+    expect(tools).not.toContain("gbd_population");
+    expect(system).not.toContain("gbd_population");
+    expect(system).toContain("`guideline_search` gives guideline passages");
   });
 
   test("turning cohort records off also removes the analytics tools", async () => {

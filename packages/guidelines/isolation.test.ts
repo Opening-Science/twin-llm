@@ -35,7 +35,7 @@ describe("guideline tool isolation", () => {
   });
 
   test("stream-model-response merges guideline tools without wearable summaries", () => {
-    expect(streamSource).toContain("createChatTools({");
+    expect(streamSource).toMatch(/createChatTools\(\s*\{/);
     expect(streamSource).not.toMatch(
       /createChatTools\([^)]*(oura|whoop|googleHealth|vitronic)/i,
     );

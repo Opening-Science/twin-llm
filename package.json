@@ -23,7 +23,7 @@
     "lint:claims": "bun scripts/lint-claims.ts",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
-    "test": "bun test infrastructure features features/chat/response tests/guardrails tests/guidelines tests/knowledge scripts/lint-claims.test.ts packages/warehouse packages/query-tools packages/audit packages/ark-adapter packages/gbd-mcp packages/guidelines packages/knowledge packages/vitronic scripts/vitronic packages/anatomy packages/biomarkers scripts/anatomy scripts/fonts scripts/warehouse scripts/evaluation scripts/synthea scripts/synthetic-wearables scripts/training-data evaluation",
+    "test": "bun test infrastructure features features/chat/response tests/guardrails tests/guidelines tests/knowledge scripts/lint-claims.test.ts packages/warehouse packages/query-tools packages/audit packages/ark-adapter packages/gbd-mcp packages/mcp-client packages/guidelines packages/knowledge packages/vitronic scripts/vitronic packages/anatomy packages/biomarkers scripts/anatomy scripts/fonts scripts/warehouse scripts/evaluation scripts/synthea scripts/synthetic-wearables scripts/training-data evaluation",
     "test:isolation": "bun test features/wearables features/vitronic features/oura features/whoop/oauth-route.test.ts features/google-health/oauth-route.test.ts",
     "postinstall": "prisma generate && bash scripts/flatten-open-twin.sh",
     "prepare": "husky",
