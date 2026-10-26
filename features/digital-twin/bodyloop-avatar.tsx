@@ -74,6 +74,7 @@ import {
 import { PickCard, ProjectAnchor } from "./environment/pick-card";
 import { IDLE_STATUS, type LiveStatus } from "./live/live-conditioning";
 import { LiveLines } from "./live/live-lines";
+import { NightPlayback, useNightPlayback } from "./live/night-playback";
 import {
   linkedRows,
   pickHighlight,
@@ -990,20 +991,26 @@ export const BodyLoopAvatar = ({
     setPicked(null);
     viewRef.current?.focus();
   }, []);
-  const { live: liveVitals } = biomarkers;
+  const { live: measuredVitals } = biomarkers;
+  // Night playback replaces the newest readings while it is open, inline only.
+  const night = useNightPlayback(biomarkerSubject, reducedMotion);
+  const playing = night.open && !environment.active;
+  const liveVitals = playing ? night.vitals : measuredVitals;
   const liveAvailable =
     !reducedMotion &&
-    (liveVitals.heart !== null ||
-      liveVitals.breath !== null ||
-      liveVitals.hrvBelow !== null);
-  const liveOn = liveAvailable && (environment.active ? liveInEnvironment : liveInline);
+    (measuredVitals.heart !== null ||
+      measuredVitals.breath !== null ||
+      measuredVitals.hrvBelow !== null);
+  const liveOn =
+    !reducedMotion &&
+    (playing || (liveAvailable && (environment.active ? liveInEnvironment : liveInline)));
   // Primitives only, so the page hears about a change once, not on every render.
   const contextScans = listedScans.length;
   const contextValues = biomarkers.rows.filter((row) => row.value !== null).length;
   const contextLive =
-    liveVitals.heart !== null ||
-    liveVitals.breath !== null ||
-    liveVitals.hrvBelow !== null;
+    measuredVitals.heart !== null ||
+    measuredVitals.breath !== null ||
+    measuredVitals.hrvBelow !== null;
   const contextStatus = biomarkers.status;
   useEffect(() => {
     if (!subjectsReady || !onContext) return;
@@ -1294,11 +1301,14 @@ export const BodyLoopAvatar = ({
             vitals={liveVitals}
             scheme={scheme}
             context={{
-              on: environment.active ? liveInEnvironment : liveInline,
+              on: playing || (environment.active ? liveInEnvironment : liveInline),
               inEnvironment: environment.active,
               reducedMotion,
             }}
           />
+          {environment.active ? null : (
+            <NightPlayback state={night} reducedMotion={reducedMotion} />
+          )}
           {environment.active && picked ? (
             <PickCard
               picked={picked}

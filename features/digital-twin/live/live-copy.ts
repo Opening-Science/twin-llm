@@ -2,6 +2,7 @@ import { formatDate, formatMeasure, formatNumber } from "@/infrastructure/format
 import { type AtlasScheme } from "@/packages/anatomy/manifest";
 
 import { type HrvBelowUsual, type LiveRate } from "./live-rates";
+import { type NightEpoch, type SleepStage } from "./night-series";
 
 /**
  * Copy for the live twin, in one place so `lint:claims` sees it. Factual:
@@ -59,3 +60,34 @@ export const hrvLine = (hrv: HrvBelowUsual, scheme: AtlasScheme, today: string):
   `Soft glow on the ${scheme === "hra" ? "brain" : "nervous system"}: HRV below this person's usual level · ` +
   `${formatMeasure("hrv", hrv.latest)}, ${lastReading(hrv.day, today)} · ` +
   `usual level ${formatMeasure("hrv", hrv.median)}, median of the previous 28 days · ${hrv.source}`;
+
+/** Night playback: a synthetic night replayed on the twin, said as such every time. */
+export const NIGHT_TOGGLE = "Night playback";
+export const NIGHT_ABOUT =
+  "A synthetic night made up by a seeded generator, not a recording of anyone: heart rate, breathing rate and sleep stage every five minutes drive the twin. A visual cue, not a physiological model.";
+export const NIGHT_GAP =
+  "No reading at this time, so the twin stands still. Nothing is filled in.";
+export const NIGHT_REDUCED_MOTION =
+  "Reduced motion is on: the twin stays still and playback is off. Scrub to step through the night.";
+
+const STAGE_NAME: Readonly<Record<SleepStage, string>> = {
+  awake: "Awake",
+  light: "Light sleep",
+  deep: "Deep sleep",
+  rem: "REM sleep",
+};
+
+/** "02:35 · Deep sleep · heart rate 54 bpm · breathing 12.8 per minute", or the gap. */
+export const nightReadout = (clock: string, epoch: NightEpoch | null): string =>
+  epoch === null || epoch.heart === null
+    ? `${clock} · no reading`
+    : [
+        clock,
+        epoch.stage ? STAGE_NAME[epoch.stage] : null,
+        `heart rate ${formatMeasure("heartRate", epoch.heart)}`,
+        epoch.breath === null
+          ? null
+          : `breathing ${formatNumber(epoch.breath, 1)} per minute`,
+      ]
+        .filter((part): part is string => part !== null)
+        .join(" · ");
