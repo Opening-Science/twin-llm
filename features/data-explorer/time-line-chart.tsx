@@ -6,11 +6,13 @@ import { formatDate, formatNumber } from "@/infrastructure/format-measure";
 
 import { ChartTooltip, TooltipBody, useMeasuredWidth } from "./chart-frame";
 import {
+  dateAxisTicks,
   extent,
   labelIndexes,
   nearestIndex,
   niceTicks,
   tickDecimals,
+  timeScale,
   yearTickTimes,
 } from "./chart-geometry";
 
@@ -70,14 +72,20 @@ export const TimeLineChart = ({
   cursorIndex = null,
   onSeek,
   breakOverMs = Infinity,
+  domain,
 }: {
   readonly points: readonly TimePoint[];
   readonly unit: string;
   readonly decimals: number;
   readonly label: string;
   readonly height?: number;
-  /** Years for a life; hours (UTC wall clock) for one night. */
-  readonly timeAxis?: "years" | "hours";
+  /**
+   * Years for a life; hours (UTC wall clock) for one night; dates for any
+   * window, labelled with the year once it spans most of one.
+   */
+  readonly timeAxis?: "years" | "hours" | "dates";
+  /** The x range in ms; defaults to the first and last reading. */
+  readonly domain?: readonly [number, number];
   /** A reading held under the crosshair while the pointer is elsewhere. */
   readonly cursorIndex?: number | null;
   /** Pressing or dragging on the chart asks for the nearest reading. */
@@ -94,24 +102,31 @@ export const TimeLineChart = ({
   const ticks = niceTicks(minValue, maxValue);
   const low = ticks[0]!;
   const high = ticks[ticks.length - 1]!;
-  const [start, end] = extent(times);
+  const [start, end] = domain ?? extent(times);
   const plotW = width - PAD.left - PAD.right;
   const plotH = height - PAD.top - PAD.bottom;
-  const xOf = (time: number) =>
-    end === start
-      ? PAD.left + plotW / 2
-      : PAD.left + ((time - start) / (end - start)) * plotW;
+  const xOf = timeScale(start, end, PAD.left, plotW);
   const yOf = (value: number) => PAD.top + plotH * (1 - (value - low) / (high - low));
   const xs = times.map(xOf);
   const path = linePath(xs, values.map(yOf), times, breakOverMs);
   const tickText = tickDecimals(ticks);
+  const dateTicks = timeAxis === "dates" ? dateAxisTicks(start, end) : [];
   const xTicks =
-    timeAxis === "hours" ? hourTickTimes(start, end) : yearTickTimes(start, end);
-  const shownYears = labelIndexes(xTicks.length, Math.floor(plotW / 48)).map(
+    timeAxis === "dates"
+      ? dateTicks.map((tick) => tick.time)
+      : timeAxis === "hours"
+        ? hourTickTimes(start, end)
+        : yearTickTimes(start, end);
+  const labelWidth = timeAxis === "dates" ? 72 : 48;
+  const shownYears = labelIndexes(xTicks.length, Math.floor(plotW / labelWidth)).map(
     (i) => xTicks[i]!,
   );
   const xTickText = (time: number): string =>
-    timeAxis === "hours" ? clockOf(time) : String(new Date(time).getUTCFullYear());
+    timeAxis === "dates"
+      ? (dateTicks.find((tick) => tick.time === time)?.label ?? "")
+      : timeAxis === "hours"
+        ? clockOf(time)
+        : String(new Date(time).getUTCFullYear());
   const shownIndex = hover ?? cursorIndex;
   const hovered = shownIndex === null ? null : (points[shownIndex] ?? null);
   const seekAt = (event: ReactPointerEvent<SVGSVGElement>) => {

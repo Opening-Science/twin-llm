@@ -2,11 +2,13 @@ import { describe, expect, test } from "bun:test";
 
 import {
   countTicks,
+  dateAxisTicks,
   extent,
   labelIndexes,
   nearestIndex,
   niceTicks,
   tickDecimals,
+  timeScale,
   truncateLabel,
   yearTickTimes,
 } from "./chart-geometry";
@@ -86,5 +88,65 @@ describe("extent", () => {
     expect(extent([3, -1, 7])).toEqual([-1, 7]);
     expect(extent(Array.from({ length: 300_000 }, (_, i) => i))).toEqual([0, 299_999]);
     expect(extent([])).toEqual([Infinity, -Infinity]);
+  });
+});
+
+describe("dateAxisTicks", () => {
+  const at = (iso: string) => Date.parse(iso);
+  const labels = (start: string, end: string) =>
+    dateAxisTicks(at(start), at(end)).map((tick) => tick.label);
+
+  test("a ten-year window is labelled by year, each tick on 1 January", () => {
+    const ticks = dateAxisTicks(at("2016-01-01T00:00:00Z"), at("2026-10-31T23:59:59Z"));
+    expect(ticks.map((tick) => tick.label)).toEqual([
+      "2016",
+      "2017",
+      "2018",
+      "2019",
+      "2020",
+      "2021",
+      "2022",
+      "2023",
+      "2024",
+      "2025",
+      "2026",
+    ]);
+    expect(new Date(ticks[2]!.time).toISOString()).toBe("2018-01-01T00:00:00.000Z");
+  });
+
+  test("a window of about a year names month and year", () => {
+    expect(labels("2021-01-15T00:00:00Z", "2022-01-14T00:00:00Z")).toEqual([
+      "Apr 2021",
+      "Jul 2021",
+      "Oct 2021",
+      "Jan 2022",
+    ]);
+  });
+
+  test("a month names day and month", () => {
+    expect(labels("2026-10-01T00:00:00Z", "2026-10-31T23:59:59Z")).toEqual([
+      "1 Oct",
+      "7 Oct",
+      "13 Oct",
+      "19 Oct",
+      "25 Oct",
+      "31 Oct",
+    ]);
+  });
+});
+
+describe("timeScale", () => {
+  test("x is proportional to time, not to the reading's index", () => {
+    const start = Date.parse("2016-01-01T00:00:00Z");
+    const end = Date.parse("2026-01-01T00:00:00Z");
+    const x = timeScale(start, end, 50, 1000);
+    const times = ["2016-01-01", "2016-01-02", "2021-01-01", "2026-01-01"].map((day) =>
+      Date.parse(`${day}T00:00:00Z`),
+    );
+    expect(times.map((time) => Math.round(x(time)))).toEqual([50, 50, 550, 1050]);
+  });
+
+  test("a single instant sits in the middle", () => {
+    expect(timeScale(5, 5, 10, 100)(5)).toBe(60);
   });
 });
