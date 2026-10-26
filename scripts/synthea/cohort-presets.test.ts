@@ -10,9 +10,13 @@ import {
   type CohortPresetName,
   EVALUATION_COHORT_IDS,
   SYNTHEA_1M_BATCH_COHORTS,
+  SYNTHEA_RUN,
 } from "./cohort-presets";
 
 const SCRIPT = join(import.meta.dir, "generate-local.sh");
+
+/** The dates every run passes to Synthea unless SYNTHEA_*_DATE says otherwise. */
+const DATES = "reference=20260101 end=20260101";
 
 /** The script's resolved settings, without Java or a download. */
 const dryRun = (args: readonly string[], env: Record<string, string> = {}) => {
@@ -31,7 +35,7 @@ const dryRun = (args: readonly string[], env: Record<string, string> = {}) => {
 describe("generate-local.sh presets", () => {
   test("defaults are unchanged: N=10, seed 42, .synthea", () => {
     expect(dryRun([]).out).toBe(
-      "preset=none cohort=synthea-v4-seed42 population=10 seed=42 clinicianSeed=43 age=any out=.synthea",
+      `preset=none cohort=synthea-v4-seed42 population=10 seed=42 clinicianSeed=43 age=any ${DATES} out=.synthea`,
     );
   });
 
@@ -40,29 +44,29 @@ describe("generate-local.sh presets", () => {
     (name) => {
       const preset = COHORT_PRESETS[name];
       expect(dryRun(["--preset", name]).out).toBe(
-        `preset=${name} cohort=${preset.cohortId} population=${preset.population} seed=${preset.seed} clinicianSeed=${preset.clinicianSeed} age=${preset.age} out=${preset.out}`,
+        `preset=${name} cohort=${preset.cohortId} population=${preset.population} seed=${preset.seed} clinicianSeed=${preset.clinicianSeed} age=${preset.age} reference=${preset.referenceDate} end=${preset.endDate} out=${preset.out}`,
       );
     },
   );
 
   test("flags win over env, env over the preset", () => {
     expect(dryRun(["--preset", "training", "--population", "12"]).out).toBe(
-      "preset=training cohort=synthea-v4-seed4242 population=12 seed=4242 clinicianSeed=4243 age=40-75 out=.synthea/synthea-v4-seed4242",
+      `preset=training cohort=synthea-v4-seed4242 population=12 seed=4242 clinicianSeed=4243 age=40-75 ${DATES} out=.synthea/synthea-v4-seed4242`,
     );
     expect(dryRun(["--preset", "held-out"], { SYNTHEA_POPULATION: "7" }).out).toBe(
-      "preset=held-out cohort=synthea-v4-seed9001 population=7 seed=9001 clinicianSeed=9002 age=40-75 out=.synthea/synthea-v4-seed9001",
+      `preset=held-out cohort=synthea-v4-seed9001 population=7 seed=9001 clinicianSeed=9002 age=40-75 ${DATES} out=.synthea/synthea-v4-seed9001`,
     );
     expect(dryRun(["--seed", "7", "--age", "18-30"]).out).toBe(
-      "preset=none cohort=synthea-v4-seed7 population=10 seed=7 clinicianSeed=43 age=18-30 out=.synthea/synthea-v4-seed7",
+      `preset=none cohort=synthea-v4-seed7 population=10 seed=7 clinicianSeed=43 age=18-30 ${DATES} out=.synthea/synthea-v4-seed7`,
     );
   });
 
   test("only the evaluation cohort writes to .synthea/fhir", () => {
     expect(dryRun(["--seed", "42", "--population", "3"]).out).toBe(
-      "preset=none cohort=synthea-v4-seed42 population=3 seed=42 clinicianSeed=43 age=any out=.synthea",
+      `preset=none cohort=synthea-v4-seed42 population=3 seed=42 clinicianSeed=43 age=any ${DATES} out=.synthea`,
     );
     expect(dryRun(["--seed", "4242"]).out).toBe(
-      "preset=none cohort=synthea-v4-seed4242 population=10 seed=4242 clinicianSeed=43 age=any out=.synthea/synthea-v4-seed4242",
+      `preset=none cohort=synthea-v4-seed4242 population=10 seed=4242 clinicianSeed=43 age=any ${DATES} out=.synthea/synthea-v4-seed4242`,
     );
   });
 
@@ -99,6 +103,83 @@ describe("generate-local.sh presets", () => {
     expect(dryRun(["--age", "4075"]).err).toBe(
       "synthea: age must look like 40-75 (got: 4075)",
     );
+  });
+
+  test("every preset has fixed dates, and only real YYYYMMDD dates are accepted", () => {
+    expect(
+      Object.values(COHORT_PRESETS).map((preset) => [
+        preset.referenceDate,
+        preset.endDate,
+      ]),
+    ).toEqual([
+      ["20260101", "20260101"],
+      ["20260101", "20260101"],
+      ["20260101", "20260101"],
+    ]);
+    expect(
+      dryRun(["--population", "3"], {
+        SYNTHEA_REFERENCE_DATE: "20250101",
+        SYNTHEA_END_DATE: "20250601",
+      }).out,
+    ).toBe(
+      "preset=none cohort=synthea-v4-seed42 population=3 seed=42 clinicianSeed=43 age=any reference=20250101 end=20250601 out=.synthea",
+    );
+    expect(dryRun([], { SYNTHEA_REFERENCE_DATE: "20260230" })).toEqual({
+      code: 1,
+      out: "",
+      err: "synthea: SYNTHEA_REFERENCE_DATE must be a real date as YYYYMMDD (got: 20260230)",
+    });
+    expect(dryRun([], { SYNTHEA_END_DATE: "20261301" }).err).toBe(
+      "synthea: SYNTHEA_END_DATE must be a real date as YYYYMMDD (got: 20261301)",
+    );
+    expect(dryRun([], { SYNTHEA_END_DATE: "2026-01-01" }).err).toBe(
+      "synthea: SYNTHEA_END_DATE must be a real date as YYYYMMDD (got: 2026-01-01)",
+    );
+    expect(dryRun([], { SYNTHEA_REFERENCE_DATE: "20240229" }).code).toBe(0);
+    expect(dryRun([], { SYNTHEA_REFERENCE_DATE: "20250229" }).code).toBe(1);
+    expect(dryRun([], { SYNTHEA_END_DATE: "20251231" }).err).toBe(
+      "synthea: end date 20251231 is before reference date 20260101",
+    );
+  });
+
+  test("--preset eval refuses other dates; other presets take them", () => {
+    expect(dryRun(["--preset", "eval"], { SYNTHEA_REFERENCE_DATE: "20261020" })).toEqual({
+      code: 1,
+      out: "",
+      err: "synthea: preset eval is generated with reference and end date 20260101; drop SYNTHEA_REFERENCE_DATE and SYNTHEA_END_DATE",
+    });
+    expect(dryRun(["--preset", "eval"], { SYNTHEA_END_DATE: "20260102" }).code).toBe(1);
+    expect(
+      dryRun(["--preset", "training", "--population", "5"], {
+        SYNTHEA_REFERENCE_DATE: "20250101",
+        SYNTHEA_END_DATE: "20250101",
+      }).out,
+    ).toBe(
+      "preset=training cohort=synthea-v4-seed4242 population=5 seed=4242 clinicianSeed=4243 age=40-75 reference=20250101 end=20250101 out=.synthea/synthea-v4-seed4242",
+    );
+  });
+
+  test("Synthea runs in UTC, with the dates and one thread, and the manifest records them", async () => {
+    const script = await Bun.file(SCRIPT).text();
+    expect(SYNTHEA_RUN).toEqual({ timezone: "UTC", threadPoolSize: 1 });
+    expect(script).toContain('java -Duser.timezone=UTC -jar "$JAR"');
+    expect(script).toContain('-r "$REFERENCE_DATE"');
+    expect(script).toContain('-e "$END_DATE"');
+    expect(script).toContain("THREAD_POOL_SIZE=1\n");
+    expect(script).toContain("generate.thread_pool_size = $THREAD_POOL_SIZE");
+    expect(script).toContain("shasum -a 256 -- *.json | LC_ALL=C sort | shasum -a 256");
+    for (const field of [
+      '"referenceDate": "$REFERENCE_DATE"',
+      '"endDate": "$END_DATE"',
+      '"timezone": "UTC"',
+      '"threadPoolSize": $THREAD_POOL_SIZE',
+      '"jarSha256": "$SYNTHEA_JAR_SHA256"',
+      '"configSha256": "$config_sha"',
+      '"javaVersion": "$java_ver"',
+      '"contentSha256": "$content_sha"',
+    ]) {
+      expect(script).toContain(field);
+    }
   });
 
   test("every preset cohort is on the query-tool allowlist", () => {

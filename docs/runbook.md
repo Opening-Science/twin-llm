@@ -43,26 +43,26 @@ bun run vitronic:cycle start --viatar-id <n> --target analyzed_avatar_3d --execu
 
 ### `bun run synthea:generate`
 
-Runs `scripts/synthea/generate-local.sh`. Java 21+, Synthea `v4.0.0` JAR checksum `ed43c20ad40ba5c3bc724503a5af032715fe3c491620b766148e7c2361e6ecc1`, seed `42`, clinician seed `43`. `SYNTHEA_POPULATION` defaults to 10. Writes only under `.synthea/` (gitignored).
+Runs `scripts/synthea/generate-local.sh`. Java 21+, Synthea `v4.0.0` JAR checksum `ed43c20ad40ba5c3bc724503a5af032715fe3c491620b766148e7c2361e6ecc1`, seed `42`, clinician seed `43`, reference and end date `20260101` (Java in UTC, one generator thread; see `docs/warehouse.md`, "Reproducible runs"). `SYNTHEA_POPULATION` defaults to 10. Writes only under `.synthea/` (gitignored).
 
 ```sh
-SYNTHEA_POPULATION=30 SYNTHEA_AGE=40-75 bun run synthea:generate
+bun run synthea:generate -- --preset eval
 ```
 
-- Good: prints `manifest.json` with `syntheaVersion: "v4.0.0"`, `seed: 42` and `age`. `patientFileCount` can be above N because deceased patients are exported too. `.synthea/` is not committed.
-- Last run: 2026-10-15 17:59 CEST, N=30, age 40-75 → 35 files, 163 MB (OpenJDK 21.0.12).
+- Good: prints `manifest.json` with `syntheaVersion: "v4.0.0"`, `seed: 42`, `age`, `referenceDate` and `endDate` `20260101`, `threadPoolSize: 1` and `contentSha256`. A second run gives the same `contentSha256`. `patientFileCount` can be above N because deceased patients are exported too. `.synthea/` is not committed.
+- Last run: 2026-10-15 17:59 CEST, before the dates were fixed, N=30, age 40-75 → 35 files, 163 MB (OpenJDK 21.0.12).
 
 ### Seed the synthetic warehouse
 
 Added 2026-10-15. Generate, ingest, then check counts. Synthetic rows only; it writes to whatever `DATABASE_URL` points at (the local dev database).
 
 ```sh
-SYNTHEA_POPULATION=30 SYNTHEA_AGE=40-75 bun run synthea:generate
+bun run synthea:generate -- --preset eval
 bun run warehouse:ingest .synthea/fhir --cohort synthea-v4-seed42
 bun run warehouse:ingest .synthea/fhir --cohort synthea-v4-seed42   # second run: all skipped
 ```
 
-- Good: first run `Bundles: 35 inserted, 0 already ingested, 0 rejected`, `Cohort synthea-v4-seed42: 35 subjects`, and per-LOINC rows including `8480-6`, `8462-4`, `8867-4`, `29463-7`, `4548-4`. Second run `0 inserted, 35 already ingested, 0 rejected`.
+- Good: first run `Bundles: <patientFileCount> inserted, 0 already ingested, 0 rejected`, `Cohort synthea-v4-seed42: <patientFileCount> subjects`, and per-LOINC rows including `8480-6`, `8462-4`, `8867-4`, `29463-7`, `4548-4`. Second run `0 inserted, <patientFileCount> already ingested, 0 rejected`.
 - Any `rejected (...)` line exits 1. Report it; do not loosen the UCUM rule.
 - Last run: 2026-10-15 CEST against `twinllm-dev`: 35 subjects, 24,541 numeric rows, second run 35 skipped. With `DATA_MODE=synthetic`, `observations_for_subject` (`8480-6`) returned 10 rows and `summary_stats` (`29463-7`) n=10 kg for the first listed subject; personal mode returned `SUBJECT_SCOPE_VIOLATION`.
 
