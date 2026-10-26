@@ -8,7 +8,7 @@ import {
   paletteKey,
   unknownCommandHint,
 } from "./command-palette";
-import { type Command } from "./registry";
+import { type Command, skillCommand } from "./registry";
 
 const commands: readonly Command[] = [
   { name: "connect", description: "Connect a wearable", reads: [] },
@@ -88,5 +88,31 @@ describe("CommandPalette", () => {
     expect(html).toContain(
       '<p role="status" class="text-muted-foreground px-3 py-2 text-xs">No command /sleeep. Type / to see commands.</p>',
     );
+  });
+});
+
+describe("CommandPalette with skills", () => {
+  const sleep = skillCommand({
+    name: "sleep",
+    description: "Chart the last nights of sleep.",
+    sources: ["cohort-records", "wearable-context"],
+    tools: ["coverage", "baseline_deviation"],
+  });
+
+  test("skills sit under a Skills heading and show what they read and may call", () => {
+    const html = render(1, [commands[0]!, sleep]);
+    expect(html).toContain(
+      '<li role="presentation" class="text-eyebrow px-2 pt-2 pb-1">Skills</li><li><button type="button" role="option" id="command-option-sleep" aria-selected="true"',
+    );
+    expect(html).toContain(
+      ">reads: Subjects and observations, Your linked wearables</span>",
+    );
+    expect(html).toContain(">may call: coverage, baseline_deviation</span>");
+  });
+
+  test("without skills there is no Skills heading and no tools line", () => {
+    const html = render(0);
+    expect(html).not.toContain(">Skills</li>");
+    expect(html).not.toContain("may call");
   });
 });

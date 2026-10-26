@@ -13,11 +13,12 @@ import {
 } from "@/infrastructure/model-response-metrics";
 import type { OuraSummary } from "@/infrastructure/oura-types";
 import { posthogServer } from "@/infrastructure/posthog";
+import type { TurnSkill } from "@/infrastructure/skill-gate";
 import type { VitronicSummary } from "@/infrastructure/vitronic-types";
 import type { WhoopSummary } from "@/infrastructure/whoop-types";
 
 import type { ChatRequest } from "./chat-request";
-import { createChatTools, forSources } from "./chat-tools";
+import { createChatTools, forSkill, forSources } from "./chat-tools";
 import { finishModelResponse } from "./finish-model-response";
 import { generationEvent } from "./generation-analytics";
 import { errorNameOf, modelFailureLog } from "./model-failure-log";
@@ -54,6 +55,8 @@ export type StreamContext = Readonly<{
   vitronicSummary: VitronicSummary | null;
   /** Knowledge sources this user turned off at /start; their tools are left out. */
   disabledSources?: readonly KnowledgeSourceId[];
+  /** The skill this turn runs under, already permitted by `start-answer`. */
+  skill?: TurnSkill | null;
 }>;
 
 type Outcome = Readonly<{ metrics: ModelResponseMetrics; document: ResponseDocumentV1 }>;
@@ -94,16 +97,21 @@ export const streamModelResponse = async (
     vitronic: context.vitronicSummary,
   };
 
-  const { tools, offeredTools } = forSources(
-    createChatTools(
-      { actor: clerkId, sessionId: turnId, mode: env.DATA_MODE },
-      {
-        hasWearableNarrative,
-        wearables: turnWearables,
-        disabledSources: context.disabledSources,
-      },
-    ),
-    context.disabledSources ?? [],
+  const skill = context.skill ?? null;
+  const { tools, offeredTools } = forSkill(
+    forSources(
+      createChatTools(
+        { actor: clerkId, sessionId: turnId, mode: env.DATA_MODE },
+        {
+          hasWearableNarrative,
+          wearables: turnWearables,
+          disabledSources: context.disabledSources,
+          views: skill?.views,
+        },
+      ),
+      context.disabledSources ?? [],
+    ).tools,
+    skill,
   );
 
   const logStep = (step: string) => (error: unknown) =>
@@ -115,6 +123,7 @@ export const streamModelResponse = async (
       tools,
       offeredTools,
       mode: env.DATA_MODE,
+      skill,
       loadAudit: loadSessionAudit,
     },
     {

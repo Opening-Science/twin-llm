@@ -1,0 +1,11 @@
+{
+  "question": "Last 30 nights.",
+  "dataMode": "personal",
+  "wearableContext": true,
+  "script": [{ "view": "chart.timeseries" }],
+  "expect": {
+    "calls": [],
+    "views": ["chart.timeseries"],
+    "refusals": []
+  }
+}

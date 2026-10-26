@@ -22,13 +22,15 @@ A `data-view` stream part `{id, kind, title, spec, sourceAuditIds}`, rendered in
 
 Since #36: `show_view` with `chart.timeseries` reads a LOINC code for a synthetic subject (audit tool `timeseries`) or a wearable key from the turn's loaded snapshot (audit tool `wearable_series`); `sourceAuditIds` are those rows' `seq`. The model reads back only what was drawn, not the points. A window with no readings gives a view that says so and draws nothing. `show_view` is in the model-facing tool list but not the MCP manifest.
 
-Since #37: an Outputs panel beside the thread (above it on narrow screens) lists every view its answers show, newest first, with title, kind, model and time; a row scrolls to the chart, Enlarge draws it large in the panel. It collapses or closes, and the choice is kept in the browser's local storage. `list_views` lists the thread's views (id, title, kind, model, time; no points) and `open_view(id)` returns a stored view unchanged, streamed as a `data-view` part with no new query. Both read the thread's stored tool parts, are audited (`open_view` with the view's subject and point count), and a synthetic request is not offered wearable views. The views come from the stored tool parts, so no table or migration was added.
+Since #37: an Outputs panel beside the thread (above it on narrow screens) lists every view its answers show, newest first, with title, kind, model and time; a row scrolls to the chart, Enlarge draws it large in the panel. It collapses or closes, and the choice is kept in the browser's local storage. `list_views` lists the thread's views (id, title, kind, model, time; no points) and `open_view(id)` returns a stored view unchanged, streamed as a `data-view` part with no new query. Both read the thread's stored tool parts, are audited (`open_view` with the view's subject and point count), a synthetic request is not offered wearable views, and a skill turn gets them only when its skill allows a kind `show_view` draws. The views come from the stored tool parts, so no table or migration was added.
 
 Issues: #35 stored tool parts, #36 `data-view` and `show_view`, #37 Outputs panel, #38 more kinds, #39 tool-call cards.
 
 ## 2. Skills and the command palette
 
 The slash menu becomes a palette: built-in commands and skills, each showing what it may read. A skill is `skills/<name>/SKILL.md` (name, description, allowed tools, sources, providers, views) plus `evals/`, run in CI like the question set. Built-ins: `/sleep`, `/compact` (a twin note in a per-user memory the person edits), `/report` (PDF or FHIR DocumentReference). `/connect` keeps the wearable rows.
+
+Since #42: the palette lists every offered skill with what it reads and may call, and a prompt sent as `/sleep …` runs under the skill's tool, provider and view allowlists with its instructions in the system prompt. The run is audited as `skill.<name>` and the response document carries `skill` ([skills.md](skills.md)).
 
 Issues: #40 palette, #41 skill format, #42 `/sleep`, #43 `/compact`, #44 `/report`.
 

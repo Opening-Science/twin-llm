@@ -28,7 +28,8 @@ import type { ThreadView } from "./thread-views";
  * new one. Both calls are audited: `open_view` as a read of the stored view
  * (its subject, its point count), `list_views` with the titles it listed.
  *
- * A synthetic request is never offered a view of the person's own wearables.
+ * A synthetic request is never offered a view of the person's own wearables,
+ * and a skill turn only the kinds its skill allows.
  */
 
 export type ViewToolDeps = Readonly<{
@@ -39,6 +40,8 @@ export type ViewToolDeps = Readonly<{
   loadViews: (sessionId: string) => Promise<readonly ThreadView[]>;
   /** True when this request may carry personal data (`requestDataMode`). */
   personal: boolean;
+  /** View kinds this turn may show (a skill's `views`); left out, every kind. */
+  views?: readonly string[];
 }>;
 
 export type ViewListEntry = Readonly<{
@@ -60,7 +63,9 @@ export type OpenViewOutput = ChatView | typeof VIEW_NOT_FOUND;
 
 const offered = async (deps: ViewToolDeps): Promise<readonly ThreadView[]> =>
   (await deps.loadViews(deps.scope.sessionId)).filter(
-    (entry) => deps.personal || entry.view.spec.subject !== null,
+    (entry) =>
+      (deps.personal || entry.view.spec.subject !== null) &&
+      (deps.views === undefined || deps.views.includes(entry.view.kind)),
   );
 
 const appendAudit = (deps: ViewToolDeps) =>

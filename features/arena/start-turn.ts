@@ -28,6 +28,8 @@ export type StartTurnInput = Readonly<{
   threadId: string | null;
   prompt: string;
   models: readonly ChosenModel[];
+  /** The skill the prompt was sent with; only names the thread title. */
+  skill?: string | null;
 }>;
 
 export type StartedTurn = Readonly<{
@@ -119,7 +121,11 @@ export const startTurn = async (input: StartTurnInput): Promise<StartTurnResult>
   if (actorId === null) return { ok: false, error: TURN_COPY.signIn };
 
   const checked = checkTurnRequest(
-    { prompt: input.prompt, modelIds: input.models.map(({ id }) => id) },
+    {
+      prompt: input.prompt,
+      modelIds: input.models.map(({ id }) => id),
+      skill: input.skill ?? null,
+    },
     await fetchActiveModelCatalog(),
     serverEnv().LLM_PROVIDER,
   );

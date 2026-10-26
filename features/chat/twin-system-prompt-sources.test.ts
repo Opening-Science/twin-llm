@@ -53,6 +53,9 @@ describe("system prompt with sources turned off", () => {
     const all = new Set([
       "list_subjects",
       "latest_by_loinc",
+      "observations_for_subject",
+      "subject_window",
+      "summary_stats",
       "gbd_population",
       "guideline_search",
       "knowledge_search",

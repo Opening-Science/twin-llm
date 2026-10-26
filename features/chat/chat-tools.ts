@@ -9,6 +9,7 @@ import {
   withoutDisabledTools,
 } from "@/infrastructure/knowledge-sources";
 import type { WearableSummaries } from "@/infrastructure/offered-keys";
+import { type TurnSkill, withSkillTools } from "@/infrastructure/skill-gate";
 
 import { createGbdTools } from "@/packages/gbd-mcp/ai-tools";
 import { createGuidelineTools } from "@/packages/guidelines/ai-tools";
@@ -90,6 +91,8 @@ export const createChatTools = (
     hasWearableNarrative?: boolean;
     wearables?: WearableSummaries;
     disabledSources?: readonly KnowledgeSourceId[];
+    /** View kinds `show_view` may draw (a skill's `views`); left out, every kind. */
+    views?: readonly string[];
     loadViews?: ViewToolDeps["loadViews"];
     factories?: ChatToolFactories;
   }>,
@@ -105,12 +108,14 @@ export const createChatTools = (
       cohortRecords: !disabledToolNames(options?.disabledSources ?? []).has(
         "observations_for_subject",
       ),
+      views: options?.views,
     }),
     ...make.views({
       scope,
       ports: options?.query,
       loadViews: options?.loadViews ?? loadThreadViews,
       personal: requestDataMode(scope.mode, hasWearableNarrative) === "personal",
+      views: options?.views,
     }),
     ...(mcpServerPermitted("gbd", scope, hasWearableNarrative) ? make.gbd(scope) : {}),
     ...make.guidelines(scope),
@@ -133,4 +138,17 @@ export const forSources = (
     tools: kept,
     offeredTools: new Set(Object.keys(kept)),
   };
+};
+
+/**
+ * The tools a skill turn keeps, after `forSources`: the skill's own list,
+ * plus the view tools when it allows a kind `show_view` draws. Without a skill the
+ * tools pass through unchanged. The prompt is told the same names.
+ */
+export const forSkill = (
+  tools: ToolSet,
+  skill: Pick<TurnSkill, "tools" | "views"> | null,
+): Readonly<{ tools: ToolSet; offeredTools: ReadonlySet<string> }> => {
+  const kept = skill === null ? tools : withSkillTools(tools, skill);
+  return { tools: kept, offeredTools: new Set(Object.keys(kept)) };
 };

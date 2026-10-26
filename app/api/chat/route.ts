@@ -7,6 +7,7 @@ import { loadWearableContext } from "@/features/chat/wearable-context";
 import { getLatestGoogleHealthSummary } from "@/features/google-health/connection";
 import { loadDisabledSources } from "@/features/onboarding/onboarding-store";
 import { getLatestOuraSummary } from "@/features/oura/connection";
+import { findRunnableSkill } from "@/features/skills/load-skills";
 import { getLatestVitronicSummary } from "@/features/vitronic/connection";
 import { getLatestWhoopSummary } from "@/features/whoop/connection";
 import { resolveActorId } from "@/infrastructure/auth-actor";
@@ -71,6 +72,7 @@ const startAnswer = createStartAnswer({
     }),
   loadDisabledSources,
   appendAudit: (input) => append(database(), input),
+  findSkill: findRunnableSkill,
   stream: streamModelResponse,
 });
 

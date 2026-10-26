@@ -85,10 +85,16 @@ export const useConversation = (
 
   useEffect(() => {
     answersToStream(turns, streaming.current).forEach(
-      ({ turnIndex, turnId, response }) => {
+      ({ turnIndex, turnId, skill, response }) => {
         streaming.current.add(response.id);
         const messages = historyFor(turns, turnIndex, response.modelId);
-        void streamAnswer({ modelId: response.modelId, turnId, messages }, (progress) =>
+        const request = {
+          modelId: response.modelId,
+          turnId,
+          messages,
+          ...(skill === null ? {} : { skill }),
+        };
+        void streamAnswer(request, (progress) =>
           setTurns((all) =>
             updateResponse(all, response.id, (answer) => ({ ...answer, ...progress })),
           ),
@@ -108,6 +114,7 @@ export const useConversation = (
                 ...answer,
                 status: result.ending === "COMPLETE" ? "COMPLETE" : "FAILED",
                 lost: result.ending === "LOST",
+                refusal: result.refusal,
                 metrics: result.metrics,
                 document: result.document,
                 completedAt:
@@ -123,12 +130,12 @@ export const useConversation = (
   }, [turns]);
 
   const send = useCallback(
-    async (prompt: string, models: readonly SendModel[]) => {
+    async (prompt: string, models: readonly SendModel[], skill: string | null = null) => {
       setSending(true);
       setError(null);
-      setTurns((all) => [...all, pendingTurn(prompt, models)]);
+      setTurns((all) => [...all, pendingTurn(prompt, models, skill)]);
 
-      const started = await startTurn({ threadId, prompt, models }).catch(
+      const started = await startTurn({ threadId, prompt, models, skill }).catch(
         (thrown: unknown) => {
           console.error("[arena] could not start the turn", thrown);
           return { ok: false, error: SEND_FAILED } as const;

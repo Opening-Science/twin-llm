@@ -189,6 +189,15 @@ describe("list_views", () => {
     );
   });
 
+  test("a skill turn lists only the view kinds its skill allows", async () => {
+    const { ports } = recording();
+    const output = await runListViews(
+      { ...deps(ports, true), views: ["chart.compare"] },
+      {},
+    );
+    expect(output.views).toEqual([]);
+  });
+
   test("a synthetic request lists only cohort views", async () => {
     const { ports } = recording();
     const output = await runListViews(deps(ports, false), {});

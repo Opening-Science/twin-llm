@@ -62,6 +62,7 @@
     "eval": "bun --env-file=.env.eval --preload ./features/chat/response/preload-server-only.mjs scripts/evaluation/run-eval.ts",
     "eval:report": "bun scripts/evaluation/run-report.ts",
     "eval:answer-key:live": "RUN_LIVE=1 bun --env-file=.env.eval test --preload ./features/chat/response/preload-server-only.mjs evaluation/answer-key.test.ts",
+    "eval:spread-subjects": "bun --env-file=.env.eval --preload ./features/chat/response/preload-server-only.mjs scripts/evaluation/spread-subjects.ts",
     "knowledge:biomarkers": "bun scripts/knowledge/generate-biomarker-catalogue.ts",
     "ark:build": "bash apps/ark/rsid-genotypes/build.sh",
     "ark:test": "bash apps/ark/rsid-genotypes/test.sh"

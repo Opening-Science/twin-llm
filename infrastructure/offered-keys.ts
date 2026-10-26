@@ -2,6 +2,7 @@ import type { GoogleHealthSummary } from "@/infrastructure/google-health-types";
 import type { OuraSummary } from "@/infrastructure/oura-types";
 import type { VitronicSummary } from "@/infrastructure/vitronic-types";
 import type { WhoopSummary } from "@/infrastructure/whoop-types";
+import { selectPromptMetrics } from "@/infrastructure/prompt-key-selection";
 import { toChatVitronicSummary } from "@/packages/vitronic/summary";
 
 /**
@@ -27,12 +28,18 @@ export type OfferedMetric =
 
 export const OFFERED_KEYS_PER_SOURCE = 40;
 
-const capped = <S extends { readonly metrics: readonly unknown[] }>(
+/** Over budget, keys are picked by category, not first-N; see `selectPromptMetrics`. */
+const capped = <
+  S extends { readonly metrics: readonly Readonly<{ key: string; date?: string }>[] },
+>(
   summary: S | null,
 ): S | null =>
   summary === null
     ? null
-    : { ...summary, metrics: summary.metrics.slice(0, OFFERED_KEYS_PER_SOURCE) };
+    : {
+        ...summary,
+        metrics: selectPromptMetrics(summary.metrics, OFFERED_KEYS_PER_SOURCE),
+      };
 
 /** BodyLoop goes through the chat filter first, then every source is capped. */
 export const offeredSummaries = (summaries: WearableSummaries): WearableSummaries => ({

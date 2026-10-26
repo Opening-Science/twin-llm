@@ -13,6 +13,13 @@ export const LIST_VIEWS_TOOL = "list_views";
 /** Returns a stored view again, unchanged, so it is drawn without a new query. */
 export const OPEN_VIEW_TOOL = "open_view";
 
+/** Every tool that draws or reopens a view; a skill keeps them only when it allows views. */
+export const VIEW_TOOLS: ReadonlySet<string> = new Set([
+  SHOW_VIEW_TOOL,
+  LIST_VIEWS_TOOL,
+  OPEN_VIEW_TOOL,
+]);
+
 /** Tools whose output is a view (or a refusal), streamed on as a `data-view` part. */
 export const VIEW_OUTPUT_TOOLS: ReadonlySet<string> = new Set([
   SHOW_VIEW_TOOL,
