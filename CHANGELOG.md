@@ -11,6 +11,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
 - `bun run anatomy:bake-rigged` bakes the ANNY demo bodies with their skeleton and skin weights from the pinned `anny` Python package (via uv) and installs them only when they match their SHA-256 pins; the viewer prefers them over the static bodies.
 - Training conversations ask in several styles with typos, varied dates and units, add no-data families (measures no tool can read, vendor keys, periods outside the record, odd refs, similar-sounding measures) and unit families (mixed units, conversions), use the chat's twelve tools and system prompt, and write stats. `training:split` holds out whole template groups and LOINC codes for validation.
 - Skill format: `skills/<name>/SKILL.md` lists the tools, sources, providers (local only by default) and views a skill may use, and `evals/` holds its cases. `bun run skills:check` and `bun test` validate every skill and run its cases against a scripted model, so a failing case fails CI. A skill cannot widen the data-mode policy. `skills/sleep` is the first. See `docs/skills.md`.
+- Charts in answers: the model calls `show_view` with a measure (a LOINC code with a synthetic subject, or a wearable key such as `sleep.score`) and a window; the server reads the rows under the turn's scope, audits the read, and streams a `data-view` part drawn inline in the answer. The model never writes a point, a window with no readings says so instead of drawing, and a reloaded thread draws the same chart from its stored tool parts.
 - `training:batches --skip-rejected` continues past bundles the importer rejects, lists them per batch, and still stops above a 1% rejection share.
 
 ### Changed
@@ -21,6 +22,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- The evaluation cohort and its answer key can be regenerated: `synthea-v4-seed42` was generated again with fixed dates (37 bundles, checksum `f4941fab…`, the same under another time zone) and the key rebuilt from it. The key records the dates and checksum, and the tests check them. 13 items got another subject by the rule in `docs/evaluation/question-set.md`, so results scored against the old key do not compare with new ones.
 - The evaluation's hallucination scorer fails an answer that reports a measure with another code's value (skin temperature from systolic blood pressure, eGFR from HbA1c) or with a value from outside the asked years, and names the code it came from. A LOINC code at a sentence end is no longer read as a stated number.
 
 ### Security

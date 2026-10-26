@@ -232,6 +232,18 @@ const STEM_LABELS: Readonly<Record<string, string>> = {
   "whoop.sleep.efficiency": "Whoop sleep efficiency",
   "whoop.sleep.consistency": "Whoop sleep consistency",
   "whoop.sleep.in_bed_min": "Whoop time in bed",
+  "whoop.workout.duration": "Whoop workout duration",
+  "whoop.workout.strain": "Whoop workout strain",
+  "whoop.workout.avg_hr": "Whoop workout average HR",
+  "whoop.workout.max_hr": "Whoop workout max HR",
+  "whoop.workout.kilojoules": "Whoop workout energy",
+  "whoop.workout.distance": "Whoop workout distance",
+  "whoop.workout.hr_zone_0": "Whoop time in HR zone 0",
+  "whoop.workout.hr_zone_1": "Whoop time in HR zone 1",
+  "whoop.workout.hr_zone_2": "Whoop time in HR zone 2",
+  "whoop.workout.hr_zone_3": "Whoop time in HR zone 3",
+  "whoop.workout.hr_zone_4": "Whoop time in HR zone 4",
+  "whoop.workout.hr_zone_5": "Whoop time in HR zone 5",
 };
 
 const STEM_KINDS: Readonly<Record<string, MeasureKind>> = {
@@ -260,6 +272,16 @@ const STEM_KINDS: Readonly<Record<string, MeasureKind>> = {
   "whoop.sleep.efficiency": "percent",
   "whoop.sleep.consistency": "percent",
   "whoop.sleep.in_bed_min": "sleepMinutes",
+  "whoop.workout.duration": "sleepMinutes",
+  "whoop.workout.strain": "strain",
+  "whoop.workout.avg_hr": "heartRate",
+  "whoop.workout.max_hr": "heartRate",
+  "whoop.workout.hr_zone_0": "sleepMinutes",
+  "whoop.workout.hr_zone_1": "sleepMinutes",
+  "whoop.workout.hr_zone_2": "sleepMinutes",
+  "whoop.workout.hr_zone_3": "sleepMinutes",
+  "whoop.workout.hr_zone_4": "sleepMinutes",
+  "whoop.workout.hr_zone_5": "sleepMinutes",
   "google.steps": "steps",
   "google.heart-rate": "heartRate",
   "google.daily-resting-heart-rate": "heartRate",
@@ -283,23 +305,55 @@ const UNIT_KINDS: Readonly<Record<string, MeasureKind>> = {
 const DATE_SUFFIX_KEY = /\.\d{4}-\d{2}-\d{2}$/;
 const DATE_SUFFIX_LABEL = /\s*\(\d{4}-\d{2}-\d{2}\)\s*$/;
 
-/** Oura suffixes a period (`long_sleep`, `late_nap`) onto sleep keys. */
-const MAIN_SLEEP_PERIODS = new Set(["long_sleep", "sleep", "rest"]);
+/**
+ * Oura suffixes a period onto sleep keys. `long_sleep` is the day's main
+ * sleep (features/oura/summary.ts); any other period (`late_nap`, `rest`, a
+ * short `sleep`) keeps its name in the label, so a nap never reads as the night.
+ */
+const MAIN_SLEEP_PERIOD = "long_sleep";
 
-/** Key families whose third segment is a period or an activity, not part of the stem. */
-const SUFFIXED_FAMILIES = new Set(["sleep", "workout"]);
+/** Key families whose last segment is a period or an activity, not part of the stem. */
+const SUFFIXED_FAMILIES = new Set(["sleep", "workout", "whoop.workout"]);
 
 const splitStem = (key: string): Readonly<{ stem: string; period: string | null }> => {
   const stem = key.replace(DATE_SUFFIX_KEY, "");
   const parts = stem.split(".");
-  if (parts[0] !== undefined && SUFFIXED_FAMILIES.has(parts[0]) && parts.length === 3) {
-    return { stem: parts.slice(0, 2).join("."), period: parts[2]! };
+  // `sleep.hr.<period>`, `workout.calories.<activity>`, `whoop.workout.strain.<sport>`.
+  const family = parts[0] === "whoop" ? parts.slice(0, 2).join(".") : parts[0];
+  const familyLength = family?.split(".").length ?? 1;
+  if (
+    family !== undefined &&
+    SUFFIXED_FAMILIES.has(family) &&
+    parts.length === familyLength + 2
+  ) {
+    return { stem: parts.slice(0, -1).join("."), period: parts.at(-1)! };
   }
   return { stem, period: null };
 };
 
 /** A stored metric key without its date or sleep period: `sleep.hr.2026-10-01` → `sleep.hr`. */
 export const metricStem = (key: string): string => splitStem(key).stem;
+
+/**
+ * False only for a sleep key that names a period other than the day's main
+ * sleep (a nap or a rest). Keys without a period, and other families, are true.
+ */
+export const isMainSleepKey = (key: string): boolean => {
+  const { stem, period } = splitStem(key);
+  return !stem.startsWith("sleep.") || period === null || period === MAIN_SLEEP_PERIOD;
+};
+
+/** BodyLoop scan properties as people read them; unknown paths stay as stored. */
+const PROPERTY_LABELS: Readonly<Record<string, string>> = {
+  "body.height": "Height",
+  "body.mass": "Body mass",
+  "body.bmi": "BMI",
+  "body.surface": "Body surface area",
+  "body.volume": "Body volume",
+};
+
+/** A BodyLoop property path (`body.bmi`) as a label (`BMI`). */
+export const propertyLabel = (path: string): string => PROPERTY_LABELS[path] ?? path;
 
 const VITRONIC_PREFIXES = {
   height: "BodyLoop height",
@@ -315,7 +369,7 @@ const vitronicLabel = (rest: readonly string[], family: string): string | null =
   if (family === "circumference" && rest.length >= 2) {
     return `BodyLoop circumference ${rest.slice(0, -1).join(".")} ${rest.at(-1)}`;
   }
-  if (family === "property") return `BodyLoop ${rest.join(".")}`;
+  if (family === "property") return `BodyLoop ${propertyLabel(rest.join("."))}`;
   return null;
 };
 
@@ -327,7 +381,7 @@ export const metricLabel = (key: string, fallback?: string): string => {
   const { stem, period } = splitStem(key);
   const known = STEM_LABELS[stem];
   if (known) {
-    return period && !MAIN_SLEEP_PERIODS.has(period)
+    return period && period !== MAIN_SLEEP_PERIOD
       ? `${known} (${period.replace(/_/g, " ")})`
       : known;
   }
@@ -357,6 +411,26 @@ export const measureKindFor = (key: string, unit?: string): MeasureKind | null =
 
 const normaliseUnit = (unit: string): string => (unit === "deg" ? "°" : unit);
 
+/** Stored ASCII units with their typeset form. Stored data keeps the ASCII. */
+const UNIT_TEXT: Readonly<Record<string, string>> = {
+  m2: "m²",
+  m3: "m³",
+  cm2: "cm²",
+  cm3: "cm³",
+  "kg/m2": "kg/m²",
+};
+
+/** A stored unit as it is shown: `m2` → `m²`, `kg/m2` → `kg/m²`, `deg` → `°`. */
+export const formatUnit = (unit: string): string =>
+  UNIT_TEXT[unit] ?? normaliseUnit(unit);
+
+/** A formatted number and its stored unit: `%` and `°` attach, others take a space. */
+export const withUnit = (number: string, unit: string): string => {
+  const shown = formatUnit(unit);
+  if (!shown || number === EMPTY_VALUE) return number;
+  return shown === "%" || shown === "°" ? `${number}${shown}` : `${number} ${shown}`;
+};
+
 /** The key's kind applies only when the stored unit is empty or is that kind's unit. */
 const unitMatches = (kind: MeasureKind, unit: string): boolean =>
   unit === "" || normaliseUnit(unit) === MEASURES[kind].unit;
@@ -373,7 +447,7 @@ export type FormattableMetric = Readonly<{
 export const formatMetricValue = (metric: FormattableMetric): string => {
   const unit = metric.unit ?? "";
   if (typeof metric.value === "string")
-    return unit ? `${metric.value} ${unit}` : metric.value;
+    return unit ? `${metric.value} ${formatUnit(unit)}` : metric.value;
   const kind = measureKindFor(metric.key, unit);
   if (kind && unitMatches(kind, unit)) return formatMeasure(kind, metric.value);
   if (!isFiniteNumber(metric.value)) return EMPTY_VALUE;
@@ -381,8 +455,7 @@ export const formatMetricValue = (metric: FormattableMetric): string => {
   const number = kind
     ? formatMeasureNumber(kind, metric.value)
     : formatLoose(metric.value);
-  if (!unit) return number;
-  return unit === "%" || unit === "°" ? `${number}${unit}` : `${number} ${unit}`;
+  return withUnit(number, unit);
 };
 
 /**

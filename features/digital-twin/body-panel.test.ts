@@ -19,6 +19,7 @@ import {
   markerRows,
   measureRows,
   PANEL_EMPTY,
+  PANEL_PICK_PROMPT,
   PANEL_SEARCH_LABEL,
   PanelRowButton,
   propertyRows,
@@ -109,8 +110,9 @@ const tags = (markup: string, tag: string) =>
 describe("formatPropertyDisplay", () => {
   test("metres and their powers keep two decimals; kg uses the mass precision", () => {
     expect(formatPropertyDisplay({ value: 1.7, unit: "m" })).toBe("1.70 m");
-    expect(formatPropertyDisplay({ value: 1.85, unit: "m2" })).toBe("1.85 m2");
-    expect(formatPropertyDisplay({ value: 0.065, unit: "m3" })).toBe("0.07 m3");
+    expect(formatPropertyDisplay({ value: 1.85, unit: "m2" })).toBe("1.85 m²");
+    expect(formatPropertyDisplay({ value: 0.065, unit: "m3" })).toBe("0.07 m³");
+    expect(formatPropertyDisplay({ value: 23.46, unit: "kg/m2" })).toBe("23.5 kg/m²");
     expect(formatPropertyDisplay({ value: 68, unit: "kg" })).toBe("68.0 kg");
     expect(formatPropertyDisplay({ value: 1234.5, unit: "" })).toBe("1,234.50");
   });
@@ -124,15 +126,23 @@ describe("formatPropertyDisplay", () => {
 });
 
 describe("panel rows", () => {
-  test("properties keep their order and path, no group", () => {
+  test("properties keep their order and path, with plain labels, no group", () => {
     expect(
       propertyRows([
         { path: "body.height", value: 1.7, unit: "m" },
         { path: "body.mass", value: 68, unit: "kg" },
+        { path: "body.bmi", value: 23.46, unit: "kg/m2" },
+        { path: "body.surface", value: 1.85, unit: "m2" },
+        { path: "body.volume", value: 0.065, unit: "m3" },
+        { path: "body.other", value: 2, unit: "" },
       ]),
     ).toEqual([
-      { id: "body.height", label: "body.height", value: "1.70 m", group: null },
-      { id: "body.mass", label: "body.mass", value: "68.0 kg", group: null },
+      { id: "body.height", label: "Height", value: "1.70 m", group: null },
+      { id: "body.mass", label: "Body mass", value: "68.0 kg", group: null },
+      { id: "body.bmi", label: "BMI", value: "23.5 kg/m²", group: null },
+      { id: "body.surface", label: "Body surface area", value: "1.85 m²", group: null },
+      { id: "body.volume", label: "Body volume", value: "0.07 m³", group: null },
+      { id: "body.other", label: "body.other", value: "2.00", group: null },
     ]);
   });
 
@@ -323,8 +333,15 @@ describe("BodyPanel markup", () => {
   });
 
   test("an empty list says so", () => {
-    const html = panel({ markers: [], measures: [] });
+    const html = panel({ markers: [], panel: { ...initialPanel, tab: "markers" } });
     expect(html).toContain(PANEL_EMPTY);
+  });
+
+  test("with no rows on any tab the panel prompts instead of showing an empty box", () => {
+    const html = panel({ markers: [], measures: [] });
+    expect(html).toBe(
+      `<p class="text-muted-foreground px-1.5 py-1 text-xs">${PANEL_PICK_PROMPT}</p>`,
+    );
   });
 });
 

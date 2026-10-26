@@ -3,19 +3,23 @@
  * the committed files must validate, agree with each other and meet the
  * coverage the November test set promises. With RUN_LIVE=1 and `.env.eval` (a
  * copy of `.env.synthetic.example` with DATABASE_URL at a throwaway database
- * holding synthea-v4-seed42; never `.env.local`), it re-runs the generator
- * through the audited tools and diffs the result against the committed key.
- * `generated_on` is left out of the diff:
+ * holding synthea-v4-seed42; never `.env.local`), it first checks that
+ * `.synthea/fhir` is the cohort the key was built from (its checksum against
+ * `manifest.json` and the key), then re-runs the generator through the audited
+ * tools and diffs the result against the committed key. `generated_on` is left
+ * out of the diff:
  *
  *   bun run eval:answer-key:live
  */
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
 import { BANNED_TERMS } from "../scripts/lint-claims";
 import {
   buildAnswerKey,
+  EVAL_FHIR_DIR,
   questionsSha256,
   realPorts,
 } from "../scripts/evaluation/build-answer-key";
@@ -28,6 +32,8 @@ import {
   questionSetSchema,
   SCENARIOS,
 } from "../scripts/evaluation/question-set";
+import { cohortContentSha256 } from "../scripts/synthea/cohort-checksum";
+import { COHORT_PRESETS, EVAL_CONTENT_SHA256 } from "../scripts/synthea/cohort-presets";
 
 const readJson = (name: string): unknown =>
   JSON.parse(readFileSync(fileURLToPath(new URL(name, import.meta.url)), "utf8"));
@@ -108,6 +114,17 @@ describe("answer-key.v1.json", () => {
     expect(key.cohort.id).toBe(set.cohort_id);
   });
 
+  test("was built from the pinned evaluation cohort", () => {
+    const preset = COHORT_PRESETS.eval;
+    expect(key.cohort.id).toBe(preset.cohortId);
+    expect(key.cohort.seed).toBe(preset.seed);
+    expect(key.cohort.population).toBe(preset.population);
+    expect(key.cohort.age).toBe(preset.age);
+    expect(key.cohort.reference_date).toBe(preset.referenceDate);
+    expect(key.cohort.end_date).toBe(preset.endDate);
+    expect(key.cohort.content_sha256).toBe(EVAL_CONTENT_SHA256);
+  });
+
   test("every value has a key entry with the same call", () => {
     const missing = items.flatMap((item) =>
       (item.expect.values ?? [])
@@ -183,6 +200,13 @@ describe.skipIf(!runLive)("answer key against the cohort (RUN_LIVE=1)", () => {
     // every later test file. Never read a database the env does not mark synthetic.
     const { serverEnv } = await import("../infrastructure/env");
     expect(serverEnv().DATA_MODE).toBe("synthetic");
+    // A different cohort on disk explains every later difference, so say so first.
+    const manifest = JSON.parse(
+      await readFile(`${COHORT_PRESETS.eval.out}/manifest.json`, "utf8"),
+    ) as unknown;
+    const onDisk = await cohortContentSha256(EVAL_FHIR_DIR);
+    expect(onDisk).toBe(Reflect.get(manifest as object, "contentSha256"));
+    expect(onDisk).toBe(key.cohort.content_sha256);
     const fresh = await buildAnswerKey(rawQuestions, await realPorts(key.generated_on));
     expect(fresh.cohort).toEqual(key.cohort);
     expect(fresh.open_twin_sha).toBe(key.open_twin_sha);

@@ -1,4 +1,4 @@
-import { COHORT_PRESETS } from "../synthea/cohort-presets";
+import { COHORT_PRESETS, EVAL_CONTENT_SHA256 } from "../synthea/cohort-presets";
 
 /**
  * The cohorts `setup:local` can load, with the checksums it verifies before
@@ -7,18 +7,15 @@ import { COHORT_PRESETS } from "../synthea/cohort-presets";
 
 /**
  * `bun run synthea:generate -- --preset eval`: fixed seeds and dates, so every
- * machine gets the same files. `contentSha256` is the value `manifest.json`
- * records (scripts/synthea/cohort-checksum.ts); 37 files for N=30 because
- * Synthea also exports the people who died during the simulation. Measured
- * 2026-10-26 on Linux (OpenJDK 21.0.12), identical with TZ=America/New_York.
- * The answer key in evaluation/ still describes the 33-file cohort made before
- * the dates were fixed (#29).
+ * machine gets the same files. The checksum is the one the answer key records
+ * (`EVAL_CONTENT_SHA256`); 37 files for N=30 because Synthea also exports the
+ * people who died during the simulation.
  */
 export const EVAL_COHORT = {
   cohortId: COHORT_PRESETS.eval.cohortId,
   fhirDir: ".synthea/fhir",
   patientFileCount: 37,
-  contentSha256: "f4941fab7a56e17f9dd66b6b6e0fbed379dab8c564c6024831c5fd4aa0ba09eb",
+  contentSha256: EVAL_CONTENT_SHA256,
 } as const;
 
 /**

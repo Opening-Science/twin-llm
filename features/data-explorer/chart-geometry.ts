@@ -91,3 +91,73 @@ export const extent = (values: readonly number[]): readonly [number, number] =>
     ([low, high], value) => [Math.min(low, value), Math.max(high, value)],
     [Infinity, -Infinity],
   );
+
+const MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+] as const;
+
+const DAY_MS = 86_400_000;
+
+export type TimeTick = Readonly<{ time: number; label: string }>;
+
+/** Month starts inside [start, end], every `step` months, UTC. */
+const monthStarts = (start: number, end: number, step: number): readonly number[] => {
+  const from = new Date(start);
+  const first = from.getUTCFullYear() * 12 + from.getUTCMonth();
+  const last = new Date(end).getUTCFullYear() * 12 + new Date(end).getUTCMonth();
+  return Array.from({ length: last - first + 1 }, (_, i) => first + i)
+    .filter((month) => month % step === 0)
+    .map((month) => Date.UTC(Math.floor(month / 12), month % 12, 1))
+    .filter((time) => time >= start && time <= end);
+};
+
+/**
+ * Ticks for a calendar axis that always says where in time it is. Over about
+ * two years: one per January, labelled with the year ("2018"). Over about
+ * eleven months: quarter starts with month and year ("Mar 2021"). Shorter:
+ * a handful of UTC midnights as day and month ("3 Nov").
+ */
+export const dateAxisTicks = (start: number, end: number): readonly TimeTick[] => {
+  const span = end - start;
+  if (span > 730 * DAY_MS) {
+    return yearTickTimes(start, end).map((time) => ({
+      time,
+      label: String(new Date(time).getUTCFullYear()),
+    }));
+  }
+  if (span > 335 * DAY_MS) {
+    return monthStarts(start, end, 3).map((time) => {
+      const date = new Date(time);
+      return {
+        time,
+        label: `${MONTHS[date.getUTCMonth()]} ${date.getUTCFullYear()}`,
+      };
+    });
+  }
+  const days = Math.max(1, Math.floor(span / DAY_MS));
+  const step = Math.max(1, Math.ceil(days / 5)) * DAY_MS;
+  const first = Math.ceil(start / DAY_MS) * DAY_MS;
+  const count = Math.max(0, Math.floor((end - first) / step) + 1);
+  const times = Array.from({ length: count }, (_, i) => first + i * step);
+  return (times.length > 0 ? times : [start]).map((time) => {
+    const date = new Date(time);
+    return { time, label: `${date.getUTCDate()} ${MONTHS[date.getUTCMonth()]}` };
+  });
+};
+
+/** x for a time: proportional to time inside [start, end]; a zero span centres. */
+export const timeScale =
+  (start: number, end: number, left: number, width: number) =>
+  (time: number): number =>
+    end === start ? left + width / 2 : left + ((time - start) / (end - start)) * width;

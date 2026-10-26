@@ -6,7 +6,7 @@ Plan for taking the chat from text answers to a surface that shows views, runs s
 
 The chat is a narrow pipe. Twelve closed tools (nine query tools, GBD, guidelines, knowledge) are built in `features/chat/chat-tools.ts`; every call lands on the hash-linked audit chain (`packages/audit`), and `infrastructure/data-mode-policy.ts` keeps personal data local. Answers are text in four sections plus an explainability panel.
 
-What is missing: no charts or cards in answers, tool calls show as one status line, and tool outputs are not stored (`ModelResponse` keeps hashes only). The `/` menu only connects wearables. There is no MCP server, no in-app docs page, and the 3D twin, the genome helix and the wearable charts are not reachable from chat. A generic, computed walk and idle clip play on the scans' 31-joint skeleton and the rigged demo body (#51); `live-motion.ts` scales the heart and lungs.
+What is missing: no charts or cards in answers, tool calls show as one status line, and tool outputs are not stored (`ModelResponse` keeps hashes only). The `/` menu only connects wearables. There is no MCP server, no in-app docs page, and the 3D twin, the genome helix and the wearable charts are not reachable from chat. A generic, computed walk and idle clip play on the scans' 31-joint skeleton and the rigged demo body (#51); `live-motion.ts` scales the heart and lungs, and a schematic four-chamber heart beside the view runs a typical cardiac cycle at the measured rate (#53).
 
 ## Principles
 
@@ -19,6 +19,8 @@ What is missing: no charts or cards in answers, tool calls show as one status li
 ## 1. Views
 
 A `data-view` stream part `{id, kind, title, spec, sourceAuditIds}`, rendered inline and listed in an Outputs panel per thread. A `show_view` tool takes `{kind, measure, window, subject}`, runs the matching query tool and returns the spec. Kinds: `chart.timeseries`, `chart.compare`, `biomarker.card`, `twin.body`, `table`. `list_views` and `open_view` reopen a stored view instead of recomputing. Tool parts are stored per response so a reloaded thread renders the same.
+
+Since #36: `show_view` with `chart.timeseries` reads a LOINC code for a synthetic subject (audit tool `timeseries`) or a wearable key from the turn's loaded snapshot (audit tool `wearable_series`); `sourceAuditIds` are those rows' `seq`. The model reads back only what was drawn, not the points. A window with no readings gives a view that says so and draws nothing. `show_view` is in the model-facing tool list but not the MCP manifest.
 
 Issues: #35 stored tool parts, #36 `data-view` and `show_view`, #37 Outputs panel, #38 more kinds, #39 tool-call cards.
 

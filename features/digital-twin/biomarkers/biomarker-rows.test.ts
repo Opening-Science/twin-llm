@@ -177,6 +177,38 @@ describe("vitals", () => {
       details: ["Steps; the whole system is shown", "15 Oct 2026"],
     });
   });
+
+  test("a day's main sleep wins over a short rest listed first", () => {
+    // Synthetic Oura-shaped keys: a 2-minute rest and a 7 h 12 min night on one day.
+    const sleep = [
+      { key: "sleep.duration.rest.2026-10-15", label: "Rest", value: 2, unit: "min" },
+      {
+        key: "sleep.duration.long_sleep.2026-10-15",
+        label: "Night",
+        value: 432,
+        unit: "min",
+      },
+      { key: "sleep.duration.late_nap.2026-10-15", label: "Nap", value: 25, unit: "min" },
+      {
+        key: "sleep.duration.long_sleep.2026-10-14",
+        label: "Old",
+        value: 480,
+        unit: "min",
+      },
+    ];
+    const [row] = vitalRows(latestVitals(sleep));
+    expect(row).toMatchObject({
+      id: "vital:sleep",
+      english: "Total sleep duration",
+      value: "7 h 12 min",
+      details: [
+        "Sleep; open-twin files sleep and recovery under the nervous system",
+        "15 Oct 2026",
+      ],
+      search: "sleep.duration.long_sleep.2026-10-15",
+    });
+    expect(vitalRows(latestVitals([sleep[0]!, sleep[2]!]))[0]?.value).toBe("25 min");
+  });
 });
 
 describe("highlightFromLabel", () => {

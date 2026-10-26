@@ -63,6 +63,7 @@ TwinLLM-only behaviour lives under `infrastructure/open-twin-adapters/`:
 - `oura.ts` / `oura-authorize.ts` — `HostOuraTokenHandler.lastTokens()`; re-export `getAuthorizationUrl` from `.open-twin/packages/provider-oura/src/api/client`
 - `oura-bundle.ts` — `buildOuraFhirBundle` over `buildOuraBundle` from `.open-twin/packages/provider-oura/src/fhir/bundleBuilder`, so a sync builds the bundle from the data it already fetched instead of calling every endpoint twice
 - `whoop.ts` — `fetchWhoopWindow` / `buildWhoopFhirBundle` over the public barrel (`getWhoopData`, `buildWhoopBundleFromPayload`); no longer needs `fetchWhoopSyncPayload` or any `.open-twin/.../src` import
+- `whoop-workout.ts` — workout schema, paginated `GET /v2/activity/workout` fetch and `mapWhoopWorkoutsToFHIR`, appended to the upstream bundle by `withWhoopWorkouts`; uses only the public `@open-twin/fhir-core` barrel. Belongs upstream (request 7)
 - `google-health.ts` — `setGoogleHealthCredentials` / `getGoogleHealthCredentials` / `ensureGoogleHealthAccessToken`
 - BodyLoop — host Bearer client in `packages/vitronic/` plus `buildBundleFromVitronicResponse` from the public barrel. The mapper now binds D15 SI units (`m` / `m2` / `m3` / `kg` / `kg/m2`); TwinLLM still does not persist `fhirBundle` and does not call `createBodyLoopClient` (password grant + `/probands`).
 
@@ -105,6 +106,13 @@ TwinLLM-only behaviour lives under `infrastructure/open-twin-adapters/`:
 - **Out of scope:** Mapper or schema changes.
 - **Minimal diff:** one export line.
 - **Status:** host imports it from `src/` through `oura-bundle.ts` until it lands.
+
+### 7. provider-whoop: workouts
+
+- **In scope:** A `WhoopWorkoutSchema`, `WHOOP_PATHS.workout = '/activity/workout'`, a `workouts` field on `WhoopSyncPayload` fetched by `fetchWhoopSyncPayload`, and a `mapWhoopWorkoutToFHIR` mapper called from `buildWhoopBundle`. `read:workout` is already in `WHOOP_SCOPES`.
+- **Out of scope:** Host summary keys and display.
+- **Minimal diff:** port `infrastructure/open-twin-adapters/whoop-workout.ts` (schema, fetch, mapper) into the package, with LOINC `41981-2` added to the terminology allowlist for this connector.
+- **Status:** host fetches and maps workouts itself until it lands; drop `whoop-workout.ts` then.
 
 ## Verify
 

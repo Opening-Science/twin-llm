@@ -76,7 +76,7 @@ bun run synthea:generate -- --preset eval
 ```
 
 - Good: prints `manifest.json` with `syntheaVersion: "v4.0.0"`, `seed: 42`, `age`, `referenceDate` and `endDate` `20260101`, `threadPoolSize: 1` and `contentSha256`. A second run gives the same `contentSha256`. `patientFileCount` can be above N because deceased patients are exported too. `.synthea/` is not committed.
-- Last run: 2026-10-15 17:59 CEST, before the dates were fixed, N=30, age 40-75 → 35 files, 163 MB (OpenJDK 21.0.12).
+- Last run: 2026-10-26, dates fixed, N=30, age 40-75 → 37 files, 245 MB, `contentSha256` `f4941fab7a56e17f9dd66b6b6e0fbed379dab8c564c6024831c5fd4aa0ba09eb` (OpenJDK 21.0.12.1). A second run in another folder under `TZ=America/New_York` gave the same checksum. The 2026-10-15 run, before the dates were fixed, gave 35 files.
 
 ### Seed the synthetic warehouse
 

@@ -56,6 +56,7 @@ const WHOOP_GROUPS = [
   { title: "Recovery", match: (key: string) => key.startsWith("whoop.recovery.") },
   { title: "Strain", match: (key: string) => key.startsWith("whoop.cycle.") },
   { title: "Sleep", match: (key: string) => key.startsWith("whoop.sleep.") },
+  { title: "Workouts", match: (key: string) => key.startsWith("whoop.workout.") },
 ] as const;
 
 const GOOGLE_HEALTH_GROUPS = [

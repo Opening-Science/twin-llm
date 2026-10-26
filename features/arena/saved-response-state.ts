@@ -1,3 +1,4 @@
+import { viewsOf } from "@/infrastructure/chat-view";
 import type { EvidenceAttribution } from "@/infrastructure/oura-types";
 import { toResponseDocument } from "@/infrastructure/response-document/parse";
 
@@ -37,9 +38,12 @@ export type SavedResponseRow = Readonly<{
  * so the words have no reason to reach the browser.
  *
  * The stored tool parts are replayed as the stream's tool parts and reduced to
- * name and state the same way, so inputs and outputs stay on the server.
+ * name and state the same way, so inputs and outputs stay on the server. The
+ * one exception is a `show_view` output: it is the view itself, so a reloaded
+ * answer draws the same chart it streamed.
  */
 export const toSavedResponseState = (row: SavedResponseRow): ResponseState => {
+  const parts = savedToolParts(row.toolParts);
   const document = toResponseDocument(row.responseDocument);
   const withheld =
     document?.abstained === true ||
@@ -53,7 +57,8 @@ export const toSavedResponseState = (row: SavedResponseRow): ResponseState => {
     reasoningText: withheld ? null : row.reasoningText,
     attribution: (row.attribution as EvidenceAttribution[] | null) ?? null,
     document,
-    tools: toolActivity(savedToolParts(row.toolParts)),
+    tools: toolActivity(parts),
+    views: withheld ? [] : viewsOf(parts),
     metrics:
       row.status === "COMPLETE"
         ? {

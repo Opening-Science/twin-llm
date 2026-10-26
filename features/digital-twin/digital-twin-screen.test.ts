@@ -100,7 +100,7 @@ const demoContext: TwinContext = {
 
 /** One row of the body panel's Properties list. */
 const property = (label: string, value: string) =>
-  `<span class="min-w-0 truncate font-mono">${label}</span>` +
+  `<span class="min-w-0 truncate">${label}</span>` +
   `<span class="shrink-0 tabular-nums">${value}</span>`;
 
 describe("DigitalTwinScreen", () => {
@@ -143,11 +143,11 @@ describe("DigitalTwinScreen", () => {
     const markup = html({ enabled: false }, bodyFilled);
     expect(markup).toContain(GENOME_EMPTY);
     expect(markup).toContain("2026-07-10 · scan 1");
-    expect(markup).toContain(property("body.height", "1.70 m"));
-    expect(markup).toContain(property("body.surface", "1.85 m2"));
-    expect(markup).toContain(property("body.volume", "0.07 m3"));
-    expect(markup).toContain(property("body.mass", "68.0 kg"));
-    expect(markup).toContain(property("body.bmi", "21.0 kg/m2"));
+    expect(markup).toContain(property("Height", "1.70 m"));
+    expect(markup).toContain(property("Body surface area", "1.85 m²"));
+    expect(markup).toContain(property("Body volume", "0.07 m³"));
+    expect(markup).toContain(property("Body mass", "68.0 kg"));
+    expect(markup).toContain(property("BMI", "21.0 kg/m²"));
     // Server render has no WebGL, so the mesh slot shows its fallback, not the toolbar.
     expect(markup).toContain("Scan mesh needs WebGL.");
     expect(markup).not.toContain("Reset view");
@@ -157,7 +157,7 @@ describe("DigitalTwinScreen", () => {
   test("both sections can be filled at once", () => {
     const markup = html(ok, bodyFilled);
     expect(markup).toContain("Inventory");
-    expect(markup).toContain(property("body.height", "1.70 m"));
+    expect(markup).toContain(property("Height", "1.70 m"));
     expect(markup).not.toContain(GENOME_EMPTY);
     expect(markup).not.toContain(NO_SUBJECTS_LINE);
   });

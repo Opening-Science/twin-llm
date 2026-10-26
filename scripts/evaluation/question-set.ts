@@ -237,7 +237,12 @@ export const answerKeySchema = z
         seed: z.number().int(),
         population: z.number().int(),
         age: z.string(),
+        /** Synthea `-r` and `-e`, YYYYMMDD. */
+        reference_date: z.string().regex(/^\d{8}$/),
+        end_date: z.string().regex(/^\d{8}$/),
         subjects: z.number().int().nonnegative(),
+        /** Checksum of the patient files the key was built from (manifest `contentSha256`). */
+        content_sha256: z.string().regex(/^[0-9a-f]{64}$/),
       })
       .strict(),
     open_twin_sha: z.string().regex(/^[0-9a-f]{40}$/),

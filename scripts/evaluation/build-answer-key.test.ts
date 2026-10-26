@@ -113,6 +113,7 @@ const fakePorts = (
       return answer(tool, args);
     },
     countSubjects: async () => 33,
+    cohortSha256: async () => "c".repeat(64),
     openTwinSha: () => "a9e126c952c91e19e064a962dda7d815a43564e5",
     today: () => "2026-10-20",
   };
@@ -142,9 +143,12 @@ describe("buildAnswerKey", () => {
       seed: 42,
       population: 30,
       age: "40-75",
+      reference_date: "20260101",
+      end_date: "20260101",
       subjects: 33,
+      content_sha256: "c".repeat(64),
     });
-    expect(key.generator_version).toBe("1");
+    expect(key.generator_version).toBe("2");
     expect(key.actor).toBe("eval-answer-key");
     expect(key.generated_on).toBe("2026-10-20");
     expect(key.open_twin_sha).toBe("a9e126c952c91e19e064a962dda7d815a43564e5");
@@ -403,7 +407,8 @@ describe("runBuildAnswerKey", () => {
     expect(run.out.join("")).toBe(
       [
         "Answer key written to evaluation/answer-key.v1.json",
-        "Cohort synthea-v4-seed42: 33 subjects (Synthea v4.0.0, seed 42)",
+        "Cohort synthea-v4-seed42: 33 subjects (Synthea v4.0.0, seed 42, dates 20260101–20260101)",
+        `Patient files checksum ${"c".repeat(64)}`,
         "Items keyed: 2, values: 4, refusals: 1, null values: 1",
         "open-twin a9e126c952c91e19e064a962dda7d815a43564e5, generated 2026-10-20",
         "",

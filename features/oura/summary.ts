@@ -15,6 +15,59 @@ const durationMinutes = (start: string, end: string): number | null => {
   return Number.isFinite(ms) ? Math.round(ms / 60_000) : null;
 };
 
+type SleepPeriod = Readonly<{
+  day: string;
+  type?: string | null;
+  total_sleep_duration?: number | null;
+}>;
+
+/** The key segment of a day's main sleep; live rates and charts look for it. */
+export const MAIN_SLEEP_SEGMENT = "long_sleep";
+
+const sleepRank = (night: SleepPeriod): readonly [number, number] => [
+  night.type === MAIN_SLEEP_SEGMENT ? 1 : 0,
+  night.total_sleep_duration ?? -1,
+];
+
+const ranksAbove = (a: SleepPeriod, b: SleepPeriod): boolean => {
+  const [aLong, aLength] = sleepRank(a);
+  const [bLong, bLength] = sleepRank(b);
+  return aLong !== bLong ? aLong > bLong : aLength > bLength;
+};
+
+/**
+ * The key segment for each sleep period, or null for one deleted in Oura.
+ *
+ * A day can hold several periods: the night, a nap, a two-minute rest. Each
+ * day's main sleep (Oura's `long_sleep`, else the longest period) is keyed
+ * `long_sleep`, so the daily vitals read the night and never a short rest.
+ * The others keep Oura's type (`late_nap`, `rest`, `sleep`) and are numbered
+ * when one repeats on a day, so every key stays unique.
+ */
+export const sleepPeriods = (
+  nights: readonly SleepPeriod[],
+): readonly (string | null)[] => {
+  const main = new Map<string, number>();
+  nights.forEach((night, index) => {
+    if (night.type === "deleted") return;
+    const current = main.get(night.day);
+    if (current === undefined || ranksAbove(night, nights[current]!)) {
+      main.set(night.day, index);
+    }
+  });
+  const seen = new Map<string, number>();
+  return nights.map((night, index) => {
+    if (night.type === "deleted") return null;
+    if (main.get(night.day) === index) return MAIN_SLEEP_SEGMENT;
+    // A second long_sleep on one day is not the main one; it must not read as it.
+    const base =
+      night.type === MAIN_SLEEP_SEGMENT ? "extra_sleep" : (night.type ?? "other_sleep");
+    const count = (seen.get(`${night.day}:${base}`) ?? 0) + 1;
+    seen.set(`${night.day}:${base}`, count);
+    return count === 1 ? base : `${base}_${count}`;
+  });
+};
+
 /**
  * Flattens OpenTwin typed Oura payloads into a compact, citation-friendly
  * summary for the system prompt. Prefer this over dumping FHIR into the model.
@@ -35,14 +88,12 @@ export const buildOuraSummary = (
     }
 
     if (entry.type === "sleep") {
-      for (const night of entry.data.data) {
+      const periods = sleepPeriods(entry.data.data);
+      for (const [index, night] of entry.data.data.entries()) {
+        const segment = periods[index];
+        if (segment == null) continue;
         const day = night.day;
-        // Multiple periods can share a calendar day (long sleep + nap). Suffix
-        // the key when type is present so citations and React lists stay unique.
-        const period =
-          typeof (night as { type?: string }).type === "string"
-            ? `.${(night as { type: string }).type}`
-            : "";
+        const period = `.${segment}`;
         if (typeof night.score === "number") {
           metrics.push({
             key: `sleep.score${period}.${day}`,

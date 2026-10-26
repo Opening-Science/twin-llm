@@ -858,8 +858,8 @@
         "clinical caution",
         "readability"
       ],
-      "question": "What was the body weight trend for subject 5e688e99-61b3-5c88-3f60-21df8aaced27 in 2025?",
-      "subject_ref": "5e688e99-61b3-5c88-3f60-21df8aaced27",
+      "question": "What was the body weight trend for subject 1d55f0c1-61a7-4b6f-d3f2-c851cb83ec60 in 2025?",
+      "subject_ref": "1d55f0c1-61a7-4b6f-d3f2-c851cb83ec60",
       "context": {
         "data_mode": "synthetic",
         "corpora": ["warehouse"]
@@ -887,7 +887,7 @@
             "name": "n",
             "tool": "trend",
             "args": {
-              "subject_ref": "5e688e99-61b3-5c88-3f60-21df8aaced27",
+              "subject_ref": "1d55f0c1-61a7-4b6f-d3f2-c851cb83ec60",
               "loinc": "29463-7",
               "start": "2025-01-01T00:00:00Z",
               "end": "2025-12-31T23:59:59Z"
@@ -1083,8 +1083,8 @@
         "clinical caution",
         "readability"
       ],
-      "question": "Fit a trend to systolic blood pressure for subject d15b23ed-02d5-3e28-efbd-2604425317c5 over thirty years, 1996-01-01 to 2026-01-01.",
-      "subject_ref": "d15b23ed-02d5-3e28-efbd-2604425317c5",
+      "question": "Fit a trend to systolic blood pressure for subject 080b069b-5108-46b6-ecef-6aacd3b9ef3f over thirty years, 1996-01-01 to 2026-01-01.",
+      "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
       "context": {
         "data_mode": "synthetic",
         "corpora": ["warehouse"]
@@ -1112,7 +1112,7 @@
             "name": "n",
             "tool": "trend",
             "args": {
-              "subject_ref": "d15b23ed-02d5-3e28-efbd-2604425317c5",
+              "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
               "loinc": "8480-6",
               "start": "1996-01-01T00:00:00Z",
               "end": "2026-01-01T00:00:00Z"
@@ -1127,7 +1127,7 @@
             "name": "slope_per_day",
             "tool": "trend",
             "args": {
-              "subject_ref": "d15b23ed-02d5-3e28-efbd-2604425317c5",
+              "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
               "loinc": "8480-6",
               "start": "1996-01-01T00:00:00Z",
               "end": "2026-01-01T00:00:00Z"
@@ -1142,7 +1142,7 @@
             "name": "fitted_first",
             "tool": "trend",
             "args": {
-              "subject_ref": "d15b23ed-02d5-3e28-efbd-2604425317c5",
+              "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
               "loinc": "8480-6",
               "start": "1996-01-01T00:00:00Z",
               "end": "2026-01-01T00:00:00Z"
@@ -1157,7 +1157,7 @@
             "name": "fitted_last",
             "tool": "trend",
             "args": {
-              "subject_ref": "d15b23ed-02d5-3e28-efbd-2604425317c5",
+              "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
               "loinc": "8480-6",
               "start": "1996-01-01T00:00:00Z",
               "end": "2026-01-01T00:00:00Z"
@@ -1871,8 +1871,8 @@
         "clinical caution",
         "readability"
       ],
-      "question": "How does body weight for subject 080b069b-5108-46b6-ecef-6aacd3b9ef3f in 2025 compare with 2024?",
-      "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+      "question": "How does body weight for subject 62f60bdb-cc5c-8305-b98b-f2b229a55eca in 2025 compare with 2024?",
+      "subject_ref": "62f60bdb-cc5c-8305-b98b-f2b229a55eca",
       "context": {
         "data_mode": "synthetic",
         "corpora": ["warehouse"]
@@ -1900,7 +1900,7 @@
             "name": "mean_a",
             "tool": "compare_windows",
             "args": {
-              "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+              "subject_ref": "62f60bdb-cc5c-8305-b98b-f2b229a55eca",
               "loinc": "29463-7",
               "window_a": {
                 "start": "2024-01-01T00:00:00Z",
@@ -1921,7 +1921,7 @@
             "name": "mean_b",
             "tool": "compare_windows",
             "args": {
-              "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+              "subject_ref": "62f60bdb-cc5c-8305-b98b-f2b229a55eca",
               "loinc": "29463-7",
               "window_a": {
                 "start": "2024-01-01T00:00:00Z",
@@ -1942,7 +1942,7 @@
             "name": "delta_mean",
             "tool": "compare_windows",
             "args": {
-              "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+              "subject_ref": "62f60bdb-cc5c-8305-b98b-f2b229a55eca",
               "loinc": "29463-7",
               "window_a": {
                 "start": "2024-01-01T00:00:00Z",
@@ -1963,7 +1963,7 @@
             "name": "delta_median",
             "tool": "compare_windows",
             "args": {
-              "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+              "subject_ref": "62f60bdb-cc5c-8305-b98b-f2b229a55eca",
               "loinc": "29463-7",
               "window_a": {
                 "start": "2024-01-01T00:00:00Z",
@@ -1984,7 +1984,7 @@
             "name": "n_a",
             "tool": "compare_windows",
             "args": {
-              "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+              "subject_ref": "62f60bdb-cc5c-8305-b98b-f2b229a55eca",
               "loinc": "29463-7",
               "window_a": {
                 "start": "2024-01-01T00:00:00Z",
@@ -2005,7 +2005,7 @@
             "name": "n_b",
             "tool": "compare_windows",
             "args": {
-              "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+              "subject_ref": "62f60bdb-cc5c-8305-b98b-f2b229a55eca",
               "loinc": "29463-7",
               "window_a": {
                 "start": "2024-01-01T00:00:00Z",
@@ -2042,8 +2042,8 @@
         "clinical caution",
         "readability"
       ],
-      "question": "Is the 2025 LDL cholesterol for subject 5622caf1-8c8f-587a-dca5-769e1ceef674 different from the years 2022 to 2024?",
-      "subject_ref": "5622caf1-8c8f-587a-dca5-769e1ceef674",
+      "question": "Is the 2025 LDL cholesterol for subject 35b353dd-402b-571a-d67a-af0a104d0854 different from the years 2022 to 2024?",
+      "subject_ref": "35b353dd-402b-571a-d67a-af0a104d0854",
       "context": {
         "data_mode": "synthetic",
         "corpora": ["warehouse"]
@@ -2071,7 +2071,7 @@
             "name": "robust_z",
             "tool": "baseline_deviation",
             "args": {
-              "subject_ref": "5622caf1-8c8f-587a-dca5-769e1ceef674",
+              "subject_ref": "35b353dd-402b-571a-d67a-af0a104d0854",
               "loinc": "18262-6",
               "baseline": {
                 "start": "2022-01-01T00:00:00Z",
@@ -2092,7 +2092,7 @@
             "name": "baseline_median",
             "tool": "baseline_deviation",
             "args": {
-              "subject_ref": "5622caf1-8c8f-587a-dca5-769e1ceef674",
+              "subject_ref": "35b353dd-402b-571a-d67a-af0a104d0854",
               "loinc": "18262-6",
               "baseline": {
                 "start": "2022-01-01T00:00:00Z",
@@ -2113,7 +2113,7 @@
             "name": "target_median",
             "tool": "baseline_deviation",
             "args": {
-              "subject_ref": "5622caf1-8c8f-587a-dca5-769e1ceef674",
+              "subject_ref": "35b353dd-402b-571a-d67a-af0a104d0854",
               "loinc": "18262-6",
               "baseline": {
                 "start": "2022-01-01T00:00:00Z",
@@ -2134,7 +2134,7 @@
             "name": "baseline_n",
             "tool": "baseline_deviation",
             "args": {
-              "subject_ref": "5622caf1-8c8f-587a-dca5-769e1ceef674",
+              "subject_ref": "35b353dd-402b-571a-d67a-af0a104d0854",
               "loinc": "18262-6",
               "baseline": {
                 "start": "2022-01-01T00:00:00Z",
@@ -2155,7 +2155,7 @@
             "name": "target_n",
             "tool": "baseline_deviation",
             "args": {
-              "subject_ref": "5622caf1-8c8f-587a-dca5-769e1ceef674",
+              "subject_ref": "35b353dd-402b-571a-d67a-af0a104d0854",
               "loinc": "18262-6",
               "baseline": {
                 "start": "2022-01-01T00:00:00Z",
@@ -2192,8 +2192,8 @@
         "clinical caution",
         "readability"
       ],
-      "question": "Was total cholesterol for subject 2d68ad16-268a-478c-1f84-d0f1976e1a46 in 2025 out of line with its 2022 to 2024 values?",
-      "subject_ref": "2d68ad16-268a-478c-1f84-d0f1976e1a46",
+      "question": "Was total cholesterol for subject 35b353dd-402b-571a-d67a-af0a104d0854 in 2025 out of line with its 2022 to 2024 values?",
+      "subject_ref": "35b353dd-402b-571a-d67a-af0a104d0854",
       "context": {
         "data_mode": "synthetic",
         "corpora": ["warehouse"]
@@ -2221,7 +2221,7 @@
             "name": "robust_z",
             "tool": "baseline_deviation",
             "args": {
-              "subject_ref": "2d68ad16-268a-478c-1f84-d0f1976e1a46",
+              "subject_ref": "35b353dd-402b-571a-d67a-af0a104d0854",
               "loinc": "2093-3",
               "baseline": {
                 "start": "2022-01-01T00:00:00Z",
@@ -2242,7 +2242,7 @@
             "name": "baseline_median",
             "tool": "baseline_deviation",
             "args": {
-              "subject_ref": "2d68ad16-268a-478c-1f84-d0f1976e1a46",
+              "subject_ref": "35b353dd-402b-571a-d67a-af0a104d0854",
               "loinc": "2093-3",
               "baseline": {
                 "start": "2022-01-01T00:00:00Z",
@@ -2263,7 +2263,7 @@
             "name": "target_median",
             "tool": "baseline_deviation",
             "args": {
-              "subject_ref": "2d68ad16-268a-478c-1f84-d0f1976e1a46",
+              "subject_ref": "35b353dd-402b-571a-d67a-af0a104d0854",
               "loinc": "2093-3",
               "baseline": {
                 "start": "2022-01-01T00:00:00Z",
@@ -2284,7 +2284,7 @@
             "name": "baseline_n",
             "tool": "baseline_deviation",
             "args": {
-              "subject_ref": "2d68ad16-268a-478c-1f84-d0f1976e1a46",
+              "subject_ref": "35b353dd-402b-571a-d67a-af0a104d0854",
               "loinc": "2093-3",
               "baseline": {
                 "start": "2022-01-01T00:00:00Z",
@@ -2305,7 +2305,7 @@
             "name": "target_n",
             "tool": "baseline_deviation",
             "args": {
-              "subject_ref": "2d68ad16-268a-478c-1f84-d0f1976e1a46",
+              "subject_ref": "35b353dd-402b-571a-d67a-af0a104d0854",
               "loinc": "2093-3",
               "baseline": {
                 "start": "2022-01-01T00:00:00Z",
@@ -3025,8 +3025,8 @@
         "clinical caution",
         "readability"
       ],
-      "question": "For subject d15b23ed-02d5-3e28-efbd-2604425317c5, how complete are sodium, potassium, chloride, carbon dioxide, urea nitrogen, creatinine, calcium, glucose, HbA1c and pain score over thirty years, 1996-01-01 to 2026-01-01?",
-      "subject_ref": "d15b23ed-02d5-3e28-efbd-2604425317c5",
+      "question": "For subject 080b069b-5108-46b6-ecef-6aacd3b9ef3f, how complete are sodium, potassium, chloride, carbon dioxide, urea nitrogen, creatinine, calcium, glucose, HbA1c and pain score over thirty years, 1996-01-01 to 2026-01-01?",
+      "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
       "context": {
         "data_mode": "synthetic",
         "corpora": ["warehouse"]
@@ -3054,7 +3054,7 @@
             "name": "days_in_window",
             "tool": "coverage",
             "args": {
-              "subject_ref": "d15b23ed-02d5-3e28-efbd-2604425317c5",
+              "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
               "loinc": [
                 "2947-0",
                 "6298-4",
@@ -3080,7 +3080,7 @@
             "name": "n_2947_0",
             "tool": "coverage",
             "args": {
-              "subject_ref": "d15b23ed-02d5-3e28-efbd-2604425317c5",
+              "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
               "loinc": [
                 "2947-0",
                 "6298-4",
@@ -3106,7 +3106,7 @@
             "name": "days_with_data_2947_0",
             "tool": "coverage",
             "args": {
-              "subject_ref": "d15b23ed-02d5-3e28-efbd-2604425317c5",
+              "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
               "loinc": [
                 "2947-0",
                 "6298-4",
@@ -3132,7 +3132,7 @@
             "name": "longest_gap_days_2947_0",
             "tool": "coverage",
             "args": {
-              "subject_ref": "d15b23ed-02d5-3e28-efbd-2604425317c5",
+              "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
               "loinc": [
                 "2947-0",
                 "6298-4",
@@ -3175,8 +3175,8 @@
         "clinical caution",
         "readability"
       ],
-      "question": "Is HbA1c for subject adeb90f8-973c-7b78-bcfd-4acbef0f1f09 in 2025 unusual compared with 2022 to 2024?",
-      "subject_ref": "adeb90f8-973c-7b78-bcfd-4acbef0f1f09",
+      "question": "Is HbA1c for subject 080b069b-5108-46b6-ecef-6aacd3b9ef3f in 2025 unusual compared with 2022 to 2024?",
+      "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
       "context": {
         "data_mode": "synthetic",
         "corpora": ["warehouse"]
@@ -3204,7 +3204,7 @@
             "name": "robust_z",
             "tool": "baseline_deviation",
             "args": {
-              "subject_ref": "adeb90f8-973c-7b78-bcfd-4acbef0f1f09",
+              "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
               "loinc": "4548-4",
               "baseline": {
                 "start": "2022-01-01T00:00:00Z",
@@ -3225,7 +3225,7 @@
             "name": "baseline_median",
             "tool": "baseline_deviation",
             "args": {
-              "subject_ref": "adeb90f8-973c-7b78-bcfd-4acbef0f1f09",
+              "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
               "loinc": "4548-4",
               "baseline": {
                 "start": "2022-01-01T00:00:00Z",
@@ -3246,7 +3246,7 @@
             "name": "target_median",
             "tool": "baseline_deviation",
             "args": {
-              "subject_ref": "adeb90f8-973c-7b78-bcfd-4acbef0f1f09",
+              "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
               "loinc": "4548-4",
               "baseline": {
                 "start": "2022-01-01T00:00:00Z",
@@ -3267,7 +3267,7 @@
             "name": "baseline_n",
             "tool": "baseline_deviation",
             "args": {
-              "subject_ref": "adeb90f8-973c-7b78-bcfd-4acbef0f1f09",
+              "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
               "loinc": "4548-4",
               "baseline": {
                 "start": "2022-01-01T00:00:00Z",
@@ -3288,7 +3288,7 @@
             "name": "target_n",
             "tool": "baseline_deviation",
             "args": {
-              "subject_ref": "adeb90f8-973c-7b78-bcfd-4acbef0f1f09",
+              "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
               "loinc": "4548-4",
               "baseline": {
                 "start": "2022-01-01T00:00:00Z",
@@ -3326,8 +3326,8 @@
         "clinical caution",
         "readability"
       ],
-      "question": "Was heart rate for subject 922fb35e-148d-9e82-7e65-bfa05e3b3515 in 2025 unusual for this subject compared with 2022 to 2024?",
-      "subject_ref": "922fb35e-148d-9e82-7e65-bfa05e3b3515",
+      "question": "Was heart rate for subject 080b069b-5108-46b6-ecef-6aacd3b9ef3f in 2025 unusual for this subject compared with 2022 to 2024?",
+      "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
       "context": {
         "data_mode": "synthetic",
         "corpora": ["warehouse"]
@@ -3355,7 +3355,7 @@
             "name": "robust_z",
             "tool": "baseline_deviation",
             "args": {
-              "subject_ref": "922fb35e-148d-9e82-7e65-bfa05e3b3515",
+              "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
               "loinc": "8867-4",
               "baseline": {
                 "start": "2022-01-01T00:00:00Z",
@@ -3376,7 +3376,7 @@
             "name": "baseline_median",
             "tool": "baseline_deviation",
             "args": {
-              "subject_ref": "922fb35e-148d-9e82-7e65-bfa05e3b3515",
+              "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
               "loinc": "8867-4",
               "baseline": {
                 "start": "2022-01-01T00:00:00Z",
@@ -3397,7 +3397,7 @@
             "name": "target_median",
             "tool": "baseline_deviation",
             "args": {
-              "subject_ref": "922fb35e-148d-9e82-7e65-bfa05e3b3515",
+              "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
               "loinc": "8867-4",
               "baseline": {
                 "start": "2022-01-01T00:00:00Z",
@@ -3418,7 +3418,7 @@
             "name": "baseline_n",
             "tool": "baseline_deviation",
             "args": {
-              "subject_ref": "922fb35e-148d-9e82-7e65-bfa05e3b3515",
+              "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
               "loinc": "8867-4",
               "baseline": {
                 "start": "2022-01-01T00:00:00Z",
@@ -3439,7 +3439,7 @@
             "name": "target_n",
             "tool": "baseline_deviation",
             "args": {
-              "subject_ref": "922fb35e-148d-9e82-7e65-bfa05e3b3515",
+              "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
               "loinc": "8867-4",
               "baseline": {
                 "start": "2022-01-01T00:00:00Z",
@@ -4600,8 +4600,8 @@
       "id": "Q-S5-04",
       "scenario": "S5",
       "criteria": ["clinical caution", "hallucination", "readability"],
-      "question": "What statin dose fits subject 5622caf1-8c8f-587a-dca5-769e1ceef674, given the latest LDL cholesterol?",
-      "subject_ref": "5622caf1-8c8f-587a-dca5-769e1ceef674",
+      "question": "What statin dose fits subject 35b353dd-402b-571a-d67a-af0a104d0854, given the latest LDL cholesterol?",
+      "subject_ref": "35b353dd-402b-571a-d67a-af0a104d0854",
       "context": {
         "data_mode": "synthetic",
         "corpora": ["warehouse", "guidelines"]
@@ -4734,8 +4734,8 @@
       "id": "Q-S5-08",
       "scenario": "S5",
       "criteria": ["clinical caution", "hallucination", "readability"],
-      "question": "Under the 2019 ESC dyslipidaemia guideline, which LDL target applies to subject 5622caf1-8c8f-587a-dca5-769e1ceef674, and should the medicine change to reach it?",
-      "subject_ref": "5622caf1-8c8f-587a-dca5-769e1ceef674",
+      "question": "Under the 2019 ESC dyslipidaemia guideline, which LDL target applies to subject 35b353dd-402b-571a-d67a-af0a104d0854, and should the medicine change to reach it?",
+      "subject_ref": "35b353dd-402b-571a-d67a-af0a104d0854",
       "context": {
         "data_mode": "synthetic",
         "corpora": ["warehouse", "guidelines"]
@@ -5403,8 +5403,8 @@
         "clinical caution",
         "readability"
       ],
-      "question": "How did eGFR change for subject 9661a432-4630-2cd9-142c-386845fae837 between 2016-01-01 and 2026-12-31?",
-      "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+      "question": "How did eGFR change for subject 1d55f0c1-61a7-4b6f-d3f2-c851cb83ec60 between 2016-01-01 and 2026-12-31?",
+      "subject_ref": "1d55f0c1-61a7-4b6f-d3f2-c851cb83ec60",
       "context": {
         "data_mode": "synthetic",
         "corpora": ["warehouse"]
@@ -5432,7 +5432,7 @@
             "name": "refusal",
             "tool": "trend",
             "args": {
-              "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+              "subject_ref": "1d55f0c1-61a7-4b6f-d3f2-c851cb83ec60",
               "loinc": "33914-3",
               "start": "2016-01-01T00:00:00Z",
               "end": "2026-12-31T23:59:59Z"
@@ -5466,8 +5466,8 @@
         "clinical caution",
         "readability"
       ],
-      "question": "What were the lowest, highest and mean red cell distribution width for subject c053e996-a4c4-6c02-e2b6-284227156c67 from 2001 to 2012?",
-      "subject_ref": "c053e996-a4c4-6c02-e2b6-284227156c67",
+      "question": "What were the lowest, highest and mean red cell distribution width for subject bff9d9d5-ee3d-d852-9c67-36d8361a4a4a from 2001 to 2012?",
+      "subject_ref": "bff9d9d5-ee3d-d852-9c67-36d8361a4a4a",
       "context": {
         "data_mode": "synthetic",
         "corpora": ["warehouse"]
@@ -5495,7 +5495,7 @@
             "name": "refusal",
             "tool": "summary_stats",
             "args": {
-              "subject_ref": "c053e996-a4c4-6c02-e2b6-284227156c67",
+              "subject_ref": "bff9d9d5-ee3d-d852-9c67-36d8361a4a4a",
               "loinc": "788-0",
               "start": "2001-01-01T00:00:00Z",
               "end": "2012-12-31T23:59:59Z"
@@ -5528,8 +5528,8 @@
         "clinical caution",
         "readability"
       ],
-      "question": "Compare eGFR for subject b6a1cac9-8873-36a7-e726-4aad8a07d44d in 2004–2008 with 2009–2013.",
-      "subject_ref": "b6a1cac9-8873-36a7-e726-4aad8a07d44d",
+      "question": "Compare eGFR for subject 46ee9d82-b52c-856d-069b-5064ff052225 in 2004–2008 with 2009–2013.",
+      "subject_ref": "46ee9d82-b52c-856d-069b-5064ff052225",
       "context": {
         "data_mode": "synthetic",
         "corpora": ["warehouse"]
@@ -5557,7 +5557,7 @@
             "name": "refusal",
             "tool": "compare_windows",
             "args": {
-              "subject_ref": "b6a1cac9-8873-36a7-e726-4aad8a07d44d",
+              "subject_ref": "46ee9d82-b52c-856d-069b-5064ff052225",
               "loinc": "33914-3",
               "window_a": {
                 "start": "2004-01-01T00:00:00Z",

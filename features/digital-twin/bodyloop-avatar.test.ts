@@ -449,11 +449,11 @@ describe("BodyLoop avatar viewer", () => {
     );
     const row = (label: string, value: string) =>
       '<li class="flex justify-between gap-2 px-2.5 py-1">' +
-      `<span class="min-w-0 truncate font-mono">${label}</span>` +
+      `<span class="min-w-0 truncate">${label}</span>` +
       `<span class="shrink-0 tabular-nums">${value}</span></li>`;
     expect(markup).toContain(`aria-label="${BODY_PANEL_LABEL}"`);
-    expect(markup).toContain(row("body.height", "1.70 m"));
-    expect(markup).toContain(row("body.volume", "0.07 m3"));
+    expect(markup).toContain(row("Height", "1.70 m"));
+    expect(markup).toContain(row("Body volume", "0.07 m³"));
     expect(markup).not.toContain("1.7 m<");
   });
 
