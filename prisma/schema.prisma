@@ -121,6 +121,10 @@ model ModelResponse {
   status ModelResponseStatus @default(STREAMING)
   text   String              @default("")
 
+  /// Index in the list of models picked for the turn, so a saved thread keeps
+  /// that order. Null on rows written before the column existed.
+  position Int?
+
   /// The "## Reasoning" section, when the model used the expected format.
   reasoningText    String?
   /// Wearable metrics the answer cited: [{ metricKey, label, value, observationId? }].

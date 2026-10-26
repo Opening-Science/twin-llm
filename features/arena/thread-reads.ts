@@ -31,6 +31,7 @@ const findThread = (threadId: string): Promise<StoredThread | null> =>
               id: true,
               modelId: true,
               modelName: true,
+              position: true,
               status: true,
               text: true,
               reasoningText: true,

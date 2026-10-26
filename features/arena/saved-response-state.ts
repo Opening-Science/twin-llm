@@ -12,6 +12,8 @@ export type SavedResponseRow = Readonly<{
   id: string;
   modelId: string;
   modelName: string;
+  /** Index among the models picked for the turn; null on older rows. */
+  position: number | null;
   status: ResponseState["status"];
   text: string;
   reasoningText: string | null;
