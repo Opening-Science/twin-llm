@@ -18,6 +18,10 @@ const ownAnswer = (turn: TurnState, modelId: string): HistoryMessage[] => {
     : [];
 };
 
+/** A skill turn reads back as it was typed, so a follow-up knows what ran. */
+const promptOf = (turn: TurnState): string =>
+  turn.skill ? `/${turn.skill} ${turn.prompt}` : turn.prompt;
+
 export const historyFor = (
   turns: readonly TurnState[],
   turnIndex: number,
@@ -26,7 +30,7 @@ export const historyFor = (
   const earlier = turns
     .slice(0, turnIndex)
     .flatMap((turn): HistoryMessage[] => [
-      { role: "user", content: turn.prompt },
+      { role: "user", content: promptOf(turn) },
       ...ownAnswer(turn, modelId),
     ]);
   const current = turns[turnIndex];

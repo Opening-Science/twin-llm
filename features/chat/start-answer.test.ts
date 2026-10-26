@@ -4,6 +4,7 @@ import {
   PROVIDER_NOT_PERMITTED_ERROR,
   PROVIDER_NOT_PERMITTED_FOR_DATA_MODE,
 } from "@/infrastructure/data-mode-policy";
+import type { TurnSkill } from "@/infrastructure/skill-gate";
 import type { WhoopSummary } from "@/infrastructure/whoop-types";
 import type { AppendInput } from "@/packages/audit/append";
 
@@ -39,7 +40,7 @@ const WITH_WHOOP: WearableContext = { ...NO_WEARABLES, whoopSummary: WHOOP };
 const harness = (
   settings: ChatProviderSettings,
   wearables: WearableContext,
-  options: Readonly<{ auditFails?: boolean }> = {},
+  options: Readonly<{ auditFails?: boolean; skill?: TurnSkill }> = {},
 ) => {
   const calls: string[] = [];
   const audits: AppendInput[] = [];
@@ -51,6 +52,7 @@ const harness = (
       return wearables;
     },
     loadDisabledSources: async () => ["gbd"],
+    findSkill: (name) => (name === SLEEP.name ? (options.skill ?? SLEEP) : null),
     appendAudit: async (input) => {
       calls.push("audit");
       if (options.auditFails) throw new Error("audit-down");
@@ -65,6 +67,18 @@ const harness = (
   });
   return { startAnswer, calls, audits, streamed };
 };
+
+const SLEEP: TurnSkill = {
+  name: "sleep",
+  description: "Chart the last nights of sleep.",
+  tools: ["coverage", "baseline_deviation"],
+  sources: ["cohort-records", "cohort-analytics", "wearable-context"],
+  providers: ["ollama"],
+  views: ["chart.timeseries"],
+  instructions: "Describe sleep.",
+};
+
+const SLEEP_CALL: ChatRequest = { ...CALL, skill: "sleep" };
 
 const REFUSAL = {
   code: PROVIDER_NOT_PERMITTED_FOR_DATA_MODE,
@@ -181,5 +195,105 @@ describe("chat start: consented pilot audit", () => {
     );
     expect((await startAnswer(ACTOR, APP_USER, CALL)).status).toBe(200);
     expect(calls).toEqual([`wearables personal ${APP_USER}`, "stream"]);
+  });
+});
+
+describe("chat start: a turn sent with a skill", () => {
+  test("runs on a listed provider: the run is audited, then streamed with the skill", async () => {
+    const { startAnswer, calls, audits, streamed } = harness(
+      { dataMode: "personal", provider: "ollama", exoscalePersonalData: "off" },
+      WITH_WHOOP,
+    );
+    const response = await startAnswer(ACTOR, APP_USER, SLEEP_CALL);
+    expect(response.status).toBe(200);
+    expect(calls).toEqual([`wearables personal ${APP_USER}`, "audit", "stream"]);
+    expect(audits).toEqual([
+      {
+        actor: ACTOR,
+        sessionId: "turn-synthetic-1",
+        subjectRef: null,
+        tool: "skill.sleep",
+        args: {
+          skill: "sleep",
+          modelId: "swiss-ai/Apertus-8B-Instruct-2509",
+          provider: "ollama",
+          tools: ["coverage", "baseline_deviation"],
+          views: ["chart.timeseries"],
+        },
+        result: { started: true },
+        rowCount: 0,
+      },
+    ]);
+    expect(streamed).toEqual([
+      { clerkId: ACTOR, disabledSources: ["gbd"], skill: SLEEP, ...WITH_WHOOP },
+    ]);
+  });
+
+  test("a provider the skill does not list is refused with its sentence; nothing runs", async () => {
+    const { startAnswer, calls, audits } = harness(
+      { dataMode: "synthetic", provider: "openrouter", exoscalePersonalData: "off" },
+      NO_WEARABLES,
+    );
+    const response = await startAnswer(ACTOR, APP_USER, SLEEP_CALL);
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      code: "provider-not-allowed-by-skill",
+      error:
+        "/sleep runs only on local Ollama. The models here come from OpenRouter, so /sleep did not run. Ask without /sleep instead.",
+    });
+    expect(calls).toEqual([`wearables synthetic ${APP_USER}`]);
+    expect(audits).toEqual([]);
+  });
+
+  test("the skill refusal comes before the data-mode refusal", async () => {
+    const { startAnswer } = harness(
+      { dataMode: "personal", provider: "openrouter", exoscalePersonalData: "off" },
+      WITH_WHOOP,
+    );
+    const response = await startAnswer(ACTOR, APP_USER, SLEEP_CALL);
+    expect(((await response.json()) as { code: string }).code).toBe(
+      "provider-not-allowed-by-skill",
+    );
+  });
+
+  test("the data-mode policy still applies to a provider the skill lists", async () => {
+    const { startAnswer, calls, audits } = harness(
+      { dataMode: "personal", provider: "exoscale", exoscalePersonalData: "off" },
+      WITH_WHOOP,
+      { skill: { ...SLEEP, providers: ["ollama", "exoscale"] } },
+    );
+    const response = await startAnswer(ACTOR, APP_USER, SLEEP_CALL);
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual(REFUSAL);
+    expect(calls).toEqual([`wearables personal ${APP_USER}`]);
+    expect(audits).toEqual([]);
+  });
+
+  test("wearable context with a skill that does not read it is refused", async () => {
+    const { startAnswer, calls } = harness(
+      { dataMode: "personal", provider: "ollama", exoscalePersonalData: "off" },
+      WITH_WHOOP,
+      { skill: { ...SLEEP, sources: ["cohort-records"] } },
+    );
+    const response = await startAnswer(ACTOR, APP_USER, SLEEP_CALL);
+    expect(response.status).toBe(400);
+    expect(((await response.json()) as { code: string }).code).toBe("source-not-allowed");
+    expect(calls).toEqual([`wearables personal ${APP_USER}`]);
+  });
+
+  test("a skill the server does not offer is refused before anything is read", async () => {
+    const { startAnswer, calls, audits } = harness(
+      { dataMode: "synthetic", provider: "ollama", exoscalePersonalData: "off" },
+      NO_WEARABLES,
+    );
+    const response = await startAnswer(ACTOR, APP_USER, { ...CALL, skill: "nap" });
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      code: "skill-not-offered",
+      error:
+        "There is no /nap skill on this server, so nothing ran. Type / to see the skills it offers.",
+    });
+    expect(calls).toEqual([]);
+    expect(audits).toEqual([]);
   });
 });

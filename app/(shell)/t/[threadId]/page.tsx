@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 
 import { CompareScreen } from "@/features/arena/compare-screen";
+import { skillCommand } from "@/features/commands/registry";
+import { runnableSkills } from "@/features/skills/load-skills";
 import { ownedThread } from "@/features/arena/thread-reads";
 import { ThreadTitle } from "@/features/shell/thread-title";
 import { fetchActiveModelCatalog } from "@/infrastructure/fetch-model-catalog";
@@ -40,6 +42,7 @@ export default async function ThreadPage({
         defaultModelIds={defaultModelIds}
         threadId={thread.id}
         initialTurns={thread.turns}
+        skills={runnableSkills().map(skillCommand)}
       />
     </>
   );

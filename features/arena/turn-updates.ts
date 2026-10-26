@@ -25,9 +25,11 @@ const streamingAnswer = (
 export const pendingTurn = (
   prompt: string,
   models: readonly Readonly<{ id: string; name: string }>[],
+  skill: string | null = null,
 ): TurnState => ({
   id: PENDING_ID,
   prompt,
+  skill,
   pending: true,
   answers: models.map((model) =>
     streamingAnswer(`${PENDING_ID}:${model.id}`, {
@@ -48,6 +50,7 @@ export const confirmTurn = (
       ? {
           id: turnId,
           prompt: turn.prompt,
+          skill: turn.skill ?? null,
           answers: responses.map((response) => streamingAnswer(response.id, response)),
         }
       : turn,
@@ -81,7 +84,12 @@ export const restartResponse = (response: ResponseState): ResponseState =>
 export const answersToStream = (
   turns: readonly TurnState[],
   inFlight: ReadonlySet<string>,
-): Readonly<{ turnIndex: number; turnId: string; response: ResponseState }>[] =>
+): Readonly<{
+  turnIndex: number;
+  turnId: string;
+  skill: string | null;
+  response: ResponseState;
+}>[] =>
   turns.flatMap((turn, turnIndex) =>
     turn.pending
       ? []
@@ -89,5 +97,10 @@ export const answersToStream = (
           .filter(
             (response) => response.status === "STREAMING" && !inFlight.has(response.id),
           )
-          .map((response) => ({ turnIndex, turnId: turn.id, response })),
+          .map((response) => ({
+            turnIndex,
+            turnId: turn.id,
+            skill: turn.skill ?? null,
+            response,
+          })),
   );

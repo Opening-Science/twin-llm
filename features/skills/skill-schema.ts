@@ -9,14 +9,18 @@ import {
   ALL_KNOWLEDGE_SOURCES,
   KNOWLEDGE_SOURCE_IDS,
 } from "@/infrastructure/knowledge-sources";
+import {
+  SKILL_NAME_PATTERN,
+  SKILL_REQUEST_REFUSALS,
+  WEARABLE_CONTEXT_SOURCE,
+} from "@/infrastructure/skill-gate";
 
 /**
  * What a skill may touch, checked strictly. A skill is data: these lists are
  * allowlists, and the eval runner refuses anything outside them.
  */
 
-/** Wearable context the person attached to the turn. Makes a request personal. */
-export const WEARABLE_CONTEXT_SOURCE = "wearable-context" as const;
+export { WEARABLE_CONTEXT_SOURCE };
 
 export const SKILL_SOURCE_IDS = [
   ...KNOWLEDGE_SOURCE_IDS,
@@ -48,8 +52,6 @@ export const CHAT_TOOL_NAMES: readonly string[] = [...TOOL_SOURCE.keys()];
 /** Providers start local only; a skill must name any other provider itself. */
 export const DEFAULT_SKILL_PROVIDERS: readonly LlmProvider[] = ["ollama"];
 
-const SKILL_NAME = /^[a-z][a-z0-9-]{0,39}$/;
-
 const chatToolName = z.string().refine((name) => TOOL_SOURCE.has(name), {
   error: (issue) =>
     `unknown tool "${String(issue.input)}"; known tools: ${CHAT_TOOL_NAMES.join(", ")}`,
@@ -75,7 +77,7 @@ const policyCanTakePersonalData = (provider: LlmProvider): boolean =>
 
 export const skillFrontmatterSchema = z
   .strictObject({
-    name: z.string().regex(SKILL_NAME, {
+    name: z.string().regex(SKILL_NAME_PATTERN, {
       error: "name must be lower-case letters, digits and dashes, at most 40 characters",
     }),
     description: z.string().min(1).max(200),
@@ -132,9 +134,8 @@ export type Skill = SkillFrontmatter &
 
 /** What the gate refuses, as stable codes eval cases name. */
 export const SKILL_REFUSALS = [
-  "provider-not-allowed-by-skill",
+  ...SKILL_REQUEST_REFUSALS,
   "provider-not-permitted-for-data-mode",
-  "source-not-allowed",
   "tool-not-allowed",
   "invalid-tool-input",
   "view-not-allowed",

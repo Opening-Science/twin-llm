@@ -33,7 +33,7 @@ type ShowViewInput = z.infer<typeof showViewInput>;
 export type ShowViewRefusal =
   | ToolRefusal
   | Readonly<{
-      code: "COHORT_TOOLS_OFF" | "SUBJECT_REQUIRED" | "NOT_AUDITED";
+      code: "COHORT_TOOLS_OFF" | "SUBJECT_REQUIRED" | "NOT_AUDITED" | "VIEW_NOT_ALLOWED";
       error: string;
     }>;
 
@@ -53,6 +53,12 @@ const SUBJECT_REQUIRED = {
 const NOT_AUDITED = {
   code: "NOT_AUDITED",
   error: "the read was not recorded, so nothing is drawn",
+} as const;
+
+/** A skill turn may only draw the kinds its skill lists. */
+const VIEW_NOT_ALLOWED = {
+  code: "VIEW_NOT_ALLOWED",
+  error: "this view kind is not allowed for the skill this turn runs",
 } as const;
 
 const DATE_SUFFIX = /\.\d{4}-\d{2}-\d{2}$/;
@@ -149,12 +155,17 @@ export type ShowViewDeps = Readonly<{
   wearables: WearableSummaries;
   /** False when the user turned the cohort record tools off. */
   cohortRecords: boolean;
+  /** View kinds this turn may draw (a skill's `views`); left out, every kind. */
+  views?: readonly string[];
 }>;
 
 export const runShowView = async (
   deps: ShowViewDeps,
   input: ShowViewInput,
 ): Promise<ShowViewOutput> => {
+  if (deps.views !== undefined && !deps.views.includes(input.kind)) {
+    return VIEW_NOT_ALLOWED;
+  }
   const audit = recordingAudit(deps.ports ?? defaultQueryToolPorts());
   const window = { start: input.window.start, end: input.window.end };
   if (loincSchema.safeParse(input.measure).success) {

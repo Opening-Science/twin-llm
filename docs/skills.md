@@ -4,8 +4,7 @@ A skill is data plus tests: a folder under `skills/` with a `SKILL.md` and an `e
 folder of cases. It says what a command may read and use; the code decides what actually
 runs. Plan: [chat-platform.md](chat-platform.md), section 2. Issue #41.
 
-Skills are not wired into the chat yet. The command palette (#40) and `/sleep` (#42)
-build on this format.
+The `/` palette lists them and the chat runs them (#42); see "Running a skill" below.
 
 ## SKILL.md
 
@@ -95,3 +94,29 @@ malformed skill or a failing case fails CI.
 
 The check tests the format and the gate, not a model's judgement. How well a real model
 follows a skill is measured with the evaluation harness, as for the question set.
+
+## Running a skill
+
+The server reads `skills/` once per process (on every request in development) and
+offers a skill only if it validates and every case passes; anything else is logged and
+left out (`features/skills/load-skills.ts`). The `/` palette lists the offered skills
+under "Skills" with their description, the sources they read and the tools they may
+call, so a person sees that before running one.
+
+Picking a skill writes `/sleep ` into the prompt; a prompt that starts with an offered
+skill is sent tagged with it, and the rest of the text is the question (the skill's
+description when there is none). On `POST /api/chat` the server, before any model call:
+
+1. refuses a skill it does not offer (`skill-not-offered`);
+2. refuses a provider the skill does not list (`provider-not-allowed-by-skill`) and
+   wearable context the skill does not read (`source-not-allowed`), each with a sentence
+   that names the skill, shown in the answer column;
+3. applies the data-mode policy as for any turn;
+4. writes a `skill.<name>` audit row (skill, model, provider, allowlists; no prompt).
+
+The turn then gets only the skill's tools, intersected with the user's sources and what
+the data-mode policy left (`show_view` stays when the skill allows `chart.timeseries`, and
+refuses any other kind), and the skill's instructions at the end of the system prompt.
+The response document records `skill`, and the prompt shows a `/sleep` chip, also after
+a reload, where it is read back from the audit row. The shared rules live in
+`infrastructure/skill-gate.ts`, which the eval gate uses too.

@@ -183,4 +183,46 @@ describe("streamAnswer", () => {
     const { result } = await run(serverResponse(failing, Promise.resolve(null)));
     expect(result.ending).toBe("FAILED");
   });
+
+  test("a refused skill turn is FAILED and carries the server's own sentence", async () => {
+    const sentence =
+      "/sleep runs only on local Ollama. The models here come from OpenRouter, so /sleep did not run. Ask without /sleep instead.";
+    const sent: string[] = [];
+    const result = await streamAnswer(
+      {
+        modelId: "m",
+        turnId: "t",
+        messages: [{ role: "user", content: "last 7 nights" }],
+        skill: "sleep",
+      },
+      () => {},
+      async (_url, init) => {
+        sent.push(String(init.body));
+        return Response.json(
+          { code: "provider-not-allowed-by-skill", error: sentence },
+          { status: 400 },
+        );
+      },
+    );
+    expect(result).toEqual({
+      ending: "FAILED",
+      metrics: null,
+      document: null,
+      refusal: sentence,
+    });
+    expect(JSON.parse(sent[0] ?? "{}")).toMatchObject({ skill: "sleep" });
+  });
+
+  test("any other refusal text never reaches the column", async () => {
+    const result = await streamAnswer(
+      { modelId: "m", turnId: "t", messages: [{ role: "user", content: "q" }] },
+      () => {},
+      async () =>
+        Response.json(
+          { code: "PROVIDER_NOT_PERMITTED_FOR_DATA_MODE", error: "internal wording" },
+          { status: 400 },
+        ),
+    );
+    expect(result).toEqual({ ending: "FAILED", metrics: null, document: null });
+  });
 });

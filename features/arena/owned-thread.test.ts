@@ -83,10 +83,17 @@ const savedRow = (
   costUsd: 0,
 });
 
-const reads = (actorId: string | null, userIds: Record<string, string>): ThreadReads => ({
+const reads = (
+  actorId: string | null,
+  userIds: Record<string, string>,
+  skills: ReadonlyMap<string, string> = new Map(),
+  thread: StoredThread = stored,
+): ThreadReads => ({
   actorId: async () => actorId,
   appUserIdFor: async (actor) => userIds[actor] ?? null,
-  findThread: async (id) => (id === stored.id ? stored : null),
+  findThread: async (id) => (id === thread.id ? thread : null),
+  skillsOfTurns: async (turnIds) =>
+    new Map([...skills].filter(([turnId]) => turnIds.includes(turnId))),
 });
 
 describe("loadOwnedThread", () => {
@@ -138,6 +145,47 @@ describe("loadOwnedThread", () => {
     expect(withheld?.text).toBe("");
     expect(withheld?.reasoningText).toBeNull();
     expect(JSON.stringify(thread)).not.toContain("Withheld synthetic");
+  });
+});
+
+describe("a turn sent with a skill, after a reload", () => {
+  const owner = { "clerk-owner": "user-owner" };
+
+  test("an ordinary turn has no skill", async () => {
+    const thread = await loadOwnedThread("thread-1", reads("clerk-owner", owner));
+    expect(thread?.turns[0]?.skill).toBeNull();
+  });
+
+  test("the skill comes back from the turn's skill audit row", async () => {
+    const thread = await loadOwnedThread(
+      "thread-1",
+      reads("clerk-owner", owner, new Map([["turn-1", "sleep"]])),
+    );
+    expect(thread?.turns[0]?.skill).toBe("sleep");
+  });
+
+  test("without an audit row it comes back from a stored response document", async () => {
+    const [turn] = stored.turns;
+    const withSkillDocument: StoredThread = {
+      ...stored,
+      turns: [
+        {
+          ...turn!,
+          responses: [
+            savedRow("r-x", "qwen3:4b", 0),
+            {
+              ...savedRow("r-y", "medgemma:4b", 1),
+              responseDocument: { ...makeResponseDocument(), skill: "sleep" },
+            },
+          ],
+        },
+      ],
+    };
+    const thread = await loadOwnedThread(
+      "thread-1",
+      reads("clerk-owner", owner, new Map(), withSkillDocument),
+    );
+    expect(thread?.turns[0]?.skill).toBe("sleep");
   });
 });
 

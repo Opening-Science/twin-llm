@@ -67,6 +67,10 @@ read as `information` / `unknown`.
 v1 without a version bump, with parse defaults `[]` and `true`.
 `sources.knowledge` was added in v1.1 the same way, with default `[]`,
 together with the uncertainty reason `knowledge_only`.
+`skill` (#42) names the skill a turn ran under, such as `sleep`. It is set by
+the host from the request, never from model text, and is absent on ordinary
+turns and on older documents. The skill-run audit row (`skill.<name>`) stays on
+the audit chain but is not listed in `tool_calls`, because it read nothing.
 
 `interpretation.kind` is `narration` | `none` | `unrenderable`. The builder
 never emits `kind=contract`. `unrenderable` is the interpreter stub only

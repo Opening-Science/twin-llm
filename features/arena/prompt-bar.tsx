@@ -12,9 +12,11 @@ import {
   unknownCommandHint,
 } from "@/features/commands/command-palette";
 import {
-  BUILT_IN_COMMANDS,
   type Command,
   matchCommands,
+  paletteCommands,
+  readsLine,
+  skillDraft,
 } from "@/features/commands/registry";
 import { useWearableStatus } from "@/features/wearables/use-wearable-status";
 import { WearableChips, WearableSlashMenu } from "@/features/wearables/wearable-slash";
@@ -30,7 +32,9 @@ import { chosenModels, missingCount, toggleModel } from "./model-selection";
  * turns or streams: it hands "this text, these models" upward and clears.
  *
  * Typing `/` (or `/` and a word) opens the command palette; picking `connect`
- * shows the wearable rows. Enter sends, Shift+Enter starts a new line.
+ * shows the wearable rows. Picking a skill writes `/sleep ` into the prompt so
+ * a window or subject can follow; a prompt that starts with a listed skill is
+ * sent tagged with it. Enter sends, Shift+Enter starts a new line.
  */
 
 export type ChosenModel = Readonly<{ id: string; name: string }>;
@@ -55,12 +59,19 @@ export const PromptBar = ({
   catalog,
   initialModelIds,
   busy,
+  skills = [],
   onSubmit,
 }: Readonly<{
   catalog: readonly CatalogModel[] | null;
   initialModelIds: readonly string[];
   busy: boolean;
-  onSubmit: (prompt: string, models: readonly ChosenModel[]) => void;
+  /** Skills the server offers, as palette commands. */
+  skills?: readonly Command[];
+  onSubmit: (
+    prompt: string,
+    models: readonly ChosenModel[],
+    skill: string | null,
+  ) => void;
 }>) => {
   const router = useRouter();
   const wearables = useWearableStatus();
@@ -73,7 +84,10 @@ export const PromptBar = ({
 
   const chosen = catalog ? chosenModels(catalog, modelIds) : [];
   const slashOpen = !slashDismissed && SLASH_COMMAND.test(draft);
-  const commands = slashOpen ? matchCommands(draft.slice(1), BUILT_IN_COMMANDS) : [];
+  const commands = slashOpen
+    ? matchCommands(draft.slice(1), paletteCommands(skills))
+    : [];
+  const skillTurn = skillDraft(draft, skills);
   const active = Math.min(activeIndex, Math.max(commands.length - 1, 0));
   const paletteOpen = slashOpen && picked === null;
   const connectOpen = slashOpen && picked?.name === "connect";
@@ -82,10 +96,22 @@ export const PromptBar = ({
   const submit = () => {
     if (!ready) return;
     onSubmit(
-      draft,
+      skillTurn?.prompt ?? draft,
       chosen.map((model) => ({ id: model.id, name: model.name })),
+      skillTurn?.skill.name ?? null,
     );
     setDraft("");
+  };
+
+  /** A skill goes into the prompt to be sent; a built-in opens its own menu. */
+  const pick = (command: Command | null) => {
+    if (command?.kind === "skill") {
+      setDraft(`/${command.name} `);
+      setPicked(null);
+      setActiveIndex(0);
+      return;
+    }
+    setPicked(command);
   };
 
   const onFormSubmit = (event: FormEvent) => {
@@ -99,7 +125,7 @@ export const PromptBar = ({
       if (action === null) return;
       event.preventDefault();
       if (action === "close") setSlashDismissed(true);
-      else if (action === "pick") setPicked(commands[active] ?? null);
+      else if (action === "pick") pick(commands[active] ?? null);
       else if (action === "unknown") setNotice(unknownCommandHint(draft));
       else setActiveIndex(action.index);
       return;
@@ -122,7 +148,7 @@ export const PromptBar = ({
           <CommandPalette
             commands={commands}
             activeIndex={active}
-            onPick={setPicked}
+            onPick={pick}
             notice={notice}
           />
         ) : null}
@@ -237,8 +263,10 @@ export const PromptBar = ({
           </AppAuth>
         </div>
       </form>
-      <p className="text-muted-foreground mt-1.5 text-center text-xs">
-        {hintFor(missingCount(catalog, initialModelIds), chosen.length)}
+      <p className="text-muted-foreground mt-1.5 text-center text-xs" aria-live="polite">
+        {skillTurn
+          ? `Sends with /${skillTurn.skill.name}, which ${readsLine(skillTurn.skill.reads)}.`
+          : hintFor(missingCount(catalog, initialModelIds), chosen.length)}
       </p>
     </div>
   );

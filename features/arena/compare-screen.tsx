@@ -1,5 +1,6 @@
 "use client";
 
+import type { Command } from "@/features/commands/registry";
 import type { CatalogModel } from "@/infrastructure/model-catalog";
 
 import { AnswerColumn } from "./answer-column";
@@ -36,11 +37,14 @@ export const CompareScreen = ({
   defaultModelIds,
   threadId = null,
   initialTurns = [],
+  skills = [],
 }: Readonly<{
   catalog: readonly CatalogModel[] | null;
   defaultModelIds: readonly string[];
   threadId?: string | null;
   initialTurns?: readonly TurnState[];
+  /** Skills the server offers, listed in the palette. */
+  skills?: readonly Command[];
 }>) => {
   const { turns, sending, error, summaries, send, retry } = useConversation(
     threadId,
@@ -62,9 +66,17 @@ export const CompareScreen = ({
               {turns.map((turn, index) => (
                 <li key={turn.id} className="flex flex-col gap-4">
                   <h2 className="sr-only">Prompt {index + 1}</h2>
-                  <p className="bg-muted ml-auto max-w-[85%] rounded-2xl rounded-br-md px-4 py-3 text-[15px] leading-relaxed whitespace-pre-wrap sm:max-w-[70%]">
-                    {turn.prompt}
-                  </p>
+                  <div className="bg-muted ml-auto flex max-w-[85%] flex-col items-start gap-1.5 rounded-2xl rounded-br-md px-4 py-3 sm:max-w-[70%]">
+                    {turn.skill ? (
+                      <span className="skill-chip">
+                        <span className="sr-only">Sent with the skill </span>
+                        {`/${turn.skill}`}
+                      </span>
+                    ) : null}
+                    <p className="text-[15px] leading-relaxed whitespace-pre-wrap">
+                      {turn.prompt}
+                    </p>
+                  </div>
                   <div
                     className={`surface divide-border grid grid-cols-1 divide-y overflow-hidden lg:divide-x lg:divide-y-0 ${columnsClass(turn.answers.length)}`}
                   >
@@ -95,7 +107,8 @@ export const CompareScreen = ({
         catalog={catalog}
         initialModelIds={defaultModelIds}
         busy={sending}
-        onSubmit={(prompt, models) => void send(prompt, models)}
+        skills={skills}
+        onSubmit={(prompt, models, skill) => void send(prompt, models, skill)}
       />
     </div>
   );
