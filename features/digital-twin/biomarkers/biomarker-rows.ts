@@ -2,6 +2,7 @@ import {
   formatDate,
   formatMetricValue,
   formatNumber,
+  isMainSleepKey,
   isoLocalDate,
   metricLabel,
   metricStem,
@@ -163,6 +164,8 @@ const metricDay = (metric: FormattableMetric): string =>
 /**
  * One reading per vital: the first source in the vitals table that has data,
  * newest day first. Sources are not mixed, so a value and its label agree.
+ * Of a day's sleep periods the main sleep wins, so a short rest or a nap is
+ * never shown as the night; the key breaks a remaining tie.
  */
 export const latestVitals = (
   metrics: readonly FormattableMetric[],
@@ -172,8 +175,11 @@ export const latestVitals = (
       .map((source) => metrics.filter((metric) => metricStem(metric.key) === source))
       .find((list) => list.length > 0);
     if (!found) return [];
-    const newest = [...found].sort((a, b) =>
-      metricDay(b).localeCompare(metricDay(a)),
+    const newest = [...found].sort(
+      (a, b) =>
+        metricDay(b).localeCompare(metricDay(a)) ||
+        Number(isMainSleepKey(b.key)) - Number(isMainSleepKey(a.key)) ||
+        a.key.localeCompare(b.key),
     )[0]!;
     return [{ vital, metric: newest }];
   });

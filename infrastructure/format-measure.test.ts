@@ -9,10 +9,13 @@ import {
   formatMetricValue,
   formatNumber,
   formatRelative,
+  formatUnit,
+  isMainSleepKey,
   isoLocalDate,
   measureKindFor,
   metricLabel,
   metricStem,
+  propertyLabel,
   roundTo,
   type MeasureKind,
 } from "./format-measure";
@@ -192,13 +195,54 @@ describe("metricStem", () => {
   });
 });
 
+describe("formatUnit", () => {
+  test.each([
+    ["m2", "m²"],
+    ["m3", "m³"],
+    ["kg/m2", "kg/m²"],
+    ["deg", "°"],
+    ["kg", "kg"],
+    ["", ""],
+  ] as const)("%p → %p", (unit, expected) => {
+    expect(formatUnit(unit)).toBe(expected);
+  });
+});
+
+describe("isMainSleepKey", () => {
+  test.each([
+    ["sleep.duration.long_sleep.2026-10-16", true],
+    ["sleep.duration.2026-10-16", true],
+    ["sleep.duration.rest.2026-10-16", false],
+    ["sleep.hr.late_nap.2026-10-16", false],
+    ["sleep.score.sleep_2.2026-10-16", false],
+    ["workout.duration.running.2026-10-16", true],
+    ["google.steps.2026-10-16", true],
+  ] as const)("%p → %p", (key, expected) => {
+    expect(isMainSleepKey(key)).toBe(expected);
+  });
+});
+
+describe("propertyLabel", () => {
+  test.each([
+    ["body.bmi", "BMI"],
+    ["body.height", "Height"],
+    ["body.surface", "Body surface area"],
+    ["body.volume", "Body volume"],
+    ["body.mass", "Body mass"],
+    ["body.other", "body.other"],
+  ] as const)("%p → %p", (path, expected) => {
+    expect(propertyLabel(path)).toBe(expected);
+  });
+});
+
 describe("metricLabel", () => {
   test.each([
     ["sleep.hrv.2026-10-16", "Average HRV during sleep"],
     ["sleep.score.long_sleep.2026-10-16", "Sleep score"],
     ["sleep.score.late_nap.2026-10-16", "Sleep score (late nap)"],
-    ["sleep.score.sleep.2026-10-16", "Sleep score"],
-    ["sleep.hrv.rest.2026-10-16", "Average HRV during sleep"],
+    ["sleep.score.sleep.2026-10-16", "Sleep score (sleep)"],
+    ["sleep.hrv.rest.2026-10-16", "Average HRV during sleep (rest)"],
+    ["sleep.duration.rest_2.2026-10-16", "Total sleep duration (rest 2)"],
     ["readiness.score.2026-10-16", "Readiness score"],
     ["activity.active_calories.2026-10-16", "Active calories"],
     ["workout.calories.running.2026-10-16", "Workout calories (running)"],
@@ -223,7 +267,9 @@ describe("metricLabel", () => {
       "BodyLoop circumference torso waist",
     ],
     ["vitronic.angle.shoulder_tilt.2026-10-16", "BodyLoop angle shoulder_tilt"],
-    ["vitronic.property.body.height.2026-10-16", "BodyLoop body.height"],
+    ["vitronic.property.body.height.2026-10-16", "BodyLoop Height"],
+    ["vitronic.property.body.bmi.2026-10-16", "BodyLoop BMI"],
+    ["vitronic.property.body.other.2026-10-16", "BodyLoop body.other"],
   ] as const)("%p → %p", (key, expected) => {
     expect(metricLabel(key)).toBe(expected);
   });
@@ -274,6 +320,24 @@ describe("formatMetricValue and formatForPrompt", () => {
     [{ key: "google.unknown.2026-10-16", value: 3, unit: "" }, "3"],
     [{ key: "google.unknown.2026-10-16", value: "high", unit: "" }, "high"],
     [{ key: "google.unknown.2026-10-16", value: Number.NaN }, "—"],
+    [
+      { key: "sleep.duration.long_sleep.2026-10-16", value: 432, unit: "min" },
+      "7 h 12 min",
+    ],
+    [{ key: "sleep.duration.rest.2026-10-16", value: 2, unit: "min" }, "2 min"],
+    [
+      { key: "vitronic.property.body.bmi.2026-10-16", value: 23.46, unit: "kg/m2" },
+      "23.5 kg/m²",
+    ],
+    [
+      { key: "vitronic.property.body.surface.2026-10-16", value: 1.85, unit: "m2" },
+      "1.9 m²",
+    ],
+    [
+      { key: "vitronic.property.body.volume.2026-10-16", value: "0.065", unit: "m3" },
+      "0.065 m³",
+    ],
+    [{ key: "google.unknown.2026-10-16", value: Number.NaN, unit: "m2" }, "—"],
   ] as const)("%o → %p", (metric, expected) => {
     expect(formatMetricValue(metric)).toBe(expected);
   });
