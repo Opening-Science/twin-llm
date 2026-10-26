@@ -17,6 +17,12 @@ describe("motionUnavailable", () => {
     expect(motionUnavailable(false, false, "scan")).toBe(MOTION_NO_RIG_SCAN);
     expect(motionUnavailable(true, false, "scan")).toBe(null);
   });
+
+  test("a demo body without a rig names the bake command", () => {
+    expect(motionUnavailable(false, false, "demo")).toBe(
+      "The demo body that can walk is not installed on this machine. Run bun run anatomy:bake-rigged (needs uv).",
+    );
+  });
 });
 
 describe("motionLines", () => {

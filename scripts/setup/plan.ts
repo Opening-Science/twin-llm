@@ -1,0 +1,528 @@
+/**
+ * From what `detect.ts` found on this machine to what `setup:local` will do
+ * and what `doctor` reports. Pure: no I/O, so every branch is unit tested.
+ */
+import { DEMO_COHORTS, SYNTHETIC_COHORTS } from "../../packages/query-tools/scope";
+import { EVAL_COHORT, FIXTURE_COHORT, RELEASE_10K } from "./cohort-pins";
+import {
+  checkTool,
+  type Platform,
+  pgvectorInstall,
+  POSTGRES_INSTALL,
+  TOOL_IDS,
+  type ToolCheck,
+  type ToolId,
+  type ToolProbe,
+} from "./prerequisites";
+
+export type DatabaseProbe =
+  | Readonly<{ kind: "no-url" }>
+  | Readonly<{ kind: "placeholder" }>
+  | Readonly<{ kind: "unreachable"; detail: string }>
+  | Readonly<{ kind: "auth-failed" }>
+  | Readonly<{
+      kind: "missing-database";
+      name: string;
+      pgvector: boolean;
+      serverMajor: number | null;
+    }>
+  | Readonly<{
+      kind: "ok";
+      pgvector: boolean;
+      serverMajor: number | null;
+      /** Applied migration names; empty when the database is new. */
+      appliedMigrations: readonly string[];
+      /** Synthetic subjects per allowlisted cohort; empty when the table is missing. */
+      cohorts: Readonly<Record<string, number>>;
+    }>;
+
+export type OllamaProbe =
+  | Readonly<{ kind: "not-used"; provider: string }>
+  | Readonly<{ kind: "unreachable"; baseUrl: string }>
+  | Readonly<{ kind: "ok"; baseUrl: string; models: readonly string[] }>;
+
+export type DetectedState = Readonly<{
+  platform: Platform;
+  tools: Readonly<Record<ToolId, ToolProbe>>;
+  /** `.env.local` exists (setup creates it from the example when it does not). */
+  envFile: boolean;
+  dataMode: string | null;
+  database: DatabaseProbe;
+  /** Migration folders in `prisma/migrations`. */
+  migrations: readonly string[];
+  openTwin: Readonly<{ pinned: string; synced: string | null }>;
+  /** Atlas and demo-body files not yet installed (by file name). */
+  anatomyMissing: readonly string[];
+  /** Rigged demo bodies not yet installed (by file name). */
+  riggedMissing: readonly string[];
+  ollama: OllamaProbe;
+  freeDiskBytes: number | null;
+}>;
+
+export type CohortChoice = "eval" | "10k" | "none";
+
+export type SetupOptions = Readonly<{ cohort: CohortChoice }>;
+
+export type StepId =
+  | "env-file"
+  | "open-twin"
+  | "install"
+  | "database"
+  | "migrate"
+  | "anatomy"
+  | "rigged"
+  | "cohort";
+
+export type Action =
+  | Readonly<{ kind: "create-env-file" }>
+  | Readonly<{ kind: "command"; argv: readonly string[] }>
+  | Readonly<{ kind: "create-database"; name: string }>
+  | Readonly<{ kind: "load-eval" }>
+  | Readonly<{ kind: "load-10k" }>
+  | Readonly<{ kind: "load-fixtures" }>;
+
+export type Step = Readonly<{
+  id: StepId;
+  title: string;
+  /** Steps that must have succeeded (or been skipped as already done) first. */
+  after: readonly StepId[];
+}> &
+  (
+    | Readonly<{ status: "run"; action: Action; note?: string }>
+    | Readonly<{ status: "skip" | "blocked" | "off"; reason: string }>
+  );
+
+export const SETUP_COMMAND = "bun run setup:local";
+
+const fixFor = (state: DetectedState, id: ToolId): string | null => {
+  const check = checkTool(id, state.tools[id], state.platform);
+  return check.status === "ok" ? null : `${check.detail}: ${check.fix}`;
+};
+
+/** Subjects in the allowlisted cohorts, by cohort. */
+const loadedCohorts = (database: DatabaseProbe): Readonly<Record<string, number>> =>
+  database.kind === "ok" ? database.cohorts : {};
+
+const totalSubjects = (cohorts: Readonly<Record<string, number>>): number =>
+  Object.values(cohorts).reduce((sum, n) => sum + n, 0);
+
+const databaseProblem = (state: DetectedState): string | null => {
+  const db = state.database;
+  switch (db.kind) {
+    case "no-url":
+      return "DATABASE_URL is not set in .env.local";
+    case "placeholder":
+      return "DATABASE_URL in .env.local is still the example placeholder; set it to your Postgres (e.g. postgresql://postgres:postgres@127.0.0.1:5432/twin_llm_synthetic) and re-run";
+    case "auth-failed":
+      return "Postgres refused the user or password in DATABASE_URL";
+    case "unreachable":
+      return `Postgres is not reachable at DATABASE_URL (${db.detail}): ${POSTGRES_INSTALL[state.platform]}`;
+    case "missing-database":
+    case "ok":
+      return db.pgvector
+        ? null
+        : `pgvector is not installed in this Postgres: ${pgvectorInstall(state.platform, db.serverMajor)}`;
+  }
+};
+
+const openTwinStep = (state: DetectedState): Step => {
+  const base = {
+    id: "open-twin",
+    title: "open-twin packages (sync:open-twin)",
+    after: [],
+  } as const;
+  if (state.openTwin.synced === state.openTwin.pinned) {
+    return {
+      ...base,
+      status: "skip",
+      reason: `already at ${state.openTwin.pinned.slice(0, 7)}`,
+    };
+  }
+  const missing = (["git", "python3"] as const)
+    .map((id) => fixFor(state, id))
+    .filter((fix) => fix !== null);
+  return missing.length > 0
+    ? { ...base, status: "blocked", reason: missing.join("; ") }
+    : {
+        ...base,
+        status: "run",
+        action: { kind: "command", argv: ["bun", "run", "sync:open-twin"] },
+      };
+};
+
+const databaseStep = (state: DetectedState): Step => {
+  const base = {
+    id: "database",
+    title: "Postgres database",
+    after: ["env-file"],
+  } as const;
+  const problem = databaseProblem(state);
+  if (problem !== null) return { ...base, status: "blocked", reason: problem };
+  return state.database.kind === "missing-database"
+    ? {
+        ...base,
+        status: "run",
+        action: { kind: "create-database", name: state.database.name },
+      }
+    : { ...base, status: "skip", reason: "reachable, pgvector available" };
+};
+
+const anatomyStep = (state: DetectedState): Step => {
+  const base = {
+    id: "anatomy",
+    title: "Anatomy atlases and demo bodies (anatomy:fetch)",
+    after: [],
+  } as const;
+  return state.anatomyMissing.length === 0
+    ? { ...base, status: "skip", reason: "all installed" }
+    : {
+        ...base,
+        status: "run",
+        action: { kind: "command", argv: ["bun", "run", "anatomy:fetch"] },
+        note: `${state.anatomyMissing.length} file(s) to download`,
+      };
+};
+
+const riggedStep = (state: DetectedState): Step => {
+  const base = {
+    id: "rigged",
+    title: "Rigged demo bodies for Walk/Idle (anatomy:bake-rigged)",
+    after: [],
+  } as const;
+  if (state.riggedMissing.length === 0)
+    return { ...base, status: "skip", reason: "both installed" };
+  const uv = fixFor(state, "uv");
+  return uv !== null
+    ? {
+        ...base,
+        status: "blocked",
+        reason: `${uv}. Then run bun run anatomy:bake-rigged (or ${SETUP_COMMAND} again). The demo bodies stay static until then.`,
+      }
+    : {
+        ...base,
+        status: "run",
+        action: { kind: "command", argv: ["bun", "run", "anatomy:bake-rigged"] },
+      };
+};
+
+const cohortStep = (state: DetectedState, options: SetupOptions): Step => {
+  const base = {
+    id: "cohort",
+    title: "Synthetic cohort in the warehouse",
+    after: ["migrate"],
+  } as const;
+  if (options.cohort === "none")
+    return { ...base, status: "off", reason: "not loaded (--skip-cohort)" };
+  const cohorts = loadedCohorts(state.database);
+  if (options.cohort === "10k") {
+    const have = cohorts[RELEASE_10K.cohortId] ?? 0;
+    if (have > 0)
+      return {
+        ...base,
+        status: "skip",
+        reason: `${RELEASE_10K.cohortId} already has ${have} subjects`,
+      };
+    const zstd = fixFor(state, "zstd");
+    if (zstd !== null) return { ...base, status: "blocked", reason: zstd };
+    if (
+      state.freeDiskBytes !== null &&
+      state.freeDiskBytes < RELEASE_10K.diskBytesNeeded
+    ) {
+      return {
+        ...base,
+        status: "blocked",
+        reason: `the 10k cohort needs about ${gigabytes(RELEASE_10K.diskBytesNeeded)} free here, ${gigabytes(state.freeDiskBytes)} available`,
+      };
+    }
+    return {
+      ...base,
+      status: "run",
+      action: { kind: "load-10k" },
+      note: `download ${gigabytes(RELEASE_10K.archiveBytes)} from release ${RELEASE_10K.tag}, verify, unpack, ingest as ${RELEASE_10K.cohortId}`,
+    };
+  }
+  const loaded = Object.entries(cohorts).filter(
+    ([id, n]) => n > 0 && id !== FIXTURE_COHORT.cohortId,
+  );
+  if (loaded.length > 0) {
+    return {
+      ...base,
+      status: "skip",
+      reason: `warehouse already has ${loaded.map(([id, n]) => `${id} (${n} subjects)`).join(", ")}`,
+    };
+  }
+  const javaFix = [
+    fixFor(state, "java"),
+    fixFor(state, "curl"),
+    fixFor(state, "shasum"),
+  ].filter((fix) => fix !== null);
+  if (javaFix.length === 0) {
+    return {
+      ...base,
+      status: "run",
+      action: { kind: "load-eval" },
+      note: `generate ${EVAL_COHORT.cohortId} with Synthea (fixed seed and dates), verify, ingest`,
+    };
+  }
+  const reason = `${javaFix.join("; ")}. Then run ${SETUP_COMMAND} again to load ${EVAL_COHORT.cohortId}.`;
+  return totalSubjects(cohorts) === 0
+    ? {
+        ...base,
+        status: "run",
+        action: { kind: "load-fixtures" },
+        note: `no Java, so only the three trimmed fixtures (${FIXTURE_COHORT.cohortId}). ${reason}`,
+      }
+    : { ...base, status: "blocked", reason };
+};
+
+const gigabytes = (bytes: number): string => `${(bytes / 1e9).toFixed(1)} GB`;
+
+/** Every step `setup:local` takes, in order, with what it will do and why. */
+export const planSetup = (
+  state: DetectedState,
+  options: SetupOptions,
+): readonly Step[] => {
+  const envFile: Step = state.envFile
+    ? {
+        id: "env-file",
+        title: ".env.local",
+        after: [],
+        status: "skip",
+        reason: "present (left as it is)",
+      }
+    : {
+        id: "env-file",
+        title: ".env.local",
+        after: [],
+        status: "run",
+        action: { kind: "create-env-file" },
+        note: "copied from .env.synthetic.example (DATA_MODE=synthetic, LOCAL_ONLY=true)",
+      };
+  const install: Step = {
+    id: "install",
+    title: "Dependencies (bun install)",
+    after: ["open-twin"],
+    status: "run",
+    action: { kind: "command", argv: ["bun", "install"] },
+  };
+  const database = databaseStep(state);
+  const migrate: Step =
+    database.status === "blocked"
+      ? {
+          id: "migrate",
+          title: "Migrations (prisma migrate deploy)",
+          after: ["database", "install"],
+          status: "blocked",
+          reason: "needs the database",
+        }
+      : {
+          id: "migrate",
+          title: "Migrations (prisma migrate deploy)",
+          after: ["database", "install"],
+          status: "run",
+          action: { kind: "command", argv: ["bunx", "prisma", "migrate", "deploy"] },
+        };
+  const cohort: Step =
+    database.status === "blocked" && options.cohort !== "none"
+      ? {
+          id: "cohort",
+          title: "Synthetic cohort in the warehouse",
+          after: ["migrate"],
+          status: "blocked",
+          reason: "needs the database",
+        }
+      : cohortStep(state, options);
+  return [
+    envFile,
+    openTwinStep(state),
+    install,
+    database,
+    migrate,
+    anatomyStep(state),
+    riggedStep(state),
+    cohort,
+  ];
+};
+
+export type Outcome = Readonly<{
+  id: StepId;
+  title: string;
+  /** `off`: left out on request (--skip-cohort), so not something to fix. */
+  result: "done" | "skipped" | "off" | "blocked" | "failed";
+  detail: string;
+}>;
+
+/**
+ * Whether a planned step can run given what happened before it: null when it
+ * can, otherwise why not. A dependency that was skipped because it was already
+ * done counts as done.
+ */
+export const blockedBy = (step: Step, earlier: readonly Outcome[]): string | null => {
+  const failed = earlier.filter(
+    (outcome) =>
+      step.after.includes(outcome.id) &&
+      (outcome.result === "failed" || outcome.result === "blocked"),
+  );
+  return failed.length === 0
+    ? null
+    : `needs ${failed.map((outcome) => outcome.title).join(", ")}`;
+};
+
+const MARK: Readonly<Record<Outcome["result"], string>> = {
+  done: "[ready]  ",
+  skipped: "[ready]  ",
+  off: "[off]    ",
+  blocked: "[skipped]",
+  failed: "[FAILED] ",
+};
+
+/** The final checklist: what is ready, what was skipped and why. */
+export const formatChecklist = (outcomes: readonly Outcome[]): string => {
+  const lines = outcomes.map(
+    (outcome) => `${MARK[outcome.result]} ${outcome.title}: ${outcome.detail}`,
+  );
+  const open = outcomes.filter(
+    (outcome) => outcome.result === "blocked" || outcome.result === "failed",
+  );
+  const tail =
+    open.length === 0
+      ? "Everything is ready. Start the app with: bun run dev"
+      : `${open.length} item(s) need attention (above). Fix them and run ${SETUP_COMMAND} again; finished steps are skipped.`;
+  return ["", "Setup checklist", ...lines, "", tail, ""].join("\n");
+};
+
+export type Readiness = Readonly<{ page: string; ready: boolean; detail: string }>;
+
+const CHAT_MODELS_HINT = "ollama pull qwen3:8b && ollama pull nomic-embed-text";
+
+/** What each part of the app needs on this machine, and whether it has it. */
+export const pageReadiness = (state: DetectedState): readonly Readiness[] => {
+  const cohorts = loadedCohorts(state.database);
+  const loaded = SYNTHETIC_COHORTS.filter((id) => (cohorts[id] ?? 0) > 0);
+  const demo = DEMO_COHORTS.filter((id) => (cohorts[id] ?? 0) > 0);
+  const dbProblem = databaseProblem(state);
+  const synthetic = state.dataMode === "synthetic";
+  const applied = state.database.kind === "ok" ? state.database.appliedMigrations : [];
+  const pending = state.migrations.filter((name) => !applied.includes(name));
+  const dataPage: Readiness =
+    dbProblem !== null
+      ? { page: "Data page (/data)", ready: false, detail: dbProblem }
+      : pending.length > 0
+        ? {
+            page: "Data page (/data)",
+            ready: false,
+            detail: `${pending.length} migration(s) not applied: ${SETUP_COMMAND}`,
+          }
+        : !synthetic
+          ? {
+              page: "Data page (/data)",
+              ready: false,
+              detail: `DATA_MODE is ${state.dataMode ?? "unset"}; the page reads only with DATA_MODE=synthetic`,
+            }
+          : loaded.length === 0
+            ? {
+                page: "Data page (/data)",
+                ready: false,
+                detail: `no synthetic cohort loaded: ${SETUP_COMMAND}`,
+              }
+            : {
+                page: "Data page (/data)",
+                ready: true,
+                detail: loaded.map((id) => `${id} (${cohorts[id]} subjects)`).join(", "),
+              };
+  const demoLabs: Readiness =
+    demo.length > 0 && synthetic
+      ? { page: "Body twin Demo lab values", ready: true, detail: demo.join(", ") }
+      : {
+          page: "Body twin Demo lab values",
+          ready: false,
+          detail: `needs ${DEMO_COHORTS.join(" or ")} with DATA_MODE=synthetic: ${SETUP_COMMAND}`,
+        };
+  const anatomy: Readiness =
+    state.anatomyMissing.length === 0
+      ? {
+          page: "Body twin anatomy and demo bodies",
+          ready: true,
+          detail: "all installed",
+        }
+      : {
+          page: "Body twin anatomy and demo bodies",
+          ready: false,
+          detail: `missing ${state.anatomyMissing.join(", ")}: bun run anatomy:fetch`,
+        };
+  const uv = fixFor(state, "uv");
+  const walking: Readiness =
+    state.riggedMissing.length === 0
+      ? {
+          page: "Body twin Walk/Idle",
+          ready: true,
+          detail: "rigged demo bodies installed",
+        }
+      : {
+          page: "Body twin Walk/Idle",
+          ready: false,
+          detail: `rigged bodies missing (${state.riggedMissing.join(", ")}): bun run anatomy:bake-rigged${uv === null ? "" : ` after installing uv (${uv})`}`,
+        };
+  const chat = chatReadiness(state.ollama);
+  return [dataPage, demoLabs, anatomy, walking, chat];
+};
+
+const isEmbedding = (model: string): boolean => /embed/i.test(model);
+
+const chatReadiness = (ollama: OllamaProbe): Readiness => {
+  const page = "Chat (local model)";
+  switch (ollama.kind) {
+    case "not-used":
+      return {
+        page,
+        ready: true,
+        detail: `LLM_PROVIDER=${ollama.provider}; not checked here`,
+      };
+    case "unreachable":
+      return {
+        page,
+        ready: false,
+        detail: `Ollama not answering at ${ollama.baseUrl}: start it (ollama serve), then ${CHAT_MODELS_HINT}`,
+      };
+    case "ok": {
+      const chatModels = ollama.models.filter((model) => !isEmbedding(model));
+      const embed = ollama.models.some((model) => model.startsWith("nomic-embed-text"));
+      if (chatModels.length === 0)
+        return {
+          page,
+          ready: false,
+          detail: `no chat model pulled: ${CHAT_MODELS_HINT}`,
+        };
+      return embed
+        ? { page, ready: true, detail: chatModels.join(", ") }
+        : {
+            page,
+            ready: true,
+            detail: `${chatModels.join(", ")}; knowledge search also needs: ollama pull nomic-embed-text`,
+          };
+    }
+  }
+};
+
+/** Every prerequisite, as doctor lists it. */
+export const toolChecks = (state: DetectedState): readonly ToolCheck[] =>
+  TOOL_IDS.map((id) => checkTool(id, state.tools[id], state.platform));
+
+/** The database line for doctor. */
+export const databaseSummary = (
+  state: DetectedState,
+): Readonly<{ ok: boolean; detail: string }> => {
+  const problem = databaseProblem(state);
+  if (problem !== null) return { ok: false, detail: problem };
+  if (state.database.kind === "missing-database") {
+    return {
+      ok: false,
+      detail: `database ${state.database.name} does not exist yet: ${SETUP_COMMAND} creates it`,
+    };
+  }
+  const total = totalSubjects(loadedCohorts(state.database));
+  return {
+    ok: true,
+    detail: `reachable, pgvector available, ${total} synthetic subjects`,
+  };
+};

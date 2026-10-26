@@ -49,6 +49,8 @@ export const COHORT_ROLES: Readonly<Record<string, string>> = {
     "Evaluation cohort: the 81-question set reads it. Never train on it.",
   "synthea-v4-seed4242": "Training cohort.",
   "synthea-v4-seed9001": "Held-out cohort, for testing a trained model.",
+  "synthea-v4-seed42-10k":
+    "Reference cohort of 10,000 people from the cohort-synthea-v4-seed42-10k release.",
 };
 
 export const EVAL_COHORT_ID = "synthea-v4-seed42";
@@ -61,9 +63,17 @@ export const BLOCKED_COPY = {
   failed: "Could not read the warehouse just now. Reload the page to try again.",
   "too-large":
     "This subject has more numeric observations than one page reads, so nothing is shown rather than a cut record.",
-  "no-cohorts":
-    "No allowlisted synthetic cohort has subjects in this database yet. Ingest one with bun run warehouse:ingest (docs/warehouse.md).",
 } as const;
+
+export const NO_COHORT_TITLE = "No synthetic cohort loaded on this machine";
+export const NO_COHORT_BODY =
+  "The warehouse in this database has no subjects in an allowlisted synthetic cohort, so there is nothing to show yet. One command sets up a fresh checkout and generates the 30-person evaluation cohort with Synthea (fixed seed and dates, so every machine gets the same people). It needs Java 21; without it, it loads three small fixtures and says what to install. docs/runbook.md has the details.";
+export const NO_COHORT_COMMANDS = [
+  "bun run setup:local",
+  "",
+  "# or the 10,000-person release (about 1 GB download, 45 GB free disk):",
+  "bun run setup:local -- --cohort-10k",
+] as const;
 
 export const TRAINING_FAILED =
   "Could not read the training files just now. Reload to try again.";

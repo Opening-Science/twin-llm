@@ -2,6 +2,32 @@
 
 Operational commands, each with the date it last ran and what a good result looks like. Times are Europe/Zurich. Connection strings below point only at throwaway local containers; never paste a real `DATABASE_URL` here.
 
+## Local setup
+
+### `bun run setup:local`
+
+Added 2026-10-26. One idempotent command that makes a fresh checkout (macOS or Linux) run like the maintainers' machines: Data page filled, Demo bodies that walk. `scripts/setup/local.ts`; the decisions are pure functions in `scripts/setup/plan.ts`.
+
+```sh
+DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/twin_llm_synthetic bun run setup:local
+bun run setup:local -- --cohort-10k    # the 10,000-person release instead of the eval cohort
+bun run setup:local -- --skip-cohort   # everything but the cohort
+bun run doctor                         # read-only: the same checks plus what each page needs
+```
+
+1. Checks bun, Node.js, git, Python 3, Java 21+, shasum, curl, uv, zstd and Ollama, and whether Postgres answers at `DATABASE_URL` with pgvector available. Anything missing is printed with its Homebrew or apt line; nothing is installed.
+2. Writes `.env.local` from `.env.synthetic.example` when there is none (`DATABASE_URL` from the shell; on macOS without one, `postgresql://$USER@127.0.0.1:5432/twin_llm_synthetic`). An existing `.env.local` is never touched.
+3. `sync:open-twin` (skipped when `.open-twin/OPEN_TWIN_SHA` is the pin), `bun install`, creates the database when the server has none of that name, `prisma migrate deploy`.
+4. `anatomy:fetch` when an atlas or demo body is missing; `anatomy:bake-rigged` when a rigged body is missing. Without uv the bake is skipped with the install line, and Walk/Idle say "Run bun run anatomy:bake-rigged (needs uv)".
+5. When no allowlisted cohort other than the trimmed fixtures has subjects: `synthea:generate -- --preset eval`, then checks 37 files and `contentSha256` `f4941fab7a56e17f9dd66b6b6e0fbed379dab8c564c6024831c5fd4aa0ba09eb` (`scripts/setup/cohort-pins.ts`) before `warehouse:ingest`. A mismatch ingests nothing. Without Java, an empty warehouse gets the three trimmed fixtures instead and the checklist says to install Java and re-run.
+6. `--cohort-10k`: checks the release's `SHA256SUMS` against the pinned archive hash, downloads `synthea-v4-seed42-10k-fhir.tar.zst` (925,850,184 bytes) to `.synthea/downloads/` (kept for re-runs), checks its sha256, unpacks with zstd (about 41 GB), checks 11,551 files and the release's content checksum, ingests as `synthea-v4-seed42-10k` (rejected bundles are counted, not fatal), then deletes the unpacked files. Refused with less than 45 GB free.
+7. Prints a checklist: `[ready]`, `[skipped]` with the reason and fix, `[off]` for `--skip-cohort`, `[FAILED]`. Exit 1 only when a step failed.
+
+macOS (Homebrew): `brew install postgresql@18 pgvector openjdk@21 uv zstd`, `brew services start postgresql@18`, and put `$(brew --prefix openjdk@21)/bin` on PATH (openjdk@21 is keg-only). If the migration cannot create the `vector` extension, `brew info pgvector` says which Homebrew Postgres versions it is built for. Debian/Ubuntu: `sudo apt install postgresql postgresql-<major>-pgvector openjdk-21-jre-headless zstd` (pgvector from the PGDG repository) and uv from its install script.
+
+- Good: a second run marks every step `[ready]` with "already …" reasons and ends "Everything is ready." `bun run doctor` lists every page `[ready]`.
+- Last run: 2026-10-26 CET, Linux, against a new database `twin_llm_setup_test` on 127.0.0.1:5432 (dropped afterwards). `--skip-cohort` from a fresh worktree: created `.env.local` and the database, synced open-twin, installed, migrated, fetched 5 anatomy files, baked both rigged bodies; `/data` showed "No synthetic cohort loaded on this machine". Then `bun run setup:local`: generated the eval cohort (37 files, checksum as pinned; the same with `TZ=America/New_York`), `Bundles: 37 inserted, 0 already ingested, 0 rejected`; `/data` showed the cohort with 37 subjects. Third run: everything skipped. `--cohort-10k` was not run end to end (unit-tested planning only).
+
 ## open-twin sync
 
 ### `bash scripts/sync-open-twin.sh <sha>`
@@ -54,7 +80,7 @@ bun run synthea:generate -- --preset eval
 
 ### Seed the synthetic warehouse
 
-Added 2026-10-15. Generate, ingest, then check counts. Synthetic rows only; it writes to whatever `DATABASE_URL` points at (the local dev database).
+Added 2026-10-15. Generate, ingest, then check counts. Synthetic rows only; it writes to whatever `DATABASE_URL` points at (the local dev database). `bun run setup:local` runs these steps (and checks the checksum) when the warehouse is empty; this is the manual path.
 
 ```sh
 bun run synthea:generate -- --preset eval

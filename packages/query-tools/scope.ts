@@ -27,6 +27,10 @@ export const SYNTHETIC_COHORTS = [
   // belong in their own database on the GPU machine, not the dev database.
   "synthea-v4-seed4242",
   "synthea-v4-seed9001",
+  // The 10,000-person reference copy from the cohort-synthea-v4-seed42-10k
+  // release (`bun run setup:local -- --cohort-10k`). Same seed as the
+  // evaluation cohort but a different population, so a different id.
+  "synthea-v4-seed42-10k",
   ...SYNTHEA_1M_COHORTS,
 ] as const;
 

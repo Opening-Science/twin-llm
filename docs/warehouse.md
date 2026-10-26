@@ -43,9 +43,10 @@ The tables come from `prisma/migrations/20261025000000_baseline`, which also add
 | `synthea-v4-seed42`            | Generated locally: Synthea v4.0.0, seed 42, N=30, ages 40–75                         |
 | `synthea-v4-seed4242`          | Training cohort, seed 4242, N=10,000 (`--preset training`)                           |
 | `synthea-v4-seed9001`          | Held-out cohort, seed 9001, N=1,000 (`--preset held-out`)                            |
+| `synthea-v4-seed42-10k`        | 10,000 living people (11,551 records) from release `cohort-synthea-v4-seed42-10k`    |
 | `synthea-v4-seed1001` … `1100` | The 1M cohort, one cohort per batch of 10,000 (`training:batches`; 1100 is held out) |
 
-The Body twin's Demo lists only `DEMO_COHORTS` (`open-twin-synthea-trimmed-3`, `synthea-v4-seed42`), never the training or held-out cohorts or the 1M batches. The batch ids are generated in `scope.ts` (`SYNTHEA_1M_COHORTS`), not written out.
+The Body twin's Demo lists only `DEMO_COHORTS` (`open-twin-synthea-trimmed-3`, `synthea-v4-seed42`), never the training or held-out cohorts, the 1M batches or the 10k release cohort. The batch ids are generated in `scope.ts` (`SYNTHEA_1M_COHORTS`), not written out.
 
 A query tool serves a subject only when `DATA_MODE=synthetic`, the row has `is_synthetic = true`, and its `cohort_id` is in the list. Anything else returns `SUBJECT_SCOPE_VIOLATION`. A new cohort label needs a code change, which is reviewed in a PR.
 
@@ -111,6 +112,8 @@ Synthetic wearable series for the training cohorts come from `bun run wearables:
 bun run synthea:generate -- --preset eval
 bun run warehouse:ingest .synthea/fhir --cohort synthea-v4-seed42
 ```
+
+`bun run setup:local` runs both on an empty warehouse and refuses to ingest unless the files match the pin in `scripts/setup/cohort-pins.ts` (37 files with fixed dates). `bun run setup:local -- --cohort-10k` loads the release cohort `synthea-v4-seed42-10k` instead (docs/runbook.md, "Local setup").
 
 N=30, ages 40–75, reference and end date `20260101`. Synthea exports deceased patients as well, so there are more bundles than N. The bundle and row counts for the cohort with fixed dates are recorded with its answer key in `docs/evaluation/question-set.md`. These codes are the ones B3 and C2 rely on:
 

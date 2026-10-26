@@ -19,7 +19,12 @@ export const MOTION_HIDES_ANATOMY =
   "Anatomy layers are hidden while the body moves: they cannot follow its joints.";
 
 export const MOTION_REDUCED = "Motion is off because the system asks for reduced motion.";
-export const MOTION_NO_RIG_DEMO = "This demo body has no skeleton, so it cannot walk.";
+/**
+ * The demo body loads without a skeleton only when the rigged copy was never
+ * baked on this machine, so the reason names the command that bakes it.
+ */
+export const MOTION_NO_RIG_DEMO =
+  "The demo body that can walk is not installed on this machine. Run bun run anatomy:bake-rigged (needs uv).";
 export const MOTION_NO_RIG_SCAN = "This scan has no skeleton the walk can drive.";
 
 /**

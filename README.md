@@ -76,28 +76,30 @@ is the focus of the Open Science Foundation's first funding call. The full data-
   <img src="docs/images/connectors-dark.png" width="49%" alt="The Connectors page in dark mode, with cards for Oura, Whoop, Google Health, BodyLoop, GBD and Guidelines, each showing its setup status.">
 </p>
 
-## Quick start
+## Run it locally
 
-You need [Bun](https://bun.sh) 1.4, Node.js 26, PostgreSQL 16 or newer with [pgvector](https://github.com/pgvector/pgvector), and [Ollama](https://ollama.com).
+You need [Bun](https://bun.sh) 1.4, Node.js 26, PostgreSQL 16 or newer with [pgvector](https://github.com/pgvector/pgvector), Java 21 (for the Synthea cohort), [uv](https://docs.astral.sh/uv/) (for the demo bodies that walk) and [Ollama](https://ollama.com).
 
 ```bash
 git clone https://github.com/Opening-Science/twin-llm.git
 cd twin-llm
-bun run sync:open-twin          # fetch the pinned open-twin packages
-bun install
-cp .env.synthetic.example .env.local   # then set DATABASE_URL
-```
-
-Create an empty PostgreSQL database (the first migration enables pgvector), then:
-
-```bash
-bunx prisma migrate deploy
-bun run warehouse:ingest tests/fixtures/synthea --cohort open-twin-synthea-trimmed-3
+DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/twin_llm_synthetic bun run setup:local
 ollama pull qwen3:8b && ollama pull nomic-embed-text
 bun run dev
 ```
 
-Open <http://localhost:3000>. This runs fully on your machine against a small synthetic cohort: no account, no cloud keys. For a larger cohort, wearables and the 3D anatomy, see [`docs/runbook.md`](docs/runbook.md).
+`setup:local` checks the prerequisites and prints the Homebrew or apt line for anything missing (it never installs system packages). It then writes `.env.local` from `.env.synthetic.example` if there is none, syncs the pinned open-twin packages, installs dependencies, creates the database if it does not exist, applies the migrations, downloads the anatomy atlases, bakes the rigged demo bodies, and generates and ingests the 30-person synthetic evaluation cohort (fixed seed and dates, checksum verified). It is safe to re-run: finished steps are skipped. It ends with a checklist of what is ready and what was skipped and why. `bun run doctor` prints the same checks and what each page needs, without changing anything.
+
+On macOS with Homebrew:
+
+```bash
+brew install postgresql@18 pgvector openjdk@21 uv
+brew services start postgresql@18
+export PATH="$(brew --prefix openjdk@21)/bin:$PATH"   # add to ~/.zshrc
+bun run setup:local   # without DATABASE_URL it uses postgresql://$USER@127.0.0.1:5432/twin_llm_synthetic
+```
+
+`bun run setup:local -- --cohort-10k` loads the 10,000-person cohort from the [`cohort-synthea-v4-seed42-10k`](https://github.com/Opening-Science/twin-llm/releases/tag/cohort-synthea-v4-seed42-10k) release instead (about 1 GB download and 45 GB free disk while it unpacks). Open <http://localhost:3000>. This runs fully on your machine against synthetic data: no account, no cloud keys. Wearables and the rest: [`docs/runbook.md`](docs/runbook.md).
 
 ## How it works
 

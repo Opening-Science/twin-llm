@@ -6,6 +6,8 @@ Research-use visualisation only. Where the chat goes next: [`chat-platform.md`](
 
 ## Quick start (local MVP)
 
+For the synthetic demo on a fresh machine, `bun run setup:local` does the setup in one step (README, "Run it locally"). By hand, for your own data:
+
 ```bash
 bun install
 cp .env.example .env.local

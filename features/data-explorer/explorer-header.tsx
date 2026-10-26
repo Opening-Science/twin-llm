@@ -2,8 +2,16 @@ import Link from "next/link";
 
 import { formatNumber } from "@/infrastructure/format-measure";
 import { cn } from "@/infrastructure/ui";
+import { SetupPanel } from "@/infrastructure/ui-kit/setup-panel";
 
-import { BLOCKED_COPY, DATA_LEDE, DATA_TITLE } from "./explorer-copy";
+import {
+  BLOCKED_COPY,
+  DATA_LEDE,
+  DATA_TITLE,
+  NO_COHORT_BODY,
+  NO_COHORT_COMMANDS,
+  NO_COHORT_TITLE,
+} from "./explorer-copy";
 import { type CohortCount } from "./explorer-reads";
 
 /**
@@ -92,6 +100,13 @@ export const BlockedNotice = ({ kind }: { readonly kind: BlockedKind }) => (
       {BLOCKED_COPY[kind]}
     </p>
   </div>
+);
+
+/** The warehouse is empty here: say so, and give the command that fills it. */
+export const NoCohortPanel = () => (
+  <SetupPanel title={NO_COHORT_TITLE} commands={NO_COHORT_COMMANDS}>
+    <p>{NO_COHORT_BODY}</p>
+  </SetupPanel>
 );
 
 export const PageFrame = ({ children }: { readonly children: React.ReactNode }) => (
