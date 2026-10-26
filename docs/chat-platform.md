@@ -22,6 +22,8 @@ A `data-view` stream part `{id, kind, title, spec, sourceAuditIds}`, rendered in
 
 Since #36: `show_view` with `chart.timeseries` reads a LOINC code for a synthetic subject (audit tool `timeseries`) or a wearable key from the turn's loaded snapshot (audit tool `wearable_series`); `sourceAuditIds` are those rows' `seq`. The model reads back only what was drawn, not the points. A window with no readings gives a view that says so and draws nothing. `show_view` is in the model-facing tool list but not the MCP manifest.
 
+Since #39: each tool call is a folded card above the answer (`features/arena/tool-cards.ts`): the call in plain words, its named arguments (measure, window, subject, search), running, done, refused or failed, and the rows it read. Outputs never reach a card; a refusal shows a fixed sentence by its code. A reload builds the same cards from the stored tool parts, with the audit row's count, and a step's parallel calls are stored in call order so they do not reorder.
+
 Issues: #35 stored tool parts, #36 `data-view` and `show_view`, #37 Outputs panel, #38 more kinds, #39 tool-call cards.
 
 ## 2. Skills and the command palette

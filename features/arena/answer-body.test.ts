@@ -10,10 +10,7 @@ import {
   GUIDELINE_ONLY_BANNER,
   UNVERIFIED_NARRATION,
 } from "@/infrastructure/response-document/copy";
-import {
-  STREAM_STATUS_LINES,
-  TOOL_PHASE_LINES,
-} from "@/infrastructure/response-document/stream-copy";
+import { STREAM_STATUS_LINES } from "@/infrastructure/response-document/stream-copy";
 import { toResponseDocument } from "@/infrastructure/response-document/parse";
 import { GBD_ATTRIBUTION_LINE } from "@/packages/gbd-mcp/constants";
 
@@ -308,36 +305,49 @@ describe("answer body while streaming", () => {
     );
   });
 
-  test("each running tool shows its own line, never its arguments", () => {
-    const cases = [
-      ["guideline_search", TOOL_PHASE_LINES.guidelines],
-      ["gbd_population", TOOL_PHASE_LINES.population],
-      ["observations_for_subject", TOOL_PHASE_LINES.cohort],
+  test("tool calls show as folded cards above the thinking line", () => {
+    const tools = [
+      {
+        id: "c1",
+        tool: "summary_stats",
+        title: "Summarised a measure",
+        args: [
+          { label: "Measure", value: "8867-4" },
+          { label: "Subject", value: "synthetic-subject-1" },
+        ],
+        state: "running",
+        rowCount: null,
+        note: null,
+      },
     ] as const;
-    for (const [name, line] of cases) {
-      expect(
-        render({ status: "STREAMING", text: "", tools: [{ name, state: "running" }] }),
-      ).toBe(statusLine(line));
-    }
+    const markup = render({ status: "STREAMING", text: "", tools });
+    expect(markup).toContain("Summarised a measure");
+    expect(markup).toContain("8867-4 · synthetic-subject-1");
+    expect(markup).toContain('aria-expanded="false"');
+    expect(markup).toContain(">Running<");
+    expect(markup).toContain(statusLine(STREAM_STATUS_LINES.waiting));
+    expect(markup.indexOf("Summarised")).toBeLessThan(markup.indexOf("Thinking"));
   });
 
-  test("a running tool replaces the preparing line, not the answer", () => {
-    const tools = [{ name: "guideline_search", state: "running" }] as const;
-    expect(render({ status: "STREAMING", text: SCAFFOLD, tools })).toBe(
-      statusLine(TOOL_PHASE_LINES.guidelines),
-    );
-    expect(
-      render({ status: "STREAMING", text: `${SCAFFOLD}## Answer\nSynthetic.`, tools }),
-    ).not.toContain(TOOL_PHASE_LINES.guidelines);
-  });
-
-  test("a finished tool falls back to the stage line", () => {
-    expect(
-      render({
-        status: "STREAMING",
-        text: "",
-        tools: [{ name: "gbd_population", state: "done" }],
-      }),
-    ).toBe(statusLine(STREAM_STATUS_LINES.waiting));
+  test("cards stay once the Answer section streams", () => {
+    const tools = [
+      {
+        id: "c1",
+        tool: "guideline_search",
+        title: "Searched guidelines",
+        args: [],
+        state: "done",
+        rowCount: 4,
+        note: null,
+      },
+    ] as const;
+    const markup = render({
+      status: "STREAMING",
+      text: `${SCAFFOLD}## Answer\nSynthetic.`,
+      tools,
+    });
+    expect(markup).toContain("Searched guidelines");
+    expect(markup).toContain("4 rows");
+    expect(markup).not.toContain('role="status"');
   });
 });

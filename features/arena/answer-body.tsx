@@ -5,16 +5,14 @@ import {
   type WearableSummaries,
 } from "@/infrastructure/parse-twin-answer";
 import { UNVERIFIED_NARRATION } from "@/infrastructure/response-document/copy";
-import {
-  STREAM_STATUS_LINES,
-  TOOL_PHASE_LINES,
-} from "@/infrastructure/response-document/stream-copy";
+import { STREAM_STATUS_LINES } from "@/infrastructure/response-document/stream-copy";
 import { RichText } from "@/infrastructure/rich-text";
 
 import { AnswerViews } from "./answer-views";
 import { ExplainabilityPanel } from "./explainability-panel";
-import { streamingView, toolPhase } from "./streaming-view";
+import { streamingView } from "./streaming-view";
 import type { ResponseState } from "./conversation";
+import { ToolCallCards } from "./tool-call-cards";
 
 const StreamingAnswer = ({
   response,
@@ -22,25 +20,35 @@ const StreamingAnswer = ({
   readonly response: Pick<ResponseState, "text" | "tools" | "views">;
 }) => {
   const view = streamingView(response.text);
+  const tools = response.tools ?? [];
   if (view.kind === "answer") {
     return (
       <div className="flex flex-col gap-3 text-[15px] leading-relaxed">
+        <ToolCallCards cards={tools} />
         <RichText text={view.text} />
         <AnswerViews views={response.views ?? []} />
       </div>
     );
   }
-  const phase = toolPhase(response.tools ?? []);
-  return (
+  const status = (
     <p role="status" className="text-muted-foreground text-sm">
-      {phase ? TOOL_PHASE_LINES[phase] : STREAM_STATUS_LINES[view.stage]}
+      {STREAM_STATUS_LINES[view.stage]}
     </p>
+  );
+  return tools.length === 0 ? (
+    status
+  ) : (
+    <div className="flex flex-col gap-3">
+      <ToolCallCards cards={tools} />
+      {status}
+    </div>
   );
 };
 
 /**
- * One column's answer. While it streams, only a status line or the Answer
- * section shows (`streaming-view.ts`). Once complete, when the response
+ * One column's answer. Its tool calls show as cards above it, live and after a
+ * reload alike. While it streams, only a status line or the Answer section
+ * shows (`streaming-view.ts`). Once complete, when the response
  * document says the model abstained or declined, the answer text is withheld
  * and only the panel (with its abstain or declined banner) is shown. A missing
  * or malformed document leaves the answer exactly as it streamed.
@@ -65,6 +73,7 @@ export const AnswerBody = ({
 
   return (
     <div className="flex flex-col gap-3 text-[15px] leading-relaxed">
+      <ToolCallCards cards={response.tools ?? []} />
       {!withheld && document?.interpretation.kind === "narration" && (
         <p className="text-eyebrow">{UNVERIFIED_NARRATION}</p>
       )}

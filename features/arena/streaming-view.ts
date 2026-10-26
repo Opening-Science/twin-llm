@@ -4,15 +4,7 @@ import {
   sectionSpans,
   sectionText,
 } from "@/infrastructure/parse-twin-answer";
-import type {
-  STREAM_STATUS_LINES,
-  TOOL_PHASE_LINES,
-} from "@/infrastructure/response-document/stream-copy";
-import { GBD_MODEL_TOOL } from "@/packages/gbd-mcp/constants";
-import { GUIDELINE_MODEL_TOOL } from "@/packages/guidelines/constants";
-import { TOOL_DEFINITIONS } from "@/packages/query-tools/schemas";
-
-import type { ToolActivity } from "./conversation";
+import type { STREAM_STATUS_LINES } from "@/infrastructure/response-document/stream-copy";
 
 /**
  * What a column shows while its answer streams. The raw stream starts with the
@@ -23,7 +15,6 @@ import type { ToolActivity } from "./conversation";
  * it finishes; the finished view then shows it whole, as before.
  */
 export type StreamStage = keyof typeof STREAM_STATUS_LINES;
-export type ToolPhase = keyof typeof TOOL_PHASE_LINES;
 
 export type StreamingView =
   | Readonly<{ kind: "status"; stage: StreamStage }>
@@ -71,20 +62,4 @@ export const streamingView = (text: string): StreamingView => {
   return answer === null
     ? { kind: "status", stage: "preparing" }
     : { kind: "answer", text: answer };
-};
-
-const QUERY_TOOL_NAMES: ReadonlySet<string> = new Set(
-  TOOL_DEFINITIONS.map((definition) => definition.name),
-);
-
-const phaseOfTool = (name: string): ToolPhase | null => {
-  if (name === GUIDELINE_MODEL_TOOL) return "guidelines";
-  if (name === GBD_MODEL_TOOL) return "population";
-  return QUERY_TOOL_NAMES.has(name) ? "cohort" : null;
-};
-
-/** The phase of the most recent tool call still running, or null when none is. */
-export const toolPhase = (tools: readonly ToolActivity[]): ToolPhase | null => {
-  const running = tools.filter((tool) => tool.state === "running").at(-1);
-  return running ? phaseOfTool(running.name) : null;
 };

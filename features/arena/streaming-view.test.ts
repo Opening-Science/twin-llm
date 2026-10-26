@@ -1,9 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import type { ChatUIMessage } from "@/infrastructure/model-response-metrics";
-
-import { toolActivity } from "./answer-stream";
-import { streamingView, toolPhase } from "./streaming-view";
+import { streamingView } from "./streaming-view";
 
 const REASONING = "## Reasoning\nSynthetic reasoning line.\n\n";
 const EVIDENCE = "## Evidence Used\n- [oura.sleep.score.2026-01-01]\n\n";
@@ -103,83 +100,5 @@ describe("streamingView, one partial stage at a time", () => {
 
   test("no headings at all: status until the reply finishes", () => {
     expect(streamingView("Plain synthetic reply with no headings.")).toEqual(preparing);
-  });
-});
-
-describe("toolActivity", () => {
-  test("keeps only name and state; arguments and rows are dropped", () => {
-    const parts: ChatUIMessage["parts"] = [
-      { type: "step-start" },
-      {
-        type: "tool-guideline_search",
-        toolCallId: "call-1",
-        state: "output-available",
-        input: { query: "synthetic-query-text" },
-        output: { passages: ["synthetic-passage-text"] },
-      },
-      { type: "text", text: "Synthetic text.", state: "done" },
-      {
-        type: "dynamic-tool",
-        toolName: "summary_stats",
-        toolCallId: "call-2",
-        state: "input-available",
-        input: { subject_ref: "synthetic-subject-ref" },
-      },
-      {
-        type: "tool-gbd_population",
-        toolCallId: "call-3",
-        state: "output-error",
-        input: { cause: "synthetic-cause" },
-        errorText: "synthetic-error-text",
-      },
-    ];
-    const activity = toolActivity(parts);
-    expect(activity).toEqual([
-      { name: "guideline_search", state: "done" },
-      { name: "summary_stats", state: "running" },
-      { name: "gbd_population", state: "error" },
-    ]);
-    expect(JSON.stringify(activity)).not.toContain("synthetic-");
-  });
-
-  test("a call whose input is still streaming counts as running", () => {
-    expect(
-      toolActivity([
-        {
-          type: "tool-trend",
-          toolCallId: "call-1",
-          state: "input-streaming",
-          input: undefined,
-        },
-      ]),
-    ).toEqual([{ name: "trend", state: "running" }]);
-  });
-});
-
-describe("toolPhase", () => {
-  test("each running tool maps to its phase", () => {
-    expect(toolPhase([{ name: "guideline_search", state: "running" }])).toBe(
-      "guidelines",
-    );
-    expect(toolPhase([{ name: "gbd_population", state: "running" }])).toBe("population");
-    expect(toolPhase([{ name: "summary_stats", state: "running" }])).toBe("cohort");
-    expect(toolPhase([{ name: "compare_windows", state: "running" }])).toBe("cohort");
-  });
-
-  test("the latest running call wins", () => {
-    expect(
-      toolPhase([
-        { name: "guideline_search", state: "running" },
-        { name: "trend", state: "running" },
-        { name: "gbd_population", state: "done" },
-      ]),
-    ).toBe("cohort");
-  });
-
-  test("finished, failed, unknown or no calls: no phase", () => {
-    expect(toolPhase([])).toBeNull();
-    expect(toolPhase([{ name: "guideline_search", state: "done" }])).toBeNull();
-    expect(toolPhase([{ name: "gbd_population", state: "error" }])).toBeNull();
-    expect(toolPhase([{ name: "unlisted_tool", state: "running" }])).toBeNull();
   });
 });

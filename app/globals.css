@@ -356,6 +356,19 @@
     @apply bg-muted text-foreground;
   }
 
+  /* A tool call in an answer: one quiet row that folds out to its arguments. */
+  .tool-card {
+    @apply border-border rounded-md border text-xs;
+  }
+
+  .tool-card-header {
+    @apply hover:bg-muted/60 flex w-full min-w-0 items-center gap-2 rounded-md px-2.5 py-1.5 text-left;
+  }
+
+  .tool-card-body {
+    @apply border-border border-t px-3 py-2;
+  }
+
   /* Connector "Setup" disclosure: a quiet summary row that opens to env
      names, the redirect URI and commands. Names and commands only. */
   .setup-disclosure > summary {
