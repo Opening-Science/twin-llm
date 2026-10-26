@@ -71,7 +71,7 @@ mock.module("@/infrastructure/database", () => ({
   }),
 }));
 
-type Collection = "recovery" | "cycle" | "sleep";
+type Collection = "recovery" | "cycle" | "sleep" | "workout";
 let responses: Record<Collection, { status: number; records: unknown[] }>;
 
 const originalFetch = globalThis.fetch;
@@ -81,6 +81,7 @@ const collectionFor = (url: URL): Collection | null => {
   if (url.href.startsWith(`${WHOOP_API}/recovery`)) return "recovery";
   if (url.href.startsWith(`${WHOOP_API}/cycle`)) return "cycle";
   if (url.href.startsWith(`${WHOOP_API}/activity/sleep`)) return "sleep";
+  if (url.href.startsWith(`${WHOOP_API}/activity/workout`)) return "workout";
   return null;
 };
 
@@ -153,6 +154,7 @@ describe("POST /api/whoop/sync error surface", () => {
       recovery: { status: 500, records: [] },
       cycle: { status: 500, records: [] },
       sleep: { status: 500, records: [] },
+      workout: { status: 500, records: [] },
     };
 
     const res = await POST(syncRequest());
@@ -170,6 +172,7 @@ describe("POST /api/whoop/sync error surface", () => {
       recovery: { status: 500, records: [] },
       cycle: { status: 200, records: SYNTHETIC_WHOOP_PAYLOAD.cycles },
       sleep: { status: 200, records: SYNTHETIC_WHOOP_PAYLOAD.sleep },
+      workout: { status: 500, records: [] },
     };
 
     const res = await POST(syncRequest());
@@ -210,17 +213,19 @@ describe("POST /api/whoop/sync error surface", () => {
           recovery: [],
           cycles: SYNTHETIC_WHOOP_PAYLOAD.cycles,
           sleep: SYNTHETIC_WHOOP_PAYLOAD.sleep,
+          workouts: [],
         },
         { startDate: "2026-01-01", endDate: "2026-01-04" },
       ),
     );
   });
 
-  test("persists the package FHIR bundle for the synced rows", async () => {
+  test("persists the package FHIR bundle plus workouts for the synced rows", async () => {
     responses = {
       recovery: { status: 500, records: [] },
       cycle: { status: 200, records: SYNTHETIC_WHOOP_PAYLOAD.cycles },
       sleep: { status: 200, records: SYNTHETIC_WHOOP_PAYLOAD.sleep },
+      workout: { status: 200, records: SYNTHETIC_WHOOP_PAYLOAD.workouts },
     };
 
     await POST(syncRequest());
@@ -248,6 +253,8 @@ describe("POST /api/whoop/sync error surface", () => {
       "http://opentwin.ch/fhir/CodeSystem/whoop|sleep-performance",
       "http://opentwin.ch/fhir/CodeSystem/whoop|sleep-efficiency",
       "http://loinc.org|103213-5",
+      "http://opentwin.ch/fhir/CodeSystem/whoop|workout",
+      "http://opentwin.ch/fhir/CodeSystem/whoop|workout",
     ]);
   });
 });
