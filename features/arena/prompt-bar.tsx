@@ -5,6 +5,17 @@ import { useRouter } from "next/navigation";
 import { type FormEvent, type KeyboardEvent, useState } from "react";
 
 import { AppAuth, isClientAuthDisabled } from "@/features/auth/app-auth";
+import {
+  CommandPalette,
+  commandOptionId,
+  paletteKey,
+  unknownCommandHint,
+} from "@/features/commands/command-palette";
+import {
+  BUILT_IN_COMMANDS,
+  type Command,
+  matchCommands,
+} from "@/features/commands/registry";
 import { useWearableStatus } from "@/features/wearables/use-wearable-status";
 import { WearableChips, WearableSlashMenu } from "@/features/wearables/wearable-slash";
 import type { CatalogModel } from "@/infrastructure/model-catalog";
@@ -18,8 +29,8 @@ import { chosenModels, missingCount, toggleModel } from "./model-selection";
  * Where a prompt is written and its models are chosen. It knows nothing about
  * turns or streams: it hands "this text, these models" upward and clears.
  *
- * Typing `/` (or `/` and a word) opens the wearable menu, the same gesture as
- * slash commands elsewhere. Enter sends, Shift+Enter starts a new line.
+ * Typing `/` (or `/` and a word) opens the command palette; picking `connect`
+ * shows the wearable rows. Enter sends, Shift+Enter starts a new line.
  */
 
 export type ChosenModel = Readonly<{ id: string; name: string }>;
@@ -56,9 +67,16 @@ export const PromptBar = ({
   const [draft, setDraft] = useState("");
   const [modelIds, setModelIds] = useState<readonly string[]>(initialModelIds);
   const [slashDismissed, setSlashDismissed] = useState(false);
+  const [picked, setPicked] = useState<Command | null>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [notice, setNotice] = useState<string | undefined>(undefined);
 
   const chosen = catalog ? chosenModels(catalog, modelIds) : [];
   const slashOpen = !slashDismissed && SLASH_COMMAND.test(draft);
+  const commands = slashOpen ? matchCommands(draft.slice(1), BUILT_IN_COMMANDS) : [];
+  const active = Math.min(activeIndex, Math.max(commands.length - 1, 0));
+  const paletteOpen = slashOpen && picked === null;
+  const connectOpen = slashOpen && picked?.name === "connect";
   const ready = !busy && draft.trim() !== "" && chosen.length > 0;
 
   const submit = () => {
@@ -76,6 +94,16 @@ export const PromptBar = ({
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (paletteOpen) {
+      const action = paletteKey(event.key, active, commands.length);
+      if (action === null) return;
+      event.preventDefault();
+      if (action === "close") setSlashDismissed(true);
+      else if (action === "pick") setPicked(commands[active] ?? null);
+      else if (action === "unknown") setNotice(unknownCommandHint(draft));
+      else setActiveIndex(action.index);
+      return;
+    }
     if (slashOpen && (event.key === "Escape" || event.key === "Enter")) {
       event.preventDefault();
       if (event.key === "Escape") setSlashDismissed(true);
@@ -90,8 +118,16 @@ export const PromptBar = ({
   return (
     <div className="bg-background/90 sticky bottom-0 z-10 px-4 pt-2 pb-3 backdrop-blur sm:px-6">
       <form onSubmit={onFormSubmit} className="surface relative mx-auto max-w-5xl">
+        {paletteOpen ? (
+          <CommandPalette
+            commands={commands}
+            activeIndex={active}
+            onPick={setPicked}
+            notice={notice}
+          />
+        ) : null}
         <WearableSlashMenu
-          open={slashOpen}
+          open={connectOpen}
           oura={wearables.oura}
           whoop={wearables.whoop}
           googleHealth={wearables.googleHealth}
@@ -111,9 +147,17 @@ export const PromptBar = ({
           onChange={(event) => {
             setDraft(event.target.value);
             setSlashDismissed(false);
+            setPicked(null);
+            setActiveIndex(0);
+            setNotice(undefined);
           }}
           onKeyDown={onKeyDown}
-          placeholder="Ask TwinLLM…  /  adds a wearable"
+          aria-activedescendant={
+            paletteOpen && commands[active]
+              ? commandOptionId(commands[active].name)
+              : undefined
+          }
+          placeholder="Ask TwinLLM…  /  for commands"
           className="placeholder:text-muted-foreground block w-full resize-none bg-transparent px-4 pt-3 text-[15px] outline-none disabled:opacity-60"
         />
         <div className="flex items-end gap-3 px-3 pb-3">
