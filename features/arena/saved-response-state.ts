@@ -28,6 +28,8 @@ export type SavedResponseRow = Readonly<{
   outputTokens: number | null;
   totalTokens: number | null;
   costUsd: NumericLike;
+  /** Null while streaming; left out by callers that do not read it. */
+  completedAt?: Date | null;
 }>;
 
 /**
@@ -64,6 +66,7 @@ export const toSavedResponseState = (row: SavedResponseRow): ResponseState => {
     reasoningText: withheld ? null : row.reasoningText,
     attribution: (row.attribution as EvidenceAttribution[] | null) ?? null,
     document,
+    completedAt: row.completedAt?.toISOString() ?? null,
     tools: toolActivity(parts, rowCounts),
     views: withheld ? [] : viewsOf(parts),
     metrics:

@@ -79,14 +79,18 @@ describe("withSkillTools", () => {
     gbd_population: 4,
     knowledge_search: 5,
     show_view: 6,
+    list_views: 7,
+    open_view: 8,
   };
 
-  test("keeps only listed tools, and show_view when a kind it draws is allowed", () => {
+  test("keeps only listed tools, and the view tools when a kind show_view draws is allowed", () => {
     expect(withSkillTools(turnTools, SLEEP)).toEqual({
       subject_window: 2,
       coverage: 3,
       knowledge_search: 5,
       show_view: 6,
+      list_views: 7,
+      open_view: 8,
     });
   });
 

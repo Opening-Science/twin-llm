@@ -58,7 +58,7 @@ describe("show_view with a LOINC measure", () => {
     expect(view).toEqual({
       id: "view-41",
       kind: "chart.timeseries",
-      title: "Heart rate, 2026-10-01 to 2026-10-31",
+      title: "Heart rate, 1 Oct 2026 – 31 Oct 2026",
       spec: {
         measure: "8867-4",
         label: "Heart rate",
@@ -88,7 +88,7 @@ describe("show_view with a LOINC measure", () => {
     expect(modelNoteOf(view)).toEqual({
       shown: true,
       view_id: "view-41",
-      title: "8867-4, 2026-10-01 to 2026-10-31",
+      title: "8867-4, 1 Oct 2026 – 31 Oct 2026",
       readings: 0,
       unit: null,
       note: "no readings in this window; the view says so and draws no chart",
@@ -169,6 +169,40 @@ describe("show_view with a wearable key", () => {
     expect(audits.map((audit) => [audit.tool, audit.subjectRef, audit.rowCount])).toEqual(
       [["wearable_series", null, 2]],
     );
+  });
+
+  test("a measure that is neither LOINC nor a wearable key is refused, not drawn empty", async () => {
+    const { ports, audits } = fakePorts([]);
+    const deps = {
+      scope: PERSONAL,
+      ports,
+      wearables: { ...NO_WEARABLES, oura },
+      cohortRecords: true,
+    };
+    expect(await runShowView(deps, input("heart.rate", "synthetic-subject-1"))).toEqual({
+      code: "UNKNOWN_MEASURE",
+      error:
+        "not a LOINC code or a wearable key; use a LOINC code with subject, or a key from the Available keys list without its date",
+    });
+    expect(audits).toEqual([]);
+  });
+
+  test("a key only the loaded snapshot carries is known", async () => {
+    const { ports } = fakePorts([]);
+    const custom = {
+      ...oura,
+      metrics: [metric("custom.load.2026-10-01", 3, "2026-10-01")],
+    };
+    const view = await runShowView(
+      {
+        scope: PERSONAL,
+        ports,
+        wearables: { ...NO_WEARABLES, oura: custom },
+        cohortRecords: true,
+      },
+      input("custom.load"),
+    );
+    expect("spec" in view ? view.spec.points.length : view).toBe(1);
   });
 
   test("without a snapshot the view has no points", async () => {

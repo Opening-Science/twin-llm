@@ -1,3 +1,5 @@
+import { EMPTY_VALUE, formatDate } from "./format-measure";
+
 /**
  * A view in an answer: a chart the server drew from audited rows. The model
  * asks for one with `show_view`; it never writes a point. `features/chat`
@@ -8,6 +10,23 @@
 
 export const DATA_VIEW_PART = "data-view";
 export const SHOW_VIEW_TOOL = "show_view";
+/** Lists the thread's views by id and title; draws nothing. */
+export const LIST_VIEWS_TOOL = "list_views";
+/** Returns a stored view again, unchanged, so it is drawn without a new query. */
+export const OPEN_VIEW_TOOL = "open_view";
+
+/** Every tool that draws or reopens a view; a skill keeps them only when it allows views. */
+export const VIEW_TOOLS: ReadonlySet<string> = new Set([
+  SHOW_VIEW_TOOL,
+  LIST_VIEWS_TOOL,
+  OPEN_VIEW_TOOL,
+]);
+
+/** Tools whose output is a view (or a refusal), streamed on as a `data-view` part. */
+export const VIEW_OUTPUT_TOOLS: ReadonlySet<string> = new Set([
+  SHOW_VIEW_TOOL,
+  OPEN_VIEW_TOOL,
+]);
 
 export type ViewPoint = Readonly<{ at: string; value: number }>;
 
@@ -36,6 +55,18 @@ export type ChatView = Readonly<{
 export const viewId = (sourceAuditIds: readonly string[]): string =>
   `view-${sourceAuditIds.join("-")}`;
 
+/** A window bound as a calendar day, `1 Oct 2026`; a datetime keeps its day. */
+const titleDay = (bound: string): string => {
+  const day = formatDate(bound.slice(0, 10));
+  return day === EMPTY_VALUE ? bound : day;
+};
+
+/** `Heart rate, 1 Jan 2016 – 31 Oct 2026`: plain dates, never a raw timestamp. */
+export const viewTitle = (
+  label: string,
+  window: Readonly<{ start: string; end: string }>,
+): string => `${label}, ${titleDay(window.start)} – ${titleDay(window.end)}`;
+
 export const timeseriesView = (
   input: Readonly<{
     spec: TimeseriesSpec;
@@ -44,7 +75,7 @@ export const timeseriesView = (
 ): ChatView => ({
   id: viewId(input.sourceAuditIds),
   kind: "chart.timeseries",
-  title: `${input.spec.label}, ${input.spec.window.start} to ${input.spec.window.end}`,
+  title: viewTitle(input.spec.label, input.spec.window),
   spec: { ...input.spec, points: [...input.spec.points] },
   sourceAuditIds: [...input.sourceAuditIds],
 });
@@ -90,14 +121,18 @@ type PartLike = Readonly<{
   output?: unknown;
 }>;
 
+const isViewToolPart = (part: PartLike): boolean =>
+  part.type.startsWith("tool-") && VIEW_OUTPUT_TOOLS.has(part.type.slice("tool-".length));
+
 /**
  * The views of a message, in order, once each: from `data-view` parts while
- * it streams and from `show_view` tool outputs once it is stored.
+ * it streams and from `show_view` and `open_view` tool outputs once it is
+ * stored.
  */
 export const viewsOf = (parts: readonly PartLike[]): ChatView[] => {
   const found = parts.flatMap((part) => {
     if (part.type === DATA_VIEW_PART) return [toChatView(part.data)];
-    if (part.type === `tool-${SHOW_VIEW_TOOL}` && part.state === "output-available")
+    if (isViewToolPart(part) && part.state === "output-available")
       return [toChatView(part.output)];
     return [];
   });

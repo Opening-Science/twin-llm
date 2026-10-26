@@ -368,5 +368,37 @@
         "additionalProperties": false
       }
     }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "list_views",
+      "description": "List the charts already shown in this thread, newest first: id, title, kind, model and time. Reads no data.",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "open_view",
+      "description": "Show a chart from earlier in this thread again by its id from list_views. It is redrawn from the stored view with no new query; use it instead of show_view when the person asks to see a chart again.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "A view id from list_views"
+          }
+        },
+        "required": ["id"],
+        "additionalProperties": false
+      }
+    }
   }
 ]

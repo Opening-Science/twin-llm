@@ -5,6 +5,7 @@ import type { QueryToolPorts } from "@/packages/query-tools/ports";
 
 import { type ChatToolFactories, createChatTools } from "./chat-tools";
 import { createShowViewTool } from "./show-view-tool";
+import { createViewTools } from "./view-tools";
 import { createGbdTools } from "@/packages/gbd-mcp/ai-tools";
 import { createGuidelineTools } from "@/packages/guidelines/ai-tools";
 import { createKnowledgeTools } from "@/packages/knowledge/ai-tools";
@@ -57,6 +58,7 @@ const spied = (): { factories: ChatToolFactories; calls: Calls } => {
   const calls: Calls = {
     query: [],
     showView: [],
+    views: [],
     gbd: [],
     guidelines: [],
     knowledge: [],
@@ -72,6 +74,7 @@ const spied = (): { factories: ChatToolFactories; calls: Calls } => {
     factories: {
       query: spy("query", createQueryTools),
       showView: spy("showView", createShowViewTool),
+      views: spy("views", createViewTools),
       gbd: spy("gbd", createGbdTools),
       guidelines: spy("guidelines", createGuidelineTools),
       knowledge: spy("knowledge", createKnowledgeTools),
@@ -88,7 +91,7 @@ describe("wearable snapshots in the chat tools", () => {
     expect(calls.showView.length).toBe(1);
     expect((calls.showView[0]?.[0] as { wearables: unknown }).wearables).toBe(wearables);
     expect(reaches(calls.showView[0])).toBe(true);
-    for (const name of ["query", "gbd", "guidelines", "knowledge"] as const) {
+    for (const name of ["query", "views", "gbd", "guidelines", "knowledge"] as const) {
       expect(calls[name].length).toBe(1);
       expect(calls[name].map((args) => reaches(args))).toEqual([false]);
     }

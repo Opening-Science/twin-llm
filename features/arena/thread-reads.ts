@@ -45,6 +45,7 @@ const findThread = (threadId: string): Promise<StoredThread | null> =>
               outputTokens: true,
               totalTokens: true,
               costUsd: true,
+              completedAt: true,
             },
           },
         },
