@@ -48,6 +48,17 @@ describe("withViewParts", () => {
     ]);
   });
 
+  test("a reopened view streams as a data-view part the same way", async () => {
+    const chunks: Chunk[] = [
+      { type: "tool-input-start", toolCallId: "c3", toolName: "open_view" },
+      { type: "tool-output-available", toolCallId: "c3", output: view },
+    ];
+    expect(await run(chunks)).toEqual([
+      ...chunks,
+      { type: "data-view", id: "view-7", data: view },
+    ]);
+  });
+
   test("other tools and show_view refusals add nothing", async () => {
     const chunks: Chunk[] = [
       { type: "tool-input-available", toolCallId: "c1", toolName: "trend", input: {} },

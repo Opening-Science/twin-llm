@@ -42,6 +42,8 @@ const TITLES: Readonly<Record<string, string>> = {
   coverage: "Checked data coverage",
   compare_windows: "Compared two windows",
   show_view: "Drew a chart",
+  list_views: "Listed this thread's charts",
+  open_view: "Reopened a chart",
   [GUIDELINE_MODEL_TOOL]: "Searched guidelines",
   [GBD_MODEL_TOOL]: "Looked up population data",
   [KNOWLEDGE_MODEL_TOOL]: "Searched TwinLLM notes",
@@ -61,6 +63,9 @@ const REFUSAL_NOTES: Readonly<Record<string, string>> = {
   COHORT_TOOLS_OFF: "The cohort record tools are turned off.",
   SUBJECT_REQUIRED: "A cohort measure needs a subject.",
   NOT_AUDITED: "The read was not recorded, so nothing was drawn.",
+  UNKNOWN_MEASURE: "That measure is not a LOINC code or a known wearable key.",
+  VIEW_NOT_FOUND: "No chart with that id in this thread.",
+  VIEW_NOT_ALLOWED: "This skill does not draw that kind of view.",
 };
 
 const REFUSED = "The tool declined this call.";
@@ -92,6 +97,7 @@ export const rowCountOf = (output: unknown): number | null => {
   if (!isRecord(output)) return null;
   if (Array.isArray(output.rows)) return output.rows.length;
   if (Array.isArray(output.subjects)) return output.subjects.length;
+  if (Array.isArray(output.views)) return output.views.length;
   if ("n_observations" in output) return count(output.n_observations);
   if (Array.isArray(output.codes)) return sumN(...output.codes);
   if ("baseline" in output && "target" in output)
@@ -150,6 +156,7 @@ const ARG_READERS: readonly (readonly [
   ["Window B", (input) => span(input.window_b)],
   ["Subject", (input) => text(input.subject ?? input.subject_ref)],
   ["Cohort", (input) => text(input.cohort_id)],
+  ["Chart", (input) => text(input.id)],
   ["Search", (input) => (text(input.query) ? clipped(text(input.query)!) : null)],
   ["Cause", (input) => text(input.cause)],
   ["Location", (input) => text(input.location)],

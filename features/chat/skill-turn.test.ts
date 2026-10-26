@@ -129,12 +129,14 @@ const runSkillTurn = async (
 };
 
 describe("a turn run under a skill", () => {
-  test("the model is offered the skill's tools and show_view, nothing else", async () => {
+  test("the model is offered the skill's tools and the view tools, nothing else", async () => {
     const { tools } = await runSkillTurn(SLEEP);
     expect(tools).toEqual([
       "baseline_deviation",
       "coverage",
       "knowledge_search",
+      "list_views",
+      "open_view",
       "show_view",
       "subject_window",
       "summary_stats",
@@ -147,13 +149,22 @@ describe("a turn run under a skill", () => {
       "cohort-analytics",
       "opentwin-knowledge",
     ]);
-    expect(tools).toEqual(["show_view", "subject_window", "summary_stats"]);
+    expect(tools).toEqual([
+      "list_views",
+      "open_view",
+      "show_view",
+      "subject_window",
+      "summary_stats",
+    ]);
   });
 
-  test("a skill without a kind show_view draws gets no show_view", async () => {
+  test("a skill without a kind show_view draws gets no view tools", async () => {
     const { tools, system } = await runSkillTurn({ ...SLEEP, views: ["chart.compare"] });
     expect(tools).not.toContain("show_view");
+    expect(tools).not.toContain("list_views");
+    expect(tools).not.toContain("open_view");
     expect(system).not.toContain("show_view");
+    expect(system).not.toContain("open_view");
   });
 
   test("the prompt carries the skill's instructions and names only offered tools", async () => {

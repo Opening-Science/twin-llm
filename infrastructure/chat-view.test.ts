@@ -1,6 +1,12 @@
 import { describe, expect, test } from "bun:test";
 
-import { type ChatView, timeseriesView, toChatView, viewsOf } from "./chat-view";
+import {
+  type ChatView,
+  timeseriesView,
+  toChatView,
+  viewsOf,
+  viewTitle,
+} from "./chat-view";
 
 const spec = {
   measure: "8867-4",
@@ -21,10 +27,22 @@ describe("timeseriesView", () => {
     expect(view).toEqual({
       id: "view-41",
       kind: "chart.timeseries",
-      title: "Heart rate, 2026-10-01 to 2026-10-31",
+      title: "Heart rate, 1 Oct 2026 – 31 Oct 2026",
       spec,
       sourceAuditIds: ["41"],
     });
+  });
+
+  test("titles use plain dates, never a raw timestamp", () => {
+    expect(
+      viewTitle("Heart rate", {
+        start: "2016-01-01T00:00:00.000Z",
+        end: "2026-10-31T23:59:59.999Z",
+      }),
+    ).toBe("Heart rate, 1 Jan 2016 – 31 Oct 2026");
+    expect(viewTitle("Steps", { start: "2026-10-01T08:00Z", end: "2026-10-02" })).toBe(
+      "Steps, 1 Oct 2026 – 2 Oct 2026",
+    );
   });
 });
 

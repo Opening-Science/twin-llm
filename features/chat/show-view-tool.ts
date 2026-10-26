@@ -3,7 +3,7 @@ import "server-only";
 import { type JSONValue, tool } from "ai";
 
 import { type ChatView, timeseriesView } from "@/infrastructure/chat-view";
-import { metricLabel } from "@/infrastructure/format-measure";
+import { metricLabel, metricStem } from "@/infrastructure/format-measure";
 import type { OfferedMetric, WearableSummaries } from "@/infrastructure/offered-keys";
 import { toChatVitronicSummary } from "@/packages/vitronic/summary";
 import { modelInputSchema } from "@/packages/query-tools/model-schema";
@@ -33,7 +33,12 @@ type ShowViewInput = z.infer<typeof showViewInput>;
 export type ShowViewRefusal =
   | ToolRefusal
   | Readonly<{
-      code: "COHORT_TOOLS_OFF" | "SUBJECT_REQUIRED" | "NOT_AUDITED" | "VIEW_NOT_ALLOWED";
+      code:
+        | "COHORT_TOOLS_OFF"
+        | "SUBJECT_REQUIRED"
+        | "NOT_AUDITED"
+        | "VIEW_NOT_ALLOWED"
+        | "UNKNOWN_MEASURE";
       error: string;
     }>;
 
@@ -59,6 +64,16 @@ const NOT_AUDITED = {
 const VIEW_NOT_ALLOWED = {
   code: "VIEW_NOT_ALLOWED",
   error: "this view kind is not allowed for the skill this turn runs",
+} as const;
+
+/**
+ * Neither a LOINC code nor a wearable key: drawing it would only give an
+ * empty chart that looks like "no readings", so it is refused instead.
+ */
+const UNKNOWN_MEASURE = {
+  code: "UNKNOWN_MEASURE",
+  error:
+    "not a LOINC code or a wearable key; use a LOINC code with subject, or a key from the Available keys list without its date",
 } as const;
 
 const DATE_SUFFIX = /\.\d{4}-\d{2}-\d{2}$/;
@@ -102,6 +117,23 @@ export const wearableReadings =
     );
     return [...byDay.values()];
   };
+
+/**
+ * A wearable key the app knows: one with a label of its own (`sleep.score`),
+ * or one the loaded snapshots carry. `heart.rate` is neither.
+ */
+export const isKnownWearableKey = (
+  summaries: WearableSummaries,
+  key: string,
+): boolean => {
+  const wanted = key.replace(DATE_SUFFIX, "").replace(/\.$/, "");
+  return (
+    metricLabel(wanted) !== metricStem(wanted) ||
+    wearableMetrics(summaries).some(
+      (metric) => metric.key.replace(DATE_SUFFIX, "") === wanted,
+    )
+  );
+};
 
 /** The audit `seq` an append returned, when it returned one. */
 const seqOf = (event: unknown): string | null =>
@@ -178,6 +210,7 @@ export const runShowView = async (
     );
     return isToolRefusal(series) ? series : viewOf(input, series, audit.seqs);
   }
+  if (!isKnownWearableKey(deps.wearables, input.measure)) return UNKNOWN_MEASURE;
   const series = await runWearableSeries(
     deps.scope,
     { key: input.measure, ...window },
@@ -187,8 +220,10 @@ export const runShowView = async (
   return viewOf(input, series, audit.seqs);
 };
 
-/** What the model reads back: what was drawn, not the points again. */
-export const modelNoteOf = (output: ShowViewOutput): JSONValue =>
+/** What the model reads back: what was drawn, not the points again. `open_view` shares it. */
+export const modelNoteOf = (
+  output: ChatView | Readonly<{ code: string; error: string }>,
+): JSONValue =>
   "code" in output
     ? { code: output.code, error: output.error }
     : {

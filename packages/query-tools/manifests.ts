@@ -6,7 +6,7 @@ import { VIEW_TOOL_DEFINITIONS } from "./view-schema";
 
 /**
  * The tools as OpenAI function definitions, in the slim form models get: the
- * query tools, then `show_view`.
+ * query tools, then the view tools (`show_view`, `list_views`, `open_view`).
  */
 export const openaiToolList = () =>
   [...TOOL_DEFINITIONS, ...VIEW_TOOL_DEFINITIONS].map((definition) => ({
