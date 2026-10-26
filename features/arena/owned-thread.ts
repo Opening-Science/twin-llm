@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 
-import type { TurnState } from "./conversation";
+import type { ResponseState, TurnState } from "./conversation";
 import { type SavedResponseRow, toSavedResponseState } from "./saved-response-state";
 
 /**
@@ -40,6 +40,8 @@ export type ThreadReads = Readonly<{
   actorId: () => Promise<string | null>;
   appUserIdFor: (actorId: string) => Promise<string | null>;
   findThread: (threadId: string) => Promise<StoredThread | null>;
+  /** The skill each turn ran under, from its `skill.<name>` audit rows. */
+  skillsOfTurns: (turnIds: readonly string[]) => Promise<ReadonlyMap<string, string>>;
 }>;
 
 export type OwnedThread = Readonly<{
@@ -58,6 +60,19 @@ const NO_POSITION = Number.MAX_SAFE_INTEGER;
 export const inPickOrder = (rows: readonly SavedResponseRow[]): SavedResponseRow[] =>
   [...rows].sort((a, b) => (a.position ?? NO_POSITION) - (b.position ?? NO_POSITION));
 
+/**
+ * The skill a saved turn ran under: its audit row, which is written before any
+ * model is called, or else a stored answer's response document.
+ */
+const skillOfTurn = (
+  turnId: string,
+  answers: readonly ResponseState[],
+  fromAudit: ReadonlyMap<string, string>,
+): string | null =>
+  fromAudit.get(turnId) ??
+  answers.find((answer) => answer.document?.skill !== undefined)?.document?.skill ??
+  null;
+
 export const loadOwnedThread = async (
   threadId: string,
   reads: ThreadReads,
@@ -70,14 +85,19 @@ export const loadOwnedThread = async (
   const thread = await reads.findThread(threadId);
   if (!thread || thread.userId !== viewerId) return null;
 
+  const skills = await reads.skillsOfTurns(thread.turns.map((turn) => turn.id));
   return {
     id: thread.id,
     title: thread.title,
-    turns: thread.turns.map((turn) => ({
-      id: turn.id,
-      prompt: turn.prompt,
-      answers: inPickOrder(turn.responses).map(toSavedResponseState),
-    })),
+    turns: thread.turns.map((turn) => {
+      const answers = inPickOrder(turn.responses).map(toSavedResponseState);
+      return {
+        id: turn.id,
+        prompt: turn.prompt,
+        skill: skillOfTurn(turn.id, answers, skills),
+        answers,
+      };
+    }),
   };
 };
 

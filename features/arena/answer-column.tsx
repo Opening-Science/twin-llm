@@ -14,17 +14,20 @@ import { Mark } from "./marks";
 
 const FailedAnswer = ({
   lost,
+  refusal,
   onRetry,
-}: Readonly<{ lost: boolean; onRetry: () => void }>) => (
+}: Readonly<{ lost: boolean; refusal?: string; onRetry: () => void }>) => (
   <div role="alert" className="flex flex-col items-start gap-2 text-sm">
     <p className="text-destructive flex items-center gap-2 font-medium">
       <Mark name="alert" />
-      {lost
-        ? "The connection closed while this model was still working"
-        : "No answer came back from this model"}
+      {refusal !== undefined
+        ? "The skill did not run"
+        : lost
+          ? "The connection closed while this model was still working"
+          : "No answer came back from this model"}
     </p>
     <p className="text-muted-foreground">
-      The other answers are not affected. You can ask this model again.
+      {refusal ?? "The other answers are not affected. You can ask this model again."}
     </p>
     <Button size="sm" onClick={onRetry}>
       Try again
@@ -58,7 +61,11 @@ export const AnswerColumn = ({
     </header>
     <div className="flex-1">
       {response.status === "FAILED" ? (
-        <FailedAnswer lost={response.lost === true} onRetry={onRetry} />
+        <FailedAnswer
+          lost={response.lost === true}
+          refusal={response.refusal}
+          onRetry={onRetry}
+        />
       ) : (
         <AnswerBody response={response} wearables={wearables} />
       )}

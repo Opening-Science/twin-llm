@@ -89,7 +89,8 @@ export const TOOLS: Readonly<Record<ToolId, ToolSpec>> = {
   },
   uv: {
     label: "uv",
-    neededFor: "anatomy:bake-rigged (Demo bodies that walk)",
+    neededFor:
+      "anatomy:bake-rigged (fallback when the rigged demo bodies cannot be downloaded)",
     minimum: null,
     install: {
       darwin: "brew install uv",

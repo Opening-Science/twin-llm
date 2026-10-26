@@ -123,6 +123,60 @@ describe("buildTwinSystemPrompt key lists match offeredKeys", () => {
     expect(offered).toContain("vitronic.property.body.height.2026-07-10");
     expect(offered).not.toContain("vitronic.positions.leftHip.2026-07-10");
   });
+
+  test("14 days of Oura and Whoop with daily workouts still list the latest workout", async () => {
+    const { buildTwinSystemPrompt } = await import("./twin-system-prompt");
+    const days = Array.from(
+      { length: 14 },
+      (_, index) => `2026-07-${String(index + 1).padStart(2, "0")}`,
+    );
+    const window = { startDate: days[0]!, endDate: days[13]! };
+    const daily = (families: readonly string[]) =>
+      families.flatMap((family) =>
+        days.map((date) => ({ key: `${family}.${date}`, label: family, value: 1, date })),
+      );
+    const oura = {
+      window,
+      narrative: "Synthetic Oura window.",
+      metrics: daily([
+        "sleep.score.long_sleep",
+        "sleep.hrv.long_sleep",
+        "readiness.score",
+        "activity.steps",
+        "workout.duration.running",
+        "workout.calories.running",
+      ]),
+    };
+    const whoop = {
+      window,
+      narrative: "Synthetic Whoop window.",
+      metrics: daily([
+        "whoop.recovery.score",
+        "whoop.cycle.strain",
+        "whoop.sleep.performance",
+        "whoop.workout.duration.running",
+        "whoop.workout.strain.running",
+      ]),
+    };
+
+    const prompt = buildTwinSystemPrompt({
+      mode: "personal",
+      oura,
+      whoop,
+      googleHealth: null,
+      vitronic: null,
+    });
+
+    for (const key of [
+      "workout.duration.running.2026-07-14",
+      "workout.calories.running.2026-07-14",
+      "whoop.workout.duration.running.2026-07-14",
+      "whoop.workout.strain.running.2026-07-14",
+    ]) {
+      expect(prompt).toContain(`- [${key}] `);
+    }
+    expect(prompt).not.toContain("- [sleep.score.long_sleep.2026-07-01] ");
+  });
 });
 
 const goldenWindow = { startDate: "2026-07-10", endDate: "2026-07-10" };

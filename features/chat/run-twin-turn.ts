@@ -9,6 +9,7 @@ import {
   type ParsedTwinAnswer,
   parseTwinAnswer,
 } from "@/infrastructure/parse-twin-answer";
+import { skillOfAuditTool, type TurnSkill } from "@/infrastructure/skill-gate";
 import type { VitronicSummary } from "@/infrastructure/vitronic-types";
 import type { WhoopSummary } from "@/infrastructure/whoop-types";
 import { drainGbdTurn } from "@/packages/gbd-mcp/collector";
@@ -46,6 +47,12 @@ export type TwinTurnDeps = Readonly<{
    */
   offeredTools?: ReadonlySet<string>;
   mode: DataMode;
+  /**
+   * The skill this turn runs under: its instructions join the system prompt
+   * and its name goes on the response document. The caller has already cut
+   * the tools down to it.
+   */
+  skill?: TurnSkill | null;
   /** Audit rows for this turn's session, read after the model finishes. */
   loadAudit: (turnId: string) => Promise<readonly ResponseToolCall[]>;
 }>;
@@ -96,6 +103,7 @@ export const runTwinTurn = (
     googleHealth: wearables.googleHealth,
     vitronic: wearables.vitronic,
     offeredTools: deps.offeredTools,
+    skill: deps.skill ?? null,
   });
 
   return streamText({
@@ -129,7 +137,10 @@ export const runTwinTurn = (
           })),
         ),
         buildDocument: async () => {
-          const toolCalls = await deps.loadAudit(turnId);
+          // The skill-run row records the run; it read nothing, so it is not a tool call.
+          const toolCalls = (await deps.loadAudit(turnId)).filter(
+            (row) => skillOfAuditTool(row.tool) === null,
+          );
           const gbd = drainGbdTurn(turnId);
           const guidelines = drainGuidelineTurn(turnId);
           const knowledge = drainKnowledgeTurn(turnId);
@@ -141,6 +152,7 @@ export const runTwinTurn = (
             gbdRows: gbd.rows,
             guidelineSources: guidelines.sources,
             knowledgeSources: knowledge.sources,
+            skill: deps.skill?.name ?? null,
           });
         },
       });

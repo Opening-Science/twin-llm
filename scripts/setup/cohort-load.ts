@@ -11,10 +11,14 @@ import { join } from "node:path";
 
 import { cohortContentSha256 } from "../synthea/cohort-checksum";
 import { EVAL_COHORT, FIXTURE_COHORT, RELEASE_10K } from "./cohort-pins";
-import { fileSha256 } from "./detect";
+import { deleteCohortRows, formatDeleted, ReloadRefusedError } from "./cohort-reload";
+import { fileSha256, openSql } from "./detect";
 import { parseIngestSummary, sha256For } from "./ingest-summary";
 
 export class SetupError extends Error {}
+
+/** A step that could not run for a reason the person can fix (shown as skipped, not failed). */
+export class SetupBlocked extends Error {}
 
 /** Runs a command with the terminal attached; true when it exits 0. */
 export const runCommand = (root: string, argv: readonly string[]): boolean => {
@@ -90,8 +94,8 @@ const readManifest = async (
 const countJson = async (dir: string): Promise<number> =>
   (await readdir(dir).catch(() => [])).filter((name) => name.endsWith(".json")).length;
 
-/** The evaluation cohort: generate it (unless an identical copy is on disk), verify, ingest. */
-export const loadEvalCohort = async (root: string): Promise<string> => {
+/** Generates the evaluation cohort (unless an identical copy is on disk) and verifies it. */
+const prepareEvalCohort = async (root: string): Promise<void> => {
   const fhir = join(root, EVAL_COHORT.fhirDir);
   const manifest = await readManifest(join(root, ".synthea", "manifest.json"));
   const reuse =
@@ -115,7 +119,44 @@ export const loadEvalCohort = async (root: string): Promise<string> => {
     );
   }
   process.stdout.write(`contentSha256 ${content} matches the pin.\n`);
+};
+
+/** The evaluation cohort: generate it (unless an identical copy is on disk), verify, ingest. */
+export const loadEvalCohort = async (root: string): Promise<string> => {
+  await prepareEvalCohort(root);
   return ingest(root, EVAL_COHORT.fhirDir, EVAL_COHORT.cohortId, false);
+};
+
+/**
+ * `--reload-cohort`: generate and verify the pinned evaluation cohort first, so
+ * a failure there deletes nothing; then delete the warehouse's rows for that
+ * cohort in one transaction (cohort-reload.ts) and ingest the pinned files.
+ * If the ingest stops part way, running setup again finishes it (ingest skips
+ * bundles already there).
+ */
+export const reloadEvalCohort = async (
+  root: string,
+  databaseUrl: string,
+): Promise<string> => {
+  await prepareEvalCohort(root);
+  const sql = openSql(databaseUrl);
+  let deleted: string;
+  try {
+    process.stdout.write(
+      `\nDeleting ${EVAL_COHORT.cohortId}'s warehouse rows (one transaction) …\n`,
+    );
+    deleted = formatDeleted(
+      EVAL_COHORT.cohortId,
+      await deleteCohortRows(sql, EVAL_COHORT.cohortId),
+    );
+  } catch (error) {
+    if (error instanceof ReloadRefusedError) throw new SetupError(error.message);
+    throw error;
+  } finally {
+    await sql.close();
+  }
+  process.stdout.write(`${deleted}.\n`);
+  return `${deleted}; ${await ingest(root, EVAL_COHORT.fhirDir, EVAL_COHORT.cohortId, false)}`;
 };
 
 /** The three trimmed fixtures in the repository. */

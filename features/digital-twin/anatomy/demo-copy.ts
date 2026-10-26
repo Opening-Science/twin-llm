@@ -21,7 +21,7 @@ export const DEMO_LOAD_ERROR = "Could not load the demo body.";
 export const DEMO_NOT_INSTALLED_API =
   "Demo body not installed. Run bun run anatomy:fetch.";
 export const RIGGED_NOT_INSTALLED_API =
-  "Rigged demo body not installed. Run bun run anatomy:bake-rigged.";
+  "Rigged demo body not installed. Run bun run anatomy:fetch.";
 
 const metres = (value: number): string => `${formatNumber(value, 2)} m`;
 

@@ -8,6 +8,11 @@ import {
   type DemoBodyId,
 } from "../../packages/anatomy/demo-bodies";
 import { ATLASES, type AtlasEntry, type AtlasId } from "../../packages/anatomy/manifest";
+import {
+  RIGGED_ATTRIBUTION,
+  RIGGED_BODIES,
+  type RiggedBodyEntry,
+} from "../../packages/anatomy/rigged-bodies";
 
 import { runAnatomyFetch, type FetchDeps } from "./fetch";
 
@@ -45,6 +50,32 @@ const SYNTHETIC_DEMO: Record<DemoBodyId, DemoBodyEntry> = {
   },
 };
 
+const RIGGED_BYTES: Record<DemoBodyId, Uint8Array> = {
+  "anny-adult-m": new Uint8Array([20, 21, 22, 23]),
+  "anny-adult-f": new Uint8Array([24, 25]),
+};
+
+const SYNTHETIC_RIGGED: Record<DemoBodyId, RiggedBodyEntry> = {
+  "anny-adult-m": {
+    ...RIGGED_BODIES["anny-adult-m"],
+    bytes: 4,
+    sha256: sha256(RIGGED_BYTES["anny-adult-m"]),
+  },
+  "anny-adult-f": {
+    ...RIGGED_BODIES["anny-adult-f"],
+    bytes: 2,
+    sha256: sha256(RIGGED_BYTES["anny-adult-f"]),
+  },
+};
+
+const ASSET_HOST =
+  "https://release-assets.githubusercontent.com/github-production-release-asset/1/";
+
+const riggedIdFor = (url: string): DemoBodyId | undefined =>
+  (Object.keys(SYNTHETIC_RIGGED) as DemoBodyId[]).find(
+    (key) => SYNTHETIC_RIGGED[key].url === url,
+  );
+
 const harness = (
   serve: (url: string) => Response,
   existing: Record<string, Uint8Array> = {},
@@ -56,7 +87,9 @@ const harness = (
   const deps: FetchDeps = {
     fetch: async (url, init) => {
       requested.push(url);
-      expect(init.redirect).toBe("error");
+      // Only the release downloads may see a redirect, and they follow it by hand.
+      const release = riggedIdFor(url) !== undefined || url.startsWith(ASSET_HOST);
+      expect(init.redirect).toBe(release ? "manual" : "error");
       return serve(url);
     },
     readFile: async (path) => existing[path] ?? written[path] ?? null,
@@ -68,6 +101,7 @@ const harness = (
     dir: "/atlases",
     atlases: SYNTHETIC,
     demoBodies: SYNTHETIC_DEMO,
+    riggedBodies: SYNTHETIC_RIGGED,
   };
   const io = {
     stdout: { write: (chunk: string) => void out.push(chunk) },
@@ -83,22 +117,37 @@ const byUrl = (url: string): Response => {
   const demoId = (Object.keys(SYNTHETIC_DEMO) as DemoBodyId[]).find(
     (key) => SYNTHETIC_DEMO[key].url === url,
   );
+  const riggedId = riggedIdFor(url);
   if (id) return new Response(BYTES[id]);
   if (demoId) return new Response(DEMO_BYTES[demoId]);
+  // GitHub answers a release download with a redirect to its asset host.
+  if (riggedId)
+    return new Response(null, {
+      status: 302,
+      headers: { location: `${ASSET_HOST}${riggedId}` },
+    });
+  const asset = (Object.keys(RIGGED_BYTES) as DemoBodyId[]).find(
+    (key) => url === `${ASSET_HOST}${key}`,
+  );
+  if (asset) return new Response(RIGGED_BYTES[asset]);
   return new Response("missing", { status: 404 });
 };
 
 describe("runAnatomyFetch", () => {
-  test("downloads, verifies and writes every atlas and demo body, then prints the credits", async () => {
+  test("downloads, verifies and writes every atlas, demo body and rigged body, then prints the credits", async () => {
     const h = harness(byUrl);
     expect(await runAnatomyFetch([], h.io, h.deps)).toBe(0);
     expect(Object.keys(h.written).sort()).toEqual([
       "/atlases/anny-adult-f.pose-bodyparts3d.glb",
+      "/atlases/anny-adult-f.rigged.glb",
       "/atlases/anny-adult-m.pose-bodyparts3d.glb",
+      "/atlases/anny-adult-m.rigged.glb",
       "/atlases/bodyparts3d.ao.glb",
       "/atlases/hra-m.ao.glb",
       "/atlases/hra.ao.glb",
     ]);
+    expect(h.out.join("")).toContain("ANNY adult (male), rigged: installed (0.0 MB).");
+    expect(h.out.join("")).toContain(RIGGED_ATTRIBUTION);
     expect(h.out.join("")).toContain("ANNY adult (female): installed (0.0 MB).");
     expect(h.out.join("").split(DEMO_BODIES["anny-adult-m"].attribution).length).toBe(2);
     const output = h.out.join("");
@@ -168,7 +217,7 @@ describe("runAnatomyFetch", () => {
         await h.deps.writeFileAtomic(path, bytes);
       },
     };
-    expect(await runAnatomyFetch([], h.io, failing)).toBe(1);
+    expect(await runAnatomyFetch(["--skip-rigged"], h.io, failing)).toBe(1);
     expect(h.err.join("")).toBe("Could not write BodyParts3D to /atlases.\n");
     expect(Object.keys(h.written).sort()).toEqual([
       "/atlases/anny-adult-f.pose-bodyparts3d.glb",
@@ -205,6 +254,60 @@ describe("runAnatomyFetch", () => {
     expect(h.err.join("")).toBe(
       "Checksum mismatch for ANNY adult (male); nothing written.\n",
     );
+  });
+
+  test("--rigged follows the release redirect to GitHub's asset host and checks the pin", async () => {
+    const h = harness(byUrl);
+    expect(await runAnatomyFetch(["--rigged", "anny-adult-f"], h.io, h.deps)).toBe(0);
+    expect(h.requested).toEqual([
+      SYNTHETIC_RIGGED["anny-adult-f"].url,
+      `${ASSET_HOST}anny-adult-f`,
+    ]);
+    expect(h.written).toEqual({
+      "/atlases/anny-adult-f.rigged.glb": RIGGED_BYTES["anny-adult-f"],
+    });
+  });
+
+  test("a release redirect anywhere but GitHub's hosts is refused", async () => {
+    const h = harness(
+      () =>
+        new Response(null, {
+          status: 302,
+          headers: { location: "https://example.com/anny.glb" },
+        }),
+    );
+    expect(await runAnatomyFetch(["--rigged", "anny-adult-m"], h.io, h.deps)).toBe(1);
+    expect(h.requested).toEqual([SYNTHETIC_RIGGED["anny-adult-m"].url]);
+    expect(h.written).toEqual({});
+    expect(h.err.join("")).toBe(
+      "Could not download ANNY adult (male), rigged: redirected somewhere unexpected; nothing written. It comes from release anatomy-rigged-v1; bun run anatomy:bake-rigged bakes it locally instead (needs uv).\n",
+    );
+  });
+
+  test("a missing release asset names the release and the bake", async () => {
+    const h = harness(() => new Response("Not Found", { status: 404 }));
+    expect(await runAnatomyFetch(["--rigged", "anny-adult-m"], h.io, h.deps)).toBe(1);
+    expect(h.err.join("")).toBe(
+      "Could not download ANNY adult (male), rigged (HTTP 404). It comes from release anatomy-rigged-v1; bun run anatomy:bake-rigged bakes it locally instead (needs uv).\n",
+    );
+  });
+
+  test("a release download with the wrong bytes writes nothing", async () => {
+    const h = harness((url) =>
+      url.startsWith(ASSET_HOST) ? new Response(new Uint8Array([7, 7])) : byUrl(url),
+    );
+    expect(await runAnatomyFetch(["--rigged", "anny-adult-f"], h.io, h.deps)).toBe(1);
+    expect(h.written).toEqual({});
+    expect(h.err.join("")).toBe(
+      "Checksum mismatch for ANNY adult (female), rigged; nothing written.\n",
+    );
+  });
+
+  test("--skip-rigged leaves the rigged bodies out of a full fetch", async () => {
+    const h = harness(byUrl);
+    expect(await runAnatomyFetch(["--skip-rigged"], h.io, h.deps)).toBe(0);
+    expect(Object.keys(h.written).filter((path) => path.includes("rigged"))).toEqual([]);
+    expect(h.requested.length).toBe(5);
   });
 
   test("rejects an unknown demo body id", async () => {

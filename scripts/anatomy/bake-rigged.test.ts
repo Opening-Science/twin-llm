@@ -9,6 +9,8 @@ import {
 } from "../../packages/anatomy/rigged-bodies";
 
 import { runBakeRigged, type BakeDeps } from "./bake-rigged";
+import { riggedCanonicalContent } from "./rigged-content-digest";
+import { BODY, buildGlb } from "./rigged-glb-fixture";
 
 const sha256 = (bytes: Uint8Array): string =>
   createHash("sha256").update(bytes).digest("hex");
@@ -37,6 +39,7 @@ const harness = (
     bakes?: Partial<Record<RiggedBodyEntry["sex"], Uint8Array>>;
     uv?: boolean;
     installed?: Record<string, Uint8Array>;
+    rigged?: Record<DemoBodyId, RiggedBodyEntry>;
   }> = {},
 ) => {
   const files: Record<string, Uint8Array> = { ...options.installed };
@@ -60,7 +63,7 @@ const harness = (
     scratchFile: async (name) => `/scratch/${name}`,
     sha256,
     dir: "/anatomy",
-    rigged: SYNTHETIC,
+    rigged: options.rigged ?? SYNTHETIC,
   };
   const io = {
     stdout: { write: (chunk: string) => void out.push(chunk) },
@@ -85,7 +88,35 @@ describe("runBakeRigged", () => {
     expect(await runBakeRigged(["--demo", "anny-adult-m"], h.io, h.deps)).toBe(1);
     expect(h.files["/anatomy/anny-adult-m.rigged.glb"]).toBeUndefined();
     expect(h.err).toEqual([
-      `ANNY adult (male), rigged: the bake gave 3 bytes, SHA-256 ${sha256(wrong)}, which is not the pin; nothing written.\n`,
+      `ANNY adult (male), rigged: the bake gave 3 bytes, SHA-256 ${sha256(wrong)}, which is not the pin; nothing written. Its content differs from the pin too (content SHA-256 unreadable). bun run anatomy:fetch downloads the pinned file.\n`,
+    ]);
+  });
+
+  test("a bake with other bytes but the pinned content says so, and still writes nothing", async () => {
+    const pinned = buildGlb(BODY);
+    const content = riggedCanonicalContent(pinned);
+    if (content === null) throw new Error("fixture is not a rigged GLB");
+    // The same body, with the midline zeros negative as another machine may write them.
+    const elsewhere = buildGlb({
+      ...BODY,
+      positions: BODY.positions.map((value) => (value === 0 ? -0 : value)),
+    });
+    const h = harness({
+      bakes: { male: elsewhere },
+      rigged: {
+        ...SYNTHETIC,
+        "anny-adult-m": {
+          ...SYNTHETIC["anny-adult-m"],
+          bytes: pinned.byteLength,
+          sha256: sha256(pinned),
+          contentSha256: sha256(content),
+        },
+      },
+    });
+    expect(await runBakeRigged(["--demo", "anny-adult-m"], h.io, h.deps)).toBe(1);
+    expect(h.files["/anatomy/anny-adult-m.rigged.glb"]).toBeUndefined();
+    expect(h.err).toEqual([
+      `ANNY adult (male), rigged: the bake gave ${elsewhere.byteLength} bytes, SHA-256 ${sha256(elsewhere)}, which is not the pin; nothing written. Its content matches the pin (content SHA-256 as pinned): the same body, with a few values encoded differently by this machine's float maths. bun run anatomy:fetch downloads the pinned file.\n`,
     ]);
   });
 

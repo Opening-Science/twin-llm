@@ -1,4 +1,5 @@
 import { permitProviderForRequest } from "@/infrastructure/data-mode-policy";
+import { permitSkillRequest } from "@/infrastructure/skill-gate";
 import { TOOL_DEFINITIONS } from "@/packages/query-tools/schemas";
 
 import {
@@ -7,7 +8,6 @@ import {
   type SkillEvalCase,
   type SkillRefusal,
   type SkillViewKind,
-  WEARABLE_CONTEXT_SOURCE,
 } from "./skill-schema";
 
 /**
@@ -38,11 +38,11 @@ const requestRefusals = (
   skill: Skill,
   evalCase: SkillEvalCase,
 ): readonly SkillRefusal[] => {
-  if (!skill.providers.includes(evalCase.provider))
-    return ["provider-not-allowed-by-skill"];
-  if (evalCase.wearableContext && !skill.sources.includes(WEARABLE_CONTEXT_SOURCE)) {
-    return ["source-not-allowed"];
-  }
+  const skillPermit = permitSkillRequest(skill, {
+    provider: evalCase.provider,
+    hasWearableContext: evalCase.wearableContext,
+  });
+  if (!skillPermit.ok) return [skillPermit.code];
   const permit = permitProviderForRequest({
     mode: evalCase.dataMode,
     provider: evalCase.provider,

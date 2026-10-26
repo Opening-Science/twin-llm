@@ -52,7 +52,7 @@ const pending = pendingTurn("Synthetic question two", [
 describe("turn updates", () => {
   test("a pending turn streams nothing until the server confirms it", () => {
     expect(answersToStream([saved, pending], new Set())).toEqual([
-      { turnIndex: 0, turnId: "turn-1", response: saved.answers[1]! },
+      { turnIndex: 0, turnId: "turn-1", skill: null, response: saved.answers[1]! },
     ]);
     expect(answersToStream([saved, pending], new Set(["r-b"]))).toEqual([]);
 
@@ -62,6 +62,7 @@ describe("turn updates", () => {
     expect(confirmed[1]).toEqual({
       id: "turn-2",
       prompt: "Synthetic question two",
+      skill: null,
       answers: [
         {
           id: "r-c",

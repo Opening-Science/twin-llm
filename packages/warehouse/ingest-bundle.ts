@@ -1,9 +1,8 @@
-import { createHash } from "node:crypto";
-
 import { normaliseBundle } from "@open-twin/fhir-r4";
 
 import { database } from "@/infrastructure/database";
 
+import { bundleSha } from "./bundle-sha";
 import { emptyReport, ingestReportSchema, type IngestReport } from "./ingest-report";
 import { mapObservations, WAREHOUSE_SOURCE } from "./map-observation";
 import { isSyntheaBundle } from "./synthea-marker";
@@ -22,11 +21,6 @@ export type IngestBundleOptions = {
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
-
-export const bundleSha = (bundle: unknown): string => {
-  const raw = typeof bundle === "string" ? bundle : JSON.stringify(bundle);
-  return createHash("sha256").update(raw).digest("hex");
-};
 
 const patientIdFrom = (bundle: unknown): string | undefined => {
   if (!isObject(bundle) || !Array.isArray(bundle.entry)) return undefined;

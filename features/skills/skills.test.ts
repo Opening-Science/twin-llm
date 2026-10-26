@@ -55,7 +55,7 @@ describe("skills/ in this repository", () => {
     expect(check.errors).toEqual([]);
     expect(check.results.filter((result) => !result.passed)).toEqual([]);
     expect(check.skills).toContain("sleep");
-    expect(check.results.filter((result) => result.skill === "sleep").length).toBe(5);
+    expect(check.results.filter((result) => result.skill === "sleep").length).toBe(8);
   });
 });
 

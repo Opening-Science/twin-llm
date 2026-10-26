@@ -145,6 +145,12 @@ export const responseDocumentV1Schema = z.object({
   }),
   next_step: z.enum(NEXT_STEPS),
   interpretation: interpretationSchema,
+  // Additive (#42): the skill the turn ran under, such as "sleep". Absent on
+  // ordinary turns and on documents saved before it, which still parse.
+  skill: z
+    .string()
+    .regex(/^[a-z][a-z0-9-]{0,39}$/)
+    .optional(),
 });
 
 export type ResponseToolCall = z.infer<typeof toolCallSchema>;

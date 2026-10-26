@@ -32,6 +32,8 @@ export type AnswerProgress = Readonly<{
   views?: readonly ChatView[];
   /** The connection closed before the server said it was done. */
   lost?: boolean;
+  /** The server's own sentence for a refused skill turn, shown in place of the generic failure. */
+  refusal?: string;
 }>;
 
 /** What is known once it is finished; each part may be missing. */
@@ -50,6 +52,8 @@ export type TurnState = Readonly<{
   id: string;
   prompt: string;
   answers: readonly ResponseState[];
+  /** The skill the prompt was sent with (`sleep` for `/sleep`), or null. */
+  skill?: string | null;
   /**
    * Shown at once while the server creates the rows. Its ids are made up, so
    * nothing may stream against it until the real turn replaces it.

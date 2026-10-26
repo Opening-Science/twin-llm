@@ -2,19 +2,22 @@
 # requires-python = "==3.12.*"
 # dependencies = [
 #   "anny==0.6.2",
-#   "torch==2.14.1+cpu",
+#   "torch==2.14.1",
 # ]
-#
-# [tool.uv]
-# index-strategy = "unsafe-best-match"
 #
 # [[tool.uv.index]]
 # name = "pytorch-cpu"
 # url = "https://download.pytorch.org/whl/cpu"
 # explicit = true
 #
+# # The CPU index has Linux and Windows wheels only (2.14.1+cpu, no CUDA
+# # libraries). macOS takes torch 2.14.1 from PyPI, which is CPU (and MPS) only
+# # and has one wheel: Apple Silicon, macOS 14 or later. The lock is universal;
+# # scripts/anatomy/bake-lock.test.ts checks it has a wheel for every platform.
 # [tool.uv.sources]
-# torch = { index = "pytorch-cpu" }
+# torch = [
+#   { index = "pytorch-cpu", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+# ]
 # ///
 """
 Bakes a rigged ANNY demo body: the same adult shape as the pinned static demo
@@ -34,7 +37,13 @@ feet at y=0, +X the subject's left (the atlas frame, docs/anatomy.md).
 Output is plain glTF 2.0 (no extensions): POSITION, JOINTS_0 and WEIGHTS_0
 (four strongest influences, UNSIGNED_BYTE), 16-bit indices, one skin. Values
 are rounded before they are written (positions to 10 micrometres, weights to
-1/255) so the bytes do not depend on the last bits of float math.
+1/255), which hides most differences in the last bits of float math, but not
+all: the sign of a zero (a midline vertex at -1e-17 here, +1e-17 elsewhere)
+and the last bit of a renormalised quaternion can still differ between
+machines. The pins are this script's output on Linux x86_64, also published as
+the anatomy-rigged-v1 release, which `bun run anatomy:fetch` downloads. When a
+bake here gives other bytes, bake-rigged.ts compares a content digest that
+ignores those encodings and says whether the body itself differs.
 """
 
 import json

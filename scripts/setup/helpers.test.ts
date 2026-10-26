@@ -119,10 +119,22 @@ describe("ingest output", () => {
 
 describe("parseSetupArgs", () => {
   test("flags", () => {
-    expect(parseSetupArgs([])).toBe("eval");
-    expect(parseSetupArgs(["--", "--cohort-10k"])).toBe("10k");
-    expect(parseSetupArgs(["--skip-cohort"])).toBe("none");
+    expect(parseSetupArgs([])).toEqual({ cohort: "eval", reloadCohort: false });
+    expect(parseSetupArgs(["--", "--cohort-10k"])).toEqual({
+      cohort: "10k",
+      reloadCohort: false,
+    });
+    expect(parseSetupArgs(["--skip-cohort"])).toEqual({
+      cohort: "none",
+      reloadCohort: false,
+    });
+    expect(parseSetupArgs(["--", "--reload-cohort"])).toEqual({
+      cohort: "eval",
+      reloadCohort: true,
+    });
     expect(parseSetupArgs(["--cohort-10k", "--skip-cohort"])).toBeNull();
+    expect(parseSetupArgs(["--reload-cohort", "--skip-cohort"])).toBeNull();
+    expect(parseSetupArgs(["--reload-cohort", "--cohort-10k"])).toBeNull();
     expect(parseSetupArgs(["--yes"])).toBeNull();
   });
 });
