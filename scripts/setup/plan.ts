@@ -9,7 +9,7 @@ import {
   isAllowedCohort,
   SYNTHETIC_COHORTS,
 } from "../../packages/query-tools/scope";
-import { EVAL_COHORT, FIXTURE_COHORT, RELEASE_10K } from "./cohort-pins";
+import { EVAL_COHORT, EVAL_RELEASE, FIXTURE_COHORT, RELEASE_10K } from "./cohort-pins";
 import {
   checkTool,
   type Platform,
@@ -86,7 +86,20 @@ export type SetupOptions = Readonly<{
   cohort: CohortChoice;
   /** `--reload-cohort`: replace the evaluation cohort's warehouse rows with the pinned cohort. */
   reloadCohort?: boolean;
+  /** `--generate-cohort`: generate the evaluation cohort with Synthea instead of downloading it. */
+  generateCohort?: boolean;
 }>;
+
+/**
+ * Where the evaluation cohort comes from. `download`: the pinned release
+ * archive, with local generation as the fallback when the release cannot be
+ * reached (`noGenerate` says why there is no fallback, or is null).
+ * `generate`: Synthea on this machine, which matches the pin only on the CPU
+ * architecture it was made on.
+ */
+export type EvalSource =
+  | Readonly<{ kind: "download"; noGenerate: string | null }>
+  | Readonly<{ kind: "generate" }>;
 
 export type StepId =
   | "env-file"
@@ -102,8 +115,13 @@ export type Action =
   | Readonly<{ kind: "create-env-file" }>
   | Readonly<{ kind: "command"; argv: readonly string[] }>
   | Readonly<{ kind: "create-database"; name: string }>
-  | Readonly<{ kind: "load-eval" }>
-  | Readonly<{ kind: "reload-eval"; cohortId: string; subjects: number }>
+  | Readonly<{ kind: "load-eval"; source: EvalSource }>
+  | Readonly<{
+      kind: "reload-eval";
+      cohortId: string;
+      subjects: number;
+      source: EvalSource;
+    }>
   | Readonly<{ kind: "load-10k" }>
   | Readonly<{ kind: "load-fixtures" }>
   | Readonly<{
@@ -126,6 +144,7 @@ export type Step = Readonly<{
 
 export const SETUP_COMMAND = "bun run setup:local";
 export const RELOAD_COMMAND = "bun run setup:local -- --reload-cohort";
+export const GENERATE_FLAG = "--generate-cohort";
 
 const fixFor = (state: DetectedState, id: ToolId): string | null => {
   const check = checkTool(id, state.tools[id], state.platform);
@@ -326,25 +345,21 @@ const cohortStep = (state: DetectedState, options: SetupOptions): Step => {
     };
   }
   const evalState = evalCohortState(state.database);
-  const generateFix = [
-    fixFor(state, "java"),
-    fixFor(state, "curl"),
-    fixFor(state, "shasum"),
-  ].filter((fix) => fix !== null);
+  const source = evalSource(state, options);
   if (options.reloadCohort === true) {
-    if (generateFix.length > 0) {
+    if (source.kind === "none") {
       return {
         ...base,
         status: "blocked",
-        reason: `${generateFix.join("; ")}. --reload-cohort generates ${EVAL_COHORT.cohortId} first; nothing was deleted.`,
+        reason: `${source.reason}. --reload-cohort loads ${EVAL_COHORT.cohortId} first; nothing was deleted.`,
       };
     }
     return evalState.kind === "absent"
       ? {
           ...base,
           status: "run",
-          action: { kind: "load-eval" },
-          note: `${EVAL_COHORT.cohortId} is not loaded, so nothing to delete: generate it with Synthea (fixed seed and dates), verify, ingest`,
+          action: { kind: "load-eval", source: source.source },
+          note: `${EVAL_COHORT.cohortId} is not loaded, so nothing to delete: ${source.note}, ingest`,
         }
       : {
           ...base,
@@ -353,8 +368,9 @@ const cohortStep = (state: DetectedState, options: SetupOptions): Step => {
             kind: "reload-eval",
             cohortId: EVAL_COHORT.cohortId,
             subjects: evalState.subjects,
+            source: source.source,
           },
-          note: `generate and verify ${EVAL_COHORT.cohortId}, then delete its ${evalState.subjects} subjects' warehouse rows in one transaction and ingest the pinned cohort`,
+          note: `${source.note}; then delete its ${evalState.subjects} subjects' warehouse rows in one transaction and ingest the pinned cohort`,
         };
   }
   if (evalState.kind === "stale") {
@@ -370,24 +386,70 @@ const cohortStep = (state: DetectedState, options: SetupOptions): Step => {
       reason: `warehouse already has ${loaded.map(([id, n]) => `${id} (${n} subjects)`).join(", ")}`,
     };
   }
-  const javaFix = generateFix;
-  if (javaFix.length === 0) {
+  if (source.kind !== "none") {
     return {
       ...base,
       status: "run",
-      action: { kind: "load-eval" },
-      note: `generate ${EVAL_COHORT.cohortId} with Synthea (fixed seed and dates), verify, ingest`,
+      action: { kind: "load-eval", source: source.source },
+      note: `${source.note}, ingest`,
     };
   }
-  const reason = `${javaFix.join("; ")}. Then run ${SETUP_COMMAND} again to load ${EVAL_COHORT.cohortId}.`;
-  return totalSubjects(cohorts) === 0
+  const reason = `${source.reason}. Then run ${SETUP_COMMAND} again to load ${EVAL_COHORT.cohortId}.`;
+  return totalSubjects(cohorts) === 0 && options.generateCohort !== true
     ? {
         ...base,
         status: "run",
         action: { kind: "load-fixtures" },
-        note: `no Java, so only the three trimmed fixtures (${FIXTURE_COHORT.cohortId}). ${reason}`,
+        note: `cannot download or generate the eval cohort here, so only the three trimmed fixtures (${FIXTURE_COHORT.cohortId}). ${reason}`,
       }
     : { ...base, status: "blocked", reason };
+};
+
+type SourceChoice =
+  | Readonly<{ kind: "ok"; source: EvalSource; note: string }>
+  | Readonly<{ kind: "none"; reason: string }>;
+
+/**
+ * How this machine can get the evaluation cohort: the download needs zstd to
+ * unpack, generating needs Java, curl and shasum. Downloading is the default
+ * because only it gives the pinned files on every CPU architecture.
+ */
+const evalSource = (state: DetectedState, options: SetupOptions): SourceChoice => {
+  const generateFix = [
+    fixFor(state, "java"),
+    fixFor(state, "curl"),
+    fixFor(state, "shasum"),
+  ].filter((fix) => fix !== null);
+  const zstdFix = fixFor(state, "zstd");
+  const generated = `generate ${EVAL_COHORT.cohortId} with Synthea (fixed seed and dates), verify`;
+  if (options.generateCohort === true) {
+    return generateFix.length === 0
+      ? {
+          kind: "ok",
+          source: { kind: "generate" },
+          note: `${GENERATE_FLAG}: ${generated}`,
+        }
+      : {
+          kind: "none",
+          reason: `${generateFix.join("; ")}. ${GENERATE_FLAG} needs Java; without the flag setup downloads the pinned files instead`,
+        };
+  }
+  if (zstdFix === null) {
+    const noGenerate = generateFix.length === 0 ? null : generateFix.join("; ");
+    return {
+      kind: "ok",
+      source: { kind: "download", noGenerate },
+      note: `download ${EVAL_RELEASE.archive} from release ${EVAL_RELEASE.tag}, verify (${noGenerate === null ? "Synthea generates it instead if the release cannot be reached" : "no Java, so no local fallback"})`,
+    };
+  }
+  if (generateFix.length === 0) {
+    return {
+      kind: "ok",
+      source: { kind: "generate" },
+      note: `no zstd to unpack the release (${zstdFix}), so ${generated} (matches the pin on x86_64 only)`,
+    };
+  }
+  return { kind: "none", reason: [zstdFix, ...generateFix].join("; ") };
 };
 
 const gigabytes = (bytes: number): string => `${(bytes / 1e9).toFixed(1)} GB`;

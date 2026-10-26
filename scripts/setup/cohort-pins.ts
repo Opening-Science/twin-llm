@@ -1,3 +1,4 @@
+import { RIGGED_RELEASE_HOSTS } from "../../packages/anatomy/rigged-bodies";
 import { COHORT_PRESETS, EVAL_CONTENT_SHA256 } from "../synthea/cohort-presets";
 
 /**
@@ -7,7 +8,7 @@ import { COHORT_PRESETS, EVAL_CONTENT_SHA256 } from "../synthea/cohort-presets";
 
 /**
  * `bun run synthea:generate -- --preset eval`: fixed seeds and dates, so every
- * machine gets the same files. The checksum is the one the answer key records
+ * machine of the same CPU architecture gets the same files. The checksum is the one the answer key records
  * (`EVAL_CONTENT_SHA256`); 37 files for N=30 because Synthea also exports the
  * people who died during the simulation.
  */
@@ -24,6 +25,31 @@ export const EVAL_COHORT = {
    * `bun scripts/setup/cohort-fingerprint.ts .synthea/fhir` on the pinned files.
    */
   bundleSetSha256: "469ecc95530aa6f546ef8d04f6a7a6a271d1cc379a25e8f39a30fd0272a18ba6",
+} as const;
+
+/**
+ * The evaluation cohort's pinned files as a release asset: the 37 bundles in
+ * `fhir/` and the generator's `manifest.json`, made on Linux x86_64 by
+ * `synthea:generate -- --preset eval`. Synthea's floating-point maths
+ * (`java.lang.Math`) can give other last digits on another CPU architecture, so
+ * a Mac with Apple Silicon generates a cohort with the same people but another
+ * checksum. `setup:local` downloads this archive by default and generates
+ * locally only with `--generate-cohort`, or when the release cannot be reached.
+ */
+export const EVAL_RELEASE = {
+  tag: "eval-cohort-v1",
+  archive: "eval-cohort-synthea-v4-seed42-20260101.tar.zst",
+  url: "https://github.com/Opening-Science/twin-llm/releases/download/eval-cohort-v1/eval-cohort-synthea-v4-seed42-20260101.tar.zst",
+  archiveBytes: 4_911_581,
+  archiveSha256: "45d84cad9882f9fe7365f42b7bc64b6cedcc6665a412c88a8e56e612712c2b14",
+  /** GitHub serves release assets through a redirect; the same hosts anatomy:fetch allows. */
+  redirectHosts: RIGGED_RELEASE_HOSTS,
+  /** Where the pin was generated; another architecture may not reproduce it. */
+  generatedOn: "Linux x86_64",
+  /** The archive is kept here for re-runs (about 5 MB). */
+  downloadDir: ".synthea/downloads",
+  /** Unpacked and checked here before it replaces `.synthea/fhir`. */
+  unpackDir: ".synthea/downloads/eval-cohort",
 } as const;
 
 /**
