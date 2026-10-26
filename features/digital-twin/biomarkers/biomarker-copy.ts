@@ -1,4 +1,5 @@
 import { type IntervalPosition } from "@/packages/biomarkers/interval-position";
+import { type OrganStatus } from "@/packages/biomarkers/organ-map";
 import { type VitalId } from "@/packages/biomarkers/vitals";
 
 /**
@@ -36,6 +37,10 @@ export const POSITION_TEXT: Readonly<
   within: "Within the published range",
   above: "Above the published range",
 };
+
+/** On an organ's card: the marker furthest from its published range, and where it sits. */
+export const organStatusLine = (status: OrganStatus): string =>
+  `Range position: ${status.label} · ${POSITION_TEXT[status.position]}`;
 
 /** How the anatomy Highlight select names a highlight a row set. */
 export const highlightFromLabel = (kind: "marker" | "vital", label: string): string =>
