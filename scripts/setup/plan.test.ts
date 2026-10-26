@@ -179,9 +179,79 @@ describe("planSetup", () => {
     });
   });
 
-  test("without Java an empty warehouse gets the three fixtures and says how to get the eval cohort", () => {
+  test("the eval cohort is downloaded from its release, with Synthea as the fallback", () => {
+    expect(planSetup(fresh, { cohort: "eval" }).at(-1)).toEqual({
+      id: "cohort",
+      title: "Synthetic cohort in the warehouse",
+      after: ["migrate"],
+      status: "run",
+      action: { kind: "load-eval", source: { kind: "download", noGenerate: null } },
+      note: "download eval-cohort-synthea-v4-seed42-20260101.tar.zst from release eval-cohort-v1, verify (Synthea generates it instead if the release cannot be reached), ingest",
+    });
+  });
+
+  test("without Java the download still runs; only the generate fallback is gone", () => {
+    expect(
+      planSetup(
+        { ...fresh, platform: "linux", tools: tools(["java"]) },
+        { cohort: "eval" },
+      ).at(-1),
+    ).toEqual({
+      id: "cohort",
+      title: "Synthetic cohort in the warehouse",
+      after: ["migrate"],
+      status: "run",
+      action: {
+        kind: "load-eval",
+        source: {
+          kind: "download",
+          noGenerate: "Java not found: sudo apt install openjdk-21-jre-headless",
+        },
+      },
+      note: "download eval-cohort-synthea-v4-seed42-20260101.tar.zst from release eval-cohort-v1, verify (no Java, so no local fallback), ingest",
+    });
+  });
+
+  test("without zstd the cohort is generated, and the note says it matches the pin on x86_64 only", () => {
+    expect(
+      planSetup(
+        { ...fresh, platform: "linux", tools: tools(["zstd"]) },
+        { cohort: "eval" },
+      ).at(-1),
+    ).toEqual({
+      id: "cohort",
+      title: "Synthetic cohort in the warehouse",
+      after: ["migrate"],
+      status: "run",
+      action: { kind: "load-eval", source: { kind: "generate" } },
+      note: "no zstd to unpack the release (zstd not found: sudo apt install zstd), so generate synthea-v4-seed42 with Synthea (fixed seed and dates), verify (matches the pin on x86_64 only), ingest",
+    });
+  });
+
+  test("--generate-cohort generates with Synthea, and without Java it is blocked", () => {
+    expect(planSetup(fresh, { cohort: "eval", generateCohort: true }).at(-1)).toEqual({
+      id: "cohort",
+      title: "Synthetic cohort in the warehouse",
+      after: ["migrate"],
+      status: "run",
+      action: { kind: "load-eval", source: { kind: "generate" } },
+      note: "--generate-cohort: generate synthea-v4-seed42 with Synthea (fixed seed and dates), verify, ingest",
+    });
+    expect(
+      summary(
+        planSetup(
+          { ...fresh, platform: "linux", tools: tools(["java"]) },
+          { cohort: "eval", generateCohort: true },
+        ),
+      ).at(-1),
+    ).toBe(
+      "cohort: blocked Java not found: sudo apt install openjdk-21-jre-headless. --generate-cohort needs Java; without the flag setup downloads the pinned files instead. Then run bun run setup:local again to load synthea-v4-seed42.",
+    );
+  });
+
+  test("without zstd and Java an empty warehouse gets the three fixtures and says how to get the eval cohort", () => {
     const cohort = planSetup(
-      { ...fresh, platform: "linux", tools: tools(["java"]) },
+      { ...fresh, platform: "linux", tools: tools(["java", "zstd"]) },
       { cohort: "eval" },
     ).at(-1);
     expect(cohort).toEqual({
@@ -190,20 +260,20 @@ describe("planSetup", () => {
       after: ["migrate"],
       status: "run",
       action: { kind: "load-fixtures" },
-      note: "no Java, so only the three trimmed fixtures (open-twin-synthea-trimmed-3). Java not found: sudo apt install openjdk-21-jre-headless. Then run bun run setup:local again to load synthea-v4-seed42.",
+      note: "cannot download or generate the eval cohort here, so only the three trimmed fixtures (open-twin-synthea-trimmed-3). zstd not found: sudo apt install zstd; Java not found: sudo apt install openjdk-21-jre-headless. Then run bun run setup:local again to load synthea-v4-seed42.",
     });
   });
 
-  test("Java too old with the fixtures already loaded: blocked, nothing re-ingested", () => {
+  test("without zstd, Java too old and the fixtures already loaded: blocked, nothing re-ingested", () => {
     const state: DetectedState = {
       ...ready,
-      tools: { ...tools(), java: { output: 'openjdk version "17.0.2"' } },
+      tools: { ...tools(["zstd"]), java: { output: 'openjdk version "17.0.2"' } },
       database: okDatabase([cohortRows("open-twin-synthea-trimmed-3", 3)]),
     };
     const cohort = planSetup(state, { cohort: "eval" }).at(-1);
     expect(cohort?.status).toBe("blocked");
     expect(cohort?.status === "blocked" ? cohort.reason : "").toBe(
-      "Java 17.0.2 found, 21 or newer needed: brew install openjdk@21 && echo 'export PATH=\"$(brew --prefix openjdk@21)/bin:$PATH\"' >> ~/.zshrc. Then run bun run setup:local again to load synthea-v4-seed42.",
+      "zstd not found: brew install zstd; Java 17.0.2 found, 21 or newer needed: brew install openjdk@21 && echo 'export PATH=\"$(brew --prefix openjdk@21)/bin:$PATH\"' >> ~/.zshrc. Then run bun run setup:local again to load synthea-v4-seed42.",
     );
   });
 
@@ -294,8 +364,13 @@ describe("planSetup", () => {
       title: "Synthetic cohort in the warehouse",
       after: ["migrate"],
       status: "run",
-      action: { kind: "reload-eval", cohortId: "synthea-v4-seed42", subjects: 35 },
-      note: "generate and verify synthea-v4-seed42, then delete its 35 subjects' warehouse rows in one transaction and ingest the pinned cohort",
+      action: {
+        kind: "reload-eval",
+        cohortId: "synthea-v4-seed42",
+        subjects: 35,
+        source: { kind: "download", noGenerate: null },
+      },
+      note: "download eval-cohort-synthea-v4-seed42-20260101.tar.zst from release eval-cohort-v1, verify (Synthea generates it instead if the release cannot be reached); then delete its 35 subjects' warehouse rows in one transaction and ingest the pinned cohort",
     });
     // Asked for explicitly, so it reloads a current cohort too.
     expect(summary(planSetup(ready, { cohort: "eval", reloadCohort: true })).at(-1)).toBe(
@@ -303,7 +378,20 @@ describe("planSetup", () => {
     );
   });
 
-  test("--reload-cohort with nothing loaded just loads, and without Java deletes nothing", () => {
+  test("--reload-cohort --generate-cohort generates before it deletes", () => {
+    const step = planSetup(
+      { ...ready, database: OLD_EVAL },
+      { cohort: "eval", reloadCohort: true, generateCohort: true },
+    ).at(-1);
+    expect(step?.status === "run" ? step.action : null).toEqual({
+      kind: "reload-eval",
+      cohortId: "synthea-v4-seed42",
+      subjects: 35,
+      source: { kind: "generate" },
+    });
+  });
+
+  test("--reload-cohort with nothing loaded just loads, and with no way to get the cohort deletes nothing", () => {
     expect(
       summary(
         planSetup(
@@ -318,12 +406,12 @@ describe("planSetup", () => {
     expect(
       summary(
         planSetup(
-          { ...ready, database: OLD_EVAL, tools: tools(["java"]) },
+          { ...ready, database: OLD_EVAL, tools: tools(["java", "zstd"]) },
           { cohort: "eval", reloadCohort: true },
         ),
       ).at(-1),
     ).toBe(
-      "cohort: blocked Java not found: brew install openjdk@21 && echo 'export PATH=\"$(brew --prefix openjdk@21)/bin:$PATH\"' >> ~/.zshrc. --reload-cohort generates synthea-v4-seed42 first; nothing was deleted.",
+      "cohort: blocked zstd not found: brew install zstd; Java not found: brew install openjdk@21 && echo 'export PATH=\"$(brew --prefix openjdk@21)/bin:$PATH\"' >> ~/.zshrc. --reload-cohort loads synthea-v4-seed42 first; nothing was deleted.",
     );
   });
 

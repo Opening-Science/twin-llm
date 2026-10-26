@@ -7,6 +7,11 @@
  *
  * The JAR is reused from `.synthea/cache` when it is there, else downloaded
  * (and checked) by the script. `.synthea/fhir` is never touched.
+ *
+ * The pin was made on Linux x86_64. Synthea's java.lang.Math gives a few last
+ * digits differently on other CPU architectures (an Apple Silicon Mac gets the
+ * same people with another checksum), so it is skipped there; such machines
+ * download the pinned files instead (docs/warehouse.md, "Reproducible runs").
  */
 import { describe, expect, test } from "bun:test";
 import { copyFile, mkdir, mkdtemp, readFile, rm, stat } from "node:fs/promises";
@@ -20,6 +25,7 @@ import { COHORT_PRESETS, EVAL_CONTENT_SHA256 } from "./cohort-presets";
 // than through infrastructure/env.ts, the same exception as
 // evaluation/answer-key.test.ts.
 const runLive = Bun.env.RUN_LIVE === "1";
+const skip = !runLive || process.arch !== "x64";
 
 const REPO = join(import.meta.dir, "../..");
 const JAR = ".synthea/cache/synthea-with-dependencies.jar";
@@ -30,7 +36,7 @@ const exists = (path: string): Promise<boolean> =>
     () => false,
   );
 
-describe.skipIf(!runLive)("the evaluation cohort regenerates (RUN_LIVE=1)", () => {
+describe.skipIf(skip)("the evaluation cohort regenerates (RUN_LIVE=1)", () => {
   test("another folder and time zone give the pinned checksum", async () => {
     const root = await mkdtemp(join(tmpdir(), "twin-llm-synthea-"));
     try {

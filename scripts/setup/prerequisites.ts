@@ -67,7 +67,8 @@ export const TOOLS: Readonly<Record<ToolId, ToolSpec>> = {
   },
   java: {
     label: "Java",
-    neededFor: "Synthea (generating the synthetic cohort)",
+    neededFor:
+      "Synthea (--generate-cohort, or when the eval cohort cannot be downloaded)",
     minimum: "21",
     install: {
       darwin:
@@ -99,7 +100,7 @@ export const TOOLS: Readonly<Record<ToolId, ToolSpec>> = {
   },
   zstd: {
     label: "zstd",
-    neededFor: "--cohort-10k (unpacks the release archive)",
+    neededFor: "the eval cohort and --cohort-10k (unpacks the release archives)",
     minimum: null,
     install: { darwin: "brew install zstd", linux: "sudo apt install zstd" },
   },
