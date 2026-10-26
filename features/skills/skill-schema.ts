@@ -3,8 +3,10 @@ import { z } from "zod";
 import {
   LLM_PROVIDERS,
   type LlmProvider,
+  permitGenomeRequest,
   permitProviderForRequest,
 } from "@/infrastructure/data-mode-policy";
+import { GENOME_TOOLS } from "@/packages/carbon-x/constants";
 import {
   ALL_KNOWLEDGE_SOURCES,
   KNOWLEDGE_SOURCE_IDS,
@@ -75,6 +77,16 @@ const policyCanTakePersonalData = (provider: LlmProvider): boolean =>
     exoscalePersonalData: "consented-pilot",
   }).ok;
 
+/** True when the genome policy could let this chat provider see a genotype at all. */
+const policyCanTakeGenome = (provider: LlmProvider): boolean =>
+  permitGenomeRequest({
+    mode: "personal",
+    genomeSource: "ark",
+    chatProvider: provider,
+    chatOnLoopback: true,
+    carbonXOnLoopback: true,
+  }).ok;
+
 export const skillFrontmatterSchema = z
   .strictObject({
     name: z.string().regex(SKILL_NAME_PATTERN, {
@@ -110,6 +122,19 @@ export const skillFrontmatterSchema = z
         });
       }
     });
+    // Genome tools run only with a chat model on this machine (the genome
+    // policy in data-mode-policy.ts); a skill that calls them lists no other.
+    if (skill.tools.some((tool) => GENOME_TOOLS.includes(tool))) {
+      skill.providers.forEach((provider, index) => {
+        if (!policyCanTakeGenome(provider)) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["providers", index],
+            message: `provider "${provider}" may never receive a genotype (infrastructure/data-mode-policy.ts), so a skill calling genome tools cannot list it`,
+          });
+        }
+      });
+    }
     if (sources.has(WEARABLE_CONTEXT_SOURCE)) {
       skill.providers.forEach((provider, index) => {
         if (!policyCanTakePersonalData(provider)) {
@@ -139,6 +164,7 @@ export const SKILL_REFUSALS = [
   "tool-not-allowed",
   "invalid-tool-input",
   "view-not-allowed",
+  "genome-not-permitted",
 ] as const;
 
 export type SkillRefusal = (typeof SKILL_REFUSALS)[number];
@@ -163,6 +189,8 @@ export const skillEvalCaseSchema = z.strictObject({
   dataMode: z.enum(["synthetic", "personal"]).default("synthetic"),
   exoscalePersonalData: z.enum(["off", "consented-pilot"]).default("off"),
   wearableContext: z.boolean().default(false),
+  /** GENOME_SOURCE for the case; genome tools need `ark` (and personal mode, ollama). */
+  genomeSource: z.enum(["none", "ark"]).default("none"),
   script: z.array(scriptedStepSchema),
   expect: z.strictObject({
     calls: z.array(chatToolName),

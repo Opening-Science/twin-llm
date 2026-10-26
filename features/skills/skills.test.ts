@@ -126,7 +126,7 @@ describe("validateSkill", () => {
     ].join("\n");
     const result = validateSkill(files(front, [okEval]), SUBJECTS);
     expect(result.ok ? [] : result.errors).toEqual([
-      'skills/demo/SKILL.md: tools.1: unknown tool "made_up"; known tools: guideline_search, knowledge_search, list_subjects, subject_window, observations_for_subject, latest_by_loinc, summary_stats, trend, baseline_deviation, coverage, compare_windows, gbd_population',
+      'skills/demo/SKILL.md: tools.1: unknown tool "made_up"; known tools: guideline_search, knowledge_search, list_subjects, subject_window, observations_for_subject, latest_by_loinc, summary_stats, trend, baseline_deviation, coverage, compare_windows, gbd_population, genome_report, dna_ask',
       'skills/demo/SKILL.md: Unrecognized key: "model"',
       'skills/demo/SKILL.md: tools.0: tool "trend" needs source "cohort-analytics" in sources',
     ]);
@@ -153,6 +153,26 @@ describe("validateSkill", () => {
     const result = validateSkill(files(front, [okEval]), SUBJECTS);
     expect(result.ok ? [] : result.errors).toEqual([
       'skills/demo/SKILL.md: providers.2: provider "openrouter" may never receive personal data (infrastructure/data-mode-policy.ts), so a skill reading wearable-context cannot list it',
+    ]);
+  });
+
+  test("a skill calling genome tools may list only a local chat provider", () => {
+    const front = [
+      "name: demo",
+      "description: A demo skill",
+      "tools: [genome_report, dna_ask]",
+      "sources: [ark-genome]",
+      "providers: [ollama, exoscale]",
+    ].join("\n");
+    const genomeEval = evalFile({
+      dataMode: "personal",
+      genomeSource: "ark",
+      script: [{ tool: "genome_report", input: {} }],
+      expect: { calls: ["genome_report"], refusals: [] },
+    });
+    const result = validateSkill(files(front, [genomeEval]), SUBJECTS);
+    expect(result.ok ? [] : result.errors).toEqual([
+      'skills/demo/SKILL.md: providers.1: provider "exoscale" may never receive a genotype (infrastructure/data-mode-policy.ts), so a skill calling genome tools cannot list it',
     ]);
   });
 
@@ -211,6 +231,28 @@ describe("runSkillEvals", () => {
         expect: { calls: ["summary_stats"], refusals: [] },
       }).map((result) => result.passed),
     ).toEqual([true]);
+  });
+
+  test("genome tools are refused outside personal mode with GENOME_SOURCE=ark", () => {
+    const front = [
+      "name: demo",
+      "description: A demo skill",
+      "tools: [dna_ask]",
+      "sources: [ark-genome]",
+    ].join("\n");
+    const ask = { tool: "dna_ask", input: { rsid: "rs4244285" } };
+    const outcome = (body: Record<string, unknown>) =>
+      run(front, { script: [ask], expect: { calls: [], refusals: [] }, ...body })[0]
+        ?.actual;
+    expect(outcome({ dataMode: "personal", genomeSource: "ark" })).toEqual({
+      calls: ["dna_ask"],
+      views: [],
+      refusals: [],
+    });
+    expect(outcome({ dataMode: "synthetic", genomeSource: "ark" })?.refusals).toEqual([
+      "genome-not-permitted",
+    ]);
+    expect(outcome({ dataMode: "personal" })?.refusals).toEqual(["genome-not-permitted"]);
   });
 
   test("wearable context needs the wearable-context source", () => {

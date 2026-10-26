@@ -1,0 +1,13 @@
+{
+  "question": "Does my CYP2C19 result relate to my sleep?",
+  "provider": "ollama",
+  "dataMode": "personal",
+  "genomeSource": "ark",
+  "wearableContext": true,
+  "script": [{ "tool": "genome_report", "input": {} }],
+  "expect": {
+    "calls": [],
+    "views": [],
+    "refusals": ["source-not-allowed"]
+  }
+}

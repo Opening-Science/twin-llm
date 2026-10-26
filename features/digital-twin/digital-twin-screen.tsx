@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import { type ComponentProps, useEffect, useState } from "react";
 
 import {
   isArkStatusPayload,
@@ -14,6 +14,7 @@ import { BodyLoopAvatar } from "./bodyloop-avatar";
 import { GenomeAudit } from "./genome-audit";
 import { GenomeHelixFallback } from "./genome-helix-fallback";
 import { GenomeInventory } from "./genome-inventory";
+import { GenomeReport } from "./genome-report";
 import {
   sourceLines,
   twinSections,
@@ -48,6 +49,8 @@ type DigitalTwinScreenProps = {
   readonly bodyPreview?: BodyTwinPreview;
   /** Tests only: what the body viewer reports once its subject is known. */
   readonly contextPreview?: TwinContext;
+  /** Tests only: a fixed phase for the rsid-genotypes report. */
+  readonly reportPreview?: ComponentProps<typeof GenomeReport>["preview"];
 };
 
 const SectionHead = ({
@@ -64,7 +67,13 @@ const SectionHead = ({
   </>
 );
 
-const GenomeSection = ({ status }: { readonly status: ArkStatusPayload | null }) => {
+const GenomeSection = ({
+  status,
+  reportPreview,
+}: Readonly<{
+  status: ArkStatusPayload | null;
+  reportPreview?: ComponentProps<typeof GenomeReport>["preview"];
+}>) => {
   const enabled = status?.enabled === true;
   return (
     <section className="mt-12">
@@ -79,6 +88,7 @@ const GenomeSection = ({ status }: { readonly status: ArkStatusPayload | null })
             <GenomeHelix />
           </div>
           <div className="mt-6 grid gap-4 lg:grid-cols-2">
+            <GenomeReport preview={reportPreview} />
             <GenomeInventory status={status} />
             <GenomeAudit />
           </div>
@@ -111,6 +121,7 @@ export const DigitalTwinScreen = ({
   preview,
   bodyPreview,
   contextPreview,
+  reportPreview,
 }: DigitalTwinScreenProps) => {
   const [payload, setPayload] = useState<ArkStatusPayload | null>(preview ?? null);
   const [context, setContext] = useState<TwinContext | null>(contextPreview ?? null);
@@ -145,7 +156,7 @@ export const DigitalTwinScreen = ({
       {context && plan.sections.includes("sources") ? (
         <SourcesSection context={context} plan={plan} />
       ) : null}
-      <GenomeSection status={status} />
+      <GenomeSection status={status} reportPreview={reportPreview} />
     </div>
   );
 };

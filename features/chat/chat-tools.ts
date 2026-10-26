@@ -20,6 +20,7 @@ import { createQueryTools } from "@/packages/query-tools/ai-tools";
 import type { QueryToolPorts } from "@/packages/query-tools/ports";
 import type { SessionScope } from "@/packages/query-tools/scope";
 
+import { createGenomeTools, type GenomeToolDeps } from "./genome-tools";
 import { createShowViewTool } from "./show-view-tool";
 
 const NO_WEARABLES: WearableSummaries = {
@@ -87,6 +88,12 @@ export const createChatTools = (
     /** View kinds `show_view` may draw (a skill's `views`); left out, every kind. */
     views?: readonly string[];
     factories?: ChatToolFactories;
+    /**
+     * Ports for `genome_report` and `dna_ask`. Only the chat route passes them,
+     * and only after the genome policy allowed this turn; a synthetic scope
+     * never gets them. The eval and training tool lists never include them.
+     */
+    genome?: GenomeToolDeps;
   }>,
 ) => {
   const make = options?.factories ?? CHAT_TOOL_FACTORIES;
@@ -106,6 +113,9 @@ export const createChatTools = (
       : {}),
     ...make.guidelines(scope),
     ...make.knowledge(scope),
+    ...(options?.genome !== undefined && scope.mode === "personal"
+      ? createGenomeTools(options.genome)
+      : {}),
   };
 };
 

@@ -1,0 +1,17 @@
+{
+  "question": "How common is my CYP2C19 variant, and what is at chr10:94781859?",
+  "provider": "ollama",
+  "dataMode": "personal",
+  "genomeSource": "ark",
+  "script": [
+    { "tool": "gbd_population", "input": { "measure": "CYP2C19" } },
+    { "tool": "dna_ask", "input": { "rsid": "chr10:94781859" } },
+    { "tool": "dna_ask", "input": { "rsid": "rs4244285", "genotype": "A/G" } },
+    { "tool": "dna_ask", "input": { "rsid": "rs4244285" } }
+  ],
+  "expect": {
+    "calls": ["dna_ask"],
+    "views": [],
+    "refusals": ["tool-not-allowed", "invalid-tool-input"]
+  }
+}

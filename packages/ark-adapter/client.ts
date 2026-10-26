@@ -167,13 +167,30 @@ const reportFromAppRun = (document: ArkAppRunDocument): string => {
   return "";
 };
 
+/**
+ * What the audit chain keeps of a released report: the run's metadata and the
+ * report's length, never its text or a hash of it. A report of eleven
+ * genotypes has few enough possible values that a plain hash could be
+ * reversed by trying them all.
+ */
+export const appRunAuditView = (document: ArkAppRunDocument): Record<string, unknown> => {
+  const {
+    stdout: _stdout,
+    stdout_base64: _stdoutBase64,
+    stderr: _stderr,
+    stderr_base64: _stderrBase64,
+    ...metadata
+  } = document;
+  return { ...metadata, report_chars: reportFromAppRun(document).length };
+};
+
 const parseAppRun = (value: unknown): ParsedOk<ArkAppRunData> => {
   const parsed = arkAppRunDocumentSchema.safeParse(value);
   if (!parsed.success) return { ok: false, issues: formatZodIssues(parsed.error) };
   return {
     ok: true,
     data: { report: reportFromAppRun(parsed.data) },
-    audit: parsed.data,
+    audit: appRunAuditView(parsed.data),
   };
 };
 

@@ -21,6 +21,7 @@ import type { ChatRequest } from "./chat-request";
 import { createChatTools, forSkill, forSources } from "./chat-tools";
 import { finishModelResponse } from "./finish-model-response";
 import { generationEvent } from "./generation-analytics";
+import { genomeToolDepsFor } from "./genome-tool-deps";
 import { errorNameOf, modelFailureLog } from "./model-failure-log";
 import {
   markModelResponseComplete,
@@ -98,17 +99,16 @@ export const streamModelResponse = async (
   };
 
   const skill = context.skill ?? null;
+  const scope = { actor: clerkId, sessionId: turnId, mode: env.DATA_MODE };
   const { tools, offeredTools } = forSkill(
     forSources(
-      createChatTools(
-        { actor: clerkId, sessionId: turnId, mode: env.DATA_MODE },
-        {
-          hasWearableNarrative,
-          wearables: turnWearables,
-          disabledSources: context.disabledSources,
-          views: skill?.views,
-        },
-      ),
+      createChatTools(scope, {
+        hasWearableNarrative,
+        wearables: turnWearables,
+        disabledSources: context.disabledSources,
+        views: skill?.views,
+        genome: genomeToolDepsFor(scope),
+      }),
       context.disabledSources ?? [],
     ).tools,
     skill,

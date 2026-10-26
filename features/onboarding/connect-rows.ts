@@ -135,6 +135,8 @@ export type SourceFacts = Readonly<{
   guidelineDocuments: number;
   knowledgeDocuments: number;
   gbdConfigured: boolean;
+  /** The genome policy allows chat here (`infrastructure/genome-gate.ts`). */
+  genomeChat: boolean;
 }>;
 
 export type SourceAvailability = Readonly<{ available: boolean; note: string | null }>;
@@ -164,5 +166,8 @@ export const sourceAvailability = (
     gbd: facts.gbdConfigured
       ? { available: true, note: null }
       : { available: false, note: "Pending IHME's OK" },
+    "ark-genome": facts.genomeChat
+      ? { available: true, note: null }
+      : { available: false, note: "Needs Ark and local Carbon-X" },
   };
 };

@@ -96,14 +96,15 @@ describe("runnableSkillsIn", () => {
     logged.mockRestore();
   });
 
-  test("the repository's own skills/ offers /sleep", () => {
+  test("the repository's own skills/ offers /genome and /sleep", () => {
     const repo = join(import.meta.dir, "..", "..");
     const skills = runnableSkillsIn({
       skillsDir: join(repo, "skills"),
       questionsPath: join(repo, "evaluation", "questions.v1.json"),
     });
-    expect(skills.map((skill) => skill.name)).toEqual(["sleep"]);
-    expect(skills[0]?.providers).toEqual(["ollama"]);
-    expect(skills[0]?.views).toEqual(["chart.timeseries", "chart.compare"]);
+    expect(skills.map((skill) => skill.name)).toEqual(["genome", "sleep"]);
+    expect(skills.map((skill) => skill.providers)).toEqual([["ollama"], ["ollama"]]);
+    expect(skills[0]?.tools).toEqual(["genome_report", "dna_ask"]);
+    expect(skills[1]?.views).toEqual(["chart.timeseries", "chart.compare"]);
   });
 });
