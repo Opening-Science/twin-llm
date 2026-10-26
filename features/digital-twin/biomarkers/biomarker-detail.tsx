@@ -1,8 +1,13 @@
 "use client";
 
 import { Field } from "@/infrastructure/ui-kit/field";
+import { StatusBadge } from "@/infrastructure/ui-kit/status-badge";
 
-import { LAB_SOURCE_LABEL, LAB_SOURCE_NONE } from "./biomarker-copy";
+import {
+  LAB_SOURCE_LABEL,
+  LAB_SOURCE_NONE,
+  SYNTHETIC_DATA_LABEL,
+} from "./biomarker-copy";
 import { type BiomarkerRow } from "./biomarker-rows";
 import { type BiomarkerTabModel } from "./use-biomarker-tab";
 
@@ -27,6 +32,9 @@ export const BiomarkerDetail = ({
 /** Where the values come from, and for the Demo which synthetic person. */
 export const BiomarkerSource = ({ model }: Readonly<{ model: BiomarkerTabModel }>) => (
   <div className="mb-2 space-y-2 px-2.5">
+    {model.people.length > 0 ? (
+      <StatusBadge tone="neutral">{SYNTHETIC_DATA_LABEL}</StatusBadge>
+    ) : null}
     {model.people.length > 0 ? (
       <Field
         as="select"

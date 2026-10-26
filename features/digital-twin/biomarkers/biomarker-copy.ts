@@ -49,6 +49,7 @@ export const highlightFromLabel = (kind: "marker" | "vital", label: string): str
 export const LAB_SOURCE_LABEL = "Lab values from";
 export const COHORT_FAILED = "Could not load synthetic lab values.";
 export const LAB_SOURCE_NONE = "None";
+export const SYNTHETIC_DATA_LABEL = "Synthetic data";
 export const DEMO_LABS_NOTE =
   "Lab values of a synthetic cohort person, not of this body. No sex or age is stored, so ranges that depend on them get no position.";
 export const NO_COHORT =

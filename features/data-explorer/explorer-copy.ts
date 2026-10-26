@@ -6,6 +6,9 @@
 
 export const DATA_TITLE = "Data";
 
+/** Shown beside the title on every Data screen, in any DATA_MODE. */
+export const SYNTHETIC_DATA_LABEL = "Synthetic data";
+
 export const DATA_LEDE =
   "The synthetic people TwinLLM is tested and trained on: what is in the warehouse, and the training conversations made from it.";
 
@@ -56,8 +59,6 @@ export const COHORT_ROLES: Readonly<Record<string, string>> = {
 export const EVAL_COHORT_ID = "synthea-v4-seed42";
 
 export const BLOCKED_COPY = {
-  personal:
-    "The Data page shows synthetic data only. This server runs in personal mode, so it reads nothing here. Start it with DATA_MODE=synthetic to explore the synthetic cohorts.",
   "sign-in": "Sign in to explore the synthetic cohorts.",
   "not-found": "That cohort or subject is not in the synthetic scope of this server.",
   failed: "Could not read the warehouse just now. Reload the page to try again.",

@@ -1,19 +1,18 @@
 import { NextResponse } from "next/server";
 
 import { type AppendInput } from "@/packages/audit/append";
-import {
-  SUBJECT_SCOPE_VIOLATION,
-  subjectRowInScope,
-  type SessionScope,
-} from "@/packages/query-tools/scope";
+import { SUBJECT_SCOPE_VIOLATION } from "@/packages/query-tools/scope";
+import { demoSubjectInScope } from "@/packages/query-tools/synthetic-display";
 
 import { COHORT_VITAL_LOINCS } from "../live/live-rates";
 import { COHORT_FAILED } from "./biomarker-copy";
 
 /**
- * Lab values for the Demo body, read from the synthetic B1 cohort. The same
- * scope rule as the query tools applies: only in synthetic mode, only
- * `is_synthetic` rows from an allowlisted cohort. Personal mode lists nobody.
+ * Lab values for the Demo body, read from the synthetic B1 cohort under the
+ * synthetic display scope (`packages/query-tools/synthetic-display.ts`): only
+ * `is_synthetic` rows of a Demo cohort, in any DATA_MODE. The Demo shows a
+ * synthetic person and sends nothing to a model, so a personal-mode machine
+ * shows it too; the chat's query tools keep their own, stricter scope.
  *
  * The rows are synthetic, but every read still gets an audit row, like any
  * other subject read. A person is shown as "Synthetic person N" in subject_ref
@@ -46,7 +45,6 @@ export type CohortRow = Readonly<{
 }>;
 
 export type CohortDeps = Readonly<{
-  dataMode: () => SessionScope["mode"];
   resolveActorId: () => Promise<string | null>;
   /** Synthetic subjects of the allowlisted cohorts, sorted by subject_ref. */
   listSubjectRefs: () => Promise<readonly string[]>;
@@ -92,9 +90,6 @@ export const createCohortListHandler = (deps: CohortDeps) => async () => {
   if (!actor) {
     return NextResponse.json({ error: COHORT_SIGN_IN }, { status: 401 });
   }
-  if (deps.dataMode() !== "synthetic") {
-    return NextResponse.json({ subjects: [] }, { headers: NO_STORE });
-  }
   try {
     const refs = await deps.listSubjectRefs();
     const subjects: readonly CohortPerson[] = refs.map((ref, index) => ({
@@ -134,8 +129,7 @@ export const createCohortValuesHandler =
     }
     const params = (await context.params) as Record<string, unknown>;
     const ref = params.subjectRef;
-    const mode = deps.dataMode();
-    if (typeof ref !== "string" || mode !== "synthetic") {
+    if (typeof ref !== "string") {
       return NextResponse.json({ error: COHORT_NOT_FOUND }, { status: 404 });
     }
     const anchor = deps.anchorLoincs();
@@ -151,8 +145,7 @@ export const createCohortValuesHandler =
         rowCount,
       });
     try {
-      const scope: SessionScope = { actor, sessionId: actor, mode };
-      if (!subjectRowInScope(scope, await deps.findSubject(ref))) {
+      if (!demoSubjectInScope(await deps.findSubject(ref))) {
         await audit(SUBJECT_SCOPE_VIOLATION, 0);
         return NextResponse.json({ error: COHORT_NOT_FOUND }, { status: 404 });
       }

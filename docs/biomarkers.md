@@ -65,9 +65,9 @@ person in the synthetic B1 cohort (`docs/warehouse.md`).
   Anchor LOINC: `{ loinc, value, unitUcum, effectiveAt }`. Synthea writes rows with
   the same timestamp, so a tie goes to the lower row id and a reload shows the same
   value.
-- Scope is the query tools' rule (`packages/query-tools/scope.ts`): `DATA_MODE=synthetic`,
-  `is_synthetic`, an allowlisted cohort. In personal mode the list is empty and a
-  values request is a 404 before anything is read.
+- Scope is the synthetic display scope (`packages/query-tools/synthetic-display.ts`):
+  `is_synthetic` rows of a Demo cohort, in any `DATA_MODE`, labelled "Synthetic data".
+  The chat's query tools keep their stricter rule (`docs/warehouse.md`).
 - Every read writes an audit row (`biomarkers.cohort.list`, `biomarkers.cohort.values`),
   refusals and failed reads included, with the row count.
 - Matching is by exact LOINC; units are never converted. In the `synthea-v4-seed42`

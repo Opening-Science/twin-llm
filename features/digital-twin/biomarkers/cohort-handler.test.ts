@@ -63,7 +63,6 @@ const fakeDeps = (overrides: Partial<CohortDeps> = {}) => {
   const audits: AppendInput[] = [];
   const asked: { ref: string; loincs: readonly string[] }[] = [];
   const deps: CohortDeps = {
-    dataMode: () => "synthetic",
     resolveActorId: async () => "local",
     listSubjectRefs: async () => ["syn-a", "syn-b"],
     findSubject: async (ref) => SUBJECTS[ref] ?? null,
@@ -112,21 +111,6 @@ describe("GET /api/biomarkers/cohort", () => {
         rowCount: 2,
       },
     ]);
-  });
-
-  test("lists nobody in personal mode and reads nothing", async () => {
-    let listed = false;
-    const { deps, audits } = fakeDeps({
-      dataMode: () => "personal",
-      listSubjectRefs: async () => {
-        listed = true;
-        return ["syn-a"];
-      },
-    });
-    const res = await createCohortListHandler(deps)();
-    expect(await res.json()).toEqual({ subjects: [] });
-    expect(listed).toBe(false);
-    expect(audits).toEqual([]);
   });
 
   test("asks to sign in without an actor", async () => {
@@ -265,19 +249,19 @@ describe("GET /api/biomarkers/cohort/:subjectRef", () => {
     expect(audits.map((row) => row.result)).toEqual([SUBJECT_SCOPE_VIOLATION]);
   });
 
-  test("serves nothing in personal mode, before any read", async () => {
-    let looked = false;
+  test("refuses a non-synthetic subject before reading its values", async () => {
+    let read = false;
     const { deps, audits } = fakeDeps({
-      dataMode: () => "personal",
-      findSubject: async () => {
-        looked = true;
-        return SUBJECTS["syn-a"]!;
+      findSubject: async () => ({ isSynthetic: false, cohortId: "synthea-v4-seed42" }),
+      findValues: async () => {
+        read = true;
+        return [];
       },
     });
     const res = await getValues(deps, "syn-a");
     expect(res.status).toBe(404);
-    expect(looked).toBe(false);
-    expect(audits).toEqual([]);
+    expect(read).toBe(false);
+    expect(audits.map((row) => row.result)).toEqual([SUBJECT_SCOPE_VIOLATION]);
   });
 
   test("audits a failed read with no rows and answers with a sentence", async () => {

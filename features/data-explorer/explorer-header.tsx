@@ -3,6 +3,7 @@ import Link from "next/link";
 import { formatNumber } from "@/infrastructure/format-measure";
 import { cn } from "@/infrastructure/ui";
 import { SetupPanel } from "@/infrastructure/ui-kit/setup-panel";
+import { StatusBadge } from "@/infrastructure/ui-kit/status-badge";
 
 import {
   BLOCKED_COPY,
@@ -11,6 +12,7 @@ import {
   NO_COHORT_BODY,
   NO_COHORT_COMMANDS,
   NO_COHORT_TITLE,
+  SYNTHETIC_DATA_LABEL,
 } from "./explorer-copy";
 import { type CohortCount } from "./explorer-reads";
 
@@ -39,7 +41,10 @@ export const ExplorerHeader = ({
   readonly cohortId: string | null;
 }) => (
   <header>
-    <h1 className="text-display">{DATA_TITLE}</h1>
+    <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+      <h1 className="text-display">{DATA_TITLE}</h1>
+      <StatusBadge tone="neutral">{SYNTHETIC_DATA_LABEL}</StatusBadge>
+    </div>
     <p className="text-muted-foreground mt-2 max-w-2xl text-[15px] leading-relaxed">
       {DATA_LEDE}
     </p>

@@ -197,13 +197,11 @@ describe("parsing", () => {
 
 const files = (
   entries: Readonly<Record<string, string>>,
-  mode: "synthetic" | "personal" = "synthetic",
   actor: string | null = "local",
 ): TrainingFileDeps & { readonly opened: string[] } => {
   const opened: string[] = [];
   return {
     opened,
-    dataMode: () => mode,
     resolveActorId: async () => actor,
     listFiles: async () => Object.keys(entries),
     readText: async (name) => {
@@ -225,16 +223,8 @@ describe("training files", () => {
     "smoke.meta.jsonl": META_TEXT,
   };
 
-  test("personal mode opens nothing", async () => {
-    const deps = files(entries, "personal");
-    expect(await loadTrainingSets(deps)).toEqual({ kind: "personal" });
-    expect(await loadTrainingSet(deps, "smoke")).toEqual({ kind: "personal" });
-    expect(await loadConversation(deps, "smoke", 0)).toEqual({ kind: "personal" });
-    expect(deps.opened).toEqual([]);
-  });
-
   test("no actor with sign-in on means sign in, before any file is opened", async () => {
-    const deps = files(entries, "synthetic", null);
+    const deps = files(entries, null);
     expect(await loadTrainingSets(deps)).toEqual({ kind: "sign-in" });
     expect(await loadTrainingSet(deps, "smoke")).toEqual({ kind: "sign-in" });
     expect(await loadConversation(deps, "smoke", 0)).toEqual({ kind: "sign-in" });
