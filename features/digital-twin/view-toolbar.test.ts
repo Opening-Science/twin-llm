@@ -165,10 +165,11 @@ describe("ViewToolbar", () => {
     ]);
   });
 
-  test("Walk, Idle and Dance sit in Show after Live vitals; pressing the playing clip stops it", () => {
+  test("Walk, Run, Idle, Dance loop and Dance (video) sit in Show after Live vitals; pressing the playing clip stops it", () => {
     const picked: (string | null)[] = [];
     const motion = {
       clip: "walk" as const,
+      clips: ["walk", "run", "idle", "dance", "video"] as const,
       onSelect: (clip: string | null) => void picked.push(clip),
       unavailable: null,
       tempo: 110,
@@ -178,15 +179,17 @@ describe("ViewToolbar", () => {
       groups({ ...BASE, liveVitals: { on: false, onToggle: noop }, motion }),
     ).toEqual([
       ["View", ["Reset view", "Pause", "+", "−"]],
-      ["Show", ["Live vitals", "Walk", "Idle", "Dance"]],
+      ["Show", ["Live vitals", "Walk", "Run", "Idle", "Dance loop", "Dance (video)"]],
     ]);
     expect(buttons({ ...BASE, motion }).slice(4)).toEqual([
       ["Walk", null, "true"],
+      ["Run", null, "false"],
       ["Idle", null, "false"],
-      ["Dance", null, "false"],
+      ["Dance loop", null, "false"],
+      ["Dance (video)", null, "false"],
     ]);
     for (const click of clickable(ViewToolbar({ ...BASE, motion })).slice(4)) click();
-    expect(picked).toEqual([null, "idle", "dance"]);
+    expect(picked).toEqual([null, "run", "idle", "dance", "video"]);
     expect(
       renderToStaticMarkup(createElement(ViewToolbar, { ...BASE, motion })),
     ).not.toContain("<select");
@@ -199,6 +202,7 @@ describe("ViewToolbar", () => {
         ...BASE,
         motion: {
           clip: "dance",
+          clips: ["walk", "run", "idle", "dance"],
           onSelect: noop,
           unavailable: null,
           tempo: 128,
@@ -228,6 +232,7 @@ describe("ViewToolbar", () => {
         ...BASE,
         motion: {
           clip: null,
+          clips: ["walk", "run", "idle", "dance"],
           onSelect: noop,
           unavailable: "This scan has no skeleton the walk can drive.",
           tempo: 110,
@@ -238,6 +243,6 @@ describe("ViewToolbar", () => {
     expect(
       html.split('disabled="" title="This scan has no skeleton the walk can drive."')
         .length - 1,
-    ).toBe(3);
+    ).toBe(4);
   });
 });

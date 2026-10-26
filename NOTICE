@@ -44,7 +44,9 @@ The files were merged, simplified and shaded (ambient occlusion) by the Open Sci
 
 - ANNY, a free-to-use 3D human parametric model for all ages — NAVER LABS Europe / NAVER Corporation. Apache-2.0 code over CC0 shape assets derived from MakeHuman. Cite arXiv:2511.03589. Baked with its skeleton by this repository; no scan of any person was used.
 
-Here "this repository" is TwinLLM (`scripts/anatomy/bake-anny-rigged.py`). The walk and idle clips use no motion-capture data.
+Here "this repository" is TwinLLM (`scripts/anatomy/bake-anny-rigged.py`). The walk, run, idle and dance-loop clips use no motion-capture data.
+
+`python/motion/fetch_model.py` downloads the MediaPipe Pose Landmarker model (Google, Apache-2.0) into the gitignored `data/motion/models/` for making motion clips from a video locally. It is not part of this repository, and neither is any clip made with it.
 
 ## open-twin-xr (ported code)
 

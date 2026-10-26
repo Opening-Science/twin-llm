@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { Bone, Group, Quaternion, Vector3 } from "three";
 
-import { walkPose } from "./gait";
+import { walkPose, weighPose } from "./gait";
 import {
   applyPose,
   bindRig,
@@ -194,6 +194,17 @@ describe("bindRig and applyPose", () => {
     const feet = [world(root, "LeftFoot").z, world(root, "RightFoot").z];
     expect(round(Math.min(...feet))).toBe(0.05);
     expect(round(world(root, "Hips").z)).toBeLessThan(1);
+  });
+
+  test("a pose's lift raises the whole body off the floor (a run's flight)", () => {
+    const root = skeleton();
+    const binding = bindRig(root);
+    if (!binding) throw new Error("no binding");
+    applyPose(binding, { ...weighPose(walkPose(0), 0), pelvisLift: 0.05 });
+    expect(round(world(root, "Hips").z)).toBe(1.05);
+    expect(round(Math.min(world(root, "LeftFoot").z, world(root, "RightFoot").z))).toBe(
+      0.1,
+    );
   });
 
   test("restorePose puts every bone back exactly", () => {

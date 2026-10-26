@@ -3,8 +3,9 @@
  * a body frame, with no motion-capture data (so no mocap licence applies). The
  * walk is a generic adult walk built from smooth curves shaped like textbook
  * sagittal gait kinematics (hip, knee, ankle, arm swing, pelvis rotation and
- * list); the idle clip is a slow breath with a little postural sway. Neither
- * is anyone's measured gait or breathing.
+ * list); the run is the same kind of curve for a generic easy run, with a
+ * flight phase; the idle clip is a slow breath with a little postural sway.
+ * None is anyone's measured gait or breathing.
  *
  * Body frame, per joint, carried by the parent joint as it moves:
  * - pitch: about the subject's right-to-left axis; positive swings a limb that
@@ -31,6 +32,7 @@ export const JOINT_IDS = [
   "lowerLegR",
   "footL",
   "footR",
+  "head",
 ] as const;
 
 export type JointId = (typeof JOINT_IDS)[number];
@@ -41,9 +43,27 @@ export type BodyPose = Readonly<{
   joints: Readonly<Record<JointId, JointRotation>>;
   /** Pelvis shift toward the subject's left, in metres (weight over the stance leg). */
   pelvisShift: number;
+  /**
+   * Metres the body rises off the floor, on top of keeping the lowest foot on
+   * it: a run's flight phase. Absent means none.
+   */
+  pelvisLift?: number;
+  /**
+   * How planted each foot is, 0 to 1: a planted foot is held on the floor where
+   * it landed (`foot-contact.ts`). `onsetL` / `onsetR` name the footfall
+   * (when it began), so a new one lands somewhere new. Absent means neither
+   * is held.
+   */
+  footContact?: Readonly<{
+    footL: number;
+    footR: number;
+    onsetL: number;
+    onsetR: number;
+  }>;
 }>;
 
-export type MotionClip = "walk" | "idle" | "dance";
+/** "video" is a keyframe clip traced from a video on this machine (`keyframe-clip.ts`). */
+export type MotionClip = "walk" | "run" | "idle" | "dance" | "video";
 
 export type WalkParams = Readonly<{
   /** Steps per minute; two steps make one gait cycle. */
@@ -172,6 +192,7 @@ export const walkPose = (t: number, params: WalkParams = DEFAULT_WALK): BodyPose
       lowerLegR: rotation(-s * right.knee),
       footL: rotation(s * left.ankle),
       footR: rotation(s * right.ankle),
+      head: ZERO,
     },
     pelvisShift: 0.02 * s * stance,
   };
@@ -201,8 +222,103 @@ export const idlePose = (t: number, params: IdleParams = DEFAULT_IDLE): BodyPose
       lowerLegR: ZERO,
       footL: ZERO,
       footR: ZERO,
+      head: ZERO,
     },
     pelvisShift: 0.006 * sway,
+  };
+};
+
+export type RunParams = Readonly<{
+  /** Steps per minute; two steps make one stride cycle. */
+  cadence: number;
+}>;
+
+/** An easy run: about 170 steps a minute. */
+export const DEFAULT_RUN: RunParams = { cadence: 170 };
+
+/** Where the foot leaves the ground in the run's cycle (0 is foot strike). */
+export const RUN_TOE_OFF = 0.38;
+/** The sole may point further down in the run's push-off than in the walk, degrees. */
+export const RUN_FOOT_PITCH_FLOOR = -50;
+export const RUN_ANKLE_RANGE: readonly [number, number] = [-25, 20];
+/** Highest rise of the body in the flight phase, metres. */
+export const RUN_FLIGHT_LIFT = 0.05;
+
+/**
+ * Sagittal angles in degrees for one leg and the arm on the same side in the
+ * run, at that leg's phase (0 foot strike): a shorter stance than the walk
+ * (toe off at 38% of the cycle), more hip flexion (about 44° late in swing),
+ * a loading knee bend of about 40° and up to about 100° in swing, a stronger
+ * push-off, and the arms bent about 90° swinging further.
+ */
+export const runLimbAngles = (
+  phase: number,
+): Readonly<{
+  hip: number;
+  knee: number;
+  ankle: number;
+  shoulder: number;
+  elbow: number;
+}> => {
+  const swing = Math.cos(TAU * (phase + 0.1));
+  // About 39° flexed at foot strike, 12° extended at 0.4, 44° flexed at 0.9.
+  const hip = 16 + 28 * swing;
+  const knee = 15 + 25 * bump(phase, 0.15, 0.17) + 85 * bump(phase, 0.68, 0.3);
+  const raw =
+    12 * bump(phase, 0.18, 0.14) - 24 * bump(phase, RUN_TOE_OFF + 0.04, 0.1) + 4;
+  return {
+    hip,
+    knee,
+    ankle: clamp(Math.max(raw, RUN_FOOT_PITCH_FLOOR - (hip - knee)), RUN_ANKLE_RANGE),
+    shoulder: -30 * swing,
+    elbow: 85 + 10 * (1 - swing),
+  };
+};
+
+/**
+ * How high the body floats at a phase of the left leg's cycle: zero in either
+ * stance, a smooth hump in the two flight phases between one foot's toe off
+ * and the other's strike.
+ */
+export const runLift = (phase: number): number => {
+  const p = frac(phase);
+  const flight = (start: number): number => {
+    const u = (p - start) / (0.5 - RUN_TOE_OFF);
+    return u > 0 && u < 1 ? Math.sin(Math.PI * u) : 0;
+  };
+  return RUN_FLIGHT_LIFT * (flight(RUN_TOE_OFF) + flight(RUN_TOE_OFF + 0.5));
+};
+
+/** The run at time `t` seconds, running in place with a forward lean. */
+export const runPose = (t: number, params: RunParams = DEFAULT_RUN): BodyPose => {
+  const phase = gaitPhase(t, params.cadence);
+  const left = runLimbAngles(phase);
+  const right = runLimbAngles(phase + 0.5);
+  const cycle = Math.cos(TAU * phase);
+  const stance = Math.sin(TAU * phase);
+  return {
+    joints: {
+      pelvis: rotation(0, 5 * stance, -6 * cycle),
+      // About 9° of forward lean from the hips, the chest turning against the pelvis.
+      spineLower: rotation(-7, -3 * stance, 3 * cycle),
+      spineUpper: rotation(-2, 0, 6 * cycle),
+      clavicleL: ZERO,
+      clavicleR: ZERO,
+      upperArmL: rotation(left.shoulder, 6),
+      upperArmR: rotation(right.shoulder, -6),
+      lowerArmL: rotation(left.elbow),
+      lowerArmR: rotation(right.elbow),
+      upperLegL: rotation(left.hip),
+      upperLegR: rotation(right.hip),
+      lowerLegL: rotation(-left.knee),
+      lowerLegR: rotation(-right.knee),
+      footL: rotation(left.ankle),
+      footR: rotation(right.ankle),
+      // The head stays level against the lean.
+      head: rotation(6),
+    },
+    pelvisShift: 0.015 * stance,
+    pelvisLift: runLift(phase),
   };
 };
 
@@ -222,6 +338,16 @@ export const weighPose = (pose: BodyPose, weight: number): BodyPose => ({
     }),
   ) as Record<JointId, JointRotation>,
   pelvisShift: pose.pelvisShift * weight,
+  pelvisLift: (pose.pelvisLift ?? 0) * weight,
+  ...(pose.footContact
+    ? {
+        footContact: {
+          ...pose.footContact,
+          footL: pose.footContact.footL * weight,
+          footR: pose.footContact.footR * weight,
+        },
+      }
+    : {}),
 });
 
 /** Seconds to blend a clip in or out, so starting and stopping never jumps. */

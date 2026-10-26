@@ -17,6 +17,8 @@ const NOT_OURS = [
   "next-env.d.ts", // written by Next
   "generated/**", // Prisma client output
   ".open-twin/**", // synced checkout, linted where it lives
+  "python/.venv/**", // uv's environment (matplotlib ships JavaScript)
+  "data/**", // local, gitignored data and scratch files
 ];
 
 /**
