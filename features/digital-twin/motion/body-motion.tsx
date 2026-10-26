@@ -6,6 +6,7 @@ import { useEffect, useRef } from "react";
 import { nextAutoRotateDelay } from "../frame-pacing";
 import { clipPose } from "./clip-pose";
 import { DEFAULT_TEMPO, retimeElapsed } from "./dance";
+import { createFootPlanter } from "./foot-contact";
 import { type MotionClip, stepWeight, weighPose } from "./gait";
 import { type KeyframeClip } from "./keyframe-clip";
 import { applyPose, restorePose, type RigBinding } from "./rig-map";
@@ -21,7 +22,8 @@ const MAX_DELTA_S = 0.1;
  * the canvas is off screen or the tab is hidden. Stopping, a new body or
  * unmounting puts every bone back where it was bound. A new tempo carries the
  * dance on from the beat it had reached. The "video" clip plays `video`, the
- * installed keyframe clip. Renders nothing.
+ * installed keyframe clip, and holds its planted feet on the floor
+ * (`foot-contact.ts`). Renders nothing.
  */
 export const BodyMotion = ({
   binding,
@@ -46,6 +48,7 @@ export const BodyMotion = ({
     tempo,
   });
   const live = useRef({ binding, clip, tempo, video });
+  const planter = useRef(createFootPlanter());
   useEffect(() => {
     live.current = { binding, clip, tempo, video };
   });
@@ -81,6 +84,7 @@ export const BodyMotion = ({
       if (timerRef.current !== null) window.clearTimeout(timerRef.current);
       timerRef.current = null;
       if (binding) restorePose(binding);
+      planter.current.reset();
       motion.current = {
         weight: 0,
         playing: null,
@@ -117,6 +121,7 @@ export const BodyMotion = ({
     state.weight = stepWeight(state.weight, target, delta);
     if (state.weight === 0 && target === 0) {
       restorePose(rig);
+      planter.current.reset();
       state.playing = wanted;
       state.startS = nowS;
     }
@@ -124,13 +129,12 @@ export const BodyMotion = ({
       state.lastS = null;
       return;
     }
-    applyPose(
-      rig,
-      weighPose(
-        clipPose(state.playing, nowS - state.startS, state.tempo, keyframes),
-        state.weight,
-      ),
+    const pose = weighPose(
+      clipPose(state.playing, nowS - state.startS, state.tempo, keyframes),
+      state.weight,
     );
+    applyPose(rig, pose);
+    planter.current.plant(rig, pose);
 
     if (timerRef.current !== null) return;
     const wait = nextAutoRotateDelay({

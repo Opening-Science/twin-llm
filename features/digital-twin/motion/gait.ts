@@ -48,6 +48,18 @@ export type BodyPose = Readonly<{
    * it: a run's flight phase. Absent means none.
    */
   pelvisLift?: number;
+  /**
+   * How planted each foot is, 0 to 1: a planted foot is held on the floor where
+   * it landed (`foot-contact.ts`). `onsetL` / `onsetR` name the footfall
+   * (when it began), so a new one lands somewhere new. Absent means neither
+   * is held.
+   */
+  footContact?: Readonly<{
+    footL: number;
+    footR: number;
+    onsetL: number;
+    onsetR: number;
+  }>;
 }>;
 
 /** "video" is a keyframe clip traced from a video on this machine (`keyframe-clip.ts`). */
@@ -327,6 +339,15 @@ export const weighPose = (pose: BodyPose, weight: number): BodyPose => ({
   ) as Record<JointId, JointRotation>,
   pelvisShift: pose.pelvisShift * weight,
   pelvisLift: (pose.pelvisLift ?? 0) * weight,
+  ...(pose.footContact
+    ? {
+        footContact: {
+          ...pose.footContact,
+          footL: pose.footContact.footL * weight,
+          footR: pose.footContact.footR * weight,
+        },
+      }
+    : {}),
 });
 
 /** Seconds to blend a clip in or out, so starting and stopping never jumps. */

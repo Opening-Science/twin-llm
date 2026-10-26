@@ -9,6 +9,9 @@ The format is checked on the TypeScript side by the zod schema in
   z forward), on top of the rig's bind pose.
 - ``pelvisShift``: per frame, metres toward the subject's left that the hips
   sit over the midpoint of the ankles, scaled to the ANNY body's legs.
+- ``contacts`` (optional): per foot ("footL", "footR"), 1 for each frame the
+  foot is planted (``foot_contact.py``); the app holds a planted foot on the
+  floor where it landed.
 - Root motion is removed: the clip plays in place. Travel across the floor,
   forward or sideways, is dropped; the up and down of the body comes back on
   its own because the app keeps the lowest foot on the floor, so bent knees
@@ -81,6 +84,7 @@ def build_clip(
     generator: dict[str, Any],
     calibrate_head: bool = True,
     crossfade_s: float = 0.5,
+    contacts: dict[str, list[int]] | None = None,
 ) -> dict[str, Any]:
     """The clip dictionary for a cleaned body-frame track (frames x 33 x 3)."""
     head_rest = (
@@ -106,6 +110,7 @@ def build_clip(
         "joints": list(JOINTS),
         "frames": frames,
         "pelvisShift": shift,
+        **({"contacts": contacts} if contacts is not None else {}),
         "source": source,
         "licence": licence,
         "generator": generator,

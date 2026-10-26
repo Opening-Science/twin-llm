@@ -127,6 +127,8 @@ export const resolveRig = (boneNames: readonly string[]): ResolvedRig | null => 
 type BoundJoint = Readonly<{
   bone: Bone;
   rest: Quaternion;
+  /** The bone's world rotation at rest. */
+  restWorld: Quaternion;
   /** W⁻¹ · B, and its inverse: the body frame seen from the bone's rest frame. */
   toBone: Quaternion;
   fromBone: Quaternion;
@@ -138,6 +140,10 @@ export type RigBinding = Readonly<{
   pelvis: Readonly<{ bone: Bone; restPosition: Vector3; restWorld: Vector3 }>;
   /** Ankles, and toes when the rig has them: whichever is lowest touches the floor. */
   feet: readonly Bone[];
+  /** The same per side: the ankle first, then the toe when there is one. */
+  soles: Readonly<Record<"L" | "R", readonly Bone[]>>;
+  /** Per side, the rest slope (radians, up positive) from the ankle to the toe; null without a toe. */
+  soleSlope: Readonly<Record<"L" | "R", number | null>>;
   up: Vector3;
   left: Vector3;
   /** The lowest foot point's height along `up` at rest; walking keeps one foot there. */
@@ -191,21 +197,33 @@ export const bindRig = (root: Object3D): RigBinding | null => {
     const bone = at(id);
     if (!bone) continue;
     const world = bone.getWorldQuaternion(new Quaternion());
-    const toBone = world.invert().multiply(body);
+    const toBone = world.clone().invert().multiply(body);
     joints.set(id, {
       bone,
       rest: bone.quaternion.clone(),
+      restWorld: world,
       toBone,
       fromBone: toBone.clone().invert(),
     });
   }
   const pelvis = need("pelvis");
-  const toes = TOE_NAMES[resolved.kind].flatMap((wanted) => {
-    const index = findName(names, wanted);
+  const toeOf = (wanted: string | undefined): Bone[] => {
+    const index = wanted === undefined ? null : findName(names, wanted);
     const toe = index === null ? undefined : bones[index];
     return toe ? [toe] : [];
-  });
-  const feet = [need("footL"), need("footR"), ...toes];
+  };
+  const [toeL, toeR] = TOE_NAMES[resolved.kind];
+  const soles = {
+    L: [need("footL"), ...toeOf(toeL)],
+    R: [need("footR"), ...toeOf(toeR)],
+  };
+  const feet = [need("footL"), need("footR"), ...soles.L.slice(1), ...soles.R.slice(1)];
+  const slopeOf = (sole: readonly Bone[]): number | null => {
+    const [ankle, toe] = sole;
+    if (!ankle || !toe) return null;
+    const along = worldOf(toe).sub(worldOf(ankle));
+    return along.length() < 1e-6 ? null : Math.asin(along.dot(up) / along.length());
+  };
   return {
     kind: resolved.kind,
     joints,
@@ -215,6 +233,8 @@ export const bindRig = (root: Object3D): RigBinding | null => {
       restWorld: worldOf(pelvis),
     },
     feet,
+    soles,
+    soleSlope: { L: slopeOf(soles.L), R: slopeOf(soles.R) },
     up,
     left,
     restFloor: Math.min(...feet.map((foot) => worldOf(foot).dot(up))),
@@ -227,8 +247,10 @@ const target = new Vector3();
 
 /**
  * Poses the skeleton. The pelvis then moves along `up` so the lowest ankle or
- * toe sits where it stood at rest: walking in place stays on the floor. A
- * pose's `pelvisLift` raises the body off it (a run's flight phase).
+ * toe sits where it stood at rest: walking in place stays on the floor. With
+ * both feet planted (`footContact`) it is the higher foot instead, and
+ * `foot-contact.ts` then bends the other leg up to the floor. A pose's
+ * `pelvisLift` raises the body off it (a run's flight phase).
  * Bones are three.js objects, configured in place every frame.
  */
 export const applyPose = (binding: RigBinding, pose: BodyPose): void => {
@@ -245,7 +267,18 @@ export const applyPose = (binding: RigBinding, pose: BodyPose): void => {
   const { bone, restPosition, restWorld } = binding.pelvis;
   bone.position.copy(restPosition);
   bone.updateWorldMatrix(true, true);
-  const floor = Math.min(...binding.feet.map((foot) => worldOf(foot).dot(binding.up)));
+  const lowest = (bones: readonly Bone[]) =>
+    Math.min(...bones.map((foot) => worldOf(foot).dot(binding.up)));
+  const lowestL = lowest(binding.soles.L);
+  const lowestR = lowest(binding.soles.R);
+  const base = Math.min(lowestL, lowestR);
+  // With both feet planted, the higher one goes to the floor: the hips come
+  // down as far as the clip's bent knees put them, and the planter bends the
+  // other leg to keep its foot on the floor rather than straightening it.
+  const bothPlanted = pose.footContact
+    ? Math.min(pose.footContact.footL, pose.footContact.footR)
+    : 0;
+  const floor = base + (Math.max(lowestL, lowestR) - base) * Math.min(1, bothPlanted);
   target
     .copy(restWorld)
     .addScaledVector(binding.left, pose.pelvisShift)

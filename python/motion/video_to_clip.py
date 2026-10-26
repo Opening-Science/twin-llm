@@ -8,8 +8,9 @@ the MediaPipe Pose Landmarker model on disk, and nothing is sent anywhere.
 
 Steps: find the picture area (rows of captions or black bars above and below
 are cut, or pass ``--crop``), estimate 3D world landmarks per frame, fill short
-gaps, smooth with a Savitzky–Golay filter, level the camera's tilt, turn the
-landmarks into joint rotations (``retarget.py``) and write the clip
+gaps, limit limb depths to the bones' lengths, find planted feet
+(``foot_contact.py``), smooth with a Savitzky–Golay filter, level the camera's
+tilt, turn the landmarks into joint rotations (``retarget.py``) and write the clip
 (``clip_builder.py``). ``--landmarks-out`` keeps the raw landmarks and
 ``--from-landmarks`` starts from such a file instead of a video (the tests do).
 
@@ -31,7 +32,16 @@ import numpy as np
 
 from clip_builder import build_clip, level
 from fetch_model import DEFAULT_MODEL, MODEL_SHA256, model_ok
-from landmark_filter import anchor_to_picture, fill_gaps, fix_swaps, savgol, window_frames
+from foot_contact import foot_contacts
+from landmark_filter import (
+    anchor_to_picture,
+    bone_lengths,
+    consistent_depth,
+    fill_gaps,
+    fix_swaps,
+    savgol,
+    window_frames,
+)
 from retarget import LANDMARK_COUNT, to_body_frame
 
 DEFAULT_LICENCE = (
@@ -211,7 +221,12 @@ def main(argv: list[str] | None = None) -> int:
     scale = None
     if picture is not None and not args.world_only:
         unswapped, scale = anchor_to_picture(unswapped, picture)
-    filled, gaps = fill_gaps(unswapped, max_gap=int(round(args.max_gap_s * fps)))
+    max_gap = int(round(args.max_gap_s * fps))
+    filled, gaps = fill_gaps(unswapped, max_gap=max_gap)
+    contacts = None
+    if scale is not None and picture is not None:
+        filled = consistent_depth(filled, bone_lengths(raw))
+        contacts = foot_contacts(fill_gaps(picture, max_gap=max_gap)[0], scale, fps)
     window = window_frames(args.smooth_s, fps)
     smooth = savgol(filled, window, order=2)
     body = to_body_frame(smooth)
@@ -229,6 +244,7 @@ def main(argv: list[str] | None = None) -> int:
             **({"crop": landmarks["crop"]} if "crop" in landmarks else {}),
         },
         licence=args.licence,
+        contacts=contacts,
         generator={
             "tool": "python/motion/video_to_clip.py",
             "estimator": "MediaPipe Pose Landmarker heavy (float16 v1)",
@@ -238,6 +254,7 @@ def main(argv: list[str] | None = None) -> int:
             "gaps": {"missing": gaps.missing, "filled": gaps.filled, "held": gaps.held},
             "leftRightSwapsFixed": swaps,
             "anchoredToPicture": scale is not None,
+            "depthFromBoneLengths": scale is not None,
             "levelledDeg": round(tilt, 2),
         },
     )
@@ -246,7 +263,12 @@ def main(argv: list[str] | None = None) -> int:
     print(
         f"{args.out}: {clip['frameCount']} frames at {fps:g} fps; "
         f"{gaps.missing} without a pose ({gaps.filled} bridged, {gaps.held} held); "
-        f"{swaps} left/right swaps undone; tilt {tilt:.1f}° removed."
+        f"{swaps} left/right swaps undone; tilt {tilt:.1f}° removed"
+        + (
+            f"; feet planted {sum(contacts['footL'])} and {sum(contacts['footR'])} frames."
+            if contacts
+            else "."
+        )
     )
     return 0
 

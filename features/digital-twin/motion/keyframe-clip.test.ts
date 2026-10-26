@@ -5,6 +5,8 @@ import fixture from "./fixtures/synthetic-clip.json";
 import { JOINT_IDS, type JointRotation } from "./gait";
 import {
   clipSpan,
+  contactOnset,
+  contactWeight,
   keyframePose,
   loopCrossfade,
   loopPeriod,
@@ -66,7 +68,7 @@ describe("parseKeyframeClip", () => {
     expect(reject("not json")).toBeNull();
     expect(reasons.length).toBe(6);
     expect(reasons[1]).toBe(
-      "frames does not match frameCount.; pelvisShift does not match frameCount.",
+      "frames does not match frameCount.; pelvisShift does not match frameCount.; contacts does not match frameCount.",
     );
     expect(reasons[2]).toBe("A frame has the wrong number of values.");
   });
@@ -140,5 +142,51 @@ describe("keyframePose", () => {
     expect([round(back.pitch), round(back.roll), round(back.yaw)]).toEqual([
       0.3, -0.2, 0.5,
     ]);
+  });
+});
+
+describe("foot contacts", () => {
+  test("the fixture's contacts come through: left planted from frame 8, right 2 to 5", () => {
+    expect(clip.contacts?.footL).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1]);
+    expect(clip.contacts?.footR).toEqual([0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0]);
+  });
+
+  test("a contact ramps in and out over 0.1 s round each change", () => {
+    // At 10 fps frame k covers [k − 0.5, k + 0.5) / 10 s; contact from frame 3.
+    const flags = [0, 0, 0, 1, 1, 1, 0, 0];
+    expect(contactWeight(flags, 10, 0.1)).toBe(0);
+    expect(contactWeight(flags, 10, 0.25)).toBe(0.5);
+    expect(contactWeight(flags, 10, 0.4)).toBe(1);
+    expect(contactWeight(flags, 10, 0.55)).toBe(0.5);
+    expect(contactWeight(flags, 10, 0.7)).toBe(0);
+  });
+
+  test("each footfall is named by when it began", () => {
+    const flags = [1, 1, 0, 0, 1, 1, 1, 0];
+    expect(contactOnset(flags, 10, 0.1)).toBe(0);
+    expect(contactOnset(flags, 10, 0.25)).toBe(-1);
+    expect(contactOnset(flags, 10, 0.36)).toBe(0.4);
+    expect(contactOnset(flags, 10, 0.6)).toBe(0.4);
+  });
+
+  test("the pose carries the weights and onsets; a clip without contacts carries none", () => {
+    const pose = keyframePose(clip, 3 / 12);
+    expect(pose.footContact).toEqual({ footL: 0, footR: 1, onsetL: -1, onsetR: 2 / 12 });
+    const { contacts: _contacts, ...older } = fixture;
+    const plain = parseKeyframeClip(older) as KeyframeClip;
+    expect(plain.contacts).toBeNull();
+    expect(keyframePose(plain, 3 / 12).footContact).toBeUndefined();
+  });
+
+  test("contacts of the wrong length or with other values are refused", () => {
+    const reasons: string[] = [];
+    const reject = (contacts: unknown) =>
+      parseKeyframeClip(
+        { ...fixture, contacts },
+        (message) => void reasons.push(message),
+      );
+    expect(reject({ footL: [1], footR: fixture.contacts.footR })).toBeNull();
+    expect(reject({ footL: fixture.contacts.footL.map(() => 2), footR: [] })).toBeNull();
+    expect(reasons[0]).toBe("contacts does not match frameCount.");
   });
 });

@@ -72,7 +72,7 @@ def savgol_coefficients(window: int, order: int) -> np.ndarray:
 
 
 def savgol(track: np.ndarray, window: int, order: int) -> np.ndarray:
-    """Savitzky–Golay along the first axis, with mirrored ends."""
+    """Savitzky–Golay along the first axis, with point-mirrored ends."""
     if len(track) < 2 or window <= 1:
         return np.array(track, dtype=float, copy=True)
     window = min(window, len(track) if len(track) % 2 == 1 else len(track) - 1)
@@ -80,8 +80,15 @@ def savgol(track: np.ndarray, window: int, order: int) -> np.ndarray:
         return np.array(track, dtype=float, copy=True)
     weights = savgol_coefficients(window, min(order, window - 1))
     half = window // 2
+    # Point-mirrored ends keep a trend going instead of folding it back, so a
+    # movement at the first or last frame does not read as a stop.
     padded = np.concatenate(
-        [track[half:0:-1], track, track[-2 : -half - 2 : -1]], axis=0
+        [
+            2 * track[0] - track[half:0:-1],
+            track,
+            2 * track[-1] - track[-2 : -half - 2 : -1],
+        ],
+        axis=0,
     )
     out = np.zeros_like(track, dtype=float)
     for k, w in enumerate(weights):
@@ -119,6 +126,46 @@ def anchor_to_picture(world: np.ndarray, image: np.ndarray) -> tuple[np.ndarray,
     out[:, :, :2] = (image - hips_i[:, None, :]) * scale
     out[:, :, 2] = world[:, :, 2] - hips_w[:, None, 2]
     return out, scale
+
+
+#: Limb bones, parent joint first, in chain order so a joint's depth is set
+#: before its child's.
+LIMB_BONES = (
+    (11, 13), (13, 15), (12, 14), (14, 16),
+    (23, 25), (25, 27), (24, 26), (26, 28),
+)  # fmt: skip
+
+
+def bone_lengths(world: np.ndarray) -> dict[tuple[int, int], float]:
+    """Median 3D length of each limb bone over the frames with a pose, metres."""
+    return {
+        (a, b): float(np.nanmedian(np.linalg.norm(world[:, b] - world[:, a], axis=1)))
+        for a, b in LIMB_BONES
+    }
+
+
+def consistent_depth(
+    track: np.ndarray, lengths: dict[tuple[int, int], float]
+) -> np.ndarray:
+    """Limb depths limited to what the bones' lengths allow.
+
+    With x and y from the picture, a bone of length L drawn l long in the
+    picture can reach at most sqrt(L² − l²) toward or away from the camera.
+    The estimator's depth beyond that is cut back to it, keeping its sign.
+    """
+    out = np.array(track, dtype=float, copy=True)
+    for a, b in LIMB_BONES:
+        length = lengths[(a, b)]
+        drawn = np.linalg.norm(track[:, b, :2] - track[:, a, :2], axis=1)
+        reach = np.sqrt(np.clip(length**2 - drawn**2, 0.0, None))
+        dz = track[:, b, 2] - track[:, a, 2]
+        out[:, b, 2] = out[:, a, 2] + np.clip(dz, -reach, reach)
+    # Hands and feet move with the wrist or ankle they hang from.
+    for end, carried in ((15, (17, 19, 21)), (16, (18, 20, 22)), (27, (29, 31)), (28, (30, 32))):
+        shift = out[:, end, 2] - track[:, end, 2]
+        for k in carried:
+            out[:, k, 2] = track[:, k, 2] + shift
+    return out
 
 
 # MediaPipe's left/right pairs, split into the upper body (face, shoulders,
