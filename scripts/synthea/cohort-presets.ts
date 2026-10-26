@@ -9,7 +9,10 @@ import {
  * this table, so the two cannot drift.
  *
  * Train on `training`, test on `held-out` and on the evaluation question set
- * (`eval`). A seed is never reused across roles.
+ * (`eval`). A seed is never reused across roles. Every preset passes fixed
+ * reference and end dates (YYYYMMDD) to Synthea; without them Synthea simulates
+ * up to the moment it starts, so the same seed gives other patients on another
+ * day. `--preset eval` refuses other dates.
  */
 export const COHORT_PRESETS = {
   eval: {
@@ -19,6 +22,8 @@ export const COHORT_PRESETS = {
     seed: 42,
     clinicianSeed: 43,
     age: "40-75",
+    referenceDate: "20260101",
+    endDate: "20260101",
     out: ".synthea",
   },
   training: {
@@ -28,6 +33,8 @@ export const COHORT_PRESETS = {
     seed: 4242,
     clinicianSeed: 4243,
     age: "40-75",
+    referenceDate: "20260101",
+    endDate: "20260101",
     out: ".synthea/synthea-v4-seed4242",
   },
   "held-out": {
@@ -37,11 +44,23 @@ export const COHORT_PRESETS = {
     seed: 9001,
     clinicianSeed: 9002,
     age: "40-75",
+    referenceDate: "20260101",
+    endDate: "20260101",
     out: ".synthea/synthea-v4-seed9001",
   },
 } as const;
 
 export type CohortPresetName = keyof typeof COHORT_PRESETS;
+
+/**
+ * How `generate-local.sh` runs Synthea for every cohort, so that the same seeds
+ * and dates give the same files: the JVM in UTC (Synthea reads `-r`/`-e` in the
+ * JVM's time zone) and one generator thread (more threads race in v4.0.0).
+ */
+export const SYNTHEA_RUN = {
+  timezone: "UTC",
+  threadPoolSize: 1,
+} as const;
 
 /**
  * The 1M cohort: 100 batches of 10,000, made by the batch script outside this
