@@ -4,6 +4,15 @@ Optional MCP connector for IHME Global Burden of Disease **population**
 estimates. It is not a statement about a person. Wearable summaries and genome
 rows never go on the MCP wire.
 
+## Client
+
+GBD is the entry `gbd` in the MCP server registry (`packages/mcp-client/registry.ts`:
+transport `http`, locality `remote`, URL from `GBD_MCP_URL`). `packages/gbd-mcp/client.ts`
+only binds that entry and the env to the generic JSON-RPC client in
+`packages/mcp-client/http-client.ts`. `permitServerForDataMode` refuses a `remote` entry
+in `DATA_MODE=personal`; the GBD chat tool is still registered in both modes, because
+its questions carry population fields only.
+
 ## Status
 
 `GET /api/gbd/status` returns:

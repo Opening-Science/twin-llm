@@ -1,6 +1,9 @@
 import type { ModelResponseMetrics } from "@/infrastructure/model-response-metrics";
+import type { StoredToolPart } from "@/infrastructure/model-response-tool-parts";
 import type { EvidenceAttribution } from "@/infrastructure/oura-types";
 import type { ResponseDocumentV1 } from "@/infrastructure/response-document/document-v1";
+
+import { storedToolParts, type ToolResultLike } from "./tool-parts";
 
 /**
  * The two terminal writes for a `ModelResponse` row that `startTurn` created
@@ -18,6 +21,8 @@ export type ModelResponseCompleteParams = Readonly<{
   reasoningText?: string | null;
   attribution?: readonly EvidenceAttribution[];
   document?: ResponseDocumentV1 | null;
+  /** The turn's tool results; left out, the column is not touched. */
+  toolResults?: readonly ToolResultLike[];
 }>;
 
 type RowKey = Readonly<{ turnId_modelId: { turnId: string; modelId: string } }>;
@@ -40,6 +45,8 @@ export type ModelResponseCompleteUpdate = Readonly<{
     attribution: EvidenceAttribution[] | undefined;
     /** Undefined leaves the column as it is. */
     responseDocument: ResponseDocumentV1 | undefined;
+    /** Null when the answer used no tool. */
+    toolParts: StoredToolPart[] | null | undefined;
     completedAt: Date;
   };
 }>;
@@ -73,6 +80,7 @@ export const writeModelResponseComplete = async (
   now: () => Date = () => new Date(),
 ): Promise<void> => {
   const { turnId, modelId, text, metrics, reasoningText, attribution, document } = params;
+  const completedAt = now();
   await port.update({
     where: rowKey(turnId, modelId),
     data: {
@@ -82,7 +90,15 @@ export const writeModelResponseComplete = async (
       reasoningText: reasoningText ?? null,
       attribution: attribution === undefined ? undefined : Array.from(attribution),
       responseDocument: document ?? undefined,
-      completedAt: now(),
+      toolParts:
+        params.toolResults === undefined
+          ? undefined
+          : storedToolParts(
+              params.toolResults,
+              document?.data_basis.tool_calls ?? [],
+              completedAt,
+            ),
+      completedAt,
     },
   });
 };

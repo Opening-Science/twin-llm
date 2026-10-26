@@ -201,6 +201,9 @@ JSONB) and reloaded on `/t/[threadId]`. Both the browser stream and the
 stored column pass through `toResponseDocument`
 (`infrastructure/response-document/parse.ts`). Anything that is not a valid
 v1 or v1.1 document is dropped, and the answer renders as plain text.
+The document holds only the hashes of each tool call; the inputs and outputs
+themselves are stored next to it in `model_responses."toolParts"`
+(`docs/storage.md`, "Tool parts of an answer").
 
 The schema, copy and parser live in `infrastructure/response-document/` so
 the arena feature can import them. `features/chat/response/{document-v1,copy}.ts`

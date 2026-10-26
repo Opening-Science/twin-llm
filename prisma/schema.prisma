@@ -132,6 +132,10 @@ model ModelResponse {
   /// Validated ResponseDocumentV1 (docs/response-schema.md). Null when it was
   /// not built or the row predates it.
   responseDocument Json?
+  /// Tool calls of the turn with their inputs and outputs, in step order:
+  /// [{ seq, tool, input, output, argsSha256, resultSha256, rowCount, at }].
+  /// Null when the answer used no tool or the row predates it.
+  toolParts        Json?
 
   // Measurements. Null means not measured, never zero.
   timeToFirstTokenMs Int?

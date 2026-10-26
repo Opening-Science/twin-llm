@@ -1,3 +1,5 @@
+import { notFound } from "next/navigation";
+
 import type { TurnState } from "./conversation";
 import { type SavedResponseRow, toSavedResponseState } from "./saved-response-state";
 
@@ -15,6 +17,11 @@ import { type SavedResponseRow, toSavedResponseState } from "./saved-response-st
  * confirm that a thread exists.
  *
  * The reads are injected so the rule is tested with plain values.
+ *
+ * `requireOwnedThread` turns "nothing" into Next's 404. The route calls it in
+ * its layout, above the loading boundary: once a loading fallback has been
+ * streamed the status is fixed at 200, and a 404 thrown after that point only
+ * changes the page body (#1).
  */
 
 export type StoredThread = Readonly<{
@@ -72,4 +79,13 @@ export const loadOwnedThread = async (
       answers: inPickOrder(turn.responses).map(toSavedResponseState),
     })),
   };
+};
+
+export const requireOwnedThread = async (
+  threadId: string,
+  reads: ThreadReads,
+): Promise<OwnedThread> => {
+  const thread = await loadOwnedThread(threadId, reads);
+  if (!thread) notFound();
+  return thread;
 };

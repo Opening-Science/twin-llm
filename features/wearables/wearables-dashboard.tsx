@@ -45,6 +45,10 @@ const OURA_GROUPS = [
   { title: "Sleep", match: (key: string) => key.startsWith("sleep.") },
   { title: "Readiness", match: (key: string) => key.startsWith("readiness.") },
   { title: "Activity", match: (key: string) => key.startsWith("activity.") },
+  { title: "Workouts", match: (key: string) => key.startsWith("workout.") },
+  { title: "SpO2", match: (key: string) => key.startsWith("spo2.") },
+  { title: "Stress", match: (key: string) => key.startsWith("stress.") },
+  { title: "VO2 max", match: (key: string) => key.startsWith("vo2max.") },
   { title: "Personal", match: (key: string) => key.startsWith("personal.") },
 ] as const;
 
