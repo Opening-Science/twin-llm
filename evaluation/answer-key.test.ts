@@ -186,6 +186,16 @@ describe("answer-key.v1.json", () => {
       "Q-S6-17 SUBJECT_SCOPE_VIOLATION",
     ]);
   });
+
+  test("only the absent-code probe is keyed as null", () => {
+    // A null slope or mean elsewhere means the subject has too few readings.
+    const nulls = Object.entries(key.entries).flatMap(([id, entries]) =>
+      entries
+        .filter((entry) => entry.value === null && entry.refusal === null)
+        .map((entry) => `${id} ${entry.name}`),
+    );
+    expect(nulls).toEqual(["Q-S6-05 value"]);
+  });
 });
 
 // RUN_LIVE is a test-runner switch, not app config, so it is read here rather

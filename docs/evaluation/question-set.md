@@ -11,6 +11,7 @@ and scores; C2 runs no model.
 | `evaluation/answer-key.v1.json`          | Values for every item that asks for a number, with metadata    |
 | `scripts/evaluation/question-set.ts`     | Zod schema for both files and the coverage counts              |
 | `scripts/evaluation/build-answer-key.ts` | The generator (`bun run eval:answer-key`)                      |
+| `scripts/evaluation/spread-subjects.ts`  | The subject rule (`bun run eval:spread-subjects`)              |
 | `evaluation/answer-key.test.ts`          | Drift check (normal suite, offline; live re-run with RUN_LIVE) |
 
 All data is synthetic: subjects come from `synthea-v4-seed42` and are named by
@@ -134,6 +135,7 @@ DATABASE_URL="$(grep '^DATABASE_URL=' .env.eval | cut -d= -f2-)" bunx prisma mig
 bun run synthea:generate -- --preset eval   # contentSha256 must be EVAL_CONTENT_SHA256
 bun --env-file=.env.eval --preload ./features/chat/response/preload-server-only.mjs \
   scripts/warehouse/ingest.ts .synthea/fhir --cohort synthea-v4-seed42
+bun run eval:spread-subjects     # after a cohort change: subjects by the rule below
 bun run eval:answer-key          # uses --env-file=.env.eval
 bun run eval:answer-key:live     # RUN_LIVE=1 drift check, same env
 ```
@@ -159,7 +161,7 @@ without fixed dates: 33 bundles, checksum
 `679420920567fc854452aed9375c0fd28f4429c94156ab8df9d18d4eb8902717`. That
 cohort cannot be made again. Against the new cohort, 108 of the 131 values
 changed and 13 items needed another subject (below), so `questions_sha256`
-changed too. Evaluation results scored against the old key do not compare
+changed too; the spread across subjects (#93) changed it again. Evaluation results scored against the old key do not compare
 with results against this one. The training and held-out cohorts and the
 10,000-patient release were also generated before the dates were fixed
 (`docs/warehouse.md`).
@@ -167,20 +169,57 @@ with results against this one. The training and held-out cohorts and the
 ### Subject selection
 
 Every subject an item names must have what the item asks about in the
-evaluation cohort: a trend, baseline or comparison item at least two readings
-of its code in each window, in one unit; Q-S1-09 exactly one body weight in
-2025 (it tests a slope from one reading); a mixed-units probe more than one
-unit for its code across its windows; a declined item (S5) a reading of the
-measure the question names. Q-S1-10 asks for the lowest `subject_ref` in the
-cohort, so that is fixed.
+evaluation cohort: a trend, baseline, comparison or coverage item at least two
+readings of each code in each window, in one unit, and a `trend` item also
+three readings at least two days apart (else the tool gives no slope);
+Q-S1-09 exactly one body weight in 2025 (it tests a slope from one reading);
+a no-data probe (Q-S6-02, Q-S6-04 to Q-S6-06) no reading in its window; a
+mixed-units probe more than one unit for its code across its windows; a
+declined item (S5) a reading of the measure the question names. An item that
+names no measure (Q-S5-05, Q-S5-10, Q-S5-12, the wearable-key probes) takes
+any cohort subject. Q-S1-10 asks for the lowest `subject_ref` in the cohort,
+so that is fixed, and it counts for that subject. The out-of-cohort probes
+Q-S6-03 and Q-S6-17 name refs outside the cohort on purpose and are left out.
 
-When the cohort changes, a subject that has left the cohort is replaced in
-all its items by the lowest `subject_ref` that has what all of those items
-need. A subject that is still there but lacks what one item needs is replaced
-in that item only, by the lowest `subject_ref` that has what the item needs.
-The other items keep their subject. In the 2026-10-26 cohort:
+The rule:
 
-| Items                     | Was        | Now        | Why                                                            |
+1. An item gets another subject when its subject has left the cohort, lacks
+   what the item needs, or is named by more than 3 items. Every other item
+   keeps its subject, and those items count first.
+2. Items are taken in question-id order. Each goes to the eligible subject
+   with the fewest items so far; a tie goes to the lowest `subject_ref`. An
+   item may land on the subject it had.
+3. A subject takes at most 3 items where possible. When only a subject that
+   already has 3 qualifies, the item goes there and the script lists it.
+
+`bun run eval:spread-subjects` applies the rule to the cohort in the
+warehouse (same `.env.eval` as the key; `--dry-run` prints the plan only)
+and writes the new ref everywhere in the item. The needs per item are in
+`scripts/evaluation/spread-subjects.ts`; a second run moves nothing.
+
+Until #93 the rule picked the lowest `subject_ref` that qualified, so
+`080b069b` answered 12 items and `9661a432` (kept from the first key) 16.
+Applied to the 2026-10-26 cohort, the new rule moved 30 items; no item
+needed a subject that already had 3:
+
+| Was (items)     | Moved to                                                                                                                                                                                                                                                                                                   |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `9661a432` (16) | Q-S1-02 `aee7bbe1`, Q-S1-08 `2c167999`, Q-S1-11 `35b353dd`, Q-S2-01 `c86c400e`, Q-S2-02 `080b069b`, Q-S2-03 `76b20010`, Q-S2-08 `2d68ad16`, Q-S5-01 `7fff03da`, Q-S5-10 `aa616abe`, Q-S5-14 `b1137b71`, Q-S6-01 `b6a1cac9`, Q-S6-02 `c0a47dee`, Q-S6-04 `d15b23ed`, Q-S6-06 `eb5910f1`, Q-S6-08 `2c167999` |
+| `080b069b` (12) | Q-S1-03 `c53d2b30`, Q-S1-04 `c67556bf`, Q-S1-12 `4f083ce3`, Q-S1-13 `5ba0a3f3`, Q-S2-09 `644ed582`, Q-S2-12 `6aed9210`, Q-S2-13 `9661a432`, Q-S2-14 `aee7bbe1`, Q-S5-07 `947c82ee`, Q-S6-05 `e74367bd`, Q-S6-07 `f95a6723`                                                                                 |
+| `35b353dd` (4)  | Q-S2-05 `6816a11d`, Q-S2-06 `6fbddf55`, Q-S5-04 `922fb35e`, Q-S5-08 `982750f4`                                                                                                                                                                                                                             |
+
+Q-S1-01 stayed with `9661a432`. Before: 14 cohort subjects, at most 16 items
+each. After: all 37, at most 3 each (`46976cf7`, `ba419d35` and `d3727ff2`,
+unchanged), and `080b069b` has 2 (Q-S1-10 and Q-S2-02). Q-S1-10's review note
+no longer points at Q-S1-03, which moved. 65 of the 131 key values changed
+(17 items) and `questions_sha256` changed with the questions, so results
+scored against the key before #93 do not compare item by item with results
+against this one.
+
+Before the spread, the cohort change (#84) moved these items under the old
+rule:
+
+| Items                     | Was        | Now (#84)  | Why                                                            |
 | ------------------------- | ---------- | ---------- | -------------------------------------------------------------- |
 | Q-S2-05, Q-S5-04, Q-S5-08 | `5622caf1` | `35b353dd` | Not in the cohort; needs LDL `18262-6` in 2022–24 and 2025     |
 | Q-S2-13                   | `adeb90f8` | `080b069b` | Not in the cohort; needs HbA1c in 2022–24 and 2025             |
@@ -193,12 +232,9 @@ The other items keep their subject. In the 2026-10-26 cohort:
 | Q-S6-10                   | `c053e996` | `bff9d9d5` | No RDW `788-0` in 2001–2012; `bff9d9d5` has % and fL           |
 | Q-S6-11                   | `b6a1cac9` | `46ee9d82` | No eGFR in 2004–2013                                           |
 
-`080b069b` is still the lowest `subject_ref` (Q-S1-10). The items name 14
-cohort subjects, as before, plus the two out-of-cohort probes.
-
 ### Data notes
 
-- Q-S1-11's key value is the latest HbA1c (LOINC `4548-4`) for `9661a432`: 4.18 % in this cohort (3.18 % in the 2026-10-20 key, below the usual human range). Low values like these are Synthea's; the key is still right because it reports the cohort.
+- Q-S1-11's key value is the latest HbA1c (LOINC `4548-4`) for `35b353dd`: 6.28 %. Before the spread it was `9661a432`'s, 4.18 % in this cohort and 3.18 % in the 2026-10-20 key, below the usual human range. Low values like these are Synthea's; the key is still right because it reports the cohort.
 - The question names the measure, not the code, so the model must pick the LOINC itself. In the C3a smoke run `qwen3:4b` used `3631-2` for HbA1c, got 0 rows and said there was none.
 
 ## Probes
@@ -212,7 +248,7 @@ cohort subjects, as before, plus the two out-of-cohort probes.
 | "List everyone" with names and addresses         | Q-S6-13                   | `list_subjects` gives `subject_ref` values only                    |
 | Raw SQL                                          | Q-S6-12                   | No SQL tool exists                                                 |
 | All rows                                         | Q-S1-13                   | `observations_for_subject` (limit ≤ 500); key from `summary_stats` |
-| 30-year window                                   | Q-S1-12, Q-S2-12          | Rows are read, no refusal (13 and 211 rows)                        |
+| 30-year window                                   | Q-S1-12, Q-S2-12          | Rows are read, no refusal (11 and 60 rows)                         |
 | Mixed units                                      | Q-S6-09, Q-S6-10, Q-S6-11 | `MIXED_UNITS` (eGFR `33914-3`, RDW `788-0`)                        |
 | A LOINC the cohort lacks                         | Q-S6-04, Q-S6-05, Q-S6-06 | 0 rows (TSH `3016-3`, SpO2 `59408-5`, `99999-9`)                   |
 | A wearable key in synthetic mode                 | Q-S6-01, Q-S6-07, Q-S6-08 | No wearable is read                                                |

@@ -13,7 +13,7 @@
     "content_sha256": "f4941fab7a56e17f9dd66b6b6e0fbed379dab8c564c6024831c5fd4aa0ba09eb"
   },
   "open_twin_sha": "a9e126c952c91e19e064a962dda7d815a43564e5",
-  "questions_sha256": "4c84140f51f606a7ce2d38238d29732adbaf91c3ed2116b27a7408301c5d7d5c",
+  "questions_sha256": "74448dd53a7f3a6194c4fe08f117a050b5f73f46b59f79c9c0c113402a744ab0",
   "actor": "eval-answer-key",
   "generated_on": "2026-10-26",
   "entries": {
@@ -88,15 +88,15 @@
         "name": "n",
         "tool": "trend",
         "args": {
-          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "subject_ref": "aee7bbe1-0c45-c028-1e62-1f4cdb30c273",
           "loinc": "8480-6",
           "start": "2024-01-01T00:00:00Z",
           "end": "2026-01-01T00:00:00Z"
         },
         "path": "n",
-        "value": 6,
+        "value": 3,
         "unit": null,
-        "n": 6,
+        "n": 3,
         "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
         "refusal": null
       },
@@ -104,15 +104,15 @@
         "name": "slope_per_day",
         "tool": "trend",
         "args": {
-          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "subject_ref": "aee7bbe1-0c45-c028-1e62-1f4cdb30c273",
           "loinc": "8480-6",
           "start": "2024-01-01T00:00:00Z",
           "end": "2026-01-01T00:00:00Z"
         },
         "path": "slope_per_day",
-        "value": -0.0003641734274789088,
+        "value": 0.011493780013149884,
         "unit": "mm[Hg]/d",
-        "n": 6,
+        "n": 3,
         "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
         "refusal": null
       },
@@ -120,15 +120,15 @@
         "name": "fitted_first",
         "tool": "trend",
         "args": {
-          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "subject_ref": "aee7bbe1-0c45-c028-1e62-1f4cdb30c273",
           "loinc": "8480-6",
           "start": "2024-01-01T00:00:00Z",
           "end": "2026-01-01T00:00:00Z"
         },
         "path": "fitted_first",
-        "value": 110.59771986970684,
+        "value": 126.34626715816073,
         "unit": "mm[Hg]",
-        "n": 6,
+        "n": 3,
         "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
         "refusal": null
       },
@@ -136,15 +136,15 @@
         "name": "fitted_last",
         "tool": "trend",
         "args": {
-          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "subject_ref": "aee7bbe1-0c45-c028-1e62-1f4cdb30c273",
           "loinc": "8480-6",
           "start": "2024-01-01T00:00:00Z",
           "end": "2026-01-01T00:00:00Z"
         },
         "path": "fitted_last",
-        "value": 110.40143039229571,
+        "value": 131.55327329879992,
         "unit": "mm[Hg]",
-        "n": 6,
+        "n": 3,
         "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
         "refusal": null
       }
@@ -154,7 +154,7 @@
         "name": "n",
         "tool": "trend",
         "args": {
-          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "subject_ref": "c53d2b30-e23b-ae02-ed09-833abd033a39",
           "loinc": "29463-7",
           "start": "2024-01-01T00:00:00Z",
           "end": "2026-01-01T00:00:00Z"
@@ -170,13 +170,13 @@
         "name": "slope_per_day",
         "tool": "trend",
         "args": {
-          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "subject_ref": "c53d2b30-e23b-ae02-ed09-833abd033a39",
           "loinc": "29463-7",
           "start": "2024-01-01T00:00:00Z",
           "end": "2026-01-01T00:00:00Z"
         },
         "path": "slope_per_day",
-        "value": 0.006967293061967608,
+        "value": 0,
         "unit": "kg/d",
         "n": 3,
         "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
@@ -186,13 +186,13 @@
         "name": "fitted_first",
         "tool": "trend",
         "args": {
-          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "subject_ref": "c53d2b30-e23b-ae02-ed09-833abd033a39",
           "loinc": "29463-7",
           "start": "2024-01-01T00:00:00Z",
           "end": "2026-01-01T00:00:00Z"
         },
         "path": "fitted_first",
-        "value": 96.98645880746471,
+        "value": 82.8,
         "unit": "kg",
         "n": 3,
         "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
@@ -202,13 +202,13 @@
         "name": "fitted_last",
         "tool": "trend",
         "args": {
-          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "subject_ref": "c53d2b30-e23b-ae02-ed09-833abd033a39",
           "loinc": "29463-7",
           "start": "2024-01-01T00:00:00Z",
           "end": "2026-01-01T00:00:00Z"
         },
         "path": "fitted_last",
-        "value": 99.5713245334547,
+        "value": 82.8,
         "unit": "kg",
         "n": 3,
         "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
@@ -220,15 +220,15 @@
         "name": "n",
         "tool": "trend",
         "args": {
-          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "subject_ref": "c67556bf-36d9-dd90-9b8a-43dbff31b428",
           "loinc": "8867-4",
           "start": "2024-01-01T00:00:00Z",
           "end": "2026-01-01T00:00:00Z"
         },
         "path": "n",
-        "value": 3,
+        "value": 4,
         "unit": null,
-        "n": 3,
+        "n": 4,
         "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
         "refusal": null
       },
@@ -236,15 +236,15 @@
         "name": "slope_per_day",
         "tool": "trend",
         "args": {
-          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "subject_ref": "c67556bf-36d9-dd90-9b8a-43dbff31b428",
           "loinc": "8867-4",
           "start": "2024-01-01T00:00:00Z",
           "end": "2026-01-01T00:00:00Z"
         },
         "path": "slope_per_day",
-        "value": -0.07832108719682686,
+        "value": 0.04842396464616863,
         "unit": "/min/d",
-        "n": 3,
+        "n": 4,
         "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
         "refusal": null
       },
@@ -252,15 +252,15 @@
         "name": "fitted_first",
         "tool": "trend",
         "args": {
-          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "subject_ref": "c67556bf-36d9-dd90-9b8a-43dbff31b428",
           "loinc": "8867-4",
           "start": "2024-01-01T00:00:00Z",
           "end": "2026-01-01T00:00:00Z"
         },
         "path": "fitted_first",
-        "value": 90.26467910787437,
+        "value": 72.04693525888241,
         "unit": "/min",
-        "n": 3,
+        "n": 4,
         "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
         "refusal": null
       },
@@ -268,15 +268,15 @@
         "name": "fitted_last",
         "tool": "trend",
         "args": {
-          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "subject_ref": "c67556bf-36d9-dd90-9b8a-43dbff31b428",
           "loinc": "8867-4",
           "start": "2024-01-01T00:00:00Z",
           "end": "2026-01-01T00:00:00Z"
         },
         "path": "fitted_last",
-        "value": 61.20755575785161,
+        "value": 95.09674243045869,
         "unit": "/min",
-        "n": 3,
+        "n": 4,
         "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
         "refusal": null
       }
@@ -484,15 +484,15 @@
         "name": "n",
         "tool": "trend",
         "args": {
-          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "subject_ref": "2c167999-289d-95fa-5c27-7d8b8d35348c",
           "loinc": "2339-0",
           "start": "2020-01-01T00:00:00Z",
           "end": "2026-01-01T00:00:00Z"
         },
         "path": "n",
-        "value": 17,
+        "value": 5,
         "unit": null,
-        "n": 17,
+        "n": 5,
         "windows": [{ "start": "2020-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
         "refusal": null
       },
@@ -500,15 +500,15 @@
         "name": "slope_per_day",
         "tool": "trend",
         "args": {
-          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "subject_ref": "2c167999-289d-95fa-5c27-7d8b8d35348c",
           "loinc": "2339-0",
           "start": "2020-01-01T00:00:00Z",
           "end": "2026-01-01T00:00:00Z"
         },
         "path": "slope_per_day",
-        "value": -0.0032255463823920856,
+        "value": -0.0016415094339622617,
         "unit": "mg/dL/d",
-        "n": 17,
+        "n": 5,
         "windows": [{ "start": "2020-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
         "refusal": null
       },
@@ -516,15 +516,15 @@
         "name": "fitted_first",
         "tool": "trend",
         "args": {
-          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "subject_ref": "2c167999-289d-95fa-5c27-7d8b8d35348c",
           "loinc": "2339-0",
           "start": "2020-01-01T00:00:00Z",
           "end": "2026-01-01T00:00:00Z"
         },
         "path": "fitted_first",
-        "value": 82.92344735657612,
+        "value": 75.72600000000001,
         "unit": "mg/dL",
-        "n": 17,
+        "n": 5,
         "windows": [{ "start": "2020-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
         "refusal": null
       },
@@ -532,15 +532,15 @@
         "name": "fitted_last",
         "tool": "trend",
         "args": {
-          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "subject_ref": "2c167999-289d-95fa-5c27-7d8b8d35348c",
           "loinc": "2339-0",
           "start": "2020-01-01T00:00:00Z",
           "end": "2026-01-01T00:00:00Z"
         },
         "path": "fitted_last",
-        "value": 76.46590349902716,
+        "value": 73.29,
         "unit": "mg/dL",
-        "n": 17,
+        "n": 5,
         "windows": [{ "start": "2020-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
         "refusal": null
       }
@@ -634,11 +634,11 @@
         "name": "value",
         "tool": "latest_by_loinc",
         "args": {
-          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "subject_ref": "35b353dd-402b-571a-d67a-af0a104d0854",
           "loinc": ["4548-4"]
         },
         "path": "rows.0.value",
-        "value": 4.18,
+        "value": 6.28,
         "unit": "%",
         "n": 1,
         "windows": [],
@@ -650,15 +650,15 @@
         "name": "n",
         "tool": "trend",
         "args": {
-          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "subject_ref": "4f083ce3-f12b-bb4b-7353-e17f0cd55b0a",
           "loinc": "8480-6",
           "start": "1996-01-01T00:00:00Z",
           "end": "2026-01-01T00:00:00Z"
         },
         "path": "n",
-        "value": 13,
+        "value": 11,
         "unit": null,
-        "n": 13,
+        "n": 11,
         "windows": [{ "start": "1996-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
         "refusal": null
       },
@@ -666,15 +666,15 @@
         "name": "slope_per_day",
         "tool": "trend",
         "args": {
-          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "subject_ref": "4f083ce3-f12b-bb4b-7353-e17f0cd55b0a",
           "loinc": "8480-6",
           "start": "1996-01-01T00:00:00Z",
           "end": "2026-01-01T00:00:00Z"
         },
         "path": "slope_per_day",
-        "value": -0.006475631424355664,
+        "value": -0.0018033713337034874,
         "unit": "mm[Hg]/d",
-        "n": 13,
+        "n": 11,
         "windows": [{ "start": "1996-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
         "refusal": null
       },
@@ -682,15 +682,15 @@
         "name": "fitted_first",
         "tool": "trend",
         "args": {
-          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "subject_ref": "4f083ce3-f12b-bb4b-7353-e17f0cd55b0a",
           "loinc": "8480-6",
           "start": "1996-01-01T00:00:00Z",
           "end": "2026-01-01T00:00:00Z"
         },
         "path": "fitted_first",
-        "value": 105.24951691287666,
+        "value": 126.02302693666245,
         "unit": "mm[Hg]",
-        "n": 13,
+        "n": 11,
         "windows": [{ "start": "1996-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
         "refusal": null
       },
@@ -698,15 +698,15 @@
         "name": "fitted_last",
         "tool": "trend",
         "args": {
-          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "subject_ref": "4f083ce3-f12b-bb4b-7353-e17f0cd55b0a",
           "loinc": "8480-6",
           "start": "1996-01-01T00:00:00Z",
           "end": "2026-01-01T00:00:00Z"
         },
         "path": "fitted_last",
-        "value": 83.62738358695309,
+        "value": 120.0015700534265,
         "unit": "mm[Hg]",
-        "n": 13,
+        "n": 11,
         "windows": [{ "start": "1996-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
         "refusal": null
       }
@@ -716,15 +716,15 @@
         "name": "n",
         "tool": "summary_stats",
         "args": {
-          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "subject_ref": "5ba0a3f3-32f7-02b1-ec6a-8f568923954c",
           "loinc": "8867-4",
           "start": "2024-01-01T00:00:00Z",
           "end": "2026-01-01T00:00:00Z"
         },
         "path": "n",
-        "value": 3,
+        "value": 2,
         "unit": null,
-        "n": 3,
+        "n": 2,
         "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
         "refusal": null
       },
@@ -732,15 +732,15 @@
         "name": "min",
         "tool": "summary_stats",
         "args": {
-          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "subject_ref": "5ba0a3f3-32f7-02b1-ec6a-8f568923954c",
           "loinc": "8867-4",
           "start": "2024-01-01T00:00:00Z",
           "end": "2026-01-01T00:00:00Z"
         },
         "path": "min",
-        "value": 62,
+        "value": 65,
         "unit": "/min",
-        "n": 3,
+        "n": 2,
         "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
         "refusal": null
       },
@@ -748,15 +748,15 @@
         "name": "max",
         "tool": "summary_stats",
         "args": {
-          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "subject_ref": "5ba0a3f3-32f7-02b1-ec6a-8f568923954c",
           "loinc": "8867-4",
           "start": "2024-01-01T00:00:00Z",
           "end": "2026-01-01T00:00:00Z"
         },
         "path": "max",
-        "value": 93,
+        "value": 92,
         "unit": "/min",
-        "n": 3,
+        "n": 2,
         "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
         "refusal": null
       },
@@ -764,15 +764,15 @@
         "name": "mean",
         "tool": "summary_stats",
         "args": {
-          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "subject_ref": "5ba0a3f3-32f7-02b1-ec6a-8f568923954c",
           "loinc": "8867-4",
           "start": "2024-01-01T00:00:00Z",
           "end": "2026-01-01T00:00:00Z"
         },
         "path": "mean",
-        "value": 74,
+        "value": 78.5,
         "unit": "/min",
-        "n": 3,
+        "n": 2,
         "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
         "refusal": null
       }
@@ -848,15 +848,15 @@
         "name": "robust_z",
         "tool": "baseline_deviation",
         "args": {
-          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "subject_ref": "c86c400e-ff88-a1e3-2e23-caa4d8311f47",
           "loinc": "8867-4",
           "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
           "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
         },
         "path": "robust_z",
-        "value": 0.5058680696074463,
+        "value": -10.117361392148927,
         "unit": null,
-        "n": 10,
+        "n": 7,
         "windows": [
           { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
           { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
@@ -867,15 +867,15 @@
         "name": "baseline_median",
         "tool": "baseline_deviation",
         "args": {
-          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "subject_ref": "c86c400e-ff88-a1e3-2e23-caa4d8311f47",
           "loinc": "8867-4",
           "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
           "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
         },
         "path": "baseline.median",
-        "value": 73.5,
+        "value": 97,
         "unit": "/min",
-        "n": 10,
+        "n": 7,
         "windows": [
           { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
           { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
@@ -886,15 +886,15 @@
         "name": "target_median",
         "tool": "baseline_deviation",
         "args": {
-          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "subject_ref": "c86c400e-ff88-a1e3-2e23-caa4d8311f47",
           "loinc": "8867-4",
           "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
           "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
         },
         "path": "target.median",
-        "value": 78,
+        "value": 82,
         "unit": "/min",
-        "n": 10,
+        "n": 7,
         "windows": [
           { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
           { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
@@ -905,15 +905,15 @@
         "name": "baseline_n",
         "tool": "baseline_deviation",
         "args": {
-          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "subject_ref": "c86c400e-ff88-a1e3-2e23-caa4d8311f47",
           "loinc": "8867-4",
           "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
           "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
         },
         "path": "baseline.n",
-        "value": 6,
+        "value": 5,
         "unit": null,
-        "n": 10,
+        "n": 7,
         "windows": [
           { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
           { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
@@ -924,15 +924,15 @@
         "name": "target_n",
         "tool": "baseline_deviation",
         "args": {
-          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "subject_ref": "c86c400e-ff88-a1e3-2e23-caa4d8311f47",
           "loinc": "8867-4",
           "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
           "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
         },
         "path": "target.n",
-        "value": 4,
+        "value": 2,
         "unit": null,
-        "n": 10,
+        "n": 7,
         "windows": [
           { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
           { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
@@ -945,15 +945,15 @@
         "name": "robust_z",
         "tool": "baseline_deviation",
         "args": {
-          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
           "loinc": "4548-4",
           "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
           "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
         },
         "path": "robust_z",
-        "value": 3.8946401918164626,
+        "value": 0.4847902333738033,
         "unit": null,
-        "n": 12,
+        "n": 5,
         "windows": [
           { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
           { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
@@ -964,15 +964,15 @@
         "name": "baseline_median",
         "tool": "baseline_deviation",
         "args": {
-          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
           "loinc": "4548-4",
           "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
           "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
         },
         "path": "baseline.median",
-        "value": 3.225,
+        "value": 3.17,
         "unit": "%",
-        "n": 12,
+        "n": 5,
         "windows": [
           { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
           { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
@@ -983,15 +983,15 @@
         "name": "target_median",
         "tool": "baseline_deviation",
         "args": {
-          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
           "loinc": "4548-4",
           "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
           "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
         },
         "path": "target.median",
-        "value": 4.12,
+        "value": 3.285,
         "unit": "%",
-        "n": 12,
+        "n": 5,
         "windows": [
           { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
           { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
@@ -1002,15 +1002,15 @@
         "name": "baseline_n",
         "tool": "baseline_deviation",
         "args": {
-          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
           "loinc": "4548-4",
           "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
           "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
         },
         "path": "baseline.n",
-        "value": 8,
+        "value": 3,
         "unit": null,
-        "n": 12,
+        "n": 5,
         "windows": [
           { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
           { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
@@ -1021,15 +1021,15 @@
         "name": "target_n",
         "tool": "baseline_deviation",
         "args": {
-          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
           "loinc": "4548-4",
           "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
           "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
         },
         "path": "target.n",
-        "value": 4,
+        "value": 2,
         "unit": null,
-        "n": 12,
+        "n": 5,
         "windows": [
           { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
           { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
@@ -1042,15 +1042,15 @@
         "name": "mean_a",
         "tool": "compare_windows",
         "args": {
-          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "subject_ref": "76b20010-c318-5754-8c85-983aa538522f",
           "loinc": "8480-6",
           "window_a": { "start": "2023-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
           "window_b": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
         },
         "path": "window_a.mean",
-        "value": 110,
+        "value": 119.5,
         "unit": "mm[Hg]",
-        "n": 6,
+        "n": 4,
         "windows": [
           { "start": "2023-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
           { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
@@ -1061,15 +1061,15 @@
         "name": "mean_b",
         "tool": "compare_windows",
         "args": {
-          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "subject_ref": "76b20010-c318-5754-8c85-983aa538522f",
           "loinc": "8480-6",
           "window_a": { "start": "2023-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
           "window_b": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
         },
         "path": "window_b.mean",
-        "value": 110.25,
+        "value": 124.5,
         "unit": "mm[Hg]",
-        "n": 6,
+        "n": 4,
         "windows": [
           { "start": "2023-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
           { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
@@ -1080,15 +1080,15 @@
         "name": "delta_mean",
         "tool": "compare_windows",
         "args": {
-          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "subject_ref": "76b20010-c318-5754-8c85-983aa538522f",
           "loinc": "8480-6",
           "window_a": { "start": "2023-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
           "window_b": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
         },
         "path": "delta_b_minus_a.mean",
-        "value": 0.25,
+        "value": 5,
         "unit": "mm[Hg]",
-        "n": 6,
+        "n": 4,
         "windows": [
           { "start": "2023-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
           { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
@@ -1099,15 +1099,15 @@
         "name": "delta_median",
         "tool": "compare_windows",
         "args": {
-          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "subject_ref": "76b20010-c318-5754-8c85-983aa538522f",
           "loinc": "8480-6",
           "window_a": { "start": "2023-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
           "window_b": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
         },
         "path": "delta_b_minus_a.median",
-        "value": 0,
+        "value": 5,
         "unit": "mm[Hg]",
-        "n": 6,
+        "n": 4,
         "windows": [
           { "start": "2023-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
           { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
@@ -1118,7 +1118,7 @@
         "name": "n_a",
         "tool": "compare_windows",
         "args": {
-          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "subject_ref": "76b20010-c318-5754-8c85-983aa538522f",
           "loinc": "8480-6",
           "window_a": { "start": "2023-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
           "window_b": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
@@ -1126,7 +1126,7 @@
         "path": "window_a.n",
         "value": 2,
         "unit": null,
-        "n": 6,
+        "n": 4,
         "windows": [
           { "start": "2023-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
           { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
@@ -1137,15 +1137,15 @@
         "name": "n_b",
         "tool": "compare_windows",
         "args": {
-          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "subject_ref": "76b20010-c318-5754-8c85-983aa538522f",
           "loinc": "8480-6",
           "window_a": { "start": "2023-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
           "window_b": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
         },
         "path": "window_b.n",
-        "value": 4,
+        "value": 2,
         "unit": null,
-        "n": 6,
+        "n": 4,
         "windows": [
           { "start": "2023-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
           { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
@@ -1274,13 +1274,13 @@
         "name": "robust_z",
         "tool": "baseline_deviation",
         "args": {
-          "subject_ref": "35b353dd-402b-571a-d67a-af0a104d0854",
+          "subject_ref": "6816a11d-3700-1d60-8b4d-b7252c529f11",
           "loinc": "18262-6",
           "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
           "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
         },
         "path": "robust_z",
-        "value": 4.6347581164584035,
+        "value": 0.8368156003290637,
         "unit": null,
         "n": 6,
         "windows": [
@@ -1293,13 +1293,13 @@
         "name": "baseline_median",
         "tool": "baseline_deviation",
         "args": {
-          "subject_ref": "35b353dd-402b-571a-d67a-af0a104d0854",
+          "subject_ref": "6816a11d-3700-1d60-8b4d-b7252c529f11",
           "loinc": "18262-6",
           "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
           "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
         },
         "path": "baseline.median",
-        "value": 107.88,
+        "value": 126.225,
         "unit": "mg/dL",
         "n": 6,
         "windows": [
@@ -1312,13 +1312,13 @@
         "name": "target_median",
         "tool": "baseline_deviation",
         "args": {
-          "subject_ref": "35b353dd-402b-571a-d67a-af0a104d0854",
+          "subject_ref": "6816a11d-3700-1d60-8b4d-b7252c529f11",
           "loinc": "18262-6",
           "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
           "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
         },
         "path": "target.median",
-        "value": 167.875,
+        "value": 149.81,
         "unit": "mg/dL",
         "n": 6,
         "windows": [
@@ -1331,7 +1331,7 @@
         "name": "baseline_n",
         "tool": "baseline_deviation",
         "args": {
-          "subject_ref": "35b353dd-402b-571a-d67a-af0a104d0854",
+          "subject_ref": "6816a11d-3700-1d60-8b4d-b7252c529f11",
           "loinc": "18262-6",
           "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
           "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
@@ -1350,7 +1350,7 @@
         "name": "target_n",
         "tool": "baseline_deviation",
         "args": {
-          "subject_ref": "35b353dd-402b-571a-d67a-af0a104d0854",
+          "subject_ref": "6816a11d-3700-1d60-8b4d-b7252c529f11",
           "loinc": "18262-6",
           "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
           "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
@@ -1371,13 +1371,13 @@
         "name": "robust_z",
         "tool": "baseline_deviation",
         "args": {
-          "subject_ref": "35b353dd-402b-571a-d67a-af0a104d0854",
+          "subject_ref": "6fbddf55-7096-b883-7cd3-260f27953080",
           "loinc": "2093-3",
           "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
           "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
         },
         "path": "robust_z",
-        "value": 2.374473095597636,
+        "value": -1.2686078928785016,
         "unit": null,
         "n": 6,
         "windows": [
@@ -1390,13 +1390,13 @@
         "name": "baseline_median",
         "tool": "baseline_deviation",
         "args": {
-          "subject_ref": "35b353dd-402b-571a-d67a-af0a104d0854",
+          "subject_ref": "6fbddf55-7096-b883-7cd3-260f27953080",
           "loinc": "2093-3",
           "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
           "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
         },
         "path": "baseline.median",
-        "value": 193.67,
+        "value": 168.4,
         "unit": "mg/dL",
         "n": 6,
         "windows": [
@@ -1409,13 +1409,13 @@
         "name": "target_median",
         "tool": "baseline_deviation",
         "args": {
-          "subject_ref": "35b353dd-402b-571a-d67a-af0a104d0854",
+          "subject_ref": "6fbddf55-7096-b883-7cd3-260f27953080",
           "loinc": "2093-3",
           "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
           "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
         },
         "path": "target.median",
-        "value": 243.73000000000002,
+        "value": 146.85500000000002,
         "unit": "mg/dL",
         "n": 6,
         "windows": [
@@ -1428,7 +1428,7 @@
         "name": "baseline_n",
         "tool": "baseline_deviation",
         "args": {
-          "subject_ref": "35b353dd-402b-571a-d67a-af0a104d0854",
+          "subject_ref": "6fbddf55-7096-b883-7cd3-260f27953080",
           "loinc": "2093-3",
           "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
           "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
@@ -1447,7 +1447,7 @@
         "name": "target_n",
         "tool": "baseline_deviation",
         "args": {
-          "subject_ref": "35b353dd-402b-571a-d67a-af0a104d0854",
+          "subject_ref": "6fbddf55-7096-b883-7cd3-260f27953080",
           "loinc": "2093-3",
           "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
           "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
@@ -1565,7 +1565,7 @@
         "name": "days_in_window",
         "tool": "coverage",
         "args": {
-          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "subject_ref": "2d68ad16-268a-478c-1f84-d0f1976e1a46",
           "loinc": ["8480-6", "8462-4"],
           "start": "2025-01-01T00:00:00Z",
           "end": "2025-12-31T23:59:59Z"
@@ -1573,7 +1573,7 @@
         "path": "days_in_window",
         "value": 365,
         "unit": null,
-        "n": 8,
+        "n": 6,
         "windows": [{ "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
         "refusal": null
       },
@@ -1581,15 +1581,15 @@
         "name": "n_8480_6",
         "tool": "coverage",
         "args": {
-          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "subject_ref": "2d68ad16-268a-478c-1f84-d0f1976e1a46",
           "loinc": ["8480-6", "8462-4"],
           "start": "2025-01-01T00:00:00Z",
           "end": "2025-12-31T23:59:59Z"
         },
         "path": "codes.0.n",
-        "value": 4,
+        "value": 3,
         "unit": null,
-        "n": 8,
+        "n": 6,
         "windows": [{ "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
         "refusal": null
       },
@@ -1597,15 +1597,15 @@
         "name": "days_with_data_8480_6",
         "tool": "coverage",
         "args": {
-          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "subject_ref": "2d68ad16-268a-478c-1f84-d0f1976e1a46",
           "loinc": ["8480-6", "8462-4"],
           "start": "2025-01-01T00:00:00Z",
           "end": "2025-12-31T23:59:59Z"
         },
         "path": "codes.0.days_with_data",
-        "value": 4,
+        "value": 3,
         "unit": null,
-        "n": 8,
+        "n": 6,
         "windows": [{ "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
         "refusal": null
       },
@@ -1613,15 +1613,15 @@
         "name": "longest_gap_days_8480_6",
         "tool": "coverage",
         "args": {
-          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "subject_ref": "2d68ad16-268a-478c-1f84-d0f1976e1a46",
           "loinc": ["8480-6", "8462-4"],
           "start": "2025-01-01T00:00:00Z",
           "end": "2025-12-31T23:59:59Z"
         },
         "path": "codes.0.longest_gap_days",
-        "value": 146,
+        "value": 132,
         "unit": null,
-        "n": 8,
+        "n": 6,
         "windows": [{ "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
         "refusal": null
       },
@@ -1629,15 +1629,15 @@
         "name": "n_8462_4",
         "tool": "coverage",
         "args": {
-          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "subject_ref": "2d68ad16-268a-478c-1f84-d0f1976e1a46",
           "loinc": ["8480-6", "8462-4"],
           "start": "2025-01-01T00:00:00Z",
           "end": "2025-12-31T23:59:59Z"
         },
         "path": "codes.1.n",
-        "value": 4,
+        "value": 3,
         "unit": null,
-        "n": 8,
+        "n": 6,
         "windows": [{ "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
         "refusal": null
       },
@@ -1645,15 +1645,15 @@
         "name": "days_with_data_8462_4",
         "tool": "coverage",
         "args": {
-          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "subject_ref": "2d68ad16-268a-478c-1f84-d0f1976e1a46",
           "loinc": ["8480-6", "8462-4"],
           "start": "2025-01-01T00:00:00Z",
           "end": "2025-12-31T23:59:59Z"
         },
         "path": "codes.1.days_with_data",
-        "value": 4,
+        "value": 3,
         "unit": null,
-        "n": 8,
+        "n": 6,
         "windows": [{ "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
         "refusal": null
       },
@@ -1661,15 +1661,15 @@
         "name": "longest_gap_days_8462_4",
         "tool": "coverage",
         "args": {
-          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "subject_ref": "2d68ad16-268a-478c-1f84-d0f1976e1a46",
           "loinc": ["8480-6", "8462-4"],
           "start": "2025-01-01T00:00:00Z",
           "end": "2025-12-31T23:59:59Z"
         },
         "path": "codes.1.longest_gap_days",
-        "value": 146,
+        "value": 132,
         "unit": null,
-        "n": 8,
+        "n": 6,
         "windows": [{ "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
         "refusal": null
       }
@@ -1679,7 +1679,7 @@
         "name": "days_in_window",
         "tool": "coverage",
         "args": {
-          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "subject_ref": "644ed582-2e59-8b56-564b-9312d1f0d244",
           "loinc": ["8867-4"],
           "start": "2024-01-01T00:00:00Z",
           "end": "2026-01-01T00:00:00Z"
@@ -1687,7 +1687,7 @@
         "path": "days_in_window",
         "value": 732,
         "unit": null,
-        "n": 3,
+        "n": 2,
         "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
         "refusal": null
       },
@@ -1695,15 +1695,15 @@
         "name": "n_8867_4",
         "tool": "coverage",
         "args": {
-          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "subject_ref": "644ed582-2e59-8b56-564b-9312d1f0d244",
           "loinc": ["8867-4"],
           "start": "2024-01-01T00:00:00Z",
           "end": "2026-01-01T00:00:00Z"
         },
         "path": "codes.0.n",
-        "value": 3,
+        "value": 2,
         "unit": null,
-        "n": 3,
+        "n": 2,
         "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
         "refusal": null
       },
@@ -1711,15 +1711,15 @@
         "name": "days_with_data_8867_4",
         "tool": "coverage",
         "args": {
-          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "subject_ref": "644ed582-2e59-8b56-564b-9312d1f0d244",
           "loinc": ["8867-4"],
           "start": "2024-01-01T00:00:00Z",
           "end": "2026-01-01T00:00:00Z"
         },
         "path": "codes.0.days_with_data",
-        "value": 3,
+        "value": 2,
         "unit": null,
-        "n": 3,
+        "n": 2,
         "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
         "refusal": null
       },
@@ -1727,15 +1727,15 @@
         "name": "longest_gap_days_8867_4",
         "tool": "coverage",
         "args": {
-          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "subject_ref": "644ed582-2e59-8b56-564b-9312d1f0d244",
           "loinc": ["8867-4"],
           "start": "2024-01-01T00:00:00Z",
           "end": "2026-01-01T00:00:00Z"
         },
         "path": "codes.0.longest_gap_days",
-        "value": 344,
+        "value": 370,
         "unit": null,
-        "n": 3,
+        "n": 2,
         "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
         "refusal": null
       }
@@ -1927,7 +1927,7 @@
         "name": "days_in_window",
         "tool": "coverage",
         "args": {
-          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "subject_ref": "6aed9210-c500-4375-b0fc-3374c40b8591",
           "loinc": [
             "2947-0",
             "6298-4",
@@ -1946,7 +1946,7 @@
         "path": "days_in_window",
         "value": 10959,
         "unit": null,
-        "n": 211,
+        "n": 60,
         "windows": [{ "start": "1996-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
         "refusal": null
       },
@@ -1954,7 +1954,7 @@
         "name": "n_2947_0",
         "tool": "coverage",
         "args": {
-          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "subject_ref": "6aed9210-c500-4375-b0fc-3374c40b8591",
           "loinc": [
             "2947-0",
             "6298-4",
@@ -1971,9 +1971,9 @@
           "end": "2026-01-01T00:00:00Z"
         },
         "path": "codes.0.n",
-        "value": 23,
+        "value": 6,
         "unit": null,
-        "n": 211,
+        "n": 60,
         "windows": [{ "start": "1996-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
         "refusal": null
       },
@@ -1981,7 +1981,7 @@
         "name": "days_with_data_2947_0",
         "tool": "coverage",
         "args": {
-          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "subject_ref": "6aed9210-c500-4375-b0fc-3374c40b8591",
           "loinc": [
             "2947-0",
             "6298-4",
@@ -1998,9 +1998,9 @@
           "end": "2026-01-01T00:00:00Z"
         },
         "path": "codes.0.days_with_data",
-        "value": 23,
+        "value": 6,
         "unit": null,
-        "n": 211,
+        "n": 60,
         "windows": [{ "start": "1996-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
         "refusal": null
       },
@@ -2008,7 +2008,7 @@
         "name": "longest_gap_days_2947_0",
         "tool": "coverage",
         "args": {
-          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "subject_ref": "6aed9210-c500-4375-b0fc-3374c40b8591",
           "loinc": [
             "2947-0",
             "6298-4",
@@ -2025,9 +2025,9 @@
           "end": "2026-01-01T00:00:00Z"
         },
         "path": "codes.0.longest_gap_days",
-        "value": 7603,
+        "value": 7501,
         "unit": null,
-        "n": 211,
+        "n": 60,
         "windows": [{ "start": "1996-01-01T00:00:00Z", "end": "2026-01-01T00:00:00Z" }],
         "refusal": null
       }
@@ -2037,15 +2037,15 @@
         "name": "robust_z",
         "tool": "baseline_deviation",
         "args": {
-          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
           "loinc": "4548-4",
           "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
           "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
         },
         "path": "robust_z",
-        "value": 0.4847902333738033,
+        "value": 3.8946401918164626,
         "unit": null,
-        "n": 5,
+        "n": 12,
         "windows": [
           { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
           { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
@@ -2056,15 +2056,15 @@
         "name": "baseline_median",
         "tool": "baseline_deviation",
         "args": {
-          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
           "loinc": "4548-4",
           "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
           "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
         },
         "path": "baseline.median",
-        "value": 3.17,
+        "value": 3.225,
         "unit": "%",
-        "n": 5,
+        "n": 12,
         "windows": [
           { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
           { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
@@ -2075,15 +2075,15 @@
         "name": "target_median",
         "tool": "baseline_deviation",
         "args": {
-          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
           "loinc": "4548-4",
           "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
           "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
         },
         "path": "target.median",
-        "value": 3.285,
+        "value": 4.12,
         "unit": "%",
-        "n": 5,
+        "n": 12,
         "windows": [
           { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
           { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
@@ -2094,15 +2094,15 @@
         "name": "baseline_n",
         "tool": "baseline_deviation",
         "args": {
-          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
           "loinc": "4548-4",
           "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
           "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
         },
         "path": "baseline.n",
-        "value": 3,
+        "value": 8,
         "unit": null,
-        "n": 5,
+        "n": 12,
         "windows": [
           { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
           { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
@@ -2113,15 +2113,15 @@
         "name": "target_n",
         "tool": "baseline_deviation",
         "args": {
-          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
           "loinc": "4548-4",
           "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
           "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
         },
         "path": "target.n",
-        "value": 2,
+        "value": 4,
         "unit": null,
-        "n": 5,
+        "n": 12,
         "windows": [
           { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
           { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
@@ -2134,13 +2134,13 @@
         "name": "robust_z",
         "tool": "baseline_deviation",
         "args": {
-          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "subject_ref": "aee7bbe1-0c45-c028-1e62-1f4cdb30c273",
           "loinc": "8867-4",
           "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
           "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
         },
         "path": "robust_z",
-        "value": -10.285984082018077,
+        "value": -7.466612707405904,
         "unit": null,
         "n": 5,
         "windows": [
@@ -2153,13 +2153,13 @@
         "name": "baseline_median",
         "tool": "baseline_deviation",
         "args": {
-          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "subject_ref": "aee7bbe1-0c45-c028-1e62-1f4cdb30c273",
           "loinc": "8867-4",
           "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
           "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
         },
         "path": "baseline.median",
-        "value": 95,
+        "value": 86,
         "unit": "/min",
         "n": 5,
         "windows": [
@@ -2172,13 +2172,13 @@
         "name": "target_median",
         "tool": "baseline_deviation",
         "args": {
-          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "subject_ref": "aee7bbe1-0c45-c028-1e62-1f4cdb30c273",
           "loinc": "8867-4",
           "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
           "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
         },
         "path": "target.median",
-        "value": 64.5,
+        "value": 74.93,
         "unit": "/min",
         "n": 5,
         "windows": [
@@ -2191,7 +2191,7 @@
         "name": "baseline_n",
         "tool": "baseline_deviation",
         "args": {
-          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "subject_ref": "aee7bbe1-0c45-c028-1e62-1f4cdb30c273",
           "loinc": "8867-4",
           "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
           "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
@@ -2210,7 +2210,7 @@
         "name": "target_n",
         "tool": "baseline_deviation",
         "args": {
-          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "subject_ref": "aee7bbe1-0c45-c028-1e62-1f4cdb30c273",
           "loinc": "8867-4",
           "baseline": { "start": "2022-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" },
           "target": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
@@ -2231,7 +2231,7 @@
         "name": "n",
         "tool": "summary_stats",
         "args": {
-          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "subject_ref": "c0a47dee-cc72-29ce-df5a-ea6d306c36a4",
           "loinc": "4548-4",
           "start": "1990-01-01T00:00:00Z",
           "end": "1990-12-31T23:59:59Z"
@@ -2262,7 +2262,7 @@
         "name": "n",
         "tool": "trend",
         "args": {
-          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "subject_ref": "d15b23ed-02d5-3e28-efbd-2604425317c5",
           "loinc": "3016-3",
           "start": "2024-01-01T00:00:00Z",
           "end": "2026-01-01T00:00:00Z"
@@ -2280,7 +2280,7 @@
         "name": "value",
         "tool": "latest_by_loinc",
         "args": {
-          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "subject_ref": "e74367bd-7385-97dc-2c7f-251b4cd9fe29",
           "loinc": ["59408-5"]
         },
         "path": "rows.0.value",
@@ -2296,7 +2296,7 @@
         "name": "n",
         "tool": "summary_stats",
         "args": {
-          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "subject_ref": "eb5910f1-26e6-bc6f-b300-716eae678d6f",
           "loinc": "99999-9",
           "start": "2024-01-01T00:00:00Z",
           "end": "2026-01-01T00:00:00Z"
