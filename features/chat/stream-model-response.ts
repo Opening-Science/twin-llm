@@ -89,7 +89,10 @@ export const streamModelResponse = async (
   const hasWearableNarrative = Object.values(sources).some(Boolean);
 
   const { tools, offeredTools } = forSources(
-    createChatTools({ actor: clerkId, sessionId: turnId, mode: env.DATA_MODE }),
+    createChatTools(
+      { actor: clerkId, sessionId: turnId, mode: env.DATA_MODE },
+      { hasWearableNarrative },
+    ),
     context.disabledSources ?? [],
   );
 
