@@ -6,7 +6,7 @@ Plan for taking the chat from text answers to a surface that shows views, runs s
 
 The chat is a narrow pipe. Twelve closed tools (nine query tools, GBD, guidelines, knowledge) are built in `features/chat/chat-tools.ts`; every call lands on the hash-linked audit chain (`packages/audit`), and `infrastructure/data-mode-policy.ts` keeps personal data local. Answers are text in four sections plus an explainability panel.
 
-What is missing: no charts or cards in answers, tool calls show as one status line, and tool outputs are not stored (`ModelResponse` keeps hashes only). The `/` menu only connects wearables. There is no MCP server, no in-app docs page, and the 3D twin, the genome helix and the wearable charts are not reachable from chat. A generic, computed walk and idle clip play on the scans' 31-joint skeleton and the rigged demo body (#51); `live-motion.ts` scales the heart and lungs.
+What is missing: no charts or cards in answers, tool calls show as one status line, and tool outputs are not stored (`ModelResponse` keeps hashes only). The `/` menu only connects wearables. There is no MCP server, no in-app docs page, and the 3D twin, the genome helix and the wearable charts are not reachable from chat. A generic, computed walk and idle clip play on the scans' 31-joint skeleton and the rigged demo body (#51); `live-motion.ts` scales the heart and lungs, and a schematic four-chamber heart beside the view runs a typical cardiac cycle at the measured rate (#53).
 
 ## Principles
 
