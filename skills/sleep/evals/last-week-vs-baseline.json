@@ -1,0 +1,22 @@
+{
+  "question": "Was last week's sleep shorter than my usual?",
+  "dataMode": "personal",
+  "wearableContext": true,
+  "script": [
+    {
+      "tool": "baseline_deviation",
+      "input": {
+        "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+        "loinc": "93832-4",
+        "baseline": { "start": "2025-09-24", "end": "2025-10-23" },
+        "target": { "start": "2025-10-24", "end": "2025-10-30" }
+      }
+    },
+    { "view": "chart.compare" }
+  ],
+  "expect": {
+    "calls": ["baseline_deviation"],
+    "views": ["chart.compare"],
+    "refusals": []
+  }
+}

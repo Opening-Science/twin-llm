@@ -7,16 +7,17 @@ what actually runs; fix whichever one is wrong.
 
 ## Commands
 
-| Command                  | Purpose                                              |
-| ------------------------ | ---------------------------------------------------- |
-| `bun run typecheck`      | `tsc --noEmit` over the whole project                |
-| `bun run lint`           | ESLint with `--max-warnings=0`: any warning fails    |
-| `bun run lint:claims`    | Banned product-claim wording (see `CONTRIBUTING.md`) |
-| `bun run test`           | Unit tests                                           |
-| `bun run test:isolation` | Test folders that must also pass in their own run    |
-| `bun run format`         | Prettier rewrites files in place                     |
-| `bun run format:check`   | Prettier reports files it would change               |
-| `bun run build`          | Production Next.js build                             |
+| Command                  | Purpose                                                |
+| ------------------------ | ------------------------------------------------------ |
+| `bun run typecheck`      | `tsc --noEmit` over the whole project                  |
+| `bun run lint`           | ESLint with `--max-warnings=0`: any warning fails      |
+| `bun run lint:claims`    | Banned product-claim wording (see `CONTRIBUTING.md`)   |
+| `bun run test`           | Unit tests                                             |
+| `bun run test:isolation` | Test folders that must also pass in their own run      |
+| `bun run skills:check`   | Validates skills and runs their evals (`bun test` too) |
+| `bun run format`         | Prettier rewrites files in place                       |
+| `bun run format:check`   | Prettier reports files it would change                 |
+| `bun run build`          | Production Next.js build                               |
 
 Run typecheck, lint and build before you call a change finished.
 

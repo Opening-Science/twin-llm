@@ -17,8 +17,15 @@
 
 export type DataMode = "synthetic" | "personal";
 
-export type LlmProvider =
-  "exoscale" | "ollama" | "openrouter" | "remote-gpu" | "infomaniak";
+export const LLM_PROVIDERS = [
+  "exoscale",
+  "ollama",
+  "openrouter",
+  "remote-gpu",
+  "infomaniak",
+] as const;
+
+export type LlmProvider = (typeof LLM_PROVIDERS)[number];
 
 /** Values of EXOSCALE_PERSONAL_DATA; the first is the default. */
 export const EXOSCALE_PERSONAL_DATA_SETTINGS = ["off", "consented-pilot"] as const;
