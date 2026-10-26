@@ -19,6 +19,8 @@ import { createHash } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 
 import { isToolRefusal } from "../../packages/query-tools/refusals";
+import { cohortContentSha256 } from "../synthea/cohort-checksum";
+import { COHORT_PRESETS } from "../synthea/cohort-presets";
 import {
   type AnswerKey,
   answerKeySchema,
@@ -32,17 +34,25 @@ import {
   type ValueSpec,
 } from "./question-set";
 
-export const GENERATOR_VERSION = "1";
+export const GENERATOR_VERSION = "2";
 export const ANSWER_KEY_ACTOR = "eval-answer-key";
 export const DEFAULT_QUESTIONS = "evaluation/questions.v1.json";
 export const DEFAULT_OUT = "evaluation/answer-key.v1.json";
 
-/** How the cohort was generated (docs/warehouse.md); the subject count is read live. */
+/** Where `--preset eval` writes the patient files the key is built from. */
+export const EVAL_FHIR_DIR = `${COHORT_PRESETS.eval.out}/fhir`;
+
+/**
+ * How the cohort was generated (`--preset eval`, docs/warehouse.md). The
+ * subject count and the checksum of the patient files are read at build time.
+ */
 export const COHORT_GENERATION = {
   synthea_version: "v4.0.0",
-  seed: 42,
-  population: 30,
-  age: "40-75",
+  seed: COHORT_PRESETS.eval.seed,
+  population: COHORT_PRESETS.eval.population,
+  age: COHORT_PRESETS.eval.age,
+  reference_date: COHORT_PRESETS.eval.referenceDate,
+  end_date: COHORT_PRESETS.eval.endDate,
 } as const;
 
 export type AnswerKeyPorts = Readonly<{
@@ -50,6 +60,8 @@ export type AnswerKeyPorts = Readonly<{
   runTool: (tool: KeyedTool, args: unknown) => Promise<unknown>;
   /** Subjects in the cohort, through the audited `list_subjects`. */
   countSubjects: () => Promise<number>;
+  /** The checksum of the cohort's patient files (`contentSha256` in its manifest). */
+  cohortSha256: () => Promise<string>;
   openTwinSha: () => string;
   /** Today as YYYY-MM-DD. */
   today: () => string;
@@ -239,6 +251,7 @@ export const buildAnswerKey = async (
       id: COHORT_ID,
       ...COHORT_GENERATION,
       subjects: await ports.countSubjects(),
+      content_sha256: await ports.cohortSha256(),
     },
     open_twin_sha: ports.openTwinSha(),
     questions_sha256: questionsSha256(raw),
@@ -316,7 +329,8 @@ export const runBuildAnswerKey = async (
   io.stdout.write(
     [
       `Answer key written to ${outPath}`,
-      `Cohort ${key.cohort.id}: ${key.cohort.subjects} subjects (Synthea ${key.cohort.synthea_version}, seed ${key.cohort.seed})`,
+      `Cohort ${key.cohort.id}: ${key.cohort.subjects} subjects (Synthea ${key.cohort.synthea_version}, seed ${key.cohort.seed}, dates ${key.cohort.reference_date}–${key.cohort.end_date})`,
+      `Patient files checksum ${key.cohort.content_sha256}`,
       `Items keyed: ${summary.itemsKeyed}, values: ${summary.values}, refusals: ${summary.refusals}, null values: ${summary.nullValues}`,
       `open-twin ${key.open_twin_sha}, generated ${key.generated_on}`,
       "",
@@ -368,6 +382,7 @@ export const realPorts = async (today: string): Promise<AnswerKeyPorts> => {
       const result = await tools.runListSubjects(scope, { cohort_id: COHORT_ID });
       return subjectCount(result);
     },
+    cohortSha256: () => cohortContentSha256(EVAL_FHIR_DIR),
     openTwinSha: () =>
       execFileSync("git", ["-C", ".open-twin", "rev-parse", "HEAD"], {
         encoding: "utf8",

@@ -134,14 +134,17 @@ const QUESTIONS = {
 
 const answerKey = (sha: string) => ({
   schema_version: "twin-llm.eval.answer-key.v1",
-  generator_version: "1",
+  generator_version: "2",
   cohort: {
     id: "synthea-v4-seed42",
     synthea_version: "v4.0.0",
     seed: 42,
     population: 30,
     age: "40-75",
-    subjects: 33,
+    reference_date: "20260101",
+    end_date: "20260101",
+    subjects: 37,
+    content_sha256: "c".repeat(64),
   },
   open_twin_sha: "a".repeat(40),
   questions_sha256: sha,
