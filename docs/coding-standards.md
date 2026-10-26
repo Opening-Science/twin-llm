@@ -185,7 +185,8 @@ and works the same on server and client.
   else. Chart coordinates and React keys are not display text.
 - The locale is `en-GB` (`12,345.7`, `16 Oct 2026`).
 - Degrees are written `12.3°`, without a space. Stored BodyLoop data keeps its `deg`
-  unit.
+  unit. Powers are typeset the same way through `formatUnit`: a stored `m2`, `m3` or
+  `kg/m2` reads `m²`, `m³`, `kg/m²`.
 - Halves round away from zero (`0.15` becomes `0.2`). Missing, `NaN` and infinite values
   show as `—`. A measured zero, such as the cost of a free model, is shown as zero.
 - "Today" is `isoLocalDate()`, the viewer's own calendar day, not a UTC date.

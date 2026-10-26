@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { SYNTHETIC_OURA_DATA, SYNTHETIC_WINDOW } from "./fixtures/synthetic-sync-data";
-import { buildOuraSummary } from "./summary";
+import { buildOuraSummary, sleepPeriods } from "./summary";
 
 describe("buildOuraSummary workouts, SpO2, stress and VO2max", () => {
   const summary = buildOuraSummary(SYNTHETIC_OURA_DATA, SYNTHETIC_WINDOW);
@@ -67,5 +67,95 @@ describe("buildOuraSummary workouts, SpO2, stress and VO2max", () => {
     expect(summary.narrative.split("\n").at(-1)).toBe(
       "- [vo2max.value.2026-01-02] VO2 max (2026-01-02): 41.5 mL/kg/min",
     );
+  });
+});
+
+const sleepPeriod = (
+  id: string,
+  day: string,
+  type: "long_sleep" | "rest" | "deleted" | "sleep" | "late_nap",
+  minutes: number,
+) => ({
+  id,
+  day,
+  type,
+  bedtime_start: `${day}T00:00:00+00:00`,
+  bedtime_end: `${day}T08:00:00+00:00`,
+  total_sleep_duration: minutes * 60,
+  average_heart_rate: type === "long_sleep" ? 54 : 70,
+});
+
+describe("buildOuraSummary sleep periods", () => {
+  // Synthetic: a 2-minute rest listed before a 7 h 12 min night, then a day
+  // with no long_sleep, two short periods of one type and a deleted one.
+  const summary = buildOuraSummary(
+    [
+      {
+        type: "sleep",
+        data: {
+          next_token: null,
+          data: [
+            sleepPeriod("p1", "2026-01-02", "rest", 2),
+            sleepPeriod("p2", "2026-01-02", "long_sleep", 432),
+            sleepPeriod("p3", "2026-01-02", "late_nap", 25),
+            sleepPeriod("p4", "2026-01-03", "sleep", 40),
+            sleepPeriod("p5", "2026-01-03", "sleep", 310),
+            sleepPeriod("p6", "2026-01-03", "sleep", 15),
+            sleepPeriod("p7", "2026-01-03", "deleted", 500),
+          ],
+        },
+      },
+    ],
+    SYNTHETIC_WINDOW,
+  );
+
+  test("each day's main sleep is keyed long_sleep; naps and rests keep their type", () => {
+    expect(
+      summary.metrics
+        .filter((m) => m.key.startsWith("sleep.duration."))
+        .map((m) => [m.key, m.value]),
+    ).toEqual([
+      ["sleep.duration.rest.2026-01-02", 2],
+      ["sleep.duration.long_sleep.2026-01-02", 432],
+      ["sleep.duration.late_nap.2026-01-02", 25],
+      ["sleep.duration.sleep.2026-01-03", 40],
+      ["sleep.duration.long_sleep.2026-01-03", 310],
+      ["sleep.duration.sleep_2.2026-01-03", 15],
+    ]);
+  });
+
+  test("every metric of a period follows its key", () => {
+    expect(
+      summary.metrics.filter((m) => m.key.startsWith("sleep.hr.")).map((m) => m.key),
+    ).toEqual([
+      "sleep.hr.rest.2026-01-02",
+      "sleep.hr.long_sleep.2026-01-02",
+      "sleep.hr.late_nap.2026-01-02",
+      "sleep.hr.sleep.2026-01-03",
+      "sleep.hr.long_sleep.2026-01-03",
+      "sleep.hr.sleep_2.2026-01-03",
+    ]);
+  });
+});
+
+describe("sleepPeriods", () => {
+  test("a second long_sleep on a day is not the main one", () => {
+    expect(
+      sleepPeriods([
+        { day: "2026-01-02", type: "long_sleep", total_sleep_duration: 3600 },
+        { day: "2026-01-02", type: "long_sleep", total_sleep_duration: 7200 },
+        { day: "2026-01-02", type: null, total_sleep_duration: 60 },
+        { day: "2026-01-02", type: "deleted", total_sleep_duration: 9000 },
+      ]),
+    ).toEqual(["extra_sleep", "long_sleep", "other_sleep", null]);
+  });
+
+  test("without a long_sleep or durations, the first period is the main one", () => {
+    expect(
+      sleepPeriods([
+        { day: "2026-01-02", type: "rest" },
+        { day: "2026-01-02", type: "rest" },
+      ]),
+    ).toEqual(["long_sleep", "rest"]);
   });
 });

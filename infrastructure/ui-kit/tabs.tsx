@@ -15,7 +15,8 @@ import { cn } from "@/infrastructure/ui";
  * wrong. Buttons that merely look like tabs announce nothing.
  *
  * The selected tab takes the accent underline because choosing a tab is an
- * interactive act; the panel keeps the app-wide focus ring.
+ * interactive act; the panel keeps the app-wide focus ring. The list wraps
+ * when its tabs do not fit, so a narrow panel never cuts a tab off.
  */
 
 export const Tabs = ({
@@ -35,7 +36,7 @@ export const TabsList = ({
 }: ComponentProps<typeof TabsPrimitive.List>) => (
   <TabsPrimitive.List
     data-slot="tabs-list"
-    className={cn("border-border flex gap-1 border-b", className)}
+    className={cn("border-border flex flex-wrap gap-x-1 border-b", className)}
     {...props}
   />
 );

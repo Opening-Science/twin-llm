@@ -4,10 +4,11 @@ import { useEffect, useRef, type ReactNode, type Ref } from "react";
 
 import type { VitronicPropertyRow } from "@/features/vitronic/vitronic-status-view";
 import {
-  EMPTY_VALUE,
   formatMetricValue,
   formatNumber,
   measureKindFor,
+  propertyLabel,
+  withUnit,
 } from "@/infrastructure/format-measure";
 import { Button } from "@/infrastructure/ui-kit/button";
 import { Field } from "@/infrastructure/ui-kit/field";
@@ -24,6 +25,8 @@ export const BODY_PANEL_LABEL = "Scan details";
 export const PANEL_SEARCH_LABEL = "Search";
 export const PANEL_EMPTY = "None shown.";
 export const PANEL_NO_MATCH = "Nothing matches.";
+/** What an open panel says when it has nothing to list yet. */
+export const PANEL_PICK_PROMPT = "Click a part of the body to see its details.";
 
 const PANEL_TABS = [
   { value: "properties", label: "Properties" },
@@ -44,16 +47,15 @@ const SCROLL_AREA =
 
 /**
  * UI-only rounding; stored SI values stay as received. A unit with a known kind
- * (kg) uses that kind's precision; m, m2 and m3 keep two decimals, so a volume
- * of 0.065 m3 does not collapse to 0.1.
+ * (kg) uses that kind's precision; m, m² and m³ keep two decimals, so a volume
+ * of 0.065 m³ does not collapse to 0.1.
  */
 export const formatPropertyDisplay = (
   row: Pick<VitronicPropertyRow, "value" | "unit">,
 ): string => {
   if (measureKindFor("", row.unit) !== null)
     return formatMetricValue({ key: "", value: row.value, unit: row.unit });
-  const number = formatNumber(row.value, 2);
-  return row.unit && number !== EMPTY_VALUE ? `${number} ${row.unit}` : number;
+  return withUnit(formatNumber(row.value, 2), row.unit);
 };
 
 export type PanelRow = Readonly<{
@@ -75,7 +77,7 @@ export const propertyRows = (
 ): readonly PanelRow[] =>
   properties.map((row) => ({
     id: row.path,
-    label: row.path,
+    label: propertyLabel(row.path),
     value: formatPropertyDisplay(row),
     group: null,
   }));
@@ -191,7 +193,7 @@ const PropertyList = ({ rows }: Readonly<{ rows: readonly PanelRow[] }>) => (
   <ul className="text-xs">
     {rows.map((row) => (
       <li key={row.id} className="flex justify-between gap-2 px-2.5 py-1">
-        <span className="min-w-0 truncate font-mono">{row.label}</span>
+        <span className="min-w-0 truncate">{row.label}</span>
         <span className="shrink-0 tabular-nums">{row.value}</span>
       </li>
     ))}
@@ -362,12 +364,19 @@ export const BodyPanel = ({
       (tab.value !== "biomarkers" || biomarkers !== undefined),
   );
   const offeredTabs = offered.map((tab) => tab.value);
-  const activeTab = activePanelTab(panel.tab, offeredTabs, {
+  const counts = {
     properties: lists.properties.length,
     markers: lists.markers.length,
     measures: lists.measures.length,
     biomarkers: biomarkers?.rows.length ?? 0,
-  });
+  };
+  const activeTab = activePanelTab(panel.tab, offeredTabs, counts);
+  // An open panel is never an empty box: with no rows anywhere it says what to do.
+  if (offeredTabs.every((tab) => counts[tab] === 0)) {
+    return (
+      <p className="text-muted-foreground px-1.5 py-1 text-xs">{PANEL_PICK_PROMPT}</p>
+    );
+  }
   return (
     <Tabs
       value={activeTab}
