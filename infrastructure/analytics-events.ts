@@ -3,8 +3,8 @@ import "server-only";
 import { posthogServer } from "./posthog";
 
 /**
- * Product funnel events: a prompt goes out, each model answers or fails, and
- * a vote is cast. The properties are ids, counts and statuses, never prompt
+ * Product funnel events: a prompt goes out and each model answers or fails.
+ * The properties are ids, counts and statuses, never prompt
  * or answer text. Model-call metrics are a separate event, built in
  * `features/chat/generation-analytics.ts`.
  *
@@ -13,7 +13,7 @@ import { posthogServer } from "./posthog";
  */
 export type FunnelEvent = Readonly<{
   distinctId: string;
-  event: "prompt_sent" | "model_answered" | "vote_cast";
+  event: "prompt_sent" | "model_answered";
   properties: Readonly<Record<string, string | number | readonly string[]>>;
 }>;
 
@@ -72,19 +72,6 @@ export const trackModelAnswered = (
         modelId: answered.modelId,
         status: answered.status,
       },
-    },
-    sink,
-  );
-
-export const trackVoteCast = (
-  vote: Readonly<{ clerkId: string; turnId: string; modelResponseId: string }>,
-  sink: FunnelSink | null = liveSink(),
-): void =>
-  emit(
-    {
-      distinctId: vote.clerkId,
-      event: "vote_cast",
-      properties: { turnId: vote.turnId, modelResponseId: vote.modelResponseId },
     },
     sink,
   );

@@ -1,12 +1,8 @@
 import type { WhoopSyncPayload } from "@open-twin/provider-whoop";
+import { dayKey } from "@/infrastructure/day-key";
 import type { WhoopMetric, WhoopSummary } from "@/infrastructure/whoop-types";
 
 export type { WhoopMetric, WhoopSummary };
-
-const dayKey = (iso?: string) => {
-  if (!iso) return "unknown";
-  return iso.slice(0, 10);
-};
 
 /**
  * Flattens Whoop recovery / cycle / sleep payloads into citation-friendly keys.

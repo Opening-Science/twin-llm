@@ -26,6 +26,7 @@ const SECTIONS: readonly Readonly<{ prefix: string; label: string }>[] = [
   { prefix: "/digital-twin", label: "Digital Twin" },
   { prefix: "/data", label: "Data" },
   { prefix: "/models", label: "Models" },
+  { prefix: "/docs", label: "Docs" },
 ];
 
 const HOME: Crumb = { label: "TwinLLM" };

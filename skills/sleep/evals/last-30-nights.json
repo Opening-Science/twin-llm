@@ -1,0 +1,31 @@
+{
+  "question": "How has my sleep duration looked over the last 30 nights?",
+  "dataMode": "personal",
+  "wearableContext": true,
+  "script": [
+    {
+      "tool": "coverage",
+      "input": {
+        "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+        "loinc": ["93832-4"],
+        "start": "2025-10-01",
+        "end": "2025-10-30"
+      }
+    },
+    {
+      "tool": "trend",
+      "input": {
+        "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+        "loinc": "93832-4",
+        "start": "2025-10-01",
+        "end": "2025-10-30"
+      }
+    },
+    { "view": "chart.timeseries" }
+  ],
+  "expect": {
+    "calls": ["coverage", "trend"],
+    "views": ["chart.timeseries"],
+    "refusals": []
+  }
+}

@@ -1,3 +1,4 @@
+import { dayKey } from "@/infrastructure/day-key";
 import type { VitronicSummary } from "@/infrastructure/vitronic-types";
 import { presentSummaryMetric, UNIT_M, UNIT_RAD } from "./present-measure";
 
@@ -35,11 +36,6 @@ export type VitronicSummaryInput = Readonly<{
   cross_section?: unknown;
   properties?: readonly { readonly property_path: string; readonly value: unknown }[];
 }>;
-
-const dayKey = (iso?: string): string => {
-  if (!iso) return "unknown";
-  return iso.slice(0, 10);
-};
 
 const asNumber = (value: unknown): number | null => {
   if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -176,10 +172,14 @@ export const toChatVitronicSummary = (summary: VitronicSummary): VitronicSummary
   metrics: summary.metrics.filter(isChatVitronicMetric).map(presentSummaryMetric),
 });
 
-export const propertyRowsFromSummary = (summary: VitronicSummary): readonly VitronicPropertyRow[] => {
+export const propertyRowsFromSummary = (
+  summary: VitronicSummary,
+): readonly VitronicPropertyRow[] => {
   const rows: VitronicPropertyRow[] = [];
   for (const metric of summary.metrics) {
-    const match = /^vitronic\.property\.(.+)\.(?:\d{4}-\d{2}-\d{2}|unknown)$/.exec(metric.key);
+    const match = /^vitronic\.property\.(.+)\.(?:\d{4}-\d{2}-\d{2}|unknown)$/.exec(
+      metric.key,
+    );
     if (!match?.[1]) continue;
     if (typeof metric.value !== "number" || !metric.unit) continue;
     rows.push({ path: match[1], value: metric.value, unit: metric.unit });

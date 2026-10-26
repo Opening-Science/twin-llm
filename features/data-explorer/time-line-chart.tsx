@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { type PointerEvent as ReactPointerEvent, useState } from "react";
 
 import { formatDate, formatNumber } from "@/infrastructure/format-measure";
 
@@ -19,6 +19,10 @@ import {
  * years looks like five years), y is one axis in the series' own unit. A thin
  * line, dots while there are few enough to see, and a crosshair with a dot and
  * a tooltip at the reading nearest the pointer.
+ *
+ * For playback over one night: an hour axis, a cursor held at one reading,
+ * a pointer that seeks, and a line that breaks over a gap instead of bridging
+ * it, so a missing stretch never looks measured.
  */
 
 export type TimePoint = Readonly<{ at: string; value: number }>;
@@ -27,6 +31,34 @@ const PAD = { top: 12, right: 12, bottom: 26, left: 56 } as const;
 const DOTS_UP_TO = 80;
 
 const dayOf = (iso: string): string => iso.slice(0, 10);
+const clockOf = (time: number): string => new Date(time).toISOString().slice(11, 16);
+
+const HOUR_MS = 3_600_000;
+
+/** Whole hours inside [start, end], every `step` hours, as UTC wall clock. */
+export const hourTickTimes = (
+  start: number,
+  end: number,
+  step = 2,
+): readonly number[] => {
+  const first = Math.ceil(start / HOUR_MS) * HOUR_MS;
+  const count = Math.max(0, Math.floor((end - first) / (HOUR_MS * step)) + 1);
+  return Array.from({ length: count }, (_, i) => first + i * HOUR_MS * step);
+};
+
+/** "M" starts a new run of the line wherever two readings are further apart than `breakOverMs`. */
+export const linePath = (
+  xs: readonly number[],
+  ys: readonly number[],
+  times: readonly number[],
+  breakOverMs: number,
+): string =>
+  xs
+    .map((x, i) => {
+      const jump = i === 0 || times[i]! - times[i - 1]! > breakOverMs;
+      return `${jump ? "M" : "L"}${x.toFixed(1)},${ys[i]!.toFixed(1)}`;
+    })
+    .join(" ");
 
 export const TimeLineChart = ({
   points,
@@ -34,12 +66,23 @@ export const TimeLineChart = ({
   decimals,
   label,
   height = 220,
+  timeAxis = "years",
+  cursorIndex = null,
+  onSeek,
+  breakOverMs = Infinity,
 }: {
   readonly points: readonly TimePoint[];
   readonly unit: string;
   readonly decimals: number;
   readonly label: string;
   readonly height?: number;
+  /** Years for a life; hours (UTC wall clock) for one night. */
+  readonly timeAxis?: "years" | "hours";
+  /** A reading held under the crosshair while the pointer is elsewhere. */
+  readonly cursorIndex?: number | null;
+  /** Pressing or dragging on the chart asks for the nearest reading. */
+  readonly onSeek?: (index: number) => void;
+  readonly breakOverMs?: number;
 }) => {
   const [ref, width] = useMeasuredWidth(640);
   const [hover, setHover] = useState<number | null>(null);
@@ -60,18 +103,21 @@ export const TimeLineChart = ({
       : PAD.left + ((time - start) / (end - start)) * plotW;
   const yOf = (value: number) => PAD.top + plotH * (1 - (value - low) / (high - low));
   const xs = times.map(xOf);
-  const path = points
-    .map(
-      (point, i) =>
-        `${i === 0 ? "M" : "L"}${xs[i]!.toFixed(1)},${yOf(point.value).toFixed(1)}`,
-    )
-    .join(" ");
+  const path = linePath(xs, values.map(yOf), times, breakOverMs);
   const tickText = tickDecimals(ticks);
-  const yearTicks = yearTickTimes(start, end);
-  const shownYears = labelIndexes(yearTicks.length, Math.floor(plotW / 48)).map(
-    (i) => yearTicks[i]!,
+  const xTicks =
+    timeAxis === "hours" ? hourTickTimes(start, end) : yearTickTimes(start, end);
+  const shownYears = labelIndexes(xTicks.length, Math.floor(plotW / 48)).map(
+    (i) => xTicks[i]!,
   );
-  const hovered = hover === null ? null : points[hover];
+  const xTickText = (time: number): string =>
+    timeAxis === "hours" ? clockOf(time) : String(new Date(time).getUTCFullYear());
+  const shownIndex = hover ?? cursorIndex;
+  const hovered = shownIndex === null ? null : (points[shownIndex] ?? null);
+  const seekAt = (event: ReactPointerEvent<SVGSVGElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    return nearestIndex(xs, ((event.clientX - rect.left) / rect.width) * width);
+  };
   const valueText = (value: number) =>
     `${formatNumber(value, decimals)}${unit ? ` ${unit}` : ""}`;
 
@@ -85,10 +131,18 @@ export const TimeLineChart = ({
         role="img"
         aria-label={label}
         onMouseLeave={() => setHover(null)}
+        onPointerDown={
+          onSeek
+            ? (event) => {
+                event.currentTarget.setPointerCapture(event.pointerId);
+                onSeek(seekAt(event));
+              }
+            : undefined
+        }
         onPointerMove={(event) => {
-          const rect = event.currentTarget.getBoundingClientRect();
-          const x = ((event.clientX - rect.left) / rect.width) * width;
-          setHover(nearestIndex(xs, x));
+          const index = seekAt(event);
+          setHover(index);
+          if (onSeek && event.buttons === 1) onSeek(index);
         }}
       >
         {ticks.map((tick) => (
@@ -147,15 +201,15 @@ export const TimeLineChart = ({
               }
               className="fill-muted-foreground font-mono text-[11px]"
             >
-              {new Date(time).getUTCFullYear()}
+              {xTickText(time)}
             </text>
           );
         })}
-        {hovered && hover !== null && (
+        {hovered && shownIndex !== null && (
           <g>
             <line
-              x1={xs[hover]}
-              x2={xs[hover]}
+              x1={xs[shownIndex]}
+              x2={xs[shownIndex]}
               y1={PAD.top}
               y2={height - PAD.bottom}
               className="stroke-muted-foreground"
@@ -163,7 +217,7 @@ export const TimeLineChart = ({
               strokeWidth={1}
             />
             <circle
-              cx={xs[hover]}
+              cx={xs[shownIndex]}
               cy={yOf(hovered.value)}
               r={4.5}
               className="text-chart-1 stroke-card fill-current"
@@ -178,9 +232,13 @@ export const TimeLineChart = ({
         }
         chart={{ width, height }}
       >
-        {hovered && (
+        {hovered && hover !== null && (
           <TooltipBody
-            title={formatDate(dayOf(hovered.at))}
+            title={
+              timeAxis === "hours"
+                ? clockOf(Date.parse(hovered.at))
+                : formatDate(dayOf(hovered.at))
+            }
             rows={[["Value", valueText(hovered.value)]]}
           />
         )}

@@ -8,7 +8,7 @@ import {
   type ArkStatusOk,
   type ArkStatusUnavailable,
 } from "./ark-card";
-import { emptySetup } from "./setup-fixture";
+import { emptySetup } from "./fixtures/setup-fixture";
 
 const ok = (overrides?: Partial<ArkStatusOk>): ArkStatusOk => ({
   enabled: true,

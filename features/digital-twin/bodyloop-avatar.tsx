@@ -78,6 +78,9 @@ import {
 import { PickCard, ProjectAnchor } from "./environment/pick-card";
 import { IDLE_STATUS, type LiveStatus } from "./live/live-conditioning";
 import { LiveLines } from "./live/live-lines";
+import { NIGHT_NEEDS_READINGS } from "./live/live-copy";
+import { NightPlayback, useNightPlayback } from "./live/night-playback";
+import { nightPlaybackFor } from "./live/night-series";
 import {
   linkedRows,
   pickHighlight,
@@ -995,20 +998,27 @@ export const BodyLoopAvatar = ({
     setPicked(null);
     viewRef.current?.focus();
   }, []);
-  const { live: liveVitals } = biomarkers;
+  const { live: measuredVitals } = biomarkers;
+  // Night playback replaces the newest readings while it is open, inline only.
+  const night = useNightPlayback(biomarkerSubject, reducedMotion);
+  const nightSynthetic = nightPlaybackFor(biomarkerSubject) === "synthetic";
+  const playing = nightSynthetic && night.open && !environment.active;
+  const liveVitals = playing ? night.vitals : measuredVitals;
   const liveAvailable =
     !reducedMotion &&
-    (liveVitals.heart !== null ||
-      liveVitals.breath !== null ||
-      liveVitals.hrvBelow !== null);
-  const liveOn = liveAvailable && (environment.active ? liveInEnvironment : liveInline);
+    (measuredVitals.heart !== null ||
+      measuredVitals.breath !== null ||
+      measuredVitals.hrvBelow !== null);
+  const liveOn =
+    !reducedMotion &&
+    (playing || (liveAvailable && (environment.active ? liveInEnvironment : liveInline)));
   // Primitives only, so the page hears about a change once, not on every render.
   const contextScans = listedScans.length;
   const contextValues = biomarkers.rows.filter((row) => row.value !== null).length;
   const contextLive =
-    liveVitals.heart !== null ||
-    liveVitals.breath !== null ||
-    liveVitals.hrvBelow !== null;
+    measuredVitals.heart !== null ||
+    measuredVitals.breath !== null ||
+    measuredVitals.hrvBelow !== null;
   const contextStatus = biomarkers.status;
   useEffect(() => {
     if (!subjectsReady || !onContext) return;
@@ -1032,6 +1042,10 @@ export const BodyLoopAvatar = ({
     () => (picked ? linkedRows(picked.target, biomarkers.rows, scheme) : []),
     [picked, biomarkers.rows, scheme],
   );
+  // HRA parts carry a group key; BodyParts3D parts have none, so they get no line.
+  const pickedGroup = picked?.target.kind === "part" ? picked.target.group : null;
+  const pickedOrgan =
+    biomarkers.organs.find((status) => status.organ === pickedGroup) ?? null;
   // A card describes one part of one body on one atlas; any of those changing closes it.
   const bodyKey = isDemo ? `demo:${demoSex}` : `scan:${shownViatarId}`;
   useEffect(() => {
@@ -1310,16 +1324,22 @@ export const BodyLoopAvatar = ({
             vitals={liveVitals}
             scheme={scheme}
             context={{
-              on: environment.active ? liveInEnvironment : liveInline,
+              on: playing || (environment.active ? liveInEnvironment : liveInline),
               inEnvironment: environment.active,
               reducedMotion,
             }}
             extra={motionLines(motion.control, anatomy.state.targetDepth > 0)}
           />
+          {environment.active ? null : nightSynthetic ? (
+            <NightPlayback state={night} reducedMotion={reducedMotion} />
+          ) : (
+            <p className="twin-live-lines">{NIGHT_NEEDS_READINGS}</p>
+          )}
           {environment.active && picked ? (
             <PickCard
               picked={picked}
               linked={linked}
+              organ={pickedOrgan}
               selectedId={biomarkers.selectedId}
               store={anchorStore}
               onSelectRow={(id) => {

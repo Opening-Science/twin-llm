@@ -1,3 +1,5 @@
+import { notFound } from "next/navigation";
+
 import type { TurnState } from "./conversation";
 import { type SavedResponseRow, toSavedResponseState } from "./saved-response-state";
 
@@ -15,6 +17,11 @@ import { type SavedResponseRow, toSavedResponseState } from "./saved-response-st
  * confirm that a thread exists.
  *
  * The reads are injected so the rule is tested with plain values.
+ *
+ * `requireOwnedThread` turns "nothing" into Next's 404. The route calls it in
+ * its layout, above the loading boundary: once a loading fallback has been
+ * streamed the status is fixed at 200, and a 404 thrown after that point only
+ * changes the page body (#1).
  */
 
 export type StoredThread = Readonly<{
@@ -41,6 +48,16 @@ export type OwnedThread = Readonly<{
   turns: readonly TurnState[];
 }>;
 
+/** Rows written before the position was stored sort after numbered rows. */
+const NO_POSITION = Number.MAX_SAFE_INTEGER;
+
+/**
+ * Rows in the order the models were picked. Rows without a position keep
+ * the order they came in.
+ */
+export const inPickOrder = (rows: readonly SavedResponseRow[]): SavedResponseRow[] =>
+  [...rows].sort((a, b) => (a.position ?? NO_POSITION) - (b.position ?? NO_POSITION));
+
 export const loadOwnedThread = async (
   threadId: string,
   reads: ThreadReads,
@@ -59,7 +76,16 @@ export const loadOwnedThread = async (
     turns: thread.turns.map((turn) => ({
       id: turn.id,
       prompt: turn.prompt,
-      answers: turn.responses.map(toSavedResponseState),
+      answers: inPickOrder(turn.responses).map(toSavedResponseState),
     })),
   };
+};
+
+export const requireOwnedThread = async (
+  threadId: string,
+  reads: ThreadReads,
+): Promise<OwnedThread> => {
+  const thread = await loadOwnedThread(threadId, reads);
+  if (!thread) notFound();
+  return thread;
 };

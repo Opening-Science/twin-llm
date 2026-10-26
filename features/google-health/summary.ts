@@ -1,5 +1,6 @@
 import type { Bundle, Observation } from "fhir/r4";
 
+import { dayKey } from "@/infrastructure/day-key";
 import { GOOGLE_MEASURE_LABELS } from "@/infrastructure/format-measure";
 import type {
   GoogleHealthMetric,
@@ -42,11 +43,6 @@ const SUM_BY_DAY = new Set([
   "basal-energy-burned",
   "floors",
 ]);
-
-const dayKey = (iso?: string | null) => {
-  if (!iso) return "unknown";
-  return iso.slice(0, 10);
-};
 
 const measureFromObservation = (observation: Observation): string => {
   const identifier = observation.identifier?.find(

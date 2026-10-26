@@ -1,3 +1,4 @@
+import { utcDay } from "@/infrastructure/day-key";
 import { isoLocalDate } from "@/infrastructure/format-measure";
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -9,9 +10,6 @@ export type SyncDateWindow = {
   readonly startDate: string;
   readonly endDate: string;
 };
-
-// UTC on purpose: only used to canonicalise a parsed YYYY-MM-DD, never for "today".
-const isoDate = (d: Date) => d.toISOString().slice(0, 10);
 
 const defaultWindow = (): SyncDateWindow => {
   const end = new Date();
@@ -25,8 +23,9 @@ const parseUtcDate = (value: string): number | null => {
   if (!ISO_DATE_RE.test(value)) return null;
   const [y, m, d] = value.split("-").map(Number);
   const ms = Date.UTC(y, m - 1, d);
-  // Reject non-canonical dates (e.g. 2024-02-31 → March).
-  if (isoDate(new Date(ms)) !== value) return null;
+  // Reject non-canonical dates (e.g. 2024-02-31 → March). UTC on purpose: this
+  // only canonicalises a parsed YYYY-MM-DD, never "today".
+  if (utcDay(new Date(ms)) !== value) return null;
   return ms;
 };
 

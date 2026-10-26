@@ -29,6 +29,8 @@ describe("crumbsFor", () => {
     expect(crumbsFor("/data")).toEqual([{ label: "Data" }]);
     expect(crumbsFor("/data/subjects")).toEqual([{ label: "Data" }]);
     expect(crumbsFor("/data/training/smoke/3")).toEqual([{ label: "Data" }]);
+    expect(crumbsFor("/docs")).toEqual([{ label: "Docs" }]);
+    expect(crumbsFor("/docs/evaluation/harness")).toEqual([{ label: "Docs" }]);
     expect(crumbsFor("/database")).toEqual([{ label: "TwinLLM" }]);
     expect(crumbsFor("/benchmarks")).toEqual([{ label: "TwinLLM" }]);
   });

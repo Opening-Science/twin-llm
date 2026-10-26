@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
+import { organStatus } from "@/packages/biomarkers/organ-map";
+
 import { markerRows } from "../biomarkers/biomarker-rows";
 import { cardPlacement, createAnchorStore, CARD_WIDTH_PX } from "./card-anchor";
 import {
@@ -31,6 +33,7 @@ const render = (props: Partial<PickCardProps> & Pick<PickCardProps, "picked">) =
   renderToStaticMarkup(
     createElement(PickCard, {
       linked: [],
+      organ: null,
       selectedId: null,
       store: createAnchorStore(),
       onSelectRow: () => undefined,
@@ -57,6 +60,23 @@ describe("PickCard", () => {
     expect(html.match(/<li>/g)?.length).toBe(10);
     expect(html.match(/aria-pressed="true"/g)?.length).toBe(1);
     expect(html).toContain('aria-label="Close"');
+  });
+
+  test("an organ with a mapped value says which marker is furthest from its range", () => {
+    const [liver] = organStatus(
+      [
+        { loinc: "2324-2", value: 70, unitUcum: "U/L" },
+        { loinc: "1742-6", value: 30, unitUcum: "U/L" },
+      ],
+      { sex: "male", ageYears: 40 },
+    );
+    const html = render({ picked: LIVER, organ: liver ?? null });
+    expect(texts(html, "p")).toEqual([
+      "Digestive · Organs · UBERON:0002107",
+      CARD_ATLAS_NOTE,
+      "Range position: Gamma-GT (GGT) · Above the published range",
+      NO_LINKED_BIOMARKERS,
+    ]);
   });
 
   test("a part with no linked marker says so", () => {

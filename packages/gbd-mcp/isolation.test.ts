@@ -46,12 +46,12 @@ describe("GBD tool isolation", () => {
   });
 
   test("stream-model-response merges GBD tools without wearable summaries", () => {
-    expect(streamSource).toContain("createChatTools({");
+    expect(streamSource).toMatch(/createChatTools\(\s*\{/);
     expect(streamSource).not.toMatch(
       /createChatTools\([^)]*(oura|whoop|googleHealth|vitronic)/i,
     );
     expect(chatToolsSource).toContain("createGbdTools(scope)");
-    expect(chatToolsSource).toContain("createQueryTools(scope, ports?.query)");
+    expect(chatToolsSource).toContain("createQueryTools(scope, options?.query)");
     expect(chatToolsSource).toContain("createGuidelineTools(scope)");
     expect(turnSource).toContain("drainGbdTurn(turnId)");
     expect(turnSource).toContain("drainGuidelineTurn(turnId)");
