@@ -21,7 +21,7 @@ The Body twin viewer can slide from the BodyLoop scan into stacked reference ana
 bun run anatomy:fetch
 ```
 
-The script downloads each file with a size cap, checks its pinned SHA-256 and only then writes it (`.partial`, then rename). A mismatch writes nothing. Files land in `ANATOMY_DATA_DIR` (default `data/anatomy/`, gitignored). With no flags it fetches every atlas and both demo bodies. `bun run anatomy:fetch --check` reports without downloading; `--atlas <id>` fetches one atlas (`bodyparts3d`, `hra-f`, `hra-m`) and `--demo <id>` one demo body (`anny-adult-m`, `anny-adult-f`).
+The script downloads each file with a size cap, checks its pinned SHA-256 and only then writes it (`.partial`, then rename). A mismatch writes nothing. Files land in `ANATOMY_DATA_DIR` (default `data/anatomy/`, gitignored). With no flags it fetches every atlas, both demo bodies and both rigged demo bodies. `bun run anatomy:fetch --check` reports without downloading; `--atlas <id>` fetches one atlas (`bodyparts3d`, `hra-f`, `hra-m`), `--demo <id>` one demo body and `--rigged <id>` one rigged demo body (`anny-adult-m`, `anny-adult-f`); `--skip-rigged` leaves the rigged bodies out.
 
 Without these files the Digital Twin page says "Reference anatomy is not available here." or "Could not load the demo body." and names no command; the API responses (`/api/anatomy/...`) still name `bun run anatomy:fetch`.
 
@@ -119,12 +119,16 @@ The Body twin subject picker always offers **Demo (synthetic)** next to the Body
 ### Rigged demo bodies
 
 ```bash
-bun run anatomy:bake-rigged            # both; --demo <id> for one, --check to report
+bun run anatomy:fetch --rigged anny-adult-m   # the normal route: download from the release (plain bun run anatomy:fetch fetches both)
+bun run anatomy:bake-rigged                   # fallback: bake locally (needs uv); --demo <id> for one, --check to report
 ```
 
-`bun run setup:local` runs this when a rigged body is missing and uv is on PATH; without uv it skips the bake and prints how to install uv. Until the bodies are baked, Walk and Idle are disabled and say "Run bun run anatomy:bake-rigged (needs uv)".
+The rigged bodies are assets of this repository's [`anatomy-rigged-v1`](https://github.com/Opening-Science/twin-llm/releases/tag/anatomy-rigged-v1) release. `anatomy:fetch` downloads them on every platform with no Python, follows GitHub's redirect only to `github.com`, `release-assets.githubusercontent.com` or `objects.githubusercontent.com` over https, and installs a file only when its bytes and SHA-256 match the pin in `packages/anatomy/rigged-bodies.ts`. `bun run setup:local` downloads them when one is missing and bakes them only when the download fails and uv is on PATH. Until they are installed, Walk, Idle and Dance are disabled and say "Run bun run anatomy:fetch."
 
-- Needs [uv](https://docs.astral.sh/uv/). `scripts/anatomy/bake-anny-rigged.py` runs with `uv run --script` against `scripts/anatomy/bake-anny-rigged.py.lock` (anny 0.6.2, torch 2.14.1 CPU and every transitive dependency pinned; about 7 s per body once the environment is cached). It writes to a scratch file; `scripts/anatomy/bake-rigged.ts` installs it into `data/anatomy/` only when its bytes match the pin in `packages/anatomy/rigged-bodies.ts`, and otherwise prints the SHA-256 it got and writes nothing.
+- The release files are the output of the bake below on Linux x86_64 (2026-10-26). The bake reproduces them byte for byte there.
+- Bake: needs [uv](https://docs.astral.sh/uv/). `scripts/anatomy/bake-anny-rigged.py` runs with `uv run --script` against `scripts/anatomy/bake-anny-rigged.py.lock` (anny 0.6.2 and every transitive dependency pinned; about 7 s per body once the environment is cached). torch 2.14.1 comes from the PyTorch CPU index on Linux and Windows (`2.14.1+cpu`, no CUDA libraries) and from PyPI on macOS, which has no CPU-index wheels; PyPI's only macOS wheel is Apple Silicon, macOS 14 or later. uv does not accept `required-environments` in a script's metadata, so `scripts/anatomy/bake-lock.test.ts` checks that the universal lock has a Python 3.12 wheel for every package on macOS arm64, Linux x86_64 and aarch64, and Windows x86_64. After changing the script's dependencies, run `uv lock --script scripts/anatomy/bake-anny-rigged.py`.
+- The bake writes to a scratch file; `scripts/anatomy/bake-rigged.ts` installs it into `data/anatomy/` only when its bytes match the pin, and otherwise prints the SHA-256 it got and writes nothing.
+- Same bytes across machines: rounding hides most float differences but not all. The pinned files hold 39 vertices with a position of `-0.0` and a few `-0.0` bone translations and quaternion parts: midline values whose sign is float noise and can come out `+0.0` on another CPU or BLAS, and a renormalised quaternion can differ in its last bit. Neither changes the body, but either changes the bytes, so a bake on macOS may not match the pin. When it does not, `bake-rigged` also compares a content digest (`scripts/anatomy/rigged-content-digest.ts`: positions, joints, weights, triangles and skeleton on their rounding grids as integers, so the sign of zero and the last bits drop out) with the pinned `contentSha256`, and says whether the body itself differs or only its encoding; either way it writes nothing and points to `anatomy:fetch`. A trial bake with those values made sign-free and every step after the rounding done in fixed-order IEEE arithmetic gave other bytes (`c730a8d4…` and `a7259702…`) with the same content digests as the pins, which is the evidence that the digest separates encoding from content. Making the bake itself platform-independent would change the pinned bytes and needs a new release.
 - The static bodies are ANNY at gender 0 (male) or 1 (female), age 2/3 ("young"), every other phenotype 0.5: those reproduce their heights exactly (1.914 m, 1.772 m). The bake uses the same values and keeps ANNY's own 104-bone skeleton (`rig="anny"`) and skin weights (the four strongest per vertex). Bind pose: ANNY's rest pose with the upper arms lowered 30° (10° from vertical) and the forearms hanging 15° in front of the upper arm. The static files' exact pose could not be recovered (their vertex order differs from ANNY's), so the limbs differ a little; the fit uses the box either way.
 - Plain glTF 2.0, no extensions: 13,718 vertices, 27,420 triangles, `POSITION`, `JOINTS_0`, `WEIGHTS_0` (normalised bytes summing to 255), one skin, no normals and no `COLOR_0` (so no baked shading). Atlas frame like the static bodies. Positions are rounded to 10 µm and joint transforms to 1e-6 before writing, so the bytes do not depend on the last bits of float maths.
 
@@ -132,6 +136,18 @@ bun run anatomy:bake-rigged            # both; --demo <id> for one, --check to r
 | ------------ | ------------------------- | ------- | ------------------------------------------------------------------ |
 | ANNY adult m | `anny-adult-m.rigged.glb` | 464,852 | `16d101090af7719069cd78d0a091d7d9c4975bc45df44201f23761ea89553589` |
 | ANNY adult f | `anny-adult-f.rigged.glb` | 464,816 | `9032bfeb29ba4be8aeb0eb38a81e72c5dd5420a38005913d907c83c4f87fdbe1` |
+
+Content digests (`contentSha256`): male `5231a8dbb70cb5ca679cfc963fba8407f829b6c8f73093f52b0c5a5b452f859c`, female `808a7ffa5afe7d900359c3fc6dd8b3e90a396d7e883ec58ab8e581b2a19f0b28`.
+
+To publish a new set (a maintainer, after bumping the pins; the files must be the ones the pins name):
+
+```bash
+gh release create anatomy-rigged-v2 data/anatomy/anny-adult-m.rigged.glb data/anatomy/anny-adult-f.rigged.glb \
+  --repo Opening-Science/twin-llm --title "Rigged ANNY demo bodies v2" \
+  --notes "ANNY demo bodies with skeleton and skin weights for Walk, Idle and Dance, baked by scripts/anatomy/bake-anny-rigged.py (pins in packages/anatomy/rigged-bodies.ts). ANNY by NAVER LABS Europe / NAVER Corporation: Apache-2.0 code over CC0 shape assets derived from MakeHuman, arXiv:2511.03589. No scan of any person was used."
+```
+
+and set `RIGGED_RELEASE_TAG` to the new tag.
 
 - `GET /api/anatomy/status` also lists `riggedBodies: [{ id, installed }]`; `GET /api/anatomy/rigged/:bodyId` serves them under the same caching rules as the demo route. The viewer waits for the status before loading a demo body, then loads the rigged one when installed and the static one otherwise, so it never loads twice. The credit then says the body was baked with its skeleton by this repository.
 

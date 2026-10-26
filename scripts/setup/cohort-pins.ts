@@ -16,6 +16,14 @@ export const EVAL_COHORT = {
   fhirDir: ".synthea/fhir",
   patientFileCount: 37,
   contentSha256: EVAL_CONTENT_SHA256,
+  /** One subject per patient file once ingested. */
+  subjectCount: 37,
+  /**
+   * The ingested bundles' fingerprint (cohort-fingerprint.ts), so a warehouse
+   * holding an older cohort under the same id is caught even at 37 subjects.
+   * `bun scripts/setup/cohort-fingerprint.ts .synthea/fhir` on the pinned files.
+   */
+  bundleSetSha256: "469ecc95530aa6f546ef8d04f6a7a6a271d1cc379a25e8f39a30fd0272a18ba6",
 } as const;
 
 /**
