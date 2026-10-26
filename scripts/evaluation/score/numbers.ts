@@ -40,8 +40,8 @@ export type NarratedNumber = Readonly<{
 export const UUID_PATTERN =
   /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi;
 
-/** A LOINC code: 3 to 5 digits, a hyphen and one check digit (`4548-4`). */
-export const LOINC_PATTERN = /(?<![\w.-])\d{3,5}-\d(?![\w.-])/g;
+/** A LOINC code: 3 to 5 digits, a hyphen and one check digit (`4548-4`), also at a sentence end. */
+export const LOINC_PATTERN = /(?<![\w.-])\d{3,5}-\d(?![\w-]|\.\d)/g;
 
 const NUMBER_PATTERN =
   /(?<![\w.])(?:(?<=^|[\s(=:~≈<>±])-)?(?:\d{1,3}(?:[,'’]\d{3})+|\d+)(?:\.\d+)?(?!\d)/g;
@@ -72,8 +72,28 @@ export const ALLOWED_CONSTANTS: readonly number[] = Array.from(
 
 export const DAYS_PER_YEAR = [365, 365.25] as const;
 
-const blankOut = (text: string, pattern: RegExp): string =>
+export const blankOut = (text: string, pattern: RegExp): string =>
   text.replace(pattern, (match) => " ".repeat(match.length));
+
+const MONTH = String.raw`(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?`;
+
+/**
+ * Dates and years in a reply: `2024-01-01` (with any time), `3 Mar 2026`,
+ * `March 3, 2026`, and a lone year 1900 to 2099. Hallucination's code checks
+ * read values, not the dates a reply mentions.
+ */
+export const DATE_PATTERN = new RegExp(
+  [
+    String.raw`\b\d{4}-\d{2}-\d{2}(?:T[\d:.]+Z?)?`,
+    String.raw`\b\d{1,2}\s+${MONTH}\s+\d{4}\b`,
+    String.raw`\b${MONTH}\s+\d{1,2},?\s+\d{4}\b`,
+    String.raw`(?<![\d.])\b(?:19|20)\d{2}\b(?!\.\d)`,
+  ].join("|"),
+  "gi",
+);
+
+/** The text with every date blanked out, positions kept. */
+export const withoutDates = (text: string): string => blankOut(text, DATE_PATTERN);
 
 export const narratedNumbers = (text: string): NarratedNumber[] => {
   const cleaned = blankOut(
