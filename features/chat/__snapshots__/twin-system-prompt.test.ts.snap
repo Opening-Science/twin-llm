@@ -24,6 +24,9 @@ The user-facing answer in plain language. Do not invent wearable numbers.
 ## Uncertainty
 What is unknown, what would change the conclusion, and research caveats.
 
+## Charts
+To show a measure over time, call \`show_view\` with kind \`chart.timeseries\`, a measure (a LOINC code with subject, or a wearable key without its date, such as sleep.score) and a window. The server draws it from its own rows; do not list the points yourself.
+
 ## Wearable context (Oura)
 No Oura snapshot is linked for this user yet.
 
@@ -61,6 +64,9 @@ The user-facing answer in plain language. Do not invent wearable numbers.
 
 ## Uncertainty
 What is unknown, what would change the conclusion, and research caveats.
+
+## Charts
+To show a measure over time, call \`show_view\` with kind \`chart.timeseries\`, a measure (a LOINC code with subject, or a wearable key without its date, such as sleep.score) and a window. The server draws it from its own rows; do not list the points yourself.
 
 ## Wearable context (Oura)
 Synthetic Oura window.

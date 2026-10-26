@@ -7,6 +7,7 @@ import {
   type UIMessageChunk,
 } from "ai";
 
+import { type ChatView, viewsOf } from "@/infrastructure/chat-view";
 import type {
   ChatUIMessage,
   ModelResponseMetrics,
@@ -38,7 +39,11 @@ export type StreamResult = Readonly<{
   document: ResponseDocumentV1 | null;
 }>;
 
-export type StreamProgress = Readonly<{ text: string; tools: readonly ToolActivity[] }>;
+export type StreamProgress = Readonly<{
+  text: string;
+  tools: readonly ToolActivity[];
+  views: readonly ChatView[];
+}>;
 
 export type AnswerRequest = Readonly<{
   modelId: string;
@@ -125,7 +130,11 @@ export const streamAnswer = async (
     });
 
     for await (const message of snapshots) {
-      onProgress({ text: textOf(message), tools: toolActivity(message.parts) });
+      onProgress({
+        text: textOf(message),
+        tools: toolActivity(message.parts),
+        views: viewsOf(message.parts),
+      });
       if (message.metadata) {
         metrics = message.metadata;
         document = documentFromMetadata(message.metadata) ?? document;

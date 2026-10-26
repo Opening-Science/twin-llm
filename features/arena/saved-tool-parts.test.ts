@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
+import { timeseriesView } from "@/infrastructure/chat-view";
+
 import { toSavedResponseState } from "./saved-response-state";
 import { savedToolParts } from "./saved-tool-parts";
 
@@ -80,5 +82,33 @@ describe("toSavedResponseState", () => {
 
   test("an answer without tool parts has none", () => {
     expect(toSavedResponseState({ ...row, toolParts: null }).tools).toEqual([]);
+  });
+
+  test("a reloaded answer draws the views its show_view calls returned", () => {
+    const view = timeseriesView({
+      spec: {
+        measure: "sleep.score",
+        label: "Sleep score",
+        unit: null,
+        window: { start: "2026-10-01", end: "2026-10-31" },
+        subject: null,
+        points: [{ at: "2026-10-01T00:00:00.000Z", value: 77 }],
+      },
+      sourceAuditIds: ["7"],
+    });
+    const showView = {
+      ...stored[1]!,
+      seq: 3,
+      tool: "show_view",
+      input: { kind: "chart.timeseries", measure: "sleep.score" },
+      output: view,
+    };
+    const state = toSavedResponseState({ ...row, toolParts: [...stored, showView] });
+    expect(state.views).toEqual([view]);
+    expect(state.tools?.map((tool) => tool.name)).toEqual([
+      "query_observations",
+      "guideline_search",
+      "show_view",
+    ]);
   });
 });

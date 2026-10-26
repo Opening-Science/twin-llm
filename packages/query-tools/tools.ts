@@ -608,3 +608,99 @@ export const runCompareWindows = (
     (result) => ("window_a" in result ? result.window_a.n + result.window_b.n : 0),
     ports,
   );
+
+/** One measure's readings in a window, for a view: every row, in time order. */
+export type SeriesResult = Readonly<{
+  measure: string;
+  display: string | null;
+  unit: string | null;
+  n: number;
+  points: ReadonlyArray<Readonly<{ at: string; value: number }>>;
+}>;
+
+type SeriesInput = Readonly<{
+  subject_ref: string;
+  loinc: string;
+  start: string;
+  end: string;
+}>;
+
+/**
+ * A cohort measure's rows for `show_view`, scoped and audited like the other
+ * query tools. Over the cap or in two units is refused, never cut or mixed.
+ */
+export const runTimeseries = (
+  scope: SessionScope,
+  input: SeriesInput,
+  ports: QueryToolPorts = defaultQueryToolPorts(),
+): Promise<SeriesResult | ToolRefusal> =>
+  audited<SeriesResult | ToolRefusal>(
+    scope,
+    "timeseries",
+    input,
+    input.subject_ref,
+    async () => {
+      if (!(await subjectInScope(scope, input.subject_ref, ports))) {
+        return SUBJECT_SCOPE_VIOLATION;
+      }
+      const rows = await readWindow(ports, input.subject_ref, [input.loinc], input);
+      if (isToolRefusal(rows)) return rows;
+      const units = distinctUnits(rows);
+      if (units.length > 1) return mixedUnits(input.loinc, units);
+      return {
+        measure: input.loinc,
+        display: rows.find((row) => row.display !== undefined)?.display ?? null,
+        unit: units[0] ?? null,
+        n: rows.length,
+        points: rows.map((row) => ({ at: asIso(row.effectiveAt), value: row.value })),
+      };
+    },
+    (result) => ("n" in result ? result.n : 0),
+    ports,
+  );
+
+/** A wearable reading as the user's synced snapshot holds it. */
+export type WearableReading = Readonly<{
+  at: string;
+  value: number;
+  label: string;
+  unit: string | null;
+}>;
+
+/**
+ * A wearable measure's readings for `show_view`. The readings come from the
+ * snapshot the turn already loaded for this user; this filters them to the
+ * window and audits the read like a query tool, so a view of them traces to
+ * an audit row too.
+ */
+export const runWearableSeries = (
+  scope: SessionScope,
+  input: Readonly<{ key: string; start: string; end: string }>,
+  readings: (key: string) => readonly WearableReading[],
+  ports: QueryToolPorts = defaultQueryToolPorts(),
+): Promise<SeriesResult> =>
+  audited<SeriesResult>(
+    scope,
+    "wearable_series",
+    input,
+    null,
+    async () => {
+      const from = windowStartDate(input.start).getTime();
+      const to = windowEndDate(input.end).getTime();
+      const inWindow = readings(input.key)
+        .filter((reading) => {
+          const at = Date.parse(reading.at);
+          return at >= from && at <= to;
+        })
+        .sort((a, b) => a.at.localeCompare(b.at));
+      return {
+        measure: input.key,
+        display: inWindow[0]?.label ?? null,
+        unit: inWindow[0]?.unit ?? null,
+        n: inWindow.length,
+        points: inWindow.map((reading) => ({ at: reading.at, value: reading.value })),
+      };
+    },
+    (result) => result.n,
+    ports,
+  );

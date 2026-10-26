@@ -44,5 +44,10 @@ describe("guideline tool isolation", () => {
     expect(chatToolsSource).not.toMatch(/createGuidelineTools\([^)]*oura/);
     expect(chatToolsSource).not.toMatch(/createGuidelineTools\([^)]*whoop/);
     expect(chatToolsSource).not.toMatch(/createGuidelineTools\([^)]*googleHealth/);
+    // The turn's snapshots reach show_view only, which reads them on this server.
+    expect(chatToolsSource).toContain("wearables: options?.wearables ?? NO_WEARABLES,");
+    expect(chatToolsSource.match(/options\?\.wearables/g)).toEqual([
+      "options?.wearables",
+    ]);
   });
 });

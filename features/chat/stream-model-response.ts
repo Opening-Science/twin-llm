@@ -87,11 +87,21 @@ export const streamModelResponse = async (
     vitronic: context.vitronicSummary !== null,
   };
   const hasWearableNarrative = Object.values(sources).some(Boolean);
+  const turnWearables = {
+    oura: context.ouraSummary,
+    whoop: context.whoopSummary,
+    googleHealth: context.googleHealthSummary,
+    vitronic: context.vitronicSummary,
+  };
 
   const { tools, offeredTools } = forSources(
     createChatTools(
       { actor: clerkId, sessionId: turnId, mode: env.DATA_MODE },
-      { hasWearableNarrative },
+      {
+        hasWearableNarrative,
+        wearables: turnWearables,
+        disabledSources: context.disabledSources,
+      },
     ),
     context.disabledSources ?? [],
   );
@@ -110,12 +120,7 @@ export const streamModelResponse = async (
     {
       turnId,
       messages,
-      wearables: {
-        oura: context.ouraSummary,
-        whoop: context.whoopSummary,
-        googleHealth: context.googleHealthSummary,
-        vitronic: context.vitronicSummary,
-      },
+      wearables: turnWearables,
     },
     {
       onFirstToken: () => timer.markFirstToken(),

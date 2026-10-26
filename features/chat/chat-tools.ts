@@ -4,9 +4,11 @@ import type { ToolSet } from "ai";
 
 import { requestDataMode } from "@/infrastructure/data-mode-policy";
 import {
+  disabledToolNames,
   type KnowledgeSourceId,
   withoutDisabledTools,
 } from "@/infrastructure/knowledge-sources";
+import type { WearableSummaries } from "@/infrastructure/offered-keys";
 
 import { createGbdTools } from "@/packages/gbd-mcp/ai-tools";
 import { createGuidelineTools } from "@/packages/guidelines/ai-tools";
@@ -16,6 +18,15 @@ import { findServer } from "@/packages/mcp-client/registry";
 import { createQueryTools } from "@/packages/query-tools/ai-tools";
 import type { QueryToolPorts } from "@/packages/query-tools/ports";
 import type { SessionScope } from "@/packages/query-tools/scope";
+
+import { createShowViewTool } from "./show-view-tool";
+
+const NO_WEARABLES: WearableSummaries = {
+  oura: null,
+  whoop: null,
+  googleHealth: null,
+  vitronic: null,
+};
 
 /**
  * True when this request may use the named MCP server's tools. A personal
@@ -38,12 +49,30 @@ const mcpServerPermitted = (
  * Every tool a chat turn gets, in one place so the live tool-call smoke and the
  * eval harness send the same set. Tests pass fake query ports. Tools served by
  * a remote MCP server (GBD) are left out of a personal request.
+ *
+ * `show_view` belongs to no source: it is how any answer shows a chart. It
+ * reads cohort rows only while the cohort record tools are on, and wearable
+ * readings only from the snapshots this turn already loaded, which synthetic
+ * mode never does.
  */
 export const createChatTools = (
   scope: SessionScope,
-  options?: Readonly<{ query?: QueryToolPorts; hasWearableNarrative?: boolean }>,
+  options?: Readonly<{
+    query?: QueryToolPorts;
+    hasWearableNarrative?: boolean;
+    wearables?: WearableSummaries;
+    disabledSources?: readonly KnowledgeSourceId[];
+  }>,
 ) => ({
   ...createQueryTools(scope, options?.query),
+  ...createShowViewTool({
+    scope,
+    ports: options?.query,
+    wearables: options?.wearables ?? NO_WEARABLES,
+    cohortRecords: !disabledToolNames(options?.disabledSources ?? []).has(
+      "observations_for_subject",
+    ),
+  }),
   ...(mcpServerPermitted("gbd", scope, options?.hasWearableNarrative ?? false)
     ? createGbdTools(scope)
     : {}),

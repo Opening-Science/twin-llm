@@ -16,6 +16,18 @@ const cohortSection = (prompt: string): string =>
   );
 
 describe("system prompt with sources turned off", () => {
+  test("leaves out the chart line when show_view is not offered", () => {
+    const prompt = buildTwinSystemPrompt({
+      ...noWearables,
+      mode: "personal",
+      offeredTools: new Set(),
+    });
+    expect(prompt).not.toContain("show_view");
+    expect(buildTwinSystemPrompt({ ...noWearables, mode: "personal" })).toContain(
+      "## Charts\nTo show a measure over time, call `show_view`",
+    );
+  });
+
   test("names only the tools the turn carries", () => {
     const prompt = buildTwinSystemPrompt({
       ...noWearables,
@@ -44,6 +56,7 @@ describe("system prompt with sources turned off", () => {
       "gbd_population",
       "guideline_search",
       "knowledge_search",
+      "show_view",
     ]);
     expect(
       buildTwinSystemPrompt({ ...noWearables, mode: "synthetic", offeredTools: all }),
@@ -55,7 +68,7 @@ describe("system prompt with sources turned off", () => {
       buildTwinSystemPrompt({
         ...noWearables,
         mode: "personal",
-        offeredTools: new Set(),
+        offeredTools: new Set(["show_view"]),
       }),
     ).toBe(buildTwinSystemPrompt({ ...noWearables, mode: "personal" }));
   });

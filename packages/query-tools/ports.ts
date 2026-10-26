@@ -17,6 +17,8 @@ export type ObservationRecord = Readonly<{
   value: number;
   unitUcum: string;
   effectiveAt: Date;
+  /** The code's display name; a view uses it as its label. */
+  display?: string;
 }>;
 
 export type ObservationQuery = Readonly<{
@@ -56,7 +58,13 @@ export const defaultQueryToolPorts = (): QueryToolPorts => ({
         loinc: { in: [...query.loinc] },
         effectiveAt: { gte: query.start, lte: query.end },
       },
-      select: { loinc: true, value: true, unitUcum: true, effectiveAt: true },
+      select: {
+        loinc: true,
+        display: true,
+        value: true,
+        unitUcum: true,
+        effectiveAt: true,
+      },
       orderBy: { effectiveAt: "asc" },
       take: query.take,
     });

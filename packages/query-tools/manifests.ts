@@ -2,10 +2,14 @@ import { z } from "zod";
 
 import { modelJsonSchema } from "./model-schema";
 import { TOOL_DEFINITIONS } from "./schemas";
+import { VIEW_TOOL_DEFINITIONS } from "./view-schema";
 
-/** The tools as OpenAI function definitions, in the slim form models get. */
+/**
+ * The tools as OpenAI function definitions, in the slim form models get: the
+ * query tools, then `show_view`.
+ */
 export const openaiToolList = () =>
-  TOOL_DEFINITIONS.map((definition) => ({
+  [...TOOL_DEFINITIONS, ...VIEW_TOOL_DEFINITIONS].map((definition) => ({
     type: "function" as const,
     function: {
       name: definition.name,
