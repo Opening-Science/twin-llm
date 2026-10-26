@@ -15,7 +15,7 @@ const ports: QueryToolPorts = {
 const SCOPE = { actor: "test", sessionId: "tools", mode: "synthetic" } as const;
 
 describe("openAiToolsFrom", () => {
-  test("the training tools are the twelve a chat request sends, in order", async () => {
+  test("the training tools are the thirteen a chat request sends, in order", async () => {
     const tools = await openAiToolsFrom(createChatTools(SCOPE, { query: ports }));
     expect(tools.map((tool) => tool.function.name)).toEqual([
       "list_subjects",
@@ -27,15 +27,16 @@ describe("openAiToolsFrom", () => {
       "baseline_deviation",
       "coverage",
       "compare_windows",
+      "show_view",
       "gbd_population",
       "guideline_search",
       "knowledge_search",
     ]);
   });
 
-  test("the query tools are in the slim form the manifest gives models", async () => {
+  test("the query tools and show_view are in the slim form the manifest gives models", async () => {
     const tools = await openAiToolsFrom(createChatTools(SCOPE, { query: ports }));
-    expect(tools.slice(0, 9)).toEqual(openaiToolList());
+    expect(tools.slice(0, 10)).toEqual(openaiToolList());
   });
 
   test("the reference tools keep their own schemas", async () => {

@@ -1,3 +1,4 @@
+import type { ChatView } from "@/infrastructure/chat-view";
 import type { ModelResponseMetrics } from "@/infrastructure/model-response-metrics";
 import type { EvidenceAttribution } from "@/infrastructure/oura-types";
 import type { ResponseDocumentV1 } from "@/infrastructure/response-document/document-v1";
@@ -28,6 +29,8 @@ export type AnswerProgress = Readonly<{
   status: AnswerStatus;
   text: string;
   tools?: readonly ToolActivity[];
+  /** Charts the server drew from audited rows; a saved answer reads them from its stored tool parts. */
+  views?: readonly ChatView[];
   /** The connection closed before the server said it was done. */
   lost?: boolean;
 }>;

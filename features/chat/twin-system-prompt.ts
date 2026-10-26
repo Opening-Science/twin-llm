@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { DataMode } from "@/infrastructure/data-mode-policy";
+import { SHOW_VIEW_TOOL } from "@/infrastructure/chat-view";
 import { formatForPrompt } from "@/infrastructure/format-measure";
 import type { GoogleHealthSummary } from "@/infrastructure/google-health-types";
 import { offeredSummaries } from "@/infrastructure/offered-keys";
@@ -86,6 +87,16 @@ const syntheticCohortSection = (
     "",
   ];
 };
+
+/** One line on charts, when this request carries `show_view`. */
+const viewSection = (offered: (tool: string) => boolean): readonly string[] =>
+  offered(SHOW_VIEW_TOOL)
+    ? [
+        "## Charts",
+        `To show a measure over time, call \`${SHOW_VIEW_TOOL}\` with kind \`chart.timeseries\`, a measure (a LOINC code with subject, or a wearable key without its date, such as sleep.score) and a window. The server draws it from its own rows; do not list the points yourself.`,
+        "",
+      ]
+    : [];
 
 export const buildTwinSystemPrompt = (params: {
   readonly mode: DataMode;
@@ -178,6 +189,7 @@ export const buildTwinSystemPrompt = (params: {
     "## Uncertainty",
     "What is unknown, what would change the conclusion, and research caveats.",
     "",
+    ...viewSection((tool) => params.offeredTools?.has(tool) ?? true),
     ...syntheticCohortSection(
       params.mode,
       (tool) => params.offeredTools?.has(tool) ?? true,

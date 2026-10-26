@@ -78,9 +78,9 @@ const sentTo = async (
 };
 
 describe("chat tools and knowledge sources", () => {
-  test("every chat tool is owned by exactly one source", () => {
+  test("every chat tool but show_view is owned by exactly one source", () => {
     const owned = ALL_KNOWLEDGE_SOURCES.flatMap((source) => source.tools);
-    expect([...owned].sort()).toEqual(
+    expect([...owned, "show_view"].sort()).toEqual(
       Object.keys(createChatTools(SCOPE, { query: ports })).sort(),
     );
     expect(new Set(owned).size).toBe(owned.length);
@@ -119,6 +119,11 @@ describe("chat tools and knowledge sources", () => {
 
   test("turning cohort records off also removes the analytics tools", async () => {
     const { tools } = await sentTo(["cohort-records"]);
-    expect(tools).toEqual(["gbd_population", "guideline_search", "knowledge_search"]);
+    expect(tools).toEqual([
+      "gbd_population",
+      "guideline_search",
+      "knowledge_search",
+      "show_view",
+    ]);
   });
 });
