@@ -49,6 +49,7 @@
     "synthea:generate": "bash scripts/synthea/generate-local.sh",
     "wearables:generate": "bun scripts/synthetic-wearables/generate.ts",
     "training:conversations": "bun --env-file=.env.training --preload ./features/chat/response/preload-server-only.mjs scripts/training-data/build-conversations.ts",
+    "training:split": "bun scripts/training-data/split-conversations.ts",
     "training:batches": "bun --env-file=.env.training --preload ./features/chat/response/preload-server-only.mjs scripts/training-data/run-batches.ts",
     "warehouse:ingest": "bun --preload ./features/chat/response/preload-server-only.mjs scripts/warehouse/ingest.ts",
     "knowledge:ingest": "bun --preload ./features/chat/response/preload-server-only.mjs packages/knowledge/ingest-cli.ts",

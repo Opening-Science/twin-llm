@@ -5,41 +5,21 @@
  * Each tool call is its own assistant turn followed by the tool's result, in
  * the order the generator made them, because a later call can depend on an
  * earlier result (a window from `subject_window`). The final turn uses the
- * four headings of the Twin system prompt, or a `REFUSE:` line.
+ * four headings of the Twin system prompt, or a `REFUSE:` line. The system
+ * prompt and the tools are the ones a chat request sends.
  */
 import { sha256Hex, toCanonicalJson } from "../../packages/audit/hash";
-import { GBD_MODEL_TOOL } from "../../packages/gbd-mcp/constants";
-import { GUIDELINE_MODEL_TOOL } from "../../packages/guidelines/constants";
-import { KNOWLEDGE_MODEL_TOOL } from "../../packages/knowledge/constants";
-import { openaiToolList } from "../../packages/query-tools/manifests";
 import { isToolRefusal } from "../../packages/query-tools/refusals";
 import { type KeyedTool, KEYED_TOOLS } from "../evaluation/question-set";
 import { rowCountOf } from "../evaluation/build-answer-key";
 
+import type { OpenAiTool } from "./chat-tool-list";
 import type { Draft, Outcome, Sections, ToolCall } from "./families";
+import type { Style } from "./questions";
 
-export const GENERATOR_VERSION = "1";
+export const GENERATOR_VERSION = "2";
 
 export type SystemPrompt = Readonly<{ id: string; text: string }>;
-
-/** Tool names the training records never offer; their prompt lines are dropped. */
-const NON_QUERY_TOOLS = [
-  GBD_MODEL_TOOL,
-  GUIDELINE_MODEL_TOOL,
-  KNOWLEDGE_MODEL_TOOL,
-] as const;
-
-/**
- * The Twin prompt for the nine query tools only: lines naming the GBD,
- * guideline or knowledge tools are removed, and the id says so.
- */
-export const queryToolsOnlyPrompt = (prompt: SystemPrompt): SystemPrompt => ({
-  id: `${prompt.id}/query-tools-only`,
-  text: prompt.text
-    .split("\n")
-    .filter((line) => !NON_QUERY_TOOLS.some((name) => line.includes(name)))
-    .join("\n"),
-});
 
 type ToolCallMessage = Readonly<{
   id: string;
@@ -67,17 +47,19 @@ export type ConversationMeta = Readonly<{
   system_prompt_id: string;
   system_prompt_sha256: string;
   expected_answer_class: AnswerClass;
+  template_id: string;
+  template_group: string;
+  style: Style;
+  typo: boolean;
+  measure_loinc: string | null;
   synthetic: true;
 }>;
 
 export type ConversationRecord = Readonly<{
   messages: readonly Message[];
-  tools: ReturnType<typeof toolSchemas>;
+  tools: readonly OpenAiTool[];
   meta: ConversationMeta;
 }>;
-
-/** The closed query tools as OpenAI function definitions, in the slim form models get. */
-export const toolSchemas = openaiToolList;
 
 export const renderSections = (sections: Sections): string =>
   [
@@ -114,7 +96,12 @@ export const expectedAnswerClass = (draft: Draft): AnswerClass => {
 
 export const toConversation = (
   draft: Draft,
-  context: Readonly<{ cohortId: string; seed: number; prompt: SystemPrompt }>,
+  context: Readonly<{
+    cohortId: string;
+    seed: number;
+    prompt: SystemPrompt;
+    tools: readonly OpenAiTool[];
+  }>,
 ): ConversationRecord => {
   const toolTurns = draft.calls.flatMap((call, index): Message[] => {
     const id = `call_${index + 1}`;
@@ -144,7 +131,7 @@ export const toConversation = (
       ...toolTurns,
       { role: "assistant", content: final },
     ],
-    tools: toolSchemas(),
+    tools: context.tools,
     meta: {
       family: draft.family,
       outcome: draft.outcome,
@@ -161,6 +148,11 @@ export const toConversation = (
       system_prompt_id: context.prompt.id,
       system_prompt_sha256: sha256Hex(context.prompt.text),
       expected_answer_class: expectedAnswerClass(draft),
+      template_id: draft.template.id,
+      template_group: draft.template.group,
+      style: draft.template.style,
+      typo: draft.template.typo,
+      measure_loinc: draft.measureLoinc,
       synthetic: true,
     },
   };

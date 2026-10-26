@@ -1,25 +1,35 @@
 import { describe, expect, test } from "bun:test";
 
-import { renderSections } from "./conversation";
-import { fakeTools, sampleRows } from "./fake-tools";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { type Draft, draftsFor, type Family, FAMILIES, QUESTIONS } from "./families";
+import { randomFor } from "../synthetic-wearables/random";
+
+import { renderSections } from "./conversation";
+import { fakeTools, sampleRows } from "./fake-tools";
+import { type Draft, draftsFor, type Family, FAMILIES } from "./families";
+import { changeDecimals, formatChange, formatShare, formatValue } from "./format";
 import {
   ABSENT_MEASURES,
-  changeDecimals,
-  formatChange,
-  formatShare,
-  formatValue,
+  CONVERSIONS,
+  EVALUATION_PROBE_NAMES,
   MEASURES,
   MIXED_UNIT_MEASURES,
-} from "./format";
+  NEAR_MISSES,
+  NO_CODE_MEASURES,
+  WEARABLE_KEYS,
+} from "./measures";
+import { addTypo, ask, askDay, askPeriod, STYLES, TEMPLATES } from "./questions";
 
-/** A constant stream: 0.15 picks resting heart rate, the first templates, every family. */
+/** A stream that repeats the given values in order. */
+const cycle = (values: readonly number[]) => {
+  let at = 0;
+  return () => values[at++ % values.length] ?? 0;
+};
+
 const drafts = async (
   subjectRef: string,
-  value: number,
+  stream: number | readonly number[],
   only?: readonly Family[],
   hasWearables = true,
 ) => {
@@ -32,7 +42,7 @@ const drafts = async (
       hasWearables,
       run: tools.run,
     },
-    () => () => value,
+    () => (typeof stream === "number" ? () => stream : cycle(stream)),
     new Set(only ?? FAMILIES),
   );
   return { list, calls: tools.calls };
@@ -46,6 +56,11 @@ const byFamily = (list: readonly Draft[], family: Family): Draft => {
 
 const text = (draft: Draft): string =>
   draft.reply.kind === "refuse" ? draft.reply.text : renderSections(draft.reply.sections);
+
+const answer = (draft: Draft): string => {
+  if (draft.reply.kind !== "sections") throw new Error("expected sections");
+  return draft.reply.sections.answer;
+};
 
 describe("format", () => {
   test("numbers and units go through format-measure", () => {
@@ -74,30 +89,60 @@ const normalise = (question: string): string =>
     .replace(/[?.!]+$/, "")
     .trim();
 
+const evaluationItems = (): Array<{ question: string }> =>
+  (
+    JSON.parse(
+      readFileSync(join(import.meta.dir, "../../evaluation/questions.v1.json"), "utf8"),
+    ) as { items: Array<{ question: string }> }
+  ).items;
+
 describe("questions", () => {
   test("no template repeats an evaluation question", () => {
-    const evaluation = JSON.parse(
-      readFileSync(join(import.meta.dir, "../../evaluation/questions.v1.json"), "utf8"),
-    ) as { items: Array<{ question: string }> };
-    const taken = new Set(evaluation.items.map((item) => normalise(item.question)));
-    const labels = [...MEASURES, ...ABSENT_MEASURES, ...MIXED_UNIT_MEASURES].map(
-      (measure) => measure.label,
+    const taken = new Set(evaluationItems().map((item) => normalise(item.question)));
+    const labels = [
+      ...[...MEASURES, ...ABSENT_MEASURES, ...MIXED_UNIT_MEASURES].flatMap((measure) => [
+        measure.label,
+        ...(measure.aliases ?? []),
+      ]),
+      ...NEAR_MISSES.map((pair) => pair.asked.label),
+      ...NO_CODE_MEASURES.map((measure) => measure.label),
+    ];
+    const rendered = TEMPLATES.flatMap((template) =>
+      labels.map((label) =>
+        template.text
+          .replaceAll("{label}", label)
+          .replaceAll("{ref}", "9661a432-4630-2cd9-142c-386845fae837")
+          .replaceAll("{start}", "3 Aug 2026")
+          .replaceAll("{end}", "1 Oct 2026")
+          .replaceAll("{a}", "the 30 days ending 1 Sep 2026")
+          .replaceAll("{b}", "the 30 days ending 1 Oct 2026")
+          .replaceAll("{days}", "60")
+          .replaceAll("{key}", WEARABLE_KEYS[0])
+          .replaceAll("{period}", "1994")
+          .replaceAll("{who}", "my patient")
+          .replaceAll("{unit}", "mmol/L"),
+      ),
     );
-    const rendered = Object.values(QUESTIONS)
-      .flat()
-      .flatMap((template) =>
-        labels.map((label) =>
-          template
-            .replaceAll("{label}", label)
-            .replaceAll("{ref}", "9661a432-4630-2cd9-142c-386845fae837")
-            .replaceAll("{start}", "3 Aug 2026")
-            .replaceAll("{end}", "1 Oct 2026")
-            .replaceAll("{a}", "the 30 days ending 1 Sep 2026")
-            .replaceAll("{b}", "the 30 days ending 1 Oct 2026"),
-        ),
-      );
-    expect(rendered.length).toBeGreaterThan(300);
+    expect(rendered.length).toBeGreaterThan(10_000);
     expect(rendered.filter((question) => taken.has(normalise(question)))).toEqual([]);
+  });
+
+  test("no measure, alias or key names an evaluation probe", () => {
+    const names = [
+      ...[...MEASURES, ...ABSENT_MEASURES, ...MIXED_UNIT_MEASURES].flatMap((measure) => [
+        measure.label,
+        measure.loinc,
+        ...(measure.aliases ?? []),
+      ]),
+      ...NEAR_MISSES.flatMap((pair) => [pair.asked.label, pair.asked.loinc]),
+      ...NO_CODE_MEASURES.map((measure) => measure.label),
+      ...CONVERSIONS.map((conversion) => conversion.measure.label),
+      ...WEARABLE_KEYS,
+    ].map((name) => name.toLowerCase());
+    const hits = EVALUATION_PROBE_NAMES.flatMap((probe) =>
+      names.filter((name) => name.includes(probe.toLowerCase())),
+    );
+    expect(hits).toEqual([]);
   });
 
   test("the normaliser does catch a reworded ref or date", () => {
@@ -111,16 +156,69 @@ describe("questions", () => {
       ),
     );
   });
+
+  test("every slot has every style, and ids are unique", () => {
+    const slots = [...new Set(TEMPLATES.map((template) => template.id.split(".")[0]))];
+    expect(slots.length).toBe(19);
+    expect(TEMPLATES.length).toBe(169);
+    expect(new Set(TEMPLATES.map((template) => template.id)).size).toBe(169);
+    for (const slot of slots) {
+      expect(
+        STYLES.filter((style) =>
+          TEMPLATES.some((template) => template.group === `${slot}.${style}`),
+        ),
+      ).toEqual([...STYLES]);
+    }
+  });
+
+  test("a typo changes one word and never a placeholder", () => {
+    expect(addTypo(cycle([0, 0, 0]), "Show the {label} for subject {ref}.")).toBe(
+      "Sohw the {label} for subject {ref}.",
+    );
+    const placeholders = (value: string) => value.match(/\{[a-z]+\}/g) ?? [];
+    for (const [index, template] of TEMPLATES.entries()) {
+      const slipped = addTypo(randomFor(1, `typo:${index}`), template.text);
+      expect(placeholders(slipped)).toEqual(placeholders(template.text));
+    }
+  });
+
+  test("a day is written four ways, never as an ambiguous number pair", () => {
+    expect(
+      [0, 0.25, 0.5, 0.75].map((v) => askDay(() => v, "2026-08-03T00:00:00Z")),
+    ).toEqual(["3 Aug 2026", "2026-08-03", "3 August 2026", "August 3, 2026"]);
+    expect(askPeriod(cycle([0.7, 0.1]), 1994)).toEqual({
+      text: "February 1994",
+      start: "1994-02-01",
+      end: "1994-02-28",
+    });
+  });
+
+  test("ask names the template it used", () => {
+    expect(ask(cycle([0.9, 0, 0.5]), "latest", { label: "BMI", ref: "s-a" })).toEqual({
+      question: "Please give me the last value of BMI of the subject s-a.",
+      template: {
+        id: "latest.non_native.1",
+        group: "latest.non_native",
+        style: "non_native",
+        typo: false,
+      },
+    });
+  });
 });
 
-describe("draftsFor", () => {
+/** Share, measure (resting heart rate), label, no unit, dates in the question, two day formats, formal 1, no typo. */
+const EXPLICIT_RESTING = [0.5, 0.15, 0, 0.9, 0.9, 0, 0, 0, 0, 0.9];
+
+describe("data families", () => {
   test("a trend answer states the tool's numbers with units", async () => {
-    const { list } = await drafts("s-a", 0.15);
+    const { list } = await drafts("s-a", EXPLICIT_RESTING, ["trend"]);
     const trend = byFamily(list, "trend");
     expect(trend.outcome).toBe("answered");
     expect(trend.question).toBe(
       "Over 3 Aug 2026 to 1 Oct 2026, which way did resting heart rate move for subject s-a?",
     );
+    expect(trend.template.id).toBe("trendWearable.formal.1");
+    expect(trend.measureLoinc).toBe("40443-4");
     expect(trend.calls.map((call) => call.args)).toEqual([
       {
         subject_ref: "s-a",
@@ -146,16 +244,36 @@ describe("draftsFor", () => {
     );
   });
 
+  test("'the last N days' reads the record window first", async () => {
+    const { list } = await drafts("s-a", 0.15, ["trend"]);
+    const trend = byFamily(list, "trend");
+    expect(trend.question).toBe(
+      "Over the last 30 days of records, which way has resting heart rate (/min) moved for subject s-a?",
+    );
+    expect(trend.calls.map((call) => [call.name, call.args])).toEqual([
+      ["subject_window", { subject_ref: "s-a" }],
+      [
+        "trend",
+        {
+          subject_ref: "s-a",
+          loinc: "40443-4",
+          start: "2026-09-02T00:00:00.000Z",
+          end: "2026-10-01T23:59:59.999Z",
+        },
+      ],
+    ]);
+    if (trend.reply.kind !== "sections") throw new Error("expected sections");
+    expect(trend.reply.sections.reasoning).toStartWith(
+      "I called `subject_window` for subject s-a: the records end on 1 Oct 2026, so the last 30 days run from 2 Sept 2026 to 1 Oct 2026. I called `trend`",
+    );
+  });
+
   test("baseline deviation and compare windows report the tool values", async () => {
     const { list } = await drafts("s-a", 0.15);
-    const baseline = byFamily(list, "baseline_deviation");
-    if (baseline.reply.kind !== "sections") throw new Error("expected sections");
-    expect(baseline.reply.sections.answer).toBe(
+    expect(answer(byFamily(list, "baseline_deviation"))).toBe(
       "The recent median resting heart rate for subject s-a is 65 /min, against a baseline median of 60 /min (median absolute deviation 1.0 /min). That is a robust z of +3.4.",
     );
-    const compare = byFamily(list, "compare_windows");
-    if (compare.reply.kind !== "sections") throw new Error("expected sections");
-    expect(compare.reply.sections.answer).toBe(
+    expect(answer(byFamily(list, "compare_windows"))).toBe(
       "For subject s-a, resting heart rate had a mean of 60.0 /min (median 60 /min) in window A and 62.4 /min (median 62 /min) in window B. B minus A: mean +2.4 /min, median +2 /min.",
     );
   });
@@ -173,8 +291,7 @@ describe("draftsFor", () => {
       baseline: { start: "2021-03-15T09:00:00.000Z", end: "2025-03-15T08:59:59.999Z" },
       target: { start: "2025-03-15T09:00:00.000Z", end: "2026-03-15T09:00:00.000Z" },
     });
-    if (draft.reply.kind !== "sections") throw new Error("expected sections");
-    expect(draft.reply.sections.answer).toBe(
+    expect(answer(draft)).toBe(
       "The recent median HbA1c for subject s-b is 6.1%, against a baseline median of 5.6% (median absolute deviation 0.15%). That is a robust z of +2.0.",
     );
   });
@@ -182,18 +299,16 @@ describe("draftsFor", () => {
   test("no rows is said plainly, never as zero", async () => {
     const { list } = await drafts("s-a", 0, ["latest_value", "trend"]);
     expect(list.map((draft) => draft.outcome)).toEqual(["no_rows", "no_rows"]);
-    const latest = byFamily(list, "latest_value");
-    if (latest.reply.kind !== "sections") throw new Error("expected sections");
-    expect(latest.reply.sections.answer).toBe(
+    expect(answer(byFamily(list, "latest_value"))).toBe(
       "There is no heart rate reading for subject s-a, so I cannot give a latest value.",
     );
   });
 
   test("a subject without a wearable series gets clinical questions only", async () => {
     const { list, calls } = await drafts("s-a", 0.15, ["trend", "coverage"], false);
-    expect(list.map((draft) => draft.question)).toEqual([
-      "Across the last five years of records, which way has body weight moved for subject s-a?",
-      "How much clinical data is there for subject s-a over the last five years of records?",
+    expect(list.map((draft) => draft.template.id)).toEqual([
+      "trendClinical.formal.1",
+      "coverageClinical.formal.1",
     ]);
     expect(calls.map((call) => call.name)).toEqual([
       "subject_window",
@@ -202,21 +317,153 @@ describe("draftsFor", () => {
       "coverage",
     ]);
   });
+});
 
-  test("refusals come from the tools: out of cohort and mixed units", async () => {
-    const { list } = await drafts("s-b", 0.05, ["out_of_cohort", "unit_mismatch"]);
-    expect(list.map((draft) => [draft.family, draft.outcome])).toEqual([
-      ["unit_mismatch", "MIXED_UNITS"],
-      ["out_of_cohort", "SUBJECT_SCOPE_VIOLATION"],
+describe("no-data families", () => {
+  test("no family reads a code other than the one asked about", async () => {
+    const checked = await Promise.all(
+      Array.from({ length: 150 }, (_, seed) => seed).flatMap((seed) =>
+        ["s-a", "s-b"].map(async (subjectRef) => {
+          const tools = fakeTools(sampleRows());
+          return draftsFor(
+            {
+              subjectRef,
+              anchorDay: "2026-10-01",
+              outsideRef: "outside-1",
+              hasWearables: subjectRef === "s-a",
+              run: tools.run,
+            },
+            (family) => randomFor(seed, `${subjectRef}:${family}`),
+            new Set(FAMILIES),
+          );
+        }),
+      ),
+    );
+    const all = checked.flat();
+    const wrong = all.filter((draft) =>
+      draft.calls.some((call) => {
+        const loinc = call.args.loinc;
+        if (loinc === undefined || draft.family === "coverage") return false;
+        const codes = Array.isArray(loinc) ? loinc : [loinc];
+        return codes.some((code) => code !== draft.measureLoinc);
+      }),
+    );
+    expect(wrong).toEqual([]);
+    const toolless = all.filter((draft) =>
+      ["no_code", "no_subject_ref", "declined", "out_of_scope_person"].includes(
+        draft.outcome,
+      ),
+    );
+    expect(toolless.length).toBeGreaterThan(100);
+    expect(toolless.flatMap((draft) => draft.calls)).toEqual([]);
+    expect(new Set(all.map((draft) => draft.family))).toEqual(new Set(FAMILIES));
+  });
+
+  test("a measure no tool can read gets no tool call and no substitute", async () => {
+    const { list, calls } = await drafts("s-a", 0.15, ["no_code"]);
+    expect(calls).toEqual([]);
+    expect(text(byFamily(list, "no_code"))).toBe(
+      [
+        "## Reasoning",
+        "Sleep score is stored in the synthetic wearable series under a local code, not a LOINC code, and the query tools read LOINC codes only. No tool can return it, so I called none. Sleep duration is a different measure, so I did not query it instead.",
+        "",
+        "## Evidence Used",
+        "- none",
+        "",
+        "## Answer",
+        "There is no sleep score data for subject s-a that I can read, so I cannot report a value. I will not give a number from another measure instead.",
+        "",
+        "## Uncertainty",
+        "Nothing was read, so nothing is known about sleep score for this subject. The subject is synthetic (Synthea) and the numbers describe no real person.",
+      ].join("\n"),
+    );
+  });
+
+  test("a wearable key the prompt does not offer is not cited", async () => {
+    const { list, calls } = await drafts("s-a", 0.15, ["wearable_key"]);
+    expect(calls).toEqual([]);
+    const draft = byFamily(list, "wearable_key");
+    expect(draft.question).toBe("Please cite whoop.sleep.performance for subject s-a.");
+    expect(answer(draft)).toBe(
+      "I cannot cite `whoop.sleep.performance` for subject s-a: it is not an available key in this session, and I will not report a different measure in its place.",
+    );
+  });
+
+  test("a period outside the record is answered from the record window only", async () => {
+    const { list } = await drafts("s-a", 0.15, ["outside_record"]);
+    const draft = byFamily(list, "outside_record");
+    expect(draft.question).toBe(
+      "What was resting heart rate (/min) for subject s-a in 2017?",
+    );
+    expect(draft.calls.map((call) => call.name)).toEqual(["subject_window"]);
+    expect(draft.outcome).toBe("outside_record");
+    expect(answer(draft)).toBe(
+      "There are no resting heart rate readings for subject s-a in 2017: the records only run from 15 Mar 2021 to 1 Oct 2026. I will not report the nearest reading in its place.",
+    );
+  });
+
+  test("an odd ref goes to the tool as written; no ref gets no tool", async () => {
+    const odd = await drafts("s-a", 0.15, ["odd_ref"]);
+    const draft = byFamily(odd.list, "odd_ref");
+    expect(draft.calls.map((call) => call.args)).toEqual([
+      { subject_ref: "S-A", loinc: ["40443-4"] },
     ]);
+    expect(draft.outcome).toBe("SUBJECT_SCOPE_VIOLATION");
+    const none = await drafts("s-a", [0, 0.15, 0, 0.9, 0.9, 0, 0, 0, 0.9], ["odd_ref"]);
+    expect(none.calls).toEqual([]);
+    const noRef = byFamily(none.list, "odd_ref");
+    expect([noRef.outcome, noRef.subjectRef]).toEqual(["no_subject_ref", null]);
+    expect(noRef.question).toBe("Report the latest resting heart rate for my patient.");
+  });
+
+  test("a near miss reads the asked code and names the neighbour", async () => {
+    const { list, calls } = await drafts("s-a", 0, ["near_miss"]);
+    expect(calls.map((call) => call.args)).toEqual([
+      { subject_ref: "s-a", loinc: ["8462-4"] },
+    ]);
+    expect(answer(byFamily(list, "near_miss"))).toBe(
+      "There is no diastolic blood pressure reading for subject s-a, so I cannot give a latest value. Systolic blood pressure is a different measure and is not reported in its place.",
+    );
+  });
+
+  test("an absent code is asked with its own code", async () => {
+    const { list } = await drafts("s-a", 0.15, ["absent_code"]);
+    const draft = byFamily(list, "absent_code");
+    expect(draft.calls.map((call) => call.args)).toEqual([
+      { subject_ref: "s-a", loinc: ["1989-3"] },
+    ]);
+    expect(answer(draft)).toBe(
+      "There is no 25-hydroxyvitamin D reading for subject s-a, so I cannot give a latest value. I did not read another measure in its place.",
+    );
+  });
+
+  test("out of cohort is the tool's refusal", async () => {
+    const { list } = await drafts("s-b", 0.05, ["out_of_cohort"]);
     const outside = byFamily(list, "out_of_cohort");
     expect(outside.calls[0]?.result).toEqual({
       code: "SUBJECT_SCOPE_VIOLATION",
       error: "subject_ref is not in this session scope",
     });
-    if (outside.reply.kind !== "sections") throw new Error("expected sections");
-    expect(outside.reply.sections.answer).toBe(
+    expect(answer(outside)).toBe(
       "Subject outside-1 is not in the synthetic cohort this session can read, so there is no heart rate to report. I will not guess one.",
+    );
+  });
+});
+
+describe("unit families", () => {
+  test("mixed units: a planning read finds the code, the conversation gets MIXED_UNITS", async () => {
+    const { list, calls } = await drafts("s-b", 0.05, ["unit_mismatch"]);
+    const draft = byFamily(list, "unit_mismatch");
+    expect(calls.map((call) => call.name)).toEqual([
+      "subject_window",
+      "coverage",
+      "subject_window",
+      "trend",
+    ]);
+    expect(draft.calls.map((call) => call.name)).toEqual(["subject_window", "trend"]);
+    expect([draft.outcome, draft.measureLoinc]).toEqual(["MIXED_UNITS", "5811-5"]);
+    expect(answer(draft)).toBe(
+      "I cannot give one figure for urine specific gravity for subject s-b: the records are in more than one unit ({SG}, {nominal}), and mixing them would give a wrong number.",
     );
   });
 
@@ -225,6 +472,24 @@ describe("draftsFor", () => {
     expect(list).toEqual([]);
   });
 
+  test("a conversion uses the stored unit and names the factor", async () => {
+    const { list } = await drafts("s-a", 0.15, ["unit_conversion"]);
+    const draft = byFamily(list, "unit_conversion");
+    expect(draft.question).toBe(
+      "What is the latest HbA1c for subject s-a, expressed in mmol/mol?",
+    );
+    expect(draft.outcome).toBe("converted");
+    if (draft.reply.kind !== "sections") throw new Error("expected sections");
+    expect(draft.reply.sections.reasoning).toBe(
+      "I called `latest_by_loinc` for subject s-a, HbA1c (LOINC 4548-4). It returned one row: 6.1% on 15 Mar 2026. I converted it to mmol/mol with the IFCC–NGSP master equation, mmol/mol = (% − 2.15) × 10.929.",
+    );
+    expect(draft.reply.sections.answer).toBe(
+      "The latest HbA1c for subject s-a is 43 mmol/mol (6.1% as stored), recorded on 15 Mar 2026.",
+    );
+  });
+});
+
+describe("declines and shares", () => {
   test("declines and other-person questions call no tool", async () => {
     const { list, calls } = await drafts("s-a", 0, [
       "decline_dose",
@@ -251,6 +516,7 @@ describe("draftsFor", () => {
       "baseline_deviation",
       "coverage",
       "compare_windows",
+      "unit_conversion",
     ]);
   });
 });

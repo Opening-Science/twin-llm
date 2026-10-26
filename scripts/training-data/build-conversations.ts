@@ -7,9 +7,12 @@
  *   bun run training:conversations -- --cohort synthea-v4-seed1001 --rejected <out>/synthea-v4-seed1001.rejected.json
  *
  * Writes `<out>.jsonl` (messages only; tools too with --inline-tools),
- * `<out>.meta.jsonl` (one meta record per line, same order) and
- * `<out>.manifest.json` (counts and the tool definitions). Both JSONL files
- * are written as `.partial` and renamed only when the run finishes.
+ * `<out>.meta.jsonl` (one meta record per line, same order),
+ * `<out>.manifest.json` (counts and the tool definitions) and
+ * `<out>.stats.json` (counts per family and template, shares, lengths). Both
+ * JSONL files are written as `.partial` and renamed only when the run
+ * finishes. The system prompt and the twelve tools are the ones a chat
+ * request sends in synthetic mode.
  *
  * `.env.training` (gitignored) is a copy of `.env.synthetic.example` with
  * DATABASE_URL at a database that holds only the training (or held-out)
@@ -34,14 +37,10 @@ import { stableUuid } from "../synthetic-wearables/bundle";
 import { randomFor } from "../synthetic-wearables/random";
 import { DEFAULT_END_DAY } from "../synthetic-wearables/series";
 
-import {
-  GENERATOR_VERSION,
-  queryToolsOnlyPrompt,
-  type SystemPrompt,
-  toConversation,
-  toolSchemas,
-} from "./conversation";
+import type { OpenAiTool } from "./chat-tool-list";
+import { GENERATOR_VERSION, type SystemPrompt, toConversation } from "./conversation";
 import { draftsFor, type Family, FAMILIES, type ToolName } from "./families";
+import { conversationStats, messageChars, type StatsRow } from "./stats";
 
 export const TRAINING_ACTOR = "training-conversations";
 
@@ -51,6 +50,8 @@ export type ConversationPorts = Readonly<{
   /** One audited query tool call; returns the tool's result or refusal. */
   runTool: (name: ToolName, args: unknown) => Promise<unknown>;
   systemPrompt: () => Promise<SystemPrompt>;
+  /** The tools a chat request sends, as OpenAI function definitions. */
+  tools: () => Promise<readonly OpenAiTool[]>;
 }>;
 
 export type LineWriter = Readonly<{
@@ -89,13 +90,14 @@ export type BuildArgs = Readonly<{
   rejected: string | null;
 }>;
 
-/** `x.jsonl` → `x.meta.jsonl`, `x.manifest.json`. */
+/** `x.jsonl` → `x.meta.jsonl`, `x.manifest.json`, `x.stats.json`. */
 export const outputPaths = (out: string) => {
   const base = out.endsWith(".jsonl") ? out.slice(0, -".jsonl".length) : out;
   return {
     records: out,
     meta: `${base}.meta.jsonl`,
     manifest: `${base}.manifest.json`,
+    stats: `${base}.stats.json`,
   };
 };
 
@@ -241,7 +243,8 @@ export const runBuildConversations = async (
   }
 
   const ports = await deps.ports();
-  const prompt = queryToolsOnlyPrompt(await ports.systemPrompt());
+  const prompt = await ports.systemPrompt();
+  const tools = await ports.tools();
   const all = await ports.listSubjects(args.cohortId);
   if (all.length === 0) {
     io.stderr.write(`No subjects in cohort ${args.cohortId}.\n`);
@@ -258,6 +261,7 @@ export const runBuildConversations = async (
   const metas = await deps.openOut(partial(paths.meta));
   const families: string[] = [];
   const outcomes: string[] = [];
+  const statsRows: StatsRow[] = [];
   const wearableStart = Date.parse(`${args.anchorDay}T00:00:00Z`) - 89 * 86_400_000;
   try {
     // One subject at a time, so the audit chain reads in subject order.
@@ -283,6 +287,7 @@ export const runBuildConversations = async (
           cohortId: args.cohortId,
           seed: args.seed,
           prompt,
+          tools,
         });
         const clean = args.inlineTools
           ? { messages: record.messages, tools: record.tools }
@@ -291,6 +296,7 @@ export const runBuildConversations = async (
         await metas.write(`${JSON.stringify(record.meta)}\n`);
         families.push(draft.family);
         outcomes.push(draft.outcome);
+        statsRows.push({ meta: record.meta, chars: messageChars(record.messages) });
       }
     }
   } catch {
@@ -323,23 +329,26 @@ export const runBuildConversations = async (
         seed: args.seed,
         anchor_day: args.anchorDay,
         system_prompt_id: prompt.id,
-        files: { records: paths.records, meta: paths.meta },
+        files: { records: paths.records, meta: paths.meta, stats: paths.stats },
         ...summary,
         // Subjects whose FHIR bundle the warehouse refused (training:batches --skip-rejected).
         ...(rejected === null ? {} : { rejected_bundles: rejected }),
         // One copy of the tool definitions; --inline-tools also puts them on every line.
-        tools: toolSchemas(),
+        tools,
       },
       null,
       2,
     )}\n`,
   );
+  const stats = conversationStats(statsRows, JSON.stringify(tools).length);
+  await deps.writeText(paths.stats, `${JSON.stringify(stats, null, 2)}\n`);
   io.stdout.write(
     [
       `Conversations written to ${paths.records} (meta in ${paths.meta})`,
       `Cohort ${args.cohortId}, seed ${args.seed}: ${summary.subjects} subjects, ${summary.conversations} conversations`,
       `By family: ${JSON.stringify(summary.byFamily)}`,
       `By outcome: ${JSON.stringify(summary.byOutcome)}`,
+      `No-data share ${stats.no_data_share}, unit share ${stats.unit_share}; stats in ${paths.stats}`,
       "",
     ].join("\n"),
   );
@@ -352,6 +361,8 @@ export const realPorts = async (today: string): Promise<ConversationPorts> => {
   const { database } = await import("../../infrastructure/database");
   const { buildTwinSystemPrompt } =
     await import("../../features/chat/twin-system-prompt");
+  const { createChatTools } = await import("../../features/chat/chat-tools");
+  const { openAiToolsFrom } = await import("./chat-tool-list");
   const scope = {
     actor: TRAINING_ACTOR,
     sessionId: `${TRAINING_ACTOR}-${today}`,
@@ -387,6 +398,9 @@ export const realPorts = async (today: string): Promise<ConversationPorts> => {
         })
       ).map((row) => row.subjectRef),
     runTool,
+    // The chat's own tool set; building it runs nothing, only the schemas are read.
+    tools: () => openAiToolsFrom(createChatTools(scope)),
+    // Every tool offered and no wearable linked: the prompt a synthetic chat gets.
     systemPrompt: async () => ({
       id: "twin-system-prompt/synthetic/no-wearables",
       text: buildTwinSystemPrompt({
