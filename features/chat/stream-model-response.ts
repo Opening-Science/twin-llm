@@ -116,7 +116,7 @@ export const streamModelResponse = async (
     },
     {
       onFirstToken: () => timer.markFirstToken(),
-      onFinish: async ({ text, usage, parsed, buildDocument }) => {
+      onFinish: async ({ text, usage, parsed, toolResults, buildDocument }) => {
         try {
           const metrics = timer.read(usage);
           const finished = await finishModelResponse({
@@ -130,6 +130,7 @@ export const streamModelResponse = async (
                 reasoningText: parsed.reasoningText,
                 attribution: parsed.attribution,
                 document,
+                toolResults,
               }),
             writeFailed: () => markModelResponseFailed({ turnId, modelId }),
             logError: (message, name) =>

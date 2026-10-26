@@ -71,6 +71,17 @@ nothing to apply. The old rows in `_prisma_migrations` can stay. Two leftovers f
 earlier history are no longer in the schema and can be dropped when convenient:
 `DROP TABLE "votes";` and `DROP INDEX "model_responses_modelId_idx";`.
 
+## Tool parts of an answer
+
+`model_responses."toolParts"` (nullable JSONB) keeps the tool calls an answer
+made, in step order: `[{ seq, tool, input, output, argsSha256, resultSha256,
+rowCount, at }]`. The hashes are the audit row's (`packages/audit/hash.ts`),
+so a stored part can be checked against the chain; `rowCount` is copied from
+the audit row with the same hashes and is null when none matched. An answer
+that used no tool stores null. `/t/[threadId]` replays the column as the
+stream's `tool-<name>` parts (`features/arena/saved-tool-parts.ts`); the
+browser still receives only each tool's name and state.
+
 ## Two-layer personal data
 
 | Layer            | What lives there                                                                                                                                                                                          | What does not                                                                           |
