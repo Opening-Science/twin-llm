@@ -2,10 +2,11 @@
  * `bun run setup:local`: everything a fresh checkout needs to run like the
  * maintainers' machines, in one idempotent command (macOS and Linux).
  *
- *   bun run setup:local                  # synthetic eval cohort (Synthea, fixed dates)
+ *   bun run setup:local                  # synthetic eval cohort (pinned files from release eval-cohort-v1)
  *   bun run setup:local -- --cohort-10k  # the 10,000-person release instead (~1 GB download, ~45 GB disk)
  *   bun run setup:local -- --skip-cohort # everything but the cohort
  *   bun run setup:local -- --reload-cohort  # replace a stale eval cohort with the pinned one
+ *   bun run setup:local -- --generate-cohort  # generate the eval cohort with Synthea instead (x86_64 matches the pin)
  *
  * Checks prerequisites and prints how to install what is missing; it never
  * installs system packages. Steps already done are skipped, so it is safe to
@@ -40,6 +41,7 @@ import {
   blockedBy,
   type CohortChoice,
   formatChecklist,
+  GENERATE_FLAG,
   type Outcome,
   planSetup,
   type SetupOptions,
@@ -48,22 +50,29 @@ import {
 import { checkTool } from "./prerequisites";
 
 const USAGE =
-  "Usage: bun run setup:local [-- --cohort-10k | --skip-cohort | --reload-cohort]";
+  "Usage: bun run setup:local [-- --cohort-10k | --skip-cohort | [--reload-cohort] [--generate-cohort]]";
 
-const FLAGS = ["--cohort-10k", "--skip-cohort", "--reload-cohort"];
+const COHORT_FLAGS = ["--cohort-10k", "--skip-cohort", "--reload-cohort"];
 
-/** The options, or null for an unknown flag or flags that contradict each other. */
+/**
+ * The options, or null for an unknown flag or flags that contradict each
+ * other. `--generate-cohort` goes with the evaluation cohort only, alone or
+ * with `--reload-cohort`.
+ */
 export const parseSetupArgs = (argv: readonly string[]): SetupOptions | null => {
   const known = argv.filter((arg) => arg !== "--");
-  if (known.some((arg) => !FLAGS.includes(arg))) return null;
-  const chosen = FLAGS.filter((flag) => known.includes(flag));
+  if (known.some((arg) => !COHORT_FLAGS.includes(arg) && arg !== GENERATE_FLAG))
+    return null;
+  const chosen = COHORT_FLAGS.filter((flag) => known.includes(flag));
   if (chosen.length > 1) return null;
   const cohort: CohortChoice = known.includes("--cohort-10k")
     ? "10k"
     : known.includes("--skip-cohort")
       ? "none"
       : "eval";
-  return { cohort, reloadCohort: known.includes("--reload-cohort") };
+  const generateCohort = known.includes(GENERATE_FLAG);
+  if (generateCohort && cohort !== "eval") return null;
+  return { cohort, reloadCohort: known.includes("--reload-cohort"), generateCohort };
 };
 
 const createEnvFile = async (root: string): Promise<string> => {
@@ -140,13 +149,13 @@ const perform = async (root: string, action: Action): Promise<string> => {
     case "install-rigged":
       return installRigged(root, action);
     case "reload-eval":
-      return reloadEvalCohort(root, await databaseUrl(root));
+      return reloadEvalCohort(root, await databaseUrl(root), action.source);
     case "command":
       if (!runCommand(root, action.argv))
         throw new SetupError(`${action.argv.join(" ")} failed; see its output above`);
       return "done";
     case "load-eval":
-      return loadEvalCohort(root);
+      return loadEvalCohort(root, action.source);
     case "load-10k":
       return loadRelease10k(root);
     case "load-fixtures":

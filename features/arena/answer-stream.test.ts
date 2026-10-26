@@ -116,7 +116,7 @@ describe("streamAnswer", () => {
     expect(raw).toContain('{"type":"data-heartbeat","data":null,"transient":true}');
   });
 
-  test("tool calls show as name and state, nothing else", async () => {
+  test("tool calls show as cards with named arguments, never outputs", async () => {
     const { updates } = await run(
       serverResponse(
         scriptedModel("## Answer\nSynthetic.", [
@@ -126,7 +126,11 @@ describe("streamAnswer", () => {
             toolName: "query_observations",
             input: { subject_ref: "synthetic-1" },
           },
-          { type: "tool-output-available", toolCallId: "c1", output: { rows: [] } },
+          {
+            type: "tool-output-available",
+            toolCallId: "c1",
+            output: { rows: [{ value: 41 }] },
+          },
           {
             type: "tool-input-available",
             toolCallId: "c2",
@@ -137,8 +141,24 @@ describe("streamAnswer", () => {
       ),
     );
     expect(updates.at(-1)?.tools).toEqual([
-      { name: "query_observations", state: "done" },
-      { name: "guideline_search", state: "running" },
+      {
+        id: "c1",
+        tool: "query_observations",
+        title: "Query observations",
+        args: [{ label: "Subject", value: "synthetic-1" }],
+        state: "done",
+        rowCount: 1,
+        note: null,
+      },
+      {
+        id: "c2",
+        tool: "guideline_search",
+        title: "Searched guidelines",
+        args: [],
+        state: "running",
+        rowCount: null,
+        note: null,
+      },
     ]);
   });
 

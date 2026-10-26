@@ -22,7 +22,9 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Tool calls show as folded cards above each answer instead of a one-line status (#39): the call in plain words, its measure, window or subject, running, done, refused or failed, and the rows it read. Expanding a card lists its arguments; tool outputs never show. A reloaded thread shows the same cards, and the "Thinking…" line stays while the model works.
 - Evaluation items are spread across subjects: an item that needs another subject, or shares one with more than 3 items, goes to the qualifying subject with the fewest items (ties to the lowest `subject_ref`), so no subject answers more than 3 items (16 before). `bun run eval:spread-subjects` applies the rule from the warehouse; 30 items moved and the answer key was rebuilt from the same cohort (`f4941fab…`), so results scored against the earlier key do not compare item by item.
+- `bun run setup:local` downloads the evaluation cohort's pinned files from the `eval-cohort-v1` release (SHA-256 pinned) instead of generating them, because Synthea gives other last digits on Apple Silicon than on x86_64 (#100). `--generate-cohort` still generates locally, and a mismatch on arm64 is reported as a platform difference with the download as the fix.
 - Models get slimmer query-tool definitions: no regex patterns or formats, window bounds as plain strings. With the Qwen3 chat template the nine tools take about 2,200 tokens instead of 12,000 in chat and 8,600 in the training data; the server still validates every call as strictly as before, and the MCP manifest is unchanged.
 - Repository admins can bypass the `main` rules only through a pull request; nobody pushes to `main` directly.
 - Personal data reaches Exoscale only with `EXOSCALE_PERSONAL_DATA=consented-pilot`, each such request is audited, and Infomaniak is synthetic-only.

@@ -6,14 +6,22 @@
 import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { createWriteStream, existsSync } from "node:fs";
-import { mkdir, readdir, readFile, rename, rm } from "node:fs/promises";
-import { join } from "node:path";
+import { mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 
 import { cohortContentSha256 } from "../synthea/cohort-checksum";
-import { EVAL_COHORT, FIXTURE_COHORT, RELEASE_10K } from "./cohort-pins";
+import { EVAL_COHORT, EVAL_RELEASE, FIXTURE_COHORT, RELEASE_10K } from "./cohort-pins";
 import { deleteCohortRows, formatDeleted, ReloadRefusedError } from "./cohort-reload";
 import { fileSha256, openSql } from "./detect";
+import {
+  fallbackNotice,
+  fetchEvalArchive,
+  type GenerateReason,
+  generatedMismatchMessage,
+  unpackedProblem,
+} from "./eval-cohort-download";
 import { parseIngestSummary, sha256For } from "./ingest-summary";
+import { type EvalSource, RELOAD_COMMAND, SETUP_COMMAND } from "./plan";
 
 export class SetupError extends Error {}
 
@@ -94,51 +102,170 @@ const readManifest = async (
 const countJson = async (dir: string): Promise<number> =>
   (await readdir(dir).catch(() => [])).filter((name) => name.endsWith(".json")).length;
 
-/** Generates the evaluation cohort (unless an identical copy is on disk) and verifies it. */
-const prepareEvalCohort = async (root: string): Promise<void> => {
-  const fhir = join(root, EVAL_COHORT.fhirDir);
-  const manifest = await readManifest(join(root, ".synthea", "manifest.json"));
-  const reuse =
-    manifest?.cohortId === EVAL_COHORT.cohortId &&
-    manifest.contentSha256 === EVAL_COHORT.contentSha256 &&
-    (await countJson(fhir)) === EVAL_COHORT.patientFileCount;
-  if (reuse) {
-    process.stdout.write(
-      `\n${EVAL_COHORT.cohortId} already generated in ${EVAL_COHORT.fhirDir}; checking it.\n`,
-    );
-  } else if (
-    !runCommand(root, ["bun", "run", "synthea:generate", "--", "--preset", "eval"])
-  ) {
+const unpack = (archive: string, dir: string): boolean =>
+  spawnSync("sh", ["-c", 'zstd -dc "$1" | tar -xf - -C "$2"', "sh", archive, dir], {
+    stdio: "inherit",
+  }).status === 0;
+
+/**
+ * Downloads the pinned archive (kept for re-runs), unpacks it beside
+ * `.synthea/fhir`, checks it, and only then puts its `fhir/` and
+ * `manifest.json` in place of the ones in `.synthea/`. Returns null when the
+ * cohort is in place, otherwise why not; nothing in `.synthea/fhir` is touched
+ * then.
+ */
+const downloadEvalCohort = async (root: string): Promise<string | null> => {
+  const archive = join(root, EVAL_RELEASE.downloadDir, EVAL_RELEASE.archive);
+  await mkdir(dirname(archive), { recursive: true });
+  process.stdout.write(
+    `\nRelease ${EVAL_RELEASE.tag}: ${EVAL_RELEASE.archive} (${(EVAL_RELEASE.archiveBytes / 1e6).toFixed(1)} MB) …\n`,
+  );
+  const got = await fetchEvalArchive(archive, EVAL_RELEASE, {
+    fetch: (url, init) => fetch(url, init),
+    readFile: async (path) => {
+      try {
+        return new Uint8Array(await readFile(path));
+      } catch {
+        return null;
+      }
+    },
+    writeFileAtomic: async (path, bytes) => {
+      const partial = `${path}.partial`;
+      try {
+        await writeFile(partial, bytes);
+        await rename(partial, path);
+      } catch (error) {
+        await rm(partial, { force: true });
+        throw error;
+      }
+    },
+    sha256: (bytes) => createHash("sha256").update(bytes).digest("hex"),
+  });
+  if (got.kind === "not-published" || got.kind === "failed") return got.message;
+  process.stdout.write(
+    got.kind === "cached"
+      ? `${EVAL_RELEASE.archive} already downloaded; SHA-256 matches the pin.\n`
+      : `SHA-256 matches the pin.\n`,
+  );
+
+  const dir = join(root, EVAL_RELEASE.unpackDir);
+  await rm(dir, { recursive: true, force: true });
+  await mkdir(dir, { recursive: true });
+  try {
+    if (!unpack(archive, dir)) return `unpacking ${EVAL_RELEASE.archive} failed`;
+    const fhir = join(dir, "fhir");
+    const manifest = await readManifest(join(dir, "manifest.json"));
+    const problem = unpackedProblem({
+      files: await countJson(fhir),
+      contentSha256: await cohortContentSha256(fhir),
+      manifestCohortId: typeof manifest?.cohortId === "string" ? manifest.cohortId : null,
+    });
+    if (problem !== null) return problem;
+    const synthea = join(root, ".synthea");
+    await rm(join(synthea, "fhir"), { recursive: true, force: true });
+    await rm(join(synthea, "manifest.json"), { force: true });
+    await rename(fhir, join(synthea, "fhir"));
+    await rename(join(dir, "manifest.json"), join(synthea, "manifest.json"));
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+  process.stdout.write(
+    `${EVAL_COHORT.patientFileCount} files from release ${EVAL_RELEASE.tag} in ${EVAL_COHORT.fhirDir}.\n`,
+  );
+  return null;
+};
+
+/** Generates the evaluation cohort with Synthea and checks it against the pin. */
+const generateEvalCohort = async (
+  root: string,
+  reason: GenerateReason,
+  rerun: string,
+): Promise<void> => {
+  if (!runCommand(root, ["bun", "run", "synthea:generate", "--", "--preset", "eval"])) {
     throw new SetupError("synthea:generate failed; see its output above");
   }
+  const fhir = join(root, EVAL_COHORT.fhirDir);
   const files = await countJson(fhir);
   const content = await cohortContentSha256(fhir);
   if (files !== EVAL_COHORT.patientFileCount || content !== EVAL_COHORT.contentSha256) {
     throw new SetupError(
-      `generated cohort does not match the pin (${files} files, contentSha256 ${content}; expected ${EVAL_COHORT.patientFileCount} files, ${EVAL_COHORT.contentSha256}). Nothing ingested. Please report this with .synthea/manifest.json`,
+      generatedMismatchMessage(
+        { files, contentSha256: content },
+        process.arch,
+        reason,
+        rerun,
+      ),
     );
   }
   process.stdout.write(`contentSha256 ${content} matches the pin.\n`);
 };
 
-/** The evaluation cohort: generate it (unless an identical copy is on disk), verify, ingest. */
-export const loadEvalCohort = async (root: string): Promise<string> => {
-  await prepareEvalCohort(root);
-  return ingest(root, EVAL_COHORT.fhirDir, EVAL_COHORT.cohortId, false);
+/**
+ * Puts the pinned evaluation cohort in `.synthea/fhir`: keeps an identical
+ * copy already there, else downloads it (the default) or generates it
+ * (`--generate-cohort`, or when the release cannot be reached). Returns how.
+ */
+const prepareEvalCohort = async (
+  root: string,
+  source: EvalSource,
+  rerun: string,
+): Promise<string> => {
+  const fhir = join(root, EVAL_COHORT.fhirDir);
+  const manifest = await readManifest(join(root, ".synthea", "manifest.json"));
+  const onDisk =
+    manifest?.cohortId === EVAL_COHORT.cohortId &&
+    manifest.contentSha256 === EVAL_COHORT.contentSha256 &&
+    (await countJson(fhir)) === EVAL_COHORT.patientFileCount &&
+    (await cohortContentSha256(fhir)) === EVAL_COHORT.contentSha256;
+  if (onDisk) {
+    process.stdout.write(
+      `\n${EVAL_COHORT.cohortId} already in ${EVAL_COHORT.fhirDir}; contentSha256 matches the pin.\n`,
+    );
+    return "pinned files already on disk";
+  }
+  if (source.kind === "generate") {
+    await generateEvalCohort(root, { kind: "asked" }, rerun);
+    return "generated with Synthea, contentSha256 as pinned";
+  }
+  const problem = await downloadEvalCohort(root);
+  if (problem === null)
+    return `downloaded from release ${EVAL_RELEASE.tag}, SHA-256 as pinned`;
+  if (source.noGenerate !== null) {
+    throw new SetupBlocked(
+      `${problem}, and generating it locally needs ${source.noGenerate}. Then run ${rerun} again.`,
+    );
+  }
+  process.stdout.write(`\n${fallbackNotice(problem)}\n`);
+  await generateEvalCohort(
+    root,
+    { kind: "download-unavailable", message: problem },
+    rerun,
+  );
+  return `generated with Synthea (${problem}), contentSha256 as pinned`;
+};
+
+/** The evaluation cohort: download (or generate) it, verify, ingest. */
+export const loadEvalCohort = async (
+  root: string,
+  source: EvalSource,
+): Promise<string> => {
+  const how = await prepareEvalCohort(root, source, SETUP_COMMAND);
+  return `${await ingest(root, EVAL_COHORT.fhirDir, EVAL_COHORT.cohortId, false)} (${how})`;
 };
 
 /**
- * `--reload-cohort`: generate and verify the pinned evaluation cohort first, so
- * a failure there deletes nothing; then delete the warehouse's rows for that
- * cohort in one transaction (cohort-reload.ts) and ingest the pinned files.
- * If the ingest stops part way, running setup again finishes it (ingest skips
- * bundles already there).
+ * `--reload-cohort`: download (or generate) and verify the pinned evaluation
+ * cohort first, so a failure there deletes nothing; then delete the
+ * warehouse's rows for that cohort in one transaction (cohort-reload.ts) and
+ * ingest the pinned files. If the ingest stops part way, running setup again
+ * finishes it (ingest skips bundles already there).
  */
 export const reloadEvalCohort = async (
   root: string,
   databaseUrl: string,
+  source: EvalSource,
 ): Promise<string> => {
-  await prepareEvalCohort(root);
+  const how = await prepareEvalCohort(root, source, RELOAD_COMMAND);
   const sql = openSql(databaseUrl);
   let deleted: string;
   try {
@@ -156,7 +283,7 @@ export const reloadEvalCohort = async (
     await sql.close();
   }
   process.stdout.write(`${deleted}.\n`);
-  return `${deleted}; ${await ingest(root, EVAL_COHORT.fhirDir, EVAL_COHORT.cohortId, false)}`;
+  return `${deleted}; ${await ingest(root, EVAL_COHORT.fhirDir, EVAL_COHORT.cohortId, false)} (${how})`;
 };
 
 /** The three trimmed fixtures in the repository. */

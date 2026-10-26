@@ -132,7 +132,7 @@ leave `.env.local` alone: the env for this lives in `.env.eval`, a copy of
 cp .env.synthetic.example .env.eval       # then set DATABASE_URL to the throwaway database
 # prisma.config.ts reads .env.local for anything unset, so pass DATABASE_URL explicitly
 DATABASE_URL="$(grep '^DATABASE_URL=' .env.eval | cut -d= -f2-)" bunx prisma migrate deploy
-bun run synthea:generate -- --preset eval   # contentSha256 must be EVAL_CONTENT_SHA256
+bun run synthea:generate -- --preset eval   # contentSha256 must be EVAL_CONTENT_SHA256 (x86_64; elsewhere use the eval-cohort-v1 release, docs/warehouse.md)
 bun --env-file=.env.eval --preload ./features/chat/response/preload-server-only.mjs \
   scripts/warehouse/ingest.ts .synthea/fhir --cohort synthea-v4-seed42
 bun run eval:spread-subjects     # after a cohort change: subjects by the rule below

@@ -3,6 +3,8 @@ import type { ModelResponseMetrics } from "@/infrastructure/model-response-metri
 import type { EvidenceAttribution } from "@/infrastructure/oura-types";
 import type { ResponseDocumentV1 } from "@/infrastructure/response-document/document-v1";
 
+import type { ToolCard } from "./tool-cards";
+
 /**
  * The browser's picture of a conversation. A saved thread and a live one use
  * the same shapes, so the thread page hands its rows straight to the screen
@@ -13,11 +15,8 @@ import type { ResponseDocumentV1 } from "@/infrastructure/response-document/docu
  * named so code that only needs one of them can say so.
  */
 
-/** A tool call as the column shows it: a name and how far it got, never its input or output. */
-export type ToolActivity = Readonly<{
-  name: string;
-  state: "running" | "done" | "error";
-}>;
+/** A tool call as the column shows it (`tool-cards.ts`): named arguments and a row count, never its output. */
+export type ToolActivity = ToolCard;
 
 export type AnswerStatus = "STREAMING" | "COMPLETE" | "FAILED";
 

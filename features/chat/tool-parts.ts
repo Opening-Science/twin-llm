@@ -41,3 +41,17 @@ export const storedToolParts = (
     };
   });
 };
+
+/**
+ * A step's results in the order the model made the calls. Calls in one step
+ * run in parallel and finish in any order; the live answer lists them as
+ * called, so the stored column must too or a reload would reorder the cards.
+ */
+export const inCallOrder = <T extends Readonly<{ toolCallId: string }>>(
+  calls: readonly Readonly<{ toolCallId: string }>[],
+  results: readonly T[],
+): T[] => {
+  const position = new Map(calls.map((call, index) => [call.toolCallId, index]));
+  const at = (result: T) => position.get(result.toolCallId) ?? calls.length;
+  return [...results].sort((a, b) => at(a) - at(b));
+};

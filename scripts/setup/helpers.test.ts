@@ -119,22 +119,32 @@ describe("ingest output", () => {
 
 describe("parseSetupArgs", () => {
   test("flags", () => {
-    expect(parseSetupArgs([])).toEqual({ cohort: "eval", reloadCohort: false });
-    expect(parseSetupArgs(["--", "--cohort-10k"])).toEqual({
-      cohort: "10k",
-      reloadCohort: false,
-    });
-    expect(parseSetupArgs(["--skip-cohort"])).toEqual({
-      cohort: "none",
-      reloadCohort: false,
-    });
+    const eval_ = { cohort: "eval", reloadCohort: false, generateCohort: false };
+    expect(parseSetupArgs([])).toEqual(eval_);
+    expect(parseSetupArgs(["--", "--cohort-10k"])).toEqual({ ...eval_, cohort: "10k" });
+    expect(parseSetupArgs(["--skip-cohort"])).toEqual({ ...eval_, cohort: "none" });
     expect(parseSetupArgs(["--", "--reload-cohort"])).toEqual({
-      cohort: "eval",
+      ...eval_,
       reloadCohort: true,
     });
     expect(parseSetupArgs(["--cohort-10k", "--skip-cohort"])).toBeNull();
     expect(parseSetupArgs(["--reload-cohort", "--skip-cohort"])).toBeNull();
     expect(parseSetupArgs(["--reload-cohort", "--cohort-10k"])).toBeNull();
     expect(parseSetupArgs(["--yes"])).toBeNull();
+  });
+
+  test("--generate-cohort goes with the evaluation cohort, alone or with --reload-cohort", () => {
+    expect(parseSetupArgs(["--", "--generate-cohort"])).toEqual({
+      cohort: "eval",
+      reloadCohort: false,
+      generateCohort: true,
+    });
+    expect(parseSetupArgs(["--reload-cohort", "--generate-cohort"])).toEqual({
+      cohort: "eval",
+      reloadCohort: true,
+      generateCohort: true,
+    });
+    expect(parseSetupArgs(["--generate-cohort", "--cohort-10k"])).toBeNull();
+    expect(parseSetupArgs(["--generate-cohort", "--skip-cohort"])).toBeNull();
   });
 });
