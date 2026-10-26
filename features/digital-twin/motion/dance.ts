@@ -14,8 +14,8 @@ import { type BodyPose, JOINT_IDS, type JointId, type JointRotation } from "./ga
  * the lowered hip does not push its foot through the floor. `applyPose` then
  * lifts the pelvis so the lowest foot touches the floor, as for the walk.
  *
- * There is no neck joint in the vocabulary, so the head bob is a nod of the
- * upper spine, which carries the head.
+ * The head bob is a nod of the upper spine, which carries the head; the head
+ * joint itself stays at rest.
  */
 
 /** Beats per minute; the toolbar offers 90, 110 and 128. */
@@ -275,6 +275,7 @@ export const DANCE_LIMITS: Readonly<
     lowerLegR: lowerLeg,
     footL: foot,
     footR: foot,
+    head: { pitch: [-20, 20], roll: [-15, 15], yaw: [-30, 30] },
   };
 })();
 
@@ -353,6 +354,7 @@ export const compose = (frame: MoveFrame): Degrees => {
     lowerLegR: lowerLegR ?? [0, 0, 0],
     footL: footL ?? [0, 0, 0],
     footR: footR ?? [0, 0, 0],
+    head: [0, 0, 0],
   };
 };
 

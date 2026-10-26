@@ -56,6 +56,7 @@ export const RIG_NAMES: Readonly<
     lowerLegR: ["lowerleg01r"],
     footL: ["footl"],
     footR: ["footr"],
+    head: ["head"],
   },
   mixamo: {
     pelvis: ["hips"],
@@ -73,6 +74,7 @@ export const RIG_NAMES: Readonly<
     lowerLegR: ["rightleg"],
     footL: ["leftfoot"],
     footR: ["rightfoot"],
+    head: ["head"],
   },
 };
 
@@ -225,7 +227,8 @@ const target = new Vector3();
 
 /**
  * Poses the skeleton. The pelvis then moves along `up` so the lowest ankle or
- * toe sits where it stood at rest: walking in place stays on the floor.
+ * toe sits where it stood at rest: walking in place stays on the floor. A
+ * pose's `pelvisLift` raises the body off it (a run's flight phase).
  * Bones are three.js objects, configured in place every frame.
  */
 export const applyPose = (binding: RigBinding, pose: BodyPose): void => {
@@ -246,7 +249,7 @@ export const applyPose = (binding: RigBinding, pose: BodyPose): void => {
   target
     .copy(restWorld)
     .addScaledVector(binding.left, pose.pelvisShift)
-    .addScaledVector(binding.up, binding.restFloor - floor);
+    .addScaledVector(binding.up, binding.restFloor - floor + (pose.pelvisLift ?? 0));
   bone.position.copy(bone.parent ? bone.parent.worldToLocal(target.clone()) : target);
   bone.updateWorldMatrix(false, true);
 };
