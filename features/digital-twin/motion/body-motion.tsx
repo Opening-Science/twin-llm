@@ -4,7 +4,9 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useRef } from "react";
 
 import { nextAutoRotateDelay } from "../frame-pacing";
-import { clipPose, type MotionClip, stepWeight, weighPose } from "./gait";
+import { clipPose } from "./clip-pose";
+import { DEFAULT_TEMPO, retimeElapsed } from "./dance";
+import { type MotionClip, stepWeight, weighPose } from "./gait";
 import { applyPose, restorePose, type RigBinding } from "./rig-map";
 
 /** Longer gaps (a hidden tab, a stall) do not jump the blend. */
@@ -16,12 +18,14 @@ const MAX_DELTA_S = 0.1;
  * of time, not keyframes). A clip blends in and out over 0.4 s. Frames stay on
  * demand: while the body moves, a timer asks for about 30 fps, and none while
  * the canvas is off screen or the tab is hidden. Stopping, a new body or
- * unmounting puts every bone back where it was bound. Renders nothing.
+ * unmounting puts every bone back where it was bound. A new tempo carries the
+ * dance on from the beat it had reached. Renders nothing.
  */
 export const BodyMotion = ({
   binding,
   clip,
-}: Readonly<{ binding: RigBinding | null; clip: MotionClip | null }>) => {
+  tempo = DEFAULT_TEMPO,
+}: Readonly<{ binding: RigBinding | null; clip: MotionClip | null; tempo?: number }>) => {
   const gl = useThree((state) => state.gl);
   const invalidate = useThree((state) => state.invalidate);
   const visibleRef = useRef(true);
@@ -31,10 +35,11 @@ export const BodyMotion = ({
     playing: null as MotionClip | null,
     startS: 0,
     lastS: null as number | null,
+    tempo,
   });
-  const live = useRef({ binding, clip });
+  const live = useRef({ binding, clip, tempo });
   useEffect(() => {
-    live.current = { binding, clip };
+    live.current = { binding, clip, tempo };
   });
 
   useEffect(() => {
@@ -68,18 +73,28 @@ export const BodyMotion = ({
       if (timerRef.current !== null) window.clearTimeout(timerRef.current);
       timerRef.current = null;
       if (binding) restorePose(binding);
-      motion.current = { weight: 0, playing: null, startS: 0, lastS: null };
+      motion.current = {
+        weight: 0,
+        playing: null,
+        startS: 0,
+        lastS: null,
+        tempo: live.current.tempo,
+      };
     },
     [binding],
   );
 
   useFrame(() => {
-    const { binding: rig, clip: wanted } = live.current;
+    const { binding: rig, clip: wanted, tempo: wantedTempo } = live.current;
     const state = motion.current;
     if (!rig) return;
     const nowS = performance.now() / 1000;
     const delta = state.lastS === null ? 0 : Math.min(MAX_DELTA_S, nowS - state.lastS);
     state.lastS = nowS;
+    if (state.tempo !== wantedTempo) {
+      state.startS = nowS - retimeElapsed(nowS - state.startS, state.tempo, wantedTempo);
+      state.tempo = wantedTempo;
+    }
     if (state.playing === null && wanted !== null) {
       state.playing = wanted;
       state.startS = nowS;
@@ -96,7 +111,10 @@ export const BodyMotion = ({
       state.lastS = null;
       return;
     }
-    applyPose(rig, weighPose(clipPose(state.playing, nowS - state.startS), state.weight));
+    applyPose(
+      rig,
+      weighPose(clipPose(state.playing, nowS - state.startS, state.tempo), state.weight),
+    );
 
     if (timerRef.current !== null) return;
     const wait = nextAutoRotateDelay({

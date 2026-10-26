@@ -165,25 +165,61 @@ describe("ViewToolbar", () => {
     ]);
   });
 
-  test("Walk and Idle sit in Show after Live vitals; pressing the playing clip stops it", () => {
+  test("Walk, Idle and Dance sit in Show after Live vitals; pressing the playing clip stops it", () => {
     const picked: (string | null)[] = [];
     const motion = {
       clip: "walk" as const,
       onSelect: (clip: string | null) => void picked.push(clip),
       unavailable: null,
+      tempo: 110,
+      onTempo: noop,
     };
     expect(
       groups({ ...BASE, liveVitals: { on: false, onToggle: noop }, motion }),
     ).toEqual([
       ["View", ["Reset view", "Pause", "+", "−"]],
-      ["Show", ["Live vitals", "Walk", "Idle"]],
+      ["Show", ["Live vitals", "Walk", "Idle", "Dance"]],
     ]);
     expect(buttons({ ...BASE, motion }).slice(4)).toEqual([
       ["Walk", null, "true"],
       ["Idle", null, "false"],
+      ["Dance", null, "false"],
     ]);
     for (const click of clickable(ViewToolbar({ ...BASE, motion })).slice(4)) click();
-    expect(picked).toEqual([null, "idle"]);
+    expect(picked).toEqual([null, "idle", "dance"]);
+    expect(
+      renderToStaticMarkup(createElement(ViewToolbar, { ...BASE, motion })),
+    ).not.toContain("<select");
+  });
+
+  test("while the dance plays a Tempo select offers 90, 110 and 128 BPM", () => {
+    const tempos: number[] = [];
+    const html = renderToStaticMarkup(
+      createElement(ViewToolbar, {
+        ...BASE,
+        motion: {
+          clip: "dance",
+          onSelect: noop,
+          unavailable: null,
+          tempo: 128,
+          onTempo: (tempo) => void tempos.push(tempo),
+        },
+      }),
+    );
+    expect(html).toContain("Tempo<select");
+    expect(
+      [...html.matchAll(/<option value="(\d+)"( selected="")?>([^<]*)<\/option>/g)].map(
+        ([, value, selected, text]) => [
+          value,
+          selected === undefined ? "" : "selected",
+          text,
+        ],
+      ),
+    ).toEqual([
+      ["90", "", "90 BPM"],
+      ["110", "", "110 BPM"],
+      ["128", "selected", "128 BPM"],
+    ]);
   });
 
   test("without a rig the clips are disabled and say why", () => {
@@ -194,11 +230,14 @@ describe("ViewToolbar", () => {
           clip: null,
           onSelect: noop,
           unavailable: "This scan has no skeleton the walk can drive.",
+          tempo: 110,
+          onTempo: noop,
         },
       }),
     );
-    expect(html).toContain(
-      'disabled="" title="This scan has no skeleton the walk can drive."',
-    );
+    expect(
+      html.split('disabled="" title="This scan has no skeleton the walk can drive."')
+        .length - 1,
+    ).toBe(3);
   });
 });

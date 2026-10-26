@@ -1,13 +1,16 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  ANKLE_RANGE,
   bump,
   DEFAULT_WALK,
+  FOOT_PITCH_FLOOR,
   gaitPeriod,
   gaitPhase,
   idlePose,
   JOINT_IDS,
   limbAngles,
+  shapeAnkle,
   stepWeight,
   walkPose,
   weighPose,
@@ -53,9 +56,34 @@ describe("limbAngles", () => {
     expect(limbAngles(0.15).knee).toBe(18);
   });
 
-  test("the ankle pushes off at toe off and lifts in late stance", () => {
-    expect(limbAngles(0.63).ankle).toBe(-16);
+  test("the ankle drops after heel strike and lifts in late stance", () => {
+    expect(limbAngles(0.06).ankle).toBe(-6);
     expect(limbAngles(0.42).ankle).toBe(10);
+  });
+
+  test("around toe off and in swing the sole never points more than 35° down", () => {
+    const sole = (phase: number) => {
+      const { hip, knee, ankle } = limbAngles(phase);
+      return hip - knee + ankle;
+    };
+    expect(round(sole(0.6), 3)).toBe(-35);
+    expect(round(sole(0.75), 3)).toBe(-35);
+    const lowest = Math.min(...Array.from({ length: 1000 }, (_, i) => sole(i / 1000)));
+    // The ankle's 20° of dorsiflexion runs out briefly in early swing.
+    expect(round(lowest, 1)).toBe(-35.4);
+    for (let i = 0; i < 1000; i += 1) {
+      const { ankle } = limbAngles(i / 1000);
+      expect(ankle).toBeGreaterThanOrEqual(ANKLE_RANGE[0]);
+      expect(ankle).toBeLessThanOrEqual(ANKLE_RANGE[1]);
+    }
+  });
+
+  test("shapeAnkle lifts a toe-down foot to the floor angle, within the ankle's range", () => {
+    expect(FOOT_PITCH_FLOOR).toBe(-35);
+    expect(shapeAnkle(-8, 31, -16)).toBe(4);
+    expect(shapeAnkle(0, 70, 0)).toBe(20);
+    expect(shapeAnkle(20, 0, -30)).toBe(-12);
+    expect(shapeAnkle(28, 0, -1)).toBe(-1);
   });
 
   test("the arm swings against its own leg and its elbow bends as it comes forward", () => {

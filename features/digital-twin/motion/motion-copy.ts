@@ -1,3 +1,5 @@
+import { formatNumber } from "@/infrastructure/format-measure";
+
 import { type MotionClip } from "./gait";
 
 /**
@@ -8,12 +10,17 @@ import { type MotionClip } from "./gait";
 export const MOTION_LABEL: Readonly<Record<MotionClip, string>> = {
   walk: "Walk",
   idle: "Idle",
+  dance: "Dance",
 };
 
 export const MOTION_LINE: Readonly<Record<MotionClip, string>> = {
   walk: "A generic walk cycle, computed from typical joint angles, not this person's gait. Walking in place.",
   idle: "A generic standing breath and sway, not this person's breathing.",
+  dance: "A computed dance loop, not motion capture and not this person's movement.",
 };
+
+export const TEMPO_LABEL = "Tempo";
+export const tempoOption = (bpm: number): string => `${formatNumber(bpm, 0)} BPM`;
 
 export const MOTION_HIDES_ANATOMY =
   "Anatomy layers are hidden while the body moves: they cannot follow its joints.";
