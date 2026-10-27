@@ -315,6 +315,9 @@ describe("helpers", () => {
     expect(
       rowCountOf("compare_windows", { window_a: { n: 3 }, window_b: { n: 4 } }),
     ).toBe(7);
+    expect(rowCountOf("values_around_event", { before: { n: 2 }, after: { n: 3 } })).toBe(
+      5,
+    );
     expect(rowCountOf("coverage", { codes: [{ n: 2 }, { n: 9 }] })).toBe(11);
     expect(rowCountOf("latest_by_loinc", { rows: [{}, {}] })).toBe(2);
     expect(rowCountOf("trend", ROW_CAP_EXCEEDED)).toBe(0);

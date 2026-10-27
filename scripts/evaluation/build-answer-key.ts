@@ -119,7 +119,7 @@ export const rowCountOf = (tool: KeyedTool, result: unknown): number => {
     case "medications_timeline":
       return numberAt(result, "n");
     case "values_around_event":
-      return numberAt(result, "n");
+      return numberAt(result, "before.n") + numberAt(result, "after.n");
     case "latest_by_loinc":
       return lengthAt(result, "rows");
     case "coverage": {
