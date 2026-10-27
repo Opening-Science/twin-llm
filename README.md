@@ -67,7 +67,7 @@ is the focus of the Open Science Foundation's first funding call. The full data-
 | **Data**          | Browse the synthetic cohort: what is measured, how often, for whom, and the training conversations made from it.             |
 | **Connectors**    | Link Oura, Whoop and Google Health, a BodyLoop body scanner, and knowledge sources.                                          |
 | **Get started**   | A short first-run flow: what you are here for, which data to connect, which sources the model may use, where your data goes. |
-| **Evaluation**    | Score models on 81 questions over the synthetic cohort, with every model call cached for replay.                             |
+| **Evaluation**    | Score models on the evaluation question set over the synthetic cohort, with every model call cached for replay.              |
 | **Training data** | Turn synthetic cohorts into tool-use conversations for fine-tuning open models.                                              |
 
 <p>
@@ -148,7 +148,7 @@ The open-model lineup for comparisons is in [`docs/models.md`](docs/models.md).
 
 ## Evaluation
 
-81 questions over six synthetic scenarios, scored on eight criteria: correctness, hallucination, privacy, query safety, clinical caution, readability, consistency and latency. The answer key comes from the synthetic cohort through the same closed tools the models call.
+About a hundred questions (`evaluation/questions.v1.json`) over six synthetic scenarios, scored on eight criteria: correctness, hallucination, privacy, query safety, clinical caution, readability, consistency and latency. The answer key comes from the synthetic cohort through the same closed tools the models call.
 
 ```bash
 bun run eval -- --models ollama:qwen3:4b --latency-set
