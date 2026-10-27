@@ -32,6 +32,30 @@ export const minimum = (values: readonly number[]): number | null =>
 export const maximum = (values: readonly number[]): number | null =>
   values.length === 0 ? null : values.reduce((high, value) => Math.max(high, value));
 
+export type WindowSummary = Readonly<{
+  start: string;
+  end: string;
+  n: number;
+  mean: number | null;
+  median: number | null;
+  min: number | null;
+  max: number | null;
+}>;
+
+/** One window of `compare_windows`; `chart.compare` summarises wearable windows with it too. */
+export const summariseWindow = (
+  window: Readonly<{ start: string; end: string }>,
+  values: readonly number[],
+): WindowSummary => ({
+  start: window.start,
+  end: window.end,
+  n: values.length,
+  mean: mean(values),
+  median: median(values),
+  min: minimum(values),
+  max: maximum(values),
+});
+
 /** Median absolute deviation from the median, unscaled. */
 export const mad = (values: readonly number[]): number | null => {
   const centre = median(values);

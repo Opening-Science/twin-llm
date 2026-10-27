@@ -7,6 +7,8 @@ import {
   type ChatView,
   LIST_VIEWS_TOOL,
   OPEN_VIEW_TOOL,
+  viewReadings,
+  viewSubject,
 } from "@/infrastructure/chat-view";
 import { modelInputSchema } from "@/packages/query-tools/model-schema";
 import { defaultQueryToolPorts, type QueryToolPorts } from "@/packages/query-tools/ports";
@@ -64,7 +66,7 @@ export type OpenViewOutput = ChatView | typeof VIEW_NOT_FOUND;
 const offered = async (deps: ViewToolDeps): Promise<readonly ThreadView[]> =>
   (await deps.loadViews(deps.scope.sessionId)).filter(
     (entry) =>
-      (deps.personal || entry.view.spec.subject !== null) &&
+      (deps.personal || viewSubject(entry.view) !== null) &&
       (deps.views === undefined || deps.views.includes(entry.view.kind)),
   );
 
@@ -105,11 +107,11 @@ export const runOpenView = async (
   await appendAudit(deps)({
     actor: deps.scope.actor,
     sessionId: deps.scope.sessionId,
-    subjectRef: found?.view.spec.subject ?? null,
+    subjectRef: found ? viewSubject(found.view) : null,
     tool: OPEN_VIEW_TOOL,
     args: input,
     result: output,
-    rowCount: found ? found.view.spec.points.length : 0,
+    rowCount: found ? viewReadings(found.view) : 0,
   });
   return output;
 };
