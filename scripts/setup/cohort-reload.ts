@@ -2,7 +2,7 @@
  * `setup:local -- --reload-cohort`: remove one cohort's rows from the research
  * warehouse so the pinned cohort can be ingested in their place.
  *
- * Only the four warehouse tables are touched, and every statement is scoped by
+ * Only the six warehouse tables are touched, and every statement is scoped by
  * the cohort id as a bound parameter. It runs in one transaction that also
  * counts every other cohort's subjects and bundles before and after; if those
  * counts move, or anything of this cohort is left, it throws and Postgres
@@ -21,6 +21,8 @@ export class ReloadRefusedError extends Error {}
 export const WAREHOUSE_TABLES = [
   "observations",
   "observation_non_numeric",
+  "conditions",
+  "medication_requests",
   "bundles",
   "subjects",
 ] as const;
@@ -29,7 +31,8 @@ type WarehouseTable = (typeof WAREHOUSE_TABLES)[number];
 
 /**
  * The delete statements, one per table, each with the cohort id as `$1`.
- * Observation rows go when either their subject or their bundle is in the
+ * Observation, condition and medication request rows go when either their
+ * subject or their bundle is in the
  * cohort (ingest keeps the two in the same cohort; both are named so neither
  * is left behind). The foreign keys would cascade the same rows; spelling them
  * out keeps the scope readable here. Pure.
@@ -45,6 +48,14 @@ export const cohortDeleteStatements = (): readonly Readonly<{
   {
     table: "observation_non_numeric",
     sql: "delete from observation_non_numeric where subject_ref in (select subject_ref from subjects where cohort_id = $1) or bundle_sha in (select sha from bundles where cohort_id = $1)",
+  },
+  {
+    table: "conditions",
+    sql: "delete from conditions where subject_ref in (select subject_ref from subjects where cohort_id = $1) or bundle_sha in (select sha from bundles where cohort_id = $1)",
+  },
+  {
+    table: "medication_requests",
+    sql: "delete from medication_requests where subject_ref in (select subject_ref from subjects where cohort_id = $1) or bundle_sha in (select sha from bundles where cohort_id = $1)",
   },
   { table: "bundles", sql: "delete from bundles where cohort_id = $1" },
   { table: "subjects", sql: "delete from subjects where cohort_id = $1" },
@@ -102,6 +113,8 @@ export const deleteCohortRows = async (
     return {
       observations: deleted.observations ?? 0,
       observation_non_numeric: deleted.observation_non_numeric ?? 0,
+      conditions: deleted.conditions ?? 0,
+      medication_requests: deleted.medication_requests ?? 0,
       bundles: deleted.bundles ?? 0,
       subjects: deleted.subjects ?? 0,
     };
@@ -110,4 +123,4 @@ export const deleteCohortRows = async (
 
 /** One line for the checklist. Pure. */
 export const formatDeleted = (cohortId: string, deleted: DeletedRows): string =>
-  `${cohortId}: deleted ${deleted.subjects} subjects, ${deleted.bundles} bundles, ${deleted.observations} observations and ${deleted.observation_non_numeric} non-numeric observations`;
+  `${cohortId}: deleted ${deleted.subjects} subjects, ${deleted.bundles} bundles, ${deleted.observations} observations, ${deleted.observation_non_numeric} non-numeric observations, ${deleted.conditions} conditions and ${deleted.medication_requests} medication requests`;
