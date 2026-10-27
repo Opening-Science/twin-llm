@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { buttonClassName } from "@/infrastructure/ui-kit/button";
 
 import {
+  ARK_OUTDATED_NOTICE,
   ARK_STATE_LABEL,
   ARK_STATE_TONE,
   isArkStatusPayload,
@@ -71,7 +72,11 @@ const ArkCardFrame = ({
     })}
     detail={ARK_STATE_LABEL[payload.state]}
     notice={
-      payload.state === "busy" ? { text: "Close the Ark Hub tab", tone: "info" } : null
+      payload.state === "busy"
+        ? { text: "Close the Ark Hub tab", tone: "info" }
+        : payload.state === "outdated"
+          ? { text: ARK_OUTDATED_NOTICE, tone: "info" }
+          : null
     }
     actions={
       <Link href={ARK_CARD_HREF} className={buttonClassName({ size: "sm" })}>

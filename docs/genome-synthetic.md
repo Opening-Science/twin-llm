@@ -143,19 +143,19 @@ TwinLLM never uploads or deletes Ark data: `packages/ark-adapter` refuses
 1. Make the file: `bun run genome:synth -- --subject <ref> --out <dir>`. Keep the
    `.rsid-genotypes.tsv` next to it; it is the report the device should print.
 2. Close the Ark Hub tab. Run one `ark` command at a time.
-3. Check the device: `ark status --json` and `ark data list --json`. The
-   `snp-indel-calls` slot (slot 3, "Personal SNP and indel calls", `VCF 4.x`) should
-   be empty. If it holds the owner's real calls, stop: do not replace a real genome
-   with a synthetic one.
-4. Load the file into the `snp-indel-calls` slot, either in Ark Hub or with the CLI
-   (`ark data upload` with the file; `ark data upload --help` shows how to name the
-   slot on CLI 0.3.5). Approve on the phone.
-5. `ark data list --json`: slot 3 filled. `ark data paths --json`: the eleven
-   `v1/genome/rsids/<rsid>` paths should be `available`.
+3. Check the device: `ark status --json` and `ark data list --json` (CLI 0.5.0,
+   ArkOS 0.13.1). The `small-variants` slot (id 3) should be empty. If it holds
+   the owner's real calls, stop: do not replace a real genome with a synthetic
+   one. An emulator is the safer place for this.
+4. Load the file: `ark data upload calls.vcf.gz --slot small-variants`, approved
+   on the phone, then `ark data fetch --all` for the references and catalog.
+5. `ark data list --json`: `small-variants` filled, with its `build`.
+   `ark data paths --json`: `v1/genome/rsids/<rsid>` should be `available`.
 6. Build and run the app: `bun run ark:build`, then the local smoke test
-   (`GENOME_SOURCE=ark RUN_ARK=1 ARK_DEVICE=<serial> bun test packages/ark-adapter`,
-   `docs/runbook.md`) or an `ark` app run of `apps/ark/rsid-genotypes/build/rsid-genotypes.wasm`.
-   Approve on the phone.
+   (`GENOME_SOURCE=ark RUN_ARK=1 ARK_DEVICE=<locator> bun test packages/ark-adapter`,
+   `docs/runbook.md`) or `ark run apps/ark/rsid-genotypes/build/rsid-genotypes.wasm`.
+   Approve the run on the phone with all eleven sites switched on, then release
+   the report.
 7. Compare the report the device prints with the saved `.rsid-genotypes.tsv`
    (`diff`). They should match byte for byte.
 8. When done, empty the slot in Ark Hub (or `ark data delete 3`), so the synthetic

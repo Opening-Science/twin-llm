@@ -18,8 +18,10 @@ export type GenomeReportRowView = Readonly<{
   chromosome: string | null;
   position: number | null;
   reference: string | null;
-  /** Null is `no call`, never a reference fill. */
+  /** Null is `no call` (or `not granted`), never a reference fill. */
   genotype: string | null;
+  /** False when the site's optional grant was not mounted: declined or not on the Ark. */
+  granted: boolean;
 }>;
 
 export type GenomeReportView = Readonly<{
@@ -81,14 +83,21 @@ export const toReportView = (
       position: row.position,
       reference: row.reference,
       genotype: row.genotype,
+      granted: row.granted !== false,
     };
   }),
 });
 
 /** One sentence per way a run ends without a report. */
 export const RUN_FAILURE_TEXT: Readonly<Record<string, string>> = {
-  refused: "The run was declined on your phone. Nothing was released.",
-  awaiting_approval: "Nobody answered on your phone in time. Nothing was released.",
+  refused: "You declined the run or the report on your phone; nothing was stored.",
+  awaiting_approval:
+    "Nobody answered on your phone in time (5 minutes to approve the run, 10 to release the report); nothing was stored.",
+  outdated: "Ark firmware too old: run `ark firmware update`.",
+  undelivered: "The request never reached your phone. Open Ark Companion and run again.",
+  rejected:
+    "The Ark refused to run the app, for example because no small variants are loaded. Nothing was asked on your phone.",
+  app_failed: "The app failed on the Ark; nothing was stored.",
   busy: "The Ark is busy. Close the Ark Hub tab and run again.",
   locked: "The Ark is locked. Unlock it in the Companion app and run again.",
   unpaired: "This computer is not paired with the Ark.",
@@ -115,7 +124,8 @@ const isRowView = (value: unknown): value is GenomeReportRowView =>
   typeof value.rsid === "string" &&
   typeof value.gene === "string" &&
   typeof value.allele === "string" &&
-  (value.genotype === null || typeof value.genotype === "string");
+  (value.genotype === null || typeof value.genotype === "string") &&
+  typeof value.granted === "boolean";
 
 export const isReportView = (value: unknown): value is GenomeReportView =>
   isRecord(value) &&

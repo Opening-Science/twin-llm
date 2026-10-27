@@ -1,6 +1,6 @@
 import "server-only";
 
-import { type ArkAuditContext, auditArkCall } from "./audit";
+import { type ArkAuditContext, type ArkAuditTool, auditArkCall } from "./audit";
 import {
   errorFromExitCode,
   errorFromObject,
@@ -12,19 +12,22 @@ import {
   arkAppRunDocumentSchema,
   arkDataListDocumentSchema,
   arkDataPathsDocumentSchema,
+  arkDoctorDocumentSchema,
   arkStatusDocumentSchema,
   formatZodIssues,
   isErrorDocument,
   parseJsonValue,
   parseStderrEvents,
+  redactDoctorDocument,
   redactStatusDocument,
   stderrErrorObject,
   type ArkAppRunDocument,
   type ArkDataListDocument,
   type ArkDataPathsDocument,
+  type ArkDoctorSafe,
   type ArkStatusSafe,
 } from "./schemas";
-import { hostTimeoutMsForCliTimeout, spawnArk, type ArkSpawnResult } from "./spawn";
+import { hostTimeoutMsForRun, spawnArk, type ArkSpawnResult } from "./spawn";
 
 export type { ArkAuditContext };
 
@@ -85,7 +88,7 @@ const auditArgsFor = (
 
 const writeAudit = async (
   ctx: ArkAuditContext,
-  tool: "ark.status" | "ark.data.list" | "ark.data.paths" | "ark.app.run",
+  tool: ArkAuditTool,
   args: ArkAuditArgs,
   result: unknown,
 ): Promise<void> => {
@@ -99,10 +102,15 @@ const writeAudit = async (
 
 const runCommand = async <T>(
   ctx: ArkAuditContext,
-  tool: "ark.status" | "ark.data.list" | "ark.data.paths" | "ark.app.run",
+  tool: ArkAuditTool,
   commandArgv: readonly string[],
   parseOk: (value: unknown) => ParsedOk<T>,
-  options?: { readonly hostTimeoutMs?: number; readonly grants?: readonly string[] },
+  options?: {
+    readonly hostTimeoutMs?: number;
+    readonly grants?: readonly string[];
+    /** doctor exits non-zero on a failed check but still prints its whole report. */
+    readonly documentOnFailure?: boolean;
+  },
 ): Promise<ArkResult<T>> => {
   const spawned = await spawnArk(commandArgv, options);
   const args = auditArgsFor(spawned.argv, options?.grants);
@@ -110,6 +118,15 @@ const runCommand = async <T>(
     const result = mapArkFailure(spawned.error);
     await writeAudit(ctx, tool, args, result.error);
     return result;
+  }
+
+  if (spawned.exitCode !== 0 && options?.documentOnFailure === true) {
+    const parsed = parseStdout(spawned.stdout);
+    const document = parsed.ok ? parseOk(parsed.value) : null;
+    if (document?.ok === true) {
+      await writeAudit(ctx, tool, args, document.audit);
+      return { status: "ok", data: document.data };
+    }
   }
 
   if (spawned.exitCode === 0) {
@@ -149,6 +166,13 @@ const parseStatus = (value: unknown): ParsedOk<ArkStatusSafe> => {
   return { ok: true, data, audit: data };
 };
 
+const parseDoctor = (value: unknown): ParsedOk<ArkDoctorSafe> => {
+  const parsed = arkDoctorDocumentSchema.safeParse(value);
+  if (!parsed.success) return { ok: false, issues: formatZodIssues(parsed.error) };
+  const data = redactDoctorDocument(parsed.data);
+  return { ok: true, data, audit: data };
+};
+
 const parseDataList = (value: unknown): ParsedOk<ArkDataListDocument> => {
   const parsed = arkDataListDocumentSchema.safeParse(value);
   if (!parsed.success) return { ok: false, issues: formatZodIssues(parsed.error) };
@@ -179,9 +203,16 @@ export const appRunAuditView = (document: ArkAppRunDocument): Record<string, unk
     stdout_base64: _stdoutBase64,
     stderr: _stderr,
     stderr_base64: _stderrBase64,
+    paths,
     ...metadata
   } = document;
-  return { ...metadata, report_chars: reportFromAppRun(document).length };
+  // Which optional sites the owner switched on is personal too, and eleven
+  // switches are few enough to reverse from a hash: keep only how many.
+  return {
+    ...metadata,
+    paths_mounted: paths.length,
+    report_chars: reportFromAppRun(document).length,
+  };
 };
 
 const parseAppRun = (value: unknown): ParsedOk<ArkAppRunData> => {
@@ -197,6 +228,10 @@ const parseAppRun = (value: unknown): ParsedOk<ArkAppRunData> => {
 export const status = (ctx: ArkAuditContext): Promise<ArkResult<ArkStatusSafe>> =>
   runCommand(ctx, "ark.status", ["status"], parseStatus);
 
+/** Check names and results only; details can name local paths and are dropped. */
+export const doctor = (ctx: ArkAuditContext): Promise<ArkResult<ArkDoctorSafe>> =>
+  runCommand(ctx, "ark.doctor", ["doctor"], parseDoctor, { documentOnFailure: true });
+
 export const dataList = (ctx: ArkAuditContext): Promise<ArkResult<ArkDataListDocument>> =>
   runCommand(ctx, "ark.data.list", ["data", "list"], parseDataList);
 
@@ -205,16 +240,21 @@ export const dataPaths = (
 ): Promise<ArkResult<ArkDataPathsDocument>> =>
   runCommand(ctx, "ark.data.paths", ["data", "paths"], parseDataPaths);
 
+/**
+ * `ark run FILE` (CLI 0.5.0; `ark app run` is gone). The CLI waits on the
+ * phone twice, the run and then the report review, so the host cap covers
+ * both windows on top of `--timeout`. The audit tool name stays `ark.app.run`.
+ */
 export const appRun = (
   ctx: ArkAuditContext,
   input: ArkAppRunInput,
 ): Promise<ArkResult<ArkAppRunData>> => {
   const commandArgv =
     input.timeout === undefined
-      ? (["app", "run", input.app] as const)
-      : (["app", "run", input.app, "--timeout", String(input.timeout)] as const);
+      ? (["run", input.app] as const)
+      : (["run", input.app, "--timeout", String(input.timeout)] as const);
   return runCommand(ctx, "ark.app.run", commandArgv, parseAppRun, {
-    hostTimeoutMs: hostTimeoutMsForCliTimeout(input.timeout),
+    hostTimeoutMs: hostTimeoutMsForRun(input.timeout),
     grants: input.grants,
   });
 };

@@ -3,7 +3,10 @@ import { describe, expect, test } from "bun:test";
 import appRunOk from "./fixtures/app-run-ok.json";
 import dataListOk from "./fixtures/data-list-ok.json";
 import dataPathsOk from "./fixtures/data-paths-ok.json";
+import doctorEmulator from "./fixtures/doctor-emulator.json";
+import errorArkRefused from "./fixtures/error-ark-refused.json";
 import errorLocked from "./fixtures/error-locked.json";
+import statusEmulator from "./fixtures/status-emulator-unenrolled.json";
 import statusOk from "./fixtures/status-ok.json";
 import statusRealShape from "./fixtures/status-real-shape.json";
 import {
@@ -13,10 +16,12 @@ import {
   arkAppRunDocumentSchema,
   arkDataListDocumentSchema,
   arkDataPathsDocumentSchema,
+  arkDoctorDocumentSchema,
   arkErrorDocumentSchema,
   arkStatusDocumentSchema,
   isErrorDocument,
   parseStderrEvents,
+  redactDoctorDocument,
   redactStatusDocument,
 } from "./schemas";
 
@@ -44,9 +49,31 @@ describe("ark-adapter schemas", () => {
     expect(JSON.stringify(redacted)).not.toContain("pubkey");
   });
 
-  test("data list names the four genome slots", () => {
+  test("data list names the six 0.5.0 slots by their slot field", () => {
     const parsed = arkDataListDocumentSchema.parse(dataListOk);
-    expect(parsed.slots.map((slot) => slot.name)).toEqual([...ARK_SLOT_NAMES]);
+    expect(parsed.slots.map((slot) => slot.slot)).toEqual([...ARK_SLOT_NAMES]);
+    expect(parsed.slots.map((slot) => slot.id)).toEqual([1, 2, 3, 4, 5, 6]);
+  });
+
+  test("self-signed emulator status: attestation fields are null", () => {
+    const parsed = arkStatusDocumentSchema.parse(statusEmulator);
+    expect(parsed.serial).toBeNull();
+    expect(parsed.hardware.model).toBeNull();
+    expect(parsed.environment).toBeNull();
+    expect(parsed.firmware.version).toBe("0.13.1-36da538");
+  });
+
+  test("doctor report keeps names and results only after redaction", () => {
+    const parsed = arkDoctorDocumentSchema.parse(doctorEmulator);
+    const safe = redactDoctorDocument(parsed);
+    expect(safe.checks[0]).toEqual({ name: "ark", result: "ok" });
+    expect(safe.checks).toHaveLength(13);
+  });
+
+  test("0.5.0 error object carries hints and the Ark's remote code", () => {
+    const parsed = arkErrorDocumentSchema.parse(errorArkRefused);
+    expect(parsed.error.hints).toEqual([]);
+    expect(parsed.error.remote?.code).toBe("9001");
   });
 
   test("path excerpt and helper stay under v1/genome", () => {
@@ -58,10 +85,17 @@ describe("ark-adapter schemas", () => {
     );
   });
 
-  test("app run document keeps stdout as the report bytes", () => {
+  test("ark run document keeps stdout as the report bytes", () => {
     const parsed = arkAppRunDocumentSchema.parse(appRunOk);
     expect(parsed.success).toBe(true);
+    expect(parsed.app).toEqual({ name: "fixture", version: "0.1.0", develop: false });
+    expect(parsed.paths).toEqual(["v1/genome/rsids/rs72921001"]);
     expect(parsed.stdout).toContain("Synthetic fixture report");
+  });
+
+  test("the 0.3.5 run document (app as a file name) no longer parses", () => {
+    const old = { task: "1", app: "x.wasm", success: true, duration_seconds: 1 };
+    expect(arkAppRunDocumentSchema.safeParse(old).success).toBe(false);
   });
 
   test("error document and stderr JSON lines", () => {

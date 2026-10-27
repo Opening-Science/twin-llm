@@ -36,9 +36,10 @@ export type SpawnArkOptions = {
 
 const ALLOWED_PREFIXES: ReadonlyArray<readonly string[]> = [
   ["status"],
+  ["doctor"],
   ["data", "list"],
   ["data", "paths"],
-  ["app", "run"],
+  ["run"],
 ];
 
 export const isAllowedArkCommand = (commandArgv: readonly string[]): boolean =>
@@ -175,3 +176,22 @@ export const hostTimeoutMsForCliTimeout = (
   if (timeoutSeconds === undefined) return undefined;
   return timeoutSeconds * 1000 + APPROVAL_HOST_SLACK_MS;
 };
+
+/** CLI 0.5.0 `ark run`: the owner approves the run within 5 minutes… */
+export const RUN_APPROVAL_WINDOW_MS = 5 * 60_000;
+/** …then reviews and releases the report within 10 minutes. */
+export const REPORT_REVIEW_WINDOW_MS = 10 * 60_000;
+/** Upload, the Ark's checks and the app itself, on top of both windows. */
+export const RUN_HOST_MARGIN_MS = 5 * 60_000;
+const CLI_DEFAULT_TIMEOUT_S = 60;
+
+/**
+ * Host cap for `ark run`. ark never lets --timeout bound an approval, and a
+ * killed run cancels its task on the Ark, so the cap sits past both phone
+ * windows instead of cutting the owner off mid-review.
+ */
+export const hostTimeoutMsForRun = (timeoutSeconds?: number): number =>
+  (timeoutSeconds ?? CLI_DEFAULT_TIMEOUT_S) * 1000 +
+  RUN_APPROVAL_WINDOW_MS +
+  REPORT_REVIEW_WINDOW_MS +
+  RUN_HOST_MARGIN_MS;

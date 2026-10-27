@@ -20,6 +20,8 @@ sh run.sh build/rsid-genotypes.wasm fixtures/present >"$got"
 cmp -s "$got" goldens/present.tsv
 sh run.sh build/rsid-genotypes.wasm fixtures/unanswered >"$got"
 cmp -s "$got" goldens/unanswered.tsv
+sh run.sh build/rsid-genotypes.wasm fixtures/declined >"$got"
+cmp -s "$got" goldens/declined.tsv
 set +e
 sh run.sh build/rsid-genotypes.wasm fixtures/eio >"$got" 2>"$eio_err"
 status=$?

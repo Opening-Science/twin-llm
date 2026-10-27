@@ -12,10 +12,11 @@ advice.
  Digital Twin page                     this machine                         Ark device
  ─────────────────                     ────────────                         ──────────
  [Run on Ark] ── POST /api/genome/run ─▶ packages/ark-adapter
-                                         ark data list   (build of the call slot) ─▶ slots
-                                         ark app run rsid-genotypes.wasm ─────────▶ app reads
+                                         ark data list   (small-variants build) ─────▶ slots
+                                         ark run rsid-genotypes.wasm ─────────────▶ app reads
                                          … blocks …                                  v1/genome/rsids/*
- "Approve on your phone"                                       owner approves in Companion app
+ "Approve on your phone" (5 min)                               owner approves, switches sites on
+ "Review and release the report" (10 min)                      owner releases the report
                                          ◀──────────── released TSV (rsid, chr, pos, ref, genotype)
                                          strict parse (11 rows, footer)
                                          GenomeReport row (Postgres, personal)
@@ -80,7 +81,10 @@ These are enforced in code, not only by convention.
 
 The report's positions must be on GRCh38, the build of the reference windows.
 A GRCh37 (hg19) position points at different bases. The build comes from the
-Ark's `data list` (the `snp-indel-calls` slot, else `reference-genome`):
+Ark's `data list --json` (the `small-variants` slot's `build`, such as
+`GRCh38` or `GRCh38.p14`, else `reference-genome`'s), stored with the report.
+On ArkOS 0.13.1 the slot names its build, so `GENOME_ASSUME_BUILD` is only for
+an Ark that names none:
 
 | Ark names        | Result                                                  |
 | ---------------- | ------------------------------------------------------- |
@@ -95,8 +99,12 @@ refuses as `REF_STRAND_MISMATCH`, because the call file is on the other strand.
 
 ## Setup
 
-1. Ark: see [ark.md](ark.md). Build the app with `bun run ark:build`, close the
-   Ark Hub tab, and set
+1. Ark: see [ark.md](ark.md). Ark CLI 0.5.0 needs ArkOS 0.13.1 or newer. After
+   the 0.13 update, add the owner's small variants again with
+   `ark data upload calls.vcf.gz` (approved on the phone), then
+   `ark data fetch --all` for the references and the variant catalog.
+   Build the app with `bun run ark:build` (rustup's `cargo` first on `PATH`),
+   close the Ark Hub tab, and set
 
    ```sh
    DATA_MODE=personal
@@ -130,10 +138,12 @@ refuses as `REF_STRAND_MISMATCH`, because the call file is on the other strand.
    Set `CARBON_X_URL` only if it listens elsewhere on loopback
    (default `http://127.0.0.1:8090/v1`); `CARBON_X_TIMEOUT_S` defaults to 120.
 
-4. Open Digital Twin, press **Run on Ark**, approve on your phone. The table
-   shows each site's gene, star allele, position, reference and genotype or
-   `no call`. It is stored, so a reload does not ask the Ark again; **Run
-   again** releases a fresh report.
+4. Open Digital Twin and press **Run on Ark**. Approve the run on your phone
+   within 5 minutes and switch on the sites you want read, then review and
+   release the report within 10 minutes. The table shows each site's gene, star
+   allele, position, reference and genotype, `no call`, or `not granted` for a
+   site you left off (or one the Ark has no data for). It is stored, so a reload
+   does not ask the Ark again; **Run again** releases a fresh report.
 
 5. In chat, `/genome` summarises the report and asks Carbon-X about each called
    site. The `Released Ark report and Carbon-X` source can be turned off at

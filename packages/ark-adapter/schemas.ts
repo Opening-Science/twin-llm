@@ -1,17 +1,21 @@
 import { z } from "zod";
 
 /**
- * Ark CLI 0.3.5 JSON contracts. Extra keys pass through so a firmware
- * addition does not break parse; pin the tool version in docs/ark.md.
+ * Ark CLI 0.5.0 JSON contracts (ArkOS 0.13.1). Extra keys pass through so a
+ * firmware addition does not break parse; pin the tool version in docs/ark.md.
  */
 
-export const ARK_CLI_VERSION = "0.3.5" as const;
+export const ARK_CLI_VERSION = "0.5.0" as const;
+export const ARK_FIRMWARE_VERSION = "0.13.1" as const;
 export const ARK_PATH_PREFIX = "v1/genome" as const;
 
+/** The slots `ark data list` names, in its order. */
 export const ARK_SLOT_NAMES = [
   "reference-genome",
   "gene-annotations",
-  "snp-indel-calls",
+  "small-variants",
+  "structural-variants",
+  "copy-number-variants",
   "variant-catalog",
 ] as const;
 
@@ -22,6 +26,12 @@ const decimal = z.union([z.string(), z.number()]);
 export const arkErrorObjectSchema = z.looseObject({
   code: z.string(),
   message: z.string(),
+  hints: z.array(z.string()).optional(),
+  /** CLI 0.5.0: the Ark's own code and message on an error[ark] refusal. */
+  remote: z
+    .looseObject({ code: decimal.optional(), message: z.string().optional() })
+    .nullable()
+    .optional(),
   remote_code: z.string().optional(),
   remote_message: z.string().optional(),
 });
@@ -53,21 +63,25 @@ export const arkStderrEventSchema = z.union([
   arkErrorEventSchema,
 ]);
 
+/**
+ * `ark status --json`. Serial, model, environment and realm come from the
+ * attestation, so a self-signed Ark (a fresh emulator) reports them as null.
+ */
 export const arkStatusDocumentSchema = z.looseObject({
   name: z.string().nullable(),
-  serial: z.string(),
+  serial: z.string().nullable(),
   hardware: z.looseObject({
     version: z.string(),
     revision: z.string(),
-    model: z.string(),
+    model: z.string().nullable(),
   }),
   firmware: z.looseObject({
     version: z.string(),
     published: z.string().nullable(),
   }),
   trust: z.string(),
-  environment: z.string(),
-  realm: z.string(),
+  environment: z.string().nullable(),
+  realm: z.string().nullable(),
   synced: z.boolean().nullable(),
   paired: z.boolean().nullable(),
   unlocked: z.boolean().nullable(),
@@ -90,8 +104,10 @@ export const arkSlotSchema = z.looseObject({
   damage: z.unknown().nullable().optional(),
   requires: z.unknown().optional(),
   size_bytes: decimal.nullable().optional(),
+  /** The assembly the slot's data is on, such as GRCh38.p14. */
   build: z.string().nullable().optional(),
-  version: z.string().nullable().optional(),
+  /** The variant catalog's dbSNP release, such as 157; null for other slots. */
+  version: decimal.nullable().optional(),
   download: z.unknown().nullable().optional(),
 });
 
@@ -107,21 +123,56 @@ export const arkPathSchema = z.looseObject({
   description: z.string().nullable().optional(),
   format: z.string().nullable().optional(),
   examples: z.unknown().optional(),
+  public: z.boolean().optional(),
+  wording: z.string().nullable().optional(),
 });
 
 export const arkDataPathsDocumentSchema = z.looseObject({
   paths: z.array(arkPathSchema),
 });
 
+/** `ark run FILE --json` (CLI 0.5.0). `paths` are the grants the Ark mounted. */
 export const arkAppRunDocumentSchema = z.looseObject({
   task: z.string(),
-  app: z.string(),
+  app: z.looseObject({
+    name: z.string(),
+    version: z.string(),
+    develop: z.boolean(),
+  }),
   success: z.boolean(),
+  paths: z.array(z.string()),
+  media: z.string().nullable().optional(),
   stdout: z.string().optional(),
   stdout_base64: z.string().optional(),
   stderr: z.string().optional(),
   stderr_base64: z.string().optional(),
   duration_seconds: decimal,
+});
+
+/** `ark doctor --json`: each check is ok, warn, fail or skip. */
+export const arkDoctorDocumentSchema = z.looseObject({
+  version: z.string(),
+  checks: z.array(
+    z.looseObject({
+      name: z.string(),
+      result: z.enum(["ok", "warn", "fail", "skip"]),
+      detail: z.string().nullable().optional(),
+      hint: z.string().nullable().optional(),
+    }),
+  ),
+});
+
+/** What leaves the adapter from doctor: check names and results, no details. */
+export type ArkDoctorSafe = Readonly<{
+  version: string;
+  checks: readonly Readonly<{ name: string; result: "ok" | "warn" | "fail" | "skip" }>[];
+}>;
+
+export const redactDoctorDocument = (
+  document: z.infer<typeof arkDoctorDocumentSchema>,
+): ArkDoctorSafe => ({
+  version: document.version,
+  checks: document.checks.map(({ name, result }) => ({ name, result })),
 });
 
 export type ArkErrorObject = z.infer<typeof arkErrorObjectSchema>;
@@ -173,4 +224,5 @@ export const isErrorDocument = (value: unknown): value is ArkErrorDocument =>
   !("serial" in value) &&
   !("slots" in value) &&
   !("paths" in value) &&
-  !("task" in value);
+  !("task" in value) &&
+  !("checks" in value);

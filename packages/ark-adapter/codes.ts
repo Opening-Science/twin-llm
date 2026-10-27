@@ -16,8 +16,20 @@ export type ArkOk<T> = {
   readonly data: T;
 };
 
-export type ArkFailureStatus =
-  "locked" | "unpaired" | "busy" | "awaiting_approval" | "refused" | "error";
+export const ARK_FAILURE_STATUSES = [
+  "locked",
+  "unpaired",
+  "busy",
+  "awaiting_approval",
+  "refused",
+  "undelivered",
+  "outdated",
+  "rejected",
+  "app_failed",
+  "error",
+] as const;
+
+export type ArkFailureStatus = (typeof ARK_FAILURE_STATUSES)[number];
 
 export type ArkFailure = {
   readonly status: ArkFailureStatus;
@@ -58,10 +70,18 @@ export const toArkError = (
 export const errorFromObject = (value: {
   readonly code: string;
   readonly message: string;
+  readonly remote?: {
+    readonly code?: string | number;
+    readonly message?: string;
+  } | null;
   readonly remote_code?: string;
   readonly remote_message?: string;
-}): ArkError =>
-  toArkError(value.code, value.message, value.remote_code, value.remote_message);
+}): ArkError => {
+  const remoteCode =
+    value.remote?.code !== undefined ? String(value.remote.code) : value.remote_code;
+  const remoteMessage = value.remote?.message ?? value.remote_message;
+  return toArkError(value.code, value.message, remoteCode, remoteMessage);
+};
 
 const EXIT_FALLBACK: Readonly<Record<number, { code: string; message: string }>> = {
   1: { code: "local-input", message: "ark CLI local input or confirmation failed" },
@@ -85,6 +105,12 @@ export const errorFromExitCode = (exitCode: number): ArkError => {
   };
 };
 
+/**
+ * CLI 0.5.0 codes by exit class: 4 approval-undelivered, 5 firmware-outdated
+ * and the Ark's own refusal (`ark`, e.g. a grant it will not mount), 6
+ * approval-denied / approval-timeout (the run or the report review), 8
+ * app-failed. Everything else stays `error`.
+ */
 export const mapArkFailure = (error: ArkError): ArkFailure => {
   switch (error.code) {
     case "locked":
@@ -97,6 +123,14 @@ export const mapArkFailure = (error: ArkError): ArkFailure => {
       return { status: "refused", error };
     case "approval-timeout":
       return { status: "awaiting_approval", error };
+    case "approval-undelivered":
+      return { status: "undelivered", error };
+    case "firmware-outdated":
+      return { status: "outdated", error };
+    case "ark":
+      return { status: "rejected", error };
+    case "app-failed":
+      return { status: "app_failed", error };
     default:
       return { status: "error", error };
   }

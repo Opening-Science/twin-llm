@@ -1,0 +1,21 @@
+{
+  "name": null,
+  "serial": null,
+  "hardware": {
+    "version": "Ark I",
+    "revision": "1.0.0",
+    "model": null
+  },
+  "firmware": {
+    "version": "0.13.1-36da538",
+    "published": "2026-10-19T21:41:34Z"
+  },
+  "trust": "self-signed",
+  "environment": null,
+  "realm": null,
+  "synced": false,
+  "paired": false,
+  "unlocked": false,
+  "identity": "0000000000000000000000000000000000000000000000000000000000000000",
+  "mismatch": null
+}

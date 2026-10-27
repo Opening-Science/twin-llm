@@ -20,8 +20,9 @@ import { GENOME_REPORT_COPY as COPY } from "./twin-page-copy";
 
 /**
  * The rsid-genotypes run on the genome dashboard. Run asks the server to
- * start the Ark app; the CLI then blocks until the owner approves on their
- * phone, so the whole wait is the "Approve on your phone" state. The released
+ * start the Ark app; `ark run` then blocks through two phone steps (approve
+ * the run within 5 minutes, review and release the report within 10), and
+ * the request cannot tell which one is open, so the wait shows both. The released
  * report is stored on this machine and shown as a table; a reload shows the
  * stored one without asking the Ark again.
  */
@@ -79,7 +80,9 @@ const ReportTable = ({ report }: Readonly<{ report: GenomeReportView }>) => (
               </td>
               <td className="py-1.5 font-mono text-xs">
                 {row.genotype ?? (
-                  <span className="text-muted-foreground font-sans">{COPY.noCall}</span>
+                  <span className="text-muted-foreground font-sans">
+                    {row.granted ? COPY.noCall : COPY.notGranted}
+                  </span>
                 )}
               </td>
             </tr>
@@ -88,6 +91,7 @@ const ReportTable = ({ report }: Readonly<{ report: GenomeReportView }>) => (
       </table>
     </div>
     <p className="text-muted-foreground mt-3 text-xs leading-relaxed">
+      {report.rows.some((row) => !row.granted) ? `${COPY.notGrantedNote} ` : ""}
       {report.buildNote}. Released {formatRelative(report.releasedAt)}. {report.footer}
     </p>
   </>
@@ -96,8 +100,14 @@ const ReportTable = ({ report }: Readonly<{ report: GenomeReportView }>) => (
 const Waiting = () => (
   <div role="status" className="border-border mt-4 rounded-lg border px-4 py-4">
     <StatusBadge tone="warn">{COPY.approveTitle}</StatusBadge>
-    <p className="mt-2 text-sm leading-relaxed">{COPY.approveBody}</p>
-    <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+    <ol className="mt-2 list-decimal space-y-1.5 pl-5 text-sm leading-relaxed">
+      {COPY.steps.map((step) => (
+        <li key={step.title}>
+          <span className="font-medium">{step.title}.</span> {step.body}
+        </li>
+      ))}
+    </ol>
+    <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
       {COPY.approveNote}
     </p>
   </div>

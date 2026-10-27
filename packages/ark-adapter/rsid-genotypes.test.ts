@@ -7,6 +7,8 @@ import {
   genotypeAlleles,
   parseRsidGenotypesReport,
   RSID_GENOTYPES_GRANTS,
+  RSID_GENOTYPES_REQUIRED,
+  RSID_GENOTYPES_VERSION,
   RSID_PANEL,
 } from "./rsid-genotypes";
 
@@ -105,5 +107,63 @@ describe("genotypeAlleles", () => {
     expect(genotypeAlleles("A/G")).toEqual(["A", "G"]);
     expect(genotypeAlleles("C|T")).toEqual(["C", "T"]);
     expect(genotypeAlleles(null)).toEqual([]);
+  });
+
+  test("ArkOS 0.13 shapes: leading phase, missing, deleted and symbolic copies", () => {
+    expect(genotypeAlleles("|A|G")).toEqual(["A", "G"]);
+    expect(genotypeAlleles("./.")).toEqual([]);
+    expect(genotypeAlleles("A/.")).toEqual(["A"]);
+    expect(genotypeAlleles("T/*")).toEqual(["T"]);
+    expect(genotypeAlleles("G")).toEqual(["G"]);
+    expect(genotypeAlleles("C/<DEL>")).toEqual(["C"]);
+  });
+});
+
+describe("rsid-genotypes 0.2.0 on ArkOS 0.13", () => {
+  test("the version and required grant match the Rust app", () => {
+    const lib = readFileSync(join(APP_DIR, "src/lib.rs"), "utf8");
+    expect(lib).toContain(`pub const APP_VERSION: &str = "${RSID_GENOTYPES_VERSION}";`);
+    expect(lib).toContain(
+      `pub const REQUIRED_DATASET: &str = "${RSID_GENOTYPES_REQUIRED}";`,
+    );
+  });
+
+  test("reads the declined golden: unmounted sites are not granted, ./. is kept", () => {
+    const parsed = parseRsidGenotypesReport(golden("declined.tsv"));
+    if (!parsed.ok) throw new Error(parsed.issue);
+    expect(parsed.rows[4]).toEqual({
+      rsid: "rs1057910",
+      chromosome: null,
+      position: null,
+      reference: null,
+      genotype: null,
+      granted: false,
+    });
+    expect(parsed.rows[5]?.genotype).toBe("./.");
+    expect(
+      parsed.rows.filter((row) => row.granted === false).map((row) => row.rsid),
+    ).toEqual(["rs1057910", "rs9923231"]);
+  });
+
+  test("accepts the documented genotype shapes and refuses a breakend", () => {
+    const withCall = (call: string) =>
+      parseRsidGenotypesReport(golden("present.tsv").replace("\tA/G\n", `\t${call}\n`));
+    for (const call of ["|A|G", "A|G", "G", "./.", ".", "A/.", "T/*", "C/<DEL>"]) {
+      const parsed = withCall(call);
+      if (!parsed.ok) throw new Error(`${call}: ${parsed.issue}`);
+      expect(parsed.rows[0]?.genotype).toBe(call);
+    }
+    expect(withCall("G/G]chr1:100]")).toEqual({
+      ok: false,
+      issue: "rs4244285 has an unreadable genotype",
+    });
+  });
+
+  test("refuses a not granted row that still carries leaves", () => {
+    const text = golden("present.tsv").replace("\tA/G\n", "\tnot granted\n");
+    expect(parseRsidGenotypesReport(text)).toEqual({
+      ok: false,
+      issue: "rs4244285 is not granted but has leaves",
+    });
   });
 });
