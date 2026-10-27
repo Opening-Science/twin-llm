@@ -9,6 +9,12 @@ import {
 import { useThreadHistory } from "@/infrastructure/thread-history-store";
 
 import { streamAnswer } from "./answer-stream";
+import {
+  answerRequestFor,
+  beginTurn,
+  type BeginTurnDeps,
+  type ConversationMode,
+} from "./begin-turn";
 import type { TurnState } from "./conversation";
 import { startTurn } from "./start-turn";
 import { historyFor } from "./turn-history";
@@ -32,6 +38,10 @@ import {
  *   are still being written (onboarding starts threads that way).
  * - Nothing here navigates. A new thread's URL is set with `replaceState`, so
  *   the open streams are not torn down by a route change.
+ *
+ * In incognito mode (`begin-turn.ts`) the turns live in this state only:
+ * `startTurn` is never called, the thread history is not touched and the URL
+ * stays as it is, so a reload or a new chat discards the conversation.
  */
 
 const NO_SUMMARIES: WearableSummaries = {
@@ -59,11 +69,17 @@ const fetchSummaries = async (): Promise<WearableSummaries> => {
 
 const SEND_FAILED = "That prompt didn't go through. Try sending it again.";
 
+const BEGIN_TURN: BeginTurnDeps = {
+  startTurn,
+  randomId: () => crypto.randomUUID(),
+};
+
 export type SendModel = Readonly<{ id: string; name: string }>;
 
 export const useConversation = (
   initialThreadId: string | null,
   initialTurns: readonly TurnState[],
+  mode: ConversationMode = "saved",
 ) => {
   const { noteThreadTouched } = useThreadHistory();
   const [threadId, setThreadId] = useState(initialThreadId);
@@ -87,13 +103,12 @@ export const useConversation = (
     answersToStream(turns, streaming.current).forEach(
       ({ turnIndex, turnId, skill, response }) => {
         streaming.current.add(response.id);
-        const messages = historyFor(turns, turnIndex, response.modelId);
-        const request = {
+        const request = answerRequestFor(mode, {
           modelId: response.modelId,
           turnId,
-          messages,
-          ...(skill === null ? {} : { skill }),
-        };
+          messages: historyFor(turns, turnIndex, response.modelId),
+          skill,
+        });
         void streamAnswer(request, (progress) =>
           setTurns((all) =>
             updateResponse(all, response.id, (answer) => ({ ...answer, ...progress })),
@@ -128,7 +143,7 @@ export const useConversation = (
         });
       },
     );
-  }, [turns]);
+  }, [turns, mode]);
 
   const send = useCallback(
     async (prompt: string, models: readonly SendModel[], skill: string | null = null) => {
@@ -136,12 +151,18 @@ export const useConversation = (
       setError(null);
       setTurns((all) => [...all, pendingTurn(prompt, models, skill)]);
 
-      const started = await startTurn({ threadId, prompt, models, skill }).catch(
-        (thrown: unknown) => {
-          console.error("[arena] could not start the turn", thrown);
-          return { ok: false, error: SEND_FAILED } as const;
-        },
-      );
+      const started = await beginTurn(mode, BEGIN_TURN, {
+        threadId,
+        prompt,
+        models,
+        skill,
+      }).catch((thrown: unknown) => {
+        console.error(
+          "[arena] could not start the turn",
+          thrown instanceof Error ? thrown.name : typeof thrown,
+        );
+        return { ok: false, error: SEND_FAILED } as const;
+      });
       setSending(false);
       if (!started.ok) {
         setTurns(dropPending);
@@ -150,6 +171,7 @@ export const useConversation = (
       }
 
       setTurns((all) => confirmTurn(all, started.turnId, started.responses));
+      if (started.kind === "incognito") return;
       noteThreadTouched({
         id: started.threadId,
         title: started.threadTitle,
@@ -162,7 +184,7 @@ export const useConversation = (
         window.history.replaceState(null, "", `/t/${started.threadId}`);
       }
     },
-    [threadId, noteThreadTouched],
+    [threadId, noteThreadTouched, mode],
   );
 
   const retry = useCallback(

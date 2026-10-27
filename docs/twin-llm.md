@@ -67,6 +67,7 @@ Exoscale: set `EXOSCALE_BASE_URLS` (one vLLM `/v1` URL per GPU); without it, sta
 - The synthetic cohort explorer (Customize · Data, `/customize/data/cohort`) and the Body twin's Demo lab values show the synthetic cohorts in both modes, labelled "Synthetic data". They read through a separate synthetic display scope that can only select `is_synthetic` rows of allowlisted cohorts and sends nothing to a model ([warehouse.md](warehouse.md#synthetic-display-scope))
 - Files you import on Customize · Data (FHIR records, lab CSV, research tables) are stored only with `DATA_MODE=personal`, in their own `personal_*` tables, audited without values, and never sent to a hosted model ([personal-data.md](personal-data.md))
 - Threads are private in both modes. `/t/<id>` opens only for the person who wrote the thread; anyone else, signed in or not, gets the same 404 as an unknown id (`features/arena/owned-thread.ts`). There is no sharing: "Copy link" copies the address for the owner's own use, and its analytics event carries no thread id. A withheld answer's text and reasoning are not sent to the browser when a saved thread loads.
+- Incognito chats (`/?incognito=1`) are never saved and run only on Ollama on loopback: no thread, turn or answer row, no thread history entry, no analytics event about the conversation, and no prompt or answer text in a log. Tool reads are audited as usual, under a random session id per answer with no thread or turn id ([chat-platform.md](chat-platform.md#incognito-chats))
 
 ## Key paths
 

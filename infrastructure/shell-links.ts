@@ -3,7 +3,7 @@
  * change) opens a new chat with this flag; until it lands, the flag is ignored
  * and the link opens a normal new chat.
  */
-export const INCOGNITO_HREF = "/?incognito=1";
+export { INCOGNITO_HREF } from "./incognito";
 
 /** A draft the prompt bar may be opened with: one `/command` and a space, nothing else. */
 const DRAFT = /^\/[a-z][a-z0-9-]{0,40} $/;

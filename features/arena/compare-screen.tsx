@@ -1,13 +1,16 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import type { Command } from "@/features/commands/registry";
+import { INCOGNITO_HREF, NEW_CHAT_HREF } from "@/infrastructure/incognito";
 import type { CatalogModel } from "@/infrastructure/model-catalog";
 
 import { AnswerColumn } from "./answer-column";
 import type { TurnState } from "./conversation";
+import { IncognitoBanner } from "./incognito-controls";
 import { OutputsPanel } from "./outputs-panel";
 import { PromptBar } from "./prompt-bar";
 import { useSuggestedQuestions } from "./suggestion-chips";
@@ -17,6 +20,7 @@ import { TwinChatCard } from "./twin-chat-card";
 import type { TwinDataMode } from "./twin-subject";
 import { useConversation } from "./use-conversation";
 import { useTwinCard } from "./use-twin-card";
+import { Welcome } from "./welcome";
 
 /**
  * TwinLLM's main screen: a prompt goes to one to three models and their
@@ -30,6 +34,9 @@ import { useTwinCard } from "./use-twin-card";
  *
  * `/twin` adds the twin card to the list, after the turns there were when it
  * was opened. It is not a turn, so no model ever sees it.
+ * A new chat can be incognito (`/?incognito=1`, `infrastructure/incognito.ts`):
+ * the conversation stays in this screen's state, only local models are
+ * offered, and the banner and a dashed prompt bar say so throughout.
  */
 
 /** three.js arrives with the first open card, not with the chat. */
@@ -39,17 +46,6 @@ const TwinCardViewer = dynamic(
     ssr: false,
     loading: () => <p className="twin-chat-status">Loading the digital twin…</p>,
   },
-);
-
-const Welcome = () => (
-  <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 px-2 pt-[12vh] text-center">
-    <h1 className="text-display">TwinLLM</h1>
-    <p className="text-muted-foreground text-[15px] leading-relaxed">
-      Ask a research question, with wearable context if you link a device. Up to three
-      open models answer side by side; open any answer to see its reasoning and which
-      metrics it cited. Research use and visualisation only.
-    </p>
-  </div>
 );
 
 const columnsClass = (count: number): string =>
@@ -62,6 +58,8 @@ export const CompareScreen = ({
   initialTurns = [],
   skills = [],
   dataMode,
+  incognito = false,
+  localModelIds = [],
   initialDraft,
 }: Readonly<{
   catalog: readonly CatalogModel[] | null;
@@ -72,9 +70,14 @@ export const CompareScreen = ({
   skills?: readonly Command[];
   /** The server's DATA_MODE: which twin `/twin` shows. */
   dataMode: TwinDataMode;
+  /** A new chat that is never saved; only the home page sets it. */
+  incognito?: boolean;
+  /** Catalog models that run on this machine, the only ones incognito offers. */
+  localModelIds?: readonly string[];
   /** A `/command ` to start the prompt with, from the search box. */
   initialDraft?: string;
 }>) => {
+  const router = useRouter();
   const {
     threadId: currentThreadId,
     turns,
@@ -83,7 +86,7 @@ export const CompareScreen = ({
     summaries,
     send,
     retry,
-  } = useConversation(threadId, initialTurns);
+  } = useConversation(threadId, initialTurns, incognito ? "incognito" : "saved");
   const twin = useTwinCard({
     initialThreadId: threadId,
     threadId: currentThreadId,
@@ -112,10 +115,22 @@ export const CompareScreen = ({
         )}
         <div className="min-w-0 xl:col-start-1 xl:row-start-1">
           {items.length === 0 ? (
-            <Welcome />
+            <Welcome
+              incognito={incognito}
+              onToggleIncognito={
+                threadId === null
+                  ? () => router.push(incognito ? NEW_CHAT_HREF : INCOGNITO_HREF)
+                  : undefined
+              }
+            />
           ) : (
             <>
               <h1 className="sr-only">{turns[0]?.prompt ?? "TwinLLM"}</h1>
+              {incognito ? (
+                <div className="mx-auto mb-6 max-w-5xl">
+                  <IncognitoBanner />
+                </div>
+              ) : null}
               <ol
                 aria-label="Answers in this thread"
                 className="mx-auto flex max-w-5xl flex-col gap-10"
@@ -191,6 +206,8 @@ export const CompareScreen = ({
         initialModelIds={defaultModelIds}
         busy={sending}
         skills={skills}
+        incognito={incognito}
+        localModelIds={localModelIds}
         suggestions={suggestions}
         initialDraft={initialDraft}
         onSubmit={(prompt, models, skill) => void send(prompt, models, skill)}

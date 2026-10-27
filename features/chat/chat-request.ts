@@ -30,3 +30,19 @@ export const chatRequestSchema = z.object({
 });
 
 export type ChatRequest = Readonly<z.infer<typeof chatRequestSchema>>;
+
+/**
+ * Body of `POST /api/chat/incognito`: one model and the conversation so far,
+ * held only in the browser. There is no turn id because nothing was written
+ * down. Closed (`strict`), so a stray field is refused rather than ignored, and
+ * bounded like the saved request.
+ */
+export const incognitoChatRequestSchema = z
+  .object({
+    modelId: z.string().min(1).max(MAX_MODEL_ID_CHARS),
+    messages: z.array(conversationMessage.strict()).min(1).max(MAX_MESSAGES),
+    skill: z.string().regex(SKILL_NAME_PATTERN).optional(),
+  })
+  .strict();
+
+export type IncognitoChatRequest = Readonly<z.infer<typeof incognitoChatRequestSchema>>;
