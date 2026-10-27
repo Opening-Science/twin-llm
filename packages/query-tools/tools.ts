@@ -24,8 +24,12 @@ import {
   type ToolRefusal,
   noRecords,
   noRows,
+  noWearableRows,
   recordCapExceeded,
   sourceNotConnected,
+  sourcesUnitMismatch,
+  tooFewPairedDays,
+  wearableMixedUnits,
   type SourceNotConnected,
   unsupportedConversion,
   type UnsupportedConversion,
@@ -57,6 +61,7 @@ import type {
   restingHrTrendInput,
   trainingLoadInput,
   WEARABLE_SOURCE_CHOICES,
+  crossSourceCompareInput,
 } from "./schemas";
 import { windowEndDate, windowStartDate } from "./schemas";
 import {
@@ -75,8 +80,14 @@ import {
   utcDay,
 } from "./stats";
 import { placeReading, type RangePlacement, rangeRefusalFor } from "./range-position";
+import {
+  AGREEMENT_MINIMUM,
+  type SourceAgreement,
+  sourceAgreement,
+} from "./source-agreement";
 import { applyConversion, findConversion, supportedPairs } from "./unit-conversions";
 import {
+  inSpan,
   sleepSummary,
   type SleepSummaryResult,
   type Span,
@@ -1333,5 +1344,111 @@ export const runTrainingLoad = (
       ]);
     },
     wearableRowCount,
+    ports,
+  );
+
+type CrossSourceCompareInput = z.infer<typeof crossSourceCompareInput>;
+
+export type CrossSourceCompareResult = SourceAgreement &
+  Readonly<{
+    measure: string;
+    source_a: WearableSource;
+    source_b: WearableSource;
+    key_a: string;
+    key_b: string;
+    unit: string | null;
+    start: string;
+    end: string;
+  }>;
+
+/** The snapshot key family each source records a comparable measure under, if any. */
+const compareKey = (
+  measure: CrossSourceCompareInput["measure"],
+  source: WearableSource,
+): string | undefined => {
+  switch (measure) {
+    case "hrv":
+      return TREND_MEASURES.hrv.snapshot[source];
+    case "resting_hr":
+      return TREND_MEASURES.resting_hr.snapshot[source];
+    case "sleep_duration":
+      return SLEEP_SOURCES[source].fields.duration;
+    case "sleep_efficiency":
+      return SLEEP_SOURCES[source].fields.efficiency;
+  }
+};
+
+/**
+ * `cross_source_compare`: two linked wearables on one daily measure, paired by
+ * day, the maths in `sourceAgreement` (source-agreement.ts). Personal mode
+ * only: a synthetic subject has one series and nothing to compare it with.
+ */
+export const runCrossSourceCompare = (
+  scope: SessionScope,
+  input: CrossSourceCompareInput,
+  ports: QueryToolPorts = defaultQueryToolPorts(),
+  wearables: WearableSummaries = NO_WEARABLE_SNAPSHOTS,
+): Promise<CrossSourceCompareResult | ToolRefusal> =>
+  audited<CrossSourceCompareResult | ToolRefusal>(
+    scope,
+    "cross_source_compare",
+    input,
+    null,
+    async () => {
+      if (scope.mode !== "personal") {
+        return sourceNotConnected(input.source_a, ["synthetic"]);
+      }
+      const linked = linkedSources(wearables);
+      for (const source of [input.source_a, input.source_b]) {
+        if (!linked.includes(source)) return sourceNotConnected(source, linked);
+      }
+      const span = spanOf(input);
+      const sides = [input.source_a, input.source_b].map((source) => {
+        const key = compareKey(input.measure, source);
+        return {
+          source,
+          key: key ?? "",
+          readings: snapshotReadings(wearables, source, key).filter((reading) =>
+            inSpan(reading.at, span),
+          ),
+        };
+      });
+      for (const side of sides) {
+        if (side.readings.length === 0) return noWearableRows(input.measure, side.source);
+        const units = [...new Set(side.readings.map((reading) => reading.unit))];
+        if (units.length > 1) {
+          return wearableMixedUnits(
+            input.measure,
+            side.source,
+            units.map((unit) => unit ?? "none"),
+          );
+        }
+      }
+      const [a, b] = sides as [(typeof sides)[number], (typeof sides)[number]];
+      const unitA = a.readings[0]?.unit ?? null;
+      const unitB = b.readings[0]?.unit ?? null;
+      if (unitA !== unitB) {
+        return sourcesUnitMismatch(input.measure, [
+          { source: a.source, unit: unitA },
+          { source: b.source, unit: unitB },
+        ]);
+      }
+      const agreement = sourceAgreement(a.readings, b.readings);
+      if (agreement.n_pairs < AGREEMENT_MINIMUM) {
+        return tooFewPairedDays(input.measure, AGREEMENT_MINIMUM, agreement.n_pairs);
+      }
+      return {
+        measure: input.measure,
+        source_a: a.source,
+        source_b: b.source,
+        key_a: a.key,
+        key_b: b.key,
+        unit: unitA,
+        start: input.start,
+        end: input.end,
+        ...agreement,
+      };
+    },
+    (result) => ("n_pairs" in result ? result.n_pairs : 0),
     ports,
   );

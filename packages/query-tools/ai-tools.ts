@@ -22,6 +22,7 @@ import {
   hrvTrendInput,
   restingHrTrendInput,
   trainingLoadInput,
+  crossSourceCompareInput,
 } from "./schemas";
 import { modelInputSchema } from "./model-schema";
 import type { QueryToolPorts } from "./ports";
@@ -45,6 +46,7 @@ import {
   runHrvTrend,
   runRestingHrTrend,
   runTrainingLoad,
+  runCrossSourceCompare,
 } from "./tools";
 import { NO_WEARABLE_SNAPSHOTS } from "./wearable-readings";
 
@@ -153,5 +155,10 @@ export const createQueryTools = (
     description: description("training_load"),
     inputSchema: modelInputSchema(trainingLoadInput),
     execute: async (input) => runTrainingLoad(scope, input, ports, wearables),
+  }),
+  cross_source_compare: tool({
+    description: description("cross_source_compare"),
+    inputSchema: modelInputSchema(crossSourceCompareInput),
+    execute: async (input) => runCrossSourceCompare(scope, input, ports, wearables),
   }),
 });

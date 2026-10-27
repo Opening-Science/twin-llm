@@ -36,6 +36,7 @@ describe("openAiToolsFrom", () => {
       "hrv_trend",
       "resting_hr_trend",
       "training_load",
+      "cross_source_compare",
       "show_view",
       "list_views",
       "open_view",

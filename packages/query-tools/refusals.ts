@@ -79,7 +79,8 @@ export type ToolRefusal =
   | SourceNotConnected
   | NoWearableRows
   | WearableMixedUnits
-  | WindowTooShort;
+  | WindowTooShort
+  | SourcesUnitMismatch;
 
 const REFUSAL_CODES: readonly string[] = [
   SUBJECT_SCOPE_VIOLATION.code,
@@ -318,4 +319,35 @@ export const windowTooShort = (
   measure,
   minimum: WEARABLE_TREND_MINIMUM,
   counts: counts.map((count) => ({ source: count.source, n: count.n })),
+});
+
+/** Two days both sources recorded is not enough to say how far apart they read. */
+export const tooFewPairedDays = (
+  measure: string,
+  minimum: number,
+  pairs: number,
+): WindowTooShort => ({
+  code: "WINDOW_TOO_SHORT",
+  error: `fewer than ${minimum} days that both sources recorded in this window; too few to compare them`,
+  measure,
+  minimum,
+  counts: [{ source: "both", n: pairs }],
+});
+
+export type SourcesUnitMismatch = Readonly<{
+  code: "UNIT_MISMATCH";
+  error: string;
+  measure: string;
+  units: ReadonlyArray<Readonly<{ source: string; unit: string | null }>>;
+}>;
+
+/** The two sources record the measure in different units; nothing is converted. */
+export const sourcesUnitMismatch = (
+  measure: string,
+  units: ReadonlyArray<Readonly<{ source: string; unit: string | null }>>,
+): SourcesUnitMismatch => ({
+  code: "UNIT_MISMATCH",
+  error: "the two sources record this measure in different units; nothing is converted",
+  measure,
+  units: units.map((each) => ({ source: each.source, unit: each.unit })),
 });

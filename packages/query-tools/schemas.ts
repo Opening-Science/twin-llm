@@ -307,6 +307,35 @@ export const trainingLoadInput = z
   .refine(startBeforeEnd, START_BEFORE_END)
   .describe("Workout minutes per day or week from wearables in a window, per source");
 
+/** Measures two wearables can both record, by day. */
+export const COMPARE_MEASURES = [
+  "hrv",
+  "resting_hr",
+  "sleep_duration",
+  "sleep_efficiency",
+] as const;
+
+const singleWearable = z
+  .enum(["oura", "whoop", "google"])
+  .describe("A linked wearable: oura, whoop or google");
+
+export const crossSourceCompareInput = z
+  .object({
+    measure: z
+      .enum(COMPARE_MEASURES)
+      .describe("hrv, resting_hr, sleep_duration or sleep_efficiency"),
+    source_a: singleWearable,
+    source_b: singleWearable,
+    start: windowStart,
+    end: windowEnd,
+  })
+  .strict()
+  .refine(startBeforeEnd, START_BEFORE_END)
+  .refine((input) => input.source_a !== input.source_b, {
+    error: "source_a and source_b must be two different wearables",
+  })
+  .describe("How closely two linked wearables agree on one daily measure in a window");
+
 export const TOOL_DEFINITIONS = [
   {
     name: "list_subjects",
@@ -413,5 +442,11 @@ export const TOOL_DEFINITIONS = [
     description:
       "Workouts in a window, one row per source, day or week (weeks start Monday, UTC) and sport: sessions, minutes, the highest workout strain (Whoop) and calories (Oura), null where a source does not record one. Per source also the minutes in the 7 days ending on end and in the 28 days before them, and their ratio, labelled only as recent load compared with the previous four weeks (null when those four weeks have no minutes). sport keeps one sport group. Personal mode: this turn's linked wearables, no subject_ref. Synthetic mode: the named subject's series, source all. Refuses SOURCE_NOT_CONNECTED, NO_ROWS and MIXED_UNITS. Numbers only, no advice.",
     input: trainingLoadInput,
+  },
+  {
+    name: "cross_source_compare",
+    description:
+      "How closely two linked wearables agree on one daily measure (hrv, resting_hr, sleep_duration, sleep_efficiency) in a window, over the days both recorded: n_pairs, each source's mean, the mean difference (b minus a), its standard deviation, the limits of agreement (mean difference plus or minus 1.96 standard deviations) and the Pearson correlation. Under 7 paired days the spread, limits and correlation are null. Personal mode only; units must match and are never converted. Says how far apart the two read, never which is right. Refuses SOURCE_NOT_CONNECTED, NO_ROWS, MIXED_UNITS, UNIT_MISMATCH and WINDOW_TOO_SHORT.",
+    input: crossSourceCompareInput,
   },
 ] as const;

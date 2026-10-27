@@ -1155,6 +1155,72 @@
         "additionalProperties": false,
         "description": "Workout minutes per day or week from wearables in a window, per source"
       }
+    },
+    {
+      "name": "cross_source_compare",
+      "description": "How closely two linked wearables agree on one daily measure (hrv, resting_hr, sleep_duration, sleep_efficiency) in a window, over the days both recorded: n_pairs, each source's mean, the mean difference (b minus a), its standard deviation, the limits of agreement (mean difference plus or minus 1.96 standard deviations) and the Pearson correlation. Under 7 paired days the spread, limits and correlation are null. Personal mode only; units must match and are never converted. Says how far apart the two read, never which is right. Refuses SOURCE_NOT_CONNECTED, NO_ROWS, MIXED_UNITS, UNIT_MISMATCH and WINDOW_TOO_SHORT.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "measure": {
+            "type": "string",
+            "enum": ["hrv", "resting_hr", "sleep_duration", "sleep_efficiency"],
+            "description": "hrv, resting_hr, sleep_duration or sleep_efficiency"
+          },
+          "source_a": {
+            "type": "string",
+            "enum": ["oura", "whoop", "google"],
+            "description": "A linked wearable: oura, whoop or google"
+          },
+          "source_b": {
+            "type": "string",
+            "enum": ["oura", "whoop", "google"],
+            "description": "A linked wearable: oura, whoop or google"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?:Z))$"
+              },
+              {
+                "type": "string",
+                "format": "date",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+              }
+            ],
+            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+          },
+          "end": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              {
+                "type": "string",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?:Z))$"
+              },
+              {
+                "type": "string",
+                "format": "date",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+              }
+            ],
+            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+          }
+        },
+        "required": ["measure", "source_a", "source_b", "start", "end"],
+        "additionalProperties": false,
+        "description": "How closely two linked wearables agree on one daily measure in a window"
+      }
     }
   ]
 }

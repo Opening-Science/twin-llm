@@ -47,7 +47,7 @@ import {
 /** The instants a window covers, from its parsed bounds. */
 export type Span = Readonly<{ from: Date; to: Date }>;
 
-const inSpan = (at: Date, span: Span): boolean =>
+export const inSpan = (at: Date, span: Span): boolean =>
   at.getTime() >= span.from.getTime() && at.getTime() <= span.to.getTime();
 
 const inDays = (day: string, window: DayWindow): boolean =>

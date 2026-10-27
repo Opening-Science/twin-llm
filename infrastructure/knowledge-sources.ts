@@ -75,6 +75,7 @@ export const WEARABLE_ANALYTICS_TOOLS = [
   "hrv_trend",
   "resting_hr_trend",
   "training_load",
+  "cross_source_compare",
 ] as const satisfies readonly QueryToolName[];
 
 export const KNOWLEDGE_SOURCE_GROUPS: readonly KnowledgeSourceGroup[] = [
