@@ -54,16 +54,16 @@ const SECTIONS: readonly Section[] = [
     owns: (path) => path === "/" || under("/t")(path),
   },
   {
-    href: "/customize",
-    label: "Customize",
-    Glyph: ConnectorsGlyph,
-    owns: (path) => under("/customize")(path) || under("/customize/connectors")(path),
-  },
-  {
     href: "/digital-twin",
     label: "Digital Twin",
     Glyph: TwinGlyph,
     owns: under("/digital-twin"),
+  },
+  {
+    href: "/customize",
+    label: "Customize",
+    Glyph: ConnectorsGlyph,
+    owns: (path) => under("/customize")(path) || under("/customize/connectors")(path),
   },
   { href: "/models", label: "Models", Glyph: ModelsGlyph, owns: under("/models") },
   { href: "/docs", label: "Docs", Glyph: DocsGlyph, owns: under("/docs") },
