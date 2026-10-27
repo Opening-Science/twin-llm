@@ -12,8 +12,10 @@ The Python side of TwinLLM, kept apart from the app. Four things live here or wi
 - **Motion from video** (`motion` group): `motion/video_to_clip.py` turns a video into a
   keyframe clip the Body twin plays, on this machine, with MediaPipe Pose
   (`docs/motion-from-video.md`). Clips go to the gitignored `data/motion/`.
-- **The Carbon-X sidecar** (later): a separate process the app talks to over a socket,
-  not a module it imports.
+- **The Carbon-X sidecar** (`carbon` group): `carbon/serve.py` serves the pinned
+  Carbon-X DNA model in 4-bit on 127.0.0.1:8090 with an OpenAI-compatible chat route. A
+  separate process the app would talk to over HTTP, not a module it imports. Research
+  spike for #58; contract and limits in [`docs/carbon-x.md`](../docs/carbon-x.md).
 
 ## Setup
 
@@ -25,6 +27,7 @@ cd python
 uv sync                    # pandas and pyarrow only
 uv sync --group analysis   # plus matplotlib and pytest
 uv sync --group train      # plus torch, transformers, peft, trl, datasets (large)
+uv sync --group carbon     # plus torch, transformers, bitsandbytes, accelerate (large)
 uv sync --group motion     # plus mediapipe, opencv and pytest
 uv run --group motion pytest motion
 uv run --group analysis pytest
