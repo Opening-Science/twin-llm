@@ -642,6 +642,49 @@
         "additionalProperties": false,
         "description": "One reading of one LOINC against its Anchor v3 published range"
       }
+    },
+    {
+      "name": "convert_unit",
+      "description": "Convert one value of glucose, creatinine, HbA1c, total/LDL/HDL cholesterol, triglycerides or body temperature between units with a fixed table: value rounded half away from zero, unrounded, unit, the formula used and the rounding rule. Reads no rows. A pair the table does not hold is refused with UNSUPPORTED_CONVERSION and the pairs it does hold.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "number",
+            "minimum": -1000,
+            "maximum": 100000,
+            "description": "The value to convert"
+          },
+          "from": {
+            "type": "string",
+            "enum": ["mg/dL", "mmol/L", "umol/L", "%", "mmol/mol", "Cel", "[degF]"],
+            "description": "UCUM unit of value"
+          },
+          "to": {
+            "type": "string",
+            "enum": ["mg/dL", "mmol/L", "umol/L", "%", "mmol/mol", "Cel", "[degF]"],
+            "description": "UCUM unit to convert to"
+          },
+          "analyte": {
+            "type": "string",
+            "enum": [
+              "glucose",
+              "creatinine",
+              "hba1c",
+              "total_cholesterol",
+              "ldl_cholesterol",
+              "hdl_cholesterol",
+              "triglycerides",
+              "body_temperature"
+            ],
+            "description": "What was measured"
+          }
+        },
+        "required": ["value", "from", "to", "analyte"],
+        "additionalProperties": false,
+        "description": "One value of one analyte from one unit to another, by a fixed table"
+      }
     }
   ]
 }

@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { CONVERSION_ANALYTES, CONVERSION_UNITS } from "./unit-conversions";
+
 export const loincSchema = z
   .string()
   .regex(/^\d{1,5}-\d+$/)
@@ -153,6 +155,18 @@ export const rangePositionInput = z
   .refine(pickAtAgree, { message: "at is required with pick at, and only then" })
   .describe("One reading of one LOINC against its Anchor v3 published range");
 
+const conversionUnit = z.enum(CONVERSION_UNITS);
+
+export const convertUnitInput = z
+  .object({
+    value: z.number().min(-1000).max(100000).describe("The value to convert"),
+    from: conversionUnit.describe("UCUM unit of value"),
+    to: conversionUnit.describe("UCUM unit to convert to"),
+    analyte: z.enum(CONVERSION_ANALYTES).describe("What was measured"),
+  })
+  .strict()
+  .describe("One value of one analyte from one unit to another, by a fixed table");
+
 export const TOOL_DEFINITIONS = [
   {
     name: "list_subjects",
@@ -211,5 +225,11 @@ export const TOOL_DEFINITIONS = [
     description:
       "Where one reading of one LOINC sits against its Anchor v3 published range: below, within or above it, bounds inclusive. pick latest takes the newest reading in the window, pick at the reading at `at`. When the range depends on sex, age or timing, which the warehouse does not hold, position is null and depends_on names them; nothing is guessed. Reads up to 5000 rows; refuses no rows, mixed units, no published range, and a unit other than the range's (nothing is converted). Neutral position only.",
     input: rangePositionInput,
+  },
+  {
+    name: "convert_unit",
+    description:
+      "Convert one value of glucose, creatinine, HbA1c, total/LDL/HDL cholesterol, triglycerides or body temperature between units with a fixed table: value rounded half away from zero, unrounded, unit, the formula used and the rounding rule. Reads no rows. A pair the table does not hold is refused with UNSUPPORTED_CONVERSION and the pairs it does hold.",
+    input: convertUnitInput,
   },
 ] as const;

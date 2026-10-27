@@ -15,7 +15,7 @@ const ports: QueryToolPorts = {
 const SCOPE = { actor: "test", sessionId: "tools", mode: "synthetic" } as const;
 
 describe("openAiToolsFrom", () => {
-  test("the training tools are the fifteen a chat request sends, in order", async () => {
+  test("the training tools are the ones a chat request sends, in order", async () => {
     const tools = await openAiToolsFrom(createChatTools(SCOPE, { query: ports }));
     expect(tools.map((tool) => tool.function.name)).toEqual([
       "list_subjects",
@@ -28,6 +28,7 @@ describe("openAiToolsFrom", () => {
       "coverage",
       "compare_windows",
       "range_position",
+      "convert_unit",
       "show_view",
       "list_views",
       "open_view",

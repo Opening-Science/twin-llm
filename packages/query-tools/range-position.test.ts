@@ -313,7 +313,7 @@ describe("range_position", () => {
     expect(await runRangePosition(synthetic, latest(TRIGLYCERIDES), ports)).toEqual({
       code: "UNIT_MISMATCH",
       error:
-        "the observation's unit is not the published range's unit; nothing is converted",
+        "the observation's unit is not the published range's unit; nothing is converted here. convert_unit converts the value when its table holds this analyte and pair.",
       loinc: TRIGLYCERIDES,
       unit: "mmol/L",
       range_unit: "mg/dL",

@@ -11,6 +11,7 @@ const UNIT_TEXT: Readonly<Record<string, string>> = {
   "{score}": "points",
   "mm[Hg]": "mmHg",
   "kg/m2": "kg/m²",
+  "umol/L": "µmol/L",
   "/min": "/min",
 };
 

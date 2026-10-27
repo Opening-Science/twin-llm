@@ -1,5 +1,5 @@
 /**
- * Test helper: the real analytics tools over in-memory rows, plus in-memory
+ * Test helper: the real analytics tools and `convert_unit` over in-memory rows, plus in-memory
  * `latest_by_loinc` and `subject_window` (those two read the database
  * directly). Used by the training-data tests only.
  */
@@ -8,6 +8,7 @@ import { SUBJECT_SCOPE_VIOLATION } from "../../packages/query-tools/scope";
 import {
   runBaselineDeviation,
   runCompareWindows,
+  runConvertUnit,
   runCoverage,
   runTrend,
 } from "../../packages/query-tools/tools";
@@ -53,6 +54,8 @@ export const fakeTools = (data: FakeRows) => {
         return runCoverage(scope, KEYED_TOOLS.coverage.parse(args), ports);
       case "compare_windows":
         return runCompareWindows(scope, KEYED_TOOLS.compare_windows.parse(args), ports);
+      case "convert_unit":
+        return runConvertUnit(scope, KEYED_TOOLS.convert_unit.parse(args), ports);
       case "latest_by_loinc": {
         const input = KEYED_TOOLS.latest_by_loinc.parse(args);
         if (!(input.subject_ref in data)) return SUBJECT_SCOPE_VIOLATION;

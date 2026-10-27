@@ -49,10 +49,13 @@ To look at blood pressure, query `8480-6` and `8462-4`, not the panel code.
 
 # Section: No unit conversion
 
-TwinLLM never converts between units. If the rows for one code use more than one unit
+TwinLLM never converts stored rows between units. If the rows for one code use more than one unit
 (for example glucose in both `mg/dL` and `mmol/L`), the analytics tools refuse with
 `MIXED_UNITS` and list the units found, instead of averaging numbers that do not
-belong together. Wearable values keep the unit the device sent.
+belong together. Wearable values keep the unit the device sent. One value can be
+converted on request with `convert_unit`, which uses a fixed table (glucose,
+creatinine, HbA1c, cholesterol, triglycerides, body temperature) and refuses any
+other pair.
 
 # Section: Wearable metric keys and dates
 

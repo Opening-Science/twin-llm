@@ -18,7 +18,7 @@ bun run eval:report -- 2026-10-21-qwen3-s5 --quantisation Q4_K_M
 | Flag                                                    | Meaning                                                        |
 | ------------------------------------------------------- | -------------------------------------------------------------- |
 | `--models provider:id[,…]`                              | Required. Every provider must be `LLM_PROVIDER` in `.env.eval` |
-| `--items Q-S1-01,…` / `--scenario S1` / `--latency-set` | One selection at most; none means all 81 items                 |
+| `--items Q-S1-01,…` / `--scenario S1` / `--latency-set` | One selection at most; none means all 88 items                 |
 | `--replay`                                              | Cache only; never calls a model                                |
 | `--run-id <id>`                                         | Default `<date>-<provider>-<time>`; an existing run is refused |
 | `--timeout-s <n>`                                       | Per item, default 300                                          |
@@ -148,14 +148,17 @@ asks about, so hallucination can catch an answer that reports it with another
 code's value (skin temperature answered "30.1 °C" after reading only systolic
 blood pressure, `8480-6`).
 
-- The asked codes are the LOINC codes in the item's `expect.values`, in its
+- An item with `expect.measures` names its measures (LOINC codes, or
+  `MEASURE_NAMES` names for their codes) and they are used as written.
+- Otherwise the asked codes are the LOINC codes in the item's `expect.values`, in its
   answer-key entries (`args.loinc`), written in the question, and those of the
   measure names in `MEASURE_NAMES` the question uses. A wearable metric
   (readiness, recovery, strain, skin temperature, HRV, sleep) has no code, so
   no warehouse code stands for it. Systolic and diastolic share their codes. A
   question that names no measure is not checked.
 - A tool result's numbers belong to a code when they sit in an object with a
-  `loinc` field; in a result with none, to the codes in the call's input.
+  `loinc` field; in a result with none, to the codes in the call's input (a
+  `convert_unit` call's are its analyte's codes).
   Numbers beside coded objects, in a refusal, or of a call with no code
   (`subject_window`, `list_subjects`, guideline search) are neutral. A call
   "returned readings" when it has a row or a count `n` above 0.

@@ -13,7 +13,7 @@
     "content_sha256": "f4941fab7a56e17f9dd66b6b6e0fbed379dab8c564c6024831c5fd4aa0ba09eb"
   },
   "open_twin_sha": "a9e126c952c91e19e064a962dda7d815a43564e5",
-  "questions_sha256": "6ac80a3bf7ef183eadade16677141083c2ced58cd391531f79b99631047ded88",
+  "questions_sha256": "5385897e1a885157311a3818556540746d5bc3a70357d6b8a4a48f4f8c0714c1",
   "actor": "eval-answer-key",
   "generated_on": "2026-10-27",
   "entries": {
@@ -2473,6 +2473,97 @@
         "n": 0,
         "windows": [{ "start": "2010-01-01T00:00:00Z", "end": "2014-12-31T23:59:59Z" }],
         "refusal": "NO_ROWS"
+      }
+    ],
+    "Q-S1-17": [
+      {
+        "name": "value",
+        "tool": "latest_by_loinc",
+        "args": {
+          "subject_ref": "4f083ce3-f12b-bb4b-7353-e17f0cd55b0a",
+          "loinc": ["2339-0"]
+        },
+        "path": "rows.0.value",
+        "value": 104.68,
+        "unit": "mg/dL",
+        "n": 1,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "converted",
+        "tool": "convert_unit",
+        "args": {
+          "value": 104.68,
+          "from": "mg/dL",
+          "to": "mmol/L",
+          "analyte": "glucose"
+        },
+        "path": "value",
+        "value": 5.8,
+        "unit": "mmol/L",
+        "n": 0,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S1-18": [
+      {
+        "name": "value",
+        "tool": "latest_by_loinc",
+        "args": {
+          "subject_ref": "c67556bf-36d9-dd90-9b8a-43dbff31b428",
+          "loinc": ["38483-4"]
+        },
+        "path": "rows.0.value",
+        "value": 1.32,
+        "unit": "mg/dL",
+        "n": 1,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "converted",
+        "tool": "convert_unit",
+        "args": {
+          "value": 1.32,
+          "from": "mg/dL",
+          "to": "umol/L",
+          "analyte": "creatinine"
+        },
+        "path": "value",
+        "value": 117,
+        "unit": "umol/L",
+        "n": 0,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S6-20": [
+      {
+        "name": "value",
+        "tool": "latest_by_loinc",
+        "args": {
+          "subject_ref": "6fbddf55-7096-b883-7cd3-260f27953080",
+          "loinc": ["4548-4"]
+        },
+        "path": "rows.0.value",
+        "value": 6.19,
+        "unit": "%",
+        "n": 1,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "refusal",
+        "tool": "convert_unit",
+        "args": { "value": 6.19, "from": "%", "to": "mmol/L", "analyte": "hba1c" },
+        "path": "code",
+        "value": "UNSUPPORTED_CONVERSION",
+        "unit": null,
+        "n": 0,
+        "windows": [],
+        "refusal": "UNSUPPORTED_CONVERSION"
       }
     ]
   }

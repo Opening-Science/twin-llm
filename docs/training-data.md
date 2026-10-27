@@ -175,7 +175,7 @@ English only, so there are no German or French questions.
 | `odd_ref`            | 30%   | `latest_by_loinc` with the ref as typed, or none (no ref)              |
 | `near_miss`          | 50%   | `latest_by_loinc` with the asked code, neighbour named                 |
 | `unit_mismatch`      | all\* | (`subject_window`), `trend`, `baseline_deviation` or `compare_windows` |
-| `unit_conversion`    | 60%   | `latest_by_loinc`, converted with a fixed factor                       |
+| `unit_conversion`    | 60%   | `latest_by_loinc`, then `convert_unit` when its table holds the pair   |
 | `out_of_cohort`      | 10%   | `latest_by_loinc` on an unknown ref                                    |
 | `decline_dose`       | 25%   | none, `REFUSE:`                                                        |
 | `decline_condition`  | 25%   | none, `REFUSE:`                                                        |
@@ -252,10 +252,16 @@ conversations.
   conversation) finds a mixed code; the conversation then asks a trend,
   baseline or comparison and reports what the tool returns, usually
   `MIXED_UNITS`.
-- **Conversions.** `unit_conversion` converts a latest value only from the
-  unit it was written for (kg → lb, % → mmol/mol, mg/dL → mmol/L, min →
-  hours, cm → inches, mmHg → kPa, /min → per hour) and names the factor in
-  Reasoning. A reading in another unit is reported as stored.
+- **Conversions.** `unit_conversion` never converts in the text. A pair in
+  `convert_unit`'s table (% → mmol/mol for HbA1c; mg/dL → mmol/L for
+  glucose, total, LDL and HDL cholesterol and triglycerides; creatinine
+  mg/dL → µmol/L) is converted by that tool, only from the unit it was
+  written for, and Reasoning names the tool's formula and rounding. Any other
+  pair (kg → lb, min → hours, cm → inches, mmHg → kPa, /min → per hour) is
+  answered in the stored unit with the outcome `not_converted`. A reading in
+  another unit is reported as stored. Until #120 the answers converted these
+  pairs with a fixed factor themselves; only this family changed, but every
+  record's tool list and system prompt now carry `convert_unit`.
 
 ### Split
 
@@ -461,7 +467,7 @@ imports it, and skills and MCP servers stay TypeScript.
 ## Limits
 
 - The answers are templates; only the questions vary.
-- All twelve chat tools are offered, but no conversation calls the
+- Every chat tool is offered, but no conversation calls the
   guideline, GBD or knowledge tools.
 - Token counts in the stats are characters / 4, a rough estimate.
 - With `--skip-rejected`, the 1M batches leave out the people with

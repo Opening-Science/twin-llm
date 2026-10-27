@@ -31,13 +31,42 @@ export const mixedUnits = (loinc: string, units: readonly string[]): MixedUnits 
   units: [...units].sort(),
 });
 
+export type UnsupportedConversion = Readonly<{
+  code: "UNSUPPORTED_CONVERSION";
+  error: string;
+  analyte: string;
+  from: string;
+  to: string;
+  /** The pairs the table does hold for this analyte, "from → to". */
+  supported: readonly string[];
+}>;
+
+/** `convert_unit` converts only the pairs in its table; any other pair is refused, never guessed. */
+export const unsupportedConversion = (
+  analyte: string,
+  from: string,
+  to: string,
+  supported: readonly string[],
+): UnsupportedConversion => ({
+  code: "UNSUPPORTED_CONVERSION",
+  error:
+    from === to
+      ? "from and to are the same unit; there is nothing to convert"
+      : "the conversion table has no factor for this analyte between these units",
+  analyte,
+  from,
+  to,
+  supported: [...supported],
+});
+
 export type ToolRefusal =
   | SubjectScopeViolation
   | RowCapExceeded
   | MixedUnits
   | NoRows
   | NoPublishedRange
-  | UnitMismatch;
+  | UnitMismatch
+  | UnsupportedConversion;
 
 const REFUSAL_CODES: readonly string[] = [
   SUBJECT_SCOPE_VIOLATION.code,
@@ -46,6 +75,7 @@ const REFUSAL_CODES: readonly string[] = [
   "NO_ROWS",
   "NO_PUBLISHED_RANGE",
   "UNIT_MISMATCH",
+  "UNSUPPORTED_CONVERSION",
 ];
 
 export const isToolRefusal = (value: unknown): value is ToolRefusal =>
@@ -101,14 +131,15 @@ export type UnitMismatch = Readonly<{
   range_unit: string;
 }>;
 
-/** There is no unit conversion, so a value in another unit gets no position. */
+/** range_position never converts, so a value in another unit gets no position; `convert_unit` may convert it first. */
 export const unitMismatch = (
   loinc: string,
   unit: string,
   rangeUnit: string,
 ): UnitMismatch => ({
   code: "UNIT_MISMATCH",
-  error: "the observation's unit is not the published range's unit; nothing is converted",
+  error:
+    "the observation's unit is not the published range's unit; nothing is converted here. convert_unit converts the value when its table holds this analyte and pair.",
   loinc,
   unit,
   range_unit: rangeUnit,

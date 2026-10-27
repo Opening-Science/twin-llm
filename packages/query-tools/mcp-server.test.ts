@@ -84,7 +84,7 @@ const textOf = (result: { content: unknown }): string => {
 };
 
 describe("query tools MCP server", () => {
-  test("lists exactly the nine tools of the committed manifest", async () => {
+  test("lists exactly the tools of the committed manifest", async () => {
     const client = await connectedClient(fakePorts().ports);
     expect(asJson(await client.listTools())).toEqual(snapshot());
   });

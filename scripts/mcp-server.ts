@@ -1,5 +1,5 @@
 /**
- * Serves the nine query tools to an MCP client over stdio.
+ * Serves the query tools to an MCP client over stdio.
  *
  * Usage (from repo root, env from .env.local):
  *   bun run mcp:serve

@@ -62,6 +62,7 @@ describe("system prompt with sources turned off", () => {
       "show_view",
       "list_views",
       "open_view",
+      "convert_unit",
     ]);
     expect(
       buildTwinSystemPrompt({ ...noWearables, mode: "synthetic", offeredTools: all }),
@@ -73,9 +74,19 @@ describe("system prompt with sources turned off", () => {
       buildTwinSystemPrompt({
         ...noWearables,
         mode: "personal",
-        offeredTools: new Set(["show_view", "list_views", "open_view"]),
+        offeredTools: new Set(["show_view", "list_views", "open_view", "convert_unit"]),
       }),
     ).toBe(buildTwinSystemPrompt({ ...noWearables, mode: "personal" }));
+  });
+
+  test("the units line is there only when convert_unit is offered", () => {
+    const line =
+      "## Units\nUse `convert_unit` for any unit conversion; never convert a number in the answer text. If it refuses a pair, give the value in the unit it came in.\n";
+    const prompt = (mode: "personal" | "synthetic", tools: readonly string[]) =>
+      buildTwinSystemPrompt({ ...noWearables, mode, offeredTools: new Set(tools) });
+    expect(prompt("synthetic", ["convert_unit"])).toContain(line);
+    expect(prompt("personal", ["convert_unit"])).toContain(line);
+    expect(prompt("synthetic", ["latest_by_loinc"])).not.toContain("convert_unit");
   });
 
   test("the reopen line is there only when open_view is offered", () => {

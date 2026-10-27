@@ -18,7 +18,10 @@ import {
   summaryStatsInput,
   trendInput,
   rangePositionInput,
+  convertUnitInput,
 } from "../../packages/query-tools/schemas";
+
+import { isMeasureId } from "./score/asked-measure";
 
 export const COHORT_ID = "synthea-v4-seed42";
 
@@ -50,6 +53,7 @@ export const KEYED_TOOLS = {
   latest_by_loinc: latestByLoincInput,
   summary_stats: summaryStatsInput,
   range_position: rangePositionInput,
+  convert_unit: convertUnitInput,
 } as const;
 
 export type KeyedTool = keyof typeof KEYED_TOOLS;
@@ -68,13 +72,16 @@ export const AUDIT_TOOL_NAMES = [
   "coverage",
   "compare_windows",
   "range_position",
+  "convert_unit",
   "guidelines.guideline_search",
   "knowledge.knowledge_search",
   "gbd.gbd_query",
 ] as const;
 
-/** Every warehouse read, for items that must not touch subject data. */
-export const WAREHOUSE_TOOLS = AUDIT_TOOL_NAMES.filter((name) => !name.includes("."));
+/** Every warehouse read, for items that must not touch subject data. `convert_unit` reads none. */
+export const WAREHOUSE_TOOLS = AUDIT_TOOL_NAMES.filter(
+  (name) => !name.includes(".") && name !== "convert_unit",
+);
 
 const auditToolName = z.enum(AUDIT_TOOL_NAMES);
 
@@ -151,6 +158,17 @@ export const expectSchema = z
       })
       .strict(),
     values: z.array(valueSpecSchema).optional(),
+    /**
+     * The measures the question asks about: LOINC codes, or measure names the
+     * hallucination scorer knows (`MEASURE_NAMES`). When present the scorer
+     * uses these instead of inferring the measure from the question.
+     */
+    measures: z
+      .array(
+        z.string().refine(isMeasureId, { message: "not a LOINC code or a measure name" }),
+      )
+      .min(1)
+      .optional(),
     /** Phrases or behaviours that fail the item when present. */
     must_not: z.array(z.string().min(1)).min(1),
   })

@@ -19,6 +19,7 @@ export const TOOL_NAMES = [
   "baseline_deviation",
   "coverage",
   "compare_windows",
+  "convert_unit",
 ] as const;
 
 export type ToolName = (typeof TOOL_NAMES)[number];
@@ -75,6 +76,7 @@ export type Family = (typeof FAMILIES)[number] | (typeof GENOME_FAMILIES)[number
 export type Outcome =
   | "answered"
   | "converted"
+  | "not_converted"
   | "no_rows"
   | "not_enough_data"
   | "no_code"
@@ -223,6 +225,7 @@ export const refusalReply = (
       ),
     };
   }
+  if (result.code !== "ROW_CAP_EXCEEDED") return null;
   return {
     outcome: "ROW_CAP_EXCEEDED",
     reply: sections(
