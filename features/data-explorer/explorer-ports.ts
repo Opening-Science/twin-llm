@@ -54,31 +54,43 @@ export const explorerDeps: ExplorerDeps = {
   readAggregates: async (cohortId) => {
     const db = database();
     const inCohort = Prisma.sql`s.cohort_id = ${cohortId} AND s.is_synthetic`;
-    const [subjects, codeUnits, codeSubjects, years, nonNumeric] = await Promise.all([
-      db.subject.count({ where: { cohortId, isSynthetic: true } }),
-      db.$queryRaw<CodeUnitSql[]>(Prisma.sql`
+    const [subjects, codeUnits, codeSubjects, years, nonNumeric, facts] =
+      await Promise.all([
+        db.subject.count({ where: { cohortId, isSynthetic: true } }),
+        db.$queryRaw<CodeUnitSql[]>(Prisma.sql`
         SELECT o.loinc, MIN(o.display) AS display, o.unit_ucum AS unit,
                COUNT(*)::int AS rows, COUNT(DISTINCT o.subject_ref)::int AS subjects,
                MIN(o.effective_at) AS first, MAX(o.effective_at) AS last
         FROM observations o JOIN subjects s ON s.subject_ref = o.subject_ref
         WHERE ${inCohort}
         GROUP BY o.loinc, o.unit_ucum`),
-      db.$queryRaw<{ loinc: string; subjects: number }[]>(Prisma.sql`
+        db.$queryRaw<{ loinc: string; subjects: number }[]>(Prisma.sql`
         SELECT o.loinc, COUNT(DISTINCT o.subject_ref)::int AS subjects
         FROM observations o JOIN subjects s ON s.subject_ref = o.subject_ref
         WHERE ${inCohort}
         GROUP BY o.loinc`),
-      db.$queryRaw<{ year: number; rows: number; subjects: number }[]>(Prisma.sql`
+        db.$queryRaw<{ year: number; rows: number; subjects: number }[]>(Prisma.sql`
         SELECT EXTRACT(YEAR FROM o.effective_at)::int AS year,
                COUNT(*)::int AS rows, COUNT(DISTINCT o.subject_ref)::int AS subjects
         FROM observations o JOIN subjects s ON s.subject_ref = o.subject_ref
         WHERE ${inCohort}
         GROUP BY 1`),
-      db.observationNonNumeric.count({
-        where: { subject: { cohortId, isSynthetic: true } },
-      }),
-    ]);
-    return { subjects, nonNumeric, codeUnits, codeSubjects, years };
+        db.observationNonNumeric.count({
+          where: { subject: { cohortId, isSynthetic: true } },
+        }),
+        db.subject.groupBy({
+          by: ["sex", "birthYear", "deathYear"],
+          where: { cohortId, isSynthetic: true },
+          _count: { _all: true },
+        }),
+      ]);
+    const subjectFacts = facts.map((row) => ({
+      sex: row.sex,
+      birthYear: row.birthYear,
+      deathYear: row.deathYear,
+      subjects: row._count._all,
+    }));
+    return { subjects, nonNumeric, codeUnits, codeSubjects, years, subjectFacts };
   },
   listSubjectSummaries: async (cohortId) => {
     const rows = await database().$queryRaw<SubjectSql[]>(Prisma.sql`

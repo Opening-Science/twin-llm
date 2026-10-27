@@ -75,15 +75,29 @@ const mockDb = () => ({
     upsert: async ({
       where,
       create,
+      update,
     }: {
       where: { subjectRef: string };
       create: Row;
       update: Row;
     }) => {
       const existing = store.subjects.get(where.subjectRef);
-      if (existing) return existing;
+      if (existing) {
+        const updated = { ...existing, ...update };
+        store.subjects.set(where.subjectRef, updated);
+        return updated;
+      }
       store.subjects.set(create.subjectRef as string, { ...create });
       return create;
+    },
+    updateMany: async ({ where, data }: { where: Row; data: Row }) => {
+      const matches = [...store.subjects.values()].filter((row) =>
+        Object.entries(where).every(([key, value]) => row[key] === value),
+      );
+      for (const row of matches) {
+        store.subjects.set(row.subjectRef as string, { ...row, ...data });
+      }
+      return { count: matches.length };
     },
   },
   $transaction: async (
@@ -461,6 +475,79 @@ describe("blood pressure components and Synthea marker", () => {
   });
 });
 
+describe("subject sex, birth year and death year (#4)", () => {
+  const BP_SUBJECT = "b1000000-0000-4000-8000-000000000001";
+  const STORED = {
+    subjectRef: BP_SUBJECT,
+    isSynthetic: true,
+    cohortId: COHORT,
+    sex: "female",
+    birthYear: 1968,
+  };
+
+  test("ingest stores the Patient's sex and birth year on the synthetic subject", async () => {
+    const { ingestBundle } = await import("./ingest-bundle");
+    await ingestBundle(loadFixture("bp-panel.json"), {
+      cohortId: COHORT,
+      syntheaVersion: VERSION,
+    });
+    expect(store.subjects.get(BP_SUBJECT)).toEqual(STORED);
+  });
+
+  test("re-running over an ingested bundle backfills the facts and writes no rows", async () => {
+    const { ingestBundle } = await import("./ingest-bundle");
+    const bundle = loadFixture("bp-panel.json");
+    await ingestBundle(bundle, { cohortId: COHORT, syntheaVersion: VERSION });
+    // As a row ingested before the columns existed.
+    store.subjects.set(BP_SUBJECT, {
+      subjectRef: BP_SUBJECT,
+      isSynthetic: true,
+      cohortId: COHORT,
+    });
+
+    const report = await ingestBundle(bundle, {
+      cohortId: COHORT,
+      syntheaVersion: VERSION,
+    });
+    expect(report.alreadyIngested).toBe(true);
+    expect(store.observations).toHaveLength(5);
+    expect(store.subjects.get(BP_SUBJECT)).toEqual(STORED);
+  });
+
+  test("a later bundle without the facts leaves them as they are", async () => {
+    const { ingestBundle } = await import("./ingest-bundle");
+    await ingestBundle(loadFixture("bp-panel.json"), {
+      cohortId: COHORT,
+      syntheaVersion: VERSION,
+    });
+    const bare = structuredClone(loadFixture("bp-panel.json")) as {
+      entry: Array<{ resource: Record<string, unknown> }>;
+    };
+    const patient = bare.entry[0];
+    if (!patient) throw new Error("expected a Patient entry");
+    delete patient.resource.gender;
+    delete patient.resource.birthDate;
+    // Another bundle (another sha) for the same subject, as a wearable bundle is.
+    bare.entry = bare.entry.slice(0, 1);
+
+    await ingestBundle(bare, { cohortId: COHORT, syntheaVersion: VERSION });
+    expect(store.bundles.size).toBe(2);
+    expect(store.subjects.get(BP_SUBJECT)).toEqual(STORED);
+  });
+
+  test("a bundle without the Synthea identifier stores no facts", async () => {
+    const { ingestBundle } = await import("./ingest-bundle");
+    const bundle = structuredClone(loadFixture("bp-panel.json")) as {
+      entry: Array<{ resource: { identifier?: unknown } }>;
+    };
+    const patient = bundle.entry[0];
+    if (!patient) throw new Error("expected a Patient entry");
+    patient.resource.identifier = [{ system: "urn:example:mrn", value: "1" }];
+    await ingestBundle(bundle, { cohortId: COHORT, syntheaVersion: VERSION });
+    expect(store.subjects.size).toBe(0);
+  });
+});
+
 describe("conditions and medication requests", () => {
   const CLINICAL = "clinical/clinical-records.json";
   const SUBJECT = "c1000000-0000-4000-8000-000000000001";
@@ -489,6 +576,8 @@ describe("conditions and medication requests", () => {
       subjectRef: SUBJECT,
       isSynthetic: true,
       cohortId: COHORT,
+      sex: "male",
+      birthYear: 1961,
     });
     expect(store.conditions).toEqual([
       {

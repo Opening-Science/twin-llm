@@ -66,6 +66,10 @@ const fake = (overrides: Partial<ExplorerDeps> = {}): Fake => {
         { year: 2019, rows: 2, subjects: 2 },
         { year: 2021, rows: 3, subjects: 2 },
       ],
+      subjectFacts: [
+        { sex: "female", birthYear: 1975, deathYear: null, subjects: 1 },
+        { sex: "male", birthYear: 1950, deathYear: 2020, subjects: 1 },
+      ],
     })),
     listSubjectSummaries: read("listSubjectSummaries", () => [
       {
@@ -201,6 +205,45 @@ describe("overview", () => {
       [2020, 0],
       [2021, 3],
     ]);
+    // Ages in 2021, the year of the latest reading: 46; the man died in 2020 at 70.
+    expect(result.overview.sexAge).toEqual({
+      referenceYear: 2021,
+      columns: ["female", "male"],
+      bands: [
+        {
+          id: "40",
+          label: "40–49",
+          from: 40,
+          counts: { female: 1, male: 0, other: 0, unknown: 0, "not-stored": 0 },
+          total: 1,
+        },
+        {
+          id: "50",
+          label: "50–59",
+          from: 50,
+          counts: { female: 0, male: 0, other: 0, unknown: 0, "not-stored": 0 },
+          total: 0,
+        },
+        {
+          id: "60",
+          label: "60–69",
+          from: 60,
+          counts: { female: 0, male: 0, other: 0, unknown: 0, "not-stored": 0 },
+          total: 0,
+        },
+        {
+          id: "70",
+          label: "70–79",
+          from: 70,
+          counts: { female: 0, male: 1, other: 0, unknown: 0, "not-stored": 0 },
+          total: 1,
+        },
+      ],
+      totals: { female: 1, male: 1, other: 0, unknown: 0, "not-stored": 0 },
+      total: 2,
+      deceased: 1,
+      withFacts: 2,
+    });
     expect(deps.audits).toHaveLength(1);
     expect(deps.audits[0]).toMatchObject({
       actor: "local",

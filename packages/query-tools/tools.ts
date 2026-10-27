@@ -802,9 +802,9 @@ export const runRangePosition = (
     input,
     input.subject_ref,
     async () => {
-      if (!(await subjectInScope(scope, input.subject_ref, ports))) {
-        return SUBJECT_SCOPE_VIOLATION;
-      }
+      if (scope.mode !== "synthetic") return SUBJECT_SCOPE_VIOLATION;
+      const subject = await ports.findSubject(input.subject_ref);
+      if (!subjectRowInScope(scope, subject)) return SUBJECT_SCOPE_VIOLATION;
       const noRange = rangeRefusalFor(input.loinc);
       if (noRange) return noRange;
       const rows = await readWindow(ports, input.subject_ref, [input.loinc], input);
@@ -814,7 +814,11 @@ export const runRangePosition = (
       const at = input.pick === "at" && input.at ? new Date(input.at) : null;
       const reading = pickReading(rows, at);
       if (!reading) return noRows(input.loinc, at === null ? null : asIso(at));
-      const placed = placeReading(input.loinc, reading);
+      // Sex and birth year are stored for synthetic subjects only (#4).
+      const placed = placeReading(input.loinc, reading, {
+        sex: subject?.sex,
+        birthYear: subject?.birthYear,
+      });
       if (isToolRefusal(placed)) return placed;
       return {
         loinc: input.loinc,
