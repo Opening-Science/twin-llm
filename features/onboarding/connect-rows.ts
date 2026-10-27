@@ -104,7 +104,11 @@ export const connectGroups = (facts: ConnectFacts): readonly ConnectGroup[] => {
           action:
             bodyloopState === "linked"
               ? null
-              : { label: "Open Connectors", href: "/connectors", external: false },
+              : {
+                  label: "Open Connectors",
+                  href: "/customize/connectors",
+                  external: false,
+                },
         },
       ],
     },
@@ -117,7 +121,11 @@ export const connectGroups = (facts: ConnectFacts): readonly ConnectGroup[] => {
           purpose: "Genome stays on the device; TwinLLM reads its status only.",
           state: facts.arkEnabled ? "on" : "not-set-up",
           stateLabel: STATE_LABEL[facts.arkEnabled ? "on" : "not-set-up"],
-          action: { label: "Check on Connectors", href: "/connectors", external: false },
+          action: {
+            label: "Check on Connectors",
+            href: "/customize/connectors",
+            external: false,
+          },
         },
       ],
     },

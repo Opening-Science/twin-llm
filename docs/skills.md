@@ -5,6 +5,7 @@ folder of cases. It says what a command may read and use; the code decides what 
 runs. Plan: [chat-platform.md](chat-platform.md), section 2. Issue #41.
 
 The `/` palette lists them and the chat runs them (#42); see "Running a skill" below.
+Two built-in commands come first in the palette; see "Built-in commands" at the end.
 
 ## SKILL.md
 
@@ -128,3 +129,39 @@ allows a kind `show_view` draws: `chart.timeseries`, `chart.compare`, `biomarker
 The response document records `skill`, and the prompt shows a `/sleep` chip, also after
 a reload, where it is read back from the audit row. The shared rules live in
 `infrastructure/skill-gate.ts`, which the eval gate uses too.
+
+## Built-in commands
+
+Built-ins live in `features/commands/registry.ts`. A skill may not take a built-in's name.
+
+- `/connect` shows the wearable rows under the prompt.
+- `/twin` shows the thread's digital twin as a card in the conversation (#168). Picking
+  it, or sending `/twin` on its own, clears the prompt and asks no model: it starts no
+  turn, never calls `/api/chat`, and the card is not part of the history any model is
+  sent (`features/arena/prompt-route.ts`, `twin-card-state.ts`).
+
+Which twin the card shows (`features/arena/twin-subject.ts`):
+
+- With `DATA_MODE=synthetic`, the first synthetic subject the thread used: a
+  `subject_ref` in one of its tool calls, or a subject_ref in a prompt, when that person
+  is in the synthetic cohort the Demo body lists. Synthetic people have no scan, so they
+  are shown on the Demo body with their lab values, as on the Digital Twin page. With
+  no such person, the Demo body.
+- With `DATA_MODE=personal`, Self, as the Digital Twin page shows it. When there is no
+  Self twin the viewer falls back as the page does, and the label says what it shows.
+
+The card names the twin in its header, reuses the Digital Twin page's body viewer in a
+shorter view, and loads it only when a card opens, so the chat does not load three.js
+until then. It collapses to a one-line chip or closes. A second `/twin` reopens the
+same card and scrolls to it. Its place and collapsed state are kept per thread in
+sessionStorage, never in the database. Reading the synthetic cohort list for the label
+is audited like the Digital Twin page's read (`biomarkers.cohort.list`).
+
+## Your own skills (#174)
+
+Customize · Skills has a form for making a skill without a SKILL.md: a name, one sentence on what it does, instructions, the sources it reads and the tools it may call, the views it may draw and where its model may run (local models unless more are ticked). It is held to the same schema as a SKILL.md frontmatter (`skillFrontmatterSchema`): a tool needs its source, genome tools and wearable context never list a provider the data-mode policy would refuse, and a skill only narrows what a turn allows.
+
+- Stored per person in `user_skills` (`features/skills/user-skill-store.ts`); only the owner lists, runs, edits or deletes it. At most 50 per person.
+- It may not take the name of a shipped skill or a built-in command, so `/sleep` always means the shipped one.
+- The palette, search and the chat route find shipped skills first, then the person's own (`findSkillFor`). A stored row is checked again before it runs, so one that breaks today's rules does not run.
+- It has no eval cases; Customize and the palette say "Yours · not evaluated". It runs under the same gate and `skill.<name>` audit as a shipped skill.

@@ -20,12 +20,20 @@ import {
 } from "@/features/commands/registry";
 import { useWearableStatus } from "@/features/wearables/use-wearable-status";
 import { WearableChips, WearableSlashMenu } from "@/features/wearables/wearable-slash";
+import { INCOGNITO_MODEL_NOT_LOCAL } from "@/infrastructure/incognito";
 import type { CatalogModel } from "@/infrastructure/model-catalog";
 import { Button } from "@/infrastructure/ui-kit/button";
 
 import { Mark } from "./marks";
 import { ModelMenu } from "./model-menu";
-import { chosenModels, missingCount, toggleModel } from "./model-selection";
+import {
+  chosenModels,
+  incognitoHint,
+  missingCount,
+  offeredModels,
+  toggleModel,
+} from "./model-selection";
+import { routeDraft, routePick } from "./prompt-route";
 import type { SuggestedQuestions } from "./suggested-questions";
 import { SuggestionChips } from "./suggestion-chips";
 
@@ -34,12 +42,17 @@ import { SuggestionChips } from "./suggestion-chips";
  * turns or streams: it hands "this text, these models" upward and clears.
  *
  * Typing `/` (or `/` and a word) opens the command palette; picking `connect`
- * shows the wearable rows. Picking a skill writes `/sleep ` into the prompt so
- * a window or subject can follow; a prompt that starts with a listed skill is
- * sent tagged with it. Enter sends, Shift+Enter starts a new line.
+ * shows the wearable rows; picking `twin` (or sending `/twin`) shows the twin
+ * card in the conversation and asks no model. Picking a skill writes `/sleep `
+ * into the prompt so a window or subject can follow; a prompt that starts with
+ * a listed skill is sent tagged with it. Enter sends, Shift+Enter starts a new
+ * line.
  *
  * On an empty thread, suggested questions sit above the prompt; picking one
  * writes it into the prompt to be read or edited first, never sent.
+ *
+ * In an incognito chat only local models can be chosen; the others stay in
+ * the menu, greyed out with the reason, and the frame is dashed.
  */
 
 export type ChosenModel = Readonly<{ id: string; name: string }>;
@@ -66,7 +79,11 @@ export const PromptBar = ({
   busy,
   skills = [],
   suggestions = null,
+  incognito = false,
+  localModelIds = [],
+  initialDraft = "",
   onSubmit,
+  onTwin,
 }: Readonly<{
   catalog: readonly CatalogModel[] | null;
   initialModelIds: readonly string[];
@@ -75,15 +92,22 @@ export const PromptBar = ({
   skills?: readonly Command[];
   /** Shown above the prompt; null once the thread has a turn. */
   suggestions?: SuggestedQuestions | null;
+  /** An incognito chat: only `localModelIds` may be chosen. */
+  incognito?: boolean;
+  localModelIds?: readonly string[];
+  /** A `/command ` the search box opened the chat with (`safeDraft`). */
+  initialDraft?: string;
   onSubmit: (
     prompt: string,
     models: readonly ChosenModel[],
     skill: string | null,
   ) => void;
+  /** `/twin`: show the twin card. Never a turn. */
+  onTwin: () => void;
 }>) => {
   const router = useRouter();
   const wearables = useWearableStatus();
-  const [draft, setDraft] = useState("");
+  const [draft, setDraft] = useState(initialDraft);
   const [modelIds, setModelIds] = useState<readonly string[]>(initialModelIds);
   const [slashDismissed, setSlashDismissed] = useState(false);
   const [picked, setPicked] = useState<Command | null>(null);
@@ -91,7 +115,12 @@ export const PromptBar = ({
   const [notice, setNotice] = useState<string | undefined>(undefined);
   const promptRef = useRef<HTMLTextAreaElement>(null);
 
-  const chosen = catalog ? chosenModels(catalog, modelIds) : [];
+  const offered = catalog ? offeredModels(catalog, incognito, localModelIds) : null;
+  const chosen = offered ? chosenModels(offered, modelIds) : [];
+  const lockedIds =
+    catalog && offered && incognito
+      ? catalog.filter((model) => !offered.includes(model)).map((model) => model.id)
+      : [];
   const slashOpen = !slashDismissed && SLASH_COMMAND.test(draft);
   const commands = slashOpen
     ? matchCommands(draft.slice(1), paletteCommands(skills))
@@ -102,18 +131,36 @@ export const PromptBar = ({
   const connectOpen = slashOpen && picked?.name === "connect";
   const ready = !busy && draft.trim() !== "" && chosen.length > 0;
 
-  const submit = () => {
-    if (!ready) return;
-    onSubmit(
-      skillTurn?.prompt ?? draft,
-      chosen.map((model) => ({ id: model.id, name: model.name })),
-      skillTurn?.skill.name ?? null,
-    );
+  const openTwin = () => {
+    onTwin();
     setDraft("");
+    setPicked(null);
+    setActiveIndex(0);
+    setNotice(undefined);
   };
 
-  /** A skill goes into the prompt to be sent; a built-in opens its own menu. */
+  const submit = () => {
+    if (busy) return;
+    routeDraft(draft, {
+      openTwin,
+      send: () => {
+        if (!ready) return;
+        onSubmit(
+          skillTurn?.prompt ?? draft,
+          chosen.map((model) => ({ id: model.id, name: model.name })),
+          skillTurn?.skill.name ?? null,
+        );
+        setDraft("");
+      },
+    });
+  };
+
+  /**
+   * A skill goes into the prompt to be sent; `twin` shows its card at once;
+   * another built-in opens its own menu.
+   */
   const pick = (command: Command | null) => {
+    if (routePick(command, { openTwin })) return;
     if (command?.kind === "skill") {
       setDraft(`/${command.name} `);
       setPicked(null);
@@ -163,7 +210,11 @@ export const PromptBar = ({
           }}
         />
       ) : null}
-      <form onSubmit={onFormSubmit} className="surface relative mx-auto max-w-5xl">
+      <form
+        onSubmit={onFormSubmit}
+        data-incognito={incognito ? "true" : undefined}
+        className="surface relative mx-auto max-w-5xl"
+      >
         {paletteOpen ? (
           <CommandPalette
             commands={commands}
@@ -204,12 +255,16 @@ export const PromptBar = ({
               ? commandOptionId(commands[active].name)
               : undefined
           }
-          placeholder="Ask TwinLLM…  /  for commands"
+          placeholder={
+            incognito
+              ? "Ask in incognito…  /  for commands"
+              : "Ask TwinLLM…  /  for commands"
+          }
           className="placeholder:text-muted-foreground block w-full resize-none bg-transparent px-4 pt-3 text-[15px] outline-none disabled:opacity-60"
         />
         <div className="flex items-end gap-3 px-3 pb-3">
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
-            {catalog ? (
+            {catalog && offered ? (
               <>
                 <WearableChips
                   oura={wearables.oura}
@@ -237,7 +292,7 @@ export const PromptBar = ({
                       title={chosen.length === 1 ? "One model has to stay" : undefined}
                       disabled={chosen.length === 1}
                       onClick={() =>
-                        setModelIds(toggleModel(catalog, modelIds, model.id))
+                        setModelIds(toggleModel(offered, modelIds, model.id))
                       }
                       className="hover:text-foreground hover:bg-muted rounded-full p-0.5 disabled:cursor-not-allowed disabled:opacity-40"
                     >
@@ -247,8 +302,10 @@ export const PromptBar = ({
                 ))}
                 <ModelMenu
                   catalog={catalog}
-                  selectedIds={modelIds}
-                  onToggle={(id) => setModelIds(toggleModel(catalog, modelIds, id))}
+                  selectedIds={chosen.map((model) => model.id)}
+                  lockedIds={lockedIds}
+                  lockedNote={INCOGNITO_MODEL_NOT_LOCAL}
+                  onToggle={(id) => setModelIds(toggleModel(offered, modelIds, id))}
                 />
               </>
             ) : (
@@ -287,7 +344,9 @@ export const PromptBar = ({
       <p className="text-muted-foreground mt-1.5 text-center text-xs" aria-live="polite">
         {skillTurn
           ? `Sends with /${skillTurn.skill.name}, which ${readsLine(skillTurn.skill.reads)}.`
-          : hintFor(missingCount(catalog, initialModelIds), chosen.length)}
+          : incognito
+            ? incognitoHint(offered?.length ?? 0)
+            : hintFor(missingCount(catalog, initialModelIds), chosen.length)}
       </p>
     </div>
   );

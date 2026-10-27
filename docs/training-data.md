@@ -285,7 +285,7 @@ and codes, counts per reason and stats for each part. It reads files only.
 
 ### Looking at the files
 
-The Data page's Training data tab (`/data/training`, any `DATA_MODE`) lists the sets in `training-data/out/`, with counts per family and outcome from the meta file, and opens one conversation with its question, tool calls, tool results and answer. It reads the files only; nothing is audited because nothing is read from the warehouse.
+The Data page's Training data tab (`/customize/data/cohort/training`, any `DATA_MODE`) lists the sets in `training-data/out/`, with counts per family and outcome from the meta file, and opens one conversation with its question, tool calls, tool results and answer. It reads the files only; nothing is audited because nothing is read from the warehouse.
 
 ### No evaluation question is reused
 
@@ -459,6 +459,14 @@ a uv project with a `train` dependency group (torch, transformers, peft, trl,
 datasets) and an `analysis` group for reading harness output. It reads the
 JSONL files above and the gitignored `evaluation/runs/`; the app never
 imports it, and skills and MCP servers stay TypeScript.
+
+**Context length.** Chat and `bun run eval` both reach a local model through
+the same resolver, so an evaluated answer runs with the context the app asks
+Ollama for: `OLLAMA_NUM_CTX`, default 16384 (see
+[providers.md](providers.md#ollama-context)). Train pilot 2 with a maximum
+sequence length of at least that, so a training record is never cut where the
+served model would see the whole prompt. A Modelfile's own `num_ctx` (8192 in
+the pilot 1 models) is overridden by the request.
 
 ## Licences
 

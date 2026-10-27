@@ -68,7 +68,7 @@ The instance is still off this machine, so `LOCAL_ONLY=true` refuses it at start
 
 ## Tool calls by model
 
-Run 2026-10-16 on a MacBook Air M1, 8 GB, Ollama defaults (4096-token context), `LOCAL_ONLY=true`, `DATA_MODE=synthetic`, cohort `synthea-v4-seed42`. One prompt asks for the latest heart rate (LOINC `8867-4`) of one listed subject; the test passes when the audit log has at least one tool call for that model's session. Command: see the header of `features/chat/tool-calls.live.test.ts` (`RUN_LIVE=1` only, never CI).
+Run 2026-10-16 on a MacBook Air M1, 8 GB, Ollama defaults (4096-token context, before [#149](#ollama-context)), `LOCAL_ONLY=true`, `DATA_MODE=synthetic`, cohort `synthea-v4-seed42`. One prompt asks for the latest heart rate (LOINC `8867-4`) of one listed subject; the test passes when the audit log has at least one tool call for that model's session. Command: see the header of `features/chat/tool-calls.live.test.ts` (`RUN_LIVE=1` only, never CI).
 
 | Model      | Made a tool call | Notes                                                                                                                                      |
 | ---------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -110,13 +110,42 @@ The first-run starter questions go to the same provider, through the same `permi
 
 Chat injects only the summary narrative and `whoop.*` / Oura / Google Health citation keys.
 
+## Ollama context
+
+Ollama loads a model with a 4096-token context unless the request asks for more, and drops the start of a longer prompt without an error (its log says `truncated = 1`). The tool definitions come first, so the model loses them and writes tool calls as text (#149). The OpenAI-compatible endpoint (`/v1/chat/completions`) ignores `num_ctx`, so chat with `LLM_PROVIDER=ollama` uses Ollama's native `/api/chat` with `options.num_ctx` set to `OLLAMA_NUM_CTX` (default `16384`). Nothing changes on the Ollama service: no `OLLAMA_CONTEXT_LENGTH`, no Modelfile variants. The model list and embeddings still use `OLLAMA_BASE_URL` as before. Thinking is off on this path (`think: false`): the fine-tuned models have no thinking mode, and the answer already has a written Reasoning section.
+
+`bun run doctor` (and the end of `bun run setup:local`) prints the context chat asks for and the context each loaded model runs at (`/api/ps`), and says when part of a model runs on the CPU.
+
+**Size of the prompt.** `bun run prompt:size --ollama qwen3:4b` renders the system prompt and model-facing tool list of a first turn for each data mode and skill and prints Ollama's exact token count. Measured 2026-10-27 with `qwen3:4b`:
+
+| Turn                            | Tools | Tokens |
+| ------------------------------- | ----- | ------ |
+| synthetic                       | 20    | 4,666  |
+| synthetic `/sleep`              | 9     | 2,860  |
+| personal, no wearable           | 21    | 4,541  |
+| personal, no wearable `/genome` | 2     | 1,120  |
+| personal, Oura linked           | 21    | 9,088  |
+| personal, Oura linked `/sleep`  | 9     | 7,257  |
+| personal, all four wearables    | 21    | 20,262 |
+
+A linked wearable costs about 4,500 tokens, because the prompt lists each source's metrics twice (narrative lines and the key list) and Qwen3 spends one token per digit of every date and value. With all four linked the prompt alone is larger than 16k; set `OLLAMA_NUM_CTX=32768` for that case. `scripts/setup/prompt-size.test.ts` fails when any other case leaves less than 4,096 tokens for the conversation, the tool results and the answer at the default context.
+
+**Memory.** The KV cache grows with the context. Measured on an RTX 2080 Ti (11 GB) with the desktop holding about 4.4 GB, Ollama 0.33.3:
+
+| Model                     | 4096    | 8192                 | 16384                | 32768                |
+| ------------------------- | ------- | -------------------- | -------------------- | -------------------- |
+| `qwen3:4b`, fine-tuned 4B | 3.0 GiB | 3.6 GiB              | 4.8 GiB              | 7.1 GiB (5.3 on GPU) |
+| `qwen3:8b`                | 5.2 GiB | 6.1 GiB (5.3 on GPU) | 7.3 GiB (5.2 on GPU) | 9.7 GiB (5.2 on GPU) |
+
+At 16384 the 4B models fit on the GPU with room to spare. `qwen3:8b` needs 7.3 GiB at 16384: whole on an 11 GB card with a light desktop, partly on the CPU (slower) when the desktop takes 4 GB. On a Mac the same sizes come out of unified memory, so an 8 GB machine should stay on a 4B model.
+
 ## How to switch
 
 Set `LLM_PROVIDER` to `exoscale`, `ollama`, `openrouter`, `remote-gpu` or (legacy) `infomaniak` in `.env.local`. Names only; values stay in `.env.local`.
 
 - Exoscale: `EXOSCALE_BASE_URLS`, optional `EXOSCALE_API_KEY` and `EXOSCALE_FIRST_BYTE_TIMEOUT_S`, `LOCAL_ONLY=false`. See [Exoscale](#exoscale).
 - Infomaniak (legacy): `INFOMANIAK_API_TOKEN`, `INFOMANIAK_PRODUCT_ID`, optional `INFOMANIAK_BASE_URL` (default already ends in `/openai/v1`). Catalog is `GET {that base}/models`, not `{base}/v1/models`.
-- Ollama: `OLLAMA_BASE_URL` (default `http://127.0.0.1:11434/v1`).
+- Ollama: `OLLAMA_BASE_URL` (default `http://127.0.0.1:11434/v1`), optional `OLLAMA_NUM_CTX` (default `16384`). See [Ollama context](#ollama-context).
 - OpenRouter: `OPENROUTER_API_KEY`, and `DATA_MODE=synthetic` with no linked snapshot.
 - Remote GPU: `REMOTE_GPU_BASE_URLS`, a comma list of loopback tunnel URLs ending in `/v1` (one per vLLM port), optional `REMOTE_GPU_API_KEY` (vLLM `--api-key`), `DATA_MODE=synthetic` and `LOCAL_ONLY=false`. The catalog merges `GET {url}/models` from every URL and sends each model to the URL that listed it; a closed tunnel is skipped. Setup: [runbook](runbook.md#remote-gpu-runpod-ssh-tunnel).
 

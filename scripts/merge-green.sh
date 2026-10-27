@@ -21,7 +21,7 @@ gh_retry() { # retries flaky network calls, nothing else
   local i out
   for i in 1 2 3 4 5; do
     if out=$(gh "$@" 2>&1); then printf '%s' "${out}"; return 0; fi
-    grep -qiE 'timeout|EOF|connection|i/o|502|503' <<<"${out}" || { printf '%s' "${out}" >&2; return 1; }
+    grep -qiE 'timeout|EOF|connection|i/o|502|503|something went wrong' <<<"${out}" || { printf '%s' "${out}" >&2; return 1; }
     sleep $((i * 5))
   done
   printf '%s' "${out}" >&2; return 1
@@ -68,7 +68,11 @@ for pr in "$@"; do
   n=$(grep -c '^pass ' <<<"${checks}")
   echo "  ${n} checks passed on ${head:0:7}, up to date with main"
 
-  gh_retry pr merge "${pr}" -R "${REPO}" --squash --admin --delete-branch >/dev/null
+  # A retried merge can meet a PR the first attempt already merged; that is success.
+  if ! gh_retry pr merge "${pr}" -R "${REPO}" --squash --admin --delete-branch >/dev/null; then
+    [[ $(gh_retry pr view "${pr}" -R "${REPO}" --json state -q .state) == MERGED ]] ||
+      die "#${pr} did not merge; nothing else was changed."
+  fi
   sha=$(gh_retry pr view "${pr}" -R "${REPO}" --json mergeCommit -q .mergeCommit.oid)
   echo "  merged as ${sha:0:7}; waiting for main's CI..."
   main_ci_green "${sha}"

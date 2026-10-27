@@ -47,6 +47,6 @@ describe("scrubEvent", () => {
   });
 
   test("scrubThreadIds leaves other paths alone", () => {
-    expect(scrubThreadIds("/connectors")).toBe("/connectors");
+    expect(scrubThreadIds("/customize/connectors")).toBe("/customize/connectors");
   });
 });

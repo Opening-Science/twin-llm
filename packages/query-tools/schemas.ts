@@ -393,25 +393,25 @@ export const TOOL_DEFINITIONS = [
   {
     name: "sleep_summary",
     description:
-      "Main sleep per night in a window, one row per source and night: duration (min), time in bed (min, Whoop), efficiency (%) and the source's own sleep score, with each source's averages. Oura's main sleep is its long_sleep period; Whoop naps are left out. A field a source does not record is null. Personal mode reads the linked Oura, Whoop and Google Health snapshots of this turn (leave subject_ref out); synthetic mode reads the named subject's synthetic series (source all), whose rows are source synthetic. Refuses SOURCE_NOT_CONNECTED, NO_ROWS and MIXED_UNITS.",
+      "Main sleep per night in a window, one row per source and night: duration (min), time in bed (min, Whoop), efficiency (%) and the source's own sleep score, with each source's averages. Oura's main sleep is its long_sleep period; Whoop naps are left out. A field a source does not record is null. Personal mode: this turn's linked wearables, no subject_ref. Synthetic mode: the named subject's series, source all. Refuses SOURCE_NOT_CONNECTED, NO_ROWS and MIXED_UNITS.",
     input: sleepSummaryInput,
   },
   {
     name: "hrv_trend",
     description:
-      "Daily HRV (RMSSD, ms) in a window, per source: n, least-squares slope per day and per week with the fitted first and last values, and the 7 days ending on end against the 28 days before them (medians, baseline MAD, robust z). Oura: average HRV in the main sleep; Whoop: recovery HRV. A source with fewer than 7 readings has null statistics; WINDOW_TOO_SHORT when none has 7. Personal mode reads the linked Oura, Whoop and Google Health snapshots of this turn (leave subject_ref out); synthetic mode reads the named subject's synthetic series (source all), whose rows are source synthetic. Refuses SOURCE_NOT_CONNECTED, NO_ROWS, MIXED_UNITS and WINDOW_TOO_SHORT. Direction only, no judgement.",
+      "Daily HRV (RMSSD, ms) in a window, per source: n, least-squares slope per day and per week with the fitted first and last values, and the 7 days ending on end against the 28 days before them (medians, baseline MAD, robust z). Oura: average HRV in the main sleep; Whoop: recovery HRV. A source with fewer than 7 readings has null statistics; WINDOW_TOO_SHORT when none has 7. Personal mode: this turn's linked wearables, no subject_ref. Synthetic mode: the named subject's series, source all. Refuses SOURCE_NOT_CONNECTED, NO_ROWS, MIXED_UNITS and WINDOW_TOO_SHORT. Direction only, no judgement.",
     input: hrvTrendInput,
   },
   {
     name: "resting_hr_trend",
     description:
-      "Daily resting heart rate in a window, per source: n, least-squares slope per day and per week with the fitted first and last values, and the 7 days ending on end against the 28 days before them (medians, baseline MAD, robust z). Whoop: recovery resting heart rate; Google Health: daily resting heart rate; the Oura summary holds none. A source with fewer than 7 readings has null statistics; WINDOW_TOO_SHORT when none has 7. Personal mode reads the linked Oura, Whoop and Google Health snapshots of this turn (leave subject_ref out); synthetic mode reads the named subject's synthetic series (source all), whose rows are source synthetic. Refuses SOURCE_NOT_CONNECTED, NO_ROWS, MIXED_UNITS and WINDOW_TOO_SHORT. Direction only, no judgement.",
+      "Daily resting heart rate in a window, per source: n, least-squares slope per day and per week with the fitted first and last values, and the 7 days ending on end against the 28 days before them (medians, baseline MAD, robust z). Whoop: recovery resting heart rate; Google Health: daily resting heart rate; the Oura summary holds none. A source with fewer than 7 readings has null statistics; WINDOW_TOO_SHORT when none has 7. Personal mode: this turn's linked wearables, no subject_ref. Synthetic mode: the named subject's series, source all. Refuses SOURCE_NOT_CONNECTED, NO_ROWS, MIXED_UNITS and WINDOW_TOO_SHORT. Direction only, no judgement.",
     input: restingHrTrendInput,
   },
   {
     name: "training_load",
     description:
-      "Workouts in a window, one row per source, day or week (weeks start Monday, UTC) and sport: sessions, minutes, the highest workout strain (Whoop) and calories (Oura), null where a source does not record one. Per source also the minutes in the 7 days ending on end and in the 28 days before them, and their ratio, labelled only as recent load compared with the previous four weeks (null when those four weeks have no minutes). sport keeps one sport group. Personal mode reads the linked Oura, Whoop and Google Health snapshots of this turn (leave subject_ref out); synthetic mode reads the named subject's synthetic series (source all), whose rows are source synthetic. Refuses SOURCE_NOT_CONNECTED, NO_ROWS and MIXED_UNITS. Numbers only, no advice.",
+      "Workouts in a window, one row per source, day or week (weeks start Monday, UTC) and sport: sessions, minutes, the highest workout strain (Whoop) and calories (Oura), null where a source does not record one. Per source also the minutes in the 7 days ending on end and in the 28 days before them, and their ratio, labelled only as recent load compared with the previous four weeks (null when those four weeks have no minutes). sport keeps one sport group. Personal mode: this turn's linked wearables, no subject_ref. Synthetic mode: the named subject's series, source all. Refuses SOURCE_NOT_CONNECTED, NO_ROWS and MIXED_UNITS. Numbers only, no advice.",
     input: trainingLoadInput,
   },
 ] as const;

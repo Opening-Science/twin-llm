@@ -9,6 +9,7 @@ import {
   isAllowedCohort,
   SYNTHETIC_COHORTS,
 } from "../../packages/query-tools/scope";
+import { MIN_OLLAMA_NUM_CTX } from "../../infrastructure/ollama-context";
 import { EVAL_COHORT, EVAL_RELEASE, FIXTURE_COHORT, RELEASE_10K } from "./cohort-pins";
 import {
   checkTool,
@@ -64,10 +65,25 @@ export type DatabaseProbe =
       exampleThread: boolean;
     }>;
 
+/** A model Ollama has in memory now (`/api/ps`). */
+export type LoadedModel = Readonly<{
+  name: string;
+  contextLength: number;
+  sizeBytes: number;
+  vramBytes: number;
+}>;
+
 export type OllamaProbe =
   | Readonly<{ kind: "not-used"; provider: string }>
   | Readonly<{ kind: "unreachable"; baseUrl: string }>
-  | Readonly<{ kind: "ok"; baseUrl: string; models: readonly string[] }>;
+  | Readonly<{
+      kind: "ok";
+      baseUrl: string;
+      models: readonly string[];
+      /** OLLAMA_NUM_CTX as the app will read it; null when it is not a valid size. */
+      numCtx: number | null;
+      loaded: readonly LoadedModel[];
+    }>;
 
 export type DetectedState = Readonly<{
   platform: Platform;
@@ -784,6 +800,43 @@ const chatReadiness = (ollama: OllamaProbe): Readiness => {
           };
     }
   }
+};
+
+const gib = (bytes: number): string => (bytes / 2 ** 30).toFixed(1);
+
+const loadedLine = (model: LoadedModel, numCtx: number): string => {
+  const reload =
+    model.contextLength === numCtx ? "" : ` (the next chat reloads it at ${numCtx})`;
+  const offload =
+    model.vramBytes < model.sizeBytes
+      ? `; only ${gib(model.vramBytes)} of ${gib(model.sizeBytes)} GiB on the GPU, the rest runs on the CPU: lower OLLAMA_NUM_CTX or use a smaller model if answers are slow`
+      : `, ${gib(model.sizeBytes)} GiB`;
+  return `${model.name} loaded with ${model.contextLength}${reload}${offload}`;
+};
+
+/**
+ * The context chat asks Ollama for, and what the loaded models actually run
+ * with. Null when chat does not use a local Ollama. Ollama's own default is
+ * 4096, which cuts the tool list off (#149); chat sets `num_ctx` per request.
+ */
+export const ollamaContextSummary = (
+  ollama: OllamaProbe,
+): Readonly<{ ok: boolean; detail: string }> | null => {
+  if (ollama.kind !== "ok") return null;
+  if (ollama.numCtx === null)
+    return {
+      ok: false,
+      detail: `OLLAMA_NUM_CTX must be a whole number of at least ${MIN_OLLAMA_NUM_CTX}; the app will not start`,
+    };
+  const numCtx = ollama.numCtx;
+  const loaded =
+    ollama.loaded.length === 0
+      ? "no model loaded right now"
+      : ollama.loaded.map((model) => loadedLine(model, numCtx)).join("; ");
+  return {
+    ok: true,
+    detail: `chat asks for ${numCtx} tokens (OLLAMA_NUM_CTX); ${loaded}`,
+  };
 };
 
 /** Every prerequisite, as doctor lists it. */
