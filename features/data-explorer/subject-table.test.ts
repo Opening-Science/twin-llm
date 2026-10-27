@@ -1,27 +1,11 @@
 import { describe, expect, test } from "bun:test";
 
 import {
-  pageSubjects,
+  escapeLike,
+  pageWindow,
   parseSubjectQuery,
-  sortSubjects,
   subjectQueryString,
-  type SubjectSummary,
 } from "./subject-table";
-
-const subject = (
-  ref: string,
-  observations: number,
-  codes: number,
-  firstDay: string | null,
-  lastDay: string | null,
-): SubjectSummary => ({ ref, observations, codes, firstDay, lastDay });
-
-const ROWS = [
-  subject("aa11", 120, 30, "2010-01-02", "2026-09-01"),
-  subject("bb22", 900, 41, "2001-05-06", "2020-01-01"),
-  subject("cc33", 0, 0, null, null),
-  subject("dd44", 120, 12, "2015-07-08", "2026-10-01"),
-];
 
 describe("parseSubjectQuery", () => {
   test("defaults to most observations first, page 1", () => {
@@ -67,53 +51,21 @@ describe("parseSubjectQuery", () => {
   });
 });
 
-describe("sortSubjects", () => {
-  test("ties on a count break by ref", () => {
-    expect(sortSubjects(ROWS, "observations", "desc").map((row) => row.ref)).toEqual([
-      "bb22",
-      "aa11",
-      "dd44",
-      "cc33",
-    ]);
-  });
-
-  test("a subject with no days sorts last in both directions", () => {
-    expect(sortSubjects(ROWS, "first", "asc").map((row) => row.ref)).toEqual([
-      "bb22",
-      "aa11",
-      "dd44",
-      "cc33",
-    ]);
-    expect(sortSubjects(ROWS, "last", "desc").map((row) => row.ref)).toEqual([
-      "dd44",
-      "aa11",
-      "bb22",
-      "cc33",
-    ]);
-  });
-});
-
-describe("pageSubjects", () => {
-  test("filters by ref case-insensitively before paging", () => {
-    const page = pageSubjects(ROWS, { q: "D4", sort: "ref", dir: "asc", page: 1 }, 2);
-    expect(page).toEqual({ rows: [ROWS[3]!], matching: 1, page: 1, pages: 1 });
-  });
-
+describe("pageWindow", () => {
   test("cuts pages and holds a page past the end at the last one", () => {
-    const page = pageSubjects(ROWS, { q: "", sort: "ref", dir: "asc", page: 9 }, 3);
-    expect(page.rows.map((row) => row.ref)).toEqual(["dd44"]);
-    expect(page.page).toBe(2);
-    expect(page.pages).toBe(2);
-    expect(page.matching).toBe(4);
+    expect(pageWindow(1, 4, 3)).toEqual({ page: 1, pages: 2, skip: 0, take: 3 });
+    expect(pageWindow(9, 4, 3)).toEqual({ page: 2, pages: 2, skip: 3, take: 3 });
   });
 
   test("no match is one empty page", () => {
-    expect(pageSubjects(ROWS, { q: "zz", sort: "ref", dir: "asc", page: 1 })).toEqual({
-      rows: [],
-      matching: 0,
-      page: 1,
-      pages: 1,
-    });
+    expect(pageWindow(3, 0, 25)).toEqual({ page: 1, pages: 1, skip: 0, take: 25 });
+  });
+});
+
+describe("escapeLike", () => {
+  test("escapes the LIKE wildcards and the escape character", () => {
+    expect(escapeLike("ab-12")).toBe("ab-12");
+    expect(escapeLike("a_b%c\\d")).toBe("a\\_b\\%c\\\\d");
   });
 });
 

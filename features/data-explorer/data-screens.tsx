@@ -132,13 +132,10 @@ export const SubjectsScreen = ({
     params={params}
     deps={deps}
     body={async (cohortId) => {
-      const result = await loadSubjects(deps, cohortId);
+      const query = parseSubjectQuery(params);
+      const result = await loadSubjects(deps, cohortId, query);
       return result.kind === "ok" ? (
-        <SubjectsTable
-          cohortId={cohortId}
-          subjects={result.subjects}
-          query={parseSubjectQuery(params)}
-        />
+        <SubjectsTable cohortId={cohortId} page={result.subjects} query={query} />
       ) : (
         <BlockedView blocked={result} />
       );

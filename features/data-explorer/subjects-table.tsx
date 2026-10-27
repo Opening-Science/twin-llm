@@ -5,17 +5,17 @@ import { buttonClassName } from "@/infrastructure/ui-kit/button";
 
 import {
   defaultDir,
-  pageSubjects,
+  type SubjectPage,
   type SubjectQuery,
   type SubjectSort,
   subjectQueryString,
-  type SubjectSummary,
 } from "./subject-table";
 
 /**
  * The cohort's subjects as a server-rendered table. Search is a GET form and
  * sorting and paging are links, so the table works without JavaScript and a
- * sorted, filtered view can be shared as a URL. Only subject_refs and counts
+ * sorted, filtered view can be shared as a URL. The page arrives already
+ * searched, sorted and cut by the database. Only subject_refs and counts
  * are listed; opening a subject is its own audited read.
  */
 
@@ -64,14 +64,13 @@ const SortHeader = ({
 
 export const SubjectsTable = ({
   cohortId,
-  subjects,
+  page,
   query,
 }: {
   readonly cohortId: string;
-  readonly subjects: readonly SubjectSummary[];
+  readonly page: SubjectPage;
   readonly query: SubjectQuery;
 }) => {
-  const page = pageSubjects(subjects, query);
   const pageLink = (target: number) =>
     `/data/subjects${subjectQueryString(cohortId, { ...query, page: target })}`;
 
@@ -91,7 +90,7 @@ export const SubjectsTable = ({
             htmlFor="subject-search"
             className="text-muted-foreground text-xs font-medium"
           >
-            Search by subject_ref
+            subject_ref starts with
           </label>
           <input
             id="subject-search"
@@ -108,8 +107,8 @@ export const SubjectsTable = ({
       </form>
 
       <p className="text-muted-foreground mt-3 text-sm" aria-live="polite">
-        {formatNumber(page.matching, 0)} of {formatNumber(subjects.length, 0)} subjects
-        {query.q ? ` match “${query.q}”` : ""}. Open one to see its measurements over
+        {formatNumber(page.matching, 0)} of {formatNumber(page.total, 0)} subjects
+        {query.q ? ` start with “${query.q}”` : ""}. Open one to see its measurements over
         time.
       </p>
 
@@ -167,7 +166,7 @@ export const SubjectsTable = ({
                   colSpan={COLUMNS.length}
                   className="text-muted-foreground px-3 py-6 text-sm"
                 >
-                  No subject_ref contains that text.
+                  No subject_ref starts with that text.
                 </td>
               </tr>
             )}
