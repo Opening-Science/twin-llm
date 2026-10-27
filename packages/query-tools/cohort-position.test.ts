@@ -8,7 +8,12 @@ import type {
   QueryToolPorts,
   SubjectScopeRow,
 } from "./ports";
-import { COHORT_ROW_CAP_EXCEEDED, cohortTooSmall, mixedUnits, noRows } from "./refusals";
+import {
+  COHORT_ROW_CAP_EXCEEDED,
+  cohortTooSmall,
+  mixedUnits,
+  noRows,
+} from "./refusals";
 import { cohortPositionInput } from "./schemas";
 import { SUBJECT_SCOPE_VIOLATION, type SessionScope } from "./scope";
 import { latestPerSubject, midRankPercentile } from "./stats";
@@ -31,9 +36,7 @@ const PEERS = ["p01", "p02", "p03", "p04", "p05", "p06", "p07", "p08", "p09", "p
 
 const SUBJECTS: Readonly<Record<string, SubjectScopeRow>> = {
   [SUBJECT]: { isSynthetic: true, cohortId: COHORT },
-  ...Object.fromEntries(
-    PEERS.map((peer) => [peer, { isSynthetic: true, cohortId: COHORT }]),
-  ),
+  ...Object.fromEntries(PEERS.map((peer) => [peer, { isSynthetic: true, cohortId: COHORT }])),
   [UNLISTED]: { isSynthetic: true, cohortId: "synthea-unlisted" },
   [NOT_SYNTHETIC]: { isSynthetic: false, cohortId: COHORT },
   [ELSEWHERE]: { isSynthetic: true, cohortId: "open-twin-synthea-trimmed-3" },
@@ -233,14 +236,11 @@ describe("cohort_position", () => {
   });
 
   test("fewer than 10 people with a value is refused with the count", async () => {
-    const nine = FIXTURE.filter(
-      (fixture) => !["p09", "p10"].includes(fixture.subjectRef),
-    );
+    const nine = FIXTURE.filter((fixture) => !["p09", "p10"].includes(fixture.subjectRef));
     const { ports, audits } = fakePorts(nine);
     expect(await runCohortPosition(synthetic, INPUT, ports)).toEqual({
       code: "COHORT_TOO_SMALL",
-      error:
-        "fewer than 10 people in this cohort have a value for this code in this window",
+      error: "fewer than 10 people in this cohort have a value for this code in this window",
       loinc: HR,
       n: 9,
       minimum: 10,
