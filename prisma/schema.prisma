@@ -109,6 +109,9 @@ enum ModelResponseStatus {
   STREAMING
   COMPLETE
   FAILED
+  /// Refused before any model ran (data-mode policy or a skill rule). The
+  /// row's text holds TwinLLM's own refusal sentence, never a provider message.
+  REFUSED
 
   @@map("model_response_status")
 }
