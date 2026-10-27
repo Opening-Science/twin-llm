@@ -55,6 +55,8 @@ export type DatabaseProbe =
       warehouse: readonly CohortRows[];
       /** The evaluation cohort's ingested bundles; null when it has none. */
       evalBundles: BundleSet | null;
+      /** The local user already has the "Example (synthetic)" thread. */
+      exampleThread: boolean;
     }>;
 
 export type OllamaProbe =
@@ -68,6 +70,10 @@ export type DetectedState = Readonly<{
   /** `.env.local` exists (setup creates it from the example when it does not). */
   envFile: boolean;
   dataMode: string | null;
+  /** LOCAL_MVP or AUTH_DISABLED is on, so there is one local user. */
+  authOff: boolean;
+  /** LOCAL_USER_ID, the local user's `clerkId` (default "local"). */
+  localUserId: string;
   database: DatabaseProbe;
   /** Migration folders in `prisma/migrations`. */
   migrations: readonly string[];
@@ -88,6 +94,8 @@ export type SetupOptions = Readonly<{
   reloadCohort?: boolean;
   /** `--generate-cohort`: generate the evaluation cohort with Synthea instead of downloading it. */
   generateCohort?: boolean;
+  /** `--skip-example`: do not add the example thread. */
+  skipExample?: boolean;
 }>;
 
 /**
@@ -109,7 +117,8 @@ export type StepId =
   | "migrate"
   | "anatomy"
   | "rigged"
-  | "cohort";
+  | "cohort"
+  | "example";
 
 export type Action =
   | Readonly<{ kind: "create-env-file" }>
@@ -124,6 +133,7 @@ export type Action =
     }>
   | Readonly<{ kind: "load-10k" }>
   | Readonly<{ kind: "load-fixtures" }>
+  | Readonly<{ kind: "insert-example"; clerkId: string }>
   | Readonly<{
       kind: "install-rigged";
       ids: readonly DemoBodyId[];
@@ -145,6 +155,8 @@ export type Step = Readonly<{
 export const SETUP_COMMAND = "bun run setup:local";
 export const RELOAD_COMMAND = "bun run setup:local -- --reload-cohort";
 export const GENERATE_FLAG = "--generate-cohort";
+export const SKIP_EXAMPLE_FLAG = "--skip-example";
+export const EXAMPLE_TITLE = "Example (synthetic)";
 
 const fixFor = (state: DetectedState, id: ToolId): string | null => {
   const check = checkTool(id, state.tools[id], state.platform);
@@ -405,6 +417,45 @@ const cohortStep = (state: DetectedState, options: SetupOptions): Step => {
     : { ...base, status: "blocked", reason };
 };
 
+/**
+ * The example thread: added for the local user when auth is off and the app
+ * runs on synthetic data, once. It is never added with personal data on.
+ */
+const exampleStep = (state: DetectedState, skip: boolean): Step => {
+  const base = {
+    id: "example",
+    title: `Example thread "${EXAMPLE_TITLE}"`,
+    after: ["migrate"],
+  } as const;
+  if (skip) return { ...base, status: "off", reason: `not added (${SKIP_EXAMPLE_FLAG})` };
+  if (!state.authOff)
+    return {
+      ...base,
+      status: "off",
+      reason: "auth is on (no LOCAL_MVP or AUTH_DISABLED), so there is no local user",
+    };
+  if (state.dataMode !== "synthetic")
+    return {
+      ...base,
+      status: "off",
+      reason: `only with DATA_MODE=synthetic (now ${state.dataMode ?? "unset"})`,
+    };
+  if (databaseProblem(state) !== null)
+    return { ...base, status: "blocked", reason: "needs the database" };
+  if (state.database.kind === "ok" && state.database.exampleThread)
+    return {
+      ...base,
+      status: "skip",
+      reason: `already in Your threads for LOCAL_USER_ID=${state.localUserId}`,
+    };
+  return {
+    ...base,
+    status: "run",
+    action: { kind: "insert-example", clerkId: state.localUserId },
+    note: `from scripts/setup/fixtures/example-thread.json, for LOCAL_USER_ID=${state.localUserId}`,
+  };
+};
+
 type SourceChoice =
   | Readonly<{ kind: "ok"; source: EvalSource; note: string }>
   | Readonly<{ kind: "none"; reason: string }>;
@@ -518,6 +569,7 @@ export const planSetup = (
     anatomyStep(state),
     riggedStep(state),
     cohort,
+    exampleStep(state, options.skipExample === true),
   ];
 };
 
@@ -698,6 +750,25 @@ const chatReadiness = (ollama: OllamaProbe): Readiness => {
 /** Every prerequisite, as doctor lists it. */
 export const toolChecks = (state: DetectedState): readonly ToolCheck[] =>
   TOOL_IDS.map((id) => checkTool(id, state.tools[id], state.platform));
+
+/** The example thread line for doctor; not counted as something to fix. */
+export const exampleSummary = (
+  state: DetectedState,
+): Readonly<{ ok: boolean; detail: string }> => {
+  if (state.database.kind === "ok" && state.database.exampleThread)
+    return {
+      ok: true,
+      detail: `"${EXAMPLE_TITLE}" in Your threads for LOCAL_USER_ID=${state.localUserId}`,
+    };
+  const step = exampleStep(state, false);
+  return {
+    ok: false,
+    detail:
+      step.status === "run"
+        ? `"${EXAMPLE_TITLE}" not in Your threads: ${SETUP_COMMAND} adds it (${SKIP_EXAMPLE_FLAG} leaves it out)`
+        : `"${EXAMPLE_TITLE}" not added: ${step.reason}`,
+  };
+};
 
 /** The database line for doctor. */
 export const databaseSummary = (
