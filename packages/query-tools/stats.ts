@@ -139,3 +139,34 @@ export const coverage = (times: readonly Date[], start: Date, end: Date): Covera
     longestGapDays: longestGapDays(dataDays, firstDay, lastDay),
   };
 };
+
+const byId = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
+
+export type Reading = Readonly<{
+  /** The row id, when the read has it; the lower id wins a tie at one instant. */
+  id?: string;
+  value: number;
+  unitUcum: string;
+  effectiveAt: Date;
+}>;
+
+/**
+ * The reading `range_position` places: the newest one, or the one at `at`
+ * exactly. Synthea writes several rows at one instant, so a tie goes to the
+ * lower id, as on the Biomarkers tab. `null` when there is none.
+ */
+export const pickReading = <T extends Reading>(
+  readings: readonly T[],
+  at: Date | null,
+): T | null => {
+  const candidates =
+    at === null
+      ? readings
+      : readings.filter((reading) => reading.effectiveAt.getTime() === at.getTime());
+  return (
+    [...candidates].sort(
+      (a, b) =>
+        b.effectiveAt.getTime() - a.effectiveAt.getTime() || byId(a.id ?? "", b.id ?? ""),
+    )[0] ?? null
+  );
+};

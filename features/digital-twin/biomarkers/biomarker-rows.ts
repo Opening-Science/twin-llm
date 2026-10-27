@@ -13,13 +13,13 @@ import {
   type Biomarker,
   type ReferenceInterval,
 } from "@/packages/biomarkers/anchor-layer";
-import {
-  listBiomarkers,
-  referenceIntervalFor,
-  referenceIntervalsOf,
-} from "@/packages/biomarkers/catalogue";
-import { intervalPosition } from "@/packages/biomarkers/interval-position";
+import { listBiomarkers } from "@/packages/biomarkers/catalogue";
 import { type PopulationContext } from "@/packages/biomarkers/population";
+import {
+  placeValue,
+  rangeChoice,
+  type RangeChoice,
+} from "@/packages/biomarkers/range-choice";
 import { markerAnatomy, type MarkerAnatomy } from "@/packages/biomarkers/region-anatomy";
 import { SYSTEM_IDS } from "@/packages/anatomy/systems";
 import {
@@ -93,12 +93,11 @@ export const rangeText = (interval: ReferenceInterval): string | null => {
   return null;
 };
 
-const rangeLine = (marker: Biomarker, interval: ReferenceInterval | null): string => {
-  const text = interval ? rangeText(interval) : null;
-  if (text) return publishedRange(text);
-  return referenceIntervalsOf(marker.id).length > 0
-    ? RANGE_NOT_CHOSEN
-    : NO_PUBLISHED_RANGE;
+/** The same range choice `range_position` reports (packages/biomarkers/range-choice.ts). */
+const rangeLine = (choice: RangeChoice): string => {
+  if (choice.kind === "none") return NO_PUBLISHED_RANGE;
+  const text = choice.kind === "range" ? rangeText(choice.interval) : null;
+  return text ? publishedRange(text) : RANGE_NOT_CHOSEN;
 };
 
 const positionLine = (
@@ -106,10 +105,11 @@ const positionLine = (
   interval: ReferenceInterval | null,
 ): string | null => {
   const day = formatDate(isoLocalDate(new Date(lab.effectiveAt)));
-  const position = intervalPosition(lab.value, lab.unitUcum, interval);
-  if (position !== "unknown") return `${POSITION_TEXT[position]} · ${day}`;
-  if (interval?.unitUcum && interval.unitUcum !== lab.unitUcum) {
-    return `${unitMismatch(lab.unitUcum, interval.unitUcum)} · ${day}`;
+  const placement = placeValue(lab.value, lab.unitUcum, interval);
+  if (placement.kind === "position")
+    return `${POSITION_TEXT[placement.position]} · ${day}`;
+  if (placement.kind === "unit-mismatch") {
+    return `${unitMismatch(placement.unit, placement.rangeUnit)} · ${day}`;
   }
   return day;
 };
@@ -119,7 +119,8 @@ const markerRow = (
   lab: LabValue | undefined,
   context: PopulationContext,
 ): BiomarkerRow => {
-  const interval = referenceIntervalFor(marker.id, context);
+  const choice = rangeChoice(marker.id, context);
+  const interval = choice.kind === "range" ? choice.interval : null;
   const english = englishName(marker);
   const position = lab ? positionLine(lab, interval) : null;
   return {
@@ -129,7 +130,7 @@ const markerRow = (
     group: SYSTEM_LABEL[marker.systemId],
     value: lab ? withUnit(published(lab.value), lab.unitUcum) : null,
     details: [
-      rangeLine(marker, interval),
+      rangeLine(choice),
       ...(marker.blocked ? [D11_NO_POSITION] : []),
       ...(position ? [position] : []),
     ],

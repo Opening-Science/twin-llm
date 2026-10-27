@@ -19,6 +19,8 @@ export type ObservationRecord = Readonly<{
   effectiveAt: Date;
   /** The code's display name; a view uses it as its label. */
   display?: string;
+  /** The row id; `range_position` breaks a tie at one instant with it. */
+  id?: string;
 }>;
 
 export type ObservationQuery = Readonly<{
@@ -59,6 +61,7 @@ export const defaultQueryToolPorts = (): QueryToolPorts => ({
         effectiveAt: { gte: query.start, lte: query.end },
       },
       select: {
+        id: true,
         loinc: true,
         display: true,
         value: true,
