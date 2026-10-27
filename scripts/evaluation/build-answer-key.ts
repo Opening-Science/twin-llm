@@ -112,6 +112,8 @@ export const rowCountOf = (tool: KeyedTool, result: unknown): number => {
     case "convert_unit":
       // A conversion reads no rows (audit row_count 0).
       return 0;
+    case "cohort_position":
+      return numberAt(result, "rows_read");
     case "latest_by_loinc":
       return lengthAt(result, "rows");
     case "coverage": {
@@ -379,6 +381,8 @@ export const realPorts = async (today: string): Promise<AnswerKeyPorts> => {
         return tools.runRangePosition(scope, KEYED_TOOLS.range_position.parse(args));
       case "convert_unit":
         return tools.runConvertUnit(scope, KEYED_TOOLS.convert_unit.parse(args));
+      case "cohort_position":
+        return tools.runCohortPosition(scope, KEYED_TOOLS.cohort_position.parse(args));
       case "latest_by_loinc":
         return tools.runLatestByLoinc(scope, KEYED_TOOLS.latest_by_loinc.parse(args));
       case "summary_stats":

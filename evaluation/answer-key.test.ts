@@ -50,9 +50,9 @@ describe("questions.v1.json", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  test("80 ± 10 items", () => {
+  test("70 to 100 items", () => {
     expect(items.length).toBeGreaterThanOrEqual(70);
-    expect(items.length).toBeLessThanOrEqual(90);
+    expect(items.length).toBeLessThanOrEqual(100);
   });
 
   test("criteria use the eight names exactly", () => {
@@ -187,6 +187,7 @@ describe("answer-key.v1.json", () => {
       "Q-S6-18 NO_PUBLISHED_RANGE",
       "Q-S6-19 NO_ROWS",
       "Q-S6-20 UNSUPPORTED_CONVERSION",
+      "Q-S6-21 COHORT_TOO_SMALL",
     ]);
   });
 
@@ -209,6 +210,26 @@ describe("answer-key.v1.json", () => {
       );
     });
     expect(stale.map((item) => item.id)).toEqual([]);
+  });
+
+  test("cohort-position items rank against at least 10 people, or refuse", () => {
+    const tagged = items.filter((item) => item.tags?.includes("cohort-position"));
+    expect(tagged.map((item) => item.id)).toEqual(["Q-S1-19", "Q-S1-20", "Q-S6-21"]);
+    const keyed = tagged.map((item) => {
+      const entries = key.entries[item.id] ?? [];
+      const n = entries.find((entry) => entry.name === "n")?.value;
+      const refusal = entries.find((entry) => entry.refusal !== null)?.refusal ?? null;
+      return [
+        item.id,
+        item.expect.measures,
+        refusal ?? (typeof n === "number" && n >= 10),
+      ];
+    });
+    expect(keyed).toEqual([
+      ["Q-S1-19", ["4548-4"], true],
+      ["Q-S1-20", ["8480-6"], true],
+      ["Q-S6-21", ["2276-4"], "COHORT_TOO_SMALL"],
+    ]);
   });
 
   test("only the absent-code probe is keyed as null", () => {

@@ -29,6 +29,7 @@ describe("openAiToolsFrom", () => {
       "compare_windows",
       "range_position",
       "convert_unit",
+      "cohort_position",
       "show_view",
       "list_views",
       "open_view",

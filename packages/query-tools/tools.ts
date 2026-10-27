@@ -10,6 +10,10 @@ import {
 } from "./ports";
 import {
   ANALYTICS_ROW_CAP,
+  COHORT_MINIMUM,
+  COHORT_ROW_CAP,
+  COHORT_ROW_CAP_EXCEEDED,
+  cohortTooSmall,
   isToolRefusal,
   mixedUnits,
   type MixedUnits,
@@ -38,6 +42,7 @@ import type {
   trendInput,
   rangePositionInput,
   convertUnitInput,
+  cohortPositionInput,
 } from "./schemas";
 import { windowEndDate, windowStartDate } from "./schemas";
 import {
@@ -51,6 +56,8 @@ import {
   olsSlopePerDay,
   robustZ,
   pickReading,
+  latestPerSubject,
+  midRankPercentile,
 } from "./stats";
 import { placeReading, type RangePlacement, rangeRefusalFor } from "./range-position";
 import { applyConversion, findConversion, supportedPairs } from "./unit-conversions";
@@ -886,5 +893,100 @@ export const runConvertUnit = (
       };
     },
     () => 0,
+    ports,
+  );
+
+type CohortPositionInput = z.infer<typeof cohortPositionInput>;
+
+export type CohortPositionResult = Readonly<{
+  loinc: string;
+  unit: string;
+  start: string;
+  end: string;
+  cohort_id: string;
+  /** The subject's own latest reading in the window. */
+  effective_at: string;
+  value: number;
+  /** People in the cohort with a value in the window, the subject included. */
+  n: number;
+  n_lower: number;
+  /** The subject included, so at least 1. */
+  n_equal: number;
+  n_higher: number;
+  /** 100 × (n_lower + n_equal / 2) / n. */
+  percentile: number;
+  method: "mid-rank";
+  /** Cohort rows read, the audit row count. */
+  rows_read: number;
+}>;
+
+/** The subject's own cohort, or null when the subject is out of scope. */
+const subjectCohort = async (
+  scope: SessionScope,
+  subjectRef: string,
+  ports: QueryToolPorts,
+): Promise<string | null> => {
+  if (scope.mode !== "synthetic") return null;
+  const subject = await ports.findSubject(subjectRef);
+  return subject !== null && subjectRowInScope(scope, subject) ? subject.cohortId : null;
+};
+
+/**
+ * `cohort_position`: one fixed, capped read of the code across the subject's
+ * own synthetic cohort; each person's latest reading in `latestPerSubject`,
+ * the rank in `midRankPercentile` (stats.ts). Out of scope, over the cohort
+ * cap, mixed units, no reading for the subject and fewer than 10 people are
+ * refused.
+ */
+export const runCohortPosition = (
+  scope: SessionScope,
+  input: CohortPositionInput,
+  ports: QueryToolPorts = defaultQueryToolPorts(),
+): Promise<CohortPositionResult | ToolRefusal> =>
+  audited<CohortPositionResult | ToolRefusal>(
+    scope,
+    "cohort_position",
+    input,
+    input.subject_ref,
+    async () => {
+      const cohortId = await subjectCohort(scope, input.subject_ref, ports);
+      if (cohortId === null) return SUBJECT_SCOPE_VIOLATION;
+      const rows = await ports.findCohortObservations({
+        cohortId,
+        loinc: input.loinc,
+        start: windowStartDate(input.start),
+        end: windowEndDate(input.end),
+        take: COHORT_ROW_CAP + 1,
+      });
+      if (rows.length > COHORT_ROW_CAP) return COHORT_ROW_CAP_EXCEEDED;
+      const units = distinctUnits(rows);
+      if (units.length > 1) return mixedUnits(input.loinc, units);
+      const latest = latestPerSubject(rows);
+      const own = latest.get(input.subject_ref);
+      if (!own) return noRows(input.loinc, null);
+      if (latest.size < COHORT_MINIMUM) return cohortTooSmall(input.loinc, latest.size);
+      const rank = midRankPercentile(
+        own.value,
+        [...latest.values()].map((reading) => reading.value),
+      );
+      if (rank === null) return noRows(input.loinc, null);
+      return {
+        loinc: input.loinc,
+        unit: own.unitUcum,
+        start: input.start,
+        end: input.end,
+        cohort_id: cohortId,
+        effective_at: asIso(own.effectiveAt),
+        value: own.value,
+        n: rank.n,
+        n_lower: rank.nLower,
+        n_equal: rank.nEqual,
+        n_higher: rank.nHigher,
+        percentile: rank.percentile,
+        method: "mid-rank",
+        rows_read: rows.length,
+      };
+    },
+    (result) => ("rows_read" in result ? result.rows_read : 0),
     ports,
   );
