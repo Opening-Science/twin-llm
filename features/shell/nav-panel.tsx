@@ -9,6 +9,8 @@ import { AppAuth, isClientAuthDisabled } from "@/features/auth/app-auth";
 import { useThreadHistory } from "@/infrastructure/thread-history-store";
 import { Button } from "@/infrastructure/ui-kit/button";
 
+import { useOpenSearch } from "@/features/search/search-context";
+
 import { BrandAttribution } from "./brand-attribution";
 import {
   CompareGlyph,
@@ -17,6 +19,7 @@ import {
   DocsGlyph,
   ModelsGlyph,
   PlusGlyph,
+  SearchGlyph,
   StartGlyph,
   TwinGlyph,
 } from "./glyphs";
@@ -144,6 +147,7 @@ export const NavPanel = ({
 }>) => {
   const path = usePathname();
   const recent = withTouchedThreads(threadGroups, useThreadHistory().touched);
+  const openSearch = useOpenSearch();
 
   const followLinks = (event: MouseEvent<HTMLDivElement>) => {
     if (
@@ -170,6 +174,18 @@ export const NavPanel = ({
       </div>
 
       <nav aria-label="Sections" className="px-3">
+        <button
+          type="button"
+          onClick={() => {
+            onNavigate?.();
+            openSearch();
+          }}
+          className={`${LINK} w-full gap-3 py-2`}
+        >
+          <SearchGlyph className="size-4 shrink-0" />
+          Search
+          <kbd className="search-kbd ml-auto">Ctrl K</kbd>
+        </button>
         {SECTIONS.map(({ href, label, Glyph, owns }) => (
           <Link
             key={href}

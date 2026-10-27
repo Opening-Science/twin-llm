@@ -115,6 +115,33 @@ export const SidebarGlyph = (props: GlyphProps) => (
   </Svg>
 );
 
+/** A magnifying glass: search. */
+export const SearchGlyph = (props: GlyphProps) => (
+  <Svg {...props}>
+    <>
+      <circle cx="8.75" cy="8.75" r="5.25" />
+      <path d="m12.75 12.75 4 4" />
+    </>
+  </Svg>
+);
+
+/** A speech bubble: a thread. */
+export const ThreadGlyph = (props: GlyphProps) => (
+  <Svg {...props}>
+    <path d="M4 4.5h12a1.5 1.5 0 0 1 1.5 1.5v6.5A1.5 1.5 0 0 1 16 14H9l-3.5 3v-3H4A1.5 1.5 0 0 1 2.5 12.5V6A1.5 1.5 0 0 1 4 4.5Z" />
+  </Svg>
+);
+
+/** A slash in a box: a command. */
+export const CommandGlyph = (props: GlyphProps) => (
+  <Svg {...props}>
+    <>
+      <rect x="2.5" y="3.5" width="15" height="13" rx="2" />
+      <path d="m11.5 6.5-3 7" />
+    </>
+  </Svg>
+);
+
 /** Three lines: the menu. */
 export const MenuGlyph = (props: GlyphProps) => (
   <Svg {...props}>

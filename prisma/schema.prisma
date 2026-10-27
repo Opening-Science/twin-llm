@@ -84,11 +84,36 @@ model Thread {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  turns Turn[]
+  user             User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  turns            Turn[]
+  searchEmbeddings ThreadSearchEmbedding[]
 
   @@index([userId, updatedAt])
   @@map("threads")
+}
+
+/// One embedding of a prompt or an answer, for the search box (#167). Holds
+/// no text: the snippet is read back from turns or model_responses, so
+/// deleting a thread (cascade) removes everything search knows about it.
+/// Embedded only by Ollama on this machine. Genome threads are never indexed.
+model ThreadSearchEmbedding {
+  id         String                @id @default(cuid())
+  userId     String                @map("user_id")
+  threadId   String                @map("thread_id")
+  /// "prompt" (sourceId is a turn id) or "answer" (a model_responses id).
+  sourceKind String                @map("source_kind")
+  sourceId   String                @map("source_id")
+  model      String
+  /// vector(768) in the database, with an HNSW cosine index, set in the
+  /// migration SQL because Prisma has no syntax for either.
+  embedding  Unsupported("vector")
+  createdAt  DateTime              @default(now()) @map("created_at")
+
+  thread Thread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceKind, sourceId])
+  @@index([userId])
+  @@map("thread_search_embeddings")
 }
 
 /// One question in a thread. Each model asked gets its own ModelResponse.
@@ -416,7 +441,7 @@ model Subject {
   conditions         Condition[]
   medicationRequests MedicationRequest[]
   /// Synthetic genome reports (scripts/genome-synth), never a person's.
-  genomeReports GenomeReport[]
+  genomeReports      GenomeReport[]
 
   @@index([cohortId])
   @@map("subjects")
