@@ -116,7 +116,7 @@ bun run dev
 - Good: ask "What is the latest heart rate for subject_ref <one from list_subjects>?" The answer's tool calls show `latest_by_loinc` (or `list_subjects` first) with rows.
 - Seed steps are in "Seed the synthetic warehouse" above. Which models make tool calls: [providers.md](providers.md#tool-calls-by-model).
 
-### Data page (`/data`)
+### Synthetic cohort explorer (`/customize/data/cohort`, formerly `/data`)
 
 Added 2026-10-24. The Data page in the sidebar shows the synthetic cohorts, their subjects and the training conversations, in any `DATA_MODE` (2026-10-26: personal mode too; the chat still reads no synthetic subject in personal mode).
 
@@ -127,7 +127,7 @@ bun run training:conversations -- --cohort synthea-v4-seed42 --allow-eval-cohort
   --max-subjects 12 --out training-data/out/smoke-seed42.jsonl
 ```
 
-- Good: `/data` shows the cohort picker, six tiles, the most common LOINC codes as a share of subjects, observations per year and the coverage bands. `/data/subjects` sorts and pages; a subject opens with a chart per code and unit and a latest-values table. `/data/training` lists the set with counts per family and outcome, and a conversation shows its tool calls and results.
+- Good: `/customize/data/cohort` shows the cohort picker, six tiles, the most common LOINC codes as a share of subjects, observations per year and the coverage bands. `/data/subjects` sorts and pages; a subject opens with a chart per code and unit and a latest-values table. `/data/training` lists the set with counts per family and outcome, and a conversation shows its tool calls and results.
 - Audit: each overview, subject list and subject read adds one `audit_events` row (`data-explorer.cohort.overview`, `data-explorer.cohort.subjects`, `data-explorer.subject.observations`).
 - Personal mode: every tab says the page shows synthetic data only and reads nothing.
 - Last run: 2026-10-24 CEST against a local database with 200 subjects in `synthea-v4-seed42` (123,361 numeric rows, 178 codes) and a 76-conversation smoke set; pages checked at 1440 px (dark) and 375 px (light), no horizontal scroll at 375.

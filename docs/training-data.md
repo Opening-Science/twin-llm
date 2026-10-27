@@ -276,7 +276,7 @@ and codes, counts per reason and stats for each part. It reads files only.
 
 ### Looking at the files
 
-The Data page's Training data tab (`/data/training`, any `DATA_MODE`) lists the sets in `training-data/out/`, with counts per family and outcome from the meta file, and opens one conversation with its question, tool calls, tool results and answer. It reads the files only; nothing is audited because nothing is read from the warehouse.
+The Data page's Training data tab (`/customize/data/cohort/training`, any `DATA_MODE`) lists the sets in `training-data/out/`, with counts per family and outcome from the meta file, and opens one conversation with its question, tool calls, tool results and answer. It reads the files only; nothing is audited because nothing is read from the warehouse.
 
 ### No evaluation question is reused
 
