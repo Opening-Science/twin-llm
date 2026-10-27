@@ -14,7 +14,13 @@ export const ROW_CAP_EXCEEDED = {
   error: "more than 5000 observations in this window; narrow the window",
 } as const;
 
-export type RowCapExceeded = typeof ROW_CAP_EXCEEDED;
+export type RowCapExceeded = Readonly<{ code: "ROW_CAP_EXCEEDED"; error: string }>;
+
+/** The timeline tools' cap: they list records, not observations. */
+export const recordCapExceeded = (cap: number): RowCapExceeded => ({
+  code: "ROW_CAP_EXCEEDED",
+  error: `more than ${cap} records in this window; narrow the window`,
+});
 
 export type MixedUnits = Readonly<{
   code: "MIXED_UNITS";
@@ -64,6 +70,7 @@ export type ToolRefusal =
   | RowCapExceeded
   | MixedUnits
   | NoRows
+  | NoRecords
   | NoPublishedRange
   | UnitMismatch
   | UnsupportedConversion
@@ -100,6 +107,39 @@ export const noRows = (loinc: string, at: string | null): NoRows => ({
       : "no observation for this code at this effective_at in this window",
   loinc,
 });
+
+export type ClinicalRecordKind = "condition" | "medication request";
+
+export type NoRecords = Readonly<{
+  code: "NO_ROWS";
+  error: string;
+  record: ClinicalRecordKind;
+}>;
+
+/**
+ * No record to list: says which kind, which window rule and which filters, so
+ * the answer can say plainly what is missing. It never says the subject has
+ * none at all, only none that match.
+ */
+export const noRecords = (
+  record: ClinicalRecordKind,
+  filters: Readonly<{ status?: string; code?: string }>,
+): NoRecords => {
+  const status = record === "condition" ? "clinical status" : "status";
+  const matching = [
+    filters.code === undefined ? null : `code ${filters.code}`,
+    filters.status === undefined ? null : `${status} ${filters.status}`,
+  ].filter((part) => part !== null);
+  const which = matching.length === 0 ? "" : ` with ${matching.join(" and ")}`;
+  return {
+    code: "NO_ROWS",
+    error:
+      record === "condition"
+        ? `no condition${which} is recorded for this subject with a span (onset to abatement, or still open) that overlaps this window`
+        : `no medication request${which} is recorded for this subject as authored in this window`,
+    record,
+  };
+};
 
 export type NoPublishedRange = Readonly<{
   code: "NO_PUBLISHED_RANGE";

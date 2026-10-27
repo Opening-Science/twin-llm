@@ -46,6 +46,8 @@ const TITLES: Readonly<Record<string, string>> = {
   range_position: "Placed a value against its published range",
   convert_unit: "Converted a unit",
   cohort_position: "Placed a value among the synthetic cohort",
+  conditions_timeline: "Listed recorded conditions",
+  medications_timeline: "Listed recorded medication requests",
   show_view: "Showed a view",
   list_views: "Listed this thread's views",
   open_view: "Reopened a view",
@@ -98,6 +100,18 @@ const REFUSAL_NOTES: Readonly<Record<string, string>> = {
   COHORT_TOO_SMALL:
     "Fewer than 10 synthetic people have a value, so no percentile was given.",
   COHORT_ROW_CAP_EXCEEDED: "Too many cohort rows in this window; nothing was ranked.",
+};
+
+/** Notes for a code whose usual sentence would be wrong for this tool (it lists records, not readings). */
+const TOOL_REFUSAL_NOTES: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+  conditions_timeline: {
+    NO_ROWS: "No recorded condition matches in this window.",
+    ROW_CAP_EXCEEDED: "Too many records in this window; nothing was read.",
+  },
+  medications_timeline: {
+    NO_ROWS: "No recorded medication request matches in this window.",
+    ROW_CAP_EXCEEDED: "Too many records in this window; nothing was read.",
+  },
 };
 
 const REFUSED = "The tool declined this call.";
@@ -190,6 +204,8 @@ const ARG_READERS: readonly (readonly [
   ["Window A", (input) => span(input.window_a)],
   ["Window B", (input) => span(input.window_b)],
   ["Subject", (input) => text(input.subject ?? input.subject_ref)],
+  ["Status", (input) => text(input.status)],
+  ["Code", (input) => text(input.code)],
   ["Cohort", (input) => text(input.cohort_id)],
   ["Chart", (input) => text(input.id)],
   ["Search", (input) => (text(input.query) ? clipped(text(input.query)!) : null)],
@@ -247,7 +263,10 @@ export const toolCard = (
       state === "done" || state === "refused"
         ? (storedRowCount ?? rowCountOf(part.output))
         : null,
-    note: code === null ? null : (REFUSAL_NOTES[code] ?? REFUSED),
+    note:
+      code === null
+        ? null
+        : (TOOL_REFUSAL_NOTES[part.tool]?.[code] ?? REFUSAL_NOTES[code] ?? REFUSED),
   };
 };
 

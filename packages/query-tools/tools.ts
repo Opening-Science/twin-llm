@@ -3,7 +3,10 @@ import "server-only";
 import { database } from "@/infrastructure/database";
 
 import {
+  type ClinicalQuery,
   defaultQueryToolPorts,
+  findConditionsInDatabase,
+  findMedicationRequestsInDatabase,
   type ObservationRecord,
   type QueryToolPorts,
   toNumber,
@@ -19,7 +22,9 @@ import {
   type MixedUnits,
   ROW_CAP_EXCEEDED,
   type ToolRefusal,
+  noRecords,
   noRows,
+  recordCapExceeded,
   unsupportedConversion,
   type UnsupportedConversion,
 } from "./refusals";
@@ -43,6 +48,8 @@ import type {
   rangePositionInput,
   convertUnitInput,
   cohortPositionInput,
+  conditionsTimelineInput,
+  medicationsTimelineInput,
 } from "./schemas";
 import { windowEndDate, windowStartDate } from "./schemas";
 import {
@@ -61,6 +68,13 @@ import {
 import { placeReading, type RangePlacement, rangeRefusalFor } from "./range-position";
 import { applyConversion, findConversion, supportedPairs } from "./unit-conversions";
 import type { z } from "zod";
+import {
+  CLINICAL_ROW_CAP,
+  conditionsTimeline,
+  type ConditionsTimeline,
+  medicationsTimeline,
+  type MedicationsTimeline,
+} from "./clinical-timeline";
 
 type ListSubjectsInput = z.infer<typeof listSubjectsInput>;
 type SubjectWindowInput = z.infer<typeof subjectWindowInput>;
@@ -966,5 +980,113 @@ export const runCohortPosition = (
       };
     },
     (result) => ("rows_read" in result ? result.rows_read : 0),
+    ports,
+  );
+
+type ConditionsTimelineInput = z.infer<typeof conditionsTimelineInput>;
+type MedicationsTimelineInput = z.infer<typeof medicationsTimelineInput>;
+
+type TimelineEcho = Readonly<{
+  subject_ref: string;
+  start: string;
+  end: string;
+  /** The filters as asked, null when not given. */
+  status: string | null;
+  code: string | null;
+}>;
+
+export type ConditionsTimelineResult = TimelineEcho & ConditionsTimeline;
+export type MedicationsTimelineResult = TimelineEcho & MedicationsTimeline;
+
+const clinicalQuery = (
+  input: Readonly<{
+    subject_ref: string;
+    start: string;
+    end: string;
+    status?: string;
+    code?: string;
+  }>,
+): ClinicalQuery => ({
+  subjectRef: input.subject_ref,
+  start: windowStartDate(input.start),
+  end: windowEndDate(input.end),
+  ...(input.status === undefined ? {} : { status: input.status }),
+  ...(input.code === undefined ? {} : { code: input.code }),
+  take: CLINICAL_ROW_CAP + 1,
+});
+
+const echo = (
+  input: Readonly<{
+    subject_ref: string;
+    start: string;
+    end: string;
+    status?: string;
+    code?: string;
+  }>,
+): TimelineEcho => ({
+  subject_ref: input.subject_ref,
+  start: input.start,
+  end: input.end,
+  status: input.status ?? null,
+  code: input.code ?? null,
+});
+
+/**
+ * `conditions_timeline`: scope first, one fixed capped read of the subject's
+ * conditions overlapping the window, the ordering and counts in
+ * `conditionsTimeline` (clinical-timeline.ts). None is refused with NO_ROWS and
+ * its reason; over the cap with ROW_CAP_EXCEEDED.
+ */
+export const runConditionsTimeline = (
+  scope: SessionScope,
+  input: ConditionsTimelineInput,
+  ports: QueryToolPorts = defaultQueryToolPorts(),
+): Promise<ConditionsTimelineResult | ToolRefusal> =>
+  audited<ConditionsTimelineResult | ToolRefusal>(
+    scope,
+    "conditions_timeline",
+    input,
+    input.subject_ref,
+    async () => {
+      if (!(await subjectInScope(scope, input.subject_ref, ports))) {
+        return SUBJECT_SCOPE_VIOLATION;
+      }
+      const find = ports.findConditions ?? findConditionsInDatabase;
+      const rows = await find(clinicalQuery(input));
+      if (rows.length > CLINICAL_ROW_CAP) return recordCapExceeded(CLINICAL_ROW_CAP);
+      if (rows.length === 0) return noRecords("condition", input);
+      return { ...echo(input), ...conditionsTimeline(rows) };
+    },
+    (result) => ("n" in result ? result.n : 0),
+    ports,
+  );
+
+/**
+ * `medications_timeline`: scope first, one fixed capped read of the subject's
+ * medication requests authored in the window, the ordering and counts in
+ * `medicationsTimeline`. Dosage is the record's own text or null; nothing is
+ * added to it.
+ */
+export const runMedicationsTimeline = (
+  scope: SessionScope,
+  input: MedicationsTimelineInput,
+  ports: QueryToolPorts = defaultQueryToolPorts(),
+): Promise<MedicationsTimelineResult | ToolRefusal> =>
+  audited<MedicationsTimelineResult | ToolRefusal>(
+    scope,
+    "medications_timeline",
+    input,
+    input.subject_ref,
+    async () => {
+      if (!(await subjectInScope(scope, input.subject_ref, ports))) {
+        return SUBJECT_SCOPE_VIOLATION;
+      }
+      const find = ports.findMedicationRequests ?? findMedicationRequestsInDatabase;
+      const rows = await find(clinicalQuery(input));
+      if (rows.length > CLINICAL_ROW_CAP) return recordCapExceeded(CLINICAL_ROW_CAP);
+      if (rows.length === 0) return noRecords("medication request", input);
+      return { ...echo(input), ...medicationsTimeline(rows) };
+    },
+    (result) => ("n" in result ? result.n : 0),
     ports,
   );

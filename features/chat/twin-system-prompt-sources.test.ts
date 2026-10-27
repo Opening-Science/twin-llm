@@ -56,6 +56,8 @@ describe("system prompt with sources turned off", () => {
       "observations_for_subject",
       "subject_window",
       "summary_stats",
+      "conditions_timeline",
+      "medications_timeline",
       "gbd_population",
       "guideline_search",
       "knowledge_search",

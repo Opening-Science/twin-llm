@@ -20,6 +20,8 @@ import {
   rangePositionInput,
   convertUnitInput,
   cohortPositionInput,
+  conditionsTimelineInput,
+  medicationsTimelineInput,
 } from "../../packages/query-tools/schemas";
 
 import { isMeasureId } from "./score/asked-measure";
@@ -56,6 +58,8 @@ export const KEYED_TOOLS = {
   range_position: rangePositionInput,
   convert_unit: convertUnitInput,
   cohort_position: cohortPositionInput,
+  conditions_timeline: conditionsTimelineInput,
+  medications_timeline: medicationsTimelineInput,
 } as const;
 
 export type KeyedTool = keyof typeof KEYED_TOOLS;
@@ -76,6 +80,8 @@ export const AUDIT_TOOL_NAMES = [
   "range_position",
   "convert_unit",
   "cohort_position",
+  "conditions_timeline",
+  "medications_timeline",
   "guidelines.guideline_search",
   "knowledge.knowledge_search",
   "gbd.gbd_query",

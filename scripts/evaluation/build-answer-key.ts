@@ -114,6 +114,10 @@ export const rowCountOf = (tool: KeyedTool, result: unknown): number => {
       return 0;
     case "cohort_position":
       return numberAt(result, "rows_read");
+    case "conditions_timeline":
+      return numberAt(result, "n");
+    case "medications_timeline":
+      return numberAt(result, "n");
     case "latest_by_loinc":
       return lengthAt(result, "rows");
     case "coverage": {
@@ -383,6 +387,16 @@ export const realPorts = async (today: string): Promise<AnswerKeyPorts> => {
         return tools.runConvertUnit(scope, KEYED_TOOLS.convert_unit.parse(args));
       case "cohort_position":
         return tools.runCohortPosition(scope, KEYED_TOOLS.cohort_position.parse(args));
+      case "conditions_timeline":
+        return tools.runConditionsTimeline(
+          scope,
+          KEYED_TOOLS.conditions_timeline.parse(args),
+        );
+      case "medications_timeline":
+        return tools.runMedicationsTimeline(
+          scope,
+          KEYED_TOOLS.medications_timeline.parse(args),
+        );
       case "latest_by_loinc":
         return tools.runLatestByLoinc(scope, KEYED_TOOLS.latest_by_loinc.parse(args));
       case "summary_stats":
