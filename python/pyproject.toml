@@ -20,6 +20,13 @@ analysis = [
   "matplotlib==3.11.2",
   "pytest==9.1.1",
 ]
+carbon = [
+  "torch==2.14.1",
+  "transformers==5.20.2",
+  "accelerate==1.15.0",
+  "bitsandbytes==0.50.2",
+  "safetensors==0.8.0",
+]
 
 [tool.uv]
 package = false
@@ -28,4 +35,4 @@ package = false
 members = []
 
 [tool.pytest.ini_options]
-testpaths = ["analysis"]
+testpaths = ["analysis", "carbon"]

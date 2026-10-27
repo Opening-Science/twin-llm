@@ -9,8 +9,10 @@ The Python side of TwinLLM, kept apart from the app. Three things live here or w
   `results.jsonl` from `bun run eval` and prints, per model and scenario, how many lines
   ran, were answered, errored or were skipped. Pass and fail per criterion stay with
   `bun run eval:report`.
-- **The Carbon-X sidecar** (later): a separate process the app talks to over a socket,
-  not a module it imports.
+- **The Carbon-X sidecar** (`carbon` group): `carbon/serve.py` serves the pinned
+  Carbon-X DNA model in 4-bit on 127.0.0.1:8090 with an OpenAI-compatible chat route. A
+  separate process the app would talk to over HTTP, not a module it imports. Research
+  spike for #58; contract and limits in [`docs/carbon-x.md`](../docs/carbon-x.md).
 
 ## Setup
 
@@ -22,7 +24,8 @@ cd python
 uv sync                    # pandas and pyarrow only
 uv sync --group analysis   # plus matplotlib and pytest
 uv sync --group train      # plus torch, transformers, peft, trl, datasets (large)
-uv run --group analysis pytest
+uv sync --group carbon     # plus torch, transformers, bitsandbytes, accelerate (large)
+uv run --group analysis pytest   # the sidecar tests use a fake model, no GPU
 uv run analysis/eval_report.py ../evaluation/runs/<run-id>/results.jsonl
 ```
 
