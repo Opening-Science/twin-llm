@@ -26,5 +26,8 @@ bun run ark:test
 ```
 
 `ark:test` always runs host `cargo test` against `fixtures/` and `goldens/`.
+Fixtures are synthetic, forward-strand GRCh38; `tests/grch38_panel.rs` keeps
+every panel site in step with `scripts/genome-synth/variants.tsv`. On a real
+run the Ark's own variant catalog is authoritative.
 When `wasmtime` and `build/rsid-genotypes.wasm` exist, it also runs the
 two-pass mount used by dark-bio/examples.

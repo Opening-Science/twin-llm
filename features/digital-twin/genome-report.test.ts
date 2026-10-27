@@ -21,7 +21,7 @@ const REPORT: GenomeReportView = toReportView(
       {
         rsid: "rs4986893",
         chromosome: "chr10",
-        position: 94762706,
+        position: 94780653,
         reference: "G",
         genotype: null,
       },

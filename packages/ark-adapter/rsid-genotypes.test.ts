@@ -50,8 +50,8 @@ describe("parseRsidGenotypesReport", () => {
       "G/A",
       "T/C",
       "C/C",
-      "A/G",
-      "G/A",
+      "T/C",
+      "C/T",
     ]);
   });
 
@@ -63,7 +63,7 @@ describe("parseRsidGenotypesReport", () => {
       rsid: "rs9923231",
       chromosome: "chr16",
       position: 31096368,
-      reference: "G",
+      reference: "C",
       genotype: null,
     });
   });

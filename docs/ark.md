@@ -100,7 +100,11 @@ https://cpicpgx.org/guidelines/ and
 https://www.pharmgkb.org/page/cyp2c19RefMaterials
 
 Build with `bun run ark:build` (wasm stays gitignored). Fixture goldens:
-`bun run ark:test`. A live `appRun` is `RUN_ARK=1` after that build and a
+`bun run ark:test`. Fixtures and goldens are synthetic and use forward-strand
+GRCh38 coordinates and alleles; `tests/grch38_panel.rs` checks every panel site
+(rsid, chromosome, position, reference, alternate) against the panel rows of
+`scripts/genome-synth/variants.tsv`. The app prints whatever the Ark reports,
+so on a real run the device's own variant catalog is authoritative. A live `appRun` is `RUN_ARK=1` after that build and a
 Companion approval. Close Hub first. The Digital Twin card runs the module at
 `apps/ark/rsid-genotypes/build/rsid-genotypes.wasm` unless
 `ARK_RSID_GENOTYPES_WASM` names another path.
