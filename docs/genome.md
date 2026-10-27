@@ -72,7 +72,11 @@ These are enforced in code, not only by convention.
    (`infrastructure/genome-thread-policy.ts`). An export of a genome-personal
    thread (`/report`, #44, not built yet) must use `permitGenomeThreadExport`
    and goes only to a recipient on this machine. Starting a new thread is the
-   way to use a hosted model again. The genome tools are left out of the eval
+   way to use a hosted model again. An incognito chat
+   ([chat-platform.md](chat-platform.md#incognito-chats)) runs only on Ollama
+   on loopback and stores no thread, so the genome tools may run in it under
+   the same policy, its answers and tool results are never stored, and its
+   genome audit rows carry a random session id instead of a turn id. The genome tools are left out of the eval
    harness and the MCP manifest. Training data offers them only with `--genome`, on synthetic
    genomes with stand-in answers, never a person's report
    (`docs/genome-synthetic.md`). Analytics send nothing in personal mode.

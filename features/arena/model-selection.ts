@@ -13,6 +13,23 @@ import {
  * `missingCount` is what lets the prompt bar say so in words.
  */
 
+/**
+ * The models a prompt may go to: the whole catalog, or in an incognito chat
+ * only those that run on this machine.
+ */
+export const offeredModels = (
+  catalog: readonly CatalogModel[],
+  incognito: boolean,
+  localModelIds: readonly string[],
+): readonly CatalogModel[] =>
+  incognito ? catalog.filter((model) => localModelIds.includes(model.id)) : catalog;
+
+/** The line under an incognito prompt bar. */
+export const incognitoHint = (localCount: number): string =>
+  localCount === 0
+    ? "No model on this machine is offered, so an incognito chat has nowhere to go. Turn incognito off to use the others."
+    : "Local models only. Nothing in this chat is saved; a reload or a new chat discards it.";
+
 /** The chosen models in catalog order, ignoring ids the catalog does not have. */
 export const chosenModels = (
   catalog: readonly CatalogModel[],
