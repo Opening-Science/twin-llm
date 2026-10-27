@@ -1,0 +1,487 @@
+{
+  "title": "Example (synthetic)",
+  "recorded": {
+    "date": "2026-10-27",
+    "how": "one real run of bun run dev with LLM_PROVIDER=ollama, DATA_MODE=synthetic, LOCAL_ONLY=true; the stored model_responses row, unchanged"
+  },
+  "cohortId": "synthea-v4-seed42",
+  "subjectRef": "29bbf012-3e7f-d6ab-a986-b5d9915f1900",
+  "prompt": "Show a chart of heart rate (LOINC 8867-4) for subject_ref 29bbf012-3e7f-d6ab-a986-b5d9915f1900 from 2024-01-01 to 2026-10-01. What is the latest value, and the average over that window?",
+  "response": {
+    "modelId": "qwen3:4b",
+    "modelName": "qwen3:4b",
+    "text": "The chart of heart rate (LOINC 8867-4) for subject_ref `29bbf012-3e7f-d6ab-a986-b5d9915f1900` from **2024-01-01 to 2026-10-01** shows **72 readings** with the following statistics:\n\n- 📊 **Latest value**: `95 bpm` (recorded on 2026-10-01T11:08:43.000Z)  \n- 📊 **Average over window**: `79.79 bpm`  \n\n*Note: Heart rate is measured in beats per minute (bpm), and the data represents the subject's heart rate over the specified time period.*",
+    "reasoningText": null,
+    "attribution": [],
+    "responseDocument": {
+      "abstained": false,
+      "next_step": "none",
+      "data_basis": {
+        "sources": {
+          "gbd": [],
+          "knowledge": [],
+          "guidelines": []
+        },
+        "gbd_rows": [],
+        "tool_calls": [
+          {
+            "ts": "2026-10-27T01:30:46.037Z",
+            "seq": 713,
+            "tool": "timeseries",
+            "row_count": 72,
+            "args_sha256": "a26f400ce32d795e9e78f9ae9fa24b18fb6c6450c547fc285233749723b3047b",
+            "result_sha256": "94ebcf31d84b8f14196587c781b17931a8e4526d2a41fcc1cd7bc996aec89029"
+          },
+          {
+            "ts": "2026-10-27T01:30:46.053Z",
+            "seq": 714,
+            "tool": "latest_by_loinc",
+            "row_count": 1,
+            "args_sha256": "beced40686273f92003459355874e74bfbda39057ffe8c2ab849ff62b25cccb1",
+            "result_sha256": "04202d6e33f2f88eed0f2e21814e4ba4183409cf331d4a63807849557695a96d"
+          },
+          {
+            "ts": "2026-10-27T01:30:46.065Z",
+            "seq": 715,
+            "tool": "summary_stats",
+            "row_count": 72,
+            "args_sha256": "a26f400ce32d795e9e78f9ae9fa24b18fb6c6450c547fc285233749723b3047b",
+            "result_sha256": "923c260846e0430ed8b167e7f4f5da2df459142924f9006da339859b588cbef1"
+          },
+          {
+            "ts": "2026-10-27T01:31:25.770Z",
+            "seq": 716,
+            "tool": "timeseries",
+            "row_count": 72,
+            "args_sha256": "a26f400ce32d795e9e78f9ae9fa24b18fb6c6450c547fc285233749723b3047b",
+            "result_sha256": "94ebcf31d84b8f14196587c781b17931a8e4526d2a41fcc1cd7bc996aec89029"
+          },
+          {
+            "ts": "2026-10-27T01:31:32.865Z",
+            "seq": 717,
+            "tool": "timeseries",
+            "row_count": 72,
+            "args_sha256": "49c047c0f4e03c2be61f8eaec130592c2d43e2e12d343ab08ec92324c286b66e",
+            "result_sha256": "94ebcf31d84b8f14196587c781b17931a8e4526d2a41fcc1cd7bc996aec89029"
+          },
+          {
+            "ts": "2026-10-27T01:31:32.876Z",
+            "seq": 718,
+            "tool": "summary_stats",
+            "row_count": 72,
+            "args_sha256": "49c047c0f4e03c2be61f8eaec130592c2d43e2e12d343ab08ec92324c286b66e",
+            "result_sha256": "923c260846e0430ed8b167e7f4f5da2df459142924f9006da339859b588cbef1"
+          },
+          {
+            "ts": "2026-10-27T01:32:58.596Z",
+            "seq": 721,
+            "tool": "latest_by_loinc",
+            "row_count": 1,
+            "args_sha256": "beced40686273f92003459355874e74bfbda39057ffe8c2ab849ff62b25cccb1",
+            "result_sha256": "04202d6e33f2f88eed0f2e21814e4ba4183409cf331d4a63807849557695a96d"
+          },
+          {
+            "ts": "2026-10-27T01:32:58.611Z",
+            "seq": 722,
+            "tool": "summary_stats",
+            "row_count": 72,
+            "args_sha256": "a26f400ce32d795e9e78f9ae9fa24b18fb6c6450c547fc285233749723b3047b",
+            "result_sha256": "923c260846e0430ed8b167e7f4f5da2df459142924f9006da339859b588cbef1"
+          }
+        ],
+        "evidence_keys": [],
+        "hallucinated_keys": []
+      },
+      "uncertainty": {
+        "level": "low",
+        "reasons": ["no_model_statement"],
+        "model_statement": null
+      },
+      "answer_class": "analytics",
+      "intended_use": "research_hypothesis_generation_n_of_1",
+      "interpretation": {
+        "kind": "narration",
+        "text": "The chart of heart rate (LOINC 8867-4) for subject_ref `29bbf012-3e7f-d6ab-a986-b5d9915f1900` from **2024-01-01 to 2026-10-01** shows **72 readings** with the following statistics:\n\n- 📊 **Latest value**: `95 bpm` (recorded on 2026-10-01T11:08:43.000Z)  \n- 📊 **Average over window**: `79.79 bpm`  \n\n*Note: Heart rate is measured in beats per minute (bpm), and the data represents the subject's heart rate over the specified time period.*",
+        "narration_is_unverified": true
+      },
+      "schema_version": "twin-llm.response.v1.1",
+      "sufficient_data": true,
+      "not_for_diagnostic_use": true
+    },
+    "toolParts": [
+      {
+        "at": "2026-10-27T01:33:05.661Z",
+        "seq": 1,
+        "tool": "show_view",
+        "input": {
+          "kind": "chart.timeseries",
+          "window": {
+            "end": "2026-10-01",
+            "start": "2024-01-01"
+          },
+          "measure": "8867-4",
+          "subject": "29bbf012-3e7f-d6ab-a986-b5d9915f1900"
+        },
+        "output": {
+          "id": "view-716",
+          "kind": "chart.timeseries",
+          "spec": {
+            "unit": "/min",
+            "label": "Heart rate",
+            "points": [
+              {
+                "at": "2024-01-11T11:08:43.000Z",
+                "value": 81
+              },
+              {
+                "at": "2024-01-25T11:08:43.000Z",
+                "value": 91
+              },
+              {
+                "at": "2024-02-08T11:08:43.000Z",
+                "value": 92
+              },
+              {
+                "at": "2024-02-22T11:08:43.000Z",
+                "value": 72
+              },
+              {
+                "at": "2024-03-07T11:08:43.000Z",
+                "value": 64
+              },
+              {
+                "at": "2024-03-21T11:08:43.000Z",
+                "value": 63
+              },
+              {
+                "at": "2024-04-04T11:08:43.000Z",
+                "value": 84
+              },
+              {
+                "at": "2024-04-18T11:08:43.000Z",
+                "value": 83
+              },
+              {
+                "at": "2024-05-02T11:08:43.000Z",
+                "value": 96
+              },
+              {
+                "at": "2024-05-16T11:08:43.000Z",
+                "value": 66
+              },
+              {
+                "at": "2024-05-30T11:08:43.000Z",
+                "value": 69
+              },
+              {
+                "at": "2024-06-13T11:08:43.000Z",
+                "value": 96
+              },
+              {
+                "at": "2024-06-27T11:08:43.000Z",
+                "value": 93
+              },
+              {
+                "at": "2024-07-11T11:08:43.000Z",
+                "value": 60
+              },
+              {
+                "at": "2024-07-25T11:08:43.000Z",
+                "value": 80
+              },
+              {
+                "at": "2024-08-08T11:08:43.000Z",
+                "value": 92
+              },
+              {
+                "at": "2024-08-22T11:08:43.000Z",
+                "value": 65
+              },
+              {
+                "at": "2024-09-05T11:08:43.000Z",
+                "value": 88
+              },
+              {
+                "at": "2024-09-19T11:08:43.000Z",
+                "value": 61
+              },
+              {
+                "at": "2024-10-03T11:08:43.000Z",
+                "value": 64
+              },
+              {
+                "at": "2024-10-17T11:08:43.000Z",
+                "value": 90
+              },
+              {
+                "at": "2024-10-31T11:08:43.000Z",
+                "value": 94
+              },
+              {
+                "at": "2024-11-14T11:08:43.000Z",
+                "value": 86
+              },
+              {
+                "at": "2024-11-28T11:08:43.000Z",
+                "value": 63
+              },
+              {
+                "at": "2024-12-12T11:08:43.000Z",
+                "value": 63
+              },
+              {
+                "at": "2024-12-26T11:08:43.000Z",
+                "value": 67
+              },
+              {
+                "at": "2025-01-09T11:08:43.000Z",
+                "value": 67
+              },
+              {
+                "at": "2025-01-23T11:08:43.000Z",
+                "value": 91
+              },
+              {
+                "at": "2025-02-06T11:08:43.000Z",
+                "value": 99
+              },
+              {
+                "at": "2025-02-20T11:08:43.000Z",
+                "value": 78
+              },
+              {
+                "at": "2025-03-06T11:08:43.000Z",
+                "value": 86
+              },
+              {
+                "at": "2025-03-20T11:08:43.000Z",
+                "value": 81
+              },
+              {
+                "at": "2025-04-03T11:08:43.000Z",
+                "value": 100
+              },
+              {
+                "at": "2025-04-17T11:08:43.000Z",
+                "value": 65
+              },
+              {
+                "at": "2025-05-01T11:08:43.000Z",
+                "value": 64
+              },
+              {
+                "at": "2025-05-15T11:08:43.000Z",
+                "value": 67
+              },
+              {
+                "at": "2025-05-29T11:08:43.000Z",
+                "value": 68
+              },
+              {
+                "at": "2025-06-12T11:08:43.000Z",
+                "value": 65
+              },
+              {
+                "at": "2025-06-26T11:08:43.000Z",
+                "value": 67
+              },
+              {
+                "at": "2025-07-10T11:08:43.000Z",
+                "value": 78
+              },
+              {
+                "at": "2025-07-24T11:08:43.000Z",
+                "value": 77
+              },
+              {
+                "at": "2025-08-07T11:08:43.000Z",
+                "value": 97
+              },
+              {
+                "at": "2025-08-21T11:08:43.000Z",
+                "value": 80
+              },
+              {
+                "at": "2025-09-04T11:08:43.000Z",
+                "value": 72
+              },
+              {
+                "at": "2025-09-18T11:08:43.000Z",
+                "value": 79
+              },
+              {
+                "at": "2025-10-02T11:08:43.000Z",
+                "value": 73
+              },
+              {
+                "at": "2025-10-16T11:08:43.000Z",
+                "value": 88
+              },
+              {
+                "at": "2025-10-30T11:08:43.000Z",
+                "value": 94
+              },
+              {
+                "at": "2025-11-13T11:08:43.000Z",
+                "value": 91
+              },
+              {
+                "at": "2025-11-27T11:08:43.000Z",
+                "value": 82
+              },
+              {
+                "at": "2025-12-11T11:08:43.000Z",
+                "value": 62
+              },
+              {
+                "at": "2025-12-25T11:08:43.000Z",
+                "value": 89
+              },
+              {
+                "at": "2026-01-08T11:08:43.000Z",
+                "value": 95
+              },
+              {
+                "at": "2026-01-22T11:08:43.000Z",
+                "value": 95
+              },
+              {
+                "at": "2026-02-05T11:08:43.000Z",
+                "value": 81
+              },
+              {
+                "at": "2026-02-19T11:08:43.000Z",
+                "value": 82
+              },
+              {
+                "at": "2026-03-05T11:08:43.000Z",
+                "value": 96
+              },
+              {
+                "at": "2026-03-19T11:08:43.000Z",
+                "value": 70
+              },
+              {
+                "at": "2026-04-02T11:08:43.000Z",
+                "value": 67
+              },
+              {
+                "at": "2026-04-16T11:08:43.000Z",
+                "value": 84
+              },
+              {
+                "at": "2026-04-30T11:08:43.000Z",
+                "value": 93
+              },
+              {
+                "at": "2026-05-14T11:08:43.000Z",
+                "value": 99
+              },
+              {
+                "at": "2026-05-28T11:08:43.000Z",
+                "value": 69
+              },
+              {
+                "at": "2026-06-11T11:08:43.000Z",
+                "value": 71
+              },
+              {
+                "at": "2026-06-25T11:08:43.000Z",
+                "value": 67
+              },
+              {
+                "at": "2026-07-09T11:08:43.000Z",
+                "value": 81
+              },
+              {
+                "at": "2026-07-23T11:08:43.000Z",
+                "value": 85
+              },
+              {
+                "at": "2026-08-06T11:08:43.000Z",
+                "value": 95
+              },
+              {
+                "at": "2026-08-20T11:08:43.000Z",
+                "value": 84
+              },
+              {
+                "at": "2026-09-03T11:08:43.000Z",
+                "value": 65
+              },
+              {
+                "at": "2026-09-17T11:08:43.000Z",
+                "value": 88
+              },
+              {
+                "at": "2026-10-01T11:08:43.000Z",
+                "value": 95
+              }
+            ],
+            "window": {
+              "end": "2026-10-01",
+              "start": "2024-01-01"
+            },
+            "measure": "8867-4",
+            "subject": "29bbf012-3e7f-d6ab-a986-b5d9915f1900"
+          },
+          "title": "Heart rate, 1 Jan 2024 – 1 Oct 2026",
+          "sourceAuditIds": ["716"]
+        },
+        "rowCount": null,
+        "argsSha256": "929ce8b783b19f94139e797aea5402ad34caaada0b20b62262ae7b0370067edb",
+        "resultSha256": "59ae8fd3573911d6061a5bd182b265fa35e343f7ebde7270a3588aba3e637e70"
+      },
+      {
+        "at": "2026-10-27T01:33:05.661Z",
+        "seq": 2,
+        "tool": "latest_by_loinc",
+        "input": {
+          "loinc": ["8867-4"],
+          "subject_ref": "29bbf012-3e7f-d6ab-a986-b5d9915f1900"
+        },
+        "output": {
+          "rows": [
+            {
+              "loinc": "8867-4",
+              "value": 95,
+              "display": "Heart rate",
+              "unit_ucum": "/min",
+              "subject_ref": "29bbf012-3e7f-d6ab-a986-b5d9915f1900",
+              "effective_at": "2026-10-01T11:08:43.000Z"
+            }
+          ]
+        },
+        "rowCount": 1,
+        "argsSha256": "beced40686273f92003459355874e74bfbda39057ffe8c2ab849ff62b25cccb1",
+        "resultSha256": "04202d6e33f2f88eed0f2e21814e4ba4183409cf331d4a63807849557695a96d"
+      },
+      {
+        "at": "2026-10-27T01:33:05.661Z",
+        "seq": 3,
+        "tool": "summary_stats",
+        "input": {
+          "end": "2026-10-01",
+          "loinc": "8867-4",
+          "start": "2024-01-01",
+          "subject_ref": "29bbf012-3e7f-d6ab-a986-b5d9915f1900"
+        },
+        "output": {
+          "n": 72,
+          "max": 100,
+          "min": 60,
+          "mean": 79.79166666666667,
+          "unit": "/min"
+        },
+        "rowCount": 72,
+        "argsSha256": "a26f400ce32d795e9e78f9ae9fa24b18fb6c6450c547fc285233749723b3047b",
+        "resultSha256": "923c260846e0430ed8b167e7f4f5da2df459142924f9006da339859b588cbef1"
+      }
+    ],
+    "timeToFirstTokenMs": 147546,
+    "tokensPerSecond": 71.13,
+    "inputTokens": 13628,
+    "outputTokens": 10597,
+    "totalTokens": 24225
+  }
+}

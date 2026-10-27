@@ -7,6 +7,7 @@
  *   bun run setup:local -- --skip-cohort # everything but the cohort
  *   bun run setup:local -- --reload-cohort  # replace a stale eval cohort with the pinned one
  *   bun run setup:local -- --generate-cohort  # generate the eval cohort with Synthea instead (x86_64 matches the pin)
+ *   bun run setup:local -- --skip-example     # do not add the "Example (synthetic)" thread
  *
  * Checks prerequisites and prints how to install what is missing; it never
  * installs system packages. Steps already done are skipped, so it is safe to
@@ -45,12 +46,18 @@ import {
   type Outcome,
   planSetup,
   type SetupOptions,
+  SKIP_EXAMPLE_FLAG,
   type Step,
 } from "./plan";
+import {
+  insertExampleThread,
+  parseExampleFixture,
+  readExampleFixture,
+} from "./example-thread";
 import { checkTool } from "./prerequisites";
 
 const USAGE =
-  "Usage: bun run setup:local [-- --cohort-10k | --skip-cohort | [--reload-cohort] [--generate-cohort]]";
+  "Usage: bun run setup:local [-- --cohort-10k | --skip-cohort | [--reload-cohort] [--generate-cohort]] [--skip-example]";
 
 const COHORT_FLAGS = ["--cohort-10k", "--skip-cohort", "--reload-cohort"];
 
@@ -61,7 +68,12 @@ const COHORT_FLAGS = ["--cohort-10k", "--skip-cohort", "--reload-cohort"];
  */
 export const parseSetupArgs = (argv: readonly string[]): SetupOptions | null => {
   const known = argv.filter((arg) => arg !== "--");
-  if (known.some((arg) => !COHORT_FLAGS.includes(arg) && arg !== GENERATE_FLAG))
+  if (
+    known.some(
+      (arg) =>
+        !COHORT_FLAGS.includes(arg) && arg !== GENERATE_FLAG && arg !== SKIP_EXAMPLE_FLAG,
+    )
+  )
     return null;
   const chosen = COHORT_FLAGS.filter((flag) => known.includes(flag));
   if (chosen.length > 1) return null;
@@ -72,7 +84,12 @@ export const parseSetupArgs = (argv: readonly string[]): SetupOptions | null => 
       : "eval";
   const generateCohort = known.includes(GENERATE_FLAG);
   if (generateCohort && cohort !== "eval") return null;
-  return { cohort, reloadCohort: known.includes("--reload-cohort"), generateCohort };
+  return {
+    cohort,
+    reloadCohort: known.includes("--reload-cohort"),
+    generateCohort,
+    skipExample: known.includes(SKIP_EXAMPLE_FLAG),
+  };
 };
 
 const createEnvFile = async (root: string): Promise<string> => {
@@ -140,6 +157,27 @@ const installRigged = (
   );
 };
 
+/** Adds the example thread from the committed fixture; never calls a model. */
+const addExampleThread = async (root: string, clerkId: string): Promise<string> => {
+  const parsed = parseExampleFixture(await readExampleFixture(root));
+  if (!parsed.ok)
+    throw new SetupError(`the example fixture is not usable: ${parsed.why}`);
+  const sql = openSql(await databaseUrl(root));
+  try {
+    const outcome = await insertExampleThread(sql, clerkId, parsed.fixture);
+    switch (outcome.kind) {
+      case "inserted":
+        return `added to Your threads for LOCAL_USER_ID=${clerkId} (${parsed.fixture.response.modelName}, recorded ${parsed.fixture.recorded.date})`;
+      case "exists":
+        return "already in Your threads";
+      case "refused":
+        throw new SetupError(outcome.why);
+    }
+  } finally {
+    await sql.close();
+  }
+};
+
 const perform = async (root: string, action: Action): Promise<string> => {
   switch (action.kind) {
     case "create-env-file":
@@ -160,6 +198,8 @@ const perform = async (root: string, action: Action): Promise<string> => {
       return loadRelease10k(root);
     case "load-fixtures":
       return loadFixtures(root);
+    case "insert-example":
+      return addExampleThread(root, action.clerkId);
   }
 };
 

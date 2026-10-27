@@ -119,7 +119,12 @@ describe("ingest output", () => {
 
 describe("parseSetupArgs", () => {
   test("flags", () => {
-    const eval_ = { cohort: "eval", reloadCohort: false, generateCohort: false };
+    const eval_ = {
+      cohort: "eval",
+      reloadCohort: false,
+      generateCohort: false,
+      skipExample: false,
+    };
     expect(parseSetupArgs([])).toEqual(eval_);
     expect(parseSetupArgs(["--", "--cohort-10k"])).toEqual({ ...eval_, cohort: "10k" });
     expect(parseSetupArgs(["--skip-cohort"])).toEqual({ ...eval_, cohort: "none" });
@@ -133,16 +138,33 @@ describe("parseSetupArgs", () => {
     expect(parseSetupArgs(["--yes"])).toBeNull();
   });
 
+  test("--skip-example goes with any cohort choice", () => {
+    expect(parseSetupArgs(["--", "--skip-example"])).toEqual({
+      cohort: "eval",
+      reloadCohort: false,
+      generateCohort: false,
+      skipExample: true,
+    });
+    expect(parseSetupArgs(["--skip-cohort", "--skip-example"])).toEqual({
+      cohort: "none",
+      reloadCohort: false,
+      generateCohort: false,
+      skipExample: true,
+    });
+  });
+
   test("--generate-cohort goes with the evaluation cohort, alone or with --reload-cohort", () => {
     expect(parseSetupArgs(["--", "--generate-cohort"])).toEqual({
       cohort: "eval",
       reloadCohort: false,
       generateCohort: true,
+      skipExample: false,
     });
     expect(parseSetupArgs(["--reload-cohort", "--generate-cohort"])).toEqual({
       cohort: "eval",
       reloadCohort: true,
       generateCohort: true,
+      skipExample: false,
     });
     expect(parseSetupArgs(["--generate-cohort", "--cohort-10k"])).toBeNull();
     expect(parseSetupArgs(["--generate-cohort", "--skip-cohort"])).toBeNull();
