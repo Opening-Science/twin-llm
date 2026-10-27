@@ -123,8 +123,8 @@ description when there is none). On `POST /api/chat` the server, before any mode
 
 The turn then gets only the skill's tools, intersected with the user's sources and what
 the data-mode policy left (`show_view`, `list_views` and `open_view` stay when the skill
-allows `chart.timeseries`; `show_view` refuses any other kind and the other two offer only
-the allowed kinds), and the skill's instructions at the end of the system prompt.
+allows a kind `show_view` draws: `chart.timeseries`, `chart.compare`, `biomarker.card` or
+`table`; `show_view` refuses any other kind and the other two offer only the allowed kinds), and the skill's instructions at the end of the system prompt.
 The response document records `skill`, and the prompt shows a `/sleep` chip, also after
 a reload, where it is read back from the audit row. The shared rules live in
 `infrastructure/skill-gate.ts`, which the eval gate uses too.

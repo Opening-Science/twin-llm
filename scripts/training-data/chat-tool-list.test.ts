@@ -30,6 +30,8 @@ describe("openAiToolsFrom", () => {
       "range_position",
       "convert_unit",
       "cohort_position",
+      "conditions_timeline",
+      "medications_timeline",
       "show_view",
       "list_views",
       "open_view",
