@@ -74,8 +74,8 @@ export type StartAnswerDeps = Readonly<{
   loadWearables: (mode: DataMode, appUserId: string) => Promise<WearableContext>;
   loadDisabledSources: (appUserId: string) => Promise<readonly KnowledgeSourceId[]>;
   appendAudit: (input: AppendInput) => Promise<unknown>;
-  /** A runnable skill by name (`features/skills`), or null when there is none. */
-  findSkill: (name: string) => TurnSkill | null;
+  /** A runnable skill by name, shipped or the person's own (#174), or null. */
+  findSkill: (name: string, appUserId: string) => Promise<TurnSkill | null>;
   stream: (call: ChatRequest, context: StreamContext) => Promise<Response>;
   /** Stores the refusal sentence on the turn's row for this model. */
   markRefused: (
@@ -97,7 +97,8 @@ export const createStartAnswer =
     };
 
     const settings = deps.settings();
-    const skill = call.skill === undefined ? null : deps.findSkill(call.skill);
+    const skill =
+      call.skill === undefined ? null : await deps.findSkill(call.skill, appUserId);
     if (call.skill !== undefined && skill === null) {
       return refuse(skillNotOffered(call.skill));
     }

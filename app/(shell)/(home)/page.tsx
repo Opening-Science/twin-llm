@@ -2,7 +2,8 @@ import { redirect } from "next/navigation";
 
 import { CompareScreen } from "@/features/arena/compare-screen";
 import { skillCommand } from "@/features/commands/registry";
-import { runnableSkills } from "@/features/skills/load-skills";
+import { skillsFor } from "@/features/skills/user-skill-store";
+import { findAppUserId } from "@/infrastructure/current-user";
 import { needsOnboarding } from "@/features/onboarding/onboarding-store";
 import { resolveActorId } from "@/infrastructure/auth-actor";
 import { fetchActiveModelCatalog } from "@/infrastructure/fetch-model-catalog";
@@ -24,7 +25,9 @@ export default async function HomePage({
     <CompareScreen
       catalog={catalog}
       defaultModelIds={catalog ? defaultModelSelection(catalog) : []}
-      skills={runnableSkills().map(skillCommand)}
+      skills={(
+        await skillsFor(actorId === null ? null : await findAppUserId(actorId))
+      ).map(skillCommand)}
       initialDraft={safeDraft((await searchParams).draft)}
     />
   );
