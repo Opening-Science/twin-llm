@@ -99,7 +99,7 @@ describe("withSkillTools", () => {
   });
 
   test("drops show_view when the skill allows no kind it draws", () => {
-    expect(withSkillTools(turnTools, { ...SLEEP, views: ["chart.compare"] })).toEqual({
+    expect(withSkillTools(turnTools, { ...SLEEP, views: ["twin.body"] })).toEqual({
       subject_window: 2,
       coverage: 3,
       knowledge_search: 5,

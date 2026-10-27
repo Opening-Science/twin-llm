@@ -136,7 +136,7 @@ describe("scaffoldTool", () => {
       ].join("\n"),
     );
     expect(after[PATHS.trainingToolList]).toContain(
-      '      "cohort_position",\n      "resting_hr_drift",\n      "show_view",',
+      '      "medications_timeline",\n      "resting_hr_drift",\n      "show_view",',
     );
     expect(after[PATHS.questionSet]).toContain(
       "  resting_hr_drift: restingHrDriftInput,\n",

@@ -24,9 +24,9 @@ const view = timeseriesView({
 
 describe("toolTitle", () => {
   test("known tools read in plain words, others from their name", () => {
-    expect(toolTitle("show_view")).toBe("Drew a chart");
-    expect(toolTitle("list_views")).toBe("Listed this thread's charts");
-    expect(toolTitle("open_view")).toBe("Reopened a chart");
+    expect(toolTitle("show_view")).toBe("Showed a view");
+    expect(toolTitle("list_views")).toBe("Listed this thread's views");
+    expect(toolTitle("open_view")).toBe("Reopened a view");
     expect(toolTitle("summary_stats")).toBe("Summarised a measure");
     expect(toolTitle("guideline_search")).toBe("Searched guidelines");
     expect(toolTitle("gbd_population")).toBe("Looked up population data");
@@ -86,6 +86,18 @@ describe("rowCountOf", () => {
     expect(rowCountOf({ baseline: { n: 3 }, target: { n: 4 } })).toBe(7);
     expect(rowCountOf({ window_a: { n: 1 }, window_b: { n: 0 } })).toBe(1);
     expect(rowCountOf(view)).toBe(2);
+    expect(
+      rowCountOf({
+        ...view,
+        kind: "table",
+        spec: {
+          ...view.spec,
+          columns: [{ key: "value", label: "Value", format: "number" }],
+          rows: [{ value: 1 }],
+          total: 120,
+        },
+      }),
+    ).toBe(120);
   });
 
   test("a refusal reads nothing; an unknown shape is unknown, not zero", () => {
@@ -107,12 +119,61 @@ describe("toolCard", () => {
     expect(card).toEqual({
       id: "c1",
       tool: "show_view",
-      title: "Drew a chart",
+      title: "Showed a view",
       args: [{ label: "Measure", value: "8867-4" }],
       state: "refused",
       rowCount: 0,
       note: "A cohort measure needs a subject.",
     });
+  });
+
+  test("a timeline card shows its filters, counts records and words NO_ROWS for records", () => {
+    const input = {
+      subject_ref: "synthetic-subject",
+      start: "2019-01-01",
+      end: "2021-12-31",
+      status: "active",
+      code: "59621000",
+    };
+    const listed = toolCard({
+      toolCallId: "t1",
+      tool: "conditions_timeline",
+      state: "output-available",
+      input,
+      output: { n: 2, conditions: [] },
+    });
+    expect(listed).toEqual({
+      id: "t1",
+      tool: "conditions_timeline",
+      title: "Listed recorded conditions",
+      args: [
+        { label: "Window", value: "1 Jan 2019 – 31 Dec 2021" },
+        { label: "Subject", value: "synthetic-subject" },
+        { label: "Status", value: "active" },
+        { label: "Code", value: "59621000" },
+      ],
+      state: "done",
+      rowCount: 2,
+      note: null,
+    });
+    const none = { code: "NO_ROWS", error: "synthetic-tool-wording" };
+    expect(
+      toolCard({
+        toolCallId: "t2",
+        tool: "medications_timeline",
+        state: "output-available",
+        input,
+        output: none,
+      }).note,
+    ).toBe("No recorded medication request matches in this window.");
+    expect(
+      toolCard({
+        toolCallId: "t3",
+        tool: "range_position",
+        state: "output-available",
+        output: none,
+      }).note,
+    ).toBe("No reading for that measure in this window.");
   });
 
   test("a stored audit count wins over the output's", () => {
@@ -288,7 +349,7 @@ describe("view tool cards", () => {
     ).toEqual({
       id: "c1",
       tool: "list_views",
-      title: "Listed this thread's charts",
+      title: "Listed this thread's views",
       args: [],
       state: "done",
       rowCount: 2,
@@ -308,7 +369,7 @@ describe("view tool cards", () => {
     expect(refused("VIEW_NOT_FOUND")).toEqual({
       id: "c2",
       tool: "open_view",
-      title: "Reopened a chart",
+      title: "Reopened a view",
       args: [{ label: "Chart", value: "view-9" }],
       state: "refused",
       rowCount: 0,

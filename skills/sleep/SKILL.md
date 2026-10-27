@@ -28,6 +28,12 @@ Pick the data first:
   window as `target` and the 30 days before it as `baseline`, and report its medians and
   robust z. Use `summary_stats` or `trend` only if the question asks for them.
 
+**Last week against the weeks before.** When the question sets the last week against the
+person's usual sleep, also call `show_view` with kind `chart.compare`, the same measure
+(and subject, for 93832-4), the last 7 nights as `window` and the 28 nights before them as
+`compare_with`. The view states the n and mean of each window itself; do not work out
+your own means for it.
+
 Nights without data stay empty: never fill a missing night, and never count it as zero.
 Use `knowledge_search` only to explain what the measure is and its limits. Numbers in
 the answer come from tool results or the Available keys, never from memory.
