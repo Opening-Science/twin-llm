@@ -66,6 +66,7 @@ export const PromptBar = ({
   busy,
   skills = [],
   suggestions = null,
+  initialDraft = "",
   onSubmit,
 }: Readonly<{
   catalog: readonly CatalogModel[] | null;
@@ -75,6 +76,8 @@ export const PromptBar = ({
   skills?: readonly Command[];
   /** Shown above the prompt; null once the thread has a turn. */
   suggestions?: SuggestedQuestions | null;
+  /** A `/command ` the search box opened the chat with (`safeDraft`). */
+  initialDraft?: string;
   onSubmit: (
     prompt: string,
     models: readonly ChosenModel[],
@@ -83,7 +86,7 @@ export const PromptBar = ({
 }>) => {
   const router = useRouter();
   const wearables = useWearableStatus();
-  const [draft, setDraft] = useState("");
+  const [draft, setDraft] = useState(initialDraft);
   const [modelIds, setModelIds] = useState<readonly string[]>(initialModelIds);
   const [slashDismissed, setSlashDismissed] = useState(false);
   const [picked, setPicked] = useState<Command | null>(null);

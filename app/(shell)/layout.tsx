@@ -2,10 +2,12 @@ import { Show, UserButton } from "@clerk/nextjs";
 import { cookies } from "next/headers";
 import type { ReactNode } from "react";
 
+import { paletteCommands, skillCommand } from "@/features/commands/registry";
 import { threadsForViewer } from "@/features/shell/load-threads";
 import { ShellFrame } from "@/features/shell/shell-frame";
 import { pinnedFromCookie, SIDEBAR_COOKIE } from "@/features/shell/sidebar-state";
 import { ThreadTitleProvider } from "@/features/shell/thread-title";
+import { runnableSkills } from "@/features/skills/load-skills";
 import { ThemeToggle } from "@/features/theme/theme-toggle";
 import { resolveActorId } from "@/infrastructure/auth-actor";
 import { findAppUserId } from "@/infrastructure/current-user";
@@ -42,6 +44,7 @@ export default async function ShellPagesLayout({
           residency={{ localOnly: LOCAL_ONLY, provider: LLM_PROVIDER }}
           navFooter={<NavFooter />}
           initialPinned={pinned}
+          commands={paletteCommands(runnableSkills().map(skillCommand))}
         >
           {children}
         </ShellFrame>

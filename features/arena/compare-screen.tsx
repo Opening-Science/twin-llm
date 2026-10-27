@@ -44,6 +44,7 @@ export const CompareScreen = ({
   threadId = null,
   initialTurns = [],
   skills = [],
+  initialDraft,
 }: Readonly<{
   catalog: readonly CatalogModel[] | null;
   defaultModelIds: readonly string[];
@@ -51,6 +52,8 @@ export const CompareScreen = ({
   initialTurns?: readonly TurnState[];
   /** Skills the server offers, listed in the palette. */
   skills?: readonly Command[];
+  /** A `/command ` to start the prompt with, from the search box. */
+  initialDraft?: string;
 }>) => {
   const { turns, sending, error, summaries, send, retry } = useConversation(
     threadId,
@@ -132,6 +135,7 @@ export const CompareScreen = ({
         busy={sending}
         skills={skills}
         suggestions={suggestions}
+        initialDraft={initialDraft}
         onSubmit={(prompt, models, skill) => void send(prompt, models, skill)}
       />
     </div>

@@ -5,12 +5,20 @@ import {
   type RefObject,
   useCallback,
   useEffect,
+  useMemo,
   useReducer,
   useRef,
   useState,
 } from "react";
 
+import type { Command } from "@/features/commands/registry";
+import { SearchOpener } from "@/features/search/search-context";
+import type { SearchItem } from "@/features/search/search-model";
+import { useThreadHistory } from "@/infrastructure/thread-history-store";
+
 import { CrossGlyph, SidebarGlyph } from "./glyphs";
+import { isSearchShortcut, SearchDialog } from "./search-dialog";
+import { staticItems } from "./search-items";
 import { NavPanel } from "./nav-panel";
 import { type DataResidency, ResearchFooter } from "./research-footer";
 import {
@@ -21,6 +29,7 @@ import {
   sidebarReducer,
 } from "./sidebar-state";
 import { ThreadBar } from "./thread-bar";
+import { withTouchedThreads } from "./thread-list";
 import type { ThreadGroup } from "./thread-list";
 
 /**
@@ -114,6 +123,7 @@ export const ShellFrame = ({
   navFooter,
   residency,
   initialPinned = false,
+  commands = [],
   children,
 }: Readonly<{
   threadGroups: readonly ThreadGroup[];
@@ -121,8 +131,26 @@ export const ShellFrame = ({
   residency?: DataResidency;
   /** The pinned choice from the cookie, so the server renders the right layout. */
   initialPinned?: boolean;
+  /** The `/` commands the search box lists: built-ins and runnable skills. */
+  commands?: readonly Command[];
   children: ReactNode;
 }>) => {
+  const [searchOpen, setSearchOpen] = useState(false);
+  const { touched } = useThreadHistory();
+  const recents = useMemo<readonly SearchItem[]>(
+    () =>
+      withTouchedThreads(threadGroups, touched)
+        .flatMap((group) => group.threads)
+        .slice(0, 8)
+        .map((thread) => ({
+          kind: "thread",
+          id: thread.id,
+          title: thread.title,
+          href: `/t/${thread.id}`,
+        })),
+    [threadGroups, touched],
+  );
+  const statics = useMemo(() => staticItems(commands), [commands]);
   const [menuOpen, setMenuOpen] = useState(false);
   const [sidebar, dispatch] = useReducer(sidebarReducer, {
     pinned: initialPinned,
@@ -180,6 +208,9 @@ export const ShellFrame = ({
       if (isSidebarShortcut(event)) {
         event.preventDefault();
         toggle();
+      } else if (isSearchShortcut(event)) {
+        event.preventDefault();
+        setSearchOpen(true);
       } else if (event.key === "Escape") {
         dispatch("escape");
       }
@@ -209,72 +240,80 @@ export const ShellFrame = ({
   );
 
   return (
-    <div
-      data-sidebar={sidebar.pinned ? "pinned" : "tucked"}
-      className={`grid h-dvh grid-cols-[minmax(0,1fr)] grid-rows-[minmax(0,1fr)] ${sidebar.pinned ? "lg:grid-cols-[16rem_minmax(0,1fr)]" : ""}`}
-    >
-      <a
-        href="#main"
-        className="bg-background border-border fixed top-3 left-3 z-50 -translate-y-24 rounded-lg border px-3 py-2 text-sm focus:translate-y-0"
+    <SearchOpener open={() => setSearchOpen(true)}>
+      <div
+        data-sidebar={sidebar.pinned ? "pinned" : "tucked"}
+        className={`grid h-dvh grid-cols-[minmax(0,1fr)] grid-rows-[minmax(0,1fr)] ${sidebar.pinned ? "lg:grid-cols-[16rem_minmax(0,1fr)]" : ""}`}
       >
-        Skip to content
-      </a>
-      {sidebar.pinned && (
-        <div className="border-border bg-muted/40 hidden min-h-0 border-r lg:block">
-          <NavPanel
-            threadGroups={threadGroups}
-            footer={navFooter}
-            headerAction={pinButton}
-          />
-        </div>
-      )}
-      <button
-        ref={toggleButton}
-        type="button"
-        aria-label={toggleLabel}
-        aria-expanded={wide ? peeking : menuOpen}
-        title={wide ? `${toggleLabel} (Ctrl+.)` : toggleLabel}
-        onClick={toggle}
-        onPointerEnter={point}
-        onPointerLeave={leave}
-        className="shell-toggle"
-      >
-        <SidebarGlyph className="size-[1.125rem]" />
-      </button>
-      {!pinned && (
-        <div aria-hidden="true" className="shell-edge" onPointerEnter={point} />
-      )}
-      {peeking && (
-        <div className="shell-peek" onPointerEnter={stay} onPointerLeave={leave}>
-          <NavPanel
-            threadGroups={threadGroups}
-            footer={navFooter}
-            headerAction={pinButton}
-            onNavigate={() => dispatch("navigate")}
-          />
-        </div>
-      )}
-      <PhoneMenu
-        open={menuOpen}
-        onClosed={() => setMenuOpen(false)}
-        returnFocusTo={toggleButton}
-      >
-        <NavPanel
-          threadGroups={threadGroups}
-          footer={navFooter}
-          onNavigate={() => setMenuOpen(false)}
-        />
-      </PhoneMenu>
-      <div className="grid min-h-0 min-w-0 grid-cols-[minmax(0,1fr)] grid-rows-[minmax(0,1fr)_auto]">
-        <main
-          id="main"
-          className="shell-main relative flex min-w-0 flex-col overflow-y-auto"
+        <a
+          href="#main"
+          className="bg-background border-border fixed top-3 left-3 z-50 -translate-y-24 rounded-lg border px-3 py-2 text-sm focus:translate-y-0"
         >
-          <ThreadBar />
-          {children}
-        </main>
-        <ResearchFooter residency={residency} />
+          Skip to content
+        </a>
+        {sidebar.pinned && (
+          <div className="border-border bg-muted/40 hidden min-h-0 border-r lg:block">
+            <NavPanel
+              threadGroups={threadGroups}
+              footer={navFooter}
+              headerAction={pinButton}
+            />
+          </div>
+        )}
+        <button
+          ref={toggleButton}
+          type="button"
+          aria-label={toggleLabel}
+          aria-expanded={wide ? peeking : menuOpen}
+          title={wide ? `${toggleLabel} (Ctrl+.)` : toggleLabel}
+          onClick={toggle}
+          onPointerEnter={point}
+          onPointerLeave={leave}
+          className="shell-toggle"
+        >
+          <SidebarGlyph className="size-[1.125rem]" />
+        </button>
+        {!pinned && (
+          <div aria-hidden="true" className="shell-edge" onPointerEnter={point} />
+        )}
+        {peeking && (
+          <div className="shell-peek" onPointerEnter={stay} onPointerLeave={leave}>
+            <NavPanel
+              threadGroups={threadGroups}
+              footer={navFooter}
+              headerAction={pinButton}
+              onNavigate={() => dispatch("navigate")}
+            />
+          </div>
+        )}
+        <PhoneMenu
+          open={menuOpen}
+          onClosed={() => setMenuOpen(false)}
+          returnFocusTo={toggleButton}
+        >
+          <NavPanel
+            threadGroups={threadGroups}
+            footer={navFooter}
+            onNavigate={() => setMenuOpen(false)}
+          />
+        </PhoneMenu>
+        <div className="grid min-h-0 min-w-0 grid-cols-[minmax(0,1fr)] grid-rows-[minmax(0,1fr)_auto]">
+          <main
+            id="main"
+            className="shell-main relative flex min-w-0 flex-col overflow-y-auto"
+          >
+            <ThreadBar />
+            {children}
+          </main>
+          <ResearchFooter residency={residency} />
+        </div>
+        <SearchDialog
+          open={searchOpen}
+          onClose={() => setSearchOpen(false)}
+          recents={recents}
+          statics={statics}
+        />
       </div>
-    </div>
+    </SearchOpener>
   );
 };
