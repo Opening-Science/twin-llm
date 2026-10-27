@@ -38,7 +38,7 @@ describe("openAiToolsFrom", () => {
 
   test("the query tools and view tools are in the slim form the manifest gives models", async () => {
     const tools = await openAiToolsFrom(createChatTools(SCOPE, { query: ports }));
-    expect(tools.slice(0, 12)).toEqual(openaiToolList());
+    expect(tools.slice(0, openaiToolList().length)).toEqual(openaiToolList());
   });
 
   test("the reference tools keep their own schemas", async () => {
