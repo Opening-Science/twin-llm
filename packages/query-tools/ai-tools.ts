@@ -1,5 +1,7 @@
 import { tool } from "ai";
 
+import type { WearableSummaries } from "@/infrastructure/offered-keys";
+
 import {
   baselineDeviationInput,
   compareWindowsInput,
@@ -16,6 +18,10 @@ import {
   cohortPositionInput,
   conditionsTimelineInput,
   medicationsTimelineInput,
+  sleepSummaryInput,
+  hrvTrendInput,
+  restingHrTrendInput,
+  trainingLoadInput,
 } from "./schemas";
 import { modelInputSchema } from "./model-schema";
 import type { QueryToolPorts } from "./ports";
@@ -35,17 +41,29 @@ import {
   runCohortPosition,
   runConditionsTimeline,
   runMedicationsTimeline,
+  runSleepSummary,
+  runHrvTrend,
+  runRestingHrTrend,
+  runTrainingLoad,
 } from "./tools";
+import { NO_WEARABLE_SNAPSHOTS } from "./wearable-readings";
 
 const description = (name: (typeof TOOL_DEFINITIONS)[number]["name"]): string =>
   TOOL_DEFINITIONS.find((definition) => definition.name === name)?.description ?? name;
 
 /**
  * `ports` reaches the analytics tools only (trend, baseline_deviation, coverage,
- * compare_windows); the B1 reads still use the database directly. Left out,
- * every tool uses its default ports, as before.
+ * compare_windows, the wearable tools); the B1 reads still use the database
+ * directly. Left out, every tool uses its default ports, as before.
+ *
+ * `wearables` is the snapshots the turn already loaded (none in synthetic
+ * mode); only the four wearable tools read them.
  */
-export const createQueryTools = (scope: SessionScope, ports?: QueryToolPorts) => ({
+export const createQueryTools = (
+  scope: SessionScope,
+  ports?: QueryToolPorts,
+  wearables: WearableSummaries = NO_WEARABLE_SNAPSHOTS,
+) => ({
   list_subjects: tool({
     description: description("list_subjects"),
     inputSchema: modelInputSchema(listSubjectsInput),
@@ -115,5 +133,25 @@ export const createQueryTools = (scope: SessionScope, ports?: QueryToolPorts) =>
     description: description("medications_timeline"),
     inputSchema: modelInputSchema(medicationsTimelineInput),
     execute: async (input) => runMedicationsTimeline(scope, input, ports),
+  }),
+  sleep_summary: tool({
+    description: description("sleep_summary"),
+    inputSchema: modelInputSchema(sleepSummaryInput),
+    execute: async (input) => runSleepSummary(scope, input, ports, wearables),
+  }),
+  hrv_trend: tool({
+    description: description("hrv_trend"),
+    inputSchema: modelInputSchema(hrvTrendInput),
+    execute: async (input) => runHrvTrend(scope, input, ports, wearables),
+  }),
+  resting_hr_trend: tool({
+    description: description("resting_hr_trend"),
+    inputSchema: modelInputSchema(restingHrTrendInput),
+    execute: async (input) => runRestingHrTrend(scope, input, ports, wearables),
+  }),
+  training_load: tool({
+    description: description("training_load"),
+    inputSchema: modelInputSchema(trainingLoadInput),
+    execute: async (input) => runTrainingLoad(scope, input, ports, wearables),
   }),
 });

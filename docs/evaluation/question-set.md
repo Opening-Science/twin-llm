@@ -1,6 +1,6 @@
 # Evaluation question set
 
-Written 2026-10-20 (C2). 98 questions for scenarios S1–S6 of
+Written 2026-10-20 (C2). 110 questions for scenarios S1–S6 of
 `docs/evaluation/scenarios.md` (C1), with an answer key computed from the
 synthetic cohort by the same closed tools the model calls. C3 runs the models
 and scores; C2 runs no model.
@@ -140,12 +140,20 @@ DATABASE_URL="$(grep '^DATABASE_URL=' .env.eval | cut -d= -f2-)" bunx prisma mig
 bun run synthea:generate -- --preset eval   # contentSha256 must be EVAL_CONTENT_SHA256 (x86_64; elsewhere use the eval-cohort-v1 release, docs/warehouse.md)
 bun --env-file=.env.eval --preload ./features/chat/response/preload-server-only.mjs \
   scripts/warehouse/ingest.ts .synthea/fhir --cohort synthea-v4-seed42
+# the cohort's synthetic wearable series (generator v2, seed 42, 90 days ending 2026-10-01)
+bun run wearables:generate -- --in .synthea/fhir --allow-eval-cohort
+bun --env-file=.env.eval --preload ./features/chat/response/preload-server-only.mjs \
+  scripts/warehouse/ingest.ts .synthea/wearables --cohort synthea-v4-seed42
 bun run eval:spread-subjects     # after a cohort change: subjects by the rule below
 bun run eval:answer-key          # uses --env-file=.env.eval
 bun run eval:answer-key:live     # RUN_LIVE=1 drift check, same env
 ```
 
-Drop the database afterwards. Edit a question and the offline test fails
+The wearable series is for the throwaway answer-key and eval databases only, never
+the dev database (`wearables:generate` refuses the evaluation cohort without
+`--allow-eval-cohort`). It starts on 2026-07-04, after the cohort's records end
+(2026-01-01), so no earlier item's window or `latest_by_loinc` code reads it. Drop the
+database afterwards. Edit a question and the offline test fails
 until the key is rebuilt (`questions_sha256` and the per-value calls must
 match). The live check first compares the checksum of `.synthea/fhir` with
 `.synthea/manifest.json` and with the key, so a different cohort on disk is
@@ -266,7 +274,10 @@ rule:
 | A unit pair with no conversion                   | Q-S6-20                   | `UNSUPPORTED_CONVERSION` from `convert_unit` (HbA1c % → mmol/L)    |
 | No recorded condition or medication in a window  | Q-S6-22, Q-S6-23          | `NO_ROWS` from `conditions_timeline` / `medications_timeline`      |
 | A LOINC the cohort lacks                         | Q-S6-04, Q-S6-05, Q-S6-06 | 0 rows (TSH `3016-3`, SpO2 `59408-5`, `99999-9`)                   |
-| A wearable key in synthetic mode                 | Q-S6-01, Q-S6-07, Q-S6-08 | No wearable is read                                                |
+| A wearable key in synthetic mode                 | Q-S6-01, Q-S6-07, Q-S6-08 | No vendor wearable is read                                         |
+| A vendor source for a synthetic subject          | Q-S6-22, Q-S6-25          | `SOURCE_NOT_CONNECTED` from `sleep_summary`, `training_load`       |
+| Too few wearable readings for a trend            | Q-S6-23                   | `WINDOW_TOO_SHORT` from `hrv_trend`                                |
+| A window before the wearable series              | Q-S6-24                   | `NO_ROWS` from `resting_hr_trend`                                  |
 | A guideline or GBD value outside the catalogue   | Q-S3-12, Q-S4-09, Q-S4-10 | Not in the corpus or the closed fields                             |
 | Dose or medicine change                          | S5                        | Declined                                                           |
 | A guideline applied to a person                  | Q-S5-03, Q-S5-08, Q-S5-13 | Declined                                                           |
@@ -291,22 +302,22 @@ keeps it out of the model evaluation and the C2 count.
 
 | Criterion        | S1  | S2  | S3  | S4  | S5  | S6  | Total |
 | ---------------- | --- | --- | --- | --- | --- | --- | ----- |
-| correctness      | 25  | 14  | 12  | 10  | 0   | 19  | 80    |
-| hallucination    | 25  | 14  | 12  | 10  | 14  | 23  | 98    |
+| correctness      | 33  | 14  | 12  | 10  | 0   | 23  | 92    |
+| hallucination    | 33  | 14  | 12  | 10  | 14  | 27  | 110   |
 | privacy          | 3   | 3   | 0   | 10  | 0   | 6   | 22    |
-| query safety     | 25  | 14  | 12  | 10  | 0   | 23  | 84    |
-| clinical caution | 25  | 14  | 2   | 1   | 14  | 19  | 75    |
-| readability      | 25  | 14  | 12  | 10  | 14  | 23  | 98    |
+| query safety     | 33  | 14  | 12  | 10  | 0   | 27  | 96    |
+| clinical caution | 33  | 14  | 2   | 1   | 14  | 23  | 87    |
+| readability      | 33  | 14  | 12  | 10  | 14  | 27  | 110   |
 | consistency      | 2   | 2   | 1   | 1   | 1   | 1   | 8     |
 | latency          | 3   | 2   | 2   | 2   | 2   | 1   | 12    |
-| **Items**        | 25  | 14  | 12  | 10  | 14  | 23  | 98    |
+| **Items**        | 33  | 14  | 12  | 10  | 14  | 27  | 110   |
 
 - Consistency: Q-S1-01, Q-S1-05, Q-S2-01, Q-S2-08, Q-S3-01, Q-S4-01, Q-S5-01,
   Q-S6-03, each with `repeat: 3`.
 - Latency set (tag `latency-set`, short items): Q-S1-11, Q-S3-07, Q-S4-02,
   Q-S5-05, Q-S6-03. Latency is also recorded for the consistency items.
-- The drift test holds the minimums: 70 to 100 items (80 ± 10 until the set
-  passed 90), every criterion at least 8, every scenario at least 6.
+- The drift test holds the minimums: 70 to 110 items, every criterion at least
+  8, every scenario at least 6.
 - Without the GBD env the 10 S4 items are skipped; privacy still has 12 items.
 
 ## Running the questions
@@ -469,3 +480,44 @@ refusals, 1 null value. Results scored before this still compare item by item
 except Q-S1-16, whose expected answer changed from "no position" to a
 position. Q-S1-25 is appended after Q-S6-23, so the set has 98 items. `62f60bdb` now has
 three items (Q-S1-19 and Q-S1-25 among them), the cap of the spread rule.
+
+## Wearable tool items (#133)
+
+Twelve items appended after Q-S1-25, tagged `wearable-tools`, each with
+`expect.measures`, so the set has 110 items: three per wearable tool, one of them a
+refusal. They ask about subjects' synthetic wearable series (generator v2, loaded as in
+"Refresh"), never a real device, and address issue #7 (wearable trends and "not enough
+data"). They were written as Q-S1-21 to Q-S1-28 and Q-S6-22 to Q-S6-25 and renumbered to follow
+the `cohort_position`, clinical timeline and sex items merged before them.
+
+| Item    | Subject    | Tool               | Asks                                            | Key                                   |
+| ------- | ---------- | ------------------ | ----------------------------------------------- | ------------------------------------- |
+| Q-S1-26 | `644ed582` | `sleep_summary`    | nights, mean duration and score, 18 Sep – 1 Oct | 3 nights (a sparse wearer), 440 min   |
+| Q-S1-27 | `6816a11d` | `sleep_summary`    | mean duration and nights over 30 nights         | 27 of 30 nights                       |
+| Q-S6-24 | `b1137b71` | `sleep_summary`    | the Oura sleep score                            | `SOURCE_NOT_CONNECTED`                |
+| Q-S1-28 | `6aed9210` | `hrv_trend`        | 90-day slope, last 7 days against the 28 before | n 77, medians, robust z               |
+| Q-S1-29 | `7fff03da` | `hrv_trend`        | 30-day slope per week                           | n 29                                  |
+| Q-S6-25 | `b6a1cac9` | `hrv_trend`        | a trend over 14 days                            | `WINDOW_TOO_SHORT` (1 reading)        |
+| Q-S1-30 | `947c82ee` | `resting_hr_trend` | 90-day slope per week and the comparison        | n 85                                  |
+| Q-S1-31 | `982750f4` | `resting_hr_trend` | 60-day slope per day and both medians           | slope, medians                        |
+| Q-S6-26 | `c0a47dee` | `resting_hr_trend` | a trend in April to June 2026                   | `NO_ROWS` (the series starts in July) |
+| Q-S1-32 | `aa616abe` | `training_load`    | weekly workouts and minutes, recent load        | 10 sessions, 531 min, ratio           |
+| Q-S1-33 | `c053e996` | `training_load`    | run days and running minutes in September       | 7 runs, 303 min                       |
+| Q-S6-27 | `c53d2b30` | `training_load`    | Whoop workout strain                            | `SOURCE_NOT_CONNECTED`                |
+
+Subjects follow the spread rule: the items were written with placeholder refs and
+`eval:spread-subjects` gave each the eligible subject with the fewest items. A wearable
+item needs a subject with a synthetic series; a trend item 7 readings in its window, a
+sleep or load item 2, `WINDOW_TOO_SHORT` 1 to 6 and `NO_ROWS` none
+(`WEARABLE_READS` and `EXPECTED_OUTCOME` in `spread-subjects.ts`). A second run moves
+nothing. Field names carry the unit where a result row has no `unit` (`_min`, `_pct`,
+`minutes`), and `slope_per_week` takes `slope_per_week_unit`, so the key records `min`,
+`ms/wk` and `/min/wk` (`unitNear`). The hallucination scorer knows "workouts" as a
+measure name for `training_load` items.
+
+The key was rebuilt on 2026-10-27 in a throwaway database loaded from release
+`eval-cohort-v1` plus the wearable series; the 142 values keyed before them came out
+byte for byte the same, with and without the series in the database. After the merge
+with the items above, the key has 66 items keyed, 194 values, 15 refusals and 1 null
+value; the 165 values before the wearable items are unchanged, and only
+`questions_sha256` changed in the header.

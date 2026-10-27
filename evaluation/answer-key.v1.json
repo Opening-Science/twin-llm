@@ -13,7 +13,7 @@
     "content_sha256": "f4941fab7a56e17f9dd66b6b6e0fbed379dab8c564c6024831c5fd4aa0ba09eb"
   },
   "open_twin_sha": "a9e126c952c91e19e064a962dda7d815a43564e5",
-  "questions_sha256": "016f354084c24db6b5330fcb0171ed59dccd2c6bf575f0b67244467cc4a8ef75",
+  "questions_sha256": "2ae762708b81eb35b7fcf9606c8a81b29930765feef7bb2a4131593ffefc1a5e",
   "actor": "eval-answer-key",
   "generated_on": "2026-10-27",
   "entries": {
@@ -2947,6 +2947,502 @@
         "n": 23,
         "windows": [{ "start": "2016-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
         "refusal": null
+      }
+    ],
+    "Q-S1-26": [
+      {
+        "name": "nights",
+        "tool": "sleep_summary",
+        "args": {
+          "subject_ref": "644ed582-2e59-8b56-564b-9312d1f0d244",
+          "source": "all",
+          "start": "2026-09-18",
+          "end": "2026-10-01"
+        },
+        "path": "sources.0.nights",
+        "value": 3,
+        "unit": null,
+        "n": 6,
+        "windows": [{ "start": "2026-09-18", "end": "2026-10-01" }],
+        "refusal": null
+      },
+      {
+        "name": "mean_duration_min",
+        "tool": "sleep_summary",
+        "args": {
+          "subject_ref": "644ed582-2e59-8b56-564b-9312d1f0d244",
+          "source": "all",
+          "start": "2026-09-18",
+          "end": "2026-10-01"
+        },
+        "path": "sources.0.mean_duration_min",
+        "value": 440,
+        "unit": "min",
+        "n": 6,
+        "windows": [{ "start": "2026-09-18", "end": "2026-10-01" }],
+        "refusal": null
+      },
+      {
+        "name": "mean_score",
+        "tool": "sleep_summary",
+        "args": {
+          "subject_ref": "644ed582-2e59-8b56-564b-9312d1f0d244",
+          "source": "all",
+          "start": "2026-09-18",
+          "end": "2026-10-01"
+        },
+        "path": "sources.0.mean_score",
+        "value": 79,
+        "unit": null,
+        "n": 6,
+        "windows": [{ "start": "2026-09-18", "end": "2026-10-01" }],
+        "refusal": null
+      }
+    ],
+    "Q-S1-27": [
+      {
+        "name": "nights",
+        "tool": "sleep_summary",
+        "args": {
+          "subject_ref": "6816a11d-3700-1d60-8b4d-b7252c529f11",
+          "source": "all",
+          "start": "2026-09-02",
+          "end": "2026-10-01"
+        },
+        "path": "sources.0.nights",
+        "value": 27,
+        "unit": null,
+        "n": 54,
+        "windows": [{ "start": "2026-09-02", "end": "2026-10-01" }],
+        "refusal": null
+      },
+      {
+        "name": "mean_duration_min",
+        "tool": "sleep_summary",
+        "args": {
+          "subject_ref": "6816a11d-3700-1d60-8b4d-b7252c529f11",
+          "source": "all",
+          "start": "2026-09-02",
+          "end": "2026-10-01"
+        },
+        "path": "sources.0.mean_duration_min",
+        "value": 449.6296296296296,
+        "unit": "min",
+        "n": 54,
+        "windows": [{ "start": "2026-09-02", "end": "2026-10-01" }],
+        "refusal": null
+      }
+    ],
+    "Q-S6-24": [
+      {
+        "name": "refusal",
+        "tool": "sleep_summary",
+        "args": {
+          "subject_ref": "b1137b71-d58f-a737-e56f-5021902058ab",
+          "source": "oura",
+          "start": "2026-09-25",
+          "end": "2026-10-01"
+        },
+        "path": "code",
+        "value": "SOURCE_NOT_CONNECTED",
+        "unit": null,
+        "n": 0,
+        "windows": [{ "start": "2026-09-25", "end": "2026-10-01" }],
+        "refusal": "SOURCE_NOT_CONNECTED"
+      }
+    ],
+    "Q-S1-28": [
+      {
+        "name": "n",
+        "tool": "hrv_trend",
+        "args": {
+          "subject_ref": "6aed9210-c500-4375-b0fc-3374c40b8591",
+          "source": "all",
+          "start": "2026-07-04",
+          "end": "2026-10-01"
+        },
+        "path": "sources.0.n",
+        "value": 77,
+        "unit": null,
+        "n": 77,
+        "windows": [{ "start": "2026-07-04", "end": "2026-10-01" }],
+        "refusal": null
+      },
+      {
+        "name": "slope_per_day",
+        "tool": "hrv_trend",
+        "args": {
+          "subject_ref": "6aed9210-c500-4375-b0fc-3374c40b8591",
+          "source": "all",
+          "start": "2026-07-04",
+          "end": "2026-10-01"
+        },
+        "path": "sources.0.slope_per_day",
+        "value": -0.03160184547439976,
+        "unit": "ms/d",
+        "n": 77,
+        "windows": [{ "start": "2026-07-04", "end": "2026-10-01" }],
+        "refusal": null
+      },
+      {
+        "name": "recent_median",
+        "tool": "hrv_trend",
+        "args": {
+          "subject_ref": "6aed9210-c500-4375-b0fc-3374c40b8591",
+          "source": "all",
+          "start": "2026-07-04",
+          "end": "2026-10-01"
+        },
+        "path": "sources.0.recent.median",
+        "value": 67,
+        "unit": "ms",
+        "n": 77,
+        "windows": [{ "start": "2026-07-04", "end": "2026-10-01" }],
+        "refusal": null
+      },
+      {
+        "name": "baseline_median",
+        "tool": "hrv_trend",
+        "args": {
+          "subject_ref": "6aed9210-c500-4375-b0fc-3374c40b8591",
+          "source": "all",
+          "start": "2026-07-04",
+          "end": "2026-10-01"
+        },
+        "path": "sources.0.baseline.median",
+        "value": 62,
+        "unit": "ms",
+        "n": 77,
+        "windows": [{ "start": "2026-07-04", "end": "2026-10-01" }],
+        "refusal": null
+      },
+      {
+        "name": "robust_z",
+        "tool": "hrv_trend",
+        "args": {
+          "subject_ref": "6aed9210-c500-4375-b0fc-3374c40b8591",
+          "source": "all",
+          "start": "2026-07-04",
+          "end": "2026-10-01"
+        },
+        "path": "sources.0.robust_z",
+        "value": 0.8431134493457441,
+        "unit": null,
+        "n": 77,
+        "windows": [{ "start": "2026-07-04", "end": "2026-10-01" }],
+        "refusal": null
+      }
+    ],
+    "Q-S1-29": [
+      {
+        "name": "n",
+        "tool": "hrv_trend",
+        "args": {
+          "subject_ref": "7fff03da-06e1-4c8f-091b-a415e649d0c8",
+          "source": "all",
+          "start": "2026-09-02",
+          "end": "2026-10-01"
+        },
+        "path": "sources.0.n",
+        "value": 29,
+        "unit": null,
+        "n": 29,
+        "windows": [{ "start": "2026-09-02", "end": "2026-10-01" }],
+        "refusal": null
+      },
+      {
+        "name": "slope_per_week",
+        "tool": "hrv_trend",
+        "args": {
+          "subject_ref": "7fff03da-06e1-4c8f-091b-a415e649d0c8",
+          "source": "all",
+          "start": "2026-09-02",
+          "end": "2026-10-01"
+        },
+        "path": "sources.0.slope_per_week",
+        "value": 2.296551724137932,
+        "unit": "ms/wk",
+        "n": 29,
+        "windows": [{ "start": "2026-09-02", "end": "2026-10-01" }],
+        "refusal": null
+      },
+      {
+        "name": "robust_z",
+        "tool": "hrv_trend",
+        "args": {
+          "subject_ref": "7fff03da-06e1-4c8f-091b-a415e649d0c8",
+          "source": "all",
+          "start": "2026-09-02",
+          "end": "2026-10-01"
+        },
+        "path": "sources.0.robust_z",
+        "value": 0.5058680696074465,
+        "unit": null,
+        "n": 29,
+        "windows": [{ "start": "2026-09-02", "end": "2026-10-01" }],
+        "refusal": null
+      }
+    ],
+    "Q-S6-25": [
+      {
+        "name": "refusal",
+        "tool": "hrv_trend",
+        "args": {
+          "subject_ref": "b6a1cac9-8873-36a7-e726-4aad8a07d44d",
+          "source": "all",
+          "start": "2026-09-18",
+          "end": "2026-10-01"
+        },
+        "path": "code",
+        "value": "WINDOW_TOO_SHORT",
+        "unit": null,
+        "n": 0,
+        "windows": [{ "start": "2026-09-18", "end": "2026-10-01" }],
+        "refusal": "WINDOW_TOO_SHORT"
+      }
+    ],
+    "Q-S1-30": [
+      {
+        "name": "n",
+        "tool": "resting_hr_trend",
+        "args": {
+          "subject_ref": "947c82ee-1735-c9ed-8210-38cb93d8070c",
+          "source": "all",
+          "start": "2026-07-04",
+          "end": "2026-10-01"
+        },
+        "path": "sources.0.n",
+        "value": 85,
+        "unit": null,
+        "n": 85,
+        "windows": [{ "start": "2026-07-04", "end": "2026-10-01" }],
+        "refusal": null
+      },
+      {
+        "name": "slope_per_week",
+        "tool": "resting_hr_trend",
+        "args": {
+          "subject_ref": "947c82ee-1735-c9ed-8210-38cb93d8070c",
+          "source": "all",
+          "start": "2026-07-04",
+          "end": "2026-10-01"
+        },
+        "path": "sources.0.slope_per_week",
+        "value": 0.2513470853749711,
+        "unit": "/min/wk",
+        "n": 85,
+        "windows": [{ "start": "2026-07-04", "end": "2026-10-01" }],
+        "refusal": null
+      },
+      {
+        "name": "recent_median",
+        "tool": "resting_hr_trend",
+        "args": {
+          "subject_ref": "947c82ee-1735-c9ed-8210-38cb93d8070c",
+          "source": "all",
+          "start": "2026-07-04",
+          "end": "2026-10-01"
+        },
+        "path": "sources.0.recent.median",
+        "value": 68,
+        "unit": "/min",
+        "n": 85,
+        "windows": [{ "start": "2026-07-04", "end": "2026-10-01" }],
+        "refusal": null
+      },
+      {
+        "name": "robust_z",
+        "tool": "resting_hr_trend",
+        "args": {
+          "subject_ref": "947c82ee-1735-c9ed-8210-38cb93d8070c",
+          "source": "all",
+          "start": "2026-07-04",
+          "end": "2026-10-01"
+        },
+        "path": "sources.0.robust_z",
+        "value": 0,
+        "unit": null,
+        "n": 85,
+        "windows": [{ "start": "2026-07-04", "end": "2026-10-01" }],
+        "refusal": null
+      }
+    ],
+    "Q-S1-31": [
+      {
+        "name": "slope_per_day",
+        "tool": "resting_hr_trend",
+        "args": {
+          "subject_ref": "982750f4-569b-5949-196b-60699bdda3fb",
+          "source": "all",
+          "start": "2026-08-03",
+          "end": "2026-10-01"
+        },
+        "path": "sources.0.slope_per_day",
+        "value": 0.029216781036263125,
+        "unit": "/min/d",
+        "n": 53,
+        "windows": [{ "start": "2026-08-03", "end": "2026-10-01" }],
+        "refusal": null
+      },
+      {
+        "name": "recent_median",
+        "tool": "resting_hr_trend",
+        "args": {
+          "subject_ref": "982750f4-569b-5949-196b-60699bdda3fb",
+          "source": "all",
+          "start": "2026-08-03",
+          "end": "2026-10-01"
+        },
+        "path": "sources.0.recent.median",
+        "value": 67,
+        "unit": "/min",
+        "n": 53,
+        "windows": [{ "start": "2026-08-03", "end": "2026-10-01" }],
+        "refusal": null
+      },
+      {
+        "name": "baseline_median",
+        "tool": "resting_hr_trend",
+        "args": {
+          "subject_ref": "982750f4-569b-5949-196b-60699bdda3fb",
+          "source": "all",
+          "start": "2026-08-03",
+          "end": "2026-10-01"
+        },
+        "path": "sources.0.baseline.median",
+        "value": 68,
+        "unit": "/min",
+        "n": 53,
+        "windows": [{ "start": "2026-08-03", "end": "2026-10-01" }],
+        "refusal": null
+      }
+    ],
+    "Q-S6-26": [
+      {
+        "name": "refusal",
+        "tool": "resting_hr_trend",
+        "args": {
+          "subject_ref": "c0a47dee-cc72-29ce-df5a-ea6d306c36a4",
+          "source": "all",
+          "start": "2026-04-01",
+          "end": "2026-06-30"
+        },
+        "path": "code",
+        "value": "NO_ROWS",
+        "unit": null,
+        "n": 0,
+        "windows": [{ "start": "2026-04-01", "end": "2026-06-30" }],
+        "refusal": "NO_ROWS"
+      }
+    ],
+    "Q-S1-32": [
+      {
+        "name": "sessions",
+        "tool": "training_load",
+        "args": {
+          "subject_ref": "aa616abe-1761-0c9a-7959-07544679dafd",
+          "source": "all",
+          "aggregation": "week",
+          "start": "2026-08-31",
+          "end": "2026-09-27"
+        },
+        "path": "sources.0.sessions",
+        "value": 10,
+        "unit": null,
+        "n": 10,
+        "windows": [{ "start": "2026-08-31", "end": "2026-09-27" }],
+        "refusal": null
+      },
+      {
+        "name": "minutes",
+        "tool": "training_load",
+        "args": {
+          "subject_ref": "aa616abe-1761-0c9a-7959-07544679dafd",
+          "source": "all",
+          "aggregation": "week",
+          "start": "2026-08-31",
+          "end": "2026-09-27"
+        },
+        "path": "sources.0.minutes",
+        "value": 531,
+        "unit": "min",
+        "n": 10,
+        "windows": [{ "start": "2026-08-31", "end": "2026-09-27" }],
+        "refusal": null
+      },
+      {
+        "name": "recent_load_ratio",
+        "tool": "training_load",
+        "args": {
+          "subject_ref": "aa616abe-1761-0c9a-7959-07544679dafd",
+          "source": "all",
+          "aggregation": "week",
+          "start": "2026-08-31",
+          "end": "2026-09-27"
+        },
+        "path": "sources.0.recent_load.ratio",
+        "value": 0.5967503692762186,
+        "unit": null,
+        "n": 10,
+        "windows": [{ "start": "2026-08-31", "end": "2026-09-27" }],
+        "refusal": null
+      }
+    ],
+    "Q-S1-33": [
+      {
+        "name": "sessions",
+        "tool": "training_load",
+        "args": {
+          "subject_ref": "c053e996-a4c4-6c02-e2b6-284227156c67",
+          "source": "all",
+          "aggregation": "day",
+          "sport": "running",
+          "start": "2026-09-01",
+          "end": "2026-09-30"
+        },
+        "path": "sources.0.sessions",
+        "value": 7,
+        "unit": null,
+        "n": 7,
+        "windows": [{ "start": "2026-09-01", "end": "2026-09-30" }],
+        "refusal": null
+      },
+      {
+        "name": "minutes",
+        "tool": "training_load",
+        "args": {
+          "subject_ref": "c053e996-a4c4-6c02-e2b6-284227156c67",
+          "source": "all",
+          "aggregation": "day",
+          "sport": "running",
+          "start": "2026-09-01",
+          "end": "2026-09-30"
+        },
+        "path": "sources.0.minutes",
+        "value": 303,
+        "unit": "min",
+        "n": 7,
+        "windows": [{ "start": "2026-09-01", "end": "2026-09-30" }],
+        "refusal": null
+      }
+    ],
+    "Q-S6-27": [
+      {
+        "name": "refusal",
+        "tool": "training_load",
+        "args": {
+          "subject_ref": "c53d2b30-e23b-ae02-ed09-833abd033a39",
+          "source": "whoop",
+          "aggregation": "week",
+          "start": "2026-09-21",
+          "end": "2026-09-27"
+        },
+        "path": "code",
+        "value": "SOURCE_NOT_CONNECTED",
+        "unit": null,
+        "n": 0,
+        "windows": [{ "start": "2026-09-21", "end": "2026-09-27" }],
+        "refusal": "SOURCE_NOT_CONNECTED"
       }
     ]
   }

@@ -1,0 +1,17 @@
+{
+  "question": "How did I sleep over the last 7 nights?",
+  "dataMode": "personal",
+  "wearableContext": true,
+  "script": [
+    {
+      "tool": "sleep_summary",
+      "input": { "source": "all", "start": "2026-09-24", "end": "2026-09-30" }
+    },
+    { "view": "chart.timeseries" }
+  ],
+  "expect": {
+    "calls": ["sleep_summary"],
+    "views": ["chart.timeseries"],
+    "refusals": []
+  }
+}
