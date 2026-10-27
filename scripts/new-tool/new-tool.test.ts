@@ -118,7 +118,7 @@ describe("scaffoldTool", () => {
       "| `resting_hr_drift` | `subject_ref`, `loinc`, `start`, `end` | TODO: the output fields | 5000 |",
     );
     expect(after[PATHS.knowledgeSources]).toContain(
-      '  "compare_windows",\n  "resting_hr_drift",\n] as const satisfies',
+      '  "range_position",\n  "resting_hr_drift",\n] as const satisfies',
     );
     expect(after[PATHS.knowledgeSourcesTest]).toContain(
       [
@@ -127,13 +127,14 @@ describe("scaffoldTool", () => {
         '      "compare_windows",',
         '      "coverage",',
         '      "gbd_population",',
+        '      "range_position",',
         '      "resting_hr_drift",',
         '      "trend",',
         "    ]);",
       ].join("\n"),
     );
     expect(after[PATHS.trainingToolList]).toContain(
-      '      "compare_windows",\n      "resting_hr_drift",\n      "show_view",',
+      '      "range_position",\n      "resting_hr_drift",\n      "show_view",',
     );
     expect(after[PATHS.questionSet]).toContain(
       "  resting_hr_drift: restingHrDriftInput,\n",

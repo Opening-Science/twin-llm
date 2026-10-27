@@ -53,6 +53,10 @@ Biomarkers). The Demo body shows only this tab, since it has no scan.
   atlas.") and, before anyone has moved past the scan, "Move Depth past the scan to
   see it." The highlight never moves the depth (G1).
 - Rows light on select only, not on hover.
+- The range line and the position come from `rangeChoice` and `placeValue`
+  (`packages/biomarkers/range-choice.ts`). The chat tool `range_position`
+  (`docs/query-layer.md`) calls the same two, so a value sits in the same place
+  in chat as on this tab.
 
 ## Lab values for the Demo body
 

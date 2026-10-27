@@ -107,6 +107,8 @@ export const rowCountOf = (tool: KeyedTool, result: unknown): number => {
       return numberAt(result, "baseline.n") + numberAt(result, "target.n");
     case "compare_windows":
       return numberAt(result, "window_a.n") + numberAt(result, "window_b.n");
+    case "range_position":
+      return numberAt(result, "n");
     case "latest_by_loinc":
       return lengthAt(result, "rows");
     case "coverage": {
@@ -370,6 +372,8 @@ export const realPorts = async (today: string): Promise<AnswerKeyPorts> => {
         return tools.runCoverage(scope, KEYED_TOOLS.coverage.parse(args));
       case "compare_windows":
         return tools.runCompareWindows(scope, KEYED_TOOLS.compare_windows.parse(args));
+      case "range_position":
+        return tools.runRangePosition(scope, KEYED_TOOLS.range_position.parse(args));
       case "latest_by_loinc":
         return tools.runLatestByLoinc(scope, KEYED_TOOLS.latest_by_loinc.parse(args));
       case "summary_stats":

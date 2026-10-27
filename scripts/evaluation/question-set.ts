@@ -17,6 +17,7 @@ import {
   latestByLoincInput,
   summaryStatsInput,
   trendInput,
+  rangePositionInput,
 } from "../../packages/query-tools/schemas";
 
 export const COHORT_ID = "synthea-v4-seed42";
@@ -48,6 +49,7 @@ export const KEYED_TOOLS = {
   compare_windows: compareWindowsInput,
   latest_by_loinc: latestByLoincInput,
   summary_stats: summaryStatsInput,
+  range_position: rangePositionInput,
 } as const;
 
 export type KeyedTool = keyof typeof KEYED_TOOLS;
@@ -65,6 +67,7 @@ export const AUDIT_TOOL_NAMES = [
   "baseline_deviation",
   "coverage",
   "compare_windows",
+  "range_position",
   "guidelines.guideline_search",
   "knowledge.knowledge_search",
   "gbd.gbd_query",

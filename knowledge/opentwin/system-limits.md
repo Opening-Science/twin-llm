@@ -24,6 +24,9 @@ synthetic warehouse and return the result:
   baseline MAD. `null` when the MAD is 0 or a window is empty.
 - `coverage`: days with data, coverage ratio and the longest gap in days.
 - `compare_windows`: n, mean, median, min and max for two windows, and B minus A.
+- `range_position`: one reading against its Anchor v3 published range: below, within or
+  above it. When the range depends on sex, age or timing, which the warehouse does not
+  hold, the position is `null` and `depends_on` names the facts.
 
 A slope or z value describes the rows, not the cause behind them.
 
@@ -35,6 +38,8 @@ A slope or z value describes the rows, not the cause behind them.
 - `SUBJECT_SCOPE_VIOLATION`: the subject is not in this session's scope (in personal
   mode the warehouse scope is empty).
 - Guideline and knowledge search return at most 8 passages per call.
+- `range_position` also refuses `NO_ROWS` (no reading), `NO_PUBLISHED_RANGE` (Anchor v3
+  has no range for the code) and `UNIT_MISMATCH` (the reading's unit is not the range's).
 
 A refused call is still written to the audit log, with 0 rows.
 
