@@ -12,6 +12,15 @@
       "input": {
         "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
         "source": "all",
+        "start": "2026-07-20",
+        "end": "2026-10-17"
+      }
+    },
+    {
+      "tool": "hrv_trend",
+      "input": {
+        "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+        "source": "all",
         "start": "2026-08-28",
         "end": "2026-10-01"
       }
@@ -46,20 +55,18 @@
     },
     {
       "view": "chart.timeseries"
-    },
-    {
-      "view": "chart.timeseries"
     }
   ],
   "expect": {
     "calls": [
       "subject_window",
       "hrv_trend",
+      "hrv_trend",
       "resting_hr_trend",
       "sleep_summary",
       "training_load"
     ],
-    "views": ["chart.timeseries", "chart.timeseries"],
+    "views": ["chart.timeseries"],
     "refusals": []
   }
 }

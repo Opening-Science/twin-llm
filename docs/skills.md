@@ -141,7 +141,9 @@ previous four weeks), and reads the vendor's readiness or recovery score from th
 Available keys. A weekly review adds `chart.timeseries` charts. Every number names its
 source; sources are never pooled. With no linked wearable and no synthetic subject it
 says so in one sentence and stops. In synthetic mode it reads a named subject's synthetic
-series (`subject_window` finds the end day).
+series; a date in the question, or `subject_window` and a first `hrv_trend`, give the day
+that series ends. The chat stops after 8 steps, so a weekly review draws at most two
+charts (one for a synthetic subject).
 
 Its instructions rule out a training plan or suggestion ("push", "steady", "recover",
 "you should"), injury or illness prediction, a label for the person's state and medical
