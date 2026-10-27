@@ -80,7 +80,7 @@ const harness = (
       return wearables;
     },
     loadDisabledSources: async () => ["gbd"],
-    findSkill: (name) => (name === SLEEP.name ? (options.skill ?? SLEEP) : null),
+    findSkill: async (name) => (name === SLEEP.name ? (options.skill ?? SLEEP) : null),
     appendAudit: async (input) => {
       calls.push("audit");
       if (options.auditFails) throw new Error("audit-down");
