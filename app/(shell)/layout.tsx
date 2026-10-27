@@ -1,8 +1,10 @@
 import { Show, UserButton } from "@clerk/nextjs";
+import { cookies } from "next/headers";
 import type { ReactNode } from "react";
 
 import { threadsForViewer } from "@/features/shell/load-threads";
 import { ShellFrame } from "@/features/shell/shell-frame";
+import { pinnedFromCookie, SIDEBAR_COOKIE } from "@/features/shell/sidebar-state";
 import { ThreadTitleProvider } from "@/features/shell/thread-title";
 import { ThemeToggle } from "@/features/theme/theme-toggle";
 import { resolveActorId } from "@/infrastructure/auth-actor";
@@ -31,6 +33,7 @@ export default async function ShellPagesLayout({
 }: Readonly<{ children: ReactNode }>) {
   const { LOCAL_ONLY, LLM_PROVIDER } = serverEnv();
   const threadGroups = await threadsForViewer(resolveActorId, findAppUserId);
+  const pinned = pinnedFromCookie((await cookies()).get(SIDEBAR_COOKIE)?.value);
   return (
     <RecentThreads>
       <ThreadTitleProvider>
@@ -38,6 +41,7 @@ export default async function ShellPagesLayout({
           threadGroups={threadGroups}
           residency={{ localOnly: LOCAL_ONLY, provider: LLM_PROVIDER }}
           navFooter={<NavFooter />}
+          initialPinned={pinned}
         >
           {children}
         </ShellFrame>

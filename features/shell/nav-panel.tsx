@@ -133,10 +133,13 @@ const SignInNote = () => (
 export const NavPanel = ({
   threadGroups,
   footer,
+  headerAction,
   onNavigate,
 }: Readonly<{
   threadGroups: readonly ThreadGroup[];
   footer: ReactNode;
+  /** Beside the wordmark: the button that pins or hides the sidebar. */
+  headerAction?: ReactNode;
   onNavigate?: () => void;
 }>) => {
   const path = usePathname();
@@ -159,9 +162,12 @@ export const NavPanel = ({
       onClick={followLinks}
       className="grid h-full grid-cols-[minmax(0,1fr)] grid-rows-[auto_auto_minmax(0,1fr)_auto]"
     >
-      <Link href="/" className="font-display px-5 pt-5 pb-4 text-xl tracking-tight">
-        TwinLLM
-      </Link>
+      <div className="flex items-center justify-between gap-2 pt-3 pr-3 pb-2 pl-5">
+        <Link href="/" className="font-display py-2 text-xl tracking-tight">
+          TwinLLM
+        </Link>
+        {headerAction}
+      </div>
 
       <nav aria-label="Sections" className="px-3">
         {SECTIONS.map(({ href, label, Glyph, owns }) => (
