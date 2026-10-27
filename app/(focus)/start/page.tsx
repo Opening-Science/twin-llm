@@ -14,6 +14,7 @@ import {
   isAuthDisabled,
   serverEnv,
 } from "@/infrastructure/env";
+import { genomeChatPermit } from "@/infrastructure/genome-gate";
 import { isLoopbackUrl } from "@/infrastructure/loopback";
 
 import { loadConnectFacts } from "../../api/onboarding/connect-facts";
@@ -50,6 +51,7 @@ export default async function StartPage() {
         guidelineDocuments: documents.guidelines,
         knowledgeDocuments: documents.knowledge,
         gbdConfigured: gbdEnv() !== null,
+        genomeChat: genomeChatPermit().ok,
       })}
       residency={{
         localOnly: env.LOCAL_ONLY,

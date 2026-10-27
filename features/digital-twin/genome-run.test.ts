@@ -1,0 +1,260 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
+import { describe, expect, test } from "bun:test";
+
+import type { AppendInput } from "@/packages/audit/append";
+import type {
+  NewGenomeReport,
+  StoredGenomeReport,
+} from "@/infrastructure/genome-report-store";
+import type { ArkAppRunInput, ArkAuditContext } from "@/packages/ark-adapter";
+
+import {
+  arkBuildOf,
+  getGenomeReportResponse,
+  type GenomeRunPorts,
+  postGenomeRunResponse,
+} from "./genome-run";
+
+const PRESENT = readFileSync(
+  join(import.meta.dir, "../../apps/ark/rsid-genotypes/goldens/present.tsv"),
+  "utf8",
+);
+
+const listed = (build: string | null) => ({
+  slots: [
+    { slot: 1, name: "reference-genome", state: "filled", build: "GRCh38" },
+    { slot: 3, name: "snp-indel-calls", state: "filled", build },
+  ],
+});
+
+type Recorder = {
+  runs: ArkAppRunInput[];
+  saved: NewGenomeReport[];
+  audits: AppendInput[];
+  contexts: ArkAuditContext[];
+};
+
+const fakePorts = (
+  overrides: Partial<GenomeRunPorts> = {},
+): { ports: Partial<GenomeRunPorts>; seen: Recorder } => {
+  const seen: Recorder = { runs: [], saved: [], audits: [], contexts: [] };
+  const ports: Partial<GenomeRunPorts> = {
+    resolveActorId: async () => "local",
+    permit: () => ({ ok: true }),
+    assumeBuild: () => null,
+    wasmPath: () => "/repo/apps/ark/rsid-genotypes/build/rsid-genotypes.wasm",
+    wasmExists: async () => true,
+    sessionId: () => "session-1",
+    dataList: async (ctx) => {
+      seen.contexts.push(ctx);
+      return { status: "ok", data: listed("GRCh38") };
+    },
+    appRun: async (_ctx, input) => {
+      seen.runs.push(input);
+      return { status: "ok", data: { report: PRESENT } };
+    },
+    ensureUserId: async () => "user-1",
+    latest: async () => null,
+    save: async (input): Promise<StoredGenomeReport> => {
+      seen.saved.push(input);
+      return {
+        id: "report-1",
+        app: "rsid-genotypes",
+        arkBuild: input.arkBuild,
+        rows: input.rows,
+        releasedAt: "2026-10-27T09:00:00.000Z",
+      };
+    },
+    audit: async (input) => {
+      seen.audits.push(input);
+      return undefined;
+    },
+    ...overrides,
+  };
+  return { ports, seen };
+};
+
+describe("POST /api/genome/run", () => {
+  test("runs rsid-genotypes with the panel grants, stores and shows the report", async () => {
+    const { ports, seen } = fakePorts();
+    const response = await postGenomeRunResponse(ports);
+    const body = (await response.json()) as {
+      ok: boolean;
+      report: {
+        rows: { rsid: string; gene: string; allele: string; genotype: string }[];
+      };
+    };
+    expect(response.status).toBe(200);
+    expect(seen.runs).toEqual([
+      {
+        app: "/repo/apps/ark/rsid-genotypes/build/rsid-genotypes.wasm",
+        grants: [
+          "v1/genome/rsids/rs4244285",
+          "v1/genome/rsids/rs4986893",
+          "v1/genome/rsids/rs12248560",
+          "v1/genome/rsids/rs1799853",
+          "v1/genome/rsids/rs1057910",
+          "v1/genome/rsids/rs3892097",
+          "v1/genome/rsids/rs1065852",
+          "v1/genome/rsids/rs4149056",
+          "v1/genome/rsids/rs3918290",
+          "v1/genome/rsids/rs1142345",
+          "v1/genome/rsids/rs9923231",
+        ],
+        timeout: 30,
+      },
+    ]);
+    expect(seen.saved[0]?.arkBuild).toBe("GRCh38");
+    expect(seen.saved[0]?.report).toBe(PRESENT);
+    expect(body.ok).toBe(true);
+    expect(body.report.rows[0]).toEqual({
+      rsid: "rs4244285",
+      gene: "CYP2C19",
+      allele: "*2",
+      chromosome: "chr10",
+      position: 94781859,
+      reference: "G",
+      genotype: "A/G",
+    } as never);
+  });
+
+  test("the store audit row has counts only, no genotype or report text", async () => {
+    const { ports, seen } = fakePorts();
+    await postGenomeRunResponse(ports);
+    expect(seen.audits).toEqual([
+      {
+        actor: "local",
+        sessionId: "session-1",
+        subjectRef: null,
+        tool: "genome.report.store",
+        args: { app: "rsid-genotypes", grants: 11 },
+        result: {
+          stored: true,
+          report_id: "report-1",
+          rows: 11,
+          calls: 11,
+          build_named: true,
+        },
+        rowCount: 11,
+      },
+    ]);
+    expect(JSON.stringify(seen.audits)).not.toContain("A/G");
+  });
+
+  test("a declined approval stores nothing and says so", async () => {
+    const { ports, seen } = fakePorts({
+      appRun: async () => ({
+        status: "refused",
+        error: { code: "approval-denied", message: "denied" },
+      }),
+    });
+    const response = await postGenomeRunResponse(ports);
+    expect(await response.json()).toEqual({
+      ok: false,
+      code: "refused",
+      message: "The run was declined on your phone. Nothing was released.",
+    });
+    expect(seen.saved).toEqual([]);
+  });
+
+  test("a busy Ark asks to close the Hub tab", async () => {
+    const { ports } = fakePorts({
+      dataList: async () => ({
+        status: "busy",
+        error: { code: "device-busy", message: "busy" },
+      }),
+    });
+    const body = (await (await postGenomeRunResponse(ports)).json()) as {
+      message: string;
+    };
+    expect(body.message).toBe("The Ark is busy. Close the Ark Hub tab and run again.");
+  });
+
+  test("a released text that is not the report is refused and audited as not stored", async () => {
+    const { ports, seen } = fakePorts({
+      appRun: async () => ({ status: "ok", data: { report: "# Something else\n" } }),
+    });
+    const response = await postGenomeRunResponse(ports);
+    expect(response.status).toBe(502);
+    expect(seen.saved).toEqual([]);
+    expect(seen.audits.map((row) => row.result)).toEqual([{ stored: false }]);
+  });
+
+  test("not built, not permitted, not signed in: no Ark call at all", async () => {
+    const cases: readonly [Partial<GenomeRunPorts>, number, string][] = [
+      [{ wasmExists: async () => false }, 409, "app-not-built"],
+      [
+        {
+          permit: () => ({
+            ok: false,
+            code: "GENOME_NOT_PERMITTED",
+            reason: "data-mode-not-personal",
+          }),
+        },
+        403,
+        "not-permitted",
+      ],
+      [{ resolveActorId: async () => null }, 401, "sign-in"],
+    ];
+    for (const [override, status, code] of cases) {
+      const { ports, seen } = fakePorts(override);
+      const response = await postGenomeRunResponse(ports);
+      expect([
+        response.status,
+        ((await response.json()) as { code: string }).code,
+      ]).toEqual([status, code]);
+      expect([seen.contexts.length, seen.runs.length]).toEqual([0, 0]);
+    }
+  });
+});
+
+describe("GET /api/genome/report", () => {
+  test("off unless the genome run is permitted", async () => {
+    const { ports } = fakePorts({
+      permit: () => ({
+        ok: false,
+        code: "GENOME_NOT_PERMITTED",
+        reason: "genome-source-not-ark",
+      }),
+    });
+    expect(await (await getGenomeReportResponse(ports)).json()).toEqual({
+      enabled: false,
+    });
+  });
+
+  test("enabled with no stored report yet", async () => {
+    const { ports } = fakePorts();
+    expect(await (await getGenomeReportResponse(ports)).json()).toEqual({
+      enabled: true,
+      report: null,
+    });
+  });
+
+  test("a stored report without a named build says windows are refused", async () => {
+    const { ports } = fakePorts({
+      latest: async () => ({
+        id: "report-1",
+        app: "rsid-genotypes",
+        arkBuild: null,
+        rows: [],
+        releasedAt: "2026-10-27T09:00:00.000Z",
+      }),
+    });
+    const body = (await (await getGenomeReportResponse(ports)).json()) as {
+      report: { buildNote: string };
+    };
+    expect(body.report.buildNote).toBe(
+      "The Ark named no build, so Carbon-X windows are refused",
+    );
+  });
+});
+
+describe("arkBuildOf", () => {
+  test("the call slot's build first, then the reference slot's", () => {
+    expect(arkBuildOf(listed("hg38"))).toBe("hg38");
+    expect(arkBuildOf(listed(null))).toBe("GRCh38");
+    expect(arkBuildOf({ slots: [] })).toBe(null);
+  });
+});

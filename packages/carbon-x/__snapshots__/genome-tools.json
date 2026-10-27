@@ -1,0 +1,38 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "genome_report",
+      "description": "Read the owner's released Ark rsid-genotypes report: each panel site with its gene, star allele, position and genotype or no call. Research use only.",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "dna_ask",
+      "description": "Ask Carbon-X, a local research DNA model, about one variant in the released report. The server builds the DNA windows from the public GRCh38 reference and the recorded genotype; give only the rsID. The answer is labelled as a research model's and is never clinical or dosing advice.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "rsid": {
+            "type": "string",
+            "description": "An rsID from the released genome report, such as rs4244285"
+          },
+          "question": {
+            "description": "What to ask about this variant; left out, a description of its effect",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          }
+        },
+        "required": ["rsid"],
+        "additionalProperties": false
+      }
+    }
+  }
+]

@@ -52,6 +52,7 @@ describe("source availability", () => {
         guidelineDocuments: 0,
         knowledgeDocuments: 5,
         gbdConfigured: false,
+        genomeChat: false,
       }),
     ).toEqual({
       guidelines: { available: false, note: "Not indexed yet" },
@@ -59,16 +60,33 @@ describe("source availability", () => {
       "cohort-records": { available: false, note: "Synthetic data mode only" },
       "cohort-analytics": { available: false, note: "Synthetic data mode only" },
       gbd: { available: false, note: "Pending IHME's OK" },
+      "ark-genome": { available: false, note: "Needs Ark and local Carbon-X" },
     });
   });
 
-  test("synthetic mode with indexes and GBD makes every source usable", () => {
+  test("synthetic mode with indexes and GBD makes every source but the genome usable", () => {
     const all = sourceAvailability({
       dataMode: "synthetic",
       guidelineDocuments: 12,
       knowledgeDocuments: 5,
       gbdConfigured: true,
+      genomeChat: false,
     });
-    expect(Object.values(all).every((item) => item.available)).toBe(true);
+    expect(
+      Object.entries(all)
+        .filter(([, item]) => !item.available)
+        .map(([id]) => id),
+    ).toEqual(["ark-genome"]);
+  });
+
+  test("the genome source is usable when the genome policy allows chat", () => {
+    const all = sourceAvailability({
+      dataMode: "personal",
+      guidelineDocuments: 0,
+      knowledgeDocuments: 0,
+      gbdConfigured: false,
+      genomeChat: true,
+    });
+    expect(all["ark-genome"]).toEqual({ available: true, note: null });
   });
 });

@@ -1,0 +1,17 @@
+{
+  "question": "What does my released genome report say?",
+  "provider": "ollama",
+  "dataMode": "personal",
+  "genomeSource": "ark",
+  "script": [
+    { "tool": "genome_report", "input": {} },
+    { "tool": "dna_ask", "input": { "rsid": "rs4244285" } },
+    { "tool": "dna_ask", "input": { "rsid": "rs12248560" } },
+    { "tool": "dna_ask", "input": { "rsid": "rs9923231" } }
+  ],
+  "expect": {
+    "calls": ["genome_report", "dna_ask", "dna_ask", "dna_ask"],
+    "views": [],
+    "refusals": []
+  }
+}

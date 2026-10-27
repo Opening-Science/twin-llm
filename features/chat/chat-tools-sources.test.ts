@@ -80,8 +80,13 @@ const sentTo = async (
 describe("chat tools and knowledge sources", () => {
   test("every chat tool but the view tools is owned by exactly one source", () => {
     const owned = ALL_KNOWLEDGE_SOURCES.flatMap((source) => source.tools);
+    // The genome tools are owned too, but only a genome-permitted turn gets them.
     expect([...owned, "show_view", "list_views", "open_view"].sort()).toEqual(
-      Object.keys(createChatTools(SCOPE, { query: ports })).sort(),
+      [
+        ...Object.keys(createChatTools(SCOPE, { query: ports })),
+        "dna_ask",
+        "genome_report",
+      ].sort(),
     );
     expect(new Set(owned).size).toBe(owned.length);
   });

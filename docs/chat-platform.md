@@ -65,7 +65,7 @@ An in-app Docs page rendering `docs/`: how the twin works, where data goes, what
 ## Research
 
 - Pilot 2 fine-tuning: #31. Pilot 1 learned the templates but reported another code's value for measures it did not know, so pilot 2 adds paraphrases, no-data and unit cases, held-out templates and the app's twelve tools. Later the generator also emits `show_view` and skill conversations.
-- Carbon-X as a local DNA helper: #58. Research track for this funding period; the download waits for Peter.
+- Carbon-X as a local DNA helper: #58. Research track for this funding period; the download waits for Peter. Since #105 the app side exists: the Ark report on the Digital Twin page, `genome_report` and `dna_ask` (personal mode with local Ollama and the local sidecar only) and `/genome` ([genome.md](genome.md)).
 - Own gait and text-to-motion: #59.
 - A `python/` workspace with uv for training, sidecars and analysis: #60.
 - LaminDB for lineage of the research pipeline: looked at, not now.

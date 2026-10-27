@@ -1,3 +1,4 @@
+import { DNA_ASK_TOOL, GENOME_REPORT_TOOL } from "@/packages/carbon-x/constants";
 import { GBD_MODEL_TOOL } from "@/packages/gbd-mcp/constants";
 import { GUIDELINE_MODEL_TOOL } from "@/packages/guidelines/constants";
 import { KNOWLEDGE_MODEL_TOOL } from "@/packages/knowledge/constants";
@@ -22,6 +23,7 @@ export const KNOWLEDGE_SOURCE_IDS = [
   "cohort-records",
   "cohort-analytics",
   "gbd",
+  "ark-genome",
 ] as const;
 
 export type KnowledgeSourceId = (typeof KNOWLEDGE_SOURCE_IDS)[number];
@@ -112,6 +114,20 @@ export const KNOWLEDGE_SOURCE_GROUPS: readonly KnowledgeSourceGroup[] = [
         label: "IHME GBD estimates",
         description: "Population estimates from the Global Burden of Disease study.",
         tools: [GBD_MODEL_TOOL],
+      },
+    ],
+  },
+  {
+    id: "genome",
+    label: "Your genome",
+    description: "Personal data mode on this machine only. Never sent to a hosted model.",
+    sources: [
+      {
+        id: "ark-genome",
+        label: "Released Ark report and Carbon-X",
+        description:
+          "The rsid-genotypes report you released from your Ark, and the local Carbon-X research model for one variant at a time.",
+        tools: [GENOME_REPORT_TOOL, DNA_ASK_TOOL],
       },
     ],
   },

@@ -38,6 +38,12 @@ import { isLoopbackUrl } from "./loopback";
 /** How long a cloud model may stay silent before the first byte of its answer. */
 export const DEFAULT_FIRST_BYTE_TIMEOUT_S = 120;
 
+/** How long the local Carbon-X sidecar may take for one answer. */
+export const DEFAULT_CARBON_X_TIMEOUT_S = 120;
+
+/** The Carbon-X sidecar's OpenAI-compatible root when CARBON_X_URL is unset. */
+export const DEFAULT_CARBON_X_URL = "http://127.0.0.1:8090/v1";
+
 /** PostHog's EU ingestion host, used when only a key is configured. */
 export const DEFAULT_POSTHOG_HOST = "https://eu.i.posthog.com";
 
@@ -388,6 +394,26 @@ const serverEnvSchema = z
 
     GENOME_SOURCE: z.enum(["none", "ark"]).default("none"),
     ARK_DEVICE: maybeText(),
+    ARK_RSID_GENOTYPES_WASM: maybeText(),
+    GENOME_REFERENCE_DIR: maybeText(),
+    GENOME_ASSUME_BUILD: z.preprocess(
+      blankAsMissing,
+      z
+        .enum(["GRCh38"], {
+          message:
+            "GENOME_ASSUME_BUILD may only be GRCh38; leave it unset when the Ark reports its build",
+        })
+        .optional(),
+    ),
+    CARBON_X_URL: maybeUrl(),
+    CARBON_X_TIMEOUT_S: z.preprocess(
+      blankAsMissing,
+      z.coerce
+        .number()
+        .int("CARBON_X_TIMEOUT_S must be a whole number of seconds")
+        .positive("CARBON_X_TIMEOUT_S must be above 0")
+        .default(DEFAULT_CARBON_X_TIMEOUT_S),
+    ),
     GBD_MCP_URL: maybeUrl(),
     GBD_MCP_TOKEN: maybeText(),
 
@@ -421,6 +447,15 @@ const serverEnvSchema = z
     if (env.LOCAL_ONLY) checkLocalOnly(env, authOff, report);
     checkRemoteGpu(env, report);
     checkExoscale(env, report);
+
+    // Carbon-X reads genotypes, so it may only ever be the sidecar on this machine.
+    if (env.CARBON_X_URL !== undefined && !isLoopbackUrl(env.CARBON_X_URL)) {
+      report({
+        path: "CARBON_X_URL",
+        message:
+          "CARBON_X_URL must be on this machine (localhost, 127.0.0.1 or [::1]); genotypes never leave it",
+      });
+    }
 
     if (env.LLM_PROVIDER === "openrouter") {
       if (env.DATA_MODE === "personal") {
@@ -664,3 +699,26 @@ export type AnatomyEnv = Readonly<{
 
 export const anatomyEnv = (): AnatomyEnv =>
   Object.freeze({ dataDir: serverEnv().ANATOMY_DATA_DIR ?? null });
+
+export type GenomeEnv = Readonly<{
+  source: "none" | "ark";
+  /** Where the rsid-genotypes WASI module was built; null means the repo default. */
+  rsidGenotypesWasm: string | null;
+  /** Local GRCh38 FASTA folder (per-chromosome .fa or .fa.gz); null when not set up. */
+  referenceDir: string | null;
+  /** The owner's statement that the calls are GRCh38, used when the Ark names no build. */
+  assumeBuild: "GRCh38" | null;
+  /** Carbon-X's OpenAI-compatible `/v1` root; always loopback (checked at startup). */
+  carbonXUrl: string;
+  carbonXTimeoutMs: number;
+}>;
+
+export const genomeEnv = (env: ServerEnv = serverEnv()): GenomeEnv =>
+  Object.freeze({
+    source: env.GENOME_SOURCE,
+    rsidGenotypesWasm: env.ARK_RSID_GENOTYPES_WASM ?? null,
+    referenceDir: env.GENOME_REFERENCE_DIR ?? null,
+    assumeBuild: env.GENOME_ASSUME_BUILD ?? null,
+    carbonXUrl: env.CARBON_X_URL ?? DEFAULT_CARBON_X_URL,
+    carbonXTimeoutMs: env.CARBON_X_TIMEOUT_S * 1000,
+  });
