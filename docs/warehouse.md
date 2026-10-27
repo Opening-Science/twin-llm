@@ -21,7 +21,7 @@ Local research store for a Synthea cohort. Numeric rows come from `@open-twin/fh
 
 `ingestBundle` does not take `is_synthetic` from the caller. It hard-sets `isSynthetic: true` and `source: "synthea"`. Snapshot tables have no `is_synthetic` column, so a personal connector row cannot be stored as synthetic.
 
-The tables come from `prisma/migrations/20261025000000_baseline`, which also adds `CHECK (source = 'synthea')` on both observation tables by hand. `conditions` and `medication_requests` come from `20261027120000_conditions_medication_requests`, with the same check. They have no `is_synthetic` column: a row is synthetic through its subject (`subjects.is_synthetic`), which every read checks.
+The tables come from `prisma/migrations/20261025000000_baseline`, which also adds `CHECK (source = 'synthea')` on both observation tables by hand. `conditions` and `medication_requests` come from `20261027130000_conditions_medication_requests`, with the same check. They have no `is_synthetic` column: a row is synthetic through its subject (`subjects.is_synthetic`), which every read checks.
 
 ### Conditions and medication requests
 
