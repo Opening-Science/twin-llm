@@ -4,6 +4,7 @@ import { EVAL_COHORT } from "./cohort-pins";
 import {
   blockedBy,
   type BundleSet,
+  type ClinicalCounts,
   type CohortRows,
   dataPageFindings,
   type DatabaseProbe,
@@ -50,6 +51,7 @@ const PINNED_BUNDLES: BundleSet = { count: 37, sha256: EVAL_COHORT.bundleSetSha2
 const okDatabase = (
   warehouse: readonly CohortRows[],
   evalBundles: BundleSet | null = null,
+  evalClinical: ClinicalCounts | null = null,
 ): DatabaseProbe => ({
   kind: "ok",
   pgvector: true,
@@ -57,6 +59,7 @@ const okDatabase = (
   appliedMigrations: ["20261025000000_baseline"],
   warehouse,
   evalBundles,
+  evalClinical,
   exampleThread: false,
 });
 
@@ -507,6 +510,47 @@ describe("evalCohortState", () => {
       subjects: 37,
       why: "its 37 ingested bundles are not the pinned files",
     });
+  });
+
+  test("the pinned bundles ingested before conditions were stored: stale", () => {
+    expect(
+      evalCohortState(
+        okDatabase([cohortRows("synthea-v4-seed42", 37)], PINNED_BUNDLES, {
+          conditions: 0,
+          medicationRequests: 0,
+        }),
+      ),
+    ).toEqual({
+      kind: "stale",
+      subjects: 37,
+      why: "ingested before conditions and medication requests were stored",
+    });
+  });
+
+  test("other condition or medication request counts: stale, with both counts", () => {
+    expect(
+      evalCohortState(
+        okDatabase([cohortRows("synthea-v4-seed42", 37)], PINNED_BUNDLES, {
+          conditions: 1995,
+          medicationRequests: 3000,
+        }),
+      ),
+    ).toEqual({
+      kind: "stale",
+      subjects: 37,
+      why: "1995 conditions and 3000 medication requests, the pinned cohort has 1995 and 3615",
+    });
+  });
+
+  test("pinned bundles and pinned clinical counts: current", () => {
+    expect(
+      evalCohortState(
+        okDatabase([cohortRows("synthea-v4-seed42", 37)], PINNED_BUNDLES, {
+          conditions: 1995,
+          medicationRequests: 3615,
+        }),
+      ),
+    ).toEqual({ kind: "current", subjects: 37 });
   });
 
   test("wrong count with no bundle table: stale by the count", () => {

@@ -13,6 +13,7 @@ import {
   trendInput,
   rangePositionInput,
   convertUnitInput,
+  cohortPositionInput,
 } from "./schemas";
 import { modelInputSchema } from "./model-schema";
 import type { QueryToolPorts } from "./ports";
@@ -29,6 +30,7 @@ import {
   runTrend,
   runRangePosition,
   runConvertUnit,
+  runCohortPosition,
 } from "./tools";
 
 const description = (name: (typeof TOOL_DEFINITIONS)[number]["name"]): string =>
@@ -94,5 +96,10 @@ export const createQueryTools = (scope: SessionScope, ports?: QueryToolPorts) =>
     description: description("convert_unit"),
     inputSchema: modelInputSchema(convertUnitInput),
     execute: async (input) => runConvertUnit(scope, input, ports),
+  }),
+  cohort_position: tool({
+    description: description("cohort_position"),
+    inputSchema: modelInputSchema(cohortPositionInput),
+    execute: async (input) => runCohortPosition(scope, input, ports),
   }),
 });

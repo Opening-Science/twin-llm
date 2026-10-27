@@ -43,6 +43,8 @@ export const INGEST_FAILED_REASON = "ingest-failed";
 
 export type CohortSummary = Readonly<{
   subjects: number;
+  conditions: number;
+  medicationRequests: number;
   byLoinc: ReadonlyArray<Readonly<{ loinc: string; display: string; n: number }>>;
 }>;
 
@@ -185,6 +187,8 @@ export const runWarehouseIngest = async (
         skipped: 0,
         unresolved: [],
         nonNumeric: 0,
+        conditions: 0,
+        medicationRequests: 0,
         alreadyIngested: false,
         rejected: { reason: INGEST_FAILED_REASON },
       };
@@ -198,7 +202,7 @@ export const runWarehouseIngest = async (
     } else {
       inserted += 1;
       io.stdout.write(
-        `${name}: inserted ${report.inserted} rows (${report.nonNumeric} non-numeric)\n`,
+        `${name}: inserted ${report.inserted} rows (${report.nonNumeric} non-numeric), ${report.conditions} conditions, ${report.medicationRequests} medication requests\n`,
       );
     }
   }
@@ -208,6 +212,9 @@ export const runWarehouseIngest = async (
   );
   const summary = await deps.cohortSummary(cohort);
   io.stdout.write(`Cohort ${cohort}: ${summary.subjects} subjects\n`);
+  io.stdout.write(
+    `Conditions: ${summary.conditions}, medication requests: ${summary.medicationRequests}\n`,
+  );
   io.stdout.write("Numeric observations per LOINC:\n");
   for (const row of summary.byLoinc) {
     io.stdout.write(`  ${row.loinc}\t${row.n}\t${row.display}\n`);
@@ -248,8 +255,10 @@ if (isMain) {
     ingest: ingestBundle,
     cohortSummary: async (cohortId) => {
       const db = database();
-      const [subjects, groups] = await Promise.all([
+      const [subjects, conditions, medicationRequests, groups] = await Promise.all([
         db.subject.count({ where: { cohortId } }),
+        db.condition.count({ where: { subject: { cohortId } } }),
+        db.medicationRequest.count({ where: { subject: { cohortId } } }),
         db.observation.groupBy({
           by: ["loinc", "display"],
           where: { subject: { cohortId } },
@@ -259,6 +268,8 @@ if (isMain) {
       ]);
       return {
         subjects,
+        conditions,
+        medicationRequests,
         byLoinc: groups.map((group) => ({
           loinc: group.loinc,
           display: group.display,

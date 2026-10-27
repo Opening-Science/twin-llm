@@ -17,11 +17,20 @@ const FIXTURES = ["bp-panel.json", "patient-1.json", "patient-2.json", "patient-
 const fixture = (name: string): unknown =>
   JSON.parse(readFileSync(join(FIXTURE_DIR, name), "utf8"));
 
-const ROWS: Record<string, { inserted: number; nonNumeric: number }> = {
-  "bp-panel.json": { inserted: 7, nonNumeric: 2 },
-  "patient-1.json": { inserted: 5, nonNumeric: 0 },
-  "patient-2.json": { inserted: 5, nonNumeric: 0 },
-  "patient-3.json": { inserted: 5, nonNumeric: 0 },
+type Rows = {
+  inserted: number;
+  nonNumeric: number;
+  conditions: number;
+  medicationRequests: number;
+};
+
+const NO_CLINICAL = { conditions: 0, medicationRequests: 0 };
+
+const ROWS: Record<string, Rows> = {
+  "bp-panel.json": { inserted: 7, nonNumeric: 2, ...NO_CLINICAL },
+  "patient-1.json": { inserted: 5, nonNumeric: 0, ...NO_CLINICAL },
+  "patient-2.json": { inserted: 5, nonNumeric: 0, ...NO_CLINICAL },
+  "patient-3.json": { inserted: 5, nonNumeric: 0, ...NO_CLINICAL },
 };
 
 const sha = (value: unknown): string =>
@@ -64,16 +73,19 @@ const harness = (files: Record<string, unknown>) => {
           skipped: known,
           unresolved: [],
           nonNumeric: 0,
+          ...NO_CLINICAL,
           alreadyIngested: true,
         };
       }
       const name = (nameOf.get(key) ?? "").replace("/cohort/", "");
-      const rows = ROWS[name] ?? { inserted: 0, nonNumeric: 0 };
+      const rows = ROWS[name] ?? { inserted: 0, nonNumeric: 0, ...NO_CLINICAL };
       stored.set(key, rows.inserted);
       return { ...rows, skipped: 0, unresolved: [], alreadyIngested: false };
     },
     cohortSummary: async () => ({
       subjects: stored.size,
+      conditions: 2,
+      medicationRequests: 3,
       byLoinc: [
         { loinc: "8462-4", display: "Diastolic Blood Pressure", n: 2 },
         { loinc: "8480-6", display: "Systolic Blood Pressure", n: 2 },
@@ -107,13 +119,14 @@ describe("warehouse:ingest", () => {
     expect(out.join("")).toBe(
       [
         "Ingesting 4 bundles into cohort synthea-v4-seed42 (Synthea v4.0.0)",
-        "bp-panel.json: inserted 7 rows (2 non-numeric)",
-        "patient-1.json: inserted 5 rows (0 non-numeric)",
-        "patient-2.json: inserted 5 rows (0 non-numeric)",
-        "patient-3.json: inserted 5 rows (0 non-numeric)",
+        "bp-panel.json: inserted 7 rows (2 non-numeric), 0 conditions, 0 medication requests",
+        "patient-1.json: inserted 5 rows (0 non-numeric), 0 conditions, 0 medication requests",
+        "patient-2.json: inserted 5 rows (0 non-numeric), 0 conditions, 0 medication requests",
+        "patient-3.json: inserted 5 rows (0 non-numeric), 0 conditions, 0 medication requests",
         "",
         "Bundles: 4 inserted, 0 already ingested, 0 rejected",
         "Cohort synthea-v4-seed42: 4 subjects",
+        "Conditions: 2, medication requests: 3",
         "Numeric observations per LOINC:",
         "  8462-4\t2\tDiastolic Blood Pressure",
         "  8480-6\t2\tSystolic Blood Pressure",
@@ -235,6 +248,7 @@ describe("warehouse:ingest", () => {
         skipped: 0,
         unresolved: [],
         nonNumeric: 0,
+        ...NO_CLINICAL,
         alreadyIngested: false,
         rejected: { reason: "ot-quantity-no-code" },
       }),
@@ -272,7 +286,9 @@ describe("warehouse:ingest", () => {
     expect(code).toBe(1);
     expect(out.join("")).toContain("patient-2.json: rejected (ingest-failed)\n");
     expect(out.join("")).not.toContain("Prisma");
-    expect(out.join("")).toContain("patient-3.json: inserted 5 rows (0 non-numeric)\n");
+    expect(out.join("")).toContain(
+      "patient-3.json: inserted 5 rows (0 non-numeric), 0 conditions, 0 medication requests\n",
+    );
     expect(out.join("")).toContain(
       "Bundles: 3 inserted, 0 already ingested, 1 rejected\n",
     );
@@ -288,10 +304,13 @@ describe("warehouse:ingest", () => {
       skipped: 0,
       unresolved: [],
       nonNumeric: 0,
+      ...NO_CLINICAL,
       alreadyIngested: false,
     });
     await runWarehouseIngest(["/cohort"], io, { ...deps, ingest });
-    expect(out[1]).toBe("patient-1.json: inserted 0 rows (0 non-numeric)\n");
+    expect(out[1]).toBe(
+      "patient-1.json: inserted 0 rows (0 non-numeric), 0 conditions, 0 medication requests\n",
+    );
 
     out.length = 0;
     await runWarehouseIngest(["/cohort"], io, {

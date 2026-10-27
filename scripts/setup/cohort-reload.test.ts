@@ -60,6 +60,14 @@ describe("cohortDeleteStatements", () => {
   test("touches only the warehouse tables, each scoped by the cohort id as $1", () => {
     const statements = cohortDeleteStatements();
     expect(statements.map((statement) => statement.table)).toEqual([...WAREHOUSE_TABLES]);
+    expect([...WAREHOUSE_TABLES]).toEqual([
+      "observations",
+      "observation_non_numeric",
+      "conditions",
+      "medication_requests",
+      "bundles",
+      "subjects",
+    ]);
     for (const statement of statements) {
       expect(statement.sql.startsWith(`delete from ${statement.table} where `)).toBe(
         true,
@@ -81,19 +89,23 @@ describe("deleteCohortRows", () => {
     expect(await deleteCohortRows(db.sql, "synthea-v4-seed42")).toEqual({
       observations: 7,
       observation_non_numeric: 7,
+      conditions: 7,
+      medication_requests: 7,
       bundles: 7,
       subjects: 7,
     });
     expect(db.state).toEqual({ committed: true, rolledBack: false, closed: false });
     expect(db.calls.every((call) => call.params[0] === "synthea-v4-seed42")).toBe(true);
-    expect(db.calls.filter((call) => call.query.includes("delete from")).length).toBe(4);
+    expect(db.calls.filter((call) => call.query.includes("delete from")).length).toBe(6);
   });
 
-  test("deletes the trimmed fixtures' cohort the same way, scoped by its id (#96)", async () => {
+  test("deletes the trimmed fixtures' cohort from every warehouse table in the same transaction (#96)", async () => {
     const db = fakeSql({ before: "37/37", after: "37/37", left: 0, deleted: 3 });
     expect(await deleteCohortRows(db.sql, "open-twin-synthea-trimmed-3")).toEqual({
       observations: 3,
       observation_non_numeric: 3,
+      conditions: 3,
+      medication_requests: 3,
       bundles: 3,
       subjects: 3,
     });
@@ -101,6 +113,11 @@ describe("deleteCohortRows", () => {
     expect(
       db.calls.every((call) => call.params[0] === "open-twin-synthea-trimmed-3"),
     ).toBe(true);
+    expect(
+      db.calls
+        .filter((call) => call.query.includes("delete from"))
+        .map((call) => /delete from (\w+)/.exec(call.query)?.[1]),
+    ).toEqual([...WAREHOUSE_TABLES]);
   });
 
   test("refuses any cohort but the evaluation cohort and the fixtures before touching the database", async () => {
@@ -137,11 +154,13 @@ describe("formatDeleted", () => {
       formatDeleted("synthea-v4-seed42", {
         observations: 10,
         observation_non_numeric: 4,
+        conditions: 6,
+        medication_requests: 9,
         bundles: 35,
         subjects: 35,
       }),
     ).toBe(
-      "synthea-v4-seed42: deleted 35 subjects, 35 bundles, 10 observations and 4 non-numeric observations",
+      "synthea-v4-seed42: deleted 35 subjects, 35 bundles, 10 observations, 4 non-numeric observations, 6 conditions and 9 medication requests",
     );
   });
 });
