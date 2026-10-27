@@ -1,6 +1,6 @@
 # Warehouse
 
-Local research store for a Synthea cohort. Numeric rows come from `@open-twin/fhir-r4` `normaliseBundle` at pin `24179d8`. Personal wearable snapshots (Oura, Whoop, Google Health) never write these tables.
+Local research store for a Synthea cohort. Numeric rows come from `@open-twin/fhir-r4` `normaliseBundle` at pin `24179d8`. Personal wearable snapshots (Oura, Whoop, Google Health) and the files a person imports on Customize · Data ([personal-data.md](personal-data.md)) never write these tables.
 
 ## Pin
 

@@ -5,8 +5,8 @@
 //   2. Conversations: threads of turns. A turn stores the question once and
 //      gets one ModelResponse row per model that was asked.
 //   3. Personal context: wearables (Oura, Whoop, Google Health), BodyLoop
-//      scans and released Ark genome reports. Tokens are AES-GCM ciphertext,
-//      never plain text.
+//      scans, released Ark genome reports and the files a person imports
+//      (personal_*). Tokens are AES-GCM ciphertext, never plain text.
 //   4. Research warehouse: synthetic Synthea cohorts only.
 //   5. Retrieval: guideline and OpenTwin knowledge chunks with pgvector.
 //   6. Tool audit log, hash-chained.
@@ -46,6 +46,7 @@ model User {
   vitronicSubjects       VitronicSubject[]
   vitronicSnapshots      VitronicSnapshot[]
   genomeReports          GenomeReport[]
+  personalDatasets       PersonalDataset[]
 
   @@map("users")
 }
@@ -419,6 +420,119 @@ model GenomeReport {
   @@index([userId, app, releasedAt])
   @@index([subjectRef, app, releasedAt])
   @@map("genome_reports")
+}
+
+/// One file a person imported on Customize · Data (#176, docs/personal-data.md).
+/// Personal data, written only with DATA_MODE=personal, owned by one user and
+/// never mixed with the synthetic warehouse. Deleting it hard-deletes its rows
+/// (cascade). `sha256` is the uploaded file's, so the same file twice is
+/// recognised. CHECK constraints in the migration hold `kind` and `status`.
+model PersonalDataset {
+  id             String   @id @default(cuid())
+  userId         String   @map("user_id")
+  /// "fhir", "lab-csv" or "table".
+  kind           String
+  name           String
+  sourceFileName String   @map("source_file_name")
+  sha256         String
+  byteSize       Int      @map("byte_size")
+  /// "ready": written whole in one transaction.
+  status         String   @default("ready")
+  /// Rows stored: observations plus clinical records, or table rows.
+  rowCount       Int      @map("row_count")
+  /// Earliest and latest date stored, ISO text as the review showed it.
+  firstAt        String?  @map("first_at")
+  lastAt         String?  @map("last_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  user            User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  observations    PersonalObservation[]
+  clinicalRecords PersonalClinicalRecord[]
+  table           PersonalTable?
+  tableChunks     PersonalTableChunk[]
+
+  @@unique([userId, sha256])
+  @@index([userId, createdAt])
+  @@map("personal_datasets")
+}
+
+/// A number from an imported FHIR file or lab CSV. The unit is stored as the
+/// file wrote it and never converted; `unitUcum` says whether it is UCUM.
+/// `code` is null when the file gave none and the explicit name table had none.
+model PersonalObservation {
+  id                 String   @id @default(cuid())
+  datasetId          String   @map("dataset_id")
+  userId             String   @map("user_id")
+  codeSystem         String?  @map("code_system")
+  code               String?
+  display            String
+  value              Float
+  unit               String
+  unitUcum           Boolean  @map("unit_ucum")
+  effectiveAt        DateTime @map("effective_at")
+  /// "year", "month", "day" or "instant": how much of the date the file gave.
+  effectivePrecision String   @map("effective_precision")
+  /// A FHIR id or "row 12".
+  sourceRef          String   @map("source_ref")
+  note               String?
+
+  dataset PersonalDataset @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+
+  @@index([datasetId])
+  @@index([userId, code, effectiveAt])
+  @@map("personal_observations")
+}
+
+/// A FHIR Condition or MedicationRequest from an imported file, as recorded.
+model PersonalClinicalRecord {
+  id           String    @id @default(cuid())
+  datasetId    String    @map("dataset_id")
+  userId       String    @map("user_id")
+  /// "Condition" or "MedicationRequest".
+  resourceType String    @map("resource_type")
+  codeSystem   String?   @map("code_system")
+  code         String?
+  display      String
+  /// Condition onset, or MedicationRequest authoredOn.
+  startAt      DateTime? @map("start_at")
+  /// Condition abatement.
+  endAt        DateTime? @map("end_at")
+  status       String?
+  sourceRef    String    @map("source_ref")
+
+  dataset PersonalDataset @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+
+  @@index([datasetId])
+  @@map("personal_clinical_records")
+}
+
+/// The columns of an imported research table: name, inferred type
+/// ("number", "date", "text") and missing count, in file order.
+model PersonalTable {
+  datasetId String @id @map("dataset_id")
+  userId    String @map("user_id")
+  columns   Json
+  rowCount  Int    @map("row_count")
+
+  dataset PersonalDataset @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+
+  @@map("personal_tables")
+}
+
+/// Up to 1,000 rows of an imported research table, as a JSON array of arrays
+/// in column order (null for a missing cell).
+model PersonalTableChunk {
+  id         String @id @default(cuid())
+  datasetId  String @map("dataset_id")
+  userId     String @map("user_id")
+  chunkIndex Int    @map("chunk_index")
+  rows       Json
+
+  dataset PersonalDataset @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+
+  @@unique([datasetId, chunkIndex])
+  @@map("personal_table_chunks")
 }
 
 // ─── 4. Research warehouse (synthetic only) ─────────────────────────────────

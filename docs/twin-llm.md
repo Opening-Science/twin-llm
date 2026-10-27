@@ -65,6 +65,7 @@ Exoscale: set `EXOSCALE_BASE_URLS` (one vLLM `/v1` URL per GPU); without it, sta
 - `DATA_MODE=synthetic` — OpenRouter allowed when no wearable snapshot is linked
 - `DATA_MODE=personal` — default; live wearable narratives in prompts; OpenRouter blocked at env parse, chat resolve, and the request-level permit. The chat's query tools read no synthetic subject in this mode
 - The Data page (`/data`) and the Body twin's Demo lab values show the synthetic cohorts in both modes, labelled "Synthetic data". They read through a separate synthetic display scope that can only select `is_synthetic` rows of allowlisted cohorts and sends nothing to a model ([warehouse.md](warehouse.md#synthetic-display-scope))
+- Files you import on Customize · Data (FHIR records, lab CSV, research tables) are stored only with `DATA_MODE=personal`, in their own `personal_*` tables, audited without values, and never sent to a hosted model ([personal-data.md](personal-data.md))
 - Threads are private in both modes. `/t/<id>` opens only for the person who wrote the thread; anyone else, signed in or not, gets the same 404 as an unknown id (`features/arena/owned-thread.ts`). There is no sharing: "Copy link" copies the address for the owner's own use, and its analytics event carries no thread id. A withheld answer's text and reasoning are not sent to the browser when a saved thread loads.
 
 ## Key paths
