@@ -8,6 +8,10 @@ import {
 } from "ai";
 
 import { type ChatView, viewsOf } from "@/infrastructure/chat-view";
+import {
+  PROVIDER_NOT_PERMITTED_FOR_DATA_MODE,
+  PROVIDER_NOT_PERMITTED_SENTENCE,
+} from "@/infrastructure/data-mode-policy";
 import type {
   ChatUIMessage,
   ModelResponseMetrics,
@@ -44,7 +48,7 @@ export type StreamResult = Readonly<{
   ending: StreamEnding;
   metrics: ModelResponseMetrics | null;
   document: ResponseDocumentV1 | null;
-  /** The server's sentence when it refused a skill turn; only ever set with FAILED. */
+  /** The sentence for a refused turn (skill or data-mode policy); only ever set with FAILED. */
   refusal?: string;
   /** The answer's numbers a tool call holds, matched once the stream ends. */
   numberSources?: readonly NumberSource[];
@@ -107,16 +111,20 @@ export const sourceParts = (parts: ChatUIMessage["parts"]): NumberSourcePart[] =
   );
 
 /**
- * The sentence of a refused skill turn. Only skill refusal codes qualify:
- * their text is written by TwinLLM itself, never by a provider.
+ * The sentence of a refused turn. A skill refusal's text is written by
+ * TwinLLM itself, never by a provider, so it is shown as sent. The data-mode
+ * refusal's text is for the operator (it names settings), so the column shows
+ * the policy's fixed sentence for people instead, the same one the server
+ * stores on the row. Anything else is no refusal.
  */
-export const skillRefusalOf = async (response: Response): Promise<string | null> => {
+export const refusalOf = async (response: Response): Promise<string | null> => {
   if (response.status !== 400) return null;
   const body: unknown = await response.json().catch(() => null);
-  return typeof body === "object" &&
-    body !== null &&
-    "code" in body &&
-    isSkillRefusalCode(body.code) &&
+  if (typeof body !== "object" || body === null || !("code" in body)) return null;
+  if (body.code === PROVIDER_NOT_PERMITTED_FOR_DATA_MODE) {
+    return PROVIDER_NOT_PERMITTED_SENTENCE;
+  }
+  return isSkillRefusalCode(body.code) &&
     "error" in body &&
     typeof body.error === "string"
     ? body.error
@@ -162,7 +170,7 @@ export const streamAnswer = async (
       body: JSON.stringify(request),
     });
     if (!response.ok || !response.body) {
-      const refusal = await skillRefusalOf(response);
+      const refusal = await refusalOf(response);
       return refusal === null ? FAILED : { ...FAILED, refusal };
     }
 

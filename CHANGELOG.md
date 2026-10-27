@@ -40,6 +40,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- A turn refused before any model runs (the data-mode policy, a skill's provider or source rule, a skill the server does not offer) is stored as `REFUSED` with its refusal sentence instead of staying `STREAMING` (#99). A reload shows the refusal and does not ask the model again. A data-mode refusal now reads "This model provider may not receive personal data or wearable context, so this model did not run." in the column, live and after a reload. Migration `20261027120000_model_response_refused` adds the enum value.
 - The evaluation cohort and its answer key can be regenerated: `synthea-v4-seed42` was generated again with fixed dates (37 bundles, checksum `f4941fab…`, the same under another time zone) and the key rebuilt from it. The key records the dates and checksum, and the tests check them. 13 items got another subject by the rule in `docs/evaluation/question-set.md`, so results scored against the old key do not compare with new ones.
 - The evaluation's hallucination scorer fails an answer that reports a measure with another code's value (skin temperature from systolic blood pressure, eGFR from HbA1c) or with a value from outside the asked years, and names the code it came from. A LOINC code at a sentence end is no longer read as a stated number.
 

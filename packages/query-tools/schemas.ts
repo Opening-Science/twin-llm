@@ -167,6 +167,19 @@ export const convertUnitInput = z
   .strict()
   .describe("One value of one analyte from one unit to another, by a fixed table");
 
+export const cohortPositionInput = z
+  .object({
+    subject_ref: subjectRefSchema,
+    loinc: loincSchema,
+    start: windowStart,
+    end: windowEnd,
+  })
+  .strict()
+  .refine(startBeforeEnd, START_BEFORE_END)
+  .describe(
+    "A subject's latest value of one LOINC in a window, as a percentile among its synthetic cohort",
+  );
+
 /** FHIR R4 Condition.clinicalStatus codes. */
 export const CONDITION_STATUSES = [
   "active",
@@ -291,6 +304,12 @@ export const TOOL_DEFINITIONS = [
     description:
       "Convert one value of glucose, creatinine, HbA1c, total/LDL/HDL cholesterol, triglycerides or body temperature between units with a fixed table: value rounded half away from zero, unrounded, unit, the formula used and the rounding rule. Reads no rows. A pair the table does not hold is refused with UNSUPPORTED_CONVERSION and the pairs it does hold.",
     input: convertUnitInput,
+  },
+  {
+    name: "cohort_position",
+    description:
+      'Where a subject\'s latest value of one LOINC in a time range sits among the latest values, in the same window, of everyone in its synthetic cohort (one value per person, the subject included). percentile is the mid-rank percentile, 100 × (n_lower + n_equal / 2) / n, where n is the people with a value and n_equal counts the subject; say it as "higher than about <percentile> % of the <n> synthetic people with a value", never better, worse or normal. Synthetic cohorts only. Refuses no value for the subject, fewer than 10 people with a value, mixed units across the cohort, and more than 20000 cohort rows (narrow the window).',
+    input: cohortPositionInput,
   },
   {
     name: "conditions_timeline",

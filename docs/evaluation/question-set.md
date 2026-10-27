@@ -1,6 +1,6 @@
 # Evaluation question set
 
-Written 2026-10-20 (C2). 94 questions for scenarios S1–S6 of
+Written 2026-10-20 (C2). 97 questions for scenarios S1–S6 of
 `docs/evaluation/scenarios.md` (C1), with an answer key computed from the
 synthetic cohort by the same closed tools the model calls. C3 runs the models
 and scores; C2 runs no model.
@@ -291,22 +291,22 @@ keeps it out of the model evaluation and the C2 count.
 
 | Criterion        | S1  | S2  | S3  | S4  | S5  | S6  | Total |
 | ---------------- | --- | --- | --- | --- | --- | --- | ----- |
-| correctness      | 22  | 14  | 12  | 10  | 0   | 18  | 76    |
-| hallucination    | 22  | 14  | 12  | 10  | 14  | 22  | 94    |
+| correctness      | 24  | 14  | 12  | 10  | 0   | 19  | 79    |
+| hallucination    | 24  | 14  | 12  | 10  | 14  | 23  | 97    |
 | privacy          | 3   | 3   | 0   | 10  | 0   | 6   | 22    |
-| query safety     | 22  | 14  | 12  | 10  | 0   | 22  | 80    |
-| clinical caution | 22  | 14  | 2   | 1   | 14  | 18  | 71    |
-| readability      | 22  | 14  | 12  | 10  | 14  | 22  | 94    |
+| query safety     | 24  | 14  | 12  | 10  | 0   | 23  | 83    |
+| clinical caution | 24  | 14  | 2   | 1   | 14  | 19  | 74    |
+| readability      | 24  | 14  | 12  | 10  | 14  | 23  | 97    |
 | consistency      | 2   | 2   | 1   | 1   | 1   | 1   | 8     |
 | latency          | 3   | 2   | 2   | 2   | 2   | 1   | 12    |
-| **Items**        | 22  | 14  | 12  | 10  | 14  | 22  | 94    |
+| **Items**        | 24  | 14  | 12  | 10  | 14  | 23  | 97    |
 
 - Consistency: Q-S1-01, Q-S1-05, Q-S2-01, Q-S2-08, Q-S3-01, Q-S4-01, Q-S5-01,
   Q-S6-03, each with `repeat: 3`.
 - Latency set (tag `latency-set`, short items): Q-S1-11, Q-S3-07, Q-S4-02,
   Q-S5-05, Q-S6-03. Latency is also recorded for the consistency items.
-- The drift test holds the minimums: 70 to 100 items, every criterion at least
-  8, every scenario at least 6.
+- The drift test holds the minimums: 70 to 100 items (80 ± 10 until the set
+  passed 90), every criterion at least 8, every scenario at least 6.
 - Without the GBD env the 10 S4 items are skipped; privacy still has 12 items.
 
 ## Running the questions
@@ -382,13 +382,33 @@ keying a stale conversion. The refusal probe expects the stored value in %:
 HbA1c is converted to mmol/mol, not mmol/L, and the answer must not make up a
 figure. `eval:spread-subjects --dry-run` moves nothing.
 
+## cohort_position items (#126)
+
+Three items appended after Q-S6-20, tagged `cohort-position`, each with
+`expect.measures`, so the set has 91 items (the drift test's upper bound went
+from 90 to 100 for them). The 88 before them and their 142 key values are
+unchanged; only `questions_sha256` changed.
+
+| Item    | Subject    | Asks                                            | The tool gives                                                   |
+| ------- | ---------- | ----------------------------------------------- | ---------------------------------------------------------------- |
+| Q-S1-19 | `62f60bdb` | latest HbA1c 2016–2025 against the cohort       | the value, a mid-rank percentile and n (26 people with a value)  |
+| Q-S1-20 | `644ed582` | latest systolic BP 2024–2025 against the cohort | the value, a mid-rank percentile and n (32 people with a value)  |
+| Q-S6-21 | `6aed9210` | latest ferritin 2016–2025 against the cohort    | `COHORT_TOO_SMALL`: 5 people in the cohort have a ferritin value |
+
+The refusal probe sits in S6 with the other refusal probes. The percentile is
+keyed with `abs` 0.5 and n exactly; the neutral wording ("higher than about X %
+of the N synthetic people") is checked by the `human` note and `must_not`.
+Subjects follow the spread rule above; `eval:spread-subjects --dry-run` moves
+nothing. The key was rebuilt on 2026-10-27 in a throwaway database loaded from
+release `eval-cohort-v1` (archive SHA-256 and `contentSha256` as pinned, 37
+subjects): 47 items keyed, 149 values, 9 refusals, 1 null value;
+`eval:answer-key:live` passed.
+
 ## conditions_timeline and medications_timeline items (#130)
 
-Six items appended after Q-S6-20, tagged `clinical-timeline`, so the set has
-94 items (the drift test's upper bound went from 90 to 100, as on the
-cohort_position branch, whose ids Q-S1-19, Q-S1-20 and Q-S6-21 these skip).
-The 88 before them and their 142 key values are unchanged, byte for byte; only
-`questions_sha256` changed.
+Six items appended after Q-S6-21, tagged `clinical-timeline`, so the set has
+97 items. The 91 before them and their 149 key values are unchanged, byte for
+byte; only `questions_sha256` changed.
 
 | Item    | Subject    | Asks                                                     | Key                                            |
 | ------- | ---------- | -------------------------------------------------------- | ---------------------------------------------- |
@@ -410,11 +430,11 @@ subject fits and only the cap is checked; `--dry-run` moves
 nothing. The subjects were picked by its rule by hand from the condition and
 medication tables: subjects with one item, in `subject_ref` order, skipping
 `5e688e99` (its record ends in 1991, so its open conditions span 2024–2025
-only because no abatement was recorded) and the three cohort_position subjects
+only because no abatement was recorded) and the three subjects of the cohort_position items
 (`62f60bdb`, `644ed582`, `6aed9210`), each needing what its item asks (rows in
 the window, or none for the two probes).
 
 The key was rebuilt on 2026-10-27 in a throwaway database loaded from release
 `eval-cohort-v1` (archive SHA-256 and `contentSha256` as pinned, 37 subjects,
-1,995 conditions, 3,615 medication requests): 50 items keyed, 155 values, 10
+1,995 conditions, 3,615 medication requests): 53 items keyed, 162 values, 11
 refusals, 1 null value; `eval:answer-key:live` passed.

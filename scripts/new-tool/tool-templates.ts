@@ -197,6 +197,7 @@ const fakePorts = (rows: readonly FakeRow[] = FIXTURE) => {
         .sort((a, b) => a.effectiveAt.getTime() - b.effectiveAt.getTime())
         .slice(0, query.take);
     },
+    findCohortObservations: async () => [],
     appendAudit: async (input) => {
       audits.push(input);
     },

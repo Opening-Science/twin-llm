@@ -81,6 +81,7 @@ describe("rowCountOf", () => {
     expect(rowCountOf([{}, {}])).toBe(2);
     expect(rowCountOf({ n: 12, mean: 1 })).toBe(12);
     expect(rowCountOf({ n_observations: 40 })).toBe(40);
+    expect(rowCountOf({ n: 11, rows_read: 13, percentile: 36.4 })).toBe(13);
     expect(rowCountOf({ codes: [{ n: 2 }, { n: 5 }] })).toBe(7);
     expect(rowCountOf({ baseline: { n: 3 }, target: { n: 4 } })).toBe(7);
     expect(rowCountOf({ window_a: { n: 1 }, window_b: { n: 0 } })).toBe(1);

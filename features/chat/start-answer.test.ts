@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import {
   PROVIDER_NOT_PERMITTED_ERROR,
   PROVIDER_NOT_PERMITTED_FOR_DATA_MODE,
+  PROVIDER_NOT_PERMITTED_SENTENCE,
 } from "@/infrastructure/data-mode-policy";
 import type { TurnSkill } from "@/infrastructure/skill-gate";
 import type { WhoopSummary } from "@/infrastructure/whoop-types";
@@ -36,6 +37,15 @@ const NO_WEARABLES: WearableContext = {
 
 const WITH_WHOOP: WearableContext = { ...NO_WEARABLES, whoopSummary: WHOOP };
 
+type RefusedRow = Readonly<{ turnId: string; modelId: string; sentence: string }>;
+
+/** The row a refusal is stored on: this turn, this model, the sentence sent. */
+const refusedRow = (sentence: string): RefusedRow => ({
+  turnId: CALL.turnId,
+  modelId: CALL.modelId,
+  sentence,
+});
+
 /** Fakes for every port; `calls` records what reached each one, in order. */
 const harness = (
   settings: ChatProviderSettings,
@@ -45,6 +55,7 @@ const harness = (
   const calls: string[] = [];
   const audits: AppendInput[] = [];
   const streamed: StreamContext[] = [];
+  const refused: RefusedRow[] = [];
   const startAnswer = createStartAnswer({
     settings: () => settings,
     loadWearables: async (mode, appUserId) => {
@@ -64,8 +75,12 @@ const harness = (
       streamed.push(context);
       return new Response("streamed");
     },
+    markRefused: async (target) => {
+      calls.push("refused");
+      refused.push(target);
+    },
   });
-  return { startAnswer, calls, audits, streamed };
+  return { startAnswer, calls, audits, streamed, refused };
 };
 
 const SLEEP: TurnSkill = {
@@ -87,30 +102,32 @@ const REFUSAL = {
 
 describe("chat start: provider refusal", () => {
   test("wearable context to Exoscale with the setting off is the typed 400, nothing sent", async () => {
-    const { startAnswer, calls, audits } = harness(
+    const { startAnswer, calls, audits, refused } = harness(
       { dataMode: "synthetic", provider: "exoscale", exoscalePersonalData: "off" },
       WITH_WHOOP,
     );
     const response = await startAnswer(ACTOR, APP_USER, CALL);
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual(REFUSAL);
-    expect(calls).toEqual([`wearables synthetic ${APP_USER}`]);
+    expect(calls).toEqual([`wearables synthetic ${APP_USER}`, "refused"]);
     expect(audits).toEqual([]);
+    expect(refused).toEqual([refusedRow(PROVIDER_NOT_PERMITTED_SENTENCE)]);
   });
 
   test("DATA_MODE=personal to Exoscale with the setting off is refused per request too", async () => {
-    const { startAnswer, calls } = harness(
+    const { startAnswer, calls, refused } = harness(
       { dataMode: "personal", provider: "exoscale", exoscalePersonalData: "off" },
       NO_WEARABLES,
     );
     const response = await startAnswer(ACTOR, APP_USER, CALL);
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual(REFUSAL);
-    expect(calls).toEqual([`wearables personal ${APP_USER}`]);
+    expect(calls).toEqual([`wearables personal ${APP_USER}`, "refused"]);
+    expect(refused).toEqual([refusedRow(PROVIDER_NOT_PERMITTED_SENTENCE)]);
   });
 
   test("OpenRouter stays refused even under the consented pilot", async () => {
-    const { startAnswer, calls } = harness(
+    const { startAnswer, calls, refused } = harness(
       {
         dataMode: "personal",
         provider: "openrouter",
@@ -121,7 +138,8 @@ describe("chat start: provider refusal", () => {
     const response = await startAnswer(ACTOR, APP_USER, CALL);
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual(REFUSAL);
-    expect(calls).toEqual([`wearables personal ${APP_USER}`]);
+    expect(calls).toEqual([`wearables personal ${APP_USER}`, "refused"]);
+    expect(refused).toEqual([refusedRow(PROVIDER_NOT_PERMITTED_SENTENCE)]);
   });
 });
 
@@ -155,6 +173,15 @@ describe("chat start: consented pilot audit", () => {
     expect(streamed).toEqual([
       { clerkId: ACTOR, disabledSources: ["gbd"], ...WITH_WHOOP },
     ]);
+  });
+
+  test("an allowed request stores no refusal", async () => {
+    const { startAnswer, refused } = harness(
+      { dataMode: "synthetic", provider: "openrouter", exoscalePersonalData: "off" },
+      NO_WEARABLES,
+    );
+    expect((await startAnswer(ACTOR, APP_USER, CALL)).status).toBe(200);
+    expect(refused).toEqual([]);
   });
 
   test("a failed audit write stops the model call", async () => {
@@ -230,19 +257,21 @@ describe("chat start: a turn sent with a skill", () => {
   });
 
   test("a provider the skill does not list is refused with its sentence; nothing runs", async () => {
-    const { startAnswer, calls, audits } = harness(
+    const { startAnswer, calls, audits, refused } = harness(
       { dataMode: "synthetic", provider: "openrouter", exoscalePersonalData: "off" },
       NO_WEARABLES,
     );
     const response = await startAnswer(ACTOR, APP_USER, SLEEP_CALL);
+    const sentence =
+      "/sleep runs only on local Ollama. The models here come from OpenRouter, so /sleep did not run. Ask without /sleep instead.";
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({
       code: "provider-not-allowed-by-skill",
-      error:
-        "/sleep runs only on local Ollama. The models here come from OpenRouter, so /sleep did not run. Ask without /sleep instead.",
+      error: sentence,
     });
-    expect(calls).toEqual([`wearables synthetic ${APP_USER}`]);
+    expect(calls).toEqual([`wearables synthetic ${APP_USER}`, "refused"]);
     expect(audits).toEqual([]);
+    expect(refused).toEqual([refusedRow(sentence)]);
   });
 
   test("the skill refusal comes before the data-mode refusal", async () => {
@@ -257,7 +286,7 @@ describe("chat start: a turn sent with a skill", () => {
   });
 
   test("the data-mode policy still applies to a provider the skill lists", async () => {
-    const { startAnswer, calls, audits } = harness(
+    const { startAnswer, calls, audits, refused } = harness(
       { dataMode: "personal", provider: "exoscale", exoscalePersonalData: "off" },
       WITH_WHOOP,
       { skill: { ...SLEEP, providers: ["ollama", "exoscale"] } },
@@ -265,35 +294,41 @@ describe("chat start: a turn sent with a skill", () => {
     const response = await startAnswer(ACTOR, APP_USER, SLEEP_CALL);
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual(REFUSAL);
-    expect(calls).toEqual([`wearables personal ${APP_USER}`]);
+    expect(calls).toEqual([`wearables personal ${APP_USER}`, "refused"]);
     expect(audits).toEqual([]);
+    expect(refused).toEqual([refusedRow(PROVIDER_NOT_PERMITTED_SENTENCE)]);
   });
 
   test("wearable context with a skill that does not read it is refused", async () => {
-    const { startAnswer, calls } = harness(
+    const { startAnswer, calls, refused } = harness(
       { dataMode: "personal", provider: "ollama", exoscalePersonalData: "off" },
       WITH_WHOOP,
       { skill: { ...SLEEP, sources: ["cohort-records"] } },
     );
     const response = await startAnswer(ACTOR, APP_USER, SLEEP_CALL);
+    const sentence =
+      "/sleep does not read linked wearables, and this question would carry them, so /sleep did not run.";
     expect(response.status).toBe(400);
-    expect(((await response.json()) as { code: string }).code).toBe("source-not-allowed");
-    expect(calls).toEqual([`wearables personal ${APP_USER}`]);
+    expect(await response.json()).toEqual({
+      code: "source-not-allowed",
+      error: sentence,
+    });
+    expect(calls).toEqual([`wearables personal ${APP_USER}`, "refused"]);
+    expect(refused).toEqual([refusedRow(sentence)]);
   });
 
   test("a skill the server does not offer is refused before anything is read", async () => {
-    const { startAnswer, calls, audits } = harness(
+    const { startAnswer, calls, audits, refused } = harness(
       { dataMode: "synthetic", provider: "ollama", exoscalePersonalData: "off" },
       NO_WEARABLES,
     );
     const response = await startAnswer(ACTOR, APP_USER, { ...CALL, skill: "nap" });
+    const sentence =
+      "There is no /nap skill on this server, so nothing ran. Type / to see the skills it offers.";
     expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({
-      code: "skill-not-offered",
-      error:
-        "There is no /nap skill on this server, so nothing ran. Type / to see the skills it offers.",
-    });
-    expect(calls).toEqual([]);
+    expect(await response.json()).toEqual({ code: "skill-not-offered", error: sentence });
+    expect(calls).toEqual(["refused"]);
     expect(audits).toEqual([]);
+    expect(refused).toEqual([refusedRow(sentence)]);
   });
 });

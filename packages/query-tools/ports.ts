@@ -4,9 +4,9 @@ import { database } from "@/infrastructure/database";
 import { append, type AppendInput } from "@/packages/audit/append";
 
 /**
- * What the query tools need from outside: one subject lookup, one fixed
- * observation query, the two fixed clinical-record queries and the audit
- * append. The defaults below are the only
+ * What the query tools need from outside: one subject lookup, two fixed
+ * observation queries (one subject's rows, or one code across a cohort), the
+ * two fixed clinical-record queries and the audit append. The defaults below are the only
  * Prisma calls the analytics tools make; tests pass in-memory functions, so
  * none of them has to fake a whole Prisma client or replace a module.
  */
@@ -31,6 +31,18 @@ export type ObservationQuery = Readonly<{
   end: Date;
   take: number;
 }>;
+
+/** One code in one window across one cohort's synthetic subjects (`cohort_position`). */
+export type CohortObservationQuery = Readonly<{
+  cohortId: string;
+  loinc: string;
+  start: Date;
+  end: Date;
+  take: number;
+}>;
+
+export type CohortObservationRecord = ObservationRecord &
+  Readonly<{ subjectRef: string }>;
 
 /** A Condition as stored (packages/warehouse/map-clinical.ts). */
 export type ConditionRecord = Readonly<{
@@ -70,6 +82,13 @@ export type QueryToolPorts = Readonly<{
   findSubject: (subjectRef: string) => Promise<SubjectScopeRow | null>;
   /** Rows ordered by `effectiveAt` ascending, at most `take`. */
   findObservations: (query: ObservationQuery) => Promise<readonly ObservationRecord[]>;
+  /**
+   * Rows of `is_synthetic` subjects in the cohort, ordered by `effectiveAt`
+   * then id, at most `take`.
+   */
+  findCohortObservations: (
+    query: CohortObservationQuery,
+  ) => Promise<readonly CohortObservationRecord[]>;
   /**
    * Conditions whose span overlaps the window (onset at or before its end, no
    * abatement or abatement at or after its start), by onset, code, id; at most
@@ -164,6 +183,26 @@ export const defaultQueryToolPorts = (): QueryToolPorts => ({
         effectiveAt: true,
       },
       orderBy: { effectiveAt: "asc" },
+      take: query.take,
+    });
+    return rows.map((row) => ({ ...row, value: toNumber(row.value) }));
+  },
+  findCohortObservations: async (query) => {
+    const rows = await database().observation.findMany({
+      where: {
+        loinc: query.loinc,
+        effectiveAt: { gte: query.start, lte: query.end },
+        subject: { cohortId: query.cohortId, isSynthetic: true },
+      },
+      select: {
+        id: true,
+        subjectRef: true,
+        loinc: true,
+        value: true,
+        unitUcum: true,
+        effectiveAt: true,
+      },
+      orderBy: [{ effectiveAt: "asc" }, { id: "asc" }],
       take: query.take,
     });
     return rows.map((row) => ({ ...row, value: toNumber(row.value) }));

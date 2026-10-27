@@ -25,6 +25,7 @@ import {
   trendInput,
   rangePositionInput,
   convertUnitInput,
+  cohortPositionInput,
   conditionsTimelineInput,
   medicationsTimelineInput,
 } from "./schemas";
@@ -41,6 +42,7 @@ import {
   runTrend,
   runRangePosition,
   runConvertUnit,
+  runCohortPosition,
   runConditionsTimeline,
   runMedicationsTimeline,
 } from "./tools";
@@ -105,6 +107,9 @@ export const queryToolRunners = (
     runRangePosition(scope, input, ports),
   ),
   convert_unit: bind(convertUnitInput, (input) => runConvertUnit(scope, input, ports)),
+  cohort_position: bind(cohortPositionInput, (input) =>
+    runCohortPosition(scope, input, ports),
+  ),
   conditions_timeline: bind(conditionsTimelineInput, (input) =>
     runConditionsTimeline(scope, input, ports),
   ),

@@ -27,6 +27,10 @@ synthetic warehouse and return the result:
 - `range_position`: one reading against its Anchor v3 published range: below, within or
   above it. When the range depends on sex, age or timing, which the warehouse does not
   hold, the position is `null` and `depends_on` names the facts.
+- `cohort_position`: where a subject's latest value sits among the latest values of everyone
+  in its synthetic cohort with a value in the window, as a mid-rank percentile with the
+  number of people. It says "higher than about X % of the N synthetic people", not
+  better or worse.
 
 A slope or z value describes the rows, not the cause behind them.
 
@@ -52,6 +56,9 @@ only say what came before or after. Both refuse `NO_ROWS` when nothing matches a
 - Guideline and knowledge search return at most 8 passages per call.
 - `range_position` also refuses `NO_ROWS` (no reading), `NO_PUBLISHED_RANGE` (Anchor v3
   has no range for the code) and `UNIT_MISMATCH` (the reading's unit is not the range's).
+- `cohort_position` also refuses `COHORT_TOO_SMALL` (fewer than 10 people with a value),
+  `NO_ROWS` (no reading for the subject) and `COHORT_ROW_CAP_EXCEEDED` (more than 20000
+  cohort rows in the window). It reads synthetic cohorts only.
 
 A refused call is still written to the audit log, with 0 rows.
 

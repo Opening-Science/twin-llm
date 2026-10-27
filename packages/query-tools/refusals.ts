@@ -73,7 +73,9 @@ export type ToolRefusal =
   | NoRecords
   | NoPublishedRange
   | UnitMismatch
-  | UnsupportedConversion;
+  | UnsupportedConversion
+  | CohortRowCapExceeded
+  | CohortTooSmall;
 
 const REFUSAL_CODES: readonly string[] = [
   SUBJECT_SCOPE_VIOLATION.code,
@@ -83,6 +85,8 @@ const REFUSAL_CODES: readonly string[] = [
   "NO_PUBLISHED_RANGE",
   "UNIT_MISMATCH",
   "UNSUPPORTED_CONVERSION",
+  "COHORT_ROW_CAP_EXCEEDED",
+  "COHORT_TOO_SMALL",
 ];
 
 export const isToolRefusal = (value: unknown): value is ToolRefusal =>
@@ -183,4 +187,39 @@ export const unitMismatch = (
   loinc,
   unit,
   range_unit: rangeUnit,
+});
+
+/**
+ * Rows one cohort-wide read may hold: every subject's rows of one code in the
+ * window. More is refused, not truncated, because a truncated read would drop
+ * whole people from the comparison.
+ */
+export const COHORT_ROW_CAP = 20_000;
+
+export const COHORT_ROW_CAP_EXCEEDED = {
+  code: "COHORT_ROW_CAP_EXCEEDED",
+  error:
+    "more than 20000 observations for this code across the cohort in this window; narrow the window",
+} as const;
+
+export type CohortRowCapExceeded = typeof COHORT_ROW_CAP_EXCEEDED;
+
+/** With fewer people with a value than this, no percentile is given. */
+export const COHORT_MINIMUM = 10;
+
+export type CohortTooSmall = Readonly<{
+  code: "COHORT_TOO_SMALL";
+  error: string;
+  loinc: string;
+  n: number;
+  minimum: typeof COHORT_MINIMUM;
+}>;
+
+/** A percentile among a handful of people says little and points at each of them. */
+export const cohortTooSmall = (loinc: string, n: number): CohortTooSmall => ({
+  code: "COHORT_TOO_SMALL",
+  error: "fewer than 10 people in this cohort have a value for this code in this window",
+  loinc,
+  n,
+  minimum: COHORT_MINIMUM,
 });
