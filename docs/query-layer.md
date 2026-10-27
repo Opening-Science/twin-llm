@@ -98,3 +98,29 @@ Outside the tools, the chat route and the onboarding starter questions write `pr
 `streamModelResponse` passes `createQueryTools(...)`, `createGbdTools(...)`,
 `createGuidelineTools(...)`, `createKnowledgeTools(...)`, and `stopWhen: isStepCount(8)`. Every tool
 `execute` calls `append` before the result is returned to the model.
+
+## How to add a tool
+
+`bun run new:tool <snake_name>` writes one tool into every place below. Each piece carries `todo("…")` calls (`packages/query-tools/todo.ts`) that fail `bun run typecheck` with their note in the message, and throw in a test, so the typecheck lists what is left. It refuses a name that is not snake_case, that an existing tool, view tool or genome tool already uses, or whose identifiers already exist, and writes nothing when it refuses. The template is a one-LOINC, one-window tool shaped like `trend`.
+
+The contract:
+
+- **Closed input.** A zod object with `.strict()`, window bounds from `schemas.ts`, `z.enum` for every fixed choice, no free text. It goes into `TOOL_DEFINITIONS`, which feeds chat (`ai-tools.ts`), the MCP server and both manifests.
+- **Scope first.** `subjectInScope` before any read; out of scope returns `SUBJECT_SCOPE_VIOLATION`.
+- **Audited.** The body runs inside `audited(...)`, so every call, refusal and throw writes one audit row; a refusal counts 0 rows.
+- **Capped reads.** One fixed `findMany` per window through `readWindow` (`ports.ts`), `ANALYTICS_ROW_CAP` + 1 rows, over the cap refused. No `$queryRaw`.
+- **Pure maths.** The arithmetic lives in `stats.ts`, free of I/O, tested with hand-computed numbers. Nothing to compute from is `null`, never 0.
+- **Refusals with a reason.** Mixed units return `MIXED_UNITS`; any new refusal is a named code in `refusals.ts` with an `error` that says why. No rows is `n: 0` with null statistics.
+- **Neutral wording.** Descriptions and answers say "within / above / below the published range", "before / after", never "because"; no advice, no warning colours, no causes.
+- **Owned by a source.** The name joins a source in `infrastructure/knowledge-sources.ts` (the scaffold uses `cohort-analytics`), so `forSources` drops it when that source is off.
+
+Done means:
+
+- the exact-output tests in `packages/query-tools/<name>.test.ts` pass, every expected value written out;
+- `bun run tools:snapshots` regenerated `__snapshots__/mcp-tools.json` and `openai-tools.json`, and the diff was read;
+- the row in the table above is filled in (and an Analytics bullet, if there is maths);
+- the training tool list (`scripts/training-data/chat-tool-list.test.ts`) and the skills tool list name the tool;
+- at least three eval questions, one of them a refusal, each with `expect.values`, moved from `evaluation/drafts/` into `evaluation/questions.v1.json`, and the answer key rebuilt offline with `bun run eval:answer-key`;
+- no `todo(` left; `bun run typecheck`, `lint`, `build` and `test` pass.
+
+`bun run new:tool:prove` scaffolds a throwaway tool into a temporary copy of the checkout and runs the full typecheck there: it passes when tsc fails on the todo markers and on nothing else. It takes a few minutes, so CI runs the faster checks in `scripts/new-tool/new-tool.test.ts`.

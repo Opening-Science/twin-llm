@@ -12,6 +12,11 @@ import type {
   ChatUIMessage,
   ModelResponseMetrics,
 } from "@/infrastructure/model-response-metrics";
+import {
+  type NumberSource,
+  numberSources,
+  type NumberSourcePart,
+} from "@/infrastructure/number-sources";
 import type { ResponseDocumentV1 } from "@/infrastructure/response-document/document-v1";
 import { toResponseDocument } from "@/infrastructure/response-document/parse";
 import { isSkillRefusalCode } from "@/infrastructure/skill-gate";
@@ -41,6 +46,8 @@ export type StreamResult = Readonly<{
   document: ResponseDocumentV1 | null;
   /** The server's sentence when it refused a skill turn; only ever set with FAILED. */
   refusal?: string;
+  /** The answer's numbers a tool call holds, matched once the stream ends. */
+  numberSources?: readonly NumberSource[];
 }>;
 
 export type StreamProgress = Readonly<{
@@ -88,6 +95,14 @@ export const toolActivity = (
             rowCounts?.get(part.toolCallId),
           ),
         ]
+      : [],
+  );
+
+/** The finished calls of a message, as the number matcher reads them. */
+export const sourceParts = (parts: ChatUIMessage["parts"]): NumberSourcePart[] =>
+  parts.flatMap((part) =>
+    isToolUIPart(part) && part.state === "output-available"
+      ? [{ toolCallId: part.toolCallId, input: part.input, output: part.output }]
       : [],
   );
 
@@ -152,11 +167,12 @@ export const streamAnswer = async (
     }
 
     // Stream bookkeeping: the reader reports finish and errors through
-    // callbacks, so these four are written from them and read once at the end.
+    // callbacks, so these are written from them and read once at the end.
     let finished = false;
     let errored = false;
     let metrics: ModelResponseMetrics | null = null;
     let document: ResponseDocumentV1 | null = null;
+    let last: ChatUIMessage | null = null;
 
     const snapshots = readUIMessageStream<ChatUIMessage>({
       stream: validChunks(response.body, () => {
@@ -168,6 +184,7 @@ export const streamAnswer = async (
     });
 
     for await (const message of snapshots) {
+      last = message;
       onProgress({
         text: textOf(message),
         tools: toolActivity(message.parts),
@@ -180,7 +197,15 @@ export const streamAnswer = async (
     }
 
     const ending: StreamEnding = errored ? "FAILED" : finished ? "COMPLETE" : "LOST";
-    return { ending, metrics, document };
+    // The browser already holds the outputs it streamed; only the matches are kept.
+    return ending === "COMPLETE" && last !== null
+      ? {
+          ending,
+          metrics,
+          document,
+          numberSources: numberSources(textOf(last), sourceParts(last.parts)),
+        }
+      : { ending, metrics, document };
   } catch (error) {
     console.error(`[arena] lost the stream for ${request.modelId}`, error);
     return FAILED;

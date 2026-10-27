@@ -20,6 +20,7 @@ import {
   type ModelScores,
   SCORED_CRITERIA,
   type ScoredCriterion,
+  type ScoredLine,
   sumTallies,
   type Tally,
 } from "./score/score-run";
@@ -134,6 +135,35 @@ const latencyTable = (all: readonly ModelScores[]): string =>
     ]),
   );
 
+/** Answers hallucination scored, the unsourced numbers in them, and how many had any. */
+export const unsourcedFigures = (
+  scores: Readonly<{ scored: readonly Pick<ScoredLine, "unsourcedNumbers">[] }>,
+): Readonly<{ answers: number; numbers: number; withAny: number }> => {
+  const counts = scores.scored.flatMap((entry) =>
+    entry.unsourcedNumbers === null ? [] : [entry.unsourcedNumbers],
+  );
+  return {
+    answers: counts.length,
+    numbers: counts.reduce((sum, n) => sum + n, 0),
+    withAny: counts.filter((n) => n > 0).length,
+  };
+};
+
+const unsourcedTable = (all: readonly ModelScores[]): string =>
+  table(
+    ["Model", "Answers", "Unsourced numbers", "Per answer", "Answers with any"],
+    all.map((scores) => {
+      const figures = unsourcedFigures(scores);
+      return [
+        modelName(scores.model),
+        String(figures.answers),
+        String(figures.numbers),
+        figures.answers === 0 ? DASH : formatNumber(figures.numbers / figures.answers, 2),
+        String(figures.withAny),
+      ];
+    }),
+  );
+
 export type ReportInput = Readonly<{
   meta: RunMeta;
   scores: readonly ModelScores[];
@@ -189,6 +219,12 @@ export const renderReport = ({ meta, scores, quantisation }: ReportInput): strin
     "Seconds, nearest-rank percentiles. Cache hits and errors are left out.",
     "",
     latencyTable(scores),
+    "",
+    "## Unsourced numbers",
+    "",
+    "Numbers in a reply that neither a tool call of the turn nor the question gives, dates and 0 to 10 left out: the numbers the app shows without a link. Counted over the answers hallucination scores. An extra metric; no pass or fail depends on it.",
+    "",
+    unsourcedTable(scores),
     "",
     "## Limits",
     "",

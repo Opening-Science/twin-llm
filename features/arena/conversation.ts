@@ -1,5 +1,6 @@
 import type { ChatView } from "@/infrastructure/chat-view";
 import type { ModelResponseMetrics } from "@/infrastructure/model-response-metrics";
+import type { NumberSource } from "@/infrastructure/number-sources";
 import type { EvidenceAttribution } from "@/infrastructure/oura-types";
 import type { ResponseDocumentV1 } from "@/infrastructure/response-document/document-v1";
 
@@ -44,6 +45,11 @@ export type AnswerFindings = Readonly<{
   document?: ResponseDocumentV1 | null;
   /** When the answer finished, ISO 8601; the Outputs panel shows it. */
   completedAt?: string | null;
+  /**
+   * The answer's numbers a tool call holds, with the call and row
+   * (`number-sources.ts`); never the value it read.
+   */
+  numberSources?: readonly NumberSource[];
 }>;
 
 /** One model's answer to one prompt. */

@@ -26,7 +26,7 @@ import {
 import { scoreClinicalCaution } from "./clinical-caution";
 import { scoreConsistency } from "./consistency";
 import { scoreCorrectness } from "./correctness";
-import { scoreHallucination } from "./hallucination";
+import { scoreHallucination, unsourcedNumberCount } from "./hallucination";
 import { scorePrivacy } from "./privacy";
 import { scoreQuerySafety } from "./query-safety";
 import { scoreReadability } from "./readability";
@@ -65,6 +65,11 @@ export type ScoredLine = Readonly<{
   line: ResultLine;
   item: Question;
   scores: Readonly<Record<ScoredCriterion, ScoreResult>>;
+  /**
+   * Numbers of the reply with no tool, question or 0–10 source; null when
+   * hallucination does not apply. An extra metric: no score depends on it.
+   */
+  unsourcedNumbers: number | null;
 }>;
 
 export type LatencyFigures = Readonly<{
@@ -162,7 +167,12 @@ const scoreModel = (input: RunInput, model: ModelKey): ModelScores => {
       ]),
     ) as Record<Exclude<ScoredCriterion, "consistency">, ScoreResult>;
     return [
-      { line, item, scores: { ...perLine, consistency: scoreConsistency(input_) } },
+      {
+        line,
+        item,
+        scores: { ...perLine, consistency: scoreConsistency(input_) },
+        unsourcedNumbers: unsourcedNumberCount(input_),
+      },
     ];
   });
 

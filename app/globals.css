@@ -369,6 +369,19 @@
     @apply border-border border-t px-3 py-2;
   }
 
+  /* A card a number in the answer was opened from. */
+  .tool-card[data-highlight] {
+    @apply border-primary/60;
+  }
+
+  /* A number in the answer that a tool call holds: a quiet dotted underline,
+     no colour of its own, so it reads as text first and a link second. */
+  .number-link {
+    @apply decoration-muted-foreground/70 hover:decoration-primary cursor-pointer rounded-sm underline decoration-dotted underline-offset-[3px];
+    font: inherit;
+    color: inherit;
+  }
+
   /* The thread's Outputs panel: a block above the answers on narrow screens, a
      sticky column beside them from xl up. */
   .outputs-panel {
