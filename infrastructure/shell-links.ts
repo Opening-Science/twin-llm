@@ -10,3 +10,7 @@ const DRAFT = /^\/[a-z][a-z0-9-]{0,40} $/;
 
 export const safeDraft = (value: string | string[] | undefined): string | undefined =>
   typeof value === "string" && DRAFT.test(value) ? value : undefined;
+
+/** A new chat with `/name ` typed in, for a command or skill; nothing is sent. */
+export const draftHref = (name: string): string =>
+  `/?draft=${encodeURIComponent(`/${name} `)}`;

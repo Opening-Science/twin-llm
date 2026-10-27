@@ -32,7 +32,7 @@ describe("ThreadBarView", () => {
   test("every other page has no bar: its own heading leads", () => {
     for (const path of [
       "/",
-      "/connectors",
+      "/customize/connectors",
       "/data",
       "/data/subjects",
       "/docs",
