@@ -13,13 +13,13 @@ export const dynamic = "force-dynamic";
 
 const DATASETS = [
   {
-    href: "/data",
+    href: "/customize/data/cohort",
     title: "Synthetic cohort",
     detail:
       "Synthea people with labs, vitals, conditions and medications. The evaluation set and the training conversations read it.",
   },
   {
-    href: "/data/training",
+    href: "/customize/data/cohort/training",
     title: "Training conversations",
     detail:
       "Conversations made from the synthetic cohort, with their tools and outcomes.",

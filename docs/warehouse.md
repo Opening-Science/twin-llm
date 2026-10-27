@@ -76,7 +76,7 @@ The Body twin's Demo lab values (`/api/biomarkers/cohort`, see `docs/biomarkers.
 
 ## Data page
 
-`/data` (`features/data-explorer/`) is where the team looks at what is in the warehouse. It is labelled "Synthetic data" and reads only `is_synthetic` subjects of a cohort in `SYNTHETIC_COHORTS`, in any `DATA_MODE`.
+`/customize/data/cohort` (Customize · Data, formerly `/data`; `features/data-explorer/`) is where the team looks at what is in the warehouse. It is labelled "Synthetic data" and reads only `is_synthetic` subjects of a cohort in `SYNTHETIC_COHORTS`, in any `DATA_MODE`.
 
 ### Synthetic display scope
 

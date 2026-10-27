@@ -15,7 +15,6 @@ import { BrandAttribution } from "./brand-attribution";
 import {
   CompareGlyph,
   ConnectorsGlyph,
-  DataGlyph,
   DocsGlyph,
   ModelsGlyph,
   PlusGlyph,
@@ -66,7 +65,6 @@ const SECTIONS: readonly Section[] = [
     Glyph: TwinGlyph,
     owns: under("/digital-twin"),
   },
-  { href: "/data", label: "Data", Glyph: DataGlyph, owns: under("/data") },
   { href: "/models", label: "Models", Glyph: ModelsGlyph, owns: under("/models") },
   { href: "/docs", label: "Docs", Glyph: DocsGlyph, owns: under("/docs") },
   { href: "/start", label: "Get started", Glyph: StartGlyph, owns: under("/start") },
