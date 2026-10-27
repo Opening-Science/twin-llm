@@ -5,6 +5,13 @@ import {
   permitProviderForRequest,
   PROVIDER_NOT_PERMITTED_SENTENCE,
 } from "@/infrastructure/data-mode-policy";
+import { genomeThreadRefusedEvent } from "@/infrastructure/genome-thread-audit";
+import {
+  GENOME_THREAD_SENTENCE,
+  historyShowsGenome,
+  permitGenomeThreadTurn,
+  requestsGenomeTools,
+} from "@/infrastructure/genome-thread-policy";
 import type { KnowledgeSourceId } from "@/infrastructure/knowledge-sources";
 import { personalDataSentEvent } from "@/infrastructure/personal-data-audit";
 import {
@@ -42,7 +49,12 @@ import type { WearableContext } from "./wearable-context";
  * settings, which is for the operator).
  *
  * The genome gate never refuses a whole turn here: a turn it does not permit
- * runs without the genome tools (`genome-tool-deps.ts`).
+ * runs without the genome tools (`genome-tool-deps.ts`). The genome rule per
+ * thread does (#151): a thread where a genome tool ran, a history that shows
+ * one, or a skill that asks for one runs only on a local chat model. Any other
+ * model is refused after the skill refusals and before the data-mode policy,
+ * so before any history is sent. The refusal is audited (provider and a hash
+ * of the thread id); if that write fails the turn is still refused.
  */
 
 export type ChatProviderSettings = Readonly<{
@@ -51,8 +63,14 @@ export type ChatProviderSettings = Readonly<{
   exoscalePersonalData: ExoscalePersonalData;
 }>;
 
+/** Whether a turn's thread already used a genome tool (`load-genome-thread.ts`). */
+export type GenomeThread = Readonly<{ threadId: string; usedGenome: boolean }>;
+
 export type StartAnswerDeps = Readonly<{
   settings: () => ChatProviderSettings;
+  /** True when the chat model runs on this machine (Ollama on loopback). */
+  chatIsLocal: () => boolean;
+  loadGenomeThread: (turnId: string) => Promise<GenomeThread>;
   loadWearables: (mode: DataMode, appUserId: string) => Promise<WearableContext>;
   loadDisabledSources: (appUserId: string) => Promise<readonly KnowledgeSourceId[]>;
   appendAudit: (input: AppendInput) => Promise<unknown>;
@@ -83,6 +101,11 @@ export const createStartAnswer =
     if (call.skill !== undefined && skill === null) {
       return refuse(skillNotOffered(call.skill));
     }
+    const thread = await deps.loadGenomeThread(call.turnId);
+    const genomeThread =
+      thread.usedGenome ||
+      historyShowsGenome(call.messages) ||
+      (skill !== null && requestsGenomeTools(skill.tools));
     const wearables = await deps.loadWearables(settings.dataMode, appUserId);
     const request = {
       mode: settings.dataMode,
@@ -96,6 +119,28 @@ export const createStartAnswer =
         hasWearableContext: request.hasWearableNarrative,
       });
       if (!skillPermit.ok) return refuse(skillPermit);
+    }
+    const genomePermit = permitGenomeThreadTurn({
+      genomeThread,
+      chatIsLocal: deps.chatIsLocal(),
+    });
+    if (!genomePermit.ok) {
+      await deps
+        .appendAudit(
+          genomeThreadRefusedEvent({
+            actor: actorId,
+            sessionId: call.turnId,
+            threadId: thread.threadId,
+            provider: request.provider,
+          }),
+        )
+        .catch((error: unknown) => {
+          console.error(
+            "[chat] could not audit the genome thread refusal",
+            error instanceof Error ? error.name : "unknown",
+          );
+        });
+      return refuse(genomePermit, GENOME_THREAD_SENTENCE);
     }
     const permit = permitProviderForRequest(request);
     if (!permit.ok) return refuse(permit, PROVIDER_NOT_PERMITTED_SENTENCE);
@@ -119,6 +164,7 @@ export const createStartAnswer =
 
     return deps.stream(call, {
       clerkId: actorId,
+      genomeThread,
       disabledSources: await deps.loadDisabledSources(appUserId),
       ...(skill === null ? {} : { skill }),
       ...wearables,

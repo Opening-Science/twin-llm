@@ -19,6 +19,10 @@ let streamCalls = 0;
 let streamWearables: unknown = null;
 let whoopReads = 0;
 let appendFail = false;
+let auditedTools: string[] = [];
+let refusedRows: string[] = [];
+/** The stored tool parts of the thread's earlier turn (synthetic). */
+let earlierToolParts: unknown = null;
 
 mock.module("server-only", () => ({}));
 mock.module("@/infrastructure/auth-actor", () => ({
@@ -37,7 +41,23 @@ mock.module("@/infrastructure/database", () => ({
       findUnique: async () => ({
         turn: { thread: { userId: USER_ID } },
       }),
+      update: async (args: { data: { status: string; text: string } }) => {
+        refusedRows.push(`${args.data.status} ${args.data.text}`);
+        return {};
+      },
     },
+    turn: {
+      findUnique: async () => ({
+        threadId: "thread-synthetic-1",
+        thread: {
+          turns: [
+            { id: "turn-synthetic-0", responses: [{ toolParts: earlierToolParts }] },
+            { id: TURN_ID, responses: [{ toolParts: null }] },
+          ],
+        },
+      }),
+    },
+    auditEvent: { findFirst: async () => null },
     ouraSnapshot: { findFirst: async () => null },
     whoopSnapshot: {
       findFirst: async () => {
@@ -58,7 +78,7 @@ mock.module("@/infrastructure/database", () => ({
         $executeRaw: () => Promise<number>;
         auditEvent: {
           findFirst: () => Promise<null>;
-          create: () => Promise<object>;
+          create: (args: { data: { tool: string } }) => Promise<object>;
         };
       }) => Promise<unknown>,
     ) => {
@@ -69,7 +89,10 @@ mock.module("@/infrastructure/database", () => ({
         $executeRaw: async () => 0,
         auditEvent: {
           findFirst: async () => null,
-          create: async () => ({}),
+          create: async (args: { data: { tool: string } }) => {
+            auditedTools.push(args.data.tool);
+            return {};
+          },
         },
       });
     },
@@ -135,6 +158,9 @@ beforeEach(async () => {
   streamWearables = null;
   whoopReads = 0;
   appendFail = false;
+  auditedTools = [];
+  refusedRows = [];
+  earlierToolParts = null;
   await useEnv({
     LLM_PROVIDER: "openrouter",
     DATA_MODE: "synthetic",
@@ -194,6 +220,76 @@ describe("POST /api/chat with LLM_PROVIDER=exoscale", () => {
     expect(whoopReads).toBe(1);
     expect(streamCalls).toBe(1);
     expect(JSON.stringify(streamWearables)).toContain(WHOOP_NARRATIVE);
+  });
+});
+
+describe("POST /api/chat in a thread that used genome tools (#151)", () => {
+  const PILOT = {
+    LLM_PROVIDER: "exoscale",
+    DATA_MODE: "personal",
+    LOCAL_ONLY: "false",
+    EXOSCALE_BASE_URLS: "https://gpu1.example.invalid/v1",
+    EXOSCALE_PERSONAL_DATA: "consented-pilot",
+  };
+  const GENOME_PART = {
+    seq: 1,
+    tool: "dna_ask",
+    input: { rsid: "rs0000001" },
+    output: { answer: "synthetic" },
+    argsSha256: "a".repeat(64),
+    resultSha256: "b".repeat(64),
+    rowCount: null,
+    at: "2026-10-27T00:00:00.000Z",
+  };
+  const ask = () =>
+    POST(
+      new Request("http://localhost:3000/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          modelId: MODEL_ID,
+          turnId: TURN_ID,
+          messages: [{ role: "user", content: "And how did I sleep?" }],
+        }),
+      }),
+    );
+
+  test("the consented Exoscale pilot is refused before anything is streamed", async () => {
+    await useEnv(PILOT);
+    earlierToolParts = [GENOME_PART];
+    const res = await ask();
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({
+      code: "GENOME_THREAD_LOCAL_ONLY",
+      error: "This thread used your genome report, so it only runs on local models.",
+    });
+    expect(streamCalls).toBe(0);
+    // The wearable read is audited first; nothing says the pilot got data.
+    expect(auditedTools).toEqual(["vitronic.chat.summary", "genome.thread.refused"]);
+    expect(refusedRows).toEqual([
+      "REFUSED This thread used your genome report, so it only runs on local models.",
+    ]);
+  });
+
+  test("the same thread on local Ollama streams", async () => {
+    await useEnv({ LLM_PROVIDER: "ollama", DATA_MODE: "personal" });
+    earlierToolParts = [GENOME_PART];
+    const res = await ask();
+    expect(res.status).toBe(200);
+    expect(streamCalls).toBe(1);
+    expect(refusedRows).toEqual([]);
+  });
+
+  test("a thread without genome parts on the pilot is unchanged", async () => {
+    await useEnv(PILOT);
+    earlierToolParts = [{ ...GENOME_PART, tool: "coverage" }];
+    const res = await ask();
+    expect(res.status).toBe(200);
+    expect(streamCalls).toBe(1);
+    expect(auditedTools).toEqual([
+      "vitronic.chat.summary",
+      "provider.personal_data_sent",
+    ]);
   });
 });
 

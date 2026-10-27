@@ -48,6 +48,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Security
 
+- A thread where `genome_report` or `dna_ask` ran stays on local models (#151). Before, switching to a hosted provider (the consented Exoscale pilot included) and writing on in that thread sent the earlier genome turns with the history. Now every later turn on a model other than Ollama on loopback is refused before any history is sent, stored as `REFUSED` with "This thread used your genome report, so it only runs on local models.", and audited as `genome.thread.refused` (provider and a hash of the thread id). A second check refuses again right before the history reaches a model. `permitGenomeThreadExport` is the same rule for `/report` (#44) to use. `docs/genome.md` rule 6 now says per thread, not only per question.
 - `next` and `eslint-config-next` 16.2.12 → 16.4.1, and `zod` 4.4.3 → 4.6.6, for published security advisories; an `overrides` entry keeps every transitive zod on 4.6.6. Query-tool window bounds still accept a UTC datetime without seconds.
 
 ## [0.1.0] - 2026-10-25
