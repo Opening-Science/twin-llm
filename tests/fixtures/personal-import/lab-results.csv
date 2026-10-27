@@ -1,0 +1,14 @@
+Date,Test,Value,Unit,LOINC,Note
+2024-02-10,HbA1c,5.4,%,,made-up
+2024-02-10,Total cholesterol,182,mg/dL,,
+2024-02-10,Total cholesterol,4.7,mmol/L,,
+2024-02-10,Ferritin,48,ng/mL,,
+2024-02-10,Glucose,92,mg/dL,2345-7,
+2024-02-10,Made-up marker,1.25,U/L,,
+2025-05-20T08:30:00+02:00,TSH,2.1,m[IU]/L,,
+2025-05-20,Vitamin B12,<150,pg/mL,,
+2025-05-20,Sodium,140,,,
+2025-05-20T08:30:00,Potassium,4.2,mmol/L,,
+2025-05-20,Calcium,2.4,mmol/L,4548-5,
+2025-05-20,"Platelets, count",250,x10^9/L,,
+2025-05-20,Platelets,250,10*9/L,,
