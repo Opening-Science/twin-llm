@@ -1,0 +1,6 @@
+participant	visit_date	score	group	comment
+p01	2024-01-15	12.5	a	first visit
+p02	2024-01-16	NA		second visit
+p03	2024-02-01	9	a	"said ""fine"""
+p04		11.25	b	late
+p05	2024-02-30	8	a

@@ -279,21 +279,21 @@ describe("spreadSubjects", () => {
     };
     const set = parse(
       questions([
-        wearable("Q-S1-23", "all"),
-        wearable("Q-S6-22", "oura"),
-        wearable("Q-S6-23", "all"),
-        wearable("Q-S6-24", "all"),
+        wearable("Q-S1-28", "all"),
+        wearable("Q-S6-24", "oura"),
+        wearable("Q-S6-25", "all"),
+        wearable("Q-S6-26", "all"),
       ]),
     );
     expect(spreadSubjects(set, series).moves.map((move) => [move.id, move.to])).toEqual([
       // A trend: 7 readings in the window.
-      ["Q-S1-23", "bbb"],
+      ["Q-S1-28", "bbb"],
       // A vendor source reads nothing; any subject with a series, fewest items first.
-      ["Q-S6-22", "ccc"],
+      ["Q-S6-24", "ccc"],
       // WINDOW_TOO_SHORT: 1 to 6 readings.
-      ["Q-S6-23", "ccc"],
+      ["Q-S6-25", "ccc"],
       // NO_ROWS: a series, but none in the window.
-      ["Q-S6-24", "ddd"],
+      ["Q-S6-26", "ddd"],
     ]);
   });
 

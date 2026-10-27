@@ -25,6 +25,9 @@ import {
   trendInput,
   rangePositionInput,
   convertUnitInput,
+  cohortPositionInput,
+  conditionsTimelineInput,
+  medicationsTimelineInput,
   sleepSummaryInput,
   hrvTrendInput,
   restingHrTrendInput,
@@ -43,6 +46,9 @@ import {
   runTrend,
   runRangePosition,
   runConvertUnit,
+  runCohortPosition,
+  runConditionsTimeline,
+  runMedicationsTimeline,
   runSleepSummary,
   runHrvTrend,
   runRestingHrTrend,
@@ -109,6 +115,15 @@ export const queryToolRunners = (
     runRangePosition(scope, input, ports),
   ),
   convert_unit: bind(convertUnitInput, (input) => runConvertUnit(scope, input, ports)),
+  cohort_position: bind(cohortPositionInput, (input) =>
+    runCohortPosition(scope, input, ports),
+  ),
+  conditions_timeline: bind(conditionsTimelineInput, (input) =>
+    runConditionsTimeline(scope, input, ports),
+  ),
+  medications_timeline: bind(medicationsTimelineInput, (input) =>
+    runMedicationsTimeline(scope, input, ports),
+  ),
   sleep_summary: bind(sleepSummaryInput, (input) => runSleepSummary(scope, input, ports)),
   hrv_trend: bind(hrvTrendInput, (input) => runHrvTrend(scope, input, ports)),
   resting_hr_trend: bind(restingHrTrendInput, (input) =>

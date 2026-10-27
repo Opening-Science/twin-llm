@@ -26,9 +26,25 @@ Since #39: each tool call is a folded card above the answer (`features/arena/too
 
 Since #37: an Outputs panel beside the thread (above it on narrow screens) lists every view its answers show, newest first, with title, kind, model and time; a row scrolls to the chart, Enlarge draws it large in the panel. It collapses or closes, and the choice is kept in the browser's local storage. `list_views` lists the thread's views (id, title, kind, model, time; no points) and `open_view(id)` returns a stored view unchanged, streamed as a `data-view` part with no new query. Both read the thread's stored tool parts, are audited (`open_view` with the view's subject and point count), a synthetic request is not offered wearable views, and a skill turn gets them only when its skill allows a kind `show_view` draws. The views come from the stored tool parts, so no table or migration was added. Views with no readings are listed dimmed. View titles use plain dates (`Heart rate, 1 Jan 2016 – 31 Oct 2026`), and `show_view` refuses a measure that is neither a LOINC code nor a wearable key the app labels or the turn loaded (`UNKNOWN_MEASURE`) rather than drawing an empty chart.
 
+Since #38: `show_view` also draws `chart.compare`, `biomarker.card` and `table` (`infrastructure/view-specs.ts` holds each spec's zod schema; `features/chat/view-builders.ts` builds them). `chart.compare` sets `window` against an earlier `compare_with`: for a LOINC the n and mean of each window are `compare_windows`' own and the points one `timeseries` read per window; a wearable key gets the same summary of its readings. Side by side or overlaid by day, the earlier window grey and dashed, each with its n and mean in words. `biomarker.card` runs `range_position` (latest reading, the Anchor v3 range and position from `packages/biomarkers`, or what the range depends on) and `trend` over the window; the arrow is the fitted change rounded as the value is shown, with n. A code with no published range is refused as `range_position` refuses it, and a wearable key with `LOINC_REQUIRED`. `table` lists the readings under columns the server picks from the row fields (a fixed list; text the same in every row is left to the caption), the first 50 with "Showing first 50 of N". The visuals are neutral: above and below are words, never a warning colour. All three reload from the stored tool parts and appear in the Outputs panel.
+
 Since #111: a number in a finished answer that a tool call returned is a quiet dotted link. Pressing it (click or Enter) opens the card of every call that holds it, moves focus to the first, and the card lists the answer's numbers from that call with their rows and fields (`rows 1, 4 · value`). A number with no source stays plain. The matcher is `infrastructure/number-sources.ts`, shared with the hallucination scorer: dates and 0 to 10 are left out, a value matches by rounding or within 1 %, and a reading in another common unit (lb for kg) counts. A saved answer is matched on the server from its stored tool parts and a live one in the browser from the parts it streamed; only the number's text, the call id, the row position and the field name reach the page, never a row's values.
 
-Issues: #35 stored tool parts, #36 `data-view` and `show_view`, #37 Outputs panel, #38 more kinds, #39 tool-call cards, #111 clickable numbers.
+Issues: #35 stored tool parts, #36 `data-view` and `show_view`, #37 Outputs panel, #38 compare, card and table kinds, #39 tool-call cards, #111 clickable numbers.
+
+## Incognito chats
+
+Never saved, local only. On an empty new chat the hat-and-glasses switch at the top right ("Incognito chat", `aria-pressed`) opens `/?incognito=1`; turning it off goes back to `/`. A reload keeps the mode but starts an empty conversation, and so do "New chat" and navigating away. Other UI links to `INCOGNITO_HREF` (`infrastructure/incognito.ts`). The banner under the heading reads "Incognito chat. Not saved, not in your threads or search, local models only.", it stays above the answers once there are some, and the prompt bar's frame is dashed.
+
+The conversation lives in the compare screen's React state only (`features/arena/begin-turn.ts`): `startTurn` is never called, the thread history store is not touched, the URL never becomes `/t/<id>`, and no analytics event describes the conversation (with analytics on, the visit to `/?incognito=1` is a page view like any other). Each answer goes to `POST /api/chat/incognito` with a closed body (`modelId`, at most 100 messages, optional `skill`; no turn id). The route needs a signed-in person (or auth off, as `/api/chat`), passes the same abuse protection, and refuses any chat model that is not Ollama on loopback with `INCOGNITO_LOCAL_ONLY` before a model is called. The picker shows the other models greyed out with the reason.
+
+The answer runs through the same pipeline as a saved one: `createStartAnswer` (skill gate, genome rules, data-mode policy) and `createStreamModelResponse` (model, tools, views, stream), with an answer store that writes nothing and analytics that send nothing (`features/chat/incognito-chat.ts`). Exactly what is kept:
+
+- Written: one `audit_events` row per tool call, and `skill.<name>` for a skill turn, as for any chat: actor, a random session id per answer (`incognito-<uuid>`, never a thread or turn id), subject, tool, row count, time, and SHA-256 hashes of the tool's arguments and result. No prompt, answer or thread id. An argument the model writes, such as a knowledge search phrase, is only ever stored as part of that hash.
+- Not written: no `threads`, `turns` or `model_responses` row, no stored tool parts or response document, no `prompt_sent`, `model_answered` or generation event. No prompt or answer text goes to a log line; failures log error names and status codes only.
+- Read only: the person's user row (never created here), wearable summaries and the sources turned off at `/start`, as a saved turn reads them.
+
+`list_views` and `open_view` find no earlier views, since nothing was stored. The genome tools stay available where the genome policy allows them, because the model is local. Ollama's own logs on this machine are outside TwinLLM.
 
 ## 2. Skills and the command palette
 
@@ -37,6 +53,16 @@ The slash menu becomes a palette: built-in commands and skills, each showing wha
 Since #42: the palette lists every offered skill with what it reads and may call, and a prompt sent as `/sleep …` runs under the skill's tool, provider and view allowlists with its instructions in the system prompt. The run is audited as `skill.<name>` and the response document carries `skill` ([skills.md](skills.md)).
 
 Issues: #40 palette, #41 skill format, #42 `/sleep`, #43 `/compact`, #44 `/report`.
+
+### Search (#167)
+
+Ctrl/⌘+K anywhere in the shell, or Search in the sidebar, opens one box over threads, pages, docs and `/` commands, with tabs (All, Threads, Pages, Docs, Commands), recent threads and actions when empty, ↑/↓ and Enter, and ←/→ at either end of the text to change the tab. A command opens a new chat with `/name ` typed in; it sends nothing.
+
+- Threads are only the signed-in person's own. Words match titles, prompts and finished answers (Prisma `contains`); meaning matches come from `thread_search_embeddings`, one nomic-embed-text vector per prompt or answer and **no text**, so deleting a thread removes everything search knows about it. The snippet is read back from the turn or answer.
+- Embeddings are made only by Ollama on a loopback address, whatever `LOCAL_ONLY` says. Opening the box embeds what is new (at most 25 items or 4 s per call, newest first); with Ollama down, search answers by words and says so.
+- A genome thread (#151) is found by its title only: no passage is shown, it is never embedded, and an existing embedding is dropped at the next index run.
+- Each thread search is audited as `search.threads` with the tab and the number of words and results, never the query; if the audit cannot be written, the search is refused.
+- Docs match by title and by text, with a passage; they are not embedded.
 
 ## 3. `/trainer`, descriptive
 

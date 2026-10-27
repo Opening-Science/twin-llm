@@ -1,6 +1,6 @@
 # Warehouse
 
-Local research store for a Synthea cohort. Numeric rows come from `@open-twin/fhir-r4` `normaliseBundle` at pin `24179d8`. Personal wearable snapshots (Oura, Whoop, Google Health) never write these tables.
+Local research store for a Synthea cohort. Numeric rows come from `@open-twin/fhir-r4` `normaliseBundle` at pin `24179d8`. Personal wearable snapshots (Oura, Whoop, Google Health) and the files a person imports on Customize · Data ([personal-data.md](personal-data.md)) never write these tables.
 
 ## Pin
 
@@ -10,28 +10,50 @@ Local research store for a Synthea cohort. Numeric rows come from `@open-twin/fh
 
 ## Schema
 
-| Table                     | Role                                                                          |
-| ------------------------- | ----------------------------------------------------------------------------- |
-| `subjects`                | Opaque `subject_ref` PK, `is_synthetic` (always true here), `cohort_id`       |
-| `bundles`                 | `sha` PK (sha256 of raw bytes), `cohort_id`, `ingested_at`, `synthea_version` |
-| `observations`            | Numeric row, `unit_ucum` NOT NULL, `UNIQUE(bundle_sha, fhir_id)`              |
-| `observation_non_numeric` | String / codeable / boolean payloads as `raw_value` jsonb                     |
+| Table                     | Role                                                                                                       |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `subjects`                | Opaque `subject_ref` PK, `is_synthetic` (always true here), `cohort_id`, `sex`, `birth_year`, `death_year` |
+| `bundles`                 | `sha` PK (sha256 of raw bytes), `cohort_id`, `ingested_at`, `synthea_version`                              |
+| `observations`            | Numeric row, `unit_ucum` NOT NULL, `UNIQUE(bundle_sha, fhir_id)`                                           |
+| `observation_non_numeric` | String / codeable / boolean payloads as `raw_value` jsonb                                                  |
+| `conditions`              | Synthea Condition as recorded, `UNIQUE(bundle_sha, fhir_id)`                                               |
+| `medication_requests`     | Synthea MedicationRequest as recorded, `UNIQUE(bundle_sha, fhir_id)`                                       |
 
 `ingestBundle` does not take `is_synthetic` from the caller. It hard-sets `isSynthetic: true` and `source: "synthea"`. Snapshot tables have no `is_synthetic` column, so a personal connector row cannot be stored as synthetic.
 
-The tables come from `prisma/migrations/20261025000000_baseline`, which also adds `CHECK (source = 'synthea')` on both observation tables by hand.
+The tables come from `prisma/migrations/20261025000000_baseline`, which also adds `CHECK (source = 'synthea')` on both observation tables by hand. `conditions` and `medication_requests` come from `20261027130000_conditions_medication_requests`, with the same check. They have no `is_synthetic` column: a row is synthetic through its subject (`subjects.is_synthetic`), which every read checks.
+
+### Conditions and medication requests
+
+Copied from the normalised bundle as recorded; nothing is inferred, and a missing date or status stays null (`packages/warehouse/map-clinical.ts`).
+
+- `conditions`: `code_system`, `code`, `display` (SNOMED CT or ICD-10 in Synthea v4), `onset_at` and `abatement_at` (`onsetDateTime`, `abatementDateTime`), `clinical_status`, `verification_status`, `encounter_ref`.
+- `medication_requests`: `code_system`, `code`, `display` from `medicationCodeableConcept`, or from the `code` of the Medication that `medicationReference` points at in the same bundle (Synthea uses both; RxNorm wins over any other coding; an unresolved reference leaves the code empty). `authored_at`, `status`, `intent`, `dosage_text` (each `dosageInstruction[].text`, verbatim; no dose, timing or route fields are kept) and `reason_refs` (`reasonReference[].reference`).
+- References (`encounter_ref`, `reason_refs`) carry the ids `normaliseBundle` assigned, so a reason ref is `urn:uuid:<fhir_id>` of a condition from the same bundle.
+
+### Sex, birth year and death year (#4)
+
+`prisma/migrations/20261027150000_subject_sex_birth_year` adds three nullable columns to `subjects`: `sex` (FHIR `Patient.gender`: `female`, `male`, `other` or `unknown`), `birth_year` (the year of `Patient.birthDate`) and `death_year` (the year of `Patient.deceasedDateTime`). Only years are stored, never a full date; the year is read as written in the bundle, not shifted by a time zone. Three checks hold them in the database: `sex` is one of the four values, a death year is not before the birth year, and all three stay null unless `is_synthetic` is true.
+
+`ingestBundle` fills them from the bundle's Patient (`packages/warehouse/subject-facts.ts`), after the Synthea marker check, so they are only ever written for synthetic subjects; personal wearable data never reaches `subjects`. A fact the Patient does not carry is left as it is rather than set to null, so a synthetic wearable bundle (it copies only the Patient's id and identifier) never erases what the subject's own Synthea bundle stored. A `deceasedBoolean` without a date gives no death year.
+
+Rows ingested before the migration keep null facts until they are filled in. Either of these does it:
+
+- `bun run warehouse:ingest <dir> --cohort <id>` again over the same files: an `already ingested` bundle writes no observation, but its subject's sex, birth year and death year are updated.
+- `bun run setup:local -- --reload-cohort` for the evaluation cohort: it deletes that cohort's warehouse rows and ingests the pinned files.
 
 ## ingestBundle
 
 `packages/warehouse/ingest-bundle.ts`:
 
 1. The bundle's Patient must carry the Synthea identifier system. Otherwise → `rejected.reason = not-synthea`, nothing written. Library callers cannot skip this.
-2. Hash the raw bundle. A known `bundles.sha` returns `{ inserted: 0, skipped: <row count>, alreadyIngested: true }`.
+2. Hash the raw bundle. A known `bundles.sha` returns `{ inserted: 0, skipped: <observation rows>, conditions, medicationRequests, alreadyIngested: true }` with the stored counts; the only write is the subject's sex, birth year and death year from the Patient (the backfill above).
 3. Call `normaliseBundle` with `unresolvedUrnPolicy: "preserve"`. If there is no `bundle`, return `{ inserted: 0, rejected: { reason } }` and list dangling `urn:uuid:` refs in `unresolved`. Do not insert `bundles` on reject.
 4. Map Observations (`mapObservations`). Every numeric row needs a UCUM `code`. Missing unit → `rejected.reason = ot-quantity-no-code`. Missing is not written as zero.
 5. Components with a LOINC code and a Quantity become their own numeric rows. A blood pressure panel (`85354-9`) gives one `8480-6` (systolic) and one `8462-4` (diastolic) row, with `fhir_id = <panel id>#<component loinc>` and the panel's time. A LOINC that repeats within one panel gets `/2`, `/3`, … from its second occurrence, in source order. The panel itself stays in `observation_non_numeric` as `value_type = components`.
-6. One transaction (timeout 120 s): first look up the subject. If it already belongs to another cohort, write nothing and reject (`subject-cohort-conflict`). A subject never moves between cohorts. Otherwise insert with `createMany`, so a full Synthea patient with thousands of rows fits.
-7. Report: `{ inserted, skipped, unresolved, nonNumeric, alreadyIngested, rejected? }` (Zod).
+6. Map Conditions and MedicationRequests (`mapConditions`, `mapMedicationRequests`).
+7. One transaction (timeout 120 s): first look up the subject. If it already belongs to another cohort, write nothing and reject (`subject-cohort-conflict`). A subject never moves between cohorts. Otherwise upsert the subject with its sex, birth year and death year and insert observations, conditions and medication requests with `createMany`, so a full Synthea patient with thousands of rows fits. A bundle is written whole or not at all.
+8. Report: `{ inserted, skipped, unresolved, nonNumeric, conditions, medicationRequests, alreadyIngested, rejected? }` (Zod). `inserted` and `skipped` count observation rows.
 
 ## Cohorts and scope
 
@@ -54,7 +76,7 @@ The Body twin's Demo lab values (`/api/biomarkers/cohort`, see `docs/biomarkers.
 
 ## Data page
 
-`/data` (`features/data-explorer/`) is where the team looks at what is in the warehouse. It is labelled "Synthetic data" and reads only `is_synthetic` subjects of a cohort in `SYNTHETIC_COHORTS`, in any `DATA_MODE`.
+`/customize/data/cohort` (Customize · Data, formerly `/data`; `features/data-explorer/`) is where the team looks at what is in the warehouse. It is labelled "Synthetic data" and reads only `is_synthetic` subjects of a cohort in `SYNTHETIC_COHORTS`, in any `DATA_MODE`.
 
 ### Synthetic display scope
 
@@ -62,13 +84,13 @@ The Data page and the Body twin's Demo lab values read through the synthetic dis
 
 The chat stays strict. The query tools and `show_view` use `scope.ts`, which in personal mode refuses every synthetic subject; the chat tools never import the display scope. `synthetic-display.test.ts` checks both sides.
 
-- **Overview**: per cohort, subjects, numeric and text observations, distinct LOINC codes and the years covered; the most common codes with their units as a share of subjects; observations per year; and coverage (how many codes reach how many subjects, the codes at least 80% have and the sparse ones under 10%). Codes stored in more than one unit are listed.
+- **Overview**: per cohort, subjects, numeric and text observations, distinct LOINC codes and the years covered; subjects by sex and 10-year age band, with counts (`sex-age-split.ts`; ages are the age reached in the year of the cohort's latest reading, or in the year of death, from the birth year only, so they can be a year high; subjects with no stored facts are counted as not stored); the most common codes with their units as a share of subjects; observations per year; and coverage (how many codes reach how many subjects, the codes at least 80% have and the sparse ones under 10%). Codes stored in more than one unit are listed.
 - **Subjects**: subject_refs with observation and code counts, first and last day; search, sort and pages are URL parameters. A subject page has one chart per code and unit (units are never converted) and a table of latest values, readings, days with data, first and last day.
 - **Audit**: every read writes an audit row, refusals and failed reads included: `data-explorer.cohort.overview` and `data-explorer.cohort.subjects` with no subject_ref, `data-explorer.subject.observations` with the subject_ref and the rows read. The overview's `row_count` is the number of observations its counts summarise, not rows returned. A cohort off the allowlist is audited as `SUBJECT_SCOPE_VIOLATION` with 0 rows. A subject with more than 50,000 numeric rows is refused (`ROW_CAP_EXCEEDED`, 0 rows) rather than cut, since a cut read would lose the newest values.
 - **Sign-in**: with sign-in on, every tab, Training data included, needs a signed-in actor.
 - The cohort summaries are fixed `$queryRaw` statements with the cohort id bound (Prisma `groupBy` has no distinct-subjects count); the subject read is a `findMany`. They are the first `$queryRaw` outside vector search (`docs/query-layer.md`).
 - A chart draws at most 1,000 readings of a series: the lowest and highest of each stretch, exact values. The table counts every reading.
-- Sex, birth year and death are not stored, so the page has no split by them.
+- The sex and age split is one Prisma `groupBy` over `sex`, `birth_year` and `death_year` for the cohort's `is_synthetic` subjects; it is part of the overview read and its audit row. A cohort ingested before the columns existed shows the not-stored row and how to fill it in.
 
 ## warehouse:ingest
 
@@ -80,12 +102,12 @@ The chat stays strict. The query tools and `show_view` use `scope.ts`, which in 
 - When `manifest.json` in `<dir>` or its parent names a `cohortId` (the generators write one), it must equal `--cohort` (or the default). A mismatch is refused before anything is written. With no cohort id there, the run goes on with a warning.
 - `synthea_version` comes from `manifest.json` in `<dir>` or its parent (written by the generator), else the pinned `v4.0.0`.
 - A bundle whose ingest throws is reported as `rejected (ingest-failed)`, never with the raw error, and the run goes on to the next bundle and the summary.
-- Prints one line per file, totals, the cohort's subject count and numeric rows per LOINC. It prints no values. Exit code 1 on any rejected bundle.
+- Prints one line per file (observation rows, conditions, medication requests), totals, the cohort's subject, condition and medication request counts, and numeric rows per LOINC. It prints no values. Exit code 1 on any rejected bundle.
 - Safe to re-run: a bundle whose sha256 is already stored is reported as `already ingested` (from `alreadyIngested`, not from a zero insert count).
 
 ## Fixtures
 
-Byte copies of the three open-twin trimmed bundles live under `tests/fixtures/synthea/`. `bp-panel.json` is a small hand-made bundle (two blood pressure panels and one HbA1c, two years apart) for the component path. Provenance: `tests/fixtures/synthea/PROVENANCE`. Generated bundles are never committed.
+Byte copies of the three open-twin trimmed bundles live under `tests/fixtures/synthea/`. `bp-panel.json` is a small hand-made bundle (two blood pressure panels and one HbA1c, two years apart) for the component path. `clinical/clinical-records.json` is hand-made too: two conditions (one resolved SNOMED, one active ICD-10) and two medication requests (one coded inline with dosage text, one through a Medication reference without), in a subfolder so `warehouse:ingest tests/fixtures/synthea` does not load it. Provenance: `tests/fixtures/synthea/PROVENANCE`. Generated bundles are never committed.
 
 Those bundles carry Encounter URNs whose targets were removed. `ingestBundle` passes `unresolvedUrnPolicy: "preserve"`, so `normaliseBundle` returns a bundle, lists the dangling `urn:uuid:` refs in `unresolved`, and inserts five numeric rows per fixture. `preserve` does not mean the Encounter references resolved.
 
@@ -136,9 +158,9 @@ bun run synthea:generate -- --preset eval
 bun run warehouse:ingest .synthea/fhir --cohort synthea-v4-seed42
 ```
 
-`bun run setup:local` downloads the pinned files (release `eval-cohort-v1`) and ingests them on an empty warehouse; with `--generate-cohort`, or when the release cannot be reached, it runs both commands above. Either way it refuses to ingest unless the files match `EVAL_CONTENT_SHA256` (37 files with fixed dates). A `synthea-v4-seed42` already in the warehouse that is not this cohort (35 subjects from before the dates were fixed, or bundles whose fingerprint is not the pin) is reported `[stale]` by setup and `bun run doctor`; `bun run setup:local -- --reload-cohort` deletes that cohort's warehouse rows in one transaction and ingests the pinned files. `bun run setup:local -- --cohort-10k` loads the release cohort `synthea-v4-seed42-10k` instead (docs/runbook.md, "Local setup").
+`bun run setup:local` downloads the pinned files (release `eval-cohort-v1`) and ingests them on an empty warehouse; with `--generate-cohort`, or when the release cannot be reached, it runs both commands above. Either way it refuses to ingest unless the files match `EVAL_CONTENT_SHA256` (37 files with fixed dates). A `synthea-v4-seed42` already in the warehouse that is not this cohort (35 subjects from before the dates were fixed, bundles whose fingerprint is not the pin, or the pinned bundles ingested before conditions and medication requests were stored) is reported `[stale]` by setup and `bun run doctor`; `bun run setup:local -- --reload-cohort` deletes that cohort's warehouse rows (observations, conditions, medication requests, bundles, subjects) in one transaction and ingests the pinned files. `bun run setup:local -- --cohort-10k` loads the release cohort `synthea-v4-seed42-10k` instead (docs/runbook.md, "Local setup").
 
-N=30, ages 40–75, reference and end date `20260101`. Synthea exports deceased patients as well, so there are more bundles than N: 37 bundles, 37 subjects and 35,598 numeric observations, `contentSha256` `f4941fab7a56e17f9dd66b6b6e0fbed379dab8c564c6024831c5fd4aa0ba09eb` (`EVAL_CONTENT_SHA256` in `scripts/synthea/cohort-presets.ts`; generated 2026-10-26, the same in a second run under another time zone). The evaluation answer key records the same dates and checksum (`docs/evaluation/question-set.md`). These codes are the ones B3 and C2 rely on:
+N=30, ages 40–75, reference and end date `20260101`. Synthea exports deceased patients as well, so there are more bundles than N: 37 bundles, 37 subjects, 35,598 numeric observations, 9,022 non-numeric observations, 1,995 conditions (192 distinct codes, all 37 subjects; 532 active, 1,463 resolved; 45 coded in ICD-10, the rest SNOMED CT) and 3,615 medication requests (108 distinct RxNorm codes, 36 subjects; 167 active, 3,448 completed; 816 with dosage text; 2,936 with reason refs, all resolving to a stored condition) (`conditionCount`, `medicationRequestCount` in `scripts/setup/cohort-pins.ts`; measured 2026-10-27 from release `eval-cohort-v1` in a throwaway database), `contentSha256` `f4941fab7a56e17f9dd66b6b6e0fbed379dab8c564c6024831c5fd4aa0ba09eb` (`EVAL_CONTENT_SHA256` in `scripts/synthea/cohort-presets.ts`; generated 2026-10-26, the same in a second run under another time zone). The evaluation answer key records the same dates and checksum (`docs/evaluation/question-set.md`). These codes are the ones B3 and C2 rely on:
 
 | LOINC     | What              |
 | --------- | ----------------- |

@@ -1,13 +1,15 @@
 import { chatRequestSchema, type ChatRequest } from "@/features/chat/chat-request";
 import { guardChatRequest } from "@/features/chat/chat-protection";
+import { loadGenomeThread } from "@/features/chat/load-genome-thread";
 import { publicProviderFailure } from "@/features/chat/public-provider-failure";
+import { markModelResponseRefused } from "@/features/chat/persist-model-response";
 import { createStartAnswer } from "@/features/chat/start-answer";
 import { streamModelResponse } from "@/features/chat/stream-model-response";
 import { loadWearableContext } from "@/features/chat/wearable-context";
 import { getLatestGoogleHealthSummary } from "@/features/google-health/connection";
 import { loadDisabledSources } from "@/features/onboarding/onboarding-store";
 import { getLatestOuraSummary } from "@/features/oura/connection";
-import { findRunnableSkill } from "@/features/skills/load-skills";
+import { findSkillFor } from "@/features/skills/user-skill-store";
 import { getLatestVitronicSummary } from "@/features/vitronic/connection";
 import { getLatestWhoopSummary } from "@/features/whoop/connection";
 import { resolveActorId } from "@/infrastructure/auth-actor";
@@ -15,6 +17,7 @@ import { findAppUserId } from "@/infrastructure/current-user";
 import { database } from "@/infrastructure/database";
 import { exoscalePersonalData, isAuthDisabled, serverEnv } from "@/infrastructure/env";
 import { fetchActiveModelCatalog } from "@/infrastructure/fetch-model-catalog";
+import { chatModelIsLocal } from "@/infrastructure/genome-gate";
 import { append } from "@/packages/audit/append";
 
 /**
@@ -63,6 +66,8 @@ const startAnswer = createStartAnswer({
       exoscalePersonalData: exoscalePersonalData(env),
     };
   },
+  chatIsLocal: chatModelIsLocal,
+  loadGenomeThread,
   loadWearables: (mode, appUserId) =>
     loadWearableContext(mode, appUserId, {
       oura: getLatestOuraSummary,
@@ -72,8 +77,17 @@ const startAnswer = createStartAnswer({
     }),
   loadDisabledSources,
   appendAudit: (input) => append(database(), input),
-  findSkill: findRunnableSkill,
+  findSkill: findSkillFor,
   stream: streamModelResponse,
+  // The person still gets the refusal when the row cannot be written; a
+  // reload then asks again, which is how a refused turn behaved before.
+  markRefused: (target) =>
+    markModelResponseRefused(target).catch((error: unknown) => {
+      console.error(
+        "[chat] could not store the refusal",
+        error instanceof Error ? error.name : "unknown",
+      );
+    }),
 });
 
 export const POST = async (request: Request): Promise<Response> => {

@@ -9,6 +9,7 @@ import {
   isAllowedCohort,
   SYNTHETIC_COHORTS,
 } from "../../packages/query-tools/scope";
+import { MIN_OLLAMA_NUM_CTX } from "../../infrastructure/ollama-context";
 import { EVAL_COHORT, EVAL_RELEASE, FIXTURE_COHORT, RELEASE_10K } from "./cohort-pins";
 import {
   checkTool,
@@ -34,6 +35,9 @@ export type CohortRows = Readonly<{
 /** The bundles ingested under one cohort id: how many, and their fingerprint (cohort-fingerprint.ts). */
 export type BundleSet = Readonly<{ count: number; sha256: string }>;
 
+/** Condition and MedicationRequest rows of one cohort; 0 while their tables do not exist. */
+export type ClinicalCounts = Readonly<{ conditions: number; medicationRequests: number }>;
+
 export type DatabaseProbe =
   | Readonly<{ kind: "no-url" }>
   | Readonly<{ kind: "placeholder" }>
@@ -55,14 +59,31 @@ export type DatabaseProbe =
       warehouse: readonly CohortRows[];
       /** The evaluation cohort's ingested bundles; null when it has none. */
       evalBundles: BundleSet | null;
+      /** The evaluation cohort's conditions and medication requests; null when it is not loaded. */
+      evalClinical: ClinicalCounts | null;
       /** The local user already has the "Example (synthetic)" thread. */
       exampleThread: boolean;
     }>;
 
+/** A model Ollama has in memory now (`/api/ps`). */
+export type LoadedModel = Readonly<{
+  name: string;
+  contextLength: number;
+  sizeBytes: number;
+  vramBytes: number;
+}>;
+
 export type OllamaProbe =
   | Readonly<{ kind: "not-used"; provider: string }>
   | Readonly<{ kind: "unreachable"; baseUrl: string }>
-  | Readonly<{ kind: "ok"; baseUrl: string; models: readonly string[] }>;
+  | Readonly<{
+      kind: "ok";
+      baseUrl: string;
+      models: readonly string[];
+      /** OLLAMA_NUM_CTX as the app will read it; null when it is not a valid size. */
+      numCtx: number | null;
+      loaded: readonly LoadedModel[];
+    }>;
 
 export type DetectedState = Readonly<{
   platform: Platform;
@@ -120,17 +141,28 @@ export type StepId =
   | "cohort"
   | "example";
 
+/**
+ * The trimmed fixtures are three people of the evaluation cohort (#96), and a
+ * subject belongs to one cohort only, so ingesting the evaluation cohort over
+ * them would reject those three bundles. A load or reload of the evaluation
+ * cohort therefore deletes the fixture cohort's rows first; this is how many
+ * subjects it holds, and the field is left out when there are none.
+ */
+type FixturesReplaced = Readonly<{ fixtureSubjects?: number }>;
+
 export type Action =
   | Readonly<{ kind: "create-env-file" }>
   | Readonly<{ kind: "command"; argv: readonly string[] }>
   | Readonly<{ kind: "create-database"; name: string }>
-  | Readonly<{ kind: "load-eval"; source: EvalSource }>
-  | Readonly<{
-      kind: "reload-eval";
-      cohortId: string;
-      subjects: number;
-      source: EvalSource;
-    }>
+  | Readonly<{ kind: "load-eval"; source: EvalSource } & FixturesReplaced>
+  | Readonly<
+      {
+        kind: "reload-eval";
+        cohortId: string;
+        subjects: number;
+        source: EvalSource;
+      } & FixturesReplaced
+    >
   | Readonly<{ kind: "load-10k" }>
   | Readonly<{ kind: "load-fixtures" }>
   | Readonly<{ kind: "insert-example"; clerkId: string }>
@@ -180,10 +212,23 @@ export type EvalCohortState =
 
 /**
  * Whether the warehouse's evaluation cohort is the pinned one: the subject
- * count, and the ingested bundles' fingerprint when the database has bundles.
+ * count, the ingested bundles' fingerprint when the database has bundles, and
+ * its condition and medication request counts.
  * A cohort ingested before the dates were fixed has the same id but other
  * people (35 subjects instead of 37).
  */
+const clinicalProblem = (counts: ClinicalCounts | null): string | null => {
+  if (
+    counts === null ||
+    (counts.conditions === EVAL_COHORT.conditionCount &&
+      counts.medicationRequests === EVAL_COHORT.medicationRequestCount)
+  )
+    return null;
+  if (counts.conditions === 0 && counts.medicationRequests === 0)
+    return "ingested before conditions and medication requests were stored";
+  return `${counts.conditions} conditions and ${counts.medicationRequests} medication requests, the pinned cohort has ${EVAL_COHORT.conditionCount} and ${EVAL_COHORT.medicationRequestCount}`;
+};
+
 export const evalCohortState = (database: DatabaseProbe): EvalCohortState => {
   if (database.kind !== "ok") return { kind: "absent" };
   const subjects =
@@ -197,6 +242,7 @@ export const evalCohortState = (database: DatabaseProbe): EvalCohortState => {
     database.evalBundles.sha256 === EVAL_COHORT.bundleSetSha256
       ? null
       : `its ${database.evalBundles.count} ingested bundles are not the pinned files`,
+    clinicalProblem(database.evalClinical),
   ].filter((problem) => problem !== null);
   return problems.length === 0
     ? { kind: "current", subjects }
@@ -358,6 +404,14 @@ const cohortStep = (state: DetectedState, options: SetupOptions): Step => {
   }
   const evalState = evalCohortState(state.database);
   const source = evalSource(state, options);
+  const fixtureSubjects = cohorts[FIXTURE_COHORT.cohortId] ?? 0;
+  const fixtures =
+    fixtureSubjects > 0
+      ? {
+          field: { fixtureSubjects },
+          note: `; first delete the ${fixtureSubjects} subjects of ${FIXTURE_COHORT.cohortId}, who are also in ${EVAL_COHORT.cohortId}`,
+        }
+      : { field: {}, note: "" };
   if (options.reloadCohort === true) {
     if (source.kind === "none") {
       return {
@@ -370,8 +424,8 @@ const cohortStep = (state: DetectedState, options: SetupOptions): Step => {
       ? {
           ...base,
           status: "run",
-          action: { kind: "load-eval", source: source.source },
-          note: `${EVAL_COHORT.cohortId} is not loaded, so nothing to delete: ${source.note}, ingest`,
+          action: { kind: "load-eval", source: source.source, ...fixtures.field },
+          note: `${EVAL_COHORT.cohortId} is not loaded, so nothing to delete: ${source.note}${fixtures.note}, ingest`,
         }
       : {
           ...base,
@@ -381,8 +435,9 @@ const cohortStep = (state: DetectedState, options: SetupOptions): Step => {
             cohortId: EVAL_COHORT.cohortId,
             subjects: evalState.subjects,
             source: source.source,
+            ...fixtures.field,
           },
-          note: `${source.note}; then delete its ${evalState.subjects} subjects' warehouse rows in one transaction and ingest the pinned cohort`,
+          note: `${source.note}${fixtures.note}; then delete its ${evalState.subjects} subjects' warehouse rows in one transaction and ingest the pinned cohort`,
         };
   }
   if (evalState.kind === "stale") {
@@ -402,8 +457,8 @@ const cohortStep = (state: DetectedState, options: SetupOptions): Step => {
     return {
       ...base,
       status: "run",
-      action: { kind: "load-eval", source: source.source },
-      note: `${source.note}, ingest`,
+      action: { kind: "load-eval", source: source.source, ...fixtures.field },
+      note: `${source.note}${fixtures.note}, ingest`,
     };
   }
   const reason = `${source.reason}. Then run ${SETUP_COMMAND} again to load ${EVAL_COHORT.cohortId}.`;
@@ -745,6 +800,43 @@ const chatReadiness = (ollama: OllamaProbe): Readiness => {
           };
     }
   }
+};
+
+const gib = (bytes: number): string => (bytes / 2 ** 30).toFixed(1);
+
+const loadedLine = (model: LoadedModel, numCtx: number): string => {
+  const reload =
+    model.contextLength === numCtx ? "" : ` (the next chat reloads it at ${numCtx})`;
+  const offload =
+    model.vramBytes < model.sizeBytes
+      ? `; only ${gib(model.vramBytes)} of ${gib(model.sizeBytes)} GiB on the GPU, the rest runs on the CPU: lower OLLAMA_NUM_CTX or use a smaller model if answers are slow`
+      : `, ${gib(model.sizeBytes)} GiB`;
+  return `${model.name} loaded with ${model.contextLength}${reload}${offload}`;
+};
+
+/**
+ * The context chat asks Ollama for, and what the loaded models actually run
+ * with. Null when chat does not use a local Ollama. Ollama's own default is
+ * 4096, which cuts the tool list off (#149); chat sets `num_ctx` per request.
+ */
+export const ollamaContextSummary = (
+  ollama: OllamaProbe,
+): Readonly<{ ok: boolean; detail: string }> | null => {
+  if (ollama.kind !== "ok") return null;
+  if (ollama.numCtx === null)
+    return {
+      ok: false,
+      detail: `OLLAMA_NUM_CTX must be a whole number of at least ${MIN_OLLAMA_NUM_CTX}; the app will not start`,
+    };
+  const numCtx = ollama.numCtx;
+  const loaded =
+    ollama.loaded.length === 0
+      ? "no model loaded right now"
+      : ollama.loaded.map((model) => loadedLine(model, numCtx)).join("; ");
+  return {
+    ok: true,
+    detail: `chat asks for ${numCtx} tokens (OLLAMA_NUM_CTX); ${loaded}`,
+  };
 };
 
 /** Every prerequisite, as doctor lists it. */

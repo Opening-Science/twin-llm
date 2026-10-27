@@ -10,6 +10,10 @@ import { readdir, readFile, statfs } from "node:fs/promises";
 import { userInfo } from "node:os";
 import { join } from "node:path";
 
+import {
+  DEFAULT_OLLAMA_NUM_CTX,
+  MIN_OLLAMA_NUM_CTX,
+} from "../../infrastructure/ollama-context";
 import { DEMO_BODIES, DEMO_BODY_IDS } from "../../packages/anatomy/demo-bodies";
 import { ATLAS_IDS, ATLASES } from "../../packages/anatomy/manifest";
 import { resolveAnatomyDir } from "../../packages/anatomy/paths";
@@ -25,10 +29,12 @@ import {
 } from "./env-file";
 import {
   type BundleSet,
+  type ClinicalCounts,
   type CohortRows,
   type DatabaseProbe,
   type DetectedState,
   EXAMPLE_TITLE,
+  type LoadedModel,
   type OllamaProbe,
 } from "./plan";
 import { type Platform, TOOL_IDS, type ToolId, type ToolProbe } from "./prerequisites";
@@ -176,7 +182,25 @@ export const readBundleSet = async (
   return count > 0 ? { count, sha256: String(row?.digest) } : null;
 };
 
-/** What the database at `url` holds, without changing anything. */
+/** Condition and MedicationRequest rows of `cohortId`; 0 for a table that does not exist yet. */
+export const readClinicalCounts = async (
+  sql: SqlQuery,
+  cohortId: string,
+): Promise<ClinicalCounts> => {
+  const count = async (table: "conditions" | "medication_requests"): Promise<number> => {
+    if (!(await tableExists(sql, table))) return 0;
+    const [row] = await sql.unsafe(
+      `select count(*)::int as n from ${table} t join subjects s on s.subject_ref = t.subject_ref where s.cohort_id = $1`,
+      [cohortId],
+    );
+    return Number(row?.n ?? 0);
+  };
+  return {
+    conditions: await count("conditions"),
+    medicationRequests: await count("medication_requests"),
+  };
+};
+
 /** Whether `clerkId` has the example thread; false while the tables are missing. */
 export const readExampleThread = async (
   sql: SqlQuery,
@@ -210,8 +234,12 @@ export const probeDatabase = async (
         ).map((row) => String(row.migration_name))
       : [];
     const warehouse = await readWarehouse(sql);
-    const evalBundles = warehouse.some((rows) => rows.cohortId === EVAL_COHORT.cohortId)
+    const evalLoaded = warehouse.some((rows) => rows.cohortId === EVAL_COHORT.cohortId);
+    const evalBundles = evalLoaded
       ? await readBundleSet(sql, EVAL_COHORT.cohortId)
+      : null;
+    const evalClinical = evalLoaded
+      ? await readClinicalCounts(sql, EVAL_COHORT.cohortId)
       : null;
     const exampleThread = await readExampleThread(sql, localUserId);
     return {
@@ -220,6 +248,7 @@ export const probeDatabase = async (
       appliedMigrations,
       warehouse,
       evalBundles,
+      evalClinical,
       exampleThread,
     };
   } catch (error) {
@@ -268,9 +297,48 @@ const probeOllama = async (
           .map((model: unknown) => Reflect.get(Object(model), "name"))
           .filter((name): name is string => typeof name === "string")
       : [];
-    return { kind: "ok", baseUrl, models: names };
+    return {
+      kind: "ok",
+      baseUrl,
+      models: names,
+      numCtx: parseNumCtx(env.OLLAMA_NUM_CTX),
+      loaded: await loadedModels(baseUrl),
+    };
   } catch {
     return { kind: "unreachable", baseUrl };
+  }
+};
+
+/** OLLAMA_NUM_CTX as `infrastructure/env.ts` reads it; null when the app would refuse it. */
+export const parseNumCtx = (raw: string | undefined): number | null => {
+  if (raw === undefined || raw.trim() === "") return DEFAULT_OLLAMA_NUM_CTX;
+  const value = Number(raw);
+  return Number.isInteger(value) && value >= MIN_OLLAMA_NUM_CTX ? value : null;
+};
+
+const numberField = (value: unknown, field: string): number => {
+  const read = Reflect.get(Object(value), field);
+  return typeof read === "number" ? read : 0;
+};
+
+/** What `/api/ps` says is in memory, with the context each model runs at. */
+const loadedModels = async (baseUrl: string): Promise<readonly LoadedModel[]> => {
+  try {
+    const response = await fetch(`${baseUrl}/api/ps`, {
+      signal: AbortSignal.timeout(3000),
+    });
+    if (!response.ok) return [];
+    const models = Reflect.get(Object(await response.json()), "models");
+    return Array.isArray(models)
+      ? models.map((model: unknown) => ({
+          name: String(Reflect.get(Object(model), "name")),
+          contextLength: numberField(model, "context_length"),
+          sizeBytes: numberField(model, "size"),
+          vramBytes: numberField(model, "size_vram"),
+        }))
+      : [];
+  } catch {
+    return [];
   }
 };
 

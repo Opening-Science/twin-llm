@@ -72,8 +72,8 @@ export const EXPECTED_OUTCOME: Readonly<Record<string, Outcome>> = {
   "Q-S6-10": "mixed",
   "Q-S6-11": "mixed",
   "Q-S6-19": "none",
-  "Q-S6-23": "few",
-  "Q-S6-24": "none",
+  "Q-S6-25": "few",
+  "Q-S6-26": "none",
 };
 
 /**

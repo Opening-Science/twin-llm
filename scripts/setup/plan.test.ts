@@ -4,6 +4,7 @@ import { EVAL_COHORT } from "./cohort-pins";
 import {
   blockedBy,
   type BundleSet,
+  type ClinicalCounts,
   type CohortRows,
   dataPageFindings,
   type DatabaseProbe,
@@ -11,6 +12,7 @@ import {
   evalCohortState,
   exampleSummary,
   formatChecklist,
+  ollamaContextSummary,
   type Outcome,
   pageReadiness,
   planSetup,
@@ -50,6 +52,7 @@ const PINNED_BUNDLES: BundleSet = { count: 37, sha256: EVAL_COHORT.bundleSetSha2
 const okDatabase = (
   warehouse: readonly CohortRows[],
   evalBundles: BundleSet | null = null,
+  evalClinical: ClinicalCounts | null = null,
 ): DatabaseProbe => ({
   kind: "ok",
   pgvector: true,
@@ -57,6 +60,7 @@ const okDatabase = (
   appliedMigrations: ["20261025000000_baseline"],
   warehouse,
   evalBundles,
+  evalClinical,
   exampleThread: false,
 });
 
@@ -83,6 +87,8 @@ const ready: DetectedState = {
     kind: "ok",
     baseUrl: "http://127.0.0.1:11434",
     models: ["qwen3:8b", "nomic-embed-text:latest"],
+    numCtx: 16_384,
+    loaded: [],
   },
   freeDiskBytes: 500e9,
 };
@@ -289,6 +295,54 @@ describe("planSetup", () => {
     );
   });
 
+  test("with the fixtures loaded, the eval cohort deletes them first: they are its people (#96)", () => {
+    const withFixtures: DetectedState = {
+      ...ready,
+      database: okDatabase([cohortRows("open-twin-synthea-trimmed-3", 4)]),
+    };
+    expect(planSetup(withFixtures, { cohort: "eval" }).at(COHORT)).toEqual({
+      id: "cohort",
+      title: "Synthetic cohort in the warehouse",
+      after: ["migrate"],
+      status: "run",
+      action: {
+        kind: "load-eval",
+        source: { kind: "download", noGenerate: null },
+        fixtureSubjects: 4,
+      },
+      note: "download eval-cohort-synthea-v4-seed42-20260101.tar.zst from release eval-cohort-v1, verify (Synthea generates it instead if the release cannot be reached); first delete the 4 subjects of open-twin-synthea-trimmed-3, who are also in synthea-v4-seed42, ingest",
+    });
+    const reload = planSetup(
+      {
+        ...ready,
+        database: okDatabase(
+          [
+            cohortRows("open-twin-synthea-trimmed-3", 4),
+            cohortRows("synthea-v4-seed42", 34),
+          ],
+          { count: 34, sha256: "0".repeat(64) },
+        ),
+      },
+      { cohort: "eval", reloadCohort: true },
+    ).at(COHORT);
+    expect(reload?.status === "run" ? reload.action : null).toEqual({
+      kind: "reload-eval",
+      cohortId: "synthea-v4-seed42",
+      subjects: 34,
+      source: { kind: "download", noGenerate: null },
+      fixtureSubjects: 4,
+    });
+    // Without the fixtures the action does not mention them.
+    const plain = planSetup(
+      { ...ready, database: okDatabase([]) },
+      { cohort: "eval" },
+    ).at(COHORT);
+    expect(plain?.status === "run" ? plain.action : null).toEqual({
+      kind: "load-eval",
+      source: { kind: "download", noGenerate: null },
+    });
+  });
+
   test("--cohort-10k downloads when that cohort is empty, even with the eval cohort loaded", () => {
     expect(summary(planSetup(ready, { cohort: "10k" })).at(COHORT)).toBe(
       "cohort: run load-10k",
@@ -459,6 +513,47 @@ describe("evalCohortState", () => {
       subjects: 37,
       why: "its 37 ingested bundles are not the pinned files",
     });
+  });
+
+  test("the pinned bundles ingested before conditions were stored: stale", () => {
+    expect(
+      evalCohortState(
+        okDatabase([cohortRows("synthea-v4-seed42", 37)], PINNED_BUNDLES, {
+          conditions: 0,
+          medicationRequests: 0,
+        }),
+      ),
+    ).toEqual({
+      kind: "stale",
+      subjects: 37,
+      why: "ingested before conditions and medication requests were stored",
+    });
+  });
+
+  test("other condition or medication request counts: stale, with both counts", () => {
+    expect(
+      evalCohortState(
+        okDatabase([cohortRows("synthea-v4-seed42", 37)], PINNED_BUNDLES, {
+          conditions: 1995,
+          medicationRequests: 3000,
+        }),
+      ),
+    ).toEqual({
+      kind: "stale",
+      subjects: 37,
+      why: "1995 conditions and 3000 medication requests, the pinned cohort has 1995 and 3615",
+    });
+  });
+
+  test("pinned bundles and pinned clinical counts: current", () => {
+    expect(
+      evalCohortState(
+        okDatabase([cohortRows("synthea-v4-seed42", 37)], PINNED_BUNDLES, {
+          conditions: 1995,
+          medicationRequests: 3615,
+        }),
+      ),
+    ).toEqual({ kind: "current", subjects: 37 });
   });
 
   test("wrong count with no bundle table: stale by the count", () => {
@@ -722,5 +817,65 @@ describe("the example thread step", () => {
       detail:
         '"Example (synthetic)" not added: only with DATA_MODE=synthetic (now personal)',
     });
+  });
+});
+
+describe("ollamaContextSummary", () => {
+  const ok = ready.ollama.kind === "ok" ? ready.ollama : null;
+  if (ok === null) throw new Error("the ready fixture has Ollama up");
+  const GIB = 2 ** 30;
+
+  test("names the requested context when no model is loaded", () => {
+    expect(ollamaContextSummary(ok)).toEqual({
+      ok: true,
+      detail: "chat asks for 16384 tokens (OLLAMA_NUM_CTX); no model loaded right now",
+    });
+  });
+
+  test("a model left at Ollama's 4096 default reloads on the next chat", () => {
+    expect(
+      ollamaContextSummary({
+        ...ok,
+        loaded: [
+          {
+            name: "qwen3:4b",
+            contextLength: 4096,
+            sizeBytes: 3 * GIB,
+            vramBytes: 3 * GIB,
+          },
+        ],
+      }),
+    ).toEqual({
+      ok: true,
+      detail:
+        "chat asks for 16384 tokens (OLLAMA_NUM_CTX); qwen3:4b loaded with 4096 (the next chat reloads it at 16384), 3.0 GiB",
+    });
+  });
+
+  test("says when part of a model runs on the CPU", () => {
+    expect(
+      ollamaContextSummary({
+        ...ok,
+        loaded: [
+          {
+            name: "qwen3:8b",
+            contextLength: 16_384,
+            sizeBytes: 7.3 * GIB,
+            vramBytes: 5.2 * GIB,
+          },
+        ],
+      })?.detail,
+    ).toBe(
+      "chat asks for 16384 tokens (OLLAMA_NUM_CTX); qwen3:8b loaded with 16384; only 5.2 of 7.3 GiB on the GPU, the rest runs on the CPU: lower OLLAMA_NUM_CTX or use a smaller model if answers are slow",
+    );
+  });
+
+  test("an invalid OLLAMA_NUM_CTX is a problem; another provider is not checked", () => {
+    expect(ollamaContextSummary({ ...ok, numCtx: null })).toEqual({
+      ok: false,
+      detail:
+        "OLLAMA_NUM_CTX must be a whole number of at least 8192; the app will not start",
+    });
+    expect(ollamaContextSummary({ kind: "not-used", provider: "exoscale" })).toBeNull();
   });
 });

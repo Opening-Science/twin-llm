@@ -35,6 +35,7 @@ export const fakeTools = (data: FakeRows) => {
         )
         .toSorted((a, b) => a.effectiveAt.getTime() - b.effectiveAt.getTime())
         .slice(0, query.take),
+    findCohortObservations: async () => [],
     appendAudit: async () => undefined,
   };
   const scope = { actor: "test", sessionId: "test", mode: "synthetic" } as const;

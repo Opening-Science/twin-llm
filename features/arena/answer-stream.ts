@@ -8,6 +8,18 @@ import {
 } from "ai";
 
 import { type ChatView, viewsOf } from "@/infrastructure/chat-view";
+import {
+  PROVIDER_NOT_PERMITTED_FOR_DATA_MODE,
+  PROVIDER_NOT_PERMITTED_SENTENCE,
+} from "@/infrastructure/data-mode-policy";
+import {
+  GENOME_THREAD_LOCAL_ONLY,
+  GENOME_THREAD_SENTENCE,
+} from "@/infrastructure/genome-thread-policy";
+import {
+  INCOGNITO_LOCAL_ONLY,
+  INCOGNITO_LOCAL_ONLY_SENTENCE,
+} from "@/infrastructure/incognito";
 import type {
   ChatUIMessage,
   ModelResponseMetrics,
@@ -44,7 +56,7 @@ export type StreamResult = Readonly<{
   ending: StreamEnding;
   metrics: ModelResponseMetrics | null;
   document: ResponseDocumentV1 | null;
-  /** The server's sentence when it refused a skill turn; only ever set with FAILED. */
+  /** The sentence for a refused turn (skill or data-mode policy); only ever set with FAILED. */
   refusal?: string;
   /** The answer's numbers a tool call holds, matched once the stream ends. */
   numberSources?: readonly NumberSource[];
@@ -63,6 +75,37 @@ export type AnswerRequest = Readonly<{
   /** The skill the turn was sent with; left out for an ordinary prompt. */
   skill?: string;
 }>;
+
+/**
+ * One answer of an incognito chat (`infrastructure/incognito.ts`). There is
+ * no turn row, so no turn id; it goes to `/api/chat/incognito`, which keeps
+ * nothing.
+ */
+export type IncognitoAnswerRequest = Readonly<{
+  incognito: true;
+  modelId: string;
+  messages: readonly HistoryMessage[];
+  skill?: string;
+}>;
+
+export const CHAT_ENDPOINT = "/api/chat";
+export const INCOGNITO_CHAT_ENDPOINT = "/api/chat/incognito";
+
+/** Where a request goes and the body it sends; the incognito marker is not sent. */
+export const answerCall = (
+  request: AnswerRequest | IncognitoAnswerRequest,
+): Readonly<{ endpoint: string; body: string }> => {
+  if (!("incognito" in request)) {
+    return { endpoint: CHAT_ENDPOINT, body: JSON.stringify(request) };
+  }
+  const { modelId, messages, skill } = request;
+  return {
+    endpoint: INCOGNITO_CHAT_ENDPOINT,
+    body: JSON.stringify(
+      skill === undefined ? { modelId, messages } : { modelId, messages, skill },
+    ),
+  };
+};
 
 type Fetcher = (input: string, init: RequestInit) => Promise<Response>;
 
@@ -107,16 +150,22 @@ export const sourceParts = (parts: ChatUIMessage["parts"]): NumberSourcePart[] =
   );
 
 /**
- * The sentence of a refused skill turn. Only skill refusal codes qualify:
- * their text is written by TwinLLM itself, never by a provider.
+ * The sentence of a refused turn. A skill refusal's text is written by
+ * TwinLLM itself, never by a provider, so it is shown as sent. The data-mode
+ * refusal's text is for the operator (it names settings), so the column shows
+ * the policy's fixed sentence for people instead, the same one the server
+ * stores on the row. Anything else is no refusal.
  */
-export const skillRefusalOf = async (response: Response): Promise<string | null> => {
+export const refusalOf = async (response: Response): Promise<string | null> => {
   if (response.status !== 400) return null;
   const body: unknown = await response.json().catch(() => null);
-  return typeof body === "object" &&
-    body !== null &&
-    "code" in body &&
-    isSkillRefusalCode(body.code) &&
+  if (typeof body !== "object" || body === null || !("code" in body)) return null;
+  if (body.code === PROVIDER_NOT_PERMITTED_FOR_DATA_MODE) {
+    return PROVIDER_NOT_PERMITTED_SENTENCE;
+  }
+  if (body.code === GENOME_THREAD_LOCAL_ONLY) return GENOME_THREAD_SENTENCE;
+  if (body.code === INCOGNITO_LOCAL_ONLY) return INCOGNITO_LOCAL_ONLY_SENTENCE;
+  return isSkillRefusalCode(body.code) &&
     "error" in body &&
     typeof body.error === "string"
     ? body.error
@@ -151,18 +200,19 @@ const validChunks = (body: ReadableStream<Uint8Array>, onFinish: () => void) =>
   );
 
 export const streamAnswer = async (
-  request: AnswerRequest,
+  request: AnswerRequest | IncognitoAnswerRequest,
   onProgress: (progress: StreamProgress) => void,
   fetcher: Fetcher = fetch,
 ): Promise<StreamResult> => {
   try {
-    const response = await fetcher("/api/chat", {
+    const { endpoint, body } = answerCall(request);
+    const response = await fetcher(endpoint, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify(request),
+      body,
     });
     if (!response.ok || !response.body) {
-      const refusal = await skillRefusalOf(response);
+      const refusal = await refusalOf(response);
       return refusal === null ? FAILED : { ...FAILED, refusal };
     }
 
@@ -207,7 +257,11 @@ export const streamAnswer = async (
         }
       : { ending, metrics, document };
   } catch (error) {
-    console.error(`[arena] lost the stream for ${request.modelId}`, error);
+    // The error's name only: an incognito answer leaves nothing in the console.
+    console.error(
+      `[arena] lost the stream for ${request.modelId}`,
+      error instanceof Error ? error.name : typeof error,
+    );
     return FAILED;
   }
 };

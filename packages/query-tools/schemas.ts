@@ -167,6 +167,79 @@ export const convertUnitInput = z
   .strict()
   .describe("One value of one analyte from one unit to another, by a fixed table");
 
+export const cohortPositionInput = z
+  .object({
+    subject_ref: subjectRefSchema,
+    loinc: loincSchema,
+    start: windowStart,
+    end: windowEnd,
+  })
+  .strict()
+  .refine(startBeforeEnd, START_BEFORE_END)
+  .describe(
+    "A subject's latest value of one LOINC in a window, as a percentile among its synthetic cohort",
+  );
+
+/** FHIR R4 Condition.clinicalStatus codes. */
+export const CONDITION_STATUSES = [
+  "active",
+  "recurrence",
+  "relapse",
+  "inactive",
+  "remission",
+  "resolved",
+] as const;
+
+/** FHIR R4 MedicationRequest.status codes. */
+export const MEDICATION_REQUEST_STATUSES = [
+  "active",
+  "on-hold",
+  "cancelled",
+  "completed",
+  "entered-in-error",
+  "stopped",
+  "draft",
+  "unknown",
+] as const;
+
+/** A SNOMED CT, ICD-10 or RxNorm code as stored: letters, digits, dots and hyphens. */
+const clinicalCodeSchema = z
+  .string()
+  .regex(/^[A-Za-z0-9][A-Za-z0-9.-]{0,31}$/)
+  .describe(
+    "One code as recorded (SNOMED CT or ICD-10 for conditions, RxNorm for medications)",
+  );
+
+export const conditionsTimelineInput = z
+  .object({
+    subject_ref: subjectRefSchema,
+    start: windowStart,
+    end: windowEnd,
+    status: z
+      .enum(CONDITION_STATUSES)
+      .optional()
+      .describe("Only conditions with this recorded clinical status"),
+    code: clinicalCodeSchema.optional(),
+  })
+  .strict()
+  .refine(startBeforeEnd, START_BEFORE_END)
+  .describe("Recorded conditions whose span overlaps a window, oldest onset first");
+
+export const medicationsTimelineInput = z
+  .object({
+    subject_ref: subjectRefSchema,
+    start: windowStart,
+    end: windowEnd,
+    status: z
+      .enum(MEDICATION_REQUEST_STATUSES)
+      .optional()
+      .describe("Only medication requests with this recorded status"),
+    code: clinicalCodeSchema.optional(),
+  })
+  .strict()
+  .refine(startBeforeEnd, START_BEFORE_END)
+  .describe("Recorded medication requests authored in a window, oldest first");
+
 /** Which linked wearable a wearable tool reads; `all` reads each linked one, row by row. */
 export const WEARABLE_SOURCE_CHOICES = ["oura", "whoop", "google", "all"] as const;
 
@@ -290,7 +363,7 @@ export const TOOL_DEFINITIONS = [
   {
     name: "range_position",
     description:
-      "Where one reading of one LOINC sits against its Anchor v3 published range: below, within or above it, bounds inclusive. pick latest takes the newest reading in the window, pick at the reading at `at`. When the range depends on sex, age or timing, which the warehouse does not hold, position is null and depends_on names them; nothing is guessed. Reads up to 5000 rows; refuses no rows, mixed units, no published range, and a unit other than the range's (nothing is converted). Neutral position only.",
+      "Where one reading of one LOINC sits against its Anchor v3 published range: below, within or above it, bounds inclusive. pick latest takes the newest reading in the window, pick at the reading at `at`. A sex- or age-specific range is chosen from the subject's stored sex and birth year; facts_used names them, and the age is approximate (birth year only: one of two ages). When a fact is not stored (timing never is) or the age band changes within the reading's year, position is null and depends_on names the facts; nothing is guessed. Reads up to 5000 rows; refuses no rows, mixed units, no published range, and a unit other than the range's (nothing is converted). Neutral position only.",
     input: rangePositionInput,
   },
   {
@@ -300,27 +373,45 @@ export const TOOL_DEFINITIONS = [
     input: convertUnitInput,
   },
   {
+    name: "cohort_position",
+    description:
+      'Where a subject\'s latest value of one LOINC in a time range sits among the latest values, in the same window, of everyone in its synthetic cohort (one value per person, the subject included). percentile is the mid-rank percentile, 100 × (n_lower + n_equal / 2) / n, where n is the people with a value and n_equal counts the subject; say it as "higher than about <percentile> % of the <n> synthetic people with a value", never better, worse or normal. Synthetic cohorts only. Refuses no value for the subject, fewer than 10 people with a value, mixed units across the cohort, and more than 20000 cohort rows (narrow the window).',
+    input: cohortPositionInput,
+  },
+  {
+    name: "conditions_timeline",
+    description:
+      "List one subject's recorded conditions whose span overlaps the window (onset at or before its end, and no abatement or abatement at or after its start), oldest onset first: code_system, code, display, onset_at, abatement_at, clinical_status and verification_status as recorded (status as of the record, not of the window), with n, n_codes, by_status and n_without_abatement. Optional status and code narrow the list. Reads up to 1000 records; refuses more (ROW_CAP_EXCEEDED) and none (NO_ROWS, with the reason). Lists what is recorded; times relate as before or after, never as a cause.",
+    input: conditionsTimelineInput,
+  },
+  {
+    name: "medications_timeline",
+    description:
+      "List one subject's recorded medication requests authored in the window, oldest first: code_system, code (RxNorm), display, authored_at, status and intent as recorded, and dosage_as_recorded, the record's own dosage text verbatim (null when the record has none), with n, n_codes, by_status and n_with_dosage_text. Optional status and code narrow the list. Reads up to 1000 records; refuses more (ROW_CAP_EXCEEDED) and none (NO_ROWS, with the reason). Lists what is recorded; never a dose, a change or advice of its own.",
+    input: medicationsTimelineInput,
+  },
+  {
     name: "sleep_summary",
     description:
-      "Main sleep per night in a window, one row per source and night: duration (min), time in bed (min, Whoop), efficiency (%) and the source's own sleep score, with each source's averages. Oura's main sleep is its long_sleep period; Whoop naps are left out. A field a source does not record is null. Personal mode reads the linked Oura, Whoop and Google Health snapshots of this turn (leave subject_ref out); synthetic mode reads the named subject's synthetic series (source all), whose rows are source synthetic. Refuses SOURCE_NOT_CONNECTED, NO_ROWS and MIXED_UNITS.",
+      "Main sleep per night in a window, one row per source and night: duration (min), time in bed (min, Whoop), efficiency (%) and the source's own sleep score, with each source's averages. Oura's main sleep is its long_sleep period; Whoop naps are left out. A field a source does not record is null. Personal mode: this turn's linked wearables, no subject_ref. Synthetic mode: the named subject's series, source all. Refuses SOURCE_NOT_CONNECTED, NO_ROWS and MIXED_UNITS.",
     input: sleepSummaryInput,
   },
   {
     name: "hrv_trend",
     description:
-      "Daily HRV (RMSSD, ms) in a window, per source: n, least-squares slope per day and per week with the fitted first and last values, and the 7 days ending on end against the 28 days before them (medians, baseline MAD, robust z). Oura: average HRV in the main sleep; Whoop: recovery HRV. A source with fewer than 7 readings has null statistics; WINDOW_TOO_SHORT when none has 7. Personal mode reads the linked Oura, Whoop and Google Health snapshots of this turn (leave subject_ref out); synthetic mode reads the named subject's synthetic series (source all), whose rows are source synthetic. Refuses SOURCE_NOT_CONNECTED, NO_ROWS, MIXED_UNITS and WINDOW_TOO_SHORT. Direction only, no judgement.",
+      "Daily HRV (RMSSD, ms) in a window, per source: n, least-squares slope per day and per week with the fitted first and last values, and the 7 days ending on end against the 28 days before them (medians, baseline MAD, robust z). Oura: average HRV in the main sleep; Whoop: recovery HRV. A source with fewer than 7 readings has null statistics; WINDOW_TOO_SHORT when none has 7. Personal mode: this turn's linked wearables, no subject_ref. Synthetic mode: the named subject's series, source all. Refuses SOURCE_NOT_CONNECTED, NO_ROWS, MIXED_UNITS and WINDOW_TOO_SHORT. Direction only, no judgement.",
     input: hrvTrendInput,
   },
   {
     name: "resting_hr_trend",
     description:
-      "Daily resting heart rate in a window, per source: n, least-squares slope per day and per week with the fitted first and last values, and the 7 days ending on end against the 28 days before them (medians, baseline MAD, robust z). Whoop: recovery resting heart rate; Google Health: daily resting heart rate; the Oura summary holds none. A source with fewer than 7 readings has null statistics; WINDOW_TOO_SHORT when none has 7. Personal mode reads the linked Oura, Whoop and Google Health snapshots of this turn (leave subject_ref out); synthetic mode reads the named subject's synthetic series (source all), whose rows are source synthetic. Refuses SOURCE_NOT_CONNECTED, NO_ROWS, MIXED_UNITS and WINDOW_TOO_SHORT. Direction only, no judgement.",
+      "Daily resting heart rate in a window, per source: n, least-squares slope per day and per week with the fitted first and last values, and the 7 days ending on end against the 28 days before them (medians, baseline MAD, robust z). Whoop: recovery resting heart rate; Google Health: daily resting heart rate; the Oura summary holds none. A source with fewer than 7 readings has null statistics; WINDOW_TOO_SHORT when none has 7. Personal mode: this turn's linked wearables, no subject_ref. Synthetic mode: the named subject's series, source all. Refuses SOURCE_NOT_CONNECTED, NO_ROWS, MIXED_UNITS and WINDOW_TOO_SHORT. Direction only, no judgement.",
     input: restingHrTrendInput,
   },
   {
     name: "training_load",
     description:
-      "Workouts in a window, one row per source, day or week (weeks start Monday, UTC) and sport: sessions, minutes, the highest workout strain (Whoop) and calories (Oura), null where a source does not record one. Per source also the minutes in the 7 days ending on end and in the 28 days before them, and their ratio, labelled only as recent load compared with the previous four weeks (null when those four weeks have no minutes). sport keeps one sport group. Personal mode reads the linked Oura, Whoop and Google Health snapshots of this turn (leave subject_ref out); synthetic mode reads the named subject's synthetic series (source all), whose rows are source synthetic. Refuses SOURCE_NOT_CONNECTED, NO_ROWS and MIXED_UNITS. Numbers only, no advice.",
+      "Workouts in a window, one row per source, day or week (weeks start Monday, UTC) and sport: sessions, minutes, the highest workout strain (Whoop) and calories (Oura), null where a source does not record one. Per source also the minutes in the 7 days ending on end and in the 28 days before them, and their ratio, labelled only as recent load compared with the previous four weeks (null when those four weeks have no minutes). sport keeps one sport group. Personal mode: this turn's linked wearables, no subject_ref. Synthetic mode: the named subject's series, source all. Refuses SOURCE_NOT_CONNECTED, NO_ROWS and MIXED_UNITS. Numbers only, no advice.",
     input: trainingLoadInput,
   },
 ] as const;

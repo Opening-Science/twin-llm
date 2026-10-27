@@ -15,6 +15,7 @@ import {
   type YearRow,
   yearSeries,
 } from "./cohort-stats";
+import { sexAgeSplit, type SexAgeSplit, type SubjectFactsRow } from "./sex-age-split";
 import { type SubjectSummary } from "./subject-table";
 import {
   type SubjectObservation,
@@ -50,6 +51,8 @@ export type CohortAggregates = Readonly<{
   codeUnits: readonly CodeUnitRow[];
   codeSubjects: readonly CodeSubjectsRow[];
   years: readonly YearRow[];
+  /** Subjects per stored sex, birth year and death year (#4). */
+  subjectFacts: readonly SubjectFactsRow[];
 }>;
 
 export type ExplorerDeps = Readonly<{
@@ -127,7 +130,12 @@ export type CohortOverview = Readonly<{
   totals: CohortTotals;
   codes: readonly CodeSummary[];
   years: readonly YearRow[];
+  sexAge: SexAgeSplit;
 }>;
+
+/** Living subjects' ages are taken in the year of the cohort's latest reading. */
+const referenceYear = (totals: CohortTotals): number | null =>
+  totals.lastDay === null ? null : Number(totals.lastDay.slice(0, 4));
 
 const auditFor =
   (
@@ -164,12 +172,14 @@ export const loadOverview = async (
   }
   try {
     const raw = await deps.readAggregates(cohortId);
+    const totals = cohortTotals(raw.codeUnits, raw.subjects, raw.nonNumeric);
     const overview: CohortOverview = {
-      totals: cohortTotals(raw.codeUnits, raw.subjects, raw.nonNumeric),
+      totals,
       codes: summariseCodes(raw.codeUnits, raw.codeSubjects, raw.subjects),
       years: yearSeries(raw.years),
+      sexAge: sexAgeSplit(raw.subjectFacts, referenceYear(totals)),
     };
-    // Counts per code and year only; the audit row counts the rows they summarise.
+    // Counts per code, year, sex and age band only; the audit row counts the rows they summarise.
     await audit(overview, overview.totals.observations);
     return { kind: "ok", overview };
   } catch (error) {

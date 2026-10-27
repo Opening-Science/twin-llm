@@ -43,6 +43,7 @@ import {
   type CohortChoice,
   formatChecklist,
   GENERATE_FLAG,
+  ollamaContextSummary,
   type Outcome,
   planSetup,
   type SetupOptions,
@@ -187,13 +188,22 @@ const perform = async (root: string, action: Action): Promise<string> => {
     case "install-rigged":
       return installRigged(root, action);
     case "reload-eval":
-      return reloadEvalCohort(root, await databaseUrl(root), action.source);
+      return reloadEvalCohort(
+        root,
+        await databaseUrl(root),
+        action.source,
+        action.fixtureSubjects !== undefined,
+      );
     case "command":
       if (!runCommand(root, action.argv))
         throw new SetupError(`${action.argv.join(" ")} failed; see its output above`);
       return "done";
     case "load-eval":
-      return loadEvalCohort(root, action.source);
+      return loadEvalCohort(
+        root,
+        action.source,
+        action.fixtureSubjects === undefined ? null : await databaseUrl(root),
+      );
     case "load-10k":
       return loadRelease10k(root);
     case "load-fixtures":
@@ -282,6 +292,8 @@ const main = async (): Promise<number> => {
           },
         ];
   process.stdout.write(formatChecklist([...outcomes, ...nodeOutcome]));
+  const context = ollamaContextSummary(state.ollama);
+  if (context !== null) process.stdout.write(`Ollama context: ${context.detail}\n`);
   process.stdout.write("Run bun run doctor any time for what each page needs.\n");
   return outcomes.some((outcome) => outcome.result === "failed") ? 1 : 0;
 };

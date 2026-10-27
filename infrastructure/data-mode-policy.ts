@@ -45,11 +45,26 @@ export const PROVIDER_NOT_PERMITTED_FOR_DATA_MODE =
 export const PROVIDER_NOT_PERMITTED_ERROR =
   "PROVIDER_NOT_PERMITTED_FOR_DATA_MODE: This model provider may not receive personal data or wearable context. Use local Ollama, or Exoscale with EXOSCALE_PERSONAL_DATA=consented-pilot for a consented pilot.";
 
+/**
+ * The same refusal as a person reads it in the answer column: no code and no
+ * setting names. It is stored on the refused answer's row and shown on reload.
+ */
+export const PROVIDER_NOT_PERMITTED_SENTENCE =
+  "This model provider may not receive personal data or wearable context, so this model did not run.";
+
 export type ProviderRequest = Readonly<{
   mode: DataMode;
   provider: LlmProvider;
   hasWearableNarrative: boolean;
   exoscalePersonalData: ExoscalePersonalData;
+  /**
+   * The request carries data the person imported on Customize · Data
+   * (FHIR records, lab results, research tables; docs/personal-data.md).
+   * Like wearable context it makes the request personal, and it is stricter:
+   * only Ollama may receive it, never a hosted model, the consented Exoscale
+   * pilot included. Absent means none.
+   */
+  hasImportedData?: boolean;
 }>;
 
 /** The data mode one request runs under: wearable context makes it personal. */
@@ -59,15 +74,19 @@ export const requestDataMode = (
 ): DataMode => (mode === "personal" || hasWearableNarrative ? "personal" : "synthetic");
 
 const isPersonalRequest = (input: ProviderRequest): boolean =>
+  input.hasImportedData === true ||
   requestDataMode(input.mode, input.hasWearableNarrative) === "personal";
 
 const providerTakesPersonalData = (
   provider: LlmProvider,
   exoscalePersonalData: ExoscalePersonalData,
+  hasImportedData: boolean,
 ): boolean =>
-  provider === "exoscale"
-    ? exoscalePersonalData === "consented-pilot"
-    : !SYNTHETIC_ONLY_PROVIDERS.has(provider);
+  hasImportedData
+    ? provider === "ollama"
+    : provider === "exoscale"
+      ? exoscalePersonalData === "consented-pilot"
+      : !SYNTHETIC_ONLY_PROVIDERS.has(provider);
 
 /** Pure guard for the configured mode, without a request's wearable context. */
 export const assertProviderAllowedForDataMode = (
@@ -75,7 +94,10 @@ export const assertProviderAllowedForDataMode = (
   provider: LlmProvider,
   exoscalePersonalData: ExoscalePersonalData,
 ): void => {
-  if (mode === "personal" && !providerTakesPersonalData(provider, exoscalePersonalData)) {
+  if (
+    mode === "personal" &&
+    !providerTakesPersonalData(provider, exoscalePersonalData, false)
+  ) {
     throw new Error(PROVIDER_NOT_PERMITTED_ERROR);
   }
 };
@@ -92,7 +114,11 @@ export const permitProviderForRequest = (
   input: ProviderRequest,
 ): ProviderPermitDecision =>
   isPersonalRequest(input) &&
-  !providerTakesPersonalData(input.provider, input.exoscalePersonalData)
+  !providerTakesPersonalData(
+    input.provider,
+    input.exoscalePersonalData,
+    input.hasImportedData === true,
+  )
     ? {
         ok: false,
         code: PROVIDER_NOT_PERMITTED_FOR_DATA_MODE,
@@ -111,6 +137,54 @@ export const sendsPersonalDataToHostedModel = (input: ProviderRequest): boolean 
 
 /** Audit `tool` name for one personal request sent to a hosted model. */
 export const PERSONAL_DATA_SENT_AUDIT_TOOL = "provider.personal_data_sent";
+
+/**
+ * Imported data (Customize · Data, docs/personal-data.md) has its own gate,
+ * the same shape as the genome's:
+ *
+ * - DATA_MODE=personal. A synthetic session never imports, stores or reads it.
+ * - Only a model on this machine reads it: Ollama on loopback. No hosted
+ *   provider, the consented Exoscale pilot included, and no MCP server, GBD
+ *   tool or analytics event ever receives an imported value.
+ *
+ * Importing, reviewing, listing and deleting need only the first rule: no
+ * model sees anything at those steps. Chat tools that read imported data
+ * (a follow-up) must pass `permitImportedDataRequest` before each call.
+ */
+export type ImportedDataRequest = Readonly<{
+  mode: DataMode;
+  chatProvider: LlmProvider;
+  chatOnLoopback: boolean;
+}>;
+
+export const IMPORTED_DATA_NOT_PERMITTED = "IMPORTED_DATA_NOT_PERMITTED" as const;
+
+export type ImportedDataRefusalReason = "data-mode-not-personal" | "chat-model-not-local";
+
+export type ImportedDataPermitDecision =
+  | { readonly ok: true }
+  | {
+      readonly ok: false;
+      readonly code: typeof IMPORTED_DATA_NOT_PERMITTED;
+      readonly reason: ImportedDataRefusalReason;
+    };
+
+/** May this server import, store, list or delete a person's own files? */
+export const permitImportedDataStore = (mode: DataMode): ImportedDataPermitDecision =>
+  mode === "personal"
+    ? { ok: true }
+    : { ok: false, code: IMPORTED_DATA_NOT_PERMITTED, reason: "data-mode-not-personal" };
+
+/** May a chat model read imported data? Only Ollama on this machine, in personal mode. */
+export const permitImportedDataRequest = (
+  input: ImportedDataRequest,
+): ImportedDataPermitDecision => {
+  const stored = permitImportedDataStore(input.mode);
+  if (!stored.ok) return stored;
+  return input.chatProvider === "ollama" && input.chatOnLoopback
+    ? { ok: true }
+    : { ok: false, code: IMPORTED_DATA_NOT_PERMITTED, reason: "chat-model-not-local" };
+};
 
 /**
  * Genome requests (the Ark report and the Carbon-X DNA model) have their own

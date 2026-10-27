@@ -6,8 +6,10 @@ import { sha256Hex, toCanonicalJson } from "@/packages/audit/hash";
 import {
   type ModelResponseCompleteUpdate,
   type ModelResponseFailedUpdate,
+  type ModelResponseRefusedUpdate,
   writeModelResponseComplete,
   writeModelResponseFailed,
+  writeModelResponseRefused,
 } from "./write-model-response-complete";
 
 const metrics = {
@@ -181,6 +183,31 @@ describe("writeModelResponseFailed", () => {
       {
         where: { turnId_modelId: { turnId: "turn-3", modelId: "synthetic/model" } },
         data: { status: "FAILED", completedAt },
+      },
+    ]);
+  });
+});
+
+describe("writeModelResponseRefused", () => {
+  test("marks the row refused with the refusal sentence and a completion time", async () => {
+    const calls: ModelResponseRefusedUpdate[] = [];
+    await writeModelResponseRefused(
+      { update: async (args: ModelResponseRefusedUpdate) => calls.push(args) },
+      {
+        turnId: "turn-4",
+        modelId: "synthetic/model",
+        sentence: "/sleep runs only on local Ollama.",
+      },
+      () => completedAt,
+    );
+    expect(calls).toEqual([
+      {
+        where: { turnId_modelId: { turnId: "turn-4", modelId: "synthetic/model" } },
+        data: {
+          status: "REFUSED",
+          text: "/sleep runs only on local Ollama.",
+          completedAt,
+        },
       },
     ]);
   });

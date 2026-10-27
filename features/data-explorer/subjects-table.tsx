@@ -11,6 +11,7 @@ import {
   subjectQueryString,
   type SubjectSummary,
 } from "./subject-table";
+import { COHORT_SUBJECTS } from "./data-paths";
 
 /**
  * The cohort's subjects as a server-rendered table. Search is a GET form and
@@ -28,7 +29,7 @@ const COLUMNS: readonly (readonly [SubjectSort, string, "left" | "right"])[] = [
 ];
 
 export const subjectHref = (ref: string): string =>
-  `/data/subjects/${encodeURIComponent(ref)}`;
+  `${COHORT_SUBJECTS}/${encodeURIComponent(ref)}`;
 
 const SortHeader = ({
   cohortId,
@@ -79,7 +80,7 @@ export const SubjectsTable = ({
     <section className="mt-6">
       <form
         method="get"
-        action="/data/subjects"
+        action={COHORT_SUBJECTS}
         className="flex flex-wrap items-end gap-2"
       >
         <input type="hidden" name="cohort" value={cohortId} />

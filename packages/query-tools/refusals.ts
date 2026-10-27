@@ -14,7 +14,13 @@ export const ROW_CAP_EXCEEDED = {
   error: "more than 5000 observations in this window; narrow the window",
 } as const;
 
-export type RowCapExceeded = typeof ROW_CAP_EXCEEDED;
+export type RowCapExceeded = Readonly<{ code: "ROW_CAP_EXCEEDED"; error: string }>;
+
+/** The timeline tools' cap: they list records, not observations. */
+export const recordCapExceeded = (cap: number): RowCapExceeded => ({
+  code: "ROW_CAP_EXCEEDED",
+  error: `more than ${cap} records in this window; narrow the window`,
+});
 
 export type MixedUnits = Readonly<{
   code: "MIXED_UNITS";
@@ -64,9 +70,12 @@ export type ToolRefusal =
   | RowCapExceeded
   | MixedUnits
   | NoRows
+  | NoRecords
   | NoPublishedRange
   | UnitMismatch
   | UnsupportedConversion
+  | CohortRowCapExceeded
+  | CohortTooSmall
   | SourceNotConnected
   | NoWearableRows
   | WearableMixedUnits
@@ -80,6 +89,8 @@ const REFUSAL_CODES: readonly string[] = [
   "NO_PUBLISHED_RANGE",
   "UNIT_MISMATCH",
   "UNSUPPORTED_CONVERSION",
+  "COHORT_ROW_CAP_EXCEEDED",
+  "COHORT_TOO_SMALL",
   "SOURCE_NOT_CONNECTED",
   "WINDOW_TOO_SHORT",
 ];
@@ -102,6 +113,39 @@ export const noRows = (loinc: string, at: string | null): NoRows => ({
       : "no observation for this code at this effective_at in this window",
   loinc,
 });
+
+export type ClinicalRecordKind = "condition" | "medication request";
+
+export type NoRecords = Readonly<{
+  code: "NO_ROWS";
+  error: string;
+  record: ClinicalRecordKind;
+}>;
+
+/**
+ * No record to list: says which kind, which window rule and which filters, so
+ * the answer can say plainly what is missing. It never says the subject has
+ * none at all, only none that match.
+ */
+export const noRecords = (
+  record: ClinicalRecordKind,
+  filters: Readonly<{ status?: string; code?: string }>,
+): NoRecords => {
+  const status = record === "condition" ? "clinical status" : "status";
+  const matching = [
+    filters.code === undefined ? null : `code ${filters.code}`,
+    filters.status === undefined ? null : `${status} ${filters.status}`,
+  ].filter((part) => part !== null);
+  const which = matching.length === 0 ? "" : ` with ${matching.join(" and ")}`;
+  return {
+    code: "NO_ROWS",
+    error:
+      record === "condition"
+        ? `no condition${which} is recorded for this subject with a span (onset to abatement, or still open) that overlaps this window`
+        : `no medication request${which} is recorded for this subject as authored in this window`,
+    record,
+  };
+};
 
 export type NoPublishedRange = Readonly<{
   code: "NO_PUBLISHED_RANGE";
@@ -149,6 +193,41 @@ export const unitMismatch = (
   loinc,
   unit,
   range_unit: rangeUnit,
+});
+
+/**
+ * Rows one cohort-wide read may hold: every subject's rows of one code in the
+ * window. More is refused, not truncated, because a truncated read would drop
+ * whole people from the comparison.
+ */
+export const COHORT_ROW_CAP = 20_000;
+
+export const COHORT_ROW_CAP_EXCEEDED = {
+  code: "COHORT_ROW_CAP_EXCEEDED",
+  error:
+    "more than 20000 observations for this code across the cohort in this window; narrow the window",
+} as const;
+
+export type CohortRowCapExceeded = typeof COHORT_ROW_CAP_EXCEEDED;
+
+/** With fewer people with a value than this, no percentile is given. */
+export const COHORT_MINIMUM = 10;
+
+export type CohortTooSmall = Readonly<{
+  code: "COHORT_TOO_SMALL";
+  error: string;
+  loinc: string;
+  n: number;
+  minimum: typeof COHORT_MINIMUM;
+}>;
+
+/** A percentile among a handful of people says little and points at each of them. */
+export const cohortTooSmall = (loinc: string, n: number): CohortTooSmall => ({
+  code: "COHORT_TOO_SMALL",
+  error: "fewer than 10 people in this cohort have a value for this code in this window",
+  loinc,
+  n,
+  minimum: COHORT_MINIMUM,
 });
 
 /** Readings a wearable trend needs from at least one source. */
