@@ -224,6 +224,10 @@ type BodyLoopAvatarProps = {
   readonly forceFallback?: boolean;
   /** Tells the page which subject is shown and what it has, for its Sources section. */
   readonly onContext?: (context: TwinContext) => void;
+  /** The subject to start on instead of the default (the chat's `/twin` card passes the demo). */
+  readonly initialSubjectId?: string;
+  /** The Demo's synthetic person to start on instead of the first one. */
+  readonly initialPersonRef?: string;
 };
 
 /** BodyLoop helper geometry that must not show inside the (glass) scan. */
@@ -735,6 +739,8 @@ export const BodyLoopAvatar = ({
   preview,
   forceFallback = false,
   onContext,
+  initialSubjectId,
+  initialPersonRef,
 }: BodyLoopAvatarProps) => {
   const [subjects, setSubjects] = useState<readonly BodyTwinSubject[]>(
     preview?.subjects ?? [],
@@ -743,7 +749,9 @@ export const BodyLoopAvatar = ({
   const [snapshots, setSnapshots] = useState<readonly BodyTwinSnapshot[]>(
     preview?.snapshots ?? [],
   );
-  const [chosenSubjectId, setSubjectId] = useState(preview?.selectedSubjectId ?? "");
+  const [chosenSubjectId, setSubjectId] = useState(
+    preview?.selectedSubjectId ?? initialSubjectId ?? "",
+  );
   // Previews know their subjects up front; live, the list (or its failure) decides.
   const [subjectsReady, setSubjectsReady] = useState(preview !== undefined);
   const [demoSexPick, setDemoSexPick] = useState<DemoSexPick | null>(null);
@@ -966,6 +974,7 @@ export const BodyLoopAvatar = ({
     enabled: preview === undefined,
     anatomy: anatomy.state,
     dispatch: anatomy.dispatch,
+    initialPersonRef,
   });
   // The Demo body follows the synthetic person's stored sex unless picked by hand.
   const personSex =

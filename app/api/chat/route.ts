@@ -9,7 +9,7 @@ import { loadWearableContext } from "@/features/chat/wearable-context";
 import { getLatestGoogleHealthSummary } from "@/features/google-health/connection";
 import { loadDisabledSources } from "@/features/onboarding/onboarding-store";
 import { getLatestOuraSummary } from "@/features/oura/connection";
-import { findRunnableSkill } from "@/features/skills/load-skills";
+import { findSkillFor } from "@/features/skills/user-skill-store";
 import { getLatestVitronicSummary } from "@/features/vitronic/connection";
 import { getLatestWhoopSummary } from "@/features/whoop/connection";
 import { resolveActorId } from "@/infrastructure/auth-actor";
@@ -77,7 +77,7 @@ const startAnswer = createStartAnswer({
     }),
   loadDisabledSources,
   appendAudit: (input) => append(database(), input),
-  findSkill: findRunnableSkill,
+  findSkill: findSkillFor,
   stream: streamModelResponse,
   // The person still gets the refusal when the row cannot be written; a
   // reload then asks again, which is how a refused turn behaved before.

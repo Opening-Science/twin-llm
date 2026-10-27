@@ -25,8 +25,8 @@ describe("connect rows", () => {
       ["oura", "Linked", null],
       ["whoop", "Not linked", "/api/whoop/authorize"],
       ["google-health", "Not set up", "/connectors?source=google-health"],
-      ["bodyloop", "Not linked", "/connectors"],
-      ["ark", "Not set up", "/connectors"],
+      ["bodyloop", "Not linked", "/customize/connectors"],
+      ["ark", "Not set up", "/customize/connectors"],
     ]);
     expect(linkedNames(groups)).toEqual(["Oura"]);
   });

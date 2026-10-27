@@ -32,6 +32,20 @@ Since #111: a number in a finished answer that a tool call returned is a quiet d
 
 Issues: #35 stored tool parts, #36 `data-view` and `show_view`, #37 Outputs panel, #38 compare, card and table kinds, #39 tool-call cards, #111 clickable numbers.
 
+## Incognito chats
+
+Never saved, local only. On an empty new chat the hat-and-glasses switch at the top right ("Incognito chat", `aria-pressed`) opens `/?incognito=1`; turning it off goes back to `/`. A reload keeps the mode but starts an empty conversation, and so do "New chat" and navigating away. Other UI links to `INCOGNITO_HREF` (`infrastructure/incognito.ts`). The banner under the heading reads "Incognito chat. Not saved, not in your threads or search, local models only.", it stays above the answers once there are some, and the prompt bar's frame is dashed.
+
+The conversation lives in the compare screen's React state only (`features/arena/begin-turn.ts`): `startTurn` is never called, the thread history store is not touched, the URL never becomes `/t/<id>`, and no analytics event describes the conversation (with analytics on, the visit to `/?incognito=1` is a page view like any other). Each answer goes to `POST /api/chat/incognito` with a closed body (`modelId`, at most 100 messages, optional `skill`; no turn id). The route needs a signed-in person (or auth off, as `/api/chat`), passes the same abuse protection, and refuses any chat model that is not Ollama on loopback with `INCOGNITO_LOCAL_ONLY` before a model is called. The picker shows the other models greyed out with the reason.
+
+The answer runs through the same pipeline as a saved one: `createStartAnswer` (skill gate, genome rules, data-mode policy) and `createStreamModelResponse` (model, tools, views, stream), with an answer store that writes nothing and analytics that send nothing (`features/chat/incognito-chat.ts`). Exactly what is kept:
+
+- Written: one `audit_events` row per tool call, and `skill.<name>` for a skill turn, as for any chat: actor, a random session id per answer (`incognito-<uuid>`, never a thread or turn id), subject, tool, row count, time, and SHA-256 hashes of the tool's arguments and result. No prompt, answer or thread id. An argument the model writes, such as a knowledge search phrase, is only ever stored as part of that hash.
+- Not written: no `threads`, `turns` or `model_responses` row, no stored tool parts or response document, no `prompt_sent`, `model_answered` or generation event. No prompt or answer text goes to a log line; failures log error names and status codes only.
+- Read only: the person's user row (never created here), wearable summaries and the sources turned off at `/start`, as a saved turn reads them.
+
+`list_views` and `open_view` find no earlier views, since nothing was stored. The genome tools stay available where the genome policy allows them, because the model is local. Ollama's own logs on this machine are outside TwinLLM.
+
 ## 2. Skills and the command palette
 
 The slash menu becomes a palette: built-in commands and skills, each showing what it may read. A skill is `skills/<name>/SKILL.md` (name, description, allowed tools, sources, providers, views) plus `evals/`, run in CI like the question set. Built-ins: `/sleep`, `/compact` (a twin note in a per-user memory the person edits), `/report` (PDF or FHIR DocumentReference). `/connect` keeps the wearable rows.
@@ -39,6 +53,16 @@ The slash menu becomes a palette: built-in commands and skills, each showing wha
 Since #42: the palette lists every offered skill with what it reads and may call, and a prompt sent as `/sleep …` runs under the skill's tool, provider and view allowlists with its instructions in the system prompt. The run is audited as `skill.<name>` and the response document carries `skill` ([skills.md](skills.md)).
 
 Issues: #40 palette, #41 skill format, #42 `/sleep`, #43 `/compact`, #44 `/report`.
+
+### Search (#167)
+
+Ctrl/⌘+K anywhere in the shell, or Search in the sidebar, opens one box over threads, pages, docs and `/` commands, with tabs (All, Threads, Pages, Docs, Commands), recent threads and actions when empty, ↑/↓ and Enter, and ←/→ at either end of the text to change the tab. A command opens a new chat with `/name ` typed in; it sends nothing.
+
+- Threads are only the signed-in person's own. Words match titles, prompts and finished answers (Prisma `contains`); meaning matches come from `thread_search_embeddings`, one nomic-embed-text vector per prompt or answer and **no text**, so deleting a thread removes everything search knows about it. The snippet is read back from the turn or answer.
+- Embeddings are made only by Ollama on a loopback address, whatever `LOCAL_ONLY` says. Opening the box embeds what is new (at most 25 items or 4 s per call, newest first); with Ollama down, search answers by words and says so.
+- A genome thread (#151) is found by its title only: no passage is shown, it is never embedded, and an existing embedding is dropped at the next index run.
+- Each thread search is audited as `search.threads` with the tab and the number of words and results, never the query; if the audit cannot be written, the search is refused.
+- Docs match by title and by text, with a passage; they are not embedded.
 
 ## 3. `/trainer`, descriptive
 

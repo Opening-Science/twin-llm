@@ -17,7 +17,10 @@ import {
 import { vllmBaseUrlFor } from "@/infrastructure/fetch-model-catalog";
 import { withFirstByteTimeout } from "@/infrastructure/first-byte-timeout-fetch";
 
+import { ollamaChatModel } from "./ollama-chat-model";
 import { openrouter } from "./openrouter";
+
+const DEFAULT_OLLAMA_BASE_URL = "http://127.0.0.1:11434/v1";
 
 export class ProviderNotPermittedError extends Error {
   readonly code = PROVIDER_NOT_PERMITTED_FOR_DATA_MODE;
@@ -97,7 +100,8 @@ export const exoscaleTarget = (
  * Providers:
  * - exoscale — default without LOCAL_ONLY: our own vLLM servers on an Exoscale
  *   GPU instance in Switzerland; each id goes to the server that listed it
- * - ollama — local OpenAI-compatible daemon (default with LOCAL_ONLY)
+ * - ollama — local daemon (default with LOCAL_ONLY), on its native chat API
+ *   so the request can set the context size (OLLAMA_NUM_CTX)
  * - remote-gpu — vLLM on a rented GPU behind SSH tunnels; each id goes to the
  *   tunnel URL that listed it
  * - openrouter — free OSS catalog
@@ -124,12 +128,10 @@ export const resolveLanguageModel = (
   }
 
   if (env.LLM_PROVIDER === "ollama") {
-    const baseURL = env.OLLAMA_BASE_URL ?? "http://127.0.0.1:11434/v1";
-    const ollama = createOpenAI({
-      apiKey: "ollama",
-      baseURL,
+    return ollamaChatModel(modelId, {
+      baseUrl: env.OLLAMA_BASE_URL ?? DEFAULT_OLLAMA_BASE_URL,
+      numCtx: env.OLLAMA_NUM_CTX,
     });
-    return ollama.chat(modelId);
   }
 
   if (env.LLM_PROVIDER === "exoscale") {
