@@ -6,6 +6,7 @@ import { runnableSkills } from "@/features/skills/load-skills";
 import { needsOnboarding } from "@/features/onboarding/onboarding-store";
 import { resolveActorId } from "@/infrastructure/auth-actor";
 import { fetchActiveModelCatalog } from "@/infrastructure/fetch-model-catalog";
+import { serverEnv } from "@/infrastructure/env";
 import { defaultModelSelection } from "@/infrastructure/model-catalog";
 
 /**
@@ -22,6 +23,7 @@ export default async function HomePage() {
       catalog={catalog}
       defaultModelIds={catalog ? defaultModelSelection(catalog) : []}
       skills={runnableSkills().map(skillCommand)}
+      dataMode={serverEnv().DATA_MODE}
     />
   );
 }

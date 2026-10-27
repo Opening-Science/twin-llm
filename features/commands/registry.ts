@@ -15,8 +15,19 @@ export type Command = Readonly<{
   kind?: "built-in" | "skill";
 }>;
 
+/** Shows the thread's twin as a card in the chat; asks no model (features/arena/prompt-route.ts). */
+export const TWIN_COMMAND = "twin";
+
 export const BUILT_IN_COMMANDS: readonly Command[] = [
   { name: "connect", description: "Connect a wearable", reads: [] },
+  {
+    name: TWIN_COMMAND,
+    description: "Show the digital twin in this chat. Asks no model.",
+    reads: [
+      "this thread's prompts and tool calls",
+      "Body twin: scans, synthetic lab values, linked wearables",
+    ],
+  },
 ];
 
 /** A runnable skill as the palette lists it: sources by their labels, tools by name. */

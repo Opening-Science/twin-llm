@@ -6,6 +6,7 @@ import { runnableSkills } from "@/features/skills/load-skills";
 import { ownedThread } from "@/features/arena/thread-reads";
 import { ThreadTitle } from "@/features/shell/thread-title";
 import { fetchActiveModelCatalog } from "@/infrastructure/fetch-model-catalog";
+import { serverEnv } from "@/infrastructure/env";
 import { defaultModelSelection } from "@/infrastructure/model-catalog";
 
 /** A thread is private to its owner; search engines get nothing either way. */
@@ -43,6 +44,7 @@ export default async function ThreadPage({
         threadId={thread.id}
         initialTurns={thread.turns}
         skills={runnableSkills().map(skillCommand)}
+        dataMode={serverEnv().DATA_MODE}
       />
     </>
   );
