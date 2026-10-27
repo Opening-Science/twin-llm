@@ -356,6 +356,20 @@
     @apply bg-muted text-foreground;
   }
 
+  /* Incognito chat: a calm banner and a dashed prompt bar, in the neutral
+     tokens only, so the mode is plain to see without reading as a warning. */
+  .incognito-banner {
+    @apply border-input text-foreground bg-muted mx-auto flex w-full max-w-2xl items-start gap-2 rounded-lg border border-dashed px-3 py-2 text-left text-sm leading-snug;
+  }
+
+  .incognito-toggle[aria-pressed="true"] {
+    @apply bg-muted text-foreground;
+  }
+
+  .surface[data-incognito] {
+    @apply border-input border-dashed;
+  }
+
   /* A tool call in an answer: one quiet row that folds out to its arguments. */
   .tool-card {
     @apply border-border rounded-md border text-xs;

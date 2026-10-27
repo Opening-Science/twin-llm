@@ -32,6 +32,20 @@ Since #111: a number in a finished answer that a tool call returned is a quiet d
 
 Issues: #35 stored tool parts, #36 `data-view` and `show_view`, #37 Outputs panel, #38 compare, card and table kinds, #39 tool-call cards, #111 clickable numbers.
 
+## Incognito chats
+
+Never saved, local only. On an empty new chat the hat-and-glasses switch at the top right ("Incognito chat", `aria-pressed`) opens `/?incognito=1`; turning it off goes back to `/`. A reload keeps the mode but starts an empty conversation, and so do "New chat" and navigating away. Other UI links to `INCOGNITO_HREF` (`infrastructure/incognito.ts`). The banner under the heading reads "Incognito chat. Not saved, not in your threads or search, local models only.", it stays above the answers once there are some, and the prompt bar's frame is dashed.
+
+The conversation lives in the compare screen's React state only (`features/arena/begin-turn.ts`): `startTurn` is never called, the thread history store is not touched, the URL never becomes `/t/<id>`, and no analytics event describes the conversation (with analytics on, the visit to `/?incognito=1` is a page view like any other). Each answer goes to `POST /api/chat/incognito` with a closed body (`modelId`, at most 100 messages, optional `skill`; no turn id). The route needs a signed-in person (or auth off, as `/api/chat`), passes the same abuse protection, and refuses any chat model that is not Ollama on loopback with `INCOGNITO_LOCAL_ONLY` before a model is called. The picker shows the other models greyed out with the reason.
+
+The answer runs through the same pipeline as a saved one: `createStartAnswer` (skill gate, genome rules, data-mode policy) and `createStreamModelResponse` (model, tools, views, stream), with an answer store that writes nothing and analytics that send nothing (`features/chat/incognito-chat.ts`). Exactly what is kept:
+
+- Written: one `audit_events` row per tool call, and `skill.<name>` for a skill turn, as for any chat: actor, a random session id per answer (`incognito-<uuid>`, never a thread or turn id), subject, tool, row count, time, and SHA-256 hashes of the tool's arguments and result. No prompt, answer or thread id. An argument the model writes, such as a knowledge search phrase, is only ever stored as part of that hash.
+- Not written: no `threads`, `turns` or `model_responses` row, no stored tool parts or response document, no `prompt_sent`, `model_answered` or generation event. No prompt or answer text goes to a log line; failures log error names and status codes only.
+- Read only: the person's user row (never created here), wearable summaries and the sources turned off at `/start`, as a saved turn reads them.
+
+`list_views` and `open_view` find no earlier views, since nothing was stored. The genome tools stay available where the genome policy allows them, because the model is local. Ollama's own logs on this machine are outside TwinLLM.
+
 ## 2. Skills and the command palette
 
 The slash menu becomes a palette: built-in commands and skills, each showing what it may read. A skill is `skills/<name>/SKILL.md` (name, description, allowed tools, sources, providers, views) plus `evals/`, run in CI like the question set. Built-ins: `/sleep`, `/compact` (a twin note in a per-user memory the person edits), `/report` (PDF or FHIR DocumentReference). `/connect` keeps the wearable rows.

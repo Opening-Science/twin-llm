@@ -1,6 +1,6 @@
 /**
- * The three small marks the compare screen draws: send, a failed answer, and
- * remove. Decorative only; the button or sentence beside each carries the
+ * The small marks the compare screen draws: send, a failed answer, remove,
+ * and the incognito toggle (a hat and glasses). Decorative only; the button or sentence beside each carries the
  * meaning. They inherit `currentColor` and the caller's size.
  */
 const MARK = {
@@ -12,6 +12,14 @@ const MARK = {
     </>
   ),
   remove: <path d="m6 6 8 8M14 6l-8 8" />,
+  incognito: (
+    <>
+      <path d="M2.5 9.5h15M5 9.5 6.5 4.5h7L15 9.5" />
+      <circle cx="6.5" cy="13.5" r="2.25" />
+      <circle cx="13.5" cy="13.5" r="2.25" />
+      <path d="M8.75 13.5h2.5" />
+    </>
+  ),
 } as const;
 
 export const Mark = ({

@@ -11,7 +11,8 @@ import { chosenModels, toggleLimit } from "./model-selection";
  * The list of every model the provider offers, as real checkboxes: picking a
  * model is a yes/no choice per row, and a checkbox says that to a screen reader
  * without any extra ARIA. A row that would break the 1-to-3 rule is disabled,
- * and the line under the list says why in words.
+ * and the line under the list says why in words. A locked row (a model an
+ * incognito chat may not use) is disabled with its reason on the row itself.
  */
 
 const LIMIT_NOTE = {
@@ -23,10 +24,15 @@ const LIMIT_NOTE = {
 export const ModelMenu = ({
   catalog,
   selectedIds,
+  lockedIds = [],
+  lockedNote = "",
   onToggle,
 }: Readonly<{
   catalog: readonly CatalogModel[];
   selectedIds: readonly string[];
+  /** Models that cannot be chosen here at all, with `lockedNote` saying why. */
+  lockedIds?: readonly string[];
+  lockedNote?: string;
   onToggle: (modelId: string) => void;
 }>) => {
   const count = chosenModels(catalog, selectedIds).length;
@@ -57,7 +63,8 @@ export const ModelMenu = ({
           <ul className="border-border max-h-72 overflow-y-auto border-y py-1">
             {catalog.map((model) => {
               const selected = selectedIds.includes(model.id);
-              const blocked = toggleLimit(selected, count) !== null;
+              const locked = lockedIds.includes(model.id);
+              const blocked = locked || toggleLimit(selected, count) !== null;
               return (
                 <li key={model.id}>
                   <label
@@ -79,6 +86,11 @@ export const ModelMenu = ({
                       <span className="text-muted-foreground block truncate text-xs">
                         {model.provider}
                       </span>
+                      {locked ? (
+                        <span className="text-muted-foreground block text-xs">
+                          {lockedNote}
+                        </span>
+                      ) : null}
                     </span>
                     <span className="metric">{formatModelWindow(model)}</span>
                   </label>
