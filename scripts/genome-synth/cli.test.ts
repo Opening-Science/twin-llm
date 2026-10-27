@@ -5,7 +5,14 @@ import { join } from "node:path";
 
 import { parseCatalog, type Variant } from "./catalog";
 import { genomeFor, parseGenerateArgs, runGenerate } from "./generate";
-import { releasedReport, runIngest } from "./ingest";
+import {
+  parseIngestArgs,
+  releasedReport,
+  runIngest,
+  type SaveOutcome,
+  type SyntheticRow,
+  syntheticRow,
+} from "./ingest";
 
 const catalog = (): readonly Variant[] => {
   const parsed = parseCatalog(
@@ -155,5 +162,79 @@ describe("genome:ingest", () => {
       "No cohort: pass --cohort or keep manifest.json next to the fhir dir.\n",
     ]);
     expect(fake.written.size).toBe(0);
+  });
+
+  describe("--to-db", () => {
+    const FILES = {
+      "c/manifest.json": { seed: 4242, cohortId: "synthea-v4-seed4242" },
+      "c/fhir/a.json": patientBundle(REF),
+      "c/fhir/b.json": patientBundle(OTHER),
+    };
+    const withDb = (outcome: (row: SyntheticRow) => SaveOutcome, mode = "synthetic") => {
+      const fake = deps(FILES);
+      const saved: SyntheticRow[] = [];
+      return {
+        ...fake,
+        saved,
+        deps: {
+          ...fake.deps,
+          dataMode: () => mode,
+          save: async (row: SyntheticRow) => {
+            saved.push(row);
+            return outcome(row);
+          },
+        },
+      };
+    };
+
+    test("writes each report through the store as a parsed synthetic row, and no file", async () => {
+      const fake = withDb(() => "saved");
+      const { out, io: streams } = io();
+      expect(await runIngest(["--in", "c/fhir", "--to-db"], streams, fake.deps)).toBe(0);
+      expect(fake.written.size).toBe(0);
+      expect(fake.saved.map((row) => row.subjectRef)).toEqual([REF, OTHER]);
+      const report = releasedReport(REF, "synthea-v4-seed4242", catalog());
+      expect(fake.saved[0]).toEqual(syntheticRow(report));
+      expect(fake.saved[0]?.arkBuild).toBe("GRCh38");
+      expect(fake.saved[0]?.rows[0]).toEqual({
+        rsid: "rs4244285",
+        chromosome: "chr10",
+        position: 94781859,
+        reference: "G",
+        genotype: "G/A",
+      });
+      expect(out.join("")).toContain(
+        "Cohort synthea-v4-seed4242: 2 saved, 0 not in the warehouse, 0 refused",
+      );
+    });
+
+    test("a subject that is not a synthetic member of the cohort fails the run", async () => {
+      const fake = withDb((row) =>
+        row.subjectRef === REF ? "not_synthetic" : "no_subject",
+      );
+      const { out, io: streams } = io();
+      expect(await runIngest(["--in", "c/fhir", "--to-db"], streams, fake.deps)).toBe(1);
+      expect(out.join("")).toContain("0 saved, 1 not in the warehouse, 1 refused");
+    });
+
+    test("needs DATA_MODE=synthetic and a database, and no --out", async () => {
+      const personal = withDb(() => "saved", "personal");
+      const first = io();
+      expect(
+        await runIngest(["--in", "c/fhir", "--to-db"], first.io, personal.deps),
+      ).toBe(1);
+      expect(first.err).toEqual([
+        "genome:ingest --to-db runs only with DATA_MODE=synthetic.\n",
+      ]);
+      expect(personal.saved).toEqual([]);
+      const second = io();
+      expect(
+        await runIngest(["--in", "c/fhir", "--to-db"], second.io, deps(FILES).deps),
+      ).toBe(1);
+      expect(second.err).toEqual(["--to-db needs a database.\n"]);
+      expect(parseIngestArgs(["--in", "x", "--to-db", "--out", "y"])).toBe(
+        "--out and --to-db do not go together.",
+      );
+    });
   });
 });

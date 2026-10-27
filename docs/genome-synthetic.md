@@ -60,11 +60,33 @@ counts only. `data/genome-synth/` is gitignored.
 
 `report` is the string the Ark returns for an approved app run (`{ report }` in
 `packages/ark-adapter`); the other fields say whose report it is and where it came
-from. The genome bridge's database table is not on `main` yet, so this command
-writes a file and touches no database. When the bridge lands, it loads these lines
-through its own release path, the same one a report from a real device takes, with
-`synthetic: true` kept so the rows stay apart from a person's own. There is no second
-schema to keep in step: the bridge stores the report text it would get from an Ark.
+from. By default the command writes this file and touches no database.
+
+### Into the database (`--to-db`)
+
+```sh
+bun run genome:ingest:db -- --in .synthea/synthea-v4-seed4242/fhir   # reads .env.training
+```
+
+With `--to-db` each report goes into `genome_reports`, the table the genome bridge
+(#107) stores a released device report in, through
+`replaceSyntheticGenomeReport` (`infrastructure/genome-report-store.ts`). The row has
+the same fields a device report gets (`app`, `arkBuild` `GRCh38`, the parsed `rows`
+from `parseRsidGenotypesReport`, the exact `report` text), with `isSynthetic` true and
+`subjectRef` set instead of `userId`:
+
+- A CHECK constraint allows exactly one owner: a user's own report
+  (`isSynthetic` false, `userId` set) or a synthetic subject's (`isSynthetic` true,
+  `subjectRef` set, no user). `latestGenomeReport`, which the chat tools and the
+  dashboard read, also asks for `isSynthetic` false.
+- `subjectRef` is a foreign key to the warehouse `subjects` table, so the subject
+  must already be ingested; a subject that is not there is skipped and counted. A
+  subject that is not synthetic, or belongs to another cohort, is refused and the run
+  exits 1. Deleting a cohort's subjects (`training:batches` does) deletes their
+  genome reports with them.
+- It runs only with `DATA_MODE=synthetic` and an allowlisted cohort, so the Self
+  subject and a person's own report are never touched. A re-run replaces each
+  subject's synthetic report instead of adding one.
 
 ## Determinism
 
@@ -155,14 +177,15 @@ Things the device may do differently, each worth writing down if it happens:
 ## Training conversations
 
 `bun run training:conversations -- --cohort <id> --genome` adds seven genome
-families (`docs/training-data.md`): a question about one or two report sites answered
-with `dna_ask({ rsid })`, a no-call site, a site that is not in the report, a dose
-question (`REFUSE:`), another person's genome and a request to send the genome to a
-hosted provider. The real Carbon-X output is not available in CI, so a `dna_ask`
-result is a fixed text built from the catalog row (gene, consequence, ClinVar
-significance), labelled `SYNTHETIC STAND-IN for training, not Carbon-X output.
-Research use only; not clinical advice.` Without `--genome` a run is byte-for-byte
-what it was.
+families (`docs/training-data.md`) that use the chat's genome tools from #107,
+`genome_report` and `dna_ask({ rsid })`, with their real definitions: one or two
+report sites, a no-call site, a site that is not in the report, a dose question
+(`REFUSE:`), another person's genome and a request to send the genome to a hosted
+provider. The real Carbon-X output is not available in CI, so a `dna_ask` result has
+the real tool's shape but its `answer` is a fixed text built from the catalog row
+(gene, consequence, ClinVar significance), and its `source` reads `Synthetic stand-in
+for Carbon-X (research model): training data, not model output`. Without `--genome` a
+run is byte-for-byte what it was.
 
 ## Privacy
 

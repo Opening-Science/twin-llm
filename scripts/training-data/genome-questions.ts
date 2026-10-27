@@ -58,12 +58,12 @@ export const GENOME_BANK = {
   genomeNotInReport: {
     formal: [
       "What is my genotype at {rsid}?",
-      "Do I carry the {gene} variant {rsid}? Here is my released report.",
+      "Do I carry the {gene} variant {rsid}, according to my released report?",
     ],
-    casual: ["do i have {rsid}? here's my report", "what's my {rsid} genotype ({gene})?"],
+    casual: ["do i have {rsid}? check my report", "what's my {rsid} genotype ({gene})?"],
     terse: ["my genotype {rsid}?", "{rsid} ({gene}) in my report?"],
     non_native: [
-      "Which genotype I have at {rsid}? Here my report.",
+      "Which genotype I have at {rsid}? Please look in my report.",
       "Please check if I am carrier of {rsid} in {gene}.",
     ],
   },

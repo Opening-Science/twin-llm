@@ -3,6 +3,7 @@
  * it runs in, and small helpers to read tool results and write the four
  * sections. Pure.
  */
+import type { DNA_ASK_TOOL, GENOME_REPORT_TOOL } from "../../packages/carbon-x/constants";
 import { isToolRefusal } from "../../packages/query-tools/refusals";
 import type { Variant } from "../genome-synth/catalog";
 import type { Random } from "../synthetic-wearables/random";
@@ -22,11 +23,14 @@ export const TOOL_NAMES = [
 
 export type ToolName = (typeof TOOL_NAMES)[number];
 
-/** The genome families' one tool; its result is a fixed synthetic stand-in, never a query. */
-export const DNA_ASK = "dna_ask";
+/**
+ * The genome tools (#107). In training their results are built from the
+ * subject's synthetic report, never from a query or a model.
+ */
+export type GenomeToolName = typeof DNA_ASK_TOOL | typeof GENOME_REPORT_TOOL;
 
 export type ToolCall = Readonly<{
-  name: ToolName | typeof DNA_ASK;
+  name: ToolName | GenomeToolName;
   args: Readonly<Record<string, unknown>>;
   result: unknown;
 }>;

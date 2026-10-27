@@ -59,8 +59,10 @@ These are enforced in code, not only by convention.
    in a synthetic scope.
 6. **No genotype goes to a hosted provider**, the consented Exoscale pilot
    included, nor to OpenRouter, the remote GPU, Infomaniak, GBD or any MCP
-   server. The genome tools are left out of the eval harness, the training
-   data and the MCP manifest. Analytics send nothing in personal mode.
+   server. The genome tools are left out of the eval harness and the MCP
+   manifest. Training data offers them only with `--genome`, on synthetic
+   genomes with stand-in answers, never a person's report
+   (`docs/genome-synthetic.md`). Analytics send nothing in personal mode.
 7. **Every step is audited, without genotypes.** `ark.data.list`, `ark.app.run`,
    `genome.report.store`, `genome.report` and `genome.dna_ask` each append to
    the hash chain. Their arguments and results hold rsIDs, ids, counts and
@@ -145,6 +147,7 @@ refuses as `REF_STRAND_MISMATCH`, because the call file is on the other strand.
 | Run and stored report routes | `features/digital-twin/genome-run.ts`, `app/api/genome/*`     |
 | Dashboard card               | `features/digital-twin/genome-report.tsx`                     |
 | Stored report                | `GenomeReport` model, `infrastructure/genome-report-store.ts` |
+| Synthetic reports (testing)  | `scripts/genome-synth/`, `docs/genome-synthetic.md`           |
 | Reference windows and build  | `packages/genome-reference/`                                  |
 | Carbon-X client and prompt   | `packages/carbon-x/`                                          |
 | Chat tools                   | `features/chat/genome-tools.ts`                               |

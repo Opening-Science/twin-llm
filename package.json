@@ -55,6 +55,7 @@
     "wearables:generate": "bun scripts/synthetic-wearables/generate.ts",
     "genome:synth": "bun scripts/genome-synth/generate.ts",
     "genome:ingest": "bun scripts/genome-synth/ingest.ts",
+    "genome:ingest:db": "bun --env-file=.env.training --preload ./features/chat/response/preload-server-only.mjs scripts/genome-synth/ingest.ts --to-db",
     "training:conversations": "bun --env-file=.env.training --preload ./features/chat/response/preload-server-only.mjs scripts/training-data/build-conversations.ts",
     "training:split": "bun scripts/training-data/split-conversations.ts",
     "training:batches": "bun --env-file=.env.training --preload ./features/chat/response/preload-server-only.mjs scripts/training-data/run-batches.ts",

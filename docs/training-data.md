@@ -186,29 +186,35 @@ English only, so there are no German or French questions.
 ### Genome families (`--genome`)
 
 Off by default. With `--genome` the run adds seven families after all the others, so
-every other conversation stays byte-for-byte the same, and the records offer one more
-tool, `dna_ask` (`{ rsid: string }`), after the chat's twelve. The manifest gets
-`genome.catalog_version` and the stats `genome_share`. Naming a genome family in
-`--families` without `--genome` is refused.
+every other conversation stays byte-for-byte the same. Genome records get the system
+prompt and tools of a personal turn that carries the genome tools
+(`twin-system-prompt/personal/genome`: `createChatTools` with the genome ports, so
+`genome_report` and `dna_ask` have #107's definitions, the same as
+`packages/carbon-x/__snapshots__/genome-tools.json`); every other record keeps the
+synthetic prompt and tools. The manifest gets `genome` (catalog version, prompt id,
+tools) and the stats `genome_share`. Naming a genome family in `--families` without
+`--genome` is refused.
 
-The genotypes are the subject's synthetic ones (`docs/genome-synthetic.md`), and the
-report a question quotes is exactly what the Ark app would print for them. Questions
-are first person ("my report") in the same four styles and with the same typo rule,
-from their own template bank (`genome-questions.ts`). The real Carbon-X output is not
-available here, so a `dna_ask` result is a fixed text from the catalog row (gene,
-consequence, ClinVar significance) that labels itself a synthetic stand-in and
-research only. Answers summarise it, say it is research information only, and never
-give a dose, a medicine change or a clinical reading.
+The report is the subject's synthetic one (`docs/genome-synthetic.md`), and tool
+results have the shapes the real tools return: `genome_report` gives the parsed rows
+with gene, star allele and gene note; `dna_ask` gives the site, the genotype and an
+answer. The real Carbon-X output is not available here, so that answer is a fixed text
+from the catalog row (gene, consequence, ClinVar significance), and its `source` says
+it is a synthetic stand-in. A no-call site or a site outside the report gets no
+`dna_ask` call, as the real tool refuses both. Questions are first person ("my
+report") in the same four styles and with the same typo rule, from their own template
+bank (`genome-questions.ts`). Answers quote the labelled answer, say it is research
+information only, and never give a dose, a medicine change or a clinical reading.
 
-| Family                   | Share   | Tools                    | Outcome                    |
-| ------------------------ | ------- | ------------------------ | -------------------------- |
-| `genome_variant`         | 50%     | `dna_ask` once           | `answered`                 |
-| `genome_variants`        | 25%     | `dna_ask` twice          | `answered`                 |
-| `genome_no_call`         | all\*\* | `dna_ask` (general only) | `no_call`                  |
-| `genome_not_in_report`   | 30%     | none                     | `not_in_report`            |
-| `genome_decline_dose`    | 25%     | none, `REFUSE:`          | `declined`                 |
-| `genome_other_person`    | 15%     | none                     | `out_of_scope_person`      |
-| `genome_hosted_provider` | 15%     | none                     | `declined_hosted_provider` |
+| Family                   | Share   | Tools                            | Outcome                    |
+| ------------------------ | ------- | -------------------------------- | -------------------------- |
+| `genome_variant`         | 50%     | `genome_report`, `dna_ask`       | `answered`                 |
+| `genome_variants`        | 25%     | `genome_report`, `dna_ask` twice | `answered`                 |
+| `genome_no_call`         | all\*\* | `genome_report`                  | `no_call`                  |
+| `genome_not_in_report`   | 30%     | `genome_report`                  | `not_in_report`            |
+| `genome_decline_dose`    | 25%     | none, `REFUSE:`                  | `declined`                 |
+| `genome_other_person`    | 15%     | none                             | `out_of_scope_person`      |
+| `genome_hosted_provider` | 15%     | none                             | `declined_hosted_provider` |
 
 \*\* only for subjects with a no-call on the panel (about one in five).
 

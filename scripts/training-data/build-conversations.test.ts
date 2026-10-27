@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
+import { genomeToolList } from "../../packages/carbon-x/manifest";
 import { parseCatalog } from "../genome-synth/catalog";
 
 import {
@@ -13,7 +14,7 @@ import {
 import type { OpenAiTool } from "./chat-tool-list";
 import type { ConversationRecord } from "./conversation";
 import { FAKE_COHORT, fakeTools, sampleRows } from "./fake-tools";
-import { DNA_ASK_TOOL, STAND_IN_LABEL } from "./genome-families";
+import { STAND_IN_SOURCE } from "./genome-families";
 
 const PROMPT = {
   id: "test-prompt",
@@ -358,6 +359,9 @@ describe("runBuildConversations output", () => {
 
 describe("runBuildConversations --genome", () => {
   const OUT = "/tmp/out.jsonl";
+  const GENOME_PROMPT = { id: "test-genome-prompt", text: "Genome turn (test prompt)." };
+  // The real genome tool definitions (#107), after the chat's.
+  const GENOME_TOOLS: readonly OpenAiTool[] = [...TOOLS, ...genomeToolList()];
   const catalog = async () => {
     const parsed = parseCatalog(
       readFileSync(join(import.meta.dir, "../genome-synth/variants.tsv"), "utf8"),
@@ -365,12 +369,22 @@ describe("runBuildConversations --genome", () => {
     if (typeof parsed === "string") throw new Error(parsed);
     return parsed;
   };
-  const run = async (extra: readonly string[], withCatalog = true) => {
-    const h = harness(withCatalog ? { genomeCatalog: catalog } : {});
+  const run = async (extra: readonly string[], withGenome = true) => {
+    const h = harness();
+    const deps: BuildDeps = withGenome
+      ? {
+          ...h.deps,
+          genomeCatalog: catalog,
+          ports: async () => ({
+            ...(await h.deps.ports()),
+            genome: async () => ({ prompt: GENOME_PROMPT, tools: GENOME_TOOLS }),
+          }),
+        }
+      : h.deps;
     const code = await runBuildConversations(
       ["--cohort", FAKE_COHORT, "--out", OUT, ...extra],
       h.io,
-      h.deps,
+      deps,
     );
     return {
       ...h,
@@ -400,27 +414,40 @@ describe("runBuildConversations --genome", () => {
 
   test("a run without --genome is byte-identical to the genome run minus its genome lines", async () => {
     const off = await run([]);
-    const on = await run(["--genome"]);
+    const offInline = await run(["--inline-tools"]);
+    const on = await run(["--genome", "--inline-tools"]);
     expect(off.manifest.genome).toBeUndefined();
     expect(off.manifest.tools).toEqual(TOOLS);
     expect(off.stats.genome_share).toBeUndefined();
     const keep = on.metas.flatMap((meta, index) =>
       meta.family.startsWith("genome_") ? [] : [index],
     );
-    expect(keep.map((index) => on.records[index])).toEqual(off.records);
+    expect(keep.map((index) => on.records[index])).toEqual(offInline.records);
     expect(keep.map((index) => on.metas[index])).toEqual(off.metas);
-    expect(on.manifest.genome).toEqual({ catalog_version: "genome-synth-v1" });
-    expect(on.manifest.tools).toEqual([...TOOLS, DNA_ASK_TOOL]);
-    expect(on.metas.length - off.metas.length).toBe(
-      on.metas.filter((meta) => meta.family.startsWith("genome_")).length,
+    expect(on.manifest.tools).toEqual(TOOLS);
+    expect(on.manifest.genome).toEqual({
+      catalog_version: "genome-synth-v1",
+      system_prompt_id: "test-genome-prompt",
+      tools: GENOME_TOOLS,
+    });
+    const genome = on.metas.flatMap((meta, index) =>
+      meta.family.startsWith("genome_") ? [index] : [],
     );
+    expect(genome.length).toBe(on.metas.length - off.metas.length);
+    for (const index of genome) {
+      expect(on.records[index]?.tools).toEqual(GENOME_TOOLS);
+      expect(on.records[index]?.messages[0]).toEqual({
+        role: "system",
+        content: GENOME_PROMPT.text,
+      });
+      expect(on.metas[index]?.system_prompt_id).toBe("test-genome-prompt");
+    }
     expect(on.stats.genome_share).toBe(
-      Math.round(((on.metas.length - off.metas.length) / on.metas.length) * 10_000) /
-        10_000,
+      Math.round((genome.length / on.metas.length) * 10_000) / 10_000,
     );
   });
 
-  test("a genome conversation calls dna_ask with an rsid and quotes the stand-in label", async () => {
+  test("a variant question reads the report, then asks dna_ask with the rsid only", async () => {
     const { records, metas } = await run([
       "--genome",
       "--families",
@@ -429,20 +456,29 @@ describe("runBuildConversations --genome", () => {
       "1",
     ]);
     expect(metas.map((meta) => meta.family)).toEqual(["genome_variant"]);
-    for (const [index, record] of records.entries()) {
-      const call = record.messages[2];
-      if (!call || !("tool_calls" in call)) throw new Error("no tool call");
-      expect(call.tool_calls[0]?.function.name).toBe("dna_ask");
-      const args = JSON.parse(call.tool_calls[0]?.function.arguments ?? "{}") as unknown;
-      expect(Object.keys(Object(args))).toEqual(["rsid"]);
-      expect(String(record.messages[3]?.content)).toContain(STAND_IN_LABEL);
-      expect(metas[index]?.expected_answer_class).toBe("information");
-    }
+    const [record] = records;
+    if (!record) throw new Error("no record");
+    const names = record.messages.flatMap((message) =>
+      "tool_calls" in message ? message.tool_calls.map((call) => call.function.name) : [],
+    );
+    expect(names).toEqual(["genome_report", "dna_ask"]);
+    const ask = record.messages[4];
+    if (!ask || !("tool_calls" in ask)) throw new Error("no dna_ask call");
+    const args = JSON.parse(ask.tool_calls[0]?.function.arguments ?? "{}") as unknown;
+    expect(Object.keys(Object(args))).toEqual(["rsid"]);
+    expect(JSON.parse(String(record.messages[5]?.content))).toMatchObject({
+      source: STAND_IN_SOURCE,
+      withheld_sentences: 0,
+    });
+    expect(metas[0]?.tool_calls).toEqual(["genome_report", "dna_ask"]);
+    expect(metas[0]?.expected_answer_class).toBe("information");
   });
 
-  test("--genome without the catalog stops with a plain sentence", async () => {
+  test("--genome without the genome turn stops with a plain sentence", async () => {
     const result = await run(["--genome"], false);
     expect(result.code).toBe(1);
-    expect(result.err).toEqual(["--genome needs the variant catalog.\n"]);
+    expect(result.err).toEqual([
+      "--genome needs the variant catalog and the genome turn's tools.\n",
+    ]);
   });
 });

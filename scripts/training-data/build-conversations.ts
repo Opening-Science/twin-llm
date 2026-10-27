@@ -49,7 +49,6 @@ import {
   GENOME_FAMILIES,
   type ToolName,
 } from "./families";
-import { DNA_ASK_TOOL } from "./genome-families";
 import { conversationStats, messageChars, type StatsRow } from "./stats";
 
 export const TRAINING_ACTOR = "training-conversations";
@@ -62,6 +61,13 @@ export type ConversationPorts = Readonly<{
   systemPrompt: () => Promise<SystemPrompt>;
   /** The tools a chat request sends, as OpenAI function definitions. */
   tools: () => Promise<readonly OpenAiTool[]>;
+  /**
+   * For --genome: the system prompt and tools of a turn that carries the
+   * genome tools (`genome_report`, `dna_ask`). Building them runs nothing.
+   */
+  genome?: () => Promise<
+    Readonly<{ prompt: SystemPrompt; tools: readonly OpenAiTool[] }>
+  >;
 }>;
 
 export type LineWriter = Readonly<{
@@ -269,16 +275,20 @@ export const runBuildConversations = async (
     return 1;
   }
 
-  if (args.genome && deps.genomeCatalog === undefined) {
-    io.stderr.write("--genome needs the variant catalog.\n");
+  const ports = await deps.ports();
+  if (args.genome && (deps.genomeCatalog === undefined || ports.genome === undefined)) {
+    io.stderr.write("--genome needs the variant catalog and the genome turn's tools.\n");
     return 1;
   }
   const genomeCatalog =
     args.genome && deps.genomeCatalog ? await deps.genomeCatalog() : undefined;
-  const ports = await deps.ports();
   const prompt = await ports.systemPrompt();
-  // With --genome the records also offer `dna_ask`; without it the tools are the chat's.
-  const tools = [...(await ports.tools()), ...(args.genome ? [DNA_ASK_TOOL] : [])];
+  const tools = await ports.tools();
+  // Genome records get the prompt and tools of a turn that carries the genome
+  // tools; every other record keeps the chat's, so nothing else changes.
+  const genomeTurn = args.genome && ports.genome ? await ports.genome() : null;
+  const contextFor = (family: string) =>
+    genomeTurn !== null && isGenomeFamily(family) ? genomeTurn : { prompt, tools };
   const all = await ports.listSubjects(args.cohortId);
   if (all.length === 0) {
     io.stderr.write(`No subjects in cohort ${args.cohortId}.\n`);
@@ -321,8 +331,7 @@ export const runBuildConversations = async (
         const record = toConversation(draft, {
           cohortId: args.cohortId,
           seed: args.seed,
-          prompt,
-          tools,
+          ...contextFor(draft.family),
         });
         const clean = args.inlineTools
           ? { messages: record.messages, tools: record.tools }
@@ -369,7 +378,15 @@ export const runBuildConversations = async (
         // Subjects whose FHIR bundle the warehouse refused (training:batches --skip-rejected).
         ...(rejected === null ? {} : { rejected_bundles: rejected }),
         // Synthetic genotypes (scripts/genome-synth) and stand-in dna_ask results.
-        ...(args.genome ? { genome: { catalog_version: CATALOG_VERSION } } : {}),
+        ...(genomeTurn === null
+          ? {}
+          : {
+              genome: {
+                catalog_version: CATALOG_VERSION,
+                system_prompt_id: genomeTurn.prompt.id,
+                tools: genomeTurn.tools,
+              },
+            }),
         // One copy of the tool definitions; --inline-tools also puts them on every line.
         tools,
       },
@@ -448,6 +465,37 @@ export const realPorts = async (today: string): Promise<ConversationPorts> => {
         vitronic: null,
       }),
     }),
+    // A personal turn with the genome tools (#107), as the chat route builds it
+    // once the genome policy allows a turn. Only the schemas are read: these
+    // ports refuse, and the training records never run a genome tool.
+    genome: async () => {
+      const personal = { ...scope, mode: "personal" } as const;
+      const inert = () => Promise.reject(new Error("training never runs a genome tool"));
+      const chatTools = createChatTools(personal, {
+        genome: {
+          scope: personal,
+          loadReport: inert,
+          assumeBuild: null,
+          windows: inert,
+          ask: inert,
+          appendAudit: inert,
+        },
+      });
+      return {
+        tools: await openAiToolsFrom(chatTools),
+        prompt: {
+          id: "twin-system-prompt/personal/genome",
+          text: buildTwinSystemPrompt({
+            mode: "personal",
+            oura: null,
+            whoop: null,
+            googleHealth: null,
+            vitronic: null,
+            offeredTools: new Set(Object.keys(chatTools)),
+          }),
+        },
+      };
+    },
   };
 };
 

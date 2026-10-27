@@ -11,13 +11,14 @@ import { randomFor } from "../synthetic-wearables/random";
 
 import { renderSections } from "./conversation";
 import { type Draft, draftsFor, type Family, GENOME_FAMILIES } from "./families";
-import { GENOME_TEMPLATES } from "./genome-questions";
 import {
-  DNA_ASK_TOOL,
+  dnaAskResult,
+  genomeReportResult,
   genomeVariant,
-  STAND_IN_LABEL,
-  standInResult,
+  REPORT_SOURCE,
+  STAND_IN_SOURCE,
 } from "./genome-families";
+import { GENOME_TEMPLATES } from "./genome-questions";
 import { addTypo } from "./questions";
 
 const catalog = (): readonly Variant[] => {
@@ -68,39 +69,67 @@ const genotypeAt = (ref: string, rsid: string): string | null => {
   return [`${r}/${r}`, `${r}/${alt}`, `${alt}/${alt}`][call.altCopies] ?? null;
 };
 
-describe("genome families", () => {
-  test("the stand-in result says what it is", () => {
-    const variant = catalog().find((entry) => entry.rsid === "rs4244285");
-    if (!variant) throw new Error("no rs4244285");
-    expect(standInResult(variant)).toEqual({
+describe("genome tool results", () => {
+  test("genome_report has the shape runGenomeReport returns, from the synthetic report", () => {
+    const source = readFileSync(
+      join(import.meta.dir, "../../features/chat/genome-tools.ts"),
+      "utf8",
+    );
+    expect(source).toContain(`source: "${REPORT_SOURCE}"`);
+    const result = genomeReportResult(
+      reportFor(callsFor(REF, catalog()), catalog()),
+      "2026-10-01T09:00:00.000Z",
+    );
+    expect(Object.keys(result)).toEqual([
+      "source",
+      "released_at",
+      "build",
+      "rows",
+      "note",
+    ]);
+    expect(result.rows).toHaveLength(11);
+    expect(result.rows[0]).toEqual({
       rsid: "rs4244285",
-      research_only: true,
-      synthetic: true,
-      label: STAND_IN_LABEL,
-      text: "rs4244285 is in CYP2C19 (GRCh38 chr10:94781859 G>A). Consequence: synonymous variant. ClinVar: drug response, likely benign, other.",
+      gene: "CYP2C19",
+      allele: "*2",
+      gene_note: "a liver cytochrome P450 enzyme that breaks down many medicines",
+      chromosome: "chr10",
+      position: 94781859,
+      reference: "G",
+      genotype: "G/A",
     });
-    expect(DNA_ASK_TOOL.function.parameters).toEqual({
-      type: "object",
-      properties: {
-        rsid: {
-          type: "string",
-          pattern: "^rs[0-9]+$",
-          description: "One dbSNP rsID, for example rs4244285.",
-        },
-      },
-      required: ["rsid"],
-      additionalProperties: false,
-    });
+    expect(result.build).toBe("GRCh38");
   });
 
-  test("one variant question, answered from the report and the tool", () => {
-    // 0.3: the fourth panel site, a formal template, no typo, the report pasted.
+  test("dna_ask has the shape runDnaAsk returns, and says it is a stand-in", () => {
+    const call = callsFor(REF, catalog())[0];
+    if (!call) throw new Error("no call");
+    expect(dnaAskResult(call)).toEqual({
+      source: STAND_IN_SOURCE,
+      rsid: "rs4244285",
+      gene: "CYP2C19",
+      allele: "*2",
+      site: "chr10:94781859 (GRCh38)",
+      genotype: "G/A",
+      answer:
+        "rs4244285 lies in CYP2C19 (GRCh38 chr10:94781859 G>A). Consequence: synonymous variant. ClinVar lists: drug response, likely benign, other.",
+      withheld_sentences: 0,
+      note: "Research model output about a DNA sequence. Not clinical advice and not a basis for any dosing or medicine decision.",
+    });
+    expect(STAND_IN_SOURCE).not.toBe("Carbon-X (research model)");
+  });
+});
+
+describe("genome families", () => {
+  test("one variant question: genome_report, then dna_ask, then the answer", () => {
+    // 0.3: the fourth panel site, a formal template, no typo.
     const draft = genomeVariant(context(REF, () => 0.3));
+    const call = callsFor(REF, catalog())[3];
+    if (!call) throw new Error("no call");
     expect(draft).toEqual({
       family: "genome_variant",
       question:
-        "My genome report shows C/T at rs1799853. What is known about this variant?\n\n" +
-        reportFor(callsFor(REF, catalog()), catalog()).trimEnd(),
+        "My genome report shows C/T at rs1799853. What is known about this variant?",
       template: {
         id: "genomeVariant.formal.1",
         group: "genomeVariant.formal",
@@ -111,19 +140,23 @@ describe("genome families", () => {
       subjectRef: REF,
       calls: [
         {
-          name: "dna_ask",
-          args: { rsid: "rs1799853" },
-          result: standInResult(catalog()[3] as Variant),
+          name: "genome_report",
+          args: {},
+          result: genomeReportResult(
+            reportFor(callsFor(REF, catalog()), catalog()),
+            "2026-10-01T09:00:00.000Z",
+          ),
         },
+        { name: "dna_ask", args: { rsid: "rs1799853" }, result: dnaAskResult(call) },
       ],
       outcome: "answered",
       reply: {
         kind: "sections",
         sections: {
           reasoning:
-            "Your released report records C/T at rs1799853. I called `dna_ask` for rs1799853; it returned a summary labelled research only and synthetic.",
+            "I called `genome_report`; the released report records C/T at rs1799853. I then called `dna_ask` for rs1799853; its answer is labelled as a synthetic stand-in for the research model.",
           answer:
-            "rs1799853 lies in CYP2C9 (missense variant); ClinVar lists drug response, likely benign, other. Your report records C/T: one copy of the reference allele C and one of T. This is research information only: it does not say what the genotype means for any medicine, dose or condition.",
+            'Your report records C/T at rs1799853: one copy of the reference allele C and one of T. rs1799853 is a CYP2C9 site that defines the *2 allele (CYP2C9: a liver cytochrome P450 enzyme that breaks down many medicines). The answer `dna_ask` returned, labelled "Synthetic stand-in for Carbon-X (research model): training data, not model output", says: rs1799853 lies in CYP2C9 (GRCh38 chr10:94942290 C>T). Consequence: missense variant. ClinVar lists: drug response, likely benign, other. This is research information only: it does not say what the genotype means for any medicine, dose or condition.',
           uncertainty:
             "One site does not define a star allele or a metaboliser status, and a research genotype is not a clinical test; a clinician or pharmacist can order one. The genotypes are synthetic (TwinLLM genome-synth) and describe no real person.",
         },
@@ -139,42 +172,47 @@ describe("genome families", () => {
     for (const draft of drafts) {
       const reply = text(draft);
       expect(draft.question).not.toMatch(/\{[a-z]+\}/);
-      const asked = draft.calls.map((call) => String(call.args.rsid));
-      expect(draft.calls.every((call) => call.name === "dna_ask")).toBe(true);
+      const names = draft.calls.map((call) => call.name);
+      const asked = draft.calls.flatMap((call) =>
+        call.name === "dna_ask" ? [String(call.args.rsid)] : [],
+      );
       switch (draft.family) {
         case "genome_variant":
         case "genome_variants":
+          expect(names).toEqual(["genome_report", ...asked.map(() => "dna_ask")]);
           for (const rsid of asked) {
             const genotype = genotypeAt(draft.ref, rsid);
             expect(genotype).not.toBeNull();
-            expect(reply).toContain(`records ${genotype}`);
+            expect(reply).toContain(`${genotype} at ${rsid}`);
           }
           expect(reply).toContain("research information only");
           expect(draft.outcome).toBe("answered");
           break;
-        case "genome_no_call":
-          expect(asked).toHaveLength(1);
-          expect(genotypeAt(draft.ref, asked[0] ?? "")).toBeNull();
-          expect((ARK_PANEL as readonly string[]).includes(asked[0] ?? "")).toBe(true);
+        case "genome_no_call": {
+          // The real dna_ask refuses a no-call site, so it is not called.
+          expect(names).toEqual(["genome_report"]);
+          const rsid = /no call at (rs\d+)/.exec(reply)?.[1] ?? "";
+          expect(genotypeAt(draft.ref, rsid)).toBeNull();
+          expect((ARK_PANEL as readonly string[]).includes(rsid)).toBe(true);
           expect(reply).toContain("A no call is not the reference genotype");
           break;
+        }
         case "genome_not_in_report": {
-          expect(asked).toEqual([]);
+          expect(names).toEqual(["genome_report"]);
           const rsid = /(rs\d+) is not one of them/.exec(reply)?.[1] ?? "";
           expect((ARK_PANEL as readonly string[]).includes(rsid)).toBe(false);
-          expect(draft.question).toContain("Research use only; genotypes as recorded");
           break;
         }
         case "genome_decline_dose":
           expect(reply).toStartWith("REFUSE: ");
-          expect(asked).toEqual([]);
+          expect(names).toEqual([]);
           break;
         case "genome_other_person":
-          expect(asked).toEqual([]);
+          expect(names).toEqual([]);
           expect(draft.subjectRef).toBeNull();
           break;
         case "genome_hosted_provider":
-          expect(asked).toEqual([]);
+          expect(names).toEqual([]);
           expect(reply).toContain("I will not send your genome report");
           break;
       }

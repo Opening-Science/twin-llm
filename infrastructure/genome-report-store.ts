@@ -41,7 +41,7 @@ export const latestGenomeReport = async (
   clerkId: string,
 ): Promise<StoredGenomeReport | null> => {
   const row = await database().genomeReport.findFirst({
-    where: { app: RSID_GENOTYPES_APP, user: { clerkId } },
+    where: { app: RSID_GENOTYPES_APP, isSynthetic: false, user: { clerkId } },
     orderBy: { releasedAt: "desc" },
     select: { id: true, app: true, arkBuild: true, rows: true, releasedAt: true },
   });
@@ -87,4 +87,49 @@ export const saveGenomeReport = async (
     rows: input.rows,
     releasedAt: row.releasedAt.toISOString(),
   };
+};
+
+export type NewSyntheticGenomeReport = Readonly<{
+  subjectRef: string;
+  arkBuild: string | null;
+  rows: readonly RsidGenotypeRow[];
+  report: string;
+}>;
+
+export type SyntheticSaveResult = "saved" | "no_subject" | "not_synthetic";
+
+/**
+ * A synthetic subject's report (`scripts/genome-synth`), flagged synthetic and
+ * tied to the warehouse subject instead of a user. Refuses a subject that is
+ * not in the warehouse or not synthetic, so a person's data can never be
+ * written this way. Replaces the subject's earlier synthetic report, so a
+ * re-run does not add rows.
+ */
+export const replaceSyntheticGenomeReport = async (
+  input: NewSyntheticGenomeReport,
+  allowedCohort: (cohortId: string) => boolean,
+): Promise<SyntheticSaveResult> => {
+  const subject = await database().subject.findUnique({
+    where: { subjectRef: input.subjectRef },
+    select: { isSynthetic: true, cohortId: true },
+  });
+  if (subject === null) return "no_subject";
+  if (!subject.isSynthetic || !allowedCohort(subject.cohortId)) return "not_synthetic";
+  await database().$transaction([
+    database().genomeReport.deleteMany({
+      where: { subjectRef: input.subjectRef, app: RSID_GENOTYPES_APP, isSynthetic: true },
+    }),
+    database().genomeReport.create({
+      data: {
+        subjectRef: input.subjectRef,
+        isSynthetic: true,
+        app: RSID_GENOTYPES_APP,
+        arkBuild: input.arkBuild,
+        rows: input.rows.map((entry) => ({ ...entry })),
+        report: input.report,
+      },
+      select: { id: true },
+    }),
+  ]);
+  return "saved";
 };
