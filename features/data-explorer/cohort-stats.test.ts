@@ -3,7 +3,6 @@ import { describe, expect, test } from "bun:test";
 import {
   type CodeUnitRow,
   cohortTotals,
-  coverageBands,
   coverageSplit,
   formatShare,
   summariseCodes,
@@ -154,23 +153,6 @@ describe("coverage", () => {
     rows: 1,
     subjects: 1,
     share,
-  });
-
-  test("bands are ten points wide and 100% lands in the last band", () => {
-    const bands = coverageBands([
-      code("a", 0),
-      code("b", 0.05),
-      code("c", 0.1),
-      code("d", 0.55),
-      code("e", 0.9),
-      code("f", 1),
-    ]);
-    expect(bands.map((band) => band.codes)).toEqual([2, 1, 0, 0, 0, 1, 0, 0, 0, 2]);
-    expect(bands[9]).toEqual({ from: 90, to: 100, codes: 2 });
-  });
-
-  test("a share of 0.3 from 3/10 stays in the 30–40% band despite float error", () => {
-    expect(coverageBands([code("a", 3 / 10)])[3]!.codes).toBe(1);
   });
 
   test("wide is at least 80% of subjects, sparse under 10%, rarest first", () => {

@@ -1,10 +1,8 @@
 import { formatDate, formatNumber } from "@/infrastructure/format-measure";
 import { Card } from "@/infrastructure/ui-kit/card";
 
-import { BarList } from "./bar-list";
 import {
   type CodeSummary,
-  coverageBands,
   coverageSplit,
   formatShare,
   SPARSE_SHARE,
@@ -12,6 +10,7 @@ import {
   WIDE_SHARE,
 } from "./cohort-stats";
 import { ColumnChart } from "./column-chart";
+import { CoverageCurve } from "./coverage-curve";
 import {
   COHORT_ROLES,
   INTRO_PARAGRAPHS,
@@ -24,6 +23,8 @@ import {
 } from "./explorer-copy";
 import { type CohortOverview as Overview } from "./explorer-reads";
 import { SEX_LABELS, type SexAgeSplit } from "./sex-age-split";
+import { ReadingsPerSubject } from "./readings-per-subject";
+import { type ReadingsResult } from "./reading-reads";
 import { SexAgeTable } from "./sex-age-table";
 
 /**
@@ -31,8 +32,6 @@ import { SexAgeTable } from "./sex-age-table";
  * what the warehouse actually stores: numeric observations by LOINC code and
  * unit, per subject_ref, and the subjects by stored sex and age band (#4).
  */
-
-const TOP_CODES = 20;
 
 const Section = ({
   title,
@@ -116,14 +115,6 @@ const SexAge = ({ split }: { readonly split: SexAgeSplit }) =>
     </Section>
   );
 
-const codeDetail = (code: CodeSummary, subjects: number) =>
-  [
-    ["LOINC", code.loinc],
-    ["Unit", unitLabel(code.units)],
-    ["Subjects", `${formatNumber(code.subjects, 0)} of ${formatNumber(subjects, 0)}`],
-    ["Readings", formatNumber(code.rows, 0)],
-  ] as const;
-
 const CodeList = ({ codes }: { readonly codes: readonly CodeSummary[] }) =>
   codes.length === 0 ? (
     <p className="text-muted-foreground text-sm">None.</p>
@@ -204,9 +195,11 @@ const AllCodes = ({
 export const CohortOverview = ({
   cohortId,
   overview,
+  readings,
 }: {
   readonly cohortId: string;
   readonly overview: Overview;
+  readonly readings: ReadingsResult;
 }) => {
   const { totals, codes, years, sexAge } = overview;
   const split = coverageSplit(codes);
@@ -246,59 +239,17 @@ export const CohortOverview = ({
       <SexAge split={sexAge} />
 
       <Section
-        title="Most common measurements"
-        note="Share of subjects with at least one reading of the code. Hover a bar for the code, unit and counts."
+        title="Coverage across subjects"
+        note="Every LOINC code, most widespread first, by the share of subjects with at least one reading. The flat top is the codes nearly everyone has; the tail is the codes few people have, where a tool question mostly returns no rows. Hover the line for a code."
       >
-        <BarList
-          label={`The ${TOP_CODES} LOINC codes the most subjects have, as a share of subjects`}
-          items={codes.slice(0, TOP_CODES).map((code) => ({
-            id: code.loinc,
-            label: code.display,
-            fraction: code.share,
-            valueText: formatShare(code.share),
-            detail: codeDetail(code, totals.subjects),
-          }))}
-        />
-        <AllCodes codes={codes} subjects={totals.subjects} />
-      </Section>
-
-      <Section
-        title="Observations per year"
-        note="Every numeric observation in the cohort by the UTC year it was taken. Synthea simulates whole lives, so the early years hold few records."
-      >
-        <ColumnChart
-          label="Numeric observations per year"
-          columns={years.map((year) => ({
-            id: String(year.year),
-            label: String(year.year),
-            value: year.rows,
-            detail: [
-              ["Observations", formatNumber(year.rows, 0)],
-              ["Subjects", formatNumber(year.subjects, 0)],
-            ],
-          }))}
-        />
-      </Section>
-
-      <Section
-        title="Coverage"
-        note="How many codes reach how many subjects. A tool question about a code most subjects have can be answered for most people; a sparse code mostly returns no rows."
-      >
-        <ColumnChart
-          label="Number of LOINC codes by the share of subjects that have them"
-          height={180}
-          columns={coverageBands(codes).map((band) => ({
-            id: String(band.from),
-            label: `${band.from}–${band.to}%`,
-            value: band.codes,
-            detail: [
-              ["Codes", formatNumber(band.codes, 0)],
-              ["Share of subjects", `${band.from}–${band.to}%`],
-            ],
-          }))}
+        <CoverageCurve
+          codes={codes}
+          subjects={totals.subjects}
+          label={`Share of subjects with each of the ${codes.length} LOINC codes, most widespread first`}
         />
         <p className="text-muted-foreground mt-2 text-xs">
-          Codes (y) by the share of subjects that have them (x).
+          Share of subjects (y) by code, ranked from most to least widespread (x). Dashed
+          lines at {formatShare(WIDE_SHARE)} and {formatShare(SPARSE_SHARE)}.
         </p>
         <div className="mt-5 grid gap-6 md:grid-cols-2">
           <div className="min-w-0">
@@ -328,6 +279,32 @@ export const CohortOverview = ({
             .
           </p>
         )}
+        <AllCodes codes={codes} subjects={totals.subjects} />
+      </Section>
+
+      <Section
+        title="Readings per subject"
+        note="How many numeric observations each subject has, all codes together. Synthea records a visit's vitals and labs at once, so people with more visits have many more readings. Hover a column for its range."
+      >
+        <ReadingsPerSubject readings={readings} subjects={totals.subjects} />
+      </Section>
+
+      <Section
+        title="Observations per year"
+        note="Every numeric observation in the cohort by the UTC year it was taken. Synthea simulates whole lives, so the early years hold few records."
+      >
+        <ColumnChart
+          label="Numeric observations per year"
+          columns={years.map((year) => ({
+            id: String(year.year),
+            label: String(year.year),
+            value: year.rows,
+            detail: [
+              ["Observations", formatNumber(year.rows, 0)],
+              ["Subjects", formatNumber(year.subjects, 0)],
+            ],
+          }))}
+        />
       </Section>
     </>
   );

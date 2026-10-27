@@ -7,6 +7,7 @@ import {
   labelIndexes,
   nearestIndex,
   niceTicks,
+  stepPath,
   tickDecimals,
   timeScale,
   truncateLabel,
@@ -148,5 +149,17 @@ describe("timeScale", () => {
 
   test("a single instant sits in the middle", () => {
     expect(timeScale(5, 5, 10, 100)(5)).toBe(60);
+  });
+});
+
+describe("stepPath", () => {
+  test("one flat step per value, joined by vertical moves", () => {
+    expect(stepPath([10, 10, 40], 50, 20)).toBe(
+      "M50.0,10.0 H70.0 V10.0 H90.0 V40.0 H110.0",
+    );
+  });
+
+  test("no values, no path", () => {
+    expect(stepPath([], 0, 10)).toBe("");
   });
 });
