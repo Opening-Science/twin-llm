@@ -47,6 +47,7 @@ model User {
   vitronicSnapshots      VitronicSnapshot[]
   genomeReports          GenomeReport[]
   personalDatasets       PersonalDataset[]
+  skills                 UserSkill[]
 
   @@map("users")
 }
@@ -737,4 +738,26 @@ model AuditEvent {
   hash     String @db.Char(64)
 
   @@map("audit_events")
+}
+
+/// A skill a person made on Customize (#174). The same fields as a SKILL.md
+/// frontmatter plus its instructions, checked by the same schema on save and
+/// again before it runs. Only its owner sees or runs it.
+model UserSkill {
+  id           String   @id @default(cuid())
+  userId       String   @map("user_id")
+  name         String
+  description  String
+  instructions String
+  tools        String[]
+  sources      String[]
+  providers    String[]
+  views        String[]
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, name])
+  @@map("user_skills")
 }

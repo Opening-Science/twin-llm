@@ -14,7 +14,7 @@
     "setup:local": "bun scripts/setup/local.ts",
     "doctor": "bun scripts/setup/doctor.ts",
     "prompt:size": "bun --preload ./features/chat/response/preload-server-only.mjs scripts/setup/prompt-size.ts",
-    "dev": "next dev -H 127.0.0.1",
+    "dev": "bun scripts/setup/installed-packages.ts && next dev -H 127.0.0.1",
     "dev:http": "next dev -H 127.0.0.1",
     "dev:https": "next dev -H 127.0.0.1 --experimental-https --experimental-https-key ./certificates/localhost-key.pem --experimental-https-cert ./certificates/localhost.pem",
     "dev:behind-https": "next dev -H 127.0.0.1 -p 3011",
