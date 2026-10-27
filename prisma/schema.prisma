@@ -4,8 +4,9 @@
 //   1. People: an app user keyed by their Clerk id, plus first-run answers.
 //   2. Conversations: threads of turns. A turn stores the question once and
 //      gets one ModelResponse row per model that was asked.
-//   3. Personal wearable and body-scan context (Oura, Whoop, Google Health,
-//      BodyLoop). Tokens are AES-GCM ciphertext, never plain text.
+//   3. Personal context: wearables (Oura, Whoop, Google Health), BodyLoop
+//      scans and released Ark genome reports. Tokens are AES-GCM ciphertext,
+//      never plain text.
 //   4. Research warehouse: synthetic Synthea cohorts only.
 //   5. Retrieval: guideline and OpenTwin knowledge chunks with pgvector.
 //   6. Tool audit log, hash-chained.
@@ -44,6 +45,7 @@ model User {
   vitronicConnection     VitronicConnection?
   vitronicSubjects       VitronicSubject[]
   vitronicSnapshots      VitronicSnapshot[]
+  genomeReports          GenomeReport[]
 
   @@map("users")
 }
@@ -356,6 +358,31 @@ model VitronicSnapshot {
   @@index([subjectId, syncedAt])
   @@index([userId, syncedAt])
   @@map("vitronic_snapshots")
+}
+
+/// A report the owner released from their Ark after a phone approval: the
+/// rsid-genotypes app's table, kept so the app is not re-run on every visit.
+/// Personal data. Written only with DATA_MODE=personal and GENOME_SOURCE=ark,
+/// read only by this machine's dashboard and its local genome tools. Never
+/// sent to a hosted model, MCP server or analytics.
+model GenomeReport {
+  id       String  @id @default(cuid())
+  userId   String
+  /// Ark app that produced it, e.g. rsid-genotypes.
+  app      String
+  /// The build the Ark named for its call slot, as written; null when it named none.
+  arkBuild String?
+  /// Parsed rows: rsid, chromosome, position, reference, genotype (null is no call).
+  rows     Json
+  /// The released text exactly as the app printed it.
+  report   String
+
+  releasedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, app, releasedAt])
+  @@map("genome_reports")
 }
 
 // ─── 4. Research warehouse (synthetic only) ─────────────────────────────────

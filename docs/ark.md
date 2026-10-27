@@ -33,7 +33,10 @@ Grants are audit-only; Ark mounts the app manifest `datasets`. TwinLLM never
 passes `--unlock`.
 
 Every call appends an audit row (`ark.status`, `ark.data.list`, `ark.data.paths`,
-`ark.app.run`) with hashed argv and hashed parsed JSON, `row_count` 0.
+`ark.app.run`) with hashed argv and hashed parsed JSON, `row_count` 0. The
+`ark.app.run` row hashes the run's metadata and the report's length, never the
+report text: eleven genotypes have few enough values that a hash of them could
+be reversed.
 
 ## Approval and concurrency
 
@@ -61,11 +64,19 @@ and `error.code` only. Busy also hints to close the Ark Hub tab.
 
 When `GENOME_SOURCE=ark` and status is enabled, Digital Twin shows a decorative
 helix (no sequence, VCF, or FASTA), the same slot inventory as empty or filled
-plus optional build and catalog version, and the last twenty `ark.*` audit rows
+plus optional build and catalog version, and the last twenty `ark.*` and `genome.*` audit rows
 for the signed-in actor as `{ seq, tool, ts, hash8 }`. The audit route never
-returns args, result, subject, actor, session, or the full hash. The
-rsid-genotypes Run control is not on the page yet. When
+returns args, result, subject, actor, session, or the full hash. When
 `GENOME_SOURCE=none` the page stays on the existing coming-soon placeholder.
+
+With `DATA_MODE=personal` as well, an **rsID genotypes** card runs the app:
+**Run on Ark** posts to `/api/genome/run`, which calls `dataList` (for the
+build) and `appRun` with the panel grants. While the CLI waits, the card shows
+**Approve on your phone**. The released report is parsed strictly, stored as a
+`GenomeReport` row and shown as a table (rsID, gene, star allele, position,
+reference, genotype or `no call`); a reload reads the stored row from
+`/api/genome/report` instead of asking the Ark again. What the report feeds
+next (reference windows, Carbon-X, `/genome`) is in [genome.md](genome.md).
 
 ## Apps
 
@@ -94,8 +105,9 @@ Synthetic genomes for testing the app and the slot end to end (a VCF for
 
 Build with `bun run ark:build` (wasm stays gitignored). Fixture goldens:
 `bun run ark:test`. A live `appRun` is `RUN_ARK=1` after that build and a
-Companion approval. Close Hub first. The Digital Twin Run button stays
-disabled until a later UI slice.
+Companion approval. Close Hub first. The Digital Twin card runs the module at
+`apps/ark/rsid-genotypes/build/rsid-genotypes.wasm` unless
+`ARK_RSID_GENOTYPES_WASM` names another path.
 
 ## Operations
 

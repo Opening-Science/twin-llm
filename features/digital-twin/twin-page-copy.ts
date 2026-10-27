@@ -11,8 +11,24 @@ export const SOURCES_TITLE = "Sources";
 export const SOURCES_NOTE = "Where this twin's data comes from.";
 export const GENOME_TWIN = "Genome twin";
 export const GENOME_NOTE =
-  "Ark slot inventory and recent reads. The helix is decorative.";
+  "Your released Ark report, the slot inventory and recent reads. The helix is decorative.";
 export const GENOME_EMPTY = "No genome twin on this account.";
+
+/** The rsid-genotypes run and its released report. */
+export const GENOME_REPORT_COPY = {
+  title: "rsID genotypes",
+  note: "Runs the rsid-genotypes app on your Ark. It reads eleven public CPIC / PharmGKB sites and releases only their recorded genotypes, after you approve on your phone. The report stays on this machine.",
+  run: "Run on Ark",
+  runAgain: "Run again",
+  empty: "No report released yet.",
+  approveTitle: "Approve on your phone",
+  approveBody:
+    "The Ark is waiting for you to approve this run in the Companion app. Nothing is released until you do.",
+  approveNote:
+    "This can take about a minute. Keep this tab open and the Ark Hub tab closed.",
+  noCall: "no call",
+  tableCaption: "Recorded genotypes at the eleven panel sites",
+} as const;
 
 export const SOURCE_LABEL = {
   body: "Body",

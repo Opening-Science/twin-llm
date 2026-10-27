@@ -1,5 +1,12 @@
-import { permitProviderForRequest } from "@/infrastructure/data-mode-policy";
+import type { z } from "zod";
+
+import {
+  permitGenomeRequest,
+  permitProviderForRequest,
+} from "@/infrastructure/data-mode-policy";
 import { permitSkillRequest } from "@/infrastructure/skill-gate";
+import { GENOME_TOOLS } from "@/packages/carbon-x/constants";
+import { GENOME_TOOL_DEFINITIONS } from "@/packages/carbon-x/schema";
 import { TOOL_DEFINITIONS } from "@/packages/query-tools/schemas";
 
 import {
@@ -31,8 +38,25 @@ export type CaseResult = Readonly<{
   expected: GateOutcome;
 }>;
 
-const INPUT_SCHEMAS: ReadonlyMap<string, (typeof TOOL_DEFINITIONS)[number]["input"]> =
-  new Map(TOOL_DEFINITIONS.map((definition) => [definition.name, definition.input]));
+const INPUT_SCHEMAS: ReadonlyMap<string, z.ZodType> = new Map<string, z.ZodType>([
+  ...TOOL_DEFINITIONS.map((definition) => [definition.name, definition.input] as const),
+  ...GENOME_TOOL_DEFINITIONS.map(
+    (definition) => [definition.name, definition.input] as const,
+  ),
+]);
+
+/**
+ * The genome policy for one case. The eval gate cannot see URLs, so it takes
+ * Ollama and Carbon-X as local; the provider, mode and genome source decide.
+ */
+const genomePermitted = (evalCase: SkillEvalCase): boolean =>
+  permitGenomeRequest({
+    mode: evalCase.dataMode,
+    genomeSource: evalCase.genomeSource,
+    chatProvider: evalCase.provider,
+    chatOnLoopback: true,
+    carbonXOnLoopback: true,
+  }).ok;
 
 const requestRefusals = (
   skill: Skill,
@@ -60,7 +84,11 @@ type StepOutcome =
 const isAllowedView = (skill: Skill, view: string): view is SkillViewKind =>
   (skill.views as readonly string[]).includes(view);
 
-const gateStep = (skill: Skill, step: ScriptedStep): StepOutcome => {
+const gateStep = (
+  skill: Skill,
+  evalCase: SkillEvalCase,
+  step: ScriptedStep,
+): StepOutcome => {
   if ("view" in step) {
     return isAllowedView(skill, step.view)
       ? { kind: "view", view: step.view }
@@ -68,6 +96,9 @@ const gateStep = (skill: Skill, step: ScriptedStep): StepOutcome => {
   }
   if (!skill.tools.includes(step.tool))
     return { kind: "refused", refusal: "tool-not-allowed" };
+  if (GENOME_TOOLS.includes(step.tool) && !genomePermitted(evalCase)) {
+    return { kind: "refused", refusal: "genome-not-permitted" };
+  }
   const schema = INPUT_SCHEMAS.get(step.tool);
   if (schema !== undefined && !schema.safeParse(step.input).success) {
     return { kind: "refused", refusal: "invalid-tool-input" };
@@ -80,7 +111,7 @@ const unique = <T>(items: readonly T[]): readonly T[] => [...new Set(items)];
 export const gateCase = (skill: Skill, evalCase: SkillEvalCase): GateOutcome => {
   const refused = requestRefusals(skill, evalCase);
   if (refused.length > 0) return { calls: [], views: [], refusals: refused };
-  const steps = evalCase.script.map((step) => gateStep(skill, step));
+  const steps = evalCase.script.map((step) => gateStep(skill, evalCase, step));
   return {
     calls: steps.flatMap((step) => (step.kind === "call" ? [step.tool] : [])),
     views: steps.flatMap((step) => (step.kind === "view" ? [step.view] : [])),

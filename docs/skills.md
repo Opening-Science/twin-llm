@@ -39,6 +39,10 @@ personal data (OpenRouter, remote GPU, Infomaniak). A provider the skill does li
 goes through the policy on every request, so Exoscale only takes personal data with
 `EXOSCALE_PERSONAL_DATA=consented-pilot`.
 
+A skill that calls a genome tool (`genome_report`, `dna_ask`) may list only `ollama`:
+the genome policy never lets a genotype reach a hosted model, the consented pilot
+included ([genome.md](genome.md)).
+
 ## Eval cases
 
 One JSON file per case in `evals/`, named `lower-case-with-dashes.json`:
@@ -72,7 +76,8 @@ One JSON file per case in `evals/`, named `lower-case-with-dashes.json`:
 `script` is what a scripted model tries, in order. The gate applies the skill and the
 policy, and the outcome must equal `expect`: the calls and views that ran, in order,
 and the refusals. `provider` defaults to `ollama`, `dataMode` to `synthetic`,
-`exoscalePersonalData` to `off`, `wearableContext` to `false`.
+`exoscalePersonalData` to `off`, `wearableContext` to `false`, `genomeSource` to
+`none`.
 
 Refusal codes:
 
@@ -82,6 +87,8 @@ Refusal codes:
 - `tool-not-allowed`: the tool is not in `tools`.
 - `invalid-tool-input`: the query tool's own schema rejects the input.
 - `view-not-allowed`: the view kind is not in `views`.
+- `genome-not-permitted`: a genome tool outside `dataMode: personal` with
+  `genomeSource: ark` on `ollama`.
 
 The first three refuse the whole request and nothing runs. Cases may only name subjects
 from the synthetic question set (`evaluation/questions.v1.json`).
