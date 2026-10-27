@@ -76,7 +76,7 @@ export type IncognitoChatDeps = Readonly<{
   loadWearables: (mode: DataMode, appUserId: string) => Promise<WearableContext>;
   loadDisabledSources: (appUserId: string) => Promise<readonly KnowledgeSourceId[]>;
   appendAudit: (input: AppendInput) => Promise<unknown>;
-  findSkill: (name: string) => TurnSkill | null;
+  findSkill: (name: string, appUserId: string) => Promise<TurnSkill | null>;
   randomId: () => string;
   /** The model and tool ports of the shared pipeline; store and analytics are fixed above. */
   pipeline: Omit<

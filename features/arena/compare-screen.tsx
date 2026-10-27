@@ -43,6 +43,7 @@ export const CompareScreen = ({
   skills = [],
   incognito = false,
   localModelIds = [],
+  initialDraft,
 }: Readonly<{
   catalog: readonly CatalogModel[] | null;
   defaultModelIds: readonly string[];
@@ -54,6 +55,8 @@ export const CompareScreen = ({
   incognito?: boolean;
   /** Catalog models that run on this machine, the only ones incognito offers. */
   localModelIds?: readonly string[];
+  /** A `/command ` to start the prompt with, from the search box. */
+  initialDraft?: string;
 }>) => {
   const router = useRouter();
   const { turns, sending, error, summaries, send, retry } = useConversation(
@@ -151,6 +154,7 @@ export const CompareScreen = ({
         incognito={incognito}
         localModelIds={localModelIds}
         suggestions={suggestions}
+        initialDraft={initialDraft}
         onSubmit={(prompt, models, skill) => void send(prompt, models, skill)}
       />
     </div>

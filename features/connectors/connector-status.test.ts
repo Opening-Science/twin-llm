@@ -33,10 +33,10 @@ describe("syncDetail", () => {
 describe("loopbackHostHint", () => {
   test("names the localhost URL when the page is on a loopback IP", () => {
     expect(loopbackHostHint("127.0.0.1", "3000")).toBe(
-      "You opened TwinLLM at 127.0.0.1. Sign-in returns go to localhost, so open http://localhost:3000/connectors before linking.",
+      "You opened TwinLLM at 127.0.0.1. Sign-in returns go to localhost, so open http://localhost:3000/customize/connectors before linking.",
     );
     expect(loopbackHostHint("[::1]", "")).toBe(
-      "You opened TwinLLM at [::1]. Sign-in returns go to localhost, so open http://localhost/connectors before linking.",
+      "You opened TwinLLM at [::1]. Sign-in returns go to localhost, so open http://localhost/customize/connectors before linking.",
     );
   });
 

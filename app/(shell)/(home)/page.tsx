@@ -2,13 +2,15 @@ import { redirect } from "next/navigation";
 
 import { CompareScreen } from "@/features/arena/compare-screen";
 import { skillCommand } from "@/features/commands/registry";
-import { runnableSkills } from "@/features/skills/load-skills";
+import { skillsFor } from "@/features/skills/user-skill-store";
+import { findAppUserId } from "@/infrastructure/current-user";
 import { needsOnboarding } from "@/features/onboarding/onboarding-store";
 import { resolveActorId } from "@/infrastructure/auth-actor";
 import { fetchActiveModelCatalog } from "@/infrastructure/fetch-model-catalog";
 import { chatModelIsLocal } from "@/infrastructure/genome-gate";
 import { INCOGNITO_PARAM, isIncognitoParam } from "@/infrastructure/incognito";
 import { defaultModelSelection } from "@/infrastructure/model-catalog";
+import { safeDraft } from "@/infrastructure/shell-links";
 
 /**
  * A new thread. Someone who has not been through first-run setup and has no
@@ -37,9 +39,12 @@ export default async function HomePage({
       key={incognito ? "incognito" : "new"}
       catalog={catalog}
       defaultModelIds={offered ? defaultModelSelection(offered) : []}
-      skills={runnableSkills().map(skillCommand)}
+      skills={(
+        await skillsFor(actorId === null ? null : await findAppUserId(actorId))
+      ).map(skillCommand)}
       incognito={incognito}
       localModelIds={localModelIds}
+      initialDraft={safeDraft((await searchParams).draft)}
     />
   );
 }

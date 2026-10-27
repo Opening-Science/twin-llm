@@ -165,7 +165,7 @@ const harness = (
       return [];
     },
     appendAudit: db.appendAudit,
-    findSkill: () => null,
+    findSkill: async () => null,
     randomId: () => RANDOM,
     pipeline: {
       resolveModel: (modelId) => {

@@ -17,6 +17,13 @@ const OPEN_TWIN_SOURCE_PACKAGES = [
 
 const config: NextConfig = {
   transpilePackages: OPEN_TWIN_SOURCE_PACKAGES,
+  experimental: {
+    // proxy.ts runs on every API route, and Next buffers a request body for it
+    // only up to this size, then passes the route a silently cut body. Imports
+    // on Customize · Data take files up to 50 MB plus the multipart envelope
+    // (docs/personal-data.md); the route refuses anything larger itself.
+    proxyClientMaxBodySize: "52mb",
+  },
 };
 
 export default config;

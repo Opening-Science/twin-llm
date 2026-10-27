@@ -78,6 +78,7 @@ export const PromptBar = ({
   suggestions = null,
   incognito = false,
   localModelIds = [],
+  initialDraft = "",
   onSubmit,
 }: Readonly<{
   catalog: readonly CatalogModel[] | null;
@@ -90,6 +91,8 @@ export const PromptBar = ({
   /** An incognito chat: only `localModelIds` may be chosen. */
   incognito?: boolean;
   localModelIds?: readonly string[];
+  /** A `/command ` the search box opened the chat with (`safeDraft`). */
+  initialDraft?: string;
   onSubmit: (
     prompt: string,
     models: readonly ChosenModel[],
@@ -98,7 +101,7 @@ export const PromptBar = ({
 }>) => {
   const router = useRouter();
   const wearables = useWearableStatus();
-  const [draft, setDraft] = useState("");
+  const [draft, setDraft] = useState(initialDraft);
   const [modelIds, setModelIds] = useState<readonly string[]>(initialModelIds);
   const [slashDismissed, setSlashDismissed] = useState(false);
   const [picked, setPicked] = useState<Command | null>(null);

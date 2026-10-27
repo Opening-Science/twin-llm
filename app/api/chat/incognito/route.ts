@@ -7,7 +7,7 @@ import { loadWearableContext } from "@/features/chat/wearable-context";
 import { getLatestGoogleHealthSummary } from "@/features/google-health/connection";
 import { loadDisabledSources } from "@/features/onboarding/onboarding-store";
 import { getLatestOuraSummary } from "@/features/oura/connection";
-import { findRunnableSkill } from "@/features/skills/load-skills";
+import { findSkillFor } from "@/features/skills/user-skill-store";
 import { getLatestVitronicSummary } from "@/features/vitronic/connection";
 import { getLatestWhoopSummary } from "@/features/whoop/connection";
 import { resolveActorId } from "@/infrastructure/auth-actor";
@@ -47,7 +47,7 @@ export const POST = createIncognitoChatHandler({
     }),
   loadDisabledSources,
   appendAudit: (input) => append(database(), input),
-  findSkill: findRunnableSkill,
+  findSkill: findSkillFor,
   randomId: () => crypto.randomUUID(),
   pipeline: {
     resolveModel: resolveLanguageModel,
