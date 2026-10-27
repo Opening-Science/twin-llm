@@ -40,6 +40,16 @@ Since #42: the palette lists every offered skill with what it reads and may call
 
 Issues: #40 palette, #41 skill format, #42 `/sleep`, #43 `/compact`, #44 `/report`.
 
+### Search (#167)
+
+Ctrl/⌘+K anywhere in the shell, or Search in the sidebar, opens one box over threads, pages, docs and `/` commands, with tabs (All, Threads, Pages, Docs, Commands), recent threads and actions when empty, ↑/↓ and Enter, and ←/→ at either end of the text to change the tab. A command opens a new chat with `/name ` typed in; it sends nothing.
+
+- Threads are only the signed-in person's own. Words match titles, prompts and finished answers (Prisma `contains`); meaning matches come from `thread_search_embeddings`, one nomic-embed-text vector per prompt or answer and **no text**, so deleting a thread removes everything search knows about it. The snippet is read back from the turn or answer.
+- Embeddings are made only by Ollama on a loopback address, whatever `LOCAL_ONLY` says. Opening the box embeds what is new (at most 25 items or 4 s per call, newest first); with Ollama down, search answers by words and says so.
+- A genome thread (#151) is found by its title only: no passage is shown, it is never embedded, and an existing embedding is dropped at the next index run.
+- Each thread search is audited as `search.threads` with the tab and the number of words and results, never the query; if the audit cannot be written, the search is refused.
+- Docs match by title and by text, with a passage; they are not embedded.
+
 ## 3. `/trainer`, descriptive
 
 Daily and weekly views of recovery or readiness, HRV, RHR, sleep and load against the person's 30-day baseline, with goals the person sets. It describes; it does not advise: no training-load suggestion, no red-flag triage, no medical or dose advice. That keeps it inside the intended use. Whoop workouts and the unused Oura mappers (workout, SpO2, stress, VO2max) come first.

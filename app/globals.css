@@ -266,6 +266,67 @@
 /* --- Shared text and surface classes --------------------------------------- */
 
 @layer components {
+  /* The shell (shell-frame.tsx). Wide screens: the sidebar is a pinned column
+     or tucked away behind a floating button that shows it on hover. Narrow
+     screens: always tucked; the button opens the menu dialog. No header bar:
+     each page's own heading leads. */
+  .shell-toggle {
+    @apply text-muted-foreground hover:text-foreground hover:bg-muted bg-background/80 fixed top-3 left-3 z-40 inline-flex size-9 items-center justify-center rounded-lg backdrop-blur;
+  }
+  [data-sidebar="pinned"] .shell-toggle {
+    @apply lg:hidden;
+  }
+  .shell-peek {
+    @apply bg-background border-border fixed top-2 bottom-2 left-2 z-50 hidden w-64 overflow-hidden rounded-xl border shadow-xl lg:block;
+    animation: shell-peek-in 120ms var(--default-transition-timing-function);
+  }
+  @keyframes shell-peek-in {
+    from {
+      opacity: 0;
+      transform: translateX(-0.75rem);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .shell-peek {
+      animation: none;
+    }
+  }
+  /* The strip along the left edge that shows a tucked sidebar. */
+  .shell-edge {
+    @apply fixed inset-y-0 left-0 z-30 hidden w-2 lg:block;
+  }
+  /* Pages without a thread bar start below the floating button. */
+  .shell-main:not(:has(.thread-bar)) {
+    @apply pt-10;
+  }
+  [data-sidebar="pinned"] .shell-main:not(:has(.thread-bar)) {
+    @apply lg:pt-0;
+  }
+  /* The search box (search-dialog.tsx): a centred modal like a chat app's. */
+  .search-dialog {
+    @apply bg-background border-border text-foreground fixed inset-x-0 top-[12vh] mx-auto w-[min(40rem,calc(100vw-2rem))] max-w-none overflow-hidden rounded-2xl border p-0 shadow-2xl backdrop:bg-black/40;
+  }
+  .search-tab {
+    @apply text-muted-foreground hover:text-foreground aria-selected:bg-muted aria-selected:text-foreground rounded-lg px-2.5 py-1 text-sm;
+  }
+  .search-option {
+    @apply flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm;
+  }
+  .search-option-active {
+    @apply bg-muted;
+  }
+  .search-kbd {
+    @apply border-border rounded border px-1 py-px font-mono text-[11px];
+  }
+
+  /* A saved thread's title row; it leaves room for the floating button. */
+  .thread-bar {
+    @apply bg-background/85 sticky top-0 z-20 flex h-14 items-center gap-3 pr-4 pl-14 backdrop-blur sm:pr-6;
+  }
+  [data-sidebar="pinned"] .thread-bar {
+    @apply lg:pl-6;
+  }
+
   /* Page titles: Selecta Regular, large and tight. */
   .text-display {
     font-family: var(--font-display);

@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 
 import { CompareScreen } from "@/features/arena/compare-screen";
 import { skillCommand } from "@/features/commands/registry";
-import { runnableSkills } from "@/features/skills/load-skills";
 import { ownedThread } from "@/features/arena/thread-reads";
 import { ThreadTitle } from "@/features/shell/thread-title";
+import { skillsFor } from "@/features/skills/user-skill-store";
+import { resolveActorId } from "@/infrastructure/auth-actor";
+import { findAppUserId } from "@/infrastructure/current-user";
 import { fetchActiveModelCatalog } from "@/infrastructure/fetch-model-catalog";
 import { serverEnv } from "@/infrastructure/env";
 import { defaultModelSelection } from "@/infrastructure/model-catalog";
@@ -22,9 +24,11 @@ export default async function ThreadPage({
   params,
 }: Readonly<{ params: Promise<{ threadId: string }> }>) {
   const { threadId } = await params;
-  const [thread, catalog] = await Promise.all([
+  const actor = await resolveActorId();
+  const [thread, catalog, skills] = await Promise.all([
     ownedThread(threadId),
     fetchActiveModelCatalog(),
+    actor === null ? skillsFor(null) : findAppUserId(actor).then(skillsFor),
   ]);
 
   const lastTurn = thread.turns.at(-1);
@@ -43,7 +47,7 @@ export default async function ThreadPage({
         defaultModelIds={defaultModelIds}
         threadId={thread.id}
         initialTurns={thread.turns}
-        skills={runnableSkills().map(skillCommand)}
+        skills={skills.map(skillCommand)}
         dataMode={serverEnv().DATA_MODE}
       />
     </>

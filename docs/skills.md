@@ -156,3 +156,12 @@ until then. It collapses to a one-line chip or closes. A second `/twin` reopens 
 same card and scrolls to it. Its place and collapsed state are kept per thread in
 sessionStorage, never in the database. Reading the synthetic cohort list for the label
 is audited like the Digital Twin page's read (`biomarkers.cohort.list`).
+
+## Your own skills (#174)
+
+Customize · Skills has a form for making a skill without a SKILL.md: a name, one sentence on what it does, instructions, the sources it reads and the tools it may call, the views it may draw and where its model may run (local models unless more are ticked). It is held to the same schema as a SKILL.md frontmatter (`skillFrontmatterSchema`): a tool needs its source, genome tools and wearable context never list a provider the data-mode policy would refuse, and a skill only narrows what a turn allows.
+
+- Stored per person in `user_skills` (`features/skills/user-skill-store.ts`); only the owner lists, runs, edits or deletes it. At most 50 per person.
+- It may not take the name of a shipped skill or a built-in command, so `/sleep` always means the shipped one.
+- The palette, search and the chat route find shipped skills first, then the person's own (`findSkillFor`). A stored row is checked again before it runs, so one that breaks today's rules does not run.
+- It has no eval cases; Customize and the palette say "Yours · not evaluated". It runs under the same gate and `skill.<name>` audit as a shipped skill.

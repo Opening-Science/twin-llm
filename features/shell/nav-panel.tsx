@@ -9,14 +9,16 @@ import { AppAuth, isClientAuthDisabled } from "@/features/auth/app-auth";
 import { useThreadHistory } from "@/infrastructure/thread-history-store";
 import { Button } from "@/infrastructure/ui-kit/button";
 
+import { useOpenSearch } from "@/features/search/search-context";
+
 import { BrandAttribution } from "./brand-attribution";
 import {
   CompareGlyph,
   ConnectorsGlyph,
-  DataGlyph,
   DocsGlyph,
   ModelsGlyph,
   PlusGlyph,
+  SearchGlyph,
   StartGlyph,
   TwinGlyph,
 } from "./glyphs";
@@ -52,18 +54,17 @@ const SECTIONS: readonly Section[] = [
     owns: (path) => path === "/" || under("/t")(path),
   },
   {
-    href: "/connectors",
-    label: "Connectors",
-    Glyph: ConnectorsGlyph,
-    owns: under("/connectors"),
-  },
-  {
     href: "/digital-twin",
     label: "Digital Twin",
     Glyph: TwinGlyph,
     owns: under("/digital-twin"),
   },
-  { href: "/data", label: "Data", Glyph: DataGlyph, owns: under("/data") },
+  {
+    href: "/customize",
+    label: "Customize",
+    Glyph: ConnectorsGlyph,
+    owns: (path) => under("/customize")(path) || under("/customize/connectors")(path),
+  },
   { href: "/models", label: "Models", Glyph: ModelsGlyph, owns: under("/models") },
   { href: "/docs", label: "Docs", Glyph: DocsGlyph, owns: under("/docs") },
   { href: "/start", label: "Get started", Glyph: StartGlyph, owns: under("/start") },
@@ -133,14 +134,18 @@ const SignInNote = () => (
 export const NavPanel = ({
   threadGroups,
   footer,
+  headerAction,
   onNavigate,
 }: Readonly<{
   threadGroups: readonly ThreadGroup[];
   footer: ReactNode;
+  /** Beside the wordmark: the button that pins or hides the sidebar. */
+  headerAction?: ReactNode;
   onNavigate?: () => void;
 }>) => {
   const path = usePathname();
   const recent = withTouchedThreads(threadGroups, useThreadHistory().touched);
+  const openSearch = useOpenSearch();
 
   const followLinks = (event: MouseEvent<HTMLDivElement>) => {
     if (
@@ -159,11 +164,26 @@ export const NavPanel = ({
       onClick={followLinks}
       className="grid h-full grid-cols-[minmax(0,1fr)] grid-rows-[auto_auto_minmax(0,1fr)_auto]"
     >
-      <Link href="/" className="font-display px-5 pt-5 pb-4 text-xl tracking-tight">
-        TwinLLM
-      </Link>
+      <div className="flex items-center justify-between gap-2 pt-3 pr-3 pb-2 pl-5">
+        <Link href="/" className="font-display py-2 text-xl tracking-tight">
+          TwinLLM
+        </Link>
+        {headerAction}
+      </div>
 
       <nav aria-label="Sections" className="px-3">
+        <button
+          type="button"
+          onClick={() => {
+            onNavigate?.();
+            openSearch();
+          }}
+          className={`${LINK} w-full gap-3 py-2`}
+        >
+          <SearchGlyph className="size-4 shrink-0" />
+          Search
+          <kbd className="search-kbd ml-auto">Ctrl K</kbd>
+        </button>
         {SECTIONS.map(({ href, label, Glyph, owns }) => (
           <Link
             key={href}

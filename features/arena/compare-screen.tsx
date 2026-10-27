@@ -62,6 +62,7 @@ export const CompareScreen = ({
   initialTurns = [],
   skills = [],
   dataMode,
+  initialDraft,
 }: Readonly<{
   catalog: readonly CatalogModel[] | null;
   defaultModelIds: readonly string[];
@@ -71,6 +72,8 @@ export const CompareScreen = ({
   skills?: readonly Command[];
   /** The server's DATA_MODE: which twin `/twin` shows. */
   dataMode: TwinDataMode;
+  /** A `/command ` to start the prompt with, from the search box. */
+  initialDraft?: string;
 }>) => {
   const {
     threadId: currentThreadId,
@@ -189,6 +192,7 @@ export const CompareScreen = ({
         busy={sending}
         skills={skills}
         suggestions={suggestions}
+        initialDraft={initialDraft}
         onSubmit={(prompt, models, skill) => void send(prompt, models, skill)}
         onTwin={twin.open}
       />
