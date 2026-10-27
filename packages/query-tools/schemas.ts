@@ -296,7 +296,7 @@ export const TOOL_DEFINITIONS = [
   {
     name: "range_position",
     description:
-      "Where one reading of one LOINC sits against its Anchor v3 published range: below, within or above it, bounds inclusive. pick latest takes the newest reading in the window, pick at the reading at `at`. When the range depends on sex, age or timing, which the warehouse does not hold, position is null and depends_on names them; nothing is guessed. Reads up to 5000 rows; refuses no rows, mixed units, no published range, and a unit other than the range's (nothing is converted). Neutral position only.",
+      "Where one reading of one LOINC sits against its Anchor v3 published range: below, within or above it, bounds inclusive. pick latest takes the newest reading in the window, pick at the reading at `at`. A sex- or age-specific range is chosen from the subject's stored sex and birth year; facts_used names them, and the age is approximate (birth year only: one of two ages). When a fact is not stored (timing never is) or the age band changes within the reading's year, position is null and depends_on names the facts; nothing is guessed. Reads up to 5000 rows; refuses no rows, mixed units, no published range, and a unit other than the range's (nothing is converted). Neutral position only.",
     input: rangePositionInput,
   },
   {

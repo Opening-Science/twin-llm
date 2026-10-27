@@ -43,7 +43,26 @@ export const TERMS: readonly (readonly [string, string])[] = [
 ];
 
 export const NOT_STORED_NOTE =
-  "The warehouse keeps no sex, birth year or date of death for a subject yet, so this page cannot split people by them.";
+  "For each synthetic person the warehouse keeps sex, birth year and, for people who died, the year of death: years only, never a full date. Nothing else about them is stored.";
+
+export const SEX_AGE_TITLE = "Sex and age";
+
+/** How the ages in the split are taken; the years are filled in on the page. */
+export const sexAgeNote = (referenceYear: number | null, deceased: number): string =>
+  [
+    referenceYear === null
+      ? "Age from the birth year."
+      : `Age reached in ${referenceYear}, the year of the cohort's latest reading, from the birth year only, so it can be one year more than on a given day.`,
+    deceased > 0
+      ? "People who died are counted at the age reached in the year of death."
+      : "",
+    "Bands are 10 years wide.",
+  ]
+    .filter((part) => part !== "")
+    .join(" ");
+
+export const SEX_AGE_MISSING =
+  "Sex and birth year are not stored for this cohort yet: it was ingested before they were kept. Running bun run warehouse:ingest over its files again fills them in without changing any observation; for the evaluation cohort, bun run setup:local -- --reload-cohort does the same.";
 
 /** What each allowlisted cohort is for (docs/training-data.md). */
 export const COHORT_ROLES: Readonly<Record<string, string>> = {

@@ -12,6 +12,10 @@ import {
   PROVIDER_NOT_PERMITTED_FOR_DATA_MODE,
   PROVIDER_NOT_PERMITTED_SENTENCE,
 } from "@/infrastructure/data-mode-policy";
+import {
+  GENOME_THREAD_LOCAL_ONLY,
+  GENOME_THREAD_SENTENCE,
+} from "@/infrastructure/genome-thread-policy";
 import type {
   ChatUIMessage,
   ModelResponseMetrics,
@@ -124,6 +128,7 @@ export const refusalOf = async (response: Response): Promise<string | null> => {
   if (body.code === PROVIDER_NOT_PERMITTED_FOR_DATA_MODE) {
     return PROVIDER_NOT_PERMITTED_SENTENCE;
   }
+  if (body.code === GENOME_THREAD_LOCAL_ONLY) return GENOME_THREAD_SENTENCE;
   return isSkillRefusalCode(body.code) &&
     "error" in body &&
     typeof body.error === "string"

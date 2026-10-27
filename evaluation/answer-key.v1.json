@@ -13,7 +13,7 @@
     "content_sha256": "f4941fab7a56e17f9dd66b6b6e0fbed379dab8c564c6024831c5fd4aa0ba09eb"
   },
   "open_twin_sha": "a9e126c952c91e19e064a962dda7d815a43564e5",
-  "questions_sha256": "51d1c2d2f5af8c711f730ab3d9023ece7afd0b4e7811d9032ffcf3c47fe0a038",
+  "questions_sha256": "016f354084c24db6b5330fcb0171ed59dccd2c6bf575f0b67244467cc4a8ef75",
   "actor": "eval-answer-key",
   "generated_on": "2026-10-27",
   "entries": {
@@ -2435,6 +2435,23 @@
         "n": 19,
         "windows": [{ "start": "2012-01-01T00:00:00Z", "end": "2020-12-31T23:59:59Z" }],
         "refusal": null
+      },
+      {
+        "name": "range_high",
+        "tool": "range_position",
+        "args": {
+          "subject_ref": "46ee9d82-b52c-856d-069b-5064ff052225",
+          "loinc": "2093-3",
+          "start": "2012-01-01T00:00:00Z",
+          "end": "2020-12-31T23:59:59Z",
+          "pick": "latest"
+        },
+        "path": "range.high",
+        "value": 190,
+        "unit": "mg/dL",
+        "n": 19,
+        "windows": [{ "start": "2012-01-01T00:00:00Z", "end": "2020-12-31T23:59:59Z" }],
+        "refusal": null
       }
     ],
     "Q-S6-18": [
@@ -2894,6 +2911,42 @@
         "n": 0,
         "windows": [{ "start": "1950-01-01T00:00:00Z", "end": "1969-12-31T23:59:59Z" }],
         "refusal": "NO_ROWS"
+      }
+    ],
+    "Q-S1-25": [
+      {
+        "name": "value",
+        "tool": "range_position",
+        "args": {
+          "subject_ref": "62f60bdb-cc5c-8305-b98b-f2b229a55eca",
+          "loinc": "2085-9",
+          "start": "2016-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z",
+          "pick": "latest"
+        },
+        "path": "value",
+        "value": 47.45,
+        "unit": "mg/dL",
+        "n": 23,
+        "windows": [{ "start": "2016-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "range_low",
+        "tool": "range_position",
+        "args": {
+          "subject_ref": "62f60bdb-cc5c-8305-b98b-f2b229a55eca",
+          "loinc": "2085-9",
+          "start": "2016-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z",
+          "pick": "latest"
+        },
+        "path": "range.low",
+        "value": 45,
+        "unit": "mg/dL",
+        "n": 23,
+        "windows": [{ "start": "2016-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
       }
     ]
   }
