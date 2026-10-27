@@ -9,11 +9,17 @@
  * rolls the whole delete back. Only cohorts listed in RELOADABLE_COHORTS can
  * be deleted at all.
  */
-import { EVAL_COHORT } from "./cohort-pins";
+import { EVAL_COHORT, FIXTURE_COHORT } from "./cohort-pins";
 import { type SqlClient, type SqlQuery } from "./detect";
 
-/** The cohorts setup may delete and load again: the evaluation cohort only. */
-export const RELOADABLE_COHORTS: readonly string[] = [EVAL_COHORT.cohortId];
+/**
+ * The cohorts setup may delete: the evaluation cohort, to load it again, and
+ * the trimmed fixtures, whose people are also in it (#96), before it is loaded.
+ */
+export const RELOADABLE_COHORTS: readonly string[] = [
+  EVAL_COHORT.cohortId,
+  FIXTURE_COHORT.cohortId,
+];
 
 export class ReloadRefusedError extends Error {}
 
@@ -85,7 +91,7 @@ export const deleteCohortRows = async (
 ): Promise<DeletedRows> => {
   if (!RELOADABLE_COHORTS.includes(cohortId)) {
     throw new ReloadRefusedError(
-      `refusing to delete cohort ${cohortId}: only ${RELOADABLE_COHORTS.join(", ")} can be reloaded`,
+      `refusing to delete cohort ${cohortId}: only ${RELOADABLE_COHORTS.join(" and ")} can be deleted`,
     );
   }
   return sql.begin(async (tx) => {

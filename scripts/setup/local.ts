@@ -187,13 +187,22 @@ const perform = async (root: string, action: Action): Promise<string> => {
     case "install-rigged":
       return installRigged(root, action);
     case "reload-eval":
-      return reloadEvalCohort(root, await databaseUrl(root), action.source);
+      return reloadEvalCohort(
+        root,
+        await databaseUrl(root),
+        action.source,
+        action.fixtureSubjects !== undefined,
+      );
     case "command":
       if (!runCommand(root, action.argv))
         throw new SetupError(`${action.argv.join(" ")} failed; see its output above`);
       return "done";
     case "load-eval":
-      return loadEvalCohort(root, action.source);
+      return loadEvalCohort(
+        root,
+        action.source,
+        action.fixtureSubjects === undefined ? null : await databaseUrl(root),
+      );
     case "load-10k":
       return loadRelease10k(root);
     case "load-fixtures":

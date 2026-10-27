@@ -99,11 +99,32 @@ describe("deleteCohortRows", () => {
     expect(db.calls.filter((call) => call.query.includes("delete from")).length).toBe(6);
   });
 
-  test("refuses any cohort but the evaluation cohort before touching the database", async () => {
+  test("deletes the trimmed fixtures' cohort from every warehouse table in the same transaction (#96)", async () => {
+    const db = fakeSql({ before: "37/37", after: "37/37", left: 0, deleted: 3 });
+    expect(await deleteCohortRows(db.sql, "open-twin-synthea-trimmed-3")).toEqual({
+      observations: 3,
+      observation_non_numeric: 3,
+      conditions: 3,
+      medication_requests: 3,
+      bundles: 3,
+      subjects: 3,
+    });
+    expect(db.state).toEqual({ committed: true, rolledBack: false, closed: false });
+    expect(
+      db.calls.every((call) => call.params[0] === "open-twin-synthea-trimmed-3"),
+    ).toBe(true);
+    expect(
+      db.calls
+        .filter((call) => call.query.includes("delete from"))
+        .map((call) => /delete from (\w+)/.exec(call.query)?.[1]),
+    ).toEqual([...WAREHOUSE_TABLES]);
+  });
+
+  test("refuses any cohort but the evaluation cohort and the fixtures before touching the database", async () => {
     const db = fakeSql({ before: "0/0", after: "0/0", left: 0, deleted: 0 });
     await expect(deleteCohortRows(db.sql, "synthea-v4-seed42-10k")).rejects.toThrow(
       new ReloadRefusedError(
-        "refusing to delete cohort synthea-v4-seed42-10k: only synthea-v4-seed42 can be reloaded",
+        "refusing to delete cohort synthea-v4-seed42-10k: only synthea-v4-seed42 and open-twin-synthea-trimmed-3 can be deleted",
       ),
     );
     expect(db.calls).toEqual([]);
