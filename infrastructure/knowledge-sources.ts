@@ -55,6 +55,8 @@ export const COHORT_RECORD_TOOLS = [
   "observations_for_subject",
   "latest_by_loinc",
   "summary_stats",
+  "conditions_timeline",
+  "medications_timeline",
 ] as const satisfies readonly QueryToolName[];
 
 export const COHORT_ANALYTICS_TOOLS = [
@@ -64,6 +66,7 @@ export const COHORT_ANALYTICS_TOOLS = [
   "compare_windows",
   "range_position",
   "convert_unit",
+  "cohort_position",
 ] as const satisfies readonly QueryToolName[];
 
 /** Wearable summaries: the linked snapshots in personal mode, a synthetic subject's series otherwise. */
@@ -102,14 +105,15 @@ export const KNOWLEDGE_SOURCE_GROUPS: readonly KnowledgeSourceGroup[] = [
       {
         id: "cohort-records",
         label: "Subjects and observations",
-        description: "List subjects and read their coded observations.",
+        description:
+          "List subjects and read their coded observations, recorded conditions and medication requests.",
         tools: COHORT_RECORD_TOOLS,
       },
       {
         id: "cohort-analytics",
         label: "Trends and baselines",
         description:
-          "Trend, baseline deviation, coverage, window comparisons, position against the Anchor v3 published range and unit conversions. Needs Subjects and observations on.",
+          "Trend, baseline deviation, coverage, window comparisons, position against the Anchor v3 published range, unit conversions and a percentile in the synthetic cohort. Needs Subjects and observations on.",
         tools: COHORT_ANALYTICS_TOOLS,
         requires: "cohort-records",
       },

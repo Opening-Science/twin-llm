@@ -198,7 +198,10 @@ chunk until then and sends metrics and document together in one
 `message-metadata` chunk. If the audit read or build fails, the stream still
 finishes, without a document, and the text is stored without one. If storing
 the row fails, the row is marked `FAILED` rather than left `STREAMING`
-(`features/chat/finish-model-response.ts`).
+(`features/chat/finish-model-response.ts`). A turn refused before any model
+runs (data-mode policy or a skill rule) builds no document: its row is marked
+`REFUSED` with TwinLLM's refusal sentence as its text
+(`features/chat/start-answer.ts`), and a reload shows that sentence.
 
 The document is stored on `model_responses."responseDocument"` (nullable
 JSONB) and reloaded on `/t/[threadId]`. Both the browser stream and the

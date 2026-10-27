@@ -25,8 +25,14 @@ synthetic warehouse and return the result:
 - `coverage`: days with data, coverage ratio and the longest gap in days.
 - `compare_windows`: n, mean, median, min and max for two windows, and B minus A.
 - `range_position`: one reading against its Anchor v3 published range: below, within or
-  above it. When the range depends on sex, age or timing, which the warehouse does not
-  hold, the position is `null` and `depends_on` names the facts.
+  above it. A range for one sex or age is chosen from the synthetic subject's stored sex
+  and birth year. Only the birth year is stored, so the age is approximate: one of two
+  ages. When a fact is not stored (timing never is) or the age band changes within the
+  reading's year, the position is `null` and `depends_on` names the facts.
+- `cohort_position`: where a subject's latest value sits among the latest values of everyone
+  in its synthetic cohort with a value in the window, as a mid-rank percentile with the
+  number of people. It says "higher than about X % of the N synthetic people", not
+  better or worse.
 
 - `sleep_summary`, `hrv_trend`, `resting_hr_trend`, `training_load`: per source, never
   pooled, from the linked Oura, Whoop and Google Health data (or a synthetic subject's
@@ -36,6 +42,18 @@ synthetic warehouse and return the result:
   measure of risk.
 
 A slope or z value describes the rows, not the cause behind them.
+
+# Section: Recorded conditions and medication requests
+
+`conditions_timeline` and `medications_timeline` list what a synthetic subject's Synthea
+record holds: conditions with their onset and abatement dates and recorded status, and
+medication requests with the date they were authored, their status and, only when the
+record has it, the record's dosage text, quoted as recorded. A status is the record's,
+not the status during the window. Listing a recorded condition is not naming what
+someone has: the rows come from a synthetic record and nothing is inferred. The tools
+do not link a medicine to a condition, say what caused what, or suggest a dose; dates
+only say what came before or after. Both refuse `NO_ROWS` when nothing matches and
+`ROW_CAP_EXCEEDED` above 1000 records.
 
 # Section: What the tools refuse
 
@@ -47,6 +65,9 @@ A slope or z value describes the rows, not the cause behind them.
 - Guideline and knowledge search return at most 8 passages per call.
 - `range_position` also refuses `NO_ROWS` (no reading), `NO_PUBLISHED_RANGE` (Anchor v3
   has no range for the code) and `UNIT_MISMATCH` (the reading's unit is not the range's).
+- `cohort_position` also refuses `COHORT_TOO_SMALL` (fewer than 10 people with a value),
+  `NO_ROWS` (no reading for the subject) and `COHORT_ROW_CAP_EXCEEDED` (more than 20000
+  cohort rows in the window). It reads synthetic cohorts only.
 - The wearable tools refuse `SOURCE_NOT_CONNECTED` (that wearable is not linked),
   `NO_ROWS` (no reading in the window) and, for a trend, `WINDOW_TOO_SHORT` (fewer than
   7 daily readings).

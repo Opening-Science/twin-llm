@@ -5,6 +5,10 @@ export const ingestReportSchema = z.object({
   skipped: z.number().int().nonnegative(),
   unresolved: z.array(z.string()),
   nonNumeric: z.number().int().nonnegative(),
+  /** Condition rows written (or already stored, with `alreadyIngested`). */
+  conditions: z.number().int().nonnegative(),
+  /** MedicationRequest rows written (or already stored, with `alreadyIngested`). */
+  medicationRequests: z.number().int().nonnegative(),
   /** True when this bundle's sha256 was already stored; nothing was written. */
   alreadyIngested: z.boolean(),
   rejected: z.object({ reason: z.string().min(1) }).optional(),
@@ -18,6 +22,8 @@ export const emptyReport = (overrides: Partial<IngestReport> = {}): IngestReport
     skipped: 0,
     unresolved: [],
     nonNumeric: 0,
+    conditions: 0,
+    medicationRequests: 0,
     alreadyIngested: false,
     ...overrides,
   });

@@ -157,7 +157,11 @@ describe("threadOutputs", () => {
 
   test("no views, no entries", () => {
     expect(threadOutputs([])).toEqual([]);
-    expect(viewKindLabel("chart.timeseries")).toBe("Time series");
+    expect(
+      (["chart.timeseries", "chart.compare", "biomarker.card", "table"] as const).map(
+        viewKindLabel,
+      ),
+    ).toEqual(["Time series", "Comparison", "Biomarker", "Table"]);
   });
 });
 

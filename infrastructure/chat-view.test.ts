@@ -2,8 +2,10 @@ import { describe, expect, test } from "bun:test";
 
 import {
   type ChatView,
+  compareView,
   timeseriesView,
   toChatView,
+  viewReadings,
   viewsOf,
   viewTitle,
 } from "./chat-view";
@@ -73,5 +75,46 @@ describe("viewsOf", () => {
         { type: "data-view", data: other },
       ]),
     ).toEqual([view, other]);
+  });
+});
+
+describe("the other kinds", () => {
+  const compare = compareView({
+    spec: {
+      measure: "93832-4",
+      label: "Sleep duration",
+      unit: "h",
+      subject: null,
+      layout: "overlaid",
+      before: { start: "2026-09-01", end: "2026-09-27", n: 1, mean: 7, points: [] },
+      after: { start: "2026-09-28", end: "2026-10-04", n: 2, mean: 6.5, points: [] },
+      meanDelta: -0.5,
+    },
+    sourceAuditIds: ["7", "8"],
+  });
+
+  test("a compare view is titled by both windows and counts both", () => {
+    expect(compare.id).toBe("view-7-8");
+    expect(compare.title).toBe(
+      "Sleep duration, 28 Sept 2026 – 4 Oct 2026 vs 1 Sept 2026 – 27 Sept 2026",
+    );
+    expect(viewReadings(compare)).toBe(3);
+    expect(viewReadings(view)).toBe(2);
+    expect(toChatView(compare)).toEqual(compare);
+  });
+
+  test("a spec that does not parse is no view", () => {
+    expect(
+      toChatView({ ...compare, spec: { ...compare.spec, layout: "stacked" } }),
+    ).toBeNull();
+    const before = {
+      start: "2026-09-01",
+      end: "2026-09-27",
+      n: 1,
+      mean: "7",
+      points: [],
+    };
+    expect(toChatView({ ...compare, spec: { ...compare.spec, before } })).toBeNull();
+    expect(toChatView({ ...compare, kind: "twin.body" })).toBeNull();
   });
 });

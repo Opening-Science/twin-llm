@@ -109,6 +109,9 @@ enum ModelResponseStatus {
   STREAMING
   COMPLETE
   FAILED
+  /// Refused before any model ran (data-mode policy or a skill rule). The
+  /// row's text holds TwinLLM's own refusal sentence, never a provider message.
+  REFUSED
 
   @@map("model_response_status")
 }
@@ -401,9 +404,17 @@ model Subject {
   subjectRef  String  @id @map("subject_ref")
   cohortId    String  @map("cohort_id")
   isSynthetic Boolean @map("is_synthetic")
+  /// FHIR Patient.gender (female, male, other, unknown); synthetic subjects only (#4).
+  sex         String?
+  /// Year of Patient.birthDate; the full date is never stored.
+  birthYear   Int?    @map("birth_year")
+  /// Year of Patient.deceasedDateTime; null while alive or when not given.
+  deathYear   Int?    @map("death_year")
 
-  observations  Observation[]
-  nonNumeric    ObservationNonNumeric[]
+  observations       Observation[]
+  nonNumeric         ObservationNonNumeric[]
+  conditions         Condition[]
+  medicationRequests MedicationRequest[]
   /// Synthetic genome reports (scripts/genome-synth), never a person's.
   genomeReports GenomeReport[]
 
@@ -418,8 +429,10 @@ model Bundle {
   syntheaVersion String   @map("synthea_version")
   ingestedAt     DateTime @default(now()) @map("ingested_at")
 
-  observations Observation[]
-  nonNumeric   ObservationNonNumeric[]
+  observations       Observation[]
+  nonNumeric         ObservationNonNumeric[]
+  conditions         Condition[]
+  medicationRequests MedicationRequest[]
 
   @@map("bundles")
 }
@@ -465,6 +478,56 @@ model ObservationNonNumeric {
 
   @@unique([bundleSha, fhirId])
   @@map("observation_non_numeric")
+}
+
+/// A Synthea Condition as recorded. Synthetic only through its subject
+/// (`subjects.is_synthetic`); `source` is checked to be 'synthea' in SQL.
+model Condition {
+  id                 String    @id @default(cuid())
+  subjectRef         String    @map("subject_ref")
+  bundleSha          String    @map("bundle_sha")
+  fhirId             String    @map("fhir_id")
+  source             String
+  codeSystem         String    @map("code_system")
+  code               String
+  display            String
+  onsetAt            DateTime? @map("onset_at")
+  abatementAt        DateTime? @map("abatement_at")
+  clinicalStatus     String?   @map("clinical_status")
+  verificationStatus String?   @map("verification_status")
+  encounterRef       String?   @map("encounter_ref")
+
+  subject Subject @relation(fields: [subjectRef], references: [subjectRef], onDelete: Cascade)
+  bundle  Bundle  @relation(fields: [bundleSha], references: [sha], onDelete: Cascade)
+
+  @@unique([bundleSha, fhirId])
+  @@index([subjectRef, onsetAt])
+  @@map("conditions")
+}
+
+/// A Synthea MedicationRequest as recorded. `dosage_text` is the record's
+/// `dosageInstruction[].text`, verbatim; no other dosing field is kept.
+model MedicationRequest {
+  id         String    @id @default(cuid())
+  subjectRef String    @map("subject_ref")
+  bundleSha  String    @map("bundle_sha")
+  fhirId     String    @map("fhir_id")
+  source     String
+  codeSystem String    @map("code_system")
+  code       String
+  display    String
+  authoredAt DateTime? @map("authored_at")
+  status     String?
+  intent     String?
+  dosageText String[]  @map("dosage_text")
+  reasonRefs String[]  @map("reason_refs")
+
+  subject Subject @relation(fields: [subjectRef], references: [subjectRef], onDelete: Cascade)
+  bundle  Bundle  @relation(fields: [bundleSha], references: [sha], onDelete: Cascade)
+
+  @@unique([bundleSha, fhirId])
+  @@index([subjectRef, authoredAt])
+  @@map("medication_requests")
 }
 
 // ─── 5. Retrieval ───────────────────────────────────────────────────────────

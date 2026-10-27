@@ -3,19 +3,28 @@ import "server-only";
 import { database } from "@/infrastructure/database";
 
 import {
+  type ClinicalQuery,
   defaultQueryToolPorts,
+  findConditionsInDatabase,
+  findMedicationRequestsInDatabase,
   type ObservationRecord,
   type QueryToolPorts,
   toNumber,
 } from "./ports";
 import {
   ANALYTICS_ROW_CAP,
+  COHORT_MINIMUM,
+  COHORT_ROW_CAP,
+  COHORT_ROW_CAP_EXCEEDED,
+  cohortTooSmall,
   isToolRefusal,
   mixedUnits,
   type MixedUnits,
   ROW_CAP_EXCEEDED,
   type ToolRefusal,
+  noRecords,
   noRows,
+  recordCapExceeded,
   sourceNotConnected,
   type SourceNotConnected,
   unsupportedConversion,
@@ -40,6 +49,9 @@ import type {
   trendInput,
   rangePositionInput,
   convertUnitInput,
+  cohortPositionInput,
+  conditionsTimelineInput,
+  medicationsTimelineInput,
   sleepSummaryInput,
   hrvTrendInput,
   restingHrTrendInput,
@@ -51,14 +63,15 @@ import {
   coverage,
   daysInWindow,
   mad,
-  maximum,
-  mean,
   median,
-  minimum,
   olsSlopePerDay,
   recentAndBaseline,
   robustZ,
   pickReading,
+  summariseWindow,
+  type WindowSummary,
+  latestPerSubject,
+  midRankPercentile,
   utcDay,
 } from "./stats";
 import { placeReading, type RangePlacement, rangeRefusalFor } from "./range-position";
@@ -88,6 +101,13 @@ import {
 } from "./wearable-readings";
 import type { WearableSummaries } from "@/infrastructure/offered-keys";
 import type { z } from "zod";
+import {
+  CLINICAL_ROW_CAP,
+  conditionsTimeline,
+  type ConditionsTimeline,
+  medicationsTimeline,
+  type MedicationsTimeline,
+} from "./clinical-timeline";
 
 type ListSubjectsInput = z.infer<typeof listSubjectsInput>;
 type SubjectWindowInput = z.infer<typeof subjectWindowInput>;
@@ -568,16 +588,6 @@ export const runCoverage = (
     ports,
   );
 
-type WindowSummary = Readonly<{
-  start: string;
-  end: string;
-  n: number;
-  mean: number | null;
-  median: number | null;
-  min: number | null;
-  max: number | null;
-}>;
-
 export type CompareWindowsResult = Readonly<{
   loinc: string;
   unit: string | null;
@@ -594,18 +604,7 @@ export type CompareWindowsResult = Readonly<{
 const summarise = (
   window: TimeWindow,
   rows: readonly ObservationRecord[],
-): WindowSummary => {
-  const values = valuesOf(rows);
-  return {
-    start: window.start,
-    end: window.end,
-    n: values.length,
-    mean: mean(values),
-    median: median(values),
-    min: minimum(values),
-    max: maximum(values),
-  };
-};
+): WindowSummary => summariseWindow(window, valuesOf(rows));
 
 const delta = (a: number | null, b: number | null): number | null =>
   a === null || b === null ? null : b - a;
@@ -836,9 +835,9 @@ export const runRangePosition = (
     input,
     input.subject_ref,
     async () => {
-      if (!(await subjectInScope(scope, input.subject_ref, ports))) {
-        return SUBJECT_SCOPE_VIOLATION;
-      }
+      if (scope.mode !== "synthetic") return SUBJECT_SCOPE_VIOLATION;
+      const subject = await ports.findSubject(input.subject_ref);
+      if (!subjectRowInScope(scope, subject)) return SUBJECT_SCOPE_VIOLATION;
       const noRange = rangeRefusalFor(input.loinc);
       if (noRange) return noRange;
       const rows = await readWindow(ports, input.subject_ref, [input.loinc], input);
@@ -848,7 +847,11 @@ export const runRangePosition = (
       const at = input.pick === "at" && input.at ? new Date(input.at) : null;
       const reading = pickReading(rows, at);
       if (!reading) return noRows(input.loinc, at === null ? null : asIso(at));
-      const placed = placeReading(input.loinc, reading);
+      // Sex and birth year are stored for synthetic subjects only (#4).
+      const placed = placeReading(input.loinc, reading, {
+        sex: subject?.sex,
+        birthYear: subject?.birthYear,
+      });
       if (isToolRefusal(placed)) return placed;
       return {
         loinc: input.loinc,
@@ -919,6 +922,209 @@ export const runConvertUnit = (
       };
     },
     () => 0,
+    ports,
+  );
+
+type CohortPositionInput = z.infer<typeof cohortPositionInput>;
+
+export type CohortPositionResult = Readonly<{
+  loinc: string;
+  unit: string;
+  start: string;
+  end: string;
+  cohort_id: string;
+  /** The subject's own latest reading in the window. */
+  effective_at: string;
+  value: number;
+  /** People in the cohort with a value in the window, the subject included. */
+  n: number;
+  n_lower: number;
+  /** The subject included, so at least 1. */
+  n_equal: number;
+  n_higher: number;
+  /** 100 × (n_lower + n_equal / 2) / n. */
+  percentile: number;
+  method: "mid-rank";
+  /** Cohort rows read, the audit row count. */
+  rows_read: number;
+}>;
+
+/** The subject's own cohort, or null when the subject is out of scope. */
+const subjectCohort = async (
+  scope: SessionScope,
+  subjectRef: string,
+  ports: QueryToolPorts,
+): Promise<string | null> => {
+  if (scope.mode !== "synthetic") return null;
+  const subject = await ports.findSubject(subjectRef);
+  return subject !== null && subjectRowInScope(scope, subject) ? subject.cohortId : null;
+};
+
+/**
+ * `cohort_position`: one fixed, capped read of the code across the subject's
+ * own synthetic cohort; each person's latest reading in `latestPerSubject`,
+ * the rank in `midRankPercentile` (stats.ts). Out of scope, over the cohort
+ * cap, mixed units, no reading for the subject and fewer than 10 people are
+ * refused.
+ */
+export const runCohortPosition = (
+  scope: SessionScope,
+  input: CohortPositionInput,
+  ports: QueryToolPorts = defaultQueryToolPorts(),
+): Promise<CohortPositionResult | ToolRefusal> =>
+  audited<CohortPositionResult | ToolRefusal>(
+    scope,
+    "cohort_position",
+    input,
+    input.subject_ref,
+    async () => {
+      const cohortId = await subjectCohort(scope, input.subject_ref, ports);
+      if (cohortId === null) return SUBJECT_SCOPE_VIOLATION;
+      const rows = await ports.findCohortObservations({
+        cohortId,
+        loinc: input.loinc,
+        start: windowStartDate(input.start),
+        end: windowEndDate(input.end),
+        take: COHORT_ROW_CAP + 1,
+      });
+      if (rows.length > COHORT_ROW_CAP) return COHORT_ROW_CAP_EXCEEDED;
+      const units = distinctUnits(rows);
+      if (units.length > 1) return mixedUnits(input.loinc, units);
+      const latest = latestPerSubject(rows);
+      const own = latest.get(input.subject_ref);
+      if (!own) return noRows(input.loinc, null);
+      if (latest.size < COHORT_MINIMUM) return cohortTooSmall(input.loinc, latest.size);
+      const rank = midRankPercentile(
+        own.value,
+        [...latest.values()].map((reading) => reading.value),
+      );
+      if (rank === null) return noRows(input.loinc, null);
+      return {
+        loinc: input.loinc,
+        unit: own.unitUcum,
+        start: input.start,
+        end: input.end,
+        cohort_id: cohortId,
+        effective_at: asIso(own.effectiveAt),
+        value: own.value,
+        n: rank.n,
+        n_lower: rank.nLower,
+        n_equal: rank.nEqual,
+        n_higher: rank.nHigher,
+        percentile: rank.percentile,
+        method: "mid-rank",
+        rows_read: rows.length,
+      };
+    },
+    (result) => ("rows_read" in result ? result.rows_read : 0),
+    ports,
+  );
+
+type ConditionsTimelineInput = z.infer<typeof conditionsTimelineInput>;
+type MedicationsTimelineInput = z.infer<typeof medicationsTimelineInput>;
+
+type TimelineEcho = Readonly<{
+  subject_ref: string;
+  start: string;
+  end: string;
+  /** The filters as asked, null when not given. */
+  status: string | null;
+  code: string | null;
+}>;
+
+export type ConditionsTimelineResult = TimelineEcho & ConditionsTimeline;
+export type MedicationsTimelineResult = TimelineEcho & MedicationsTimeline;
+
+const clinicalQuery = (
+  input: Readonly<{
+    subject_ref: string;
+    start: string;
+    end: string;
+    status?: string;
+    code?: string;
+  }>,
+): ClinicalQuery => ({
+  subjectRef: input.subject_ref,
+  start: windowStartDate(input.start),
+  end: windowEndDate(input.end),
+  ...(input.status === undefined ? {} : { status: input.status }),
+  ...(input.code === undefined ? {} : { code: input.code }),
+  take: CLINICAL_ROW_CAP + 1,
+});
+
+const echo = (
+  input: Readonly<{
+    subject_ref: string;
+    start: string;
+    end: string;
+    status?: string;
+    code?: string;
+  }>,
+): TimelineEcho => ({
+  subject_ref: input.subject_ref,
+  start: input.start,
+  end: input.end,
+  status: input.status ?? null,
+  code: input.code ?? null,
+});
+
+/**
+ * `conditions_timeline`: scope first, one fixed capped read of the subject's
+ * conditions overlapping the window, the ordering and counts in
+ * `conditionsTimeline` (clinical-timeline.ts). None is refused with NO_ROWS and
+ * its reason; over the cap with ROW_CAP_EXCEEDED.
+ */
+export const runConditionsTimeline = (
+  scope: SessionScope,
+  input: ConditionsTimelineInput,
+  ports: QueryToolPorts = defaultQueryToolPorts(),
+): Promise<ConditionsTimelineResult | ToolRefusal> =>
+  audited<ConditionsTimelineResult | ToolRefusal>(
+    scope,
+    "conditions_timeline",
+    input,
+    input.subject_ref,
+    async () => {
+      if (!(await subjectInScope(scope, input.subject_ref, ports))) {
+        return SUBJECT_SCOPE_VIOLATION;
+      }
+      const find = ports.findConditions ?? findConditionsInDatabase;
+      const rows = await find(clinicalQuery(input));
+      if (rows.length > CLINICAL_ROW_CAP) return recordCapExceeded(CLINICAL_ROW_CAP);
+      if (rows.length === 0) return noRecords("condition", input);
+      return { ...echo(input), ...conditionsTimeline(rows) };
+    },
+    (result) => ("n" in result ? result.n : 0),
+    ports,
+  );
+
+/**
+ * `medications_timeline`: scope first, one fixed capped read of the subject's
+ * medication requests authored in the window, the ordering and counts in
+ * `medicationsTimeline`. Dosage is the record's own text or null; nothing is
+ * added to it.
+ */
+export const runMedicationsTimeline = (
+  scope: SessionScope,
+  input: MedicationsTimelineInput,
+  ports: QueryToolPorts = defaultQueryToolPorts(),
+): Promise<MedicationsTimelineResult | ToolRefusal> =>
+  audited<MedicationsTimelineResult | ToolRefusal>(
+    scope,
+    "medications_timeline",
+    input,
+    input.subject_ref,
+    async () => {
+      if (!(await subjectInScope(scope, input.subject_ref, ports))) {
+        return SUBJECT_SCOPE_VIOLATION;
+      }
+      const find = ports.findMedicationRequests ?? findMedicationRequestsInDatabase;
+      const rows = await find(clinicalQuery(input));
+      if (rows.length > CLINICAL_ROW_CAP) return recordCapExceeded(CLINICAL_ROW_CAP);
+      if (rows.length === 0) return noRecords("medication request", input);
+      return { ...echo(input), ...medicationsTimeline(rows) };
+    },
+    (result) => ("n" in result ? result.n : 0),
     ports,
   );
 

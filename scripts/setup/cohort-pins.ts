@@ -25,6 +25,13 @@ export const EVAL_COHORT = {
    * `bun scripts/setup/cohort-fingerprint.ts .synthea/fhir` on the pinned files.
    */
   bundleSetSha256: "469ecc95530aa6f546ef8d04f6a7a6a271d1cc379a25e8f39a30fd0272a18ba6",
+  /**
+   * Condition and MedicationRequest rows once ingested. The same bundles
+   * ingested before these tables existed have the pinned fingerprint but none
+   * of these rows, so setup checks the counts too.
+   */
+  conditionCount: 1995,
+  medicationRequestCount: 3615,
 } as const;
 
 /**

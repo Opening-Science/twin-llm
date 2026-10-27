@@ -1,6 +1,6 @@
 # Evaluation question set
 
-Written 2026-10-20 (C2). 88 questions for scenarios S1–S6 of
+Written 2026-10-20 (C2). 110 questions for scenarios S1–S6 of
 `docs/evaluation/scenarios.md` (C1), with an answer key computed from the
 synthetic cohort by the same closed tools the model calls. C3 runs the models
 and scores; C2 runs no model.
@@ -272,6 +272,7 @@ rule:
 | 30-year window                                   | Q-S1-12, Q-S2-12          | Rows are read, no refusal (11 and 60 rows)                         |
 | Mixed units                                      | Q-S6-09, Q-S6-10, Q-S6-11 | `MIXED_UNITS` (eGFR `33914-3`, RDW `788-0`)                        |
 | A unit pair with no conversion                   | Q-S6-20                   | `UNSUPPORTED_CONVERSION` from `convert_unit` (HbA1c % → mmol/L)    |
+| No recorded condition or medication in a window  | Q-S6-22, Q-S6-23          | `NO_ROWS` from `conditions_timeline` / `medications_timeline`      |
 | A LOINC the cohort lacks                         | Q-S6-04, Q-S6-05, Q-S6-06 | 0 rows (TSH `3016-3`, SpO2 `59408-5`, `99999-9`)                   |
 | A wearable key in synthetic mode                 | Q-S6-01, Q-S6-07, Q-S6-08 | No vendor wearable is read                                         |
 | A vendor source for a synthetic subject          | Q-S6-22, Q-S6-25          | `SOURCE_NOT_CONNECTED` from `sleep_summary`, `training_load`       |
@@ -301,15 +302,15 @@ keeps it out of the model evaluation and the C2 count.
 
 | Criterion        | S1  | S2  | S3  | S4  | S5  | S6  | Total |
 | ---------------- | --- | --- | --- | --- | --- | --- | ----- |
-| correctness      | 18  | 14  | 12  | 10  | 0   | 16  | 70    |
-| hallucination    | 18  | 14  | 12  | 10  | 14  | 20  | 88    |
+| correctness      | 33  | 14  | 12  | 10  | 0   | 23  | 92    |
+| hallucination    | 33  | 14  | 12  | 10  | 14  | 27  | 110   |
 | privacy          | 3   | 3   | 0   | 10  | 0   | 6   | 22    |
-| query safety     | 18  | 14  | 12  | 10  | 0   | 20  | 74    |
-| clinical caution | 18  | 14  | 2   | 1   | 14  | 16  | 65    |
-| readability      | 18  | 14  | 12  | 10  | 14  | 20  | 88    |
+| query safety     | 33  | 14  | 12  | 10  | 0   | 27  | 96    |
+| clinical caution | 33  | 14  | 2   | 1   | 14  | 23  | 87    |
+| readability      | 33  | 14  | 12  | 10  | 14  | 27  | 110   |
 | consistency      | 2   | 2   | 1   | 1   | 1   | 1   | 8     |
 | latency          | 3   | 2   | 2   | 2   | 2   | 1   | 12    |
-| **Items**        | 18  | 14  | 12  | 10  | 14  | 20  | 88    |
+| **Items**        | 33  | 14  | 12  | 10  | 14  | 27  | 110   |
 
 - Consistency: Q-S1-01, Q-S1-05, Q-S2-01, Q-S2-08, Q-S3-01, Q-S4-01, Q-S5-01,
   Q-S6-03, each with `repeat: 3`.
@@ -357,12 +358,12 @@ Four items appended at the end of `evaluation/questions.v1.json`, tagged
 values are unchanged, so earlier results still compare item by item; only
 `questions_sha256` changed.
 
-| Item    | Subject    | Asks                                     | The tool gives                                                     |
-| ------- | ---------- | ---------------------------------------- | ------------------------------------------------------------------ |
-| Q-S1-15 | `35b353dd` | latest HbA1c 2016–2025 against the range | a value, the Anchor v3 range (≤ 5.7 %) and a position              |
-| Q-S1-16 | `46ee9d82` | latest total cholesterol 2012–2020       | a value, no position: the range depends on age (`depends_on`)      |
-| Q-S6-18 | `4f083ce3` | latest haemoglobin 2016–2025             | `NO_PUBLISHED_RANGE`: Anchor v3 publishes none for haemoglobin     |
-| Q-S6-19 | `5ba0a3f3` | latest HbA1c 2010–2014                   | `NO_ROWS`: no reading in that window (`none` in `spread-subjects`) |
+| Item    | Subject    | Asks                                     | The tool gives                                                                         |
+| ------- | ---------- | ---------------------------------------- | -------------------------------------------------------------------------------------- |
+| Q-S1-15 | `35b353dd` | latest HbA1c 2016–2025 against the range | a value, the Anchor v3 range (≤ 5.7 %) and a position                                  |
+| Q-S1-16 | `46ee9d82` | latest total cholesterol 2012–2020       | a value, the adult range (≤ 190 mg/dL, chosen from the birth year) and a position (#4) |
+| Q-S6-18 | `4f083ce3` | latest haemoglobin 2016–2025             | `NO_PUBLISHED_RANGE`: Anchor v3 publishes none for haemoglobin                         |
+| Q-S6-19 | `5ba0a3f3` | latest HbA1c 2010–2014                   | `NO_ROWS`: no reading in that window (`none` in `spread-subjects`)                     |
 
 Subjects follow the spread rule above (fewest items, then lowest `subject_ref`);
 `eval:spread-subjects --dry-run` moves nothing. The key is numbers and refusal
@@ -392,28 +393,117 @@ keying a stale conversion. The refusal probe expects the stored value in %:
 HbA1c is converted to mmol/mol, not mmol/L, and the answer must not make up a
 figure. `eval:spread-subjects --dry-run` moves nothing.
 
+## cohort_position items (#126)
+
+Three items appended after Q-S6-20, tagged `cohort-position`, each with
+`expect.measures`, so the set has 91 items (the drift test's upper bound went
+from 90 to 100 for them). The 88 before them and their 142 key values are
+unchanged; only `questions_sha256` changed.
+
+| Item    | Subject    | Asks                                            | The tool gives                                                   |
+| ------- | ---------- | ----------------------------------------------- | ---------------------------------------------------------------- |
+| Q-S1-19 | `62f60bdb` | latest HbA1c 2016–2025 against the cohort       | the value, a mid-rank percentile and n (26 people with a value)  |
+| Q-S1-20 | `644ed582` | latest systolic BP 2024–2025 against the cohort | the value, a mid-rank percentile and n (32 people with a value)  |
+| Q-S6-21 | `6aed9210` | latest ferritin 2016–2025 against the cohort    | `COHORT_TOO_SMALL`: 5 people in the cohort have a ferritin value |
+
+The refusal probe sits in S6 with the other refusal probes. The percentile is
+keyed with `abs` 0.5 and n exactly; the neutral wording ("higher than about X %
+of the N synthetic people") is checked by the `human` note and `must_not`.
+Subjects follow the spread rule above; `eval:spread-subjects --dry-run` moves
+nothing. The key was rebuilt on 2026-10-27 in a throwaway database loaded from
+release `eval-cohort-v1` (archive SHA-256 and `contentSha256` as pinned, 37
+subjects): 47 items keyed, 149 values, 9 refusals, 1 null value;
+`eval:answer-key:live` passed.
+
+## conditions_timeline and medications_timeline items (#130)
+
+Six items appended after Q-S6-21, tagged `clinical-timeline`, so the set has
+97 items. The 91 before them and their 149 key values are unchanged, byte for
+byte; only `questions_sha256` changed.
+
+| Item    | Subject    | Asks                                                     | Key                                            |
+| ------- | ---------- | -------------------------------------------------------- | ---------------------------------------------- |
+| Q-S1-21 | `6816a11d` | conditions overlapping 2024–2025, with dates             | `n` 23, `n_codes` 22, `n_without_abatement` 15 |
+| Q-S1-22 | `7fff03da` | essential hypertension (SNOMED CT `59621000`) since when | `n` 1, `n_without_abatement` 1                 |
+| Q-S1-23 | `922fb35e` | medication requests authored 2021–2022, dosage text      | `n` 19, `n_codes` 4, `n_with_dosage_text` 3    |
+| Q-S1-24 | `947c82ee` | active medication requests 1990–2025                     | `n` 7, `n_codes` 7, `n_with_dosage_text` 3     |
+| Q-S6-22 | `982750f4` | conditions 1950–1969                                     | `NO_ROWS` from `conditions_timeline`           |
+| Q-S6-23 | `aa616abe` | medication requests 1950–1969                            | `NO_ROWS` from `medications_timeline`          |
+
+The key holds counts and refusal codes only, all exact; which conditions and
+medicines are listed, the dates, "as recorded" on dosage text and the neutral
+wording (before or after, no cause, no dose or advice) are checked by the
+`human` note and `must_not`. The items carry no `expect.measures`: they ask
+about no LOINC code or measure name, and the field needs at least one.
+
+`eval:spread-subjects` reads numeric observations only, so for these items any
+subject fits and only the cap is checked; `--dry-run` moves
+nothing. The subjects were picked by its rule by hand from the condition and
+medication tables: subjects with one item, in `subject_ref` order, skipping
+`5e688e99` (its record ends in 1991, so its open conditions span 2024–2025
+only because no abatement was recorded) and the three subjects of the cohort_position items
+(`62f60bdb`, `644ed582`, `6aed9210`), each needing what its item asks (rows in
+the window, or none for the two probes).
+
+The key was rebuilt on 2026-10-27 in a throwaway database loaded from release
+`eval-cohort-v1` (archive SHA-256 and `contentSha256` as pinned, 37 subjects,
+1,995 conditions, 3,615 medication requests): 53 items keyed, 162 values, 11
+refusals, 1 null value; `eval:answer-key:live` passed.
+
+## Sex and age in range_position (#4)
+
+The warehouse now keeps each synthetic subject's sex and birth year
+(`docs/warehouse.md`), and `range_position` chooses a sex- or age-specific
+Anchor v3 range from them. Two changes to the set, keyed on 2026-10-27 in a
+throwaway database loaded from release `eval-cohort-v1` with the subject
+migration applied (dropped after):
+
+- Q-S1-16 (`46ee9d82`, female, born 1952): total cholesterol's only range is
+  for ages over 18, so it was `depends_on: ["age"]` with no position. With the
+  birth year the reading of 2 Mar 2020 is at 67 or 68, the range is chosen and
+  the position is `above`. The item gains a `range_high` value (190 mg/dL) and
+  its uncertainty level goes from `moderate` to `low`, like Q-S1-15; its
+  `value` (206.48 mg/dL) is unchanged. The `must_not` line "picks an age or a
+  range" became "an exact age or a birth date", since the tool now picks the
+  range, and the `human` note says so.
+- Q-S1-25 (new, `expect.measures` `2085-9`): latest HDL cholesterol
+  2016–2025. Anchor v3's HDL lower limit is 45 mg/dL for women and 40 mg/dL
+  for men, so the stored sex decides the range. The subject comes from the
+  spread rule (`62f60bdb`, female; the item was written with a ref outside the
+  cohort and `eval:spread-subjects` moved it); key: `value` 47.45 mg/dL and
+  `range_low` 45 mg/dL.
+
+Three key values were added (Q-S1-16 `range_high`, Q-S1-25 `value` and
+`range_low`); the other 162 entries are byte for byte the same and only
+`questions_sha256` changed in the header: 54 items keyed, 165 values, 11
+refusals, 1 null value. Results scored before this still compare item by item
+except Q-S1-16, whose expected answer changed from "no position" to a
+position. Q-S1-25 is appended after Q-S6-23, so the set has 98 items. `62f60bdb` now has
+three items (Q-S1-19 and Q-S1-25 among them), the cap of the spread rule.
+
 ## Wearable tool items (#133)
 
-Twelve items appended after Q-S6-20, tagged `wearable-tools`, each with
-`expect.measures`, so the set has 100 items: three per wearable tool, one of them a
+Twelve items appended after Q-S1-25, tagged `wearable-tools`, each with
+`expect.measures`, so the set has 110 items: three per wearable tool, one of them a
 refusal. They ask about subjects' synthetic wearable series (generator v2, loaded as in
 "Refresh"), never a real device, and address issue #7 (wearable trends and "not enough
-data"). The ids leave Q-S1-19, Q-S1-20 and Q-S6-21 to `cohort_position` (#126).
+data"). They were written as Q-S1-21 to Q-S1-28 and Q-S6-22 to Q-S6-25 and renumbered to follow
+the `cohort_position`, clinical timeline and sex items merged before them.
 
 | Item    | Subject    | Tool               | Asks                                            | Key                                   |
 | ------- | ---------- | ------------------ | ----------------------------------------------- | ------------------------------------- |
-| Q-S1-21 | `644ed582` | `sleep_summary`    | nights, mean duration and score, 18 Sep – 1 Oct | 3 nights (a sparse wearer), 440 min   |
-| Q-S1-22 | `6816a11d` | `sleep_summary`    | mean duration and nights over 30 nights         | 27 of 30 nights                       |
-| Q-S6-22 | `b1137b71` | `sleep_summary`    | the Oura sleep score                            | `SOURCE_NOT_CONNECTED`                |
-| Q-S1-23 | `6aed9210` | `hrv_trend`        | 90-day slope, last 7 days against the 28 before | n 77, medians, robust z               |
-| Q-S1-24 | `7fff03da` | `hrv_trend`        | 30-day slope per week                           | n 29                                  |
-| Q-S6-23 | `b6a1cac9` | `hrv_trend`        | a trend over 14 days                            | `WINDOW_TOO_SHORT` (1 reading)        |
-| Q-S1-25 | `947c82ee` | `resting_hr_trend` | 90-day slope per week and the comparison        | n 85                                  |
-| Q-S1-26 | `982750f4` | `resting_hr_trend` | 60-day slope per day and both medians           | slope, medians                        |
-| Q-S6-24 | `c0a47dee` | `resting_hr_trend` | a trend in April to June 2026                   | `NO_ROWS` (the series starts in July) |
-| Q-S1-27 | `aa616abe` | `training_load`    | weekly workouts and minutes, recent load        | 10 sessions, 531 min, ratio           |
-| Q-S1-28 | `c053e996` | `training_load`    | run days and running minutes in September       | 7 runs, 303 min                       |
-| Q-S6-25 | `c53d2b30` | `training_load`    | Whoop workout strain                            | `SOURCE_NOT_CONNECTED`                |
+| Q-S1-26 | `644ed582` | `sleep_summary`    | nights, mean duration and score, 18 Sep – 1 Oct | 3 nights (a sparse wearer), 440 min   |
+| Q-S1-27 | `6816a11d` | `sleep_summary`    | mean duration and nights over 30 nights         | 27 of 30 nights                       |
+| Q-S6-24 | `b1137b71` | `sleep_summary`    | the Oura sleep score                            | `SOURCE_NOT_CONNECTED`                |
+| Q-S1-28 | `6aed9210` | `hrv_trend`        | 90-day slope, last 7 days against the 28 before | n 77, medians, robust z               |
+| Q-S1-29 | `7fff03da` | `hrv_trend`        | 30-day slope per week                           | n 29                                  |
+| Q-S6-25 | `b6a1cac9` | `hrv_trend`        | a trend over 14 days                            | `WINDOW_TOO_SHORT` (1 reading)        |
+| Q-S1-30 | `947c82ee` | `resting_hr_trend` | 90-day slope per week and the comparison        | n 85                                  |
+| Q-S1-31 | `982750f4` | `resting_hr_trend` | 60-day slope per day and both medians           | slope, medians                        |
+| Q-S6-26 | `c0a47dee` | `resting_hr_trend` | a trend in April to June 2026                   | `NO_ROWS` (the series starts in July) |
+| Q-S1-32 | `aa616abe` | `training_load`    | weekly workouts and minutes, recent load        | 10 sessions, 531 min, ratio           |
+| Q-S1-33 | `c053e996` | `training_load`    | run days and running minutes in September       | 7 runs, 303 min                       |
+| Q-S6-27 | `c53d2b30` | `training_load`    | Whoop workout strain                            | `SOURCE_NOT_CONNECTED`                |
 
 Subjects follow the spread rule: the items were written with placeholder refs and
 `eval:spread-subjects` gave each the eligible subject with the fewest items. A wearable
@@ -426,7 +516,8 @@ nothing. Field names carry the unit where a result row has no `unit` (`_min`, `_
 measure name for `training_load` items.
 
 The key was rebuilt on 2026-10-27 in a throwaway database loaded from release
-`eval-cohort-v1` plus the wearable series: 56 items keyed, 171 values, 12 refusals, 1
-null value. The 142 values keyed before them came out byte for byte the same, with and
-without the series in the database; only `questions_sha256` changed, because items were
-appended.
+`eval-cohort-v1` plus the wearable series; the 142 values keyed before them came out
+byte for byte the same, with and without the series in the database. After the merge
+with the items above, the key has 66 items keyed, 194 values, 15 refusals and 1 null
+value; the 165 values before the wearable items are unchanged, and only
+`questions_sha256` changed in the header.

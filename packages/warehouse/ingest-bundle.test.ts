@@ -9,6 +9,8 @@ const store = {
   bundles: new Map<string, Row>(),
   observations: [] as Row[],
   nonNumeric: [] as Row[],
+  conditions: [] as Row[],
+  medicationRequests: [] as Row[],
   transactionTimeouts: [] as Array<number | undefined>,
 };
 
@@ -17,6 +19,8 @@ const resetStore = () => {
   store.bundles.clear();
   store.observations.length = 0;
   store.nonNumeric.length = 0;
+  store.conditions.length = 0;
+  store.medicationRequests.length = 0;
   store.transactionTimeouts.length = 0;
 };
 
@@ -49,21 +53,51 @@ const mockDb = () => ({
       return { count: data.length };
     },
   },
+  condition: {
+    count: async ({ where }: { where: { bundleSha: string } }) =>
+      store.conditions.filter((row) => row.bundleSha === where.bundleSha).length,
+    createMany: async ({ data }: { data: Row[] }) => {
+      store.conditions.push(...data.map((row) => ({ ...row })));
+      return { count: data.length };
+    },
+  },
+  medicationRequest: {
+    count: async ({ where }: { where: { bundleSha: string } }) =>
+      store.medicationRequests.filter((row) => row.bundleSha === where.bundleSha).length,
+    createMany: async ({ data }: { data: Row[] }) => {
+      store.medicationRequests.push(...data.map((row) => ({ ...row })));
+      return { count: data.length };
+    },
+  },
   subject: {
     findUnique: async ({ where }: { where: { subjectRef: string } }) =>
       store.subjects.get(where.subjectRef) ?? null,
     upsert: async ({
       where,
       create,
+      update,
     }: {
       where: { subjectRef: string };
       create: Row;
       update: Row;
     }) => {
       const existing = store.subjects.get(where.subjectRef);
-      if (existing) return existing;
+      if (existing) {
+        const updated = { ...existing, ...update };
+        store.subjects.set(where.subjectRef, updated);
+        return updated;
+      }
       store.subjects.set(create.subjectRef as string, { ...create });
       return create;
+    },
+    updateMany: async ({ where, data }: { where: Row; data: Row }) => {
+      const matches = [...store.subjects.values()].filter((row) =>
+        Object.entries(where).every(([key, value]) => row[key] === value),
+      );
+      for (const row of matches) {
+        store.subjects.set(row.subjectRef as string, { ...row, ...data });
+      }
+      return { count: matches.length };
     },
   },
   $transaction: async (
@@ -312,6 +346,8 @@ describe("blood pressure components and Synthea marker", () => {
       skipped: 0,
       unresolved: [],
       nonNumeric: 2,
+      conditions: 0,
+      medicationRequests: 0,
       alreadyIngested: false,
     });
     expect(store.transactionTimeouts).toEqual([120_000]);
@@ -366,6 +402,8 @@ describe("blood pressure components and Synthea marker", () => {
       skipped: 0,
       unresolved: [],
       nonNumeric: 0,
+      conditions: 0,
+      medicationRequests: 0,
       alreadyIngested: false,
       rejected: { reason: "subject-cohort-conflict" },
     });
@@ -394,6 +432,8 @@ describe("blood pressure components and Synthea marker", () => {
       skipped: 0,
       unresolved: [],
       nonNumeric: 0,
+      conditions: 0,
+      medicationRequests: 0,
       alreadyIngested: false,
       rejected: { reason: "not-synthea" },
     });
@@ -432,5 +472,208 @@ describe("blood pressure components and Synthea marker", () => {
       ["panel-1", "nonNumeric"],
     ]);
     expect(ids(mapObservations(panel))).toEqual(ids(mapObservations(panel)));
+  });
+});
+
+describe("subject sex, birth year and death year (#4)", () => {
+  const BP_SUBJECT = "b1000000-0000-4000-8000-000000000001";
+  const STORED = {
+    subjectRef: BP_SUBJECT,
+    isSynthetic: true,
+    cohortId: COHORT,
+    sex: "female",
+    birthYear: 1968,
+  };
+
+  test("ingest stores the Patient's sex and birth year on the synthetic subject", async () => {
+    const { ingestBundle } = await import("./ingest-bundle");
+    await ingestBundle(loadFixture("bp-panel.json"), {
+      cohortId: COHORT,
+      syntheaVersion: VERSION,
+    });
+    expect(store.subjects.get(BP_SUBJECT)).toEqual(STORED);
+  });
+
+  test("re-running over an ingested bundle backfills the facts and writes no rows", async () => {
+    const { ingestBundle } = await import("./ingest-bundle");
+    const bundle = loadFixture("bp-panel.json");
+    await ingestBundle(bundle, { cohortId: COHORT, syntheaVersion: VERSION });
+    // As a row ingested before the columns existed.
+    store.subjects.set(BP_SUBJECT, {
+      subjectRef: BP_SUBJECT,
+      isSynthetic: true,
+      cohortId: COHORT,
+    });
+
+    const report = await ingestBundle(bundle, {
+      cohortId: COHORT,
+      syntheaVersion: VERSION,
+    });
+    expect(report.alreadyIngested).toBe(true);
+    expect(store.observations).toHaveLength(5);
+    expect(store.subjects.get(BP_SUBJECT)).toEqual(STORED);
+  });
+
+  test("a later bundle without the facts leaves them as they are", async () => {
+    const { ingestBundle } = await import("./ingest-bundle");
+    await ingestBundle(loadFixture("bp-panel.json"), {
+      cohortId: COHORT,
+      syntheaVersion: VERSION,
+    });
+    const bare = structuredClone(loadFixture("bp-panel.json")) as {
+      entry: Array<{ resource: Record<string, unknown> }>;
+    };
+    const patient = bare.entry[0];
+    if (!patient) throw new Error("expected a Patient entry");
+    delete patient.resource.gender;
+    delete patient.resource.birthDate;
+    // Another bundle (another sha) for the same subject, as a wearable bundle is.
+    bare.entry = bare.entry.slice(0, 1);
+
+    await ingestBundle(bare, { cohortId: COHORT, syntheaVersion: VERSION });
+    expect(store.bundles.size).toBe(2);
+    expect(store.subjects.get(BP_SUBJECT)).toEqual(STORED);
+  });
+
+  test("a bundle without the Synthea identifier stores no facts", async () => {
+    const { ingestBundle } = await import("./ingest-bundle");
+    const bundle = structuredClone(loadFixture("bp-panel.json")) as {
+      entry: Array<{ resource: { identifier?: unknown } }>;
+    };
+    const patient = bundle.entry[0];
+    if (!patient) throw new Error("expected a Patient entry");
+    patient.resource.identifier = [{ system: "urn:example:mrn", value: "1" }];
+    await ingestBundle(bundle, { cohortId: COHORT, syntheaVersion: VERSION });
+    expect(store.subjects.size).toBe(0);
+  });
+});
+
+describe("conditions and medication requests", () => {
+  const CLINICAL = "clinical/clinical-records.json";
+  const SUBJECT = "c1000000-0000-4000-8000-000000000001";
+  // normaliseBundle gives every resource a deterministic id; references follow.
+  const SINUSITIS = "566de4a0-949a-5dde-98d9-0a15565c671a";
+  const HYPERTENSION = "0296bf9f-66a6-5660-a0c8-dd7d8dde3e5d";
+
+  test("clinical-records.json stores two conditions and two medication requests as recorded", async () => {
+    const { ingestBundle } = await import("./ingest-bundle");
+    const report = await ingestBundle(loadFixture(CLINICAL), {
+      cohortId: COHORT,
+      syntheaVersion: VERSION,
+    });
+    const sha = [...store.bundles.keys()][0];
+
+    expect(report).toEqual({
+      inserted: 0,
+      skipped: 0,
+      unresolved: [],
+      nonNumeric: 0,
+      conditions: 2,
+      medicationRequests: 2,
+      alreadyIngested: false,
+    });
+    expect(store.subjects.get(SUBJECT)).toEqual({
+      subjectRef: SUBJECT,
+      isSynthetic: true,
+      cohortId: COHORT,
+      sex: "male",
+      birthYear: 1961,
+    });
+    expect(store.conditions).toEqual([
+      {
+        fhirId: SINUSITIS,
+        codeSystem: "http://snomed.info/sct",
+        code: "444814009",
+        display: "Viral sinusitis (disorder)",
+        onsetAt: new Date("2015-04-02T09:00:00.000Z"),
+        abatementAt: new Date("2015-04-20T09:00:00.000Z"),
+        clinicalStatus: "resolved",
+        verificationStatus: "confirmed",
+        encounterRef: "urn:uuid:4ef29e6f-ab88-593f-90c9-343b01189820",
+        subjectRef: SUBJECT,
+        source: "synthea",
+        bundleSha: sha,
+      },
+      {
+        fhirId: HYPERTENSION,
+        codeSystem: "http://hl7.org/fhir/sid/icd-10",
+        code: "I10",
+        display: "Essential (primary) hypertension",
+        onsetAt: new Date("2018-11-05T10:00:00.000Z"),
+        abatementAt: null,
+        clinicalStatus: "active",
+        verificationStatus: "confirmed",
+        encounterRef: null,
+        subjectRef: SUBJECT,
+        source: "synthea",
+        bundleSha: sha,
+      },
+    ]);
+    expect(store.medicationRequests).toEqual([
+      {
+        fhirId: "5ecf192a-feb5-5fff-98c8-de713ecb612a",
+        codeSystem: "http://www.nlm.nih.gov/research/umls/rxnorm",
+        code: "313782",
+        display: "Acetaminophen 325 MG Oral Tablet",
+        authoredAt: new Date("2015-04-02T09:20:00.000Z"),
+        status: "completed",
+        intent: "order",
+        dosageText: ["Take as needed."],
+        reasonRefs: [`urn:uuid:${SINUSITIS}`],
+        subjectRef: SUBJECT,
+        source: "synthea",
+        bundleSha: sha,
+      },
+      {
+        fhirId: "cf7d367f-fb4a-55a8-91d2-d307a1532f5b",
+        codeSystem: "http://www.nlm.nih.gov/research/umls/rxnorm",
+        code: "314076",
+        display: "lisinopril 10 MG Oral Tablet",
+        authoredAt: new Date("2018-11-05T10:15:00.000Z"),
+        status: "active",
+        intent: "order",
+        dosageText: [],
+        reasonRefs: [`urn:uuid:${HYPERTENSION}`],
+        subjectRef: SUBJECT,
+        source: "synthea",
+        bundleSha: sha,
+      },
+    ]);
+  });
+
+  test("a second ingest of the same bundle writes nothing and reports what is stored", async () => {
+    const { ingestBundle } = await import("./ingest-bundle");
+    const options = { cohortId: COHORT, syntheaVersion: VERSION };
+    await ingestBundle(loadFixture(CLINICAL), options);
+    const second = await ingestBundle(loadFixture(CLINICAL), options);
+
+    expect(second).toEqual({
+      inserted: 0,
+      skipped: 0,
+      unresolved: [],
+      nonNumeric: 0,
+      conditions: 2,
+      medicationRequests: 2,
+      alreadyIngested: true,
+    });
+    expect(store.conditions).toHaveLength(2);
+    expect(store.medicationRequests).toHaveLength(2);
+  });
+
+  test("a subject in another cohort writes no conditions or medication requests", async () => {
+    const { ingestBundle } = await import("./ingest-bundle");
+    store.subjects.set(SUBJECT, {
+      subjectRef: SUBJECT,
+      isSynthetic: true,
+      cohortId: "synthea-v4-seed42",
+    });
+    const report = await ingestBundle(loadFixture(CLINICAL), {
+      cohortId: COHORT,
+      syntheaVersion: VERSION,
+    });
+
+    expect(report.rejected).toEqual({ reason: "subject-cohort-conflict" });
+    expect(store.conditions).toEqual([]);
+    expect(store.medicationRequests).toEqual([]);
   });
 });

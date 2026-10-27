@@ -17,14 +17,19 @@ import {
   INTRO_PARAGRAPHS,
   INTRO_TITLE,
   NOT_STORED_NOTE,
+  SEX_AGE_MISSING,
+  SEX_AGE_TITLE,
+  sexAgeNote,
   TERMS,
 } from "./explorer-copy";
 import { type CohortOverview as Overview } from "./explorer-reads";
+import { SEX_LABELS, type SexAgeSplit } from "./sex-age-split";
+import { SexAgeTable } from "./sex-age-table";
 
 /**
  * The cohort at a glance, after the standalone Synthea viewer prototype, but from
  * what the warehouse actually stores: numeric observations by LOINC code and
- * unit, per subject_ref. No sex, age or death split, because none is stored.
+ * unit, per subject_ref, and the subjects by stored sex and age band (#4).
  */
 
 const TOP_CODES = 20;
@@ -79,6 +84,37 @@ const Tile = ({ value, label }: { readonly value: string; readonly label: string
     <p className="text-muted-foreground mt-1 text-sm">{label}</p>
   </Card>
 );
+
+const SexAge = ({ split }: { readonly split: SexAgeSplit }) =>
+  split.withFacts === 0 ? (
+    <Section title={SEX_AGE_TITLE} note={SEX_AGE_MISSING}>
+      <SexAgeTable split={split} />
+    </Section>
+  ) : (
+    <Section title={SEX_AGE_TITLE} note={sexAgeNote(split.referenceYear, split.deceased)}>
+      <ColumnChart
+        label="Subjects per 10-year age band"
+        height={180}
+        columns={split.bands.map((band) => ({
+          id: band.id,
+          label: band.from === null ? "n/a" : band.label,
+          value: band.total,
+          detail: [
+            ...split.columns.map(
+              (column) =>
+                [SEX_LABELS[column], formatNumber(band.counts[column], 0)] as const,
+            ),
+            ["All", formatNumber(band.total, 0)] as const,
+          ],
+        }))}
+      />
+      <p className="text-muted-foreground mt-2 mb-5 text-xs">
+        Subjects (y) by age band (x). {formatNumber(split.deceased, 0)} of{" "}
+        {formatNumber(split.total, 0)} have a year of death.
+      </p>
+      <SexAgeTable split={split} />
+    </Section>
+  );
 
 const codeDetail = (code: CodeSummary, subjects: number) =>
   [
@@ -172,7 +208,7 @@ export const CohortOverview = ({
   readonly cohortId: string;
   readonly overview: Overview;
 }) => {
-  const { totals, codes, years } = overview;
+  const { totals, codes, years, sexAge } = overview;
   const split = coverageSplit(codes);
   const mixed = codes.filter((code) => code.units.length > 1);
   const perSubject = totals.subjects > 0 ? totals.observations / totals.subjects : null;
@@ -206,6 +242,8 @@ export const CohortOverview = ({
           label={`years covered, ${formatDate(totals.firstDay)} to ${formatDate(totals.lastDay)}`}
         />
       </div>
+
+      <SexAge split={sexAge} />
 
       <Section
         title="Most common measurements"

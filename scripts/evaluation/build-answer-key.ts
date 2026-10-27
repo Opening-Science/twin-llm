@@ -112,6 +112,12 @@ export const rowCountOf = (tool: KeyedTool, result: unknown): number => {
     case "convert_unit":
       // A conversion reads no rows (audit row_count 0).
       return 0;
+    case "cohort_position":
+      return numberAt(result, "rows_read");
+    case "conditions_timeline":
+      return numberAt(result, "n");
+    case "medications_timeline":
+      return numberAt(result, "n");
     case "sleep_summary":
     case "hrv_trend":
     case "resting_hr_trend":
@@ -400,6 +406,18 @@ export const realPorts = async (today: string): Promise<AnswerKeyPorts> => {
         return tools.runRangePosition(scope, KEYED_TOOLS.range_position.parse(args));
       case "convert_unit":
         return tools.runConvertUnit(scope, KEYED_TOOLS.convert_unit.parse(args));
+      case "cohort_position":
+        return tools.runCohortPosition(scope, KEYED_TOOLS.cohort_position.parse(args));
+      case "conditions_timeline":
+        return tools.runConditionsTimeline(
+          scope,
+          KEYED_TOOLS.conditions_timeline.parse(args),
+        );
+      case "medications_timeline":
+        return tools.runMedicationsTimeline(
+          scope,
+          KEYED_TOOLS.medications_timeline.parse(args),
+        );
       case "sleep_summary":
         return tools.runSleepSummary(scope, KEYED_TOOLS.sleep_summary.parse(args));
       case "hrv_trend":

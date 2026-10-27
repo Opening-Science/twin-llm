@@ -25,6 +25,7 @@ import {
 } from "./env-file";
 import {
   type BundleSet,
+  type ClinicalCounts,
   type CohortRows,
   type DatabaseProbe,
   type DetectedState,
@@ -176,7 +177,25 @@ export const readBundleSet = async (
   return count > 0 ? { count, sha256: String(row?.digest) } : null;
 };
 
-/** What the database at `url` holds, without changing anything. */
+/** Condition and MedicationRequest rows of `cohortId`; 0 for a table that does not exist yet. */
+export const readClinicalCounts = async (
+  sql: SqlQuery,
+  cohortId: string,
+): Promise<ClinicalCounts> => {
+  const count = async (table: "conditions" | "medication_requests"): Promise<number> => {
+    if (!(await tableExists(sql, table))) return 0;
+    const [row] = await sql.unsafe(
+      `select count(*)::int as n from ${table} t join subjects s on s.subject_ref = t.subject_ref where s.cohort_id = $1`,
+      [cohortId],
+    );
+    return Number(row?.n ?? 0);
+  };
+  return {
+    conditions: await count("conditions"),
+    medicationRequests: await count("medication_requests"),
+  };
+};
+
 /** Whether `clerkId` has the example thread; false while the tables are missing. */
 export const readExampleThread = async (
   sql: SqlQuery,
@@ -210,8 +229,12 @@ export const probeDatabase = async (
         ).map((row) => String(row.migration_name))
       : [];
     const warehouse = await readWarehouse(sql);
-    const evalBundles = warehouse.some((rows) => rows.cohortId === EVAL_COHORT.cohortId)
+    const evalLoaded = warehouse.some((rows) => rows.cohortId === EVAL_COHORT.cohortId);
+    const evalBundles = evalLoaded
       ? await readBundleSet(sql, EVAL_COHORT.cohortId)
+      : null;
+    const evalClinical = evalLoaded
+      ? await readClinicalCounts(sql, EVAL_COHORT.cohortId)
       : null;
     const exampleThread = await readExampleThread(sql, localUserId);
     return {
@@ -220,6 +243,7 @@ export const probeDatabase = async (
       appliedMigrations,
       warehouse,
       evalBundles,
+      evalClinical,
       exampleThread,
     };
   } catch (error) {
