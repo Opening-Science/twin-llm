@@ -65,7 +65,7 @@ describe("skills/ in this repository", () => {
     if (!parsed.ok) throw new Error(parsed.error);
     const body = parsed.value.body.replace(/\s+/g, " ");
     [
-      "No wearable is linked for this question, so /trainer has nothing to describe; link Oura, Whoop or Google Health on the Connectors page.",
+      "No wearable is linked for this question, so /trainer has nothing to describe; link Oura, Whoop or Google Health under Customize · Connectors.",
       "/trainer describes your data and does not say whether or how to train.",
       "/trainer does not give doses, supplements, medicines or plans.",
       "If this concerns you, talk to a clinician.",
