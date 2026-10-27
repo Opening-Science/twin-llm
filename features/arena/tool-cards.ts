@@ -45,6 +45,7 @@ const TITLES: Readonly<Record<string, string>> = {
   compare_windows: "Compared two windows",
   range_position: "Placed a value against its published range",
   convert_unit: "Converted a unit",
+  cohort_position: "Placed a value among the synthetic cohort",
   show_view: "Showed a view",
   list_views: "Listed this thread's views",
   open_view: "Reopened a view",
@@ -94,6 +95,9 @@ const REFUSAL_NOTES: Readonly<Record<string, string>> = {
   NO_ROWS: "No reading for that measure in this window.",
   NO_PUBLISHED_RANGE: "Anchor v3 has no published range to place that measure against.",
   UNIT_MISMATCH: "The reading's unit is not the published range's, so it was not placed.",
+  COHORT_TOO_SMALL:
+    "Fewer than 10 synthetic people have a value, so no percentile was given.",
+  COHORT_ROW_CAP_EXCEEDED: "Too many cohort rows in this window; nothing was ranked.",
 };
 
 const REFUSED = "The tool declined this call.";
@@ -129,6 +133,8 @@ export const rowCountOf = (output: unknown): number | null => {
   if (Array.isArray(output.subjects)) return output.subjects.length;
   if (Array.isArray(output.views)) return output.views.length;
   if ("n_observations" in output) return count(output.n_observations);
+  // cohort_position: `n` is people with a value; the audit counts rows read.
+  if ("rows_read" in output) return count(output.rows_read);
   if (Array.isArray(output.codes)) return sumN(...output.codes);
   if ("baseline" in output && "target" in output)
     return sumN(output.baseline, output.target);

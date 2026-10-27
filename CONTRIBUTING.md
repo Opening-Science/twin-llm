@@ -154,6 +154,12 @@ paths. Reviews check, with file and line evidence:
 Maintainers merge. Contributors do not merge, force-push shared branches or change
 repository settings.
 
+Maintainers merge with `scripts/merge-green.sh <pr> [<pr> ...]`, never a bare loop. It
+merges one pull request at a time and only when it targets `main`, merges cleanly, is up
+to date with `main`, and every check on its head commit ran and passed. After each merge
+it waits for `main`'s CI on the new commit to finish green before the next one. A pending,
+cancelled, failed or missing check stops it.
+
 ## Maintainers
 
 For a change to product behaviour, write the plan in the issue and implement it only after

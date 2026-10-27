@@ -17,7 +17,8 @@ export type SavedResponseRow = Readonly<{
   modelName: string;
   /** Index among the models picked for the turn; null on older rows. */
   position: number | null;
-  status: ResponseState["status"];
+  /** REFUSED: no model ran, and `text` is TwinLLM's refusal sentence. */
+  status: ResponseState["status"] | "REFUSED";
   text: string;
   reasoningText: string | null;
   attribution: unknown;
@@ -47,8 +48,24 @@ export type SavedResponseRow = Readonly<{
  * reloaded answer draws the same chart it streamed. The answer's numbers are
  * matched to the stored outputs here (`number-sources.ts`), so the browser gets
  * which call and row holds each number, not what the row says.
+ *
+ * A refused row reads the way the live refusal did: a failed answer carrying
+ * the stored sentence and no text. It is not STREAMING, so a reload does not
+ * ask the model again.
  */
 export const toSavedResponseState = (row: SavedResponseRow): ResponseState => {
+  if (row.status === "REFUSED") {
+    return {
+      id: row.id,
+      modelId: row.modelId,
+      modelName: row.modelName,
+      status: "FAILED",
+      text: "",
+      refusal: row.text,
+      completedAt: row.completedAt?.toISOString() ?? null,
+      metrics: null,
+    };
+  }
   const parts = savedToolParts(row.toolParts);
   const stored = toStoredToolParts(row.toolParts) ?? [];
   const rowCounts = new Map(stored.map((part) => [String(part.seq), part.rowCount]));

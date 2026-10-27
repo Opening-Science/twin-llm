@@ -45,6 +45,13 @@ export const PROVIDER_NOT_PERMITTED_FOR_DATA_MODE =
 export const PROVIDER_NOT_PERMITTED_ERROR =
   "PROVIDER_NOT_PERMITTED_FOR_DATA_MODE: This model provider may not receive personal data or wearable context. Use local Ollama, or Exoscale with EXOSCALE_PERSONAL_DATA=consented-pilot for a consented pilot.";
 
+/**
+ * The same refusal as a person reads it in the answer column: no code and no
+ * setting names. It is stored on the refused answer's row and shown on reload.
+ */
+export const PROVIDER_NOT_PERMITTED_SENTENCE =
+  "This model provider may not receive personal data or wearable context, so this model did not run.";
+
 export type ProviderRequest = Readonly<{
   mode: DataMode;
   provider: LlmProvider;

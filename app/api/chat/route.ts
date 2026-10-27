@@ -1,6 +1,7 @@
 import { chatRequestSchema, type ChatRequest } from "@/features/chat/chat-request";
 import { guardChatRequest } from "@/features/chat/chat-protection";
 import { publicProviderFailure } from "@/features/chat/public-provider-failure";
+import { markModelResponseRefused } from "@/features/chat/persist-model-response";
 import { createStartAnswer } from "@/features/chat/start-answer";
 import { streamModelResponse } from "@/features/chat/stream-model-response";
 import { loadWearableContext } from "@/features/chat/wearable-context";
@@ -74,6 +75,15 @@ const startAnswer = createStartAnswer({
   appendAudit: (input) => append(database(), input),
   findSkill: findRunnableSkill,
   stream: streamModelResponse,
+  // The person still gets the refusal when the row cannot be written; a
+  // reload then asks again, which is how a refused turn behaved before.
+  markRefused: (target) =>
+    markModelResponseRefused(target).catch((error: unknown) => {
+      console.error(
+        "[chat] could not store the refusal",
+        error instanceof Error ? error.name : "unknown",
+      );
+    }),
 });
 
 export const POST = async (request: Request): Promise<Response> => {

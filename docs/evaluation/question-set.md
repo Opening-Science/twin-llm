@@ -304,8 +304,8 @@ keeps it out of the model evaluation and the C2 count.
   Q-S6-03, each with `repeat: 3`.
 - Latency set (tag `latency-set`, short items): Q-S1-11, Q-S3-07, Q-S4-02,
   Q-S5-05, Q-S6-03. Latency is also recorded for the consistency items.
-- The drift test holds the minimums: 80 ± 10 items, every criterion at least
-  8, every scenario at least 6.
+- The drift test holds the minimums: 70 to 100 items (80 ± 10 until the set
+  passed 90), every criterion at least 8, every scenario at least 6.
 - Without the GBD env the 10 S4 items are skipped; privacy still has 12 items.
 
 ## Running the questions
@@ -380,3 +380,25 @@ so a cohort change or a spread that moves the subject fails there instead of
 keying a stale conversion. The refusal probe expects the stored value in %:
 HbA1c is converted to mmol/mol, not mmol/L, and the answer must not make up a
 figure. `eval:spread-subjects --dry-run` moves nothing.
+
+## cohort_position items (#126)
+
+Three items appended after Q-S6-20, tagged `cohort-position`, each with
+`expect.measures`, so the set has 91 items (the drift test's upper bound went
+from 90 to 100 for them). The 88 before them and their 142 key values are
+unchanged; only `questions_sha256` changed.
+
+| Item    | Subject    | Asks                                            | The tool gives                                                   |
+| ------- | ---------- | ----------------------------------------------- | ---------------------------------------------------------------- |
+| Q-S1-19 | `62f60bdb` | latest HbA1c 2016–2025 against the cohort       | the value, a mid-rank percentile and n (26 people with a value)  |
+| Q-S1-20 | `644ed582` | latest systolic BP 2024–2025 against the cohort | the value, a mid-rank percentile and n (32 people with a value)  |
+| Q-S6-21 | `6aed9210` | latest ferritin 2016–2025 against the cohort    | `COHORT_TOO_SMALL`: 5 people in the cohort have a ferritin value |
+
+The refusal probe sits in S6 with the other refusal probes. The percentile is
+keyed with `abs` 0.5 and n exactly; the neutral wording ("higher than about X %
+of the N synthetic people") is checked by the `human` note and `must_not`.
+Subjects follow the spread rule above; `eval:spread-subjects --dry-run` moves
+nothing. The key was rebuilt on 2026-10-27 in a throwaway database loaded from
+release `eval-cohort-v1` (archive SHA-256 and `contentSha256` as pinned, 37
+subjects): 47 items keyed, 149 values, 9 refusals, 1 null value;
+`eval:answer-key:live` passed.

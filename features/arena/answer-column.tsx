@@ -21,7 +21,7 @@ const FailedAnswer = ({
     <p className="text-destructive flex items-center gap-2 font-medium">
       <Mark name="alert" />
       {refusal !== undefined
-        ? "The skill did not run"
+        ? "This model did not run"
         : lost
           ? "The connection closed while this model was still working"
           : "No answer came back from this model"}
