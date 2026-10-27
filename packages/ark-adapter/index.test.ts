@@ -4,6 +4,7 @@ mock.module("server-only", () => ({}));
 
 export const ARK_ADAPTER_BARREL_KEYS = [
   "ARK_CLI_VERSION",
+  "ARK_FIRMWARE_VERSION",
   "ARK_PATH_PREFIX",
   "ARK_SLOT_NAMES",
   "GENOME_SOURCE_DISABLED",
@@ -14,6 +15,7 @@ export const ARK_ADAPTER_BARREL_KEYS = [
   "buildArkArgv",
   "dataList",
   "dataPaths",
+  "doctor",
   "errorFromExitCode",
   "errorFromObject",
   "hostTimeoutMsForCliTimeout",

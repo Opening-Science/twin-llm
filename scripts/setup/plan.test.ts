@@ -9,10 +9,12 @@ import {
   type DatabaseProbe,
   type DetectedState,
   evalCohortState,
+  exampleSummary,
   formatChecklist,
   type Outcome,
   pageReadiness,
   planSetup,
+  type SetupOptions,
   type Step,
 } from "./plan";
 import { TOOL_IDS, type ToolId, type ToolProbe } from "./prerequisites";
@@ -55,6 +57,7 @@ const okDatabase = (
   appliedMigrations: ["20261025000000_baseline"],
   warehouse,
   evalBundles,
+  exampleThread: false,
 });
 
 /** The warehouse Peter's Mac had: the evaluation cohort from before the dates were fixed. */
@@ -69,6 +72,8 @@ const ready: DetectedState = {
   tools: tools(),
   envFile: true,
   dataMode: "synthetic",
+  authOff: true,
+  localUserId: "local",
   database: okDatabase([cohortRows("synthea-v4-seed42", 37)], PINNED_BUNDLES),
   migrations: ["20261025000000_baseline"],
   openTwin: { pinned: PIN, synced: PIN },
@@ -97,6 +102,9 @@ const fresh: DetectedState = {
   riggedMissing: ["anny-adult-m.rigged.glb", "anny-adult-f.rigged.glb"],
 };
 
+/** The cohort step's index from the end: the example thread comes after it. */
+const COHORT = -2;
+
 const summary = (steps: readonly Step[]): readonly string[] =>
   steps.map((step) =>
     step.status === "run"
@@ -115,6 +123,7 @@ describe("planSetup", () => {
       "anatomy: skip all installed",
       "rigged: skip both installed",
       "cohort: skip warehouse already has synthea-v4-seed42 (37 subjects)",
+      "example: run insert-example",
     ]);
   });
 
@@ -128,6 +137,7 @@ describe("planSetup", () => {
       "anatomy: run command",
       "rigged: run install-rigged",
       "cohort: run load-eval",
+      "example: run insert-example",
     ]);
   });
 
@@ -180,7 +190,7 @@ describe("planSetup", () => {
   });
 
   test("the eval cohort is downloaded from its release, with Synthea as the fallback", () => {
-    expect(planSetup(fresh, { cohort: "eval" }).at(-1)).toEqual({
+    expect(planSetup(fresh, { cohort: "eval" }).at(COHORT)).toEqual({
       id: "cohort",
       title: "Synthetic cohort in the warehouse",
       after: ["migrate"],
@@ -195,7 +205,7 @@ describe("planSetup", () => {
       planSetup(
         { ...fresh, platform: "linux", tools: tools(["java"]) },
         { cohort: "eval" },
-      ).at(-1),
+      ).at(COHORT),
     ).toEqual({
       id: "cohort",
       title: "Synthetic cohort in the warehouse",
@@ -217,7 +227,7 @@ describe("planSetup", () => {
       planSetup(
         { ...fresh, platform: "linux", tools: tools(["zstd"]) },
         { cohort: "eval" },
-      ).at(-1),
+      ).at(COHORT),
     ).toEqual({
       id: "cohort",
       title: "Synthetic cohort in the warehouse",
@@ -229,21 +239,23 @@ describe("planSetup", () => {
   });
 
   test("--generate-cohort generates with Synthea, and without Java it is blocked", () => {
-    expect(planSetup(fresh, { cohort: "eval", generateCohort: true }).at(-1)).toEqual({
-      id: "cohort",
-      title: "Synthetic cohort in the warehouse",
-      after: ["migrate"],
-      status: "run",
-      action: { kind: "load-eval", source: { kind: "generate" } },
-      note: "--generate-cohort: generate synthea-v4-seed42 with Synthea (fixed seed and dates), verify, ingest",
-    });
+    expect(planSetup(fresh, { cohort: "eval", generateCohort: true }).at(COHORT)).toEqual(
+      {
+        id: "cohort",
+        title: "Synthetic cohort in the warehouse",
+        after: ["migrate"],
+        status: "run",
+        action: { kind: "load-eval", source: { kind: "generate" } },
+        note: "--generate-cohort: generate synthea-v4-seed42 with Synthea (fixed seed and dates), verify, ingest",
+      },
+    );
     expect(
       summary(
         planSetup(
           { ...fresh, platform: "linux", tools: tools(["java"]) },
           { cohort: "eval", generateCohort: true },
         ),
-      ).at(-1),
+      ).at(COHORT),
     ).toBe(
       "cohort: blocked Java not found: sudo apt install openjdk-21-jre-headless. --generate-cohort needs Java; without the flag setup downloads the pinned files instead. Then run bun run setup:local again to load synthea-v4-seed42.",
     );
@@ -253,7 +265,7 @@ describe("planSetup", () => {
     const cohort = planSetup(
       { ...fresh, platform: "linux", tools: tools(["java", "zstd"]) },
       { cohort: "eval" },
-    ).at(-1);
+    ).at(COHORT);
     expect(cohort).toEqual({
       id: "cohort",
       title: "Synthetic cohort in the warehouse",
@@ -270,7 +282,7 @@ describe("planSetup", () => {
       tools: { ...tools(["zstd"]), java: { output: 'openjdk version "17.0.2"' } },
       database: okDatabase([cohortRows("open-twin-synthea-trimmed-3", 3)]),
     };
-    const cohort = planSetup(state, { cohort: "eval" }).at(-1);
+    const cohort = planSetup(state, { cohort: "eval" }).at(COHORT);
     expect(cohort?.status).toBe("blocked");
     expect(cohort?.status === "blocked" ? cohort.reason : "").toBe(
       "zstd not found: brew install zstd; Java 17.0.2 found, 21 or newer needed: brew install openjdk@21 && echo 'export PATH=\"$(brew --prefix openjdk@21)/bin:$PATH\"' >> ~/.zshrc. Then run bun run setup:local again to load synthea-v4-seed42.",
@@ -278,7 +290,7 @@ describe("planSetup", () => {
   });
 
   test("--cohort-10k downloads when that cohort is empty, even with the eval cohort loaded", () => {
-    expect(summary(planSetup(ready, { cohort: "10k" })).at(-1)).toBe(
+    expect(summary(planSetup(ready, { cohort: "10k" })).at(COHORT)).toBe(
       "cohort: run load-10k",
     );
   });
@@ -288,21 +300,23 @@ describe("planSetup", () => {
       ...ready,
       database: okDatabase([cohortRows("synthea-v4-seed42-10k", 10_000)]),
     };
-    expect(summary(planSetup(loaded, { cohort: "10k" })).at(-1)).toBe(
+    expect(summary(planSetup(loaded, { cohort: "10k" })).at(COHORT)).toBe(
       "cohort: skip synthea-v4-seed42-10k already has 10000 subjects",
     );
     expect(
-      summary(planSetup({ ...ready, freeDiskBytes: 20e9 }, { cohort: "10k" })).at(-1),
+      summary(planSetup({ ...ready, freeDiskBytes: 20e9 }, { cohort: "10k" })).at(COHORT),
     ).toBe(
       "cohort: blocked the 10k cohort needs about 45.0 GB free here, 20.0 GB available",
     );
     expect(
-      summary(planSetup({ ...ready, tools: tools(["zstd"]) }, { cohort: "10k" })).at(-1),
+      summary(planSetup({ ...ready, tools: tools(["zstd"]) }, { cohort: "10k" })).at(
+        COHORT,
+      ),
     ).toBe("cohort: blocked zstd not found: brew install zstd");
   });
 
   test("--skip-cohort skips the cohort only", () => {
-    expect(summary(planSetup(fresh, { cohort: "none" })).at(-1)).toBe(
+    expect(summary(planSetup(fresh, { cohort: "none" })).at(COHORT)).toBe(
       "cohort: off not loaded (--skip-cohort)",
     );
   });
@@ -318,7 +332,7 @@ describe("planSetup", () => {
       "database: blocked Postgres is not reachable at DATABASE_URL (ECONNREFUSED): brew install postgresql@18 && brew services start postgresql@18",
       "migrate: blocked needs the database",
     ]);
-    expect(steps.at(-1)).toBe("cohort: blocked needs the database");
+    expect(steps.at(COHORT)).toBe("cohort: blocked needs the database");
   });
 
   test("missing pgvector names the package for the server's major version", () => {
@@ -342,7 +356,7 @@ describe("planSetup", () => {
 
   test("an evaluation cohort that is not the pinned one is reported stale, not skipped", () => {
     expect(
-      planSetup({ ...ready, database: OLD_EVAL }, { cohort: "eval" }).at(-1),
+      planSetup({ ...ready, database: OLD_EVAL }, { cohort: "eval" }).at(COHORT),
     ).toEqual({
       id: "cohort",
       title: "Synthetic cohort in the warehouse",
@@ -358,7 +372,7 @@ describe("planSetup", () => {
       planSetup(
         { ...ready, database: OLD_EVAL },
         { cohort: "eval", reloadCohort: true },
-      ).at(-1),
+      ).at(COHORT),
     ).toEqual({
       id: "cohort",
       title: "Synthetic cohort in the warehouse",
@@ -373,16 +387,16 @@ describe("planSetup", () => {
       note: "download eval-cohort-synthea-v4-seed42-20260101.tar.zst from release eval-cohort-v1, verify (Synthea generates it instead if the release cannot be reached); then delete its 35 subjects' warehouse rows in one transaction and ingest the pinned cohort",
     });
     // Asked for explicitly, so it reloads a current cohort too.
-    expect(summary(planSetup(ready, { cohort: "eval", reloadCohort: true })).at(-1)).toBe(
-      "cohort: run reload-eval",
-    );
+    expect(
+      summary(planSetup(ready, { cohort: "eval", reloadCohort: true })).at(COHORT),
+    ).toBe("cohort: run reload-eval");
   });
 
   test("--reload-cohort --generate-cohort generates before it deletes", () => {
     const step = planSetup(
       { ...ready, database: OLD_EVAL },
       { cohort: "eval", reloadCohort: true, generateCohort: true },
-    ).at(-1);
+    ).at(COHORT);
     expect(step?.status === "run" ? step.action : null).toEqual({
       kind: "reload-eval",
       cohortId: "synthea-v4-seed42",
@@ -401,7 +415,7 @@ describe("planSetup", () => {
           },
           { cohort: "eval", reloadCohort: true },
         ),
-      ).at(-1),
+      ).at(COHORT),
     ).toBe("cohort: run load-eval");
     expect(
       summary(
@@ -409,7 +423,7 @@ describe("planSetup", () => {
           { ...ready, database: OLD_EVAL, tools: tools(["java", "zstd"]) },
           { cohort: "eval", reloadCohort: true },
         ),
-      ).at(-1),
+      ).at(COHORT),
     ).toBe(
       "cohort: blocked zstd not found: brew install zstd; Java not found: brew install openjdk@21 && echo 'export PATH=\"$(brew --prefix openjdk@21)/bin:$PATH\"' >> ~/.zshrc. --reload-cohort loads synthea-v4-seed42 first; nothing was deleted.",
     );
@@ -652,5 +666,61 @@ describe("dataPageFindings", () => {
       "ok DATA_MODE=synthetic",
       "no DATABASE_URL is not set in .env.local",
     ]);
+  });
+});
+
+describe("the example thread step", () => {
+  const exampleOf = (state: DetectedState, options: SetupOptions = { cohort: "eval" }) =>
+    summary(planSetup(state, options)).at(-1);
+  const withThread: DetectedState = {
+    ...ready,
+    database: {
+      ...okDatabase([cohortRows("synthea-v4-seed42", 37)]),
+      exampleThread: true,
+    },
+  };
+
+  test("runs for the local user, after the migrations", () => {
+    const step = planSetup(fresh, { cohort: "eval" }).at(-1);
+    expect(step?.after).toEqual(["migrate"]);
+    expect(step?.status === "run" ? step.action : null).toEqual({
+      kind: "insert-example",
+      clerkId: "local",
+    });
+  });
+
+  test("is skipped when the thread exists, off on request, with auth on or personal data", () => {
+    expect(exampleOf(withThread)).toBe(
+      "example: skip already in Your threads for LOCAL_USER_ID=local",
+    );
+    expect(exampleOf(ready, { cohort: "eval", skipExample: true })).toBe(
+      "example: off not added (--skip-example)",
+    );
+    expect(exampleOf({ ...ready, authOff: false })).toBe(
+      "example: off auth is on (no LOCAL_MVP or AUTH_DISABLED), so there is no local user",
+    );
+    expect(exampleOf({ ...ready, dataMode: "personal" })).toBe(
+      "example: off only with DATA_MODE=synthetic (now personal)",
+    );
+    expect(
+      exampleOf({ ...fresh, database: { kind: "unreachable", detail: "ECONNREFUSED" } }),
+    ).toBe("example: blocked needs the database");
+  });
+
+  test("doctor reports it without counting it as something to fix", () => {
+    expect(exampleSummary(withThread)).toEqual({
+      ok: true,
+      detail: '"Example (synthetic)" in Your threads for LOCAL_USER_ID=local',
+    });
+    expect(exampleSummary(ready)).toEqual({
+      ok: false,
+      detail:
+        '"Example (synthetic)" not in Your threads: bun run setup:local adds it (--skip-example leaves it out)',
+    });
+    expect(exampleSummary({ ...ready, dataMode: "personal" })).toEqual({
+      ok: false,
+      detail:
+        '"Example (synthetic)" not added: only with DATA_MODE=synthetic (now personal)',
+    });
   });
 });

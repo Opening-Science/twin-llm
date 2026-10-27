@@ -17,16 +17,26 @@ export const GENOME_EMPTY = "No genome twin on this account.";
 /** The rsid-genotypes run and its released report. */
 export const GENOME_REPORT_COPY = {
   title: "rsID genotypes",
-  note: "Runs the rsid-genotypes app on your Ark. It reads eleven public CPIC / PharmGKB sites and releases only their recorded genotypes, after you approve on your phone. The report stays on this machine.",
+  note: "Runs the rsid-genotypes app on your Ark. It reads up to eleven public CPIC / PharmGKB sites, each one you switch on, and releases only their recorded genotypes after you review the report on your phone. The report stays on this machine.",
   run: "Run on Ark",
   runAgain: "Run again",
   empty: "No report released yet.",
-  approveTitle: "Approve on your phone",
-  approveBody:
-    "The Ark is waiting for you to approve this run in the Companion app. Nothing is released until you do.",
-  approveNote:
-    "This can take about a minute. Keep this tab open and the Ark Hub tab closed.",
+  approveTitle: "Waiting for your phone",
+  steps: [
+    {
+      title: "Approve on your phone",
+      body: "Approve the run in Ark Companion within 5 minutes, and switch on the sites you want read.",
+    },
+    {
+      title: "Review and release the report on your phone",
+      body: "Once the app ends, read the report and release it within 10 minutes. Nothing reaches this machine until you do.",
+    },
+  ],
+  approveNote: "Keep this tab open and the Ark Hub tab closed.",
   noCall: "no call",
+  notGranted: "not granted",
+  notGrantedNote:
+    "Not granted: the site was switched off at approval or is not on the Ark. The app cannot tell which.",
   tableCaption: "Recorded genotypes at the eleven panel sites",
 } as const;
 

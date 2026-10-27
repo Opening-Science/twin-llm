@@ -1,0 +1,48 @@
+{
+  "version": "0.5.0",
+  "checks": [
+    {
+      "name": "ark",
+      "result": "ok",
+      "detail": "0.5.0, the newest release",
+      "hint": null
+    },
+    { "name": "hardware", "result": "ok", "detail": "none attached", "hint": null },
+    { "name": "emulator", "result": "ok", "detail": "1 running", "hint": null },
+    { "name": "cache", "result": "ok", "detail": "80 B in ~/.cache/ark", "hint": null },
+    { "name": "connection", "result": "ok", "detail": "authenticated", "hint": null },
+    {
+      "name": "compatibility",
+      "result": "ok",
+      "detail": "firmware supports this tool",
+      "hint": null
+    },
+    { "name": "environment", "result": "ok", "detail": "release", "hint": null },
+    {
+      "name": "firmware",
+      "result": "ok",
+      "detail": "0.13.1-36da538, the newest published",
+      "hint": null
+    },
+    { "name": "sync", "result": "ok", "detail": "keys and clock accepted", "hint": null },
+    {
+      "name": "registry",
+      "result": "fail",
+      "detail": "genuinity check failed: HTTP 400 Bad Request",
+      "hint": null
+    },
+    { "name": "pairing", "result": "ok", "detail": "not paired", "hint": null },
+    {
+      "name": "relay",
+      "result": "skip",
+      "detail": "needs a paired Ark and cloud sync",
+      "hint": null
+    },
+    {
+      "name": "slots",
+      "result": "skip",
+      "detail": "needs an unlocked Ark and cloud sync",
+      "hint": null
+    }
+  ]
+}

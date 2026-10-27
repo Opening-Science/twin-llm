@@ -324,3 +324,26 @@ rule with its thresholds, and what stays human.
   not describe a direction.
 - The out-of-catalogue probes Q-S3-12, Q-S4-09, Q-S4-10, where offering a
   listed alternative is allowed.
+
+## range_position items (#119)
+
+Four items appended at the end of `evaluation/questions.v1.json`, tagged
+`range-position`, so the set has 85 items. The 81 before them and their 131 key
+values are unchanged, so earlier results still compare item by item; only
+`questions_sha256` changed.
+
+| Item    | Subject    | Asks                                     | The tool gives                                                     |
+| ------- | ---------- | ---------------------------------------- | ------------------------------------------------------------------ |
+| Q-S1-15 | `35b353dd` | latest HbA1c 2016–2025 against the range | a value, the Anchor v3 range (≤ 5.7 %) and a position              |
+| Q-S1-16 | `46ee9d82` | latest total cholesterol 2012–2020       | a value, no position: the range depends on age (`depends_on`)      |
+| Q-S6-18 | `4f083ce3` | latest haemoglobin 2016–2025             | `NO_PUBLISHED_RANGE`: Anchor v3 publishes none for haemoglobin     |
+| Q-S6-19 | `5ba0a3f3` | latest HbA1c 2010–2014                   | `NO_ROWS`: no reading in that window (`none` in `spread-subjects`) |
+
+Subjects follow the spread rule above (fewest items, then lowest `subject_ref`);
+`eval:spread-subjects --dry-run` moves nothing. The key is numbers and refusal
+codes only, so the position and `depends_on` are checked by the `human` note and
+`must_not`, not by the key. The key was rebuilt on 2026-10-27 in a throwaway
+database loaded from release `eval-cohort-v1` (`setup:local`'s download code):
+41 items keyed, 136 values, 7 refusals, 1 null value.
+
+`expect.measures` is not on `main` yet, so these items do not carry it.

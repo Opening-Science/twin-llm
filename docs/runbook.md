@@ -14,6 +14,7 @@ bun run setup:local -- --cohort-10k    # the 10,000-person release instead of th
 bun run setup:local -- --skip-cohort   # everything but the cohort
 bun run setup:local -- --reload-cohort # replace a stale evaluation cohort with the pinned one
 bun run setup:local -- --generate-cohort # generate the eval cohort with Synthea instead of downloading it
+bun run setup:local -- --skip-example  # do not add the "Example (synthetic)" thread
 bun run doctor                         # read-only: the same checks, what each page needs, why /data is empty
 ```
 
@@ -23,7 +24,8 @@ bun run doctor                         # read-only: the same checks, what each p
 4. `anatomy:fetch --skip-rigged` when an atlas or demo body is missing. When a rigged body is missing, `anatomy:fetch --rigged <id>` downloads it from the `anatomy-rigged-v1` release; only if that fails, `anatomy:bake-rigged` bakes it (needs uv; without uv the step is skipped with the install line). Walk/Idle/Dance say "Run bun run anatomy:fetch." until then.
 5. When the warehouse has `synthea-v4-seed42` but not the pinned copy (subjects other than 37, or ingested bundles whose fingerprint is not `bundleSetSha256` in `scripts/setup/cohort-pins.ts`: the SHA-256 of the sorted bundle hashes, computed in SQL from `bundles`), the step is `[stale]` with the fix and nothing is loaded. `--reload-cohort` downloads (or generates) and verifies the pinned cohort first, then deletes that cohort's rows from `observations`, `observation_non_numeric`, `bundles` and `subjects` (each scoped by the cohort id, in one transaction that rolls back if any other cohort's counts move or a row of this cohort is left), then ingests. Only `synthea-v4-seed42` can be reloaded. When no allowlisted cohort other than the trimmed fixtures has subjects: downloads `eval-cohort-synthea-v4-seed42-20260101.tar.zst` (4,911,581 bytes) from release `eval-cohort-v1` to `.synthea/downloads/` (kept for re-runs; redirects only to GitHub's asset hosts), checks its SHA-256, unpacks it with zstd, checks 37 files, `contentSha256` `f4941fab7a56e17f9dd66b6b6e0fbed379dab8c564c6024831c5fd4aa0ba09eb` and the manifest's cohort id, puts it in `.synthea/fhir`, then `warehouse:ingest`. When the release is not published yet or cannot be reached, setup says so and runs `synthea:generate -- --preset eval` instead (needs Java); `--generate-cohort` does that on purpose. A generated cohort is checked against the same pin; a mismatch ingests nothing, and on arm64 (Apple Silicon) the checklist says it is a platform difference (floating point) and to use the download (`docs/warehouse.md`, "Other CPU architectures"). Without zstd setup generates; without zstd and Java, an empty warehouse gets the three trimmed fixtures instead and the checklist says what to install.
 6. `--cohort-10k`: checks the release's `SHA256SUMS` against the pinned archive hash, downloads `synthea-v4-seed42-10k-fhir.tar.zst` (925,850,184 bytes) to `.synthea/downloads/` (kept for re-runs), checks its sha256, unpacks with zstd (about 41 GB), checks 11,551 files and the release's content checksum, ingests as `synthea-v4-seed42-10k` (rejected bundles are counted, not fatal), then deletes the unpacked files. Refused with less than 45 GB free.
-7. Prints a checklist: `[ready]`, `[skipped]` with the reason and fix, `[off]` for `--skip-cohort`, `[stale]` with the fix, `[FAILED]`. Exit 1 only when a step failed.
+7. Adds one thread, "Example (synthetic)", to Your threads for `LOCAL_USER_ID`: a heart-rate chart question about evaluation-cohort subject `29bbf012-3e7f-d6ab-a986-b5d9915f1900`, answered by `qwen3:4b`, with its chart and tool cards. It comes from `scripts/setup/fixtures/example-thread.json`, the stored answer of one real local run on 27 Oct 2026, so no model is called. Only with `LOCAL_MVP` or `AUTH_DISABLED` and `DATA_MODE=synthetic`. Before inserting, setup checks the fixture: no wearable keys or attribution, only warehouse and chart tools, the one synthetic subject, and tool outputs that still match their hashes. Skipped when the thread exists; `--skip-example` leaves it out. `bun run doctor` shows whether it is there.
+8. Prints a checklist: `[ready]`, `[skipped]` with the reason and fix, `[off]` for `--skip-cohort` or `--skip-example`, `[stale]` with the fix, `[FAILED]`. Exit 1 only when a step failed.
 
 `bun run doctor` also lists what the Data page reads: `DATA_MODE`, then every cohort in `subjects` with whether it is in `SYNTHETIC_COHORTS` (`packages/query-tools/scope.ts`), how many of its subjects are `is_synthetic`, whether it has observation rows, and whether the evaluation cohort is stale. The page lists a cohort only when none of those says `[no]`.
 
@@ -433,8 +435,8 @@ time. A second command or an open Hub tab returns `device-busy`.
 
 ### `bun test packages/ark-adapter`
 
-Mocked spawn fixtures for `ok`, `locked`, `unpaired`, `busy`, `refused`,
-`awaiting_approval`, and `error`. `RUN_ARK` is unset, so the live hardware test
+Mocked spawn fixtures (CLI 0.5.0 shapes) for `ok`, `locked`, `unpaired`, `busy`, `refused`,
+`awaiting_approval`, `undelivered`, `outdated`, `rejected`, `app_failed` and `error`. `RUN_ARK` is unset, so the live device test
 is skipped.
 
 ```sh
@@ -457,19 +459,20 @@ bun run ark:build
 bun run ark:test
 ```
 
-- Good: `ark:test` prints cargo 6 passed, then `wasmtime two-pass goldens ok`
+- Good: `ark:test` prints cargo 8 + 4 passed, then `wasmtime two-pass goldens ok`
   when the WASI toolchain is installed. Local Homebrew rustc 1.98 without
   `wasm32-wasip1` still runs the host goldens and skips the wasmtime pass.
 - Last run: 2026-09-28 11:05 CEST, host `cargo test --locked` 6 passed / 0
   failed (wasmtime not on PATH; wasm-opt not installed).
 
-### `RUN_ARK=1` (local hardware only; never CI)
+### `RUN_ARK=1` (local Ark or emulator only; never CI)
 
 Calls `status`, `data list`, and `data paths` against `ARK_DEVICE`, then one
-`appRun` of `rsid-genotypes.wasm`. Asserts the four slot names, that every
+`appRun` (`ark run`) of `rsid-genotypes.wasm`. Asserts the six slot names, that every
 path starts with `v1/genome`, and that the app report has eleven rsID lines
 plus the research-use footer. Close Hub first. Build the wasm first. Does
-not pass `--unlock`. Approve the Companion prompt. The test does not print
+not pass `--unlock`. Approve the run, switch on all eleven sites, then release the
+report in Companion (5 and 10 minute windows). The test does not print
 the report.
 
 ```sh
@@ -477,8 +480,8 @@ bun run ark:build
 GENOME_SOURCE=ark RUN_ARK=1 ARK_DEVICE=alpha-002 bun test packages/ark-adapter
 ```
 
-- Good: one device, four named slots, every path under `v1/genome`, appRun
-  `ok` after phone approval, eleven TSV rows, footer present.
+- Good: one device, six named slots, every path under `v1/genome`, appRun
+  `ok` after both phone steps, eleven TSV rows, footer present.
 - Last run: not a CI gate; local optional after `ark:build` and Companion
   approval. Confirm panel rsIDs are `available` with `ark data paths --json`
   first (read-only).

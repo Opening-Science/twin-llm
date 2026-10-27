@@ -1,6 +1,7 @@
 {
   "error": {
     "code": "not-paired",
-    "message": "Ark is not paired"
+    "message": "the Ark is not paired",
+    "hints": ["run `ark pair`"]
   }
 }

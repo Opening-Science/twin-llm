@@ -1,5 +1,6 @@
 import { describe, expect, mock, test } from "bun:test";
 
+import dataListOk from "@/packages/ark-adapter/fixtures/data-list-ok.json";
 import dataPathsOk from "@/packages/ark-adapter/fixtures/data-paths-ok.json";
 import statusRealShape from "@/packages/ark-adapter/fixtures/status-real-shape.json";
 import type { ArkResult } from "@/packages/ark-adapter";
@@ -173,5 +174,44 @@ describe("GET /api/ark/status", () => {
       error: { code: "device-busy" },
     });
     expect(listed).toBe(0);
+  });
+
+  test("CLI 0.5.0 slots: six of them, catalog release as text", async () => {
+    const response = await getArkStatusResponse({
+      resolveActorId: async () => "user-ark-1",
+      genomeSource: () => "ark",
+      status: async () => ({ status: "ok", data: statusRealShape }),
+      dataList: async () => ({ status: "ok", data: dataListOk }),
+      dataPaths: async () => ({ status: "ok", data: dataPathsOk }),
+    });
+    const body = (await response.json()) as {
+      slots: { slot: string; build: string | null; version: string | null }[];
+    };
+    expect(body.slots.map((row) => [row.slot, row.build, row.version])).toEqual([
+      ["reference-genome", "GRCh38.p14", null],
+      ["gene-annotations", "GRCh38.p14", null],
+      ["small-variants", "GRCh38.p14", null],
+      ["structural-variants", null, null],
+      ["copy-number-variants", null, null],
+      ["variant-catalog", "GRCh38.p14", "157"],
+    ]);
+  });
+
+  test("firmware older than 0.13.1 is its own state", async () => {
+    const response = await getArkStatusResponse({
+      resolveActorId: async () => "user-ark-1",
+      genomeSource: () => "ark",
+      status: async () => ({
+        status: "outdated",
+        error: { code: "firmware-outdated", message: "raw cli text" },
+      }),
+      dataList: unused,
+      dataPaths: unused,
+    });
+    expect(await response.json()).toEqual({
+      enabled: true,
+      state: "outdated",
+      error: { code: "firmware-outdated" },
+    });
   });
 });

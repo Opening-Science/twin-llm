@@ -1,0 +1,11 @@
+{
+  "error": {
+    "code": "ark",
+    "message": "synthetic fixture: the Ark refused the app",
+    "hints": [],
+    "remote": {
+      "code": "9001",
+      "message": "synthetic fixture: required grant has no data"
+    }
+  }
+}

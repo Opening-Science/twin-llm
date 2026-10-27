@@ -27,6 +27,7 @@ describe("openAiToolsFrom", () => {
       "baseline_deviation",
       "coverage",
       "compare_windows",
+      "range_position",
       "show_view",
       "list_views",
       "open_view",

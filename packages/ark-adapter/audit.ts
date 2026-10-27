@@ -17,7 +17,7 @@ export type ArkAuditContext = {
 };
 
 export type ArkAuditTool =
-  "ark.status" | "ark.data.list" | "ark.data.paths" | "ark.app.run";
+  "ark.status" | "ark.doctor" | "ark.data.list" | "ark.data.paths" | "ark.app.run";
 
 export const auditArkCall = async (
   ctx: ArkAuditContext,

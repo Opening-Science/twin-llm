@@ -8,7 +8,10 @@ TwinLLM is an open-source research application by the [Open Science Foundation](
 [![Licence: Apache-2.0](https://img.shields.io/badge/licence-Apache--2.0-blue.svg)](LICENSE)
 ![Research use only](https://img.shields.io/badge/use-research%20only-lightgrey.svg)
 
-![Two open models answering the same question about one synthetic subject side by side. Each answer shows the values it used, the data tools it called, its reasoning and how uncertain it is.](docs/images/compare-light.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/chat-dark.png">
+  <img src="docs/images/chat-light.png" alt="Three local open models answering one heart-rate question about a synthetic evaluation-cohort subject side by side. Each answer shows the data tools it called, its numbers and an inline heart-rate chart; the Outputs panel on the right lists the three charts.">
+</picture>
 
 > **Research use only.** TwinLLM gives no medical advice and is not for diagnostic use. See [Intended use](#intended-use).
 
@@ -88,7 +91,7 @@ ollama pull qwen3:8b && ollama pull nomic-embed-text
 bun run dev
 ```
 
-`setup:local` checks the prerequisites and prints the Homebrew or apt line for anything missing (it never installs system packages). It then writes `.env.local` from `.env.synthetic.example` if there is none, syncs the pinned open-twin packages, installs dependencies, creates the database if it does not exist, applies the migrations, downloads the anatomy atlases and the rigged demo bodies (from the `anatomy-rigged-v1` release; baked with uv only if that fails), and downloads and ingests the 30-person synthetic evaluation cohort (Synthea, fixed seed and dates, from the `eval-cohort-v1` release, checksum verified; `-- --generate-cohort` generates it locally instead, which gives the pinned files on x86_64 only). It is safe to re-run: finished steps are skipped. It ends with a checklist of what is ready and what was skipped and why. An evaluation cohort in the warehouse that is not the pinned one (an older copy with 35 subjects instead of 37) is marked `[stale]`; `bun run setup:local -- --reload-cohort` replaces that cohort's warehouse rows and nothing else. `bun run doctor` prints the same checks and what each page needs, without changing anything.
+`setup:local` checks the prerequisites and prints the Homebrew or apt line for anything missing (it never installs system packages). It then writes `.env.local` from `.env.synthetic.example` if there is none, syncs the pinned open-twin packages, installs dependencies, creates the database if it does not exist, applies the migrations, downloads the anatomy atlases and the rigged demo bodies (from the `anatomy-rigged-v1` release; baked with uv only if that fails), and downloads and ingests the 30-person synthetic evaluation cohort (Synthea, fixed seed and dates, from the `eval-cohort-v1` release, checksum verified; `-- --generate-cohort` generates it locally instead, which gives the pinned files on x86_64 only). It also adds one example thread, "Example (synthetic)", to Your threads: a heart-rate chart question about a synthetic subject, built from a recorded answer, so no model is needed (`-- --skip-example` leaves it out). It is safe to re-run: finished steps are skipped. It ends with a checklist of what is ready and what was skipped and why. An evaluation cohort in the warehouse that is not the pinned one (an older copy with 35 subjects instead of 37) is marked `[stale]`; `bun run setup:local -- --reload-cohort` replaces that cohort's warehouse rows and nothing else. `bun run doctor` prints the same checks and what each page needs, without changing anything.
 
 On macOS with Homebrew:
 

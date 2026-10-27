@@ -11,6 +11,7 @@ import {
   dataPageFindings,
   type DetectedState,
   databaseSummary,
+  exampleSummary,
   type Finding,
   pageReadiness,
   type Readiness,
@@ -36,6 +37,7 @@ export const formatDoctor = (state: DetectedState): string => {
       : `  [missing] ${TOOLS[check.id].label} (${TOOLS[check.id].neededFor}): ${check.detail}. Install: ${check.fix}`,
   );
   const database = databaseSummary(state);
+  const example = exampleSummary(state);
   const openTwin =
     state.openTwin.synced === state.openTwin.pinned
       ? `  [ok]      open-twin packages at ${state.openTwin.pinned.slice(0, 7)}`
@@ -59,6 +61,7 @@ export const formatDoctor = (state: DetectedState): string => {
     `  ${state.envFile ? "[ok]     " : "[missing]"} .env.local${state.envFile ? ` (DATA_MODE=${state.dataMode ?? "unset"})` : `: ${SETUP_COMMAND} creates it`}`,
     `  ${database.ok ? "[ok]     " : "[missing]"} Postgres: ${database.detail}`,
     openTwin,
+    `  ${example.ok ? "[ok]     " : "[off]    "} Example thread: ${example.detail}`,
     "",
     "What each page needs",
     ...pages,

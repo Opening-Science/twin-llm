@@ -184,6 +184,8 @@ describe("answer-key.v1.json", () => {
       "Q-S6-10 MIXED_UNITS",
       "Q-S6-11 MIXED_UNITS",
       "Q-S6-17 SUBJECT_SCOPE_VIOLATION",
+      "Q-S6-18 NO_PUBLISHED_RANGE",
+      "Q-S6-19 NO_ROWS",
     ]);
   });
 

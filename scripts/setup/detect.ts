@@ -23,16 +23,20 @@ import {
   envFileFromExample,
   parseEnvFile,
 } from "./env-file";
-import type {
-  BundleSet,
-  CohortRows,
-  DatabaseProbe,
-  DetectedState,
-  OllamaProbe,
+import {
+  type BundleSet,
+  type CohortRows,
+  type DatabaseProbe,
+  type DetectedState,
+  EXAMPLE_TITLE,
+  type OllamaProbe,
 } from "./plan";
 import { type Platform, TOOL_IDS, type ToolId, type ToolProbe } from "./prerequisites";
 
 type SqlRow = Readonly<Record<string, unknown>>;
+
+/** LOCAL_USER_ID when .env.local does not set it, as in infrastructure/env.ts. */
+export const DEFAULT_LOCAL_USER_ID = "local";
 export type SqlQuery = Readonly<{
   unsafe: (query: string, params?: readonly unknown[]) => Promise<readonly SqlRow[]>;
 }>;
@@ -173,7 +177,24 @@ export const readBundleSet = async (
 };
 
 /** What the database at `url` holds, without changing anything. */
-export const probeDatabase = async (url: string | undefined): Promise<DatabaseProbe> => {
+/** Whether `clerkId` has the example thread; false while the tables are missing. */
+export const readExampleThread = async (
+  sql: SqlQuery,
+  clerkId: string,
+): Promise<boolean> => {
+  if (!(await tableExists(sql, "threads")) || !(await tableExists(sql, "users")))
+    return false;
+  const [row] = await sql.unsafe(
+    'select exists(select 1 from threads t join users u on u.id = t."userId" where u."clerkId" = $1 and t.title = $2) as present',
+    [clerkId, EXAMPLE_TITLE],
+  );
+  return row?.present === true;
+};
+
+export const probeDatabase = async (
+  url: string | undefined,
+  localUserId = DEFAULT_LOCAL_USER_ID,
+): Promise<DatabaseProbe> => {
   if (!url) return { kind: "no-url" };
   if (url === EXAMPLE_DATABASE_URL) return { kind: "placeholder" };
   const target = databaseTarget(url);
@@ -192,7 +213,15 @@ export const probeDatabase = async (url: string | undefined): Promise<DatabasePr
     const evalBundles = warehouse.some((rows) => rows.cohortId === EVAL_COHORT.cohortId)
       ? await readBundleSet(sql, EVAL_COHORT.cohortId)
       : null;
-    return { kind: "ok", ...facts, appliedMigrations, warehouse, evalBundles };
+    const exampleThread = await readExampleThread(sql, localUserId);
+    return {
+      kind: "ok",
+      ...facts,
+      appliedMigrations,
+      warehouse,
+      evalBundles,
+      exampleThread,
+    };
   } catch (error) {
     const code = errorCode(error);
     if (code === "3D000" && target !== null) {
@@ -290,6 +319,7 @@ export const detectState = async (root: string): Promise<DetectedState> => {
   const platform = currentPlatform();
   const { envFile, env } = await effectiveEnv(root, platform);
   const anatomyDir = resolveAnatomyDir(env.ANATOMY_DATA_DIR, root);
+  const localUserId = env.LOCAL_USER_ID || DEFAULT_LOCAL_USER_ID;
   const migrations = (
     await readdir(join(root, "prisma", "migrations"), { withFileTypes: true }).catch(
       () => [],
@@ -300,7 +330,7 @@ export const detectState = async (root: string): Promise<DetectedState> => {
     .sort();
   const [database, ollama, anatomyMissing, riggedMissing, pinned, synced, freeDiskBytes] =
     await Promise.all([
-      probeDatabase(env.DATABASE_URL),
+      probeDatabase(env.DATABASE_URL, localUserId),
       probeOllama(env),
       missingPinned(anatomyDir, [
         ...ATLAS_IDS.map((id) => ATLASES[id]),
@@ -322,6 +352,8 @@ export const detectState = async (root: string): Promise<DetectedState> => {
     >,
     envFile,
     dataMode: env.DATA_MODE ?? null,
+    authOff: env.LOCAL_MVP === "true" || env.AUTH_DISABLED === "true",
+    localUserId,
     database,
     migrations,
     openTwin: { pinned, synced: synced?.trim() ?? null },

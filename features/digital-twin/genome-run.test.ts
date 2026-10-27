@@ -22,10 +22,17 @@ const PRESENT = readFileSync(
   "utf8",
 );
 
+/** `ark data list --json` as CLI 0.5.0 shapes it: `slot` is the name, `id` the number. */
 const listed = (build: string | null) => ({
   slots: [
-    { slot: 1, name: "reference-genome", state: "filled", build: "GRCh38" },
-    { slot: 3, name: "snp-indel-calls", state: "filled", build },
+    {
+      slot: "reference-genome",
+      id: 1,
+      name: "Reference genome",
+      state: "filled",
+      build: "GRCh38.p14",
+    },
+    { slot: "small-variants", id: 3, name: "Small variants", state: "filled", build },
   ],
 });
 
@@ -117,6 +124,7 @@ describe("POST /api/genome/run", () => {
       position: 94781859,
       reference: "G",
       genotype: "A/G",
+      granted: true,
     } as never);
   });
 
@@ -154,9 +162,66 @@ describe("POST /api/genome/run", () => {
     expect(await response.json()).toEqual({
       ok: false,
       code: "refused",
-      message: "The run was declined on your phone. Nothing was released.",
+      message: "You declined the run or the report on your phone; nothing was stored.",
     });
     expect(seen.saved).toEqual([]);
+  });
+
+  test("every 0.5.0 failure ends in its own sentence and stores nothing", async () => {
+    const cases = [
+      [
+        "awaiting_approval",
+        "approval-timeout",
+        "Nobody answered on your phone in time (5 minutes to approve the run, 10 to release the report); nothing was stored.",
+      ],
+      [
+        "outdated",
+        "firmware-outdated",
+        "Ark firmware too old: run `ark firmware update`.",
+      ],
+      [
+        "undelivered",
+        "approval-undelivered",
+        "The request never reached your phone. Open Ark Companion and run again.",
+      ],
+      [
+        "rejected",
+        "ark",
+        "The Ark refused to run the app, for example because no small variants are loaded. Nothing was asked on your phone.",
+      ],
+      ["app_failed", "app-failed", "The app failed on the Ark; nothing was stored."],
+    ] as const;
+    for (const [status, code, message] of cases) {
+      const { ports, seen } = fakePorts({
+        appRun: async () => ({ status, error: { code, message: "raw cli text" } }),
+      });
+      const body = await (await postGenomeRunResponse(ports)).json();
+      expect(body).toEqual({ ok: false, code: status, message });
+      expect(seen.saved).toEqual([]);
+    }
+  });
+
+  test("a report with declined sites is stored; not granted rows count as no call", async () => {
+    const declined = readFileSync(
+      join(import.meta.dir, "../../apps/ark/rsid-genotypes/goldens/declined.tsv"),
+      "utf8",
+    );
+    const { ports, seen } = fakePorts({
+      appRun: async () => ({ status: "ok", data: { report: declined } }),
+    });
+    const body = (await (await postGenomeRunResponse(ports)).json()) as {
+      report: { rows: { rsid: string; genotype: string | null; granted: boolean }[] };
+    };
+    expect(seen.audits[0]?.result).toEqual({
+      stored: true,
+      report_id: "report-1",
+      rows: 11,
+      calls: 9,
+      build_named: true,
+    });
+    expect(body.report.rows.filter((row) => !row.granted).map((row) => row.rsid)).toEqual(
+      ["rs1057910", "rs9923231"],
+    );
   });
 
   test("a busy Ark asks to close the Hub tab", async () => {
@@ -252,9 +317,17 @@ describe("GET /api/genome/report", () => {
 });
 
 describe("arkBuildOf", () => {
-  test("the call slot's build first, then the reference slot's", () => {
+  test("the small-variants build first, then the reference slot's", () => {
     expect(arkBuildOf(listed("hg38"))).toBe("hg38");
-    expect(arkBuildOf(listed(null))).toBe("GRCh38");
+    expect(arkBuildOf(listed(null))).toBe("GRCh38.p14");
     expect(arkBuildOf({ slots: [] })).toBe(null);
+  });
+
+  test("still reads a CLI 0.3.5 list, where the call slot was snp-indel-calls", () => {
+    expect(
+      arkBuildOf({
+        slots: [{ slot: 3, name: "snp-indel-calls", state: "filled", build: "GRCh38" }],
+      }),
+    ).toBe("GRCh38");
   });
 });

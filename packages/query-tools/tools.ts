@@ -15,6 +15,7 @@ import {
   type MixedUnits,
   ROW_CAP_EXCEEDED,
   type ToolRefusal,
+  noRows,
 } from "./refusals";
 import {
   cohortInScope,
@@ -33,6 +34,7 @@ import type {
   subjectWindowInput,
   summaryStatsInput,
   trendInput,
+  rangePositionInput,
 } from "./schemas";
 import { windowEndDate, windowStartDate } from "./schemas";
 import {
@@ -45,7 +47,9 @@ import {
   minimum,
   olsSlopePerDay,
   robustZ,
+  pickReading,
 } from "./stats";
+import { placeReading, type RangePlacement, rangeRefusalFor } from "./range-position";
 import type { z } from "zod";
 
 type ListSubjectsInput = z.infer<typeof listSubjectsInput>;
@@ -762,5 +766,64 @@ export const runWearableCoverage = (
       };
     },
     (result) => result.measures.reduce((total, measure) => total + measure.n, 0),
+    ports,
+  );
+
+type RangePositionInput = z.infer<typeof rangePositionInput>;
+
+export type RangePositionResult = Readonly<{
+  loinc: string;
+  start: string;
+  end: string;
+  /** Rows read in the window. */
+  n: number;
+  effective_at: string;
+  value: number;
+  unit: string;
+}> &
+  RangePlacement;
+
+/**
+ * `range_position`: the code's Anchor v3 range is checked first (no read when
+ * there is none), then one fixed, capped read; the reading is picked in
+ * `pickReading` (stats.ts) and placed in `placeReading` (range-position.ts).
+ */
+export const runRangePosition = (
+  scope: SessionScope,
+  input: RangePositionInput,
+  ports: QueryToolPorts = defaultQueryToolPorts(),
+): Promise<RangePositionResult | ToolRefusal> =>
+  audited<RangePositionResult | ToolRefusal>(
+    scope,
+    "range_position",
+    input,
+    input.subject_ref,
+    async () => {
+      if (!(await subjectInScope(scope, input.subject_ref, ports))) {
+        return SUBJECT_SCOPE_VIOLATION;
+      }
+      const noRange = rangeRefusalFor(input.loinc);
+      if (noRange) return noRange;
+      const rows = await readWindow(ports, input.subject_ref, [input.loinc], input);
+      if (isToolRefusal(rows)) return rows;
+      const units = distinctUnits(rows);
+      if (units.length > 1) return mixedUnits(input.loinc, units);
+      const at = input.pick === "at" && input.at ? new Date(input.at) : null;
+      const reading = pickReading(rows, at);
+      if (!reading) return noRows(input.loinc, at === null ? null : asIso(at));
+      const placed = placeReading(input.loinc, reading);
+      if (isToolRefusal(placed)) return placed;
+      return {
+        loinc: input.loinc,
+        start: input.start,
+        end: input.end,
+        n: rows.length,
+        effective_at: asIso(reading.effectiveAt),
+        value: reading.value,
+        unit: reading.unitUcum,
+        ...placed,
+      };
+    },
+    (result) => ("n" in result ? result.n : 0),
     ports,
   );

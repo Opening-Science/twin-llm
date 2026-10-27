@@ -1,0 +1,14 @@
+{
+  "task": "2",
+  "app": {
+    "name": "fixture",
+    "version": "0.1.0",
+    "develop": false
+  },
+  "success": false,
+  "paths": [],
+  "media": "text/markdown",
+  "stdout": "",
+  "stderr": "",
+  "duration_seconds": 0.1
+}
