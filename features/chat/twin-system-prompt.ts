@@ -1,7 +1,11 @@
 import "server-only";
 
 import type { DataMode } from "@/infrastructure/data-mode-policy";
-import { SHOW_VIEW_TOOL } from "@/infrastructure/chat-view";
+import {
+  LIST_VIEWS_TOOL,
+  OPEN_VIEW_TOOL,
+  SHOW_VIEW_TOOL,
+} from "@/infrastructure/chat-view";
 import { formatForPrompt } from "@/infrastructure/format-measure";
 import type { GoogleHealthSummary } from "@/infrastructure/google-health-types";
 import { offeredSummaries } from "@/infrastructure/offered-keys";
@@ -9,6 +13,11 @@ import type { TurnSkill } from "@/infrastructure/skill-gate";
 import type { OuraSummary } from "@/infrastructure/oura-types";
 import type { VitronicSummary } from "@/infrastructure/vitronic-types";
 import type { WhoopSummary } from "@/infrastructure/whoop-types";
+import {
+  CARBON_X_LABEL,
+  DNA_ASK_TOOL,
+  GENOME_REPORT_TOOL,
+} from "@/packages/carbon-x/constants";
 import { GBD_MODEL_TOOL } from "@/packages/gbd-mcp/constants";
 import { GUIDELINE_MODEL_TOOL } from "@/packages/guidelines/constants";
 import { KNOWLEDGE_MODEL_TOOL } from "@/packages/knowledge/constants";
@@ -132,6 +141,30 @@ const viewSection = (offered: (tool: string) => boolean): readonly string[] =>
     ? [
         "## Charts",
         `To show a measure over time, call \`${SHOW_VIEW_TOOL}\` with kind \`chart.timeseries\`, a measure (a LOINC code with subject, or a wearable key without its date, such as sleep.score) and a window. The server draws it from its own rows; do not list the points yourself.`,
+        ...(offered(OPEN_VIEW_TOOL)
+          ? [
+              `To show a chart from earlier in this thread again, call \`${LIST_VIEWS_TOOL}\` and then \`${OPEN_VIEW_TOOL}\` with its id instead of drawing it again.`,
+            ]
+          : []),
+        "",
+      ]
+    : [];
+
+/**
+ * Only when this request carries the genome tools, which only a personal turn
+ * on a fully local setup ever does. Absent `offeredTools` means none here:
+ * the genome tools are never assumed.
+ */
+const genomeSection = (
+  offeredTools: ReadonlySet<string> | undefined,
+): readonly string[] =>
+  offeredTools?.has(DNA_ASK_TOOL)
+    ? [
+        "## Genome (released Ark report)",
+        `- \`${GENOME_REPORT_TOOL}\` reads the rsid-genotypes report the person released from their Ark. \`${DNA_ASK_TOOL}\` asks ${CARBON_X_LABEL} about one rsID from it; give only the rsID.`,
+        `- Quote a ${CARBON_X_LABEL} answer as that model's, labelled with its name. It is research output, not a fact about the person.`,
+        "- Describe what a variant is known to affect. Never give a dose, and never say to start, stop or change a medicine.",
+        "- `no call` means the call file has nothing there; it is not the reference allele.",
         "",
       ]
     : [];
@@ -230,6 +263,7 @@ export const buildTwinSystemPrompt = (params: {
     "What is unknown, what would change the conclusion, and research caveats.",
     "",
     ...viewSection((tool) => params.offeredTools?.has(tool) ?? true),
+    ...genomeSection(params.offeredTools),
     ...syntheticCohortSection(
       params.mode,
       (tool) => params.offeredTools?.has(tool) ?? true,

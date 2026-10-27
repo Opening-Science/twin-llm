@@ -25,6 +25,8 @@ const view = timeseriesView({
 describe("toolTitle", () => {
   test("known tools read in plain words, others from their name", () => {
     expect(toolTitle("show_view")).toBe("Drew a chart");
+    expect(toolTitle("list_views")).toBe("Listed this thread's charts");
+    expect(toolTitle("open_view")).toBe("Reopened a chart");
     expect(toolTitle("summary_stats")).toBe("Summarised a measure");
     expect(toolTitle("guideline_search")).toBe("Searched guidelines");
     expect(toolTitle("gbd_population")).toBe("Looked up population data");
@@ -269,5 +271,50 @@ describe("a reload rebuilds the cards the stream showed", () => {
       live.map((card, index) => ({ ...card, id: String(index + 1) })),
     );
     expect(saved?.map((card) => card.rowCount)).toEqual([2, 3]);
+  });
+});
+
+describe("view tool cards", () => {
+  test("list_views counts the charts it listed", () => {
+    expect(
+      toolCard({
+        toolCallId: "c1",
+        tool: "list_views",
+        state: "output-available",
+        input: {},
+        output: { views: [{ id: "view-1" }, { id: "view-2" }] },
+      }),
+    ).toEqual({
+      id: "c1",
+      tool: "list_views",
+      title: "Listed this thread's charts",
+      args: [],
+      state: "done",
+      rowCount: 2,
+      note: null,
+    });
+  });
+
+  test("open_view names the chart; refusals read as fixed sentences", () => {
+    const refused = (code: string) =>
+      toolCard({
+        toolCallId: "c2",
+        tool: "open_view",
+        state: "output-available",
+        input: { id: "view-9" },
+        output: { code, error: "synthetic-tool-wording" },
+      });
+    expect(refused("VIEW_NOT_FOUND")).toEqual({
+      id: "c2",
+      tool: "open_view",
+      title: "Reopened a chart",
+      args: [{ label: "Chart", value: "view-9" }],
+      state: "refused",
+      rowCount: 0,
+      note: "No chart with that id in this thread.",
+    });
+    expect(refused("UNKNOWN_MEASURE").note).toBe(
+      "That measure is not a LOINC code or a known wearable key.",
+    );
   });
 });

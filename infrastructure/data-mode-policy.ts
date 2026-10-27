@@ -111,3 +111,73 @@ export const sendsPersonalDataToHostedModel = (input: ProviderRequest): boolean 
 
 /** Audit `tool` name for one personal request sent to a hosted model. */
 export const PERSONAL_DATA_SENT_AUDIT_TOOL = "provider.personal_data_sent";
+
+/**
+ * Genome requests (the Ark report and the Carbon-X DNA model) have their own
+ * gate, stricter than the one above. A request may touch a genotype only when
+ * every one of these holds:
+ *
+ * - DATA_MODE=personal. Synthetic sessions never see a genome.
+ * - GENOME_SOURCE=ark. The report came from the owner's Ark after a phone approval.
+ * - The chat model runs on this machine: ollama on loopback. A genotype is
+ *   never sent to a hosted provider, the consented Exoscale pilot included.
+ * - Carbon-X, the DNA model, is the local sidecar on loopback.
+ *
+ * No remote MCP server or GBD tool ever receives a genotype; those tools take
+ * no genome input at all.
+ */
+export const CARBON_X_PROVIDER = "carbon-x" as const;
+
+export type GenomeRequest = Readonly<{
+  mode: DataMode;
+  genomeSource: "none" | "ark";
+  chatProvider: LlmProvider;
+  chatOnLoopback: boolean;
+  carbonXOnLoopback: boolean;
+}>;
+
+export const GENOME_NOT_PERMITTED = "GENOME_NOT_PERMITTED" as const;
+
+export type GenomeRefusalReason =
+  | "data-mode-not-personal"
+  | "genome-source-not-ark"
+  | "chat-model-not-local"
+  | "carbon-x-not-local";
+
+export type GenomePermitDecision =
+  | { readonly ok: true }
+  | {
+      readonly ok: false;
+      readonly code: typeof GENOME_NOT_PERMITTED;
+      readonly reason: GenomeRefusalReason;
+    };
+
+/**
+ * Running the Ark app and storing its report on this machine needs only the
+ * first two rules: no model sees anything at that step.
+ */
+export const permitGenomeRun = (
+  input: Pick<GenomeRequest, "mode" | "genomeSource">,
+): GenomePermitDecision =>
+  input.mode !== "personal"
+    ? { ok: false, code: GENOME_NOT_PERMITTED, reason: "data-mode-not-personal" }
+    : input.genomeSource !== "ark"
+      ? { ok: false, code: GENOME_NOT_PERMITTED, reason: "genome-source-not-ark" }
+      : { ok: true };
+
+/** The first rule a genome request breaks, in the order above, or ok. */
+export const permitGenomeRequest = (input: GenomeRequest): GenomePermitDecision => {
+  const broken: GenomeRefusalReason | null =
+    input.mode !== "personal"
+      ? "data-mode-not-personal"
+      : input.genomeSource !== "ark"
+        ? "genome-source-not-ark"
+        : input.chatProvider !== "ollama" || !input.chatOnLoopback
+          ? "chat-model-not-local"
+          : !input.carbonXOnLoopback
+            ? "carbon-x-not-local"
+            : null;
+  return broken === null
+    ? { ok: true }
+    : { ok: false, code: GENOME_NOT_PERMITTED, reason: broken };
+};

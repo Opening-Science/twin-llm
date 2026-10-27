@@ -1,0 +1,15 @@
+{
+  "question": "Ask Carbon-X about rs4244285.",
+  "provider": "ollama",
+  "dataMode": "synthetic",
+  "genomeSource": "ark",
+  "script": [
+    { "tool": "genome_report", "input": {} },
+    { "tool": "dna_ask", "input": { "rsid": "rs4244285" } }
+  ],
+  "expect": {
+    "calls": [],
+    "views": [],
+    "refusals": ["genome-not-permitted"]
+  }
+}

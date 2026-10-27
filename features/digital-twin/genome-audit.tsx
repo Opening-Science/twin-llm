@@ -67,7 +67,8 @@ export const GenomeAudit = ({ preview }: GenomeAuditProps) => {
     <article className="surface px-4 py-5">
       <h2 className="font-display text-xl tracking-tight">Audit trail</h2>
       <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
-        Last twenty Ark reads for this account. Hash prefix only — no dataset bytes.
+        Last twenty Ark and genome steps for this account. Hash prefix only — no dataset
+        bytes.
       </p>
       {events.length === 0 ? (
         <p className="text-muted-foreground mt-4 text-sm">No recent Ark reads.</p>

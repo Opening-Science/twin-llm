@@ -1,4 +1,5 @@
 import { EMPTY_VALUE, formatDate, formatNumber } from "@/infrastructure/format-measure";
+import { DNA_ASK_TOOL, GENOME_REPORT_TOOL } from "@/packages/carbon-x/constants";
 import { GBD_MODEL_TOOL } from "@/packages/gbd-mcp/constants";
 import { GUIDELINE_MODEL_TOOL } from "@/packages/guidelines/constants";
 import { KNOWLEDGE_MODEL_TOOL } from "@/packages/knowledge/constants";
@@ -42,9 +43,13 @@ const TITLES: Readonly<Record<string, string>> = {
   coverage: "Checked data coverage",
   compare_windows: "Compared two windows",
   show_view: "Drew a chart",
+  list_views: "Listed this thread's charts",
+  open_view: "Reopened a chart",
   [GUIDELINE_MODEL_TOOL]: "Searched guidelines",
   [GBD_MODEL_TOOL]: "Looked up population data",
   [KNOWLEDGE_MODEL_TOOL]: "Searched TwinLLM notes",
+  [GENOME_REPORT_TOOL]: "Read the released genome report",
+  [DNA_ASK_TOOL]: "Asked Carbon-X (research model) about a variant",
 };
 
 export const toolTitle = (tool: string): string => {
@@ -61,6 +66,27 @@ const REFUSAL_NOTES: Readonly<Record<string, string>> = {
   COHORT_TOOLS_OFF: "The cohort record tools are turned off.",
   SUBJECT_REQUIRED: "A cohort measure needs a subject.",
   NOT_AUDITED: "The read was not recorded, so nothing was drawn.",
+  UNKNOWN_MEASURE: "That measure is not a LOINC code or a known wearable key.",
+  VIEW_NOT_FOUND: "No chart with that id in this thread.",
+  VIEW_NOT_ALLOWED: "This skill does not draw that kind of view.",
+  GENOME_NOT_PERMITTED: "Genome tools run only in personal mode on this machine.",
+  NO_REPORT: "No genome report has been released yet.",
+  RSID_NOT_IN_REPORT: "That variant is not in the released report.",
+  NO_CALL: "The report has no call at that variant, so nothing was asked.",
+  INCOMPLETE_ROW: "The report has no position for that variant.",
+  BUILD_MISMATCH: "The report is not on GRCh38, so no reference window was built.",
+  BUILD_UNKNOWN: "The report's build is unknown, so no reference window was built.",
+  REF_MISMATCH:
+    "The reported reference allele does not match GRCh38, so nothing was asked.",
+  REF_STRAND_MISMATCH: "The report is on the other strand, so nothing was asked.",
+  OUT_OF_RANGE: "That position is outside the reference chromosome.",
+  REFERENCE_NOT_CONFIGURED: "No local GRCh38 reference is set up.",
+  REFERENCE_MISSING: "The local GRCh38 reference lacks that chromosome.",
+  REFERENCE_UNREADABLE: "The local GRCh38 reference could not be read.",
+  CARBON_X_NOT_LOCAL: "Carbon-X is not on this machine, so nothing was sent.",
+  CARBON_X_UNREACHABLE: "The local Carbon-X sidecar is not running.",
+  CARBON_X_TIMEOUT: "The local Carbon-X sidecar did not answer in time.",
+  CARBON_X_FAILED: "The local Carbon-X sidecar did not return an answer.",
 };
 
 const REFUSED = "The tool declined this call.";
@@ -92,6 +118,7 @@ export const rowCountOf = (output: unknown): number | null => {
   if (!isRecord(output)) return null;
   if (Array.isArray(output.rows)) return output.rows.length;
   if (Array.isArray(output.subjects)) return output.subjects.length;
+  if (Array.isArray(output.views)) return output.views.length;
   if ("n_observations" in output) return count(output.n_observations);
   if (Array.isArray(output.codes)) return sumN(...output.codes);
   if ("baseline" in output && "target" in output)
@@ -143,6 +170,7 @@ const ARG_READERS: readonly (readonly [
 ])[] = [
   ["Measure", (input) => list(input.measure ?? input.loinc ?? input.key)],
   ["Kind", (input) => text(input.kind)],
+  ["Variant", (input) => text(input.rsid)],
   ["Window", (input) => span(input.window) ?? span(input)],
   ["Baseline", (input) => span(input.baseline)],
   ["Target", (input) => span(input.target)],
@@ -150,6 +178,7 @@ const ARG_READERS: readonly (readonly [
   ["Window B", (input) => span(input.window_b)],
   ["Subject", (input) => text(input.subject ?? input.subject_ref)],
   ["Cohort", (input) => text(input.cohort_id)],
+  ["Chart", (input) => text(input.id)],
   ["Search", (input) => (text(input.query) ? clipped(text(input.query)!) : null)],
   ["Cause", (input) => text(input.cause)],
   ["Location", (input) => text(input.location)],

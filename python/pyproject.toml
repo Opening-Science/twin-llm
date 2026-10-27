@@ -1,7 +1,7 @@
 [project]
 name = "twinllm-python"
 version = "0.1.0"
-description = "Fine-tuning, the Carbon-X sidecar and evaluation analysis for TwinLLM. Nothing in the app imports this."
+description = "Fine-tuning, the Carbon-X sidecar, evaluation analysis and motion from video for TwinLLM. Nothing in the app imports this."
 requires-python = ">=3.11"
 dependencies = [
   "pandas==3.1.0",
@@ -27,6 +27,11 @@ carbon = [
   "bitsandbytes==0.50.2",
   "safetensors==0.8.0",
 ]
+motion = [
+  "mediapipe==0.10.35",
+  "opencv-contrib-python==5.0.0.93",
+  "pytest==9.1.1",
+]
 
 [tool.uv]
 package = false
@@ -35,4 +40,4 @@ package = false
 members = []
 
 [tool.pytest.ini_options]
-testpaths = ["analysis", "carbon"]
+testpaths = ["analysis", "carbon", "motion"]

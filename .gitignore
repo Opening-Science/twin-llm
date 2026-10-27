@@ -88,3 +88,6 @@ evaluation/cache/
 python/.venv/
 __pycache__/
 .pytest_cache/
+
+# Motion clips made from videos (python/motion); third-party footage stays local
+data/motion/

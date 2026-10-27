@@ -39,6 +39,10 @@ personal data (OpenRouter, remote GPU, Infomaniak). A provider the skill does li
 goes through the policy on every request, so Exoscale only takes personal data with
 `EXOSCALE_PERSONAL_DATA=consented-pilot`.
 
+A skill that calls a genome tool (`genome_report`, `dna_ask`) may list only `ollama`:
+the genome policy never lets a genotype reach a hosted model, the consented pilot
+included ([genome.md](genome.md)).
+
 ## Eval cases
 
 One JSON file per case in `evals/`, named `lower-case-with-dashes.json`:
@@ -72,7 +76,8 @@ One JSON file per case in `evals/`, named `lower-case-with-dashes.json`:
 `script` is what a scripted model tries, in order. The gate applies the skill and the
 policy, and the outcome must equal `expect`: the calls and views that ran, in order,
 and the refusals. `provider` defaults to `ollama`, `dataMode` to `synthetic`,
-`exoscalePersonalData` to `off`, `wearableContext` to `false`.
+`exoscalePersonalData` to `off`, `wearableContext` to `false`, `genomeSource` to
+`none`.
 
 Refusal codes:
 
@@ -82,6 +87,8 @@ Refusal codes:
 - `tool-not-allowed`: the tool is not in `tools`.
 - `invalid-tool-input`: the query tool's own schema rejects the input.
 - `view-not-allowed`: the view kind is not in `views`.
+- `genome-not-permitted`: a genome tool outside `dataMode: personal` with
+  `genomeSource: ark` on `ollama`.
 
 The first three refuse the whole request and nothing runs. Cases may only name subjects
 from the synthetic question set (`evaluation/questions.v1.json`).
@@ -115,8 +122,9 @@ description when there is none). On `POST /api/chat` the server, before any mode
 4. writes a `skill.<name>` audit row (skill, model, provider, allowlists; no prompt).
 
 The turn then gets only the skill's tools, intersected with the user's sources and what
-the data-mode policy left (`show_view` stays when the skill allows `chart.timeseries`, and
-refuses any other kind), and the skill's instructions at the end of the system prompt.
+the data-mode policy left (`show_view`, `list_views` and `open_view` stay when the skill
+allows `chart.timeseries`; `show_view` refuses any other kind and the other two offer only
+the allowed kinds), and the skill's instructions at the end of the system prompt.
 The response document records `skill`, and the prompt shows a `/sleep` chip, also after
 a reload, where it is read back from the audit row. The shared rules live in
 `infrastructure/skill-gate.ts`, which the eval gate uses too.

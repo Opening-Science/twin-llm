@@ -1,0 +1,12 @@
+{
+  "question": "Summarise my genome report.",
+  "provider": "ollama",
+  "dataMode": "personal",
+  "genomeSource": "none",
+  "script": [{ "tool": "genome_report", "input": {} }],
+  "expect": {
+    "calls": [],
+    "views": [],
+    "refusals": ["genome-not-permitted"]
+  }
+}

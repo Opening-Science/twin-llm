@@ -24,6 +24,8 @@ Since #36: `show_view` with `chart.timeseries` reads a LOINC code for a syntheti
 
 Since #39: each tool call is a folded card above the answer (`features/arena/tool-cards.ts`): the call in plain words, its named arguments (measure, window, subject, search), running, done, refused or failed, and the rows it read. Outputs never reach a card; a refusal shows a fixed sentence by its code. A reload builds the same cards from the stored tool parts, with the audit row's count, and a step's parallel calls are stored in call order so they do not reorder.
 
+Since #37: an Outputs panel beside the thread (above it on narrow screens) lists every view its answers show, newest first, with title, kind, model and time; a row scrolls to the chart, Enlarge draws it large in the panel. It collapses or closes, and the choice is kept in the browser's local storage. `list_views` lists the thread's views (id, title, kind, model, time; no points) and `open_view(id)` returns a stored view unchanged, streamed as a `data-view` part with no new query. Both read the thread's stored tool parts, are audited (`open_view` with the view's subject and point count), a synthetic request is not offered wearable views, and a skill turn gets them only when its skill allows a kind `show_view` draws. The views come from the stored tool parts, so no table or migration was added. Views with no readings are listed dimmed. View titles use plain dates (`Heart rate, 1 Jan 2016 – 31 Oct 2026`), and `show_view` refuses a measure that is neither a LOINC code nor a wearable key the app labels or the turn loaded (`UNKNOWN_MEASURE`) rather than drawing an empty chart.
+
 Issues: #35 stored tool parts, #36 `data-view` and `show_view`, #37 Outputs panel, #38 more kinds, #39 tool-call cards.
 
 ## 2. Skills and the command palette
@@ -63,7 +65,7 @@ An in-app Docs page rendering `docs/`: how the twin works, where data goes, what
 ## Research
 
 - Pilot 2 fine-tuning: #31. Pilot 1 learned the templates but reported another code's value for measures it did not know, so pilot 2 adds paraphrases, no-data and unit cases, held-out templates and the app's twelve tools. Later the generator also emits `show_view` and skill conversations.
-- Carbon-X as a local DNA helper: #58. Research track for this funding period; the download waits for Peter.
+- Carbon-X as a local DNA helper: #58. Research track for this funding period; the download waits for Peter. Since #105 the app side exists: the Ark report on the Digital Twin page, `genome_report` and `dna_ask` (personal mode with local Ollama and the local sidecar only) and `/genome` ([genome.md](genome.md)).
 - Own gait and text-to-motion: #59.
 - A `python/` workspace with uv for training, sidecars and analysis: #60.
 - LaminDB for lineage of the research pipeline: looked at, not now.

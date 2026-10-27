@@ -2,8 +2,8 @@ import { resolveActorId } from "@/infrastructure/auth-actor";
 import { database } from "@/infrastructure/database";
 
 /**
- * Last twenty Ark audit rows for the signed-in actor. Hash prefix only —
- * never args, result, subject, or the full chain hash.
+ * Last twenty Ark and genome audit rows (`ark.*`, `genome.*`) for the signed-in
+ * actor. Hash prefix only — never args, result, subject, or the full chain hash.
  */
 
 export type ArkAuditEventView = {
@@ -29,7 +29,10 @@ const defaultPorts = (): ArkAuditPorts => ({
   resolveActorId,
   findEvents: (actor) =>
     database().auditEvent.findMany({
-      where: { actor, tool: { startsWith: "ark." } },
+      where: {
+        actor,
+        OR: [{ tool: { startsWith: "ark." } }, { tool: { startsWith: "genome." } }],
+      },
       orderBy: { seq: "desc" },
       take: 20,
       select: { seq: true, tool: true, ts: true, hash: true },

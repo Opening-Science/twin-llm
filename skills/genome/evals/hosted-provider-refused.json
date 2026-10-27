@@ -1,0 +1,16 @@
+{
+  "question": "Summarise my genome report.",
+  "provider": "exoscale",
+  "exoscalePersonalData": "consented-pilot",
+  "dataMode": "personal",
+  "genomeSource": "ark",
+  "script": [
+    { "tool": "genome_report", "input": {} },
+    { "tool": "dna_ask", "input": { "rsid": "rs4244285" } }
+  ],
+  "expect": {
+    "calls": [],
+    "views": [],
+    "refusals": ["provider-not-allowed-by-skill"]
+  }
+}

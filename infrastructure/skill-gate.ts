@@ -1,7 +1,7 @@
 import type { AppendInput } from "@/packages/audit/append";
 import { VIEW_KINDS } from "@/packages/query-tools/view-schema";
 
-import { SHOW_VIEW_TOOL } from "./chat-view";
+import { VIEW_TOOLS } from "./chat-view";
 import type { LlmProvider } from "./data-mode-policy";
 import { ALL_KNOWLEDGE_SOURCES } from "./knowledge-sources";
 
@@ -16,7 +16,7 @@ import { ALL_KNOWLEDGE_SOURCES } from "./knowledge-sources";
  * A skill only narrows. Its tools are intersected with what the turn already
  * has after the user's source choices and the data-mode policy, its providers
  * are checked before the data-mode policy (which still runs), and its views
- * limit which kinds `show_view` will draw.
+ * limit which kinds `show_view` will draw and `open_view` will reopen.
  */
 
 /** Wearable context the person attached to the turn. Makes a request personal. */
@@ -107,13 +107,13 @@ export const permitSkillRequest = (
 };
 
 /** True when `show_view` can draw at least one kind the skill allows. */
-const allowsShowView = (skill: Pick<TurnSkill, "views">): boolean =>
+const allowsViews = (skill: Pick<TurnSkill, "views">): boolean =>
   VIEW_KINDS.some((kind) => skill.views.includes(kind));
 
 /**
- * The tools a skill turn keeps: those it lists, plus `show_view` when it
- * allows a kind `show_view` draws. Only ever removes; never adds a tool the
- * turn did not already have.
+ * The tools a skill turn keeps: those it lists, plus the view tools
+ * (`show_view`, `list_views`, `open_view`) when it allows a kind `show_view`
+ * draws. Only ever removes; never adds a tool the turn did not already have.
  */
 export const withSkillTools = <V>(
   tools: Readonly<Record<string, V>>,
@@ -121,7 +121,7 @@ export const withSkillTools = <V>(
 ): Record<string, V> =>
   Object.fromEntries(
     Object.entries(tools).filter(([name]) =>
-      name === SHOW_VIEW_TOOL ? allowsShowView(skill) : skill.tools.includes(name),
+      VIEW_TOOLS.has(name) ? allowsViews(skill) : skill.tools.includes(name),
     ),
   );
 

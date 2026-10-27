@@ -20,7 +20,10 @@ import { createQueryTools } from "@/packages/query-tools/ai-tools";
 import type { QueryToolPorts } from "@/packages/query-tools/ports";
 import type { SessionScope } from "@/packages/query-tools/scope";
 
+import { createGenomeTools, type GenomeToolDeps } from "./genome-tools";
+import { loadThreadViews } from "./load-thread-views";
 import { createShowViewTool } from "./show-view-tool";
+import { createViewTools, type ViewToolDeps } from "./view-tools";
 
 const NO_WEARABLES: WearableSummaries = {
   oura: null,
@@ -54,6 +57,7 @@ const mcpServerPermitted = (
 export type ChatToolFactories = Readonly<{
   query: typeof createQueryTools;
   showView: typeof createShowViewTool;
+  views: typeof createViewTools;
   gbd: typeof createGbdTools;
   guidelines: typeof createGuidelineTools;
   knowledge: typeof createKnowledgeTools;
@@ -62,6 +66,7 @@ export type ChatToolFactories = Readonly<{
 const CHAT_TOOL_FACTORIES: ChatToolFactories = {
   query: createQueryTools,
   showView: createShowViewTool,
+  views: createViewTools,
   gbd: createGbdTools,
   guidelines: createGuidelineTools,
   knowledge: createKnowledgeTools,
@@ -76,6 +81,9 @@ const CHAT_TOOL_FACTORIES: ChatToolFactories = {
  * reads cohort rows only while the cohort record tools are on, and wearable
  * readings only from the snapshots this turn already loaded, which synthetic
  * mode never does. It is the only tool that receives those snapshots.
+ *
+ * `list_views` and `open_view` read the views this thread already showed
+ * (`thread-views.ts`); a synthetic request is not offered wearable ones.
  */
 export const createChatTools = (
   scope: SessionScope,
@@ -86,10 +94,18 @@ export const createChatTools = (
     disabledSources?: readonly KnowledgeSourceId[];
     /** View kinds `show_view` may draw (a skill's `views`); left out, every kind. */
     views?: readonly string[];
+    loadViews?: ViewToolDeps["loadViews"];
     factories?: ChatToolFactories;
+    /**
+     * Ports for `genome_report` and `dna_ask`. Only the chat route passes them,
+     * and only after the genome policy allowed this turn; a synthetic scope
+     * never gets them. The eval and training tool lists never include them.
+     */
+    genome?: GenomeToolDeps;
   }>,
 ) => {
   const make = options?.factories ?? CHAT_TOOL_FACTORIES;
+  const hasWearableNarrative = options?.hasWearableNarrative ?? false;
   return {
     ...make.query(scope, options?.query),
     ...make.showView({
@@ -101,11 +117,19 @@ export const createChatTools = (
       ),
       views: options?.views,
     }),
-    ...(mcpServerPermitted("gbd", scope, options?.hasWearableNarrative ?? false)
-      ? make.gbd(scope)
-      : {}),
+    ...make.views({
+      scope,
+      ports: options?.query,
+      loadViews: options?.loadViews ?? loadThreadViews,
+      personal: requestDataMode(scope.mode, hasWearableNarrative) === "personal",
+      views: options?.views,
+    }),
+    ...(mcpServerPermitted("gbd", scope, hasWearableNarrative) ? make.gbd(scope) : {}),
     ...make.guidelines(scope),
     ...make.knowledge(scope),
+    ...(options?.genome !== undefined && scope.mode === "personal"
+      ? createGenomeTools(options.genome)
+      : {}),
   };
 };
 
@@ -128,7 +152,7 @@ export const forSources = (
 
 /**
  * The tools a skill turn keeps, after `forSources`: the skill's own list,
- * plus `show_view` when it allows a kind that tool draws. Without a skill the
+ * plus the view tools when it allows a kind `show_view` draws. Without a skill the
  * tools pass through unchanged. The prompt is told the same names.
  */
 export const forSkill = (

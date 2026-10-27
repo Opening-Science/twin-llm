@@ -244,6 +244,13 @@ describe("ark-adapter client states", () => {
       argv: ["ark", "app", "run", "/tmp/fixture.wasm", "--timeout", "15", "--json"],
       grants: ["v1/genome/variants"],
     });
+    expect(appendCalls[0]?.result).toEqual({
+      task: "1",
+      app: "fixture.wasm",
+      success: true,
+      duration_seconds: 0.5,
+      report_chars: 37,
+    });
   });
 
   test("locked", async () => {
