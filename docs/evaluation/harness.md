@@ -99,7 +99,9 @@ is flagged on the sheet) or `na` (the item does not list the criterion).
 
 ### Numbers
 
-`scripts/evaluation/score/numbers.ts` reads numbers with `,` or `'` grouping
+`infrastructure/narrated-numbers.ts` (re-exported by
+`scripts/evaluation/score/numbers.ts`, and shared with the app's number links)
+reads numbers with `,` or `'` grouping
 ("12,345", "1'234") and `.` decimals. A decimal comma ("1,5") is not parsed: it
 reads as 1 and 5. A minus counts only after a space or bracket, so
 `2024-01-01` reads as 2024, 1, 1 on both sides of a comparison. Subject refs
@@ -131,6 +133,13 @@ number.
   under the same display-decimals rule. A reading's value (`value`, `mean`,
   `median`, `min`, `max`, `fitted_*`) also counts in a common other unit: kg as
   lb, °C as °F, mmHg as kPa, glucose and lipids in mmol/L, HbA1c in mmol/mol.
+- Unsourced numbers (an extra metric, #111): per answer that hallucination
+  scores, the numbers (dates and 0 to 10 left out) that no tool call of the
+  turn holds and the question does not give, counted by
+  `infrastructure/number-sources.ts`, the matcher the app uses to link numbers
+  to tool cards. Dates inside tool outputs are not sources there. The report
+  lists them per model in "Unsourced numbers". No pass, fail or human depends
+  on it, so runs scored before it keep their tallies.
 
 ### Asked measure and code substitution
 

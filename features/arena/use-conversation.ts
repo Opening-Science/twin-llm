@@ -117,6 +117,7 @@ export const useConversation = (
                 refusal: result.refusal,
                 metrics: result.metrics,
                 document: result.document,
+                numberSources: result.numberSources ?? [],
                 completedAt:
                   result.ending === "COMPLETE" ? new Date().toISOString() : null,
                 reasoningText: parsed.reasoningText,

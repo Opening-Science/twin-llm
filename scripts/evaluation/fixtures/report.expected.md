@@ -57,6 +57,14 @@ Seconds, nearest-rank percentiles. Cache hits and errors are left out.
 | ollama:qwen3:4b | latency set | 3   | 1.2 s    | 1.8 s    | 1.8 s    | 5.0 s     | 7.0 s     | 7.0 s     |
 | ollama:qwen3:4b | all items   | 3   | 1.2 s    | 1.8 s    | 1.8 s    | 5.0 s     | 7.0 s     | 7.0 s     |
 
+## Unsourced numbers
+
+Numbers in a reply that neither a tool call of the turn nor the question gives, dates and 0 to 10 left out: the numbers the app shows without a link. Counted over the answers hallucination scores. An extra metric; no pass or fail depends on it.
+
+| Model           | Answers | Unsourced numbers | Per answer | Answers with any |
+| --------------- | ------- | ----------------- | ---------- | ---------------- |
+| ollama:qwen3:4b | 3       | 0                 | 0.00       | 0                |
+
 ## Limits
 
 - The questions were written alongside the synthea-v4-seed42 cohort they are scored against, so these results lean optimistic.

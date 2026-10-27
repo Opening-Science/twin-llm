@@ -7,6 +7,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Numbers in a finished answer that a tool call returned are quiet links (#111): pressing one opens the tool card that holds it and lists the rows and fields it came from. A number with no source stays plain. The evaluation report adds "Unsourced numbers" per model, counted with the same matcher; it is an extra metric and changes no pass, fail or human tally.
 - An Outputs panel per thread (#37) lists every chart its answers show, newest first, with title, kind, model and time. A row scrolls to the chart in its answer and Enlarge draws it large in the panel; the panel collapses or closes and remembers that in this browser. Two new model tools, `list_views` and `open_view`, let "show that chart again" reopen the stored chart instead of querying again; both are audited, a synthetic request is not offered wearable charts, and a skill turn gets them only when its skill allows views. Views with no readings are listed dimmed with "No readings".
 - Chart titles use plain dates (`Heart rate, 1 Jan 2016 – 31 Oct 2026`), never a raw timestamp, and `show_view` refuses a measure that is neither a LOINC code nor a known wearable key (`UNKNOWN_MEASURE`) instead of drawing an empty chart. Titles already stored keep their old form.
 
