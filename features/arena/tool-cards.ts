@@ -44,6 +44,8 @@ const TITLES: Readonly<Record<string, string>> = {
   compare_windows: "Compared two windows",
   range_position: "Placed a value against its published range",
   convert_unit: "Converted a unit",
+  conditions_timeline: "Listed recorded conditions",
+  medications_timeline: "Listed recorded medication requests",
   show_view: "Drew a chart",
   list_views: "Listed this thread's charts",
   open_view: "Reopened a chart",
@@ -93,6 +95,18 @@ const REFUSAL_NOTES: Readonly<Record<string, string>> = {
   NO_ROWS: "No reading for that measure in this window.",
   NO_PUBLISHED_RANGE: "Anchor v3 has no published range to place that measure against.",
   UNIT_MISMATCH: "The reading's unit is not the published range's, so it was not placed.",
+};
+
+/** Notes for a code whose usual sentence would be wrong for this tool (it lists records, not readings). */
+const TOOL_REFUSAL_NOTES: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+  conditions_timeline: {
+    NO_ROWS: "No recorded condition matches in this window.",
+    ROW_CAP_EXCEEDED: "Too many records in this window; nothing was read.",
+  },
+  medications_timeline: {
+    NO_ROWS: "No recorded medication request matches in this window.",
+    ROW_CAP_EXCEEDED: "Too many records in this window; nothing was read.",
+  },
 };
 
 const REFUSED = "The tool declined this call.";
@@ -183,6 +197,8 @@ const ARG_READERS: readonly (readonly [
   ["Window A", (input) => span(input.window_a)],
   ["Window B", (input) => span(input.window_b)],
   ["Subject", (input) => text(input.subject ?? input.subject_ref)],
+  ["Status", (input) => text(input.status)],
+  ["Code", (input) => text(input.code)],
   ["Cohort", (input) => text(input.cohort_id)],
   ["Chart", (input) => text(input.id)],
   ["Search", (input) => (text(input.query) ? clipped(text(input.query)!) : null)],
@@ -240,7 +256,10 @@ export const toolCard = (
       state === "done" || state === "refused"
         ? (storedRowCount ?? rowCountOf(part.output))
         : null,
-    note: code === null ? null : (REFUSAL_NOTES[code] ?? REFUSED),
+    note:
+      code === null
+        ? null
+        : (TOOL_REFUSAL_NOTES[part.tool]?.[code] ?? REFUSAL_NOTES[code] ?? REFUSED),
   };
 };
 

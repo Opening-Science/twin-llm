@@ -13,7 +13,7 @@
     "content_sha256": "f4941fab7a56e17f9dd66b6b6e0fbed379dab8c564c6024831c5fd4aa0ba09eb"
   },
   "open_twin_sha": "a9e126c952c91e19e064a962dda7d815a43564e5",
-  "questions_sha256": "5385897e1a885157311a3818556540746d5bc3a70357d6b8a4a48f4f8c0714c1",
+  "questions_sha256": "98882d797c7e376814c8256ad498ef96f0c2480ce4a49d7ae92654aaf72b06e6",
   "actor": "eval-answer-key",
   "generated_on": "2026-10-27",
   "entries": {
@@ -2564,6 +2564,218 @@
         "n": 0,
         "windows": [],
         "refusal": "UNSUPPORTED_CONVERSION"
+      }
+    ],
+    "Q-S1-21": [
+      {
+        "name": "n",
+        "tool": "conditions_timeline",
+        "args": {
+          "subject_ref": "6816a11d-3700-1d60-8b4d-b7252c529f11",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z"
+        },
+        "path": "n",
+        "value": 23,
+        "unit": null,
+        "n": 23,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "n_codes",
+        "tool": "conditions_timeline",
+        "args": {
+          "subject_ref": "6816a11d-3700-1d60-8b4d-b7252c529f11",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z"
+        },
+        "path": "n_codes",
+        "value": 22,
+        "unit": null,
+        "n": 23,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "n_without_abatement",
+        "tool": "conditions_timeline",
+        "args": {
+          "subject_ref": "6816a11d-3700-1d60-8b4d-b7252c529f11",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z"
+        },
+        "path": "n_without_abatement",
+        "value": 15,
+        "unit": null,
+        "n": 23,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S1-22": [
+      {
+        "name": "n",
+        "tool": "conditions_timeline",
+        "args": {
+          "subject_ref": "7fff03da-06e1-4c8f-091b-a415e649d0c8",
+          "start": "1990-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z",
+          "code": "59621000"
+        },
+        "path": "n",
+        "value": 1,
+        "unit": null,
+        "n": 1,
+        "windows": [{ "start": "1990-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "n_without_abatement",
+        "tool": "conditions_timeline",
+        "args": {
+          "subject_ref": "7fff03da-06e1-4c8f-091b-a415e649d0c8",
+          "start": "1990-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z",
+          "code": "59621000"
+        },
+        "path": "n_without_abatement",
+        "value": 1,
+        "unit": null,
+        "n": 1,
+        "windows": [{ "start": "1990-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S1-23": [
+      {
+        "name": "n",
+        "tool": "medications_timeline",
+        "args": {
+          "subject_ref": "922fb35e-148d-9e82-7e65-bfa05e3b3515",
+          "start": "2021-01-01T00:00:00Z",
+          "end": "2022-12-31T23:59:59Z"
+        },
+        "path": "n",
+        "value": 19,
+        "unit": null,
+        "n": 19,
+        "windows": [{ "start": "2021-01-01T00:00:00Z", "end": "2022-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "n_codes",
+        "tool": "medications_timeline",
+        "args": {
+          "subject_ref": "922fb35e-148d-9e82-7e65-bfa05e3b3515",
+          "start": "2021-01-01T00:00:00Z",
+          "end": "2022-12-31T23:59:59Z"
+        },
+        "path": "n_codes",
+        "value": 4,
+        "unit": null,
+        "n": 19,
+        "windows": [{ "start": "2021-01-01T00:00:00Z", "end": "2022-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "n_with_dosage_text",
+        "tool": "medications_timeline",
+        "args": {
+          "subject_ref": "922fb35e-148d-9e82-7e65-bfa05e3b3515",
+          "start": "2021-01-01T00:00:00Z",
+          "end": "2022-12-31T23:59:59Z"
+        },
+        "path": "n_with_dosage_text",
+        "value": 3,
+        "unit": null,
+        "n": 19,
+        "windows": [{ "start": "2021-01-01T00:00:00Z", "end": "2022-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S1-24": [
+      {
+        "name": "n",
+        "tool": "medications_timeline",
+        "args": {
+          "subject_ref": "947c82ee-1735-c9ed-8210-38cb93d8070c",
+          "start": "1990-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z",
+          "status": "active"
+        },
+        "path": "n",
+        "value": 7,
+        "unit": null,
+        "n": 7,
+        "windows": [{ "start": "1990-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "n_codes",
+        "tool": "medications_timeline",
+        "args": {
+          "subject_ref": "947c82ee-1735-c9ed-8210-38cb93d8070c",
+          "start": "1990-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z",
+          "status": "active"
+        },
+        "path": "n_codes",
+        "value": 7,
+        "unit": null,
+        "n": 7,
+        "windows": [{ "start": "1990-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "n_with_dosage_text",
+        "tool": "medications_timeline",
+        "args": {
+          "subject_ref": "947c82ee-1735-c9ed-8210-38cb93d8070c",
+          "start": "1990-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z",
+          "status": "active"
+        },
+        "path": "n_with_dosage_text",
+        "value": 3,
+        "unit": null,
+        "n": 7,
+        "windows": [{ "start": "1990-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S6-22": [
+      {
+        "name": "refusal",
+        "tool": "conditions_timeline",
+        "args": {
+          "subject_ref": "982750f4-569b-5949-196b-60699bdda3fb",
+          "start": "1950-01-01T00:00:00Z",
+          "end": "1969-12-31T23:59:59Z"
+        },
+        "path": "code",
+        "value": "NO_ROWS",
+        "unit": null,
+        "n": 0,
+        "windows": [{ "start": "1950-01-01T00:00:00Z", "end": "1969-12-31T23:59:59Z" }],
+        "refusal": "NO_ROWS"
+      }
+    ],
+    "Q-S6-23": [
+      {
+        "name": "refusal",
+        "tool": "medications_timeline",
+        "args": {
+          "subject_ref": "aa616abe-1761-0c9a-7959-07544679dafd",
+          "start": "1950-01-01T00:00:00Z",
+          "end": "1969-12-31T23:59:59Z"
+        },
+        "path": "code",
+        "value": "NO_ROWS",
+        "unit": null,
+        "n": 0,
+        "windows": [{ "start": "1950-01-01T00:00:00Z", "end": "1969-12-31T23:59:59Z" }],
+        "refusal": "NO_ROWS"
       }
     ]
   }

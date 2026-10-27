@@ -25,6 +25,8 @@ import {
   trendInput,
   rangePositionInput,
   convertUnitInput,
+  conditionsTimelineInput,
+  medicationsTimelineInput,
 } from "./schemas";
 import type { SessionScope } from "./scope";
 import {
@@ -39,6 +41,8 @@ import {
   runTrend,
   runRangePosition,
   runConvertUnit,
+  runConditionsTimeline,
+  runMedicationsTimeline,
 } from "./tools";
 
 /**
@@ -101,6 +105,12 @@ export const queryToolRunners = (
     runRangePosition(scope, input, ports),
   ),
   convert_unit: bind(convertUnitInput, (input) => runConvertUnit(scope, input, ports)),
+  conditions_timeline: bind(conditionsTimelineInput, (input) =>
+    runConditionsTimeline(scope, input, ports),
+  ),
+  medications_timeline: bind(medicationsTimelineInput, (input) =>
+    runMedicationsTimeline(scope, input, ports),
+  ),
 });
 
 export const QUERY_MCP_SERVER_INFO = {

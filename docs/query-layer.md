@@ -4,21 +4,23 @@ Closed, parameterised reads over the Synthea warehouse. The model never writes S
 
 ## Tools
 
-| Name                       | Input                                                                    | Output                                                                                       | Max rows        |
-| -------------------------- | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- | --------------- |
-| `list_subjects`            | `cohort_id`                                                              | `{ subjects: [{ subject_ref }] }`                                                            | 200             |
-| `subject_window`           | `subject_ref`                                                            | `{ start, end, n_observations }`                                                             | —               |
-| `observations_for_subject` | `subject_ref`, `loinc[]`, `start`, `end`, `limit`                        | `{ rows }` with `unit_ucum`                                                                  | `limit` ≤ 500   |
-| `latest_by_loinc`          | `subject_ref`, `loinc[]`                                                 | one row per code that exists                                                                 | 20 codes        |
-| `summary_stats`            | `subject_ref`, `loinc`, `start`, `end`                                   | `{ n, min, max, mean, unit }`                                                                | —               |
-| `trend`                    | `subject_ref`, `loinc`, `start`, `end`                                   | `{ n, first_at, last_at, slope_per_day, slope_unit, fitted_first, fitted_last, unit }`       | 5000            |
-| `baseline_deviation`       | `subject_ref`, `loinc`, `baseline {start, end}`, `target {start, end}`   | `{ baseline { n, median, mad }, target { n, median }, robust_z, unit }`                      | 5000 per window |
-| `coverage`                 | `subject_ref`, `loinc[]`, `start`, `end`                                 | `{ days_in_window, codes: [{ n, days_with_data, coverage_ratio, longest_gap_days, unit }] }` | 5000, 20 codes  |
-| `compare_windows`          | `subject_ref`, `loinc`, `window_a {start, end}`, `window_b {start, end}` | `{ window_a, window_b }` with `n, mean, median, min, max`, `delta_b_minus_a`, `unit`         | 5000 per window |
-| `range_position`           | `subject_ref`, `loinc`, `start`, `end`, `pick`, `at`                     | `{ n, effective_at, value, unit, marker_id, range, position, depends_on }`                   | 5000            |
-| `convert_unit`             | `value`, `from`, `to`, `analyte` (enums)                                 | `{ analyte, from_value, from_unit, value, unrounded, unit, formula, rounding }`              | no rows         |
-| `guideline_search`         | `query`, `k` (default 5, max 8)                                          | catalogue + `passage` (null when `cite_only`)                                                | `k` ≤ 8         |
-| `knowledge_search`         | `query`, `k` (default 5, max 8)                                          | file, title, section, `passage` (OpenTwin knowledge, `docs/knowledge.md`)                    | `k` ≤ 8         |
+| Name                       | Input                                                                    | Output                                                                                                                                                        | Max rows        |
+| -------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| `list_subjects`            | `cohort_id`                                                              | `{ subjects: [{ subject_ref }] }`                                                                                                                             | 200             |
+| `subject_window`           | `subject_ref`                                                            | `{ start, end, n_observations }`                                                                                                                              | —               |
+| `observations_for_subject` | `subject_ref`, `loinc[]`, `start`, `end`, `limit`                        | `{ rows }` with `unit_ucum`                                                                                                                                   | `limit` ≤ 500   |
+| `latest_by_loinc`          | `subject_ref`, `loinc[]`                                                 | one row per code that exists                                                                                                                                  | 20 codes        |
+| `summary_stats`            | `subject_ref`, `loinc`, `start`, `end`                                   | `{ n, min, max, mean, unit }`                                                                                                                                 | —               |
+| `trend`                    | `subject_ref`, `loinc`, `start`, `end`                                   | `{ n, first_at, last_at, slope_per_day, slope_unit, fitted_first, fitted_last, unit }`                                                                        | 5000            |
+| `baseline_deviation`       | `subject_ref`, `loinc`, `baseline {start, end}`, `target {start, end}`   | `{ baseline { n, median, mad }, target { n, median }, robust_z, unit }`                                                                                       | 5000 per window |
+| `coverage`                 | `subject_ref`, `loinc[]`, `start`, `end`                                 | `{ days_in_window, codes: [{ n, days_with_data, coverage_ratio, longest_gap_days, unit }] }`                                                                  | 5000, 20 codes  |
+| `compare_windows`          | `subject_ref`, `loinc`, `window_a {start, end}`, `window_b {start, end}` | `{ window_a, window_b }` with `n, mean, median, min, max`, `delta_b_minus_a`, `unit`                                                                          | 5000 per window |
+| `range_position`           | `subject_ref`, `loinc`, `start`, `end`, `pick`, `at`                     | `{ n, effective_at, value, unit, marker_id, range, position, depends_on }`                                                                                    | 5000            |
+| `convert_unit`             | `value`, `from`, `to`, `analyte` (enums)                                 | `{ analyte, from_value, from_unit, value, unrounded, unit, formula, rounding }`                                                                               | no rows         |
+| `conditions_timeline`      | `subject_ref`, `start`, `end`, `status`?, `code`?                        | `{ n, n_codes, by_status, n_without_abatement, conditions }`, each `code_system, code, display, onset_at, abatement_at, clinical_status, verification_status` | 1000 records    |
+| `medications_timeline`     | `subject_ref`, `start`, `end`, `status`?, `code`?                        | `{ n, n_codes, by_status, n_with_dosage_text, medications }`, each `code_system, code, display, authored_at, status, intent, dosage_as_recorded`              | 1000 records    |
+| `guideline_search`         | `query`, `k` (default 5, max 8)                                          | catalogue + `passage` (null when `cite_only`)                                                                                                                 | `k` ≤ 8         |
+| `knowledge_search`         | `query`, `k` (default 5, max 8)                                          | file, title, section, `passage` (OpenTwin knowledge, `docs/knowledge.md`)                                                                                     | `k` ≤ 8         |
 
 Inputs are Zod schemas (`packages/query-tools/schemas.ts`). LOINC is `\d{1,5}-\d+`. Window bounds are ISO-8601 UTC datetimes or plain `YYYY-MM-DD` dates; a plain date means the whole UTC day, so `start: 2026-09-01` begins at 00:00:00.000Z and `end: 2026-09-01` ends at 23:59:59.999Z. A UTC datetime may omit seconds (`2026-10-01T08:00Z` reads as 08:00:00.000Z). There are no free-text filter columns.
 
@@ -62,6 +64,18 @@ A tool that throws (database down, a bad decimal) is still audited, for every wa
 - It reads no rows. There is no `subject_ref`, so no scope check, no row cap and no no-rows case; it works in both data modes. Every call is still audited (`subject_ref` null, `row_count` 0), so a conversion never counts toward `sufficient_data`.
 - The same table feeds the number matcher (`CONVERSIONS` in `infrastructure/number-sources.ts`, which adds kg and mmHg) and through it the hallucination scorer, so "7.0 mmol/L" is sourced by a 126 mg/dL glucose row.
 - The system prompt says to use `convert_unit` for any conversion and never to convert in the answer text.
+
+## Clinical records
+
+`conditions_timeline` and `medications_timeline` read the warehouse's `conditions` and `medication_requests` (`docs/warehouse.md`) with one fixed `findMany` each (`findConditions`, `findMedicationRequests` in `ports.ts`), `CLINICAL_ROW_CAP` + 1 records, and order and count them in `packages/query-tools/clinical-timeline.ts`. They list; they compute nothing about health.
+
+- `conditions_timeline`: a condition is listed when its span overlaps the window: onset at or before the window's end, and no abatement or abatement at or after its start. A condition without an onset is never listed. Order: onset, then code, then row id.
+- `medications_timeline`: a request is listed when it was authored in the window. Order: authored date, then code, then row id.
+- `status` filters on the recorded clinical status (FHIR `active`, `recurrence`, `relapse`, `inactive`, `remission`, `resolved`) or the request status (`active`, `on-hold`, `cancelled`, `completed`, `entered-in-error`, `stopped`, `draft`, `unknown`); `code` on one code as stored (letters, digits, dots and hyphens). Both are echoed, null when not given.
+- Statuses are the record's as exported at the end of the simulation, not the status during the window. `by_status` counts them, `unrecorded` for none.
+- `dosage_as_recorded` is the record's `dosageInstruction[].text`, verbatim, or null when the record has none (2,799 of the pinned cohort's 3,615 requests). Nothing else about dosing is stored or returned.
+- Refusals: `NO_ROWS` (with `record` and an `error` naming the window rule and the filters) when nothing matches, and `ROW_CAP_EXCEEDED` above 1000 records. Audit `row_count` is `n`.
+- Wording: the system prompt and the tool descriptions say to list what is recorded, relate dates as before or after, never as a cause, quote dosage text as recorded and add no dose, change or advice.
 
 ## Manifests
 

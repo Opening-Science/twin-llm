@@ -54,6 +54,8 @@ export const COHORT_RECORD_TOOLS = [
   "observations_for_subject",
   "latest_by_loinc",
   "summary_stats",
+  "conditions_timeline",
+  "medications_timeline",
 ] as const satisfies readonly QueryToolName[];
 
 export const COHORT_ANALYTICS_TOOLS = [
@@ -93,7 +95,8 @@ export const KNOWLEDGE_SOURCE_GROUPS: readonly KnowledgeSourceGroup[] = [
       {
         id: "cohort-records",
         label: "Subjects and observations",
-        description: "List subjects and read their coded observations.",
+        description:
+          "List subjects and read their coded observations, recorded conditions and medication requests.",
         tools: COHORT_RECORD_TOOLS,
       },
       {

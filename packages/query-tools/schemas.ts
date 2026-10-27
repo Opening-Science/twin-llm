@@ -167,6 +167,66 @@ export const convertUnitInput = z
   .strict()
   .describe("One value of one analyte from one unit to another, by a fixed table");
 
+/** FHIR R4 Condition.clinicalStatus codes. */
+export const CONDITION_STATUSES = [
+  "active",
+  "recurrence",
+  "relapse",
+  "inactive",
+  "remission",
+  "resolved",
+] as const;
+
+/** FHIR R4 MedicationRequest.status codes. */
+export const MEDICATION_REQUEST_STATUSES = [
+  "active",
+  "on-hold",
+  "cancelled",
+  "completed",
+  "entered-in-error",
+  "stopped",
+  "draft",
+  "unknown",
+] as const;
+
+/** A SNOMED CT, ICD-10 or RxNorm code as stored: letters, digits, dots and hyphens. */
+const clinicalCodeSchema = z
+  .string()
+  .regex(/^[A-Za-z0-9][A-Za-z0-9.-]{0,31}$/)
+  .describe(
+    "One code as recorded (SNOMED CT or ICD-10 for conditions, RxNorm for medications)",
+  );
+
+export const conditionsTimelineInput = z
+  .object({
+    subject_ref: subjectRefSchema,
+    start: windowStart,
+    end: windowEnd,
+    status: z
+      .enum(CONDITION_STATUSES)
+      .optional()
+      .describe("Only conditions with this recorded clinical status"),
+    code: clinicalCodeSchema.optional(),
+  })
+  .strict()
+  .refine(startBeforeEnd, START_BEFORE_END)
+  .describe("Recorded conditions whose span overlaps a window, oldest onset first");
+
+export const medicationsTimelineInput = z
+  .object({
+    subject_ref: subjectRefSchema,
+    start: windowStart,
+    end: windowEnd,
+    status: z
+      .enum(MEDICATION_REQUEST_STATUSES)
+      .optional()
+      .describe("Only medication requests with this recorded status"),
+    code: clinicalCodeSchema.optional(),
+  })
+  .strict()
+  .refine(startBeforeEnd, START_BEFORE_END)
+  .describe("Recorded medication requests authored in a window, oldest first");
+
 export const TOOL_DEFINITIONS = [
   {
     name: "list_subjects",
@@ -231,5 +291,17 @@ export const TOOL_DEFINITIONS = [
     description:
       "Convert one value of glucose, creatinine, HbA1c, total/LDL/HDL cholesterol, triglycerides or body temperature between units with a fixed table: value rounded half away from zero, unrounded, unit, the formula used and the rounding rule. Reads no rows. A pair the table does not hold is refused with UNSUPPORTED_CONVERSION and the pairs it does hold.",
     input: convertUnitInput,
+  },
+  {
+    name: "conditions_timeline",
+    description:
+      "List one subject's recorded conditions whose span overlaps the window (onset at or before its end, and no abatement or abatement at or after its start), oldest onset first: code_system, code, display, onset_at, abatement_at, clinical_status and verification_status as recorded (status as of the record, not of the window), with n, n_codes, by_status and n_without_abatement. Optional status and code narrow the list. Reads up to 1000 records; refuses more (ROW_CAP_EXCEEDED) and none (NO_ROWS, with the reason). Lists what is recorded; times relate as before or after, never as a cause.",
+    input: conditionsTimelineInput,
+  },
+  {
+    name: "medications_timeline",
+    description:
+      "List one subject's recorded medication requests authored in the window, oldest first: code_system, code (RxNorm), display, authored_at, status and intent as recorded, and dosage_as_recorded, the record's own dosage text verbatim (null when the record has none), with n, n_codes, by_status and n_with_dosage_text. Optional status and code narrow the list. Reads up to 1000 records; refuses more (ROW_CAP_EXCEEDED) and none (NO_ROWS, with the reason). Lists what is recorded; never a dose, a change or advice of its own.",
+    input: medicationsTimelineInput,
   },
 ] as const;

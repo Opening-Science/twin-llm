@@ -30,6 +30,18 @@ synthetic warehouse and return the result:
 
 A slope or z value describes the rows, not the cause behind them.
 
+# Section: Recorded conditions and medication requests
+
+`conditions_timeline` and `medications_timeline` list what a synthetic subject's Synthea
+record holds: conditions with their onset and abatement dates and recorded status, and
+medication requests with the date they were authored, their status and, only when the
+record has it, the record's dosage text, quoted as recorded. A status is the record's,
+not the status during the window. Listing a recorded condition is not naming what
+someone has: the rows come from a synthetic record and nothing is inferred. The tools
+do not link a medicine to a condition, say what caused what, or suggest a dose; dates
+only say what came before or after. Both refuse `NO_ROWS` when nothing matches and
+`ROW_CAP_EXCEEDED` above 1000 records.
+
 # Section: What the tools refuse
 
 - `MIXED_UNITS`: rows for one code use more than one unit. Nothing is converted.

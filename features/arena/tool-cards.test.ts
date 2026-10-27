@@ -114,6 +114,55 @@ describe("toolCard", () => {
     });
   });
 
+  test("a timeline card shows its filters, counts records and words NO_ROWS for records", () => {
+    const input = {
+      subject_ref: "synthetic-subject",
+      start: "2019-01-01",
+      end: "2021-12-31",
+      status: "active",
+      code: "59621000",
+    };
+    const listed = toolCard({
+      toolCallId: "t1",
+      tool: "conditions_timeline",
+      state: "output-available",
+      input,
+      output: { n: 2, conditions: [] },
+    });
+    expect(listed).toEqual({
+      id: "t1",
+      tool: "conditions_timeline",
+      title: "Listed recorded conditions",
+      args: [
+        { label: "Window", value: "1 Jan 2019 – 31 Dec 2021" },
+        { label: "Subject", value: "synthetic-subject" },
+        { label: "Status", value: "active" },
+        { label: "Code", value: "59621000" },
+      ],
+      state: "done",
+      rowCount: 2,
+      note: null,
+    });
+    const none = { code: "NO_ROWS", error: "synthetic-tool-wording" };
+    expect(
+      toolCard({
+        toolCallId: "t2",
+        tool: "medications_timeline",
+        state: "output-available",
+        input,
+        output: none,
+      }).note,
+    ).toBe("No recorded medication request matches in this window.");
+    expect(
+      toolCard({
+        toolCallId: "t3",
+        tool: "range_position",
+        state: "output-available",
+        output: none,
+      }).note,
+    ).toBe("No reading for that measure in this window.");
+  });
+
   test("a stored audit count wins over the output's", () => {
     expect(
       toolCard(

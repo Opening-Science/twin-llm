@@ -29,6 +29,8 @@ describe("openAiToolsFrom", () => {
       "compare_windows",
       "range_position",
       "convert_unit",
+      "conditions_timeline",
+      "medications_timeline",
       "show_view",
       "list_views",
       "open_view",

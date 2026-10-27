@@ -113,10 +113,12 @@ describe("knowledge source preferences", () => {
     expect([...disabledToolNames(["cohort-records"])].sort()).toEqual([
       "baseline_deviation",
       "compare_windows",
+      "conditions_timeline",
       "convert_unit",
       "coverage",
       "latest_by_loinc",
       "list_subjects",
+      "medications_timeline",
       "observations_for_subject",
       "range_position",
       "subject_window",
