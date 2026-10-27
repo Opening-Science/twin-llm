@@ -22,6 +22,7 @@ import {
   runCompareWindows,
   runCoverage,
   runTrend,
+  runWearableCoverage,
 } from "./tools";
 
 const SUBJECT = "synthetic-hr-subject";
@@ -585,5 +586,62 @@ describe("UTC datetimes without seconds", () => {
     );
     expect(queries[0]?.start.toISOString()).toBe("2024-01-01T08:00:00.000Z");
     expect(queries[0]?.end.toISOString()).toBe("2024-01-09T08:00:00.000Z");
+  });
+});
+
+describe("runWearableCoverage", () => {
+  test("readings and days per key in the window, audited with no subject", async () => {
+    const audits: AppendInput[] = [];
+    const ports: QueryToolPorts = {
+      findSubject: async () => null,
+      findObservations: async () => [],
+      appendAudit: async (input) => {
+        audits.push(input);
+      },
+    };
+    const at = (day: string) => ({
+      at: `${day}T00:00:00.000Z`,
+      value: 50,
+      label: "Resting heart rate",
+      unit: "bpm",
+    });
+    const readings = (key: string) =>
+      key === "whoop.recovery.rhr"
+        ? [at("2026-09-30"), at("2026-10-01"), at("2026-10-02"), at("2026-10-05")]
+        : [];
+    const result = await runWearableCoverage(
+      personal,
+      {
+        keys: ["whoop.recovery.rhr", "sleep.score"],
+        start: "2026-10-01",
+        end: "2026-10-05",
+      },
+      readings,
+      ports,
+    );
+    expect(result).toEqual({
+      start: "2026-10-01",
+      end: "2026-10-05",
+      days_in_window: 5,
+      measures: [
+        {
+          key: "whoop.recovery.rhr",
+          n: 3,
+          days_with_data: 3,
+          coverage_ratio: 0.6,
+          longest_gap_days: 2,
+        },
+        {
+          key: "sleep.score",
+          n: 0,
+          days_with_data: 0,
+          coverage_ratio: 0,
+          longest_gap_days: 5,
+        },
+      ],
+    });
+    expect(audits.map((audit) => [audit.tool, audit.subjectRef, audit.rowCount])).toEqual(
+      [["wearable_coverage", null, 3]],
+    );
   });
 });

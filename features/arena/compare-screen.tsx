@@ -9,6 +9,7 @@ import { AnswerColumn } from "./answer-column";
 import type { TurnState } from "./conversation";
 import { OutputsPanel } from "./outputs-panel";
 import { PromptBar } from "./prompt-bar";
+import { useSuggestedQuestions } from "./suggestion-chips";
 import { threadOutputs } from "./thread-outputs";
 import { useConversation } from "./use-conversation";
 
@@ -55,6 +56,7 @@ export const CompareScreen = ({
     threadId,
     initialTurns,
   );
+  const suggestions = useSuggestedQuestions(threadId === null && turns.length === 0);
   const outputs = useMemo(() => threadOutputs(turns), [turns]);
   const [largeOutput, setLargeOutput] = useState(false);
   const withPanel = outputs.length > 0;
@@ -129,6 +131,7 @@ export const CompareScreen = ({
         initialModelIds={defaultModelIds}
         busy={sending}
         skills={skills}
+        suggestions={suggestions}
         onSubmit={(prompt, models, skill) => void send(prompt, models, skill)}
       />
     </div>

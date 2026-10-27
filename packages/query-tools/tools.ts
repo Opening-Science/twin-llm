@@ -704,3 +704,63 @@ export const runWearableSeries = (
     (result) => result.n,
     ports,
   );
+
+export type WearableCoverageResult = Readonly<{
+  start: string;
+  end: string;
+  days_in_window: number;
+  measures: ReadonlyArray<
+    Readonly<{
+      key: string;
+      n: number;
+      days_with_data: number;
+      coverage_ratio: number;
+      longest_gap_days: number;
+    }>
+  >;
+}>;
+
+/**
+ * `coverage` for wearable keys: how many readings and days each key has in a
+ * window. Like `wearable_series`, the readings come from the snapshot already
+ * loaded for this user, and the read is audited like a query tool.
+ */
+export const runWearableCoverage = (
+  scope: SessionScope,
+  input: Readonly<{ keys: readonly string[]; start: string; end: string }>,
+  readings: (key: string) => readonly WearableReading[],
+  ports: QueryToolPorts = defaultQueryToolPorts(),
+): Promise<WearableCoverageResult> =>
+  audited<WearableCoverageResult>(
+    scope,
+    "wearable_coverage",
+    input,
+    null,
+    async () => {
+      const start = windowStartDate(input.start);
+      const end = windowEndDate(input.end);
+      const from = start.getTime();
+      const to = end.getTime();
+      return {
+        start: input.start,
+        end: input.end,
+        days_in_window: daysInWindow(start, end),
+        measures: [...new Set(input.keys)].map((key) => {
+          const times = readings(key)
+            .map((reading) => Date.parse(reading.at))
+            .filter((at) => at >= from && at <= to)
+            .map((at) => new Date(at));
+          const days = coverage(times, start, end);
+          return {
+            key,
+            n: times.length,
+            days_with_data: days.daysWithData,
+            coverage_ratio: days.coverageRatio,
+            longest_gap_days: days.longestGapDays,
+          };
+        }),
+      };
+    },
+    (result) => result.measures.reduce((total, measure) => total + measure.n, 0),
+    ports,
+  );
