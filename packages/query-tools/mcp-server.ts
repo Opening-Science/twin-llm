@@ -25,6 +25,7 @@ import {
   trendInput,
   rangePositionInput,
   convertUnitInput,
+  cohortPositionInput,
 } from "./schemas";
 import type { SessionScope } from "./scope";
 import {
@@ -39,6 +40,7 @@ import {
   runTrend,
   runRangePosition,
   runConvertUnit,
+  runCohortPosition,
 } from "./tools";
 
 /**
@@ -101,6 +103,9 @@ export const queryToolRunners = (
     runRangePosition(scope, input, ports),
   ),
   convert_unit: bind(convertUnitInput, (input) => runConvertUnit(scope, input, ports)),
+  cohort_position: bind(cohortPositionInput, (input) =>
+    runCohortPosition(scope, input, ports),
+  ),
 });
 
 export const QUERY_MCP_SERVER_INFO = {

@@ -13,7 +13,7 @@
     "content_sha256": "f4941fab7a56e17f9dd66b6b6e0fbed379dab8c564c6024831c5fd4aa0ba09eb"
   },
   "open_twin_sha": "a9e126c952c91e19e064a962dda7d815a43564e5",
-  "questions_sha256": "5385897e1a885157311a3818556540746d5bc3a70357d6b8a4a48f4f8c0714c1",
+  "questions_sha256": "a1140e9f980ecfe19b864d5eab50298a67b55e11831ba0444d9c7248bbf2e1e8",
   "actor": "eval-answer-key",
   "generated_on": "2026-10-27",
   "entries": {
@@ -2564,6 +2564,124 @@
         "n": 0,
         "windows": [],
         "refusal": "UNSUPPORTED_CONVERSION"
+      }
+    ],
+    "Q-S1-19": [
+      {
+        "name": "value",
+        "tool": "cohort_position",
+        "args": {
+          "subject_ref": "62f60bdb-cc5c-8305-b98b-f2b229a55eca",
+          "loinc": "4548-4",
+          "start": "2016-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z"
+        },
+        "path": "value",
+        "value": 5.7,
+        "unit": "%",
+        "n": 380,
+        "windows": [{ "start": "2016-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "percentile",
+        "tool": "cohort_position",
+        "args": {
+          "subject_ref": "62f60bdb-cc5c-8305-b98b-f2b229a55eca",
+          "loinc": "4548-4",
+          "start": "2016-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z"
+        },
+        "path": "percentile",
+        "value": 32.69230769230769,
+        "unit": null,
+        "n": 380,
+        "windows": [{ "start": "2016-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "n",
+        "tool": "cohort_position",
+        "args": {
+          "subject_ref": "62f60bdb-cc5c-8305-b98b-f2b229a55eca",
+          "loinc": "4548-4",
+          "start": "2016-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z"
+        },
+        "path": "n",
+        "value": 26,
+        "unit": null,
+        "n": 380,
+        "windows": [{ "start": "2016-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S1-20": [
+      {
+        "name": "value",
+        "tool": "cohort_position",
+        "args": {
+          "subject_ref": "644ed582-2e59-8b56-564b-9312d1f0d244",
+          "loinc": "8480-6",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z"
+        },
+        "path": "value",
+        "value": 98,
+        "unit": "mm[Hg]",
+        "n": 100,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "percentile",
+        "tool": "cohort_position",
+        "args": {
+          "subject_ref": "644ed582-2e59-8b56-564b-9312d1f0d244",
+          "loinc": "8480-6",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z"
+        },
+        "path": "percentile",
+        "value": 14.0625,
+        "unit": null,
+        "n": 100,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "n",
+        "tool": "cohort_position",
+        "args": {
+          "subject_ref": "644ed582-2e59-8b56-564b-9312d1f0d244",
+          "loinc": "8480-6",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z"
+        },
+        "path": "n",
+        "value": 32,
+        "unit": null,
+        "n": 100,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S6-21": [
+      {
+        "name": "refusal",
+        "tool": "cohort_position",
+        "args": {
+          "subject_ref": "6aed9210-c500-4375-b0fc-3374c40b8591",
+          "loinc": "2276-4",
+          "start": "2016-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z"
+        },
+        "path": "code",
+        "value": "COHORT_TOO_SMALL",
+        "unit": null,
+        "n": 0,
+        "windows": [{ "start": "2016-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": "COHORT_TOO_SMALL"
       }
     ]
   }
