@@ -188,7 +188,29 @@ describe("answer-key.v1.json", () => {
       "Q-S6-19 NO_ROWS",
       "Q-S6-20 UNSUPPORTED_CONVERSION",
       "Q-S6-21 COHORT_TOO_SMALL",
+      "Q-S6-22 NO_ROWS",
+      "Q-S6-23 NO_ROWS",
     ]);
+  });
+
+  test("clinical-timeline items: two lists and one refusal per tool, counts keyed exactly", () => {
+    const tagged = items.filter((item) => item.tags?.includes("clinical-timeline"));
+    expect(
+      tagged.map((item) => [item.id, item.expect.values?.map((spec) => spec.tool)[0]]),
+    ).toEqual([
+      ["Q-S1-21", "conditions_timeline"],
+      ["Q-S1-22", "conditions_timeline"],
+      ["Q-S1-23", "medications_timeline"],
+      ["Q-S1-24", "medications_timeline"],
+      ["Q-S6-22", "conditions_timeline"],
+      ["Q-S6-23", "medications_timeline"],
+    ]);
+    const loose = tagged.flatMap((item) =>
+      (item.expect.values ?? [])
+        .filter((spec) => spec.unit !== null || !("exact" in spec.tolerance))
+        .map((spec) => `${item.id} ${spec.name}`),
+    );
+    expect(loose).toEqual([]);
   });
 
   test("convert-unit items convert the value the key read, and name their measures", () => {
