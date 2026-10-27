@@ -7,6 +7,7 @@ import { findAppUserId } from "@/infrastructure/current-user";
 import { needsOnboarding } from "@/features/onboarding/onboarding-store";
 import { resolveActorId } from "@/infrastructure/auth-actor";
 import { fetchActiveModelCatalog } from "@/infrastructure/fetch-model-catalog";
+import { serverEnv } from "@/infrastructure/env";
 import { chatModelIsLocal } from "@/infrastructure/genome-gate";
 import { INCOGNITO_PARAM, isIncognitoParam } from "@/infrastructure/incognito";
 import { defaultModelSelection } from "@/infrastructure/model-catalog";
@@ -45,6 +46,7 @@ export default async function HomePage({
       incognito={incognito}
       localModelIds={localModelIds}
       initialDraft={safeDraft((await searchParams).draft)}
+      dataMode={serverEnv().DATA_MODE}
     />
   );
 }

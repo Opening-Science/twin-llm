@@ -33,6 +33,7 @@ import {
   offeredModels,
   toggleModel,
 } from "./model-selection";
+import { routeDraft, routePick } from "./prompt-route";
 import type { SuggestedQuestions } from "./suggested-questions";
 import { SuggestionChips } from "./suggestion-chips";
 
@@ -41,9 +42,11 @@ import { SuggestionChips } from "./suggestion-chips";
  * turns or streams: it hands "this text, these models" upward and clears.
  *
  * Typing `/` (or `/` and a word) opens the command palette; picking `connect`
- * shows the wearable rows. Picking a skill writes `/sleep ` into the prompt so
- * a window or subject can follow; a prompt that starts with a listed skill is
- * sent tagged with it. Enter sends, Shift+Enter starts a new line.
+ * shows the wearable rows; picking `twin` (or sending `/twin`) shows the twin
+ * card in the conversation and asks no model. Picking a skill writes `/sleep `
+ * into the prompt so a window or subject can follow; a prompt that starts with
+ * a listed skill is sent tagged with it. Enter sends, Shift+Enter starts a new
+ * line.
  *
  * On an empty thread, suggested questions sit above the prompt; picking one
  * writes it into the prompt to be read or edited first, never sent.
@@ -80,6 +83,7 @@ export const PromptBar = ({
   localModelIds = [],
   initialDraft = "",
   onSubmit,
+  onTwin,
 }: Readonly<{
   catalog: readonly CatalogModel[] | null;
   initialModelIds: readonly string[];
@@ -98,6 +102,8 @@ export const PromptBar = ({
     models: readonly ChosenModel[],
     skill: string | null,
   ) => void;
+  /** `/twin`: show the twin card. Never a turn. */
+  onTwin: () => void;
 }>) => {
   const router = useRouter();
   const wearables = useWearableStatus();
@@ -125,18 +131,36 @@ export const PromptBar = ({
   const connectOpen = slashOpen && picked?.name === "connect";
   const ready = !busy && draft.trim() !== "" && chosen.length > 0;
 
-  const submit = () => {
-    if (!ready) return;
-    onSubmit(
-      skillTurn?.prompt ?? draft,
-      chosen.map((model) => ({ id: model.id, name: model.name })),
-      skillTurn?.skill.name ?? null,
-    );
+  const openTwin = () => {
+    onTwin();
     setDraft("");
+    setPicked(null);
+    setActiveIndex(0);
+    setNotice(undefined);
   };
 
-  /** A skill goes into the prompt to be sent; a built-in opens its own menu. */
+  const submit = () => {
+    if (busy) return;
+    routeDraft(draft, {
+      openTwin,
+      send: () => {
+        if (!ready) return;
+        onSubmit(
+          skillTurn?.prompt ?? draft,
+          chosen.map((model) => ({ id: model.id, name: model.name })),
+          skillTurn?.skill.name ?? null,
+        );
+        setDraft("");
+      },
+    });
+  };
+
+  /**
+   * A skill goes into the prompt to be sent; `twin` shows its card at once;
+   * another built-in opens its own menu.
+   */
   const pick = (command: Command | null) => {
+    if (routePick(command, { openTwin })) return;
     if (command?.kind === "skill") {
       setDraft(`/${command.name} `);
       setPicked(null);

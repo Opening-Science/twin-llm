@@ -8,6 +8,7 @@ import { skillsFor } from "@/features/skills/user-skill-store";
 import { resolveActorId } from "@/infrastructure/auth-actor";
 import { findAppUserId } from "@/infrastructure/current-user";
 import { fetchActiveModelCatalog } from "@/infrastructure/fetch-model-catalog";
+import { serverEnv } from "@/infrastructure/env";
 import { defaultModelSelection } from "@/infrastructure/model-catalog";
 
 /** A thread is private to its owner; search engines get nothing either way. */
@@ -47,6 +48,7 @@ export default async function ThreadPage({
         threadId={thread.id}
         initialTurns={thread.turns}
         skills={skills.map(skillCommand)}
+        dataMode={serverEnv().DATA_MODE}
       />
     </>
   );

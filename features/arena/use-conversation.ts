@@ -193,5 +193,5 @@ export const useConversation = (
     [],
   );
 
-  return { turns, sending, error, summaries, send, retry };
+  return { threadId, turns, sending, error, summaries, send, retry };
 };

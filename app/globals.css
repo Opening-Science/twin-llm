@@ -787,6 +787,35 @@
     background-color: var(--color-muted);
     animation: placeholder-pulse 1.6s ease-in-out infinite;
   }
+
+  /* The `/twin` card in the chat (features/arena/twin-chat-card.tsx): the Body
+     twin viewer in a compact, scrollable body. Collapsed, a one-line chip. */
+  .twin-chat-card {
+    @apply overflow-hidden;
+  }
+
+  .twin-chat-body {
+    @apply h-[min(440px,75vh)] overflow-y-auto overscroll-contain px-4 pb-4;
+  }
+
+  .twin-chat-chip {
+    @apply border-border bg-card inline-flex max-w-full items-center gap-1 rounded-full border py-0.5 pr-0.5 pl-1;
+  }
+
+  .twin-chat-chip-open {
+    @apply hover:bg-muted focus-visible:ring-ring inline-flex min-w-0 items-center gap-1.5 rounded-full px-2 py-1 text-sm outline-none focus-visible:ring-2;
+  }
+
+  .twin-chat-status {
+    @apply text-muted-foreground pt-4 text-sm;
+  }
+}
+
+/* Unlayered, so it wins over the viewer's own height utility: inside the
+   chat card the 3D view is shorter than on the Digital Twin page. */
+.twin-chat-body .wearables-hero {
+  height: 270px;
+  min-height: 0;
 }
 
 @keyframes placeholder-pulse {
