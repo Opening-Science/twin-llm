@@ -36,6 +36,7 @@ import {
   type TrainingFileDeps,
 } from "./training-files";
 import { NoTrainingSets, TrainingBrowser } from "./training-browser";
+import { COHORT_BASE, COHORT_SUBJECTS } from "./data-paths";
 
 /**
  * The Data page's screens, one per route under `app/(shell)/data`. Each reads
@@ -105,7 +106,7 @@ export const OverviewScreen = ({
 }) => (
   <CohortScreen
     section="overview"
-    path="/data"
+    path={COHORT_BASE}
     params={params}
     deps={deps}
     body={async (cohortId) => {
@@ -128,7 +129,7 @@ export const SubjectsScreen = ({
 }) => (
   <CohortScreen
     section="subjects"
-    path="/data/subjects"
+    path={COHORT_SUBJECTS}
     params={params}
     deps={deps}
     body={async (cohortId) => {
@@ -161,7 +162,7 @@ export const SubjectScreen = async ({
         <>
           <div className="mt-6 flex flex-wrap items-center justify-between gap-2">
             <Link
-              href={`/data/subjects?cohort=${encodeURIComponent(result.subject.cohortId)}`}
+              href={`${COHORT_SUBJECTS}?cohort=${encodeURIComponent(result.subject.cohortId)}`}
               className={buttonClassName({ size: "sm" })}
             >
               All subjects

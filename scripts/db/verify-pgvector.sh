@@ -63,6 +63,25 @@ if [[ "${hnsw_row}" != "guideline_chunks_embedding_hnsw|guideline_chunks|hnsw|ve
   exit 1
 fi
 
+echo "=== HNSW cosine index (search, #167) ==="
+search_row="$(sql "
+SELECT i.relname || '|' || t.relname || '|' || am.amname || '|' || opc.opcname
+FROM pg_class i
+JOIN pg_index ix ON ix.indexrelid = i.oid
+JOIN pg_class t ON t.oid = ix.indrelid
+JOIN pg_am am ON am.oid = i.relam
+JOIN pg_opclass opc ON opc.oid = ix.indclass[0]
+WHERE i.relname = 'thread_search_embeddings_embedding_hnsw'
+  AND t.relname = 'thread_search_embeddings'
+  AND am.amname = 'hnsw'
+  AND opc.opcname = 'vector_cosine_ops';
+")"
+printf '%s\n' "${search_row}"
+if [[ "${search_row}" != "thread_search_embeddings_embedding_hnsw|thread_search_embeddings|hnsw|vector_cosine_ops" ]]; then
+  echo "verify-pgvector FAIL: thread_search_embeddings_embedding_hnsw must exist with hnsw and vector_cosine_ops" >&2
+  exit 1
+fi
+
 echo "=== 768-d vector insert (rollback) ==="
 set +e
 ok_out="$(

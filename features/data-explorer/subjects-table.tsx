@@ -10,6 +10,7 @@ import {
   type SubjectSort,
   subjectQueryString,
 } from "./subject-table";
+import { COHORT_SUBJECTS } from "./data-paths";
 
 /**
  * The cohort's subjects as a server-rendered table. Search is a GET form and
@@ -28,7 +29,7 @@ const COLUMNS: readonly (readonly [SubjectSort, string, "left" | "right"])[] = [
 ];
 
 export const subjectHref = (ref: string): string =>
-  `/data/subjects/${encodeURIComponent(ref)}`;
+  `${COHORT_SUBJECTS}/${encodeURIComponent(ref)}`;
 
 const SortHeader = ({
   cohortId,
@@ -52,7 +53,7 @@ const SortHeader = ({
       className={`text-eyebrow px-3 py-2.5 ${align === "right" ? "text-right" : "text-left"}`}
     >
       <Link
-        href={`/data/subjects${subjectQueryString(cohortId, { q: query.q, sort, dir: nextDir })}`}
+        href={`${COHORT_SUBJECTS}${subjectQueryString(cohortId, { q: query.q, sort, dir: nextDir })}`}
         className="hover:text-foreground rounded-sm"
       >
         {label}
@@ -72,13 +73,13 @@ export const SubjectsTable = ({
   readonly query: SubjectQuery;
 }) => {
   const pageLink = (target: number) =>
-    `/data/subjects${subjectQueryString(cohortId, { ...query, page: target })}`;
+    `${COHORT_SUBJECTS}${subjectQueryString(cohortId, { ...query, page: target })}`;
 
   return (
     <section className="mt-6">
       <form
         method="get"
-        action="/data/subjects"
+        action={COHORT_SUBJECTS}
         className="flex flex-wrap items-end gap-2"
       >
         <input type="hidden" name="cohort" value={cohortId} />

@@ -6,6 +6,7 @@ import {
   permitGenomeRun,
 } from "./data-mode-policy";
 import { genomeEnv, serverEnv } from "./env";
+import { isLocalChatModel } from "./genome-thread-policy";
 import { isLoopbackUrl } from "./loopback";
 
 /**
@@ -25,6 +26,18 @@ export const genomeChatPermit = (): GenomePermitDecision => {
     chatOnLoopback: isLoopbackUrl(env.OLLAMA_BASE_URL ?? DEFAULT_OLLAMA_URL),
     carbonXOnLoopback: isLoopbackUrl(genomeEnv(env).carbonXUrl),
   });
+};
+
+/**
+ * Does the chat model run on this machine: Ollama on loopback? A thread that
+ * used a genome tool may only go to such a model (`genome-thread-policy.ts`).
+ */
+export const chatModelIsLocal = (): boolean => {
+  const env = serverEnv();
+  return isLocalChatModel(
+    env.LLM_PROVIDER,
+    isLoopbackUrl(env.OLLAMA_BASE_URL ?? DEFAULT_OLLAMA_URL),
+  );
 };
 
 /** May the dashboard run the Ark app and store its report? */

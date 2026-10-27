@@ -252,6 +252,24 @@ describe("streamAnswer", () => {
     });
   });
 
+  test("a genome thread refusal shows the thread sentence (#151)", async () => {
+    const result = await streamAnswer(
+      { modelId: "m", turnId: "t", messages: [{ role: "user", content: "q" }] },
+      () => {},
+      async () =>
+        Response.json(
+          { code: "GENOME_THREAD_LOCAL_ONLY", error: "internal wording" },
+          { status: 400 },
+        ),
+    );
+    expect(result).toEqual({
+      ending: "FAILED",
+      metrics: null,
+      document: null,
+      refusal: "This thread used your genome report, so it only runs on local models.",
+    });
+  });
+
   test("any other refusal text never reaches the column", async () => {
     const result = await streamAnswer(
       { modelId: "m", turnId: "t", messages: [{ role: "user", content: "q" }] },

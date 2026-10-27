@@ -10,6 +10,7 @@ import { BarList } from "./bar-list";
 import { COHORT_ROLES, EVAL_COHORT_ID } from "./explorer-copy";
 import { type TrainingSet, type TrainingSetDetail } from "./training-files";
 import { countBy, type Count, pageMeta } from "./training-sets";
+import { COHORT_TRAINING } from "./data-paths";
 
 /**
  * The Training tab: the conversation sets in `training-data/out/`, one set's
@@ -24,11 +25,11 @@ export const trainingHref = (
   const params = new URLSearchParams({ set });
   if (options.family) params.set("family", options.family);
   if (options.page && options.page > 1) params.set("page", String(options.page));
-  return `/data/training?${params}`;
+  return `${COHORT_TRAINING}?${params}`;
 };
 
 export const conversationHref = (set: string, index: number): string =>
-  `/data/training/${encodeURIComponent(set)}/${index + 1}`;
+  `${COHORT_TRAINING}/${encodeURIComponent(set)}/${index + 1}`;
 
 const Code = ({ children }: { readonly children: React.ReactNode }) => (
   <code className="setup-code">{children}</code>

@@ -2,7 +2,14 @@ import { describe, expect, test } from "bun:test";
 
 import type { CatalogModel } from "@/infrastructure/model-catalog";
 
-import { chosenModels, missingCount, toggleLimit, toggleModel } from "./model-selection";
+import {
+  chosenModels,
+  incognitoHint,
+  missingCount,
+  offeredModels,
+  toggleLimit,
+  toggleModel,
+} from "./model-selection";
 
 const model = (id: string): CatalogModel => ({
   id,
@@ -37,5 +44,26 @@ describe("model selection", () => {
     expect(toggleLimit(false, 3)).toBe("cap");
     expect(toggleLimit(true, 2)).toBeNull();
     expect(toggleLimit(false, 2)).toBeNull();
+  });
+});
+
+describe("models offered in an incognito chat", () => {
+  test("only local models are offered; a normal chat offers the whole catalog", () => {
+    expect(offeredModels(catalog, true, ["b", "d"]).map((m) => m.id)).toEqual(["b", "d"]);
+    expect(offeredModels(catalog, false, []).map((m) => m.id)).toEqual([
+      "a",
+      "b",
+      "c",
+      "d",
+    ]);
+  });
+
+  test("the hint says when no local model is offered", () => {
+    expect(incognitoHint(0)).toBe(
+      "No model on this machine is offered, so an incognito chat has nowhere to go. Turn incognito off to use the others.",
+    );
+    expect(incognitoHint(2)).toBe(
+      "Local models only. Nothing in this chat is saved; a reload or a new chat discards it.",
+    );
   });
 });
