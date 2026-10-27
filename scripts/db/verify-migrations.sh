@@ -20,8 +20,12 @@ bunx prisma migrate deploy
 
 echo "=== prisma migrate diff (expect empty / the unmodelable HNSW drop only) ==="
 # Prisma 7.9 cannot declare USING hnsw on Unsupported("vector"), so migrate
-# diff always emits this one DROP. verify-pgvector.sh asserts the index exists.
-TOLERATED_HNSW_DROP='DROP INDEX "guideline_chunks_embedding_hnsw";'
+# diff always emits a DROP for each HNSW index. verify-pgvector.sh asserts
+# the guideline index exists; the search index (#167) is checked below.
+TOLERATED_HNSW_DROPS=(
+  'DROP INDEX "guideline_chunks_embedding_hnsw";'
+  'DROP INDEX "thread_search_embeddings_embedding_hnsw";'
+)
 set +e
 diff_script="$(
   bunx prisma migrate diff \
@@ -38,7 +42,11 @@ if [[ "${diff_status}" -ne 0 ]]; then
   while IFS= read -r line || [[ -n "${line}" ]]; do
     [[ -z "${line}" ]] && continue
     [[ "${line}" == "-- DropIndex" ]] && continue
-    [[ "${line}" == "${TOLERATED_HNSW_DROP}" ]] && continue
+    tolerated=0
+    for drop in "${TOLERATED_HNSW_DROPS[@]}"; do
+      [[ "${line}" == "${drop}" ]] && tolerated=1
+    done
+    [[ "${tolerated}" -eq 1 ]] && continue
     [[ "${line}" == *"injected env"* ]] && continue
     [[ "${line}" == "Loaded Prisma config from prisma.config.ts." ]] && continue
     [[ "${line}" == "Prisma schema loaded from prisma/schema.prisma." ]] && continue
@@ -49,7 +57,7 @@ if [[ "${diff_status}" -ne 0 ]]; then
     printf '%s' "${leftover}" >&2
     exit 1
   fi
-  echo "migrate diff is the unmodelable HNSW drop only"
+  echo "migrate diff is the unmodelable HNSW drops only"
 fi
 
 echo "=== pgvector ==="

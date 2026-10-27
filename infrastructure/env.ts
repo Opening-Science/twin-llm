@@ -7,6 +7,7 @@ import {
   type ExoscalePersonalData,
 } from "./data-mode-policy";
 import { isLoopbackUrl } from "./loopback";
+import { DEFAULT_OLLAMA_NUM_CTX, MIN_OLLAMA_NUM_CTX } from "./ollama-context";
 
 /**
  * Server configuration for TwinLLM, validated once and then read everywhere
@@ -369,6 +370,14 @@ const serverEnvSchema = z
     ),
     OPENROUTER_API_KEY: maybeText(),
     OLLAMA_BASE_URL: maybeUrl(),
+    OLLAMA_NUM_CTX: z.preprocess(
+      blankAsMissing,
+      z.coerce
+        .number()
+        .int("OLLAMA_NUM_CTX must be a whole number of tokens")
+        .min(MIN_OLLAMA_NUM_CTX, `OLLAMA_NUM_CTX must be at least ${MIN_OLLAMA_NUM_CTX}`)
+        .default(DEFAULT_OLLAMA_NUM_CTX),
+    ),
     REMOTE_GPU_BASE_URLS: urlList(),
     REMOTE_GPU_API_KEY: maybeText(),
     EXOSCALE_BASE_URLS: urlList(),
