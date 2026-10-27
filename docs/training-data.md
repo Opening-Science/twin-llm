@@ -451,6 +451,14 @@ datasets) and an `analysis` group for reading harness output. It reads the
 JSONL files above and the gitignored `evaluation/runs/`; the app never
 imports it, and skills and MCP servers stay TypeScript.
 
+**Context length.** Chat and `bun run eval` both reach a local model through
+the same resolver, so an evaluated answer runs with the context the app asks
+Ollama for: `OLLAMA_NUM_CTX`, default 16384 (see
+[providers.md](providers.md#ollama-context)). Train pilot 2 with a maximum
+sequence length of at least that, so a training record is never cut where the
+served model would see the whole prompt. A Modelfile's own `num_ctx` (8192 in
+the pilot 1 models) is overridden by the request.
+
 ## Licences
 
 - **Synthea** is Apache-2.0 (v4.0.0, pinned in `scripts/synthea/generate-local.sh`).

@@ -13,6 +13,7 @@ import {
   databaseSummary,
   exampleSummary,
   type Finding,
+  ollamaContextSummary,
   pageReadiness,
   type Readiness,
   SETUP_COMMAND,
@@ -38,6 +39,7 @@ export const formatDoctor = (state: DetectedState): string => {
   );
   const database = databaseSummary(state);
   const example = exampleSummary(state);
+  const context = ollamaContextSummary(state.ollama);
   const openTwin =
     state.openTwin.synced === state.openTwin.pinned
       ? `  [ok]      open-twin packages at ${state.openTwin.pinned.slice(0, 7)}`
@@ -62,6 +64,11 @@ export const formatDoctor = (state: DetectedState): string => {
     `  ${database.ok ? "[ok]     " : "[missing]"} Postgres: ${database.detail}`,
     openTwin,
     `  ${example.ok ? "[ok]     " : "[off]    "} Example thread: ${example.detail}`,
+    ...(context === null
+      ? []
+      : [
+          `  ${context.ok ? "[ok]     " : "[no]     "} Ollama context: ${context.detail}`,
+        ]),
     "",
     "What each page needs",
     ...pages,
