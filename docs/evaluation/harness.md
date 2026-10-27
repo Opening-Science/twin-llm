@@ -18,7 +18,7 @@ bun run eval:report -- 2026-10-21-qwen3-s5 --quantisation Q4_K_M
 | Flag                                                    | Meaning                                                        |
 | ------------------------------------------------------- | -------------------------------------------------------------- |
 | `--models provider:id[,…]`                              | Required. Every provider must be `LLM_PROVIDER` in `.env.eval` |
-| `--items Q-S1-01,…` / `--scenario S1` / `--latency-set` | One selection at most; none means all 84 items                 |
+| `--items Q-S1-01,…` / `--scenario S1` / `--latency-set` | One selection at most; none means all 88 items                 |
 | `--replay`                                              | Cache only; never calls a model                                |
 | `--run-id <id>`                                         | Default `<date>-<provider>-<time>`; an existing run is refused |
 | `--timeout-s <n>`                                       | Per item, default 300                                          |

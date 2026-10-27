@@ -1,7 +1,13 @@
 {
   "task": "1",
-  "app": "fixture.wasm",
+  "app": {
+    "name": "fixture",
+    "version": "0.1.0",
+    "develop": false
+  },
   "success": true,
+  "paths": ["v1/genome/rsids/rs72921001"],
+  "media": "text/markdown",
   "stdout": "# Finding\n\nSynthetic fixture report.\n",
   "stderr": "",
   "duration_seconds": 0.5

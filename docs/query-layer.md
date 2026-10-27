@@ -15,6 +15,7 @@ Closed, parameterised reads over the Synthea warehouse. The model never writes S
 | `baseline_deviation`       | `subject_ref`, `loinc`, `baseline {start, end}`, `target {start, end}`   | `{ baseline { n, median, mad }, target { n, median }, robust_z, unit }`                      | 5000 per window |
 | `coverage`                 | `subject_ref`, `loinc[]`, `start`, `end`                                 | `{ days_in_window, codes: [{ n, days_with_data, coverage_ratio, longest_gap_days, unit }] }` | 5000, 20 codes  |
 | `compare_windows`          | `subject_ref`, `loinc`, `window_a {start, end}`, `window_b {start, end}` | `{ window_a, window_b }` with `n, mean, median, min, max`, `delta_b_minus_a`, `unit`         | 5000 per window |
+| `range_position`           | `subject_ref`, `loinc`, `start`, `end`, `pick`, `at`                     | `{ n, effective_at, value, unit, marker_id, range, position, depends_on }`                   | 5000            |
 | `convert_unit`             | `value`, `from`, `to`, `analyte` (enums)                                 | `{ analyte, from_value, from_unit, value, unrounded, unit, formula, rounding }`              | no rows         |
 | `guideline_search`         | `query`, `k` (default 5, max 8)                                          | catalogue + `passage` (null when `cite_only`)                                                | `k` ≤ 8         |
 | `knowledge_search`         | `query`, `k` (default 5, max 8)                                          | file, title, section, `passage` (OpenTwin knowledge, `docs/knowledge.md`)                    | `k` ≤ 8         |
@@ -31,6 +32,7 @@ Warehouse tools use Prisma `findMany` / `aggregate` only. No `$queryRaw` in thos
 - `baseline_deviation`: robust z = (target median − baseline median) / (1.4826 · baseline MAD). `null` when the MAD is 0 or a window is empty. `mad` is unscaled.
 - `coverage`: UTC calendar days from the start's day to the end's day, inclusive, so an end at midnight UTC counts that day (1 Jan 00:00 to 10 Jan 00:00 is 10 days). `longest_gap_days` is the longest run of days with no row, counting the gap before the first and after the last row. All requested codes are read together, so the 5000-row cap covers all codes at once, not each code.
 - `compare_windows`: deltas are B minus A, `null` when either window is empty.
+- `range_position`: one reading (`pick: latest`, the newest in the window, or `pick: at`, the one at `at`; a tie at one instant goes to the lower row id) against its Anchor v3 published range (`range { low, high, unit, population, source }`), with the Biomarkers tab's own functions (`rangeChoice`, `placeValue` in `packages/biomarkers/range-choice.ts`, `docs/biomarkers.md`). `position` is `below`, `within` or `above`, bounds inclusive. The warehouse holds no sex, age or timing for a subject (#4), so a range that needs one has `range` and `position` null and `depends_on` names the facts (`sex`, `age`, `timing`); nothing is guessed. Refusals: `NO_ROWS` (no reading in the window or at `at`), `MIXED_UNITS`, `NO_PUBLISHED_RANGE` (not an Anchor marker, no range published, a D11 unit flag; checked before any read) and `UNIT_MISMATCH` (with `unit` and `range_unit`; nothing is converted, and the reason points to `convert_unit`).
 
 A statistic with no data is `null`, never 0. Counts stay 0. Refusals have a `code`:
 
@@ -40,7 +42,7 @@ A statistic with no data is `null`, never 0. Counts stay 0. Refusals have a `cod
 
 Audit `row_count` is the number of observations read (both windows for two-window tools). Any refusal records 0, so a refused call never counts toward `sufficient_data`.
 
-A tool that throws (database down, a bad decimal) is still audited, for all nine warehouse tools: `row_count` 0 and `result` `{ "error": "query-tool-failed" }`. The error message is not stored. The error is then rethrown to the caller.
+A tool that throws (database down, a bad decimal) is still audited, for every warehouse tool: `row_count` 0 and `result` `{ "error": "query-tool-failed" }`. The error message is not stored. The error is then rethrown to the caller.
 
 ## Unit conversion
 
@@ -74,7 +76,7 @@ Models get a slim form of each input schema, built in one place (`modelJsonSchem
 
 ## MCP server
 
-`bun run mcp:serve` (`scripts/mcp-server.ts`) serves the nine warehouse tools and `convert_unit` to an MCP client over stdio, with the env from `.env.local`. The tool list is `mcpToolManifest()`, so it equals the committed snapshot; every call is parsed with the tool's zod schema and then runs the same function chat runs (`packages/query-tools/mcp-server.ts`), so scope and audit are unchanged: a call outside the synthetic cohorts returns `SUBJECT_SCOPE_VIOLATION`, every call appends one audit event with `actor` `mcp` and one `session_id` per server process, and a call that throws is audited as `query-tool-failed` and answered with a fixed error text. Invalid arguments are refused before the tool runs and are not audited. Logs go to stderr; stdout is the protocol.
+`bun run mcp:serve` (`scripts/mcp-server.ts`) serves the warehouse tools and `convert_unit` to an MCP client over stdio, with the env from `.env.local`. The tool list is `mcpToolManifest()`, so it equals the committed snapshot; every call is parsed with the tool's zod schema and then runs the same function chat runs (`packages/query-tools/mcp-server.ts`), so scope and audit are unchanged: a call outside the synthetic cohorts returns `SUBJECT_SCOPE_VIOLATION`, every call appends one audit event with `actor` `mcp` and one `session_id` per server process, and a call that throws is audited as `query-tool-failed` and answered with a fixed error text. Invalid arguments are refused before the tool runs and are not audited. Logs go to stderr; stdout is the protocol.
 
 Transport is stdio only. `DATA_MODE=personal` must stay that way: `assertTransportAllowedForDataMode` refuses a network transport (streamable HTTP, SSE) in personal mode, so anyone adding one has to go through that guard. In personal mode the warehouse scope is empty anyway (see "Scope").
 

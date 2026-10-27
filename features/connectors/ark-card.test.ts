@@ -100,6 +100,12 @@ describe("ArkCard", () => {
     expect(markup).not.toContain("readable paths");
   });
 
+  test("renders firmware too old with the update command", () => {
+    const markup = html(unavailable("outdated", "firmware-outdated"));
+    expect(markup).toContain("Firmware too old");
+    expect(markup).toContain("Ark firmware too old: run `ark firmware update`");
+  });
+
   test("renders locked", () => {
     expect(html(unavailable("locked", "locked"))).toContain("Locked");
   });

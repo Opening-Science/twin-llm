@@ -7,15 +7,21 @@ import type { AppendInput } from "@/packages/audit/append";
 mock.module("server-only", () => ({}));
 
 import type { ArkAuditFn } from "./hooks";
+import appRunFailed from "./fixtures/app-run-failed.json";
 import appRunOk from "./fixtures/app-run-ok.json";
 import dataListOk from "./fixtures/data-list-ok.json";
 import dataPathsOk from "./fixtures/data-paths-ok.json";
+import doctorEmulator from "./fixtures/doctor-emulator.json";
 import errorApprovalDenied from "./fixtures/error-approval-denied.json";
 import errorApprovalTimeout from "./fixtures/error-approval-timeout.json";
+import errorApprovalUndelivered from "./fixtures/error-approval-undelivered.json";
+import errorArkRefused from "./fixtures/error-ark-refused.json";
 import errorDeviceBusy from "./fixtures/error-device-busy.json";
+import errorFirmwareOutdated from "./fixtures/error-firmware-outdated.json";
 import errorLocked from "./fixtures/error-locked.json";
 import errorNoDevice from "./fixtures/error-no-device.json";
 import errorNotPaired from "./fixtures/error-not-paired.json";
+import statusEmulator from "./fixtures/status-emulator-unenrolled.json";
 import statusOk from "./fixtures/status-ok.json";
 
 const envState = {
@@ -96,8 +102,9 @@ const installFixtureSpawn = () =>
 
 installFixtureSpawn();
 
-const { appRun, dataList, dataPaths, status } = await import("./client");
-const { buildArkArgv, hostTimeoutMsForCliTimeout, spawnArk } = await import("./spawn");
+const { appRun, dataList, dataPaths, doctor, status } = await import("./client");
+const { buildArkArgv, hostTimeoutMsForCliTimeout, hostTimeoutMsForRun, spawnArk } =
+  await import("./spawn");
 const { GENOME_SOURCE_DISABLED, UNLOCK_FORBIDDEN } = await import("./codes");
 
 const CTX = {
@@ -177,6 +184,15 @@ describe("ark-adapter spawn argv", () => {
     expect(hostTimeoutMsForCliTimeout(10)).toBe(100_000);
     expect(hostTimeoutMsForCliTimeout()).toBeUndefined();
   });
+
+  test("ark run is capped past both phone windows (5 + 10 minutes)", () => {
+    expect(hostTimeoutMsForRun(30)).toBe(30_000 + 300_000 + 600_000 + 300_000);
+    expect(hostTimeoutMsForRun()).toBe(60_000 + 300_000 + 600_000 + 300_000);
+  });
+
+  test("ark app run is gone; ark run is the only run command", async () => {
+    await expect(spawnArk(["app", "run", "x.wasm"])).rejects.toThrow(/not allowed/);
+  });
 });
 
 describe("ark-adapter client states", () => {
@@ -210,12 +226,16 @@ describe("ark-adapter client states", () => {
     const listed = await dataList(CTX);
     expect(listed.status).toBe("ok");
     if (listed.status === "ok") {
-      expect(listed.data.slots.map((slot) => slot.name)).toEqual([
+      expect(listed.data.slots.map((slot) => slot.slot)).toEqual([
         "reference-genome",
         "gene-annotations",
-        "snp-indel-calls",
+        "small-variants",
+        "structural-variants",
+        "copy-number-variants",
         "variant-catalog",
       ]);
+      expect(listed.data.slots[2]?.build).toBe("GRCh38.p14");
+      expect(listed.data.slots[5]?.version).toBe(157);
     }
 
     nextIo = jsonIo(0, dataPathsOk);
@@ -228,11 +248,11 @@ describe("ark-adapter client states", () => {
     }
   });
 
-  test("ok appRun returns report and audits grants", async () => {
+  test("ok appRun spawns ark run, returns the report and audits grants", async () => {
     nextIo = jsonIo(0, appRunOk);
     const result = await appRun(CTX, {
       app: "/tmp/fixture.wasm",
-      grants: ["v1/genome/variants"],
+      grants: ["v1/genome/rsids/rs72921001"],
       timeout: 15,
     });
     expect(result).toEqual({
@@ -241,16 +261,76 @@ describe("ark-adapter client states", () => {
     });
     expect(appendCalls[0]?.tool).toBe("ark.app.run");
     expect(appendCalls[0]?.args).toEqual({
-      argv: ["ark", "app", "run", "/tmp/fixture.wasm", "--timeout", "15", "--json"],
-      grants: ["v1/genome/variants"],
+      argv: ["ark", "run", "/tmp/fixture.wasm", "--timeout", "15", "--json"],
+      grants: ["v1/genome/rsids/rs72921001"],
     });
     expect(appendCalls[0]?.result).toEqual({
       task: "1",
-      app: "fixture.wasm",
+      app: { name: "fixture", version: "0.1.0", develop: false },
       success: true,
+      media: "text/markdown",
       duration_seconds: 0.5,
+      paths_mounted: 1,
       report_chars: 37,
     });
+    expect(JSON.stringify(appendCalls[0]?.result)).not.toContain("rs72921001");
+  });
+
+  test("doctor keeps check names and results, even when a check fails", async () => {
+    nextIo = jsonIo(4, doctorEmulator);
+    const result = await doctor(CTX);
+    expect(result.status).toBe("ok");
+    if (result.status === "ok") {
+      expect(result.data.version).toBe("0.5.0");
+      expect(result.data.checks.find((check) => check.name === "registry")).toEqual({
+        name: "registry",
+        result: "fail",
+      });
+      expect(JSON.stringify(result.data)).not.toContain("detail");
+    }
+    expect(appendCalls[0]?.tool).toBe("ark.doctor");
+  });
+
+  test("status parses a self-signed emulator with null attestation fields", async () => {
+    nextIo = jsonIo(0, { ...statusEmulator, pubkey: "ab".repeat(64) });
+    const result = await status(CTX);
+    expect(result.status).toBe("ok");
+    if (result.status === "ok") {
+      expect(result.data.serial).toBeNull();
+      expect(result.data.trust).toBe("self-signed");
+      expect("pubkey" in result.data).toBe(false);
+    }
+  });
+
+  test("outdated from firmware-outdated", async () => {
+    nextIo = jsonIo(5, errorFirmwareOutdated);
+    const result = await dataList(CTX);
+    expect(result.status).toBe("outdated");
+  });
+
+  test("undelivered from approval-undelivered (exit 4)", async () => {
+    nextIo = jsonIo(4, errorApprovalUndelivered);
+    const result = await appRun(CTX, { app: "/tmp/fixture.wasm", grants: [] });
+    expect(result.status).toBe("undelivered");
+  });
+
+  test("rejected from the Ark's own refusal, with its remote code kept", async () => {
+    nextIo = jsonIo(5, errorArkRefused);
+    const result = await appRun(CTX, { app: "/tmp/fixture.wasm", grants: [] });
+    expect(result.status).toBe("rejected");
+    if (result.status === "rejected") {
+      expect(result.error.remoteCode).toBe("9001");
+    }
+  });
+
+  test("app_failed from exit 8: run document on stdout, error event on stderr", async () => {
+    nextIo = jsonIo(
+      8,
+      appRunFailed,
+      '{"event":"error","message":"app failed","error":{"code":"app-failed","message":"app failed","hints":[]}}',
+    );
+    const result = await appRun(CTX, { app: "/tmp/fixture.wasm", grants: [] });
+    expect(result.status).toBe("app_failed");
   });
 
   test("locked", async () => {

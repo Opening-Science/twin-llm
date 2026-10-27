@@ -1,31 +1,37 @@
 {
   "paths": [
     {
-      "path": "v1/genome",
+      "path": "v1/genome/rsids/<rsid>",
       "directory": true,
+      "grantable": true,
+      "available": true,
+      "description": "Synthetic fixture text",
+      "format": "Synthetic fixture text",
+      "examples": ["rs72921001"],
+      "public": false,
+      "wording": "Synthetic fixture text"
+    },
+    {
+      "path": "v1/genome/rsids/<rsid>/genotype",
+      "directory": false,
       "grantable": false,
-      "available": false,
-      "description": "Genome data root",
-      "format": null,
-      "examples": []
+      "available": true,
+      "description": "Synthetic fixture text",
+      "format": "Synthetic fixture text",
+      "examples": ["A/G"],
+      "public": false,
+      "wording": null
     },
     {
-      "path": "v1/genome/variants",
+      "path": "v1/genome/datasets/<name>",
       "directory": true,
       "grantable": true,
-      "available": false,
-      "description": "Variant call directory",
-      "format": null,
-      "examples": []
-    },
-    {
-      "path": "v1/genome/reference",
-      "directory": true,
-      "grantable": true,
-      "available": false,
-      "description": "Reference sequence directory",
-      "format": null,
-      "examples": []
+      "available": true,
+      "description": "Synthetic fixture text",
+      "format": "Synthetic fixture text",
+      "examples": ["small-variants"],
+      "public": true,
+      "wording": null
     }
   ]
 }

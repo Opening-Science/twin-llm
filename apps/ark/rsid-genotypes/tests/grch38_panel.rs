@@ -38,9 +38,9 @@ fn site(rsid: &str) -> (&'static str, &'static str, &'static str, &'static str) 
 }
 
 fn check_genotype(rsid: &str, genotype: &str, reference: &str, alt: &str) {
-    for allele in genotype.split(['/', '|']) {
+    for allele in genotype.trim_start_matches(['/', '|']).split(['/', '|']) {
         assert!(
-            allele == reference || allele == alt,
+            allele == reference || allele == alt || allele == ".",
             "{rsid} genotype {genotype} has {allele}, not {reference} or {alt}"
         );
     }
@@ -55,13 +55,16 @@ fn panel_is_the_grch38_table_in_order() {
 
 #[test]
 fn fixture_leaves_are_forward_strand_grch38() {
-    for set in ["present", "unanswered", "eio"] {
+    for set in ["present", "unanswered", "eio", "declined"] {
         for entry in PANEL {
             let (chrom, pos, reference, alt) = site(entry.rsid);
             let base = crate_root()
                 .join("fixtures")
                 .join(set)
                 .join(rsid_genotypes::grant_path(entry.rsid));
+            if set == "declined" && !base.is_dir() {
+                continue;
+            }
             let leaf = |name: &str| fs::read_to_string(base.join(name)).ok();
             let at = format!("{set}/{}", entry.rsid);
             assert_eq!(
@@ -70,6 +73,7 @@ fn fixture_leaves_are_forward_strand_grch38() {
                 "{at} chromosome"
             );
             assert_eq!(leaf("position").as_deref(), Some(pos), "{at} position");
+            assert_eq!(leaf("end").as_deref(), Some(pos), "{at} end");
             assert_eq!(
                 leaf("reference").as_deref(),
                 Some(reference),
@@ -85,7 +89,7 @@ fn fixture_leaves_are_forward_strand_grch38() {
 
 #[test]
 fn golden_rows_are_forward_strand_grch38() {
-    for golden in ["present.tsv", "unanswered.tsv"] {
+    for golden in ["present.tsv", "unanswered.tsv", "declined.tsv"] {
         let text = fs::read_to_string(crate_root().join("goldens").join(golden)).unwrap();
         let rows: Vec<Vec<&str>> = text
             .lines()
@@ -94,6 +98,10 @@ fn golden_rows_are_forward_strand_grch38() {
             .collect();
         assert_eq!(rows.len(), GRCH38.len(), "{golden} row count");
         for (row, &(rsid, chrom, pos, reference, alt)) in rows.iter().zip(GRCH38) {
+            if row[4] == rsid_genotypes::NOT_GRANTED {
+                assert_eq!(row[..4], [rsid, "", "", ""], "{golden} {rsid}");
+                continue;
+            }
             assert_eq!(row[..4], [rsid, chrom, pos, reference], "{golden} {rsid}");
             if row[4] != rsid_genotypes::NO_CALL {
                 check_genotype(rsid, row[4], reference, alt);

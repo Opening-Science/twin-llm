@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": "firmware-outdated",
+    "message": "synthetic fixture: firmware older than this tool supports",
+    "hints": ["run `ark firmware update`"]
+  }
+}

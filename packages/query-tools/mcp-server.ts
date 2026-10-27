@@ -23,6 +23,7 @@ import {
   summaryStatsInput,
   TOOL_DEFINITIONS,
   trendInput,
+  rangePositionInput,
   convertUnitInput,
 } from "./schemas";
 import type { SessionScope } from "./scope";
@@ -36,6 +37,7 @@ import {
   runSubjectWindow,
   runSummaryStats,
   runTrend,
+  runRangePosition,
   runConvertUnit,
 } from "./tools";
 
@@ -94,6 +96,9 @@ export const queryToolRunners = (
   coverage: bind(coverageInput, (input) => runCoverage(scope, input, ports)),
   compare_windows: bind(compareWindowsInput, (input) =>
     runCompareWindows(scope, input, ports),
+  ),
+  range_position: bind(rangePositionInput, (input) =>
+    runRangePosition(scope, input, ports),
   ),
   convert_unit: bind(convertUnitInput, (input) => runConvertUnit(scope, input, ports)),
 });

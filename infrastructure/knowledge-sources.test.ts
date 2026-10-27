@@ -49,6 +49,7 @@ describe("knowledge source preferences", () => {
       "convert_unit",
       "coverage",
       "gbd_population",
+      "range_position",
       "trend",
     ]);
   });
@@ -117,6 +118,7 @@ describe("knowledge source preferences", () => {
       "latest_by_loinc",
       "list_subjects",
       "observations_for_subject",
+      "range_position",
       "subject_window",
       "summary_stats",
       "trend",

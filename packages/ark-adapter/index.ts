@@ -5,6 +5,7 @@ export {
   appRun,
   dataList,
   dataPaths,
+  doctor,
   status,
   type ArkAppRunData,
   type ArkAppRunInput,
@@ -24,11 +25,13 @@ export {
 export {
   allPathsStartWithGenome,
   ARK_CLI_VERSION,
+  ARK_FIRMWARE_VERSION,
   ARK_PATH_PREFIX,
   ARK_SLOT_NAMES,
   redactStatusDocument,
   type ArkDataListDocument,
   type ArkDataPathsDocument,
+  type ArkDoctorSafe,
   type ArkStatusSafe,
 } from "./schemas";
 export { buildArkArgv, hostTimeoutMsForCliTimeout } from "./spawn";

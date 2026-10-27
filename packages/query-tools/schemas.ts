@@ -127,6 +127,34 @@ export const compareWindowsInput = z
   .strict()
   .describe("One LOINC in two windows, and B minus A");
 
+export const RANGE_POSITION_PICKS = ["latest", "at"] as const;
+
+const pickAtAgree = (input: { readonly pick: string; readonly at?: string }) =>
+  (input.pick === "at") === (input.at !== undefined);
+
+export const rangePositionInput = z
+  .object({
+    subject_ref: subjectRefSchema,
+    loinc: loincSchema,
+    start: windowStart,
+    end: windowEnd,
+    pick: z
+      .enum(RANGE_POSITION_PICKS)
+      .describe(
+        "latest: the newest reading in the window; at: the reading taken at `at`",
+      ),
+    at: z
+      .union([z.iso.datetime(), z.iso.datetime({ precision: -1 })])
+      .optional()
+      .describe(
+        "With pick at only: the reading's effective_at as observations_for_subject returns it",
+      ),
+  })
+  .strict()
+  .refine(startBeforeEnd, START_BEFORE_END)
+  .refine(pickAtAgree, { message: "at is required with pick at, and only then" })
+  .describe("One reading of one LOINC against its Anchor v3 published range");
+
 const conversionUnit = z.enum(CONVERSION_UNITS);
 
 export const convertUnitInput = z
@@ -191,6 +219,12 @@ export const TOOL_DEFINITIONS = [
     description:
       "n, mean, median, min, and max for one LOINC in window A and window B, and B minus A for each. Deltas are null when a window has no rows. Up to 5000 rows per window; refuses mixed units.",
     input: compareWindowsInput,
+  },
+  {
+    name: "range_position",
+    description:
+      "Where one reading of one LOINC sits against its Anchor v3 published range: below, within or above it, bounds inclusive. pick latest takes the newest reading in the window, pick at the reading at `at`. When the range depends on sex, age or timing, which the warehouse does not hold, position is null and depends_on names them; nothing is guessed. Reads up to 5000 rows; refuses no rows, mixed units, no published range, and a unit other than the range's (nothing is converted). Neutral position only.",
+    input: rangePositionInput,
   },
   {
     name: "convert_unit",

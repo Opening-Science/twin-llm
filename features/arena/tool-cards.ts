@@ -42,6 +42,7 @@ const TITLES: Readonly<Record<string, string>> = {
   baseline_deviation: "Compared with a baseline",
   coverage: "Checked data coverage",
   compare_windows: "Compared two windows",
+  range_position: "Placed a value against its published range",
   convert_unit: "Converted a unit",
   show_view: "Drew a chart",
   list_views: "Listed this thread's charts",
@@ -89,6 +90,9 @@ const REFUSAL_NOTES: Readonly<Record<string, string>> = {
   CARBON_X_UNREACHABLE: "The local Carbon-X sidecar is not running.",
   CARBON_X_TIMEOUT: "The local Carbon-X sidecar did not answer in time.",
   CARBON_X_FAILED: "The local Carbon-X sidecar did not return an answer.",
+  NO_ROWS: "No reading for that measure in this window.",
+  NO_PUBLISHED_RANGE: "Anchor v3 has no published range to place that measure against.",
+  UNIT_MISMATCH: "The reading's unit is not the published range's, so it was not placed.",
 };
 
 const REFUSED = "The tool declined this call.";

@@ -13,7 +13,7 @@
     "content_sha256": "f4941fab7a56e17f9dd66b6b6e0fbed379dab8c564c6024831c5fd4aa0ba09eb"
   },
   "open_twin_sha": "a9e126c952c91e19e064a962dda7d815a43564e5",
-  "questions_sha256": "e5e00183f9b02e27ef19c1a44f3f9e6a659360e14891e57b4149cae938add236",
+  "questions_sha256": "5385897e1a885157311a3818556540746d5bc3a70357d6b8a4a48f4f8c0714c1",
   "actor": "eval-answer-key",
   "generated_on": "2026-10-27",
   "entries": {
@@ -2385,6 +2385,99 @@
     "Q-S1-15": [
       {
         "name": "value",
+        "tool": "range_position",
+        "args": {
+          "subject_ref": "35b353dd-402b-571a-d67a-af0a104d0854",
+          "loinc": "4548-4",
+          "start": "2016-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z",
+          "pick": "latest"
+        },
+        "path": "value",
+        "value": 6.28,
+        "unit": "%",
+        "n": 12,
+        "windows": [{ "start": "2016-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "range_high",
+        "tool": "range_position",
+        "args": {
+          "subject_ref": "35b353dd-402b-571a-d67a-af0a104d0854",
+          "loinc": "4548-4",
+          "start": "2016-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z",
+          "pick": "latest"
+        },
+        "path": "range.high",
+        "value": 5.7,
+        "unit": "%",
+        "n": 12,
+        "windows": [{ "start": "2016-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S1-16": [
+      {
+        "name": "value",
+        "tool": "range_position",
+        "args": {
+          "subject_ref": "46ee9d82-b52c-856d-069b-5064ff052225",
+          "loinc": "2093-3",
+          "start": "2012-01-01T00:00:00Z",
+          "end": "2020-12-31T23:59:59Z",
+          "pick": "latest"
+        },
+        "path": "value",
+        "value": 206.48,
+        "unit": "mg/dL",
+        "n": 19,
+        "windows": [{ "start": "2012-01-01T00:00:00Z", "end": "2020-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S6-18": [
+      {
+        "name": "refusal",
+        "tool": "range_position",
+        "args": {
+          "subject_ref": "4f083ce3-f12b-bb4b-7353-e17f0cd55b0a",
+          "loinc": "718-7",
+          "start": "2016-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z",
+          "pick": "latest"
+        },
+        "path": "code",
+        "value": "NO_PUBLISHED_RANGE",
+        "unit": null,
+        "n": 0,
+        "windows": [{ "start": "2016-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": "NO_PUBLISHED_RANGE"
+      }
+    ],
+    "Q-S6-19": [
+      {
+        "name": "refusal",
+        "tool": "range_position",
+        "args": {
+          "subject_ref": "5ba0a3f3-32f7-02b1-ec6a-8f568923954c",
+          "loinc": "4548-4",
+          "start": "2010-01-01T00:00:00Z",
+          "end": "2014-12-31T23:59:59Z",
+          "pick": "latest"
+        },
+        "path": "code",
+        "value": "NO_ROWS",
+        "unit": null,
+        "n": 0,
+        "windows": [{ "start": "2010-01-01T00:00:00Z", "end": "2014-12-31T23:59:59Z" }],
+        "refusal": "NO_ROWS"
+      }
+    ],
+    "Q-S1-17": [
+      {
+        "name": "value",
         "tool": "latest_by_loinc",
         "args": {
           "subject_ref": "4f083ce3-f12b-bb4b-7353-e17f0cd55b0a",
@@ -2414,7 +2507,7 @@
         "refusal": null
       }
     ],
-    "Q-S1-16": [
+    "Q-S1-18": [
       {
         "name": "value",
         "tool": "latest_by_loinc",
@@ -2446,7 +2539,7 @@
         "refusal": null
       }
     ],
-    "Q-S1-17": [
+    "Q-S6-20": [
       {
         "name": "value",
         "tool": "latest_by_loinc",

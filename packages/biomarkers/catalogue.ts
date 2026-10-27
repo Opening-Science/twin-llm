@@ -42,3 +42,10 @@ export const referenceIntervalFor = (
   });
   return fitting.length === 1 ? fitting[0]! : null;
 };
+
+/** The Anchor marker with this LOINC code, or null when Anchor has none. */
+export const biomarkerByLoinc = (
+  loinc: string,
+  layer: AnchorLayer = anchorLayer,
+): Biomarker | null =>
+  layer.biomarkers.find((marker) => marker.loincCode === loinc) ?? null;

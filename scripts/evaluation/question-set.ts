@@ -17,6 +17,7 @@ import {
   latestByLoincInput,
   summaryStatsInput,
   trendInput,
+  rangePositionInput,
   convertUnitInput,
 } from "../../packages/query-tools/schemas";
 
@@ -51,6 +52,7 @@ export const KEYED_TOOLS = {
   compare_windows: compareWindowsInput,
   latest_by_loinc: latestByLoincInput,
   summary_stats: summaryStatsInput,
+  range_position: rangePositionInput,
   convert_unit: convertUnitInput,
 } as const;
 
@@ -69,6 +71,7 @@ export const AUDIT_TOOL_NAMES = [
   "baseline_deviation",
   "coverage",
   "compare_windows",
+  "range_position",
   "convert_unit",
   "guidelines.guideline_search",
   "knowledge.knowledge_search",

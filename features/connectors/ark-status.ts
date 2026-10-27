@@ -53,7 +53,9 @@ const defaultPorts = (): ArkStatusPorts => ({
 const SLOT_LABEL: Readonly<Record<(typeof ARK_SLOT_NAMES)[number], string>> = {
   "reference-genome": "Reference genome",
   "gene-annotations": "Gene annotations",
-  "snp-indel-calls": "SNP and indel calls",
+  "small-variants": "Small variants",
+  "structural-variants": "Structural variants",
+  "copy-number-variants": "Copy number variants",
   "variant-catalog": "Variant catalog",
 };
 
@@ -74,6 +76,10 @@ const publicSlotName = (slot: string, name: string): string => {
   if (isKnownSlot(name) && name === slot) return SLOT_LABEL[name];
   return name;
 };
+
+/** CLI 0.5.0 gives the catalog's dbSNP release as a number (157). */
+const slotVersion = (value: unknown): string | null =>
+  typeof value === "string" ? value : typeof value === "number" ? String(value) : null;
 
 const unavailable = (state: string, code: string): Response =>
   Response.json({ enabled: true, state, error: { code } });
@@ -158,7 +164,7 @@ export const getArkStatusResponse = async (
       name: publicSlotName(slot, row.name),
       state: row.state === "empty" ? ("empty" as const) : ("filled" as const),
       build: typeof row.build === "string" ? row.build : null,
-      version: typeof row.version === "string" ? row.version : null,
+      version: slotVersion(row.version),
     };
   });
 
