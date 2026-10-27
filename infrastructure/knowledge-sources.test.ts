@@ -49,7 +49,6 @@ describe("knowledge source preferences", () => {
       "compare_windows",
       "convert_unit",
       "coverage",
-      "cross_source_compare",
       "gbd_population",
       "range_position",
       "trend",
@@ -119,7 +118,6 @@ describe("knowledge source preferences", () => {
       "conditions_timeline",
       "convert_unit",
       "coverage",
-      "cross_source_compare",
       "latest_by_loinc",
       "list_subjects",
       "medications_timeline",
@@ -133,6 +131,7 @@ describe("knowledge source preferences", () => {
 
   test("the wearable tools belong to their own source, in both data modes' toggles", () => {
     expect([...disabledToolNames(["wearable-analytics"])].sort()).toEqual([
+      "cross_source_compare",
       "hrv_trend",
       "resting_hr_trend",
       "sleep_summary",
