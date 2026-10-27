@@ -38,9 +38,21 @@ export type ArkStatusOk = {
 export type ArkStatusUnavailable = {
   readonly enabled: true;
   readonly state:
-    "locked" | "unpaired" | "busy" | "awaiting_approval" | "refused" | "error";
+    | "locked"
+    | "unpaired"
+    | "busy"
+    | "awaiting_approval"
+    | "refused"
+    | "undelivered"
+    | "outdated"
+    | "rejected"
+    | "app_failed"
+    | "error";
   readonly error: { readonly code: string };
 };
+
+/** Ark CLI 0.5.0 refuses firmware older than 0.13.1; the owner updates it, never the app. */
+export const ARK_OUTDATED_NOTICE = "Ark firmware too old: run `ark firmware update`";
 
 export type ArkStatusPayload = ArkStatusDisabled | ArkStatusOk | ArkStatusUnavailable;
 
@@ -53,6 +65,10 @@ export const ARK_STATE_LABEL: Readonly<
   busy: "Busy",
   awaiting_approval: "Waiting for approval",
   refused: "Declined",
+  undelivered: "Phone not reached",
+  outdated: "Firmware too old",
+  rejected: "Refused by the Ark",
+  app_failed: "App failed",
   error: "Unavailable",
 };
 
@@ -67,6 +83,10 @@ export const ARK_STATE_TONE: Readonly<
   busy: "neutral",
   awaiting_approval: "neutral",
   refused: "warn",
+  undelivered: "warn",
+  outdated: "warn",
+  rejected: "warn",
+  app_failed: "warn",
   error: "warn",
 };
 

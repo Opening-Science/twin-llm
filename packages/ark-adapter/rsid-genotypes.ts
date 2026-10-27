@@ -17,6 +17,11 @@ export const RSID_GENOTYPES_TITLE = "# rsID genotypes";
 export const RSID_GENOTYPES_FOOTER =
   "Research use only; genotypes as recorded in the loaded call file.";
 export const RSID_NO_CALL = "no call";
+/** App 0.2.0: the site's optional grant was not mounted (declined, or no data). */
+export const RSID_NOT_GRANTED = "not granted";
+export const RSID_GENOTYPES_VERSION = "0.2.0";
+/** Public grant the manifest requires, so an Ark without small variants refuses. */
+export const RSID_GENOTYPES_REQUIRED = "v1/genome/datasets/small-variants";
 
 export type RsidPanelEntry = Readonly<{
   rsid: string;
@@ -63,7 +68,10 @@ export const RSID_PANEL: readonly RsidPanelEntry[] = [
   },
 ];
 
-/** Dataset paths the app's manifest lists; `appRun` records them as grants. */
+/**
+ * The panel's optional grants, in the manifest's order; `appRun` records them
+ * for the audit. The owner switches each one on at approval.
+ */
 export const RSID_GENOTYPES_GRANTS: readonly string[] = RSID_PANEL.map(
   (entry) => `v1/genome/rsids/${entry.rsid}`,
 );
@@ -79,6 +87,8 @@ export type RsidGenotypeRow = Readonly<{
   position: number | null;
   reference: string | null;
   genotype: string | null;
+  /** False when the site was not mounted (declined or no data); absent means granted. */
+  granted?: boolean;
 }>;
 
 export type RsidReportParse =
@@ -88,7 +98,16 @@ export type RsidReportParse =
 const CHROMOSOME = /^chr([1-9]|1\d|2[0-2]|X|Y|M)$/;
 const POSITION = /^[1-9]\d{0,9}$/;
 const ALLELE = /^[ACGTN]+$/;
-const GENOTYPE = /^[ACGTN-]+([/|][ACGTN-]+)?$/;
+/**
+ * ArkOS 0.13 genotype shapes (dark-bio/examples docs/03-data-paths.md): one
+ * allele per copy joined by `/` or `|`, an optional leading phase marker, `.`
+ * for a missing allele, `*` for a copy a deletion removed, and symbolic
+ * alleles such as `<DEL>`. Breakends are refused as unreadable.
+ */
+const GENOTYPE_ALLELE = String.raw`(?:[ACGTN]+|\.|\*|<[A-Z0-9:._]+>)`;
+const GENOTYPE = new RegExp(
+  String.raw`^[/|]?${GENOTYPE_ALLELE}(?:[/|]${GENOTYPE_ALLELE})*$`,
+);
 
 type FieldResult<T> = Readonly<{ ok: true; value: T }> | Readonly<{ ok: false }>;
 
@@ -114,6 +133,19 @@ const parseRow = (
     fields.map((field) => field.trim());
   if (rsid !== expected.rsid) {
     return `row ${index + 1} is ${rsid || "empty"}, expected ${expected.rsid}`;
+  }
+  if (call === RSID_NOT_GRANTED) {
+    if (chromosomeRaw !== "" || positionRaw !== "" || referenceRaw !== "") {
+      return `${rsid} is not granted but has leaves`;
+    }
+    return {
+      rsid,
+      chromosome: null,
+      position: null,
+      reference: null,
+      genotype: null,
+      granted: false,
+    };
   }
   const chromosome = optional(chromosomeRaw, (v) => CHROMOSOME.test(v), String);
   const position = optional(positionRaw, (v) => POSITION.test(v), Number);
@@ -162,6 +194,10 @@ export const parseRsidGenotypesReport = (text: string): RsidReportParse => {
   };
 };
 
-/** The alleles of a genotype (`A/G` → [A, G]); empty for `no call`. */
+/**
+ * The base alleles of a genotype (`A/G` → [A, G], `|A|G` → [A, G]); empty for
+ * `no call`. A missing (`.`), deleted (`*`) or symbolic (`<DEL>`) copy has no
+ * bases, so it is left out rather than read as the reference.
+ */
 export const genotypeAlleles = (genotype: string | null): readonly string[] =>
-  genotype === null ? [] : genotype.split(/[/|]/).filter((allele) => allele !== "");
+  genotype === null ? [] : genotype.split(/[/|]/).filter((allele) => ALLELE.test(allele));

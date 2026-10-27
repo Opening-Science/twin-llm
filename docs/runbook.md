@@ -433,8 +433,8 @@ time. A second command or an open Hub tab returns `device-busy`.
 
 ### `bun test packages/ark-adapter`
 
-Mocked spawn fixtures for `ok`, `locked`, `unpaired`, `busy`, `refused`,
-`awaiting_approval`, and `error`. `RUN_ARK` is unset, so the live hardware test
+Mocked spawn fixtures (CLI 0.5.0 shapes) for `ok`, `locked`, `unpaired`, `busy`, `refused`,
+`awaiting_approval`, `undelivered`, `outdated`, `rejected`, `app_failed` and `error`. `RUN_ARK` is unset, so the live device test
 is skipped.
 
 ```sh
@@ -457,19 +457,20 @@ bun run ark:build
 bun run ark:test
 ```
 
-- Good: `ark:test` prints cargo 6 passed, then `wasmtime two-pass goldens ok`
+- Good: `ark:test` prints cargo 8 + 4 passed, then `wasmtime two-pass goldens ok`
   when the WASI toolchain is installed. Local Homebrew rustc 1.98 without
   `wasm32-wasip1` still runs the host goldens and skips the wasmtime pass.
 - Last run: 2026-09-28 11:05 CEST, host `cargo test --locked` 6 passed / 0
   failed (wasmtime not on PATH; wasm-opt not installed).
 
-### `RUN_ARK=1` (local hardware only; never CI)
+### `RUN_ARK=1` (local Ark or emulator only; never CI)
 
 Calls `status`, `data list`, and `data paths` against `ARK_DEVICE`, then one
-`appRun` of `rsid-genotypes.wasm`. Asserts the four slot names, that every
+`appRun` (`ark run`) of `rsid-genotypes.wasm`. Asserts the six slot names, that every
 path starts with `v1/genome`, and that the app report has eleven rsID lines
 plus the research-use footer. Close Hub first. Build the wasm first. Does
-not pass `--unlock`. Approve the Companion prompt. The test does not print
+not pass `--unlock`. Approve the run, switch on all eleven sites, then release the
+report in Companion (5 and 10 minute windows). The test does not print
 the report.
 
 ```sh
@@ -477,8 +478,8 @@ bun run ark:build
 GENOME_SOURCE=ark RUN_ARK=1 ARK_DEVICE=alpha-002 bun test packages/ark-adapter
 ```
 
-- Good: one device, four named slots, every path under `v1/genome`, appRun
-  `ok` after phone approval, eleven TSV rows, footer present.
+- Good: one device, six named slots, every path under `v1/genome`, appRun
+  `ok` after both phone steps, eleven TSV rows, footer present.
 - Last run: not a CI gate; local optional after `ark:build` and Companion
   approval. Confirm panel rsIDs are `available` with `ark data paths --json`
   first (read-only).

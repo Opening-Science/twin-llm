@@ -32,6 +32,8 @@ const rowSchema = z.object({
   position: z.number().int().positive().nullable(),
   reference: z.string().nullable(),
   genotype: z.string().nullable(),
+  /** rsid-genotypes 0.2.0: false when the site's optional grant was not mounted. */
+  granted: z.boolean().optional(),
 });
 
 const rowsSchema = z.array(rowSchema);

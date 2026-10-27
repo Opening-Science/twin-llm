@@ -95,12 +95,21 @@ const defaultPorts = (): GenomeRunPorts => ({
   sessionId: () => crypto.randomUUID(),
 });
 
-/** The build the Ark names for the call slot, else for the reference slot. */
+/**
+ * The build `ark data list` names for the small-variants slot (CLI 0.5.0,
+ * e.g. GRCh38 or GRCh38.p14), else for the reference genome. Stored with the
+ * report, so the GRCh38 check reads the Ark's word and GENOME_ASSUME_BUILD is
+ * only a fallback for an Ark that names none. `snp-indel-calls` is the
+ * CLI 0.3.5 name of the same slot.
+ */
 export const arkBuildOf = (listed: ArkDataListDocument): string | null => {
-  const named = (slot: string) =>
-    listed.slots.find((row) => row.name === slot || String(row.slot) === slot)?.build;
-  const build = named("snp-indel-calls") ?? named("reference-genome");
-  return typeof build === "string" && build.trim() !== "" ? build.trim() : null;
+  const named = (slot: string) => {
+    const build = listed.slots.find(
+      (row) => String(row.slot) === slot || row.name === slot,
+    )?.build;
+    return typeof build === "string" && build.trim() !== "" ? build.trim() : null;
+  };
+  return named("small-variants") ?? named("snp-indel-calls") ?? named("reference-genome");
 };
 
 export const getGenomeReportResponse = async (

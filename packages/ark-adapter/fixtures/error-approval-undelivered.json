@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": "approval-undelivered",
+    "message": "synthetic fixture: the approval never reached the phone",
+    "hints": ["run `ark doctor`"]
+  }
+}

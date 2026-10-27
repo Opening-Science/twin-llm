@@ -40,11 +40,42 @@ describe("GenomeReport", () => {
     expect(html).toContain("No report released yet.");
   });
 
-  test("running: the blocking Approve on your phone state, button disabled", () => {
+  test("running: both phone steps with their windows, button disabled", () => {
     const html = render({ kind: "running", report: null });
-    expect(html).toContain("Approve on your phone");
+    expect(html).toContain("Approve on your phone.");
+    expect(html).toContain("within 5 minutes");
+    expect(html).toContain("Review and release the report on your phone.");
+    expect(html).toContain("within 10 minutes");
+    expect(html.indexOf("Approve on your phone")).toBeLessThan(
+      html.indexOf("Review and release"),
+    );
     expect(html).toContain('role="status"');
     expect(html).toContain("disabled");
+  });
+
+  test("an unmounted site reads not granted, with the note that says why", () => {
+    const declined = toReportView(
+      {
+        id: "report-2",
+        releasedAt: "2026-10-27T09:00:00.000Z",
+        arkBuild: "GRCh38",
+        rows: [
+          {
+            rsid: "rs1057910",
+            chromosome: null,
+            position: null,
+            reference: null,
+            genotype: null,
+            granted: false,
+          },
+        ],
+      },
+      null,
+    );
+    const html = render({ kind: "ready", report: declined, error: null });
+    expect(html).toContain(">not granted<");
+    expect(html).not.toContain(">no call<");
+    expect(html).toContain("The app cannot tell which.");
   });
 
   test("a released report: gene and allele context, genotype or no call", () => {
@@ -66,10 +97,11 @@ describe("GenomeReport", () => {
     const html = render({
       kind: "ready",
       report: null,
-      error: "The run was declined on your phone. Nothing was released.",
+      error: "You declined the run or the report on your phone; nothing was stored.",
     });
     expect(html).toContain('role="alert"');
-    expect(html).toContain("declined on your phone");
+    expect(html).toContain("declined the run or the report on your phone");
+    expect(html).not.toContain("The app cannot tell which.");
   });
 });
 
