@@ -2,7 +2,7 @@
 
 import { SignInButton } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
-import { type FormEvent, type KeyboardEvent, useState } from "react";
+import { type FormEvent, type KeyboardEvent, useRef, useState } from "react";
 
 import { AppAuth, isClientAuthDisabled } from "@/features/auth/app-auth";
 import {
@@ -26,6 +26,8 @@ import { Button } from "@/infrastructure/ui-kit/button";
 import { Mark } from "./marks";
 import { ModelMenu } from "./model-menu";
 import { chosenModels, missingCount, toggleModel } from "./model-selection";
+import type { SuggestedQuestions } from "./suggested-questions";
+import { SuggestionChips } from "./suggestion-chips";
 
 /**
  * Where a prompt is written and its models are chosen. It knows nothing about
@@ -35,6 +37,9 @@ import { chosenModels, missingCount, toggleModel } from "./model-selection";
  * shows the wearable rows. Picking a skill writes `/sleep ` into the prompt so
  * a window or subject can follow; a prompt that starts with a listed skill is
  * sent tagged with it. Enter sends, Shift+Enter starts a new line.
+ *
+ * On an empty thread, suggested questions sit above the prompt; picking one
+ * writes it into the prompt to be read or edited first, never sent.
  */
 
 export type ChosenModel = Readonly<{ id: string; name: string }>;
@@ -60,6 +65,7 @@ export const PromptBar = ({
   initialModelIds,
   busy,
   skills = [],
+  suggestions = null,
   onSubmit,
 }: Readonly<{
   catalog: readonly CatalogModel[] | null;
@@ -67,6 +73,8 @@ export const PromptBar = ({
   busy: boolean;
   /** Skills the server offers, as palette commands. */
   skills?: readonly Command[];
+  /** Shown above the prompt; null once the thread has a turn. */
+  suggestions?: SuggestedQuestions | null;
   onSubmit: (
     prompt: string,
     models: readonly ChosenModel[],
@@ -81,6 +89,7 @@ export const PromptBar = ({
   const [picked, setPicked] = useState<Command | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [notice, setNotice] = useState<string | undefined>(undefined);
+  const promptRef = useRef<HTMLTextAreaElement>(null);
 
   const chosen = catalog ? chosenModels(catalog, modelIds) : [];
   const slashOpen = !slashDismissed && SLASH_COMMAND.test(draft);
@@ -143,6 +152,17 @@ export const PromptBar = ({
 
   return (
     <div className="bg-background/90 sticky bottom-0 z-10 px-4 pt-2 pb-3 backdrop-blur sm:px-6">
+      {suggestions ? (
+        <SuggestionChips
+          suggestions={suggestions}
+          onPick={(question) => {
+            setDraft(question.prompt);
+            setSlashDismissed(false);
+            setPicked(null);
+            promptRef.current?.focus();
+          }}
+        />
+      ) : null}
       <form onSubmit={onFormSubmit} className="surface relative mx-auto max-w-5xl">
         {paletteOpen ? (
           <CommandPalette
@@ -167,6 +187,7 @@ export const PromptBar = ({
         </label>
         <textarea
           id="prompt"
+          ref={promptRef}
           rows={2}
           value={draft}
           disabled={busy}

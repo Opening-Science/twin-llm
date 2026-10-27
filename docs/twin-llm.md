@@ -33,6 +33,15 @@ A person who has not finished or skipped setup and has no thread yet is sent fro
 
 Answers live in `onboarding_profiles`, one row per user. "Get started" in the sidebar reopens the flow on the saved answers.
 
+## Suggested questions
+
+A new, empty chat shows up to five question chips above the prompt (`/api/chat/suggestions`, `features/arena/suggested-questions.ts`). They come from fixed templates, one per measure family that has data, so a chip never asks about data that is not there. No model writes them.
+
+- `DATA_MODE=synthetic`: the Demo's first synthetic person (Synthetic person 1, first by `subject_ref`), read with the `coverage` query tool over the families' LOINC codes. The chip shows "their …" under the person's name; the prompt names the `subject_ref`.
+- `DATA_MODE=personal`: the linked Oura, Whoop and Google Health snapshots, read with `wearable_coverage` (the same coverage maths, over the snapshot's keys).
+
+Families with the most readings come first, ties in a fixed order. A trend question needs three readings, otherwise it asks for the latest value. Labs only ask for the latest value. With ten or more readings the busiest family that can be drawn also gets a chart question, last. Both reads are audited like any tool call, with the actor as session. A subject with no rows, or nothing linked, gets no chips. A chip writes its question into the prompt and does not send it. The chips are gone once the thread has a turn.
+
 ## LLM providers
 
 | `LLM_PROVIDER`                            | What it uses                                                                                   |
