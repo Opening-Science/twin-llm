@@ -198,9 +198,11 @@ const splitRows = (
   if (Array.isArray(output)) return { rows: output, rest: null };
   if (!isRecord(output)) return { rows: [], rest: output };
   const spec = isRecord(output.spec) ? output.spec : null;
-  if (spec !== null && Array.isArray(spec.points)) {
+  const specRows =
+    spec === null ? undefined : [spec.points, spec.rows].find(Array.isArray);
+  if (spec !== null && specRows !== undefined) {
     const { spec: _spec, ...others } = output;
-    return { rows: spec.points, rest: others };
+    return { rows: specRows, rest: others };
   }
   const key = ROW_KEYS.find((name) => Array.isArray(output[name]));
   if (key === undefined) return { rows: [], rest: output };

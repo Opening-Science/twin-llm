@@ -56,13 +56,12 @@ import {
   coverage,
   daysInWindow,
   mad,
-  maximum,
-  mean,
   median,
-  minimum,
   olsSlopePerDay,
   robustZ,
   pickReading,
+  summariseWindow,
+  type WindowSummary,
   latestPerSubject,
   midRankPercentile,
 } from "./stats";
@@ -556,16 +555,6 @@ export const runCoverage = (
     ports,
   );
 
-type WindowSummary = Readonly<{
-  start: string;
-  end: string;
-  n: number;
-  mean: number | null;
-  median: number | null;
-  min: number | null;
-  max: number | null;
-}>;
-
 export type CompareWindowsResult = Readonly<{
   loinc: string;
   unit: string | null;
@@ -582,18 +571,7 @@ export type CompareWindowsResult = Readonly<{
 const summarise = (
   window: TimeWindow,
   rows: readonly ObservationRecord[],
-): WindowSummary => {
-  const values = valuesOf(rows);
-  return {
-    start: window.start,
-    end: window.end,
-    n: values.length,
-    mean: mean(values),
-    median: median(values),
-    min: minimum(values),
-    max: maximum(values),
-  };
-};
+): WindowSummary => summariseWindow(window, valuesOf(rows));
 
 const delta = (a: number | null, b: number | null): number | null =>
   a === null || b === null ? null : b - a;

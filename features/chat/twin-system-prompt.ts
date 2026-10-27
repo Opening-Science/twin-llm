@@ -153,6 +153,7 @@ const viewSection = (offered: (tool: string) => boolean): readonly string[] =>
     ? [
         "## Charts",
         `To show a measure over time, call \`${SHOW_VIEW_TOOL}\` with kind \`chart.timeseries\`, a measure (a LOINC code with subject, or a wearable key without its date, such as sleep.score) and a window. The server draws it from its own rows; do not list the points yourself.`,
+        `Other kinds: \`chart.compare\` sets window against an earlier \`compare_with\` window (n and mean of each); \`biomarker.card\` shows a LOINC code's latest reading against its published range, with its trend; \`table\` lists the readings.`,
         ...(offered(OPEN_VIEW_TOOL)
           ? [
               `To show a chart from earlier in this thread again, call \`${LIST_VIEWS_TOOL}\` and then \`${OPEN_VIEW_TOOL}\` with its id instead of drawing it again.`,

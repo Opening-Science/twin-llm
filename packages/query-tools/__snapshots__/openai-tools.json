@@ -534,13 +534,13 @@
     "type": "function",
     "function": {
       "name": "show_view",
-      "description": "Show a chart of one measure in the answer. The server reads the rows itself and draws every point; the result says how many readings it drew. A LOINC code needs subject (a synthetic subject_ref); a wearable key reads the user's synced data. Never write data points yourself.",
+      "description": "Show a view of one measure in the answer. chart.timeseries draws every reading in window; chart.compare sets window against compare_with (n and mean of each); biomarker.card shows a LOINC's latest reading against its published range, with its trend; table lists the readings (first 50). The server reads the rows itself; the result says how many it read. A LOINC code needs subject (a synthetic subject_ref); a wearable key reads the user's synced data. Never write numbers for a view yourself.",
       "parameters": {
         "type": "object",
         "properties": {
           "kind": {
             "type": "string",
-            "enum": ["chart.timeseries"]
+            "enum": ["chart.timeseries", "chart.compare", "biomarker.card", "table"]
           },
           "measure": {
             "type": "string",
@@ -569,6 +569,27 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 128
+          },
+          "compare_with": {
+            "description": "chart.compare only: the earlier window to set against window, such as the 4 weeks before it",
+            "type": "object",
+            "properties": {
+              "start": {
+                "type": "string",
+                "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+              },
+              "end": {
+                "type": "string",
+                "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+              }
+            },
+            "required": ["start", "end"],
+            "additionalProperties": false
+          },
+          "layout": {
+            "description": "chart.compare only: side-by-side (default) or overlaid by day of window",
+            "type": "string",
+            "enum": ["side-by-side", "overlaid"]
           }
         },
         "required": ["kind", "measure", "window"],

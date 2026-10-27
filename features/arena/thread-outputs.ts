@@ -1,4 +1,4 @@
-import type { ChatView } from "@/infrastructure/chat-view";
+import { type ChatView, viewReadings } from "@/infrastructure/chat-view";
 
 import type { TurnState } from "./conversation";
 
@@ -26,12 +26,15 @@ export const viewAnchorId = (answerId: string, viewId: string): string =>
 
 const KIND_LABELS: Readonly<Record<ChatView["kind"], string>> = {
   "chart.timeseries": "Time series",
+  "chart.compare": "Comparison",
+  "biomarker.card": "Biomarker",
+  table: "Table",
 };
 
 export const viewKindLabel = (kind: ChatView["kind"]): string => KIND_LABELS[kind];
 
 /** A view whose window had no readings; the panel lists it dimmed. */
-export const isEmptyView = (view: ChatView): boolean => view.spec.points.length === 0;
+export const isEmptyView = (view: ChatView): boolean => viewReadings(view) === 0;
 
 export const NO_READINGS_SHORT = "No readings";
 

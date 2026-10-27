@@ -1,3 +1,4 @@
+import { toChatView, viewReadings } from "@/infrastructure/chat-view";
 import { EMPTY_VALUE, formatDate, formatNumber } from "@/infrastructure/format-measure";
 import { DNA_ASK_TOOL, GENOME_REPORT_TOOL } from "@/packages/carbon-x/constants";
 import { GBD_MODEL_TOOL } from "@/packages/gbd-mcp/constants";
@@ -47,9 +48,9 @@ const TITLES: Readonly<Record<string, string>> = {
   cohort_position: "Placed a value among the synthetic cohort",
   conditions_timeline: "Listed recorded conditions",
   medications_timeline: "Listed recorded medication requests",
-  show_view: "Drew a chart",
-  list_views: "Listed this thread's charts",
-  open_view: "Reopened a chart",
+  show_view: "Showed a view",
+  list_views: "Listed this thread's views",
+  open_view: "Reopened a view",
   [GUIDELINE_MODEL_TOOL]: "Searched guidelines",
   [GBD_MODEL_TOOL]: "Looked up population data",
   [KNOWLEDGE_MODEL_TOOL]: "Searched TwinLLM notes",
@@ -134,10 +135,12 @@ const sumN = (...windows: readonly unknown[]): number | null => {
 /**
  * Rows read, the way the audit row counts them (`packages/query-tools/tools.ts`
  * and the search tools): list lengths, `n`, or the sum over windows or codes.
- * A chart counts the points it drew. Anything else is unknown, not zero.
+ * A view counts the readings it was drawn from. Anything else is unknown, not zero.
  */
 export const rowCountOf = (output: unknown): number | null => {
   if (refusalCode(output) !== null) return 0;
+  const view = toChatView(output);
+  if (view !== null) return viewReadings(view);
   if (Array.isArray(output)) return output.length;
   if (!isRecord(output)) return null;
   if (Array.isArray(output.rows)) return output.rows.length;
@@ -151,8 +154,6 @@ export const rowCountOf = (output: unknown): number | null => {
     return sumN(output.baseline, output.target);
   if ("window_a" in output && "window_b" in output)
     return sumN(output.window_a, output.window_b);
-  if (isRecord(output.spec) && Array.isArray(output.spec.points))
-    return output.spec.points.length;
   return count(output.n);
 };
 
