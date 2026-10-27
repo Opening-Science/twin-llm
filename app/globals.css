@@ -540,8 +540,8 @@
     @apply z-10 col-start-1 row-start-1 flex max-w-full flex-col items-start gap-2 self-start justify-self-start p-3;
   }
 
-  .twin-environment-bar > [role="group"] {
-    @apply bg-card/90 border-border m-0 rounded-md border p-1.5;
+  .twin-environment-bar > .collapsible-panel {
+    @apply bg-card/90 border-border m-0 rounded-md border;
   }
 
   .twin-environment-rail {
@@ -556,8 +556,23 @@
     @apply w-[min(18rem,calc(100vw-1.5rem))];
   }
 
-  .twin-environment-panel-toggle {
-    @apply flex w-full items-center justify-between gap-3 rounded-md px-3 py-1.5 text-left text-xs font-medium;
+  /* A panel that folds under its title (infrastructure/ui-kit/collapsible-panel.tsx).
+     The title is the toggle; the global focus ring marks it. */
+  .collapsible-panel {
+    @apply min-w-0;
+  }
+
+  .collapsible-panel-toggle {
+    @apply text-foreground hover:bg-muted/60 flex w-full items-center justify-between gap-3 rounded-md px-3 py-1.5 text-left text-xs font-medium;
+  }
+
+  /* Inline Body twin panels: a card around the title and its body. */
+  .twin-panel {
+    @apply bg-card border-border rounded-md border;
+  }
+
+  .twin-panel > .collapsible-panel-body {
+    @apply px-1.5 pb-1.5;
   }
 
   .twin-research-line {
@@ -590,7 +605,11 @@
      bottom left inside the environment, beside the 3D view rather than in its
      role="application". */
   .twin-live-lines {
-    @apply text-muted-foreground mt-2 flex flex-col gap-0.5 text-xs leading-snug;
+    @apply bg-card border-border mt-2 rounded-md border text-xs leading-snug;
+  }
+
+  .twin-live-lines > .collapsible-panel-body {
+    @apply text-muted-foreground flex flex-col gap-0.5 px-3 pb-2;
   }
 
   .twin-night {
@@ -602,7 +621,7 @@
   }
 
   .twin-environment .twin-live-lines {
-    @apply bg-card/90 border-border absolute bottom-12 left-3 z-10 mt-0 max-w-80 rounded-md border p-2;
+    @apply bg-card/90 border-border absolute bottom-12 left-3 z-10 mt-0 max-w-80 rounded-md border;
   }
 
   /* Shown once, when a plain wheel over the inline view scrolled the page instead of zooming. */

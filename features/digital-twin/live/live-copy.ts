@@ -12,6 +12,8 @@ import { type NightEpoch, type SleepStage } from "./night-series";
  * always said.
  */
 export const LIVE_TOGGLE = "Live vitals";
+/** Title of the box with these lines (and the motion lines); it folds away. */
+export const LIVE_PANEL = "What moves";
 export const NO_RATE = "No heart rate on record for this subject.";
 export const SHOW_ORGANS =
   "Live vitals move the heart and lungs: set Depth to Organs to see them.";

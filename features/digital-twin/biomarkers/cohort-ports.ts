@@ -28,13 +28,13 @@ export const demoSubjectOnly = <
  */
 export const cohortDeps: CohortDeps = {
   resolveActorId,
-  listSubjectRefs: async () => {
+  listSubjects: async () => {
     const rows = await database().subject.findMany({
       where: DEMO_SUBJECT_WHERE,
-      select: { subjectRef: true },
+      select: { subjectRef: true, sex: true },
       orderBy: { subjectRef: "asc" },
     });
-    return rows.map((row) => row.subjectRef);
+    return rows.map((row) => ({ ref: row.subjectRef, sex: row.sex }));
   },
   findSubject: async (ref) =>
     demoSubjectOnly(

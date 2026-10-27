@@ -60,7 +60,7 @@ export const ViewToolbar = ({
   <div
     role="group"
     aria-label="3D view"
-    className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1.5"
+    className="flex flex-wrap items-center gap-x-3 gap-y-1.5"
   >
     <div role="group" aria-label="View" className="flex gap-1.5">
       <Button size="sm" onClick={onReset}>

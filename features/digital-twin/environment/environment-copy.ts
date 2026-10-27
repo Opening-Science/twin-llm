@@ -15,9 +15,9 @@ export const PANEL_TEXT = {
 } as const;
 export const HOW_TO_MOVE = "How to move";
 export const WALK_HINT =
-  "With the 3D view focused, W A S D or the arrow keys walk and Enter selects what is in the middle. On touch, two fingers drag to walk. Select an organ for details.";
+  "With the pointer over the 3D view, or the view focused, W A S D or the arrow keys walk. Enter selects what is in the middle. On touch, two fingers drag to walk. Click any part for details.";
 export const VIEW_LABEL =
-  "3D view. W A S D or arrow keys walk; Enter or Space selects what is in the middle.";
+  "3D view. With the pointer over it or focus on it, W A S D or arrow keys walk; Enter or Space selects what is in the middle.";
 export const pickedLabel = (name: string): string => `Picked: ${name}`;
 export const CARD_ATLAS_NOTE = "Reference anatomy from a donor atlas, not this body.";
 export const BODY_CARD_TITLE = "Body outline";

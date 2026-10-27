@@ -6,6 +6,7 @@ import { StatusBadge } from "@/infrastructure/ui-kit/status-badge";
 import {
   LAB_SOURCE_LABEL,
   LAB_SOURCE_NONE,
+  personOptionLabel,
   SYNTHETIC_DATA_LABEL,
 } from "./biomarker-copy";
 import { type BiomarkerRow } from "./biomarker-rows";
@@ -45,7 +46,7 @@ export const BiomarkerSource = ({ model }: Readonly<{ model: BiomarkerTabModel }
         <option value="">{LAB_SOURCE_NONE}</option>
         {model.people.map((person) => (
           <option key={person.ref} value={person.ref}>
-            {person.label}
+            {personOptionLabel(person)}
           </option>
         ))}
       </Field>

@@ -94,8 +94,9 @@ const GROUP_SYSTEM: Readonly<Record<string, SystemId>> = {
 /** Full-term placenta and the liver's Couinaud segments: not general anatomy here. */
 const HIDDEN_GROUPS = new Set(["placenta", "placentafullterm", "liversegment"]);
 
+/** HRA male spells one of them `left_superiomedial_segment`; it is a liver segment too. */
 const LIVER_SEGMENT =
-  /^VH_[FM]_(left|right)_(antero|postero|infero|supero)(lateral|medial|superior|inferior)_segment\d*$/i;
+  /^VH_[FM]_(left|right)_(antero|postero|infero|supero|superio)(lateral|medial|superior|inferior)_segment\d*$/i;
 
 const TERM_SYSTEM: Readonly<Record<string, SystemId>> = {
   "UBERON:0001227": "metabolic", // minor calyx
@@ -114,6 +115,28 @@ export const groupKey = (
   if (typeof value === "string" && value !== "-" && value !== "") return value;
   if (LIVER_SEGMENT.test(nodeName)) return "liversegment";
   return null;
+};
+
+/** Side and sub-part markers at the end of HRA node names (`_L`, `_R`, `_a`). */
+const NAME_SUFFIX = /^[a-z]$/i;
+const SIDE_WORD = /^(left|right)$/i;
+
+/**
+ * A group key made from the node's own name, for HRA meshes whose
+ * `anatomical_structure_of` is the `-` placeholder (renal calyces, vas
+ * deferens, urethra, hyoid). Without one such a mesh had no organ to light
+ * or list, so a click on it lit nothing. `VH_F_minor_calyx_R_c` →
+ * `MinorCalyx`, which `normaliseGroup` and `groupLabel` read like any HRA
+ * key ("minorcalyx", "Minor calyx"). This TwinLLM addition is not in
+ * open-twin-xr's hraGroups.ts.
+ */
+export const nameGroupKey = (nodeName: string): string | null => {
+  const words = nodeName
+    .replace(/^VH_[FM]_/i, "")
+    .split(/[_\s]+/)
+    .filter((word) => word.length > 0 && !NAME_SUFFIX.test(word) && !SIDE_WORD.test(word))
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase());
+  return words.length > 0 ? words.join("") : null;
 };
 
 export const systemForGroup = (raw: string | null): SystemId | null =>

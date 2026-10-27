@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import {
   DEMO_SUBJECT_ID,
   defaultSubjectId,
+  demoBodySex,
   isDemoSubject,
   subjectOptions,
 } from "./demo-subject";
@@ -33,5 +34,24 @@ describe("demo subject", () => {
     expect(isDemoSubject("demo")).toBe(true);
     expect(isDemoSubject("sub-self")).toBe(false);
     expect(isDemoSubject("")).toBe(false);
+  });
+});
+
+describe("demoBodySex", () => {
+  test("male until a person with a stored sex is shown", () => {
+    expect(demoBodySex(null, "", null)).toBe("male");
+    expect(demoBodySex(null, "syn-a", null)).toBe("male");
+    expect(demoBodySex(null, "syn-a", "female")).toBe("female");
+  });
+
+  test("a body picked by hand wins for that person and for people without a sex", () => {
+    const pick = { personRef: "syn-a", sex: "male" } as const;
+    expect(demoBodySex(pick, "syn-a", "female")).toBe("male");
+    expect(demoBodySex(pick, "syn-b", null)).toBe("male");
+  });
+
+  test("another person with a stored sex brings their own body back", () => {
+    const pick = { personRef: "syn-a", sex: "male" } as const;
+    expect(demoBodySex(pick, "syn-c", "female")).toBe("female");
   });
 });

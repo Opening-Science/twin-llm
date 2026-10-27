@@ -243,7 +243,7 @@ describe("BodyLoop avatar viewer", () => {
     expect(markup).not.toContain('aria-label="3D view"');
     expect(markup).not.toContain("Reset view");
     expect(markup).not.toContain("Pause");
-    expect(markup).toContain("View");
+    expect(markup).toContain("Scan overlays");
     expect(markup).toContain("not a name");
   });
 

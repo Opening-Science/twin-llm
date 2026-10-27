@@ -35,6 +35,7 @@ import {
   type AnatomyEnvelope,
 } from "./anatomy-copy";
 import { type AnatomyAction, type AnatomyState } from "./anatomy-state";
+import { atlasSexNote } from "./atlas-sex";
 import { highlightOptions, selectedHighlightValue } from "./highlight-options";
 
 const STEP_UP = new Set(["ArrowRight", "ArrowUp", "PageUp"]);
@@ -69,6 +70,7 @@ export const AnatomyControls = ({
   const ready = load.kind === "ready" ? load : null;
   const entry = ATLASES[state.atlasId];
   const coverage = ATLAS_COVERAGE_NOTE[state.atlasId];
+  const sexNote = atlasSexNote(state.bodySex, state.atlasId, installed);
   const options = highlightOptions(ready, state);
   const fromOptions = options.filter((option) => option.section === "from");
   const systemOptions = options.filter((option) => option.section === "systems");
@@ -146,6 +148,7 @@ export const AnatomyControls = ({
 
       <div aria-live="polite" className="text-muted-foreground mt-2 space-y-1 text-xs">
         {notInstalled ? <p>{ANATOMY_NOT_INSTALLED}</p> : null}
+        {sexNote ? <p className="text-foreground">{sexNote}</p> : null}
         {load.kind === "loading" ? (
           <p>
             {anatomyLoading(null)}

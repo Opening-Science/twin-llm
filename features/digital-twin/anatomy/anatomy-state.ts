@@ -11,13 +11,14 @@ import {
   type PartView,
 } from "@/packages/anatomy/highlight";
 import {
-  ATLAS_IDS,
   ATLASES,
   DEFAULT_ATLAS_ID,
   type AtlasId,
   type AtlasScheme,
 } from "@/packages/anatomy/manifest";
 import { type OrganSystem, type SystemId } from "@/packages/anatomy/systems";
+
+import { atlasForBody, preferredAtlas, type BodySex } from "./atlas-sex";
 
 /** Where the atlas load stands, as reported by the 3D layer component. */
 export type AnatomyLoad =
@@ -43,6 +44,12 @@ export type AnatomyState = Readonly<{
   requested: boolean;
   targetDepth: number;
   atlasId: AtlasId;
+  /** Which atlases are on this machine; null until the status answers. */
+  installed: Readonly<Record<AtlasId, boolean>> | null;
+  /** The body's sex when it is known (a Demo body); the atlas follows it. */
+  bodySex: BodySex | null;
+  /** The person picked an atlas for this body; it stays until the body changes. */
+  atlasChosen: boolean;
   layers: Readonly<Record<AtlasLayerId, boolean>>;
   hiddenSystems: readonly OrganSystem[];
   /** What glows, if anything. Group keys are atlas-specific, so an atlas switch clears it. */
@@ -67,6 +74,7 @@ export type AnatomyAction =
   | Readonly<{ type: "step"; direction: 1 | -1 }>
   | Readonly<{ type: "atlas"; atlasId: AtlasId }>
   | Readonly<{ type: "installed"; installed: Readonly<Record<AtlasId, boolean>> | null }>
+  | Readonly<{ type: "bodySex"; sex: BodySex | null }>
   | Readonly<{ type: "toggleLayer"; layer: AtlasLayerId }>
   | Readonly<{ type: "toggleSystem"; system: OrganSystem }>
   | Readonly<{ type: "highlight"; highlight: Highlight | null; from?: HighlightFrom }>
@@ -77,6 +85,9 @@ export const initialAnatomyState: AnatomyState = {
   requested: false,
   targetDepth: DEPTH_MIN,
   atlasId: DEFAULT_ATLAS_ID,
+  installed: null,
+  bodySex: null,
+  atlasChosen: false,
   layers: { muscle: true, skeleton: true, organs: true },
   hiddenSystems: [],
   highlight: null,
@@ -85,14 +96,7 @@ export const initialAnatomyState: AnatomyState = {
   retry: 0,
 };
 
-/** The atlas to show: the current one if installed, else the first installed one. */
-export const preferredAtlas = (
-  current: AtlasId,
-  installed: Readonly<Record<AtlasId, boolean>> | null,
-): AtlasId =>
-  installed === null || installed[current]
-    ? current
-    : (ATLAS_IDS.find((id) => installed[id]) ?? current);
+export { preferredAtlas } from "./atlas-sex";
 
 /**
  * A picked highlight names one atlas's group keys, so it is cleared. A row's
@@ -127,11 +131,30 @@ export const anatomyReducer = (
     case "step":
       return withDepth(state, stepStop(state.targetDepth, action.direction));
     case "atlas":
-      return switchAtlas(state, action.atlasId);
-    case "installed":
-      // Only moves off the current atlas when it is missing, so a choice made
-      // before the status arrived is kept.
-      return switchAtlas(state, preferredAtlas(state.atlasId, action.installed));
+      return action.atlasId === state.atlasId
+        ? state
+        : { ...switchAtlas(state, action.atlasId), atlasChosen: true };
+    case "installed": {
+      // A choice made before the status arrived is kept unless it is missing;
+      // otherwise the atlas follows the body's sex.
+      const known =
+        action.installed === state.installed
+          ? state
+          : { ...state, installed: action.installed };
+      return switchAtlas(
+        known,
+        state.atlasChosen
+          ? preferredAtlas(state.atlasId, action.installed)
+          : atlasForBody(state.bodySex, state.atlasId, action.installed),
+      );
+    }
+    case "bodySex":
+      // Another body starts from its own sex again, whatever was chosen before.
+      if (action.sex === state.bodySex) return state;
+      return switchAtlas(
+        { ...state, bodySex: action.sex, atlasChosen: false },
+        atlasForBody(action.sex, state.atlasId, state.installed),
+      );
     case "toggleLayer":
       // A toggle only hides or shows; the atlas loads when someone moves past the scan.
       return {

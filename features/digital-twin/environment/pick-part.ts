@@ -122,9 +122,19 @@ export const pickHighlight = (target: PickTarget): Highlight | null => {
 };
 
 /**
+ * Whether a click on this part lights something: every part the atlas keeps
+ * must be (prepare-atlas.ts gives a part without a group or known system a
+ * key from its node name).
+ */
+export const isSelectable = (
+  part: PickablePart,
+  groups: readonly AtlasGroup[],
+): boolean => pickHighlight(pickTarget(part, groups)) !== null;
+
+/**
  * What a pick lights on each atlas kind, so an atlas switch keeps something
- * lit. Group keys exist only on HRA; every part has a system, so BodyParts3D
- * lights the picked part's whole system.
+ * lit. Group keys belong to one atlas; every known system exists on both, so
+ * the other atlas lights the picked part's whole system.
  */
 export const pickHighlights = (
   target: PickTarget,
@@ -136,7 +146,7 @@ export const pickHighlights = (
     : null;
   return {
     hra: scheme === "hra" ? pickHighlight(target) : null,
-    bodyparts3d: system,
+    bodyparts3d: scheme === "bodyparts3d" ? pickHighlight(target) : system,
   };
 };
 
