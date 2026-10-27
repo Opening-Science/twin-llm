@@ -1,5 +1,6 @@
 import { chatRequestSchema, type ChatRequest } from "@/features/chat/chat-request";
 import { guardChatRequest } from "@/features/chat/chat-protection";
+import { loadGenomeThread } from "@/features/chat/load-genome-thread";
 import { publicProviderFailure } from "@/features/chat/public-provider-failure";
 import { markModelResponseRefused } from "@/features/chat/persist-model-response";
 import { createStartAnswer } from "@/features/chat/start-answer";
@@ -16,6 +17,7 @@ import { findAppUserId } from "@/infrastructure/current-user";
 import { database } from "@/infrastructure/database";
 import { exoscalePersonalData, isAuthDisabled, serverEnv } from "@/infrastructure/env";
 import { fetchActiveModelCatalog } from "@/infrastructure/fetch-model-catalog";
+import { chatModelIsLocal } from "@/infrastructure/genome-gate";
 import { append } from "@/packages/audit/append";
 
 /**
@@ -64,6 +66,8 @@ const startAnswer = createStartAnswer({
       exoscalePersonalData: exoscalePersonalData(env),
     };
   },
+  chatIsLocal: chatModelIsLocal,
+  loadGenomeThread,
   loadWearables: (mode, appUserId) =>
     loadWearableContext(mode, appUserId, {
       oura: getLatestOuraSummary,

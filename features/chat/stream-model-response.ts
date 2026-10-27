@@ -4,6 +4,7 @@ import { captureAiGeneration } from "@posthog/ai";
 
 import { trackModelAnswered } from "@/infrastructure/analytics-events";
 import { serverEnv } from "@/infrastructure/env";
+import { chatModelIsLocal } from "@/infrastructure/genome-gate";
 import type { GoogleHealthSummary } from "@/infrastructure/google-health-types";
 import type { KnowledgeSourceId } from "@/infrastructure/knowledge-sources";
 import {
@@ -21,11 +22,13 @@ import type { ChatRequest } from "./chat-request";
 import { createChatTools, forSkill, forSources } from "./chat-tools";
 import { finishModelResponse } from "./finish-model-response";
 import { generationEvent } from "./generation-analytics";
+import { guardGenomeHistory } from "./genome-history-guard";
 import { genomeToolDepsFor } from "./genome-tool-deps";
 import { errorNameOf, modelFailureLog } from "./model-failure-log";
 import {
   markModelResponseComplete,
   markModelResponseFailed,
+  markModelResponseRefused,
 } from "./persist-model-response";
 import { resolveLanguageModel } from "./resolve-language-model";
 import type { ResponseDocumentV1 } from "./response/document-v1";
@@ -50,6 +53,11 @@ import { twinUIMessageResponse } from "./twin-ui-stream";
 
 export type StreamContext = Readonly<{
   clerkId: string;
+  /**
+   * The thread used a genome tool, the history shows one, or the turn asks
+   * for one (`start-answer`). Required, so no caller can forget to decide.
+   */
+  genomeThread: boolean;
   ouraSummary: OuraSummary | null;
   whoopSummary: WhoopSummary | null;
   googleHealthSummary: GoogleHealthSummary | null;
@@ -80,6 +88,13 @@ export const streamModelResponse = async (
 ): Promise<Response> => {
   const { modelId, turnId, messages } = request;
   const { clerkId } = context;
+  const held = await guardGenomeHistory(
+    { chatIsLocal: chatModelIsLocal, markRefused: markModelResponseRefused },
+    request,
+    context.genomeThread,
+  );
+  if (held !== null) return held;
+
   const env = serverEnv();
   const timer = createResponseTimer(modelId);
   const outcome = settleOnce<Outcome | null>();
