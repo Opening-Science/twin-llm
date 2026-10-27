@@ -120,13 +120,13 @@ Ollama loads a model with a 4096-token context unless the request asks for more,
 
 | Turn                            | Tools | Tokens |
 | ------------------------------- | ----- | ------ |
-| synthetic                       | 18    | 3,759  |
-| synthetic `/sleep`              | 9     | 2,515  |
-| personal, no wearable           | 19    | 3,698  |
+| synthetic                       | 20    | 4,666  |
+| synthetic `/sleep`              | 9     | 2,860  |
+| personal, no wearable           | 21    | 4,541  |
 | personal, no wearable `/genome` | 2     | 1,120  |
-| personal, Oura linked           | 19    | 8,245  |
-| personal, Oura linked `/sleep`  | 9     | 6,912  |
-| personal, all four wearables    | 19    | 19,419 |
+| personal, Oura linked           | 21    | 9,088  |
+| personal, Oura linked `/sleep`  | 9     | 7,257  |
+| personal, all four wearables    | 21    | 20,262 |
 
 A linked wearable costs about 4,500 tokens, because the prompt lists each source's metrics twice (narrative lines and the key list) and Qwen3 spends one token per digit of every date and value. With all four linked the prompt alone is larger than 16k; set `OLLAMA_NUM_CTX=32768` for that case. `scripts/setup/prompt-size.test.ts` fails when any other case leaves less than 4,096 tokens for the conversation, the tool results and the answer at the default context.
 

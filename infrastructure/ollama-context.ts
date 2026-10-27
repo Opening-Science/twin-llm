@@ -29,12 +29,12 @@ export const TURN_RESERVE_TOKENS = 4_096;
 
 /**
  * Characters per Qwen3 token for everything but digits, used to estimate a
- * request's size without the tokenizer. Prose and dotted wearable keys run
- * near 3; tool JSON near 4.5. Both figures sit below what was measured, so
- * the estimate errs high.
+ * request's size without the tokenizer. Prose and dotted wearable keys measure
+ * near 3 and tool JSON near 4.6 (Ollama prompt_eval_count, qwen3:4b); both
+ * figures below sit under those, so the estimate errs high.
  */
 export const PROSE_CHARS_PER_TOKEN = 2.5;
-export const JSON_CHARS_PER_TOKEN = 3.5;
+export const JSON_CHARS_PER_TOKEN = 4;
 
 /** The chat template's own wrapping around the system prompt and tool list. */
 export const TEMPLATE_OVERHEAD_TOKENS = 256;

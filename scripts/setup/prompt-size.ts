@@ -135,7 +135,7 @@ if (isMain) {
   );
   const budget = promptBudgetTokens(numCtx);
   console.log(
-    `num_ctx ${numCtx}; prompt + tools may use ${budget} tokens. Estimate: 1 per digit, prose chars / 2.5, tool JSON chars / 3.5, plus the template. "fits" uses the exact count when there is one.`,
+    `num_ctx ${numCtx}; prompt + tools may use ${budget} tokens. Estimate: 1 per digit, prose chars / 2.5, tool JSON chars / 4, plus the template. "fits" uses the exact count when there is one.`,
   );
   console.log(
     [
