@@ -159,7 +159,7 @@ describe("a turn run under a skill", () => {
   });
 
   test("a skill without a kind show_view draws gets no view tools", async () => {
-    const { tools, system } = await runSkillTurn({ ...SLEEP, views: ["chart.compare"] });
+    const { tools, system } = await runSkillTurn({ ...SLEEP, views: ["twin.body"] });
     expect(tools).not.toContain("show_view");
     expect(tools).not.toContain("list_views");
     expect(tools).not.toContain("open_view");

@@ -55,6 +55,12 @@ const FETCH_TOOLS: readonly QueryToolName[] = [
   "summary_stats",
 ];
 
+/** Timelines of recorded conditions and medication requests (#130). */
+const CLINICAL_RECORD_TOOLS: readonly QueryToolName[] = [
+  "conditions_timeline",
+  "medications_timeline",
+];
+
 /** "a, b and c", as the prompt has always written the fetch tools. */
 const andList = (items: readonly string[]): string =>
   items.length <= 1
@@ -92,6 +98,7 @@ const syntheticCohortSection = (
   if (mode !== "synthetic") return [];
   const references = REFERENCE_TOOL_LINES.filter((line) => offered(line.tool));
   const fetchTools = FETCH_TOOLS.filter(offered);
+  const recordTools = CLINICAL_RECORD_TOOLS.filter(offered);
   const cohortOn = offered("list_subjects") || fetchTools.length > 0;
   return [
     "## Data mode: synthetic research cohort",
@@ -104,6 +111,11 @@ const syntheticCohortSection = (
           ...(fetchTools.length > 0
             ? [
                 `- Fetch rows with ${andList(fetchTools.map(queryTool))}. Observations use LOINC codes and UCUM units.`,
+              ]
+            : []),
+          ...(recordTools.length > 0
+            ? [
+                `- ${andList(recordTools.map(queryTool))} list what the record holds, with dates. Say what came before or after, never that one thing caused another. Quote dosage text only as \`dosage_as_recorded\` gives it, labelled as recorded; never add a dose, a change or advice.`,
               ]
             : []),
         ]
@@ -141,6 +153,7 @@ const viewSection = (offered: (tool: string) => boolean): readonly string[] =>
     ? [
         "## Charts",
         `To show a measure over time, call \`${SHOW_VIEW_TOOL}\` with kind \`chart.timeseries\`, a measure (a LOINC code with subject, or a wearable key without its date, such as sleep.score) and a window. The server draws it from its own rows; do not list the points yourself.`,
+        `Other kinds: \`chart.compare\` sets window against an earlier \`compare_with\` window (n and mean of each); \`biomarker.card\` shows a LOINC code's latest reading against its published range, with its trend; \`table\` lists the readings.`,
         ...(offered(OPEN_VIEW_TOOL)
           ? [
               `To show a chart from earlier in this thread again, call \`${LIST_VIEWS_TOOL}\` and then \`${OPEN_VIEW_TOOL}\` with its id instead of drawing it again.`,

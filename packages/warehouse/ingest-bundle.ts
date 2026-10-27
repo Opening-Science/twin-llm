@@ -4,6 +4,7 @@ import { database } from "@/infrastructure/database";
 
 import { bundleSha } from "./bundle-sha";
 import { emptyReport, ingestReportSchema, type IngestReport } from "./ingest-report";
+import { mapConditions, mapMedicationRequests } from "./map-clinical";
 import { mapObservations, WAREHOUSE_SOURCE } from "./map-observation";
 import { subjectFactsFrom } from "./subject-facts";
 import { isSyntheaBundle } from "./synthea-marker";
@@ -71,13 +72,20 @@ export const unresolvedUrnsFrom = (bundle: unknown): string[] => {
   return found;
 };
 
-const countStoredRows = async (sha: string): Promise<number> => {
+/** Rows already stored for a bundle: observations (as `skipped`) and the clinical records. */
+const countStoredRows = async (
+  sha: string,
+): Promise<
+  Readonly<{ skipped: number; conditions: number; medicationRequests: number }>
+> => {
   const db = database();
-  const [numeric, nonNumeric] = await Promise.all([
+  const [numeric, nonNumeric, conditions, medicationRequests] = await Promise.all([
     db.observation.count({ where: { bundleSha: sha } }),
     db.observationNonNumeric.count({ where: { bundleSha: sha } }),
+    db.condition.count({ where: { bundleSha: sha } }),
+    db.medicationRequest.count({ where: { bundleSha: sha } }),
   ]);
-  return numeric + nonNumeric;
+  return { skipped: numeric + nonNumeric, conditions, medicationRequests };
 };
 
 export const ingestBundle = async (
@@ -100,7 +108,7 @@ export const ingestBundle = async (
         data: facts,
       });
     }
-    return emptyReport({ skipped: await countStoredRows(sha), alreadyIngested: true });
+    return emptyReport({ ...(await countStoredRows(sha)), alreadyIngested: true });
   }
 
   const subjectRef = patientIdFrom(bundle);
@@ -136,6 +144,8 @@ export const ingestBundle = async (
       skipped: 0,
       unresolved,
       nonNumeric: 0,
+      conditions: 0,
+      medicationRequests: 0,
       alreadyIngested: false,
       rejected: { reason },
     });
@@ -157,6 +167,8 @@ export const ingestBundle = async (
   const nonNumeric = mapped
     .filter((item) => item.kind === "nonNumeric")
     .map((item) => item.row);
+  const conditions = mapConditions(entries);
+  const medicationRequests = mapMedicationRequests(entries);
 
   const outcome = await database().$transaction(
     async (tx) => {
@@ -196,6 +208,24 @@ export const ingestBundle = async (
           bundleSha: sha,
         })),
       });
+      await tx.condition.createMany({
+        data: conditions.map((row) => ({
+          ...row,
+          subjectRef,
+          source: WAREHOUSE_SOURCE,
+          bundleSha: sha,
+        })),
+      });
+      await tx.medicationRequest.createMany({
+        data: medicationRequests.map((row) => ({
+          ...row,
+          dosageText: [...row.dosageText],
+          reasonRefs: [...row.reasonRefs],
+          subjectRef,
+          source: WAREHOUSE_SOURCE,
+          bundleSha: sha,
+        })),
+      });
       return "written" as const;
     },
     { timeout: TRANSACTION_TIMEOUT_MS },
@@ -210,6 +240,8 @@ export const ingestBundle = async (
     skipped: 0,
     unresolved: unresolvedUrnsFrom(bundle),
     nonNumeric: nonNumeric.length,
+    conditions: conditions.length,
+    medicationRequests: medicationRequests.length,
     alreadyIngested: false,
   });
 };

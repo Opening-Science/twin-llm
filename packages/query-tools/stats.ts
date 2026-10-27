@@ -32,6 +32,30 @@ export const minimum = (values: readonly number[]): number | null =>
 export const maximum = (values: readonly number[]): number | null =>
   values.length === 0 ? null : values.reduce((high, value) => Math.max(high, value));
 
+export type WindowSummary = Readonly<{
+  start: string;
+  end: string;
+  n: number;
+  mean: number | null;
+  median: number | null;
+  min: number | null;
+  max: number | null;
+}>;
+
+/** One window of `compare_windows`; `chart.compare` summarises wearable windows with it too. */
+export const summariseWindow = (
+  window: Readonly<{ start: string; end: string }>,
+  values: readonly number[],
+): WindowSummary => ({
+  start: window.start,
+  end: window.end,
+  n: values.length,
+  mean: mean(values),
+  median: median(values),
+  min: minimum(values),
+  max: maximum(values),
+});
+
 /** Median absolute deviation from the median, unscaled. */
 export const mad = (values: readonly number[]): number | null => {
   const centre = median(values);
@@ -169,4 +193,60 @@ export const pickReading = <T extends Reading>(
         b.effectiveAt.getTime() - a.effectiveAt.getTime() || byId(a.id ?? "", b.id ?? ""),
     )[0] ?? null
   );
+};
+
+/**
+ * Each subject's own latest reading, as `pickReading` picks it (newest; a tie
+ * at one instant to the lower id), so a person counts once however many rows
+ * they have. Keyed by subject_ref.
+ */
+export const latestPerSubject = <T extends Reading & Readonly<{ subjectRef: string }>>(
+  readings: readonly T[],
+): ReadonlyMap<string, T> => {
+  const bySubject = new Map<string, T[]>();
+  for (const reading of readings) {
+    const own = bySubject.get(reading.subjectRef);
+    if (own) own.push(reading);
+    else bySubject.set(reading.subjectRef, [reading]);
+  }
+  const latest = new Map<string, T>();
+  for (const [subjectRef, own] of bySubject) {
+    const picked = pickReading(own, null);
+    if (picked) latest.set(subjectRef, picked);
+  }
+  return latest;
+};
+
+export type MidRankPercentile = Readonly<{
+  /** Values compared, the subject's own included. */
+  n: number;
+  nLower: number;
+  /** Values equal to the subject's, the subject's own included, so at least 1. */
+  nEqual: number;
+  nHigher: number;
+  /** 100 × (nLower + nEqual / 2) / n. */
+  percentile: number;
+}>;
+
+/**
+ * Mid-rank percentile of `value` among `values`, which must include `value`
+ * itself: 100 × (lower + equal / 2) / n. Ties count half, so the result never
+ * depends on the order of equal values. `null` when `value` is not among
+ * `values` (nothing to rank).
+ */
+export const midRankPercentile = (
+  value: number,
+  values: readonly number[],
+): MidRankPercentile | null => {
+  const nLower = values.filter((other) => other < value).length;
+  const nEqual = values.filter((other) => other === value).length;
+  const nHigher = values.length - nLower - nEqual;
+  if (nEqual === 0) return null;
+  return {
+    n: values.length,
+    nLower,
+    nEqual,
+    nHigher,
+    percentile: (100 * (nLower + nEqual / 2)) / values.length,
+  };
 };

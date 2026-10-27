@@ -9,6 +9,8 @@ const store = {
   bundles: new Map<string, Row>(),
   observations: [] as Row[],
   nonNumeric: [] as Row[],
+  conditions: [] as Row[],
+  medicationRequests: [] as Row[],
   transactionTimeouts: [] as Array<number | undefined>,
 };
 
@@ -17,6 +19,8 @@ const resetStore = () => {
   store.bundles.clear();
   store.observations.length = 0;
   store.nonNumeric.length = 0;
+  store.conditions.length = 0;
+  store.medicationRequests.length = 0;
   store.transactionTimeouts.length = 0;
 };
 
@@ -46,6 +50,22 @@ const mockDb = () => ({
       for (const row of data) {
         store.nonNumeric.push({ id: `nn-${store.nonNumeric.length + 1}`, ...row });
       }
+      return { count: data.length };
+    },
+  },
+  condition: {
+    count: async ({ where }: { where: { bundleSha: string } }) =>
+      store.conditions.filter((row) => row.bundleSha === where.bundleSha).length,
+    createMany: async ({ data }: { data: Row[] }) => {
+      store.conditions.push(...data.map((row) => ({ ...row })));
+      return { count: data.length };
+    },
+  },
+  medicationRequest: {
+    count: async ({ where }: { where: { bundleSha: string } }) =>
+      store.medicationRequests.filter((row) => row.bundleSha === where.bundleSha).length,
+    createMany: async ({ data }: { data: Row[] }) => {
+      store.medicationRequests.push(...data.map((row) => ({ ...row })));
       return { count: data.length };
     },
   },
@@ -326,6 +346,8 @@ describe("blood pressure components and Synthea marker", () => {
       skipped: 0,
       unresolved: [],
       nonNumeric: 2,
+      conditions: 0,
+      medicationRequests: 0,
       alreadyIngested: false,
     });
     expect(store.transactionTimeouts).toEqual([120_000]);
@@ -380,6 +402,8 @@ describe("blood pressure components and Synthea marker", () => {
       skipped: 0,
       unresolved: [],
       nonNumeric: 0,
+      conditions: 0,
+      medicationRequests: 0,
       alreadyIngested: false,
       rejected: { reason: "subject-cohort-conflict" },
     });
@@ -408,6 +432,8 @@ describe("blood pressure components and Synthea marker", () => {
       skipped: 0,
       unresolved: [],
       nonNumeric: 0,
+      conditions: 0,
+      medicationRequests: 0,
       alreadyIngested: false,
       rejected: { reason: "not-synthea" },
     });
@@ -519,5 +545,135 @@ describe("subject sex, birth year and death year (#4)", () => {
     patient.resource.identifier = [{ system: "urn:example:mrn", value: "1" }];
     await ingestBundle(bundle, { cohortId: COHORT, syntheaVersion: VERSION });
     expect(store.subjects.size).toBe(0);
+  });
+});
+
+describe("conditions and medication requests", () => {
+  const CLINICAL = "clinical/clinical-records.json";
+  const SUBJECT = "c1000000-0000-4000-8000-000000000001";
+  // normaliseBundle gives every resource a deterministic id; references follow.
+  const SINUSITIS = "566de4a0-949a-5dde-98d9-0a15565c671a";
+  const HYPERTENSION = "0296bf9f-66a6-5660-a0c8-dd7d8dde3e5d";
+
+  test("clinical-records.json stores two conditions and two medication requests as recorded", async () => {
+    const { ingestBundle } = await import("./ingest-bundle");
+    const report = await ingestBundle(loadFixture(CLINICAL), {
+      cohortId: COHORT,
+      syntheaVersion: VERSION,
+    });
+    const sha = [...store.bundles.keys()][0];
+
+    expect(report).toEqual({
+      inserted: 0,
+      skipped: 0,
+      unresolved: [],
+      nonNumeric: 0,
+      conditions: 2,
+      medicationRequests: 2,
+      alreadyIngested: false,
+    });
+    expect(store.subjects.get(SUBJECT)).toEqual({
+      subjectRef: SUBJECT,
+      isSynthetic: true,
+      cohortId: COHORT,
+      sex: "male",
+      birthYear: 1961,
+    });
+    expect(store.conditions).toEqual([
+      {
+        fhirId: SINUSITIS,
+        codeSystem: "http://snomed.info/sct",
+        code: "444814009",
+        display: "Viral sinusitis (disorder)",
+        onsetAt: new Date("2015-04-02T09:00:00.000Z"),
+        abatementAt: new Date("2015-04-20T09:00:00.000Z"),
+        clinicalStatus: "resolved",
+        verificationStatus: "confirmed",
+        encounterRef: "urn:uuid:4ef29e6f-ab88-593f-90c9-343b01189820",
+        subjectRef: SUBJECT,
+        source: "synthea",
+        bundleSha: sha,
+      },
+      {
+        fhirId: HYPERTENSION,
+        codeSystem: "http://hl7.org/fhir/sid/icd-10",
+        code: "I10",
+        display: "Essential (primary) hypertension",
+        onsetAt: new Date("2018-11-05T10:00:00.000Z"),
+        abatementAt: null,
+        clinicalStatus: "active",
+        verificationStatus: "confirmed",
+        encounterRef: null,
+        subjectRef: SUBJECT,
+        source: "synthea",
+        bundleSha: sha,
+      },
+    ]);
+    expect(store.medicationRequests).toEqual([
+      {
+        fhirId: "5ecf192a-feb5-5fff-98c8-de713ecb612a",
+        codeSystem: "http://www.nlm.nih.gov/research/umls/rxnorm",
+        code: "313782",
+        display: "Acetaminophen 325 MG Oral Tablet",
+        authoredAt: new Date("2015-04-02T09:20:00.000Z"),
+        status: "completed",
+        intent: "order",
+        dosageText: ["Take as needed."],
+        reasonRefs: [`urn:uuid:${SINUSITIS}`],
+        subjectRef: SUBJECT,
+        source: "synthea",
+        bundleSha: sha,
+      },
+      {
+        fhirId: "cf7d367f-fb4a-55a8-91d2-d307a1532f5b",
+        codeSystem: "http://www.nlm.nih.gov/research/umls/rxnorm",
+        code: "314076",
+        display: "lisinopril 10 MG Oral Tablet",
+        authoredAt: new Date("2018-11-05T10:15:00.000Z"),
+        status: "active",
+        intent: "order",
+        dosageText: [],
+        reasonRefs: [`urn:uuid:${HYPERTENSION}`],
+        subjectRef: SUBJECT,
+        source: "synthea",
+        bundleSha: sha,
+      },
+    ]);
+  });
+
+  test("a second ingest of the same bundle writes nothing and reports what is stored", async () => {
+    const { ingestBundle } = await import("./ingest-bundle");
+    const options = { cohortId: COHORT, syntheaVersion: VERSION };
+    await ingestBundle(loadFixture(CLINICAL), options);
+    const second = await ingestBundle(loadFixture(CLINICAL), options);
+
+    expect(second).toEqual({
+      inserted: 0,
+      skipped: 0,
+      unresolved: [],
+      nonNumeric: 0,
+      conditions: 2,
+      medicationRequests: 2,
+      alreadyIngested: true,
+    });
+    expect(store.conditions).toHaveLength(2);
+    expect(store.medicationRequests).toHaveLength(2);
+  });
+
+  test("a subject in another cohort writes no conditions or medication requests", async () => {
+    const { ingestBundle } = await import("./ingest-bundle");
+    store.subjects.set(SUBJECT, {
+      subjectRef: SUBJECT,
+      isSynthetic: true,
+      cohortId: "synthea-v4-seed42",
+    });
+    const report = await ingestBundle(loadFixture(CLINICAL), {
+      cohortId: COHORT,
+      syntheaVersion: VERSION,
+    });
+
+    expect(report.rejected).toEqual({ reason: "subject-cohort-conflict" });
+    expect(store.conditions).toEqual([]);
+    expect(store.medicationRequests).toEqual([]);
   });
 });

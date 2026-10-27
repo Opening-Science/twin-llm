@@ -13,7 +13,7 @@
     "content_sha256": "f4941fab7a56e17f9dd66b6b6e0fbed379dab8c564c6024831c5fd4aa0ba09eb"
   },
   "open_twin_sha": "a9e126c952c91e19e064a962dda7d815a43564e5",
-  "questions_sha256": "415aac116877e215b97b028751a867103954847c21547fd95f8eda407be4b478",
+  "questions_sha256": "016f354084c24db6b5330fcb0171ed59dccd2c6bf575f0b67244467cc4a8ef75",
   "actor": "eval-answer-key",
   "generated_on": "2026-10-27",
   "entries": {
@@ -2581,6 +2581,336 @@
         "n": 0,
         "windows": [],
         "refusal": "UNSUPPORTED_CONVERSION"
+      }
+    ],
+    "Q-S1-19": [
+      {
+        "name": "value",
+        "tool": "cohort_position",
+        "args": {
+          "subject_ref": "62f60bdb-cc5c-8305-b98b-f2b229a55eca",
+          "loinc": "4548-4",
+          "start": "2016-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z"
+        },
+        "path": "value",
+        "value": 5.7,
+        "unit": "%",
+        "n": 380,
+        "windows": [{ "start": "2016-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "percentile",
+        "tool": "cohort_position",
+        "args": {
+          "subject_ref": "62f60bdb-cc5c-8305-b98b-f2b229a55eca",
+          "loinc": "4548-4",
+          "start": "2016-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z"
+        },
+        "path": "percentile",
+        "value": 32.69230769230769,
+        "unit": null,
+        "n": 380,
+        "windows": [{ "start": "2016-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "n",
+        "tool": "cohort_position",
+        "args": {
+          "subject_ref": "62f60bdb-cc5c-8305-b98b-f2b229a55eca",
+          "loinc": "4548-4",
+          "start": "2016-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z"
+        },
+        "path": "n",
+        "value": 26,
+        "unit": null,
+        "n": 380,
+        "windows": [{ "start": "2016-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S1-20": [
+      {
+        "name": "value",
+        "tool": "cohort_position",
+        "args": {
+          "subject_ref": "644ed582-2e59-8b56-564b-9312d1f0d244",
+          "loinc": "8480-6",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z"
+        },
+        "path": "value",
+        "value": 98,
+        "unit": "mm[Hg]",
+        "n": 100,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "percentile",
+        "tool": "cohort_position",
+        "args": {
+          "subject_ref": "644ed582-2e59-8b56-564b-9312d1f0d244",
+          "loinc": "8480-6",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z"
+        },
+        "path": "percentile",
+        "value": 14.0625,
+        "unit": null,
+        "n": 100,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "n",
+        "tool": "cohort_position",
+        "args": {
+          "subject_ref": "644ed582-2e59-8b56-564b-9312d1f0d244",
+          "loinc": "8480-6",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z"
+        },
+        "path": "n",
+        "value": 32,
+        "unit": null,
+        "n": 100,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S6-21": [
+      {
+        "name": "refusal",
+        "tool": "cohort_position",
+        "args": {
+          "subject_ref": "6aed9210-c500-4375-b0fc-3374c40b8591",
+          "loinc": "2276-4",
+          "start": "2016-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z"
+        },
+        "path": "code",
+        "value": "COHORT_TOO_SMALL",
+        "unit": null,
+        "n": 0,
+        "windows": [{ "start": "2016-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": "COHORT_TOO_SMALL"
+      }
+    ],
+    "Q-S1-21": [
+      {
+        "name": "n",
+        "tool": "conditions_timeline",
+        "args": {
+          "subject_ref": "6816a11d-3700-1d60-8b4d-b7252c529f11",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z"
+        },
+        "path": "n",
+        "value": 23,
+        "unit": null,
+        "n": 23,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "n_codes",
+        "tool": "conditions_timeline",
+        "args": {
+          "subject_ref": "6816a11d-3700-1d60-8b4d-b7252c529f11",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z"
+        },
+        "path": "n_codes",
+        "value": 22,
+        "unit": null,
+        "n": 23,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "n_without_abatement",
+        "tool": "conditions_timeline",
+        "args": {
+          "subject_ref": "6816a11d-3700-1d60-8b4d-b7252c529f11",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z"
+        },
+        "path": "n_without_abatement",
+        "value": 15,
+        "unit": null,
+        "n": 23,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S1-22": [
+      {
+        "name": "n",
+        "tool": "conditions_timeline",
+        "args": {
+          "subject_ref": "7fff03da-06e1-4c8f-091b-a415e649d0c8",
+          "start": "1990-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z",
+          "code": "59621000"
+        },
+        "path": "n",
+        "value": 1,
+        "unit": null,
+        "n": 1,
+        "windows": [{ "start": "1990-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "n_without_abatement",
+        "tool": "conditions_timeline",
+        "args": {
+          "subject_ref": "7fff03da-06e1-4c8f-091b-a415e649d0c8",
+          "start": "1990-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z",
+          "code": "59621000"
+        },
+        "path": "n_without_abatement",
+        "value": 1,
+        "unit": null,
+        "n": 1,
+        "windows": [{ "start": "1990-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S1-23": [
+      {
+        "name": "n",
+        "tool": "medications_timeline",
+        "args": {
+          "subject_ref": "922fb35e-148d-9e82-7e65-bfa05e3b3515",
+          "start": "2021-01-01T00:00:00Z",
+          "end": "2022-12-31T23:59:59Z"
+        },
+        "path": "n",
+        "value": 19,
+        "unit": null,
+        "n": 19,
+        "windows": [{ "start": "2021-01-01T00:00:00Z", "end": "2022-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "n_codes",
+        "tool": "medications_timeline",
+        "args": {
+          "subject_ref": "922fb35e-148d-9e82-7e65-bfa05e3b3515",
+          "start": "2021-01-01T00:00:00Z",
+          "end": "2022-12-31T23:59:59Z"
+        },
+        "path": "n_codes",
+        "value": 4,
+        "unit": null,
+        "n": 19,
+        "windows": [{ "start": "2021-01-01T00:00:00Z", "end": "2022-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "n_with_dosage_text",
+        "tool": "medications_timeline",
+        "args": {
+          "subject_ref": "922fb35e-148d-9e82-7e65-bfa05e3b3515",
+          "start": "2021-01-01T00:00:00Z",
+          "end": "2022-12-31T23:59:59Z"
+        },
+        "path": "n_with_dosage_text",
+        "value": 3,
+        "unit": null,
+        "n": 19,
+        "windows": [{ "start": "2021-01-01T00:00:00Z", "end": "2022-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S1-24": [
+      {
+        "name": "n",
+        "tool": "medications_timeline",
+        "args": {
+          "subject_ref": "947c82ee-1735-c9ed-8210-38cb93d8070c",
+          "start": "1990-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z",
+          "status": "active"
+        },
+        "path": "n",
+        "value": 7,
+        "unit": null,
+        "n": 7,
+        "windows": [{ "start": "1990-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "n_codes",
+        "tool": "medications_timeline",
+        "args": {
+          "subject_ref": "947c82ee-1735-c9ed-8210-38cb93d8070c",
+          "start": "1990-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z",
+          "status": "active"
+        },
+        "path": "n_codes",
+        "value": 7,
+        "unit": null,
+        "n": 7,
+        "windows": [{ "start": "1990-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "n_with_dosage_text",
+        "tool": "medications_timeline",
+        "args": {
+          "subject_ref": "947c82ee-1735-c9ed-8210-38cb93d8070c",
+          "start": "1990-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z",
+          "status": "active"
+        },
+        "path": "n_with_dosage_text",
+        "value": 3,
+        "unit": null,
+        "n": 7,
+        "windows": [{ "start": "1990-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S6-22": [
+      {
+        "name": "refusal",
+        "tool": "conditions_timeline",
+        "args": {
+          "subject_ref": "982750f4-569b-5949-196b-60699bdda3fb",
+          "start": "1950-01-01T00:00:00Z",
+          "end": "1969-12-31T23:59:59Z"
+        },
+        "path": "code",
+        "value": "NO_ROWS",
+        "unit": null,
+        "n": 0,
+        "windows": [{ "start": "1950-01-01T00:00:00Z", "end": "1969-12-31T23:59:59Z" }],
+        "refusal": "NO_ROWS"
+      }
+    ],
+    "Q-S6-23": [
+      {
+        "name": "refusal",
+        "tool": "medications_timeline",
+        "args": {
+          "subject_ref": "aa616abe-1761-0c9a-7959-07544679dafd",
+          "start": "1950-01-01T00:00:00Z",
+          "end": "1969-12-31T23:59:59Z"
+        },
+        "path": "code",
+        "value": "NO_ROWS",
+        "unit": null,
+        "n": 0,
+        "windows": [{ "start": "1950-01-01T00:00:00Z", "end": "1969-12-31T23:59:59Z" }],
+        "refusal": "NO_ROWS"
       }
     ],
     "Q-S1-25": [

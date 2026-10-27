@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { COMPARE_LAYOUTS } from "@/infrastructure/view-specs";
+
 import { subjectRefSchema, windowSchema } from "./schemas";
 
 /**
@@ -10,7 +12,12 @@ import { subjectRefSchema, windowSchema } from "./schemas";
  * something inside the app.
  */
 
-export const VIEW_KINDS = ["chart.timeseries"] as const;
+export const VIEW_KINDS = [
+  "chart.timeseries",
+  "chart.compare",
+  "biomarker.card",
+  "table",
+] as const;
 
 export const showViewInput = z
   .object({
@@ -24,9 +31,20 @@ export const showViewInput = z
     subject: subjectRefSchema
       .optional()
       .describe("subject_ref for a LOINC code; leave out for wearable keys"),
+    compare_with: windowSchema
+      .optional()
+      .describe(
+        "chart.compare only: the earlier window to set against window, such as the 4 weeks before it",
+      ),
+    layout: z
+      .enum(COMPARE_LAYOUTS)
+      .optional()
+      .describe(
+        "chart.compare only: side-by-side (default) or overlaid by day of window",
+      ),
   })
   .strict()
-  .describe("A chart of one measure in a window, drawn from audited rows");
+  .describe("A view of one measure in a window, drawn from audited rows");
 
 export const listViewsInput = z
   .object({})
@@ -44,7 +62,7 @@ export const VIEW_TOOL_DEFINITIONS = [
   {
     name: "show_view",
     description:
-      "Show a chart of one measure in the answer. The server reads the rows itself and draws every point; the result says how many readings it drew. A LOINC code needs subject (a synthetic subject_ref); a wearable key reads the user's synced data. Never write data points yourself.",
+      "Show a view of one measure in the answer. chart.timeseries draws every reading in window; chart.compare sets window against compare_with (n and mean of each); biomarker.card shows a LOINC's latest reading against its published range, with its trend; table lists the readings (first 50). The server reads the rows itself; the result says how many it read. A LOINC code needs subject (a synthetic subject_ref); a wearable key reads the user's synced data. Never write numbers for a view yourself.",
     input: showViewInput,
   },
   {

@@ -411,14 +411,136 @@
   {
     "type": "function",
     "function": {
+      "name": "cohort_position",
+      "description": "Where a subject's latest value of one LOINC in a time range sits among the latest values, in the same window, of everyone in its synthetic cohort (one value per person, the subject included). percentile is the mid-rank percentile, 100 × (n_lower + n_equal / 2) / n, where n is the people with a value and n_equal counts the subject; say it as \"higher than about <percentile> % of the <n> synthetic people with a value\", never better, worse or normal. Synthetic cohorts only. Refuses no value for the subject, fewer than 10 people with a value, mixed units across the cohort, and more than 20000 cohort rows (narrow the window).",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "subject_ref": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Opaque subject_ref"
+          },
+          "loinc": {
+            "type": "string",
+            "description": "LOINC code"
+          },
+          "start": {
+            "type": "string",
+            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+          },
+          "end": {
+            "type": "string",
+            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+          }
+        },
+        "required": ["subject_ref", "loinc", "start", "end"],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "conditions_timeline",
+      "description": "List one subject's recorded conditions whose span overlaps the window (onset at or before its end, and no abatement or abatement at or after its start), oldest onset first: code_system, code, display, onset_at, abatement_at, clinical_status and verification_status as recorded (status as of the record, not of the window), with n, n_codes, by_status and n_without_abatement. Optional status and code narrow the list. Reads up to 1000 records; refuses more (ROW_CAP_EXCEEDED) and none (NO_ROWS, with the reason). Lists what is recorded; times relate as before or after, never as a cause.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "subject_ref": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Opaque subject_ref"
+          },
+          "start": {
+            "type": "string",
+            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+          },
+          "end": {
+            "type": "string",
+            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+          },
+          "status": {
+            "description": "Only conditions with this recorded clinical status",
+            "type": "string",
+            "enum": [
+              "active",
+              "recurrence",
+              "relapse",
+              "inactive",
+              "remission",
+              "resolved"
+            ]
+          },
+          "code": {
+            "type": "string",
+            "description": "One code as recorded (SNOMED CT or ICD-10 for conditions, RxNorm for medications)"
+          }
+        },
+        "required": ["subject_ref", "start", "end"],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "medications_timeline",
+      "description": "List one subject's recorded medication requests authored in the window, oldest first: code_system, code (RxNorm), display, authored_at, status and intent as recorded, and dosage_as_recorded, the record's own dosage text verbatim (null when the record has none), with n, n_codes, by_status and n_with_dosage_text. Optional status and code narrow the list. Reads up to 1000 records; refuses more (ROW_CAP_EXCEEDED) and none (NO_ROWS, with the reason). Lists what is recorded; never a dose, a change or advice of its own.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "subject_ref": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Opaque subject_ref"
+          },
+          "start": {
+            "type": "string",
+            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+          },
+          "end": {
+            "type": "string",
+            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+          },
+          "status": {
+            "description": "Only medication requests with this recorded status",
+            "type": "string",
+            "enum": [
+              "active",
+              "on-hold",
+              "cancelled",
+              "completed",
+              "entered-in-error",
+              "stopped",
+              "draft",
+              "unknown"
+            ]
+          },
+          "code": {
+            "type": "string",
+            "description": "One code as recorded (SNOMED CT or ICD-10 for conditions, RxNorm for medications)"
+          }
+        },
+        "required": ["subject_ref", "start", "end"],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
       "name": "show_view",
-      "description": "Show a chart of one measure in the answer. The server reads the rows itself and draws every point; the result says how many readings it drew. A LOINC code needs subject (a synthetic subject_ref); a wearable key reads the user's synced data. Never write data points yourself.",
+      "description": "Show a view of one measure in the answer. chart.timeseries draws every reading in window; chart.compare sets window against compare_with (n and mean of each); biomarker.card shows a LOINC's latest reading against its published range, with its trend; table lists the readings (first 50). The server reads the rows itself; the result says how many it read. A LOINC code needs subject (a synthetic subject_ref); a wearable key reads the user's synced data. Never write numbers for a view yourself.",
       "parameters": {
         "type": "object",
         "properties": {
           "kind": {
             "type": "string",
-            "enum": ["chart.timeseries"]
+            "enum": ["chart.timeseries", "chart.compare", "biomarker.card", "table"]
           },
           "measure": {
             "type": "string",
@@ -447,6 +569,27 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 128
+          },
+          "compare_with": {
+            "description": "chart.compare only: the earlier window to set against window, such as the 4 weeks before it",
+            "type": "object",
+            "properties": {
+              "start": {
+                "type": "string",
+                "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+              },
+              "end": {
+                "type": "string",
+                "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+              }
+            },
+            "required": ["start", "end"],
+            "additionalProperties": false
+          },
+          "layout": {
+            "description": "chart.compare only: side-by-side (default) or overlaid by day of window",
+            "type": "string",
+            "enum": ["side-by-side", "overlaid"]
           }
         },
         "required": ["kind", "measure", "window"],
