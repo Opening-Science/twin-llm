@@ -84,6 +84,15 @@ export const conversationStats = (rows: readonly StatsRow[], toolsChars: number)
       ).length,
       rows.length,
     ),
+    // Only with --genome, so a run without genome families keeps its stats file as it was.
+    ...(metas.some((meta) => meta.family.startsWith("genome_"))
+      ? {
+          genome_share: share(
+            metas.filter((meta) => meta.family.startsWith("genome_")).length,
+            rows.length,
+          ),
+        }
+      : {}),
     message_chars: spread(chars),
     approx_tokens: {
       method: "characters / 4, rounded up; rough",

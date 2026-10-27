@@ -39,7 +39,16 @@ import { DEFAULT_END_DAY } from "../synthetic-wearables/series";
 
 import type { OpenAiTool } from "./chat-tool-list";
 import { GENERATOR_VERSION, type SystemPrompt, toConversation } from "./conversation";
-import { draftsFor, type Family, FAMILIES, type ToolName } from "./families";
+import type { Variant } from "../genome-synth/catalog";
+import { CATALOG_VERSION } from "../genome-synth/genotypes";
+
+import {
+  draftsFor,
+  type Family,
+  FAMILIES,
+  GENOME_FAMILIES,
+  type ToolName,
+} from "./families";
 import { conversationStats, messageChars, type StatsRow } from "./stats";
 
 export const TRAINING_ACTOR = "training-conversations";
@@ -52,6 +61,13 @@ export type ConversationPorts = Readonly<{
   systemPrompt: () => Promise<SystemPrompt>;
   /** The tools a chat request sends, as OpenAI function definitions. */
   tools: () => Promise<readonly OpenAiTool[]>;
+  /**
+   * For --genome: the system prompt and tools of a turn that carries the
+   * genome tools (`genome_report`, `dna_ask`). Building them runs nothing.
+   */
+  genome?: () => Promise<
+    Readonly<{ prompt: SystemPrompt; tools: readonly OpenAiTool[] }>
+  >;
 }>;
 
 export type LineWriter = Readonly<{
@@ -73,6 +89,8 @@ export type BuildDeps = Readonly<{
   remove: (path: string) => Promise<void>;
   /** A file's text, or null when it cannot be read. */
   readText: (path: string) => Promise<string | null>;
+  /** The curated variant catalog (`scripts/genome-synth/variants.tsv`); read only with --genome. */
+  genomeCatalog?: () => Promise<readonly Variant[]>;
 }>;
 
 const TOOL_INPUTS = { ...KEYED_TOOLS, subject_window: subjectWindowInput } as const;
@@ -88,6 +106,8 @@ export type BuildArgs = Readonly<{
   inlineTools: boolean;
   /** `<cohort>.rejected.json` from training:batches, summarised in the manifest. */
   rejected: string | null;
+  /** Genome conversation families and the `dna_ask` tool (off by default). */
+  genome: boolean;
 }>;
 
 /** `x.jsonl` → `x.meta.jsonl`, `x.manifest.json`, `x.stats.json`. */
@@ -113,7 +133,10 @@ const presetSeed = (cohortId: string): number | null =>
   )?.seed ?? null;
 
 const isFamily = (name: string): name is Family =>
-  (FAMILIES as readonly string[]).includes(name);
+  ([...FAMILIES, ...GENOME_FAMILIES] as readonly string[]).includes(name);
+
+const isGenomeFamily = (name: string): boolean =>
+  (GENOME_FAMILIES as readonly string[]).includes(name);
 
 /** The parsed flags, or a plain message saying what is wrong. */
 export const parseBuildArgs = (argv: readonly string[]): BuildArgs | string => {
@@ -133,10 +156,20 @@ export const parseBuildArgs = (argv: readonly string[]): BuildArgs | string => {
   if (maxSubjects !== null && !(Number.isInteger(maxSubjects) && maxSubjects >= 1)) {
     return "--max-subjects must be a whole number of at least 1.";
   }
-  const names = (flag(argv, "--families") ?? FAMILIES.join(",")).split(",");
+  // Genome families are off unless --genome: a run without it is unchanged.
+  const genome = argv.includes("--genome");
+  const chosen = flag(argv, "--families");
+  const names =
+    chosen === undefined
+      ? [...FAMILIES, ...(genome ? GENOME_FAMILIES : [])]
+      : chosen.split(",");
   const unknown = names.filter((name) => !isFamily(name));
   if (unknown.length > 0) return `Unknown families: ${unknown.join(", ")}.`;
+  if (!genome && names.some(isGenomeFamily)) {
+    return "Genome families need --genome.";
+  }
   return {
+    genome,
     cohortId,
     out: flag(argv, "--out") ?? `training-data/out/${cohortId}.jsonl`,
     seed,
@@ -243,8 +276,19 @@ export const runBuildConversations = async (
   }
 
   const ports = await deps.ports();
+  if (args.genome && (deps.genomeCatalog === undefined || ports.genome === undefined)) {
+    io.stderr.write("--genome needs the variant catalog and the genome turn's tools.\n");
+    return 1;
+  }
+  const genomeCatalog =
+    args.genome && deps.genomeCatalog ? await deps.genomeCatalog() : undefined;
   const prompt = await ports.systemPrompt();
   const tools = await ports.tools();
+  // Genome records get the prompt and tools of a turn that carries the genome
+  // tools; every other record keeps the chat's, so nothing else changes.
+  const genomeTurn = args.genome && ports.genome ? await ports.genome() : null;
+  const contextFor = (family: string) =>
+    genomeTurn !== null && isGenomeFamily(family) ? genomeTurn : { prompt, tools };
   const all = await ports.listSubjects(args.cohortId);
   if (all.length === 0) {
     io.stderr.write(`No subjects in cohort ${args.cohortId}.\n`);
@@ -278,6 +322,7 @@ export const runBuildConversations = async (
           outsideRef: outsideRefFor(args.seed, subjectRef, known),
           hasWearables,
           run,
+          ...(genomeCatalog === undefined ? {} : { genomeCatalog }),
         },
         (family) => randomFor(args.seed, `conversation:${subjectRef}:${family}`),
         args.families,
@@ -286,8 +331,7 @@ export const runBuildConversations = async (
         const record = toConversation(draft, {
           cohortId: args.cohortId,
           seed: args.seed,
-          prompt,
-          tools,
+          ...contextFor(draft.family),
         });
         const clean = args.inlineTools
           ? { messages: record.messages, tools: record.tools }
@@ -333,6 +377,16 @@ export const runBuildConversations = async (
         ...summary,
         // Subjects whose FHIR bundle the warehouse refused (training:batches --skip-rejected).
         ...(rejected === null ? {} : { rejected_bundles: rejected }),
+        // Synthetic genotypes (scripts/genome-synth) and stand-in dna_ask results.
+        ...(genomeTurn === null
+          ? {}
+          : {
+              genome: {
+                catalog_version: CATALOG_VERSION,
+                system_prompt_id: genomeTurn.prompt.id,
+                tools: genomeTurn.tools,
+              },
+            }),
         // One copy of the tool definitions; --inline-tools also puts them on every line.
         tools,
       },
@@ -411,6 +465,37 @@ export const realPorts = async (today: string): Promise<ConversationPorts> => {
         vitronic: null,
       }),
     }),
+    // A personal turn with the genome tools (#107), as the chat route builds it
+    // once the genome policy allows a turn. Only the schemas are read: these
+    // ports refuse, and the training records never run a genome tool.
+    genome: async () => {
+      const personal = { ...scope, mode: "personal" } as const;
+      const inert = () => Promise.reject(new Error("training never runs a genome tool"));
+      const chatTools = createChatTools(personal, {
+        genome: {
+          scope: personal,
+          loadReport: inert,
+          assumeBuild: null,
+          windows: inert,
+          ask: inert,
+          appendAudit: inert,
+        },
+      });
+      return {
+        tools: await openAiToolsFrom(chatTools),
+        prompt: {
+          id: "twin-system-prompt/personal/genome",
+          text: buildTwinSystemPrompt({
+            mode: "personal",
+            oura: null,
+            whoop: null,
+            googleHealth: null,
+            vitronic: null,
+            offeredTools: new Set(Object.keys(chatTools)),
+          }),
+        },
+      };
+    },
   };
 };
 
@@ -438,6 +523,8 @@ if (isMain) {
     rename: (from, to) => rename(from, to),
     remove: (path) => rm(path, { force: true }),
     readText: (path) => readFile(path, "utf8").catch(() => null),
+    genomeCatalog: async () =>
+      (await import("../genome-synth/read-catalog")).readCatalog(),
   });
   await database().$disconnect();
   process.exit(code);

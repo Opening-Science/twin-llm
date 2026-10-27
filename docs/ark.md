@@ -99,6 +99,10 @@ Citation (allele definition tables, 2026-09-28):
 https://cpicpgx.org/guidelines/ and
 https://www.pharmgkb.org/page/cyp2c19RefMaterials
 
+Synthetic genomes for testing the app and the slot end to end (a VCF for
+`snp-indel-calls` and the report the app should print for it) are described in
+`docs/genome-synthetic.md`.
+
 Build with `bun run ark:build` (wasm stays gitignored). Fixture goldens:
 `bun run ark:test`. A live `appRun` is `RUN_ARK=1` after that build and a
 Companion approval. Close Hub first. The Digital Twin card runs the module at

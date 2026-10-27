@@ -99,7 +99,8 @@ export const createChatTools = (
     /**
      * Ports for `genome_report` and `dna_ask`. Only the chat route passes them,
      * and only after the genome policy allowed this turn; a synthetic scope
-     * never gets them. The eval and training tool lists never include them.
+     * never gets them. The eval tool list never includes them; training
+     * includes them only for its synthetic `--genome` records.
      */
     genome?: GenomeToolDeps;
   }>,

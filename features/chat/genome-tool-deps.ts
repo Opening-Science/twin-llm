@@ -13,8 +13,9 @@ import type { GenomeToolDeps } from "./genome-tools";
 
 /**
  * The real ports behind the genome tools, or undefined when this turn may not
- * have them. Only the chat route asks; the eval harness and the training
- * generator never pass genome deps, so the tools are never in their lists.
+ * have them. Only the chat route asks. The eval harness never passes genome
+ * deps; the training generator (`--genome` only) passes ports that refuse,
+ * to read the tool schemas, and never runs a genome tool.
  */
 export const genomeToolDepsFor = (scope: SessionScope): GenomeToolDeps | undefined => {
   if (scope.mode !== "personal" || !genomeChatPermit().ok) return undefined;

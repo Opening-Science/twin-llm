@@ -3,7 +3,9 @@
  * it runs in, and small helpers to read tool results and write the four
  * sections. Pure.
  */
+import type { DNA_ASK_TOOL, GENOME_REPORT_TOOL } from "../../packages/carbon-x/constants";
 import { isToolRefusal } from "../../packages/query-tools/refusals";
+import type { Variant } from "../genome-synth/catalog";
 import type { Random } from "../synthetic-wearables/random";
 
 import { formatDay } from "./format";
@@ -21,8 +23,14 @@ export const TOOL_NAMES = [
 
 export type ToolName = (typeof TOOL_NAMES)[number];
 
+/**
+ * The genome tools (#107). In training their results are built from the
+ * subject's synthetic report, never from a query or a model.
+ */
+export type GenomeToolName = typeof DNA_ASK_TOOL | typeof GENOME_REPORT_TOOL;
+
 export type ToolCall = Readonly<{
-  name: ToolName;
+  name: ToolName | GenomeToolName;
   args: Readonly<Record<string, unknown>>;
   result: unknown;
 }>;
@@ -47,7 +55,21 @@ export const FAMILIES = [
   "other_person",
 ] as const;
 
-export type Family = (typeof FAMILIES)[number];
+/**
+ * Genome conversations (`genome-families.ts`). Off by default: they run only
+ * with `--genome`, so a run without it is unchanged.
+ */
+export const GENOME_FAMILIES = [
+  "genome_variant",
+  "genome_variants",
+  "genome_no_call",
+  "genome_not_in_report",
+  "genome_decline_dose",
+  "genome_other_person",
+  "genome_hosted_provider",
+] as const;
+
+export type Family = (typeof FAMILIES)[number] | (typeof GENOME_FAMILIES)[number];
 
 /** What the answer had to do; tool refusal codes are copied as the tools spell them. */
 export type Outcome =
@@ -62,7 +84,10 @@ export type Outcome =
   | "MIXED_UNITS"
   | "ROW_CAP_EXCEEDED"
   | "declined"
-  | "out_of_scope_person";
+  | "out_of_scope_person"
+  | "no_call"
+  | "not_in_report"
+  | "declined_hosted_provider";
 
 /** Outcomes where the honest answer is that there is nothing to report. */
 export const NO_DATA_OUTCOMES: ReadonlySet<string> = new Set<Outcome>([
@@ -72,6 +97,8 @@ export const NO_DATA_OUTCOMES: ReadonlySet<string> = new Set<Outcome>([
   "outside_record",
   "no_subject_ref",
   "SUBJECT_SCOPE_VIOLATION",
+  "no_call",
+  "not_in_report",
 ]);
 
 export type Sections = Readonly<{
@@ -109,6 +136,8 @@ export type FamilyContext = Readonly<{
    */
   hasWearables: boolean;
   run: (name: ToolName, args: Readonly<Record<string, unknown>>) => Promise<unknown>;
+  /** The curated variant catalog; needed only by the genome families. */
+  genomeCatalog?: readonly Variant[];
 }>;
 
 /** The parts of a draft that come from asking: question and template. */

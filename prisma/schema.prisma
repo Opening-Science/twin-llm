@@ -365,23 +365,31 @@ model VitronicSnapshot {
 /// Personal data. Written only with DATA_MODE=personal and GENOME_SOURCE=ark,
 /// read only by this machine's dashboard and its local genome tools. Never
 /// sent to a hosted model, MCP server or analytics.
+/// A released report belongs to a user, or (synthetic only) to a synthetic
+/// cohort subject; a CHECK constraint in the migration allows exactly one of
+/// the two, and `isSynthetic` is true exactly when it is a subject's.
 model GenomeReport {
-  id       String  @id @default(cuid())
-  userId   String
+  id          String  @id @default(cuid())
+  userId      String?
+  /// A synthetic subject's report (scripts/genome-synth); null for a user's own.
+  subjectRef  String?
+  isSynthetic Boolean @default(false)
   /// Ark app that produced it, e.g. rsid-genotypes.
-  app      String
+  app         String
   /// The build the Ark named for its call slot, as written; null when it named none.
-  arkBuild String?
+  arkBuild    String?
   /// Parsed rows: rsid, chromosome, position, reference, genotype (null is no call).
-  rows     Json
+  rows        Json
   /// The released text exactly as the app printed it.
-  report   String
+  report      String
 
   releasedAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user    User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject Subject? @relation(fields: [subjectRef], references: [subjectRef], onDelete: Cascade)
 
   @@index([userId, app, releasedAt])
+  @@index([subjectRef, app, releasedAt])
   @@map("genome_reports")
 }
 
@@ -394,8 +402,10 @@ model Subject {
   cohortId    String  @map("cohort_id")
   isSynthetic Boolean @map("is_synthetic")
 
-  observations Observation[]
-  nonNumeric   ObservationNonNumeric[]
+  observations  Observation[]
+  nonNumeric    ObservationNonNumeric[]
+  /// Synthetic genome reports (scripts/genome-synth), never a person's.
+  genomeReports GenomeReport[]
 
   @@index([cohortId])
   @@map("subjects")
