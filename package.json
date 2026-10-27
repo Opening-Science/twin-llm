@@ -60,6 +60,7 @@
     "genome:ingest": "bun scripts/genome-synth/ingest.ts",
     "genome:ingest:db": "bun --env-file=.env.training --preload ./features/chat/response/preload-server-only.mjs scripts/genome-synth/ingest.ts --to-db",
     "training:conversations": "bun --env-file=.env.training --preload ./features/chat/response/preload-server-only.mjs scripts/training-data/build-conversations.ts",
+    "training:sample": "bun --preload ./features/chat/response/preload-server-only.mjs scripts/training-data/build-conversations.ts --cohort synthea-v4-seed42 --allow-eval-cohort --max-subjects 12 --out training-data/out/sample-synthea-v4-seed42.jsonl",
     "training:split": "bun scripts/training-data/split-conversations.ts",
     "training:batches": "bun --env-file=.env.training --preload ./features/chat/response/preload-server-only.mjs scripts/training-data/run-batches.ts",
     "warehouse:ingest": "bun --preload ./features/chat/response/preload-server-only.mjs scripts/warehouse/ingest.ts",

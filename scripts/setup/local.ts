@@ -8,6 +8,7 @@
  *   bun run setup:local -- --reload-cohort  # replace a stale eval cohort with the pinned one
  *   bun run setup:local -- --generate-cohort  # generate the eval cohort with Synthea instead (x86_64 matches the pin)
  *   bun run setup:local -- --skip-example     # do not add the "Example (synthetic)" thread
+ *   bun run setup:local -- --skip-training-sample  # do not write the Training tab's sample set
  *
  * Checks prerequisites and prints how to install what is missing; it never
  * installs system packages. Steps already done are skipped, so it is safe to
@@ -47,6 +48,7 @@ import {
   planSetup,
   type SetupOptions,
   SKIP_EXAMPLE_FLAG,
+  SKIP_TRAINING_SAMPLE_FLAG,
   type Step,
 } from "./plan";
 import {
@@ -57,7 +59,7 @@ import {
 import { checkTool } from "./prerequisites";
 
 const USAGE =
-  "Usage: bun run setup:local [-- --cohort-10k | --skip-cohort | [--reload-cohort] [--generate-cohort]] [--skip-example]";
+  "Usage: bun run setup:local [-- --cohort-10k | --skip-cohort | [--reload-cohort] [--generate-cohort]] [--skip-example] [--skip-training-sample]";
 
 const COHORT_FLAGS = ["--cohort-10k", "--skip-cohort", "--reload-cohort"];
 
@@ -71,7 +73,10 @@ export const parseSetupArgs = (argv: readonly string[]): SetupOptions | null => 
   if (
     known.some(
       (arg) =>
-        !COHORT_FLAGS.includes(arg) && arg !== GENERATE_FLAG && arg !== SKIP_EXAMPLE_FLAG,
+        !COHORT_FLAGS.includes(arg) &&
+        arg !== GENERATE_FLAG &&
+        arg !== SKIP_EXAMPLE_FLAG &&
+        arg !== SKIP_TRAINING_SAMPLE_FLAG,
     )
   )
     return null;
@@ -89,6 +94,7 @@ export const parseSetupArgs = (argv: readonly string[]): SetupOptions | null => 
     reloadCohort: known.includes("--reload-cohort"),
     generateCohort,
     skipExample: known.includes(SKIP_EXAMPLE_FLAG),
+    skipTrainingSample: known.includes(SKIP_TRAINING_SAMPLE_FLAG),
   };
 };
 

@@ -338,6 +338,13 @@ const freeDisk = async (root: string): Promise<number | null> => {
   }
 };
 
+/** Conversation sets in `training-data/out/`, by their manifest; [] when the folder is missing. */
+const trainingSetNames = async (root: string): Promise<readonly string[]> =>
+  (await readdir(join(root, "training-data", "out")).catch(() => []))
+    .filter((name) => name.endsWith(".manifest.json"))
+    .map((name) => name.slice(0, -".manifest.json".length))
+    .sort();
+
 /** Everything setup and doctor decide from. */
 export const detectState = async (root: string): Promise<DetectedState> => {
   const platform = currentPlatform();
@@ -352,22 +359,31 @@ export const detectState = async (root: string): Promise<DetectedState> => {
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
     .sort();
-  const [database, ollama, anatomyMissing, riggedMissing, pinned, synced, freeDiskBytes] =
-    await Promise.all([
-      probeDatabase(env.DATABASE_URL, localUserId),
-      probeOllama(env),
-      missingPinned(anatomyDir, [
-        ...ATLAS_IDS.map((id) => ATLASES[id]),
-        ...DEMO_BODY_IDS.map((id) => DEMO_BODIES[id]),
-      ]),
-      missingPinned(
-        anatomyDir,
-        DEMO_BODY_IDS.map((id) => RIGGED_BODIES[id]),
-      ),
-      pinnedOpenTwinSha(root),
-      readText(join(root, ".open-twin", "OPEN_TWIN_SHA")),
-      freeDisk(root),
-    ]);
+  const [
+    database,
+    ollama,
+    anatomyMissing,
+    riggedMissing,
+    pinned,
+    synced,
+    freeDiskBytes,
+    trainingSets,
+  ] = await Promise.all([
+    probeDatabase(env.DATABASE_URL, localUserId),
+    probeOllama(env),
+    missingPinned(anatomyDir, [
+      ...ATLAS_IDS.map((id) => ATLASES[id]),
+      ...DEMO_BODY_IDS.map((id) => DEMO_BODIES[id]),
+    ]),
+    missingPinned(
+      anatomyDir,
+      DEMO_BODY_IDS.map((id) => RIGGED_BODIES[id]),
+    ),
+    pinnedOpenTwinSha(root),
+    readText(join(root, ".open-twin", "OPEN_TWIN_SHA")),
+    freeDisk(root),
+    trainingSetNames(root),
+  ]);
   return {
     platform,
     tools: Object.fromEntries(TOOL_IDS.map((id) => [id, probeTool(id)])) as Record<
@@ -383,6 +399,7 @@ export const detectState = async (root: string): Promise<DetectedState> => {
     openTwin: { pinned, synced: synced?.trim() ?? null },
     anatomyMissing,
     riggedMissing,
+    trainingSets,
     ollama,
     freeDiskBytes,
   };

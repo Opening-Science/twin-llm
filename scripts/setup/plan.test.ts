@@ -17,6 +17,7 @@ import {
   planSetup,
   type SetupOptions,
   type Step,
+  TRAINING_SAMPLE,
 } from "./plan";
 import { TOOL_IDS, type ToolId, type ToolProbe } from "./prerequisites";
 
@@ -82,6 +83,7 @@ const ready: DetectedState = {
   openTwin: { pinned: PIN, synced: PIN },
   anatomyMissing: [],
   riggedMissing: [],
+  trainingSets: ["sample-synthea-v4-seed42"],
   ollama: {
     kind: "ok",
     baseUrl: "http://127.0.0.1:11434",
@@ -103,10 +105,11 @@ const fresh: DetectedState = {
   openTwin: { pinned: PIN, synced: null },
   anatomyMissing: ["bodyparts3d.ao.glb"],
   riggedMissing: ["anny-adult-m.rigged.glb", "anny-adult-f.rigged.glb"],
+  trainingSets: [],
 };
 
-/** The cohort step's index from the end: the example thread comes after it. */
-const COHORT = -2;
+/** The cohort step's index from the end: the example thread and the training sample come after it. */
+const COHORT = -3;
 
 const summary = (steps: readonly Step[]): readonly string[] =>
   steps.map((step) =>
@@ -126,6 +129,7 @@ describe("planSetup", () => {
       "anatomy: skip all installed",
       "rigged: skip both installed",
       "cohort: skip warehouse already has synthea-v4-seed42 (37 subjects)",
+      "training-sample: skip training-data/out/sample-synthea-v4-seed42.jsonl is there",
       "example: run insert-example",
     ]);
   });
@@ -140,6 +144,7 @@ describe("planSetup", () => {
       "anatomy: run command",
       "rigged: run install-rigged",
       "cohort: run load-eval",
+      "training-sample: run command",
       "example: run insert-example",
     ]);
   });
@@ -663,6 +668,7 @@ describe("pageReadiness", () => {
       "ready Body twin anatomy and demo bodies: all installed",
       "ready Body twin Walk/Idle: rigged demo bodies installed",
       "ready Chat (local model): qwen3:8b",
+      "ready Data page Training tab (/data/training): sample-synthea-v4-seed42",
     ]);
   });
 
@@ -672,6 +678,7 @@ describe("pageReadiness", () => {
       tools: tools(["uv"]),
       database: okDatabase([]),
       riggedMissing: ["anny-adult-f.rigged.glb"],
+      trainingSets: [],
       ollama: { kind: "unreachable", baseUrl: "http://127.0.0.1:11434" },
     };
     expect(pageReadiness(state).map((page) => page.detail)).toEqual([
@@ -680,6 +687,7 @@ describe("pageReadiness", () => {
       "all installed",
       "rigged bodies missing (anny-adult-f.rigged.glb): bun run anatomy:fetch downloads them from release anatomy-rigged-v1; offline, bun run anatomy:bake-rigged after installing uv (uv not found: brew install uv)",
       "Ollama not answering at http://127.0.0.1:11434: start it (ollama serve), then ollama pull qwen3:8b && ollama pull nomic-embed-text",
+      "no conversation set in training-data/out: bun run setup:local writes a sample (or bun run training:sample once synthea-v4-seed42 is loaded)",
     ]);
   });
 
@@ -814,5 +822,73 @@ describe("the example thread step", () => {
       detail:
         '"Example (synthetic)" not added: only with DATA_MODE=synthetic (now personal)',
     });
+  });
+});
+
+describe("the training sample step", () => {
+  const sampleOf = (state: DetectedState, options: SetupOptions = { cohort: "eval" }) =>
+    planSetup(state, options).find((step) => step.id === "training-sample");
+  const line = (state: DetectedState, options?: SetupOptions): string => {
+    const step = sampleOf(state, options);
+    if (step === undefined) return "missing";
+    if (step.status !== "run") return `${step.status} ${step.reason}`;
+    return step.action.kind === "command"
+      ? `run ${step.action.argv.join(" ")}`
+      : `run ${step.action.kind}`;
+  };
+  const noSample: DetectedState = { ...ready, trainingSets: [] };
+
+  test("runs after the cohort when the evaluation cohort is loaded or about to be", () => {
+    expect(sampleOf(noSample)?.after).toEqual(["cohort"]);
+    expect(line(noSample)).toBe("run bun run training:sample");
+    expect(line(fresh)).toBe("run bun run training:sample");
+    const step = sampleOf(fresh);
+    expect(step?.status === "run" ? step.note : null).toBe(
+      "12 subjects of synthea-v4-seed42 through the real query tools, to training-data/out/sample-synthea-v4-seed42.jsonl; a sample to look at, never to train on",
+    );
+  });
+
+  test("is skipped when written, off on request, in personal mode or without the evaluation cohort", () => {
+    expect(line(ready)).toBe(
+      "skip training-data/out/sample-synthea-v4-seed42.jsonl is there",
+    );
+    expect(line(noSample, { cohort: "eval", skipTrainingSample: true })).toBe(
+      "off not written (--skip-training-sample)",
+    );
+    expect(line({ ...noSample, dataMode: "personal" })).toBe(
+      "off only with DATA_MODE=synthetic (now personal)",
+    );
+    expect(
+      line(
+        {
+          ...noSample,
+          database: okDatabase([cohortRows("synthea-v4-seed42-10k", 11551)]),
+        },
+        { cohort: "10k" },
+      ),
+    ).toBe("off written from synthea-v4-seed42, which is not in the warehouse");
+  });
+
+  test("waits for a stale evaluation cohort and for the database", () => {
+    expect(line({ ...noSample, database: OLD_EVAL })).toBe(
+      "blocked needs the pinned synthea-v4-seed42: bun run setup:local -- --reload-cohort",
+    );
+    expect(
+      line({ ...noSample, database: OLD_EVAL }, { cohort: "eval", reloadCohort: true }),
+    ).toBe("run bun run training:sample");
+    expect(
+      line({ ...fresh, database: { kind: "unreachable", detail: "ECONNREFUSED" } }),
+    ).toBe("blocked needs the database");
+  });
+
+  test("the package script writes the set setup looks for", async () => {
+    const pkg = (await Bun.file(
+      new URL("../../package.json", import.meta.url),
+    ).json()) as {
+      scripts: Record<string, string>;
+    };
+    expect(pkg.scripts["training:sample"]).toBe(
+      `bun --preload ./features/chat/response/preload-server-only.mjs scripts/training-data/build-conversations.ts --cohort ${EVAL_COHORT.cohortId} --allow-eval-cohort --max-subjects ${TRAINING_SAMPLE.subjects} --out training-data/out/${TRAINING_SAMPLE.set}.jsonl`,
+    );
   });
 });

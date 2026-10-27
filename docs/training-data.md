@@ -278,6 +278,8 @@ and codes, counts per reason and stats for each part. It reads files only.
 
 The Data page's Training data tab (`/data/training`, any `DATA_MODE`) lists the sets in `training-data/out/`, with counts per family and outcome from the meta file, and opens one conversation with its question, tool calls, tool results and answer. It reads the files only; nothing is audited because nothing is read from the warehouse.
 
+On a fresh machine `bun run setup:local` writes one small set there, so the tab is not empty: `bun run training:sample` runs this generator on the first 12 subjects of the evaluation cohort (`--cohort synthea-v4-seed42 --allow-eval-cohort --max-subjects 12 --out training-data/out/sample-synthea-v4-seed42.jsonl`) against the database in `.env.local`, with `DATA_MODE=synthetic`. That is the smoke run described above: the same families, templates and audited tools, all numbers from the closed tools on synthetic rows. The evaluation cohort has no wearable series, so its conversations are clinical only. It is a set to look at, never to train on, and the tab marks it as such. `--skip-training-sample` leaves it out. Last run 2026-10-27, Linux, a throwaway database holding release `eval-cohort-v1`: 128 conversations from 12 subjects (57 answered, 15 no rows, 12 no code, 9 declined, 8 outside the record, 7 MIXED_UNITS and fewer of the rest), in about a second.
+
 ### No evaluation question is reused
 
 The evaluation's probes use TSH, SpO2, eGFR and RDW, so the training set uses
