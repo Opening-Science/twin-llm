@@ -19,6 +19,10 @@ import {
   trendInput,
   rangePositionInput,
   convertUnitInput,
+  sleepSummaryInput,
+  hrvTrendInput,
+  restingHrTrendInput,
+  trainingLoadInput,
 } from "../../packages/query-tools/schemas";
 
 import { isMeasureId } from "./score/asked-measure";
@@ -54,6 +58,10 @@ export const KEYED_TOOLS = {
   summary_stats: summaryStatsInput,
   range_position: rangePositionInput,
   convert_unit: convertUnitInput,
+  sleep_summary: sleepSummaryInput,
+  hrv_trend: hrvTrendInput,
+  resting_hr_trend: restingHrTrendInput,
+  training_load: trainingLoadInput,
 } as const;
 
 export type KeyedTool = keyof typeof KEYED_TOOLS;
@@ -73,6 +81,10 @@ export const AUDIT_TOOL_NAMES = [
   "compare_windows",
   "range_position",
   "convert_unit",
+  "sleep_summary",
+  "hrv_trend",
+  "resting_hr_trend",
+  "training_load",
   "guidelines.guideline_search",
   "knowledge.knowledge_search",
   "gbd.gbd_query",

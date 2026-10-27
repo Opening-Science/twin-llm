@@ -332,6 +332,26 @@ describe("helpers", () => {
     expect(unitNear(trendResult, "fitted_last")).toBe("%");
   });
 
+  test("unitNear reads a wearable field's unit from its name", () => {
+    const sleep = { sources: [{ mean_duration_min: 400, mean_efficiency_pct: 88 }] };
+    expect(unitNear(sleep, "sources.0.mean_duration_min")).toBe("min");
+    expect(unitNear(sleep, "sources.0.mean_efficiency_pct")).toBe("%");
+    expect(unitNear({ sources: [{ minutes: 90 }] }, "sources.0.minutes")).toBe("min");
+    const trend = {
+      sources: [
+        {
+          unit: "ms",
+          slope_unit: "ms/d",
+          slope_per_week_unit: "ms/wk",
+          recent: { median: 50 },
+        },
+      ],
+    };
+    expect(unitNear(trend, "sources.0.slope_per_day")).toBe("ms/d");
+    expect(unitNear(trend, "sources.0.slope_per_week")).toBe("ms/wk");
+    expect(unitNear(trend, "sources.0.recent.median")).toBe("ms");
+  });
+
   test("valueAt keeps a real null and rejects a missing path", () => {
     expect(valueAt(trendResult, "slope_per_day")).toBe(0.0012);
     expect(valueAt({ robust_z: null }, "robust_z")).toBeNull();

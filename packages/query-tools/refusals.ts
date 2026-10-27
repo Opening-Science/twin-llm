@@ -66,7 +66,11 @@ export type ToolRefusal =
   | NoRows
   | NoPublishedRange
   | UnitMismatch
-  | UnsupportedConversion;
+  | UnsupportedConversion
+  | SourceNotConnected
+  | NoWearableRows
+  | WearableMixedUnits
+  | WindowTooShort;
 
 const REFUSAL_CODES: readonly string[] = [
   SUBJECT_SCOPE_VIOLATION.code,
@@ -76,6 +80,8 @@ const REFUSAL_CODES: readonly string[] = [
   "NO_PUBLISHED_RANGE",
   "UNIT_MISMATCH",
   "UNSUPPORTED_CONVERSION",
+  "SOURCE_NOT_CONNECTED",
+  "WINDOW_TOO_SHORT",
 ];
 
 export const isToolRefusal = (value: unknown): value is ToolRefusal =>
@@ -143,4 +149,94 @@ export const unitMismatch = (
   loinc,
   unit,
   range_unit: rangeUnit,
+});
+
+/** Readings a wearable trend needs from at least one source. */
+export const WEARABLE_TREND_MINIMUM = 7;
+
+export type SourceNotConnected = Readonly<{
+  code: "SOURCE_NOT_CONNECTED";
+  error: string;
+  source: string;
+  /** What this turn can read: linked wearables, or `synthetic` for a synthetic subject. */
+  available: readonly string[];
+}>;
+
+/**
+ * The wearable tools read a source only when this turn has it: a linked
+ * snapshot in personal mode, the synthetic series in synthetic mode.
+ */
+export const sourceNotConnected = (
+  source: string,
+  available: readonly string[],
+): SourceNotConnected => ({
+  code: "SOURCE_NOT_CONNECTED",
+  error: available.includes("synthetic")
+    ? "a synthetic subject has one synthetic series, read with source all; no wearable vendor is linked to it"
+    : source === "all"
+      ? "no wearable is linked for this turn"
+      : "this wearable is not linked for this turn",
+  source,
+  available: [...available],
+});
+
+export type NoWearableRows = Readonly<{
+  code: "NO_ROWS";
+  error: string;
+  measure: string;
+  source: string;
+}>;
+
+/** No reading of this measure from the requested sources in the window. */
+export const noWearableRows = (measure: string, source: string): NoWearableRows => ({
+  code: "NO_ROWS",
+  error: "no reading of this measure from this source in this window",
+  measure,
+  source,
+});
+
+export type WearableMixedUnits = Readonly<{
+  code: "MIXED_UNITS";
+  error: string;
+  measure: string;
+  source: string;
+  units: readonly string[];
+}>;
+
+/**
+ * One source's readings of one field in more than one unit, or in a unit
+ * other than the one the field is named for (`duration_min`). Nothing is
+ * converted.
+ */
+export const wearableMixedUnits = (
+  measure: string,
+  source: string,
+  units: readonly string[],
+): WearableMixedUnits => ({
+  code: "MIXED_UNITS",
+  error:
+    "this source's readings of this measure are not all in the one unit the tool reports",
+  measure,
+  source,
+  units: [...units].sort(),
+});
+
+export type WindowTooShort = Readonly<{
+  code: "WINDOW_TOO_SHORT";
+  error: string;
+  measure: string;
+  minimum: number;
+  counts: ReadonlyArray<Readonly<{ source: string; n: number }>>;
+}>;
+
+/** Some readings, but no source has enough for a trend. */
+export const windowTooShort = (
+  measure: string,
+  counts: ReadonlyArray<Readonly<{ source: string; n: number }>>,
+): WindowTooShort => ({
+  code: "WINDOW_TOO_SHORT",
+  error: `fewer than ${WEARABLE_TREND_MINIMUM} daily readings from every source in this window; too few for a trend`,
+  measure,
+  minimum: WEARABLE_TREND_MINIMUM,
+  counts: counts.map((count) => ({ source: count.source, n: count.n })),
 });

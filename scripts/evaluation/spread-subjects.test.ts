@@ -241,6 +241,62 @@ describe("spreadSubjects", () => {
     ]);
   });
 
+  test("a wearable item needs a synthetic series, and a trend 7 readings in its window", () => {
+    const sept = (days: number): string[] =>
+      Array.from(
+        { length: days },
+        (_, i) => `2026-09-${String(i + 1).padStart(2, "0")}T07:00:00Z`,
+      );
+    const wearable = (id: string, source: string) => {
+      const base = item(id, { subject: "aaa" });
+      const args = { subject_ref: "aaa", source, start: "2026-09-01", end: "2026-09-10" };
+      return {
+        ...base,
+        expect: {
+          ...base.expect,
+          tools: { must_call: [], must_not_call: [] },
+          values: [
+            {
+              name: "refusal",
+              tool: "hrv_trend",
+              args,
+              path: "code",
+              unit: null,
+              tolerance: { exact: true },
+            },
+          ],
+        },
+      };
+    };
+    // aaa has no series; bbb has 8 days; ccc 3; ddd has its series in October only.
+    const series: Inventory = {
+      subjects: ["aaa", "bbb", "ccc", "ddd"],
+      rows: [
+        ...rows("bbb", "hrv-rmssd", sept(8), "ms"),
+        ...rows("ccc", "hrv-rmssd", sept(3), "ms"),
+        ...rows("ddd", "hrv-rmssd", ["2026-10-02T07:00:00Z"], "ms"),
+      ],
+    };
+    const set = parse(
+      questions([
+        wearable("Q-S1-23", "all"),
+        wearable("Q-S6-22", "oura"),
+        wearable("Q-S6-23", "all"),
+        wearable("Q-S6-24", "all"),
+      ]),
+    );
+    expect(spreadSubjects(set, series).moves.map((move) => [move.id, move.to])).toEqual([
+      // A trend: 7 readings in the window.
+      ["Q-S1-23", "bbb"],
+      // A vendor source reads nothing; any subject with a series, fewest items first.
+      ["Q-S6-22", "ccc"],
+      // WINDOW_TOO_SHORT: 1 to 6 readings.
+      ["Q-S6-23", "ccc"],
+      // NO_ROWS: a series, but none in the window.
+      ["Q-S6-24", "ddd"],
+    ]);
+  });
+
   test("throws when no subject fits", () => {
     const set = parse(questions([item("Q-S1-01", { subject: "fff" })]));
     expect(() => spreadSubjects(set, { subjects: ["fff"], rows: [] })).toThrow(

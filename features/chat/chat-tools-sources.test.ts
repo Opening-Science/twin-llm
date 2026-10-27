@@ -127,10 +127,24 @@ describe("chat tools and knowledge sources", () => {
     expect(tools).toEqual([
       "gbd_population",
       "guideline_search",
+      "hrv_trend",
       "knowledge_search",
       "list_views",
       "open_view",
+      "resting_hr_trend",
       "show_view",
+      "sleep_summary",
+      "training_load",
     ]);
+  });
+
+  test("turning the wearable source off removes the four wearable tools only", async () => {
+    const { tools } = await sentTo(["wearable-analytics"]);
+    expect(
+      ["sleep_summary", "hrv_trend", "resting_hr_trend", "training_load"].filter((name) =>
+        tools.includes(name),
+      ),
+    ).toEqual([]);
+    expect(tools).toContain("trend");
   });
 });

@@ -1,24 +1,28 @@
 # Query layer
 
-Closed, parameterised reads over the Synthea warehouse. The model never writes SQL. Wearable summaries stay text in `buildTwinSystemPrompt`. The four-section prompt and the DATA_MODE provider permit are unchanged.
+Closed, parameterised reads over the Synthea warehouse, and four wearable tools over the turn's own snapshots ("Wearable tools" below). The model never writes SQL. Wearable summaries stay text in `buildTwinSystemPrompt`. The four-section prompt and the DATA_MODE provider permit are unchanged.
 
 ## Tools
 
-| Name                       | Input                                                                    | Output                                                                                       | Max rows        |
-| -------------------------- | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- | --------------- |
-| `list_subjects`            | `cohort_id`                                                              | `{ subjects: [{ subject_ref }] }`                                                            | 200             |
-| `subject_window`           | `subject_ref`                                                            | `{ start, end, n_observations }`                                                             | —               |
-| `observations_for_subject` | `subject_ref`, `loinc[]`, `start`, `end`, `limit`                        | `{ rows }` with `unit_ucum`                                                                  | `limit` ≤ 500   |
-| `latest_by_loinc`          | `subject_ref`, `loinc[]`                                                 | one row per code that exists                                                                 | 20 codes        |
-| `summary_stats`            | `subject_ref`, `loinc`, `start`, `end`                                   | `{ n, min, max, mean, unit }`                                                                | —               |
-| `trend`                    | `subject_ref`, `loinc`, `start`, `end`                                   | `{ n, first_at, last_at, slope_per_day, slope_unit, fitted_first, fitted_last, unit }`       | 5000            |
-| `baseline_deviation`       | `subject_ref`, `loinc`, `baseline {start, end}`, `target {start, end}`   | `{ baseline { n, median, mad }, target { n, median }, robust_z, unit }`                      | 5000 per window |
-| `coverage`                 | `subject_ref`, `loinc[]`, `start`, `end`                                 | `{ days_in_window, codes: [{ n, days_with_data, coverage_ratio, longest_gap_days, unit }] }` | 5000, 20 codes  |
-| `compare_windows`          | `subject_ref`, `loinc`, `window_a {start, end}`, `window_b {start, end}` | `{ window_a, window_b }` with `n, mean, median, min, max`, `delta_b_minus_a`, `unit`         | 5000 per window |
-| `range_position`           | `subject_ref`, `loinc`, `start`, `end`, `pick`, `at`                     | `{ n, effective_at, value, unit, marker_id, range, position, depends_on }`                   | 5000            |
-| `convert_unit`             | `value`, `from`, `to`, `analyte` (enums)                                 | `{ analyte, from_value, from_unit, value, unrounded, unit, formula, rounding }`              | no rows         |
-| `guideline_search`         | `query`, `k` (default 5, max 8)                                          | catalogue + `passage` (null when `cite_only`)                                                | `k` ≤ 8         |
-| `knowledge_search`         | `query`, `k` (default 5, max 8)                                          | file, title, section, `passage` (OpenTwin knowledge, `docs/knowledge.md`)                    | `k` ≤ 8         |
+| Name                       | Input                                                                                           | Output                                                                                                                                                | Max rows         |
+| -------------------------- | ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| `list_subjects`            | `cohort_id`                                                                                     | `{ subjects: [{ subject_ref }] }`                                                                                                                     | 200              |
+| `subject_window`           | `subject_ref`                                                                                   | `{ start, end, n_observations }`                                                                                                                      | —                |
+| `observations_for_subject` | `subject_ref`, `loinc[]`, `start`, `end`, `limit`                                               | `{ rows }` with `unit_ucum`                                                                                                                           | `limit` ≤ 500    |
+| `latest_by_loinc`          | `subject_ref`, `loinc[]`                                                                        | one row per code that exists                                                                                                                          | 20 codes         |
+| `summary_stats`            | `subject_ref`, `loinc`, `start`, `end`                                                          | `{ n, min, max, mean, unit }`                                                                                                                         | —                |
+| `trend`                    | `subject_ref`, `loinc`, `start`, `end`                                                          | `{ n, first_at, last_at, slope_per_day, slope_unit, fitted_first, fitted_last, unit }`                                                                | 5000             |
+| `baseline_deviation`       | `subject_ref`, `loinc`, `baseline {start, end}`, `target {start, end}`                          | `{ baseline { n, median, mad }, target { n, median }, robust_z, unit }`                                                                               | 5000 per window  |
+| `coverage`                 | `subject_ref`, `loinc[]`, `start`, `end`                                                        | `{ days_in_window, codes: [{ n, days_with_data, coverage_ratio, longest_gap_days, unit }] }`                                                          | 5000, 20 codes   |
+| `compare_windows`          | `subject_ref`, `loinc`, `window_a {start, end}`, `window_b {start, end}`                        | `{ window_a, window_b }` with `n, mean, median, min, max`, `delta_b_minus_a`, `unit`                                                                  | 5000 per window  |
+| `range_position`           | `subject_ref`, `loinc`, `start`, `end`, `pick`, `at`                                            | `{ n, effective_at, value, unit, marker_id, range, position, depends_on }`                                                                            | 5000             |
+| `convert_unit`             | `value`, `from`, `to`, `analyte` (enums)                                                        | `{ analyte, from_value, from_unit, value, unrounded, unit, formula, rounding }`                                                                       | no rows          |
+| `sleep_summary`            | `subject_ref` (synthetic only), `source` (enum), `start`, `end`                                 | `{ n, sources: [{ source, nights, score_name, mean_duration_min, mean_in_bed_min, mean_efficiency_pct, mean_score }], nights: [{ source, day, … }] }` | 5000 (synthetic) |
+| `hrv_trend`                | `subject_ref` (synthetic only), `source` (enum), `start`, `end`                                 | `{ measure, n, sources: [{ source, key, unit, n, slope_per_day, slope_per_week, fitted_*, recent, baseline, robust_z }] }`                            | 5000 (synthetic) |
+| `resting_hr_trend`         | `subject_ref` (synthetic only), `source` (enum), `start`, `end`                                 | as `hrv_trend`                                                                                                                                        | 5000 (synthetic) |
+| `training_load`            | `subject_ref` (synthetic only), `source` (enum), `start`, `end`, `sport`, `aggregation` (enums) | `{ n, periods: [{ source, period_start, sport, sessions, minutes, max_strain, calories }], sources: [{ source, sessions, minutes, recent_load }] }`   | 5000 (synthetic) |
+| `guideline_search`         | `query`, `k` (default 5, max 8)                                                                 | catalogue + `passage` (null when `cite_only`)                                                                                                         | `k` ≤ 8          |
+| `knowledge_search`         | `query`, `k` (default 5, max 8)                                                                 | file, title, section, `passage` (OpenTwin knowledge, `docs/knowledge.md`)                                                                             | `k` ≤ 8          |
 
 Inputs are Zod schemas (`packages/query-tools/schemas.ts`). LOINC is `\d{1,5}-\d+`. Window bounds are ISO-8601 UTC datetimes or plain `YYYY-MM-DD` dates; a plain date means the whole UTC day, so `start: 2026-09-01` begins at 00:00:00.000Z and `end: 2026-09-01` ends at 23:59:59.999Z. A UTC datetime may omit seconds (`2026-10-01T08:00Z` reads as 08:00:00.000Z). There are no free-text filter columns.
 
@@ -34,11 +38,18 @@ Warehouse tools use Prisma `findMany` / `aggregate` only. No `$queryRaw` in thos
 - `compare_windows`: deltas are B minus A, `null` when either window is empty.
 - `range_position`: one reading (`pick: latest`, the newest in the window, or `pick: at`, the one at `at`; a tie at one instant goes to the lower row id) against its Anchor v3 published range (`range { low, high, unit, population, source }`), with the Biomarkers tab's own functions (`rangeChoice`, `placeValue` in `packages/biomarkers/range-choice.ts`, `docs/biomarkers.md`). `position` is `below`, `within` or `above`, bounds inclusive. The warehouse holds no sex, age or timing for a subject (#4), so a range that needs one has `range` and `position` null and `depends_on` names the facts (`sex`, `age`, `timing`); nothing is guessed. Refusals: `NO_ROWS` (no reading in the window or at `at`), `MIXED_UNITS`, `NO_PUBLISHED_RANGE` (not an Anchor marker, no range published, a D11 unit flag; checked before any read) and `UNIT_MISMATCH` (with `unit` and `range_unit`; nothing is converted, and the reason points to `convert_unit`).
 
+- `hrv_trend`, `resting_hr_trend`: per source, `olsSlopePerDay` over the window's daily readings (and × 7 per week, `slope_per_week_unit` `…/wk`), and the 7 UTC days ending on the end's day (`recent`) against the 28 days before them (`baseline`) with the `baseline_deviation` maths (`median`, `mad`, `robustZ`), whatever the window's start. A source with under 7 readings in the window has its counts and medians but no slope; no source with 7 is `WINDOW_TOO_SHORT`.
+- `sleep_summary`: per source and night the main sleep's fields (`duration_min`, `in_bed_min`, `efficiency_pct`, `score`), and per source the mean of each over the nights that have it.
+- `training_load`: per source, period (day, or the Monday-started UTC week) and sport: sessions, summed minutes and calories, and the highest workout strain (Whoop strain does not add up). `recent_load` sums minutes in the 7 days ending on the end's day and in the 28 days before them; `ratio` is recent ÷ (previous ÷ 4), `null` when the previous four weeks have none, and its only label is "recent load compared with the previous four weeks".
+
 A statistic with no data is `null`, never 0. Counts stay 0. Refusals have a `code`:
 
 - `MIXED_UNITS` (with `loinc` and `units`): the rows for one code use more than one unit. No tool converts rows, so nothing is averaged across units. `summary_stats` follows the same rule.
 - `ROW_CAP_EXCEEDED`: a window holds more than 5000 rows. The tool refuses rather than fit a truncated series. Exactly 5000 rows is accepted.
 - `UNSUPPORTED_CONVERSION` (with `analyte`, `from`, `to` and the `supported` pairs): `convert_unit` has no rule for that pair, or `from` equals `to`.
+- `SOURCE_NOT_CONNECTED` (with `source` and the `available` ones): a wearable tool asked for a source this turn does not have: a vendor not linked in personal mode (or none at all for `all`), or any vendor for a synthetic subject.
+- `WINDOW_TOO_SHORT` (with `minimum` 7 and the `counts` per source): a wearable trend with readings but fewer than 7 from every source.
+- The wearable tools' `NO_ROWS` names the `measure` and `source`, and their `MIXED_UNITS` the `measure` and `source`: one source's field in two units, or in a unit other than the one the field is named for (`duration_min` in hours).
 
 Audit `row_count` is the number of observations read (both windows for two-window tools). Any refusal records 0, so a refused call never counts toward `sufficient_data`.
 
@@ -92,6 +103,22 @@ Claude Desktop (`claude_desktop_config.json`) and Claude Code (`.mcp.json`) use 
   }
 }
 ```
+
+## Wearable tools
+
+`sleep_summary`, `hrv_trend`, `resting_hr_trend` and `training_load` (#133) read wearable data and never pool sources: every row names its `source`, because two devices measure sleep, HRV and workouts differently and the same run can be recorded by both. Inputs are closed: `source` is `oura`, `whoop`, `google` or `all`; `training_load` adds `aggregation` (`day`, `week`) and an optional `sport` group (`running`, `cycling`, `walking`, `swimming`, `strength`, `other`; a vendor's sport name is matched to one in `sportGroup`). The readings come from one of two places, in `planWearableRead` (`tools.ts`), scope first:
+
+- **Personal mode** reads the snapshots the turn already loaded, the same metrics `show_view`'s wearable path draws, one reading per key family and day (`wearable-readings.ts`). A `subject_ref` is refused with `SUBJECT_SCOPE_VIOLATION`; a source not linked is `SOURCE_NOT_CONNECTED`. The audit row has `subject_ref` null and counts the readings in the window.
+- **Synthetic mode** reads the named subject's synthetic series (`scripts/synthetic-wearables`) from the warehouse with one capped `findMany` (the window and, for the trends and the load, the 35 days they compare), scoped like any cohort read. Its rows are source `synthetic`; a vendor source is `SOURCE_NOT_CONNECTED`. Synthetic mode never loads a snapshot.
+
+| Tool               | Oura                                           | Whoop                                                       | Google Health                     | Synthetic series         |
+| ------------------ | ---------------------------------------------- | ----------------------------------------------------------- | --------------------------------- | ------------------------ |
+| `sleep_summary`    | `sleep.{duration,efficiency,score}.long_sleep` | `whoop.sleep.{in_bed_min,efficiency,performance}` (no naps) | none in its summary               | `93832-4`, `sleep-score` |
+| `hrv_trend`        | `sleep.hrv.long_sleep`                         | `whoop.recovery.hrv`                                        | none in its summary               | `hrv-rmssd`              |
+| `resting_hr_trend` | none in its summary                            | `whoop.recovery.rhr`                                        | `google.daily-resting-heart-rate` | `40443-4`                |
+| `training_load`    | `workout.{duration,calories}.<activity>`       | `workout.{duration,strain}.<sport>` (`whoop.`)              | none in its summary               | `workout-<sport>` (min)  |
+
+Oura's main sleep is its `long_sleep` segment (#85), so a nap or a short rest is never a night. The Google Health summary keeps only top-level quantities, so its sleep sessions and HRV (FHIR components) are not in it; a Google-only question gets `NO_ROWS` for them. The MCP server passes no snapshots, so in personal mode the wearable tools there answer `SOURCE_NOT_CONNECTED`. The four tools belong to their own knowledge source, `wearable-analytics` ("Sleep, HRV, resting heart rate and workouts"), usable in both data modes.
 
 ## Scope
 

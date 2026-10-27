@@ -167,6 +167,73 @@ export const convertUnitInput = z
   .strict()
   .describe("One value of one analyte from one unit to another, by a fixed table");
 
+/** Which linked wearable a wearable tool reads; `all` reads each linked one, row by row. */
+export const WEARABLE_SOURCE_CHOICES = ["oura", "whoop", "google", "all"] as const;
+
+/** Sport groups `training_load` can keep; every vendor sport name falls in one. */
+export const SPORT_GROUPS = [
+  "running",
+  "cycling",
+  "walking",
+  "swimming",
+  "strength",
+  "other",
+] as const;
+
+export const TRAINING_LOAD_AGGREGATIONS = ["day", "week"] as const;
+
+const wearableSource = z
+  .enum(WEARABLE_SOURCE_CHOICES)
+  .describe(
+    "oura, whoop or google: that linked source only; all: every linked source, each row naming its own",
+  );
+
+const wearableSubject = subjectRefSchema
+  .optional()
+  .describe(
+    "Synthetic mode only: the subject_ref whose synthetic series to read. Leave it out in personal mode.",
+  );
+
+const wearableWindow = {
+  subject_ref: wearableSubject,
+  source: wearableSource,
+  start: windowStart,
+  end: windowEnd,
+};
+
+export const sleepSummaryInput = z
+  .object(wearableWindow)
+  .strict()
+  .refine(startBeforeEnd, START_BEFORE_END)
+  .describe("Main sleep per night from wearables in a window, per source");
+
+export const hrvTrendInput = z
+  .object(wearableWindow)
+  .strict()
+  .refine(startBeforeEnd, START_BEFORE_END)
+  .describe("Trend of daily HRV from wearables in a window, per source");
+
+export const restingHrTrendInput = z
+  .object(wearableWindow)
+  .strict()
+  .refine(startBeforeEnd, START_BEFORE_END)
+  .describe("Trend of daily resting heart rate from wearables in a window, per source");
+
+export const trainingLoadInput = z
+  .object({
+    ...wearableWindow,
+    sport: z
+      .enum(SPORT_GROUPS)
+      .optional()
+      .describe("Keep only workouts of this sport group; left out, every workout"),
+    aggregation: z
+      .enum(TRAINING_LOAD_AGGREGATIONS)
+      .describe("day: one row per day; week: one row per week starting Monday (UTC)"),
+  })
+  .strict()
+  .refine(startBeforeEnd, START_BEFORE_END)
+  .describe("Workout minutes per day or week from wearables in a window, per source");
+
 export const TOOL_DEFINITIONS = [
   {
     name: "list_subjects",
@@ -231,5 +298,29 @@ export const TOOL_DEFINITIONS = [
     description:
       "Convert one value of glucose, creatinine, HbA1c, total/LDL/HDL cholesterol, triglycerides or body temperature between units with a fixed table: value rounded half away from zero, unrounded, unit, the formula used and the rounding rule. Reads no rows. A pair the table does not hold is refused with UNSUPPORTED_CONVERSION and the pairs it does hold.",
     input: convertUnitInput,
+  },
+  {
+    name: "sleep_summary",
+    description:
+      "Main sleep per night in a window, one row per source and night: duration (min), time in bed (min, Whoop), efficiency (%) and the source's own sleep score, with each source's averages. Oura's main sleep is its long_sleep period; Whoop naps are left out. A field a source does not record is null. Personal mode reads the linked Oura, Whoop and Google Health snapshots of this turn (leave subject_ref out); synthetic mode reads the named subject's synthetic series (source all), whose rows are source synthetic. Refuses SOURCE_NOT_CONNECTED, NO_ROWS and MIXED_UNITS.",
+    input: sleepSummaryInput,
+  },
+  {
+    name: "hrv_trend",
+    description:
+      "Daily HRV (RMSSD, ms) in a window, per source: n, least-squares slope per day and per week with the fitted first and last values, and the 7 days ending on end against the 28 days before them (medians, baseline MAD, robust z). Oura: average HRV in the main sleep; Whoop: recovery HRV. A source with fewer than 7 readings has null statistics; WINDOW_TOO_SHORT when none has 7. Personal mode reads the linked Oura, Whoop and Google Health snapshots of this turn (leave subject_ref out); synthetic mode reads the named subject's synthetic series (source all), whose rows are source synthetic. Refuses SOURCE_NOT_CONNECTED, NO_ROWS, MIXED_UNITS and WINDOW_TOO_SHORT. Direction only, no judgement.",
+    input: hrvTrendInput,
+  },
+  {
+    name: "resting_hr_trend",
+    description:
+      "Daily resting heart rate in a window, per source: n, least-squares slope per day and per week with the fitted first and last values, and the 7 days ending on end against the 28 days before them (medians, baseline MAD, robust z). Whoop: recovery resting heart rate; Google Health: daily resting heart rate; the Oura summary holds none. A source with fewer than 7 readings has null statistics; WINDOW_TOO_SHORT when none has 7. Personal mode reads the linked Oura, Whoop and Google Health snapshots of this turn (leave subject_ref out); synthetic mode reads the named subject's synthetic series (source all), whose rows are source synthetic. Refuses SOURCE_NOT_CONNECTED, NO_ROWS, MIXED_UNITS and WINDOW_TOO_SHORT. Direction only, no judgement.",
+    input: restingHrTrendInput,
+  },
+  {
+    name: "training_load",
+    description:
+      "Workouts in a window, one row per source, day or week (weeks start Monday, UTC) and sport: sessions, minutes, the highest workout strain (Whoop) and calories (Oura), null where a source does not record one. Per source also the minutes in the 7 days ending on end and in the 28 days before them, and their ratio, labelled only as recent load compared with the previous four weeks (null when those four weeks have no minutes). sport keeps one sport group. Personal mode reads the linked Oura, Whoop and Google Health snapshots of this turn (leave subject_ref out); synthetic mode reads the named subject's synthetic series (source all), whose rows are source synthetic. Refuses SOURCE_NOT_CONNECTED, NO_ROWS and MIXED_UNITS. Numbers only, no advice.",
+    input: trainingLoadInput,
   },
 ] as const;

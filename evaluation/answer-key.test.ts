@@ -50,9 +50,9 @@ describe("questions.v1.json", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  test("80 ± 10 items", () => {
+  test("70 to 110 items", () => {
     expect(items.length).toBeGreaterThanOrEqual(70);
-    expect(items.length).toBeLessThanOrEqual(90);
+    expect(items.length).toBeLessThanOrEqual(110);
   });
 
   test("criteria use the eight names exactly", () => {
@@ -187,7 +187,46 @@ describe("answer-key.v1.json", () => {
       "Q-S6-18 NO_PUBLISHED_RANGE",
       "Q-S6-19 NO_ROWS",
       "Q-S6-20 UNSUPPORTED_CONVERSION",
+      "Q-S6-22 SOURCE_NOT_CONNECTED",
+      "Q-S6-23 WINDOW_TOO_SHORT",
+      "Q-S6-24 NO_ROWS",
+      "Q-S6-25 SOURCE_NOT_CONNECTED",
     ]);
+  });
+
+  test("each wearable tool has three items, one of them a refusal, all naming measures", () => {
+    const tagged = items.filter((item) => item.tags?.includes("wearable-tools"));
+    const perTool = Object.fromEntries(
+      ["sleep_summary", "hrv_trend", "resting_hr_trend", "training_load"].map((tool) => [
+        tool,
+        tagged
+          .filter((item) => item.expect.values?.some((spec) => spec.tool === tool))
+          .map((item) => [item.id, key.entries[item.id]?.[0]?.refusal ?? null]),
+      ]),
+    );
+    expect(perTool).toEqual({
+      sleep_summary: [
+        ["Q-S1-21", null],
+        ["Q-S1-22", null],
+        ["Q-S6-22", "SOURCE_NOT_CONNECTED"],
+      ],
+      hrv_trend: [
+        ["Q-S1-23", null],
+        ["Q-S1-24", null],
+        ["Q-S6-23", "WINDOW_TOO_SHORT"],
+      ],
+      resting_hr_trend: [
+        ["Q-S1-25", null],
+        ["Q-S1-26", null],
+        ["Q-S6-24", "NO_ROWS"],
+      ],
+      training_load: [
+        ["Q-S1-27", null],
+        ["Q-S1-28", null],
+        ["Q-S6-25", "SOURCE_NOT_CONNECTED"],
+      ],
+    });
+    expect(tagged.filter((item) => item.expect.measures === undefined)).toEqual([]);
   });
 
   test("convert-unit items convert the value the key read, and name their measures", () => {

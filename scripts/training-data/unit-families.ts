@@ -51,7 +51,9 @@ export const unitMismatch = async (context: FamilyContext): Promise<Draft | null
     start: yearsBefore(record.end, 6),
     end: record.end,
   });
-  if (!isToolRefusal(probe) || probe.code !== "MIXED_UNITS") return null;
+  if (!isToolRefusal(probe) || probe.code !== "MIXED_UNITS" || !("loinc" in probe)) {
+    return null;
+  }
   const measure = MIXED_UNIT_MEASURES.find((item) => item.loinc === probe.loinc);
   if (measure === undefined) return null;
   const build = pick(context.random, [trend, baselineDeviation, compareWindows] as const);

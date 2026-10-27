@@ -66,6 +66,40 @@ describe("toolArgs", () => {
     ]);
   });
 
+  test("a wearable tool's source, sport, aggregation and window", () => {
+    expect(toolTitle("training_load")).toBe("Summed workout minutes");
+    expect(
+      toolArgs({
+        source: "all",
+        sport: "running",
+        aggregation: "week",
+        start: "2026-09-01",
+        end: "2026-09-30",
+      }),
+    ).toEqual([
+      { label: "Source", value: "all" },
+      { label: "Sport", value: "running" },
+      { label: "Per", value: "week" },
+      { label: "Window", value: "1 Sept 2026 – 30 Sept 2026" },
+    ]);
+  });
+
+  test("a wearable source that is not linked reads as a fixed sentence", () => {
+    const card = toolCard({
+      toolCallId: "w1",
+      tool: "hrv_trend",
+      state: "output-available",
+      input: { source: "oura", start: "2026-09-01", end: "2026-09-30" },
+      output: { code: "SOURCE_NOT_CONNECTED", error: "synthetic-tool-wording" },
+    });
+    expect([card.title, card.state, card.rowCount, card.note]).toEqual([
+      "Fitted an HRV trend",
+      "refused",
+      0,
+      "That wearable source is not linked here, so nothing was read.",
+    ]);
+  });
+
   test("a long search query is clipped; unnamed fields are dropped", () => {
     const [search, ...rest] = toolArgs({ query: "q".repeat(120), k: 5, extra: "x" });
     expect(search).toEqual({ label: "Search", value: `${"q".repeat(79)}…` });

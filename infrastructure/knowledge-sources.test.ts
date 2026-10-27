@@ -125,6 +125,21 @@ describe("knowledge source preferences", () => {
     ]);
   });
 
+  test("the wearable tools belong to their own source, in both data modes' toggles", () => {
+    expect([...disabledToolNames(["wearable-analytics"])].sort()).toEqual([
+      "hrv_trend",
+      "resting_hr_trend",
+      "sleep_summary",
+      "training_load",
+    ]);
+    expect(group("wearables").sources.map((source) => source.id)).toEqual([
+      "wearable-analytics",
+    ]);
+    expect(normaliseDisabledSources(["cohort-records"])).not.toContain(
+      "wearable-analytics",
+    );
+  });
+
   test("setSourceEnabled toggles one id without duplicates", () => {
     expect(setSourceEnabled(["gbd"], "gbd", false)).toEqual(["gbd"]);
     expect(setSourceEnabled(["gbd"], "guidelines", false)).toEqual(["guidelines", "gbd"]);

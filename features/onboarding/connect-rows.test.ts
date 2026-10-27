@@ -59,6 +59,7 @@ describe("source availability", () => {
       "opentwin-knowledge": { available: true, note: null },
       "cohort-records": { available: false, note: "Synthetic data mode only" },
       "cohort-analytics": { available: false, note: "Synthetic data mode only" },
+      "wearable-analytics": { available: true, note: null },
       gbd: { available: false, note: "Pending IHME's OK" },
       "ark-genome": { available: false, note: "Needs Ark and local Carbon-X" },
     });

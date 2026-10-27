@@ -55,7 +55,7 @@ describe("skills/ in this repository", () => {
     expect(check.errors).toEqual([]);
     expect(check.results.filter((result) => !result.passed)).toEqual([]);
     expect(check.skills).toContain("sleep");
-    expect(check.results.filter((result) => result.skill === "sleep").length).toBe(8);
+    expect(check.results.filter((result) => result.skill === "sleep").length).toBe(11);
   });
 });
 
@@ -94,6 +94,13 @@ describe("parseSkillFile", () => {
     });
   });
 
+  test("reads a wrapped list with the trailing comma Prettier writes", () => {
+    expect(parseSkillFile("---\ntools:\n  [\n    a,\n    b,\n  ]\n---\nBody")).toEqual({
+      ok: true,
+      value: { fields: { tools: ["a", "b"] }, body: "Body" },
+    });
+  });
+
   test("rejects a missing closing line and duplicate keys", () => {
     expect(parseSkillFile("---\nname: demo\n")).toEqual({
       ok: false,
@@ -126,7 +133,7 @@ describe("validateSkill", () => {
     ].join("\n");
     const result = validateSkill(files(front, [okEval]), SUBJECTS);
     expect(result.ok ? [] : result.errors).toEqual([
-      'skills/demo/SKILL.md: tools.1: unknown tool "made_up"; known tools: guideline_search, knowledge_search, list_subjects, subject_window, observations_for_subject, latest_by_loinc, summary_stats, trend, baseline_deviation, coverage, compare_windows, range_position, convert_unit, gbd_population, genome_report, dna_ask',
+      'skills/demo/SKILL.md: tools.1: unknown tool "made_up"; known tools: guideline_search, knowledge_search, list_subjects, subject_window, observations_for_subject, latest_by_loinc, summary_stats, trend, baseline_deviation, coverage, compare_windows, range_position, convert_unit, sleep_summary, hrv_trend, resting_hr_trend, training_load, gbd_population, genome_report, dna_ask',
       'skills/demo/SKILL.md: Unrecognized key: "model"',
       'skills/demo/SKILL.md: tools.0: tool "trend" needs source "cohort-analytics" in sources',
     ]);

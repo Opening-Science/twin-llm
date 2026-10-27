@@ -112,6 +112,12 @@ export const rowCountOf = (tool: KeyedTool, result: unknown): number => {
     case "convert_unit":
       // A conversion reads no rows (audit row_count 0).
       return 0;
+    case "sleep_summary":
+    case "hrv_trend":
+    case "resting_hr_trend":
+    case "training_load":
+      // Wearable readings in the window, as the audit row counts them.
+      return numberAt(result, "n");
     case "latest_by_loinc":
       return lengthAt(result, "rows");
     case "coverage": {
@@ -123,16 +129,31 @@ export const rowCountOf = (tool: KeyedTool, result: unknown): number => {
   }
 };
 
+/** Fields whose name carries their unit (the wearable tools'): `mean_duration_min`, `minutes`, `mean_efficiency_pct`. */
+const unitInName = (field: string): string | null =>
+  field === "minutes" || field.endsWith("_min")
+    ? "min"
+    : field.endsWith("_pct")
+      ? "%"
+      : null;
+
 /**
- * The unit for the value at `path`: a slope's own `slope_unit` (`%/d`), else the
- * nearest `unit` or `unit_ucum` (`codes.0.n` → `codes.0.unit`, `rows.0.value` →
- * `rows.0.unit_ucum`).
+ * The unit for the value at `path`: one its field name carries (`_min`, `_pct`),
+ * a slope's own `slope_unit` (`%/d`), else the nearest `unit` or `unit_ucum`
+ * (`codes.0.n` → `codes.0.unit`, `rows.0.value` → `rows.0.unit_ucum`).
  */
 export const unitNear = (result: unknown, path: string): string | null => {
   const segments = path.split(".");
+  const named = unitInName(segments.at(-1) ?? "");
+  if (named !== null) return named;
   const parents = segments.map((_, index) => segments.slice(0, index).join("."));
+  const last = segments.at(-1);
   const names =
-    segments.at(-1) === "slope_per_day" ? ["slope_unit"] : ["unit", "unit_ucum"];
+    last === "slope_per_day"
+      ? ["slope_unit"]
+      : last === "slope_per_week"
+        ? ["slope_per_week_unit"]
+        : ["unit", "unit_ucum"];
   const found = parents
     .reverse()
     .flatMap((parent) =>
@@ -379,6 +400,14 @@ export const realPorts = async (today: string): Promise<AnswerKeyPorts> => {
         return tools.runRangePosition(scope, KEYED_TOOLS.range_position.parse(args));
       case "convert_unit":
         return tools.runConvertUnit(scope, KEYED_TOOLS.convert_unit.parse(args));
+      case "sleep_summary":
+        return tools.runSleepSummary(scope, KEYED_TOOLS.sleep_summary.parse(args));
+      case "hrv_trend":
+        return tools.runHrvTrend(scope, KEYED_TOOLS.hrv_trend.parse(args));
+      case "resting_hr_trend":
+        return tools.runRestingHrTrend(scope, KEYED_TOOLS.resting_hr_trend.parse(args));
+      case "training_load":
+        return tools.runTrainingLoad(scope, KEYED_TOOLS.training_load.parse(args));
       case "latest_by_loinc":
         return tools.runLatestByLoinc(scope, KEYED_TOOLS.latest_by_loinc.parse(args));
       case "summary_stats":

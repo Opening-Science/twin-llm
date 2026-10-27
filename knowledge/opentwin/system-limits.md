@@ -28,6 +28,13 @@ synthetic warehouse and return the result:
   above it. When the range depends on sex, age or timing, which the warehouse does not
   hold, the position is `null` and `depends_on` names the facts.
 
+- `sleep_summary`, `hrv_trend`, `resting_hr_trend`, `training_load`: per source, never
+  pooled, from the linked Oura, Whoop and Google Health data (or a synthetic subject's
+  synthetic series): main sleep per night and averages; a slope per day and week with
+  the last 7 days against the 28 before them; workout minutes per day or week. The
+  load ratio is only "recent load compared with the previous four weeks"; it is not a
+  measure of risk.
+
 A slope or z value describes the rows, not the cause behind them.
 
 # Section: What the tools refuse
@@ -40,6 +47,9 @@ A slope or z value describes the rows, not the cause behind them.
 - Guideline and knowledge search return at most 8 passages per call.
 - `range_position` also refuses `NO_ROWS` (no reading), `NO_PUBLISHED_RANGE` (Anchor v3
   has no range for the code) and `UNIT_MISMATCH` (the reading's unit is not the range's).
+- The wearable tools refuse `SOURCE_NOT_CONNECTED` (that wearable is not linked),
+  `NO_ROWS` (no reading in the window) and, for a trend, `WINDOW_TOO_SHORT` (fewer than
+  7 daily readings).
 
 A refused call is still written to the audit log, with 0 rows.
 

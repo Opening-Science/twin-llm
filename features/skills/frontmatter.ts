@@ -42,7 +42,8 @@ const unquote = (raw: string): string => {
 
 const parseInline = (raw: string): FrontmatterValue => {
   if (!raw.startsWith("[")) return unquote(raw);
-  const inner = raw.slice(1, -1).trim();
+  // YAML allows one trailing comma, and Prettier writes it when it wraps a long list.
+  const inner = raw.slice(1, -1).trim().replace(/,\s*$/, "");
   return inner === "" ? [] : inner.split(",").map(unquote);
 };
 

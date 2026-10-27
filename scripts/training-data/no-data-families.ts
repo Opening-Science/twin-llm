@@ -58,10 +58,7 @@ export const noCode = (context: FamilyContext): Draft => {
     label: measure.label,
     ref: context.subjectRef,
   });
-  const why =
-    measure.why === "local_code"
-      ? `${capitalise(measure.label)} is stored in the synthetic wearable series under a local code, not a LOINC code, and the query tools read LOINC codes only. No tool can return it, so I called none.`
-      : `Neither the synthetic cohort's clinic records nor its wearable series (${SERIES_LABELS}) include ${measure.label}, so there is no code to query and I called no tool.`;
+  const why = `Neither the synthetic cohort's clinic records nor its wearable series (${SERIES_LABELS}) include ${measure.label}, so there is no code to query and I called no tool.`;
   const notThis =
     measure.notThis === null
       ? ""
