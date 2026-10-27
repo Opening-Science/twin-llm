@@ -289,6 +289,54 @@ describe("planSetup", () => {
     );
   });
 
+  test("with the fixtures loaded, the eval cohort deletes them first: they are its people (#96)", () => {
+    const withFixtures: DetectedState = {
+      ...ready,
+      database: okDatabase([cohortRows("open-twin-synthea-trimmed-3", 4)]),
+    };
+    expect(planSetup(withFixtures, { cohort: "eval" }).at(COHORT)).toEqual({
+      id: "cohort",
+      title: "Synthetic cohort in the warehouse",
+      after: ["migrate"],
+      status: "run",
+      action: {
+        kind: "load-eval",
+        source: { kind: "download", noGenerate: null },
+        fixtureSubjects: 4,
+      },
+      note: "download eval-cohort-synthea-v4-seed42-20260101.tar.zst from release eval-cohort-v1, verify (Synthea generates it instead if the release cannot be reached); first delete the 4 subjects of open-twin-synthea-trimmed-3, who are also in synthea-v4-seed42, ingest",
+    });
+    const reload = planSetup(
+      {
+        ...ready,
+        database: okDatabase(
+          [
+            cohortRows("open-twin-synthea-trimmed-3", 4),
+            cohortRows("synthea-v4-seed42", 34),
+          ],
+          { count: 34, sha256: "0".repeat(64) },
+        ),
+      },
+      { cohort: "eval", reloadCohort: true },
+    ).at(COHORT);
+    expect(reload?.status === "run" ? reload.action : null).toEqual({
+      kind: "reload-eval",
+      cohortId: "synthea-v4-seed42",
+      subjects: 34,
+      source: { kind: "download", noGenerate: null },
+      fixtureSubjects: 4,
+    });
+    // Without the fixtures the action does not mention them.
+    const plain = planSetup(
+      { ...ready, database: okDatabase([]) },
+      { cohort: "eval" },
+    ).at(COHORT);
+    expect(plain?.status === "run" ? plain.action : null).toEqual({
+      kind: "load-eval",
+      source: { kind: "download", noGenerate: null },
+    });
+  });
+
   test("--cohort-10k downloads when that cohort is empty, even with the eval cohort loaded", () => {
     expect(summary(planSetup(ready, { cohort: "10k" })).at(COHORT)).toBe(
       "cohort: run load-10k",

@@ -120,17 +120,28 @@ export type StepId =
   | "cohort"
   | "example";
 
+/**
+ * The trimmed fixtures are three people of the evaluation cohort (#96), and a
+ * subject belongs to one cohort only, so ingesting the evaluation cohort over
+ * them would reject those three bundles. A load or reload of the evaluation
+ * cohort therefore deletes the fixture cohort's rows first; this is how many
+ * subjects it holds, and the field is left out when there are none.
+ */
+type FixturesReplaced = Readonly<{ fixtureSubjects?: number }>;
+
 export type Action =
   | Readonly<{ kind: "create-env-file" }>
   | Readonly<{ kind: "command"; argv: readonly string[] }>
   | Readonly<{ kind: "create-database"; name: string }>
-  | Readonly<{ kind: "load-eval"; source: EvalSource }>
-  | Readonly<{
-      kind: "reload-eval";
-      cohortId: string;
-      subjects: number;
-      source: EvalSource;
-    }>
+  | Readonly<{ kind: "load-eval"; source: EvalSource } & FixturesReplaced>
+  | Readonly<
+      {
+        kind: "reload-eval";
+        cohortId: string;
+        subjects: number;
+        source: EvalSource;
+      } & FixturesReplaced
+    >
   | Readonly<{ kind: "load-10k" }>
   | Readonly<{ kind: "load-fixtures" }>
   | Readonly<{ kind: "insert-example"; clerkId: string }>
@@ -358,6 +369,14 @@ const cohortStep = (state: DetectedState, options: SetupOptions): Step => {
   }
   const evalState = evalCohortState(state.database);
   const source = evalSource(state, options);
+  const fixtureSubjects = cohorts[FIXTURE_COHORT.cohortId] ?? 0;
+  const fixtures =
+    fixtureSubjects > 0
+      ? {
+          field: { fixtureSubjects },
+          note: `; first delete the ${fixtureSubjects} subjects of ${FIXTURE_COHORT.cohortId}, who are also in ${EVAL_COHORT.cohortId}`,
+        }
+      : { field: {}, note: "" };
   if (options.reloadCohort === true) {
     if (source.kind === "none") {
       return {
@@ -370,8 +389,8 @@ const cohortStep = (state: DetectedState, options: SetupOptions): Step => {
       ? {
           ...base,
           status: "run",
-          action: { kind: "load-eval", source: source.source },
-          note: `${EVAL_COHORT.cohortId} is not loaded, so nothing to delete: ${source.note}, ingest`,
+          action: { kind: "load-eval", source: source.source, ...fixtures.field },
+          note: `${EVAL_COHORT.cohortId} is not loaded, so nothing to delete: ${source.note}${fixtures.note}, ingest`,
         }
       : {
           ...base,
@@ -381,8 +400,9 @@ const cohortStep = (state: DetectedState, options: SetupOptions): Step => {
             cohortId: EVAL_COHORT.cohortId,
             subjects: evalState.subjects,
             source: source.source,
+            ...fixtures.field,
           },
-          note: `${source.note}; then delete its ${evalState.subjects} subjects' warehouse rows in one transaction and ingest the pinned cohort`,
+          note: `${source.note}${fixtures.note}; then delete its ${evalState.subjects} subjects' warehouse rows in one transaction and ingest the pinned cohort`,
         };
   }
   if (evalState.kind === "stale") {
@@ -402,8 +422,8 @@ const cohortStep = (state: DetectedState, options: SetupOptions): Step => {
     return {
       ...base,
       status: "run",
-      action: { kind: "load-eval", source: source.source },
-      note: `${source.note}, ingest`,
+      action: { kind: "load-eval", source: source.source, ...fixtures.field },
+      note: `${source.note}${fixtures.note}, ingest`,
     };
   }
   const reason = `${source.reason}. Then run ${SETUP_COMMAND} again to load ${EVAL_COHORT.cohortId}.`;

@@ -244,46 +244,77 @@ const prepareEvalCohort = async (
   return `generated with Synthea (${problem}), contentSha256 as pinned`;
 };
 
-/** The evaluation cohort: download (or generate) it, verify, ingest. */
-export const loadEvalCohort = async (
-  root: string,
-  source: EvalSource,
-): Promise<string> => {
-  const how = await prepareEvalCohort(root, source, SETUP_COMMAND);
-  return `${await ingest(root, EVAL_COHORT.fhirDir, EVAL_COHORT.cohortId, false)} (${how})`;
-};
-
 /**
- * `--reload-cohort`: download (or generate) and verify the pinned evaluation
- * cohort first, so a failure there deletes nothing; then delete the
- * warehouse's rows for that cohort in one transaction (cohort-reload.ts) and
- * ingest the pinned files. If the ingest stops part way, running setup again
- * finishes it (ingest skips bundles already there).
+ * Deletes one cohort's warehouse rows in one transaction (cohort-reload.ts)
+ * and returns the checklist line. Nothing is deleted when it refuses.
  */
-export const reloadEvalCohort = async (
-  root: string,
+const deleteCohort = async (
   databaseUrl: string,
-  source: EvalSource,
+  cohortId: string,
+  why: string,
 ): Promise<string> => {
-  const how = await prepareEvalCohort(root, source, RELOAD_COMMAND);
   const sql = openSql(databaseUrl);
-  let deleted: string;
   try {
     process.stdout.write(
-      `\nDeleting ${EVAL_COHORT.cohortId}'s warehouse rows (one transaction) …\n`,
+      `\nDeleting ${cohortId}'s warehouse rows (one transaction)${why} …\n`,
     );
-    deleted = formatDeleted(
-      EVAL_COHORT.cohortId,
-      await deleteCohortRows(sql, EVAL_COHORT.cohortId),
-    );
+    const deleted = formatDeleted(cohortId, await deleteCohortRows(sql, cohortId));
+    process.stdout.write(`${deleted}.\n`);
+    return deleted;
   } catch (error) {
     if (error instanceof ReloadRefusedError) throw new SetupError(error.message);
     throw error;
   } finally {
     await sql.close();
   }
-  process.stdout.write(`${deleted}.\n`);
-  return `${deleted}; ${await ingest(root, EVAL_COHORT.fhirDir, EVAL_COHORT.cohortId, false)} (${how})`;
+};
+
+/**
+ * The trimmed fixtures' people are also in the evaluation cohort (#96), and a
+ * subject belongs to one cohort only, so their rows go before the evaluation
+ * cohort is ingested. `databaseUrl` is null when the fixtures are not loaded.
+ */
+const replaceFixtures = async (databaseUrl: string | null): Promise<string> =>
+  databaseUrl === null
+    ? ""
+    : `${await deleteCohort(
+        databaseUrl,
+        FIXTURE_COHORT.cohortId,
+        `, whose subjects are also in ${EVAL_COHORT.cohortId}`,
+      )}; `;
+
+/**
+ * The evaluation cohort: download (or generate) it, verify, delete the
+ * fixture cohort when it is loaded (`fixturesDatabaseUrl`), ingest.
+ */
+export const loadEvalCohort = async (
+  root: string,
+  source: EvalSource,
+  fixturesDatabaseUrl: string | null = null,
+): Promise<string> => {
+  const how = await prepareEvalCohort(root, source, SETUP_COMMAND);
+  const fixtures = await replaceFixtures(fixturesDatabaseUrl);
+  return `${fixtures}${await ingest(root, EVAL_COHORT.fhirDir, EVAL_COHORT.cohortId, false)} (${how})`;
+};
+
+/**
+ * `--reload-cohort`: download (or generate) and verify the pinned evaluation
+ * cohort first, so a failure there deletes nothing; then delete the
+ * warehouse's rows for that cohort (and the fixture cohort's, when
+ * `replacesFixtures`) in one transaction each (cohort-reload.ts) and ingest
+ * the pinned files. If the ingest stops part way, running setup again
+ * finishes it (ingest skips bundles already there).
+ */
+export const reloadEvalCohort = async (
+  root: string,
+  databaseUrl: string,
+  source: EvalSource,
+  replacesFixtures = false,
+): Promise<string> => {
+  const how = await prepareEvalCohort(root, source, RELOAD_COMMAND);
+  const fixtures = await replaceFixtures(replacesFixtures ? databaseUrl : null);
+  const deleted = await deleteCohort(databaseUrl, EVAL_COHORT.cohortId, "");
+  return `${fixtures}${deleted}; ${await ingest(root, EVAL_COHORT.fhirDir, EVAL_COHORT.cohortId, false)} (${how})`;
 };
 
 /** The three trimmed fixtures in the repository. */
