@@ -6,8 +6,9 @@ import type { ResponseDocumentV1 } from "@/infrastructure/response-document/docu
 import { storedToolParts, type ToolResultLike } from "./tool-parts";
 
 /**
- * The two terminal writes for a `ModelResponse` row that `startTurn` created
- * as STREAMING: COMPLETE with the answer and its measured numbers, or FAILED.
+ * The terminal writes for a `ModelResponse` row that `startTurn` created as
+ * STREAMING: COMPLETE with the answer and its measured numbers, FAILED, or
+ * REFUSED with TwinLLM's own refusal sentence when no model was called.
  *
  * The numbers stored are the same measured values the browser received in
  * the stream's metadata, so the card and the leaderboard can never disagree.
@@ -56,12 +57,21 @@ export type ModelResponseFailedUpdate = Readonly<{
   data: { status: "FAILED"; completedAt: Date };
 }>;
 
+export type ModelResponseRefusedUpdate = Readonly<{
+  where: RowKey;
+  data: { status: "REFUSED"; text: string; completedAt: Date };
+}>;
+
 export type ModelResponseWritePort = Readonly<{
   update: (args: ModelResponseCompleteUpdate) => Promise<unknown>;
 }>;
 
 export type ModelResponseFailPort = Readonly<{
   update: (args: ModelResponseFailedUpdate) => Promise<unknown>;
+}>;
+
+export type ModelResponseRefusePort = Readonly<{
+  update: (args: ModelResponseRefusedUpdate) => Promise<unknown>;
 }>;
 
 const rowKey = (turnId: string, modelId: string): RowKey => ({
@@ -111,5 +121,21 @@ export const writeModelResponseFailed = async (
   await port.update({
     where: rowKey(target.turnId, target.modelId),
     data: { status: "FAILED", completedAt: now() },
+  });
+};
+
+/**
+ * Stores a refusal on the row so a reload shows it instead of asking again.
+ * `sentence` must be one TwinLLM wrote (a policy or skill refusal), never a
+ * provider or exception message.
+ */
+export const writeModelResponseRefused = async (
+  port: ModelResponseRefusePort,
+  target: Readonly<{ turnId: string; modelId: string; sentence: string }>,
+  now: () => Date = () => new Date(),
+): Promise<void> => {
+  await port.update({
+    where: rowKey(target.turnId, target.modelId),
+    data: { status: "REFUSED", text: target.sentence, completedAt: now() },
   });
 };

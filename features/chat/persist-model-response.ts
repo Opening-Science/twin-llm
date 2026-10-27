@@ -8,6 +8,7 @@ import {
   type ModelResponseWritePort,
   writeModelResponseComplete,
   writeModelResponseFailed,
+  writeModelResponseRefused,
 } from "./write-model-response-complete";
 
 /** The terminal row writes, bound to the real database. */
@@ -33,3 +34,7 @@ export const markModelResponseComplete = (params: ModelResponseCompleteParams) =
 export const markModelResponseFailed = (
   target: Readonly<{ turnId: string; modelId: string }>,
 ) => writeModelResponseFailed(database().modelResponse, target);
+
+export const markModelResponseRefused = (
+  target: Readonly<{ turnId: string; modelId: string; sentence: string }>,
+) => writeModelResponseRefused(database().modelResponse, target);

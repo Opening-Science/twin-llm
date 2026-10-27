@@ -3,6 +3,7 @@ import {
   type ExoscalePersonalData,
   type LlmProvider,
   permitProviderForRequest,
+  PROVIDER_NOT_PERMITTED_SENTENCE,
 } from "@/infrastructure/data-mode-policy";
 import type { KnowledgeSourceId } from "@/infrastructure/knowledge-sources";
 import { personalDataSentEvent } from "@/infrastructure/personal-data-audit";
@@ -33,6 +34,15 @@ import type { WearableContext } from "./wearable-context";
  * names the skill; the data-mode policy still applies after them. The run is
  * written to the audit chain before the model is called, and the stream gets
  * the skill so tools, views and the system prompt follow it.
+ *
+ * Every refusal is also stored on the answer's row (`markRefused`) before the
+ * 400 goes out, so a reload shows the refusal instead of asking again. Only
+ * fixed sentences TwinLLM writes are stored: the skill gate's own, and for
+ * the data-mode policy its person-facing sentence (the 400's `error` names
+ * settings, which is for the operator).
+ *
+ * The genome gate never refuses a whole turn here: a turn it does not permit
+ * runs without the genome tools (`genome-tool-deps.ts`).
  */
 
 export type ChatProviderSettings = Readonly<{
@@ -49,15 +59,29 @@ export type StartAnswerDeps = Readonly<{
   /** A runnable skill by name (`features/skills`), or null when there is none. */
   findSkill: (name: string) => TurnSkill | null;
   stream: (call: ChatRequest, context: StreamContext) => Promise<Response>;
+  /** Stores the refusal sentence on the turn's row for this model. */
+  markRefused: (
+    target: Readonly<{ turnId: string; modelId: string; sentence: string }>,
+  ) => Promise<void>;
 }>;
+
+type Refusal = Readonly<{ code: string; error: string }>;
 
 export const createStartAnswer =
   (deps: StartAnswerDeps) =>
   async (actorId: string, appUserId: string, call: ChatRequest): Promise<Response> => {
+    const refuse = async (
+      refusal: Refusal,
+      sentence: string = refusal.error,
+    ): Promise<Response> => {
+      await deps.markRefused({ turnId: call.turnId, modelId: call.modelId, sentence });
+      return Response.json({ code: refusal.code, error: refusal.error }, { status: 400 });
+    };
+
     const settings = deps.settings();
     const skill = call.skill === undefined ? null : deps.findSkill(call.skill);
     if (call.skill !== undefined && skill === null) {
-      return Response.json(skillNotOffered(call.skill), { status: 400 });
+      return refuse(skillNotOffered(call.skill));
     }
     const wearables = await deps.loadWearables(settings.dataMode, appUserId);
     const request = {
@@ -71,17 +95,10 @@ export const createStartAnswer =
         provider: request.provider,
         hasWearableContext: request.hasWearableNarrative,
       });
-      if (!skillPermit.ok) {
-        return Response.json(
-          { code: skillPermit.code, error: skillPermit.error },
-          { status: 400 },
-        );
-      }
+      if (!skillPermit.ok) return refuse(skillPermit);
     }
     const permit = permitProviderForRequest(request);
-    if (!permit.ok) {
-      return Response.json({ code: permit.code, error: permit.error }, { status: 400 });
-    }
+    if (!permit.ok) return refuse(permit, PROVIDER_NOT_PERMITTED_SENTENCE);
 
     const event = personalDataSentEvent(request, {
       actor: actorId,
