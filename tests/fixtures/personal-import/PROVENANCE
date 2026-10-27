@@ -1,0 +1,11 @@
+Hand-made fixtures for the personal data import (#176). Every value, id and name
+here was made up for the tests; none comes from a person, a patient portal or a
+device export.
+
+- fhir-bundle.json: a FHIR R4 collection Bundle with a placeholder Patient, an
+  HbA1c, a blood pressure panel, a glucose without a UCUM system, a coded
+  smoking answer, a weight without a unit and one Condition.
+- lab-results.csv: lab rows covering the name table, a unit that does not fit,
+  a value bound, a missing unit, a time without a zone and a bad check digit.
+- research-table.tsv: a small table with a missing marker, a quoted field, an
+  empty cell, a row with too few fields and a date that is not a calendar day.

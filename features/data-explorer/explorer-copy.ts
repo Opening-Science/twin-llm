@@ -4,7 +4,7 @@
  * build the warehouse.
  */
 
-export const DATA_TITLE = "Data";
+export const DATA_TITLE = "Synthetic cohort";
 
 /** Shown beside the title on every Data screen, in any DATA_MODE. */
 export const SYNTHETIC_DATA_LABEL = "Synthetic data";

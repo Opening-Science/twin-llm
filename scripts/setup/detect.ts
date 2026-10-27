@@ -10,6 +10,10 @@ import { readdir, readFile, statfs } from "node:fs/promises";
 import { userInfo } from "node:os";
 import { join } from "node:path";
 
+import {
+  DEFAULT_OLLAMA_NUM_CTX,
+  MIN_OLLAMA_NUM_CTX,
+} from "../../infrastructure/ollama-context";
 import { DEMO_BODIES, DEMO_BODY_IDS } from "../../packages/anatomy/demo-bodies";
 import { ATLAS_IDS, ATLASES } from "../../packages/anatomy/manifest";
 import { resolveAnatomyDir } from "../../packages/anatomy/paths";
@@ -30,6 +34,7 @@ import {
   type DatabaseProbe,
   type DetectedState,
   EXAMPLE_TITLE,
+  type LoadedModel,
   type OllamaProbe,
 } from "./plan";
 import { type Platform, TOOL_IDS, type ToolId, type ToolProbe } from "./prerequisites";
@@ -292,9 +297,48 @@ const probeOllama = async (
           .map((model: unknown) => Reflect.get(Object(model), "name"))
           .filter((name): name is string => typeof name === "string")
       : [];
-    return { kind: "ok", baseUrl, models: names };
+    return {
+      kind: "ok",
+      baseUrl,
+      models: names,
+      numCtx: parseNumCtx(env.OLLAMA_NUM_CTX),
+      loaded: await loadedModels(baseUrl),
+    };
   } catch {
     return { kind: "unreachable", baseUrl };
+  }
+};
+
+/** OLLAMA_NUM_CTX as `infrastructure/env.ts` reads it; null when the app would refuse it. */
+export const parseNumCtx = (raw: string | undefined): number | null => {
+  if (raw === undefined || raw.trim() === "") return DEFAULT_OLLAMA_NUM_CTX;
+  const value = Number(raw);
+  return Number.isInteger(value) && value >= MIN_OLLAMA_NUM_CTX ? value : null;
+};
+
+const numberField = (value: unknown, field: string): number => {
+  const read = Reflect.get(Object(value), field);
+  return typeof read === "number" ? read : 0;
+};
+
+/** What `/api/ps` says is in memory, with the context each model runs at. */
+const loadedModels = async (baseUrl: string): Promise<readonly LoadedModel[]> => {
+  try {
+    const response = await fetch(`${baseUrl}/api/ps`, {
+      signal: AbortSignal.timeout(3000),
+    });
+    if (!response.ok) return [];
+    const models = Reflect.get(Object(await response.json()), "models");
+    return Array.isArray(models)
+      ? models.map((model: unknown) => ({
+          name: String(Reflect.get(Object(model), "name")),
+          contextLength: numberField(model, "context_length"),
+          sizeBytes: numberField(model, "size"),
+          vramBytes: numberField(model, "size_vram"),
+        }))
+      : [];
+  } catch {
+    return [];
   }
 };
 

@@ -8,11 +8,17 @@ import { fileURLToPath } from "node:url";
 
 import { detectState } from "./detect";
 import {
+  checkInstalledPackages,
+  describeProblems,
+  type PackageProblem,
+} from "./installed-packages";
+import {
   dataPageFindings,
   type DetectedState,
   databaseSummary,
   exampleSummary,
   type Finding,
+  ollamaContextSummary,
   pageReadiness,
   type Readiness,
   SETUP_COMMAND,
@@ -30,7 +36,10 @@ const readinessMark = (page: Readiness): string =>
   page.stale === true ? "[stale]  " : page.ready ? "[ready]  " : "[missing]";
 
 /** The report as text. Pure. */
-export const formatDoctor = (state: DetectedState): string => {
+export const formatDoctor = (
+  state: DetectedState,
+  packages: readonly PackageProblem[] = [],
+): string => {
   const tools = toolChecks(state).map((check) =>
     check.status === "ok"
       ? `  [ok]      ${TOOLS[check.id].label}${check.version ? ` ${check.version}` : ""}`
@@ -38,6 +47,7 @@ export const formatDoctor = (state: DetectedState): string => {
   );
   const database = databaseSummary(state);
   const example = exampleSummary(state);
+  const context = ollamaContextSummary(state.ollama);
   const openTwin =
     state.openTwin.synced === state.openTwin.pinned
       ? `  [ok]      open-twin packages at ${state.openTwin.pinned.slice(0, 7)}`
@@ -61,7 +71,15 @@ export const formatDoctor = (state: DetectedState): string => {
     `  ${state.envFile ? "[ok]     " : "[missing]"} .env.local${state.envFile ? ` (DATA_MODE=${state.dataMode ?? "unset"})` : `: ${SETUP_COMMAND} creates it`}`,
     `  ${database.ok ? "[ok]     " : "[missing]"} Postgres: ${database.detail}`,
     openTwin,
+    packages.length === 0
+      ? "  [ok]      node_modules matches package.json"
+      : `  [stale]   node_modules: ${describeProblems(packages)}. Run: bun install`,
     `  ${example.ok ? "[ok]     " : "[off]    "} Example thread: ${example.detail}`,
+    ...(context === null
+      ? []
+      : [
+          `  ${context.ok ? "[ok]     " : "[no]     "} Ollama context: ${context.detail}`,
+        ]),
     "",
     "What each page needs",
     ...pages,
@@ -80,5 +98,7 @@ const isMain = Boolean((import.meta as { main?: boolean }).main);
 
 if (isMain) {
   const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
-  process.stdout.write(formatDoctor(await detectState(root)));
+  process.stdout.write(
+    formatDoctor(await detectState(root), checkInstalledPackages(root)),
+  );
 }

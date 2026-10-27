@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
+import { parseNumCtx } from "./detect";
 import {
   databaseTarget,
   defaultDatabaseUrl,
@@ -190,5 +191,15 @@ describe("parseSetupArgs", () => {
     });
     expect(parseSetupArgs(["--generate-cohort", "--cohort-10k"])).toBeNull();
     expect(parseSetupArgs(["--generate-cohort", "--skip-cohort"])).toBeNull();
+  });
+});
+
+describe("parseNumCtx", () => {
+  test("reads OLLAMA_NUM_CTX the way the app does", () => {
+    expect(parseNumCtx(undefined)).toBe(16_384);
+    expect(parseNumCtx(" ")).toBe(16_384);
+    expect(parseNumCtx("32768")).toBe(32_768);
+    expect(parseNumCtx("4096")).toBeNull();
+    expect(parseNumCtx("16k")).toBeNull();
   });
 });

@@ -105,18 +105,21 @@ export const useBiomarkerTab = ({
   enabled,
   anatomy,
   dispatch,
+  initialPersonRef,
 }: Readonly<{
   subject: BiomarkerSubject;
   /** False in previews: nothing is fetched. */
   enabled: boolean;
   anatomy: AnatomyState;
   dispatch: (action: AnatomyAction) => void;
+  /** The synthetic person to start on; the first listed one otherwise. */
+  initialPersonRef?: string;
 }>): BiomarkerTabModel => {
   // null: the read failed.
   const [people, setPeople] = useState<readonly CohortPerson[] | null | undefined>(
     undefined,
   );
-  const [chosenRef, setChosenRef] = useState<string | null>(null);
+  const [chosenRef, setChosenRef] = useState<string | null>(initialPersonRef ?? null);
   const [labs, setLabs] = useState<Labs>({ ref: "", values: [], vitals: [] });
   const [metricsRead, setMetrics] = useState<readonly FormattableMetric[] | undefined>(
     undefined,

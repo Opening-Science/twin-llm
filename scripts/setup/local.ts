@@ -44,6 +44,7 @@ import {
   type CohortChoice,
   formatChecklist,
   GENERATE_FLAG,
+  ollamaContextSummary,
   type Outcome,
   planSetup,
   type SetupOptions,
@@ -297,6 +298,8 @@ const main = async (): Promise<number> => {
           },
         ];
   process.stdout.write(formatChecklist([...outcomes, ...nodeOutcome]));
+  const context = ollamaContextSummary(state.ollama);
+  if (context !== null) process.stdout.write(`Ollama context: ${context.detail}\n`);
   process.stdout.write("Run bun run doctor any time for what each page needs.\n");
   return outcomes.some((outcome) => outcome.result === "failed") ? 1 : 0;
 };

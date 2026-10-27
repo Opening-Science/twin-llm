@@ -137,7 +137,7 @@ export const ConnectStep = ({ groups }: { readonly groups: readonly ConnectGroup
     <LaterNote>
       Linking opens the vendor&rsquo;s sign-in and returns to Connectors; come back here
       from Get started in the sidebar. Change anytime on the{" "}
-      <Link href="/connectors" className="underline underline-offset-2">
+      <Link href="/customize/connectors" className="underline underline-offset-2">
         Connectors
       </Link>{" "}
       page.

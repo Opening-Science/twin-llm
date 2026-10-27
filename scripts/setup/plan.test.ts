@@ -12,6 +12,7 @@ import {
   evalCohortState,
   exampleSummary,
   formatChecklist,
+  ollamaContextSummary,
   type Outcome,
   pageReadiness,
   planSetup,
@@ -88,6 +89,8 @@ const ready: DetectedState = {
     kind: "ok",
     baseUrl: "http://127.0.0.1:11434",
     models: ["qwen3:8b", "nomic-embed-text:latest"],
+    numCtx: 16_384,
+    loaded: [],
   },
   freeDiskBytes: 500e9,
 };
@@ -890,5 +893,65 @@ describe("the training sample step", () => {
     expect(pkg.scripts["training:sample"]).toBe(
       `bun --preload ./features/chat/response/preload-server-only.mjs scripts/training-data/build-conversations.ts --cohort ${EVAL_COHORT.cohortId} --allow-eval-cohort --max-subjects ${TRAINING_SAMPLE.subjects} --out training-data/out/${TRAINING_SAMPLE.set}.jsonl`,
     );
+  });
+});
+
+describe("ollamaContextSummary", () => {
+  const ok = ready.ollama.kind === "ok" ? ready.ollama : null;
+  if (ok === null) throw new Error("the ready fixture has Ollama up");
+  const GIB = 2 ** 30;
+
+  test("names the requested context when no model is loaded", () => {
+    expect(ollamaContextSummary(ok)).toEqual({
+      ok: true,
+      detail: "chat asks for 16384 tokens (OLLAMA_NUM_CTX); no model loaded right now",
+    });
+  });
+
+  test("a model left at Ollama's 4096 default reloads on the next chat", () => {
+    expect(
+      ollamaContextSummary({
+        ...ok,
+        loaded: [
+          {
+            name: "qwen3:4b",
+            contextLength: 4096,
+            sizeBytes: 3 * GIB,
+            vramBytes: 3 * GIB,
+          },
+        ],
+      }),
+    ).toEqual({
+      ok: true,
+      detail:
+        "chat asks for 16384 tokens (OLLAMA_NUM_CTX); qwen3:4b loaded with 4096 (the next chat reloads it at 16384), 3.0 GiB",
+    });
+  });
+
+  test("says when part of a model runs on the CPU", () => {
+    expect(
+      ollamaContextSummary({
+        ...ok,
+        loaded: [
+          {
+            name: "qwen3:8b",
+            contextLength: 16_384,
+            sizeBytes: 7.3 * GIB,
+            vramBytes: 5.2 * GIB,
+          },
+        ],
+      })?.detail,
+    ).toBe(
+      "chat asks for 16384 tokens (OLLAMA_NUM_CTX); qwen3:8b loaded with 16384; only 5.2 of 7.3 GiB on the GPU, the rest runs on the CPU: lower OLLAMA_NUM_CTX or use a smaller model if answers are slow",
+    );
+  });
+
+  test("an invalid OLLAMA_NUM_CTX is a problem; another provider is not checked", () => {
+    expect(ollamaContextSummary({ ...ok, numCtx: null })).toEqual({
+      ok: false,
+      detail:
+        "OLLAMA_NUM_CTX must be a whole number of at least 8192; the app will not start",
+    });
+    expect(ollamaContextSummary({ kind: "not-used", provider: "exoscale" })).toBeNull();
   });
 });

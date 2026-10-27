@@ -45,5 +45,5 @@ export const syncDetail = (
 export const loopbackHostHint = (hostname: string, port: string): string | null => {
   if (hostname !== "127.0.0.1" && hostname !== "[::1]") return null;
   const origin = `http://localhost${port ? `:${port}` : ""}`;
-  return `You opened TwinLLM at ${hostname}. Sign-in returns go to localhost, so open ${origin}/connectors before linking.`;
+  return `You opened TwinLLM at ${hostname}. Sign-in returns go to localhost, so open ${origin}/customize/connectors before linking.`;
 };
