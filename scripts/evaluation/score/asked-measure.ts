@@ -123,6 +123,7 @@ export const MEASURE_NAMES: readonly MeasureName[] = [
     codes: [],
   },
   { measure: "sleep score", pattern: /\bsleep\b/i, codes: [] },
+  { measure: "workouts", pattern: /\bworkouts?\b|training load/i, codes: [] },
 ];
 
 export type YearSpan = Readonly<{ from: number; to: number }>;

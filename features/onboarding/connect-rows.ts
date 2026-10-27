@@ -171,6 +171,8 @@ export const sourceAvailability = (
         : { available: false, note: "Not indexed yet" },
     "cohort-records": cohort,
     "cohort-analytics": cohort,
+    // Linked snapshots in personal mode, a synthetic subject's series in synthetic mode.
+    "wearable-analytics": { available: true, note: null },
     gbd: facts.gbdConfigured
       ? { available: true, note: null }
       : { available: false, note: "Pending IHME's OK" },

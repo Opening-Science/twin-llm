@@ -22,6 +22,10 @@ import {
   cohortPositionInput,
   conditionsTimelineInput,
   medicationsTimelineInput,
+  sleepSummaryInput,
+  hrvTrendInput,
+  restingHrTrendInput,
+  trainingLoadInput,
 } from "../../packages/query-tools/schemas";
 
 import { isMeasureId } from "./score/asked-measure";
@@ -60,6 +64,10 @@ export const KEYED_TOOLS = {
   cohort_position: cohortPositionInput,
   conditions_timeline: conditionsTimelineInput,
   medications_timeline: medicationsTimelineInput,
+  sleep_summary: sleepSummaryInput,
+  hrv_trend: hrvTrendInput,
+  resting_hr_trend: restingHrTrendInput,
+  training_load: trainingLoadInput,
 } as const;
 
 export type KeyedTool = keyof typeof KEYED_TOOLS;
@@ -82,6 +90,10 @@ export const AUDIT_TOOL_NAMES = [
   "cohort_position",
   "conditions_timeline",
   "medications_timeline",
+  "sleep_summary",
+  "hrv_trend",
+  "resting_hr_trend",
+  "training_load",
   "guidelines.guideline_search",
   "knowledge.knowledge_search",
   "gbd.gbd_query",

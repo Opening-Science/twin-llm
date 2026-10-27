@@ -8,9 +8,11 @@
 import { createHash } from "node:crypto";
 
 import { type DailyReading, WEARABLE_METRICS } from "./series";
+import { WORKOUT_METRICS, type WorkoutReading } from "./workouts";
 
 export const GENERATOR_ID = "twinllm-synthetic-wearables";
-export const WEARABLE_GENERATOR_VERSION = "1";
+/** 2: workouts (`workout-<sport>`, minutes) beside the daily series, which is unchanged. */
+export const WEARABLE_GENERATOR_VERSION = "2";
 
 const SYNTHEA_IDENTIFIER_SYSTEM = "https://github.com/synthetichealth/synthea";
 const UCUM = "http://unitsofmeasure.org";
@@ -77,8 +79,12 @@ export const stableUuid = (key: string): string => {
   ].join("-");
 };
 
-const observationOf = (patientId: string, reading: DailyReading) => {
-  const metric = WEARABLE_METRICS[reading.metric];
+const METRICS = { ...WEARABLE_METRICS, ...WORKOUT_METRICS } as const;
+
+export type SeriesReading = DailyReading | WorkoutReading;
+
+const observationOf = (patientId: string, reading: SeriesReading) => {
+  const metric = METRICS[reading.metric];
   const id = stableUuid(`${GENERATOR_ID}:${patientId}:${reading.metric}:${reading.day}`);
   return {
     fullUrl: `urn:uuid:${id}`,
@@ -106,7 +112,7 @@ const observationOf = (patientId: string, reading: DailyReading) => {
 
 export const wearableBundle = (
   patient: SyntheaPatient,
-  readings: readonly DailyReading[],
+  readings: readonly SeriesReading[],
 ) => ({
   resourceType: "Bundle",
   id: stableUuid(`${GENERATOR_ID}:${patient.id}:bundle`),
