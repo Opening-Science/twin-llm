@@ -10,7 +10,13 @@ import { append, type AppendInput } from "@/packages/audit/append";
  * none of them has to fake a whole Prisma client or replace a module.
  */
 
-export type SubjectScopeRow = Readonly<{ isSynthetic: boolean; cohortId: string }>;
+export type SubjectScopeRow = Readonly<{
+  isSynthetic: boolean;
+  cohortId: string;
+  /** Stored for synthetic subjects only (#4); `range_position` reads them. */
+  sex?: string | null;
+  birthYear?: number | null;
+}>;
 
 export type ObservationRecord = Readonly<{
   loinc: string;
@@ -51,7 +57,7 @@ export const defaultQueryToolPorts = (): QueryToolPorts => ({
   findSubject: (subjectRef) =>
     database().subject.findUnique({
       where: { subjectRef },
-      select: { isSynthetic: true, cohortId: true },
+      select: { isSynthetic: true, cohortId: true, sex: true, birthYear: true },
     }),
   findObservations: async (query) => {
     const rows = await database().observation.findMany({

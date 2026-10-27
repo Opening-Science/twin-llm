@@ -401,6 +401,12 @@ model Subject {
   subjectRef  String  @id @map("subject_ref")
   cohortId    String  @map("cohort_id")
   isSynthetic Boolean @map("is_synthetic")
+  /// FHIR Patient.gender (female, male, other, unknown); synthetic subjects only (#4).
+  sex         String?
+  /// Year of Patient.birthDate; the full date is never stored.
+  birthYear   Int?    @map("birth_year")
+  /// Year of Patient.deceasedDateTime; null while alive or when not given.
+  deathYear   Int?    @map("death_year")
 
   observations  Observation[]
   nonNumeric    ObservationNonNumeric[]

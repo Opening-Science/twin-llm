@@ -25,8 +25,10 @@ synthetic warehouse and return the result:
 - `coverage`: days with data, coverage ratio and the longest gap in days.
 - `compare_windows`: n, mean, median, min and max for two windows, and B minus A.
 - `range_position`: one reading against its Anchor v3 published range: below, within or
-  above it. When the range depends on sex, age or timing, which the warehouse does not
-  hold, the position is `null` and `depends_on` names the facts.
+  above it. A range for one sex or age is chosen from the synthetic subject's stored sex
+  and birth year. Only the birth year is stored, so the age is approximate: one of two
+  ages. When a fact is not stored (timing never is) or the age band changes within the
+  reading's year, the position is `null` and `depends_on` names the facts.
 
 A slope or z value describes the rows, not the cause behind them.
 

@@ -10,27 +10,38 @@ Local research store for a Synthea cohort. Numeric rows come from `@open-twin/fh
 
 ## Schema
 
-| Table                     | Role                                                                          |
-| ------------------------- | ----------------------------------------------------------------------------- |
-| `subjects`                | Opaque `subject_ref` PK, `is_synthetic` (always true here), `cohort_id`       |
-| `bundles`                 | `sha` PK (sha256 of raw bytes), `cohort_id`, `ingested_at`, `synthea_version` |
-| `observations`            | Numeric row, `unit_ucum` NOT NULL, `UNIQUE(bundle_sha, fhir_id)`              |
-| `observation_non_numeric` | String / codeable / boolean payloads as `raw_value` jsonb                     |
+| Table                     | Role                                                                                                       |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `subjects`                | Opaque `subject_ref` PK, `is_synthetic` (always true here), `cohort_id`, `sex`, `birth_year`, `death_year` |
+| `bundles`                 | `sha` PK (sha256 of raw bytes), `cohort_id`, `ingested_at`, `synthea_version`                              |
+| `observations`            | Numeric row, `unit_ucum` NOT NULL, `UNIQUE(bundle_sha, fhir_id)`                                           |
+| `observation_non_numeric` | String / codeable / boolean payloads as `raw_value` jsonb                                                  |
 
 `ingestBundle` does not take `is_synthetic` from the caller. It hard-sets `isSynthetic: true` and `source: "synthea"`. Snapshot tables have no `is_synthetic` column, so a personal connector row cannot be stored as synthetic.
 
 The tables come from `prisma/migrations/20261025000000_baseline`, which also adds `CHECK (source = 'synthea')` on both observation tables by hand.
+
+### Sex, birth year and death year (#4)
+
+`prisma/migrations/20261027150000_subject_sex_birth_year` adds three nullable columns to `subjects`: `sex` (FHIR `Patient.gender`: `female`, `male`, `other` or `unknown`), `birth_year` (the year of `Patient.birthDate`) and `death_year` (the year of `Patient.deceasedDateTime`). Only years are stored, never a full date; the year is read as written in the bundle, not shifted by a time zone. Three checks hold them in the database: `sex` is one of the four values, a death year is not before the birth year, and all three stay null unless `is_synthetic` is true.
+
+`ingestBundle` fills them from the bundle's Patient (`packages/warehouse/subject-facts.ts`), after the Synthea marker check, so they are only ever written for synthetic subjects; personal wearable data never reaches `subjects`. A fact the Patient does not carry is left as it is rather than set to null, so a synthetic wearable bundle (it copies only the Patient's id and identifier) never erases what the subject's own Synthea bundle stored. A `deceasedBoolean` without a date gives no death year.
+
+Rows ingested before the migration keep null facts until they are filled in. Either of these does it:
+
+- `bun run warehouse:ingest <dir> --cohort <id>` again over the same files: an `already ingested` bundle writes no observation, but its subject's sex, birth year and death year are updated.
+- `bun run setup:local -- --reload-cohort` for the evaluation cohort: it deletes that cohort's warehouse rows and ingests the pinned files.
 
 ## ingestBundle
 
 `packages/warehouse/ingest-bundle.ts`:
 
 1. The bundle's Patient must carry the Synthea identifier system. Otherwise → `rejected.reason = not-synthea`, nothing written. Library callers cannot skip this.
-2. Hash the raw bundle. A known `bundles.sha` returns `{ inserted: 0, skipped: <row count>, alreadyIngested: true }`.
+2. Hash the raw bundle. A known `bundles.sha` returns `{ inserted: 0, skipped: <row count>, alreadyIngested: true }`; the only write is the subject's sex, birth year and death year from the Patient (the backfill above).
 3. Call `normaliseBundle` with `unresolvedUrnPolicy: "preserve"`. If there is no `bundle`, return `{ inserted: 0, rejected: { reason } }` and list dangling `urn:uuid:` refs in `unresolved`. Do not insert `bundles` on reject.
 4. Map Observations (`mapObservations`). Every numeric row needs a UCUM `code`. Missing unit → `rejected.reason = ot-quantity-no-code`. Missing is not written as zero.
 5. Components with a LOINC code and a Quantity become their own numeric rows. A blood pressure panel (`85354-9`) gives one `8480-6` (systolic) and one `8462-4` (diastolic) row, with `fhir_id = <panel id>#<component loinc>` and the panel's time. A LOINC that repeats within one panel gets `/2`, `/3`, … from its second occurrence, in source order. The panel itself stays in `observation_non_numeric` as `value_type = components`.
-6. One transaction (timeout 120 s): first look up the subject. If it already belongs to another cohort, write nothing and reject (`subject-cohort-conflict`). A subject never moves between cohorts. Otherwise insert with `createMany`, so a full Synthea patient with thousands of rows fits.
+6. One transaction (timeout 120 s): first look up the subject. If it already belongs to another cohort, write nothing and reject (`subject-cohort-conflict`). A subject never moves between cohorts. Otherwise upsert the subject with its sex, birth year and death year and insert with `createMany`, so a full Synthea patient with thousands of rows fits.
 7. Report: `{ inserted, skipped, unresolved, nonNumeric, alreadyIngested, rejected? }` (Zod).
 
 ## Cohorts and scope
@@ -62,13 +73,13 @@ The Data page and the Body twin's Demo lab values read through the synthetic dis
 
 The chat stays strict. The query tools and `show_view` use `scope.ts`, which in personal mode refuses every synthetic subject; the chat tools never import the display scope. `synthetic-display.test.ts` checks both sides.
 
-- **Overview**: per cohort, subjects, numeric and text observations, distinct LOINC codes and the years covered; the most common codes with their units as a share of subjects; observations per year; and coverage (how many codes reach how many subjects, the codes at least 80% have and the sparse ones under 10%). Codes stored in more than one unit are listed.
+- **Overview**: per cohort, subjects, numeric and text observations, distinct LOINC codes and the years covered; subjects by sex and 10-year age band, with counts (`sex-age-split.ts`; ages are the age reached in the year of the cohort's latest reading, or in the year of death, from the birth year only, so they can be a year high; subjects with no stored facts are counted as not stored); the most common codes with their units as a share of subjects; observations per year; and coverage (how many codes reach how many subjects, the codes at least 80% have and the sparse ones under 10%). Codes stored in more than one unit are listed.
 - **Subjects**: subject_refs with observation and code counts, first and last day; search, sort and pages are URL parameters. A subject page has one chart per code and unit (units are never converted) and a table of latest values, readings, days with data, first and last day.
 - **Audit**: every read writes an audit row, refusals and failed reads included: `data-explorer.cohort.overview` and `data-explorer.cohort.subjects` with no subject_ref, `data-explorer.subject.observations` with the subject_ref and the rows read. The overview's `row_count` is the number of observations its counts summarise, not rows returned. A cohort off the allowlist is audited as `SUBJECT_SCOPE_VIOLATION` with 0 rows. A subject with more than 50,000 numeric rows is refused (`ROW_CAP_EXCEEDED`, 0 rows) rather than cut, since a cut read would lose the newest values.
 - **Sign-in**: with sign-in on, every tab, Training data included, needs a signed-in actor.
 - The cohort summaries are fixed `$queryRaw` statements with the cohort id bound (Prisma `groupBy` has no distinct-subjects count); the subject read is a `findMany`. They are the first `$queryRaw` outside vector search (`docs/query-layer.md`).
 - A chart draws at most 1,000 readings of a series: the lowest and highest of each stretch, exact values. The table counts every reading.
-- Sex, birth year and death are not stored, so the page has no split by them.
+- The sex and age split is one Prisma `groupBy` over `sex`, `birth_year` and `death_year` for the cohort's `is_synthetic` subjects; it is part of the overview read and its audit row. A cohort ingested before the columns existed shows the not-stored row and how to fill it in.
 
 ## warehouse:ingest
 

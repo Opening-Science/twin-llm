@@ -5,6 +5,7 @@ import { database } from "@/infrastructure/database";
 import { bundleSha } from "./bundle-sha";
 import { emptyReport, ingestReportSchema, type IngestReport } from "./ingest-report";
 import { mapObservations, WAREHOUSE_SOURCE } from "./map-observation";
+import { subjectFactsFrom } from "./subject-facts";
 import { isSyntheaBundle } from "./synthea-marker";
 
 const UNRESOLVED_RULE = "ot-reference-unresolved-urn";
@@ -88,8 +89,17 @@ export const ingestBundle = async (
   }
 
   const sha = bundleSha(bundle);
+  const facts = subjectFactsFrom(bundle);
   const existing = await database().bundle.findUnique({ where: { sha } });
   if (existing) {
+    // A re-run backfills the subject's facts (#4) and writes nothing else.
+    const knownRef = patientIdFrom(bundle);
+    if (knownRef && Object.keys(facts).length > 0) {
+      await database().subject.updateMany({
+        where: { subjectRef: knownRef, cohortId: existing.cohortId, isSynthetic: true },
+        data: facts,
+      });
+    }
     return emptyReport({ skipped: await countStoredRows(sha), alreadyIngested: true });
   }
 
@@ -155,8 +165,8 @@ export const ingestBundle = async (
       if (known && known.cohortId !== cohortId) return "cohort-conflict" as const;
       await tx.subject.upsert({
         where: { subjectRef },
-        create: { subjectRef, isSynthetic: true, cohortId },
-        update: {},
+        create: { subjectRef, isSynthetic: true, cohortId, ...facts },
+        update: facts,
       });
       await tx.bundle.create({
         data: { sha, cohortId, syntheaVersion },

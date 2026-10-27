@@ -13,7 +13,7 @@
     "content_sha256": "f4941fab7a56e17f9dd66b6b6e0fbed379dab8c564c6024831c5fd4aa0ba09eb"
   },
   "open_twin_sha": "a9e126c952c91e19e064a962dda7d815a43564e5",
-  "questions_sha256": "5385897e1a885157311a3818556540746d5bc3a70357d6b8a4a48f4f8c0714c1",
+  "questions_sha256": "415aac116877e215b97b028751a867103954847c21547fd95f8eda407be4b478",
   "actor": "eval-answer-key",
   "generated_on": "2026-10-27",
   "entries": {
@@ -2435,6 +2435,23 @@
         "n": 19,
         "windows": [{ "start": "2012-01-01T00:00:00Z", "end": "2020-12-31T23:59:59Z" }],
         "refusal": null
+      },
+      {
+        "name": "range_high",
+        "tool": "range_position",
+        "args": {
+          "subject_ref": "46ee9d82-b52c-856d-069b-5064ff052225",
+          "loinc": "2093-3",
+          "start": "2012-01-01T00:00:00Z",
+          "end": "2020-12-31T23:59:59Z",
+          "pick": "latest"
+        },
+        "path": "range.high",
+        "value": 190,
+        "unit": "mg/dL",
+        "n": 19,
+        "windows": [{ "start": "2012-01-01T00:00:00Z", "end": "2020-12-31T23:59:59Z" }],
+        "refusal": null
       }
     ],
     "Q-S6-18": [
@@ -2564,6 +2581,42 @@
         "n": 0,
         "windows": [],
         "refusal": "UNSUPPORTED_CONVERSION"
+      }
+    ],
+    "Q-S1-25": [
+      {
+        "name": "value",
+        "tool": "range_position",
+        "args": {
+          "subject_ref": "62f60bdb-cc5c-8305-b98b-f2b229a55eca",
+          "loinc": "2085-9",
+          "start": "2016-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z",
+          "pick": "latest"
+        },
+        "path": "value",
+        "value": 47.45,
+        "unit": "mg/dL",
+        "n": 23,
+        "windows": [{ "start": "2016-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "range_low",
+        "tool": "range_position",
+        "args": {
+          "subject_ref": "62f60bdb-cc5c-8305-b98b-f2b229a55eca",
+          "loinc": "2085-9",
+          "start": "2016-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z",
+          "pick": "latest"
+        },
+        "path": "range.low",
+        "value": 45,
+        "unit": "mg/dL",
+        "n": 23,
+        "windows": [{ "start": "2016-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
       }
     ]
   }
