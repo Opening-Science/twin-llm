@@ -11,7 +11,7 @@ describe("titleFor", () => {
 
   test("another thread, or another page, gets nothing", () => {
     expect(titleFor(published, "/t/b7d2e0")).toBeUndefined();
-    expect(titleFor(published, "/connectors")).toBeUndefined();
+    expect(titleFor(published, "/customize/connectors")).toBeUndefined();
     expect(titleFor(published, "/t/f3a9c1/extra")).toBeUndefined();
   });
 

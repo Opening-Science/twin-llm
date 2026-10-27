@@ -376,9 +376,9 @@ export const WearablesScreen = ({
         : googleHealthStatus.connected;
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-4 py-10 sm:px-6">
-      <h1 className="text-display">Connectors</h1>
-      <p className="text-muted-foreground mt-3 max-w-xl text-[15px] leading-relaxed">
+    <div className="w-full">
+      <h2 className="sr-only">Connectors</h2>
+      <p className="text-muted-foreground max-w-xl text-[15px] leading-relaxed">
         Link devices and home systems, pick a timeline, and read synced metrics. TwinLLM
         uses the same snapshots. Cross-source interpretation comes later — compare shows
         the numbers side by side first.

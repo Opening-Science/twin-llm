@@ -1,6 +1,6 @@
 import type { Command } from "@/features/commands/registry";
 import type { SearchItem } from "@/features/search/search-model";
-import { INCOGNITO_HREF } from "@/infrastructure/shell-links";
+import { draftHref, INCOGNITO_HREF } from "@/infrastructure/shell-links";
 
 /**
  * What the search box finds without asking the server: the app's pages, the
@@ -18,10 +18,17 @@ const PAGES: readonly (SearchItem & { kind: "page" })[] = [
   },
   {
     kind: "page",
+    id: "customize",
+    title: "Customize",
+    detail: "skills, your data, import, connectors",
+    href: "/customize",
+  },
+  {
+    kind: "page",
     id: "connectors",
-    title: "Connectors",
+    title: "Customize · Connectors",
     detail: "wearables Oura Whoop Google Health Ark genome",
-    href: "/connectors",
+    href: "/customize/connectors",
   },
   {
     kind: "page",
@@ -79,10 +86,6 @@ export const ACTIONS: readonly SearchItem[] = [
   },
 ];
 
-/** A command fills the prompt on a new chat; it never sends anything by itself. */
-export const commandHref = (name: string): string =>
-  `/?draft=${encodeURIComponent(`/${name} `)}`;
-
 export const staticItems = (commands: readonly Command[]): readonly SearchItem[] => [
   ...PAGES,
   ...commands.map((command): SearchItem => ({
@@ -90,7 +93,7 @@ export const staticItems = (commands: readonly Command[]): readonly SearchItem[]
     id: command.name,
     title: `/${command.name}`,
     detail: command.description,
-    href: commandHref(command.name),
+    href: draftHref(command.name),
   })),
   ...ACTIONS,
 ];
