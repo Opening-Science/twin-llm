@@ -24,7 +24,14 @@
  *   integers 0 to 10, by rounding or within 1 %. A
  *   model may fairly derive a number (a difference, a per-year rate), so a
  *   person decides (C1: "human check on flagged items").
+ *
+ * `unsourcedNumberCount` is reported beside the verdict and never changes it:
+ * the numbers no tool call of the turn, the question or 0 to 10 gives, by the
+ * matcher the answer column uses to link numbers (`number-sources.ts`). They
+ * are the numbers the app shows plain.
  */
+import { unsourcedNumbers } from "../../../infrastructure/number-sources";
+
 import type { KeyEntry, Question } from "../question-set";
 
 import {
@@ -52,7 +59,14 @@ import {
   turnSources,
   unsupportedNumbers,
 } from "./turn";
-import { type AnsweredLine, applies, NA, type Scorer, verdict } from "./types";
+import {
+  type AnsweredLine,
+  applies,
+  NA,
+  type ScoreInput,
+  type Scorer,
+  verdict,
+} from "./types";
 
 const subjectRefsOfTools = (values: readonly unknown[]): ReadonlySet<string> =>
   new Set(values.flatMap((value) => subjectRefsIn(JSON.stringify(value ?? null))));
@@ -216,3 +230,24 @@ export const scoreHallucination: Scorer = ({ item, keyEntries, line }) => {
     [...measure.humans, ...humans],
   );
 };
+
+/**
+ * How many numbers of the reply no tool call of the turn holds, and the
+ * question does not give; null when hallucination does not apply. Calls are
+ * named by their position, as a saved answer names them.
+ */
+export const unsourcedNumberCount = ({
+  item,
+  line,
+}: Pick<ScoreInput, "item" | "line">): number | null =>
+  applies(item, "hallucination")
+    ? unsourcedNumbers(
+        line.text ?? "",
+        line.tool_results.map((result, index) => ({
+          toolCallId: String(index + 1),
+          input: result.input,
+          output: result.output,
+        })),
+        numbersIn(item.question),
+      ).length
+    : null;

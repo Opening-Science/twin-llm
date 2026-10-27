@@ -1,18 +1,22 @@
 "use client";
 
+import { type ReactNode, useId, useMemo, useState } from "react";
+
+import type { NumberSource } from "@/infrastructure/number-sources";
 import {
   parseTwinAnswer,
   type WearableSummaries,
 } from "@/infrastructure/parse-twin-answer";
 import { UNVERIFIED_NARRATION } from "@/infrastructure/response-document/copy";
 import { STREAM_STATUS_LINES } from "@/infrastructure/response-document/stream-copy";
-import { RichText } from "@/infrastructure/rich-text";
+import { type DecorateText, RichText } from "@/infrastructure/rich-text";
 
 import { AnswerViews } from "./answer-views";
 import { ExplainabilityPanel } from "./explainability-panel";
 import { streamingView } from "./streaming-view";
 import type { ResponseState } from "./conversation";
-import { ToolCallCards } from "./tool-call-cards";
+import { numberLinkPieces, sourceCallIds, sourcesByText } from "./number-links";
+import { type ActiveNumber, ToolCallCards, toolCardTitleId } from "./tool-call-cards";
 
 const StreamingAnswer = ({
   response,
@@ -47,41 +51,84 @@ const StreamingAnswer = ({
 };
 
 /**
- * One column's answer. Its tool calls show as cards above it, live and after a
- * reload alike. While it streams, only a status line or the Answer section
- * shows (`streaming-view.ts`). Once complete, when the response
- * document says the model abstained or declined, the answer text is withheld
- * and only the panel (with its abstain or declined banner) is shown. A missing
- * or malformed document leaves the answer exactly as it streamed.
+ * A run of answer text with its sourced numbers as buttons. Each names the
+ * card(s) it came from through `aria-describedby`; pressing it opens them.
  */
-export const AnswerBody = ({
+const linkedNumbers =
+  (
+    byText: ReadonlyMap<string, readonly NumberSource[]>,
+    idPrefix: string,
+    onOpen: (text: string) => void,
+  ): DecorateText =>
+  (text, key) =>
+    numberLinkPieces(text, byText).map((piece, index): ReactNode =>
+      typeof piece === "string" ? (
+        piece
+      ) : (
+        <button
+          key={`${key}-${index}`}
+          type="button"
+          className="number-link"
+          aria-describedby={sourceCallIds(piece.sources)
+            .map((id) => toolCardTitleId(idPrefix, id))
+            .join(" ")}
+          onClick={() => onOpen(piece.text)}
+        >
+          {piece.text}
+        </button>
+      ),
+    );
+
+type AnswerBodyResponse = Pick<
+  ResponseState,
+  | "status"
+  | "text"
+  | "reasoningText"
+  | "attribution"
+  | "document"
+  | "tools"
+  | "views"
+  | "numberSources"
+> &
+  Partial<Pick<ResponseState, "id">>;
+
+const SettledAnswer = ({
   response,
   wearables,
 }: {
-  readonly response: Pick<
-    ResponseState,
-    "status" | "text" | "reasoningText" | "attribution" | "document" | "tools" | "views"
-  > &
-    Partial<Pick<ResponseState, "id">>;
+  readonly response: AnswerBodyResponse;
   readonly wearables: WearableSummaries;
 }) => {
-  if (response.status === "STREAMING") return <StreamingAnswer response={response} />;
+  const idPrefix = useId();
+  const [active, setActive] = useState<ActiveNumber | null>(null);
+  const sources = response.numberSources;
+  const byText = useMemo(() => sourcesByText(sources ?? []), [sources]);
 
   const parsed = parseTwinAnswer(response.text, wearables);
   const document = response.document ?? null;
   const withheld =
     document?.abstained === true ||
     document?.answer_class === "declined_decision_support";
+  const decorate = linkedNumbers(byText, idPrefix, (text) =>
+    setActive((was) => ({ text, key: (was?.key ?? 0) + 1 })),
+  );
 
   return (
     <div className="flex flex-col gap-3 text-[15px] leading-relaxed">
-      <ToolCallCards cards={response.tools ?? []} />
+      <ToolCallCards
+        cards={response.tools ?? []}
+        numbers={sources ?? []}
+        active={active}
+        idPrefix={idPrefix}
+      />
       {!withheld && document?.interpretation.kind === "narration" && (
         <p className="text-eyebrow">{UNVERIFIED_NARRATION}</p>
       )}
       {/* Prefer the Answer section when Twin structure is present; otherwise
           show the full reply. */}
-      {!withheld && <RichText text={parsed.answerText || response.text} />}
+      {!withheld && (
+        <RichText text={parsed.answerText || response.text} decorate={decorate} />
+      )}
       {!withheld && <AnswerViews views={response.views ?? []} answerId={response.id} />}
       {response.status === "COMPLETE" && (
         <ExplainabilityPanel
@@ -95,3 +142,28 @@ export const AnswerBody = ({
     </div>
   );
 };
+
+/**
+ * One column's answer. Its tool calls show as cards above it, live and after a
+ * reload alike. While it streams, only a status line or the Answer section
+ * shows (`streaming-view.ts`). Once complete, when the response
+ * document says the model abstained or declined, the answer text is withheld
+ * and only the panel (with its abstain or declined banner) is shown. A missing
+ * or malformed document leaves the answer exactly as it streamed.
+ *
+ * A finished answer's numbers that a tool call holds are buttons: pressing one
+ * opens its card and lists the rows that hold it (`number-links.ts`). Numbers
+ * with no source stay plain text.
+ */
+export const AnswerBody = ({
+  response,
+  wearables,
+}: {
+  readonly response: AnswerBodyResponse;
+  readonly wearables: WearableSummaries;
+}) =>
+  response.status === "STREAMING" ? (
+    <StreamingAnswer response={response} />
+  ) : (
+    <SettledAnswer response={response} wearables={wearables} />
+  );

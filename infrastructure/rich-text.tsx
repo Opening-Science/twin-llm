@@ -8,13 +8,26 @@ import { cn } from "@/infrastructure/ui";
  * CommonMark is out of scope, and so is a markdown library: every node here is
  * a React element built from plain strings, so nothing a model writes can turn
  * into HTML, and links stay `https?://` only.
+ *
+ * `decorate` may turn a run of plain text (also inside bold and italic, never
+ * inside code or a link) into nodes of its own; the answer column uses it to
+ * make sourced numbers clickable. By default text stays text.
  */
+
+/** Turns a run of plain text into nodes; `key` is unique within the answer. */
+export type DecorateText = (text: string, key: string) => ReactNode[];
+
+const plain: DecorateText = (text) => [text];
 
 /** `_x_` only at word edges, so `subject_ref` and `latest_by_loinc` keep their underscores. */
 const INLINE =
   /(\*\*([^*]+)\*\*|\*([^*]+)\*|(?<![A-Za-z0-9])_([^_]+)_(?![A-Za-z0-9])|`([^`]+)`|\[([^\]]+)\]\((https?:\/\/[^)]+)\))/g;
 
-const renderInline = (text: string, keyPrefix: string): ReactNode[] => {
+const renderInline = (
+  text: string,
+  keyPrefix: string,
+  decorate: DecorateText = plain,
+): ReactNode[] => {
   const nodes: ReactNode[] = [];
   let last = 0;
   let match: RegExpExecArray | null;
@@ -22,18 +35,18 @@ const renderInline = (text: string, keyPrefix: string): ReactNode[] => {
   const re = new RegExp(INLINE.source, "g");
 
   while ((match = re.exec(text)) !== null) {
-    if (match.index > last) {
-      nodes.push(text.slice(last, match.index));
-    }
     const key = `${keyPrefix}-${i++}`;
+    if (match.index > last) {
+      nodes.push(...decorate(text.slice(last, match.index), `${key}-t`));
+    }
     if (match[2] !== undefined) {
       nodes.push(
         <strong key={key} className="text-foreground font-medium">
-          {match[2]}
+          {decorate(match[2], `${key}-s`)}
         </strong>,
       );
     } else if (match[3] !== undefined || match[4] !== undefined) {
-      nodes.push(<em key={key}>{match[3] ?? match[4]}</em>);
+      nodes.push(<em key={key}>{decorate(match[3] ?? match[4] ?? "", `${key}-e`)}</em>);
     } else if (match[5] !== undefined) {
       nodes.push(
         <code key={key} className="bg-muted rounded px-1 py-0.5 font-mono text-[0.9em]">
@@ -56,7 +69,7 @@ const renderInline = (text: string, keyPrefix: string): ReactNode[] => {
     last = match.index + match[0].length;
   }
 
-  if (last < text.length) nodes.push(text.slice(last));
+  if (last < text.length) nodes.push(...decorate(text.slice(last), `${keyPrefix}-end`));
   return nodes;
 };
 
@@ -223,12 +236,12 @@ const HEADING_TAGS = {
 
 const TABLE_CELL = "border-border border-b px-2 py-1.5 align-top";
 
-const renderBlock = (block: Block, key: string): ReactNode => {
+const renderBlock = (block: Block, key: string, decorate: DecorateText): ReactNode => {
   switch (block.type) {
     case "p":
       return (
         <p key={key} className="whitespace-pre-wrap">
-          {renderInline(block.text, key)}
+          {renderInline(block.text, key, decorate)}
         </p>
       );
     case "ul":
@@ -243,7 +256,7 @@ const renderBlock = (block: Block, key: string): ReactNode => {
           )}
         >
           {block.items.map((item, itemIndex) => (
-            <li key={itemIndex}>{renderInline(item, `${key}-${itemIndex}`)}</li>
+            <li key={itemIndex}>{renderInline(item, `${key}-${itemIndex}`, decorate)}</li>
           ))}
         </ListTag>
       );
@@ -252,7 +265,7 @@ const renderBlock = (block: Block, key: string): ReactNode => {
       const { Tag, className } = HEADING_TAGS[block.level];
       return (
         <Tag key={key} className={cn("text-foreground font-semibold", className)}>
-          {renderInline(block.text, key)}
+          {renderInline(block.text, key, decorate)}
         </Tag>
       );
     }
@@ -266,7 +279,7 @@ const renderBlock = (block: Block, key: string): ReactNode => {
               <tr>
                 {block.header.map((cell, cellIndex) => (
                   <th key={cellIndex} className={cn(TABLE_CELL, "font-medium")}>
-                    {renderInline(cell, `${key}-h${cellIndex}`)}
+                    {renderInline(cell, `${key}-h${cellIndex}`, decorate)}
                   </th>
                 ))}
               </tr>
@@ -276,7 +289,7 @@ const renderBlock = (block: Block, key: string): ReactNode => {
                 <tr key={rowIndex}>
                   {row.map((cell, cellIndex) => (
                     <td key={cellIndex} className={TABLE_CELL}>
-                      {renderInline(cell, `${key}-${rowIndex}-${cellIndex}`)}
+                      {renderInline(cell, `${key}-${rowIndex}-${cellIndex}`, decorate)}
                     </td>
                   ))}
                 </tr>
@@ -292,7 +305,7 @@ const renderBlock = (block: Block, key: string): ReactNode => {
           className="border-border text-muted-foreground flex flex-col gap-3 border-l-2 pl-3"
         >
           {block.blocks.map((inner, innerIndex) =>
-            renderBlock(inner, `${key}-${innerIndex}`),
+            renderBlock(inner, `${key}-${innerIndex}`, decorate),
           )}
         </blockquote>
       );
@@ -302,9 +315,11 @@ const renderBlock = (block: Block, key: string): ReactNode => {
 export const RichText = ({
   text,
   className,
+  decorate = plain,
 }: {
   readonly text: string;
   readonly className?: string;
+  readonly decorate?: DecorateText;
 }) => {
   const blocks = splitBlocks(text);
 
@@ -312,7 +327,7 @@ export const RichText = ({
 
   return (
     <div className={cn("flex flex-col gap-3", className)}>
-      {blocks.map((block, index) => renderBlock(block, `b${index}`))}
+      {blocks.map((block, index) => renderBlock(block, `b${index}`, decorate))}
     </div>
   );
 };

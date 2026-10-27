@@ -26,7 +26,11 @@
 import type { ToolResultLine } from "../eval-results";
 import type { KeyEntry, Question } from "../question-set";
 
-import { blankOut, LOINC_PATTERN, numbersIn, UUID_PATTERN } from "./numbers";
+import { withConversions } from "../../../infrastructure/number-sources";
+
+import { blankOut, LOINC_PATTERN, UUID_PATTERN } from "./numbers";
+
+export { CONVERSIONS } from "../../../infrastructure/number-sources";
 
 export type MeasureName = Readonly<{
   measure: string;
@@ -197,28 +201,6 @@ export type CodedNumbers = Readonly<{
   numbers: readonly number[];
 }>;
 
-type Conversion = Readonly<{
-  units: readonly string[];
-  /** Null: any code in that unit. */
-  codes: readonly string[] | null;
-  convert: (value: number) => number;
-}>;
-
-/** Other units a reading is commonly narrated in. */
-export const CONVERSIONS: readonly Conversion[] = [
-  { units: ["kg"], codes: null, convert: (kg) => kg * 2.20462 },
-  { units: ["Cel"], codes: null, convert: (c) => (c * 9) / 5 + 32 },
-  { units: ["mm[Hg]"], codes: null, convert: (mmHg) => mmHg * 0.133322 },
-  { units: ["mg/dL"], codes: ["2339-0", "2345-7"], convert: (mg) => mg / 18.016 },
-  {
-    units: ["mg/dL"],
-    codes: ["2093-3", "18262-6", "13457-7", "2089-1", "2085-9"],
-    convert: (mg) => mg / 38.67,
-  },
-  { units: ["mg/dL"], codes: ["2571-8"], convert: (mg) => mg / 88.57 },
-  { units: ["%"], codes: ["4548-4", "17856-6"], convert: (pct) => (pct - 2.15) * 10.929 },
-];
-
 const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
@@ -231,45 +213,6 @@ const holdsCode = (value: unknown): boolean => {
 const stringField = (record: Readonly<Record<string, unknown>>, key: string) => {
   const value = record[key];
   return typeof value === "string" ? value : null;
-};
-
-/** Fields that hold a reading's value; only these are converted. */
-const VALUE_KEYS: ReadonlySet<string> = new Set([
-  "value",
-  "mean",
-  "median",
-  "min",
-  "max",
-  "fitted_first",
-  "fitted_last",
-]);
-
-const readingValues = (value: unknown): readonly number[] => {
-  if (Array.isArray(value)) return value.flatMap(readingValues);
-  if (!isRecord(value)) return [];
-  return Object.entries(value).flatMap(([key, inner]) =>
-    VALUE_KEYS.has(key) && typeof inner === "number" ? [inner] : readingValues(inner),
-  );
-};
-
-/** Every number of `value`, and its reading values in the other units `CONVERSIONS` lists. */
-const withConversions = (
-  value: unknown,
-  codes: readonly string[],
-  unit: string | null,
-): readonly number[] => {
-  const apply = CONVERSIONS.filter(
-    (conversion) =>
-      unit !== null &&
-      conversion.units.includes(unit) &&
-      (conversion.codes === null ||
-        codes.some((code) => conversion.codes?.includes(code))),
-  );
-  const readings = readingValues(value);
-  return [
-    ...numbersIn(value),
-    ...apply.flatMap((conversion) => readings.map((n) => conversion.convert(n))),
-  ];
 };
 
 const coded = (
