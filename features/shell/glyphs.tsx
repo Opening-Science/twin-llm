@@ -105,6 +105,16 @@ export const PlusGlyph = (props: GlyphProps) => (
   </Svg>
 );
 
+/** A window with a side column: show or pin the sidebar. */
+export const SidebarGlyph = (props: GlyphProps) => (
+  <Svg {...props}>
+    <>
+      <rect x="2.5" y="3.5" width="15" height="13" rx="2" />
+      <path d="M7.5 3.5v13" />
+    </>
+  </Svg>
+);
+
 /** Three lines: the menu. */
 export const MenuGlyph = (props: GlyphProps) => (
   <Svg {...props}>
