@@ -1,19 +1,25 @@
 import Link from "next/link";
 
+import { loadYourData } from "@/features/personal-data/import-routes";
+import { YourDataSection } from "@/features/personal-data/your-data-section";
+
 /**
- * Customize · Data: what you bring (imports come in the next change) and the
- * open datasets TwinLLM already holds to explore.
+ * Customize · Data: what you bring (your own imports, docs/personal-data.md)
+ * and the open datasets TwinLLM already holds to explore.
  */
+
+// Reads the person's imports on every visit (and audits it); never prerendered.
+export const dynamic = "force-dynamic";
 
 const DATASETS = [
   {
-    href: "/data",
+    href: "/customize/data/cohort",
     title: "Synthetic cohort",
     detail:
       "Synthea people with labs, vitals, conditions and medications. The evaluation set and the training conversations read it.",
   },
   {
-    href: "/data/training",
+    href: "/customize/data/cohort/training",
     title: "Training conversations",
     detail:
       "Conversations made from the synthetic cohort, with their tools and outcomes.",
@@ -25,20 +31,11 @@ const DATASETS = [
   },
 ] as const;
 
-export default function CustomizeDataPage() {
+export default async function CustomizeDataPage() {
+  const yours = await loadYourData();
   return (
     <>
-      <section aria-labelledby="your-data">
-        <h2 id="your-data" className="text-lg">
-          Yours
-        </h2>
-        <p className="text-muted-foreground mt-1 max-w-2xl text-sm leading-relaxed">
-          Bring your own records and files: FHIR bundles, lab results as CSV, an Apple
-          Health export, wearable exports, a genome VCF, or any research table you want to
-          explore. They stay on this machine. Coming in the next change; until then, link
-          a wearable under Connectors.
-        </p>
-      </section>
+      <YourDataSection data={yours} />
       <section aria-labelledby="open-data" className="mt-10">
         <h2 id="open-data" className="text-lg">
           Discover

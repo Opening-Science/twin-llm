@@ -15,6 +15,12 @@ import {
   SYNTHETIC_DATA_LABEL,
 } from "./explorer-copy";
 import { type CohortCount } from "./explorer-reads";
+import {
+  COHORT_BASE,
+  COHORT_SUBJECTS,
+  COHORT_TRAINING,
+  CUSTOMIZE_DATA,
+} from "./data-paths";
 
 /**
  * The Data page's title, its three sections and the cohort picker. All links,
@@ -25,9 +31,9 @@ import { type CohortCount } from "./explorer-reads";
 export type DataSection = "overview" | "subjects" | "training";
 
 const SECTIONS: readonly (readonly [DataSection, string, string])[] = [
-  ["overview", "Overview", "/data"],
-  ["subjects", "Subjects", "/data/subjects"],
-  ["training", "Training data", "/data/training"],
+  ["overview", "Overview", COHORT_BASE],
+  ["subjects", "Subjects", COHORT_SUBJECTS],
+  ["training", "Training data", COHORT_TRAINING],
 ];
 
 const withCohort = (path: string, cohortId: string | null) =>
@@ -41,8 +47,14 @@ export const ExplorerHeader = ({
   readonly cohortId: string | null;
 }) => (
   <header>
-    <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-      <h1 className="text-display">{DATA_TITLE}</h1>
+    <Link
+      href={CUSTOMIZE_DATA}
+      className="text-muted-foreground hover:text-foreground text-sm"
+    >
+      ← Data
+    </Link>
+    <div className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+      <h2 className="text-2xl">{DATA_TITLE}</h2>
       <StatusBadge tone="neutral">{SYNTHETIC_DATA_LABEL}</StatusBadge>
     </div>
     <p className="text-muted-foreground mt-2 max-w-2xl text-[15px] leading-relaxed">
@@ -115,5 +127,5 @@ export const NoCohortPanel = () => (
 );
 
 export const PageFrame = ({ children }: { readonly children: React.ReactNode }) => (
-  <div className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6">{children}</div>
+  <div className="w-full">{children}</div>
 );
