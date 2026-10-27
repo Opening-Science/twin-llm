@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { parseSkillFile } from "./frontmatter";
@@ -56,6 +57,40 @@ describe("skills/ in this repository", () => {
     expect(check.results.filter((result) => !result.passed)).toEqual([]);
     expect(check.skills).toContain("sleep");
     expect(check.results.filter((result) => result.skill === "sleep").length).toBe(11);
+  });
+
+  test("/trainer keeps its descriptive-only rules and the cases that hold it to them", () => {
+    const text = readFileSync(join(ROOT, "skills", "trainer", "SKILL.md"), "utf8");
+    const parsed = parseSkillFile(text);
+    if (!parsed.ok) throw new Error(parsed.error);
+    const body = parsed.value.body.replace(/\s+/g, " ");
+    [
+      "No wearable is linked for this question, so /trainer has nothing to describe; link Oura, Whoop or Google Health on the Connectors page.",
+      "/trainer describes your data and does not say whether or how to train.",
+      "/trainer does not give doses, supplements, medicines or plans.",
+      "If this concerns you, talk to a clinician.",
+      'Never write "you should", "push", "steady", "recover"',
+      "recent load compared with the previous four weeks",
+    ].forEach((rule) => expect(body).toContain(rule));
+    expect(parsed.value.fields["providers"]).toEqual(["ollama"]);
+
+    const check = checkSkills(
+      join(ROOT, "skills"),
+      readSyntheticSubjects(join(ROOT, "evaluation", "questions.v1.json")),
+    );
+    const cases = check.results
+      .filter((result) => result.skill === "trainer")
+      .map((result) => result.caseId);
+    expect(cases).toEqual(
+      expect.arrayContaining([
+        "daily-check-in-wearable",
+        "weekly-review-synthetic",
+        "no-wearable-connected",
+        "should-i-train-today",
+        "what-dose-refused",
+        "hosted-provider-refused",
+      ]),
+    );
   });
 });
 

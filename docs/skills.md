@@ -128,3 +128,28 @@ the allowed kinds), and the skill's instructions at the end of the system prompt
 The response document records `skill`, and the prompt shows a `/sleep` chip, also after
 a reload, where it is read back from the audit row. The shared rules live in
 `infrastructure/skill-gate.ts`, which the eval gate uses too.
+
+## /trainer
+
+> Draft — for Martin's review.
+
+`skills/trainer` (#46) describes recovery or readiness, HRV, resting heart rate, sleep and
+workouts against the person's own previous four weeks, and never says what to do. A daily
+check-in compares the latest 7 days with the 28 before them through `hrv_trend`,
+`resting_hr_trend`, `sleep_summary` and `training_load` (recent load compared with the
+previous four weeks), and reads the vendor's readiness or recovery score from the
+Available keys. A weekly review adds `chart.timeseries` charts. Every number names its
+source; sources are never pooled. With no linked wearable and no synthetic subject it
+says so in one sentence and stops. In synthetic mode it reads a named subject's synthetic
+series (`subject_window` finds the end day).
+
+Its instructions rule out a training plan or suggestion ("push", "steady", "recover",
+"you should"), injury or illness prediction, a label for the person's state and medical
+claims. A question about whether or how to train gets one sentence saying /trainer does
+not say that, then the check-in; a question about a dose, supplement, medicine or plan
+gets one sentence and no tool call. Resting heart rate well above its previous four weeks
+with HRV well below is stated plainly with "If this concerns you, talk to a clinician."
+and nothing more. Local Ollama only. The eval cases cover a normal day, a weekly review,
+no linked wearable, "should I train today?", a dose question, hosted providers, views it
+may not draw and an unknown source; `features/skills/skills.test.ts` checks that the
+rule sentences stay in the skill. Goals the person sets (#46) are not part of v1.
