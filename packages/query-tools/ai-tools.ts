@@ -11,6 +11,7 @@ import {
   summaryStatsInput,
   TOOL_DEFINITIONS,
   trendInput,
+  convertUnitInput,
 } from "./schemas";
 import { modelInputSchema } from "./model-schema";
 import type { QueryToolPorts } from "./ports";
@@ -25,6 +26,7 @@ import {
   runSubjectWindow,
   runSummaryStats,
   runTrend,
+  runConvertUnit,
 } from "./tools";
 
 const description = (name: (typeof TOOL_DEFINITIONS)[number]["name"]): string =>
@@ -80,5 +82,10 @@ export const createQueryTools = (scope: SessionScope, ports?: QueryToolPorts) =>
     description: description("compare_windows"),
     inputSchema: modelInputSchema(compareWindowsInput),
     execute: async (input) => runCompareWindows(scope, input, ports),
+  }),
+  convert_unit: tool({
+    description: description("convert_unit"),
+    inputSchema: modelInputSchema(convertUnitInput),
+    execute: async (input) => runConvertUnit(scope, input, ports),
   }),
 });

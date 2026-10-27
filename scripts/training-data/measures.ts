@@ -6,6 +6,10 @@
  * any other measure, so S6 scores after training measure in-distribution
  * behaviour (docs/training-data.md).
  */
+import type {
+  ConversionAnalyte,
+  ConversionUnit,
+} from "../../packages/query-tools/unit-conversions";
 
 export type MeasureSource = "wearable" | "clinical";
 
@@ -260,91 +264,51 @@ export const MIXED_UNIT_MEASURES: readonly [Measure, ...Measure[]] = [
 ];
 
 /**
- * A unit conversion the answer may do itself: only from the stored unit
- * `from` (UCUM), with a fixed factor, and the reasoning says so. `scale` and
- * `offset` give `to = value × scale + offset`.
+ * A unit a question asks for. The answer never converts by itself: when
+ * `convert_unit`'s table holds the pair (`tool`), the reply calls the tool and
+ * reports its value, formula and rounding; when it does not (`tool` null), the
+ * reply gives the value in the unit it was stored in and says no tool
+ * converts it. Only a reading stored in `from` (UCUM) is converted.
  */
 export type Conversion = Readonly<{
   measure: Measure;
   from: string;
+  /** The unit as the question names it. */
   to: string;
-  scale: number;
-  offset: number;
-  decimals: number;
-  how: string;
+  tool: Readonly<{ analyte: ConversionAnalyte; to: ConversionUnit }> | null;
 }>;
 
+const CREATININE = {
+  ...clinical("38483-4", "creatinine", 2),
+  aliases: ["serum creatinine"],
+} satisfies Measure;
+
+const viaTool = (
+  measure: Measure,
+  from: ConversionUnit,
+  analyte: ConversionAnalyte,
+  to: ConversionUnit,
+  asked: string = to,
+): Conversion => ({ measure, from, to: asked, tool: { analyte, to } });
+
+const byHand = (measure: Measure, from: string, to: string): Conversion => ({
+  measure,
+  from,
+  to,
+  tool: null,
+});
+
 export const CONVERSIONS: readonly [Conversion, ...Conversion[]] = [
-  {
-    measure: byLoinc("29463-7"),
-    from: "kg",
-    to: "lb",
-    scale: 2.20462262,
-    offset: 0,
-    decimals: 1,
-    how: "1 kg = 2.20462 lb",
-  },
-  {
-    measure: byLoinc("4548-4"),
-    from: "%",
-    to: "mmol/mol",
-    scale: 10.929,
-    offset: -2.15 * 10.929,
-    decimals: 0,
-    how: "the IFCC–NGSP master equation, mmol/mol = (% − 2.15) × 10.929",
-  },
-  {
-    measure: byLoinc("2093-3"),
-    from: "mg/dL",
-    to: "mmol/L",
-    scale: 1 / 38.67,
-    offset: 0,
-    decimals: 2,
-    how: "cholesterol mmol/L = mg/dL ÷ 38.67",
-  },
-  {
-    measure: GLUCOSE,
-    from: "mg/dL",
-    to: "mmol/L",
-    scale: 1 / 18.016,
-    offset: 0,
-    decimals: 1,
-    how: "glucose mmol/L = mg/dL ÷ 18.016",
-  },
-  {
-    measure: byLoinc("93832-4"),
-    from: "min",
-    to: "hours",
-    scale: 1 / 60,
-    offset: 0,
-    decimals: 1,
-    how: "60 min = 1 hour",
-  },
-  {
-    measure: HEIGHT,
-    from: "cm",
-    to: "inches",
-    scale: 1 / 2.54,
-    offset: 0,
-    decimals: 1,
-    how: "1 inch = 2.54 cm",
-  },
-  {
-    measure: byLoinc("8480-6"),
-    from: "mm[Hg]",
-    to: "kPa",
-    scale: 0.133322,
-    offset: 0,
-    decimals: 1,
-    how: "1 mmHg = 0.133322 kPa",
-  },
-  {
-    measure: byLoinc("8867-4"),
-    from: "/min",
-    to: "beats per hour",
-    scale: 60,
-    offset: 0,
-    decimals: 0,
-    how: "60 minutes in an hour",
-  },
+  byHand(byLoinc("29463-7"), "kg", "lb"),
+  viaTool(byLoinc("4548-4"), "%", "hba1c", "mmol/mol"),
+  viaTool(byLoinc("2093-3"), "mg/dL", "total_cholesterol", "mmol/L"),
+  viaTool(GLUCOSE, "mg/dL", "glucose", "mmol/L"),
+  byHand(byLoinc("93832-4"), "min", "hours"),
+  byHand(HEIGHT, "cm", "inches"),
+  byHand(byLoinc("8480-6"), "mm[Hg]", "kPa"),
+  byHand(byLoinc("8867-4"), "/min", "beats per hour"),
+  viaTool(LDL, "mg/dL", "ldl_cholesterol", "mmol/L"),
+  viaTool(HDL, "mg/dL", "hdl_cholesterol", "mmol/L"),
+  viaTool(TRIGLYCERIDES, "mg/dL", "triglycerides", "mmol/L"),
+  viaTool(CREATININE, "mg/dL", "creatinine", "umol/L", "µmol/L"),
 ];

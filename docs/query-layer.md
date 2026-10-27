@@ -15,6 +15,7 @@ Closed, parameterised reads over the Synthea warehouse. The model never writes S
 | `baseline_deviation`       | `subject_ref`, `loinc`, `baseline {start, end}`, `target {start, end}`   | `{ baseline { n, median, mad }, target { n, median }, robust_z, unit }`                      | 5000 per window |
 | `coverage`                 | `subject_ref`, `loinc[]`, `start`, `end`                                 | `{ days_in_window, codes: [{ n, days_with_data, coverage_ratio, longest_gap_days, unit }] }` | 5000, 20 codes  |
 | `compare_windows`          | `subject_ref`, `loinc`, `window_a {start, end}`, `window_b {start, end}` | `{ window_a, window_b }` with `n, mean, median, min, max`, `delta_b_minus_a`, `unit`         | 5000 per window |
+| `convert_unit`             | `value`, `from`, `to`, `analyte` (enums)                                 | `{ analyte, from_value, from_unit, value, unrounded, unit, formula, rounding }`              | no rows         |
 | `guideline_search`         | `query`, `k` (default 5, max 8)                                          | catalogue + `passage` (null when `cite_only`)                                                | `k` ≤ 8         |
 | `knowledge_search`         | `query`, `k` (default 5, max 8)                                          | file, title, section, `passage` (OpenTwin knowledge, `docs/knowledge.md`)                    | `k` ≤ 8         |
 
@@ -33,12 +34,32 @@ Warehouse tools use Prisma `findMany` / `aggregate` only. No `$queryRaw` in thos
 
 A statistic with no data is `null`, never 0. Counts stay 0. Refusals have a `code`:
 
-- `MIXED_UNITS` (with `loinc` and `units`): the rows for one code use more than one unit. There is no unit conversion, so nothing is averaged across units. `summary_stats` follows the same rule.
+- `MIXED_UNITS` (with `loinc` and `units`): the rows for one code use more than one unit. No tool converts rows, so nothing is averaged across units. `summary_stats` follows the same rule.
 - `ROW_CAP_EXCEEDED`: a window holds more than 5000 rows. The tool refuses rather than fit a truncated series. Exactly 5000 rows is accepted.
+- `UNSUPPORTED_CONVERSION` (with `analyte`, `from`, `to` and the `supported` pairs): `convert_unit` has no rule for that pair, or `from` equals `to`.
 
 Audit `row_count` is the number of observations read (both windows for two-window tools). Any refusal records 0, so a refused call never counts toward `sufficient_data`.
 
 A tool that throws (database down, a bad decimal) is still audited, for all nine warehouse tools: `row_count` 0 and `result` `{ "error": "query-tool-failed" }`. The error message is not stored. The error is then rethrown to the caller.
+
+## Unit conversion
+
+`convert_unit` converts one value with the exact table in `packages/query-tools/unit-conversions.ts`; the factors and their sources are in that file. Each pair is written in both directions with its own formula, so an inverse multiplies by the factor rather than dividing by a rounded reciprocal.
+
+| Analyte                        | Pair           | Formula                        | Decimals (to) |
+| ------------------------------ | -------------- | ------------------------------ | ------------- |
+| glucose                        | mg/dL ↔ mmol/L | mmol/L = mg/dL ÷ 18.016        | 1 / 0         |
+| creatinine                     | mg/dL ↔ umol/L | umol/L = mg/dL × 88.42         | 0 / 2         |
+| hba1c                          | % ↔ mmol/mol   | mmol/mol = (% − 2.15) × 10.929 | 0 / 1         |
+| total, LDL and HDL cholesterol | mg/dL ↔ mmol/L | mmol/L = mg/dL ÷ 38.67         | 2 / 0         |
+| triglycerides                  | mg/dL ↔ mmol/L | mmol/L = mg/dL ÷ 88.57         | 2 / 0         |
+| body_temperature               | Cel ↔ [degF]   | [degF] = Cel × 9/5 + 32        | 1 / 1         |
+
+- Input is closed: `value` (−1000 to 100000), `from` and `to` from one UCUM enum, `analyte` from one enum. Any other pair is `UNSUPPORTED_CONVERSION`, with the pairs the table holds for that analyte.
+- Output: `value` rounded half away from zero (`roundTo`, the display rule) to the decimals the target unit is usually reported in, `unrounded`, `unit`, `formula` and `rounding` (the rule in words).
+- It reads no rows. There is no `subject_ref`, so no scope check, no row cap and no no-rows case; it works in both data modes. Every call is still audited (`subject_ref` null, `row_count` 0), so a conversion never counts toward `sufficient_data`.
+- The same table feeds the number matcher (`CONVERSIONS` in `infrastructure/number-sources.ts`, which adds kg and mmHg) and through it the hallucination scorer, so "7.0 mmol/L" is sourced by a 126 mg/dL glucose row.
+- The system prompt says to use `convert_unit` for any conversion and never to convert in the answer text.
 
 ## Manifests
 
@@ -53,7 +74,7 @@ Models get a slim form of each input schema, built in one place (`modelJsonSchem
 
 ## MCP server
 
-`bun run mcp:serve` (`scripts/mcp-server.ts`) serves the nine warehouse tools to an MCP client over stdio, with the env from `.env.local`. The tool list is `mcpToolManifest()`, so it equals the committed snapshot; every call is parsed with the tool's zod schema and then runs the same function chat runs (`packages/query-tools/mcp-server.ts`), so scope and audit are unchanged: a call outside the synthetic cohorts returns `SUBJECT_SCOPE_VIOLATION`, every call appends one audit event with `actor` `mcp` and one `session_id` per server process, and a call that throws is audited as `query-tool-failed` and answered with a fixed error text. Invalid arguments are refused before the tool runs and are not audited. Logs go to stderr; stdout is the protocol.
+`bun run mcp:serve` (`scripts/mcp-server.ts`) serves the nine warehouse tools and `convert_unit` to an MCP client over stdio, with the env from `.env.local`. The tool list is `mcpToolManifest()`, so it equals the committed snapshot; every call is parsed with the tool's zod schema and then runs the same function chat runs (`packages/query-tools/mcp-server.ts`), so scope and audit are unchanged: a call outside the synthetic cohorts returns `SUBJECT_SCOPE_VIOLATION`, every call appends one audit event with `actor` `mcp` and one `session_id` per server process, and a call that throws is audited as `query-tool-failed` and answered with a fixed error text. Invalid arguments are refused before the tool runs and are not audited. Logs go to stderr; stdout is the protocol.
 
 Transport is stdio only. `DATA_MODE=personal` must stay that way: `assertTransportAllowedForDataMode` refuses a network transport (streamable HTTP, SSE) in personal mode, so anyone adding one has to go through that guard. In personal mode the warehouse scope is empty anyway (see "Scope").
 

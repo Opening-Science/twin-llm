@@ -28,6 +28,8 @@ import {
   withoutDates,
 } from "./narrated-numbers";
 
+import { ANALYTE_CODES, CONVERSION_TABLE } from "@/packages/query-tools/unit-conversions";
+
 type Conversion = Readonly<{
   units: readonly string[];
   /** Null: any code in that unit. */
@@ -35,19 +37,25 @@ type Conversion = Readonly<{
   convert: (value: number) => number;
 }>;
 
-/** Other units a reading is commonly narrated in. */
-export const CONVERSIONS: readonly Conversion[] = [
+/** Body measures the conversion table (`convert_unit`) does not cover. */
+const BODY_CONVERSIONS: readonly Conversion[] = [
   { units: ["kg"], codes: null, convert: (kg) => kg * 2.20462 },
-  { units: ["Cel"], codes: null, convert: (c) => (c * 9) / 5 + 32 },
   { units: ["mm[Hg]"], codes: null, convert: (mmHg) => mmHg * 0.133322 },
-  { units: ["mg/dL"], codes: ["2339-0", "2345-7"], convert: (mg) => mg / 18.016 },
-  {
-    units: ["mg/dL"],
-    codes: ["2093-3", "18262-6", "13457-7", "2089-1", "2085-9"],
-    convert: (mg) => mg / 38.67,
-  },
-  { units: ["mg/dL"], codes: ["2571-8"], convert: (mg) => mg / 88.57 },
-  { units: ["%"], codes: ["4548-4", "17856-6"], convert: (pct) => (pct - 2.15) * 10.929 },
+];
+
+/**
+ * Other units a reading is commonly narrated in: the body measures above, and
+ * every pair of the exact table `convert_unit` converts with
+ * (`packages/query-tools/unit-conversions.ts`), so the tool, this matcher and
+ * the hallucination scorer share one set of factors.
+ */
+export const CONVERSIONS: readonly Conversion[] = [
+  ...BODY_CONVERSIONS,
+  ...CONVERSION_TABLE.map((rule) => ({
+    units: [rule.from],
+    codes: ANALYTE_CODES[rule.analyte],
+    convert: rule.convert,
+  })),
 ];
 
 const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>

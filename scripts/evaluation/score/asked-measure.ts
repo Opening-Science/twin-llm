@@ -5,14 +5,18 @@
  * value of another code: asked for skin temperature, a model reads systolic
  * blood pressure (`8480-6`) and calls its value the skin temperature. Pure.
  *
- * - The asked codes are the LOINC codes in the item's `expect.values` and its
- *   answer-key entries (`args.loinc`), any code written in the question, and
- *   the codes of the measure names the question uses (`MEASURE_NAMES`). A
- *   wearable metric (readiness, recovery, skin temperature, …) has no code: a
- *   warehouse code never stands for it.
+ * - An item's `expect.measures`, when it has one, says which measures it asks
+ *   about (LOINC codes, or `MEASURE_NAMES` names for their codes) and is used
+ *   as written: nothing is inferred from the question then.
+ * - Otherwise the asked codes are the LOINC codes in the item's
+ *   `expect.values` and its answer-key entries (`args.loinc`), any code
+ *   written in the question, and the codes of the measure names the question
+ *   uses (`MEASURE_NAMES`). A wearable metric (readiness, recovery, skin
+ *   temperature, …) has no code: a warehouse code never stands for it.
  * - A tool result's numbers belong to a code when they sit in an object with a
  *   `loinc` field (a row, a trend). In a result with no such object they
- *   belong to the codes in the call's input (`summary_stats` returns no code).
+ *   belong to the codes in the call's input (`summary_stats` returns no code;
+ *   a `convert_unit` call's are its analyte's codes).
  *   Other numbers are neutral: those beside coded objects (`coverage`'s
  *   `days_in_window`), those of a refusal (its limits), and those of a call
  *   that names no code (`subject_window`, `list_subjects`, guideline search).
@@ -27,6 +31,11 @@ import type { ToolResultLine } from "../eval-results";
 import type { KeyEntry, Question } from "../question-set";
 
 import { withConversions } from "../../../infrastructure/number-sources";
+import {
+  ANALYTE_CODES,
+  CONVERSION_ANALYTES,
+  type ConversionAnalyte,
+} from "../../../packages/query-tools/unit-conversions";
 
 import { blankOut, LOINC_PATTERN, UUID_PATTERN } from "./numbers";
 
@@ -164,11 +173,36 @@ export const callYears = (result: ToolResultLine): YearSpan | null =>
     ),
   );
 
+const LOINC_ID = /^\d{1,5}-\d+$/;
+
+/** Whether an `expect.measures` entry is a LOINC code or a `MEASURE_NAMES` name. */
+export const isMeasureId = (id: string): boolean =>
+  LOINC_ID.test(id) || MEASURE_NAMES.some((name) => name.measure === id);
+
+const measureIdCodes = (id: string): readonly string[] =>
+  LOINC_ID.test(id)
+    ? [id]
+    : (MEASURE_NAMES.find((name) => name.measure === id)?.codes ?? []);
+
+/** The measures an item declares in `expect.measures`, used as written. */
+const declaredMeasure = (question: string, measures: readonly string[]): AskedMeasure => {
+  const codes = new Set(measures.flatMap(measureIdCodes));
+  const names = measures.filter((id) => !LOINC_ID.test(id));
+  const label =
+    names.length === 0
+      ? [...codes].join(", ")
+      : `${names.join(", ")} (${codes.size > 0 ? [...codes].join(", ") : "no LOINC code"})`;
+  return { label, codes, years: askedYears(question) };
+};
+
 /** The measure the question asks about, or null when it names none. */
 export const askedMeasure = (
   item: Question,
   keyEntries: readonly KeyEntry[],
 ): AskedMeasure | null => {
+  if (item.expect.measures !== undefined) {
+    return declaredMeasure(item.question, item.expect.measures);
+  }
   const named = MEASURE_NAMES.filter((name) => name.pattern.test(item.question));
   const written = [...blankOut(item.question, UUID_PATTERN).matchAll(LOINC_PATTERN)].map(
     (m) => m[0],
@@ -272,8 +306,18 @@ const holdsReadings = (value: unknown): boolean => {
   );
 };
 
+const isConversionAnalyte = (value: unknown): value is ConversionAnalyte =>
+  typeof value === "string" && (CONVERSION_ANALYTES as readonly string[]).includes(value);
+
+/** A `convert_unit` call names no LOINC; its analyte stands for its codes. */
+const analyteCodes = (result: ToolResultLine): readonly string[] => {
+  if (result.tool !== "convert_unit" || !isRecord(result.input)) return [];
+  const analyte = result.input.analyte;
+  return isConversionAnalyte(analyte) ? (ANALYTE_CODES[analyte] ?? []) : [];
+};
+
 export const measureCall = (result: ToolResultLine): MeasureCall => {
-  const inputCodes = argsLoinc(result.input);
+  const inputCodes = [...argsLoinc(result.input), ...analyteCodes(result)];
   // A refusal (`{ code: "ROW_CAP_EXCEEDED", … }`) states limits, not readings.
   const refused = isRecord(result.output) && typeof result.output.code === "string";
   const parts = coded(result.output, refused ? [] : inputCodes, null);

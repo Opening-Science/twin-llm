@@ -439,6 +439,8 @@ export const realPorts = async (today: string): Promise<ConversationPorts> => {
         return tools.runCoverage(scope, KEYED_TOOLS.coverage.parse(args));
       case "compare_windows":
         return tools.runCompareWindows(scope, KEYED_TOOLS.compare_windows.parse(args));
+      case "convert_unit":
+        return tools.runConvertUnit(scope, KEYED_TOOLS.convert_unit.parse(args));
     }
   };
   return {

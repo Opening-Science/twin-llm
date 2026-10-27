@@ -23,6 +23,7 @@ import {
   summaryStatsInput,
   TOOL_DEFINITIONS,
   trendInput,
+  convertUnitInput,
 } from "./schemas";
 import type { SessionScope } from "./scope";
 import {
@@ -35,10 +36,11 @@ import {
   runSubjectWindow,
   runSummaryStats,
   runTrend,
+  runConvertUnit,
 } from "./tools";
 
 /**
- * The nine query tools as an MCP server. The tool list is the committed
+ * The query tools as an MCP server. The tool list is the committed
  * manifest; each call is parsed with the tool's zod schema and runs the same
  * function chat runs, so scope and audit rules are unchanged. `scripts/
  * mcp-server.ts` connects it to stdio; nothing here opens a database.
@@ -93,6 +95,7 @@ export const queryToolRunners = (
   compare_windows: bind(compareWindowsInput, (input) =>
     runCompareWindows(scope, input, ports),
   ),
+  convert_unit: bind(convertUnitInput, (input) => runConvertUnit(scope, input, ports)),
 });
 
 export const QUERY_MCP_SERVER_INFO = {

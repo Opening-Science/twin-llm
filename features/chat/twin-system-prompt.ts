@@ -150,6 +150,16 @@ const viewSection = (offered: (tool: string) => boolean): readonly string[] =>
       ]
     : [];
 
+/** One line on units, when this request carries `convert_unit` (either data mode). */
+const unitSection = (offered: (tool: string) => boolean): readonly string[] =>
+  offered("convert_unit")
+    ? [
+        "## Units",
+        `Use ${queryTool("convert_unit")} for any unit conversion; never convert a number in the answer text. If it refuses a pair, give the value in the unit it came in.`,
+        "",
+      ]
+    : [];
+
 /**
  * Only when this request carries the genome tools, which only a personal turn
  * on a fully local setup ever does. Absent `offeredTools` means none here:
@@ -263,6 +273,7 @@ export const buildTwinSystemPrompt = (params: {
     "What is unknown, what would change the conclusion, and research caveats.",
     "",
     ...viewSection((tool) => params.offeredTools?.has(tool) ?? true),
+    ...unitSection((tool) => params.offeredTools?.has(tool) ?? true),
     ...genomeSection(params.offeredTools),
     ...syntheticCohortSection(
       params.mode,

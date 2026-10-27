@@ -326,6 +326,50 @@
   {
     "type": "function",
     "function": {
+      "name": "convert_unit",
+      "description": "Convert one value of glucose, creatinine, HbA1c, total/LDL/HDL cholesterol, triglycerides or body temperature between units with a fixed table: value rounded half away from zero, unrounded, unit, the formula used and the rounding rule. Reads no rows. A pair the table does not hold is refused with UNSUPPORTED_CONVERSION and the pairs it does hold.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "number",
+            "minimum": -1000,
+            "maximum": 100000,
+            "description": "The value to convert"
+          },
+          "from": {
+            "type": "string",
+            "enum": ["mg/dL", "mmol/L", "umol/L", "%", "mmol/mol", "Cel", "[degF]"],
+            "description": "UCUM unit of value"
+          },
+          "to": {
+            "type": "string",
+            "enum": ["mg/dL", "mmol/L", "umol/L", "%", "mmol/mol", "Cel", "[degF]"],
+            "description": "UCUM unit to convert to"
+          },
+          "analyte": {
+            "type": "string",
+            "enum": [
+              "glucose",
+              "creatinine",
+              "hba1c",
+              "total_cholesterol",
+              "ldl_cholesterol",
+              "hdl_cholesterol",
+              "triglycerides",
+              "body_temperature"
+            ],
+            "description": "What was measured"
+          }
+        },
+        "required": ["value", "from", "to", "analyte"],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
       "name": "show_view",
       "description": "Show a chart of one measure in the answer. The server reads the rows itself and draws every point; the result says how many readings it drew. A LOINC code needs subject (a synthetic subject_ref); a wearable key reads the user's synced data. Never write data points yourself.",
       "parameters": {

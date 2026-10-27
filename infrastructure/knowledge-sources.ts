@@ -61,6 +61,7 @@ export const COHORT_ANALYTICS_TOOLS = [
   "baseline_deviation",
   "coverage",
   "compare_windows",
+  "convert_unit",
 ] as const satisfies readonly QueryToolName[];
 
 export const KNOWLEDGE_SOURCE_GROUPS: readonly KnowledgeSourceGroup[] = [
@@ -98,7 +99,7 @@ export const KNOWLEDGE_SOURCE_GROUPS: readonly KnowledgeSourceGroup[] = [
         id: "cohort-analytics",
         label: "Trends and baselines",
         description:
-          "Trend, baseline deviation, coverage and window comparisons. Needs Subjects and observations on.",
+          "Trend, baseline deviation, coverage, window comparisons and unit conversions. Needs Subjects and observations on.",
         tools: COHORT_ANALYTICS_TOOLS,
         requires: "cohort-records",
       },

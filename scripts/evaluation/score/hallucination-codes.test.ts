@@ -302,6 +302,47 @@ describe("askedMeasure and askedYears", () => {
     );
   });
 
+  test("expect.measures, when present, is used as written", () => {
+    const base = item(
+      `Show the HbA1c and LOINC 99999-9 for subject ${SUBJECT_A} in 2025.`,
+    );
+    const declared: Question = {
+      ...base,
+      expect: { ...base.expect, measures: ["2339-0", "skin temperature"] },
+    };
+    // Neither the HbA1c named in the question nor the key's eGFR code counts now.
+    expect(askedMeasure(declared, EGFR_KEY)).toEqual({
+      label: "skin temperature (2339-0)",
+      codes: new Set(["2339-0"]),
+      years: { from: 2025, to: 2025 },
+    });
+    const noCode: Question = {
+      ...base,
+      expect: { ...base.expect, measures: ["readiness"] },
+    };
+    expect(askedMeasure(noCode, [])?.label).toBe("readiness (no LOINC code)");
+  });
+
+  test("a convert_unit call's numbers belong to its analyte's codes", () => {
+    const call = measureCall(
+      toolResult(
+        "convert_unit",
+        { value: 126, from: "mg/dL", to: "mmol/L", analyte: "glucose" },
+        { analyte: "glucose", from_value: 126, value: 7, unit: "mmol/L" },
+      ),
+    );
+    expect(call.codes).toEqual(["2339-0", "2345-7"]);
+    expect(call.returnedReadings).toBe(false);
+    const refused = measureCall(
+      toolResult(
+        "convert_unit",
+        { value: 6.5, from: "%", to: "mmol/L", analyte: "hba1c" },
+        { code: "UNSUPPORTED_CONVERSION", analyte: "hba1c" },
+      ),
+    );
+    expect(refused.parts.every((part) => part.codes.length === 0)).toBe(true);
+  });
+
   test("years come from windows, not from a guideline's year", () => {
     expect(askedYears("Compare eGFR in 2004–2008 with 2009–2013.")).toEqual({
       from: 2004,

@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { CONVERSION_ANALYTES, CONVERSION_UNITS } from "./unit-conversions";
+
 export const loincSchema = z
   .string()
   .regex(/^\d{1,5}-\d+$/)
@@ -125,6 +127,18 @@ export const compareWindowsInput = z
   .strict()
   .describe("One LOINC in two windows, and B minus A");
 
+const conversionUnit = z.enum(CONVERSION_UNITS);
+
+export const convertUnitInput = z
+  .object({
+    value: z.number().min(-1000).max(100000).describe("The value to convert"),
+    from: conversionUnit.describe("UCUM unit of value"),
+    to: conversionUnit.describe("UCUM unit to convert to"),
+    analyte: z.enum(CONVERSION_ANALYTES).describe("What was measured"),
+  })
+  .strict()
+  .describe("One value of one analyte from one unit to another, by a fixed table");
+
 export const TOOL_DEFINITIONS = [
   {
     name: "list_subjects",
@@ -177,5 +191,11 @@ export const TOOL_DEFINITIONS = [
     description:
       "n, mean, median, min, and max for one LOINC in window A and window B, and B minus A for each. Deltas are null when a window has no rows. Up to 5000 rows per window; refuses mixed units.",
     input: compareWindowsInput,
+  },
+  {
+    name: "convert_unit",
+    description:
+      "Convert one value of glucose, creatinine, HbA1c, total/LDL/HDL cholesterol, triglycerides or body temperature between units with a fixed table: value rounded half away from zero, unrounded, unit, the formula used and the rounding rule. Reads no rows. A pair the table does not hold is refused with UNSUPPORTED_CONVERSION and the pairs it does hold.",
+    input: convertUnitInput,
   },
 ] as const;

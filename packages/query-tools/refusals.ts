@@ -31,12 +31,42 @@ export const mixedUnits = (loinc: string, units: readonly string[]): MixedUnits 
   units: [...units].sort(),
 });
 
-export type ToolRefusal = SubjectScopeViolation | RowCapExceeded | MixedUnits;
+export type UnsupportedConversion = Readonly<{
+  code: "UNSUPPORTED_CONVERSION";
+  error: string;
+  analyte: string;
+  from: string;
+  to: string;
+  /** The pairs the table does hold for this analyte, "from → to". */
+  supported: readonly string[];
+}>;
+
+/** `convert_unit` converts only the pairs in its table; any other pair is refused, never guessed. */
+export const unsupportedConversion = (
+  analyte: string,
+  from: string,
+  to: string,
+  supported: readonly string[],
+): UnsupportedConversion => ({
+  code: "UNSUPPORTED_CONVERSION",
+  error:
+    from === to
+      ? "from and to are the same unit; there is nothing to convert"
+      : "the conversion table has no factor for this analyte between these units",
+  analyte,
+  from,
+  to,
+  supported: [...supported],
+});
+
+export type ToolRefusal =
+  SubjectScopeViolation | RowCapExceeded | MixedUnits | UnsupportedConversion;
 
 const REFUSAL_CODES: readonly string[] = [
   SUBJECT_SCOPE_VIOLATION.code,
   ROW_CAP_EXCEEDED.code,
   "MIXED_UNITS",
+  "UNSUPPORTED_CONVERSION",
 ];
 
 export const isToolRefusal = (value: unknown): value is ToolRefusal =>

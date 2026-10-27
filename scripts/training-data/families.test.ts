@@ -11,6 +11,7 @@ import { type Draft, draftsFor, type Family, FAMILIES } from "./families";
 import { changeDecimals, formatChange, formatShare, formatValue } from "./format";
 import {
   ABSENT_MEASURES,
+  CONVERSIONS,
   MEASURES,
   MIXED_UNIT_MEASURES,
   NEAR_MISSES,
@@ -18,6 +19,7 @@ import {
   WEARABLE_KEYS,
 } from "./measures";
 import { addTypo, ask, askDay, askPeriod, STYLES, TEMPLATES } from "./questions";
+import { unitConversion } from "./unit-families";
 
 /** A stream that repeats the given values in order. */
 const cycle = (values: readonly number[]) => {
@@ -452,19 +454,56 @@ describe("unit families", () => {
     expect(list).toEqual([]);
   });
 
-  test("a conversion uses the stored unit and names the factor", async () => {
+  test("a conversion in the table calls convert_unit with the stored value", async () => {
     const { list } = await drafts("s-a", 0.15, ["unit_conversion"]);
     const draft = byFamily(list, "unit_conversion");
     expect(draft.question).toBe(
       "What is the latest HbA1c for subject s-a, expressed in mmol/mol?",
     );
     expect(draft.outcome).toBe("converted");
+    // (6.1 − 2.15) × 10.929 = 43.16955 → 43.
+    expect(draft.calls.map((call) => [call.name, call.args])).toEqual([
+      ["latest_by_loinc", { subject_ref: "s-a", loinc: ["4548-4"] }],
+      ["convert_unit", { value: 6.1, from: "%", to: "mmol/mol", analyte: "hba1c" }],
+    ]);
     if (draft.reply.kind !== "sections") throw new Error("expected sections");
     expect(draft.reply.sections.reasoning).toBe(
-      "I called `latest_by_loinc` for subject s-a, HbA1c (LOINC 4548-4). It returned one row: 6.1% on 15 Mar 2026. I converted it to mmol/mol with the IFCC–NGSP master equation, mmol/mol = (% − 2.15) × 10.929.",
+      "I called `latest_by_loinc` for subject s-a, HbA1c (LOINC 4548-4). It returned one row: 6.1% on 15 Mar 2026. I called `convert_unit` for HbA1c from % to mmol/mol. It used mmol/mol = (% − 2.15) × 10.929 and returned 43 mmol/mol, rounded half away from zero to 0 decimals.",
     );
     expect(draft.reply.sections.answer).toBe(
       "The latest HbA1c for subject s-a is 43 mmol/mol (6.1% as stored), recorded on 15 Mar 2026.",
+    );
+  });
+
+  test("a pair outside the table is reported in the stored unit, not converted by hand", async () => {
+    const weight = CONVERSIONS.find((item) => item.to === "lb");
+    if (weight === undefined) throw new Error("expected the kg → lb pair");
+    const tools = fakeTools({
+      "s-w": [
+        {
+          loinc: "29463-7",
+          value: 80.24,
+          unitUcum: "kg",
+          effectiveAt: new Date("2026-02-01T09:00:00Z"),
+        },
+      ],
+    });
+    const draft = await unitConversion(
+      {
+        subjectRef: "s-w",
+        random: () => 0,
+        anchorDay: "2026-10-01",
+        outsideRef: "outside-1",
+        hasWearables: false,
+        run: tools.run,
+      },
+      [weight],
+    );
+    expect(draft.outcome).toBe("not_converted");
+    expect(tools.calls.map((call) => call.name)).toEqual(["latest_by_loinc"]);
+    if (draft.reply.kind !== "sections") throw new Error("expected sections");
+    expect(draft.reply.sections.answer).toBe(
+      "The latest body weight for subject s-w is 80.2 kg, recorded on 1 Feb 2026. I give it in the unit it was stored in, kg, because no tool here converts it to lb.",
     );
   });
 });

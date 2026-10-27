@@ -46,6 +46,7 @@ describe("knowledge source preferences", () => {
     expect([...disabledToolNames(["cohort-analytics", "gbd"])].sort()).toEqual([
       "baseline_deviation",
       "compare_windows",
+      "convert_unit",
       "coverage",
       "gbd_population",
       "trend",
@@ -111,6 +112,7 @@ describe("knowledge source preferences", () => {
     expect([...disabledToolNames(["cohort-records"])].sort()).toEqual([
       "baseline_deviation",
       "compare_windows",
+      "convert_unit",
       "coverage",
       "latest_by_loinc",
       "list_subjects",

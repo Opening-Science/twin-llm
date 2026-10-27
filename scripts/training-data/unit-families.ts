@@ -1,8 +1,9 @@
 /**
  * Families about units: MIXED_UNITS refusals from the analytics tools, and
- * conversions of a latest value into the unit the question asks for. A
- * conversion is done here with a fixed factor from `measures.ts`, only from
- * the stored unit it was written for, and the reasoning names the factor.
+ * a latest value asked for in another unit. The answer never converts by
+ * itself: a pair `convert_unit`'s table holds is converted by that tool (only
+ * from the stored unit it was written for) and the reply gives the tool's
+ * value, formula and rounding; any other pair is reported in the stored unit.
  */
 import { pick } from "../synthetic-wearables/random";
 
@@ -27,6 +28,10 @@ import { formatNumber } from "../../infrastructure/format-measure";
 import { type Conversion, CONVERSIONS, MIXED_UNIT_MEASURES } from "./measures";
 import { ask } from "./questions";
 import { isToolRefusal } from "../../packages/query-tools/refusals";
+import {
+  findConversion,
+  isConversionUnit,
+} from "../../packages/query-tools/unit-conversions";
 
 /**
  * A mixed-unit question, only for a subject whose records really hold one of
@@ -53,10 +58,7 @@ export const unitMismatch = async (context: FamilyContext): Promise<Draft | null
   return build(context, measure, "unit_mismatch");
 };
 
-const convert = (conversion: Conversion, value: number): number =>
-  value * conversion.scale + conversion.offset;
-
-/** The latest value in the unit the question names, converted from the stored unit. */
+/** The latest value in the unit the question names, converted by `convert_unit` when its table holds the pair. */
 export const unitConversion = async (
   context: FamilyContext,
   pool: readonly [Conversion, ...Conversion[]],
@@ -108,14 +110,50 @@ export const unitConversion = async (
       ),
     };
   }
-  const converted = `${formatNumber(convert(conversion, value), conversion.decimals)} ${conversion.to}`;
+  const tool = conversion.tool;
+  const rule =
+    tool === null || !isConversionUnit(unit)
+      ? null
+      : findConversion(tool.analyte, unit, tool.to);
+  if (tool === null || rule === null) {
+    return {
+      ...base,
+      outcome: "not_converted",
+      reply: sections(
+        `${read} \`convert_unit\` has no conversion for ${measure.label} to ${conversion.to}, and I do not convert numbers by hand.`,
+        `The latest ${measure.label} for subject ${context.subjectRef} is ${shown}, recorded on ${at}. I give it in the unit it was stored in, ${unitText(unit)}, because no tool here converts it to ${conversion.to}.`,
+        `A conversion done in the text could not be checked against a tool result. ${SYNTHETIC_NOTE}`,
+      ),
+    };
+  }
+  const convertArgs = { value, from: unit, to: tool.to, analyte: tool.analyte };
+  const converted = await context.run("convert_unit", convertArgs);
+  const calls: readonly ToolCall[] = [
+    ...base.calls,
+    { name: "convert_unit", args: convertArgs, result: converted },
+  ];
+  const convertedValue = num(converted, "value");
+  if (isToolRefusal(converted) || convertedValue === null) {
+    return {
+      ...base,
+      calls,
+      outcome: "not_converted",
+      reply: sections(
+        `${read} I called \`convert_unit\` to convert it to ${conversion.to}; it refused, so there is no converted value.`,
+        `The latest ${measure.label} for subject ${context.subjectRef} is ${shown}, recorded on ${at}, in the unit it was stored in.`,
+        `I do not convert numbers by hand. ${SYNTHETIC_NOTE}`,
+      ),
+    };
+  }
+  const shownConverted = `${formatNumber(convertedValue, rule.decimals)} ${conversion.to}`;
   return {
     ...base,
+    calls,
     outcome: "converted",
     reply: sections(
-      `${read} I converted it to ${conversion.to} with ${conversion.how}.`,
-      `The latest ${measure.label} for subject ${context.subjectRef} is ${converted} (${shown} as stored), recorded on ${at}.`,
-      `The record stores ${measure.label} in ${unitText(conversion.from)}; the value in ${conversion.to} is arithmetic on that reading and is rounded. One reading says nothing about a pattern. ${SYNTHETIC_NOTE}`,
+      `${read} I called \`convert_unit\` for ${measure.label} from ${unitText(unit)} to ${conversion.to}. It used ${str(converted, "formula") ?? rule.formula} and returned ${shownConverted}, rounded ${str(converted, "rounding") ?? ""}.`,
+      `The latest ${measure.label} for subject ${context.subjectRef} is ${shownConverted} (${shown} as stored), recorded on ${at}.`,
+      `The record stores ${measure.label} in ${unitText(unit)}; the value in ${conversion.to} is the tool's arithmetic on that reading and is rounded. One reading says nothing about a pattern. ${SYNTHETIC_NOTE}`,
     ),
   };
 };

@@ -179,12 +179,34 @@ describe("answer-key.v1.json", () => {
       )
       .sort();
     expect(refusals).toEqual([
+      "Q-S1-17 UNSUPPORTED_CONVERSION",
       "Q-S6-03 SUBJECT_SCOPE_VIOLATION",
       "Q-S6-09 MIXED_UNITS",
       "Q-S6-10 MIXED_UNITS",
       "Q-S6-11 MIXED_UNITS",
       "Q-S6-17 SUBJECT_SCOPE_VIOLATION",
     ]);
+  });
+
+  test("convert-unit items convert the value the key read, and name their measures", () => {
+    // The convert_unit args carry the latest value by hand; a cohort or subject
+    // change that moves it must fail here, not pass with a stale conversion.
+    const tagged = items.filter((item) => item.tags?.includes("convert-unit"));
+    expect(tagged.map((item) => item.id)).toEqual(["Q-S1-15", "Q-S1-16", "Q-S1-17"]);
+    const stale = tagged.filter((item) => {
+      const read = key.entries[item.id]?.find(
+        (entry) => entry.tool === "latest_by_loinc",
+      );
+      const converted = (item.expect.values ?? []).find(
+        (spec) => spec.tool === "convert_unit",
+      );
+      return (
+        item.expect.measures === undefined ||
+        read === undefined ||
+        converted?.args.value !== read.value
+      );
+    });
+    expect(stale.map((item) => item.id)).toEqual([]);
   });
 
   test("only the absent-code probe is keyed as null", () => {

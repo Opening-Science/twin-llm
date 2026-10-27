@@ -15,6 +15,8 @@ import {
   type MixedUnits,
   ROW_CAP_EXCEEDED,
   type ToolRefusal,
+  unsupportedConversion,
+  type UnsupportedConversion,
 } from "./refusals";
 import {
   cohortInScope,
@@ -33,6 +35,7 @@ import type {
   subjectWindowInput,
   summaryStatsInput,
   trendInput,
+  convertUnitInput,
 } from "./schemas";
 import { windowEndDate, windowStartDate } from "./schemas";
 import {
@@ -46,6 +49,7 @@ import {
   olsSlopePerDay,
   robustZ,
 } from "./stats";
+import { applyConversion, findConversion, supportedPairs } from "./unit-conversions";
 import type { z } from "zod";
 
 type ListSubjectsInput = z.infer<typeof listSubjectsInput>;
@@ -702,5 +706,62 @@ export const runWearableSeries = (
       };
     },
     (result) => result.n,
+    ports,
+  );
+
+type ConvertUnitInput = z.infer<typeof convertUnitInput>;
+
+export type ConvertUnitResult = Readonly<{
+  analyte: ConvertUnitInput["analyte"];
+  from_value: number;
+  from_unit: ConvertUnitInput["from"];
+  /** Rounded half away from zero, as `rounding` states. */
+  value: number;
+  unrounded: number;
+  unit: ConvertUnitInput["to"];
+  formula: string;
+  rounding: string;
+}>;
+
+/**
+ * `convert_unit`: one value through the exact table in `unit-conversions.ts`.
+ * It reads no rows, so there is no subject to scope, no row cap and no
+ * no-rows case: the call is audited like any tool (subject_ref null,
+ * row_count 0, so it never counts toward `sufficient_data`), and a pair the
+ * table does not hold is refused with `UNSUPPORTED_CONVERSION`.
+ */
+export const runConvertUnit = (
+  scope: SessionScope,
+  input: ConvertUnitInput,
+  ports: QueryToolPorts = defaultQueryToolPorts(),
+): Promise<ConvertUnitResult | UnsupportedConversion> =>
+  audited<ConvertUnitResult | UnsupportedConversion>(
+    scope,
+    "convert_unit",
+    input,
+    null,
+    async () => {
+      const rule = findConversion(input.analyte, input.from, input.to);
+      if (rule === null) {
+        return unsupportedConversion(
+          input.analyte,
+          input.from,
+          input.to,
+          supportedPairs(input.analyte),
+        );
+      }
+      const converted = applyConversion(rule, input.value);
+      return {
+        analyte: input.analyte,
+        from_value: input.value,
+        from_unit: input.from,
+        value: converted.value,
+        unrounded: converted.unrounded,
+        unit: input.to,
+        formula: converted.formula,
+        rounding: converted.rounding,
+      };
+    },
+    () => 0,
     ports,
   );
