@@ -48,6 +48,7 @@ const TITLES: Readonly<Record<string, string>> = {
   cohort_position: "Placed a value among the synthetic cohort",
   conditions_timeline: "Listed recorded conditions",
   medications_timeline: "Listed recorded medication requests",
+  values_around_event: "Compared values before and after an event",
   show_view: "Showed a view",
   list_views: "Listed this thread's views",
   open_view: "Reopened a view",

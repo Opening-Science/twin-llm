@@ -223,3 +223,10 @@ export const cohortTooSmall = (loinc: string, n: number): CohortTooSmall => ({
   n,
   minimum: COHORT_MINIMUM,
 });
+
+/** No dated record of this code for the subject, so there is no event to look around. */
+export const noEvent = (record: ClinicalRecordKind, code: string): NoRecords => ({
+  code: "NO_ROWS",
+  error: `no ${record} with code ${code} and a recorded date is on file for this subject`,
+  record,
+});

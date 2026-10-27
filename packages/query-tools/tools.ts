@@ -22,6 +22,7 @@ import {
   type MixedUnits,
   ROW_CAP_EXCEEDED,
   type ToolRefusal,
+  noEvent,
   noRecords,
   noRows,
   recordCapExceeded,
@@ -50,6 +51,7 @@ import type {
   cohortPositionInput,
   conditionsTimelineInput,
   medicationsTimelineInput,
+  valuesAroundEventInput,
 } from "./schemas";
 import { windowEndDate, windowStartDate } from "./schemas";
 import {
@@ -65,6 +67,7 @@ import {
   latestPerSubject,
   midRankPercentile,
 } from "./stats";
+import { eventWindows, firstDated } from "./event-windows";
 import { placeReading, type RangePlacement, rangeRefusalFor } from "./range-position";
 import { applyConversion, findConversion, supportedPairs } from "./unit-conversions";
 import type { z } from "zod";
@@ -1092,5 +1095,125 @@ export const runMedicationsTimeline = (
       return { ...echo(input), ...medicationsTimeline(rows) };
     },
     (result) => ("n" in result ? result.n : 0),
+    ports,
+  );
+
+type ValuesAroundEventInput = z.infer<typeof valuesAroundEventInput>;
+
+export type ValuesAroundEventResult = Readonly<{
+  loinc: string;
+  unit: string | null;
+  event: Readonly<{
+    kind: "condition" | "medication";
+    code_system: string;
+    code: string;
+    display: string;
+    /** The first recorded onset or request of this code. */
+    at: string;
+    /** Dated records of this code, the first one included. */
+    n_records: number;
+  }>;
+  before: WindowSummary;
+  after: WindowSummary;
+  delta_after_minus_before: Readonly<{
+    mean: number | null;
+    median: number | null;
+    min: number | null;
+    max: number | null;
+  }>;
+}>;
+
+/** Every record of a subject, whatever its dates: the event is looked up, not windowed. */
+const ALL_TIME = { start: "1900-01-01T00:00:00Z", end: "2100-01-01T00:00:00Z" } as const;
+
+/**
+ * `values_around_event`: the first dated record of one condition or medication
+ * code, then the LOINC's readings in the window before it and the window from
+ * it on, summarised as `compare_windows` does. Before and after, never cause.
+ */
+export const runValuesAroundEvent = (
+  scope: SessionScope,
+  input: ValuesAroundEventInput,
+  ports: QueryToolPorts = defaultQueryToolPorts(),
+): Promise<ValuesAroundEventResult | ToolRefusal> =>
+  audited<ValuesAroundEventResult | ToolRefusal>(
+    scope,
+    "values_around_event",
+    input,
+    input.subject_ref,
+    async () => {
+      if (!(await subjectInScope(scope, input.subject_ref, ports))) {
+        return SUBJECT_SCOPE_VIOLATION;
+      }
+      const query = clinicalQuery({
+        subject_ref: input.subject_ref,
+        ...ALL_TIME,
+        code: input.event_code,
+      });
+      type EventRecord = Readonly<{
+        id: string;
+        codeSystem: string;
+        code: string;
+        display: string;
+        when: Date | null;
+      }>;
+      const records: readonly EventRecord[] =
+        input.event_kind === "condition"
+          ? (await (ports.findConditions ?? findConditionsInDatabase)(query)).map(
+              (row) => ({ ...row, when: row.onsetAt }),
+            )
+          : (
+              await (ports.findMedicationRequests ?? findMedicationRequestsInDatabase)(
+                query,
+              )
+            ).map((row) => ({ ...row, when: row.authoredAt }));
+      if (records.length > CLINICAL_ROW_CAP) return recordCapExceeded(CLINICAL_ROW_CAP);
+      const first = firstDated(records, (record) => record.when);
+      if (first === null) {
+        return noEvent(
+          input.event_kind === "condition" ? "condition" : "medication request",
+          input.event_code,
+        );
+      }
+      const windows = eventWindows(first.at, input.days_before, input.days_after);
+      const codes = [input.loinc];
+      const rowsBefore = await readWindow(
+        ports,
+        input.subject_ref,
+        codes,
+        windows.before,
+      );
+      if (isToolRefusal(rowsBefore)) return rowsBefore;
+      const rowsAfter = await readWindow(ports, input.subject_ref, codes, windows.after);
+      if (isToolRefusal(rowsAfter)) return rowsAfter;
+      if (rowsBefore.length + rowsAfter.length === 0) {
+        return noRows(input.loinc, null);
+      }
+      const units = distinctUnits([...rowsBefore, ...rowsAfter]);
+      if (units.length > 1) return mixedUnits(input.loinc, units);
+      const before = summarise(windows.before, rowsBefore);
+      const after = summarise(windows.after, rowsAfter);
+      return {
+        loinc: input.loinc,
+        unit: units[0] ?? null,
+        event: {
+          kind: input.event_kind,
+          code_system: first.codeSystem,
+          code: first.code,
+          display: first.display,
+          at: first.at.toISOString(),
+          n_records: records.filter((record) => record.when !== null).length,
+        },
+        before,
+        after,
+        delta_after_minus_before: {
+          mean: delta(before.mean, after.mean),
+          median: delta(before.median, after.median),
+          min: delta(before.min, after.min),
+          max: delta(before.max, after.max),
+        },
+      };
+    },
+    (result) => ("before" in result ? result.before.n + result.after.n : 0),
     ports,
   );

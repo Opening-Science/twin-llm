@@ -240,6 +240,34 @@ export const medicationsTimelineInput = z
   .refine(startBeforeEnd, START_BEFORE_END)
   .describe("Recorded medication requests authored in a window, oldest first");
 
+export const valuesAroundEventInput = z
+  .object({
+    subject_ref: subjectRefSchema,
+    loinc: loincSchema,
+    event_kind: z
+      .enum(["condition", "medication"])
+      .describe("condition: its first recorded onset; medication: its first request"),
+    event_code: clinicalCodeSchema.describe(
+      "The condition's SNOMED CT or ICD-10 code, or the medication's RxNorm code, as recorded",
+    ),
+    days_before: z
+      .number()
+      .int()
+      .min(1)
+      .max(365)
+      .describe("Days before the event, 1 to 365"),
+    days_after: z
+      .number()
+      .int()
+      .min(1)
+      .max(365)
+      .describe("Days from the event on, 1 to 365"),
+  })
+  .strict()
+  .describe(
+    "One LOINC's readings before and after a subject's first recorded condition or medication",
+  );
+
 export const TOOL_DEFINITIONS = [
   {
     name: "list_subjects",
@@ -322,5 +350,11 @@ export const TOOL_DEFINITIONS = [
     description:
       "List one subject's recorded medication requests authored in the window, oldest first: code_system, code (RxNorm), display, authored_at, status and intent as recorded, and dosage_as_recorded, the record's own dosage text verbatim (null when the record has none), with n, n_codes, by_status and n_with_dosage_text. Optional status and code narrow the list. Reads up to 1000 records; refuses more (ROW_CAP_EXCEEDED) and none (NO_ROWS, with the reason). Lists what is recorded; never a dose, a change or advice of its own.",
     input: medicationsTimelineInput,
+  },
+  {
+    name: "values_around_event",
+    description:
+      "One subject's readings of one LOINC in the days_before days before and the days_after days from the first recorded onset of a condition (event_kind condition) or the first request of a medication (event_kind medication), found by its code: n, mean, median, min and max on each side and after minus before. Says what was recorded before and after the date, never that the event caused a change. Refuses SUBJECT_SCOPE_VIOLATION, NO_ROWS (no dated record of that code, or no reading on either side), MIXED_UNITS and ROW_CAP_EXCEEDED.",
+    input: valuesAroundEventInput,
   },
 ] as const;

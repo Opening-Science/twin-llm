@@ -28,6 +28,7 @@ import {
   cohortPositionInput,
   conditionsTimelineInput,
   medicationsTimelineInput,
+  valuesAroundEventInput,
 } from "./schemas";
 import type { SessionScope } from "./scope";
 import {
@@ -45,6 +46,7 @@ import {
   runCohortPosition,
   runConditionsTimeline,
   runMedicationsTimeline,
+  runValuesAroundEvent,
 } from "./tools";
 
 /**
@@ -115,6 +117,9 @@ export const queryToolRunners = (
   ),
   medications_timeline: bind(medicationsTimelineInput, (input) =>
     runMedicationsTimeline(scope, input, ports),
+  ),
+  values_around_event: bind(valuesAroundEventInput, (input) =>
+    runValuesAroundEvent(scope, input, ports),
   ),
 });
 

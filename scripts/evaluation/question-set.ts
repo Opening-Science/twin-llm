@@ -22,6 +22,7 @@ import {
   cohortPositionInput,
   conditionsTimelineInput,
   medicationsTimelineInput,
+  valuesAroundEventInput,
 } from "../../packages/query-tools/schemas";
 
 import { isMeasureId } from "./score/asked-measure";
@@ -60,6 +61,7 @@ export const KEYED_TOOLS = {
   cohort_position: cohortPositionInput,
   conditions_timeline: conditionsTimelineInput,
   medications_timeline: medicationsTimelineInput,
+  values_around_event: valuesAroundEventInput,
 } as const;
 
 export type KeyedTool = keyof typeof KEYED_TOOLS;
@@ -82,6 +84,7 @@ export const AUDIT_TOOL_NAMES = [
   "cohort_position",
   "conditions_timeline",
   "medications_timeline",
+  "values_around_event",
   "guidelines.guideline_search",
   "knowledge.knowledge_search",
   "gbd.gbd_query",

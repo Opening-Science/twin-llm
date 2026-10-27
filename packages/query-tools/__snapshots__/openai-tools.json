@@ -533,6 +533,58 @@
   {
     "type": "function",
     "function": {
+      "name": "values_around_event",
+      "description": "One subject's readings of one LOINC in the days_before days before and the days_after days from the first recorded onset of a condition (event_kind condition) or the first request of a medication (event_kind medication), found by its code: n, mean, median, min and max on each side and after minus before. Says what was recorded before and after the date, never that the event caused a change. Refuses SUBJECT_SCOPE_VIOLATION, NO_ROWS (no dated record of that code, or no reading on either side), MIXED_UNITS and ROW_CAP_EXCEEDED.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "subject_ref": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Opaque subject_ref"
+          },
+          "loinc": {
+            "type": "string",
+            "description": "LOINC code"
+          },
+          "event_kind": {
+            "type": "string",
+            "enum": ["condition", "medication"],
+            "description": "condition: its first recorded onset; medication: its first request"
+          },
+          "event_code": {
+            "type": "string",
+            "description": "The condition's SNOMED CT or ICD-10 code, or the medication's RxNorm code, as recorded"
+          },
+          "days_before": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 365,
+            "description": "Days before the event, 1 to 365"
+          },
+          "days_after": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 365,
+            "description": "Days from the event on, 1 to 365"
+          }
+        },
+        "required": [
+          "subject_ref",
+          "loinc",
+          "event_kind",
+          "event_code",
+          "days_before",
+          "days_after"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
       "name": "show_view",
       "description": "Show a view of one measure in the answer. chart.timeseries draws every reading in window; chart.compare sets window against compare_with (n and mean of each); biomarker.card shows a LOINC's latest reading against its published range, with its trend; table lists the readings (first 50). The server reads the rows itself; the result says how many it read. A LOINC code needs subject (a synthetic subject_ref); a wearable key reads the user's synced data. Never write numbers for a view yourself.",
       "parameters": {

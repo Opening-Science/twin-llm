@@ -32,6 +32,7 @@ describe("openAiToolsFrom", () => {
       "cohort_position",
       "conditions_timeline",
       "medications_timeline",
+      "values_around_event",
       "show_view",
       "list_views",
       "open_view",

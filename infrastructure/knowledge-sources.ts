@@ -66,6 +66,7 @@ export const COHORT_ANALYTICS_TOOLS = [
   "range_position",
   "convert_unit",
   "cohort_position",
+  "values_around_event",
 ] as const satisfies readonly QueryToolName[];
 
 export const KNOWLEDGE_SOURCE_GROUPS: readonly KnowledgeSourceGroup[] = [
