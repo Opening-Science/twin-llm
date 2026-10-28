@@ -1,0 +1,21 @@
+{
+  "question": "Weekly review.",
+  "provider": "openrouter",
+  "dataMode": "personal",
+  "wearableContext": true,
+  "script": [
+    {
+      "tool": "hrv_trend",
+      "input": {
+        "source": "all",
+        "start": "2026-08-27",
+        "end": "2026-09-30"
+      }
+    }
+  ],
+  "expect": {
+    "calls": [],
+    "views": [],
+    "refusals": ["provider-not-allowed-by-skill"]
+  }
+}

@@ -20,7 +20,7 @@ export type ConnectFacts = Readonly<{
   whoop: ConnectorFacts;
   googleHealth: ConnectorFacts;
   bodyloop: ConnectorFacts;
-  /** `GENOME_SOURCE=ark`; the device itself is checked on the Connectors page. */
+  /** `GENOME_SOURCE=ark`; the device itself is checked under Customize · Connectors. */
   arkEnabled: boolean;
 }>;
 

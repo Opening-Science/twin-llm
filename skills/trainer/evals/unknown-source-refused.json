@@ -1,0 +1,21 @@
+{
+  "question": "What did my Garmin record this week?",
+  "dataMode": "personal",
+  "wearableContext": true,
+  "script": [
+    {
+      "tool": "training_load",
+      "input": {
+        "source": "garmin",
+        "start": "2026-08-27",
+        "end": "2026-09-30",
+        "aggregation": "week"
+      }
+    }
+  ],
+  "expect": {
+    "calls": [],
+    "views": [],
+    "refusals": ["invalid-tool-input"]
+  }
+}
