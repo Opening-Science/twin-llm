@@ -12,12 +12,14 @@ import { getLatestOuraSummary } from "@/features/oura/connection";
 import { findSkillFor } from "@/features/skills/user-skill-store";
 import { getLatestVitronicSummary } from "@/features/vitronic/connection";
 import { getLatestWhoopSummary } from "@/features/whoop/connection";
+import { runnableSkills } from "@/features/skills/load-skills";
 import { resolveActorId } from "@/infrastructure/auth-actor";
 import { findAppUserId } from "@/infrastructure/current-user";
 import { database } from "@/infrastructure/database";
 import { exoscalePersonalData, isAuthDisabled, serverEnv } from "@/infrastructure/env";
-import { fetchActiveModelCatalog } from "@/infrastructure/fetch-model-catalog";
+import { fetchChatCatalog } from "@/infrastructure/fetch-model-catalog";
 import { chatModelIsLocal } from "@/infrastructure/genome-gate";
+import { catalogAgentOf } from "@/infrastructure/model-catalog";
 import { append } from "@/packages/audit/append";
 
 /**
@@ -26,7 +28,8 @@ import { append } from "@/packages/audit/append";
  * Each selected model gets its own request, so answers stream and fail
  * independently. Before any model is called the request must: come from a
  * known person, pass abuse protection (auth on only), be well formed, name a
- * model the active provider offers, and target a turn this person owns. Every
+ * model the active provider offers (or an agent over one, `agent:<id>`), and
+ * target a turn this person owns. Every
  * refusal is a plain sentence; internal errors stay in the server log.
  */
 
@@ -102,7 +105,7 @@ export const POST = async (request: Request): Promise<Response> => {
     return refuse(400, "That request didn't look right. Try sending your prompt again.");
   }
 
-  const models = await fetchActiveModelCatalog();
+  const models = await fetchChatCatalog(runnableSkills());
   if (models === null) {
     return refuse(503, "We can't reach the model list right now. Try again in a moment.");
   }
@@ -123,7 +126,12 @@ export const POST = async (request: Request): Promise<Response> => {
     return refuse(403, "That turn isn't yours to answer.");
 
   try {
-    return await startAnswer(actorId, ownership.appUserId, call);
+    return await startAnswer(
+      actorId,
+      ownership.appUserId,
+      call,
+      catalogAgentOf(call.modelId, models),
+    );
   } catch (error) {
     console.error(
       "[chat] failed to start the model stream",

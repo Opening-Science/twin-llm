@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { type AgentOffer, AGENTS, agentIsOffered, agentModelId } from "./agents";
 import { roundTo } from "./format-measure";
 
 /**
@@ -26,7 +27,20 @@ export type CatalogModel = {
    * is only a placeholder. Such rows sort after measured ones, in list order.
    */
   readonly contextUnknown?: true;
+  /** Set on an agent's row (`withAgents`): who it is and the model it runs on. */
+  readonly agent?: CatalogAgent;
 };
+
+/** An agent as the catalog offers it, with its base model already chosen. */
+export type CatalogAgent = Readonly<{
+  /** `gp`, not the row id `agent:gp`. */
+  id: string;
+  name: string;
+  role: string;
+  skill: string | null;
+  baseModelId: string;
+  baseModelName: string;
+}>;
 
 /** Upper and lower bounds on how many models one prompt goes to. */
 export const MAX_SELECTED_MODELS = 3;
@@ -241,18 +255,79 @@ export const parseFreeModels = (payload: unknown): readonly CatalogModel[] | nul
     })
     .sort(widestFirst) ?? null;
 
+// --- agents -------------------------------------------------------------------
+
+/**
+ * The model an agent runs on: the first of its preferences the catalog
+ * offers, else the catalog's first model. Agent rows are never a base.
+ */
+export const agentBaseModel = (
+  modelPreference: readonly string[],
+  catalog: readonly CatalogModel[],
+): CatalogModel | null => {
+  const models = catalog.filter((model) => model.agent === undefined);
+  const preferred = modelPreference.flatMap((id) =>
+    models.filter((model) => model.id === id),
+  );
+  return preferred[0] ?? models[0] ?? null;
+};
+
+/**
+ * The catalog with the agents in front (#218). Each agent row copies its base
+ * model's provider and window and takes the agent's id and name, so the
+ * picker, the 1-to-3 rule and the answer columns treat it like any model.
+ * An agent with no model to run on, or one `agentIsOffered` leaves out, gets
+ * no row. Rows already marked as agents are replaced, never doubled.
+ */
+export const withAgents = (
+  catalog: readonly CatalogModel[],
+  offer: AgentOffer,
+): readonly CatalogModel[] => {
+  const models = catalog.filter((model) => model.agent === undefined);
+  const agents = AGENTS.filter((agent) => agentIsOffered(agent, offer)).flatMap(
+    (agent): CatalogModel[] => {
+      const base = agentBaseModel(agent.modelPreference, models);
+      return base === null
+        ? []
+        : [
+            {
+              ...base,
+              id: agentModelId(agent),
+              name: agent.name,
+              agent: {
+                id: agent.id,
+                name: agent.name,
+                role: agent.role,
+                skill: agent.skill,
+                baseModelId: base.id,
+                baseModelName: base.name,
+              },
+            },
+          ];
+    },
+  );
+  return [...agents, ...models];
+};
+
+/** The agent a catalog row stands for, or null for a plain model. */
+export const catalogAgentOf = (
+  modelId: string,
+  catalog: readonly Readonly<{ id: string; agent?: CatalogAgent }>[],
+): CatalogAgent | null => catalog.find((model) => model.id === modelId)?.agent ?? null;
+
 // --- selection and display ------------------------------------------------------
 
 /**
  * The models a new prompt starts with: walk the (already ordered) list and
  * take the first model of each vendor, so the opening comparison spans
  * vendors instead of three variants of one; top up from the rest when there
- * are fewer vendors than slots.
+ * are fewer vendors than slots. Agents are picked by hand, never by default.
  */
 export const defaultModelSelection = (
-  models: readonly CatalogModel[],
+  catalog: readonly CatalogModel[],
 ): readonly string[] => {
   const seenVendors = new Set<string>();
+  const models = catalog.filter((model) => model.agent === undefined);
   const [firsts, others] = models.reduce<[CatalogModel[], CatalogModel[]]>(
     ([leading, trailing], model) => {
       const isFirst = !seenVendors.has(model.providerId);

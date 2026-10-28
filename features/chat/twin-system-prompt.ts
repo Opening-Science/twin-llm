@@ -160,6 +160,11 @@ const skillSection = (skill: TurnSkill | null): readonly string[] =>
         skill.instructions,
       ];
 
+/** The agent's name and role, right under who TwinLLM is. */
+const agentLine = (
+  agent: Readonly<{ name: string; role: string }> | null,
+): readonly string[] => (agent === null ? [] : [`Agent: ${agent.name}. ${agent.role}`]);
+
 /** One line on charts, when this request carries `show_view`. */
 const viewSection = (offered: (tool: string) => boolean): readonly string[] =>
   offered(SHOW_VIEW_TOOL)
@@ -215,6 +220,8 @@ export const buildTwinSystemPrompt = (params: {
   readonly offeredTools?: ReadonlySet<string>;
   /** The skill this turn runs under, if any. */
   readonly skill?: TurnSkill | null;
+  /** The agent this turn answers as (#218): one line with its name and role. */
+  readonly agent?: Readonly<{ name: string; role: string }> | null;
 }): string => {
   const hasAny = Boolean(
     params.oura || params.whoop || params.googleHealth || params.vitronic,
@@ -276,6 +283,7 @@ export const buildTwinSystemPrompt = (params: {
 
   return [
     "You are TwinLLM, a research assistant for personalized-medicine questions.",
+    ...agentLine(params.agent ?? null),
     "You are NOT a doctor. Do not diagnose or prescribe. Include uncertainty clearly.",
     "If asked to diagnose, to pick a dose, or to start, stop or change a medicine, start your reply with REFUSE: and one plain sentence instead of the headings below.",
     "Always structure your reply with these exact markdown headings, in order:",

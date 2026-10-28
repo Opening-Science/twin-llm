@@ -62,3 +62,17 @@ export const toggleModel = (
   if (toggleLimit(selected, current.length) !== null) return current;
   return selected ? current.filter((id) => id !== modelId) : [...current, modelId];
 };
+
+export type MenuGroup = Readonly<{
+  label: "Agents" | "Models";
+  models: readonly CatalogModel[];
+}>;
+
+/** The menu's sections: agents first, then models; an empty one is left out. */
+export const menuGroups = (catalog: readonly CatalogModel[]): readonly MenuGroup[] =>
+  (
+    [
+      { label: "Agents", models: catalog.filter((model) => model.agent !== undefined) },
+      { label: "Models", models: catalog.filter((model) => model.agent === undefined) },
+    ] as const
+  ).filter((group) => group.models.length > 0);

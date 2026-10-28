@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  agentSkillUnavailable,
   isSkillRefusalCode,
   permitSkillRequest,
   skillAuditTool,
@@ -136,6 +137,25 @@ describe("skill audit rows", () => {
     });
   });
 
+  test("a skill an agent applied names the agent too (#218)", () => {
+    expect(
+      skillRunEvent(SLEEP, {
+        actor: "actor-1",
+        sessionId: "turn-1",
+        modelId: "qwen3:4b",
+        provider: "ollama",
+        agent: "sleep",
+      }).args,
+    ).toEqual({
+      skill: "sleep",
+      modelId: "qwen3:4b",
+      provider: "ollama",
+      tools: SLEEP.tools,
+      views: SLEEP.views,
+      agent: "sleep",
+    });
+  });
+
   test("the skill is read back from the row name, and only from skill rows", () => {
     expect(skillAuditTool("sleep")).toBe("skill.sleep");
     expect(skillOfAuditTool("skill.sleep")).toBe("sleep");
@@ -168,5 +188,47 @@ describe("skillSourceLabel", () => {
     expect(skillSourceLabel("cohort-records")).toBe("Subjects and observations");
     expect(skillSourceLabel("wearable-context")).toBe("Your linked wearables");
     expect(skillSourceLabel("unknown-source")).toBe("unknown-source");
+  });
+});
+
+describe("agentSkillUnavailable (#218)", () => {
+  test("names the agent and where its skill runs, keeping the code", () => {
+    expect(
+      agentSkillUnavailable(
+        "Trainer",
+        { name: "trainer", providers: ["ollama"] },
+        "provider-not-allowed-by-skill",
+      ),
+    ).toEqual({
+      code: "provider-not-allowed-by-skill",
+      error:
+        "Trainer isn't available here: its /trainer skill runs only on local Ollama.",
+    });
+  });
+
+  test("lists every provider the skill names", () => {
+    expect(
+      agentSkillUnavailable(
+        "Sleep",
+        { name: "sleep", providers: ["ollama", "exoscale"] },
+        "provider-not-allowed-by-skill",
+      ).error,
+    ).toBe(
+      "Sleep isn't available here: its /sleep skill runs only on local Ollama or Exoscale.",
+    );
+  });
+
+  test("a skill the server does not offer", () => {
+    expect(
+      agentSkillUnavailable(
+        "Sleep",
+        { name: "sleep", providers: null },
+        "skill-not-offered",
+      ),
+    ).toEqual({
+      code: "skill-not-offered",
+      error:
+        "Sleep isn't available here: its /sleep skill is not offered on this server.",
+    });
   });
 });
