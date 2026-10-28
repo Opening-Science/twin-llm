@@ -7,6 +7,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Agents (#218): the model picker lists four named agents above the models: General Practitioner, Sleep, Trainer and Genetics. A specialist is offered only where its skill could run, so a hosted provider shows only the General Practitioner. Each is a preset over a model the provider already offers and, for the specialists, a shipped skill (`/sleep`, `/trainer`, `/genome`), which applies when the prompt names no skill of its own and goes through the same skill gate and `skill.<name>` audit row. The answer column shows the agent's name, the system prompt gets one line with its role, and the audit rows name the model that ran. No schema change. See `docs/agents.md`.
 - PDF from a thread (#213): a PDF link beside Download opens the thread as a page laid out for paper with the print dialog, where "Save as PDF" keeps it. Same content as the Markdown and FHIR exports, audited as format `print`, genome threads local only. No PDF library and nothing leaves the machine.
 
 - Thread export (#44): `?format=fhir` gives a FHIR R4 DocumentReference whose attachment is the same Markdown, tagged research use only. Every export now writes an audit row (format and size, no content), and a thread that used the genome tools exports only when the app is served to this machine alone (`LOCAL_ONLY`); otherwise it is refused and audited as `genome.thread.export_refused`.

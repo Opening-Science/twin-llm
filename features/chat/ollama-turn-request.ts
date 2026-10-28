@@ -44,6 +44,8 @@ export type TurnRequestCase = Readonly<{
   wearables: WearableSummaries;
   /** The question; short, since the budget is about what comes before it. */
   question: string;
+  /** The agent the turn answers as (#218), whose role line joins the prompt. */
+  agent?: Readonly<{ name: string; role: string }> | null;
 }>;
 
 const NO_PORTS: QueryToolPorts = {
@@ -119,6 +121,7 @@ export const captureOllamaTurnRequest = async (
       offeredTools,
       mode: turn.mode,
       skill: turn.skill,
+      agent: turn.agent ?? null,
       loadAudit: async () => [],
     },
     {
