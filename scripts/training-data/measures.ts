@@ -158,12 +158,13 @@ export const ABSENT_MEASURES: readonly [Measure, ...Measure[]] = [
 
 /**
  * Measures no tool can read in this session: nothing in the cohort or the
- * wearable series carries them, or (HRV, sleep score) they are stored under a
- * local code the LOINC-only tools cannot take. The right answer calls no tool.
+ * wearable series carries them. The right answer calls no tool. HRV, the
+ * sleep score and training load left this list when `hrv_trend`,
+ * `sleep_summary` and `training_load` began to read the synthetic series.
  */
 export type NoCodeMeasure = Readonly<{
   label: string;
-  why: "not_recorded" | "local_code";
+  why: "not_recorded";
   /** A measure the cohort does have that someone might put in its place. */
   notThis: string | null;
 }>;
@@ -172,14 +173,11 @@ export const NO_CODE_MEASURES: readonly [NoCodeMeasure, ...NoCodeMeasure[]] = [
   { label: "VO2max", why: "not_recorded", notThis: "heart rate" },
   { label: "skin temperature", why: "not_recorded", notThis: "systolic blood pressure" },
   { label: "wrist temperature", why: "not_recorded", notThis: "heart rate" },
-  { label: "HRV (RMSSD)", why: "local_code", notThis: "resting heart rate" },
-  { label: "sleep score", why: "local_code", notThis: "sleep duration" },
   { label: "sleep efficiency", why: "not_recorded", notThis: "sleep duration" },
   { label: "deep sleep time", why: "not_recorded", notThis: "sleep duration" },
   { label: "REM sleep time", why: "not_recorded", notThis: "sleep duration" },
   { label: "stress score", why: "not_recorded", notThis: "resting heart rate" },
   { label: "body battery", why: "not_recorded", notThis: null },
-  { label: "training load", why: "not_recorded", notThis: "daily step count" },
   { label: "active calories", why: "not_recorded", notThis: "daily step count" },
   { label: "floors climbed", why: "not_recorded", notThis: "daily step count" },
   { label: "core body temperature", why: "not_recorded", notThis: null },

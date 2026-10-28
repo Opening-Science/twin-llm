@@ -64,7 +64,11 @@ const fakeDeps = (overrides: Partial<CohortDeps> = {}) => {
   const asked: { ref: string; loincs: readonly string[] }[] = [];
   const deps: CohortDeps = {
     resolveActorId: async () => "local",
-    listSubjectRefs: async () => ["syn-a", "syn-b"],
+    listSubjects: async () => [
+      { ref: "syn-a", sex: "female" },
+      { ref: "syn-b", sex: "unknown" },
+      { ref: "syn-c", sex: null },
+    ],
     findSubject: async (ref) => SUBJECTS[ref] ?? null,
     findValues: async (ref, loincs) => {
       asked.push({ ref, loincs });
@@ -86,17 +90,17 @@ const getValues = (deps: CohortDeps, ref: string) =>
   );
 
 describe("GET /api/biomarkers/cohort", () => {
-  test("numbers the synthetic people in order and audits the read", async () => {
+  test("numbers the synthetic people in order, with female or male sex, and audits the read", async () => {
     const { deps, audits } = fakeDeps();
     const res = await createCohortListHandler(deps)();
     expect(res.status).toBe(200);
     expect(res.headers.get("cache-control")).toBe("no-store");
-    expect(await res.json()).toEqual({
-      subjects: [
-        { ref: "syn-a", label: "Synthetic person 1" },
-        { ref: "syn-b", label: "Synthetic person 2" },
-      ],
-    });
+    const people = [
+      { ref: "syn-a", label: "Synthetic person 1", sex: "female" },
+      { ref: "syn-b", label: "Synthetic person 2", sex: null },
+      { ref: "syn-c", label: "Synthetic person 3", sex: null },
+    ];
+    expect(await res.json()).toEqual({ subjects: people });
     expect(audits).toEqual([
       {
         actor: "local",
@@ -104,11 +108,8 @@ describe("GET /api/biomarkers/cohort", () => {
         subjectRef: null,
         tool: COHORT_LIST_AUDIT_TOOL,
         args: {},
-        result: [
-          { ref: "syn-a", label: "Synthetic person 1" },
-          { ref: "syn-b", label: "Synthetic person 2" },
-        ],
-        rowCount: 2,
+        result: people,
+        rowCount: 3,
       },
     ]);
   });
@@ -122,7 +123,7 @@ describe("GET /api/biomarkers/cohort", () => {
 
   test("says a plain sentence when the database fails", async () => {
     const { deps, audits } = fakeDeps({
-      listSubjectRefs: async () => {
+      listSubjects: async () => {
         throw new Error("connection refused at 10.0.0.1");
       },
     });

@@ -374,8 +374,8 @@ describe("Biomarkers tab", () => {
     onSelect: noop,
     intro: "Synthetic labs.",
     people: [
-      { ref: "syn-a", label: "Synthetic person 1" },
-      { ref: "syn-b", label: "Synthetic person 2" },
+      { ref: "syn-a", label: "Synthetic person 1", sex: null },
+      { ref: "syn-b", label: "Synthetic person 2", sex: "female" },
     ],
     personRef: "syn-a",
     onPerson: noop,
@@ -406,7 +406,7 @@ describe("Biomarkers tab", () => {
     expect(tabs).toHaveLength(1);
     expect(tabs[0]).toContain('aria-selected="true"');
     expect(html).toContain(`>${LAB_SOURCE_LABEL}</label>`);
-    expect(html).toContain('<option value="syn-b">Synthetic person 2</option>');
+    expect(html).toContain('<option value="syn-b">Synthetic person 2 · female</option>');
     expect(html).toContain("Synthetic labs.");
     expect(html).toContain(
       '<p class="text-muted-foreground px-2.5 text-xs capitalize">Cardiovascular</p>',

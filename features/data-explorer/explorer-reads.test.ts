@@ -14,6 +14,8 @@ import {
   SUBJECTS_AUDIT_TOOL,
 } from "./explorer-reads";
 
+const QUERY = { q: "", sort: "observations", dir: "desc", page: 1 } as const;
+
 type Fake = ExplorerDeps & { readonly audits: AppendInput[]; readonly reads: string[] };
 
 const fake = (overrides: Partial<ExplorerDeps> = {}): Fake => {
@@ -71,22 +73,28 @@ const fake = (overrides: Partial<ExplorerDeps> = {}): Fake => {
         { sex: "male", birthYear: 1950, deathYear: 2020, subjects: 1 },
       ],
     })),
-    listSubjectSummaries: read("listSubjectSummaries", () => [
-      {
-        ref: "s-1",
-        observations: 4,
-        codes: 2,
-        firstDay: "2019-04-01",
-        lastDay: "2021-02-01",
-      },
-      {
-        ref: "s-2",
-        observations: 3,
-        codes: 1,
-        firstDay: "2019-05-01",
-        lastDay: "2020-02-01",
-      },
-    ]),
+    readSubjectPage: read("readSubjectPage", () => ({
+      rows: [
+        {
+          ref: "s-1",
+          observations: 4,
+          codes: 2,
+          firstDay: "2019-04-01",
+          lastDay: "2021-02-01",
+        },
+        {
+          ref: "s-2",
+          observations: 3,
+          codes: 1,
+          firstDay: "2019-05-01",
+          lastDay: "2020-02-01",
+        },
+      ],
+      matching: 2,
+      total: 2,
+      page: 1,
+      pages: 1,
+    })),
     findSubject: read("findSubject", (ref: string) =>
       ref === "s-1"
         ? { isSynthetic: true, cohortId: "synthea-v4-seed42" }
@@ -260,7 +268,7 @@ describe("overview", () => {
     expect(await loadOverview(deps, "someone-elses-cohort")).toEqual({
       kind: "not-found",
     });
-    expect(await loadSubjects(deps, "someone-elses-cohort")).toEqual({
+    expect(await loadSubjects(deps, "someone-elses-cohort", QUERY)).toEqual({
       kind: "not-found",
     });
     expect(deps.reads).toEqual([]);
@@ -278,7 +286,13 @@ describe("overview", () => {
       ]),
     ).toEqual([
       [OVERVIEW_AUDIT_TOOL, null, { cohort_id: "someone-elses-cohort" }, violation, 0],
-      [SUBJECTS_AUDIT_TOOL, null, { cohort_id: "someone-elses-cohort" }, violation, 0],
+      [
+        SUBJECTS_AUDIT_TOOL,
+        null,
+        { cohort_id: "someone-elses-cohort", ...QUERY },
+        violation,
+        0,
+      ],
     ]);
   });
 
@@ -298,16 +312,31 @@ describe("overview", () => {
 });
 
 describe("subjects", () => {
-  test("lists the cohort's subjects and audits the count", async () => {
-    const deps = fake();
-    const result = await loadSubjects(deps, "synthea-v4-seed42");
-    expect(result.kind === "ok" && result.subjects.map((s) => s.ref)).toEqual([
+  test("reads one page with the query and audits the rows on it", async () => {
+    const calls: unknown[][] = [];
+    const deps = fake({
+      readSubjectPage: async (...args) => {
+        calls.push(args);
+        return fake().readSubjectPage(...args);
+      },
+    });
+    const query = { q: "s-", sort: "ref", dir: "asc", page: 1 } as const;
+    const result = await loadSubjects(deps, "synthea-v4-seed42", query);
+    expect(result.kind === "ok" && result.subjects.rows.map((s) => s.ref)).toEqual([
       "s-1",
       "s-2",
     ]);
+    expect(calls).toEqual([["synthea-v4-seed42", query]]);
     expect(
-      deps.audits.map((audit) => [audit.tool, audit.subjectRef, audit.rowCount]),
-    ).toEqual([[SUBJECTS_AUDIT_TOOL, null, 2]]);
+      deps.audits.map((audit) => [
+        audit.tool,
+        audit.subjectRef,
+        audit.args,
+        audit.rowCount,
+      ]),
+    ).toEqual([
+      [SUBJECTS_AUDIT_TOOL, null, { cohort_id: "synthea-v4-seed42", ...query }, 2],
+    ]);
   });
 });
 

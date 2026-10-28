@@ -142,13 +142,10 @@ export const SubjectsScreen = ({
     params={params}
     deps={deps}
     body={async (cohortId) => {
-      const result = await loadSubjects(deps, cohortId);
+      const query = parseSubjectQuery(params);
+      const result = await loadSubjects(deps, cohortId, query);
       return result.kind === "ok" ? (
-        <SubjectsTable
-          cohortId={cohortId}
-          subjects={result.subjects}
-          query={parseSubjectQuery(params)}
-        />
+        <SubjectsTable cohortId={cohortId} page={result.subjects} query={query} />
       ) : (
         <BlockedView blocked={result} />
       );
@@ -174,7 +171,7 @@ export const SubjectScreen = async ({
         <>
           <div className="mt-6 flex flex-wrap items-center justify-between gap-2">
             <Link
-              href={`/data/subjects?cohort=${encodeURIComponent(result.subject.cohortId)}`}
+              href={`${COHORT_SUBJECTS}?cohort=${encodeURIComponent(result.subject.cohortId)}`}
               className={buttonClassName({ size: "sm" })}
             >
               All subjects

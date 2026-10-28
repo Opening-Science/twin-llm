@@ -78,7 +78,7 @@ export const AnatomyLayers = ({
   highlight: Highlight | null;
   reducedMotion: boolean;
   onLoad: (load: AnatomyLoad) => void;
-  /** Picking is on only in the environment; inline it stays off. */
+  /** A tap on the body or a part, inline and in the environment; absent, nothing picks. */
   onPick?: (picked: Picked | null) => void;
   /** Live vitals (G4): what drives the heartbeat, breathing and HRV glow. */
   liveVitals?: Readonly<{

@@ -55,7 +55,6 @@ export const parseRiggedStatus = (value: unknown): Record<DemoBodyId, boolean> =
  */
 export const useAnatomyView = (enabled: boolean) => {
   const [state, dispatch] = useReducer(anatomyReducer, initialAnatomyState);
-  const [installed, setInstalled] = useState<Record<AtlasId, boolean> | null>(null);
   const [rigged, setRigged] = useState<Record<DemoBodyId, boolean> | null>(null);
 
   useEffect(() => {
@@ -65,11 +64,10 @@ export const useAnatomyView = (enabled: boolean) => {
       .then((response) => (response.ok ? response.json() : null))
       .then((value: unknown) => {
         if (cancelled) return;
-        const status = parseAnatomyStatus(value);
-        setInstalled(status);
         setRigged(parseRiggedStatus(value));
-        // A missing atlas should not leave the slider stuck when another one is here.
-        dispatch({ type: "installed", installed: status });
+        // A missing atlas should not leave the slider stuck when another one is
+        // here; the reducer keeps the status, so a later body sex can use it.
+        dispatch({ type: "installed", installed: parseAnatomyStatus(value) });
       })
       .catch(() => {
         if (!cancelled) setRigged(parseRiggedStatus(null));
@@ -81,5 +79,5 @@ export const useAnatomyView = (enabled: boolean) => {
 
   const onLoad = useCallback((load: AnatomyLoad) => dispatch({ type: "load", load }), []);
 
-  return { state, dispatch, installed, rigged, onLoad };
+  return { state, dispatch, installed: state.installed, rigged, onLoad };
 };

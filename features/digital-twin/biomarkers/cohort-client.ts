@@ -29,7 +29,15 @@ export const loadCohortPeople = (
   fetcher: Fetcher = fetch,
 ): Promise<readonly CohortPerson[] | null> =>
   getJson(fetcher, "/api/biomarkers/cohort")
-    .then((body) => listOrNull<CohortPerson>(body, "subjects"))
+    .then(
+      (body) =>
+        listOrNull<CohortPerson>(body, "subjects")?.map((person) => ({
+          ref: person.ref,
+          label: person.label,
+          // Only female or male choose a body and atlas; anything else is unknown.
+          sex: person.sex === "female" || person.sex === "male" ? person.sex : null,
+        })) ?? null,
+    )
     .catch(() => null);
 
 /** A person's newest Anchor values, and their newest vitals for the live twin (G4). */

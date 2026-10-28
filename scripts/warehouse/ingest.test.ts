@@ -5,8 +5,10 @@ import { join } from "node:path";
 import { describe, expect, test } from "bun:test";
 
 import type { IngestReport } from "../../packages/warehouse/ingest-report";
+import { isSyntheaBundle } from "../../packages/warehouse/synthea-marker";
 
 import { runWarehouseIngest, type JsonRead, type WarehouseIngestDeps } from "./ingest";
+import { ingestShard, type ShardPorts } from "./ingest-shard";
 
 /** Stands for a *.json file whose text does not parse. */
 const INVALID = Symbol("invalid JSON");
@@ -36,7 +38,17 @@ const ROWS: Record<string, Rows> = {
 const sha = (value: unknown): string =>
   createHash("sha256").update(JSON.stringify(value)).digest("hex");
 
-/** In-memory file system and an ingest port that dedupes by sha like ingestBundle. */
+/** Runs the shards in this process, one after another, so output order is fixed. */
+const inProcess =
+  (ports: ShardPorts): WarehouseIngestDeps["runShards"] =>
+  async (shards, job, onOutcome) => {
+    for (const files of shards) await ingestShard(files, job, ports, onOutcome);
+  };
+
+/**
+ * In-memory file system and an ingest port that refuses non-Synthea bundles
+ * and dedupes by sha like ingestBundle.
+ */
 const harness = (files: Record<string, unknown>) => {
   const read = (path: string): JsonRead =>
     !(path in files)
@@ -53,7 +65,39 @@ const harness = (files: Record<string, unknown>) => {
       .filter(([, value]) => value !== INVALID)
       .map(([path, value]) => [sha(value), path]),
   );
-  const deps: WarehouseIngestDeps = {
+  const shardLists: string[][][] = [];
+  const ingest: ShardPorts["ingest"] = async (bundle, options): Promise<IngestReport> => {
+    calls.push(options);
+    if (!isSyntheaBundle(bundle)) {
+      return {
+        inserted: 0,
+        skipped: 0,
+        unresolved: [],
+        nonNumeric: 0,
+        ...NO_CLINICAL,
+        alreadyIngested: false,
+        rejected: { reason: "not-synthea" },
+      };
+    }
+    const key = sha(bundle);
+    const known = stored.get(key);
+    if (known !== undefined) {
+      return {
+        inserted: 0,
+        skipped: known,
+        unresolved: [],
+        nonNumeric: 0,
+        ...NO_CLINICAL,
+        alreadyIngested: true,
+      };
+    }
+    const name = (nameOf.get(key) ?? "").replace("/cohort/", "");
+    const rows = ROWS[name] ?? { inserted: 0, nonNumeric: 0, ...NO_CLINICAL };
+    stored.set(key, rows.inserted);
+    return { ...rows, skipped: 0, unresolved: [], alreadyIngested: false };
+  };
+  /** The deps with another ingest port behind the shards. */
+  const withIngest = (port: ShardPorts["ingest"]): WarehouseIngestDeps => ({
     listJson: async (dir) =>
       dir === "/cohort"
         ? Object.keys(files)
@@ -63,25 +107,15 @@ const harness = (files: Record<string, unknown>) => {
           ? []
           : null,
     readJson: async (path) => read(path),
-    ingest: async (bundle, options): Promise<IngestReport> => {
-      calls.push(options);
-      const key = sha(bundle);
-      const known = stored.get(key);
-      if (known !== undefined) {
-        return {
-          inserted: 0,
-          skipped: known,
-          unresolved: [],
-          nonNumeric: 0,
-          ...NO_CLINICAL,
-          alreadyIngested: true,
-        };
-      }
-      const name = (nameOf.get(key) ?? "").replace("/cohort/", "");
-      const rows = ROWS[name] ?? { inserted: 0, nonNumeric: 0, ...NO_CLINICAL };
-      stored.set(key, rows.inserted);
-      return { ...rows, skipped: 0, unresolved: [], alreadyIngested: false };
+    runShards: async (shards, job, onOutcome) => {
+      shardLists.push(shards.map((shard) => [...shard]));
+      await inProcess({ readJson: async (path) => read(path), ingest: port })(
+        shards,
+        job,
+        onOutcome,
+      );
     },
+    defaultWorkers: 1,
     cohortSummary: async () => ({
       subjects: stored.size,
       conditions: 2,
@@ -91,12 +125,13 @@ const harness = (files: Record<string, unknown>) => {
         { loinc: "8480-6", display: "Systolic Blood Pressure", n: 2 },
       ],
     }),
-  };
+  });
+  const deps = withIngest(ingest);
   const io = {
     stdout: { write: (chunk: string) => void out.push(chunk) },
     stderr: { write: (chunk: string) => void err.push(chunk) },
   };
-  return { deps, io, calls, out, err };
+  return { deps, withIngest, ingest, io, calls, out, err, shardLists };
 };
 
 const cohortFiles = (): Record<string, unknown> => ({
@@ -118,7 +153,7 @@ describe("warehouse:ingest", () => {
     );
     expect(out.join("")).toBe(
       [
-        "Ingesting 4 bundles into cohort synthea-v4-seed42 (Synthea v4.0.0)",
+        "Ingesting 5 files into cohort synthea-v4-seed42 (Synthea v4.0.0) with 1 process",
         "bp-panel.json: inserted 7 rows (2 non-numeric), 0 conditions, 0 medication requests",
         "patient-1.json: inserted 5 rows (0 non-numeric), 0 conditions, 0 medication requests",
         "patient-2.json: inserted 5 rows (0 non-numeric), 0 conditions, 0 medication requests",
@@ -151,7 +186,7 @@ describe("warehouse:ingest", () => {
     ]);
   });
 
-  test("a bundle without the Synthea identifier stops the run before any write", async () => {
+  test("a bundle without the Synthea identifier is rejected and nothing of it is written", async () => {
     const foreign = structuredClone(fixture("patient-2.json")) as {
       entry: Array<{ resource: { resourceType?: string; identifier?: unknown } }>;
     };
@@ -160,16 +195,18 @@ describe("warehouse:ingest", () => {
         entry.resource.identifier = [{ system: "urn:example:mrn", value: "7" }];
       }
     }
-    const { deps, io, calls, out, err } = harness({
+    const { deps, io, out } = harness({
       ...cohortFiles(),
       "/cohort/zz-foreign.json": foreign,
     });
 
     const code = await runWarehouseIngest(["/cohort"], io, deps);
     expect(code).toBe(1);
-    expect(calls).toEqual([]);
-    expect(out).toEqual([]);
-    expect(err).toEqual(["Refused, nothing written: zz-foreign.json (not Synthea)\n"]);
+    expect(out.slice(5, 7)).toEqual([
+      "zz-foreign.json: rejected (not-synthea)\n",
+      "\nBundles: 4 inserted, 0 already ingested, 1 rejected\n",
+    ]);
+    expect(out).toContain("Cohort synthea-v4-seed42: 4 subjects\n");
   });
 
   test("a cohort outside the allowlist is refused", async () => {
@@ -234,16 +271,19 @@ describe("warehouse:ingest", () => {
 
     const none = harness({});
     expect(await runWarehouseIngest([], none.io, none.deps)).toBe(1);
-    expect(none.err).toEqual(["Usage: bun run warehouse:ingest <dir> [--cohort <id>]\n"]);
+    expect(none.err).toEqual([
+      "Usage: bun run warehouse:ingest <dir> [--cohort <id>] [--workers <n>]\n",
+    ]);
   });
 
   test("a rejected bundle is reported and the exit code is 1", async () => {
-    const { deps, io, out } = harness({
+    const { withIngest, io, out } = harness({
       "/cohort/patient-1.json": fixture("patient-1.json"),
     });
-    const code = await runWarehouseIngest(["/cohort"], io, {
-      ...deps,
-      ingest: async () => ({
+    const code = await runWarehouseIngest(
+      ["/cohort"],
+      io,
+      withIngest(async () => ({
         inserted: 0,
         skipped: 0,
         unresolved: [],
@@ -251,38 +291,103 @@ describe("warehouse:ingest", () => {
         ...NO_CLINICAL,
         alreadyIngested: false,
         rejected: { reason: "ot-quantity-no-code" },
-      }),
-    });
+      })),
+    );
     expect(code).toBe(1);
     expect(out[1]).toBe("patient-1.json: rejected (ot-quantity-no-code)\n");
     expect(out[2]).toBe("\nBundles: 0 inserted, 0 already ingested, 1 rejected\n");
   });
 
-  test("a *.json that does not parse is refused and nothing is written", async () => {
-    const { deps, io, calls, out, err } = harness({
+  test("a *.json that does not parse is rejected and the other files are ingested", async () => {
+    const { deps, io, calls, out } = harness({
       ...cohortFiles(),
       "/cohort/broken.json": INVALID,
     });
     const code = await runWarehouseIngest(["/cohort"], io, deps);
     expect(code).toBe(1);
-    expect(calls).toEqual([]);
-    expect(out).toEqual([]);
-    expect(err).toEqual(["Refused, nothing written: broken.json (invalid JSON)\n"]);
+    expect(calls.length).toBe(4);
+    expect(out.slice(1, 3)).toEqual([
+      "bp-panel.json: inserted 7 rows (2 non-numeric), 0 conditions, 0 medication requests\n",
+      "broken.json: rejected (invalid-json)\n",
+    ]);
+    expect(out).toContain("\nBundles: 4 inserted, 0 already ingested, 1 rejected\n");
+  });
+
+  test("a folder of JSON with no FHIR bundle in it is a clear error", async () => {
+    const { deps, io, err } = harness({ "/cohort/notes.json": { note: "not a bundle" } });
+    expect(await runWarehouseIngest(["/cohort"], io, deps)).toBe(1);
+    expect(err.at(-1)).toBe("No FHIR bundles in /cohort\n");
+  });
+
+  test("--workers splits the files across that many shards, in turn", async () => {
+    const { deps, io, out, shardLists } = harness(cohortFiles());
+    expect(await runWarehouseIngest(["/cohort", "--workers", "2"], io, deps)).toBe(0);
+    expect(out[0]).toBe(
+      "Ingesting 5 files into cohort synthea-v4-seed42 (Synthea v4.0.0) with 2 processes\n",
+    );
+    expect(shardLists).toEqual([
+      [
+        ["/cohort/bp-panel.json", "/cohort/patient-1.json", "/cohort/patient-3.json"],
+        ["/cohort/notes.json", "/cohort/patient-2.json"],
+      ],
+    ]);
+    expect(out).toContain("\nBundles: 4 inserted, 0 already ingested, 0 rejected\n");
+  });
+
+  test("the default is deps.defaultWorkers, never more shards than files", async () => {
+    const { deps, io, shardLists } = harness(cohortFiles());
+    await runWarehouseIngest(["/cohort"], io, { ...deps, defaultWorkers: 7 });
+    expect(shardLists[0]?.length).toBe(5);
+  });
+
+  test("--workers must be a whole number from 1", async () => {
+    for (const bad of ["0", "-2", "1.5", "many", undefined]) {
+      const { deps, io, calls, err } = harness(cohortFiles());
+      const argv = ["/cohort", "--workers", ...(bad === undefined ? [] : [bad])];
+      expect(await runWarehouseIngest(argv, io, deps)).toBe(1);
+      expect(calls).toEqual([]);
+      expect(err).toEqual([
+        "Usage: bun run warehouse:ingest <dir> [--cohort <id>] [--workers <n>]\n",
+      ]);
+    }
+  });
+
+  test("an ingest that throws once is tried again and counts once", async () => {
+    const { withIngest, ingest, io, out } = harness(cohortFiles());
+    let thrown = 0;
+    const code = await runWarehouseIngest(
+      ["/cohort"],
+      io,
+      withIngest(async (bundle, options) => {
+        if (sha(bundle) === sha(fixture("patient-1.json")) && thrown === 0) {
+          thrown += 1;
+          throw new Error('Unique constraint failed on "subject_ref"');
+        }
+        return ingest(bundle, options);
+      }),
+    );
+    expect(code).toBe(0);
+    expect(thrown).toBe(1);
+    expect(out).toContain(
+      "patient-1.json: inserted 5 rows (0 non-numeric), 0 conditions, 0 medication requests\n",
+    );
+    expect(out).toContain("\nBundles: 4 inserted, 0 already ingested, 0 rejected\n");
   });
 
   test("a bundle whose ingest throws is rejected with a fixed reason and the run goes on", async () => {
-    const { deps, io, out } = harness(cohortFiles());
-    const code = await runWarehouseIngest(["/cohort"], io, {
-      ...deps,
-      ingest: async (bundle, options) => {
+    const { withIngest, ingest, io, out } = harness(cohortFiles());
+    const code = await runWarehouseIngest(
+      ["/cohort"],
+      io,
+      withIngest(async (bundle, options) => {
         if (sha(bundle) === sha(fixture("patient-2.json"))) {
           throw new Error(
             'PrismaClientKnownRequestError: Unique constraint failed on "sha"',
           );
         }
-        return deps.ingest(bundle, options);
-      },
-    });
+        return ingest(bundle, options);
+      }),
+    );
     expect(code).toBe(1);
     expect(out.join("")).toContain("patient-2.json: rejected (ingest-failed)\n");
     expect(out.join("")).not.toContain("Prisma");
@@ -296,7 +401,7 @@ describe("warehouse:ingest", () => {
   });
 
   test("already ingested comes from the report flag, even for a bundle with no rows", async () => {
-    const { deps, io, out } = harness({
+    const { withIngest, io, out } = harness({
       "/cohort/patient-1.json": fixture("patient-1.json"),
     });
     const ingest = async (): Promise<IngestReport> => ({
@@ -307,16 +412,17 @@ describe("warehouse:ingest", () => {
       ...NO_CLINICAL,
       alreadyIngested: false,
     });
-    await runWarehouseIngest(["/cohort"], io, { ...deps, ingest });
+    await runWarehouseIngest(["/cohort"], io, withIngest(ingest));
     expect(out[1]).toBe(
       "patient-1.json: inserted 0 rows (0 non-numeric), 0 conditions, 0 medication requests\n",
     );
 
     out.length = 0;
-    await runWarehouseIngest(["/cohort"], io, {
-      ...deps,
-      ingest: async () => ({ ...(await ingest()), alreadyIngested: true }),
-    });
+    await runWarehouseIngest(
+      ["/cohort"],
+      io,
+      withIngest(async () => ({ ...(await ingest()), alreadyIngested: true })),
+    );
     expect(out[1]).toBe("patient-1.json: already ingested (0 rows)\n");
     expect(out[2]).toBe("\nBundles: 0 inserted, 1 already ingested, 0 rejected\n");
   });

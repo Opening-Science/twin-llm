@@ -1,0 +1,33 @@
+{
+  "question": "Summarise the last 7 nights of sleep for subject 9661a432-4630-2cd9-142c-386845fae837.",
+  "script": [
+    {
+      "tool": "subject_window",
+      "input": { "subject_ref": "9661a432-4630-2cd9-142c-386845fae837" }
+    },
+    {
+      "tool": "sleep_summary",
+      "input": {
+        "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+        "source": "all",
+        "start": "2026-09-25",
+        "end": "2026-10-01"
+      }
+    },
+    { "view": "chart.timeseries" },
+    {
+      "tool": "baseline_deviation",
+      "input": {
+        "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+        "loinc": "93832-4",
+        "baseline": { "start": "2026-08-26", "end": "2026-09-24" },
+        "target": { "start": "2026-09-25", "end": "2026-10-01" }
+      }
+    }
+  ],
+  "expect": {
+    "calls": ["subject_window", "sleep_summary", "baseline_deviation"],
+    "views": ["chart.timeseries"],
+    "refusals": []
+  }
+}

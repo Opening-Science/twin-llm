@@ -35,13 +35,15 @@ export type BatchArgs = Readonly<{
   skipRejected: boolean;
   /** With skipRejected: the largest share of a batch's bundles that may be left out. */
   maxRejectedShare: number;
+  /** Ingest processes per ingest step; null leaves warehouse:ingest's default (cores - 1). */
+  workers: number | null;
 }>;
 
 /** More than this share of rejected bundles stops a batch even with --skip-rejected. */
 export const DEFAULT_MAX_REJECTED_SHARE = 0.01;
 
 const USAGE =
-  "Usage: bun run training:batches -- --batches 1001-1010 [--archives <dir>] [--work <dir>] [--out <dir>] [--keep] [--skip-rejected [--max-rejected-share 0.01]]";
+  "Usage: bun run training:batches -- --batches 1001-1010 [--archives <dir>] [--work <dir>] [--out <dir>] [--keep] [--skip-rejected [--max-rejected-share 0.01]] [--workers <n>]";
 
 const flag = (argv: readonly string[], name: string): string | undefined => {
   const index = argv.indexOf(name);
@@ -97,6 +99,10 @@ export const parseBatchArgs = (argv: readonly string[]): BatchArgs | string => {
       return `--max-rejected-share must be a share from 0 to 1, like 0.02 (got: ${shareText ?? ""}).`;
     }
   }
+  const workersText = flag(argv, "--workers");
+  if (argv.includes("--workers") && !/^[1-9]\d*$/.test(workersText ?? "")) {
+    return `--workers must be a whole number from 1 (got: ${workersText ?? ""}).`;
+  }
   return {
     batches,
     archives: flag(argv, "--archives") ?? DEFAULT_ARCHIVES,
@@ -106,6 +112,7 @@ export const parseBatchArgs = (argv: readonly string[]): BatchArgs | string => {
     skipRejected,
     maxRejectedShare:
       shareText === undefined ? DEFAULT_MAX_REJECTED_SHARE : Number(shareText),
+    workers: workersText === undefined ? null : Number(workersText),
   };
 };
 

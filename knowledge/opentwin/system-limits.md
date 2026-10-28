@@ -34,6 +34,13 @@ synthetic warehouse and return the result:
   number of people. It says "higher than about X % of the N synthetic people", not
   better or worse.
 
+- `sleep_summary`, `hrv_trend`, `resting_hr_trend`, `training_load`: per source, never
+  pooled, from the linked Oura, Whoop and Google Health data (or a synthetic subject's
+  synthetic series): main sleep per night and averages; a slope per day and week with
+  the last 7 days against the 28 before them; workout minutes per day or week. The
+  load ratio is only "recent load compared with the previous four weeks"; it is not a
+  measure of risk.
+
 A slope or z value describes the rows, not the cause behind them.
 
 # Section: Recorded conditions and medication requests
@@ -61,6 +68,9 @@ only say what came before or after. Both refuse `NO_ROWS` when nothing matches a
 - `cohort_position` also refuses `COHORT_TOO_SMALL` (fewer than 10 people with a value),
   `NO_ROWS` (no reading for the subject) and `COHORT_ROW_CAP_EXCEEDED` (more than 20000
   cohort rows in the window). It reads synthetic cohorts only.
+- The wearable tools refuse `SOURCE_NOT_CONNECTED` (that wearable is not linked),
+  `NO_ROWS` (no reading in the window) and, for a trend, `WINDOW_TOO_SHORT` (fewer than
+  7 daily readings).
 
 A refused call is still written to the audit log, with 0 rows.
 
