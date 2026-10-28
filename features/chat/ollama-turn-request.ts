@@ -97,6 +97,7 @@ export const captureOllamaTurnRequest = async (
         hasWearableNarrative,
         wearables: turn.wearables,
         views: turn.skill?.views,
+        sources: turn.skill?.sources,
         loadViews: async () => [],
         genome: noGenome(scope),
       }),

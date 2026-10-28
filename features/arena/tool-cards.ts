@@ -84,6 +84,8 @@ const REFUSAL_NOTES: Readonly<Record<string, string>> = {
   UNKNOWN_MEASURE: "That measure is not a LOINC code or a known wearable key.",
   VIEW_NOT_FOUND: "No chart with that id in this thread.",
   VIEW_NOT_ALLOWED: "This skill does not draw that kind of view.",
+  WINDOW_REQUIRED: "This kind of view needs a time window.",
+  RECORDS_NOT_IN_SKILL: "This skill reads no subject records, so none were read.",
   GENOME_NOT_PERMITTED: "Genome tools run only in personal mode on this machine.",
   NO_REPORT: "No genome report has been released yet.",
   RSID_NOT_IN_REPORT: "That variant is not in the released report.",

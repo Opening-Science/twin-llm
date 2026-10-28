@@ -36,7 +36,11 @@ export const showViewInput = z
       .enum(TWIN_FOCUS_IDS)
       .optional()
       .describe("twin.body only: the organ or body system to show"),
-    window: windowSchema,
+    window: windowSchema
+      .optional()
+      .describe(
+        "Needed for every kind but twin.body; twin.body without it uses each marker's latest reading",
+      ),
     subject: subjectRefSchema
       .optional()
       .describe("subject_ref for a LOINC code; leave out for wearable keys"),
@@ -71,7 +75,7 @@ export const VIEW_TOOL_DEFINITIONS = [
   {
     name: "show_view",
     description:
-      "Show a view of one measure in the answer. chart.timeseries draws every reading in window; chart.compare sets window against compare_with (n and mean of each); biomarker.card shows a LOINC's latest reading against its published range, with its trend; table lists the readings (first 50); twin.body shows the body twin on focus with each mapped organ's range position (subject's labs, or none). The server reads the rows itself; the result says how many it read. A LOINC code needs subject (a synthetic subject_ref); a wearable key reads the user's synced data. Never write numbers for a view yourself.",
+      "Show a view of one measure in the answer. chart.timeseries draws every reading in window; chart.compare sets window against compare_with (n and mean of each); biomarker.card shows a LOINC's latest reading against its published range, with its trend; table lists the readings (first 50); twin.body shows the body twin on focus with each mapped organ's range position (subject's labs, or none); without window it uses each marker's latest reading. The server reads the rows itself; the result says how many it read. A LOINC code needs subject (a synthetic subject_ref); a wearable key reads the user's synced data. Never write numbers for a view yourself.",
     input: showViewInput,
   },
   {

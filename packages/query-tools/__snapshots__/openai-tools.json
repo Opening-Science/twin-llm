@@ -765,7 +765,7 @@
     "type": "function",
     "function": {
       "name": "show_view",
-      "description": "Show a view of one measure in the answer. chart.timeseries draws every reading in window; chart.compare sets window against compare_with (n and mean of each); biomarker.card shows a LOINC's latest reading against its published range, with its trend; table lists the readings (first 50); twin.body shows the body twin on focus with each mapped organ's range position (subject's labs, or none). The server reads the rows itself; the result says how many it read. A LOINC code needs subject (a synthetic subject_ref); a wearable key reads the user's synced data. Never write numbers for a view yourself.",
+      "description": "Show a view of one measure in the answer. chart.timeseries draws every reading in window; chart.compare sets window against compare_with (n and mean of each); biomarker.card shows a LOINC's latest reading against its published range, with its trend; table lists the readings (first 50); twin.body shows the body twin on focus with each mapped organ's range position (subject's labs, or none); without window it uses each marker's latest reading. The server reads the rows itself; the result says how many it read. A LOINC code needs subject (a synthetic subject_ref); a wearable key reads the user's synced data. Never write numbers for a view yourself.",
       "parameters": {
         "type": "object",
         "properties": {
@@ -808,6 +808,7 @@
             ]
           },
           "window": {
+            "description": "Needed for every kind but twin.body; twin.body without it uses each marker's latest reading",
             "type": "object",
             "properties": {
               "start": {
@@ -820,8 +821,7 @@
               }
             },
             "required": ["start", "end"],
-            "additionalProperties": false,
-            "description": "Time window, ISO-8601 UTC or YYYY-MM-DD, start before end"
+            "additionalProperties": false
           },
           "subject": {
             "description": "subject_ref for a LOINC code; leave out for wearable keys",
@@ -851,7 +851,7 @@
             "enum": ["side-by-side", "overlaid"]
           }
         },
-        "required": ["kind", "window"],
+        "required": ["kind"],
         "additionalProperties": false
       }
     }

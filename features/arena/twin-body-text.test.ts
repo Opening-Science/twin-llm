@@ -58,6 +58,12 @@ describe("twinBodyEmptyText", () => {
     );
   });
 
+  test("no readings in the subject's whole record", () => {
+    expect(twinBodyEmptyText({ ...spec, window: null, organs: [], n: 0 })).toBe(
+      "No mapped lab marker has a reading in this subject's record.",
+    );
+  });
+
   test("readings without a fitting range", () => {
     expect(twinBodyEmptyText({ ...spec, organs: [] })).toBe(
       "No reading here has a published range that fits, so no organ has a position.",

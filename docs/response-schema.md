@@ -118,9 +118,13 @@ holds catalogue and section metadata only (no `passage`). `sources.knowledge` ho
 under "OpenTwin knowledge" as title · section · file.
 
 `abstained` is true only when there is no personal evidence **and** no
-reference material: no guideline citations, no OpenTwin knowledge citations
-and no GBD rows (before B4, a population-only answer was withheld). Such
-an answer is shown, with `answer_class: information`. `interpretation` stays
+reference material: no guideline citations, no OpenTwin knowledge citations,
+no GBD rows (before B4, a population-only answer was withheld) and no
+`twin.body` view among the turn's tool outputs (`twinBodyShown`). The body on
+its focus is reference anatomy shown to the person, so a `twin.body` view with
+no readings is "shown, no values", not "no data". Such an answer is shown,
+with `answer_class: information`. The view's `twin_body` row still counts
+toward `sufficient_data` only when it read rows. `interpretation` stays
 `{ kind: "none" }` when `sufficient_data` is false (reference text is not
 person-level narration).
 
@@ -131,6 +135,7 @@ person-level narration).
 | Guideline   | false             | `sources.guidelines` non-empty | false       | `information`               | `more_data`                       | `{ kind: "none" }`            |
 | Knowledge   | false             | `sources.knowledge` non-empty  | false       | `information`               | `more_data` or `connect_wearable` | `{ kind: "none" }`            |
 | Population  | false             | `gbd_rows` non-empty           | false       | `information`               | `more_data` or `connect_wearable` | `{ kind: "none" }`            |
+| Body twin   | false             | a `twin.body` view was shown   | false       | `information`               | `more_data` or `connect_wearable` | `{ kind: "none" }`            |
 | Declined    | any               | any                            | as above    | `declined_decision_support` | `consult_clinician`               | `{ kind: "none" }`            |
 
 ## Declines

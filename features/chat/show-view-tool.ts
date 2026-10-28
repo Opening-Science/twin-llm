@@ -57,7 +57,9 @@ export type ShowViewRefusal =
         | "LOINC_REQUIRED"
         | "COMPARE_WINDOW_REQUIRED"
         | "MEASURE_REQUIRED"
-        | "FOCUS_REQUIRED";
+        | "FOCUS_REQUIRED"
+        | "WINDOW_REQUIRED"
+        | "RECORDS_NOT_IN_SKILL";
       error: string;
     }>;
 
@@ -72,6 +74,13 @@ const SUBJECT_REQUIRED = {
   code: "SUBJECT_REQUIRED",
   error:
     "a LOINC measure needs subject: call show_view again with subject set to the subject_ref you used for the other tools",
+} as const;
+
+/** A skill that does not list cohort-records reads no subject through a view either. */
+const RECORDS_NOT_IN_SKILL = {
+  code: "RECORDS_NOT_IN_SKILL",
+  error:
+    "this skill reads no subject records; call show_view again without subject (twin.body) or with a wearable key",
 } as const;
 
 /** No audit row, no view: a point must always trace to one. */
@@ -117,6 +126,12 @@ const MEASURE_REQUIRED = {
 const FOCUS_REQUIRED = {
   code: "FOCUS_REQUIRED",
   error: "twin.body needs focus: one of the listed organ or body system ids",
+} as const;
+
+/** Only twin.body may leave out the window. */
+const WINDOW_REQUIRED = {
+  code: "WINDOW_REQUIRED",
+  error: "this kind needs window: the start and end of the readings to show",
 } as const;
 
 const DATE_SUFFIX = /\.\d{4}-\d{2}-\d{2}$/;
@@ -220,6 +235,8 @@ export type ShowViewDeps = Readonly<{
   wearables: WearableSummaries;
   /** False when the user turned the cohort record tools off. */
   cohortRecords: boolean;
+  /** False when the turn's skill does not list `cohort-records`; left out, true. */
+  skillRecords?: boolean;
   /** View kinds this turn may draw (a skill's `views`); left out, every kind. */
   views?: readonly string[];
 }>;
@@ -237,6 +254,7 @@ const sourceOf = (
   measure: string,
 ): Source | ShowViewRefusal => {
   if (loincSchema.safeParse(measure).success) {
+    if (deps.skillRecords === false) return RECORDS_NOT_IN_SKILL;
     if (!deps.cohortRecords) return COHORT_TOOLS_OFF;
     if (input.subject === undefined) return SUBJECT_REQUIRED;
     return { kind: "loinc", loinc: measure, subject: input.subject };
@@ -406,12 +424,18 @@ const showTwinBody = async (
   input: ShowViewInput,
 ): Promise<ShowViewOutput> => {
   if (input.focus === undefined) return FOCUS_REQUIRED;
+  if (input.subject !== undefined && deps.skillRecords === false) {
+    return RECORDS_NOT_IN_SKILL;
+  }
   if (input.subject !== undefined && !deps.cohortRecords) return COHORT_TOOLS_OFF;
   const audit = recordingAudit(deps.ports ?? defaultQueryToolPorts());
   const twin = {
     focus: input.focus,
     subject: input.subject ?? null,
-    window: { start: input.window.start, end: input.window.end },
+    window:
+      input.window === undefined
+        ? null
+        : { start: input.window.start, end: input.window.end },
     body: deps.scope.mode === "personal" ? ("self" as const) : ("demo" as const),
   };
   const state = await runTwinBodyState(deps.scope, twin, audit.ports);
@@ -430,6 +454,7 @@ export const runShowView = async (
   }
   if (input.kind === "twin.body") return showTwinBody(deps, input);
   if (input.measure === undefined) return MEASURE_REQUIRED;
+  if (input.window === undefined) return WINDOW_REQUIRED;
   const source = sourceOf(deps, input, input.measure);
   if ("code" in source) return source;
   if (input.kind === "chart.compare" && input.compare_with === undefined) {
@@ -478,6 +503,9 @@ export const modelNoteOf = (
         marker: organ.marker,
         position: organ.position,
       })),
+      ...(output.spec.organs.length === 0
+        ? { note: "the body is shown on the focus; no organ has a lab position" }
+        : {}),
     };
   }
   const readings = viewReadings(output);

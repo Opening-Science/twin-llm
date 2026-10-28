@@ -168,6 +168,7 @@ export const createStreamModelResponse =
           wearables: turnWearables,
           disabledSources: context.disabledSources,
           views: skill?.views,
+          sources: skill?.sources,
           loadViews: deps.store.loadViews,
           genome: deps.genomeTools(scope),
         }),

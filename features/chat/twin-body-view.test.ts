@@ -5,7 +5,7 @@ import type { ObservationQuery, QueryToolPorts } from "@/packages/query-tools/po
 import { showViewInput } from "@/packages/query-tools/view-schema";
 
 import { modelNoteOf, runShowView } from "./show-view-tool";
-import { latestValues, populationOf } from "./twin-body-view";
+import { latestValues, populationOf, WHOLE_RECORD } from "./twin-body-view";
 
 const SCOPE = { actor: "test", sessionId: "turn-twin", mode: "synthetic" } as const;
 const PERSONAL = { ...SCOPE, mode: "personal" } as const;
@@ -47,10 +47,10 @@ const ROWS = [
   reading("2571-8", 180, "mg/dL", "03-02"),
 ];
 
-const twin = (focus?: string, subject?: string) =>
+const twin = (focus?: string, subject?: string, window: typeof WINDOW | null = WINDOW) =>
   showViewInput.parse({
     kind: "twin.body",
-    window: WINDOW,
+    ...(window ? { window } : {}),
     ...(focus ? { focus } : {}),
     ...(subject ? { subject } : {}),
   });
@@ -71,6 +71,23 @@ describe("show_view input for twin.body", () => {
       showViewInput.safeParse({ kind: "twin.body", window: WINDOW, focus: "spleen" })
         .success,
     ).toBe(false);
+  });
+
+  test("only twin.body may leave out the window", async () => {
+    const { ports, audits } = fakePorts(ROWS);
+    expect(showViewInput.safeParse({ kind: "twin.body", focus: "liver" }).success).toBe(
+      true,
+    );
+    expect(
+      await runShowView(
+        deps(ports),
+        showViewInput.parse({ kind: "chart.timeseries", measure: "2571-8" }),
+      ),
+    ).toEqual({
+      code: "WINDOW_REQUIRED",
+      error: "this kind needs window: the start and end of the readings to show",
+    });
+    expect(audits).toEqual([]);
   });
 
   test("another kind without a measure is refused before any read", async () => {
@@ -149,6 +166,53 @@ describe("show_view with twin.body", () => {
     });
   });
 
+  test("without a window, each mapped marker's latest reading over the whole record", async () => {
+    const { ports, audits, queries } = fakePorts(ROWS);
+    const view = await runShowView(
+      deps(ports),
+      twin("cardiovascular", "synthetic-1", null),
+    );
+    expect("spec" in view ? [view.title, view.spec.window, view.spec.n] : null).toEqual([
+      "Body twin: Cardiovascular system, latest readings",
+      null,
+      3,
+    ]);
+    expect("spec" in view ? view.spec.organs : null).toEqual([
+      {
+        organ: "bloodvasculature",
+        label: "Blood vessels",
+        position: "above",
+        marker: "Triglyceride",
+        loinc: "2571-8",
+      },
+    ]);
+    expect(queries.map((query) => [query.start, query.end, query.take])).toEqual([
+      [new Date("1900-01-01T00:00:00.000Z"), new Date("2999-12-31T23:59:59.999Z"), 5001],
+    ]);
+    expect(audits.map((audit) => audit.args)).toEqual([
+      { focus: "cardiovascular", subject_ref: "synthetic-1" },
+    ]);
+  });
+
+  test("WHOLE_RECORD spans every stored date", () => {
+    expect(WHOLE_RECORD).toEqual({ start: "1900-01-01", end: "2999-12-31" });
+  });
+
+  test("with no organ placed, the model note says the body is still shown", async () => {
+    const { ports } = fakePorts([]);
+    const view = await runShowView(deps(ports), twin("liver", "synthetic-1", null));
+    expect(modelNoteOf(view)).toEqual({
+      shown: true,
+      view_id: "view-71",
+      title: "Body twin: Liver, latest readings",
+      focus: "liver",
+      body: "demo",
+      readings: 0,
+      organs: [],
+      note: "the body is shown on the focus; no organ has a lab position",
+    });
+  });
+
   test("without a subject nothing is read, but the call is still audited", async () => {
     const { ports, audits, queries } = fakePorts(ROWS);
     const view = await runShowView(deps(ports), twin("liver"));
@@ -181,7 +245,7 @@ describe("show_view with twin.body", () => {
     ).toMatchObject({ code: "SUBJECT_SCOPE_VIOLATION" });
   });
 
-  test("refuses without focus, with cohort records off, or outside the skill's kinds", async () => {
+  test("refuses without focus, with cohort records off, outside the skill's kinds or records", async () => {
     const { ports, audits } = fakePorts(ROWS);
     expect(await runShowView(deps(ports), twin())).toMatchObject({
       code: "FOCUS_REQUIRED",
@@ -195,7 +259,31 @@ describe("show_view with twin.body", () => {
     expect(
       await runShowView({ ...deps(ports), views: ["chart.timeseries"] }, twin("liver")),
     ).toMatchObject({ code: "VIEW_NOT_ALLOWED" });
+    expect(
+      await runShowView(
+        { ...deps(ports), skillRecords: false },
+        twin("liver", "synthetic-1"),
+      ),
+    ).toEqual({
+      code: "RECORDS_NOT_IN_SKILL",
+      error:
+        "this skill reads no subject records; call show_view again without subject (twin.body) or with a wearable key",
+    });
     expect(audits).toEqual([]);
+  });
+
+  test("a skill without records still shows the body with no subject", async () => {
+    const { ports, queries } = fakePorts(ROWS);
+    const view = await runShowView(
+      { ...deps(ports), skillRecords: false, views: ["twin.body"] },
+      twin("liver", undefined, null),
+    );
+    expect("spec" in view ? [view.title, view.spec.subject, view.spec.n] : null).toEqual([
+      "Body twin: Liver",
+      null,
+      0,
+    ]);
+    expect(queries).toEqual([]);
   });
 });
 

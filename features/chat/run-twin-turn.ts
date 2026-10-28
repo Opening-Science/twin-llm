@@ -18,7 +18,7 @@ import { drainGuidelineTurn } from "@/packages/guidelines/collector";
 import { drainKnowledgeTurn } from "@/packages/knowledge/collector";
 
 import type { ChatRequest } from "./chat-request";
-import { buildResponseDocumentV1 } from "./response/build-document";
+import { buildResponseDocumentV1, twinBodyShown } from "./response/build-document";
 import type { ResponseDocumentV1, ResponseToolCall } from "./response/document-v1";
 import { inCallOrder } from "./tool-parts";
 import { buildTwinSystemPrompt } from "./twin-system-prompt";
@@ -143,6 +143,13 @@ export const runTwinTurn = (
     },
     onFinish: async ({ text, totalUsage, steps }) => {
       const parsed = parseTwinAnswer(text, wearables);
+      const toolResults = steps.flatMap((step) =>
+        inCallOrder(step.toolCalls, step.toolResults).map((result) => ({
+          toolName: result.toolName,
+          input: result.input,
+          output: result.output,
+        })),
+      );
       await hooks.onFinish({
         text,
         usage: {
@@ -151,13 +158,7 @@ export const runTwinTurn = (
           totalTokens: totalUsage.totalTokens,
         },
         parsed,
-        toolResults: steps.flatMap((step) =>
-          inCallOrder(step.toolCalls, step.toolResults).map((result) => ({
-            toolName: result.toolName,
-            input: result.input,
-            output: result.output,
-          })),
-        ),
+        toolResults,
         buildDocument: async () => {
           // The skill-run and UI context rows record the turn; they read nothing,
           // so they are not tool calls.
@@ -178,6 +179,7 @@ export const runTwinTurn = (
             knowledgeSources: knowledge.sources,
             skill: deps.skill?.name ?? null,
             uiContext: deps.uiContext ?? null,
+            twinBody: twinBodyShown(toolResults.map((result) => result.output)),
           });
         },
       });

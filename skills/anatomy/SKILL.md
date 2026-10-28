@@ -4,7 +4,7 @@ description: Explain where organs and body systems are and what the Anchor bioma
 tools: [knowledge_search]
 sources: [opentwin-knowledge, wearable-context]
 providers: [ollama]
-views: []
+views: [twin.body]
 ---
 
 Explain where an organ or body system sits and which Anchor biomarkers relate to it.
@@ -21,8 +21,10 @@ This is reference anatomy, the same for everyone; it is not the person's own bod
 3. Cite the notes you used under Evidence Used. What the notes do not say, say you do
    not know; never fill it in from memory.
 
-The Digital Twin page shows the reference anatomy layers (Scan, Muscle, Skeleton,
-Organs); you may point to it, but you cannot draw it here.
+To show where something is, call show_view with kind twin.body and the focus (one of
+its listed organ or system ids), with no subject and no window. Draw it once, and say
+where the organ is in words as well. Asked for a subject's lab values, show the body
+without them and say the Anatomy specialist reads no values.
 
 Hard rules:
 

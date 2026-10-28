@@ -25,6 +25,9 @@ import { loadThreadViews } from "./load-thread-views";
 import { createShowViewTool } from "./show-view-tool";
 import { createViewTools, type ViewToolDeps } from "./view-tools";
 
+/** The source whose tools read a subject's records. */
+const COHORT_RECORDS_SOURCE: KnowledgeSourceId = "cohort-records";
+
 const NO_WEARABLES: WearableSummaries = {
   oura: null,
   whoop: null,
@@ -97,6 +100,11 @@ export const createChatTools = (
     disabledSources?: readonly KnowledgeSourceId[];
     /** View kinds `show_view` may draw (a skill's `views`); left out, every kind. */
     views?: readonly string[];
+    /**
+     * A skill's `sources`; left out, every source. Without `cohort-records`
+     * `show_view` reads no subject, as the skill's tools read none.
+     */
+    sources?: readonly string[];
     loadViews?: ViewToolDeps["loadViews"];
     factories?: ChatToolFactories;
     /**
@@ -120,6 +128,7 @@ export const createChatTools = (
         "observations_for_subject",
       ),
       views: options?.views,
+      skillRecords: options?.sources?.includes(COHORT_RECORDS_SOURCE) ?? true,
     }),
     ...make.views({
       scope,

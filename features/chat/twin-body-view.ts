@@ -27,8 +27,9 @@ import { audited, readWindow } from "@/packages/query-tools/tool-core";
  * with the range position of each mapped organ under it. With a synthetic
  * subject the mapped markers are read in the window (one capped read) and
  * placed by `organStatus` from `packages/biomarkers`, the same table the twin's
- * environment uses; without one nothing is read and the body is shown with no
- * positions. Either way the call is one audit row (`twin_body`), so the view
+ * environment uses. Without a window the read covers the subject's whole record,
+ * still one capped read, so each marker's latest reading places its organ.
+ * Without a subject nothing is read and the body is shown with no positions. Either way the call is one audit row (`twin_body`), so the view
  * has a source like every other.
  */
 
@@ -39,7 +40,8 @@ type Window = Readonly<{ start: string; end: string }>;
 export type TwinBodyInput = Readonly<{
   focus: TwinFocusId;
   subject: string | null;
-  window: Window;
+  /** Null: the subject's whole record, so each marker's latest reading. */
+  window: Window | null;
 }>;
 
 export type TwinBodyState = Readonly<{
@@ -63,6 +65,12 @@ export const populationOf = (sex: string | null | undefined): PopulationContext 
 
 const NO_STATE: TwinBodyState = { organs: [], n: 0 };
 
+/**
+ * The span read when no window is asked for: wider than any stored record, so
+ * the read is the subject's whole record of the mapped codes.
+ */
+export const WHOLE_RECORD: Window = { start: "1900-01-01", end: "2999-12-31" };
+
 /** The organ state of the focus for one subject, read and audited as `twin_body`. */
 export const runTwinBodyState = (
   scope: SessionScope,
@@ -72,7 +80,7 @@ export const runTwinBodyState = (
   audited<TwinBodyState | ToolRefusal>(
     scope,
     TWIN_BODY_AUDIT_TOOL,
-    { focus: input.focus, subject_ref: input.subject, ...input.window },
+    { focus: input.focus, subject_ref: input.subject, ...(input.window ?? {}) },
     input.subject,
     async () => {
       if (input.subject === null) return NO_STATE;
@@ -81,7 +89,12 @@ export const runTwinBodyState = (
       if (!subjectRowInScope(scope, subject)) return SUBJECT_SCOPE_VIOLATION;
       const loincs = focusLoincs(input.focus);
       if (loincs.length === 0) return NO_STATE;
-      const rows = await readWindow(ports, input.subject, loincs, input.window);
+      const rows = await readWindow(
+        ports,
+        input.subject,
+        loincs,
+        input.window ?? WHOLE_RECORD,
+      );
       if (isToolRefusal(rows)) return rows;
       return {
         organs: focusOrganStatus(

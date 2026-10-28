@@ -124,8 +124,10 @@ description when there is none). On `POST /api/chat` the server, before any mode
 
 The turn then gets only the skill's tools, intersected with the user's sources and what
 the data-mode policy left (`show_view`, `list_views` and `open_view` stay when the skill
-allows a kind `show_view` draws: `chart.timeseries`, `chart.compare`, `biomarker.card` or
-`table`; `show_view` refuses any other kind and the other two offer only the allowed kinds), and the skill's instructions at the end of the system prompt.
+allows a kind `show_view` draws: `chart.timeseries`, `chart.compare`, `biomarker.card`,
+`table` or `twin.body`; `show_view` refuses any other kind and the other two offer only the allowed kinds), and the skill's instructions at the end of the system prompt.
+A skill that does not list `cohort-records` reads no subject through `show_view` either
+(`RECORDS_NOT_IN_SKILL`).
 The response document records `skill`, and the prompt shows a `/sleep` chip, also after
 a reload, where it is read back from the audit row. The shared rules live in
 `infrastructure/skill-gate.ts`, which the eval gate uses too.
@@ -184,15 +186,18 @@ request, tools and views it may not use, and a hosted provider.
 `skills/anatomy` (#218) is the Anatomy specialist agent's skill and can be typed as
 `/anatomy`. It explains where an organ or body system is and which Anchor biomarkers the
 biomarker catalogue lists for that system or region, through `knowledge_search` over the
-OpenTwin notes only. It reads no values and no records. No view fits: `twin.body` is not a
-kind `show_view` can draw, so the skill points to the Digital Twin page instead. A
+OpenTwin notes only. It reads no values and no records. To show where something is it
+draws one `twin.body` view on the focus, with no subject and no window; it does not list
+`cohort-records`, so `show_view` would refuse a subject. Asked for a subject's lab values,
+it shows the body without them and says it reads no values. A
 question asking whether something is wrong with an organ, or what a pain or a value means
 for it, gets one fixed sentence ending "If this concerns you, talk to a clinician." and
 no tool call. It lists `wearable-context` only so that a turn with a
 linked wearable is not refused; its instructions say not to describe it. Local Ollama
-only. The eval cases cover an organ's place, a system's markers, a turn with linked
+only. The eval cases cover an organ's place, a system's markers, an organ shown on the
+twin, the liver on the twin when a subject's values are asked for, a turn with linked
 wearables, a "is my liver damaged?" question, tools and views it may not use, and a
-hosted provider.
+hosted provider. `/nutrition` does not draw `twin.body`.
 
 ## Built-in commands
 

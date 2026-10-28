@@ -1,13 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
 
+import { twinBodyView } from "@/infrastructure/chat-view";
 import type { DataMode } from "@/infrastructure/data-mode-policy";
 import {
   parseTwinAnswer,
   type WearableSummaries,
 } from "@/infrastructure/parse-twin-answer";
 
-import { buildResponseDocumentV1 } from "./build-document";
+import { buildResponseDocumentV1, twinBodyShown } from "./build-document";
 import { CHAT_RESPONSE_DOCUMENT } from "../response-document";
 import {
   RESPONSE_SCHEMA_VERSION,
@@ -833,5 +834,68 @@ describe("ResponseDocument v1.1 next_step", () => {
     expect(documentOf(REFUSE_CASE_TEXT, [], emptySummaries, "synthetic").next_step).toBe(
       "consult_clinician",
     );
+  });
+});
+
+const TWIN_BODY_ROW: ResponseToolCall = {
+  seq: 4,
+  tool: "twin_body",
+  args_sha256: HASH_A,
+  result_sha256: HASH_B,
+  row_count: 0,
+  ts: "2026-09-27T12:00:00.000Z",
+};
+
+const LIVER_VIEW = twinBodyView({
+  spec: {
+    focus: "liver",
+    label: "Liver",
+    body: "demo",
+    subject: "synthetic-1",
+    window: null,
+    unit: null,
+    organs: [],
+    n: 0,
+  },
+  sourceAuditIds: ["4"],
+});
+
+describe("twinBodyShown", () => {
+  test("true only for a twin.body view among the tool outputs", () => {
+    expect(twinBodyShown([LIVER_VIEW])).toBe(true);
+    expect(twinBodyShown([{ code: "FOCUS_REQUIRED", error: "no focus" }])).toBe(false);
+    expect(twinBodyShown([])).toBe(false);
+  });
+});
+
+describe("ResponseDocument v1.1 with a twin.body view and no readings", () => {
+  test("shown, not withheld, and still no personal data", () => {
+    const document = buildResponseDocumentV1({
+      parsed: parseTwinAnswer(ABSTAIN_TEXT, emptySummaries),
+      toolCalls: [TWIN_BODY_ROW],
+      mode: "synthetic",
+      twinBody: true,
+    });
+    expect([document.sufficient_data, document.abstained]).toEqual([false, false]);
+    expect(v11Fields(document)).toEqual({
+      answer_class: "information",
+      uncertainty: {
+        model_statement: "No observations in the window.",
+        level: "moderate",
+        reasons: ["no_personal_data", "tool_returned_no_rows"],
+      },
+      next_step: "more_data",
+      interpretation: { kind: "none" },
+    });
+  });
+
+  test("the same turn without the view abstains as before", () => {
+    const document = buildResponseDocumentV1({
+      parsed: parseTwinAnswer(ABSTAIN_TEXT, emptySummaries),
+      toolCalls: [TWIN_BODY_ROW],
+      mode: "synthetic",
+    });
+    expect([document.sufficient_data, document.abstained]).toEqual([false, true]);
+    expect(document.uncertainty.level).toBe("high");
   });
 });
