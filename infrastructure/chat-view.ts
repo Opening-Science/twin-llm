@@ -7,6 +7,7 @@ import {
   type compareSpecSchema,
   type tableSpecSchema,
   type timeseriesSpecSchema,
+  type twinBodySpecSchema,
 } from "./view-specs";
 
 /**
@@ -44,6 +45,7 @@ export type TimeseriesSpec = z.infer<typeof timeseriesSpecSchema>;
 export type CompareSpec = z.infer<typeof compareSpecSchema>;
 export type BiomarkerCardSpec = z.infer<typeof biomarkerCardSpecSchema>;
 export type TableSpec = z.infer<typeof tableSpecSchema>;
+export type TwinBodySpec = z.infer<typeof twinBodySpecSchema>;
 
 export type ChatView = z.infer<typeof chatViewSchema>;
 export type ViewKind = ChatView["kind"];
@@ -106,6 +108,15 @@ export const tableView = (input: Built<TableSpec>): ChatView => ({
   sourceAuditIds: [...input.sourceAuditIds],
 });
 
+/** `Body twin: Liver, 1 Jan 2026 – 31 Mar 2026`. */
+export const twinBodyView = (input: Built<TwinBodySpec>): ChatView => ({
+  id: viewId(input.sourceAuditIds),
+  kind: "twin.body",
+  title: viewTitle(`Body twin: ${input.spec.label}`, input.spec.window),
+  spec: { ...input.spec, organs: [...input.spec.organs] },
+  sourceAuditIds: [...input.sourceAuditIds],
+});
+
 /**
  * The decimals a stored number was written with, at most three: 0.35 keeps
  * both. A card shows its value and range this way, and its trend arrow
@@ -128,11 +139,20 @@ export const viewReadings = (view: ChatView): number => {
       return view.spec.n;
     case "table":
       return view.spec.total;
+    case "twin.body":
+      return view.spec.n;
   }
 };
 
 /** The synthetic subject a view shows; null for the user's own wearables. */
 export const viewSubject = (view: ChatView): string | null => view.spec.subject;
+
+/**
+ * True when a view shows the person's own data: their wearables, or their
+ * own body. A twin of the Demo body with no lab subject is not personal.
+ */
+export const viewIsPersonal = (view: ChatView): boolean =>
+  view.kind === "twin.body" ? view.spec.body === "self" : view.spec.subject === null;
 
 /** A view only when its spec parses; a view without an audit source is not one. */
 export const toChatView = (value: unknown): ChatView | null => {

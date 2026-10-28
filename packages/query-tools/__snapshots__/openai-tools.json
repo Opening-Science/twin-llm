@@ -765,19 +765,47 @@
     "type": "function",
     "function": {
       "name": "show_view",
-      "description": "Show a view of one measure in the answer. chart.timeseries draws every reading in window; chart.compare sets window against compare_with (n and mean of each); biomarker.card shows a LOINC's latest reading against its published range, with its trend; table lists the readings (first 50). The server reads the rows itself; the result says how many it read. A LOINC code needs subject (a synthetic subject_ref); a wearable key reads the user's synced data. Never write numbers for a view yourself.",
+      "description": "Show a view of one measure in the answer. chart.timeseries draws every reading in window; chart.compare sets window against compare_with (n and mean of each); biomarker.card shows a LOINC's latest reading against its published range, with its trend; table lists the readings (first 50); twin.body shows the body twin on focus with each mapped organ's range position (subject's labs, or none). The server reads the rows itself; the result says how many it read. A LOINC code needs subject (a synthetic subject_ref); a wearable key reads the user's synced data. Never write numbers for a view yourself.",
       "parameters": {
         "type": "object",
         "properties": {
           "kind": {
             "type": "string",
-            "enum": ["chart.timeseries", "chart.compare", "biomarker.card", "table"]
+            "enum": [
+              "chart.timeseries",
+              "chart.compare",
+              "biomarker.card",
+              "table",
+              "twin.body"
+            ]
           },
           "measure": {
+            "description": "A LOINC code, or a wearable key without its date, such as sleep.score; not for twin.body",
             "type": "string",
             "minLength": 1,
-            "maxLength": 128,
-            "description": "A LOINC code, or a wearable key without its date, such as sleep.score"
+            "maxLength": 128
+          },
+          "focus": {
+            "description": "twin.body only: the organ or body system to show",
+            "type": "string",
+            "enum": [
+              "musculoskeletal",
+              "cardiovascular",
+              "respiratory",
+              "nervous",
+              "digestive",
+              "metabolic",
+              "endocrine",
+              "reproductive",
+              "integumentary",
+              "heart",
+              "lung",
+              "brain",
+              "liver",
+              "kidney",
+              "pancreas",
+              "bloodvasculature"
+            ]
           },
           "window": {
             "type": "object",
@@ -823,7 +851,7 @@
             "enum": ["side-by-side", "overlaid"]
           }
         },
-        "required": ["kind", "measure", "window"],
+        "required": ["kind", "window"],
         "additionalProperties": false
       }
     }

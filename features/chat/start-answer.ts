@@ -23,6 +23,7 @@ import {
   skillRunEvent,
   type TurnSkill,
 } from "@/infrastructure/skill-gate";
+import { uiContextEvent } from "@/infrastructure/ui-context";
 import type { AppendInput } from "@/packages/audit/append";
 
 import type { ChatRequest } from "./chat-request";
@@ -58,6 +59,10 @@ import type { WearableContext } from "./wearable-context";
  * model is refused after the skill refusals and before the data-mode policy,
  * so before any history is sent. The refusal is audited (provider and a hash
  * of the thread id); if that write fails the turn is still refused.
+ *
+ * A turn's UI context (#47) is written to the audit chain as `ui.context`
+ * before the model is called, like a skill run; if that write fails, the
+ * model is not called.
  *
  * An agent (`agent:<id>`, #218) runs on its base model with its skill when the
  * prompt names none; a `/skill` in the prompt wins. Its skill goes through
@@ -199,6 +204,16 @@ export const createStartAnswer =
                 agent: agent.id,
                 ...(agent.via === undefined ? {} : { via: agent.via }),
               }),
+        }),
+      );
+    }
+
+    if (call.uiContext !== undefined) {
+      await deps.appendAudit(
+        uiContextEvent(call.uiContext, {
+          actor: actorId,
+          sessionId: call.turnId,
+          modelId,
         }),
       );
     }

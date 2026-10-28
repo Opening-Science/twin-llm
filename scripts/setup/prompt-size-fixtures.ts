@@ -5,6 +5,7 @@
  * Shaped like the summary builders' output; no real data.
  */
 import type { WearableSummaries } from "../../infrastructure/offered-keys";
+import { UI_CONTEXT_MAX_VIEWS, type UiContext } from "../../infrastructure/ui-context";
 
 const DAYS = Array.from(
   { length: 8 },
@@ -149,4 +150,25 @@ export const NO_WEARABLES: WearableSummaries = {
   whoop: null,
   googleHealth: null,
   vitronic: null,
+};
+
+/**
+ * The longest UI context block a turn can carry (#47): every part set, every
+ * listed view at its cap. Every size case carries it, so the budget holds
+ * with it.
+ */
+export const LONGEST_UI_CONTEXT: UiContext = {
+  panels: ["outputs", "twin"],
+  organ: "bloodvasculature",
+  chart: {
+    kind: "chart.timeseries",
+    measure: "a".repeat(40),
+    start: "2026-01-01",
+    end: "2026-03-31",
+  },
+  views: Array.from({ length: UI_CONTEXT_MAX_VIEWS }, (_, index) => ({
+    kind: "chart.timeseries" as const,
+    measure: `${index}${"b".repeat(39)}`,
+  })),
+  viewCount: 9999,
 };

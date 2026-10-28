@@ -222,6 +222,17 @@ blood pressure (SpO2, resting heart rate and blood pressure are not Anchor
 markers). Every code in the table must exist in the catalogue and every organ
 in `hra-groups.ts`; `organ-map.test.ts` checks both.
 
+### Biomarker state of a twin focus (`focus-state.ts`)
+
+The `twin.body` chat view (#48) focuses the twin on an organ or a system from
+`packages/anatomy/twin-focus.ts`. `focusOrgans` names the organ-map organs under
+it: a focus organ is itself (or nothing, for heart, lung and brain, which have no
+mapped lab marker), a system every mapped organ the HRA group table files under it
+(metabolic: liver and pancreas; cardiovascular: blood vessels; endocrine: kidney,
+as upstream files it). `focusLoincs` gives the codes to read and
+`focusOrganStatus` is `organStatus` kept to those organs. Nothing is coloured; the
+view says the position in words.
+
 ### Wearable vitals → body system (`vitals.ts`)
 
 Vitals are not Anchor biomarkers, so Anchor has no system for them. The sources

@@ -10,6 +10,7 @@ import {
   parseTwinAnswer,
 } from "@/infrastructure/parse-twin-answer";
 import { skillOfAuditTool, type TurnSkill } from "@/infrastructure/skill-gate";
+import { UI_CONTEXT_AUDIT_TOOL, type UiContext } from "@/infrastructure/ui-context";
 import type { VitronicSummary } from "@/infrastructure/vitronic-types";
 import type { WhoopSummary } from "@/infrastructure/whoop-types";
 import { drainGbdTurn } from "@/packages/gbd-mcp/collector";
@@ -53,6 +54,11 @@ export type TwinTurnDeps = Readonly<{
    * the tools down to it.
    */
   skill?: TurnSkill | null;
+  /**
+   * What the person had on screen (#47): a short block in the system prompt
+   * and `ui_context` on the response document. Already audited by the caller.
+   */
+  uiContext?: UiContext | null;
   /** The agent this turn answers as (#218); its role line joins the system prompt. */
   agent?: Readonly<{ name: string; role: string }> | null;
   /** Audit rows for this turn's session, read after the model finishes. */
@@ -117,6 +123,7 @@ export const runTwinTurn = (
     vitronic: wearables.vitronic,
     offeredTools: deps.offeredTools,
     skill: deps.skill ?? null,
+    uiContext: deps.uiContext ?? null,
     agent: deps.agent ?? null,
   });
 
@@ -152,9 +159,11 @@ export const runTwinTurn = (
           })),
         ),
         buildDocument: async () => {
-          // The skill-run row records the run; it read nothing, so it is not a tool call.
+          // The skill-run and UI context rows record the turn; they read nothing,
+          // so they are not tool calls.
           const toolCalls = (await deps.loadAudit(turnId)).filter(
-            (row) => skillOfAuditTool(row.tool) === null,
+            (row) =>
+              skillOfAuditTool(row.tool) === null && row.tool !== UI_CONTEXT_AUDIT_TOOL,
           );
           const gbd = drainGbdTurn(turnId);
           const guidelines = drainGuidelineTurn(turnId);
@@ -168,6 +177,7 @@ export const runTwinTurn = (
             guidelineSources: guidelines.sources,
             knowledgeSources: knowledge.sources,
             skill: deps.skill?.name ?? null,
+            uiContext: deps.uiContext ?? null,
           });
         },
       });
