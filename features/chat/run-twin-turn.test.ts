@@ -210,15 +210,24 @@ describe("runTwinTurn", () => {
     expect(finish.usage).toEqual({ inputTokens: 10, outputTokens: 5, totalTokens: 15 });
   });
 
-  test("stops after eight steps and builds the document from this turn's audit", async () => {
+  test("stops after eight steps, the last without tools, and builds the document from this turn's audit", async () => {
+    // A model that calls a tool whenever it is offered one.
     const model = new MockLanguageModelV4({
-      doStream: async () => streamOf(toolCall(`call-${Math.random()}`)),
+      doStream: async ({ tools }) =>
+        streamOf(
+          (tools ?? []).length === 0 ? text("Answer") : toolCall(`call-${Math.random()}`),
+        ),
     });
     const { finish, audited } = await run(model);
 
     expect(model.doStreamCalls.length).toBe(8);
+    expect(model.doStreamCalls.map((call) => (call.tools ?? []).length > 0)).toEqual([
+      ...Array.from({ length: 7 }, () => true),
+      false,
+    ]);
+    expect(finish.text).toBe("Answer more");
     expect(finish.toolResults.map((result) => result.toolName)).toEqual(
-      Array.from({ length: 8 }, () => "trend"),
+      Array.from({ length: 7 }, () => "trend"),
     );
     expect(finish.toolResults[0]?.output).toEqual({
       loinc: "4548-4",

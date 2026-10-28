@@ -91,6 +91,17 @@ export type TwinTurnHooks = Readonly<{
   onAbort: () => void;
 }>;
 
+/** Model calls in one turn; the last one is kept for writing the answer. */
+export const MAX_STEPS = 8;
+
+/**
+ * The last step has no tools, so a model that is still calling them writes
+ * from what it has instead of stopping with nothing (the pilot fine-tune
+ * spent all eight steps on lookups and wrote no answer).
+ */
+export const lastStepWithoutTools = (stepNumber: number) =>
+  stepNumber >= MAX_STEPS - 1 ? { activeTools: [] } : undefined;
+
 export const runTwinTurn = (
   deps: TwinTurnDeps,
   { turnId, messages, wearables, abortSignal }: TwinTurnInput,
@@ -114,7 +125,8 @@ export const runTwinTurn = (
       content: message.content,
     })),
     tools: deps.tools,
-    stopWhen: isStepCount(8),
+    stopWhen: isStepCount(MAX_STEPS),
+    prepareStep: ({ stepNumber }) => lastStepWithoutTools(stepNumber),
     abortSignal,
     onChunk: ({ chunk }) => {
       if (chunk.type === "text-delta") hooks.onFirstToken();
