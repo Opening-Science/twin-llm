@@ -1,3 +1,5 @@
+import type { UiContext } from "@/infrastructure/ui-context";
+
 import type { AnswerRequest, IncognitoAnswerRequest } from "./answer-stream";
 import type { AnswerSource } from "./conversation";
 import type { StartTurnInput, StartTurnResult } from "./start-turn";
@@ -68,9 +70,11 @@ export const answerRequestFor = (
     turnId: string;
     messages: readonly HistoryMessage[];
     skill: string | null;
+    uiContext?: UiContext | null;
   }>,
 ): AnswerRequest | IncognitoAnswerRequest => {
   const skill = answer.skill === null ? {} : { skill: answer.skill };
+  // An incognito turn keeps nothing, so it sends no UI context to be audited.
   return mode === "incognito"
     ? { incognito: true, modelId: answer.modelId, messages: answer.messages, ...skill }
     : {
@@ -78,5 +82,6 @@ export const answerRequestFor = (
         turnId: answer.turnId,
         messages: answer.messages,
         ...skill,
+        ...(answer.uiContext ? { uiContext: answer.uiContext } : {}),
       };
 };

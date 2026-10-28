@@ -232,3 +232,37 @@ describe("buildTwinSystemPrompt data mode", () => {
     expect(personal).not.toContain("synthetic research cohort");
   });
 });
+
+describe("buildTwinSystemPrompt agent line (#218)", () => {
+  const base = {
+    mode: "synthetic",
+    oura: null,
+    whoop: null,
+    googleHealth: null,
+    vitronic: null,
+  } as const;
+
+  test("an agent adds one line with its name and role under the first", async () => {
+    const { buildTwinSystemPrompt } = await import("./twin-system-prompt");
+    const without = buildTwinSystemPrompt(base).split("\n");
+    const withAgent = buildTwinSystemPrompt({
+      ...base,
+      agent: {
+        name: "Sleep",
+        role: "Describes sleep against the person's own recent nights.",
+      },
+    }).split("\n");
+    expect(withAgent.slice(0, 2)).toEqual([
+      "You are TwinLLM, a research assistant for personalized-medicine questions.",
+      "Agent: Sleep. Describes sleep against the person's own recent nights.",
+    ]);
+    expect(withAgent.filter((line, index) => index !== 1)).toEqual(without);
+  });
+
+  test("no agent, no line", async () => {
+    const { buildTwinSystemPrompt } = await import("./twin-system-prompt");
+    expect(buildTwinSystemPrompt({ ...base, agent: null })).toBe(
+      buildTwinSystemPrompt(base),
+    );
+  });
+});

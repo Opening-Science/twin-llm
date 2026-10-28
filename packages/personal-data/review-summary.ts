@@ -1,11 +1,12 @@
 import { MAX_CODES_LISTED, MAX_UNMAPPED_LISTED, PREVIEW_ROWS } from "./limits";
-import type {
-  ImportKind,
-  ObservationDraft,
-  ParsedOk,
-  TableCell,
-  TableColumn,
-  Unmapped,
+import {
+  type ImportKind,
+  type ObservationDraft,
+  type ParsedOk,
+  type TableCell,
+  type TableColumn,
+  type Unmapped,
+  unmappedCount,
 } from "./types";
 
 /**
@@ -48,7 +49,12 @@ export type ReviewSummary = Readonly<{
   codesTotal: number;
   units: readonly ReviewUnit[];
   columns: readonly TableColumn[];
-  unmapped: Readonly<{ byReason: readonly ReviewReason[]; listed: readonly Unmapped[] }>;
+  unmapped: Readonly<{
+    byReason: readonly ReviewReason[];
+    listed: readonly Unmapped[];
+    /** Entries in all; one entry can stand for many records (`Unmapped.count`). */
+    listedOf: number;
+  }>;
   preview: Readonly<{
     columns: readonly string[];
     rows: readonly (readonly TableCell[])[];
@@ -161,7 +167,7 @@ const reasonsOf = (unmapped: readonly Unmapped[]): readonly ReviewReason[] =>
     (known, row) => ({
       code: row.code,
       example: known?.example ?? row.reason,
-      count: (known?.count ?? 0) + 1,
+      count: (known?.count ?? 0) + (row.count ?? 1),
     }),
   ).toSorted((a, b) => b.count - a.count || a.code.localeCompare(b.code));
 
@@ -194,7 +200,7 @@ export const reviewSummary = (parsed: ParsedOk, file: FileFacts): ReviewSummary 
       clinicalRecords,
       tableRows,
       tableColumns: parsed.kind === "table" ? parsed.table.columns.length : 0,
-      unmapped: parsed.unmapped.length,
+      unmapped: unmappedCount(parsed.unmapped),
     },
     dateRange: dateRangeOf(parsed),
     codes: codes.slice(0, MAX_CODES_LISTED),
@@ -204,6 +210,7 @@ export const reviewSummary = (parsed: ParsedOk, file: FileFacts): ReviewSummary 
     unmapped: {
       byReason: reasonsOf(parsed.unmapped),
       listed: parsed.unmapped.slice(0, MAX_UNMAPPED_LISTED),
+      listedOf: parsed.unmapped.length,
     },
     preview:
       parsed.kind === "table"

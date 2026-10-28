@@ -27,7 +27,8 @@ import {
   demoBodyApiUrl,
   demoBodyIdFor,
 } from "@/packages/anatomy/demo-bodies";
-import { ATLASES } from "@/packages/anatomy/manifest";
+import { type Highlight } from "@/packages/anatomy/highlight";
+import { ATLASES, type AtlasScheme } from "@/packages/anatomy/manifest";
 import { RIGGED_ATTRIBUTION, riggedBodyApiUrl } from "@/packages/anatomy/rigged-bodies";
 import { Button } from "@/infrastructure/ui-kit/button";
 import {
@@ -208,7 +209,20 @@ type BodyLoopAvatarProps = {
   readonly initialSubjectId?: string;
   /** The Demo's synthetic person to start on instead of the first one. */
   readonly initialPersonRef?: string;
+  /** A chat `twin.body` view: what to light, and the depth to start at. Read once. */
+  readonly initialFocus?: InitialFocus;
+  /** A tap on the body, as the HRA group and system it names; null when cleared. */
+  readonly onPickPart?: (part: PickedPart | null) => void;
 };
+
+export type InitialFocus = Readonly<{
+  id: string;
+  label: string;
+  highlights: Readonly<Record<AtlasScheme, Highlight>>;
+  depth: number;
+}>;
+
+export type PickedPart = Readonly<{ group: string | null; system: string | null }>;
 
 /** BodyLoop helper geometry that must not show inside the (glass) scan. */
 export const BodyLoopAvatar = ({
@@ -217,6 +231,8 @@ export const BodyLoopAvatar = ({
   onContext,
   initialSubjectId,
   initialPersonRef,
+  initialFocus,
+  onPickPart,
 }: BodyLoopAvatarProps) => {
   const [subjects, setSubjects] = useState<readonly BodyTwinSubject[]>(
     preview?.subjects ?? [],
@@ -479,6 +495,11 @@ export const BodyLoopAvatar = ({
   const onPick = useCallback(
     (next: Picked | null) => {
       setPicked(next);
+      onPickPart?.(
+        next?.target.kind === "part"
+          ? { group: next.target.group, system: next.target.system }
+          : null,
+      );
       const lit = next ? pickHighlight(next.target) : null;
       if (!next || next.target.kind !== "part" || !lit) {
         // The body outline or empty sky replaces a pick; its glow goes with it.
@@ -496,8 +517,24 @@ export const BodyLoopAvatar = ({
         },
       });
     },
-    [scheme, anatomyDispatch, pickLit],
+    [scheme, anatomyDispatch, pickLit, onPickPart],
   );
+  // A chat view's focus is lit once, at its depth; after that the viewer is the person's.
+  const focusApplied = useRef(false);
+  useEffect(() => {
+    if (initialFocus === undefined || focusApplied.current) return;
+    focusApplied.current = true;
+    anatomyDispatch({ type: "depth", depth: initialFocus.depth });
+    anatomyDispatch({
+      type: "highlight",
+      highlight: initialFocus.highlights[scheme],
+      from: {
+        id: `chat:${initialFocus.id}`,
+        label: `From chat: ${initialFocus.label}`,
+        highlights: initialFocus.highlights,
+      },
+    });
+  }, [initialFocus, scheme, anatomyDispatch]);
   const viewRef = useRef<HTMLDivElement | null>(null);
   const [viewNode, setViewNode] = useState<HTMLDivElement | null>(null);
   const setView = useCallback((node: HTMLDivElement | null) => {

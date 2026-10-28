@@ -1,4 +1,4 @@
-Hand-made fixtures for the personal data import (#176). Every value, id and name
+Hand-made fixtures for the personal data import (#176, #178, #179). Every value, id and name
 here was made up for the tests; none comes from a person, a patient portal or a
 device export.
 
@@ -9,3 +9,12 @@ device export.
   a value bound, a missing unit, a time without a zone and a bad check digit.
 - research-table.tsv: a small table with a missing marker, a quoted field, an
   empty cell, a row with too few fields and a date that is not a calendar day.
+- apple-health-export.xml: an Apple Health export.xml in the export's shape with
+  a placeholder Me element, one or two samples of each allowlisted type, a weight
+  in lb, an oxygen saturation that is not a fraction, a value that is not a
+  number, sleep from two devices that overlap, and types that are not read.
+  Tests zip it themselves.
+- wearables/: files in the shape of an Oura JSON export and trends CSV, Whoop's
+  my_whoop_data CSVs, and Fitbit daily JSON from Google Takeout, with empty
+  cells, naps, a row without a time zone, a 0 resting heart rate and files no
+  layout knows. Device names such as "Demo Watch" are made up.

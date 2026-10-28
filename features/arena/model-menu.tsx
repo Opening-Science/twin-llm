@@ -5,7 +5,7 @@ import { formatModelWindow } from "@/infrastructure/model-catalog";
 import { buttonClassName } from "@/infrastructure/ui-kit/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/infrastructure/ui-kit/popover";
 
-import { chosenModels, toggleLimit } from "./model-selection";
+import { chosenModels, menuGroups, menuSubline, toggleLimit } from "./model-selection";
 
 /**
  * The list of every model the provider offers, as real checkboxes: picking a
@@ -13,6 +13,9 @@ import { chosenModels, toggleLimit } from "./model-selection";
  * without any extra ARIA. A row that would break the 1-to-3 rule is disabled,
  * and the line under the list says why in words. A locked row (a model an
  * incognito chat may not use) is disabled with its reason on the row itself.
+ * Agents come first under their own heading, each with the model it runs on;
+ * Auto heads them. A fine-tune shown by its readable name keeps its raw id in
+ * the small line.
  */
 
 const LIMIT_NOTE = {
@@ -60,44 +63,51 @@ export const ModelMenu = ({
               {count}/{MAX_SELECTED_MODELS}
             </span>
           </legend>
-          <ul className="border-border max-h-72 overflow-y-auto border-y py-1">
-            {catalog.map((model) => {
-              const selected = selectedIds.includes(model.id);
-              const locked = lockedIds.includes(model.id);
-              const blocked = locked || toggleLimit(selected, count) !== null;
-              return (
-                <li key={model.id}>
-                  <label
-                    className={
-                      blocked
-                        ? "flex cursor-not-allowed items-center gap-3 px-4 py-2 opacity-50"
-                        : "hover:bg-muted flex cursor-pointer items-center gap-3 px-4 py-2"
-                    }
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selected}
-                      disabled={blocked}
-                      onChange={() => onToggle(model.id)}
-                      className="accent-primary size-4 shrink-0"
-                    />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm">{model.name}</span>
-                      <span className="text-muted-foreground block truncate text-xs">
-                        {model.provider}
-                      </span>
-                      {locked ? (
-                        <span className="text-muted-foreground block text-xs">
-                          {lockedNote}
-                        </span>
-                      ) : null}
-                    </span>
-                    <span className="metric">{formatModelWindow(model)}</span>
-                  </label>
-                </li>
-              );
-            })}
-          </ul>
+          <div className="border-border max-h-72 overflow-y-auto border-y py-1">
+            {menuGroups(catalog).map((group) => (
+              <section key={group.label} aria-label={group.label}>
+                <h3 className="text-eyebrow px-4 pt-2 pb-1">{group.label}</h3>
+                <ul>
+                  {group.models.map((model) => {
+                    const selected = selectedIds.includes(model.id);
+                    const locked = lockedIds.includes(model.id);
+                    const blocked = locked || toggleLimit(selected, count) !== null;
+                    return (
+                      <li key={model.id}>
+                        <label
+                          className={
+                            blocked
+                              ? "flex cursor-not-allowed items-center gap-3 px-4 py-2 opacity-50"
+                              : "hover:bg-muted flex cursor-pointer items-center gap-3 px-4 py-2"
+                          }
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selected}
+                            disabled={blocked}
+                            onChange={() => onToggle(model.id)}
+                            className="accent-primary size-4 shrink-0"
+                          />
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-sm">{model.name}</span>
+                            <span className="text-muted-foreground block truncate text-xs">
+                              {menuSubline(model)}
+                            </span>
+                            {locked ? (
+                              <span className="text-muted-foreground block text-xs">
+                                {lockedNote}
+                              </span>
+                            ) : null}
+                          </span>
+                          <span className="metric">{formatModelWindow(model)}</span>
+                        </label>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            ))}
+          </div>
         </fieldset>
         <p className="text-muted-foreground px-4 py-3 text-xs">{note}</p>
       </PopoverContent>

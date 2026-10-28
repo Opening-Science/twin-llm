@@ -76,6 +76,19 @@ Measured on the pinned files (2026-10-13):
 - Group names in the picker come from the HRA keys themselves (`#VHFSmallIntestine` → "Small intestine"), not a hand table. Left and right are dropped as whole words, whatever their case, a two-word name that starts with the tissue reads organ first (`#VHMDuctsLiver` and `#VHFLiverDucts` are both "Liver ducts"), and groups with the same name are one option. Glands (thyroid, parathyroid, pituitary, adrenal) and marrow are not in either HRA atlas, so they cannot be picked.
 - Rows of the body panel's Biomarkers tab drive the same highlight through `packages/biomarkers/marker-highlight.ts`: HRA lights the row's organ groups, BodyParts3D their systems (see `docs/biomarkers.md`). The highlight remembers which row set it, so the row stays pressed until another highlight replaces it, and an atlas switch lights the same row on the new atlas. The picker then shows that row as its own option ("From biomarker: Gamma-GT (GGT)", "From vital: Heart rate"), so a highlight spanning several groups does not read as None.
 
+## Focus from chat
+
+A `twin.body` view in the chat (`docs/chat-platform.md`, #48) starts the viewer
+on a focus from `packages/anatomy/twin-focus.ts`: one of the nine systems or one
+of heart, lung, brain, liver, kidney, pancreas and blood vessels. `focusHighlights`
+gives what it lights per atlas kind (HRA the organ group or the whole system,
+BodyParts3D the system), set like a Biomarkers-tab row ("From chat: Liver"), so an
+atlas switch lights it again. `focusDepth` starts the depth at organs, at muscle
+for the musculoskeletal system and at the scan for the skin; after that the
+viewer is the person's. A tap on a part in the chat's viewers reports its group
+and system, and `focusOfPick` turns that into the organ (or its system) the next
+turn's UI context names.
+
 ## Environment
 
 - **Enter environment** in the view toolbar opens the viewer full screen (Fullscreen API on the viewer container). Where the browser has no element full screen (iPhone Safari) or refuses, the same container covers the window as a fixed overlay and the page behind it stops scrolling. The same button reads **Exit environment** inside; Escape also exits, except inside a text field such as the panel search (in real full screen the browser handles Escape itself, text field or not). Focus returns to the button. Tab cycles inside the environment, also after a drag on the canvas, and the research-use line stays visible in the bar. Unmounting the viewer while open closes the environment.

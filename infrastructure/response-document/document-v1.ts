@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { gbdPopulationInput } from "@/packages/gbd-mcp/input";
 
+import { uiContextSchema } from "../ui-context";
 import { CHAT_RESPONSE_DOCUMENT } from "./constants";
 
 /** The builder emits the newest; stored v1 documents still parse (A3). */
@@ -151,6 +152,9 @@ export const responseDocumentV1Schema = z.object({
     .string()
     .regex(/^[a-z][a-z0-9-]{0,39}$/)
     .optional(),
+  // Additive (#47): what the person had on screen as they asked. Absent when
+  // the turn carried none and on documents saved before it.
+  ui_context: uiContextSchema.optional(),
 });
 
 export type ResponseToolCall = z.infer<typeof toolCallSchema>;

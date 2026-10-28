@@ -423,7 +423,7 @@ model GenomeReport {
   @@map("genome_reports")
 }
 
-/// One file a person imported on Customize · Data (#176, docs/personal-data.md).
+/// One file a person imported on Customize · Data (#176, #178, #179, docs/personal-data.md).
 /// Personal data, written only with DATA_MODE=personal, owned by one user and
 /// never mixed with the synthetic warehouse. Deleting it hard-deletes its rows
 /// (cascade). `sha256` is the uploaded file's, so the same file twice is
@@ -431,7 +431,7 @@ model GenomeReport {
 model PersonalDataset {
   id             String   @id @default(cuid())
   userId         String   @map("user_id")
-  /// "fhir", "lab-csv" or "table".
+  /// "fhir", "lab-csv", "table", "apple-health" or "wearable".
   kind           String
   name           String
   sourceFileName String   @map("source_file_name")

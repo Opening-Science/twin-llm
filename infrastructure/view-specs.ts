@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { TWIN_FOCUS_IDS } from "@/packages/anatomy/twin-focus";
+
 /**
  * The spec of every view kind, as zod schemas. A view reaches the browser in
  * a stream part and comes back from a stored tool part, so `toChatView`
@@ -116,6 +118,38 @@ export const tableSpecSchema = z.object({
   total: z.number().int().nonnegative(),
 });
 
+/** Which body a `twin.body` view starts on: the Demo body, or Self (its scan where there is one). */
+export const TWIN_BODIES = ["demo", "self"] as const;
+
+/**
+ * twin.body: the twin focused on an organ or system, with the range position
+ * of each mapped organ under it (`packages/biomarkers/focus-state.ts`). No
+ * value is stored, only positions and the marker that set them.
+ */
+export const twinBodySpecSchema = z.object({
+  focus: z.enum(TWIN_FOCUS_IDS),
+  label: z.string(),
+  body: z.enum(TWIN_BODIES),
+  /** The synthetic subject whose labs were read; null when none was. */
+  subject: z.string().nullable(),
+  window: windowSpec,
+  /** No measure, so no unit; kept so every spec answers `unit`. */
+  unit: z.null(),
+  organs: z
+    .array(
+      z.object({
+        organ: z.string(),
+        label: z.string(),
+        position: z.enum(RANGE_POSITIONS),
+        marker: z.string(),
+        loinc: z.string(),
+      }),
+    )
+    .readonly(),
+  /** Rows read in the window; 0 when no subject or no mapped marker. */
+  n: z.number().int().nonnegative(),
+});
+
 const sources = z.array(z.string()).min(1).readonly();
 
 const viewOf = <K extends string, S extends z.ZodType>(kind: K, spec: S) =>
@@ -133,4 +167,5 @@ export const chatViewSchema = z.discriminatedUnion("kind", [
   viewOf("chart.compare", compareSpecSchema),
   viewOf("biomarker.card", biomarkerCardSpecSchema),
   viewOf("table", tableSpecSchema),
+  viewOf("twin.body", twinBodySpecSchema),
 ]);

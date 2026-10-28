@@ -64,7 +64,7 @@ type Row = Readonly<{
 
 const toView = (row: Row): DatasetView => ({
   id: row.id,
-  // The CHECK constraint holds kind to the three values.
+  // The CHECK constraint holds kind to the import kinds.
   kind: isImportKind(row.kind) ? row.kind : "table",
   name: row.name,
   sourceFileName: row.sourceFileName,

@@ -396,6 +396,24 @@ bun run knowledge:ingest
 - Last run: 2026-10-17, throwaway pgvector DB: `biomarker-catalogue` 15, `metric-glossary` 12, `provenance-and-audit` 7, `system-limits` 7, `units-and-codes` 8 chunks (49), `pruned=1` (a seeded stale row) then `pruned=0`. Chunk hash identical across both runs; the one `source = 'guideline'` row was untouched.
 - After an open-twin pin bump: `bun run knowledge:biomarkers`, then re-ingest.
 
+### Specialty literature
+
+Fetches open-licence PMC articles for one agent specialty into gitignored
+`data/literature/<specialty>/`, then embeds them with
+`source = 'literature:<specialty>'`. Licences and limits: `docs/literature.md`.
+
+```sh
+bun run literature:fetch -- --specialty diet --limit 3 --dry-run
+bun run literature:fetch -- --specialty diet --limit 50
+bun run literature:ingest -- --specialty diet
+```
+
+- Good: one `stored` or `skipped <reason>` line per article, then
+  `searched=<n> stored=<n> skipped=<n>`. A re-run skips what is stored.
+- Last fetch: 2026-10-28, `--specialty diet --limit 3`: three stored (one
+  CC BY, two CC BY-NC-ND), none skipped. The ingest has only run against
+  test fakes so far, not a database.
+
 ### Knowledge and guideline search in one database
 
 ```sh

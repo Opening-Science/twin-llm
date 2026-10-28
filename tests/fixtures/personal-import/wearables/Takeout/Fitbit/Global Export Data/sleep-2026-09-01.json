@@ -1,0 +1,18 @@
+[
+  {
+    "logId": 1001,
+    "dateOfSleep": "2026-09-02",
+    "startTime": "2026-09-01T23:05:00.000",
+    "endTime": "2026-09-02T06:40:00.000",
+    "minutesAsleep": 402,
+    "mainSleep": true
+  },
+  {
+    "logId": 1002,
+    "dateOfSleep": "2026-09-02",
+    "startTime": "2026-09-02T15:00:00.000",
+    "endTime": "2026-09-02T15:30:00.000",
+    "minutesAsleep": 27,
+    "mainSleep": false
+  }
+]

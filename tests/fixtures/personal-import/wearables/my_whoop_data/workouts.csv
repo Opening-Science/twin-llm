@@ -1,0 +1,2 @@
+Cycle start time,Cycle end time,Cycle timezone,Workout start time,Workout end time,Duration (min),Activity name,Activity Strain,Energy burned (cal),Max HR (bpm),Average HR (bpm)
+2026-09-01 23:10:00,2026-09-02 22:55:00,UTC+02:00,2026-09-02 18:00:00,2026-09-02 18:40:00,40,Running,12.1,410,171,148

@@ -38,6 +38,19 @@ describe("parseOllamaTags", () => {
     ]);
   });
 
+  test("names our own fine-tunes readably and keeps their raw id", () => {
+    const models = parseOllamaTags({
+      models: [
+        { name: "twinllm-qwen3-4b-pilot1:latest", capabilities: ["completion"] },
+        { name: "qwen3:4b", capabilities: ["completion"] },
+      ],
+    });
+    expect(models?.map(({ id, name }) => [id, name])).toEqual([
+      ["twinllm-qwen3-4b-pilot1", "TwinLLM 4B (pilot 1)"],
+      ["qwen3:4b", "qwen3:4b"],
+    ]);
+  });
+
   test("lists the largest context window first, whatever order the daemon used", () => {
     const models = parseOllamaTags({
       models: [

@@ -32,6 +32,7 @@ import {
 import { showViewInput, VIEW_TOOL_DEFINITIONS } from "@/packages/query-tools/view-schema";
 import type { z } from "zod";
 
+import { buildTwinBodyView, runTwinBodyState } from "./twin-body-view";
 import { cardLabel, cardSpecOf, compareSpecOf, tableSpecOf } from "./view-builders";
 
 /**
@@ -54,7 +55,9 @@ export type ShowViewRefusal =
         | "VIEW_NOT_ALLOWED"
         | "UNKNOWN_MEASURE"
         | "LOINC_REQUIRED"
-        | "COMPARE_WINDOW_REQUIRED";
+        | "COMPARE_WINDOW_REQUIRED"
+        | "MEASURE_REQUIRED"
+        | "FOCUS_REQUIRED";
       error: string;
     }>;
 
@@ -103,6 +106,17 @@ const LOINC_REQUIRED = {
 const COMPARE_WINDOW_REQUIRED = {
   code: "COMPARE_WINDOW_REQUIRED",
   error: "chart.compare needs compare_with, the earlier window to set against window",
+} as const;
+
+/** Every kind but twin.body draws a measure. */
+const MEASURE_REQUIRED = {
+  code: "MEASURE_REQUIRED",
+  error: "this kind needs measure: a LOINC code with subject, or a wearable key",
+} as const;
+
+const FOCUS_REQUIRED = {
+  code: "FOCUS_REQUIRED",
+  error: "twin.body needs focus: one of the listed organ or body system ids",
 } as const;
 
 const DATE_SUFFIX = /\.\d{4}-\d{2}-\d{2}$/;
@@ -217,15 +231,19 @@ type Source =
   | Readonly<{ kind: "loinc"; loinc: string; subject: string }>
   | Readonly<{ kind: "wearable"; key: string }>;
 
-const sourceOf = (deps: ShowViewDeps, input: ShowViewInput): Source | ShowViewRefusal => {
-  if (loincSchema.safeParse(input.measure).success) {
+const sourceOf = (
+  deps: ShowViewDeps,
+  input: ShowViewInput,
+  measure: string,
+): Source | ShowViewRefusal => {
+  if (loincSchema.safeParse(measure).success) {
     if (!deps.cohortRecords) return COHORT_TOOLS_OFF;
     if (input.subject === undefined) return SUBJECT_REQUIRED;
-    return { kind: "loinc", loinc: input.measure, subject: input.subject };
+    return { kind: "loinc", loinc: measure, subject: input.subject };
   }
   if (input.kind === "biomarker.card") return LOINC_REQUIRED;
-  if (!isKnownWearableKey(deps.wearables, input.measure)) return UNKNOWN_MEASURE;
-  return { kind: "wearable", key: input.measure };
+  if (!isKnownWearableKey(deps.wearables, measure)) return UNKNOWN_MEASURE;
+  return { kind: "wearable", key: measure };
 };
 
 type Run = Readonly<{
@@ -324,7 +342,7 @@ const showCompare = async (
   return audited(run.seqs, (sourceAuditIds) =>
     compareView({
       spec: compareSpecOf({
-        measure: run.input.measure,
+        measure: run.source.kind === "loinc" ? run.source.loinc : run.source.key,
         label: afterSeries.display ?? labelOf(beforeSeries),
         unit: compared?.unit ?? afterSeries.unit ?? beforeSeries.unit,
         subject: subjectOf(run.source),
@@ -378,6 +396,31 @@ const showCard = async (
   );
 };
 
+/**
+ * The twin on an organ or system. A subject's labs are read only while the
+ * cohort record tools are on; personal mode shows Self and synthetic mode the
+ * Demo body, as the `/twin` card does.
+ */
+const showTwinBody = async (
+  deps: ShowViewDeps,
+  input: ShowViewInput,
+): Promise<ShowViewOutput> => {
+  if (input.focus === undefined) return FOCUS_REQUIRED;
+  if (input.subject !== undefined && !deps.cohortRecords) return COHORT_TOOLS_OFF;
+  const audit = recordingAudit(deps.ports ?? defaultQueryToolPorts());
+  const twin = {
+    focus: input.focus,
+    subject: input.subject ?? null,
+    window: { start: input.window.start, end: input.window.end },
+    body: deps.scope.mode === "personal" ? ("self" as const) : ("demo" as const),
+  };
+  const state = await runTwinBodyState(deps.scope, twin, audit.ports);
+  if (isToolRefusal(state)) return state;
+  return audited(audit.seqs, (sourceAuditIds) =>
+    buildTwinBodyView(twin, state, sourceAuditIds),
+  );
+};
+
 export const runShowView = async (
   deps: ShowViewDeps,
   input: ShowViewInput,
@@ -385,7 +428,9 @@ export const runShowView = async (
   if (deps.views !== undefined && !deps.views.includes(input.kind)) {
     return VIEW_NOT_ALLOWED;
   }
-  const source = sourceOf(deps, input);
+  if (input.kind === "twin.body") return showTwinBody(deps, input);
+  if (input.measure === undefined) return MEASURE_REQUIRED;
+  const source = sourceOf(deps, input, input.measure);
   if ("code" in source) return source;
   if (input.kind === "chart.compare" && input.compare_with === undefined) {
     return COMPARE_WINDOW_REQUIRED;
@@ -411,11 +456,30 @@ export const runShowView = async (
   }
 };
 
-/** What the model reads back: what was drawn, not its numbers again. `open_view` shares it. */
+/**
+ * What the model reads back: what was drawn, not its numbers again. `open_view`
+ * shares it. A twin view also says which organs it placed and where, in words,
+ * so the answer can talk about the organs it shows.
+ */
 export const modelNoteOf = (
   output: ChatView | Readonly<{ code: string; error: string }>,
 ): JSONValue => {
   if ("code" in output) return { code: output.code, error: output.error };
+  if (output.kind === "twin.body") {
+    return {
+      shown: true,
+      view_id: output.id,
+      title: output.title,
+      focus: output.spec.focus,
+      body: output.spec.body,
+      readings: output.spec.n,
+      organs: output.spec.organs.map((organ) => ({
+        organ: organ.organ,
+        marker: organ.marker,
+        position: organ.position,
+      })),
+    };
+  }
   const readings = viewReadings(output);
   return {
     shown: true,

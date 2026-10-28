@@ -7,6 +7,7 @@ import {
   type ChatView,
   LIST_VIEWS_TOOL,
   OPEN_VIEW_TOOL,
+  viewIsPersonal,
   viewReadings,
   viewSubject,
 } from "@/infrastructure/chat-view";
@@ -66,7 +67,7 @@ export type OpenViewOutput = ChatView | typeof VIEW_NOT_FOUND;
 const offered = async (deps: ViewToolDeps): Promise<readonly ThreadView[]> =>
   (await deps.loadViews(deps.scope.sessionId)).filter(
     (entry) =>
-      (deps.personal || viewSubject(entry.view) !== null) &&
+      (deps.personal || !viewIsPersonal(entry.view)) &&
       (deps.views === undefined || deps.views.includes(entry.view.kind)),
   );
 
