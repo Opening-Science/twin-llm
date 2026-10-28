@@ -40,7 +40,14 @@ provider only Auto and the General Practitioner are offered.
 
 The picker lists the agents under "Agents", Auto first, each with its base model in small
 text (Auto says it picks an agent for each question), and the models under "Models". An
-agent counts as one of the one to three picks. A new chat never picks an agent by default.
+agent counts as one of the one to three picks.
+
+A new chat, an incognito chat and the first question on `/start` start with the General
+Practitioner, the Diet specialist and the Anatomy specialist, as many of them as the
+catalog offers, topped up with the usual one model per vendor (`defaultModelSelection`).
+On local Ollama that is the three agents; on a hosted provider it is the General
+Practitioner and two models. The models page and the starter questions read the catalog
+without agents, so they keep models only.
 
 ## In a turn
 

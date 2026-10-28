@@ -401,14 +401,32 @@ export const catalogAgentOf = (
 // --- selection and display ------------------------------------------------------
 
 /**
- * The models a new prompt starts with: walk the (already ordered) list and
- * take the first model of each vendor, so the opening comparison spans
- * vendors instead of three variants of one; top up from the rest when there
- * are fewer vendors than slots. Agents are picked by hand, never by default.
+ * The agents a new chat starts with, in this order, when the catalog offers
+ * them: on a local provider all three, on a hosted one only the General
+ * Practitioner.
+ */
+export const DEFAULT_AGENT_IDS: readonly string[] = Object.freeze([
+  "agent:gp",
+  "agent:diet",
+  "agent:anatomy",
+]);
+
+/**
+ * The rows a new prompt starts with: the default agents the catalog offers
+ * (`DEFAULT_AGENT_IDS`), then models. For the models, walk the (already
+ * ordered) list and take the first model of each vendor, so the comparison
+ * spans vendors instead of three variants of one; top up from the rest when
+ * there are fewer vendors than slots. A catalog without agents (the models
+ * page, the starter questions) gets models only, as before.
  */
 export const defaultModelSelection = (
   catalog: readonly CatalogModel[],
 ): readonly string[] => {
+  const agents = DEFAULT_AGENT_IDS.filter((id) => catalog.some((row) => row.id === id));
+  return [...agents, ...defaultPlainModels(catalog)].slice(0, MAX_SELECTED_MODELS);
+};
+
+const defaultPlainModels = (catalog: readonly CatalogModel[]): readonly string[] => {
   const seenVendors = new Set<string>();
   const models = catalog.filter((model) => model.agent === undefined);
   const [firsts, others] = models.reduce<[CatalogModel[], CatalogModel[]]>(

@@ -255,8 +255,37 @@ describe("agents in the catalog (#218)", () => {
     );
   });
 
-  test("defaultModelSelection never picks an agent", () => {
-    const rows = withAgents([ollama("qwen3:8b"), ollama("llama3.2")], LOCAL);
-    expect(defaultModelSelection(rows)).toEqual(["qwen3:8b", "llama3.2"]);
+  test("defaultModelSelection: General Practitioner, Diet and Anatomy where all three are offered", () => {
+    const skills = [
+      ...SKILLS,
+      { name: "nutrition", providers: ["ollama"], sources: [], tools: [] },
+      { name: "anatomy", providers: ["ollama"], sources: [], tools: [] },
+    ];
+    const rows = withAgents([ollama("qwen3:8b"), ollama("llama3.2")], {
+      ...LOCAL,
+      skills,
+    });
+    expect(defaultModelSelection(rows)).toEqual([
+      "agent:gp",
+      "agent:diet",
+      "agent:anatomy",
+    ]);
+  });
+
+  test("defaultModelSelection: an offered default agent first, then the usual models", () => {
+    const local = withAgents([ollama("qwen3:8b"), ollama("llama3.2")], LOCAL);
+    expect(defaultModelSelection(local)).toEqual(["agent:gp", "qwen3:8b", "llama3.2"]);
+    const hosted = withAgents([ollama("qwen3:8b"), ollama("llama3.2")], {
+      ...LOCAL,
+      provider: "exoscale",
+    });
+    expect(defaultModelSelection(hosted)).toEqual(["agent:gp", "qwen3:8b", "llama3.2"]);
+  });
+
+  test("defaultModelSelection: a catalog without agents gets models only", () => {
+    expect(defaultModelSelection([ollama("qwen3:8b"), ollama("llama3.2")])).toEqual([
+      "qwen3:8b",
+      "llama3.2",
+    ]);
   });
 });
