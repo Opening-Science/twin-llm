@@ -12,9 +12,15 @@ import type { SuggestedQuestion, SuggestedQuestions } from "./suggested-question
  * A failed fetch shows no chips: the chat works without them.
  */
 
-const fetchSuggestions = async (): Promise<SuggestedQuestions | null> => {
+const fetchSuggestions = async (
+  subjectRef: string | undefined,
+): Promise<SuggestedQuestions | null> => {
   try {
-    const response = await fetch("/api/chat/suggestions");
+    const response = await fetch(
+      subjectRef === undefined
+        ? "/api/chat/suggestions"
+        : `/api/chat/suggestions?subject=${encodeURIComponent(subjectRef)}`,
+    );
     if (!response.ok) return null;
     return (await response.json()) as SuggestedQuestions;
   } catch {
@@ -22,18 +28,21 @@ const fetchSuggestions = async (): Promise<SuggestedQuestions | null> => {
   }
 };
 
-export const useSuggestedQuestions = (enabled: boolean): SuggestedQuestions | null => {
+export const useSuggestedQuestions = (
+  enabled: boolean,
+  subjectRef?: string,
+): SuggestedQuestions | null => {
   const [suggestions, setSuggestions] = useState<SuggestedQuestions | null>(null);
   useEffect(() => {
     if (!enabled) return;
     let current = true;
-    void fetchSuggestions().then((fresh) => {
+    void fetchSuggestions(subjectRef).then((fresh) => {
       if (current) setSuggestions(fresh);
     });
     return () => {
       current = false;
     };
-  }, [enabled]);
+  }, [enabled, subjectRef]);
   return enabled ? suggestions : null;
 };
 

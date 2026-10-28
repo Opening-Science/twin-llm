@@ -11,7 +11,7 @@ import { serverEnv } from "@/infrastructure/env";
 import { chatModelIsLocal } from "@/infrastructure/genome-gate";
 import { INCOGNITO_PARAM, isIncognitoParam } from "@/infrastructure/incognito";
 import { defaultModelSelection } from "@/infrastructure/model-catalog";
-import { safeDraft, subjectDraft } from "@/infrastructure/shell-links";
+import { safeDraft, subjectDraft, subjectRefParam } from "@/infrastructure/shell-links";
 
 /**
  * A new thread. Someone who has not been through first-run setup and has no
@@ -52,6 +52,7 @@ export default async function HomePage({
         safeDraft((await searchParams).draft) ??
         subjectDraft((await searchParams).subject)
       }
+      subjectRef={subjectRefParam((await searchParams).subject)}
       dataMode={serverEnv().DATA_MODE}
     />
   );

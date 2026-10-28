@@ -14,15 +14,23 @@ export const safeDraft = (value: string | string[] | undefined): string | undefi
 /** A synthetic subject_ref as Synthea writes it. */
 const SUBJECT_REF = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/** `?subject=` as a lower-case subject_ref, or undefined for anything else. */
+export const subjectRefParam = (
+  value: string | string[] | undefined,
+): string | undefined =>
+  typeof value === "string" && SUBJECT_REF.test(value) ? value.toLowerCase() : undefined;
+
 /**
  * The start of a question about one cohort subject, from `?subject=`. Only
  * the fixed prefix and the ref go in; the person writes the question, and the
  * chat's scope rules decide whether the subject can be read at all.
  */
-export const subjectDraft = (value: string | string[] | undefined): string | undefined =>
-  typeof value === "string" && SUBJECT_REF.test(value)
-    ? `For synthetic subject ${value.toLowerCase()}, `
-    : undefined;
+export const subjectDraft = (
+  value: string | string[] | undefined,
+): string | undefined => {
+  const ref = subjectRefParam(value);
+  return ref === undefined ? undefined : `For synthetic subject ${ref}, `;
+};
 
 /** A new chat with a question about this subject started; nothing is sent. */
 export const askAboutSubjectHref = (subjectRef: string): string =>

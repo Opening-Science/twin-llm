@@ -28,8 +28,13 @@ import {
 export type SuggestionDeps = Readonly<{
   resolveActorId: () => Promise<string | null>;
   dataMode: () => SessionScope["mode"];
-  /** The synthetic subject the questions are about, or null with no cohort loaded. */
-  findSubject: () => Promise<Readonly<{ ref: string; label: string }> | null>;
+  /**
+   * The synthetic subject the questions are about: the one asked for (from a
+   * subject page), else the default one; null with no cohort loaded.
+   */
+  findSubject: (
+    requested: string | null,
+  ) => Promise<Readonly<{ ref: string; label: string }> | null>;
   cohortCoverage: (
     scope: SessionScope,
     input: Readonly<{ subject_ref: string; loinc: string[]; start: string; end: string }>,
@@ -55,11 +60,21 @@ export const COHORT_WINDOW_START = "1900-01-01";
 const NONE: SuggestedQuestions = { heading: "", questions: [] };
 const NO_STORE = { "Cache-Control": "no-store" };
 
+/** `?subject=` when it is a subject_ref; anything else asks for the default. */
+const SUBJECT_REF = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const requestedSubject = (request: Request | undefined): string | null => {
+  const value = request ? new URL(request.url).searchParams.get("subject") : null;
+  return value !== null && SUBJECT_REF.test(value) ? value.toLowerCase() : null;
+};
+
 const synthetic = async (
   deps: SuggestionDeps,
   scope: SessionScope,
+  requested: string | null,
 ): Promise<SuggestedQuestions> => {
-  const subject = await deps.findSubject();
+  // A requested subject is read under the same scope check and audit as any.
+  const subject = await deps.findSubject(requested);
   if (subject === null) return NONE;
   const result = await deps.cohortCoverage(scope, {
     subject_ref: subject.ref,
@@ -92,21 +107,22 @@ const personal = async (
   return wearableSuggestions(result);
 };
 
-export const createSuggestionsHandler = (deps: SuggestionDeps) => async () => {
-  const actor = await deps.resolveActorId();
-  if (!actor) return Response.json(NONE, { headers: NO_STORE });
-  const scope: SessionScope = { actor, sessionId: actor, mode: deps.dataMode() };
-  try {
-    const result =
-      scope.mode === "synthetic"
-        ? await synthetic(deps, scope)
-        : await personal(deps, scope);
-    return Response.json(result, { headers: NO_STORE });
-  } catch (error) {
-    deps.logError(
-      "[chat] suggested questions failed",
-      error instanceof Error ? error.name : "unknown",
-    );
-    return Response.json(NONE, { status: 502, headers: NO_STORE });
-  }
-};
+export const createSuggestionsHandler =
+  (deps: SuggestionDeps) => async (request?: Request) => {
+    const actor = await deps.resolveActorId();
+    if (!actor) return Response.json(NONE, { headers: NO_STORE });
+    const scope: SessionScope = { actor, sessionId: actor, mode: deps.dataMode() };
+    try {
+      const result =
+        scope.mode === "synthetic"
+          ? await synthetic(deps, scope, requestedSubject(request))
+          : await personal(deps, scope);
+      return Response.json(result, { headers: NO_STORE });
+    } catch (error) {
+      deps.logError(
+        "[chat] suggested questions failed",
+        error instanceof Error ? error.name : "unknown",
+      );
+      return Response.json(NONE, { status: 502, headers: NO_STORE });
+    }
+  };
