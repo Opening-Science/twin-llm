@@ -7,6 +7,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Apple Health and wearable export imports on Customize · Data (#178, #179), through the same review and Save flow, personal mode only, audited by counts and never sent to a hosted model. Apple Health: the export.zip or export.xml, read as a stream, storing heart rate, resting heart rate, HRV (SDNN), steps, body weight, BMI, blood oxygen and respiratory rate with LOINC and UCUM, and sleep as minutes asleep per night; units are converted only by a power of ten, and everything else is listed in the review with a reason and a count. Wearable exports: Oura JSON or trends CSV, Whoop's physiological_cycles, sleeps and workouts CSVs, and Fitbit daily JSON from Google Takeout, alone or in a zip, recognised by file name and header; files it does not know are listed as unsupported. Migration `20261028120000_personal_import_kinds` adds the two kinds. See `docs/personal-data.md`.
+
 - Thread export (#44): `?format=fhir` gives a FHIR R4 DocumentReference whose attachment is the same Markdown, tagged research use only. Every export now writes an audit row (format and size, no content), and a thread that used the genome tools exports only when the app is served to this machine alone (`LOCAL_ONLY`); otherwise it is refused and audited as `genome.thread.export_refused`.
 
 - Download a thread as Markdown from the bar at the top of it (`/api/threads/<id>/export`, the owner only): each prompt, each model's lookups with their arguments, row counts and refusals, and the answer as the page shows it; withheld and refused answers say so. For an issue, a lab notebook or a paper's appendix.

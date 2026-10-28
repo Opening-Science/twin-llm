@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE HealthData [
+<!ELEMENT HealthData (ExportDate,Me,(Record|Correlation|Workout|ActivitySummary)*)>
+<!ATTLIST HealthData locale CDATA #REQUIRED>
+<!ELEMENT Record ((MetadataEntry|HeartRateVariabilityMetadataList)*)>
+<!ATTLIST Record
+  type          CDATA #REQUIRED
+  unit          CDATA #IMPLIED
+  value         CDATA #IMPLIED
+  sourceName    CDATA #REQUIRED
+  startDate     CDATA #REQUIRED
+  endDate       CDATA #REQUIRED
+>
+]>
+<HealthData locale="en_GB">
+ <ExportDate value="2026-09-03 09:00:00 +0200"/>
+ <Me HKCharacteristicTypeIdentifierDateOfBirth="1990-01-01" HKCharacteristicTypeIdentifierBiologicalSex="HKBiologicalSexNotSet" HKCharacteristicTypeIdentifierBloodType="HKBloodTypeNotSet"/>
+ <Record type="HKQuantityTypeIdentifierHeartRate" sourceName="Demo Watch" unit="count/min" creationDate="2026-09-01 08:00:10 +0200" startDate="2026-09-01 08:00:05 +0200" endDate="2026-09-01 08:00:05 +0200" value="64">
+  <MetadataEntry key="HKMetadataKeyHeartRateMotionContext" value="0"/>
+ </Record>
+ <Record type="HKQuantityTypeIdentifierHeartRate" sourceName="Demo Watch" unit="count/min" startDate="2026-09-01 12:30:00 +0200" endDate="2026-09-01 12:30:00 +0200" value="71.5"/>
+ <Record type="HKQuantityTypeIdentifierRestingHeartRate" sourceName="Demo Watch" unit="count/min" startDate="2026-09-01 00:00:00 +0200" endDate="2026-09-01 23:59:00 +0200" value="55"/>
+ <Record type="HKQuantityTypeIdentifierHeartRateVariabilitySDNN" sourceName="Demo Watch" unit="ms" startDate="2026-09-01 06:10:00 +0200" endDate="2026-09-01 06:11:00 +0200" value="42.3"/>
+ <Record type="HKQuantityTypeIdentifierStepCount" sourceName="Demo Phone" unit="count" startDate="2026-09-01 09:00:00 +0200" endDate="2026-09-01 09:10:00 +0200" value="812"/>
+ <Record type="HKQuantityTypeIdentifierBodyMass" sourceName="Demo Scale" unit="kg" startDate="2026-09-01 07:00:00 +0200" endDate="2026-09-01 07:00:00 +0200" value="70.4"/>
+ <Record type="HKQuantityTypeIdentifierBodyMass" sourceName="Demo Scale" unit="lb" startDate="2026-09-02 07:00:00 +0200" endDate="2026-09-02 07:00:00 +0200" value="155.2"/>
+ <Record type="HKQuantityTypeIdentifierBodyMassIndex" sourceName="Demo Scale" unit="count" startDate="2026-09-01 07:00:00 +0200" endDate="2026-09-01 07:00:00 +0200" value="22.9"/>
+ <Record type="HKQuantityTypeIdentifierOxygenSaturation" sourceName="Demo Watch" unit="%" startDate="2026-09-01 03:00:00 +0200" endDate="2026-09-01 03:00:00 +0200" value="0.97"/>
+ <Record type="HKQuantityTypeIdentifierOxygenSaturation" sourceName="Demo Watch" unit="%" startDate="2026-09-01 04:00:00 +0200" endDate="2026-09-01 04:00:00 +0200" value="96"/>
+ <Record type="HKQuantityTypeIdentifierRespiratoryRate" sourceName="Demo Watch" unit="count/min" startDate="2026-09-01 03:30:00 +0200" endDate="2026-09-01 03:30:00 +0200" value="14.5"/>
+ <Record type="HKQuantityTypeIdentifierRespiratoryRate" sourceName="Demo Watch" unit="count/min" startDate="2026-09-01 03:40:00 +0200" endDate="2026-09-01 03:40:00 +0200" value="n/a"/>
+ <Record type="HKQuantityTypeIdentifierActiveEnergyBurned" sourceName="Demo Watch" unit="kcal" startDate="2026-09-01 09:00:00 +0200" endDate="2026-09-01 09:01:00 +0200" value="3.1"/>
+ <Record type="HKQuantityTypeIdentifierActiveEnergyBurned" sourceName="Demo Watch" unit="kcal" startDate="2026-09-01 09:01:00 +0200" endDate="2026-09-01 09:02:00 +0200" value="2.7"/>
+ <Record type="HKCategoryTypeIdentifierSleepAnalysis" sourceName="Demo Watch" startDate="2026-09-01 22:40:00 +0200" endDate="2026-09-02 06:50:00 +0200" value="HKCategoryValueSleepAnalysisInBed"/>
+ <Record type="HKCategoryTypeIdentifierSleepAnalysis" sourceName="Demo Watch" startDate="2026-09-01 23:00:00 +0200" endDate="2026-09-02 02:00:00 +0200" value="HKCategoryValueSleepAnalysisAsleepCore"/>
+ <Record type="HKCategoryTypeIdentifierSleepAnalysis" sourceName="Demo Watch" startDate="2026-09-02 02:00:00 +0200" endDate="2026-09-02 03:00:00 +0200" value="HKCategoryValueSleepAnalysisAsleepDeep"/>
+ <Record type="HKCategoryTypeIdentifierSleepAnalysis" sourceName="Demo Watch" startDate="2026-09-02 03:00:00 +0200" endDate="2026-09-02 03:20:00 +0200" value="HKCategoryValueSleepAnalysisAwake"/>
+ <Record type="HKCategoryTypeIdentifierSleepAnalysis" sourceName="Demo Watch" startDate="2026-09-02 03:20:00 +0200" endDate="2026-09-02 06:30:00 +0200" value="HKCategoryValueSleepAnalysisAsleepREM"/>
+ <Record type="HKCategoryTypeIdentifierSleepAnalysis" sourceName="Demo Phone" startDate="2026-09-02 05:30:00 +0200" endDate="2026-09-02 06:45:00 +0200" value="HKCategoryValueSleepAnalysisAsleepUnspecified"/>
+ <Correlation type="HKCorrelationTypeIdentifierBloodPressure" sourceName="Demo Cuff" startDate="2026-09-01 08:00:00 +0200" endDate="2026-09-01 08:00:00 +0200">
+  <Record type="HKQuantityTypeIdentifierBloodPressureSystolic" sourceName="Demo Cuff" unit="mmHg" startDate="2026-09-01 08:00:00 +0200" endDate="2026-09-01 08:00:00 +0200" value="118"/>
+ </Correlation>
+ <Workout workoutActivityType="HKWorkoutActivityTypeWalking" duration="30" durationUnit="min" sourceName="Demo Watch" startDate="2026-09-01 18:00:00 +0200" endDate="2026-09-01 18:30:00 +0200"/>
+ <ActivitySummary dateComponents="2026-09-01" activeEnergyBurned="410" appleExerciseTime="32"/>
+</HealthData>
