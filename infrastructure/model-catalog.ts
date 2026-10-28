@@ -1,7 +1,15 @@
 import { z } from "zod";
 
-import { type AgentOffer, AGENTS, agentIsOffered, agentModelId } from "./agents";
+import { agentIdOfAutoColumn, autoColumnName, routeAgent } from "./agent-router";
+import {
+  type AgentOffer,
+  AGENTS,
+  agentIsOffered,
+  agentModelId,
+  AUTO_AGENT,
+} from "./agents";
 import { roundTo } from "./format-measure";
+import { displayModelName } from "./model-names";
 
 /**
  * Catalog rows and the pure rules about them: parsing each provider's model
@@ -40,6 +48,8 @@ export type CatalogAgent = Readonly<{
   skill: string | null;
   baseModelId: string;
   baseModelName: string;
+  /** Set when Auto picked this agent for the turn (#219). */
+  via?: "auto";
 }>;
 
 /** Upper and lower bounds on how many models one prompt goes to. */
@@ -107,7 +117,7 @@ export const parseInfomaniakModels = (
   return rows
     .map(({ id }): CatalogModel => ({
       id,
-      name: id,
+      name: displayModelName(id),
       provider: "Infomaniak",
       providerId: "infomaniak",
       ...windowOf(undefined),
@@ -152,7 +162,7 @@ export const parseOllamaTags = (
         : tag.name;
       return {
         id,
-        name: id,
+        name: displayModelName(id),
         provider: "Ollama",
         providerId: "ollama",
         ...windowOf(
@@ -202,7 +212,7 @@ export const parseVllmModels = (
   validRows(payload, "data", vllmModel)
     ?.map((row): CatalogModel => ({
       id: row.id,
-      name: row.id,
+      name: displayModelName(row.id),
       ...source,
       ...windowOf(row.max_model_len),
     }))
@@ -306,7 +316,80 @@ export const withAgents = (
           ];
     },
   );
-  return [...agents, ...models];
+  const [first] = agents;
+  const auto: CatalogModel[] =
+    first?.agent === undefined
+      ? []
+      : [
+          {
+            ...first,
+            id: agentModelId(AUTO_AGENT),
+            name: AUTO_AGENT.name,
+            agent: { ...first.agent, ...AUTO_AGENT, skill: null },
+          },
+        ];
+  return [...auto, ...agents, ...models];
+};
+
+export const AUTO_MODEL_ID = agentModelId(AUTO_AGENT);
+
+type AgentRow = Readonly<{ id: string; agent?: CatalogAgent }>;
+
+/**
+ * The agent Auto runs as for one question (#219): the one the router picks
+ * among the agents this catalog offers, marked `via: "auto"`. A stored column
+ * name ("Auto → Sleep") wins when that agent is still offered, so a retry runs
+ * as the agent the header names.
+ */
+export const autoAgentFor = (
+  prompt: string,
+  catalog: readonly AgentRow[],
+  columnName: string | null = null,
+): CatalogAgent | null => {
+  const offered = catalog.flatMap((row) =>
+    row.agent === undefined || row.id === AUTO_MODEL_ID ? [] : [row.agent],
+  );
+  const stored = columnName === null ? null : agentIdOfAutoColumn(columnName);
+  const chosen =
+    offered.find(({ id }) => id === stored) ??
+    offered.find(
+      ({ id }) =>
+        id ===
+        routeAgent(
+          prompt,
+          offered.map((agent) => agent.id),
+        ).agentId,
+    ) ??
+    offered[0];
+  return chosen === undefined ? null : { ...chosen, via: "auto" };
+};
+
+/**
+ * The agent a turn runs as: Auto's pick for an `agent:auto` row, the row's
+ * own agent for any other agent row, null for a plain model.
+ */
+export const turnAgentOf = (
+  modelId: string,
+  catalog: readonly AgentRow[],
+  prompt: string,
+  columnName: string | null = null,
+): CatalogAgent | null =>
+  modelId === AUTO_MODEL_ID
+    ? autoAgentFor(prompt, catalog, columnName)
+    : catalogAgentOf(modelId, catalog);
+
+/**
+ * The name a turn stores for a picked row: "Auto → Diet specialist" for Auto,
+ * else the row's own name.
+ */
+export const turnModelName = (
+  model: Readonly<{ id: string; name: string }>,
+  catalog: readonly AgentRow[],
+  prompt: string,
+): string => {
+  if (model.id !== AUTO_MODEL_ID) return model.name;
+  const agent = autoAgentFor(prompt, catalog);
+  return agent === null ? model.name : autoColumnName(agent.name);
 };
 
 /** The agent a catalog row stands for, or null for a plain model. */
@@ -318,14 +401,32 @@ export const catalogAgentOf = (
 // --- selection and display ------------------------------------------------------
 
 /**
- * The models a new prompt starts with: walk the (already ordered) list and
- * take the first model of each vendor, so the opening comparison spans
- * vendors instead of three variants of one; top up from the rest when there
- * are fewer vendors than slots. Agents are picked by hand, never by default.
+ * The agents a new chat starts with, in this order, when the catalog offers
+ * them: on a local provider all three, on a hosted one only the General
+ * Practitioner.
+ */
+export const DEFAULT_AGENT_IDS: readonly string[] = Object.freeze([
+  "agent:gp",
+  "agent:diet",
+  "agent:anatomy",
+]);
+
+/**
+ * The rows a new prompt starts with: the default agents the catalog offers
+ * (`DEFAULT_AGENT_IDS`), then models. For the models, walk the (already
+ * ordered) list and take the first model of each vendor, so the comparison
+ * spans vendors instead of three variants of one; top up from the rest when
+ * there are fewer vendors than slots. A catalog without agents (the models
+ * page, the starter questions) gets models only, as before.
  */
 export const defaultModelSelection = (
   catalog: readonly CatalogModel[],
 ): readonly string[] => {
+  const agents = DEFAULT_AGENT_IDS.filter((id) => catalog.some((row) => row.id === id));
+  return [...agents, ...defaultPlainModels(catalog)].slice(0, MAX_SELECTED_MODELS);
+};
+
+const defaultPlainModels = (catalog: readonly CatalogModel[]): readonly string[] => {
   const seenVendors = new Set<string>();
   const models = catalog.filter((model) => model.agent === undefined);
   const [firsts, others] = models.reduce<[CatalogModel[], CatalogModel[]]>(

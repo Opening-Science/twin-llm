@@ -5,7 +5,9 @@ import type { CatalogModel } from "@/infrastructure/model-catalog";
 import {
   chosenModels,
   incognitoHint,
+  AUTO_SUBLINE,
   menuGroups,
+  menuSubline,
   missingCount,
   offeredModels,
   toggleLimit,
@@ -97,5 +99,29 @@ describe("menuGroups", () => {
   test("an empty section is left out", () => {
     expect(menuGroups([model("x")]).map(({ label }) => label)).toEqual(["Models"]);
     expect(menuGroups([])).toEqual([]);
+  });
+});
+
+describe("menuSubline", () => {
+  const agent = {
+    id: "gp",
+    name: "General Practitioner",
+    role: "",
+    skill: null,
+    baseModelId: "twinllm-qwen3-4b-pilot",
+    baseModelName: "TwinLLM 4B (pilot)",
+  };
+
+  test("Auto, an agent, a fine-tune and a plain model", () => {
+    expect(menuSubline({ id: "agent:auto", provider: "Ollama", agent })).toBe(
+      AUTO_SUBLINE,
+    );
+    expect(menuSubline({ id: "agent:gp", provider: "Ollama", agent })).toBe(
+      "TwinLLM 4B (pilot)",
+    );
+    expect(menuSubline({ id: "twinllm-qwen3-4b-base", provider: "Ollama" })).toBe(
+      "twinllm-qwen3-4b-base",
+    );
+    expect(menuSubline({ id: "qwen3:8b", provider: "Ollama" })).toBe("Ollama");
   });
 });

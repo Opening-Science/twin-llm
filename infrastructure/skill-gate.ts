@@ -167,6 +167,8 @@ export const skillRunEvent = (
     provider: LlmProvider;
     /** Set when the skill came from an agent (#218), not from the prompt. */
     agent?: string;
+    /** Set when Auto picked that agent (#219). */
+    via?: "auto";
   }>,
 ): AppendInput => ({
   actor: call.actor,
@@ -180,6 +182,7 @@ export const skillRunEvent = (
     tools: skill.tools,
     views: skill.views,
     ...(call.agent === undefined ? {} : { agent: call.agent }),
+    ...(call.via === undefined ? {} : { via: call.via }),
   },
   result: { started: true },
   rowCount: 0,

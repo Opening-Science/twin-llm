@@ -1,12 +1,13 @@
 import { incognitoSessionId, permitIncognitoModel } from "@/infrastructure/incognito";
 import type { DataMode } from "@/infrastructure/data-mode-policy";
-import { type CatalogAgent, catalogAgentOf } from "@/infrastructure/model-catalog";
+import { type CatalogAgent, turnAgentOf } from "@/infrastructure/model-catalog";
 import type { KnowledgeSourceId } from "@/infrastructure/knowledge-sources";
 import type { TurnSkill } from "@/infrastructure/skill-gate";
 import type { AppendInput } from "@/packages/audit/append";
 
 import {
   type ChatRequest,
+  currentPrompt,
   type IncognitoChatRequest,
   incognitoChatRequestSchema,
 } from "./chat-request";
@@ -169,7 +170,7 @@ export const createIncognitoChatHandler = (deps: IncognitoChatDeps) => {
         actorId,
         appUserId ?? "",
         call,
-        catalogAgentOf(body.modelId, models),
+        turnAgentOf(body.modelId, models, currentPrompt(body.messages)),
       );
     } catch (error) {
       console.error(

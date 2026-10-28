@@ -1,0 +1,23 @@
+{
+  "question": "Give me a meal plan to bring my cholesterol down.",
+  "dataMode": "personal",
+  "script": [
+    {
+      "tool": "guideline_search",
+      "input": {
+        "query": "diet to lower LDL cholesterol"
+      }
+    },
+    {
+      "tool": "gbd_population",
+      "input": {
+        "measure": "cholesterol"
+      }
+    }
+  ],
+  "expect": {
+    "calls": [],
+    "views": [],
+    "refusals": ["tool-not-allowed"]
+  }
+}

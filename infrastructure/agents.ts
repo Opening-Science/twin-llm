@@ -37,6 +37,20 @@ export const AGENTS: readonly Agent[] = Object.freeze([
     modelPreference: LOCAL_PREFERENCE,
   },
   {
+    id: "diet",
+    name: "Diet specialist",
+    role: "Describes body weight, BMI, glucose, HbA1c and blood lipids against the person's own earlier values, without meal plans, diets or doses.",
+    skill: "nutrition",
+    modelPreference: LOCAL_PREFERENCE,
+  },
+  {
+    id: "anatomy",
+    name: "Anatomy specialist",
+    role: "Explains where organs and body systems sit and which of them the Anchor biomarkers relate to, as reference anatomy rather than the person's own body.",
+    skill: "anatomy",
+    modelPreference: LOCAL_PREFERENCE,
+  },
+  {
     id: "sleep",
     name: "Sleep",
     role: "Describes sleep against the person's own recent nights.",
@@ -58,6 +72,17 @@ export const AGENTS: readonly Agent[] = Object.freeze([
     modelPreference: LOCAL_PREFERENCE,
   },
 ]);
+
+/**
+ * Auto (#219): not an agent of its own but a row that picks one of the agents
+ * above for each turn (`agent-router.ts`). It never runs as itself, so it is
+ * kept out of `AGENTS` and has no skill.
+ */
+export const AUTO_AGENT = Object.freeze({
+  id: "auto",
+  name: "Auto",
+  role: "Picks one of the agents for each question from keyword and LOINC rules, the General Practitioner when none match.",
+});
 
 export const agentModelId = (agent: Pick<Agent, "id">): string =>
   `${AGENT_ID_PREFIX}${agent.id}`;

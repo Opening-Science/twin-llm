@@ -4,24 +4,34 @@ import {
   AGENTS,
   agentIsOffered,
   agentModelId,
+  AUTO_AGENT,
   findAgent,
   isAgentModelId,
 } from "./agents";
 
 describe("AGENTS", () => {
-  test("the four agents, in picker order, with their skills", () => {
+  test("the six agents, in picker order, with their skills", () => {
     expect(AGENTS.map(({ id, name, skill }) => ({ id, name, skill }))).toEqual([
       { id: "gp", name: "General Practitioner", skill: null },
+      { id: "diet", name: "Diet specialist", skill: "nutrition" },
+      { id: "anatomy", name: "Anatomy specialist", skill: "anatomy" },
       { id: "sleep", name: "Sleep", skill: "sleep" },
       { id: "trainer", name: "Trainer", skill: "trainer" },
       { id: "genetics", name: "Genetics", skill: "genome" },
     ]);
   });
 
-  test("each role is one sentence", () => {
-    expect(
-      AGENTS.map(({ role }) => role.endsWith(".") && role.split(". ").length === 1),
-    ).toEqual([true, true, true, true]);
+  test("each role is one sentence, Auto's too", () => {
+    [...AGENTS, AUTO_AGENT].forEach(({ role }) => {
+      expect(role.endsWith(".")).toBe(true);
+      expect(role.split(". ")).toHaveLength(1);
+    });
+  });
+
+  test("Auto is not an agent of its own and has the row id agent:auto", () => {
+    expect(AGENTS.map(({ id }) => id)).not.toContain(AUTO_AGENT.id);
+    expect(agentModelId(AUTO_AGENT)).toBe("agent:auto");
+    expect(findAgent("agent:auto")).toBeNull();
   });
 });
 
@@ -29,6 +39,8 @@ describe("agent model ids", () => {
   test("an agent's row id is agent:<id>", () => {
     expect(AGENTS.map(agentModelId)).toEqual([
       "agent:gp",
+      "agent:diet",
+      "agent:anatomy",
       "agent:sleep",
       "agent:trainer",
       "agent:genetics",
@@ -101,6 +113,25 @@ describe("agentIsOffered", () => {
     expect(
       offered({ provider: "exoscale", chatIsLocal: false, skills: [sleepOnExoscale] }),
     ).toEqual(["gp", "sleep"]);
+  });
+
+  test("the Diet and Anatomy specialists are offered where their skills run", () => {
+    const withNew = [
+      ...SKILLS,
+      skill("nutrition", ["latest_by_loinc"]),
+      skill("anatomy", ["knowledge_search"]),
+    ];
+    expect(offered({ provider: "ollama", chatIsLocal: true, skills: withNew })).toEqual([
+      "gp",
+      "diet",
+      "anatomy",
+      "sleep",
+      "trainer",
+      "genetics",
+    ]);
+    expect(
+      offered({ provider: "exoscale", chatIsLocal: false, skills: withNew }),
+    ).toEqual(["gp"]);
   });
 
   test("a skill the server does not offer leaves its agent out", () => {
