@@ -1,4 +1,10 @@
+"use client";
+
 import { isoLocalDate } from "@/infrastructure/format-measure";
+import {
+  CollapsiblePanel,
+  usePanelOpen,
+} from "@/infrastructure/ui-kit/collapsible-panel";
 import { type AtlasScheme } from "@/packages/anatomy/manifest";
 
 import { type LiveStatus } from "./live-conditioning";
@@ -8,6 +14,7 @@ import {
   breathingLine,
   hrvLine,
   ILLUSTRATIVE,
+  LIVE_PANEL,
   NO_RATE,
   pulseLine,
   SHOW_ORGANS,
@@ -34,6 +41,9 @@ export const liveLines = (
       : []),
   ];
 };
+
+/** The stored key of the live-vitals box (infrastructure/ui-kit/panel-memory.ts). */
+export const LIVE_PANEL_ID = "twin-live";
 
 export type LiveContext = Readonly<{
   /** The person's toggle; on by default in the environment. */
@@ -65,7 +75,8 @@ export const liveNote = (
  * Beside the 3D view, not inside its `role="application"`, so the lines read
  * as text. Shown while something moves or glows, or with the one note above.
  * `extra` lines (whole-body motion) follow in the same box, so the two never
- * overlap at the bottom left of the environment.
+ * overlap at the bottom left of the environment. The box folds under its
+ * title like every viewer panel, remembered per viewer.
  */
 export const LiveLines = ({
   status,
@@ -84,12 +95,18 @@ export const LiveLines = ({
   const moving = liveLines(status, vitals, scheme, isoLocalDate());
   const note = liveNote(status, vitals, context);
   const lines = [...(moving.length > 0 ? moving : note ? [note] : []), ...extra];
+  const [open, onToggle] = usePanelOpen(LIVE_PANEL_ID);
   if (lines.length === 0) return null;
   return (
-    <div className="twin-live-lines">
+    <CollapsiblePanel
+      label={LIVE_PANEL}
+      open={open}
+      onToggle={onToggle}
+      className="twin-live-lines"
+    >
       {lines.map((line) => (
         <p key={line}>{line}</p>
       ))}
-    </div>
+    </CollapsiblePanel>
   );
 };

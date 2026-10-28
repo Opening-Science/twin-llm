@@ -7,7 +7,10 @@ import {
   isArkStatusPayload,
   type ArkStatusPayload,
 } from "@/features/connectors/ark-status-view";
-import { Card } from "@/infrastructure/ui-kit/card";
+import {
+  CollapsiblePanel,
+  usePanelOpen,
+} from "@/infrastructure/ui-kit/collapsible-panel";
 import type { BodyTwinPreview } from "./bodyloop-avatar";
 
 import { BodyLoopAvatar } from "./bodyloop-avatar";
@@ -29,8 +32,11 @@ import {
   GENOME_TWIN,
   PAGE_TITLE,
   SOURCES_NOTE,
+  SOURCES_PANEL,
   SOURCES_TITLE,
 } from "./twin-page-copy";
+
+const SOURCES_PANEL_ID = "twin-sources";
 
 /**
  * Digital Twin: the body twin first and full width, then where its data comes
@@ -98,24 +104,33 @@ const GenomeSection = ({
   );
 };
 
+/** The Sources list folds under its title like the viewer's panels. */
 const SourcesSection = ({
   context,
   plan,
-}: Readonly<{ context: TwinContext; plan: SectionPlan }>) => (
-  <section className="mt-12">
-    <SectionHead title={SOURCES_TITLE} note={SOURCES_NOTE} />
-    <Card className="mt-4">
-      <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-[10rem_minmax(0,1fr)]">
-        {sourceLines(context, plan.empty).map((line) => (
-          <div key={line.label} className="contents">
-            <dt className="text-muted-foreground">{line.label}</dt>
-            <dd>{line.text}</dd>
-          </div>
-        ))}
-      </dl>
-    </Card>
-  </section>
-);
+}: Readonly<{ context: TwinContext; plan: SectionPlan }>) => {
+  const [open, onToggle] = usePanelOpen(SOURCES_PANEL_ID);
+  return (
+    <section className="mt-12">
+      <SectionHead title={SOURCES_TITLE} note={SOURCES_NOTE} />
+      <CollapsiblePanel
+        label={SOURCES_PANEL}
+        open={open}
+        onToggle={onToggle}
+        className="twin-panel mt-4"
+      >
+        <dl className="grid gap-x-6 gap-y-2 px-1.5 pb-1.5 text-sm sm:grid-cols-[10rem_minmax(0,1fr)]">
+          {sourceLines(context, plan.empty).map((line) => (
+            <div key={line.label} className="contents">
+              <dt className="text-muted-foreground">{line.label}</dt>
+              <dd>{line.text}</dd>
+            </div>
+          ))}
+        </dl>
+      </CollapsiblePanel>
+    </section>
+  );
+};
 
 export const DigitalTwinScreen = ({
   preview,

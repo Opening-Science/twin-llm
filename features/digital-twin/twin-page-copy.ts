@@ -9,6 +9,8 @@ export const BODY_TWIN_NOTE =
   "A 3D body with reference anatomy and biomarkers. Not a statement about a person.";
 export const SOURCES_TITLE = "Sources";
 export const SOURCES_NOTE = "Where this twin's data comes from.";
+/** Title of the collapsible list under Sources. */
+export const SOURCES_PANEL = "By part";
 export const GENOME_TWIN = "Genome twin";
 export const GENOME_NOTE =
   "Your released Ark report, the slot inventory and recent reads. The helix is decorative.";

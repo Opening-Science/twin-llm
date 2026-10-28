@@ -4,24 +4,36 @@
  * Usage (from repo root):
  *   bun run warehouse:ingest .synthea/fhir                          # cohort synthea-v4-seed42
  *   bun run warehouse:ingest <dir> --cohort open-twin-synthea-trimmed-3
+ *   bun run warehouse:ingest <dir> --cohort <id> --workers 4
  *
- * Every *.json in <dir> must parse, and every FHIR Bundle must carry
- * Synthea's Patient identifier; otherwise nothing is written. A bundle that
- * fails during ingest is reported as rejected and the run continues. The cohort must be in
- * SYNTHETIC_COHORTS, and must match the cohort id in the generator's
- * manifest.json (in <dir> or its parent) when there is one. Re-running is safe: known bundles are skipped by sha256.
- * Prints file names and counts only.
+ * The folder's *.json files are split across --workers ingest processes
+ * (default: CPU cores - 1), and each file is read and parsed once. A FHIR
+ * Bundle whose Patient lacks Synthea's identifier is rejected (`not-synthea`)
+ * and nothing of it is written; so is a file that does not parse
+ * (`invalid-json`) and a bundle whose ingest fails (`ingest-failed`). Other
+ * files are still ingested, the rejected ones are listed, and the exit code is
+ * 1. The cohort must be in SYNTHETIC_COHORTS, and must match the cohort id in
+ * the generator's manifest.json (in <dir> or its parent) when there is one.
+ * Re-running is safe: known bundles are skipped by sha256. Prints file names
+ * and counts only.
  */
-import { readdir, readFile } from "node:fs/promises";
-import { basename, dirname, join, resolve } from "node:path";
+import { dirname, join } from "node:path";
 
 import {
   isAllowedCohort,
   SYNTHEA_1M_COHORTS,
   SYNTHETIC_COHORTS,
 } from "../../packages/query-tools/scope";
-import type { IngestReport } from "../../packages/warehouse/ingest-report";
-import { isFhirBundle, isSyntheaBundle } from "../../packages/warehouse/synthea-marker";
+
+import {
+  type FileOutcome,
+  type IngestJob,
+  type JsonRead,
+  outcomeLine,
+  splitShards,
+} from "./ingest-shard";
+
+export { INGEST_FAILED_REASON, INVALID_JSON_REASON, type JsonRead } from "./ingest-shard";
 
 export const DEFAULT_COHORT = "synthea-v4-seed42";
 /** Pinned in scripts/synthea/generate-local.sh. */
@@ -31,15 +43,6 @@ export type IngestIo = Readonly<{
   stdout: { write: (chunk: string) => void };
   stderr: { write: (chunk: string) => void };
 }>;
-
-/** A file's JSON, or why there is none. */
-export type JsonRead =
-  | Readonly<{ kind: "json"; value: unknown }>
-  | Readonly<{ kind: "invalid" }>
-  | Readonly<{ kind: "missing" }>;
-
-/** Short, fixed reason for a bundle whose ingest threw; never the raw error. */
-export const INGEST_FAILED_REASON = "ingest-failed";
 
 export type CohortSummary = Readonly<{
   subjects: number;
@@ -51,13 +54,24 @@ export type CohortSummary = Readonly<{
 export type WarehouseIngestDeps = Readonly<{
   /** Absolute paths of *.json files in dir, or null when dir does not exist. */
   listJson: (dir: string) => Promise<readonly string[] | null>;
+  /** Used for the manifest; the bundles are read by the shards. */
   readJson: (path: string) => Promise<JsonRead>;
-  ingest: (
-    bundle: unknown,
-    options: { readonly cohortId: string; readonly syntheaVersion: string },
-  ) => Promise<IngestReport>;
+  /**
+   * Ingests each shard in its own process, all at once, and calls `onOutcome`
+   * exactly once per file as it finishes.
+   */
+  runShards: (
+    shards: readonly (readonly string[])[],
+    job: IngestJob,
+    onOutcome: (outcome: FileOutcome) => void,
+  ) => Promise<void>;
+  /** --workers when not given: CPU cores - 1, at least 1. */
+  defaultWorkers: number;
   cohortSummary: (cohortId: string) => Promise<CohortSummary>;
 }>;
+
+export const USAGE =
+  "Usage: bun run warehouse:ingest <dir> [--cohort <id>] [--workers <n>]";
 
 /** The allowlist for a message: the 1M batches as one range, not 100 ids. */
 const allowedCohortsText = (): string => {
@@ -66,19 +80,29 @@ const allowedCohortsText = (): string => {
   return [...named, `${batches[0]} … ${batches[batches.length - 1]}`].join(", ");
 };
 
-const parseArgs = (
-  argv: readonly string[],
-): Readonly<{ dir: string | undefined; cohort: string }> => {
+type IngestArgs = Readonly<{
+  dir: string | undefined;
+  cohort: string;
+  /** null when --workers is not given; NaN when it is not a whole number. */
+  workers: number | null;
+}>;
+
+const parseArgs = (argv: readonly string[]): IngestArgs => {
   let dir: string | undefined;
   let cohort = DEFAULT_COHORT;
+  let workers: number | null = null;
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i] ?? "";
     if (arg === "--cohort") {
       cohort = argv[i + 1] ?? "";
       i += 1;
+    } else if (arg === "--workers") {
+      const text = argv[i + 1] ?? "";
+      workers = /^[1-9]\d*$/.test(text) ? Number(text) : Number.NaN;
+      i += 1;
     } else if (!dir) dir = arg;
   }
-  return { dir, cohort };
+  return { dir, cohort, workers };
 };
 
 type DirManifest = Readonly<{ syntheaVersion: string; cohortId: string | null }>;
@@ -113,9 +137,9 @@ export const runWarehouseIngest = async (
   io: IngestIo,
   deps: WarehouseIngestDeps,
 ): Promise<number> => {
-  const { dir, cohort } = parseArgs(argv);
-  if (!dir) {
-    io.stderr.write("Usage: bun run warehouse:ingest <dir> [--cohort <id>]\n");
+  const { dir, cohort, workers } = parseArgs(argv);
+  if (!dir || Number.isNaN(workers)) {
+    io.stderr.write(`${USAGE}\n`);
     return 1;
   }
   if (!isAllowedCohort(cohort)) {
@@ -139,24 +163,7 @@ export const runWarehouseIngest = async (
     return 1;
   }
 
-  // First pass: every bundle must be Synthea output before anything is written.
-  const bundles: string[] = [];
-  const refused: string[] = [];
-  for (const file of files) {
-    const read = await deps.readJson(file);
-    if (read.kind !== "json") {
-      refused.push(`${basename(file)} (invalid JSON)`);
-      continue;
-    }
-    if (!isFhirBundle(read.value)) continue;
-    if (isSyntheaBundle(read.value)) bundles.push(file);
-    else refused.push(`${basename(file)} (not Synthea)`);
-  }
-  if (refused.length > 0) {
-    io.stderr.write(`Refused, nothing written: ${refused.join(", ")}\n`);
-    return 1;
-  }
-  if (bundles.length === 0) {
+  if (files.length === 0) {
     io.stderr.write(`No FHIR bundles in ${dir}\n`);
     return 1;
   }
@@ -167,46 +174,27 @@ export const runWarehouseIngest = async (
     );
   }
   const { syntheaVersion } = manifest;
+  const shards = splitShards(files, workers ?? deps.defaultWorkers);
   io.stdout.write(
-    `Ingesting ${bundles.length} bundles into cohort ${cohort} (Synthea ${syntheaVersion})\n`,
+    `Ingesting ${files.length} files into cohort ${cohort} (Synthea ${syntheaVersion}) with ${shards.length} ${shards.length === 1 ? "process" : "processes"}\n`,
   );
 
   let inserted = 0;
   let skipped = 0;
   let rejected = 0;
-  for (const file of bundles) {
-    const name = basename(file);
-    let report: IngestReport;
-    try {
-      const read = await deps.readJson(file);
-      if (read.kind !== "json") throw new Error("bundle changed during the run");
-      report = await deps.ingest(read.value, { cohortId: cohort, syntheaVersion });
-    } catch {
-      report = {
-        inserted: 0,
-        skipped: 0,
-        unresolved: [],
-        nonNumeric: 0,
-        conditions: 0,
-        medicationRequests: 0,
-        alreadyIngested: false,
-        rejected: { reason: INGEST_FAILED_REASON },
-      };
-    }
-    if (report.rejected) {
-      rejected += 1;
-      io.stdout.write(`${name}: rejected (${report.rejected.reason})\n`);
-    } else if (report.alreadyIngested) {
-      skipped += 1;
-      io.stdout.write(`${name}: already ingested (${report.skipped} rows)\n`);
-    } else {
-      inserted += 1;
-      io.stdout.write(
-        `${name}: inserted ${report.inserted} rows (${report.nonNumeric} non-numeric), ${report.conditions} conditions, ${report.medicationRequests} medication requests\n`,
-      );
-    }
-  }
+  await deps.runShards(shards, { cohortId: cohort, syntheaVersion }, (outcome) => {
+    const line = outcomeLine(outcome);
+    if (line === null || outcome.kind !== "report") return;
+    if (outcome.report.rejected) rejected += 1;
+    else if (outcome.report.alreadyIngested) skipped += 1;
+    else inserted += 1;
+    io.stdout.write(`${line}\n`);
+  });
 
+  if (inserted + skipped + rejected === 0) {
+    io.stderr.write(`No FHIR bundles in ${dir}\n`);
+    return 1;
+  }
   io.stdout.write(
     `\nBundles: ${inserted} inserted, ${skipped} already ingested, ${rejected} rejected\n`,
   );
@@ -222,37 +210,21 @@ export const runWarehouseIngest = async (
   return rejected > 0 ? 1 : 0;
 };
 
+/** One process per core, leaving one for Postgres and the rest of the machine. */
+export const defaultWorkerCount = (cores: number): number => Math.max(1, cores - 1);
+
 const isMain = Boolean((import.meta as { main?: boolean }).main);
 
 if (isMain) {
-  const { ingestBundle } = await import("../../packages/warehouse/ingest-bundle");
+  const { availableParallelism } = await import("node:os");
   const { database } = await import("../../infrastructure/database");
+  const { listJsonFiles, readJsonFile } = await import("./read-json");
+  const { spawnShards } = await import("./spawn-shards");
   const code = await runWarehouseIngest(process.argv.slice(2), process, {
-    listJson: async (dir) => {
-      try {
-        const names = await readdir(resolve(dir));
-        return names
-          .filter((name) => name.endsWith(".json"))
-          .sort()
-          .map((name) => join(resolve(dir), name));
-      } catch {
-        return null;
-      }
-    },
-    readJson: async (path) => {
-      let text: string;
-      try {
-        text = await readFile(path, "utf8");
-      } catch {
-        return { kind: "missing" };
-      }
-      try {
-        return { kind: "json", value: JSON.parse(text) as unknown };
-      } catch {
-        return { kind: "invalid" };
-      }
-    },
-    ingest: ingestBundle,
+    listJson: listJsonFiles,
+    readJson: readJsonFile,
+    runShards: spawnShards,
+    defaultWorkers: defaultWorkerCount(availableParallelism()),
     cohortSummary: async (cohortId) => {
       const db = database();
       const [subjects, conditions, medicationRequests, groups] = await Promise.all([

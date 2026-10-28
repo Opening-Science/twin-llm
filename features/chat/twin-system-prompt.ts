@@ -37,6 +37,18 @@ type WearableSummary = OuraSummary | WhoopSummary | GoogleHealthSummary | Vitron
  * Values go through `formatForPrompt`, so the model sees the same precision and
  * unit the UI shows rather than whatever the source stored.
  */
+/**
+ * The narrative's own sentences (window, how to cite), without its metric
+ * lines. The metrics go into the prompt once, as the Available keys list
+ * below, which is also the filtered set the model may cite (#188); the
+ * narrative repeated every one of them.
+ */
+export const narrativeHeader = (narrative: string): string =>
+  narrative
+    .split("\n")
+    .filter((line) => !line.startsWith("- ["))
+    .join("\n");
+
 const keyList = (summary: WearableSummary | null): string => {
   if (!summary || summary.metrics.length === 0) return "(none)";
   return summary.metrics.map((metric) => `- ${formatForPrompt(metric)}`).join("\n");
@@ -211,7 +223,7 @@ export const buildTwinSystemPrompt = (params: {
   const ouraBlock = params.oura
     ? [
         "## Wearable context (Oura)",
-        params.oura.narrative,
+        narrativeHeader(params.oura.narrative),
         "",
         "### Available Oura keys (copy exactly into Evidence Used)",
         keyList(offered.oura),
@@ -224,7 +236,7 @@ export const buildTwinSystemPrompt = (params: {
   const whoopBlock = params.whoop
     ? [
         "## Wearable context (Whoop)",
-        params.whoop.narrative,
+        narrativeHeader(params.whoop.narrative),
         "",
         "### Available Whoop keys (copy exactly into Evidence Used)",
         keyList(offered.whoop),
@@ -237,7 +249,7 @@ export const buildTwinSystemPrompt = (params: {
   const googleHealthBlock = params.googleHealth
     ? [
         "## Wearable context (Google Health / Fitbit)",
-        params.googleHealth.narrative,
+        narrativeHeader(params.googleHealth.narrative),
         "",
         "### Available Google Health keys (copy exactly into Evidence Used)",
         keyList(offered.googleHealth),
@@ -251,7 +263,7 @@ export const buildTwinSystemPrompt = (params: {
   const vitronicBlock = vitronicForChat
     ? [
         "## Wearable context (BodyLoop)",
-        vitronicForChat.narrative,
+        narrativeHeader(vitronicForChat.narrative),
         "",
         "### Available BodyLoop keys (copy exactly into Evidence Used)",
         keyList(vitronicForChat),

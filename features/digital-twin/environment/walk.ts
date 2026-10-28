@@ -47,6 +47,73 @@ export const walkIntent = (held: Iterable<string>): Intent => {
   return { forward: sum("forward"), right: sum("right") };
 };
 
+/** What a key handler needs to know about where a key landed. */
+export type KeyTarget = Readonly<{
+  tagName?: string;
+  isContentEditable?: boolean;
+  getAttribute?: (name: string) => string | null;
+}>;
+
+const FIELD_TAGS: ReadonlySet<string> = new Set(["INPUT", "TEXTAREA", "SELECT"]);
+
+/** Roles whose own keys include letters or arrows: a slider, a tab list, a list box. */
+const KEYED_ROLES: ReadonlySet<string> = new Set([
+  "combobox",
+  "grid",
+  "listbox",
+  "menu",
+  "menubar",
+  "menuitem",
+  "option",
+  "radio",
+  "radiogroup",
+  "searchbox",
+  "slider",
+  "spinbutton",
+  "tab",
+  "tablist",
+  "textbox",
+  "tree",
+]);
+
+/** A field or widget that uses the key itself, so walking must leave it alone. */
+export const isTypingTarget = (target: KeyTarget | null): boolean => {
+  if (!target) return false;
+  if (target.isContentEditable === true) return true;
+  if (FIELD_TAGS.has((target.tagName ?? "").toUpperCase())) return true;
+  const role = target.getAttribute?.("role") ?? null;
+  return role !== null && KEYED_ROLES.has(role);
+};
+
+export type WalkKey = Readonly<{
+  code: string;
+  altKey: boolean;
+  ctrlKey: boolean;
+  metaKey: boolean;
+  /** Something closer to the key (a slider, the panel search) already used it. */
+  defaultPrevented: boolean;
+  typing: boolean;
+  /** The pointer is over the 3D view. */
+  pointerOver: boolean;
+  /** Focus is on the 3D view or inside it. */
+  focusInside: boolean;
+}>;
+
+/**
+ * Whether a key walks: a walk key with no modifier, not typed into a field
+ * or widget, while the pointer is over the 3D view or the view has focus. No
+ * click first: hovering is enough, so the keys do not depend on where focus
+ * happened to be left.
+ */
+export const walkKeyApplies = (key: WalkKey): boolean =>
+  isWalkCode(key.code) &&
+  !key.altKey &&
+  !key.ctrlKey &&
+  !key.metaKey &&
+  !key.defaultPrevented &&
+  !key.typing &&
+  (key.pointerOver || key.focusInside);
+
 /** A point pulled back onto the circle when it is outside it. */
 export const clampToRadius = (point: Vec2, center: Vec2, radius: number): Vec2 => {
   const dx = point[0] - center[0];

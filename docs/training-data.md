@@ -75,9 +75,9 @@ and the config hash, not the end date.
 **Train on `synthea-v4-seed4242`. Test on `synthea-v4-seed9001` and on the
 81-question set** (`docs/evaluation/question-set.md`). The generator refuses
 `synthea-v4-seed42` unless `--allow-eval-cohort`, which is for smoke runs
-only: training on it would leak the test set. Do not add wearable series to
-`synthea-v4-seed42` either; extra heart rate rows would change the answer
-key.
+only: training on it would leak the test set. Its wearable series belongs only in
+the throwaway answer-key and eval databases (`--allow-eval-cohort`,
+`docs/evaluation/question-set.md`), never in a training or dev database.
 
 Keep the training and held-out cohorts in their own database on the GPU
 machine, never the dev database: the Body twin's Demo values read every
@@ -90,21 +90,30 @@ bundle per living subject to `.synthea/<cohort>/wearables/` (deceased
 subjects are left out). The seed is the cohort's own, from `manifest.json`.
 Defaults: 90 days ending 2026-10-01 (`--end`, `--days`).
 
-| Metric             | Code                | Unit        |
-| ------------------ | ------------------- | ----------- |
-| Heart rate         | LOINC `8867-4`      | `/min`      |
-| Resting heart rate | LOINC `40443-4`     | `/min`      |
-| Sleep duration     | LOINC `93832-4`     | `min`       |
-| Steps in 24 hours  | LOINC `41950-7`     | `{steps}/d` |
-| Respiratory rate   | LOINC `9279-1`      | `/min`      |
-| HRV (RMSSD)        | local `hrv-rmssd`   | `ms`        |
-| Sleep score        | local `sleep-score` | `{score}`   |
+| Metric             | Code                    | Unit        |
+| ------------------ | ----------------------- | ----------- |
+| Heart rate         | LOINC `8867-4`          | `/min`      |
+| Resting heart rate | LOINC `40443-4`         | `/min`      |
+| Sleep duration     | LOINC `93832-4`         | `min`       |
+| Steps in 24 hours  | LOINC `41950-7`         | `{steps}/d` |
+| Respiratory rate   | LOINC `9279-1`          | `/min`      |
+| HRV (RMSSD)        | local `hrv-rmssd`       | `ms`        |
+| Sleep score        | local `sleep-score`     | `{score}`   |
+| Workout minutes    | local `workout-<sport>` | `min`       |
 
 The LOINC and UCUM codes are the ones the open-twin Oura and Google Health
 mappers use. LOINC has no code for RMSSD or a vendor sleep score, and
 open-twin uses vendor-local codes for them, so these two use the local system
-`urn:twinllm:synthetic-wearable`. They are stored but no query tool can read
-them (the tools take LOINC only), so the conversations do not ask about them.
+`urn:twinllm:synthetic-wearable`. The LOINC-only tools cannot read them;
+`hrv_trend` and `sleep_summary` can (`docs/query-layer.md`, "Wearable tools"). The
+conversations do not ask about them yet, and the no-code family no longer offers HRV,
+the sleep score or training load as measures no tool can read.
+
+Generator v2 adds workouts beside the daily series, which it leaves unchanged: on some
+worn days (15–60% per subject) one workout of running, cycling, walking or strength
+(mostly the subject's usual sport) with its minutes, under the local code
+`workout-<sport>` at 18:00 UTC. `training_load` reads them. Their random streams are
+their own (`workout-profile:` and `workouts:` keys), so no daily value moved.
 
 Each subject gets fixed baselines, a share of worn days (one in twelve wears
 the device on about 15% of days), a slow resting heart rate drift and, for
@@ -351,8 +360,10 @@ training-data/out`. Per batch, in order, one line per step with its time:
    seed and N must match the batch).
 2. **wearables**: `wearables:generate` for that fhir dir (the seed comes from
    the manifest).
-3. **ingest fhir**: `warehouse:ingest --cohort synthea-v4-seed<seed>`. A
-   rejected bundle stops the run unless `--skip-rejected` (below).
+3. **ingest fhir**: `warehouse:ingest --cohort synthea-v4-seed<seed>`, split
+   across `--workers` ingest processes (default: CPU cores − 1; passed on to
+   both ingest steps). A rejected bundle stops the run unless
+   `--skip-rejected` (below).
 4. **ingest wearables**: the same for the wearable series, leaving out the
    series of any subject whose FHIR bundle was rejected. A rejected wearable
    bundle always stops the run.
@@ -428,12 +439,36 @@ inserted; skipped 43 of 11,439: 28 ot-unit-policy, 15 ot-quantity-no-code),
 subjects, 254.6 MB JSONL), 9m 22s, 3 s: 1h 25m 49s in all. The audit table
 held 210,442 rows (91 MB) after the two batches.
 
-Ingest is two thirds of the time. It runs one bundle at a time in one
-process, at about one CPU core, while Postgres stays nearly idle, and it
-parses every file twice (the Synthea check reads them all before the first
-write). Splitting the fhir dir across several ingest processes would cut it
-most. The second largest cost, clearing rows, would be a `TRUNCATE` when the
-database only ever holds the one batch.
+Ingest was two thirds of the time: one bundle at a time in one process, at
+about one CPU core, while Postgres stayed nearly idle, and every file parsed
+twice. Since #5 the fhir dir is split across `--workers` processes and each
+file is parsed once. The second largest cost, clearing rows, would be a
+`TRUNCATE` when the database only ever holds the one batch.
+
+### Parallel ingest (#5)
+
+`warehouse:ingest` of batch 1001's FHIR folder alone (11,416 files) into a
+throwaway database, 2026-10-27, on the same 8-core machine while other jobs
+kept it busy (7 Synthea processes, an Ollama model; load average 15–20 during
+the first run, 8–13 during the second), so the two runs did not get the same
+CPU:
+
+| Run                       | Wall time  | CPU time of the ingest processes |
+| ------------------------- | ---------- | -------------------------------- |
+| one process (before)      | 1h 44m 26s | 48m 47s                          |
+| `--workers 4`             | 12m 51s    | 42m 03s                          |
+| `--workers 4`, second run | 1m 13s     | 4m 14s (all 11,380 already in)   |
+
+Both runs inserted 11,380 bundles and rejected the same 36 files (22
+`ot-unit-policy`, 14 `ot-quantity-no-code`). The six warehouse tables
+(subjects, bundles, 4,906,250 observations, 1,243,744 non-numeric, 395,207
+conditions, 525,749 medication requests) had the same row counts and the same
+order-independent hash of their contents. The single process got about half a
+core on average on the busy machine and the four processes about 3.3 cores, so
+most of the gain is parallelism; skipping the second parse saved about 14% of
+the CPU time. On an idle machine expect roughly the CPU time divided by the
+number of workers. The run used 4 workers, not the default 7, to leave room
+for the other jobs.
 
 ## Human check
 

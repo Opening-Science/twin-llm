@@ -50,9 +50,10 @@ const mcpServerPermitted = (
 };
 
 /**
- * The factories behind the chat tools. Only `showView` is handed the turn's
- * wearable snapshots; every other factory gets the scope (and query ports)
- * alone. Tests pass spies here to check that structurally.
+ * The factories behind the chat tools. Only `query` (for its four wearable
+ * tools) and `showView` are handed the turn's wearable snapshots; every other
+ * factory gets the scope (and query ports) alone. Tests pass spies here to
+ * check that structurally.
  */
 export type ChatToolFactories = Readonly<{
   query: typeof createQueryTools;
@@ -80,7 +81,9 @@ const CHAT_TOOL_FACTORIES: ChatToolFactories = {
  * `show_view` belongs to no source: it is how any answer shows a chart. It
  * reads cohort rows only while the cohort record tools are on, and wearable
  * readings only from the snapshots this turn already loaded, which synthetic
- * mode never does. It is the only tool that receives those snapshots.
+ * mode never does. It and the wearable query tools (`sleep_summary`,
+ * `hrv_trend`, `resting_hr_trend`, `training_load`) are the only tools that
+ * receive those snapshots.
  *
  * `list_views` and `open_view` read the views this thread already showed
  * (`thread-views.ts`); a synthetic request is not offered wearable ones.
@@ -108,7 +111,7 @@ export const createChatTools = (
   const make = options?.factories ?? CHAT_TOOL_FACTORIES;
   const hasWearableNarrative = options?.hasWearableNarrative ?? false;
   return {
-    ...make.query(scope, options?.query),
+    ...make.query(scope, options?.query, options?.wearables ?? NO_WEARABLES),
     ...make.showView({
       scope,
       ports: options?.query,

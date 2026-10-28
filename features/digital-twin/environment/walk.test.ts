@@ -2,8 +2,12 @@ import { describe, expect, test } from "bun:test";
 
 import {
   clampToRadius,
+  isTypingTarget,
   isWalkCode,
   MAX_WALK_DT_S,
+  walkKeyApplies,
+  type KeyTarget,
+  type WalkKey,
   WALK_RADIUS_M,
   WALK_SPEED_M_S,
   walkIntent,
@@ -141,5 +145,93 @@ describe("clampToRadius", () => {
     expect(clampToRadius([3, 4], [0, 0], 8)).toEqual([3, 4]);
     expect(clampToRadius([6, 8], [0, 0], 5)).toEqual([3, 4]);
     expect(clampToRadius([11, 1], [1, 1], 5)).toEqual([6, 1]);
+  });
+});
+
+const element = (tagName: string, role: string | null = null, editable = false) =>
+  ({
+    tagName,
+    isContentEditable: editable,
+    getAttribute: (name: string) => (name === "role" ? role : null),
+  }) satisfies KeyTarget;
+
+describe("isTypingTarget", () => {
+  test("fields and keyed widgets keep their keys; the page and buttons do not", () => {
+    expect(
+      [
+        element("INPUT"),
+        element("input"),
+        element("TEXTAREA"),
+        element("SELECT"),
+        element("DIV", null, true),
+        element("BUTTON", "tab"),
+        element("DIV", "slider"),
+        element("DIV", "listbox"),
+        element("BODY"),
+        element("BUTTON"),
+        element("CANVAS"),
+        element("DIV", "application"),
+        null,
+      ].map(isTypingTarget),
+    ).toEqual([
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+    ]);
+  });
+});
+
+describe("walkKeyApplies", () => {
+  const key = (overrides: Partial<WalkKey> = {}): WalkKey => ({
+    code: "KeyW",
+    altKey: false,
+    ctrlKey: false,
+    metaKey: false,
+    defaultPrevented: false,
+    typing: false,
+    pointerOver: false,
+    focusInside: false,
+    ...overrides,
+  });
+
+  test("hovering the 3D view is enough, no click first", () => {
+    expect(walkKeyApplies(key({ pointerOver: true }))).toBe(true);
+    expect(walkKeyApplies(key({ code: "ArrowLeft", pointerOver: true }))).toBe(true);
+  });
+
+  test("focus on the view walks with the pointer elsewhere", () => {
+    expect(walkKeyApplies(key({ focusInside: true }))).toBe(true);
+  });
+
+  test("neither hovered nor focused: the key is the page's", () => {
+    expect(walkKeyApplies(key())).toBe(false);
+  });
+
+  test("typing in a field never walks, even over the view", () => {
+    expect(walkKeyApplies(key({ typing: true, pointerOver: true }))).toBe(false);
+    expect(walkKeyApplies(key({ typing: true, focusInside: true }))).toBe(false);
+  });
+
+  test("modifiers, used keys and other keys do not walk", () => {
+    expect(
+      [
+        key({ pointerOver: true, ctrlKey: true }),
+        key({ pointerOver: true, metaKey: true }),
+        key({ pointerOver: true, altKey: true }),
+        key({ pointerOver: true, defaultPrevented: true }),
+        key({ pointerOver: true, code: "KeyQ" }),
+        key({ pointerOver: true, code: "Space" }),
+      ].map(walkKeyApplies),
+    ).toEqual([false, false, false, false, false, false]);
   });
 });
