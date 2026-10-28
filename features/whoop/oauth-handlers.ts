@@ -9,6 +9,8 @@ import {
   type ConnectorReturn,
   type OAuthCookieJar,
 } from "@/infrastructure/oauth-state";
+import { syncThenAudit, type SyncedMetrics } from "@/features/wearables/audited-sync";
+import type { PersonalRead } from "@/infrastructure/personal-read-audit";
 
 /**
  * Whoop authorize and callback GET, as factories (same shape as Oura), so the
@@ -37,7 +39,9 @@ export type WhoopCallbackDeps = {
     readonly userId: string;
     readonly code: string;
   }) => Promise<unknown>;
-  readonly syncForUser: (userId: string) => Promise<unknown>;
+  /** The first sync after connect; it goes through `syncThenAudit`. */
+  readonly syncForUser: (userId: string) => Promise<SyncedMetrics>;
+  readonly auditPersonalRead: (read: PersonalRead) => Promise<unknown>;
   /** Receives the error name only, never the error object. */
   readonly logError: (message: string, errorName: string) => void;
   readonly logWarn: (message: string, details: Readonly<Record<string, unknown>>) => void;
@@ -135,7 +139,11 @@ export const createWhoopCallbackHandler = (deps: WhoopCallbackDeps) => {
     try {
       const { id: appUserId } = await deps.ensureAppUser(clerkId);
       await deps.exchangeAndPersistCode({ userId: appUserId, code });
-      await deps.syncForUser(appUserId).catch((error: unknown) => {
+      await syncThenAudit(
+        () => deps.syncForUser(appUserId),
+        clerkId,
+        deps.auditPersonalRead,
+      ).catch((error: unknown) => {
         deps.logError("[whoop] initial sync failed after connect", errorName(error));
       });
       return back("connected", request);

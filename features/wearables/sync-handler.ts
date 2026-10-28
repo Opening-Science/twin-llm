@@ -1,10 +1,17 @@
 import { NextResponse } from "next/server";
 
+import type { PersonalRead } from "@/infrastructure/personal-read-audit";
+
+import { syncThenAudit } from "./audited-sync";
+
 /**
  * Wearable sync POST, as one factory for Oura, Whoop and Google Health. The
  * three routes only differed in copy and Oura's sandbox flag, so each route
  * file wires its provider here and tests pass fakes instead of replacing
  * modules.
+ *
+ * Each sync writes one `personal.read.sync` row with the metric count
+ * (`syncThenAudit`); when the row cannot be written the sync reports failed.
  *
  * `logError` gets the error name, never the error: a provider message can
  * carry token or response-body text into the server log.
@@ -27,6 +34,7 @@ export type WearableSyncDeps = {
     userId: string,
     request: WearableSyncRequest,
   ) => Promise<{ readonly metrics: readonly unknown[]; readonly window: unknown }>;
+  readonly auditPersonalRead: (read: PersonalRead) => Promise<unknown>;
   readonly logError: (message: string, errorName: string) => void;
 };
 
@@ -80,7 +88,11 @@ export const createWearableSyncHandler = (deps: WearableSyncDeps) => {
     const { sandbox, startDate, endDate } = body as WearableSyncRequest;
 
     try {
-      const summary = await deps.sync(appUserId, { sandbox, startDate, endDate });
+      const summary = await syncThenAudit(
+        () => deps.sync(appUserId, { sandbox, startDate, endDate }),
+        clerkId,
+        deps.auditPersonalRead,
+      );
       return NextResponse.json({
         ok: true,
         metricCount: summary.metrics.length,

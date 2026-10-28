@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 
+import type { PersonalRead } from "@/infrastructure/personal-read-audit";
+
 import {
   createWearableSyncHandler,
   type WearableSyncDeps,
@@ -42,6 +44,7 @@ const PROVIDERS: ReadonlyArray<
 
 let logged: Array<readonly [string, string]> = [];
 let syncCalls: Array<readonly [string, WearableSyncRequest]> = [];
+let auditRows: PersonalRead[] = [];
 
 const deps = (provider: WearableSyncProvider): WearableSyncDeps => ({
   provider,
@@ -51,6 +54,9 @@ const deps = (provider: WearableSyncProvider): WearableSyncDeps => ({
   sync: async (userId, request) => {
     syncCalls.push([userId, request]);
     return { metrics: [{ key: "synthetic.metric", value: 1 }], window: WINDOW };
+  },
+  auditPersonalRead: async (read) => {
+    auditRows.push(read);
   },
   logError: (message, errorName) => {
     logged.push([message, errorName]);
@@ -73,6 +79,7 @@ const syncRequest = (body?: unknown) =>
 beforeEach(() => {
   logged = [];
   syncCalls = [];
+  auditRows = [];
 });
 
 describe("POST /api/{provider}/sync logging", () => {
@@ -120,6 +127,35 @@ describe("POST /api/{provider}/sync", () => {
     expect(await res.json()).toEqual({ ok: true, metricCount: 1, window: WINDOW });
     expect(syncCalls).toEqual([[USER_ID, { sandbox: true, ...WINDOW }]]);
     expect(logged).toEqual([]);
+  });
+
+  test("a sync writes one audit row with the metric count, no values", async () => {
+    await createWearableSyncHandler(deps("google-health"))(syncRequest(WINDOW));
+
+    expect(auditRows).toEqual([{ actor: "local", purpose: "sync", rowCount: 1 }]);
+  });
+
+  test("a failed sync writes no audit row", async () => {
+    await createWearableSyncHandler({
+      ...deps("oura"),
+      sync: failingSync(new Error(SYNTHETIC_SECRET)),
+    })(syncRequest(WINDOW));
+
+    expect(auditRows).toEqual([]);
+  });
+
+  test("when the audit row cannot be written the sync reports failed", async () => {
+    const res = await createWearableSyncHandler({
+      ...deps("whoop"),
+      auditPersonalRead: async () => {
+        throw new Error("audit down");
+      },
+    })(syncRequest(WINDOW));
+
+    expect(res.status).toBe(502);
+    expect(await res.json()).toEqual({
+      error: "Could not sync Whoop data. Reconnect and try again.",
+    });
   });
 
   test("an empty body syncs with no window, so the default applies", async () => {

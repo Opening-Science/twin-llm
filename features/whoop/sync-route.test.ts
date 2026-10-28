@@ -33,6 +33,7 @@ const recorded = {
   connectionUpdates: [] as UpdateArgs[],
   snapshotQueries: [] as FindFirstArgs[],
   snapshotRows: [] as Record<string, unknown>[],
+  auditTools: [] as string[],
 };
 
 let connectionRow: Record<string, unknown> | null = null;
@@ -43,6 +44,18 @@ mock.module("@/infrastructure/auth-actor", () => ({
 }));
 mock.module("@/infrastructure/database", () => ({
   database: () => ({
+    // The audit append (#223): records the tool name only.
+    $transaction: async (run: (tx: unknown) => Promise<unknown>) =>
+      run({
+        $executeRaw: async () => 0,
+        auditEvent: {
+          findFirst: async () => null,
+          create: async (args: { data: { tool: string } }) => {
+            recorded.auditTools.push(args.data.tool);
+            return {};
+          },
+        },
+      }),
     user: { findUnique: async () => ({ id: USER_ID }) },
     whoopConnection: {
       findUnique: async () => connectionRow,
@@ -139,6 +152,7 @@ beforeEach(() => {
   recorded.connectionUpdates.length = 0;
   recorded.snapshotQueries.length = 0;
   recorded.snapshotRows.length = 0;
+  recorded.auditTools.length = 0;
 });
 
 const syncRequest = () =>
@@ -165,6 +179,7 @@ describe("POST /api/whoop/sync error surface", () => {
     });
     expect(recorded.snapshots).toEqual([]);
     expect(recorded.connectionUpdates).toEqual([]);
+    expect(recorded.auditTools).toEqual([]);
   });
 
   test("one failed collection keeps the partial summary and persists it", async () => {
@@ -183,6 +198,8 @@ describe("POST /api/whoop/sync error surface", () => {
       metricCount: 6,
       window: { startDate: "2026-01-01", endDate: "2026-01-04" },
     });
+
+    expect(recorded.auditTools).toEqual(["personal.read.sync"]);
 
     expect(recorded.connectionUpdates).toHaveLength(1);
     expect(recorded.connectionUpdates[0]?.where).toEqual({ userId: USER_ID });

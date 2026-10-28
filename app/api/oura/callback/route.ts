@@ -11,6 +11,9 @@ import {
 } from "@/features/oura/oauth-handlers";
 import { ensureAppUser } from "@/infrastructure/current-user";
 import { ouraEnv } from "@/infrastructure/env";
+import { database } from "@/infrastructure/database";
+import { auditPersonalRead } from "@/infrastructure/personal-read-audit";
+import { append } from "@/packages/audit/append";
 
 export const GET = createOuraCallbackHandler({
   ouraEnv,
@@ -20,6 +23,7 @@ export const GET = createOuraCallbackHandler({
   createTokenHandlerFromCode,
   persistOuraTokens,
   syncOuraForUser,
+  auditPersonalRead: auditPersonalRead((input) => append(database(), input)),
   logError: console.error,
   logWarn: console.warn,
 });

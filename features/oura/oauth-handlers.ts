@@ -9,6 +9,8 @@ import {
   type ConnectorReturn,
   type OAuthCookieJar,
 } from "@/infrastructure/oauth-state";
+import { syncThenAudit, type SyncedMetrics } from "@/features/wearables/audited-sync";
+import type { PersonalRead } from "@/infrastructure/personal-read-audit";
 import { getAuthorizationUrl } from "@/infrastructure/open-twin-adapters/oura-authorize";
 
 /**
@@ -49,7 +51,9 @@ export type OuraCallbackDeps = {
     readonly expiresIn: number;
     readonly subjectKey?: string | null;
   }) => Promise<void>;
-  readonly syncOuraForUser: (userId: string) => Promise<unknown>;
+  /** The first sync after connect; it goes through `syncThenAudit`. */
+  readonly syncOuraForUser: (userId: string) => Promise<SyncedMetrics>;
+  readonly auditPersonalRead: (read: PersonalRead) => Promise<unknown>;
   /** Receives the error name only, never the error object. */
   readonly logError: (message: string, errorName: string) => void;
   /** Booleans only, never a state, cookie or code value. */
@@ -149,7 +153,11 @@ export const createOuraCallbackHandler = (deps: OuraCallbackDeps) => {
         subjectKey: appUserId,
       });
 
-      await deps.syncOuraForUser(appUserId).catch((error: unknown) => {
+      await syncThenAudit(
+        () => deps.syncOuraForUser(appUserId),
+        clerkId,
+        deps.auditPersonalRead,
+      ).catch((error: unknown) => {
         deps.logError("[oura] initial sync failed after connect", errorName(error));
       });
 

@@ -167,12 +167,14 @@ Reads of personal data outside the tools write a row too (#143), with what the r
 
 - Wearables summary: `personal.read.wearables-summary` for Oura, Whoop and Google Health, and `vitronic.wearables.summary` from the BodyLoop reader.
 - Genome report: `personal.read.genome-report` with the report's row count.
+- Customize · Connectors page: in personal mode each view writes `personal.read.connectors-page` (how many of the Oura, Whoop and Google Health summaries it found), through `readConnectorSummaries` (`features/connectors/connector-summaries.ts`). When the row cannot be written the page shows its error state instead of the summaries.
+- Oura, Whoop and Google Health syncs: `personal.read.sync` with the number of metrics written, from `POST /api/<provider>/sync` and from the first sync after an OAuth callback, through `syncThenAudit` (`features/wearables/audited-sync.ts`). The snapshot is written first; when the row cannot be written the sync route answers with its failed-sync error and the callback logs a failed initial sync.
 - BodyLoop status, subjects, scans, snapshots and avatar: one `vitronic.*` row each, written in the reader.
 - Imports and the Data page's dataset list: `personal-data.*` (`docs/personal-data.md`).
 - Thread search and export: `search.threads`, `thread.export`.
 - Ark status: one `ark.*` row per Ark call, from the adapter.
 
-Not audited, and why: the Oura, Whoop and Google Health status routes read the connection row only (linked at, last sync); Ark audit lists audit rows, not health data; sync, connect and import writes are audited where they write. Not audited yet: the Oura, Whoop and Google Health summaries a personal-mode chat puts in the prompt. `tests/personal-reads/personal-reads.test.ts` holds this list for every `app/api` route and fails on a route it does not name, so a new route is added there by hand.
+Not audited, and why: the Oura, Whoop and Google Health status routes read the connection row only (linked at, last sync); Ark audit lists audit rows, not health data; BodyLoop sync, connect and upload writes, and imports, are audited where they write; OAuth authorize and disconnect read no health data. Not audited yet: the Oura, Whoop and Google Health summaries a personal-mode chat puts in the prompt. `tests/personal-reads/personal-reads.test.ts` holds this list for every `app/api` route and fails on a route it does not name, so a new route is added there by hand. It keeps a second list for pages, which are not API routes: every `page.tsx` or `layout.tsx` under `app` that reads a wearable summary must be named there and must read it through its audited reader.
 
 Outside the tools, the chat route and the onboarding starter questions write `provider.personal_data_sent` (`subject_ref` null, `row_count` 0, args `{ provider, modelId }`) for each personal request they send to Exoscale under `EXOSCALE_PERSONAL_DATA=consented-pilot`, before the model is called. Chat uses the turn id as `session_id`, the starters the actor (`docs/providers.md`).
 
