@@ -119,8 +119,15 @@ const canChat = ({ name, capabilities }: z.infer<typeof ollamaTag>): boolean =>
 /**
  * Ollama `GET /api/tags`. The tag stays in the id (`qwen3:8b`) because Ollama
  * resolves a bare name only to `:latest`; that one suffix is dropped.
+ *
+ * `runWindow` is the context the chat asks Ollama for (`OLLAMA_NUM_CTX`). A
+ * model runs with that, not with the maximum its tag reports (qwen3:4b says
+ * 262K and runs at 16K here), so the smaller of the two is shown.
  */
-export const parseOllamaTags = (payload: unknown): readonly CatalogModel[] | null => {
+export const parseOllamaTags = (
+  payload: unknown,
+  runWindow?: number,
+): readonly CatalogModel[] | null => {
   const tags = validRows(payload, "models", ollamaTag);
   if (tags === null) return null;
   return tags
@@ -134,7 +141,11 @@ export const parseOllamaTags = (payload: unknown): readonly CatalogModel[] | nul
         name: id,
         provider: "Ollama",
         providerId: "ollama",
-        ...windowOf(tag.details?.context_length),
+        ...windowOf(
+          runWindow === undefined
+            ? tag.details?.context_length
+            : Math.min(tag.details?.context_length ?? runWindow, runWindow),
+        ),
       };
     })
     .sort(measuredThenListed);

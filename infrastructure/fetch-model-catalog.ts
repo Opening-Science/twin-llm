@@ -87,7 +87,9 @@ const ollamaModels = async (): Promise<Catalog> => {
   );
   try {
     const response = await fetch(`${root}/api/tags`, { next: { revalidate: 60 } });
-    const models = response.ok ? parseOllamaTags(await response.json()) : null;
+    const models = response.ok
+      ? parseOllamaTags(await response.json(), serverEnv().OLLAMA_NUM_CTX)
+      : null;
     return models !== null && models.length > 0 ? Object.freeze(models) : OLLAMA_FALLBACK;
   } catch {
     return OLLAMA_FALLBACK;

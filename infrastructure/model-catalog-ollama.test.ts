@@ -98,4 +98,24 @@ describe("parseOllamaTags", () => {
     ]);
     expect(parseOllamaTags({ tags: [] })).toBeNull();
   });
+
+  test("shows the window the chat runs with when it is smaller than the tag's", () => {
+    const models = parseOllamaTags(
+      {
+        models: [
+          { name: "qwen3:4b", details: { context_length: 262_144 } },
+          { name: "tiny:latest", details: { context_length: 8192 } },
+          { name: "bare:latest" },
+        ],
+      },
+      16_384,
+    );
+    expect(
+      models?.map((model) => [model.id, model.contextTokens, model.contextUnknown]),
+    ).toEqual([
+      ["bare", 16_384, undefined],
+      ["qwen3:4b", 16_384, undefined],
+      ["tiny", 8192, undefined],
+    ]);
+  });
 });
