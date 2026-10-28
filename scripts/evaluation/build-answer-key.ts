@@ -125,7 +125,7 @@ export const rowCountOf = (tool: KeyedTool, result: unknown): number => {
       // Wearable readings in the window, as the audit row counts them.
       return numberAt(result, "n");
     case "cross_source_compare":
-      return numberAt(result, "n");
+      return numberAt(result, "n_pairs");
     case "latest_by_loinc":
       return lengthAt(result, "rows");
     case "coverage": {
