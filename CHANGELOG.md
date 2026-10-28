@@ -63,6 +63,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `list_subjects` with a cohort_id the session cannot read now says the cohort is the problem and lists the readable cohorts loaded here (same `SUBJECT_SCOPE_VIOLATION` code), and its description names the evaluation cohort. A model that guessed "synthetic-cohort-001" had been told the subject was out of scope and answered that the subject could not be read.
+
 - Thinking a local model writes despite `think: false` (qwen3 closes a `<think>` block its template opened) no longer shows as the answer: everything up to the last `</think>` is taken out of the answer and the streaming view, and stands in for the reasoning only when the reply has no Reasoning section. `latest_by_loinc` refuses with `NO_ROWS` when none of the asked codes has a reading, saying to check the code, and lists `codes_without_rows` otherwise; a mistyped heart-rate code (88678-4) had come back as an empty list and an answer that the subject had no heart rate on file. The cohort suggestion chips now name the LOINC codes the subject has. A column whose model ran its lookups and wrote nothing now says so, instead of an empty "Unverified narration", and a section line that only repeats the prompt's guidance ("Step-by-step chain of thought…") is dropped.
 
 - A pull that adds a database model no longer takes every page down: `bun run dev` regenerates the Prisma client when it was built from an older `prisma/schema.prisma` (it compares the schema the client embeds), `bun run doctor` reports it, and the palette lists only the shipped skills if a person's own cannot be read. The global error page's Reload now reloads, and `/customize/skills` goes to the Skills tab instead of a 404.

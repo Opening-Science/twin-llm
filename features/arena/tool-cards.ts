@@ -112,6 +112,9 @@ const REFUSAL_NOTES: Readonly<Record<string, string>> = {
 
 /** Notes for a code whose usual sentence would be wrong for this tool (it lists records, not readings). */
 const TOOL_REFUSAL_NOTES: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+  list_subjects: {
+    SUBJECT_SCOPE_VIOLATION: "That cohort is not one this session can read.",
+  },
   conditions_timeline: {
     NO_ROWS: "No recorded condition matches in this window.",
     ROW_CAP_EXCEEDED: "Too many records in this window; nothing was read.",

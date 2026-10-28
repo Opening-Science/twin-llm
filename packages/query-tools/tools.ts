@@ -39,7 +39,10 @@ import {
 } from "./refusals";
 import {
   cohortInScope,
+  type CohortOutOfScope,
+  cohortOutOfScope,
   SUBJECT_SCOPE_VIOLATION,
+  SYNTHETIC_COHORTS,
   subjectRowInScope,
   type SessionScope,
   type SubjectScopeViolation,
@@ -238,7 +241,7 @@ const valuesOf = (rows: readonly ObservationRecord[]): number[] =>
 export const runListSubjects = (
   scope: SessionScope,
   input: ListSubjectsInput,
-): Promise<{ subjects: Array<{ subject_ref: string }> } | SubjectScopeViolation> =>
+): Promise<{ subjects: Array<{ subject_ref: string }> } | CohortOutOfScope> =>
   audited(
     scope,
     "list_subjects",
@@ -246,7 +249,17 @@ export const runListSubjects = (
     null,
     async () => {
       if (!cohortInScope(scope, input.cohort_id)) {
-        return SUBJECT_SCOPE_VIOLATION;
+        if (scope.mode !== "synthetic") return cohortOutOfScope(scope, []);
+        const loaded = await database().subject.groupBy({
+          by: ["cohortId"],
+          where: { cohortId: { in: [...SYNTHETIC_COHORTS] }, isSynthetic: true },
+          orderBy: { cohortId: "asc" },
+          take: 10,
+        });
+        return cohortOutOfScope(
+          scope,
+          loaded.map((row) => row.cohortId),
+        );
       }
       const rows = await database().subject.findMany({
         where: { cohortId: input.cohort_id, isSynthetic: true },

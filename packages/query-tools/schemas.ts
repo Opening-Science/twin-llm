@@ -367,7 +367,8 @@ export const valuesAroundEventInput = z
 export const TOOL_DEFINITIONS = [
   {
     name: "list_subjects",
-    description: "List subject_ref values for a synthetic cohort. Max 200 rows.",
+    description:
+      "List subject_ref values for a synthetic cohort (the evaluation cohort is synthea-v4-seed42). Max 200 rows. An unreadable cohort_id is refused with the readable cohorts listed.",
     input: listSubjectsInput,
   },
   {

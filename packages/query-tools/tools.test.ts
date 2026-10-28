@@ -121,6 +121,11 @@ const mockDb = () => ({
   subject: {
     findUnique: async ({ where }: { where: { subjectRef: string } }) =>
       store.subjects.get(where.subjectRef) ?? null,
+    groupBy: async ({ where }: { where: { cohortId: { in: string[] } } }) =>
+      [...new Set([...store.subjects.values()].map((row) => row.cohortId))]
+        .filter((cohortId) => where.cohortId.in.includes(cohortId))
+        .sort()
+        .map((cohortId) => ({ cohortId })),
     findMany: async ({
       where,
       take,
@@ -483,15 +488,21 @@ describe("subject scope", () => {
 
   test("list_subjects refuses a cohort outside the allowlist and personal mode", async () => {
     const { runListSubjects } = await import("./tools");
-    expect(await runListSubjects(synthetic, { cohort_id: "synthea-unlisted" })).toEqual(
-      SUBJECT_SCOPE_VIOLATION,
-    );
+    expect(await runListSubjects(synthetic, { cohort_id: "synthea-unlisted" })).toEqual({
+      code: "SUBJECT_SCOPE_VIOLATION",
+      error: "cohort_id is not a cohort this session can read; use one listed in cohorts",
+      cohorts: [COHORT],
+    });
     expect(
       await runListSubjects(
         { actor: "local", sessionId: "turn-scope", mode: "personal" },
         { cohort_id: COHORT },
       ),
-    ).toEqual(SUBJECT_SCOPE_VIOLATION);
+    ).toEqual({
+      code: "SUBJECT_SCOPE_VIOLATION",
+      error: "no cohort can be read in personal mode",
+      cohorts: [],
+    });
     expect(store.events.map((event) => event.rowCount)).toEqual([0, 0]);
   });
 });
