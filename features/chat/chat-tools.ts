@@ -16,7 +16,8 @@ import { createGuidelineTools } from "@/packages/guidelines/ai-tools";
 import { createKnowledgeTools } from "@/packages/knowledge/ai-tools";
 import { permitServerForDataMode } from "@/packages/mcp-client/policy";
 import { findServer } from "@/packages/mcp-client/registry";
-import { createQueryTools } from "@/packages/query-tools/ai-tools";
+import { createImportedTools, createQueryTools } from "@/packages/query-tools/ai-tools";
+import type { ImportedToolDeps } from "@/packages/query-tools/imported-tools";
 import type { QueryToolPorts } from "@/packages/query-tools/ports";
 import type { SessionScope } from "@/packages/query-tools/scope";
 
@@ -114,6 +115,12 @@ export const createChatTools = (
      * includes them only for its synthetic `--genome` records.
      */
     genome?: GenomeToolDeps;
+    /**
+     * Ports for the imported-data tools (#181). Only the chat route passes
+     * them, and only after the imported-data policy allowed this turn
+     * (personal mode, Ollama on loopback); a synthetic scope never gets them.
+     */
+    imported?: ImportedToolDeps;
   }>,
 ) => {
   const make = options?.factories ?? CHAT_TOOL_FACTORIES;
@@ -142,6 +149,9 @@ export const createChatTools = (
     ...make.knowledge(scope),
     ...(options?.genome !== undefined && scope.mode === "personal"
       ? createGenomeTools(options.genome)
+      : {}),
+    ...(options?.imported !== undefined && scope.mode === "personal"
+      ? createImportedTools(options.imported)
       : {}),
   };
 };

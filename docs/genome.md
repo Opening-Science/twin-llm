@@ -65,14 +65,15 @@ These are enforced in code, not only by convention.
    row), or whose history shows a `/genome` prompt or a Carbon-X answer, is
    genome-personal. Every later turn in it runs only on Ollama on loopback;
    any other model is refused before the history is sent, the answer is
-   stored as refused with "This thread used your genome report, so it only
-   runs on local models.", and `genome.thread.refused` is audited with the
+   stored as refused with "This thread used your genome report or imported
+   data, so it only runs on local models.", and `genome.thread.refused` is audited with the
    provider and a SHA-256 of the thread id. A second check just before the
    history goes to a model refuses again if a genome thread got that far
    (`infrastructure/genome-thread-policy.ts`). An export of a genome-personal
    thread (`/report`, #44, not built yet) must use `permitGenomeThreadExport`
    and goes only to a recipient on this machine. Starting a new thread is the
-   way to use a hosted model again. An incognito chat
+   way to use a hosted model again. A thread where an imported-data tool
+   ran (#181, `docs/query-layer.md`) is held to the same rule. An incognito chat
    ([chat-platform.md](chat-platform.md#incognito-chats)) runs only on Ollama
    on loopback and stores no thread, so the genome tools may run in it under
    the same policy, its answers and tool results are never stored, and its

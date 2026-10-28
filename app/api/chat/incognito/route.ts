@@ -1,5 +1,6 @@
 import { guardChatRequest } from "@/features/chat/chat-protection";
 import { genomeToolDepsFor } from "@/features/chat/genome-tool-deps";
+import { importedToolDepsFor } from "@/features/chat/imported-tool-deps";
 import { createIncognitoChatHandler } from "@/features/chat/incognito-chat";
 import { resolveLanguageModel } from "@/features/chat/resolve-language-model";
 import { loadSessionAudit } from "@/features/chat/response/load-session-audit";
@@ -53,6 +54,7 @@ export const POST = createIncognitoChatHandler({
   pipeline: {
     resolveModel: resolveLanguageModel,
     genomeTools: genomeToolDepsFor,
+    importedTools: importedToolDepsFor,
     loadAudit: loadSessionAudit,
   },
 });

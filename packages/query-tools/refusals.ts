@@ -1,3 +1,4 @@
+import { IMPORTED_REFUSAL_CODES, type ImportedRefusal } from "./imported-refusals";
 import { SUBJECT_SCOPE_VIOLATION, type SubjectScopeViolation } from "./scope";
 
 /**
@@ -80,7 +81,8 @@ export type ToolRefusal =
   | NoWearableRows
   | WearableMixedUnits
   | WindowTooShort
-  | SourcesUnitMismatch;
+  | SourcesUnitMismatch
+  | ImportedRefusal;
 
 const REFUSAL_CODES: readonly string[] = [
   SUBJECT_SCOPE_VIOLATION.code,
@@ -94,6 +96,7 @@ const REFUSAL_CODES: readonly string[] = [
   "COHORT_TOO_SMALL",
   "SOURCE_NOT_CONNECTED",
   "WINDOW_TOO_SHORT",
+  ...IMPORTED_REFUSAL_CODES,
 ];
 
 export const isToolRefusal = (value: unknown): value is ToolRefusal =>

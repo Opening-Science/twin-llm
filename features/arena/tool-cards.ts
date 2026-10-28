@@ -4,6 +4,11 @@ import { DNA_ASK_TOOL, GENOME_REPORT_TOOL } from "@/packages/carbon-x/constants"
 import { GBD_MODEL_TOOL } from "@/packages/gbd-mcp/constants";
 import { GUIDELINE_MODEL_TOOL } from "@/packages/guidelines/constants";
 import { KNOWLEDGE_MODEL_TOOL } from "@/packages/knowledge/constants";
+import {
+  IMPORTED_DATASETS_TOOL,
+  IMPORTED_LATEST_TOOL,
+  IMPORTED_TREND_TOOL,
+} from "@/packages/query-tools/imported-names";
 
 /**
  * A tool call as the answer column shows it: what was asked, in plain words,
@@ -62,6 +67,9 @@ const TITLES: Readonly<Record<string, string>> = {
   [KNOWLEDGE_MODEL_TOOL]: "Searched TwinLLM notes",
   [GENOME_REPORT_TOOL]: "Read the released genome report",
   [DNA_ASK_TOOL]: "Asked Carbon-X (research model) about a variant",
+  [IMPORTED_DATASETS_TOOL]: "Listed your imported datasets",
+  [IMPORTED_LATEST_TOOL]: "Read your newest imported readings",
+  [IMPORTED_TREND_TOOL]: "Fitted a trend of one imported series",
 };
 
 export const toolTitle = (tool: string): string => {
@@ -88,6 +96,11 @@ const REFUSAL_NOTES: Readonly<Record<string, string>> = {
   RECORDS_NOT_IN_SKILL: "This skill reads no subject records, so none were read.",
   GENOME_NOT_PERMITTED: "Genome tools run only in personal mode on this machine.",
   NO_REPORT: "No genome report has been released yet.",
+  IMPORTED_DATA_NOT_PERMITTED:
+    "Imported data is read only in personal mode, by a model on this machine.",
+  DATASET_NOT_FOUND: "No imported dataset with that id.",
+  SERIES_NOT_COMBINED: "A coded series and one stored by name were not combined.",
+  PARTIAL_DATES: "Some rows are dated only to a month or a year, so no trend was fitted.",
   RSID_NOT_IN_REPORT: "That variant is not in the released report.",
   NO_CALL: "The report has no call at that variant, so nothing was asked.",
   INCOMPLETE_ROW: "The report has no position for that variant.",

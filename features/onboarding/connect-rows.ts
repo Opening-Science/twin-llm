@@ -145,6 +145,8 @@ export type SourceFacts = Readonly<{
   gbdConfigured: boolean;
   /** The genome policy allows chat here (`infrastructure/genome-gate.ts`). */
   genomeChat: boolean;
+  /** The imported-data policy allows chat here (`infrastructure/imported-data-gate.ts`). */
+  importedChat: boolean;
 }>;
 
 export type SourceAvailability = Readonly<{ available: boolean; note: string | null }>;
@@ -179,5 +181,8 @@ export const sourceAvailability = (
     "ark-genome": facts.genomeChat
       ? { available: true, note: null }
       : { available: false, note: "Needs Ark and local Carbon-X" },
+    "imported-data": facts.importedChat
+      ? { available: true, note: null }
+      : { available: false, note: "Personal mode and a local model only" },
   };
 };

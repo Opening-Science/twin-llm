@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { MockLanguageModelV4 } from "ai/test";
 
 import { ALL_KNOWLEDGE_SOURCES } from "@/infrastructure/knowledge-sources";
+import type { ImportedToolDeps } from "@/packages/query-tools/imported-tools";
 import type { QueryToolPorts } from "@/packages/query-tools/ports";
 
 import { createChatTools, forSources } from "./chat-tools";
@@ -80,12 +81,16 @@ const sentTo = async (
 describe("chat tools and knowledge sources", () => {
   test("every chat tool but the view tools is owned by exactly one source", () => {
     const owned = ALL_KNOWLEDGE_SOURCES.flatMap((source) => source.tools);
-    // The genome tools are owned too, but only a genome-permitted turn gets them.
+    // The genome and imported-data tools are owned too, but only a turn their
+    // policies permit gets them.
     expect([...owned, "show_view", "list_views", "open_view"].sort()).toEqual(
       [
         ...Object.keys(createChatTools(SCOPE, { query: ports })),
         "dna_ask",
         "genome_report",
+        "imported_datasets",
+        "imported_latest",
+        "imported_trend",
       ].sort(),
     );
     expect(new Set(owned).size).toBe(owned.length);
@@ -151,5 +156,45 @@ describe("chat tools and knowledge sources", () => {
       ].filter((name) => tools.includes(name)),
     ).toEqual([]);
     expect(tools).toContain("trend");
+  });
+});
+
+describe("imported-data tools", () => {
+  const imported = (scope: typeof SCOPE | typeof PERSONAL): ImportedToolDeps => ({
+    scope,
+    permit: () => ({ ok: true }),
+    ports: {
+      listDatasets: async () => [],
+      listSeries: async () => [],
+      findLatest: async () => [],
+      findSeries: async () => [],
+      appendAudit: async () => undefined,
+    },
+  });
+  const IMPORTED = ["imported_datasets", "imported_latest", "imported_trend"];
+  const names = (scope: typeof SCOPE | typeof PERSONAL, deps?: ImportedToolDeps) =>
+    Object.keys(createChatTools(scope, { query: ports, imported: deps }));
+
+  test("a personal turn the policy allowed gets them", () => {
+    expect(
+      names(PERSONAL, imported(PERSONAL)).filter((name) => IMPORTED.includes(name)),
+    ).toEqual(IMPORTED);
+  });
+
+  test("without their ports, or in a synthetic scope, there are none", () => {
+    expect(names(PERSONAL).filter((name) => IMPORTED.includes(name))).toEqual([]);
+    expect(
+      names(SCOPE, imported(SCOPE)).filter((name) => IMPORTED.includes(name)),
+    ).toEqual([]);
+  });
+
+  test("turning the imported-data source off removes them", () => {
+    const { offeredTools } = forSources(
+      createChatTools(PERSONAL, { query: ports, imported: imported(PERSONAL) }),
+      ["imported-data"],
+    );
+    expect([...(offeredTools ?? [])].filter((name) => IMPORTED.includes(name))).toEqual(
+      [],
+    );
   });
 });

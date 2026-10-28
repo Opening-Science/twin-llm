@@ -393,7 +393,9 @@ describe("chat start: a thread that used genome tools stays local (#151)", () =>
     expect(JSON.stringify(audits)).not.toContain(THREAD_ID);
     expect(JSON.stringify(audits)).not.toContain("recovery");
     expect(refused).toEqual([
-      refusedRow("This thread used your genome report, so it only runs on local models."),
+      refusedRow(
+        "This thread used your genome report or imported data, so it only runs on local models.",
+      ),
     ]);
   });
 

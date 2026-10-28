@@ -23,6 +23,10 @@ import {
 import { GBD_MODEL_TOOL } from "@/packages/gbd-mcp/constants";
 import { GUIDELINE_MODEL_TOOL } from "@/packages/guidelines/constants";
 import { KNOWLEDGE_MODEL_TOOL } from "@/packages/knowledge/constants";
+import {
+  IMPORTED_DATASETS_TOOL,
+  IMPORTED_LATEST_TOOL,
+} from "@/packages/query-tools/imported-names";
 import type { TOOL_DEFINITIONS } from "@/packages/query-tools/schemas";
 
 /**
@@ -217,6 +221,22 @@ const genomeSection = (
       ]
     : [];
 
+/**
+ * Only when this request carries the imported-data tools (#181), which only a
+ * personal turn on a local chat model ever does. Never assumed.
+ */
+const importedSection = (
+  offeredTools: ReadonlySet<string> | undefined,
+): readonly string[] =>
+  offeredTools?.has(IMPORTED_LATEST_TOOL)
+    ? [
+        "## Imported data (the person's own files)",
+        `- Call \`${IMPORTED_DATASETS_TOOL}\` first to see which datasets, codes and names exist. Cite a value with its dataset and date as stored.`,
+        "- A series stored by name is not the LOINC code of a similar name: HRV RMSSD is not SDNN (80404-7). Never combine them, and never mix datasets in one trend.",
+        "",
+      ]
+    : [];
+
 export const buildTwinSystemPrompt = (params: {
   readonly mode: DataMode;
   readonly oura: OuraSummary | null;
@@ -318,6 +338,7 @@ export const buildTwinSystemPrompt = (params: {
     ...viewSection((tool) => params.offeredTools?.has(tool) ?? true),
     ...unitSection((tool) => params.offeredTools?.has(tool) ?? true),
     ...genomeSection(params.offeredTools),
+    ...importedSection(params.offeredTools),
     ...syntheticCohortSection(
       params.mode,
       (tool) => params.offeredTools?.has(tool) ?? true,

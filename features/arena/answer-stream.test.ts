@@ -266,7 +266,8 @@ describe("streamAnswer", () => {
       ending: "FAILED",
       metrics: null,
       document: null,
-      refusal: "This thread used your genome report, so it only runs on local models.",
+      refusal:
+        "This thread used your genome report or imported data, so it only runs on local models.",
     });
   });
 

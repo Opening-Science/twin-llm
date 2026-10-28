@@ -1,8 +1,17 @@
 import "server-only";
 
 import { Prisma } from "@/generated/prisma/client";
-import { isImportKind, type ImportKind } from "@/packages/personal-data/types";
 import type { SavePlan } from "@/packages/personal-data/save-plan";
+import {
+  type EffectivePrecision,
+  isImportKind,
+  type ImportKind,
+} from "@/packages/personal-data/types";
+import {
+  type ImportedDataPorts,
+  type ImportedObservationRecord,
+  LOINC_SYSTEM,
+} from "@/packages/query-tools/imported-ports";
 
 import { database } from "./database";
 
@@ -13,7 +22,7 @@ import { database } from "./database";
  * the data-mode policy and write the audit row; this module only touches rows.
  *
  * Lives in infrastructure because two features need it: Customize · Data
- * imports and deletes, and the chat tools that will read it (a follow-up).
+ * imports and deletes, and the chat tools read it (`importedDataReads`).
  */
 
 export type DatasetView = Readonly<{
@@ -175,3 +184,138 @@ export const personalDataStore = (): PersonalDataStore => ({
       return row.rowCount;
     }),
 });
+
+const OBSERVATION_SELECT = {
+  id: true,
+  datasetId: true,
+  code: true,
+  display: true,
+  value: true,
+  unit: true,
+  effectiveAt: true,
+  effectivePrecision: true,
+} as const;
+
+const PRECISIONS: readonly EffectivePrecision[] = ["year", "month", "day", "instant"];
+
+const toObservation = (
+  row: Readonly<{
+    id: string;
+    datasetId: string;
+    code: string | null;
+    display: string;
+    value: number;
+    unit: string;
+    effectiveAt: Date;
+    effectivePrecision: string;
+  }>,
+): ImportedObservationRecord => ({
+  ...row,
+  // The CHECK constraint holds precision to these; anything else reads as the coarsest.
+  effectivePrecision:
+    PRECISIONS.find((precision) => precision === row.effectivePrecision) ?? "year",
+});
+
+/**
+ * The chat tools' reads of one person's imported observations (#181,
+ * `packages/query-tools/imported-tools.ts`). Bound to that person: `userId`
+ * resolves the signed-in actor's row, and a person with no row has nothing.
+ * Fixed `findMany` / `groupBy` only, each capped by the caller's `take`.
+ * Coded reads are held to LOINC; a series by name is held to rows with no code.
+ */
+export const importedDataReads = (
+  userId: () => Promise<string | null>,
+): Omit<ImportedDataPorts, "appendAudit"> => {
+  const withUser = async <T>(read: (id: string) => Promise<T>, none: T): Promise<T> => {
+    const id = await userId();
+    return id === null ? none : read(id);
+  };
+  return {
+    listDatasets: () =>
+      withUser(
+        async (id) =>
+          (
+            await database().personalDataset.findMany({
+              where: { userId: id },
+              orderBy: { createdAt: "desc" },
+              select: SELECT,
+            })
+          ).map(toView),
+        [],
+      ),
+    listSeries: (take) =>
+      withUser(async (id) => {
+        const groups = await database().personalObservation.groupBy({
+          by: ["datasetId", "codeSystem", "code", "display", "unit"],
+          where: { userId: id },
+          _count: { _all: true },
+          _min: { effectiveAt: true },
+          _max: { effectiveAt: true },
+          orderBy: [
+            { datasetId: "asc" },
+            { codeSystem: "asc" },
+            { code: "asc" },
+            { display: "asc" },
+            { unit: "asc" },
+          ],
+          take,
+        });
+        return groups.flatMap((group) =>
+          group._min.effectiveAt === null || group._max.effectiveAt === null
+            ? []
+            : [
+                {
+                  datasetId: group.datasetId,
+                  codeSystem: group.codeSystem,
+                  code: group.code,
+                  display: group.display,
+                  unit: group.unit,
+                  n: group._count._all,
+                  firstAt: group._min.effectiveAt,
+                  lastAt: group._max.effectiveAt,
+                },
+              ],
+        );
+      }, []),
+    // One indexed `findFirst` per code (at most 20): Prisma's `distinct` would
+    // read every row of the codes before keeping the first.
+    findLatest: (query) =>
+      withUser(async (id) => {
+        const rows = await Promise.all(
+          [...new Set(query.codes)].map((code) =>
+            database().personalObservation.findFirst({
+              where: {
+                userId: id,
+                codeSystem: LOINC_SYSTEM,
+                code,
+                ...(query.datasetId === null ? {} : { datasetId: query.datasetId }),
+              },
+              orderBy: [{ effectiveAt: "desc" }, { id: "asc" }],
+              select: OBSERVATION_SELECT,
+            }),
+          ),
+        );
+        return rows.flatMap((row) => (row === null ? [] : [toObservation(row)]));
+      }, []),
+    findSeries: (query) =>
+      withUser(
+        async (id) =>
+          (
+            await database().personalObservation.findMany({
+              where: {
+                userId: id,
+                datasetId: query.datasetId,
+                ...(query.code !== null
+                  ? { codeSystem: LOINC_SYSTEM, code: query.code }
+                  : { code: null, display: query.name ?? "" }),
+                effectiveAt: { gte: query.start, lte: query.end },
+              },
+              orderBy: [{ effectiveAt: "asc" }, { id: "asc" }],
+              take: query.take,
+              select: OBSERVATION_SELECT,
+            })
+          ).map(toObservation),
+        [],
+      ),
+  };
+};

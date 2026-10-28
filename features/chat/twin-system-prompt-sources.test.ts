@@ -103,3 +103,23 @@ describe("system prompt with sources turned off", () => {
     expect(prompt(["show_view"])).not.toContain(line);
   });
 });
+
+describe("imported-data section", () => {
+  test("appears only when the turn carries the imported-data tools", () => {
+    const withImported = buildTwinSystemPrompt({
+      ...noWearables,
+      mode: "personal",
+      offeredTools: new Set(["imported_datasets", "imported_latest", "imported_trend"]),
+    });
+    expect(withImported).toContain(
+      [
+        "## Imported data (the person's own files)",
+        "- Call `imported_datasets` first to see which datasets, codes and names exist. Cite a value with its dataset and date as stored.",
+        "- A series stored by name is not the LOINC code of a similar name: HRV RMSSD is not SDNN (80404-7). Never combine them, and never mix datasets in one trend.",
+      ].join("\n"),
+    );
+    expect(buildTwinSystemPrompt({ ...noWearables, mode: "personal" })).not.toContain(
+      "## Imported data",
+    );
+  });
+});
