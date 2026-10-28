@@ -39,20 +39,21 @@ export const NoTrainingSets = () => (
   <SetupPanel
     title="No training conversations yet"
     commands={[
-      "bun run setup:local   # first, if the Overview tab shows no cohort",
+      "bun run setup:local   # loads the evaluation cohort and writes a sample set",
       "",
-      "cp .env.synthetic.example .env.training   # DATABASE_URL at a synthetic-only database",
+      "# or, with the evaluation cohort already loaded, the sample alone:",
+      "bun run training:sample",
+      "",
+      "# a full set, from a synthetic-only database (docs/training-data.md):",
+      "cp .env.synthetic.example .env.training",
       "bun run training:conversations -- --cohort synthea-v4-seed4242",
-      "",
-      "# a quick smoke set from the evaluation cohort (never train on it):",
-      "bun run training:conversations -- --cohort synthea-v4-seed42 \\",
-      "  --allow-eval-cohort --max-subjects 12 --out training-data/out/smoke-seed42.jsonl",
     ]}
   >
     <p>
-      The generator writes them to <Code>training-data/out/</Code> (gitignored) from a
-      synthetic cohort, using the real query tools. Setup does not make them; they need a
-      loaded cohort. See docs/training-data.md.
+      Conversation sets live in <Code>training-data/out/</Code> (gitignored). Setup writes
+      a small sample there: 12 subjects of the synthetic evaluation cohort, every number
+      read by the real query tools. It is for looking at, never for training. It needs{" "}
+      <Code>DATA_MODE=synthetic</Code> and the evaluation cohort in the warehouse.
     </p>
   </SetupPanel>
 );

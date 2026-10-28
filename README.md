@@ -67,7 +67,7 @@ is the focus of the Open Science Foundation's first funding call. The full data-
 | **Data**          | Browse the synthetic cohort: what is measured, how often, for whom, and the training conversations made from it.             |
 | **Connectors**    | Link Oura, Whoop and Google Health, a BodyLoop body scanner, and knowledge sources.                                          |
 | **Get started**   | A short first-run flow: what you are here for, which data to connect, which sources the model may use, where your data goes. |
-| **Evaluation**    | Score models on 81 questions over the synthetic cohort, with every model call cached for replay.                             |
+| **Evaluation**    | Score models on the evaluation question set over the synthetic cohort, with every model call cached for replay.              |
 | **Training data** | Turn synthetic cohorts into tool-use conversations for fine-tuning open models.                                              |
 
 <p>
@@ -91,7 +91,7 @@ ollama pull qwen3:8b && ollama pull nomic-embed-text
 bun run dev
 ```
 
-`setup:local` checks the prerequisites and prints the Homebrew or apt line for anything missing (it never installs system packages). It then writes `.env.local` from `.env.synthetic.example` if there is none, syncs the pinned open-twin packages, installs dependencies, creates the database if it does not exist, applies the migrations, downloads the anatomy atlases and the rigged demo bodies (from the `anatomy-rigged-v1` release; baked with uv only if that fails), and downloads and ingests the 30-person synthetic evaluation cohort (Synthea, fixed seed and dates, from the `eval-cohort-v1` release, checksum verified; `-- --generate-cohort` generates it locally instead, which gives the pinned files on x86_64 only). It also adds one example thread, "Example (synthetic)", to Your threads: a heart-rate chart question about a synthetic subject, built from a recorded answer, so no model is needed (`-- --skip-example` leaves it out). It is safe to re-run: finished steps are skipped. It ends with a checklist of what is ready and what was skipped and why. An evaluation cohort in the warehouse that is not the pinned one (an older copy with 35 subjects instead of 37) is marked `[stale]`; `bun run setup:local -- --reload-cohort` replaces that cohort's warehouse rows and nothing else. `bun run doctor` prints the same checks and what each page needs, without changing anything.
+`setup:local` checks the prerequisites and prints the Homebrew or apt line for anything missing (it never installs system packages). It then writes `.env.local` from `.env.synthetic.example` if there is none, syncs the pinned open-twin packages, installs dependencies, creates the database if it does not exist, applies the migrations, downloads the anatomy atlases and the rigged demo bodies (from the `anatomy-rigged-v1` release; baked with uv only if that fails), and downloads and ingests the 30-person synthetic evaluation cohort (Synthea, fixed seed and dates, from the `eval-cohort-v1` release, checksum verified; `-- --generate-cohort` generates it locally instead, which gives the pinned files on x86_64 only). It also adds one example thread, "Example (synthetic)", to Your threads: a heart-rate chart question about a synthetic subject, built from a recorded answer, so no model is needed (`-- --skip-example` leaves it out), and writes a small sample of training conversations from 12 people of that cohort for the Data page's Training tab (`bun run training:sample`; to look at, never to train on; `-- --skip-training-sample` leaves it out). It is safe to re-run: finished steps are skipped. It ends with a checklist of what is ready and what was skipped and why. An evaluation cohort in the warehouse that is not the pinned one (an older copy with 35 subjects instead of 37) is marked `[stale]`; `bun run setup:local -- --reload-cohort` replaces that cohort's warehouse rows and nothing else. `bun run doctor` prints the same checks and what each page needs, without changing anything.
 
 On macOS with Homebrew:
 
@@ -148,7 +148,7 @@ The open-model lineup for comparisons is in [`docs/models.md`](docs/models.md).
 
 ## Evaluation
 
-81 questions over six synthetic scenarios, scored on eight criteria: correctness, hallucination, privacy, query safety, clinical caution, readability, consistency and latency. The answer key comes from the synthetic cohort through the same closed tools the models call.
+About a hundred questions (`evaluation/questions.v1.json`) over six synthetic scenarios, scored on eight criteria: correctness, hallucination, privacy, query safety, clinical caution, readability, consistency and latency. The answer key comes from the synthetic cohort through the same closed tools the models call.
 
 ```bash
 bun run eval -- --models ollama:qwen3:4b --latency-set

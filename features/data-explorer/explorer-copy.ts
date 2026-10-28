@@ -68,7 +68,7 @@ export const SEX_AGE_MISSING =
 export const COHORT_ROLES: Readonly<Record<string, string>> = {
   "open-twin-synthea-trimmed-3": "Three trimmed open-twin fixtures, used by tests.",
   "synthea-v4-seed42":
-    "Evaluation cohort: the 81-question set reads it. Never train on it.",
+    "Evaluation cohort: the evaluation question set reads it. Never train on it.",
   "synthea-v4-seed4242": "Training cohort.",
   "synthea-v4-seed9001": "Held-out cohort, for testing a trained model.",
   "synthea-v4-seed42-10k":

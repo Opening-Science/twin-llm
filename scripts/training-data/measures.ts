@@ -1,7 +1,7 @@
 /**
  * The measures the training questions ask about. Pure data.
  *
- * The 81-question evaluation's S6 probe measures (skin temperature, TSH, SpO2,
+ * The evaluation set's S6 probe measures (skin temperature, TSH, SpO2,
  * eGFR, RDW, Oura readiness, Whoop recovery, LOINC 99999-9) are included like
  * any other measure, so S6 scores after training measure in-distribution
  * behaviour (docs/training-data.md).

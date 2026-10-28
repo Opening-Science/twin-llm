@@ -115,21 +115,6 @@ export const yearSeries = (rows: readonly YearRow[]): readonly YearRow[] => {
   );
 };
 
-export type CoverageBand = Readonly<{ from: number; to: number; codes: number }>;
-
-/**
- * Codes counted by the share of subjects that have them, in ten bands of ten
- * percentage points. A share of exactly 100% falls in the last band.
- */
-export const coverageBands = (codes: readonly CodeSummary[]): readonly CoverageBand[] =>
-  Array.from({ length: 10 }, (_, band) => ({
-    from: band * 10,
-    to: band * 10 + 10,
-    codes: codes.filter(
-      (code) => Math.min(9, Math.floor(code.share * 10 + 1e-9)) === band,
-    ).length,
-  }));
-
 export const WIDE_SHARE = 0.8;
 export const SPARSE_SHARE = 0.1;
 

@@ -39,11 +39,11 @@ synthetic cohorts, and the wearable generator reads only Synthea bundles.
 `scripts/synthea/cohort-presets.ts`; flags `--population`, `--seed`, `--age`
 override them, and `--dry-run` prints the settings without running Java).
 
-| Preset     | Cohort id             | N      | Seed | Ages  | Role                                    |
-| ---------- | --------------------- | ------ | ---- | ----- | --------------------------------------- |
-| `training` | `synthea-v4-seed4242` | 10,000 | 4242 | 40–75 | Training conversations                  |
-| `held-out` | `synthea-v4-seed9001` | 1,000  | 9001 | 40–75 | Test conversations                      |
-| `eval`     | `synthea-v4-seed42`   | 30     | 42   | 40–75 | The 81-question evaluation, never train |
+| Preset     | Cohort id             | N      | Seed | Ages  | Role                                     |
+| ---------- | --------------------- | ------ | ---- | ----- | ---------------------------------------- |
+| `training` | `synthea-v4-seed4242` | 10,000 | 4242 | 40–75 | Training conversations                   |
+| `held-out` | `synthea-v4-seed9001` | 1,000  | 9001 | 40–75 | Test conversations                       |
+| `eval`     | `synthea-v4-seed42`   | 30     | 42   | 40–75 | The evaluation question set, never train |
 
 Without a preset the defaults are unchanged (N=10, seed 42, `.synthea/fhir`).
 
@@ -73,7 +73,7 @@ bundles. Keep the archives; their manifests record the seeds, the jar sha256
 and the config hash, not the end date.
 
 **Train on `synthea-v4-seed4242`. Test on `synthea-v4-seed9001` and on the
-81-question set** (`docs/evaluation/question-set.md`). The generator refuses
+evaluation question set** (`docs/evaluation/question-set.md`). The generator refuses
 `synthea-v4-seed42` unless `--allow-eval-cohort`, which is for smoke runs
 only: training on it would leak the test set. Its wearable series belongs only in
 the throwaway answer-key and eval databases (`--allow-eval-cohort`,
@@ -233,7 +233,7 @@ plainly that there is no code or no data and that no other measure was used in
 its place.
 
 **Overlap with the evaluation.** The no-data, near-miss and unit families
-include the 81-question evaluation's S6 probe measures (skin temperature,
+include the evaluation set's S6 probe measures (skin temperature,
 eGFR, TSH, SpO2, RDW, Oura readiness, Whoop recovery, LOINC 99999-9) like any
 other measure. S6 scores after pilot 2 therefore measure in-distribution
 behaviour, not generalisation; a clean generalisation number needs a fresh
@@ -286,6 +286,8 @@ and codes, counts per reason and stats for each part. It reads files only.
 ### Looking at the files
 
 The Data page's Training data tab (`/customize/data/cohort/training`, any `DATA_MODE`) lists the sets in `training-data/out/`, with counts per family and outcome from the meta file, and opens one conversation with its question, tool calls, tool results and answer. It reads the files only; nothing is audited because nothing is read from the warehouse.
+
+On a fresh machine `bun run setup:local` writes one small set there, so the tab is not empty: `bun run training:sample` runs this generator on the first 12 subjects of the evaluation cohort (`--cohort synthea-v4-seed42 --allow-eval-cohort --max-subjects 12 --out training-data/out/sample-synthea-v4-seed42.jsonl`) against the database in `.env.local`, with `DATA_MODE=synthetic`. That is the smoke run described above: the same families, templates and audited tools, all numbers from the closed tools on synthetic rows. The evaluation cohort has no wearable series, so its conversations are clinical only. It is a set to look at, never to train on, and the tab marks it as such. `--skip-training-sample` leaves it out. Last run 2026-10-27, Linux, a throwaway database holding release `eval-cohort-v1`: 128 conversations from 12 subjects (57 answered, 15 no rows, 12 no code, 9 declined, 8 outside the record, 7 MIXED_UNITS and fewer of the rest), in about a second.
 
 ### No evaluation question is reused
 

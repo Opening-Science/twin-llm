@@ -68,6 +68,20 @@ export const labelIndexes = (count: number, maxLabels: number): readonly number[
   return trimmed.includes(last) ? trimmed : [...trimmed, last];
 };
 
+/**
+ * A stepped line, one step per value: across its slot of width `slot` at `ys[i]`,
+ * then straight down or up to the next. For ranked values, where a slope
+ * between two ranks would suggest values that do not exist.
+ */
+export const stepPath = (ys: readonly number[], left: number, slot: number): string =>
+  ys
+    .map((y, index) => {
+      const x = left + index * slot;
+      const start = index === 0 ? `M${x.toFixed(1)},${y.toFixed(1)}` : `V${y.toFixed(1)}`;
+      return `${start} H${(x + slot).toFixed(1)}`;
+    })
+    .join(" ");
+
 /** A label cut to `max` characters with an ellipsis. */
 export const truncateLabel = (label: string, max: number): string =>
   label.length <= max ? label : `${label.slice(0, Math.max(1, max - 1))}…`;

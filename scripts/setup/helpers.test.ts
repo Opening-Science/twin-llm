@@ -125,6 +125,7 @@ describe("parseSetupArgs", () => {
       reloadCohort: false,
       generateCohort: false,
       skipExample: false,
+      skipTrainingSample: false,
     };
     expect(parseSetupArgs([])).toEqual(eval_);
     expect(parseSetupArgs(["--", "--cohort-10k"])).toEqual({ ...eval_, cohort: "10k" });
@@ -145,12 +146,31 @@ describe("parseSetupArgs", () => {
       reloadCohort: false,
       generateCohort: false,
       skipExample: true,
+      skipTrainingSample: false,
     });
     expect(parseSetupArgs(["--skip-cohort", "--skip-example"])).toEqual({
       cohort: "none",
       reloadCohort: false,
       generateCohort: false,
       skipExample: true,
+      skipTrainingSample: false,
+    });
+  });
+
+  test("--skip-training-sample goes with any cohort choice", () => {
+    expect(parseSetupArgs(["--", "--skip-training-sample"])).toEqual({
+      cohort: "eval",
+      reloadCohort: false,
+      generateCohort: false,
+      skipExample: false,
+      skipTrainingSample: true,
+    });
+    expect(parseSetupArgs(["--cohort-10k", "--skip-training-sample"])).toEqual({
+      cohort: "10k",
+      reloadCohort: false,
+      generateCohort: false,
+      skipExample: false,
+      skipTrainingSample: true,
     });
   });
 
@@ -160,12 +180,14 @@ describe("parseSetupArgs", () => {
       reloadCohort: false,
       generateCohort: true,
       skipExample: false,
+      skipTrainingSample: false,
     });
     expect(parseSetupArgs(["--reload-cohort", "--generate-cohort"])).toEqual({
       cohort: "eval",
       reloadCohort: true,
       generateCohort: true,
       skipExample: false,
+      skipTrainingSample: false,
     });
     expect(parseSetupArgs(["--generate-cohort", "--cohort-10k"])).toBeNull();
     expect(parseSetupArgs(["--generate-cohort", "--skip-cohort"])).toBeNull();

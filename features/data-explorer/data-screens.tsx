@@ -23,6 +23,8 @@ import {
   loadSubjects,
   pickCohort,
 } from "./explorer-reads";
+import { readingDeps } from "./reading-ports";
+import { loadReadingCounts, type ReadingDeps } from "./reading-reads";
 import { SubjectCharts } from "./subject-charts";
 import { subjectOverview } from "./subject-series";
 import { subjectStory } from "./subject-story";
@@ -100,9 +102,11 @@ const CohortScreen = async ({
 export const OverviewScreen = ({
   params,
   deps = explorerDeps,
+  readings = readingDeps,
 }: {
   readonly params: Params;
   readonly deps?: ExplorerDeps;
+  readonly readings?: ReadingDeps;
 }) => (
   <CohortScreen
     section="overview"
@@ -111,8 +115,13 @@ export const OverviewScreen = ({
     deps={deps}
     body={async (cohortId) => {
       const result = await loadOverview(deps, cohortId);
+      // Read only once the overview could be read, one audited read after the other.
       return result.kind === "ok" ? (
-        <CohortOverview cohortId={cohortId} overview={result.overview} />
+        <CohortOverview
+          cohortId={cohortId}
+          overview={result.overview}
+          readings={await loadReadingCounts(readings, cohortId)}
+        />
       ) : (
         <BlockedView blocked={result} />
       );

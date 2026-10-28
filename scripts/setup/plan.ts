@@ -103,6 +103,8 @@ export type DetectedState = Readonly<{
   anatomyMissing: readonly string[];
   /** Rigged demo bodies not yet installed (by file name). */
   riggedMissing: readonly string[];
+  /** Conversation sets in `training-data/out/` (names of `<set>.manifest.json`, without the suffix). */
+  trainingSets: readonly string[];
   ollama: OllamaProbe;
   freeDiskBytes: number | null;
 }>;
@@ -117,6 +119,8 @@ export type SetupOptions = Readonly<{
   generateCohort?: boolean;
   /** `--skip-example`: do not add the example thread. */
   skipExample?: boolean;
+  /** `--skip-training-sample`: do not write the sample conversation set. */
+  skipTrainingSample?: boolean;
 }>;
 
 /**
@@ -139,7 +143,8 @@ export type StepId =
   | "anatomy"
   | "rigged"
   | "cohort"
-  | "example";
+  | "example"
+  | "training-sample";
 
 /**
  * The trimmed fixtures are three people of the evaluation cohort (#96), and a
@@ -188,7 +193,22 @@ export const SETUP_COMMAND = "bun run setup:local";
 export const RELOAD_COMMAND = "bun run setup:local -- --reload-cohort";
 export const GENERATE_FLAG = "--generate-cohort";
 export const SKIP_EXAMPLE_FLAG = "--skip-example";
+export const SKIP_TRAINING_SAMPLE_FLAG = "--skip-training-sample";
 export const EXAMPLE_TITLE = "Example (synthetic)";
+
+/**
+ * The Training tab's sample: `bun run training:sample` runs the training
+ * generator (`scripts/training-data/build-conversations.ts`) on the first 12
+ * subjects of the evaluation cohort with `--allow-eval-cohort`, the smoke run
+ * that docs/training-data.md describes, and writes this set to
+ * `training-data/out/` (gitignored). It is for looking at, never for
+ * training: the evaluation cohort is the test set.
+ */
+export const TRAINING_SAMPLE = {
+  set: `sample-${EVAL_COHORT.cohortId}`,
+  command: "bun run training:sample",
+  subjects: 12,
+} as const;
 
 const fixFor = (state: DetectedState, id: ToolId): string | null => {
   const check = checkTool(id, state.tools[id], state.platform);
@@ -511,6 +531,65 @@ const exampleStep = (state: DetectedState, skip: boolean): Step => {
   };
 };
 
+/**
+ * The sample conversation set for the Data page's Training tab, written from
+ * the evaluation cohort once it is in the warehouse. Synthetic mode only, like
+ * the generator itself.
+ */
+const trainingSampleStep = (
+  state: DetectedState,
+  options: SetupOptions,
+  cohort: Step,
+): Step => {
+  const base = {
+    id: "training-sample",
+    title: `Training tab sample (${TRAINING_SAMPLE.command})`,
+    after: ["cohort"],
+  } as const;
+  if (options.skipTrainingSample === true)
+    return {
+      ...base,
+      status: "off",
+      reason: `not written (${SKIP_TRAINING_SAMPLE_FLAG})`,
+    };
+  if (state.trainingSets.includes(TRAINING_SAMPLE.set))
+    return {
+      ...base,
+      status: "skip",
+      reason: `training-data/out/${TRAINING_SAMPLE.set}.jsonl is there`,
+    };
+  if (state.dataMode !== "synthetic")
+    return {
+      ...base,
+      status: "off",
+      reason: `only with DATA_MODE=synthetic (now ${state.dataMode ?? "unset"})`,
+    };
+  if (databaseProblem(state) !== null)
+    return { ...base, status: "blocked", reason: "needs the database" };
+  const evalState = evalCohortState(state.database);
+  const loading =
+    cohort.status === "run" &&
+    (cohort.action.kind === "load-eval" || cohort.action.kind === "reload-eval");
+  if (evalState.kind === "stale" && !loading)
+    return {
+      ...base,
+      status: "blocked",
+      reason: `needs the pinned ${EVAL_COHORT.cohortId}: ${RELOAD_COMMAND}`,
+    };
+  if (evalState.kind === "absent" && !loading)
+    return {
+      ...base,
+      status: "off",
+      reason: `written from ${EVAL_COHORT.cohortId}, which is not in the warehouse`,
+    };
+  return {
+    ...base,
+    status: "run",
+    action: { kind: "command", argv: ["bun", "run", "training:sample"] },
+    note: `${TRAINING_SAMPLE.subjects} subjects of ${EVAL_COHORT.cohortId} through the real query tools, to training-data/out/${TRAINING_SAMPLE.set}.jsonl; a sample to look at, never to train on`,
+  };
+};
+
 type SourceChoice =
   | Readonly<{ kind: "ok"; source: EvalSource; note: string }>
   | Readonly<{ kind: "none"; reason: string }>;
@@ -624,6 +703,7 @@ export const planSetup = (
     anatomyStep(state),
     riggedStep(state),
     cohort,
+    trainingSampleStep(state, options, cohort),
     exampleStep(state, options.skipExample === true),
   ];
 };
@@ -762,7 +842,19 @@ export const pageReadiness = (state: DetectedState): readonly Readiness[] => {
           detail: `rigged bodies missing (${state.riggedMissing.join(", ")}): bun run anatomy:fetch downloads them from release ${RIGGED_RELEASE_TAG}; offline, bun run anatomy:bake-rigged${uv === null ? "" : ` after installing uv (${uv})`}`,
         };
   const chat = chatReadiness(state.ollama);
-  return [dataPage, demoLabs, anatomy, walking, chat];
+  const training: Readiness =
+    state.trainingSets.length > 0
+      ? {
+          page: "Data page Training tab (/data/training)",
+          ready: true,
+          detail: state.trainingSets.join(", "),
+        }
+      : {
+          page: "Data page Training tab (/data/training)",
+          ready: false,
+          detail: `no conversation set in training-data/out: ${SETUP_COMMAND} writes a sample (or ${TRAINING_SAMPLE.command} once ${EVAL_COHORT.cohortId} is loaded)`,
+        };
+  return [dataPage, demoLabs, anatomy, walking, chat, training];
 };
 
 const isEmbedding = (model: string): boolean => /embed/i.test(model);
