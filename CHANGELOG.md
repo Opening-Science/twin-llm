@@ -48,6 +48,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The setup example thread was re-recorded on pinned-cohort subject `ba419d35` (#214): a heart-rate chart question for 2024 to 2025 answered by `qwen3:4b` on a database holding only the pinned evaluation cohort, with 25 readings in its chart. The old subject was not in the pinned 37; the fixture test now checks membership.
 - `features/digital-twin/bodyloop-avatar.tsx` (1,690 lines) split: `scan-scene.tsx` (camera fit, orbit controls, environment, the scan mesh, WebGL checks), `body-twin-copy.ts`, `body-twin-types.ts` and `body-twin-payloads.ts`. The component keeps its props and re-exports what it exported before.
 
 - `packages/query-tools/tools.ts` (1,600 lines) split by family: `tool-core.ts` (audit wrapper, scope check, rows), `warehouse-tools.ts`, `clinical-tools.ts` and `wearable-tools.ts`. `tools.ts` is now the public index, so no caller changed; tool snapshots are identical. `bun run new:tool` writes to `warehouse-tools.ts` and the index.
