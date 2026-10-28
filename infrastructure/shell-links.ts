@@ -39,3 +39,7 @@ export const askAboutSubjectHref = (subjectRef: string): string =>
 /** A new chat with `/name ` typed in, for a command or skill; nothing is sent. */
 export const draftHref = (name: string): string =>
   `/?draft=${encodeURIComponent(`/${name} `)}`;
+
+/** A saved thread as a Markdown file; the route serves it to its owner only. */
+export const threadExportHref = (threadId: string): string =>
+  `/api/threads/${encodeURIComponent(threadId)}/export`;
