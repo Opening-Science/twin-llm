@@ -148,6 +148,8 @@ export const skillRunEvent = (
     sessionId: string;
     modelId: string;
     provider: LlmProvider;
+    /** Set when the skill came from an agent (#218), not from the prompt. */
+    agent?: string;
   }>,
 ): AppendInput => ({
   actor: call.actor,
@@ -160,6 +162,7 @@ export const skillRunEvent = (
     provider: call.provider,
     tools: skill.tools,
     views: skill.views,
+    ...(call.agent === undefined ? {} : { agent: call.agent }),
   },
   result: { started: true },
   rowCount: 0,

@@ -136,6 +136,25 @@ describe("skill audit rows", () => {
     });
   });
 
+  test("a skill an agent applied names the agent too (#218)", () => {
+    expect(
+      skillRunEvent(SLEEP, {
+        actor: "actor-1",
+        sessionId: "turn-1",
+        modelId: "qwen3:4b",
+        provider: "ollama",
+        agent: "sleep",
+      }).args,
+    ).toEqual({
+      skill: "sleep",
+      modelId: "qwen3:4b",
+      provider: "ollama",
+      tools: SLEEP.tools,
+      views: SLEEP.views,
+      agent: "sleep",
+    });
+  });
+
   test("the skill is read back from the row name, and only from skill rows", () => {
     expect(skillAuditTool("sleep")).toBe("skill.sleep");
     expect(skillOfAuditTool("skill.sleep")).toBe("sleep");

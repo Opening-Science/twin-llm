@@ -1,11 +1,14 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  agentBaseModel,
   type CatalogModel,
+  catalogAgentOf,
   defaultModelSelection,
   formatContextWindow,
   formatModelWindow,
   parseFreeModels,
+  withAgents,
 } from "./model-catalog";
 
 const row = (
@@ -90,5 +93,109 @@ describe("formatModelWindow", () => {
       "unknown",
     );
     expect(formatModelWindow({ contextTokens: 128_000 })).toBe("128K");
+  });
+});
+
+describe("agents in the catalog (#218)", () => {
+  const ollama = (id: string, contextTokens = 16_384): CatalogModel => ({
+    id,
+    name: id,
+    provider: "Ollama",
+    providerId: "ollama",
+    contextTokens,
+  });
+
+  test("agentBaseModel takes the first preference offered, else the first model", () => {
+    const catalog = [ollama("llama3.2"), ollama("qwen3:4b"), ollama("qwen3:8b")];
+    expect(agentBaseModel(["qwen3:8b", "qwen3:4b"], catalog)?.id).toBe("qwen3:8b");
+    expect(agentBaseModel(["qwen3:14b", "qwen3:4b"], catalog)?.id).toBe("qwen3:4b");
+    expect(agentBaseModel(["qwen3:14b"], catalog)?.id).toBe("llama3.2");
+    expect(agentBaseModel(["qwen3:8b"], [])).toBeNull();
+  });
+
+  test("withAgents puts the agents first, with their base model's provider and window", () => {
+    const catalog = [ollama("llama3.2", 128_000), ollama("qwen3:4b")];
+    const rows = withAgents(catalog, { chatIsLocal: true });
+    expect(
+      rows.map(({ id, name, providerId, contextTokens }) => ({
+        id,
+        name,
+        providerId,
+        contextTokens,
+      })),
+    ).toEqual([
+      {
+        id: "agent:gp",
+        name: "General Practitioner",
+        providerId: "ollama",
+        contextTokens: 16_384,
+      },
+      { id: "agent:sleep", name: "Sleep", providerId: "ollama", contextTokens: 16_384 },
+      {
+        id: "agent:trainer",
+        name: "Trainer",
+        providerId: "ollama",
+        contextTokens: 16_384,
+      },
+      {
+        id: "agent:genetics",
+        name: "Genetics",
+        providerId: "ollama",
+        contextTokens: 16_384,
+      },
+      { id: "llama3.2", name: "llama3.2", providerId: "ollama", contextTokens: 128_000 },
+      { id: "qwen3:4b", name: "qwen3:4b", providerId: "ollama", contextTokens: 16_384 },
+    ]);
+    expect(rows[1]?.agent).toEqual({
+      id: "sleep",
+      name: "Sleep",
+      role: "Describes sleep against the person's own recent nights.",
+      skill: "sleep",
+      baseModelId: "qwen3:4b",
+      baseModelName: "qwen3:4b",
+    });
+  });
+
+  test("a hosted catalog gets no Genetics, and an agent copies an unknown window as unknown", () => {
+    const hosted: CatalogModel = {
+      id: "swiss-ai/Apertus-8B-Instruct-2509",
+      name: "swiss-ai/Apertus-8B-Instruct-2509",
+      provider: "Exoscale (Switzerland)",
+      providerId: "exoscale",
+      contextTokens: 128_000,
+      contextUnknown: true,
+    };
+    const rows = withAgents([hosted], { chatIsLocal: false });
+    expect(rows.map(({ id }) => id)).toEqual([
+      "agent:gp",
+      "agent:sleep",
+      "agent:trainer",
+      "swiss-ai/Apertus-8B-Instruct-2509",
+    ]);
+    expect(rows[0]?.contextUnknown).toBe(true);
+    expect(rows[0]?.agent?.baseModelId).toBe("swiss-ai/Apertus-8B-Instruct-2509");
+  });
+
+  test("no model, no agents", () => {
+    expect(withAgents([], { chatIsLocal: true })).toEqual([]);
+  });
+
+  test("applying it twice gives the same rows", () => {
+    const once = withAgents([ollama("qwen3:8b")], { chatIsLocal: true });
+    expect(withAgents(once, { chatIsLocal: true })).toEqual(once);
+  });
+
+  test("catalogAgentOf finds an agent row and gives null for a plain model", () => {
+    const rows = withAgents([ollama("qwen3:8b")], { chatIsLocal: false });
+    expect(catalogAgentOf("agent:gp", rows)?.baseModelId).toBe("qwen3:8b");
+    expect(catalogAgentOf("qwen3:8b", rows)).toBeNull();
+    expect(catalogAgentOf("agent:genetics", rows)).toBeNull();
+  });
+
+  test("defaultModelSelection never picks an agent", () => {
+    const rows = withAgents([ollama("qwen3:8b"), ollama("llama3.2")], {
+      chatIsLocal: true,
+    });
+    expect(defaultModelSelection(rows)).toEqual(["qwen3:8b", "llama3.2"]);
   });
 });

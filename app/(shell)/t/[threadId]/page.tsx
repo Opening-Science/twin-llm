@@ -7,7 +7,7 @@ import { ThreadTitle } from "@/features/shell/thread-title";
 import { skillsFor } from "@/features/skills/user-skill-store";
 import { resolveActorId } from "@/infrastructure/auth-actor";
 import { findAppUserId } from "@/infrastructure/current-user";
-import { fetchActiveModelCatalog } from "@/infrastructure/fetch-model-catalog";
+import { fetchChatCatalog } from "@/infrastructure/fetch-model-catalog";
 import { serverEnv } from "@/infrastructure/env";
 import { defaultModelSelection } from "@/infrastructure/model-catalog";
 
@@ -27,7 +27,7 @@ export default async function ThreadPage({
   const actor = await resolveActorId();
   const [thread, catalog, skills] = await Promise.all([
     ownedThread(threadId),
-    fetchActiveModelCatalog(),
+    fetchChatCatalog(),
     actor === null ? skillsFor(null) : findAppUserId(actor).then(skillsFor),
   ]);
 

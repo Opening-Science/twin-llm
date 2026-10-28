@@ -6,6 +6,7 @@ import {
   INCOGNITO_LOCAL_ONLY,
   INCOGNITO_LOCAL_ONLY_SENTENCE,
 } from "@/infrastructure/incognito";
+import { withAgents } from "@/infrastructure/model-catalog";
 import type { AppendInput } from "@/packages/audit/append";
 import type { QueryToolPorts } from "@/packages/query-tools/ports";
 
@@ -113,7 +114,7 @@ const localModel = () => {
 };
 
 const harness = (
-  options: Readonly<{ chatIsLocal?: boolean; signedIn?: boolean }> = {},
+  options: Readonly<{ chatIsLocal?: boolean; signedIn?: boolean; agents?: boolean }> = {},
 ) => {
   const db = fakeDatabase();
   const model = localModel();
@@ -139,7 +140,20 @@ const harness = (
     guard: async () => null,
     catalog: async () => {
       catalogReads.push("catalog");
-      return [{ id: MODEL }];
+      return options.agents === true
+        ? withAgents(
+            [
+              {
+                id: MODEL,
+                name: MODEL,
+                provider: "Ollama",
+                providerId: "ollama",
+                contextTokens: 16_384,
+              },
+            ],
+            { chatIsLocal: true },
+          )
+        : [{ id: MODEL }];
     },
     chatIsLocal: () => options.chatIsLocal ?? true,
     findAppUserId: async (actorId) => {
@@ -283,6 +297,30 @@ describe("POST /api/chat/incognito", () => {
     expect(recorded.includes(PROMPT)).toBe(false);
     expect(recorded.includes("About 5 mmol/L.")).toBe(false);
     expect(recorded.includes("turn-")).toBe(false);
+  });
+});
+
+describe("POST /api/chat/incognito with an agent (#218)", () => {
+  test("agent:gp runs on its base model with its role line in the system prompt", async () => {
+    const run = harness({ agents: true });
+    const response = await run.handle(post({ ...BODY, modelId: "agent:gp" }));
+    expect(response.status).toBe(200);
+    await response.text();
+    expect(run.resolved).toEqual([MODEL]);
+    const [first] = run.model.doStreamCalls;
+    const system = first?.prompt.find((message) => message.role === "system");
+    const lines = typeof system?.content === "string" ? system.content.split("\n") : [];
+    expect(lines.slice(0, 2)).toEqual([
+      "You are TwinLLM, a research assistant for personalized-medicine questions.",
+      "Agent: General Practitioner. Looks at the whole record and says when a question is better asked of one of the specialist agents.",
+    ]);
+  });
+
+  test("an agent the catalog does not offer is refused before any model call", async () => {
+    const run = harness();
+    const response = await run.handle(post({ ...BODY, modelId: "agent:gp" }));
+    expect(response.status).toBe(400);
+    expect(run.resolved).toEqual([]);
   });
 });
 

@@ -6,7 +6,7 @@ import { skillsFor } from "@/features/skills/user-skill-store";
 import { findAppUserId } from "@/infrastructure/current-user";
 import { needsOnboarding } from "@/features/onboarding/onboarding-store";
 import { resolveActorId } from "@/infrastructure/auth-actor";
-import { fetchActiveModelCatalog } from "@/infrastructure/fetch-model-catalog";
+import { fetchChatCatalog } from "@/infrastructure/fetch-model-catalog";
 import { serverEnv } from "@/infrastructure/env";
 import { chatModelIsLocal } from "@/infrastructure/genome-gate";
 import { INCOGNITO_PARAM, isIncognitoParam } from "@/infrastructure/incognito";
@@ -33,7 +33,7 @@ export default async function HomePage({
   if (actorId && (await needsOnboarding(actorId))) redirect("/start");
 
   const incognito = isIncognitoParam((await searchParams)[INCOGNITO_PARAM]);
-  const catalog = await fetchActiveModelCatalog();
+  const catalog = await fetchChatCatalog();
   const localModelIds = catalog && chatModelIsLocal() ? catalog.map(({ id }) => id) : [];
   const offered = incognito
     ? (catalog ?? []).filter(({ id }) => localModelIds.includes(id))

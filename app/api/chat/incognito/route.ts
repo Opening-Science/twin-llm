@@ -14,7 +14,7 @@ import { resolveActorId } from "@/infrastructure/auth-actor";
 import { findAppUserId } from "@/infrastructure/current-user";
 import { database } from "@/infrastructure/database";
 import { exoscalePersonalData, isAuthDisabled, serverEnv } from "@/infrastructure/env";
-import { fetchActiveModelCatalog } from "@/infrastructure/fetch-model-catalog";
+import { fetchChatCatalog } from "@/infrastructure/fetch-model-catalog";
 import { chatModelIsLocal } from "@/infrastructure/genome-gate";
 import { append } from "@/packages/audit/append";
 
@@ -27,7 +27,7 @@ export const POST = createIncognitoChatHandler({
   resolveActorId,
   guard: (request, actorId) =>
     isAuthDisabled() ? Promise.resolve(null) : guardChatRequest(request, actorId),
-  catalog: fetchActiveModelCatalog,
+  catalog: fetchChatCatalog,
   chatIsLocal: chatModelIsLocal,
   findAppUserId,
   settings: () => {

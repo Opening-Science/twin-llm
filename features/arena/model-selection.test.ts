@@ -5,6 +5,7 @@ import type { CatalogModel } from "@/infrastructure/model-catalog";
 import {
   chosenModels,
   incognitoHint,
+  menuGroups,
   missingCount,
   offeredModels,
   toggleLimit,
@@ -65,5 +66,36 @@ describe("models offered in an incognito chat", () => {
     expect(incognitoHint(2)).toBe(
       "Local models only. Nothing in this chat is saved; a reload or a new chat discards it.",
     );
+  });
+});
+
+describe("menuGroups", () => {
+  const agent = (id: string, name: string): CatalogModel => ({
+    ...model("qwen3:8b"),
+    id: `agent:${id}`,
+    name,
+    agent: {
+      id,
+      name,
+      role: "Describes sleep.",
+      skill: null,
+      baseModelId: "qwen3:8b",
+      baseModelName: "qwen3:8b",
+    },
+  });
+
+  test("agents first under their heading, then models", () => {
+    const catalog = [model("qwen3:8b"), agent("gp", "General Practitioner"), model("x")];
+    expect(
+      menuGroups(catalog).map(({ label, models }) => [label, models.map(({ id }) => id)]),
+    ).toEqual([
+      ["Agents", ["agent:gp"]],
+      ["Models", ["qwen3:8b", "x"]],
+    ]);
+  });
+
+  test("an empty section is left out", () => {
+    expect(menuGroups([model("x")]).map(({ label }) => label)).toEqual(["Models"]);
+    expect(menuGroups([])).toEqual([]);
   });
 });
