@@ -74,6 +74,9 @@ export const EXPECTED_OUTCOME: Readonly<Record<string, Outcome>> = {
   "Q-S6-19": "none",
   "Q-S6-25": "few",
   "Q-S6-26": "none",
+  "Q-S6-31": "few",
+  "Q-S6-32": "none",
+  "Q-S6-33": "none",
 };
 
 /**
@@ -146,6 +149,9 @@ const codesOf = (args: Readonly<Record<string, unknown>>): string[] => {
 /** The reads a keyed call makes; units are checked per read across its windows. */
 export const readsOf = (spec: ValueSpec): Read[] => {
   const args = spec.args;
+  // Its windows hang on a condition or medication date, which the inventory
+  // does not hold: like a timeline item's, its subject is picked by hand.
+  if (spec.tool === "values_around_event") return [];
   const wearable = WEARABLE_READS[spec.tool];
   if (wearable !== undefined) {
     // A vendor source is refused before any read: only the series must exist.
