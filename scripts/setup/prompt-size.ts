@@ -25,6 +25,7 @@ import {
   ollamaApiRoot,
   promptBudgetTokens,
 } from "../../infrastructure/ollama-context";
+import { AGENTS } from "../../infrastructure/agents";
 import type { TurnSkill } from "../../infrastructure/skill-gate";
 import { NO_WEARABLES, ONE_WEARABLE, WORST_CASE_WEARABLES } from "./prompt-size-fixtures";
 
@@ -58,20 +59,35 @@ const CONTEXTS = [
   },
 ] as const;
 
-/** Every data mode and wearable load, without a skill and under each skill. */
+/**
+ * Every data mode and wearable load, without a skill, under each skill, and
+ * as each agent (#218) with its skill when the server offers it.
+ */
 export const promptSizeCases = (skills: readonly TurnSkill[]): readonly SizeCase[] =>
-  CONTEXTS.flatMap((context) =>
-    [null, ...skills].map((skill) => ({
-      label: `${context.label}${skill === null ? "" : ` /${skill.name}`}`,
-      turn: {
-        mode: context.mode,
-        skill,
-        wearables: context.wearables,
-        question: QUESTION,
-      },
-      largeContext: context.large,
-    })),
-  );
+  CONTEXTS.flatMap((context) => {
+    const turnFor = (
+      skill: TurnSkill | null,
+      agent: Readonly<{ name: string; role: string }> | null,
+    ) => ({
+      mode: context.mode,
+      skill,
+      wearables: context.wearables,
+      question: QUESTION,
+      agent,
+    });
+    return [
+      ...[null, ...skills].map((skill) => ({
+        label: `${context.label}${skill === null ? "" : ` /${skill.name}`}`,
+        turn: turnFor(skill, null),
+        largeContext: context.large,
+      })),
+      ...AGENTS.map((agent) => ({
+        label: `${context.label} agent:${agent.id}`,
+        turn: turnFor(skills.find(({ name }) => name === agent.skill) ?? null, agent),
+        largeContext: context.large,
+      })),
+    ];
+  });
 
 /** The runnable skills under `skills/`, as the chat offers them. */
 export const loadSkills = (root: string): readonly TurnSkill[] =>

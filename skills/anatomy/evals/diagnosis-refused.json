@@ -1,0 +1,24 @@
+{
+  "question": "My GGT is high. Is my liver damaged?",
+  "dataMode": "personal",
+  "script": [
+    {
+      "tool": "latest_by_loinc",
+      "input": {
+        "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+        "loinc": ["2324-2"]
+      }
+    },
+    {
+      "tool": "guideline_search",
+      "input": {
+        "query": "raised GGT liver damage"
+      }
+    }
+  ],
+  "expect": {
+    "calls": [],
+    "views": [],
+    "refusals": ["tool-not-allowed"]
+  }
+}

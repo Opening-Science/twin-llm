@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name>pmc-oa-opendata</Name><Prefix>metadata/PMC1000001.</Prefix><KeyCount>2</KeyCount><Contents><Key>metadata/PMC1000001.1.json</Key><Size>1000</Size></Contents><Contents><Key>metadata/PMC1000001.2.json</Key><Size>1000</Size></Contents></ListBucketResult>

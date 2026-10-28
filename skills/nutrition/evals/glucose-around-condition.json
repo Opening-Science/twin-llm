@@ -1,0 +1,28 @@
+{
+  "question": "What was recorded for glucose before and after subject 9661a432-4630-2cd9-142c-386845fae837 was first diagnosed with prediabetes?",
+  "script": [
+    {
+      "tool": "values_around_event",
+      "input": {
+        "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+        "loinc": "2339-0",
+        "event_kind": "condition",
+        "event_code": "15777000",
+        "days_before": 180,
+        "days_after": 180
+      }
+    },
+    {
+      "tool": "knowledge_search",
+      "input": {
+        "query": "blood glucose measure",
+        "k": 3
+      }
+    }
+  ],
+  "expect": {
+    "calls": ["values_around_event", "knowledge_search"],
+    "views": [],
+    "refusals": []
+  }
+}

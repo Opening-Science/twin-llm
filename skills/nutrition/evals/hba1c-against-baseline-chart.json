@@ -1,0 +1,50 @@
+{
+  "question": "Chart HbA1c for subject 9661a432-4630-2cd9-142c-386845fae837 and compare the last 90 days with the year before.",
+  "script": [
+    {
+      "tool": "subject_window",
+      "input": {
+        "subject_ref": "9661a432-4630-2cd9-142c-386845fae837"
+      }
+    },
+    {
+      "tool": "latest_by_loinc",
+      "input": {
+        "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+        "loinc": ["4548-4"]
+      }
+    },
+    {
+      "tool": "coverage",
+      "input": {
+        "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+        "loinc": ["4548-4"],
+        "start": "2024-10-01",
+        "end": "2026-01-01"
+      }
+    },
+    {
+      "tool": "baseline_deviation",
+      "input": {
+        "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+        "loinc": "4548-4",
+        "baseline": {
+          "start": "2024-10-01",
+          "end": "2025-09-30"
+        },
+        "target": {
+          "start": "2025-10-01",
+          "end": "2025-12-31"
+        }
+      }
+    },
+    {
+      "view": "chart.timeseries"
+    }
+  ],
+  "expect": {
+    "calls": ["subject_window", "latest_by_loinc", "coverage", "baseline_deviation"],
+    "views": ["chart.timeseries"],
+    "refusals": []
+  }
+}

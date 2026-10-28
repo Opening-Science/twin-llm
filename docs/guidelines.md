@@ -129,7 +129,9 @@ chunks.
 `guideline_chunks` with cosine `<=>` (HNSW), filtered to documents with
 `source = 'guideline'`. The same tables also hold the OpenTwin knowledge notes
 (`source = 'opentwin-knowledge'`, `docs/knowledge.md`), which only
-`knowledge_search` reads. `k` defaults to 5 and is capped
+`knowledge_search` reads, and open-licence specialty literature
+(`source = 'literature:<specialty>'`, `docs/literature.md`), which no chat
+tool reads yet. `k` defaults to 5 and is capped
 at 8. The call is audited as `guidelines.guideline_search` with `subject_ref`
 null. Embed or database failure returns no hits and still writes the audit
 row (`row_count` 0). There is no cloud fallback.

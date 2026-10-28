@@ -121,4 +121,16 @@ describe("createThreadExportHandler", () => {
     expect(await response.text()).toBe("Not found");
     expect(audits).toEqual([]);
   });
+
+  test("?format=print is a page for printing or saving as PDF, audited, same content", async () => {
+    const { run, audits } = handler(THREAD);
+    const response = await run("t1", exportFormat("print"));
+    expect(response.headers.get("Content-Type")).toBe("text/html; charset=utf-8");
+    expect(response.headers.get("Content-Disposition")).toBeNull();
+    const html = await response.text();
+    expect(html).toContain("<title>What was their latest HbA1c?</title>");
+    expect(html).toContain("<h1>What was their latest HbA1c?</h1>");
+    expect(html).toContain("window.print()");
+    expect(audits.map((audit) => audit.args)).toEqual([{ format: "print" }]);
+  });
 });

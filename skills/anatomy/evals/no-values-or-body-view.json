@@ -1,0 +1,27 @@
+{
+  "question": "Show the latest HbA1c of subject 9661a432-4630-2cd9-142c-386845fae837 on the body.",
+  "script": [
+    {
+      "tool": "latest_by_loinc",
+      "input": {
+        "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+        "loinc": ["4548-4"]
+      }
+    },
+    {
+      "tool": "knowledge_search",
+      "input": {
+        "query": "HbA1c region",
+        "k": 3
+      }
+    },
+    {
+      "view": "twin.body"
+    }
+  ],
+  "expect": {
+    "calls": ["knowledge_search"],
+    "views": [],
+    "refusals": ["tool-not-allowed", "view-not-allowed"]
+  }
+}

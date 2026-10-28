@@ -1,4 +1,5 @@
 import { parseConnectorReturn } from "@/features/connectors/connector-return";
+import { readConnectorSummaries } from "@/features/connectors/connector-summaries";
 import { connectorSetupViews } from "@/features/connectors/connector-setup";
 import { getGuidelineCorpusStatus } from "@/features/connectors/guidelines-status";
 import { WearablesScreen } from "@/features/wearables/wearables-screen";
@@ -16,6 +17,7 @@ import {
 } from "@/features/google-health/connection";
 import { resolveActorId } from "@/infrastructure/auth-actor";
 import { ensureAppUser, findAppUserId } from "@/infrastructure/current-user";
+import { database } from "@/infrastructure/database";
 import {
   envLooksEmpty,
   googleHealthEnv,
@@ -24,6 +26,17 @@ import {
   serverEnv,
   whoopEnv,
 } from "@/infrastructure/env";
+import { auditPersonalRead } from "@/infrastructure/personal-read-audit";
+import { append } from "@/packages/audit/append";
+
+/** Summaries for this page view, audited in personal mode (#223). */
+const summaryDeps = {
+  isPersonalMode: () => serverEnv().DATA_MODE === "personal",
+  getLatestOuraSummary,
+  getLatestWhoopSummary,
+  getLatestGoogleHealthSummary,
+  auditPersonalRead: auditPersonalRead((input) => append(database(), input)),
+};
 
 const emptyStatus = (configured: boolean) => ({
   configured,
@@ -61,7 +74,7 @@ export default async function ConnectorsPage({
     appUserId = (await ensureAppUser(clerkId)).id;
   }
 
-  if (!appUserId) {
+  if (!clerkId || !appUserId) {
     return (
       <WearablesScreen
         ouraStatus={emptyStatus(ouraEnv() !== null)}
@@ -80,17 +93,13 @@ export default async function ConnectorsPage({
     ouraStatus,
     whoopStatus,
     googleHealthStatus,
-    ouraSummary,
-    whoopSummary,
-    googleHealthSummary,
+    { ouraSummary, whoopSummary, googleHealthSummary },
     guidelineStatus,
   ] = await Promise.all([
     getOuraConnectionStatus(appUserId),
     getWhoopConnectionStatus(appUserId),
     getGoogleHealthConnectionStatus(appUserId),
-    getLatestOuraSummary(appUserId),
-    getLatestWhoopSummary(appUserId),
-    getLatestGoogleHealthSummary(appUserId),
+    readConnectorSummaries(summaryDeps, clerkId, appUserId),
     guidelineStatusRead,
   ]);
 

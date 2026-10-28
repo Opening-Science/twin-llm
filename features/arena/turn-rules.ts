@@ -4,6 +4,7 @@ import {
   type CatalogModel,
   MAX_SELECTED_MODELS,
   MIN_SELECTED_MODELS,
+  turnModelName,
 } from "@/infrastructure/model-catalog";
 
 /**
@@ -39,7 +40,8 @@ const refuse = (error: string): TurnCheck => ({ ok: false, error });
 
 /**
  * The prompt is trimmed, ids de-duplicated, and names always taken from the
- * catalog: what the browser says a model is called is never stored.
+ * catalog: what the browser says a model is called is never stored. Auto's
+ * row is named after the agent it picks for this prompt ("Auto → Sleep").
  */
 export const checkTurnRequest = (
   request: Readonly<{
@@ -76,7 +78,7 @@ export const checkTurnRequest = (
         TITLE_LENGTH,
       ),
       models: models.flatMap((model) =>
-        model ? [{ id: model.id, name: model.name }] : [],
+        model ? [{ id: model.id, name: turnModelName(model, catalog, prompt) }] : [],
       ),
     },
   };

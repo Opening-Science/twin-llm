@@ -1,0 +1,26 @@
+{
+  "question": "List every body weight reading of subject 9661a432-4630-2cd9-142c-386845fae837.",
+  "script": [
+    {
+      "tool": "subject_window",
+      "input": {
+        "subject_ref": "9661a432-4630-2cd9-142c-386845fae837"
+      }
+    },
+    {
+      "tool": "observations_for_subject",
+      "input": {
+        "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+        "loinc": ["29463-7"],
+        "start": "2015-01-01",
+        "end": "2026-01-01",
+        "limit": 100
+      }
+    }
+  ],
+  "expect": {
+    "calls": ["subject_window", "observations_for_subject"],
+    "views": [],
+    "refusals": []
+  }
+}
