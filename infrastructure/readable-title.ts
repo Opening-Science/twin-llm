@@ -11,13 +11,18 @@
  */
 
 const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
+/**
+ * After "subject" or "subject_ref" a ref may be cut short: stored titles were
+ * the first 60 characters of the prompt, so many end mid-ref.
+ */
+const NAMED_REF = "[0-9a-f]{6,8}(?:-[0-9a-f]{0,12}){0,4}";
 
 const LEADING_SUBJECT = new RegExp(
-  `^\\s*for\\s+(?:synthetic\\s+subject|subject_ref|subject)\\s+(${UUID})\\s*[:,]?\\s*`,
+  `^\\s*for\\s+(?:synthetic\\s+subject|subject_ref|subject)\\s+(${NAMED_REF})\\s*[:,]?\\s*`,
   "i",
 );
 const INNER_SUBJECT = new RegExp(
-  `\\s*(?:for|of)\\s+(?:synthetic\\s+subject|subject_ref|subject)\\s+(${UUID})`,
+  `\\s*(?:for|of)\\s+(?:synthetic\\s+subject|subject_ref|subject)\\s+(${NAMED_REF})`,
   "gi",
 );
 const BARE_SUBJECT = new RegExp(`(?:subject_ref\\s+)?(${UUID})`, "gi");

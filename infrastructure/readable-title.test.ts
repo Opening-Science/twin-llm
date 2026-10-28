@@ -34,6 +34,19 @@ describe("readableTitle", () => {
     expect(readableTitle("/trainer how was my week")).toBe("/trainer how was my week");
   });
 
+  test("a stored title cut off in the middle of the ref", () => {
+    expect(
+      readableTitle(
+        "Show me a chart of heart rate (LOINC 8867-4) for subject_ref 29bbf012-3e7f-d6ab-",
+      ),
+    ).toBe("Show me a chart of heart rate · subject 29bbf0");
+    expect(
+      readableTitle(
+        "What is the latest systolic blood pressure (LOINC 8480-6) for subject_ref 29bbf0",
+      ),
+    ).toBe("What is the latest systolic blood pressure · subject 29bbf0");
+  });
+
   test("only a subject_ref is still a title", () => {
     expect(readableTitle(REF)).toBe("Subject 29bbf0");
   });
