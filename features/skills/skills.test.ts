@@ -112,6 +112,7 @@ describe("skills/ in this repository", () => {
     const body = bodyOf("nutrition");
     [
       "The Diet specialist describes your values and does not give diets, meal plans or doses.",
+      "Start with subject_window to find the subject's date range, then use it as the window.",
       'Never write "you should", "eat", "avoid"',
       "29463-7",
       "39156-5",
@@ -119,9 +120,17 @@ describe("skills/ in this repository", () => {
       "4548-4",
       "18262-6",
     ].forEach((rule) => expect(body).toContain(rule));
+    const front = parseSkillFile(
+      readFileSync(join(ROOT, "skills", "nutrition", "SKILL.md"), "utf8"),
+    );
+    if (!front.ok) throw new Error(front.error);
+    expect(front.value.fields["tools"]).toEqual(
+      expect.arrayContaining(["subject_window", "observations_for_subject"]),
+    );
     expect(casesOf("nutrition")).toEqual(
       expect.arrayContaining([
         "body-weight-change",
+        "weights-over-subject-window",
         "lipids-against-range",
         "diet-plan-refused",
         "hosted-provider-refused",

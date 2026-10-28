@@ -162,8 +162,11 @@ rule sentences stay in the skill. Goals the person sets (#46) are not part of v1
 `skills/nutrition` (#218) is the Diet specialist agent's skill and can be typed as
 `/nutrition`. It describes body weight (29463-7), BMI (39156-5), glucose (2339-0), HbA1c
 (4548-4) and the lipids (total 2093-3, LDL 18262-6, HDL 2085-9, triglycerides 2571-8) of
-a named synthetic subject against their own earlier values: the latest reading
-(`latest_by_loinc`), the change over two years (`trend`), the last 90 days against the year
+a named synthetic subject against their own earlier values. It starts with
+`subject_window` and uses the subject's whole date range as the window, so a reading is
+never missed by a guessed window; `observations_for_subject` lists the readings. Then: the
+latest reading
+(`latest_by_loinc`), the change over that window (`trend`), the last 90 days against the year
 before (`baseline_deviation`), how sparse the readings are (`coverage`), one reading against
 its Anchor v3 published range (`range_position`, said only as below, within or above) and
 what was recorded around a named condition or medication (`values_around_event`). It may
@@ -172,7 +175,7 @@ measure. A question asking for a diet, meal plan, food list, calorie or macro ta
 supplement, medicine or dose gets one fixed sentence and no tool call. It never names a
 target value and never labels the person. It lists `wearable-context` so that a turn with
 a linked wearable is not refused; a body weight key in the Available keys may be reported
-with its date. Local Ollama only. The eval cases cover a weight change, lipids against the
+with its date. Local Ollama only. The eval cases cover a weight change, every weight reading over the subject's window, lipids against the
 range, HbA1c against a baseline with a chart, glucose around a condition, a meal plan
 request, tools and views it may not use, and a hosted provider.
 
