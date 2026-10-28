@@ -23,6 +23,7 @@ import { formatDay } from "./format";
 import {
   ABSENT_MEASURES,
   type Measure,
+  type NearMiss,
   NEAR_MISSES,
   NO_CODE_MEASURES,
   WEARABLE_KEYS,
@@ -203,8 +204,11 @@ export const oddRef = async (
 };
 
 /** A measure that sounds like another: read the asked code only and say the neighbour differs. */
-export const nearMiss = (context: FamilyContext): Promise<Draft> => {
-  const { asked: measure, neighbour } = pick(context.random, NEAR_MISSES);
+export const nearMiss = (
+  context: FamilyContext,
+  misses: readonly [NearMiss, ...NearMiss[]] = NEAR_MISSES,
+): Promise<Draft> => {
+  const { asked: measure, neighbour } = pick(context.random, misses);
   return latestDraft(
     context,
     measure,

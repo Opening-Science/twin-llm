@@ -7,6 +7,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Training tracks (#210): `training:conversations -- --track <id>` writes one agent's set (General Practitioner, Diet, Anatomy, Sleep, Trainer, Genetics) with its families, codes and question styles, and the agent's role line in every system prompt. A new `agent_handover` family: a specialist asked about another area calls no tool and names the agent that fits; the General Practitioner answers a specialist's question with the audited tool and names the specialist. `training:batches -- --tracks` writes the track sets per 1M batch. Without `--track` the output is unchanged, byte for byte. See `docs/training-data.md`.
 - Thread export (#44): `?format=fhir` gives a FHIR R4 DocumentReference whose attachment is the same Markdown, tagged research use only. Every export now writes an audit row (format and size, no content), and a thread that used the genome tools exports only when the app is served to this machine alone (`LOCAL_ONLY`); otherwise it is refused and audited as `genome.thread.export_refused`.
 
 - Download a thread as Markdown from the bar at the top of it (`/api/threads/<id>/export`, the owner only): each prompt, each model's lookups with their arguments, row counts and refusals, and the answer as the page shows it; withheld and refused answers say so. For an issue, a lab notebook or a paper's appendix.

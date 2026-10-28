@@ -272,6 +272,77 @@ conversations.
   pairs with a fixed factor themselves; only this family changed, but every
   record's tool list and system prompt now carry `convert_unit`.
 
+### Tracks (`--track`)
+
+One training set per agent (#210), so a fine-tune can learn one agent's role.
+`--track <id>` keeps that agent's families, codes and question styles, adds the
+hand-over family, and puts the agent's line (`Agent: <name>. <role>`) right under
+the prompt's first line, where an agent turn in the chat has it. The prompt id
+gets `/agent/<agent id>`, the manifest gets `track` (id, agent, role, families,
+codes, styles), and the default file is `<cohort>.<track>.jsonl`. Without
+`--track` nothing changes: `tracks.test.ts` checks a run against hashes of every
+file taken before tracks existed.
+
+The tracks are in `scripts/training-data/tracks.ts`. The role lines of the
+General Practitioner, Sleep, Trainer and Genetics agents are copied word for
+word from `infrastructure/agents.ts` on the `medical-agents` branch (#218), which
+is not on main yet; Diet and Anatomy are new, in the same style.
+
+| Track      | Agent                | Families                                                                                                          | Codes                                                                      |
+| ---------- | -------------------- | ----------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `general`  | General Practitioner | every default family                                                                                              | every measure                                                              |
+| `diet`     | Diet                 | latest, trend, baseline, compare, outside record, near miss, unit conversion, declines, other person              | weight, BMI, HbA1c, glucose, total, LDL and HDL cholesterol, triglycerides |
+| `anatomy`  | Anatomy              | latest, near miss, absent code, decline condition, other person                                                   | systolic blood pressure, creatinine                                        |
+| `sleep`    | Sleep                | the five data families, outside record, wearable key, decline condition, other person                             | sleep duration, respiratory rate                                           |
+| `trainer`  | Trainer              | the five data families, outside record, near miss, unit conversion, wearable key, decline condition, other person | resting heart rate, heart rate, daily step count                           |
+| `genetics` | Genetics             | the seven genome families (turns on `--genome`)                                                                   | none                                                                       |
+
+Every track also has `agent_handover`, and keeps all four question styles. No
+two specialists ask about the same code. A subject without a wearable series
+gets no sleep or trainer data questions.
+
+**`agent_handover`** (half of subjects, tracks only): a question that belongs
+to another agent. Templates only, like every other family.
+
+- A specialist asked about another agent's area (the hand-over bank in
+  `handover-family.ts`, `handover.<style>`) calls no tool, says the question is
+  outside what it looks at and names the agent that fits with that agent's
+  role line. Outcome `handed_over`.
+- The General Practitioner asked a Diet, Sleep or Trainer question reads the
+  latest value with `latest_by_loinc`, answers as `latest_value` does, and
+  names the specialist to ask for more. Asked about the genome report, which a
+  GP turn cannot read, it calls no tool and names the Genetics agent.
+
+What is not there yet: the trainer cannot be asked about HRV or training load,
+and the sleep track has no sleep score, because the generator's tools are the
+LOINC query tools only (`hrv_trend`, `sleep_summary` and `training_load` are
+not in it). The anatomy track has no knowledge-note conversations
+(`knowledge_search`), and the GP does not hand anatomy questions over.
+
+On the 1M cohort, `training:batches -- --tracks` writes one set per track in
+the conversations step, after the default set, while the batch's rows are
+still in the database:
+
+```sh
+bun run training:batches -- --batches 1001-1099 --skip-rejected \
+  --tracks general,diet,anatomy,sleep,trainer,genetics
+bun run training:batches -- --batches 1100 --skip-rejected \
+  --tracks general,diet,anatomy,sleep,trainer,genetics
+```
+
+A batch is done when its default manifest and every track's manifest exist. A
+batch finished before `--tracks` is unpacked and ingested again, and only the
+missing track sets are written. The genetics track builds each subject's
+synthetic genome report from the variant catalog in the process, as `--genome`
+does, so it needs no genome rows in the database.
+
+One cohort without batches works the same way:
+
+```sh
+bun run training:conversations -- --cohort synthea-v4-seed4242 --track diet
+bun run training:conversations -- --cohort synthea-v4-seed4242 --track genetics
+```
+
 ### Split
 
 `bun run training:split -- --in <out>.jsonl [--seed n] [--template-share 0.1]

@@ -70,7 +70,16 @@ export const GENOME_FAMILIES = [
   "genome_hosted_provider",
 ] as const;
 
-export type Family = (typeof FAMILIES)[number] | (typeof GENOME_FAMILIES)[number];
+/**
+ * Families only a training track runs (`tracks.ts`, `--track`): a question
+ * that belongs to another agent. A run without `--track` never has them.
+ */
+export const TRACK_FAMILIES = ["agent_handover"] as const;
+
+export type Family =
+  | (typeof FAMILIES)[number]
+  | (typeof GENOME_FAMILIES)[number]
+  | (typeof TRACK_FAMILIES)[number];
 
 /** What the answer had to do; tool refusal codes are copied as the tools spell them. */
 export type Outcome =
@@ -89,7 +98,8 @@ export type Outcome =
   | "out_of_scope_person"
   | "no_call"
   | "not_in_report"
-  | "declined_hosted_provider";
+  | "declined_hosted_provider"
+  | "handed_over";
 
 /** Outcomes where the honest answer is that there is nothing to report. */
 export const NO_DATA_OUTCOMES: ReadonlySet<string> = new Set<Outcome>([

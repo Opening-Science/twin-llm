@@ -18,6 +18,7 @@ import {
 } from "../synthea/cohort-presets";
 
 import { outputPaths } from "./build-conversations";
+import { isTrackId, TRACK_IDS, type TrackId } from "./tracks";
 
 export const DEFAULT_ARCHIVES = "../synthea-1m/batches";
 export const DEFAULT_WORK = ".synthea/batches";
@@ -37,13 +38,15 @@ export type BatchArgs = Readonly<{
   maxRejectedShare: number;
   /** Ingest processes per ingest step; null leaves warehouse:ingest's default (cores - 1). */
   workers: number | null;
+  /** Training tracks (`--tracks`) written after the default set, one file set each. */
+  tracks: readonly TrackId[];
 }>;
 
 /** More than this share of rejected bundles stops a batch even with --skip-rejected. */
 export const DEFAULT_MAX_REJECTED_SHARE = 0.01;
 
 const USAGE =
-  "Usage: bun run training:batches -- --batches 1001-1010 [--archives <dir>] [--work <dir>] [--out <dir>] [--keep] [--skip-rejected [--max-rejected-share 0.01]] [--workers <n>]";
+  "Usage: bun run training:batches -- --batches 1001-1010 [--archives <dir>] [--work <dir>] [--out <dir>] [--keep] [--skip-rejected [--max-rejected-share 0.01]] [--workers <n>] [--tracks diet,sleep]";
 
 const flag = (argv: readonly string[], name: string): string | undefined => {
   const index = argv.indexOf(name);
@@ -103,8 +106,14 @@ export const parseBatchArgs = (argv: readonly string[]): BatchArgs | string => {
   if (argv.includes("--workers") && !/^[1-9]\d*$/.test(workersText ?? "")) {
     return `--workers must be a whole number from 1 (got: ${workersText ?? ""}).`;
   }
+  const tracksText = flag(argv, "--tracks");
+  const tracks = tracksText === undefined ? [] : tracksText.split(",");
+  if (argv.includes("--tracks") && (tracks.length === 0 || !tracks.every(isTrackId))) {
+    return `--tracks takes ${TRACK_IDS.join(", ")} (got: ${tracksText ?? ""}).`;
+  }
   return {
     batches,
+    tracks: [...new Set(tracks.filter(isTrackId))],
     archives: flag(argv, "--archives") ?? DEFAULT_ARCHIVES,
     work: flag(argv, "--work") ?? DEFAULT_WORK,
     out: flag(argv, "--out") ?? DEFAULT_OUT,
@@ -129,6 +138,14 @@ export type BatchPaths = Readonly<{
   conversationManifest: string;
   rejected: string;
   logs: string;
+  /** One file set per training track, written after the default set. */
+  tracks: readonly TrackPaths[];
+}>;
+
+export type TrackPaths = Readonly<{
+  track: TrackId;
+  records: string;
+  manifest: string;
 }>;
 
 /**
@@ -138,7 +155,7 @@ export type BatchPaths = Readonly<{
  */
 export const batchPaths = (
   batch: BatchCohort,
-  args: Pick<BatchArgs, "archives" | "work" | "out">,
+  args: Pick<BatchArgs, "archives" | "work" | "out"> & Partial<Pick<BatchArgs, "tracks">>,
 ): BatchPaths => {
   const dir = join(args.work, batch.cohortId);
   const out = outputPaths(join(args.out, `${batch.cohortId}.jsonl`));
@@ -158,6 +175,10 @@ export const batchPaths = (
     conversationManifest: out.manifest,
     rejected: join(args.out, `${batch.cohortId}.rejected.json`),
     logs: join(args.work, "logs"),
+    tracks: (args.tracks ?? []).map((track) => {
+      const paths = outputPaths(join(args.out, `${batch.cohortId}.${track}.jsonl`));
+      return { track, records: paths.records, manifest: paths.manifest };
+    }),
   };
 };
 
