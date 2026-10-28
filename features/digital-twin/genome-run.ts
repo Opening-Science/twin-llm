@@ -9,6 +9,7 @@ import type { GenomePermitDecision } from "@/infrastructure/data-mode-policy";
 import { database } from "@/infrastructure/database";
 import { genomeEnv } from "@/infrastructure/env";
 import { genomeRunPermit } from "@/infrastructure/genome-gate";
+import { personalReadEvent } from "@/infrastructure/personal-read-audit";
 import {
   latestGenomeReport,
   saveGenomeReport,
@@ -47,8 +48,9 @@ import {
  * `packages/ark-adapter`: the CLI blocks until the owner approves on their
  * phone, then releases the report, which is parsed strictly and stored as a
  * personal record. Nothing here talks to a model. Every Ark call is audited
- * by the adapter; the store is audited here with counts only, never a
- * genotype or a hash of one.
+ * by the adapter; the store and every read of the stored report are audited
+ * here with counts only, never a genotype or a hash of one. A report read
+ * whose row cannot be written is not shown.
  */
 
 /** Machine and network waits for one run; phone approval is on top (docs/ark.md). */
@@ -125,11 +127,27 @@ export const getGenomeReportResponse = async (
   if (!ports.permit().ok) {
     return Response.json({ enabled: false } satisfies GenomeReportPayload);
   }
-  const stored = await ports.latest(actor);
-  return Response.json({
-    enabled: true,
-    report: stored === null ? null : toReportView(stored, ports.assumeBuild()),
-  } satisfies GenomeReportPayload);
+  try {
+    const stored = await ports.latest(actor);
+    await ports.audit(
+      personalReadEvent({
+        actor,
+        sessionId: ports.sessionId(),
+        purpose: "genome-report",
+        rowCount: stored?.rows.length ?? 0,
+      }),
+    );
+    return Response.json({
+      enabled: true,
+      report: stored === null ? null : toReportView(stored, ports.assumeBuild()),
+    } satisfies GenomeReportPayload);
+  } catch (error) {
+    console.error(
+      "[genome] report read failed",
+      error instanceof Error ? error.name : "unknown",
+    );
+    return Response.json({ error: "Could not load the genome report." }, { status: 502 });
+  }
 };
 
 const failed = (code: string, status = 200): Response =>

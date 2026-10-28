@@ -204,6 +204,41 @@ describe("runTrainingBatches", () => {
     expect(h.cleared).toEqual(["synthea-v4-seed1001", "synthea-v4-seed1002"]);
   });
 
+  test("--tracks writes one set per track after the default set, with --track", async () => {
+    const h = harness();
+    expect(await run(h, ["--batches", "1001", "--tracks", "diet,sleep"])).toBe(0);
+    const env =
+      "bun --env-file=.env.training --preload ./features/chat/response/preload-server-only.mjs";
+    expect(
+      h.commands.filter((command) => command.includes("build-conversations")),
+    ).toEqual([
+      `${env} scripts/training-data/build-conversations.ts --cohort synthea-v4-seed1001 --out out/synthea-v4-seed1001.jsonl > work/logs/synthea-v4-seed1001.conversations.log`,
+      `${env} scripts/training-data/build-conversations.ts --cohort synthea-v4-seed1001 --track diet --out out/synthea-v4-seed1001.diet.jsonl > work/logs/synthea-v4-seed1001.conversations.log`,
+      `${env} scripts/training-data/build-conversations.ts --cohort synthea-v4-seed1001 --track sleep --out out/synthea-v4-seed1001.sleep.jsonl > work/logs/synthea-v4-seed1001.conversations.log`,
+    ]);
+    expect(h.out.join("")).toContain("4.0 KB JSONL; tracks diet, sleep (1m 01s)");
+  });
+
+  test("a batch with the default set but not a track's runs again for the track only", async () => {
+    const h = harness({
+      files: [["out/synthea-v4-seed1001.manifest.json", { conversations: 54 }]],
+    });
+    expect(await run(h, ["--batches", "1001", "--tracks", "diet"])).toBe(0);
+    const conversations = h.commands.filter((command) =>
+      command.includes("build-conversations"),
+    );
+    expect(conversations.length).toBe(1);
+    expect(conversations[0]).toContain("--track diet");
+    const done = harness({
+      files: [
+        ["out/synthea-v4-seed1001.manifest.json", { conversations: 54 }],
+        ["out/synthea-v4-seed1001.diet.manifest.json", { conversations: 20 }],
+      ],
+    });
+    expect(await run(done, ["--batches", "1001", "--tracks", "diet"])).toBe(0);
+    expect(done.commands).toEqual([]);
+  });
+
   test("a kept unpacked copy is not unpacked again", async () => {
     const h = harness({ files: [["work/synthea-v4-seed1001/.unpacked", {}]] });
     expect(await run(h, ["--batches", "1001", "--keep"])).toBe(0);

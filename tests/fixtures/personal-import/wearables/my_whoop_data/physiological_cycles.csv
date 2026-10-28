@@ -1,0 +1,4 @@
+Cycle start time,Cycle end time,Cycle timezone,Recovery score %,Resting heart rate (bpm),Heart rate variability (ms),Skin temp (celsius),Blood oxygen %,Day Strain
+2026-09-01 23:10:00,2026-09-02 22:55:00,UTC+02:00,71,54,48.5,33.4,96.5,11.2
+2026-09-02 22:55:00,,UTC+02:00,,,,,,
+2026-09-03 23:30:00,2026-09-04 23:00:00,,60,57,41,33.1,95,9.8

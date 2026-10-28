@@ -71,6 +71,11 @@ together with the uncertainty reason `knowledge_only`.
 the host from the request, never from model text, and is absent on ordinary
 turns and on older documents. The skill-run audit row (`skill.<name>`) stays on
 the audit chain but is not listed in `tool_calls`, because it read nothing.
+`ui_context` (#47) is the turn's UI context (`infrastructure/ui-context.ts`):
+open panels, the organ picked on a twin, the chart drawn large with its days and
+the thread's views by kind and measure, with no values. It is set by the host
+from the request and is absent when the turn carried none and on older
+documents. Its `ui.context` audit row is left out of `tool_calls` too.
 
 `interpretation.kind` is `narration` | `none` | `unrenderable`. The builder
 never emits `kind=contract`. `unrenderable` is the interpreter stub only

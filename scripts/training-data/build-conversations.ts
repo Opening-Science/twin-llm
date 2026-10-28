@@ -5,6 +5,7 @@
  *   bun run training:conversations -- --cohort synthea-v4-seed4242 --out training-data/out/train.jsonl \
  *     --seed 4242 --anchor 2026-10-01 --max-subjects 500 --families trend,coverage --inline-tools
  *   bun run training:conversations -- --cohort synthea-v4-seed1001 --rejected <out>/synthea-v4-seed1001.rejected.json
+ *   bun run training:conversations -- --cohort synthea-v4-seed4242 --track diet
  *
  * Writes `<out>.jsonl` (messages only; tools too with --inline-tools),
  * `<out>.meta.jsonl` (one meta record per line, same order),
@@ -12,7 +13,10 @@
  * `<out>.stats.json` (counts per family and template, shares, lengths). Both
  * JSONL files are written as `.partial` and renamed only when the run
  * finishes. The system prompt and the twelve tools are the ones a chat
- * request sends in synthetic mode.
+ * request sends in synthetic mode. `--track <id>` (`tracks.ts`) keeps one
+ * agent's families, codes and styles, adds the hand-over family, and puts the
+ * agent's role line in every system prompt; without it the output is the same
+ * as before tracks, byte for byte.
  *
  * `.env.training` (gitignored) is a copy of `.env.synthetic.example` with
  * DATABASE_URL at a database that holds only the training (or held-out)
@@ -23,9 +27,10 @@
  */
 import { createWriteStream } from "node:fs";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
-import { dirname } from "node:path";
+import { dirname, join } from "node:path";
 
 import { isAllowedCohort } from "../../packages/query-tools/scope";
+import { guidelineSearchInput } from "../../packages/guidelines/input";
 import { subjectWindowInput } from "../../packages/query-tools/schemas";
 import { KEYED_TOOLS } from "../evaluation/question-set";
 import {
@@ -48,7 +53,27 @@ import {
   FAMILIES,
   GENOME_FAMILIES,
   type ToolName,
+  TRACK_FAMILIES,
+  type TrackScope,
 } from "./families";
+import { handoverFor } from "./handover-family";
+import {
+  CATALOGUE_FILE,
+  catalogueChunks,
+  type KnowledgeHit,
+  searchCatalogue,
+} from "./knowledge-notes";
+import { KNOWLEDGE_DIR } from "../../packages/knowledge/constants";
+import {
+  isTrackId,
+  keepsStyle,
+  type Track,
+  TRACK_IDS,
+  TRACKS,
+  trackMeasures,
+  trackOut,
+  withAgentLine,
+} from "./tracks";
 import { conversationStats, messageChars, type StatsRow } from "./stats";
 
 export const TRAINING_ACTOR = "training-conversations";
@@ -93,7 +118,11 @@ export type BuildDeps = Readonly<{
   genomeCatalog?: () => Promise<readonly Variant[]>;
 }>;
 
-const TOOL_INPUTS = { ...KEYED_TOOLS, subject_window: subjectWindowInput } as const;
+const TOOL_INPUTS = {
+  ...KEYED_TOOLS,
+  subject_window: subjectWindowInput,
+  knowledge_search: guidelineSearchInput,
+} as const;
 
 export type BuildArgs = Readonly<{
   cohortId: string;
@@ -108,6 +137,8 @@ export type BuildArgs = Readonly<{
   rejected: string | null;
   /** Genome conversation families and the `dna_ask` tool (off by default). */
   genome: boolean;
+  /** One agent's training track (`--track`), or null for the default set. */
+  track: Track | null;
 }>;
 
 /** `x.jsonl` → `x.meta.jsonl`, `x.manifest.json`, `x.stats.json`. */
@@ -133,7 +164,12 @@ const presetSeed = (cohortId: string): number | null =>
   )?.seed ?? null;
 
 const isFamily = (name: string): name is Family =>
-  ([...FAMILIES, ...GENOME_FAMILIES] as readonly string[]).includes(name);
+  ([...FAMILIES, ...GENOME_FAMILIES, ...TRACK_FAMILIES] as readonly string[]).includes(
+    name,
+  );
+
+const isTrackFamily = (name: string): boolean =>
+  (TRACK_FAMILIES as readonly string[]).includes(name);
 
 const isGenomeFamily = (name: string): boolean =>
   (GENOME_FAMILIES as readonly string[]).includes(name);
@@ -156,22 +192,38 @@ export const parseBuildArgs = (argv: readonly string[]): BuildArgs | string => {
   if (maxSubjects !== null && !(Number.isInteger(maxSubjects) && maxSubjects >= 1)) {
     return "--max-subjects must be a whole number of at least 1.";
   }
-  // Genome families are off unless --genome: a run without it is unchanged.
-  const genome = argv.includes("--genome");
+  const trackName = flag(argv, "--track");
+  if (argv.includes("--track") && (trackName === undefined || !isTrackId(trackName))) {
+    return `--track must be one of ${TRACK_IDS.join(", ")}.`;
+  }
+  const track =
+    trackName !== undefined && isTrackId(trackName) ? TRACKS[trackName] : null;
+  // Genome families are off unless --genome (or the genetics track): a run without it is unchanged.
+  const genome = argv.includes("--genome") || track?.genome === true;
   const chosen = flag(argv, "--families");
   const names =
-    chosen === undefined
-      ? [...FAMILIES, ...(genome ? GENOME_FAMILIES : [])]
-      : chosen.split(",");
+    chosen !== undefined
+      ? chosen.split(",")
+      : track !== null
+        ? [...track.families, ...(genome && !track.genome ? GENOME_FAMILIES : [])]
+        : [...FAMILIES, ...(genome ? GENOME_FAMILIES : [])];
   const unknown = names.filter((name) => !isFamily(name));
   if (unknown.length > 0) return `Unknown families: ${unknown.join(", ")}.`;
   if (!genome && names.some(isGenomeFamily)) {
     return "Genome families need --genome.";
   }
+  if (track === null && names.some(isTrackFamily)) {
+    return "The agent_handover family needs --track.";
+  }
   return {
     genome,
+    track,
     cohortId,
-    out: flag(argv, "--out") ?? `training-data/out/${cohortId}.jsonl`,
+    out:
+      flag(argv, "--out") ??
+      (track === null
+        ? `training-data/out/${cohortId}.jsonl`
+        : trackOut(cohortId, track.id)),
     seed,
     anchorDay,
     maxSubjects,
@@ -287,8 +339,21 @@ export const runBuildConversations = async (
   // Genome records get the prompt and tools of a turn that carries the genome
   // tools; every other record keeps the chat's, so nothing else changes.
   const genomeTurn = args.genome && ports.genome ? await ports.genome() : null;
-  const contextFor = (family: string) =>
+  const turnFor = (family: string) =>
     genomeTurn !== null && isGenomeFamily(family) ? genomeTurn : { prompt, tools };
+  // A track's records carry its agent's role line, as an agent turn in the chat does.
+  const { track } = args;
+  const contextFor = (family: string) => {
+    const turn = turnFor(family);
+    return track === null
+      ? turn
+      : { ...turn, prompt: withAgentLine(turn.prompt, track.agent) };
+  };
+  const scope: TrackScope | undefined =
+    track === null
+      ? undefined
+      : { measures: trackMeasures(track), handover: handoverFor(track) };
+
   const all = await ports.listSubjects(args.cohortId);
   if (all.length === 0) {
     io.stderr.write(`No subjects in cohort ${args.cohortId}.\n`);
@@ -326,8 +391,9 @@ export const runBuildConversations = async (
         },
         (family) => randomFor(args.seed, `conversation:${subjectRef}:${family}`),
         args.families,
+        scope,
       );
-      for (const draft of drafts) {
+      for (const draft of drafts.filter((d) => keepsStyle(track, d.template.style))) {
         const record = toConversation(draft, {
           cohortId: args.cohortId,
           seed: args.seed,
@@ -372,7 +438,21 @@ export const runBuildConversations = async (
         cohort_id: args.cohortId,
         seed: args.seed,
         anchor_day: args.anchorDay,
-        system_prompt_id: prompt.id,
+        system_prompt_id: track === null ? prompt.id : contextFor("").prompt.id,
+        // The agent this set trains (`tracks.ts`): its role line is in every system prompt.
+        ...(track === null
+          ? {}
+          : {
+              track: {
+                id: track.id,
+                agent_id: track.agent.id,
+                agent_name: track.agent.name,
+                role: track.agent.role,
+                families: [...args.families],
+                loincs: track.loincs,
+                styles: track.styles,
+              },
+            }),
         files: { records: paths.records, meta: paths.meta, stats: paths.stats },
         ...summary,
         // Subjects whose FHIR bundle the warehouse refused (training:batches --skip-rejected).
@@ -383,7 +463,7 @@ export const runBuildConversations = async (
           : {
               genome: {
                 catalog_version: CATALOG_VERSION,
-                system_prompt_id: genomeTurn.prompt.id,
+                system_prompt_id: contextFor(GENOME_FAMILIES[0]).prompt.id,
                 tools: genomeTurn.tools,
               },
             }),
@@ -422,7 +502,14 @@ export const realPorts = async (today: string): Promise<ConversationPorts> => {
     sessionId: `${TRAINING_ACTOR}-${today}`,
     mode: "synthetic",
   } as const;
-  const runTool = (name: ToolName, args: unknown): Promise<unknown> => {
+  let chunks: readonly KnowledgeHit[] | null = null;
+  const catalogue = async (): Promise<readonly KnowledgeHit[]> => {
+    chunks ??= catalogueChunks(
+      await readFile(join(KNOWLEDGE_DIR, CATALOGUE_FILE), "utf8"),
+    );
+    return chunks;
+  };
+  const runTool = async (name: ToolName, args: unknown): Promise<unknown> => {
     switch (name) {
       case "subject_window":
         return tools.runSubjectWindow(scope, subjectWindowInput.parse(args));
@@ -441,6 +528,18 @@ export const realPorts = async (today: string): Promise<ConversationPorts> => {
         return tools.runCompareWindows(scope, KEYED_TOOLS.compare_windows.parse(args));
       case "convert_unit":
         return tools.runConvertUnit(scope, KEYED_TOOLS.convert_unit.parse(args));
+      // The wearable tools read the subject's synthetic series (track families only).
+      case "sleep_summary":
+        return tools.runSleepSummary(scope, KEYED_TOOLS.sleep_summary.parse(args));
+      case "hrv_trend":
+        return tools.runHrvTrend(scope, KEYED_TOOLS.hrv_trend.parse(args));
+      case "resting_hr_trend":
+        return tools.runRestingHrTrend(scope, KEYED_TOOLS.resting_hr_trend.parse(args));
+      case "training_load":
+        return tools.runTrainingLoad(scope, KEYED_TOOLS.training_load.parse(args));
+      // A stand-in over the shipped notes (knowledge-notes.ts); no embedding model runs.
+      case "knowledge_search":
+        return searchCatalogue(await catalogue(), guidelineSearchInput.parse(args));
     }
   };
   return {

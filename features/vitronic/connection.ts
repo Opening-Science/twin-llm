@@ -948,13 +948,14 @@ export const loadAvatarForSnapshot = async (
   userId: string,
   snapshotId: string,
   actor: string,
+  opts?: { readonly ports?: Partial<VitronicLocalReadPorts> },
 ): Promise<Uint8Array | null> => {
-  const snapshot = await database().vitronicSnapshot.findFirst({
+  const snapshot = await localReadDb(opts)().vitronicSnapshot.findFirst({
     where: { id: snapshotId, userId },
     select: { glbSha256: true, subjectId: true },
   });
   if (!snapshot) return null;
-  await append(database(), {
+  await localReadAppend(opts)({
     actor,
     sessionId: userId,
     subjectRef: snapshot.subjectId,

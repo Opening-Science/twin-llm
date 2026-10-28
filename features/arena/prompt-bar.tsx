@@ -21,7 +21,7 @@ import {
 import { useWearableStatus } from "@/features/wearables/use-wearable-status";
 import { WearableChips, WearableSlashMenu } from "@/features/wearables/wearable-slash";
 import { INCOGNITO_MODEL_NOT_LOCAL } from "@/infrastructure/incognito";
-import type { CatalogModel } from "@/infrastructure/model-catalog";
+import { type CatalogModel, turnModelName } from "@/infrastructure/model-catalog";
 import { Button } from "@/infrastructure/ui-kit/button";
 
 import { Mark } from "./marks";
@@ -147,7 +147,10 @@ export const PromptBar = ({
         if (!ready) return;
         onSubmit(
           skillTurn?.prompt ?? draft,
-          chosen.map((model) => ({ id: model.id, name: model.name })),
+          chosen.map((model) => ({
+            id: model.id,
+            name: turnModelName(model, catalog ?? [], skillTurn?.prompt ?? draft),
+          })),
           skillTurn?.skill.name ?? null,
         );
         setDraft("");

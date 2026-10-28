@@ -26,6 +26,7 @@
         "@types/fhir": "0.0.44",
         "ai": "7.0.48",
         "clsx": "2.1.1",
+        "fflate": "0.8.3",
         "googleapis": "173.0.0",
         "next": "16.4.1",
         "next-themes": "0.4.6",

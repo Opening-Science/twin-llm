@@ -32,6 +32,7 @@ import {
 import type { ResponseDocumentV1 } from "@/infrastructure/response-document/document-v1";
 import { toResponseDocument } from "@/infrastructure/response-document/parse";
 import { isSkillRefusalCode } from "@/infrastructure/skill-gate";
+import type { UiContext } from "@/infrastructure/ui-context";
 
 import type { ToolActivity } from "./conversation";
 import { toolCard } from "./tool-cards";
@@ -74,6 +75,8 @@ export type AnswerRequest = Readonly<{
   messages: readonly HistoryMessage[];
   /** The skill the turn was sent with; left out for an ordinary prompt. */
   skill?: string;
+  /** What was on screen when it was sent (#47); left out when nothing was. */
+  uiContext?: UiContext;
 }>;
 
 /**

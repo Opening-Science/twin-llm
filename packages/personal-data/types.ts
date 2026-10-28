@@ -7,7 +7,13 @@
  */
 
 /** Formats with a full import flow in this version. */
-export const IMPORT_KINDS = ["fhir", "lab-csv", "table"] as const;
+export const IMPORT_KINDS = [
+  "fhir",
+  "lab-csv",
+  "table",
+  "apple-health",
+  "wearable",
+] as const;
 
 export type ImportKind = (typeof IMPORT_KINDS)[number];
 
@@ -64,12 +70,22 @@ export type TableDraft = Readonly<{
   rows: readonly (readonly TableCell[])[];
 }>;
 
-/** A row or resource that is reported, not stored. */
+/**
+ * A row or resource that is reported, not stored. Large exports (Apple
+ * Health, wearable files) report one entry per record type and reason with
+ * `count`, so a million skipped samples are not a million objects.
+ */
 export type Unmapped = Readonly<{
   where: string;
   code: string;
   reason: string;
+  /** How many records this entry stands for; 1 when absent. */
+  count?: number;
 }>;
+
+/** Records reported, not stored, counting grouped entries by their `count`. */
+export const unmappedCount = (unmapped: readonly Unmapped[]): number =>
+  unmapped.reduce((total, row) => total + (row.count ?? 1), 0);
 
 export type ImportRefusal = Readonly<{
   code: string;
@@ -94,7 +110,7 @@ export type ParsedImport =
   | (ParsedBase &
       Readonly<{
         ok: true;
-        kind: "lab-csv";
+        kind: "lab-csv" | "apple-health" | "wearable";
         observations: readonly ObservationDraft[];
       }>)
   | (ParsedBase & Readonly<{ ok: true; kind: "table"; table: TableDraft }>)

@@ -9,6 +9,7 @@ import {
   GENOME_THREAD_LOCAL_ONLY,
   GENOME_THREAD_SENTENCE,
 } from "@/infrastructure/genome-thread-policy";
+import type { CatalogAgent } from "@/infrastructure/model-catalog";
 import type { TurnSkill } from "@/infrastructure/skill-gate";
 import type { WhoopSummary } from "@/infrastructure/whoop-types";
 import type { AppendInput } from "@/packages/audit/append";
@@ -490,5 +491,249 @@ describe("chat start: a thread that used genome tools stays local (#151)", () =>
     expect(response.status).toBe(400);
     expect(calls).toEqual([`wearables personal ${APP_USER}`, "audit", "refused"]);
     expect(refused).toEqual([refusedRow(GENOME_THREAD_SENTENCE)]);
+  });
+});
+
+describe("chat start: a turn's UI context (#47)", () => {
+  const SYNTHETIC_OLLAMA: ChatProviderSettings = {
+    dataMode: "synthetic",
+    provider: "ollama",
+    exoscalePersonalData: "off",
+  };
+  const CONTEXT = {
+    panels: ["outputs" as const],
+    organ: "liver" as const,
+    chart: null,
+    views: [{ kind: "biomarker.card" as const, measure: "2324-2" }],
+    viewCount: 1,
+  };
+
+  test("is written to the audit chain before the model is called", async () => {
+    const { startAnswer, calls, audits } = harness(SYNTHETIC_OLLAMA, NO_WEARABLES);
+    const response = await startAnswer(ACTOR, APP_USER, { ...CALL, uiContext: CONTEXT });
+    expect(response.status).toBe(200);
+    expect(calls).toEqual([`wearables synthetic ${APP_USER}`, "audit", "stream"]);
+    expect(audits).toEqual([
+      {
+        actor: ACTOR,
+        sessionId: CALL.turnId,
+        subjectRef: null,
+        tool: "ui.context",
+        args: { modelId: CALL.modelId, context: CONTEXT },
+        result: { lines: 3 },
+        rowCount: 0,
+      },
+    ]);
+  });
+
+  test("a failed audit write stops the model call", async () => {
+    const { startAnswer, calls } = harness(SYNTHETIC_OLLAMA, NO_WEARABLES, {
+      auditFails: true,
+    });
+    await expect(
+      startAnswer(ACTOR, APP_USER, { ...CALL, uiContext: CONTEXT }),
+    ).rejects.toThrow("audit-down");
+    expect(calls).toEqual([`wearables synthetic ${APP_USER}`, "audit"]);
+  });
+
+  test("a turn without one writes no row", async () => {
+    const { startAnswer, calls } = harness(SYNTHETIC_OLLAMA, NO_WEARABLES);
+    await startAnswer(ACTOR, APP_USER, CALL);
+    expect(calls).toEqual([`wearables synthetic ${APP_USER}`, "stream"]);
+  });
+});
+
+describe("chat start: an agent (#218)", () => {
+  const SLEEP_AGENT: CatalogAgent = {
+    id: "sleep",
+    name: "Sleep",
+    role: "Describes sleep against the person's own recent nights.",
+    skill: "sleep",
+    baseModelId: "qwen3:8b",
+    baseModelName: "qwen3:8b",
+  };
+  const GP_AGENT: CatalogAgent = {
+    ...SLEEP_AGENT,
+    id: "gp",
+    name: "General Practitioner",
+    role: "Looks at the whole record.",
+    skill: null,
+  };
+  const AGENT_CALL: ChatRequest = { ...CALL, modelId: "agent:sleep" };
+  const LOCAL: ChatProviderSettings = {
+    dataMode: "personal",
+    provider: "ollama",
+    exoscalePersonalData: "off",
+  };
+
+  test("its skill applies when the prompt names none; the audit row names the base model and the agent", async () => {
+    const { startAnswer, calls, audits, streamed } = harness(LOCAL, WITH_WHOOP);
+    const response = await startAnswer(ACTOR, APP_USER, AGENT_CALL, SLEEP_AGENT);
+    expect(response.status).toBe(200);
+    expect(calls).toEqual([`wearables personal ${APP_USER}`, "audit", "stream"]);
+    expect(audits).toEqual([
+      {
+        actor: ACTOR,
+        sessionId: "turn-synthetic-1",
+        subjectRef: null,
+        tool: "skill.sleep",
+        args: {
+          skill: "sleep",
+          modelId: "qwen3:8b",
+          provider: "ollama",
+          tools: ["coverage", "baseline_deviation"],
+          views: ["chart.timeseries"],
+          agent: "sleep",
+        },
+        result: { started: true },
+        rowCount: 0,
+      },
+    ]);
+    expect(streamed).toEqual([
+      {
+        clerkId: ACTOR,
+        genomeThread: false,
+        disabledSources: ["gbd"],
+        skill: SLEEP,
+        agent: SLEEP_AGENT,
+        ...WITH_WHOOP,
+      },
+    ]);
+  });
+
+  test("an agent Auto picked runs the same way; its skill row says via auto (#219)", async () => {
+    const { startAnswer, audits, streamed } = harness(LOCAL, WITH_WHOOP);
+    const picked: CatalogAgent = { ...SLEEP_AGENT, via: "auto" };
+    const response = await startAnswer(
+      ACTOR,
+      APP_USER,
+      { ...CALL, modelId: "agent:auto" },
+      picked,
+    );
+    expect(response.status).toBe(200);
+    expect(audits.map(({ tool, args }) => [tool, args])).toEqual([
+      [
+        "skill.sleep",
+        expect.objectContaining({ modelId: "qwen3:8b", agent: "sleep", via: "auto" }),
+      ],
+    ]);
+    expect(streamed.map((context) => context.agent)).toEqual([picked]);
+  });
+
+  test("a /skill in the prompt wins over the agent's, and the row does not name the agent", async () => {
+    const other: CatalogAgent = { ...SLEEP_AGENT, id: "trainer", skill: "trainer" };
+    const { startAnswer, audits, streamed } = harness(LOCAL, WITH_WHOOP);
+    const response = await startAnswer(
+      ACTOR,
+      APP_USER,
+      { ...AGENT_CALL, modelId: "agent:trainer", skill: "sleep" },
+      other,
+    );
+    expect(response.status).toBe(200);
+    expect(audits.map(({ tool, args }) => ({ tool, args }))).toEqual([
+      {
+        tool: "skill.sleep",
+        args: {
+          skill: "sleep",
+          modelId: "qwen3:8b",
+          provider: "ollama",
+          tools: ["coverage", "baseline_deviation"],
+          views: ["chart.timeseries"],
+        },
+      },
+    ]);
+    expect(streamed.map((context) => context.skill)).toEqual([SLEEP]);
+  });
+
+  test("an agent with no skill runs without one and writes no skill row", async () => {
+    const { startAnswer, calls, audits, streamed } = harness(LOCAL, NO_WEARABLES);
+    const response = await startAnswer(
+      ACTOR,
+      APP_USER,
+      { ...CALL, modelId: "agent:gp" },
+      GP_AGENT,
+    );
+    expect(response.status).toBe(200);
+    expect(calls).toEqual([`wearables personal ${APP_USER}`, "stream"]);
+    expect(audits).toEqual([]);
+    expect(streamed).toEqual([
+      {
+        clerkId: ACTOR,
+        genomeThread: false,
+        disabledSources: ["gbd"],
+        agent: GP_AGENT,
+        ...NO_WEARABLES,
+      },
+    ]);
+  });
+
+  test("its skill goes through the skill gate: a provider the skill does not list is refused naming the agent", async () => {
+    const { startAnswer, audits, refused } = harness(
+      { dataMode: "synthetic", provider: "openrouter", exoscalePersonalData: "off" },
+      NO_WEARABLES,
+    );
+    const response = await startAnswer(ACTOR, APP_USER, AGENT_CALL, SLEEP_AGENT);
+    const sentence =
+      "Sleep isn't available here: its /sleep skill runs only on local Ollama.";
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      code: "provider-not-allowed-by-skill",
+      error: sentence,
+    });
+    expect(audits).toEqual([]);
+    expect(refused).toEqual([{ turnId: CALL.turnId, modelId: "agent:sleep", sentence }]);
+  });
+
+  test("an agent skill the server does not offer is refused naming the agent", async () => {
+    const { startAnswer, refused } = harness(LOCAL, NO_WEARABLES);
+    const response = await startAnswer(ACTOR, APP_USER, AGENT_CALL, {
+      ...SLEEP_AGENT,
+      skill: "nap",
+    });
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      code: "skill-not-offered",
+      error: "Sleep isn't available here: its /nap skill is not offered on this server.",
+    });
+    expect(refused.map(({ modelId }) => modelId)).toEqual(["agent:sleep"]);
+  });
+
+  test("a typed /skill that is refused keeps the skill's own sentence", async () => {
+    const { startAnswer } = harness(
+      { dataMode: "synthetic", provider: "openrouter", exoscalePersonalData: "off" },
+      NO_WEARABLES,
+    );
+    const response = await startAnswer(
+      ACTOR,
+      APP_USER,
+      { ...AGENT_CALL, skill: "sleep" },
+      SLEEP_AGENT,
+    );
+    expect(await response.json()).toEqual({
+      code: "provider-not-allowed-by-skill",
+      error:
+        "/sleep runs only on local Ollama. The models here come from OpenRouter, so /sleep did not run. Ask without /sleep instead.",
+    });
+  });
+
+  test("the pilot audit names the base model, not the agent row", async () => {
+    const { startAnswer, audits } = harness(
+      {
+        dataMode: "personal",
+        provider: "exoscale",
+        exoscalePersonalData: "consented-pilot",
+      },
+      NO_WEARABLES,
+    );
+    const response = await startAnswer(
+      ACTOR,
+      APP_USER,
+      { ...CALL, modelId: "agent:gp" },
+      GP_AGENT,
+    );
+    expect(response.status).toBe(200);
+    expect(audits.map(({ args }) => Reflect.get(Object(args), "modelId"))).toEqual([
+      "qwen3:8b",
+    ]);
   });
 });

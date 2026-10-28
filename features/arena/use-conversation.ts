@@ -7,6 +7,7 @@ import {
   type WearableSummaries,
 } from "@/infrastructure/parse-twin-answer";
 import { useThreadHistory } from "@/infrastructure/thread-history-store";
+import type { UiContext } from "@/infrastructure/ui-context";
 
 import { streamAnswer } from "./answer-stream";
 import {
@@ -101,13 +102,14 @@ export const useConversation = (
 
   useEffect(() => {
     answersToStream(turns, streaming.current).forEach(
-      ({ turnIndex, turnId, skill, response }) => {
+      ({ turnIndex, turnId, skill, uiContext, response }) => {
         streaming.current.add(response.id);
         const request = answerRequestFor(mode, {
           modelId: response.modelId,
           turnId,
           messages: historyFor(turns, turnIndex, response.modelId),
           skill,
+          uiContext,
         });
         void streamAnswer(request, (progress) =>
           setTurns((all) =>
@@ -146,10 +148,15 @@ export const useConversation = (
   }, [turns, mode]);
 
   const send = useCallback(
-    async (prompt: string, models: readonly SendModel[], skill: string | null = null) => {
+    async (
+      prompt: string,
+      models: readonly SendModel[],
+      skill: string | null = null,
+      uiContext: UiContext | null = null,
+    ) => {
       setSending(true);
       setError(null);
-      setTurns((all) => [...all, pendingTurn(prompt, models, skill)]);
+      setTurns((all) => [...all, pendingTurn(prompt, models, skill, uiContext)]);
 
       const started = await beginTurn(mode, BEGIN_TURN, {
         threadId,

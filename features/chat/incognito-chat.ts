@@ -1,11 +1,13 @@
 import { incognitoSessionId, permitIncognitoModel } from "@/infrastructure/incognito";
 import type { DataMode } from "@/infrastructure/data-mode-policy";
+import { type CatalogAgent, turnAgentOf } from "@/infrastructure/model-catalog";
 import type { KnowledgeSourceId } from "@/infrastructure/knowledge-sources";
 import type { TurnSkill } from "@/infrastructure/skill-gate";
 import type { AppendInput } from "@/packages/audit/append";
 
 import {
   type ChatRequest,
+  currentPrompt,
   type IncognitoChatRequest,
   incognitoChatRequestSchema,
 } from "./chat-request";
@@ -66,8 +68,13 @@ export type IncognitoChatDeps = Readonly<{
   resolveActorId: () => Promise<string | null>;
   /** Abuse protection; null when the call may proceed (auth off: always null). */
   guard: (request: Request, actorId: string) => Promise<Response | null>;
-  /** Model ids the active provider offers, or null when the list is unreachable. */
-  catalog: () => Promise<readonly Readonly<{ id: string }>[] | null>;
+  /**
+   * Model ids the active provider offers, agents included, or null when the
+   * list is unreachable.
+   */
+  catalog: () => Promise<
+    readonly Readonly<{ id: string; agent?: CatalogAgent }>[] | null
+  >;
   /** True when the chat model runs on this machine (Ollama on loopback). */
   chatIsLocal: () => boolean;
   /** The person's app user id; reads only, never creates one. */
@@ -159,7 +166,12 @@ export const createIncognitoChatHandler = (deps: IncognitoChatDeps) => {
     const call: ChatRequest = { ...body, turnId: sessionId };
 
     try {
-      return await startAnswer(actorId, appUserId ?? "", call);
+      return await startAnswer(
+        actorId,
+        appUserId ?? "",
+        call,
+        turnAgentOf(body.modelId, models, currentPrompt(body.messages)),
+      );
     } catch (error) {
       console.error(
         "[chat] failed to start the incognito model stream",
