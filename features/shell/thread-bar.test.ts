@@ -16,6 +16,9 @@ describe("ThreadBarView", () => {
       'title="Copy this thread&#x27;s address. Only you can open it."',
     );
     expect(html).toContain('href="/api/threads/f3a9c1/export" download=""');
+    expect(html).toContain(
+      '<a class="text-muted-foreground hover:text-foreground shrink-0" href="/">Chat</a>',
+    );
     // The id is only ever in the download address, never in what is shown.
     expect(html.replace(/href="[^"]*"/g, "")).not.toContain("f3a9c1");
   });

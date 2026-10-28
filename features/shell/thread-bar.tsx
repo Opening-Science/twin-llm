@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import posthog from "posthog-js";
 import { useEffect, useState } from "react";
@@ -9,11 +10,12 @@ import { useThreadHistory } from "@/infrastructure/thread-history-store";
 import { Button, buttonClassName } from "@/infrastructure/ui-kit/button";
 
 import { CopyGlyph, DownloadGlyph, TickGlyph } from "./glyphs";
-import { threadCrumb } from "./thread-crumb";
+import { threadCrumb, threadSection } from "./thread-crumb";
 import { useThreadTitle } from "./thread-title";
 
 /**
- * The slim row at the top of a saved thread: its title, a button that copies
+ * The slim row at the top of a saved thread: where it belongs and its title
+ * ("Chat / …", "Twin / …"), a button that copies
  * its address and a link that downloads it as Markdown. Other pages have no
  * bar; their own heading leads.
  *
@@ -65,15 +67,27 @@ export const ThreadBarView = ({
   title,
 }: Readonly<{ pathname: string; title?: string }>) => {
   if (!isThreadPath(pathname)) return null;
-  const crumb = threadCrumb(title);
+  const placed = threadSection(title);
+  const crumb = threadCrumb(placed.title);
   return (
     <div className="thread-bar">
-      <p
-        className="text-muted-foreground min-w-0 flex-1 truncate text-sm"
-        title={crumb.full}
+      <nav
+        aria-label="Breadcrumb"
+        className="flex min-w-0 flex-1 items-center gap-1.5 text-sm"
       >
-        {crumb.label}
-      </p>
+        <Link
+          href={placed.section.href}
+          className="text-muted-foreground hover:text-foreground shrink-0"
+        >
+          {placed.section.label}
+        </Link>
+        <span aria-hidden="true" className="text-muted-foreground">
+          /
+        </span>
+        <p className="min-w-0 truncate" title={crumb.full}>
+          {crumb.label}
+        </p>
+      </nav>
       <a
         href={threadExportHref(pathname.slice("/t/".length))}
         download

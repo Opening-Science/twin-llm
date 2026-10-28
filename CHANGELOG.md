@@ -44,6 +44,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- A thread's bar reads like a breadcrumb: "Chat / <title>", or "Twin / <title>" for a thread started with `/twin` (without the command). "Chat" goes to a new chat and "Twin" to the Digital Twin.
+
 - README cut to about half: back to four pictures under the hero (dark, light, light, dark), a short privacy list, one paragraph on setup and links out for models, providers, tools, anatomy and evaluation.
 
 - README rewritten in plainer words, with every screenshot retaken on the current design: chat (light and dark), search, incognito, Customize, the cohort, Digital Twin and Connectors. The setup paragraph is a list, and import formats say what ships today.

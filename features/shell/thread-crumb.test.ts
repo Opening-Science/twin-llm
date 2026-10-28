@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { threadCrumb } from "./thread-crumb";
+import { threadCrumb, threadSection } from "./thread-crumb";
 
 describe("threadCrumb", () => {
   test("no title, or a blank one, falls back to Thread", () => {
@@ -32,5 +32,29 @@ describe("threadCrumb", () => {
   test("a cut that lands after a space does not leave the space before the ellipsis", () => {
     const title = `${"a".repeat(58)} bcdef`;
     expect(threadCrumb(title)).toEqual({ label: `${"a".repeat(58)}…`, full: title });
+  });
+});
+
+describe("threadSection", () => {
+  test("a /twin thread is under Twin, without the command in its title", () => {
+    expect(threadSection("/twin how is my resting heart rate")).toEqual({
+      section: { label: "Twin", href: "/digital-twin" },
+      title: "how is my resting heart rate",
+    });
+  });
+
+  test("everything else is a chat, title unchanged", () => {
+    expect(threadSection("/sleep last week")).toEqual({
+      section: { label: "Chat", href: "/" },
+      title: "/sleep last week",
+    });
+    expect(threadSection("/twinkle")).toEqual({
+      section: { label: "Chat", href: "/" },
+      title: "/twinkle",
+    });
+    expect(threadSection(undefined)).toEqual({
+      section: { label: "Chat", href: "/" },
+      title: undefined,
+    });
   });
 });
