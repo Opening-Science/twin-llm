@@ -3,6 +3,7 @@ import "server-only";
 import { unstable_rethrow } from "next/navigation";
 
 import { database } from "@/infrastructure/database";
+import { readableTitle } from "@/infrastructure/readable-title";
 
 import { groupThreads, type ThreadGroup } from "./thread-list";
 
@@ -29,7 +30,7 @@ export const listThreadHistory = async (
   return groupThreads(
     threads.map((thread) => ({
       id: thread.id,
-      title: thread.title,
+      title: readableTitle(thread.title),
       updatedAt: thread.updatedAt,
       modelCount: new Set(
         thread.turns.flatMap((turn) =>

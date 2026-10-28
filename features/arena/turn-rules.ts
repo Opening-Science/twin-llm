@@ -1,3 +1,5 @@
+import { readableTitle } from "@/infrastructure/readable-title";
+
 import {
   type CatalogModel,
   MAX_SELECTED_MODELS,
@@ -69,7 +71,7 @@ export const checkTurnRequest = (
     ok: true,
     plan: {
       prompt,
-      title: (request.skill ? `/${request.skill} ${prompt}` : prompt).slice(
+      title: readableTitle(request.skill ? `/${request.skill} ${prompt}` : prompt).slice(
         0,
         TITLE_LENGTH,
       ),

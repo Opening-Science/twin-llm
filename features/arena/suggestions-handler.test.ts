@@ -171,3 +171,29 @@ describe("createSuggestionsHandler", () => {
     expect(logged).toEqual(["[chat] suggested questions failed: TypeError"]);
   });
 });
+
+describe("a subject asked for by a subject page", () => {
+  test("its ref goes to findSubject; anything else asks for the default", async () => {
+    const asked: (string | null)[] = [];
+    const { ports } = fakePorts([]);
+    const handler = createSuggestionsHandler(
+      deps(
+        {
+          findSubject: async (requested) => {
+            asked.push(requested);
+            return null;
+          },
+        },
+        ports,
+      ),
+    );
+    await handler(
+      new Request(
+        "http://localhost/api/chat/suggestions?subject=085B5E58-FC26-CE3B-8661-1514605B162A",
+      ),
+    );
+    await handler(new Request("http://localhost/api/chat/suggestions?subject=nope"));
+    await handler();
+    expect(asked).toEqual(["085b5e58-fc26-ce3b-8661-1514605b162a", null, null]);
+  });
+});

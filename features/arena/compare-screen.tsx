@@ -61,6 +61,7 @@ export const CompareScreen = ({
   incognito = false,
   localModelIds = [],
   initialDraft,
+  subjectRef,
 }: Readonly<{
   catalog: readonly CatalogModel[] | null;
   defaultModelIds: readonly string[];
@@ -76,6 +77,8 @@ export const CompareScreen = ({
   localModelIds?: readonly string[];
   /** A `/command ` to start the prompt with, from the search box. */
   initialDraft?: string;
+  /** A subject page's subject: the suggestions are about it. */
+  subjectRef?: string;
 }>) => {
   const router = useRouter();
   const {
@@ -94,7 +97,10 @@ export const CompareScreen = ({
     mode: dataMode,
   });
   const items = useMemo(() => conversationItems(turns, twin.card), [turns, twin.card]);
-  const suggestions = useSuggestedQuestions(threadId === null && turns.length === 0);
+  const suggestions = useSuggestedQuestions(
+    threadId === null && turns.length === 0,
+    subjectRef,
+  );
   const outputs = useMemo(() => threadOutputs(turns), [turns]);
   const [largeOutput, setLargeOutput] = useState(false);
   const withPanel = outputs.length > 0;

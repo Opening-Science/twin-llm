@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { askAboutSubjectHref } from "@/infrastructure/shell-links";
 import { buttonClassName } from "@/infrastructure/ui-kit/button";
 
 import { CohortOverview } from "./cohort-overview";
@@ -176,8 +177,16 @@ export const SubjectScreen = async ({
             >
               All subjects
             </Link>
-            <span className="text-muted-foreground font-mono text-xs">
-              {result.subject.cohortId}
+            <span className="flex items-center gap-3">
+              <span className="text-muted-foreground font-mono text-xs">
+                {result.subject.cohortId}
+              </span>
+              <Link
+                href={askAboutSubjectHref(result.subject.ref)}
+                className={buttonClassName({ size: "sm" })}
+              >
+                Ask about this subject
+              </Link>
             </span>
           </div>
           <h2 className="mt-4 font-mono text-base break-all">{result.subject.ref}</h2>

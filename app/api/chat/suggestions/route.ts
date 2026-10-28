@@ -16,12 +16,17 @@ import { runCoverage, runWearableCoverage } from "@/packages/query-tools/tools";
 /**
  * Suggested first questions for an empty chat. The synthetic subject is the
  * Demo's first person in subject_ref order, as the Body twin numbers them;
- * the coverage read itself runs under the chat's scope and audit.
+ * the coverage read itself runs under the chat's scope and audit. A subject
+ * page's "Ask about this subject" asks for its own subject instead; the scope
+ * check in the coverage read decides whether it may be read.
  */
 export const GET = createSuggestionsHandler({
   resolveActorId,
   dataMode: () => serverEnv().DATA_MODE,
-  findSubject: async () => {
+  findSubject: async (requested) => {
+    if (requested !== null) {
+      return { ref: requested, label: `Subject ${requested.slice(0, 6)}` };
+    }
     const first = await database().subject.findFirst({
       where: DEMO_SUBJECT_WHERE,
       select: { subjectRef: true },
