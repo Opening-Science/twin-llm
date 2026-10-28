@@ -283,16 +283,16 @@ codes, styles), and the default file is `<cohort>.<track>.jsonl`. Without
 `--track` nothing changes: `tracks.test.ts` checks a run against hashes of every
 file taken before tracks existed.
 
-The tracks are in `scripts/training-data/tracks.ts`. The role lines of the
-General Practitioner, Sleep, Trainer and Genetics agents are copied word for
-word from `infrastructure/agents.ts` on the `medical-agents` branch (#218), which
-is not on main yet; Diet and Anatomy are new, in the same style.
+The tracks are in `scripts/training-data/tracks.ts`. Each agent's id, name and
+role line are read from `infrastructure/agents.ts` (#218), the agents the chat
+runs, so a role change there reaches the training data without a second copy.
+Only each agent's area and hand-over topics live in `tracks.ts`.
 
 | Track      | Agent                | Families                                                                                                                                                                                                      | Codes                                                                      | Styles         |
 | ---------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | -------------- |
 | `general`  | General Practitioner | every default family                                                                                                                                                                                          | every measure                                                              | all four       |
-| `diet`     | Diet                 | latest, trend, baseline, compare, outside record, near miss, unit conversion, declines, other person                                                                                                          | weight, BMI, HbA1c, glucose, total, LDL and HDL cholesterol, triglycerides | all four       |
-| `anatomy`  | Anatomy              | `anatomy_note`, latest, near miss, absent code, decline condition, other person                                                                                                                               | systolic blood pressure, creatinine                                        | all four       |
+| `diet`     | Diet specialist      | latest, trend, baseline, compare, outside record, near miss, unit conversion, declines, other person                                                                                                          | weight, BMI, HbA1c, glucose, total, LDL and HDL cholesterol, triglycerides | all four       |
+| `anatomy`  | Anatomy specialist   | `anatomy_note`, latest, near miss, absent code, decline condition, other person                                                                                                                               | systolic blood pressure, creatinine                                        | all four       |
 | `sleep`    | Sleep                | `sleep_summary`, `sleep_no_rows`, the five data families, outside record, wearable key, decline condition, other person                                                                                       | sleep duration, respiratory rate                                           | formal, casual |
 | `trainer`  | Trainer              | `hrv_trend`, `resting_hr_trend`, `training_load`, `wearable_too_short`, `wearable_no_rows`, the five data families, outside record, near miss, unit conversion, wearable key, decline condition, other person | resting heart rate, heart rate, daily step count                           | casual, terse  |
 | `genetics` | Genetics             | the seven genome families (turns on `--genome`)                                                                                                                                                               | none                                                                       | all four       |

@@ -45,6 +45,7 @@ const PROVIDERS: ReadonlyArray<
 let logged: Array<readonly [string, string]> = [];
 let syncCalls: Array<readonly [string, WearableSyncRequest]> = [];
 let auditRows: PersonalRead[] = [];
+let saves = 0;
 
 const deps = (provider: WearableSyncProvider): WearableSyncDeps => ({
   provider,
@@ -53,7 +54,12 @@ const deps = (provider: WearableSyncProvider): WearableSyncDeps => ({
   findAppUserId: async () => USER_ID,
   sync: async (userId, request) => {
     syncCalls.push([userId, request]);
-    return { metrics: [{ key: "synthetic.metric", value: 1 }], window: WINDOW };
+    return {
+      synced: { metrics: [{ key: "synthetic.metric", value: 1 }], window: WINDOW },
+      save: async () => {
+        saves += 1;
+      },
+    };
   },
   auditPersonalRead: async (read) => {
     auditRows.push(read);
@@ -80,6 +86,7 @@ beforeEach(() => {
   logged = [];
   syncCalls = [];
   auditRows = [];
+  saves = 0;
 });
 
 describe("POST /api/{provider}/sync logging", () => {
@@ -135,6 +142,7 @@ describe("POST /api/{provider}/sync", () => {
     expect(auditRows).toEqual([
       { actor: "local", purpose: "sync-google-health", rowCount: 1 },
     ]);
+    expect(saves).toBe(1);
   });
 
   test("a failed sync writes no audit row", async () => {
@@ -146,7 +154,7 @@ describe("POST /api/{provider}/sync", () => {
     expect(auditRows).toEqual([]);
   });
 
-  test("when the audit row cannot be written the sync reports failed", async () => {
+  test("when the audit row cannot be written nothing is saved and the sync reports failed", async () => {
     const res = await createWearableSyncHandler({
       ...deps("whoop"),
       auditPersonalRead: async () => {
@@ -158,6 +166,7 @@ describe("POST /api/{provider}/sync", () => {
     expect(await res.json()).toEqual({
       error: "Could not sync Whoop data. Reconnect and try again.",
     });
+    expect(saves).toBe(0);
   });
 
   test("an empty body syncs with no window, so the default applies", async () => {

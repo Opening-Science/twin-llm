@@ -9,7 +9,11 @@ import {
   type ConnectorReturn,
   type OAuthCookieJar,
 } from "@/infrastructure/oauth-state";
-import { syncThenAudit, type SyncedMetrics } from "@/features/wearables/audited-sync";
+import {
+  auditThenSave,
+  type PreparedSync,
+  type SyncedMetrics,
+} from "@/features/wearables/audited-sync";
 import type { PersonalRead } from "@/infrastructure/personal-read-audit";
 import { getAuthorizationUrl } from "@/infrastructure/open-twin-adapters/oura-authorize";
 
@@ -51,8 +55,8 @@ export type OuraCallbackDeps = {
     readonly expiresIn: number;
     readonly subjectKey?: string | null;
   }) => Promise<void>;
-  /** The first sync after connect; it goes through `syncThenAudit`. */
-  readonly syncOuraForUser: (userId: string) => Promise<SyncedMetrics>;
+  /** The first sync after connect; it goes through `auditThenSave`, which stores it only after the audit row. */
+  readonly syncOuraForUser: (userId: string) => Promise<PreparedSync<SyncedMetrics>>;
   readonly auditPersonalRead: (read: PersonalRead) => Promise<unknown>;
   /** Receives the error name only, never the error object. */
   readonly logError: (message: string, errorName: string) => void;
@@ -153,7 +157,7 @@ export const createOuraCallbackHandler = (deps: OuraCallbackDeps) => {
         subjectKey: appUserId,
       });
 
-      await syncThenAudit(
+      await auditThenSave(
         () => deps.syncOuraForUser(appUserId),
         "oura",
         clerkId,
