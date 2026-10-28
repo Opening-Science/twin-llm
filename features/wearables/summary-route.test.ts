@@ -1,5 +1,11 @@
 import { describe, expect, test } from "bun:test";
 
+import {
+  auditPersonalRead,
+  personalReadEvent,
+} from "@/infrastructure/personal-read-audit";
+import type { AppendInput } from "@/packages/audit/append";
+
 import { createWearablesSummaryHandler } from "./summary-handler";
 
 const USER_ID = "user-synthetic-1";
@@ -13,6 +19,7 @@ const dummySummary = {
 };
 
 let receivedAuditTool: string | undefined;
+const appended: AppendInput[] = [];
 
 const okDeps = {
   resolveActorId: async () => "local",
@@ -27,6 +34,10 @@ const okDeps = {
     receivedAuditTool = opts?.auditTool;
     return dummySummary;
   },
+  auditPersonalRead: auditPersonalRead(async (input) => {
+    appended.push(input);
+    return undefined;
+  }),
 };
 
 describe("GET /api/wearables/summary", () => {
@@ -55,6 +66,7 @@ describe("GET /api/wearables/summary", () => {
 
   test("returns all four summaries", async () => {
     receivedAuditTool = undefined;
+    appended.length = 0;
     const GET = createWearablesSummaryHandler(okDeps);
     const res = await GET();
     expect(res.status).toBe(200);
@@ -65,5 +77,45 @@ describe("GET /api/wearables/summary", () => {
       vitronic: dummySummary,
     });
     expect(receivedAuditTool).toBe(WEARABLES_SUMMARY_AUDIT_TOOL);
+  });
+
+  test("writes one personal read row: how many of Oura, Whoop and Google Health had one", async () => {
+    appended.length = 0;
+    const GET = createWearablesSummaryHandler({
+      ...okDeps,
+      getLatestWhoopSummary: async () => null,
+    });
+    expect((await GET()).status).toBe(200);
+    expect(appended).toEqual([
+      personalReadEvent({ actor: "local", purpose: "wearables-summary", rowCount: 2 }),
+    ]);
+    expect(JSON.stringify(appended)).not.toContain(WHOOP_NARRATIVE);
+  });
+
+  test("signed out reads nothing and writes no row", async () => {
+    appended.length = 0;
+    const GET = createWearablesSummaryHandler({
+      ...okDeps,
+      resolveActorId: async () => null,
+    });
+    expect(await (await GET()).json()).toEqual({
+      oura: null,
+      whoop: null,
+      googleHealth: null,
+      vitronic: null,
+    });
+    expect(appended).toEqual([]);
+  });
+
+  test("when the personal read row cannot be written, no summary goes out", async () => {
+    const GET = createWearablesSummaryHandler({
+      ...okDeps,
+      auditPersonalRead: auditPersonalRead(async () => {
+        throw new Error("audit-down");
+      }),
+    });
+    const res = await GET();
+    expect(res.status).toBe(502);
+    expect(await res.json()).toEqual({ error: "Could not load wearable summaries." });
   });
 });

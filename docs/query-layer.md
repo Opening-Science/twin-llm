@@ -163,6 +163,17 @@ A violation returns `{ code: "SUBJECT_SCOPE_VIOLATION", error: "subject_ref is n
 
 The audit row stores actor, session, subject_ref, tool name, and sha256 of args/result — not observation payloads.
 
+Reads of personal data outside the tools write a row too (#143), with what the read was for and how many rows it returned, never a value. `infrastructure/personal-read-audit.ts` builds the `personal.read.<purpose>` row; when it cannot be written, the data is not sent. What is audited now:
+
+- Wearables summary: `personal.read.wearables-summary` for Oura, Whoop and Google Health, and `vitronic.wearables.summary` from the BodyLoop reader.
+- Genome report: `personal.read.genome-report` with the report's row count.
+- BodyLoop status, subjects, scans, snapshots and avatar: one `vitronic.*` row each, written in the reader.
+- Imports and the Data page's dataset list: `personal-data.*` (`docs/personal-data.md`).
+- Thread search and export: `search.threads`, `thread.export`.
+- Ark status: one `ark.*` row per Ark call, from the adapter.
+
+Not audited, and why: the Oura, Whoop and Google Health status routes read the connection row only (linked at, last sync); Ark audit lists audit rows, not health data; sync, connect and import writes are audited where they write. Not audited yet: the Oura, Whoop and Google Health summaries a personal-mode chat puts in the prompt. `tests/personal-reads/personal-reads.test.ts` holds this list for every `app/api` route and fails on a route it does not name, so a new route is added there by hand.
+
 Outside the tools, the chat route and the onboarding starter questions write `provider.personal_data_sent` (`subject_ref` null, `row_count` 0, args `{ provider, modelId }`) for each personal request they send to Exoscale under `EXOSCALE_PERSONAL_DATA=consented-pilot`, before the model is called. Chat uses the turn id as `session_id`, the starters the actor (`docs/providers.md`).
 
 ## Chat wiring
