@@ -186,6 +186,7 @@ export const CompareScreen = ({
                           <AnswerColumn
                             key={response.id}
                             response={response}
+                            prompt={item.turn.prompt}
                             wearables={summaries}
                             onRetry={() => retry(response.id)}
                           />

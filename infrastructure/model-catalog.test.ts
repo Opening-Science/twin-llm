@@ -1,13 +1,17 @@
 import { describe, expect, test } from "bun:test";
 
+import { AUTO_AGENT } from "./agents";
 import {
   agentBaseModel,
+  type CatalogAgent,
   type CatalogModel,
   catalogAgentOf,
   defaultModelSelection,
   formatContextWindow,
   formatModelWindow,
   parseFreeModels,
+  turnAgentOf,
+  turnModelName,
   withAgents,
 } from "./model-catalog";
 
@@ -130,6 +134,7 @@ describe("agents in the catalog (#218)", () => {
         contextTokens,
       })),
     ).toEqual([
+      { id: "agent:auto", name: "Auto", providerId: "ollama", contextTokens: 16_384 },
       {
         id: "agent:gp",
         name: "General Practitioner",
@@ -152,7 +157,7 @@ describe("agents in the catalog (#218)", () => {
       { id: "llama3.2", name: "llama3.2", providerId: "ollama", contextTokens: 128_000 },
       { id: "qwen3:4b", name: "qwen3:4b", providerId: "ollama", contextTokens: 16_384 },
     ]);
-    expect(rows[1]?.agent).toEqual({
+    expect(rows[2]?.agent).toEqual({
       id: "sleep",
       name: "Sleep",
       role: "Describes sleep against the person's own recent nights.",
@@ -177,6 +182,7 @@ describe("agents in the catalog (#218)", () => {
       skills: SKILLS,
     });
     expect(rows.map(({ id }) => id)).toEqual([
+      "agent:auto",
       "agent:gp",
       "swiss-ai/Apertus-8B-Instruct-2509",
     ]);
@@ -198,6 +204,55 @@ describe("agents in the catalog (#218)", () => {
     expect(catalogAgentOf("agent:gp", rows)?.baseModelId).toBe("qwen3:8b");
     expect(catalogAgentOf("qwen3:8b", rows)).toBeNull();
     expect(catalogAgentOf("agent:genetics", rows)).toBeNull();
+  });
+
+  test("Auto heads the agents, runs on the General Practitioner's base and has no skill", () => {
+    const rows = withAgents([ollama("qwen3:8b")], LOCAL);
+    expect(rows[0]?.agent).toEqual({
+      id: "auto",
+      name: "Auto",
+      role: AUTO_AGENT.role,
+      skill: null,
+      baseModelId: "qwen3:8b",
+      baseModelName: "qwen3:8b",
+    });
+  });
+
+  test("turnAgentOf: Auto runs as the agent the router picks, marked via auto", () => {
+    const rows = withAgents([ollama("qwen3:8b")], LOCAL);
+    expect(turnAgentOf("agent:auto", rows, "How did I sleep last night?")).toEqual({
+      ...catalogAgentOf("agent:sleep", rows),
+      via: "auto",
+    } as CatalogAgent);
+    expect(turnAgentOf("agent:auto", rows, "Summarise my record.")?.id).toBe("gp");
+    expect(turnAgentOf("agent:trainer", rows, "How did I sleep?")?.id).toBe("trainer");
+    expect(turnAgentOf("qwen3:8b", rows, "How did I sleep?")).toBeNull();
+  });
+
+  test("turnAgentOf: a stored column name wins while its agent is offered", () => {
+    const rows = withAgents([ollama("qwen3:8b")], LOCAL);
+    expect(
+      turnAgentOf("agent:auto", rows, "How did I sleep?", "Auto → Trainer")?.id,
+    ).toBe("trainer");
+    expect(
+      turnAgentOf("agent:auto", rows, "How did I sleep?", "Auto → Diet specialist")?.id,
+    ).toBe("sleep");
+  });
+
+  test("Auto never picks an agent the catalog does not offer", () => {
+    const hosted = withAgents([ollama("qwen3:8b")], { ...LOCAL, provider: "exoscale" });
+    expect(turnAgentOf("agent:auto", hosted, "How did I sleep?")?.id).toBe("gp");
+  });
+
+  test("turnModelName names Auto after its pick and leaves other rows alone", () => {
+    const rows = withAgents([ollama("qwen3:8b")], LOCAL);
+    expect(turnModelName({ id: "agent:auto", name: "Auto" }, rows, "My HRV?")).toBe(
+      "Auto → Trainer",
+    );
+    expect(turnModelName({ id: "agent:auto", name: "Auto" }, [], "My HRV?")).toBe("Auto");
+    expect(turnModelName({ id: "qwen3:8b", name: "qwen3:8b" }, rows, "My HRV?")).toBe(
+      "qwen3:8b",
+    );
   });
 
   test("defaultModelSelection never picks an agent", () => {

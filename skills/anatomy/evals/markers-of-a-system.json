@@ -1,0 +1,24 @@
+{
+  "question": "Which Anchor biomarkers relate to the kidneys, and where are the kidneys?",
+  "script": [
+    {
+      "tool": "knowledge_search",
+      "input": {
+        "query": "Anchor biomarkers renal system kidney",
+        "k": 5
+      }
+    },
+    {
+      "tool": "knowledge_search",
+      "input": {
+        "query": "markers with no single body location",
+        "k": 3
+      }
+    }
+  ],
+  "expect": {
+    "calls": ["knowledge_search", "knowledge_search"],
+    "views": [],
+    "refusals": []
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "question": "How has body weight changed for subject 9661a432-4630-2cd9-142c-386845fae837?",
+  "script": [
+    {
+      "tool": "latest_by_loinc",
+      "input": {
+        "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+        "loinc": ["29463-7"]
+      }
+    },
+    {
+      "tool": "trend",
+      "input": {
+        "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+        "loinc": "29463-7",
+        "start": "2024-01-01",
+        "end": "2026-01-01"
+      }
+    }
+  ],
+  "expect": {
+    "calls": ["latest_by_loinc", "trend"],
+    "views": [],
+    "refusals": []
+  }
+}

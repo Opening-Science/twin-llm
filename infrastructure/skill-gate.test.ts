@@ -156,6 +156,19 @@ describe("skill audit rows", () => {
     });
   });
 
+  test("an agent Auto picked is marked via auto (#219)", () => {
+    expect(
+      skillRunEvent(SLEEP, {
+        actor: "actor-1",
+        sessionId: "turn-1",
+        modelId: "qwen3:4b",
+        provider: "ollama",
+        agent: "sleep",
+        via: "auto",
+      }).args,
+    ).toMatchObject({ agent: "sleep", via: "auto" });
+  });
+
   test("the skill is read back from the row name, and only from skill rows", () => {
     expect(skillAuditTool("sleep")).toBe("skill.sleep");
     expect(skillOfAuditTool("skill.sleep")).toBe("sleep");

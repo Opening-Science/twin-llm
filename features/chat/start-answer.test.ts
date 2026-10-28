@@ -552,6 +552,25 @@ describe("chat start: an agent (#218)", () => {
     ]);
   });
 
+  test("an agent Auto picked runs the same way; its skill row says via auto (#219)", async () => {
+    const { startAnswer, audits, streamed } = harness(LOCAL, WITH_WHOOP);
+    const picked: CatalogAgent = { ...SLEEP_AGENT, via: "auto" };
+    const response = await startAnswer(
+      ACTOR,
+      APP_USER,
+      { ...CALL, modelId: "agent:auto" },
+      picked,
+    );
+    expect(response.status).toBe(200);
+    expect(audits.map(({ tool, args }) => [tool, args])).toEqual([
+      [
+        "skill.sleep",
+        expect.objectContaining({ modelId: "qwen3:8b", agent: "sleep", via: "auto" }),
+      ],
+    ]);
+    expect(streamed.map((context) => context.agent)).toEqual([picked]);
+  });
+
   test("a /skill in the prompt wins over the agent's, and the row does not name the agent", async () => {
     const other: CatalogAgent = { ...SLEEP_AGENT, id: "trainer", skill: "trainer" };
     const { startAnswer, audits, streamed } = harness(LOCAL, WITH_WHOOP);

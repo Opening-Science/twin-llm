@@ -64,7 +64,8 @@ import type { WearableContext } from "./wearable-context";
  * every check above, as if typed; a refusal of the agent's own skill names
  * the agent. The answer row stays keyed by `agent:<id>`;
  * the audit rows name the base model, which is what saw the data, and the
- * skill row names the agent too.
+ * skill row names the agent too. An agent Auto picked (#219) runs exactly the
+ * same way; its skill row adds `via: "auto"`.
  */
 
 export type ChatProviderSettings = Readonly<{
@@ -192,7 +193,12 @@ export const createStartAnswer =
           sessionId: call.turnId,
           modelId,
           provider: request.provider,
-          ...(agentSkill === null || agent === null ? {} : { agent: agent.id }),
+          ...(agentSkill === null || agent === null
+            ? {}
+            : {
+                agent: agent.id,
+                ...(agent.via === undefined ? {} : { via: agent.via }),
+              }),
         }),
       );
     }

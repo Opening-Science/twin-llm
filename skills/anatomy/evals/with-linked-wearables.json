@@ -1,0 +1,19 @@
+{
+  "question": "Where does the pancreas sit, and what does HbA1c relate to?",
+  "dataMode": "personal",
+  "wearableContext": true,
+  "script": [
+    {
+      "tool": "knowledge_search",
+      "input": {
+        "query": "HbA1c body system region",
+        "k": 5
+      }
+    }
+  ],
+  "expect": {
+    "calls": ["knowledge_search"],
+    "views": [],
+    "refusals": []
+  }
+}

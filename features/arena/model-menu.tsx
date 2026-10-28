@@ -5,7 +5,7 @@ import { formatModelWindow } from "@/infrastructure/model-catalog";
 import { buttonClassName } from "@/infrastructure/ui-kit/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/infrastructure/ui-kit/popover";
 
-import { chosenModels, menuGroups, toggleLimit } from "./model-selection";
+import { chosenModels, menuGroups, menuSubline, toggleLimit } from "./model-selection";
 
 /**
  * The list of every model the provider offers, as real checkboxes: picking a
@@ -13,7 +13,9 @@ import { chosenModels, menuGroups, toggleLimit } from "./model-selection";
  * without any extra ARIA. A row that would break the 1-to-3 rule is disabled,
  * and the line under the list says why in words. A locked row (a model an
  * incognito chat may not use) is disabled with its reason on the row itself.
- * Agents come first under their own heading, each with the model it runs on.
+ * Agents come first under their own heading, each with the model it runs on;
+ * Auto heads them. A fine-tune shown by its readable name keeps its raw id in
+ * the small line.
  */
 
 const LIMIT_NOTE = {
@@ -89,7 +91,7 @@ export const ModelMenu = ({
                           <span className="min-w-0 flex-1">
                             <span className="block truncate text-sm">{model.name}</span>
                             <span className="text-muted-foreground block truncate text-xs">
-                              {model.agent ? model.agent.baseModelName : model.provider}
+                              {menuSubline(model)}
                             </span>
                             {locked ? (
                               <span className="text-muted-foreground block text-xs">

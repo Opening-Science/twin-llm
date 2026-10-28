@@ -157,6 +157,40 @@ no linked wearable, "should I train today?", a dose question, hosted providers, 
 may not draw and an unknown source; `features/skills/skills.test.ts` checks that the
 rule sentences stay in the skill. Goals the person sets (#46) are not part of v1.
 
+## /nutrition
+
+`skills/nutrition` (#218) is the Diet specialist agent's skill and can be typed as
+`/nutrition`. It describes body weight (29463-7), BMI (39156-5), glucose (2339-0), HbA1c
+(4548-4) and the lipids (total 2093-3, LDL 18262-6, HDL 2085-9, triglycerides 2571-8) of
+a named synthetic subject against their own earlier values: the latest reading
+(`latest_by_loinc`), the change over two years (`trend`), the last 90 days against the year
+before (`baseline_deviation`), how sparse the readings are (`coverage`), one reading against
+its Anchor v3 published range (`range_position`, said only as below, within or above) and
+what was recorded around a named condition or medication (`values_around_event`). It may
+draw one `chart.timeseries` or one `biomarker.card`. `knowledge_search` only explains a
+measure. A question asking for a diet, meal plan, food list, calorie or macro target,
+supplement, medicine or dose gets one fixed sentence and no tool call. It never names a
+target value and never labels the person. It lists `wearable-context` so that a turn with
+a linked wearable is not refused; a body weight key in the Available keys may be reported
+with its date. Local Ollama only. The eval cases cover a weight change, lipids against the
+range, HbA1c against a baseline with a chart, glucose around a condition, a meal plan
+request, tools and views it may not use, and a hosted provider.
+
+## /anatomy
+
+`skills/anatomy` (#218) is the Anatomy specialist agent's skill and can be typed as
+`/anatomy`. It explains where an organ or body system is and which Anchor biomarkers the
+biomarker catalogue lists for that system or region, through `knowledge_search` over the
+OpenTwin notes only. It reads no values and no records. No view fits: `twin.body` is not a
+kind `show_view` can draw, so the skill points to the Digital Twin page instead. A
+question asking whether something is wrong with an organ, or what a pain or a value means
+for it, gets one fixed sentence ending "If this concerns you, talk to a clinician." and
+no tool call. It lists `wearable-context` only so that a turn with a
+linked wearable is not refused; its instructions say not to describe it. Local Ollama
+only. The eval cases cover an organ's place, a system's markers, a turn with linked
+wearables, a "is my liver damaged?" question, tools and views it may not use, and a
+hosted provider.
+
 ## Built-in commands
 
 Built-ins live in `features/commands/registry.ts`. A skill may not take a built-in's name.

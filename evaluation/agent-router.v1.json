@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "description": "Router fixture for Auto mode v1 (#219). Prompts and the agent expected for each. Separate from questions.v1.json, which stays the scored set.",
+  "items": [
+    {
+      "prompt": "How has body weight changed for subject 9661a432-4630-2cd9-142c-386845fae837 over two years?",
+      "expected": "diet"
+    },
+    {
+      "prompt": "What is my BMI trend?",
+      "expected": "diet"
+    },
+    {
+      "prompt": "Where does my latest LDL cholesterol sit against the published range?",
+      "expected": "diet"
+    },
+    {
+      "prompt": "Show HbA1c for subject 9661a432-4630-2cd9-142c-386845fae837 since 2024.",
+      "expected": "diet"
+    },
+    {
+      "prompt": "What does LOINC 2339-0 measure, and what is my latest value?",
+      "expected": "diet"
+    },
+    {
+      "prompt": "Did my triglycerides go up after I started the new medication?",
+      "expected": "diet"
+    },
+    {
+      "prompt": "Give me a meal plan to lose weight.",
+      "expected": "diet"
+    },
+    {
+      "prompt": "Where is the pancreas?",
+      "expected": "anatomy"
+    },
+    {
+      "prompt": "Which organs do the Anchor biomarkers relate to?",
+      "expected": "anatomy"
+    },
+    {
+      "prompt": "Explain the anatomy of the kidneys.",
+      "expected": "anatomy"
+    },
+    {
+      "prompt": "Where does the liver sit in the body?",
+      "expected": "anatomy"
+    },
+    {
+      "prompt": "Which body system does creatinine belong to?",
+      "expected": "anatomy"
+    },
+    {
+      "prompt": "How did I sleep last week compared with my usual nights?",
+      "expected": "sleep"
+    },
+    {
+      "prompt": "Chart the last 30 nights of sleep.",
+      "expected": "sleep"
+    },
+    {
+      "prompt": "Was my REM sleep shorter this month?",
+      "expected": "sleep"
+    },
+    {
+      "prompt": "Daily check-in.",
+      "expected": "trainer"
+    },
+    {
+      "prompt": "How is my recovery today?",
+      "expected": "trainer"
+    },
+    {
+      "prompt": "What is my HRV trend over the last four weeks?",
+      "expected": "trainer"
+    },
+    {
+      "prompt": "Weekly review of my workouts and resting heart rate.",
+      "expected": "trainer"
+    },
+    {
+      "prompt": "Should I train hard today?",
+      "expected": "trainer"
+    },
+    {
+      "prompt": "What does my genome report say about rs1801133?",
+      "expected": "genetics"
+    },
+    {
+      "prompt": "Which variants did I release in my DNA report?",
+      "expected": "genetics"
+    },
+    {
+      "prompt": "Summarise everything in my record.",
+      "expected": "gp"
+    },
+    {
+      "prompt": "What does this research tool do?",
+      "expected": "gp"
+    },
+    {
+      "prompt": "Which conditions are recorded for subject 9661a432-4630-2cd9-142c-386845fae837?",
+      "expected": "gp"
+    },
+    {
+      "prompt": "How did my blood pressure change last year?",
+      "expected": "gp"
+    }
+  ]
+}

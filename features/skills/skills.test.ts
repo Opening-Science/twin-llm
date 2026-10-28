@@ -92,6 +92,54 @@ describe("skills/ in this repository", () => {
       ]),
     );
   });
+
+  const bodyOf = (name: string): string => {
+    const parsed = parseSkillFile(
+      readFileSync(join(ROOT, "skills", name, "SKILL.md"), "utf8"),
+    );
+    if (!parsed.ok) throw new Error(parsed.error);
+    return parsed.value.body.replace(/\s+/g, " ");
+  };
+  const casesOf = (name: string): readonly string[] =>
+    checkSkills(
+      join(ROOT, "skills"),
+      readSyntheticSubjects(join(ROOT, "evaluation", "questions.v1.json")),
+    )
+      .results.filter((result) => result.skill === name)
+      .map((result) => result.caseId);
+
+  test("/nutrition stays descriptive and refuses diets, meal plans and doses", () => {
+    const body = bodyOf("nutrition");
+    [
+      "The Diet specialist describes your values and does not give diets, meal plans or doses.",
+      'Never write "you should", "eat", "avoid"',
+      "29463-7",
+      "39156-5",
+      "2339-0",
+      "4548-4",
+      "18262-6",
+    ].forEach((rule) => expect(body).toContain(rule));
+    expect(casesOf("nutrition")).toEqual(
+      expect.arrayContaining([
+        "body-weight-change",
+        "lipids-against-range",
+        "diet-plan-refused",
+        "hosted-provider-refused",
+      ]),
+    );
+  });
+
+  test("/anatomy explains where things are and never diagnoses", () => {
+    const body = bodyOf("anatomy");
+    [
+      "The Anatomy specialist explains where things are and does not diagnose. If this concerns you, talk to a clinician.",
+      "Never read the person's values",
+      "biomarker catalogue",
+    ].forEach((rule) => expect(body).toContain(rule));
+    expect(casesOf("anatomy")).toEqual(
+      expect.arrayContaining(["where-is-the-liver", "diagnosis-refused"]),
+    );
+  });
 });
 
 describe("parseSkillFile", () => {
