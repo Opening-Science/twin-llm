@@ -37,6 +37,7 @@ const fullTextRow = (overrides?: Partial<GuidelineJoinedRow>): GuidelineJoinedRo
   url: "https://example.org/ean-als-2024",
   licence: "cc-by-nc-nd-4.0",
   ingestMode: "full_text",
+  source: "guideline",
   ...overrides,
 });
 
@@ -80,31 +81,49 @@ describe("toGuidelineHit licence strip", () => {
   });
 });
 
+const recordingDb = () => {
+  const statements: Array<{ sql: string; values: unknown[] }> = [];
+  const tx = {
+    $executeRaw: async (query: { sql: string; values: unknown[] }) => {
+      statements.push({ sql: query.sql, values: query.values });
+      return 0;
+    },
+    $queryRaw: async (query: { sql: string; values: unknown[] }) => {
+      statements.push({ sql: query.sql, values: query.values });
+      return [];
+    },
+  };
+  const db = {
+    $transaction: async (run: (client: typeof tx) => Promise<unknown>) => run(tx),
+  } as unknown as PrismaClient;
+  return { db, statements };
+};
+
 describe("queryNearestChunks source filter", () => {
   test("enables iterative scan in the same transaction, then filters on source", async () => {
-    const statements: Array<{ sql: string; values: unknown[] }> = [];
-    const tx = {
-      $executeRaw: async (query: { sql: string; values: unknown[] }) => {
-        statements.push({ sql: query.sql, values: query.values });
-        return 0;
-      },
-      $queryRaw: async (query: { sql: string; values: unknown[] }) => {
-        statements.push({ sql: query.sql, values: query.values });
-        return [];
-      },
-    };
-    const db = {
-      $transaction: async (run: (client: typeof tx) => Promise<unknown>) => run(tx),
-    } as unknown as PrismaClient;
+    const { db, statements } = recordingDb();
     await queryNearestChunks(db, vector, 4, "guideline");
     expect(statements).toHaveLength(2);
     expect(statements[0]).toEqual({
       sql: "SET LOCAL hnsw.iterative_scan = relaxed_order",
       values: [],
     });
-    expect(statements[1]?.sql).toContain("WHERE d.source = ?");
+    expect(statements[1]?.sql).toContain("WHERE d.source IN (?)");
     expect(statements[1]?.sql).toContain("ORDER BY distance");
     expect(statements[1]?.values).toEqual(["guideline", 4]);
+  });
+
+  test("several sources go into one IN list", async () => {
+    const { db, statements } = recordingDb();
+    await queryNearestChunks(db, vector, 5, ["opentwin-knowledge", "literature:diet"]);
+    expect(statements[1]?.sql).toContain("WHERE d.source IN (?,?)");
+    expect(statements[1]?.values).toEqual(["opentwin-knowledge", "literature:diet", 5]);
+  });
+
+  test("no sources reads nothing and opens no transaction", async () => {
+    const { db, statements } = recordingDb();
+    expect(await queryNearestChunks(db, vector, 5, [])).toEqual([]);
+    expect(statements).toEqual([]);
   });
 });
 

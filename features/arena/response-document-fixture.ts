@@ -23,7 +23,7 @@ export const makeResponseDocument = (
       evidence_keys: [],
       hallucinated_keys: [],
       tool_calls: [],
-      sources: { gbd: [], guidelines: [], knowledge: [] },
+      sources: { gbd: [], guidelines: [], knowledge: [], literature: [] },
       gbd_rows: [],
     },
     uncertainty: { model_statement: null },
@@ -43,6 +43,21 @@ export const syntheticKnowledge = {
   file: "knowledge/opentwin/metric-glossary.md",
   sectionHeading: "Heart rate variability (HRV)",
   licence: "cc-by-4.0",
+} as const;
+
+/** A made-up article; the PMC id is not a real one. */
+export const syntheticLiterature = {
+  tool: "knowledge.knowledge_search",
+  id: "lit-sleep-PMC0000001.1",
+  title: "Synthetic sleep article",
+  journal: "J Synth Sleep",
+  year: 2024,
+  pmcid: "PMC0000001",
+  url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC0000001/",
+  doi: "",
+  licence: "cc-by-nc-nd",
+  licenceLabel: "CC BY-NC-ND",
+  sectionHeading: "Results",
 } as const;
 
 export const syntheticGuideline = {

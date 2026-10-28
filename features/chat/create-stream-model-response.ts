@@ -171,6 +171,7 @@ export const createStreamModelResponse =
           sources: skill?.sources,
           loadViews: deps.store.loadViews,
           genome: deps.genomeTools(scope),
+          agent: context.agent?.id ?? null,
         }),
         context.disabledSources ?? [],
       ).tools,

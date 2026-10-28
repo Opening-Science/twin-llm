@@ -100,3 +100,24 @@ describe("wearable snapshots in the chat tools", () => {
     }
   });
 });
+
+describe("an agent's literature in the chat tools (#236)", () => {
+  test("knowledge_search gets the agent's specialty, every one for the GP, none without an agent", () => {
+    const literatureOf = (agent: string | null | undefined): unknown => {
+      const { factories, calls } = spied();
+      createChatTools(SCOPE, { query: ports, factories, agent });
+      return calls.knowledge[0]?.[2];
+    };
+    expect(literatureOf(undefined)).toEqual([]);
+    expect(literatureOf(null)).toEqual([]);
+    expect(literatureOf("sleep")).toEqual(["literature:sleep"]);
+    expect(literatureOf("gp")).toEqual([
+      "literature:gp",
+      "literature:diet",
+      "literature:anatomy",
+      "literature:sleep",
+      "literature:trainer",
+      "literature:genetics",
+    ]);
+  });
+});

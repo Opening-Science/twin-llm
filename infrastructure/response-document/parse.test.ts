@@ -26,7 +26,7 @@ describe("toResponseDocument", () => {
       ...valid,
       data_basis: {
         ...valid.data_basis,
-        sources: { gbd: [], guidelines: [], knowledge: [] },
+        sources: { gbd: [], guidelines: [], knowledge: [], literature: [] },
       },
       schema_version: "twin-llm.response.v1",
       answer_class: "information",
@@ -39,7 +39,7 @@ describe("toResponseDocument", () => {
       ...valid,
       data_basis: {
         ...valid.data_basis,
-        sources: { gbd: [], guidelines: [], knowledge: [] },
+        sources: { gbd: [], guidelines: [], knowledge: [], literature: [] },
       },
       schema_version: "twin-llm.response.v1.1",
       answer_class: "information",

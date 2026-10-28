@@ -49,3 +49,15 @@ export const literatureSource = (specialty: SpecialtyId): string =>
 /** The PMC search term: the specialty's MeSH query, open access only. */
 export const specialtySearchTerm = (specialty: SpecialtyId, query?: string): string =>
   `(${query ?? SPECIALTIES[specialty].query}) AND "open access"[filter]`;
+
+/**
+ * The literature an agent's search reads (#236): its own specialty's source,
+ * every specialty for the General Practitioner, none for anything else (a
+ * plain model, or an agent without a specialty).
+ */
+export const literatureSourcesForAgent = (
+  agentId: string | null | undefined,
+): readonly string[] => {
+  if (agentId === "gp") return SPECIALTY_IDS.map(literatureSource);
+  return agentId != null && isSpecialtyId(agentId) ? [literatureSource(agentId)] : [];
+};

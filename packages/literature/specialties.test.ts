@@ -1,8 +1,11 @@
 import { describe, expect, test } from "bun:test";
 
+import { AGENTS } from "@/infrastructure/agents";
+
 import {
   isSpecialtyId,
   literatureSource,
+  literatureSourcesForAgent,
   SPECIALTY_IDS,
   specialtySearchTerm,
 } from "./specialties";
@@ -36,5 +39,28 @@ describe("specialties", () => {
     expect(specialtySearchTerm("diet", '"fibre"[tiab]')).toBe(
       '("fibre"[tiab]) AND "open access"[filter]',
     );
+  });
+
+  test("literatureSourcesForAgent: own specialty, every one for the GP, none otherwise", () => {
+    expect(literatureSourcesForAgent("diet")).toEqual(["literature:diet"]);
+    expect(literatureSourcesForAgent("genetics")).toEqual(["literature:genetics"]);
+    expect(literatureSourcesForAgent("gp")).toEqual([
+      "literature:gp",
+      "literature:diet",
+      "literature:anatomy",
+      "literature:sleep",
+      "literature:trainer",
+      "literature:genetics",
+    ]);
+    expect(literatureSourcesForAgent("auto")).toEqual([]);
+    expect(literatureSourcesForAgent("cardiology")).toEqual([]);
+    expect(literatureSourcesForAgent(null)).toEqual([]);
+    expect(literatureSourcesForAgent(undefined)).toEqual([]);
+  });
+
+  test("every agent in the roster has a specialty of its own", () => {
+    expect(AGENTS.map(({ id }) => literatureSourcesForAgent(id).length)).toEqual([
+      6, 1, 1, 1, 1, 1,
+    ]);
   });
 });

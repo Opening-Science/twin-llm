@@ -1,8 +1,9 @@
 # Agents
 
 An agent is a named preset over what TwinLLM already has: a model the active provider
-offers and, for a specialist, one of the shipped skills. It adds no tool, source or
-permission. Issues #218 and #219, part of #210.
+offers and, for a specialist, one of the shipped skills. It adds no tool or permission;
+the one thing it widens is what `knowledge_search` reads: the agent's own specialty
+literature ([below](#literature-236)). Issues #218, #219 and #236, part of #210.
 
 ```ts
 type Agent = { id; name; role; skill: string | null; modelPreference: readonly string[] };
@@ -61,6 +62,7 @@ same catalog, then:
   provider, or not offered, the sentence names the agent: "Sleep isn't available here:
   its /sleep skill runs only on local Ollama.";
 - the system prompt gets one line, `Agent: <name>. <role>`, under its first line;
+- `knowledge_search` also reads the agent's specialty literature ([below](#literature-236));
 - the answer row keeps `agent:<id>` as its model id and the agent's name as its model
   name, so the column reads "General Practitioner". Audit rows name the base model,
   which is the one that saw the data.
@@ -104,6 +106,54 @@ expected (all 26 do today). The prompts were written alongside the rules, so the
 says the rules do what they say, not how they do on questions people ask. The scored
 question set (`evaluation/questions.v1.json`) is not changed or tagged.
 
+## Literature (#236)
+
+On an agent's turn `knowledge_search` reads the OpenTwin notes and that agent's
+literature, the open-access PMC articles `bun run literature:ingest` put into the
+guideline tables ([literature.md](literature.md)):
+
+| Agent                                   | Literature sources                    |
+| --------------------------------------- | ------------------------------------- |
+| General Practitioner                    | every `literature:<specialty>` source |
+| Diet, Anatomy, Sleep, Trainer, Genetics | its own one, e.g. `literature:diet`   |
+| Auto                                    | the agent it picked, as above         |
+| a plain model (no agent)                | none; the notes alone, as before      |
+
+The mapping is `literatureSourcesForAgent` (`packages/literature/specialties.ts`); the
+chat route passes the agent's id to `createChatTools`. `knowledge_search` was chosen over
+`guideline_search` because it is the search every agent has: the specialists' skills
+list `knowledge_search` and not `guideline_search`, and adding a tool to a skill would go
+around the skill gate. `guideline_search` is unchanged and still reads the guideline
+corpus alone wherever a turn offers it (the General Practitioner, plain models).
+
+Notes and literature are ranked together: one nearest-neighbour search over both sources
+returns the `k` closest passages, so literature can push notes out of a short list. Rows
+of any other source are dropped.
+
+Each literature hit (`packages/literature/hit.ts`) carries `kind: "literature"`, the
+article title, journal, year, PMC id, URL, DOI, the licence and its label ("CC BY-NC-ND"),
+the section, the passage as stored (the title the ingest puts in front of a chunk is taken
+off again, nothing else is changed), an `attribution` line to put next to any quote, a
+`quoting` rule and `about`, which says the passage is reference material and not about the
+person. The rule is "quote only word for word, with the attribution line"; for the two
+NoDerivatives licences (CC BY-ND, CC BY-NC-ND) it adds that a quote may not be shortened,
+reworded or translated. A row whose PMC id or licence cannot be read is not shown. The tool
+text names the literature only on an agent's turn, so the prompt and the tool snapshots of
+other turns are unchanged.
+
+Literature is never person-level evidence. The call is audited as
+`knowledge.knowledge_search`, a reference tool, so it cannot make an answer
+`sufficient_data` or `analytics`. Its citations (no passage) go to the response
+document's `sources.literature`, which keeps a literature-only answer from being withheld
+and gives it the reason `literature_only` ("Only published articles support this
+answer."), and the panel lists each article once under "Literature" as title · PMC id ·
+licence, with "Open-access articles from PubMed Central (NLM), each under its own licence.
+Reference material, not a statement about this person." See
+[response-schema.md](response-schema.md).
+
+A source toggle that turns `knowledge_search` off turns the literature off with it; there is
+no separate toggle yet.
+
 ## Model names
 
 Our own fine-tunes are listed by a readable name (`infrastructure/model-names.ts`):
@@ -118,4 +168,5 @@ Training tracks per agent come next: each agent gets its own slice of the traini
 generated from the questions its skill answers (the router's topics give a first cut of
 which questions those are), and its own fine-tune, which then becomes the first entry of
 that agent's `modelPreference`. A later router may use a model call, measured against
-this fixture before it replaces the rules. Specialty literature for each agent is #220.
+this fixture before it replaces the rules. Specialty literature for each agent is #220
+(fetch and ingest) and #236 (search, above).

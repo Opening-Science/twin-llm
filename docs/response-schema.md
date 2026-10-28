@@ -67,6 +67,8 @@ read as `information` / `unknown`.
 v1 without a version bump, with parse defaults `[]` and `true`.
 `sources.knowledge` was added in v1.1 the same way, with default `[]`,
 together with the uncertainty reason `knowledge_only`.
+`sources.literature` (#236) was added the same way, with default `[]`,
+together with the reason `literature_only`.
 `skill` (#42) names the skill a turn ran under, such as `sleep`. It is set by
 the host from the request, never from model text, and is absent on ordinary
 turns and on older documents. The skill-run audit row (`skill.<name>`) stays on
@@ -92,6 +94,7 @@ never emits `kind=contract`. `unrenderable` is the interpreter stub only
 | GBD normalised rows              | `data_basis.gbd_rows`                        |
 | Guideline catalogue citations    | `data_basis.sources.guidelines` (default []) |
 | OpenTwin knowledge citations     | `data_basis.sources.knowledge` (default [])  |
+| Specialty literature citations   | `data_basis.sources.literature` (default []) |
 | Uncertainty                      | `uncertainty.model_statement`                |
 | Answer                           | `interpretation.text` when `kind=narration`  |
 | Reply opens with `REFUSE`        | `answer_class: declined_decision_support`    |
@@ -115,10 +118,15 @@ tool that reads data about a person. Reference tools never count: `guidelines.gu
 `knowledge.knowledge_search`. Hallucinated keys never flip sufficiency either. `sources.guidelines`
 holds catalogue and section metadata only (no `passage`). `sources.knowledge` holds
 `{ tool, id, title, file, sectionHeading, licence }` per hit (no passage); the panel lists it
-under "OpenTwin knowledge" as title · section · file.
+under "OpenTwin knowledge" as title · section · file. `sources.literature` holds
+`{ tool, id, title, journal, year, pmcid, url, doi, licence, licenceLabel, sectionHeading }`
+per article passage an agent's `knowledge_search` returned (no passage); the panel lists
+each article once under "Literature" as title · PMC id · licence. Literature comes
+through `knowledge.knowledge_search`, a reference tool, so it never counts as
+person-level evidence ([agents.md](agents.md#literature-236)).
 
 `abstained` is true only when there is no personal evidence **and** no
-reference material: no guideline citations, no OpenTwin knowledge citations,
+reference material: no guideline citations, no OpenTwin knowledge citations, no literature citations,
 no GBD rows (before B4, a population-only answer was withheld) and no
 `twin.body` view among the turn's tool outputs (`twinBodyShown`). The body on
 its focus is reference anatomy shown to the person, so a `twin.body` view with
@@ -171,14 +179,15 @@ collectors and `DATA_MODE`. Nothing is read from the model's prose.
 | `guideline_only`        | not sufficient and `sources.guidelines` is non-empty |
 | `population_only`       | not sufficient and `gbd_rows` is non-empty           |
 | `knowledge_only`        | not sufficient and `sources.knowledge` is non-empty  |
+| `literature_only`       | not sufficient and `sources.literature` is non-empty |
 | `hallucinated_keys`     | `hallucinated_keys` is non-empty                     |
 | `tool_returned_no_rows` | any `tool_calls` row has `row_count` 0               |
 | `no_model_statement`    | the Uncertainty section is missing or blank          |
 | `declined`              | the reply was declined                               |
 
 `uncertainty.level`: `high` if abstained, declined or any hallucinated key;
-else `moderate` if `guideline_only`, `population_only`, `knowledge_only` or
-`tool_returned_no_rows`; else `low`. `unknown` only appears on a stored v1
+else `moderate` if `guideline_only`, `population_only`, `knowledge_only`,
+`literature_only` or `tool_returned_no_rows`; else `low`. `unknown` only appears on a stored v1
 document.
 
 `next_step`: declined → `consult_clinician`; sufficient → `none`; else, in
@@ -252,6 +261,7 @@ never repeated. Codes (`answer_class`, reasons, `next_step`) are never shown.
   - `guideline_only`: `Only published guidelines support this answer.`
   - `population_only`: `Only population figures support this answer.`
   - `knowledge_only`: `Only OpenTwin notes about TwinLLM itself support this answer.`
+  - `literature_only`: `Only published articles support this answer.`
   - `hallucinated_keys`: `Some cited keys were not in the model's context.`
   - `tool_returned_no_rows`: `A data lookup returned no rows.`
   - `no_model_statement`: `The model wrote no uncertainty statement.`
