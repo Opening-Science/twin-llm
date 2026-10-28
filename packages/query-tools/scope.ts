@@ -59,6 +59,36 @@ export const SUBJECT_SCOPE_VIOLATION = {
 
 export type SubjectScopeViolation = typeof SUBJECT_SCOPE_VIOLATION;
 
+export type CohortOutOfScope = Readonly<{
+  code: "SUBJECT_SCOPE_VIOLATION";
+  error: string;
+  /** The cohorts this session can read that hold subjects here. */
+  cohorts: readonly string[];
+}>;
+
+/**
+ * A cohort_id this session cannot read. Same code as a subject outside the
+ * scope, but it says the cohort is the problem and names the ones that are
+ * readable: a model that guessed "synthetic-cohort-001" was told the
+ * *subject* was out of scope and passed that on as the answer.
+ */
+export const cohortOutOfScope = (
+  scope: SessionScope,
+  readable: readonly string[],
+): CohortOutOfScope =>
+  scope.mode === "synthetic"
+    ? {
+        code: "SUBJECT_SCOPE_VIOLATION",
+        error:
+          "cohort_id is not a cohort this session can read; use one listed in cohorts",
+        cohorts: [...readable],
+      }
+    : {
+        code: "SUBJECT_SCOPE_VIOLATION",
+        error: "no cohort can be read in personal mode",
+        cohorts: [],
+      };
+
 export type SessionScope = {
   readonly actor: string;
   readonly sessionId: string;
