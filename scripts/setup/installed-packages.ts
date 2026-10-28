@@ -3,12 +3,15 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { checkPrismaClient } from "./prisma-client";
+
 /**
  * Whether `node_modules` still matches `package.json`. A pull that adds or
  * bumps a dependency (#154 added `ollama-ai-provider-v2`) otherwise breaks
  * `bun run dev` with "Module not found" until someone runs `bun install`.
- * `bun run dev` runs this first and installs when something is stale;
- * `bun run doctor` reports it.
+ * `bun run dev` runs this first and installs when something is stale, then
+ * regenerates the Prisma client when the schema moved on without it;
+ * `bun run doctor` reports both.
  */
 
 export type PackageProblem = Readonly<{
@@ -94,6 +97,18 @@ if (isMain) {
       `Packages changed since the last install: ${describeProblems(problems)}. Running bun install…\n`,
     );
     const install = spawnSync("bun", ["install"], { cwd: root, stdio: "inherit" });
-    process.exit(install.status ?? 1);
+    if (install.status !== 0) process.exit(install.status ?? 1);
+  }
+  // bun install runs prisma generate, so this is usually ok by now.
+  const client = checkPrismaClient(root);
+  if (client !== "ok") {
+    process.stdout.write(
+      `The Prisma client is ${client === "missing" ? "missing" : "older than prisma/schema.prisma"}. Running prisma generate…\n`,
+    );
+    const generate = spawnSync("bunx", ["prisma", "generate"], {
+      cwd: root,
+      stdio: "inherit",
+    });
+    process.exit(generate.status ?? 1);
   }
 }
