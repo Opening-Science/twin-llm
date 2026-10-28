@@ -533,6 +533,237 @@
   {
     "type": "function",
     "function": {
+      "name": "sleep_summary",
+      "description": "Main sleep per night in a window, one row per source and night: duration (min), time in bed (min, Whoop), efficiency (%) and the source's own sleep score, with each source's averages. Oura's main sleep is its long_sleep period; Whoop naps are left out. A field a source does not record is null. Personal mode: this turn's linked wearables, no subject_ref. Synthetic mode: the named subject's series, source all. Refuses SOURCE_NOT_CONNECTED, NO_ROWS and MIXED_UNITS.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "subject_ref": {
+            "description": "Synthetic mode only: the subject_ref whose synthetic series to read. Leave it out in personal mode.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "source": {
+            "type": "string",
+            "enum": ["oura", "whoop", "google", "all"],
+            "description": "oura, whoop or google: that linked source only; all: every linked source, each row naming its own"
+          },
+          "start": {
+            "type": "string",
+            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+          },
+          "end": {
+            "type": "string",
+            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+          }
+        },
+        "required": ["source", "start", "end"],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "hrv_trend",
+      "description": "Daily HRV (RMSSD, ms) in a window, per source: n, least-squares slope per day and per week with the fitted first and last values, and the 7 days ending on end against the 28 days before them (medians, baseline MAD, robust z). Oura: average HRV in the main sleep; Whoop: recovery HRV. A source with fewer than 7 readings has null statistics; WINDOW_TOO_SHORT when none has 7. Personal mode: this turn's linked wearables, no subject_ref. Synthetic mode: the named subject's series, source all. Refuses SOURCE_NOT_CONNECTED, NO_ROWS, MIXED_UNITS and WINDOW_TOO_SHORT. Direction only, no judgement.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "subject_ref": {
+            "description": "Synthetic mode only: the subject_ref whose synthetic series to read. Leave it out in personal mode.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "source": {
+            "type": "string",
+            "enum": ["oura", "whoop", "google", "all"],
+            "description": "oura, whoop or google: that linked source only; all: every linked source, each row naming its own"
+          },
+          "start": {
+            "type": "string",
+            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+          },
+          "end": {
+            "type": "string",
+            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+          }
+        },
+        "required": ["source", "start", "end"],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "resting_hr_trend",
+      "description": "Daily resting heart rate in a window, per source: n, least-squares slope per day and per week with the fitted first and last values, and the 7 days ending on end against the 28 days before them (medians, baseline MAD, robust z). Whoop: recovery resting heart rate; Google Health: daily resting heart rate; the Oura summary holds none. A source with fewer than 7 readings has null statistics; WINDOW_TOO_SHORT when none has 7. Personal mode: this turn's linked wearables, no subject_ref. Synthetic mode: the named subject's series, source all. Refuses SOURCE_NOT_CONNECTED, NO_ROWS, MIXED_UNITS and WINDOW_TOO_SHORT. Direction only, no judgement.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "subject_ref": {
+            "description": "Synthetic mode only: the subject_ref whose synthetic series to read. Leave it out in personal mode.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "source": {
+            "type": "string",
+            "enum": ["oura", "whoop", "google", "all"],
+            "description": "oura, whoop or google: that linked source only; all: every linked source, each row naming its own"
+          },
+          "start": {
+            "type": "string",
+            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+          },
+          "end": {
+            "type": "string",
+            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+          }
+        },
+        "required": ["source", "start", "end"],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "training_load",
+      "description": "Workouts in a window, one row per source, day or week (weeks start Monday, UTC) and sport: sessions, minutes, the highest workout strain (Whoop) and calories (Oura), null where a source does not record one. Per source also the minutes in the 7 days ending on end and in the 28 days before them, and their ratio, labelled only as recent load compared with the previous four weeks (null when those four weeks have no minutes). sport keeps one sport group. Personal mode: this turn's linked wearables, no subject_ref. Synthetic mode: the named subject's series, source all. Refuses SOURCE_NOT_CONNECTED, NO_ROWS and MIXED_UNITS. Numbers only, no advice.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "subject_ref": {
+            "description": "Synthetic mode only: the subject_ref whose synthetic series to read. Leave it out in personal mode.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "source": {
+            "type": "string",
+            "enum": ["oura", "whoop", "google", "all"],
+            "description": "oura, whoop or google: that linked source only; all: every linked source, each row naming its own"
+          },
+          "start": {
+            "type": "string",
+            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+          },
+          "end": {
+            "type": "string",
+            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+          },
+          "sport": {
+            "description": "Keep only workouts of this sport group; left out, every workout",
+            "type": "string",
+            "enum": ["running", "cycling", "walking", "swimming", "strength", "other"]
+          },
+          "aggregation": {
+            "type": "string",
+            "enum": ["day", "week"],
+            "description": "day: one row per day; week: one row per week starting Monday (UTC)"
+          }
+        },
+        "required": ["source", "start", "end", "aggregation"],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "cross_source_compare",
+      "description": "How closely two linked wearables agree on one daily measure (hrv, resting_hr, sleep_duration, sleep_efficiency) in a window, over the days both recorded: n_pairs, each source's mean, the mean difference (b minus a), its standard deviation, the limits of agreement (mean difference plus or minus 1.96 standard deviations) and the Pearson correlation. Under 7 paired days the spread, limits and correlation are null. Personal mode only; units must match and are never converted. Says how far apart the two read, never which is right. Refuses SOURCE_NOT_CONNECTED, NO_ROWS, MIXED_UNITS, UNIT_MISMATCH and WINDOW_TOO_SHORT.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "measure": {
+            "type": "string",
+            "enum": ["hrv", "resting_hr", "sleep_duration", "sleep_efficiency"],
+            "description": "hrv, resting_hr, sleep_duration or sleep_efficiency"
+          },
+          "source_a": {
+            "type": "string",
+            "enum": ["oura", "whoop", "google"],
+            "description": "A linked wearable: oura, whoop or google"
+          },
+          "source_b": {
+            "type": "string",
+            "enum": ["oura", "whoop", "google"],
+            "description": "A linked wearable: oura, whoop or google"
+          },
+          "start": {
+            "type": "string",
+            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+          },
+          "end": {
+            "type": "string",
+            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+          }
+        },
+        "required": ["measure", "source_a", "source_b", "start", "end"],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "values_around_event",
+      "description": "One subject's readings of one LOINC in the days_before days before and the days_after days from the first recorded onset of a condition (event_kind condition) or the first request of a medication (event_kind medication), found by its code: n, mean, median, min and max on each side and after minus before. Says what was recorded before and after the date, never that the event caused a change. Refuses SUBJECT_SCOPE_VIOLATION, NO_ROWS (no dated record of that code, or no reading on either side), MIXED_UNITS and ROW_CAP_EXCEEDED.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "subject_ref": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Opaque subject_ref"
+          },
+          "loinc": {
+            "type": "string",
+            "description": "LOINC code"
+          },
+          "event_kind": {
+            "type": "string",
+            "enum": ["condition", "medication"],
+            "description": "condition: its first recorded onset; medication: its first request"
+          },
+          "event_code": {
+            "type": "string",
+            "description": "The condition's SNOMED CT or ICD-10 code, or the medication's RxNorm code, as recorded"
+          },
+          "days_before": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 365,
+            "description": "Days before the event, 1 to 365"
+          },
+          "days_after": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 365,
+            "description": "Days from the event on, 1 to 365"
+          }
+        },
+        "required": [
+          "subject_ref",
+          "loinc",
+          "event_kind",
+          "event_code",
+          "days_before",
+          "days_after"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
       "name": "show_view",
       "description": "Show a view of one measure in the answer. chart.timeseries draws every reading in window; chart.compare sets window against compare_with (n and mean of each); biomarker.card shows a LOINC's latest reading against its published range, with its trend; table lists the readings (first 50). The server reads the rows itself; the result says how many it read. A LOINC code needs subject (a synthetic subject_ref); a wearable key reads the user's synced data. Never write numbers for a view yourself.",
       "parameters": {

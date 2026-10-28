@@ -1,0 +1,51 @@
+{
+  "question": "Should I train today?",
+  "dataMode": "personal",
+  "wearableContext": true,
+  "script": [
+    {
+      "tool": "guideline_search",
+      "input": {
+        "query": "exercise intensity after a short night"
+      }
+    },
+    {
+      "tool": "hrv_trend",
+      "input": {
+        "source": "all",
+        "start": "2026-08-27",
+        "end": "2026-09-30"
+      }
+    },
+    {
+      "tool": "resting_hr_trend",
+      "input": {
+        "source": "all",
+        "start": "2026-08-27",
+        "end": "2026-09-30"
+      }
+    },
+    {
+      "tool": "sleep_summary",
+      "input": {
+        "source": "all",
+        "start": "2026-09-24",
+        "end": "2026-09-30"
+      }
+    },
+    {
+      "tool": "training_load",
+      "input": {
+        "source": "all",
+        "start": "2026-08-27",
+        "end": "2026-09-30",
+        "aggregation": "week"
+      }
+    }
+  ],
+  "expect": {
+    "calls": ["hrv_trend", "resting_hr_trend", "sleep_summary", "training_load"],
+    "views": [],
+    "refusals": ["tool-not-allowed"]
+  }
+}

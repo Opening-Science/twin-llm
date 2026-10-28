@@ -240,6 +240,130 @@ export const medicationsTimelineInput = z
   .refine(startBeforeEnd, START_BEFORE_END)
   .describe("Recorded medication requests authored in a window, oldest first");
 
+/** Which linked wearable a wearable tool reads; `all` reads each linked one, row by row. */
+export const WEARABLE_SOURCE_CHOICES = ["oura", "whoop", "google", "all"] as const;
+
+/** Sport groups `training_load` can keep; every vendor sport name falls in one. */
+export const SPORT_GROUPS = [
+  "running",
+  "cycling",
+  "walking",
+  "swimming",
+  "strength",
+  "other",
+] as const;
+
+export const TRAINING_LOAD_AGGREGATIONS = ["day", "week"] as const;
+
+const wearableSource = z
+  .enum(WEARABLE_SOURCE_CHOICES)
+  .describe(
+    "oura, whoop or google: that linked source only; all: every linked source, each row naming its own",
+  );
+
+const wearableSubject = subjectRefSchema
+  .optional()
+  .describe(
+    "Synthetic mode only: the subject_ref whose synthetic series to read. Leave it out in personal mode.",
+  );
+
+const wearableWindow = {
+  subject_ref: wearableSubject,
+  source: wearableSource,
+  start: windowStart,
+  end: windowEnd,
+};
+
+export const sleepSummaryInput = z
+  .object(wearableWindow)
+  .strict()
+  .refine(startBeforeEnd, START_BEFORE_END)
+  .describe("Main sleep per night from wearables in a window, per source");
+
+export const hrvTrendInput = z
+  .object(wearableWindow)
+  .strict()
+  .refine(startBeforeEnd, START_BEFORE_END)
+  .describe("Trend of daily HRV from wearables in a window, per source");
+
+export const restingHrTrendInput = z
+  .object(wearableWindow)
+  .strict()
+  .refine(startBeforeEnd, START_BEFORE_END)
+  .describe("Trend of daily resting heart rate from wearables in a window, per source");
+
+export const trainingLoadInput = z
+  .object({
+    ...wearableWindow,
+    sport: z
+      .enum(SPORT_GROUPS)
+      .optional()
+      .describe("Keep only workouts of this sport group; left out, every workout"),
+    aggregation: z
+      .enum(TRAINING_LOAD_AGGREGATIONS)
+      .describe("day: one row per day; week: one row per week starting Monday (UTC)"),
+  })
+  .strict()
+  .refine(startBeforeEnd, START_BEFORE_END)
+  .describe("Workout minutes per day or week from wearables in a window, per source");
+
+/** Measures two wearables can both record, by day. */
+export const COMPARE_MEASURES = [
+  "hrv",
+  "resting_hr",
+  "sleep_duration",
+  "sleep_efficiency",
+] as const;
+
+const singleWearable = z
+  .enum(["oura", "whoop", "google"])
+  .describe("A linked wearable: oura, whoop or google");
+
+export const crossSourceCompareInput = z
+  .object({
+    measure: z
+      .enum(COMPARE_MEASURES)
+      .describe("hrv, resting_hr, sleep_duration or sleep_efficiency"),
+    source_a: singleWearable,
+    source_b: singleWearable,
+    start: windowStart,
+    end: windowEnd,
+  })
+  .strict()
+  .refine(startBeforeEnd, START_BEFORE_END)
+  .refine((input) => input.source_a !== input.source_b, {
+    error: "source_a and source_b must be two different wearables",
+  })
+  .describe("How closely two linked wearables agree on one daily measure in a window");
+
+export const valuesAroundEventInput = z
+  .object({
+    subject_ref: subjectRefSchema,
+    loinc: loincSchema,
+    event_kind: z
+      .enum(["condition", "medication"])
+      .describe("condition: its first recorded onset; medication: its first request"),
+    event_code: clinicalCodeSchema.describe(
+      "The condition's SNOMED CT or ICD-10 code, or the medication's RxNorm code, as recorded",
+    ),
+    days_before: z
+      .number()
+      .int()
+      .min(1)
+      .max(365)
+      .describe("Days before the event, 1 to 365"),
+    days_after: z
+      .number()
+      .int()
+      .min(1)
+      .max(365)
+      .describe("Days from the event on, 1 to 365"),
+  })
+  .strict()
+  .describe(
+    "One LOINC's readings before and after a subject's first recorded condition or medication",
+  );
+
 export const TOOL_DEFINITIONS = [
   {
     name: "list_subjects",
@@ -322,5 +446,41 @@ export const TOOL_DEFINITIONS = [
     description:
       "List one subject's recorded medication requests authored in the window, oldest first: code_system, code (RxNorm), display, authored_at, status and intent as recorded, and dosage_as_recorded, the record's own dosage text verbatim (null when the record has none), with n, n_codes, by_status and n_with_dosage_text. Optional status and code narrow the list. Reads up to 1000 records; refuses more (ROW_CAP_EXCEEDED) and none (NO_ROWS, with the reason). Lists what is recorded; never a dose, a change or advice of its own.",
     input: medicationsTimelineInput,
+  },
+  {
+    name: "sleep_summary",
+    description:
+      "Main sleep per night in a window, one row per source and night: duration (min), time in bed (min, Whoop), efficiency (%) and the source's own sleep score, with each source's averages. Oura's main sleep is its long_sleep period; Whoop naps are left out. A field a source does not record is null. Personal mode: this turn's linked wearables, no subject_ref. Synthetic mode: the named subject's series, source all. Refuses SOURCE_NOT_CONNECTED, NO_ROWS and MIXED_UNITS.",
+    input: sleepSummaryInput,
+  },
+  {
+    name: "hrv_trend",
+    description:
+      "Daily HRV (RMSSD, ms) in a window, per source: n, least-squares slope per day and per week with the fitted first and last values, and the 7 days ending on end against the 28 days before them (medians, baseline MAD, robust z). Oura: average HRV in the main sleep; Whoop: recovery HRV. A source with fewer than 7 readings has null statistics; WINDOW_TOO_SHORT when none has 7. Personal mode: this turn's linked wearables, no subject_ref. Synthetic mode: the named subject's series, source all. Refuses SOURCE_NOT_CONNECTED, NO_ROWS, MIXED_UNITS and WINDOW_TOO_SHORT. Direction only, no judgement.",
+    input: hrvTrendInput,
+  },
+  {
+    name: "resting_hr_trend",
+    description:
+      "Daily resting heart rate in a window, per source: n, least-squares slope per day and per week with the fitted first and last values, and the 7 days ending on end against the 28 days before them (medians, baseline MAD, robust z). Whoop: recovery resting heart rate; Google Health: daily resting heart rate; the Oura summary holds none. A source with fewer than 7 readings has null statistics; WINDOW_TOO_SHORT when none has 7. Personal mode: this turn's linked wearables, no subject_ref. Synthetic mode: the named subject's series, source all. Refuses SOURCE_NOT_CONNECTED, NO_ROWS, MIXED_UNITS and WINDOW_TOO_SHORT. Direction only, no judgement.",
+    input: restingHrTrendInput,
+  },
+  {
+    name: "training_load",
+    description:
+      "Workouts in a window, one row per source, day or week (weeks start Monday, UTC) and sport: sessions, minutes, the highest workout strain (Whoop) and calories (Oura), null where a source does not record one. Per source also the minutes in the 7 days ending on end and in the 28 days before them, and their ratio, labelled only as recent load compared with the previous four weeks (null when those four weeks have no minutes). sport keeps one sport group. Personal mode: this turn's linked wearables, no subject_ref. Synthetic mode: the named subject's series, source all. Refuses SOURCE_NOT_CONNECTED, NO_ROWS and MIXED_UNITS. Numbers only, no advice.",
+    input: trainingLoadInput,
+  },
+  {
+    name: "cross_source_compare",
+    description:
+      "How closely two linked wearables agree on one daily measure (hrv, resting_hr, sleep_duration, sleep_efficiency) in a window, over the days both recorded: n_pairs, each source's mean, the mean difference (b minus a), its standard deviation, the limits of agreement (mean difference plus or minus 1.96 standard deviations) and the Pearson correlation. Under 7 paired days the spread, limits and correlation are null. Personal mode only; units must match and are never converted. Says how far apart the two read, never which is right. Refuses SOURCE_NOT_CONNECTED, NO_ROWS, MIXED_UNITS, UNIT_MISMATCH and WINDOW_TOO_SHORT.",
+    input: crossSourceCompareInput,
+  },
+  {
+    name: "values_around_event",
+    description:
+      "One subject's readings of one LOINC in the days_before days before and the days_after days from the first recorded onset of a condition (event_kind condition) or the first request of a medication (event_kind medication), found by its code: n, mean, median, min and max on each side and after minus before. Says what was recorded before and after the date, never that the event caused a change. Refuses SUBJECT_SCOPE_VIOLATION, NO_ROWS (no dated record of that code, or no reading on either side), MIXED_UNITS and ROW_CAP_EXCEEDED.",
+    input: valuesAroundEventInput,
   },
 ] as const;

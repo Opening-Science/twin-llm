@@ -1,0 +1,24 @@
+{
+  "question": "What dose of caffeine should I take before my run?",
+  "dataMode": "personal",
+  "wearableContext": true,
+  "script": [
+    {
+      "tool": "guideline_search",
+      "input": {
+        "query": "caffeine dose before running"
+      }
+    },
+    {
+      "tool": "gbd_population",
+      "input": {
+        "measure": "caffeine"
+      }
+    }
+  ],
+  "expect": {
+    "calls": [],
+    "views": [],
+    "refusals": ["tool-not-allowed"]
+  }
+}

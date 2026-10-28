@@ -1,0 +1,21 @@
+{
+  "question": "Daily check-in for subject 9661a432-4630-2cd9-142c-386845fae837.",
+  "provider": "exoscale",
+  "script": [
+    {
+      "tool": "training_load",
+      "input": {
+        "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+        "source": "all",
+        "start": "2026-08-28",
+        "end": "2026-10-01",
+        "aggregation": "week"
+      }
+    }
+  ],
+  "expect": {
+    "calls": [],
+    "views": [],
+    "refusals": ["provider-not-allowed-by-skill"]
+  }
+}

@@ -6,9 +6,11 @@
  *   bun run training:batches -- --batches 1100 --archives ../synthea-1m/batches \
  *     --work .synthea/batches --out training-data/out --keep
  *   bun run training:batches -- --batches 1001-1010 --skip-rejected [--max-rejected-share 0.02]
+ *   bun run training:batches -- --batches 1001 --workers 4
  *
  * Per batch: unpack the archive → wearables:generate → warehouse:ingest of the
- * FHIR and the wearables → training:conversations → delete the cohort's
+ * FHIR and the wearables (split across --workers ingest processes, default
+ * cores - 1) → training:conversations → delete the cohort's
  * warehouse rows → remove the unpacked files (unless --keep). Audit rows stay:
  * the audit chain is append-only. A batch whose conversation manifest exists is
  * skipped. Each step runs the existing CLI with `.env.training`; its output
@@ -97,8 +99,10 @@ export const stepCommand = (
   batch: BatchCohort,
   paths: BatchPaths,
   bun: string,
+  workers: number | null = null,
 ): readonly string[] | null => {
   const withEnv = [bun, `--env-file=${TRAINING_ENV_FILE}`, "--preload", PRELOAD];
+  const ingestWorkers = workers === null ? [] : ["--workers", String(workers)];
   switch (step) {
     case "unpack":
       return ["tar", "--zstd", "-xf", paths.archive, "-C", paths.dir];
@@ -111,6 +115,7 @@ export const stepCommand = (
         paths.fhir,
         "--cohort",
         batch.cohortId,
+        ...ingestWorkers,
       ];
     case "ingest wearables":
       return [
@@ -119,6 +124,7 @@ export const stepCommand = (
         paths.wearables,
         "--cohort",
         batch.cohortId,
+        ...ingestWorkers,
       ];
     case "conversations":
       return [
@@ -145,12 +151,12 @@ const runStep = async (
   step: Step,
   batch: BatchCohort,
   paths: BatchPaths,
-  args: Pick<BatchArgs, "skipRejected" | "maxRejectedShare">,
+  args: Pick<BatchArgs, "skipRejected" | "maxRejectedShare" | "workers">,
   bun: string,
   deps: BatchRunDeps,
 ): Promise<StepOutcome> => {
   const log = logPath(paths, batch, step);
-  const command = stepCommand(step, batch, paths, bun);
+  const command = stepCommand(step, batch, paths, bun, args.workers);
   const failed = (result: CommandResult) => ({
     ok: false as const,
     error: `exit ${result.code}; see ${log}`,
