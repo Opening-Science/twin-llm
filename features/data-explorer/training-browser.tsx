@@ -25,7 +25,7 @@ export const trainingHref = (
   const params = new URLSearchParams({ set });
   if (options.family) params.set("family", options.family);
   if (options.page && options.page > 1) params.set("page", String(options.page));
-  return `/data/training?${params}`;
+  return `${COHORT_TRAINING}?${params}`;
 };
 
 export const conversationHref = (set: string, index: number): string =>

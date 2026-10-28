@@ -16,7 +16,7 @@ import {
   yearSeries,
 } from "./cohort-stats";
 import { sexAgeSplit, type SexAgeSplit, type SubjectFactsRow } from "./sex-age-split";
-import { type SubjectSummary } from "./subject-table";
+import { type SubjectPage, type SubjectQuery } from "./subject-table";
 import {
   type SubjectObservation,
   type SubjectSeries,
@@ -60,7 +60,8 @@ export type ExplorerDeps = Readonly<{
   /** Synthetic subjects per allowlisted cohort present in this database. */
   listCohorts: () => Promise<readonly CohortCount[]>;
   readAggregates: (cohortId: string) => Promise<CohortAggregates>;
-  listSubjectSummaries: (cohortId: string) => Promise<readonly SubjectSummary[]>;
+  /** One page of the cohort's subjects, searched, sorted and cut in the database. */
+  readSubjectPage: (cohortId: string, query: SubjectQuery) => Promise<SubjectPage>;
   findSubject: (
     ref: string,
   ) => Promise<Readonly<{ isSynthetic: boolean; cohortId: string }> | null>;
@@ -192,11 +193,13 @@ export const loadOverview = async (
 export const loadSubjects = async (
   deps: ExplorerDeps,
   cohortId: string,
-): Promise<Ok<{ subjects: readonly SubjectSummary[] }> | Blocked> => {
+  query: SubjectQuery,
+): Promise<Ok<{ subjects: SubjectPage }> | Blocked> => {
   const session = await openSession(deps);
   if (isBlocked(session)) return session;
   const audit = auditFor(deps, session.actor, SUBJECTS_AUDIT_TOOL, null, {
     cohort_id: cohortId,
+    ...query,
   });
   if (!displayCohortInScope(cohortId)) {
     // A refusal is audited too, as the query tools' list_subjects does.
@@ -204,8 +207,9 @@ export const loadSubjects = async (
     return { kind: "not-found" };
   }
   try {
-    const subjects = await deps.listSubjectSummaries(cohortId);
-    await audit(subjects, subjects.length);
+    // Only the page shown is read and audited, not the whole cohort.
+    const subjects = await deps.readSubjectPage(cohortId, query);
+    await audit(subjects, subjects.rows.length);
     return { kind: "ok", subjects };
   } catch (error) {
     logFailure("subject list", error);
