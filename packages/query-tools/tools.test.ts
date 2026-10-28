@@ -286,6 +286,24 @@ describe("query tools against constructed patient-2", () => {
           effective_at: EFFECTIVE.toISOString(),
         },
       ],
+      codes_without_rows: [],
+    });
+  });
+
+  test("latest_by_loinc lists a code with no reading, and refuses when none has one", async () => {
+    const { runLatestByLoinc } = await import("./tools");
+    const some = await runLatestByLoinc(synthetic, {
+      subject_ref: SUBJECT,
+      loinc: ["8302-2", "88678-4"],
+    });
+    expect("rows" in some && some.codes_without_rows).toEqual(["88678-4"]);
+    expect(
+      await runLatestByLoinc(synthetic, { subject_ref: SUBJECT, loinc: ["88678-4"] }),
+    ).toEqual({
+      code: "NO_ROWS",
+      error:
+        "none of these LOINC codes has a reading for this subject; check each code is the one meant before saying there is no data",
+      loinc: ["88678-4"],
     });
   });
 
@@ -375,6 +393,7 @@ describe("patient-2 oracles for 72514-3 and 59576-9", () => {
           effective_at: EFFECTIVE.toISOString(),
         },
       ],
+      codes_without_rows: [],
     });
   });
 });

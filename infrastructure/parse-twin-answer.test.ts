@@ -392,3 +392,50 @@ describe("inline labels", () => {
     });
   });
 });
+
+describe("thinking leaked past think: false", () => {
+  const LEAKED = [
+    "Okay, let's see. The user wants the latest heart rate. I should call latest_by_loinc.",
+    "</think>",
+    "",
+    "## Reasoning",
+    "The latest reading is from 2021.",
+    "",
+    "## Answer",
+    "72 /min on 3 March 2021.",
+  ].join("\n");
+
+  test("the answer and reasoning come from after the closing tag", () => {
+    const parsed = parseTwinAnswer(LEAKED, null);
+    expect(parsed.answerText).toBe("72 /min on 3 March 2021.");
+    expect(parsed.reasoningText).toBe("The latest reading is from 2021.");
+  });
+
+  test("with no Reasoning section the thinking stands in for it", () => {
+    const parsed = parseTwinAnswer(
+      "<think>check the window first</think>\n72 /min",
+      null,
+    );
+    expect(parsed.answerText).toBe("72 /min");
+    expect(parsed.reasoningText).toBe("check the window first");
+  });
+});
+
+describe("a section that repeats the prompt's guidance", () => {
+  test("the copied line is dropped; an Answer of only that line is empty", () => {
+    const parsed = parseTwinAnswer(
+      [
+        "## Reasoning",
+        "Step-by-step chain of thought. Be concise but explicit about assumptions.",
+        "",
+        "I read the trend.",
+        "",
+        "## Answer",
+        "The user-facing answer in plain language. Do not invent wearable numbers.",
+      ].join("\n"),
+      null,
+    );
+    expect(parsed.reasoningText).toBe("I read the trend.");
+    expect(parsed.answerText).toBe("");
+  });
+});

@@ -6,6 +6,8 @@ import {
   type WearableSummaries,
 } from "@/infrastructure/offered-keys";
 import type { EvidenceAttribution, OuraSummary } from "@/infrastructure/oura-types";
+import { splitThinking } from "@/infrastructure/think-block";
+import { withoutGuidanceEcho } from "@/infrastructure/twin-section-guidance";
 import { sectionLines } from "@/infrastructure/twin-section-lines";
 
 export type { EvidenceAttribution } from "@/infrastructure/oura-types";
@@ -279,21 +281,26 @@ const normalizeSummaries = (
  * the same keys the system prompt listed, whichever caller passes them.
  */
 export const parseTwinAnswer = (
-  text: string,
+  reply: string,
   summaries: WearableSummaries | OuraSummary | null | undefined,
 ): ParsedTwinAnswer => {
+  // Thinking a model leaked past `think: false` is never the answer; it stands
+  // in for the reasoning only when the reply has no Reasoning section.
+  const { thinking, text } = splitThinking(reply);
   const offered = offeredMetrics(normalizeSummaries(summaries));
   const spans = sectionSpans(text);
-  const reasoningText = sectionText(spans, text, "reasoning");
+  const reasoningText = withoutGuidanceEcho(sectionText(spans, text, "reasoning"));
   const evidenceSection = sectionText(spans, text, "evidence");
-  const answerSection = sectionText(spans, text, "answer");
-  const uncertaintyText = sectionText(spans, text, "uncertainty");
+  const answerSection = withoutGuidanceEcho(sectionText(spans, text, "answer"));
+  const uncertaintyText = withoutGuidanceEcho(sectionText(spans, text, "uncertainty"));
   const citedKeys = parseCitedKeys(evidenceSection);
   const realKeys = citedKeysForDataBasis(citedKeys);
 
   return {
-    reasoningText,
-    answerText: answerSection ?? text,
+    reasoningText: reasoningText ?? thinking,
+    // An Answer heading with nothing of the model's own under it is no answer,
+    // never the whole reply.
+    answerText: answerSection ?? (spans.answer ? "" : text),
     uncertaintyText,
     citedKeys,
     evidenceKeys: realKeys.filter((key) => matchOfferedMetric(key, offered) !== null),

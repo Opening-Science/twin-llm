@@ -1,3 +1,4 @@
+import { splitThinking } from "@/infrastructure/think-block";
 import { type DataChoiceId, type RoleId, ROLES } from "./onboarding-steps";
 
 /**
@@ -112,7 +113,7 @@ const CLAIM_STEMS =
 
 /** Model text to at most three clean questions. Reasoning blocks are ignored. */
 export const parseStarterQuestions = (text: string): readonly string[] => {
-  const visible = text.replace(/<think>[\s\S]*?<\/think>/gi, "");
+  const visible = splitThinking(text).text;
   const lines = visible
     .split(/\r?\n/)
     .map((line) =>

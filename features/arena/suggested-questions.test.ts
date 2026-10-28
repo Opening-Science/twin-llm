@@ -65,27 +65,27 @@ describe("cohortSuggestions", () => {
         {
           label: "How has their heart rate changed across their records?",
           prompt:
-            "For synthetic subject synthetic-subject-1, how has their heart rate changed across their records?",
+            "For synthetic subject synthetic-subject-1, using LOINC 8867-4, how has their heart rate changed across their records?",
         },
         {
           label: "How has their blood pressure changed across their records?",
           prompt:
-            "For synthetic subject synthetic-subject-1, how has their blood pressure changed across their records?",
+            "For synthetic subject synthetic-subject-1, using LOINC 8480-6, 8462-4, how has their blood pressure changed across their records?",
         },
         {
           label: "What was their latest HbA1c?",
           prompt:
-            "For synthetic subject synthetic-subject-1, what was their latest HbA1c?",
+            "For synthetic subject synthetic-subject-1, using LOINC 4548-4, what was their latest HbA1c?",
         },
         {
           label: "What were their latest cholesterol and triglyceride results?",
           prompt:
-            "For synthetic subject synthetic-subject-1, what were their latest cholesterol and triglyceride results?",
+            "For synthetic subject synthetic-subject-1, using LOINC 2093-3, what were their latest cholesterol and triglyceride results?",
         },
         {
           label: "Show a chart of their heart rate across their records.",
           prompt:
-            "For synthetic subject synthetic-subject-1, show a chart of their heart rate across their records.",
+            "For synthetic subject synthetic-subject-1, using LOINC 8867-4, show a chart of their heart rate across their records.",
         },
       ],
     });

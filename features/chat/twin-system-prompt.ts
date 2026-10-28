@@ -1,3 +1,4 @@
+import { SECTION_GUIDANCE } from "@/infrastructure/twin-section-guidance";
 import "server-only";
 
 import type { DataMode } from "@/infrastructure/data-mode-policy";
@@ -280,7 +281,7 @@ export const buildTwinSystemPrompt = (params: {
     "Always structure your reply with these exact markdown headings, in order:",
     "",
     "## Reasoning",
-    "Step-by-step chain of thought. Be concise but explicit about assumptions.",
+    SECTION_GUIDANCE.reasoning,
     "",
     "## Evidence Used",
     "Bullet list of wearable metric keys you relied on. Each line MUST be exactly:",
@@ -292,10 +293,10 @@ export const buildTwinSystemPrompt = (params: {
     "- none",
     "",
     "## Answer",
-    "The user-facing answer in plain language. Do not invent wearable numbers.",
+    SECTION_GUIDANCE.answer,
     "",
     "## Uncertainty",
-    "What is unknown, what would change the conclusion, and research caveats.",
+    SECTION_GUIDANCE.uncertainty,
     "",
     ...viewSection((tool) => params.offeredTools?.has(tool) ?? true),
     ...unitSection((tool) => params.offeredTools?.has(tool) ?? true),

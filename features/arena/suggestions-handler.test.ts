@@ -67,7 +67,7 @@ describe("createSuggestionsHandler", () => {
         {
           label: "How has their heart rate changed across their records?",
           prompt:
-            "For synthetic subject synthetic-subject-1, how has their heart rate changed across their records?",
+            "For synthetic subject synthetic-subject-1, using LOINC 8867-4, how has their heart rate changed across their records?",
         },
       ],
     });
