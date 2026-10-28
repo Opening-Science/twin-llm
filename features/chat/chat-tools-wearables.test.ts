@@ -12,7 +12,8 @@ import { createKnowledgeTools } from "@/packages/knowledge/ai-tools";
 import { createQueryTools } from "@/packages/query-tools/ai-tools";
 
 /**
- * The turn's wearable snapshots reach `show_view` and nothing else. Every
+ * The turn's wearable snapshots reach `show_view` and the query factory (for
+ * its four wearable tools) and nothing else. Every
  * factory is wrapped in a spy that records its arguments; the test then walks
  * those arguments for the sentinel snapshots. No source text is matched.
  */
@@ -83,7 +84,7 @@ const spied = (): { factories: ChatToolFactories; calls: Calls } => {
 };
 
 describe("wearable snapshots in the chat tools", () => {
-  test("only the show_view factory is given them", () => {
+  test("only the show_view and query factories are given them", () => {
     const { factories, calls } = spied();
     const tools = createChatTools(SCOPE, { query: ports, wearables, factories });
     expect(Object.keys(tools)).toContain("gbd_population");
@@ -91,7 +92,9 @@ describe("wearable snapshots in the chat tools", () => {
     expect(calls.showView.length).toBe(1);
     expect((calls.showView[0]?.[0] as { wearables: unknown }).wearables).toBe(wearables);
     expect(reaches(calls.showView[0])).toBe(true);
-    for (const name of ["query", "views", "gbd", "guidelines", "knowledge"] as const) {
+    expect(calls.query.length).toBe(1);
+    expect(calls.query[0]?.[2]).toBe(wearables);
+    for (const name of ["views", "gbd", "guidelines", "knowledge"] as const) {
       expect(calls[name].length).toBe(1);
       expect(calls[name].map((args) => reaches(args))).toEqual([false]);
     }

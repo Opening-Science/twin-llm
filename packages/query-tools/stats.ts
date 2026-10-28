@@ -250,3 +250,43 @@ export const midRankPercentile = (
     percentile: (100 * (nLower + nEqual / 2)) / values.length,
   };
 };
+
+/** `day` moved by `days` (back when negative), as a UTC `YYYY-MM-DD`. */
+export const addDays = (day: string, days: number): string =>
+  new Date(Date.parse(`${day}T00:00:00.000Z`) + days * MS_PER_DAY)
+    .toISOString()
+    .slice(0, 10);
+
+/** The UTC day of an instant, `YYYY-MM-DD`. */
+export const utcDay = (at: Date): string => at.toISOString().slice(0, 10);
+
+export const RECENT_DAYS = 7;
+export const BASELINE_DAYS = 28;
+
+export type DayWindow = Readonly<{ start: string; end: string }>;
+
+/**
+ * The 7 days ending on `endDay` and the 28 days before them, inclusive UTC
+ * days. The wearable trends compare the two; `training_load` sums each.
+ */
+export const recentAndBaseline = (
+  endDay: string,
+): Readonly<{ recent: DayWindow; baseline: DayWindow }> => ({
+  recent: { start: addDays(endDay, 1 - RECENT_DAYS), end: endDay },
+  baseline: {
+    start: addDays(endDay, 1 - RECENT_DAYS - BASELINE_DAYS),
+    end: addDays(endDay, -RECENT_DAYS),
+  },
+});
+
+/** The Monday that starts the UTC week holding `day`. */
+export const weekStart = (day: string): string =>
+  addDays(day, -((new Date(`${day}T00:00:00.000Z`).getUTCDay() + 6) % 7));
+
+/**
+ * Minutes in the last 7 days against a quarter of the minutes in the 28 days
+ * before them, so 1 means the same weekly minutes. `null` when those four
+ * weeks have none: there is nothing to compare with.
+ */
+export const recentLoadRatio = (recent: number, previous: number): number | null =>
+  previous === 0 ? null : (recent * 4) / previous;

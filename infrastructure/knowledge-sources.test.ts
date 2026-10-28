@@ -52,6 +52,7 @@ describe("knowledge source preferences", () => {
       "gbd_population",
       "range_position",
       "trend",
+      "values_around_event",
     ]);
   });
 
@@ -126,7 +127,24 @@ describe("knowledge source preferences", () => {
       "subject_window",
       "summary_stats",
       "trend",
+      "values_around_event",
     ]);
+  });
+
+  test("the wearable tools belong to their own source, in both data modes' toggles", () => {
+    expect([...disabledToolNames(["wearable-analytics"])].sort()).toEqual([
+      "cross_source_compare",
+      "hrv_trend",
+      "resting_hr_trend",
+      "sleep_summary",
+      "training_load",
+    ]);
+    expect(group("wearables").sources.map((source) => source.id)).toEqual([
+      "wearable-analytics",
+    ]);
+    expect(normaliseDisabledSources(["cohort-records"])).not.toContain(
+      "wearable-analytics",
+    );
   });
 
   test("setSourceEnabled toggles one id without duplicates", () => {
