@@ -138,12 +138,14 @@ describe("prepareAtlas part identity", () => {
       ["VH_F_kidney_left", "kidney", "UBERON:0004538", "organs"],
       ["VH_F_kidney_right", "kidney", null, "organs"],
       ["VH_F_L1", "vertebrae", null, "skeleton"],
-      ["VH_F_unlabelled", null, null, "organs"],
+      ["VH_F_unlabelled", "unlabelled", null, "organs"],
       ["VH_F_liver", "liver", "FMA:7197", "organs"],
     ]);
+    // A node whose structure is the "-" placeholder is a group of its own name.
     expect(prepared.groups).toEqual([
       { key: "kidney", label: "Kidney" },
       { key: "vertebrae", label: "Vertebrae" },
+      { key: "unlabelled", label: "Unlabelled" },
       { key: "liver", label: "Liver" },
     ]);
     expect(prepared.partSystems).toEqual(["endocrine", "musculoskeletal", "metabolic"]);
@@ -152,12 +154,12 @@ describe("prepareAtlas part identity", () => {
     expect(prepared.views).toEqual([
       { layer: "organs", system: "endocrine", group: "kidney" },
       { layer: "skeleton", system: "musculoskeletal", group: "vertebrae" },
-      { layer: "organs", system: "unassigned", group: null },
+      { layer: "organs", system: "unassigned", group: "unlabelled" },
       { layer: "organs", system: "metabolic", group: "liver" },
     ]);
   });
 
-  test("BodyParts3D parts have no group or ontology id, and list every layer's system", () => {
+  test("BodyParts3D parts have no group or ontology id (bar an unknown system), and list every layer's system", () => {
     const root = new Group();
     root.add(
       node({ system: "musculoskeletal", layer: "muscle" }, "musculoskeletalmuscle"),
@@ -174,9 +176,10 @@ describe("prepareAtlas part identity", () => {
       ["musculoskeletalmuscle", null, null, "musculoskeletal"],
       ["musculoskeletalbone", null, null, "musculoskeletal"],
       ["metabolicorgan", null, null, "metabolic"],
-      ["mystery", null, null, "unassigned"],
+      ["mystery", "mystery", null, "unassigned"],
     ]);
-    expect(prepared.groups).toEqual([]);
+    // No system to light, so the part is a group of its own name.
+    expect(prepared.groups).toEqual([{ key: "mystery", label: "Mystery" }]);
     expect(prepared.partSystems).toEqual(["musculoskeletal", "metabolic"]);
   });
 });

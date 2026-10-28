@@ -65,8 +65,16 @@ describe("loadCohortValues", () => {
 
 describe("loadCohortPeople", () => {
   test("people, an empty cohort, or a failure", async () => {
-    const people = [{ ref: "syn-a", label: "Synthetic person 1" }];
-    expect(await loadCohortPeople(answer(200, { subjects: people }))).toEqual(people);
+    const people = [
+      { ref: "syn-a", label: "Synthetic person 1", sex: "female" },
+      { ref: "syn-b", label: "Synthetic person 2", sex: "other" },
+      { ref: "syn-c", label: "Synthetic person 3" },
+    ];
+    expect(await loadCohortPeople(answer(200, { subjects: people }))).toEqual([
+      { ref: "syn-a", label: "Synthetic person 1", sex: "female" },
+      { ref: "syn-b", label: "Synthetic person 2", sex: null },
+      { ref: "syn-c", label: "Synthetic person 3", sex: null },
+    ]);
     expect(await loadCohortPeople(answer(200, { subjects: [] }))).toEqual([]);
     expect(await loadCohortPeople(answer(500, {}))).toBeNull();
     expect(await loadCohortPeople(offline)).toBeNull();

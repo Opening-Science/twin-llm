@@ -51,7 +51,12 @@ export const COHORT_FAILED = "Could not load synthetic lab values.";
 export const LAB_SOURCE_NONE = "None";
 export const SYNTHETIC_DATA_LABEL = "Synthetic data";
 export const DEMO_LABS_NOTE =
-  "Lab values of a synthetic cohort person, not of this body. No sex or age is stored, so ranges that depend on them get no position.";
+  "Lab values of a synthetic cohort person, not of this body. The body and its atlas follow the person's sex; ranges that depend on sex or age get no position here.";
+
+/** A person in the "Lab values from" select, with their sex when it is stored. */
+export const personOptionLabel = (
+  person: Readonly<{ label: string; sex: "female" | "male" | null }>,
+): string => (person.sex ? `${person.label} · ${person.sex}` : person.label);
 export const NO_COHORT =
   "No synthetic cohort loaded on this machine, so only the catalogue is listed. Run bun run setup:local to load one.";
 export const SELF_NO_LABS = "No lab source yet. Vitals come from connected wearables.";

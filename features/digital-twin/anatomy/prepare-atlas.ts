@@ -1,7 +1,7 @@
 import { Box3, type Material, type Mesh, type Object3D, Vector3 } from "three";
 
 import { classifyAtlasNode } from "@/packages/anatomy/atlas-nodes";
-import { groupKey, normaliseGroup } from "@/packages/anatomy/hra-groups";
+import { groupKey, nameGroupKey, normaliseGroup } from "@/packages/anatomy/hra-groups";
 import { groupLabel, type AtlasGroup, type PartView } from "@/packages/anatomy/highlight";
 import { ATLAS_LAYER_IDS, type AtlasLayerId } from "@/packages/anatomy/layers";
 import { type AtlasEntry } from "@/packages/anatomy/manifest";
@@ -116,7 +116,15 @@ export const prepareAtlas = (root: Object3D, entry: AtlasEntry): PreparedAtlas =
     if (isSystemId(placement.system) && !partSystems.includes(placement.system)) {
       partSystems.push(placement.system);
     }
-    const raw = entry.scheme === "hra" ? groupKey(tagged.userData, tagged.name) : null;
+    // Every part must light something when clicked: its HRA group, else a key
+    // from its node name (HRA's `-` placeholder, or a system this app does not
+    // know). A BodyParts3D part with a known system lights that system.
+    const hraKey = entry.scheme === "hra" ? groupKey(tagged.userData, tagged.name) : null;
+    const raw =
+      hraKey ??
+      (entry.scheme === "hra" || !isSystemId(placement.system)
+        ? nameGroupKey(tagged.name)
+        : null);
     const group = raw === null ? null : normaliseGroup(raw);
     if (raw !== null && group !== null && !groups.some((known) => known.key === group)) {
       groups.push({ key: group, label: groupLabel(raw) });

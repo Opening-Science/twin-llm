@@ -64,7 +64,10 @@ The Demo body has no labs of its own, so in synthetic mode it borrows them from 
 person in the synthetic B1 cohort (`docs/warehouse.md`).
 
 - `GET /api/biomarkers/cohort` lists the cohort as "Synthetic person 1…N", in
-  `subject_ref` order, so the same seed gives the same numbering.
+  `subject_ref` order, so the same seed gives the same numbering. Each person
+  carries `sex` (female or male from `subjects.sex`, else null); the select shows
+  it, and the Demo body and its atlas follow it (`docs/anatomy.md`, "Atlas and
+  body sex").
 - `GET /api/biomarkers/cohort/:subjectRef` returns the newest numeric row for each
   Anchor LOINC: `{ loinc, value, unitUcum, effectiveAt }`. Synthea writes rows with
   the same timestamp, so a tie goes to the lower row id and a reload shows the same

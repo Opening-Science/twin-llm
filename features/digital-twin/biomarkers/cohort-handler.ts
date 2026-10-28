@@ -27,7 +27,17 @@ export const COHORT_VALUES_AUDIT_TOOL = "biomarkers.cohort.values";
 export const COHORT_SIGN_IN = "Sign in to see synthetic lab values.";
 export const COHORT_NOT_FOUND = "No synthetic lab values for this person.";
 
-export type CohortPerson = Readonly<{ ref: string; label: string }>;
+/**
+ * `sex` is the subject's stored FHIR administrative gender when it is female
+ * or male (#135), else null; the Demo body and its atlas follow it.
+ */
+export type CohortPerson = Readonly<{
+  ref: string;
+  label: string;
+  sex: "female" | "male" | null;
+}>;
+
+export type CohortSubject = Readonly<{ ref: string; sex: string | null }>;
 
 export type CohortValue = Readonly<{
   loinc: string;
@@ -46,8 +56,8 @@ export type CohortRow = Readonly<{
 
 export type CohortDeps = Readonly<{
   resolveActorId: () => Promise<string | null>;
-  /** Synthetic subjects of the allowlisted cohorts, sorted by subject_ref. */
-  listSubjectRefs: () => Promise<readonly string[]>;
+  /** Synthetic subjects of the allowlisted cohorts with their sex, sorted by subject_ref. */
+  listSubjects: () => Promise<readonly CohortSubject[]>;
   findSubject: (
     ref: string,
   ) => Promise<Readonly<{ isSynthetic: boolean; cohortId: string }> | null>;
@@ -91,10 +101,11 @@ export const createCohortListHandler = (deps: CohortDeps) => async () => {
     return NextResponse.json({ error: COHORT_SIGN_IN }, { status: 401 });
   }
   try {
-    const refs = await deps.listSubjectRefs();
-    const subjects: readonly CohortPerson[] = refs.map((ref, index) => ({
-      ref,
+    const rows = await deps.listSubjects();
+    const subjects: readonly CohortPerson[] = rows.map((row, index) => ({
+      ref: row.ref,
       label: personLabel(index),
+      sex: row.sex === "female" || row.sex === "male" ? row.sex : null,
     }));
     await deps.appendAudit({
       actor,

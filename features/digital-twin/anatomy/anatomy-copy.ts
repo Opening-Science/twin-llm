@@ -20,7 +20,13 @@ export const ANATOMY_FIT_FAILED = "Reference anatomy could not be fitted to this
 export const ANATOMY_TYPICAL_NOTE =
   "Body shape is measured. Organ positions and limb pose are typical, not measured.";
 export const ANATOMY_DONOR_NOTE =
-  "Donor sex is chosen here. It is not read from the scan.";
+  "The atlas follows the body's sex when it is known. A scan's sex is not, so choose its atlas here.";
+/** The atlas donor and the body differ; the viewer never shows that silently. */
+export const MALE_ATLAS_ON_FEMALE =
+  "Male reference anatomy shown on a female body. Choose HRA · female donor for female anatomy.";
+export const NO_FEMALE_ATLAS =
+  "Male reference anatomy shown: the female atlas is not available here.";
+export const FEMALE_ATLAS_ON_MALE = "Female reference anatomy shown on a male body.";
 export const ANATOMY_CHANGES_NOTE =
   "Merged, simplified and shaded by the Open Science Foundation's open-twin-xr; positioned by TwinLLM.";
 export const ANATOMY_NOT_IN_ATLAS = "Not in this atlas.";

@@ -43,6 +43,10 @@ import {
 import { ATLASES } from "@/packages/anatomy/manifest";
 import { RIGGED_ATTRIBUTION, riggedBodyApiUrl } from "@/packages/anatomy/rigged-bodies";
 import { Button } from "@/infrastructure/ui-kit/button";
+import {
+  CollapsiblePanel,
+  usePanelOpen,
+} from "@/infrastructure/ui-kit/collapsible-panel";
 import { Field } from "@/infrastructure/ui-kit/field";
 import { Legend } from "@/infrastructure/ui-kit/legend";
 import { AnatomyControls } from "./anatomy/anatomy-controls";
@@ -93,11 +97,14 @@ import { EnvironmentWorld } from "./environment/environment-world";
 import { useEnvironment, useLocalHour } from "./environment/use-environment";
 import { clampToRadius, WALK_RADIUS_M } from "./environment/walk";
 import { WALK_SURFACE_ATTR, WalkControls } from "./environment/walk-controls";
+import { type BodySex } from "./anatomy/atlas-sex";
 import {
   DEMO_SUBJECT_ID,
   defaultSubjectId,
+  demoBodySex,
   isDemoSubject,
   subjectOptions,
+  type DemoSexPick,
 } from "./demo-subject";
 import { disposeObject3D } from "./dispose-object";
 import { FloorPool } from "./floor-pool";
@@ -144,6 +151,16 @@ export const BODY_VIEW_LOST =
 export const BODY_VIEW_RELOAD = "Reload 3D view";
 export const DEMO_NEEDS_WEBGL = "Demo body needs WebGL.";
 export const SCAN_NEEDS_WEBGL = "Scan mesh needs WebGL.";
+export const TOOLBAR_PANEL = "View controls";
+export const OVERLAYS_PANEL = "Scan overlays";
+
+/** Stored keys of the viewer's collapsible panels (infrastructure/ui-kit/panel-memory.ts). */
+export const PANEL_IDS = {
+  toolbar: "twin-toolbar",
+  anatomy: "twin-anatomy",
+  details: "twin-details",
+  overlays: "twin-scan-overlays",
+} as const;
 
 const DEMO_SEXES: readonly DemoSex[] = ["male", "female"];
 const NO_MARKERS: ReturnType<typeof visibleMarkers> = [];
@@ -494,7 +511,7 @@ const BodyScan = ({
   readonly onControls: (controls: OrbitControls | null) => void;
   /** The full-screen environment's sky and ground, or null inline. */
   readonly world: WorldLook | null;
-  /** The environment's walking: keys, ground pans and the walk radius. */
+  /** The environment: pans slide along the ground and stay within the walk radius. */
   readonly walk: boolean;
   readonly getControls: () => OrbitControls | null;
   readonly markers: ReturnType<typeof visibleMarkers>;
@@ -602,7 +619,7 @@ const BodyScan = ({
         />
       ) : null}
       <WalkControls
-        enabled={walk}
+        enabled
         camera={camera}
         center={target}
         getControls={getControls}
@@ -737,7 +754,7 @@ export const BodyLoopAvatar = ({
   );
   // Previews know their subjects up front; live, the list (or its failure) decides.
   const [subjectsReady, setSubjectsReady] = useState(preview !== undefined);
-  const [demoSex, setDemoSex] = useState<DemoSex>("male");
+  const [demoSexPick, setDemoSexPick] = useState<DemoSexPick | null>(null);
   const [demoFailedUrl, setDemoFailedUrl] = useState<string | null>(null);
   const subjectId = chosenSubjectId || (subjectsReady ? defaultSubjectId(subjects) : "");
   const isDemo = isDemoSubject(subjectId);
@@ -959,11 +976,29 @@ export const BodyLoopAvatar = ({
     dispatch: anatomy.dispatch,
     initialPersonRef,
   });
-  // G3b: a tap in the environment picks a part, lights it and opens its card.
+  // The Demo body follows the synthetic person's stored sex unless picked by hand.
+  const personSex =
+    biomarkers.people.find((person) => person.ref === biomarkers.personRef)?.sex ?? null;
+  const demoSex = demoBodySex(demoSexPick, biomarkers.personRef, personSex);
+  // The atlas follows the body's sex where it is known; a scan's is not.
+  const bodySex: BodySex | null = isDemo ? demoSex : null;
+  const { dispatch: anatomyDispatch } = anatomy;
+  useEffect(() => {
+    anatomyDispatch({ type: "bodySex", sex: bodySex });
+  }, [anatomyDispatch, bodySex]);
+  // Every viewer panel folds away; inline the choice is remembered per viewer.
+  const [toolbarOpen, toggleToolbar] = usePanelOpen(PANEL_IDS.toolbar);
+  const [anatomyOpen, toggleAnatomy] = usePanelOpen(PANEL_IDS.anatomy);
+  const [detailsOpen, toggleDetails, setDetailsOpen] = usePanelOpen(PANEL_IDS.details);
+  const [overlaysOpen, toggleOverlays] = usePanelOpen(PANEL_IDS.overlays);
+  const inlinePanels = {
+    anatomy: { open: anatomyOpen, toggle: toggleAnatomy },
+    details: { open: detailsOpen, toggle: toggleDetails },
+  };
+  // G3b: a tap on the body picks a part, lights it and opens its card.
   const [picked, setPicked] = useState<Picked | null>(null);
   const [anchorStore] = useState(createAnchorStore);
   const scheme = ATLASES[anatomy.state.atlasId].scheme;
-  const { dispatch: anatomyDispatch } = anatomy;
   const pickLit = anatomy.state.highlightFrom?.id.startsWith(PICK_PREFIX) === true;
   const onPick = useCallback(
     (next: Picked | null) => {
@@ -1121,134 +1156,159 @@ export const BodyLoopAvatar = ({
         ? riggedBodyApiUrl(demoBody.id)
         : demoBodyApiUrl(demoBody.id);
 
+  // One card for a picked part: inline over the canvas, in the environment in
+  // the bottom stack. It describes one view, so entering or leaving closes it.
+  const pickCard = picked ? (
+    <PickCard
+      picked={picked}
+      linked={linked}
+      organ={pickedOrgan}
+      selectedId={biomarkers.selectedId}
+      store={anchorStore}
+      onSelectRow={(id) => {
+        biomarkers.onSelect(id);
+        // The row and its notes are in Details, so it opens.
+        if (!id) return;
+        if (environment.active) environment.openPanel("details");
+        else setDetailsOpen(true);
+      }}
+      onClose={closeCard}
+    />
+  ) : null;
+
+  // The wrapper places the inline card over the canvas; in the environment it
+  // has no box, so the view stays a cell of the environment's grid. The tree
+  // is the same either way, so the canvas never remounts.
   const viewport = (body: Readonly<{ kind: "scan" | "demo"; url: string }>) => (
-    <div
-      className={
-        environment.active
-          ? "twin-environment-view relative overflow-hidden"
-          : "wearables-hero relative h-[min(70vh,640px)] min-h-[360px] overflow-hidden rounded-xl outline-none"
-      }
-      // In the environment the 3D view takes focus (a click, or Tab) and walks on keys.
-      // Inline a click focuses it too, which is what lets the wheel zoom (wheel-zoom.ts).
-      ref={setView}
-      tabIndex={environment.active ? 0 : -1}
-      role={environment.active ? "application" : undefined}
-      aria-label={environment.active ? VIEW_LABEL : undefined}
-      {...(environment.active ? { [WALK_SURFACE_ATTR]: "" } : {})}
-    >
-      <Canvas
-        key={canvasKey}
-        camera={camera}
-        frameloop="demand"
-        dpr={[1, 1.5]}
-        gl={{
-          antialias: true,
-          alpha: true,
-          powerPreference: "low-power",
-          toneMapping: ACESFilmicToneMapping,
-          toneMappingExposure: 1.1,
-        }}
+    <div className={environment.active ? "contents" : "relative"}>
+      <div
+        className={
+          environment.active
+            ? "twin-environment-view relative overflow-hidden"
+            : "wearables-hero relative h-[min(70vh,640px)] min-h-[360px] overflow-hidden rounded-xl"
+        }
+        // The 3D view takes focus (a click, or Tab); focused or hovered, the
+        // keys walk (walk-controls.tsx). Inline, focus is also what lets the
+        // wheel zoom (wheel-zoom.ts).
+        ref={setView}
+        tabIndex={0}
+        role="application"
+        aria-label={VIEW_LABEL}
+        {...{ [WALK_SURFACE_ATTR]: "" }}
       >
-        <ContextLossWatcher onLost={onGlLost} onFresh={onGlFresh} />
-        <ScanEnvironment intensity={light.environment} />
-        {/* Z-up scene: the sky is +Z, the key is front-top (the body faces -Y), the rim behind.
-            The environment changes only colours and intensities, never the light count. */}
-        <hemisphereLight
-          position={[0, 0, 1]}
-          color={0xf2f6ff}
-          groundColor={0x3a3a3a}
-          intensity={light.hemisphere}
-        />
-        <directionalLight
-          position={[0, -2.4, 3.2]}
-          intensity={light.key}
-          color={light.keyColor}
-        />
-        <directionalLight position={[0, 2.5, 1.5]} intensity={light.rim} />
-        <BodyScan
-          url={body.url}
-          kind={body.kind}
-          onError={body.kind === "demo" ? onDemoError : undefined}
-          onReady={body.kind === "demo" ? onDemoReady : undefined}
-          dark={look ? look.world.dark : dark}
+        <Canvas
+          key={canvasKey}
           camera={camera}
-          showLandmarks={body.kind === "scan" && showLandmarks}
-          resetKey={resetKey}
-          autoRotate={autoRotate}
-          onUserRotate={onUserRotate}
-          markers={body.kind === "scan" ? shownMarkers : NO_MARKERS}
-          measures={body.kind === "scan" ? shownMeasures : NO_MEASURES}
-          highlightId={highlightId ?? panel.hoverId}
-          onHover={onHover}
-          onLabels={setLabelScreen}
-          onScene={setScanScene}
-          onControls={onControls}
-          world={look?.world ?? null}
-          walk={environment.active}
-          getControls={getControls}
-        />
-        <BodyMotion
-          binding={motion.binding}
-          clip={motion.clip}
-          tempo={motion.tempo}
-          video={motion.video}
-        />
-        {environment.active ? (
-          <ProjectAnchor point={picked?.point ?? null} store={anchorStore} />
-        ) : null}
-        <AnatomyLayers
-          scanRoot={scanScene}
-          statureM={body.kind === "scan" ? snapshotStature(properties) : null}
-          atlasId={anatomy.state.atlasId}
-          requested={anatomy.state.requested}
-          retry={anatomy.state.retry}
-          // The atlas cannot follow the bones, so it fades out while the body moves.
-          targetDepth={motion.clip ? 0 : anatomy.state.targetDepth}
-          layers={anatomy.state.layers}
-          hiddenSystems={anatomy.state.hiddenSystems}
-          highlight={anatomy.state.highlight}
-          reducedMotion={reducedMotion}
-          onLoad={anatomy.onLoad}
-          onPick={environment.active ? onPick : undefined}
-          liveVitals={{ enabled: liveOn, vitals: liveVitals, onStatus: setLiveStatus }}
-        />
-      </Canvas>
-      {glLost ? (
-        <div
-          role="alert"
-          className="bg-card/90 absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 p-4 text-center text-sm"
+          frameloop="demand"
+          dpr={[1, 1.5]}
+          gl={{
+            antialias: true,
+            alpha: true,
+            powerPreference: "low-power",
+            toneMapping: ACESFilmicToneMapping,
+            toneMappingExposure: 1.1,
+          }}
         >
-          <p>{BODY_VIEW_LOST}</p>
-          <Button
-            onClick={() => {
-              setGlLost(false);
-              setCanvasKey((value) => value + 1);
-            }}
+          <ContextLossWatcher onLost={onGlLost} onFresh={onGlFresh} />
+          <ScanEnvironment intensity={light.environment} />
+          {/* Z-up scene: the sky is +Z, the key is front-top (the body faces -Y), the rim behind.
+            The environment changes only colours and intensities, never the light count. */}
+          <hemisphereLight
+            position={[0, 0, 1]}
+            color={0xf2f6ff}
+            groundColor={0x3a3a3a}
+            intensity={light.hemisphere}
+          />
+          <directionalLight
+            position={[0, -2.4, 3.2]}
+            intensity={light.key}
+            color={light.keyColor}
+          />
+          <directionalLight position={[0, 2.5, 1.5]} intensity={light.rim} />
+          <BodyScan
+            url={body.url}
+            kind={body.kind}
+            onError={body.kind === "demo" ? onDemoError : undefined}
+            onReady={body.kind === "demo" ? onDemoReady : undefined}
+            dark={look ? look.world.dark : dark}
+            camera={camera}
+            showLandmarks={body.kind === "scan" && showLandmarks}
+            resetKey={resetKey}
+            autoRotate={autoRotate}
+            onUserRotate={onUserRotate}
+            markers={body.kind === "scan" ? shownMarkers : NO_MARKERS}
+            measures={body.kind === "scan" ? shownMeasures : NO_MEASURES}
+            highlightId={highlightId ?? panel.hoverId}
+            onHover={onHover}
+            onLabels={setLabelScreen}
+            onScene={setScanScene}
+            onControls={onControls}
+            world={look?.world ?? null}
+            walk={environment.active}
+            getControls={getControls}
+          />
+          <BodyMotion
+            binding={motion.binding}
+            clip={motion.clip}
+            tempo={motion.tempo}
+            video={motion.video}
+          />
+          <ProjectAnchor point={picked?.point ?? null} store={anchorStore} />
+          <AnatomyLayers
+            scanRoot={scanScene}
+            statureM={body.kind === "scan" ? snapshotStature(properties) : null}
+            atlasId={anatomy.state.atlasId}
+            requested={anatomy.state.requested}
+            retry={anatomy.state.retry}
+            // The atlas cannot follow the bones, so it fades out while the body moves.
+            targetDepth={motion.clip ? 0 : anatomy.state.targetDepth}
+            layers={anatomy.state.layers}
+            hiddenSystems={anatomy.state.hiddenSystems}
+            highlight={anatomy.state.highlight}
+            reducedMotion={reducedMotion}
+            onLoad={anatomy.onLoad}
+            onPick={onPick}
+            liveVitals={{ enabled: liveOn, vitals: liveVitals, onStatus: setLiveStatus }}
+          />
+        </Canvas>
+        {glLost ? (
+          <div
+            role="alert"
+            className="bg-card/90 absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 p-4 text-center text-sm"
           >
-            {BODY_VIEW_RELOAD}
-          </Button>
-        </div>
-      ) : null}
-      {wheelHint ? (
-        <p role="status" className="twin-wheel-hint">
-          {WHEEL_ZOOM_HINT}
-        </p>
-      ) : null}
-      {body.kind === "scan" && showLandmarks
-        ? labelScreen.map((row) => (
-            <div
-              key={row.id}
-              className="pointer-events-none absolute z-10 rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-white"
-              style={{
-                left: row.x,
-                top: row.y,
-                transform: "translate(-50%, -120%)",
+            <p>{BODY_VIEW_LOST}</p>
+            <Button
+              onClick={() => {
+                setGlLost(false);
+                setCanvasKey((value) => value + 1);
               }}
             >
-              {row.text}
-            </div>
-          ))
-        : null}
+              {BODY_VIEW_RELOAD}
+            </Button>
+          </div>
+        ) : null}
+        {wheelHint ? (
+          <p role="status" className="twin-wheel-hint">
+            {WHEEL_ZOOM_HINT}
+          </p>
+        ) : null}
+        {body.kind === "scan" && showLandmarks
+          ? labelScreen.map((row) => (
+              <div
+                key={row.id}
+                className="pointer-events-none absolute z-10 rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-white"
+                style={{
+                  left: row.x,
+                  top: row.y,
+                  transform: "translate(-50%, -120%)",
+                }}
+              >
+                {row.text}
+              </div>
+            ))
+          : null}
+      </div>
+      {environment.active ? null : pickCard}
     </div>
   );
 
@@ -1278,42 +1338,49 @@ export const BodyLoopAvatar = ({
     >
       <div className={inEnvironment ? "contents" : "min-w-0"}>
         <div className={inEnvironment ? "twin-environment-bar" : undefined}>
-          <ViewToolbar
-            autoRotate={autoRotate}
-            onReset={() => setResetKey((value) => value + 1)}
-            onToggleRotate={() => {
-              const next = !wantRotate;
-              setWantRotate(next);
-              setAutoRotate(next);
-            }}
-            onZoom={zoom}
-            landmarks={
-              body.kind === "scan"
-                ? {
-                    shown: showLandmarks,
-                    onToggle: () => setShowLandmarks((value) => !value),
-                  }
-                : undefined
-            }
-            motion={motion.control}
-            environment={{ active: inEnvironment, onToggle: environment.toggle }}
-            environmentRef={environment.buttonRef}
-            liveVitals={
-              liveAvailable
-                ? {
-                    on: liveOn,
-                    onToggle: () =>
-                      environment.active
-                        ? setLiveInEnvironment((on) => !on)
-                        : setLiveInline((on) => !on),
-                  }
-                : undefined
-            }
-          />
+          <CollapsiblePanel
+            label={TOOLBAR_PANEL}
+            open={toolbarOpen}
+            onToggle={toggleToolbar}
+            className={inEnvironment ? "twin-toolbar" : "twin-panel twin-toolbar mb-2"}
+          >
+            <ViewToolbar
+              autoRotate={autoRotate}
+              onReset={() => setResetKey((value) => value + 1)}
+              onToggleRotate={() => {
+                const next = !wantRotate;
+                setWantRotate(next);
+                setAutoRotate(next);
+              }}
+              onZoom={zoom}
+              landmarks={
+                body.kind === "scan"
+                  ? {
+                      shown: showLandmarks,
+                      onToggle: () => setShowLandmarks((value) => !value),
+                    }
+                  : undefined
+              }
+              motion={motion.control}
+              environment={{ active: inEnvironment, onToggle: environment.toggle }}
+              environmentRef={environment.buttonRef}
+              liveVitals={
+                liveAvailable
+                  ? {
+                      on: liveOn,
+                      onToggle: () =>
+                        environment.active
+                          ? setLiveInEnvironment((on) => !on)
+                          : setLiveInline((on) => !on),
+                    }
+                  : undefined
+              }
+            />
+          </CollapsiblePanel>
           {inEnvironment ? (
             <EnvironmentPanel
               label={PANEL_TEXT.scene}
-              collapsible
+              floating
               open={environment.state.open.scene}
               onToggle={() => environment.togglePanel("scene")}
             >
@@ -1347,22 +1414,9 @@ export const BodyLoopAvatar = ({
           {environment.active ? null : nightSynthetic ? (
             <NightPlayback state={night} reducedMotion={reducedMotion} />
           ) : (
-            <p className="twin-live-lines">{NIGHT_NEEDS_READINGS}</p>
+            <p className="text-muted-foreground mt-2 text-xs">{NIGHT_NEEDS_READINGS}</p>
           )}
-          {environment.active && picked ? (
-            <PickCard
-              picked={picked}
-              linked={linked}
-              organ={pickedOrgan}
-              selectedId={biomarkers.selectedId}
-              store={anchorStore}
-              onSelectRow={(id) => {
-                biomarkers.onSelect(id);
-                if (id) environment.openPanel("details");
-              }}
-              onClose={closeCard}
-            />
-          ) : null}
+          {environment.active ? pickCard : null}
         </div>
       </div>
       <div
@@ -1370,13 +1424,21 @@ export const BodyLoopAvatar = ({
           inEnvironment ? "twin-environment-rail" : "flex min-w-0 flex-col gap-3"
         }
       >
+        {/* In the environment the panels open by screen size on entry
+            (environment-state.ts); inline each keeps the viewer's own choice. */}
         {(["anatomy", "details"] as const).map((panel) => (
           <EnvironmentPanel
             key={panel}
             label={PANEL_TEXT[panel]}
-            collapsible={inEnvironment}
-            open={environment.state.open[panel]}
-            onToggle={() => environment.togglePanel(panel)}
+            floating={inEnvironment}
+            open={
+              inEnvironment ? environment.state.open[panel] : inlinePanels[panel].open
+            }
+            onToggle={
+              inEnvironment
+                ? () => environment.togglePanel(panel)
+                : inlinePanels[panel].toggle
+            }
           >
             {rail[panel]}
           </EnvironmentPanel>
@@ -1411,7 +1473,7 @@ export const BodyLoopAvatar = ({
             value={demoSex}
             onChange={(event) => {
               const next = DEMO_SEXES.find((sex) => sex === event.target.value);
-              if (next) setDemoSex(next);
+              if (next) setDemoSexPick({ personRef: biomarkers.personRef, sex: next });
             }}
           >
             {DEMO_SEXES.map((sex) => (
@@ -1566,27 +1628,34 @@ export const BodyLoopAvatar = ({
               {(readyMesh && snapshot) ||
               geometry.markers.length + geometry.measures.length > 0 ? (
                 <>
-                  <fieldset className="border-input mt-3 rounded-md border p-2">
-                    <legend className="text-muted-foreground px-1 text-xs">View</legend>
-                    <div className="grid grid-cols-2 gap-1 text-xs sm:grid-cols-4">
-                      {OVERLAY_OPTIONS.map(({ key, label }) => (
-                        <label key={key} className="flex items-center gap-1">
-                          <input
-                            type="checkbox"
-                            checked={overlays[key]}
-                            onChange={() =>
-                              setOverlays((current) => ({
-                                ...current,
-                                [key]: !current[key],
-                              }))
-                            }
-                          />
-                          {label}
-                        </label>
-                      ))}
-                    </div>
-                    <Legend items={overlayLegendItems()} className="mt-2 gap-y-1" />
-                  </fieldset>
+                  <CollapsiblePanel
+                    label={OVERLAYS_PANEL}
+                    open={overlaysOpen}
+                    onToggle={toggleOverlays}
+                    className="twin-panel mt-3"
+                  >
+                    <fieldset className="px-1.5">
+                      <legend className="sr-only">{OVERLAYS_PANEL}</legend>
+                      <div className="grid grid-cols-2 gap-1 text-xs sm:grid-cols-4">
+                        {OVERLAY_OPTIONS.map(({ key, label }) => (
+                          <label key={key} className="flex items-center gap-1">
+                            <input
+                              type="checkbox"
+                              checked={overlays[key]}
+                              onChange={() =>
+                                setOverlays((current) => ({
+                                  ...current,
+                                  [key]: !current[key],
+                                }))
+                              }
+                            />
+                            {label}
+                          </label>
+                        ))}
+                      </div>
+                      <Legend items={overlayLegendItems()} className="mt-2 gap-y-1" />
+                    </fieldset>
+                  </CollapsiblePanel>
                   {showWebgl && readyMesh && snapshot ? (
                     viewer(
                       { kind: "scan", url: `/api/vitronic/avatar/${snapshot.id}` },

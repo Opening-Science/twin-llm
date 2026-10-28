@@ -86,28 +86,38 @@ test("the research-use line from the shell footer stands on its own", () => {
 });
 
 describe("EnvironmentPanel", () => {
-  const render = (collapsible: boolean, open: boolean) =>
+  const render = (floating: boolean, open: boolean) =>
     renderToStaticMarkup(
       createElement(
         EnvironmentPanel,
-        { label: "Anatomy", collapsible, open, onToggle: noop },
+        { label: "Anatomy", floating, open, onToggle: noop },
         createElement("p", null, "inside"),
       ),
     );
+  const toggleText = (html: string) =>
+    /aria-expanded="(true|false)"[^>]*><span>([^<]*)<\/span>/.exec(html)?.slice(1);
 
-  test("inline it is a plain block with its content shown", () => {
-    const html = render(false, false);
-    expect(html).not.toContain("<button");
-    expect(html).not.toContain("hidden");
-    expect(html).toContain("<p>inside</p>");
+  test("inline it is a card that collapses under its title", () => {
+    const closed = render(false, false);
+    const id = /aria-controls="([^"]+)"/.exec(closed)?.[1];
+    expect(closed.startsWith('<div class="collapsible-panel twin-panel">')).toBe(true);
+    expect(toggleText(closed)).toEqual(["false", "Anatomy"]);
+    expect(closed).toContain(`<div id="${id}" hidden="" class="collapsible-panel-body">`);
+    const open = render(false, true);
+    expect(toggleText(open)).toEqual(["true", "Anatomy"]);
+    expect(open).not.toContain('hidden=""');
+    expect(open).toContain("<p>inside</p>");
   });
 
-  test("in the environment a toggle reports and controls the content", () => {
+  test("in the environment the same toggle reports and controls the content", () => {
     const closed = render(true, false);
     const id = /aria-controls="([^"]+)"/.exec(closed)?.[1];
+    expect(
+      closed.startsWith('<div class="collapsible-panel twin-environment-panel">'),
+    ).toBe(true);
     expect(closed).toContain('aria-expanded="false"');
     expect(closed).not.toContain("data-open");
-    expect(closed).toContain(`<div id="${id}" hidden="">`);
+    expect(closed).toContain(`<div id="${id}" hidden="" class="collapsible-panel-body">`);
     const open = render(true, true);
     expect(open).toContain('aria-expanded="true"');
     expect(open).not.toContain('hidden=""');
