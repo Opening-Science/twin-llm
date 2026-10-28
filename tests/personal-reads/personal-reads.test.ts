@@ -41,7 +41,7 @@ import type { AppendInput } from "@/packages/audit/append";
  * four sources and writes one row for Oura, Whoop and Google Health and one
  * in the BodyLoop reader. A wearable sync, from its route or the first sync
  * after an OAuth callback, writes one `personal.read.sync-<provider>` row counting the
- * metrics it wrote (#223).
+ * metrics it stores (#223), before the snapshot is saved (#235).
  *
  * Pages are not API routes, so the pages that read wearable summaries have
  * their own list, `PERSONAL_READ_PAGES`, checked the same way.
@@ -58,6 +58,8 @@ const SUBJECT_ID = "subj-synthetic-1";
 
 type Recorder = Readonly<{
   rows: AppendInput[];
+  /** "row" per audit row and "save" per stored sync snapshot, in order. */
+  events: string[];
   append: (input: AppendInput) => Promise<{
     seq: bigint;
     hash: string;
@@ -66,12 +68,17 @@ type Recorder = Readonly<{
   }>;
 }>;
 
-const recorder = (): Recorder => {
+/** With `failing`, every append throws, as when the audit chain is down. */
+const recorder = (failing = false): Recorder => {
   const rows: AppendInput[] = [];
+  const events: string[] = [];
   return {
     rows,
+    events,
     append: async (input) => {
+      if (failing) throw new Error("audit down");
       rows.push(input);
+      events.push("row");
       return {
         seq: 1n,
         hash: "h",
@@ -126,13 +133,18 @@ const vitronicPorts = (record: Recorder): VitronicLocalReadPorts => ({
   }),
 });
 
-/** What a fake sync wrote: synthetic metric keys, counted by the sync row. */
+/** What a fake sync read: synthetic metric keys, counted by the sync row before it is saved. */
 const SYNC_METRICS = [
   { key: "synthetic.metric.a", value: 1 },
   { key: "synthetic.metric.b", value: 2 },
   { key: "synthetic.metric.c", value: 3 },
 ];
-const syncedSummary = async () => ({ ...SUMMARY, metrics: SYNC_METRICS });
+const syncedSummary = (record: Recorder) => async () => ({
+  synced: { ...SUMMARY, metrics: SYNC_METRICS },
+  save: async () => {
+    record.events.push("save");
+  },
+});
 
 const SYNTHETIC_STATE = "abcd1234";
 const stateJar: OAuthCookieJar = {
@@ -173,7 +185,7 @@ const syncRoute = (provider: WearableSyncProvider): Audited => ({
       provider,
       isConfigured: () => true,
       ...signedIn,
-      sync: syncedSummary,
+      sync: syncedSummary(record),
       auditPersonalRead: auditPersonalRead(record.append),
       logError: () => undefined,
     })(new Request(`http://localhost/api/${provider}/sync`, { method: "POST" })),
@@ -186,7 +198,7 @@ const callbackDeps = (record: Recorder) => ({
   ensureAppUser: async () => ({ id: APP_USER }),
   readCookies: () => stateJar,
   exchangeAndPersistCode: async () => undefined,
-  syncForUser: syncedSummary,
+  syncForUser: syncedSummary(record),
   auditPersonalRead: auditPersonalRead(record.append),
   logError: () => undefined,
   logWarn: () => undefined,
@@ -404,7 +416,7 @@ const PERSONAL_READ_ROUTES: Readonly<Record<string, Entry>> = {
           }),
         }),
         persistOuraTokens: async () => undefined,
-        syncOuraForUser: syncedSummary,
+        syncOuraForUser: syncedSummary(record),
         auditPersonalRead: auditPersonalRead(record.append),
         logError: () => undefined,
         logWarn: () => undefined,
@@ -556,6 +568,19 @@ describe("every personal read route writes its audit rows", () => {
       await entry.call(record);
       expect(record.rows.map((row) => row.rowCount)).toEqual([SYNC_METRICS.length]);
       expect(JSON.stringify(record.rows)).not.toContain("synthetic.metric");
+      expect(record.events).toEqual(["row", "save"]);
+    }
+  });
+
+  test("a sync whose row cannot be written stores no snapshot (#235)", async () => {
+    const syncs = audited.filter(([, entry]) =>
+      entry.tools.some((tool) => tool.startsWith("personal.read.sync-")),
+    );
+    expect(syncs.length).toBe(6);
+    for (const [route, entry] of syncs) {
+      const record = recorder(true);
+      await entry.call(record);
+      expect([route, record.rows, record.events]).toEqual([route, [], []]);
     }
   });
 

@@ -92,6 +92,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- A wearable sync could store its snapshot without an audit row (#235): the `personal.read.sync-<provider>` row was written after the Oura, Whoop or Google Health snapshot was saved, so a failed append left data stored but unlogged. The sync now fetches, writes the row with the count about to be stored, and only then saves the snapshot and `lastSyncAt` (`auditThenSave`). When the row fails nothing is saved and the sync reports failed.
 - A tool call a model types out as text (`<tool_call>…`) is no longer shown as its answer; the pilot fine-tune did this on the last step, which has no tools. `show_view`'s missing-subject refusal now says to call it again with the subject_ref used for the other tools; qwen3:8b had given up on its chart after the old message.
 
 - The bar at the top of a thread sits 10px off the top edge, its title and buttons centred on the same line as the sidebar button; it had been squeezed to 40px by the column it sits in.
