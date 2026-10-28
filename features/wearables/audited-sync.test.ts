@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import type { PersonalRead } from "@/infrastructure/personal-read-audit";
 
-import { syncPurpose, syncThenAudit } from "./audited-sync";
+import { auditThenSave, syncPurpose } from "./audited-sync";
 
 const SYNCED = {
   metrics: [
@@ -12,15 +12,23 @@ const SYNCED = {
   narrative: "Synthetic wearable context.",
 };
 
-describe("syncThenAudit", () => {
-  test("syncs, then writes one sync row counting the metrics, and returns the sync", async () => {
+/** A fake sync that records each step in `order`. */
+const prepared = (order: string[]) => async () => {
+  order.push("fetch");
+  return {
+    synced: SYNCED,
+    save: async () => {
+      order.push("save");
+    },
+  };
+};
+
+describe("auditThenSave", () => {
+  test("fetches, writes one row counting the metrics, then saves and returns the sync", async () => {
     const order: string[] = [];
     const rows: PersonalRead[] = [];
-    const result = await syncThenAudit(
-      async () => {
-        order.push("sync");
-        return SYNCED;
-      },
+    const result = await auditThenSave(
+      prepared(order),
       "whoop",
       "user_synthetic_1",
       async (read) => {
@@ -30,16 +38,16 @@ describe("syncThenAudit", () => {
     );
 
     expect(result).toBe(SYNCED);
-    expect(order).toEqual(["sync", "audit"]);
+    expect(order).toEqual(["fetch", "audit", "save"]);
     expect(rows).toEqual([
       { actor: "user_synthetic_1", purpose: "sync-whoop", rowCount: 2 },
     ]);
     expect(JSON.stringify(rows)).not.toContain(SYNCED.narrative);
   });
 
-  test("a failed sync writes no row", async () => {
+  test("a failed fetch writes no row and saves nothing", async () => {
     const rows: PersonalRead[] = [];
-    const run = syncThenAudit(
+    const run = auditThenSave(
       async () => {
         throw new Error("sync failed");
       },
@@ -54,9 +62,10 @@ describe("syncThenAudit", () => {
     expect(rows).toEqual([]);
   });
 
-  test("a failed row rejects", async () => {
-    const run = syncThenAudit(
-      async () => SYNCED,
+  test("a failed row rejects and saves nothing, so no snapshot is stored unlogged", async () => {
+    const order: string[] = [];
+    const run = auditThenSave(
+      prepared(order),
       "google-health",
       "user_synthetic_1",
       async () => {
@@ -65,6 +74,27 @@ describe("syncThenAudit", () => {
     );
 
     await expect(run).rejects.toThrow("audit down");
+    expect(order).toEqual(["fetch"]);
+  });
+
+  test("a failed save after the row rejects, and the row stays", async () => {
+    const rows: PersonalRead[] = [];
+    const run = auditThenSave(
+      async () => ({
+        synced: SYNCED,
+        save: async () => {
+          throw new Error("database down");
+        },
+      }),
+      "oura",
+      "user_synthetic_1",
+      async (read) => {
+        rows.push(read);
+      },
+    );
+
+    await expect(run).rejects.toThrow("database down");
+    expect(rows.map((row) => row.rowCount)).toEqual([2]);
   });
 });
 

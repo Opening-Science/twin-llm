@@ -18,6 +18,7 @@ import {
   setGoogleHealthCredentials,
 } from "@/infrastructure/open-twin-adapters/google-health";
 
+import type { PreparedSync } from "@/features/wearables/audited-sync";
 import { resolveSyncDateWindow } from "@/features/wearables/sync-window";
 
 import { buildGoogleHealthSummary, type GoogleHealthSummary } from "./summary";
@@ -140,10 +141,16 @@ const persistRefreshedCredentials = async (
   });
 };
 
+/**
+ * Fetches one Google Health sync and returns the summary with the step that
+ * stores it. Refreshed credentials are stored at once; the snapshot and
+ * `lastSyncAt` only when `save` runs, which `auditThenSave` does after the
+ * audit row.
+ */
 export const syncGoogleHealthForUser = async (
   userId: string,
   options?: { readonly startDate?: string; readonly endDate?: string },
-): Promise<GoogleHealthSummary> => {
+): Promise<PreparedSync<GoogleHealthSummary>> => {
   const client = await loadClientForUser(userId);
   if (!client) throw new Error("Connect Google Health before syncing.");
 
@@ -178,22 +185,24 @@ export const syncGoogleHealthForUser = async (
 
   const summary = buildGoogleHealthSummary(bundle, { startDate, endDate });
 
-  await database().googleHealthConnection.update({
-    where: { userId },
-    data: { lastSyncAt: new Date() },
-  });
+  const save = async () => {
+    await database().googleHealthConnection.update({
+      where: { userId },
+      data: { lastSyncAt: new Date() },
+    });
 
-  await database().googleHealthSnapshot.create({
-    data: {
-      userId,
-      startDate,
-      endDate,
-      summary,
-      fhirBundle: bundle as object,
-    },
-  });
+    await database().googleHealthSnapshot.create({
+      data: {
+        userId,
+        startDate,
+        endDate,
+        summary,
+        fhirBundle: bundle as object,
+      },
+    });
+  };
 
-  return summary;
+  return { synced: summary, save };
 };
 
 export const getLatestGoogleHealthSummary = async (
