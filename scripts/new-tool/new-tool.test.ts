@@ -99,7 +99,10 @@ describe("scaffoldTool", () => {
     const after = readAll(root);
     result.edited.forEach((path) => {
       expect(after[path]).not.toBe(before[path]);
-      expect(after[path]).toContain(TOOL);
+      // The index re-exports the run function; every other file names the tool.
+      expect(after[path]).toContain(
+        path === PATHS.toolsIndex ? "runRestingHrDrift" : TOOL,
+      );
     });
 
     const markers = Object.fromEntries(

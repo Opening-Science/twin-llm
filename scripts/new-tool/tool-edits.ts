@@ -24,7 +24,9 @@ import type { ToolNames } from "./tool-names";
 export const PATHS = {
   schemas: "packages/query-tools/schemas.ts",
   stats: "packages/query-tools/stats.ts",
-  tools: "packages/query-tools/tools.ts",
+  // A new tool's run function lives with the warehouse reads; tools.ts is the index.
+  tools: "packages/query-tools/warehouse-tools.ts",
+  toolsIndex: "packages/query-tools/tools.ts",
   aiTools: "packages/query-tools/ai-tools.ts",
   mcpServer: "packages/query-tools/mcp-server.ts",
   viewSchema: "packages/query-tools/view-schema.ts",
@@ -150,6 +152,15 @@ export const fileEdits = (names: ToolNames): readonly FileEdit[] => [
       insertBefore('} from "./schemas";\nimport { windowEndDate', `  ${names.input},\n`),
       insertBefore('} from "./stats";', `  ${names.compute},\n`),
       (_path, source) => source + runBlock(names),
+    ],
+  },
+  {
+    path: PATHS.toolsIndex,
+    steps: [
+      insertBefore(
+        '} from "./warehouse-tools";',
+        `  type ${names.result},\n  ${names.run},\n`,
+      ),
     ],
   },
   {

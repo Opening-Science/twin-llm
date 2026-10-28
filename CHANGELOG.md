@@ -44,6 +44,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- `packages/query-tools/tools.ts` (1,600 lines) split by family: `tool-core.ts` (audit wrapper, scope check, rows), `warehouse-tools.ts`, `clinical-tools.ts` and `wearable-tools.ts`. `tools.ts` is now the public index, so no caller changed; tool snapshots are identical. `bun run new:tool` writes to `warehouse-tools.ts` and the index.
+
 - A thread's bar reads like a breadcrumb: "Chat / <title>", or "Twin / <title>" for a thread started with `/twin` (without the command). "Chat" goes to a new chat and "Twin" to the Digital Twin.
 
 - README cut to about half: back to four pictures under the hero (dark, light, light, dark), a short privacy list, one paragraph on setup and links out for models, providers, tools, anatomy and evaluation.
