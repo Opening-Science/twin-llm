@@ -106,7 +106,7 @@ mappers use. LOINC has no code for RMSSD or a vendor sleep score, and
 open-twin uses vendor-local codes for them, so these two use the local system
 `urn:twinllm:synthetic-wearable`. The LOINC-only tools cannot read them;
 `hrv_trend` and `sleep_summary` can (`docs/query-layer.md`, "Wearable tools"). The
-conversations do not ask about them yet, and the no-code family no longer offers HRV,
+default conversations do not ask about them (the sleep and trainer tracks do, see Tracks), and the no-code family no longer offers HRV,
 the sleep score or training load as measures no tool can read.
 
 Generator v2 adds workouts beside the daily series, which it leaves unchanged: on some
@@ -271,6 +271,104 @@ conversations.
   another unit is reported as stored. Until #120 the answers converted these
   pairs with a fixed factor themselves; only this family changed, but every
   record's tool list and system prompt now carry `convert_unit`.
+
+### Tracks (`--track`)
+
+One training set per agent (#210), so a fine-tune can learn one agent's role.
+`--track <id>` keeps that agent's families, codes and question styles, adds the
+hand-over family, and puts the agent's line (`Agent: <name>. <role>`) right under
+the prompt's first line, where an agent turn in the chat has it. The prompt id
+gets `/agent/<agent id>`, the manifest gets `track` (id, agent, role, families,
+codes, styles), and the default file is `<cohort>.<track>.jsonl`. Without
+`--track` nothing changes: `tracks.test.ts` checks a run against hashes of every
+file taken before tracks existed.
+
+The tracks are in `scripts/training-data/tracks.ts`. The role lines of the
+General Practitioner, Sleep, Trainer and Genetics agents are copied word for
+word from `infrastructure/agents.ts` on the `medical-agents` branch (#218), which
+is not on main yet; Diet and Anatomy are new, in the same style.
+
+| Track      | Agent                | Families                                                                                                                                                                                                      | Codes                                                                      | Styles         |
+| ---------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | -------------- |
+| `general`  | General Practitioner | every default family                                                                                                                                                                                          | every measure                                                              | all four       |
+| `diet`     | Diet                 | latest, trend, baseline, compare, outside record, near miss, unit conversion, declines, other person                                                                                                          | weight, BMI, HbA1c, glucose, total, LDL and HDL cholesterol, triglycerides | all four       |
+| `anatomy`  | Anatomy              | `anatomy_note`, latest, near miss, absent code, decline condition, other person                                                                                                                               | systolic blood pressure, creatinine                                        | all four       |
+| `sleep`    | Sleep                | `sleep_summary`, `sleep_no_rows`, the five data families, outside record, wearable key, decline condition, other person                                                                                       | sleep duration, respiratory rate                                           | formal, casual |
+| `trainer`  | Trainer              | `hrv_trend`, `resting_hr_trend`, `training_load`, `wearable_too_short`, `wearable_no_rows`, the five data families, outside record, near miss, unit conversion, wearable key, decline condition, other person | resting heart rate, heart rate, daily step count                           | casual, terse  |
+| `genetics` | Genetics             | the seven genome families (turns on `--genome`)                                                                                                                                                               | none                                                                       | all four       |
+
+Every track also has `agent_handover`. No two specialists ask about the same
+code. A track keeps only questions in its styles, so the sleep and trainer sets
+are smaller per subject. A subject without a wearable series gets no sleep or
+trainer data questions, and no wearable tool question except the NO_ROWS ones.
+
+**Wearable families** (sleep and trainer tracks, `wearable-families.ts`). They
+call the wearable tools on the subject's synthetic series
+(`scripts/synthetic-wearables`, source `all`), through the same audited tools a
+chat uses, so every number is one `packages/query-tools/wearable-analytics.ts`
+computed. Templates name what the tool returned and nothing else.
+
+| Family               | Share | Tool                                               | Window                     | Outcome             |
+| -------------------- | ----- | -------------------------------------------------- | -------------------------- | ------------------- |
+| `sleep_summary`      | all   | `sleep_summary`                                    | last 7, 14, 28 or 30 days  | `answered`          |
+| `sleep_no_rows`      | 30%   | `sleep_summary`                                    | a month in the year before | `no_rows` (NO_ROWS) |
+| `hrv_trend`          | all   | `hrv_trend`                                        | last 28, 42, 60 or 90 days | `answered`          |
+| `resting_hr_trend`   | all   | `resting_hr_trend`                                 | last 28, 42, 60 or 90 days | `answered`          |
+| `training_load`      | all   | `training_load` (per day or week)                  | last 28, 42 or 56 days     | `answered`          |
+| `wearable_too_short` | 30%   | `hrv_trend` or `resting_hr_trend`                  | last 3 to 5 days           | `WINDOW_TOO_SHORT`  |
+| `wearable_no_rows`   | 30%   | `hrv_trend`, `resting_hr_trend` or `training_load` | a month in the year before | `no_rows` (NO_ROWS) |
+
+A sparse wearer (one subject in twelve) gets the refusal the tool gives,
+usually WINDOW_TOO_SHORT or NO_ROWS, in any of them.
+
+**`anatomy_note`** (anatomy track, `anatomy-families.ts`): which body system and
+region a biomarker belongs to, for one of the 67 markers of the Anchor
+catalogue, or (one in five) a code the catalogue does not list. It calls
+`knowledge_search` and the answer quotes the catalogue line it found, with its
+file and section; nothing found is said plainly. The real tool embeds the
+query and reads the nearest chunks from the database. Training runs without an
+embedding model, so `knowledge-notes.ts` stands in for it: it cuts
+`knowledge/opentwin/biomarker-catalogue.md` with the ingest's own chunker and
+returns the chunks that name the LOINC code in the query, in the real tool's
+shape. A model trained on it learns to cite the passage, not the ranking.
+
+**`agent_handover`** (half of subjects, tracks only): a question that belongs
+to another agent. Templates only, like every other family.
+
+- A specialist asked about another agent's area (the hand-over bank in
+  `handover-family.ts`, `handover.<style>`) calls no tool, says the question is
+  outside what it looks at and names the agent that fits with that agent's
+  role line. Outcome `handed_over`.
+- The General Practitioner asked a Diet, Sleep or Trainer question reads the
+  latest value with `latest_by_loinc`, answers as `latest_value` does, and
+  names the specialist to ask for more. Asked an anatomy question, it answers
+  as `anatomy_note` does and names the Anatomy agent. Asked about the genome
+  report, which a GP turn cannot read, it calls no tool and names the
+  Genetics agent.
+
+On the 1M cohort, `training:batches -- --tracks` writes one set per track in
+the conversations step, after the default set, while the batch's rows are
+still in the database:
+
+```sh
+bun run training:batches -- --batches 1001-1099 --skip-rejected \
+  --tracks general,diet,anatomy,sleep,trainer,genetics
+bun run training:batches -- --batches 1100 --skip-rejected \
+  --tracks general,diet,anatomy,sleep,trainer,genetics
+```
+
+A batch is done when its default manifest and every track's manifest exist. A
+batch finished before `--tracks` is unpacked and ingested again, and only the
+missing track sets are written. The genetics track builds each subject's
+synthetic genome report from the variant catalog in the process, as `--genome`
+does, so it needs no genome rows in the database.
+
+One cohort without batches works the same way:
+
+```sh
+bun run training:conversations -- --cohort synthea-v4-seed4242 --track diet
+bun run training:conversations -- --cohort synthea-v4-seed4242 --track genetics
+```
 
 ### Split
 

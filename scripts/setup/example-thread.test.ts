@@ -3,6 +3,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { EVAL_COHORT } from "./cohort-pins";
+import { EVAL_COHORT_SUBJECTS } from "./eval-cohort-subjects";
 import type { SqlQuery } from "./detect";
 import {
   type ExampleFixture,
@@ -27,7 +28,9 @@ describe("the committed fixture", () => {
     const fixture = await loadFixture();
     expect(fixture.title).toBe("Example (synthetic)");
     expect(fixture.cohortId).toBe(EVAL_COHORT.cohortId);
-    expect(fixture.subjectRef).toBe("29bbf012-3e7f-d6ab-a986-b5d9915f1900");
+    expect(fixture.subjectRef).toBe("ba419d35-0dfe-8af7-347c-eebf02485a56");
+    // One of the pinned 37, so the chart matches what setup:local loads (#214).
+    expect(EVAL_COHORT_SUBJECTS).toContain(fixture.subjectRef);
     expect(fixture.response.modelId).toBe("qwen3:4b");
     expect(fixture.response.attribution).toEqual([]);
     expect(fixture.response.toolParts.map((part) => [part.seq, part.tool])).toEqual([
@@ -41,7 +44,7 @@ describe("the committed fixture", () => {
     };
     expect(chart.kind).toBe("chart.timeseries");
     expect(chart.spec.unit).toBe("/min");
-    expect(chart.spec.points.length).toBe(72);
+    expect(chart.spec.points.length).toBe(25);
   });
 
   test("refuses wearable attribution, cited keys, other subjects and edited outputs", async () => {
@@ -211,7 +214,7 @@ describe("insertExampleThread", () => {
     const db = fakeDatabase({ is_synthetic: false });
     expect(await insertExampleThread(db.sql, "local", fixture, counter())).toEqual({
       kind: "refused",
-      why: "29bbf012-3e7f-d6ab-a986-b5d9915f1900 is in the warehouse but not marked synthetic",
+      why: "ba419d35-0dfe-8af7-347c-eebf02485a56 is in the warehouse but not marked synthetic",
     });
     expect(db.tables.threads).toEqual([]);
   });

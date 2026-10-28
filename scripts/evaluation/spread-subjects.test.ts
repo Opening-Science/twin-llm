@@ -5,6 +5,7 @@ import {
   applyMoves,
   type Inventory,
   type InventoryRow,
+  readsOf,
   runSpreadSubjects,
   type SpreadDeps,
   spreadSubjects,
@@ -294,6 +295,50 @@ describe("spreadSubjects", () => {
       ["Q-S6-25", "ccc"],
       // NO_ROWS: a series, but none in the window.
       ["Q-S6-26", "ddd"],
+    ]);
+  });
+
+  test("a values_around_event item stays where it was put, within the cap", () => {
+    // The event date is not in the inventory, so the subject is picked by hand.
+    const aroundEvent = (id: string, subject: string) => {
+      const base = item(id, { subject });
+      const args = {
+        subject_ref: subject,
+        loinc: "4548-4",
+        event_kind: "medication",
+        event_code: "860975",
+        days_before: 365,
+        days_after: 365,
+      };
+      return {
+        ...base,
+        expect: {
+          ...base.expect,
+          values: [
+            {
+              name: "before_n",
+              tool: "values_around_event",
+              args,
+              path: "before.n",
+              unit: null,
+              tolerance: { exact: true },
+            },
+          ],
+        },
+      };
+    };
+    // fff has no HbA1c in 2024–25, which a windowed read would need.
+    const set = parse(questions([aroundEvent("Q-S1-34", "fff")]));
+    expect((set.items[0]?.expect.values ?? []).flatMap(readsOf)).toEqual([]);
+    expect(spreadSubjects(set, inventory).moves).toEqual([]);
+    const four = parse(
+      questions(["34", "35", "36", "37"].map((n) => aroundEvent(`Q-S1-${n}`, "fff"))),
+    );
+    expect(spreadSubjects(four, inventory).moves.map((move) => move.reason)).toEqual([
+      "over the cap",
+      "over the cap",
+      "over the cap",
+      "over the cap",
     ]);
   });
 

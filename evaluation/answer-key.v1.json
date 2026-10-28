@@ -13,9 +13,9 @@
     "content_sha256": "f4941fab7a56e17f9dd66b6b6e0fbed379dab8c564c6024831c5fd4aa0ba09eb"
   },
   "open_twin_sha": "a9e126c952c91e19e064a962dda7d815a43564e5",
-  "questions_sha256": "2ae762708b81eb35b7fcf9606c8a81b29930765feef7bb2a4131593ffefc1a5e",
+  "questions_sha256": "248deb6cdf76ba3d2cef16217d60fdc88e95847151d27afe821ffc4391cb0649",
   "actor": "eval-answer-key",
-  "generated_on": "2026-10-27",
+  "generated_on": "2026-10-28",
   "entries": {
     "Q-S1-01": [
       {
@@ -2288,7 +2288,7 @@
         "unit": null,
         "n": 0,
         "windows": [],
-        "refusal": null
+        "refusal": "NO_ROWS"
       }
     ],
     "Q-S6-06": [
@@ -3443,6 +3443,885 @@
         "n": 0,
         "windows": [{ "start": "2026-09-21", "end": "2026-09-27" }],
         "refusal": "SOURCE_NOT_CONNECTED"
+      }
+    ],
+    "Q-S1-34": [
+      {
+        "name": "before_n",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "c86c400e-ff88-a1e3-2e23-caa4d8311f47",
+          "loinc": "18262-6",
+          "event_kind": "medication",
+          "event_code": "617311",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "before.n",
+        "value": 2,
+        "unit": null,
+        "n": 4,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "after_n",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "c86c400e-ff88-a1e3-2e23-caa4d8311f47",
+          "loinc": "18262-6",
+          "event_kind": "medication",
+          "event_code": "617311",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "after.n",
+        "value": 2,
+        "unit": null,
+        "n": 4,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "before_mean",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "c86c400e-ff88-a1e3-2e23-caa4d8311f47",
+          "loinc": "18262-6",
+          "event_kind": "medication",
+          "event_code": "617311",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "before.mean",
+        "value": 155.10000000000002,
+        "unit": "mg/dL",
+        "n": 4,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "after_mean",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "c86c400e-ff88-a1e3-2e23-caa4d8311f47",
+          "loinc": "18262-6",
+          "event_kind": "medication",
+          "event_code": "617311",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "after.mean",
+        "value": 114.1075,
+        "unit": "mg/dL",
+        "n": 4,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "delta_mean",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "c86c400e-ff88-a1e3-2e23-caa4d8311f47",
+          "loinc": "18262-6",
+          "event_kind": "medication",
+          "event_code": "617311",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "delta_after_minus_before.mean",
+        "value": -40.99250000000002,
+        "unit": "mg/dL",
+        "n": 4,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S1-35": [
+      {
+        "name": "before_n",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "46ee9d82-b52c-856d-069b-5064ff052225",
+          "loinc": "4548-4",
+          "event_kind": "medication",
+          "event_code": "860975",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "before.n",
+        "value": 1,
+        "unit": null,
+        "n": 2,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "after_n",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "46ee9d82-b52c-856d-069b-5064ff052225",
+          "loinc": "4548-4",
+          "event_kind": "medication",
+          "event_code": "860975",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "after.n",
+        "value": 1,
+        "unit": null,
+        "n": 2,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "before_mean",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "46ee9d82-b52c-856d-069b-5064ff052225",
+          "loinc": "4548-4",
+          "event_kind": "medication",
+          "event_code": "860975",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "before.mean",
+        "value": 7.45,
+        "unit": "%",
+        "n": 2,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "after_mean",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "46ee9d82-b52c-856d-069b-5064ff052225",
+          "loinc": "4548-4",
+          "event_kind": "medication",
+          "event_code": "860975",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "after.mean",
+        "value": 7.58,
+        "unit": "%",
+        "n": 2,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "delta_mean",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "46ee9d82-b52c-856d-069b-5064ff052225",
+          "loinc": "4548-4",
+          "event_kind": "medication",
+          "event_code": "860975",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "delta_after_minus_before.mean",
+        "value": 0.1299999999999999,
+        "unit": "%",
+        "n": 2,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S1-36": [
+      {
+        "name": "before_n",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "922fb35e-148d-9e82-7e65-bfa05e3b3515",
+          "loinc": "39156-5",
+          "event_kind": "condition",
+          "event_code": "162864005",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "before.n",
+        "value": 1,
+        "unit": null,
+        "n": 3,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "after_n",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "922fb35e-148d-9e82-7e65-bfa05e3b3515",
+          "loinc": "39156-5",
+          "event_kind": "condition",
+          "event_code": "162864005",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "after.n",
+        "value": 2,
+        "unit": null,
+        "n": 3,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "before_mean",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "922fb35e-148d-9e82-7e65-bfa05e3b3515",
+          "loinc": "39156-5",
+          "event_kind": "condition",
+          "event_code": "162864005",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "before.mean",
+        "value": 29.78,
+        "unit": "kg/m2",
+        "n": 3,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "after_mean",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "922fb35e-148d-9e82-7e65-bfa05e3b3515",
+          "loinc": "39156-5",
+          "event_kind": "condition",
+          "event_code": "162864005",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "after.mean",
+        "value": 29.45,
+        "unit": "kg/m2",
+        "n": 3,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "delta_mean",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "922fb35e-148d-9e82-7e65-bfa05e3b3515",
+          "loinc": "39156-5",
+          "event_kind": "condition",
+          "event_code": "162864005",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "delta_after_minus_before.mean",
+        "value": -0.33000000000000185,
+        "unit": "kg/m2",
+        "n": 3,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S1-37": [
+      {
+        "name": "before_n",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "c053e996-a4c4-6c02-e2b6-284227156c67",
+          "loinc": "8480-6",
+          "event_kind": "condition",
+          "event_code": "271737000",
+          "days_before": 180,
+          "days_after": 180
+        },
+        "path": "before.n",
+        "value": 5,
+        "unit": null,
+        "n": 10,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "after_n",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "c053e996-a4c4-6c02-e2b6-284227156c67",
+          "loinc": "8480-6",
+          "event_kind": "condition",
+          "event_code": "271737000",
+          "days_before": 180,
+          "days_after": 180
+        },
+        "path": "after.n",
+        "value": 5,
+        "unit": null,
+        "n": 10,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "before_mean",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "c053e996-a4c4-6c02-e2b6-284227156c67",
+          "loinc": "8480-6",
+          "event_kind": "condition",
+          "event_code": "271737000",
+          "days_before": 180,
+          "days_after": 180
+        },
+        "path": "before.mean",
+        "value": 146,
+        "unit": "mm[Hg]",
+        "n": 10,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "after_mean",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "c053e996-a4c4-6c02-e2b6-284227156c67",
+          "loinc": "8480-6",
+          "event_kind": "condition",
+          "event_code": "271737000",
+          "days_before": 180,
+          "days_after": 180
+        },
+        "path": "after.mean",
+        "value": 143.8,
+        "unit": "mm[Hg]",
+        "n": 10,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "delta_mean",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "c053e996-a4c4-6c02-e2b6-284227156c67",
+          "loinc": "8480-6",
+          "event_kind": "condition",
+          "event_code": "271737000",
+          "days_before": 180,
+          "days_after": 180
+        },
+        "path": "delta_after_minus_before.mean",
+        "value": -2.1999999999999886,
+        "unit": "mm[Hg]",
+        "n": 10,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S1-38": [
+      {
+        "name": "before_n",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "76b20010-c318-5754-8c85-983aa538522f",
+          "loinc": "33914-3",
+          "event_kind": "condition",
+          "event_code": "431855005",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "before.n",
+        "value": 0,
+        "unit": null,
+        "n": 2,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "after_n",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "76b20010-c318-5754-8c85-983aa538522f",
+          "loinc": "33914-3",
+          "event_kind": "condition",
+          "event_code": "431855005",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "after.n",
+        "value": 2,
+        "unit": null,
+        "n": 2,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "after_mean",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "76b20010-c318-5754-8c85-983aa538522f",
+          "loinc": "33914-3",
+          "event_kind": "condition",
+          "event_code": "431855005",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "after.mean",
+        "value": 118.62,
+        "unit": "mL/min/{1.73_m2}",
+        "n": 2,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S6-28": [
+      {
+        "name": "refusal",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "f95a6723-14a5-c4b6-78df-fa97f7ab361c",
+          "loinc": "4548-4",
+          "event_kind": "medication",
+          "event_code": "860975",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "code",
+        "value": "NO_ROWS",
+        "unit": null,
+        "n": 0,
+        "windows": [],
+        "refusal": "NO_ROWS"
+      }
+    ],
+    "Q-S6-29": [
+      {
+        "name": "refusal",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "1d55f0c1-61a7-4b6f-d3f2-c851cb83ec60",
+          "loinc": "33914-3",
+          "event_kind": "medication",
+          "event_code": "205923",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "code",
+        "value": "MIXED_UNITS",
+        "unit": null,
+        "n": 0,
+        "windows": [],
+        "refusal": "MIXED_UNITS"
+      }
+    ],
+    "Q-S6-30": [
+      {
+        "name": "refusal",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "eb5910f1-26e6-bc6f-b300-716eae678d6f",
+          "loinc": "4548-4",
+          "event_kind": "condition",
+          "event_code": "714628002",
+          "days_before": 90,
+          "days_after": 90
+        },
+        "path": "code",
+        "value": "NO_ROWS",
+        "unit": null,
+        "n": 0,
+        "windows": [],
+        "refusal": "NO_ROWS"
+      }
+    ],
+    "Q-S1-39": [
+      {
+        "name": "sessions",
+        "tool": "training_load",
+        "args": {
+          "subject_ref": "2c167999-289d-95fa-5c27-7d8b8d35348c",
+          "source": "all",
+          "aggregation": "week",
+          "sport": "cycling",
+          "start": "2026-07-06",
+          "end": "2026-09-27"
+        },
+        "path": "sources.0.sessions",
+        "value": 4,
+        "unit": null,
+        "n": 4,
+        "windows": [{ "start": "2026-07-06", "end": "2026-09-27" }],
+        "refusal": null
+      },
+      {
+        "name": "minutes",
+        "tool": "training_load",
+        "args": {
+          "subject_ref": "2c167999-289d-95fa-5c27-7d8b8d35348c",
+          "source": "all",
+          "aggregation": "week",
+          "sport": "cycling",
+          "start": "2026-07-06",
+          "end": "2026-09-27"
+        },
+        "path": "sources.0.minutes",
+        "value": 276,
+        "unit": "min",
+        "n": 4,
+        "windows": [{ "start": "2026-07-06", "end": "2026-09-27" }],
+        "refusal": null
+      }
+    ],
+    "Q-S1-40": [
+      {
+        "name": "nights",
+        "tool": "sleep_summary",
+        "args": {
+          "subject_ref": "2d68ad16-268a-478c-1f84-d0f1976e1a46",
+          "source": "all",
+          "start": "2026-09-24",
+          "end": "2026-09-30"
+        },
+        "path": "sources.0.nights",
+        "value": 6,
+        "unit": null,
+        "n": 12,
+        "windows": [{ "start": "2026-09-24", "end": "2026-09-30" }],
+        "refusal": null
+      },
+      {
+        "name": "mean_efficiency_pct",
+        "tool": "sleep_summary",
+        "args": {
+          "subject_ref": "2d68ad16-268a-478c-1f84-d0f1976e1a46",
+          "source": "all",
+          "start": "2026-09-24",
+          "end": "2026-09-30"
+        },
+        "path": "sources.0.mean_efficiency_pct",
+        "value": null,
+        "unit": "%",
+        "n": 12,
+        "windows": [{ "start": "2026-09-24", "end": "2026-09-30" }],
+        "refusal": null
+      }
+    ],
+    "Q-S1-41": [
+      {
+        "name": "n",
+        "tool": "resting_hr_trend",
+        "args": {
+          "subject_ref": "35b353dd-402b-571a-d67a-af0a104d0854",
+          "source": "all",
+          "start": "2026-09-02",
+          "end": "2026-10-01"
+        },
+        "path": "sources.0.n",
+        "value": 21,
+        "unit": null,
+        "n": 21,
+        "windows": [{ "start": "2026-09-02", "end": "2026-10-01" }],
+        "refusal": null
+      },
+      {
+        "name": "slope_per_week",
+        "tool": "resting_hr_trend",
+        "args": {
+          "subject_ref": "35b353dd-402b-571a-d67a-af0a104d0854",
+          "source": "all",
+          "start": "2026-09-02",
+          "end": "2026-10-01"
+        },
+        "path": "sources.0.slope_per_week",
+        "value": -0.04324581204704764,
+        "unit": "/min/wk",
+        "n": 21,
+        "windows": [{ "start": "2026-09-02", "end": "2026-10-01" }],
+        "refusal": null
+      },
+      {
+        "name": "recent_median",
+        "tool": "resting_hr_trend",
+        "args": {
+          "subject_ref": "35b353dd-402b-571a-d67a-af0a104d0854",
+          "source": "all",
+          "start": "2026-09-02",
+          "end": "2026-10-01"
+        },
+        "path": "sources.0.recent.median",
+        "value": 70,
+        "unit": "/min",
+        "n": 21,
+        "windows": [{ "start": "2026-09-02", "end": "2026-10-01" }],
+        "refusal": null
+      },
+      {
+        "name": "baseline_median",
+        "tool": "resting_hr_trend",
+        "args": {
+          "subject_ref": "35b353dd-402b-571a-d67a-af0a104d0854",
+          "source": "all",
+          "start": "2026-09-02",
+          "end": "2026-10-01"
+        },
+        "path": "sources.0.baseline.median",
+        "value": 70,
+        "unit": "/min",
+        "n": 21,
+        "windows": [{ "start": "2026-09-02", "end": "2026-10-01" }],
+        "refusal": null
+      }
+    ],
+    "Q-S6-31": [
+      {
+        "name": "refusal",
+        "tool": "resting_hr_trend",
+        "args": {
+          "subject_ref": "5ba0a3f3-32f7-02b1-ec6a-8f568923954c",
+          "source": "all",
+          "start": "2026-09-28",
+          "end": "2026-10-01"
+        },
+        "path": "code",
+        "value": "WINDOW_TOO_SHORT",
+        "unit": null,
+        "n": 0,
+        "windows": [{ "start": "2026-09-28", "end": "2026-10-01" }],
+        "refusal": "WINDOW_TOO_SHORT"
+      }
+    ],
+    "Q-S6-32": [
+      {
+        "name": "refusal",
+        "tool": "sleep_summary",
+        "args": {
+          "subject_ref": "6fbddf55-7096-b883-7cd3-260f27953080",
+          "source": "all",
+          "start": "2026-10-05",
+          "end": "2026-10-20"
+        },
+        "path": "code",
+        "value": "NO_ROWS",
+        "unit": null,
+        "n": 0,
+        "windows": [{ "start": "2026-10-05", "end": "2026-10-20" }],
+        "refusal": "NO_ROWS"
+      }
+    ],
+    "Q-S6-33": [
+      {
+        "name": "refusal",
+        "tool": "training_load",
+        "args": {
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "source": "all",
+          "aggregation": "week",
+          "sport": "swimming",
+          "start": "2026-07-04",
+          "end": "2026-10-01"
+        },
+        "path": "code",
+        "value": "NO_ROWS",
+        "unit": null,
+        "n": 0,
+        "windows": [{ "start": "2026-07-04", "end": "2026-10-01" }],
+        "refusal": "NO_ROWS"
+      }
+    ],
+    "Q-S1-42": [
+      {
+        "name": "n",
+        "tool": "conditions_timeline",
+        "args": {
+          "subject_ref": "d15b23ed-02d5-3e28-efbd-2604425317c5",
+          "start": "1987-01-01T00:00:00Z",
+          "end": "1987-12-31T23:59:59Z",
+          "status": "resolved"
+        },
+        "path": "n",
+        "value": 23,
+        "unit": null,
+        "n": 23,
+        "windows": [{ "start": "1987-01-01T00:00:00Z", "end": "1987-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "n_codes",
+        "tool": "conditions_timeline",
+        "args": {
+          "subject_ref": "d15b23ed-02d5-3e28-efbd-2604425317c5",
+          "start": "1987-01-01T00:00:00Z",
+          "end": "1987-12-31T23:59:59Z",
+          "status": "resolved"
+        },
+        "path": "n_codes",
+        "value": 20,
+        "unit": null,
+        "n": 23,
+        "windows": [{ "start": "1987-01-01T00:00:00Z", "end": "1987-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S1-43": [
+      {
+        "name": "n",
+        "tool": "conditions_timeline",
+        "args": {
+          "subject_ref": "c67556bf-36d9-dd90-9b8a-43dbff31b428",
+          "start": "2015-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z",
+          "code": "66383009"
+        },
+        "path": "n",
+        "value": 6,
+        "unit": null,
+        "n": 6,
+        "windows": [{ "start": "2015-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "n_without_abatement",
+        "tool": "conditions_timeline",
+        "args": {
+          "subject_ref": "c67556bf-36d9-dd90-9b8a-43dbff31b428",
+          "start": "2015-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z",
+          "code": "66383009"
+        },
+        "path": "n_without_abatement",
+        "value": 0,
+        "unit": null,
+        "n": 6,
+        "windows": [{ "start": "2015-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S1-44": [
+      {
+        "name": "n",
+        "tool": "conditions_timeline",
+        "args": {
+          "subject_ref": "bff9d9d5-ee3d-d852-9c67-36d8361a4a4a",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z"
+        },
+        "path": "n",
+        "value": 13,
+        "unit": null,
+        "n": 13,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "n_codes",
+        "tool": "conditions_timeline",
+        "args": {
+          "subject_ref": "bff9d9d5-ee3d-d852-9c67-36d8361a4a4a",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z"
+        },
+        "path": "n_codes",
+        "value": 13,
+        "unit": null,
+        "n": 13,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "n_without_abatement",
+        "tool": "conditions_timeline",
+        "args": {
+          "subject_ref": "bff9d9d5-ee3d-d852-9c67-36d8361a4a4a",
+          "start": "2024-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z"
+        },
+        "path": "n_without_abatement",
+        "value": 13,
+        "unit": null,
+        "n": 13,
+        "windows": [{ "start": "2024-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S1-45": [
+      {
+        "name": "n",
+        "tool": "medications_timeline",
+        "args": {
+          "subject_ref": "d15b23ed-02d5-3e28-efbd-2604425317c5",
+          "start": "1987-01-01T00:00:00Z",
+          "end": "1987-12-31T23:59:59Z",
+          "status": "completed"
+        },
+        "path": "n",
+        "value": 28,
+        "unit": null,
+        "n": 28,
+        "windows": [{ "start": "1987-01-01T00:00:00Z", "end": "1987-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "n_codes",
+        "tool": "medications_timeline",
+        "args": {
+          "subject_ref": "d15b23ed-02d5-3e28-efbd-2604425317c5",
+          "start": "1987-01-01T00:00:00Z",
+          "end": "1987-12-31T23:59:59Z",
+          "status": "completed"
+        },
+        "path": "n_codes",
+        "value": 5,
+        "unit": null,
+        "n": 28,
+        "windows": [{ "start": "1987-01-01T00:00:00Z", "end": "1987-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "n_with_dosage_text",
+        "tool": "medications_timeline",
+        "args": {
+          "subject_ref": "d15b23ed-02d5-3e28-efbd-2604425317c5",
+          "start": "1987-01-01T00:00:00Z",
+          "end": "1987-12-31T23:59:59Z",
+          "status": "completed"
+        },
+        "path": "n_with_dosage_text",
+        "value": 20,
+        "unit": null,
+        "n": 28,
+        "windows": [{ "start": "1987-01-01T00:00:00Z", "end": "1987-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S6-34": [
+      {
+        "name": "refusal",
+        "tool": "medications_timeline",
+        "args": {
+          "subject_ref": "e74367bd-7385-97dc-2c7f-251b4cd9fe29",
+          "start": "1990-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z",
+          "code": "860975"
+        },
+        "path": "code",
+        "value": "NO_ROWS",
+        "unit": null,
+        "n": 0,
+        "windows": [{ "start": "1990-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": "NO_ROWS"
+      }
+    ],
+    "Q-S6-35": [
+      {
+        "name": "refusal",
+        "tool": "conditions_timeline",
+        "args": {
+          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "start": "1990-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z",
+          "code": "44054006"
+        },
+        "path": "code",
+        "value": "NO_ROWS",
+        "unit": null,
+        "n": 0,
+        "windows": [{ "start": "1990-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": "NO_ROWS"
       }
     ]
   }

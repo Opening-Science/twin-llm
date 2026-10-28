@@ -21,7 +21,7 @@ import {
   type FamilyContext,
   sections,
 } from "./family-kit";
-import { CLINICAL_MEASURES, type Measure, MEASURES } from "./measures";
+import { CLINICAL_MEASURES, type Measure, MEASURES, NEAR_MISSES } from "./measures";
 import {
   absentCode,
   nearMiss,
@@ -40,7 +40,17 @@ import {
   genomeVariant,
   genomeVariants,
 } from "./genome-families";
+import { anatomyNote } from "./anatomy-families";
 import { ask } from "./questions";
+import {
+  hrvTrend,
+  restingHrTrend,
+  sleepNoRows,
+  sleepSummary,
+  trainingLoad,
+  wearableNoRows,
+  wearableTooShort,
+} from "./wearable-families";
 import { conversionsFor, unitConversion, unitMismatch } from "./unit-families";
 
 export {
@@ -48,6 +58,7 @@ export {
   type Family,
   FAMILIES,
   GENOME_FAMILIES,
+  TRACK_FAMILIES,
   type FamilyContext,
   type Outcome,
   type Sections,
@@ -96,7 +107,7 @@ const otherPerson = (context: FamilyContext): Draft => ({
   ),
 });
 
-type Build = (own: FamilyContext) => Promise<Draft | null>;
+export type Build = (own: FamilyContext) => Promise<Draft | null>;
 
 /**
  * Share of subjects each family runs on. The five data families run for
@@ -130,41 +141,129 @@ export const FAMILY_SHARES: Readonly<Record<Family, number>> = {
   genome_decline_dose: 0.25,
   genome_other_person: 0.15,
   genome_hosted_provider: 0.15,
+  // Track families (only with --track).
+  agent_handover: 0.5,
+  sleep_summary: 1,
+  sleep_no_rows: 0.3,
+  hrv_trend: 1,
+  resting_hr_trend: 1,
+  training_load: 1,
+  wearable_too_short: 0.3,
+  wearable_no_rows: 0.3,
+  anatomy_note: 1,
+};
+
+/**
+ * What a training track (`tracks.ts`) narrows: the measures its questions ask
+ * about, and the hand-over family's builder. Without a scope every measure is
+ * asked about and there is no hand-over, exactly as before tracks.
+ */
+export type TrackScope = Readonly<{
+  /** The measures a track asks about, or null for every measure. */
+  measures: readonly Measure[] | null;
+  /** Builds the `agent_handover` draft, or null when there is none. */
+  handover: Build | null;
+}>;
+
+const NO_SCOPE: TrackScope = { measures: null, handover: null };
+
+const nonEmpty = <T>(items: readonly T[]): readonly [T, ...T[]] | null => {
+  const [first, ...rest] = items;
+  return first === undefined ? null : [first, ...rest];
 };
 
 /**
  * One subject's drafts, in a fixed family order. Families that need data pick
  * a measure; the others run on a share of subjects. Each family draws from its
  * own stream, so leaving a family out never changes another family's
- * conversations.
+ * conversations. A track scope narrows the measures; a family with no measure
+ * left for this subject (a sleep question without a wearable series) is
+ * skipped.
  */
 export const draftsFor = async (
   context: Omit<FamilyContext, "random">,
   randomFor: (family: Family) => Random,
   families: ReadonlySet<Family>,
+  scope: TrackScope = NO_SCOPE,
 ): Promise<Draft[]> => {
-  const pool: readonly [Measure, ...Measure[]] = context.hasWearables
-    ? MEASURES
-    : CLINICAL_MEASURES;
-  const measure = (random: Random) => pick(random, pool);
+  const tracked = scope.measures;
+  const inTrack = (loinc: string) =>
+    tracked === null || tracked.some((measure) => measure.loinc === loinc);
+  const pool: readonly [Measure, ...Measure[]] | null =
+    tracked === null
+      ? context.hasWearables
+        ? MEASURES
+        : CLINICAL_MEASURES
+      : nonEmpty(
+          tracked.filter(
+            (measure) => context.hasWearables || measure.source === "clinical",
+          ),
+        );
+  const misses =
+    tracked === null
+      ? NEAR_MISSES
+      : nonEmpty(
+          NEAR_MISSES.filter(
+            (miss) =>
+              inTrack(miss.asked.loinc) &&
+              (context.hasWearables || miss.asked.source === "clinical"),
+          ),
+        );
+  const conversions =
+    tracked === null
+      ? conversionsFor(context.hasWearables)
+      : nonEmpty(
+          conversionsFor(context.hasWearables).filter(
+            (conversion) =>
+              inTrack(conversion.measure.loinc) &&
+              (context.hasWearables || conversion.measure.source === "clinical"),
+          ),
+        );
+  /** A builder that needs a measure; skipped when the track leaves none. */
+  const withPool =
+    (
+      build: (
+        own: FamilyContext,
+        from: readonly [Measure, ...Measure[]],
+      ) => Promise<Draft>,
+    ) =>
+    (own: FamilyContext) => (pool === null ? Promise.resolve(null) : build(own, pool));
+  const measure = (random: Random, from: readonly [Measure, ...Measure[]]) =>
+    pick(random, from);
   const plan: ReadonlyArray<readonly [Family, Build]> = [
-    ["latest_value", (own) => latestValue(own, measure(own.random))],
-    ["trend", (own) => trend(own, measure(own.random))],
-    ["baseline_deviation", (own) => baselineDeviation(own, measure(own.random))],
-    ["coverage", (own) => coverage(own, measure(own.random))],
-    ["compare_windows", (own) => compareWindows(own, measure(own.random))],
+    [
+      "latest_value",
+      withPool((own, from) => latestValue(own, measure(own.random, from))),
+    ],
+    ["trend", withPool((own, from) => trend(own, measure(own.random, from)))],
+    [
+      "baseline_deviation",
+      withPool((own, from) => baselineDeviation(own, measure(own.random, from))),
+    ],
+    ["coverage", withPool((own, from) => coverage(own, measure(own.random, from)))],
+    [
+      "compare_windows",
+      withPool((own, from) => compareWindows(own, measure(own.random, from))),
+    ],
     ["absent_code", (own) => absentCode(own)],
     ["no_code", async (own) => noCode(own)],
     ["wearable_key", async (own) => wearableKey(own)],
-    ["outside_record", (own) => outsideRecord(own, pool)],
-    ["odd_ref", (own) => oddRef(own, pool)],
-    ["near_miss", (own) => nearMiss(own)],
+    ["outside_record", withPool((own, from) => outsideRecord(own, from))],
+    ["odd_ref", withPool((own, from) => oddRef(own, from))],
+    [
+      "near_miss",
+      (own) => (misses === null ? Promise.resolve(null) : nearMiss(own, misses)),
+    ],
     ["unit_mismatch", (own) => unitMismatch(own)],
     [
       "unit_conversion",
-      (own) => unitConversion(own, conversionsFor(context.hasWearables)),
+      (own) =>
+        conversions === null ? Promise.resolve(null) : unitConversion(own, conversions),
     ],
-    ["out_of_cohort", (own) => outOfCohort(own, measure(own.random))],
+    [
+      "out_of_cohort",
+      withPool((own, from) => outOfCohort(own, measure(own.random, from))),
+    ],
     ["decline_dose", async (own) => declineDose(own)],
     ["decline_condition", async (own) => declineCondition(own)],
     ["other_person", async (own) => otherPerson(own)],
@@ -176,6 +275,16 @@ export const draftsFor = async (
     ["genome_decline_dose", async (own) => genomeDeclineDose(own)],
     ["genome_other_person", async (own) => genomeOtherPerson(own)],
     ["genome_hosted_provider", async (own) => genomeHostedProvider(own)],
+    // Tracks only, last of all.
+    ["agent_handover", (own) => scope.handover?.(own) ?? Promise.resolve(null)],
+    ["sleep_summary", (own) => sleepSummary(own)],
+    ["sleep_no_rows", (own) => sleepNoRows(own)],
+    ["hrv_trend", (own) => hrvTrend(own)],
+    ["resting_hr_trend", (own) => restingHrTrend(own)],
+    ["training_load", (own) => trainingLoad(own)],
+    ["wearable_too_short", (own) => wearableTooShort(own)],
+    ["wearable_no_rows", (own) => wearableNoRows(own)],
+    ["anatomy_note", (own) => anatomyNote(own)],
   ];
   const drafts: Draft[] = [];
   for (const [family, build] of plan) {
