@@ -23,8 +23,12 @@ The list lives in `infrastructure/agents.ts`.
 provider's models, with the id `agent:<id>` and the agent's name. Its provider and
 context window are copied from its base model: the first id in `modelPreference` the
 catalog offers, else the catalog's first model. With no model there are no agents.
-Genetics is offered only when the chat model runs on this machine, because a thread that
-uses the genome skill may only run there ([genome.md](genome.md)).
+
+An agent with a skill is offered only when that skill could run here (`agentIsOffered`):
+the skill must be one the server offers, the active provider must be in its `providers`
+(the skill gate's rule), and a skill that asks for genome tools also needs a local chat
+model ([genome.md](genome.md)). The shipped skills list local Ollama only, so on a hosted
+provider only the General Practitioner is offered.
 
 The picker lists the agents under "Agents", each with its base model in small text, and
 the models under "Models". An agent counts as one of the one to three picks. A new chat
@@ -37,9 +41,10 @@ same catalog, then:
 
 - the model called is the agent's base model;
 - the agent's skill applies when the prompt names none, and a `/skill` in the prompt wins.
-  The skill goes through every check a typed one does, so `/sleep` and `/trainer` still
-  run only on the providers they list, and the `skill.<name>` audit row is written with
-  the agent's id added;
+  The skill goes through every check a typed one does, and the `skill.<name>` audit row
+  is written with the agent's id added. When the agent's own skill is refused for its
+  provider, or not offered, the sentence names the agent: "Sleep isn't available here:
+  its /sleep skill runs only on local Ollama.";
 - the system prompt gets one line, `Agent: <name>. <role>`, under its first line;
 - the answer row keeps `agent:<id>` as its model id and the agent's name as its model
   name, so the column reads "General Practitioner". Audit rows name the base model,

@@ -97,6 +97,12 @@ describe("formatModelWindow", () => {
 });
 
 describe("agents in the catalog (#218)", () => {
+  const SKILLS = [
+    { name: "sleep", providers: ["ollama"], sources: [], tools: ["sleep_summary"] },
+    { name: "trainer", providers: ["ollama"], sources: [], tools: ["hrv_trend"] },
+    { name: "genome", providers: ["ollama"], sources: [], tools: ["dna_ask"] },
+  ] as const;
+  const LOCAL = { provider: "ollama", chatIsLocal: true, skills: SKILLS } as const;
   const ollama = (id: string, contextTokens = 16_384): CatalogModel => ({
     id,
     name: id,
@@ -115,7 +121,7 @@ describe("agents in the catalog (#218)", () => {
 
   test("withAgents puts the agents first, with their base model's provider and window", () => {
     const catalog = [ollama("llama3.2", 128_000), ollama("qwen3:4b")];
-    const rows = withAgents(catalog, { chatIsLocal: true });
+    const rows = withAgents(catalog, LOCAL);
     expect(
       rows.map(({ id, name, providerId, contextTokens }) => ({
         id,
@@ -156,7 +162,7 @@ describe("agents in the catalog (#218)", () => {
     });
   });
 
-  test("a hosted catalog gets no Genetics, and an agent copies an unknown window as unknown", () => {
+  test("a hosted catalog gets only the agents whose skill runs there; a window stays unknown", () => {
     const hosted: CatalogModel = {
       id: "swiss-ai/Apertus-8B-Instruct-2509",
       name: "swiss-ai/Apertus-8B-Instruct-2509",
@@ -165,11 +171,13 @@ describe("agents in the catalog (#218)", () => {
       contextTokens: 128_000,
       contextUnknown: true,
     };
-    const rows = withAgents([hosted], { chatIsLocal: false });
+    const rows = withAgents([hosted], {
+      provider: "exoscale",
+      chatIsLocal: false,
+      skills: SKILLS,
+    });
     expect(rows.map(({ id }) => id)).toEqual([
       "agent:gp",
-      "agent:sleep",
-      "agent:trainer",
       "swiss-ai/Apertus-8B-Instruct-2509",
     ]);
     expect(rows[0]?.contextUnknown).toBe(true);
@@ -177,25 +185,23 @@ describe("agents in the catalog (#218)", () => {
   });
 
   test("no model, no agents", () => {
-    expect(withAgents([], { chatIsLocal: true })).toEqual([]);
+    expect(withAgents([], LOCAL)).toEqual([]);
   });
 
   test("applying it twice gives the same rows", () => {
-    const once = withAgents([ollama("qwen3:8b")], { chatIsLocal: true });
-    expect(withAgents(once, { chatIsLocal: true })).toEqual(once);
+    const once = withAgents([ollama("qwen3:8b")], LOCAL);
+    expect(withAgents(once, LOCAL)).toEqual(once);
   });
 
   test("catalogAgentOf finds an agent row and gives null for a plain model", () => {
-    const rows = withAgents([ollama("qwen3:8b")], { chatIsLocal: false });
+    const rows = withAgents([ollama("qwen3:8b")], { ...LOCAL, chatIsLocal: false });
     expect(catalogAgentOf("agent:gp", rows)?.baseModelId).toBe("qwen3:8b");
     expect(catalogAgentOf("qwen3:8b", rows)).toBeNull();
     expect(catalogAgentOf("agent:genetics", rows)).toBeNull();
   });
 
   test("defaultModelSelection never picks an agent", () => {
-    const rows = withAgents([ollama("qwen3:8b"), ollama("llama3.2")], {
-      chatIsLocal: true,
-    });
+    const rows = withAgents([ollama("qwen3:8b"), ollama("llama3.2")], LOCAL);
     expect(defaultModelSelection(rows)).toEqual(["qwen3:8b", "llama3.2"]);
   });
 });

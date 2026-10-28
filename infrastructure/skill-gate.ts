@@ -73,6 +73,23 @@ export const skillNotOffered = (
 });
 
 /**
+ * The refusal when an agent's own skill (#218) cannot run for this turn. It
+ * names the agent, since the person picked the agent and typed no `/skill`.
+ * `providers` is null when the server does not offer the skill at all.
+ */
+export const agentSkillUnavailable = <Code extends string>(
+  agentName: string,
+  skill: Readonly<{ name: string; providers: readonly LlmProvider[] | null }>,
+  code: Code,
+): Readonly<{ code: Code; error: string }> => ({
+  code,
+  error:
+    skill.providers === null
+      ? `${agentName} isn't available here: its /${skill.name} skill is not offered on this server.`
+      : `${agentName} isn't available here: its /${skill.name} skill runs only on ${orList(skill.providers.map((provider) => PROVIDER_LABELS[provider]))}.`,
+});
+
+/**
  * Codes whose `error` sentence the browser may show as it is. They are all
  * written here, so no provider or exception text can come through.
  */

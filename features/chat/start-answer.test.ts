@@ -599,20 +599,24 @@ describe("chat start: an agent (#218)", () => {
     ]);
   });
 
-  test("its skill goes through the skill gate: refused on a provider the skill does not list", async () => {
+  test("its skill goes through the skill gate: a provider the skill does not list is refused naming the agent", async () => {
     const { startAnswer, audits, refused } = harness(
       { dataMode: "synthetic", provider: "openrouter", exoscalePersonalData: "off" },
       NO_WEARABLES,
     );
     const response = await startAnswer(ACTOR, APP_USER, AGENT_CALL, SLEEP_AGENT);
     const sentence =
-      "/sleep runs only on local Ollama. The models here come from OpenRouter, so /sleep did not run. Ask without /sleep instead.";
+      "Sleep isn't available here: its /sleep skill runs only on local Ollama.";
     expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      code: "provider-not-allowed-by-skill",
+      error: sentence,
+    });
     expect(audits).toEqual([]);
     expect(refused).toEqual([{ turnId: CALL.turnId, modelId: "agent:sleep", sentence }]);
   });
 
-  test("an agent skill the server does not offer is refused by name", async () => {
+  test("an agent skill the server does not offer is refused naming the agent", async () => {
     const { startAnswer, refused } = harness(LOCAL, NO_WEARABLES);
     const response = await startAnswer(ACTOR, APP_USER, AGENT_CALL, {
       ...SLEEP_AGENT,
@@ -621,10 +625,27 @@ describe("chat start: an agent (#218)", () => {
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({
       code: "skill-not-offered",
-      error:
-        "There is no /nap skill on this server, so nothing ran. Type / to see the skills it offers.",
+      error: "Sleep isn't available here: its /nap skill is not offered on this server.",
     });
     expect(refused.map(({ modelId }) => modelId)).toEqual(["agent:sleep"]);
+  });
+
+  test("a typed /skill that is refused keeps the skill's own sentence", async () => {
+    const { startAnswer } = harness(
+      { dataMode: "synthetic", provider: "openrouter", exoscalePersonalData: "off" },
+      NO_WEARABLES,
+    );
+    const response = await startAnswer(
+      ACTOR,
+      APP_USER,
+      { ...AGENT_CALL, skill: "sleep" },
+      SLEEP_AGENT,
+    );
+    expect(await response.json()).toEqual({
+      code: "provider-not-allowed-by-skill",
+      error:
+        "/sleep runs only on local Ollama. The models here come from OpenRouter, so /sleep did not run. Ask without /sleep instead.",
+    });
   });
 
   test("the pilot audit names the base model, not the agent row", async () => {

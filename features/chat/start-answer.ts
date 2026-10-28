@@ -16,7 +16,9 @@ import type { KnowledgeSourceId } from "@/infrastructure/knowledge-sources";
 import type { CatalogAgent } from "@/infrastructure/model-catalog";
 import { personalDataSentEvent } from "@/infrastructure/personal-data-audit";
 import {
+  agentSkillUnavailable,
   permitSkillRequest,
+  SKILL_NOT_OFFERED,
   skillNotOffered,
   skillRunEvent,
   type TurnSkill,
@@ -59,7 +61,8 @@ import type { WearableContext } from "./wearable-context";
  *
  * An agent (`agent:<id>`, #218) runs on its base model with its skill when the
  * prompt names none; a `/skill` in the prompt wins. Its skill goes through
- * every check above, as if typed. The answer row stays keyed by `agent:<id>`;
+ * every check above, as if typed; a refusal of the agent's own skill names
+ * the agent. The answer row stays keyed by `agent:<id>`;
  * the audit rows name the base model, which is what saw the data, and the
  * skill row names the agent too.
  */
@@ -113,7 +116,15 @@ export const createStartAnswer =
     const skillName = call.skill ?? agentSkill;
     const skill = skillName === null ? null : await deps.findSkill(skillName, appUserId);
     if (skillName !== null && skill === null) {
-      return refuse(skillNotOffered(skillName));
+      return refuse(
+        agentSkill !== null && agent !== null
+          ? agentSkillUnavailable(
+              agent.name,
+              { name: agentSkill, providers: null },
+              SKILL_NOT_OFFERED,
+            )
+          : skillNotOffered(skillName),
+      );
     }
     const modelId = agent?.baseModelId ?? call.modelId;
     const thread = await deps.loadGenomeThread(call.turnId);
@@ -133,7 +144,15 @@ export const createStartAnswer =
         provider: request.provider,
         hasWearableContext: request.hasWearableNarrative,
       });
-      if (!skillPermit.ok) return refuse(skillPermit);
+      if (!skillPermit.ok) {
+        return refuse(
+          agentSkill !== null &&
+            agent !== null &&
+            skillPermit.code === "provider-not-allowed-by-skill"
+            ? agentSkillUnavailable(agent.name, skill, skillPermit.code)
+            : skillPermit,
+        );
+      }
     }
     const genomePermit = permitGenomeThreadTurn({
       genomeThread,

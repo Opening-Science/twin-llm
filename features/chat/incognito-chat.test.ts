@@ -151,7 +151,7 @@ const harness = (
                 contextTokens: 16_384,
               },
             ],
-            { chatIsLocal: true },
+            { provider: "ollama", chatIsLocal: true, skills: [] },
           )
         : [{ id: MODEL }];
     },

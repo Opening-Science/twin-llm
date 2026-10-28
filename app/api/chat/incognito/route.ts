@@ -10,6 +10,7 @@ import { getLatestOuraSummary } from "@/features/oura/connection";
 import { findSkillFor } from "@/features/skills/user-skill-store";
 import { getLatestVitronicSummary } from "@/features/vitronic/connection";
 import { getLatestWhoopSummary } from "@/features/whoop/connection";
+import { runnableSkills } from "@/features/skills/load-skills";
 import { resolveActorId } from "@/infrastructure/auth-actor";
 import { findAppUserId } from "@/infrastructure/current-user";
 import { database } from "@/infrastructure/database";
@@ -27,7 +28,7 @@ export const POST = createIncognitoChatHandler({
   resolveActorId,
   guard: (request, actorId) =>
     isAuthDisabled() ? Promise.resolve(null) : guardChatRequest(request, actorId),
-  catalog: fetchChatCatalog,
+  catalog: () => fetchChatCatalog(runnableSkills()),
   chatIsLocal: chatModelIsLocal,
   findAppUserId,
   settings: () => {

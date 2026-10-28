@@ -53,18 +53,59 @@ describe("agent model ids", () => {
 });
 
 describe("agentIsOffered", () => {
-  test("Genetics only with a local chat model; the others always", () => {
-    expect(AGENTS.map((agent) => agentIsOffered(agent, { chatIsLocal: false }))).toEqual([
-      true,
-      true,
-      true,
-      false,
+  const skill = (name: string, tools: readonly string[]) => ({
+    name,
+    providers: ["ollama"] as const,
+    sources: ["wearable-context"],
+    tools,
+  });
+  const SKILLS = [
+    skill("sleep", ["sleep_summary"]),
+    skill("trainer", ["hrv_trend"]),
+    skill("genome", ["genome_report", "dna_ask"]),
+  ];
+  const offered = (offer: Parameters<typeof agentIsOffered>[1]) =>
+    AGENTS.filter((agent) => agentIsOffered(agent, offer)).map(({ id }) => id);
+
+  test("local Ollama: all four", () => {
+    expect(offered({ provider: "ollama", chatIsLocal: true, skills: SKILLS })).toEqual([
+      "gp",
+      "sleep",
+      "trainer",
+      "genetics",
     ]);
-    expect(AGENTS.map((agent) => agentIsOffered(agent, { chatIsLocal: true }))).toEqual([
-      true,
-      true,
-      true,
-      true,
+  });
+
+  test("Ollama on another machine: the genome skill needs a local model", () => {
+    expect(offered({ provider: "ollama", chatIsLocal: false, skills: SKILLS })).toEqual([
+      "gp",
+      "sleep",
+      "trainer",
+    ]);
+  });
+
+  test("a hosted provider the skills do not list: only the General Practitioner", () => {
+    expect(offered({ provider: "exoscale", chatIsLocal: false, skills: SKILLS })).toEqual(
+      ["gp"],
+    );
+    expect(
+      offered({ provider: "openrouter", chatIsLocal: false, skills: SKILLS }),
+    ).toEqual(["gp"]);
+  });
+
+  test("a skill that lists the hosted provider makes its agent offered there", () => {
+    const sleepOnExoscale = {
+      ...skill("sleep", ["sleep_summary"]),
+      providers: ["ollama", "exoscale"] as const,
+    };
+    expect(
+      offered({ provider: "exoscale", chatIsLocal: false, skills: [sleepOnExoscale] }),
+    ).toEqual(["gp", "sleep"]);
+  });
+
+  test("a skill the server does not offer leaves its agent out", () => {
+    expect(offered({ provider: "ollama", chatIsLocal: true, skills: [] })).toEqual([
+      "gp",
     ]);
   });
 });

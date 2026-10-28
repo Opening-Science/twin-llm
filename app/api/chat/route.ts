@@ -12,6 +12,7 @@ import { getLatestOuraSummary } from "@/features/oura/connection";
 import { findSkillFor } from "@/features/skills/user-skill-store";
 import { getLatestVitronicSummary } from "@/features/vitronic/connection";
 import { getLatestWhoopSummary } from "@/features/whoop/connection";
+import { runnableSkills } from "@/features/skills/load-skills";
 import { resolveActorId } from "@/infrastructure/auth-actor";
 import { findAppUserId } from "@/infrastructure/current-user";
 import { database } from "@/infrastructure/database";
@@ -104,7 +105,7 @@ export const POST = async (request: Request): Promise<Response> => {
     return refuse(400, "That request didn't look right. Try sending your prompt again.");
   }
 
-  const models = await fetchChatCatalog();
+  const models = await fetchChatCatalog(runnableSkills());
   if (models === null) {
     return refuse(503, "We can't reach the model list right now. Try again in a moment.");
   }

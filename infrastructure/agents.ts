@@ -8,6 +8,10 @@
  * built in `model-catalog.ts` (`withAgents`).
  */
 
+import type { LlmProvider } from "./data-mode-policy";
+import { requestsGenomeTools } from "./genome-thread-policy";
+import { permitSkillRequest, type TurnSkill } from "./skill-gate";
+
 export type Agent = Readonly<{
   id: string;
   name: string;
@@ -55,9 +59,6 @@ export const AGENTS: readonly Agent[] = Object.freeze([
   },
 ]);
 
-/** The skill that only runs on a local chat model (`genome-thread-policy.ts`). */
-const GENOME_SKILL = "genome";
-
 export const agentModelId = (agent: Pick<Agent, "id">): string =>
   `${AGENT_ID_PREFIX}${agent.id}`;
 
@@ -71,14 +72,29 @@ export const findAgent = (modelId: string): Agent | null =>
     : null;
 
 export type AgentOffer = Readonly<{
+  /** The active chat provider (`LLM_PROVIDER`). */
+  provider: LlmProvider;
   /** True when the chat model runs on this machine (`chatModelIsLocal`). */
   chatIsLocal: boolean;
+  /** The skills the server offers (`runnableSkills`). */
+  skills: readonly Pick<TurnSkill, "name" | "providers" | "sources" | "tools">[];
 }>;
 
 /**
- * Whether the agent may be offered at all. Genetics runs the genome skill,
- * which a thread may only use on a local chat model, so it is left out
- * everywhere else instead of being refused on every turn.
+ * Whether the agent may be offered at all: an agent without a skill always,
+ * one with a skill only when that skill could run here. That is the skill
+ * gate's provider rule (`permitSkillRequest`, before any wearable context is
+ * known) and, for a skill that asks for genome tools, a local chat model
+ * (`genome-thread-policy.ts`). An agent that could not run is left out
+ * instead of being refused on every turn.
  */
-export const agentIsOffered = (agent: Agent, offer: AgentOffer): boolean =>
-  agent.skill !== GENOME_SKILL || offer.chatIsLocal;
+export const agentIsOffered = (agent: Agent, offer: AgentOffer): boolean => {
+  if (agent.skill === null) return true;
+  const skill = offer.skills.find(({ name }) => name === agent.skill);
+  if (skill === undefined) return false;
+  const permit = permitSkillRequest(skill, {
+    provider: offer.provider,
+    hasWearableContext: false,
+  });
+  return permit.ok && (!requestsGenomeTools(skill.tools) || offer.chatIsLocal);
+};

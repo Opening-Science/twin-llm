@@ -5,6 +5,7 @@ import { skillCommand } from "@/features/commands/registry";
 import { ownedThread } from "@/features/arena/thread-reads";
 import { ThreadTitle } from "@/features/shell/thread-title";
 import { skillsFor } from "@/features/skills/user-skill-store";
+import { runnableSkills } from "@/features/skills/load-skills";
 import { resolveActorId } from "@/infrastructure/auth-actor";
 import { findAppUserId } from "@/infrastructure/current-user";
 import { fetchChatCatalog } from "@/infrastructure/fetch-model-catalog";
@@ -27,7 +28,7 @@ export default async function ThreadPage({
   const actor = await resolveActorId();
   const [thread, catalog, skills] = await Promise.all([
     ownedThread(threadId),
-    fetchChatCatalog(),
+    fetchChatCatalog(runnableSkills()),
     actor === null ? skillsFor(null) : findAppUserId(actor).then(skillsFor),
   ]);
 

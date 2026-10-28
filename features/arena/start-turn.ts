@@ -1,5 +1,6 @@
 "use server";
 
+import { runnableSkills } from "@/features/skills/load-skills";
 import { trackPromptSent } from "@/infrastructure/analytics-events";
 import { resolveActorId } from "@/infrastructure/auth-actor";
 import { ensureAppUser } from "@/infrastructure/current-user";
@@ -126,7 +127,7 @@ export const startTurn = async (input: StartTurnInput): Promise<StartTurnResult>
       modelIds: input.models.map(({ id }) => id),
       skill: input.skill ?? null,
     },
-    await fetchChatCatalog(),
+    await fetchChatCatalog(runnableSkills()),
     serverEnv().LLM_PROVIDER,
   );
   if (!checked.ok) return checked;
