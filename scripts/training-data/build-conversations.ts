@@ -27,9 +27,10 @@
  */
 import { createWriteStream } from "node:fs";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
-import { dirname } from "node:path";
+import { dirname, join } from "node:path";
 
 import { isAllowedCohort } from "../../packages/query-tools/scope";
+import { guidelineSearchInput } from "../../packages/guidelines/input";
 import { subjectWindowInput } from "../../packages/query-tools/schemas";
 import { KEYED_TOOLS } from "../evaluation/question-set";
 import {
@@ -56,6 +57,13 @@ import {
   type TrackScope,
 } from "./families";
 import { handoverFor } from "./handover-family";
+import {
+  CATALOGUE_FILE,
+  catalogueChunks,
+  type KnowledgeHit,
+  searchCatalogue,
+} from "./knowledge-notes";
+import { KNOWLEDGE_DIR } from "../../packages/knowledge/constants";
 import {
   isTrackId,
   keepsStyle,
@@ -110,7 +118,11 @@ export type BuildDeps = Readonly<{
   genomeCatalog?: () => Promise<readonly Variant[]>;
 }>;
 
-const TOOL_INPUTS = { ...KEYED_TOOLS, subject_window: subjectWindowInput } as const;
+const TOOL_INPUTS = {
+  ...KEYED_TOOLS,
+  subject_window: subjectWindowInput,
+  knowledge_search: guidelineSearchInput,
+} as const;
 
 export type BuildArgs = Readonly<{
   cohortId: string;
@@ -490,7 +502,14 @@ export const realPorts = async (today: string): Promise<ConversationPorts> => {
     sessionId: `${TRAINING_ACTOR}-${today}`,
     mode: "synthetic",
   } as const;
-  const runTool = (name: ToolName, args: unknown): Promise<unknown> => {
+  let chunks: readonly KnowledgeHit[] | null = null;
+  const catalogue = async (): Promise<readonly KnowledgeHit[]> => {
+    chunks ??= catalogueChunks(
+      await readFile(join(KNOWLEDGE_DIR, CATALOGUE_FILE), "utf8"),
+    );
+    return chunks;
+  };
+  const runTool = async (name: ToolName, args: unknown): Promise<unknown> => {
     switch (name) {
       case "subject_window":
         return tools.runSubjectWindow(scope, subjectWindowInput.parse(args));
@@ -509,6 +528,18 @@ export const realPorts = async (today: string): Promise<ConversationPorts> => {
         return tools.runCompareWindows(scope, KEYED_TOOLS.compare_windows.parse(args));
       case "convert_unit":
         return tools.runConvertUnit(scope, KEYED_TOOLS.convert_unit.parse(args));
+      // The wearable tools read the subject's synthetic series (track families only).
+      case "sleep_summary":
+        return tools.runSleepSummary(scope, KEYED_TOOLS.sleep_summary.parse(args));
+      case "hrv_trend":
+        return tools.runHrvTrend(scope, KEYED_TOOLS.hrv_trend.parse(args));
+      case "resting_hr_trend":
+        return tools.runRestingHrTrend(scope, KEYED_TOOLS.resting_hr_trend.parse(args));
+      case "training_load":
+        return tools.runTrainingLoad(scope, KEYED_TOOLS.training_load.parse(args));
+      // A stand-in over the shipped notes (knowledge-notes.ts); no embedding model runs.
+      case "knowledge_search":
+        return searchCatalogue(await catalogue(), guidelineSearchInput.parse(args));
     }
   };
   return {

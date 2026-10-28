@@ -20,6 +20,12 @@ export const TOOL_NAMES = [
   "coverage",
   "compare_windows",
   "convert_unit",
+  // Only the track families call these (`wearable-families.ts`, `anatomy-families.ts`).
+  "sleep_summary",
+  "hrv_trend",
+  "resting_hr_trend",
+  "training_load",
+  "knowledge_search",
 ] as const;
 
 export type ToolName = (typeof TOOL_NAMES)[number];
@@ -74,7 +80,17 @@ export const GENOME_FAMILIES = [
  * Families only a training track runs (`tracks.ts`, `--track`): a question
  * that belongs to another agent. A run without `--track` never has them.
  */
-export const TRACK_FAMILIES = ["agent_handover"] as const;
+export const TRACK_FAMILIES = [
+  "agent_handover",
+  "sleep_summary",
+  "sleep_no_rows",
+  "hrv_trend",
+  "resting_hr_trend",
+  "training_load",
+  "wearable_too_short",
+  "wearable_no_rows",
+  "anatomy_note",
+] as const;
 
 export type Family =
   | (typeof FAMILIES)[number]
@@ -99,7 +115,8 @@ export type Outcome =
   | "no_call"
   | "not_in_report"
   | "declined_hosted_provider"
-  | "handed_over";
+  | "handed_over"
+  | "WINDOW_TOO_SHORT";
 
 /** Outcomes where the honest answer is that there is nothing to report. */
 export const NO_DATA_OUTCOMES: ReadonlySet<string> = new Set<Outcome>([
@@ -111,6 +128,7 @@ export const NO_DATA_OUTCOMES: ReadonlySet<string> = new Set<Outcome>([
   "SUBJECT_SCOPE_VIOLATION",
   "no_call",
   "not_in_report",
+  "WINDOW_TOO_SHORT",
 ]);
 
 export type Sections = Readonly<{

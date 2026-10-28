@@ -14,7 +14,13 @@ import {
 } from "./build-conversations";
 import type { ConversationRecord } from "./conversation";
 import { FAKE_COHORT, fakeTools, sampleRows } from "./fake-tools";
-import { type Draft, draftsFor, FAMILIES, GENOME_FAMILIES } from "./families";
+import {
+  type Draft,
+  draftsFor,
+  FAMILIES,
+  GENOME_FAMILIES,
+  TRACK_FAMILIES,
+} from "./families";
 import { agentSentence, HANDOVER_BANK } from "./handover-family";
 import { STYLES } from "./questions";
 import {
@@ -102,6 +108,20 @@ const build = async (extra: readonly string[]) => {
   };
 };
 
+/** Families that ask about a track's own measures. */
+const DATA_FAMILIES = new Set<string>([
+  "latest_value",
+  "trend",
+  "baseline_deviation",
+  "coverage",
+  "compare_windows",
+  "near_miss",
+  "unit_conversion",
+  "outside_record",
+  "odd_ref",
+  "out_of_cohort",
+]);
+
 describe("track definitions", () => {
   test("the four existing agents keep their role lines word for word (#218)", () => {
     expect(AGENTS.general.role).toBe(
@@ -127,7 +147,7 @@ describe("track definitions", () => {
   });
 
   test("every track has the hand-over family, known families and resolvable codes", () => {
-    const known = new Set<string>([...FAMILIES, ...GENOME_FAMILIES, "agent_handover"]);
+    const known = new Set<string>([...FAMILIES, ...GENOME_FAMILIES, ...TRACK_FAMILIES]);
     for (const id of TRACK_IDS) {
       const track = TRACKS[id];
       expect(track.id).toBe(id);
@@ -296,9 +316,7 @@ describe("runBuildConversations --track", () => {
       const allowed = new Set([...(TRACKS[id].loincs ?? []), null]);
       for (const seed of ["1", "2", "3", "4"]) {
         const { metas } = await build(["--track", id, "--seed", seed]);
-        const data = metas.filter(
-          (meta) => meta.family !== "agent_handover" && meta.family !== "absent_code",
-        );
+        const data = metas.filter((meta) => DATA_FAMILIES.has(meta.family));
         expect(data.filter((meta) => !allowed.has(meta.measure_loinc))).toEqual([]);
       }
     }
@@ -413,10 +431,17 @@ describe("agent_handover family", () => {
   test("the GP answers with the audited tool and names the specialist", async () => {
     const { found } = await handovers("general", "s-a");
     const specialists = [AGENTS.diet, AGENTS.sleep, AGENTS.trainer];
-    const answered = found.filter((draft) => draft.calls.length > 0);
+    const answered = found.filter((draft) => draft.calls[0]?.name === "latest_by_loinc");
+    const anatomy = found.filter((draft) => draft.calls[0]?.name === "knowledge_search");
     const genome = found.filter((draft) => draft.calls.length === 0);
     expect(answered.length).toBeGreaterThan(0);
+    expect(anatomy.length).toBeGreaterThan(0);
     expect(genome.length).toBeGreaterThan(0);
+    expect(answered.length + anatomy.length + genome.length).toBe(found.length);
+    for (const draft of anatomy) {
+      if (draft.reply.kind !== "sections") throw new Error("no sections");
+      expect(draft.reply.sections.answer).toContain(agentSentence(AGENTS.anatomy));
+    }
     for (const draft of answered) {
       expect(draft.calls.map((call) => call.name)).toEqual(["latest_by_loinc"]);
       if (draft.reply.kind !== "sections") throw new Error("no sections");
@@ -440,7 +465,7 @@ describe("agent_handover family", () => {
   test("the GP hands only clinical questions over for a subject without a series", async () => {
     const { found } = await handovers("general", "s-b");
     const codes = new Set((trackMeasures(TRACKS.diet) ?? []).map((m) => m.loinc));
-    for (const draft of found.filter((d) => d.calls.length > 0)) {
+    for (const draft of found.filter((d) => d.calls[0]?.name === "latest_by_loinc")) {
       expect(codes.has(draft.measureLoinc ?? "")).toBe(true);
     }
   });

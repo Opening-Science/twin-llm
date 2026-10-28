@@ -169,6 +169,7 @@ export const TRACKS: Readonly<Record<TrackId, Track>> = {
     id: "anatomy",
     agent: AGENTS.anatomy,
     families: [
+      "anatomy_note",
       "latest_value",
       "near_miss",
       "absent_code",
@@ -185,6 +186,8 @@ export const TRACKS: Readonly<Record<TrackId, Track>> = {
     id: "sleep",
     agent: AGENTS.sleep,
     families: [
+      "sleep_summary",
+      "sleep_no_rows",
       ...DATA_FAMILIES,
       "outside_record",
       "wearable_key",
@@ -193,13 +196,19 @@ export const TRACKS: Readonly<Record<TrackId, Track>> = {
       handover,
     ],
     loincs: ["93832-4", "9279-1"],
-    styles: STYLES,
+    // People ask about their nights in plain words; the terse and non-native wordings read as lookups.
+    styles: ["formal", "casual"],
     genome: false,
   },
   trainer: {
     id: "trainer",
     agent: AGENTS.trainer,
     families: [
+      "hrv_trend",
+      "resting_hr_trend",
+      "training_load",
+      "wearable_too_short",
+      "wearable_no_rows",
       ...DATA_FAMILIES,
       "outside_record",
       "near_miss",
@@ -210,7 +219,8 @@ export const TRACKS: Readonly<Record<TrackId, Track>> = {
       handover,
     ],
     loincs: ["40443-4", "8867-4", "41950-7"],
-    styles: STYLES,
+    // A training check-in is short: casual and terse questions only.
+    styles: ["casual", "terse"],
     genome: false,
   },
   genetics: {

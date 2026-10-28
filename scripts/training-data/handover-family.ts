@@ -1,14 +1,15 @@
 /**
  * The `agent_handover` family (#210, tracks only): a question that belongs to
  * another agent. The General Practitioner answers a specialist's question with
- * the same audited tool a latest-value question uses, then names the agent to
- * ask for more; a question about the genome report it cannot read, so it only
- * names the Genetics agent. A specialist asked about something outside its
+ * the same audited tool a latest-value question uses (an anatomy question with
+ * `knowledge_search`), then names the agent to ask for more; a question about
+ * the genome report it cannot read, so it only names the Genetics agent. A specialist asked about something outside its
  * area calls no tool and says which agent fits. Every answer is a fixed
  * template; every number in it is one a tool returned. Pure apart from `run`.
  */
 import { pick } from "../synthetic-wearables/random";
 
+import { anatomyNote } from "./anatomy-families";
 import { latestDraft } from "./data-families";
 import {
   asked,
@@ -101,19 +102,30 @@ const dataSpecialists = (hasWearables: boolean): readonly DataSpecialist[] =>
       : [{ agent: track.agent, measures: [first, ...rest] } as const];
   });
 
+type GeneralChoice = DataSpecialist | "genome" | "anatomy";
+
 /**
  * The GP asked a specialist's question: it reads the latest value with the
- * audited tool and names the agent to ask for more. A genome question gets no
- * tool (the GP's turn has none) and names the Genetics agent.
+ * audited tool and names the agent to ask for more. An anatomy question is
+ * answered from the knowledge notes, as the Anatomy agent does, and names it.
+ * A genome question gets no tool (the GP's turn has none) and names the
+ * Genetics agent.
  */
 export const generalHandover = async (context: FamilyContext): Promise<Draft> => {
-  // null is the genome question, which the GP cannot read.
-  const choices: readonly [DataSpecialist | null, ...(DataSpecialist | null)[]] = [
-    null,
+  const choices: readonly [GeneralChoice, ...GeneralChoice[]] = [
+    "genome",
+    "anatomy",
     ...dataSpecialists(context.hasWearables),
   ];
   const choice = pick(context.random, choices);
-  if (choice === null) {
+  if (choice === "anatomy") {
+    return anatomyNote(
+      context,
+      "agent_handover",
+      `${agentSentence(AGENTS.anatomy)} Ask it for more on where this marker belongs.`,
+    );
+  }
+  if (choice === "genome") {
     const target = AGENTS.genetics;
     const topic = pick(context.random, target.topics);
     return {

@@ -40,7 +40,17 @@ import {
   genomeVariant,
   genomeVariants,
 } from "./genome-families";
+import { anatomyNote } from "./anatomy-families";
 import { ask } from "./questions";
+import {
+  hrvTrend,
+  restingHrTrend,
+  sleepNoRows,
+  sleepSummary,
+  trainingLoad,
+  wearableNoRows,
+  wearableTooShort,
+} from "./wearable-families";
 import { conversionsFor, unitConversion, unitMismatch } from "./unit-families";
 
 export {
@@ -133,6 +143,14 @@ export const FAMILY_SHARES: Readonly<Record<Family, number>> = {
   genome_hosted_provider: 0.15,
   // Track families (only with --track).
   agent_handover: 0.5,
+  sleep_summary: 1,
+  sleep_no_rows: 0.3,
+  hrv_trend: 1,
+  resting_hr_trend: 1,
+  training_load: 1,
+  wearable_too_short: 0.3,
+  wearable_no_rows: 0.3,
+  anatomy_note: 1,
 };
 
 /**
@@ -259,6 +277,14 @@ export const draftsFor = async (
     ["genome_hosted_provider", async (own) => genomeHostedProvider(own)],
     // Tracks only, last of all.
     ["agent_handover", (own) => scope.handover?.(own) ?? Promise.resolve(null)],
+    ["sleep_summary", (own) => sleepSummary(own)],
+    ["sleep_no_rows", (own) => sleepNoRows(own)],
+    ["hrv_trend", (own) => hrvTrend(own)],
+    ["resting_hr_trend", (own) => restingHrTrend(own)],
+    ["training_load", (own) => trainingLoad(own)],
+    ["wearable_too_short", (own) => wearableTooShort(own)],
+    ["wearable_no_rows", (own) => wearableNoRows(own)],
+    ["anatomy_note", (own) => anatomyNote(own)],
   ];
   const drafts: Draft[] = [];
   for (const [family, build] of plan) {

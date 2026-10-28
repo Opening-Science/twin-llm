@@ -6,14 +6,30 @@
 import type { ObservationRecord, QueryToolPorts } from "../../packages/query-tools/ports";
 import { noReadingForCodes } from "../../packages/query-tools/refusals";
 import { SUBJECT_SCOPE_VIOLATION } from "../../packages/query-tools/scope";
+import { readFileSync } from "node:fs";
+
+import { guidelineSearchInput } from "../../packages/guidelines/input";
 import {
   runBaselineDeviation,
   runCompareWindows,
   runConvertUnit,
   runCoverage,
+  runHrvTrend,
+  runRestingHrTrend,
+  runSleepSummary,
+  runTrainingLoad,
   runTrend,
 } from "../../packages/query-tools/tools";
 import { KEYED_TOOLS } from "../evaluation/question-set";
+import {
+  DEFAULT_DAYS,
+  DEFAULT_END_DAY,
+  generateSeries,
+  WEARABLE_METRICS,
+} from "../synthetic-wearables/series";
+import { generateWorkouts, WORKOUT_METRICS } from "../synthetic-wearables/workouts";
+
+import { CATALOGUE_FILE, catalogueChunks, searchCatalogue } from "./knowledge-notes";
 
 import type { ToolName } from "./families";
 
@@ -58,6 +74,16 @@ export const fakeTools = (data: FakeRows) => {
         return runCompareWindows(scope, KEYED_TOOLS.compare_windows.parse(args), ports);
       case "convert_unit":
         return runConvertUnit(scope, KEYED_TOOLS.convert_unit.parse(args), ports);
+      case "sleep_summary":
+        return runSleepSummary(scope, KEYED_TOOLS.sleep_summary.parse(args), ports);
+      case "hrv_trend":
+        return runHrvTrend(scope, KEYED_TOOLS.hrv_trend.parse(args), ports);
+      case "resting_hr_trend":
+        return runRestingHrTrend(scope, KEYED_TOOLS.resting_hr_trend.parse(args), ports);
+      case "training_load":
+        return runTrainingLoad(scope, KEYED_TOOLS.training_load.parse(args), ports);
+      case "knowledge_search":
+        return searchCatalogue(catalogue(), guidelineSearchInput.parse(args));
       case "latest_by_loinc": {
         const input = KEYED_TOOLS.latest_by_loinc.parse(args);
         if (!(input.subject_ref in data)) return SUBJECT_SCOPE_VIOLATION;
@@ -142,4 +168,50 @@ export const sampleRows = (): FakeRows => {
     },
   ];
   return { "s-a": [...resting, ...hba1c], "s-b": [...hba1c, ...gravity] };
+};
+
+let chunks: ReturnType<typeof catalogueChunks> | null = null;
+
+/** The shipped biomarker catalogue's chunks, read once. */
+const catalogue = () => {
+  chunks ??= catalogueChunks(
+    readFileSync(
+      new URL(`../../knowledge/opentwin/${CATALOGUE_FILE}`, import.meta.url),
+      "utf8",
+    ),
+  );
+  return chunks;
+};
+
+/**
+ * One subject's synthetic wearable series and workouts as warehouse rows,
+ * made by the real generator (`scripts/synthetic-wearables`) the way
+ * `wearables:generate` writes them: 90 days to 1 Oct 2026, each metric at its
+ * own time of day.
+ */
+export const generatedWearableRows = (
+  seed: number,
+  subjectRef: string,
+): readonly ObservationRecord[] => {
+  const options = { seed, subjectRef, endDay: DEFAULT_END_DAY, days: DEFAULT_DAYS };
+  const series = generateSeries(options);
+  const daily = series.map((reading) => {
+    const metric = WEARABLE_METRICS[reading.metric];
+    return {
+      loinc: metric.code,
+      value: reading.value,
+      unitUcum: metric.unit,
+      effectiveAt: new Date(`${reading.day}T${metric.time}Z`),
+    };
+  });
+  const workouts = generateWorkouts(options, series).map((reading) => {
+    const metric = WORKOUT_METRICS[reading.metric];
+    return {
+      loinc: metric.code,
+      value: reading.value,
+      unitUcum: metric.unit,
+      effectiveAt: new Date(`${reading.day}T${metric.time}Z`),
+    };
+  });
+  return [...daily, ...workouts];
 };
