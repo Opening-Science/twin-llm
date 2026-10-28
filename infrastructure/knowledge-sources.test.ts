@@ -131,6 +131,7 @@ describe("knowledge source preferences", () => {
 
   test("the wearable tools belong to their own source, in both data modes' toggles", () => {
     expect([...disabledToolNames(["wearable-analytics"])].sort()).toEqual([
+      "cross_source_compare",
       "hrv_trend",
       "resting_hr_trend",
       "sleep_summary",

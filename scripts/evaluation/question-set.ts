@@ -26,6 +26,7 @@ import {
   hrvTrendInput,
   restingHrTrendInput,
   trainingLoadInput,
+  crossSourceCompareInput,
 } from "../../packages/query-tools/schemas";
 
 import { isMeasureId } from "./score/asked-measure";
@@ -68,6 +69,7 @@ export const KEYED_TOOLS = {
   hrv_trend: hrvTrendInput,
   resting_hr_trend: restingHrTrendInput,
   training_load: trainingLoadInput,
+  cross_source_compare: crossSourceCompareInput,
 } as const;
 
 export type KeyedTool = keyof typeof KEYED_TOOLS;
@@ -94,6 +96,7 @@ export const AUDIT_TOOL_NAMES = [
   "hrv_trend",
   "resting_hr_trend",
   "training_load",
+  "cross_source_compare",
   "guidelines.guideline_search",
   "knowledge.knowledge_search",
   "gbd.gbd_query",

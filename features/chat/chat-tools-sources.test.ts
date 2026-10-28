@@ -125,6 +125,7 @@ describe("chat tools and knowledge sources", () => {
   test("turning cohort records off also removes the analytics tools", async () => {
     const { tools } = await sentTo(["cohort-records"]);
     expect(tools).toEqual([
+      "cross_source_compare",
       "gbd_population",
       "guideline_search",
       "hrv_trend",
@@ -141,9 +142,13 @@ describe("chat tools and knowledge sources", () => {
   test("turning the wearable source off removes the four wearable tools only", async () => {
     const { tools } = await sentTo(["wearable-analytics"]);
     expect(
-      ["sleep_summary", "hrv_trend", "resting_hr_trend", "training_load"].filter((name) =>
-        tools.includes(name),
-      ),
+      [
+        "sleep_summary",
+        "hrv_trend",
+        "resting_hr_trend",
+        "training_load",
+        "cross_source_compare",
+      ].filter((name) => tools.includes(name)),
     ).toEqual([]);
     expect(tools).toContain("trend");
   });

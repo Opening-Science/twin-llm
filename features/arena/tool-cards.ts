@@ -55,6 +55,7 @@ const TITLES: Readonly<Record<string, string>> = {
   hrv_trend: "Fitted an HRV trend",
   resting_hr_trend: "Fitted a resting heart rate trend",
   training_load: "Summed workout minutes",
+  cross_source_compare: "Compared two wearables",
   [GUIDELINE_MODEL_TOOL]: "Searched guidelines",
   [GBD_MODEL_TOOL]: "Looked up population data",
   [KNOWLEDGE_MODEL_TOOL]: "Searched TwinLLM notes",

@@ -124,6 +124,8 @@ export const rowCountOf = (tool: KeyedTool, result: unknown): number => {
     case "training_load":
       // Wearable readings in the window, as the audit row counts them.
       return numberAt(result, "n");
+    case "cross_source_compare":
+      return numberAt(result, "n_pairs");
     case "latest_by_loinc":
       return lengthAt(result, "rows");
     case "coverage": {
@@ -426,6 +428,11 @@ export const realPorts = async (today: string): Promise<AnswerKeyPorts> => {
         return tools.runRestingHrTrend(scope, KEYED_TOOLS.resting_hr_trend.parse(args));
       case "training_load":
         return tools.runTrainingLoad(scope, KEYED_TOOLS.training_load.parse(args));
+      case "cross_source_compare":
+        return tools.runCrossSourceCompare(
+          scope,
+          KEYED_TOOLS.cross_source_compare.parse(args),
+        );
       case "latest_by_loinc":
         return tools.runLatestByLoinc(scope, KEYED_TOOLS.latest_by_loinc.parse(args));
       case "summary_stats":

@@ -32,6 +32,7 @@ import {
   hrvTrendInput,
   restingHrTrendInput,
   trainingLoadInput,
+  crossSourceCompareInput,
 } from "./schemas";
 import type { SessionScope } from "./scope";
 import {
@@ -53,6 +54,7 @@ import {
   runHrvTrend,
   runRestingHrTrend,
   runTrainingLoad,
+  runCrossSourceCompare,
 } from "./tools";
 
 /**
@@ -130,6 +132,9 @@ export const queryToolRunners = (
     runRestingHrTrend(scope, input, ports),
   ),
   training_load: bind(trainingLoadInput, (input) => runTrainingLoad(scope, input, ports)),
+  cross_source_compare: bind(crossSourceCompareInput, (input) =>
+    runCrossSourceCompare(scope, input, ports),
+  ),
 });
 
 export const QUERY_MCP_SERVER_INFO = {

@@ -675,6 +675,43 @@
   {
     "type": "function",
     "function": {
+      "name": "cross_source_compare",
+      "description": "How closely two linked wearables agree on one daily measure (hrv, resting_hr, sleep_duration, sleep_efficiency) in a window, over the days both recorded: n_pairs, each source's mean, the mean difference (b minus a), its standard deviation, the limits of agreement (mean difference plus or minus 1.96 standard deviations) and the Pearson correlation. Under 7 paired days the spread, limits and correlation are null. Personal mode only; units must match and are never converted. Says how far apart the two read, never which is right. Refuses SOURCE_NOT_CONNECTED, NO_ROWS, MIXED_UNITS, UNIT_MISMATCH and WINDOW_TOO_SHORT.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "measure": {
+            "type": "string",
+            "enum": ["hrv", "resting_hr", "sleep_duration", "sleep_efficiency"],
+            "description": "hrv, resting_hr, sleep_duration or sleep_efficiency"
+          },
+          "source_a": {
+            "type": "string",
+            "enum": ["oura", "whoop", "google"],
+            "description": "A linked wearable: oura, whoop or google"
+          },
+          "source_b": {
+            "type": "string",
+            "enum": ["oura", "whoop", "google"],
+            "description": "A linked wearable: oura, whoop or google"
+          },
+          "start": {
+            "type": "string",
+            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+          },
+          "end": {
+            "type": "string",
+            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+          }
+        },
+        "required": ["measure", "source_a", "source_b", "start", "end"],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
       "name": "show_view",
       "description": "Show a view of one measure in the answer. chart.timeseries draws every reading in window; chart.compare sets window against compare_with (n and mean of each); biomarker.card shows a LOINC's latest reading against its published range, with its trend; table lists the readings (first 50). The server reads the rows itself; the result says how many it read. A LOINC code needs subject (a synthetic subject_ref); a wearable key reads the user's synced data. Never write numbers for a view yourself.",
       "parameters": {
