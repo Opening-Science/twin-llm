@@ -12,7 +12,7 @@ import {
 
 import { drainKnowledgeTurn, resetKnowledgeCollectorForTests } from "./collector";
 import {
-  knowledgeSearchSources,
+  mergeKnowledgeSlots,
   runKnowledgeSearch,
   toKnowledgeSearchHit,
   type KnowledgeSearchPorts,
@@ -163,12 +163,41 @@ describe("runKnowledgeSearch", () => {
 });
 
 describe("knowledge search on an agent's turn (#236)", () => {
-  test("knowledgeSearchSources: the notes, then the agent's literature", () => {
-    expect(knowledgeSearchSources()).toEqual(["opentwin-knowledge"]);
-    expect(knowledgeSearchSources(["literature:diet"])).toEqual([
-      "opentwin-knowledge",
-      "literature:diet",
+  test("mergeKnowledgeSlots: up to ceil(k/2) notes first, the rest literature", () => {
+    const notes = ["n1", "n2", "n3", "n4", "n5"];
+    const papers = ["p1", "p2", "p3", "p4", "p5"];
+    expect(mergeKnowledgeSlots(notes, papers, 5)).toEqual(["n1", "n2", "n3", "p1", "p2"]);
+    expect(mergeKnowledgeSlots(notes, papers, 4)).toEqual(["n1", "n2", "p1", "p2"]);
+    expect(mergeKnowledgeSlots(notes, papers, 1)).toEqual(["n1"]);
+  });
+
+  test("mergeKnowledgeSlots: a short side leaves its slots to the other", () => {
+    expect(mergeKnowledgeSlots(["n1"], ["p1", "p2", "p3", "p4"], 5)).toEqual([
+      "n1",
+      "p1",
+      "p2",
+      "p3",
+      "p4",
     ]);
+    expect(mergeKnowledgeSlots(["n1", "n2", "n3", "n4"], ["p1"], 5)).toEqual([
+      "n1",
+      "n2",
+      "n3",
+      "n4",
+      "p1",
+    ]);
+    expect(mergeKnowledgeSlots([], ["p1", "p2"], 5)).toEqual(["p1", "p2"]);
+    expect(mergeKnowledgeSlots(["n1", "n2"], [], 5)).toEqual(["n1", "n2"]);
+  });
+
+  test("notes that match are never crowded out by more literature", () => {
+    const papers = Array.from({ length: 8 }, (_, index) => `p${index}`);
+    for (const k of [1, 2, 3, 5, 8]) {
+      const merged = mergeKnowledgeSlots(["n1", "n2", "n3", "n4"], papers, k);
+      expect(merged.filter((item) => item.startsWith("n")).length).toBe(
+        Math.min(4, Math.ceil(k / 2)),
+      );
+    }
   });
 
   test("toKnowledgeSearchHit drops guideline rows and literature not asked for", () => {
@@ -205,13 +234,21 @@ describe("knowledge search on an agent's turn (#236)", () => {
       ports(calls, {
         search: async (_embedding, _k, sources) => {
           asked.push(sources);
-          return [dietRow, hrvRow, sleepRow];
+          return sources.includes("opentwin-knowledge") ? [hrvRow] : [dietRow, sleepRow];
         },
       }),
       ["literature:diet"],
     );
-    expect(asked).toEqual([["opentwin-knowledge", "literature:diet"]]);
+    expect(asked).toEqual([["opentwin-knowledge"], ["literature:diet"]]);
     expect(hits).toEqual([
+      {
+        id: "opentwin-metric-glossary",
+        title: "Metric glossary",
+        file: "knowledge/opentwin/metric-glossary.md",
+        sectionHeading: "Heart rate variability (HRV)",
+        licence: "cc-by-4.0",
+        passage: hrvRow.text,
+      },
       {
         kind: "literature",
         id: "lit-diet-PMC0000002.1",
@@ -232,14 +269,6 @@ describe("knowledge search on an agent's turn (#236)", () => {
           "Quote only word for word from passage, with the attribution line next to the quote. Its CC BY-NC-ND licence allows no changes: quote it unchanged or not at all, never shortened, reworded or translated.",
         about:
           "Published article as reference material, not a statement about this person.",
-      },
-      {
-        id: "opentwin-metric-glossary",
-        title: "Metric glossary",
-        file: "knowledge/opentwin/metric-glossary.md",
-        sectionHeading: "Heart rate variability (HRV)",
-        licence: "cc-by-4.0",
-        passage: hrvRow.text,
       },
     ]);
     expect(calls.map((call) => [call.tool, call.rowCount])).toEqual([

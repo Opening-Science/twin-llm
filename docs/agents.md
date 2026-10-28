@@ -126,9 +126,11 @@ list `knowledge_search` and not `guideline_search`, and adding a tool to a skill
 around the skill gate. `guideline_search` is unchanged and still reads the guideline
 corpus alone wherever a turn offers it (the General Practitioner, plain models).
 
-Notes and literature are ranked together: one nearest-neighbour search over both sources
-returns the `k` closest passages, so literature can push notes out of a short list. Rows
-of any other source are dropped.
+Notes and literature get separate slots (`mergeKnowledgeSlots`), so papers cannot push
+the notes, the biomarker catalogue among them, out of a short list: one nearest-neighbour
+search over the notes and one over the agent's literature, then up to ceil(k/2) notes
+first and literature in the rest. When one side has fewer passages, the other fills the
+remaining slots. Rows of any other source are dropped.
 
 Each literature hit (`packages/literature/hit.ts`) carries `kind: "literature"`, the
 article title, journal, year, PMC id, URL, DOI, the licence and its label ("CC BY-NC-ND"),

@@ -69,13 +69,23 @@ export const defaultKnowledgeSearchPorts = (): KnowledgeSearchPorts => ({
 });
 
 /**
- * The sources one search reads: the knowledge notes, plus the agent's
- * `literature:<specialty>` sources (`literatureSourcesForAgent`) on an
- * agent's turn. Never guideline rows.
+ * Separate slots for notes and literature (#236), so papers cannot push the
+ * notes (the biomarker catalogue among them) out of a short list: up to
+ * ceil(k/2) notes first, then literature; when one side has fewer, the other
+ * fills the rest. Each list is already nearest first.
  */
-export const knowledgeSearchSources = (
-  literatureSources: readonly string[] = [],
-): readonly string[] => [KNOWLEDGE_SOURCE, ...literatureSources];
+export const mergeKnowledgeSlots = <T>(
+  notes: readonly T[],
+  literature: readonly T[],
+  k: number,
+): T[] => {
+  const literatureCount = Math.min(
+    literature.length,
+    k - Math.min(notes.length, Math.ceil(k / 2)),
+  );
+  const notesCount = Math.min(notes.length, k - literatureCount);
+  return [...notes.slice(0, notesCount), ...literature.slice(0, literatureCount)];
+};
 
 /**
  * A row as a hit, read by its source: a note, a literature passage from one
@@ -111,11 +121,12 @@ export const runKnowledgeSearch = async (
     if (!embedding) {
       result = { error: "knowledge-embed-failed" };
     } else {
-      const rows = await ports.search(
-        embedding,
-        input.k,
-        knowledgeSearchSources(literatureSources),
-      );
+      const notes = await ports.search(embedding, input.k, [KNOWLEDGE_SOURCE]);
+      const literature =
+        literatureSources.length > 0
+          ? await ports.search(embedding, input.k, literatureSources)
+          : [];
+      const rows = mergeKnowledgeSlots(notes, literature, input.k);
       hits = rows.flatMap((row) => toKnowledgeSearchHit(row, literatureSources) ?? []);
       result = hits;
     }

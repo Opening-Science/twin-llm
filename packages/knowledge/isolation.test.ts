@@ -35,7 +35,9 @@ describe("knowledge tool isolation", () => {
   });
 
   test("search reads the knowledge source and an agent's literature, never guideline rows", () => {
-    expect(read("search.ts")).toContain("[KNOWLEDGE_SOURCE, ...literatureSources]");
+    expect(read("search.ts")).toContain(
+      "ports.search(embedding, input.k, [KNOWLEDGE_SOURCE])",
+    );
     expect(read("search.ts")).not.toContain("GUIDELINE_SOURCE");
   });
 
