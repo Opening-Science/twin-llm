@@ -79,13 +79,13 @@ export const threadMarkdown = (thread: ExportableThread, exportedOn: string): st
     .trimEnd()
     .concat("\n");
 
-/** A file name from the title: lower case, dashes, at most 60 characters. */
+/** A file name from the title: lower case, dashes, at most 60 characters, whole words. */
 export const exportFileName = (title: string): string => {
-  const slug = readableTitle(title)
+  const full = readableTitle(title)
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 60)
-    .replace(/-+$/, "");
+    .replace(/^-+|-+$/g, "");
+  const cut = full.length <= 60 ? full : full.slice(0, 61).replace(/-[^-]*$/, "");
+  const slug = cut.replace(/-+$/, "");
   return `${slug === "" ? "thread" : slug}.md`;
 };

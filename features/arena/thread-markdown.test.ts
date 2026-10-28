@@ -99,5 +99,10 @@ describe("threadMarkdown", () => {
       "what-is-the-latest-hba1c-subject-085b5e.md",
     );
     expect(exportFileName("???")).toBe("thread.md");
+    expect(
+      exportFileName(
+        `For synthetic subject ${REF}, how has their heart rate changed across their records?`,
+      ),
+    ).toBe("how-has-their-heart-rate-changed-across-their-records.md");
   });
 });
