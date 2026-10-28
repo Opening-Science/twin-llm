@@ -89,3 +89,47 @@ export const exportFileName = (title: string): string => {
   const slug = cut.replace(/-+$/, "");
   return `${slug === "" ? "thread" : slug}.md`;
 };
+
+/** UTF-8 text as base64, without Node's Buffer. */
+const base64 = (text: string): string => {
+  let binary = "";
+  for (const byte of new TextEncoder().encode(text)) binary += String.fromCharCode(byte);
+  return btoa(binary);
+};
+
+/**
+ * The same export as a FHIR R4 DocumentReference (#44): the Markdown above is
+ * its one attachment, so both formats carry the same content. Tagged research
+ * use only; no Patient, no subject reference.
+ */
+export const threadDocumentReference = (
+  thread: ExportableThread,
+  markdown: string,
+  day: string,
+) => ({
+  resourceType: "DocumentReference" as const,
+  meta: {
+    tag: [
+      {
+        system: "https://opening.science/twinllm",
+        code: "research-use-only",
+        display: "Research use only; model output, not medical advice",
+      },
+    ],
+  },
+  status: "current" as const,
+  docStatus: "final" as const,
+  type: { text: "TwinLLM thread export" },
+  date: `${day}T00:00:00Z`,
+  description: readableTitle(thread.title),
+  content: [
+    {
+      attachment: {
+        contentType: "text/markdown; charset=utf-8",
+        language: "en",
+        title: exportFileName(thread.title),
+        data: base64(markdown),
+      },
+    },
+  ],
+});
