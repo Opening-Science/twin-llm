@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { SKILL_NAME_PATTERN } from "@/infrastructure/skill-gate";
+import { uiContextSchema } from "@/infrastructure/ui-context";
 
 /**
  * Body of `POST /api/chat`: one model, one turn, the conversation so far.
@@ -12,6 +13,9 @@ import { SKILL_NAME_PATTERN } from "@/infrastructure/skill-gate";
  *
  * `skill` names the skill the turn was sent with (`/sleep`). The server loads
  * it and enforces it; a name it does not offer is refused.
+ *
+ * `uiContext` is what the person had on screen as they asked (#47): a closed,
+ * size-capped structure with no values (`infrastructure/ui-context.ts`).
  */
 const MAX_MESSAGES = 100;
 const MAX_MESSAGE_CHARS = 32_000;
@@ -27,6 +31,7 @@ export const chatRequestSchema = z.object({
   turnId: z.string().min(1),
   messages: z.array(conversationMessage).min(1).max(MAX_MESSAGES),
   skill: z.string().regex(SKILL_NAME_PATTERN).optional(),
+  uiContext: uiContextSchema.optional(),
 });
 
 export type ChatRequest = Readonly<z.infer<typeof chatRequestSchema>>;

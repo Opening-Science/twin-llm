@@ -1,5 +1,6 @@
 import type { DataMode } from "@/infrastructure/data-mode-policy";
 import type { ParsedTwinAnswer } from "@/infrastructure/parse-twin-answer";
+import type { UiContext } from "@/infrastructure/ui-context";
 
 import { CHAT_RESPONSE_DOCUMENT } from "../response-document";
 import type { GbdSource } from "@/packages/gbd-mcp/collector";
@@ -123,6 +124,8 @@ export const buildResponseDocumentV1 = (input: {
   readonly knowledgeSources?: readonly KnowledgeCitation[];
   /** The skill the turn ran under (`sleep`), or null. */
   readonly skill?: string | null;
+  /** The turn's UI context (#47), or null. */
+  readonly uiContext?: UiContext | null;
 }): ResponseDocumentV1 => {
   // Only keys the prompt offered count; an invented key cannot stop abstaining.
   const evidence_keys = [...input.parsed.evidenceKeys];
@@ -188,6 +191,8 @@ export const buildResponseDocumentV1 = (input: {
         : { kind: "none" as const },
     // Only present on a skill turn, so documents without one are unchanged.
     ...(input.skill ? { skill: input.skill } : {}),
+    // Only present when the turn carried one, so other documents are unchanged.
+    ...(input.uiContext ? { ui_context: input.uiContext } : {}),
   };
 
   return responseDocumentV1Schema.parse(document);

@@ -29,6 +29,7 @@ const KIND_LABELS: Readonly<Record<ChatView["kind"], string>> = {
   "chart.compare": "Comparison",
   "biomarker.card": "Biomarker",
   table: "Table",
+  "twin.body": "Body twin",
 };
 
 export const viewKindLabel = (kind: ChatView["kind"]): string => KIND_LABELS[kind];

@@ -7,6 +7,7 @@ import { TimeLineChart } from "@/features/data-explorer/time-line-chart";
 import { BiomarkerCard } from "./biomarker-card";
 import { CompareChart } from "./compare-chart";
 import { viewAnchorId } from "./thread-outputs";
+import { TwinBodyFigure } from "./twin-body-figure";
 import { viewChart } from "./view-chart";
 import { ViewTable } from "./view-table";
 
@@ -42,6 +43,8 @@ const ViewBody = ({ view, height }: Readonly<{ view: ChatView; height: number }>
       return <BiomarkerCard spec={view.spec} />;
     case "table":
       return <ViewTable spec={view.spec} label={view.title} />;
+    case "twin.body":
+      return <TwinBodyFigure spec={view.spec} />;
   }
 };
 

@@ -19,10 +19,13 @@ import {
   KNOWLEDGE_HEADING,
   NEXT_STEP_LINES,
   toolCallCountLine,
+  UI_CONTEXT_HEADING,
+  UI_CONTEXT_NOTE,
   UNCERTAINTY_REASON_LINES,
   uncertaintyLevelLine,
 } from "@/infrastructure/response-document/copy";
 import type { ResponseDocumentV1 } from "@/infrastructure/response-document/document-v1";
+import { uiContextLines } from "@/infrastructure/ui-context";
 import { formatGbdRow } from "@/infrastructure/response-document/gbd-labels";
 import { GBD_ATTRIBUTION_LINE } from "@/packages/gbd-mcp/constants";
 
@@ -119,6 +122,7 @@ export const ExplainabilityPanel = ({
   const hasUncertainty = hasModelStatement || level !== "unknown";
   const nextStepLine = document ? NEXT_STEP_LINES[document.next_step] : null;
   const hasContractStates = Boolean(contractStates && contractStates.length > 0);
+  const uiLines = document?.ui_context ? uiContextLines(document.ui_context) : [];
 
   if (!hasReasoning && !hasAttribution && attribution === undefined && !document) {
     return null;
@@ -242,6 +246,19 @@ export const ExplainabilityPanel = ({
             <p className="text-muted-foreground text-xs">
               {toolCallCountLine(toolCallCount)}
             </p>
+          )}
+          {uiLines.length > 0 && (
+            <div>
+              <p className="text-eyebrow mb-1">{UI_CONTEXT_HEADING}</p>
+              <ul className="text-muted-foreground flex flex-col gap-0.5 font-mono text-xs">
+                {uiLines.map((line) => (
+                  <li key={line}>{line.replace(/^- /, "")}</li>
+                ))}
+              </ul>
+              <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+                {UI_CONTEXT_NOTE}
+              </p>
+            </div>
           )}
           {hasContractStates && (
             <ul className="text-muted-foreground flex flex-col gap-0.5 font-mono text-xs">

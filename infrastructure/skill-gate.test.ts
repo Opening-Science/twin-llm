@@ -99,12 +99,15 @@ describe("withSkillTools", () => {
   });
 
   test("drops show_view when the skill allows no kind it draws", () => {
-    expect(withSkillTools(turnTools, { ...SLEEP, views: ["twin.body"] })).toEqual({
+    expect(withSkillTools(turnTools, { ...SLEEP, views: [] })).toEqual({
       subject_window: 2,
       coverage: 3,
       knowledge_search: 5,
     });
-    expect(withSkillTools(turnTools, { ...SLEEP, views: [] })).not.toHaveProperty(
+  });
+
+  test("keeps show_view for a skill that allows only twin.body (#48)", () => {
+    expect(withSkillTools(turnTools, { ...SLEEP, views: ["twin.body"] })).toHaveProperty(
       "show_view",
     );
   });

@@ -11,6 +11,7 @@ import { formatForPrompt } from "@/infrastructure/format-measure";
 import type { GoogleHealthSummary } from "@/infrastructure/google-health-types";
 import { offeredSummaries } from "@/infrastructure/offered-keys";
 import type { TurnSkill } from "@/infrastructure/skill-gate";
+import { type UiContext, uiContextBlock } from "@/infrastructure/ui-context";
 import type { OuraSummary } from "@/infrastructure/oura-types";
 import type { VitronicSummary } from "@/infrastructure/vitronic-types";
 import type { WhoopSummary } from "@/infrastructure/whoop-types";
@@ -160,13 +161,19 @@ const skillSection = (skill: TurnSkill | null): readonly string[] =>
         skill.instructions,
       ];
 
+/** The turn's UI context block, before the skill so the skill keeps the last word. */
+const uiContextSection = (context: UiContext | null): readonly string[] => {
+  const block = context === null ? "" : uiContextBlock(context);
+  return block === "" ? [] : ["", block];
+};
+
 /** One line on charts, when this request carries `show_view`. */
 const viewSection = (offered: (tool: string) => boolean): readonly string[] =>
   offered(SHOW_VIEW_TOOL)
     ? [
         "## Charts",
         `To show a measure over time, call \`${SHOW_VIEW_TOOL}\` with kind \`chart.timeseries\`, a measure (a LOINC code with subject, or a wearable key without its date, such as sleep.score) and a window. The server draws it from its own rows; do not list the points yourself.`,
-        `Other kinds: \`chart.compare\` sets window against an earlier \`compare_with\` window (n and mean of each); \`biomarker.card\` shows a LOINC code's latest reading against its published range, with its trend; \`table\` lists the readings.`,
+        `Other kinds: \`chart.compare\` sets window against an earlier \`compare_with\` window (n and mean of each); \`biomarker.card\` shows a LOINC code's latest reading against its published range, with its trend; \`table\` lists the readings; \`twin.body\` shows the body twin on a \`focus\` organ or system, with each mapped organ's range position for subject.`,
         ...(offered(OPEN_VIEW_TOOL)
           ? [
               `To show a chart from earlier in this thread again, call \`${LIST_VIEWS_TOOL}\` and then \`${OPEN_VIEW_TOOL}\` with its id instead of drawing it again.`,
@@ -215,6 +222,8 @@ export const buildTwinSystemPrompt = (params: {
   readonly offeredTools?: ReadonlySet<string>;
   /** The skill this turn runs under, if any. */
   readonly skill?: TurnSkill | null;
+  /** What the person had on screen (#47); only its small block is added. */
+  readonly uiContext?: UiContext | null;
 }): string => {
   const hasAny = Boolean(
     params.oura || params.whoop || params.googleHealth || params.vitronic,
@@ -315,6 +324,7 @@ export const buildTwinSystemPrompt = (params: {
     hasAny
       ? "If a question needs a metric you do not have in Available keys, say so under Uncertainty."
       : "Under Evidence Used write `- none` until a wearable is connected and synced.",
+    ...uiContextSection(params.uiContext ?? null),
     ...skillSection(params.skill ?? null),
   ].join("\n");
 };

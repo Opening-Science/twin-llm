@@ -8,6 +8,7 @@ import {
 } from "@/infrastructure/ollama-context";
 import type { WearableSummaries } from "@/infrastructure/offered-keys";
 import type { TurnSkill } from "@/infrastructure/skill-gate";
+import type { UiContext } from "@/infrastructure/ui-context";
 import type { QueryToolPorts } from "@/packages/query-tools/ports";
 
 import { createChatTools, forSkill, forSources } from "./chat-tools";
@@ -44,6 +45,8 @@ export type TurnRequestCase = Readonly<{
   wearables: WearableSummaries;
   /** The question; short, since the budget is about what comes before it. */
   question: string;
+  /** The turn's UI context block (#47); the size cases carry the longest one. */
+  uiContext?: UiContext | null;
 }>;
 
 const NO_PORTS: QueryToolPorts = {
@@ -119,6 +122,7 @@ export const captureOllamaTurnRequest = async (
       offeredTools,
       mode: turn.mode,
       skill: turn.skill,
+      uiContext: turn.uiContext ?? null,
       loadAudit: async () => [],
     },
     {

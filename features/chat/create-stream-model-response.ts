@@ -180,6 +180,7 @@ export const createStreamModelResponse =
         offeredTools,
         mode: settings.dataMode,
         skill,
+        uiContext: request.uiContext ?? null,
         loadAudit: deps.loadAudit,
       },
       {

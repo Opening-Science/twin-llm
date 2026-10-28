@@ -26,7 +26,12 @@ import {
   promptBudgetTokens,
 } from "../../infrastructure/ollama-context";
 import type { TurnSkill } from "../../infrastructure/skill-gate";
-import { NO_WEARABLES, ONE_WEARABLE, WORST_CASE_WEARABLES } from "./prompt-size-fixtures";
+import {
+  LONGEST_UI_CONTEXT,
+  NO_WEARABLES,
+  ONE_WEARABLE,
+  WORST_CASE_WEARABLES,
+} from "./prompt-size-fixtures";
 
 /**
  * `largeContext`: needs more than the default context. A linked wearable lists
@@ -68,6 +73,7 @@ export const promptSizeCases = (skills: readonly TurnSkill[]): readonly SizeCase
         skill,
         wearables: context.wearables,
         question: QUESTION,
+        uiContext: LONGEST_UI_CONTEXT,
       },
       largeContext: context.large,
     })),

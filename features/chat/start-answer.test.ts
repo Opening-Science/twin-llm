@@ -492,3 +492,52 @@ describe("chat start: a thread that used genome tools stays local (#151)", () =>
     expect(refused).toEqual([refusedRow(GENOME_THREAD_SENTENCE)]);
   });
 });
+
+describe("chat start: a turn's UI context (#47)", () => {
+  const SYNTHETIC_OLLAMA: ChatProviderSettings = {
+    dataMode: "synthetic",
+    provider: "ollama",
+    exoscalePersonalData: "off",
+  };
+  const CONTEXT = {
+    panels: ["outputs" as const],
+    organ: "liver" as const,
+    chart: null,
+    views: [{ kind: "biomarker.card" as const, measure: "2324-2" }],
+    viewCount: 1,
+  };
+
+  test("is written to the audit chain before the model is called", async () => {
+    const { startAnswer, calls, audits } = harness(SYNTHETIC_OLLAMA, NO_WEARABLES);
+    const response = await startAnswer(ACTOR, APP_USER, { ...CALL, uiContext: CONTEXT });
+    expect(response.status).toBe(200);
+    expect(calls).toEqual([`wearables synthetic ${APP_USER}`, "audit", "stream"]);
+    expect(audits).toEqual([
+      {
+        actor: ACTOR,
+        sessionId: CALL.turnId,
+        subjectRef: null,
+        tool: "ui.context",
+        args: { modelId: CALL.modelId, context: CONTEXT },
+        result: { lines: 3 },
+        rowCount: 0,
+      },
+    ]);
+  });
+
+  test("a failed audit write stops the model call", async () => {
+    const { startAnswer, calls } = harness(SYNTHETIC_OLLAMA, NO_WEARABLES, {
+      auditFails: true,
+    });
+    await expect(
+      startAnswer(ACTOR, APP_USER, { ...CALL, uiContext: CONTEXT }),
+    ).rejects.toThrow("audit-down");
+    expect(calls).toEqual([`wearables synthetic ${APP_USER}`, "audit"]);
+  });
+
+  test("a turn without one writes no row", async () => {
+    const { startAnswer, calls } = harness(SYNTHETIC_OLLAMA, NO_WEARABLES);
+    await startAnswer(ACTOR, APP_USER, CALL);
+    expect(calls).toEqual([`wearables synthetic ${APP_USER}`, "stream"]);
+  });
+});

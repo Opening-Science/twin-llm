@@ -3,6 +3,7 @@ import type { ModelResponseMetrics } from "@/infrastructure/model-response-metri
 import type { NumberSource } from "@/infrastructure/number-sources";
 import type { EvidenceAttribution } from "@/infrastructure/oura-types";
 import type { ResponseDocumentV1 } from "@/infrastructure/response-document/document-v1";
+import type { UiContext } from "@/infrastructure/ui-context";
 
 import type { ToolCard } from "./tool-cards";
 
@@ -62,6 +63,8 @@ export type TurnState = Readonly<{
   answers: readonly ResponseState[];
   /** The skill the prompt was sent with (`sleep` for `/sleep`), or null. */
   skill?: string | null;
+  /** What was on screen when it was sent (#47); kept for retries, never stored. */
+  uiContext?: UiContext | null;
   /**
    * Shown at once while the server creates the rows. Its ids are made up, so
    * nothing may stream against it until the real turn replaces it.

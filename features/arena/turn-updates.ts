@@ -1,3 +1,5 @@
+import type { UiContext } from "@/infrastructure/ui-context";
+
 import type { AnswerSource, ResponseState, TurnState } from "./conversation";
 
 /**
@@ -26,10 +28,12 @@ export const pendingTurn = (
   prompt: string,
   models: readonly Readonly<{ id: string; name: string }>[],
   skill: string | null = null,
+  uiContext: UiContext | null = null,
 ): TurnState => ({
   id: PENDING_ID,
   prompt,
   skill,
+  ...(uiContext === null ? {} : { uiContext }),
   pending: true,
   answers: models.map((model) =>
     streamingAnswer(`${PENDING_ID}:${model.id}`, {
@@ -51,6 +55,7 @@ export const confirmTurn = (
           id: turnId,
           prompt: turn.prompt,
           skill: turn.skill ?? null,
+          ...(turn.uiContext ? { uiContext: turn.uiContext } : {}),
           answers: responses.map((response) => streamingAnswer(response.id, response)),
         }
       : turn,
@@ -88,6 +93,8 @@ export const answersToStream = (
   turnIndex: number;
   turnId: string;
   skill: string | null;
+  /** Left out when the turn carried no UI context. */
+  uiContext?: UiContext;
   response: ResponseState;
 }>[] =>
   turns.flatMap((turn, turnIndex) =>
@@ -101,6 +108,7 @@ export const answersToStream = (
             turnIndex,
             turnId: turn.id,
             skill: turn.skill ?? null,
+            ...(turn.uiContext ? { uiContext: turn.uiContext } : {}),
             response,
           })),
   );

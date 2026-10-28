@@ -5,6 +5,11 @@ export const ABSTAIN_BANNER = "Not enough data — this reply is withheld.";
 export const GUIDELINE_ATTRIBUTION_LINE =
   "Published guideline passage as reference material, not a statement about this person.";
 export const KNOWLEDGE_HEADING = "OpenTwin knowledge";
+
+/** The turn's UI context (#47), as the model was given it. */
+export const UI_CONTEXT_HEADING = "On screen when asked";
+export const UI_CONTEXT_NOTE =
+  "Sent to the model as a short block and recorded in the audit chain. It holds no values.";
 export const KNOWLEDGE_ATTRIBUTION_LINE =
   "OpenTwin knowledge notes, Open Science Foundation, CC BY 4.0. They describe TwinLLM itself, not this person.";
 export const GUIDELINE_ONLY_BANNER =

@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useState } from "react";
 
+import type { ChatView } from "@/infrastructure/chat-view";
 import { formatRelative } from "@/infrastructure/format-measure";
 import { Button } from "@/infrastructure/ui-kit/button";
 
@@ -94,10 +95,13 @@ const EntryRow = ({
 export const OutputsPanel = ({
   entries,
   onLargeChange,
+  onShownChange,
 }: Readonly<{
   entries: readonly OutputEntry[];
   /** Tells the layout to widen the panel while a view is drawn large. */
   onLargeChange?: (large: boolean) => void;
+  /** Whether the panel is open and which view it draws large, for the UI context. */
+  onShownChange?: (shown: Readonly<{ open: boolean; large: ChatView | null }>) => void;
 }>) => {
   const [state, setState] = useState<PanelState>("open");
   const [largeKey, setLargeKey] = useState<string | null>(null);
@@ -116,6 +120,12 @@ export const OutputsPanel = ({
   useEffect(() => {
     onLargeChange?.(showLarge);
   }, [showLarge, onLargeChange]);
+
+  const largeView = showLarge ? large.view : null;
+  const open = state === "open";
+  useEffect(() => {
+    onShownChange?.({ open, large: largeView });
+  }, [open, largeView, onShownChange]);
 
   if (entries.length === 0) return null;
 
