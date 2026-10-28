@@ -33,16 +33,3 @@ export const setGoogleHealthCredentials = (
 export const getGoogleHealthCredentials = (
   client: GoogleHealthClient,
 ): Auth.Credentials => internals(client).oauth2Client.credentials;
-
-export const ensureGoogleHealthAccessToken = async (
-  client: GoogleHealthClient,
-): Promise<string> => {
-  const result = await internals(client).oauth2Client.getAccessToken();
-  const token = typeof result === "string" ? result : result?.token;
-  if (!token) {
-    throw new Error(
-      "Access token is required. Authenticate the client first using initializeGoogleHealthClient.",
-    );
-  }
-  return token;
-};

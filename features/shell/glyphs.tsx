@@ -59,16 +59,6 @@ export const TwinGlyph = (props: GlyphProps) => (
   </Svg>
 );
 
-/** A table. */
-export const DataGlyph = (props: GlyphProps) => (
-  <Svg {...props}>
-    <>
-      <rect x="3" y="3.5" width="14" height="13" rx="1.5" />
-      <path d="M3 8h14M3 12.3h14M8 8v8.5" />
-    </>
-  </Svg>
-);
-
 /** A chip with pins. */
 export const ModelsGlyph = (props: GlyphProps) => (
   <Svg {...props}>
@@ -139,13 +129,6 @@ export const CommandGlyph = (props: GlyphProps) => (
       <rect x="2.5" y="3.5" width="15" height="13" rx="2" />
       <path d="m11.5 6.5-3 7" />
     </>
-  </Svg>
-);
-
-/** Three lines: the menu. */
-export const MenuGlyph = (props: GlyphProps) => (
-  <Svg {...props}>
-    <path d="M3.5 5.5h13M3.5 10h13M3.5 14.5h13" />
   </Svg>
 );
 

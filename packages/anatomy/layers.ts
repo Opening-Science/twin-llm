@@ -21,8 +21,6 @@ export type AtlasLayerId = (typeof ATLAS_LAYER_IDS)[number];
 
 export type LayerId = "scan" | AtlasLayerId;
 
-export const LAYER_IDS: readonly LayerId[] = ["scan", ...ATLAS_LAYER_IDS];
-
 export const DEPTH_MIN = 0;
 export const DEPTH_MAX = 3;
 

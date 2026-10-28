@@ -56,9 +56,6 @@ export const pointsByPrefix = (
   return [...byDay.values()].sort((a, b) => a.date.localeCompare(b.date));
 };
 
-export const seriesByPrefix = (metrics: readonly Metric[], prefix: string): number[] =>
-  pointsByPrefix(metrics, prefix).map((p) => p.value);
-
 export const filterMetricsByRange = (
   metrics: readonly Metric[],
   startDate: string,

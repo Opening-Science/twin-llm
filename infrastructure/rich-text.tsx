@@ -1,4 +1,4 @@
-import { Fragment, type ReactNode } from "react";
+import type { ReactNode } from "react";
 
 import { cn } from "@/infrastructure/ui";
 
@@ -331,18 +331,3 @@ export const RichText = ({
     </div>
   );
 };
-
-/** Single-line / short snippets (e.g. a status sentence). */
-export const RichInline = ({
-  text,
-  className,
-}: {
-  readonly text: string;
-  readonly className?: string;
-}) => (
-  <span className={className}>
-    {renderInline(text, "i").map((node, index) => (
-      <Fragment key={index}>{node}</Fragment>
-    ))}
-  </span>
-);
