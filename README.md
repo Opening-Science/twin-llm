@@ -10,7 +10,7 @@ TwinLLM is an open-source research app from the [Open Science Foundation](https:
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/chat-dark.png">
-  <img src="docs/images/chat-light.png" alt="Three local models (qwen3:4b, a TwinLLM fine-tune and qwen3:8b) answering how a synthetic subject's heart rate changed. Each column lists the tools it called with their row counts, then its answer.">
+  <img src="docs/images/chat-light.png" alt="Three local models (qwen3:4b, qwen3:8b and a TwinLLM fine-tune) asked for a chart of a synthetic subject's heart rate. Each column lists the tools it called with their row counts, then its answer and an inline heart-rate chart; the Outputs panel on the right lists the three charts.">
 </picture>
 
 > **Research use only.** TwinLLM gives no medical advice and is not for diagnostic use. See [Intended use](#intended-use).
