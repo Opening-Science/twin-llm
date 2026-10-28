@@ -1,8 +1,8 @@
 # TwinLLM
 
-**Ask questions about health data with open language models, and see exactly which numbers every answer used.**
+Ask questions about health data with open models, side by side, and see which numbers each answer used.
 
-TwinLLM is an open-source research application by the [Open Science Foundation](https://github.com/Opening-Science). It connects wearables, body scans and synthetic patient cohorts to open models you can run on your own machine, lets several models answer the same question side by side, and shows the evidence behind every answer. It is built on [open-twin](https://github.com/Opening-Science/open-twin), the foundation's library of health-data connectors to coded FHIR R4.
+TwinLLM is an open-source research app from the [Open Science Foundation](https://github.com/Opening-Science). It reads wearables, body scans and synthetic patient cohorts, lets up to three open models answer the same question, and shows the tool calls and values behind every answer. Models can run on your own machine. Health data comes in as coded FHIR R4 through [open-twin](https://github.com/Opening-Science/open-twin), the foundation's connector library.
 
 [![CI](https://github.com/Opening-Science/twin-llm/actions/workflows/ci.yml/badge.svg)](https://github.com/Opening-Science/twin-llm/actions/workflows/ci.yml)
 [![Licence: Apache-2.0](https://img.shields.io/badge/licence-Apache--2.0-blue.svg)](LICENSE)
@@ -10,74 +10,52 @@ TwinLLM is an open-source research application by the [Open Science Foundation](
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/chat-dark.png">
-  <img src="docs/images/chat-light.png" alt="Three local open models answering one heart-rate question about a synthetic evaluation-cohort subject side by side. Each answer shows the data tools it called, its numbers and an inline heart-rate chart; the Outputs panel on the right lists the three charts.">
+  <img src="docs/images/chat-light.png" alt="Three local models (qwen3:4b, a TwinLLM fine-tune and qwen3:8b) answering how a synthetic subject's heart rate changed. Each column lists the tools it called with their row counts, then its answer, reasoning, evidence and uncertainty.">
 </picture>
 
 > **Research use only.** TwinLLM gives no medical advice and is not for diagnostic use. See [Intended use](#intended-use).
 
-## Why TwinLLM
+## What it does
 
-Language models are good at sounding sure. Health data needs the opposite: numbers you can trace, units you can trust, and a model that says "not enough data" when that is the honest answer. TwinLLM is a place to work on that in the open:
+- **Answers come from tools, not from memory.** A model never sees raw records. It calls a small set of closed query tools (latest value, trend, baseline, coverage, before and after an event, two wearables compared), and every call lands in an append-only audit log. Each tool call shows as a card above the answer, with the rows it read.
+- **Several models, one question.** Up to three models answer side by side, each with its reasoning, cited values and uncertainty. A model that refuses, guesses a code or writes nothing is shown as it happened.
+- **Local first.** With `LOCAL_ONLY=true` the models, embeddings and database all run on your machine.
+- **Synthetic data to start.** A Synthea cohort ships with setup, so you can try everything, run the evaluation or build training data without a real person's records.
 
-- **Every number has a source.** Models do not read raw records. They call a small set of closed query tools (latest value, trend, baseline, coverage, comparison) over coded observations, and every call is written to an append-only audit log.
-- **Open models, side by side.** Ask one question and get answers from up to three models, each with its reasoning, cited values and uncertainty, so you can compare them on the same footing.
-- **Local first.** With `LOCAL_ONLY=true`, models, embeddings and storage all stay on your machine.
-- **Honest by design.** Answers that do not rest on enough data are withheld, missing values are never turned into zero, and the interface copy is checked in CI for medical claims.
-- **Synthetic data to start with.** A built-in Synthea cohort lets anyone try the full app, run the evaluation or build training data without touching a real person's records.
+| Page             | What you do there                                                                                                                                                                         |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Chat**         | Ask about a subject's measurements or your own wearables. `/sleep` and `/trainer` run a skill, `/twin` opens the digital twin in the chat, and Ctrl/⌘+K searches threads, pages and docs. |
+| **Incognito**    | A chat that is never saved, never indexed for search and only runs on local models.                                                                                                       |
+| **Digital Twin** | A 3D body with reference anatomy, live vitals and biomarkers by organ system.                                                                                                             |
+| **Customize**    | Your own skills (a form, stored per person), data you import (FHIR records, lab results as CSV, research tables) and connectors (Oura, Whoop, Google Health, BodyLoop).                   |
+| **Cohort**       | Browse the synthetic cohort: what is measured, for whom, how often, and the training conversations made from it. Any subject can be asked about in one click.                             |
+| **Evaluation**   | Score models on about a hundred questions over the synthetic cohort, with every model call cached for replay.                                                                             |
+
+<p>
+  <img src="docs/images/search-light.png" width="49%" alt="The search dialog over a chat: threads matching heart rate, with readable titles, followed by matching docs.">
+  <img src="docs/images/incognito-dark.png" width="49%" alt="A new incognito chat in dark mode, with the banner saying it is not saved, not in threads or search, local models only.">
+</p>
+<p>
+  <img src="docs/images/customize-light.png" width="49%" alt="Customize, Skills tab: no own skills yet and a New skill button, then the shipped /genome, /sleep and /trainer skills with what each reads and may call.">
+  <img src="docs/images/cohort-light.png" width="49%" alt="The synthetic cohort overview under Customize, Data, with a plain introduction to subjects, observations, LOINC codes, units and cohorts.">
+</p>
+<p>
+  <img src="docs/images/digital-twin-dark.png" width="49%" alt="The Digital Twin page in dark mode: a synthetic demo body at the Skeleton depth with the anatomy panel.">
+  <img src="docs/images/connectors-dark.png" width="49%" alt="Customize, Connectors, in dark mode: Oura, Whoop and Google Health cards with their setup status, and BodyLoop under body scan.">
+</p>
 
 ## Data privacy
 
-Health data is among the most sensitive data a person has, and a digital twin concentrates
-it in one place. TwinLLM is built so that privacy does not depend on a policy page or on
-trusting an operator: the rules below are enforced by the code, checked by tests in CI, and
-visible in the source for anyone to audit.
+Health data is about as sensitive as data gets, and a digital twin puts a lot of it in one place. So the rules are in the code and checked in CI, not on a policy page:
 
-- **Local by default.** With `LOCAL_ONLY=true`, the models, the embeddings and the database
-  all run on your own machine. Nothing about you needs to leave it.
-- **No third-party model ever sees personal data.** External model services, such as
-  OpenRouter or a rented GPU, are refused for anything but synthetic data. Our own
-  Swiss-hosted models receive personal data only in an explicitly configured, consented
-  pilot, because the operator of a hosted GPU can in principle read a running machine's
-  memory.
-- **The model never reads your raw records.** It works through a small set of closed query
-  tools that return numbers with their units and dates, and body-scan data reaches it only
-  as numeric measurements, never as images or meshes.
-- **Every data read is on the record.** Each query a model makes is written to an
-  append-only, hash-linked audit log, so tampering with the history is detectable.
-- **Your conversations are yours.** Threads open only for their owner, wearable tokens are
-  encrypted at rest, logs are kept free of health values and secrets, and analytics, if
-  enabled at all, carry counts and timings, never your questions or answers.
-- **No model of you.** TwinLLM never fits or fine-tunes a model on one person's data, so
-  there is no per-person model that could memorise and leak that person. It answers
-  through audited queries over the person's own record. Development, evaluation and
-  training use synthetic patients generated with Synthea.
+- **Local by default.** With `LOCAL_ONLY=true`, nothing about you needs to leave your machine.
+- **No third-party model sees personal data.** OpenRouter, a rented GPU or any other outside model service is refused for anything but synthetic data. Our own Swiss-hosted models get personal data only in an explicitly configured, consented pilot, because whoever runs a GPU host can in principle read its memory.
+- **The model reads numbers, not records.** It gets values with units and dates from the query tools. Body scans reach it as measurements only, never as images or meshes.
+- **Every read is logged.** Each tool call goes into an append-only, hash-linked audit log, so editing the history shows.
+- **Your threads are yours.** A thread opens only for its owner, wearable tokens are encrypted at rest, logs carry no health values or secrets, and analytics (if switched on) carry counts and timings, never questions or answers. Incognito chats are not stored at all.
+- **No model of you.** TwinLLM never fine-tunes on one person's data. Training and evaluation use synthetic patients only.
 
-What remains unsolved is just as important to say. Wearable data still originates in each
-vendor's cloud, and no one, including us, can yet measure how much an answer or insight
-shared with a third party discloses about the one person a twin describes. That open problem
-is the focus of the Open Science Foundation's first funding call. The full data-flow table is under
-[What leaves your machine](#what-leaves-your-machine).
-
-## What you can do with it
-
-|                   |                                                                                                                              |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| **Chat**          | Ask about one subject's measurements with optional wearable context; compare up to three open models.                        |
-| **Digital Twin**  | Explore a 3D body with reference anatomy, live vitals and biomarkers lit by organ system.                                    |
-| **Data**          | Browse the synthetic cohort: what is measured, how often, for whom, and the training conversations made from it.             |
-| **Connectors**    | Link Oura, Whoop and Google Health, a BodyLoop body scanner, and knowledge sources.                                          |
-| **Get started**   | A short first-run flow: what you are here for, which data to connect, which sources the model may use, where your data goes. |
-| **Evaluation**    | Score models on the evaluation question set over the synthetic cohort, with every model call cached for replay.              |
-| **Training data** | Turn synthetic cohorts into tool-use conversations for fine-tuning open models.                                              |
-
-<p>
-  <img src="docs/images/digital-twin-dark.png" width="49%" alt="The Digital Twin page in dark mode: a synthetic demo body at the Skeleton depth with the depth slider and the Biomarkers panel.">
-  <img src="docs/images/data-light.png" width="49%" alt="The Data page: a plain-language introduction to the synthetic cohort, with what a subject, an observation, a LOINC code, a unit and a cohort mean.">
-</p>
-<p>
-  <img src="docs/images/start-light.png" width="49%" alt="The first-run flow asking what brings you here, with roles to pick and a choice between the synthetic demo cohort and your own data.">
-  <img src="docs/images/connectors-dark.png" width="49%" alt="The Connectors page in dark mode, with cards for Oura, Whoop, Google Health, BodyLoop, GBD and Guidelines, each showing its setup status.">
-</p>
+Two problems are still open. Wearable data starts in each vendor's cloud, and nobody yet knows how to measure how much an answer shared with someone else gives away about the one person a twin describes. That second question is what the Open Science Foundation's first funding call is about. The full table is under [What leaves your machine](#what-leaves-your-machine).
 
 ## Run it locally
 
@@ -91,7 +69,17 @@ ollama pull qwen3:8b && ollama pull nomic-embed-text
 bun run dev
 ```
 
-`setup:local` checks the prerequisites and prints the Homebrew or apt line for anything missing (it never installs system packages). It then writes `.env.local` from `.env.synthetic.example` if there is none, syncs the pinned open-twin packages, installs dependencies, creates the database if it does not exist, applies the migrations, downloads the anatomy atlases and the rigged demo bodies (from the `anatomy-rigged-v1` release; baked with uv only if that fails), and downloads and ingests the 30-person synthetic evaluation cohort (Synthea, fixed seed and dates, from the `eval-cohort-v1` release, checksum verified; `-- --generate-cohort` generates it locally instead, which gives the pinned files on x86_64 only). It also adds one example thread, "Example (synthetic)", to Your threads: a heart-rate chart question about a synthetic subject, built from a recorded answer, so no model is needed (`-- --skip-example` leaves it out), and writes a small sample of training conversations from 12 people of that cohort for the Data page's Training tab (`bun run training:sample`; to look at, never to train on; `-- --skip-training-sample` leaves it out). It is safe to re-run: finished steps are skipped. It ends with a checklist of what is ready and what was skipped and why. An evaluation cohort in the warehouse that is not the pinned one (an older copy with 35 subjects instead of 37) is marked `[stale]`; `bun run setup:local -- --reload-cohort` replaces that cohort's warehouse rows and nothing else. `bun run doctor` prints the same checks and what each page needs, without changing anything.
+`setup:local` is safe to re-run; finished steps are skipped. It:
+
+- checks the prerequisites and prints the Homebrew or apt line for anything missing (it never installs system packages);
+- writes `.env.local` from `.env.synthetic.example` if there is none, syncs the pinned open-twin packages and installs dependencies;
+- creates the database if needed and applies the migrations;
+- downloads the anatomy atlases and the rigged demo bodies (baked locally with uv only if the download fails);
+- downloads and ingests the synthetic evaluation cohort (Synthea, fixed seed and dates, checksum verified; `-- --generate-cohort` builds it locally instead);
+- adds one example thread built from a recorded answer, so you can look around before pulling a model (`-- --skip-example` leaves it out), and a small sample of training conversations for the Cohort page (`-- --skip-training-sample`);
+- ends with a checklist of what is ready and what was skipped.
+
+`bun run doctor` prints the same checks without changing anything, including whether `node_modules` and the Prisma client match the repo. `bun run dev` fixes both before it starts. If the evaluation cohort in your database is an older copy, doctor marks it `[stale]` and `bun run setup:local -- --reload-cohort` replaces just that cohort.
 
 On macOS with Homebrew:
 
@@ -102,13 +90,13 @@ export PATH="$(brew --prefix openjdk@21)/bin:$PATH"   # add to ~/.zshrc
 bun run setup:local   # without DATABASE_URL it uses postgresql://$USER@127.0.0.1:5432/twin_llm_synthetic
 ```
 
-`bun run setup:local -- --cohort-10k` loads the 10,000-person cohort from the [`cohort-synthea-v4-seed42-10k`](https://github.com/Opening-Science/twin-llm/releases/tag/cohort-synthea-v4-seed42-10k) release instead (about 1 GB download and 45 GB free disk while it unpacks). Open <http://localhost:3000>. This runs fully on your machine against synthetic data: no account, no cloud keys. Wearables and the rest: [`docs/runbook.md`](docs/runbook.md).
+Then open <http://localhost:3000>. That runs entirely on your machine against synthetic data, with no account and no cloud keys. `bun run setup:local -- --cohort-10k` loads the 10,000-person cohort instead (about 1 GB to download and 45 GB free while it unpacks). Wearables and everything else: [`docs/runbook.md`](docs/runbook.md).
 
 ## How it works
 
 ![TwinLLM data flow: wearable, body-scan, guideline and knowledge, population, synthetic and genome lines run from their sources through sync, storage and tools into an open model, which writes the chat answer and runs the synthetic evaluation.](docs/diagrams/data-flow.svg)
 
-Connectors bring data in as coded FHIR R4 observations (LOINC codes, UCUM units) through open-twin. The warehouse stores them per subject. A chat turn gives the model a fixed system prompt and the closed query tools; the model calls them, and the answer is parsed into a response document with its evidence, reasoning, uncertainty and answer class. Solid lines in the diagram are built; dashed lines are planned.
+Connectors bring data in as coded FHIR R4 observations (LOINC codes, UCUM units) through open-twin, and the warehouse stores them per subject. A chat turn gives the model a fixed system prompt and the query tools. The model calls the tools, and its reply is parsed into a response document with evidence, reasoning, uncertainty and an answer class. In the diagram, solid lines are built and dashed lines are planned.
 
 ### What leaves your machine
 
@@ -132,8 +120,8 @@ Details: [`docs/providers.md`](docs/providers.md).
 | --------------------------------------------- | --------------------------------------------------------------------------------------------------- |
 | `ollama` (**default with `LOCAL_ONLY=true`**) | Local models on this machine, including MedGemma                                                    |
 | `exoscale` (**default otherwise**)            | Our own open models on vLLM, on an Exoscale GPU instance in Switzerland; needs `EXOSCALE_BASE_URLS` |
-| `openrouter`                                  | Free OSS (`*:free`) — only when `DATA_MODE=synthetic` and no snapshot                               |
-| `remote-gpu`                                  | Your own vLLM (e.g. Apertus) over an SSH tunnel — synthetic data only                               |
+| `openrouter`                                  | Free OSS (`*:free`), only when `DATA_MODE=synthetic` and no snapshot                                |
+| `remote-gpu`                                  | Your own vLLM (e.g. Apertus) over an SSH tunnel, synthetic data only                                |
 | `infomaniak` (legacy)                         | Swiss-hosted OSS, OpenAI-compatible (cloud); only when named, never a default; synthetic data only  |
 
 The open-model lineup for comparisons is in [`docs/models.md`](docs/models.md).
@@ -148,7 +136,7 @@ The open-model lineup for comparisons is in [`docs/models.md`](docs/models.md).
 
 ## Evaluation
 
-About a hundred questions (`evaluation/questions.v1.json`) over six synthetic scenarios, scored on eight criteria: correctness, hallucination, privacy, query safety, clinical caution, readability, consistency and latency. The answer key comes from the synthetic cohort through the same closed tools the models call.
+About a hundred questions (`evaluation/questions.v1.json`) over six synthetic scenarios, scored on correctness, hallucination, privacy, query safety, clinical caution, readability, consistency and latency. The answer key is built from the cohort with the same tools the models call.
 
 ```bash
 bun run eval -- --models ollama:qwen3:4b --latency-set
@@ -159,18 +147,18 @@ Every model call is cached, so `--replay` re-scores a run without a GPU. Details
 
 ## Project layout
 
-| Path              | What lives there                                                                     |
-| ----------------- | ------------------------------------------------------------------------------------ |
-| `app/`            | Next.js routes and API handlers                                                      |
-| `features/`       | One folder per feature: chat, digital twin, connectors, data explorer, onboarding, … |
-| `infrastructure/` | Environment, database, analytics, auth and shared UI primitives                      |
-| `packages/`       | Query tools, warehouse, biomarkers, guidelines, knowledge, BodyLoop client           |
-| `scripts/`        | Synthea, ingest, evaluation and training-data command lines                          |
-| `docs/`           | Design notes, runbook and reference                                                  |
+| Path              | What lives there                                                                  |
+| ----------------- | --------------------------------------------------------------------------------- |
+| `app/`            | Next.js routes and API handlers                                                   |
+| `features/`       | One folder per feature: chat, search, skills, digital twin, connectors, cohort, … |
+| `infrastructure/` | Environment, database, analytics, auth and shared UI primitives                   |
+| `packages/`       | Query tools, warehouse, biomarkers, guidelines, knowledge, BodyLoop client        |
+| `scripts/`        | Synthea, ingest, evaluation and training-data command lines                       |
+| `docs/`           | Design notes, runbook and reference                                               |
 
 ## Contributing
 
-Contributions are welcome, from a typo fix to a new connector. Good places to start:
+Contributions are welcome, from a typo to a new connector. Good places to start:
 
 - issues labelled [`good first issue`](https://github.com/Opening-Science/twin-llm/labels/good%20first%20issue) and [`help wanted`](https://github.com/Opening-Science/twin-llm/labels/help%20wanted);
 - trying the quick start on your machine and telling us what was unclear;
@@ -196,9 +184,9 @@ The software is supplied under the warranty and liability terms of its [licence]
 
 ## Related projects
 
-- [Open Wearables](https://github.com/the-momentum/open-wearables) — wearable interchange work. TwinLLM consumes coded FHIR R4 via open-twin rather than a parallel interchange format.
-- [omh-shim](https://github.com/jupyterhealth/omh-shim) / [JupyterHealth](https://jupyterhealth.org) — produce [Open mHealth](https://www.openmhealth.org/), optionally wrapped in FHIR. open-twin produces coded FHIR R4 Observations (LOINC + UCUM).
-- [HealthKitOnFHIR](https://github.com/StanfordBDHG/HealthKitOnFHIR) — Apple HealthKit to FHIR on device. TwinLLM is a server-side companion for Oura, Whoop, and Google Health.
+- [Open Wearables](https://github.com/the-momentum/open-wearables): wearable interchange. TwinLLM reads coded FHIR R4 through open-twin instead of a separate interchange format.
+- [omh-shim](https://github.com/jupyterhealth/omh-shim) and [JupyterHealth](https://jupyterhealth.org): [Open mHealth](https://www.openmhealth.org/), optionally wrapped in FHIR. open-twin writes coded FHIR R4 Observations (LOINC and UCUM).
+- [HealthKitOnFHIR](https://github.com/StanfordBDHG/HealthKitOnFHIR): Apple HealthKit to FHIR on the device. TwinLLM is the server side for Oura, Whoop and Google Health.
 
 ## Licence
 
