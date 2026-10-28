@@ -67,6 +67,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Removed
 
+- Code nothing used: the Data and menu glyphs (the Data nav item is gone), `RichInline`, `seriesByPrefix`, `LAYER_IDS`, an unused BodyLoop message, `ensureGoogleHealthAccessToken`, the `IngestBody` type, and five re-exports and `isRealDataMode` from `infrastructure/data-mode.ts`. Each was checked with a search across app, features, infrastructure, packages, scripts and tests.
+
 - The schematic four-chamber heart panel beside the live twin (#53): it looked crude and could not be closed. Live vitals still pulse the atlas heart.
 
 ### Fixed

@@ -46,5 +46,3 @@ export const ingestSchema = z
       row.cross_section !== undefined,
     { message: "glb-or-measurements-required" },
   );
-
-export type IngestBody = z.infer<typeof ingestSchema>;

@@ -135,7 +135,6 @@ import { initialPanel, panelReducer } from "./panel-state";
 import { ViewToolbar } from "./view-toolbar";
 import { useWheelGate, WHEEL_ZOOM_HINT } from "./wheel-zoom";
 
-export const BODYLOOP_EMPTY = "No BodyLoop scan on this account.";
 export const BODY_TWIN_LOADING = "Loading body twin…";
 export const BODYLOOP_NO_SCANS = "No scans for this subject.";
 export const BODYLOOP_NO_MESH = "No 3D model stored for this scan — Sync again";
