@@ -74,6 +74,8 @@ data/vitronic/
 data/guidelines/
 # Reference-anatomy atlases (CC BY 4.0, fetched by bun run anatomy:fetch; never commit)
 data/anatomy/
+# Open-licence article text (bun run literature:fetch; never commit downloaded text)
+data/literature/
 # Synthetic genomes and reports (bun run genome:synth / genome:ingest)
 data/genome-synth/
 
