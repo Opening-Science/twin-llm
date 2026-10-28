@@ -6,6 +6,7 @@ import {
   type WearableSummaries,
 } from "@/infrastructure/offered-keys";
 import type { EvidenceAttribution, OuraSummary } from "@/infrastructure/oura-types";
+import { splitThinking } from "@/infrastructure/think-block";
 import { sectionLines } from "@/infrastructure/twin-section-lines";
 
 export type { EvidenceAttribution } from "@/infrastructure/oura-types";
@@ -279,9 +280,12 @@ const normalizeSummaries = (
  * the same keys the system prompt listed, whichever caller passes them.
  */
 export const parseTwinAnswer = (
-  text: string,
+  reply: string,
   summaries: WearableSummaries | OuraSummary | null | undefined,
 ): ParsedTwinAnswer => {
+  // Thinking a model leaked past `think: false` is never the answer; it stands
+  // in for the reasoning only when the reply has no Reasoning section.
+  const { thinking, text } = splitThinking(reply);
   const offered = offeredMetrics(normalizeSummaries(summaries));
   const spans = sectionSpans(text);
   const reasoningText = sectionText(spans, text, "reasoning");
@@ -292,7 +296,7 @@ export const parseTwinAnswer = (
   const realKeys = citedKeysForDataBasis(citedKeys);
 
   return {
-    reasoningText,
+    reasoningText: reasoningText ?? thinking,
     answerText: answerSection ?? text,
     uncertaintyText,
     citedKeys,

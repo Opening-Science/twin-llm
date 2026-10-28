@@ -220,12 +220,23 @@ export const cohortSuggestions = (
       phrasing: family,
     })),
   );
+  // The prompt names the codes the subject has, so a small model never has to
+  // recall a LOINC (qwen3:4b asked for 88678-4 when it meant 8867-4).
+  const codesFor = (label: string): readonly string[] =>
+    COHORT_FAMILIES.find((family) =>
+      [family.latest, family.trend, family.chart].includes(label),
+    )?.loinc.filter((loinc) => readingsOf(loinc) > 0) ?? [];
   return {
     heading: `From ${subject.label}, synthetic`,
-    questions: pick(families).map((label) => ({
-      label,
-      prompt: `For synthetic subject ${subject.ref}, ${lowerFirst(label)}`,
-    })),
+    questions: pick(families).map((label) => {
+      const codes = codesFor(label);
+      return {
+        label,
+        prompt: `For synthetic subject ${subject.ref}, ${
+          codes.length === 0 ? "" : `using LOINC ${codes.join(", ")}, `
+        }${lowerFirst(label)}`,
+      };
+    }),
   };
 };
 

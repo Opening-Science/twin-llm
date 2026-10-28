@@ -4,6 +4,7 @@
  * directly). Used by the training-data tests only.
  */
 import type { ObservationRecord, QueryToolPorts } from "../../packages/query-tools/ports";
+import { noReadingForCodes } from "../../packages/query-tools/refusals";
 import { SUBJECT_SCOPE_VIOLATION } from "../../packages/query-tools/scope";
 import {
   runBaselineDeviation,
@@ -78,7 +79,13 @@ export const fakeTools = (data: FakeRows) => {
               ]
             : [];
         });
-        return { rows: latest };
+        if (latest.length === 0) return noReadingForCodes(input.loinc);
+        return {
+          rows: latest,
+          codes_without_rows: input.loinc.filter(
+            (code) => !latest.some((row) => row.loinc === code),
+          ),
+        };
       }
       case "subject_window": {
         const ref = String(Reflect.get(Object(args), "subject_ref"));

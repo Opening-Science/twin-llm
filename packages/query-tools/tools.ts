@@ -24,6 +24,8 @@ import {
   type ToolRefusal,
   noEvent,
   noRecords,
+  noReadingForCodes,
+  type NoReadingForCodes,
   noRows,
   noWearableRows,
   recordCapExceeded,
@@ -330,7 +332,11 @@ export const runObservationsForSubject = (
 export const runLatestByLoinc = (
   scope: SessionScope,
   input: LatestByLoincInput,
-): Promise<{ rows: ObservationRow[] } | SubjectScopeViolation> =>
+): Promise<
+  | { rows: ObservationRow[]; codes_without_rows: string[] }
+  | NoReadingForCodes
+  | SubjectScopeViolation
+> =>
   audited(
     scope,
     "latest_by_loinc",
@@ -354,7 +360,11 @@ export const runLatestByLoinc = (
         seen.add(row.loinc);
         latest.push(mapRow(row));
       }
-      return { rows: latest };
+      if (latest.length === 0) return noReadingForCodes(input.loinc);
+      return {
+        rows: latest,
+        codes_without_rows: input.loinc.filter((code) => !seen.has(code)),
+      };
     },
     (result) => ("rows" in result ? result.rows.length : 0),
   );

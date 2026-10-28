@@ -115,6 +115,24 @@ export const noRows = (loinc: string, at: string | null): NoRows => ({
   loinc,
 });
 
+export type NoReadingForCodes = Readonly<{
+  code: "NO_ROWS";
+  error: string;
+  loinc: readonly string[];
+}>;
+
+/**
+ * None of the asked codes has a reading for the subject. A mistyped code
+ * (88678-4 for heart rate, 8867-4) lands here too, so the error says to check
+ * the code before telling anyone there is no data.
+ */
+export const noReadingForCodes = (codes: readonly string[]): NoReadingForCodes => ({
+  code: "NO_ROWS",
+  error:
+    "none of these LOINC codes has a reading for this subject; check each code is the one meant before saying there is no data",
+  loinc: [...codes],
+});
+
 export type ClinicalRecordKind = "condition" | "medication request";
 
 export type NoRecords = Readonly<{

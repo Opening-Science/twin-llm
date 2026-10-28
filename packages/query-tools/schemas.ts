@@ -385,7 +385,7 @@ export const TOOL_DEFINITIONS = [
   {
     name: "latest_by_loinc",
     description:
-      "Return the latest numeric row for each requested LOINC. Missing codes are omitted.",
+      "Return the latest numeric row for each requested LOINC; codes with no reading are listed in codes_without_rows. NO_ROWS when none has a reading: check the code before saying there is no data.",
     input: latestByLoincInput,
   },
   {

@@ -4,6 +4,7 @@ import {
   sectionSpans,
   sectionText,
 } from "@/infrastructure/parse-twin-answer";
+import { splitThinking } from "@/infrastructure/think-block";
 import type { STREAM_STATUS_LINES } from "@/infrastructure/response-document/stream-copy";
 
 /**
@@ -45,7 +46,8 @@ const withoutUnfinishedHeading = (text: string): string => {
     : text;
 };
 
-export const streamingView = (text: string): StreamingView => {
+export const streamingView = (reply: string): StreamingView => {
+  const { text } = splitThinking(reply);
   if (text.trim() === "") return { kind: "status", stage: "waiting" };
   // A declined reply has no Answer section; its finished document withholds it.
   if (classifyCompletion(text) === "REFUSE")
