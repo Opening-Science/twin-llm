@@ -420,3 +420,22 @@ describe("thinking leaked past think: false", () => {
     expect(parsed.reasoningText).toBe("check the window first");
   });
 });
+
+describe("a section that repeats the prompt's guidance", () => {
+  test("the copied line is dropped; an Answer of only that line is empty", () => {
+    const parsed = parseTwinAnswer(
+      [
+        "## Reasoning",
+        "Step-by-step chain of thought. Be concise but explicit about assumptions.",
+        "",
+        "I read the trend.",
+        "",
+        "## Answer",
+        "The user-facing answer in plain language. Do not invent wearable numbers.",
+      ].join("\n"),
+      null,
+    );
+    expect(parsed.reasoningText).toBe("I read the trend.");
+    expect(parsed.answerText).toBe("");
+  });
+});

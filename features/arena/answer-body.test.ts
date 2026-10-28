@@ -14,7 +14,7 @@ import { STREAM_STATUS_LINES } from "@/infrastructure/response-document/stream-c
 import { toResponseDocument } from "@/infrastructure/response-document/parse";
 import { GBD_ATTRIBUTION_LINE } from "@/packages/gbd-mcp/constants";
 
-import { AnswerBody } from "./answer-body";
+import { AnswerBody, noAnswerLine } from "./answer-body";
 import { toSavedResponseState } from "./saved-response-state";
 import { documentFromMetadata } from "./answer-stream";
 import {
@@ -349,5 +349,17 @@ describe("answer body while streaming", () => {
     expect(markup).toContain("Searched guidelines");
     expect(markup).toContain("4 rows");
     expect(markup).not.toContain('role="status"');
+  });
+});
+
+describe("noAnswerLine", () => {
+  test("says how many lookups ran before the model stopped", () => {
+    expect(noAnswerLine(0)).toBe("This model wrote no answer.");
+    expect(noAnswerLine(1)).toBe(
+      "This model ran 1 lookup and wrote no answer. The cards above show what it returned.",
+    );
+    expect(noAnswerLine(8)).toBe(
+      "This model ran 8 lookups and wrote no answer. The cards above show what they returned.",
+    );
   });
 });

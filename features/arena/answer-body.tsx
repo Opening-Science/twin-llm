@@ -7,6 +7,7 @@ import {
   parseTwinAnswer,
   type WearableSummaries,
 } from "@/infrastructure/parse-twin-answer";
+import { splitThinking } from "@/infrastructure/think-block";
 import { UNVERIFIED_NARRATION } from "@/infrastructure/response-document/copy";
 import { STREAM_STATUS_LINES } from "@/infrastructure/response-document/stream-copy";
 import { type DecorateText, RichText } from "@/infrastructure/rich-text";
@@ -109,6 +110,9 @@ const SettledAnswer = ({
   const withheld =
     document?.abstained === true ||
     document?.answer_class === "declined_decision_support";
+  const shown = parsed.answerText || splitThinking(response.text).text;
+  // A model can run its lookups and stop without writing anything.
+  const silent = !withheld && shown.trim() === "";
   const decorate = linkedNumbers(byText, idPrefix, (text) =>
     setActive((was) => ({ text, key: (was?.key ?? 0) + 1 })),
   );
@@ -121,14 +125,17 @@ const SettledAnswer = ({
         active={active}
         idPrefix={idPrefix}
       />
-      {!withheld && document?.interpretation.kind === "narration" && (
+      {!withheld && !silent && document?.interpretation.kind === "narration" && (
         <p className="text-eyebrow">{UNVERIFIED_NARRATION}</p>
       )}
-      {/* Prefer the Answer section when Twin structure is present; otherwise
-          show the full reply. */}
-      {!withheld && (
-        <RichText text={parsed.answerText || response.text} decorate={decorate} />
+      {silent && (
+        <p className="text-muted-foreground text-sm">
+          {noAnswerLine(response.tools?.length ?? 0)}
+        </p>
       )}
+      {/* Prefer the Answer section when Twin structure is present; otherwise
+          show the full reply, less any thinking a model leaked. */}
+      {!withheld && !silent && <RichText text={shown} decorate={decorate} />}
       {!withheld && <AnswerViews views={response.views ?? []} answerId={response.id} />}
       {response.status === "COMPLETE" && (
         <ExplainabilityPanel
@@ -142,6 +149,12 @@ const SettledAnswer = ({
     </div>
   );
 };
+
+/** What a column says when the model wrote nothing after its lookups. */
+export const noAnswerLine = (lookups: number): string =>
+  lookups === 0
+    ? "This model wrote no answer."
+    : `This model ran ${lookups} ${lookups === 1 ? "lookup" : "lookups"} and wrote no answer. The cards above show what ${lookups === 1 ? "it" : "they"} returned.`;
 
 /**
  * One column's answer. Its tool calls show as cards above it, live and after a
