@@ -25,6 +25,7 @@ import {
   toolChecks,
 } from "./plan";
 import { TOOLS } from "./prerequisites";
+import { checkPrismaClient, type PrismaClientState } from "./prisma-client";
 
 const FINDING_MARK: Readonly<Record<Finding["mark"], string>> = {
   ok: "[ok]     ",
@@ -39,6 +40,7 @@ const readinessMark = (page: Readiness): string =>
 export const formatDoctor = (
   state: DetectedState,
   packages: readonly PackageProblem[] = [],
+  client: PrismaClientState = "ok",
 ): string => {
   const tools = toolChecks(state).map((check) =>
     check.status === "ok"
@@ -74,6 +76,11 @@ export const formatDoctor = (
     packages.length === 0
       ? "  [ok]      node_modules matches package.json"
       : `  [stale]   node_modules: ${describeProblems(packages)}. Run: bun install`,
+    client === "ok"
+      ? "  [ok]      Prisma client matches prisma/schema.prisma"
+      : client === "missing"
+        ? "  [missing] Prisma client not generated. Run: bun run db:generate"
+        : "  [stale]   Prisma client older than prisma/schema.prisma. Run: bun run db:generate",
     `  ${example.ok ? "[ok]     " : "[off]    "} Example thread: ${example.detail}`,
     ...(context === null
       ? []
@@ -99,6 +106,10 @@ const isMain = Boolean((import.meta as { main?: boolean }).main);
 if (isMain) {
   const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
   process.stdout.write(
-    formatDoctor(await detectState(root), checkInstalledPackages(root)),
+    formatDoctor(
+      await detectState(root),
+      checkInstalledPackages(root),
+      checkPrismaClient(root),
+    ),
   );
 }

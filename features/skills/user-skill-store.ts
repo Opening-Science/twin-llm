@@ -57,10 +57,28 @@ export const findSkillFor = async (
   return row === null ? null : userTurnSkill(row);
 };
 
+/**
+ * The person's own skills for the palette, or none when they cannot be read
+ * (a database without the table, or a client generated before it). Every
+ * shell page renders the palette, so a failure here must not take the page
+ * down with it; the chat still refuses an own skill it cannot load.
+ */
+const ownSkillsForPalette = async (userId: string): Promise<readonly TurnSkill[]> => {
+  try {
+    return await userTurnSkills(userId);
+  } catch (error) {
+    console.error(
+      "[skills] own skills unreadable",
+      error instanceof Error ? error.name : "unknown",
+    );
+    return [];
+  }
+};
+
 /** Shipped skills, then the person's own, as the palette and search list them. */
 export const skillsFor = async (userId: string | null): Promise<readonly TurnSkill[]> => [
   ...runnableSkills(),
-  ...(userId === null ? [] : await userTurnSkills(userId)),
+  ...(userId === null ? [] : await ownSkillsForPalette(userId)),
 ];
 
 const data = (skill: UserSkillInput) => ({

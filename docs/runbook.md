@@ -120,7 +120,7 @@ bun run dev
 
 ### Synthetic cohort explorer (`/customize/data/cohort`, formerly `/data`)
 
-Added 2026-10-24. The Data page in the sidebar shows the synthetic cohorts, their subjects and the training conversations, in any `DATA_MODE` (2026-10-26: personal mode too; the chat still reads no synthetic subject in personal mode).
+Added 2026-10-24. Customize · Data · Synthetic cohort shows the synthetic cohorts, their subjects and the training conversations, in any `DATA_MODE` (2026-10-26: personal mode too; the chat still reads no synthetic subject in personal mode).
 
 ```sh
 bun run dev -p 3012

@@ -9,7 +9,9 @@ import { useEffect } from "react";
  * are inline and use `light-dark()` with the brand colours from docs/brand.md,
  * so it reads correctly under either system theme.
  *
- * At this depth only a full reload can help, so that is the one action.
+ * At this depth only a full reload can help, so that is the one action. It
+ * is a real reload: `reset()` only re-renders this boundary and never
+ * fetches the failed server layout again.
  */
 
 const PAGE_CSS = `
@@ -32,6 +34,7 @@ const PAGE_CSS = `
     background: light-dark(#ffffff, #242424);
   }
   h1 { margin: 0; font-size: 16px; }
+  code { font: 13px ui-monospace, monospace; }
   p { margin: 8px 0 16px; font-size: 14px; color: light-dark(#646363, #c0beb2); }
   button {
     font: inherit;
@@ -49,10 +52,11 @@ const PAGE_CSS = `
 
 type Props = Readonly<{
   error: Error & { digest?: string };
+  // Next passes reset too; it cannot recover a failed layout (see above).
   reset: () => void;
 }>;
 
-const GlobalError = ({ error, reset }: Props) => {
+const GlobalError = ({ error }: Props) => {
   useEffect(() => {
     // The digest links this to the server log; the message is redacted anyway.
     console.error("[app] root layout failed", error.digest ?? error.name);
@@ -65,10 +69,10 @@ const GlobalError = ({ error, reset }: Props) => {
         <main>
           <h1>TwinLLM couldn&rsquo;t load</h1>
           <p>
-            The problem is on our side. It is usually short-lived: reload the page to try
-            again.
+            The problem is on our side. Reload the page to try again. On your own copy, if
+            it keeps happening, <code>bun run doctor</code> says what is missing.
           </p>
-          <button type="button" onClick={reset}>
+          <button type="button" onClick={() => window.location.reload()}>
             Reload
           </button>
         </main>
