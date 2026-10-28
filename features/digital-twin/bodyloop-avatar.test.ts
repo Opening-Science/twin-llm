@@ -57,9 +57,15 @@ const syncedPreview = (defaultViatarId: number | null) => ({
   selectedSubjectId: "sub-self",
 });
 
+/** The viewer's source: the component, its 3D scene parts and its copy. */
+const viewerSource = (): string =>
+  ["bodyloop-avatar.tsx", "scan-scene.tsx", "body-twin-copy.ts"]
+    .map((file) => readFileSync(join(import.meta.dir, file), "utf8"))
+    .join("\n");
+
 describe("BodyLoop avatar viewer", () => {
   test("source uses GLTFLoader, OrbitControls, hemisphere light, and AutoMarkers", () => {
-    const source = readFileSync(join(import.meta.dir, "bodyloop-avatar.tsx"), "utf8");
+    const source = viewerSource();
     expect(source).toContain("GLTFLoader");
     expect(source).toContain("three/examples/jsm/controls/OrbitControls.js");
     expect(source).toContain("enableDamping");
@@ -79,7 +85,7 @@ describe("BodyLoop avatar viewer", () => {
   });
 
   test("source wires anatomy layers, zoom limits, disposal and on-demand frames", () => {
-    const source = readFileSync(join(import.meta.dir, "bodyloop-avatar.tsx"), "utf8");
+    const source = viewerSource();
     expect(source).toContain("<AnatomyLayers");
     expect(source).toContain("<AnatomyControls");
     expect(source).toContain("controls.minDistance = MIN_ZOOM_DISTANCE");
@@ -139,7 +145,7 @@ describe("BodyLoop avatar viewer", () => {
   });
 
   test("lighting and auto-rotate pacing are wired for the Z-up scene", () => {
-    const source = readFileSync(join(import.meta.dir, "bodyloop-avatar.tsx"), "utf8");
+    const source = viewerSource();
     expect(source).toContain(
       "Object.assign(scene.environmentRotation, { x: Math.PI / 2, y: 0, z: 0 })",
     );
@@ -151,7 +157,7 @@ describe("BodyLoop avatar viewer", () => {
   });
 
   test("scan textures are prepared in the load callback before the scan joins the scene", () => {
-    const source = readFileSync(join(import.meta.dir, "bodyloop-avatar.tsx"), "utf8");
+    const source = viewerSource();
     const textures = source.indexOf("prepareScanTextures(gltf.scene");
     const joins = source.indexOf("setScene(gltf.scene)");
     expect(textures).toBeGreaterThan(-1);
