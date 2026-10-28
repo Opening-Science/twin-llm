@@ -227,9 +227,5 @@ Training tracks per agent come next: each agent gets its own slice of the traini
 generated from the questions its skill answers (the router's topics give a first cut of
 which questions those are), and its own fine-tune, which then becomes the first entry of
 that agent's `modelPreference`. A later router may use a model call, measured against
-<<<<<<< HEAD
-this fixture before it replaces the rules. Specialty literature for each agent is #220
+these fixtures before it replaces the rules. Specialty literature for each agent is #220
 (fetch and ingest) and #236 (search, above).
-=======
-these fixtures before it replaces the rules. Specialty literature for each agent is #220.
->>>>>>> origin/router-eval
