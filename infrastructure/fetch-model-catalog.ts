@@ -1,6 +1,8 @@
 import "server-only";
 
 import { exoscaleEnv, infomaniakOpenAiBaseUrl, remoteGpuEnv, serverEnv } from "./env";
+import { chatModelIsLocal } from "./genome-gate";
+import type { AgentOffer } from "./agents";
 import { listRemoteGpuModels } from "./list-remote-gpu-models";
 import {
   EXOSCALE_SOURCE,
@@ -11,6 +13,7 @@ import {
   REMOTE_GPU_SOURCE,
   type VllmProviderId,
   type VllmSource,
+  withAgents,
 } from "./model-catalog";
 
 /**
@@ -208,6 +211,26 @@ export const fetchActiveModelCatalog = async (): Promise<Catalog | null> => {
     case "openrouter":
       return openRouterFreeModels();
   }
+};
+
+/**
+ * The catalog the chat offers: the agents (#218) in front of the provider's
+ * models. The picker, the turn check and both chat routes read this one, so
+ * an `agent:<id>` the browser sends is checked against the same list. The
+ * caller passes the skills the server offers (`runnableSkills`), which this
+ * layer cannot read itself.
+ */
+export const fetchChatCatalog = async (
+  skills: AgentOffer["skills"],
+): Promise<Catalog | null> => {
+  const catalog = await fetchActiveModelCatalog();
+  return catalog === null
+    ? null
+    : withAgents(catalog, {
+        provider: serverEnv().LLM_PROVIDER,
+        chatIsLocal: chatModelIsLocal(),
+        skills,
+      });
 };
 
 /** @deprecated Use fetchActiveModelCatalog; kept for existing imports. */

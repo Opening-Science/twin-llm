@@ -1,8 +1,10 @@
 import {
+  AUTO_MODEL_ID,
   type CatalogModel,
   MAX_SELECTED_MODELS,
   MIN_SELECTED_MODELS,
 } from "@/infrastructure/model-catalog";
+import { friendlyModelName } from "@/infrastructure/model-names";
 
 /**
  * The 1-to-3 model rule as plain functions, so the prompt bar and the menu
@@ -61,4 +63,33 @@ export const toggleModel = (
   const selected = current.includes(modelId);
   if (toggleLimit(selected, current.length) !== null) return current;
   return selected ? current.filter((id) => id !== modelId) : [...current, modelId];
+};
+
+export type MenuGroup = Readonly<{
+  label: "Agents" | "Models";
+  models: readonly CatalogModel[];
+}>;
+
+/** The menu's sections: agents first, then models; an empty one is left out. */
+export const menuGroups = (catalog: readonly CatalogModel[]): readonly MenuGroup[] =>
+  (
+    [
+      { label: "Agents", models: catalog.filter((model) => model.agent !== undefined) },
+      { label: "Models", models: catalog.filter((model) => model.agent === undefined) },
+    ] as const
+  ).filter((group) => group.models.length > 0);
+
+/** What Auto's row says under its name: it runs as another agent each time. */
+export const AUTO_SUBLINE = "Picks an agent for each question";
+
+/**
+ * The small line under a row's name: Auto's own line, an agent's base model,
+ * a fine-tune's raw id (its name is the readable one), else the provider.
+ */
+export const menuSubline = (
+  model: Pick<CatalogModel, "id" | "provider" | "agent">,
+): string => {
+  if (model.id === AUTO_MODEL_ID) return AUTO_SUBLINE;
+  if (model.agent) return model.agent.baseModelName;
+  return friendlyModelName(model.id) === null ? model.provider : model.id;
 };

@@ -3,6 +3,7 @@ import { join } from "node:path";
 
 import { describe, expect, test } from "bun:test";
 
+import { personalReadEvent } from "@/infrastructure/personal-read-audit";
 import type { AppendInput } from "@/packages/audit/append";
 import type {
   NewGenomeReport,
@@ -290,11 +291,82 @@ describe("GET /api/genome/report", () => {
   });
 
   test("enabled with no stored report yet", async () => {
-    const { ports } = fakePorts();
+    const { ports, seen } = fakePorts();
     expect(await (await getGenomeReportResponse(ports)).json()).toEqual({
       enabled: true,
       report: null,
     });
+    expect(seen.audits).toEqual([
+      personalReadEvent({
+        actor: "local",
+        sessionId: "session-1",
+        purpose: "genome-report",
+        rowCount: 0,
+      }),
+    ]);
+  });
+
+  test("off: nothing is read, so no row is written", async () => {
+    const { ports, seen } = fakePorts({
+      permit: () => ({
+        ok: false,
+        code: "GENOME_NOT_PERMITTED",
+        reason: "genome-source-not-ark",
+      }),
+      latest: async () => {
+        throw new Error("must not read");
+      },
+    });
+    expect((await getGenomeReportResponse(ports)).status).toBe(200);
+    expect(seen.audits).toEqual([]);
+  });
+
+  test("a stored report read writes one row with its row count, no genotype", async () => {
+    const { ports, seen } = fakePorts({
+      latest: async () => ({
+        id: "report-1",
+        app: "rsid-genotypes",
+        arkBuild: "GRCh38",
+        rows: [
+          {
+            rsid: "rs0000001",
+            chromosome: null,
+            position: null,
+            reference: null,
+            genotype: "AG",
+          },
+          {
+            rsid: "rs0000002",
+            chromosome: null,
+            position: null,
+            reference: null,
+            genotype: null,
+          },
+        ],
+        releasedAt: "2026-10-27T09:00:00.000Z",
+      }),
+    });
+    expect((await getGenomeReportResponse(ports)).status).toBe(200);
+    expect(seen.audits).toEqual([
+      personalReadEvent({
+        actor: "local",
+        sessionId: "session-1",
+        purpose: "genome-report",
+        rowCount: 2,
+      }),
+    ]);
+    expect(JSON.stringify(seen.audits)).not.toContain("rs0000001");
+  });
+
+  test("when the read row cannot be written, the report is not shown", async () => {
+    const { ports } = fakePorts({
+      audit: async () => {
+        throw new Error("audit-down");
+      },
+    });
+    const response = await getGenomeReportResponse(ports);
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({ error: "Could not load the genome report." });
   });
 
   test("a stored report without a named build says windows are refused", async () => {

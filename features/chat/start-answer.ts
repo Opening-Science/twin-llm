@@ -13,9 +13,12 @@ import {
   requestsGenomeTools,
 } from "@/infrastructure/genome-thread-policy";
 import type { KnowledgeSourceId } from "@/infrastructure/knowledge-sources";
+import type { CatalogAgent } from "@/infrastructure/model-catalog";
 import { personalDataSentEvent } from "@/infrastructure/personal-data-audit";
 import {
+  agentSkillUnavailable,
   permitSkillRequest,
+  SKILL_NOT_OFFERED,
   skillNotOffered,
   skillRunEvent,
   type TurnSkill,
@@ -55,6 +58,14 @@ import type { WearableContext } from "./wearable-context";
  * model is refused after the skill refusals and before the data-mode policy,
  * so before any history is sent. The refusal is audited (provider and a hash
  * of the thread id); if that write fails the turn is still refused.
+ *
+ * An agent (`agent:<id>`, #218) runs on its base model with its skill when the
+ * prompt names none; a `/skill` in the prompt wins. Its skill goes through
+ * every check above, as if typed; a refusal of the agent's own skill names
+ * the agent. The answer row stays keyed by `agent:<id>`;
+ * the audit rows name the base model, which is what saw the data, and the
+ * skill row names the agent too. An agent Auto picked (#219) runs exactly the
+ * same way; its skill row adds `via: "auto"`.
  */
 
 export type ChatProviderSettings = Readonly<{
@@ -87,7 +98,12 @@ type Refusal = Readonly<{ code: string; error: string }>;
 
 export const createStartAnswer =
   (deps: StartAnswerDeps) =>
-  async (actorId: string, appUserId: string, call: ChatRequest): Promise<Response> => {
+  async (
+    actorId: string,
+    appUserId: string,
+    call: ChatRequest,
+    agent: CatalogAgent | null = null,
+  ): Promise<Response> => {
     const refuse = async (
       refusal: Refusal,
       sentence: string = refusal.error,
@@ -97,11 +113,21 @@ export const createStartAnswer =
     };
 
     const settings = deps.settings();
-    const skill =
-      call.skill === undefined ? null : await deps.findSkill(call.skill, appUserId);
-    if (call.skill !== undefined && skill === null) {
-      return refuse(skillNotOffered(call.skill));
+    const agentSkill = call.skill === undefined ? (agent?.skill ?? null) : null;
+    const skillName = call.skill ?? agentSkill;
+    const skill = skillName === null ? null : await deps.findSkill(skillName, appUserId);
+    if (skillName !== null && skill === null) {
+      return refuse(
+        agentSkill !== null && agent !== null
+          ? agentSkillUnavailable(
+              agent.name,
+              { name: agentSkill, providers: null },
+              SKILL_NOT_OFFERED,
+            )
+          : skillNotOffered(skillName),
+      );
     }
+    const modelId = agent?.baseModelId ?? call.modelId;
     const thread = await deps.loadGenomeThread(call.turnId);
     const genomeThread =
       thread.usedGenome ||
@@ -119,7 +145,15 @@ export const createStartAnswer =
         provider: request.provider,
         hasWearableContext: request.hasWearableNarrative,
       });
-      if (!skillPermit.ok) return refuse(skillPermit);
+      if (!skillPermit.ok) {
+        return refuse(
+          agentSkill !== null &&
+            agent !== null &&
+            skillPermit.code === "provider-not-allowed-by-skill"
+            ? agentSkillUnavailable(agent.name, skill, skillPermit.code)
+            : skillPermit,
+        );
+      }
     }
     const genomePermit = permitGenomeThreadTurn({
       genomeThread,
@@ -149,7 +183,7 @@ export const createStartAnswer =
     const event = personalDataSentEvent(request, {
       actor: actorId,
       sessionId: call.turnId,
-      modelId: call.modelId,
+      modelId,
     });
     if (event !== null) await deps.appendAudit(event);
     if (skill !== null) {
@@ -157,8 +191,14 @@ export const createStartAnswer =
         skillRunEvent(skill, {
           actor: actorId,
           sessionId: call.turnId,
-          modelId: call.modelId,
+          modelId,
           provider: request.provider,
+          ...(agentSkill === null || agent === null
+            ? {}
+            : {
+                agent: agent.id,
+                ...(agent.via === undefined ? {} : { via: agent.via }),
+              }),
         }),
       );
     }
@@ -168,6 +208,7 @@ export const createStartAnswer =
       genomeThread,
       disabledSources: await deps.loadDisabledSources(appUserId),
       ...(skill === null ? {} : { skill }),
+      ...(agent === null ? {} : { agent }),
       ...wearables,
     });
   };

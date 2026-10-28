@@ -53,6 +53,8 @@ export type TwinTurnDeps = Readonly<{
    * the tools down to it.
    */
   skill?: TurnSkill | null;
+  /** The agent this turn answers as (#218); its role line joins the system prompt. */
+  agent?: Readonly<{ name: string; role: string }> | null;
   /** Audit rows for this turn's session, read after the model finishes. */
   loadAudit: (turnId: string) => Promise<readonly ResponseToolCall[]>;
 }>;
@@ -115,6 +117,7 @@ export const runTwinTurn = (
     vitronic: wearables.vitronic,
     offeredTools: deps.offeredTools,
     skill: deps.skill ?? null,
+    agent: deps.agent ?? null,
   });
 
   return streamText({

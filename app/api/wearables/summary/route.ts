@@ -5,6 +5,9 @@ import { getLatestGoogleHealthSummary } from "@/features/google-health/connectio
 import { getLatestVitronicSummary } from "@/features/vitronic/connection";
 import { findAppUserId } from "@/infrastructure/current-user";
 import { createWearablesSummaryHandler } from "@/features/wearables/summary-handler";
+import { database } from "@/infrastructure/database";
+import { auditPersonalRead } from "@/infrastructure/personal-read-audit";
+import { append } from "@/packages/audit/append";
 
 /**
  * Latest wearable summaries for client-side evidence attribution after a stream.
@@ -16,4 +19,5 @@ export const GET = createWearablesSummaryHandler({
   getLatestWhoopSummary,
   getLatestGoogleHealthSummary,
   getLatestVitronicSummary,
+  auditPersonalRead: auditPersonalRead((input) => append(database(), input)),
 });

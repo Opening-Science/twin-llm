@@ -5,7 +5,8 @@ import type { StartThreadResult } from "@/features/onboarding/onboarding-flow";
 import { completeOnboarding } from "@/features/onboarding/onboarding-store";
 import { resolveActorId } from "@/infrastructure/auth-actor";
 import { ensureAppUser } from "@/infrastructure/current-user";
-import { fetchActiveModelCatalog } from "@/infrastructure/fetch-model-catalog";
+import { runnableSkills } from "@/features/skills/load-skills";
+import { fetchChatCatalog } from "@/infrastructure/fetch-model-catalog";
 import { defaultModelSelection } from "@/infrastructure/model-catalog";
 
 const MAX_STARTER_PROMPT = 2000;
@@ -22,7 +23,7 @@ export const startStarterThread = async (
   const prompt = question.trim().slice(0, MAX_STARTER_PROMPT);
   if (!prompt) return { ok: false, error: "Write a question first." };
 
-  const catalog = await fetchActiveModelCatalog();
+  const catalog = await fetchChatCatalog(runnableSkills());
   if (!catalog || catalog.length === 0) {
     return {
       ok: false,

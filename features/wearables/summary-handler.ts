@@ -4,10 +4,16 @@ import {
   VITRONIC_WEARABLES_SUMMARY_AUDIT_TOOL,
   type VitronicSummaryAuditTool,
 } from "@/features/vitronic/connection";
+import { type PersonalRead } from "@/infrastructure/personal-read-audit";
 
 /**
  * Wearables summary GET, as a factory, so the Next route file can export only
  * GET and tests can pass fakes without mock.module (those leak across files).
+ *
+ * The Oura, Whoop and Google Health reads write one `personal.read` row
+ * (how many of the three had a summary) before the answer goes out; BodyLoop
+ * writes its own row in its reader (`vitronic.wearables.summary`). When the
+ * row cannot be written, nothing is sent.
  */
 export type WearablesSummaryDeps = {
   readonly resolveActorId: () => Promise<string | null>;
@@ -19,6 +25,7 @@ export type WearablesSummaryDeps = {
     userId: string,
     opts?: { readonly auditTool?: VitronicSummaryAuditTool },
   ) => Promise<unknown>;
+  readonly auditPersonalRead: (read: PersonalRead) => Promise<unknown>;
 };
 
 export const createWearablesSummaryHandler = (deps: WearablesSummaryDeps) => {
@@ -52,6 +59,11 @@ export const createWearablesSummaryHandler = (deps: WearablesSummaryDeps) => {
           auditTool: VITRONIC_WEARABLES_SUMMARY_AUDIT_TOOL,
         }),
       ]);
+      await deps.auditPersonalRead({
+        actor: clerkId,
+        purpose: "wearables-summary",
+        rowCount: [oura, whoop, googleHealth].filter((summary) => summary != null).length,
+      });
 
       return NextResponse.json({ oura, whoop, googleHealth, vitronic });
     } catch (error) {

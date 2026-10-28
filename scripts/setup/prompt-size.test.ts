@@ -28,6 +28,9 @@ describe("prompt + tools fit the Ollama context", () => {
     expect(CASES.map((sizeCase) => sizeCase.label)).toContain(
       "personal, no wearable /genome",
     );
+    expect(CASES.map((sizeCase) => sizeCase.label)).toContain(
+      "personal, Oura agent:trainer",
+    );
   });
 
   test.each(CASES.filter((sizeCase) => !sizeCase.largeContext).map((c) => [c.label, c]))(

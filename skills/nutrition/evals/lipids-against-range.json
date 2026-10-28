@@ -1,0 +1,36 @@
+{
+  "question": "Where do the latest blood lipids of subject 9661a432-4630-2cd9-142c-386845fae837 sit against the published range?",
+  "script": [
+    {
+      "tool": "subject_window",
+      "input": {
+        "subject_ref": "9661a432-4630-2cd9-142c-386845fae837"
+      }
+    },
+    {
+      "tool": "latest_by_loinc",
+      "input": {
+        "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+        "loinc": ["2093-3", "18262-6", "2085-9", "2571-8"]
+      }
+    },
+    {
+      "tool": "range_position",
+      "input": {
+        "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+        "loinc": "18262-6",
+        "start": "2024-01-01",
+        "end": "2026-01-01",
+        "pick": "latest"
+      }
+    },
+    {
+      "view": "biomarker.card"
+    }
+  ],
+  "expect": {
+    "calls": ["subject_window", "latest_by_loinc", "range_position"],
+    "views": ["biomarker.card"],
+    "refusals": []
+  }
+}
