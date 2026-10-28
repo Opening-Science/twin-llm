@@ -65,6 +65,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `latest_by_loinc` reads one newest row per asked code (at most 20, on the subject/LOINC/time index) instead of every reading of those codes; rows come back in the order the codes were asked.
+
 - The last of a turn's eight model calls has no tools, so a model still calling them writes an answer from what it has. The pilot fine-tune had spent all eight on lookups (some on six knowledge searches in a row) and stopped with no answer.
 
 - `list_subjects` with a cohort_id the session cannot read now says the cohort is the problem and lists the readable cohorts loaded here (same `SUBJECT_SCOPE_VIOLATION` code), and its description names the evaluation cohort. A model that guessed "synthetic-cohort-001" had been told the subject was out of scope and answered that the subject could not be read.

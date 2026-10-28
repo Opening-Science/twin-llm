@@ -359,20 +359,19 @@ export const runLatestByLoinc = (
       if (!(await subjectInScope(scope, input.subject_ref))) {
         return SUBJECT_SCOPE_VIOLATION;
       }
-      const rows = await database().observation.findMany({
-        where: {
-          subjectRef: input.subject_ref,
-          loinc: { in: input.loinc },
-        },
-        orderBy: { effectiveAt: "desc" },
-      });
-      const seen = new Set<string>();
-      const latest: ObservationRow[] = [];
-      for (const row of rows) {
-        if (seen.has(row.loinc)) continue;
-        seen.add(row.loinc);
-        latest.push(mapRow(row));
-      }
+      // One newest row per code: at most 20 rows, however long the history.
+      const codes = [...new Set(input.loinc)];
+      const newest = await Promise.all(
+        codes.map((loinc) =>
+          database().observation.findMany({
+            where: { subjectRef: input.subject_ref, loinc },
+            orderBy: { effectiveAt: "desc" },
+            take: 1,
+          }),
+        ),
+      );
+      const latest: ObservationRow[] = newest.flat().map(mapRow);
+      const seen = new Set(latest.map((row) => row.loinc));
       if (latest.length === 0) return noReadingForCodes(input.loinc);
       return {
         rows: latest,
