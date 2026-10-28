@@ -6,6 +6,10 @@
  *   bun run wearables:generate -- --in <dir> --out <dir> --seed 4242 --end 2026-10-01 --days 90
  *   bun run warehouse:ingest .synthea/synthea-v4-seed4242/wearables --cohort synthea-v4-seed4242
  *
+ * It refuses the evaluation cohort unless `--allow-eval-cohort`: the
+ * answer-key and eval databases load its series (docs/evaluation/question-set.md),
+ * the dev database never does.
+ *
  * The seed defaults to the cohort's own (from manifest.json next to <in>), so a
  * cohort and its series are rebuilt from one number. Reads only Synthea
  * bundles (it refuses anything else), never personal wearable data. Prints
@@ -23,6 +27,7 @@ import {
 import { EVALUATION_COHORT_IDS } from "../synthea/cohort-presets";
 
 import { DEFAULT_DAYS, DEFAULT_END_DAY, generateSeries } from "./series";
+import { generateWorkouts } from "./workouts";
 
 export type WearablesIo = Readonly<{
   stdout: { write: (chunk: string) => void };
@@ -43,6 +48,8 @@ export type WearablesArgs = Readonly<{
   seed: number | null;
   endDay: string;
   days: number;
+  /** The evaluation cohort's series, for the answer-key and eval databases only. */
+  allowEvalCohort: boolean;
 }>;
 
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
@@ -75,6 +82,7 @@ export const parseWearablesArgs = (argv: readonly string[]): WearablesArgs | str
     seed,
     endDay,
     days,
+    allowEvalCohort: argv.includes("--allow-eval-cohort"),
   };
 };
 
@@ -124,9 +132,13 @@ export const runGenerateWearables = async (
   const cohort = manifestOf(
     await deps.readJson(join(dirname(args.input), "manifest.json")),
   );
-  if (cohort.cohortId !== null && EVALUATION_COHORT_IDS.includes(cohort.cohortId)) {
+  if (
+    cohort.cohortId !== null &&
+    EVALUATION_COHORT_IDS.includes(cohort.cohortId) &&
+    !args.allowEvalCohort
+  ) {
     io.stderr.write(
-      `Refused: ${cohort.cohortId} is the evaluation cohort; wearable rows would change its answer key.\n`,
+      `Refused: ${cohort.cohortId} is the evaluation cohort. Its series belong only in the throwaway answer-key and eval databases (docs/evaluation/question-set.md); pass --allow-eval-cohort for those.\n`,
     );
     return 1;
   }
@@ -151,12 +163,14 @@ export const runGenerateWearables = async (
       deceased += 1;
       continue;
     }
-    const series = generateSeries({
+    const options = {
       seed,
       subjectRef: patient.id,
       endDay: args.endDay,
       days: args.days,
-    });
+    };
+    const daily = generateSeries(options);
+    const series = [...daily, ...generateWorkouts(options, daily)];
     await deps.writeJson(
       join(args.output, `${patient.id}.wearables.json`),
       wearableBundle(patient, series),

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { parseSkillFile } from "./frontmatter";
@@ -55,7 +56,41 @@ describe("skills/ in this repository", () => {
     expect(check.errors).toEqual([]);
     expect(check.results.filter((result) => !result.passed)).toEqual([]);
     expect(check.skills).toContain("sleep");
-    expect(check.results.filter((result) => result.skill === "sleep").length).toBe(8);
+    expect(check.results.filter((result) => result.skill === "sleep").length).toBe(11);
+  });
+
+  test("/trainer keeps its descriptive-only rules and the cases that hold it to them", () => {
+    const text = readFileSync(join(ROOT, "skills", "trainer", "SKILL.md"), "utf8");
+    const parsed = parseSkillFile(text);
+    if (!parsed.ok) throw new Error(parsed.error);
+    const body = parsed.value.body.replace(/\s+/g, " ");
+    [
+      "No wearable is linked for this question, so /trainer has nothing to describe; link Oura, Whoop or Google Health under Customize · Connectors.",
+      "/trainer describes your data and does not say whether or how to train.",
+      "/trainer does not give doses, supplements, medicines or plans.",
+      "If this concerns you, talk to a clinician.",
+      'Never write "you should", "push", "steady", "recover"',
+      "recent load compared with the previous four weeks",
+    ].forEach((rule) => expect(body).toContain(rule));
+    expect(parsed.value.fields["providers"]).toEqual(["ollama"]);
+
+    const check = checkSkills(
+      join(ROOT, "skills"),
+      readSyntheticSubjects(join(ROOT, "evaluation", "questions.v1.json")),
+    );
+    const cases = check.results
+      .filter((result) => result.skill === "trainer")
+      .map((result) => result.caseId);
+    expect(cases).toEqual(
+      expect.arrayContaining([
+        "daily-check-in-wearable",
+        "weekly-review-synthetic",
+        "no-wearable-connected",
+        "should-i-train-today",
+        "what-dose-refused",
+        "hosted-provider-refused",
+      ]),
+    );
   });
 });
 
@@ -94,6 +129,13 @@ describe("parseSkillFile", () => {
     });
   });
 
+  test("reads a wrapped list with the trailing comma Prettier writes", () => {
+    expect(parseSkillFile("---\ntools:\n  [\n    a,\n    b,\n  ]\n---\nBody")).toEqual({
+      ok: true,
+      value: { fields: { tools: ["a", "b"] }, body: "Body" },
+    });
+  });
+
   test("rejects a missing closing line and duplicate keys", () => {
     expect(parseSkillFile("---\nname: demo\n")).toEqual({
       ok: false,
@@ -126,7 +168,7 @@ describe("validateSkill", () => {
     ].join("\n");
     const result = validateSkill(files(front, [okEval]), SUBJECTS);
     expect(result.ok ? [] : result.errors).toEqual([
-      'skills/demo/SKILL.md: tools.1: unknown tool "made_up"; known tools: guideline_search, knowledge_search, list_subjects, subject_window, observations_for_subject, latest_by_loinc, summary_stats, conditions_timeline, medications_timeline, trend, baseline_deviation, coverage, compare_windows, range_position, convert_unit, cohort_position, values_around_event, gbd_population, genome_report, dna_ask',
+      'skills/demo/SKILL.md: tools.1: unknown tool "made_up"; known tools: guideline_search, knowledge_search, list_subjects, subject_window, observations_for_subject, latest_by_loinc, summary_stats, conditions_timeline, medications_timeline, trend, baseline_deviation, coverage, compare_windows, range_position, convert_unit, cohort_position, values_around_event, sleep_summary, hrv_trend, resting_hr_trend, training_load, cross_source_compare, gbd_population, genome_report, dna_ask',
       'skills/demo/SKILL.md: Unrecognized key: "model"',
       'skills/demo/SKILL.md: tools.0: tool "trend" needs source "cohort-analytics" in sources',
     ]);

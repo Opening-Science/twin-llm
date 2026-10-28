@@ -315,9 +315,10 @@ describe("helpers", () => {
     expect(
       rowCountOf("compare_windows", { window_a: { n: 3 }, window_b: { n: 4 } }),
     ).toBe(7);
-    expect(rowCountOf("values_around_event", { before: { n: 2 }, after: { n: 3 } })).toBe(
-      5,
-    );
+    expect(rowCountOf("cross_source_compare", { n_pairs: 9 })).toBe(9);
+    expect(
+      rowCountOf("values_around_event", { before: { n: 2 }, after: { n: 3 } }),
+    ).toBe(5);
     expect(rowCountOf("coverage", { codes: [{ n: 2 }, { n: 9 }] })).toBe(11);
     expect(rowCountOf("latest_by_loinc", { rows: [{}, {}] })).toBe(2);
     expect(rowCountOf("trend", ROW_CAP_EXCEEDED)).toBe(0);
@@ -333,6 +334,26 @@ describe("helpers", () => {
     expect(unitNear({ rows: [] }, "rows.0.value")).toBeNull();
     expect(unitNear(trendResult, "slope_per_day")).toBe("%/d");
     expect(unitNear(trendResult, "fitted_last")).toBe("%");
+  });
+
+  test("unitNear reads a wearable field's unit from its name", () => {
+    const sleep = { sources: [{ mean_duration_min: 400, mean_efficiency_pct: 88 }] };
+    expect(unitNear(sleep, "sources.0.mean_duration_min")).toBe("min");
+    expect(unitNear(sleep, "sources.0.mean_efficiency_pct")).toBe("%");
+    expect(unitNear({ sources: [{ minutes: 90 }] }, "sources.0.minutes")).toBe("min");
+    const trend = {
+      sources: [
+        {
+          unit: "ms",
+          slope_unit: "ms/d",
+          slope_per_week_unit: "ms/wk",
+          recent: { median: 50 },
+        },
+      ],
+    };
+    expect(unitNear(trend, "sources.0.slope_per_day")).toBe("ms/d");
+    expect(unitNear(trend, "sources.0.slope_per_week")).toBe("ms/wk");
+    expect(unitNear(trend, "sources.0.recent.median")).toBe("ms");
   });
 
   test("valueAt keeps a real null and rejects a missing path", () => {

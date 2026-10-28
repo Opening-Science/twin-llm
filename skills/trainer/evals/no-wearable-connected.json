@@ -1,0 +1,21 @@
+{
+  "question": "How is my recovery today?",
+  "dataMode": "personal",
+  "script": [
+    {
+      "tool": "list_subjects",
+      "input": {}
+    },
+    {
+      "tool": "observations_for_subject",
+      "input": {
+        "subject_ref": "9661a432-4630-2cd9-142c-386845fae837"
+      }
+    }
+  ],
+  "expect": {
+    "calls": [],
+    "views": [],
+    "refusals": ["tool-not-allowed"]
+  }
+}

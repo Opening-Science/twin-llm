@@ -28,6 +28,11 @@ import {
   cohortPositionInput,
   conditionsTimelineInput,
   medicationsTimelineInput,
+  sleepSummaryInput,
+  hrvTrendInput,
+  restingHrTrendInput,
+  trainingLoadInput,
+  crossSourceCompareInput,
   valuesAroundEventInput,
 } from "./schemas";
 import type { SessionScope } from "./scope";
@@ -46,6 +51,11 @@ import {
   runCohortPosition,
   runConditionsTimeline,
   runMedicationsTimeline,
+  runSleepSummary,
+  runHrvTrend,
+  runRestingHrTrend,
+  runTrainingLoad,
+  runCrossSourceCompare,
   runValuesAroundEvent,
 } from "./tools";
 
@@ -117,6 +127,15 @@ export const queryToolRunners = (
   ),
   medications_timeline: bind(medicationsTimelineInput, (input) =>
     runMedicationsTimeline(scope, input, ports),
+  ),
+  sleep_summary: bind(sleepSummaryInput, (input) => runSleepSummary(scope, input, ports)),
+  hrv_trend: bind(hrvTrendInput, (input) => runHrvTrend(scope, input, ports)),
+  resting_hr_trend: bind(restingHrTrendInput, (input) =>
+    runRestingHrTrend(scope, input, ports),
+  ),
+  training_load: bind(trainingLoadInput, (input) => runTrainingLoad(scope, input, ports)),
+  cross_source_compare: bind(crossSourceCompareInput, (input) =>
+    runCrossSourceCompare(scope, input, ports),
   ),
   values_around_event: bind(valuesAroundEventInput, (input) =>
     runValuesAroundEvent(scope, input, ports),

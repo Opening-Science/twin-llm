@@ -1,0 +1,27 @@
+{
+  "question": "Show my load on the body and compare this week with last week.",
+  "dataMode": "personal",
+  "wearableContext": true,
+  "script": [
+    {
+      "tool": "training_load",
+      "input": {
+        "source": "all",
+        "start": "2026-08-27",
+        "end": "2026-09-30",
+        "aggregation": "week"
+      }
+    },
+    {
+      "view": "twin.body"
+    },
+    {
+      "view": "chart.compare"
+    }
+  ],
+  "expect": {
+    "calls": ["training_load"],
+    "views": [],
+    "refusals": ["view-not-allowed"]
+  }
+}
