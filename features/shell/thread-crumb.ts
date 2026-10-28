@@ -19,3 +19,22 @@ export const threadCrumb = (title?: string): Crumb => {
   if (text.length <= MAX_LENGTH) return { label: text, full: text };
   return { label: `${text.slice(0, MAX_LENGTH - 1).trimEnd()}…`, full: text };
 };
+
+/** Where a thread belongs, shown before its title: "Chat / …" or "Twin / …". */
+export type ThreadSection = Readonly<{ label: "Chat" | "Twin"; href: string }>;
+
+const TWIN_COMMAND = /^\s*\/twin(?:\s+|$)/i;
+
+/**
+ * A thread started with `/twin` belongs to the Digital Twin and drops the
+ * command from its title; every other thread is a chat.
+ */
+export const threadSection = (
+  title?: string,
+): Readonly<{ section: ThreadSection; title?: string }> =>
+  title !== undefined && TWIN_COMMAND.test(title)
+    ? {
+        section: { label: "Twin", href: "/digital-twin" },
+        title: title.replace(TWIN_COMMAND, ""),
+      }
+    : { section: { label: "Chat", href: "/" }, title };
