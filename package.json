@@ -69,6 +69,7 @@
     "eval:answer-key": "bun --env-file=.env.eval --preload ./features/chat/response/preload-server-only.mjs scripts/evaluation/build-answer-key.ts",
     "eval": "bun --env-file=.env.eval --preload ./features/chat/response/preload-server-only.mjs scripts/evaluation/run-eval.ts",
     "eval:report": "bun scripts/evaluation/run-report.ts",
+    "eval:router-fixture": "bun scripts/evaluation/build-router-fixture.ts",
     "eval:answer-key:live": "RUN_LIVE=1 bun --env-file=.env.eval test --preload ./features/chat/response/preload-server-only.mjs evaluation/answer-key.test.ts",
     "eval:spread-subjects": "bun --env-file=.env.eval --preload ./features/chat/response/preload-server-only.mjs scripts/evaluation/spread-subjects.ts",
     "literature:fetch": "bun scripts/literature/fetch.ts",
