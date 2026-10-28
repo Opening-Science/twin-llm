@@ -360,8 +360,10 @@ training-data/out`. Per batch, in order, one line per step with its time:
    seed and N must match the batch).
 2. **wearables**: `wearables:generate` for that fhir dir (the seed comes from
    the manifest).
-3. **ingest fhir**: `warehouse:ingest --cohort synthea-v4-seed<seed>`. A
-   rejected bundle stops the run unless `--skip-rejected` (below).
+3. **ingest fhir**: `warehouse:ingest --cohort synthea-v4-seed<seed>`, split
+   across `--workers` ingest processes (default: CPU cores − 1; passed on to
+   both ingest steps). A rejected bundle stops the run unless
+   `--skip-rejected` (below).
 4. **ingest wearables**: the same for the wearable series, leaving out the
    series of any subject whose FHIR bundle was rejected. A rejected wearable
    bundle always stops the run.
@@ -437,12 +439,36 @@ inserted; skipped 43 of 11,439: 28 ot-unit-policy, 15 ot-quantity-no-code),
 subjects, 254.6 MB JSONL), 9m 22s, 3 s: 1h 25m 49s in all. The audit table
 held 210,442 rows (91 MB) after the two batches.
 
-Ingest is two thirds of the time. It runs one bundle at a time in one
-process, at about one CPU core, while Postgres stays nearly idle, and it
-parses every file twice (the Synthea check reads them all before the first
-write). Splitting the fhir dir across several ingest processes would cut it
-most. The second largest cost, clearing rows, would be a `TRUNCATE` when the
-database only ever holds the one batch.
+Ingest was two thirds of the time: one bundle at a time in one process, at
+about one CPU core, while Postgres stayed nearly idle, and every file parsed
+twice. Since #5 the fhir dir is split across `--workers` processes and each
+file is parsed once. The second largest cost, clearing rows, would be a
+`TRUNCATE` when the database only ever holds the one batch.
+
+### Parallel ingest (#5)
+
+`warehouse:ingest` of batch 1001's FHIR folder alone (11,416 files) into a
+throwaway database, 2026-10-27, on the same 8-core machine while other jobs
+kept it busy (7 Synthea processes, an Ollama model; load average 15–20 during
+the first run, 8–13 during the second), so the two runs did not get the same
+CPU:
+
+| Run                       | Wall time  | CPU time of the ingest processes |
+| ------------------------- | ---------- | -------------------------------- |
+| one process (before)      | 1h 44m 26s | 48m 47s                          |
+| `--workers 4`             | 12m 51s    | 42m 03s                          |
+| `--workers 4`, second run | 1m 13s     | 4m 14s (all 11,380 already in)   |
+
+Both runs inserted 11,380 bundles and rejected the same 36 files (22
+`ot-unit-policy`, 14 `ot-quantity-no-code`). The six warehouse tables
+(subjects, bundles, 4,906,250 observations, 1,243,744 non-numeric, 395,207
+conditions, 525,749 medication requests) had the same row counts and the same
+order-independent hash of their contents. The single process got about half a
+core on average on the busy machine and the four processes about 3.3 cores, so
+most of the gain is parallelism; skipping the second parse saved about 14% of
+the CPU time. On an idle machine expect roughly the CPU time divided by the
+number of workers. The run used 4 workers, not the default 7, to leave room
+for the other jobs.
 
 ## Human check
 

@@ -94,14 +94,15 @@ The chat stays strict. The query tools and `show_view` use `scope.ts`, which in 
 
 ## warehouse:ingest
 
-`bun run warehouse:ingest <dir> [--cohort <id>]` (`scripts/warehouse/ingest.ts`). The default cohort is `synthea-v4-seed42`.
+`bun run warehouse:ingest <dir> [--cohort <id>] [--workers <n>]` (`scripts/warehouse/ingest.ts`). The default cohort is `synthea-v4-seed42`.
 
-- Reads every `*.json` in `<dir>`. A file that does not parse is refused. Valid JSON that is not a FHIR Bundle is skipped.
-- Every Bundle's Patient must carry the identifier system `https://github.com/synthetichealth/synthea`. If a file is refused (invalid JSON or not Synthea), the run lists it and stops before anything is written.
+- Splits the `*.json` files in `<dir>` across `--workers` ingest processes (default: CPU cores − 1, at least 1; never more than files), dealt out in turn (`scripts/warehouse/ingest-shard.ts`, `ingest-worker.ts`). Each file is read and parsed once. Lines are printed as files finish, so their order varies between runs; the totals do not.
+- A file that does not parse is rejected (`invalid-json`). Valid JSON that is not a FHIR Bundle is skipped.
+- Every Bundle's Patient must carry the identifier system `https://github.com/synthetichealth/synthea`; `ingestBundle` rejects one that does not (`not-synthea`) and writes nothing of it. Since #5 there is no separate checking pass: a rejected file no longer stops the run before anything is written. The other files are ingested, the rejected ones are listed, and the exit code is 1. Re-running after a fix ingests only what is missing.
 - The cohort must be in `SYNTHETIC_COHORTS`. Otherwise the run is refused.
 - When `manifest.json` in `<dir>` or its parent names a `cohortId` (the generators write one), it must equal `--cohort` (or the default). A mismatch is refused before anything is written. With no cohort id there, the run goes on with a warning.
 - `synthea_version` comes from `manifest.json` in `<dir>` or its parent (written by the generator), else the pinned `v4.0.0`.
-- A bundle whose ingest throws is reported as `rejected (ingest-failed)`, never with the raw error, and the run goes on to the next bundle and the summary.
+- A bundle whose ingest throws is tried once more (two processes can meet on one subject or one bundle hash; the retry then finds the other's row), then reported as `rejected (ingest-failed)`, never with the raw error, and the run goes on to the next bundle and the summary. So is every file of a worker process that dies before reporting it; each bundle is written in one transaction or not at all.
 - Prints one line per file (observation rows, conditions, medication requests), totals, the cohort's subject, condition and medication request counts, and numeric rows per LOINC. It prints no values. Exit code 1 on any rejected bundle.
 - Safe to re-run: a bundle whose sha256 is already stored is reported as `already ingested` (from `alreadyIngested`, not from a zero insert count).
 

@@ -163,6 +163,19 @@ describe("runTrainingBatches", () => {
     expect([...h.files.keys()].filter((key) => key.startsWith("work/"))).toEqual([]);
   });
 
+  test("--workers goes to both ingest steps and nowhere else", async () => {
+    const h = harness();
+    expect(await run(h, ["--batches", "1001", "--workers", "4"])).toBe(0);
+    expect(h.commands.filter((command) => command.includes("--workers 4"))).toEqual([
+      expect.stringContaining(
+        "scripts/warehouse/ingest.ts work/synthea-v4-seed1001/fhir --cohort synthea-v4-seed1001 --workers 4 >",
+      ),
+      expect.stringContaining(
+        "scripts/warehouse/ingest.ts work/synthea-v4-seed1001/wearables --cohort synthea-v4-seed1001 --workers 4 >",
+      ),
+    ]);
+  });
+
   test("the unpacked manifest carries the cohort id while the batch runs", async () => {
     const h = harness();
     expect(await run(h, ["--batches", "1001", "--keep"])).toBe(0);

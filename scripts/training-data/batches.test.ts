@@ -82,6 +82,7 @@ describe("parseBatchArgs", () => {
       keep: false,
       skipRejected: false,
       maxRejectedShare: 0.01,
+      workers: null,
     });
   });
 
@@ -108,13 +109,28 @@ describe("parseBatchArgs", () => {
 
   test("usage and a flag without a value", () => {
     expect(parseBatchArgs([])).toBe(
-      "Usage: bun run training:batches -- --batches 1001-1010 [--archives <dir>] [--work <dir>] [--out <dir>] [--keep] [--skip-rejected [--max-rejected-share 0.01]]",
+      "Usage: bun run training:batches -- --batches 1001-1010 [--archives <dir>] [--work <dir>] [--out <dir>] [--keep] [--skip-rejected [--max-rejected-share 0.01]] [--workers <n>]",
     );
     expect(parseBatchArgs(["--batches", "1001", "--work"])).toBe(
       "--work needs a directory.",
     );
     expect(parseBatchArgs(["--batches", "1001", "--out", "--keep"])).toBe(
       "--out needs a directory.",
+    );
+  });
+});
+
+describe("--workers", () => {
+  test("takes a whole number from 1, passed on to warehouse:ingest", () => {
+    const args = parseBatchArgs(["--batches", "1001", "--workers", "4"]);
+    expect(typeof args === "string" ? args : args.workers).toBe(4);
+    for (const bad of ["0", "two", "1.5"]) {
+      expect(parseBatchArgs(["--batches", "1001", "--workers", bad])).toBe(
+        `--workers must be a whole number from 1 (got: ${bad}).`,
+      );
+    }
+    expect(parseBatchArgs(["--batches", "1001", "--workers"])).toBe(
+      "--workers must be a whole number from 1 (got: ).",
     );
   });
 });
