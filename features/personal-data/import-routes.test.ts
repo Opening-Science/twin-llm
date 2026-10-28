@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { describe, expect, test } from "bun:test";
+import { zipSync } from "fflate";
 
 import type {
   DatasetView,
@@ -253,7 +254,7 @@ describe("review, then save", () => {
   test("no kind or no file is refused with a sentence", async () => {
     const { ports } = setup();
     const form = new FormData();
-    form.set("kind", "apple-health");
+    form.set("kind", "genome-vcf");
     const response = await postReviewResponse(
       new Request("http://localhost", { method: "POST", body: form }),
       ports,
@@ -433,6 +434,61 @@ describe("audit rows carry no values", () => {
       "sha256",
       "stored",
       "unmapped",
+    ]);
+  });
+});
+
+describe("Apple Health and wearable exports", () => {
+  const APPLE = new Uint8Array(readFileSync(join(FIXTURES, "apple-health-export.xml")));
+  const APPLE_ZIP = zipSync({ "apple_health_export/export.xml": APPLE });
+  const APPLE_ZIP_SHA = fileSha256(APPLE_ZIP);
+  const WHOOP = new Uint8Array(
+    readFileSync(join(FIXTURES, "wearables/my_whoop_data/sleeps.csv")),
+  );
+
+  test("an export zip is reviewed and saved like any import, audited by counts", async () => {
+    const { ports, audits, rows } = setup();
+    const review = await postReviewResponse(
+      upload(APPLE_ZIP, { kind: "apple-health" }, "export.zip"),
+      ports,
+    );
+    expect(review.status).toBe(200);
+    const body = (await review.json()) as {
+      review: { rowsToStore: number; counts: { unmapped: number } };
+    };
+    expect([body.review.rowsToStore, body.review.counts.unmapped]).toEqual([10, 11]);
+    const saved = await postSaveResponse(
+      upload(APPLE_ZIP, { kind: "apple-health", sha256: APPLE_ZIP_SHA }, "export.zip"),
+      ports,
+    );
+    expect(saved.status).toBe(200);
+    expect(rows.get("ds-1")?.plan.dataset.kind).toBe("apple-health");
+    expect(audits.map((event) => [event.tool, event.result])).toEqual([
+      ["personal-data.review", { stored: false, rows: 10, unmapped: 11 }],
+      [
+        "personal-data.save",
+        { stored: true, dataset_id: "ds-1", rows: 10, unmapped: 11 },
+      ],
+    ]);
+    const written = JSON.stringify(audits);
+    for (const value of ["8867-4", "HKQuantityType", "Demo Watch", "export.zip", "445"]) {
+      expect({ value, found: written.includes(value) }).toEqual({ value, found: false });
+    }
+  });
+
+  test("a wearable file is read by its own name", async () => {
+    const { ports } = setup();
+    const review = await postReviewResponse(
+      upload(WHOOP, { kind: "wearable" }, "sleeps.csv"),
+      ports,
+    );
+    const body = (await review.json()) as {
+      review: { kind: string; rowsToStore: number; notes: readonly string[] };
+    };
+    expect([body.review.kind, body.review.rowsToStore, body.review.notes[0]]).toEqual([
+      "wearable",
+      2,
+      "Read sleeps.csv as Whoop sleeps.",
     ]);
   });
 });
