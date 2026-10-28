@@ -1,0 +1,18 @@
+{
+  "pmcid": "PMC1000001",
+  "version": 2,
+  "pmid": 99000001,
+  "doi": "10.0000/fixture.1",
+  "mid": null,
+  "title": "Synthetic fibre fixture",
+  "citation": "Synth Nutr J. 2024 Mar 2;1(1):1-2. doi: 10.0000/fixture.1",
+  "is_pmc_openaccess": true,
+  "is_manuscript": false,
+  "is_historical_ocr": false,
+  "is_retracted": false,
+  "license_code": "CC BY",
+  "xml_url": "s3://pmc-oa-opendata/PMC1000001.2/PMC1000001.2.xml?md5=00",
+  "text_url": "s3://pmc-oa-opendata/PMC1000001.2/PMC1000001.2.txt?md5=11",
+  "pdf_url": null,
+  "media_urls": []
+}

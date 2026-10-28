@@ -19,7 +19,11 @@ import {
 } from "@/packages/personal-data/review-summary";
 import { cleanDatasetName, savePlan } from "@/packages/personal-data/save-plan";
 import { fileSha256 } from "@/packages/personal-data/text-file";
-import { type ImportKind, isImportKind } from "@/packages/personal-data/types";
+import {
+  type ImportKind,
+  isImportKind,
+  unmappedCount,
+} from "@/packages/personal-data/types";
 
 import {
   type AuditContext,
@@ -195,7 +199,7 @@ export const postReviewResponse = async (
     byteSize: upload.bytes.byteLength,
     sha256: upload.sha256,
   };
-  const parsed = parseImport(upload.kind, upload.bytes);
+  const parsed = parseImport(upload.kind, upload.bytes, upload.fileName);
   if (!parsed.ok) {
     await ports.audit(reviewEvent(context, file, { refused: parsed.refusal.code }));
     return failure(parsed.refusal.message, 422);
@@ -260,7 +264,7 @@ export const postSaveResponse = async (
   if (upload.form.get("sha256") !== upload.sha256) {
     return refuse("changed-since-review", IMPORT_MESSAGES.changedSinceReview, 409);
   }
-  const parsed = parseImport(upload.kind, upload.bytes);
+  const parsed = parseImport(upload.kind, upload.bytes, upload.fileName);
   if (!parsed.ok) return refuse(parsed.refusal.code, parsed.refusal.message, 422);
 
   const userId = await ports.ensureUserId(actor);
@@ -291,7 +295,7 @@ export const postSaveResponse = async (
       saveEvent(context, file, {
         datasetId: saved.dataset.id,
         rows: plan.dataset.rowCount,
-        unmapped: parsed.unmapped.length,
+        unmapped: unmappedCount(parsed.unmapped),
       }),
     )
     .then(

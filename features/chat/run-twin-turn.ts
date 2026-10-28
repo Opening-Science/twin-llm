@@ -59,6 +59,8 @@ export type TwinTurnDeps = Readonly<{
    * and `ui_context` on the response document. Already audited by the caller.
    */
   uiContext?: UiContext | null;
+  /** The agent this turn answers as (#218); its role line joins the system prompt. */
+  agent?: Readonly<{ name: string; role: string }> | null;
   /** Audit rows for this turn's session, read after the model finishes. */
   loadAudit: (turnId: string) => Promise<readonly ResponseToolCall[]>;
 }>;
@@ -122,6 +124,7 @@ export const runTwinTurn = (
     offeredTools: deps.offeredTools,
     skill: deps.skill ?? null,
     uiContext: deps.uiContext ?? null,
+    agent: deps.agent ?? null,
   });
 
   return streamText({

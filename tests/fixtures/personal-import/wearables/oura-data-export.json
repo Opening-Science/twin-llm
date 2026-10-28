@@ -1,0 +1,34 @@
+{
+  "sleep": [
+    {
+      "day": "2026-09-02",
+      "type": "long_sleep",
+      "total_sleep_duration": 25230,
+      "lowest_heart_rate": 49,
+      "average_hrv": 52,
+      "average_breath": 14.25
+    },
+    {
+      "day": "2026-09-02",
+      "type": "rest",
+      "total_sleep_duration": 1200,
+      "lowest_heart_rate": 58,
+      "average_hrv": 40,
+      "average_breath": 15
+    },
+    {
+      "day": "2026-09-03",
+      "type": "long_sleep",
+      "total_sleep_duration": 23400,
+      "lowest_heart_rate": null,
+      "average_hrv": 47,
+      "average_breath": 14.5
+    }
+  ],
+  "daily_activity": { "data": [{ "day": "2026-09-02", "steps": 8421 }] },
+  "daily_spo2": [
+    { "day": "2026-09-02", "spo2_percentage": { "average": 96.8 } },
+    { "day": "2026-09-03", "spo2_percentage": null }
+  ],
+  "daily_readiness": [{ "day": "2026-09-02", "score": 80 }]
+}

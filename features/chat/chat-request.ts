@@ -51,3 +51,8 @@ export const incognitoChatRequestSchema = z
   .strict();
 
 export type IncognitoChatRequest = Readonly<z.infer<typeof incognitoChatRequestSchema>>;
+
+/** The prompt this request answers: its last user message, or "" if none. */
+export const currentPrompt = (
+  messages: readonly Readonly<{ role: "user" | "assistant"; content: string }>[],
+): string => messages.findLast((message) => message.role === "user")?.content ?? "";

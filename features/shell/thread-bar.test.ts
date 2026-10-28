@@ -17,6 +17,9 @@ describe("ThreadBarView", () => {
     );
     expect(html).toContain('href="/api/threads/f3a9c1/export" download=""');
     expect(html).toContain(
+      'href="/api/threads/f3a9c1/export?format=print" target="_blank"',
+    );
+    expect(html).toContain(
       '<a class="text-muted-foreground hover:text-foreground shrink-0" href="/">Chat</a>',
     );
     // The id is only ever in the download address, never in what is shown.

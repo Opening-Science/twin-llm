@@ -151,14 +151,20 @@ const Unmapped = ({ review }: Readonly<{ review: ReviewSummary }>) =>
       </ul>
       <details className="mt-2 text-xs">
         <summary className="text-muted-foreground cursor-pointer">
-          {review.unmapped.listed.length < review.counts.unmapped
-            ? `First ${review.unmapped.listed.length} rows`
-            : "Each row"}
+          {review.unmapped.listed.length < review.unmapped.listedOf
+            ? `First ${review.unmapped.listed.length} entries`
+            : "Each entry"}
         </summary>
         <ul className="mt-1 grid gap-0.5">
           {review.unmapped.listed.map((row) => (
-            <li key={`${row.where}|${row.code}`}>
+            <li key={`${row.where}|${row.code}|${row.reason}`}>
               <span className="font-mono">{row.where}</span> {row.reason}
+              {(row.count ?? 1) > 1 && (
+                <span className="text-muted-foreground">
+                  {" "}
+                  ({countLabel(row.count ?? 1, "record", "records")})
+                </span>
+              )}
             </li>
           ))}
         </ul>

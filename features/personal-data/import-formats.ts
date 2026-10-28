@@ -1,9 +1,9 @@
 import type { ImportKind } from "@/packages/personal-data/types";
 
 /**
- * The formats Customize · Data offers, in the order shown. The first three
- * import now; the rest are listed with the issue that will add them, so
- * nobody wonders whether their file was forgotten.
+ * The formats Customize · Data offers, in the order shown. Formats still to
+ * come are listed with the issue that will add them, so nobody wonders
+ * whether their file was forgotten.
  */
 
 export type ImportFormat = Readonly<{
@@ -35,13 +35,25 @@ export const IMPORT_FORMATS: readonly ImportFormat[] = [
       "Any CSV or TSV with a header row: up to 200 columns and 200,000 rows. Column types are inferred as number, date or text.",
     accept: ".csv,.tsv,.txt,text/csv,text/tab-separated-values",
   },
+  {
+    kind: "apple-health",
+    label: "Apple Health export",
+    detail:
+      "The export.zip from the Health app, or the export.xml inside it. Heart rate, HRV, steps, weight, BMI, blood oxygen, breathing and sleep are kept.",
+    accept: ".zip,.xml,application/zip,application/xml,text/xml",
+  },
+  {
+    kind: "wearable",
+    label: "Wearable export (Oura, Whoop, Google)",
+    detail:
+      "An Oura JSON or trends CSV, Whoop CSVs, or Fitbit JSON from Google Takeout, alone or in a zip. Files it does not know are listed.",
+    accept: ".zip,.csv,.json,application/zip,text/csv,application/json",
+  },
 ];
 
 export type NextFormat = Readonly<{ label: string; issue: number }>;
 
 export const NEXT_FORMATS: readonly NextFormat[] = [
-  { label: "Apple Health export", issue: 178 },
-  { label: "Wearable export files (Oura, Whoop, Google)", issue: 179 },
   { label: "Genome VCF, local models only", issue: 180 },
 ];
 

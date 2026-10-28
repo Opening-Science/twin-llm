@@ -1,6 +1,9 @@
 /** Caps for one import. A file over a cap is refused with a sentence, never cut. */
 
-/** 50 MB per file. An Apple Health export (often larger) is a later change (#178). */
+/**
+ * 50 MB per file, a zip counted as uploaded. An Apple Health export zip over
+ * 50 MB is refused like any other file.
+ */
 export const MAX_FILE_BYTES = 50_000_000;
 
 /** Columns in a research table. */

@@ -2,14 +2,17 @@ import type { WearableSummaries } from "@/infrastructure/parse-twin-answer";
 import { Button } from "@/infrastructure/ui-kit/button";
 
 import { AnswerBody } from "./answer-body";
+import { autoLineOf, columnRawId } from "./answer-header";
 import { AnswerStats } from "./answer-stats";
 import type { ResponseState } from "./conversation";
 import { Mark } from "./marks";
 
 /**
  * One model's answer to one prompt: who answered, the answer itself (or why
- * there is none), and what the call measured. A failed column offers its own
- * retry, because the other models in the turn are independent of it.
+ * there is none), and what the call measured. A fine-tune's raw id sits
+ * under its readable name, and an Auto answer says which agent it ran as. A
+ * failed column offers its own retry, because the other models in the turn
+ * are independent of it.
  */
 
 const FailedAnswer = ({
@@ -37,43 +40,60 @@ const FailedAnswer = ({
 
 export const AnswerColumn = ({
   response,
+  prompt,
   wearables,
   onRetry,
 }: Readonly<{
   response: ResponseState;
+  /** The turn's prompt, for the line that says why Auto chose its agent. */
+  prompt: string;
   wearables: WearableSummaries;
   onRetry: () => void;
-}>) => (
-  <article
-    aria-labelledby={`answer-${response.id}`}
-    className="flex min-w-0 flex-col gap-4 p-4 sm:p-5"
-  >
-    <header className="flex items-center gap-2">
-      <span
-        aria-hidden="true"
-        className="border-input text-muted-foreground flex size-6 shrink-0 items-center justify-center rounded-full border font-mono text-[11px] uppercase"
-      >
-        {response.modelName.charAt(0)}
-      </span>
-      <h3 id={`answer-${response.id}`} className="truncate text-[15px] font-medium">
-        {response.modelName}
-      </h3>
-    </header>
-    <div className="flex-1">
-      {response.status === "FAILED" ? (
-        <FailedAnswer
-          lost={response.lost === true}
-          refusal={response.refusal}
-          onRetry={onRetry}
-        />
-      ) : (
-        <AnswerBody response={response} wearables={wearables} />
+}>) => {
+  const rawId = columnRawId(response.modelId);
+  const autoLine = autoLineOf(response, prompt);
+  return (
+    <article
+      aria-labelledby={`answer-${response.id}`}
+      className="flex min-w-0 flex-col gap-4 p-4 sm:p-5"
+    >
+      <header className="flex items-center gap-2">
+        <span
+          aria-hidden="true"
+          className="border-input text-muted-foreground flex size-6 shrink-0 items-center justify-center rounded-full border font-mono text-[11px] uppercase"
+        >
+          {response.modelName.charAt(0)}
+        </span>
+        <span className="flex min-w-0 flex-col">
+          <h3 id={`answer-${response.id}`} className="truncate text-[15px] font-medium">
+            {response.modelName}
+          </h3>
+          {rawId === null ? null : (
+            <span className="text-muted-foreground truncate font-mono text-xs">
+              {rawId}
+            </span>
+          )}
+        </span>
+      </header>
+      {autoLine === null ? null : (
+        <p className="text-muted-foreground text-xs">{autoLine}</p>
       )}
-    </div>
-    {response.status === "COMPLETE" && response.metrics && (
-      <footer className="border-border border-t pt-3">
-        <AnswerStats metrics={response.metrics} />
-      </footer>
-    )}
-  </article>
-);
+      <div className="flex-1">
+        {response.status === "FAILED" ? (
+          <FailedAnswer
+            lost={response.lost === true}
+            refusal={response.refusal}
+            onRetry={onRetry}
+          />
+        ) : (
+          <AnswerBody response={response} wearables={wearables} />
+        )}
+      </div>
+      {response.status === "COMPLETE" && response.metrics && (
+        <footer className="border-border border-t pt-3">
+          <AnswerStats metrics={response.metrics} />
+        </footer>
+      )}
+    </article>
+  );
+};

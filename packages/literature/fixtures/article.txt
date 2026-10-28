@@ -1,0 +1,35 @@
+
+JOURNAL INFORMATION
+==============================
+NLM Title Abbreviation: Synth Nutr J
+Publisher: Example Press
+
+ARTICLE INFORMATION
+==============================
+PMCID: PMC1000001
+Fixture Author 1 fixture.author@example.org
+1 Example Institute, Nowhere
+License: CC BY 4.0
+
+==============================
+Abstract
+
+A synthetic abstract written for tests.
+
+1 INTRODUCTION
+
+Fibre intake was described in a made-up cohort.
+
+2 METHODS
+
+2.1 Data
+
+Values are invented for this fixture.
+
+Conclusions
+
+Nothing here is a finding.
+
+REFERENCES
+
+1. Example A. A reference that must not be embedded.

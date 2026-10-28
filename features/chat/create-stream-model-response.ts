@@ -3,6 +3,7 @@ import type { LanguageModel } from "ai";
 import type { DataMode, LlmProvider } from "@/infrastructure/data-mode-policy";
 import type { GoogleHealthSummary } from "@/infrastructure/google-health-types";
 import type { KnowledgeSourceId } from "@/infrastructure/knowledge-sources";
+import type { CatalogAgent } from "@/infrastructure/model-catalog";
 import {
   type ChatUIMessage,
   createResponseTimer,
@@ -64,6 +65,11 @@ export type StreamContext = Readonly<{
   disabledSources?: readonly KnowledgeSourceId[];
   /** The skill this turn runs under, already permitted by `start-answer`. */
   skill?: TurnSkill | null;
+  /**
+   * Set when the answer's model id is an agent (`agent:<id>`): the model
+   * called is its base model, and its role line joins the system prompt.
+   */
+  agent?: CatalogAgent | null;
 }>;
 
 type RowTarget = Readonly<{ turnId: string; modelId: string }>;
@@ -175,12 +181,15 @@ export const createStreamModelResponse =
 
     const turn = runTwinTurn(
       {
-        model: deps.resolveModel(modelId, { hasWearableNarrative }),
+        model: deps.resolveModel(context.agent?.baseModelId ?? modelId, {
+          hasWearableNarrative,
+        }),
         tools,
         offeredTools,
         mode: settings.dataMode,
         skill,
         uiContext: request.uiContext ?? null,
+        agent: context.agent ?? null,
         loadAudit: deps.loadAudit,
       },
       {

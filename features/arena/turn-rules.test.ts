@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import type { CatalogModel } from "@/infrastructure/model-catalog";
+import { type CatalogModel, withAgents } from "@/infrastructure/model-catalog";
 
 import { checkTurnRequest } from "./turn-rules";
 
@@ -43,6 +43,26 @@ describe("checkTurnRequest", () => {
         ],
       },
     });
+  });
+
+  test("an Auto row is stored under the agent it picks for the prompt", () => {
+    const rows = withAgents(catalog, {
+      provider: "ollama",
+      chatIsLocal: true,
+      skills: [
+        { name: "nutrition", providers: ["ollama"], sources: [], tools: [] },
+        { name: "sleep", providers: ["ollama"], sources: [], tools: [] },
+      ],
+    });
+    const check = checkTurnRequest(
+      { prompt: "How has my body weight changed?", modelIds: ["agent:auto", "qwen3:8b"] },
+      rows,
+      "ollama",
+    );
+    expect(check.ok && check.plan.models).toEqual([
+      { id: "agent:auto", name: "Auto → Diet specialist" },
+      { id: "qwen3:8b", name: "qwen3:8b" },
+    ]);
   });
 
   test("the title is the first 80 characters of the prompt", () => {

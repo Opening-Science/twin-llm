@@ -1,11 +1,12 @@
 "use server";
 
+import { runnableSkills } from "@/features/skills/load-skills";
 import { trackPromptSent } from "@/infrastructure/analytics-events";
 import { resolveActorId } from "@/infrastructure/auth-actor";
 import { ensureAppUser } from "@/infrastructure/current-user";
 import { database } from "@/infrastructure/database";
 import { serverEnv } from "@/infrastructure/env";
-import { fetchActiveModelCatalog } from "@/infrastructure/fetch-model-catalog";
+import { fetchChatCatalog } from "@/infrastructure/fetch-model-catalog";
 
 import type { AnswerSource } from "./conversation";
 import { checkTurnRequest, TURN_COPY, type TurnPlan } from "./turn-rules";
@@ -126,7 +127,7 @@ export const startTurn = async (input: StartTurnInput): Promise<StartTurnResult>
       modelIds: input.models.map(({ id }) => id),
       skill: input.skill ?? null,
     },
-    await fetchActiveModelCatalog(),
+    await fetchChatCatalog(runnableSkills()),
     serverEnv().LLM_PROVIDER,
   );
   if (!checked.ok) return checked;

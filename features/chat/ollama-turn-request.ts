@@ -47,6 +47,8 @@ export type TurnRequestCase = Readonly<{
   question: string;
   /** The turn's UI context block (#47); the size cases carry the longest one. */
   uiContext?: UiContext | null;
+  /** The agent the turn answers as (#218), whose role line joins the prompt. */
+  agent?: Readonly<{ name: string; role: string }> | null;
 }>;
 
 const NO_PORTS: QueryToolPorts = {
@@ -123,6 +125,7 @@ export const captureOllamaTurnRequest = async (
       mode: turn.mode,
       skill: turn.skill,
       uiContext: turn.uiContext ?? null,
+      agent: turn.agent ?? null,
       loadAudit: async () => [],
     },
     {
