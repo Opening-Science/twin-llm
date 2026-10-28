@@ -73,6 +73,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- A tool call a model types out as text (`<tool_call>…`) is no longer shown as its answer; the pilot fine-tune did this on the last step, which has no tools. `show_view`'s missing-subject refusal now says to call it again with the subject_ref used for the other tools; qwen3:8b had given up on its chart after the old message.
+
 - The bar at the top of a thread sits 10px off the top edge, its title and buttons centred on the same line as the sidebar button; it had been squeezed to 40px by the column it sits in.
 
 - The model picker and the Models page show an Ollama model's context as the window the chat runs it with (`OLLAMA_NUM_CTX`, 16K by default) when that is smaller than its tag's maximum; qwen3:4b read 262K.

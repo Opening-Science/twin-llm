@@ -67,7 +67,8 @@ const COHORT_TOOLS_OFF = {
 
 const SUBJECT_REQUIRED = {
   code: "SUBJECT_REQUIRED",
-  error: "a LOINC measure needs subject (a subject_ref from list_subjects)",
+  error:
+    "a LOINC measure needs subject: call show_view again with subject set to the subject_ref you used for the other tools",
 } as const;
 
 /** No audit row, no view: a point must always trace to one. */

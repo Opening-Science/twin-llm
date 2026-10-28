@@ -37,4 +37,16 @@ describe("splitThinking", () => {
     const text = "## Answer\nI think the trend is flat.";
     expect(splitThinking(text)).toEqual({ thinking: null, text });
   });
+
+  test("a tool call written out as text is not part of the answer", () => {
+    expect(
+      splitThinking(
+        '<tool_call>\n{"name": "knowledge_search", "arguments": {"query": "x"}}\n</tool_call>',
+      ),
+    ).toEqual({ thinking: null, text: "" });
+    expect(splitThinking('## Answer\n72 /min\n<tool_call>{"name": "trend"')).toEqual({
+      thinking: null,
+      text: "## Answer\n72 /min",
+    });
+  });
 });

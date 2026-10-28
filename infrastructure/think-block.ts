@@ -18,7 +18,16 @@ export type SplitThinking = Readonly<{
 const OPEN = /^\s*<think>/i;
 const CLOSE = /<\/think>/gi;
 
-export const splitThinking = (text: string): SplitThinking => {
+/**
+ * A tool call a model wrote as text instead of making it. A fine-tune asked to
+ * answer on a step with no tools (`run-twin-turn.ts`) sometimes types out the
+ * call it wanted; it is not an answer, so it is dropped (an unclosed one while
+ * streaming too).
+ */
+const TOOL_CALL_TEXT = /<tool_call>[\s\S]*?(?:<\/tool_call>|$)/gi;
+
+export const splitThinking = (reply: string): SplitThinking => {
+  const text = reply.replace(TOOL_CALL_TEXT, "").trim();
   const closes = [...text.matchAll(CLOSE)];
   const last = closes.at(-1);
   if (last?.index !== undefined) {
