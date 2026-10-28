@@ -44,6 +44,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- README cut to about half: back to four pictures under the hero (dark, light, light, dark), a short privacy list, one paragraph on setup and links out for models, providers, tools, anatomy and evaluation.
+
 - README rewritten in plainer words, with every screenshot retaken on the current design: chat (light and dark), search, incognito, Customize, the cohort, Digital Twin and Connectors. The setup paragraph is a list, and import formats say what ships today.
 
 - The Data page's subject list is searched, sorted and paged in the database (#3): the search is a subject_ref prefix (it was a substring), the sort one of five fixed columns, and only the 25 rows shown are read. The overview's per-code counts come from one statement, and overview and subject pages are cached per cohort for up to 5 minutes while the cohort's bundles are unchanged. The subject list's audit row now records the page shown and its query.
