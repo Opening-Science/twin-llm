@@ -67,6 +67,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- The bar at the top of a thread sits 10px off the top edge, its title and buttons centred on the same line as the sidebar button; it had been squeezed to 40px by the column it sits in.
+
 - The model picker and the Models page show an Ollama model's context as the window the chat runs it with (`OLLAMA_NUM_CTX`, 16K by default) when that is smaller than its tag's maximum; qwen3:4b read 262K.
 
 - `latest_by_loinc` reads one newest row per asked code (at most 20, on the subject/LOINC/time index) instead of every reading of those codes; rows come back in the order the codes were asked.

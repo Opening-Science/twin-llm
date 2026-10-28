@@ -322,7 +322,7 @@
   /* A saved thread's title row; it leaves room for the floating button. */
   /* 10px off the top, centred on the same line as .shell-toggle (top-3 + size-9 / 2 = 30px). */
   .thread-bar {
-    @apply bg-background/85 sticky top-0 z-20 flex h-[50px] items-center gap-3 pt-[10px] pr-4 pl-14 backdrop-blur sm:pr-6;
+    @apply bg-background/85 sticky top-0 z-20 flex h-[50px] shrink-0 items-center gap-3 pt-[10px] pr-4 pl-14 backdrop-blur sm:pr-6;
   }
   [data-sidebar="pinned"] .thread-bar {
     @apply lg:pl-6;
