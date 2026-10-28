@@ -19,7 +19,9 @@
 import { readFile, writeFile } from "node:fs/promises";
 
 import { windowEndDate, windowStartDate } from "../../packages/query-tools/schemas";
+import { WEARABLE_TREND_MINIMUM } from "../../packages/query-tools/refusals";
 import { olsSlopePerDay } from "../../packages/query-tools/stats";
+import { SYNTHETIC_WORKOUT_CODES } from "../../packages/query-tools/wearable-readings";
 import {
   COHORT_ID,
   type Question,
@@ -55,8 +57,9 @@ export type Inventory = Readonly<{
  * `one`: exactly one reading in the window (Q-S1-09, a slope from one reading).
  * `none`: no reading in the window (no-data probes).
  * `mixed`: more than one unit across the windows (`MIXED_UNITS` probes).
+ * `few`: 1 to 6 readings in the window (`WINDOW_TOO_SHORT` probes).
  */
-export type Outcome = "rows" | "one" | "none" | "mixed";
+export type Outcome = "rows" | "one" | "none" | "mixed" | "few";
 
 /** Keyed items that expect something other than `rows`. */
 export const EXPECTED_OUTCOME: Readonly<Record<string, Outcome>> = {
@@ -69,6 +72,8 @@ export const EXPECTED_OUTCOME: Readonly<Record<string, Outcome>> = {
   "Q-S6-10": "mixed",
   "Q-S6-11": "mixed",
   "Q-S6-19": "none",
+  "Q-S6-25": "few",
+  "Q-S6-26": "none",
 };
 
 /**
@@ -92,8 +97,32 @@ type Window = Readonly<{ from: number; to: number }>;
 
 const ALL_TIME: Window = { from: -Infinity, to: Infinity };
 
-/** One code read over one or more windows, as a closed tool reads it. */
-type Read = Readonly<{ loinc: string; windows: readonly Window[]; slope: boolean }>;
+/**
+ * Codes read together over one or more windows, as a closed tool reads them;
+ * `minimum` readings per window for `rows`.
+ */
+type Read = Readonly<{
+  codes: readonly string[];
+  windows: readonly Window[];
+  slope: boolean;
+  minimum: number;
+}>;
+
+/**
+ * The synthetic series' codes each wearable tool reads (wearable-readings.ts):
+ * sleep by its duration, the trends by their measure, the load by every sport.
+ */
+const WEARABLE_READS: Readonly<
+  Record<string, Readonly<{ codes: readonly string[]; minimum: number }>>
+> = {
+  sleep_summary: { codes: ["93832-4"], minimum: 2 },
+  hrv_trend: { codes: ["hrv-rmssd"], minimum: WEARABLE_TREND_MINIMUM },
+  resting_hr_trend: { codes: ["40443-4"], minimum: WEARABLE_TREND_MINIMUM },
+  training_load: { codes: SYNTHETIC_WORKOUT_CODES, minimum: 2 },
+};
+
+/** Every worn day of the synthetic series writes HRV, so it marks a subject that has one. */
+const SERIES_CODE = "hrv-rmssd";
 
 const asWindow = (value: unknown): Window | null => {
   if (typeof value !== "object" || value === null) return null;
@@ -114,9 +143,22 @@ const codesOf = (args: Readonly<Record<string, unknown>>): string[] => {
     : [];
 };
 
-/** The reads a keyed call makes; units are checked per code across its windows. */
+/** The reads a keyed call makes; units are checked per read across its windows. */
 export const readsOf = (spec: ValueSpec): Read[] => {
   const args = spec.args;
+  const wearable = WEARABLE_READS[spec.tool];
+  if (wearable !== undefined) {
+    // A vendor source is refused before any read: only the series must exist.
+    const window = args.source === "all" ? asWindow(args) : null;
+    // A sport filter reads that sport's code only; a sport the series lacks reads none.
+    const codes =
+      typeof args.sport === "string"
+        ? wearable.codes.filter((code) => code === `workout-${String(args.sport)}`)
+        : wearable.codes;
+    return window === null
+      ? []
+      : [{ ...wearable, codes, windows: [window], slope: false }];
+  }
   const windows =
     spec.tool === "latest_by_loinc"
       ? [ALL_TIME]
@@ -124,7 +166,7 @@ export const readsOf = (spec: ValueSpec): Read[] => {
           .map(asWindow)
           .filter((window): window is Window => window !== null);
   const slope = spec.tool === "trend";
-  return codesOf(args).map((loinc) => ({ loinc, windows, slope }));
+  return codesOf(args).map((loinc) => ({ codes: [loinc], windows, slope, minimum: 2 }));
 };
 
 type SubjectRows = ReadonlyMap<string, readonly Readonly<{ unit: string; at: number }>[]>;
@@ -151,7 +193,7 @@ const fitsSlope = (inside: readonly Readonly<{ at: number }>[]): boolean =>
   olsSlopePerDay(inside.map((row) => ({ at: new Date(row.at), value: 0 }))) !== null;
 
 const readGives = (rows: SubjectRows, read: Read, outcome: Outcome): boolean => {
-  const own = rows.get(read.loinc) ?? [];
+  const own = read.codes.flatMap((code) => rows.get(code) ?? []);
   const perWindow = read.windows.map((window) =>
     own.filter((row) => row.at >= window.from && row.at <= window.to),
   );
@@ -160,7 +202,7 @@ const readGives = (rows: SubjectRows, read: Read, outcome: Outcome): boolean => 
     case "rows":
       return (
         units.size === 1 &&
-        perWindow.every((inside) => inside.length >= 2) &&
+        perWindow.every((inside) => inside.length >= read.minimum) &&
         (!read.slope || perWindow.every(fitsSlope))
       );
     case "one":
@@ -169,6 +211,10 @@ const readGives = (rows: SubjectRows, read: Read, outcome: Outcome): boolean => 
       return perWindow.every((inside) => inside.length === 0);
     case "mixed":
       return units.size > 1;
+    case "few":
+      return perWindow.every(
+        (inside) => inside.length >= 1 && inside.length < WEARABLE_TREND_MINIMUM,
+      );
   }
 };
 
@@ -182,8 +228,11 @@ export const isEligible = (index: Index, item: Question, subject: string): boole
     return measure === undefined || (rows.get(measure)?.length ?? 0) > 0;
   }
   const outcome = EXPECTED_OUTCOME[item.id] ?? "rows";
-  return specs.every((spec) =>
-    readsOf(spec).every((read) => readGives(rows, read, outcome)),
+  // A wearable item is for a subject with a synthetic series, refusal or not.
+  const needsSeries = specs.some((spec) => WEARABLE_READS[spec.tool] !== undefined);
+  return (
+    (!needsSeries || (rows.get(SERIES_CODE)?.length ?? 0) > 0) &&
+    specs.every((spec) => readsOf(spec).every((read) => readGives(rows, read, outcome)))
   );
 };
 

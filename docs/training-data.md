@@ -75,9 +75,9 @@ and the config hash, not the end date.
 **Train on `synthea-v4-seed4242`. Test on `synthea-v4-seed9001` and on the
 81-question set** (`docs/evaluation/question-set.md`). The generator refuses
 `synthea-v4-seed42` unless `--allow-eval-cohort`, which is for smoke runs
-only: training on it would leak the test set. Do not add wearable series to
-`synthea-v4-seed42` either; extra heart rate rows would change the answer
-key.
+only: training on it would leak the test set. Its wearable series belongs only in
+the throwaway answer-key and eval databases (`--allow-eval-cohort`,
+`docs/evaluation/question-set.md`), never in a training or dev database.
 
 Keep the training and held-out cohorts in their own database on the GPU
 machine, never the dev database: the Body twin's Demo values read every
@@ -90,21 +90,30 @@ bundle per living subject to `.synthea/<cohort>/wearables/` (deceased
 subjects are left out). The seed is the cohort's own, from `manifest.json`.
 Defaults: 90 days ending 2026-10-01 (`--end`, `--days`).
 
-| Metric             | Code                | Unit        |
-| ------------------ | ------------------- | ----------- |
-| Heart rate         | LOINC `8867-4`      | `/min`      |
-| Resting heart rate | LOINC `40443-4`     | `/min`      |
-| Sleep duration     | LOINC `93832-4`     | `min`       |
-| Steps in 24 hours  | LOINC `41950-7`     | `{steps}/d` |
-| Respiratory rate   | LOINC `9279-1`      | `/min`      |
-| HRV (RMSSD)        | local `hrv-rmssd`   | `ms`        |
-| Sleep score        | local `sleep-score` | `{score}`   |
+| Metric             | Code                    | Unit        |
+| ------------------ | ----------------------- | ----------- |
+| Heart rate         | LOINC `8867-4`          | `/min`      |
+| Resting heart rate | LOINC `40443-4`         | `/min`      |
+| Sleep duration     | LOINC `93832-4`         | `min`       |
+| Steps in 24 hours  | LOINC `41950-7`         | `{steps}/d` |
+| Respiratory rate   | LOINC `9279-1`          | `/min`      |
+| HRV (RMSSD)        | local `hrv-rmssd`       | `ms`        |
+| Sleep score        | local `sleep-score`     | `{score}`   |
+| Workout minutes    | local `workout-<sport>` | `min`       |
 
 The LOINC and UCUM codes are the ones the open-twin Oura and Google Health
 mappers use. LOINC has no code for RMSSD or a vendor sleep score, and
 open-twin uses vendor-local codes for them, so these two use the local system
-`urn:twinllm:synthetic-wearable`. They are stored but no query tool can read
-them (the tools take LOINC only), so the conversations do not ask about them.
+`urn:twinllm:synthetic-wearable`. The LOINC-only tools cannot read them;
+`hrv_trend` and `sleep_summary` can (`docs/query-layer.md`, "Wearable tools"). The
+conversations do not ask about them yet, and the no-code family no longer offers HRV,
+the sleep score or training load as measures no tool can read.
+
+Generator v2 adds workouts beside the daily series, which it leaves unchanged: on some
+worn days (15–60% per subject) one workout of running, cycling, walking or strength
+(mostly the subject's usual sport) with its minutes, under the local code
+`workout-<sport>` at 18:00 UTC. `training_load` reads them. Their random streams are
+their own (`workout-profile:` and `workouts:` keys), so no daily value moved.
 
 Each subject gets fixed baselines, a share of worn days (one in twelve wears
 the device on about 15% of days), a slow resting heart rate drift and, for

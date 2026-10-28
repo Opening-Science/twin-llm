@@ -41,6 +41,15 @@ describe("parseWearablesArgs", () => {
       seed: null,
       endDay: "2026-10-01",
       days: 90,
+      allowEvalCohort: false,
+    });
+    expect(parseWearablesArgs(["--in", "/c/fhir", "--allow-eval-cohort"])).toEqual({
+      input: "/c/fhir",
+      output: "/c/wearables",
+      seed: null,
+      endDay: "2026-10-01",
+      days: 90,
+      allowEvalCohort: true,
     });
   });
 
@@ -85,13 +94,14 @@ describe("runGenerateWearables", () => {
     ]);
     expect(h.written.get("/c/wearables/manifest.json")).toEqual({
       generator: "twinllm-synthetic-wearables",
-      generatorVersion: "1",
+      generatorVersion: "2",
       cohortId: "synthea-v4-seed4242",
       seed: 4242,
       endDay: "2026-10-01",
       days: 5,
       subjects: 2,
-      readings: 35,
+      // 35 daily readings and one workout (4f083ce3, 29 Sep, running).
+      readings: 36,
       syntheaVersion: "v4.0.0",
     });
     expect(h.out.join("")).toContain("Subjects: 2, deceased left out: 0, other files: 1");
@@ -105,10 +115,29 @@ describe("runGenerateWearables", () => {
       });
       expect(await runGenerateWearables(["--in", "/c/fhir"], h.io, h.deps)).toBe(1);
       expect(h.err.join("")).toBe(
-        "Refused: synthea-v4-seed42 is the evaluation cohort; wearable rows would change its answer key.\n",
+        "Refused: synthea-v4-seed42 is the evaluation cohort. Its series belong only in the throwaway answer-key and eval databases (docs/evaluation/question-set.md); pass --allow-eval-cohort for those.\n",
       );
       expect(h.written.size).toBe(0);
     }
+  });
+
+  test("writes the evaluation cohort's series with --allow-eval-cohort", async () => {
+    const h = harness({
+      "/c/manifest.json": { seed: 42, cohortId: "synthea-v4-seed42" },
+      "/c/fhir/patient-1.json": fixture("patient-1.json"),
+    });
+    expect(
+      await runGenerateWearables(
+        ["--in", "/c/fhir", "--days", "5", "--allow-eval-cohort"],
+        h.io,
+        h.deps,
+      ),
+    ).toBe(0);
+    expect([...h.written.keys()].sort()).toEqual([
+      "/c/wearables/ba419d35-0dfe-8af7-347c-eebf02485a56.wearables.json",
+      "/c/wearables/manifest.json",
+    ]);
+    expect(h.err.join("")).toBe("");
   });
 
   test("needs a seed when the cohort has no manifest", async () => {

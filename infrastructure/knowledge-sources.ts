@@ -22,6 +22,7 @@ export const KNOWLEDGE_SOURCE_IDS = [
   "opentwin-knowledge",
   "cohort-records",
   "cohort-analytics",
+  "wearable-analytics",
   "gbd",
   "ark-genome",
 ] as const;
@@ -66,6 +67,16 @@ export const COHORT_ANALYTICS_TOOLS = [
   "range_position",
   "convert_unit",
   "cohort_position",
+  "values_around_event",
+] as const satisfies readonly QueryToolName[];
+
+/** Wearable summaries: the linked snapshots in personal mode, a synthetic subject's series otherwise. */
+export const WEARABLE_ANALYTICS_TOOLS = [
+  "sleep_summary",
+  "hrv_trend",
+  "resting_hr_trend",
+  "training_load",
+  "cross_source_compare",
 ] as const satisfies readonly QueryToolName[];
 
 export const KNOWLEDGE_SOURCE_GROUPS: readonly KnowledgeSourceGroup[] = [
@@ -107,6 +118,20 @@ export const KNOWLEDGE_SOURCE_GROUPS: readonly KnowledgeSourceGroup[] = [
           "Trend, baseline deviation, coverage, window comparisons, position against the Anchor v3 published range, unit conversions and a percentile in the synthetic cohort. Needs Subjects and observations on.",
         tools: COHORT_ANALYTICS_TOOLS,
         requires: "cohort-records",
+      },
+    ],
+  },
+  {
+    id: "wearables",
+    label: "Wearables",
+    description: "Computed on this server from wearable data, read where it is kept.",
+    sources: [
+      {
+        id: "wearable-analytics",
+        label: "Sleep, HRV, resting heart rate and workouts",
+        description:
+          "Nightly sleep, HRV and resting heart rate trends, and workout minutes, per source, from linked Oura, Whoop and Google Health data. In synthetic mode, a synthetic subject's synthetic series.",
+        tools: WEARABLE_ANALYTICS_TOOLS,
       },
     ],
   },

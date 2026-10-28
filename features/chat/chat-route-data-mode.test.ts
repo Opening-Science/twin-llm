@@ -98,7 +98,12 @@ mock.module("@/infrastructure/database", () => ({
     },
   }),
 }));
+// Bun's module mocks last for the whole test process, so keep the module's
+// other exports (`vllmBaseUrlFor` and the rest): replacing only this one left
+// them undefined for every later test file that imports the module (#152).
+const realCatalog = await import("@/infrastructure/fetch-model-catalog");
 mock.module("@/infrastructure/fetch-model-catalog", () => ({
+  ...realCatalog,
   fetchActiveModelCatalog: async () => [
     {
       id: MODEL_ID,

@@ -1,0 +1,20 @@
+{
+  "question": "What did my Fitbit say about sleep this week?",
+  "dataMode": "personal",
+  "wearableContext": true,
+  "script": [
+    {
+      "tool": "sleep_summary",
+      "input": { "source": "fitbit", "start": "2026-09-24", "end": "2026-09-30" }
+    },
+    {
+      "tool": "hrv_trend",
+      "input": { "source": "all", "start": "2026-09-01", "end": "2026-09-30" }
+    }
+  ],
+  "expect": {
+    "calls": [],
+    "views": [],
+    "refusals": ["invalid-tool-input", "tool-not-allowed"]
+  }
+}
