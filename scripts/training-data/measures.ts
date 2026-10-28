@@ -213,15 +213,18 @@ export const WEARABLE_KEYS: readonly [string, ...string[]] = [
  */
 export type NearMiss = Readonly<{ asked: Measure; neighbour: Measure }>;
 
-const DIASTOLIC = {
+export const DIASTOLIC = {
   ...clinical("8462-4", "diastolic blood pressure", 0),
   aliases: ["diastolic BP", "diastolic pressure"],
   unit: "mmHg",
 } satisfies Measure;
-const LDL = { ...clinical("18262-6", "LDL cholesterol", 0), aliases: ["LDL"] };
-const HDL = { ...clinical("2085-9", "HDL cholesterol", 0), aliases: ["HDL"] };
-const TRIGLYCERIDES = clinical("2571-8", "triglycerides", 0);
-const GLUCOSE = { ...clinical("2339-0", "blood glucose", 0), aliases: ["glucose"] };
+export const LDL = { ...clinical("18262-6", "LDL cholesterol", 0), aliases: ["LDL"] };
+export const HDL = { ...clinical("2085-9", "HDL cholesterol", 0), aliases: ["HDL"] };
+export const TRIGLYCERIDES = clinical("2571-8", "triglycerides", 0);
+export const GLUCOSE = {
+  ...clinical("2339-0", "blood glucose", 0),
+  aliases: ["glucose"],
+};
 const HEIGHT = { ...clinical("8302-2", "body height", 1), aliases: ["height"] };
 const INSULIN = clinical("20448-7", "insulin", 1);
 const HS_CRP = clinical("30522-7", "high-sensitivity CRP", 1);
@@ -276,7 +279,7 @@ export type Conversion = Readonly<{
   tool: Readonly<{ analyte: ConversionAnalyte; to: ConversionUnit }> | null;
 }>;
 
-const CREATININE = {
+export const CREATININE = {
   ...clinical("38483-4", "creatinine", 2),
   aliases: ["serum creatinine"],
 } satisfies Measure;

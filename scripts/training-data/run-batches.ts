@@ -7,13 +7,16 @@
  *     --work .synthea/batches --out training-data/out --keep
  *   bun run training:batches -- --batches 1001-1010 --skip-rejected [--max-rejected-share 0.02]
  *   bun run training:batches -- --batches 1001 --workers 4
+ *   bun run training:batches -- --batches 1001-1010 --tracks general,diet,sleep
  *
  * Per batch: unpack the archive → wearables:generate → warehouse:ingest of the
  * FHIR and the wearables (split across --workers ingest processes, default
  * cores - 1) → training:conversations → delete the cohort's
  * warehouse rows → remove the unpacked files (unless --keep). Audit rows stay:
  * the audit chain is append-only. A batch whose conversation manifest exists is
- * skipped. Each step runs the existing CLI with `.env.training`; its output
+ * skipped. `--tracks` also writes one set per training track
+ * (`<cohort>.<track>.jsonl`) in the conversations step; a batch is done when
+ * the default manifest and every track's manifest exist. Each step runs the existing CLI with `.env.training`; its output
  * goes to `<work>/logs/`, and this prints one line per step with its time.
  *
  * Refuses to run unless DATA_MODE=synthetic, the database is not the dev
@@ -35,6 +38,7 @@ import {
   type BatchArgs,
   type BatchPaths,
   batchPaths,
+  type TrackPaths,
   databaseRefusal,
   envFileValue,
   formatBytes,
@@ -139,6 +143,42 @@ export const stepCommand = (
     case "remove files":
       return null;
   }
+};
+
+/** The conversations command for one training track. */
+export const trackCommand = (
+  batch: BatchCohort,
+  track: TrackPaths,
+  bun: string,
+): readonly string[] => [
+  bun,
+  `--env-file=${TRAINING_ENV_FILE}`,
+  "--preload",
+  PRELOAD,
+  "scripts/training-data/build-conversations.ts",
+  "--cohort",
+  batch.cohortId,
+  "--track",
+  track.track,
+  "--out",
+  track.records,
+];
+
+/** Every conversation manifest the batch should end with: the default set's, then each track's. */
+const manifestsOf = (paths: BatchPaths): readonly string[] => [
+  paths.conversationManifest,
+  ...paths.tracks.map((track) => track.manifest),
+];
+
+/** A batch is done when every set it should write has its manifest. */
+const isDone = async (
+  paths: BatchPaths,
+  deps: Pick<BatchRunDeps, "exists">,
+): Promise<boolean> => {
+  for (const manifest of manifestsOf(paths)) {
+    if (!(await deps.exists(manifest))) return false;
+  }
+  return true;
 };
 
 const logPath = (paths: BatchPaths, batch: BatchCohort, step: Step) =>
@@ -261,11 +301,26 @@ const runStep = async (
       };
     }
     case "conversations": {
-      const withRejected = (await deps.exists(paths.rejected))
-        ? [...(command ?? []), "--rejected", paths.rejected]
-        : (command ?? []);
-      const result = await deps.run(withRejected, log);
-      if (result.code !== 0) return failed(result);
+      const rejectedFlag = (await deps.exists(paths.rejected))
+        ? ["--rejected", paths.rejected]
+        : [];
+      // A set already written (an earlier run, before --tracks) is kept as it is.
+      if (!(await deps.exists(paths.conversationManifest))) {
+        const result = await deps.run([...(command ?? []), ...rejectedFlag], log);
+        if (result.code !== 0) return failed(result);
+      }
+      for (const track of paths.tracks) {
+        if (await deps.exists(track.manifest)) continue;
+        const result = await deps.run(
+          [...trackCommand(batch, track, bun), ...rejectedFlag],
+          log,
+        );
+        if (result.code !== 0) return failed(result);
+      }
+      const tracks =
+        paths.tracks.length === 0
+          ? ""
+          : `; tracks ${paths.tracks.map((track) => track.track).join(", ")}`;
       const manifest = await deps.readJson(paths.conversationManifest);
       const count = (key: string) =>
         typeof manifest === "object" && manifest !== null
@@ -274,7 +329,7 @@ const runStep = async (
       const bytes = await deps.fileSize(paths.records);
       return {
         ok: true,
-        detail: `${count("conversations")} conversations from ${count("subjects")} subjects, ${formatBytes(bytes)} JSONL`,
+        detail: `${count("conversations")} conversations from ${count("subjects")} subjects, ${formatBytes(bytes)} JSONL${tracks}`,
       };
     }
     case "clear rows": {
@@ -324,10 +379,7 @@ export const runTrainingBatches = async (
   const missing: string[] = [];
   for (const batch of args.batches) {
     const paths = batchPaths(batch, args);
-    if (
-      !(await deps.exists(paths.conversationManifest)) &&
-      !(await deps.exists(paths.archive))
-    ) {
+    if (!(await isDone(paths, deps)) && !(await deps.exists(paths.archive))) {
       missing.push(paths.archive);
     }
   }
@@ -339,7 +391,7 @@ export const runTrainingBatches = async (
   const runStart = deps.now();
   for (const batch of args.batches) {
     const paths = batchPaths(batch, args);
-    const done = await deps.exists(paths.conversationManifest);
+    const done = await isDone(paths, deps);
     const steps = stepPlan({
       done,
       unpacked: await deps.exists(paths.unpacked),

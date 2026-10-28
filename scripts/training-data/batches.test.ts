@@ -83,7 +83,17 @@ describe("parseBatchArgs", () => {
       skipRejected: false,
       maxRejectedShare: 0.01,
       workers: null,
+      tracks: [],
     });
+  });
+
+  test("--tracks takes track ids, once each", () => {
+    const args = parseBatchArgs(["--batches", "1001", "--tracks", "diet,sleep,diet"]);
+    if (typeof args === "string") throw new Error(args);
+    expect(args.tracks).toEqual(["diet", "sleep"]);
+    expect(parseBatchArgs(["--batches", "1001", "--tracks", "diet,poems"])).toBe(
+      "--tracks takes general, diet, anatomy, sleep, trainer, genetics (got: diet,poems).",
+    );
   });
 
   test("flags", () => {
@@ -109,7 +119,7 @@ describe("parseBatchArgs", () => {
 
   test("usage and a flag without a value", () => {
     expect(parseBatchArgs([])).toBe(
-      "Usage: bun run training:batches -- --batches 1001-1010 [--archives <dir>] [--work <dir>] [--out <dir>] [--keep] [--skip-rejected [--max-rejected-share 0.01]] [--workers <n>]",
+      "Usage: bun run training:batches -- --batches 1001-1010 [--archives <dir>] [--work <dir>] [--out <dir>] [--keep] [--skip-rejected [--max-rejected-share 0.01]] [--workers <n>] [--tracks diet,sleep]",
     );
     expect(parseBatchArgs(["--batches", "1001", "--work"])).toBe(
       "--work needs a directory.",
@@ -242,7 +252,25 @@ describe("batchPaths", () => {
       conversationManifest: "out/synthea-v4-seed1001.manifest.json",
       rejected: "out/synthea-v4-seed1001.rejected.json",
       logs: "work/logs",
+      tracks: [],
     });
+  });
+
+  test("each track gets its own file set next to the default one", () => {
+    expect(
+      batchPaths(batch1001(), {
+        archives: "arch",
+        work: "work",
+        out: "out",
+        tracks: ["diet"],
+      }).tracks,
+    ).toEqual([
+      {
+        track: "diet",
+        records: "out/synthea-v4-seed1001.diet.jsonl",
+        manifest: "out/synthea-v4-seed1001.diet.manifest.json",
+      },
+    ]);
   });
 });
 
