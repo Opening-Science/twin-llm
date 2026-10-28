@@ -1,3 +1,4 @@
+import { toChatView } from "@/infrastructure/chat-view";
 import type { DataMode } from "@/infrastructure/data-mode-policy";
 import type { ParsedTwinAnswer } from "@/infrastructure/parse-twin-answer";
 import type { UiContext } from "@/infrastructure/ui-context";
@@ -114,6 +115,15 @@ const deriveNextStep = (basis: Basis): NextStep => {
   return basis.mode === "personal" && nothingToRead ? "connect_wearable" : "more_data";
 };
 
+/**
+ * True when a tool output of the turn is a `twin.body` view. The body on its
+ * focus is reference anatomy shown to the person, so like a guideline passage
+ * it keeps an answer from being withheld; it never makes the answer
+ * `sufficient_data`, which only rows about a person do.
+ */
+export const twinBodyShown = (outputs: readonly unknown[]): boolean =>
+  outputs.some((output) => toChatView(output)?.kind === "twin.body");
+
 export const buildResponseDocumentV1 = (input: {
   readonly parsed: ParsedTwinAnswer;
   readonly toolCalls: readonly ResponseToolCall[];
@@ -126,6 +136,8 @@ export const buildResponseDocumentV1 = (input: {
   readonly skill?: string | null;
   /** The turn's UI context (#47), or null. */
   readonly uiContext?: UiContext | null;
+  /** A `twin.body` view was shown this turn (`twinBodyShown`). */
+  readonly twinBody?: boolean;
 }): ResponseDocumentV1 => {
   // Only keys the prompt offered count; an invented key cannot stop abstaining.
   const evidence_keys = [...input.parsed.evidenceKeys];
@@ -135,12 +147,14 @@ export const buildResponseDocumentV1 = (input: {
   const guidelineSources = [...(input.guidelineSources ?? [])];
   const knowledgeSources = [...(input.knowledgeSources ?? [])];
   const gbdRows = [...(input.gbdRows ?? [])];
-  // Reference material alone is still an answer to show, with answer_class information.
+  // Reference material alone, or the body twin on its focus, is still an
+  // answer to show, with answer_class information.
   const abstained =
     !sufficient_data &&
     guidelineSources.length === 0 &&
     knowledgeSources.length === 0 &&
-    gbdRows.length === 0;
+    gbdRows.length === 0 &&
+    input.twinBody !== true;
   const basis: Basis = {
     declined: input.parsed.declined,
     sufficient: sufficient_data,

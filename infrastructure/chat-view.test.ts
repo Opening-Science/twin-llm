@@ -5,6 +5,7 @@ import {
   compareView,
   timeseriesView,
   toChatView,
+  twinBodyTitle,
   viewReadings,
   viewsOf,
   viewTitle,
@@ -116,5 +117,31 @@ describe("the other kinds", () => {
     };
     expect(toChatView({ ...compare, spec: { ...compare.spec, before } })).toBeNull();
     expect(toChatView({ ...compare, kind: "twin.body" })).toBeNull();
+  });
+});
+
+describe("twinBodyTitle", () => {
+  const spec = {
+    focus: "liver",
+    label: "Liver",
+    body: "demo",
+    subject: "synthetic-1",
+    window: { start: "2026-01-01", end: "2026-03-31" },
+    unit: null,
+    organs: [],
+    n: 0,
+  } as const;
+
+  test("a window is named, as for every view", () => {
+    expect(twinBodyTitle(spec)).toBe("Body twin: Liver, 1 Jan 2026 – 31 Mar 2026");
+  });
+
+  test("no window: latest readings with a subject, the label alone without", () => {
+    expect(twinBodyTitle({ ...spec, window: null })).toBe(
+      "Body twin: Liver, latest readings",
+    );
+    expect(twinBodyTitle({ ...spec, window: null, subject: null })).toBe(
+      "Body twin: Liver",
+    );
   });
 });

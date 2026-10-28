@@ -127,8 +127,8 @@ const viewRefOf = (view: ChatView): ViewRef | null => {
   return MEASURE.test(measure) ? { kind: view.kind, measure } : null;
 };
 
-/** A compare chart's range runs from its earlier window to its later one. */
-const rangeOf = (view: ChatView): Readonly<{ start: string; end: string }> =>
+/** A compare chart's range runs from its earlier window to its later one; a twin view may have none. */
+const rangeOf = (view: ChatView): Readonly<{ start: string; end: string }> | null =>
   view.kind === "chart.compare"
     ? { start: view.spec.before.start, end: view.spec.after.end }
     : view.spec.window;
@@ -137,6 +137,8 @@ const chartOf = (view: ChatView | null): UiContext["chart"] => {
   if (view === null) return null;
   const ref = viewRefOf(view);
   const range = rangeOf(view);
+  // A twin view without a window has no days to name.
+  if (range === null) return null;
   const start = range.start.slice(0, 10);
   const end = range.end.slice(0, 10);
   return ref !== null && DAY.test(start) && DAY.test(end) ? { ...ref, start, end } : null;

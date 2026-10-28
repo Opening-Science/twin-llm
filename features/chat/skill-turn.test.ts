@@ -233,4 +233,29 @@ describe("show_view under a skill", () => {
     });
     expect(audits).toEqual([]);
   });
+
+  test("a skill without cohort-records reads no subject through show_view", async () => {
+    const reads: unknown[] = [];
+    const tools = createChatTools(SCOPE, {
+      query: {
+        ...ports,
+        findObservations: async (query) => {
+          reads.push(query);
+          return [];
+        },
+      },
+      views: ["twin.body"],
+      sources: ["opentwin-knowledge", "wearable-context"],
+    });
+    const output = await tools.show_view.execute?.(
+      { kind: "twin.body", focus: "liver", subject: "synthetic-subject-1" },
+      { toolCallId: "call-1", messages: [] },
+    );
+    expect(output).toEqual({
+      code: "RECORDS_NOT_IN_SKILL",
+      error:
+        "this skill reads no subject records; call show_view again without subject (twin.body) or with a wearable key",
+    });
+    expect(reads).toEqual([]);
+  });
 });

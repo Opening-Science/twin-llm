@@ -1,0 +1,20 @@
+{
+  "question": "Show me where the pancreas is.",
+  "script": [
+    {
+      "tool": "knowledge_search",
+      "input": {
+        "query": "pancreas location",
+        "k": 5
+      }
+    },
+    {
+      "view": "twin.body"
+    }
+  ],
+  "expect": {
+    "calls": ["knowledge_search"],
+    "views": ["twin.body"],
+    "refusals": []
+  }
+}

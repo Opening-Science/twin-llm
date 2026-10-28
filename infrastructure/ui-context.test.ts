@@ -99,6 +99,29 @@ describe("buildUiContext", () => {
     });
   });
 
+  test("a twin view with no window names no chart days", () => {
+    const latest = twinBodyView({
+      spec: {
+        focus: "liver",
+        label: "Liver",
+        body: "demo",
+        subject: "synthetic-1",
+        window: null,
+        unit: null,
+        organs: [],
+        n: 0,
+      },
+      sourceAuditIds: ["10"],
+    });
+    expect(buildUiContext({ ...NOTHING, largeView: latest, views: [latest] })).toEqual({
+      panels: [],
+      organ: null,
+      chart: null,
+      views: [{ kind: "twin.body", measure: "liver" }],
+      viewCount: 1,
+    });
+  });
+
   test("lists at most four views, once each, and counts them all", () => {
     const views = ["1", "2", "3", "4", "5"].map((seq) => series(`1000${seq}-1`, seq));
     const context = buildUiContext({ ...NOTHING, views: [...views, views[0]!] });

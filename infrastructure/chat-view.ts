@@ -108,11 +108,20 @@ export const tableView = (input: Built<TableSpec>): ChatView => ({
   sourceAuditIds: [...input.sourceAuditIds],
 });
 
-/** `Body twin: Liver, 1 Jan 2026 – 31 Mar 2026`. */
+/**
+ * `Body twin: Liver, 1 Jan 2026 – 31 Mar 2026`; with no window, `Body twin: Liver,
+ * latest readings`, or `Body twin: Liver` when no labs were read.
+ */
+export const twinBodyTitle = (spec: TwinBodySpec): string => {
+  const label = `Body twin: ${spec.label}`;
+  if (spec.window !== null) return viewTitle(label, spec.window);
+  return spec.subject === null ? label : `${label}, latest readings`;
+};
+
 export const twinBodyView = (input: Built<TwinBodySpec>): ChatView => ({
   id: viewId(input.sourceAuditIds),
   kind: "twin.body",
-  title: viewTitle(`Body twin: ${input.spec.label}`, input.spec.window),
+  title: twinBodyTitle(input.spec),
   spec: { ...input.spec, organs: [...input.spec.organs] },
   sourceAuditIds: [...input.sourceAuditIds],
 });

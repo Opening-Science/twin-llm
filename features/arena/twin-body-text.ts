@@ -31,9 +31,12 @@ export const twinBodyEmptyText = (spec: TwinBodySpec): string | null => {
   if (spec.organs.length > 0) return null;
   if (spec.subject === null)
     return "No lab values were read, so no organ has a position.";
-  return spec.n === 0
-    ? "No mapped lab marker has a reading in this window."
-    : "No reading here has a published range that fits, so no organ has a position.";
+  if (spec.n === 0) {
+    return spec.window === null
+      ? "No mapped lab marker has a reading in this subject's record."
+      : "No mapped lab marker has a reading in this window.";
+  }
+  return "No reading here has a published range that fits, so no organ has a position.";
 };
 
 /** `Demo body · labs of <subject>`; Self is shown with its scan where there is one. */

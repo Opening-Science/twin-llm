@@ -132,7 +132,8 @@ export const twinBodySpecSchema = z.object({
   body: z.enum(TWIN_BODIES),
   /** The synthetic subject whose labs were read; null when none was. */
   subject: z.string().nullable(),
-  window: windowSpec,
+  /** The window read; null when none was asked for and each marker's latest reading was used. */
+  window: windowSpec.nullable(),
   /** No measure, so no unit; kept so every spec answers `unit`. */
   unit: z.null(),
   organs: z
@@ -146,7 +147,7 @@ export const twinBodySpecSchema = z.object({
       }),
     )
     .readonly(),
-  /** Rows read in the window; 0 when no subject or no mapped marker. */
+  /** Rows read (in the window, if any); 0 when no subject or no mapped marker. */
   n: z.number().int().nonnegative(),
 });
 

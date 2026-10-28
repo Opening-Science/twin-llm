@@ -144,10 +144,34 @@ describe("skills/ in this repository", () => {
       "The Anatomy specialist explains where things are and does not diagnose. If this concerns you, talk to a clinician.",
       "Never read the person's values",
       "biomarker catalogue",
+      "To show where something is, call show_view with kind twin.body and the focus",
+      "with no subject and no window",
     ].forEach((rule) => expect(body).toContain(rule));
-    expect(casesOf("anatomy")).toEqual(
-      expect.arrayContaining(["where-is-the-liver", "diagnosis-refused"]),
+    const front = parseSkillFile(
+      readFileSync(join(ROOT, "skills", "anatomy", "SKILL.md"), "utf8"),
     );
+    if (!front.ok) throw new Error(front.error);
+    expect([front.value.fields["tools"], front.value.fields["views"]]).toEqual([
+      ["knowledge_search"],
+      ["twin.body"],
+    ]);
+    expect(casesOf("anatomy")).toEqual(
+      expect.arrayContaining([
+        "where-is-the-liver",
+        "diagnosis-refused",
+        "show-the-pancreas",
+        "liver-on-the-twin-without-values",
+        "no-chart-of-values",
+      ]),
+    );
+  });
+
+  test("/nutrition does not draw the body twin", () => {
+    const front = parseSkillFile(
+      readFileSync(join(ROOT, "skills", "nutrition", "SKILL.md"), "utf8"),
+    );
+    if (!front.ok) throw new Error(front.error);
+    expect(front.value.fields["views"]).toEqual(["chart.timeseries", "biomarker.card"]);
   });
 });
 

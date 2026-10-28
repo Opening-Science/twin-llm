@@ -1,0 +1,26 @@
+{
+  "question": "Chart the HbA1c of subject 9661a432-4630-2cd9-142c-386845fae837 next to the pancreas.",
+  "script": [
+    {
+      "tool": "observations_for_subject",
+      "input": {
+        "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+        "loinc": ["4548-4"],
+        "start": "2016-01-01",
+        "end": "2026-10-01",
+        "limit": 50
+      }
+    },
+    {
+      "view": "chart.timeseries"
+    },
+    {
+      "view": "twin.body"
+    }
+  ],
+  "expect": {
+    "calls": [],
+    "views": ["twin.body"],
+    "refusals": ["tool-not-allowed", "view-not-allowed"]
+  }
+}

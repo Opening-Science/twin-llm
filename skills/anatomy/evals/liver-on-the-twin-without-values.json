@@ -1,17 +1,17 @@
 {
-  "question": "Show the latest HbA1c of subject 9661a432-4630-2cd9-142c-386845fae837 on the body.",
+  "question": "For synthetic subject 9661a432-4630-2cd9-142c-386845fae837, show the liver on the body twin with the related lab values.",
   "script": [
     {
       "tool": "latest_by_loinc",
       "input": {
         "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
-        "loinc": ["4548-4"]
+        "loinc": ["2324-2"]
       }
     },
     {
       "tool": "knowledge_search",
       "input": {
-        "query": "HbA1c region",
+        "query": "liver location markers",
         "k": 3
       }
     },
@@ -21,7 +21,7 @@
   ],
   "expect": {
     "calls": ["knowledge_search"],
-    "views": [],
-    "refusals": ["tool-not-allowed", "view-not-allowed"]
+    "views": ["twin.body"],
+    "refusals": ["tool-not-allowed"]
   }
 }
