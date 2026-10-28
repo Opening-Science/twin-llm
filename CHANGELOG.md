@@ -7,6 +7,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Thread export (#44): `?format=fhir` gives a FHIR R4 DocumentReference whose attachment is the same Markdown, tagged research use only. Every export now writes an audit row (format and size, no content), and a thread that used the genome tools exports only when the app is served to this machine alone (`LOCAL_ONLY`); otherwise it is refused and audited as `genome.thread.export_refused`.
+
 - Download a thread as Markdown from the bar at the top of it (`/api/threads/<id>/export`, the owner only): each prompt, each model's lookups with their arguments, row counts and refusals, and the answer as the page shows it; withheld and refused answers say so. For an issue, a lab notebook or a paper's appendix.
 
 - Thread titles read as questions (`infrastructure/readable-title.ts`): a leading or inner subject_ref moves to a short tag at the end ("What is the latest systolic · subject 29bbf0") and LOINC asides are dropped. New threads are named that way; older ones show that way in the sidebar and search, with their stored titles left as they were. A subject page in the cohort explorer has "Ask about this subject", which opens a new chat with "For synthetic subject <ref>, " typed in and the suggestion chips about that subject (`/?subject=`, a subject_ref only; the chips' coverage read keeps its scope check and audit).
