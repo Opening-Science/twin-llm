@@ -7,6 +7,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- PDF from a thread (#213): a PDF link beside Download opens the thread as a page laid out for paper with the print dialog, where "Save as PDF" keeps it. Same content as the Markdown and FHIR exports, audited as format `print`, genome threads local only. No PDF library and nothing leaves the machine.
+
 - Thread export (#44): `?format=fhir` gives a FHIR R4 DocumentReference whose attachment is the same Markdown, tagged research use only. Every export now writes an audit row (format and size, no content), and a thread that used the genome tools exports only when the app is served to this machine alone (`LOCAL_ONLY`); otherwise it is refused and audited as `genome.thread.export_refused`.
 
 - Download a thread as Markdown from the bar at the top of it (`/api/threads/<id>/export`, the owner only): each prompt, each model's lookups with their arguments, row counts and refusals, and the answer as the page shows it; withheld and refused answers say so. For an issue, a lab notebook or a paper's appendix.
