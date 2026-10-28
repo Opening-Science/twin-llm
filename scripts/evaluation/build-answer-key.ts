@@ -126,6 +126,8 @@ export const rowCountOf = (tool: KeyedTool, result: unknown): number => {
       return numberAt(result, "n");
     case "cross_source_compare":
       return numberAt(result, "n_pairs");
+    case "values_around_event":
+      return numberAt(result, "before.n") + numberAt(result, "after.n");
     case "latest_by_loinc":
       return lengthAt(result, "rows");
     case "coverage": {
@@ -432,6 +434,11 @@ export const realPorts = async (today: string): Promise<AnswerKeyPorts> => {
         return tools.runCrossSourceCompare(
           scope,
           KEYED_TOOLS.cross_source_compare.parse(args),
+        );
+      case "values_around_event":
+        return tools.runValuesAroundEvent(
+          scope,
+          KEYED_TOOLS.values_around_event.parse(args),
         );
       case "latest_by_loinc":
         return tools.runLatestByLoinc(scope, KEYED_TOOLS.latest_by_loinc.parse(args));

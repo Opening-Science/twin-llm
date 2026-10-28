@@ -52,6 +52,7 @@ describe("knowledge source preferences", () => {
       "gbd_population",
       "range_position",
       "trend",
+      "values_around_event",
     ]);
   });
 
@@ -126,6 +127,7 @@ describe("knowledge source preferences", () => {
       "subject_window",
       "summary_stats",
       "trend",
+      "values_around_event",
     ]);
   });
 

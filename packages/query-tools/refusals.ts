@@ -351,3 +351,10 @@ export const sourcesUnitMismatch = (
   measure,
   units: units.map((each) => ({ source: each.source, unit: each.unit })),
 });
+
+/** No dated record of this code for the subject, so there is no event to look around. */
+export const noEvent = (record: ClinicalRecordKind, code: string): NoRecords => ({
+  code: "NO_ROWS",
+  error: `no ${record} with code ${code} and a recorded date is on file for this subject`,
+  record,
+});

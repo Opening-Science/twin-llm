@@ -33,6 +33,7 @@ import {
   restingHrTrendInput,
   trainingLoadInput,
   crossSourceCompareInput,
+  valuesAroundEventInput,
 } from "./schemas";
 import type { SessionScope } from "./scope";
 import {
@@ -55,6 +56,7 @@ import {
   runRestingHrTrend,
   runTrainingLoad,
   runCrossSourceCompare,
+  runValuesAroundEvent,
 } from "./tools";
 
 /**
@@ -134,6 +136,9 @@ export const queryToolRunners = (
   training_load: bind(trainingLoadInput, (input) => runTrainingLoad(scope, input, ports)),
   cross_source_compare: bind(crossSourceCompareInput, (input) =>
     runCrossSourceCompare(scope, input, ports),
+  ),
+  values_around_event: bind(valuesAroundEventInput, (input) =>
+    runValuesAroundEvent(scope, input, ports),
   ),
 });
 

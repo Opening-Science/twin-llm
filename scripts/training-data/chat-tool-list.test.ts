@@ -37,6 +37,7 @@ describe("openAiToolsFrom", () => {
       "resting_hr_trend",
       "training_load",
       "cross_source_compare",
+      "values_around_event",
       "show_view",
       "list_views",
       "open_view",

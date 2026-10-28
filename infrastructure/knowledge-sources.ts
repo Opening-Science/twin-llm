@@ -67,6 +67,7 @@ export const COHORT_ANALYTICS_TOOLS = [
   "range_position",
   "convert_unit",
   "cohort_position",
+  "values_around_event",
 ] as const satisfies readonly QueryToolName[];
 
 /** Wearable summaries: the linked snapshots in personal mode, a synthetic subject's series otherwise. */

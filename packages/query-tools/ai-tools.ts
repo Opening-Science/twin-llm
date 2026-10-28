@@ -23,6 +23,7 @@ import {
   restingHrTrendInput,
   trainingLoadInput,
   crossSourceCompareInput,
+  valuesAroundEventInput,
 } from "./schemas";
 import { modelInputSchema } from "./model-schema";
 import type { QueryToolPorts } from "./ports";
@@ -47,6 +48,7 @@ import {
   runRestingHrTrend,
   runTrainingLoad,
   runCrossSourceCompare,
+  runValuesAroundEvent,
 } from "./tools";
 import { NO_WEARABLE_SNAPSHOTS } from "./wearable-readings";
 
@@ -160,5 +162,10 @@ export const createQueryTools = (
     description: description("cross_source_compare"),
     inputSchema: modelInputSchema(crossSourceCompareInput),
     execute: async (input) => runCrossSourceCompare(scope, input, ports, wearables),
+  }),
+  values_around_event: tool({
+    description: description("values_around_event"),
+    inputSchema: modelInputSchema(valuesAroundEventInput),
+    execute: async (input) => runValuesAroundEvent(scope, input, ports),
   }),
 });
