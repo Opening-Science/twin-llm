@@ -1,8 +1,9 @@
 # Agents
 
 An agent is a named preset over what TwinLLM already has: a model the active provider
-offers and, for a specialist, one of the shipped skills. It adds no tool, source or
-permission. Issues #218 and #219, part of #210.
+offers and, for a specialist, one of the shipped skills. It adds no tool or permission;
+the one thing it widens is what `knowledge_search` reads: the agent's own specialty
+literature ([below](#literature-236)). Issues #218, #219 and #236, part of #210.
 
 ```ts
 type Agent = { id; name; role; skill: string | null; modelPreference: readonly string[] };
@@ -61,6 +62,7 @@ same catalog, then:
   provider, or not offered, the sentence names the agent: "Sleep isn't available here:
   its /sleep skill runs only on local Ollama.";
 - the system prompt gets one line, `Agent: <name>. <role>`, under its first line;
+- `knowledge_search` also reads the agent's specialty literature ([below](#literature-236));
 - the answer row keeps `agent:<id>` as its model id and the agent's name as its model
   name, so the column reads "General Practitioner". Audit rows name the base model,
   which is the one that saw the data.
@@ -76,33 +78,140 @@ the prompt, and the turn runs as that agent exactly as if it had been picked by 
 base model, its skill through the skill gate, its refusal sentences and its audit rows.
 The skill row adds `via: "auto"`. No model is called to choose.
 
-Version 1 rules. Each specialist has a few topics; a topic matches on keywords or on its
-LOINC codes:
+Version 2 rules. A question that asks for a medicine or dose decision goes to the General
+Practitioner before any specialist is looked at, since no specialist gives a dose or says
+what to take, start or stop: "dose" or "dosing", "how many milligrams" or "how many
+units", or "should" followed in the same sentence by take, start, stop, change, replace,
+inject, double, see a doctor or go to hospital. Otherwise each specialist has a few
+topics; a topic matches on keywords or on its LOINC codes:
 
-| Agent              | Topics (keywords and LOINC codes)                                                                                                                                                                                                      |
-| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Diet specialist    | body weight (weight, 29463-7); BMI (39156-5); blood glucose (glucose, blood sugar, 2339-0); HbA1c (A1c, glycated, 4548-4); blood lipids (cholesterol, lipids, LDL, HDL, triglycerides, 2093-3, 18262-6, 2085-9, 2571-8); food and diet |
-| Anatomy specialist | anatomy; where an organ is (organ, liver, kidney, pancreas, spleen, gallbladder, thyroid, stomach, lung, bladder, bowel, heart but not heart rate); a body system (skeleton, muscle, bone, circulatory, digestive, nervous, endocrine) |
-| Sleep              | sleep (sleep, slept, night, insomnia, nap, REM, bedtime, 93832-4)                                                                                                                                                                      |
-| Trainer            | recovery (recovery, readiness); heart rate variability (HRV); resting heart rate (RHR, 40443-4); training (train, workout, exercise, run, strain, check-in, weekly review)                                                             |
-| Genetics           | the genome (gene, genetic, genome, genotype, DNA, variant, SNP, rs numbers)                                                                                                                                                            |
+| Agent              | Topics (keywords and LOINC codes)                                                                                                                                                                                                                                                            |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Diet specialist    | body weight (weight, 29463-7); BMI (39156-5); blood glucose (glucose, blood sugar, 2339-0); HbA1c (A1c, glycated, 4548-4); blood lipids (cholesterol, lipids, LDL, HDL, triglycerides, 2093-3, 18262-6, 2085-9, 2571-8); food and diet                                                       |
+| Anatomy specialist | anatomy; where an organ is (organ, liver, kidney, pancreas, spleen, gallbladder, thyroid, stomach, lung, bladder, bowel, heart; not heart rate, and not an organ followed by disease, failure or cancer); a body system (skeleton, muscle, bone, circulatory, digestive, nervous, endocrine) |
+| Sleep              | sleep (sleep, slept, night, insomnia, nap, REM, bedtime, 93832-4)                                                                                                                                                                                                                            |
+| Trainer            | recovery (recovery, readiness); heart rate variability (HRV); resting heart rate (RHR, 40443-4); training (train, workout, exercise, a run, runs, running, jog, swim, cycling, bike, rowing, sport, strain, check-in, weekly review)                                                         |
+| Genetics           | the genome (gene, genetic, genome, genotype, DNA, variant, SNP, rs numbers)                                                                                                                                                                                                                  |
 
 The agent with the most matching topics wins; a tie goes to the one listed first in the
 roster; no match, or a match only for an agent not offered here, goes to the General
 Practitioner. The answer column reads "Auto → Diet specialist", and one muted line under
 it says why: "Auto chose Diet specialist: the question is about body weight." or "Auto
-chose General Practitioner: no specialist agent here matched the question."
+chose General Practitioner: no specialist agent here matched the question." A medicine or dose decision
+reads "Auto chose General Practitioner: the question is about a medicine or dose decision."
 
 The turn stores the column name when it starts (`checkTurnRequest`), and `/api/chat` runs
 Auto as the agent that name holds while it is still offered, so a retry runs as the agent
 the header shows. An incognito turn routes the prompt in the request. The muted line is
 found again from the prompt and the stored name, so a reload shows the same line.
 
-`evaluation/agent-router.v1.json` holds 26 prompts with the agent each should go to; the
-test in `infrastructure/agent-router.test.ts` requires at least 90% of them to route as
-expected (all 26 do today). The prompts were written alongside the rules, so the number
-says the rules do what they say, not how they do on questions people ask. The scored
-question set (`evaluation/questions.v1.json`) is not changed or tagged.
+### Measuring the router
+
+Two fixtures, both checked by `infrastructure/agent-router.test.ts`, which prints the
+share routed as expected and every miss:
+
+- `evaluation/agent-router.v1.json`: 26 prompts written alongside the version 1 rules. It
+  says the rules do what they say, not how they do on other questions. At least 90% must
+  pass.
+- `evaluation/agent-router.questions.v1.json`: the 130 scored questions of
+  `evaluation/questions.v1.json`, each labelled from what the item already declares, not
+  from its words (`scripts/evaluation/router-labels.ts`, rebuilt with
+  `bun run eval:router-fixture`; a test checks the file matches). Each item keeps the rule
+  that gave its label. At least 95% must pass. The question set itself is not changed.
+
+The labelling rules, first that applies wins:
+
+1. Scenario S3 (guideline library), S4 (population, GBD) or S5 (a medicine or dose decision to
+   decline): General Practitioner.
+2. A genome tool (`genome_report`, `dna_ask`): Genetics.
+3. `sleep_summary`: Sleep.
+4. `hrv_trend`, `resting_hr_trend` or `training_load`: Trainer.
+5. LOINC codes, all of them Diet measures (body weight, BMI, glucose, HbA1c, total, LDL
+   and HDL cholesterol, triglycerides, and the serum glucose and HPLC HbA1c codes the set
+   also accepts): Diet specialist.
+6. Anything else (blood pressure, heart rate, kidney and blood markers, conditions,
+   medications, a panel mixing Diet and other measures, no code at all): General
+   Practitioner.
+
+Tools are the item's `must_call` and the tools its keyed values are read with; codes are
+the LOINC codes in those values' arguments and in `measures`. That gives 83 General
+Practitioner, 29 Diet, 13 Trainer and 5 Sleep. No scored question calls an anatomy or
+genome tool, so this fixture says nothing about the Anatomy specialist or Genetics.
+
+| Rules     | `agent-router.v1.json` | `agent-router.questions.v1.json` |
+| --------- | ---------------------- | -------------------------------- |
+| Version 1 | 26/26 (100%)           | 117/130 (90.0%)                  |
+| Version 2 | 26/26 (100%)           | 126/130 (96.9%)                  |
+
+Version 2 came from the version 1 misses on the questions: seven medicine or dose decisions (a
+metformin or statin dose, insulin units, "should ... see a doctor", "go to hospital")
+went to the Diet specialist because they named HbA1c, LDL or weight; "chronic kidney
+disease" counted as the kidney's anatomy; "run a SQL query" counted as training; and
+"swim" was not a sport. Each fix is a general rule written down above, not the question's
+wording, but it was found on these questions, so 96.9% is measured on the set the rules
+were tuned on and overstates how they do on new questions.
+
+The four that still miss:
+
+- Q-S2-12 asks how complete a ten-marker panel is (sodium to HbA1c). The router sees
+  glucose and HbA1c and picks the Diet specialist; the label says General Practitioner
+  because the panel is mostly not Diet measures. Counting non-Diet markers would need a
+  list of every lab name, so it is left.
+- Q-S6-07, Q-S6-08 and Q-S6-14 ask for an Oura readiness or Whoop recovery score that no
+  tool holds (they are refusal probes). They carry no tool and no code, so the label falls
+  to the General Practitioner, while the router reads "readiness" and "recovery" and picks
+  Trainer, whose role covers both. That is a limit of labelling from tools, not a router
+  error we want to fix.
+
+## Literature (#236)
+
+On an agent's turn `knowledge_search` reads the OpenTwin notes and that agent's
+literature, the open-access PMC articles `bun run literature:ingest` put into the
+guideline tables ([literature.md](literature.md)):
+
+| Agent                                   | Literature sources                    |
+| --------------------------------------- | ------------------------------------- |
+| General Practitioner                    | every `literature:<specialty>` source |
+| Diet, Anatomy, Sleep, Trainer, Genetics | its own one, e.g. `literature:diet`   |
+| Auto                                    | the agent it picked, as above         |
+| a plain model (no agent)                | none; the notes alone, as before      |
+
+The mapping is `literatureSourcesForAgent` (`packages/literature/specialties.ts`); the
+chat route passes the agent's id to `createChatTools`. `knowledge_search` was chosen over
+`guideline_search` because it is the search every agent has: the specialists' skills
+list `knowledge_search` and not `guideline_search`, and adding a tool to a skill would go
+around the skill gate. `guideline_search` is unchanged and still reads the guideline
+corpus alone wherever a turn offers it (the General Practitioner, plain models).
+
+Notes and literature get separate slots (`mergeKnowledgeSlots`), so papers cannot push
+the notes, the biomarker catalogue among them, out of a short list: one nearest-neighbour
+search over the notes and one over the agent's literature, then up to ceil(k/2) notes
+first and literature in the rest. When one side has fewer passages, the other fills the
+remaining slots. Rows of any other source are dropped.
+
+Each literature hit (`packages/literature/hit.ts`) carries `kind: "literature"`, the
+article title, journal, year, PMC id, URL, DOI, the licence and its label ("CC BY-NC-ND"),
+the section, the passage as stored (the title the ingest puts in front of a chunk is taken
+off again, nothing else is changed), an `attribution` line to put next to any quote, a
+`quoting` rule and `about`, which says the passage is reference material and not about the
+person. The rule is "quote only word for word, with the attribution line"; for the two
+NoDerivatives licences (CC BY-ND, CC BY-NC-ND) it adds that a quote may not be shortened,
+reworded or translated. A row whose PMC id or licence cannot be read is not shown. The tool
+text names the literature only on an agent's turn, so the prompt and the tool snapshots of
+other turns are unchanged.
+
+Literature is never person-level evidence. The call is audited as
+`knowledge.knowledge_search`, a reference tool, so it cannot make an answer
+`sufficient_data` or `analytics`. Its citations (no passage) go to the response
+document's `sources.literature`, which keeps a literature-only answer from being withheld
+and gives it the reason `literature_only` ("Only published articles support this
+answer."), and the panel lists each article once under "Literature" as title · PMC id ·
+licence, with "Open-access articles from PubMed Central (NLM), each under its own licence.
+Reference material, not a statement about this person." See
+[response-schema.md](response-schema.md).
+
+A source toggle that turns `knowledge_search` off turns the literature off with it; there is
+no separate toggle yet.
 
 ## Model names
 
@@ -118,4 +227,5 @@ Training tracks per agent come next: each agent gets its own slice of the traini
 generated from the questions its skill answers (the router's topics give a first cut of
 which questions those are), and its own fine-tune, which then becomes the first entry of
 that agent's `modelPreference`. A later router may use a model call, measured against
-this fixture before it replaces the rules. Specialty literature for each agent is #220.
+these fixtures before it replaces the rules. Specialty literature for each agent is #220
+(fetch and ingest) and #236 (search, above).

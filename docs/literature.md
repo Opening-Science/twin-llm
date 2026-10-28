@@ -157,8 +157,34 @@ tables like the knowledge notes do (`docs/knowledge.md`), with local
   article. Articles whose files were removed are pruned, only within the
   specialties being ingested.
 
-No chat tool reads these sources yet. Exposing them to agents, with the
-licence shown next to every passage, is the next step of #210.
+## Search (#236)
+
+On an agent's turn `knowledge_search` reads the OpenTwin notes plus that agent's
+`literature:<specialty>` source; the General Practitioner reads every specialty. A plain
+model reads the notes alone, as before. Every literature hit gives the article title, PMC
+id and licence, an attribution line ending "via PubMed Central (NLM)", and a quoting
+rule: word for word only, with the attribution; for CC BY-ND and CC BY-NC-ND, never
+shortened, reworded or translated. Literature is reference material and never counts as
+evidence about the person. Details in [agents.md](agents.md#literature-236).
+
+### First local run (2026-10-29)
+
+`literature:fetch -- --specialty <id> --limit 5` for diet, anatomy and sleep stored 5
+articles each (15 searched each, none skipped): 7 CC BY and 8 CC BY-NC-ND. The ingest wrote
+15 documents and 443 chunks (diet 135, anatomy 154, sleep 154). One search per agent, `k`
+8, read-only, no audit row:
+
+| Agent   | Query                                  | Hits | From                   |
+| ------- | -------------------------------------- | ---- | ---------------------- |
+| diet    | dietary fibre intake and blood glucose | 8    | 8 `literature:diet`    |
+| anatomy | anatomical variation of blood vessels  | 8    | 8 `literature:anatomy` |
+| sleep   | sleep duration and insomnia            | 8    | 8 `literature:sleep`   |
+| gp      | sleep duration and insomnia            | 8    | 8 `literature:sleep`   |
+
+The local database had no OpenTwin notes ingested, so this run says nothing about how
+notes and literature rank against each other. With five articles a specialty, the nearest
+passages are often off topic (the first anatomy hit was from a neuroblastoma imaging paper);
+the counts show the filter works, not that the corpus is useful yet.
 
 ## Sources
 

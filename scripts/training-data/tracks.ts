@@ -4,12 +4,12 @@
  * it trains on, the LOINC codes its questions ask about and the question
  * styles it keeps. Pure data and pure helpers.
  *
- * The role lines of the General Practitioner, Sleep, Trainer and Genetics
- * agents are copied word for word from `infrastructure/agents.ts` on the
- * `medical-agents` branch (#218), which is not on main yet; Diet and Anatomy
- * are new and written in the same style. When that file reaches main, these
- * should read from it instead.
+ * Each agent's id, name and role line come from `infrastructure/agents.ts`
+ * (#218), the agents the chat runs, so a role change there reaches the
+ * training data too. Only the area and hand-over topics are kept here.
  */
+import { AGENTS as LIVE_AGENTS, type Agent } from "../../infrastructure/agents";
+
 import { type Family, FAMILIES, GENOME_FAMILIES, TRACK_FAMILIES } from "./family-kit";
 import {
   CREATININE,
@@ -27,7 +27,7 @@ export type TrackAgent = Readonly<{
   /** The agent id in `infrastructure/agents.ts` (`agent:<id>`). */
   id: string;
   name: string;
-  /** One plain sentence on what the agent looks at, as in `infrastructure/agents.ts`. */
+  /** One plain sentence on what the agent looks at, from `infrastructure/agents.ts`. */
   role: string;
   /** What the agent looks at, as a noun phrase for hand-over answers. */
   area: string;
@@ -57,11 +57,27 @@ export type Track = Readonly<{
   genome: boolean;
 }>;
 
+type LiveAgent = Pick<Agent, "id" | "name" | "role">;
+
+/**
+ * The id, name and role line of one agent in `infrastructure/agents.ts`.
+ * Throws when the id is missing, so a renamed agent fails at load, not in a
+ * training file.
+ */
+export const liveAgent = (
+  id: string,
+  agents: readonly LiveAgent[] = LIVE_AGENTS,
+): LiveAgent => {
+  const found = agents.find((agent) => agent.id === id);
+  if (found === undefined) {
+    throw new Error(`No agent "${id}" in infrastructure/agents.ts.`);
+  }
+  return { id: found.id, name: found.name, role: found.role };
+};
+
 export const AGENTS: Readonly<Record<TrackId, TrackAgent>> = {
   general: {
-    id: "gp",
-    name: "General Practitioner",
-    role: "Looks at the whole record and says when a question is better asked of one of the specialist agents.",
+    ...liveAgent("gp"),
     area: "the whole record",
     topics: [
       "the whole record at once",
@@ -70,16 +86,12 @@ export const AGENTS: Readonly<Record<TrackId, TrackAgent>> = {
     ],
   },
   diet: {
-    id: "diet",
-    name: "Diet",
-    role: "Describes weight, BMI, glucose, HbA1c and blood lipids against the person's own earlier readings.",
+    ...liveAgent("diet"),
     area: "weight, BMI, glucose, HbA1c and blood lipids",
     topics: ["body weight", "BMI", "HbA1c", "LDL cholesterol", "blood glucose"],
   },
   anatomy: {
-    id: "anatomy",
-    name: "Anatomy",
-    role: "Describes where organs and body systems are and which biomarkers relate to them.",
+    ...liveAgent("anatomy"),
     area: "where organs and body systems are and which biomarkers relate to them",
     topics: [
       "the organ that HbA1c relates to",
@@ -88,23 +100,17 @@ export const AGENTS: Readonly<Record<TrackId, TrackAgent>> = {
     ],
   },
   sleep: {
-    id: "sleep",
-    name: "Sleep",
-    role: "Describes sleep against the person's own recent nights.",
+    ...liveAgent("sleep"),
     area: "sleep from the wearable series",
     topics: ["sleep duration", "time asleep", "the last few nights of sleep"],
   },
   trainer: {
-    id: "trainer",
-    name: "Trainer",
-    role: "Describes recovery, heart rate variability and training load against the person's previous four weeks.",
+    ...liveAgent("trainer"),
     area: "recovery, heart rate variability and training load",
     topics: ["heart rate variability", "training load", "recovery after workouts"],
   },
   genetics: {
-    id: "genetics",
-    name: "Genetics",
-    role: "Describes the genome report the person released, one variant at a time.",
+    ...liveAgent("genetics"),
     area: "the synthetic genome report",
     topics: [
       "the variants in the genome report",
@@ -255,7 +261,7 @@ export const trackMeasures = (track: Track): readonly Measure[] | null =>
         return found === undefined ? [] : [found];
       });
 
-/** The line the chat adds for an agent turn (`twin-system-prompt.ts` on #218). */
+/** The line the chat adds for an agent turn, as `features/chat/twin-system-prompt.ts` writes it. */
 export const agentLine = (agent: Pick<TrackAgent, "name" | "role">): string =>
   `Agent: ${agent.name}. ${agent.role}`;
 

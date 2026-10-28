@@ -7,6 +7,7 @@ import { ouraEnv } from "@/infrastructure/env";
 import { HostOuraTokenHandler } from "@/infrastructure/open-twin-adapters/oura";
 import { buildOuraFhirBundle } from "@/infrastructure/open-twin-adapters/oura-bundle";
 
+import type { PreparedSync } from "@/features/wearables/audited-sync";
 import { resolveSyncDateWindow } from "@/features/wearables/sync-window";
 
 import { buildOuraSummary, type OuraSummary } from "./summary";
@@ -104,6 +105,11 @@ export const persistOuraTokens = async (params: {
   });
 };
 
+/**
+ * Fetches one Oura sync and returns the summary with the step that stores it.
+ * Refreshed tokens are stored at once; the snapshot and `lastSyncAt` only
+ * when `save` runs, which `auditThenSave` does after the audit row.
+ */
 export const syncOuraForUser = async (
   userId: string,
   options: {
@@ -111,7 +117,7 @@ export const syncOuraForUser = async (
     readonly startDate?: string;
     readonly endDate?: string;
   } = {},
-): Promise<OuraSummary> => {
+): Promise<PreparedSync<OuraSummary>> => {
   const loaded = await loadTokenHandlerForUser(userId);
   if (!loaded) throw new Error("Connect Oura before syncing.");
 
@@ -156,22 +162,24 @@ export const syncOuraForUser = async (
     });
   }
 
-  await database().ouraConnection.update({
-    where: { userId },
-    data: { lastSyncAt: new Date() },
-  });
+  const save = async () => {
+    await database().ouraConnection.update({
+      where: { userId },
+      data: { lastSyncAt: new Date() },
+    });
 
-  await database().ouraSnapshot.create({
-    data: {
-      userId,
-      startDate,
-      endDate,
-      summary,
-      fhirBundle: fhirBundle as object | undefined,
-    },
-  });
+    await database().ouraSnapshot.create({
+      data: {
+        userId,
+        startDate,
+        endDate,
+        summary,
+        fhirBundle: fhirBundle as object | undefined,
+      },
+    });
+  };
 
-  return summary;
+  return { synced: summary, save };
 };
 
 export const getLatestOuraSummary = async (

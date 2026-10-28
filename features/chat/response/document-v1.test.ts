@@ -169,7 +169,7 @@ describe("ResponseDocument v1.1 goldens", () => {
         evidence_keys: ["whoop.recovery.score.2026-01-02"],
         hallucinated_keys: [],
         tool_calls: [],
-        sources: { gbd: [], guidelines: [], knowledge: [] },
+        sources: { gbd: [], guidelines: [], knowledge: [], literature: [] },
         gbd_rows: [],
       },
       uncertainty: {
@@ -198,7 +198,7 @@ describe("ResponseDocument v1.1 goldens", () => {
         evidence_keys: [],
         hallucinated_keys: [],
         tool_calls: [TOOL_LATEST],
-        sources: { gbd: [], guidelines: [], knowledge: [] },
+        sources: { gbd: [], guidelines: [], knowledge: [], literature: [] },
         gbd_rows: [],
       },
       uncertainty: {
@@ -227,7 +227,7 @@ describe("ResponseDocument v1.1 goldens", () => {
         evidence_keys: ["oura.sleep.score.2026-01-01"],
         hallucinated_keys: [],
         tool_calls: [TOOL_LATEST, TOOL_WINDOW],
-        sources: { gbd: [], guidelines: [], knowledge: [] },
+        sources: { gbd: [], guidelines: [], knowledge: [], literature: [] },
         gbd_rows: [],
       },
       uncertainty: {
@@ -259,7 +259,7 @@ describe("ResponseDocument v1 abstain", () => {
         evidence_keys: [],
         hallucinated_keys: [],
         tool_calls: [],
-        sources: { gbd: [], guidelines: [], knowledge: [] },
+        sources: { gbd: [], guidelines: [], knowledge: [], literature: [] },
         gbd_rows: [],
       },
       uncertainty: {
@@ -347,6 +347,21 @@ const knowledgeCitation = {
   file: "knowledge/opentwin/metric-glossary.md",
   sectionHeading: "Heart rate variability (HRV)",
   licence: "cc-by-4.0",
+};
+
+/** A made-up article; the PMC id is not a real one. */
+const syntheticLiterature = {
+  tool: "knowledge.knowledge_search",
+  id: "lit-sleep-PMC0000001.1",
+  title: "Synthetic sleep article",
+  journal: "J Synth Sleep",
+  year: 2024,
+  pmcid: "PMC0000001",
+  url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC0000001/",
+  doi: "",
+  licence: "cc-by-nc-nd",
+  licenceLabel: "CC BY-NC-ND",
+  sectionHeading: "Results",
 };
 
 const KNOWLEDGE_TEXT = [
@@ -649,6 +664,7 @@ describe("ResponseDocument v1.1 answer_class", () => {
       gbd: [{ tool: "gbd.gbd_query", fields: gbdFields }],
       guidelines: [],
       knowledge: [],
+      literature: [],
     });
     expect(v11Fields(document)).toEqual({
       answer_class: "information",
@@ -681,7 +697,12 @@ describe("ResponseDocument v1.1 answer_class", () => {
         evidence_keys: [],
         hallucinated_keys: [],
         tool_calls: [KNOWLEDGE_ONLY],
-        sources: { gbd: [], guidelines: [], knowledge: [knowledgeCitation] },
+        sources: {
+          gbd: [],
+          guidelines: [],
+          knowledge: [knowledgeCitation],
+          literature: [],
+        },
         gbd_rows: [],
       },
       uncertainty: {
@@ -690,6 +711,34 @@ describe("ResponseDocument v1.1 answer_class", () => {
         reasons: ["no_personal_data", "knowledge_only"],
       },
       next_step: "more_data",
+      interpretation: { kind: "none" },
+    });
+  });
+
+  test("information: a literature-only answer is shown, never person-level evidence", () => {
+    // Three literature passages from an agent's knowledge_search (#236).
+    const document = buildResponseDocumentV1({
+      parsed: parseTwinAnswer(KNOWLEDGE_TEXT, emptySummaries),
+      toolCalls: [KNOWLEDGE_ONLY],
+      mode: "personal",
+      literatureSources: [syntheticLiterature],
+    });
+    expect(document.sufficient_data).toBe(false);
+    expect(document.abstained).toBe(false);
+    expect(document.data_basis.sources).toEqual({
+      gbd: [],
+      guidelines: [],
+      knowledge: [],
+      literature: [syntheticLiterature],
+    });
+    expect(v11Fields(document)).toEqual({
+      answer_class: "information",
+      uncertainty: {
+        model_statement: "This describes the metric, not any person's values.",
+        level: "moderate",
+        reasons: ["no_personal_data", "literature_only"],
+      },
+      next_step: "connect_wearable",
       interpretation: { kind: "none" },
     });
   });
@@ -710,7 +759,7 @@ describe("ResponseDocument v1.1 answer_class", () => {
         evidence_keys: [],
         hallucinated_keys: [],
         tool_calls: [],
-        sources: { gbd: [], guidelines: [], knowledge: [] },
+        sources: { gbd: [], guidelines: [], knowledge: [], literature: [] },
         gbd_rows: [],
       },
       uncertainty: { model_statement: null, level: "high", reasons: ["declined"] },

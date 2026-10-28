@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import type { PersonalRead } from "@/infrastructure/personal-read-audit";
 
-import { syncThenAudit, type SyncedProvider } from "./audited-sync";
+import { auditThenSave, type PreparedSync, type SyncedProvider } from "./audited-sync";
 
 /**
  * Wearable sync POST, as one factory for Oura, Whoop and Google Health. The
@@ -11,7 +11,8 @@ import { syncThenAudit, type SyncedProvider } from "./audited-sync";
  * modules.
  *
  * Each sync writes one `personal.read.sync-<provider>` row with the metric count
- * (`syncThenAudit`); when the row cannot be written the sync reports failed.
+ * before its snapshot is stored (`auditThenSave`); when the row cannot be
+ * written nothing is stored and the sync reports failed.
  *
  * `logError` gets the error name, never the error: a provider message can
  * carry token or response-body text into the server log.
@@ -33,7 +34,9 @@ export type WearableSyncDeps = {
   readonly sync: (
     userId: string,
     request: WearableSyncRequest,
-  ) => Promise<{ readonly metrics: readonly unknown[]; readonly window: unknown }>;
+  ) => Promise<
+    PreparedSync<{ readonly metrics: readonly unknown[]; readonly window: unknown }>
+  >;
   readonly auditPersonalRead: (read: PersonalRead) => Promise<unknown>;
   readonly logError: (message: string, errorName: string) => void;
 };
@@ -88,7 +91,7 @@ export const createWearableSyncHandler = (deps: WearableSyncDeps) => {
     const { sandbox, startDate, endDate } = body as WearableSyncRequest;
 
     try {
-      const summary = await syncThenAudit(
+      const summary = await auditThenSave(
         () => deps.sync(appUserId, { sandbox, startDate, endDate }),
         deps.provider,
         clerkId,

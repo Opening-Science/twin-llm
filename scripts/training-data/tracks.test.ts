@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
+import { AGENTS as LIVE_AGENTS } from "../../infrastructure/agents";
 import { parseCatalog } from "../genome-synth/catalog";
 import { randomFor } from "../synthetic-wearables/random";
 
@@ -27,6 +28,7 @@ import {
   AGENTS,
   agentLine,
   keepsStyle,
+  liveAgent,
   otherAgents,
   TRACK_IDS,
   TRACKS,
@@ -123,18 +125,18 @@ const DATA_FAMILIES = new Set<string>([
 ]);
 
 describe("track definitions", () => {
-  test("the four existing agents keep their role lines word for word (#218)", () => {
-    expect(AGENTS.general.role).toBe(
-      "Looks at the whole record and says when a question is better asked of one of the specialist agents.",
-    );
-    expect(AGENTS.sleep.role).toBe(
-      "Describes sleep against the person's own recent nights.",
-    );
-    expect(AGENTS.trainer.role).toBe(
-      "Describes recovery, heart rate variability and training load against the person's previous four weeks.",
-    );
-    expect(AGENTS.genetics.role).toBe(
-      "Describes the genome report the person released, one variant at a time.",
+  test("every track's agent has the id, name and role line of the live agent (#218)", () => {
+    for (const id of TRACK_IDS) {
+      const live = LIVE_AGENTS.find((agent) => agent.id === AGENTS[id].id);
+      expect(live).toBeDefined();
+      expect({ name: AGENTS[id].name, role: AGENTS[id].role }).toEqual({
+        name: live?.name,
+        role: live?.role,
+      });
+    }
+    expect(AGENTS.diet.name).toBe("Diet specialist");
+    expect(AGENTS.anatomy.role).toBe(
+      "Explains where organs and body systems sit and which of them the Anchor biomarkers relate to, as reference anatomy rather than the person's own body.",
     );
     expect(TRACK_IDS.map((id) => AGENTS[id].id)).toEqual([
       "gp",
@@ -144,6 +146,14 @@ describe("track definitions", () => {
       "trainer",
       "genetics",
     ]);
+  });
+
+  test("liveAgent copies id, name and role, and refuses an unknown id", () => {
+    const agents = [{ id: "x", name: "X", role: "Describes x." }];
+    expect(liveAgent("x", agents)).toEqual({ id: "x", name: "X", role: "Describes x." });
+    expect(() => liveAgent("y", agents)).toThrow(
+      'No agent "y" in infrastructure/agents.ts.',
+    );
   });
 
   test("every track has the hand-over family, known families and resolvable codes", () => {

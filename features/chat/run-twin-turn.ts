@@ -16,6 +16,7 @@ import type { WhoopSummary } from "@/infrastructure/whoop-types";
 import { drainGbdTurn } from "@/packages/gbd-mcp/collector";
 import { drainGuidelineTurn } from "@/packages/guidelines/collector";
 import { drainKnowledgeTurn } from "@/packages/knowledge/collector";
+import { drainLiteratureTurn } from "@/packages/literature/collector";
 
 import type { ChatRequest } from "./chat-request";
 import { buildResponseDocumentV1, twinBodyShown } from "./response/build-document";
@@ -169,6 +170,7 @@ export const runTwinTurn = (
           const gbd = drainGbdTurn(turnId);
           const guidelines = drainGuidelineTurn(turnId);
           const knowledge = drainKnowledgeTurn(turnId);
+          const literature = drainLiteratureTurn(turnId);
           return buildResponseDocumentV1({
             parsed,
             toolCalls,
@@ -177,6 +179,7 @@ export const runTwinTurn = (
             gbdRows: gbd.rows,
             guidelineSources: guidelines.sources,
             knowledgeSources: knowledge.sources,
+            literatureSources: literature.sources,
             skill: deps.skill?.name ?? null,
             uiContext: deps.uiContext ?? null,
             twinBody: twinBodyShown(toolResults.map((result) => result.output)),
