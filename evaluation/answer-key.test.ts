@@ -50,9 +50,9 @@ describe("questions.v1.json", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  test("70 to 110 items", () => {
+  test("70 to 140 items", () => {
     expect(items.length).toBeGreaterThanOrEqual(70);
-    expect(items.length).toBeLessThanOrEqual(110);
+    expect(items.length).toBeLessThanOrEqual(140);
   });
 
   test("criteria use the eight names exactly", () => {
@@ -180,6 +180,7 @@ describe("answer-key.v1.json", () => {
       .sort();
     expect(refusals).toEqual([
       "Q-S6-03 SUBJECT_SCOPE_VIOLATION",
+      "Q-S6-05 NO_ROWS",
       "Q-S6-09 MIXED_UNITS",
       "Q-S6-10 MIXED_UNITS",
       "Q-S6-11 MIXED_UNITS",
@@ -194,6 +195,14 @@ describe("answer-key.v1.json", () => {
       "Q-S6-25 WINDOW_TOO_SHORT",
       "Q-S6-26 NO_ROWS",
       "Q-S6-27 SOURCE_NOT_CONNECTED",
+      "Q-S6-28 NO_ROWS",
+      "Q-S6-29 MIXED_UNITS",
+      "Q-S6-30 NO_ROWS",
+      "Q-S6-31 WINDOW_TOO_SHORT",
+      "Q-S6-32 NO_ROWS",
+      "Q-S6-33 NO_ROWS",
+      "Q-S6-34 NO_ROWS",
+      "Q-S6-35 NO_ROWS",
     ]);
   });
 
@@ -293,14 +302,85 @@ describe("answer-key.v1.json", () => {
     ]);
   });
 
-  test("only the absent-code probe is keyed as null", () => {
+  test("only the field the synthetic series does not record is keyed as null", () => {
     // A null slope or mean elsewhere means the subject has too few readings.
+    // Q-S1-40 asks for sleep efficiency, which the series never writes. Q-S6-05,
+    // the absent-code probe, is a NO_ROWS refusal since latest_by_loinc refuses (#196).
     const nulls = Object.entries(key.entries).flatMap(([id, entries]) =>
       entries
         .filter((entry) => entry.value === null && entry.refusal === null)
         .map((entry) => `${id} ${entry.name}`),
     );
-    expect(nulls).toEqual(["Q-S6-05 value"]);
+    expect(nulls).toEqual(["Q-S1-40 mean_efficiency_pct"]);
+  });
+
+  test("values-around-event items: five comparisons and three refusals, all naming their code", () => {
+    const tagged = items.filter((item) => item.tags?.includes("values-around-event"));
+    const keyed = tagged.map((item) => [
+      item.id,
+      item.expect.values?.every((spec) => spec.tool === "values_around_event"),
+      item.expect.measures,
+      key.entries[item.id]?.find((entry) => entry.refusal !== null)?.refusal ?? null,
+    ]);
+    expect(keyed).toEqual([
+      ["Q-S1-34", true, ["18262-6"], null],
+      ["Q-S1-35", true, ["4548-4"], null],
+      ["Q-S1-36", true, ["39156-5"], null],
+      ["Q-S1-37", true, ["8480-6"], null],
+      ["Q-S1-38", true, ["33914-3"], null],
+      ["Q-S6-28", true, ["4548-4"], "NO_ROWS"],
+      ["Q-S6-29", true, ["33914-3"], "MIXED_UNITS"],
+      ["Q-S6-30", true, ["4548-4"], "NO_ROWS"],
+    ]);
+    // Q-S1-38 has readings after the onset only: nothing to compare with.
+    const oneSided = key.entries["Q-S1-38"]?.map((entry) => [entry.name, entry.value]);
+    expect(oneSided?.slice(0, 2)).toEqual([
+      ["before_n", 0],
+      ["after_n", 2],
+    ]);
+  });
+
+  test("wearable-edge items: three answers and three refusals, all naming measures", () => {
+    const tagged = items.filter((item) => item.tags?.includes("wearable-edge"));
+    expect(
+      tagged.map((item) => [
+        item.id,
+        item.expect.values?.[0]?.tool,
+        key.entries[item.id]?.[0]?.refusal ?? null,
+      ]),
+    ).toEqual([
+      ["Q-S1-39", "training_load", null],
+      ["Q-S1-40", "sleep_summary", null],
+      ["Q-S1-41", "resting_hr_trend", null],
+      ["Q-S6-31", "resting_hr_trend", "WINDOW_TOO_SHORT"],
+      ["Q-S6-32", "sleep_summary", "NO_ROWS"],
+      ["Q-S6-33", "training_load", "NO_ROWS"],
+    ]);
+    expect(tagged.filter((item) => item.expect.measures === undefined)).toEqual([]);
+  });
+
+  test("clinical-timeline-edge items: counts keyed exactly, two refusals", () => {
+    const tagged = items.filter((item) => item.tags?.includes("clinical-timeline-edge"));
+    expect(
+      tagged.map((item) => [
+        item.id,
+        item.expect.values?.[0]?.tool,
+        key.entries[item.id]?.[0]?.refusal ?? null,
+      ]),
+    ).toEqual([
+      ["Q-S1-42", "conditions_timeline", null],
+      ["Q-S1-43", "conditions_timeline", null],
+      ["Q-S1-44", "conditions_timeline", null],
+      ["Q-S1-45", "medications_timeline", null],
+      ["Q-S6-34", "medications_timeline", "NO_ROWS"],
+      ["Q-S6-35", "conditions_timeline", "NO_ROWS"],
+    ]);
+    const loose = tagged.flatMap((item) =>
+      (item.expect.values ?? [])
+        .filter((spec) => spec.unit !== null || !("exact" in spec.tolerance))
+        .map((spec) => `${item.id} ${spec.name}`),
+    );
+    expect(loose).toEqual([]);
   });
 });
 

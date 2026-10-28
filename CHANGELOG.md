@@ -7,6 +7,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Twenty evaluation items for edge cases (#7): `values_around_event` before and after a condition or medication (one comparison with readings on one side only, and refusals for a medicine the record lacks, no reading on either side and mixed units), wearable edge cases in synthetic mode (a sport filter, a field the series does not record, a 30-day resting heart rate trend, too few days, a window after the series ends, a sport never recorded) and clinical timeline edge cases (status and code filters, a record that ends years before the window, two refusals). The set has 130 items; the key was rebuilt from the pinned cohort, and the 194 earlier values are unchanged except Q-S6-05, now keyed with the `NO_ROWS` refusal `latest_by_loinc` gives since #196. `eval:spread-subjects` leaves `values_around_event` items where they are put, within the cap, since the event date is not in its inventory.
+
 - Thread export (#44): `?format=fhir` gives a FHIR R4 DocumentReference whose attachment is the same Markdown, tagged research use only. Every export now writes an audit row (format and size, no content), and a thread that used the genome tools exports only when the app is served to this machine alone (`LOCAL_ONLY`); otherwise it is refused and audited as `genome.thread.export_refused`.
 
 - Download a thread as Markdown from the bar at the top of it (`/api/threads/<id>/export`, the owner only): each prompt, each model's lookups with their arguments, row counts and refusals, and the answer as the page shows it; withheld and refused answers say so. For an issue, a lab notebook or a paper's appendix.
