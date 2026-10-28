@@ -4,16 +4,18 @@ import { usePathname } from "next/navigation";
 import posthog from "posthog-js";
 import { useEffect, useState } from "react";
 
+import { threadExportHref } from "@/infrastructure/shell-links";
 import { useThreadHistory } from "@/infrastructure/thread-history-store";
-import { Button } from "@/infrastructure/ui-kit/button";
+import { Button, buttonClassName } from "@/infrastructure/ui-kit/button";
 
-import { CopyGlyph, TickGlyph } from "./glyphs";
+import { CopyGlyph, DownloadGlyph, TickGlyph } from "./glyphs";
 import { threadCrumb } from "./thread-crumb";
 import { useThreadTitle } from "./thread-title";
 
 /**
- * The slim row at the top of a saved thread: its title and a button that
- * copies its address. Other pages have no bar; their own heading leads.
+ * The slim row at the top of a saved thread: its title, a button that copies
+ * its address and a link that downloads it as Markdown. Other pages have no
+ * bar; their own heading leads.
  *
  * The copied link opens only for the thread's owner (`owned-thread.ts`), so
  * it is a way back to your own thread on another tab or device, not a way to
@@ -72,6 +74,19 @@ export const ThreadBarView = ({
       >
         {crumb.label}
       </p>
+      <a
+        href={threadExportHref(pathname.slice("/t/".length))}
+        download
+        title="Download this thread as Markdown: prompts, lookups and answers."
+        className={buttonClassName({
+          variant: "pill",
+          size: "sm",
+          className: "text-muted-foreground hover:text-foreground shrink-0 py-1.5",
+        })}
+      >
+        <DownloadGlyph className="size-3.5" />
+        <span>Download</span>
+      </a>
       <CopyLinkButton />
     </div>
   );

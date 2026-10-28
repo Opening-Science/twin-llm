@@ -8,14 +8,16 @@ const render = (pathname: string, title?: string) =>
   renderToStaticMarkup(createElement(ThreadBarView, { pathname, title }));
 
 describe("ThreadBarView", () => {
-  test("a thread shows its title and Copy link, never its id", () => {
+  test("a thread shows its title, Download and Copy link, never its id as text", () => {
     const html = render("/t/f3a9c1", "Sleep and HRV");
     expect(html).toContain('title="Sleep and HRV">Sleep and HRV</p>');
     expect(html).toContain("Copy link");
     expect(html).toContain(
       'title="Copy this thread&#x27;s address. Only you can open it."',
     );
-    expect(html).not.toContain("f3a9c1");
+    expect(html).toContain('href="/api/threads/f3a9c1/export" download=""');
+    // The id is only ever in the download address, never in what is shown.
+    expect(html.replace(/href="[^"]*"/g, "")).not.toContain("f3a9c1");
   });
 
   test("a long title is cut to fit, with the whole text on hover", () => {

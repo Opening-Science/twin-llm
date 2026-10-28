@@ -165,6 +165,12 @@ export const CopyGlyph = (props: GlyphProps) => (
   </Svg>
 );
 
+export const DownloadGlyph = (props: GlyphProps) => (
+  <Svg {...props}>
+    <path d="M10 3v9.5M6 9l4 4 4-4M4 16.5h12" />
+  </Svg>
+);
+
 export const TickGlyph = (props: GlyphProps) => (
   <Svg {...props}>
     <path d="m4 10.5 4 4 8-9" />
