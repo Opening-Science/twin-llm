@@ -11,11 +11,14 @@ import { serverEnv } from "@/infrastructure/env";
 import { chatModelIsLocal } from "@/infrastructure/genome-gate";
 import { INCOGNITO_PARAM, isIncognitoParam } from "@/infrastructure/incognito";
 import { defaultModelSelection } from "@/infrastructure/model-catalog";
-import { safeDraft } from "@/infrastructure/shell-links";
+import { safeDraft, subjectDraft } from "@/infrastructure/shell-links";
 
 /**
  * A new thread. Someone who has not been through first-run setup and has no
  * thread yet goes to `/start` first; a signed-out visitor never does.
+ *
+ * `/?subject=<ref>` opens it with "For synthetic subject <ref>, " typed in,
+ * from a subject page in the cohort explorer.
  *
  * `/?incognito=1` is a new chat that is never saved
  * (`infrastructure/incognito.ts`). The screen is keyed on the mode, so
@@ -45,7 +48,10 @@ export default async function HomePage({
       ).map(skillCommand)}
       incognito={incognito}
       localModelIds={localModelIds}
-      initialDraft={safeDraft((await searchParams).draft)}
+      initialDraft={
+        safeDraft((await searchParams).draft) ??
+        subjectDraft((await searchParams).subject)
+      }
       dataMode={serverEnv().DATA_MODE}
     />
   );

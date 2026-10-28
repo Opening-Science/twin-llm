@@ -1,3 +1,5 @@
+import { readableTitle } from "@/infrastructure/readable-title";
+
 /**
  * What the search box (#167) lists and how it ranks, as pure functions: the
  * dialog, the route and the tests share them.
@@ -127,7 +129,7 @@ export const blendThreadHits = (
 const threadItem = (hit: ThreadHit, match: "words" | "meaning"): SearchItem => ({
   kind: "thread",
   id: hit.threadId,
-  title: hit.title.trim() === "" ? "Thread" : hit.title,
+  title: hit.title.trim() === "" ? "Thread" : readableTitle(hit.title),
   ...(hit.snippet ? { detail: hit.snippet } : {}),
   href: `/t/${hit.threadId}`,
   match,
