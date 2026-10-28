@@ -44,6 +44,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- `features/digital-twin/bodyloop-avatar.tsx` (1,690 lines) split: `scan-scene.tsx` (camera fit, orbit controls, environment, the scan mesh, WebGL checks), `body-twin-copy.ts`, `body-twin-types.ts` and `body-twin-payloads.ts`. The component keeps its props and re-exports what it exported before.
+
 - `packages/query-tools/tools.ts` (1,600 lines) split by family: `tool-core.ts` (audit wrapper, scope check, rows), `warehouse-tools.ts`, `clinical-tools.ts` and `wearable-tools.ts`. `tools.ts` is now the public index, so no caller changed; tool snapshots are identical. `bun run new:tool` writes to `warehouse-tools.ts` and the index.
 
 - A thread's bar reads like a breadcrumb: "Chat / <title>", or "Twin / <title>" for a thread started with `/twin` (without the command). "Chat" goes to a new chat and "Twin" to the Digital Twin.

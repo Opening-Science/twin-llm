@@ -1,31 +1,18 @@
 "use client";
 
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Canvas } from "@react-three/fiber";
 import { useTheme } from "next-themes";
 import {
   useCallback,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useReducer,
   useRef,
   useState,
-  useSyncExternalStore,
   type ReactNode,
 } from "react";
-import {
-  ACESFilmicToneMapping,
-  Box3,
-  type Group,
-  type Object3D,
-  PerspectiveCamera,
-  PMREMGenerator,
-  type Texture,
-  Vector3,
-} from "three";
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { ACESFilmicToneMapping, type Group, PerspectiveCamera } from "three";
+import { type OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 import type { VitronicPropertyRow } from "@/features/vitronic/vitronic-status-view";
 import {
@@ -61,9 +48,7 @@ import {
   DEMO_SEX_LABEL,
   type DemoSex,
 } from "./anatomy/demo-copy";
-import { loadAtlasGltf } from "./anatomy/load-atlas";
 import { useAnatomyView } from "./anatomy/use-anatomy-view";
-import { prepareDemoBody } from "./demo-body";
 import { BodyMotion } from "./motion/body-motion";
 import { motionLines } from "./motion/motion-copy";
 import { useBodyMotion } from "./motion/use-body-motion";
@@ -92,11 +77,9 @@ import {
   pickVisible,
   type Picked,
 } from "./environment/pick-part";
-import { INLINE_LIGHT, lookFor, type WorldLook } from "./environment/environment-look";
-import { EnvironmentWorld } from "./environment/environment-world";
+import { INLINE_LIGHT, lookFor } from "./environment/environment-look";
 import { useEnvironment, useLocalHour } from "./environment/use-environment";
-import { clampToRadius, WALK_RADIUS_M } from "./environment/walk";
-import { WALK_SURFACE_ATTR, WalkControls } from "./environment/walk-controls";
+import { WALK_SURFACE_ATTR } from "./environment/walk-controls";
 import { type BodySex } from "./anatomy/atlas-sex";
 import {
   DEMO_SUBJECT_ID,
@@ -106,26 +89,13 @@ import {
   subjectOptions,
   type DemoSexPick,
 } from "./demo-subject";
-import { disposeObject3D } from "./dispose-object";
-import { FloorPool } from "./floor-pool";
-import { nextAutoRotateDelay } from "./frame-pacing";
 import { mergeScanRows, orderScans, pickDefaultScan } from "./scan-default";
+import { initialAutoRotate } from "./scan-materials";
 import {
-  downscaleImage,
-  initialAutoRotate,
-  prepareScanMaterials,
-  prepareScanTextures,
-  releaseImage,
-} from "./scan-materials";
-import {
-  collectLabels,
   DEFAULT_OVERLAYS,
   OVERLAY_OPTIONS,
   overlayLegendItems,
-  OverlayPrimitives,
   parseSnapshotGeometry,
-  ProjectedLabels,
-  shouldProjectLabels,
   visibleMarkers,
   visibleMeasures,
   type OverlayToggles,
@@ -135,31 +105,79 @@ import { initialPanel, panelReducer } from "./panel-state";
 import { ViewToolbar } from "./view-toolbar";
 import { useWheelGate, WHEEL_ZOOM_HINT } from "./wheel-zoom";
 
-export const BODY_TWIN_LOADING = "Loading body twin…";
-export const BODYLOOP_NO_SCANS = "No scans for this subject.";
-export const BODYLOOP_NO_MESH = "No 3D model stored for this scan — Sync again";
-export const SCAN_SYNC = "Sync this scan";
-export const SCAN_SYNC_AGAIN = "Sync again";
-export const SCAN_RESYNC = "Re-sync";
-export const SCAN_SET_DEFAULT = "Set as default";
-export const SCAN_CLEAR_DEFAULT = "Clear default";
-export const SCAN_DEFAULT_TAG = "default";
-export const SCAN_DEFAULT_FAILED = "Could not save the default scan.";
-export const BODY_VIEW_LOST =
-  "The 3D view stopped: the browser lost its graphics context.";
-export const BODY_VIEW_RELOAD = "Reload 3D view";
-export const DEMO_NEEDS_WEBGL = "Demo body needs WebGL.";
-export const SCAN_NEEDS_WEBGL = "Scan mesh needs WebGL.";
-export const TOOLBAR_PANEL = "View controls";
-export const OVERLAYS_PANEL = "Scan overlays";
-
-/** Stored keys of the viewer's collapsible panels (infrastructure/ui-kit/panel-memory.ts). */
-export const PANEL_IDS = {
-  toolbar: "twin-toolbar",
-  anatomy: "twin-anatomy",
-  details: "twin-details",
-  overlays: "twin-scan-overlays",
-} as const;
+import {
+  BODY_TWIN_LOADING,
+  BODYLOOP_NO_SCANS,
+  BODYLOOP_NO_MESH,
+  SCAN_SYNC,
+  SCAN_SYNC_AGAIN,
+  SCAN_RESYNC,
+  SCAN_SET_DEFAULT,
+  SCAN_CLEAR_DEFAULT,
+  SCAN_DEFAULT_FAILED,
+  BODY_VIEW_LOST,
+  BODY_VIEW_RELOAD,
+  DEMO_NEEDS_WEBGL,
+  SCAN_NEEDS_WEBGL,
+  TOOLBAR_PANEL,
+  OVERLAYS_PANEL,
+  PANEL_IDS,
+} from "./body-twin-copy";
+import {
+  type BodyTwinSubject,
+  type BodyTwinScan,
+  type BodyTwinSnapshot,
+  type BodyTwinPreview,
+} from "./body-twin-types";
+import {
+  AUTO_ROTATE_IDLE_MS,
+  ZOOM_STEP,
+  ScanEnvironment,
+  BodyScan,
+  useWebglAvailable,
+  ContextLossWatcher,
+} from "./scan-scene";
+import {
+  scanLabel,
+  isSubjectsPayload,
+  isScansPayload,
+  isSnapshotsPayload,
+} from "./body-twin-payloads";
+export {
+  BODY_TWIN_LOADING,
+  BODYLOOP_NO_SCANS,
+  BODYLOOP_NO_MESH,
+  SCAN_SYNC,
+  SCAN_SYNC_AGAIN,
+  SCAN_RESYNC,
+  SCAN_SET_DEFAULT,
+  SCAN_CLEAR_DEFAULT,
+  SCAN_DEFAULT_TAG,
+  SCAN_DEFAULT_FAILED,
+  BODY_VIEW_LOST,
+  BODY_VIEW_RELOAD,
+  DEMO_NEEDS_WEBGL,
+  SCAN_NEEDS_WEBGL,
+  TOOLBAR_PANEL,
+  OVERLAYS_PANEL,
+  PANEL_IDS,
+} from "./body-twin-copy";
+export {
+  type BodyTwinSubject,
+  type BodyTwinScan,
+  type BodyTwinSnapshot,
+  type BodyTwinPreview,
+} from "./body-twin-types";
+export {
+  HIDDEN_NODE_NAMES,
+  hideOverlayNodes,
+  fitCameraToBox,
+  AUTO_ROTATE_SPEED,
+  AUTO_ROTATE_IDLE_MS,
+  MIN_ZOOM_DISTANCE,
+  MAX_ZOOM_DISTANCE,
+  ZOOM_STEP,
+} from "./scan-scene";
 
 const DEMO_SEXES: readonly DemoSex[] = ["male", "female"];
 const NO_MARKERS: ReturnType<typeof visibleMarkers> = [];
@@ -181,43 +199,6 @@ export const demoErrorShown = (failedUrl: string | null, url: string): boolean =
 /** Highlights set by a pick; a body or empty pick clears only these. */
 const PICK_PREFIX = "pick:";
 
-/** A long pause (tab hidden, canvas off screen) must not turn into one big jump. */
-const MAX_ROTATE_DELTA_S = 0.1;
-
-export type BodyTwinSubject = Readonly<{
-  id: string;
-  label: string;
-  isSelf: boolean;
-  source?: string;
-  defaultViatarId?: number | null;
-}>;
-
-export type BodyTwinScan = Readonly<{
-  viatarId: number;
-  crtime: string | null;
-  synced?: boolean;
-  incomplete?: boolean;
-  presetName?: string | null;
-}>;
-
-export type BodyTwinSnapshot = Readonly<{
-  id: string;
-  viatarId: number;
-  hasAvatar: boolean;
-  presetName?: string | null;
-  properties: readonly VitronicPropertyRow[];
-  markers?: unknown;
-  measures?: unknown;
-}>;
-
-export type BodyTwinPreview = Readonly<{
-  subjects?: readonly BodyTwinSubject[];
-  scans?: readonly BodyTwinScan[];
-  snapshots?: readonly BodyTwinSnapshot[];
-  selectedSubjectId?: string;
-  selectedViatarId?: number;
-}>;
-
 type BodyLoopAvatarProps = {
   readonly preview?: BodyTwinPreview;
   readonly forceFallback?: boolean;
@@ -230,510 +211,6 @@ type BodyLoopAvatarProps = {
 };
 
 /** BodyLoop helper geometry that must not show inside the (glass) scan. */
-export const HIDDEN_NODE_NAMES: ReadonlySet<string> = new Set([
-  "AutoMarkers",
-  "PalpationMarkers",
-  "Analysis_Spine",
-]);
-
-const hiddenOverlayNodes = (root: Object3D): readonly Object3D[] => {
-  const found: Object3D[] = [];
-  root.traverse((obj) => {
-    if (HIDDEN_NODE_NAMES.has(obj.name)) found.push(obj);
-  });
-  return found;
-};
-
-export const hideOverlayNodes = (root: Object3D): void => {
-  for (const node of hiddenOverlayNodes(root)) {
-    node.visible = false;
-  }
-};
-
-/** Z-up BodyLoop fit. Near/far come from a new PerspectiveCamera copied onto `camera`. */
-export const fitCameraToBox = (camera: PerspectiveCamera, box: Box3): Vector3 => {
-  const center = box.getCenter(new Vector3());
-  if (box.isEmpty()) return center;
-  const size = box.getSize(new Vector3());
-  const span = Math.max(size.x, size.y, size.z, 0.5);
-  const fitted = new PerspectiveCamera(camera.fov, camera.aspect, span / 80, span * 20);
-  fitted.up.set(0, 0, 1);
-  fitted.position.set(center.x, center.y - span * 1.8, center.z + size.z * 0.05);
-  fitted.lookAt(center);
-  fitted.updateProjectionMatrix();
-  camera.copy(fitted);
-  camera.up.set(0, 0, 1);
-  camera.position.set(center.x, center.y - span * 1.8, center.z + size.z * 0.05);
-  camera.lookAt(center);
-  camera.updateProjectionMatrix();
-  return center;
-};
-
-const FitZUpCamera = ({
-  object,
-  camera,
-  resetKey,
-  onTarget,
-}: {
-  readonly object: Object3D;
-  readonly camera: PerspectiveCamera;
-  readonly resetKey: number;
-  readonly onTarget: (center: Vector3) => void;
-}) => {
-  const invalidate = useThree((state) => state.invalidate);
-  useLayoutEffect(() => {
-    const center = fitCameraToBox(camera, new Box3().setFromObject(object));
-    onTarget(center);
-    invalidate();
-  }, [object, camera, invalidate, resetKey, onTarget]);
-  return null;
-};
-
-export const AUTO_ROTATE_SPEED = 1.25;
-export const AUTO_ROTATE_IDLE_MS = 5000;
-/** Close enough for an organ, far enough to keep the whole body in view. */
-export const MIN_ZOOM_DISTANCE = 0.25;
-export const MAX_ZOOM_DISTANCE = 6;
-/** One button press: dollyIn(0.8) moves 20% closer, dollyOut(0.8) 25% further. */
-export const ZOOM_STEP = 0.8;
-
-const ScanOrbitControls = ({
-  camera,
-  target,
-  autoRotate,
-  onUserRotate,
-  onControls,
-  walk,
-}: {
-  readonly camera: PerspectiveCamera;
-  readonly target: Vector3;
-  readonly autoRotate: boolean;
-  readonly onUserRotate: () => void;
-  readonly onControls: (controls: OrbitControls | null) => void;
-  /** In the environment a pan slides along the ground and stays near the body. */
-  readonly walk: boolean;
-}) => {
-  const gl = useThree((state) => state.gl);
-  const invalidate = useThree((state) => state.invalidate);
-  const controlsRef = useRef<OrbitControls | null>(null);
-  const visibleRef = useRef(true);
-  const timerRef = useRef<number | null>(null);
-  // `update()` in the frame loop emits "change" too; only user input should redraw at once.
-  const inFrameUpdateRef = useRef(false);
-  // Controls are rebuilt when the target changes (Reset view); keep the current turn.
-  const autoRotateRef = useRef(autoRotate);
-  const walkRef = useRef(walk);
-  useEffect(() => {
-    autoRotateRef.current = autoRotate;
-    walkRef.current = walk;
-  });
-
-  useEffect(() => {
-    const controls = new OrbitControls(camera, gl.domElement);
-    controls.enableDamping = true;
-    controls.autoRotate = autoRotateRef.current;
-    controls.autoRotateSpeed = AUTO_ROTATE_SPEED;
-    controls.minDistance = MIN_ZOOM_DISTANCE;
-    controls.maxDistance = MAX_ZOOM_DISTANCE;
-    controls.zoomToCursor = true;
-    // Controls are rebuilt on Reset and on a rotate toggle; keep ground panning across that.
-    controls.screenSpacePanning = !walkRef.current;
-    controls.target.copy(target);
-    camera.up.set(0, 0, 1);
-    const onChange = () => {
-      if (walkRef.current) {
-        // A two-finger or right-drag pan walks too; it stops at the walk radius.
-        const kept = clampToRadius(
-          [controls.target.x, controls.target.y],
-          [target.x, target.y],
-          WALK_RADIUS_M,
-        );
-        const dx = kept[0] - controls.target.x;
-        const dy = kept[1] - controls.target.y;
-        if (dx !== 0 || dy !== 0) {
-          // Target and camera are three.js vectors the controls read each update.
-          controls.target.set(kept[0], kept[1], controls.target.z);
-          camera.position.set(
-            camera.position.x + dx,
-            camera.position.y + dy,
-            camera.position.z,
-          );
-        }
-      }
-      if (!inFrameUpdateRef.current) invalidate();
-    };
-    const onStart = () => onUserRotate();
-    controls.addEventListener("change", onChange);
-    controls.addEventListener("start", onStart);
-    controlsRef.current = controls;
-    onControls(controls);
-    invalidate();
-    return () => {
-      controls.removeEventListener("change", onChange);
-      controls.removeEventListener("start", onStart);
-      controls.dispose();
-      controlsRef.current = null;
-      onControls(null);
-    };
-  }, [camera, gl, invalidate, target, onUserRotate, onControls]);
-
-  useEffect(() => {
-    const controls = controlsRef.current;
-    if (controls) controls.autoRotate = autoRotate;
-    invalidate();
-  }, [autoRotate, invalidate]);
-
-  // Inline a pan moves in the screen plane, as before; walking pans along the ground.
-  useEffect(() => {
-    const controls = controlsRef.current;
-    if (controls) controls.screenSpacePanning = !walk;
-  }, [walk, target]);
-
-  // Off screen, auto-rotate stops asking for frames; back on screen, one frame restarts it.
-  useEffect(() => {
-    if (typeof IntersectionObserver === "undefined") return;
-    const observer = new IntersectionObserver((entries) => {
-      const visible = entries.some((entry) => entry.isIntersecting);
-      const wasVisible = visibleRef.current;
-      visibleRef.current = visible;
-      if (visible && !wasVisible) invalidate();
-    });
-    observer.observe(gl.domElement);
-    return () => observer.disconnect();
-  }, [gl, invalidate]);
-
-  useEffect(
-    () => () => {
-      if (timerRef.current !== null) window.clearTimeout(timerRef.current);
-      timerRef.current = null;
-    },
-    [],
-  );
-
-  // Frames render on demand. Damping asks for the next frame at once; auto-rotate
-  // alone asks at ~30 fps. The delta keeps the turn speed independent of the rate.
-  useFrame((_, delta) => {
-    const controls = controlsRef.current;
-    if (!controls) return;
-    inFrameUpdateRef.current = true;
-    const moved = controls.update(Math.min(delta, MAX_ROTATE_DELTA_S));
-    inFrameUpdateRef.current = false;
-    if (!controls.autoRotate) {
-      if (moved) invalidate();
-      return;
-    }
-    if (timerRef.current !== null) return;
-    const now = performance.now();
-    const wait = nextAutoRotateDelay({
-      lastDrawMs: now,
-      nowMs: now,
-      visible: visibleRef.current,
-    });
-    if (wait === null) return;
-    timerRef.current = window.setTimeout(() => {
-      timerRef.current = null;
-      invalidate();
-    }, wait);
-  });
-  return null;
-};
-
-/**
- * RoomEnvironment is built Y-up with its brightest emitter at +Y; the scan is
- * Z-up and faces -Y. Rotating the environment +90° about X puts that emitter
- * overhead, so the front is not lit from the floor.
- */
-const ScanEnvironment = ({ intensity }: Readonly<{ intensity: number }>) => {
-  const gl = useThree((state) => state.gl);
-  const scene = useThree((state) => state.scene);
-  const invalidate = useThree((state) => state.invalidate);
-  const [texture, setTexture] = useState<Texture | null>(null);
-  useEffect(() => {
-    const pmrem = new PMREMGenerator(gl);
-    const env = pmrem.fromScene(new RoomEnvironment(), 0.04);
-    pmrem.dispose();
-    // three.js reads the scene's environment rotation each draw; it is set in place.
-    Object.assign(scene.environmentRotation, { x: Math.PI / 2, y: 0, z: 0 });
-    setTexture(env.texture);
-    return () => {
-      env.texture.dispose();
-      Object.assign(scene.environmentRotation, { x: 0, y: 0, z: 0 });
-      setTexture(null);
-    };
-  }, [gl, scene]);
-  useEffect(() => {
-    // A uniform the renderer reads each draw; the environment dims it at night.
-    Object.assign(scene, { environmentIntensity: intensity });
-    invalidate();
-    return () => {
-      Object.assign(scene, { environmentIntensity: 1 });
-    };
-  }, [scene, intensity, invalidate]);
-  if (!texture) return null;
-  return <primitive attach="environment" object={texture} />;
-};
-
-const BodyScan = ({
-  url,
-  kind,
-  onError,
-  onReady,
-  dark,
-  camera,
-  showLandmarks,
-  resetKey,
-  autoRotate,
-  onUserRotate,
-  markers,
-  measures,
-  highlightId,
-  onHover,
-  onLabels,
-  onScene,
-  onControls,
-  world,
-  walk,
-  getControls,
-}: {
-  readonly url: string;
-  /** "demo" is a meshopt-compressed ANNY body in the atlas frame; "scan" a BodyLoop GLB. */
-  readonly kind: "scan" | "demo";
-  readonly onError?: (url: string) => void;
-  readonly onReady?: (url: string) => void;
-  readonly dark: boolean;
-  readonly camera: PerspectiveCamera;
-  readonly showLandmarks: boolean;
-  readonly resetKey: number;
-  readonly autoRotate: boolean;
-  readonly onUserRotate: () => void;
-  readonly onScene: (scene: Group | null) => void;
-  readonly onControls: (controls: OrbitControls | null) => void;
-  /** The full-screen environment's sky and ground, or null inline. */
-  readonly world: WorldLook | null;
-  /** The environment: pans slide along the ground and stay within the walk radius. */
-  readonly walk: boolean;
-  readonly getControls: () => OrbitControls | null;
-  readonly markers: ReturnType<typeof visibleMarkers>;
-  readonly measures: ReturnType<typeof visibleMeasures>;
-  readonly highlightId: string | null;
-  readonly onHover: (id: string | null) => void;
-  readonly onLabels: (
-    rows: readonly { id: string; text: string; x: number; y: number }[],
-  ) => void;
-}) => {
-  const gl = useThree((state) => state.gl);
-  const [scene, setScene] = useState<Group | null>(null);
-  const [target, setTarget] = useState<Vector3 | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    let loaded: Group | null = null;
-    if (kind === "demo") {
-      void loadAtlasGltf(url, () => undefined)
-        .then((gltf) => {
-          if (cancelled) {
-            disposeObject3D(gltf.scene);
-            return;
-          }
-          const body = prepareDemoBody(gltf.scene);
-          loaded = body;
-          setScene(body);
-          onScene(body);
-          onReady?.(url);
-        })
-        .catch(() => {
-          if (cancelled) return;
-          setScene(null);
-          onScene(null);
-          onError?.(url);
-        });
-    } else {
-      const loader = new GLTFLoader();
-      loader.load(
-        url,
-        (gltf) => {
-          if (cancelled) {
-            disposeObject3D(gltf.scene);
-            return;
-          }
-          prepareScanMaterials(gltf.scene, {
-            log: process.env.NODE_ENV === "development",
-          });
-          // Before the scan joins the scene, so the 8K originals never reach the GPU.
-          prepareScanTextures(gltf.scene, {
-            maxAnisotropy: gl.capabilities.getMaxAnisotropy(),
-            deviceMemoryGb: (navigator as Navigator & { deviceMemory?: number })
-              .deviceMemory,
-            resize: downscaleImage,
-            release: releaseImage,
-          });
-          hideOverlayNodes(gltf.scene);
-          loaded = gltf.scene;
-          setScene(gltf.scene);
-          onScene(gltf.scene);
-        },
-        undefined,
-        () => {
-          if (!cancelled) {
-            setScene(null);
-            onScene(null);
-          }
-        },
-      );
-    }
-    return () => {
-      cancelled = true;
-      setScene(null);
-      onScene(null);
-      // Free the scan's GPU memory on a switch; dropping it from state does not.
-      if (loaded) {
-        loaded.removeFromParent();
-        disposeObject3D(loaded);
-      }
-    };
-  }, [url, kind, gl, onScene, onError, onReady]);
-
-  const overlayLabels = useMemo(
-    () => collectLabels(markers, measures, highlightId),
-    [markers, measures, highlightId],
-  );
-
-  if (!scene) return null;
-  return (
-    <>
-      <FitZUpCamera
-        object={scene}
-        camera={camera}
-        resetKey={resetKey}
-        onTarget={setTarget}
-      />
-      {target ? (
-        <ScanOrbitControls
-          camera={camera}
-          target={target}
-          autoRotate={autoRotate}
-          onUserRotate={onUserRotate}
-          onControls={onControls}
-          walk={walk}
-        />
-      ) : null}
-      <WalkControls
-        enabled
-        camera={camera}
-        center={target}
-        getControls={getControls}
-        onWalk={onUserRotate}
-      />
-      <primitive object={scene} />
-      <FloorPool object={scene} dark={dark} />
-      {world ? <EnvironmentWorld object={scene} world={world} /> : null}
-      {showLandmarks ? (
-        <OverlayPrimitives
-          markers={markers}
-          measures={measures}
-          highlightId={highlightId}
-          onHover={onHover}
-        />
-      ) : null}
-      {shouldProjectLabels(showLandmarks, overlayLabels) ? (
-        <ProjectedLabels labels={overlayLabels} camera={camera} onScreen={onLabels} />
-      ) : null}
-    </>
-  );
-};
-
-/**
- * Probes WebGL once per page and releases the probe context. Probing on every
- * render created a new context each time; browsers cap live contexts and drop
- * the oldest, which can be the viewer's own.
- */
-let webglProbe: boolean | null = null;
-
-const probeWebgl = (): boolean => {
-  if (webglProbe !== null) return webglProbe;
-  if (typeof document === "undefined") return false;
-  try {
-    const canvas = document.createElement("canvas");
-    const context = canvas.getContext("webgl2") ?? canvas.getContext("webgl");
-    webglProbe = context !== null;
-    context?.getExtension("WEBGL_lose_context")?.loseContext();
-  } catch {
-    webglProbe = false;
-  }
-  return webglProbe;
-};
-
-const subscribeNever = () => () => undefined;
-
-/** False on the server and during hydration, the cached probe afterwards. */
-const useWebglAvailable = (): boolean =>
-  useSyncExternalStore(subscribeNever, probeWebgl, () => false);
-
-/**
- * Reports a lost WebGL context while this canvas is mounted. The listener is
- * removed on unmount, before R3F force-loses the old context on purpose, so a
- * normal unmount never looks like a failure. Mounting means a fresh context.
- */
-const ContextLossWatcher = ({
-  onLost,
-  onFresh,
-}: {
-  readonly onLost: () => void;
-  readonly onFresh: () => void;
-}) => {
-  const gl = useThree((state) => state.gl);
-  useEffect(() => {
-    const canvas = gl.domElement;
-    const handler = (event: Event) => {
-      event.preventDefault();
-      onLost();
-    };
-    onFresh();
-    canvas.addEventListener("webglcontextlost", handler);
-    return () => canvas.removeEventListener("webglcontextlost", handler);
-  }, [gl, onLost, onFresh]);
-  return null;
-};
-
-const scanLabel = (scan: BodyTwinScan, pinnedViatarId: number | null): string => {
-  const day = scan.crtime ? scan.crtime.slice(0, 10) : "unknown date";
-  const status = scan.incomplete
-    ? SCAN_SYNC_AGAIN
-    : scan.synced === true
-      ? "synced"
-      : "not synced";
-  const preset = scan.presetName ? ` · ${scan.presetName}` : "";
-  const pinned = scan.viatarId === pinnedViatarId ? ` · ${SCAN_DEFAULT_TAG}` : "";
-  return `${day} · scan ${scan.viatarId} · ${status}${preset}${pinned}`;
-};
-
-type SubjectsPayload = { readonly subjects?: readonly BodyTwinSubject[] };
-type ScansPayload = { readonly scans?: readonly BodyTwinScan[] };
-type SnapshotsPayload = { readonly snapshots?: readonly BodyTwinSnapshot[] };
-
-const isSubjectsPayload = (value: unknown): value is SubjectsPayload =>
-  Boolean(
-    value &&
-    typeof value === "object" &&
-    Array.isArray((value as SubjectsPayload).subjects),
-  );
-
-const isScansPayload = (value: unknown): value is ScansPayload =>
-  Boolean(
-    value && typeof value === "object" && Array.isArray((value as ScansPayload).scans),
-  );
-
-const isSnapshotsPayload = (value: unknown): value is SnapshotsPayload =>
-  Boolean(
-    value &&
-    typeof value === "object" &&
-    Array.isArray((value as SnapshotsPayload).snapshots),
-  );
-
-/**
- * Digital Twin Body twin: subject and scan selectors, GLTFLoader, OrbitControls,
- * Z-up fit, AutoMarkers overlay, scan date and SI property values.
- */
 export const BodyLoopAvatar = ({
   preview,
   forceFallback = false,
