@@ -135,6 +135,7 @@ export const createGoogleHealthCallbackHandler = (deps: GoogleHealthCallbackDeps
       await deps.exchangeAndPersistCode({ userId: appUserId, code });
       await syncThenAudit(
         () => deps.syncForUser(appUserId),
+        "google-health",
         clerkId,
         deps.auditPersonalRead,
       ).catch((error: unknown) => {

@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import type { PersonalRead } from "@/infrastructure/personal-read-audit";
 
-import { syncThenAudit } from "./audited-sync";
+import { syncPurpose, syncThenAudit } from "./audited-sync";
 
 const SYNCED = {
   metrics: [
@@ -21,6 +21,7 @@ describe("syncThenAudit", () => {
         order.push("sync");
         return SYNCED;
       },
+      "whoop",
       "user_synthetic_1",
       async (read) => {
         order.push("audit");
@@ -30,7 +31,9 @@ describe("syncThenAudit", () => {
 
     expect(result).toBe(SYNCED);
     expect(order).toEqual(["sync", "audit"]);
-    expect(rows).toEqual([{ actor: "user_synthetic_1", purpose: "sync", rowCount: 2 }]);
+    expect(rows).toEqual([
+      { actor: "user_synthetic_1", purpose: "sync-whoop", rowCount: 2 },
+    ]);
     expect(JSON.stringify(rows)).not.toContain(SYNCED.narrative);
   });
 
@@ -40,6 +43,7 @@ describe("syncThenAudit", () => {
       async () => {
         throw new Error("sync failed");
       },
+      "oura",
       "user_synthetic_1",
       async (read) => {
         rows.push(read);
@@ -53,6 +57,7 @@ describe("syncThenAudit", () => {
   test("a failed row rejects", async () => {
     const run = syncThenAudit(
       async () => SYNCED,
+      "google-health",
       "user_synthetic_1",
       async () => {
         throw new Error("audit down");
@@ -60,5 +65,13 @@ describe("syncThenAudit", () => {
     );
 
     await expect(run).rejects.toThrow("audit down");
+  });
+});
+
+describe("syncPurpose", () => {
+  test("names the provider, so the tool says which wearable synced", () => {
+    expect(syncPurpose("oura")).toBe("sync-oura");
+    expect(syncPurpose("whoop")).toBe("sync-whoop");
+    expect(syncPurpose("google-health")).toBe("sync-google-health");
   });
 });

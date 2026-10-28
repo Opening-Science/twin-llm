@@ -40,7 +40,7 @@ import type { AppendInput } from "@/packages/audit/append";
  * one row per read for all of them but the wearables summary: that one reads
  * four sources and writes one row for Oura, Whoop and Google Health and one
  * in the BodyLoop reader. A wearable sync, from its route or the first sync
- * after an OAuth callback, writes one `personal.read.sync` row counting the
+ * after an OAuth callback, writes one `personal.read.sync-<provider>` row counting the
  * metrics it wrote (#223).
  *
  * Pages are not API routes, so the pages that read wearable summaries have
@@ -167,7 +167,7 @@ const emptyStore: PersonalDataStore = {
 /** The sync route for one provider, with a fake sync and the recorder's append. */
 const syncRoute = (provider: WearableSyncProvider): Audited => ({
   kind: "audited",
-  tools: ["personal.read.sync"],
+  tools: [`personal.read.sync-${provider}`],
   call: (record) =>
     createWearableSyncHandler({
       provider,
@@ -389,7 +389,7 @@ const PERSONAL_READ_ROUTES: Readonly<Record<string, Entry>> = {
   "GET /api/oura/authorize": { kind: "exempt", why: OAUTH },
   "GET /api/oura/callback": {
     kind: "audited",
-    tools: ["personal.read.sync"],
+    tools: ["personal.read.sync-oura"],
     call: (record) =>
       createOuraCallbackHandler({
         ouraEnv: () => ({ configured: true }),
@@ -415,7 +415,7 @@ const PERSONAL_READ_ROUTES: Readonly<Record<string, Entry>> = {
   "GET /api/whoop/authorize": { kind: "exempt", why: OAUTH },
   "GET /api/whoop/callback": {
     kind: "audited",
-    tools: ["personal.read.sync"],
+    tools: ["personal.read.sync-whoop"],
     call: (record) =>
       createWhoopCallbackHandler(callbackDeps(record))(callbackRequest("whoop")),
   },
@@ -424,7 +424,7 @@ const PERSONAL_READ_ROUTES: Readonly<Record<string, Entry>> = {
   "GET /api/google-health/authorize": { kind: "exempt", why: OAUTH },
   "GET /api/google-health/callback": {
     kind: "audited",
-    tools: ["personal.read.sync"],
+    tools: ["personal.read.sync-google-health"],
     call: (record) =>
       createGoogleHealthCallbackHandler(callbackDeps(record))(
         callbackRequest("google-health"),
@@ -541,7 +541,7 @@ describe("every personal read route writes its audit rows", () => {
 
   test("every sync row counts the metrics written, never a value", async () => {
     const syncs = audited.filter(([, entry]) =>
-      entry.tools.includes("personal.read.sync"),
+      entry.tools.some((tool) => tool.startsWith("personal.read.sync-")),
     );
     expect(syncs.map(([route]) => route).sort()).toEqual([
       "GET /api/google-health/callback",

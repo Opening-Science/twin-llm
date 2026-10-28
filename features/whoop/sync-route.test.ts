@@ -199,7 +199,7 @@ describe("POST /api/whoop/sync error surface", () => {
       window: { startDate: "2026-01-01", endDate: "2026-01-04" },
     });
 
-    expect(recorded.auditTools).toEqual(["personal.read.sync"]);
+    expect(recorded.auditTools).toEqual(["personal.read.sync-whoop"]);
 
     expect(recorded.connectionUpdates).toHaveLength(1);
     expect(recorded.connectionUpdates[0]?.where).toEqual({ userId: USER_ID });

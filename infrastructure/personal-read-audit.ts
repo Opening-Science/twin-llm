@@ -5,8 +5,9 @@ import type { AppendInput } from "@/packages/audit/append";
  * the model tools (#143): which read it was and how many rows it returned.
  * Never a value, a unit, a date or a hash of one. The tool name is
  * `personal.read.<purpose>`, so the chain says what the read was for.
- * A wearable sync (`sync`) reads from the provider and writes a snapshot; its
- * row counts the metrics written (#223).
+ * A wearable sync (`sync-<provider>`) reads from the provider and writes a
+ * snapshot; its row counts the metrics written (#223). The provider is in the
+ * purpose because args are stored only as a hash.
  *
  * `personalReadEvent` is pure; `auditPersonalRead` wires it to an append the
  * caller passes in, so a handler takes it as a dep and a test passes a fake.
@@ -18,7 +19,9 @@ export const PERSONAL_READ_PURPOSES = [
   "wearables-summary",
   "genome-report",
   "connectors-page",
-  "sync",
+  "sync-oura",
+  "sync-whoop",
+  "sync-google-health",
 ] as const;
 
 export type PersonalReadPurpose = (typeof PERSONAL_READ_PURPOSES)[number];

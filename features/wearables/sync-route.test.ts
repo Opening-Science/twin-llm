@@ -132,7 +132,9 @@ describe("POST /api/{provider}/sync", () => {
   test("a sync writes one audit row with the metric count, no values", async () => {
     await createWearableSyncHandler(deps("google-health"))(syncRequest(WINDOW));
 
-    expect(auditRows).toEqual([{ actor: "local", purpose: "sync", rowCount: 1 }]);
+    expect(auditRows).toEqual([
+      { actor: "local", purpose: "sync-google-health", rowCount: 1 },
+    ]);
   });
 
   test("a failed sync writes no audit row", async () => {

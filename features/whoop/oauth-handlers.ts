@@ -141,6 +141,7 @@ export const createWhoopCallbackHandler = (deps: WhoopCallbackDeps) => {
       await deps.exchangeAndPersistCode({ userId: appUserId, code });
       await syncThenAudit(
         () => deps.syncForUser(appUserId),
+        "whoop",
         clerkId,
         deps.auditPersonalRead,
       ).catch((error: unknown) => {

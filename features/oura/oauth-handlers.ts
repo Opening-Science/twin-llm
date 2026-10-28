@@ -155,6 +155,7 @@ export const createOuraCallbackHandler = (deps: OuraCallbackDeps) => {
 
       await syncThenAudit(
         () => deps.syncOuraForUser(appUserId),
+        "oura",
         clerkId,
         deps.auditPersonalRead,
       ).catch((error: unknown) => {
