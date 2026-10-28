@@ -89,6 +89,19 @@ export const ThreadBarView = ({
         </p>
       </nav>
       <a
+        href={threadExportHref(pathname.slice("/t/".length), "print")}
+        target="_blank"
+        rel="noopener"
+        title="Open this thread for printing or saving as PDF."
+        className={buttonClassName({
+          variant: "pill",
+          size: "sm",
+          className: "text-muted-foreground hover:text-foreground shrink-0 py-1.5",
+        })}
+      >
+        <span>PDF</span>
+      </a>
+      <a
         href={threadExportHref(pathname.slice("/t/".length))}
         download
         title="Download this thread as Markdown: prompts, lookups and answers."
