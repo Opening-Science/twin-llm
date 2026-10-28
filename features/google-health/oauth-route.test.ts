@@ -63,7 +63,8 @@ const callbackDeps = (): GoogleHealthCallbackDeps => ({
   exchangeAndPersistCode: async () => {
     exchangeCalls += 1;
   },
-  syncForUser: async () => {},
+  syncForUser: async () => ({ metrics: [] }),
+  auditPersonalRead: async () => undefined,
   logError: (message, errorName) => {
     logged.push([message, errorName]);
   },
