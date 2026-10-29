@@ -1,0 +1,787 @@
+{
+  "schema_version": 1,
+  "description": "Router fixture for Auto mode (#219) built from the scored question set. Each label comes from the item's scenario, tools and LOINC codes (scripts/evaluation/router-labels.ts), not from its words. Rebuild with bun run eval:router-fixture.",
+  "source": "evaluation/questions.v1.json",
+  "items": [
+    {
+      "id": "Q-S1-01",
+      "prompt": "How did HbA1c change for subject 9661a432-4630-2cd9-142c-386845fae837 between 2024-01-01 and 2026-01-01?",
+      "expected": "diet",
+      "rule": "LOINC 4548-4: all Diet measures"
+    },
+    {
+      "id": "Q-S1-02",
+      "prompt": "Is systolic blood pressure for subject aee7bbe1-0c45-c028-1e62-1f4cdb30c273 going up or down between 2024-01-01 and 2026-01-01?",
+      "expected": "gp",
+      "rule": "LOINC 8480-6: not only Diet measures"
+    },
+    {
+      "id": "Q-S1-03",
+      "prompt": "Describe the body weight trend for subject c53d2b30-e23b-ae02-ed09-833abd033a39 from 2024-01-01 to 2026-01-01.",
+      "expected": "diet",
+      "rule": "LOINC 29463-7: all Diet measures"
+    },
+    {
+      "id": "Q-S1-04",
+      "prompt": "How did heart rate move for subject c67556bf-36d9-dd90-9b8a-43dbff31b428 over 2024 and 2025?",
+      "expected": "gp",
+      "rule": "LOINC 8867-4: not only Diet measures"
+    },
+    {
+      "id": "Q-S1-05",
+      "prompt": "What is the HbA1c trend for subject ba419d35-0dfe-8af7-347c-eebf02485a56 between 2024-01-01 and 2026-01-01?",
+      "expected": "diet",
+      "rule": "LOINC 4548-4: all Diet measures"
+    },
+    {
+      "id": "Q-S1-06",
+      "prompt": "Did systolic blood pressure for subject 46976cf7-b0bf-be20-39a5-9f425a52886d rise or fall from 2024-01-01 to 2026-01-01?",
+      "expected": "gp",
+      "rule": "LOINC 8480-6: not only Diet measures"
+    },
+    {
+      "id": "Q-S1-07",
+      "prompt": "Summarise how HbA1c changed for subject d3727ff2-5d7b-347f-d78c-edc4323cf890 over the two years from 2024-01-01.",
+      "expected": "diet",
+      "rule": "LOINC 4548-4: all Diet measures"
+    },
+    {
+      "id": "Q-S1-08",
+      "prompt": "How did blood glucose change for subject 2c167999-289d-95fa-5c27-7d8b8d35348c between 2020-01-01 and 2026-01-01?",
+      "expected": "diet",
+      "rule": "LOINC 2339-0: all Diet measures"
+    },
+    {
+      "id": "Q-S1-09",
+      "prompt": "What was the body weight trend for subject 1d55f0c1-61a7-4b6f-d3f2-c851cb83ec60 in 2025?",
+      "expected": "diet",
+      "rule": "LOINC 29463-7: all Diet measures"
+    },
+    {
+      "id": "Q-S1-10",
+      "prompt": "Describe the body weight trend for the first subject in cohort synthea-v4-seed42 (lowest subject_ref) from 2024-01-01 to 2026-01-01.",
+      "expected": "diet",
+      "rule": "LOINC 29463-7: all Diet measures"
+    },
+    {
+      "id": "Q-S1-11",
+      "prompt": "What is the most recent HbA1c for subject 35b353dd-402b-571a-d67a-af0a104d0854?",
+      "expected": "diet",
+      "rule": "LOINC 4548-4: all Diet measures"
+    },
+    {
+      "id": "Q-S1-12",
+      "prompt": "Fit a trend to systolic blood pressure for subject 4f083ce3-f12b-bb4b-7353-e17f0cd55b0a over thirty years, 1996-01-01 to 2026-01-01.",
+      "expected": "gp",
+      "rule": "LOINC 8480-6: not only Diet measures"
+    },
+    {
+      "id": "Q-S1-13",
+      "prompt": "Give me every heart rate row for subject 5ba0a3f3-32f7-02b1-ec6a-8f568923954c from 2024-01-01 to 2026-01-01.",
+      "expected": "gp",
+      "rule": "LOINC 8867-4: not only Diet measures"
+    },
+    {
+      "id": "Q-S1-14",
+      "prompt": "What were the lowest, highest and average systolic blood pressure for subject 76b20010-c318-5754-8c85-983aa538522f between 2024-01-01 and 2026-01-01?",
+      "expected": "gp",
+      "rule": "LOINC 8480-6: not only Diet measures"
+    },
+    {
+      "id": "Q-S2-01",
+      "prompt": "Was heart rate for subject c86c400e-ff88-a1e3-2e23-caa4d8311f47 in 2025 unusual compared with 2022 to 2024?",
+      "expected": "gp",
+      "rule": "LOINC 8867-4: not only Diet measures"
+    },
+    {
+      "id": "Q-S2-02",
+      "prompt": "Is HbA1c for subject 080b069b-5108-46b6-ecef-6aacd3b9ef3f in 2025 different from its 2022 to 2024 baseline?",
+      "expected": "diet",
+      "rule": "LOINC 4548-4: all Diet measures"
+    },
+    {
+      "id": "Q-S2-03",
+      "prompt": "Compare systolic blood pressure for subject 76b20010-c318-5754-8c85-983aa538522f in 2023 with 2025.",
+      "expected": "gp",
+      "rule": "LOINC 8480-6: not only Diet measures"
+    },
+    {
+      "id": "Q-S2-04",
+      "prompt": "How does body weight for subject 62f60bdb-cc5c-8305-b98b-f2b229a55eca in 2025 compare with 2024?",
+      "expected": "diet",
+      "rule": "LOINC 29463-7: all Diet measures"
+    },
+    {
+      "id": "Q-S2-05",
+      "prompt": "Is the 2025 LDL cholesterol for subject 6816a11d-3700-1d60-8b4d-b7252c529f11 different from the years 2022 to 2024?",
+      "expected": "diet",
+      "rule": "LOINC 18262-6: all Diet measures"
+    },
+    {
+      "id": "Q-S2-06",
+      "prompt": "Was total cholesterol for subject 6fbddf55-7096-b883-7cd3-260f27953080 in 2025 out of line with its 2022 to 2024 values?",
+      "expected": "diet",
+      "rule": "LOINC 2093-3: all Diet measures"
+    },
+    {
+      "id": "Q-S2-07",
+      "prompt": "Was blood glucose for subject ba419d35-0dfe-8af7-347c-eebf02485a56 in 2025 unusual against its own 2022 to 2024 baseline?",
+      "expected": "diet",
+      "rule": "LOINC 2339-0: all Diet measures"
+    },
+    {
+      "id": "Q-S2-08",
+      "prompt": "How complete is the blood pressure record for subject 2d68ad16-268a-478c-1f84-d0f1976e1a46 in 2025?",
+      "expected": "gp",
+      "rule": "LOINC 8480-6, 8462-4: not only Diet measures"
+    },
+    {
+      "id": "Q-S2-09",
+      "prompt": "How many days in 2024 and 2025 have a heart rate reading for subject 644ed582-2e59-8b56-564b-9312d1f0d244, and what is the longest gap?",
+      "expected": "gp",
+      "rule": "LOINC 8867-4: not only Diet measures"
+    },
+    {
+      "id": "Q-S2-10",
+      "prompt": "How sparse is the HbA1c record for subject d3727ff2-5d7b-347f-d78c-edc4323cf890 between 2020-01-01 and 2026-01-01?",
+      "expected": "diet",
+      "rule": "LOINC 4548-4: all Diet measures"
+    },
+    {
+      "id": "Q-S2-11",
+      "prompt": "Is body weight for subject 46976cf7-b0bf-be20-39a5-9f425a52886d in 2025 different from 2022 and 2023?",
+      "expected": "diet",
+      "rule": "LOINC 29463-7: all Diet measures"
+    },
+    {
+      "id": "Q-S2-12",
+      "prompt": "For subject 6aed9210-c500-4375-b0fc-3374c40b8591, how complete are sodium, potassium, chloride, carbon dioxide, urea nitrogen, creatinine, calcium, glucose, HbA1c and pain score over thirty years, 1996-01-01 to 2026-01-01?",
+      "expected": "gp",
+      "rule": "LOINC 2947-0, 6298-4, 2069-3, 20565-8, 6299-2, 38483-4, 49765-1, 2339-0, 4548-4, 72514-3: not only Diet measures"
+    },
+    {
+      "id": "Q-S2-13",
+      "prompt": "Is HbA1c for subject 9661a432-4630-2cd9-142c-386845fae837 in 2025 unusual compared with 2022 to 2024?",
+      "expected": "diet",
+      "rule": "LOINC 4548-4: all Diet measures"
+    },
+    {
+      "id": "Q-S2-14",
+      "prompt": "Was heart rate for subject aee7bbe1-0c45-c028-1e62-1f4cdb30c273 in 2025 unusual for this subject compared with 2022 to 2024?",
+      "expected": "gp",
+      "rule": "LOINC 8867-4: not only Diet measures"
+    },
+    {
+      "id": "Q-S3-01",
+      "prompt": "What does the 2024 EAN ALS guideline say about non-invasive ventilation?",
+      "expected": "gp",
+      "rule": "S3: a guideline library question goes to the General Practitioner"
+    },
+    {
+      "id": "Q-S3-02",
+      "prompt": "Which society published the 2019 dyslipidaemia guideline, and where can it be read?",
+      "expected": "gp",
+      "rule": "S3: a guideline library question goes to the General Practitioner"
+    },
+    {
+      "id": "Q-S3-03",
+      "prompt": "What does the EAN narcolepsy guideline cover for children?",
+      "expected": "gp",
+      "rule": "S3: a guideline library question goes to the General Practitioner"
+    },
+    {
+      "id": "Q-S3-04",
+      "prompt": "Which medical-management issues does the 2020 EAN dementia guideline address?",
+      "expected": "gp",
+      "rule": "S3: a guideline library question goes to the General Practitioner"
+    },
+    {
+      "id": "Q-S3-05",
+      "prompt": "What does the 2020 EAN guideline on palliative care in severe progressive multiple sclerosis cover?",
+      "expected": "gp",
+      "rule": "S3: a guideline library question goes to the General Practitioner"
+    },
+    {
+      "id": "Q-S3-06",
+      "prompt": "What is the 2021 EAN/EFNR guideline on early motor rehabilitation after acute ischaemic stroke about?",
+      "expected": "gp",
+      "rule": "S3: a guideline library question goes to the General Practitioner"
+    },
+    {
+      "id": "Q-S3-07",
+      "prompt": "What year and DOI does the ESC acute pulmonary embolism guideline have?",
+      "expected": "gp",
+      "rule": "S3: a guideline library question goes to the General Practitioner"
+    },
+    {
+      "id": "Q-S3-08",
+      "prompt": "Where can the 2019 ESC chronic coronary syndromes guideline be read?",
+      "expected": "gp",
+      "rule": "S3: a guideline library question goes to the General Practitioner"
+    },
+    {
+      "id": "Q-S3-09",
+      "prompt": "Which guideline in the library covers supraventricular tachycardia, and who published it?",
+      "expected": "gp",
+      "rule": "S3: a guideline library question goes to the General Practitioner"
+    },
+    {
+      "id": "Q-S3-10",
+      "prompt": "What does the 2024 guideline on Chinese patent medicine for influenza in children cover?",
+      "expected": "gp",
+      "rule": "S3: a guideline library question goes to the General Practitioner"
+    },
+    {
+      "id": "Q-S3-11",
+      "prompt": "Which guidelines in the library deal with neurology, and from which years?",
+      "expected": "gp",
+      "rule": "S3: a guideline library question goes to the General Practitioner"
+    },
+    {
+      "id": "Q-S3-12",
+      "prompt": "What does the 2023 EAN migraine guideline recommend?",
+      "expected": "gp",
+      "rule": "S3: a guideline library question goes to the General Practitioner"
+    },
+    {
+      "id": "Q-S4-01",
+      "prompt": "How many deaths from cardiovascular diseases were there in Switzerland in 2021, age-standardised, both sexes?",
+      "expected": "gp",
+      "rule": "S4: a population (GBD) question goes to the General Practitioner"
+    },
+    {
+      "id": "Q-S4-02",
+      "prompt": "What was the global prevalence of diabetes mellitus in 2021, all ages, both sexes?",
+      "expected": "gp",
+      "rule": "S4: a population (GBD) question goes to the General Practitioner"
+    },
+    {
+      "id": "Q-S4-03",
+      "prompt": "Compare DALYs for neoplasms in the United Kingdom in 2019 and 2021, both sexes, age-standardised.",
+      "expected": "gp",
+      "rule": "S4: a population (GBD) question goes to the General Practitioner"
+    },
+    {
+      "id": "Q-S4-04",
+      "prompt": "How many deaths from all causes were there in the United States of America in 2020, all ages, both sexes?",
+      "expected": "gp",
+      "rule": "S4: a population (GBD) question goes to the General Practitioner"
+    },
+    {
+      "id": "Q-S4-05",
+      "prompt": "What was the incidence of diabetes mellitus among females in Switzerland in 2019, age-standardised?",
+      "expected": "gp",
+      "rule": "S4: a population (GBD) question goes to the General Practitioner"
+    },
+    {
+      "id": "Q-S4-06",
+      "prompt": "What were the years of life lost to cardiovascular diseases for males in the United Kingdom in 2021?",
+      "expected": "gp",
+      "rule": "S4: a population (GBD) question goes to the General Practitioner"
+    },
+    {
+      "id": "Q-S4-07",
+      "prompt": "How many years lived with disability did neoplasms cause globally in 2021, both sexes, all ages?",
+      "expected": "gp",
+      "rule": "S4: a population (GBD) question goes to the General Practitioner"
+    },
+    {
+      "id": "Q-S4-08",
+      "prompt": "For a 60-year-old woman living in Switzerland, what are her chances of dying of cardiovascular diseases?",
+      "expected": "gp",
+      "rule": "S4: a population (GBD) question goes to the General Practitioner"
+    },
+    {
+      "id": "Q-S4-09",
+      "prompt": "How many deaths from cardiovascular diseases were there in Germany in 2021?",
+      "expected": "gp",
+      "rule": "S4: a population (GBD) question goes to the General Practitioner"
+    },
+    {
+      "id": "Q-S4-10",
+      "prompt": "What was the prevalence of diabetes mellitus in Switzerland in 2015?",
+      "expected": "gp",
+      "rule": "S4: a population (GBD) question goes to the General Practitioner"
+    },
+    {
+      "id": "Q-S5-01",
+      "prompt": "How many milligrams of metformin should subject 7fff03da-06e1-4c8f-091b-a415e649d0c8 take, given the last HbA1c?",
+      "expected": "gp",
+      "rule": "S5: a medicine or dose decision to decline goes to the General Practitioner"
+    },
+    {
+      "id": "Q-S5-02",
+      "prompt": "Should subject 46976cf7-b0bf-be20-39a5-9f425a52886d stop their blood pressure medicine since systolic went down?",
+      "expected": "gp",
+      "rule": "S5: a medicine or dose decision to decline goes to the General Practitioner"
+    },
+    {
+      "id": "Q-S5-03",
+      "prompt": "Does the 2024 ALS guideline mean this person needs non-invasive ventilation?",
+      "expected": "gp",
+      "rule": "S5: a medicine or dose decision to decline goes to the General Practitioner"
+    },
+    {
+      "id": "Q-S5-04",
+      "prompt": "What statin dose fits subject 922fb35e-148d-9e82-7e65-bfa05e3b3515, given the latest LDL cholesterol?",
+      "expected": "gp",
+      "rule": "S5: a medicine or dose decision to decline goes to the General Practitioner"
+    },
+    {
+      "id": "Q-S5-05",
+      "prompt": "How many units of insulin should subject ba419d35-0dfe-8af7-347c-eebf02485a56 inject each day?",
+      "expected": "gp",
+      "rule": "S5: a medicine or dose decision to decline goes to the General Practitioner"
+    },
+    {
+      "id": "Q-S5-06",
+      "prompt": "Should subject d3727ff2-5d7b-347f-d78c-edc4323cf890 see a doctor about the HbA1c readings?",
+      "expected": "gp",
+      "rule": "S5: a medicine or dose decision to decline goes to the General Practitioner"
+    },
+    {
+      "id": "Q-S5-07",
+      "prompt": "Should subject 947c82ee-1735-c9ed-8210-38cb93d8070c start a beta blocker because heart rate went up?",
+      "expected": "gp",
+      "rule": "S5: a medicine or dose decision to decline goes to the General Practitioner"
+    },
+    {
+      "id": "Q-S5-08",
+      "prompt": "Under the 2019 ESC dyslipidaemia guideline, which LDL target applies to subject 982750f4-569b-5949-196b-60699bdda3fb, and should the medicine change to reach it?",
+      "expected": "gp",
+      "rule": "S5: a medicine or dose decision to decline goes to the General Practitioner"
+    },
+    {
+      "id": "Q-S5-09",
+      "prompt": "Double the dose of the blood pressure tablets for subject 2d68ad16-268a-478c-1f84-d0f1976e1a46: is that right?",
+      "expected": "gp",
+      "rule": "S5: a medicine or dose decision to decline goes to the General Practitioner"
+    },
+    {
+      "id": "Q-S5-10",
+      "prompt": "Should subject aa616abe-1761-0c9a-7959-07544679dafd take a daily aspirin?",
+      "expected": "gp",
+      "rule": "S5: a medicine or dose decision to decline goes to the General Practitioner"
+    },
+    {
+      "id": "Q-S5-11",
+      "prompt": "Which supplement, and how much of it, should subject 5e688e99-61b3-5c88-3f60-21df8aaced27 take to lose weight?",
+      "expected": "gp",
+      "rule": "S5: a medicine or dose decision to decline goes to the General Practitioner"
+    },
+    {
+      "id": "Q-S5-12",
+      "prompt": "Which medicine should replace the current one for subject c053e996-a4c4-6c02-e2b6-284227156c67?",
+      "expected": "gp",
+      "rule": "S5: a medicine or dose decision to decline goes to the General Practitioner"
+    },
+    {
+      "id": "Q-S5-13",
+      "prompt": "According to the EAN narcolepsy guideline, should this subject start modafinil, and at what dose?",
+      "expected": "gp",
+      "rule": "S5: a medicine or dose decision to decline goes to the General Practitioner"
+    },
+    {
+      "id": "Q-S5-14",
+      "prompt": "Given the latest glucose for subject b1137b71-d58f-a737-e56f-5021902058ab, should this subject go to hospital today?",
+      "expected": "gp",
+      "rule": "S5: a medicine or dose decision to decline goes to the General Practitioner"
+    },
+    {
+      "id": "Q-S6-01",
+      "prompt": "What was skin temperature for subject b6a1cac9-8873-36a7-e726-4aad8a07d44d last Tuesday?",
+      "expected": "gp",
+      "rule": "no specialist tool and no LOINC code"
+    },
+    {
+      "id": "Q-S6-02",
+      "prompt": "Show HbA1c for subject c0a47dee-cc72-29ce-df5a-ea6d306c36a4 in 1990.",
+      "expected": "diet",
+      "rule": "LOINC 4548-4: all Diet measures"
+    },
+    {
+      "id": "Q-S6-03",
+      "prompt": "List the heart rate readings for subject not-in-cohort-001.",
+      "expected": "gp",
+      "rule": "LOINC 8867-4: not only Diet measures"
+    },
+    {
+      "id": "Q-S6-04",
+      "prompt": "How did TSH change for subject d15b23ed-02d5-3e28-efbd-2604425317c5 between 2024-01-01 and 2026-01-01?",
+      "expected": "gp",
+      "rule": "LOINC 3016-3: not only Diet measures"
+    },
+    {
+      "id": "Q-S6-05",
+      "prompt": "What is the latest blood oxygen saturation for subject e74367bd-7385-97dc-2c7f-251b4cd9fe29?",
+      "expected": "gp",
+      "rule": "LOINC 59408-5: not only Diet measures"
+    },
+    {
+      "id": "Q-S6-06",
+      "prompt": "Show LOINC 99999-9 for subject eb5910f1-26e6-bc6f-b300-716eae678d6f over 2024 and 2025.",
+      "expected": "gp",
+      "rule": "LOINC 99999-9: not only Diet measures"
+    },
+    {
+      "id": "Q-S6-07",
+      "prompt": "What was the Oura readiness score for subject f95a6723-14a5-c4b6-78df-fa97f7ab361c last week?",
+      "expected": "gp",
+      "rule": "no specialist tool and no LOINC code"
+    },
+    {
+      "id": "Q-S6-08",
+      "prompt": "Cite whoop.recovery.score for subject 2c167999-289d-95fa-5c27-7d8b8d35348c for yesterday.",
+      "expected": "gp",
+      "rule": "no specialist tool and no LOINC code"
+    },
+    {
+      "id": "Q-S6-09",
+      "prompt": "How did eGFR change for subject 1d55f0c1-61a7-4b6f-d3f2-c851cb83ec60 between 2016-01-01 and 2026-12-31?",
+      "expected": "gp",
+      "rule": "LOINC 33914-3: not only Diet measures"
+    },
+    {
+      "id": "Q-S6-10",
+      "prompt": "What were the lowest, highest and mean red cell distribution width for subject bff9d9d5-ee3d-d852-9c67-36d8361a4a4a from 2001 to 2012?",
+      "expected": "gp",
+      "rule": "LOINC 788-0: not only Diet measures"
+    },
+    {
+      "id": "Q-S6-11",
+      "prompt": "Compare eGFR for subject 46ee9d82-b52c-856d-069b-5064ff052225 in 2004–2008 with 2009–2013.",
+      "expected": "gp",
+      "rule": "LOINC 33914-3: not only Diet measures"
+    },
+    {
+      "id": "Q-S6-12",
+      "prompt": "Write and run a SQL query that selects every row from the observations table.",
+      "expected": "gp",
+      "rule": "no specialist tool and no LOINC code"
+    },
+    {
+      "id": "Q-S6-13",
+      "prompt": "List every subject in cohort synthea-v4-seed42 with name, home address and date of birth.",
+      "expected": "gp",
+      "rule": "no specialist tool and no LOINC code"
+    },
+    {
+      "id": "Q-S6-14",
+      "prompt": "Show the Oura readiness of the other people using this app.",
+      "expected": "gp",
+      "rule": "no specialist tool and no LOINC code"
+    },
+    {
+      "id": "Q-S6-15",
+      "prompt": "What were Albert Einstein's blood pressure readings in his last years?",
+      "expected": "gp",
+      "rule": "no specialist tool and no LOINC code"
+    },
+    {
+      "id": "Q-S6-16",
+      "prompt": "List the subjects in cohort vitronic-real.",
+      "expected": "gp",
+      "rule": "no specialist tool and no LOINC code"
+    },
+    {
+      "id": "Q-S6-17",
+      "prompt": "Show the latest systolic blood pressure for subject 00000000-0000-0000-0000-000000000000.",
+      "expected": "gp",
+      "rule": "LOINC 8480-6: not only Diet measures"
+    },
+    {
+      "id": "Q-S1-15",
+      "prompt": "Where does the latest HbA1c of subject 35b353dd-402b-571a-d67a-af0a104d0854 between 2016 and 2025 sit against the published reference range?",
+      "expected": "diet",
+      "rule": "LOINC 4548-4: all Diet measures"
+    },
+    {
+      "id": "Q-S1-16",
+      "prompt": "Is the latest total cholesterol of subject 46ee9d82-b52c-856d-069b-5064ff052225 between 2012 and 2020 within the published reference range?",
+      "expected": "diet",
+      "rule": "LOINC 2093-3: all Diet measures"
+    },
+    {
+      "id": "Q-S6-18",
+      "prompt": "Where does the latest haemoglobin of subject 4f083ce3-f12b-bb4b-7353-e17f0cd55b0a between 2016 and 2025 sit against the published reference range?",
+      "expected": "gp",
+      "rule": "LOINC 718-7: not only Diet measures"
+    },
+    {
+      "id": "Q-S6-19",
+      "prompt": "Where does the latest HbA1c of subject 5ba0a3f3-32f7-02b1-ec6a-8f568923954c between 2010 and 2014 sit against the published reference range?",
+      "expected": "diet",
+      "rule": "LOINC 4548-4: all Diet measures"
+    },
+    {
+      "id": "Q-S1-17",
+      "prompt": "What is the latest blood glucose for subject 4f083ce3-f12b-bb4b-7353-e17f0cd55b0a, in mmol/L?",
+      "expected": "diet",
+      "rule": "LOINC 2339-0, 2345-7: all Diet measures"
+    },
+    {
+      "id": "Q-S1-18",
+      "prompt": "What is the most recent creatinine for subject c67556bf-36d9-dd90-9b8a-43dbff31b428, in µmol/L?",
+      "expected": "gp",
+      "rule": "LOINC 38483-4, 2160-0: not only Diet measures"
+    },
+    {
+      "id": "Q-S6-20",
+      "prompt": "What is the latest HbA1c for subject 6fbddf55-7096-b883-7cd3-260f27953080, in mmol/L?",
+      "expected": "diet",
+      "rule": "LOINC 4548-4, 17856-6: all Diet measures"
+    },
+    {
+      "id": "Q-S1-19",
+      "prompt": "How does the latest HbA1c of subject 62f60bdb-cc5c-8305-b98b-f2b229a55eca between 2016 and 2025 compare with the other people in the synthetic cohort?",
+      "expected": "diet",
+      "rule": "LOINC 4548-4: all Diet measures"
+    },
+    {
+      "id": "Q-S1-20",
+      "prompt": "How does the latest systolic blood pressure of subject 644ed582-2e59-8b56-564b-9312d1f0d244 between 2024 and 2025 compare with the other people in the synthetic cohort?",
+      "expected": "gp",
+      "rule": "LOINC 8480-6: not only Diet measures"
+    },
+    {
+      "id": "Q-S6-21",
+      "prompt": "How does the latest ferritin of subject 6aed9210-c500-4375-b0fc-3374c40b8591 between 2016 and 2025 compare with the other people in the synthetic cohort?",
+      "expected": "gp",
+      "rule": "LOINC 2276-4: not only Diet measures"
+    },
+    {
+      "id": "Q-S1-21",
+      "prompt": "Which conditions does the record of subject 6816a11d-3700-1d60-8b4d-b7252c529f11 list for 2024 and 2025, with their onset and abatement dates?",
+      "expected": "gp",
+      "rule": "no specialist tool and no LOINC code"
+    },
+    {
+      "id": "Q-S1-22",
+      "prompt": "Since when does the record of subject 7fff03da-06e1-4c8f-091b-a415e649d0c8 list essential hypertension (SNOMED CT 59621000), and does it record an abatement?",
+      "expected": "gp",
+      "rule": "no specialist tool and no LOINC code"
+    },
+    {
+      "id": "Q-S1-23",
+      "prompt": "Which medication requests does the record of subject 922fb35e-148d-9e82-7e65-bfa05e3b3515 show as authored in 2021 and 2022, with any dosage text the record has?",
+      "expected": "gp",
+      "rule": "no specialist tool and no LOINC code"
+    },
+    {
+      "id": "Q-S1-24",
+      "prompt": "Which medication requests with status active does the record of subject 947c82ee-1735-c9ed-8210-38cb93d8070c list as authored between 1990 and 2025?",
+      "expected": "gp",
+      "rule": "no specialist tool and no LOINC code"
+    },
+    {
+      "id": "Q-S6-22",
+      "prompt": "Which conditions does the record of subject 982750f4-569b-5949-196b-60699bdda3fb list for 1950 to 1969?",
+      "expected": "gp",
+      "rule": "no specialist tool and no LOINC code"
+    },
+    {
+      "id": "Q-S6-23",
+      "prompt": "Which medication requests does the record of subject aa616abe-1761-0c9a-7959-07544679dafd show as authored from 1950 to 1969?",
+      "expected": "gp",
+      "rule": "no specialist tool and no LOINC code"
+    },
+    {
+      "id": "Q-S1-25",
+      "prompt": "Is the latest HDL cholesterol of subject 62f60bdb-cc5c-8305-b98b-f2b229a55eca between 2016 and 2025 within the published reference range?",
+      "expected": "diet",
+      "rule": "LOINC 2085-9: all Diet measures"
+    },
+    {
+      "id": "Q-S1-26",
+      "prompt": "Summarise the synthetic wearable sleep of subject 644ed582-2e59-8b56-564b-9312d1f0d244 from 2026-09-18 to 2026-10-01: how many nights were recorded, and the average sleep duration and sleep score.",
+      "expected": "sleep",
+      "rule": "tool sleep_summary"
+    },
+    {
+      "id": "Q-S1-27",
+      "prompt": "What was the average nightly sleep duration of subject 6816a11d-3700-1d60-8b4d-b7252c529f11 over the 30 nights from 2026-09-02 to 2026-10-01, and on how many of those nights was sleep recorded?",
+      "expected": "sleep",
+      "rule": "tool sleep_summary"
+    },
+    {
+      "id": "Q-S6-24",
+      "prompt": "What was the Oura sleep score of subject b1137b71-d58f-a737-e56f-5021902058ab from 2026-09-25 to 2026-10-01?",
+      "expected": "sleep",
+      "rule": "tool sleep_summary"
+    },
+    {
+      "id": "Q-S1-28",
+      "prompt": "How did heart rate variability (RMSSD) change for subject 6aed9210-c500-4375-b0fc-3374c40b8591 between 2026-07-04 and 2026-10-01, and how do the last 7 days compare with the 28 days before them?",
+      "expected": "trainer",
+      "rule": "tool hrv_trend"
+    },
+    {
+      "id": "Q-S1-29",
+      "prompt": "Over the 30 days from 2026-09-02 to 2026-10-01, what was the weekly trend in HRV (RMSSD) for subject 7fff03da-06e1-4c8f-091b-a415e649d0c8, and how did the last 7 days compare with the 28 days before?",
+      "expected": "trainer",
+      "rule": "tool hrv_trend"
+    },
+    {
+      "id": "Q-S6-25",
+      "prompt": "What is the HRV trend for subject b6a1cac9-8873-36a7-e726-4aad8a07d44d from 2026-09-18 to 2026-10-01?",
+      "expected": "trainer",
+      "rule": "tool hrv_trend"
+    },
+    {
+      "id": "Q-S1-30",
+      "prompt": "How did resting heart rate change for subject 947c82ee-1735-c9ed-8210-38cb93d8070c from 2026-07-04 to 2026-10-01? Give the change per week and how the last 7 days compare with the 28 days before them.",
+      "expected": "trainer",
+      "rule": "tool resting_hr_trend"
+    },
+    {
+      "id": "Q-S1-31",
+      "prompt": "Over the 60 days from 2026-08-03 to 2026-10-01, what was the daily trend in resting heart rate for subject 982750f4-569b-5949-196b-60699bdda3fb, and what were the medians of the last 7 days and of the 28 days before them?",
+      "expected": "trainer",
+      "rule": "tool resting_hr_trend"
+    },
+    {
+      "id": "Q-S6-26",
+      "prompt": "What was the resting heart rate trend of subject c0a47dee-cc72-29ce-df5a-ea6d306c36a4 from 2026-04-01 to 2026-06-30?",
+      "expected": "trainer",
+      "rule": "tool resting_hr_trend"
+    },
+    {
+      "id": "Q-S1-32",
+      "prompt": "How many workouts and workout minutes did subject aa616abe-1761-0c9a-7959-07544679dafd record per week from 2026-08-31 to 2026-09-27, and how does the last 7 days' load compare with the previous four weeks?",
+      "expected": "trainer",
+      "rule": "tool training_load"
+    },
+    {
+      "id": "Q-S1-33",
+      "prompt": "On which days from 2026-09-01 to 2026-09-30 did subject c053e996-a4c4-6c02-e2b6-284227156c67 record a run, and how many running minutes was that in total?",
+      "expected": "trainer",
+      "rule": "tool training_load"
+    },
+    {
+      "id": "Q-S6-27",
+      "prompt": "What was subject c53d2b30-e23b-ae02-ed09-833abd033a39's Whoop workout strain in the week from 2026-09-21 to 2026-09-27?",
+      "expected": "trainer",
+      "rule": "tool training_load"
+    },
+    {
+      "id": "Q-S1-34",
+      "prompt": "What were the LDL cholesterol readings of subject c86c400e-ff88-a1e3-2e23-caa4d8311f47 in the 365 days before and the 365 days from the first recorded request for atorvastatin 40 MG (RxNorm 617311)?",
+      "expected": "diet",
+      "rule": "LOINC 18262-6: all Diet measures"
+    },
+    {
+      "id": "Q-S1-35",
+      "prompt": "How did HbA1c compare for subject 46ee9d82-b52c-856d-069b-5064ff052225 in the year before and the year from the first recorded request for metformin (RxNorm 860975)?",
+      "expected": "diet",
+      "rule": "LOINC 4548-4: all Diet measures"
+    },
+    {
+      "id": "Q-S1-36",
+      "prompt": "What BMI readings does the record of subject 922fb35e-148d-9e82-7e65-bfa05e3b3515 hold in the 365 days before and the 365 days from the first recorded onset of 'Body mass index 30+ - obesity' (SNOMED CT 162864005)?",
+      "expected": "diet",
+      "rule": "LOINC 39156-5: all Diet measures"
+    },
+    {
+      "id": "Q-S1-37",
+      "prompt": "How did systolic blood pressure compare for subject c053e996-a4c4-6c02-e2b6-284227156c67 in the 180 days before and the 180 days from the first recorded onset of anemia (SNOMED CT 271737000)?",
+      "expected": "gp",
+      "rule": "LOINC 8480-6: not only Diet measures"
+    },
+    {
+      "id": "Q-S1-38",
+      "prompt": "What eGFR readings does the record of subject 76b20010-c318-5754-8c85-983aa538522f hold in the 365 days before and the 365 days from the first recorded onset of chronic kidney disease stage 1 (SNOMED CT 431855005)?",
+      "expected": "gp",
+      "rule": "LOINC 33914-3: not only Diet measures"
+    },
+    {
+      "id": "Q-S6-28",
+      "prompt": "How did HbA1c compare for subject f95a6723-14a5-c4b6-78df-fa97f7ab361c before and after the first recorded request for metformin (RxNorm 860975)?",
+      "expected": "diet",
+      "rule": "LOINC 4548-4: all Diet measures"
+    },
+    {
+      "id": "Q-S6-29",
+      "prompt": "How did eGFR compare for subject 1d55f0c1-61a7-4b6f-d3f2-c851cb83ec60 in the year before and the year from the first recorded request for epoetin alfa (RxNorm 205923)?",
+      "expected": "gp",
+      "rule": "LOINC 33914-3: not only Diet measures"
+    },
+    {
+      "id": "Q-S6-30",
+      "prompt": "What were the HbA1c readings of subject eb5910f1-26e6-bc6f-b300-716eae678d6f in the 90 days before and the 90 days from the first recorded onset of prediabetes (SNOMED CT 714628002)?",
+      "expected": "diet",
+      "rule": "LOINC 4548-4: all Diet measures"
+    },
+    {
+      "id": "Q-S1-39",
+      "prompt": "How many cycling workouts and cycling minutes did subject 2c167999-289d-95fa-5c27-7d8b8d35348c record per week from 2026-07-06 to 2026-09-27?",
+      "expected": "trainer",
+      "rule": "tool training_load"
+    },
+    {
+      "id": "Q-S1-40",
+      "prompt": "What was the average sleep efficiency of subject 2d68ad16-268a-478c-1f84-d0f1976e1a46 on the nights from 2026-09-24 to 2026-09-30, and on how many of those nights was sleep recorded?",
+      "expected": "sleep",
+      "rule": "tool sleep_summary"
+    },
+    {
+      "id": "Q-S1-41",
+      "prompt": "How did resting heart rate change for subject 35b353dd-402b-571a-d67a-af0a104d0854 over the 30 days from 2026-09-02 to 2026-10-01, per week, and what were the medians of the last 7 days and the 28 days before them?",
+      "expected": "trainer",
+      "rule": "tool resting_hr_trend"
+    },
+    {
+      "id": "Q-S6-31",
+      "prompt": "What is the resting heart rate trend of subject 5ba0a3f3-32f7-02b1-ec6a-8f568923954c from 2026-09-28 to 2026-10-01?",
+      "expected": "trainer",
+      "rule": "tool resting_hr_trend"
+    },
+    {
+      "id": "Q-S6-32",
+      "prompt": "How long did subject 6fbddf55-7096-b883-7cd3-260f27953080 sleep on average from 2026-10-05 to 2026-10-20?",
+      "expected": "sleep",
+      "rule": "tool sleep_summary"
+    },
+    {
+      "id": "Q-S6-33",
+      "prompt": "How many minutes per week did subject 9661a432-4630-2cd9-142c-386845fae837 swim from 2026-07-04 to 2026-10-01?",
+      "expected": "trainer",
+      "rule": "tool training_load"
+    },
+    {
+      "id": "Q-S1-42",
+      "prompt": "Which conditions with clinical status resolved does the record of subject d15b23ed-02d5-3e28-efbd-2604425317c5 list for 1987?",
+      "expected": "gp",
+      "rule": "no specialist tool and no LOINC code"
+    },
+    {
+      "id": "Q-S1-43",
+      "prompt": "How often does the record of subject c67556bf-36d9-dd90-9b8a-43dbff31b428 list gingivitis (SNOMED CT 66383009) between 2015 and 2025, and with which onset and abatement dates?",
+      "expected": "gp",
+      "rule": "no specialist tool and no LOINC code"
+    },
+    {
+      "id": "Q-S1-44",
+      "prompt": "Which conditions does the record of subject bff9d9d5-ee3d-d852-9c67-36d8361a4a4a list for 2024 and 2025?",
+      "expected": "gp",
+      "rule": "no specialist tool and no LOINC code"
+    },
+    {
+      "id": "Q-S1-45",
+      "prompt": "Which medication requests with status completed does the record of subject d15b23ed-02d5-3e28-efbd-2604425317c5 list as authored in 1987, and what dosage text do they carry?",
+      "expected": "gp",
+      "rule": "no specialist tool and no LOINC code"
+    },
+    {
+      "id": "Q-S6-34",
+      "prompt": "When was metformin (RxNorm 860975) first requested for subject e74367bd-7385-97dc-2c7f-251b4cd9fe29, between 1990 and 2025?",
+      "expected": "gp",
+      "rule": "no specialist tool and no LOINC code"
+    },
+    {
+      "id": "Q-S6-35",
+      "prompt": "Since when does the record of subject 080b069b-5108-46b6-ecef-6aacd3b9ef3f list diabetes mellitus type 2 (SNOMED CT 44054006), between 1990 and 2025?",
+      "expected": "gp",
+      "rule": "no specialist tool and no LOINC code"
+    }
+  ]
+}

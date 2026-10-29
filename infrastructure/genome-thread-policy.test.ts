@@ -8,6 +8,7 @@ import {
   historyShowsGenome,
   isGenomeAuditTool,
   isLocalChatModel,
+  LOCAL_ONLY_AUDIT_TOOLS,
   permitGenomeThreadExport,
   permitGenomeThreadTurn,
   requestsGenomeTools,
@@ -17,7 +18,8 @@ import {
 const REFUSED = {
   ok: false,
   code: "GENOME_THREAD_LOCAL_ONLY",
-  error: "This thread used your genome report, so it only runs on local models.",
+  error:
+    "This thread used your genome report or imported data, so it only runs on local models.",
 };
 
 const part = (tool: string) => ({
@@ -180,5 +182,24 @@ describe("genomeThreadRefusedEvent", () => {
         tool: "genome.thread.export_refused",
       }).tool,
     ).toBe("genome.thread.export_refused");
+  });
+});
+
+describe("imported-data tools make a thread local-only too", () => {
+  test("a stored imported-data tool part, audit row or skill tool counts", () => {
+    expect(toolPartsUseGenome([{ tool: "imported_latest" }])).toBe(true);
+    expect(toolPartsUseGenome([{ tool: "imported_trend" }, { tool: "coverage" }])).toBe(
+      true,
+    );
+    expect(isGenomeAuditTool("imported_datasets")).toBe(true);
+    expect(isGenomeAuditTool("personal-data.list")).toBe(false);
+    expect(requestsGenomeTools(["imported_trend"])).toBe(true);
+    expect(LOCAL_ONLY_AUDIT_TOOLS).toEqual([
+      "genome.report",
+      "genome.dna_ask",
+      "imported_datasets",
+      "imported_latest",
+      "imported_trend",
+    ]);
   });
 });

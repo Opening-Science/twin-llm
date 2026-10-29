@@ -53,6 +53,7 @@ describe("source availability", () => {
         knowledgeDocuments: 5,
         gbdConfigured: false,
         genomeChat: false,
+        importedChat: false,
       }),
     ).toEqual({
       guidelines: { available: false, note: "Not indexed yet" },
@@ -62,32 +63,36 @@ describe("source availability", () => {
       "wearable-analytics": { available: true, note: null },
       gbd: { available: false, note: "Pending IHME's OK" },
       "ark-genome": { available: false, note: "Needs Ark and local Carbon-X" },
+      "imported-data": { available: false, note: "Personal mode and a local model only" },
     });
   });
 
-  test("synthetic mode with indexes and GBD makes every source but the genome usable", () => {
+  test("synthetic mode with indexes and GBD makes every source but the genome and imports usable", () => {
     const all = sourceAvailability({
       dataMode: "synthetic",
       guidelineDocuments: 12,
       knowledgeDocuments: 5,
       gbdConfigured: true,
       genomeChat: false,
+      importedChat: false,
     });
     expect(
       Object.entries(all)
         .filter(([, item]) => !item.available)
         .map(([id]) => id),
-    ).toEqual(["ark-genome"]);
+    ).toEqual(["ark-genome", "imported-data"]);
   });
 
-  test("the genome source is usable when the genome policy allows chat", () => {
+  test("the genome and imported-data sources are usable when their policies allow chat", () => {
     const all = sourceAvailability({
       dataMode: "personal",
       guidelineDocuments: 0,
       knowledgeDocuments: 0,
       gbdConfigured: false,
       genomeChat: true,
+      importedChat: true,
     });
     expect(all["ark-genome"]).toEqual({ available: true, note: null });
+    expect(all["imported-data"]).toEqual({ available: true, note: null });
   });
 });

@@ -16,6 +16,10 @@ import { isLoopbackUrl } from "./loopback";
 
 const DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434/v1";
 
+/** Is the configured Ollama URL on this machine? Says nothing about the provider. */
+export const chatOnLoopback = (): boolean =>
+  isLoopbackUrl(serverEnv().OLLAMA_BASE_URL ?? DEFAULT_OLLAMA_URL);
+
 /** May a chat turn read the released report and ask Carbon-X? */
 export const genomeChatPermit = (): GenomePermitDecision => {
   const env = serverEnv();

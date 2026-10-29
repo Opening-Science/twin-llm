@@ -9,6 +9,7 @@ import {
 import type { WearableSummaries } from "@/infrastructure/offered-keys";
 import type { TurnSkill } from "@/infrastructure/skill-gate";
 import type { UiContext } from "@/infrastructure/ui-context";
+import type { ImportedToolDeps } from "@/packages/query-tools/imported-tools";
 import type { QueryToolPorts } from "@/packages/query-tools/ports";
 
 import { createChatTools, forSkill, forSources } from "./chat-tools";
@@ -69,6 +70,19 @@ const noGenome = (scope: GenomeToolDeps["scope"]): GenomeToolDeps => ({
   appendAudit: async () => undefined,
 });
 
+/** The imported-data tools as a fully local personal turn gets them; nothing is read. */
+const noImported = (scope: ImportedToolDeps["scope"]): ImportedToolDeps => ({
+  scope,
+  permit: () => ({ ok: true }),
+  ports: {
+    listDatasets: async () => [],
+    listSeries: async () => [],
+    findLatest: async () => [],
+    findSeries: async () => [],
+    appendAudit: async () => undefined,
+  },
+});
+
 const EMPTY_REPLY = `${JSON.stringify({
   model: "measure",
   created_at: "2026-01-01T00:00:00Z",
@@ -100,6 +114,7 @@ export const captureOllamaTurnRequest = async (
         sources: turn.skill?.sources,
         loadViews: async () => [],
         genome: noGenome(scope),
+        imported: noImported(scope),
       }),
       [],
     ).tools,

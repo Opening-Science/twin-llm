@@ -13,6 +13,7 @@ import type { OuraSummary } from "@/infrastructure/oura-types";
 import type { TurnSkill } from "@/infrastructure/skill-gate";
 import type { VitronicSummary } from "@/infrastructure/vitronic-types";
 import type { WhoopSummary } from "@/infrastructure/whoop-types";
+import type { ImportedToolDeps } from "@/packages/query-tools/imported-tools";
 import type { QueryToolPorts } from "@/packages/query-tools/ports";
 import type { SessionScope } from "@/packages/query-tools/scope";
 
@@ -106,6 +107,8 @@ export type StreamModelResponseDeps = Readonly<{
   ) => LanguageModel;
   /** Genome tool ports, or undefined when the genome policy does not allow them. */
   genomeTools: (scope: SessionScope) => GenomeToolDeps | undefined;
+  /** The imported-data tools' ports, or undefined when the policy refuses this turn. */
+  importedTools: (scope: SessionScope) => ImportedToolDeps | undefined;
   /** Audit rows of the turn's session, read once the model has finished. */
   loadAudit: (sessionId: string) => Promise<readonly ResponseToolCall[]>;
   store: AnswerStore;
@@ -171,6 +174,8 @@ export const createStreamModelResponse =
           sources: skill?.sources,
           loadViews: deps.store.loadViews,
           genome: deps.genomeTools(scope),
+          imported: deps.importedTools(scope),
+          agent: context.agent?.id ?? null,
         }),
         context.disabledSources ?? [],
       ).tools,

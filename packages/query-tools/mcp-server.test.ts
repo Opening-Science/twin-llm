@@ -11,6 +11,7 @@ import { sha256Hex, toCanonicalJson } from "@/packages/audit/hash";
 import {
   assertTransportAllowedForDataMode,
   createQueryMcpServer,
+  mcpImportedPermit,
   queryToolRunners,
   TRANSPORT_NOT_PERMITTED_ERROR,
 } from "./mcp-server";
@@ -142,6 +143,43 @@ describe("query tools MCP server", () => {
     expect(result.isError).toBe(true);
     expect(textOf(result)).toBe("invalid arguments: ✖ start must be before end");
     expect(audits).toEqual([]);
+  });
+
+  test("an imported-data tool always refuses over MCP, audited with its code only", async () => {
+    const { ports, audits } = fakePorts();
+    const client = await connectedClient(ports);
+    const result = await client.callTool({
+      name: "imported_latest",
+      arguments: { loinc: [HR] },
+    });
+    expect(JSON.parse(textOf(result))).toEqual({
+      code: "IMPORTED_DATA_NOT_PERMITTED",
+      error: "imported data is read only in personal data mode",
+      reason: "data-mode-not-personal",
+    });
+    expect(
+      audits.map((each) => [each.tool, each.args, each.result, each.rowCount]),
+    ).toEqual([
+      [
+        "imported_latest",
+        { codes: 1, dataset_id: null },
+        { code: "IMPORTED_DATA_NOT_PERMITTED" },
+        0,
+      ],
+    ]);
+  });
+
+  test("in personal mode the MCP client's model is not known to be local", () => {
+    expect(mcpImportedPermit("personal")).toEqual({
+      ok: false,
+      code: "IMPORTED_DATA_NOT_PERMITTED",
+      reason: "chat-model-not-local",
+    });
+    expect(mcpImportedPermit("synthetic")).toEqual({
+      ok: false,
+      code: "IMPORTED_DATA_NOT_PERMITTED",
+      reason: "data-mode-not-personal",
+    });
   });
 
   test("an unknown tool is a protocol error", async () => {

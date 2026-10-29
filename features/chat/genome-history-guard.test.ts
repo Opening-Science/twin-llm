@@ -8,7 +8,8 @@ const REQUEST = {
   messages: [{ role: "user" as const, content: "How did I sleep?" }],
 };
 
-const SENTENCE = "This thread used your genome report, so it only runs on local models.";
+const SENTENCE =
+  "This thread used your genome report or imported data, so it only runs on local models.";
 
 /** A fake model next to the guard: it records a call only if the guard lets one through. */
 const run = async (

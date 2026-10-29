@@ -5,14 +5,15 @@ Written 2026-10-20 (C2). 130 questions for scenarios S1–S6 of
 synthetic cohort by the same closed tools the model calls. C3 runs the models
 and scores; C2 runs no model.
 
-| File                                     | What                                                           |
-| ---------------------------------------- | -------------------------------------------------------------- |
-| `evaluation/questions.v1.json`           | The items (schema `twin-llm.eval.questions.v1`)                |
-| `evaluation/answer-key.v1.json`          | Values for every item that asks for a number, with metadata    |
-| `scripts/evaluation/question-set.ts`     | Zod schema for both files and the coverage counts              |
-| `scripts/evaluation/build-answer-key.ts` | The generator (`bun run eval:answer-key`)                      |
-| `scripts/evaluation/spread-subjects.ts`  | The subject rule (`bun run eval:spread-subjects`)              |
-| `evaluation/answer-key.test.ts`          | Drift check (normal suite, offline; live re-run with RUN_LIVE) |
+| File                                        | What                                                                                                    |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `evaluation/questions.v1.json`              | The items (schema `twin-llm.eval.questions.v1`)                                                         |
+| `evaluation/answer-key.v1.json`             | Values for every item that asks for a number, with metadata                                             |
+| `scripts/evaluation/question-set.ts`        | Zod schema for both files and the coverage counts                                                       |
+| `scripts/evaluation/build-answer-key.ts`    | The generator (`bun run eval:answer-key`)                                                               |
+| `scripts/evaluation/spread-subjects.ts`     | The subject rule (`bun run eval:spread-subjects`)                                                       |
+| `evaluation/answer-key.test.ts`             | Drift check (normal suite, offline; live re-run with RUN_LIVE)                                          |
+| `evaluation/agent-router.questions.v1.json` | The agent Auto should pick for each item, from its tools and codes ([agents.md](../agents.md#auto-219)) |
 
 All data is synthetic: subjects come from `synthea-v4-seed42` and are named by
 `subject_ref` only. Reference questions use the guideline catalogue

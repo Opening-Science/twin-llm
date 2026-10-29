@@ -27,6 +27,8 @@ export const UNCERTAINTY_REASONS = [
   "population_only",
   // Additive: only OpenTwin knowledge notes support the answer.
   "knowledge_only",
+  // Additive (#236): only published articles support the answer.
+  "literature_only",
   "hallucinated_keys",
   "tool_returned_no_rows",
   "no_model_statement",
@@ -116,6 +118,21 @@ export const knowledgeSourceSchema = z.object({
   licence: z.string(),
 });
 
+/** One open-access article passage an agent's search returned (#236). */
+export const literatureSourceSchema = z.object({
+  tool: z.string(),
+  id: z.string(),
+  title: z.string(),
+  journal: z.string(),
+  year: z.number().int(),
+  pmcid: z.string(),
+  url: z.string(),
+  doi: z.string(),
+  licence: z.string(),
+  licenceLabel: z.string(),
+  sectionHeading: z.string(),
+});
+
 export const responseDocumentV1Schema = z.object({
   schema_version: z.enum(RESPONSE_SCHEMA_VERSIONS),
   intended_use: z.literal(CHAT_RESPONSE_DOCUMENT.intended_use),
@@ -136,6 +153,9 @@ export const responseDocumentV1Schema = z.object({
       // Additive (B4): OpenTwin knowledge notes. Still v1.1; defaults
       // to [] so documents saved before it still parse.
       knowledge: z.array(knowledgeSourceSchema).default([]),
+      // Additive (#236): specialty literature. Defaults to [] so documents
+      // saved before it still parse.
+      literature: z.array(literatureSourceSchema).default([]),
     }),
     gbd_rows: z.array(gbdRowSchema),
   }),

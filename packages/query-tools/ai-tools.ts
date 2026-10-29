@@ -25,6 +25,24 @@ import {
   crossSourceCompareInput,
   valuesAroundEventInput,
 } from "./schemas";
+import {
+  IMPORTED_DATASETS_TOOL,
+  IMPORTED_LATEST_TOOL,
+  IMPORTED_TREND_TOOL,
+  type ImportedToolName,
+} from "./imported-names";
+import {
+  IMPORTED_TOOL_DEFINITIONS,
+  importedDatasetsInput,
+  importedLatestInput,
+  importedTrendInput,
+} from "./imported-schemas";
+import {
+  type ImportedToolDeps,
+  runImportedDatasets,
+  runImportedLatest,
+  runImportedTrend,
+} from "./imported-tools";
 import { modelInputSchema } from "./model-schema";
 import type { QueryToolPorts } from "./ports";
 import type { SessionScope } from "./scope";
@@ -167,5 +185,32 @@ export const createQueryTools = (
     description: description("values_around_event"),
     inputSchema: modelInputSchema(valuesAroundEventInput),
     execute: async (input) => runValuesAroundEvent(scope, input, ports),
+  }),
+});
+
+const importedDescription = (name: ImportedToolName): string =>
+  IMPORTED_TOOL_DEFINITIONS.find((definition) => definition.name === name)?.description ??
+  name;
+
+/**
+ * The imported-data tools (#181). Only the chat route passes `deps`, and only
+ * when the imported-data policy allowed this turn (personal mode, Ollama on
+ * loopback); each call asks the policy again.
+ */
+export const createImportedTools = (deps: ImportedToolDeps) => ({
+  [IMPORTED_DATASETS_TOOL]: tool({
+    description: importedDescription(IMPORTED_DATASETS_TOOL),
+    inputSchema: modelInputSchema(importedDatasetsInput),
+    execute: async (input) => runImportedDatasets(deps, input),
+  }),
+  [IMPORTED_LATEST_TOOL]: tool({
+    description: importedDescription(IMPORTED_LATEST_TOOL),
+    inputSchema: modelInputSchema(importedLatestInput),
+    execute: async (input) => runImportedLatest(deps, input),
+  }),
+  [IMPORTED_TREND_TOOL]: tool({
+    description: importedDescription(IMPORTED_TREND_TOOL),
+    inputSchema: modelInputSchema(importedTrendInput),
+    execute: async (input) => runImportedTrend(deps, input),
   }),
 });

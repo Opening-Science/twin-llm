@@ -11,6 +11,7 @@ import type { GuidelineCitation } from "@/packages/guidelines/collector";
 import { GUIDELINE_AUDIT_TOOL } from "@/packages/guidelines/constants";
 import type { KnowledgeCitation } from "@/packages/knowledge/collector";
 import { KNOWLEDGE_AUDIT_TOOL } from "@/packages/knowledge/constants";
+import type { LiteratureCitation } from "@/packages/literature/collector";
 
 import {
   type AnswerClass,
@@ -25,7 +26,8 @@ import {
 
 /**
  * Reference material, not data about a person: guideline passages, GBD
- * population figures and OpenTwin knowledge notes never make an answer
+ * population figures, OpenTwin knowledge notes and the specialty literature
+ * an agent's `knowledge_search` returns never make an answer
  * `sufficient_data` or `analytics`.
  */
 const REFERENCE_TOOLS: ReadonlySet<string> = new Set([
@@ -58,6 +60,7 @@ type Basis = Readonly<{
   hasGuidelines: boolean;
   hasGbdRows: boolean;
   hasKnowledge: boolean;
+  hasLiterature: boolean;
   hallucinatedCount: number;
   toolCalls: readonly ResponseToolCall[];
   modelStatement: string | null;
@@ -78,6 +81,7 @@ const deriveUncertaintyReasons = (basis: Basis): UncertaintyReason[] => {
     ["guideline_only", !basis.sufficient && basis.hasGuidelines],
     ["population_only", !basis.sufficient && basis.hasGbdRows],
     ["knowledge_only", !basis.sufficient && basis.hasKnowledge],
+    ["literature_only", !basis.sufficient && basis.hasLiterature],
     ["hallucinated_keys", basis.hallucinatedCount > 0],
     ["tool_returned_no_rows", basis.toolCalls.some((row) => row.row_count === 0)],
     ["no_model_statement", !basis.modelStatement?.trim()],
@@ -89,6 +93,7 @@ const MODERATE_REASONS: readonly UncertaintyReason[] = [
   "guideline_only",
   "population_only",
   "knowledge_only",
+  "literature_only",
   "tool_returned_no_rows",
 ];
 
@@ -132,6 +137,8 @@ export const buildResponseDocumentV1 = (input: {
   readonly gbdRows?: readonly GbdRow[];
   readonly guidelineSources?: readonly GuidelineCitation[];
   readonly knowledgeSources?: readonly KnowledgeCitation[];
+  /** Specialty literature an agent's search returned (#236). */
+  readonly literatureSources?: readonly LiteratureCitation[];
   /** The skill the turn ran under (`sleep`), or null. */
   readonly skill?: string | null;
   /** The turn's UI context (#47), or null. */
@@ -146,6 +153,7 @@ export const buildResponseDocumentV1 = (input: {
     evidence_keys.length > 0 || hasSufficientToolRows(input.toolCalls);
   const guidelineSources = [...(input.guidelineSources ?? [])];
   const knowledgeSources = [...(input.knowledgeSources ?? [])];
+  const literatureSources = [...(input.literatureSources ?? [])];
   const gbdRows = [...(input.gbdRows ?? [])];
   // Reference material alone, or the body twin on its focus, is still an
   // answer to show, with answer_class information.
@@ -153,6 +161,7 @@ export const buildResponseDocumentV1 = (input: {
     !sufficient_data &&
     guidelineSources.length === 0 &&
     knowledgeSources.length === 0 &&
+    literatureSources.length === 0 &&
     gbdRows.length === 0 &&
     input.twinBody !== true;
   const basis: Basis = {
@@ -162,6 +171,7 @@ export const buildResponseDocumentV1 = (input: {
     hasGuidelines: guidelineSources.length > 0,
     hasGbdRows: gbdRows.length > 0,
     hasKnowledge: knowledgeSources.length > 0,
+    hasLiterature: literatureSources.length > 0,
     hallucinatedCount: hallucinated_keys.length,
     toolCalls: input.toolCalls,
     modelStatement: input.parsed.uncertaintyText,
@@ -185,6 +195,7 @@ export const buildResponseDocumentV1 = (input: {
         gbd: [...(input.gbdSources ?? [])],
         guidelines: guidelineSources,
         knowledge: knowledgeSources,
+        literature: literatureSources,
       },
       gbd_rows: gbdRows,
     },

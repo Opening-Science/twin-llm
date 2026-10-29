@@ -27,6 +27,8 @@ export type GuidelineJoinedRow = {
   readonly url: string;
   readonly licence: string;
   readonly ingestMode: string;
+  /** `guideline_documents.source`: `guideline`, `opentwin-knowledge`, `literature:<id>`. */
+  readonly source: string;
 };
 
 export type GuidelineHit = {
@@ -63,7 +65,8 @@ const vectorSql = (values: readonly number[]): Prisma.Sql =>
   Prisma.raw(`'${vectorLiteral(values)}'::vector`);
 
 /**
- * Nearest chunks of one source (`guideline` or `opentwin-knowledge`).
+ * Nearest chunks of one source (`guideline`, `opentwin-knowledge`) or of
+ * several (knowledge notes plus an agent's `literature:<specialty>` sources).
  *
  * The source filter is applied after the HNSW index scan. A plain HNSW scan
  * stops after `hnsw.ef_search` (40) candidates, so once the guideline corpus
@@ -78,9 +81,11 @@ export const queryNearestChunks = async (
   db: PrismaClient,
   embedding: readonly number[],
   k: number,
-  source: string,
-): Promise<GuidelineJoinedRow[]> =>
-  db.$transaction(async (tx) => {
+  source: string | readonly string[],
+): Promise<GuidelineJoinedRow[]> => {
+  const sources = typeof source === "string" ? [source] : [...source];
+  if (sources.length === 0) return [];
+  return db.$transaction(async (tx) => {
     await tx.$executeRaw(Prisma.sql`SET LOCAL hnsw.iterative_scan = relaxed_order`);
     return tx.$queryRaw<GuidelineJoinedRow[]>(Prisma.sql`
       WITH nearest AS MATERIALIZED (
@@ -100,20 +105,23 @@ export const queryNearestChunks = async (
           d.url,
           d.licence,
           d.ingest_mode AS "ingestMode",
+          d.source,
           c.embedding <=> ${vectorSql(embedding)} AS distance
         FROM guideline_chunks c
         INNER JOIN guideline_documents d ON d.id = c.document_id
-        WHERE d.source = ${source}
+        WHERE d.source IN (${Prisma.join(sources)})
         ORDER BY c.embedding <=> ${vectorSql(embedding)}
         LIMIT ${k}
       )
       SELECT
         id, "sectionHeading", "recommendationId", "recClass", "evidenceLevel",
-        page, text, "documentId", title, year, society, doi, url, licence, "ingestMode"
+        page, text, "documentId", title, year, society, doi, url, licence, "ingestMode",
+        source
       FROM nearest
       ORDER BY distance
     `);
   });
+};
 
 export const toGuidelineHit = (row: GuidelineJoinedRow): GuidelineHit => ({
   id: row.documentId,
