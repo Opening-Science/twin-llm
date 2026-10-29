@@ -75,7 +75,7 @@ const callbackDeps = (): OuraCallbackDeps => ({
     };
   },
   persistOuraTokens: async () => {},
-  syncOuraForUser: async () => ({ metrics: [] }),
+  syncOuraForUser: async () => ({ synced: { metrics: [] }, save: async () => undefined }),
   auditPersonalRead: async () => undefined,
   logError: (message, errorName) => {
     logged.push([message, errorName]);

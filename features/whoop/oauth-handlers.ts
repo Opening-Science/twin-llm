@@ -9,7 +9,11 @@ import {
   type ConnectorReturn,
   type OAuthCookieJar,
 } from "@/infrastructure/oauth-state";
-import { syncThenAudit, type SyncedMetrics } from "@/features/wearables/audited-sync";
+import {
+  auditThenSave,
+  type PreparedSync,
+  type SyncedMetrics,
+} from "@/features/wearables/audited-sync";
 import type { PersonalRead } from "@/infrastructure/personal-read-audit";
 
 /**
@@ -39,8 +43,8 @@ export type WhoopCallbackDeps = {
     readonly userId: string;
     readonly code: string;
   }) => Promise<unknown>;
-  /** The first sync after connect; it goes through `syncThenAudit`. */
-  readonly syncForUser: (userId: string) => Promise<SyncedMetrics>;
+  /** The first sync after connect; it goes through `auditThenSave`, which stores it only after the audit row. */
+  readonly syncForUser: (userId: string) => Promise<PreparedSync<SyncedMetrics>>;
   readonly auditPersonalRead: (read: PersonalRead) => Promise<unknown>;
   /** Receives the error name only, never the error object. */
   readonly logError: (message: string, errorName: string) => void;
@@ -139,7 +143,7 @@ export const createWhoopCallbackHandler = (deps: WhoopCallbackDeps) => {
     try {
       const { id: appUserId } = await deps.ensureAppUser(clerkId);
       await deps.exchangeAndPersistCode({ userId: appUserId, code });
-      await syncThenAudit(
+      await auditThenSave(
         () => deps.syncForUser(appUserId),
         "whoop",
         clerkId,

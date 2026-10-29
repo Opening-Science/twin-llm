@@ -15,6 +15,7 @@ import {
   fetchWhoopWindow,
 } from "@/infrastructure/open-twin-adapters/whoop";
 
+import type { PreparedSync } from "@/features/wearables/audited-sync";
 import {
   resolveSyncDateWindow,
   syncWindowToUtcTimestamps,
@@ -88,10 +89,15 @@ const loadAccessTokenForUser = async (userId: string): Promise<string | null> =>
   return tokens.access_token;
 };
 
+/**
+ * Fetches one Whoop sync and returns the summary with the step that stores it.
+ * The snapshot and `lastSyncAt` are written only when `save` runs, which
+ * `auditThenSave` does after the audit row.
+ */
 export const syncWhoopForUser = async (
   userId: string,
   options?: { readonly startDate?: string; readonly endDate?: string },
-): Promise<WhoopSummary> => {
+): Promise<PreparedSync<WhoopSummary>> => {
   const accessToken = await loadAccessTokenForUser(userId);
   if (!accessToken) throw new Error("Connect Whoop before syncing.");
 
@@ -116,22 +122,24 @@ export const syncWhoopForUser = async (
     );
   }
 
-  await database().whoopConnection.update({
-    where: { userId },
-    data: { lastSyncAt: new Date() },
-  });
+  const save = async () => {
+    await database().whoopConnection.update({
+      where: { userId },
+      data: { lastSyncAt: new Date() },
+    });
 
-  await database().whoopSnapshot.create({
-    data: {
-      userId,
-      startDate,
-      endDate,
-      summary,
-      fhirBundle: fhirBundle as object | undefined,
-    },
-  });
+    await database().whoopSnapshot.create({
+      data: {
+        userId,
+        startDate,
+        endDate,
+        summary,
+        fhirBundle: fhirBundle as object | undefined,
+      },
+    });
+  };
 
-  return summary;
+  return { synced: summary, save };
 };
 
 export const getLatestWhoopSummary = async (
