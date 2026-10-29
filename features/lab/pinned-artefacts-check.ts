@@ -92,8 +92,11 @@ const RESULT_TEXT: Readonly<Record<ArtefactResult, string>> = {
   "not present": "Not on this machine",
 };
 
+/** Plain paths and `$VARIABLE/...` stay as typed; anything else is single-quoted. */
 const quote = (path: string): string =>
-  /^[\w./-]+$/.test(path) ? path : `'${path.replace(/'/g, "'\\''")}'`;
+  /^(\$[A-Z_]+)?[\w./-]*$/.test(path) && path !== ""
+    ? path
+    : `'${path.replace(/'/g, "'\\''")}'`;
 
 export const pinnedArtefactsCheck = (
   pins: readonly PinnedArtefact[],

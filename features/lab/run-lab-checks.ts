@@ -21,9 +21,13 @@ import {
 } from "@/infrastructure/local-artefacts";
 import { isLoopbackUrl } from "@/infrastructure/loopback";
 import { resolveAnatomyDir } from "@/packages/anatomy/paths";
-import { verifyChain } from "@/packages/audit/verify-chain";
+import { type VerifyChainResult, verifyChain } from "@/packages/audit/verify-chain";
 
-import { auditChainCheck } from "./audit-chain-check";
+import {
+  AUDIT_PAGE_ROW_LIMIT,
+  auditChainCheck,
+  type TooManyRows,
+} from "./audit-chain-check";
 import { type LabCheck, type LabSection, unavailableCheck } from "./lab-check";
 import { localModelsCheck, parseOllamaModels } from "./local-models-check";
 import { localOnlyCheck } from "./local-only-check";
@@ -91,23 +95,23 @@ const sha256OfFile = async (path: string): Promise<string | null> => {
 const readTextOrNull = (path: string): Promise<string | null> =>
   readFile(path, "utf8").catch(() => null);
 
-/** A path as a person would type it from the repository root. */
-const shownPath = (cwd: string, path: string): string => {
-  const inside = relative(cwd, path);
-  return inside !== "" && !inside.startsWith("..") && !isAbsolute(inside) ? inside : path;
-};
-
 // --- Checks -----------------------------------------------------------------
 
 const checkLocalOnly = async (): Promise<LabCheck> => localOnlyCheck(serverEnv());
 
-const checkAuditChain = async (): Promise<LabCheck> => {
-  const result = await verifyChain(database()).catch((error: unknown) => {
-    console.error("[lab] audit table could not be read", errorName(error));
-    return null;
-  });
-  return auditChainCheck(result);
+const readAuditChain = async (): Promise<VerifyChainResult | TooManyRows> => {
+  const client = database();
+  const total = await client.auditEvent.count();
+  return total > AUDIT_PAGE_ROW_LIMIT ? { kind: "too-many", total } : verifyChain(client);
 };
+
+const checkAuditChain = async (): Promise<LabCheck> =>
+  auditChainCheck(
+    await readAuditChain().catch((error: unknown) => {
+      console.error("[lab] audit table could not be read", errorName(error));
+      return null;
+    }),
+  );
 
 const fetchOllamaModels = async (root: string) => {
   try {
@@ -135,29 +139,42 @@ const checkLocalModels = async (): Promise<LabCheck> => {
   });
 };
 
+/**
+ * How a folder is written on the page: relative to the repository root when
+ * it is inside it, else as the variable that set it, so a home path is never
+ * shown.
+ */
+const shownDir = (cwd: string, path: string, variable: string): string => {
+  const inside = relative(cwd, path);
+  if (inside === "") return ".";
+  return !inside.startsWith("..") && !isAbsolute(inside) ? inside : `$${variable}`;
+};
+
 const checkPinnedArtefacts = async (): Promise<LabCheck> => {
   const cwd = process.cwd();
-  const jar = syntheaEnv().jarPath ?? SYNTHEA_JAR_DEFAULT_PATH;
+  const jar = resolve(
+    /* turbopackIgnore: true */ cwd,
+    syntheaEnv().jarPath ?? SYNTHEA_JAR_DEFAULT_PATH,
+  );
   const absolute = {
-    syntheaJar: resolve(/* turbopackIgnore: true */ cwd, jar),
+    syntheaJar: jar,
     syntheaDownloads: resolve(
       /* turbopackIgnore: true */ cwd,
       EVAL_COHORT_ARCHIVE.downloadDir,
     ),
     anatomy: resolveAnatomyDir(anatomyEnv().dataDir, cwd),
   };
+  const files = new Map(pinnedArtefacts(absolute).map((pin) => [pin.id, pin.path]));
+  const jarDir = shownDir(cwd, jar, "SYNTHEA_JAR");
   const pins = pinnedArtefacts({
-    syntheaJar: shownPath(cwd, absolute.syntheaJar),
-    syntheaDownloads: shownPath(cwd, absolute.syntheaDownloads),
-    anatomy: shownPath(cwd, absolute.anatomy),
+    // SYNTHEA_JAR names the file itself, not a folder.
+    syntheaJar: jarDir === "$SYNTHEA_JAR" ? jarDir : relative(cwd, jar),
+    syntheaDownloads: EVAL_COHORT_ARCHIVE.downloadDir,
+    anatomy: shownDir(cwd, absolute.anatomy, "ANATOMY_DATA_DIR"),
   });
   const found = await Promise.all(
     pins.map(
-      async (pin) =>
-        [
-          pin.id,
-          await sha256OfFile(resolve(/* turbopackIgnore: true */ cwd, pin.path)),
-        ] as const,
+      async (pin) => [pin.id, await sha256OfFile(files.get(pin.id) ?? "")] as const,
     ),
   );
   return pinnedArtefactsCheck(pins, Object.fromEntries(found));

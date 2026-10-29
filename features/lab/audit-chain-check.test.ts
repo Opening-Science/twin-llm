@@ -11,6 +11,15 @@ describe("auditChainCheck", () => {
     expect(check.evidence).toEqual([]);
   });
 
+  test("a table above the page limit is left to the command", () => {
+    const check = auditChainCheck({ kind: "too-many", total: 250_000 });
+    expect(check.status).toBe("unknown");
+    expect(check.summary).toBe(
+      "The audit log has 250,000 rows, more than the 200,000 this page walks on load. Run the command below to check the whole chain.",
+    );
+    expect(check.evidence).toEqual([{ label: "Rows", value: "250,000" }]);
+  });
+
   test("an empty table is unknown, with nothing to check", () => {
     const check = auditChainCheck({
       ok: true,

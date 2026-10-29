@@ -27,8 +27,7 @@ reason goes to the server log only.
 
 None of this is remote attestation. Every check is this machine reporting on itself, so it shows a
 careful person what to look at and how to repeat it; it cannot prove anything to someone who does
-not trust the machine. The audit check reads the whole table on each load, which is fine for a local
-database and slow for a very large one.
+not trust the machine. The audit check reads the whole table on each load. Hashing takes about 0.3 s per 100,000 rows on a laptop, plus the database read, so above 200,000 rows (`AUDIT_PAGE_ROW_LIMIT`) the card shows the row count and leaves the walk to the command. Paths on the page are relative to the repository root; a folder set outside it is written as its variable (`$ANATOMY_DATA_DIR`, `$SYNTHEA_JAR`), so no home path is shown.
 
 ## Commands
 

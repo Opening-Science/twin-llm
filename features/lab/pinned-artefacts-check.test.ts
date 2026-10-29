@@ -88,6 +88,14 @@ describe("pinnedArtefactsCheck", () => {
     expect(check.status).toBe("unknown");
   });
 
+  test("a folder outside the repository is written as its variable", () => {
+    const check = pinnedArtefactsCheck(
+      [{ ...pin("x"), path: "$ANATOMY_DATA_DIR/x.glb" }],
+      {},
+    );
+    expect(check.howTo).toBe("sha256sum $ANATOMY_DATA_DIR/x.glb");
+  });
+
   test("the command lists every path and quotes odd ones", () => {
     const check = pinnedArtefactsCheck(
       [pin("x"), { ...pin("y"), path: "/home/a b/y.bin" }],
