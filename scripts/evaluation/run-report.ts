@@ -21,9 +21,8 @@ import { BANNED_TERMS } from "../lint-claims";
 
 import { questionsSha256 } from "./build-answer-key";
 import {
-  ANSWER_KEY_PATH,
   metaSchema,
-  QUESTIONS_PATH,
+  QUESTION_SETS,
   RESULTS_SCHEMA_VERSION,
   type ResultLine,
   resultLineSchema,
@@ -133,10 +132,12 @@ export const runReport = async (
       );
     }
 
-    const questionsRaw = JSON.parse(await deps.readText(QUESTIONS_PATH)) as unknown;
+    // A run written before #251 names no set: it ran v1.
+    const files = QUESTION_SETS[meta.question_set ?? "v1"];
+    const questionsRaw = JSON.parse(await deps.readText(files.questions)) as unknown;
     const questions = questionSetSchema.parse(questionsRaw);
     const key = answerKeySchema.parse(
-      JSON.parse(await deps.readText(ANSWER_KEY_PATH)) as unknown,
+      JSON.parse(await deps.readText(files.key)) as unknown,
     );
     const sha = questionsSha256(questionsRaw);
     if (sha !== key.questions_sha256 || sha !== meta.questions_sha256) {

@@ -30,7 +30,7 @@ import {
   CRITERIA,
   LATENCY_SET_TAG,
   questionSetSchema,
-  SCENARIOS,
+  V1_SCENARIOS,
 } from "../scripts/evaluation/question-set";
 import { cohortContentSha256 } from "../scripts/synthea/cohort-checksum";
 import { COHORT_PRESETS, EVAL_CONTENT_SHA256 } from "../scripts/synthea/cohort-presets";
@@ -45,6 +45,10 @@ const key = answerKeySchema.parse(rawKey);
 const items = set.items;
 
 describe("questions.v1.json", () => {
+  test("holds no S7 item: S7 has its own file (#251), so this hash never moves for it", () => {
+    expect(items.filter((item) => item.scenario === "S7")).toEqual([]);
+  });
+
   test("ids are unique", () => {
     const ids = items.map((item) => item.id);
     expect(new Set(ids).size).toBe(ids.length);
@@ -65,7 +69,7 @@ describe("questions.v1.json", () => {
     const shortCriteria = CRITERIA.filter(
       (criterion) => counts.byCriterion[criterion] < 8,
     );
-    const shortScenarios = SCENARIOS.filter(
+    const shortScenarios = V1_SCENARIOS.filter(
       (scenario) => counts.byScenario[scenario] < 6,
     );
     expect(shortCriteria).toEqual([]);

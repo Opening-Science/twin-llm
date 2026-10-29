@@ -28,11 +28,13 @@ import type {
 
 import { questionsSha256 } from "./build-answer-key";
 import {
-  ANSWER_KEY_PATH,
   type AuditLine,
+  isQuestionSetId,
   META_SCHEMA_VERSION,
   MISSING_ENV,
-  QUESTIONS_PATH,
+  QUESTION_SET_IDS,
+  QUESTION_SETS,
+  type QuestionSetId,
   type ResultError,
   type ResultLine,
   RESULTS_SCHEMA_VERSION,
@@ -110,6 +112,8 @@ export type EvalDeps = Readonly<{
 }>;
 
 export type EvalOptions = Readonly<{
+  /** The question set and its key (`--set`, default `v1`). */
+  set: QuestionSetId;
   models: readonly ModelSpec[];
   items: readonly string[] | null;
   scenario: string | null;
@@ -145,6 +149,7 @@ export const parseModelSpec = (value: string): ModelSpec => {
 };
 
 const KNOWN_FLAGS = new Set([
+  "--set",
   "--models",
   "--items",
   "--scenario",
@@ -154,6 +159,7 @@ const KNOWN_FLAGS = new Set([
   "--timeout-s",
 ]);
 const VALUE_FLAGS = new Set([
+  "--set",
   "--models",
   "--items",
   "--scenario",
@@ -182,6 +188,13 @@ export const parseEvalArgs = (argv: readonly string[]): EvalOptions => {
   if (scenario !== null && !(SCENARIOS as readonly string[]).includes(scenario)) {
     throw new EvalSetupError("USAGE", `--scenario takes one of ${SCENARIOS.join(", ")}`);
   }
+  const set = flagValue(args, "--set") ?? "v1";
+  if (!isQuestionSetId(set)) {
+    throw new EvalSetupError(
+      "USAGE",
+      `--set takes one of ${QUESTION_SET_IDS.join(", ")}`,
+    );
+  }
   const runId = flagValue(args, "--run-id");
   if (runId !== null && !/^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$/.test(runId)) {
     throw new EvalSetupError("USAGE", "--run-id takes letters, digits, '.', '_' and '-'");
@@ -192,6 +205,7 @@ export const parseEvalArgs = (argv: readonly string[]): EvalOptions => {
     throw new EvalSetupError("USAGE", "--timeout-s takes a whole number of seconds");
   }
   return {
+    set,
     models: list(models).map(parseModelSpec),
     items: items === null ? null : list(items),
     scenario,
@@ -498,9 +512,12 @@ type Loaded = Readonly<{
 }>;
 
 /** Fails closed: questions that no longer match the key cannot be scored against it. */
-export const loadQuestions = async (deps: EvalDeps): Promise<Loaded> => {
-  const questionsText = await deps.readText(QUESTIONS_PATH);
-  const keyText = await deps.readText(ANSWER_KEY_PATH);
+export const loadQuestions = async (
+  deps: EvalDeps,
+  set: QuestionSetId = "v1",
+): Promise<Loaded> => {
+  const questionsText = await deps.readText(QUESTION_SETS[set].questions);
+  const keyText = await deps.readText(QUESTION_SETS[set].key);
   const raw = JSON.parse(questionsText) as unknown;
   const questions = questionSetSchema.parse(raw);
   const key = answerKeySchema.parse(JSON.parse(keyText) as unknown);
@@ -508,7 +525,7 @@ export const loadQuestions = async (deps: EvalDeps): Promise<Loaded> => {
   if (sha !== key.questions_sha256) {
     throw new EvalSetupError(
       "QUESTIONS_SHA_MISMATCH",
-      `questions sha256 ${sha} is not the answer key's ${key.questions_sha256}; rebuild the key (bun run eval:answer-key)`,
+      `questions sha256 ${sha} is not the answer key's ${key.questions_sha256}; rebuild the key (bun run ${set === "v1" ? "eval:answer-key" : "eval:answer-key:s7"})`,
     );
   }
   return {
@@ -545,7 +562,7 @@ const setup = async (
       `${mismatch.provider}:${mismatch.modelId} is not the configured provider ${deps.llmProvider}; one provider per run`,
     );
   }
-  const loaded = await loadQuestions(deps);
+  const loaded = await loadQuestions(deps, options.set);
   const items = selectItems(loaded.items, options);
   if (items.length === 0) throw new EvalSetupError("NO_ITEMS", "the selection is empty");
   // Every model is checked before anything runs, so an unlisted id fails in seconds.
@@ -619,6 +636,7 @@ export const runEval = async (
       replay: options.replay,
       date: deps.today(),
       git_sha: deps.gitSha(),
+      question_set: options.set,
       questions_sha256: loaded.questionsSha256,
       answer_key_sha256: loaded.answerKeySha256,
       cohort_id: loaded.cohortId,
