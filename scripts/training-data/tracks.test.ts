@@ -346,7 +346,7 @@ describe("runBuildConversations --track", () => {
     }
   });
 
-  test("the general track is the default set plus hand-overs, with the GP line", async () => {
+  test("the general track is the default set plus hand-overs, with the General agent line", async () => {
     const plain = await build([]);
     const general = await build(["--track", "general"]);
     const kept = general.metas.flatMap((meta, index) =>
@@ -438,7 +438,7 @@ describe("agent_handover family", () => {
     }
   });
 
-  test("the GP answers with the audited tool and names the specialist", async () => {
+  test("the General agent answers with the audited tool and names the specialist", async () => {
     const { found } = await handovers("general", "s-a");
     const specialists = [AGENTS.diet, AGENTS.sleep, AGENTS.trainer];
     const answered = found.filter((draft) => draft.calls[0]?.name === "latest_by_loinc");
@@ -472,7 +472,7 @@ describe("agent_handover family", () => {
     }
   });
 
-  test("the GP hands only clinical questions over for a subject without a series", async () => {
+  test("the General agent hands only clinical questions over for a subject without a series", async () => {
     const { found } = await handovers("general", "s-b");
     const codes = new Set((trackMeasures(TRACKS.diet) ?? []).map((m) => m.loinc));
     for (const draft of found.filter((d) => d.calls[0]?.name === "latest_by_loinc")) {

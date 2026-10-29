@@ -1,11 +1,11 @@
 /**
  * Auto mode (#219), version 2: picks the agent for one question from the
  * question's words alone. A question that asks for a medicine or dose decision goes
- * to the General Practitioner first, since no specialist gives doses or says
+ * to the General agent first, since no specialist gives doses or says
  * what to start or stop. Otherwise every specialist has a short list of
  * topics, each a keyword pattern that also matches the topic's LOINC codes.
  * The agent with the most matching topics wins; a tie goes to the agent listed
- * first in `AGENTS`; no match at all goes to the General Practitioner. No
+ * first in `AGENTS`; no match at all goes to the General agent. No
  * model is called, so the choice is the same every time and can be read off
  * the rules.
  *
@@ -25,7 +25,7 @@ export type RouteTopic = Readonly<{
 export const DEFAULT_AGENT_ID = "gp";
 
 /**
- * Topics that send a question to the General Practitioner before any
+ * Topics that send a question to the General agent before any
  * specialist is scored: the specialists describe, and never give a dose or
  * say what to take, start, stop or change.
  */
@@ -37,7 +37,7 @@ export const DEFAULT_AGENT_TOPICS: readonly RouteTopic[] = [
   },
 ];
 
-/** Topics per specialist id. The General Practitioner is the default. */
+/** Topics per specialist id. The General agent is the default. */
 export const ROUTE_TOPICS: Readonly<Record<string, readonly RouteTopic[]>> = {
   diet: [
     { topic: "body weight", pattern: /\bweigh(?:t|s|ed|ing)?\b|29463-7/ },

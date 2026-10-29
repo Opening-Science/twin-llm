@@ -78,7 +78,7 @@ describe("toolsOf and loincsOf", () => {
 });
 
 describe("routerLabel", () => {
-  test("guideline, population and medicine or dose decision scenarios go to the General Practitioner", () => {
+  test("guideline, population and medicine or dose decision scenarios go to the General agent", () => {
     expect(routerLabel(item({ scenario: "S3" })).expected).toBe("gp");
     expect(routerLabel(item({ scenario: "S4" })).expected).toBe("gp");
     expect(
@@ -102,7 +102,7 @@ describe("routerLabel", () => {
     );
   });
 
-  test("only Diet measures name the Diet specialist; any other code keeps the General Practitioner", () => {
+  test("only Diet measures name the Diet specialist; any other code keeps the General agent", () => {
     expect(routerLabel(item({ values: [value("trend", { loinc: "29463-7" })] }))).toEqual(
       {
         expected: "diet",
@@ -118,7 +118,7 @@ describe("routerLabel", () => {
     ).toBe("gp");
   });
 
-  test("nothing to go on: the General Practitioner", () => {
+  test("nothing to go on: the General agent", () => {
     expect(routerLabel(item({}))).toEqual({
       expected: "gp",
       rule: "no specialist tool and no LOINC code",

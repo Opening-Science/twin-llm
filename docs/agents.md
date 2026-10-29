@@ -11,18 +11,23 @@ type Agent = { id; name; role; skill: string | null; modelPreference: readonly s
 
 The list lives in `infrastructure/agents.ts`.
 
-| Agent                | Skill        | Role                                                                                                                                                  |
-| -------------------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| General Practitioner | none         | Looks at the whole record and says when a question is better asked of one of the specialist agents.                                                   |
-| Diet specialist      | `/nutrition` | Describes body weight, BMI, glucose, HbA1c and blood lipids against the person's own earlier values, without meal plans, diets or doses.              |
-| Anatomy specialist   | `/anatomy`   | Explains where organs and body systems sit and which of them the Anchor biomarkers relate to, as reference anatomy rather than the person's own body. |
-| Sleep                | `/sleep`     | Describes sleep against the person's own recent nights.                                                                                               |
-| Trainer              | `/trainer`   | Describes recovery, heart rate variability and training load against the person's previous four weeks.                                                |
-| Genetics             | `/genome`    | Describes the genome report the person released, one variant at a time.                                                                               |
+| Agent              | Skill        | Role                                                                                                                                                  |
+| ------------------ | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| General            | none         | Looks at the whole record and says when a question is better asked of one of the specialist agents.                                                   |
+| Diet specialist    | `/nutrition` | Describes body weight, BMI, glucose, HbA1c and blood lipids against the person's own earlier values, without meal plans, diets or doses.              |
+| Anatomy specialist | `/anatomy`   | Explains where organs and body systems sit and which of them the Anchor biomarkers relate to, as reference anatomy rather than the person's own body. |
+| Sleep              | `/sleep`     | Describes sleep against the person's own recent nights.                                                                                               |
+| Trainer            | `/trainer`   | Describes recovery, heart rate variability and training load against the person's previous four weeks.                                                |
+| Genetics           | `/genome`    | Describes the genome report the person released, one variant at a time.                                                                               |
 
 The picker lists them in this order, under Auto (below). The two new skills are described
 in [skills.md](skills.md#nutrition). Every agent prefers `qwen3:8b`, then `qwen3:4b`, then
 the catalog's first model.
+
+The first agent was called General Practitioner until #243. A clinical role name reads as
+a medical purpose, so it is now General; its id stays `gp`. Diet specialist and Anatomy
+specialist keep "specialist" as a plain word for one area of the record. Why names matter,
+and what the app is for: [clinical-research.md](clinical-research.md).
 
 ## In the catalog
 
@@ -37,17 +42,17 @@ An agent with a skill is offered only when that skill could run here (`agentIsOf
 the skill must be one the server offers, the active provider must be in its `providers`
 (the skill gate's rule), and a skill that asks for genome tools also needs a local chat
 model ([genome.md](genome.md)). The shipped skills list local Ollama only, so on a hosted
-provider only Auto and the General Practitioner are offered.
+provider only Auto and the General agent are offered.
 
 The picker lists the agents under "Agents", Auto first, each with its base model in small
 text (Auto says it picks an agent for each question), and the models under "Models". An
 agent counts as one of the one to three picks.
 
 A new chat, an incognito chat and the first question on `/start` start with the General
-Practitioner, the Diet specialist and the Anatomy specialist, as many of them as the
+agent, the Diet specialist and the Anatomy specialist, as many of them as the
 catalog offers, topped up with the usual one model per vendor (`defaultModelSelection`).
 On local Ollama that is the three agents; on a hosted provider it is the General
-Practitioner and two models. The models page and the starter questions read the catalog
+agent and two models. The models page and the starter questions read the catalog
 without agents, so they keep models only.
 
 ## In a turn
@@ -64,7 +69,7 @@ same catalog, then:
 - the system prompt gets one line, `Agent: <name>. <role>`, under its first line;
 - `knowledge_search` also reads the agent's specialty literature ([below](#literature-236));
 - the answer row keeps `agent:<id>` as its model id and the agent's name as its model
-  name, so the column reads "General Practitioner". Audit rows name the base model,
+  name, so the column reads "General". Audit rows name the base model,
   which is the one that saw the data.
 
 A reloaded turn reads its `/skill` chip back from the skill audit row, which is per turn,
@@ -79,7 +84,7 @@ base model, its skill through the skill gate, its refusal sentences and its audi
 The skill row adds `via: "auto"`. No model is called to choose.
 
 Version 2 rules. A question that asks for a medicine or dose decision goes to the General
-Practitioner before any specialist is looked at, since no specialist gives a dose or says
+agent before any specialist is looked at, since no specialist gives a dose or says
 what to take, start or stop: "dose" or "dosing", "how many milligrams" or "how many
 units", or "should" followed in the same sentence by take, start, stop, change, replace,
 inject, double, see a doctor or go to hospital. Otherwise each specialist has a few
@@ -95,10 +100,10 @@ topics; a topic matches on keywords or on its LOINC codes:
 
 The agent with the most matching topics wins; a tie goes to the one listed first in the
 roster; no match, or a match only for an agent not offered here, goes to the General
-Practitioner. The answer column reads "Auto → Diet specialist", and one muted line under
+agent. The answer column reads "Auto → Diet specialist", and one muted line under
 it says why: "Auto chose Diet specialist: the question is about body weight." or "Auto
-chose General Practitioner: no specialist agent here matched the question." A medicine or dose decision
-reads "Auto chose General Practitioner: the question is about a medicine or dose decision."
+chose General: no specialist agent here matched the question." A medicine or dose decision
+reads "Auto chose General: the question is about a medicine or dose decision."
 
 The turn stores the column name when it starts (`checkTurnRequest`), and `/api/chat` runs
 Auto as the agent that name holds while it is still offered, so a retry runs as the agent
@@ -122,7 +127,7 @@ share routed as expected and every miss:
 The labelling rules, first that applies wins:
 
 1. Scenario S3 (guideline library), S4 (population, GBD) or S5 (a medicine or dose decision to
-   decline): General Practitioner.
+   decline): General.
 2. A genome tool (`genome_report`, `dna_ask`): Genetics.
 3. `sleep_summary`: Sleep.
 4. `hrv_trend`, `resting_hr_trend` or `training_load`: Trainer.
@@ -130,12 +135,10 @@ The labelling rules, first that applies wins:
    and HDL cholesterol, triglycerides, and the serum glucose and HPLC HbA1c codes the set
    also accepts): Diet specialist.
 6. Anything else (blood pressure, heart rate, kidney and blood markers, conditions,
-   medications, a panel mixing Diet and other measures, no code at all): General
-   Practitioner.
+   medications, a panel mixing Diet and other measures, no code at all): General.
 
 Tools are the item's `must_call` and the tools its keyed values are read with; codes are
-the LOINC codes in those values' arguments and in `measures`. That gives 83 General
-Practitioner, 29 Diet, 13 Trainer and 5 Sleep. No scored question calls an anatomy or
+the LOINC codes in those values' arguments and in `measures`. That gives 83 General, 29 Diet, 13 Trainer and 5 Sleep. No scored question calls an anatomy or
 genome tool, so this fixture says nothing about the Anatomy specialist or Genetics.
 
 | Rules     | `agent-router.v1.json` | `agent-router.questions.v1.json` |
@@ -154,12 +157,12 @@ were tuned on and overstates how they do on new questions.
 The four that still miss:
 
 - Q-S2-12 asks how complete a ten-marker panel is (sodium to HbA1c). The router sees
-  glucose and HbA1c and picks the Diet specialist; the label says General Practitioner
+  glucose and HbA1c and picks the Diet specialist; the label says General
   because the panel is mostly not Diet measures. Counting non-Diet markers would need a
   list of every lab name, so it is left.
 - Q-S6-07, Q-S6-08 and Q-S6-14 ask for an Oura readiness or Whoop recovery score that no
   tool holds (they are refusal probes). They carry no tool and no code, so the label falls
-  to the General Practitioner, while the router reads "readiness" and "recovery" and picks
+  to the General agent, while the router reads "readiness" and "recovery" and picks
   Trainer, whose role covers both. That is a limit of labelling from tools, not a router
   error we want to fix.
 
@@ -171,7 +174,7 @@ guideline tables ([literature.md](literature.md)):
 
 | Agent                                   | Literature sources                    |
 | --------------------------------------- | ------------------------------------- |
-| General Practitioner                    | every `literature:<specialty>` source |
+| General                                 | every `literature:<specialty>` source |
 | Diet, Anatomy, Sleep, Trainer, Genetics | its own one, e.g. `literature:diet`   |
 | Auto                                    | the agent it picked, as above         |
 | a plain model (no agent)                | none; the notes alone, as before      |
@@ -181,7 +184,7 @@ chat route passes the agent's id to `createChatTools`. `knowledge_search` was ch
 `guideline_search` because it is the search every agent has: the specialists' skills
 list `knowledge_search` and not `guideline_search`, and adding a tool to a skill would go
 around the skill gate. `guideline_search` is unchanged and still reads the guideline
-corpus alone wherever a turn offers it (the General Practitioner, plain models).
+corpus alone wherever a turn offers it (the General agent, plain models).
 
 Notes and literature get separate slots (`mergeKnowledgeSlots`), so papers cannot push
 the notes, the biomarker catalogue among them, out of a short list: one nearest-neighbour

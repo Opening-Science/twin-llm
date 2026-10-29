@@ -102,7 +102,7 @@ describe("wearable snapshots in the chat tools", () => {
 });
 
 describe("an agent's literature in the chat tools (#236)", () => {
-  test("knowledge_search gets the agent's specialty, every one for the GP, none without an agent", () => {
+  test("knowledge_search gets the agent's specialty, every one for the General agent, none without an agent", () => {
     const literatureOf = (agent: string | null | undefined): unknown => {
       const { factories, calls } = spied();
       createChatTools(SCOPE, { query: ports, factories, agent });

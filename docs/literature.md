@@ -85,14 +85,14 @@ Every specialty can draw on the PMC Open Access Subset through the fetch tool,
 with the per-article rules above. The MeSH query each one uses is in
 `packages/literature/specialties.ts`.
 
-| Specialty (id)              | PMC query (MeSH, open access only)                                    | Other sources                                                                                   | Training-safe set                                        |
-| --------------------------- | --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| General Practitioner (`gp`) | primary health care, general practice                                 | MedlinePlus NLM-authored health topics; StatPearls (NC-ND, quote only); WHO (NC-SA, quote only) | PMC CC0/CC BY, MedlinePlus NLM-authored                  |
-| Diet (`diet`)               | diet, nutritional physiological phenomena                             | FoodData Central (CC0); Dietary Guidelines text (public domain); Nutrition for Nurses (NC-SA)   | PMC CC0/CC BY, FoodData Central, Dietary Guidelines text |
-| Anatomy (`anatomy`)         | anatomy                                                               | OpenStax A&P 1st edition (CC BY); 2e is NC-SA                                                   | PMC CC0/CC BY, OpenStax A&P 1st edition                  |
-| Sleep (`sleep`)             | sleep, sleep wake disorders                                           | MedlinePlus NLM-authored sleep topics                                                           | PMC CC0/CC BY, MedlinePlus NLM-authored                  |
-| Trainer (`trainer`)         | exercise, sports, physical fitness                                    | MedlinePlus NLM-authored exercise topics                                                        | PMC CC0/CC BY, MedlinePlus NLM-authored                  |
-| Genetics (`genetics`)       | genetics medical, pharmacogenetics, genetic predisposition to disease | MedlinePlus Genetics (public domain)                                                            | PMC CC0/CC BY, MedlinePlus Genetics                      |
+| Specialty (id)        | PMC query (MeSH, open access only)                                    | Other sources                                                                                   | Training-safe set                                        |
+| --------------------- | --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| General (`gp`)        | primary health care, general practice                                 | MedlinePlus NLM-authored health topics; StatPearls (NC-ND, quote only); WHO (NC-SA, quote only) | PMC CC0/CC BY, MedlinePlus NLM-authored                  |
+| Diet (`diet`)         | diet, nutritional physiological phenomena                             | FoodData Central (CC0); Dietary Guidelines text (public domain); Nutrition for Nurses (NC-SA)   | PMC CC0/CC BY, FoodData Central, Dietary Guidelines text |
+| Anatomy (`anatomy`)   | anatomy                                                               | OpenStax A&P 1st edition (CC BY); 2e is NC-SA                                                   | PMC CC0/CC BY, OpenStax A&P 1st edition                  |
+| Sleep (`sleep`)       | sleep, sleep wake disorders                                           | MedlinePlus NLM-authored sleep topics                                                           | PMC CC0/CC BY, MedlinePlus NLM-authored                  |
+| Trainer (`trainer`)   | exercise, sports, physical fitness                                    | MedlinePlus NLM-authored exercise topics                                                        | PMC CC0/CC BY, MedlinePlus NLM-authored                  |
+| Genetics (`genetics`) | genetics medical, pharmacogenetics, genetic predisposition to disease | MedlinePlus Genetics (public domain)                                                            | PMC CC0/CC BY, MedlinePlus Genetics                      |
 
 What may be stored, quoted and trained on is decided per article by its
 licence, not per specialty. Only PMC is wired into the fetch today; the other
@@ -160,7 +160,7 @@ tables like the knowledge notes do (`docs/knowledge.md`), with local
 ## Search (#236)
 
 On an agent's turn `knowledge_search` reads the OpenTwin notes plus that agent's
-`literature:<specialty>` source; the General Practitioner reads every specialty. A plain
+`literature:<specialty>` source; the General agent reads every specialty. A plain
 model reads the notes alone, as before. Every literature hit gives the article title, PMC
 id and licence, an attribution line ending "via PubMed Central (NLM)", and a quoting
 rule: word for word only, with the attribution; for CC BY-ND and CC BY-NC-ND, never

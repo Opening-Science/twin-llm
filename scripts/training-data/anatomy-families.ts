@@ -72,7 +72,7 @@ const plural = (n: number, word: string): string => `${n} ${word}${n === 1 ? "" 
 
 /**
  * One anatomy question and its answer from what `knowledge_search` found. The
- * GP's hand-over reuses it with a note naming the Anatomy agent.
+ * General agent's hand-over reuses it with a note naming the Anatomy agent.
  */
 export const anatomyNote = async (
   context: FamilyContext,

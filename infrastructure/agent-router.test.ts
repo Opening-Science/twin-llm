@@ -70,7 +70,7 @@ describe("routeAgent", () => {
     expect(routeAgent("Chart 93832-4", ALL).agentId).toBe("sleep");
   });
 
-  test("no rule matches: the General Practitioner, with no topic", () => {
+  test("no rule matches: the General agent, with no topic", () => {
     expect(routeAgent("Summarise my record.", ALL)).toEqual({
       agentId: "gp",
       topic: null,
@@ -97,7 +97,7 @@ describe("routeAgent", () => {
     expect(routeAgent("What is my resting heart rate?", ALL).agentId).toBe("trainer");
   });
 
-  test("a medicine or dose decision goes to the General Practitioner, whatever it names", () => {
+  test("a medicine or dose decision goes to the General agent, whatever it names", () => {
     expect(routeAgent("What statin dose fits, given my latest LDL?", ALL)).toEqual({
       agentId: "gp",
       topic: "a medicine or dose decision",
@@ -134,16 +134,14 @@ describe("routeAgent", () => {
     expect(routeAgent("Write and run a SQL query.", ALL).agentId).toBe("gp");
   });
 
-  test("the General Practitioner's own topics come back on its line", () => {
+  test("the General agent's own topics come back on its line", () => {
     expect(DEFAULT_AGENT_TOPICS.length).toBeGreaterThan(0);
-    expect(
-      autoChoiceLineFor("What dose of metformin?", "Auto → General Practitioner"),
-    ).toBe(
-      "Auto chose General Practitioner: the question is about a medicine or dose decision.",
+    expect(autoChoiceLineFor("What dose of metformin?", "Auto → General")).toBe(
+      "Auto chose General: the question is about a medicine or dose decision.",
     );
   });
 
-  test("every agent but the General Practitioner has rules, and only real agents do", () => {
+  test("every agent but the General agent has rules, and only real agents do", () => {
     expect(Object.keys(ROUTE_TOPICS).sort()).toEqual(
       ALL.filter((id) => id !== "gp").sort(),
     );
@@ -193,8 +191,8 @@ describe("Auto's column name and line", () => {
     expect(autoChoiceLine("Diet specialist", "body weight")).toBe(
       "Auto chose Diet specialist: the question is about body weight.",
     );
-    expect(autoChoiceLine("General Practitioner", null)).toBe(
-      "Auto chose General Practitioner: no specialist agent here matched the question.",
+    expect(autoChoiceLine("General", null)).toBe(
+      "Auto chose General: no specialist agent here matched the question.",
     );
   });
 
@@ -202,8 +200,8 @@ describe("Auto's column name and line", () => {
     expect(
       autoChoiceLineFor("How has my weight changed?", "Auto → Diet specialist"),
     ).toBe("Auto chose Diet specialist: the question is about body weight.");
-    expect(autoChoiceLineFor("How did I sleep?", "Auto → General Practitioner")).toBe(
-      "Auto chose General Practitioner: no specialist agent here matched the question.",
+    expect(autoChoiceLineFor("How did I sleep?", "Auto → General")).toBe(
+      "Auto chose General: no specialist agent here matched the question.",
     );
     expect(autoChoiceLineFor("How did I sleep?", "qwen3:8b")).toBeNull();
   });

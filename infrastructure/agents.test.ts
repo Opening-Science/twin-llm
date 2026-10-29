@@ -12,7 +12,7 @@ import {
 describe("AGENTS", () => {
   test("the six agents, in picker order, with their skills", () => {
     expect(AGENTS.map(({ id, name, skill }) => ({ id, name, skill }))).toEqual([
-      { id: "gp", name: "General Practitioner", skill: null },
+      { id: "gp", name: "General", skill: null },
       { id: "diet", name: "Diet specialist", skill: "nutrition" },
       { id: "anatomy", name: "Anatomy specialist", skill: "anatomy" },
       { id: "sleep", name: "Sleep", skill: "sleep" },
@@ -96,7 +96,7 @@ describe("agentIsOffered", () => {
     ]);
   });
 
-  test("a hosted provider the skills do not list: only the General Practitioner", () => {
+  test("a hosted provider the skills do not list: only the General agent", () => {
     expect(offered({ provider: "exoscale", chatIsLocal: false, skills: SKILLS })).toEqual(
       ["gp"],
     );

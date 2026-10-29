@@ -68,7 +68,7 @@ Contributions are welcome. Start with [`good first issue`](https://github.com/Op
 
 TwinLLM is experimental software for **research use only**: n-of-1 hypothesis generation and the evaluation of open language models on coded health data. It is not a medical device. Its answers, cited evidence, body-twin views and evaluation results must not be used for medical advice, diagnosis or diagnostic support, disease prediction, monitoring, triage, treatment or any other medical decision. Model output can be wrong even when it cites sources.
 
-Regulatory status depends on actual functions and claims; a research label or the `not_for_diagnostic_use=true` flag does not exempt medical functionality, and `bun run lint:claims` is a floor, not a certificate. A deployment with real wearable, scan or genome data handles health data: operators are responsible for consent, data protection and ethics approval. Read open-twin's [intended use](https://github.com/Opening-Science/open-twin/blob/main/docs/INTENDED-USE.md) first.
+Regulatory status depends on actual functions and claims; a research label or the `not_for_diagnostic_use=true` flag does not exempt medical functionality, and `bun run lint:claims` is a floor, not a certificate. A deployment with real wearable, scan or genome data handles health data: operators are responsible for consent, data protection and ethics approval. Read open-twin's [intended use](https://github.com/Opening-Science/open-twin/blob/main/docs/INTENDED-USE.md) first. Our intended purpose and what would make TwinLLM a device: [`docs/clinical-research.md`](docs/clinical-research.md).
 
 ## Licence
 

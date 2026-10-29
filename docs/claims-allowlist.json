@@ -28,5 +28,20 @@
     "file": "README.md",
     "line-pattern": "must not be used for medical advice, diagnosis or diagnostic support",
     "reason": "intended-use disclaimer"
+  },
+  {
+    "file": "docs/clinical-research.md",
+    "line-pattern": "It is not for the diagnosis,",
+    "reason": "intended-purpose statement"
+  },
+  {
+    "file": "docs/clinical-research.md",
+    "line-pattern": "prognosis, treatment or alleviation of disease in",
+    "reason": "intended-purpose statement"
+  },
+  {
+    "file": "docs/clinical-research.md",
+    "line-pattern": "software that gives information used to take diagnostic",
+    "reason": "paraphrase of MDR Rule 11, regulatory orientation"
   }
 ]

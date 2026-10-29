@@ -125,7 +125,7 @@ export const createChatTools = (
     /**
      * The agent the turn runs as (`gp`, `diet`, ...), or null. `knowledge_search`
      * then also reads that agent's specialty literature, every specialty for the
-     * General Practitioner (`literatureSourcesForAgent`).
+     * General (`literatureSourcesForAgent`).
      */
     agent?: string | null;
   }>,
