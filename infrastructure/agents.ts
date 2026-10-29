@@ -71,6 +71,20 @@ export const AGENTS: readonly Agent[] = Object.freeze([
     skill: "genome",
     modelPreference: LOCAL_PREFERENCE,
   },
+  {
+    id: "rhythm",
+    name: "Heart rhythm (research)",
+    role: "Describes heart rate, heart rate variability and recorded rhythm conditions in the data and in the cardiology literature, and never says what rhythm or condition a person has.",
+    skill: "rhythm",
+    modelPreference: LOCAL_PREFERENCE,
+  },
+  {
+    id: "brain",
+    name: "Brain (research)",
+    role: "Describes recorded stroke, cognition and autonomic data and the neurology literature, and never says what condition a person has.",
+    skill: "brain",
+    modelPreference: LOCAL_PREFERENCE,
+  },
 ]);
 
 /**

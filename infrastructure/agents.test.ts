@@ -10,7 +10,7 @@ import {
 } from "./agents";
 
 describe("AGENTS", () => {
-  test("the six agents, in picker order, with their skills", () => {
+  test("the eight agents, in picker order, with their skills", () => {
     expect(AGENTS.map(({ id, name, skill }) => ({ id, name, skill }))).toEqual([
       { id: "gp", name: "General", skill: null },
       { id: "diet", name: "Diet specialist", skill: "nutrition" },
@@ -18,7 +18,18 @@ describe("AGENTS", () => {
       { id: "sleep", name: "Sleep", skill: "sleep" },
       { id: "trainer", name: "Trainer", skill: "trainer" },
       { id: "genetics", name: "Genetics", skill: "genome" },
+      { id: "rhythm", name: "Heart rhythm (research)", skill: "rhythm" },
+      { id: "brain", name: "Brain (research)", skill: "brain" },
     ]);
+  });
+
+  test("the research agents say what they never do", () => {
+    const research = AGENTS.filter(({ name }) => name.endsWith("(research)"));
+    expect(research.map(({ id }) => id)).toEqual(["rhythm", "brain"]);
+    research.forEach(({ role }) => {
+      expect(role).toContain("literature");
+      expect(role).toContain("never says what");
+    });
   });
 
   test("each role is one sentence, Auto's too", () => {
@@ -44,6 +55,8 @@ describe("agent model ids", () => {
       "agent:sleep",
       "agent:trainer",
       "agent:genetics",
+      "agent:rhythm",
+      "agent:brain",
     ]);
   });
 
@@ -115,11 +128,13 @@ describe("agentIsOffered", () => {
     ).toEqual(["gp", "sleep"]);
   });
 
-  test("the Diet and Anatomy specialists are offered where their skills run", () => {
+  test("the Diet, Anatomy, Heart rhythm and Brain agents are offered where their skills run", () => {
     const withNew = [
       ...SKILLS,
       skill("nutrition", ["latest_by_loinc"]),
       skill("anatomy", ["knowledge_search"]),
+      skill("rhythm", ["hrv_trend", "conditions_timeline"]),
+      skill("brain", ["conditions_timeline", "values_around_event"]),
     ];
     expect(offered({ provider: "ollama", chatIsLocal: true, skills: withNew })).toEqual([
       "gp",
@@ -128,6 +143,8 @@ describe("agentIsOffered", () => {
       "sleep",
       "trainer",
       "genetics",
+      "rhythm",
+      "brain",
     ]);
     expect(
       offered({ provider: "exoscale", chatIsLocal: false, skills: withNew }),

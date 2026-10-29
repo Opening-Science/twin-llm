@@ -35,7 +35,8 @@ const row: GuidelineJoinedRow = {
 describe("literature hits", () => {
   test("specialtyOfSource reads literature sources only", () => {
     expect(specialtyOfSource("literature:sleep")).toBe("sleep");
-    expect(specialtyOfSource("literature:cardiology")).toBeNull();
+    expect(specialtyOfSource("literature:cardiology")).toBe("cardiology");
+    expect(specialtyOfSource("literature:oncology")).toBeNull();
     expect(specialtyOfSource("opentwin-knowledge")).toBeNull();
     expect(specialtyOfSource("guideline")).toBeNull();
   });

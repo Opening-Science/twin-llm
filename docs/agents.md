@@ -3,7 +3,7 @@
 An agent is a named preset over what TwinLLM already has: a model the active provider
 offers and, for a specialist, one of the shipped skills. It adds no tool or permission;
 the one thing it widens is what `knowledge_search` reads: the agent's own specialty
-literature ([below](#literature-236)). Issues #218, #219 and #236, part of #210.
+literature ([below](#literature-236)). Issues #218, #219, #236 and #253, part of #210.
 
 ```ts
 type Agent = { id; name; role; skill: string | null; modelPreference: readonly string[] };
@@ -11,16 +11,18 @@ type Agent = { id; name; role; skill: string | null; modelPreference: readonly s
 
 The list lives in `infrastructure/agents.ts`.
 
-| Agent              | Skill        | Role                                                                                                                                                  |
-| ------------------ | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| General            | none         | Looks at the whole record and says when a question is better asked of one of the specialist agents.                                                   |
-| Diet specialist    | `/nutrition` | Describes body weight, BMI, glucose, HbA1c and blood lipids against the person's own earlier values, without meal plans, diets or doses.              |
-| Anatomy specialist | `/anatomy`   | Explains where organs and body systems sit and which of them the Anchor biomarkers relate to, as reference anatomy rather than the person's own body. |
-| Sleep              | `/sleep`     | Describes sleep against the person's own recent nights.                                                                                               |
-| Trainer            | `/trainer`   | Describes recovery, heart rate variability and training load against the person's previous four weeks.                                                |
-| Genetics           | `/genome`    | Describes the genome report the person released, one variant at a time.                                                                               |
+| Agent                   | Skill        | Role                                                                                                                                                                            |
+| ----------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| General                 | none         | Looks at the whole record and says when a question is better asked of one of the specialist agents.                                                                             |
+| Diet specialist         | `/nutrition` | Describes body weight, BMI, glucose, HbA1c and blood lipids against the person's own earlier values, without meal plans, diets or doses.                                        |
+| Anatomy specialist      | `/anatomy`   | Explains where organs and body systems sit and which of them the Anchor biomarkers relate to, as reference anatomy rather than the person's own body.                           |
+| Sleep                   | `/sleep`     | Describes sleep against the person's own recent nights.                                                                                                                         |
+| Trainer                 | `/trainer`   | Describes recovery, heart rate variability and training load against the person's previous four weeks.                                                                          |
+| Genetics                | `/genome`    | Describes the genome report the person released, one variant at a time.                                                                                                         |
+| Heart rhythm (research) | `/rhythm`    | Describes heart rate, heart rate variability and recorded rhythm conditions in the data and in the cardiology literature, and never says what rhythm or condition a person has. |
+| Brain (research)        | `/brain`     | Describes recorded stroke, cognition and autonomic data and the neurology literature, and never says what condition a person has.                                               |
 
-The picker lists them in this order, under Auto (below). The two new skills are described
+The picker lists them in this order, under Auto (below). The skills are described
 in [skills.md](skills.md#nutrition). Every agent prefers `qwen3:8b`, then `qwen3:4b`, then
 the catalog's first model.
 
@@ -28,6 +30,25 @@ The first agent was called General Practitioner until #243. A clinical role name
 a medical purpose, so it is now General; its id stays `gp`. Diet specialist and Anatomy
 specialist keep "specialist" as a plain word for one area of the record. Why names matter,
 and what the app is for: [clinical-research.md](clinical-research.md).
+
+### Heart rhythm and Brain (#253)
+
+The two newest agents carry "(research)" in their names, since their topics sit closest to
+a medical purpose. Each describes recorded data and published literature and never says
+what a person has: their skills answer "do I have atrial fibrillation?" or "does this
+score mean dementia?" with one fixed sentence and no tool call
+([skills.md](skills.md#rhythm-and-brain)).
+
+The issue asked for "Brain and sleep (research)". Sleep already has its own agent, skill,
+literature and training track, so a second agent covering sleep would split those
+questions between two agents for no gain. The agent is called Brain (research) and covers
+stroke and cerebrovascular records, cognition scores and the autonomic nervous system.
+Sleep and cognition together still go to Sleep on a tie (below), and the neurology
+literature query keeps sleep studies only where they are about cognition.
+
+The rhythm tool being built for #246 (`rhythm_irregularity`) is not part of `/rhythm` yet;
+the skill uses the wearable and record tools that exist today and gets the new tool when
+it lands.
 
 ## In the catalog
 
@@ -83,23 +104,28 @@ the prompt, and the turn runs as that agent exactly as if it had been picked by 
 base model, its skill through the skill gate, its refusal sentences and its audit rows.
 The skill row adds `via: "auto"`. No model is called to choose.
 
-Version 2 rules. A question that asks for a medicine or dose decision goes to the General
+Version 3 rules. A question that asks for a medicine or dose decision goes to the General
 agent before any specialist is looked at, since no specialist gives a dose or says
 what to take, start or stop: "dose" or "dosing", "how many milligrams" or "how many
 units", or "should" followed in the same sentence by take, start, stop, change, replace,
-inject, double, see a doctor or go to hospital. Otherwise each specialist has a few
-topics; a topic matches on keywords or on its LOINC codes:
+inject, double, see a doctor or go to hospital. So does a question that names a
+guideline, since only the General agent searches the guideline library (version 3).
+Otherwise each specialist has a few topics; a topic matches on keywords or on its LOINC
+codes:
 
-| Agent              | Topics (keywords and LOINC codes)                                                                                                                                                                                                                                                            |
-| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Diet specialist    | body weight (weight, 29463-7); BMI (39156-5); blood glucose (glucose, blood sugar, 2339-0); HbA1c (A1c, glycated, 4548-4); blood lipids (cholesterol, lipids, LDL, HDL, triglycerides, 2093-3, 18262-6, 2085-9, 2571-8); food and diet                                                       |
-| Anatomy specialist | anatomy; where an organ is (organ, liver, kidney, pancreas, spleen, gallbladder, thyroid, stomach, lung, bladder, bowel, heart; not heart rate, and not an organ followed by disease, failure or cancer); a body system (skeleton, muscle, bone, circulatory, digestive, nervous, endocrine) |
-| Sleep              | sleep (sleep, slept, night, insomnia, nap, REM, bedtime, 93832-4)                                                                                                                                                                                                                            |
-| Trainer            | recovery (recovery, readiness); heart rate variability (HRV); resting heart rate (RHR, 40443-4); training (train, workout, exercise, a run, runs, running, jog, swim, cycling, bike, rowing, sport, strain, check-in, weekly review)                                                         |
-| Genetics           | the genome (gene, genetic, genome, genotype, DNA, variant, SNP, rs numbers)                                                                                                                                                                                                                  |
+| Agent                   | Topics (keywords and LOINC codes)                                                                                                                                                                                                                                                                                                                  |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Diet specialist         | body weight (weight, 29463-7); BMI (39156-5); blood glucose (glucose, blood sugar, 2339-0); HbA1c (A1c, glycated, 4548-4); blood lipids (cholesterol, lipids, LDL, HDL, triglycerides, 2093-3, 18262-6, 2085-9, 2571-8); food and diet                                                                                                             |
+| Anatomy specialist      | anatomy; where an organ is (organ, liver, kidney, pancreas, spleen, gallbladder, thyroid, stomach, lung, bladder, bowel, heart; not heart rate, heart rhythm or heart beat, and not an organ followed by disease, failure or cancer); a body system (skeleton, muscle, bone, circulatory, digestive, nervous but not autonomic nervous, endocrine) |
+| Sleep                   | sleep (sleep, slept, night, insomnia, nap, REM, bedtime, 93832-4)                                                                                                                                                                                                                                                                                  |
+| Trainer                 | recovery (recovery, readiness); heart rate variability (HRV); resting heart rate (RHR, 40443-4); training (train, workout, exercise, a run, runs, running, jog, swim, cycling, bike, rowing, sport, strain, check-in, weekly review)                                                                                                               |
+| Genetics                | the genome (gene, genetic, genome, genotype, DNA, variant, SNP, rs numbers)                                                                                                                                                                                                                                                                        |
+| Heart rhythm (research) | atrial fibrillation (atrial fibrillation, AF, AFib); heart rhythm (arrhythmia, rhythm but not circadian rhythm, palpitations, ectopic, heartbeat, tachycardia, bradycardia); RR intervals (RR or R-R interval, inter-beat); heart rate variability (HRV, 80404-7)                                                                                  |
+| Brain (research)        | stroke (stroke, cerebrovascular, TIA, transient ischaemic); cognition and memory (cognition, dementia, Alzheimer, memory, MMSE, 72106-8); the autonomic nervous system (autonomic, heart-brain)                                                                                                                                                    |
 
 The agent with the most matching topics wins; a tie goes to the one listed first in the
-roster; no match, or a match only for an agent not offered here, goes to the General
+roster, so HRV alone stays with Trainer (listed before Heart rhythm) and HRV with a rhythm
+word goes to Heart rhythm; no match, or a match only for an agent not offered here, goes to the General
 agent. The answer column reads "Auto → Diet specialist", and one muted line under
 it says why: "Auto chose Diet specialist: the question is about body weight." or "Auto
 chose General: no specialist agent here matched the question." A medicine or dose decision
@@ -145,6 +171,7 @@ genome tool, so this fixture says nothing about the Anatomy specialist or Geneti
 | --------- | ---------------------- | -------------------------------- |
 | Version 1 | 26/26 (100%)           | 117/130 (90.0%)                  |
 | Version 2 | 26/26 (100%)           | 126/130 (96.9%)                  |
+| Version 3 | 36/36 (100%)           | 126/130 (96.9%)                  |
 
 Version 2 came from the version 1 misses on the questions: seven medicine or dose decisions (a
 metformin or statin dose, insulin units, "should ... see a doctor", "go to hospital")
@@ -153,6 +180,16 @@ disease" counted as the kidney's anatomy; "run a SQL query" counted as training;
 "swim" was not a sport. Each fix is a general rule written down above, not the question's
 wording, but it was found on these questions, so 96.9% is measured on the set the rules
 were tuned on and overstates how they do on new questions.
+
+Version 3 (#253) adds the Heart rhythm and Brain topics, ten hand-written prompts for them
+(atrial fibrillation, RR intervals, palpitations, HRV with arrhythmia, HRV alone staying
+with Trainer, stroke, MMSE, autonomic, and two medicine questions that must stay with the
+General agent), and the guideline rule. No labelling rule changed: no scored question
+calls a tool only these agents use, so the 130-question fixture is rebuilt unchanged and
+says nothing about them. Without the guideline rule three guideline library questions
+would move: Q-S3-04 (the EAN dementia guideline) and Q-S3-06 (rehabilitation after
+stroke) to Brain, and Q-S3-09 (supraventricular tachycardia) to Heart rhythm, for 123/130.
+With it every question routes as under version 2, with the same four misses.
 
 The four that still miss:
 
@@ -176,10 +213,13 @@ guideline tables ([literature.md](literature.md)):
 | --------------------------------------- | ------------------------------------- |
 | General                                 | every `literature:<specialty>` source |
 | Diet, Anatomy, Sleep, Trainer, Genetics | its own one, e.g. `literature:diet`   |
+| Heart rhythm (research)                 | `literature:cardiology`               |
+| Brain (research)                        | `literature:neurology`                |
 | Auto                                    | the agent it picked, as above         |
 | a plain model (no agent)                | none; the notes alone, as before      |
 
-The mapping is `literatureSourcesForAgent` (`packages/literature/specialties.ts`); the
+The mapping is `literatureSourcesForAgent` (`packages/literature/specialties.ts`); an agent
+whose id is not a specialty name reads the one `specialtyForAgent` gives it; the
 chat route passes the agent's id to `createChatTools`. `knowledge_search` was chosen over
 `guideline_search` because it is the search every agent has: the specialists' skills
 list `knowledge_search` and not `guideline_search`, and adding a tool to a skill would go
@@ -225,6 +265,10 @@ Our own fine-tunes are listed by a readable name (`infrastructure/model-names.ts
 name in the picker and in the answer column.
 
 ## Later
+
+Heart rhythm and Brain have no training track yet (`--track`): a track needs its own
+conversation families (a rhythm or stroke question over the synthetic record), hand-over
+topics in every other track and new golden counts, which is more than adding a row.
 
 Training tracks per agent come next: each agent gets its own slice of the training data,
 generated from the questions its skill answers (the router's topics give a first cut of
