@@ -87,10 +87,12 @@ export const WEARABLE_METRICS = {
   },
 } as const;
 
+export const WEARABLE_GENERATOR_VERSIONS = ["2", "3"] as const;
+export type WearableGeneratorVersion = (typeof WEARABLE_GENERATOR_VERSIONS)[number];
+
 /**
- * v3: metrics only a subject with the matching condition has, from its onset
- * (`docs/training-data.md`, "Condition effects"). Every v2 subject keeps the
- * seven metrics above and nothing else.
+ * v3: metrics every subject has on a worn day, whose values follow the
+ * conditions (`docs/training-data.md`, "Condition effects"). v2 has none of them.
  */
 export const CONDITION_METRICS = {
   spo2_mean: {
@@ -168,8 +170,10 @@ export type SeriesOptions = Readonly<{
   subjectRef: string;
   endDay: string;
   days: number;
-  /** v3: the subject's conditions with a wearable effect; none gives the v2 series. */
+  /** v3: the subject's conditions with a wearable effect. */
   conditions?: readonly SubjectCondition[];
+  /** "2" gives the v2 series exactly (conditions ignored); default "3". */
+  generatorVersion?: WearableGeneratorVersion;
 }>;
 
 const round = (value: number, decimals: number): number => {
@@ -329,6 +333,7 @@ export const generateSeries = (options: SeriesOptions): DailyReading[] => {
   const profile = subjectProfile(options.seed, options.subjectRef);
   const random = randomFor(options.seed, `series:${options.subjectRef}`);
   const conditions = options.conditions ?? [];
+  const v2 = options.generatorVersion === "2";
   const key = `${options.seed}:${options.subjectRef}`;
   return windowDays(options.endDay, options.days).flatMap((day, index) =>
     dayReadings(
@@ -337,7 +342,7 @@ export const generateSeries = (options: SeriesOptions): DailyReading[] => {
       day,
       index,
       options.days,
-      conditions.length === 0 ? NO_EFFECTS : conditionEffects(conditions, day, key),
+      v2 ? NO_EFFECTS : conditionEffects(conditions, day, key),
     ),
   );
 };

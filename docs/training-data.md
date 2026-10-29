@@ -122,9 +122,11 @@ bundle, with their onset and abatement days (`scripts/synthetic-wearables/condit
 `conditionEffects(conditions, day, key)`). Four conditions change the series. An effect
 starts on the onset day and stops on the abatement day; a stroke ignores its abatement,
 because Synthea closes the acute event within days while the change in activity lasts.
-A subject with none of the four gets exactly the v2 series, byte for byte (a test pins
-the v2 checksum). `--generator-version 2` ignores conditions and rebuilds the v2 series;
-the evaluation key was built from v2 (`docs/evaluation/question-set.md`). The manifest
+Every v3 subject gets the same metrics on every worn day, whatever their conditions, so
+the presence of a metric never tells a condition (see the baseline rows below). A subject
+with none of the four keeps the v2 values of the seven v2 metrics. `--generator-version 2`
+ignores conditions and gives the v2 series exactly (a test pins the v2 checksum); the
+evaluation key was built from v2 (`docs/evaluation/question-set.md`). The manifest
 records the version and, for v3, how many living subjects had each effect.
 
 | Condition (SNOMED CT)                          | Effect                                                 | Size                                                                 | Source                                                                                                                                                      |
@@ -142,12 +144,16 @@ records the version and, for v3, how many living subjects had each effect.
 | Sleep apnea (`78275009`, `73430006`)           | Nightly SpO2 mean (LOINC `59408-5`)                    | 92.5 to 95%                                                          | assumption                                                                                                                                                  |
 |                                                | Nightly SpO2 minimum (local `spo2-min`)                | 80 to 88%                                                            | assumption                                                                                                                                                  |
 |                                                | Respiratory rate                                       | +0.5 to +1.0 /min, fixed per subject                                 | assumption                                                                                                                                                  |
+| Everyone (baseline)                            | Nightly SpO2 mean                                      | 95 to 98%                                                            | assumption                                                                                                                                                  |
+|                                                | Nightly SpO2 minimum                                   | 89 to 94%                                                            | assumption                                                                                                                                                  |
+|                                                | False irregular-rhythm notifications outside AF        | about 1 per person-year                                              | false positives exist (Perez et al. 2019, NEJM 381:1909; Lubitz et al. 2022, Circulation, Fitbit Heart Study); rate assumption                              |
+|                                                | AF burden without AF                                   | 0                                                                    | by definition                                                                                                                                               |
 | Hypertension (`59621000` and others)           | None                                                   |                                                                      | a wrist device does not measure blood pressure, so the series cannot show it                                                                                |
 
 Several conditions add up: deltas are summed and factors multiplied. The sleep score is
 set before the AF inflation of RMSSD, so an episode never reads as better recovery.
 
-New metrics, only for a subject with the matching condition and only from its onset:
+New metrics in v3, for every subject on every worn day (none in v2):
 
 | Metric                         | Code                                             | Unit      |
 | ------------------------------ | ------------------------------------------------ | --------- |
@@ -164,13 +170,14 @@ used to check an answer and is never a reading.
 
 Limits, stated plainly: every size above is an assumption for research data, not a
 fitted model of a disease. Persistent AF is not modelled (every AF subject has
-paroxysmal episodes). Only subjects with sleep apnea have SpO2 readings and only AF
-subjects have notifications, so the presence of a metric itself tells the condition;
-v2 subjects keep exactly the v2 metrics so that their series stay unchanged. In
-`synthea-v4-seed42` every onset is before the window (records end 2026-01-01), so the
-effects run through the whole window; of 171 living subjects, 3 have AF effects, 6
-sleep apnea, and none heart failure or stroke (the subjects with those died in Synthea
-and get no series).
+paroxysmal episodes). The SpO2 and notification values of a healthy subject are drawn
+from the ranges above, not from any device.
+
+On the pinned evaluation cohort `synthea-v4-seed42` (release `eval-cohort-v1`, 37
+patient files, 30 living), every onset is before the window (records end 2026-01-01),
+so the effects run through the whole window. Of the 30 living subjects, 1 has the AF
+effect and none heart failure, stroke or sleep apnea; the 3 subjects with heart
+failure died in Synthea and get no series. The evaluation key still uses v2.
 
 Each subject gets fixed baselines, a share of worn days (one in twelve wears
 the device on about 15% of days), a slow resting heart rate drift and, for

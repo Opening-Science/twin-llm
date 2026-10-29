@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  baselineDay,
   conditionEffects,
-  NO_EFFECTS,
   type SubjectCondition,
   syntheaConditionsOf,
 } from "./conditions";
@@ -56,8 +56,24 @@ describe("syntheaConditionsOf", () => {
 });
 
 describe("conditionEffects", () => {
-  test("no condition has no effect", () => {
-    expect(conditionEffects([], "2026-09-01", KEY)).toEqual(NO_EFFECTS);
+  test("no condition gives the baseline day: normal SpO2, no AF", () => {
+    const day = conditionEffects([], "2026-09-01", KEY);
+    expect(day).toEqual(baselineDay("2026-09-01", KEY));
+    expect(day.afBurden).toBe(0);
+    expect(day.spo2?.mean).toBeGreaterThanOrEqual(95);
+    expect(day.spo2?.mean).toBeLessThanOrEqual(98);
+    expect(day.spo2?.min).toBeGreaterThanOrEqual(89);
+    expect(day.spo2?.min).toBeLessThanOrEqual(94);
+    expect(day.restingHrDelta).toBe(0);
+  });
+
+  test("false notifications come about once a person-year", () => {
+    const days = windowDays("2026-12-31", 3650);
+    const count = days.filter(
+      (day) => (baselineDay(day, KEY).irregularRhythmNotifications ?? 0) > 0,
+    ).length;
+    expect(count).toBeGreaterThan(3);
+    expect(count).toBeLessThan(20);
   });
 
   test("every effect starts on the onset day, not before", () => {
@@ -67,8 +83,15 @@ describe("conditionEffects", () => {
       "stroke",
       "sleep_apnea",
     ] as const) {
-      expect(conditionEffects(of(kind), "2026-08-14", KEY)).toEqual(NO_EFFECTS);
-      expect(conditionEffects(of(kind), ONSET, KEY)).not.toEqual(NO_EFFECTS);
+      expect(conditionEffects(of(kind), "2026-08-14", KEY)).toEqual(
+        baselineDay("2026-08-14", KEY),
+      );
+      // An AF onset day may fall outside an episode; the AF test covers episodes.
+      if (kind !== "atrial_fibrillation") {
+        expect(conditionEffects(of(kind), ONSET, KEY)).not.toEqual(
+          baselineDay(ONSET, KEY),
+        );
+      }
     }
   });
 
@@ -81,13 +104,18 @@ describe("conditionEffects", () => {
     expect(effects.stepsFactor).toBeGreaterThanOrEqual(0.6);
     expect(effects.stepsFactor).toBeLessThan(0.7);
     // The same subject keeps the same effect from day to day.
-    expect(conditionEffects(of("heart_failure"), "2026-09-20", KEY)).toEqual(effects);
+    const later = conditionEffects(of("heart_failure"), "2026-09-20", KEY);
+    expect([later.restingHrDelta, later.hrvFactor, later.stepsFactor]).toEqual([
+      effects.restingHrDelta,
+      effects.hrvFactor,
+      effects.stepsFactor,
+    ]);
   });
 
   test("an abated condition stops on its abatement day, a stroke does not", () => {
     expect(
       conditionEffects(of("heart_failure", "2026-09-01"), "2026-09-01", KEY),
-    ).toEqual(NO_EFFECTS);
+    ).toEqual(baselineDay("2026-09-01", KEY));
     expect(
       conditionEffects(of("stroke", "2026-08-20"), "2026-09-01", KEY).stepsFactor,
     ).toBeLessThan(1);
@@ -133,11 +161,8 @@ describe("conditionEffects", () => {
       expect(effects.irregularHrvFactor).toBeCloseTo(1 + 2 * (effects.afBurden ?? 0), 5);
     }
     for (const effects of quiet) {
-      expect(effects).toEqual({
-        ...NO_EFFECTS,
-        afBurden: 0,
-        irregularRhythmNotifications: 0,
-      });
+      expect(effects.heartRateDelta).toBe(0);
+      expect(effects.irregularHrvFactor).toBe(1);
     }
     expect(
       episodes.some((effects) => (effects.irregularRhythmNotifications ?? 0) > 0),

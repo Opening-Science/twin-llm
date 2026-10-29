@@ -196,6 +196,7 @@ export const runGenerateWearables = async (
       endDay: args.endDay,
       days: args.days,
       conditions,
+      generatorVersion: args.generatorVersion,
     };
     const daily = generateSeries(options);
     const series = [...daily, ...generateWorkouts(options, daily)];

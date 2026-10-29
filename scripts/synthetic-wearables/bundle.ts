@@ -17,12 +17,12 @@ import { WORKOUT_METRICS, type WorkoutReading } from "./workouts";
 export const GENERATOR_ID = "twinllm-synthetic-wearables";
 /**
  * 2: workouts (`workout-<sport>`, minutes) beside the daily series, which is unchanged.
- * 3: the series follows the subject's Synthea conditions (`conditions.ts`); a
- * subject without any of them gets exactly the v2 series.
+ * 3: the series follows the subject's Synthea conditions (`conditions.ts`), and
+ * every subject gets nightly SpO2, irregular-rhythm notifications and the AF
+ * burden. `--generator-version 2` still gives the v2 series exactly.
  */
 export const WEARABLE_GENERATOR_VERSION = "3";
-export const WEARABLE_GENERATOR_VERSIONS = ["2", "3"] as const;
-export type WearableGeneratorVersion = (typeof WEARABLE_GENERATOR_VERSIONS)[number];
+export { WEARABLE_GENERATOR_VERSIONS, type WearableGeneratorVersion } from "./series";
 
 const SYNTHEA_IDENTIFIER_SYSTEM = "https://github.com/synthetichealth/synthea";
 const UCUM = "http://unitsofmeasure.org";

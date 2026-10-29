@@ -9,6 +9,11 @@
  * Hypertension has no wearable effect on purpose: a wrist device does not
  * measure blood pressure.
  *
+ * Every v3 subject gets the same metrics: nightly SpO2 mean and minimum, an
+ * irregular-rhythm notification count (with rare false positives) and the AF
+ * burden (0 without AF). Only the values follow the conditions, so the
+ * presence of a metric never tells a condition.
+ *
  * Pure: per-day randomness comes from a hash of the subject key, the label and
  * the day, so any day can be computed alone and nothing touches the v2 random
  * streams.
@@ -55,14 +60,15 @@ export type DayEffects = Readonly<{
   stepsFactor: number;
   sleepScoreDelta: number;
   respirationDelta: number;
-  /** Share of the day in atrial fibrillation (simulator ground truth); null before onset. */
+  /** Share of the day in atrial fibrillation (simulator ground truth); null only in v2. */
   afBurden: number | null;
-  /** Irregular-rhythm notifications that day; null before atrial fibrillation onset. */
+  /** Irregular-rhythm notifications that day; null only in v2. */
   irregularRhythmNotifications: number | null;
-  /** Nightly SpO2 in %; null without sleep apnea. */
+  /** Nightly SpO2 in %; null only in v2. */
   spo2: Readonly<{ mean: number; min: number }> | null;
 }>;
 
+/** The v2 day: no condition and none of the v3 metrics. */
 export const NO_EFFECTS: DayEffects = {
   restingHrDelta: 0,
   heartRateDelta: 0,
@@ -75,6 +81,13 @@ export const NO_EFFECTS: DayEffects = {
   irregularRhythmNotifications: null,
   spo2: null,
 };
+
+/**
+ * Assumption: about one false irregular-rhythm notification per person-year
+ * outside AF. False positives exist (Perez et al. 2019; Lubitz et al. 2022);
+ * the rate is ours.
+ */
+const FALSE_NOTIFICATIONS_PER_DAY = 1 / 365;
 
 /** Assumption: an atrial fibrillation episode starts on about one day in ten. */
 const AF_EPISODE_START_SHARE = 0.1;
@@ -120,9 +133,8 @@ const afBurdenOn = (key: string, onset: string, day: string): number => {
 
 const afEffects = (key: string, onset: string, day: string): Partial<DayEffects> => {
   const burden = afBurdenOn(key, onset, day);
-  if (burden === 0) {
-    return { afBurden: 0, irregularRhythmNotifications: 0 };
-  }
+  // A day outside an episode keeps the baseline (burden 0, rare false positives).
+  if (burden === 0) return {};
   return {
     afBurden: burden,
     // Short or low-burden episodes often go without a notification.
@@ -149,6 +161,21 @@ const sleepApneaEffects = (key: string, day: string): Partial<DayEffects> => ({
   spo2: {
     mean: round(92.5 + 2.5 * draw(key, "osa-spo2-mean", day), 1),
     min: Math.round(80 + 8 * draw(key, "osa-spo2-min", day)),
+  },
+});
+
+/**
+ * A v3 day without any condition: normal nightly SpO2, no AF and, rarely, a
+ * false irregular-rhythm notification.
+ */
+export const baselineDay = (day: string, key = ""): DayEffects => ({
+  ...NO_EFFECTS,
+  afBurden: 0,
+  irregularRhythmNotifications:
+    draw(key, "irn-false", day) < FALSE_NOTIFICATIONS_PER_DAY ? 1 : 0,
+  spo2: {
+    mean: round(95 + 3 * draw(key, "spo2-mean", day), 1),
+    min: Math.round(89 + 5 * draw(key, "spo2-min", day)),
   },
 });
 
@@ -180,7 +207,8 @@ const byKind = (conditions: readonly SubjectCondition[]): SubjectCondition[] =>
   });
 
 /**
- * The modifiers for one day. `key` makes the per-subject and per-day draws
+ * The modifiers and v3 metric values for one day, starting from
+ * `baselineDay`. `key` makes the per-subject and per-day draws
  * the subject's own (the generator passes seed and subject id). A stroke's
  * abatement is ignored: Synthea closes the acute event within days, while
  * the change in activity lasts.
@@ -206,7 +234,7 @@ export const conditionEffects = (
           return sleepApneaEffects(key, day);
       }
     })
-    .reduce(combine, NO_EFFECTS);
+    .reduce(combine, baselineDay(day, key));
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;

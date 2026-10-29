@@ -7,6 +7,7 @@ import { type SubjectCondition } from "./conditions";
 import { hash32, mulberry32, randomFor } from "./random";
 import { generateWorkouts } from "./workouts";
 import {
+  DAILY_METRICS,
   generateSeries,
   subjectProfile,
   WEARABLE_METRIC_NAMES,
@@ -60,8 +61,8 @@ describe("subjectProfile", () => {
 });
 
 describe("generateSeries", () => {
-  test("gives exact values for a fixed seed", () => {
-    const series = generateSeries(OPTIONS);
+  test("gives exact values for a fixed seed (v2)", () => {
+    const series = generateSeries({ ...OPTIONS, generatorVersion: "2" });
     expect(series.length).toBe(567);
     expect(series.slice(0, 7)).toEqual([
       { day: "2026-07-04", metric: "heart_rate", value: 74 },
@@ -84,7 +85,9 @@ describe("generateSeries", () => {
   test("a worn day has every metric, a missed day none", () => {
     const series = generateSeries(OPTIONS);
     const days = new Set(series.map((reading) => reading.day));
-    expect(series.length).toBe(days.size * WEARABLE_METRIC_NAMES.length);
+    expect(series.length).toBe(days.size * Object.keys(DAILY_METRICS).length);
+    const v2 = generateSeries({ ...OPTIONS, generatorVersion: "2" });
+    expect(v2.length).toBe(days.size * WEARABLE_METRIC_NAMES.length);
   });
 
   test("stays inside plausible ranges for 200 subjects", () => {
@@ -96,6 +99,10 @@ describe("generateSeries", () => {
       sleep_score: [30, 100],
       steps: [500, 30000],
       respiratory_rate: [10, 24],
+      spo2_mean: [80, 100],
+      spo2_min: [70, 100],
+      irregular_rhythm_notifications: [0, 2],
+      af_burden: [0, 1],
     } as const;
     const outside = Array.from({ length: 200 }, (_, index) =>
       generateSeries({ ...OPTIONS, subjectRef: `s${index}` }),
@@ -128,26 +135,48 @@ describe("generateSeries", () => {
 
 describe("generateSeries with conditions (v3)", () => {
   // sha256 of 50 subjects' v2 series and workouts, taken from generator v2
-  // before v3 existed. A subject without any condition must keep it exactly.
+  // before v3 existed. `generatorVersion: "2"` must keep it exactly.
   const V2_SHA256 = "4920a858b5abf731fa3e1c3a2c24a55900d984b763e1e470e527f6f5374e462f";
-  const fifty = (conditions?: readonly SubjectCondition[]) =>
+  const ONSET = "2026-08-20";
+  const AF: readonly SubjectCondition[] = [
+    { kind: "atrial_fibrillation", onset: ONSET, abatement: null },
+  ];
+  const fifty = (generatorVersion: "2" | "3", conditions?: readonly SubjectCondition[]) =>
     Array.from({ length: 50 }, (_, index) => {
-      const options = { ...OPTIONS, subjectRef: `s${index}`, conditions };
+      const options = {
+        ...OPTIONS,
+        subjectRef: `s${index}`,
+        conditions,
+        generatorVersion,
+      };
       const daily = generateSeries(options);
       return [...daily, ...generateWorkouts(options, daily)];
     });
   const sha256 = (value: unknown) =>
     createHash("sha256").update(JSON.stringify(value)).digest("hex");
 
-  test("a subject without a condition gets exactly the v2 series", () => {
-    expect(sha256(fifty())).toBe(V2_SHA256);
-    expect(sha256(fifty([]))).toBe(V2_SHA256);
+  test("version 2 gives exactly the v2 series, conditions or not", () => {
+    expect(sha256(fifty("2"))).toBe(V2_SHA256);
+    expect(sha256(fifty("2", AF))).toBe(V2_SHA256);
   });
 
-  const ONSET = "2026-08-20";
-  const AF: readonly SubjectCondition[] = [
-    { kind: "atrial_fibrillation", onset: ONSET, abatement: null },
-  ];
+  test("a healthy subject keeps the v2 values of the v2 metrics", () => {
+    const v2 = new Set(WEARABLE_METRIC_NAMES as string[]);
+    expect(generateSeries(OPTIONS).filter((reading) => v2.has(reading.metric))).toEqual(
+      generateSeries({ ...OPTIONS, generatorVersion: "2" }),
+    );
+  });
+
+  test("a healthy and an AF subject have the same metrics on the same days", () => {
+    const metricDays = (conditions?: readonly SubjectCondition[]) =>
+      generateSeries({ ...OPTIONS, conditions }).map(
+        (reading) => `${reading.day}:${reading.metric}`,
+      );
+    expect(metricDays(AF)).toEqual(metricDays());
+    expect(metricDays([{ kind: "sleep_apnea", onset: ONSET, abatement: null }])).toEqual(
+      metricDays(),
+    );
+  });
 
   test("nothing changes before the onset day", () => {
     for (const kind of [
@@ -164,29 +193,41 @@ describe("generateSeries with conditions (v3)", () => {
     }
   });
 
-  test("atrial fibrillation adds notifications and burden only from onset", () => {
-    const series = generateSeries({ ...OPTIONS, conditions: AF });
-    const added = series.filter(
-      (reading) =>
-        reading.metric === "irregular_rhythm_notifications" ||
-        reading.metric === "af_burden",
-    );
-    expect(added.length).toBeGreaterThan(0);
-    expect(added.every((reading) => reading.day >= ONSET)).toBe(true);
-    const worn = new Set(
-      series.filter((reading) => reading.day >= ONSET).map((reading) => reading.day),
-    );
-    expect(added.length).toBe(worn.size * 2);
-    expect(
-      added.some((reading) => reading.metric === "af_burden" && reading.value > 0),
-    ).toBe(true);
-    expect(series.some((reading) => reading.metric === "spo2_mean")).toBe(false);
+  test("AF burden is above 0 only from onset; a healthy subject's is always 0", () => {
+    const burden = (conditions?: readonly SubjectCondition[]) =>
+      generateSeries({ ...OPTIONS, conditions }).filter(
+        (reading) => reading.metric === "af_burden",
+      );
+    const af = burden(AF).filter((reading) => reading.value > 0);
+    expect(af.length).toBeGreaterThan(0);
+    expect(af.every((reading) => reading.day >= ONSET)).toBe(true);
+    expect(burden().every((reading) => reading.value === 0)).toBe(true);
   });
 
-  test("an episode day has a faster heart rate and a higher RMSSD than the v2 day", () => {
-    const v2 = generateSeries(OPTIONS);
+  test("notifications come with episodes; elsewhere only rare false positives", () => {
+    const notified = (conditions?: readonly SubjectCondition[]) =>
+      generateSeries({ ...OPTIONS, conditions })
+        .filter(
+          (reading) =>
+            reading.metric === "irregular_rhythm_notifications" && reading.value > 0,
+        )
+        .reduce((sum, reading) => sum + reading.value, 0);
+    expect(notified(AF)).toBeGreaterThan(notified());
+    // About one a year: 200 healthy subjects over 90 days give roughly 50.
+    const healthy = Array.from({ length: 200 }, (_, index) =>
+      generateSeries({ ...OPTIONS, subjectRef: `s${index}` }),
+    )
+      .flat()
+      .filter((reading) => reading.metric === "irregular_rhythm_notifications")
+      .reduce((sum, reading) => sum + reading.value, 0);
+    expect(healthy).toBeGreaterThan(10);
+    expect(healthy).toBeLessThan(120);
+  });
+
+  test("an episode day has a faster heart rate and a higher RMSSD than the healthy day", () => {
+    const healthy = generateSeries(OPTIONS);
     const v3 = generateSeries({ ...OPTIONS, conditions: AF });
-    const value = (series: typeof v2, day: string, metric: string) =>
+    const value = (series: typeof v3, day: string, metric: string) =>
       series.find((reading) => reading.day === day && reading.metric === metric)?.value ??
       Number.NaN;
     const episodeDays = v3
@@ -195,24 +236,29 @@ describe("generateSeries with conditions (v3)", () => {
     expect(episodeDays.length).toBeGreaterThan(0);
     for (const day of episodeDays) {
       expect(
-        value(v3, day, "heart_rate") - value(v2, day, "heart_rate"),
+        value(v3, day, "heart_rate") - value(healthy, day, "heart_rate"),
       ).toBeGreaterThanOrEqual(9);
-      expect(value(v3, day, "hrv_rmssd")).toBeGreaterThan(value(v2, day, "hrv_rmssd"));
-      expect(value(v3, day, "sleep_score")).toBe(value(v2, day, "sleep_score"));
+      expect(value(v3, day, "hrv_rmssd")).toBeGreaterThan(
+        value(healthy, day, "hrv_rmssd"),
+      );
+      expect(value(v3, day, "sleep_score")).toBe(value(healthy, day, "sleep_score"));
     }
   });
 
-  test("sleep apnea adds nightly SpO2 from onset and is deterministic", () => {
+  test("sleep apnea lowers nightly SpO2 from onset and is deterministic", () => {
     const options = {
       ...OPTIONS,
       conditions: [{ kind: "sleep_apnea", onset: ONSET, abatement: null }] as const,
     };
     const series = generateSeries(options);
-    const spo2 = series.filter(
-      (reading) => reading.metric === "spo2_mean" || reading.metric === "spo2_min",
-    );
-    expect(spo2.length).toBeGreaterThan(0);
-    expect(spo2.every((reading) => reading.day >= ONSET)).toBe(true);
+    const mins = (after: boolean) =>
+      series
+        .filter(
+          (reading) => reading.metric === "spo2_min" && reading.day >= ONSET === after,
+        )
+        .map((reading) => reading.value);
+    expect(Math.max(...mins(true))).toBeLessThanOrEqual(88);
+    expect(Math.min(...mins(false))).toBeGreaterThanOrEqual(89);
     expect(generateSeries(options)).toEqual(series);
   });
 });

@@ -113,8 +113,9 @@ describe("runGenerateWearables", () => {
       endDay: "2026-10-01",
       days: 5,
       subjects: 2,
-      // 35 daily readings and one workout (4f083ce3, 29 Sep, running).
-      readings: 36,
+      // 5 worn days across both subjects x 11 daily metrics and one workout
+      // (4f083ce3, 29 Sep, running); v2 had 7 daily metrics (36 readings).
+      readings: 56,
       syntheaVersion: "v4.0.0",
       subjectsWithConditionEffect: {
         atrial_fibrillation: 0,
