@@ -65,6 +65,19 @@ describe("docImageFile", () => {
   });
 });
 
+describe("rewriteDocUrl for a standalone page", () => {
+  test("sends other pages to GitHub", () => {
+    expect(
+      rewriteDocUrl("training-data.md#the-1m-cohort", "synthea-generator.md", "github"),
+    ).toBe(
+      "https://github.com/Opening-Science/twin-llm/blob/main/docs/training-data.md#the-1m-cohort",
+    );
+    expect(rewriteDocUrl("../NOTICE", "synthea-generator.md", "github")).toBe(
+      "https://github.com/Opening-Science/twin-llm/blob/main/NOTICE",
+    );
+  });
+});
+
 describe("rewriteDocUrl", () => {
   test("sibling and nested Markdown links become /docs routes", () => {
     expect(rewriteDocUrl("providers.md", "twin-llm.md")).toBe("/docs/providers");

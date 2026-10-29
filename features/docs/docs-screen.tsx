@@ -37,19 +37,32 @@ export const DocsIndex = ({ pages }: Readonly<{ pages: readonly DocPage[] }>) =>
   </div>
 );
 
+/**
+ * `standalone` is for a page shown outside the docs section (the Synthea
+ * generator): no breadcrumb back to `/docs`, and links to other pages go to
+ * GitHub.
+ */
 export const DocScreen = ({
   page,
-}: Readonly<{ page: DocPage & Readonly<{ markdown: string }> }>) => (
+  standalone = false,
+}: Readonly<{
+  page: DocPage & Readonly<{ markdown: string }>;
+  standalone?: boolean;
+}>) => (
   <article className={`${FRAME} doc-prose`}>
-    <p className="text-muted-foreground font-mono text-xs">
-      <Link href="/docs" className="hover:text-foreground">
-        Docs
-      </Link>{" "}
-      / {page.path}
-    </p>
+    {!standalone && (
+      <p className="text-muted-foreground font-mono text-xs">
+        <Link href="/docs" className="hover:text-foreground">
+          Docs
+        </Link>{" "}
+        / {page.path}
+      </p>
+    )}
     <Markdown
       remarkPlugins={[remarkGfm]}
-      urlTransform={(url) => defaultUrlTransform(rewriteDocUrl(url, page.path))}
+      urlTransform={(url) =>
+        defaultUrlTransform(rewriteDocUrl(url, page.path, standalone ? "github" : "app"))
+      }
     >
       {page.markdown}
     </Markdown>

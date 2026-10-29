@@ -458,6 +458,12 @@ const PERSONAL_READ_ROUTES: Readonly<Record<string, Entry>> = {
   "GET /api/motion/status": { kind: "exempt", why: NOT_PERSONAL },
   "GET /api/motion/clip/[clipId]": { kind: "exempt", why: NOT_PERSONAL },
   "GET /api/gbd/status": { kind: "exempt", why: NOT_PERSONAL },
+  "POST /api/synthea/jobs": {
+    kind: "exempt",
+    why: "runs Synthea on closed options; every record it makes is synthetic",
+  },
+  "GET /api/synthea/jobs/[id]": { kind: "exempt", why: NOT_PERSONAL },
+  "GET /api/synthea/jobs/[id]/download": { kind: "exempt", why: NOT_PERSONAL },
 };
 
 /** A direct call to a wearable summary reader, outside the audited reader. */
