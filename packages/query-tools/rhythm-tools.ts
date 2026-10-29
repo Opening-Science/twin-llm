@@ -1,23 +1,33 @@
 import "server-only";
 
-import { type BeatLabel } from "@/packages/rhythm-sim/ectopic-beats";
 import { simulateRecording } from "@/packages/rhythm-sim/simulate-recording";
 import type { z } from "zod";
 
-import { defaultQueryToolPorts, type QueryToolPorts } from "./ports";
-import { NO_RHYTHM_DATA, tooFewBeats, type ToolRefusal } from "./refusals";
 import {
+  defaultQueryToolPorts,
+  findConditionsInDatabase,
+  findObservationSpanInDatabase,
+  type QueryToolPorts,
+} from "./ports";
+import {
+  NO_RHYTHM_DATA,
+  outsideSubjectWindow,
+  tooFewBeats,
+  type ToolRefusal,
+} from "./refusals";
+import {
+  AF_SNOMED_CODE,
+  type RecordingPlan,
   recordingConfigFor,
-  type RhythmProfile,
-  rhythmProfileOf,
 } from "./rhythm-recording";
-import type { rhythmIrregularityInput } from "./schemas";
+import { windowEndDate, windowStartDate, type rhythmIrregularityInput } from "./schemas";
 import { SUBJECT_SCOPE_VIOLATION, type SessionScope } from "./scope";
 import {
   beatWindows,
   IRREGULARITY_THRESHOLDS,
   type IrregularityWindow,
   irregularityWindow,
+  utcDay,
 } from "./stats";
 import { audited, subjectInScope } from "./tool-core";
 
@@ -25,12 +35,16 @@ import { audited, subjectInScope } from "./tool-core";
  * `rhythm_irregularity` (#246): irregularity metrics of one simulated RR
  * recording of a synthetic subject, made by packages/rhythm-sim (see
  * rhythm-recording.ts for why it is made, not read). It describes the
- * recording; it never says a person has a condition.
+ * recording; it never says a person has a condition. The simulator's ground
+ * truth is not in the result: scorers call `rhythmGroundTruth` in code.
  */
 export type RhythmIrregularityInput = z.infer<typeof rhythmIrregularityInput>;
 
+/** A condition lookup reads at most this many rows; one is enough to know. */
+const AF_CONDITION_TAKE = 1;
+
 export const RESEARCH_THRESHOLD_LABEL =
-  "research threshold (Dash et al. 2009, Ann Biomed Eng 37:1701-1709): nRMSSD > 0.1, Shannon entropy > 0.7 and turning-point ratio within the band of random values, per 128 intervals after dropping the 8 longest and 8 shortest; a research threshold, not a diagnosis";
+  "research threshold after Dash et al. 2009 (Ann Biomed Eng 37:1701-1709): nRMSSD > 0.1 and turning-point ratio inside the 99.9 % band of random values, per 128 intervals; their Shannon entropy condition is reported but not applied (not validated here); a research threshold, not a diagnosis";
 
 export type RhythmWindow = IrregularityWindow &
   Readonly<{ start_sec: number; end_sec: number }>;
@@ -38,6 +52,7 @@ export type RhythmWindow = IrregularityWindow &
 export type RhythmIrregularityResult = Readonly<{
   subject_ref: string;
   recording: number;
+  date: string;
   duration_sec: number;
   source: "simulated";
   /** RR intervals in the recording. */
@@ -50,26 +65,13 @@ export type RhythmIrregularityResult = Readonly<{
   flagged_time_share: number;
   windows: readonly RhythmWindow[];
   threshold: string;
-  /** What the simulator made: its settings, never a finding about a person. */
-  simulator_ground_truth: Readonly<{
-    profile: RhythmProfile;
-    af_interval_share: number;
-    pac: number;
-    pvc: number;
-    note: string;
-  }>;
 }>;
 
-const countOf = (labels: readonly BeatLabel[], label: BeatLabel): number =>
-  labels.filter((each) => each === label).length;
-
-/** The metrics of one simulated recording. Pure; the tool wraps it in scope and audit. */
+/** The metrics of one planned recording. Pure; the tool wraps it in scope, reads and audit. */
 export const describeRecording = (
-  input: RhythmIrregularityInput,
+  plan: RecordingPlan,
 ): RhythmIrregularityResult | ToolRefusal => {
-  const recording = simulateRecording(
-    recordingConfigFor(input.subject_ref, input.recording, input.duration_sec),
-  );
+  const recording = simulateRecording(recordingConfigFor(plan));
   const size = IRREGULARITY_THRESHOLDS.windowBeats;
   const windows = beatWindows(recording.rrMs, size).map((rr, index) => ({
     start_sec: recording.beatTimesMs[index * size] / 1000,
@@ -81,9 +83,10 @@ export const describeRecording = (
   const flagged = windows.filter((each) => each.flagged);
   const total = windows.reduce((sum, each) => sum + seconds(each), 0);
   return {
-    subject_ref: input.subject_ref,
-    recording: input.recording,
-    duration_sec: input.duration_sec,
+    subject_ref: plan.subjectRef,
+    recording: plan.recording,
+    date: plan.date,
+    duration_sec: plan.durationSec,
     source: "simulated",
     n: recording.rrMs.length,
     mean_hr: recording.meanHr,
@@ -93,16 +96,14 @@ export const describeRecording = (
     flagged_time_share: flagged.reduce((sum, each) => sum + seconds(each), 0) / total,
     windows,
     threshold: RESEARCH_THRESHOLD_LABEL,
-    simulator_ground_truth: {
-      profile: rhythmProfileOf(input.subject_ref).profile,
-      af_interval_share: countOf(recording.labels, "af") / recording.labels.length,
-      pac: countOf(recording.labels, "pac"),
-      pvc: countOf(recording.labels, "pvc"),
-      note: "simulator settings for this synthetic recording, for checking the metrics; not a finding about a person",
-    },
   };
 };
 
+/**
+ * Scope, then the subject's observation span (the recording day must lie in
+ * it; default its last day), then whether an AF condition overlaps that day,
+ * read with the same query as `conditions_timeline`.
+ */
 export const runRhythmIrregularity = (
   scope: SessionScope,
   input: RhythmIrregularityInput,
@@ -118,7 +119,32 @@ export const runRhythmIrregularity = (
       if (!(await subjectInScope(scope, input.subject_ref, ports))) {
         return SUBJECT_SCOPE_VIOLATION;
       }
-      return describeRecording(input);
+      const span = await (ports.findObservationSpan ?? findObservationSpanInDatabase)(
+        input.subject_ref,
+      );
+      if (span === null) {
+        return outsideSubjectWindow(input.date ?? null, { start: null, end: null });
+      }
+      const first = utcDay(span.first);
+      const last = utcDay(span.last);
+      const date = input.date ?? last;
+      if (date < first || date > last) {
+        return outsideSubjectWindow(date, { start: first, end: last });
+      }
+      const conditions = await (ports.findConditions ?? findConditionsInDatabase)({
+        subjectRef: input.subject_ref,
+        start: windowStartDate(date),
+        end: windowEndDate(date),
+        code: AF_SNOMED_CODE,
+        take: AF_CONDITION_TAKE,
+      });
+      return describeRecording({
+        subjectRef: input.subject_ref,
+        recording: input.recording,
+        durationSec: input.duration_sec,
+        date,
+        afConditionActive: conditions.length > 0,
+      });
     },
     (result) => ("n" in result ? result.n : 0),
     ports,

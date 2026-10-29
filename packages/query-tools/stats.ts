@@ -298,8 +298,8 @@ export const recentLoadRatio = (recent: number, previous: number): number | null
 /**
  * The series without its `count` largest and `count` smallest values, in the
  * original order. Equal values are dropped by position, first ones first.
- * Dash et al. 2009 drop 8 of each from a 128-beat segment so single ectopic
- * beats weigh less.
+ * Dash et al. 2009 drop 8 of each from a 128-beat segment before the
+ * Shannon entropy histogram.
  */
 export const withoutExtremes = (values: readonly number[], count: number): number[] => {
   if (values.length <= 2 * count) return [];
@@ -402,61 +402,68 @@ export const turningPoints = (values: readonly number[]): number =>
 
 export type TurningPointRange = Readonly<{ low: number; high: number }>;
 
+/** Two-sided 99.9 % normal quantile; Dash et al. 2009 chose the 99.9 % interval. */
+export const TPR_Z_999 = 3.2905;
+
 /**
  * For n independent values the turning-point count has mean (2n − 4) / 3 and
- * variance (16n − 29) / 90; this is that mean ± 2 SD as a ratio of n (Dash et
- * al. 2009 use the same band).
+ * variance (16n − 29) / 90; this is that mean ± z SD as a ratio of n. With
+ * n = 128 and the 99.9 % z it is 0.535 to 0.778, which Dash et al. 2009 report
+ * rounded as 0.54 < TPR < 0.77.
  */
-export const randomTurningPointRange = (n: number): TurningPointRange => {
+export const randomTurningPointRange = (n: number, z = TPR_Z_999): TurningPointRange => {
   const centre = (2 * n - 4) / 3;
-  const spread = 2 * Math.sqrt((16 * n - 29) / 90);
+  const spread = z * Math.sqrt((16 * n - 29) / 90);
   return { low: (centre - spread) / n, high: (centre + spread) / n };
 };
 
-/** The research rule of Dash et al. 2009, as the tool applies it. */
+/** The research rule of Dash et al. 2009 as the tool applies it (see irregularityWindow). */
 export const IRREGULARITY_THRESHOLDS = {
   windowBeats: 128,
   extremesDropped: 8,
   histogramBins: 16,
   nrmssdAbove: 0.1,
+  /** Dash et al. 2009's Shannon entropy threshold; reported, not used in the flag. */
   entropyAbove: 0.7,
 } as const;
 
 export type IrregularityWindow = Readonly<{
-  /** RR intervals in the window, before the extremes are dropped. */
+  /** RR intervals in the window. */
   n: number;
   nrmssd: number | null;
+  /** Implemented as Dash et al. 2009 describe it but not validated here; not in the flag. */
   shannon_entropy: number | null;
   sample_entropy: number | null;
   turning_point_ratio: number | null;
-  /** All three of nRMSSD, entropy and turning points past the research threshold. */
+  /** nRMSSD above 0.1 and the turning-point ratio inside the 99.9 % band of random values. */
   flagged: boolean;
 }>;
 
 /**
- * One window: drop the 8 largest and 8 smallest intervals, then nRMSSD,
- * 16-bin Shannon entropy, sample entropy (m 2, r 0.2 SD) and the turning-point
- * ratio of what is left. Flagged when nRMSSD > 0.1, entropy > 0.7 and the
- * turning-point ratio lies inside the band expected of random values.
+ * One window, as Dash et al. 2009 describe it: nRMSSD and the turning-point
+ * ratio over the whole window; the 16-bin Shannon entropy over the window
+ * without its 8 longest and 8 shortest intervals, bins from the shortest to
+ * the longest left, divided by ln 16. Sample entropy (m 2, r 0.2 SD) over the
+ * whole window. Flagged when nRMSSD > 0.1 and the turning-point ratio lies in
+ * the 99.9 % band; the paper's third condition (entropy > 0.7) is left out
+ * because on simulated sinus rhythm this entropy is as high as in AF
+ * (docs/query-layer.md, "Rhythm irregularity").
  */
 export const irregularityWindow = (rr: readonly number[]): IrregularityWindow => {
   const kept = withoutExtremes(rr, IRREGULARITY_THRESHOLDS.extremesDropped);
-  const nrmssd = normalisedRmssd(kept);
-  const entropy = histogramEntropy(kept, IRREGULARITY_THRESHOLDS.histogramBins);
-  const ratio = kept.length < 3 ? null : turningPoints(kept) / kept.length;
-  const band = randomTurningPointRange(kept.length);
+  const nrmssd = normalisedRmssd(rr);
+  const ratio = rr.length < 3 ? null : turningPoints(rr) / rr.length;
+  const band = randomTurningPointRange(rr.length);
   return {
     n: rr.length,
     nrmssd,
-    shannon_entropy: entropy,
-    sample_entropy: sampleEntropy(kept),
+    shannon_entropy: histogramEntropy(kept, IRREGULARITY_THRESHOLDS.histogramBins),
+    sample_entropy: sampleEntropy(rr),
     turning_point_ratio: ratio,
     flagged:
       nrmssd !== null &&
-      entropy !== null &&
       ratio !== null &&
       nrmssd > IRREGULARITY_THRESHOLDS.nrmssdAbove &&
-      entropy > IRREGULARITY_THRESHOLDS.entropyAbove &&
       ratio >= band.low &&
       ratio <= band.high,
   };

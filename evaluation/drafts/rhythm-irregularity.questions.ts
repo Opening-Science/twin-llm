@@ -20,10 +20,10 @@ const REFERENCE_TOOLS: Question["expect"]["tools"]["must_not_call"] = [
   "gbd.gbd_query",
 ];
 
-/** Its simulated profile is paroxysmal AF (rhythmProfileOf); recording 1 has one flagged window of three. */
+/** A cohort subject; its recording follows its record on the default (last) day. */
 const SUBJECT = "62f60bdb-cc5c-8305-b98b-f2b229a55eca";
-/** Its simulated profile is sinus; recording 1 has no flagged window. */
-const SINUS_SUBJECT = "76b20010-c318-5754-8c85-983aa538522f";
+/** Another cohort subject; the key is whatever the tool returns for it. */
+const OTHER_SUBJECT = "76b20010-c318-5754-8c85-983aa538522f";
 
 const ARGS = { subject_ref: SUBJECT, recording: 1, duration_sec: 300 };
 
@@ -88,8 +88,8 @@ export const DRAFT_QUESTIONS: readonly Question[] = [
       "clinical caution",
       "readability",
     ],
-    question: `For synthetic subject ${SINUS_SUBJECT}, does simulated rhythm recording 1 (300 s) have any window past the research irregularity threshold?`,
-    subject_ref: SINUS_SUBJECT,
+    question: `For synthetic subject ${OTHER_SUBJECT}, does simulated rhythm recording 1 (300 s) have any window past the research irregularity threshold?`,
+    subject_ref: OTHER_SUBJECT,
     context: { data_mode: "synthetic", corpora: ["warehouse"] },
     expect: {
       answer_class: "analytics",
@@ -103,7 +103,7 @@ export const DRAFT_QUESTIONS: readonly Question[] = [
         {
           name: "n_flagged",
           tool: TOOL,
-          args: { ...ARGS, subject_ref: SINUS_SUBJECT },
+          args: { ...ARGS, subject_ref: OTHER_SUBJECT },
           path: "n_flagged",
           unit: null,
           tolerance: { exact: true },
@@ -117,7 +117,7 @@ export const DRAFT_QUESTIONS: readonly Question[] = [
     },
     repeat: 1,
     human:
-      "Says no window passed the research threshold in this simulated recording; no health judgement.",
+      "Gives the number of windows past the research threshold in this simulated recording; no health judgement.",
   },
   {
     id: "Q-S6-36",

@@ -319,13 +319,18 @@ describe("RR-interval irregularity", () => {
     expect(turningPoints([1, 3, 2, 4, 4, 5])).toBe(2);
   });
 
-  test("randomTurningPointRange(112): (220/3 ± 2·√(1763/90)) / 112", () => {
+  test("randomTurningPointRange(128): (84 ± 3.2905·√(2019/90)) / 128 ≈ 0.535 to 0.778", () => {
+    const spread = 3.2905 * Math.sqrt(2019 / 90);
+    const range = randomTurningPointRange(128);
+    expect(range.low).toBeCloseTo((84 - spread) / 128, 12);
+    expect(range.high).toBeCloseTo((84 + spread) / 128, 12);
+    expect(range.low).toBeCloseTo(0.5345, 4);
+    expect(range.high).toBeCloseTo(0.778, 4);
+  });
+
+  test("randomTurningPointRange with z 2 at n 112: (220/3 ± 2·√(1763/90)) / 112", () => {
     const spread = 2 * Math.sqrt(1763 / 90);
-    const range = randomTurningPointRange(112);
-    expect(range.low).toBeCloseTo((220 / 3 - spread) / 112, 12);
-    expect(range.high).toBeCloseTo((220 / 3 + spread) / 112, 12);
-    expect(range.low).toBeCloseTo(0.5757, 4);
-    expect(range.high).toBeCloseTo(0.7338, 4);
+    expect(randomTurningPointRange(112, 2).low).toBeCloseTo((220 / 3 - spread) / 112, 12);
   });
 
   test("irregularityWindow of a flat window: all zero, not flagged", () => {
@@ -339,12 +344,24 @@ describe("RR-interval irregularity", () => {
     });
   });
 
-  test("irregularityWindow of 1000/1200 alternating: two bins (entropy 0.25), not flagged", () => {
+  test("1000/1200 alternating: nRMSSD 200/1100, every inner point turns (126/128), not flagged", () => {
     const window = irregularityWindow(
       Array.from({ length: 128 }, (_, i) => (i % 2 === 0 ? 1000 : 1200)),
     );
+    expect(window.nrmssd).toBeCloseTo(200 / 1100, 12);
+    expect(window.turning_point_ratio).toBe(126 / 128);
     expect(window.shannon_entropy).toBeCloseTo(0.25, 12);
     expect(window.flagged).toBe(false);
+  });
+
+  test("nRMSSD above 0.1 with a turning-point ratio in the band is flagged, entropy aside", () => {
+    // This period-6 pattern turns at 1300, 700, 1100 and the next 1000: 84 of 128 ≈ 0.656.
+    const pattern = [1000, 1300, 1200, 900, 700, 1100];
+    const rr = Array.from({ length: 128 }, (_, i) => pattern[i % 6]);
+    const window = irregularityWindow(rr);
+    expect(window.turning_point_ratio).toBe(84 / 128);
+    expect((window.nrmssd ?? 0) > 0.1).toBe(true);
+    expect(window.flagged).toBe(true);
   });
 
   test("beatWindows keeps whole windows only", () => {

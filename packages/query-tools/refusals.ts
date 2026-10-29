@@ -83,6 +83,7 @@ export type ToolRefusal =
   | WindowTooShort
   | SourcesUnitMismatch
   | NoRhythmData
+  | OutsideSubjectWindow
   | ImportedRefusal;
 
 const REFUSAL_CODES: readonly string[] = [
@@ -98,6 +99,7 @@ const REFUSAL_CODES: readonly string[] = [
   "SOURCE_NOT_CONNECTED",
   "WINDOW_TOO_SHORT",
   "NO_RHYTHM_DATA",
+  "OUTSIDE_SUBJECT_WINDOW",
   ...IMPORTED_REFUSAL_CODES,
 ];
 
@@ -401,4 +403,25 @@ export const tooFewBeats = (minimum: number, n: number): WindowTooShort => ({
   measure: "rr_intervals",
   minimum,
   counts: [{ source: "simulated", n }],
+});
+
+export type OutsideSubjectWindow = Readonly<{
+  code: "OUTSIDE_SUBJECT_WINDOW";
+  error: string;
+  date: string | null;
+  window: Readonly<{ start: string | null; end: string | null }>;
+}>;
+
+/** A recording day must fall within the days the subject has observations. */
+export const outsideSubjectWindow = (
+  date: string | null,
+  window: Readonly<{ start: string | null; end: string | null }>,
+): OutsideSubjectWindow => ({
+  code: "OUTSIDE_SUBJECT_WINDOW",
+  error:
+    window.start === null
+      ? "this subject has no observations, so there is no day to simulate a recording on"
+      : "date is outside the days this subject has observations; pick a day within window",
+  date,
+  window: { start: window.start, end: window.end },
 });

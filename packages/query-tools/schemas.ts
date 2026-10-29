@@ -383,6 +383,12 @@ export const rhythmIrregularityInput = z
       .min(180)
       .max(600)
       .describe("Recording length in seconds, 180 to 600"),
+    date: z.iso
+      .date()
+      .optional()
+      .describe(
+        "Recording day, YYYY-MM-DD, within the subject's observations; default the last",
+      ),
   })
   .strict()
   .describe(
@@ -512,7 +518,7 @@ export const TOOL_DEFINITIONS = [
   {
     name: "rhythm_irregularity",
     description:
-      "Irregularity metrics of one simulated RR-interval recording of a synthetic subject (made by the rhythm simulator, not measured), per 128-interval window: nRMSSD, Shannon entropy, sample entropy, turning-point ratio, and a research-threshold flag (Dash et al. 2009), with n_flagged and flagged_time_share. simulator_ground_truth is what the simulator made, for checking the metrics. Describes the recording; never say a person has a condition. Synthetic mode only: personal mode is NO_RHYTHM_DATA. Refuses SUBJECT_SCOPE_VIOLATION and WINDOW_TOO_SHORT.",
+      "Irregularity metrics of one simulated RR-interval recording of a synthetic subject (made by the rhythm simulator, not measured), on one day, per 128-interval window: nRMSSD, Shannon entropy, sample entropy, turning-point ratio and a research-threshold flag (Dash et al. 2009), with n_flagged and flagged_time_share. Describes the recording; never say a person has a condition. Synthetic mode only: personal mode is NO_RHYTHM_DATA. Refuses SUBJECT_SCOPE_VIOLATION, OUTSIDE_SUBJECT_WINDOW and WINDOW_TOO_SHORT.",
     input: rhythmIrregularityInput,
   },
 ] as const;

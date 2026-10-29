@@ -4,9 +4,21 @@ import type { AppendInput } from "@/packages/audit/append";
 import { type BeatLabel } from "@/packages/rhythm-sim/ectopic-beats";
 import { simulateRecording } from "@/packages/rhythm-sim/simulate-recording";
 
-import type { QueryToolPorts, SubjectScopeRow } from "./ports";
-import { NO_RHYTHM_DATA } from "./refusals";
-import { PROFILE_SHARES, recordingConfigFor, rhythmProfileOf } from "./rhythm-recording";
+import type {
+  ClinicalQuery,
+  ConditionRecord,
+  QueryToolPorts,
+  SubjectScopeRow,
+} from "./ports";
+import { NO_RHYTHM_DATA, outsideSubjectWindow } from "./refusals";
+import {
+  AF_SNOMED_CODE,
+  type RecordingPlan,
+  recordingConfigFor,
+  rhythmGroundTruth,
+  rhythmProfileOf,
+  subjectRhythmSettings,
+} from "./rhythm-recording";
 import { describeRecording, RESEARCH_THRESHOLD_LABEL } from "./rhythm-tools";
 import { rhythmIrregularityInput } from "./schemas";
 import { SUBJECT_SCOPE_VIOLATION, type SessionScope } from "./scope";
@@ -14,91 +26,159 @@ import { beatWindows, irregularityWindow } from "./stats";
 import { runRhythmIrregularity } from "./tools";
 
 /**
- * `rhythm_irregularity` over recordings made by packages/rhythm-sim. The
- * subject refs below were picked for their profiles: "a" is sinus, "b"
- * paroxysmal AF and "c" persistent AF (rhythmProfileOf).
+ * `rhythm_irregularity` over recordings made by packages/rhythm-sim. Whether a
+ * subject's recording has AF follows its record: "subject-af" has an AF
+ * condition from 2025-03-01 to 2025-09-01, "subject-sinus" has none.
  */
 
-const SINUS = "a";
-const PAROXYSMAL = "b";
-const PERSISTENT = "c";
+const AF_SUBJECT = "subject-af";
+const SINUS_SUBJECT = "subject-sinus";
 const UNLISTED = "unlisted-cohort-subject";
 
 const SUBJECTS: Readonly<Record<string, SubjectScopeRow>> = {
-  [SINUS]: { isSynthetic: true, cohortId: "synthea-v4-seed42" },
-  [PAROXYSMAL]: { isSynthetic: true, cohortId: "synthea-v4-seed42" },
-  [PERSISTENT]: { isSynthetic: true, cohortId: "synthea-v4-seed42" },
+  [AF_SUBJECT]: { isSynthetic: true, cohortId: "synthea-v4-seed42" },
+  [SINUS_SUBJECT]: { isSynthetic: true, cohortId: "synthea-v4-seed42" },
   [UNLISTED]: { isSynthetic: true, cohortId: "synthea-unlisted" },
+};
+
+const AF_CONDITION: ConditionRecord = {
+  id: "c1",
+  codeSystem: "http://snomed.info/sct",
+  code: AF_SNOMED_CODE,
+  display: "Atrial fibrillation",
+  onsetAt: new Date("2025-03-01T00:00:00.000Z"),
+  abatementAt: new Date("2025-09-01T00:00:00.000Z"),
+  clinicalStatus: "resolved",
+  verificationStatus: "confirmed",
+};
+
+const SPAN = {
+  first: new Date("2024-01-01T08:00:00.000Z"),
+  last: new Date("2025-12-31T08:00:00.000Z"),
 };
 
 const fakePorts = () => {
   const audits: AppendInput[] = [];
   const lookups: string[] = [];
+  const conditionQueries: ClinicalQuery[] = [];
   const ports: QueryToolPorts = {
     findSubject: async (subjectRef) => {
       lookups.push(subjectRef);
       return SUBJECTS[subjectRef] ?? null;
     },
     findObservations: async () => {
-      throw new Error("rhythm_irregularity reads no observations");
+      throw new Error("rhythm_irregularity reads no observation rows");
     },
     findCohortObservations: async () => [],
+    findObservationSpan: async () => SPAN,
+    findConditions: async (query) => {
+      conditionQueries.push(query);
+      // The conditions_timeline overlap rule, on the one AF record.
+      const overlaps =
+        query.subjectRef === AF_SUBJECT &&
+        query.code === AF_SNOMED_CODE &&
+        (AF_CONDITION.onsetAt?.getTime() ?? Infinity) <= query.end.getTime() &&
+        (AF_CONDITION.abatementAt === null ||
+          AF_CONDITION.abatementAt.getTime() >= query.start.getTime());
+      return overlaps ? [AF_CONDITION] : [];
+    },
     appendAudit: async (input) => {
       audits.push(input);
     },
   };
-  return { ports, audits, lookups };
+  return { ports, audits, lookups, conditionQueries };
 };
 
 const synthetic: SessionScope = { actor: "local", sessionId: "turn", mode: "synthetic" };
 const personal: SessionScope = { actor: "local", sessionId: "turn", mode: "personal" };
 
-const input = (subjectRef: string) =>
-  ({ subject_ref: subjectRef, recording: 1, duration_sec: 300 }) as const;
+const input = (subjectRef: string, date?: string) =>
+  ({
+    subject_ref: subjectRef,
+    recording: 1,
+    duration_sec: 300,
+    ...(date === undefined ? {} : { date }),
+  }) as const;
 
-describe("rhythmProfileOf and recordingConfigFor", () => {
-  test("a subject's profile and settings are fixed by its subject_ref", () => {
-    expect(rhythmProfileOf("synthetic-rhythm-subject")).toEqual({
-      profile: "sinus",
-      meanHr: 71,
-      rrSdMs: 37,
+const plan = (subjectRef: string, afConditionActive: boolean): RecordingPlan => ({
+  subjectRef,
+  recording: 1,
+  durationSec: 300,
+  date: "2025-06-01",
+  afConditionActive,
+});
+
+/** Any key that would hand a model the simulator's answer. */
+const ANSWER_KEYS = /truth|profile|episode|label|af_|afinterval|pac|pvc|condition/i;
+
+const keysOf = (value: unknown): string[] =>
+  typeof value === "object" && value !== null
+    ? Object.entries(value).flatMap(([key, inner]) => [key, ...keysOf(inner)])
+    : [];
+
+describe("recording plan and ground truth", () => {
+  test("an AF condition on the day gives paroxysmal AF; none gives sinus", () => {
+    expect(rhythmProfileOf(AF_SUBJECT, true)).toBe("paroxysmal_af");
+    expect(rhythmProfileOf(AF_SUBJECT, false)).toBe("sinus");
+  });
+
+  test("with an unrecorded-AF share of 1 every subject gets AF; the default share is 0", () => {
+    expect(rhythmProfileOf(SINUS_SUBJECT, false, 1)).toBe("paroxysmal_af");
+    expect(
+      Array.from({ length: 200 }, (_, i) => rhythmProfileOf(`s-${i}`, false)).every(
+        (profile) => profile === "sinus",
+      ),
+    ).toBe(true);
+  });
+
+  test("the config for one plan is fixed", () => {
+    expect(subjectRhythmSettings(AF_SUBJECT)).toEqual({
+      meanHr: 63,
+      rrSdMs: 36,
       respRateHz: 0.27,
-      afMeanHr: 93,
-      afCv: 0.15,
+      afMeanHr: 107,
+      afCv: 0.17,
     });
-    expect(recordingConfigFor("synthetic-rhythm-subject", 1, 300)).toEqual({
-      seed: 3340879659,
+    expect(recordingConfigFor(plan(AF_SUBJECT, true))).toEqual({
+      meanHr: 63,
+      rrSdMs: 36,
+      respRateHz: 0.27,
+      afMeanHr: 107,
+      afCv: 0.17,
+      seed: 3911816428,
       durationSec: 300,
-      meanHr: 71,
-      rrSdMs: 37,
-      respRateHz: 0.27,
-      afMeanHr: 93,
-      afCv: 0.15,
-      rhythm: "sinus",
-      pacCount: 0,
+      pacCount: 2,
       pvcCount: 1,
+      rhythm: "paroxysmal_af",
+      afEpisodes: [{ startSec: 84, endSec: 145 }],
     });
   });
 
-  test("over 1000 refs the profiles come out near 60 / 25 / 15 %: 593, 243, 164", () => {
-    const counts = Array.from({ length: 1000 }, (_, i) =>
-      rhythmProfileOf(`subject-${i}`),
-    ).reduce((tally, each) => ({ ...tally, [each.profile]: tally[each.profile] + 1 }), {
-      sinus: 0,
-      paroxysmal_af: 0,
-      af: 0,
+  test("rhythmGroundTruth says what the simulator made, for code only", () => {
+    expect(rhythmGroundTruth(plan(AF_SUBJECT, true))).toEqual({
+      profile: "paroxysmal_af",
+      afEpisodes: [{ startSec: 84, endSec: 145 }],
+      afIntervalShare: 110 / 361,
+      pac: 2,
+      pvc: 1,
     });
-    expect(counts).toEqual({ sinus: 593, paroxysmal_af: 243, af: 164 });
-    expect(PROFILE_SHARES.sinus + PROFILE_SHARES.paroxysmal_af + PROFILE_SHARES.af).toBe(
-      1,
-    );
+    expect(rhythmGroundTruth(plan(SINUS_SUBJECT, false))).toEqual({
+      profile: "sinus",
+      afEpisodes: [],
+      afIntervalShare: 0,
+      pac: 1,
+      pvc: 1,
+    });
   });
 
-  test("a paroxysmal subject's episode lies inside the recording for every recording number", () => {
+  test("an episode lies inside the recording for every recording number", () => {
     for (let recording = 1; recording <= 50; recording += 1) {
-      const config = recordingConfigFor(PAROXYSMAL, recording, 180);
+      const config = recordingConfigFor({
+        ...plan(AF_SUBJECT, true),
+        recording,
+        durationSec: 180,
+      });
       const episode = config.afEpisodes?.[0];
-      expect(config.rhythm).toBe("paroxysmal_af");
       expect(
         episode !== undefined && episode.startSec >= 18 && episode.endSec <= 162,
       ).toBe(true);
@@ -107,24 +187,30 @@ describe("rhythmProfileOf and recordingConfigFor", () => {
 });
 
 describe("rhythmIrregularityInput", () => {
-  test("closed: an unknown key, a recording of 0 and 120 s are refused", () => {
+  test("closed: an unknown key, a recording of 0, 120 s and a bad date are refused", () => {
+    const base = input(SINUS_SUBJECT);
+    expect(rhythmIrregularityInput.safeParse({ ...base, rhythm: "af" }).success).toBe(
+      false,
+    );
+    expect(rhythmIrregularityInput.safeParse({ ...base, recording: 0 }).success).toBe(
+      false,
+    );
     expect(
-      rhythmIrregularityInput.safeParse({ ...input(SINUS), rhythm: "af" }).success,
+      rhythmIrregularityInput.safeParse({ ...base, duration_sec: 120 }).success,
     ).toBe(false);
     expect(
-      rhythmIrregularityInput.safeParse({ ...input(SINUS), recording: 0 }).success,
+      rhythmIrregularityInput.safeParse({ ...base, date: "2025-02-30" }).success,
     ).toBe(false);
     expect(
-      rhythmIrregularityInput.safeParse({ ...input(SINUS), duration_sec: 120 }).success,
-    ).toBe(false);
-    expect(rhythmIrregularityInput.safeParse(input(SINUS)).success).toBe(true);
+      rhythmIrregularityInput.safeParse({ ...base, date: "2025-06-01" }).success,
+    ).toBe(true);
   });
 });
 
 describe("runRhythmIrregularity", () => {
   test("personal mode: NO_RHYTHM_DATA before any read, audited with 0 rows", async () => {
     const { ports, audits, lookups } = fakePorts();
-    expect(await runRhythmIrregularity(personal, input(SINUS), ports)).toEqual(
+    expect(await runRhythmIrregularity(personal, input(SINUS_SUBJECT), ports)).toEqual(
       NO_RHYTHM_DATA,
     );
     expect(lookups).toEqual([]);
@@ -144,60 +230,97 @@ describe("runRhythmIrregularity", () => {
     expect(audits[0]).toMatchObject({ subjectRef: UNLISTED, rowCount: 0 });
   });
 
-  test("sinus subject: 391 intervals, 3 windows, none flagged; audit counts 391", async () => {
-    const { ports, audits } = fakePorts();
-    const result = await runRhythmIrregularity(synthetic, input(SINUS), ports);
-    expect(result).toEqual(describeRecording(input(SINUS)));
-    expect(result).toMatchObject({
-      subject_ref: SINUS,
-      source: "simulated",
-      n: 391,
-      window_beats: 128,
-      n_windows: 3,
-      n_flagged: 0,
-      flagged_time_share: 0,
-      threshold: RESEARCH_THRESHOLD_LABEL,
-      simulator_ground_truth: { profile: "sinus", af_interval_share: 0, pac: 0, pvc: 2 },
-    });
-    expect(audits[0]).toMatchObject({ subjectRef: SINUS, rowCount: 391 });
-  });
-
-  test("persistent AF subject: 483 intervals, all 3 windows flagged", async () => {
+  test("a date outside the subject's observations: OUTSIDE_SUBJECT_WINDOW", async () => {
     const { ports } = fakePorts();
     expect(
-      await runRhythmIrregularity(synthetic, input(PERSISTENT), ports),
-    ).toMatchObject({
-      n: 483,
-      n_windows: 3,
-      n_flagged: 3,
-      flagged_time_share: 1,
-      simulator_ground_truth: { profile: "af", af_interval_share: 1, pac: 0, pvc: 0 },
-    });
-  });
-
-  test("paroxysmal subject: 1 of 3 windows flagged, about 31 % of the windowed time", async () => {
-    const { ports } = fakePorts();
-    const result = await runRhythmIrregularity(synthetic, input(PAROXYSMAL), ports);
-    expect(result).toMatchObject({
-      n: 422,
-      n_windows: 3,
-      n_flagged: 1,
-      simulator_ground_truth: { profile: "paroxysmal_af", pac: 0, pvc: 1 },
-    });
-    expect("flagged_time_share" in result ? result.flagged_time_share : null).toBeCloseTo(
-      0.3086,
-      4,
+      await runRhythmIrregularity(synthetic, input(SINUS_SUBJECT, "2026-01-01"), ports),
+    ).toEqual(
+      outsideSubjectWindow("2026-01-01", { start: "2024-01-01", end: "2025-12-31" }),
     );
   });
 
-  test("windows are consecutive: each starts where the last ended", () => {
-    const result = describeRecording(input(PERSISTENT));
-    const windows = "windows" in result ? result.windows : [];
-    expect(windows.map((each) => each.start_sec)).toEqual([
-      0,
-      windows[0].end_sec,
-      windows[1].end_sec,
+  test("no observations at all: OUTSIDE_SUBJECT_WINDOW with no window", async () => {
+    const { ports } = fakePorts();
+    const empty: QueryToolPorts = { ...ports, findObservationSpan: async () => null };
+    expect(await runRhythmIrregularity(synthetic, input(SINUS_SUBJECT), empty)).toEqual(
+      outsideSubjectWindow(null, { start: null, end: null }),
+    );
+  });
+
+  test("AF on the record that day: the AF plan; the condition read is the day, code 49436004", async () => {
+    const { ports, audits, conditionQueries } = fakePorts();
+    const result = await runRhythmIrregularity(
+      synthetic,
+      input(AF_SUBJECT, "2025-06-01"),
+      ports,
+    );
+    expect(result).toEqual(describeRecording(plan(AF_SUBJECT, true)));
+    expect(result).toMatchObject({
+      date: "2025-06-01",
+      source: "simulated",
+      n: 361,
+      n_windows: 2,
+      n_flagged: 1,
+      threshold: RESEARCH_THRESHOLD_LABEL,
+    });
+    expect(conditionQueries).toEqual([
+      {
+        subjectRef: AF_SUBJECT,
+        start: new Date("2025-06-01T00:00:00.000Z"),
+        end: new Date("2025-06-01T23:59:59.999Z"),
+        code: AF_SNOMED_CODE,
+        take: 1,
+      },
     ]);
+    expect(audits[0]).toMatchObject({ subjectRef: AF_SUBJECT, rowCount: 361 });
+  });
+
+  test("the same subject after the condition abates, and on its default (last) day: sinus plan", async () => {
+    const { ports } = fakePorts();
+    const after = await runRhythmIrregularity(
+      synthetic,
+      input(AF_SUBJECT, "2025-10-01"),
+      ports,
+    );
+    expect(after).toEqual(
+      describeRecording({ ...plan(AF_SUBJECT, false), date: "2025-10-01" }),
+    );
+    const latest = await runRhythmIrregularity(synthetic, input(AF_SUBJECT), ports);
+    expect(latest).toEqual(
+      describeRecording({ ...plan(AF_SUBJECT, false), date: "2025-12-31" }),
+    );
+  });
+
+  test("the output has no ground-truth field at any depth", async () => {
+    const { ports, audits } = fakePorts();
+    const result = await runRhythmIrregularity(
+      synthetic,
+      input(AF_SUBJECT, "2025-06-01"),
+      ports,
+    );
+    expect(keysOf(result).filter((key) => ANSWER_KEYS.test(key))).toEqual([]);
+    expect(Object.keys(result).sort()).toEqual([
+      "date",
+      "duration_sec",
+      "flagged_time_share",
+      "mean_hr",
+      "n",
+      "n_flagged",
+      "n_windows",
+      "recording",
+      "source",
+      "subject_ref",
+      "threshold",
+      "window_beats",
+      "windows",
+    ]);
+    expect(audits[0]?.result).toEqual(result);
+  });
+
+  test("windows are consecutive: each starts where the last ended", () => {
+    const result = describeRecording(plan(AF_SUBJECT, true));
+    const windows = "windows" in result ? result.windows : [];
+    expect(windows.map((each) => each.start_sec)).toEqual([0, windows[0].end_sec]);
   });
 });
 
@@ -236,15 +359,15 @@ describe("separation on simulated recordings", () => {
     }
   }
 
-  test("AF windows: 202 of 210 flagged (sensitivity 96.2 %)", () => {
-    expect(tally.af).toEqual([210, 202]);
+  test("AF windows: 210 of 210 flagged (sensitivity 100 %)", () => {
+    expect(tally.af).toEqual([210, 210]);
   });
 
   test("sinus windows, ectopic beats included: 0 of 128 flagged (specificity 100 %)", () => {
     expect(tally.sinus).toEqual([128, 0]);
   });
 
-  test("mixed windows (an episode starts or ends inside): 33 of 91 flagged", () => {
-    expect(tally.mixed).toEqual([91, 33]);
+  test("mixed windows (an episode starts or ends inside): 41 of 91 flagged", () => {
+    expect(tally.mixed).toEqual([91, 41]);
   });
 });
