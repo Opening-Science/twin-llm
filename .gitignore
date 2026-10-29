@@ -95,3 +95,6 @@ __pycache__/
 
 # Motion clips made from videos (python/motion); third-party footage stays local
 data/motion/
+
+# Rhythm benchmark output (bun run rhythm-bench -- --out .rhythm-bench/<run>); summaries go in docs/research
+/.rhythm-bench/
