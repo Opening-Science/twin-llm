@@ -83,6 +83,10 @@ Keep the training and held-out cohorts in their own database on the GPU
 machine, never the dev database: the Body twin's Demo values read every
 allowlisted cohort.
 
+`bun run heart-brain` reads the same archives for a research question of its own,
+streaming each one without unpacking it: whether an analysis recovers the heart and
+brain relations Synthea plants. See `docs/research/heart-brain-2026-10.md`.
+
 ## Synthetic wearable series
 
 `bun run wearables:generate -- --in .synthea/<cohort>/fhir` writes one FHIR
