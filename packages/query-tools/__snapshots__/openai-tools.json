@@ -764,6 +764,42 @@
   {
     "type": "function",
     "function": {
+      "name": "rhythm_irregularity",
+      "description": "Irregularity metrics of one simulated RR-interval recording of a synthetic subject (made by the rhythm simulator, not measured), on one day, per 128-interval window: nRMSSD, Shannon entropy, sample entropy, turning-point ratio and a research-threshold flag (Dash et al. 2009), with n_flagged and flagged_time_share. Describes the recording; never say a person has a condition. Synthetic mode only: personal mode is NO_RHYTHM_DATA. Refuses SUBJECT_SCOPE_VIOLATION, OUTSIDE_SUBJECT_WINDOW and WINDOW_TOO_SHORT.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "subject_ref": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Opaque subject_ref"
+          },
+          "recording": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Which simulated recording of this subject, 1 to 1000; the same number gives the same recording"
+          },
+          "duration_sec": {
+            "type": "integer",
+            "minimum": 180,
+            "maximum": 600,
+            "description": "Recording length in seconds, 180 to 600"
+          },
+          "date": {
+            "description": "Recording day, YYYY-MM-DD, within the subject's observations; default the last",
+            "type": "string"
+          }
+        },
+        "required": ["subject_ref", "recording", "duration_sec"],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
       "name": "show_view",
       "description": "Show a view of one measure in the answer. chart.timeseries draws every reading in window; chart.compare sets window against compare_with (n and mean of each); biomarker.card shows a LOINC's latest reading against its published range, with its trend; table lists the readings (first 50); twin.body shows the body twin on focus with each mapped organ's range position (subject's labs, or none); without window it uses each marker's latest reading. The server reads the rows itself; the result says how many it read. A LOINC code needs subject (a synthetic subject_ref); a wearable key reads the user's synced data. Never write numbers for a view yourself.",
       "parameters": {

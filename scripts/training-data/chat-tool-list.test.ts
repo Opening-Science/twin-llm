@@ -38,6 +38,7 @@ describe("openAiToolsFrom", () => {
       "training_load",
       "cross_source_compare",
       "values_around_event",
+      "rhythm_irregularity",
       "show_view",
       "list_views",
       "open_view",

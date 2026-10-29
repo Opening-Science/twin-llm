@@ -51,6 +51,7 @@ import {
   trainingLoadInput,
   crossSourceCompareInput,
   valuesAroundEventInput,
+  rhythmIrregularityInput,
 } from "./schemas";
 import type { SessionScope } from "./scope";
 import {
@@ -74,6 +75,7 @@ import {
   runTrainingLoad,
   runCrossSourceCompare,
   runValuesAroundEvent,
+  runRhythmIrregularity,
 } from "./tools";
 
 /**
@@ -194,6 +196,9 @@ export const queryToolRunners = (
   ),
   imported_trend: bind(importedTrendInput, (input) =>
     runImportedTrend(mcpImportedDeps(scope, ports), input),
+  ),
+  rhythm_irregularity: bind(rhythmIrregularityInput, (input) =>
+    runRhythmIrregularity(scope, input, ports),
   ),
 });
 

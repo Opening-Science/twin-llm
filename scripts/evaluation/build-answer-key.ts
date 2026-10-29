@@ -128,6 +128,8 @@ export const rowCountOf = (tool: KeyedTool, result: unknown): number => {
       return numberAt(result, "n_pairs");
     case "values_around_event":
       return numberAt(result, "before.n") + numberAt(result, "after.n");
+    case "rhythm_irregularity":
+      return numberAt(result, "n");
     case "latest_by_loinc":
       return lengthAt(result, "rows");
     case "coverage": {
@@ -439,6 +441,11 @@ export const realPorts = async (today: string): Promise<AnswerKeyPorts> => {
         return tools.runValuesAroundEvent(
           scope,
           KEYED_TOOLS.values_around_event.parse(args),
+        );
+      case "rhythm_irregularity":
+        return tools.runRhythmIrregularity(
+          scope,
+          KEYED_TOOLS.rhythm_irregularity.parse(args),
         );
       case "latest_by_loinc":
         return tools.runLatestByLoinc(scope, KEYED_TOOLS.latest_by_loinc.parse(args));
