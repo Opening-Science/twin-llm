@@ -4,7 +4,11 @@ import { type PointerEvent as ReactPointerEvent, useState } from "react";
 
 import { formatDate, formatNumber } from "@/infrastructure/format-measure";
 
-import { ChartTooltip, TooltipBody, useMeasuredWidth } from "./chart-frame";
+import {
+  ChartTooltip,
+  TooltipBody,
+  useMeasuredWidth,
+} from "@/infrastructure/charts/chart-frame";
 import {
   dateAxisTicks,
   extent,
@@ -14,7 +18,7 @@ import {
   tickDecimals,
   timeScale,
   yearTickTimes,
-} from "./chart-geometry";
+} from "@/infrastructure/charts/chart-geometry";
 
 /**
  * One measurement over time for one subject: x is real time (a gap of five

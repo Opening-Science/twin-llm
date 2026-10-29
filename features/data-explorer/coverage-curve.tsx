@@ -4,8 +4,16 @@ import { useState } from "react";
 
 import { formatNumber } from "@/infrastructure/format-measure";
 
-import { ChartTooltip, TooltipBody, useMeasuredWidth } from "./chart-frame";
-import { countTicks, nearestIndex, stepPath } from "./chart-geometry";
+import {
+  ChartTooltip,
+  TooltipBody,
+  useMeasuredWidth,
+} from "@/infrastructure/charts/chart-frame";
+import {
+  countTicks,
+  nearestIndex,
+  stepPath,
+} from "@/infrastructure/charts/chart-geometry";
 import {
   type CodeSummary,
   formatShare,

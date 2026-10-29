@@ -482,6 +482,7 @@ const serverEnvSchema = z
     VITRONIC_DATA_DIR: maybeText(),
     VITRONIC_SCANNER_HOSTS: maybeText(),
     ANATOMY_DATA_DIR: maybeText(),
+    RHYTHM_BENCH_RESULT: maybeText(),
   })
   .superRefine((env, ctx) => {
     const report: Report = ({ path, message }) =>
@@ -748,6 +749,14 @@ export type AnatomyEnv = Readonly<{
 
 export const anatomyEnv = (): AnatomyEnv =>
   Object.freeze({ dataDir: serverEnv().ANATOMY_DATA_DIR ?? null });
+
+export type LabEnv = Readonly<{
+  /** The rhythm benchmark's result file, relative to the repository; null means the default. */
+  rhythmBenchResult: string | null;
+}>;
+
+export const labEnv = (): LabEnv =>
+  Object.freeze({ rhythmBenchResult: serverEnv().RHYTHM_BENCH_RESULT ?? null });
 
 export type GenomeEnv = Readonly<{
   source: "none" | "ark";

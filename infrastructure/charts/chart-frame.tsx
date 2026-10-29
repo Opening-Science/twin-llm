@@ -5,7 +5,7 @@ import { type ReactNode, type RefObject, useLayoutEffect, useRef, useState } fro
 import { type Size, tooltipPosition } from "@/infrastructure/chart-tooltip";
 
 /**
- * Shared pieces of the Data page's charts: the measured width they draw at,
+ * Shared pieces of the Data page and Lab charts: the measured width they draw at,
  * and the hover tooltip placed beside the hovered mark.
  *
  * Charts draw at the container's real width so 11px axis text stays 11px on a
