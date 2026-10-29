@@ -42,6 +42,9 @@ export const DEFAULT_FIRST_BYTE_TIMEOUT_S = 120;
 /** How long the local Carbon-X sidecar may take for one answer. */
 export const DEFAULT_CARBON_X_TIMEOUT_S = 120;
 
+/** Ollama's OpenAI-compatible root on this machine when OLLAMA_BASE_URL is unset. */
+export const DEFAULT_OLLAMA_BASE_URL = "http://127.0.0.1:11434/v1";
+
 /** The Carbon-X sidecar's OpenAI-compatible root when CARBON_X_URL is unset. */
 export const DEFAULT_CARBON_X_URL = "http://127.0.0.1:8090/v1";
 
@@ -794,4 +797,25 @@ export const syntheaEnv = (env: ServerEnv = serverEnv()): SyntheaEnv =>
     jarPath: env.SYNTHEA_JAR ?? null,
     javaBin: env.SYNTHEA_JAVA ?? "java",
     childPath: process.env.PATH ?? "/usr/local/bin:/usr/bin:/bin",
+  });
+
+export type BuildInfo = Readonly<{
+  /** `version` from package.json when the app was built. */
+  appVersion: string | null;
+  /** `git rev-parse HEAD` when the app was built; null outside a git checkout. */
+  commit: string | null;
+  /** True when the build's working tree had changes not in that commit. */
+  dirty: boolean;
+}>;
+
+/**
+ * What `next.config.ts` wrote in at build time (its `env` block). Next
+ * replaces these names with the values while it compiles, so they hold in
+ * `next start` without being set on the server.
+ */
+export const buildInfo = (): BuildInfo =>
+  Object.freeze({
+    appVersion: process.env.TWINLLM_APP_VERSION || null,
+    commit: process.env.TWINLLM_BUILD_COMMIT || null,
+    dirty: process.env.TWINLLM_BUILD_DIRTY === "true",
   });

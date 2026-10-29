@@ -81,4 +81,5 @@ Exoscale: set `EXOSCALE_BASE_URLS` (one vLLM `/v1` URL per GPU); without it, sta
 | System prompt / XAI          | `features/chat/twin-system-prompt.ts`                          |
 | First run (`/start`)         | `features/onboarding/`, `infrastructure/knowledge-sources.ts`  |
 | Docs (`/docs`)               | `features/docs/`: these pages rendered from `docs/*.md`        |
+| Lab (`/lab`)                 | `features/lab/`: verifiability checks ([lab.md](lab.md))       |
 | open-twin pins               | `.open-twin/` via `bun run sync:open-twin` (`PROVENANCE.md`)   |

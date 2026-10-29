@@ -1,3 +1,4 @@
+import { EVAL_COHORT_ARCHIVE } from "../../infrastructure/local-artefacts";
 import { RIGGED_RELEASE_HOSTS } from "../../packages/anatomy/rigged-bodies";
 import { COHORT_PRESETS, EVAL_CONTENT_SHA256 } from "../synthea/cohort-presets";
 
@@ -44,17 +45,11 @@ export const EVAL_COHORT = {
  * locally only with `--generate-cohort`, or when the release cannot be reached.
  */
 export const EVAL_RELEASE = {
-  tag: "eval-cohort-v1",
-  archive: "eval-cohort-synthea-v4-seed42-20260101.tar.zst",
-  url: "https://github.com/Opening-Science/twin-llm/releases/download/eval-cohort-v1/eval-cohort-synthea-v4-seed42-20260101.tar.zst",
-  archiveBytes: 4_911_581,
-  archiveSha256: "45d84cad9882f9fe7365f42b7bc64b6cedcc6665a412c88a8e56e612712c2b14",
+  ...EVAL_COHORT_ARCHIVE,
   /** GitHub serves release assets through a redirect; the same hosts anatomy:fetch allows. */
   redirectHosts: RIGGED_RELEASE_HOSTS,
   /** Where the pin was generated; another architecture may not reproduce it. */
   generatedOn: "Linux x86_64",
-  /** The archive is kept here for re-runs (about 5 MB). */
-  downloadDir: ".synthea/downloads",
   /** Unpacked and checked here before it replaces `.synthea/fhir`. */
   unpackDir: ".synthea/downloads/eval-cohort",
 } as const;

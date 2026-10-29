@@ -39,6 +39,7 @@
     "db:verify": "bash scripts/db/verify-migrations.sh",
     "db:studio": "prisma studio",
     "verify:import": "bash scripts/verify-import.sh",
+    "sbom": "bun scripts/sbom/write.ts",
     "skills:check": "bun scripts/skills/check.ts",
     "new:tool": "bun scripts/new-tool/new-tool.ts",
     "new:tool:prove": "bun scripts/new-tool/prove-typecheck.ts",

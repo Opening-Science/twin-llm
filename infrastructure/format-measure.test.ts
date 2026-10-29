@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  formatBytes,
   formatDate,
   formatForPrompt,
   formatMeasure,
@@ -133,6 +134,25 @@ describe("formatMeasure", () => {
     expect(formatMeasureNumber("strain", 12.35)).toBe("12.4");
     expect(formatMeasureNumber("steps", 8412)).toBe("8,412");
     expect(formatMeasureNumber("heartRate", null)).toBe("—");
+  });
+});
+
+describe("formatBytes", () => {
+  test("whole bytes below a kilobyte, then one decimal in decimal units", () => {
+    expect(formatBytes(0)).toBe("0 B");
+    expect(formatBytes(999)).toBe("999 B");
+    expect(formatBytes(1000)).toBe("1.0 kB");
+    expect(formatBytes(4_911_581)).toBe("4.9 MB");
+    expect(formatBytes(5_225_387_652)).toBe("5.2 GB");
+    expect(formatBytes(2_500_000_000_000_000)).toBe("2,500.0 TB");
+  });
+  test("a value that rounds up to 1,000 moves to the next unit", () => {
+    expect(formatBytes(999_960)).toBe("1.0 MB");
+  });
+  test("missing or negative sizes show as a dash", () => {
+    expect(formatBytes(null)).toBe("—");
+    expect(formatBytes(Number.NaN)).toBe("—");
+    expect(formatBytes(-1)).toBe("—");
   });
 });
 

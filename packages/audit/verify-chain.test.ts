@@ -62,12 +62,58 @@ describe("verifyChain", () => {
     expect(await verifyChain(client as never)).toEqual({
       ok: true,
       brokenAtSeq: null,
+      checked: 20,
+      total: 20,
+      latestHash: events[19].hash,
     });
 
     events[3].rowCount = events[3].rowCount + 1;
     expect(await verifyChain(client as never)).toEqual({
       ok: false,
       brokenAtSeq: 4,
+      checked: 4,
+      total: 20,
+      latestHash: events[19].hash,
+    });
+  });
+});
+
+describe("checkChain", () => {
+  test("an empty table holds, with nothing checked and no latest hash", async () => {
+    const { checkChain } = await import("./verify-chain");
+    expect(checkChain([])).toEqual({
+      ok: true,
+      brokenAtSeq: null,
+      checked: 0,
+      total: 0,
+      latestHash: null,
+    });
+  });
+
+  test("a row pointing at the wrong previous hash breaks the chain there", async () => {
+    const { append } = await import("./append");
+    const { checkChain } = await import("./verify-chain");
+    const client = mockDb();
+    for (let i = 0; i < 3; i += 1) {
+      await append(client as never, {
+        actor: "local",
+        sessionId: "turn-link",
+        subjectRef: null,
+        tool: "list_subjects",
+        args: { cohort_id: `l-${i}` },
+        result: { subjects: [] },
+        rowCount: 0,
+      });
+    }
+    const rows = events.map((row, index) =>
+      index === 1 ? { ...row, prevHash: "f".repeat(64) } : row,
+    );
+    expect(checkChain(rows)).toEqual({
+      ok: false,
+      brokenAtSeq: 2,
+      checked: 2,
+      total: 3,
+      latestHash: events[2].hash,
     });
   });
 });

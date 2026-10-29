@@ -16,6 +16,7 @@ import {
   CompareGlyph,
   ConnectorsGlyph,
   DocsGlyph,
+  LabGlyph,
   ModelsGlyph,
   PlusGlyph,
   SearchGlyph,
@@ -66,6 +67,7 @@ const SECTIONS: readonly Section[] = [
     owns: (path) => under("/customize")(path) || under("/customize/connectors")(path),
   },
   { href: "/models", label: "Models", Glyph: ModelsGlyph, owns: under("/models") },
+  { href: "/lab", label: "Lab", Glyph: LabGlyph, owns: under("/lab") },
   { href: "/docs", label: "Docs", Glyph: DocsGlyph, owns: under("/docs") },
   { href: "/start", label: "Get started", Glyph: StartGlyph, owns: under("/start") },
 ];
