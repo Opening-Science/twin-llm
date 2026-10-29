@@ -182,7 +182,7 @@ export const document = (fields: DocFields = {}): NonNullable<ResultLine["docume
       evidence_keys: [...(fields.evidence_keys ?? [])],
       hallucinated_keys: [...(fields.hallucinated_keys ?? [])],
       tool_calls: [],
-      sources: { gbd: [], guidelines: [], knowledge: [] },
+      sources: { gbd: [], guidelines: [], knowledge: [], literature: [] },
       gbd_rows: [],
     },
     uncertainty: {

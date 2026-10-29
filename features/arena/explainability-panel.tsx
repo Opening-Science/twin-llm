@@ -17,6 +17,8 @@ import {
   INTERPRETATION_UNAVAILABLE,
   KNOWLEDGE_ATTRIBUTION_LINE,
   KNOWLEDGE_HEADING,
+  LITERATURE_ATTRIBUTION_LINE,
+  LITERATURE_HEADING,
   NEXT_STEP_LINES,
   toolCallCountLine,
   UI_CONTEXT_HEADING,
@@ -77,7 +79,7 @@ const EvidencePanel = ({
 /**
  * Collapsible chain-of-thought plus the response document's data basis.
  * Order inside the panel: reasoning, evidence used, guideline references,
- * OpenTwin knowledge, population context, uncertainty (level, reasons, model statement), next
+ * OpenTwin knowledge, literature, population context, uncertainty (level, reasons, model statement), next
  * step, tool-call count (docs/response-schema.md, "UI copy"). Internal codes
  * are mapped to plain sentences, never printed.
  */
@@ -106,6 +108,12 @@ export const ExplainabilityPanel = ({
         `${cite.file}#${cite.sectionHeading}`,
         cite,
       ]),
+    ).values(),
+  ];
+  // One line per article, even when several of its passages were returned.
+  const literatureCites = [
+    ...new Map(
+      (document?.data_basis.sources.literature ?? []).map((cite) => [cite.pmcid, cite]),
     ).values(),
   ];
   const toolCallCount = document?.data_basis.tool_calls.length ?? 0;
@@ -193,6 +201,21 @@ export const ExplainabilityPanel = ({
               </ul>
               <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
                 {KNOWLEDGE_ATTRIBUTION_LINE}
+              </p>
+            </div>
+          )}
+          {literatureCites.length > 0 && (
+            <div>
+              <p className="text-eyebrow mb-1">{LITERATURE_HEADING}</p>
+              <ul className="text-muted-foreground flex flex-col gap-1 text-xs">
+                {literatureCites.map((cite) => (
+                  <li key={cite.pmcid}>
+                    {cite.title} · {cite.pmcid} · {cite.licenceLabel}
+                  </li>
+                ))}
+              </ul>
+              <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+                {LITERATURE_ATTRIBUTION_LINE}
               </p>
             </div>
           )}

@@ -10,6 +10,7 @@ import {
   hallucinatedKeysLine,
   INTERPRETATION_UNAVAILABLE,
   KNOWLEDGE_ATTRIBUTION_LINE,
+  LITERATURE_ATTRIBUTION_LINE,
   NEXT_STEP_LINES,
   UNCERTAINTY_REASON_LINES,
   uncertaintyLevelLine,
@@ -26,6 +27,7 @@ import {
   syntheticGbdRow,
   syntheticGuideline,
   syntheticKnowledge,
+  syntheticLiterature,
 } from "./response-document-fixture";
 
 describe("explainability panel population context", () => {
@@ -130,6 +132,48 @@ describe("explainability panel OpenTwin knowledge", () => {
   });
 });
 
+describe("explainability panel literature", () => {
+  test("lists each article once with its PMC id and licence, and the attribution", () => {
+    const markup = renderToStaticMarkup(
+      createElement(ExplainabilityPanel, {
+        document: makeResponseDocument({
+          sufficient_data: false,
+          next_step: "more_data",
+          interpretation: { kind: "none" },
+          data_basis: {
+            evidence_keys: [],
+            hallucinated_keys: [],
+            tool_calls: [],
+            sources: {
+              gbd: [],
+              guidelines: [],
+              knowledge: [],
+              literature: [syntheticLiterature, syntheticLiterature],
+            },
+            gbd_rows: [],
+          },
+        }),
+      }),
+    );
+    const line = "Synthetic sleep article · PMC0000001 · CC BY-NC-ND";
+    expect(markup).toContain(">Literature<");
+    expect(markup.split(line).length - 1).toBe(1);
+    expect(markup).toContain(LITERATURE_ATTRIBUTION_LINE);
+    expect(LITERATURE_ATTRIBUTION_LINE).toBe(
+      "Open-access articles from PubMed Central (NLM), each under its own licence. Reference material, not a statement about this person.",
+    );
+    expect(markup).not.toContain(ABSTAIN_BANNER);
+    expect(markup).not.toContain(GUIDELINE_ONLY_BANNER);
+  });
+
+  test("a document without literature shows no literature section", () => {
+    const markup = renderToStaticMarkup(
+      createElement(ExplainabilityPanel, { document: makeResponseDocument() }),
+    );
+    expect(markup).not.toContain(">Literature<");
+  });
+});
+
 describe("explainability panel internal codes", () => {
   test("unrenderable interpretation shows a plain sentence, never the reason code", () => {
     const markup = renderToStaticMarkup(
@@ -208,6 +252,7 @@ describe("explainability panel v1.1 uncertainty", () => {
         "Only published guidelines support this answer.",
         "Only population figures support this answer.",
         "Only OpenTwin notes about TwinLLM itself support this answer.",
+        "Only published articles support this answer.",
         "Some cited keys were not in the model's context.",
         "A data lookup returned no rows.",
         "The model wrote no uncertainty statement.",
