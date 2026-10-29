@@ -7,12 +7,22 @@
  */
 import { createHash } from "node:crypto";
 
-import { type DailyReading, WEARABLE_METRICS } from "./series";
+import {
+  DAILY_METRICS,
+  type DailyReading,
+  SYNTHETIC_GROUND_TRUTH_SYSTEM,
+} from "./series";
 import { WORKOUT_METRICS, type WorkoutReading } from "./workouts";
 
 export const GENERATOR_ID = "twinllm-synthetic-wearables";
-/** 2: workouts (`workout-<sport>`, minutes) beside the daily series, which is unchanged. */
-export const WEARABLE_GENERATOR_VERSION = "2";
+/**
+ * 2: workouts (`workout-<sport>`, minutes) beside the daily series, which is unchanged.
+ * 3: the series follows the subject's Synthea conditions (`conditions.ts`); a
+ * subject without any of them gets exactly the v2 series.
+ */
+export const WEARABLE_GENERATOR_VERSION = "3";
+export const WEARABLE_GENERATOR_VERSIONS = ["2", "3"] as const;
+export type WearableGeneratorVersion = (typeof WEARABLE_GENERATOR_VERSIONS)[number];
 
 const SYNTHEA_IDENTIFIER_SYSTEM = "https://github.com/synthetichealth/synthea";
 const UCUM = "http://unitsofmeasure.org";
@@ -26,6 +36,13 @@ export const SYNTHETIC_TAGS = [
   },
   { system: "urn:twinllm:generator", code: GENERATOR_ID },
 ] as const;
+
+/** Added to a value no device reports, such as the atrial fibrillation burden. */
+export const GROUND_TRUTH_TAG = {
+  system: SYNTHETIC_GROUND_TRUTH_SYSTEM,
+  code: "simulator-ground-truth",
+  display: "Simulator ground truth, not a device reading",
+} as const;
 
 type Identifier = Readonly<{ system?: unknown; value?: unknown }>;
 
@@ -79,7 +96,7 @@ export const stableUuid = (key: string): string => {
   ].join("-");
 };
 
-const METRICS = { ...WEARABLE_METRICS, ...WORKOUT_METRICS } as const;
+const METRICS = { ...DAILY_METRICS, ...WORKOUT_METRICS } as const;
 
 export type SeriesReading = DailyReading | WorkoutReading;
 
@@ -91,7 +108,12 @@ const observationOf = (patientId: string, reading: SeriesReading) => {
     resource: {
       resourceType: "Observation",
       id,
-      meta: { tag: SYNTHETIC_TAGS },
+      meta: {
+        tag:
+          metric.system === SYNTHETIC_GROUND_TRUTH_SYSTEM
+            ? [...SYNTHETIC_TAGS, GROUND_TRUTH_TAG]
+            : SYNTHETIC_TAGS,
+      },
       status: "final",
       category: [{ coding: [{ system: CATEGORY, code: metric.category }] }],
       code: {

@@ -6,12 +6,20 @@
  * RMSSD 10–150 ms, sleep 4–10 h, …) so the tools and the training answers
  * have realistic magnitudes, nothing more. Pure: no I/O, no clock.
  */
+import {
+  conditionEffects,
+  type DayEffects,
+  NO_EFFECTS,
+  type SubjectCondition,
+} from "./conditions";
 import { normal, type Random, randomFor } from "./random";
 
 /** Codings follow the open-twin mappers at the pinned SHA (see docs/training-data.md). */
 export const LOINC_SYSTEM = "http://loinc.org";
 /** No LOINC code exists for RMSSD or a vendor sleep score; open-twin uses vendor-local codes. */
 export const SYNTHETIC_WEARABLE_SYSTEM = "urn:twinllm:synthetic-wearable";
+/** Values only a simulator knows (no device reports them); tagged as ground truth. */
+export const SYNTHETIC_GROUND_TRUTH_SYSTEM = "urn:twinllm:synthetic-ground-truth";
 
 export const WEARABLE_METRICS = {
   heart_rate: {
@@ -79,9 +87,57 @@ export const WEARABLE_METRICS = {
   },
 } as const;
 
+/**
+ * v3: metrics only a subject with the matching condition has, from its onset
+ * (`docs/training-data.md`, "Condition effects"). Every v2 subject keeps the
+ * seven metrics above and nothing else.
+ */
+export const CONDITION_METRICS = {
+  spo2_mean: {
+    system: LOINC_SYSTEM,
+    code: "59408-5",
+    display: "Oxygen saturation in Arterial blood by Pulse oximetry, nightly mean",
+    unit: "%",
+    unitLabel: "percent",
+    time: "07:00:00",
+    category: "vital-signs",
+  },
+  spo2_min: {
+    system: SYNTHETIC_WEARABLE_SYSTEM,
+    code: "spo2-min",
+    display: "Oxygen saturation, nightly minimum (synthetic)",
+    unit: "%",
+    unitLabel: "percent",
+    time: "07:00:00",
+    category: "vital-signs",
+  },
+  irregular_rhythm_notifications: {
+    system: SYNTHETIC_WEARABLE_SYSTEM,
+    code: "irregular-rhythm-notification",
+    display: "Irregular rhythm notifications (synthetic)",
+    unit: "{count}",
+    unitLabel: "count",
+    time: "23:00:00",
+    category: "vital-signs",
+  },
+  af_burden: {
+    system: SYNTHETIC_GROUND_TRUTH_SYSTEM,
+    code: "af-burden",
+    display: "Atrial fibrillation burden, share of the day (simulator ground truth)",
+    unit: "1",
+    unitLabel: "fraction",
+    time: "23:00:00",
+    category: "vital-signs",
+  },
+} as const;
+
 export type WearableMetric = keyof typeof WEARABLE_METRICS;
+export type ConditionMetric = keyof typeof CONDITION_METRICS;
 
 export const WEARABLE_METRIC_NAMES = Object.keys(WEARABLE_METRICS) as WearableMetric[];
+
+/** Every metric a daily reading can carry, v2 and condition ones. */
+export const DAILY_METRICS = { ...WEARABLE_METRICS, ...CONDITION_METRICS } as const;
 
 export const DEFAULT_END_DAY = "2026-10-01";
 export const DEFAULT_DAYS = 90;
@@ -103,7 +159,7 @@ export type SubjectProfile = Readonly<{
 
 export type DailyReading = Readonly<{
   day: string;
-  metric: WearableMetric;
+  metric: WearableMetric | ConditionMetric;
   value: number;
 }>;
 
@@ -112,6 +168,8 @@ export type SeriesOptions = Readonly<{
   subjectRef: string;
   endDay: string;
   days: number;
+  /** v3: the subject's conditions with a wearable effect; none gives the v2 series. */
+  conditions?: readonly SubjectCondition[];
 }>;
 
 const round = (value: number, decimals: number): number => {
@@ -182,6 +240,7 @@ const dayReadings = (
   day: string,
   index: number,
   days: number,
+  effects: DayEffects,
 ): DailyReading[] => {
   const worn = random() < profile.wearRate;
   const noise = Array.from({ length: 6 }, () => normal(random));
@@ -200,47 +259,85 @@ const dayReadings = (
     profile.episode !== null &&
     index >= episodeStart &&
     index < episodeStart + profile.episode.length;
+  // With no condition every effect is 0 or 1, so each value is the v2 one.
   const restingHr = clamp(
     profile.restingHr +
       profile.restingDriftPerDay * index +
       2 * nHr +
-      (inEpisode ? 7 : 0),
+      (inEpisode ? 7 : 0) +
+      effects.restingHrDelta,
     45,
-    90,
+    90 + Math.max(0, effects.restingHrDelta),
   );
-  const hrv = clamp(profile.hrv * (inEpisode ? 0.72 : 1) + 6 * nHrv, 10, 150);
+  const hrv = clamp(
+    profile.hrv * (inEpisode ? 0.72 : 1) * effects.hrvFactor + 6 * nHrv,
+    10,
+    150,
+  );
   const sleepMinutes = clamp(profile.sleepMinutes + 35 * nSleep, 240, 600);
   const steps = clamp(
-    profile.steps * (isWeekend(day) ? 0.85 : 1) + 1800 * nSteps,
+    profile.steps * (isWeekend(day) ? 0.85 : 1) * effects.stepsFactor + 1800 * nSteps,
     500,
     30000,
   );
   const respiration = clamp(
-    profile.respiration + 0.6 * nResp + (inEpisode ? 1.5 : 0),
+    profile.respiration + 0.6 * nResp + (inEpisode ? 1.5 : 0) + effects.respirationDelta,
     10,
     24,
   );
   const sleepScore = clamp(
-    62 + (sleepMinutes - 360) / 6 + ((hrv - profile.hrv) / profile.hrv) * 20 + 5 * nScore,
+    62 +
+      (sleepMinutes - 360) / 6 +
+      ((hrv - profile.hrv) / profile.hrv) * 20 +
+      5 * nScore +
+      effects.sleepScoreDelta,
     30,
     100,
   );
+  // An irregular rhythm inflates RMSSD; it is applied after the sleep score so
+  // that it does not read as better recovery.
+  const reportedHrv = clamp(
+    hrv * effects.irregularHrvFactor,
+    10,
+    150 * Math.max(1, effects.irregularHrvFactor),
+  );
   const values: Record<WearableMetric, number> = {
-    heart_rate: Math.round(restingHr + 14 + 3 * nHr),
+    heart_rate: Math.round(restingHr + 14 + 3 * nHr + effects.heartRateDelta),
     resting_heart_rate: Math.round(restingHr),
-    hrv_rmssd: Math.round(hrv),
+    hrv_rmssd: Math.round(reportedHrv),
     sleep_duration: Math.round(sleepMinutes),
     sleep_score: Math.round(sleepScore),
     steps: Math.round(steps),
     respiratory_rate: round(respiration, 1),
   };
-  return WEARABLE_METRIC_NAMES.map((metric) => ({ day, metric, value: values[metric] }));
+  const extra: Record<ConditionMetric, number | null> = {
+    spo2_mean: effects.spo2?.mean ?? null,
+    spo2_min: effects.spo2?.min ?? null,
+    irregular_rhythm_notifications: effects.irregularRhythmNotifications,
+    af_burden: effects.afBurden,
+  };
+  return [
+    ...WEARABLE_METRIC_NAMES.map((metric) => ({ day, metric, value: values[metric] })),
+    ...(Object.keys(CONDITION_METRICS) as ConditionMetric[]).flatMap((metric) => {
+      const value = extra[metric];
+      return value == null ? [] : [{ day, metric, value }];
+    }),
+  ];
 };
 
 export const generateSeries = (options: SeriesOptions): DailyReading[] => {
   const profile = subjectProfile(options.seed, options.subjectRef);
   const random = randomFor(options.seed, `series:${options.subjectRef}`);
+  const conditions = options.conditions ?? [];
+  const key = `${options.seed}:${options.subjectRef}`;
   return windowDays(options.endDay, options.days).flatMap((day, index) =>
-    dayReadings(profile, random, day, index, options.days),
+    dayReadings(
+      profile,
+      random,
+      day,
+      index,
+      options.days,
+      conditions.length === 0 ? NO_EFFECTS : conditionEffects(conditions, day, key),
+    ),
   );
 };
