@@ -7,6 +7,7 @@ import {
   autoChoiceLine,
   autoChoiceLineFor,
   autoColumnName,
+  DEFAULT_AGENT_TOPICS,
   ROUTE_TOPICS,
   routeAgent,
 } from "./agent-router";
@@ -14,13 +15,44 @@ import { AGENTS } from "./agents";
 
 const ALL = AGENTS.map(({ id }) => id);
 
-type Fixture = Readonly<{
-  items: readonly Readonly<{ prompt: string; expected: string }>[];
+type FixtureItem = Readonly<{
+  id?: string;
+  prompt: string;
+  expected: string;
+  rule?: string;
 }>;
+type Fixture = Readonly<{ items: readonly FixtureItem[] }>;
 
-const FIXTURE = JSON.parse(
-  readFileSync(join(import.meta.dir, "..", "evaluation", "agent-router.v1.json"), "utf8"),
-) as Fixture;
+const readFixture = (name: string): Fixture =>
+  JSON.parse(
+    readFileSync(join(import.meta.dir, "..", "evaluation", name), "utf8"),
+  ) as Fixture;
+
+const FIXTURE = readFixture("agent-router.v1.json");
+const QUESTIONS_FIXTURE = readFixture("agent-router.questions.v1.json");
+
+type Miss = FixtureItem & Readonly<{ routed: string }>;
+
+const missesOf = (fixture: Fixture): readonly Miss[] =>
+  fixture.items
+    .map((item) => ({ ...item, routed: routeAgent(item.prompt, ALL).agentId }))
+    .filter(({ routed, expected }) => routed !== expected);
+
+const accuracyOf = (fixture: Fixture): number =>
+  1 - missesOf(fixture).length / fixture.items.length;
+
+const report = (name: string, fixture: Fixture): void => {
+  const misses = missesOf(fixture);
+  const right = fixture.items.length - misses.length;
+  console.log(
+    `${name}: ${right}/${fixture.items.length} routed as expected (${(accuracyOf(fixture) * 100).toFixed(1)}%)`,
+  );
+  misses.forEach(({ id, prompt, expected, routed, rule }) =>
+    console.log(
+      `  miss ${id ?? ""} expected ${expected} (${rule ?? "hand label"}), routed ${routed}: ${prompt}`,
+    ),
+  );
+};
 
 describe("routeAgent", () => {
   test("a diet question goes to the Diet specialist, with the topic it matched", () => {
@@ -65,6 +97,52 @@ describe("routeAgent", () => {
     expect(routeAgent("What is my resting heart rate?", ALL).agentId).toBe("trainer");
   });
 
+  test("a medicine or dose decision goes to the General Practitioner, whatever it names", () => {
+    expect(routeAgent("What statin dose fits, given my latest LDL?", ALL)).toEqual({
+      agentId: "gp",
+      topic: "a medicine or dose decision",
+    });
+    expect(
+      routeAgent("Should I stop the tablets now my glucose is lower?", ALL).agentId,
+    ).toBe("gp");
+    expect(routeAgent("How many units of insulin do I need?", ALL).agentId).toBe("gp");
+  });
+
+  test("reading the record about a medicine is not a medicine or dose decision", () => {
+    expect(
+      routeAgent(
+        "LDL cholesterol before and after atorvastatin 40 MG was first requested",
+        ALL,
+      ).agentId,
+    ).toBe("diet");
+    expect(routeAgent("Should I train hard today?", ALL).agentId).toBe("trainer");
+  });
+
+  test("a disease named after an organ is not anatomy", () => {
+    expect(
+      routeAgent("eGFR since the onset of chronic kidney disease", ALL).agentId,
+    ).toBe("gp");
+    expect(routeAgent("Where are the kidneys?", ALL).agentId).toBe("anatomy");
+  });
+
+  test("a sport is training, running a query is not", () => {
+    expect(routeAgent("How many minutes per week did I swim?", ALL).agentId).toBe(
+      "trainer",
+    );
+    expect(routeAgent("Cycling minutes per week", ALL).agentId).toBe("trainer");
+    expect(routeAgent("Did I record a run on Monday?", ALL).agentId).toBe("trainer");
+    expect(routeAgent("Write and run a SQL query.", ALL).agentId).toBe("gp");
+  });
+
+  test("the General Practitioner's own topics come back on its line", () => {
+    expect(DEFAULT_AGENT_TOPICS.length).toBeGreaterThan(0);
+    expect(
+      autoChoiceLineFor("What dose of metformin?", "Auto → General Practitioner"),
+    ).toBe(
+      "Auto chose General Practitioner: the question is about a medicine or dose decision.",
+    );
+  });
+
   test("every agent but the General Practitioner has rules, and only real agents do", () => {
     expect(Object.keys(ROUTE_TOPICS).sort()).toEqual(
       ALL.filter((id) => id !== "gp").sort(),
@@ -83,10 +161,23 @@ describe("router evaluation (evaluation/agent-router.v1.json)", () => {
   });
 
   test("routes at least 90% of the prompts to the expected agent", () => {
-    const misses = FIXTURE.items.filter(
-      ({ prompt, expected }) => routeAgent(prompt, ALL).agentId !== expected,
-    );
-    expect(1 - misses.length / FIXTURE.items.length).toBeGreaterThanOrEqual(0.9);
+    report("agent-router.v1.json", FIXTURE);
+    expect(accuracyOf(FIXTURE)).toBeGreaterThanOrEqual(0.9);
+  });
+});
+
+describe("router evaluation on the scored questions (evaluation/agent-router.questions.v1.json)", () => {
+  test("has one item per scored question, each naming a real agent and its rule", () => {
+    expect(QUESTIONS_FIXTURE.items.length).toBe(130);
+    QUESTIONS_FIXTURE.items.forEach(({ expected, rule }) => {
+      expect(ALL).toContain(expected);
+      expect(rule ?? "").not.toBe("");
+    });
+  });
+
+  test("routes at least 95% of the questions to the agent their tools and codes name", () => {
+    report("agent-router.questions.v1.json", QUESTIONS_FIXTURE);
+    expect(accuracyOf(QUESTIONS_FIXTURE)).toBeGreaterThanOrEqual(0.95);
   });
 });
 

@@ -1,10 +1,13 @@
 /**
- * Auto mode (#219), version 1: picks the agent for one question from the
- * question's words alone. Every agent has a short list of topics, each a
- * keyword pattern that also matches the topic's LOINC codes. The agent with
- * the most matching topics wins; a tie goes to the agent listed first in
- * `AGENTS`; no match at all goes to the General Practitioner. No model is
- * called, so the choice is the same every time and can be read off the rules.
+ * Auto mode (#219), version 2: picks the agent for one question from the
+ * question's words alone. A question that asks for a medicine or dose decision goes
+ * to the General Practitioner first, since no specialist gives doses or says
+ * what to start or stop. Otherwise every specialist has a short list of
+ * topics, each a keyword pattern that also matches the topic's LOINC codes.
+ * The agent with the most matching topics wins; a tie goes to the agent listed
+ * first in `AGENTS`; no match at all goes to the General Practitioner. No
+ * model is called, so the choice is the same every time and can be read off
+ * the rules.
  *
  * Pure, so the turn's column name (`turn-rules.ts`), the chat route and the
  * line under the answer all agree. docs/agents.md lists the rules.
@@ -21,7 +24,20 @@ export type RouteTopic = Readonly<{
 /** The agent every question falls back to. */
 export const DEFAULT_AGENT_ID = "gp";
 
-/** Topics per agent id. The General Practitioner has none: it is the default. */
+/**
+ * Topics that send a question to the General Practitioner before any
+ * specialist is scored: the specialists describe, and never give a dose or
+ * say what to take, start, stop or change.
+ */
+export const DEFAULT_AGENT_TOPICS: readonly RouteTopic[] = [
+  {
+    topic: "a medicine or dose decision",
+    pattern:
+      /\b(?:doses?|dosing)\b|\bhow many (?:milligrams|units)\b|\bshould\b[^.?!]*\b(?:take|start|stop|change|replace|inject|double|see a doctor|go to (?:the )?hospital)\b/,
+  },
+];
+
+/** Topics per specialist id. The General Practitioner is the default. */
 export const ROUTE_TOPICS: Readonly<Record<string, readonly RouteTopic[]>> = {
   diet: [
     { topic: "body weight", pattern: /\bweigh(?:t|s|ed|ing)?\b|29463-7/ },
@@ -43,7 +59,7 @@ export const ROUTE_TOPICS: Readonly<Record<string, readonly RouteTopic[]>> = {
     {
       topic: "where an organ is",
       pattern:
-        /\b(?:organs?|liver|kidneys?|pancreas|spleen|gall ?bladder|thyroid|stomach|lungs?|bladder|intestines?|bowel)\b|\bheart\b(?! rate)/,
+        /\b(?:organs?|liver|kidneys?|pancreas|spleen|gall ?bladder|thyroid|stomach|lungs?|bladder|intestines?|bowel)\b(?! (?:disease|failure|cancer))|\bheart\b(?! rate| disease| failure)/,
     },
     {
       topic: "a body system",
@@ -65,7 +81,7 @@ export const ROUTE_TOPICS: Readonly<Record<string, readonly RouteTopic[]>> = {
     {
       topic: "training",
       pattern:
-        /\btrain(?:ing)?\b|\bworkouts?\b|\bexercis\w*|\brun(?:s|ning)?\b|\bstrain\b|check-in|weekly review/,
+        /\btrain(?:ing)?\b|\bworkouts?\b|\bexercis\w*|\ba run\b|\bruns\b|\brunning\b|\bjog\w*|\bswim\w*|\bcycling\b|\bbik(?:e|ing)\b|\browing\b|\bsports?\b|\bstrain\b|check-in|weekly review/,
     },
   ],
   genetics: [
@@ -94,6 +110,8 @@ const topicsMatched = (agentId: string, text: string): readonly string[] =>
  */
 export const routeAgent = (prompt: string, offeredIds: readonly string[]): AutoChoice => {
   const text = prompt.toLowerCase();
+  const decision = DEFAULT_AGENT_TOPICS.find(({ pattern }) => pattern.test(text));
+  if (decision !== undefined) return { agentId: DEFAULT_AGENT_ID, topic: decision.topic };
   const scored = AGENTS.filter(
     ({ id }) => id !== DEFAULT_AGENT_ID && offeredIds.includes(id),
   ).map(({ id }) => ({ id, topics: topicsMatched(id, text) }));
