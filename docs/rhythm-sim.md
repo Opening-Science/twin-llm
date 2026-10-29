@@ -84,4 +84,4 @@ SampledData needs a fixed sampling period and beats are not evenly spaced, so th
 - Ectopy is single beats only: no couplets, runs, bigeminy, interpolated PVCs or non-conducted PACs.
 - No ECG. The pulse-wave proxy is a fixed shape, not a photoplethysmogram model; its timing and amplitude rules are assumptions.
 - Recordings are 30 to 600 s. Episodes over a day would need many recordings; nothing here models when episodes happen.
-- Nothing is stored in the warehouse yet.
+- Nothing is stored in the warehouse yet. `rhythm_irregularity` makes its recordings on the fly (`docs/query-layer.md`, "Rhythm irregularity").

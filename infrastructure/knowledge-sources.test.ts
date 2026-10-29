@@ -51,6 +51,7 @@ describe("knowledge source preferences", () => {
       "coverage",
       "gbd_population",
       "range_position",
+      "rhythm_irregularity",
       "trend",
       "values_around_event",
     ]);
@@ -124,6 +125,7 @@ describe("knowledge source preferences", () => {
       "medications_timeline",
       "observations_for_subject",
       "range_position",
+      "rhythm_irregularity",
       "subject_window",
       "summary_stats",
       "trend",

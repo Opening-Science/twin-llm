@@ -366,6 +366,29 @@ export const valuesAroundEventInput = z
     "One LOINC's readings before and after a subject's first recorded condition or medication",
   );
 
+export const rhythmIrregularityInput = z
+  .object({
+    subject_ref: subjectRefSchema,
+    recording: z
+      .number()
+      .int()
+      .min(1)
+      .max(1000)
+      .describe(
+        "Which simulated recording of this subject, 1 to 1000; the same number gives the same recording",
+      ),
+    duration_sec: z
+      .number()
+      .int()
+      .min(180)
+      .max(600)
+      .describe("Recording length in seconds, 180 to 600"),
+  })
+  .strict()
+  .describe(
+    "Irregularity metrics of one simulated RR-interval recording of a synthetic subject",
+  );
+
 export const TOOL_DEFINITIONS = [
   {
     name: "list_subjects",
@@ -485,5 +508,11 @@ export const TOOL_DEFINITIONS = [
     description:
       "One subject's readings of one LOINC in the days_before days before and the days_after days from the first recorded onset of a condition (event_kind condition) or the first request of a medication (event_kind medication), found by its code: n, mean, median, min and max on each side and after minus before. Says what was recorded before and after the date, never that the event caused a change. Refuses SUBJECT_SCOPE_VIOLATION, NO_ROWS (no dated record of that code, or no reading on either side), MIXED_UNITS and ROW_CAP_EXCEEDED.",
     input: valuesAroundEventInput,
+  },
+  {
+    name: "rhythm_irregularity",
+    description:
+      "Irregularity metrics of one simulated RR-interval recording of a synthetic subject (made by the rhythm simulator, not measured), per 128-interval window: nRMSSD, Shannon entropy, sample entropy, turning-point ratio, and a research-threshold flag (Dash et al. 2009), with n_flagged and flagged_time_share. simulator_ground_truth is what the simulator made, for checking the metrics. Describes the recording; never say a person has a condition. Synthetic mode only: personal mode is NO_RHYTHM_DATA. Refuses SUBJECT_SCOPE_VIOLATION and WINDOW_TOO_SHORT.",
+    input: rhythmIrregularityInput,
   },
 ] as const;

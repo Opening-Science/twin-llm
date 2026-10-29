@@ -82,6 +82,7 @@ export type ToolRefusal =
   | WearableMixedUnits
   | WindowTooShort
   | SourcesUnitMismatch
+  | NoRhythmData
   | ImportedRefusal;
 
 const REFUSAL_CODES: readonly string[] = [
@@ -96,6 +97,7 @@ const REFUSAL_CODES: readonly string[] = [
   "COHORT_TOO_SMALL",
   "SOURCE_NOT_CONNECTED",
   "WINDOW_TOO_SHORT",
+  "NO_RHYTHM_DATA",
   ...IMPORTED_REFUSAL_CODES,
 ];
 
@@ -378,4 +380,25 @@ export const noEvent = (record: ClinicalRecordKind, code: string): NoRecords => 
   code: "NO_ROWS",
   error: `no ${record} with code ${code} and a recorded date is on file for this subject`,
   record,
+});
+
+export type NoRhythmData = Readonly<{ code: "NO_RHYTHM_DATA"; error: string }>;
+
+/**
+ * No beat-level recording exists outside the rhythm simulator: wearable
+ * summaries hold daily values only, so personal mode has nothing to describe.
+ */
+export const NO_RHYTHM_DATA: NoRhythmData = {
+  code: "NO_RHYTHM_DATA",
+  error:
+    "no beat-level recordings exist for this turn; rhythm_irregularity describes simulated recordings of synthetic subjects only",
+};
+
+/** A simulated recording with fewer intervals than one analysis window. */
+export const tooFewBeats = (minimum: number, n: number): WindowTooShort => ({
+  code: "WINDOW_TOO_SHORT",
+  error: `fewer than ${minimum} RR intervals in this recording; too few for one window`,
+  measure: "rr_intervals",
+  minimum,
+  counts: [{ source: "simulated", n }],
 });

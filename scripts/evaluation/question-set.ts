@@ -28,6 +28,7 @@ import {
   trainingLoadInput,
   crossSourceCompareInput,
   valuesAroundEventInput,
+  rhythmIrregularityInput,
 } from "../../packages/query-tools/schemas";
 
 import { isMeasureId } from "./score/asked-measure";
@@ -72,6 +73,7 @@ export const KEYED_TOOLS = {
   training_load: trainingLoadInput,
   cross_source_compare: crossSourceCompareInput,
   values_around_event: valuesAroundEventInput,
+  rhythm_irregularity: rhythmIrregularityInput,
 } as const;
 
 export type KeyedTool = keyof typeof KEYED_TOOLS;
@@ -100,6 +102,7 @@ export const AUDIT_TOOL_NAMES = [
   "training_load",
   "cross_source_compare",
   "values_around_event",
+  "rhythm_irregularity",
   "guidelines.guideline_search",
   "knowledge.knowledge_search",
   "gbd.gbd_query",

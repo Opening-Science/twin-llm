@@ -290,3 +290,180 @@ export const weekStart = (day: string): string =>
  */
 export const recentLoadRatio = (recent: number, previous: number): number | null =>
   previous === 0 ? null : (recent * 4) / previous;
+
+// ─── rhythm_irregularity: RR-interval irregularity ──────────────────────────
+// Descriptions of a series of RR intervals (ms). They say how irregular a
+// recording is; none of them says what rhythm a person has.
+
+/**
+ * The series without its `count` largest and `count` smallest values, in the
+ * original order. Equal values are dropped by position, first ones first.
+ * Dash et al. 2009 drop 8 of each from a 128-beat segment so single ectopic
+ * beats weigh less.
+ */
+export const withoutExtremes = (values: readonly number[], count: number): number[] => {
+  if (values.length <= 2 * count) return [];
+  const order = values
+    .map((value, index) => ({ value, index }))
+    .sort((a, b) => a.value - b.value || a.index - b.index);
+  const dropped = new Set(
+    [...order.slice(0, count), ...order.slice(order.length - count)].map(
+      (entry) => entry.index,
+    ),
+  );
+  return values.filter((_, index) => !dropped.has(index));
+};
+
+/** Root mean square of successive differences divided by the mean. `null` under 2 values. */
+export const normalisedRmssd = (rr: readonly number[]): number | null => {
+  if (rr.length < 2) return null;
+  const centre = mean(rr);
+  if (centre === null || centre === 0) return null;
+  const squares = rr.slice(1).map((value, i) => (value - rr[i]) ** 2);
+  return Math.sqrt(sum(squares) / squares.length) / centre;
+};
+
+/**
+ * Shannon entropy of the values' histogram in `bins` equal-width bins from the
+ * minimum to the maximum (the maximum in the last bin), divided by ln(bins) so
+ * it runs from 0 (one bin) to 1 (spread evenly). `null` when empty; 0 when
+ * every value is equal.
+ */
+export const histogramEntropy = (values: readonly number[], bins = 16): number | null => {
+  const low = minimum(values);
+  const high = maximum(values);
+  if (low === null || high === null) return null;
+  if (high === low) return 0;
+  const width = (high - low) / bins;
+  const counts = values.reduce<number[]>(
+    (tally, value) => {
+      const bin = Math.min(bins - 1, Math.floor((value - low) / width));
+      return tally.map((count, index) => (index === bin ? count + 1 : count));
+    },
+    Array.from({ length: bins }, () => 0),
+  );
+  const entropy = counts
+    .filter((count) => count > 0)
+    .map((count) => count / values.length)
+    .reduce((total, p) => total - p * Math.log(p), 0);
+  return entropy / Math.log(bins);
+};
+
+/** Population standard deviation. `null` when empty. */
+export const populationSd = (values: readonly number[]): number | null => {
+  const centre = mean(values);
+  return centre === null
+    ? null
+    : Math.sqrt(sum(values.map((value) => (value - centre) ** 2)) / values.length);
+};
+
+/**
+ * Sample entropy (Richman and Moorman 2000): −ln(A / B) = ln(B / A), where B counts pairs
+ * of templates of length m and A pairs of length m + 1 that stay within r of
+ * each other at every point (Chebyshev distance ≤ r), over the same N − m
+ * templates, self-matches excluded. r defaults to 0.2 × the population SD.
+ * `null` when B or A is 0 (undefined) or the series is shorter than m + 2.
+ */
+export const sampleEntropy = (
+  values: readonly number[],
+  m = 2,
+  r: number | null = null,
+): number | null => {
+  const n = values.length;
+  if (n < m + 2) return null;
+  const tolerance = r ?? 0.2 * (populationSd(values) ?? 0);
+  const templates = n - m;
+  const matchesUpTo = (i: number, j: number, length: number): boolean =>
+    Array.from({ length }, (_, k) => k).every(
+      (k) => Math.abs(values[i + k] - values[j + k]) <= tolerance,
+    );
+  let b = 0;
+  let a = 0;
+  for (let i = 0; i < templates; i += 1) {
+    for (let j = i + 1; j < templates; j += 1) {
+      if (matchesUpTo(i, j, m)) {
+        b += 1;
+        if (Math.abs(values[i + m] - values[j + m]) <= tolerance) a += 1;
+      }
+    }
+  }
+  return a === 0 || b === 0 ? null : Math.log(b / a);
+};
+
+/** Points strictly above both neighbours or strictly below both. */
+export const turningPoints = (values: readonly number[]): number =>
+  values
+    .slice(1, -1)
+    .filter(
+      (value, i) =>
+        (value > values[i] && value > values[i + 2]) ||
+        (value < values[i] && value < values[i + 2]),
+    ).length;
+
+export type TurningPointRange = Readonly<{ low: number; high: number }>;
+
+/**
+ * For n independent values the turning-point count has mean (2n − 4) / 3 and
+ * variance (16n − 29) / 90; this is that mean ± 2 SD as a ratio of n (Dash et
+ * al. 2009 use the same band).
+ */
+export const randomTurningPointRange = (n: number): TurningPointRange => {
+  const centre = (2 * n - 4) / 3;
+  const spread = 2 * Math.sqrt((16 * n - 29) / 90);
+  return { low: (centre - spread) / n, high: (centre + spread) / n };
+};
+
+/** The research rule of Dash et al. 2009, as the tool applies it. */
+export const IRREGULARITY_THRESHOLDS = {
+  windowBeats: 128,
+  extremesDropped: 8,
+  histogramBins: 16,
+  nrmssdAbove: 0.1,
+  entropyAbove: 0.7,
+} as const;
+
+export type IrregularityWindow = Readonly<{
+  /** RR intervals in the window, before the extremes are dropped. */
+  n: number;
+  nrmssd: number | null;
+  shannon_entropy: number | null;
+  sample_entropy: number | null;
+  turning_point_ratio: number | null;
+  /** All three of nRMSSD, entropy and turning points past the research threshold. */
+  flagged: boolean;
+}>;
+
+/**
+ * One window: drop the 8 largest and 8 smallest intervals, then nRMSSD,
+ * 16-bin Shannon entropy, sample entropy (m 2, r 0.2 SD) and the turning-point
+ * ratio of what is left. Flagged when nRMSSD > 0.1, entropy > 0.7 and the
+ * turning-point ratio lies inside the band expected of random values.
+ */
+export const irregularityWindow = (rr: readonly number[]): IrregularityWindow => {
+  const kept = withoutExtremes(rr, IRREGULARITY_THRESHOLDS.extremesDropped);
+  const nrmssd = normalisedRmssd(kept);
+  const entropy = histogramEntropy(kept, IRREGULARITY_THRESHOLDS.histogramBins);
+  const ratio = kept.length < 3 ? null : turningPoints(kept) / kept.length;
+  const band = randomTurningPointRange(kept.length);
+  return {
+    n: rr.length,
+    nrmssd,
+    shannon_entropy: entropy,
+    sample_entropy: sampleEntropy(kept),
+    turning_point_ratio: ratio,
+    flagged:
+      nrmssd !== null &&
+      entropy !== null &&
+      ratio !== null &&
+      nrmssd > IRREGULARITY_THRESHOLDS.nrmssdAbove &&
+      entropy > IRREGULARITY_THRESHOLDS.entropyAbove &&
+      ratio >= band.low &&
+      ratio <= band.high,
+  };
+};
+
+/** Consecutive, non-overlapping windows of `size`; a shorter tail is left out. */
+export const beatWindows = <T>(values: readonly T[], size: number): T[][] =>
+  Array.from({ length: Math.floor(values.length / size) }, (_, index) =>
+    values.slice(index * size, (index + 1) * size),
+  );
