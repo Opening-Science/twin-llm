@@ -210,7 +210,7 @@ Outside the tools, the chat route and the onboarding starter questions write `pr
 
 The contract:
 
-- **Closed input.** A zod object with `.strict()`, window bounds from `schemas.ts`, `z.enum` for every fixed choice, no free text. It goes into `TOOL_DEFINITIONS`, which feeds chat (`ai-tools.ts`), the MCP server and both manifests.
+- **Closed input.** A zod object with `.strict()`, window bounds from `schemas.ts`, `z.enum` for every fixed choice, no free text. It goes into `TOOL_DEFINITIONS`, which feeds chat (`ai-tools.ts`, where the scaffold adds the entry at the end of `createQueryTools`, found by name, never in `createImportedTools`), the MCP server and both manifests.
 - **Scope first.** `subjectInScope` before any read; out of scope returns `SUBJECT_SCOPE_VIOLATION`.
 - **Audited.** The body runs inside `audited(...)`, so every call, refusal and throw writes one audit row; a refusal counts 0 rows.
 - **Capped reads.** One fixed `findMany` per window through `readWindow` (`ports.ts`), `ANALYTICS_ROW_CAP` + 1 rows, over the cap refused. No `$queryRaw`.
