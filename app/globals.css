@@ -543,8 +543,9 @@
     @apply text-primary underline underline-offset-2;
   }
 
+  /* Long inline values (hashes, paths) wrap instead of widening a phone page. */
   .doc-prose code {
-    @apply bg-muted rounded px-1 py-0.5 font-mono text-[0.9em];
+    @apply bg-muted rounded px-1 py-0.5 font-mono text-[0.9em] wrap-anywhere;
   }
 
   .doc-prose pre {

@@ -45,6 +45,9 @@ export const DEFAULT_CARBON_X_TIMEOUT_S = 120;
 /** The Carbon-X sidecar's OpenAI-compatible root when CARBON_X_URL is unset. */
 export const DEFAULT_CARBON_X_URL = "http://127.0.0.1:8090/v1";
 
+/** The host name that serves only the Synthea generator (docs/synthea-generator.md). */
+export const DEFAULT_SYNTHEA_HOST = "synthea.opening.science";
+
 /** PostHog's EU ingestion host, used when only a key is configured. */
 export const DEFAULT_POSTHOG_HOST = "https://eu.i.posthog.com";
 
@@ -89,6 +92,22 @@ const hexKey = (name: string) =>
     blankAsMissing,
     z.string().regex(HEX_256, `${name} must be 64 hex characters`).optional(),
   );
+
+/** A whole number between `min` and `max`, `fallback` when unset. */
+const wholeNumberIn = (name: string, min: number, max: number, fallback: number) =>
+  z.preprocess(
+    blankAsMissing,
+    z.coerce
+      .number()
+      .int(`${name} must be a whole number`)
+      .min(min, `${name} must be at least ${min}`)
+      .max(max, `${name} must be at most ${max}`)
+      .default(fallback),
+  );
+
+/** A DNS host name, lower or upper case, no port. */
+const HOSTNAME =
+  /^(?=.{1,253}$)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*$/i;
 
 // ---------------------------------------------------------------------------
 // Cross-field policies. Each one adds named issues; none of them echoes a
@@ -426,6 +445,24 @@ const serverEnvSchema = z
     GBD_MCP_URL: maybeUrl(),
     GBD_MCP_TOKEN: maybeText(),
 
+    SYNTHEA_HOST: z.preprocess(
+      blankAsMissing,
+      z
+        .string()
+        .regex(
+          HOSTNAME,
+          "SYNTHEA_HOST must be a host name such as synthea.opening.science",
+        )
+        .transform((host) => host.toLowerCase())
+        .default(DEFAULT_SYNTHEA_HOST),
+    ),
+    SYNTHEA_MAX_PEOPLE: wholeNumberIn("SYNTHEA_MAX_PEOPLE", 1, 1000, 50),
+    SYNTHEA_JOB_TIMEOUT_S: wholeNumberIn("SYNTHEA_JOB_TIMEOUT_S", 10, 1800, 180),
+    SYNTHEA_JOBS_PER_HOUR: wholeNumberIn("SYNTHEA_JOBS_PER_HOUR", 1, 1000, 12),
+    SYNTHEA_QUEUE_MAX: wholeNumberIn("SYNTHEA_QUEUE_MAX", 1, 100, 5),
+    SYNTHEA_JAR: maybeText(),
+    SYNTHEA_JAVA: maybeText(),
+
     OURA_CLIENT_ID: maybeText(),
     OURA_CLIENT_SECRET: maybeText(),
     OURA_REDIRECT_URI: maybeUrl(),
@@ -730,4 +767,31 @@ export const genomeEnv = (env: ServerEnv = serverEnv()): GenomeEnv =>
     assumeBuild: env.GENOME_ASSUME_BUILD ?? null,
     carbonXUrl: env.CARBON_X_URL ?? DEFAULT_CARBON_X_URL,
     carbonXTimeoutMs: env.CARBON_X_TIMEOUT_S * 1000,
+  });
+
+export type SyntheaEnv = Readonly<{
+  /** Requests for this host see only the generator (`proxy.ts`). */
+  host: string;
+  maxPeople: number;
+  jobTimeoutMs: number;
+  jobsPerHour: number;
+  queueMax: number;
+  /** The pinned Synthea JAR; null means `.synthea/cache/` in the working directory. */
+  jarPath: string | null;
+  /** The Java binary; `java` from PATH when unset. */
+  javaBin: string;
+  /** PATH for the Java process, which gets no other server variable. */
+  childPath: string;
+}>;
+
+export const syntheaEnv = (env: ServerEnv = serverEnv()): SyntheaEnv =>
+  Object.freeze({
+    host: env.SYNTHEA_HOST,
+    maxPeople: env.SYNTHEA_MAX_PEOPLE,
+    jobTimeoutMs: env.SYNTHEA_JOB_TIMEOUT_S * 1000,
+    jobsPerHour: env.SYNTHEA_JOBS_PER_HOUR,
+    queueMax: env.SYNTHEA_QUEUE_MAX,
+    jarPath: env.SYNTHEA_JAR ?? null,
+    javaBin: env.SYNTHEA_JAVA ?? "java",
+    childPath: process.env.PATH ?? "/usr/local/bin:/usr/bin:/bin",
   });

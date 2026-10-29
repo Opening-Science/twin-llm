@@ -52,3 +52,6 @@ Here "this repository" is TwinLLM (`scripts/anatomy/bake-anny-rigged.py`). The w
 
 `packages/anatomy/hra-groups.ts` is ported from [Opening-Science/open-twin-xr](https://github.com/Opening-Science/open-twin-xr) `src/scene/anatomy/hraGroups.ts` at `7334c0bb0664e1f293f88971788520d64734466c` (MIT, Copyright (c) 2026 Martin Etzrodt, OSF Staff and Open Twin XR contributors). See `third_party/open-twin-xr/LICENSE`.
 
+## Synthea
+
+`bun run synthea:generate` and the Synthea generator page (`/synthea`, synthea.opening.science) download and run [Synthea](https://github.com/synthetichealth/synthea) v4.0.0 (`synthea-with-dependencies.jar`, checked by SHA-256), Copyright The MITRE Corporation and contributors, licensed under the Apache License, Version 2.0. The JAR is not part of this repository; it is kept in the gitignored `.synthea/cache/`. Records it generates are synthetic. The generator page and each downloaded zip credit Synthea. Details: `docs/synthea-generator.md`.

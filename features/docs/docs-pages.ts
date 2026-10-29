@@ -54,16 +54,23 @@ const EXTERNAL = /^(?:[a-z][a-z0-9+.-]*:|\/\/|#)/i;
  * Where a link or image in the page at `fromPath` should point in the app.
  * Markdown pages inside `docs/` become `/docs/...` routes, images under
  * `docs/images/` are served by the image route, and everything else, such as
- * `../README.md`, goes to the file on GitHub.
+ * `../README.md`, goes to the file on GitHub. With `pages: "github"` other
+ * Markdown pages go to GitHub too, for a page shown outside the app's docs
+ * (the Synthea generator's own host serves no other page).
  */
-export const rewriteDocUrl = (url: string, fromPath: string): string => {
+export const rewriteDocUrl = (
+  url: string,
+  fromPath: string,
+  pages: "app" | "github" = "app",
+): string => {
   if (url === "" || EXTERNAL.test(url)) return url;
   const [target = "", hash] = url.split("#", 2);
   const anchor = hash === undefined ? "" : `#${hash}`;
   if (target === "") return url;
   const path = posix.normalize(posix.join(posix.dirname(fromPath), target));
   if (path.startsWith("../")) return `${REPO_URL}/blob/main/${path.slice(3)}${anchor}`;
-  if (path.endsWith(".md")) return `/docs/${path.slice(0, -3)}${anchor}`;
+  if (path.endsWith(".md") && pages === "app")
+    return `/docs/${path.slice(0, -3)}${anchor}`;
   if (/^images\/[^/]+$/.test(path)) return `/${DOCS_DIR}/${path}`;
   return `${REPO_URL}/blob/main/${DOCS_DIR}/${path}${anchor}`;
 };
