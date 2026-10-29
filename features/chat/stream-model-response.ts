@@ -10,6 +10,7 @@ import { posthogServer } from "@/infrastructure/posthog";
 import { createStreamModelResponse } from "./create-stream-model-response";
 import { generationEvent } from "./generation-analytics";
 import { genomeToolDepsFor } from "./genome-tool-deps";
+import { importedToolDepsFor } from "./imported-tool-deps";
 import { loadThreadViews } from "./load-thread-views";
 import {
   markModelResponseComplete,
@@ -34,6 +35,7 @@ export const streamModelResponse = createStreamModelResponse({
   chatIsLocal: chatModelIsLocal,
   resolveModel: resolveLanguageModel,
   genomeTools: genomeToolDepsFor,
+  importedTools: importedToolDepsFor,
   loadAudit: loadSessionAudit,
   store: {
     writeComplete: markModelResponseComplete,

@@ -4,13 +4,12 @@ import { randomUUID } from "node:crypto";
 
 import { Prisma } from "@/generated/prisma/client";
 import { database } from "@/infrastructure/database";
-import { toolPartsUseGenome } from "@/infrastructure/genome-thread-policy";
+import {
+  LOCAL_ONLY_AUDIT_TOOLS,
+  toolPartsUseGenome,
+} from "@/infrastructure/genome-thread-policy";
 import { defaultEmbedPorts, embedText } from "@/packages/guidelines/embed";
 import { EMBEDDING_DIM, EMBEDDING_MODEL } from "@/packages/guidelines/constants";
-import {
-  DNA_ASK_AUDIT_TOOL,
-  GENOME_REPORT_AUDIT_TOOL,
-} from "@/packages/carbon-x/constants";
 
 import type {
   IndexPorts,
@@ -176,8 +175,8 @@ const sourceTexts = async (
 };
 
 /**
- * Genome threads among these (#151): a stored genome tool part in any answer,
- * or a genome row in the audit chain for any of their turns.
+ * Genome threads among these (#151): a stored genome or imported-data tool
+ * part in any answer, or such a row in the audit chain for any of their turns.
  */
 const genomeThreads = async (
   threadIds: readonly string[],
@@ -198,7 +197,7 @@ const genomeThreads = async (
     const audited = await db.auditEvent.findMany({
       where: {
         sessionId: { in: rest.map((turn) => turn.id) },
-        tool: { in: [GENOME_REPORT_AUDIT_TOOL, DNA_ASK_AUDIT_TOOL] },
+        tool: { in: [...LOCAL_ONLY_AUDIT_TOOLS] },
       },
       select: { sessionId: true },
       distinct: ["sessionId"],

@@ -25,11 +25,11 @@ export const windowEndDate = (value: string): Date =>
 const windowBound = () =>
   z.union([z.iso.datetime(), z.iso.datetime({ precision: -1 }), z.iso.date()]);
 
-const windowStart = windowBound().describe(
+export const windowStart = windowBound().describe(
   "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day",
 );
 
-const windowEnd = windowBound().describe(
+export const windowEnd = windowBound().describe(
   "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day",
 );
 
@@ -71,10 +71,12 @@ export const summaryStatsInput = z
   })
   .describe("n / min / max / mean for one LOINC in a window");
 
-const startBeforeEnd = (window: { readonly start: string; readonly end: string }) =>
-  windowStartDate(window.start).getTime() < windowEndDate(window.end).getTime();
+export const startBeforeEnd = (window: {
+  readonly start: string;
+  readonly end: string;
+}) => windowStartDate(window.start).getTime() < windowEndDate(window.end).getTime();
 
-const START_BEFORE_END = { message: "start must be before end" } as const;
+export const START_BEFORE_END = { message: "start must be before end" } as const;
 
 export const windowSchema = z
   .object({

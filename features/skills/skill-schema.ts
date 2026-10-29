@@ -4,9 +4,11 @@ import {
   LLM_PROVIDERS,
   type LlmProvider,
   permitGenomeRequest,
+  permitImportedDataRequest,
   permitProviderForRequest,
 } from "@/infrastructure/data-mode-policy";
 import { GENOME_TOOLS } from "@/packages/carbon-x/constants";
+import { isImportedTool } from "@/packages/query-tools/imported-names";
 import {
   ALL_KNOWLEDGE_SOURCES,
   KNOWLEDGE_SOURCE_IDS,
@@ -87,6 +89,14 @@ const policyCanTakeGenome = (provider: LlmProvider): boolean =>
     carbonXOnLoopback: true,
   }).ok;
 
+/** True when the imported-data policy could let this chat provider read imported data. */
+const policyCanTakeImportedData = (provider: LlmProvider): boolean =>
+  permitImportedDataRequest({
+    mode: "personal",
+    chatProvider: provider,
+    chatOnLoopback: true,
+  }).ok;
+
 export const skillFrontmatterSchema = z
   .strictObject({
     name: z.string().regex(SKILL_NAME_PATTERN, {
@@ -131,6 +141,18 @@ export const skillFrontmatterSchema = z
             code: "custom",
             path: ["providers", index],
             message: `provider "${provider}" may never receive a genotype (infrastructure/data-mode-policy.ts), so a skill calling genome tools cannot list it`,
+          });
+        }
+      });
+    }
+    // Imported-data tools run only with a chat model on this machine, as the genome tools do.
+    if (skill.tools.some(isImportedTool)) {
+      skill.providers.forEach((provider, index) => {
+        if (!policyCanTakeImportedData(provider)) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["providers", index],
+            message: `provider "${provider}" may never read imported data (infrastructure/data-mode-policy.ts), so a skill calling imported-data tools cannot list it`,
           });
         }
       });

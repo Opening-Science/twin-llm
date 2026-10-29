@@ -8,8 +8,25 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 
-import type { DataMode } from "@/infrastructure/data-mode-policy";
+import {
+  type DataMode,
+  IMPORTED_DATA_NOT_PERMITTED,
+  type ImportedDataPermitDecision,
+  permitImportedDataStore,
+} from "@/infrastructure/data-mode-policy";
 
+import { IMPORTED_TOOLS, type ImportedToolName } from "./imported-names";
+import {
+  importedDatasetsInput,
+  importedLatestInput,
+  importedTrendInput,
+} from "./imported-schemas";
+import {
+  type ImportedToolDeps,
+  runImportedDatasets,
+  runImportedLatest,
+  runImportedTrend,
+} from "./imported-tools";
 import { mcpToolManifest } from "./manifests";
 import type { QueryToolPorts } from "./ports";
 import {
@@ -81,7 +98,7 @@ export const assertTransportAllowedForDataMode = (
   }
 };
 
-export type QueryToolName = (typeof TOOL_DEFINITIONS)[number]["name"];
+export type QueryToolName = (typeof TOOL_DEFINITIONS)[number]["name"] | ImportedToolName;
 
 export type QueryToolRunner = (args: unknown) => Promise<unknown>;
 
@@ -94,6 +111,35 @@ const bind =
   ): QueryToolRunner =>
   (args) =>
     run(schema.parse(args));
+
+/**
+ * An MCP client's model is not known to run on this machine, so imported data is never read here: synthetic mode refuses as
+ * not personal, personal mode as not local.
+ */
+export const mcpImportedPermit = (mode: DataMode): ImportedDataPermitDecision => {
+  const stored = permitImportedDataStore(mode);
+  return stored.ok
+    ? { ok: false, code: IMPORTED_DATA_NOT_PERMITTED, reason: "chat-model-not-local" }
+    : stored;
+};
+
+const NOTHING_TO_READ = async () => [];
+
+/** The imported-data tools as MCP serves them: the policy refuses before any read. */
+const mcpImportedDeps = (
+  scope: SessionScope,
+  ports: QueryToolPorts,
+): ImportedToolDeps => ({
+  scope,
+  permit: () => mcpImportedPermit(scope.mode),
+  ports: {
+    listDatasets: NOTHING_TO_READ,
+    listSeries: NOTHING_TO_READ,
+    findLatest: NOTHING_TO_READ,
+    findSeries: NOTHING_TO_READ,
+    appendAudit: ports.appendAudit,
+  },
+});
 
 /** The real tools, bound to one scope. `ports` carries the audit appender. */
 export const queryToolRunners = (
@@ -140,6 +186,15 @@ export const queryToolRunners = (
   values_around_event: bind(valuesAroundEventInput, (input) =>
     runValuesAroundEvent(scope, input, ports),
   ),
+  imported_datasets: bind(importedDatasetsInput, (input) =>
+    runImportedDatasets(mcpImportedDeps(scope, ports), input),
+  ),
+  imported_latest: bind(importedLatestInput, (input) =>
+    runImportedLatest(mcpImportedDeps(scope, ports), input),
+  ),
+  imported_trend: bind(importedTrendInput, (input) =>
+    runImportedTrend(mcpImportedDeps(scope, ports), input),
+  ),
 });
 
 export const QUERY_MCP_SERVER_INFO = {
@@ -148,7 +203,8 @@ export const QUERY_MCP_SERVER_INFO = {
 } as const;
 
 const isQueryToolName = (name: string): name is QueryToolName =>
-  TOOL_DEFINITIONS.some((definition) => definition.name === name);
+  TOOL_DEFINITIONS.some((definition) => definition.name === name) ||
+  (IMPORTED_TOOLS as readonly string[]).includes(name);
 
 const errorResult = (text: string): CallToolResult => ({
   isError: true,

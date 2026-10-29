@@ -266,13 +266,14 @@ describe("POST /api/chat in a thread that used genome tools (#151)", () => {
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({
       code: "GENOME_THREAD_LOCAL_ONLY",
-      error: "This thread used your genome report, so it only runs on local models.",
+      error:
+        "This thread used your genome report or imported data, so it only runs on local models.",
     });
     expect(streamCalls).toBe(0);
     // The wearable read is audited first; nothing says the pilot got data.
     expect(auditedTools).toEqual(["vitronic.chat.summary", "genome.thread.refused"]);
     expect(refusedRows).toEqual([
-      "REFUSED This thread used your genome report, so it only runs on local models.",
+      "REFUSED This thread used your genome report or imported data, so it only runs on local models.",
     ]);
   });
 

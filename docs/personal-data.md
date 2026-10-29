@@ -182,8 +182,10 @@ SHA-256 is the zip's.
   only to Ollama, never Exoscale (the consented pilot included), OpenRouter, the remote
   GPU or Infomaniak. A chat tool that reads it must also pass
   `permitImportedDataRequest`: personal mode and Ollama on loopback.
-  `infrastructure/imported-data-policy.test.ts` checks every provider. No chat tool reads
-  imported data yet; that is #181.
+  `infrastructure/imported-data-policy.test.ts` checks every provider. The chat tools
+  that read it (#181: `imported_datasets`, `imported_latest`, `imported_trend`) are
+  offered only on such a turn, ask the policy again on every call, and keep the thread
+  local-only afterwards ([query-layer.md](query-layer.md), "Imported data tools").
 - **Audited, without values.** Every step appends to the audit chain
   (`features/personal-data/import-audit.ts`): `personal-data.review`, `.save`, `.list`,
   `.rename` and `.delete`. Rows hold the format, byte size, the file's SHA-256, dataset
@@ -199,7 +201,8 @@ SHA-256 is the zip's.
 - A genome VCF, local models only (#180), through the same review and Save flow.
 - Apple Health exports over the 200,000 sample cap: a way to import them (a date range, or
   per-day summaries) is not decided yet.
-- Chat tools that read imported data, closed shapes, local models only (#181).
+- Chat tools over research tables and FHIR conditions and medication requests; the
+  first tools read observations only (#181).
 
 ## Code
 
@@ -211,4 +214,5 @@ SHA-256 is the zip's.
 | Screens                        | `features/personal-data/*.tsx`                               |
 | Store                          | `infrastructure/personal-data-store.ts`                      |
 | Policy                         | `permitImportedDataStore`, `permitImportedDataRequest`       |
+| Chat tools (#181)              | `packages/query-tools/imported-*.ts`, `importedDataReads`    |
 | Upload size through `proxy.ts` | `proxyClientMaxBodySize` in `next.config.ts` (52 MB)         |
