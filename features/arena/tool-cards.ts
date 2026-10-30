@@ -36,6 +36,8 @@ export type ToolCard = Readonly<{
   rowCount: number | null;
   /** Why a refused call has no rows, in a fixed sentence. */
   note: string | null;
+  /** A refused call's code (`NO_ROWS`), for the step line; absent otherwise. */
+  refusalCode?: string;
 }>;
 
 const TITLES: Readonly<Record<string, string>> = {
@@ -297,6 +299,7 @@ export const toolCard = (
       code === null
         ? null
         : (TOOL_REFUSAL_NOTES[part.tool]?.[code] ?? REFUSAL_NOTES[code] ?? REFUSED),
+    ...(code === null ? {} : { refusalCode: code }),
   };
 };
 

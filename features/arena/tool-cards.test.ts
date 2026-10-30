@@ -158,6 +158,7 @@ describe("toolCard", () => {
       state: "refused",
       rowCount: 0,
       note: "A cohort measure needs a subject.",
+      refusalCode: "SUBJECT_REQUIRED",
     });
   });
 
@@ -408,6 +409,7 @@ describe("view tool cards", () => {
       state: "refused",
       rowCount: 0,
       note: "No chart with that id in this thread.",
+      refusalCode: "VIEW_NOT_FOUND",
     });
     expect(refused("UNKNOWN_MEASURE").note).toBe(
       "That measure is not a LOINC code or a known wearable key.",
