@@ -1,9 +1,10 @@
 import { describe, expect, test } from "bun:test";
 
-import type { ToolSet } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
 
-import { createChatTools } from "../../features/chat/chat-tools";
+import { createChatTools, createTurnTools } from "../../features/chat/chat-tools";
+import { type CatalogModel, withAgents } from "../../infrastructure/model-catalog";
+import type { TurnSkill } from "../../infrastructure/skill-gate";
 import type { ResponseToolCall } from "../../infrastructure/response-document/document-v1";
 import { sha256Hex, toCanonicalJson } from "../../packages/audit/hash";
 import type { AppendInput } from "../../packages/audit/append";
@@ -20,6 +21,7 @@ import {
   runEval,
 } from "./eval-runner";
 import { cacheEntrySchema, type CacheStore } from "./model-cache";
+import { agentRulesSha256, rosterSha256 } from "./eval-agent";
 
 /**
  * C3a end to end on fakes: a fake model, fake query-tool ports and an
@@ -338,7 +340,8 @@ const harness = (
       path === "evaluation/questions.v1.json"
         ? QUESTIONS_TEXT
         : (shared.keyText ?? KEY_TEXT),
-    listModels: async () => ["qwen3:4b"],
+    listModels: async () => [{ id: "qwen3:4b" }],
+    findSkill: () => null,
     // Never fires unless a test aborts its own controller.
     timeoutSignal: () => new AbortController().signal,
     resolveModel: async () => ({
@@ -346,8 +349,9 @@ const harness = (
       mock: shared.mock ?? true,
       host: "127.0.0.1:11434",
     }),
-    createTools: (scope: SessionScope): ToolSet =>
-      createChatTools(scope, { query: warehouse.ports }),
+    createTools: (scope: SessionScope) => ({
+      tools: createChatTools(scope, { query: warehouse.ports }),
+    }),
     loadAudit: warehouse.loadAudit,
     cache: shared.cache ?? memoryCache().store,
     prepareRun: async (runId) => !files.has(`${runId}/results.jsonl`),
@@ -921,7 +925,9 @@ describe("runEval refuses to start", () => {
 
   test("when the provider does not list a model, and calls none", async () => {
     expect(
-      await refusal(MODELS, { listModels: async () => ["qwen3:8b", "nomic-embed-text"] }),
+      await refusal(MODELS, {
+        listModels: async () => [{ id: "qwen3:8b" }, { id: "nomic-embed-text" }],
+      }),
     ).toEqual({
       code: 1,
       err: "MODEL_NOT_LISTED: ollama does not list qwen3:4b right now\n",
@@ -941,5 +947,196 @@ describe("runEval refuses to start", () => {
         })
       ).err,
     ).toBe("RUN_EXISTS: evaluation/runs/generated-id already exists\n");
+  });
+});
+
+describe("agent runs (#279)", () => {
+  const RHYTHM: TurnSkill = {
+    name: "rhythm",
+    description: "Heart rate and rhythm records.",
+    tools: ["trend", "knowledge_search"],
+    sources: ["cohort-records", "cohort-analytics", "opentwin-knowledge"],
+    providers: ["ollama"],
+    views: [],
+    instructions: "Describe heart rate readings for the subject the question names.",
+  };
+  const BASE_MODELS: CatalogModel[] = [
+    {
+      id: "qwen3:4b",
+      name: "Qwen3 4B",
+      provider: "Ollama",
+      providerId: "ollama",
+      contextTokens: 32_768,
+    },
+    {
+      id: "qwen3:8b",
+      name: "Qwen3 8B",
+      provider: "Ollama",
+      providerId: "ollama",
+      contextTokens: 32_768,
+    },
+  ];
+  const CATALOG = withAgents(BASE_MODELS, {
+    provider: "ollama",
+    chatIsLocal: true,
+    skills: [RHYTHM],
+  });
+
+  const agentHarness = (shared: Parameters<typeof harness>[1] = {}) => {
+    const resolvedIds: string[] = [];
+    const built = harness(
+      {
+        listModels: async () => CATALOG,
+        findSkill: (name) => (name === RHYTHM.name ? RHYTHM : null),
+        resolveModel: async (spec) => {
+          resolvedIds.push(spec.modelId);
+          return { model: built.model, mock: true, host: "127.0.0.1:11434" };
+        },
+      },
+      shared,
+    );
+    const deps: EvalDeps = {
+      ...built.deps,
+      createTools: (scope, agent) =>
+        agent === null
+          ? { tools: createChatTools(scope, { query: built.warehouse.ports }) }
+          : createTurnTools(
+              scope,
+              { query: built.warehouse.ports, agent: agent.agent.id },
+              agent.skill,
+            ),
+    };
+    return { ...built, deps, resolvedIds };
+  };
+
+  const systemOf = (model: MockLanguageModelV4, call = 0): string => {
+    const system = model.doStreamCalls[call]?.prompt[0];
+    return system?.role === "system" ? system.content : "";
+  };
+
+  test("runs as the chat route would: base model, role line, skill and its tools", async () => {
+    const { deps, files, model, resolvedIds } = agentHarness();
+    const out = capture();
+    expect(
+      await runEval(
+        ["--models", "agent:rhythm", "--items", "Q-S1-01", "--run-id", "agent-run"],
+        out.io,
+        deps,
+      ),
+    ).toBe(0);
+
+    // The agent's base model is its first preference the catalog offers.
+    expect(resolvedIds).toEqual(["qwen3:8b"]);
+    const system = systemOf(model);
+    expect(system).toContain(
+      "Agent: Heart rhythm (research). Describes heart rate, heart rate variability",
+    );
+    expect(system).toContain(RHYTHM.instructions);
+    expect((model.doStreamCalls[0]?.tools ?? []).map((tool) => tool.name).sort()).toEqual(
+      ["knowledge_search", "trend"],
+    );
+
+    const lines = linesOf(files.get("agent-run/results.jsonl"));
+    expect(lines.map((line) => [line.provider, line.model_id, line.error])).toEqual([
+      ["ollama", "agent:rhythm", null],
+      ["ollama", "agent:rhythm", null],
+    ]);
+    expect(lines[0]?.document?.skill).toBe("rhythm");
+
+    const meta = metaSchema.parse(JSON.parse(files.get("agent-run/meta.json") ?? ""));
+    expect(meta.models).toEqual([
+      {
+        provider: "ollama",
+        model_id: "agent:rhythm",
+        host: "127.0.0.1:11434",
+        agent: {
+          id: "rhythm",
+          name: "Heart rhythm (research)",
+          base_model_id: "qwen3:8b",
+          skill: "rhythm",
+          rules_sha256: agentRulesSha256("agent:rhythm", RHYTHM),
+          roster_sha256: rosterSha256(),
+        },
+      },
+    ]);
+  });
+
+  test("agent and base runs never share a cache entry", async () => {
+    const cache = memoryCache();
+    const base = agentHarness({ cache: cache.store });
+    await runEval(
+      ["--models", "ollama:qwen3:8b", "--items", "Q-S5-01", "--run-id", "base"],
+      capture().io,
+      base.deps,
+    );
+    const baseKeys = new Set(cache.entries.keys());
+    // The General agent has no skill: only its role line differs from the base prompt.
+    const general = agentHarness({ cache: cache.store });
+    await runEval(
+      ["--models", "agent:gp", "--items", "Q-S5-01", "--run-id", "gp"],
+      capture().io,
+      general.deps,
+    );
+    const agentKeys = [...cache.entries.keys()].filter((key) => !baseKeys.has(key));
+
+    expect(baseKeys.size).toBe(1);
+    expect(agentKeys).toHaveLength(1);
+    expect(general.model.doStreamCalls).toHaveLength(1);
+    expect(systemOf(general.model)).toContain("Agent: General.");
+    expect(systemOf(base.model)).not.toContain("Agent:");
+    // Both entries name the model that answered.
+    expect(
+      [...cache.entries.values()].map(
+        (text) => cacheEntrySchema.parse(JSON.parse(text)).model_id,
+      ),
+    ).toEqual(["qwen3:8b", "qwen3:8b"]);
+  });
+
+  test("a replay of an agent run answers from its own cache entries", async () => {
+    const cache = memoryCache();
+    const record = agentHarness({ cache: cache.store });
+    await runEval(
+      ["--models", "agent:rhythm", "--items", "Q-S1-01", "--run-id", "rec"],
+      capture().io,
+      record.deps,
+    );
+    const replay = agentHarness({ cache: cache.store });
+    expect(
+      await runEval(
+        ["--models", "agent:rhythm", "--items", "Q-S1-01", "--run-id", "rep", "--replay"],
+        capture().io,
+        replay.deps,
+      ),
+    ).toBe(0);
+    expect(replay.model.doStreamCalls).toHaveLength(0);
+    expect(
+      linesOf(replay.files.get("rep/results.jsonl")).every((line) => line.cache_hit),
+    ).toBe(true);
+  });
+
+  test("refuses Auto, an unknown agent and one the catalog does not offer", async () => {
+    const run = async (models: string, overrides: Partial<EvalDeps> = {}) => {
+      const built = agentHarness();
+      const out = capture();
+      const code = await runEval(["--models", models, "--items", "Q-S5-01"], out.io, {
+        ...built.deps,
+        ...overrides,
+      });
+      return { code, err: out.err(), calls: built.model.doStreamCalls.length };
+    };
+    expect(await run("agent:auto")).toEqual({
+      code: 1,
+      err: "USAGE: agent:auto picks an agent for each question; run the agents one by one\n",
+      calls: 0,
+    });
+    expect((await run("agent:cardio")).err).toBe(
+      "UNKNOWN_AGENT: agent:cardio is not an agent in agents.ts\n",
+    );
+    expect((await run("agent:rhythm", { listModels: async () => BASE_MODELS })).err).toBe(
+      "AGENT_NOT_OFFERED: the chat catalog does not offer agent:rhythm with this provider\n",
+    );
+    expect((await run("agent:rhythm", { findSkill: () => null })).err).toBe(
+      "AGENT_NOT_OFFERED: agent:rhythm's skill /rhythm is not one the server offers\n",
+    );
   });
 });
