@@ -79,6 +79,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The eval Refresh steps say what S4 needs (#273): `GBD_MCP_URL` and `GBD_MCP_TOKEN` for the remote IHME GBD MCP server, plus `LOCAL_ONLY=false`, since `LOCAL_ONLY=true` refuses a remote GBD URL. There is no local GBD server or cache, so S4 needs network access and a token from the operator. `.env.synthetic.example` lists the names with placeholders. S4 was not rerun: the eval env has no GBD settings yet. See `docs/evaluation/question-set.md`, "Refresh".
 - Training tracks read each agent's id, name and role line from `infrastructure/agents.ts` instead of a copy (#234), so the training data cannot drift from the agents the chat runs. The Diet and Anatomy tracks now carry the live names ("Diet specialist", "Anatomy specialist") and role lines. Output without `--track` is unchanged, byte for byte.
 - The setup example thread was re-recorded on pinned-cohort subject `ba419d35` (#214): a heart-rate chart question for 2024 to 2025 answered by `qwen3:4b` on a database holding only the pinned evaluation cohort, with 25 readings in its chart. The old subject was not in the pinned 37; the fixture test now checks membership.
 - `features/digital-twin/bodyloop-avatar.tsx` (1,690 lines) split: `scan-scene.tsx` (camera fit, orbit controls, environment, the scan mesh, WebGL checks), `body-twin-copy.ts`, `body-twin-types.ts` and `body-twin-payloads.ts`. The component keeps its props and re-exports what it exported before.
