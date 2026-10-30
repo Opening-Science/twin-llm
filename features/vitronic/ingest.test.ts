@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
-import { mkdtemp, readdir, readFile } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -172,6 +172,11 @@ describe("ingestVitronicForUser", () => {
 
     const onDisk = await readFile(join(dataDir, USER_ID, `${expectedSha}.glb`));
     expect(createHash("sha256").update(onDisk).digest("hex")).toBe(expectedSha);
+    // Owner-only whatever the umask (#144).
+    expect((await stat(join(dataDir, USER_ID))).mode & 0o777).toBe(0o700);
+    expect((await stat(join(dataDir, USER_ID, `${expectedSha}.glb`))).mode & 0o777).toBe(
+      0o600,
+    );
 
     expect(recorded.appends).toHaveLength(1);
     expect(recorded.appends[0]?.tool).toBe("vitronic.sync");

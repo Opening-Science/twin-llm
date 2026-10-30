@@ -16,6 +16,7 @@ bun run setup:local -- --reload-cohort # replace a stale evaluation cohort with 
 bun run setup:local -- --generate-cohort # generate the eval cohort with Synthea instead of downloading it
 bun run setup:local -- --skip-example  # do not add the "Example (synthetic)" thread
 bun run setup:local -- --skip-training-sample # do not write the Training tab's sample set
+bun run setup:local -- --owner-cluster # only: an owner-only Postgres for personal mode (see "Owner-only Postgres")
 bun run doctor                         # read-only: the same checks, what each page needs, why /data is empty
 ```
 
@@ -40,6 +41,72 @@ macOS (Homebrew): `brew install postgresql@18 pgvector openjdk@21 uv zstd`, `bre
 - Last run of `--reload-cohort`: 2026-10-26, Linux, throwaway database `twin_llm_reload_test` (dropped afterwards), seeded with 35 of the 37 pinned files as `synthea-v4-seed42` and 3 unrelated bundles as `synthea-v4-seed9001`. `bun run doctor` and `bun run setup:local` showed `[stale]` (35 subjects, bundles not the pinned files). `--reload-cohort`: deleted 35 subjects, 35 bundles, 35,337 observations and 8,965 non-numeric observations, ingested 37 bundles; the SQL fingerprint then equalled the pin, and `synthea-v4-seed9001` had the same 3 subjects, 3 bundles, 1,229 observations and bundle fingerprint as before. A plain run afterwards skipped the cohort. Deleting the local rigged bodies and running setup downloaded both from the release with the pinned SHA-256.
 - Conditions and medication requests (#127): on an existing machine, `bun run setup:local` applies the migration (`prisma migrate deploy`) and then marks `synthea-v4-seed42` `[stale]` ("ingested before conditions and medication requests were stored"), because `warehouse:ingest` skips bundles it already has; `bun run setup:local -- --reload-cohort` fixes it. Another database (`.env.eval`, `.env.training`) needs `DATABASE_URL=<that url> bunx prisma migrate deploy`; its evaluation cohort then reloads the same way, and other cohorts get conditions only when their bundles are deleted and ingested again (there is no reload for them). Last run: 2026-10-27, Linux, throwaway database `twin_llm_scratch_clinical` (dropped afterwards): migrate deploy, release `eval-cohort-v1` ingested (37 bundles, 1,995 conditions, 3,615 medication requests), a second ingest skipped all 37; with the clinical rows deleted by hand the probe said stale with that reason, and the reload delete on the full cohort removed 37 subjects, 37 bundles, 35,598 observations, 9,022 non-numeric observations, 1,995 conditions and 3,615 medication requests.
 - Last run of the evaluation cohort download: 2026-10-26, Linux x86_64, throwaway database `twin_llm_evaldl_test` (dropped afterwards), before release `eval-cohort-v1` existed. `bun run setup:local` printed "release eval-cohort-v1 with eval-cohort-synthea-v4-seed42-20260101.tar.zst is not published yet; generating synthea-v4-seed42 locally with Synthea instead.", generated 37 files with the pinned checksum and ingested 37. Then, with the archive copied into `.synthea/downloads/` and `.synthea/fhir` removed, `--reload-cohort` used the kept archive (SHA-256 as pinned), put 37 files with the pinned checksum in `.synthea/fhir`, deleted 37 subjects and ingested 37 bundles. The download from GitHub itself is unit-tested only until the release is published.
+
+### Owner-only Postgres
+
+Added 2026-10-30 (#144). Personal mode (`DATA_MODE=personal`, the default) does not start unless the database and files are open to your OS user only ([privacy-design.md](privacy-design.md#21-144-harden-local-storage-against-other-programs)). The recommended setup is a cluster of your own in the state directory (`TWINLLM_STATE_DIR`, default `${XDG_DATA_HOME:-$HOME/.local/share}/twin-llm` on Linux and `$HOME/Library/Application Support/TwinLLM` on macOS), with no TCP port. `scripts/setup/owner-cluster.ts`.
+
+```sh
+bun run setup:local -- --owner-cluster        # alone; other flags are refused with it
+TWINLLM_PG_BIN=/path/to/postgres/bin bun run setup:local -- --owner-cluster   # when initdb is not on PATH or pg_config
+bun run lab:storage                           # the startup checks by hand; exit 0 OK, 1 Not OK, 2 Unknown
+bun run doctor                                # the same under "Local storage"
+```
+
+1. Finds `initdb` and `pg_ctl`: `TWINLLM_PG_BIN`, else `pg_config --bindir`, else `PATH`. On Debian and Ubuntu they are in `/usr/lib/postgresql/<major>/bin`.
+2. Creates the state folder and `pg-socket` in it, mode 700. Stops if the socket path would be longer than the OS allows (103 bytes).
+3. `initdb` into `$TWINLLM_STATE_DIR/pg` with a setup-only superuser `twinllm_admin`, `scram-sha-256` on the socket and `reject` on TCP, then appends `listen_addresses = ''`, the socket folder, `unix_socket_permissions = 0700` and statement logging off to its `postgresql.conf`. The two passwords (32 random bytes each) go to `$TWINLLM_STATE_DIR/owner-cluster.env`, mode 600, before initdb runs; they are never printed. A cluster already there is reused only if this command made it; a folder holding anything else is left alone and the step is blocked.
+4. Starts it with `pg_ctl` (log in `pg/server.log`), creates the role `twinllm` (not a superuser) and the database `twin_llm` it owns, revokes `CONNECT` from `PUBLIC`, adds pgvector as the admin, and runs `prisma migrate deploy` against it.
+5. Prints a command that replaces the `DATABASE_URL` line of `.env.local` with the one in `owner-cluster.env` without printing it (an existing `.env.local` is never edited by setup itself), and the `pg_ctl ... start` line for after a reboot. Running the command again also starts a stopped cluster.
+
+The URL has the form `postgresql://twinllm:<password>@localhost/twin_llm?host=<socket folder, URL-encoded>`; the `host` parameter makes node-postgres, Prisma and `psql` use the socket.
+
+**An existing shared Postgres** (Homebrew, apt, Docker) is accepted when `listen_addresses` is loopback only, the app connects as a role of its own that is not a superuser, with a password, and `pg_hba.conf` has no `trust` line for it. As a superuser on that server, after the backup in step 1 below (the password is yours to choose; keep it only in `.env.local`):
+
+```sql
+CREATE ROLE twinllm LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE PASSWORD '<new password>';
+CREATE DATABASE twin_llm OWNER twinllm;
+REVOKE CONNECT ON DATABASE twin_llm FROM PUBLIC;
+\c twin_llm
+CREATE EXTENSION vector;
+```
+
+Then restore the backup into it as that superuser with `pg_restore --no-owner --no-acl --role=twinllm -d twin_llm "$DUMP"`, so the tables belong to `twinllm`, and set `DATABASE_URL=postgresql://twinllm:<new password>@127.0.0.1:5432/twin_llm`. Moving the old tables with `REASSIGN OWNED` does not work when they belong to the bootstrap superuser `postgres`.
+
+```text
+# pg_hba.conf, above any broader line; then reload Postgres
+host  twin_llm  twinllm  127.0.0.1/32  scram-sha-256
+host  twin_llm  twinllm  ::1/128       scram-sha-256
+```
+
+Setup never edits these system files. Docker's `-p 5432:5432` listens on every interface; publish on `127.0.0.1` only.
+
+**Moving to the owner cluster from a shared Postgres.** Back up first; the backup holds your data in plain text, so it stays in the owner-only state folder.
+
+```sh
+# 0. Stop the app. Read the settings without printing them.
+OLD_URL="$(grep -m1 '^DATABASE_URL=' .env.local | cut -d= -f2- | tr -d "\"'")"
+: "${TWINLLM_STATE_DIR:=${XDG_DATA_HOME:-$HOME/.local/share}/twin-llm}"
+# 1. Backup, owner-only, and its hash
+mkdir -p -m 700 "$TWINLLM_STATE_DIR/backups"
+DUMP="$TWINLLM_STATE_DIR/backups/pre-owner-cluster-$(date +%F).dump"
+(umask 077 && pg_dump -Fc -d "$OLD_URL" -f "$DUMP") && sha256sum "$DUMP"
+# 2. The cluster
+bun run setup:local -- --owner-cluster
+# 3. Replace its new, empty database with the backup, as the setup-only admin; objects end up owned by twinllm
+ADMIN_PW="$(grep -m1 '^TWINLLM_PG_ADMIN_PASSWORD=' "$TWINLLM_STATE_DIR/owner-cluster.env" | cut -d= -f2-)"
+SOCK="$TWINLLM_STATE_DIR/pg-socket"
+PGPASSWORD="$ADMIN_PW" psql -h "$SOCK" -U twinllm_admin -d postgres -c 'drop database twin_llm' -c 'create database twin_llm owner twinllm' -c 'revoke all on database twin_llm from public'
+PGPASSWORD="$ADMIN_PW" psql -h "$SOCK" -U twinllm_admin -d twin_llm -c 'create extension vector'
+PGPASSWORD="$ADMIN_PW" pg_restore -h "$SOCK" -U twinllm_admin -d twin_llm --no-owner --no-acl --role=twinllm "$DUMP"
+# 4. Point .env.local at the cluster with the command step 2 printed, then
+bun run lab:storage
+```
+
+`pg_restore` reports one ignored error, `must be owner of extension vector` (the extension's comment); that is expected. Keep the backup until the app runs on the new cluster, then delete it (`rm "$DUMP"`), and drop the old database on the shared server when you no longer need it.
+
+- Good: `bun run lab:storage` prints every line `[ok]`, exit 0. With `DATA_MODE=personal`, a start with `.env.local` at mode 644 answers 500 and logs `TwinLLM did not start: ... .env.local: mode 644; needs mode 600 or narrower ... Fix: chmod 600 .env.local`.
+- Last run: 2026-10-30, Linux, Postgres 18.6 and pgvector from the maintainers' local Postgres build, with `TWINLLM_STATE_DIR` set to a throwaway folder whose name has a space (deleted afterwards). Created the cluster (socket and folders 700, no TCP listener, role not a superuser), applied all migrations, a second run said "already there" for every step. `bun run lab:storage` OK on all ten lines, including the sign-in without a password (refused); against a scratch cluster with `trust` the same probe was accepted. `next start` in personal mode against it served `/lab` with the card OK, the server's umask was 0077, and the synthetic lab-results fixture imported (9 rows) as the non-superuser role. With `.env.local` at 644 it refused as above. In synthetic mode connected as the superuser it started with one `[storage]` warning and the card Not OK on "Database role". The backup and restore steps above, run on that cluster's own database: 1 dataset and 9 observations back, tables owned by `twinllm`, `migrate deploy` had nothing to apply.
 
 ## open-twin sync
 

@@ -39,8 +39,9 @@ export const persistGlb = async (userId: string, bytes: Uint8Array): Promise<str
   assertGlbSize(bytes);
   const sha = sha256Hex(bytes);
   const dir = join(/* turbopackIgnore: true */ dataDir(), safeUserId(userId));
-  await mkdir(dir, { recursive: true });
-  await writeFile(join(dir, `${sha}.glb`), bytes);
+  // Owner-only even if the umask was not set (#144): body scans are personal data.
+  await mkdir(dir, { recursive: true, mode: 0o700 });
+  await writeFile(join(dir, `${sha}.glb`), bytes, { mode: 0o600 });
   return sha;
 };
 

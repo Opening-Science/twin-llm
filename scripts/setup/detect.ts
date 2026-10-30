@@ -27,6 +27,8 @@ import {
   EXAMPLE_DATABASE_URL,
   envFileFromExample,
   parseEnvFile,
+  type ConnectOptions,
+  socketOptions,
 } from "./env-file";
 import {
   type BundleSet,
@@ -53,17 +55,38 @@ export type SqlClient = SqlQuery &
     begin: <T>(work: (tx: SqlQuery) => Promise<T>) => Promise<T>;
     close: () => Promise<void>;
   }>;
-type SqlConstructor = new (
-  url: string,
-  options?: Readonly<{ max?: number; connectionTimeout?: number }>,
-) => SqlClient;
+type SqlOptions = Readonly<{ max?: number; connectionTimeout?: number }>;
+type SqlConstructor = {
+  new (url: string, options?: SqlOptions): SqlClient;
+  new (options: SqlOptions & ConnectOptions & Readonly<{ url: string }>): SqlClient;
+};
 
-/** Bun's built-in Postgres client, so setup needs no installed packages. */
+/**
+ * Bun's built-in Postgres client, so setup needs no installed packages. A
+ * socket URL (the owner-only cluster, #144) becomes options, because Bun does
+ * not read `host=/folder` from a URL.
+ */
 export const openSql = (url: string): SqlClient => {
+  const socket = socketOptions(url);
+  return socket === null ? new (bunSql())(url, LIMITS) : openSqlWith(socket);
+};
+
+const LIMITS = { max: 1, connectionTimeout: 5 } as const;
+
+const bunSql = (): SqlConstructor => {
   const ctor = (globalThis as { Bun?: { SQL?: SqlConstructor } }).Bun?.SQL;
   if (!ctor) throw new Error("setup scripts run under bun (bun run setup:local)");
-  return new ctor(url, { max: 1, connectionTimeout: 5 });
+  return ctor;
 };
+
+/**
+ * Bun's client from options, for a socket or a connection with an explicit
+ * password. The bare `url` stops Bun filling unset options from the
+ * DATABASE_URL in the environment (its `host` query would reach the server
+ * as a setting, and its password would defeat the passwordless probe).
+ */
+export const openSqlWith = (options: ConnectOptions): SqlClient =>
+  new (bunSql())({ url: "postgres://", ...options, ...LIMITS });
 
 const VERSION_ARGS: Readonly<Record<ToolId, readonly string[]>> = {
   bun: ["--version"],
