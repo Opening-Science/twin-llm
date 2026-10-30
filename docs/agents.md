@@ -49,7 +49,10 @@ literature query keeps sleep studies only where they are about cognition.
 `/rhythm` lists the rhythm tool from #246, `rhythm_irregularity`, since #288; before that
 the Heart rhythm agent could not answer the S7 questions about simulated recordings
 ([eval-runs-2026-10.md](research/eval-runs-2026-10.md#agents-vs-base-model)). Brain does
-not list it.
+not list it. `/brain` lists `cohort_event_rates` since #293, for questions about how often
+stroke or Alzheimer's disease follows atrial fibrillation in a loaded synthetic cohort
+([query-layer.md](query-layer.md#analytics)); the General agent has every chat tool, this
+one included.
 
 ## In the catalog
 

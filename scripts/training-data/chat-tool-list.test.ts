@@ -39,6 +39,7 @@ describe("openAiToolsFrom", () => {
       "cross_source_compare",
       "values_around_event",
       "rhythm_irregularity",
+      "cohort_event_rates",
       "show_view",
       "list_views",
       "open_view",

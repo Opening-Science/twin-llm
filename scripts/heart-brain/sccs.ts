@@ -10,15 +10,15 @@
  * pooled with the next band (the last one with the one before). A window with
  * no outcome, or a fit that does not settle, gives null for that window.
  */
-import { type Person } from "./cohort";
-import { type RateRatio } from "./poisson";
+import { type Person } from "../../packages/query-tools/event-rates/cohort";
+import { type RateRatio } from "../../packages/query-tools/event-rates/poisson";
 import {
   BEFORE,
   personPieces,
   type Piece,
   type TimingSpec,
   windowLabels,
-} from "./within-person";
+} from "../../packages/query-tools/event-rates/within-person";
 
 export type SccsWindow = Readonly<{ window: string; events: number; ratio: RateRatio }>;
 

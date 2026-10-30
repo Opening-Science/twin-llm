@@ -52,6 +52,7 @@ import {
   crossSourceCompareInput,
   valuesAroundEventInput,
   rhythmIrregularityInput,
+  cohortEventRatesInput,
 } from "./schemas";
 import type { SessionScope } from "./scope";
 import {
@@ -76,6 +77,7 @@ import {
   runCrossSourceCompare,
   runValuesAroundEvent,
   runRhythmIrregularity,
+  runCohortEventRates,
 } from "./tools";
 
 /**
@@ -199,6 +201,9 @@ export const queryToolRunners = (
   ),
   rhythm_irregularity: bind(rhythmIrregularityInput, (input) =>
     runRhythmIrregularity(scope, input, ports),
+  ),
+  cohort_event_rates: bind(cohortEventRatesInput, (input) =>
+    runCohortEventRates(scope, input, ports),
   ),
 });
 

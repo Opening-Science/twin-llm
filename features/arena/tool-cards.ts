@@ -63,6 +63,7 @@ const TITLES: Readonly<Record<string, string>> = {
   training_load: "Summed workout minutes",
   cross_source_compare: "Compared two wearables",
   rhythm_irregularity: "Described a simulated heart rhythm recording",
+  cohort_event_rates: "Counted event rates in a synthetic cohort",
   [GUIDELINE_MODEL_TOOL]: "Searched guidelines",
   [GBD_MODEL_TOOL]: "Looked up population data",
   [KNOWLEDGE_MODEL_TOOL]: "Searched TwinLLM notes",

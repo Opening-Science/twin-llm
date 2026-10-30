@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import { MS_PER_DAY } from "../../packages/query-tools/stats";
 
-import { dayNumber } from "./cohort";
+import { dayNumber } from "../../packages/query-tools/event-rates/cohort";
 import {
   addSums,
   afTiming,
@@ -24,7 +24,7 @@ import {
   recordInputsOn,
   trueChance,
 } from "./excess";
-import { person } from "./fixtures.test-helpers";
+import { person } from "../../packages/query-tools/event-rates/fixtures.test-helpers";
 import { expectedStrokes, type OracleSubject, oracleSubject } from "./oracle";
 import {
   type StrokeInputs,

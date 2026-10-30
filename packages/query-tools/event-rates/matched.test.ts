@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { randomFor } from "../synthetic-wearables/random";
+import { randomFor } from "@/infrastructure/seeded-random";
 
 import { day, person } from "./fixtures.test-helpers";
 import { matchedIncidence } from "./matched";

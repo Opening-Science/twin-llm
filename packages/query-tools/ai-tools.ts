@@ -25,6 +25,7 @@ import {
   crossSourceCompareInput,
   valuesAroundEventInput,
   rhythmIrregularityInput,
+  cohortEventRatesInput,
 } from "./schemas";
 import {
   IMPORTED_DATASETS_TOOL,
@@ -69,6 +70,7 @@ import {
   runCrossSourceCompare,
   runValuesAroundEvent,
   runRhythmIrregularity,
+  runCohortEventRates,
 } from "./tools";
 import { NO_WEARABLE_SNAPSHOTS } from "./wearable-readings";
 
@@ -192,6 +194,11 @@ export const createQueryTools = (
     description: description("rhythm_irregularity"),
     inputSchema: modelInputSchema(rhythmIrregularityInput),
     execute: async (input) => runRhythmIrregularity(scope, input, ports),
+  }),
+  cohort_event_rates: tool({
+    description: description("cohort_event_rates"),
+    inputSchema: modelInputSchema(cohortEventRatesInput),
+    execute: async (input) => runCohortEventRates(scope, input, ports),
   }),
 });
 

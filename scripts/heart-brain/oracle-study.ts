@@ -20,8 +20,12 @@
  */
 import { randomFor } from "../synthetic-wearables/random";
 
-import { ageYears, type Person, toPerson } from "./cohort";
-import { type Follow, matchedFollowUp } from "./matched";
+import { ageYears, type Person } from "../../packages/query-tools/event-rates/cohort";
+import { toPerson } from "./to-person";
+import {
+  type Follow,
+  matchedFollowUp,
+} from "../../packages/query-tools/event-rates/matched";
 import {
   expectedAfDays,
   expectedStrokes,
@@ -40,7 +44,7 @@ import {
   rateOf,
   type RateRatio,
   rateRatio,
-} from "./poisson";
+} from "../../packages/query-tools/event-rates/poisson";
 import { selfControlledCaseSeries } from "./sccs";
 import { specFor } from "./timing";
 import {
@@ -49,7 +53,7 @@ import {
   type Piece,
   type TimingSpec,
   windowLabels,
-} from "./within-person";
+} from "../../packages/query-tools/event-rates/within-person";
 
 export type OracleStudyOptions = Readonly<{
   endDay: string;

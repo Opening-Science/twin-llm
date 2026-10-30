@@ -16,7 +16,7 @@ import {
   ORAL_ANTICOAGULANT_PATTERN,
   type Topic,
   topicOf,
-} from "./codes";
+} from "../../packages/query-tools/event-rates/codes";
 
 export type PersonFacts = Readonly<{
   id: string;

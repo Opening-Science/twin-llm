@@ -45,6 +45,10 @@ export const QUESTION_SETS = {
     questions: "evaluation/questions.s7h.v1.json",
     key: "evaluation/answer-key.s7h.v1.json",
   },
+  hb: {
+    questions: "evaluation/questions.hb.v1.json",
+    key: "evaluation/answer-key.hb.v1.json",
+  },
 } as const;
 
 export type QuestionSetId = keyof typeof QUESTION_SETS;

@@ -23,7 +23,7 @@
  */
 import { MS_PER_DAY } from "../../packages/query-tools/stats";
 
-import { type Person } from "./cohort";
+import { type Person } from "../../packages/query-tools/event-rates/cohort";
 import {
   expectedStrokes,
   type OracleOptions,
@@ -44,7 +44,11 @@ import {
   TREATED_SYS_BP_STROKE,
   UNTREATED_SYS_BP_STROKE,
 } from "./stroke-calculator";
-import { BEFORE, personPieces, type TimingSpec } from "./within-person";
+import {
+  BEFORE,
+  personPieces,
+  type TimingSpec,
+} from "../../packages/query-tools/event-rates/within-person";
 
 /** One wake of the monitor: the inputs the calculator had at that time step. */
 export type MonitorCheck = Readonly<{

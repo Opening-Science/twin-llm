@@ -217,7 +217,11 @@ never say what a person has.
   `conditions_timeline`, recorded cognition scores such as the MMSE total (72106-8) with
   `observations_for_subject`, a measure such as systolic blood pressure (8480-6) around a
   recorded condition with `values_around_event`, and, only when asked, HRV and resting
-  heart rate as indirect autonomic measures. It may draw one `chart.timeseries`.
+  heart rate as indirect autonomic measures. It may draw one `chart.timeseries`. For a
+  question about a whole synthetic cohort, such as stroke before and after atrial
+  fibrillation onset, it calls `cohort_event_rates` (#293) with the cohort the question
+  names and reports events, person-years, the rate ratio and the verdict as the tool gives
+  them, as a description of that cohort and the generator's rules.
 
 Both quote literature from `knowledge_search` only word for word with its attribution
 line. A question about whether the person has a rhythm condition, a stroke or dementia,
@@ -227,7 +231,7 @@ tells the person what they have, or writes "normal", "abnormal" or a threshold f
 Local Ollama only. The eval cases cover the wearable series, a recorded condition with
 values around it, cognition scores, the literature, a question about whether the person
 has a condition, a hosted provider, views they may not draw and, for `/rhythm`, a
-simulated recording. `/brain` does not list `rhythm_irregularity`: its role does not
+simulated recording, and for `/brain`, a cohort question. `/brain` does not list `rhythm_irregularity`: its role does not
 cover heart rhythm.
 
 ## Built-in commands
