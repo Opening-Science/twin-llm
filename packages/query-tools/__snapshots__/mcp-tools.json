@@ -1472,6 +1472,24 @@
         "additionalProperties": false,
         "description": "Conditions recorded in one imported FHIR dataset"
       }
+    },
+    {
+      "name": "imported_medications",
+      "description": "Medication requests in one imported FHIR dataset: code system, code, display, authored date, status. No dosage text or notes. Up to 500.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "dataset_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$",
+            "description": "dataset_id from imported_datasets"
+          }
+        },
+        "required": ["dataset_id"],
+        "additionalProperties": false,
+        "description": "Medication requests recorded in one imported FHIR dataset"
+      }
     }
   ]
 }

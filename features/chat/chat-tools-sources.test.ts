@@ -91,6 +91,7 @@ describe("chat tools and knowledge sources", () => {
         "imported_conditions",
         "imported_datasets",
         "imported_latest",
+        "imported_medications",
         "imported_table",
         "imported_trend",
       ].sort(),
@@ -173,6 +174,7 @@ describe("imported-data tools", () => {
       listTables: async () => [],
       readTableRows: async () => [],
       findConditions: async () => [],
+      findMedications: async () => [],
       appendAudit: async () => undefined,
     },
   });
@@ -182,6 +184,7 @@ describe("imported-data tools", () => {
     "imported_trend",
     "imported_table",
     "imported_conditions",
+    "imported_medications",
   ];
   const names = (scope: typeof SCOPE | typeof PERSONAL, deps?: ImportedToolDeps) =>
     Object.keys(createChatTools(scope, { query: ports, imported: deps }));

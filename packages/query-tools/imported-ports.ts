@@ -92,6 +92,21 @@ export type ImportedConditionRecord = Readonly<{
 
 export type ImportedConditionsQuery = Readonly<{ datasetId: string; take: number }>;
 
+/**
+ * A FHIR MedicationRequest as stored from an imported file. Dosage text,
+ * notes and reasons are never stored.
+ */
+export type ImportedMedicationRecord = Readonly<{
+  id: string;
+  codeSystem: string | null;
+  code: string | null;
+  display: string;
+  authoredAt: Date | null;
+  status: string | null;
+}>;
+
+export type ImportedMedicationsQuery = Readonly<{ datasetId: string; take: number }>;
+
 export type ImportedDataPorts = Readonly<{
   /** The person's datasets, newest first. */
   listDatasets: () => Promise<readonly ImportedDatasetRecord[]>;
@@ -115,5 +130,9 @@ export type ImportedDataPorts = Readonly<{
   findConditions: (
     query: ImportedConditionsQuery,
   ) => Promise<readonly ImportedConditionRecord[]>;
+  /** One dataset's MedicationRequests, by authored date (none last), then display and id, at most `take`. */
+  findMedications: (
+    query: ImportedMedicationsQuery,
+  ) => Promise<readonly ImportedMedicationRecord[]>;
   appendAudit: (input: AppendInput) => Promise<unknown>;
 }>;

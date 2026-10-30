@@ -14,15 +14,20 @@ import type { ImportedDataPorts } from "./imported-ports";
 import {
   conditionEntry,
   cutCell,
+  medicationEntry,
   missingColumns,
   selectColumns,
   tableColumnsById,
 } from "./imported-records";
-import { runImportedConditions, runImportedTable } from "./imported-tools";
+import {
+  runImportedConditions,
+  runImportedMedications,
+  runImportedTable,
+} from "./imported-tools";
 
 /**
- * The pure helpers behind imported_table and imported_conditions, and both
- * tools over the made-up import fixtures (tests/fixtures/personal-import):
+ * The pure helpers behind imported_table, imported_conditions and
+ * imported_medications, and the tools over the made-up import fixtures (tests/fixtures/personal-import):
  * parsed, planned and read back as the store would, JSON and all.
  */
 
@@ -106,6 +111,37 @@ describe("conditionEntry", () => {
   });
 });
 
+describe("medicationEntry", () => {
+  test("authored date as ISO text or null; only coded fields and status", () => {
+    expect(
+      medicationEntry({
+        id: "m1",
+        codeSystem: null,
+        code: null,
+        display: "Made-up medication",
+        authoredAt: new Date("2024-02-10T09:00:00.000Z"),
+        status: null,
+      }),
+    ).toEqual({
+      code_system: null,
+      code: null,
+      display: "Made-up medication",
+      authored: "2024-02-10T09:00:00.000Z",
+      status: null,
+    });
+    expect(
+      medicationEntry({
+        id: "m2",
+        codeSystem: "http://www.nlm.nih.gov/research/umls/rxnorm",
+        code: "314076",
+        display: "Made-up medication",
+        authoredAt: null,
+        status: "active",
+      }).authored,
+    ).toBeNull();
+  });
+});
+
 const fixture = (name: string): string =>
   readFileSync(
     join(import.meta.dir, "../../tests/fixtures/personal-import", name),
@@ -165,6 +201,17 @@ const fixturePorts = (audit: AppendInput[]): ImportedDataPorts => {
           display: row.display,
           onsetAt: row.startAt,
           abatementAt: row.endAt,
+          status: row.status,
+        })),
+    findMedications: async () =>
+      fhir.clinical
+        .filter((row) => row.resourceType === "MedicationRequest")
+        .map((row, index) => ({
+          id: `m${index}`,
+          codeSystem: row.codeSystem,
+          code: row.code,
+          display: row.display,
+          authoredAt: row.startAt,
           status: row.status,
         })),
     appendAudit: async (input) => {
@@ -232,5 +279,35 @@ describe("the import fixtures through the tools", () => {
     expect(fixture("fhir-bundle.json")).toContain("Made-up note text");
     expect(JSON.stringify(result)).not.toContain("note");
     expect(JSON.stringify(audit)).not.toContain("sinusitis");
+  });
+
+  test("the FHIR MedicationRequest: coded fields, authored date, status; never dosage or note", async () => {
+    const audit: AppendInput[] = [];
+    const result = await runImportedMedications(fixtureDeps(audit), {
+      dataset_id: "ds-fhir",
+    });
+    expect(result).toEqual({
+      dataset_id: "ds-fhir",
+      medications: [
+        {
+          code_system: "http://www.nlm.nih.gov/research/umls/rxnorm",
+          code: "314076",
+          display: "lisinopril 10 MG Oral Tablet",
+          authored: "2024-02-10T09:00:00.000Z",
+          status: "active",
+        },
+      ],
+      n: 1,
+      more_medications: false,
+    });
+    const bundle = fixture("fhir-bundle.json");
+    expect(bundle).toContain("Made-up dosage text");
+    expect(bundle).toContain("Made-up medication note");
+    const returned = JSON.stringify(result);
+    for (const hidden of ["Made-up", "dosage", "note", "order"]) {
+      expect(returned).not.toContain(hidden);
+    }
+    expect(JSON.stringify(audit)).not.toContain("lisinopril");
+    expect(audit.map((each) => each.rowCount)).toEqual([1]);
   });
 });

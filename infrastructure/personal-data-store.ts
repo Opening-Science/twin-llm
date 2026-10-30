@@ -386,5 +386,42 @@ export const importedDataReads = (
           })),
         [],
       ),
+    // Coded fields, authored date and status only: dosage text, notes and
+    // reasons were never stored, and nothing else is selected.
+    findMedications: (query) =>
+      withUser(
+        async (id) =>
+          (
+            await database().personalClinicalRecord.findMany({
+              where: {
+                userId: id,
+                datasetId: query.datasetId,
+                resourceType: "MedicationRequest",
+              },
+              orderBy: [
+                { startAt: { sort: "asc", nulls: "last" } },
+                { display: "asc" },
+                { id: "asc" },
+              ],
+              take: query.take,
+              select: {
+                id: true,
+                codeSystem: true,
+                code: true,
+                display: true,
+                startAt: true,
+                status: true,
+              },
+            })
+          ).map((row) => ({
+            id: row.id,
+            codeSystem: row.codeSystem,
+            code: row.code,
+            display: row.display,
+            authoredAt: row.startAt,
+            status: row.status,
+          })),
+        [],
+      ),
   };
 };

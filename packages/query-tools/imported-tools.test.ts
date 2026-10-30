@@ -7,6 +7,7 @@ import type {
   ImportedConditionRecord,
   ImportedDataPorts,
   ImportedDatasetRecord,
+  ImportedMedicationRecord,
   ImportedObservationRecord,
   ImportedSeriesGroup,
   ImportedSeriesQuery,
@@ -14,16 +15,19 @@ import type {
 } from "./imported-ports";
 import {
   importedConditionsInput,
+  importedMedicationsInput,
   importedTableInput,
   importedTrendInput,
 } from "./imported-schemas";
 import {
   IMPORTED_CONDITIONS_CAP,
+  IMPORTED_MEDICATIONS_CAP,
   IMPORTED_TOOL_FAILED,
   type ImportedToolDeps,
   runImportedConditions,
   runImportedDatasets,
   runImportedLatest,
+  runImportedMedications,
   runImportedTable,
   runImportedTrend,
 } from "./imported-tools";
@@ -33,7 +37,7 @@ import type { SessionScope } from "./scope";
  * Made-up imported data, read through in-memory ports. Five datasets: labs
  * with glucose (one row dated only to a month), a ring export with HRV RMSSD
  * stored by name, a watch export with HRV SDNN coded 80404-7, a research
- * table, and a FHIR file with two Conditions.
+ * table, and a FHIR file with two Conditions and two MedicationRequests.
  */
 const LOINC = "http://loinc.org";
 const SCOPE: SessionScope = { actor: "user-1", sessionId: "turn-1", mode: "personal" };
@@ -160,6 +164,25 @@ const CONDITIONS: readonly ImportedConditionRecord[] = [
   },
 ];
 
+const MEDICATIONS: readonly ImportedMedicationRecord[] = [
+  {
+    id: "m1",
+    codeSystem: "http://www.nlm.nih.gov/research/umls/rxnorm",
+    code: "314076",
+    display: "Made-up lisinopril tablet",
+    authoredAt: new Date("2021-04-02T09:00:00.000Z"),
+    status: "active",
+  },
+  {
+    id: "m2",
+    codeSystem: null,
+    code: null,
+    display: "Made-up uncoded medication",
+    authoredAt: null,
+    status: "stopped",
+  },
+];
+
 const strip = ({ codeSystem: _codeSystem, ...rest }: Row): ImportedObservationRecord =>
   rest;
 
@@ -231,6 +254,8 @@ const fakePorts = (
     query.datasetId === TABLE.datasetId ? TABLE_ROWS.slice(0, query.take) : [],
   findConditions: async (query) =>
     query.datasetId === "ds-fhir" ? CONDITIONS.slice(0, query.take) : [],
+  findMedications: async (query) =>
+    query.datasetId === "ds-fhir" ? MEDICATIONS.slice(0, query.take) : [],
   appendAudit: async (input) => {
     audit.push(input);
   },
@@ -1008,6 +1033,120 @@ describe("imported_conditions", () => {
   });
 });
 
+describe("imported_medications", () => {
+  test("code, display, authored date and status; audited as a count", async () => {
+    const { deps, audit } = harness();
+    expect(await runImportedMedications(deps, { dataset_id: "ds-fhir" })).toEqual({
+      dataset_id: "ds-fhir",
+      medications: [
+        {
+          code_system: "http://www.nlm.nih.gov/research/umls/rxnorm",
+          code: "314076",
+          display: "Made-up lisinopril tablet",
+          authored: "2021-04-02T09:00:00.000Z",
+          status: "active",
+        },
+        {
+          code_system: null,
+          code: null,
+          display: "Made-up uncoded medication",
+          authored: null,
+          status: "stopped",
+        },
+      ],
+      n: 2,
+      more_medications: false,
+    });
+    expect(audit).toEqual([
+      auditRow(
+        "imported_medications",
+        { dataset_id: "ds-fhir" },
+        { n: 2, more: false },
+        2,
+      ),
+    ]);
+  });
+
+  test("more than the cap is flagged, not listed", async () => {
+    const many = Array.from(
+      { length: IMPORTED_MEDICATIONS_CAP + 1 },
+      (_, index): ImportedMedicationRecord => ({
+        ...MEDICATIONS[0]!,
+        id: `m${index}`,
+      }),
+    );
+    const takes: number[] = [];
+    const { deps } = harness({
+      ports: {
+        findMedications: async (query) => {
+          takes.push(query.take);
+          return many.slice(0, query.take);
+        },
+      },
+    });
+    const result = await runImportedMedications(deps, { dataset_id: "ds-fhir" });
+    if (!("medications" in result)) throw new Error("expected medications");
+    expect([result.n, result.more_medications, takes]).toEqual([
+      IMPORTED_MEDICATIONS_CAP,
+      true,
+      [IMPORTED_MEDICATIONS_CAP + 1],
+    ]);
+  });
+
+  test("a dataset that is not FHIR is refused; an unknown one is not found", async () => {
+    const { deps, audit } = harness();
+    expect(await runImportedMedications(deps, { dataset_id: "ds-labs" })).toEqual({
+      code: "WRONG_DATASET_KIND",
+      error:
+        "this tool reads only fhir datasets; imported_datasets lists each dataset's kind",
+      dataset_id: "ds-labs",
+      kind: "lab-csv",
+      needs: "fhir",
+    });
+    expect(await runImportedMedications(deps, { dataset_id: "ds-gone" })).toEqual({
+      code: "DATASET_NOT_FOUND",
+      error: "no imported dataset of this person has this id; use imported_datasets",
+      dataset_id: "ds-gone",
+    });
+    expect(audit.map((each) => each.result)).toEqual([
+      { code: "WRONG_DATASET_KIND" },
+      { code: "DATASET_NOT_FOUND" },
+    ]);
+  });
+
+  test("a model that is not local is refused before any read", async () => {
+    const reads: string[] = [];
+    const { deps } = harness({
+      permit: {
+        ok: false,
+        code: "IMPORTED_DATA_NOT_PERMITTED",
+        reason: "chat-model-not-local",
+      },
+      ports: {
+        listDatasets: async () => {
+          reads.push("listDatasets");
+          return DATASETS;
+        },
+        findMedications: async () => {
+          reads.push("findMedications");
+          return MEDICATIONS;
+        },
+      },
+    });
+    const result = await runImportedMedications(deps, { dataset_id: "ds-fhir" });
+    expect("code" in result ? result.code : null).toBe("IMPORTED_DATA_NOT_PERMITTED");
+    expect(reads).toEqual([]);
+  });
+
+  test("the input is closed: no dosage, note or filter can be asked for", () => {
+    for (const extra of [{ dosage: true }, { notes: true }, { status: "active" }]) {
+      expect(
+        importedMedicationsInput.safeParse({ dataset_id: "ds-fhir", ...extra }).success,
+      ).toBe(false);
+    }
+  });
+});
+
 describe("audit rows hold no values, units, codes or names", () => {
   test("every argument and result written is an id, a count, a window or a code", async () => {
     const { deps, audit } = harness();
@@ -1024,6 +1163,7 @@ describe("audit rows hold no values, units, codes or names", () => {
       limit: 3,
     });
     await runImportedConditions(deps, { dataset_id: "ds-fhir" });
+    await runImportedMedications(deps, { dataset_id: "ds-fhir" });
     const written = JSON.stringify(audit.map((each) => [each.args, each.result]));
     for (const secret of [
       "2345-7",
@@ -1039,6 +1179,10 @@ describe("audit rows hold no values, units, codes or names", () => {
       "38341003",
       "snomed",
       "2021-04-01",
+      "314076",
+      "rxnorm",
+      "lisinopril",
+      "2021-04-02",
     ]) {
       expect(written).not.toContain(secret);
     }

@@ -6,6 +6,7 @@ import {
   IMPORTED_CONDITIONS_TOOL,
   IMPORTED_DATASETS_TOOL,
   IMPORTED_LATEST_TOOL,
+  IMPORTED_MEDICATIONS_TOOL,
   IMPORTED_TABLE_TOOL,
   IMPORTED_TREND_TOOL,
 } from "./imported-names";
@@ -14,6 +15,8 @@ import {
   conditionEntry,
   type ImportedColumnEntry,
   type ImportedConditionEntry,
+  type ImportedMedicationEntry,
+  medicationEntry,
   missingColumns,
   selectColumns,
   tableColumnsById,
@@ -33,6 +36,7 @@ import type {
   importedConditionsInput,
   importedDatasetsInput,
   importedLatestInput,
+  importedMedicationsInput,
   importedTableInput,
   importedTrendInput,
 } from "./imported-schemas";
@@ -428,5 +432,50 @@ export const runImportedConditions = (
     (result) =>
       "conditions" in result
         ? { result: { n: result.n, more: result.more_conditions }, rowCount: result.n }
+        : NOTHING_READ,
+  );
+
+/** Medication requests one listing returns; more is flagged, not read. */
+export const IMPORTED_MEDICATIONS_CAP = 500;
+
+export type ImportedMedicationsResult = Readonly<{
+  dataset_id: string;
+  medications: readonly ImportedMedicationEntry[];
+  n: number;
+  /** True when the dataset holds more than IMPORTED_MEDICATIONS_CAP; the rest are not listed. */
+  more_medications: boolean;
+}>;
+
+export const runImportedMedications = (
+  deps: ImportedToolDeps,
+  input: z.infer<typeof importedMedicationsInput>,
+): Promise<ImportedMedicationsResult | ImportedRefusal> =>
+  auditedImported<ImportedMedicationsResult | ImportedRefusal>(
+    deps,
+    IMPORTED_MEDICATIONS_TOOL,
+    { dataset_id: input.dataset_id },
+    async () => {
+      const refused = refusedByPolicy(deps);
+      if (refused !== null) return refused;
+      const dataset = await findDataset(deps, input.dataset_id);
+      if (dataset === null) return datasetNotFound(input.dataset_id);
+      if (dataset.kind !== "fhir") {
+        return wrongDatasetKind(input.dataset_id, dataset.kind, "fhir");
+      }
+      const records = await deps.ports.findMedications({
+        datasetId: input.dataset_id,
+        take: IMPORTED_MEDICATIONS_CAP + 1,
+      });
+      const medications = records.slice(0, IMPORTED_MEDICATIONS_CAP).map(medicationEntry);
+      return {
+        dataset_id: input.dataset_id,
+        medications,
+        n: medications.length,
+        more_medications: records.length > IMPORTED_MEDICATIONS_CAP,
+      };
+    },
+    (result) =>
+      "medications" in result
+        ? { result: { n: result.n, more: result.more_medications }, rowCount: result.n }
         : NOTHING_READ,
   );

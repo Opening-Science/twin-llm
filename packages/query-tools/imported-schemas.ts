@@ -4,6 +4,7 @@ import {
   IMPORTED_DATASETS_TOOL,
   IMPORTED_LATEST_TOOL,
   IMPORTED_CONDITIONS_TOOL,
+  IMPORTED_MEDICATIONS_TOOL,
   IMPORTED_TABLE_TOOL,
   IMPORTED_TREND_TOOL,
 } from "./imported-names";
@@ -104,6 +105,11 @@ export const importedConditionsInput = z
   .strict()
   .describe("Conditions recorded in one imported FHIR dataset");
 
+export const importedMedicationsInput = z
+  .object({ dataset_id: datasetIdSchema })
+  .strict()
+  .describe("Medication requests recorded in one imported FHIR dataset");
+
 export const IMPORTED_TOOL_DEFINITIONS = [
   {
     name: IMPORTED_DATASETS_TOOL,
@@ -134,5 +140,11 @@ export const IMPORTED_TOOL_DEFINITIONS = [
     description:
       "Conditions in one imported FHIR dataset: code system, code, display, onset, abatement, clinical status. No notes. Up to 500.",
     input: importedConditionsInput,
+  },
+  {
+    name: IMPORTED_MEDICATIONS_TOOL,
+    description:
+      "Medication requests in one imported FHIR dataset: code system, code, display, authored date, status. No dosage text or notes. Up to 500.",
+    input: importedMedicationsInput,
   },
 ] as const;
