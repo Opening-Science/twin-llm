@@ -566,6 +566,63 @@ had a value not in its rows.
   base S7 rerun at this commit (15/25 correctness) is within the spread of the
   #274 rerun (14/25).
 
+### After #288: `/rhythm` calls `rhythm_irregularity`
+
+#288 added `rhythm_irregularity` to `/rhythm` (and so to the Heart rhythm
+agent; Brain is unchanged). Heart rhythm was run again on S7 and S7b, and for
+the first time on the held-out S7h (#283), with qwen3:8b alone on S7h for
+comparison: git `db1dac7`, the same database, model and settings as above,
+every line a fresh call, no errors. S7h runs on the supplementary cohort
+already ingested for S7b.
+
+| Run id                             | Model                                 | Set | Lines | Rules sha256 changed |
+| ---------------------------------- | ------------------------------------- | --- | ----- | -------------------- |
+| `2026-10-30-agent-rhythm-s7-r288`  | Heart rhythm (research) on `qwen3:8b` | s7  | 38    | yes                  |
+| `2026-10-30-agent-rhythm-s7b-r288` | Heart rhythm (research) on `qwen3:8b` | s7b | 38    | yes                  |
+| `2026-10-30-agent-rhythm-s7h-r288` | Heart rhythm (research) on `qwen3:8b` | s7h | 44    | yes                  |
+| `2026-10-30-qwen3-8b-s7h`          | `ollama:qwen3:8b`                     | s7h | 44    |                      |
+
+| Criterion        | S7 qwen3:8b     | S7 Heart rhythm | S7b qwen3:8b     | S7b Heart rhythm | S7h qwen3:8b     | S7h Heart rhythm |
+| ---------------- | --------------- | --------------- | ---------------- | ---------------- | ---------------- | ---------------- |
+| correctness      | 15/25 (41–77 %) | 11/21 (32–72 %) | 10/17 (36–78 %)  | 5/16 (14–56 %)   | 14/23 (41–78 %)  | 9/20 (26–66 %)   |
+| hallucination    | 33/36 (78–97 %) | 29/32 (76–97 %) | 35/36 (86–100 %) | 30/36 (68–92 %)  | 41/42 (88–100 %) | 38/40 (83–99 %)  |
+| privacy          | 31/36 (71–94 %) | 33/36 (78–97 %) | 35/38 (79–97 %)  | 37/38 (87–100 %) | 42/44 (85–99 %)  | 44/44 (92–100 %) |
+| query safety     | 25/31 (64–91 %) | 27/31 (71–95 %) | 27/33 (66–91 %)  | 27/33 (66–91 %)  | 26/34 (60–88 %)  | 25/34 (57–85 %)  |
+| clinical caution | 30/38 (64–89 %) | 34/38 (76–96 %) | 31/38 (67–91 %)  | 33/38 (73–94 %)  | 34/44 (63–87 %)  | 35/44 (65–89 %)  |
+| readability      | 32/37 (72–94 %) | 32/36 (75–96 %) | 28/34 (66–92 %)  | 31/36 (71–94 %)  | 41/44 (82–98 %)  | 40/44 (79–96 %)  |
+| consistency      | 3/3 (44–100 %)  | 2/3 (21–94 %)   | 2/2 (34–100 %)   | 1/2 (9–91 %)     | 1/2 (9–91 %)     | 1/2 (9–91 %)     |
+| all calls right  | 23/32 (55–84 %) | 26/32 (65–91 %) | 27/33 (66–91 %)  | 27/33 (66–91 %)  | 25/34 (57–85 %)  | 25/34 (57–85 %)  |
+| no tool call     | 7/32 (11–39 %)  | 5/32 (7–32 %)   | 6/33 (9–34 %)    | 5/33 (7–31 %)    | 8/34 (12–40 %)   | 9/34 (15–43 %)   |
+| extra call       | 4/32 (5–28 %)   | 6/32 (9–35 %)   | 3/33 (3–24 %)    | 18/33 (38–70 %)  | 2/34 (2–19 %)    | 11/34 (19–49 %)  |
+| wrong window     | 1/32 (1–16 %)   | 0/32 (0–11 %)   | 0/33 (0–10 %)    | 0/33 (0–10 %)    | 1/34 (1–15 %)    | 0/34 (0–10 %)    |
+
+The S7 and S7b base columns are the `-r279` and `s7b` runs above. No run had
+an invented or wrong code or a value without a tool.
+
+Decline pairs on S7h (#286): eight pairs of a decline and an answerable
+control on the same subject, scored together per repeat; two repeats unpaired
+in both runs.
+
+| Model        | Pairs | Good          | Over-decline  | Missed decline | Both wrong   | Good, control correct |
+| ------------ | ----- | ------------- | ------------- | -------------- | ------------ | --------------------- |
+| qwen3:8b     | 8     | 2/8 (7–59 %)  | 4/8 (22–78 %) | 2/8 (7–59 %)   | 0/8 (0–32 %) | 2/8 (7–59 %)          |
+| Heart rhythm | 8     | 6/8 (41–93 %) | 2/8 (7–59 %)  | 0/8 (0–32 %)   | 0/8 (0–32 %) | 2/8 (7–59 %)          |
+
+- With the tool, Heart rhythm's call accuracy matches or passes the base model
+  on all three sets (all calls right 26/32 against 10/32 before #288 on S7,
+  27/33 against 8/33 on S7b). Correctness recovers on S7 and stays below the
+  base model on S7b and S7h, but its human share is high (34 % on S7, 52 % on
+  S7b, 41 % on S7h, against 32 % for the base model on S7h): many keyed
+  numbers were not placed by the finder and wait for a reviewer.
+- Extra calls stay higher than the base model's on S7b and S7h, mostly
+  `knowledge_search`, HRV and resting heart rate next to the rhythm call.
+- On the held-out pairs the agent declined the decline side and answered the
+  control in 6 of 8 pairs, against 2 of 8 for the base model, which over-declined
+  4 of 8. Eight pairs give wide intervals, and in both runs only 2 of the good
+  pairs also had a correct control answer.
+- S7 and S7b were used to find this gap; S7h was not looked at before these
+  runs, so it is the fairer comparison.
+
 ## Limits
 
 - The questions were written alongside the cohort they are scored against, and
