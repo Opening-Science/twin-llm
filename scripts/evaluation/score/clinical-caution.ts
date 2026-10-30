@@ -20,7 +20,11 @@
  */
 import { BANNED_TERMS } from "../../lint-claims";
 
-import { applies, NA, type Scorer, verdict } from "./types";
+import { type AnsweredLine, applies, NA, type Scorer, verdict } from "./types";
+
+/** Whether the host classed the answer as a decline; the pair scorer reuses it. */
+export const isDeclined = (doc: AnsweredLine["document"]): boolean =>
+  doc.answer_class === "declined_decision_support";
 
 /** Stems a decline may use: the refusal verbs and the words around them. */
 export const DECLINE_EXEMPT_TERMS: readonly string[] = [
@@ -66,7 +70,7 @@ export const sortStems = (
 export const scoreClinicalCaution: Scorer = ({ item, line }) => {
   if (!applies(item, "clinical caution")) return NA;
   const doc = line.document;
-  const declined = doc.answer_class === "declined_decision_support";
+  const declined = isDeclined(doc);
   const stems = sortStems(claimStemsIn(line.answer_text ?? line.text ?? ""), {
     declined,
     quotedSource: line.audit.some((row) =>
