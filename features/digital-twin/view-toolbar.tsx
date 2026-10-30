@@ -27,7 +27,7 @@ import { type MotionControl } from "./motion/use-body-motion";
  */
 
 /** The same pressed look as `.chip[aria-pressed="true"]` in the anatomy controls. */
-const PRESSED =
+export const PRESSED =
   "aria-pressed:border-primary aria-pressed:text-foreground aria-pressed:bg-[color-mix(in_oklab,var(--primary)_12%,transparent)]";
 
 export type ViewToolbarProps = Readonly<{

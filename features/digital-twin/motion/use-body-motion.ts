@@ -3,7 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { type Object3D } from "three";
 
+import { type ClipRates, GENERIC_RATES } from "./clip-pose";
 import { clampTempo, DEFAULT_TEMPO } from "./dance";
+import { type DayPlan } from "./day-motion";
 import { type MotionClip } from "./gait";
 import { type KeyframeClip, parseKeyframeClip } from "./keyframe-clip";
 import { clipInstalled } from "./motion-clips";
@@ -27,7 +29,25 @@ export type MotionControl = Readonly<{
   /** The dance's beats a minute. */
   tempo: number;
   onTempo: (tempo: number) => void;
+  /** While the twin follows a wearable day: that day's lines, in place of the clip's own. */
+  dayLines: readonly string[] | null;
 }>;
+
+/** The wearable day the twin follows, if any (`use-day-motion.ts`). */
+export type FollowedDay = Readonly<{
+  plan: DayPlan | null;
+  lines: readonly string[] | null;
+  /** A toolbar clip was pressed: the day stops being followed. */
+  onManual: () => void;
+}>;
+
+const NOT_FOLLOWING: FollowedDay = { plan: null, lines: null, onManual: () => undefined };
+
+/** The rates a followed day sets; generic otherwise. */
+export const dayRates = (plan: DayPlan | null): ClipRates =>
+  plan
+    ? { cadence: plan.cadence, breathsPerMinute: plan.breathsPerMinute }
+    : GENERIC_RATES;
 
 /** Why nothing can move, or null when a clip can play. */
 export const motionUnavailable = (
@@ -75,13 +95,15 @@ export const useVideoClip = (enabled: boolean): KeyframeClip | null => {
  * Motion state for the Body twin: the skeleton binding of the loaded body (made
  * once, while it is at rest) and the chosen clip. A clip belongs to one body,
  * so a new body starts still; reduced motion or a body without a known rig
- * plays nothing. The dance tempo is kept across bodies. `control` is undefined
- * until a body has loaded.
+ * plays nothing. The dance tempo is kept across bodies. A followed wearable
+ * day (#52) picks the clip and its rates instead of the toolbar, until a
+ * toolbar clip is pressed. `control` is undefined until a body has loaded.
  */
 export const useBodyMotion = (
   scene: Object3D | null,
   reducedMotion: boolean,
   envelope: "scan" | "demo",
+  day: FollowedDay = NOT_FOLLOWING,
 ) => {
   const binding = useMemo<RigBinding | null>(
     () => (scene ? bindRig(scene) : null),
@@ -95,16 +117,27 @@ export const useBodyMotion = (
   const clips = offeredClips(video);
   const unavailable = motionUnavailable(binding !== null, reducedMotion, envelope);
   const picked = unavailable === null && chosen.scene === scene ? chosen.clip : null;
-  const clip = picked !== null && clips.includes(picked) ? picked : null;
+  const followed = unavailable === null ? day.plan : null;
+  const clip = followed
+    ? followed.clip
+    : picked !== null && clips.includes(picked)
+      ? picked
+      : null;
   const control: MotionControl | undefined = scene
     ? {
         clip,
         clips,
-        onSelect: (next) => setChosen({ scene, clip: next }),
+        onSelect: (next) => {
+          day.onManual();
+          setChosen({ scene, clip: next });
+        },
         unavailable,
         tempo,
         onTempo: (next) => setTempo(clampTempo(next)),
+        dayLines: followed ? day.lines : null,
       }
     : undefined;
-  return { binding, clip, tempo, video, control };
+  /** Following a day starts from no toolbar clip, so stopping leaves the body still. */
+  const clearManual = () => setChosen({ scene, clip: null });
+  return { binding, clip, tempo, video, rates: dayRates(followed), control, clearManual };
 };
