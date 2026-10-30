@@ -20,8 +20,15 @@ const PAGES: readonly (SearchItem & { kind: "page" })[] = [
     kind: "page",
     id: "customize",
     title: "Customize",
-    detail: "skills, your data, import, connectors",
+    detail: "skills, agents, your data, import, connectors",
     href: "/customize",
+  },
+  {
+    kind: "page",
+    id: "agents",
+    title: "Customize · Agents",
+    detail: "roster agent auto router general diet sleep trainer",
+    href: "/customize/agents",
   },
   {
     kind: "page",
