@@ -6,6 +6,11 @@
  *   bun run wearables:generate -- --in <dir> --out <dir> --seed 4242 --end 2026-10-01 --days 90
  *   bun run warehouse:ingest .synthea/synthea-v4-seed4242/wearables --cohort synthea-v4-seed4242
  *
+ * Version 3 (the default) reads each subject's Synthea conditions and lets
+ * atrial fibrillation, heart failure, stroke and sleep apnea change the
+ * series (`conditions.ts`). `--generator-version 2` ignores them and rebuilds
+ * the v2 series the evaluation answer key was made from.
+ *
  * It refuses the evaluation cohort unless `--allow-eval-cohort`: the
  * answer-key and eval databases load its series (docs/evaluation/question-set.md),
  * the dev database never does.
@@ -22,10 +27,13 @@ import {
   GENERATOR_ID,
   syntheaPatientOf,
   WEARABLE_GENERATOR_VERSION,
+  WEARABLE_GENERATOR_VERSIONS,
+  type WearableGeneratorVersion,
   wearableBundle,
 } from "./bundle";
 import { EVALUATION_COHORT_IDS } from "../synthea/cohort-presets";
 
+import { CONDITION_KINDS, type ConditionKind, syntheaConditionsOf } from "./conditions";
 import { DEFAULT_DAYS, DEFAULT_END_DAY, generateSeries } from "./series";
 import { generateWorkouts } from "./workouts";
 
@@ -50,7 +58,12 @@ export type WearablesArgs = Readonly<{
   days: number;
   /** The evaluation cohort's series, for the answer-key and eval databases only. */
   allowEvalCohort: boolean;
+  /** "2" ignores conditions; "3" (the default) follows them. */
+  generatorVersion: WearableGeneratorVersion;
 }>;
+
+const isGeneratorVersion = (value: string): value is WearableGeneratorVersion =>
+  (WEARABLE_GENERATOR_VERSIONS as readonly string[]).includes(value);
 
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -76,6 +89,11 @@ export const parseWearablesArgs = (argv: readonly string[]): WearablesArgs | str
   if (!(Number.isInteger(days) && days >= 1 && days <= 730)) {
     return "--days must be a whole number from 1 to 730.";
   }
+  const generatorVersion =
+    flag(argv, "--generator-version") ?? WEARABLE_GENERATOR_VERSION;
+  if (!isGeneratorVersion(generatorVersion)) {
+    return "--generator-version must be 2 or 3.";
+  }
   return {
     input,
     output: flag(argv, "--out") ?? join(dirname(input), "wearables"),
@@ -83,6 +101,7 @@ export const parseWearablesArgs = (argv: readonly string[]): WearablesArgs | str
     endDay,
     days,
     allowEvalCohort: argv.includes("--allow-eval-cohort"),
+    generatorVersion,
   };
 };
 
@@ -152,8 +171,12 @@ export const runGenerateWearables = async (
   let deceased = 0;
   let skipped = 0;
   let readings = 0;
+  const withEffect = new Map<ConditionKind, number>(
+    CONDITION_KINDS.map((kind) => [kind, 0]),
+  );
   for (const file of files) {
-    const patient = syntheaPatientOf(await deps.readJson(file));
+    const bundle = await deps.readJson(file);
+    const patient = syntheaPatientOf(bundle);
     if (patient === null) {
       // Synthea also writes hospital and practitioner files; they have no Patient.
       skipped += 1;
@@ -163,11 +186,17 @@ export const runGenerateWearables = async (
       deceased += 1;
       continue;
     }
+    const conditions = args.generatorVersion === "2" ? [] : syntheaConditionsOf(bundle);
+    for (const kind of new Set(conditions.map((condition) => condition.kind))) {
+      withEffect.set(kind, (withEffect.get(kind) ?? 0) + 1);
+    }
     const options = {
       seed,
       subjectRef: patient.id,
       endDay: args.endDay,
       days: args.days,
+      conditions,
+      generatorVersion: args.generatorVersion,
     };
     const daily = generateSeries(options);
     const series = [...daily, ...generateWorkouts(options, daily)];
@@ -184,7 +213,7 @@ export const runGenerateWearables = async (
   }
   await deps.writeJson(join(args.output, "manifest.json"), {
     generator: GENERATOR_ID,
-    generatorVersion: WEARABLE_GENERATOR_VERSION,
+    generatorVersion: args.generatorVersion,
     ...(cohort.cohortId === null ? {} : { cohortId: cohort.cohortId }),
     seed,
     endDay: args.endDay,
@@ -192,11 +221,21 @@ export const runGenerateWearables = async (
     subjects,
     readings,
     ...(cohort.syntheaVersion === null ? {} : { syntheaVersion: cohort.syntheaVersion }),
+    ...(args.generatorVersion === "2"
+      ? {}
+      : { subjectsWithConditionEffect: Object.fromEntries(withEffect) }),
   });
   io.stdout.write(
     [
-      `Synthetic wearables written to ${args.output} (${GENERATOR_ID} v${WEARABLE_GENERATOR_VERSION}, seed ${seed})`,
+      `Synthetic wearables written to ${args.output} (${GENERATOR_ID} v${args.generatorVersion}, seed ${seed})`,
       `Subjects: ${subjects}, deceased left out: ${deceased}, other files: ${skipped}`,
+      ...(args.generatorVersion === "2"
+        ? []
+        : [
+            `Living subjects with a condition effect: ${CONDITION_KINDS.map(
+              (kind) => `${kind.replace("_", " ")} ${withEffect.get(kind) ?? 0}`,
+            ).join(", ")}`,
+          ]),
       `Readings: ${readings} over ${args.days} days ending ${args.endDay}`,
       "",
     ].join("\n"),

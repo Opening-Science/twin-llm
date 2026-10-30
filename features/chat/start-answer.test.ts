@@ -557,7 +557,7 @@ describe("chat start: an agent (#218)", () => {
   const GP_AGENT: CatalogAgent = {
     ...SLEEP_AGENT,
     id: "gp",
-    name: "General Practitioner",
+    name: "General",
     role: "Looks at the whole record.",
     skill: null,
   };

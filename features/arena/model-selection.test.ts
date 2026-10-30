@@ -87,7 +87,7 @@ describe("menuGroups", () => {
   });
 
   test("agents first under their heading, then models", () => {
-    const catalog = [model("qwen3:8b"), agent("gp", "General Practitioner"), model("x")];
+    const catalog = [model("qwen3:8b"), agent("gp", "General"), model("x")];
     expect(
       menuGroups(catalog).map(({ label, models }) => [label, models.map(({ id }) => id)]),
     ).toEqual([
@@ -105,7 +105,7 @@ describe("menuGroups", () => {
 describe("menuSubline", () => {
   const agent = {
     id: "gp",
-    name: "General Practitioner",
+    name: "General",
     role: "",
     skill: null,
     baseModelId: "twinllm-qwen3-4b-pilot",
