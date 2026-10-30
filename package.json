@@ -75,6 +75,8 @@
     "eval:answer-key": "bun --env-file=.env.eval --preload ./features/chat/response/preload-server-only.mjs scripts/evaluation/build-answer-key.ts",
     "eval:answer-key:s7": "bun --preload ./features/chat/response/preload-server-only.mjs scripts/evaluation/build-answer-key.ts --questions evaluation/questions.s7.v1.json --out evaluation/answer-key.s7.v1.json",
     "eval:answer-key:s7b": "bun --preload ./features/chat/response/preload-server-only.mjs scripts/evaluation/build-answer-key.ts --questions evaluation/questions.s7b.v1.json --out evaluation/answer-key.s7b.v1.json",
+    "eval:answer-key:s7h": "bun --preload ./features/chat/response/preload-server-only.mjs scripts/evaluation/build-answer-key.ts --questions evaluation/questions.s7h.v1.json --out evaluation/answer-key.s7h.v1.json",
+    "eval:heldout:s7h": "bun scripts/evaluation/heldout-s7h.ts",
     "eval": "bun --env-file=.env.eval --preload ./features/chat/response/preload-server-only.mjs scripts/evaluation/run-eval.ts",
     "eval:report": "bun scripts/evaluation/run-report.ts",
     "eval:guidelines": "bun --env-file=.env.eval --preload ./features/chat/response/preload-server-only.mjs packages/guidelines/ingest-cli.ts",

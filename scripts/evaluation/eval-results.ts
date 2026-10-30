@@ -27,7 +27,9 @@ export const ANSWER_KEY_PATH = "evaluation/answer-key.v1.json";
  * own key and questions sha256. `v1` is the C2 set; `s7` the rhythm and
  * heart-brain items (#251), kept apart so the v1 hash never changes; `s7b`
  * the S7 items on the supplementary cohort synthea-v4-s7 (#277), kept apart
- * so the S7 hash never changes either.
+ * so the S7 hash never changes either; `s7h` the held-out S7 items drawn by a
+ * seeded rule fixed before any output was seen (#283), scored apart from the
+ * S7 and S7b development sets.
  */
 export const QUESTION_SETS = {
   v1: { questions: QUESTIONS_PATH, key: ANSWER_KEY_PATH },
@@ -38,6 +40,10 @@ export const QUESTION_SETS = {
   s7b: {
     questions: "evaluation/questions.s7b.v1.json",
     key: "evaluation/answer-key.s7b.v1.json",
+  },
+  s7h: {
+    questions: "evaluation/questions.s7h.v1.json",
+    key: "evaluation/answer-key.s7h.v1.json",
   },
 } as const;
 

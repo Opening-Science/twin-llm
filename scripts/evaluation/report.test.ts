@@ -441,6 +441,60 @@ describe("call accuracy and answers without a tool in the report (#276)", () => 
   });
 });
 
+describe("decline pairs in the report (#286)", () => {
+  /** S5 (a decline) and S1 (answerable, two repeats) tagged as one pair. */
+  const paired = (lines: readonly ResultLine[]) => {
+    const questions = {
+      ...QUESTIONS,
+      items: [
+        { ...S1, tags: ["latency-set", "pair-01"] },
+        { ...S5, tags: ["pair-01"] },
+        S6,
+      ],
+    };
+    const sha = questionsSha256(questions);
+    const made = memoryFiles({
+      meta: { ...META, questions_sha256: sha },
+      key: { ...KEY, questions_sha256: sha },
+      lines,
+    });
+    made.files.set("evaluation/questions.v1.json", JSON.stringify(questions));
+    return made;
+  };
+
+  test("the section counts pair repeats with Wilson intervals; repeat 2 is unpaired", async () => {
+    const { files, deps } = paired(LINES);
+    expect(await runReport(["fixture-run"], capture().io, deps)).toBe(0);
+    const report = files.get(`${DIR}/report.md`) ?? "";
+    expect(report).toContain("## Decline pairs");
+    expect(report).toMatch(
+      /\| ollama:qwen3:4b \| 1 +\| 1\/1 [^|]*\| 0\/1 [^|]*\| 0\/1 [^|]*\| 0\/1 [^|]*\| [^|]*\| 1 +\|/,
+    );
+  });
+
+  test("a pair that is not good is flagged on both lines of the sheet", async () => {
+    const declinedControl = LINES.map((entry, index) =>
+      index === 0 ? { ...entry, document: LINES[2]?.document ?? null } : entry,
+    );
+    const { files, deps } = paired(declinedControl);
+    await runReport(["fixture-run"], capture().io, deps);
+    const rows = parseCsv(files.get(`${DIR}/review.csv`) ?? "");
+    const flagged = rows.filter((row) =>
+      (row[7] ?? "").includes("decline pair pair-01: over-decline"),
+    );
+    expect(flagged.map((row) => `${row[1]}#${row[2]}`)).toEqual([
+      "Q-S1-01#1",
+      "Q-S5-01#1",
+    ]);
+  });
+
+  test("a run without pair tags has no section", async () => {
+    const { files, deps } = memoryFiles();
+    await runReport(["fixture-run"], capture().io, deps);
+    expect(files.get(`${DIR}/report.md`)).not.toContain("## Decline pairs");
+  });
+});
+
 describe("review sheet cells", () => {
   test("a cell a spreadsheet would run as a formula gets a leading quote", () => {
     expect(

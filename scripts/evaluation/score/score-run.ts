@@ -13,6 +13,8 @@
  * - Latency is not pass/fail: p50, p90 and p95, cache hits and errors left out.
  * - Call accuracy and answers without a tool (#276) are reported per line
  *   beside the eight criteria and change none of them.
+ * - Decline and control pairs (#286) are scored per pair and repeat, also
+ *   beside the eight criteria.
  */
 import type { ResultLine } from "../eval-results";
 import {
@@ -29,6 +31,7 @@ import { type CallAccuracy, scoreCallAccuracy } from "./call-accuracy";
 import { scoreClinicalCaution } from "./clinical-caution";
 import { scoreConsistency } from "./consistency";
 import { scoreCorrectness } from "./correctness";
+import { type PairRepeat, scorePairs } from "./decline-pairs";
 import { scoreHallucination, unsourcedNumberCount } from "./hallucination";
 import { type NoToolValues, scoreNoToolValues } from "./no-tool-values";
 import { scorePrivacy } from "./privacy";
@@ -97,6 +100,8 @@ export type ModelScores = Readonly<{
   tallies: Readonly<Record<ScoredCriterion, Readonly<Record<Scenario, Tally>>>>;
   latency: Readonly<{ latencySet: LatencyFigures; overall: LatencyFigures }>;
   scored: readonly ScoredLine[];
+  /** Each `pair-NN` decline and control, per repeat; empty when the set has no pairs. */
+  pairs: readonly PairRepeat[];
 }>;
 
 export type RunInput = Readonly<{
@@ -239,6 +244,12 @@ const scoreModel = (input: RunInput, model: ModelKey): ModelScores => {
       overall: figures(counted),
     },
     scored,
+    pairs: scorePairs(
+      input.items,
+      counted,
+      (line) =>
+        scored.find((entry) => entry.line === line)?.scores.correctness.score ?? null,
+    ),
   };
 };
 
