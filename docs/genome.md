@@ -61,8 +61,8 @@ These are enforced in code, not only by convention.
 6. **No genotype goes to a hosted provider**, the consented Exoscale pilot
    included, nor to OpenRouter, the remote GPU, Infomaniak, GBD or any MCP
    server. The rule holds per thread, not only per question: a thread where
-   `genome_report` or `dna_ask` ran (a stored tool part or a genome audit
-   row), or whose history shows a `/genome` prompt or a Carbon-X answer, is
+   `genome_report`, `dna_ask` or `genome_variants` ran (a stored tool part or
+   a genome audit row), or whose history shows a `/genome` prompt or a Carbon-X answer, is
    genome-personal. Every later turn in it runs only on Ollama on loopback;
    any other model is refused before the history is sent, the answer is
    stored as refused with "This thread used your genome report or imported
@@ -78,14 +78,17 @@ These are enforced in code, not only by convention.
    on loopback and stores no thread, so the genome tools may run in it under
    the same policy, its answers and tool results are never stored, and its
    genome audit rows carry a random session id instead of a turn id. The genome tools are left out of the eval
-   harness and the MCP manifest. Training data offers them only with `--genome`, on synthetic
+   harness. `genome_report` and `dna_ask` are left out of the MCP manifest;
+   `genome_variants` is listed there only so a client learns that it always
+   refuses (`GENOME_NOT_PERMITTED`), as the imported-data tools do. Training data offers them only with `--genome`, on synthetic
    genomes with stand-in answers, never a person's report
    (`docs/genome-synthetic.md`). Analytics send nothing in personal mode.
 7. **Every step is audited, without genotypes.** `ark.data.list`, `ark.app.run`,
-   `genome.report.store`, `genome.report` and `genome.dna_ask` each append to
-   the hash chain. Their arguments and results hold rsIDs, ids, counts and
+   `genome.report.store`, `genome.report`, `genome.dna_ask` and
+   `genome.variants` each append to the hash chain. Their arguments and results hold rsIDs, ids, counts and
    outcome codes only: no genotype, no report text, no answer, and no hash of
-   any of them. A genotype has so few possible values that a plain hash could
+   any of them. `genome.variants` keeps only how many names were asked and how
+   many were found (or the refusal code), not even the rsIDs. A genotype has so few possible values that a plain hash could
    be reversed by trying them all, so the `ark.app.run` row keeps the report's
    length instead of its text.
 8. **Carbon-X is research only.** Every answer is labelled
@@ -113,6 +116,46 @@ an Ark that names none:
 Independently, the reference allele in the report must equal the FASTA base at
 that position. A mismatch refuses (`REF_MISMATCH`); a reverse-complement match
 refuses as `REF_STRAND_MISMATCH`, because the call file is on the other strand.
+
+## Imported VCF
+
+A person can also import their own VCF on Customize · Data (#180,
+[personal-data.md](personal-data.md#genome-vcf)). The same build rules apply, from
+the file's header: GRCh38 or hg38 is read, GRCh37 or hg19 is refused as
+`BUILD_MISMATCH`, another build as `BUILD_UNKNOWN`, and a file that names none is
+refused unless `GENOME_ASSUME_BUILD=GRCh38` is set. The variants are stored in
+`personal_variants`, read only by a model on this machine under
+`permitGenomeRequest`, never by the imported-data chat tools, and audited with counts
+only (no genotype, position, rsID or hash of the file).
+
+`genome_variants({ dataset_id, variants })` (#307) is the one chat tool that reads
+them. It looks up named variants only: each name is an rsID (`rs4244285`) or one
+GRCh38 site written `chrN:pos` (`chr10:94781859`, `chrX`, `chrY` and `chrM` too), at
+most 50 per call. There is no range, gene, wildcard or "all variants", so the model
+cannot scan the file. For each distinct name it returns `found` and the matching
+records as the file wrote them: `chrom`, `pos`, `id`, `ref`, `alt`, `genotype` (GT,
+such as `0/1`), `alleles` (the same GT in bases, such as `C/T`, null for a no-call)
+and `filter`. A site matches a file that writes `chr1` or `1`; an rsID matches a
+whole ID, also one of several joined by `;`. Not found means the file has no record
+there, which is not the same as the reference allele, and the result says so.
+
+- **Policy.** It is on a turn only with the genome deps, so only when
+  `permitGenomeRequest` holds (personal mode, `GENOME_SOURCE=ark`, Ollama on
+  loopback, local Carbon-X), and it asks the policy again on every call before any
+  read. A refusal is `GENOME_NOT_PERMITTED` with its `reason`. Over MCP it always
+  refuses with that code.
+- **Coded refusals.** `DATASET_NOT_FOUND` (not one of the person's datasets; it lists
+  the person's VCFs as `vcf_datasets`, id, name and variant count, so the model can
+  pick one), `NOT_A_VCF_DATASET` (another kind of import), `TOO_MANY_VARIANTS` (more
+  than 50 names; refused, not cut), `MALFORMED_VARIANT_NAMES` (lists up to 10 of the
+  names it could not read; nothing is read) and `ROW_CAP_EXCEEDED` (more than 200
+  matching records).
+- **Audit.** One `genome.variants` row per call, refusal or throw: `{ requested }` and
+  `{ found }` or the refusal code. No name, position, genotype or dataset name.
+- **Threads.** A thread where it ran is genome-personal and stays on local models,
+  as above.
+- **Source.** `vcf-variants` ("Variants in your imported VCF") in the genome group;
+  the `/genome` skill lists it for a named variant outside the Ark report.
 
 ## Setup
 
@@ -181,6 +224,8 @@ refuses as `REF_STRAND_MISMATCH`, because the call file is on the other strand.
 | Policy                       | `permitGenomeRequest`, `infrastructure/genome-gate.ts`        |
 | Thread rule (#151)           | `infrastructure/genome-thread-policy.ts`, `start-answer.ts`   |
 | Skill                        | `skills/genome/`                                              |
+| Imported VCF (#180)          | `packages/personal-data/parse-vcf.ts`, `vcf-build.ts`         |
+| Variant lookup tool (#307)   | `packages/query-tools/imported-variant*.ts`                   |
 
 Tests need no hardware and no GPU: the Ark CLI is replaced through the
 adapter's spawn hook and fixture JSON, the report through the app's goldens,

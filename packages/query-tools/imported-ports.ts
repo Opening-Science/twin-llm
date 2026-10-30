@@ -1,5 +1,10 @@
 import type { AppendInput } from "@/packages/audit/append";
-import type { EffectivePrecision, ImportKind } from "@/packages/personal-data/types";
+import type {
+  EffectivePrecision,
+  ImportKind,
+  TableCell,
+  TableColumn,
+} from "@/packages/personal-data/types";
 
 /**
  * What the imported-data tools need from outside: fixed reads of one
@@ -64,6 +69,44 @@ export type ImportedSeriesQuery = Readonly<{
   take: number;
 }>;
 
+/** The stored column list of one imported research table, in file order. */
+export type ImportedTableRecord = Readonly<{
+  datasetId: string;
+  columns: readonly TableColumn[];
+  rowCount: number;
+}>;
+
+/** The first rows of one table in file order, every column, at most `take`. */
+export type ImportedTableRowsQuery = Readonly<{ datasetId: string; take: number }>;
+
+/** A FHIR Condition as stored from an imported file. Notes are never stored. */
+export type ImportedConditionRecord = Readonly<{
+  id: string;
+  codeSystem: string | null;
+  code: string | null;
+  display: string;
+  onsetAt: Date | null;
+  abatementAt: Date | null;
+  status: string | null;
+}>;
+
+export type ImportedConditionsQuery = Readonly<{ datasetId: string; take: number }>;
+
+/**
+ * A FHIR MedicationRequest as stored from an imported file. Dosage text,
+ * notes and reasons are never stored.
+ */
+export type ImportedMedicationRecord = Readonly<{
+  id: string;
+  codeSystem: string | null;
+  code: string | null;
+  display: string;
+  authoredAt: Date | null;
+  status: string | null;
+}>;
+
+export type ImportedMedicationsQuery = Readonly<{ datasetId: string; take: number }>;
+
 export type ImportedDataPorts = Readonly<{
   /** The person's datasets, newest first. */
   listDatasets: () => Promise<readonly ImportedDatasetRecord[]>;
@@ -77,5 +120,19 @@ export type ImportedDataPorts = Readonly<{
   findSeries: (
     query: ImportedSeriesQuery,
   ) => Promise<readonly ImportedObservationRecord[]>;
+  /** The column lists of the person's tables (one per table dataset). */
+  listTables: () => Promise<readonly ImportedTableRecord[]>;
+  /** One table's first rows in file order; every row has one cell per stored column. */
+  readTableRows: (
+    query: ImportedTableRowsQuery,
+  ) => Promise<readonly (readonly TableCell[])[]>;
+  /** One dataset's Conditions, by onset (none last), then display and id, at most `take`. */
+  findConditions: (
+    query: ImportedConditionsQuery,
+  ) => Promise<readonly ImportedConditionRecord[]>;
+  /** One dataset's MedicationRequests, by authored date (none last), then display and id, at most `take`. */
+  findMedications: (
+    query: ImportedMedicationsQuery,
+  ) => Promise<readonly ImportedMedicationRecord[]>;
   appendAudit: (input: AppendInput) => Promise<unknown>;
 }>;

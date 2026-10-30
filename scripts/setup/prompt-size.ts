@@ -21,6 +21,7 @@ import {
 } from "../../features/chat/ollama-turn-request";
 import { checkSkills, readSyntheticSubjects } from "../../features/skills/read-skills";
 import {
+  DEFAULT_OLLAMA_BASE_URL,
   DEFAULT_OLLAMA_NUM_CTX,
   ollamaApiRoot,
   promptBudgetTokens,
@@ -28,6 +29,7 @@ import {
 import { AGENTS } from "../../infrastructure/agents";
 import type { TurnSkill } from "../../infrastructure/skill-gate";
 import {
+  LONGEST_TWIN_NOTES,
   LONGEST_UI_CONTEXT,
   NO_WEARABLES,
   ONE_WEARABLE,
@@ -79,6 +81,7 @@ export const promptSizeCases = (skills: readonly TurnSkill[]): readonly SizeCase
       wearables: context.wearables,
       question: QUESTION,
       uiContext: LONGEST_UI_CONTEXT,
+      twinNotes: LONGEST_TWIN_NOTES,
       agent,
     });
     return [
@@ -152,9 +155,7 @@ if (isMain) {
     argValue("--num-ctx") ?? process.env.OLLAMA_NUM_CTX ?? DEFAULT_OLLAMA_NUM_CTX,
   );
   const model = argValue("--ollama");
-  const apiRoot = ollamaApiRoot(
-    process.env.OLLAMA_BASE_URL ?? "http://127.0.0.1:11434/v1",
-  );
+  const apiRoot = ollamaApiRoot(process.env.OLLAMA_BASE_URL ?? DEFAULT_OLLAMA_BASE_URL);
   const budget = promptBudgetTokens(numCtx);
   console.log(
     `num_ctx ${numCtx}; prompt + tools may use ${budget} tokens. Estimate: 1 per digit, prose chars / 2.5, tool JSON chars / 4, plus the template. "fits" uses the exact count when there is one.`,

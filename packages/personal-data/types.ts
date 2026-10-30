@@ -13,12 +13,19 @@ export const IMPORT_KINDS = [
   "table",
   "apple-health",
   "wearable",
+  "vcf",
 ] as const;
 
 export type ImportKind = (typeof IMPORT_KINDS)[number];
 
 export const isImportKind = (value: unknown): value is ImportKind =>
   typeof value === "string" && (IMPORT_KINDS as readonly string[]).includes(value);
+
+/**
+ * A genome file. Its rows are never read by the imported-data chat tools;
+ * a model may only read them on this machine, under `permitGenomeRequest`.
+ */
+export const isGenomeImportKind = (kind: ImportKind): boolean => kind === "vcf";
 
 /** How much of a date the source gave: `2024`, `2024-03`, `2024-03-01` or a time. */
 export type EffectivePrecision = "year" | "month" | "day" | "instant";
@@ -52,6 +59,26 @@ export type ClinicalDraft = Readonly<{
   status: string | null;
   sourceRef: string;
 }>;
+
+/**
+ * One record of an imported VCF: the one sample's genotype (GT) at one site,
+ * on GRCh38. `genotype` is GT as written (`0/1`, `1|1`), null for a no-call.
+ * QUAL, INFO, the other FORMAT fields and the sample's name are never kept.
+ */
+export type VariantDraft = Readonly<{
+  chrom: string;
+  pos: number;
+  /** The ID column (`rs123`), null when `.`. */
+  variantId: string | null;
+  ref: string;
+  /** Alternate alleles as written, comma separated. */
+  alt: string;
+  genotype: string | null;
+  /** The FILTER column, null when `.`. */
+  filter: string | null;
+}>;
+
+export type GenomeBuildSource = "file" | "assumed";
 
 export type ColumnType = "number" | "date" | "text";
 
@@ -114,6 +141,14 @@ export type ParsedImport =
         observations: readonly ObservationDraft[];
       }>)
   | (ParsedBase & Readonly<{ ok: true; kind: "table"; table: TableDraft }>)
+  | (ParsedBase &
+      Readonly<{
+        ok: true;
+        kind: "vcf";
+        variants: readonly VariantDraft[];
+        build: "GRCh38";
+        buildSource: GenomeBuildSource;
+      }>)
   | Readonly<{ ok: false; refusal: ImportRefusal }>;
 
 export type ParsedOk = Extract<ParsedImport, { ok: true }>;

@@ -2,13 +2,14 @@ import { describe, expect, test } from "bun:test";
 
 import { BUILT_IN_COMMANDS, skillCommand } from "@/features/commands/registry";
 
-import { isTwinDraft, routeDraft, routePick } from "./prompt-route";
+import { isCompactDraft, isTwinDraft, routeDraft, routePick } from "./prompt-route";
 import type { StartTurnInput } from "./start-turn";
 
 /** The prompt bar's handlers with a fake `startTurn` behind `send`, as `useConversation` wires it. */
 const recorder = (draft: string) => {
   const startTurnCalls: StartTurnInput[] = [];
   const twinOpens: string[] = [];
+  const compactOpens: string[] = [];
   const fakeStartTurn = (input: StartTurnInput) => {
     startTurnCalls.push(input);
   };
@@ -22,8 +23,11 @@ const recorder = (draft: string) => {
     openTwin: () => {
       twinOpens.push("twin");
     },
+    openCompact: () => {
+      compactOpens.push("compact");
+    },
   };
-  return { startTurnCalls, twinOpens, handlers };
+  return { startTurnCalls, twinOpens, compactOpens, handlers };
 };
 
 const TWIN = BUILT_IN_COMMANDS.find((command) => command.name === "twin") ?? null;
@@ -77,5 +81,44 @@ describe("/twin in the prompt bar", () => {
     expect(routePick(skill, handlers)).toBe(false);
     expect(routePick(null, handlers)).toBe(false);
     expect(twinOpens).toEqual([]);
+  });
+});
+
+const COMPACT = BUILT_IN_COMMANDS.find((command) => command.name === "compact") ?? null;
+
+describe("/compact in the prompt bar (#43)", () => {
+  test("Enter on /compact asks for a draft and starts no turn", () => {
+    const { startTurnCalls, compactOpens, twinOpens, handlers } = recorder("/compact");
+    expect(routeDraft(" /Compact ", handlers)).toBe("compact");
+    expect(startTurnCalls).toEqual([]);
+    expect(compactOpens).toEqual(["compact"]);
+    expect(twinOpens).toEqual([]);
+  });
+
+  test("picking compact in the palette asks for a draft at once", () => {
+    const { startTurnCalls, compactOpens, handlers } = recorder("/co");
+    expect(routePick(COMPACT, handlers)).toBe(true);
+    expect(startTurnCalls).toEqual([]);
+    expect(compactOpens).toEqual(["compact"]);
+  });
+
+  test("/compact with more text is an ordinary prompt", () => {
+    const { startTurnCalls, compactOpens, handlers } = recorder("/compact this please");
+    expect(isCompactDraft("/compact this please")).toBe(false);
+    expect(routeDraft("/compact this please", handlers)).toBe("send");
+    expect(startTurnCalls.length).toBe(1);
+    expect(compactOpens).toEqual([]);
+  });
+
+  test("a skill named compact is not the built-in", () => {
+    const { compactOpens, handlers } = recorder("/");
+    const skill = skillCommand({
+      name: "compact",
+      description: "A skill cannot take a built-in's name",
+      sources: [],
+      tools: [],
+    });
+    expect(routePick(skill, handlers)).toBe(false);
+    expect(compactOpens).toEqual([]);
   });
 });

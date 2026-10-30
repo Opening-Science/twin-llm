@@ -8,6 +8,7 @@ tools:
     resting_hr_trend,
     conditions_timeline,
     values_around_event,
+    rhythm_irregularity,
     knowledge_search,
   ]
 sources:
@@ -37,7 +38,12 @@ person.
    `conditions_timeline` over the subject's window. Say only what is recorded, with its
    onset date. Then `values_around_event` for heart rate (8867-4) with the recorded code,
    if the question asks what was recorded around it.
-4. **Literature.** `knowledge_search` explains a measure and returns cardiology
+4. **Simulated recordings.** When the question asks about a simulated rhythm recording
+   of a synthetic subject, call `rhythm_irregularity` with the subject, recording number,
+   length and day the question gives. Report the windows past the research threshold,
+   nRMSSD, turning-point ratio and flagged time share as the tool gives them. They
+   describe the simulated recording, never the person.
+5. **Literature.** `knowledge_search` explains a measure and returns cardiology
    articles. Quote a passage only word for word, with its attribution line. An article is
    about its study, never about this person.
 

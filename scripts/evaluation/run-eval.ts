@@ -5,6 +5,7 @@
  *   bun run eval -- --models ollama:qwen3:4b --latency-set
  *   bun run eval -- --models ollama:qwen3:4b --items Q-S1-11,Q-S5-05 --run-id smoke
  *   bun run eval -- --models ollama:qwen3:4b --latency-set --replay
+ *   bun run eval -- --models agent:rhythm --set s7
  *
  * The package script passes `--env-file=.env.eval`, a copy of
  * `.env.synthetic.example` pointed at a throwaway database holding only
@@ -20,6 +21,7 @@ import { access, appendFile, mkdir, readFile, rename, writeFile } from "node:fs/
 import { join } from "node:path";
 
 import { type EvalDeps, type ModelSpec, EvalSetupError, runEval } from "./eval-runner";
+import { DEFAULT_OLLAMA_BASE_URL } from "../../infrastructure/ollama-context";
 import { type CacheStore } from "./model-cache";
 
 const RUNS_DIR = "evaluation/runs";
@@ -55,10 +57,13 @@ const isMain = Boolean((import.meta as { main?: boolean }).main);
 
 if (isMain) {
   const { serverEnv, infomaniakOpenAiBaseUrl } = await import("../../infrastructure/env");
-  const { fetchActiveModelCatalog, vllmBaseUrlFor } =
+  const { fetchChatCatalog, vllmBaseUrlFor } =
     await import("../../infrastructure/fetch-model-catalog");
+  const { findRunnableSkill, runnableSkills } =
+    await import("../../features/skills/load-skills");
   const { isoLocalDate } = await import("../../infrastructure/format-measure");
-  const { createChatTools } = await import("../../features/chat/chat-tools");
+  const { createChatTools, createTurnTools } =
+    await import("../../features/chat/chat-tools");
   const { resolveLanguageModel } =
     await import("../../features/chat/resolve-language-model");
   const { loadSessionAudit } =
@@ -69,7 +74,7 @@ if (isMain) {
   const endpointHost = (spec: ModelSpec): string | null => {
     switch (spec.provider) {
       case "ollama":
-        return hostOf(env.OLLAMA_BASE_URL ?? "http://127.0.0.1:11434/v1");
+        return hostOf(env.OLLAMA_BASE_URL ?? DEFAULT_OLLAMA_BASE_URL);
       case "exoscale":
       case "remote-gpu":
         return hostOf(vllmBaseUrlFor(spec.provider, spec.modelId));
@@ -88,8 +93,9 @@ if (isMain) {
     hasEnv: (name) => Boolean(Reflect.get(env, name)),
     readText: (path) => readFile(path, "utf8"),
     // Read at run time: vLLM providers route each id to the server that lists it.
-    listModels: async () =>
-      ((await fetchActiveModelCatalog()) ?? []).map((model) => model.id),
+    // The same catalog the chat route checks, agents included.
+    listModels: async () => (await fetchChatCatalog(runnableSkills())) ?? [],
+    findSkill: findRunnableSkill,
     resolveModel: async (spec) => {
       const model = resolveLanguageModel(spec.modelId, { hasWearableNarrative: false });
       if (typeof model === "string") {
@@ -98,7 +104,12 @@ if (isMain) {
       return { model, mock: false, host: endpointHost(spec) };
     },
     timeoutSignal: (timeoutMs) => AbortSignal.timeout(timeoutMs),
-    createTools: (scope) => createChatTools(scope),
+    // A plain model keeps the tool list and prompt it always had, so its cache
+    // entries still match; an agent gets the chat route's turn tools.
+    createTools: (scope, agent) =>
+      agent === null
+        ? { tools: createChatTools(scope) }
+        : createTurnTools(scope, { agent: agent.agent.id }, agent.skill),
     loadAudit: loadSessionAudit,
     cache: fileCacheStore(CACHE_DIR),
     prepareRun: async (runId) => {

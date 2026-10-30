@@ -12,6 +12,8 @@ import {
   rocCsv,
   distributionCsv,
   simWindowsCsv,
+  realNoiseCsv,
+  realNoiseWindowsCsv,
   realWindowsCsv,
 } from "./report";
 import { NOISE_LEVELS, RHYTHM_CONDITIONS } from "./sim-grid";
@@ -101,6 +103,27 @@ describe("runBenchmark", () => {
     expect(
       result.simToReal.map((each) => `${each.noise}:${each.simClass}:${each.realClass}`),
     ).toEqual(["none:af:AFIB", "none:not-af:N", "heavy:af:AFIB", "heavy:not-af:N"]);
+  });
+
+  test("real noise: level none matches the database result; off by default", () => {
+    expect(runBenchmark(INPUTS).result.realNoise).toBe(null);
+    const withNoise = { ...INPUTS, options: { ...INPUTS.options, realNoise: true } };
+    const data = runBenchmark(withNoise);
+    const levels = data.result.realNoise ?? [];
+    expect(levels.map((each) => each.noise)).toEqual(["none", "heavy"]);
+    expect(levels[0].summary.sensitivity.value).toBe(
+      data.result.real?.overall.sensitivity.value ?? null,
+    );
+    expect(levels[0].summary.specificity.value).toBe(
+      data.result.real?.overall.specificity.value ?? null,
+    );
+    expect(markdownReport(data.result, "t")).toContain(
+      "## Beat-detection noise on database beats",
+    );
+    expect(realNoiseCsv(data.result).split("\n")[1]).toMatch(/^real,none,/);
+    const again = runBenchmark(withNoise);
+    expect(realNoiseCsv(again.result)).toBe(realNoiseCsv(data.result));
+    expect(realNoiseWindowsCsv(again)).toBe(realNoiseWindowsCsv(data));
   });
 
   test("without the database the real part is null", () => {

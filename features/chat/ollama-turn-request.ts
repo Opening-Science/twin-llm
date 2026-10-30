@@ -2,12 +2,12 @@ import "server-only";
 
 import type { DataMode } from "@/infrastructure/data-mode-policy";
 import {
-  estimateTokens,
-  JSON_CHARS_PER_TOKEN,
-  TEMPLATE_OVERHEAD_TOKENS,
+  DEFAULT_OLLAMA_BASE_URL,
+  estimateRequestTokens,
 } from "@/infrastructure/ollama-context";
 import type { WearableSummaries } from "@/infrastructure/offered-keys";
 import type { TurnSkill } from "@/infrastructure/skill-gate";
+import type { TwinNote } from "@/infrastructure/twin-notes";
 import type { UiContext } from "@/infrastructure/ui-context";
 import type { ImportedToolDeps } from "@/packages/query-tools/imported-tools";
 import type { QueryToolPorts } from "@/packages/query-tools/ports";
@@ -16,6 +16,7 @@ import { createChatTools, forSkill, forSources } from "./chat-tools";
 import type { GenomeToolDeps } from "./genome-tools";
 import { ollamaChatModel } from "./ollama-chat-model";
 import { runTwinTurn } from "./run-twin-turn";
+import { fitTwinNotes } from "./twin-notes-room";
 
 /**
  * The exact body a first chat turn sends to Ollama's `/api/chat`: the twin
@@ -50,6 +51,11 @@ export type TurnRequestCase = Readonly<{
   uiContext?: UiContext | null;
   /** The agent the turn answers as (#218), whose role line joins the prompt. */
   agent?: Readonly<{ name: string; role: string }> | null;
+  /**
+   * Twin notes the turn may carry (#43), cut to its prompt room as the chat
+   * route cuts them; the size cases carry the notes that make the longest block.
+   */
+  twinNotes?: readonly TwinNote[];
 }>;
 
 const NO_PORTS: QueryToolPorts = {
@@ -68,6 +74,15 @@ const noGenome = (scope: GenomeToolDeps["scope"]): GenomeToolDeps => ({
     throw new Error("not used");
   },
   appendAudit: async () => undefined,
+  variants: {
+    scope,
+    permit: () => ({ ok: true }),
+    ports: {
+      listDatasets: async () => [],
+      findVariants: async () => [],
+      appendAudit: async () => undefined,
+    },
+  },
 });
 
 /** The imported-data tools as a fully local personal turn gets them; nothing is read. */
@@ -79,6 +94,10 @@ const noImported = (scope: ImportedToolDeps["scope"]): ImportedToolDeps => ({
     listSeries: async () => [],
     findLatest: async () => [],
     findSeries: async () => [],
+    listTables: async () => [],
+    readTableRows: async () => [],
+    findConditions: async () => [],
+    findMedications: async () => [],
     appendAudit: async () => undefined,
   },
 });
@@ -120,6 +139,15 @@ export const captureOllamaTurnRequest = async (
     ).tools,
     turn.skill,
   );
+  const promptDeps = {
+    tools,
+    offeredTools,
+    mode: turn.mode,
+    skill: turn.skill,
+    uiContext: turn.uiContext ?? null,
+    agent: turn.agent ?? null,
+  };
+  const notes = await fitTwinNotes(promptDeps, turn.wearables, turn.twinNotes ?? []);
   const sent: OllamaChatBody[] = [];
   const record = async (_input: RequestInfo | URL, init?: RequestInit) => {
     sent.push(bodyOf(init));
@@ -132,16 +160,12 @@ export const captureOllamaTurnRequest = async (
   const result = runTwinTurn(
     {
       model: ollamaChatModel("measure", {
-        baseUrl: "http://127.0.0.1:11434/v1",
+        baseUrl: DEFAULT_OLLAMA_BASE_URL,
         numCtx,
         fetch: recording,
       }),
-      tools,
-      offeredTools,
-      mode: turn.mode,
-      skill: turn.skill,
-      uiContext: turn.uiContext ?? null,
-      agent: turn.agent ?? null,
+      ...promptDeps,
+      twinNotes: notes.text,
       loadAudit: async () => [],
     },
     {
@@ -172,6 +196,4 @@ export const toolTextOf = (body: OllamaChatBody): string =>
 
 /** A conservative token count of everything that precedes the question. */
 export const estimatePromptTokens = (body: OllamaChatBody): number =>
-  estimateTokens(systemTextOf(body)) +
-  estimateTokens(toolTextOf(body), JSON_CHARS_PER_TOKEN) +
-  TEMPLATE_OVERHEAD_TOKENS;
+  estimateRequestTokens(systemTextOf(body), toolTextOf(body));

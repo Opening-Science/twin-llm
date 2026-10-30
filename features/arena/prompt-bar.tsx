@@ -84,6 +84,7 @@ export const PromptBar = ({
   initialDraft = "",
   onSubmit,
   onTwin,
+  onCompact,
 }: Readonly<{
   catalog: readonly CatalogModel[] | null;
   initialModelIds: readonly string[];
@@ -104,6 +105,8 @@ export const PromptBar = ({
   ) => void;
   /** `/twin`: show the twin card. Never a turn. */
   onTwin: () => void;
+  /** `/compact`: draft a twin note of the thread (#43). Never a turn. */
+  onCompact: () => void;
 }>) => {
   const router = useRouter();
   const wearables = useWearableStatus();
@@ -139,10 +142,19 @@ export const PromptBar = ({
     setNotice(undefined);
   };
 
+  const openCompact = () => {
+    onCompact();
+    setDraft("");
+    setPicked(null);
+    setActiveIndex(0);
+    setNotice(undefined);
+  };
+
   const submit = () => {
     if (busy) return;
     routeDraft(draft, {
       openTwin,
+      openCompact,
       send: () => {
         if (!ready) return;
         onSubmit(
@@ -163,7 +175,7 @@ export const PromptBar = ({
    * another built-in opens its own menu.
    */
   const pick = (command: Command | null) => {
-    if (routePick(command, { openTwin })) return;
+    if (routePick(command, { openTwin, openCompact })) return;
     if (command?.kind === "skill") {
       setDraft(`/${command.name} `);
       setPicked(null);
