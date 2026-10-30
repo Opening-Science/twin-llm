@@ -64,9 +64,9 @@ export const loincsOf = (item: Question): readonly string[] => [
 ];
 
 const SCENARIO_RULES: Readonly<Record<string, string>> = {
-  S3: "S3: a guideline library question goes to the General Practitioner",
-  S4: "S4: a population (GBD) question goes to the General Practitioner",
-  S5: "S5: a medicine or dose decision to decline goes to the General Practitioner",
+  S3: "S3: a guideline library question goes to the General agent",
+  S4: "S4: a population (GBD) question goes to the General agent",
+  S5: "S5: a medicine or dose decision to decline goes to the General agent",
 };
 
 export const routerLabel = (item: Question): RouterLabel => {

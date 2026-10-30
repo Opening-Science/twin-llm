@@ -98,3 +98,9 @@ __pycache__/
 
 # Motion clips made from videos (python/motion); third-party footage stays local
 data/motion/
+
+# Heart and brain study output (scripts/heart-brain/run.ts)
+/research-out/
+
+# Rhythm benchmark output (bun run rhythm-bench -- --out .rhythm-bench/<run>); summaries go in docs/research
+/.rhythm-bench/

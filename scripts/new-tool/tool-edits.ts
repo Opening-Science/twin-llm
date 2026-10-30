@@ -94,6 +94,73 @@ const insertBeforeWithin =
     return source.slice(0, at) + text + source.slice(at);
   };
 
+/** Index just past the string, template or comment that starts at `at`, or `at`. */
+const skipNonCode = (source: string, at: number): number => {
+  const char = source[at];
+  const next = source[at + 1];
+  if (char === "/" && next === "/") {
+    const end = source.indexOf("\n", at);
+    return end === -1 ? source.length : end;
+  }
+  if (char === "/" && next === "*") {
+    const end = source.indexOf("*/", at + 2);
+    return end === -1 ? source.length : end + 2;
+  }
+  if (char === '"' || char === "'" || char === "`") {
+    let i = at + 1;
+    while (i < source.length && source[i] !== char) i += source[i] === "\\" ? 2 : 1;
+    return i + 1;
+  }
+  return at;
+};
+
+/** Index of the `}` that closes the `{` at `open`, skipping strings and comments. */
+const closingBrace = (path: string, source: string, open: number): number => {
+  let depth = 0;
+  let i = open;
+  while (i < source.length) {
+    const skipped = skipNonCode(source, i);
+    if (skipped !== i) {
+      i = skipped;
+      continue;
+    }
+    if (source[i] === "{") depth += 1;
+    if (source[i] === "}") {
+      depth -= 1;
+      if (depth === 0) return i;
+    }
+    i += 1;
+  }
+  throw new ScaffoldError(`${path}: unbalanced braces after offset ${open}`);
+};
+
+/**
+ * Inserts `text` as the last entry of the object literal that the arrow
+ * function declared by `declaration` returns (`= (...) => ({ ... })`). The
+ * function is found by name and its object by matching braces, so another
+ * function added after it, or a reordering of the file, cannot pull the
+ * entry into the wrong object.
+ */
+export const insertLastEntryOf =
+  (declaration: string, text: string) =>
+  (path: string, source: string): string => {
+    const start = indexOfAnchor(path, source, declaration, "only");
+    const arrow = source.indexOf("=> ({", start);
+    if (arrow === -1) {
+      throw new ScaffoldError(
+        `${path}: ${JSON.stringify(declaration)} does not return an object literal`,
+      );
+    }
+    const close = closingBrace(path, source, arrow + "=> (".length);
+    const lineStart = source.lastIndexOf("\n", close) + 1;
+    if (source.slice(lineStart, close).trim() !== "") {
+      throw new ScaffoldError(
+        `${path}: the object ${JSON.stringify(declaration)} returns must close on its own line`,
+      );
+    }
+    return source.slice(0, lineStart) + text + source.slice(lineStart);
+  };
+
 /**
  * Adds `name` to the sorted list of quoted names that follows `after`, one
  * per line up to the next `]`, keeping the order `.sort()` gives.
@@ -168,7 +235,8 @@ export const fileEdits = (names: ToolNames): readonly FileEdit[] => [
     steps: [
       insertBefore('} from "./schemas";', `  ${names.input},\n`),
       insertBefore('} from "./tools";', `  ${names.run},\n`),
-      insertBefore("});", aiToolEntry(names), "last"),
+      // Chat's query tools, not the imported-data tools after them (#256).
+      insertLastEntryOf("export const createQueryTools = (", aiToolEntry(names)),
     ],
   },
   {
@@ -230,7 +298,7 @@ export const fileEdits = (names: ToolNames): readonly FileEdit[] => [
         rowCountCase(names),
       ),
       insertBefore(
-        '      case "latest_by_loinc":\n        return tools.runLatestByLoinc',
+        "    // These two read the database directly",
         answerKeyRunCase(names),
       ),
     ],

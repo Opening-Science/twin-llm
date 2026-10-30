@@ -22,6 +22,29 @@ export const META_SCHEMA_VERSION = "twin-llm.eval.meta.v1";
 export const QUESTIONS_PATH = "evaluation/questions.v1.json";
 export const ANSWER_KEY_PATH = "evaluation/answer-key.v1.json";
 
+/**
+ * The question sets a run can take (`bun run eval -- --set s7`), each with its
+ * own key and questions sha256. `v1` is the C2 set; `s7` the rhythm and
+ * heart-brain items (#251), kept apart so the v1 hash never changes.
+ */
+export const QUESTION_SETS = {
+  v1: { questions: QUESTIONS_PATH, key: ANSWER_KEY_PATH },
+  s7: {
+    questions: "evaluation/questions.s7.v1.json",
+    key: "evaluation/answer-key.s7.v1.json",
+  },
+} as const;
+
+export type QuestionSetId = keyof typeof QUESTION_SETS;
+
+export const QUESTION_SET_IDS = Object.keys(QUESTION_SETS) as [
+  QuestionSetId,
+  ...QuestionSetId[],
+];
+
+export const isQuestionSetId = (value: string): value is QuestionSetId =>
+  (QUESTION_SET_IDS as readonly string[]).includes(value);
+
 export const RESULT_ERRORS = [
   "CACHE_MISS",
   "CACHE_CORRUPT",
@@ -109,6 +132,8 @@ export const metaSchema = z
     replay: z.boolean(),
     date: z.iso.date(),
     git_sha: z.string(),
+    /** Which question set ran; runs written before #251 have none and ran `v1`. */
+    question_set: z.enum(QUESTION_SET_IDS).optional(),
     questions_sha256: z.string(),
     answer_key_sha256: z.string(),
     cohort_id: z.string(),

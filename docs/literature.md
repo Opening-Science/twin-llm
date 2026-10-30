@@ -85,14 +85,25 @@ Every specialty can draw on the PMC Open Access Subset through the fetch tool,
 with the per-article rules above. The MeSH query each one uses is in
 `packages/literature/specialties.ts`.
 
-| Specialty (id)              | PMC query (MeSH, open access only)                                    | Other sources                                                                                   | Training-safe set                                        |
-| --------------------------- | --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| General Practitioner (`gp`) | primary health care, general practice                                 | MedlinePlus NLM-authored health topics; StatPearls (NC-ND, quote only); WHO (NC-SA, quote only) | PMC CC0/CC BY, MedlinePlus NLM-authored                  |
-| Diet (`diet`)               | diet, nutritional physiological phenomena                             | FoodData Central (CC0); Dietary Guidelines text (public domain); Nutrition for Nurses (NC-SA)   | PMC CC0/CC BY, FoodData Central, Dietary Guidelines text |
-| Anatomy (`anatomy`)         | anatomy                                                               | OpenStax A&P 1st edition (CC BY); 2e is NC-SA                                                   | PMC CC0/CC BY, OpenStax A&P 1st edition                  |
-| Sleep (`sleep`)             | sleep, sleep wake disorders                                           | MedlinePlus NLM-authored sleep topics                                                           | PMC CC0/CC BY, MedlinePlus NLM-authored                  |
-| Trainer (`trainer`)         | exercise, sports, physical fitness                                    | MedlinePlus NLM-authored exercise topics                                                        | PMC CC0/CC BY, MedlinePlus NLM-authored                  |
-| Genetics (`genetics`)       | genetics medical, pharmacogenetics, genetic predisposition to disease | MedlinePlus Genetics (public domain)                                                            | PMC CC0/CC BY, MedlinePlus Genetics                      |
+| Specialty (id)            | PMC query (MeSH, open access only)                                                                          | Other sources                                                                                   | Training-safe set                                        |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| General (`gp`)            | primary health care, general practice                                                                       | MedlinePlus NLM-authored health topics; StatPearls (NC-ND, quote only); WHO (NC-SA, quote only) | PMC CC0/CC BY, MedlinePlus NLM-authored                  |
+| Diet (`diet`)             | diet, nutritional physiological phenomena                                                                   | FoodData Central (CC0); Dietary Guidelines text (public domain); Nutrition for Nurses (NC-SA)   | PMC CC0/CC BY, FoodData Central, Dietary Guidelines text |
+| Anatomy (`anatomy`)       | anatomy                                                                                                     | OpenStax A&P 1st edition (CC BY); 2e is NC-SA                                                   | PMC CC0/CC BY, OpenStax A&P 1st edition                  |
+| Sleep (`sleep`)           | sleep, sleep wake disorders                                                                                 | MedlinePlus NLM-authored sleep topics                                                           | PMC CC0/CC BY, MedlinePlus NLM-authored                  |
+| Trainer (`trainer`)       | exercise, sports, physical fitness                                                                          | MedlinePlus NLM-authored exercise topics                                                        | PMC CC0/CC BY, MedlinePlus NLM-authored                  |
+| Genetics (`genetics`)     | genetics medical, pharmacogenetics, genetic predisposition to disease                                       | MedlinePlus Genetics (public domain)                                                            | PMC CC0/CC BY, MedlinePlus Genetics                      |
+| Cardiology (`cardiology`) | arrhythmias cardiac, atrial fibrillation, heart rate, photoplethysmography with wearable electronic devices | MedlinePlus NLM-authored heart topics                                                           | PMC CC0/CC BY, MedlinePlus NLM-authored                  |
+| Neurology (`neurology`)   | stroke, cerebrovascular disorders, autonomic nervous system, cognitive dysfunction, sleep with cognition    | MedlinePlus NLM-authored brain topics                                                           | PMC CC0/CC BY, MedlinePlus NLM-authored                  |
+
+Cardiology and neurology (#253) are read by the Heart rhythm (research) and Brain
+(research) agents; their ids differ from the agent ids, so `specialtyForAgent` maps
+`rhythm` to `cardiology` and `brain` to `neurology`. Cardiology covers heart rhythm,
+atrial fibrillation, heart rate variability and wearable PPG rhythm studies (MeSH "Heart
+Rate" includes HRV). Neurology covers stroke, cerebrovascular disease, the autonomic
+nervous system and cognition, and sleep only together with cognition, since sleep has its
+own specialty; the heart-brain axis is reached through stroke and the autonomic nervous
+system rather than a MeSH term of its own.
 
 What may be stored, quoted and trained on is decided per article by its
 licence, not per specialty. Only PMC is wired into the fetch today; the other
@@ -160,7 +171,7 @@ tables like the knowledge notes do (`docs/knowledge.md`), with local
 ## Search (#236)
 
 On an agent's turn `knowledge_search` reads the OpenTwin notes plus that agent's
-`literature:<specialty>` source; the General Practitioner reads every specialty. A plain
+`literature:<specialty>` source; the General agent reads every specialty. A plain
 model reads the notes alone, as before. Every literature hit gives the article title, PMC
 id and licence, an attribution line ending "via PubMed Central (NLM)", and a quoting
 rule: word for word only, with the attribution; for CC BY-ND and CC BY-NC-ND, never
@@ -185,6 +196,23 @@ The local database had no OpenTwin notes ingested, so this run says nothing abou
 notes and literature rank against each other. With five articles a specialty, the nearest
 passages are often off topic (the first anatomy hit was from a neuroblastoma imaging paper);
 the counts show the filter works, not that the corpus is useful yet.
+
+### Cardiology and neurology (2026-10-30)
+
+`literature:fetch -- --specialty <id> --limit 15` for cardiology and neurology stored 15
+articles each (45 searched each). To prefer CC BY, the three NonCommercial cardiology
+articles (2 CC BY-NC-ND, 1 CC BY-NC) and the four CC BY-NC-ND neurology articles were
+removed and the fetch run again with `--allow cc0,cc-by`, then each specialty was cut back
+to the first 15 by fetch time. All 30 are CC BY, so all may be quoted with attribution and
+count as training-safe. The ingest wrote 15 documents and 485 chunks for cardiology and 15
+documents and 516 chunks for neurology.
+
+With 15 articles a specialty the corpus is thin and partly off topic: the cardiology set
+includes ablation and anticoagulation trials next to HRV and PPG validation studies, and
+the neurology set includes thrombectomy, aneurysm and multiple sclerosis papers next to
+the cognition and autonomic ones. Two articles (an edoxaban
+study in atrial fibrillation and a study of cardiac autonomic activity) are in both. A
+larger `--limit` or a narrower `--query` is the next step.
 
 ## Sources
 

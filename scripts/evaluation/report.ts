@@ -12,7 +12,7 @@ import { formatNumber } from "../../infrastructure/format-measure";
 import { sha256Hex } from "../../packages/audit/hash";
 
 import type { RunMeta } from "./eval-results";
-import { SCENARIOS, type Scenario } from "./question-set";
+import { SCENARIOS, type Scenario, V1_SCENARIOS } from "./question-set";
 import {
   type LatencyFigures,
   type ModelKey,
@@ -50,6 +50,20 @@ const table = (header: readonly string[], rows: readonly (readonly string[])[]):
     ...rows.map((row) => `| ${row.join(" | ")} |`),
   ].join("\n");
 
+const isEmpty = (tally: Tally): boolean =>
+  tally.pass + tally.fail + tally.human + tally.na + tally.error === 0;
+
+/**
+ * The scenario columns: the v1 scenarios always, so a v1 report keeps its
+ * shape, and a later one (S7) only when the run scored a line in it.
+ */
+export const reportScenarios = (scores: ModelScores): Scenario[] =>
+  SCENARIOS.filter(
+    (scenario) =>
+      (V1_SCENARIOS as readonly Scenario[]).includes(scenario) ||
+      Object.values(scores.tallies).some((byScenario) => !isEmpty(byScenario[scenario])),
+  );
+
 const criterionAll = (scores: ModelScores, criterion: ScoredCriterion): Tally =>
   sumTallies(SCENARIOS.map((scenario: Scenario) => scores.tallies[criterion][scenario]));
 
@@ -78,15 +92,17 @@ const overview = (all: readonly ModelScores[]): string =>
     }),
   );
 
-const scoreTable = (scores: ModelScores): string =>
-  table(
-    ["Criterion", ...SCENARIOS, "All"],
+const scoreTable = (scores: ModelScores): string => {
+  const scenarios = reportScenarios(scores);
+  return table(
+    ["Criterion", ...scenarios, "All"],
     SCORED_CRITERIA.map((criterion) => [
       criterion,
-      ...SCENARIOS.map((scenario) => scoreCell(scores.tallies[criterion][scenario])),
+      ...scenarios.map((scenario) => scoreCell(scores.tallies[criterion][scenario])),
       scoreCell(criterionAll(scores, criterion)),
     ]),
   );
+};
 
 const notScoredTable = (scores: ModelScores): string =>
   table(

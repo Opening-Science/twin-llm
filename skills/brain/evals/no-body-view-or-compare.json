@@ -1,0 +1,22 @@
+{
+  "question": "Show the brain on the body for subject 9661a432-4630-2cd9-142c-386845fae837 and compare two windows.",
+  "script": [
+    {
+      "tool": "subject_window",
+      "input": {
+        "subject_ref": "9661a432-4630-2cd9-142c-386845fae837"
+      }
+    },
+    {
+      "view": "twin.body"
+    },
+    {
+      "view": "chart.compare"
+    }
+  ],
+  "expect": {
+    "calls": ["subject_window"],
+    "views": [],
+    "refusals": ["view-not-allowed"]
+  }
+}

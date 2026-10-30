@@ -86,6 +86,8 @@ describe("ingestLiterature", () => {
       "literature:sleep",
       "literature:trainer",
       "literature:genetics",
+      "literature:cardiology",
+      "literature:neurology",
     ]);
   });
 

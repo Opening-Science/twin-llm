@@ -108,6 +108,25 @@ describe("skills/ in this repository", () => {
       .results.filter((result) => result.skill === name)
       .map((result) => result.caseId);
 
+  test("/rhythm and /brain describe data and literature and never say what a person has", () => {
+    expect(bodyOf("rhythm")).toContain(
+      "Heart rhythm (research) describes recorded data and published literature and does not say what rhythm or condition a person has. If this concerns you, talk to a clinician.",
+    );
+    expect(bodyOf("brain")).toContain(
+      "Brain (research) describes recorded data and published literature and does not say what condition a person has. If this concerns you, talk to a clinician.",
+    );
+    ["rhythm", "brain"].forEach((name) => {
+      const body = bodyOf(name);
+      expect(body).toContain(
+        "Quote a passage only word for word, with its attribution line.",
+      );
+      expect(body).toContain('Never write "you have", "normal", "abnormal"');
+      expect(casesOf(name)).toEqual(
+        expect.arrayContaining(["diagnosis-refused", "hosted-provider-refused"]),
+      );
+    });
+  });
+
   test("/nutrition stays descriptive and refuses diets, meal plans and doses", () => {
     const body = bodyOf("nutrition");
     [
@@ -249,7 +268,7 @@ describe("validateSkill", () => {
     ].join("\n");
     const result = validateSkill(files(front, [okEval]), SUBJECTS);
     expect(result.ok ? [] : result.errors).toEqual([
-      'skills/demo/SKILL.md: tools.1: unknown tool "made_up"; known tools: guideline_search, knowledge_search, list_subjects, subject_window, observations_for_subject, latest_by_loinc, summary_stats, conditions_timeline, medications_timeline, trend, baseline_deviation, coverage, compare_windows, range_position, convert_unit, cohort_position, values_around_event, sleep_summary, hrv_trend, resting_hr_trend, training_load, cross_source_compare, gbd_population, genome_report, dna_ask, imported_datasets, imported_latest, imported_trend',
+      'skills/demo/SKILL.md: tools.1: unknown tool "made_up"; known tools: guideline_search, knowledge_search, list_subjects, subject_window, observations_for_subject, latest_by_loinc, summary_stats, conditions_timeline, medications_timeline, trend, baseline_deviation, coverage, compare_windows, range_position, convert_unit, cohort_position, rhythm_irregularity, values_around_event, sleep_summary, hrv_trend, resting_hr_trend, training_load, cross_source_compare, gbd_population, genome_report, dna_ask, imported_datasets, imported_latest, imported_trend',
       'skills/demo/SKILL.md: Unrecognized key: "model"',
       'skills/demo/SKILL.md: tools.0: tool "trend" needs source "cohort-analytics" in sources',
     ]);
