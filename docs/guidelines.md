@@ -119,9 +119,17 @@ opclass `vector_cosine_ops`.
 bun --preload ./features/chat/response/preload-server-only.mjs packages/guidelines/ingest-cli.ts
 ```
 
-Writes catalogue rows for every manifest id. Open titles need
-`data/guidelines/<id>/text.txt`. Cite-only titles write metadata and zero
-chunks.
+Writes catalogue rows for every manifest id. Open titles read
+`data/guidelines/<id>/text.txt`. Cite-only titles write metadata and one
+catalogue chunk: a sentence built from the title, society, year, DOI and URL,
+and nothing from the publication, so `guideline_search` can find the title
+(#272). An open title whose `text.txt` is missing on this machine is stored the
+same way, as `cite_only`, and the CLI prints `(no local text.txt: catalogue
+only)` for it; add the text and run the ingest again to replace it with the
+full-text chunks. A catalogue hit always returns `passage: null`.
+
+`bun run eval:guidelines` runs the same ingest against the database in
+`.env.eval` (the evaluation Refresh, `docs/evaluation/question-set.md`).
 
 ## Retrieval
 

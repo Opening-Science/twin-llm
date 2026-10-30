@@ -6,6 +6,7 @@ import { join } from "node:path";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { database } from "@/infrastructure/database";
 
+import { CATALOGUE_SECTION_HEADING, catalogueChunkText } from "./catalogue-chunk";
 import { chunkGuidelineText, type GuidelineChunkDraft } from "./chunk";
 import { EMBEDDING_DIM, EMBEDDING_MODEL } from "./constants";
 import { defaultEmbedPorts, embedText, type EmbedPorts } from "./embed";
@@ -19,7 +20,8 @@ import {
 
 export type IngestPorts = {
   readonly database: () => PrismaClient;
-  readonly readText: (id: string) => Promise<string>;
+  /** The operator-extracted text, or null when this machine has none for the id. */
+  readonly readText: (id: string) => Promise<string | null>;
   readonly embedDocuments: (texts: readonly string[]) => Promise<(number[] | null)[]>;
   readonly upsertDocument: typeof upsertGuidelineDocument;
   readonly replaceChunks: typeof replaceGuidelineChunks;
@@ -29,11 +31,21 @@ export type IngestResult = {
   readonly id: string;
   readonly ingestMode: "full_text" | "cite_only";
   readonly chunks: number;
+  /** An open title whose text this machine lacks: catalogue only (#272). */
+  readonly textMissing?: true;
 };
 
-const defaultReadText = async (id: string): Promise<string> => {
+const isMissingFile = (error: unknown): boolean =>
+  error instanceof Error && "code" in error && error.code === "ENOENT";
+
+const defaultReadText = async (id: string): Promise<string | null> => {
   const root = join(process.cwd(), "data", "guidelines", id, "text.txt");
-  return readFile(root, "utf8");
+  try {
+    return await readFile(root, "utf8");
+  } catch (error) {
+    if (isMissingFile(error)) return null;
+    throw error;
+  }
 };
 
 export const defaultIngestPorts = (embedPorts?: EmbedPorts): IngestPorts => ({
@@ -72,18 +84,60 @@ const toStored = (
     ];
   });
 
+/** One chunk holding the catalogue fields only, so `guideline_search` can find the title. */
+const catalogueChunks = async (
+  entry: GuidelineManifestEntry,
+  ports: IngestPorts,
+): Promise<StoredChunk[]> => {
+  const text = catalogueChunkText(entry);
+  const [embedding] = await ports.embedDocuments([text]);
+  if (!embedding || embedding.length !== EMBEDDING_DIM) return [];
+  return [
+    {
+      id: `${entry.id}-catalogue`,
+      sectionHeading: CATALOGUE_SECTION_HEADING,
+      recommendationId: null,
+      recClass: null,
+      evidenceLevel: null,
+      page: null,
+      text,
+      embedding,
+    },
+  ];
+};
+
+const ingestCatalogueOnly = async (
+  entry: GuidelineManifestEntry,
+  ports: IngestPorts,
+  textMissing: boolean,
+): Promise<IngestResult> => {
+  const db = ports.database();
+  await ports.upsertDocument(db, { ...entry, ingestMode: "cite_only" });
+  const chunks = await catalogueChunks(entry, ports);
+  await ports.replaceChunks(db, entry.id, chunks);
+  return {
+    id: entry.id,
+    ingestMode: "cite_only",
+    chunks: chunks.length,
+    ...(textMissing ? { textMissing: true as const } : {}),
+  };
+};
+
+/**
+ * A cite-only title, and an open title whose text is not on this machine, is
+ * stored as `cite_only` with one catalogue chunk: searchable by its title,
+ * never with a passage.
+ */
 export const ingestGuideline = async (
   entry: GuidelineManifestEntry,
   ports: IngestPorts,
 ): Promise<IngestResult> => {
   assertIngestAllowed(entry);
+  if (entry.ingestMode === "cite_only") return ingestCatalogueOnly(entry, ports, false);
+  const source = await ports.readText(entry.id);
+  if (source === null) return ingestCatalogueOnly(entry, ports, true);
   const db = ports.database();
   await ports.upsertDocument(db, entry);
-  if (entry.ingestMode === "cite_only") {
-    await ports.replaceChunks(db, entry.id, []);
-    return { id: entry.id, ingestMode: "cite_only", chunks: 0 };
-  }
-  const source = await ports.readText(entry.id);
   const drafts = chunkGuidelineText(source);
   const vectors = await ports.embedDocuments(drafts.map((draft) => draft.text));
   const chunks = toStored(drafts, vectors).map((chunk, index) => ({

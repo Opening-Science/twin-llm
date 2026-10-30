@@ -3,7 +3,7 @@ import { describe, expect, mock, test } from "bun:test";
 mock.module("server-only", () => ({}));
 
 import { CHAT_RESPONSE_DOCUMENT } from "@/features/chat/response-document";
-import { buildTwinSystemPrompt } from "@/features/chat/twin-system-prompt";
+import { buildTwinSystemPrompt, DECLINE_RULE } from "@/features/chat/twin-system-prompt";
 import {
   classifyCompletion,
   headingOrder,
@@ -64,9 +64,9 @@ describe("guardrail system contract", () => {
       expect(headingIdx.every((idx) => idx >= 0)).toBe(true);
       expect(headingIdx).toEqual([...headingIdx].sort((a, b) => a - b));
       expect(prompt).toContain("- [exact.key.from.list]");
-      expect(prompt).toContain(
-        "If asked to diagnose, to pick a dose, or to start, stop or change a medicine, start your reply with REFUSE: and one plain sentence instead of the headings below.",
-      );
+      expect(prompt).toContain(DECLINE_RULE);
+      expect(DECLINE_RULE).toContain("whether a person has a condition");
+      expect(DECLINE_RULE).toContain("start your reply with REFUSE:");
       expect(CHAT_RESPONSE_DOCUMENT).toEqual({
         intended_use: "research_hypothesis_generation_n_of_1",
         not_for_diagnostic_use: true,

@@ -151,10 +151,26 @@ bun --env-file=.env.eval --preload ./features/chat/response/preload-server-only.
 bun run wearables:generate -- --in .synthea/fhir --allow-eval-cohort --generator-version 2
 bun --env-file=.env.eval --preload ./features/chat/response/preload-server-only.mjs \
   scripts/warehouse/ingest.ts .synthea/wearables --cohort synthea-v4-seed42
+# the guideline catalogue (S3, #272): every title as a catalogue chunk, full text
+# for the open titles whose data/guidelines/<id>/text.txt exists (docs/guidelines.md)
+bun run eval:guidelines
 bun run eval:spread-subjects     # after a cohort change: subjects by the rule below
 bun run eval:answer-key          # uses --env-file=.env.eval
 bun run eval:answer-key:live     # RUN_LIVE=1 drift check, same env
 ```
+
+S3 needs the guideline step: without it every `guideline_search` returns
+nothing and every S3 item abstains. The ingest needs Ollama with
+`nomic-embed-text` on `OLLAMA_BASE_URL`. Only the open (CC) titles may be
+loaded as full text, and only from text an operator extracted on this machine;
+the stroke rehabilitation and the four ESC titles are catalogue only by licence.
+Q-S3-02 and Q-S3-06 to Q-S3-09 ask only for catalogue fields, so the catalogue
+answers them in full. Q-S3-01, Q-S3-03, Q-S3-04, Q-S3-05 and Q-S3-10 ask what
+an open title says; when the ingest printed "catalogue only" for that title,
+the run had no passage to quote, and the run notes list those items as
+`GUIDELINE_TEXT_NOT_LOADED` rather than as model failures. The question file
+does not carry this code, so `questions_sha256` is unchanged. Q-S3-11 and
+Q-S3-12 need only the catalogue.
 
 The wearable series is for the throwaway answer-key and eval databases only, never
 the dev database (`wearables:generate` refuses the evaluation cohort without
