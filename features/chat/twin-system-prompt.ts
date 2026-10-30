@@ -260,6 +260,11 @@ export const buildTwinSystemPrompt = (params: {
   readonly uiContext?: UiContext | null;
   /** The agent this turn answers as (#218): one line with its name and role. */
   readonly agent?: Readonly<{ name: string; role: string }> | null;
+  /**
+   * The decline line; left out, `DECLINE_RULE`. Only the eval harness passes
+   * another, to compare wordings (#274).
+   */
+  readonly declineRule?: string;
 }): string => {
   const hasAny = Boolean(
     params.oura || params.whoop || params.googleHealth || params.vitronic,
@@ -323,7 +328,7 @@ export const buildTwinSystemPrompt = (params: {
     "You are TwinLLM, a research assistant for personalized-medicine questions.",
     ...agentLine(params.agent ?? null),
     "You are NOT a doctor. Do not diagnose or prescribe. Include uncertainty clearly.",
-    DECLINE_RULE,
+    params.declineRule ?? DECLINE_RULE,
     "Always structure your reply with these exact markdown headings, in order:",
     "",
     "## Reasoning",

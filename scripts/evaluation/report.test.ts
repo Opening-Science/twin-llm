@@ -4,7 +4,14 @@ import { join } from "node:path";
 
 import { questionsSha256 } from "./build-answer-key";
 import { type ResultLine, type RunMeta } from "./eval-results";
-import { callFigures, csvCell, noToolFigures, REVIEW_COLUMNS, shareCell } from "./report";
+import {
+  callFigures,
+  csvCell,
+  declineWordingRows,
+  noToolFigures,
+  REVIEW_COLUMNS,
+  shareCell,
+} from "./report";
 import { runReport, type ReportDeps } from "./run-report";
 import {
   document,
@@ -586,5 +593,17 @@ describe("eval:report on an agent run (#279)", () => {
     expect(JSON.parse(files.get(`${DIR}/review-key.json`) ?? "").labels).toEqual({
       "Model A": "ollama:agent:rhythm",
     });
+  });
+});
+
+describe("declineWordingRows (#274)", () => {
+  test("no row for the chat route's line, one row naming the wording otherwise", () => {
+    expect(declineWordingRows(META)).toEqual([]);
+    expect(
+      declineWordingRows({
+        ...META,
+        decline_wording: { id: "w3", sha256: "ab".repeat(32) },
+      }),
+    ).toEqual([["Decline wording", `w3 (sha256 ${"ab".repeat(6)})`]]);
   });
 });

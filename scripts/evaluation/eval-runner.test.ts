@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { MockLanguageModelV4 } from "ai/test";
 
 import { createChatTools, createTurnTools } from "../../features/chat/chat-tools";
+import { DECLINE_RULE } from "../../features/chat/twin-system-prompt";
 import { type CatalogModel, withAgents } from "../../infrastructure/model-catalog";
 import type { TurnSkill } from "../../infrastructure/skill-gate";
 import type { ResponseToolCall } from "../../infrastructure/response-document/document-v1";
@@ -12,6 +13,7 @@ import type { QueryToolPorts } from "../../packages/query-tools/ports";
 import type { SessionScope } from "../../packages/query-tools/scope";
 
 import { questionsSha256 } from "./build-answer-key";
+import { DECLINE_WORDINGS, declineWordingMeta } from "./decline-wordings";
 import { metaSchema, resultLineSchema, TIMING_FIELDS } from "./eval-results";
 import {
   type EvalDeps,
@@ -444,6 +446,7 @@ describe("parseEvalArgs", () => {
       replay: true,
       runId: "r1",
       timeoutMs: 60_000,
+      declineWording: null,
     });
   });
 
@@ -1138,5 +1141,65 @@ describe("agent runs (#279)", () => {
     expect((await run("agent:rhythm", { findSkill: () => null })).err).toBe(
       "AGENT_NOT_OFFERED: agent:rhythm's skill /rhythm is not one the server offers\n",
     );
+  });
+});
+
+describe("--decline-wording (#274)", () => {
+  const systemOf = (model: MockLanguageModelV4): string => {
+    const system = model.doStreamCalls[0]?.prompt[0];
+    return system?.role === "system" ? system.content : "";
+  };
+
+  test("parses a known id and refuses any other", () => {
+    expect(parseEvalArgs([...MODELS, "--decline-wording", "w2"]).declineWording).toBe(
+      "w2",
+    );
+    expect(parseEvalArgs(MODELS).declineWording).toBeNull();
+    expect(() => parseEvalArgs([...MODELS, "--decline-wording", "w9"])).toThrow(
+      "USAGE: --decline-wording takes one of w1, w2, w3",
+    );
+  });
+
+  test("puts the chosen line in the prompt and records it in meta.json", async () => {
+    const { deps, files, model } = harness();
+    expect(
+      await runEval(
+        [...MODELS, "--items", "Q-S5-01", "--run-id", "w2", "--decline-wording", "w2"],
+        capture().io,
+        deps,
+      ),
+    ).toBe(0);
+    const system = systemOf(model);
+    expect(system).toContain(DECLINE_WORDINGS.w2);
+    expect(system).not.toContain(DECLINE_RULE);
+    const meta = metaSchema.parse(JSON.parse(files.get("w2/meta.json") ?? ""));
+    expect(meta.decline_wording).toEqual(declineWordingMeta("w2"));
+  });
+
+  test("left out, the chat route's line runs and meta.json has no wording", async () => {
+    const { deps, files, model } = harness();
+    await runEval(
+      [...MODELS, "--items", "Q-S5-01", "--run-id", "w0"],
+      capture().io,
+      deps,
+    );
+    expect(systemOf(model)).toContain(DECLINE_RULE);
+    const meta = metaSchema.parse(JSON.parse(files.get("w0/meta.json") ?? ""));
+    expect(meta.decline_wording).toBeUndefined();
+  });
+
+  test("two wordings never share a cache entry", async () => {
+    const cache = memoryCache();
+    await runEval(
+      [...MODELS, "--items", "Q-S5-01", "--run-id", "a", "--decline-wording", "w1"],
+      capture().io,
+      harness({}, { cache: cache.store }).deps,
+    );
+    await runEval(
+      [...MODELS, "--items", "Q-S5-01", "--run-id", "b", "--decline-wording", "w3"],
+      capture().io,
+      harness({}, { cache: cache.store }).deps,
+    );
+    expect(cache.entries.size).toBe(2);
   });
 });

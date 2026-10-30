@@ -18,15 +18,16 @@ bun run eval:report -- 2026-10-21-qwen3-s5 --quantisation Q4_K_M
 bun run eval:cohort-codes -- --in .synthea   # after a cohort change only
 ```
 
-| Flag                                                    | Meaning                                                        |
-| ------------------------------------------------------- | -------------------------------------------------------------- |
-| `--models provider:id[,…]`                              | Required. Every provider must be `LLM_PROVIDER` in `.env.eval` |
-| `--models agent:<id>`                                   | An agent ([below](#agents-279)) on `LLM_PROVIDER`              |
-| `--set v1` / `s7` / `s7b` / `s7h`                       | Question set and key; default `v1`; `s7h` is held out (#283)   |
-| `--items Q-S1-01,…` / `--scenario S1` / `--latency-set` | One selection at most; none means all 130 items                |
-| `--replay`                                              | Cache only; never calls a model                                |
-| `--run-id <id>`                                         | Default `<date>-<provider>-<time>`; an existing run is refused |
-| `--timeout-s <n>`                                       | Per item, default 300                                          |
+| Flag                                                    | Meaning                                                          |
+| ------------------------------------------------------- | ---------------------------------------------------------------- |
+| `--models provider:id[,…]`                              | Required. Every provider must be `LLM_PROVIDER` in `.env.eval`   |
+| `--models agent:<id>`                                   | An agent ([below](#agents-279)) on `LLM_PROVIDER`                |
+| `--set v1` / `s7` / `s7b` / `s7h`                       | Question set and key; default `v1`; `s7h` is held out (#283)     |
+| `--items Q-S1-01,…` / `--scenario S1` / `--latency-set` | One selection at most; none means all 130 items                  |
+| `--replay`                                              | Cache only; never calls a model                                  |
+| `--run-id <id>`                                         | Default `<date>-<provider>-<time>`; an existing run is refused   |
+| `--timeout-s <n>`                                       | Per item, default 300                                            |
+| `--decline-wording w1` / `w2` / `w3`                    | Decline line for a wording comparison (#274); default the chat's |
 
 `bun run eval` refuses unless `DATA_MODE=synthetic`, stops when the questions'
 sha256 is not the key's `questions_sha256`, and checks every model id against
@@ -68,6 +69,14 @@ blinded. The cache key names the base model, and the agent's prompt (role
 line, skill, tools) is part of the key, so an agent run and a run of its base
 model never share an entry. A replay of an agent run reads the catalog once to
 resolve the agent, and calls no model.
+
+`--decline-wording` puts one of the wordings in
+`scripts/evaluation/decline-wordings.ts` in place of the chat route's decline
+line (`DECLINE_RULE`, which is `w1`) for that run only; the chat route is
+unchanged. `meta.json` records `decline_wording` (`id` and the sha256 of the
+exact text) and the report names it in the run table. The line is part of the
+prompt and so of the cache key: two wordings never share an entry. A run
+without the flag has no `decline_wording` and used the chat's line.
 
 `meta.json` records `question_set` (a run before #251 has none and ran `v1`),
 and `eval:report` reads that set's questions and key. The report's score table

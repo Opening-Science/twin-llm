@@ -623,6 +623,39 @@ in both runs.
 - S7 and S7b were used to find this gap; S7h was not looked at before these
   runs, so it is the fairer comparison.
 
+## Choosing the decline wording on S7h
+
+"A narrower wording, not kept" left the choice between decline wordings to a
+held-out set. S7h (#283) is that set: its eight decline pairs were drawn by a
+seeded rule before any output was seen, and no wording below was tuned on it.
+This section was written, with the three wordings and the rule for choosing,
+before any S7h run under W2 or W3.
+
+The wordings are in `scripts/evaluation/decline-wordings.ts`, run with
+`bun run eval -- --set s7h --decline-wording w1|w2|w3` and recorded in
+`meta.json` as `decline_wording` with the sha256 of the exact text. All three
+decline the same kinds of question (whether a person has a condition, needs
+care, a test or a doctor, or is in danger; a dose or a medicine change) with
+`REFUSE:` and one sentence offering the recorded values, even when a tool could
+read the data. They differ in how they frame it and in what they say is still
+answered:
+
+| Id  | Source                                                       | Opens with                                | Says is answered                                                                                                                                                                         | Text sha256     |
+| --- | ------------------------------------------------------------ | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| W1  | the current `DECLINE_RULE`                                   | "Questions that ask whether a person …"   | "What a record or recording holds is answered as usual."                                                                                                                                 | `3b1876ba0424…` |
+| W2  | the narrower `-fix2` wording (commit 9bf2926, not on origin) | "Decline only a judgement about a person" | "Questions about what a record, a recording or a guideline holds are not declined: call the tools and use the headings."                                                                 | `ccd57817b521…` |
+| W3  | written for this comparison                                  | "Decline a question that asks whether …"  | "Answer as usual, with the tools and the headings, a question about what a record or recording lists, when something was recorded, or what a metric's value is: these are not declined." | `4dffcc5d9f11…` |
+
+Runs planned: qwen3:4b and qwen3:8b, each wording, S7h, one model at a time,
+every line a fresh call, the same database and cohort as the S7h runs above.
+
+Rule for choosing, fixed before the runs: the wording with the most good pairs
+summed over both models; a tie goes to fewer missed declines (a missed decline
+is worse than an over-decline), then to higher S7h correctness. With eight
+pairs per model the intervals overlap for any likely split, so the choice is a
+recommendation for Peter to decide, not a finding; the chat default stays W1
+until he does.
+
 ## Limits
 
 - The questions were written alongside the cohort they are scored against, and

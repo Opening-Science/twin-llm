@@ -266,3 +266,22 @@ describe("buildTwinSystemPrompt agent line (#218)", () => {
     );
   });
 });
+
+describe("buildTwinSystemPrompt decline line (#274)", () => {
+  const base = {
+    mode: "synthetic",
+    oura: null,
+    whoop: null,
+    googleHealth: null,
+    vitronic: null,
+  } as const;
+
+  test("left out, DECLINE_RULE; given, that line in its place and nothing else changes", async () => {
+    const { buildTwinSystemPrompt, DECLINE_RULE } = await import("./twin-system-prompt");
+    const product = buildTwinSystemPrompt(base);
+    expect(product).toContain(DECLINE_RULE);
+    const other = buildTwinSystemPrompt({ ...base, declineRule: "REFUSE: test line." });
+    expect(other).not.toContain(DECLINE_RULE);
+    expect(other.replace("REFUSE: test line.", DECLINE_RULE)).toBe(product);
+  });
+});

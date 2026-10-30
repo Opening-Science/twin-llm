@@ -319,6 +319,17 @@ export const agentTitle = (name: string, entry: MetaModel | undefined): string =
     ? name
     : `${entry.agent.name}, ${name} on ${entry.agent.base_model_id}`;
 
+/** The decline wording row (#274): only when `--decline-wording` replaced the chat route's. */
+export const declineWordingRows = (meta: RunMeta): string[][] =>
+  meta.decline_wording === undefined
+    ? []
+    : [
+        [
+          "Decline wording",
+          `${meta.decline_wording.id} (sha256 ${short(meta.decline_wording.sha256)})`,
+        ],
+      ];
+
 /** One run-table row per agent: what it ran on and the versions of its rules. */
 export const agentRows = (meta: RunMeta): string[][] =>
   meta.models.flatMap(({ model_id: modelId, agent }) =>
@@ -432,6 +443,7 @@ export const renderReport = ({
         ["Sampling", meta.sampling],
         ["Platform", meta.platform],
         ...agentRows(meta),
+        ...declineWordingRows(meta),
         [
           "Cohort codes",
           cohortCodes === null

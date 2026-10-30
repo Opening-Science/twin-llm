@@ -62,6 +62,8 @@ export type TwinTurnDeps = Readonly<{
   uiContext?: UiContext | null;
   /** The agent this turn answers as (#218); its role line joins the system prompt. */
   agent?: Readonly<{ name: string; role: string }> | null;
+  /** The decline line; left out, the product's. Set only by the eval harness (#274). */
+  declineRule?: string;
   /** Audit rows for this turn's session, read after the model finishes. */
   loadAudit: (turnId: string) => Promise<readonly ResponseToolCall[]>;
 }>;
@@ -126,6 +128,7 @@ export const runTwinTurn = (
     skill: deps.skill ?? null,
     uiContext: deps.uiContext ?? null,
     agent: deps.agent ?? null,
+    declineRule: deps.declineRule,
   });
 
   return streamText({

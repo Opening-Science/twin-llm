@@ -30,6 +30,13 @@ import type {
 
 import { questionsSha256 } from "./build-answer-key";
 import {
+  DECLINE_WORDING_IDS,
+  DECLINE_WORDINGS,
+  type DeclineWordingId,
+  declineWordingMeta,
+  isDeclineWordingId,
+} from "./decline-wordings";
+import {
   type CatalogRow,
   type EvalAgent,
   isAgentProblem,
@@ -142,6 +149,8 @@ export type EvalOptions = Readonly<{
   replay: boolean;
   runId: string | null;
   timeoutMs: number;
+  /** `--decline-wording` (#274); null keeps the chat route's line. */
+  declineWording: DeclineWordingId | null;
 }>;
 
 const flagValue = (argv: readonly string[], flag: string): string | null => {
@@ -178,6 +187,7 @@ const KNOWN_FLAGS = new Set([
   "--replay",
   "--run-id",
   "--timeout-s",
+  "--decline-wording",
 ]);
 const VALUE_FLAGS = new Set([
   "--set",
@@ -186,6 +196,7 @@ const VALUE_FLAGS = new Set([
   "--scenario",
   "--run-id",
   "--timeout-s",
+  "--decline-wording",
 ]);
 
 export const parseEvalArgs = (argv: readonly string[]): EvalOptions => {
@@ -225,6 +236,13 @@ export const parseEvalArgs = (argv: readonly string[]): EvalOptions => {
   if (!Number.isInteger(timeoutS) || timeoutS <= 0) {
     throw new EvalSetupError("USAGE", "--timeout-s takes a whole number of seconds");
   }
+  const declineWording = flagValue(args, "--decline-wording");
+  if (declineWording !== null && !isDeclineWordingId(declineWording)) {
+    throw new EvalSetupError(
+      "USAGE",
+      `--decline-wording takes one of ${DECLINE_WORDING_IDS.join(", ")}`,
+    );
+  }
   return {
     set,
     models: list(models).map(parseModelSpec),
@@ -234,6 +252,7 @@ export const parseEvalArgs = (argv: readonly string[]): EvalOptions => {
     replay: args.includes("--replay"),
     runId,
     timeoutMs: timeoutS * 1000,
+    declineWording,
   };
 };
 
@@ -300,6 +319,7 @@ const runTurn = (
   question: string,
   timeoutMs: number,
   label: string,
+  declineWording: DeclineWordingId | null,
 ): Promise<TurnRun> =>
   new Promise<TurnRun>((resolve) => {
     let firstTokenAt: number | null = null;
@@ -322,6 +342,9 @@ const runTurn = (
         // As the chat route: the agent's skill (none typed) and its role line.
         skill: agent?.skill ?? null,
         agent: agent?.agent ?? null,
+        ...(declineWording === null
+          ? {}
+          : { declineRule: DECLINE_WORDINGS[declineWording] }),
         loadAudit: deps.loadAudit,
       },
       {
@@ -446,6 +469,7 @@ const runItem = async (
     agent: EvalAgent | null;
     replay: boolean;
     timeoutMs: number;
+    declineWording: DeclineWordingId | null;
   }>,
 ): Promise<ResultLine> => {
   const { runId, item, repeat, spec, resolved, agent } = input;
@@ -478,6 +502,7 @@ const runItem = async (
     item.question,
     input.timeoutMs,
     label,
+    input.declineWording,
   );
 
   const auditRows = await deps.loadAudit(scope.sessionId).then(
@@ -687,6 +712,7 @@ export const runEval = async (
                 agent: agents[index] ?? null,
                 replay: options.replay,
                 timeoutMs: options.timeoutMs,
+                declineWording: options.declineWording,
               });
           lines.push(line);
           await deps.appendResult(runId, `${JSON.stringify(line)}\n`);
@@ -718,6 +744,9 @@ export const runEval = async (
       sampling: "none set",
       platform: deps.platform,
       timeout_ms: options.timeoutMs,
+      ...(options.declineWording === null
+        ? {}
+        : { decline_wording: declineWordingMeta(options.declineWording) }),
       selection: {
         items: options.items === null ? null : [...options.items],
         scenario: options.scenario,

@@ -6,6 +6,7 @@
  *   bun run eval -- --models ollama:qwen3:4b --items Q-S1-11,Q-S5-05 --run-id smoke
  *   bun run eval -- --models ollama:qwen3:4b --latency-set --replay
  *   bun run eval -- --models agent:rhythm --set s7
+ *   bun run eval -- --models ollama:qwen3:8b --set s7h --decline-wording w2
  *
  * The package script passes `--env-file=.env.eval`, a copy of
  * `.env.synthetic.example` pointed at a throwaway database holding only
