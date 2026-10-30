@@ -1,9 +1,12 @@
 import { describe, expect, test } from "bun:test";
 
+import { unavailableCheck } from "./lab-check";
 import {
   configuredEndpoints,
+  localOnlyBase,
   type LocalOnlyEnv,
   localOnlyCheck,
+  localOnlyReport,
 } from "./local-only-check";
 
 const LOCAL: LocalOnlyEnv = {
@@ -16,6 +19,12 @@ const LOCAL: LocalOnlyEnv = {
   CLERK_SECRET_KEY: undefined,
   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: undefined,
   ARCJET_KEY: undefined,
+  OURA_CLIENT_ID: undefined,
+  OURA_CLIENT_SECRET: undefined,
+  WHOOP_CLIENT_ID: undefined,
+  WHOOP_CLIENT_SECRET: undefined,
+  GOOGLE_HEALTH_CLIENT_ID: undefined,
+  GOOGLE_HEALTH_CLIENT_SECRET: undefined,
 };
 
 describe("configuredEndpoints", () => {
@@ -51,6 +60,39 @@ describe("configuredEndpoints", () => {
       { name: "Sign-in (Clerk)", local: false },
       { name: "Request protection (Arcjet)", local: false },
     ]);
+  });
+});
+
+describe("wearable syncs", () => {
+  test("each vendor with an OAuth app set is a service off this machine", () => {
+    expect(
+      configuredEndpoints({
+        ...LOCAL,
+        OURA_CLIENT_ID: "oura-id",
+        WHOOP_CLIENT_SECRET: "whoop-secret",
+        GOOGLE_HEALTH_CLIENT_ID: "gh-id",
+      }).slice(1),
+    ).toEqual([
+      { name: "Wearable sync (Oura)", local: false },
+      { name: "Wearable sync (Whoop)", local: false },
+      { name: "Wearable sync (Google Health)", local: false },
+    ]);
+  });
+
+  test("off with only a wearable app set is not ok", () => {
+    const check = localOnlyCheck({ ...LOCAL, LOCAL_ONLY: false, OURA_CLIENT_ID: "x" });
+    expect(check.status).toBe("not-ok");
+    expect(check.summary).toBe(
+      "LOCAL_ONLY is off, and 1 service runs off this machine: Wearable sync (Oura).",
+    );
+  });
+
+  test("on with a wearable app set is not ok, since LOCAL_ONLY does not stop it", () => {
+    const check = localOnlyCheck({ ...LOCAL, WHOOP_CLIENT_ID: "x" });
+    expect(check.status).toBe("not-ok");
+    expect(check.summary).toBe(
+      "LOCAL_ONLY is on, but 1 service still runs off this machine: Wearable sync (Whoop). LOCAL_ONLY does not turn off wearable syncs.",
+    );
   });
 });
 
@@ -97,5 +139,35 @@ describe("localOnlyCheck", () => {
     );
     expect(text.includes("sk_secret")).toBe(false);
     expect(text.includes("gpu.example.org")).toBe(false);
+  });
+});
+
+describe("the command", () => {
+  test("is the lab:local-only script, also on a card that could not run", () => {
+    expect(localOnlyCheck(LOCAL).howTo).toBe("bun run lab:local-only");
+    expect(unavailableCheck(localOnlyBase).howTo).toBe(localOnlyCheck(LOCAL).howTo);
+  });
+
+  test("its report has the card's status, summary and list, never a value", () => {
+    const report = localOnlyReport(
+      localOnlyCheck({
+        ...LOCAL,
+        LOCAL_ONLY: false,
+        ARCJET_KEY: "ajkey_secret",
+        OURA_CLIENT_SECRET: "oura_secret",
+      }),
+    );
+    expect(report).toBe(
+      [
+        "Local only: Not OK",
+        "LOCAL_ONLY is off, and 2 services run off this machine: Request protection (Arcjet), Wearable sync (Oura).",
+        "  LOCAL_ONLY: off",
+        "  LLM_PROVIDER: ollama",
+        "  Chat models: Ollama: on this machine",
+        "  Request protection (Arcjet): off this machine",
+        "  Wearable sync (Oura): off this machine",
+      ].join("\n"),
+    );
+    expect(report.includes("secret")).toBe(false);
   });
 });

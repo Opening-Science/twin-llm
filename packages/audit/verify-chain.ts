@@ -50,14 +50,24 @@ const rowIsSound = (row: ChainRow, expectedPrev: string): boolean =>
     ts: row.ts.toISOString(),
   }) === row.hash;
 
+/**
+ * The index of the first row in `rows` that does not hash or does not point
+ * at the row before (`prevHash` for the first), or -1. Lets a caller walk the
+ * chain one page at a time, carrying the last hash between pages.
+ */
+export const firstBrokenIndex = (
+  rows: readonly ChainRow[],
+  prevHash: string = GENESIS_PREV_HASH,
+): number =>
+  rows.findIndex(
+    (row, index) => !rowIsSound(row, index === 0 ? prevHash : rows[index - 1].hash),
+  );
+
 /** Rows must already be in ascending `seq` order. */
 export const checkChain = (rows: readonly ChainRow[]): VerifyChainResult => {
   const total = rows.length;
   const latestHash = rows.at(-1)?.hash ?? null;
-  const brokenIndex = rows.findIndex(
-    (row, index) =>
-      !rowIsSound(row, index === 0 ? GENESIS_PREV_HASH : rows[index - 1].hash),
-  );
+  const brokenIndex = firstBrokenIndex(rows);
   return brokenIndex === -1
     ? { ok: true, brokenAtSeq: null, checked: total, total, latestHash }
     : {
