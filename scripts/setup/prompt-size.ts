@@ -21,6 +21,7 @@ import {
 } from "../../features/chat/ollama-turn-request";
 import { checkSkills, readSyntheticSubjects } from "../../features/skills/read-skills";
 import {
+  DEFAULT_OLLAMA_BASE_URL,
   DEFAULT_OLLAMA_NUM_CTX,
   ollamaApiRoot,
   promptBudgetTokens,
@@ -152,9 +153,7 @@ if (isMain) {
     argValue("--num-ctx") ?? process.env.OLLAMA_NUM_CTX ?? DEFAULT_OLLAMA_NUM_CTX,
   );
   const model = argValue("--ollama");
-  const apiRoot = ollamaApiRoot(
-    process.env.OLLAMA_BASE_URL ?? "http://127.0.0.1:11434/v1",
-  );
+  const apiRoot = ollamaApiRoot(process.env.OLLAMA_BASE_URL ?? DEFAULT_OLLAMA_BASE_URL);
   const budget = promptBudgetTokens(numCtx);
   console.log(
     `num_ctx ${numCtx}; prompt + tools may use ${budget} tokens. Estimate: 1 per digit, prose chars / 2.5, tool JSON chars / 4, plus the template. "fits" uses the exact count when there is one.`,
