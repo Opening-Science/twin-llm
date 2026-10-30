@@ -1,7 +1,13 @@
 import { describe, expect, test } from "bun:test";
 
-import { toolCard } from "./tool-cards";
-import { answerTraceState, toolStepLabel, toolStepState } from "./tool-steps";
+import { measureNameOf, toolCard } from "./tool-cards";
+import {
+  answerTraceState,
+  measureNames,
+  toolStepLabel,
+  toolStepLabels,
+  toolStepState,
+} from "./tool-steps";
 
 // Synthetic calls only.
 
@@ -17,7 +23,7 @@ describe("toolStepLabel", () => {
           window: { start: "2026-07-04", end: "2026-10-01" },
         }),
       ),
-    ).toBe("Reading resting heart rate, 4 Jul 2026 – 1 Oct 2026");
+    ).toBe("Reading resting heart rate, 4 Jul 2026 to 1 Oct 2026");
   });
 
   test("a cohort read names the measure it was given", () => {
@@ -30,7 +36,7 @@ describe("toolStepLabel", () => {
           end: "2025-12-31",
         }),
       ),
-    ).toBe("Summarising 8867-4, 1 Jan 2025 – 31 Dec 2025");
+    ).toBe("Summarising 8867-4, 1 Jan 2025 to 31 Dec 2025");
     expect(toolStepLabel(done("trend", { measure: "whoop.recovery.score" }))).toBe(
       "Fitting a trend of Whoop recovery score",
     );
@@ -54,6 +60,66 @@ describe("toolStepLabel", () => {
 
   test("an unknown tool falls back to its card title", () => {
     expect(toolStepLabel(done("lab.some_new_tool", {}))).toBe("Lab some new tool");
+  });
+});
+
+describe("measure names from the answer's own data", () => {
+  const window = { start: "2024-01-01", end: "2025-12-31" };
+  const chart = {
+    id: "view-1",
+    kind: "chart.timeseries",
+    title: "Heart rate, 1 Jan 2024 – 31 Dec 2025",
+    spec: {
+      measure: "8867-4",
+      label: "Heart rate",
+      unit: "/min",
+      subject: "synthetic-subject-1",
+      window,
+      points: [{ at: "2024-02-01", value: 63 }],
+    },
+    sourceAuditIds: ["a1"],
+  };
+  const latest = [
+    {
+      subject_ref: "synthetic-subject-1",
+      loinc: "8867-4",
+      display: "Heart rate",
+      value: 87,
+      unit_ucum: "/min",
+      effective_at: "2025-08-27T00:00:00.000Z",
+    },
+  ];
+
+  test("measureNameOf reads a chart's label or the asked code's row display", () => {
+    expect(measureNameOf({ measure: "8867-4" }, chart)).toBe("Heart rate");
+    expect(measureNameOf({ loinc: "8867-4" }, { rows: latest })).toBe("Heart rate");
+    expect(measureNameOf({ loinc: "8867-4" }, latest)).toBe("Heart rate");
+    expect(measureNameOf({ loinc: "2093-3" }, { rows: latest })).toBeNull();
+    expect(measureNameOf({ measure: "8867-4" }, { n: 25, mean: 78.08 })).toBeNull();
+  });
+
+  test("a code named by one call names it in every step, code in brackets", () => {
+    const cards = [
+      done("show_view", { measure: "8867-4", window }, chart),
+      done("latest_by_loinc", { loinc: "8867-4" }, { rows: latest }),
+      done("summary_stats", { measure: "8867-4", ...window }, { n: 25, mean: 78.08 }),
+    ];
+    expect(measureNames(cards)).toEqual(new Map([["8867-4", "Heart rate"]]));
+    expect(toolStepLabels(cards)).toEqual([
+      "Drawing heart rate (8867-4), 1 Jan 2024 to 31 Dec 2025",
+      "Reading the latest heart rate (8867-4)",
+      "Summarising heart rate (8867-4), 1 Jan 2024 to 31 Dec 2025",
+    ]);
+  });
+
+  test("an acronym keeps its case; a code nobody named stands alone", () => {
+    const named = done("trend", { measure: "4548-4" }, [
+      { loinc: "4548-4", display: "HbA1c" },
+    ]);
+    expect(toolStepLabel(named)).toBe("Fitting a trend of HbA1c (4548-4)");
+    expect(toolStepLabels([done("trend", { measure: "2093-3" }, { n: 3 })])).toEqual([
+      "Fitting a trend of 2093-3",
+    ]);
   });
 });
 

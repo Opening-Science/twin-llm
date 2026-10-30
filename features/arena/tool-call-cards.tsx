@@ -10,7 +10,7 @@ import { StepTrace } from "@/infrastructure/ui-kit/step-trace";
 import type { AnswerStatus, ToolActivity } from "./conversation";
 import { cardNumbers, sourceCallIds } from "./number-links";
 import { rowsLabel, STATE_LABELS, type ToolCardState } from "./tool-cards";
-import { answerTraceState, toolStepLabel, toolStepState } from "./tool-steps";
+import { answerTraceState, toolStepLabels, toolStepState } from "./tool-steps";
 
 /**
  * The answer's tool calls as a step trace (`StepTrace`): while the answer
@@ -168,8 +168,9 @@ export const ToolSteps = ({
     active === null
       ? []
       : sourceCallIds(numbers.filter((source) => source.text === active.text));
-  const steps = cards.map((card) => {
-    const label = toolStepLabel(card);
+  const labels = toolStepLabels(cards);
+  const steps = cards.map((card, index) => {
+    const label = labels[index] ?? card.title;
     return {
       id: card.id,
       label,

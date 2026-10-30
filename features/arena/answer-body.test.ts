@@ -391,7 +391,7 @@ describe("answer body while streaming", () => {
     expect(markup).toContain('<p role="status" class="sr-only">Done. Used 2 tools.</p>');
     expect(markup).toContain('<span class="min-w-0 flex-1 truncate">Used 2 tools</span>');
     expect(markup).toMatch(/<ol id="[^"]+" hidden="" aria-label="Tool calls"/);
-    expect(markup).toContain("Reading resting heart rate, 4 Jul 2026 – 1 Oct 2026");
+    expect(markup).toContain("Reading resting heart rate, 4 Jul 2026 to 1 Oct 2026");
     expect(markup).toContain(">No data: NO_ROWS</span>");
     expect(markup).toContain("No reading for that measure in this window.");
   });
