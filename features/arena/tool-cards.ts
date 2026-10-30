@@ -8,6 +8,7 @@ import {
   IMPORTED_CONDITIONS_TOOL,
   IMPORTED_DATASETS_TOOL,
   IMPORTED_LATEST_TOOL,
+  IMPORTED_MEDICATIONS_TOOL,
   IMPORTED_TABLE_TOOL,
   IMPORTED_TREND_TOOL,
 } from "@/packages/query-tools/imported-names";
@@ -75,6 +76,7 @@ const TITLES: Readonly<Record<string, string>> = {
   [IMPORTED_TREND_TOOL]: "Fitted a trend of one imported series",
   [IMPORTED_TABLE_TOOL]: "Read columns of your imported table",
   [IMPORTED_CONDITIONS_TOOL]: "Listed conditions in your imported records",
+  [IMPORTED_MEDICATIONS_TOOL]: "Listed medication requests in your imported records",
 };
 
 export const toolTitle = (tool: string): string => {

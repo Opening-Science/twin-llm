@@ -184,7 +184,7 @@ SHA-256 is the zip's.
   `permitImportedDataRequest`: personal mode and Ollama on loopback.
   `infrastructure/imported-data-policy.test.ts` checks every provider. The chat tools
   that read it (#181: `imported_datasets`, `imported_latest`, `imported_trend`,
-  `imported_table`, `imported_conditions`) are
+  `imported_table`, `imported_conditions`; #299: `imported_medications`) are
   offered only on such a turn, ask the policy again on every call, and keep the thread
   local-only afterwards ([query-layer.md](query-layer.md), "Imported data tools").
 - **Audited, without values.** Every step appends to the audit chain
@@ -202,8 +202,6 @@ SHA-256 is the zip's.
 - A genome VCF, local models only (#180), through the same review and Save flow.
 - Apple Health exports over the 200,000 sample cap: a way to import them (a date range, or
   per-day summaries) is not decided yet.
-- A chat tool over imported FHIR medication requests. Observations, research tables
-  and conditions have tools (#181); medication requests are stored but not read yet.
 
 ## Code
 

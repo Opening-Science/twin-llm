@@ -82,6 +82,7 @@ const noImported = (scope: ImportedToolDeps["scope"]): ImportedToolDeps => ({
     listTables: async () => [],
     readTableRows: async () => [],
     findConditions: async () => [],
+    findMedications: async () => [],
     appendAudit: async () => undefined,
   },
 });

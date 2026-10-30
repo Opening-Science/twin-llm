@@ -1,12 +1,16 @@
 import type { ColumnType, TableCell, TableColumn } from "@/packages/personal-data/types";
 
-import type { ImportedConditionRecord, ImportedTableRecord } from "./imported-ports";
+import type {
+  ImportedConditionRecord,
+  ImportedMedicationRecord,
+  ImportedTableRecord,
+} from "./imported-ports";
 
 /**
- * Pure helpers behind `imported_table` and `imported_conditions` (#181). No
- * I/O, so the tests check them with made-up rows. A table is read by column
- * names matched whole against the stored list; a Condition is read as coded
- * fields and dates only.
+ * Pure helpers behind `imported_table`, `imported_conditions` (#181) and
+ * `imported_medications` (#299). No I/O, so the tests check them with made-up
+ * rows. A table is read by column names matched whole against the stored list;
+ * a Condition or a MedicationRequest is read as coded fields and dates only.
  */
 
 /** Characters kept from one text cell; a longer cell is cut and counted. */
@@ -93,5 +97,24 @@ export const conditionEntry = (
   display: record.display,
   onset: record.onsetAt === null ? null : record.onsetAt.toISOString(),
   abatement: record.abatementAt === null ? null : record.abatementAt.toISOString(),
+  status: record.status,
+});
+
+export type ImportedMedicationEntry = Readonly<{
+  code_system: string | null;
+  code: string | null;
+  display: string;
+  authored: string | null;
+  status: string | null;
+}>;
+
+/** A stored MedicationRequest as the tool returns it: coded fields, the authored date and status. */
+export const medicationEntry = (
+  record: ImportedMedicationRecord,
+): ImportedMedicationEntry => ({
+  code_system: record.codeSystem,
+  code: record.code,
+  display: record.display,
+  authored: record.authoredAt === null ? null : record.authoredAt.toISOString(),
   status: record.status,
 });

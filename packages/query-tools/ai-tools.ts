@@ -30,6 +30,7 @@ import {
   IMPORTED_CONDITIONS_TOOL,
   IMPORTED_DATASETS_TOOL,
   IMPORTED_LATEST_TOOL,
+  IMPORTED_MEDICATIONS_TOOL,
   IMPORTED_TABLE_TOOL,
   IMPORTED_TREND_TOOL,
   type ImportedToolName,
@@ -39,6 +40,7 @@ import {
   importedConditionsInput,
   importedDatasetsInput,
   importedLatestInput,
+  importedMedicationsInput,
   importedTableInput,
   importedTrendInput,
 } from "./imported-schemas";
@@ -47,6 +49,7 @@ import {
   runImportedConditions,
   runImportedDatasets,
   runImportedLatest,
+  runImportedMedications,
   runImportedTable,
   runImportedTrend,
 } from "./imported-tools";
@@ -235,5 +238,10 @@ export const createImportedTools = (deps: ImportedToolDeps) => ({
     description: importedDescription(IMPORTED_CONDITIONS_TOOL),
     inputSchema: modelInputSchema(importedConditionsInput),
     execute: async (input) => runImportedConditions(deps, input),
+  }),
+  [IMPORTED_MEDICATIONS_TOOL]: tool({
+    description: importedDescription(IMPORTED_MEDICATIONS_TOOL),
+    inputSchema: modelInputSchema(importedMedicationsInput),
+    execute: async (input) => runImportedMedications(deps, input),
   }),
 });

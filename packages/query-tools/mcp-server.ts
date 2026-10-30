@@ -20,6 +20,7 @@ import {
   importedConditionsInput,
   importedDatasetsInput,
   importedLatestInput,
+  importedMedicationsInput,
   importedTableInput,
   importedTrendInput,
 } from "./imported-schemas";
@@ -28,6 +29,7 @@ import {
   runImportedConditions,
   runImportedDatasets,
   runImportedLatest,
+  runImportedMedications,
   runImportedTable,
   runImportedTrend,
 } from "./imported-tools";
@@ -146,6 +148,7 @@ const mcpImportedDeps = (
     listTables: NOTHING_TO_READ,
     readTableRows: NOTHING_TO_READ,
     findConditions: NOTHING_TO_READ,
+    findMedications: NOTHING_TO_READ,
     appendAudit: ports.appendAudit,
   },
 });
@@ -209,6 +212,9 @@ export const queryToolRunners = (
   ),
   imported_conditions: bind(importedConditionsInput, (input) =>
     runImportedConditions(mcpImportedDeps(scope, ports), input),
+  ),
+  imported_medications: bind(importedMedicationsInput, (input) =>
+    runImportedMedications(mcpImportedDeps(scope, ports), input),
   ),
   rhythm_irregularity: bind(rhythmIrregularityInput, (input) =>
     runRhythmIrregularity(scope, input, ports),
