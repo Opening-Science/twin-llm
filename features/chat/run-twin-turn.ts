@@ -62,6 +62,11 @@ export type TwinTurnDeps = Readonly<{
   uiContext?: UiContext | null;
   /** The agent this turn answers as (#218); its role line joins the system prompt. */
   agent?: Readonly<{ name: string; role: string }> | null;
+  /**
+   * Eval harness only (#302): rows read on the server for a turn with no
+   * tools, pasted into the system prompt as a data block.
+   */
+  pastedData?: string | null;
   /** Audit rows for this turn's session, read after the model finishes. */
   loadAudit: (turnId: string) => Promise<readonly ResponseToolCall[]>;
 }>;
@@ -126,6 +131,7 @@ export const runTwinTurn = (
     skill: deps.skill ?? null,
     uiContext: deps.uiContext ?? null,
     agent: deps.agent ?? null,
+    pastedData: deps.pastedData ?? null,
   });
 
   return streamText({

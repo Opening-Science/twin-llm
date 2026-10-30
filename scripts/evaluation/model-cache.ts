@@ -110,6 +110,11 @@ export type CacheKeyInput = Readonly<{
   modelId: string;
   repeat: number;
   params: CallOptions;
+  /**
+   * The eval arm (#302). The tools arm leaves it out, so its keys are the
+   * ones recorded before arms existed.
+   */
+  arm?: "tools" | "context";
 }>;
 
 export const samplingParams = (params: CallOptions): Record<string, unknown> =>
@@ -120,9 +125,16 @@ export const samplingParams = (params: CallOptions): Record<string, unknown> =>
     ]),
   );
 
-export const cacheKey = ({ provider, modelId, repeat, params }: CacheKeyInput): string =>
+export const cacheKey = ({
+  provider,
+  modelId,
+  repeat,
+  params,
+  arm = "tools",
+}: CacheKeyInput): string =>
   sha256Hex(
     toCanonicalJson({
+      ...(arm === "tools" ? {} : { arm }),
       provider,
       model_id: modelId,
       repeat,
@@ -175,6 +187,8 @@ export const createCachedModel = (input: {
   readonly provider: string;
   readonly modelId: string;
   readonly repeat: number;
+  /** The eval arm (#302); left out, `tools`. */
+  readonly arm?: "tools" | "context";
   /** The wrapped model is a fake: everything it records is MOCK. */
   readonly mock: boolean;
   readonly replay: boolean;
@@ -198,6 +212,7 @@ export const createCachedModel = (input: {
         modelId: input.modelId,
         repeat: input.repeat,
         params,
+        arm: input.arm,
       });
       const text = await input.store.read(key);
       const parsed = text === null ? null : parseCacheEntry(text, key);

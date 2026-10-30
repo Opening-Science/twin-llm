@@ -6,6 +6,7 @@
  *   bun run eval -- --models ollama:qwen3:4b --items Q-S1-11,Q-S5-05 --run-id smoke
  *   bun run eval -- --models ollama:qwen3:4b --latency-set --replay
  *   bun run eval -- --models agent:rhythm --set s7
+ *   bun run eval -- --models ollama:qwen3:4b --arm context
  *
  * The package script passes `--env-file=.env.eval`, a copy of
  * `.env.synthetic.example` pointed at a throwaway database holding only
@@ -67,6 +68,8 @@ if (isMain) {
     await import("../../features/chat/resolve-language-model");
   const { loadSessionAudit } =
     await import("../../features/chat/response/load-session-audit");
+  const queryTools = await import("../../packages/query-tools/tools");
+  const { runKeyedTool } = await import("./build-answer-key");
 
   const env = serverEnv();
 
@@ -110,6 +113,8 @@ if (isMain) {
         ? { tools: createChatTools(scope) }
         : createTurnTools(scope, { agent: agent.agent.id }, agent.skill),
     loadAudit: loadSessionAudit,
+    // Context arm (#302): the key's call through the real tool, on the database.
+    runContextCall: (scope, tool, args) => runKeyedTool(queryTools, scope, tool, args),
     cache: fileCacheStore(CACHE_DIR),
     prepareRun: async (runId) => {
       const dir = join(RUNS_DIR, runId);
