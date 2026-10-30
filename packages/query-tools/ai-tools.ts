@@ -27,21 +27,27 @@ import {
   rhythmIrregularityInput,
 } from "./schemas";
 import {
+  IMPORTED_CONDITIONS_TOOL,
   IMPORTED_DATASETS_TOOL,
   IMPORTED_LATEST_TOOL,
+  IMPORTED_TABLE_TOOL,
   IMPORTED_TREND_TOOL,
   type ImportedToolName,
 } from "./imported-names";
 import {
   IMPORTED_TOOL_DEFINITIONS,
+  importedConditionsInput,
   importedDatasetsInput,
   importedLatestInput,
+  importedTableInput,
   importedTrendInput,
 } from "./imported-schemas";
 import {
   type ImportedToolDeps,
+  runImportedConditions,
   runImportedDatasets,
   runImportedLatest,
+  runImportedTable,
   runImportedTrend,
 } from "./imported-tools";
 import { modelInputSchema } from "./model-schema";
@@ -219,5 +225,15 @@ export const createImportedTools = (deps: ImportedToolDeps) => ({
     description: importedDescription(IMPORTED_TREND_TOOL),
     inputSchema: modelInputSchema(importedTrendInput),
     execute: async (input) => runImportedTrend(deps, input),
+  }),
+  [IMPORTED_TABLE_TOOL]: tool({
+    description: importedDescription(IMPORTED_TABLE_TOOL),
+    inputSchema: modelInputSchema(importedTableInput),
+    execute: async (input) => runImportedTable(deps, input),
+  }),
+  [IMPORTED_CONDITIONS_TOOL]: tool({
+    description: importedDescription(IMPORTED_CONDITIONS_TOOL),
+    inputSchema: modelInputSchema(importedConditionsInput),
+    execute: async (input) => runImportedConditions(deps, input),
   }),
 });

@@ -200,6 +200,10 @@ describe("imported-data tools make a thread local-only too", () => {
       "imported_datasets",
       "imported_latest",
       "imported_trend",
+      "imported_table",
+      "imported_conditions",
     ]);
+    expect(requestsGenomeTools(["imported_table"])).toBe(true);
+    expect(requestsGenomeTools(["imported_conditions"])).toBe(true);
   });
 });

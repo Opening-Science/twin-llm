@@ -1,7 +1,9 @@
 import "server-only";
 
 import { Prisma } from "@/generated/prisma/client";
+import { CHUNK_ROWS } from "@/packages/personal-data/limits";
 import type { SavePlan } from "@/packages/personal-data/save-plan";
+import { storedColumns, storedRows } from "@/packages/personal-data/stored-table";
 import {
   type EffectivePrecision,
   isImportKind,
@@ -315,6 +317,73 @@ export const importedDataReads = (
               select: OBSERVATION_SELECT,
             })
           ).map(toObservation),
+        [],
+      ),
+    listTables: () =>
+      withUser(
+        async (id) =>
+          (
+            await database().personalTable.findMany({
+              where: { userId: id },
+              orderBy: { datasetId: "asc" },
+              select: { datasetId: true, columns: true, rowCount: true },
+            })
+          ).map((table) => ({
+            datasetId: table.datasetId,
+            columns: storedColumns(table.columns),
+            rowCount: table.rowCount,
+          })),
+        [],
+      ),
+    // Only the chunks that hold the first `take` rows are read.
+    readTableRows: (query) =>
+      withUser(async (id) => {
+        const chunks = await database().personalTableChunk.findMany({
+          where: {
+            userId: id,
+            datasetId: query.datasetId,
+            chunkIndex: { lt: Math.ceil(query.take / CHUNK_ROWS) },
+          },
+          orderBy: { chunkIndex: "asc" },
+          select: { rows: true },
+        });
+        return chunks.flatMap((chunk) => storedRows(chunk.rows)).slice(0, query.take);
+      }, []),
+    findConditions: (query) =>
+      withUser(
+        async (id) =>
+          (
+            await database().personalClinicalRecord.findMany({
+              where: {
+                userId: id,
+                datasetId: query.datasetId,
+                resourceType: "Condition",
+              },
+              orderBy: [
+                { startAt: { sort: "asc", nulls: "last" } },
+                { display: "asc" },
+                { id: "asc" },
+              ],
+              take: query.take,
+              select: {
+                id: true,
+                codeSystem: true,
+                code: true,
+                display: true,
+                startAt: true,
+                endAt: true,
+                status: true,
+              },
+            })
+          ).map((row) => ({
+            id: row.id,
+            codeSystem: row.codeSystem,
+            code: row.code,
+            display: row.display,
+            onsetAt: row.startAt,
+            abatementAt: row.endAt,
+            status: row.status,
+          })),
         [],
       ),
   };

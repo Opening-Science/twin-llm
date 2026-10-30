@@ -3,11 +3,21 @@ import type { z } from "zod";
 import type { ImportedDataPermitDecision } from "@/infrastructure/data-mode-policy";
 
 import {
+  IMPORTED_CONDITIONS_TOOL,
   IMPORTED_DATASETS_TOOL,
   IMPORTED_LATEST_TOOL,
+  IMPORTED_TABLE_TOOL,
   IMPORTED_TREND_TOOL,
 } from "./imported-names";
-import type { ImportedDataPorts } from "./imported-ports";
+import type { ImportedDataPorts, ImportedDatasetRecord } from "./imported-ports";
+import {
+  conditionEntry,
+  type ImportedColumnEntry,
+  type ImportedConditionEntry,
+  missingColumns,
+  selectColumns,
+  tableColumnsById,
+} from "./imported-records";
 import {
   datasetNotFound,
   importedMixedUnits,
@@ -16,10 +26,14 @@ import {
   type ImportedRefusal,
   partialDates,
   seriesNotCombined,
+  unknownColumns,
+  wrongDatasetKind,
 } from "./imported-refusals";
 import type {
+  importedConditionsInput,
   importedDatasetsInput,
   importedLatestInput,
+  importedTableInput,
   importedTrendInput,
 } from "./imported-schemas";
 import {
@@ -110,11 +124,23 @@ const refusedByPolicy = (deps: ImportedToolDeps): ImportedRefusal | null => {
   return decision.ok ? null : importedNotPermitted(decision.reason);
 };
 
+const findDataset = async (
+  deps: ImportedToolDeps,
+  datasetId: string,
+): Promise<ImportedDatasetRecord | null> =>
+  (await deps.ports.listDatasets()).find((dataset) => dataset.id === datasetId) ?? null;
+
 const datasetExists = async (deps: ImportedToolDeps, datasetId: string) =>
-  (await deps.ports.listDatasets()).some((dataset) => dataset.id === datasetId);
+  (await findDataset(deps, datasetId)) !== null;
+
+export type ImportedDatasetListing = ImportedDatasetEntry &
+  Readonly<{
+    /** A table's columns (name and type) in file order; null for other kinds. */
+    columns: readonly ImportedColumnEntry[] | null;
+  }>;
 
 export type ImportedDatasetsResult = Readonly<{
-  datasets: readonly ImportedDatasetEntry[];
+  datasets: readonly ImportedDatasetListing[];
   n_series: number;
   /** True when the person has more than IMPORTED_SERIES_CAP series; the rest are not listed. */
   more_series: boolean;
@@ -134,8 +160,12 @@ export const runImportedDatasets = (
       const datasets = await deps.ports.listDatasets();
       const groups = await deps.ports.listSeries(IMPORTED_SERIES_CAP + 1);
       const listed = seriesListing(datasets, groups.slice(0, IMPORTED_SERIES_CAP));
+      const columns = tableColumnsById(await deps.ports.listTables());
       return {
-        datasets: listed,
+        datasets: listed.map((dataset) => ({
+          ...dataset,
+          columns: columns.get(dataset.dataset_id) ?? null,
+        })),
         n_series: listed.reduce((total, dataset) => total + dataset.series.length, 0),
         more_series: groups.length > IMPORTED_SERIES_CAP,
       };
@@ -281,4 +311,122 @@ export const runImportedTrend = (
     },
     (result) =>
       "n" in result ? { result: { n: result.n }, rowCount: result.n } : NOTHING_READ,
+  );
+
+export type ImportedTableResult = Readonly<{
+  dataset_id: string;
+  columns: readonly ImportedColumnEntry[];
+  /** One array per row, cells in the order of `columns`; null for a missing cell. */
+  rows: readonly (readonly (number | string | null)[])[];
+  n_rows: number;
+  /** Rows the table holds in all. */
+  table_rows: number;
+  /** True when the table holds more rows than were returned. */
+  more_rows: boolean;
+  /** Text cells cut at 200 characters. */
+  cells_cut: number;
+}>;
+
+export const runImportedTable = (
+  deps: ImportedToolDeps,
+  input: z.infer<typeof importedTableInput>,
+): Promise<ImportedTableResult | ImportedRefusal> =>
+  auditedImported<ImportedTableResult | ImportedRefusal>(
+    deps,
+    IMPORTED_TABLE_TOOL,
+    { dataset_id: input.dataset_id, columns: input.columns.length, limit: input.limit },
+    async () => {
+      const refused = refusedByPolicy(deps);
+      if (refused !== null) return refused;
+      const dataset = await findDataset(deps, input.dataset_id);
+      if (dataset === null) return datasetNotFound(input.dataset_id);
+      const table = (await deps.ports.listTables()).find(
+        (each) => each.datasetId === input.dataset_id,
+      );
+      if (dataset.kind !== "table" || table === undefined) {
+        return wrongDatasetKind(input.dataset_id, dataset.kind, "table");
+      }
+      const unknown = missingColumns(table.columns, input.columns);
+      if (unknown.length > 0) {
+        return unknownColumns(
+          input.dataset_id,
+          unknown,
+          table.columns.map((column) => column.name),
+        );
+      }
+      const rows = await deps.ports.readTableRows({
+        datasetId: input.dataset_id,
+        take: input.limit,
+      });
+      const selected = selectColumns(
+        table.columns,
+        rows.slice(0, input.limit),
+        input.columns,
+      );
+      return {
+        dataset_id: input.dataset_id,
+        columns: selected.columns,
+        rows: selected.rows,
+        n_rows: selected.rows.length,
+        table_rows: table.rowCount,
+        more_rows: table.rowCount > selected.rows.length,
+        cells_cut: selected.cellsCut,
+      };
+    },
+    (result) =>
+      "rows" in result
+        ? {
+            result: {
+              rows: result.n_rows,
+              columns: result.columns.length,
+              cut: result.cells_cut,
+            },
+            rowCount: result.n_rows,
+          }
+        : NOTHING_READ,
+  );
+
+/** Conditions one listing returns; more is flagged, not read. */
+export const IMPORTED_CONDITIONS_CAP = 500;
+
+export type ImportedConditionsResult = Readonly<{
+  dataset_id: string;
+  conditions: readonly ImportedConditionEntry[];
+  n: number;
+  /** True when the dataset holds more than IMPORTED_CONDITIONS_CAP; the rest are not listed. */
+  more_conditions: boolean;
+}>;
+
+export const runImportedConditions = (
+  deps: ImportedToolDeps,
+  input: z.infer<typeof importedConditionsInput>,
+): Promise<ImportedConditionsResult | ImportedRefusal> =>
+  auditedImported<ImportedConditionsResult | ImportedRefusal>(
+    deps,
+    IMPORTED_CONDITIONS_TOOL,
+    { dataset_id: input.dataset_id },
+    async () => {
+      const refused = refusedByPolicy(deps);
+      if (refused !== null) return refused;
+      const dataset = await findDataset(deps, input.dataset_id);
+      if (dataset === null) return datasetNotFound(input.dataset_id);
+      if (dataset.kind !== "fhir") {
+        return wrongDatasetKind(input.dataset_id, dataset.kind, "fhir");
+      }
+      const records = await deps.ports.findConditions({
+        datasetId: input.dataset_id,
+        take: IMPORTED_CONDITIONS_CAP + 1,
+      });
+      const conditions = records.slice(0, IMPORTED_CONDITIONS_CAP).map(conditionEntry);
+      return {
+        dataset_id: input.dataset_id,
+        conditions,
+        n: conditions.length,
+        more_conditions: records.length > IMPORTED_CONDITIONS_CAP,
+      };
+    },
+    (result) =>
+      "conditions" in result
+        ? { result: { n: result.n, more: result.more_conditions }, rowCount: result.n }
+        : NOTHING_READ,
   );

@@ -4,26 +4,36 @@ import type { ImportedDataPermitDecision } from "@/infrastructure/data-mode-poli
 import type { AppendInput } from "@/packages/audit/append";
 
 import type {
+  ImportedConditionRecord,
   ImportedDataPorts,
   ImportedDatasetRecord,
   ImportedObservationRecord,
   ImportedSeriesGroup,
   ImportedSeriesQuery,
+  ImportedTableRecord,
 } from "./imported-ports";
-import { importedTrendInput } from "./imported-schemas";
 import {
+  importedConditionsInput,
+  importedTableInput,
+  importedTrendInput,
+} from "./imported-schemas";
+import {
+  IMPORTED_CONDITIONS_CAP,
   IMPORTED_TOOL_FAILED,
   type ImportedToolDeps,
+  runImportedConditions,
   runImportedDatasets,
   runImportedLatest,
+  runImportedTable,
   runImportedTrend,
 } from "./imported-tools";
 import type { SessionScope } from "./scope";
 
 /**
- * Made-up imported data, read through in-memory ports. Three datasets: labs
+ * Made-up imported data, read through in-memory ports. Five datasets: labs
  * with glucose (one row dated only to a month), a ring export with HRV RMSSD
- * stored by name, and a watch export with HRV SDNN coded 80404-7.
+ * stored by name, a watch export with HRV SDNN coded 80404-7, a research
+ * table, and a FHIR file with two Conditions.
  */
 const LOINC = "http://loinc.org";
 const SCOPE: SessionScope = { actor: "user-1", sessionId: "turn-1", mode: "personal" };
@@ -94,6 +104,60 @@ const DATASETS: readonly ImportedDatasetRecord[] = [
     firstAt: "2025-03",
     lastAt: "2026-01-05",
   },
+  {
+    id: "ds-table",
+    kind: "table",
+    name: "Made-up study",
+    rowCount: 3,
+    firstAt: "2024-01-15",
+    lastAt: "2024-02-01",
+  },
+  {
+    id: "ds-fhir",
+    kind: "fhir",
+    name: "Made-up record",
+    rowCount: 2,
+    firstAt: "2021-04-01",
+    lastAt: "2023-11-20",
+  },
+];
+
+const TABLE: ImportedTableRecord = {
+  datasetId: "ds-table",
+  columns: [
+    { name: "participant", type: "text", missing: 0 },
+    { name: "visit_date", type: "date", missing: 0 },
+    { name: "score", type: "number", missing: 1 },
+    { name: "comment", type: "text", missing: 0 },
+  ],
+  rowCount: 3,
+};
+
+const TABLE_ROWS = [
+  ["p01", "2024-01-15", 12.5, "first visit"],
+  ["p02", "2024-01-16", null, "x".repeat(250)],
+  ["p03", "2024-02-01", 9, "third visit"],
+] as const;
+
+const CONDITIONS: readonly ImportedConditionRecord[] = [
+  {
+    id: "c1",
+    codeSystem: "http://snomed.info/sct",
+    code: "38341003",
+    display: "Made-up hypertension",
+    onsetAt: new Date("2021-04-01T00:00:00.000Z"),
+    abatementAt: null,
+    status: "active",
+  },
+  {
+    id: "c2",
+    codeSystem: "http://snomed.info/sct",
+    code: "444814009",
+    display: "Made-up sinusitis",
+    onsetAt: new Date("2023-11-02T00:00:00.000Z"),
+    abatementAt: new Date("2023-11-20T00:00:00.000Z"),
+    status: "resolved",
+  },
 ];
 
 const strip = ({ codeSystem: _codeSystem, ...rest }: Row): ImportedObservationRecord =>
@@ -162,6 +226,11 @@ const fakePorts = (
     }),
   findSeries: async (query) =>
     rows.filter(inSeries(query)).sort(byTime).slice(0, query.take).map(strip),
+  listTables: async () => [TABLE],
+  readTableRows: async (query) =>
+    query.datasetId === TABLE.datasetId ? TABLE_ROWS.slice(0, query.take) : [],
+  findConditions: async (query) =>
+    query.datasetId === "ds-fhir" ? CONDITIONS.slice(0, query.take) : [],
   appendAudit: async (input) => {
     audit.push(input);
   },
@@ -296,6 +365,7 @@ describe("imported_datasets", () => {
             },
           ],
           other_coded_rows: 0,
+          columns: null,
         },
         {
           dataset_id: "ds-ring",
@@ -315,6 +385,7 @@ describe("imported_datasets", () => {
             },
           ],
           other_coded_rows: 0,
+          columns: null,
         },
         {
           dataset_id: "ds-labs",
@@ -342,13 +413,41 @@ describe("imported_datasets", () => {
             },
           ],
           other_coded_rows: 0,
+          columns: null,
+        },
+        {
+          dataset_id: "ds-table",
+          kind: "table",
+          name: "Made-up study",
+          row_count: 3,
+          first_at: "2024-01-15",
+          last_at: "2024-02-01",
+          series: [],
+          other_coded_rows: 0,
+          columns: [
+            { name: "participant", type: "text" },
+            { name: "visit_date", type: "date" },
+            { name: "score", type: "number" },
+            { name: "comment", type: "text" },
+          ],
+        },
+        {
+          dataset_id: "ds-fhir",
+          kind: "fhir",
+          name: "Made-up record",
+          row_count: 2,
+          first_at: "2021-04-01",
+          last_at: "2023-11-20",
+          series: [],
+          other_coded_rows: 0,
+          columns: null,
         },
       ],
       n_series: 4,
       more_series: false,
     });
     expect(audit).toEqual([
-      auditRow("imported_datasets", {}, { datasets: 3, series: 4 }, 3),
+      auditRow("imported_datasets", {}, { datasets: 5, series: 4 }, 5),
     ]);
   });
 
@@ -661,6 +760,254 @@ describe("imported_trend", () => {
   });
 });
 
+describe("imported_table", () => {
+  test("the asked columns in the asked order, first rows in file order", async () => {
+    const { deps, audit } = harness();
+    expect(
+      await runImportedTable(deps, {
+        dataset_id: "ds-table",
+        columns: ["score", "participant"],
+        limit: 2,
+      }),
+    ).toEqual({
+      dataset_id: "ds-table",
+      columns: [
+        { name: "score", type: "number" },
+        { name: "participant", type: "text" },
+      ],
+      rows: [
+        [12.5, "p01"],
+        [null, "p02"],
+      ],
+      n_rows: 2,
+      table_rows: 3,
+      more_rows: true,
+      cells_cut: 0,
+    });
+    expect(audit).toEqual([
+      auditRow(
+        "imported_table",
+        { dataset_id: "ds-table", columns: 2, limit: 2 },
+        { rows: 2, columns: 2, cut: 0 },
+        2,
+      ),
+    ]);
+  });
+
+  test("a text cell over 200 characters is cut and counted", async () => {
+    const { deps } = harness();
+    const result = await runImportedTable(deps, {
+      dataset_id: "ds-table",
+      columns: ["comment"],
+      limit: 50,
+    });
+    if (!("rows" in result)) throw new Error("expected rows");
+    expect(result.rows.map((cells) => String(cells[0]).length)).toEqual([11, 200, 11]);
+    expect(result.cells_cut).toBe(1);
+    expect(result.more_rows).toBe(false);
+  });
+
+  test("an unknown column is refused with the stored names, before any row is read", async () => {
+    const reads: string[] = [];
+    const { deps, audit } = harness({
+      ports: {
+        readTableRows: async () => {
+          reads.push("readTableRows");
+          return [];
+        },
+      },
+    });
+    expect(
+      await runImportedTable(deps, {
+        dataset_id: "ds-table",
+        columns: ["score", "Score", "diagnosis"],
+        limit: 10,
+      }),
+    ).toEqual({
+      code: "UNKNOWN_COLUMNS",
+      error:
+        "these columns are not in this table's stored column list; use the exact names in `known`, nothing was read",
+      dataset_id: "ds-table",
+      unknown: ["Score", "diagnosis"],
+      known: ["participant", "visit_date", "score", "comment"],
+    });
+    expect(reads).toEqual([]);
+    expect(audit.map((each) => [each.args, each.result, each.rowCount])).toEqual([
+      [{ dataset_id: "ds-table", columns: 3, limit: 10 }, { code: "UNKNOWN_COLUMNS" }, 0],
+    ]);
+  });
+
+  test("a dataset that is not a table is refused; an unknown one is not found", async () => {
+    const { deps } = harness();
+    expect(
+      await runImportedTable(deps, { dataset_id: "ds-labs", columns: ["x"], limit: 5 }),
+    ).toEqual({
+      code: "WRONG_DATASET_KIND",
+      error:
+        "this tool reads only table datasets; imported_datasets lists each dataset's kind",
+      dataset_id: "ds-labs",
+      kind: "lab-csv",
+      needs: "table",
+    });
+    expect(
+      await runImportedTable(deps, { dataset_id: "ds-gone", columns: ["x"], limit: 5 }),
+    ).toEqual({
+      code: "DATASET_NOT_FOUND",
+      error: "no imported dataset of this person has this id; use imported_datasets",
+      dataset_id: "ds-gone",
+    });
+  });
+
+  test("refused by the permit before any read", async () => {
+    const reads: string[] = [];
+    const { deps } = harness({
+      permit: {
+        ok: false,
+        code: "IMPORTED_DATA_NOT_PERMITTED",
+        reason: "chat-model-not-local",
+      },
+      ports: {
+        listTables: async () => {
+          reads.push("listTables");
+          return [TABLE];
+        },
+      },
+    });
+    const result = await runImportedTable(deps, {
+      dataset_id: "ds-table",
+      columns: ["score"],
+      limit: 5,
+    });
+    expect("code" in result ? result.code : null).toBe("IMPORTED_DATA_NOT_PERMITTED");
+    expect(reads).toEqual([]);
+  });
+
+  test("the input is closed: no SQL, at most 200 rows and 20 distinct columns", () => {
+    const base = { dataset_id: "ds-table", columns: ["score"] };
+    expect(importedTableInput.parse(base)).toEqual({ ...base, limit: 50 });
+    expect(importedTableInput.safeParse({ ...base, limit: 201 }).success).toBe(false);
+    expect(importedTableInput.safeParse({ ...base, limit: 0 }).success).toBe(false);
+    expect(importedTableInput.safeParse({ ...base, sql: "select 1" }).success).toBe(
+      false,
+    );
+    expect(importedTableInput.safeParse({ ...base, where: "score > 1" }).success).toBe(
+      false,
+    );
+    expect(importedTableInput.safeParse({ ...base, columns: [] }).success).toBe(false);
+    expect(
+      importedTableInput.safeParse({ ...base, columns: ["score", "score"] }).success,
+    ).toBe(false);
+    expect(
+      importedTableInput.safeParse({
+        ...base,
+        columns: Array.from({ length: 21 }, (_, index) => `c${index}`),
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("imported_conditions", () => {
+  test("code, display, onset, abatement and status; audited as a count", async () => {
+    const { deps, audit } = harness();
+    expect(await runImportedConditions(deps, { dataset_id: "ds-fhir" })).toEqual({
+      dataset_id: "ds-fhir",
+      conditions: [
+        {
+          code_system: "http://snomed.info/sct",
+          code: "38341003",
+          display: "Made-up hypertension",
+          onset: "2021-04-01T00:00:00.000Z",
+          abatement: null,
+          status: "active",
+        },
+        {
+          code_system: "http://snomed.info/sct",
+          code: "444814009",
+          display: "Made-up sinusitis",
+          onset: "2023-11-02T00:00:00.000Z",
+          abatement: "2023-11-20T00:00:00.000Z",
+          status: "resolved",
+        },
+      ],
+      n: 2,
+      more_conditions: false,
+    });
+    expect(audit).toEqual([
+      auditRow(
+        "imported_conditions",
+        { dataset_id: "ds-fhir" },
+        { n: 2, more: false },
+        2,
+      ),
+    ]);
+  });
+
+  test("more than the cap is flagged, not listed", async () => {
+    const many = Array.from(
+      { length: IMPORTED_CONDITIONS_CAP + 1 },
+      (_, index): ImportedConditionRecord => ({
+        ...CONDITIONS[0]!,
+        id: `m${index}`,
+      }),
+    );
+    const takes: number[] = [];
+    const { deps } = harness({
+      ports: {
+        findConditions: async (query) => {
+          takes.push(query.take);
+          return many.slice(0, query.take);
+        },
+      },
+    });
+    const result = await runImportedConditions(deps, { dataset_id: "ds-fhir" });
+    if (!("conditions" in result)) throw new Error("expected conditions");
+    expect([result.n, result.more_conditions, takes]).toEqual([
+      IMPORTED_CONDITIONS_CAP,
+      true,
+      [IMPORTED_CONDITIONS_CAP + 1],
+    ]);
+  });
+
+  test("a dataset that is not FHIR is refused", async () => {
+    const { deps, audit } = harness();
+    expect(await runImportedConditions(deps, { dataset_id: "ds-table" })).toEqual({
+      code: "WRONG_DATASET_KIND",
+      error:
+        "this tool reads only fhir datasets; imported_datasets lists each dataset's kind",
+      dataset_id: "ds-table",
+      kind: "table",
+      needs: "fhir",
+    });
+    expect(audit.map((each) => each.result)).toEqual([{ code: "WRONG_DATASET_KIND" }]);
+  });
+
+  test("synthetic mode is refused before any read", async () => {
+    const reads: string[] = [];
+    const { deps } = harness({
+      permit: {
+        ok: false,
+        code: "IMPORTED_DATA_NOT_PERMITTED",
+        reason: "data-mode-not-personal",
+      },
+      ports: {
+        findConditions: async () => {
+          reads.push("findConditions");
+          return CONDITIONS;
+        },
+      },
+    });
+    const result = await runImportedConditions(deps, { dataset_id: "ds-fhir" });
+    expect("code" in result ? result.code : null).toBe("IMPORTED_DATA_NOT_PERMITTED");
+    expect(reads).toEqual([]);
+  });
+
+  test("the input is closed", () => {
+    expect(
+      importedConditionsInput.safeParse({ dataset_id: "ds-fhir", text: "x" }).success,
+    ).toBe(false);
+  });
+});
+
 describe("audit rows hold no values, units, codes or names", () => {
   test("every argument and result written is an id, a count, a window or a code", async () => {
     const { deps, audit } = harness();
@@ -671,8 +1018,28 @@ describe("audit rows hold no values, units, codes or names", () => {
       name: "HRV (RMSSD)",
       ...JANUARY,
     });
+    await runImportedTable(deps, {
+      dataset_id: "ds-table",
+      columns: ["participant", "score"],
+      limit: 3,
+    });
+    await runImportedConditions(deps, { dataset_id: "ds-fhir" });
     const written = JSON.stringify(audit.map((each) => [each.args, each.result]));
-    for (const secret of ["2345-7", "Glucose", "RMSSD", "mg/dL", "ms", "98", "Made-up"]) {
+    for (const secret of [
+      "2345-7",
+      "Glucose",
+      "RMSSD",
+      "mg/dL",
+      "ms",
+      "98",
+      "Made-up",
+      "participant",
+      "p01",
+      "12.5",
+      "38341003",
+      "snomed",
+      "2021-04-01",
+    ]) {
       expect(written).not.toContain(secret);
     }
   });

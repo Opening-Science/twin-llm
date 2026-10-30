@@ -79,6 +79,9 @@ const noImported = (scope: ImportedToolDeps["scope"]): ImportedToolDeps => ({
     listSeries: async () => [],
     findLatest: async () => [],
     findSeries: async () => [],
+    listTables: async () => [],
+    readTableRows: async () => [],
+    findConditions: async () => [],
     appendAudit: async () => undefined,
   },
 });

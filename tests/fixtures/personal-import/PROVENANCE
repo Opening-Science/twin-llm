@@ -4,7 +4,8 @@ device export.
 
 - fhir-bundle.json: a FHIR R4 collection Bundle with a placeholder Patient, an
   HbA1c, a blood pressure panel, a glucose without a UCUM system, a coded
-  smoking answer, a weight without a unit and one Condition.
+  smoking answer, a weight without a unit and one Condition with a made-up
+  note (never stored).
 - lab-results.csv: lab rows covering the name table, a unit that does not fit,
   a value bound, a missing unit, a time without a zone and a bad check digit.
 - research-table.tsv: a small table with a missing marker, a quoted field, an

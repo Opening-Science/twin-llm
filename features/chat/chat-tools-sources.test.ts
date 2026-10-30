@@ -88,8 +88,10 @@ describe("chat tools and knowledge sources", () => {
         ...Object.keys(createChatTools(SCOPE, { query: ports })),
         "dna_ask",
         "genome_report",
+        "imported_conditions",
         "imported_datasets",
         "imported_latest",
+        "imported_table",
         "imported_trend",
       ].sort(),
     );
@@ -168,10 +170,19 @@ describe("imported-data tools", () => {
       listSeries: async () => [],
       findLatest: async () => [],
       findSeries: async () => [],
+      listTables: async () => [],
+      readTableRows: async () => [],
+      findConditions: async () => [],
       appendAudit: async () => undefined,
     },
   });
-  const IMPORTED = ["imported_datasets", "imported_latest", "imported_trend"];
+  const IMPORTED = [
+    "imported_datasets",
+    "imported_latest",
+    "imported_trend",
+    "imported_table",
+    "imported_conditions",
+  ];
   const names = (scope: typeof SCOPE | typeof PERSONAL, deps?: ImportedToolDeps) =>
     Object.keys(createChatTools(scope, { query: ports, imported: deps }));
 
