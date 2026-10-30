@@ -13,7 +13,6 @@
  * only reaches rows the graph links to, so one of the 3 knowledge chunks can
  * be missed on some builds. Every knowledge row must be a knowledge probe row
  * (1 to 3 of them), every guideline row a guideline probe row (exactly 3).
- * The noise in the fixture vectors is fixed, so only the index build varies.
  * Every probe row is removed again. Vectors only, no text from any corpus.
  *
  * Run (from verify-migrations.sh):
@@ -46,13 +45,12 @@ const fail = (message: string): never => {
 
 /**
  * 768-d vector literal in SQL: `first` at dim 1, `second` at dim 2, small
- * noise elsewhere. The noise is a fixed function of row `n` and dim `i`, not
- * `random()`, so the fixture is the same on every run.
+ * noise elsewhere. The noise stays `random()`: fixed noise compresses, the
+ * table shrinks and the planner drops the HNSW index for this probe.
  */
-const vectorExpr = (first: number, second: number, salt: number): string =>
+const vectorExpr = (first: number, second: number): string =>
   `('[' || array_to_string(array(SELECT CASE WHEN i = 1 THEN ${first} WHEN i = 2 THEN ${second} ` +
-  `ELSE ((n * 7919 + i * 104729 + ${salt}) % 1000) / 1000.0 * 0.05 END ` +
-  `FROM generate_series(1, 768) i), ',') || ']')::vector`;
+  `ELSE random() * 0.05 END FROM generate_series(1, 768) i WHERE n > 0), ',') || ']')::vector`;
 
 const cleanup = (client: PrismaClient) =>
   client.$executeRawUnsafe(
@@ -68,11 +66,11 @@ const seed = async (client: PrismaClient): Promise<void> => {
       ('verify-sf-knowledge', 'probe', 2026, 'probe', '', 'probe', 'cc-by-4.0', 'full_text', 'nomic-embed-text', 768, 'opentwin-knowledge')`);
   await client.$executeRawUnsafe(`
     INSERT INTO guideline_chunks (id, document_id, section_heading, text, embedding)
-    SELECT 'verify-sf-gl-' || n, 'verify-sf-guideline', 'probe', 'probe', ${vectorExpr(1, 0, 0)}
+    SELECT 'verify-sf-gl-' || n, 'verify-sf-guideline', 'probe', 'probe', ${vectorExpr(1, 0)}
     FROM generate_series(1, ${GUIDELINE_CHUNKS}) n`);
   await client.$executeRawUnsafe(`
     INSERT INTO guideline_chunks (id, document_id, section_heading, text, embedding)
-    SELECT 'verify-sf-kn-' || n, 'verify-sf-knowledge', 'probe', 'probe', ${vectorExpr(0.3, 1, 500)}
+    SELECT 'verify-sf-kn-' || n, 'verify-sf-knowledge', 'probe', 'probe', ${vectorExpr(0.3, 1)}
     FROM generate_series(1, 3) n`);
   await client.$executeRawUnsafe(`ANALYZE guideline_chunks`);
   await client.$executeRawUnsafe(`ANALYZE guideline_documents`);
