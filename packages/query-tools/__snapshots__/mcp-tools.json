@@ -1418,6 +1418,105 @@
         "additionalProperties": false,
         "description": "Least-squares trend of one imported series in a window"
       }
+    },
+    {
+      "name": "imported_table",
+      "description": "Selected columns (exact names from imported_datasets) of one imported table, first rows in file order. At most 20 columns and 200 rows; long text cut at 200 characters.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "dataset_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$",
+            "description": "dataset_id from imported_datasets"
+          },
+          "columns": {
+            "minItems": 1,
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "pattern": "^[^\\u0000-\\u001f]+$",
+              "description": "Exact column name from imported_datasets"
+            }
+          },
+          "limit": {
+            "default": 50,
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200
+          }
+        },
+        "required": ["dataset_id", "columns", "limit"],
+        "additionalProperties": false,
+        "description": "Selected columns of one imported research table, first rows in file order"
+      }
+    },
+    {
+      "name": "imported_conditions",
+      "description": "Conditions in one imported FHIR dataset: code system, code, display, onset, abatement, clinical status. No notes. Up to 500.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "dataset_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$",
+            "description": "dataset_id from imported_datasets"
+          }
+        },
+        "required": ["dataset_id"],
+        "additionalProperties": false,
+        "description": "Conditions recorded in one imported FHIR dataset"
+      }
+    },
+    {
+      "name": "imported_medications",
+      "description": "Medication requests in one imported FHIR dataset: code system, code, display, authored date, status. No dosage text or notes. Up to 500.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "dataset_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$",
+            "description": "dataset_id from imported_datasets"
+          }
+        },
+        "required": ["dataset_id"],
+        "additionalProperties": false,
+        "description": "Medication requests recorded in one imported FHIR dataset"
+      }
+    },
+    {
+      "name": "genome_variants",
+      "description": "Look up named variants (rsID or chrN:pos, at most 50) in the person's own imported VCF: for each, found or not, and chrom, pos, ref, alt, genotype and filter as the file wrote them. No ranges or scans. Local models only; research use only.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "dataset_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$",
+            "description": "dataset_id of the person's imported VCF"
+          },
+          "variants": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 64
+            },
+            "description": "rsIDs or GRCh38 sites written \"chrN:pos\", at most 50"
+          }
+        },
+        "required": ["dataset_id", "variants"],
+        "additionalProperties": false,
+        "description": "Look up named variants in the person's imported VCF"
+      }
     }
   ]
 }

@@ -2,6 +2,7 @@ import "server-only";
 
 import type { DataMode } from "@/infrastructure/data-mode-policy";
 import {
+  DEFAULT_OLLAMA_BASE_URL,
   estimateTokens,
   JSON_CHARS_PER_TOKEN,
   TEMPLATE_OVERHEAD_TOKENS,
@@ -70,6 +71,15 @@ const noGenome = (scope: GenomeToolDeps["scope"]): GenomeToolDeps => ({
     throw new Error("not used");
   },
   appendAudit: async () => undefined,
+  variants: {
+    scope,
+    permit: () => ({ ok: true }),
+    ports: {
+      listDatasets: async () => [],
+      findVariants: async () => [],
+      appendAudit: async () => undefined,
+    },
+  },
 });
 
 /** The imported-data tools as a fully local personal turn gets them; nothing is read. */
@@ -81,6 +91,10 @@ const noImported = (scope: ImportedToolDeps["scope"]): ImportedToolDeps => ({
     listSeries: async () => [],
     findLatest: async () => [],
     findSeries: async () => [],
+    listTables: async () => [],
+    readTableRows: async () => [],
+    findConditions: async () => [],
+    findMedications: async () => [],
     appendAudit: async () => undefined,
   },
 });
@@ -134,7 +148,7 @@ export const captureOllamaTurnRequest = async (
   const result = runTwinTurn(
     {
       model: ollamaChatModel("measure", {
-        baseUrl: "http://127.0.0.1:11434/v1",
+        baseUrl: DEFAULT_OLLAMA_BASE_URL,
         numCtx,
         fetch: recording,
       }),

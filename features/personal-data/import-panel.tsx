@@ -206,25 +206,27 @@ export const ImportPanel = () => {
             </label>
           ))}
         </div>
-        <p className="text-muted-foreground mt-3 text-xs">
-          Coming next:{" "}
-          {NEXT_FORMATS.map((next, index) => (
-            <span key={next.issue}>
-              {index > 0 && ", "}
-              {next.label} (
-              <a
-                className="underline"
-                href={`${ISSUES_URL}/${next.issue}`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                #{next.issue}
-              </a>
-              )
-            </span>
-          ))}
-          .
-        </p>
+        {NEXT_FORMATS.length > 0 && (
+          <p className="text-muted-foreground mt-3 text-xs">
+            Coming next:{" "}
+            {NEXT_FORMATS.map((next, index) => (
+              <span key={next.issue}>
+                {index > 0 && ", "}
+                {next.label} (
+                <a
+                  className="underline"
+                  href={`${ISSUES_URL}/${next.issue}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  #{next.issue}
+                </a>
+                )
+              </span>
+            ))}
+            .
+          </p>
+        )}
       </fieldset>
       <div className="mt-4">
         <Field

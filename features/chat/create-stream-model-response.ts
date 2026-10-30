@@ -18,7 +18,7 @@ import type { QueryToolPorts } from "@/packages/query-tools/ports";
 import type { SessionScope } from "@/packages/query-tools/scope";
 
 import type { ChatRequest } from "./chat-request";
-import { createChatTools, forSkill, forSources } from "./chat-tools";
+import { createTurnTools } from "./chat-tools";
 import { finishModelResponse } from "./finish-model-response";
 import type { GenerationFacts } from "./generation-analytics";
 import { guardGenomeHistory } from "./genome-history-guard";
@@ -168,22 +168,18 @@ export const createStreamModelResponse =
 
     const skill = context.skill ?? null;
     const scope = { actor: clerkId, sessionId: turnId, mode: settings.dataMode };
-    const { tools, offeredTools } = forSkill(
-      forSources(
-        createChatTools(scope, {
-          query: deps.query,
-          hasWearableNarrative,
-          wearables: turnWearables,
-          disabledSources: context.disabledSources,
-          views: skill?.views,
-          sources: skill?.sources,
-          loadViews: deps.store.loadViews,
-          genome: deps.genomeTools(scope),
-          imported: deps.importedTools(scope),
-          agent: context.agent?.id ?? null,
-        }),
-        context.disabledSources ?? [],
-      ).tools,
+    const { tools, offeredTools } = createTurnTools(
+      scope,
+      {
+        query: deps.query,
+        hasWearableNarrative,
+        wearables: turnWearables,
+        disabledSources: context.disabledSources,
+        loadViews: deps.store.loadViews,
+        genome: deps.genomeTools(scope),
+        imported: deps.importedTools(scope),
+        agent: context.agent?.id ?? null,
+      },
       skill,
     );
 

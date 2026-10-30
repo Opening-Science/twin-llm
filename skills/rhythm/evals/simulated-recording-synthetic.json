@@ -1,0 +1,18 @@
+{
+  "question": "For subject 9661a432-4630-2cd9-142c-386845fae837, how many windows of simulated rhythm recording 1 (300 s) pass the research threshold?",
+  "script": [
+    {
+      "tool": "rhythm_irregularity",
+      "input": {
+        "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+        "recording": 1,
+        "duration_sec": 300
+      }
+    }
+  ],
+  "expect": {
+    "calls": ["rhythm_irregularity"],
+    "views": [],
+    "refusals": []
+  }
+}

@@ -225,6 +225,28 @@ describe("createChatTools and the genome tools", () => {
     ]);
   });
 
+  test("genome_variants comes only with the genome deps' variant ports (#307)", () => {
+    const variants = {
+      scope: PERSONAL,
+      permit: () => ({ ok: true }) as const,
+      ports: {
+        listDatasets: async () => [],
+        findVariants: async () => [],
+        appendAudit: async () => undefined,
+      },
+    };
+    const { deps } = depsWith(null, { variants });
+    const synthetic = { ...PERSONAL, mode: "synthetic" } as const;
+    const has = (scope: typeof PERSONAL | typeof synthetic, genome?: GenomeToolDeps) =>
+      Object.keys(createChatTools(scope, { query: ports, genome })).includes(
+        "genome_variants",
+      );
+    expect(has(PERSONAL, deps)).toBe(true);
+    expect(has(PERSONAL, depsWith(null).deps)).toBe(false);
+    expect(has(synthetic, deps)).toBe(false);
+    expect(has(PERSONAL)).toBe(false);
+  });
+
   test("a synthetic scope never gets them, even if deps are passed", () => {
     const { deps } = depsWith(null);
     const synthetic = { ...PERSONAL, mode: "synthetic" } as const;

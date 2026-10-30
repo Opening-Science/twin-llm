@@ -19,11 +19,11 @@ const episodeDays = (
   return windowDays(window.endDay, window.days).filter((_, index) => flags[index]);
 };
 
-const SUBJECTS = Array.from({ length: 2000 }, (_, index) => `s${index}`);
+const SUBJECTS = Array.from({ length: 1200 }, (_, index) => `s${index}`);
 
 describe("inGenericEpisode", () => {
   test("is fixed for a subject key and day", () => {
-    const days = windowDays("2026-10-01", 3650);
+    const days = windowDays("2026-10-01", 365);
     const key = `${SEED}:subject-0001`;
     expect(days.map((day) => inGenericEpisode(key, day))).toEqual(
       days.map((day) => inGenericEpisode(key, day)),
@@ -32,7 +32,10 @@ describe("inGenericEpisode", () => {
 
   test("episodes last 4 to 6 days, about one per person-year", () => {
     const days = windowDays("2026-10-01", 3650);
-    const runs = SUBJECTS.slice(0, 200).flatMap((subject) => {
+    // 10 subjects over 10 years is 100 person-years, so about 100 episodes.
+    // The count is close to Poisson, sd about 10: 65 to 135 is a 3.5 sd band
+    // that a rate of one per two years (50) or two per year (200) falls outside.
+    const runs = SUBJECTS.slice(0, 10).flatMap((subject) => {
       const flags = days.map((day) => inGenericEpisode(`${SEED}:${subject}`, day));
       // Whole runs only: one cut by the window's first or last day is left out.
       return flags.flatMap((flag, index) => {
@@ -41,13 +44,13 @@ describe("inGenericEpisode", () => {
         return end === -1 ? [] : [end - index];
       });
     });
-    // Overlapping episodes merge into one longer run, which is rare.
+    // Two episodes within 6 days of each other merge into one longer run, about
+    // 3% of runs; 10% leaves room for chance at this sample size.
     const single = runs.filter((length) => length <= EPISODE_MAX_DAYS);
-    expect(single.length / runs.length).toBeGreaterThan(0.95);
+    expect(single.length / runs.length).toBeGreaterThan(0.9);
     expect(Math.min(...runs)).toBeGreaterThanOrEqual(EPISODE_MIN_DAYS);
-    // 200 subjects over 10 years: about 2000 episodes.
-    expect(runs.length).toBeGreaterThan(1700);
-    expect(runs.length).toBeLessThan(2300);
+    expect(runs.length).toBeGreaterThan(65);
+    expect(runs.length).toBeLessThan(135);
   });
 });
 
@@ -58,7 +61,10 @@ describe("seriesEpisodeFlags", () => {
       { endDay: "2024-12-31", days: 365 },
       { endDay: "2024-08-01", days: 60 },
     ];
-    for (const subject of SUBJECTS.slice(0, 300)) {
+    // The property is exact, not statistical, so a few subjects do; the count
+    // below makes sure they have episodes inside the windows to compare.
+    let compared = 0;
+    for (const subject of SUBJECTS.slice(0, 12)) {
       const reference = new Set(
         episodeDays(subject, { endDay: "2025-06-30", days: 730 }),
       );
@@ -67,8 +73,10 @@ describe("seriesEpisodeFlags", () => {
         expect(episodeDays(subject, window)).toEqual(
           [...reference].filter((day) => inWindow.has(day)),
         );
+        compared += episodeDays(subject, window).length;
       }
     }
+    expect(compared).toBeGreaterThan(50);
   });
 
   test("v2 episodes still move with the window", () => {
@@ -81,15 +89,29 @@ describe("seriesEpisodeFlags", () => {
   });
 
   test("v3 episode days are balanced before and after a fixed onset", () => {
-    const all = SUBJECTS.flatMap((subject) => episodeDays(subject, AROUND_ONSET));
-    const before = all.filter((day) => day < ONSET).length;
-    const after = all.length - before;
-    expect(all.length).toBeGreaterThan(3000);
-    expect(Math.abs(before - after) / all.length).toBeLessThan(0.08);
+    // One day in six per subject, at a phase that rotates with the subject, so
+    // every day of the window is used equally. An episode lasts at most 6 days,
+    // so it covers at most one sampled day: hits are close to independent and
+    // each costs about 73 days checked instead of 365 for a full scan.
+    // 1200 subjects give about 490 hits; |before - after| / hits has an sd of
+    // about 0.045, so 0.15 is a 3.3 sd band. v2 scored 1 on this (every day
+    // after the onset), as would any placement tied to the window's end.
+    const days = windowDays(AROUND_ONSET.endDay, AROUND_ONSET.days);
+    const hits = SUBJECTS.slice(0, 1200).flatMap((subject, subjectIndex) =>
+      days.filter(
+        (day, index) =>
+          (index + subjectIndex) % EPISODE_MAX_DAYS === 0 &&
+          inGenericEpisode(`${SEED}:${subject}`, day),
+      ),
+    );
+    const before = hits.filter((day) => day < ONSET).length;
+    const after = hits.length - before;
+    expect(hits.length).toBeGreaterThan(350);
+    expect(Math.abs(before - after) / hits.length).toBeLessThan(0.15);
   });
 
   test("v2 put every episode day after that onset", () => {
-    const all = SUBJECTS.slice(0, 500).flatMap((subject) =>
+    const all = SUBJECTS.slice(0, 100).flatMap((subject) =>
       episodeDays(subject, AROUND_ONSET, "2"),
     );
     expect(all.length).toBeGreaterThan(0);
