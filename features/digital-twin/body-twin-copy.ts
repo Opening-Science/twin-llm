@@ -23,4 +23,6 @@ export const PANEL_IDS = {
   anatomy: "twin-anatomy",
   details: "twin-details",
   overlays: "twin-scan-overlays",
+  /** Not a panel: the Heart chambers toggle (#53), kept the same way. */
+  heartChambers: "twin-heart-chambers",
 } as const;

@@ -1,8 +1,8 @@
 ---
 name: genome
 description: Summarise the genome report you released from your Ark and ask the local Carbon-X research model about each called variant. Descriptive only, no dosing.
-tools: [genome_report, dna_ask]
-sources: [ark-genome]
+tools: [genome_report, dna_ask, genome_variants]
+sources: [ark-genome, vcf-variants]
 providers: [ollama]
 ---
 
@@ -18,6 +18,10 @@ called variant with Carbon-X.
 4. For each answer, write one or two sentences in your own words, then quote the key part
    labelled "Carbon-X (research model):". If `dna_ask` refuses (reference mismatch,
    unknown build, Carbon-X not running), give its reason in one plain sentence and go on.
+5. For a named rsID or chrN:pos outside the report, call `genome_variants` with the
+   imported VCF's dataset_id and only the names asked for. If it refuses with
+   DATASET_NOT_FOUND, use an id from its `vcf_datasets`. Not found means no record, not
+   the reference allele.
 
 Describe what each variant is known to affect: the gene, the change, and the molecular
 effect reported for that star allele. These are pharmacogenomic sites: never give a dose,

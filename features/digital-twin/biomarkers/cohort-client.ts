@@ -1,7 +1,7 @@
 import { type FormattableMetric } from "@/infrastructure/format-measure";
 
 import { type LabValue } from "./biomarker-rows";
-import { type CohortPerson } from "./cohort-handler";
+import { type CohortPerson, type CohortRhythm } from "./cohort-handler";
 
 /**
  * The tab's reads, with `fetch` passed in so tests need no network. A cohort
@@ -44,7 +44,20 @@ export const loadCohortPeople = (
 export type CohortReading = Readonly<{
   values: readonly LabValue[];
   vitals: readonly LabValue[];
+  /** The heart rate's day and whether the record lists AF on it (#53). */
+  rhythm: CohortRhythm;
 }>;
+
+/** Only a well-formed answer counts; anything else is no rhythm, never AF. */
+export const rhythmOf = (value: unknown): CohortRhythm => {
+  const day = field(value, "day");
+  const af = field(value, "afOnDay");
+  return typeof day === "string" &&
+    /^\d{4}-\d{2}-\d{2}$/.test(day) &&
+    typeof af === "boolean"
+    ? { day, afOnDay: af }
+    : null;
+};
 
 export const loadCohortValues = (
   ref: string,
@@ -55,7 +68,11 @@ export const loadCohortValues = (
       const values = listOrNull<LabValue>(body, "values");
       // No vitals is no motion, never a failed read.
       return values
-        ? { values, vitals: listOrNull<LabValue>(body, "vitals") ?? [] }
+        ? {
+            values,
+            vitals: listOrNull<LabValue>(body, "vitals") ?? [],
+            rhythm: rhythmOf(field(body, "rhythm")),
+          }
         : null;
     })
     .catch(() => null);

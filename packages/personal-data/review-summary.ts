@@ -1,5 +1,7 @@
 import { MAX_CODES_LISTED, MAX_UNMAPPED_LISTED, PREVIEW_ROWS } from "./limits";
+import { genotypeClass } from "./parse-vcf";
 import {
+  type GenomeBuildSource,
   type ImportKind,
   type ObservationDraft,
   type ParsedOk,
@@ -7,6 +9,7 @@ import {
   type TableColumn,
   type Unmapped,
   unmappedCount,
+  type VariantDraft,
 } from "./types";
 
 /**
@@ -31,6 +34,14 @@ export type ReviewReason = Readonly<{ code: string; example: string; count: numb
 
 export type DateRange = Readonly<{ first: string; last: string }>;
 
+/** A VCF's summary: its build, records per chromosome and genotype counts. */
+export type GenomeReview = Readonly<{
+  build: "GRCh38";
+  buildSource: GenomeBuildSource;
+  chromosomes: readonly Readonly<{ chrom: string; count: number }>[];
+  genotypes: Readonly<{ homRef: number; het: number; homAlt: number; noCall: number }>;
+}>;
+
 export type ReviewSummary = Readonly<{
   kind: ImportKind;
   fileName: string;
@@ -42,8 +53,11 @@ export type ReviewSummary = Readonly<{
     clinicalRecords: number;
     tableRows: number;
     tableColumns: number;
+    variants: number;
     unmapped: number;
   }>;
+  /** Null for every format but a VCF. */
+  genome: GenomeReview | null;
   dateRange: DateRange | null;
   codes: readonly ReviewCode[];
   codesTotal: number;
@@ -89,6 +103,7 @@ const extent = (values: readonly string[]): DateRange | null =>
 
 /** Earliest and latest date in what would be stored, as ISO text. */
 export const dateRangeOf = (parsed: ParsedOk): DateRange | null => {
+  if (parsed.kind === "vcf") return null;
   if (parsed.kind === "table") {
     const dateColumns = parsed.table.columns.flatMap((column, index) =>
       column.type === "date" ? [index] : [],
@@ -184,8 +199,54 @@ const observationPreview = (rows: readonly ObservationDraft[]) =>
       row.unit,
     ]);
 
+/** Records per chromosome in file order, and the four genotype counts. */
+export const genomeReview = (
+  variants: readonly VariantDraft[],
+  build: Readonly<{ build: "GRCh38"; buildSource: GenomeBuildSource }>,
+): GenomeReview => {
+  const chromosomes = groupBy<VariantDraft, { chrom: string; count: number }>(
+    variants,
+    (row) => row.chrom,
+    (known, row) => ({ chrom: row.chrom, count: (known?.count ?? 0) + 1 }),
+  );
+  const genotypes = { homRef: 0, het: 0, homAlt: 0, noCall: 0 };
+  const keys = {
+    "hom-ref": "homRef",
+    het: "het",
+    "hom-alt": "homAlt",
+    "no-call": "noCall",
+  } as const;
+  for (const row of variants) genotypes[keys[genotypeClass(row.genotype)]] += 1;
+  return { build: build.build, buildSource: build.buildSource, chromosomes, genotypes };
+};
+
+const VARIANT_PREVIEW_COLUMNS = [
+  "chrom",
+  "pos",
+  "id",
+  "ref",
+  "alt",
+  "genotype",
+  "filter",
+] as const;
+
+const variantPreview = (rows: readonly VariantDraft[]) =>
+  rows
+    .slice(0, PREVIEW_ROWS)
+    .map((row): readonly TableCell[] => [
+      row.chrom,
+      row.pos,
+      row.variantId,
+      row.ref,
+      row.alt,
+      row.genotype ?? "no call",
+      row.filter,
+    ]);
+
 export const reviewSummary = (parsed: ParsedOk, file: FileFacts): ReviewSummary => {
-  const observations = parsed.kind === "table" ? [] : parsed.observations;
+  const observations =
+    parsed.kind === "table" || parsed.kind === "vcf" ? [] : parsed.observations;
+  const variants = parsed.kind === "vcf" ? parsed.variants : [];
   const clinicalRecords = parsed.kind === "fhir" ? parsed.clinical.length : 0;
   const tableRows = parsed.kind === "table" ? parsed.table.rows.length : 0;
   const codes = codesOf(observations);
@@ -194,14 +255,16 @@ export const reviewSummary = (parsed: ParsedOk, file: FileFacts): ReviewSummary 
     fileName: file.fileName,
     byteSize: file.byteSize,
     sha256: file.sha256,
-    rowsToStore: observations.length + clinicalRecords + tableRows,
+    rowsToStore: observations.length + clinicalRecords + tableRows + variants.length,
     counts: {
       observations: observations.length,
       clinicalRecords,
       tableRows,
       tableColumns: parsed.kind === "table" ? parsed.table.columns.length : 0,
+      variants: variants.length,
       unmapped: unmappedCount(parsed.unmapped),
     },
+    genome: parsed.kind === "vcf" ? genomeReview(variants, parsed) : null,
     dateRange: dateRangeOf(parsed),
     codes: codes.slice(0, MAX_CODES_LISTED),
     codesTotal: codes.length,
@@ -218,10 +281,12 @@ export const reviewSummary = (parsed: ParsedOk, file: FileFacts): ReviewSummary 
             columns: parsed.table.columns.map((column) => column.name),
             rows: parsed.table.rows.slice(0, PREVIEW_ROWS),
           }
-        : {
-            columns: OBSERVATION_PREVIEW_COLUMNS,
-            rows: observationPreview(observations),
-          },
+        : parsed.kind === "vcf"
+          ? { columns: VARIANT_PREVIEW_COLUMNS, rows: variantPreview(variants) }
+          : {
+              columns: OBSERVATION_PREVIEW_COLUMNS,
+              rows: observationPreview(observations),
+            },
     notes: parsed.notes,
   };
 };
