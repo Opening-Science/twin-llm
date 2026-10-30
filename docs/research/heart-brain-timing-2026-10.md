@@ -375,6 +375,127 @@ episodes of #270 multiply RMSSD on both sides and do not move the ratio
 the same 90 days on each side, so neither compounding effects nor windowing
 is involved. Every other row of Part 2 is unchanged by the rerun.
 
+## Part 4: what drives the post-onset excess (#323)
+
+Part 3 found 141 strokes after AF onset against 114.2 expected by the
+oracle (1.23, 1.04 to 1.46). The oracle feeds the calculator what the record
+shows, so the question is whether Synthea's own inputs differ from the record
+in a way that adds strokes after onset.
+
+### Instrumented run
+
+One seeded run of the pinned jar (SHA-256 `ed43c20a...e6ecc1`, unchanged)
+with one extra module, `scripts/heart-brain/synthea-monitor/excess_monitor.json`,
+loaded with `-d`. It waits on the same 1-month delay as `stroke.json`, so it
+wakes on exactly the time steps where the stroke module draws, and from age
+50 and 2014 it passes through states whose names carry the `stroke_risk`
+attribute (as the 10-year table value it came from) and the calculator's
+flags: `blood_pressure_controlled`, `diabetes`, `atrial_fibrillation`,
+`smoker` and `hypertension`. The JSON exporter's module history
+(`exporter.json.include_module_history`) gives those states back with their
+times.
+
+The module writes nothing to the record and draws no random numbers. A first
+version that wrote the values as Observations changed the people generated,
+because every record entry takes a UUID from the person's random generator.
+With the state-only module, a 3-person run with and without it gave
+byte-identical FHIR files. Systolic BP is not read directly (reading a vital
+sign can draw a random number); the BP points the calculator used are
+recovered from its own risk: total points minus age, smoking, diabetes and
+AF points.
+
+```sh
+cd <run dir>/main && java -Duser.timezone=UTC -jar synthea-with-dependencies.jar \
+  -c synthea.properties -d modules -s 323 -cs 324 -p 600 \
+  -r 20260101 -e 20260101 -a 55-95 -k keep-af.json Massachusetts
+bun run heart-brain:excess -- --run <run dir>/main --out research-out/heart-brain/excess.json
+```
+
+Inputs (SHA-256): jar `ed43c20a...e6ecc1`; monitor module as run
+`5a7d409b...a8c20` (the committed file is the same JSON, prettier-formatted,
+`186280ac...cdd67`); keep module `scripts/synthea/keep/s7-af.json`
+`3f5614cc...e7eb7`; properties `c0d32eb1...e93f3` (the 1M settings plus
+`exporter.years_of_history = 12`, `exporter.json.export = true`,
+`exporter.json.include_module_history = true`, 6 threads). Seeds 323 and 324.
+The run kept 600 living people with AF aged 55 to 95 and wrote 734 records
+(136 deceased), 15 GB, outside the repository; it took about 40 minutes.
+`excess-run.ts` cuts each record to the last 10 years before the oracle reads
+it, as in the 1M cohort, and uses the within-person cohort's pieces (all
+ages, from 2016).
+
+Checks that the instrumentation reads what the generator used:
+
+- All 89,709 monitor wakes up to the last stroke draw fall on a
+  `Chance_of_Stroke` draw time; none falls between.
+- Feeding the oracle every input from the monitor gives 16.25 expected strokes
+  after onset, the same as the sum of the chances Synthea drew with (16.25).
+- In 2 of 734 people the recorded stroke day differs from the day
+  `stroke.json` entered its `Stroke` state.
+
+### Results
+
+Expected strokes on the same person-time, with one input at a time taken from
+Synthea's state instead of the record:
+
+| Inputs                                        | Before onset | After onset | After / record |
+| --------------------------------------------- | ------------ | ----------- | -------------- |
+| Record (the oracle's inputs)                  | 2.65         | 15.29       | 1.000          |
+| True AF timing                                | 2.64         | 15.29       | 1.000          |
+| True diabetes                                 | 2.69         | 15.40       | 1.007          |
+| True smoking                                  | 2.65         | 15.29       | 1.000          |
+| BP table only (controlled table when on)      | 2.82         | 16.21       | 1.060          |
+| True BP points (value between visits + table) | 2.79         | 16.11       | 1.054          |
+| All true (equals Synthea's own chances)       | 2.82         | 16.25       | 1.063          |
+| Observed strokes                              | 5            | 22          |                |
+
+Person-time: 2,086 years before onset and 4,333 after. The oracle on the
+same pieces gives 2.72 and 15.33.
+
+What this says:
+
+- `blood_pressure_controlled` is the input that moves the level. About 35% of
+  checks have it on, and then the calculator reads BP with its controlled-BP
+  table, which gives more points for the same BP. The record never shows it. It adds
+  6.0% after onset and 6.3% before.
+- BP between visits differs from the last recorded band in about 39% of
+  uncontrolled checks, in both directions, and the net effect is nil (-0.01
+  strokes after onset). For controlled people BP between visits is a little
+  lower than at the visit, so true BP adds a bit less than the table alone.
+- AF timing is as the oracle assumes: in all 734 people the AF attribute is
+  set after the wellness visit before the recorded onset (median 154 days
+  before the recorded onset, 90th percentile 326, at most 726), and the
+  oracle's even spread gives the same expected count as the true timing
+  (0.994 before, 1.000 after).
+- Diabetes timing adds 0.7%, smoking nothing.
+
+Applied to Part 3 with the all-true factor (1.063 after onset, 1.064
+before, both measured on the monitored checks; the oracle's sum over the
+same pieces is a little higher before onset, 2.72 against 2.65, because it
+also counts time before age 50 that the monitor does not see), the expected
+count after onset rises from 114.2 to about 121.4: 141 observed is then 1.16
+times expected (0.98 to 1.37). Before onset it is 12 against about 19.0
+(0.63, 0.33 to 1.10). So `blood_pressure_controlled` explains about a
+quarter of the excess, and what is left is within chance. Because the same factor applies before and after
+onset, the within-person expected rate ratio barely moves, and its overshoot
+in Part 3 stays where it was: it comes as much from the few strokes before
+onset (12 against 19) as from the excess after.
+
+In this run itself, 22 strokes followed AF onset against 16.25 from
+Synthea's own chances (1.35, 0.85 to 2.05), and over all monitored time 27
+against 21.06 (1.28, 0.85 to 1.87). Both lie above 1 but within chance; the
+run is too small to tell a ratio of 1.16 from 1.
+
+### Limits of Part 4
+
+- One run of 734 people, generated with an age range and a keep module
+  rather than as in the 1M cohort; the input shares (35% controlled, for
+  instance) may differ there. The factor 1.06 is carried over, not measured
+  on the 1M people.
+- Too few strokes to test the remaining 16% directly; it is called chance
+  because its interval covers 1, not because another cause was ruled out.
+- BP is read through the calculator's points; where the risk table repeats a
+  value the lowest fitting BP points are taken (5% of checks after onset).
+
 ## Limits
 
 - Synthea rules, not medicine. The stroke rise at AF onset is the calculator's
@@ -391,7 +512,9 @@ is involved. Every other row of Part 2 is unchanged by the rerun.
 - The oracle reads the calculator exactly but feeds it what the record
   shows: BP at visits, smoking status, recorded conditions with an assumed
   lag. It does not see `blood_pressure_controlled` or BP between visits, and
-  it under-predicts strokes after AF onset by about a fifth.
+  it under-predicts strokes after AF onset by about a fifth. Part 4 traces
+  about 6% of that to `blood_pressure_controlled`, which the record never
+  shows.
 - Wearable effect sizes are the generator's assumptions, not fitted to any
   device or person, and recovering them shows the statistics work on the
   generator, not that a real device would show the same. Three batches; a
@@ -399,9 +522,10 @@ is involved. Every other row of Part 2 is unchanged by the rerun.
 
 ## What is left
 
-- Find the input behind the 23% excess of strokes after AF onset over the
-  oracle (for example by exporting `stroke_risk` from a patched Synthea run
-  on one batch); until then the within-person effect size is not recovered
-  within tolerance.
+- Part 4 explains about a quarter of the 23% excess after AF onset
+  (`blood_pressure_controlled`); the rest is within chance. A larger
+  instrumented run, or a batch regenerated with the monitor module, would
+  test the remaining 16% directly. The within-person overshoot is still not
+  recovered within tolerance.
 - New batches with `exporter.years_of_history = 0` would give the whole record,
   many more strokes before AF onset, and tighter before rates.
