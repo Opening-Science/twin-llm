@@ -1,6 +1,6 @@
 /**
  * The `agent_handover` family (#210, tracks only): a question that belongs to
- * another agent. The General Practitioner answers a specialist's question with
+ * another agent. The General agent answers a specialist's question with
  * the same audited tool a latest-value question uses (an anatomy question with
  * `knowledge_search`), then names the agent to ask for more; a question about
  * the genome report it cannot read, so it only names the Genetics agent. A specialist asked about something outside its
@@ -85,7 +85,7 @@ export const outsideArea = (context: FamilyContext, track: Track): Draft => {
   };
 };
 
-/** The specialists whose questions the GP can answer with a tool, with the measures left for this subject. */
+/** The specialists whose questions the General agent can answer with a tool, with the measures left for this subject. */
 type DataSpecialist = Readonly<{
   agent: TrackAgent;
   measures: readonly [Measure, ...Measure[]];
@@ -105,10 +105,10 @@ const dataSpecialists = (hasWearables: boolean): readonly DataSpecialist[] =>
 type GeneralChoice = DataSpecialist | "genome" | "anatomy";
 
 /**
- * The GP asked a specialist's question: it reads the latest value with the
+ * The General agent asked a specialist's question: it reads the latest value with the
  * audited tool and names the agent to ask for more. An anatomy question is
  * answered from the knowledge notes, as the Anatomy agent does, and names it.
- * A genome question gets no tool (the GP's turn has none) and names the
+ * A genome question gets no tool (the General agent's turn has none) and names the
  * Genetics agent.
  */
 export const generalHandover = async (context: FamilyContext): Promise<Draft> => {
@@ -161,7 +161,7 @@ export const generalHandover = async (context: FamilyContext): Promise<Draft> =>
   );
 };
 
-/** The hand-over builder for a track: the GP answers and names; a specialist names only. */
+/** The hand-over builder for a track: the General agent answers and names; a specialist names only. */
 export const handoverFor =
   (track: Track) =>
   async (context: FamilyContext): Promise<Draft> =>

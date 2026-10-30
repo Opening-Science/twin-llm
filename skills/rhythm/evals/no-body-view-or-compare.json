@@ -1,0 +1,26 @@
+{
+  "question": "Show my heart on the body and compare this week with last week.",
+  "dataMode": "personal",
+  "wearableContext": true,
+  "script": [
+    {
+      "tool": "resting_hr_trend",
+      "input": {
+        "source": "all",
+        "start": "2026-09-01",
+        "end": "2026-09-30"
+      }
+    },
+    {
+      "view": "twin.body"
+    },
+    {
+      "view": "chart.compare"
+    }
+  ],
+  "expect": {
+    "calls": ["resting_hr_trend"],
+    "views": [],
+    "refusals": ["view-not-allowed"]
+  }
+}

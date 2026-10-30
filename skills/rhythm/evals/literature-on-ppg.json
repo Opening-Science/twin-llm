@@ -1,0 +1,17 @@
+{
+  "question": "What do studies say about measuring heart rhythm with a wrist PPG sensor?",
+  "script": [
+    {
+      "tool": "knowledge_search",
+      "input": {
+        "query": "wrist photoplethysmography heart rhythm validity",
+        "k": 5
+      }
+    }
+  ],
+  "expect": {
+    "calls": ["knowledge_search"],
+    "views": [],
+    "refusals": []
+  }
+}
