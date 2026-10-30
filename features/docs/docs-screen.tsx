@@ -3,11 +3,13 @@ import Markdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import { type DocPage, rewriteDocUrl } from "./docs-pages";
+import { rehypeHeadingIds } from "./heading-ids";
 
 /**
  * The docs index and one rendered page. Markdown comes from the repository's
  * own `docs/` folder, so links between pages are rewritten to `/docs/...`
- * before the usual URL check; `.doc-prose` in `globals.css` styles the output.
+ * before the usual URL check, headings get GitHub's anchors as ids, and
+ * `.doc-prose` in `globals.css` styles the output.
  */
 
 const FRAME = "mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-10 sm:px-6";
@@ -60,6 +62,7 @@ export const DocScreen = ({
     )}
     <Markdown
       remarkPlugins={[remarkGfm]}
+      rehypePlugins={[rehypeHeadingIds]}
       urlTransform={(url) =>
         defaultUrlTransform(rewriteDocUrl(url, page.path, standalone ? "github" : "app"))
       }
