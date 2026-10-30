@@ -102,7 +102,7 @@ describe("wearable snapshots in the chat tools", () => {
 });
 
 describe("an agent's literature in the chat tools (#236)", () => {
-  test("knowledge_search gets the agent's specialty, every one for the GP, none without an agent", () => {
+  test("knowledge_search gets the agent's specialty, every one for the General agent, none without an agent", () => {
     const literatureOf = (agent: string | null | undefined): unknown => {
       const { factories, calls } = spied();
       createChatTools(SCOPE, { query: ports, factories, agent });
@@ -111,6 +111,7 @@ describe("an agent's literature in the chat tools (#236)", () => {
     expect(literatureOf(undefined)).toEqual([]);
     expect(literatureOf(null)).toEqual([]);
     expect(literatureOf("sleep")).toEqual(["literature:sleep"]);
+    expect(literatureOf("rhythm")).toEqual(["literature:cardiology"]);
     expect(literatureOf("gp")).toEqual([
       "literature:gp",
       "literature:diet",
@@ -118,6 +119,8 @@ describe("an agent's literature in the chat tools (#236)", () => {
       "literature:sleep",
       "literature:trainer",
       "literature:genetics",
+      "literature:cardiology",
+      "literature:neurology",
     ]);
   });
 });

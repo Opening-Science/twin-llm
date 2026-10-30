@@ -403,7 +403,7 @@ export const catalogAgentOf = (
 /**
  * The agents a new chat starts with, in this order, when the catalog offers
  * them: on a local provider all three, on a hosted one only the General
- * Practitioner.
+ * agent.
  */
 export const DEFAULT_AGENT_IDS: readonly string[] = Object.freeze([
   "agent:gp",

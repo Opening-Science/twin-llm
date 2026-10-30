@@ -1,0 +1,41 @@
+{
+  "question": "Describe the autonomic measures for subject 9661a432-4630-2cd9-142c-386845fae837 over the last three months.",
+  "script": [
+    {
+      "tool": "subject_window",
+      "input": {
+        "subject_ref": "9661a432-4630-2cd9-142c-386845fae837"
+      }
+    },
+    {
+      "tool": "hrv_trend",
+      "input": {
+        "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+        "source": "all",
+        "start": "2026-07-04",
+        "end": "2026-10-01"
+      }
+    },
+    {
+      "tool": "resting_hr_trend",
+      "input": {
+        "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+        "source": "all",
+        "start": "2026-07-04",
+        "end": "2026-10-01"
+      }
+    },
+    {
+      "tool": "knowledge_search",
+      "input": {
+        "query": "heart rate variability autonomic nervous system",
+        "k": 5
+      }
+    }
+  ],
+  "expect": {
+    "calls": ["subject_window", "hrv_trend", "resting_hr_trend", "knowledge_search"],
+    "views": [],
+    "refusals": []
+  }
+}
