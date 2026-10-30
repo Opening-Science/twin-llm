@@ -1,0 +1,1298 @@
+{
+  "schema_version": "twin-llm.eval.answer-key.v1",
+  "generator_version": "2",
+  "cohort": {
+    "id": "synthea-v4-s7",
+    "synthea_version": "v4.0.0",
+    "seed": 2770,
+    "population": 17,
+    "age": "65-90",
+    "reference_date": "20260101",
+    "end_date": "20260101",
+    "subjects": 17,
+    "content_sha256": "2d8b7a64fb6fff2d7951c8d8640e72ef74ddd72a6bdb75da1fc355fb98d45f14",
+    "runs": [
+      { "name": "af", "seed": 2770, "clinician_seed": 2771, "population": 10 },
+      { "name": "af-stroke", "seed": 2772, "clinician_seed": 2773, "population": 3 },
+      { "name": "sinus", "seed": 2774, "clinician_seed": 2775, "population": 4 }
+    ]
+  },
+  "open_twin_sha": "a9e126c952c91e19e064a962dda7d815a43564e5",
+  "questions_sha256": "5c32d2fdcf1e3fcb3e3097cfc4599f2b48b013e182f47d121b49425723c96beb",
+  "actor": "eval-answer-key",
+  "generated_on": "2026-10-30",
+  "entries": {
+    "Q-S7-H01": [
+      {
+        "name": "n_windows",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "2d68b88f-a1fc-829b-a57e-fe499c2313de",
+          "recording": 4,
+          "duration_sec": 300,
+          "date": "2024-01-10"
+        },
+        "path": "n_windows",
+        "value": 3,
+        "unit": null,
+        "n": 421,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "n_flagged",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "2d68b88f-a1fc-829b-a57e-fe499c2313de",
+          "recording": 4,
+          "duration_sec": 300,
+          "date": "2024-01-10"
+        },
+        "path": "n_flagged",
+        "value": 0,
+        "unit": null,
+        "n": 421,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-H02": [
+      {
+        "name": "n_windows",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "8e3e0cd7-9d26-5c89-f1ba-f3ae744dfd69",
+          "recording": 5,
+          "duration_sec": 600,
+          "date": "2022-03-26"
+        },
+        "path": "n_windows",
+        "value": 4,
+        "unit": null,
+        "n": 625,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "n_flagged",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "8e3e0cd7-9d26-5c89-f1ba-f3ae744dfd69",
+          "recording": 5,
+          "duration_sec": 600,
+          "date": "2022-03-26"
+        },
+        "path": "n_flagged",
+        "value": 2,
+        "unit": null,
+        "n": 625,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-H03": [
+      {
+        "name": "n_windows",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "45e78959-6c40-73f8-d91b-5a08faff470c",
+          "recording": 2,
+          "duration_sec": 300,
+          "date": "2023-03-05"
+        },
+        "path": "n_windows",
+        "value": 3,
+        "unit": null,
+        "n": 397,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "n_flagged",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "45e78959-6c40-73f8-d91b-5a08faff470c",
+          "recording": 2,
+          "duration_sec": 300,
+          "date": "2023-03-05"
+        },
+        "path": "n_flagged",
+        "value": 2,
+        "unit": null,
+        "n": 397,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-H04": [
+      {
+        "name": "n_windows",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "0ba5859a-a18a-b1a6-2b0b-50bb9425b036",
+          "recording": 3,
+          "duration_sec": 600,
+          "date": "2016-08-14"
+        },
+        "path": "n_windows",
+        "value": 4,
+        "unit": null,
+        "n": 610,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "n_flagged",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "0ba5859a-a18a-b1a6-2b0b-50bb9425b036",
+          "recording": 3,
+          "duration_sec": 600,
+          "date": "2016-08-14"
+        },
+        "path": "n_flagged",
+        "value": 0,
+        "unit": null,
+        "n": 610,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-H05": [
+      {
+        "name": "n_windows",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "90540a0e-ef0a-4348-7cf8-9fd9779fb54e",
+          "recording": 3,
+          "duration_sec": 600,
+          "date": "2023-05-21"
+        },
+        "path": "n_windows",
+        "value": 6,
+        "unit": null,
+        "n": 808,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "n_flagged",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "90540a0e-ef0a-4348-7cf8-9fd9779fb54e",
+          "recording": 3,
+          "duration_sec": 600,
+          "date": "2023-05-21"
+        },
+        "path": "n_flagged",
+        "value": 1,
+        "unit": null,
+        "n": 808,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-H06": [
+      {
+        "name": "n_windows",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "70ba107a-37f1-9a96-f6c3-1bce08715cfb",
+          "recording": 4,
+          "duration_sec": 300,
+          "date": "2019-08-16"
+        },
+        "path": "n_windows",
+        "value": 3,
+        "unit": null,
+        "n": 386,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "n_flagged",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "70ba107a-37f1-9a96-f6c3-1bce08715cfb",
+          "recording": 4,
+          "duration_sec": 300,
+          "date": "2019-08-16"
+        },
+        "path": "n_flagged",
+        "value": 0,
+        "unit": null,
+        "n": 386,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-H07": [
+      {
+        "name": "window_1_nrmssd",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "f4f95c2d-a700-d464-8ff4-d48910b7b2b7",
+          "recording": 1,
+          "duration_sec": 600,
+          "date": "2023-05-27"
+        },
+        "path": "windows.0.nrmssd",
+        "value": 0.039987153117416796,
+        "unit": null,
+        "n": 821,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "window_1_turning_point_ratio",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "f4f95c2d-a700-d464-8ff4-d48910b7b2b7",
+          "recording": 1,
+          "duration_sec": 600,
+          "date": "2023-05-27"
+        },
+        "path": "windows.0.turning_point_ratio",
+        "value": 0.3203125,
+        "unit": null,
+        "n": 821,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "mean_hr",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "f4f95c2d-a700-d464-8ff4-d48910b7b2b7",
+          "recording": 1,
+          "duration_sec": 600,
+          "date": "2023-05-27"
+        },
+        "path": "mean_hr",
+        "value": 82.19301509541631,
+        "unit": null,
+        "n": 821,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-H08": [
+      {
+        "name": "window_1_nrmssd",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "c0b3db8b-1e73-6d68-aadc-5e0914ff8a78",
+          "recording": 4,
+          "duration_sec": 180,
+          "date": "2020-02-26"
+        },
+        "path": "windows.0.nrmssd",
+        "value": 0.1803861992941187,
+        "unit": null,
+        "n": 218,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "window_1_turning_point_ratio",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "c0b3db8b-1e73-6d68-aadc-5e0914ff8a78",
+          "recording": 4,
+          "duration_sec": 180,
+          "date": "2020-02-26"
+        },
+        "path": "windows.0.turning_point_ratio",
+        "value": 0.46875,
+        "unit": null,
+        "n": 218,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "mean_hr",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "c0b3db8b-1e73-6d68-aadc-5e0914ff8a78",
+          "recording": 4,
+          "duration_sec": 180,
+          "date": "2020-02-26"
+        },
+        "path": "mean_hr",
+        "value": 72.893040052162,
+        "unit": null,
+        "n": 218,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-H09": [
+      {
+        "name": "window_1_nrmssd",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "2539973f-31ed-cc8c-4de1-b0374d06d52a",
+          "recording": 2,
+          "duration_sec": 180,
+          "date": "2020-03-14"
+        },
+        "path": "windows.0.nrmssd",
+        "value": 0.06404023834455741,
+        "unit": null,
+        "n": 219,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "window_1_turning_point_ratio",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "2539973f-31ed-cc8c-4de1-b0374d06d52a",
+          "recording": 2,
+          "duration_sec": 180,
+          "date": "2020-03-14"
+        },
+        "path": "windows.0.turning_point_ratio",
+        "value": 0.34375,
+        "unit": null,
+        "n": 219,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "mean_hr",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "2539973f-31ed-cc8c-4de1-b0374d06d52a",
+          "recording": 2,
+          "duration_sec": 180,
+          "date": "2020-03-14"
+        },
+        "path": "mean_hr",
+        "value": 73.33039416482039,
+        "unit": null,
+        "n": 219,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-H10": [
+      {
+        "name": "flagged_time_share",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "afe8ca0b-5c31-742b-a760-b3f55d09ec74",
+          "recording": 5,
+          "duration_sec": 600,
+          "date": "2018-10-04"
+        },
+        "path": "flagged_time_share",
+        "value": 0.3251047127368673,
+        "unit": null,
+        "n": 759,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "n_flagged",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "afe8ca0b-5c31-742b-a760-b3f55d09ec74",
+          "recording": 5,
+          "duration_sec": 600,
+          "date": "2018-10-04"
+        },
+        "path": "n_flagged",
+        "value": 2,
+        "unit": null,
+        "n": 759,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "n_windows",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "afe8ca0b-5c31-742b-a760-b3f55d09ec74",
+          "recording": 5,
+          "duration_sec": 600,
+          "date": "2018-10-04"
+        },
+        "path": "n_windows",
+        "value": 5,
+        "unit": null,
+        "n": 759,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-H11": [
+      {
+        "name": "flagged_time_share",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "988ba55d-a3c2-ca7d-c196-f6db45f22706",
+          "recording": 4,
+          "duration_sec": 600,
+          "date": "2018-03-04"
+        },
+        "path": "flagged_time_share",
+        "value": 0,
+        "unit": null,
+        "n": 762,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "n_flagged",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "988ba55d-a3c2-ca7d-c196-f6db45f22706",
+          "recording": 4,
+          "duration_sec": 600,
+          "date": "2018-03-04"
+        },
+        "path": "n_flagged",
+        "value": 0,
+        "unit": null,
+        "n": 762,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "n_windows",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "988ba55d-a3c2-ca7d-c196-f6db45f22706",
+          "recording": 4,
+          "duration_sec": 600,
+          "date": "2018-03-04"
+        },
+        "path": "n_windows",
+        "value": 5,
+        "unit": null,
+        "n": 762,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-H12": [
+      {
+        "name": "flagged_time_share",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "f3510227-8dcf-8434-40ed-8cb9ad6b2f08",
+          "recording": 3,
+          "duration_sec": 600,
+          "date": "2020-11-14"
+        },
+        "path": "flagged_time_share",
+        "value": 0,
+        "unit": null,
+        "n": 610,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "n_flagged",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "f3510227-8dcf-8434-40ed-8cb9ad6b2f08",
+          "recording": 3,
+          "duration_sec": 600,
+          "date": "2020-11-14"
+        },
+        "path": "n_flagged",
+        "value": 0,
+        "unit": null,
+        "n": 610,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "n_windows",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "f3510227-8dcf-8434-40ed-8cb9ad6b2f08",
+          "recording": 3,
+          "duration_sec": 600,
+          "date": "2020-11-14"
+        },
+        "path": "n_windows",
+        "value": 4,
+        "unit": null,
+        "n": 610,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-H13": [
+      {
+        "name": "flagged_time_share",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "cbb71edd-82ff-fb71-b250-1fee52a52f52",
+          "recording": 4,
+          "duration_sec": 600,
+          "date": "2020-09-01"
+        },
+        "path": "flagged_time_share",
+        "value": 0.1591282611724692,
+        "unit": null,
+        "n": 773,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "n_flagged",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "cbb71edd-82ff-fb71-b250-1fee52a52f52",
+          "recording": 4,
+          "duration_sec": 600,
+          "date": "2020-09-01"
+        },
+        "path": "n_flagged",
+        "value": 1,
+        "unit": null,
+        "n": 773,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "n_windows",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "cbb71edd-82ff-fb71-b250-1fee52a52f52",
+          "recording": 4,
+          "duration_sec": 600,
+          "date": "2020-09-01"
+        },
+        "path": "n_windows",
+        "value": 6,
+        "unit": null,
+        "n": 773,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-H14": [
+      {
+        "name": "first_n_flagged",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "6cfebb99-dc56-e055-bb0b-5dc50c10d0cb",
+          "recording": 3,
+          "duration_sec": 300,
+          "date": "2016-07-13"
+        },
+        "path": "n_flagged",
+        "value": 1,
+        "unit": null,
+        "n": 401,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "first_share",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "6cfebb99-dc56-e055-bb0b-5dc50c10d0cb",
+          "recording": 3,
+          "duration_sec": 300,
+          "date": "2016-07-13"
+        },
+        "path": "flagged_time_share",
+        "value": 0.31328805628786427,
+        "unit": null,
+        "n": 401,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "second_n_flagged",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "6cfebb99-dc56-e055-bb0b-5dc50c10d0cb",
+          "recording": 3,
+          "duration_sec": 300,
+          "date": "2021-11-26"
+        },
+        "path": "n_flagged",
+        "value": 1,
+        "unit": null,
+        "n": 407,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "second_share",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "6cfebb99-dc56-e055-bb0b-5dc50c10d0cb",
+          "recording": 3,
+          "duration_sec": 300,
+          "date": "2021-11-26"
+        },
+        "path": "flagged_time_share",
+        "value": 0.3113042675172811,
+        "unit": null,
+        "n": 407,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-H15": [
+      {
+        "name": "first_n_flagged",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "e0242df3-9d0a-86ba-78d5-eaddf9b5eeb2",
+          "recording": 2,
+          "duration_sec": 180,
+          "date": "2023-06-28"
+        },
+        "path": "n_flagged",
+        "value": 0,
+        "unit": null,
+        "n": 213,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "first_share",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "e0242df3-9d0a-86ba-78d5-eaddf9b5eeb2",
+          "recording": 2,
+          "duration_sec": 180,
+          "date": "2023-06-28"
+        },
+        "path": "flagged_time_share",
+        "value": 0,
+        "unit": null,
+        "n": 213,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "second_n_flagged",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "e0242df3-9d0a-86ba-78d5-eaddf9b5eeb2",
+          "recording": 2,
+          "duration_sec": 180,
+          "date": "2024-10-04"
+        },
+        "path": "n_flagged",
+        "value": 0,
+        "unit": null,
+        "n": 213,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "second_share",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "e0242df3-9d0a-86ba-78d5-eaddf9b5eeb2",
+          "recording": 2,
+          "duration_sec": 180,
+          "date": "2024-10-04"
+        },
+        "path": "flagged_time_share",
+        "value": 0,
+        "unit": null,
+        "n": 213,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-H16": [
+      {
+        "name": "first_n_flagged",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "8ac1c852-d625-efe3-d7c8-fd267b34b731",
+          "recording": 3,
+          "duration_sec": 600,
+          "date": "2016-08-05"
+        },
+        "path": "n_flagged",
+        "value": 2,
+        "unit": null,
+        "n": 808,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "first_share",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "8ac1c852-d625-efe3-d7c8-fd267b34b731",
+          "recording": 3,
+          "duration_sec": 600,
+          "date": "2016-08-05"
+        },
+        "path": "flagged_time_share",
+        "value": 0.32983230175847794,
+        "unit": null,
+        "n": 808,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "second_n_flagged",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "8ac1c852-d625-efe3-d7c8-fd267b34b731",
+          "recording": 3,
+          "duration_sec": 600,
+          "date": "2021-12-13"
+        },
+        "path": "n_flagged",
+        "value": 2,
+        "unit": null,
+        "n": 809,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "second_share",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "8ac1c852-d625-efe3-d7c8-fd267b34b731",
+          "recording": 3,
+          "duration_sec": 600,
+          "date": "2021-12-13"
+        },
+        "path": "flagged_time_share",
+        "value": 0.3266784464734497,
+        "unit": null,
+        "n": 809,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-H17": [
+      {
+        "name": "first_n_flagged",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "44d2905b-94a8-210d-1448-5cfc3c5c400a",
+          "recording": 2,
+          "duration_sec": 600,
+          "date": "2018-06-08"
+        },
+        "path": "n_flagged",
+        "value": 0,
+        "unit": null,
+        "n": 720,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "first_share",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "44d2905b-94a8-210d-1448-5cfc3c5c400a",
+          "recording": 2,
+          "duration_sec": 600,
+          "date": "2018-06-08"
+        },
+        "path": "flagged_time_share",
+        "value": 0,
+        "unit": null,
+        "n": 720,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "second_n_flagged",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "44d2905b-94a8-210d-1448-5cfc3c5c400a",
+          "recording": 2,
+          "duration_sec": 600,
+          "date": "2019-08-30"
+        },
+        "path": "n_flagged",
+        "value": 2,
+        "unit": null,
+        "n": 763,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "second_share",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "44d2905b-94a8-210d-1448-5cfc3c5c400a",
+          "recording": 2,
+          "duration_sec": 600,
+          "date": "2019-08-30"
+        },
+        "path": "flagged_time_share",
+        "value": 0.3575389230224853,
+        "unit": null,
+        "n": 763,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-H18": [
+      {
+        "name": "before_n",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "44d2905b-94a8-210d-1448-5cfc3c5c400a",
+          "loinc": "8867-4",
+          "event_kind": "condition",
+          "event_code": "49436004",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "before.n",
+        "value": 0,
+        "unit": null,
+        "n": 1,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "after_n",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "44d2905b-94a8-210d-1448-5cfc3c5c400a",
+          "loinc": "8867-4",
+          "event_kind": "condition",
+          "event_code": "49436004",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "after.n",
+        "value": 1,
+        "unit": null,
+        "n": 1,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-H19": [
+      {
+        "name": "before_n",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "70ba107a-37f1-9a96-f6c3-1bce08715cfb",
+          "loinc": "8480-6",
+          "event_kind": "condition",
+          "event_code": "49436004",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "before.n",
+        "value": 0,
+        "unit": null,
+        "n": 1,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "after_n",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "70ba107a-37f1-9a96-f6c3-1bce08715cfb",
+          "loinc": "8480-6",
+          "event_kind": "condition",
+          "event_code": "49436004",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "after.n",
+        "value": 1,
+        "unit": null,
+        "n": 1,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-H20": [
+      {
+        "name": "before_n",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "f4f95c2d-a700-d464-8ff4-d48910b7b2b7",
+          "loinc": "8480-6",
+          "event_kind": "condition",
+          "event_code": "49436004",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "before.n",
+        "value": 0,
+        "unit": null,
+        "n": 1,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "after_n",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "f4f95c2d-a700-d464-8ff4-d48910b7b2b7",
+          "loinc": "8480-6",
+          "event_kind": "condition",
+          "event_code": "49436004",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "after.n",
+        "value": 1,
+        "unit": null,
+        "n": 1,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-H21": [
+      {
+        "name": "hypertension_n",
+        "tool": "conditions_timeline",
+        "args": {
+          "subject_ref": "988ba55d-a3c2-ca7d-c196-f6db45f22706",
+          "start": "1950-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z",
+          "code": "59621000"
+        },
+        "path": "n",
+        "value": 1,
+        "unit": null,
+        "n": 1,
+        "windows": [{ "start": "1950-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "ischemic_heart_disease_n",
+        "tool": "conditions_timeline",
+        "args": {
+          "subject_ref": "988ba55d-a3c2-ca7d-c196-f6db45f22706",
+          "start": "1950-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z",
+          "code": "414545008"
+        },
+        "path": "n",
+        "value": 1,
+        "unit": null,
+        "n": 1,
+        "windows": [{ "start": "1950-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S7-H22": [
+      {
+        "name": "ischemic_heart_disease_n",
+        "tool": "conditions_timeline",
+        "args": {
+          "subject_ref": "e0242df3-9d0a-86ba-78d5-eaddf9b5eeb2",
+          "start": "1950-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z",
+          "code": "414545008"
+        },
+        "path": "n",
+        "value": 1,
+        "unit": null,
+        "n": 1,
+        "windows": [{ "start": "1950-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "hypertension_n",
+        "tool": "conditions_timeline",
+        "args": {
+          "subject_ref": "e0242df3-9d0a-86ba-78d5-eaddf9b5eeb2",
+          "start": "1950-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z",
+          "code": "59621000"
+        },
+        "path": "n",
+        "value": 1,
+        "unit": null,
+        "n": 1,
+        "windows": [{ "start": "1950-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S7-H23": [
+      {
+        "name": "atrial_fibrillation_n",
+        "tool": "conditions_timeline",
+        "args": {
+          "subject_ref": "2539973f-31ed-cc8c-4de1-b0374d06d52a",
+          "start": "1950-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z",
+          "code": "49436004"
+        },
+        "path": "n",
+        "value": 1,
+        "unit": null,
+        "n": 1,
+        "windows": [{ "start": "1950-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "hypertension_n",
+        "tool": "conditions_timeline",
+        "args": {
+          "subject_ref": "2539973f-31ed-cc8c-4de1-b0374d06d52a",
+          "start": "1950-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z",
+          "code": "59621000"
+        },
+        "path": "n",
+        "value": 1,
+        "unit": null,
+        "n": 1,
+        "windows": [{ "start": "1950-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S7-H24": [
+      {
+        "name": "hypertension_n",
+        "tool": "conditions_timeline",
+        "args": {
+          "subject_ref": "8e3e0cd7-9d26-5c89-f1ba-f3ae744dfd69",
+          "start": "1950-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z",
+          "code": "59621000"
+        },
+        "path": "n",
+        "value": 1,
+        "unit": null,
+        "n": 1,
+        "windows": [{ "start": "1950-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "ischemic_heart_disease_n",
+        "tool": "conditions_timeline",
+        "args": {
+          "subject_ref": "8e3e0cd7-9d26-5c89-f1ba-f3ae744dfd69",
+          "start": "1950-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z",
+          "code": "414545008"
+        },
+        "path": "n",
+        "value": 1,
+        "unit": null,
+        "n": 1,
+        "windows": [{ "start": "1950-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S7-H26": [
+      {
+        "name": "n",
+        "tool": "conditions_timeline",
+        "args": {
+          "subject_ref": "c0b3db8b-1e73-6d68-aadc-5e0914ff8a78",
+          "start": "1950-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z"
+        },
+        "path": "n",
+        "value": 25,
+        "unit": null,
+        "n": 25,
+        "windows": [{ "start": "1950-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "n_codes",
+        "tool": "conditions_timeline",
+        "args": {
+          "subject_ref": "c0b3db8b-1e73-6d68-aadc-5e0914ff8a78",
+          "start": "1950-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z"
+        },
+        "path": "n_codes",
+        "value": 17,
+        "unit": null,
+        "n": 25,
+        "windows": [{ "start": "1950-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S7-H28": [
+      {
+        "name": "n",
+        "tool": "conditions_timeline",
+        "args": {
+          "subject_ref": "45e78959-6c40-73f8-d91b-5a08faff470c",
+          "start": "1950-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z"
+        },
+        "path": "n",
+        "value": 20,
+        "unit": null,
+        "n": 20,
+        "windows": [{ "start": "1950-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "n_codes",
+        "tool": "conditions_timeline",
+        "args": {
+          "subject_ref": "45e78959-6c40-73f8-d91b-5a08faff470c",
+          "start": "1950-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z"
+        },
+        "path": "n_codes",
+        "value": 12,
+        "unit": null,
+        "n": 20,
+        "windows": [{ "start": "1950-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S7-H30": [
+      {
+        "name": "window_1_turning_point_ratio",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "0ba5859a-a18a-b1a6-2b0b-50bb9425b036",
+          "recording": 3,
+          "duration_sec": 180,
+          "date": "2017-09-13"
+        },
+        "path": "windows.0.turning_point_ratio",
+        "value": 0.5625,
+        "unit": null,
+        "n": 183,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-H32": [
+      {
+        "name": "window_1_turning_point_ratio",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "f3510227-8dcf-8434-40ed-8cb9ad6b2f08",
+          "recording": 4,
+          "duration_sec": 600,
+          "date": "2023-03-04"
+        },
+        "path": "windows.0.turning_point_ratio",
+        "value": 0.4609375,
+        "unit": null,
+        "n": 610,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-H34": [
+      {
+        "name": "n",
+        "tool": "medications_timeline",
+        "args": {
+          "subject_ref": "8ac1c852-d625-efe3-d7c8-fd267b34b731",
+          "start": "1950-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z",
+          "code": "855332"
+        },
+        "path": "n",
+        "value": 11,
+        "unit": null,
+        "n": 11,
+        "windows": [{ "start": "1950-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S7-H36": [
+      {
+        "name": "n",
+        "tool": "medications_timeline",
+        "args": {
+          "subject_ref": "6cfebb99-dc56-e055-bb0b-5dc50c10d0cb",
+          "start": "1950-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z",
+          "code": "855332"
+        },
+        "path": "n",
+        "value": 11,
+        "unit": null,
+        "n": 11,
+        "windows": [{ "start": "1950-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S7-H38": [
+      {
+        "name": "n_windows",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "2d68b88f-a1fc-829b-a57e-fe499c2313de",
+          "recording": 4,
+          "duration_sec": 600,
+          "date": "2023-09-02"
+        },
+        "path": "n_windows",
+        "value": 6,
+        "unit": null,
+        "n": 842,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "n_flagged",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "2d68b88f-a1fc-829b-a57e-fe499c2313de",
+          "recording": 4,
+          "duration_sec": 600,
+          "date": "2023-09-02"
+        },
+        "path": "n_flagged",
+        "value": 0,
+        "unit": null,
+        "n": 842,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-H40": [
+      {
+        "name": "n_windows",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "afe8ca0b-5c31-742b-a760-b3f55d09ec74",
+          "recording": 2,
+          "duration_sec": 600,
+          "date": "2017-07-10"
+        },
+        "path": "n_windows",
+        "value": 5,
+        "unit": null,
+        "n": 650,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "n_flagged",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "afe8ca0b-5c31-742b-a760-b3f55d09ec74",
+          "recording": 2,
+          "duration_sec": 600,
+          "date": "2017-07-10"
+        },
+        "path": "n_flagged",
+        "value": 0,
+        "unit": null,
+        "n": 650,
+        "windows": [],
+        "refusal": null
+      }
+    ]
+  }
+}

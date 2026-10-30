@@ -1,0 +1,159 @@
+{
+  "cohort_id": "synthea-v4-s7",
+  "subjects": [
+    {
+      "subject_ref": "0ba5859a-a18a-b1a6-2b0b-50bb9425b036",
+      "first": "2016-04-13",
+      "last": "2025-06-04",
+      "onsets": {
+        "atrial_fibrillation": "2021-05-12",
+        "ischemic_heart_disease": "2007-02-21",
+        "hypertension": "2001-01-17"
+      },
+      "warfarin_requests": 5
+    },
+    {
+      "subject_ref": "2539973f-31ed-cc8c-4de1-b0374d06d52a",
+      "first": "2016-10-23",
+      "last": "2025-12-14",
+      "onsets": { "atrial_fibrillation": "2024-12-08", "hypertension": "1982-04-11" },
+      "warfarin_requests": 2
+    },
+    {
+      "subject_ref": "2d68b88f-a1fc-829b-a57e-fe499c2313de",
+      "first": "2016-09-30",
+      "last": "2025-11-21",
+      "onsets": { "hypertension": "1983-03-25" },
+      "warfarin_requests": 0
+    },
+    {
+      "subject_ref": "44d2905b-94a8-210d-1448-5cfc3c5c400a",
+      "first": "2016-05-24",
+      "last": "2025-07-15",
+      "onsets": {
+        "atrial_fibrillation": "2019-06-11",
+        "ischemic_heart_disease": "2021-06-22"
+      },
+      "warfarin_requests": 8
+    },
+    {
+      "subject_ref": "45e78959-6c40-73f8-d91b-5a08faff470c",
+      "first": "2016-07-18",
+      "last": "2025-09-08",
+      "onsets": { "atrial_fibrillation": "2019-08-05" },
+      "warfarin_requests": 8
+    },
+    {
+      "subject_ref": "6cfebb99-dc56-e055-bb0b-5dc50c10d0cb",
+      "first": "2016-03-09",
+      "last": "2025-05-28",
+      "onsets": {
+        "atrial_fibrillation": "2005-01-05",
+        "ischemic_heart_disease": "2025-04-30"
+      },
+      "warfarin_requests": 11
+    },
+    {
+      "subject_ref": "70ba107a-37f1-9a96-f6c3-1bce08715cfb",
+      "first": "2016-03-10",
+      "last": "2025-05-01",
+      "onsets": { "atrial_fibrillation": "2022-04-14", "hypertension": "2006-01-12" },
+      "warfarin_requests": 4
+    },
+    {
+      "subject_ref": "8ac1c852-d625-efe3-d7c8-fd267b34b731",
+      "first": "2016-07-17",
+      "last": "2025-09-07",
+      "onsets": { "atrial_fibrillation": "1995-03-19" },
+      "warfarin_requests": 11
+    },
+    {
+      "subject_ref": "8e3e0cd7-9d26-5c89-f1ba-f3ae744dfd69",
+      "first": "2016-12-05",
+      "last": "2025-01-20",
+      "onsets": {
+        "atrial_fibrillation": "1999-08-30",
+        "alzheimers": "2023-01-09",
+        "ischemic_heart_disease": "2007-10-15",
+        "hypertension": "1996-08-12"
+      },
+      "warfarin_requests": 10
+    },
+    {
+      "subject_ref": "90540a0e-ef0a-4348-7cf8-9fd9779fb54e",
+      "first": "2017-01-03",
+      "last": "2025-02-18",
+      "onsets": {
+        "atrial_fibrillation": "2015-12-29",
+        "ischemic_heart_disease": "2009-11-24"
+      },
+      "warfarin_requests": 10
+    },
+    {
+      "subject_ref": "988ba55d-a3c2-ca7d-c196-f6db45f22706",
+      "first": "2016-06-20",
+      "last": "2025-08-11",
+      "onsets": { "ischemic_heart_disease": "2002-03-26", "hypertension": "1987-01-05" },
+      "warfarin_requests": 0
+    },
+    {
+      "subject_ref": "afe8ca0b-5c31-742b-a760-b3f55d09ec74",
+      "first": "2016-01-12",
+      "last": "2025-03-04",
+      "onsets": {
+        "atrial_fibrillation": "2018-01-23",
+        "stroke": "2021-08-04",
+        "ischemic_heart_disease": "1998-10-06"
+      },
+      "warfarin_requests": 9
+    },
+    {
+      "subject_ref": "c0b3db8b-1e73-6d68-aadc-5e0914ff8a78",
+      "first": "2016-12-31",
+      "last": "2025-02-15",
+      "onsets": {
+        "atrial_fibrillation": "1995-09-02",
+        "stroke": "2018-12-09",
+        "ischemic_heart_disease": "1997-09-13"
+      },
+      "warfarin_requests": 10
+    },
+    {
+      "subject_ref": "cbb71edd-82ff-fb71-b250-1fee52a52f52",
+      "first": "2016-04-10",
+      "last": "2025-06-01",
+      "onsets": {
+        "atrial_fibrillation": "2011-03-13",
+        "stroke": "2020-01-14",
+        "alzheimers": "2024-05-26",
+        "ischemic_heart_disease": "2014-03-30",
+        "hypertension": "1999-01-03"
+      },
+      "warfarin_requests": 11
+    },
+    {
+      "subject_ref": "e0242df3-9d0a-86ba-78d5-eaddf9b5eeb2",
+      "first": "2016-04-12",
+      "last": "2025-06-04",
+      "onsets": { "ischemic_heart_disease": "2008-02-26", "hypertension": "1974-08-20" },
+      "warfarin_requests": 0
+    },
+    {
+      "subject_ref": "f3510227-8dcf-8434-40ed-8cb9ad6b2f08",
+      "first": "2016-11-16",
+      "last": "2025-01-01",
+      "onsets": { "ischemic_heart_disease": "2019-12-04" },
+      "warfarin_requests": 0
+    },
+    {
+      "subject_ref": "f4f95c2d-a700-d464-8ff4-d48910b7b2b7",
+      "first": "2016-09-17",
+      "last": "2025-11-08",
+      "onsets": {
+        "atrial_fibrillation": "2024-11-02",
+        "ischemic_heart_disease": "1996-05-25"
+      },
+      "warfarin_requests": 3
+    }
+  ]
+}
