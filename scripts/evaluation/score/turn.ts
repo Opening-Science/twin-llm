@@ -26,9 +26,12 @@ export const auditRefusals = (line: AnsweredLine): readonly string[] =>
 export const expectedRefusals = (entries: readonly KeyEntry[]): readonly string[] =>
   entries.flatMap((entry) => (entry.refusal === null ? [] : [entry.refusal]));
 
-/** The key holds no value for this item: a null value or a refusal. */
+/**
+ * The key holds no value for this item: a null value or a refusal. A verdict
+ * phrase (`cohort_event_rates`, #293) is a value the answer can state.
+ */
 export const keyHoldsNoValue = (entries: readonly KeyEntry[]): readonly KeyEntry[] =>
-  entries.filter((entry) => entry.value === null || typeof entry.value === "string");
+  entries.filter((entry) => entry.value === null || entry.refusal !== null);
 
 /** The subject refs this turn's `list_subjects` calls returned. */
 export const listedSubjects = (line: AnsweredLine): readonly string[] =>
