@@ -188,6 +188,16 @@ Sources: Dash S, Chon KH, Lu S, Raeder EA. Automatic real time detection of atri
 - **Owned by a source.** `imported-data` ("Imported records and wearable exports"), usable only when the policy allows chat. A skill that calls them may list only `ollama`.
 - Not yet: comparisons across datasets, and a scaffold for this family: `bun run new:tool` writes warehouse tools only, so an imported tool is added by hand in the files above (names, schema, port, run function, `createImportedTools`, the MCP runners and refusing deps, `importedDataReads`, the tool card title and the tests).
 
+### Imported genome variants
+
+`genome_variants` (#307) reads `personal_variants`, the records of a VCF the person imported (#180). It is genome data, so it is held to the genome policy, not the imported-data one: it is not in `IMPORTED_TOOLS`, it comes with the genome deps (`genomeToolDepsFor`), and every call asks `permitGenomeRequest` again. The definition is `GENOME_VARIANTS_TOOL_DEFINITION` (`imported-variants-schema.ts`), the run function and its refusals are in `imported-variants.ts`, the name parsing and matching are pure functions in `imported-variant-names.ts`, and the reads are `genomeVariantReads` in `infrastructure/personal-data-store.ts`, bound to the turn's own user.
+
+| Name              | Input                                                 | Output                                                                                                                                               | Max rows    |
+| ----------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| `genome_variants` | `dataset_id`, `variants[]` (rsID or `chrN:pos`, 1-50) | `{ dataset_id, build, variants: [{ name, found, records: [{ chrom, pos, id, ref, alt, genotype, alleles, filter }] }], n_requested, n_found, note }` | 200 records |
+
+Lookups by name only; no range or scan. Refusals: `GENOME_NOT_PERMITTED`, `DATASET_NOT_FOUND` (with the person's `vcf_datasets`), `NOT_A_VCF_DATASET`, `TOO_MANY_VARIANTS`, `MALFORMED_VARIANT_NAMES`, `ROW_CAP_EXCEEDED`. Audited as `genome.variants` with the number of names asked and found only. The MCP server lists it and it always refuses there. Details: [genome.md](genome.md#imported-vcf).
+
 ## Scope
 
 - `DATA_MODE=synthetic`: subjects with `is_synthetic = true` in a cohort listed in `SYNTHETIC_COHORTS` (`packages/query-tools/scope.ts`): `open-twin-synthea-trimmed-3`, `synthea-v4-seed42`, and the training and held-out cohorts `synthea-v4-seed4242` and `synthea-v4-seed9001`. The Body twin's Demo reads only `DEMO_COHORTS` (the first two), through the separate synthetic display scope. See `docs/warehouse.md`.

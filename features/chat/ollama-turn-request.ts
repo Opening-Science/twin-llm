@@ -69,6 +69,15 @@ const noGenome = (scope: GenomeToolDeps["scope"]): GenomeToolDeps => ({
     throw new Error("not used");
   },
   appendAudit: async () => undefined,
+  variants: {
+    scope,
+    permit: () => ({ ok: true }),
+    ports: {
+      listDatasets: async () => [],
+      findVariants: async () => [],
+      appendAudit: async () => undefined,
+    },
+  },
 });
 
 /** The imported-data tools as a fully local personal turn gets them; nothing is read. */

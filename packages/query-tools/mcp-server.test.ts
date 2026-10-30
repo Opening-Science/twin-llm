@@ -11,6 +11,7 @@ import { sha256Hex, toCanonicalJson } from "@/packages/audit/hash";
 import {
   assertTransportAllowedForDataMode,
   createQueryMcpServer,
+  mcpGenomePermit,
   mcpImportedPermit,
   queryToolRunners,
   TRANSPORT_NOT_PERMITTED_ERROR,
@@ -167,6 +168,30 @@ describe("query tools MCP server", () => {
         0,
       ],
     ]);
+  });
+
+  test("genome_variants always refuses over MCP with the genome code, counts only", async () => {
+    const { ports, audits } = fakePorts();
+    const client = await connectedClient(ports);
+    const result = await client.callTool({
+      name: "genome_variants",
+      arguments: { dataset_id: "ds-synthetic", variants: ["rs699", "chr1:230710048"] },
+    });
+    expect(JSON.parse(textOf(result))).toEqual({
+      code: "GENOME_NOT_PERMITTED",
+      error: "genome data is read only in personal data mode",
+      reason: "data-mode-not-personal",
+    });
+    expect(
+      audits.map((each) => [each.tool, each.args, each.result, each.rowCount]),
+    ).toEqual([
+      ["genome.variants", { requested: 2 }, { code: "GENOME_NOT_PERMITTED" }, 0],
+    ]);
+    expect(mcpGenomePermit("personal")).toEqual({
+      ok: false,
+      code: "GENOME_NOT_PERMITTED",
+      reason: "chat-model-not-local",
+    });
   });
 
   test("imported_medications refuses over MCP too, before any read", async () => {

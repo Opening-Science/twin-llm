@@ -11,6 +11,7 @@ import {
   isImportKind,
   type ImportKind,
 } from "@/packages/personal-data/types";
+import type { GenomeVariantPorts } from "@/packages/query-tools/imported-variants";
 import {
   type ImportedDataPorts,
   type ImportedObservationRecord,
@@ -439,3 +440,58 @@ export const importedDataReads = (
       ),
   };
 };
+
+/** Prisma filters for an rsID as the whole ID cell, or one of several joined by `;`. */
+export const variantIdCellMatches = (rsid: string) => [
+  { variantId: rsid },
+  { variantId: { startsWith: `${rsid};` } },
+  { variantId: { endsWith: `;${rsid}` } },
+  { variantId: { contains: `;${rsid};` } },
+];
+
+/**
+ * The reads behind `genome_variants` (#307): the person's datasets, and the
+ * records of one VCF that carry a named rsID or sit at a named site. Bound to
+ * that person like `importedDataReads`. One fixed `findMany`, capped by the
+ * caller's `take`; the tool matches each record to its name again, so an ID
+ * cell that only starts like an rsID is never returned as it. Callers check
+ * `permitGenomeRequest` first; nothing here decides who may read.
+ */
+export const genomeVariantReads = (
+  userId: () => Promise<string | null>,
+): Omit<GenomeVariantPorts, "appendAudit"> => ({
+  listDatasets: async () => {
+    const id = await userId();
+    if (id === null) return [];
+    return (
+      await database().personalDataset.findMany({
+        where: { userId: id },
+        orderBy: { createdAt: "desc" },
+        select: SELECT,
+      })
+    ).map(toView);
+  },
+  findVariants: async (query) => {
+    const id = await userId();
+    if (id === null) return [];
+    const wanted = [
+      ...query.rsids.flatMap(variantIdCellMatches),
+      ...query.sites.map((site) => ({ chrom: { in: [...site.chroms] }, pos: site.pos })),
+    ];
+    if (wanted.length === 0) return [];
+    return database().personalVariant.findMany({
+      where: { userId: id, datasetId: query.datasetId, OR: wanted },
+      orderBy: [{ chrom: "asc" }, { pos: "asc" }, { id: "asc" }],
+      take: query.take,
+      select: {
+        chrom: true,
+        pos: true,
+        variantId: true,
+        ref: true,
+        alt: true,
+        genotype: true,
+        filter: true,
+      },
+    });
+  },
+});

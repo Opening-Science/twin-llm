@@ -1,0 +1,20 @@
+{
+  "question": "What does my imported VCF have at rs1799853 and chr10:94942290?",
+  "provider": "ollama",
+  "dataMode": "personal",
+  "genomeSource": "ark",
+  "script": [
+    {
+      "tool": "genome_variants",
+      "input": {
+        "dataset_id": "ds-synthetic-vcf",
+        "variants": ["rs1799853", "chr10:94942290"]
+      }
+    }
+  ],
+  "expect": {
+    "calls": ["genome_variants"],
+    "views": [],
+    "refusals": []
+  }
+}

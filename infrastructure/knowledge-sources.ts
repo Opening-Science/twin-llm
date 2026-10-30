@@ -2,7 +2,10 @@ import { DNA_ASK_TOOL, GENOME_REPORT_TOOL } from "@/packages/carbon-x/constants"
 import { GBD_MODEL_TOOL } from "@/packages/gbd-mcp/constants";
 import { GUIDELINE_MODEL_TOOL } from "@/packages/guidelines/constants";
 import { KNOWLEDGE_MODEL_TOOL } from "@/packages/knowledge/constants";
-import { IMPORTED_TOOLS } from "@/packages/query-tools/imported-names";
+import {
+  GENOME_VARIANTS_TOOL,
+  IMPORTED_TOOLS,
+} from "@/packages/query-tools/imported-names";
 import type { TOOL_DEFINITIONS } from "@/packages/query-tools/schemas";
 
 type QueryToolName = (typeof TOOL_DEFINITIONS)[number]["name"];
@@ -26,6 +29,7 @@ export const KNOWLEDGE_SOURCE_IDS = [
   "wearable-analytics",
   "gbd",
   "ark-genome",
+  "vcf-variants",
   "imported-data",
 ] as const;
 
@@ -162,6 +166,13 @@ export const KNOWLEDGE_SOURCE_GROUPS: readonly KnowledgeSourceGroup[] = [
         description:
           "The rsid-genotypes report you released from your Ark, and the local Carbon-X research model for one variant at a time.",
         tools: [GENOME_REPORT_TOOL, DNA_ASK_TOOL],
+      },
+      {
+        id: "vcf-variants",
+        label: "Variants in your imported VCF",
+        description:
+          "Named variants, by rsID or position, looked up by a local model in a VCF you imported on Customize · Data.",
+        tools: [GENOME_VARIANTS_TOOL],
       },
     ],
   },

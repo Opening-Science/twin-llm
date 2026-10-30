@@ -1,6 +1,6 @@
 import "server-only";
 
-import { type JSONValue, tool } from "ai";
+import { type JSONValue, tool, type ToolSet } from "ai";
 import type { z } from "zod";
 
 import type { StoredGenomeReport } from "@/infrastructure/genome-report-store";
@@ -31,11 +31,22 @@ import type {
   ReferenceWindows,
   WindowRequest,
 } from "@/packages/genome-reference/windows";
+import { GENOME_VARIANTS_TOOL } from "@/packages/query-tools/imported-names";
+import {
+  type GenomeVariantsDeps,
+  runGenomeVariants,
+} from "@/packages/query-tools/imported-variants";
+import {
+  GENOME_VARIANTS_TOOL_DEFINITION,
+  genomeVariantsInput,
+} from "@/packages/query-tools/imported-variants-schema";
 import { modelInputSchema } from "@/packages/query-tools/model-schema";
 import type { SessionScope } from "@/packages/query-tools/scope";
 
 /**
- * `genome_report` and `dna_ask`: the chat's only way to a genome.
+ * `genome_report` and `dna_ask`: the chat's only way to the Ark report, and
+ * `genome_variants` (#307, `packages/query-tools/imported-variants.ts`) to an
+ * imported VCF.
  *
  * They exist on a turn only when `genomeChatPermit()` holds (personal mode,
  * GENOME_SOURCE=ark, a local chat model, a local Carbon-X), and they refuse
@@ -58,6 +69,12 @@ export type GenomeToolDeps = Readonly<{
   appendAudit: (input: AppendInput) => Promise<unknown>;
   /** Bases each side of the site; the reference package defaults to 256. */
   flank?: number;
+  /**
+   * Ports for `genome_variants` (#307), over the person's imported VCF. Built
+   * with the other genome deps, so it exists only when the genome policy
+   * allowed this turn; the tool asks the policy again on every call.
+   */
+  variants?: GenomeVariantsDeps;
 }>;
 
 export type GenomeRefusal = Readonly<{ code: string; error: string }>;
@@ -266,6 +283,17 @@ export const runDnaAsk = async (
 
 const [REPORT_DEFINITION, DNA_ASK_DEFINITION] = GENOME_TOOL_DEFINITIONS;
 
+const variantTools = (deps: GenomeVariantsDeps | undefined): ToolSet =>
+  deps === undefined
+    ? {}
+    : {
+        [GENOME_VARIANTS_TOOL]: tool({
+          description: GENOME_VARIANTS_TOOL_DEFINITION.description,
+          inputSchema: modelInputSchema(genomeVariantsInput),
+          execute: async (input) => runGenomeVariants(deps, input),
+        }),
+      };
+
 export const createGenomeTools = (deps: GenomeToolDeps) => ({
   [GENOME_REPORT_TOOL]: tool({
     description: REPORT_DEFINITION.description,
@@ -277,4 +305,5 @@ export const createGenomeTools = (deps: GenomeToolDeps) => ({
     inputSchema: modelInputSchema(dnaAskInput),
     execute: async (input): Promise<DnaAskOutput> => runDnaAsk(deps, input),
   }),
+  ...variantTools(deps.variants),
 });
