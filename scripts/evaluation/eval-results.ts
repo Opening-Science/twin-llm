@@ -152,6 +152,21 @@ export const metaSchema = z
           model_id: z.string(),
           /** The model endpoint's host:port; null on a replay, which reaches none. */
           host: z.string().nullable(),
+          /**
+           * Set when `model_id` is an agent (`agent:<id>`, #279): the model that
+           * answered, the skill it ran under and the versions of both.
+           */
+          agent: z
+            .object({
+              id: z.string(),
+              name: z.string(),
+              base_model_id: z.string(),
+              skill: z.string().nullable(),
+              rules_sha256: z.string().regex(/^[0-9a-f]{64}$/),
+              roster_sha256: z.string().regex(/^[0-9a-f]{64}$/),
+            })
+            .strict()
+            .optional(),
         })
         .strict(),
     ),
