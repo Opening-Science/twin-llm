@@ -5,8 +5,9 @@ import { type LabCheck, plural, shortHash } from "./lab-check";
 /**
  * The software bill of materials `bun run sbom` writes: whether it exists,
  * how many components it lists, its SHA-256, and whether it still matches the
- * one the current bun.lock gives (the script's output has no timestamp, so
- * the same lockfile gives the same bytes).
+ * one the current bun.lock and package.json give (the script's output has no
+ * timestamp, so the same inputs give the same bytes), and if not, which of
+ * the two changed.
  */
 
 /** The component count of a CycloneDX JSON document, or null for anything else. */
@@ -26,19 +27,81 @@ export const countSbomComponents = (text: string): number | null => {
   }
 };
 
+/** What `bun run sbom` would write now, or which input could not be read. */
+export type CurrentSbom =
+  | Readonly<{ kind: "built"; text: string }>
+  | Readonly<{ kind: "unreadable"; file: "bun.lock" | "package.json" }>;
+
 export type SbomInput =
   | Readonly<{ kind: "missing" }>
   | Readonly<{
       kind: "found";
+      /** The file on disk. */
+      text: string;
       sha256: string;
-      components: number | null;
-      /** SHA-256 of what `bun run sbom` would write now; null when bun.lock could not be read. */
-      currentSha256: string | null;
+      current: CurrentSbom;
     }>;
 
-const HOW_TO = `bun run sbom\nsha256sum ${SBOM_PATH}`;
+export type SbomDrift = Readonly<{ lockfile: boolean; packageJson: boolean }>;
 
-const base = { id: "sbom", title: "Software bill of materials", howTo: HOW_TO } as const;
+type BomParts = Readonly<{ components: unknown; component: unknown }>;
+
+const partsOf = (text: string): BomParts | null => {
+  try {
+    const parsed = JSON.parse(text) as {
+      components?: unknown;
+      metadata?: { component?: unknown };
+    } | null;
+    return parsed === null
+      ? null
+      : { components: parsed.components, component: parsed.metadata?.component };
+  } catch {
+    return null;
+  }
+};
+
+const same = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSON.stringify(b);
+
+/**
+ * Why two SBOMs differ: the package list comes from bun.lock, the top
+ * component's name and version from package.json.
+ */
+export const sbomDrift = (recorded: string, current: string): SbomDrift => {
+  const before = partsOf(recorded);
+  const after = partsOf(current);
+  if (before === null || after === null) return { lockfile: true, packageJson: true };
+  return {
+    lockfile: !same(before.components, after.components),
+    packageJson: !same(before.component, after.component),
+  };
+};
+
+const driftText = ({ lockfile, packageJson }: SbomDrift): string =>
+  lockfile && packageJson
+    ? "bun.lock and the name or version in package.json changed since the SBOM was written."
+    : lockfile
+      ? "bun.lock changed since the SBOM was written."
+      : packageJson
+        ? "The name or version in package.json changed since the SBOM was written; the package list is the same."
+        : "The SBOM is not byte for byte what `bun run sbom` writes now.";
+
+/**
+ * Hashes the file on disk first, then writes a fresh one elsewhere and hashes
+ * that, so repeating the check never overwrites the file it is about.
+ */
+const HOW_TO = [
+  `sha256sum ${SBOM_PATH}`,
+  'fresh="$(mktemp)" && bun run sbom --out "$fresh" && sha256sum "$fresh"',
+].join("\n");
+
+/** What the card shows even when the check cannot run. */
+export const sbomBase = {
+  id: "sbom",
+  title: "Software bill of materials",
+  howTo: HOW_TO,
+} as const;
+
+const base = sbomBase;
 
 export const sbomCheck = (input: SbomInput): LabCheck => {
   if (input.kind === "missing") {
@@ -50,15 +113,16 @@ export const sbomCheck = (input: SbomInput): LabCheck => {
       evidence: [{ label: "File", value: SBOM_PATH, mono: true }],
     };
   }
+  const components = countSbomComponents(input.text);
   const evidence = [
     { label: "File", value: SBOM_PATH, mono: true },
     {
       label: "Components",
-      value: input.components === null ? "—" : plural(input.components, "component"),
+      value: components === null ? "—" : plural(components, "component"),
     },
     { label: "SHA-256", value: shortHash(input.sha256, 16), mono: true },
   ];
-  if (input.components === null) {
+  if (components === null) {
     return {
       ...base,
       status: "not-ok",
@@ -67,26 +131,26 @@ export const sbomCheck = (input: SbomInput): LabCheck => {
       evidence,
     };
   }
-  if (input.currentSha256 === null) {
+  const { current } = input;
+  if (current.kind === "unreadable") {
     return {
       ...base,
       status: "unknown",
-      summary: `The SBOM lists ${plural(input.components, "component")}. bun.lock could not be read, so whether it is current is not known.`,
+      summary: `The SBOM lists ${plural(components, "component")}. ${current.file === "bun.lock" ? "bun.lock could not be read" : "package.json could not be read as JSON"}, so whether it is current is not known.`,
       evidence,
     };
   }
-  return input.currentSha256 === input.sha256
+  return current.text === input.text
     ? {
         ...base,
         status: "ok",
-        summary: `The SBOM lists ${plural(input.components, "component")} and matches the current bun.lock byte for byte.`,
+        summary: `The SBOM lists ${plural(components, "component")} and is byte for byte what the current bun.lock and package.json give.`,
         evidence,
       }
     : {
         ...base,
         status: "not-ok",
-        summary:
-          "The SBOM was written from an older bun.lock. Run `bun run sbom` to bring it up to date.",
+        summary: `${driftText(sbomDrift(input.text, current.text))} Run \`bun run sbom\` to bring it up to date.`,
         evidence,
       };
 };

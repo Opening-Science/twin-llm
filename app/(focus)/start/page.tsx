@@ -17,6 +17,7 @@ import {
 import { genomeChatPermit } from "@/infrastructure/genome-gate";
 import { importedDataChatPermit } from "@/infrastructure/imported-data-gate";
 import { isLoopbackUrl } from "@/infrastructure/loopback";
+import { DEFAULT_OLLAMA_BASE_URL } from "@/infrastructure/ollama-context";
 
 import { loadConnectFacts } from "../../api/onboarding/connect-facts";
 import { startStarterThread } from "./actions";
@@ -60,9 +61,7 @@ export default async function StartPage() {
         provider: env.LLM_PROVIDER,
         dataMode: env.DATA_MODE,
         gbdConfigured: gbdEnv() !== null,
-        ollamaOnLoopback: isLoopbackUrl(
-          env.OLLAMA_BASE_URL ?? "http://127.0.0.1:11434/v1",
-        ),
+        ollamaOnLoopback: isLoopbackUrl(env.OLLAMA_BASE_URL ?? DEFAULT_OLLAMA_BASE_URL),
         exoscalePersonalData: exoscalePersonalData(env),
       }}
       onStartThread={startStarterThread}

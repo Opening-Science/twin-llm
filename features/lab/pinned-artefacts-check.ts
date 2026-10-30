@@ -7,6 +7,7 @@ import { ATLAS_IDS, ATLASES } from "@/packages/anatomy/manifest";
 import { DEMO_BODIES, DEMO_BODY_IDS } from "@/packages/anatomy/demo-bodies";
 import { RIGGED_BODIES } from "@/packages/anatomy/rigged-bodies";
 
+import { type FileHash } from "./file-hash";
 import { type LabCheck, plural, shortHash } from "./lab-check";
 
 /**
@@ -76,35 +77,86 @@ export const pinnedArtefacts = (dirs: ArtefactDirs): readonly PinnedArtefact[] =
   })),
 ];
 
-export type ArtefactResult = "matches" | "differs" | "not present";
+export type ArtefactResult = "matches" | "differs" | "not present" | "unreadable";
 
-/** `found` is the file's SHA-256, or null when there is no file. */
-export const artefactResult = (expected: string, found: string | null): ArtefactResult =>
-  found === null
+/** Compares what was found on disk with the pin, case-insensitively. */
+export const artefactResult = (expected: string, found: FileHash): ArtefactResult =>
+  found.kind === "missing"
     ? "not present"
-    : found.toLowerCase() === expected.toLowerCase()
-      ? "matches"
-      : "differs";
+    : found.kind === "unreadable"
+      ? "unreadable"
+      : found.sha256.toLowerCase() === expected.toLowerCase()
+        ? "matches"
+        : "differs";
 
 const RESULT_TEXT: Readonly<Record<ArtefactResult, string>> = {
   matches: "Matches",
   differs: "Differs",
   "not present": "Not on this machine",
+  unreadable: "Could not read",
 };
 
-/** Plain paths and `$VARIABLE/...` stay as typed; anything else is single-quoted. */
-const quote = (path: string): string =>
-  /^(\$[A-Z_]+)?[\w./-]*$/.test(path) && path !== ""
-    ? path
-    : `'${path.replace(/'/g, "'\\''")}'`;
+/** The settings a shown path can start with, for a folder outside the repository. */
+export const PATH_VARIABLES = ["SYNTHEA_JAR", "ANATOMY_DATA_DIR"] as const;
+
+const VARIABLE_PATH = /^\$([A-Z_]+)(.*)$/;
+
+const singleQuoted = (text: string): string =>
+  /^[\w./-]+$/.test(text) ? text : `'${text.replace(/'/g, "'\\''")}'`;
+
+/**
+ * One path as a shell word: `$VARIABLE/rest` keeps the variable in double
+ * quotes so a value with spaces stays one word; anything else odd is
+ * single-quoted.
+ */
+export const shellPath = (path: string): string => {
+  const match = VARIABLE_PATH.exec(path);
+  if (match === null) return path === "" ? "''" : singleQuoted(path);
+  const [, name, rest] = match;
+  return rest === "" ? `"$${name}"` : `"$${name}"${singleQuoted(rest)}`;
+};
+
+/**
+ * Reads one setting from .env.local into the shell without printing it, so
+ * the command works in a terminal that does not have the app's settings.
+ */
+const readSetting = (name: string): string =>
+  `${name}="$(grep -m1 '^${name}=' .env.local | cut -d= -f2- | tr -d "\"'")"`;
+
+/** The shell lines that hash every pinned file by hand. */
+export const pinnedHowTo = (pins: readonly PinnedArtefact[]): string => {
+  const used = PATH_VARIABLES.filter((name) =>
+    pins.some((pin) => VARIABLE_PATH.exec(pin.path)?.[1] === name),
+  );
+  return [
+    ...(used.length === 0
+      ? []
+      : [
+          `# Reads ${used.join(" and ")} from .env.local without printing; set by hand if not there`,
+          ...used.map(readSetting),
+        ]),
+    `sha256sum ${pins.map((pin) => shellPath(pin.path)).join(" \\\n  ")}`,
+  ].join("\n");
+};
+
+const ID = "pinned-artefacts";
+const TITLE = "Pinned artefacts";
+
+/** What the card shows even when the check cannot run. */
+export const pinnedArtefactsBase = (pins: readonly PinnedArtefact[]) =>
+  ({ id: ID, title: TITLE, howTo: pinnedHowTo(pins) }) as const;
 
 export const pinnedArtefactsCheck = (
   pins: readonly PinnedArtefact[],
-  found: Readonly<Record<string, string | null>>,
+  found: Readonly<Record<string, FileHash>>,
 ): LabCheck => {
   const rows = pins.map((pin) => {
-    const sha = found[pin.id] ?? null;
-    return { pin, sha, result: artefactResult(pin.expectedSha256, sha) };
+    const file = found[pin.id] ?? { kind: "missing" };
+    return {
+      pin,
+      sha: file.kind === "hash" ? file.sha256 : null,
+      result: artefactResult(pin.expectedSha256, file),
+    };
   });
   const present = rows.filter((row) => row.result !== "not present");
   const failed = rows.filter(
@@ -113,11 +165,12 @@ export const pinnedArtefactsCheck = (
   const unconfirmed = rows.filter(
     (row) => row.result === "differs" && row.pin.onMismatch === "unknown",
   );
+  const unreadable = rows.filter((row) => row.result === "unreadable");
   const matching = rows.filter((row) => row.result === "matches");
   const status =
     failed.length > 0
       ? "not-ok"
-      : present.length === 0 || unconfirmed.length > 0
+      : present.length === 0 || unconfirmed.length > 0 || unreadable.length > 0
         ? "unknown"
         : "ok";
   const missing = rows.length - present.length;
@@ -125,6 +178,9 @@ export const pinnedArtefactsCheck = (
     present.length === 0
       ? "None of the pinned files is on this machine yet."
       : `Files on this machine that match their pins: ${matching.length} of ${present.length}.`,
+    unreadable.length > 0
+      ? `Could not read: ${unreadable.map((row) => row.pin.name).join(", ")}. Check the file's permissions and reload.`
+      : "",
     failed.length > 0
       ? `Different bytes: ${failed.map((row) => row.pin.name).join(", ")}.`
       : "",
@@ -136,8 +192,7 @@ export const pinnedArtefactsCheck = (
       : "",
   ];
   return {
-    id: "pinned-artefacts",
-    title: "Pinned artefacts",
+    ...pinnedArtefactsBase(pins),
     status,
     summary: parts.filter((part) => part !== "").join(" "),
     evidence: [],
@@ -151,7 +206,6 @@ export const pinnedArtefactsCheck = (
         RESULT_TEXT[result],
       ]),
     },
-    howTo: `sha256sum ${pins.map((pin) => quote(pin.path)).join(" \\\n  ")}`,
     links: [
       {
         label: "Where the pins are recorded (PROVENANCE.md)",
