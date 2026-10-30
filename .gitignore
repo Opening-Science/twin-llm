@@ -85,8 +85,6 @@ data/genome-synth/
 # eval harness output (C3a): runs and recorded model calls stay local
 evaluation/runs/
 evaluation/cache/
-# Benchmark results (rhythm benchmark, #249); the Lab reads them
-.research/
 
 # Licensed brand fonts (bun run fonts:install); never commit the files
 /public/fonts/*

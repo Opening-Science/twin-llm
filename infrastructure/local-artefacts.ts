@@ -34,5 +34,8 @@ export const SBOM_PATH = ".sbom/twin-llm.cdx.json";
 /** Where `bun run eval` writes its runs (gitignored); the Lab lists them. */
 export const EVAL_RUNS_DIR = "evaluation/runs";
 
-/** The rhythm benchmark's result file when `RHYTHM_BENCH_RESULT` is not set (gitignored). */
-export const RHYTHM_BENCH_DEFAULT_PATH = ".research/rhythm-bench/latest.json";
+/**
+ * Where `bun run rhythm-bench -- --out <dir>/<run>` writes its runs
+ * (gitignored); the Lab shows the newest `result.json` in it.
+ */
+export const RHYTHM_BENCH_DIR = ".rhythm-bench";

@@ -1,22 +1,17 @@
 import "server-only";
 
 import { readdir, readFile, stat } from "node:fs/promises";
-import { join, relative } from "node:path";
+import { join } from "node:path";
 
-import { labEnv } from "@/infrastructure/env";
-import {
-  EVAL_RUNS_DIR,
-  RHYTHM_BENCH_DEFAULT_PATH,
-} from "@/infrastructure/local-artefacts";
+import { EVAL_RUNS_DIR, RHYTHM_BENCH_DIR } from "@/infrastructure/local-artefacts";
 
-import { type BenchmarkRead, parseBenchmark } from "./benchmark-result";
+import { type BenchmarkRead, newestRun, parseBenchmark } from "./benchmark-result";
 import { type EvalRun, sortRuns, summariseRun } from "./eval-runs";
-import { insideRepo } from "./repo-path";
 
 /**
  * The I/O half of the Results section: lists `evaluation/runs/` and reads
- * each run's meta.json and report.md, and reads the rhythm benchmark's
- * result file. Only files inside the repository are read, each at most
+ * each run's meta.json and report.md, and reads the newest rhythm benchmark
+ * result.json. Only files inside the repository are read, each at most
  * `MAX_FILE_BYTES`; results.jsonl, the review sheet and its key are never
  * opened.
  */
@@ -40,9 +35,13 @@ const readSmall = async (path: string): Promise<string | null> => {
 };
 
 export type BenchmarkData = Readonly<{
-  /** The file relative to the repository, or the variable when it points outside. */
-  path: string;
-  read: BenchmarkRead | Readonly<{ kind: "outside" }>;
+  /** The folder the benchmark writes to, relative to the repository. */
+  dir: string;
+  /** Run folders found in it. */
+  runs: number;
+  /** The newest run's result.json, relative to the repository, or null. */
+  path: string | null;
+  read: BenchmarkRead;
 }>;
 
 export type ResultsData = Readonly<{
@@ -84,15 +83,28 @@ const loadRuns = async (
   }
 };
 
+/** Every `<RHYTHM_BENCH_DIR>/<run>/result.json`; the page shows the newest. */
 const loadBenchmark = async (root: string): Promise<BenchmarkData> => {
-  const path = labEnv().rhythmBenchResult ?? RHYTHM_BENCH_DEFAULT_PATH;
-  const absolute = insideRepo(root, path);
-  // Shown relative to the repository, so no home path reaches the page.
-  if (absolute === null)
-    return { path: "$RHYTHM_BENCH_RESULT", read: { kind: "outside" } };
+  const dir = join(root, RHYTHM_BENCH_DIR);
+  const names = await readdir(dir, { withFileTypes: true })
+    .then((entries) =>
+      entries
+        .filter((entry) => entry.isDirectory() && RUN_ID.test(entry.name))
+        .map((entry) => entry.name),
+    )
+    .catch(() => []);
+  const runs = await Promise.all(
+    names.slice(0, MAX_RUNS).map(async (name) => ({
+      dir: name,
+      read: parseBenchmark(await readSmall(join(dir, name, "result.json"))),
+    })),
+  );
+  const newest = newestRun(runs.filter((run) => run.read.kind !== "missing"));
   return {
-    path: relative(root, absolute),
-    read: parseBenchmark(await readSmall(absolute)),
+    dir: RHYTHM_BENCH_DIR,
+    runs: runs.filter((run) => run.read.kind !== "missing").length,
+    path: newest === null ? null : `${RHYTHM_BENCH_DIR}/${newest.dir}/result.json`,
+    read: newest?.read ?? { kind: "missing" },
   };
 };
 

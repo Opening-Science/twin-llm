@@ -1,6 +1,8 @@
 import { Card } from "@/infrastructure/ui-kit/card";
 
-import { benchmarkCsv, benchmarkTable } from "./benchmark-result";
+import { RHYTHM_BENCH_DIR } from "@/infrastructure/local-artefacts";
+
+import { benchmarkRunLine, benchmarkTables } from "./benchmark-result";
 import { DownloadButton } from "./download-button";
 import { type EvalRun, runsCsv, runsTable, scoresCsv, scoreTable } from "./eval-runs";
 import { LabTable } from "./lab-table";
@@ -18,8 +20,10 @@ const EVAL_COMMANDS = [
   "bun run eval:report -- <run-id>",
 ].join("\n");
 
-/** The benchmark of #249; this checkout does not have the script yet. */
-const BENCH_COMMAND = "bun run rhythm:bench";
+const BENCH_COMMAND = [
+  `bun run rhythm-bench -- --out ${RHYTHM_BENCH_DIR}/<run> --seeds 3 --afdb <afdb-dir>`,
+  "# without --afdb it runs on simulated recordings only",
+].join("\n");
 
 const Command = ({ label, text }: Readonly<{ label: string; text: string }>) => (
   <pre className="command-block" aria-label={label}>
@@ -111,28 +115,25 @@ const Benchmark = ({ data }: Readonly<{ data: BenchmarkData }>) => {
   return (
     <Card padding="md" className="flex min-w-0 flex-col gap-3">
       <SubHeading>Rhythm benchmark</SubHeading>
-      {read.kind === "found" ? (
+      {read.kind === "found" && data.path !== null ? (
         <>
           <p className="text-muted-foreground text-sm leading-relaxed">
-            Run {read.result.run_id}
-            {read.result.date === undefined ? "" : `, ${read.result.date}`}
-            {read.result.seed === undefined ? "" : `, seed ${read.result.seed}`}, from{" "}
-            <code className="setup-code">{data.path}</code>. It describes methods on
-            recordings, not people.
+            {benchmarkRunLine(read.result)}. From{" "}
+            <code className="setup-code">{data.path}</code>
+            {data.runs > 1 ? `, the newest of ${data.runs} runs` : ""}. Point estimates
+            with 95 % bootstrap intervals over recordings or records. It describes how
+            methods do on recordings, not people.
           </p>
-          {read.result.tables.map((table, index) => (
-            <div key={`${index}:${table.title}`} className="flex min-w-0 flex-col gap-2">
-              <h4 className="text-sm font-medium">{table.title}</h4>
-              {table.note === undefined ? null : (
-                <p className="text-muted-foreground text-xs">{table.note}</p>
-              )}
-              <LabTable table={benchmarkTable(table)} />
+          {benchmarkTables(read.result).map((each) => (
+            <div key={each.slug} className="flex min-w-0 flex-col gap-2">
+              <h4 className="text-sm font-medium">{each.table.caption}</h4>
+              <LabTable table={each.table} />
               <div className="flex flex-wrap gap-2">
                 <DownloadButton
                   label="Download CSV"
-                  fileName={`${read.result.run_id}-${index + 1}.csv`}
+                  fileName={`rhythm-bench-${read.result.runId}-${each.slug}.csv`}
                   mimeType="text/csv"
-                  text={benchmarkCsv(table)}
+                  text={each.csv}
                 />
               </div>
             </div>
@@ -141,20 +142,17 @@ const Benchmark = ({ data }: Readonly<{ data: BenchmarkData }>) => {
       ) : (
         <>
           <p className="text-sm leading-relaxed">
-            {read.kind === "outside" ? (
-              "Not read: RHYTHM_BENCH_RESULT points outside the repository, and this page reads files inside it only."
-            ) : (
+            {read.kind === "unreadable" && data.path !== null ? (
               <>
-                {read.kind === "missing"
-                  ? "Not run yet: there is no result file at "
-                  : "The result file is not in the shape this page reads (docs/lab.md, Results): "}
+                The newest result file is not in the shape this page reads:{" "}
                 <code className="setup-code">{data.path}</code>.
               </>
+            ) : (
+              <>
+                Not run yet: there is no <code className="setup-code">result.json</code>{" "}
+                in <code className="setup-code">{data.dir}/</code> (gitignored).
+              </>
             )}
-          </p>
-          <p className="text-muted-foreground text-sm leading-relaxed">
-            The rhythm benchmark (#249) is planned to write it with the command below;
-            this checkout does not have that script yet.
           </p>
           <Command label="Command that runs the rhythm benchmark" text={BENCH_COMMAND} />
         </>

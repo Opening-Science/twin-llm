@@ -1,3 +1,5 @@
+import { RHYTHM_BENCH_DIR } from "@/infrastructure/local-artefacts";
+
 /** Command-line arguments of `bun run rhythm-bench`. Pure. */
 export type BenchArgs = Readonly<{
   out: string;
@@ -13,8 +15,7 @@ export const DEFAULT_SEEDS = 20;
 export const DEFAULT_RESAMPLES = 1000;
 export const DEFAULT_BOOTSTRAP_SEED = 249;
 
-export const USAGE =
-  "usage: bun run rhythm-bench -- --out <dir> [--seeds N] [--afdb <dir>] [--resamples N] [--bootstrap-seed N] [--quick]";
+export const USAGE = `usage: bun run rhythm-bench -- --out ${RHYTHM_BENCH_DIR}/<run> [--seeds N] [--afdb <dir>] [--resamples N] [--bootstrap-seed N] [--quick] (the Lab reads ${RHYTHM_BENCH_DIR}/*/result.json)`;
 
 const valueOf = (argv: readonly string[], name: string): string | undefined => {
   const index = argv.indexOf(name);

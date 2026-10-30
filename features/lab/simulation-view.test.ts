@@ -136,7 +136,7 @@ describe("tables", () => {
       ["nRMSSD", "above 0.1", "Dash et al. 2009", "Yes"],
       [
         "Turning-point ratio",
-        "0.534 to 0.778 (99.9 % band of random values at 128)",
+        "0.534 to 0.778 (69 to 99 turning points of 128; 99.9 % band of random values)",
         "Dash et al. 2009",
         "Yes",
       ],

@@ -130,7 +130,8 @@ export const intervalCsv = (recording: Recording, spans: readonly Span[]): strin
 
 /** What each metric is compared with, and where the threshold comes from. */
 export const thresholdTable = (): EvidenceTable => {
-  const band = randomTurningPointRange(IRREGULARITY_THRESHOLDS.windowBeats);
+  const size = IRREGULARITY_THRESHOLDS.windowBeats;
+  const band = randomTurningPointRange(size);
   return {
     caption: "Research thresholds and their sources",
     columns: ["Metric", "Research threshold", "Source", "In the flag"],
@@ -143,7 +144,7 @@ export const thresholdTable = (): EvidenceTable => {
       ],
       [
         "Turning-point ratio",
-        `${formatNumber(band.low, 3)} to ${formatNumber(band.high, 3)} (99.9 % band of random values at 128)`,
+        `${formatNumber(band.low, 3)} to ${formatNumber(band.high, 3)} (${Math.ceil(band.low * size)} to ${Math.floor(band.high * size)} turning points of ${size}; 99.9 % band of random values)`,
         "Dash et al. 2009",
         "Yes",
       ],

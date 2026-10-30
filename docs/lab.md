@@ -77,29 +77,18 @@ formula gets a leading `'`). Only files inside the repository are read, each at 
   interval in whole percent; not recomputed). Both files are read leniently: a run without a report says
   so. `results.jsonl`, `review.csv` and `review-key.json` are never opened. With no runs the section
   says so and shows the commands that make one.
-- **Rhythm benchmark.** The file at `RHYTHM_BENCH_RESULT` (default
-  `.research/rhythm-bench/latest.json`, gitignored; a path outside the repository is not read). The
-  benchmark (#249) is not in this checkout yet, so until the file exists the section says "Not run
-  yet" with the planned command. The page reads this shape and shows each table:
-
-```json
-{
-  "run_id": "rhythm-bench-2026-11-01",
-  "date": "2026-11-01",
-  "seed": 42,
-  "tables": [
-    {
-      "title": "Flag on simulated windows by recording length",
-      "note": "optional line under the title",
-      "columns": ["Length (s)", "Sensitivity", "Specificity"],
-      "rows": [[300, 0.98, 1.0]]
-    }
-  ]
-}
-```
-
-Cells are strings, numbers, booleans or null (shown as a dash, an empty CSV cell). On the page whole
-numbers are shown as they are and others to three decimals; the CSV keeps the file's values.
+- **Rhythm benchmark.** The newest `result.json` under `.rhythm-bench/` (`RHYTHM_BENCH_DIR` in
+  `infrastructure/local-artefacts.ts`, gitignored), by its `generatedAt`. `bun run rhythm-bench -- --out
+.rhythm-bench/<run>` writes it ([rhythm-sim.md](rhythm-sim.md#benchmark)); the page reads the
+  benchmark's own file, with no copy in another shape. It shows three tables, each with its CSV: the
+  research flag's sensitivity and specificity and the AUROC of each metric on simulated windows (all,
+  windows of one rhythm only, by length, rhythm, AF rate and noise), the same on the MIT-BIH Atrial
+  Fibrillation Database when the run had `--afdb` (by dominant reference rhythm), and the distances
+  between simulated and database windows (Wasserstein-1 over the database SD, Kolmogorov-Smirnov,
+  medians). Values are shown to three decimals with their 95 % bootstrap interval; the CSVs keep
+  the file's numbers. `features/lab/benchmark-result.ts` reads only the fields it shows, and its test
+  runs the benchmark on a small grid and parses the output, so a change to the file's shape fails
+  there. With no run the section says "Not run yet" and shows the command.
 
 ## Commands
 
