@@ -226,6 +226,10 @@ with both; crude odds ratio 2.68) but not within sex and age band
 
 ## What is left
 
+#262 followed up the first two items: see
+[`heart-brain-timing-2026-10.md`](heart-brain-timing-2026-10.md) for the
+within-person design, wearable recovery with generator v3 and all 100 batches.
+
 - Wearable changes around AF onset (#250's last item): nothing was planted,
   because the wearable generator reads no condition. A test would only
   measure noise until the generator links to conditions.
