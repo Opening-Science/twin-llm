@@ -171,6 +171,14 @@ const uiContextSection = (context: UiContext | null): readonly string[] => {
   return block === "" ? [] : ["", block];
 };
 
+/**
+ * The person's twin notes (#43, `infrastructure/twin-notes.ts`), already
+ * filtered by data mode and permit and cut to the budget. Before the UI
+ * context and the skill, so a skill keeps the last word.
+ */
+const twinNotesSection = (block: string | null): readonly string[] =>
+  block === null || block === "" ? [] : ["", block];
+
 /** The agent's name and role, right under who TwinLLM is. */
 const agentLine = (
   agent: Readonly<{ name: string; role: string }> | null,
@@ -261,6 +269,8 @@ export const buildTwinSystemPrompt = (params: {
   readonly uiContext?: UiContext | null;
   /** The agent this turn answers as (#218): one line with its name and role. */
   readonly agent?: Readonly<{ name: string; role: string }> | null;
+  /** The twin notes block this turn may carry (#43); empty or absent adds nothing. */
+  readonly twinNotes?: string | null;
 }): string => {
   const hasAny = Boolean(
     params.oura || params.whoop || params.googleHealth || params.vitronic,
@@ -363,6 +373,7 @@ export const buildTwinSystemPrompt = (params: {
     hasAny
       ? "If a question needs a metric you do not have in Available keys, say so under Uncertainty."
       : "Under Evidence Used write `- none` until a wearable is connected and synced.",
+    ...twinNotesSection(params.twinNotes ?? null),
     ...uiContextSection(params.uiContext ?? null),
     ...skillSection(params.skill ?? null),
   ].join("\n");

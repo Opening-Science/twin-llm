@@ -5,7 +5,7 @@ folder of cases. It says what a command may read and use; the code decides what 
 runs. Plan: [chat-platform.md](chat-platform.md), section 2. Issue #41.
 
 The `/` palette lists them and the chat runs them (#42); see "Running a skill" below.
-Two built-in commands come first in the palette; see "Built-in commands" at the end.
+Three built-in commands come first in the palette; see "Built-in commands" at the end.
 
 ## SKILL.md
 
@@ -237,6 +237,10 @@ cover heart rhythm.
 Built-ins live in `features/commands/registry.ts`. A skill may not take a built-in's name.
 
 - `/connect` shows the wearable rows under the prompt.
+- `/compact` drafts a twin note of the saved thread for the person to edit and confirm
+  (#43). Like `/twin` it starts no turn; the draft is shown under the conversation and
+  nothing is stored until Save note. Refused in incognito chats
+  ([twin-notes.md](twin-notes.md)).
 - `/twin` shows the thread's digital twin as a card in the conversation (#168). Picking
   it, or sending `/twin` on its own, clears the prompt and asks no model: it starts no
   turn, never calls `/api/chat`, and the card is not part of the history any model is
