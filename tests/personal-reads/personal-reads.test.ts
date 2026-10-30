@@ -491,6 +491,10 @@ const PERSONAL_READ_ROUTES: Readonly<Record<string, Entry>> = {
   "GET /api/anatomy/rigged/[bodyId]": { kind: "exempt", why: NOT_PERSONAL },
   "GET /api/motion/status": { kind: "exempt", why: NOT_PERSONAL },
   "GET /api/motion/clip/[clipId]": { kind: "exempt", why: NOT_PERSONAL },
+  "GET /api/motion/days/[subjectRef]": {
+    kind: "exempt",
+    why: "synthetic Demo cohort only (its handler still writes motion.days)",
+  },
   "GET /api/gbd/status": { kind: "exempt", why: NOT_PERSONAL },
   "POST /api/synthea/jobs": {
     kind: "exempt",

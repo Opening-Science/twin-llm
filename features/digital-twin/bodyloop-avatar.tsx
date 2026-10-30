@@ -53,6 +53,8 @@ import { useAnatomyView } from "./anatomy/use-anatomy-view";
 import { BodyMotion } from "./motion/body-motion";
 import { motionLines } from "./motion/motion-copy";
 import { useBodyMotion } from "./motion/use-body-motion";
+import { DayMotionBar } from "./motion/day-motion-bar";
+import { useDayMotion } from "./motion/use-day-motion";
 import {
   EnvironmentBar,
   EnvironmentPanel,
@@ -282,7 +284,6 @@ export const BodyLoopAvatar = ({
   const controlsRef = useRef<OrbitControls | null>(null);
   const camera = useMemo(() => new PerspectiveCamera(40, 1, 0.01, 40), []);
   const anatomy = useAnatomyView(preview === undefined);
-  const motion = useBodyMotion(scanScene, reducedMotion, isDemo ? "demo" : "scan");
   const onControls = useCallback((controls: OrbitControls | null) => {
     controlsRef.current = controls;
   }, []);
@@ -468,6 +469,21 @@ export const BodyLoopAvatar = ({
     anatomy: anatomy.state,
     dispatch: anatomy.dispatch,
     initialPersonRef,
+  });
+  // #52: the twin can follow a wearable day; a toolbar clip stops following.
+  const dayMotion = useDayMotion({
+    subject: biomarkerSubject,
+    personRef: biomarkers.personRef,
+    personLabel:
+      biomarkers.people.find((person) => person.ref === biomarkers.personRef)?.label ??
+      "",
+    enabled: preview === undefined,
+  });
+  const { onFollow: setFollowDay } = dayMotion;
+  const motion = useBodyMotion(scanScene, reducedMotion, isDemo ? "demo" : "scan", {
+    plan: dayMotion.plan,
+    lines: dayMotion.lines,
+    onManual: () => setFollowDay(false),
   });
   // The Demo body follows the synthetic person's stored sex unless picked by hand.
   const personSex =
@@ -778,6 +794,7 @@ export const BodyLoopAvatar = ({
             clip={motion.clip}
             tempo={motion.tempo}
             video={motion.video}
+            rates={motion.rates}
           />
           <ProjectAnchor point={picked?.point ?? null} store={anchorStore} />
           <AnatomyLayers
@@ -948,6 +965,18 @@ export const BodyLoopAvatar = ({
             }}
             extra={motionLines(motion.control, anatomy.state.targetDepth > 0)}
           />
+          {environment.active || !motion.control ? null : (
+            <DayMotionBar
+              state={{
+                ...dayMotion,
+                onFollow: (next) => {
+                  motion.clearManual();
+                  dayMotion.onFollow(next);
+                },
+              }}
+              unavailable={motion.control.unavailable}
+            />
+          )}
           {environment.active ? null : nightSynthetic ? (
             <NightPlayback state={night} reducedMotion={reducedMotion} />
           ) : (
