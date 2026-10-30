@@ -24,6 +24,7 @@ import {
   LUNG_SCALE,
   pulseAt,
   scaleAbout,
+  chamberGlow,
 } from "./live-motion";
 
 describe("pulseAt", () => {
@@ -176,5 +177,13 @@ describe("liveTargets", () => {
     expect(targets.heart).toEqual([vessels]);
     expect(targets.lungs).toEqual([airways]);
     expect(targets.hrv).toEqual([nerves]);
+  });
+});
+
+describe("chamberGlow", () => {
+  test("full at a ventricular peak, half at an atrial one, none at rest", () => {
+    expect(chamberGlow(0, 1)).toBe(0.15);
+    expect(chamberGlow(1, 0)).toBe(0.075);
+    expect(chamberGlow(0, 0)).toBe(0);
   });
 });

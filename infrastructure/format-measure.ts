@@ -482,3 +482,16 @@ export const formatMetricValue = (metric: FormattableMetric): string => {
  */
 export const formatForPrompt = (metric: FormattableMetric): string =>
   `[${metric.key}] ${metricLabel(metric.key, metric.label)}${metric.date ? ` (${metric.date})` : ""}: ${formatMetricValue(metric)}`;
+
+/**
+ * A running or finished timer: `3.2s` under a minute, `1m 05s` after.
+ * Tenths are cut, not rounded, so a live timer never shows a time it has
+ * not reached yet. A negative or missing time shows as `—`.
+ */
+export const formatElapsed = (ms: number | null | undefined): string => {
+  if (!isFiniteNumber(ms) || ms < 0) return EMPTY_VALUE;
+  const tenths = Math.floor(ms / 100);
+  if (tenths < 600) return `${formatNumber(tenths / 10, 1)}s`;
+  const seconds = Math.floor(tenths / 10);
+  return `${formatNumber(Math.floor(seconds / 60), 0)}m ${String(seconds % 60).padStart(2, "0")}s`;
+};

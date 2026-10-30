@@ -23,6 +23,7 @@ import { access, appendFile, mkdir, readFile, rename, writeFile } from "node:fs/
 import { join } from "node:path";
 
 import { type EvalDeps, type ModelSpec, EvalSetupError, runEval } from "./eval-runner";
+import { DEFAULT_OLLAMA_BASE_URL } from "../../infrastructure/ollama-context";
 import { type CacheStore } from "./model-cache";
 
 const RUNS_DIR = "evaluation/runs";
@@ -87,7 +88,7 @@ if (isMain) {
   const endpointHost = (spec: ModelSpec): string | null => {
     switch (spec.provider) {
       case "ollama":
-        return hostOf(env.OLLAMA_BASE_URL ?? "http://127.0.0.1:11434/v1");
+        return hostOf(env.OLLAMA_BASE_URL ?? DEFAULT_OLLAMA_BASE_URL);
       case "exoscale":
       case "remote-gpu":
         return hostOf(vllmBaseUrlFor(spec.provider, spec.modelId));

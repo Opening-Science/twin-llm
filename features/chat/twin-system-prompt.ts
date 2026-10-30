@@ -209,6 +209,14 @@ const uiContextSection = (context: UiContext | null): readonly string[] => {
   return block === "" ? [] : ["", block];
 };
 
+/**
+ * The person's twin notes (#43, `infrastructure/twin-notes.ts`), already
+ * filtered by data mode and permit and cut to the budget. Before the UI
+ * context and the skill, so a skill keeps the last word.
+ */
+const twinNotesSection = (block: string | null): readonly string[] =>
+  block === null || block === "" ? [] : ["", block];
+
 /** The agent's name and role, right under who TwinLLM is. */
 const agentLine = (
   agent: Readonly<{ name: string; role: string }> | null,
@@ -271,6 +279,7 @@ const importedSection = (
         "## Imported data (the person's own files)",
         `- Call \`${IMPORTED_DATASETS_TOOL}\` first to see which datasets, codes and names exist. Cite a value with its dataset and date as stored.`,
         "- A series stored by name is not the LOINC code of a similar name: HRV RMSSD is not SDNN (80404-7). Never combine them, and never mix datasets in one trend.",
+        "- Ask a table only for columns `imported_datasets` lists, by exact name.",
         "",
       ]
     : [];
@@ -305,6 +314,8 @@ export const buildTwinSystemPrompt = (params: {
   readonly pastedData?: string | null;
   /** What `pastedData` holds; left out, the key's call results (#302). */
   readonly pastedDataSource?: PastedDataSource;
+  /** The twin notes block this turn may carry (#43); empty or absent adds nothing. */
+  readonly twinNotes?: string | null;
 }): string => {
   const hasAny = Boolean(
     params.oura || params.whoop || params.googleHealth || params.vitronic,
@@ -411,6 +422,7 @@ export const buildTwinSystemPrompt = (params: {
       ? "If a question needs a metric you do not have in Available keys, say so under Uncertainty."
       : "Under Evidence Used write `- none` until a wearable is connected and synced.",
     ...dataBlockSection(params.mode === "synthetic" ? (params.pastedData ?? null) : null),
+    ...twinNotesSection(params.twinNotes ?? null),
     ...uiContextSection(params.uiContext ?? null),
     ...skillSection(params.skill ?? null),
   ].join("\n");

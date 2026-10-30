@@ -18,6 +18,9 @@ export type Command = Readonly<{
 /** Shows the thread's twin as a card in the chat; asks no model (features/arena/prompt-route.ts). */
 export const TWIN_COMMAND = "twin";
 
+/** Drafts a twin note of the thread for the person to confirm (#43, docs/twin-notes.md). */
+export const COMPACT_COMMAND = "compact";
+
 export const BUILT_IN_COMMANDS: readonly Command[] = [
   { name: "connect", description: "Connect a wearable", reads: [] },
   {
@@ -26,6 +29,15 @@ export const BUILT_IN_COMMANDS: readonly Command[] = [
     reads: [
       "this thread's prompts and tool calls",
       "Body twin: scans, synthetic lab values, linked wearables",
+    ],
+  },
+  {
+    name: COMPACT_COMMAND,
+    description:
+      "Draft a short note of this thread for your memory. Nothing is saved until you confirm it.",
+    reads: [
+      "this thread's prompts and answers, sent to its model",
+      "tool names and date ranges, never their rows",
     ],
   },
 ];

@@ -5,8 +5,11 @@ import { GBD_MODEL_TOOL } from "@/packages/gbd-mcp/constants";
 import { GUIDELINE_MODEL_TOOL } from "@/packages/guidelines/constants";
 import { KNOWLEDGE_MODEL_TOOL } from "@/packages/knowledge/constants";
 import {
+  IMPORTED_CONDITIONS_TOOL,
   IMPORTED_DATASETS_TOOL,
   IMPORTED_LATEST_TOOL,
+  IMPORTED_MEDICATIONS_TOOL,
+  IMPORTED_TABLE_TOOL,
   IMPORTED_TREND_TOOL,
 } from "@/packages/query-tools/imported-names";
 
@@ -36,6 +39,14 @@ export type ToolCard = Readonly<{
   rowCount: number | null;
   /** Why a refused call has no rows, in a fixed sentence. */
   note: string | null;
+  /** A refused call's code (`NO_ROWS`), for the step line; absent otherwise. */
+  refusalCode?: string;
+  /**
+   * The measure's display name as the call's own output gives it (a chart's
+   * label, or the `display` of a row with the asked code), for the step
+   * line; absent when the output names none.
+   */
+  measureName?: string;
 }>;
 
 const TITLES: Readonly<Record<string, string>> = {
@@ -71,6 +82,9 @@ const TITLES: Readonly<Record<string, string>> = {
   [IMPORTED_DATASETS_TOOL]: "Listed your imported datasets",
   [IMPORTED_LATEST_TOOL]: "Read your newest imported readings",
   [IMPORTED_TREND_TOOL]: "Fitted a trend of one imported series",
+  [IMPORTED_TABLE_TOOL]: "Read columns of your imported table",
+  [IMPORTED_CONDITIONS_TOOL]: "Listed conditions in your imported records",
+  [IMPORTED_MEDICATIONS_TOOL]: "Listed medication requests in your imported records",
 };
 
 export const toolTitle = (tool: string): string => {
@@ -102,6 +116,8 @@ const REFUSAL_NOTES: Readonly<Record<string, string>> = {
   DATASET_NOT_FOUND: "No imported dataset with that id.",
   SERIES_NOT_COMBINED: "A coded series and one stored by name were not combined.",
   PARTIAL_DATES: "Some rows are dated only to a month or a year, so no trend was fitted.",
+  WRONG_DATASET_KIND: "That dataset is not the kind this tool reads.",
+  UNKNOWN_COLUMNS: "Those columns are not in the table, so nothing was read.",
   RSID_NOT_IN_REPORT: "That variant is not in the released report.",
   NO_CALL: "The report has no call at that variant, so nothing was asked.",
   INCOMPLETE_ROW: "The report has no position for that variant.",
@@ -205,11 +221,14 @@ const day = (value: unknown): string | null => {
   return formatted === EMPTY_VALUE ? raw : formatted;
 };
 
+/** Between a window's two days on a card; the step line says "to" instead. */
+export const RANGE_DASH = " – ";
+
 const span = (value: unknown): string | null => {
   if (!isRecord(value)) return null;
   const start = day(value.start);
   const end = day(value.end);
-  return start && end ? `${start} – ${end}` : null;
+  return start && end ? `${start}${RANGE_DASH}${end}` : null;
 };
 
 const list = (value: unknown): string | null =>
@@ -255,6 +274,38 @@ export const toolArgs = (input: unknown): ToolCardArg[] => {
   });
 };
 
+/** Views drawn for one measure, whose label is that measure's display name. */
+const MEASURE_VIEWS: ReadonlySet<string> = new Set([
+  "chart.timeseries",
+  "chart.compare",
+  "biomarker.card",
+]);
+
+/**
+ * The name the data itself gives the asked measure: a measure view's label,
+ * or the `display` of a returned row with the asked code. The same names the
+ * answer's charts are titled with; nothing is looked up or made up here.
+ */
+export const measureNameOf = (input: unknown, output: unknown): string | null => {
+  const view = toChatView(output);
+  if (view !== null) {
+    const label = isRecord(view.spec) ? text(view.spec.label) : null;
+    return MEASURE_VIEWS.has(view.kind) ? label : null;
+  }
+  if (!isRecord(input)) return null;
+  const code = text(input.measure ?? input.loinc);
+  const rows = Array.isArray(output)
+    ? output
+    : isRecord(output) && Array.isArray(output.rows)
+      ? output.rows
+      : [];
+  const row = rows.find(
+    (item): item is Record<string, unknown> =>
+      isRecord(item) && code !== null && item.loinc === code,
+  );
+  return row === undefined ? null : text(row.display);
+};
+
 /** A tool part, live or replayed from the stored column. */
 export type ToolPartLike = Readonly<{
   toolCallId: string;
@@ -269,6 +320,9 @@ const ENDED: Readonly<Record<string, "done" | "error">> = {
   "output-error": "error",
   "output-denied": "error",
 };
+
+const measureField = (name: string | null): { measureName?: string } =>
+  name === null ? {} : { measureName: name };
 
 /**
  * One card per call, in order. `storedRowCount` is the audit row's count
@@ -297,6 +351,8 @@ export const toolCard = (
       code === null
         ? null
         : (TOOL_REFUSAL_NOTES[part.tool]?.[code] ?? REFUSAL_NOTES[code] ?? REFUSED),
+    ...(code === null ? {} : { refusalCode: code }),
+    ...measureField(state === "done" ? measureNameOf(part.input, part.output) : null),
   };
 };
 

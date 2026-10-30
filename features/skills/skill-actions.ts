@@ -22,7 +22,7 @@ import {
  */
 
 /** Built-in `/` commands; a skill may not shadow one. */
-const BUILT_IN_NAMES = ["connect", "twin"] as const;
+const BUILT_IN_NAMES = ["connect", "twin", "compact"] as const;
 
 export type SkillFormState = Readonly<{ errors: FieldErrors }>;
 

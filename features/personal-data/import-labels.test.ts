@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import {
   byteSizeLabel,
   countLabel,
+  datasetContentsLabel,
   dateRangeLabel,
   previewCellLabel,
   storedDateLabel,
@@ -43,5 +44,24 @@ describe("import labels", () => {
       previewCellLabel(null),
       previewCellLabel("a"),
     ]).toEqual(["0.123456", "—", "a"]);
+  });
+});
+
+describe("datasetContentsLabel", () => {
+  test("a VCF counts variant records; others count rows with dates", () => {
+    expect(
+      datasetContentsLabel({ kind: "vcf", rowCount: 92, firstAt: null, lastAt: null }),
+    ).toBe("92 variant records");
+    expect(
+      datasetContentsLabel({ kind: "vcf", rowCount: 1, firstAt: null, lastAt: null }),
+    ).toBe("1 variant record");
+    expect(
+      datasetContentsLabel({
+        kind: "lab-csv",
+        rowCount: 9,
+        firstAt: "2024-02",
+        lastAt: "2024-02",
+      }),
+    ).toBe("9 rows · Feb 2024");
   });
 });

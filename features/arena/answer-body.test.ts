@@ -272,6 +272,9 @@ describe("v1.1 answers", () => {
 const statusLine = (line: string): string =>
   `<p role="status" class="text-muted-foreground text-sm">${line}</p>`;
 
+const body = (inner: string): string =>
+  `<div class="flex flex-col gap-3 text-[15px] leading-relaxed">${inner}</div>`;
+
 const SCAFFOLD = [
   "## Reasoning",
   "Synthetic reasoning line.",
@@ -284,13 +287,13 @@ const SCAFFOLD = [
 describe("answer body while streaming", () => {
   test("before any text: the waiting line", () => {
     expect(render({ status: "STREAMING", text: "" })).toBe(
-      statusLine(STREAM_STATUS_LINES.waiting),
+      body(statusLine(STREAM_STATUS_LINES.waiting)),
     );
   });
 
   test("scaffolding before the Answer section is never shown", () => {
     const markup = render({ status: "STREAMING", text: SCAFFOLD });
-    expect(markup).toBe(statusLine(STREAM_STATUS_LINES.preparing));
+    expect(markup).toBe(body(statusLine(STREAM_STATUS_LINES.preparing)));
     expect(markup).not.toContain("Reasoning");
     expect(markup).not.toContain("oura.synthetic.key");
   });
@@ -301,11 +304,13 @@ describe("answer body while streaming", () => {
       text: `${SCAFFOLD}## Answer\nSynthetic partial answer`,
     });
     expect(markup).toBe(
-      `<div class="flex flex-col gap-3 text-[15px] leading-relaxed"><div class="flex flex-col gap-3"><p class="whitespace-pre-wrap">Synthetic partial answer</p></div></div>`,
+      body(
+        `<div class="flex flex-col gap-3"><p class="whitespace-pre-wrap">Synthetic partial answer</p></div>`,
+      ),
     );
   });
 
-  test("tool calls show as folded cards above the thinking line", () => {
+  test("tool calls show as a working step trace; its line stands in for the status line", () => {
     const tools = [
       {
         id: "c1",
@@ -321,15 +326,19 @@ describe("answer body while streaming", () => {
       },
     ] as const;
     const markup = render({ status: "STREAMING", text: "", tools });
-    expect(markup).toContain("Summarised a measure");
-    expect(markup).toContain("8867-4 · synthetic-subject-1");
-    expect(markup).toContain('aria-expanded="false"');
+    expect(markup).toContain('<p role="status" class="sr-only">Working.</p>');
+    expect(markup).toContain('step-trace-working">Summarising 8867-4</span>');
+    expect(markup).toContain('aria-label="Tool calls"');
+    expect(markup).toContain('<span class="sr-only">In progress: </span>');
+    // The card under the step keeps its arguments, title and tool name.
+    expect(markup).toContain('<dd class="min-w-0 break-words">synthetic-subject-1</dd>');
+    expect(markup).toContain("<dd>Summarised a measure</dd>");
+    expect(markup).toContain('<dd class="font-mono">summary_stats</dd>');
     expect(markup).toContain(">Running<");
-    expect(markup).toContain(statusLine(STREAM_STATUS_LINES.waiting));
-    expect(markup.indexOf("Summarised")).toBeLessThan(markup.indexOf("Thinking"));
+    expect(markup).not.toContain(statusLine(STREAM_STATUS_LINES.waiting));
   });
 
-  test("cards stay once the Answer section streams", () => {
+  test("between calls the line says what the model is doing", () => {
     const tools = [
       {
         id: "c1",
@@ -341,14 +350,50 @@ describe("answer body while streaming", () => {
         note: null,
       },
     ] as const;
-    const markup = render({
+    const waiting = render({ status: "STREAMING", text: "", tools });
+    expect(waiting).toContain(
+      `step-trace-waiting">${STREAM_STATUS_LINES.waiting}</span>`,
+    );
+    const writing = render({
       status: "STREAMING",
       text: `${SCAFFOLD}## Answer\nSynthetic.`,
       tools,
     });
-    expect(markup).toContain("Searched guidelines");
-    expect(markup).toContain("4 rows");
-    expect(markup).not.toContain('role="status"');
+    expect(writing).toContain('step-trace-waiting">Writing the answer…</span>');
+    expect(writing).toContain("Searched guidelines");
+    expect(writing).toContain("4 rows");
+    expect(writing).toContain("Synthetic.");
+  });
+
+  test("a complete answer folds its steps into a count; a refusal reads No data", () => {
+    const tools = [
+      {
+        id: "c1",
+        tool: "resting_hr_trend",
+        title: "Fitted a resting heart rate trend",
+        args: [{ label: "Window", value: "4 Jul 2026 – 1 Oct 2026" }],
+        state: "done",
+        rowCount: 88,
+        note: null,
+      },
+      {
+        id: "c2",
+        tool: "summary_stats",
+        title: "Summarised a measure",
+        args: [],
+        state: "refused",
+        rowCount: 0,
+        note: "No reading for that measure in this window.",
+        refusalCode: "NO_ROWS",
+      },
+    ] as const;
+    const markup = render({ status: "COMPLETE", text: answerText("Synthetic."), tools });
+    expect(markup).toContain('<p role="status" class="sr-only">Done. Used 2 tools.</p>');
+    expect(markup).toContain('<span class="min-w-0 flex-1 truncate">Used 2 tools</span>');
+    expect(markup).toMatch(/<ol id="[^"]+" hidden="" aria-label="Tool calls"/);
+    expect(markup).toContain("Reading resting heart rate, 4 Jul 2026 to 1 Oct 2026");
+    expect(markup).toContain(">No data: NO_ROWS</span>");
+    expect(markup).toContain("No reading for that measure in this window.");
   });
 });
 
@@ -356,10 +401,10 @@ describe("noAnswerLine", () => {
   test("says how many lookups ran before the model stopped", () => {
     expect(noAnswerLine(0)).toBe("This model wrote no answer.");
     expect(noAnswerLine(1)).toBe(
-      "This model ran 1 lookup and wrote no answer. The cards above show what it returned.",
+      "This model ran 1 lookup and wrote no answer. The steps above show what it returned.",
     );
     expect(noAnswerLine(8)).toBe(
-      "This model ran 8 lookups and wrote no answer. The cards above show what they returned.",
+      "This model ran 8 lookups and wrote no answer. The steps above show what they returned.",
     );
   });
 });
