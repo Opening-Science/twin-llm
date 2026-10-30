@@ -19,7 +19,8 @@ import { fileURLToPath } from "node:url";
 
 import { parseArgs } from "./args";
 import { toPerson } from "./cohort";
-import { type BundleFacts, bundleFacts, type PersonFacts } from "./person-facts";
+import { metaFile, peopleFile, readPeople } from "./people-files";
+import { type BundleFacts, bundleFacts } from "./person-facts";
 import { type BatchRun, buildSummary, renderReport, type Summary } from "./report";
 import { runStudy } from "./study";
 import { tarEntries } from "./tar-entries";
@@ -33,11 +34,6 @@ type Manifest = Readonly<{
 }>;
 
 type BatchMeta = BatchRun & Readonly<{ codesSeen: Summary["codesSeen"] }>;
-
-const peopleFile = (out: string, batch: string) =>
-  join(out, "people", `batch-${batch}.jsonl`);
-const metaFile = (out: string, batch: string) =>
-  join(out, "people", `batch-${batch}.meta.json`);
 
 const exists = async (path: string): Promise<boolean> =>
   stat(path).then(
@@ -187,12 +183,6 @@ const extractInChild = async (batch: string, archives: string, out: string) => {
     throw new Error(`batch ${batch} ended without writing its people file`);
   }
 };
-
-const readPeople = async (out: string, batch: string): Promise<readonly PersonFacts[]> =>
-  (await readFile(peopleFile(out, batch), "utf8"))
-    .split("\n")
-    .filter((line) => line.length > 0)
-    .map((line) => JSON.parse(line) as PersonFacts);
 
 const main = async (argv: readonly string[]): Promise<number> => {
   const extractIndex = argv.indexOf("--extract-one");
