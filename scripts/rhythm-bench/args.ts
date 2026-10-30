@@ -9,13 +9,15 @@ export type BenchArgs = Readonly<{
   bootstrapSeed: number;
   /** A small grid (60 and 300 s, three rhythms, one AF rate, two noise levels) for a quick look. */
   quick: boolean;
+  /** Apply the grid's beat-detection noise levels to the database beats too (#296). */
+  realNoise: boolean;
 }>;
 
 export const DEFAULT_SEEDS = 20;
 export const DEFAULT_RESAMPLES = 1000;
 export const DEFAULT_BOOTSTRAP_SEED = 249;
 
-export const USAGE = `usage: bun run rhythm-bench -- --out ${RHYTHM_BENCH_DIR}/<run> [--seeds N] [--afdb <dir>] [--resamples N] [--bootstrap-seed N] [--quick] (the Lab reads ${RHYTHM_BENCH_DIR}/*/result.json)`;
+export const USAGE = `usage: bun run rhythm-bench -- --out ${RHYTHM_BENCH_DIR}/<run> [--seeds N] [--afdb <dir>] [--resamples N] [--bootstrap-seed N] [--quick] [--real-noise] (the Lab reads ${RHYTHM_BENCH_DIR}/*/result.json)`;
 
 const valueOf = (argv: readonly string[], name: string): string | undefined => {
   const index = argv.indexOf(name);
@@ -43,6 +45,7 @@ export const parseArgs = (argv: readonly string[]): BenchArgs => {
     "--resamples",
     "--bootstrap-seed",
     "--quick",
+    "--real-noise",
   ]);
   const unknown = argv.filter((arg) => arg.startsWith("--") && !known.has(arg));
   if (unknown.length > 0) throw new Error(`unknown option ${unknown[0]}\n${USAGE}`);
@@ -52,6 +55,9 @@ export const parseArgs = (argv: readonly string[]): BenchArgs => {
   const afdb = valueOf(argv, "--afdb");
   if (afdb !== undefined && afdb.startsWith("--"))
     throw new Error(`--afdb needs a directory\n${USAGE}`);
+  const realNoise = argv.includes("--real-noise");
+  if (realNoise && afdb === undefined)
+    throw new Error(`--real-noise needs the database (--afdb)\n${USAGE}`);
   return {
     out,
     seeds: positiveInt(valueOf(argv, "--seeds"), "--seeds", DEFAULT_SEEDS, 1),
@@ -69,5 +75,6 @@ export const parseArgs = (argv: readonly string[]): BenchArgs => {
       0,
     ),
     quick: argv.includes("--quick"),
+    realNoise,
   };
 };
