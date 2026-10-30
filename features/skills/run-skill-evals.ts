@@ -7,6 +7,7 @@ import {
 import { permitSkillRequest } from "@/infrastructure/skill-gate";
 import { GENOME_TOOLS } from "@/packages/carbon-x/constants";
 import { GENOME_TOOL_DEFINITIONS } from "@/packages/carbon-x/schema";
+import { GENOME_VARIANTS_TOOL_DEFINITION } from "@/packages/query-tools/imported-variants-schema";
 import { TOOL_DEFINITIONS } from "@/packages/query-tools/schemas";
 
 import {
@@ -43,6 +44,7 @@ const INPUT_SCHEMAS: ReadonlyMap<string, z.ZodType> = new Map<string, z.ZodType>
   ...GENOME_TOOL_DEFINITIONS.map(
     (definition) => [definition.name, definition.input] as const,
   ),
+  [GENOME_VARIANTS_TOOL_DEFINITION.name, GENOME_VARIANTS_TOOL_DEFINITION.input],
 ]);
 
 /**

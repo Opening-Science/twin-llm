@@ -6,20 +6,27 @@ import { useState } from "react";
 import type { DatasetView } from "@/infrastructure/personal-data-store";
 import { Button } from "@/infrastructure/ui-kit/button";
 import { Field } from "@/infrastructure/ui-kit/field";
+import { isSoftHidden } from "@/infrastructure/ui-kit/soft-delete";
+import { UndoButton } from "@/infrastructure/ui-kit/undo-button";
+import { useSoftDelete } from "@/infrastructure/ui-kit/use-soft-delete";
 
 import { kindLabel } from "./import-formats";
-import { countLabel, dateRangeLabel, storedDateLabel } from "./import-labels";
+import { datasetContentsLabel, storedDateLabel } from "./import-labels";
 import { IMPORT_MESSAGES } from "./import-messages";
 
 /**
- * The person's imported datasets: rename, or delete for good. Delete asks
- * once more, saying how many rows go, because it cannot be undone.
+ * The person's imported datasets: rename, or delete for good.
+ *
+ * Delete folds the row to one line ("… deleted") with Undo for five seconds;
+ * the server deletes the rows only when that time runs out, and only that
+ * delete is audited. Going to another page first deletes it then; closing
+ * the tab first makes the browser ask, and leaving keeps the dataset
+ * (`infrastructure/ui-kit/soft-delete.ts`).
  */
 
 type Mode =
   | Readonly<{ mode: "idle" }>
   | Readonly<{ mode: "rename"; name: string }>
-  | Readonly<{ mode: "confirm-delete" }>
   | Readonly<{ mode: "busy" }>;
 
 const call = async (url: string, init: RequestInit): Promise<string | null> => {
@@ -56,14 +63,16 @@ const DatasetRow = ({ dataset }: Readonly<{ dataset: DatasetView }>) => {
     );
   };
 
-  const remove = async () => {
-    setMode({ mode: "busy" });
-    finish(await call(url, { method: "DELETE" }));
-  };
+  const removal = useSoftDelete(async () => {
+    const failed = await call(url, { method: "DELETE" });
+    if (failed === null) router.refresh();
+    return failed;
+  });
+  const hidden = isSoftHidden(removal.phase);
 
-  const busy = mode.mode === "busy";
+  const busy = mode.mode === "busy" || removal.phase === "deleting";
   return (
-    <li className="surface p-4">
+    <li className={hidden ? "surface px-4 py-2" : "surface p-4"}>
       {mode.mode === "rename" ? (
         <form
           className="flex flex-wrap items-end gap-3"
@@ -86,30 +95,24 @@ const DatasetRow = ({ dataset }: Readonly<{ dataset: DatasetView }>) => {
         </form>
       ) : (
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h3 className="text-sm break-words">{dataset.name}</h3>
-            <p className="text-muted-foreground mt-1 text-xs">
-              {kindLabel(dataset.kind)} · {countLabel(dataset.rowCount, "row", "rows")} ·{" "}
-              {dateRangeLabel(dataset.firstAt, dataset.lastAt)}
+          {hidden ? (
+            <p className="text-muted-foreground min-w-0 self-center text-sm break-words">
+              {dataset.name} deleted.
             </p>
-            <p className="text-muted-foreground mt-0.5 text-xs break-all">
-              From {dataset.sourceFileName}, imported {storedDateLabel(dataset.createdAt)}
-            </p>
-          </div>
-          {mode.mode === "confirm-delete" ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm">
-                Delete {countLabel(dataset.rowCount, "row", "rows")} for good?
-              </span>
-              <Button size="sm" variant="primary" onClick={() => void remove()}>
-                Delete
-              </Button>
-              <Button size="sm" onClick={() => setMode({ mode: "idle" })}>
-                Keep
-              </Button>
-            </div>
           ) : (
-            <div className="flex gap-2">
+            <div className="min-w-0">
+              <h3 className="text-sm break-words">{dataset.name}</h3>
+              <p className="text-muted-foreground mt-1 text-xs">
+                {kindLabel(dataset.kind)} · {datasetContentsLabel(dataset)}
+              </p>
+              <p className="text-muted-foreground mt-0.5 text-xs break-all">
+                From {dataset.sourceFileName}, imported{" "}
+                {storedDateLabel(dataset.createdAt)}
+              </p>
+            </div>
+          )}
+          <div className="flex gap-2">
+            {!hidden && (
               <Button
                 size="sm"
                 disabled={busy}
@@ -117,21 +120,23 @@ const DatasetRow = ({ dataset }: Readonly<{ dataset: DatasetView }>) => {
               >
                 Rename
               </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                disabled={busy}
-                onClick={() => setMode({ mode: "confirm-delete" })}
-              >
-                Delete
-              </Button>
-            </div>
-          )}
+            )}
+            <UndoButton
+              label="Delete"
+              actedText={`${dataset.name} deleted.`}
+              size="sm"
+              variant="ghost"
+              disabled={busy}
+              onAct={removal.controls.act}
+              onUndo={removal.controls.undo}
+              onExpire={removal.controls.expire}
+            />
+          </div>
         </div>
       )}
-      {error !== null && (
+      {(error ?? removal.error) !== null && !hidden && (
         <p role="alert" className="text-destructive mt-2 text-sm">
-          {error}
+          {error ?? removal.error}
         </p>
       )}
     </li>

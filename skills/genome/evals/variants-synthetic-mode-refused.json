@@ -1,0 +1,17 @@
+{
+  "question": "Look up rs1799853 in my imported VCF.",
+  "provider": "ollama",
+  "dataMode": "synthetic",
+  "genomeSource": "ark",
+  "script": [
+    {
+      "tool": "genome_variants",
+      "input": { "dataset_id": "ds-synthetic-vcf", "variants": ["rs1799853"] }
+    }
+  ],
+  "expect": {
+    "calls": [],
+    "views": [],
+    "refusals": ["genome-not-permitted"]
+  }
+}

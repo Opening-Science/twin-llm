@@ -3,6 +3,7 @@
  *
  *   bun run rhythm-bench -- --out .rhythm-bench/run --afdb ../physionet-afdb/files
  *   bun run rhythm-bench -- --out .rhythm-bench/quick --seeds 3 --quick
+ *   bun run rhythm-bench -- --out .rhythm-bench/noise --afdb ../physionet-afdb/files --real-noise
  *
  * Reads the MIT-BIH Atrial Fibrillation Database from the given directory
  * (never copied into the repository), runs `runBenchmark` and writes
@@ -21,6 +22,8 @@ import {
   distributionCsv,
   markdownReport,
   realWindowsCsv,
+  realNoiseCsv,
+  realNoiseWindowsCsv,
   rocCsv,
   simWindowsCsv,
 } from "./report";
@@ -92,6 +95,7 @@ const main = async () => {
       bootstrapSeed: args.bootstrapSeed,
       resamples: args.resamples,
       grid: args.quick ? QUICK_GRID : FULL_GRID,
+      realNoise: args.realNoise,
     },
     gitSha: gitSha(),
     afdb,
@@ -107,6 +111,10 @@ const main = async () => {
   await writeFile(join(args.out, "windows-real.csv"), realWindowsCsv(data));
   await writeFile(join(args.out, "roc.csv"), rocCsv(data));
   await writeFile(join(args.out, "distributions.csv"), distributionCsv(data));
+  if (data.result.realNoise !== null) {
+    await writeFile(join(args.out, "real-noise.csv"), realNoiseCsv(data.result));
+    await writeFile(join(args.out, "windows-real-noise.csv"), realNoiseWindowsCsv(data));
+  }
   console.log(
     `rhythm-bench ${data.result.runId}: ${data.simRows.length} simulated and ${data.realRows.length} database windows in ${((Date.now() - started) / 1000).toFixed(1)} s, written to ${args.out}`,
   );

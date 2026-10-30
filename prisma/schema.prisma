@@ -48,6 +48,7 @@ model User {
   genomeReports          GenomeReport[]
   personalDatasets       PersonalDataset[]
   skills                 UserSkill[]
+  twinNotes              TwinNote[]
 
   @@map("users")
 }
@@ -63,6 +64,8 @@ model OnboardingProfile {
   /// Knowledge sources this user switched off. Stored as an opt-out list so a
   /// source added later is on by default.
   disabledSources String[]  @default([])
+  /// Set when the person turned off loading their twin notes into new chats (#43).
+  twinNotesOff    Boolean   @default(false)
   /// Last step reached, so the flow can resume.
   step            Int       @default(0)
   /// Set when the user finishes or skips the flow.
@@ -423,7 +426,7 @@ model GenomeReport {
   @@map("genome_reports")
 }
 
-/// One file a person imported on Customize · Data (#176, #178, #179, docs/personal-data.md).
+/// One file a person imported on Customize · Data (#176, #178, #179, #180, docs/personal-data.md).
 /// Personal data, written only with DATA_MODE=personal, owned by one user and
 /// never mixed with the synthetic warehouse. Deleting it hard-deletes its rows
 /// (cascade). `sha256` is the uploaded file's, so the same file twice is
@@ -431,7 +434,7 @@ model GenomeReport {
 model PersonalDataset {
   id             String   @id @default(cuid())
   userId         String   @map("user_id")
-  /// "fhir", "lab-csv", "table", "apple-health" or "wearable".
+  /// "fhir", "lab-csv", "table", "apple-health", "wearable" or "vcf".
   kind           String
   name           String
   sourceFileName String   @map("source_file_name")
@@ -444,6 +447,8 @@ model PersonalDataset {
   /// Earliest and latest date stored, ISO text as the review showed it.
   firstAt        String?  @map("first_at")
   lastAt         String?  @map("last_at")
+  /// "GRCh38" for a VCF (the only build imported); null for every other kind.
+  genomeBuild    String?  @map("genome_build")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
@@ -452,6 +457,7 @@ model PersonalDataset {
   clinicalRecords PersonalClinicalRecord[]
   table           PersonalTable?
   tableChunks     PersonalTableChunk[]
+  variants        PersonalVariant[]
 
   @@unique([userId, sha256])
   @@index([userId, createdAt])
@@ -534,6 +540,36 @@ model PersonalTableChunk {
 
   @@unique([datasetId, chunkIndex])
   @@map("personal_table_chunks")
+}
+
+/// One record of an imported genome VCF (#180, docs/personal-data.md): the
+/// person's genotype at one GRCh38 site. Genome data: read only by a model on
+/// this machine under `permitGenomeRequest`, never by the imported-data chat
+/// tools and never sent to a hosted provider. QUAL, INFO, the other FORMAT
+/// fields and the sample's name are not stored.
+model PersonalVariant {
+  id        String  @id @default(cuid())
+  datasetId String  @map("dataset_id")
+  userId    String  @map("user_id")
+  /// As the file names it: "chr1" or "1".
+  chrom     String
+  /// 1-based GRCh38 position.
+  pos       Int
+  /// The ID column, such as an rsID; null when ".".
+  variantId String? @map("variant_id")
+  ref       String
+  /// Alternate alleles as written, comma separated.
+  alt       String
+  /// GT as written ("0/1", "1|1"); null for a no-call.
+  genotype  String?
+  /// The FILTER column; null when ".".
+  filter    String?
+
+  dataset PersonalDataset @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+
+  @@index([datasetId])
+  @@index([userId, chrom, pos])
+  @@map("personal_variants")
 }
 
 // ─── 4. Research warehouse (synthetic only) ─────────────────────────────────
@@ -760,4 +796,31 @@ model UserSkill {
 
   @@unique([userId, name])
   @@map("user_skills")
+}
+
+/// A twin note (#43, docs/twin-notes.md): the person's confirmed summary of a
+/// thread, made with `/compact` and edited on Customize · Memory. Lines of
+/// text only, never tool rows. `dataMode` and `permit` say which turns may
+/// load it: a note keeps the permit of the thread it came from.
+model TwinNote {
+  id             String   @id @default(cuid())
+  userId         String   @map("user_id")
+  title          String
+  topics         String[]
+  measures       String[]
+  openQuestions  String[] @map("open_questions")
+  /// "synthetic" or "personal": DATA_MODE when it was saved.
+  dataMode       String   @map("data_mode")
+  /// "synthetic", "personal" or "local" (`notePermitFor`).
+  permit         String
+  /// The thread it was made from; kept as a plain id, so deleting the thread
+  /// leaves the person's note.
+  sourceThreadId String?  @map("source_thread_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("twin_notes")
 }

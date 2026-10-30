@@ -5,6 +5,7 @@ import { ensureAppUser, findAppUserId } from "@/infrastructure/current-user";
 import { permitImportedDataStore } from "@/infrastructure/data-mode-policy";
 import { dataMode } from "@/infrastructure/data-mode";
 import { database } from "@/infrastructure/database";
+import { genomeEnv } from "@/infrastructure/env";
 import {
   type DatasetView,
   personalDataStore,
@@ -44,7 +45,9 @@ import { IMPORT_MESSAGES } from "./import-messages";
  * one transaction. Nothing is kept on the server between the two, so a
  * cancelled review leaves no trace but the audit row. Rename and delete act
  * on one dataset of the signed-in person. Every step needs DATA_MODE=personal
- * and is audited with counts only (`import-audit.ts`).
+ * and is audited with counts only (`import-audit.ts`). No model sees a file
+ * at any of these steps; a genome VCF's rows are read later only by a model
+ * on this machine, under `permitGenomeRequest`.
  */
 
 export type ImportPorts = Readonly<{
@@ -57,6 +60,8 @@ export type ImportPorts = Readonly<{
   store: PersonalDataStore;
   audit: (input: AppendInput) => Promise<unknown>;
   sessionId: () => string;
+  /** GENOME_ASSUME_BUILD: read only when a VCF names no build. */
+  assumeBuild: () => "GRCh38" | null;
 }>;
 
 const defaultPorts = (): ImportPorts => ({
@@ -67,6 +72,7 @@ const defaultPorts = (): ImportPorts => ({
   store: personalDataStore(),
   audit: (input) => append(database(), input),
   sessionId: () => crypto.randomUUID(),
+  assumeBuild: () => genomeEnv().assumeBuild,
 });
 
 const portsWith = (overrides: Partial<ImportPorts>): ImportPorts => ({
@@ -199,7 +205,9 @@ export const postReviewResponse = async (
     byteSize: upload.bytes.byteLength,
     sha256: upload.sha256,
   };
-  const parsed = parseImport(upload.kind, upload.bytes, upload.fileName);
+  const parsed = parseImport(upload.kind, upload.bytes, upload.fileName, {
+    assumeBuild: ports.assumeBuild(),
+  });
   if (!parsed.ok) {
     await ports.audit(reviewEvent(context, file, { refused: parsed.refusal.code }));
     return failure(parsed.refusal.message, 422);
@@ -264,7 +272,9 @@ export const postSaveResponse = async (
   if (upload.form.get("sha256") !== upload.sha256) {
     return refuse("changed-since-review", IMPORT_MESSAGES.changedSinceReview, 409);
   }
-  const parsed = parseImport(upload.kind, upload.bytes, upload.fileName);
+  const parsed = parseImport(upload.kind, upload.bytes, upload.fileName, {
+    assumeBuild: ports.assumeBuild(),
+  });
   if (!parsed.ok) return refuse(parsed.refusal.code, parsed.refusal.message, 422);
 
   const userId = await ports.ensureUserId(actor);

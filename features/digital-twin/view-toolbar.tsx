@@ -3,14 +3,14 @@ import { type Ref } from "react";
 import { Button } from "@/infrastructure/ui-kit/button";
 
 import { ENTER_ENVIRONMENT, EXIT_ENVIRONMENT } from "./environment/environment-copy";
-import { LIVE_TOGGLE } from "./live/live-copy";
+import { CHAMBERS_TOGGLE, LIVE_TOGGLE } from "./live/live-copy";
 import { DANCE_TEMPOS } from "./motion/dance";
 import { MOTION_LABEL, TEMPO_LABEL, tempoOption } from "./motion/motion-copy";
 import { type MotionControl } from "./motion/use-body-motion";
 
 /**
  * The 3D view controls, directly above the canvas, in three groups: View
- * (Reset, Pause, zoom), Show (Landmarks, Live vitals, the motion clips) and Enter/Exit. A row
+ * (Reset, Pause, zoom), Show (Landmarks, Live vitals, Heart chambers, the motion clips) and Enter/Exit. A row
  * that runs out of room wraps between groups, never inside one.
  *
  * It renders only with a canvas: Reset or Pause with no view to act on did
@@ -27,7 +27,7 @@ import { type MotionControl } from "./motion/use-body-motion";
  */
 
 /** The same pressed look as `.chip[aria-pressed="true"]` in the anatomy controls. */
-const PRESSED =
+export const PRESSED =
   "aria-pressed:border-primary aria-pressed:text-foreground aria-pressed:bg-[color-mix(in_oklab,var(--primary)_12%,transparent)]";
 
 export type ViewToolbarProps = Readonly<{
@@ -39,6 +39,8 @@ export type ViewToolbarProps = Readonly<{
   landmarks?: Readonly<{ shown: boolean; onToggle: () => void }>;
   /** Live vitals (G4); only when the subject has a rate and motion is allowed. */
   liveVitals?: Readonly<{ on: boolean; onToggle: () => void }>;
+  /** Heart chambers (#53); only while live vitals beat an atlas heart with its own mesh. */
+  heartChambers?: Readonly<{ on: boolean; onToggle: () => void }>;
   /** Whole-body motion (#51), once a body has loaded. */
   motion?: MotionControl;
   /** The full-screen environment; focus returns to this button on exit. */
@@ -53,6 +55,7 @@ export const ViewToolbar = ({
   onZoom,
   landmarks,
   liveVitals,
+  heartChambers,
   motion,
   environment,
   environmentRef,
@@ -96,6 +99,16 @@ export const ViewToolbar = ({
             className={PRESSED}
           >
             {LIVE_TOGGLE}
+          </Button>
+        ) : null}
+        {heartChambers ? (
+          <Button
+            size="sm"
+            aria-pressed={heartChambers.on}
+            onClick={heartChambers.onToggle}
+            className={PRESSED}
+          >
+            {CHAMBERS_TOGGLE}
           </Button>
         ) : null}
         {motion

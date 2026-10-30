@@ -5,6 +5,10 @@
 - Repository: https://github.com/Opening-Science/twin-llm
 - License: Apache-2.0 for TwinLLM original work — see `LICENSE` and `NOTICE`
 
+## Interaction patterns
+
+Interaction ideas for the ui-kit's `StepTrace`, `UndoButton`, `HoldToConfirm`, `StatusLattice` and `Rating` came from React Bits demos (reactbits.dev); no React Bits code is included.
+
 ## open-twin pins
 
 Synced (not vendored) at SHA:

@@ -4,6 +4,7 @@ import { PrismaClient } from "@/generated/prisma/client";
 
 import { append } from "./append";
 import { verifyChain } from "./verify-chain";
+import { checkOutcome, EXIT, parseVerifyMode } from "./verify-cli-args";
 
 const databaseUrl = (): string => {
   // CLI is outside Next. serverEnv() pulls server-only.
@@ -43,29 +44,24 @@ const seedTwo = async (client: PrismaClient): Promise<void> => {
 };
 
 const main = async (): Promise<void> => {
+  const parsed = parseVerifyMode(process.argv.slice(2));
+  if ("error" in parsed) {
+    console.error(parsed.error);
+    process.exit(EXIT.usage);
+  }
   const client = createClient();
-  const expectBroken = process.argv.includes("--expect-broken");
-  const seedOk = process.argv.includes("--seed-ok");
-  const checkOnly = process.argv.includes("--check");
 
   try {
-    if (checkOnly) {
+    if (parsed.mode === "--check") {
       // Read-only: the same walk the Lab page runs, on the real table.
-      const result = await verifyChain(client);
-      const latest = result.latestHash ?? "none";
-      if (!result.ok) {
-        console.error(
-          `verify-audit FAIL: ${result.checked} of ${result.total} rows checked, broken at seq ${result.brokenAtSeq}, latest hash ${latest}`,
-        );
-        process.exit(1);
-      }
-      process.stdout.write(
-        `verify-audit OK: ${result.total} rows checked, latest hash ${latest}\n`,
-      );
+      const outcome = checkOutcome(await verifyChain(client));
+      if (outcome.stream === "stdout") process.stdout.write(`${outcome.line}\n`);
+      else console.error(outcome.line);
+      process.exitCode = outcome.code;
       return;
     }
 
-    if (seedOk) {
+    if (parsed.mode === "--seed-ok") {
       await seedTwo(client);
       const result = await verifyChain(client);
       if (!result.ok) {
@@ -78,20 +74,14 @@ const main = async (): Promise<void> => {
       return;
     }
 
-    if (expectBroken) {
-      const result = await verifyChain(client);
-      if (result.ok || result.brokenAtSeq !== 1) {
-        console.error(
-          `verify-audit FAIL: expected brokenAtSeq=1 after tamper, got ${JSON.stringify(result)}`,
-        );
-        process.exit(1);
-      }
-      process.stdout.write("verify-audit OK: chain broken at seq 1\n");
-      return;
+    const result = await verifyChain(client);
+    if (result.ok || result.brokenAtSeq !== 1) {
+      console.error(
+        `verify-audit FAIL: expected brokenAtSeq=1 after tamper, got ${JSON.stringify(result)}`,
+      );
+      process.exit(1);
     }
-
-    console.error("verify-cli: pass --check, --seed-ok or --expect-broken");
-    process.exit(1);
+    process.stdout.write("verify-audit OK: chain broken at seq 1\n");
   } finally {
     await client.$disconnect();
   }
