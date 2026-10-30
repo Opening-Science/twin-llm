@@ -31,6 +31,9 @@ export const SYNTHETIC_COHORTS = [
   // release (`bun run setup:local -- --cohort-10k`). Same seed as the
   // evaluation cohort but a different population, so a different id.
   "synthea-v4-seed42-10k",
+  // The supplementary S7 cohort (#277, scripts/synthea/s7-cohort.ts): 17 people
+  // aged 65 to 90, 13 with atrial fibrillation. Evaluation only.
+  "synthea-v4-s7",
   ...SYNTHEA_1M_COHORTS,
 ] as const;
 

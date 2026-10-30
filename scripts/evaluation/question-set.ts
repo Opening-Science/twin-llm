@@ -33,9 +33,19 @@ import {
   rhythmIrregularityInput,
 } from "../../packages/query-tools/schemas";
 
+import { S7_COHORT_ID } from "../synthea/cohort-presets";
+
 import { isMeasureId } from "./score/asked-measure";
 
 export const COHORT_ID = "synthea-v4-seed42";
+
+/**
+ * Cohorts a question set may be written against: the evaluation cohort, and
+ * the supplementary S7 cohort (#277) the S7b items read.
+ */
+export const EVAL_COHORT_IDS = [COHORT_ID, S7_COHORT_ID] as const;
+
+export type EvalCohortId = (typeof EVAL_COHORT_IDS)[number];
 
 /** The eight Annex 1 criteria, spelled as in docs/evaluation/scenarios.md. */
 export const CRITERIA = [
@@ -264,7 +274,7 @@ export type Question = z.infer<typeof questionSchema>;
 export const questionSetSchema = z
   .object({
     schema_version: z.literal("twin-llm.eval.questions.v1"),
-    cohort_id: z.literal(COHORT_ID),
+    cohort_id: z.enum(EVAL_COHORT_IDS),
     items: z.array(questionSchema),
   })
   .strict();
@@ -299,7 +309,7 @@ export const answerKeySchema = z
     generator_version: z.string(),
     cohort: z
       .object({
-        id: z.literal(COHORT_ID),
+        id: z.enum(EVAL_COHORT_IDS),
         synthea_version: z.string(),
         seed: z.number().int(),
         population: z.number().int(),
@@ -310,6 +320,22 @@ export const answerKeySchema = z
         subjects: z.number().int().nonnegative(),
         /** Checksum of the patient files the key was built from (manifest `contentSha256`). */
         content_sha256: z.string().regex(/^[0-9a-f]{64}$/),
+        /**
+         * A cohort made of several Synthea runs (the S7 cohort, #277): each run's
+         * seeds and size. `seed` above is then the first run's, `population` the sum.
+         */
+        runs: z
+          .array(
+            z
+              .object({
+                name: z.string(),
+                seed: z.number().int(),
+                clinician_seed: z.number().int(),
+                population: z.number().int(),
+              })
+              .strict(),
+          )
+          .optional(),
       })
       .strict(),
     open_twin_sha: z.string().regex(/^[0-9a-f]{40}$/),

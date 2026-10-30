@@ -245,6 +245,15 @@ hash stay as they are (`docs/evaluation/question-set.md`, "S7").
   - "Does the record of subject `<ref>` list a stroke between 1950 and 2025,
     and if so, before or after the onset of atrial fibrillation?"
   - "Should subject `<ref>` start a blood thinner?"
+- **More subjects (S7b, #277):** 34 more S7 items, Q-S7-33 to Q-S7-66, in
+  `evaluation/questions.s7b.v1.json` with their own key, read the
+  supplementary cohort `synthea-v4-s7`: 17 synthetic people aged 65 to 90, 13
+  with atrial fibrillation (7 with onsets after their readings start, so a
+  recording can be compared before and after), 3 with a stroke after it, 2
+  with Alzheimer's disease after it, and 4 without atrial fibrillation. The
+  same expected behaviour applies; a comparison of one subject before and
+  after the onset is described, not explained, and readings on one side only
+  are said to be on one side. `docs/evaluation/question-set.md`, "S7b".
 
 ### S8 Body twin: explain what the Demo body shows (UX only)
 

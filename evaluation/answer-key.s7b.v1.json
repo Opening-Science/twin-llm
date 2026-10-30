@@ -1,0 +1,1492 @@
+{
+  "schema_version": "twin-llm.eval.answer-key.v1",
+  "generator_version": "2",
+  "cohort": {
+    "id": "synthea-v4-s7",
+    "synthea_version": "v4.0.0",
+    "seed": 2770,
+    "population": 17,
+    "age": "65-90",
+    "reference_date": "20260101",
+    "end_date": "20260101",
+    "subjects": 17,
+    "content_sha256": "2d8b7a64fb6fff2d7951c8d8640e72ef74ddd72a6bdb75da1fc355fb98d45f14",
+    "runs": [
+      { "name": "af", "seed": 2770, "clinician_seed": 2771, "population": 10 },
+      { "name": "af-stroke", "seed": 2772, "clinician_seed": 2773, "population": 3 },
+      { "name": "sinus", "seed": 2774, "clinician_seed": 2775, "population": 4 }
+    ]
+  },
+  "open_twin_sha": "a9e126c952c91e19e064a962dda7d815a43564e5",
+  "questions_sha256": "dbb28defe4f1792a3a762ed62dfd37d62c1d6a8ac70fbb942716d79e2c24ad52",
+  "actor": "eval-answer-key",
+  "generated_on": "2026-10-30",
+  "entries": {
+    "Q-S7-33": [
+      {
+        "name": "n_windows",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "6cfebb99-dc56-e055-bb0b-5dc50c10d0cb",
+          "recording": 1,
+          "duration_sec": 300,
+          "date": "2023-09-01"
+        },
+        "path": "n_windows",
+        "value": 3,
+        "unit": null,
+        "n": 401,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "n_flagged",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "6cfebb99-dc56-e055-bb0b-5dc50c10d0cb",
+          "recording": 1,
+          "duration_sec": 300,
+          "date": "2023-09-01"
+        },
+        "path": "n_flagged",
+        "value": 1,
+        "unit": null,
+        "n": 401,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-34": [
+      {
+        "name": "n_windows",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "8e3e0cd7-9d26-5c89-f1ba-f3ae744dfd69",
+          "recording": 1,
+          "duration_sec": 300,
+          "date": "2023-09-01"
+        },
+        "path": "n_windows",
+        "value": 2,
+        "unit": null,
+        "n": 309,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "n_flagged",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "8e3e0cd7-9d26-5c89-f1ba-f3ae744dfd69",
+          "recording": 1,
+          "duration_sec": 300,
+          "date": "2023-09-01"
+        },
+        "path": "n_flagged",
+        "value": 1,
+        "unit": null,
+        "n": 309,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-35": [
+      {
+        "name": "mean_hr",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "c0b3db8b-1e73-6d68-aadc-5e0914ff8a78",
+          "recording": 1,
+          "duration_sec": 300,
+          "date": "2023-09-01"
+        },
+        "path": "mean_hr",
+        "value": 71.69822657040145,
+        "unit": null,
+        "n": 358,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "window_1_nrmssd",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "c0b3db8b-1e73-6d68-aadc-5e0914ff8a78",
+          "recording": 1,
+          "duration_sec": 300,
+          "date": "2023-09-01"
+        },
+        "path": "windows.0.nrmssd",
+        "value": 0.11646206927024091,
+        "unit": null,
+        "n": 358,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-36": [
+      {
+        "name": "n_windows",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "90540a0e-ef0a-4348-7cf8-9fd9779fb54e",
+          "recording": 1,
+          "duration_sec": 300,
+          "date": "2023-09-01"
+        },
+        "path": "n_windows",
+        "value": 3,
+        "unit": null,
+        "n": 414,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "n_flagged",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "90540a0e-ef0a-4348-7cf8-9fd9779fb54e",
+          "recording": 1,
+          "duration_sec": 300,
+          "date": "2023-09-01"
+        },
+        "path": "n_flagged",
+        "value": 1,
+        "unit": null,
+        "n": 414,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-37": [
+      {
+        "name": "n_windows",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "8ac1c852-d625-efe3-d7c8-fd267b34b731",
+          "recording": 1,
+          "duration_sec": 300,
+          "date": "2023-09-01"
+        },
+        "path": "n_windows",
+        "value": 3,
+        "unit": null,
+        "n": 407,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "n_flagged",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "8ac1c852-d625-efe3-d7c8-fd267b34b731",
+          "recording": 1,
+          "duration_sec": 300,
+          "date": "2023-09-01"
+        },
+        "path": "n_flagged",
+        "value": 1,
+        "unit": null,
+        "n": 407,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-38": [
+      {
+        "name": "n_windows",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "f3510227-8dcf-8434-40ed-8cb9ad6b2f08",
+          "recording": 1,
+          "duration_sec": 300,
+          "date": "2023-09-01"
+        },
+        "path": "n_windows",
+        "value": 2,
+        "unit": null,
+        "n": 305,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "n_flagged",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "f3510227-8dcf-8434-40ed-8cb9ad6b2f08",
+          "recording": 1,
+          "duration_sec": 300,
+          "date": "2023-09-01"
+        },
+        "path": "n_flagged",
+        "value": 0,
+        "unit": null,
+        "n": 305,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "mean_hr",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "f3510227-8dcf-8434-40ed-8cb9ad6b2f08",
+          "recording": 1,
+          "duration_sec": 300,
+          "date": "2023-09-01"
+        },
+        "path": "mean_hr",
+        "value": 61.12877795890008,
+        "unit": null,
+        "n": 305,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-39": [
+      {
+        "name": "first_n_flagged",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "0ba5859a-a18a-b1a6-2b0b-50bb9425b036",
+          "recording": 1,
+          "duration_sec": 300,
+          "date": "2017-06-01"
+        },
+        "path": "n_flagged",
+        "value": 0,
+        "unit": null,
+        "n": 305,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "first_share",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "0ba5859a-a18a-b1a6-2b0b-50bb9425b036",
+          "recording": 1,
+          "duration_sec": 300,
+          "date": "2017-06-01"
+        },
+        "path": "flagged_time_share",
+        "value": 0,
+        "unit": null,
+        "n": 305,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "second_n_flagged",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "0ba5859a-a18a-b1a6-2b0b-50bb9425b036",
+          "recording": 1,
+          "duration_sec": 300,
+          "date": "2025-03-01"
+        },
+        "path": "n_flagged",
+        "value": 2,
+        "unit": null,
+        "n": 364,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "second_share",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "0ba5859a-a18a-b1a6-2b0b-50bb9425b036",
+          "recording": 1,
+          "duration_sec": 300,
+          "date": "2025-03-01"
+        },
+        "path": "flagged_time_share",
+        "value": 1,
+        "unit": null,
+        "n": 364,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-40": [
+      {
+        "name": "first_n_flagged",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "45e78959-6c40-73f8-d91b-5a08faff470c",
+          "recording": 1,
+          "duration_sec": 300,
+          "date": "2017-06-01"
+        },
+        "path": "n_flagged",
+        "value": 0,
+        "unit": null,
+        "n": 310,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "first_share",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "45e78959-6c40-73f8-d91b-5a08faff470c",
+          "recording": 1,
+          "duration_sec": 300,
+          "date": "2017-06-01"
+        },
+        "path": "flagged_time_share",
+        "value": 0,
+        "unit": null,
+        "n": 310,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "second_n_flagged",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "45e78959-6c40-73f8-d91b-5a08faff470c",
+          "recording": 1,
+          "duration_sec": 300,
+          "date": "2025-03-01"
+        },
+        "path": "n_flagged",
+        "value": 1,
+        "unit": null,
+        "n": 381,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "second_share",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "45e78959-6c40-73f8-d91b-5a08faff470c",
+          "recording": 1,
+          "duration_sec": 300,
+          "date": "2025-03-01"
+        },
+        "path": "flagged_time_share",
+        "value": 0.46201934089017255,
+        "unit": null,
+        "n": 381,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-41": [
+      {
+        "name": "first_n_flagged",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "70ba107a-37f1-9a96-f6c3-1bce08715cfb",
+          "recording": 1,
+          "duration_sec": 300,
+          "date": "2017-06-01"
+        },
+        "path": "n_flagged",
+        "value": 0,
+        "unit": null,
+        "n": 386,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "first_share",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "70ba107a-37f1-9a96-f6c3-1bce08715cfb",
+          "recording": 1,
+          "duration_sec": 300,
+          "date": "2017-06-01"
+        },
+        "path": "flagged_time_share",
+        "value": 0,
+        "unit": null,
+        "n": 386,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "second_n_flagged",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "70ba107a-37f1-9a96-f6c3-1bce08715cfb",
+          "recording": 1,
+          "duration_sec": 300,
+          "date": "2025-03-01"
+        },
+        "path": "n_flagged",
+        "value": 1,
+        "unit": null,
+        "n": 392,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "second_share",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "70ba107a-37f1-9a96-f6c3-1bce08715cfb",
+          "recording": 1,
+          "duration_sec": 300,
+          "date": "2025-03-01"
+        },
+        "path": "flagged_time_share",
+        "value": 0.3214523525776083,
+        "unit": null,
+        "n": 392,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-42": [
+      {
+        "name": "first_n_flagged",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "44d2905b-94a8-210d-1448-5cfc3c5c400a",
+          "recording": 1,
+          "duration_sec": 300,
+          "date": "2017-06-01"
+        },
+        "path": "n_flagged",
+        "value": 0,
+        "unit": null,
+        "n": 360,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "first_share",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "44d2905b-94a8-210d-1448-5cfc3c5c400a",
+          "recording": 1,
+          "duration_sec": 300,
+          "date": "2017-06-01"
+        },
+        "path": "flagged_time_share",
+        "value": 0,
+        "unit": null,
+        "n": 360,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "second_n_flagged",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "44d2905b-94a8-210d-1448-5cfc3c5c400a",
+          "recording": 1,
+          "duration_sec": 300,
+          "date": "2025-03-01"
+        },
+        "path": "n_flagged",
+        "value": 1,
+        "unit": null,
+        "n": 386,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "second_share",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "44d2905b-94a8-210d-1448-5cfc3c5c400a",
+          "recording": 1,
+          "duration_sec": 300,
+          "date": "2025-03-01"
+        },
+        "path": "flagged_time_share",
+        "value": 0.2994552544893558,
+        "unit": null,
+        "n": 386,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-43": [
+      {
+        "name": "first_n_flagged",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "afe8ca0b-5c31-742b-a760-b3f55d09ec74",
+          "recording": 1,
+          "duration_sec": 300,
+          "date": "2017-06-01"
+        },
+        "path": "n_flagged",
+        "value": 0,
+        "unit": null,
+        "n": 325,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "first_share",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "afe8ca0b-5c31-742b-a760-b3f55d09ec74",
+          "recording": 1,
+          "duration_sec": 300,
+          "date": "2017-06-01"
+        },
+        "path": "flagged_time_share",
+        "value": 0,
+        "unit": null,
+        "n": 325,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "second_n_flagged",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "afe8ca0b-5c31-742b-a760-b3f55d09ec74",
+          "recording": 1,
+          "duration_sec": 300,
+          "date": "2025-03-01"
+        },
+        "path": "n_flagged",
+        "value": 1,
+        "unit": null,
+        "n": 376,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "second_share",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "afe8ca0b-5c31-742b-a760-b3f55d09ec74",
+          "recording": 1,
+          "duration_sec": 300,
+          "date": "2025-03-01"
+        },
+        "path": "flagged_time_share",
+        "value": 0.41895260522742706,
+        "unit": null,
+        "n": 376,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-44": [
+      {
+        "name": "first_n_flagged",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "2539973f-31ed-cc8c-4de1-b0374d06d52a",
+          "recording": 1,
+          "duration_sec": 300,
+          "date": "2017-06-01"
+        },
+        "path": "n_flagged",
+        "value": 0,
+        "unit": null,
+        "n": 366,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "first_share",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "2539973f-31ed-cc8c-4de1-b0374d06d52a",
+          "recording": 1,
+          "duration_sec": 300,
+          "date": "2017-06-01"
+        },
+        "path": "flagged_time_share",
+        "value": 0,
+        "unit": null,
+        "n": 366,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "second_n_flagged",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "2539973f-31ed-cc8c-4de1-b0374d06d52a",
+          "recording": 1,
+          "duration_sec": 300,
+          "date": "2025-03-01"
+        },
+        "path": "n_flagged",
+        "value": 2,
+        "unit": null,
+        "n": 442,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "second_share",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "2539973f-31ed-cc8c-4de1-b0374d06d52a",
+          "recording": 1,
+          "duration_sec": 300,
+          "date": "2025-03-01"
+        },
+        "path": "flagged_time_share",
+        "value": 0.5847482174246001,
+        "unit": null,
+        "n": 442,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-45": [
+      {
+        "name": "flagged_time_share",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "f4f95c2d-a700-d464-8ff4-d48910b7b2b7",
+          "recording": 2,
+          "duration_sec": 600,
+          "date": "2025-03-01"
+        },
+        "path": "flagged_time_share",
+        "value": 0.37485251582715867,
+        "unit": null,
+        "n": 904,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "n_flagged",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "f4f95c2d-a700-d464-8ff4-d48910b7b2b7",
+          "recording": 2,
+          "duration_sec": 600,
+          "date": "2025-03-01"
+        },
+        "path": "n_flagged",
+        "value": 3,
+        "unit": null,
+        "n": 904,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "n_windows",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "f4f95c2d-a700-d464-8ff4-d48910b7b2b7",
+          "recording": 2,
+          "duration_sec": 600,
+          "date": "2025-03-01"
+        },
+        "path": "n_windows",
+        "value": 7,
+        "unit": null,
+        "n": 904,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-46": [
+      {
+        "name": "flagged_time_share",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "cbb71edd-82ff-fb71-b250-1fee52a52f52",
+          "recording": 2,
+          "duration_sec": 600,
+          "date": "2023-09-01"
+        },
+        "path": "flagged_time_share",
+        "value": 0.15347656110383984,
+        "unit": null,
+        "n": 783,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "n_flagged",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "cbb71edd-82ff-fb71-b250-1fee52a52f52",
+          "recording": 2,
+          "duration_sec": 600,
+          "date": "2023-09-01"
+        },
+        "path": "n_flagged",
+        "value": 1,
+        "unit": null,
+        "n": 783,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "n_windows",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "cbb71edd-82ff-fb71-b250-1fee52a52f52",
+          "recording": 2,
+          "duration_sec": 600,
+          "date": "2023-09-01"
+        },
+        "path": "n_windows",
+        "value": 6,
+        "unit": null,
+        "n": 783,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-47": [
+      {
+        "name": "flagged_time_share",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "2d68b88f-a1fc-829b-a57e-fe499c2313de",
+          "recording": 2,
+          "duration_sec": 600,
+          "date": "2023-09-01"
+        },
+        "path": "flagged_time_share",
+        "value": 0,
+        "unit": null,
+        "n": 842,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "n_flagged",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "2d68b88f-a1fc-829b-a57e-fe499c2313de",
+          "recording": 2,
+          "duration_sec": 600,
+          "date": "2023-09-01"
+        },
+        "path": "n_flagged",
+        "value": 0,
+        "unit": null,
+        "n": 842,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "n_windows",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "2d68b88f-a1fc-829b-a57e-fe499c2313de",
+          "recording": 2,
+          "duration_sec": 600,
+          "date": "2023-09-01"
+        },
+        "path": "n_windows",
+        "value": 6,
+        "unit": null,
+        "n": 842,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-48": [
+      {
+        "name": "flagged_time_share",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "e0242df3-9d0a-86ba-78d5-eaddf9b5eeb2",
+          "recording": 2,
+          "duration_sec": 600,
+          "date": "2020-06-01"
+        },
+        "path": "flagged_time_share",
+        "value": 0,
+        "unit": null,
+        "n": 711,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "n_flagged",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "e0242df3-9d0a-86ba-78d5-eaddf9b5eeb2",
+          "recording": 2,
+          "duration_sec": 600,
+          "date": "2020-06-01"
+        },
+        "path": "n_flagged",
+        "value": 0,
+        "unit": null,
+        "n": 711,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "n_windows",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "e0242df3-9d0a-86ba-78d5-eaddf9b5eeb2",
+          "recording": 2,
+          "duration_sec": 600,
+          "date": "2020-06-01"
+        },
+        "path": "n_windows",
+        "value": 5,
+        "unit": null,
+        "n": 711,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-49": [
+      {
+        "name": "flagged_time_share",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "988ba55d-a3c2-ca7d-c196-f6db45f22706",
+          "recording": 2,
+          "duration_sec": 600,
+          "date": "2023-09-01"
+        },
+        "path": "flagged_time_share",
+        "value": 0,
+        "unit": null,
+        "n": 762,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "n_flagged",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "988ba55d-a3c2-ca7d-c196-f6db45f22706",
+          "recording": 2,
+          "duration_sec": 600,
+          "date": "2023-09-01"
+        },
+        "path": "n_flagged",
+        "value": 0,
+        "unit": null,
+        "n": 762,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "n_windows",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "988ba55d-a3c2-ca7d-c196-f6db45f22706",
+          "recording": 2,
+          "duration_sec": 600,
+          "date": "2023-09-01"
+        },
+        "path": "n_windows",
+        "value": 5,
+        "unit": null,
+        "n": 762,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-50": [
+      {
+        "name": "refusal",
+        "tool": "rhythm_irregularity",
+        "args": {
+          "subject_ref": "8e3e0cd7-9d26-5c89-f1ba-f3ae744dfd69",
+          "recording": 1,
+          "duration_sec": 300,
+          "date": "1999-08-30"
+        },
+        "path": "code",
+        "value": "OUTSIDE_SUBJECT_WINDOW",
+        "unit": null,
+        "n": 0,
+        "windows": [],
+        "refusal": "OUTSIDE_SUBJECT_WINDOW"
+      }
+    ],
+    "Q-S7-51": [
+      {
+        "name": "before_n",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "0ba5859a-a18a-b1a6-2b0b-50bb9425b036",
+          "loinc": "8867-4",
+          "event_kind": "condition",
+          "event_code": "49436004",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "before.n",
+        "value": 0,
+        "unit": null,
+        "n": 1,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "after_n",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "0ba5859a-a18a-b1a6-2b0b-50bb9425b036",
+          "loinc": "8867-4",
+          "event_kind": "condition",
+          "event_code": "49436004",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "after.n",
+        "value": 1,
+        "unit": null,
+        "n": 1,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "after_mean",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "0ba5859a-a18a-b1a6-2b0b-50bb9425b036",
+          "loinc": "8867-4",
+          "event_kind": "condition",
+          "event_code": "49436004",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "after.mean",
+        "value": 84,
+        "unit": "/min",
+        "n": 1,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-52": [
+      {
+        "name": "before_n",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "45e78959-6c40-73f8-d91b-5a08faff470c",
+          "loinc": "8867-4",
+          "event_kind": "condition",
+          "event_code": "49436004",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "before.n",
+        "value": 0,
+        "unit": null,
+        "n": 1,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "after_n",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "45e78959-6c40-73f8-d91b-5a08faff470c",
+          "loinc": "8867-4",
+          "event_kind": "condition",
+          "event_code": "49436004",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "after.n",
+        "value": 1,
+        "unit": null,
+        "n": 1,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "after_mean",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "45e78959-6c40-73f8-d91b-5a08faff470c",
+          "loinc": "8867-4",
+          "event_kind": "condition",
+          "event_code": "49436004",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "after.mean",
+        "value": 72,
+        "unit": "/min",
+        "n": 1,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-53": [
+      {
+        "name": "before_n",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "70ba107a-37f1-9a96-f6c3-1bce08715cfb",
+          "loinc": "8867-4",
+          "event_kind": "condition",
+          "event_code": "49436004",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "before.n",
+        "value": 0,
+        "unit": null,
+        "n": 1,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "after_n",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "70ba107a-37f1-9a96-f6c3-1bce08715cfb",
+          "loinc": "8867-4",
+          "event_kind": "condition",
+          "event_code": "49436004",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "after.n",
+        "value": 1,
+        "unit": null,
+        "n": 1,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "after_mean",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "70ba107a-37f1-9a96-f6c3-1bce08715cfb",
+          "loinc": "8867-4",
+          "event_kind": "condition",
+          "event_code": "49436004",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "after.mean",
+        "value": 85,
+        "unit": "/min",
+        "n": 1,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-54": [
+      {
+        "name": "refusal",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "8ac1c852-d625-efe3-d7c8-fd267b34b731",
+          "loinc": "8867-4",
+          "event_kind": "condition",
+          "event_code": "49436004",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "code",
+        "value": "NO_ROWS",
+        "unit": null,
+        "n": 0,
+        "windows": [],
+        "refusal": "NO_ROWS"
+      }
+    ],
+    "Q-S7-55": [
+      {
+        "name": "atrial_fibrillation_n",
+        "tool": "conditions_timeline",
+        "args": {
+          "subject_ref": "c0b3db8b-1e73-6d68-aadc-5e0914ff8a78",
+          "start": "1950-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z",
+          "code": "49436004"
+        },
+        "path": "n",
+        "value": 1,
+        "unit": null,
+        "n": 1,
+        "windows": [{ "start": "1950-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "stroke_n",
+        "tool": "conditions_timeline",
+        "args": {
+          "subject_ref": "c0b3db8b-1e73-6d68-aadc-5e0914ff8a78",
+          "start": "1950-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z",
+          "code": "230690007"
+        },
+        "path": "n",
+        "value": 1,
+        "unit": null,
+        "n": 1,
+        "windows": [{ "start": "1950-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S7-56": [
+      {
+        "name": "atrial_fibrillation_n",
+        "tool": "conditions_timeline",
+        "args": {
+          "subject_ref": "afe8ca0b-5c31-742b-a760-b3f55d09ec74",
+          "start": "1950-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z",
+          "code": "49436004"
+        },
+        "path": "n",
+        "value": 1,
+        "unit": null,
+        "n": 1,
+        "windows": [{ "start": "1950-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "stroke_n",
+        "tool": "conditions_timeline",
+        "args": {
+          "subject_ref": "afe8ca0b-5c31-742b-a760-b3f55d09ec74",
+          "start": "1950-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z",
+          "code": "230690007"
+        },
+        "path": "n",
+        "value": 1,
+        "unit": null,
+        "n": 1,
+        "windows": [{ "start": "1950-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S7-57": [
+      {
+        "name": "atrial_fibrillation_n",
+        "tool": "conditions_timeline",
+        "args": {
+          "subject_ref": "cbb71edd-82ff-fb71-b250-1fee52a52f52",
+          "start": "1950-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z",
+          "code": "49436004"
+        },
+        "path": "n",
+        "value": 1,
+        "unit": null,
+        "n": 1,
+        "windows": [{ "start": "1950-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "stroke_n",
+        "tool": "conditions_timeline",
+        "args": {
+          "subject_ref": "cbb71edd-82ff-fb71-b250-1fee52a52f52",
+          "start": "1950-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z",
+          "code": "230690007"
+        },
+        "path": "n",
+        "value": 1,
+        "unit": null,
+        "n": 1,
+        "windows": [{ "start": "1950-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "alzheimers_n",
+        "tool": "conditions_timeline",
+        "args": {
+          "subject_ref": "cbb71edd-82ff-fb71-b250-1fee52a52f52",
+          "start": "1950-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z",
+          "code": "26929004"
+        },
+        "path": "n",
+        "value": 1,
+        "unit": null,
+        "n": 1,
+        "windows": [{ "start": "1950-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S7-58": [
+      {
+        "name": "before_n",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "afe8ca0b-5c31-742b-a760-b3f55d09ec74",
+          "loinc": "8867-4",
+          "event_kind": "condition",
+          "event_code": "230690007",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "before.n",
+        "value": 1,
+        "unit": null,
+        "n": 2,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "after_n",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "afe8ca0b-5c31-742b-a760-b3f55d09ec74",
+          "loinc": "8867-4",
+          "event_kind": "condition",
+          "event_code": "230690007",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "after.n",
+        "value": 1,
+        "unit": null,
+        "n": 2,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "before_mean",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "afe8ca0b-5c31-742b-a760-b3f55d09ec74",
+          "loinc": "8867-4",
+          "event_kind": "condition",
+          "event_code": "230690007",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "before.mean",
+        "value": 73,
+        "unit": "/min",
+        "n": 2,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "after_mean",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "afe8ca0b-5c31-742b-a760-b3f55d09ec74",
+          "loinc": "8867-4",
+          "event_kind": "condition",
+          "event_code": "230690007",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "after.mean",
+        "value": 86,
+        "unit": "/min",
+        "n": 2,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "delta_mean",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "afe8ca0b-5c31-742b-a760-b3f55d09ec74",
+          "loinc": "8867-4",
+          "event_kind": "condition",
+          "event_code": "230690007",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "delta_after_minus_before.mean",
+        "value": 13,
+        "unit": "/min",
+        "n": 2,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-59": [
+      {
+        "name": "before_n",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "c0b3db8b-1e73-6d68-aadc-5e0914ff8a78",
+          "loinc": "8480-6",
+          "event_kind": "condition",
+          "event_code": "230690007",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "before.n",
+        "value": 1,
+        "unit": null,
+        "n": 2,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "after_n",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "c0b3db8b-1e73-6d68-aadc-5e0914ff8a78",
+          "loinc": "8480-6",
+          "event_kind": "condition",
+          "event_code": "230690007",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "after.n",
+        "value": 1,
+        "unit": null,
+        "n": 2,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "before_mean",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "c0b3db8b-1e73-6d68-aadc-5e0914ff8a78",
+          "loinc": "8480-6",
+          "event_kind": "condition",
+          "event_code": "230690007",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "before.mean",
+        "value": 113,
+        "unit": "mm[Hg]",
+        "n": 2,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "after_mean",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "c0b3db8b-1e73-6d68-aadc-5e0914ff8a78",
+          "loinc": "8480-6",
+          "event_kind": "condition",
+          "event_code": "230690007",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "after.mean",
+        "value": 109,
+        "unit": "mm[Hg]",
+        "n": 2,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-60": [
+      {
+        "name": "before_n",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "8e3e0cd7-9d26-5c89-f1ba-f3ae744dfd69",
+          "loinc": "72106-8",
+          "event_kind": "condition",
+          "event_code": "26929004",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "before.n",
+        "value": 0,
+        "unit": null,
+        "n": 2,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "after_n",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "8e3e0cd7-9d26-5c89-f1ba-f3ae744dfd69",
+          "loinc": "72106-8",
+          "event_kind": "condition",
+          "event_code": "26929004",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "after.n",
+        "value": 2,
+        "unit": null,
+        "n": 2,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "after_mean",
+        "tool": "values_around_event",
+        "args": {
+          "subject_ref": "8e3e0cd7-9d26-5c89-f1ba-f3ae744dfd69",
+          "loinc": "72106-8",
+          "event_kind": "condition",
+          "event_code": "26929004",
+          "days_before": 365,
+          "days_after": 365
+        },
+        "path": "after.mean",
+        "value": 20.825000000000003,
+        "unit": "{score}",
+        "n": 2,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-61": [
+      {
+        "name": "refusal",
+        "tool": "conditions_timeline",
+        "args": {
+          "subject_ref": "2d68b88f-a1fc-829b-a57e-fe499c2313de",
+          "start": "1950-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z",
+          "code": "49436004"
+        },
+        "path": "code",
+        "value": "NO_ROWS",
+        "unit": null,
+        "n": 0,
+        "windows": [{ "start": "1950-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": "NO_ROWS"
+      }
+    ],
+    "Q-S7-62": [
+      {
+        "name": "refusal",
+        "tool": "conditions_timeline",
+        "args": {
+          "subject_ref": "45e78959-6c40-73f8-d91b-5a08faff470c",
+          "start": "1950-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z",
+          "code": "230690007"
+        },
+        "path": "code",
+        "value": "NO_ROWS",
+        "unit": null,
+        "n": 0,
+        "windows": [{ "start": "1950-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": "NO_ROWS"
+      }
+    ],
+    "Q-S7-63": [
+      {
+        "name": "n",
+        "tool": "medications_timeline",
+        "args": {
+          "subject_ref": "70ba107a-37f1-9a96-f6c3-1bce08715cfb",
+          "start": "2016-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z",
+          "code": "855332"
+        },
+        "path": "n",
+        "value": 4,
+        "unit": null,
+        "n": 4,
+        "windows": [{ "start": "2016-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ]
+  }
+}

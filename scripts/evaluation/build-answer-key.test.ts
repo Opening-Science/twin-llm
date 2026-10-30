@@ -6,6 +6,8 @@ import {
   type AnswerKeyPorts,
   buildAnswerKey,
   type BuildDeps,
+  cohortGeneration,
+  fhirDirOf,
   questionsSha256,
   rowCountOf,
   runBuildAnswerKey,
@@ -505,7 +507,7 @@ describe("runBuildAnswerKey", () => {
       dataMode: () => "synthetic",
       readText: async () => JSON.stringify(questions),
       writeKey: async (path) => void written.push(path),
-      ports: () => fakePorts(defaultAnswer),
+      ports: async () => fakePorts(defaultAnswer),
       ...overrides,
     };
   };
@@ -552,6 +554,23 @@ describe("runBuildAnswerKey", () => {
     expect(d.written).toEqual(["k.json"]);
   });
 
+  test("asks for the ports of the cohort the questions name", async () => {
+    const run = io();
+    const asked: string[] = [];
+    const d = deps({
+      readText: async () => JSON.stringify({ ...questions, cohort_id: "synthea-v4-s7" }),
+      ports: async (cohortId) => {
+        asked.push(cohortId);
+        return fakePorts(defaultAnswer);
+      },
+    });
+    expect(await runBuildAnswerKey([], run.io, d)).toBe(0);
+    expect(asked).toEqual(["synthea-v4-s7"]);
+    expect(run.out.join("")).toContain(
+      "Cohort synthea-v4-s7: 33 subjects (Synthea v4.0.0, seed 2770, dates 20260101–20260101)",
+    );
+  });
+
   test("an invalid question file writes nothing", async () => {
     const run = io();
     const d = deps({ readText: async () => JSON.stringify({ items: [] }) });
@@ -560,5 +579,36 @@ describe("runBuildAnswerKey", () => {
       "Answer key not written: the questions or a tool result did not validate.\n",
     ]);
     expect(d.written).toEqual([]);
+  });
+});
+
+describe("cohort generation per question set", () => {
+  test("the evaluation cohort keeps its one run and its folder", () => {
+    expect(cohortGeneration("synthea-v4-seed42")).toEqual({
+      synthea_version: "v4.0.0",
+      seed: 42,
+      population: 30,
+      age: "40-75",
+      reference_date: "20260101",
+      end_date: "20260101",
+    });
+    expect(fhirDirOf("synthea-v4-seed42")).toBe(".synthea/fhir");
+  });
+
+  test("the S7 cohort lists its three runs; seed is the first run's, population the sum", () => {
+    expect(cohortGeneration("synthea-v4-s7")).toEqual({
+      synthea_version: "v4.0.0",
+      seed: 2770,
+      population: 17,
+      age: "65-90",
+      reference_date: "20260101",
+      end_date: "20260101",
+      runs: [
+        { name: "af", seed: 2770, clinician_seed: 2771, population: 10 },
+        { name: "af-stroke", seed: 2772, clinician_seed: 2773, population: 3 },
+        { name: "sinus", seed: 2774, clinician_seed: 2775, population: 4 },
+      ],
+    });
+    expect(fhirDirOf("synthea-v4-s7")).toBe(".synthea/synthea-v4-s7/fhir");
   });
 });
