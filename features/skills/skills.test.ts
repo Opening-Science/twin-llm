@@ -108,6 +108,25 @@ describe("skills/ in this repository", () => {
       .results.filter((result) => result.skill === name)
       .map((result) => result.caseId);
 
+  test("/rhythm and /brain describe data and literature and never say what a person has", () => {
+    expect(bodyOf("rhythm")).toContain(
+      "Heart rhythm (research) describes recorded data and published literature and does not say what rhythm or condition a person has. If this concerns you, talk to a clinician.",
+    );
+    expect(bodyOf("brain")).toContain(
+      "Brain (research) describes recorded data and published literature and does not say what condition a person has. If this concerns you, talk to a clinician.",
+    );
+    ["rhythm", "brain"].forEach((name) => {
+      const body = bodyOf(name);
+      expect(body).toContain(
+        "Quote a passage only word for word, with its attribution line.",
+      );
+      expect(body).toContain('Never write "you have", "normal", "abnormal"');
+      expect(casesOf(name)).toEqual(
+        expect.arrayContaining(["diagnosis-refused", "hosted-provider-refused"]),
+      );
+    });
+  });
+
   test("/nutrition stays descriptive and refuses diets, meal plans and doses", () => {
     const body = bodyOf("nutrition");
     [

@@ -66,7 +66,9 @@ stored threads, router fixtures and literature sources keep working.
 
 Diet specialist and Anatomy specialist keep their names. "Specialist" there means the
 agent looks at one area of the record. It is not a clinical title. Sleep, Trainer and
-Genetics name a topic, not a profession.
+Genetics name a topic, not a profession. So do Heart rhythm (research) and Brain
+(research) (#253), not cardiologist or neurologist; their role lines say they describe data
+and literature and never say what a person has.
 
 The same rule applies to new copy: describe what the software reads and shows. Do not
 name a clinical role or say what a person has or should take. `bun run lint:claims`

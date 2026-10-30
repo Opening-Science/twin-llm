@@ -134,6 +134,58 @@ describe("routeAgent", () => {
     expect(routeAgent("Write and run a SQL query.", ALL).agentId).toBe("gp");
   });
 
+  test("heart rhythm words go to the Heart rhythm agent, HRV alone stays with Trainer", () => {
+    expect(routeAgent("Was atrial fibrillation recorded?", ALL)).toEqual({
+      agentId: "rhythm",
+      topic: "atrial fibrillation",
+    });
+    expect(routeAgent("Palpitations and RR intervals last week", ALL).agentId).toBe(
+      "rhythm",
+    );
+    expect(routeAgent("Latest 80404-7 and its rhythm", ALL).agentId).toBe("rhythm");
+    expect(routeAgent("What is my HRV trend?", ALL).agentId).toBe("trainer");
+    expect(routeAgent("HRV and arrhythmia in the literature", ALL).agentId).toBe(
+      "rhythm",
+    );
+  });
+
+  test("a heart rhythm or circadian rhythm is not the heart as an organ or a heart rhythm", () => {
+    expect(routeAgent("Describe my heart rhythm.", ALL).agentId).toBe("rhythm");
+    expect(routeAgent("How regular is my circadian rhythm?", ALL).agentId).toBe("gp");
+  });
+
+  test("stroke, cognition and autonomic words go to the Brain agent", () => {
+    expect(routeAgent("What was recorded around the stroke?", ALL)).toEqual({
+      agentId: "brain",
+      topic: "stroke",
+    });
+    expect(routeAgent("Chart 72106-8", ALL).agentId).toBe("brain");
+    expect(routeAgent("Dementia and memory scores", ALL).agentId).toBe("brain");
+    expect(routeAgent("The autonomic nervous system in studies", ALL).agentId).toBe(
+      "brain",
+    );
+    expect(routeAgent("Where is the nervous system?", ALL).agentId).toBe("anatomy");
+  });
+
+  test("a guideline library question goes to the General agent, whatever it names", () => {
+    expect(routeAgent("What does the EAN dementia guideline cover?", ALL)).toEqual({
+      agentId: "gp",
+      topic: "the guideline library",
+    });
+    expect(routeAgent("Which guideline covers atrial fibrillation?", ALL).agentId).toBe(
+      "gp",
+    );
+  });
+
+  test("a medicine or dose decision about rhythm or the brain still goes to the General agent", () => {
+    expect(routeAgent("Should I take a blood thinner for my AF?", ALL).agentId).toBe(
+      "gp",
+    );
+    expect(routeAgent("What dose of donepezil after the stroke?", ALL).agentId).toBe(
+      "gp",
+    );
+  });
+
   test("the General agent's own topics come back on its line", () => {
     expect(DEFAULT_AGENT_TOPICS.length).toBeGreaterThan(0);
     expect(autoChoiceLineFor("What dose of metformin?", "Auto → General")).toBe(

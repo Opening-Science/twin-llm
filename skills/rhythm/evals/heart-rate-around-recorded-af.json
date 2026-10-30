@@ -1,0 +1,36 @@
+{
+  "question": "What heart rate was recorded before and after atrial fibrillation was first recorded for subject 9661a432-4630-2cd9-142c-386845fae837?",
+  "script": [
+    {
+      "tool": "subject_window",
+      "input": {
+        "subject_ref": "9661a432-4630-2cd9-142c-386845fae837"
+      }
+    },
+    {
+      "tool": "conditions_timeline",
+      "input": {
+        "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+        "start": "1990-01-01",
+        "end": "2026-10-01",
+        "code": "49436004"
+      }
+    },
+    {
+      "tool": "values_around_event",
+      "input": {
+        "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+        "loinc": "8867-4",
+        "event_kind": "condition",
+        "event_code": "49436004",
+        "days_before": 180,
+        "days_after": 180
+      }
+    }
+  ],
+  "expect": {
+    "calls": ["subject_window", "conditions_timeline", "values_around_event"],
+    "views": [],
+    "refusals": []
+  }
+}
