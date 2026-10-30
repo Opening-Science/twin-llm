@@ -142,6 +142,30 @@ describe("ViewToolbar", () => {
     ]);
   });
 
+  test("heart chambers: a pressed-state toggle after Live vitals, only when offered", () => {
+    const live = { on: true, onToggle: noop };
+    expect(
+      buttons({
+        ...BASE,
+        liveVitals: live,
+        heartChambers: { on: true, onToggle: noop },
+      }).slice(4),
+    ).toEqual([
+      ["Live vitals", null, "true"],
+      ["Heart chambers", null, "true"],
+    ]);
+    expect(
+      buttons({
+        ...BASE,
+        liveVitals: live,
+        heartChambers: { on: false, onToggle: noop },
+      })[5],
+    ).toEqual(["Heart chambers", null, "false"]);
+    expect(buttons({ ...BASE, liveVitals: live }).map(([text]) => text)).not.toContain(
+      "Heart chambers",
+    );
+  });
+
   test("each button calls its own handler", () => {
     const calls: string[] = [];
     const tree = ViewToolbar({

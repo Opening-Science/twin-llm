@@ -48,13 +48,15 @@ The answer runs through the same pipeline as a saved one: `createStartAnswer` (s
 - Not written: no `threads`, `turns` or `model_responses` row, no stored tool parts or response document, no `prompt_sent`, `model_answered` or generation event. No prompt or answer text goes to a log line; failures log error names and status codes only.
 - Read only: the person's user row (never created here), wearable summaries and the sources turned off at `/start`, as a saved turn reads them.
 
-`list_views` and `open_view` find no earlier views, since nothing was stored. The genome tools stay available where the genome policy allows them, because the model is local. Ollama's own logs on this machine are outside TwinLLM.
+`list_views` and `open_view` find no earlier views, since nothing was stored. Twin notes are never loaded, and `/compact` says there is nothing saved to draft from. The genome tools stay available where the genome policy allows them, because the model is local. Ollama's own logs on this machine are outside TwinLLM.
 
 ## 2. Skills and the command palette
 
 The slash menu becomes a palette: built-in commands and skills, each showing what it may read. A skill is `skills/<name>/SKILL.md` (name, description, allowed tools, sources, providers, views) plus `evals/`, run in CI like the question set. Built-ins: `/sleep`, `/compact` (a twin note in a per-user memory the person edits), `/report` (PDF or FHIR DocumentReference). `/connect` keeps the wearable rows.
 
 Since #42: the palette lists every offered skill with what it reads and may call, and a prompt sent as `/sleep …` runs under the skill's tool, provider and view allowlists with its instructions in the system prompt. The run is audited as `skill.<name>` and the response document carries `skill` ([skills.md](skills.md)).
+
+Since #43: `/compact` drafts a twin note of a saved thread from the thread's model; the person edits and saves it, reads and edits notes on Customize · Memory, and new threads load them into the system prompt under the permit of the thread they came from ([twin-notes.md](twin-notes.md)).
 
 Issues: #40 palette, #41 skill format, #42 `/sleep`, #43 `/compact`, #44 `/report`.
 

@@ -62,8 +62,13 @@ export type BodyPose = Readonly<{
   }>;
 }>;
 
-/** "video" is a keyframe clip traced from a video on this machine (`keyframe-clip.ts`). */
-export type MotionClip = "walk" | "run" | "idle" | "dance" | "video";
+/**
+ * "video" is a keyframe clip traced from a video on this machine
+ * (`keyframe-clip.ts`). "cycle" (`cycle-pose.ts`) and "sleep"
+ * (`sleep-pose.ts`) play only when the twin follows a wearable day
+ * (`day-motion.ts`).
+ */
+export type MotionClip = "walk" | "run" | "idle" | "dance" | "video" | "cycle" | "sleep";
 
 export type WalkParams = Readonly<{
   /** Steps per minute; two steps make one gait cycle. */

@@ -42,10 +42,9 @@ describe.skipIf(skip)("the evaluation cohort regenerates (RUN_LIVE=1)", () => {
     try {
       // The script works from its own checkout root, so give it one.
       await mkdir(join(root, "scripts/synthea"), { recursive: true });
-      await copyFile(
-        join(import.meta.dir, "generate-local.sh"),
-        join(root, "scripts/synthea/generate-local.sh"),
-      );
+      for (const file of ["generate-local.sh", "synthea-pin.sh"]) {
+        await copyFile(join(import.meta.dir, file), join(root, "scripts/synthea", file));
+      }
       if (await exists(join(REPO, JAR))) {
         await mkdir(join(root, ".synthea/cache"), { recursive: true });
         await copyFile(join(REPO, JAR), join(root, JAR));

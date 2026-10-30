@@ -112,17 +112,64 @@ export const partialDates = (
   n_partial: nPartial,
 });
 
+export type WrongDatasetKind = Readonly<{
+  code: "WRONG_DATASET_KIND";
+  error: string;
+  dataset_id: string;
+  kind: string;
+  needs: string;
+}>;
+
+/** A table read of a FHIR dataset, or a Condition read of a table: nothing is read. */
+export const wrongDatasetKind = (
+  datasetId: string,
+  kind: string,
+  needs: string,
+): WrongDatasetKind => ({
+  code: "WRONG_DATASET_KIND",
+  error: `this tool reads only ${needs} datasets; imported_datasets lists each dataset's kind`,
+  dataset_id: datasetId,
+  kind,
+  needs,
+});
+
+export type UnknownColumns = Readonly<{
+  code: "UNKNOWN_COLUMNS";
+  error: string;
+  dataset_id: string;
+  unknown: readonly string[];
+  known: readonly string[];
+}>;
+
+/** Column names are matched whole against the stored list, never searched or guessed. */
+export const unknownColumns = (
+  datasetId: string,
+  unknown: readonly string[],
+  known: readonly string[],
+): UnknownColumns => ({
+  code: "UNKNOWN_COLUMNS",
+  error:
+    "these columns are not in this table's stored column list; use the exact names in `known`, nothing was read",
+  dataset_id: datasetId,
+  unknown: [...unknown],
+  known: [...known],
+});
+
 export type ImportedRefusal =
   | ImportedNotPermitted
   | DatasetNotFound
   | SeriesNotCombined
   | ImportedNoRows
   | ImportedMixedUnits
-  | PartialDates;
+  | PartialDates
+  | WrongDatasetKind
+  | UnknownColumns;
 
 export const IMPORTED_REFUSAL_CODES: readonly string[] = [
   IMPORTED_DATA_NOT_PERMITTED,
   "DATASET_NOT_FOUND",
   "SERIES_NOT_COMBINED",
   "PARTIAL_DATES",
+  "WRONG_DATASET_KIND",
+  "UNKNOWN_COLUMNS",
 ];

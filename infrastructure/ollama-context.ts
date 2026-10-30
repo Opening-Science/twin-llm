@@ -11,6 +11,14 @@
  */
 
 /**
+ * Where Ollama listens when `OLLAMA_BASE_URL` is not set: its OpenAI-compatible
+ * root on this machine. The one copy of this address; chat, the setup doctor,
+ * embeddings, the Lab page and the scripts all read it from here, and
+ * `infrastructure/pinned-constants.test.ts` fails on any other copy.
+ */
+export const DEFAULT_OLLAMA_BASE_URL = "http://127.0.0.1:11434/v1";
+
+/**
  * 16k fits qwen3:4b and the fine-tuned 4B wholly on an 11 GB card next to a
  * desktop (about 4.8 GiB with its KV cache) and leaves room for the system
  * prompt, every tool, the history and the answer. See docs/providers.md.
@@ -55,6 +63,16 @@ export const estimateTokens = (
   const digits = text.match(DIGIT)?.length ?? 0;
   return digits + Math.ceil((text.length - digits) / charsPerToken);
 };
+
+/**
+ * A conservative token count of a request's system prompt and tool list (one
+ * JSON object per tool and line, as the Qwen3 template prints it), with the
+ * template's wrapping.
+ */
+export const estimateRequestTokens = (systemText: string, toolText: string): number =>
+  estimateTokens(systemText) +
+  estimateTokens(toolText, JSON_CHARS_PER_TOKEN) +
+  TEMPLATE_OVERHEAD_TOKENS;
 
 /** What the prompt and tools may use at a given context size. */
 export const promptBudgetTokens = (numCtx: number): number =>

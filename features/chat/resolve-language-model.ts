@@ -9,6 +9,7 @@ import {
   PROVIDER_NOT_PERMITTED_FOR_DATA_MODE,
 } from "@/infrastructure/data-mode";
 import {
+  DEFAULT_OLLAMA_BASE_URL,
   exoscaleEnv,
   exoscalePersonalData,
   infomaniakOpenAiBaseUrl,
@@ -19,8 +20,6 @@ import { withFirstByteTimeout } from "@/infrastructure/first-byte-timeout-fetch"
 
 import { ollamaChatModel } from "./ollama-chat-model";
 import { openrouter } from "./openrouter";
-
-const DEFAULT_OLLAMA_BASE_URL = "http://127.0.0.1:11434/v1";
 
 export class ProviderNotPermittedError extends Error {
   readonly code = PROVIDER_NOT_PERMITTED_FOR_DATA_MODE;

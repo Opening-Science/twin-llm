@@ -31,36 +31,28 @@ const TABLE = "w-full border-collapse text-left text-xs";
 const TH = "text-muted-foreground border-border border-b px-2 py-1.5 font-medium";
 const TD = "border-border border-b px-2 py-1.5 align-top";
 
+const genomeRows = (review: ReviewSummary): readonly (readonly [string, string])[] =>
+  review.genome === null
+    ? []
+    : [
+        [
+          "Variant records to store",
+          countLabel(review.counts.variants, "record", "records"),
+        ],
+        [
+          "Build",
+          review.genome.buildSource === "file"
+            ? "GRCh38, as the file names it"
+            : "GRCh38, as GENOME_ASSUME_BUILD states",
+        ],
+        ["Not stored", countLabel(review.counts.unmapped, "record", "records")],
+      ];
+
 const Summary = ({ review }: Readonly<{ review: ReviewSummary }>) => {
   const rows: readonly (readonly [string, string])[] = [
     ["Format", kindLabel(review.kind)],
     ["File", `${review.fileName} (${byteSizeLabel(review.byteSize)})`],
-    ...(review.kind === "table"
-      ? ([
-          ["Rows to store", countLabel(review.counts.tableRows, "row", "rows")],
-          ["Columns", countLabel(review.counts.tableColumns, "column", "columns")],
-        ] as const)
-      : ([
-          [
-            "Numbers to store",
-            countLabel(review.counts.observations, "number", "numbers"),
-          ],
-        ] as const)),
-    ...(review.kind === "fhir"
-      ? ([
-          [
-            "Conditions and medications",
-            countLabel(review.counts.clinicalRecords, "record", "records"),
-          ],
-        ] as const)
-      : []),
-    ["Not stored", countLabel(review.counts.unmapped, "row", "rows")],
-    [
-      "Dates",
-      review.dateRange === null
-        ? "no dates"
-        : dateRangeLabel(review.dateRange.first, review.dateRange.last),
-    ],
+    ...(review.kind === "vcf" ? genomeRows(review) : summaryRows(review)),
   ];
   return (
     <dl className="grid gap-x-6 gap-y-1.5 text-sm sm:grid-cols-[auto_1fr]">
@@ -71,6 +63,65 @@ const Summary = ({ review }: Readonly<{ review: ReviewSummary }>) => {
         </div>
       ))}
     </dl>
+  );
+};
+
+const summaryRows = (review: ReviewSummary): readonly (readonly [string, string])[] => [
+  ...(review.kind === "table"
+    ? ([
+        ["Rows to store", countLabel(review.counts.tableRows, "row", "rows")],
+        ["Columns", countLabel(review.counts.tableColumns, "column", "columns")],
+      ] as const)
+    : ([
+        ["Numbers to store", countLabel(review.counts.observations, "number", "numbers")],
+      ] as const)),
+  ...(review.kind === "fhir"
+    ? ([
+        [
+          "Conditions and medications",
+          countLabel(review.counts.clinicalRecords, "record", "records"),
+        ],
+      ] as const)
+    : []),
+  ["Not stored", countLabel(review.counts.unmapped, "row", "rows")],
+  [
+    "Dates",
+    review.dateRange === null
+      ? "no dates"
+      : dateRangeLabel(review.dateRange.first, review.dateRange.last),
+  ],
+];
+
+const Genome = ({ review }: Readonly<{ review: ReviewSummary }>) => {
+  if (review.genome === null || review.counts.variants === 0) return null;
+  const { genotypes, chromosomes } = review.genome;
+  const counts: readonly (readonly [string, number])[] = [
+    ["Homozygous reference", genotypes.homRef],
+    ["Heterozygous", genotypes.het],
+    ["Homozygous alternate", genotypes.homAlt],
+    ["No call", genotypes.noCall],
+  ];
+  return (
+    <>
+      <Section title="Genotypes">
+        <ul className="flex flex-wrap gap-1.5">
+          {counts.map(([label, count]) => (
+            <li key={label} className="skill-chip">
+              {label} · {formatNumber(count, 0)}
+            </li>
+          ))}
+        </ul>
+      </Section>
+      <Section title="Records per chromosome">
+        <ul className="flex flex-wrap gap-1.5">
+          {chromosomes.map((row) => (
+            <li key={row.chrom} className="skill-chip">
+              {row.chrom} · {formatNumber(row.count, 0)}
+            </li>
+          ))}
+        </ul>
+      </Section>
+    </>
   );
 };
 
@@ -213,6 +264,7 @@ export const ReviewView = ({ review }: Readonly<{ review: ReviewSummary }>) => (
         ))}
       </ul>
     )}
+    <Genome review={review} />
     <Codes review={review} />
     <Units review={review} />
     <Columns review={review} />
