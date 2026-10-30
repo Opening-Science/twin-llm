@@ -9,6 +9,7 @@ import { generateWorkouts } from "./workouts";
 import {
   DAILY_METRICS,
   generateSeries,
+  seriesEpisodeFlags,
   subjectProfile,
   WEARABLE_METRIC_NAMES,
   WEARABLE_METRICS,
@@ -160,11 +161,25 @@ describe("generateSeries with conditions (v3)", () => {
     expect(sha256(fifty("2", AF))).toBe(V2_SHA256);
   });
 
-  test("a healthy subject keeps the v2 values of the v2 metrics", () => {
-    const v2 = new Set(WEARABLE_METRIC_NAMES as string[]);
-    expect(generateSeries(OPTIONS).filter((reading) => v2.has(reading.metric))).toEqual(
-      generateSeries({ ...OPTIONS, generatorVersion: "2" }),
-    );
+  test("a healthy subject keeps the v2 values of the v2 metrics outside episodes", () => {
+    const v2Metrics = new Set(WEARABLE_METRIC_NAMES as string[]);
+    const changed = Array.from({ length: 50 }, (_, index) => {
+      const options = { ...OPTIONS, subjectRef: `s${index}` };
+      const days = windowDays(options.endDay, options.days);
+      const v3Flags = seriesEpisodeFlags(options);
+      const v2Flags = seriesEpisodeFlags({ ...options, generatorVersion: "2" });
+      const episodeDays = new Set(
+        days.filter((_, day) => v3Flags[day] === true || v2Flags[day] === true),
+      );
+      const quiet = (reading: { day: string }) => !episodeDays.has(reading.day);
+      const v3 = generateSeries(options).filter(
+        (reading) => v2Metrics.has(reading.metric) && quiet(reading),
+      );
+      const v2 = generateSeries({ ...options, generatorVersion: "2" }).filter(quiet);
+      return { episodeDays: episodeDays.size, same: Bun.deepEquals(v3, v2) };
+    });
+    expect(changed.every((subject) => subject.same)).toBe(true);
+    expect(changed.some((subject) => subject.episodeDays > 0)).toBe(true);
   });
 
   test("a healthy and an AF subject have the same metrics on the same days", () => {

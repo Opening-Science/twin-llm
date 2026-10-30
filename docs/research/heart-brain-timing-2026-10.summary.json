@@ -733,6 +733,44 @@
       "atrial_fibrillation": 115
     },
     "minWornDaysEachSide": 10,
+    "episodePlacement": "v3 generic episode by calendar day, about one per person-year, 4 to 6 days (#270)",
+    "hypertensionBefore270": {
+      "heart_rate": {
+        "recoveredMean": 0.106,
+        "recoveredCi": {
+          "low": 0.027,
+          "high": 0.185
+        }
+      },
+      "resting_heart_rate": {
+        "recoveredMean": 0.12,
+        "recoveredCi": {
+          "low": 0.056,
+          "high": 0.185
+        }
+      },
+      "hrv_rmssd": {
+        "recoveredMean": 0.996,
+        "recoveredCi": {
+          "low": 0.994,
+          "high": 0.997
+        }
+      },
+      "sleep_score": {
+        "recoveredMean": -0.09,
+        "recoveredCi": {
+          "low": -0.178,
+          "high": -0.001
+        }
+      },
+      "respiratory_rate": {
+        "recoveredMean": 0.024,
+        "recoveredCi": {
+          "low": 0.018,
+          "high": 0.031
+        }
+      }
+    },
     "rows": [
       {
         "group": "hypertension",
@@ -741,15 +779,15 @@
         "kind": "delta",
         "subjects": 1182,
         "plantedMedian": 0,
-        "recoveredMedian": 0.156,
-        "recoveredQ1": -0.875,
-        "recoveredQ3": 1.059,
-        "recoveredMean": 0.106,
+        "recoveredMedian": 0.034,
+        "recoveredQ1": -1.0,
+        "recoveredQ3": 0.899,
+        "recoveredMean": -0.012,
         "zBeyond2": 3,
         "withZ": 1182,
         "recoveredCi": {
-          "low": 0.027,
-          "high": 0.185
+          "low": -0.091,
+          "high": 0.068
         }
       },
       {
@@ -759,15 +797,15 @@
         "kind": "delta",
         "subjects": 1182,
         "plantedMedian": 0,
-        "recoveredMedian": 0.112,
-        "recoveredQ1": -0.759,
-        "recoveredQ3": 1.055,
-        "recoveredMean": 0.12,
-        "zBeyond2": 14,
+        "recoveredMedian": -0.001,
+        "recoveredQ1": -0.883,
+        "recoveredQ3": 0.863,
+        "recoveredMean": 0.003,
+        "zBeyond2": 16,
         "withZ": 1182,
         "recoveredCi": {
-          "low": 0.056,
-          "high": 0.185
+          "low": -0.062,
+          "high": 0.067
         }
       },
       {
@@ -777,15 +815,15 @@
         "kind": "ratio",
         "subjects": 1182,
         "plantedMedian": 1,
-        "recoveredMedian": 0.996,
-        "recoveredQ1": 0.98,
-        "recoveredQ3": 1.011,
-        "recoveredMean": 0.996,
+        "recoveredMedian": 1.0,
+        "recoveredQ1": 0.984,
+        "recoveredQ3": 1.017,
+        "recoveredMean": 1.0,
         "zBeyond2": 0,
         "withZ": 1182,
         "recoveredCi": {
-          "low": 0.994,
-          "high": 0.997
+          "low": 0.999,
+          "high": 1.002
         }
       },
       {
@@ -813,15 +851,15 @@
         "kind": "delta",
         "subjects": 1182,
         "plantedMedian": 0,
-        "recoveredMedian": -0.101,
-        "recoveredQ1": -0.985,
-        "recoveredQ3": 0.878,
-        "recoveredMean": -0.09,
+        "recoveredMedian": 0.007,
+        "recoveredQ1": -0.837,
+        "recoveredQ3": 0.958,
+        "recoveredMean": 0.005,
         "zBeyond2": 2,
         "withZ": 1182,
         "recoveredCi": {
-          "low": -0.178,
-          "high": -0.001
+          "low": -0.084,
+          "high": 0.093
         }
       },
       {
@@ -831,15 +869,15 @@
         "kind": "delta",
         "subjects": 1182,
         "plantedMedian": 0,
-        "recoveredMedian": 0.022,
-        "recoveredQ1": -0.047,
-        "recoveredQ3": 0.095,
-        "recoveredMean": 0.024,
+        "recoveredMedian": 0.0,
+        "recoveredQ1": -0.082,
+        "recoveredQ3": 0.072,
+        "recoveredMean": -0.001,
         "zBeyond2": 0,
         "withZ": 1182,
         "recoveredCi": {
-          "low": 0.018,
-          "high": 0.031
+          "low": -0.008,
+          "high": 0.007
         }
       },
       {
@@ -892,7 +930,7 @@
         "zBeyond2": 0,
         "withZ": 0,
         "recoveredCi": {
-          "low": -0.0,
+          "low": 0.0,
           "high": 0.001
         }
       },
@@ -957,15 +995,15 @@
         "kind": "delta",
         "subjects": 372,
         "plantedMedian": 0.721,
-        "recoveredMedian": 0.757,
-        "recoveredQ1": 0.624,
-        "recoveredQ3": 0.9,
-        "recoveredMean": 0.76,
-        "zBeyond2": 30,
+        "recoveredMedian": 0.727,
+        "recoveredQ1": 0.596,
+        "recoveredQ3": 0.878,
+        "recoveredMean": 0.735,
+        "zBeyond2": 26,
         "withZ": 372,
         "recoveredCi": {
-          "low": 0.74,
-          "high": 0.779
+          "low": 0.716,
+          "high": 0.755
         }
       },
       {
@@ -1011,15 +1049,15 @@
         "kind": "delta",
         "subjects": 85,
         "plantedMedian": -9.499,
-        "recoveredMedian": -9.305,
-        "recoveredQ1": -10.515,
-        "recoveredQ3": -8.202,
-        "recoveredMean": -9.286,
+        "recoveredMedian": -9.317,
+        "recoveredQ1": -10.372,
+        "recoveredQ3": -8.146,
+        "recoveredMean": -9.316,
         "zBeyond2": 1,
         "withZ": 85,
         "recoveredCi": {
-          "low": -9.65,
-          "high": -8.922
+          "low": -9.68,
+          "high": -8.953
         }
       },
       {
@@ -1029,15 +1067,15 @@
         "kind": "delta",
         "subjects": 85,
         "plantedMedian": -5.609,
-        "recoveredMedian": -6.171,
-        "recoveredQ1": -7.132,
-        "recoveredQ3": -4.571,
-        "recoveredMean": -5.81,
+        "recoveredMedian": -5.712,
+        "recoveredQ1": -6.854,
+        "recoveredQ3": -4.347,
+        "recoveredMean": -5.492,
         "zBeyond2": 0,
         "withZ": 85,
         "recoveredCi": {
-          "low": -6.2,
-          "high": -5.42
+          "low": -5.874,
+          "high": -5.11
         }
       },
       {
@@ -1047,15 +1085,15 @@
         "kind": "delta",
         "subjects": 91,
         "plantedMedian": 6.61,
-        "recoveredMedian": 7.236,
-        "recoveredQ1": 5.855,
-        "recoveredQ3": 8.634,
-        "recoveredMean": 7.054,
+        "recoveredMedian": 6.992,
+        "recoveredQ1": 5.723,
+        "recoveredQ3": 8.533,
+        "recoveredMean": 6.922,
         "zBeyond2": 83,
         "withZ": 91,
         "recoveredCi": {
-          "low": 6.57,
-          "high": 7.539
+          "low": 6.443,
+          "high": 7.4
         }
       },
       {
@@ -1065,15 +1103,15 @@
         "kind": "ratio",
         "subjects": 91,
         "plantedMedian": 0.75,
-        "recoveredMedian": 0.756,
-        "recoveredQ1": 0.718,
-        "recoveredQ3": 0.779,
-        "recoveredMean": 0.763,
-        "zBeyond2": 42,
+        "recoveredMedian": 0.757,
+        "recoveredQ1": 0.724,
+        "recoveredQ3": 0.786,
+        "recoveredMean": 0.767,
+        "zBeyond2": 39,
         "withZ": 91,
         "recoveredCi": {
-          "low": 0.749,
-          "high": 0.778
+          "low": 0.753,
+          "high": 0.782
         }
       },
       {
@@ -1101,15 +1139,15 @@
         "kind": "delta",
         "subjects": 113,
         "plantedMedian": 2.716,
-        "recoveredMedian": 2.635,
-        "recoveredQ1": 1.173,
-        "recoveredQ3": 4.078,
-        "recoveredMean": 2.713,
+        "recoveredMedian": 2.64,
+        "recoveredQ1": 0.996,
+        "recoveredQ3": 3.982,
+        "recoveredMean": 2.58,
         "zBeyond2": 0,
         "withZ": 113,
         "recoveredCi": {
-          "low": 2.374,
-          "high": 3.052
+          "low": 2.243,
+          "high": 2.917
         }
       },
       {
@@ -1120,14 +1158,14 @@
         "subjects": 113,
         "plantedMedian": 1.196,
         "recoveredMedian": 1.193,
-        "recoveredQ1": 1.144,
-        "recoveredQ3": 1.241,
-        "recoveredMean": 1.199,
+        "recoveredQ1": 1.149,
+        "recoveredQ3": 1.253,
+        "recoveredMean": 1.205,
         "zBeyond2": 1,
         "withZ": 113,
         "recoveredCi": {
-          "low": 1.185,
-          "high": 1.212
+          "low": 1.191,
+          "high": 1.219
         }
       },
       {
