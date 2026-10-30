@@ -233,6 +233,7 @@ const importedSection = (
         "## Imported data (the person's own files)",
         `- Call \`${IMPORTED_DATASETS_TOOL}\` first to see which datasets, codes and names exist. Cite a value with its dataset and date as stored.`,
         "- A series stored by name is not the LOINC code of a similar name: HRV RMSSD is not SDNN (80404-7). Never combine them, and never mix datasets in one trend.",
+        "- Ask a table only for columns `imported_datasets` lists, by exact name.",
         "",
       ]
     : [];

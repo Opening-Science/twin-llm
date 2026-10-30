@@ -159,6 +159,27 @@ bun run eval:answer-key          # uses --env-file=.env.eval
 bun run eval:answer-key:live     # RUN_LIVE=1 drift check, same env
 ```
 
+S4 needs the IHME GBD MCP server (`docs/gbd.md`). It is a remote service
+over HTTPS, not a local process or a cache, so an S4 run needs network access.
+Add two names to `.env.eval` (placeholders in `.env.synthetic.example`):
+
+- `GBD_MCP_URL`: the https URL of the GBD MCP endpoint (JSON-RPC over HTTP).
+- `GBD_MCP_TOKEN`: the bearer token for that endpoint. It is a secret from the
+  operator; it is never logged and never goes in a committed file.
+
+Also set `LOCAL_ONLY=false`: `LOCAL_ONLY=true` refuses a remote GBD URL at
+startup. Keep `LLM_PROVIDER=ollama` so the model still runs on this machine,
+and keep `DATA_MODE=synthetic`, the only mode that permits a remote MCP server.
+Check the connection before a run:
+
+```sh
+RUN_LIVE=1 bun --env-file=.env.eval test packages/gbd-mcp/live.test.ts
+bun run eval -- --models ollama:qwen3:8b --scenario S4 --run-id <date>-qwen3-8b-s4
+```
+
+Without both names every S4 item is written as `MISSING_ENV` (the items list
+them in `context.requires`) and counted as skipped, not failed.
+
 S3 needs the guideline step: without it every `guideline_search` returns
 nothing and every S3 item abstains. The ingest needs Ollama with
 `nomic-embed-text` on `OLLAMA_BASE_URL`. Only the open (CC) titles may be

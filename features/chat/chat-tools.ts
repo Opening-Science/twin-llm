@@ -192,3 +192,28 @@ export const forSkill = (
   const kept = skill === null ? tools : withSkillTools(tools, skill);
   return { tools: kept, offeredTools: new Set(Object.keys(kept)) };
 };
+
+type ChatToolOptions = NonNullable<Parameters<typeof createChatTools>[1]>;
+
+/**
+ * The tools one turn gets and the names its prompt is told: the chat tools
+ * with the skill's views and sources, then the person's source choices, then
+ * the skill's own list. The chat route (`create-stream-model-response.ts`) and
+ * the eval harness's agent runs (#279) both build a turn's tools here.
+ */
+export const createTurnTools = (
+  scope: SessionScope,
+  options: Omit<ChatToolOptions, "views" | "sources">,
+  skill: TurnSkill | null,
+): Readonly<{ tools: ToolSet; offeredTools: ReadonlySet<string> }> =>
+  forSkill(
+    forSources(
+      createChatTools(scope, {
+        ...options,
+        views: skill?.views,
+        sources: skill?.sources,
+      }),
+      options.disabledSources ?? [],
+    ).tools,
+    skill,
+  );

@@ -89,13 +89,13 @@ describe("reviewSummary", () => {
     ]);
   });
 
-  test("FHIR: conditions counted and their dates in the range", () => {
+  test("FHIR: conditions and medication requests counted, their dates in the range", () => {
     const review = reviewSummary(parsedOk("fhir", "fhir-bundle.json"), FILE);
     expect([
       review.rowsToStore,
       review.counts.observations,
       review.counts.clinicalRecords,
-    ]).toEqual([5, 4, 1]);
+    ]).toEqual([6, 4, 2]);
     expect(review.dateRange).toEqual({
       first: "2023-11-02T00:00:00.000Z",
       last: "2025-06-01T09:00:00.000Z",

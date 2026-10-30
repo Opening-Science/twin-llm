@@ -194,6 +194,26 @@ describe("query tools MCP server", () => {
     });
   });
 
+  test("imported_medications refuses over MCP too, before any read", async () => {
+    const { ports, audits } = fakePorts();
+    const client = await connectedClient(ports);
+    const result = await client.callTool({
+      name: "imported_medications",
+      arguments: { dataset_id: "ds-fhir" },
+    });
+    expect(JSON.parse(textOf(result)).code).toBe("IMPORTED_DATA_NOT_PERMITTED");
+    expect(
+      audits.map((each) => [each.tool, each.args, each.result, each.rowCount]),
+    ).toEqual([
+      [
+        "imported_medications",
+        { dataset_id: "ds-fhir" },
+        { code: "IMPORTED_DATA_NOT_PERMITTED" },
+        0,
+      ],
+    ]);
+  });
+
   test("in personal mode the MCP client's model is not known to be local", () => {
     expect(mcpImportedPermit("personal")).toEqual({
       ok: false,
