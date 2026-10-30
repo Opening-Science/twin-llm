@@ -7,7 +7,7 @@ import type { TurnSkill } from "@/infrastructure/skill-gate";
 import type { AppendInput } from "@/packages/audit/append";
 import type { QueryToolPorts } from "@/packages/query-tools/ports";
 
-import { createChatTools, forSkill, forSources } from "./chat-tools";
+import { createChatTools, createTurnTools, forSkill, forSources } from "./chat-tools";
 import type { ResponseDocumentV1, ResponseToolCall } from "./response/document-v1";
 import { runTwinTurn } from "./run-twin-turn";
 import { runShowView } from "./show-view-tool";
@@ -257,5 +257,32 @@ describe("show_view under a skill", () => {
         "this skill reads no subject records; call show_view again without subject (twin.body) or with a wearable key",
     });
     expect(reads).toEqual([]);
+  });
+});
+
+describe("createTurnTools", () => {
+  test("is the chat tools after source choices and the skill's list", () => {
+    const names = (tools: object) => Object.keys(tools).sort();
+    const composed = forSkill(
+      forSources(
+        createChatTools(SCOPE, {
+          query: ports,
+          views: SLEEP.views,
+          sources: SLEEP.sources,
+        }),
+        ["gbd"],
+      ).tools,
+      SLEEP,
+    );
+    const built = createTurnTools(
+      SCOPE,
+      { query: ports, disabledSources: ["gbd"] },
+      SLEEP,
+    );
+    expect(names(built.tools)).toEqual(names(composed.tools));
+    expect([...built.offeredTools].sort()).toEqual([...composed.offeredTools].sort());
+    expect(names(createTurnTools(SCOPE, { query: ports }, null).tools)).toEqual(
+      names(createChatTools(SCOPE, { query: ports })),
+    );
   });
 });

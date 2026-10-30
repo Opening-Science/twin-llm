@@ -209,7 +209,10 @@ never say what a person has.
 - `/rhythm` reads `hrv_trend` and `resting_hr_trend` over the 90 days ending on the
   subject's last day, each source on its own, lists recorded rhythm conditions with
   `conditions_timeline`, and gives heart rate (8867-4) before and after a recorded
-  condition with `values_around_event`. It may draw one `chart.timeseries`.
+  condition with `values_around_event`. For a simulated rhythm recording of a synthetic
+  subject it calls `rhythm_irregularity` (#288) and reports the windows past the research
+  threshold, nRMSSD, turning-point ratio and flagged time share as the tool gives them,
+  as a description of the recording. It may draw one `chart.timeseries`.
 - `/brain` lists recorded conditions (stroke, Alzheimer's disease and others) with
   `conditions_timeline`, recorded cognition scores such as the MMSE total (72106-8) with
   `observations_for_subject`, a measure such as systolic blood pressure (8480-6) around a
@@ -223,7 +226,9 @@ talk to a clinician." and no tool call; a dose, medicine or plan gets another. N
 tells the person what they have, or writes "normal", "abnormal" or a threshold for them.
 Local Ollama only. The eval cases cover the wearable series, a recorded condition with
 values around it, cognition scores, the literature, a question about whether the person
-has a condition, a hosted provider and views they may not draw. The planned `rhythm_irregularity` tool (#246) is not listed yet.
+has a condition, a hosted provider, views they may not draw and, for `/rhythm`, a
+simulated recording. `/brain` does not list `rhythm_irregularity`: its role does not
+cover heart rhythm.
 
 ## Built-in commands
 

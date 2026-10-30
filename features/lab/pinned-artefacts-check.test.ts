@@ -1,14 +1,22 @@
 import { describe, expect, test } from "bun:test";
 
+import { type FileHash } from "./file-hash";
+import { unavailableCheck } from "./lab-check";
 import {
   artefactResult,
   type PinnedArtefact,
   pinnedArtefacts,
+  pinnedArtefactsBase,
   pinnedArtefactsCheck,
+  pinnedHowTo,
+  shellPath,
 } from "./pinned-artefacts-check";
 
 const A = "a".repeat(64);
 const B = "b".repeat(64);
+const hash = (sha256: string): FileHash => ({ kind: "hash", sha256 });
+const MISSING: FileHash = { kind: "missing" };
+const UNREADABLE: FileHash = { kind: "unreadable" };
 
 const pin = (
   id: string,
@@ -23,9 +31,10 @@ const pin = (
 
 describe("artefactResult", () => {
   test("compares case-insensitively and reports a missing file", () => {
-    expect(artefactResult(A, A.toUpperCase())).toBe("matches");
-    expect(artefactResult(A, B)).toBe("differs");
-    expect(artefactResult(A, null)).toBe("not present");
+    expect(artefactResult(A, hash(A.toUpperCase()))).toBe("matches");
+    expect(artefactResult(A, hash(B))).toBe("differs");
+    expect(artefactResult(A, MISSING)).toBe("not present");
+    expect(artefactResult(A, UNREADABLE)).toBe("unreadable");
   });
 });
 
@@ -59,7 +68,7 @@ describe("pinnedArtefacts", () => {
 
 describe("pinnedArtefactsCheck", () => {
   test("nothing present is unknown", () => {
-    const check = pinnedArtefactsCheck([pin("x")], { x: null });
+    const check = pinnedArtefactsCheck([pin("x")], { x: MISSING });
     expect(check.status).toBe("unknown");
     expect(check.summary).toBe("None of the pinned files is on this machine yet.");
     expect(check.table?.rows).toEqual([
@@ -68,7 +77,7 @@ describe("pinnedArtefactsCheck", () => {
   });
 
   test("present files that match are ok, missing ones are counted", () => {
-    const check = pinnedArtefactsCheck([pin("x"), pin("y")], { x: A, y: null });
+    const check = pinnedArtefactsCheck([pin("x"), pin("y")], { x: hash(A), y: MISSING });
     expect(check.status).toBe("ok");
     expect(check.summary).toBe(
       "Files on this machine that match their pins: 1 of 1. Not on this machine: 1 file.",
@@ -76,7 +85,7 @@ describe("pinnedArtefactsCheck", () => {
   });
 
   test("a changed file is not ok and named", () => {
-    const check = pinnedArtefactsCheck([pin("x"), pin("y")], { x: A, y: B });
+    const check = pinnedArtefactsCheck([pin("x"), pin("y")], { x: hash(A), y: hash(B) });
     expect(check.status).toBe("not-ok");
     expect(check.summary).toBe(
       "Files on this machine that match their pins: 1 of 2. Different bytes: File y.",
@@ -84,16 +93,57 @@ describe("pinnedArtefactsCheck", () => {
   });
 
   test("a rigged body that differs is unknown, not a failure", () => {
-    const check = pinnedArtefactsCheck([pin("x"), pin("r", "unknown")], { x: A, r: B });
+    const check = pinnedArtefactsCheck([pin("x"), pin("r", "unknown")], {
+      x: hash(A),
+      r: hash(B),
+    });
     expect(check.status).toBe("unknown");
   });
 
-  test("a folder outside the repository is written as its variable", () => {
+  test("a file that cannot be read stays in its row and hides no other", () => {
+    const check = pinnedArtefactsCheck([pin("x"), pin("y"), pin("z")], {
+      x: hash(A),
+      y: UNREADABLE,
+      z: MISSING,
+    });
+    expect(check.status).toBe("unknown");
+    expect(check.summary).toBe(
+      "Files on this machine that match their pins: 1 of 2. Could not read: File y. Check the file's permissions and reload. Not on this machine: 1 file.",
+    );
+    expect(check.table?.rows).toEqual([
+      ["File x", "aaaaaaaaaaaa", "aaaaaaaaaaaa", "Matches"],
+      ["File y", "aaaaaaaaaaaa", "—", "Could not read"],
+      ["File z", "aaaaaaaaaaaa", "—", "Not on this machine"],
+    ]);
+  });
+
+  test("a different file still fails next to one that cannot be read", () => {
+    const check = pinnedArtefactsCheck([pin("x"), pin("y")], {
+      x: hash(B),
+      y: UNREADABLE,
+    });
+    expect(check.status).toBe("not-ok");
+  });
+
+  test("a folder outside the repository is read from .env.local into the shell", () => {
     const check = pinnedArtefactsCheck(
-      [{ ...pin("x"), path: "$ANATOMY_DATA_DIR/x.glb" }],
+      [
+        { ...pin("j"), path: "$SYNTHEA_JAR" },
+        pin("x"),
+        { ...pin("y"), path: "$ANATOMY_DATA_DIR/y.glb" },
+      ],
       {},
     );
-    expect(check.howTo).toBe("sha256sum $ANATOMY_DATA_DIR/x.glb");
+    expect(check.howTo).toBe(
+      [
+        "# Reads SYNTHEA_JAR and ANATOMY_DATA_DIR from .env.local without printing; set by hand if not there",
+        `SYNTHEA_JAR="$(grep -m1 '^SYNTHEA_JAR=' .env.local | cut -d= -f2- | tr -d "\"'")"`,
+        `ANATOMY_DATA_DIR="$(grep -m1 '^ANATOMY_DATA_DIR=' .env.local | cut -d= -f2- | tr -d "\"'")"`,
+        'sha256sum "$SYNTHEA_JAR" \\',
+        "  data/x.bin \\",
+        '  "$ANATOMY_DATA_DIR"/y.glb',
+      ].join("\n"),
+    );
   });
 
   test("the command lists every path and quotes odd ones", () => {
@@ -102,5 +152,22 @@ describe("pinnedArtefactsCheck", () => {
       {},
     );
     expect(check.howTo).toBe("sha256sum data/x.bin \\\n  '/home/a b/y.bin'");
+  });
+
+  test("the card that could not run shows the same command", () => {
+    const pins = [pin("x"), { ...pin("y"), path: "$ANATOMY_DATA_DIR/y.glb" }];
+    expect(unavailableCheck(pinnedArtefactsBase(pins)).howTo).toBe(
+      pinnedArtefactsCheck(pins, {}).howTo,
+    );
+    expect(pinnedArtefactsBase(pins).howTo).toBe(pinnedHowTo(pins));
+  });
+});
+
+describe("shellPath", () => {
+  test("keeps the variable quoted and the rest safe", () => {
+    expect(shellPath("$SYNTHEA_JAR")).toBe('"$SYNTHEA_JAR"');
+    expect(shellPath("$ANATOMY_DATA_DIR/a b.glb")).toBe(`"$ANATOMY_DATA_DIR"'/a b.glb'`);
+    expect(shellPath("data/x.glb")).toBe("data/x.glb");
+    expect(shellPath("it's")).toBe(`'it'\\''s'`);
   });
 });
