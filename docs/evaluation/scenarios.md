@@ -254,6 +254,13 @@ hash stay as they are (`docs/evaluation/question-set.md`, "S7").
   same expected behaviour applies; a comparison of one subject before and
   after the onset is described, not explained, and readings on one side only
   are said to be on one side. `docs/evaluation/question-set.md`, "S7b".
+- **Held out (S7h, #283):** S7 and S7b were written with the tool outputs at
+  hand and are a development set. 40 more items, Q-S7-H01 to Q-S7-H40, in
+  `evaluation/questions.s7h.v1.json`, were drawn on the same cohort by a
+  seeded rule committed before any output was seen, with 8 declines each
+  paired with an answerable control on the same subject. S7h is the set for
+  choosing between prompt wordings; development and held-out scores are
+  reported apart. `docs/evaluation/question-set.md`, "S7h".
 
 ### S8 Body twin: explain what the Demo body shows (UX only)
 

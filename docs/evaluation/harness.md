@@ -20,7 +20,7 @@ bun run eval:cohort-codes -- --in .synthea   # after a cohort change only
 | Flag                                                    | Meaning                                                        |
 | ------------------------------------------------------- | -------------------------------------------------------------- |
 | `--models provider:id[,…]`                              | Required. Every provider must be `LLM_PROVIDER` in `.env.eval` |
-| `--set v1` / `--set s7`                                 | Question set and key; default `v1`, `s7` is S7 (#251)          |
+| `--set v1` / `s7` / `s7b` / `s7h`                       | Question set and key; default `v1`; `s7h` is held out (#283)   |
 | `--items Q-S1-01,…` / `--scenario S1` / `--latency-set` | One selection at most; none means all 130 items                |
 | `--replay`                                              | Cache only; never calls a model                                |
 | `--run-id <id>`                                         | Default `<date>-<provider>-<time>`; an existing run is refused |
