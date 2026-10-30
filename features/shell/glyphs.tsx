@@ -79,6 +79,16 @@ export const StartGlyph = (props: GlyphProps) => (
   </Svg>
 );
 
+/** A flask: checks you can repeat. */
+export const LabGlyph = (props: GlyphProps) => (
+  <Svg {...props}>
+    <>
+      <path d="M8 2.5h4M8.5 2.5v5L4 16a1 1 0 0 0 .9 1.5h10.2A1 1 0 0 0 16 16l-4.5-8.5v-5" />
+      <path d="M6 12.5h8" />
+    </>
+  </Svg>
+);
+
 /** A page with lines of text. */
 export const DocsGlyph = (props: GlyphProps) => (
   <Svg {...props}>

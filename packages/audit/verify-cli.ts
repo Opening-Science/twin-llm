@@ -46,8 +46,25 @@ const main = async (): Promise<void> => {
   const client = createClient();
   const expectBroken = process.argv.includes("--expect-broken");
   const seedOk = process.argv.includes("--seed-ok");
+  const checkOnly = process.argv.includes("--check");
 
   try {
+    if (checkOnly) {
+      // Read-only: the same walk the Lab page runs, on the real table.
+      const result = await verifyChain(client);
+      const latest = result.latestHash ?? "none";
+      if (!result.ok) {
+        console.error(
+          `verify-audit FAIL: ${result.checked} of ${result.total} rows checked, broken at seq ${result.brokenAtSeq}, latest hash ${latest}`,
+        );
+        process.exit(1);
+      }
+      process.stdout.write(
+        `verify-audit OK: ${result.total} rows checked, latest hash ${latest}\n`,
+      );
+      return;
+    }
+
     if (seedOk) {
       await seedTwo(client);
       const result = await verifyChain(client);
@@ -73,7 +90,7 @@ const main = async (): Promise<void> => {
       return;
     }
 
-    console.error("verify-cli: pass --seed-ok or --expect-broken");
+    console.error("verify-cli: pass --check, --seed-ok or --expect-broken");
     process.exit(1);
   } finally {
     await client.$disconnect();

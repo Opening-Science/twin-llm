@@ -313,7 +313,7 @@ describe("POST /api/chat/incognito with an agent (#218)", () => {
     const lines = typeof system?.content === "string" ? system.content.split("\n") : [];
     expect(lines.slice(0, 2)).toEqual([
       "You are TwinLLM, a research assistant for personalized-medicine questions.",
-      "Agent: General Practitioner. Looks at the whole record and says when a question is better asked of one of the specialist agents.",
+      "Agent: General. Looks at the whole record and says when a question is better asked of one of the specialist agents.",
     ]);
   });
 

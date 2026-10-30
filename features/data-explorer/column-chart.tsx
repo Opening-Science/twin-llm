@@ -4,8 +4,16 @@ import { useState } from "react";
 
 import { formatNumber } from "@/infrastructure/format-measure";
 
-import { ChartTooltip, TooltipBody, useMeasuredWidth } from "./chart-frame";
-import { countTicks, labelIndexes, nearestIndex } from "./chart-geometry";
+import {
+  ChartTooltip,
+  TooltipBody,
+  useMeasuredWidth,
+} from "@/infrastructure/charts/chart-frame";
+import {
+  countTicks,
+  labelIndexes,
+  nearestIndex,
+} from "@/infrastructure/charts/chart-geometry";
 
 /**
  * Vertical bars for counts: one y axis from zero with round ticks, columns

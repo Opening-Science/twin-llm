@@ -1,0 +1,1209 @@
+{
+  "title": "Heart-brain: within-person timing and wearable recovery (#262)",
+  "note": "Synthetic data from Synthea v4.0.0 rules; nothing here transfers to people. Research use only.",
+  "data": {
+    "batches": "001-100",
+    "bundles": 1150311,
+    "skipped": 0,
+    "deceased": 150311,
+    "historyYears": 10,
+    "countedFrom": "2016-01-01",
+    "seed": 250,
+    "permutations": 50,
+    "extractionMinutes70Batches6Jobs": 56
+  },
+  "timing": {
+    "batches001to100": [
+      {
+        "minAgeYears": 0,
+        "withinPerson": {
+          "people": 8144,
+          "strokeBeforeCountedTime": 75,
+          "before": {
+            "events": 26,
+            "personYears": 22563.8,
+            "per100": 0.115
+          },
+          "windows": [
+            {
+              "window": "after",
+              "events": 272,
+              "personYears": 52123.8,
+              "per100": 0.522,
+              "crudeExact": {
+                "ratio": 4.529,
+                "low": 3.024,
+                "high": 7.058
+              },
+              "ageAdjustedMH": {
+                "ratio": 3.093,
+                "low": 2.067,
+                "high": 4.627
+              }
+            },
+            {
+              "window": "0-2 y",
+              "events": 40,
+              "personYears": 7903.7,
+              "per100": 0.506,
+              "crudeExact": {
+                "ratio": 4.392,
+                "low": 2.615,
+                "high": 7.496
+              },
+              "ageAdjustedMH": {
+                "ratio": 3.807,
+                "low": 2.345,
+                "high": 6.183
+              }
+            },
+            {
+              "window": "2-5 y",
+              "events": 34,
+              "personYears": 9996.1,
+              "per100": 0.34,
+              "crudeExact": {
+                "ratio": 2.952,
+                "low": 1.72,
+                "high": 5.122
+              },
+              "ageAdjustedMH": {
+                "ratio": 2.393,
+                "low": 1.441,
+                "high": 3.973
+              }
+            },
+            {
+              "window": "5+ y",
+              "events": 198,
+              "personYears": 34223.9,
+              "per100": 0.579,
+              "crudeExact": {
+                "ratio": 5.021,
+                "low": 3.326,
+                "high": 7.877
+              },
+              "ageAdjustedMH": {
+                "ratio": 3.05,
+                "low": 2.012,
+                "high": 4.624
+              }
+            }
+          ]
+        },
+        "sccs": {
+          "cases": 298,
+          "eventsBefore": 26,
+          "ageGroups": 13,
+          "windows": [
+            {
+              "window": "0+ y",
+              "events": 272,
+              "ratio": {
+                "ratio": 2.819,
+                "low": 1.579,
+                "high": 5.035
+              }
+            },
+            {
+              "window": "0-2 y",
+              "events": 40,
+              "ratio": {
+                "ratio": 3.142,
+                "low": 1.768,
+                "high": 5.584
+              }
+            },
+            {
+              "window": "2-5 y",
+              "events": 34,
+              "ratio": {
+                "ratio": 1.952,
+                "low": 0.965,
+                "high": 3.95
+              }
+            },
+            {
+              "window": "5+ y",
+              "events": 198,
+              "ratio": {
+                "ratio": 2.369,
+                "low": 1.054,
+                "high": 5.324
+              }
+            }
+          ]
+        },
+        "shuffled": {
+          "withinCrude": {
+            "mean": 2.423,
+            "low": 1.579,
+            "high": 3.706,
+            "runs": 50
+          },
+          "withinAgeAdjusted": {
+            "mean": 1.396,
+            "low": 0.913,
+            "high": 2.194,
+            "runs": 50
+          },
+          "sccsOverall": {
+            "mean": 1.328,
+            "low": 0.562,
+            "high": 2.461,
+            "runs": 50
+          }
+        },
+        "shareOfShufflesAtLeastObserved": {
+          "withinAgeAdjusted": 0.02,
+          "sccsOverall": 0.02
+        }
+      },
+      {
+        "minAgeYears": 55,
+        "withinPerson": {
+          "people": 7868,
+          "strokeBeforeCountedTime": 77,
+          "before": {
+            "events": 25,
+            "personYears": 18450.7,
+            "per100": 0.135
+          },
+          "windows": [
+            {
+              "window": "after",
+              "events": 271,
+              "personYears": 49589.3,
+              "per100": 0.546,
+              "crudeExact": {
+                "ratio": 4.033,
+                "low": 2.674,
+                "high": 6.344
+              },
+              "ageAdjustedMH": {
+                "ratio": 3.153,
+                "low": 2.096,
+                "high": 4.741
+              }
+            },
+            {
+              "window": "0-2 y",
+              "events": 39,
+              "personYears": 6901.7,
+              "per100": 0.565,
+              "crudeExact": {
+                "ratio": 4.17,
+                "low": 2.461,
+                "high": 7.19
+              },
+              "ageAdjustedMH": {
+                "ratio": 3.837,
+                "low": 2.345,
+                "high": 6.279
+              }
+            },
+            {
+              "window": "2-5 y",
+              "events": 34,
+              "personYears": 8926.4,
+              "per100": 0.381,
+              "crudeExact": {
+                "ratio": 2.811,
+                "low": 1.628,
+                "high": 4.915
+              },
+              "ageAdjustedMH": {
+                "ratio": 2.483,
+                "low": 1.488,
+                "high": 4.144
+              }
+            },
+            {
+              "window": "5+ y",
+              "events": 198,
+              "personYears": 33761.2,
+              "per100": 0.586,
+              "crudeExact": {
+                "ratio": 4.328,
+                "low": 2.847,
+                "high": 6.851
+              },
+              "ageAdjustedMH": {
+                "ratio": 3.086,
+                "low": 2.033,
+                "high": 4.686
+              }
+            }
+          ]
+        },
+        "sccs": {
+          "cases": 296,
+          "eventsBefore": 25,
+          "ageGroups": 12,
+          "windows": [
+            {
+              "window": "0+ y",
+              "events": 271,
+              "ratio": {
+                "ratio": 2.789,
+                "low": 1.554,
+                "high": 5.008
+              }
+            },
+            {
+              "window": "0-2 y",
+              "events": 39,
+              "ratio": {
+                "ratio": 3.102,
+                "low": 1.734,
+                "high": 5.552
+              }
+            },
+            {
+              "window": "2-5 y",
+              "events": 34,
+              "ratio": {
+                "ratio": 1.978,
+                "low": 0.973,
+                "high": 4.021
+              }
+            },
+            {
+              "window": "5+ y",
+              "events": 198,
+              "ratio": {
+                "ratio": 2.425,
+                "low": 1.073,
+                "high": 5.48
+              }
+            }
+          ]
+        },
+        "shuffled": {
+          "withinCrude": {
+            "mean": 1.885,
+            "low": 1.202,
+            "high": 2.782,
+            "runs": 50
+          },
+          "withinAgeAdjusted": {
+            "mean": 1.405,
+            "low": 0.911,
+            "high": 2.14,
+            "runs": 50
+          },
+          "sccsOverall": {
+            "mean": 1.325,
+            "low": 0.551,
+            "high": 2.369,
+            "runs": 50
+          }
+        },
+        "shareOfShufflesAtLeastObserved": {
+          "withinAgeAdjusted": 0.02,
+          "sccsOverall": 0.02
+        }
+      }
+    ],
+    "batches001to030": [
+      {
+        "minAgeYears": 0,
+        "withinPerson": {
+          "people": 2489,
+          "strokeBeforeCountedTime": 27,
+          "before": {
+            "events": 8,
+            "personYears": 7134.4,
+            "per100": 0.112
+          },
+          "windows": [
+            {
+              "window": "after",
+              "events": 90,
+              "personYears": 15748.4,
+              "per100": 0.571,
+              "crudeExact": {
+                "ratio": 5.097,
+                "low": 2.479,
+                "high": 12.165
+              },
+              "ageAdjustedMH": {
+                "ratio": 4.064,
+                "low": 1.89,
+                "high": 8.735
+              }
+            },
+            {
+              "window": "0-2 y",
+              "events": 16,
+              "personYears": 2454.9,
+              "per100": 0.652,
+              "crudeExact": {
+                "ratio": 5.812,
+                "low": 2.347,
+                "high": 15.687
+              },
+              "ageAdjustedMH": {
+                "ratio": 5.59,
+                "low": 2.36,
+                "high": 13.242
+              }
+            },
+            {
+              "window": "2-5 y",
+              "events": 13,
+              "personYears": 3035.3,
+              "per100": 0.428,
+              "crudeExact": {
+                "ratio": 3.82,
+                "low": 1.467,
+                "high": 10.631
+              },
+              "ageAdjustedMH": {
+                "ratio": 3.426,
+                "low": 1.383,
+                "high": 8.484
+              }
+            },
+            {
+              "window": "5+ y",
+              "events": 61,
+              "personYears": 10258.3,
+              "per100": 0.595,
+              "crudeExact": {
+                "ratio": 5.303,
+                "low": 2.528,
+                "high": 12.834
+              },
+              "ageAdjustedMH": {
+                "ratio": 4.041,
+                "low": 1.747,
+                "high": 9.347
+              }
+            }
+          ]
+        },
+        "sccs": {
+          "cases": 98,
+          "eventsBefore": 8,
+          "ageGroups": 12,
+          "windows": [
+            {
+              "window": "0+ y",
+              "events": 90,
+              "ratio": {
+                "ratio": 4.667,
+                "low": 1.68,
+                "high": 12.964
+              }
+            },
+            {
+              "window": "0-2 y",
+              "events": 16,
+              "ratio": {
+                "ratio": 4.942,
+                "low": 1.806,
+                "high": 13.524
+              }
+            },
+            {
+              "window": "2-5 y",
+              "events": 13,
+              "ratio": {
+                "ratio": 2.952,
+                "low": 0.855,
+                "high": 10.187
+              }
+            },
+            {
+              "window": "5+ y",
+              "events": 61,
+              "ratio": {
+                "ratio": 2.704,
+                "low": 0.611,
+                "high": 11.968
+              }
+            }
+          ]
+        },
+        "shuffled": {
+          "withinCrude": {
+            "mean": 2.166,
+            "low": 1.12,
+            "high": 3.998,
+            "runs": 50
+          },
+          "withinAgeAdjusted": {
+            "mean": 1.395,
+            "low": 0.693,
+            "high": 2.503,
+            "runs": 50
+          },
+          "sccsOverall": {
+            "mean": 1.537,
+            "low": 0.261,
+            "high": 4.995,
+            "runs": 50
+          }
+        },
+        "shareOfShufflesAtLeastObserved": {
+          "withinAgeAdjusted": 0.039,
+          "sccsOverall": 0.059
+        }
+      },
+      {
+        "minAgeYears": 55,
+        "withinPerson": {
+          "people": 2416,
+          "strokeBeforeCountedTime": 28,
+          "before": {
+            "events": 7,
+            "personYears": 5856.5,
+            "per100": 0.12
+          },
+          "windows": [
+            {
+              "window": "after",
+              "events": 90,
+              "personYears": 15086.6,
+              "per100": 0.597,
+              "crudeExact": {
+                "ratio": 4.991,
+                "low": 2.326,
+                "high": 12.769
+              },
+              "ageAdjustedMH": {
+                "ratio": 4.467,
+                "low": 2.014,
+                "high": 9.907
+              }
+            },
+            {
+              "window": "0-2 y",
+              "events": 16,
+              "personYears": 2187.2,
+              "per100": 0.732,
+              "crudeExact": {
+                "ratio": 6.12,
+                "low": 2.382,
+                "high": 17.591
+              },
+              "ageAdjustedMH": {
+                "ratio": 6.311,
+                "low": 2.57,
+                "high": 15.499
+              }
+            },
+            {
+              "window": "2-5 y",
+              "events": 13,
+              "personYears": 2745.4,
+              "per100": 0.474,
+              "crudeExact": {
+                "ratio": 3.962,
+                "low": 1.469,
+                "high": 11.727
+              },
+              "ageAdjustedMH": {
+                "ratio": 3.895,
+                "low": 1.514,
+                "high": 10.017
+              }
+            },
+            {
+              "window": "5+ y",
+              "events": 61,
+              "personYears": 10153.9,
+              "per100": 0.601,
+              "crudeExact": {
+                "ratio": 5.026,
+                "low": 2.298,
+                "high": 13.026
+              },
+              "ageAdjustedMH": {
+                "ratio": 4.189,
+                "low": 1.791,
+                "high": 9.798
+              }
+            }
+          ]
+        },
+        "sccs": {
+          "cases": 97,
+          "eventsBefore": 7,
+          "ageGroups": 11,
+          "windows": [
+            {
+              "window": "0+ y",
+              "events": 90,
+              "ratio": {
+                "ratio": 4.709,
+                "low": 1.68,
+                "high": 13.205
+              }
+            },
+            {
+              "window": "0-2 y",
+              "events": 16,
+              "ratio": {
+                "ratio": 5.028,
+                "low": 1.815,
+                "high": 13.924
+              }
+            },
+            {
+              "window": "2-5 y",
+              "events": 13,
+              "ratio": {
+                "ratio": 2.968,
+                "low": 0.856,
+                "high": 10.291
+              }
+            },
+            {
+              "window": "5+ y",
+              "events": 61,
+              "ratio": {
+                "ratio": 2.751,
+                "low": 0.618,
+                "high": 12.247
+              }
+            }
+          ]
+        },
+        "shuffled": {
+          "withinCrude": {
+            "mean": 1.73,
+            "low": 0.837,
+            "high": 3.015,
+            "runs": 50
+          },
+          "withinAgeAdjusted": {
+            "mean": 1.414,
+            "low": 0.674,
+            "high": 2.404,
+            "runs": 50
+          },
+          "sccsOverall": {
+            "mean": 1.554,
+            "low": 0.261,
+            "high": 5.019,
+            "runs": 50
+          }
+        },
+        "shareOfShufflesAtLeastObserved": {
+          "withinAgeAdjusted": 0.02,
+          "sccsOverall": 0.059
+        }
+      }
+    ]
+  },
+  "betweenPerson100": {
+    "rules": [
+      {
+        "id": "af-stroke",
+        "planted": "direct",
+        "ratio": {
+          "ratio": 2.701,
+          "low": 2.316,
+          "high": 3.151
+        },
+        "recovered": "raised"
+      },
+      {
+        "id": "af-stroke-55",
+        "planted": "direct",
+        "ratio": {
+          "ratio": 2.582,
+          "low": 2.204,
+          "high": 3.025
+        },
+        "recovered": "raised"
+      },
+      {
+        "id": "diabetes-stroke",
+        "planted": "direct",
+        "ratio": {
+          "ratio": 1.428,
+          "low": 1.318,
+          "high": 1.546
+        },
+        "recovered": "raised"
+      },
+      {
+        "id": "hypertension-stroke",
+        "planted": "indirect",
+        "ratio": {
+          "ratio": 1.203,
+          "low": 1.142,
+          "high": 1.268
+        },
+        "recovered": "raised"
+      },
+      {
+        "id": "hypertension-af",
+        "planted": "indirect",
+        "ratio": {
+          "ratio": 1.399,
+          "low": 1.331,
+          "high": 1.471
+        },
+        "recovered": "raised"
+      },
+      {
+        "id": "mi-stroke",
+        "planted": "none",
+        "ratio": {
+          "ratio": 1.099,
+          "low": 0.997,
+          "high": 1.21
+        },
+        "recovered": "no clear difference"
+      },
+      {
+        "id": "chf-stroke",
+        "planted": "none",
+        "ratio": {
+          "ratio": 0.764,
+          "low": 0.546,
+          "high": 1.068
+        },
+        "recovered": "no clear difference"
+      },
+      {
+        "id": "stroke-af",
+        "planted": "none",
+        "ratio": {
+          "ratio": 0.845,
+          "low": 0.572,
+          "high": 1.247
+        },
+        "recovered": "no clear difference"
+      },
+      {
+        "id": "af-dementia",
+        "planted": "none",
+        "ratio": {
+          "ratio": 0.974,
+          "low": 0.876,
+          "high": 1.084
+        },
+        "recovered": "no clear difference"
+      },
+      {
+        "id": "osa-af",
+        "planted": "none",
+        "ratio": {
+          "ratio": 1.035,
+          "low": 0.931,
+          "high": 1.151
+        },
+        "recovered": "no clear difference"
+      },
+      {
+        "id": "anticoagulant-stroke",
+        "planted": "none",
+        "ratio": null,
+        "recovered": "too few events"
+      }
+    ],
+    "afStrokeShuffled": {
+      "observed": 2.701,
+      "shuffled": {
+        "mean": 2.324,
+        "low": 2.124,
+        "high": 2.563,
+        "runs": 50
+      }
+    }
+  },
+  "wearables": {
+    "batches": ["001", "002", "003"],
+    "seeds": {
+      "001": 1001,
+      "002": 1002,
+      "003": 1003
+    },
+    "capPerBatch": 400,
+    "subjects": {
+      "hypertension": 1200,
+      "sleep_apnea": 376,
+      "stroke": 93,
+      "heart_failure": 93,
+      "atrial_fibrillation": 115
+    },
+    "minWornDaysEachSide": 10,
+    "episodePlacement": "v3 generic episode by calendar day, about one per person-year, 4 to 6 days (#270)",
+    "hypertensionBefore270": {
+      "heart_rate": {
+        "recoveredMean": 0.106,
+        "recoveredCi": {
+          "low": 0.027,
+          "high": 0.185
+        }
+      },
+      "resting_heart_rate": {
+        "recoveredMean": 0.12,
+        "recoveredCi": {
+          "low": 0.056,
+          "high": 0.185
+        }
+      },
+      "hrv_rmssd": {
+        "recoveredMean": 0.996,
+        "recoveredCi": {
+          "low": 0.994,
+          "high": 0.997
+        }
+      },
+      "sleep_score": {
+        "recoveredMean": -0.09,
+        "recoveredCi": {
+          "low": -0.178,
+          "high": -0.001
+        }
+      },
+      "respiratory_rate": {
+        "recoveredMean": 0.024,
+        "recoveredCi": {
+          "low": 0.018,
+          "high": 0.031
+        }
+      }
+    },
+    "rows": [
+      {
+        "group": "hypertension",
+        "metric": "heart_rate",
+        "window": "0-89 d",
+        "kind": "delta",
+        "subjects": 1182,
+        "plantedMedian": 0,
+        "recoveredMedian": 0.034,
+        "recoveredQ1": -1.0,
+        "recoveredQ3": 0.899,
+        "recoveredMean": -0.012,
+        "zBeyond2": 3,
+        "withZ": 1182,
+        "recoveredCi": {
+          "low": -0.091,
+          "high": 0.068
+        }
+      },
+      {
+        "group": "hypertension",
+        "metric": "resting_heart_rate",
+        "window": "0-89 d",
+        "kind": "delta",
+        "subjects": 1182,
+        "plantedMedian": 0,
+        "recoveredMedian": -0.001,
+        "recoveredQ1": -0.883,
+        "recoveredQ3": 0.863,
+        "recoveredMean": 0.003,
+        "zBeyond2": 16,
+        "withZ": 1182,
+        "recoveredCi": {
+          "low": -0.062,
+          "high": 0.067
+        }
+      },
+      {
+        "group": "hypertension",
+        "metric": "hrv_rmssd",
+        "window": "0-89 d",
+        "kind": "ratio",
+        "subjects": 1182,
+        "plantedMedian": 1,
+        "recoveredMedian": 1.0,
+        "recoveredQ1": 0.984,
+        "recoveredQ3": 1.017,
+        "recoveredMean": 1.0,
+        "zBeyond2": 0,
+        "withZ": 1182,
+        "recoveredCi": {
+          "low": 0.999,
+          "high": 1.002
+        }
+      },
+      {
+        "group": "hypertension",
+        "metric": "steps",
+        "window": "0-89 d",
+        "kind": "ratio",
+        "subjects": 1182,
+        "plantedMedian": 1,
+        "recoveredMedian": 0.999,
+        "recoveredQ1": 0.973,
+        "recoveredQ3": 1.027,
+        "recoveredMean": 1.001,
+        "zBeyond2": 0,
+        "withZ": 1182,
+        "recoveredCi": {
+          "low": 0.998,
+          "high": 1.003
+        }
+      },
+      {
+        "group": "hypertension",
+        "metric": "sleep_score",
+        "window": "0-89 d",
+        "kind": "delta",
+        "subjects": 1182,
+        "plantedMedian": 0,
+        "recoveredMedian": 0.007,
+        "recoveredQ1": -0.837,
+        "recoveredQ3": 0.958,
+        "recoveredMean": 0.005,
+        "zBeyond2": 2,
+        "withZ": 1182,
+        "recoveredCi": {
+          "low": -0.084,
+          "high": 0.093
+        }
+      },
+      {
+        "group": "hypertension",
+        "metric": "respiratory_rate",
+        "window": "0-89 d",
+        "kind": "delta",
+        "subjects": 1182,
+        "plantedMedian": 0,
+        "recoveredMedian": 0.0,
+        "recoveredQ1": -0.082,
+        "recoveredQ3": 0.072,
+        "recoveredMean": -0.001,
+        "zBeyond2": 0,
+        "withZ": 1182,
+        "recoveredCi": {
+          "low": -0.008,
+          "high": 0.007
+        }
+      },
+      {
+        "group": "hypertension",
+        "metric": "spo2_mean",
+        "window": "0-89 d",
+        "kind": "delta",
+        "subjects": 1182,
+        "plantedMedian": -0.003,
+        "recoveredMedian": -0.002,
+        "recoveredQ1": -0.095,
+        "recoveredQ3": 0.092,
+        "recoveredMean": -0.002,
+        "zBeyond2": 1,
+        "withZ": 1182,
+        "recoveredCi": {
+          "low": -0.011,
+          "high": 0.007
+        }
+      },
+      {
+        "group": "hypertension",
+        "metric": "spo2_min",
+        "window": "0-89 d",
+        "kind": "delta",
+        "subjects": 1182,
+        "plantedMedian": -0.011,
+        "recoveredMedian": -0.006,
+        "recoveredQ1": -0.166,
+        "recoveredQ3": 0.176,
+        "recoveredMean": 0.001,
+        "zBeyond2": 2,
+        "withZ": 1178,
+        "recoveredCi": {
+          "low": -0.015,
+          "high": 0.017
+        }
+      },
+      {
+        "group": "hypertension",
+        "metric": "irregular_rhythm_notifications",
+        "window": "0-89 d",
+        "kind": "delta",
+        "subjects": 1182,
+        "plantedMedian": 0,
+        "recoveredMedian": 0,
+        "recoveredQ1": 0,
+        "recoveredQ3": 0,
+        "recoveredMean": 0.0,
+        "zBeyond2": 0,
+        "withZ": 0,
+        "recoveredCi": {
+          "low": 0.0,
+          "high": 0.001
+        }
+      },
+      {
+        "group": "hypertension",
+        "metric": "af_burden",
+        "window": "0-89 d",
+        "kind": "delta",
+        "subjects": 1182,
+        "plantedMedian": 0,
+        "recoveredMedian": 0,
+        "recoveredQ1": 0,
+        "recoveredQ3": 0,
+        "recoveredMean": 0,
+        "zBeyond2": 0,
+        "withZ": 0,
+        "recoveredCi": {
+          "low": 0,
+          "high": 0
+        }
+      },
+      {
+        "group": "sleep_apnea",
+        "metric": "spo2_mean",
+        "window": "0-89 d",
+        "kind": "delta",
+        "subjects": 372,
+        "plantedMedian": -2.758,
+        "recoveredMedian": -2.75,
+        "recoveredQ1": -2.848,
+        "recoveredQ3": -2.668,
+        "recoveredMean": -2.755,
+        "zBeyond2": 360,
+        "withZ": 372,
+        "recoveredCi": {
+          "low": -2.769,
+          "high": -2.74
+        }
+      },
+      {
+        "group": "sleep_apnea",
+        "metric": "spo2_min",
+        "window": "0-89 d",
+        "kind": "delta",
+        "subjects": 372,
+        "plantedMedian": -7.489,
+        "recoveredMedian": -7.47,
+        "recoveredQ1": -7.725,
+        "recoveredQ3": -7.274,
+        "recoveredMean": -7.5,
+        "zBeyond2": 371,
+        "withZ": 371,
+        "recoveredCi": {
+          "low": -7.537,
+          "high": -7.462
+        }
+      },
+      {
+        "group": "sleep_apnea",
+        "metric": "respiratory_rate",
+        "window": "0-89 d",
+        "kind": "delta",
+        "subjects": 372,
+        "plantedMedian": 0.721,
+        "recoveredMedian": 0.727,
+        "recoveredQ1": 0.596,
+        "recoveredQ3": 0.878,
+        "recoveredMean": 0.735,
+        "zBeyond2": 26,
+        "withZ": 372,
+        "recoveredCi": {
+          "low": 0.716,
+          "high": 0.755
+        }
+      },
+      {
+        "group": "stroke",
+        "metric": "steps",
+        "window": "0-29 d",
+        "kind": "ratio",
+        "subjects": 85,
+        "plantedMedian": 0.543,
+        "recoveredMedian": 0.548,
+        "recoveredQ1": 0.5,
+        "recoveredQ3": 0.58,
+        "recoveredMean": 0.542,
+        "zBeyond2": 29,
+        "withZ": 85,
+        "recoveredCi": {
+          "low": 0.531,
+          "high": 0.553
+        }
+      },
+      {
+        "group": "stroke",
+        "metric": "steps",
+        "window": "60-89 d",
+        "kind": "ratio",
+        "subjects": 85,
+        "plantedMedian": 0.765,
+        "recoveredMedian": 0.755,
+        "recoveredQ1": 0.725,
+        "recoveredQ3": 0.795,
+        "recoveredMean": 0.758,
+        "zBeyond2": 0,
+        "withZ": 85,
+        "recoveredCi": {
+          "low": 0.743,
+          "high": 0.772
+        }
+      },
+      {
+        "group": "stroke",
+        "metric": "sleep_score",
+        "window": "0-29 d",
+        "kind": "delta",
+        "subjects": 85,
+        "plantedMedian": -9.499,
+        "recoveredMedian": -9.317,
+        "recoveredQ1": -10.372,
+        "recoveredQ3": -8.146,
+        "recoveredMean": -9.316,
+        "zBeyond2": 1,
+        "withZ": 85,
+        "recoveredCi": {
+          "low": -9.68,
+          "high": -8.953
+        }
+      },
+      {
+        "group": "stroke",
+        "metric": "sleep_score",
+        "window": "60-89 d",
+        "kind": "delta",
+        "subjects": 85,
+        "plantedMedian": -5.609,
+        "recoveredMedian": -5.712,
+        "recoveredQ1": -6.854,
+        "recoveredQ3": -4.347,
+        "recoveredMean": -5.492,
+        "zBeyond2": 0,
+        "withZ": 85,
+        "recoveredCi": {
+          "low": -5.874,
+          "high": -5.11
+        }
+      },
+      {
+        "group": "heart_failure",
+        "metric": "resting_heart_rate",
+        "window": "0-89 d",
+        "kind": "delta",
+        "subjects": 91,
+        "plantedMedian": 6.61,
+        "recoveredMedian": 6.992,
+        "recoveredQ1": 5.723,
+        "recoveredQ3": 8.533,
+        "recoveredMean": 6.922,
+        "zBeyond2": 83,
+        "withZ": 91,
+        "recoveredCi": {
+          "low": 6.443,
+          "high": 7.4
+        }
+      },
+      {
+        "group": "heart_failure",
+        "metric": "hrv_rmssd",
+        "window": "0-89 d",
+        "kind": "ratio",
+        "subjects": 91,
+        "plantedMedian": 0.75,
+        "recoveredMedian": 0.757,
+        "recoveredQ1": 0.724,
+        "recoveredQ3": 0.786,
+        "recoveredMean": 0.767,
+        "zBeyond2": 39,
+        "withZ": 91,
+        "recoveredCi": {
+          "low": 0.753,
+          "high": 0.782
+        }
+      },
+      {
+        "group": "heart_failure",
+        "metric": "steps",
+        "window": "0-89 d",
+        "kind": "ratio",
+        "subjects": 91,
+        "plantedMedian": 0.652,
+        "recoveredMedian": 0.664,
+        "recoveredQ1": 0.622,
+        "recoveredQ3": 0.7,
+        "recoveredMean": 0.677,
+        "zBeyond2": 13,
+        "withZ": 91,
+        "recoveredCi": {
+          "low": 0.658,
+          "high": 0.696
+        }
+      },
+      {
+        "group": "atrial_fibrillation",
+        "metric": "heart_rate",
+        "window": "0-89 d",
+        "kind": "delta",
+        "subjects": 113,
+        "plantedMedian": 2.716,
+        "recoveredMedian": 2.64,
+        "recoveredQ1": 0.996,
+        "recoveredQ3": 3.982,
+        "recoveredMean": 2.58,
+        "zBeyond2": 0,
+        "withZ": 113,
+        "recoveredCi": {
+          "low": 2.243,
+          "high": 2.917
+        }
+      },
+      {
+        "group": "atrial_fibrillation",
+        "metric": "hrv_rmssd",
+        "window": "0-89 d",
+        "kind": "ratio",
+        "subjects": 113,
+        "plantedMedian": 1.196,
+        "recoveredMedian": 1.193,
+        "recoveredQ1": 1.149,
+        "recoveredQ3": 1.253,
+        "recoveredMean": 1.205,
+        "zBeyond2": 1,
+        "withZ": 113,
+        "recoveredCi": {
+          "low": 1.191,
+          "high": 1.219
+        }
+      },
+      {
+        "group": "atrial_fibrillation",
+        "metric": "irregular_rhythm_notifications",
+        "window": "0-89 d",
+        "kind": "delta",
+        "subjects": 113,
+        "plantedMedian": 0.189,
+        "recoveredMedian": 0.195,
+        "recoveredQ1": 0.148,
+        "recoveredQ3": 0.244,
+        "recoveredMean": 0.202,
+        "zBeyond2": 0,
+        "withZ": 0,
+        "recoveredCi": {
+          "low": 0.188,
+          "high": 0.216
+        }
+      },
+      {
+        "group": "atrial_fibrillation",
+        "metric": "af_burden",
+        "window": "0-89 d",
+        "kind": "delta",
+        "subjects": 113,
+        "plantedMedian": 0.098,
+        "recoveredMedian": 0.1,
+        "recoveredQ1": 0.077,
+        "recoveredQ3": 0.122,
+        "recoveredMean": 0.101,
+        "zBeyond2": 0,
+        "withZ": 0,
+        "recoveredCi": {
+          "low": 0.095,
+          "high": 0.107
+        }
+      }
+    ]
+  }
+}

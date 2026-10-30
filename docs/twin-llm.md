@@ -71,14 +71,15 @@ Exoscale: set `EXOSCALE_BASE_URLS` (one vLLM `/v1` URL per GPU); without it, sta
 
 ## Key paths
 
-| Area                         | Path                                                           |
-| ---------------------------- | -------------------------------------------------------------- |
-| Env / local MVP / DATA_MODE  | `infrastructure/env.ts`, `infrastructure/data-mode.ts`         |
-| Actor (auth bypass)          | `infrastructure/auth-actor.ts`                                 |
-| Providers                    | `features/chat/resolve-language-model.ts`                      |
-| Catalog                      | `infrastructure/fetch-model-catalog.ts`                        |
-| Oura / Whoop / Google Health | `features/oura/`, `features/whoop/`, `features/google-health/` |
-| System prompt / XAI          | `features/chat/twin-system-prompt.ts`                          |
-| First run (`/start`)         | `features/onboarding/`, `infrastructure/knowledge-sources.ts`  |
-| Docs (`/docs`)               | `features/docs/`: these pages rendered from `docs/*.md`        |
-| open-twin pins               | `.open-twin/` via `bun run sync:open-twin` (`PROVENANCE.md`)   |
+| Area                         | Path                                                                           |
+| ---------------------------- | ------------------------------------------------------------------------------ |
+| Env / local MVP / DATA_MODE  | `infrastructure/env.ts`, `infrastructure/data-mode.ts`                         |
+| Actor (auth bypass)          | `infrastructure/auth-actor.ts`                                                 |
+| Providers                    | `features/chat/resolve-language-model.ts`                                      |
+| Catalog                      | `infrastructure/fetch-model-catalog.ts`                                        |
+| Oura / Whoop / Google Health | `features/oura/`, `features/whoop/`, `features/google-health/`                 |
+| System prompt / XAI          | `features/chat/twin-system-prompt.ts`                                          |
+| First run (`/start`)         | `features/onboarding/`, `infrastructure/knowledge-sources.ts`                  |
+| Docs (`/docs`)               | `features/docs/`: these pages rendered from `docs/*.md`                        |
+| Lab (`/lab`)                 | `features/lab/`: verifiability checks, simulations, results ([lab.md](lab.md)) |
+| open-twin pins               | `.open-twin/` via `bun run sync:open-twin` (`PROVENANCE.md`)                   |

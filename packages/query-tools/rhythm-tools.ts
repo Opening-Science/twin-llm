@@ -99,11 +99,60 @@ export const describeRecording = (
   };
 };
 
+/** What `planRhythmRecording` needs: the tool's input without its length bounds. */
+export type RhythmRecordingRequest = Readonly<{
+  subject_ref: string;
+  recording: number;
+  duration_sec: number;
+  date?: string;
+}>;
+
 /**
  * Scope, then the subject's observation span (the recording day must lie in
  * it; default its last day), then whether an AF condition overlaps that day,
- * read with the same query as `conditions_timeline`.
+ * read with the same query as `conditions_timeline`. Not audited on its own:
+ * the callers below wrap it.
  */
+const planRhythmRecording = async (
+  scope: SessionScope,
+  input: RhythmRecordingRequest,
+  ports: QueryToolPorts,
+): Promise<RecordingPlan | ToolRefusal> => {
+  if (scope.mode === "personal") return NO_RHYTHM_DATA;
+  if (!(await subjectInScope(scope, input.subject_ref, ports))) {
+    return SUBJECT_SCOPE_VIOLATION;
+  }
+  const span = await (ports.findObservationSpan ?? findObservationSpanInDatabase)(
+    input.subject_ref,
+  );
+  if (span === null) {
+    return outsideSubjectWindow(input.date ?? null, { start: null, end: null });
+  }
+  const first = utcDay(span.first);
+  const last = utcDay(span.last);
+  const date = input.date ?? last;
+  if (date < first || date > last) {
+    return outsideSubjectWindow(date, { start: first, end: last });
+  }
+  const conditions = await (ports.findConditions ?? findConditionsInDatabase)({
+    subjectRef: input.subject_ref,
+    start: windowStartDate(date),
+    end: windowEndDate(date),
+    code: AF_SNOMED_CODE,
+    take: AF_CONDITION_TAKE,
+  });
+  return {
+    subjectRef: input.subject_ref,
+    recording: input.recording,
+    durationSec: input.duration_sec,
+    date,
+    afConditionActive: conditions.length > 0,
+  };
+};
+
+const isPlan = (value: RecordingPlan | ToolRefusal): value is RecordingPlan =>
+  "subjectRef" in value;
+
 export const runRhythmIrregularity = (
   scope: SessionScope,
   input: RhythmIrregularityInput,
@@ -115,37 +164,41 @@ export const runRhythmIrregularity = (
     input,
     scope.mode === "personal" ? null : input.subject_ref,
     async () => {
-      if (scope.mode === "personal") return NO_RHYTHM_DATA;
-      if (!(await subjectInScope(scope, input.subject_ref, ports))) {
-        return SUBJECT_SCOPE_VIOLATION;
-      }
-      const span = await (ports.findObservationSpan ?? findObservationSpanInDatabase)(
-        input.subject_ref,
-      );
-      if (span === null) {
-        return outsideSubjectWindow(input.date ?? null, { start: null, end: null });
-      }
-      const first = utcDay(span.first);
-      const last = utcDay(span.last);
-      const date = input.date ?? last;
-      if (date < first || date > last) {
-        return outsideSubjectWindow(date, { start: first, end: last });
-      }
-      const conditions = await (ports.findConditions ?? findConditionsInDatabase)({
-        subjectRef: input.subject_ref,
-        start: windowStartDate(date),
-        end: windowEndDate(date),
-        code: AF_SNOMED_CODE,
-        take: AF_CONDITION_TAKE,
-      });
-      return describeRecording({
-        subjectRef: input.subject_ref,
-        recording: input.recording,
-        durationSec: input.duration_sec,
-        date,
-        afConditionActive: conditions.length > 0,
-      });
+      const plan = await planRhythmRecording(scope, input, ports);
+      return isPlan(plan) ? describeRecording(plan) : plan;
     },
     (result) => ("n" in result ? result.n : 0),
+    ports,
+  );
+
+export type LabRhythmRecording = Readonly<{
+  plan: RecordingPlan;
+  /** The tool's result for this plan; a recording under one window is refused. */
+  metrics: RhythmIrregularityResult | ToolRefusal;
+}>;
+
+/**
+ * The Lab's Simulations view (#252): the same plan and metrics as
+ * `rhythm_irregularity`, plus the plan itself, so the researcher's screen can
+ * draw the recording and show what the simulator was set to. Lengths from 30
+ * s (the simulator's floor), so a recording shorter than one window is shown
+ * with its refusal. Audited as `lab.rhythm_recording`; never offered to a
+ * model.
+ */
+export const runLabRhythmRecording = (
+  scope: SessionScope,
+  input: RhythmRecordingRequest,
+  ports: QueryToolPorts = defaultQueryToolPorts(),
+): Promise<LabRhythmRecording | ToolRefusal> =>
+  audited<LabRhythmRecording | ToolRefusal>(
+    scope,
+    "lab.rhythm_recording",
+    input,
+    scope.mode === "personal" ? null : input.subject_ref,
+    async () => {
+      const plan = await planRhythmRecording(scope, input, ports);
+      return isPlan(plan) ? { plan, metrics: describeRecording(plan) } : plan;
+    },
+    (result) => ("plan" in result && "n" in result.metrics ? result.metrics.n : 0),
     ports,
   );

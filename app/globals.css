@@ -496,6 +496,44 @@
     @apply text-foreground inline-block text-xs font-medium underline underline-offset-2;
   }
 
+  /* Shell lines a person can copy and run, such as a Lab check's command.
+     Scrolls sideways rather than wrapping, so a line stays one command. */
+  .command-block {
+    @apply bg-muted text-foreground overflow-x-auto rounded-md px-3 py-2 font-mono text-xs leading-relaxed whitespace-pre;
+  }
+
+  /* Label and value pairs: one column on a phone, two from sm up. */
+  .lab-evidence {
+    @apply grid grid-cols-1 gap-x-6 gap-y-1 text-sm sm:grid-cols-[minmax(10rem,auto)_1fr];
+  }
+  .lab-evidence dt {
+    @apply text-muted-foreground;
+  }
+  .lab-evidence dd {
+    @apply mb-1.5 break-all sm:mb-0;
+  }
+
+  /* A check's rows (models, pinned files). Scrolls inside the card on a phone. */
+  .lab-table-wrap {
+    @apply border-border -mx-1 overflow-x-auto rounded-md border;
+  }
+  .lab-table {
+    @apply w-full text-left text-sm;
+  }
+  .lab-table th,
+  .lab-table td {
+    @apply border-border border-t px-3 py-2 align-top whitespace-nowrap;
+  }
+  .lab-table thead th {
+    @apply text-muted-foreground border-t-0 font-mono text-xs font-normal tracking-[0.12em] uppercase;
+  }
+  .lab-table tbody th {
+    @apply font-normal;
+  }
+  .lab-table td {
+    @apply font-mono text-xs;
+  }
+
   /* A docs page rendered from Markdown: the repository's own docs/ files. */
   .doc-prose {
     @apply leading-relaxed;

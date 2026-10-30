@@ -12,7 +12,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
 import { scaffoldTool } from "./scaffold-tool";
-import { newFilePaths, PATHS, ScaffoldError } from "./tool-edits";
+import { insertLastEntryOf, newFilePaths, PATHS, ScaffoldError } from "./tool-edits";
 import { nameProblem, toolNames } from "./tool-names";
 
 /**
@@ -148,6 +148,20 @@ describe("scaffoldTool", () => {
     );
   });
 
+  test("the chat entry lands in createQueryTools, not createImportedTools (#256)", () => {
+    const root = tempCopy();
+    scaffoldTool(root, TOOL);
+    const aiTools = readAll(root)[PATHS.aiTools] ?? "";
+    const entry = aiTools.indexOf(`  ${TOOL}: tool({`);
+    const queryTools = aiTools.indexOf("export const createQueryTools = (");
+    const importedTools = aiTools.indexOf("export const createImportedTools = (");
+    expect(entry).toBeGreaterThan(queryTools);
+    expect(entry).toBeLessThan(importedTools);
+    expect(aiTools).toContain(
+      "execute: async (input) => runRestingHrDrift(scope, input, ports),\n  }),\n});\n\nconst importedDescription",
+    );
+  });
+
   test("the eval draft stays outside the scored set", () => {
     const root = tempCopy();
     scaffoldTool(root, TOOL);
@@ -228,6 +242,53 @@ describe("scaffoldTool", () => {
     expect(errors).toHaveLength(1);
     expect(errors[0]).toContain(
       `error TS2345: Argument of type '"the maths for resting_hr_drift; hand-compute it in resting-hr-drift.test.ts first"' is not assignable to parameter of type '"the maths for resting_hr_drift; hand-compute it in resting-hr-drift.test.ts first" & TodoFillIn'.`,
+    );
+  });
+});
+
+describe("insertLastEntryOf", () => {
+  const FIXTURE = [
+    "export const createQueryTools = (scope: Scope) => ({",
+    "  trend: tool({",
+    '    description: "a } in a string and a { too",',
+    "    // a } in a comment",
+    "    execute: async () => `${scope}`,",
+    "  }),",
+    "});",
+    "",
+    "export const createImportedTools = (deps: Deps) => ({",
+    "  imported_trend: tool({ execute: async () => deps }),",
+    "});",
+    "",
+  ].join("\n");
+  const insert = insertLastEntryOf("export const createQueryTools = (", "  added: x,\n");
+
+  test("adds the entry at the end of the named function's object", () => {
+    expect(insert("fixture.ts", FIXTURE)).toBe(
+      FIXTURE.replace(
+        "  }),\n});\n\nexport const createImported",
+        "  }),\n  added: x,\n});\n\nexport const createImported",
+      ),
+    );
+  });
+
+  test("a missing function is refused", () => {
+    expect(() =>
+      insert("fixture.ts", FIXTURE.replace("createQueryTools", "createTools")),
+    ).toThrow(
+      new ScaffoldError(
+        'fixture.ts: anchor not found: "export const createQueryTools = ("',
+      ),
+    );
+  });
+
+  test("a function that returns no object literal is refused", () => {
+    expect(() =>
+      insert("fixture.ts", "export const createQueryTools = () => tools;\n"),
+    ).toThrow(
+      new ScaffoldError(
+        'fixture.ts: "export const createQueryTools = (" does not return an object literal',
+      ),
     );
   });
 });

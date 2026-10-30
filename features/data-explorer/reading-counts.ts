@@ -13,7 +13,7 @@
  * above goes into one open last bin. Every bin but that one has the same width.
  */
 
-import { countTicks } from "./chart-geometry";
+import { countTicks } from "@/infrastructure/charts/chart-geometry";
 
 export type SubjectReadingCount = Readonly<{ subjectRef: string; readings: number }>;
 

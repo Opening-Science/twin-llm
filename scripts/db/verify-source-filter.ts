@@ -6,7 +6,13 @@
  * (checked with EXPLAIN, so the probe cannot pass on a seq scan). A plain
  * HNSW scan stops after ef_search candidates, all guideline rows, and the
  * knowledge filter would come back empty; `queryNearestChunks` must still
- * return the 3 knowledge chunks, and guideline rows for the guideline source.
+ * return knowledge chunks, and only guideline rows for the guideline source.
+ *
+ * The check asserts the property, not exact ids (#267): HNSW is approximate,
+ * the graph differs per build (random levels, neighbour pruning), and a scan
+ * only reaches rows the graph links to, so one of the 3 knowledge chunks can
+ * be missed on some builds. Every knowledge row must be a knowledge probe row
+ * (1 to 3 of them), every guideline row a guideline probe row (exactly 3).
  * Every probe row is removed again. Vectors only, no text from any corpus.
  *
  * Run (from verify-migrations.sh):
@@ -16,6 +22,8 @@ import { PrismaPg } from "@prisma/adapter-pg";
 
 import { PrismaClient } from "@/generated/prisma/client";
 import { queryNearestChunks } from "@/packages/guidelines/search";
+
+import { checkSourceRows } from "./source-filter-check";
 
 const GUIDELINE_CHUNKS = 5000;
 const KNOWLEDGE_IDS = ["verify-sf-kn-1", "verify-sf-kn-2", "verify-sf-kn-3"];
@@ -35,7 +43,11 @@ const fail = (message: string): never => {
   throw new Error(`verify-source-filter FAIL: ${message}`);
 };
 
-/** 768-d vector literal in SQL: `first` at dim 1, `second` at dim 2, small noise elsewhere. */
+/**
+ * 768-d vector literal in SQL: `first` at dim 1, `second` at dim 2, small
+ * noise elsewhere. The noise stays `random()`: fixed noise compresses, the
+ * table shrinks and the planner drops the HNSW index for this probe.
+ */
 const vectorExpr = (first: number, second: number): string =>
   `('[' || array_to_string(array(SELECT CASE WHEN i = 1 THEN ${first} WHEN i = 2 THEN ${second} ` +
   `ELSE random() * 0.05 END FROM generate_series(1, 768) i WHERE n > 0), ',') || ']')::vector`;
@@ -102,21 +114,25 @@ const main = async (): Promise<void> => {
     const plain = await client.$queryRawUnsafe<{ id: string }[]>(plainKnowledgeQuery);
 
     const knowledge = await queryNearestChunks(client, QUERY, 3, "opentwin-knowledge");
-    const knowledgeIds = knowledge.map((row) => row.id).sort();
-    if (JSON.stringify(knowledgeIds) !== JSON.stringify(KNOWLEDGE_IDS)) {
-      fail(`knowledge source returned ${JSON.stringify(knowledgeIds)}`);
-    }
+    const knowledgeError = checkSourceRows(knowledge, {
+      source: "opentwin-knowledge",
+      isProbeId: (id) => KNOWLEDGE_IDS.includes(id),
+      min: 1,
+      max: KNOWLEDGE_IDS.length,
+    });
+    if (knowledgeError) fail(knowledgeError);
     const guideline = await queryNearestChunks(client, QUERY, 3, "guideline");
-    if (
-      guideline.length !== 3 ||
-      guideline.some((row) => row.documentId !== "verify-sf-guideline")
-    ) {
-      fail(`guideline source returned ${JSON.stringify(guideline.map((row) => row.id))}`);
-    }
+    const guidelineError = checkSourceRows(guideline, {
+      source: "guideline",
+      isProbeId: (id) => id.startsWith("verify-sf-gl-"),
+      min: 3,
+      max: 3,
+    });
+    if (guidelineError) fail(guidelineError);
 
     console.warn(
       `verify-source-filter OK: pgvector ${version}, HNSW plan, plain scan ${plain.length}/3 knowledge rows, ` +
-        `queryNearestChunks 3/3 knowledge rows and 3 guideline rows over ${GUIDELINE_CHUNKS} guideline chunks`,
+        `queryNearestChunks ${knowledge.length}/3 knowledge rows and 3 guideline rows over ${GUIDELINE_CHUNKS} guideline chunks`,
     );
   } finally {
     await cleanup(client);
