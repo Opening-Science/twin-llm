@@ -17,14 +17,20 @@ import {
 
 import { IMPORTED_TOOLS, type ImportedToolName } from "./imported-names";
 import {
+  importedConditionsInput,
   importedDatasetsInput,
   importedLatestInput,
+  importedMedicationsInput,
+  importedTableInput,
   importedTrendInput,
 } from "./imported-schemas";
 import {
   type ImportedToolDeps,
+  runImportedConditions,
   runImportedDatasets,
   runImportedLatest,
+  runImportedMedications,
+  runImportedTable,
   runImportedTrend,
 } from "./imported-tools";
 import { mcpToolManifest } from "./manifests";
@@ -139,6 +145,10 @@ const mcpImportedDeps = (
     listSeries: NOTHING_TO_READ,
     findLatest: NOTHING_TO_READ,
     findSeries: NOTHING_TO_READ,
+    listTables: NOTHING_TO_READ,
+    readTableRows: NOTHING_TO_READ,
+    findConditions: NOTHING_TO_READ,
+    findMedications: NOTHING_TO_READ,
     appendAudit: ports.appendAudit,
   },
 });
@@ -196,6 +206,15 @@ export const queryToolRunners = (
   ),
   imported_trend: bind(importedTrendInput, (input) =>
     runImportedTrend(mcpImportedDeps(scope, ports), input),
+  ),
+  imported_table: bind(importedTableInput, (input) =>
+    runImportedTable(mcpImportedDeps(scope, ports), input),
+  ),
+  imported_conditions: bind(importedConditionsInput, (input) =>
+    runImportedConditions(mcpImportedDeps(scope, ports), input),
+  ),
+  imported_medications: bind(importedMedicationsInput, (input) =>
+    runImportedMedications(mcpImportedDeps(scope, ports), input),
   ),
   rhythm_irregularity: bind(rhythmIrregularityInput, (input) =>
     runRhythmIrregularity(scope, input, ports),

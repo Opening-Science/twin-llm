@@ -548,3 +548,43 @@ describe("eval:report refuses", () => {
     });
   });
 });
+
+describe("eval:report on an agent run (#279)", () => {
+  test("names the agent in the run table and headings, never on the sheet", async () => {
+    const agent = {
+      id: "rhythm",
+      name: "Heart rhythm (research)",
+      base_model_id: "qwen3:8b",
+      skill: "rhythm",
+      rules_sha256: "4".repeat(64),
+      roster_sha256: "5".repeat(64),
+    };
+    const { files, deps } = memoryFiles({
+      meta: {
+        ...META,
+        models: [
+          {
+            provider: "ollama",
+            model_id: "agent:rhythm",
+            host: "127.0.0.1:11434",
+            agent,
+          },
+        ],
+      },
+      lines: LINES.map((entry) => ({ ...entry, model_id: "agent:rhythm" })),
+    });
+    expect(await runReport(["fixture-run"], capture().io, deps)).toBe(0);
+    const report = files.get(`${DIR}/report.md`) ?? "";
+    expect(report).toContain(
+      "| Agent agent:rhythm | Heart rhythm (research) on qwen3:8b, skill /rhythm, rules 444444444444, roster 555555555555 |",
+    );
+    expect(report).toContain(
+      "## Scores: Heart rhythm (research), ollama:agent:rhythm on qwen3:8b",
+    );
+    const csv = files.get(`${DIR}/review.csv`) ?? "";
+    expect(csv.includes("rhythm")).toBe(false);
+    expect(JSON.parse(files.get(`${DIR}/review-key.json`) ?? "").labels).toEqual({
+      "Model A": "ollama:agent:rhythm",
+    });
+  });
+});

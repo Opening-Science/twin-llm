@@ -174,7 +174,7 @@ export const KNOWLEDGE_SOURCE_GROUPS: readonly KnowledgeSourceGroup[] = [
         id: "imported-data",
         label: "Imported records and wearable exports",
         description:
-          "Datasets you imported on Customize · Data: the newest reading per code and a trend of one series, read by a local model.",
+          "Datasets you imported on Customize · Data: the newest reading per code, a trend of one series, chosen table columns, recorded conditions and medication requests, read by a local model.",
         tools: IMPORTED_TOOLS,
       },
     ],
