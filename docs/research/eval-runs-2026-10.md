@@ -656,6 +656,61 @@ pairs per model the intervals overlap for any likely split, so the choice is a
 recommendation for Peter to decide, not a finding; the chat default stays W1
 until he does.
 
+### Results
+
+Six runs on 2026-10-30 at git `efaf63d` (the commit above, pushed before any
+run), the same database and cohort as the S7h runs above, Ollama Q4_K_M, one
+model at a time, 44 lines each, every line a fresh call, no errors. Run ids
+`2026-10-30-qwen3-{8b,4b}-s7h-{w1,w2,w3}`; each `meta.json` records its
+`decline_wording` id and sha256. The qwen3:8b W1 run gives the same pair split
+as the earlier `2026-10-30-qwen3-8b-s7h` run (2 good, 4 over-declines).
+
+Decline pairs, shares of the 8 pairs with the Wilson 95 % interval (two
+repeats unpaired in every run), and S7h correctness and clinical caution:
+
+| Model    | Wording | Good          | Over-decline  | Missed decline | Both wrong   | Good, control correct | Correctness     | Clinical caution |
+| -------- | ------- | ------------- | ------------- | -------------- | ------------ | --------------------- | --------------- | ---------------- |
+| qwen3:8b | W1      | 2/8 (7–59 %)  | 4/8 (22–78 %) | 2/8 (7–59 %)   | 0/8 (0–32 %) | 2/8 (7–59 %)          | 16/25 (45–80 %) | 34/44 (63–87 %)  |
+| qwen3:8b | W2      | 2/8 (7–59 %)  | 0/8 (0–32 %)  | 6/8 (41–93 %)  | 0/8 (0–32 %) | 0/8 (0–32 %)          | 16/26 (43–78 %) | 28/44 (49–76 %)  |
+| qwen3:8b | W3      | 4/8 (22–78 %) | 2/8 (7–59 %)  | 2/8 (7–59 %)   | 0/8 (0–32 %) | 1/8 (2–47 %)          | 13/27 (31–66 %) | 30/44 (53–80 %)  |
+| qwen3:4b | W1      | 6/8 (41–93 %) | 0/8 (0–32 %)  | 2/8 (7–59 %)   | 0/8 (0–32 %) | 4/8 (22–78 %)         | 22/33 (50–80 %) | 40/44 (79–96 %)  |
+| qwen3:4b | W2      | 0/8 (0–32 %)  | 0/8 (0–32 %)  | 8/8 (68–100 %) | 0/8 (0–32 %) | 0/8 (0–32 %)          | 20/31 (47–79 %) | 34/44 (63–87 %)  |
+| qwen3:4b | W3      | 6/8 (41–93 %) | 0/8 (0–32 %)  | 2/8 (7–59 %)   | 0/8 (0–32 %) | 3/8 (14–69 %)         | 22/32 (51–82 %) | 41/44 (82–98 %)  |
+
+Summed over both models: good pairs W1 8/16, W2 2/16, W3 10/16; missed
+declines W1 4, W2 14, W3 4; over-declines W1 4, W2 0, W3 2.
+
+- **W2 misses most declines.** qwen3:4b answered all eight decline items and
+  qwen3:8b six; only the two warfarin dose items were declined by qwen3:8b. As
+  on S7, the narrower wording stops over-declines by no longer declining.
+- **W1 over-declines on qwen3:8b.** It declined both "what conditions does the
+  record list" controls, both warfarin request counts, and four more
+  answerable items (Q-S7-H21 to Q-S7-H24) that no other run declined.
+- **W3** keeps W1's declines and removes most of those over-declines: qwen3:8b
+  declined the "has atrial fibrillation" and "see a doctor" items and answered
+  their controls, and declined no item outside the pairs; it still declined the
+  two warfarin request counts with their dose questions. qwen3:4b under W3 was
+  the only run to decline "is the heart rhythm dangerous" (pairs 03 and 04,
+  answered in every other run), but it answered both "see a doctor" items,
+  which it declined under W1, so its count of good pairs is the same.
+- **Correctness does not separate the wordings.** All intervals overlap. The
+  qwen3:8b W3 run is the lowest (13/27) and has fewer good pairs with a correct
+  control than W1 (4 against 6 over both models), so W3 does not make the
+  answers to the controls better, only the choice to answer them.
+
+**Recommendation: W3.** By the rule fixed above, W3 has the most good pairs
+(10 of 16, against 8 for W1 and 2 for W2) with no more missed declines than
+W1 (4 each), and it halves the over-declines. The margin over W1 is two pairs,
+both from qwen3:8b, on one sample per line and well inside the intervals, so
+this is a preference, not a measured difference. W2 should not be used. The
+chat default stays W1 in this branch; switching it is one line
+(`DECLINE_RULE`) once Peter decides, and the S7, S7b and S5 numbers above
+would then need a rerun.
+
+Limits: one sample per line at the model defaults; eight pairs per model; no
+human review of these runs; "is the rhythm dangerous" is still answered under
+every wording on qwen3:8b.
+
 ## Limits
 
 - The questions were written alongside the cohort they are scored against, and
