@@ -75,6 +75,7 @@
     "eval:answer-key:s7": "bun --preload ./features/chat/response/preload-server-only.mjs scripts/evaluation/build-answer-key.ts --questions evaluation/questions.s7.v1.json --out evaluation/answer-key.s7.v1.json",
     "eval": "bun --env-file=.env.eval --preload ./features/chat/response/preload-server-only.mjs scripts/evaluation/run-eval.ts",
     "eval:report": "bun scripts/evaluation/run-report.ts",
+    "eval:cohort-codes": "bun scripts/evaluation/build-cohort-codes.ts",
     "eval:router-fixture": "bun scripts/evaluation/build-router-fixture.ts",
     "eval:answer-key:live": "RUN_LIVE=1 bun --env-file=.env.eval test --preload ./features/chat/response/preload-server-only.mjs evaluation/answer-key.test.ts",
     "eval:spread-subjects": "bun --env-file=.env.eval --preload ./features/chat/response/preload-server-only.mjs scripts/evaluation/spread-subjects.ts",

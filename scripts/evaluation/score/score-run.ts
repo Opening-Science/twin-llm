@@ -11,6 +11,8 @@
  * - Consistency counts once per item and model; an item with an errored
  *   repeat counts as `error` there.
  * - Latency is not pass/fail: p50, p90 and p95, cache hits and errors left out.
+ * - Call accuracy and answers without a tool (#276) are reported per line
+ *   beside the eight criteria and change none of them.
  */
 import type { ResultLine } from "../eval-results";
 import {
@@ -23,10 +25,12 @@ import {
   type Scenario,
 } from "../question-set";
 
+import { type CallAccuracy, scoreCallAccuracy } from "./call-accuracy";
 import { scoreClinicalCaution } from "./clinical-caution";
 import { scoreConsistency } from "./consistency";
 import { scoreCorrectness } from "./correctness";
 import { scoreHallucination, unsourcedNumberCount } from "./hallucination";
+import { type NoToolValues, scoreNoToolValues } from "./no-tool-values";
 import { scorePrivacy } from "./privacy";
 import { scoreQuerySafety } from "./query-safety";
 import { scoreReadability } from "./readability";
@@ -70,6 +74,10 @@ export type ScoredLine = Readonly<{
    * hallucination does not apply. An extra metric: no score depends on it.
    */
   unsourcedNumbers: number | null;
+  /** Each tool call against the key's calls; null when the item has no key entries. */
+  calls: CallAccuracy | null;
+  /** Stated values no tool result holds; null when the item reads no subject data. */
+  noTool: NoToolValues | null;
 }>;
 
 export type LatencyFigures = Readonly<{
@@ -96,6 +104,8 @@ export type RunInput = Readonly<{
   items: readonly Question[];
   entries: Readonly<Record<string, readonly KeyEntry[]>>;
   lines: readonly ResultLine[];
+  /** The cohort's LOINC codes (`evaluation/cohort-codes.v1.json`); null: check digit only. */
+  cohortCodes?: ReadonlySet<string> | null;
 }>;
 
 const add = (tally: Tally, outcome: Outcome): Tally => ({
@@ -172,6 +182,8 @@ const scoreModel = (input: RunInput, model: ModelKey): ModelScores => {
         item,
         scores: { ...perLine, consistency: scoreConsistency(input_) },
         unsourcedNumbers: unsourcedNumberCount(input_),
+        calls: scoreCallAccuracy(input_, input.cohortCodes ?? null),
+        noTool: scoreNoToolValues(input_),
       },
     ];
   });

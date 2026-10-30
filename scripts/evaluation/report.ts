@@ -24,6 +24,13 @@ import {
   sumTallies,
   type Tally,
 } from "./score/score-run";
+import { CALL_CLASSES, type CallClass, callReasons } from "./score/call-accuracy";
+import {
+  NO_TOOL_KINDS,
+  type NoToolKind,
+  noToolReason,
+  withoutTool,
+} from "./score/no-tool-values";
 import { wilson95 } from "./score/stats";
 
 const DASH = "—";
@@ -38,6 +45,13 @@ export const scoreCell = (tally: Tally): string => {
   const interval = wilson95(tally.pass, n);
   if (!interval) return DASH;
   return `${tally.pass}/${n} (${formatNumber(interval.low * 100, 0)}–${formatNumber(interval.high * 100, 0)} %)`;
+};
+
+/** `3/40 (3–20 %)`: a share of lines with the Wilson 95 % interval. */
+export const shareCell = (count: number, n: number): string => {
+  const interval = wilson95(count, n);
+  if (!interval) return DASH;
+  return `${count}/${n} (${formatNumber(interval.low * 100, 0)}–${formatNumber(interval.high * 100, 0)} %)`;
 };
 
 const seconds = (ms: number | null): string =>
@@ -180,14 +194,132 @@ const unsourcedTable = (all: readonly ModelScores[]): string =>
     }),
   );
 
+const countBy = <K extends string>(
+  keys: readonly K[],
+  count: (key: K) => number,
+): Readonly<Record<K, number>> =>
+  Object.fromEntries(keys.map((key) => [key, count(key)])) as Record<K, number>;
+
+export type CallFigures = Readonly<{
+  /** Answered lines of items with answer-key entries. */
+  answers: number;
+  allRight: number;
+  noCall: number;
+  /** Lines with at least one call of the class. */
+  lines: Readonly<Record<CallClass, number>>;
+  /** Calls of the class. */
+  calls: Readonly<Record<CallClass, number>>;
+}>;
+
+export const callFigures = (
+  scores: Readonly<{ scored: readonly Pick<ScoredLine, "calls">[] }>,
+): CallFigures => {
+  const all = scores.scored.flatMap((entry) =>
+    entry.calls === null ? [] : [entry.calls],
+  );
+  return {
+    answers: all.length,
+    allRight: all.filter((entry) => entry.allRight).length,
+    noCall: all.filter((entry) => entry.noCall).length,
+    lines: countBy(
+      CALL_CLASSES,
+      (cls) =>
+        all.filter((entry) => entry.calls.some((call) => call.class === cls)).length,
+    ),
+    calls: countBy(
+      CALL_CLASSES,
+      (cls) =>
+        all.flatMap((entry) => entry.calls).filter((call) => call.class === cls).length,
+    ),
+  };
+};
+
+export type NoToolFigures = Readonly<{
+  /** Answered lines of items that read subject data. */
+  answers: number;
+  /** No call or no rows: a value with no reading behind it. */
+  withoutTool: number;
+  kinds: Readonly<Record<NoToolKind, number>>;
+}>;
+
+export const noToolFigures = (
+  scores: Readonly<{ scored: readonly Pick<ScoredLine, "noTool">[] }>,
+): NoToolFigures => {
+  const all = scores.scored.flatMap((entry) =>
+    entry.noTool === null ? [] : [entry.noTool],
+  );
+  return {
+    answers: all.length,
+    withoutTool: all.filter(withoutTool).length,
+    kinds: countBy(
+      NO_TOOL_KINDS,
+      (kind) => all.filter((entry) => entry.kind === kind).length,
+    ),
+  };
+};
+
+const LINE_CLASSES: readonly CallClass[] = CALL_CLASSES.filter(
+  (cls) => cls !== "right call",
+);
+
+const callLinesTable = (all: readonly ModelScores[]): string =>
+  table(
+    ["Model", "Answers", "All right", "No call", ...LINE_CLASSES.map((cls) => cls)],
+    all.map((scores) => {
+      const figures = callFigures(scores);
+      return [
+        modelName(scores.model),
+        String(figures.answers),
+        shareCell(figures.allRight, figures.answers),
+        shareCell(figures.noCall, figures.answers),
+        ...LINE_CLASSES.map((cls) => shareCell(figures.lines[cls], figures.answers)),
+      ];
+    }),
+  );
+
+const callCountsTable = (all: readonly ModelScores[]): string =>
+  table(
+    ["Model", "Calls", ...CALL_CLASSES.map((cls) => cls)],
+    all.map((scores) => {
+      const figures = callFigures(scores);
+      const total = CALL_CLASSES.reduce((sum, cls) => sum + figures.calls[cls], 0);
+      return [
+        modelName(scores.model),
+        String(total),
+        ...CALL_CLASSES.map((cls) => String(figures.calls[cls])),
+      ];
+    }),
+  );
+
+const noToolTable = (all: readonly ModelScores[]): string =>
+  table(
+    ["Model", "Answers", "Without a tool", ...NO_TOOL_KINDS.map((kind) => kind)],
+    all.map((scores) => {
+      const figures = noToolFigures(scores);
+      return [
+        modelName(scores.model),
+        String(figures.answers),
+        shareCell(figures.withoutTool, figures.answers),
+        ...NO_TOOL_KINDS.map((kind) => shareCell(figures.kinds[kind], figures.answers)),
+      ];
+    }),
+  );
+
 export type ReportInput = Readonly<{
   meta: RunMeta;
   scores: readonly ModelScores[];
   /** Not in meta.json and not reported by vLLM, so the person running the report gives it. */
   quantisation: string | null;
+  /** How many cohort codes call accuracy checked against; null when none were loaded. */
+  cohortCodes?: number | null;
 }>;
 
-export const renderReport = ({ meta, scores, quantisation }: ReportInput): string => {
+export const renderReport = ({
+  meta,
+  scores,
+  quantisation,
+  cohortCodes = null,
+}: ReportInput): string => {
   const hostOf = (model: ModelKey): string =>
     meta.models.find(
       (entry) => entry.provider === model.provider && entry.model_id === model.modelId,
@@ -207,6 +339,12 @@ export const renderReport = ({ meta, scores, quantisation }: ReportInput): strin
         ["Replay", meta.replay ? "yes" : "no"],
         ["Sampling", meta.sampling],
         ["Platform", meta.platform],
+        [
+          "Cohort codes",
+          cohortCodes === null
+            ? "not loaded: invented code is the check digit only"
+            : `${cohortCodes} (evaluation/cohort-codes.v1.json)`,
+        ],
       ],
     ),
     "",
@@ -241,6 +379,22 @@ export const renderReport = ({ meta, scores, quantisation }: ReportInput): strin
     "Numbers in a reply that neither a tool call of the turn nor the question gives, dates and 0 to 10 left out: the numbers the app shows without a link. Counted over the answers hallucination scores. An extra metric; no pass or fail depends on it.",
     "",
     unsourcedTable(scores),
+    "",
+    "## Tool calls against the key",
+    "",
+    "Each tool call of an answer to an item with answer-key entries, compared with the calls the key reads: its code, subject and window. A line counts in a column when at least one of its calls has that class. All right: at least one right call and no wrong code, invented code, wrong subject or wrong window; extra calls are allowed. Shares of those answers with the Wilson 95 % interval. An extra metric beside the eight criteria; no pass or fail depends on it.",
+    "",
+    callLinesTable(scores),
+    "",
+    "Calls by class:",
+    "",
+    callCountsTable(scores),
+    "",
+    "## Answers without a tool",
+    "",
+    "Answers to items that read subject data which state a value (a number with a unit, or after a measure name) that neither the question nor any tool result of the turn holds. Without a tool: the turn called no tool (no call) or no call returned a reading (no rows). Not in rows: calls returned readings but none holds the value; the model may have derived it. Shares with the Wilson 95 % interval. An extra metric; no pass or fail depends on it.",
+    "",
+    noToolTable(scores),
     "",
     "## Limits",
     "",
@@ -306,12 +460,20 @@ export const renderReviewSheet = (
   const rows = scores
     .flatMap((model) =>
       model.scored.map((entry) => {
-        const flags = SCORED_CRITERIA.flatMap((criterion) => {
-          const result = entry.scores[criterion];
-          return result.score === "fail" || result.score === "human"
-            ? [`${criterion} ${result.score}: ${result.reasons.join("; ")}`]
-            : [];
-        });
+        const flags = [
+          ...SCORED_CRITERIA.flatMap((criterion) => {
+            const result = entry.scores[criterion];
+            return result.score === "fail" || result.score === "human"
+              ? [`${criterion} ${result.score}: ${result.reasons.join("; ")}`]
+              : [];
+          }),
+          ...(entry.calls === null || entry.calls.allRight
+            ? []
+            : [`calls: ${callReasons(entry.calls).join("; ")}`]),
+          ...(entry.noTool === null || entry.noTool.kind === null
+            ? []
+            : [noToolReason(entry.noTool)]),
+        ];
         return {
           label: labels.get(modelName(model.model)) ?? "",
           cells: [

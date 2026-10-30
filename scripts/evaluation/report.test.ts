@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { questionsSha256 } from "./build-answer-key";
 import { type ResultLine, type RunMeta } from "./eval-results";
-import { csvCell, REVIEW_COLUMNS } from "./report";
+import { callFigures, csvCell, noToolFigures, REVIEW_COLUMNS, shareCell } from "./report";
 import { runReport, type ReportDeps } from "./run-report";
 import {
   document,
@@ -12,7 +12,9 @@ import {
   refusalItem,
   refusalKey,
   SUBJECT_A,
+  toolResult,
   TREND_KEY,
+  TREND_OUTPUT,
   trendItem,
 } from "./score/fixtures";
 
@@ -328,6 +330,114 @@ describe("eval:report on an S7 run (#251)", () => {
     const { files, deps } = memoryFiles();
     expect(await runReport(["fixture-run"], capture().io, deps)).toBe(0);
     expect(files.get(`${DIR}/report.md`)).not.toContain("S7");
+  });
+});
+
+describe("call accuracy and answers without a tool in the report (#276)", () => {
+  const wrongCode = line({
+    tool_results: [
+      toolResult(
+        "trend",
+        {
+          subject_ref: SUBJECT_A,
+          loinc: "2335-1",
+          start: "2024-01-01",
+          end: "2026-01-01",
+        },
+        { ...TREND_OUTPUT, loinc: "2335-1", n: 0 },
+      ),
+    ],
+    answer: "HbA1c was 6.4 % at the end.",
+  });
+
+  test("shareCell gives the count, n and the Wilson interval", () => {
+    expect(shareCell(46, 96)).toBe("46/96 (38–58 %)");
+    expect(shareCell(0, 0)).toBe("—");
+  });
+
+  test("an invented code and a value with no rows reach the tables and the sheet", async () => {
+    const { files, deps } = memoryFiles({ lines: [wrongCode] });
+    expect(await runReport(["fixture-run"], capture().io, deps)).toBe(0);
+    const report = files.get(`${DIR}/report.md`) ?? "";
+    expect(report).toContain("## Tool calls against the key");
+    expect(report).toMatch(
+      /\| ollama:qwen3:4b \| 1 +\| 0\/1 [^|]*\| 0\/1 [^|]*\| 0\/1 [^|]*\| 1\/1 /,
+    );
+    expect(report).toContain("## Answers without a tool");
+    const rows = parseCsv(files.get(`${DIR}/review.csv`) ?? "");
+    const flags = rows[1]?.[7] ?? "";
+    expect(flags).toContain("calls: invented code: trend 2335-1 (not a LOINC code)");
+    expect(flags).toContain("value without a tool (no rows): 6.4");
+  });
+
+  test("the eight criteria read the same with or without the new scorers", async () => {
+    const { files, deps } = memoryFiles();
+    await runReport(["fixture-run"], capture().io, deps);
+    const report = files.get(`${DIR}/report.md`) ?? "";
+    const scores = (text: string) =>
+      text.slice(text.indexOf("## Scores"), text.indexOf("## Latency"));
+    expect(scores(report)).toBe(scores(EXPECTED));
+  });
+
+  test("cohort codes are loaded when the file pins the key's cohort", async () => {
+    const { files, deps } = memoryFiles({ lines: [wrongCode] });
+    const codesFile = (sha: string) =>
+      JSON.stringify({
+        schema_version: "twin-llm.eval.cohort-codes.v1",
+        cohort_id: "synthea-v4-seed42",
+        content_sha256: sha,
+        wearables: { generator_version: "2", seed: 42, end_day: "2026-10-01", days: 90 },
+        codes: ["4548-4", "8480-6"],
+      });
+    files.set("evaluation/cohort-codes.v1.json", codesFile("c".repeat(64)));
+    await runReport(["fixture-run"], capture().io, deps);
+    expect(files.get(`${DIR}/report.md`)).toContain(
+      "| Cohort codes      | 2 (evaluation/cohort-codes.v1.json)",
+    );
+    files.set("evaluation/cohort-codes.v1.json", codesFile("d".repeat(64)));
+    await runReport(["fixture-run"], capture().io, deps);
+    expect(files.get(`${DIR}/report.md`)).toContain("not loaded");
+  });
+
+  test("a cohort codes file that does not parse stops the report", async () => {
+    const { files, deps } = memoryFiles();
+    files.set("evaluation/cohort-codes.v1.json", JSON.stringify({ codes: [] }));
+    const out = capture();
+    expect(await runReport(["fixture-run"], out.io, deps)).toBe(1);
+    expect(out.err()).toBe(
+      "COHORT_CODES: evaluation/cohort-codes.v1.json does not parse\n",
+    );
+  });
+
+  test("figures count lines per class and leave unscored lines out", () => {
+    const right = { tool: "trend", class: "right call" as const, detail: "trend" };
+    const extra = { tool: "subject_window", class: "extra call" as const, detail: "x" };
+    const figures = callFigures({
+      scored: [
+        { calls: { calls: [right, extra, extra], noCall: false, allRight: true } },
+        { calls: { calls: [], noCall: true, allRight: false } },
+        { calls: null },
+      ],
+    });
+    expect(figures.answers).toBe(2);
+    expect(figures.allRight).toBe(1);
+    expect(figures.noCall).toBe(1);
+    expect(figures.lines["extra call"]).toBe(1);
+    expect(figures.calls["extra call"]).toBe(2);
+    expect(
+      noToolFigures({
+        scored: [
+          { noTool: { values: [], kind: "no rows" } },
+          { noTool: { values: [], kind: "not in rows" } },
+          { noTool: { values: [], kind: null } },
+          { noTool: null },
+        ],
+      }),
+    ).toEqual({
+      answers: 3,
+      withoutTool: 1,
+      kinds: { "no call": 0, "no rows": 1, "not in rows": 1 },
+    });
   });
 });
 
