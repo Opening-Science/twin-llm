@@ -8,11 +8,15 @@
 export const IMPORTED_DATASETS_TOOL = "imported_datasets" as const;
 export const IMPORTED_LATEST_TOOL = "imported_latest" as const;
 export const IMPORTED_TREND_TOOL = "imported_trend" as const;
+export const IMPORTED_TABLE_TOOL = "imported_table" as const;
+export const IMPORTED_CONDITIONS_TOOL = "imported_conditions" as const;
 
 export const IMPORTED_TOOLS = [
   IMPORTED_DATASETS_TOOL,
   IMPORTED_LATEST_TOOL,
   IMPORTED_TREND_TOOL,
+  IMPORTED_TABLE_TOOL,
+  IMPORTED_CONDITIONS_TOOL,
 ] as const;
 
 export type ImportedToolName = (typeof IMPORTED_TOOLS)[number];

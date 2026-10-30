@@ -172,7 +172,8 @@
         },
         "subject": { "reference": "urn:uuid:f0000000-0000-4000-8000-000000000001" },
         "onsetDateTime": "2023-11-02T00:00:00Z",
-        "abatementDateTime": "2023-11-20T00:00:00Z"
+        "abatementDateTime": "2023-11-20T00:00:00Z",
+        "note": [{ "text": "Made-up note text that must never reach the chat." }]
       }
     }
   ]
