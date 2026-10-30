@@ -13,6 +13,7 @@ bun run eval -- --models ollama:qwen3:4b --latency-set
 bun run eval -- --models ollama:qwen3:4b --scenario S5 --run-id 2026-10-21-qwen3-s5
 bun run eval -- --models ollama:qwen3:4b --latency-set --replay
 bun run eval -- --set s7 --models ollama:qwen3:4b --run-id 2026-10-31-qwen3-s7
+bun run eval -- --set s7 --models agent:rhythm --run-id 2026-10-31-rhythm-s7
 bun run eval:report -- 2026-10-21-qwen3-s5 --quantisation Q4_K_M
 bun run eval:cohort-codes -- --in .synthea   # after a cohort change only
 ```
@@ -20,6 +21,7 @@ bun run eval:cohort-codes -- --in .synthea   # after a cohort change only
 | Flag                                                    | Meaning                                                        |
 | ------------------------------------------------------- | -------------------------------------------------------------- |
 | `--models provider:id[,…]`                              | Required. Every provider must be `LLM_PROVIDER` in `.env.eval` |
+| `--models agent:<id>`                                   | An agent ([below](#agents-279)) on `LLM_PROVIDER`              |
 | `--set v1` / `--set s7`                                 | Question set and key; default `v1`, `s7` is S7 (#251)          |
 | `--items Q-S1-01,…` / `--scenario S1` / `--latency-set` | One selection at most; none means all 130 items                |
 | `--replay`                                              | Cache only; never calls a model                                |
@@ -32,6 +34,40 @@ the provider's model list before any item runs (`MODEL_NOT_LISTED`). Items
 whose `context.requires` env is missing get `MISSING_ENV` lines, counted on
 their own in `meta.json` and the report, never as passes. Exit code 0 means no
 line had an error, 2 means some did, 1 means the run did not start.
+
+## Agents (#279)
+
+`--models agent:rhythm` (or `ollama:agent:rhythm`) runs each item as the chat
+route runs a turn for that agent ([agents.md](../agents.md#in-a-turn)). The
+harness reads the same chat catalog as `/api/chat` (`fetchChatCatalog`: the
+provider's models with the agents it offers in front) and resolves the agent
+with the route's `turnAgentOf`, so:
+
+- the model called is the agent's base model, the first of its
+  `modelPreference` the provider lists;
+- its skill runs as if no `/skill` was typed: its instructions join the
+  system prompt and the tools are cut to its list (`createTurnTools`, the
+  route's own tool builder);
+- the system prompt gets the `Agent: <name>. <role>` line;
+- `knowledge_search` also reads the agent's specialty literature, as far as
+  the eval database holds it.
+
+An agent the catalog does not offer here (its skill not on this provider, or
+not runnable) is refused with `AGENT_NOT_OFFERED` before any item runs, an
+unknown id with `UNKNOWN_AGENT`. Auto (`agent:auto`) is refused: it picks a
+different agent per question, so one run would mix agents. The harness writes
+no `skill.<name>` audit row; the response document still names the skill.
+
+Results lines keep `agent:<id>` as `model_id`, as the answer row does.
+`meta.json` adds `agent` to that model's entry: `id`, `name`,
+`base_model_id`, `skill`, `rules_sha256` (sha256 of the agent's roster row and
+its skill: instructions, tools, sources, providers, views) and
+`roster_sha256` (sha256 of the whole roster in `agents.ts`). The report names
+the agent in the run table and in its score headings; `review.csv` stays
+blinded. The cache key names the base model, and the agent's prompt (role
+line, skill, tools) is part of the key, so an agent run and a run of its base
+model never share an entry. A replay of an agent run reads the catalog once to
+resolve the agent, and calls no model.
 
 `meta.json` records `question_set` (a run before #251 has none and ran `v1`),
 and `eval:report` reads that set's questions and key. The report's score table

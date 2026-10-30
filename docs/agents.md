@@ -272,9 +272,10 @@ the rules were tuned on them.
 An agent's page (`/customize/agents/<id>`) adds the skill's sources and tools, the model
 preference, the router fixtures per scenario (labelled for this agent and sent here, and
 labelled for another agent but sent here) and the evaluation scores of its base model per
-scenario from the runs under `evaluation/runs/` that the Lab reads. The harness calls the
-base model, not the agent, so the page says these are the model's scores without the
-agent's skill or literature; agent runs in the harness are still to come.
+scenario from the runs under `evaluation/runs/` that the Lab reads. Those are the base
+model's runs, so the page says these are the model's scores without the agent's skill or
+literature. The harness can run an agent since #279 (`bun run eval -- --models agent:<id>`,
+[harness.md](evaluation/harness.md#agents-279)); the page does not read those runs yet.
 
 Everything is read from the code that runs a turn (`agents.ts`, `agent-router.ts`, the
 skill, `literatureSourcesForAgent`), so the page cannot claim what the chat does not do.
@@ -282,8 +283,8 @@ The shaping is pure (`features/agents/roster.ts`, tested); `load-roster.ts` read
 counts, sums and dates (answers grouped by row id and column name, documents per
 `literature:<specialty>` source), never prompt or answer text. The "does not do" lines are
 in `roster.ts` and follow each skill's own rules. Issue #221 also asked for eval scores per
-agent; until the harness can run an agent, the router fixtures and the base model's runs
-are the honest numbers.
+agent; until the page reads the harness's agent runs (#279), the router fixtures and the
+base model's runs are the numbers it shows.
 
 ## Model names
 
