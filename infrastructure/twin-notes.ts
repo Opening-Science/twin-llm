@@ -9,6 +9,7 @@ import {
   permitProviderForRequest,
 } from "./data-mode-policy";
 import { formatDate } from "./format-measure";
+import { estimateTokens } from "./ollama-context";
 
 /**
  * Twin notes (#43, docs/twin-notes.md): the shape of a note, who it may be
@@ -31,7 +32,11 @@ export const NOTE_LIMITS = {
   perPerson: 30,
 } as const;
 
-/** Characters of notes one turn's system prompt may carry. */
+/**
+ * Characters of notes one turn's system prompt may carry at most. A turn whose
+ * prompt and tools leave less room gets fewer notes (`twinNotesBlock`'s
+ * `maxTokens`, set per turn by `features/chat/twin-notes-room.ts`).
+ */
 export const NOTES_PROMPT_BUDGET = 1_200;
 
 export type TwinNoteFields = Readonly<{
@@ -156,38 +161,42 @@ export const noteText = (note: TwinNote): string =>
 
 export type NotesBlock = Readonly<{ text: string; ids: readonly string[] }>;
 
+const blockText = (texts: readonly string[]): string =>
+  [NOTES_HEADING, NOTES_OPEN, ...texts, NOTES_CLOSE, NOTES_RULE].join("\n");
+
 /**
- * Newest notes first, as many whole notes as fit the budget. Empty text and
- * no ids when none fits or there are none.
+ * Newest notes first, as many whole notes as fit both the character budget
+ * and `maxTokens`, the estimated tokens the whole block (heading and rule
+ * included) may take in the prompt. Empty text and no ids when none fits or
+ * there are none.
  */
 export const twinNotesBlock = (
   notes: readonly TwinNote[],
   budget: number = NOTES_PROMPT_BUDGET,
+  maxTokens: number = Number.POSITIVE_INFINITY,
 ): NotesBlock => {
   const newest = [...notes].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const kept = newest.reduce<{ texts: string[]; ids: string[]; used: number }>(
     (acc, note) => {
       const text = noteText(note);
       const used = acc.used + text.length + 1;
-      return used > budget
+      const texts = [...acc.texts, text];
+      return used > budget || estimateTokens(blockText(texts)) > maxTokens
         ? acc
-        : { texts: [...acc.texts, text], ids: [...acc.ids, note.id], used };
+        : { texts, ids: [...acc.ids, note.id], used };
     },
     { texts: [], ids: [], used: 0 },
   );
   return kept.ids.length === 0
     ? { text: "", ids: [] }
-    : {
-        text: [NOTES_HEADING, NOTES_OPEN, ...kept.texts, NOTES_CLOSE, NOTES_RULE].join(
-          "\n",
-        ),
-        ids: kept.ids,
-      };
+    : { text: blockText(kept.texts), ids: kept.ids };
 };
 
-/** The notes a turn may carry: its data mode and permit, then the budget. */
-export const notesForTurn = (notes: readonly TwinNote[], turn: NoteTurn): NotesBlock =>
-  twinNotesBlock(notes.filter((note) => noteMayLoad(note, turn)));
+/** The notes a turn may carry by data mode and permit; the room is cut later. */
+export const notesForTurn = (
+  notes: readonly TwinNote[],
+  turn: NoteTurn,
+): readonly TwinNote[] => notes.filter((note) => noteMayLoad(note, turn));
 
 // ─── Values a model copied ─────────────────────────────────────────────────
 

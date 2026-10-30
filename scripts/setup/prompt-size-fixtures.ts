@@ -179,8 +179,8 @@ export const LONGEST_UI_CONTEXT: UiContext = {
 };
 
 /**
- * The largest twin notes block a turn carries (#43): made-up notes with
- * every part at its line limit, cut by `twinNotesBlock` to the prompt budget.
+ * The twin notes that make the largest block (#43): made-up notes with
+ * every part at its line limit, or many short ones.
  */
 const fullLines = (count: number, word: string): string[] =>
   Array.from({ length: count }, (_, index) =>
@@ -207,8 +207,15 @@ const SHORT_NOTES: readonly TwinNote[] = Array.from({ length: 30 }, (_, index) =
   openQuestions: [`Question ${index}`],
 }));
 
-/** Many short notes fill the budget more densely than one long one; the longer block wins. */
-export const LONGEST_TWIN_NOTES: string = [
-  twinNotesBlock([LONGEST_NOTE]).text,
-  twinNotesBlock(SHORT_NOTES).text,
-].reduce((longest, text) => (text.length > longest.length ? text : longest), "");
+/**
+ * Many short notes fill the budget more densely than one long one; the list
+ * whose full block is longer wins. Each turn keeps as many as its room allows.
+ */
+export const LONGEST_TWIN_NOTES: readonly TwinNote[] = [
+  [LONGEST_NOTE],
+  SHORT_NOTES,
+].reduce((longest, notes) =>
+  twinNotesBlock(notes).text.length > twinNotesBlock(longest).text.length
+    ? notes
+    : longest,
+);

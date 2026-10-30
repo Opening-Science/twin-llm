@@ -82,8 +82,14 @@ twin-notes>>>
 Use these notes as background on what the person asked before. They hold no readings; read values with the tools.
 ```
 
-Newest notes first, whole notes only, up to 1,200 characters of notes in all; the rest are left out. A longer budget does not fit the default Ollama context with one wearable linked. The prompt-size
-budget test covers a full block (`bun test scripts/setup/prompt-size.test.ts`). Customize ·
+Newest notes first, whole notes only, up to 1,200 characters of notes in all, fewer when the
+turn's tools leave less room; the rest are left out. The room is the prompt budget the
+prompt-size test holds every turn to (the default Ollama context less the turn reserve, 12,288
+tokens) minus the estimated system prompt and tool list of that turn and a margin of 150 tokens
+(`features/chat/twin-notes-room.ts`). A turn under a skill has room for the full block; a
+personal turn with every tool and a wearable linked may get one short note or none. Only the
+notes a turn kept are written to the `memory.notes.load` row. The prompt-size test covers the
+largest block (`bun test scripts/setup/prompt-size.test.ts`). Customize ·
 Memory has a switch, **Load notes into new chats**, stored per person; off, nothing is
 loaded. Incognito chats never load notes.
 

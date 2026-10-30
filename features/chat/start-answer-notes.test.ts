@@ -4,14 +4,17 @@ import type {
   ExoscalePersonalData,
   LlmProvider,
 } from "@/infrastructure/data-mode-policy";
-import { NOTES_HEADING, type TwinNote } from "@/infrastructure/twin-notes";
+import type { TwinNote } from "@/infrastructure/twin-notes";
 import type { AppendInput } from "@/packages/audit/append";
 
 import type { ChatRequest } from "./chat-request";
 import { createStartAnswer } from "./start-answer";
 import type { StreamContext } from "./stream-model-response";
 
-/** Twin notes in a chat turn (#43): which load, the audit row, and an audit failure. */
+/**
+ * Twin notes in a chat turn (#43): which are offered, the audit row, and an
+ * audit failure. How many fit a turn is in `twin-notes-room.test.ts`.
+ */
 
 const ACTOR = "user_synthetic_1";
 const APP_USER = "app-user-synthetic-1";
@@ -75,7 +78,16 @@ const harness = (
             return notes;
           },
         }),
+    // Records every offered note, as a stream with room for all of them does.
     stream: async (_call, context) => {
+      const offer = context.twinNotes ?? null;
+      if (offer !== null) {
+        await offer.recordLoad(
+          [...offer.notes]
+            .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+            .map((each) => each.id),
+        );
+      }
       streamed.push(context);
       return new Response("ok");
     },
@@ -95,7 +107,7 @@ describe("twin notes in a chat turn", () => {
     expect(audits.map((row) => [row.tool, row.args, row.rowCount])).toEqual([
       ["memory.notes.load", { noteIds: ["b", "a"] }, 2],
     ]);
-    expect(streamed[0]?.twinNotes?.startsWith(NOTES_HEADING)).toBe(true);
+    expect(streamed[0]?.twinNotes?.notes.map((each) => each.id)).toEqual(["a", "b"]);
     expect(JSON.stringify(audits)).not.toContain("Heart rate over spring");
   });
 

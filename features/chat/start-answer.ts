@@ -75,10 +75,11 @@ import type { WearableContext } from "./wearable-context";
  *
  * Twin notes (#43): after every check above, the person's notes saved before
  * this thread began are filtered to those whose data mode and permit allow
- * this turn's model (`notesForTurn`), cut to the budget, and written to the
- * audit chain as `memory.notes.load` (note ids and a count). If that write
- * fails, the model is not called. Without `loadTwinNotes` (incognito) no note
- * is read.
+ * this turn's model (`notesForTurn`) and handed to the stream, which keeps as
+ * many as the turn's prompt room allows and writes their ids to the audit
+ * chain as `memory.notes.load` (note ids and a count) through `recordLoad`.
+ * If that write fails, the model is not called. Without `loadTwinNotes`
+ * (incognito) no note is read.
  */
 
 export type ChatProviderSettings = Readonly<{
@@ -240,16 +241,22 @@ export const createStartAnswer =
             exoscalePersonalData: settings.exoscalePersonalData,
             chatIsLocal: deps.chatIsLocal(),
           });
-    if (notes !== null && notes.ids.length > 0) {
-      await deps.appendAudit(
-        noteAuditEvent("load", {
-          actor: actorId,
-          sessionId: call.turnId,
-          ids: { noteIds: notes.ids },
-          rowCount: notes.ids.length,
-        }),
-      );
-    }
+    const twinNotes =
+      notes === null || notes.length === 0
+        ? null
+        : {
+            notes,
+            recordLoad: async (ids: readonly string[]) => {
+              await deps.appendAudit(
+                noteAuditEvent("load", {
+                  actor: actorId,
+                  sessionId: call.turnId,
+                  ids: { noteIds: ids },
+                  rowCount: ids.length,
+                }),
+              );
+            },
+          };
 
     return deps.stream(call, {
       clerkId: actorId,
@@ -257,7 +264,7 @@ export const createStartAnswer =
       disabledSources: await deps.loadDisabledSources(appUserId),
       ...(skill === null ? {} : { skill }),
       ...(agent === null ? {} : { agent }),
-      ...(notes === null || notes.text === "" ? {} : { twinNotes: notes.text }),
+      ...(twinNotes === null ? {} : { twinNotes }),
       ...wearables,
     });
   };

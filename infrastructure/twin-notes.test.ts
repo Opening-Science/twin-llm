@@ -16,6 +16,7 @@ import {
   permitAllows,
   permitNoteDraft,
   NOTE_DRAFT_REFUSED,
+  NOTES_PROMPT_BUDGET,
   splitLines,
   type TwinNote,
   twinNoteFieldsSchema,
@@ -24,6 +25,7 @@ import {
   withoutCopiedValues,
   type NoteTurn,
 } from "./twin-notes";
+import { estimateTokens } from "./ollama-context";
 
 const note = (id: string, overrides: Partial<TwinNote> = {}): TwinNote => ({
   id,
@@ -218,13 +220,32 @@ describe("the prompt block", () => {
     expect(twinNotesBlock([])).toEqual({ text: "", ids: [] });
   });
 
-  test("notesForTurn filters before the budget", () => {
+  test("notesForTurn keeps only the notes the turn may carry", () => {
     expect(
       notesForTurn(
         [note("s"), note("p", { dataMode: "personal", permit: "personal" })],
         turn(),
-      ).ids,
+      ).map((each) => each.id),
     ).toEqual(["s"]);
+  });
+
+  test("whole notes only within the token room, heading and rule included", () => {
+    const notes = [
+      note("a", { createdAt: "2026-10-03T00:00:00.000Z" }),
+      note("b", { createdAt: "2026-10-02T00:00:00.000Z" }),
+    ];
+    const one = twinNotesBlock(notes.slice(0, 1));
+    const both = twinNotesBlock(notes);
+    expect(twinNotesBlock(notes, NOTES_PROMPT_BUDGET, estimateTokens(both.text))).toEqual(
+      both,
+    );
+    expect(
+      twinNotesBlock(notes, NOTES_PROMPT_BUDGET, estimateTokens(both.text) - 1).ids,
+    ).toEqual(["a"]);
+    expect(
+      twinNotesBlock(notes, NOTES_PROMPT_BUDGET, estimateTokens(one.text) - 1),
+    ).toEqual({ text: "", ids: [] });
+    expect(twinNotesBlock(notes, NOTES_PROMPT_BUDGET, 0)).toEqual({ text: "", ids: [] });
   });
 });
 

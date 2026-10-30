@@ -113,12 +113,18 @@ export const MAX_STEPS = 8;
 export const lastStepWithoutTools = (stepNumber: number) =>
   stepNumber >= MAX_STEPS - 1 ? { activeTools: [] } : undefined;
 
-export const runTwinTurn = (
-  deps: TwinTurnDeps,
-  { turnId, messages, wearables, abortSignal }: TwinTurnInput,
-  hooks: TwinTurnHooks,
-) => {
-  const system = buildTwinSystemPrompt({
+/** What the system prompt of a turn is built from. */
+export type TwinTurnPromptDeps = Pick<
+  TwinTurnDeps,
+  "offeredTools" | "mode" | "skill" | "uiContext" | "agent" | "twinNotes"
+>;
+
+/** The turn's system prompt, the one `runTwinTurn` sends. */
+export const twinTurnSystem = (
+  deps: TwinTurnPromptDeps,
+  wearables: TwinTurnWearables,
+): string =>
+  buildTwinSystemPrompt({
     mode: deps.mode,
     oura: wearables.oura,
     whoop: wearables.whoop,
@@ -130,6 +136,13 @@ export const runTwinTurn = (
     agent: deps.agent ?? null,
     twinNotes: deps.twinNotes ?? null,
   });
+
+export const runTwinTurn = (
+  deps: TwinTurnDeps,
+  { turnId, messages, wearables, abortSignal }: TwinTurnInput,
+  hooks: TwinTurnHooks,
+) => {
+  const system = twinTurnSystem(deps, wearables);
 
   return streamText({
     model: deps.model,

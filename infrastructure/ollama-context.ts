@@ -64,6 +64,16 @@ export const estimateTokens = (
   return digits + Math.ceil((text.length - digits) / charsPerToken);
 };
 
+/**
+ * A conservative token count of a request's system prompt and tool list (one
+ * JSON object per tool and line, as the Qwen3 template prints it), with the
+ * template's wrapping.
+ */
+export const estimateRequestTokens = (systemText: string, toolText: string): number =>
+  estimateTokens(systemText) +
+  estimateTokens(toolText, JSON_CHARS_PER_TOKEN) +
+  TEMPLATE_OVERHEAD_TOKENS;
+
 /** What the prompt and tools may use at a given context size. */
 export const promptBudgetTokens = (numCtx: number): number =>
   numCtx - TURN_RESERVE_TOKENS;
