@@ -69,7 +69,9 @@ so a guideline search never returns a knowledge note and the reverse.
   (pgvector 0.8+). The source filter runs after the HNSW scan, so without it a
   large guideline corpus could crowd out every knowledge row. `db:verify`
   checks this on the index path with 5000 synthetic guideline chunks
-  (`scripts/db/verify-source-filter.ts`).
+  (`scripts/db/verify-source-filter.ts`): knowledge rows come back and every
+  row has the requested source. It does not ask for exact ids, since HNSW is
+  approximate and can miss a near row on some index builds (#267).
 - Tool: `knowledge_search(query, k)`, k default 5, max 8. Audited as
   `knowledge.knowledge_search`, `subject_ref` null; a failure stores a marker
   (`knowledge-search-failed`), never the error text.

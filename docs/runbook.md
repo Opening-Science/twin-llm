@@ -259,7 +259,7 @@ SHADOW_DATABASE_URL=postgresql://postgres:scratch@localhost:5434/postgres \
 bun run db:verify
 ```
 
-- Good: migrations applied, empty diff or only the unmodelable HNSW `DROP INDEX`, pgvector probes hold, `verify-source-filter OK` (pgvector 0.8+, HNSW plan, 3/3 knowledge rows over 5000 guideline chunks), oura INSERT rejected by observations_source_synthea, synthea INSERT + ROLLBACK ok, audit chain ok then tamper breaks verifyChain at seq 1, verify-migrations OK.
+- Good: migrations applied, empty diff or only the unmodelable HNSW `DROP INDEX`, pgvector probes hold, `verify-source-filter OK` (pgvector 0.8+, HNSW plan, 1 to 3 knowledge rows, usually 3/3, and 3 guideline rows over 5000 guideline chunks, each of the requested source), oura INSERT rejected by observations_source_synthea, synthea INSERT + ROLLBACK ok, audit chain ok then tamper breaks verifyChain at seq 1, verify-migrations OK.
 - Last run: 2026-10-15 18:03 CEST, `verify-migrations OK` from an empty scratch (post-audit; fresh `pgvector/pgvector:pg16` containers on 5443/5444).
 
 ## Parallel worktrees
