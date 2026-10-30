@@ -22,7 +22,7 @@ import type { ChatRequest } from "./chat-request";
 import { buildResponseDocumentV1, twinBodyShown } from "./response/build-document";
 import type { ResponseDocumentV1, ResponseToolCall } from "./response/document-v1";
 import { inCallOrder } from "./tool-parts";
-import { buildTwinSystemPrompt } from "./twin-system-prompt";
+import { buildTwinSystemPrompt, type PastedDataSource } from "./twin-system-prompt";
 
 /**
  * One TwinLLM turn: the system prompt, the tools, the step limit and the
@@ -67,6 +67,8 @@ export type TwinTurnDeps = Readonly<{
    * tools, pasted into the system prompt as a data block.
    */
   pastedData?: string | null;
+  /** What `pastedData` holds (#320); left out, the answer key's call results. */
+  pastedDataSource?: PastedDataSource;
   /** Audit rows for this turn's session, read after the model finishes. */
   loadAudit: (turnId: string) => Promise<readonly ResponseToolCall[]>;
 }>;
@@ -132,6 +134,9 @@ export const runTwinTurn = (
     uiContext: deps.uiContext ?? null,
     agent: deps.agent ?? null,
     pastedData: deps.pastedData ?? null,
+    ...(deps.pastedDataSource === undefined
+      ? {}
+      : { pastedDataSource: deps.pastedDataSource }),
   });
 
   return streamText({

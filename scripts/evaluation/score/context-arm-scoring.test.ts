@@ -36,8 +36,13 @@ const input = (answered: AnsweredLine, item = trendItem(), keyEntries = TREND_KE
 });
 
 describe("scorers on the context arm", () => {
-  test("serverRead marks only context lines", () => {
-    expect([serverRead(line()), serverRead(contextLine())]).toEqual([false, true]);
+  test("serverRead marks only context lines, both arms and the old name (#320)", () => {
+    expect([
+      serverRead(line()),
+      serverRead(contextLine()),
+      serverRead(contextLine({ arm: "context-oracle" })),
+      serverRead(contextLine({ arm: "context-fair" })),
+    ]).toEqual([false, true, true, true]);
   });
 
   test("call accuracy is n/a", () => {

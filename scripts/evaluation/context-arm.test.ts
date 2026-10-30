@@ -2,15 +2,20 @@ import { describe, expect, test } from "bun:test";
 
 import {
   buildContextBlock,
+  cacheArm,
   callText,
   cell,
   contextCalls,
   countRows,
+  EVAL_ARMS,
+  isContextArm,
   isEvalArm,
   keepRows,
   keyedRefusalOutput,
   NO_CALLS_TEXT,
+  parseArm,
   readNothing,
+  type RecordedArm,
 } from "./context-arm";
 import { keyEntry, SUBJECT_A, TREND_OUTPUT } from "./score/fixtures";
 
@@ -32,8 +37,30 @@ const MEDICATIONS = {
 };
 
 describe("isEvalArm", () => {
-  test("knows tools and context only", () => {
-    expect(["tools", "context", "code"].map(isEvalArm)).toEqual([true, true, false]);
+  test("knows the three arms; `context` is only an alias", () => {
+    expect(
+      ["tools", "context-oracle", "context-fair", "context", "code"].map(isEvalArm),
+    ).toEqual([true, true, true, false, false]);
+  });
+});
+
+describe("parseArm and cacheArm (#320)", () => {
+  test("`context` still names the oracle arm", () => {
+    expect(
+      ["context", "context-oracle", "context-fair", "tools", "x"].map(parseArm),
+    ).toEqual(["context-oracle", "context-oracle", "context-fair", "tools", null]);
+  });
+
+  test("the oracle arm keeps its #302 cache name, so identical calls are reused", () => {
+    expect(EVAL_ARMS.map(cacheArm)).toEqual(["tools", "context", "context-fair"]);
+  });
+
+  test("isContextArm: every arm but tools, the old name included", () => {
+    expect(
+      [undefined, "tools", "context", "context-oracle", "context-fair"].map((arm) =>
+        isContextArm(arm as RecordedArm | undefined),
+      ),
+    ).toEqual([false, false, true, true, true]);
   });
 });
 
