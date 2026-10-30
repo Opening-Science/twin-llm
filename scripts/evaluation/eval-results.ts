@@ -25,13 +25,19 @@ export const ANSWER_KEY_PATH = "evaluation/answer-key.v1.json";
 /**
  * The question sets a run can take (`bun run eval -- --set s7`), each with its
  * own key and questions sha256. `v1` is the C2 set; `s7` the rhythm and
- * heart-brain items (#251), kept apart so the v1 hash never changes.
+ * heart-brain items (#251), kept apart so the v1 hash never changes; `s7b`
+ * the S7 items on the supplementary cohort synthea-v4-s7 (#277), kept apart
+ * so the S7 hash never changes either.
  */
 export const QUESTION_SETS = {
   v1: { questions: QUESTIONS_PATH, key: ANSWER_KEY_PATH },
   s7: {
     questions: "evaluation/questions.s7.v1.json",
     key: "evaluation/answer-key.s7.v1.json",
+  },
+  s7b: {
+    questions: "evaluation/questions.s7b.v1.json",
+    key: "evaluation/answer-key.s7b.v1.json",
   },
 } as const;
 

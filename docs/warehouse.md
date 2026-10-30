@@ -59,14 +59,15 @@ Rows ingested before the migration keep null facts until they are filled in. Eit
 
 `SYNTHETIC_COHORTS` in `packages/query-tools/scope.ts` is the allowlist:
 
-| Cohort                         | What                                                                                 |
-| ------------------------------ | ------------------------------------------------------------------------------------ |
-| `open-twin-synthea-trimmed-3`  | The three trimmed open-twin fixtures (tests)                                         |
-| `synthea-v4-seed42`            | Generated locally: Synthea v4.0.0, seed 42, N=30, ages 40–75                         |
-| `synthea-v4-seed4242`          | Training cohort, seed 4242, N=10,000 (`--preset training`)                           |
-| `synthea-v4-seed9001`          | Held-out cohort, seed 9001, N=1,000 (`--preset held-out`)                            |
-| `synthea-v4-seed42-10k`        | 10,000 living people (11,551 records) from release `cohort-synthea-v4-seed42-10k`    |
-| `synthea-v4-seed1001` … `1100` | The 1M cohort, one cohort per batch of 10,000 (`training:batches`; 1100 is held out) |
+| Cohort                         | What                                                                                  |
+| ------------------------------ | ------------------------------------------------------------------------------------- |
+| `open-twin-synthea-trimmed-3`  | The three trimmed open-twin fixtures (tests)                                          |
+| `synthea-v4-seed42`            | Generated locally: Synthea v4.0.0, seed 42, N=30, ages 40–75                          |
+| `synthea-v4-seed4242`          | Training cohort, seed 4242, N=10,000 (`--preset training`)                            |
+| `synthea-v4-seed9001`          | Held-out cohort, seed 9001, N=1,000 (`--preset held-out`)                             |
+| `synthea-v4-seed42-10k`        | 10,000 living people (11,551 records) from release `cohort-synthea-v4-seed42-10k`     |
+| `synthea-v4-s7`                | Supplementary evaluation cohort for S7b: 17 people aged 65–90, three keep-module runs |
+| `synthea-v4-seed1001` … `1100` | The 1M cohort, one cohort per batch of 10,000 (`training:batches`; 1100 is held out)  |
 
 The Body twin's Demo lists only `DEMO_COHORTS` (`open-twin-synthea-trimmed-3`, `synthea-v4-seed42`), never the training or held-out cohorts, the 1M batches or the 10k release cohort. The batch ids are generated in `scope.ts` (`SYNTHEA_1M_COHORTS`), not written out.
 
@@ -181,3 +182,23 @@ N=30, ages 40–75, reference and end date `20260101`. Synthea exports deceased 
 | `2571-8`  | Triglycerides     |
 
 Each machine downloads (or, on x86_64, may generate) and ingests its own copy; `contentSha256` in `manifest.json` shows whether two copies are the same.
+
+### The `synthea-v4-s7` cohort
+
+The supplementary cohort the S7b items read (#277), next to the evaluation
+cohort: 17 people aged 65 to 90 from three runs of the pinned Synthea JAR
+(seeds 2770, 2772 and 2774), each with a keep module in `scripts/synthea/keep/`,
+so 13 records have atrial fibrillation, 3 of them a stroke after it and 2
+Alzheimer's disease, and 4 have none of these.
+
+```sh
+bun run synthea:s7                                   # or: bun run synthea:s7 -- load --archive <file>
+bun run warehouse:ingest .synthea/synthea-v4-s7/fhir --cohort synthea-v4-s7
+```
+
+Only `evaluation/cohorts/synthea-v4-s7.manifest.json` is committed: the
+recipe, every file's sha256, `contentSha256`
+`2d8b7a64fb6fff2d7951c8d8640e72ef74ddd72a6bdb75da1fc355fb98d45f14` and the
+archive's sha256. Like the evaluation cohort it is for evaluation only
+(`EVALUATION_COHORT_IDS`) and never in the Demo. Recipe, counts and the items
+are in `docs/evaluation/question-set.md`, "S7b".

@@ -1,0 +1,33 @@
+{
+  "name": "s7_keep_no_atrial_fibrillation",
+  "remarks": [
+    "Keep module for the synthea-v4-s7 cohort (#277): keep a generated person only when the record has no atrial fibrillation (SNOMED CT 49436004) at the end of the run. Synthea's atrial fibrillation module never ends the condition, so these records never had it."
+  ],
+  "states": {
+    "Initial": {
+      "type": "Initial",
+      "conditional_transition": [
+        {
+          "transition": "Keep",
+          "condition": {
+            "condition_type": "Not",
+            "condition": {
+              "condition_type": "Active Condition",
+              "codes": [
+                {
+                  "system": "SNOMED-CT",
+                  "code": "49436004",
+                  "display": "Atrial fibrillation (disorder)"
+                }
+              ]
+            }
+          }
+        },
+        { "transition": "Terminal" }
+      ]
+    },
+    "Keep": { "type": "Terminal" },
+    "Terminal": { "type": "Terminal" }
+  },
+  "gmf_version": 2
+}

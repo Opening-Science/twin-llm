@@ -12,6 +12,10 @@
  * holding the pinned cohort's `fhir/` (unpacked from the eval-cohort-v1 release)
  * and the same tools run over it in memory (`cohort-ports.ts`):
  *   bun run eval:answer-key:s7 -- --cohort-dir <folder>
+ * The S7b set (#277) reads the supplementary cohort `synthea-v4-s7` the same
+ * way (`bun run synthea:s7 -- load`, then `.synthea/synthea-v4-s7`):
+ *   bun run eval:answer-key:s7b -- --cohort-dir .synthea/synthea-v4-s7
+ * The questions' `cohort_id` says which cohort a set is keyed against.
  *
  * Every number in the key comes from the same closed, audited query tools the
  * model calls (actor `eval-answer-key`), never from a hand-written value or a
@@ -28,11 +32,13 @@ import { isToolRefusal } from "../../packages/query-tools/refusals";
 import type { SessionScope } from "../../packages/query-tools/scope";
 import type * as QueryToolsModule from "../../packages/query-tools/tools";
 import { cohortContentSha256 } from "../synthea/cohort-checksum";
-import { COHORT_PRESETS } from "../synthea/cohort-presets";
+import { COHORT_PRESETS, S7_COHORT_ID } from "../synthea/cohort-presets";
+import { S7_ARMS, S7_COHORT_DIR, S7_RECIPE } from "../synthea/s7-cohort";
 import {
   type AnswerKey,
   answerKeySchema,
   COHORT_ID,
+  type EvalCohortId,
   type KeyEntry,
   type KeyedTool,
   KEYED_TOOLS,
@@ -64,6 +70,34 @@ export const COHORT_GENERATION = {
   reference_date: COHORT_PRESETS.eval.referenceDate,
   end_date: COHORT_PRESETS.eval.endDate,
 } as const;
+
+/** How the supplementary S7 cohort was generated (#277): three keep-module runs. */
+export const S7_COHORT_GENERATION = {
+  synthea_version: S7_RECIPE.syntheaVersion,
+  seed: S7_ARMS[0]?.seed ?? 0,
+  population: S7_ARMS.reduce((sum, arm) => sum + arm.population, 0),
+  age: S7_RECIPE.age,
+  reference_date: S7_RECIPE.referenceDate,
+  end_date: S7_RECIPE.endDate,
+} as const;
+
+/** The generation fields of a key's `cohort`, for the cohort its questions name. */
+export const cohortGeneration = (cohortId: EvalCohortId) =>
+  cohortId === S7_COHORT_ID
+    ? {
+        ...S7_COHORT_GENERATION,
+        runs: S7_ARMS.map((arm) => ({
+          name: arm.name,
+          seed: arm.seed,
+          clinician_seed: arm.clinicianSeed,
+          population: arm.population,
+        })),
+      }
+    : COHORT_GENERATION;
+
+/** Where the patient files of a cohort are on disk after generating or loading it. */
+export const fhirDirOf = (cohortId: EvalCohortId): string =>
+  cohortId === S7_COHORT_ID ? `${S7_COHORT_DIR}/fhir` : EVAL_FHIR_DIR;
 
 /** The data mode a keyed call runs in (`ValueSpec.mode`, synthetic when left out). */
 export type KeyMode = "synthetic" | "personal";
@@ -296,14 +330,19 @@ export const buildAnswerKey = async (
     for (const spec of specs) keyed.push(await keyEntry(item.id, spec, run));
     entries[item.id] = keyed;
   }
+  const { runs, ...generation } = {
+    runs: undefined,
+    ...cohortGeneration(set.cohort_id),
+  };
   return answerKeySchema.parse({
     schema_version: "twin-llm.eval.answer-key.v1",
     generator_version: GENERATOR_VERSION,
     cohort: {
-      id: COHORT_ID,
-      ...COHORT_GENERATION,
+      id: set.cohort_id,
+      ...generation,
       subjects: await ports.countSubjects(),
       content_sha256: await ports.cohortSha256(),
+      ...(runs === undefined ? {} : { runs }),
     },
     open_twin_sha: ports.openTwinSha(),
     questions_sha256: questionsSha256(raw),
@@ -339,7 +378,8 @@ export type BuildDeps = Readonly<{
   dataMode: () => string;
   readText: (path: string) => Promise<string>;
   writeKey: (path: string, key: AnswerKey) => Promise<void>;
-  ports: () => AnswerKeyPorts;
+  /** The ports for the cohort the questions name. */
+  ports: (cohortId: EvalCohortId) => Promise<AnswerKeyPorts>;
 }>;
 
 const argValue = (argv: readonly string[], flag: string, fallback: string): string => {
@@ -365,9 +405,16 @@ export const runBuildAnswerKey = async (
     io.stderr.write(`Cannot read questions from ${questionsPath}.\n`);
     return 1;
   }
+  const parsed = questionSetSchema.safeParse(raw);
+  if (!parsed.success) {
+    io.stderr.write(
+      "Answer key not written: the questions or a tool result did not validate.\n",
+    );
+    return 1;
+  }
   let key: AnswerKey;
   try {
-    key = await buildAnswerKey(raw, deps.ports());
+    key = await buildAnswerKey(raw, await deps.ports(parsed.data.cohort_id));
   } catch (error) {
     io.stderr.write(
       error instanceof AnswerKeyError
@@ -394,9 +441,10 @@ export const runBuildAnswerKey = async (
 /** A refused cohort is not an empty one: never key a count of 0 from it. */
 export const subjectCount = (
   result: Readonly<{ subjects: readonly unknown[] }> | Readonly<{ code: string }>,
+  cohortId: EvalCohortId = COHORT_ID,
 ): number => {
   if (!("subjects" in result)) {
-    throw new AnswerKeyError(`list_subjects refused ${COHORT_ID}`);
+    throw new AnswerKeyError(`list_subjects refused ${cohortId}`);
   }
   return result.subjects.length;
 };
@@ -504,17 +552,20 @@ const openTwinHead = (): string =>
   }).trim();
 
 /** The real tools, audited as `eval-answer-key`. Imported lazily: they need the server-only preload. */
-export const realPorts = async (today: string): Promise<AnswerKeyPorts> => {
+export const realPorts = async (
+  today: string,
+  cohortId: EvalCohortId,
+): Promise<AnswerKeyPorts> => {
   const tools = await import("../../packages/query-tools/tools");
   return {
     runTool: (tool, args, mode) => runKeyedTool(tools, scopeFor(today, mode), tool, args),
     countSubjects: async () => {
       const result = await tools.runListSubjects(scopeFor(today, "synthetic"), {
-        cohort_id: COHORT_ID,
+        cohort_id: cohortId,
       });
-      return subjectCount(result);
+      return subjectCount(result, cohortId);
     },
-    cohortSha256: () => cohortContentSha256(EVAL_FHIR_DIR),
+    cohortSha256: () => cohortContentSha256(fhirDirOf(cohortId)),
     openTwinSha: openTwinHead,
     today: () => today,
   };
@@ -528,6 +579,7 @@ export const realPorts = async (today: string): Promise<AnswerKeyPorts> => {
 export const cohortFilePorts = async (
   dir: string,
   today: string,
+  cohortId: EvalCohortId = COHORT_ID,
 ): Promise<AnswerKeyPorts> => {
   const tools = await import("../../packages/query-tools/tools");
   const { cohortSubjectFrom, loadCohortBundles, memoryPorts } =
@@ -536,8 +588,8 @@ export const cohortFilePorts = async (
   const subjects = (await loadCohortBundles(fhir)).flatMap((bundle) => {
     const subject = cohortSubjectFrom(
       bundle,
-      COHORT_ID,
-      COHORT_GENERATION.synthea_version,
+      cohortId,
+      cohortGeneration(cohortId).synthea_version,
     );
     return subject === null ? [] : [subject];
   });
@@ -569,9 +621,6 @@ if (isMain) {
   const cohortDir = argValue(argv, "--cohort-dir", "");
   // Over cohort files nothing but the synthetic cohort can be read, so no env is loaded.
   const offline = cohortDir !== "";
-  const ports = offline
-    ? await cohortFilePorts(cohortDir, today)
-    : await realPorts(today);
   const dataMode = offline
     ? "synthetic"
     : (await import("../../infrastructure/env")).serverEnv().DATA_MODE;
@@ -579,7 +628,8 @@ if (isMain) {
     dataMode: () => dataMode,
     readText: (path) => readFile(path, "utf8"),
     writeKey: async (path, key) => writeFile(path, await formatKey(key, path)),
-    ports: () => ports,
+    ports: (cohortId) =>
+      offline ? cohortFilePorts(cohortDir, today, cohortId) : realPorts(today, cohortId),
   });
   process.exit(code);
 }

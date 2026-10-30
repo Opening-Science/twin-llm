@@ -215,7 +215,7 @@ describe("warehouse:ingest", () => {
     expect(code).toBe(1);
     expect(calls).toEqual([]);
     expect(err).toEqual([
-      'Cohort "my-cohort" is not allowed. Use one of: open-twin-synthea-trimmed-3, synthea-v4-seed42, synthea-v4-seed4242, synthea-v4-seed9001, synthea-v4-seed42-10k, synthea-v4-seed1001 … synthea-v4-seed1100.\n',
+      'Cohort "my-cohort" is not allowed. Use one of: open-twin-synthea-trimmed-3, synthea-v4-seed42, synthea-v4-seed4242, synthea-v4-seed9001, synthea-v4-seed42-10k, synthea-v4-s7, synthea-v4-seed1001 … synthea-v4-seed1100.\n',
     ]);
   });
 

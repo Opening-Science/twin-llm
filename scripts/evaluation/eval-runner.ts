@@ -525,7 +525,7 @@ export const loadQuestions = async (
   if (sha !== key.questions_sha256) {
     throw new EvalSetupError(
       "QUESTIONS_SHA_MISMATCH",
-      `questions sha256 ${sha} is not the answer key's ${key.questions_sha256}; rebuild the key (bun run ${set === "v1" ? "eval:answer-key" : "eval:answer-key:s7"})`,
+      `questions sha256 ${sha} is not the answer key's ${key.questions_sha256}; rebuild the key (bun run ${set === "v1" ? "eval:answer-key" : `eval:answer-key:${set}`})`,
     );
   }
   return {

@@ -76,6 +76,17 @@ by side in separate shells to use more cores. The published batches were made
 before the script fixed the end date, so these runs do not reproduce them byte
 for byte.
 
+### The supplementary S7 cohort
+
+`bun run synthea:s7` makes the small evaluation cohort `synthea-v4-s7` (#277):
+three runs of the same JAR with fixed seeds, each with a keep module in
+`scripts/synthea/keep/` that keeps only people whose record has atrial
+fibrillation, atrial fibrillation and a stroke, or no atrial fibrillation, and
+a narrowed module list. Keep modules are Synthea's own way to generate until a
+given number of people match. The recipe and checksums are in
+`evaluation/cohorts/synthea-v4-s7.manifest.json`;
+[question-set.md](evaluation/question-set.md), "S7b", has the details.
+
 ## Path 2: the generator page
 
 Open `/synthea` (in the app) or the root of synthea.opening.science. Choose:
