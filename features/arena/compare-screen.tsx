@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
 
 import type { Command } from "@/features/commands/registry";
+import { CompactDraftCard } from "@/features/memory/compact-draft-card";
+import { useCompactNote } from "@/features/memory/use-compact-note";
 import { INCOGNITO_HREF, NEW_CHAT_HREF } from "@/infrastructure/incognito";
 import type { ChatView } from "@/infrastructure/chat-view";
 import type { CatalogModel } from "@/infrastructure/model-catalog";
@@ -37,7 +39,8 @@ import { Welcome } from "./welcome";
  * shows a chart, the Outputs panel lists the thread's charts beside it.
  *
  * `/twin` adds the twin card to the list, after the turns there were when it
- * was opened. It is not a turn, so no model ever sees it.
+ * was opened. It is not a turn, so no model ever sees it. `/compact` shows a
+ * draft twin note under the conversation (#43); it is not a turn either.
  * A new chat can be incognito (`/?incognito=1`, `infrastructure/incognito.ts`):
  * the conversation stays in this screen's state, only local models are
  * offered, and the banner and a dashed prompt bar say so throughout.
@@ -104,6 +107,7 @@ export const CompareScreen = ({
     turns,
     mode: dataMode,
   });
+  const compact = useCompactNote(currentThreadId, incognito);
   const items = useMemo(() => conversationItems(turns, twin.card), [turns, twin.card]);
   const suggestions = useSuggestedQuestions(
     threadId === null && turns.length === 0,
@@ -230,6 +234,16 @@ export const CompareScreen = ({
                 </ol>
               </>
             )}
+            {compact.card !== null && (
+              <div className="mx-auto mt-6 max-w-5xl">
+                <CompactDraftCard
+                  key={compact.card.kind}
+                  state={compact.card}
+                  onSaved={compact.saved}
+                  onClose={compact.close}
+                />
+              </div>
+            )}
             {error && (
               <p
                 role="alert"
@@ -251,6 +265,7 @@ export const CompareScreen = ({
           initialDraft={initialDraft}
           onSubmit={onSubmit}
           onTwin={twin.open}
+          onCompact={compact.open}
         />
       </div>
     </TwinPickContext>

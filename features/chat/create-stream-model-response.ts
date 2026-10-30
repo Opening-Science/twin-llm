@@ -71,6 +71,11 @@ export type StreamContext = Readonly<{
    * called is its base model, and its role line joins the system prompt.
    */
   agent?: CatalogAgent | null;
+  /**
+   * The twin notes block this turn carries (#43): filtered by data mode and
+   * permit and audited by `start-answer`. Incognito chats never set it.
+   */
+  twinNotes?: string | null;
 }>;
 
 type RowTarget = Readonly<{ turnId: string; modelId: string }>;
@@ -196,6 +201,7 @@ export const createStreamModelResponse =
         skill,
         uiContext: request.uiContext ?? null,
         agent: context.agent ?? null,
+        twinNotes: context.twinNotes ?? null,
         loadAudit: deps.loadAudit,
       },
       {

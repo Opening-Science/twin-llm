@@ -28,6 +28,7 @@ import {
 import { AGENTS } from "../../infrastructure/agents";
 import type { TurnSkill } from "../../infrastructure/skill-gate";
 import {
+  LONGEST_TWIN_NOTES,
   LONGEST_UI_CONTEXT,
   NO_WEARABLES,
   ONE_WEARABLE,
@@ -79,6 +80,7 @@ export const promptSizeCases = (skills: readonly TurnSkill[]): readonly SizeCase
       wearables: context.wearables,
       question: QUESTION,
       uiContext: LONGEST_UI_CONTEXT,
+      twinNotes: LONGEST_TWIN_NOTES,
       agent,
     });
     return [

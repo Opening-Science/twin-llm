@@ -50,6 +50,8 @@ export type TurnRequestCase = Readonly<{
   uiContext?: UiContext | null;
   /** The agent the turn answers as (#218), whose role line joins the prompt. */
   agent?: Readonly<{ name: string; role: string }> | null;
+  /** The twin notes block (#43); the size cases carry the longest one. */
+  twinNotes?: string | null;
 }>;
 
 const NO_PORTS: QueryToolPorts = {
@@ -142,6 +144,7 @@ export const captureOllamaTurnRequest = async (
       skill: turn.skill,
       uiContext: turn.uiContext ?? null,
       agent: turn.agent ?? null,
+      twinNotes: turn.twinNotes ?? null,
       loadAudit: async () => [],
     },
     {

@@ -38,7 +38,7 @@ describe("matchCommands", () => {
     expect(matchCommands("nect", commands)).toEqual([]);
   });
 
-  test("the built-ins are connect, which reads nothing, and twin, which says what it reads", () => {
+  test("the built-ins are connect, which reads nothing, and twin and compact, which say what they read", () => {
     expect(BUILT_IN_COMMANDS).toEqual([
       { name: "connect", description: "Connect a wearable", reads: [] },
       {
@@ -47,6 +47,15 @@ describe("matchCommands", () => {
         reads: [
           "this thread's prompts and tool calls",
           "Body twin: scans, synthetic lab values, linked wearables",
+        ],
+      },
+      {
+        name: "compact",
+        description:
+          "Draft a short note of this thread for your memory. Nothing is saved until you confirm it.",
+        reads: [
+          "this thread's prompts and answers, sent to its model",
+          "tool names and date ranges, never their rows",
         ],
       },
     ]);
@@ -86,11 +95,16 @@ describe("skills in the palette", () => {
   test("built-ins come first, and a skill cannot take a built-in's name", () => {
     const clash = { ...SLEEP_COMMAND, name: "connect" };
     const twinClash = { ...SLEEP_COMMAND, name: "twin" };
+    const compactClash = { ...SLEEP_COMMAND, name: "compact" };
     expect(
-      paletteCommands([SLEEP_COMMAND, clash, twinClash]).map((c) => [c.name, c.kind]),
+      paletteCommands([SLEEP_COMMAND, clash, twinClash, compactClash]).map((c) => [
+        c.name,
+        c.kind,
+      ]),
     ).toEqual([
       ["connect", undefined],
       ["twin", undefined],
+      ["compact", undefined],
       ["sleep", "skill"],
     ]);
   });
