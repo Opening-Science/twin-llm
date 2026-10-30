@@ -6,6 +6,7 @@ import {
   EXOSCALE_PERSONAL_DATA_SETTINGS,
   type ExoscalePersonalData,
 } from "./data-mode-policy";
+import { parseDirtyFlag } from "./build-stamp";
 import { isLoopbackUrl } from "./loopback";
 import { DEFAULT_OLLAMA_NUM_CTX, MIN_OLLAMA_NUM_CTX } from "./ollama-context";
 
@@ -804,8 +805,17 @@ export type BuildInfo = Readonly<{
   appVersion: string | null;
   /** `git rev-parse HEAD` when the app was built; null outside a git checkout. */
   commit: string | null;
-  /** True when the build's working tree had changes not in that commit. */
-  dirty: boolean;
+  /** True when the build's working tree had changes not in that commit; null when git could not say. */
+  dirty: boolean | null;
+  /** The open-twin pin in PROVENANCE.md when the app was built. */
+  openTwinPinned: string | null;
+  /** `.open-twin/OPEN_TWIN_SHA` when the app was built. */
+  openTwinFound: string | null;
+  /**
+   * "dev" under `next dev`, which serves edits as they are saved, so nothing
+   * recorded at startup describes the code it runs.
+   */
+  mode: "build" | "dev";
 }>;
 
 /**
@@ -817,5 +827,8 @@ export const buildInfo = (): BuildInfo =>
   Object.freeze({
     appVersion: process.env.TWINLLM_APP_VERSION || null,
     commit: process.env.TWINLLM_BUILD_COMMIT || null,
-    dirty: process.env.TWINLLM_BUILD_DIRTY === "true",
+    dirty: parseDirtyFlag(process.env.TWINLLM_BUILD_DIRTY),
+    openTwinPinned: process.env.TWINLLM_BUILD_OPEN_TWIN_PIN || null,
+    openTwinFound: process.env.TWINLLM_BUILD_OPEN_TWIN_CHECKOUT || null,
+    mode: process.env.NODE_ENV === "development" ? "dev" : "build",
   });
