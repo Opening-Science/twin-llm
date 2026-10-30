@@ -41,7 +41,7 @@ describe("specialties", () => {
     );
   });
 
-  test("literatureSourcesForAgent: own specialty, every one for the GP, none otherwise", () => {
+  test("literatureSourcesForAgent: own specialty, every one for the General agent, none otherwise", () => {
     expect(literatureSourcesForAgent("diet")).toEqual(["literature:diet"]);
     expect(literatureSourcesForAgent("genetics")).toEqual(["literature:genetics"]);
     expect(literatureSourcesForAgent("gp")).toEqual([

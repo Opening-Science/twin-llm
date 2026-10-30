@@ -7,7 +7,7 @@ import { LITERATURE_SOURCE_PREFIX } from "./constants";
  */
 export const SPECIALTIES = {
   gp: {
-    label: "General Practitioner",
+    label: "General",
     query: '"primary health care"[mesh] OR "general practice"[mesh]',
   },
   diet: {
@@ -52,7 +52,7 @@ export const specialtySearchTerm = (specialty: SpecialtyId, query?: string): str
 
 /**
  * The literature an agent's search reads (#236): its own specialty's source,
- * every specialty for the General Practitioner, none for anything else (a
+ * every specialty for the General agent, none for anything else (a
  * plain model, or an agent without a specialty).
  */
 export const literatureSourcesForAgent = (
