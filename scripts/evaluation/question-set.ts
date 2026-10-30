@@ -230,7 +230,8 @@ export const expectSchema = z
 
 export const questionSchema = z
   .object({
-    id: z.string().regex(/^Q-S[1-7]-\d{2}$/),
+    /** `Q-S7-H01`: a held-out item (S7h, #283). */
+    id: z.string().regex(/^Q-S[1-7]-H?\d{2}$/),
     scenario: z.enum(SCENARIOS),
     criteria: z.array(z.enum(CRITERIA)).min(1),
     question: z.string().min(10),
