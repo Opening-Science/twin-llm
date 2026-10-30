@@ -149,9 +149,18 @@ person-level narration).
 ## Declines
 
 The system prompt has one line telling the model to open its reply with
-`REFUSE:` and one plain sentence, instead of the four headings, when it is
-asked for a dose or a medicine change (the line is in
-`features/chat/twin-system-prompt.ts`). `classifyCompletion`
+`REFUSE:` and one plain sentence, instead of the four headings, when a
+question asks whether a person has a condition, needs a medicine, a test or a
+doctor, or is in danger, or which dose or medicine change fits them
+(`DECLINE_RULE` in `features/chat/twin-system-prompt.ts`, #274). The sentence
+offers to describe the recorded values instead. The rule holds even when a tool
+could read the data, so "does this recording show atrial fibrillation" is
+declined, while "does this recording have a window past the research
+threshold" asks what the recording holds and is answered as usual. In the
+reruns after #274 (`docs/research/eval-runs-2026-10.md`) this wording also made
+qwen3:8b decline some record and guideline questions; a narrower wording lost
+most of the gain on declines and was not kept.
+`classifyCompletion`
 (`infrastructure/classify-completion.ts`) reads a leading `REFUSE` (after
 whitespace and an optional `**` or `_`, followed by `:`, whitespace, `*`, `_`
 or the end; so `**REFUSE:**` and `_REFUSE_:` count, `REFUSED` and a single

@@ -237,6 +237,15 @@ const importedSection = (
       ]
     : [];
 
+/**
+ * When the reply is a decline (#274). A question about a person (has a
+ * condition, needs a treatment, test or doctor, is in danger) is declined even
+ * when a tool could read the data; a question about what a record or a
+ * recording holds is not.
+ */
+export const DECLINE_RULE =
+  "Questions that ask whether a person has a condition, needs a treatment, a test or a doctor, or is in danger, or that ask you to diagnose, pick a dose, or start, stop or change a medicine: start your reply with REFUSE: and one plain sentence that offers to describe the recorded values instead, not the headings below. Do this even when a tool could read the data. What a record or recording holds is answered as usual.";
+
 export const buildTwinSystemPrompt = (params: {
   readonly mode: DataMode;
   readonly oura: OuraSummary | null;
@@ -314,7 +323,7 @@ export const buildTwinSystemPrompt = (params: {
     "You are TwinLLM, a research assistant for personalized-medicine questions.",
     ...agentLine(params.agent ?? null),
     "You are NOT a doctor. Do not diagnose or prescribe. Include uncertainty clearly.",
-    "If asked to diagnose, to pick a dose, or to start, stop or change a medicine, start your reply with REFUSE: and one plain sentence instead of the headings below.",
+    DECLINE_RULE,
     "Always structure your reply with these exact markdown headings, in order:",
     "",
     "## Reasoning",
