@@ -169,26 +169,26 @@ The table gives the median over subjects and, for recovered, the mean with a
 
 | Group (subjects)            | Metric, window                 | Planted | Recovered median (IQR)  | Recovered mean (95% CI) | Robust z beyond 2 |
 | --------------------------- | ------------------------------ | ------- | ----------------------- | ----------------------- | ----------------- |
-| AF (113)                    | Heart rate, difference         | +2.72   | +2.64 (1.17 to 4.08)    | +2.71 (2.37 to 3.05)    | 0 of 113          |
-|                             | RMSSD, ratio                   | 1.196   | 1.193 (1.144 to 1.241)  | 1.199 (1.185 to 1.212)  | 1 of 113          |
+| AF (113)                    | Heart rate, difference         | +2.72   | +2.64 (1.00 to 3.98)    | +2.58 (2.24 to 2.92)    | 0 of 113          |
+|                             | RMSSD, ratio                   | 1.196   | 1.193 (1.149 to 1.253)  | 1.205 (1.191 to 1.219)  | 1 of 113          |
 |                             | Notifications per day          | +0.189  | +0.195 (0.148 to 0.244) | +0.202 (0.188 to 0.216) | no z (MAD 0)      |
 |                             | AF burden (ground truth)       | +0.098  | +0.100                  | +0.101 (0.095 to 0.107) | no z (MAD 0)      |
-| Heart failure (91)          | Resting heart rate, difference | +6.61   | +7.24 (5.86 to 8.63)    | +7.05 (6.57 to 7.54)    | 83 of 91          |
-|                             | RMSSD, ratio                   | 0.750   | 0.756 (0.718 to 0.779)  | 0.763 (0.749 to 0.778)  | 42 of 91          |
+| Heart failure (91)          | Resting heart rate, difference | +6.61   | +6.99 (5.72 to 8.53)    | +6.92 (6.44 to 7.40)    | 83 of 91          |
+|                             | RMSSD, ratio                   | 0.750   | 0.757 (0.724 to 0.786)  | 0.767 (0.753 to 0.782)  | 39 of 91          |
 |                             | Steps, ratio                   | 0.652   | 0.664 (0.622 to 0.700)  | 0.677 (0.658 to 0.696)  | 13 of 91          |
 | Stroke (85)                 | Steps, ratio, days 0 to 29     | 0.543   | 0.548 (0.500 to 0.580)  | 0.542 (0.531 to 0.553)  | 29 of 85          |
 |                             | Steps, ratio, days 60 to 89    | 0.765   | 0.755 (0.725 to 0.795)  | 0.758 (0.743 to 0.772)  | 0 of 85           |
-|                             | Sleep score, days 0 to 29      | -9.50   | -9.31 (-10.52 to -8.20) | -9.29 (-9.65 to -8.92)  | 1 of 85           |
-|                             | Sleep score, days 60 to 89     | -5.61   | -6.17 (-7.13 to -4.57)  | -5.81 (-6.20 to -5.42)  | 0 of 85           |
+|                             | Sleep score, days 0 to 29      | -9.50   | -9.32 (-10.37 to -8.15) | -9.32 (-9.68 to -8.95)  | 1 of 85           |
+|                             | Sleep score, days 60 to 89     | -5.61   | -5.71 (-6.85 to -4.35)  | -5.49 (-5.87 to -5.11)  | 0 of 85           |
 | Sleep apnea (372)           | SpO2 mean, difference          | -2.76   | -2.75 (-2.85 to -2.67)  | -2.76 (-2.77 to -2.74)  | 360 of 372        |
 |                             | SpO2 minimum, difference       | -7.49   | -7.47 (-7.73 to -7.27)  | -7.50 (-7.54 to -7.46)  | 371 of 371        |
-|                             | Respiratory rate, difference   | +0.72   | +0.76 (0.62 to 0.90)    | +0.76 (0.74 to 0.78)    | 30 of 372         |
-| Hypertension control (1182) | Heart rate, difference         | 0       | +0.16 (-0.88 to 1.06)   | +0.11 (0.03 to 0.19)    | 3 of 1182         |
-|                             | Resting heart rate, difference | 0       | +0.11 (-0.76 to 1.06)   | +0.12 (0.06 to 0.19)    | 14 of 1182        |
-|                             | RMSSD, ratio                   | 1       | 0.996 (0.980 to 1.011)  | 0.996 (0.994 to 0.997)  | 0 of 1182         |
+|                             | Respiratory rate, difference   | +0.72   | +0.73 (0.60 to 0.88)    | +0.74 (0.72 to 0.75)    | 26 of 372         |
+| Hypertension control (1182) | Heart rate, difference         | 0       | +0.03 (-1.00 to 0.90)   | -0.01 (-0.09 to 0.07)   | 3 of 1182         |
+|                             | Resting heart rate, difference | 0       | 0.00 (-0.88 to 0.86)    | +0.00 (-0.06 to 0.07)   | 16 of 1182        |
+|                             | RMSSD, ratio                   | 1       | 1.000 (0.984 to 1.017)  | 1.000 (0.999 to 1.002)  | 0 of 1182         |
 |                             | Steps, ratio                   | 1       | 0.999 (0.973 to 1.027)  | 1.001 (0.998 to 1.003)  | 0 of 1182         |
-|                             | Sleep score, difference        | 0       | -0.10 (-0.99 to 0.88)   | -0.09 (-0.18 to 0.00)   | 2 of 1182         |
-|                             | Respiratory rate, difference   | 0       | +0.02 (-0.05 to 0.10)   | +0.02 (0.02 to 0.03)    | 0 of 1182         |
+|                             | Sleep score, difference        | 0       | +0.01 (-0.84 to 0.96)   | +0.00 (-0.08 to 0.09)   | 2 of 1182         |
+|                             | Respiratory rate, difference   | 0       | +0.00 (-0.08 to 0.07)   | 0.00 (-0.01 to 0.01)    | 0 of 1182         |
 |                             | SpO2 mean and minimum          | 0       | 0.00                    | 0.00                    | 3 of 2360         |
 |                             | Notifications, AF burden       | 0       | 0                       | 0                       | no z              |
 
@@ -197,17 +197,26 @@ size. The robust z per person tells a different story by metric: a fixed
 shift that is large against day-to-day noise (heart failure resting heart
 rate, sleep apnea SpO2) is visible in most single people, while AF, whose
 effect falls on about one day in five, is invisible to a median-based z in
-every one of 113 people even though the mean heart rate rises by 2.7 /min.
+every one of 113 people even though the mean heart rate rises by 2.6 /min.
 For AF the notification count and the burden carry the signal; a check on
 medians alone would miss it.
 
-The hypertension control has no planted change, and none of size comes back.
-Heart rate, resting heart rate and breathing rate rise by about 0.1 on
-average, with intervals that exclude 0. This is not a condition effect: the
-generator puts its generic raised-heart-rate episode (30% of subjects, 4 to
-6 days) in the last 30 days of every window, which here is always the after
-window. A study that centres windows on an event should know that the series
-end is not neutral.
+The hypertension control has no planted change, and none comes back: every
+mean is within 0.01 of no change and every interval includes it.
+
+Changed with #270. The first run of this table had the hypertension control's
+heart rate, resting heart rate and breathing rate rising by about 0.1 on
+average, with intervals that excluded 0 (heart rate +0.11, 0.03 to 0.19;
+resting heart rate +0.12, 0.06 to 0.19; RMSSD ratio 0.996, 0.994 to 0.997).
+That was not a condition effect: generator v3 put its generic
+raised-heart-rate episode (30% of subjects, 4 to 6 days) in the last 30 days
+of every window, which here was always the after window. v3 now places these
+episodes by calendar day, about one per person-year
+(`scripts/synthetic-wearables/episodes.ts`, `docs/training-data.md`), so
+they are as likely before an onset as after it, and the table above is the
+rerun on the same batches and seeds. The condition rows moved only within
+their noise; the AF heart rate, heart failure and stroke sleep score rows
+shifted most, because episodes now fall on both sides.
 
 ## Limits
 
@@ -231,6 +240,3 @@ end is not neutral.
 
 - New batches with `exporter.years_of_history = 0` would give the whole record,
   many more strokes before AF onset, and tighter before rates.
-- The generic heart-rate episode in the last 30 days of each wearable window
-  could be placed by a seeded day instead, so windows near an event stay
-  neutral.

@@ -96,7 +96,7 @@ const AF_MAX_EPISODE_DAYS = 3;
 
 const DAY_MS = 86_400_000;
 
-const addDays = (day: string, offset: number): string =>
+export const addDays = (day: string, offset: number): string =>
   new Date(Date.parse(`${day}T00:00:00Z`) + offset * DAY_MS).toISOString().slice(0, 10);
 
 const daysBetween = (from: string, to: string): number =>
@@ -107,7 +107,7 @@ const daysBetween = (from: string, to: string): number =>
  * The hash goes through mulberry32 once: FNV-1a alone barely moves its top
  * bits when only the last characters (the day) change.
  */
-const draw = (key: string, label: string, day = ""): number =>
+export const draw = (key: string, label: string, day = ""): number =>
   mulberry32(hash32(`${key}:${label}:${day}`))();
 
 const round = (value: number, decimals: number): number => {

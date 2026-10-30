@@ -12,6 +12,7 @@ import {
   NO_EFFECTS,
   type SubjectCondition,
 } from "./conditions";
+import { inGenericEpisode } from "./episodes";
 import { normal, type Random, randomFor } from "./random";
 
 /** Codings follow the open-twin mappers at the pinned SHA (see docs/training-data.md). */
@@ -155,7 +156,10 @@ export type SubjectProfile = Readonly<{
   wearRate: number;
   /** Resting heart rate change per day over the window. */
   restingDriftPerDay: number;
-  /** A few days of raised resting heart rate near the end, or null. */
+  /**
+   * v2 only: a few days of raised resting heart rate in the last 30 days of the
+   * window, or null. v3 places episodes by calendar day (`episodes.ts`).
+   */
   episode: Readonly<{ startIndex: number; length: number }> | null;
 }>;
 
@@ -243,7 +247,7 @@ const dayReadings = (
   random: Random,
   day: string,
   index: number,
-  days: number,
+  inEpisode: boolean,
   effects: DayEffects,
 ): DailyReading[] => {
   const worn = random() < profile.wearRate;
@@ -257,13 +261,8 @@ const dayReadings = (
     number,
   ];
   if (!worn) return [];
-  // The episode sits in the last 30 days of the window.
-  const episodeStart = profile.episode ? days - 30 + profile.episode.startIndex : -1;
-  const inEpisode =
-    profile.episode !== null &&
-    index >= episodeStart &&
-    index < episodeStart + profile.episode.length;
-  // With no condition every effect is 0 or 1, so each value is the v2 one.
+  // With no condition every effect is 0 or 1, so each value is the v2 one
+  // except on days where only one version has an episode.
   const restingHr = clamp(
     profile.restingHr +
       profile.restingDriftPerDay * index +
@@ -329,19 +328,42 @@ const dayReadings = (
   ];
 };
 
+/** v2: the one episode sits in the last 30 days of the window, so it moves with it. */
+const inV2Episode = (profile: SubjectProfile, index: number, days: number): boolean => {
+  if (profile.episode === null) return false;
+  const start = days - 30 + profile.episode.startIndex;
+  return index >= start && index < start + profile.episode.length;
+};
+
+/**
+ * Whether each day of the window is in a generic episode, oldest first. v3
+ * follows the calendar (`inGenericEpisode`), so a day's answer does not depend
+ * on the window; v2 keeps its window-end placement.
+ */
+export const seriesEpisodeFlags = (options: SeriesOptions): boolean[] => {
+  const profile = subjectProfile(options.seed, options.subjectRef);
+  const key = `${options.seed}:${options.subjectRef}`;
+  return windowDays(options.endDay, options.days).map((day, index) =>
+    options.generatorVersion === "2"
+      ? inV2Episode(profile, index, options.days)
+      : inGenericEpisode(key, day),
+  );
+};
+
 export const generateSeries = (options: SeriesOptions): DailyReading[] => {
   const profile = subjectProfile(options.seed, options.subjectRef);
   const random = randomFor(options.seed, `series:${options.subjectRef}`);
   const conditions = options.conditions ?? [];
   const v2 = options.generatorVersion === "2";
   const key = `${options.seed}:${options.subjectRef}`;
+  const episodes = seriesEpisodeFlags(options);
   return windowDays(options.endDay, options.days).flatMap((day, index) =>
     dayReadings(
       profile,
       random,
       day,
       index,
-      options.days,
+      episodes[index] ?? false,
       v2 ? NO_EFFECTS : conditionEffects(conditions, day, key),
     ),
   );
