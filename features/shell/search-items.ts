@@ -65,6 +65,13 @@ const PAGES: readonly (SearchItem & { kind: "page" })[] = [
     detail: "catalogue Ollama",
     href: "/models",
   },
+  {
+    kind: "page",
+    id: "lab",
+    title: "Lab",
+    detail: "verify local only, audit chain, model digests, checksums, SBOM",
+    href: "/lab",
+  },
   { kind: "page", id: "docs", title: "Docs", detail: "documentation", href: "/docs" },
   {
     kind: "page",

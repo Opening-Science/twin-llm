@@ -1,6 +1,12 @@
 import "server-only";
 
-import { exoscaleEnv, infomaniakOpenAiBaseUrl, remoteGpuEnv, serverEnv } from "./env";
+import {
+  DEFAULT_OLLAMA_BASE_URL,
+  exoscaleEnv,
+  infomaniakOpenAiBaseUrl,
+  remoteGpuEnv,
+  serverEnv,
+} from "./env";
 import { chatModelIsLocal } from "./genome-gate";
 import type { AgentOffer } from "./agents";
 import { listRemoteGpuModels } from "./list-remote-gpu-models";
@@ -81,10 +87,8 @@ const openRouterFreeModels = async (): Promise<Catalog | null> => {
 
 // --- Ollama -----------------------------------------------------------------
 
-const DEFAULT_OLLAMA_API = "http://127.0.0.1:11434/v1";
-
 const ollamaModels = async (): Promise<Catalog> => {
-  const root = (serverEnv().OLLAMA_BASE_URL ?? DEFAULT_OLLAMA_API).replace(
+  const root = (serverEnv().OLLAMA_BASE_URL ?? DEFAULT_OLLAMA_BASE_URL).replace(
     /\/v1\/?$/,
     "",
   );

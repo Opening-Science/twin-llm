@@ -133,6 +133,24 @@ export const formatMeasure = (
   return spec.spaced ? `${number} ${spec.unit}` : `${number}${spec.unit}`;
 };
 
+const BYTE_UNITS = ["kB", "MB", "GB", "TB"] as const;
+
+/**
+ * A file or model size in decimal units, as `ollama list` and `ls -h --si`
+ * print it: whole bytes below 1,000, then one decimal (`5.2 GB`).
+ */
+export const formatBytes = (value: number | null | undefined): string => {
+  if (!isFiniteNumber(value) || value < 0) return EMPTY_VALUE;
+  if (value < 1000) return `${formatNumber(value, 0)} B`;
+  const step = Math.min(Math.floor(Math.log10(value) / 3) - 1, BYTE_UNITS.length - 1);
+  const scaled = value / 1000 ** (step + 1);
+  // 999,960 bytes rounds to "1,000.0 kB"; that is a megabyte.
+  if (roundTo(scaled, 1) >= 1000 && step < BYTE_UNITS.length - 1) {
+    return `${formatNumber(scaled / 1000, 1)} ${BYTE_UNITS[step + 1]}`;
+  }
+  return `${formatNumber(scaled, 1)} ${BYTE_UNITS[step]}`;
+};
+
 const ISO_DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
 const pad2 = (n: number): string => String(n).padStart(2, "0");

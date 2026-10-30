@@ -10,6 +10,7 @@ import { delimiter, join, resolve } from "node:path";
 import { zipSync } from "fflate";
 
 import { type SyntheaEnv } from "@/infrastructure/env";
+import { SYNTHEA_JAR_DEFAULT_PATH } from "@/infrastructure/local-artefacts";
 
 import {
   buildSyntheaCommand,
@@ -40,7 +41,7 @@ const CONFIG_NAME = "synthea.properties";
 const LOG_TAIL = 20;
 
 export const defaultJarPath = (): string =>
-  resolve(process.cwd(), ".synthea/cache/synthea-with-dependencies.jar");
+  resolve(/* turbopackIgnore: true */ process.cwd(), SYNTHEA_JAR_DEFAULT_PATH);
 
 export const jarPathOf = (env: SyntheaEnv): string => env.jarPath ?? defaultJarPath();
 

@@ -10,9 +10,7 @@ import { z } from "zod";
  */
 
 /** Synthea v4.0.0, the same JAR `scripts/synthea/generate-local.sh` pins. */
-export const SYNTHEA_VERSION = "v4.0.0";
-export const SYNTHEA_JAR_SHA256 =
-  "ed43c20ad40ba5c3bc724503a5af032715fe3c491620b766148e7c2361e6ecc1";
+export { SYNTHEA_JAR_SHA256, SYNTHEA_VERSION } from "@/infrastructure/local-artefacts";
 
 /**
  * Synthea simulates up to "now" unless given dates, so the same seed would give
