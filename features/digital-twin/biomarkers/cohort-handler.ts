@@ -19,7 +19,9 @@ import { COHORT_FAILED } from "./biomarker-copy";
  * order, so the same seed gives the same numbering.
  *
  * The same read also returns the person's newest heart and respiratory rate
- * (G4), apart from the Anchor values, for the live twin. One read, one audit row.
+ * (G4), apart from the Anchor values, for the live twin, and whether the
+ * record lists atrial fibrillation on the heart rate's day, which picks the
+ * heart chambers' simulated rhythm (#53). One request, one audit row.
  */
 export const COHORT_LIST_AUDIT_TOOL = "biomarkers.cohort.list";
 export const COHORT_VALUES_AUDIT_TOOL = "biomarkers.cohort.values";
@@ -46,6 +48,9 @@ export type CohortValue = Readonly<{
   effectiveAt: string;
 }>;
 
+/** The heart rate's day and whether the record lists AF on it; null without a heart rate. */
+export type CohortRhythm = Readonly<{ day: string; afOnDay: boolean }> | null;
+
 export type CohortRow = Readonly<{
   id: string;
   loinc: string;
@@ -63,6 +68,12 @@ export type CohortDeps = Readonly<{
   ) => Promise<Readonly<{ isSynthetic: boolean; cohortId: string }> | null>;
   /** Every numeric row of the person for these LOINC codes. */
   findValues: (ref: string, loincs: readonly string[]) => Promise<readonly CohortRow[]>;
+  /**
+   * Whether the person's record lists atrial fibrillation on this day
+   * (YYYY-MM-DD), read as the `rhythm_irregularity` tool reads it; the heart
+   * chambers' simulated beats follow it (#53).
+   */
+  afOnDay: (ref: string, day: string) => Promise<boolean>;
   /** The Anchor LOINC codes the tab can show. */
   anchorLoincs: () => readonly string[];
   appendAudit: (input: AppendInput) => Promise<unknown>;
@@ -163,8 +174,12 @@ export const createCohortValuesHandler =
       const rows = newestPerLoinc(await deps.findValues(ref, loincs));
       const values = rows.filter((row) => anchor.includes(row.loinc)).map(toValue);
       const vitals = rows.filter((row) => VITAL_LOINCS.includes(row.loinc)).map(toValue);
-      await audit({ values, vitals }, values.length + vitals.length);
-      return NextResponse.json({ values, vitals }, { headers: NO_STORE });
+      const heart = vitals.find((row) => row.loinc === COHORT_VITAL_LOINCS.heartRate);
+      const day = heart?.effectiveAt.slice(0, 10);
+      const rhythm: CohortRhythm =
+        day === undefined ? null : { day, afOnDay: await deps.afOnDay(ref, day) };
+      await audit({ values, vitals, rhythm }, values.length + vitals.length);
+      return NextResponse.json({ values, vitals, rhythm }, { headers: NO_STORE });
     } catch (error) {
       // A read that threw still happened, so it is audited before the 502.
       await audit({ error: "failed" }, 0).catch(() => undefined);
