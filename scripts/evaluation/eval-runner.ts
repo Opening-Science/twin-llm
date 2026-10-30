@@ -21,12 +21,21 @@ import {
 import { sha256Hex, toCanonicalJson } from "../../packages/audit/hash";
 import { isToolRefusal } from "../../packages/query-tools/refusals";
 import type { SessionScope } from "../../packages/query-tools/scope";
+import { isAgentModelId } from "../../infrastructure/agents";
+import type { TurnSkill } from "../../infrastructure/skill-gate";
 import type {
   ResponseDocumentV1,
   ResponseToolCall,
 } from "../../infrastructure/response-document/document-v1";
 
 import { questionsSha256 } from "./build-answer-key";
+import {
+  type CatalogRow,
+  type EvalAgent,
+  isAgentProblem,
+  normalizeAgentSpec,
+  resolveEvalAgent,
+} from "./eval-agent";
 import {
   type AuditLine,
   isQuestionSetId,
@@ -67,6 +76,12 @@ export type ResolvedModel = Readonly<{
 
 export type ModelSpec = Readonly<{ provider: string; modelId: string }>;
 
+/** The tools of one eval turn and, for an agent's skill, the names its prompt is told. */
+export type EvalTurnTools = Readonly<{
+  tools: ToolSet;
+  offeredTools?: ReadonlySet<string>;
+}>;
+
 /** A run that cannot start; `code` is what the user sees first. */
 export class EvalSetupError extends Error {
   constructor(
@@ -88,13 +103,19 @@ export type EvalDeps = Readonly<{
   llmProvider: string;
   hasEnv: (name: string) => boolean;
   readText: (path: string) => Promise<string>;
-  /** Model ids the provider lists right now (`/v1/models` on the remote GPU). */
-  listModels: () => Promise<readonly string[]>;
-  /** Called once per listed model before any item runs. */
+  /**
+   * The chat catalog right now: the provider's models (`/v1/models` on the
+   * remote GPU) with the agents it offers in front (`fetchChatCatalog`).
+   */
+  listModels: () => Promise<readonly CatalogRow[]>;
+  /** Called once per listed model before any item runs; an agent's base model. */
   resolveModel: (spec: ModelSpec) => Promise<ResolvedModel>;
+  /** A skill the server offers (`findRunnableSkill`), for an agent's own skill. */
+  findSkill: (name: string) => TurnSkill | null;
   /** The per-item time limit; `AbortSignal.timeout` outside tests. */
   timeoutSignal: (timeoutMs: number) => AbortSignal;
-  createTools: (scope: SessionScope) => ToolSet;
+  /** A plain model's tools, or an agent's (`createTurnTools` with its skill and id). */
+  createTools: (scope: SessionScope, agent: EvalAgent | null) => EvalTurnTools;
   loadAudit: (sessionId: string) => Promise<readonly ResponseToolCall[]>;
   cache: CacheStore;
   /** False when the run directory already exists. */
@@ -274,6 +295,7 @@ type TurnRun = Readonly<{
 const runTurn = (
   deps: EvalDeps,
   model: LanguageModel,
+  agent: EvalAgent | null,
   scope: SessionScope,
   question: string,
   timeoutMs: number,
@@ -290,11 +312,16 @@ const runTurn = (
       resolve({ outcome, firstTokenAt, finishedAt: deps.now() });
     };
 
+    const { tools, offeredTools } = deps.createTools(scope, agent);
     const result = runTwinTurn(
       {
         model,
-        tools: deps.createTools(scope),
+        tools,
+        offeredTools,
         mode: "synthetic",
+        // As the chat route: the agent's skill (none typed) and its role line.
+        skill: agent?.skill ?? null,
+        agent: agent?.agent ?? null,
         loadAudit: deps.loadAudit,
       },
       {
@@ -416,15 +443,18 @@ const runItem = async (
     repeat: number;
     spec: ModelSpec;
     resolved: ResolvedModel;
+    agent: EvalAgent | null;
     replay: boolean;
     timeoutMs: number;
   }>,
 ): Promise<ResultLine> => {
-  const { runId, item, repeat, spec, resolved } = input;
+  const { runId, item, repeat, spec, resolved, agent } = input;
+  // The key names the model that answers; an agent's prompt (role line, skill,
+  // tools) differs from its base model's, so the two never share an entry.
   const cached = createCachedModel({
     model: resolved.model,
     provider: spec.provider,
-    modelId: spec.modelId,
+    modelId: agent?.agent.baseModelId ?? spec.modelId,
     repeat,
     mock: resolved.mock,
     replay: input.replay,
@@ -443,6 +473,7 @@ const runItem = async (
   const run = await runTurn(
     deps,
     cached.model,
+    agent,
     scope,
     item.question,
     input.timeoutMs,
@@ -550,12 +581,19 @@ const setup = async (
   options: EvalOptions,
   deps: EvalDeps,
 ): Promise<
-  Readonly<{ loaded: Loaded; items: Question[]; resolved: ResolvedModel[] }>
+  Readonly<{
+    loaded: Loaded;
+    items: Question[];
+    models: readonly ModelSpec[];
+    resolved: ResolvedModel[];
+    agents: readonly (EvalAgent | null)[];
+  }>
 > => {
   if (deps.dataMode !== "synthetic") {
     throw new EvalSetupError("NOT_SYNTHETIC", "eval runs only with DATA_MODE=synthetic");
   }
-  const mismatch = options.models.find((spec) => spec.provider !== deps.llmProvider);
+  const models = options.models.map((spec) => normalizeAgentSpec(spec, deps.llmProvider));
+  const mismatch = models.find((spec) => spec.provider !== deps.llmProvider);
   if (mismatch) {
     throw new EvalSetupError(
       "PROVIDER_MISMATCH",
@@ -566,10 +604,14 @@ const setup = async (
   const items = selectItems(loaded.items, options);
   if (items.length === 0) throw new EvalSetupError("NO_ITEMS", "the selection is empty");
   // Every model is checked before anything runs, so an unlisted id fails in seconds.
-  // A replay reaches no endpoint, so it checks nothing.
+  // A replay reaches no model; it reads the catalog only to resolve an agent.
+  const hasAgent = models.some((spec) => isAgentModelId(spec.modelId));
+  const catalog = !options.replay || hasAgent ? await deps.listModels() : [];
   if (!options.replay) {
-    const listed = await deps.listModels();
-    const unlisted = options.models.find((spec) => !listed.includes(spec.modelId));
+    const unlisted = models.find(
+      (spec) =>
+        !isAgentModelId(spec.modelId) && !catalog.some((row) => row.id === spec.modelId),
+    );
     if (unlisted) {
       throw new EvalSetupError(
         "MODEL_NOT_LISTED",
@@ -577,15 +619,39 @@ const setup = async (
       );
     }
   }
+  const agents = models.map((spec) => {
+    if (!isAgentModelId(spec.modelId)) return null;
+    const agent = resolveEvalAgent(spec.modelId, catalog, deps.findSkill);
+    if (isAgentProblem(agent)) throw new EvalSetupError(agent.code, agent.message);
+    return agent;
+  });
   const resolved = await Promise.all(
-    options.models.map((spec) =>
-      options.replay
-        ? Promise.resolve({ model: replayOnlyModel(spec), mock: false, host: null })
-        : deps.resolveModel(spec),
-    ),
+    models.map((spec, index) => {
+      const base = { ...spec, modelId: agents[index]?.agent.baseModelId ?? spec.modelId };
+      return options.replay
+        ? Promise.resolve({ model: replayOnlyModel(base), mock: false, host: null })
+        : deps.resolveModel(base);
+    }),
   );
-  return { loaded, items, resolved };
+  return { loaded, items, models, resolved, agents };
 };
+
+/** What meta.json records about an agent run (#279); nothing for a plain model. */
+export const agentMeta = (
+  agent: EvalAgent | null,
+): Pick<RunMeta["models"][number], "agent"> =>
+  agent === null
+    ? {}
+    : {
+        agent: {
+          id: agent.agent.id,
+          name: agent.agent.name,
+          base_model_id: agent.agent.baseModelId,
+          skill: agent.agent.skill,
+          rules_sha256: agent.rulesSha256,
+          roster_sha256: agent.rosterSha256,
+        },
+      };
 
 export const runEval = async (
   argv: readonly string[],
@@ -594,18 +660,18 @@ export const runEval = async (
 ): Promise<number> => {
   try {
     const options = parseEvalArgs(argv);
-    const { loaded, items, resolved } = await setup(options, deps);
+    const { loaded, items, models, resolved, agents } = await setup(options, deps);
     const runId = options.runId ?? deps.newRunId();
     if (!(await deps.prepareRun(runId))) {
       throw new EvalSetupError("RUN_EXISTS", `evaluation/runs/${runId} already exists`);
     }
     if (resolved.some((model) => model.mock)) io.stderr.write(`${MOCK_BANNER}\n`);
     io.stdout.write(
-      `Run ${runId}: ${items.length} items × ${options.models.length} models${options.replay ? " (replay)" : ""}\n`,
+      `Run ${runId}: ${items.length} items × ${models.length} models${options.replay ? " (replay)" : ""}\n`,
     );
 
     const lines: ResultLine[] = [];
-    for (const [index, spec] of options.models.entries()) {
+    for (const [index, spec] of models.entries()) {
       const model = resolved[index];
       if (!model) continue;
       for (const item of items) {
@@ -618,6 +684,7 @@ export const runEval = async (
                 repeat,
                 spec,
                 resolved: model,
+                agent: agents[index] ?? null,
                 replay: options.replay,
                 timeoutMs: options.timeoutMs,
               });
@@ -642,10 +709,11 @@ export const runEval = async (
       cohort_id: loaded.cohortId,
       open_twin_sha: deps.openTwinSha(),
       provider: deps.llmProvider,
-      models: options.models.map((spec, index) => ({
+      models: models.map((spec, index) => ({
         provider: spec.provider,
         model_id: spec.modelId,
         host: resolved[index]?.host ?? null,
+        ...agentMeta(agents[index] ?? null),
       })),
       sampling: "none set",
       platform: deps.platform,

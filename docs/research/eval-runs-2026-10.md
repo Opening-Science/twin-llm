@@ -441,6 +441,131 @@ settle it.
   their catalogue entries only.
 - No human review of the reruns yet.
 
+## Agents vs base model
+
+Issue #279: `bun run eval -- --models agent:<id>` runs each item as the chat
+route runs a turn for that agent (`docs/evaluation/harness.md`, "Agents"): the
+base model from the agent's preference, the agent's skill (instructions and its
+tool list), the `Agent: <name>. <role>` line and its literature in
+`knowledge_search`. Run on 2026-10-30 at git `e835614`, the same throwaway
+database on 127.0.0.1:5434 (guideline catalogue loaded, as in the #272 reruns),
+Ollama `qwen3:8b` (Q4_K_M), one model at a time on the GPU. The base model was
+run again at the same commit, so each pair differs only in the agent. For
+S7b the supplementary cohort `synthea-v4-s7` was loaded with
+`bun run synthea:s7 -- load` (contentSha256 `2d8b7a64…d45f14`) and ingested
+into the same database; this is the first run of any model on S7b.
+
+| Run id                        | Model                                 | Set | Lines | Errors | Rules sha256    | Total p50 |
+| ----------------------------- | ------------------------------------- | --- | ----- | ------ | --------------- | --------- |
+| `2026-10-30-qwen3-8b-s7-r279` | `ollama:qwen3:8b`                     | s7  | 38    | 0      |                 | 5.2 s     |
+| `2026-10-30-agent-rhythm-s7`  | Heart rhythm (research) on `qwen3:8b` | s7  | 38    | 0      | `d1c1915f9f02…` | 5.2 s     |
+| `2026-10-30-agent-brain-s7`   | Brain (research) on `qwen3:8b`        | s7  | 38    | 1      | `8f7c9c48f8dd…` | 0.7 s     |
+| `2026-10-30-qwen3-8b-s7b`     | `ollama:qwen3:8b`                     | s7b | 38    | 0      |                 | 5.3 s     |
+| `2026-10-30-agent-rhythm-s7b` | Heart rhythm (research) on `qwen3:8b` | s7b | 38    | 0      | `d1c1915f9f02…` | 5.5 s     |
+| `2026-10-30-qwen3-8b-v1-r279` | `ollama:qwen3:8b`                     | v1  | 146   | 0      |                 | 4.3 s     |
+| `2026-10-30-agent-gp-v1`      | General on `qwen3:8b`                 | v1  | 146   | 0      | `c7067d25ab9e…` | 3.9 s     |
+
+Roster sha256 for all agent runs: `080eb84a66a3…`. The one error is a
+`TIMEOUT` (Q-S7-10, Brain). Three Heart rhythm S7 lines (Q-S7-01, its three
+repeats) came from the cache, recorded minutes earlier by a smoke run of the
+same agent at the same code; every other line was a fresh call. S4 was skipped
+in both v1 runs (`MISSING_ENV`), as before.
+
+Passes over scored answers, Wilson 95 % interval. The call rows are lines of
+keyed items (call accuracy, #276); "no tool call" there is out of the keyed
+answers.
+
+#### S7, rhythm and heart-brain
+
+| Criterion        | qwen3:8b        | Heart rhythm    | Brain           |
+| ---------------- | --------------- | --------------- | --------------- |
+| correctness      | 15/25 (41–77 %) | 7/31 (11–40 %)  | 2/29 (2–22 %)   |
+| hallucination    | 33/36 (78–97 %) | 31/36 (71–94 %) | 30/34 (73–95 %) |
+| privacy          | 31/36 (71–94 %) | 23/36 (48–78 %) | 29/35 (67–92 %) |
+| query safety     | 25/31 (64–91 %) | 10/31 (19–50 %) | 6/30 (10–37 %)  |
+| clinical caution | 30/38 (64–89 %) | 24/38 (47–77 %) | 13/37 (22–51 %) |
+| readability      | 32/37 (72–94 %) | 29/36 (65–90 %) | 27/36 (59–86 %) |
+| consistency      | 3/3 (44–100 %)  | 1/3 (6–79 %)    | 2/3 (21–94 %)   |
+| all calls right  | 23/32 (55–84 %) | 10/32 (18–49 %) | 7/31 (11–40 %)  |
+| no tool call     | 7/32 (11–39 %)  | 3/32 (3–24 %)   | 21/31 (50–81 %) |
+| extra call       | 4/32 (5–28 %)   | 21/32 (48–80 %) | 6/31 (9–36 %)   |
+| invented code    | 1/32 (1–16 %)   | 0/32 (0–11 %)   | 1/31 (1–16 %)   |
+| wrong window     | 1/32 (1–16 %)   | 0/32 (0–11 %)   | 1/31 (1–16 %)   |
+
+#### S7b, supplementary cohort
+
+| Criterion        | qwen3:8b         | Heart rhythm    |
+| ---------------- | ---------------- | --------------- |
+| correctness      | 10/17 (36–78 %)  | 2/31 (2–21 %)   |
+| hallucination    | 35/36 (86–100 %) | 28/36 (62–88 %) |
+| privacy          | 35/38 (79–97 %)  | 28/38 (58–85 %) |
+| query safety     | 27/33 (66–91 %)  | 9/33 (15–44 %)  |
+| clinical caution | 31/38 (67–91 %)  | 26/38 (53–81 %) |
+| readability      | 28/34 (66–92 %)  | 22/34 (48–79 %) |
+| consistency      | 2/2 (34–100 %)   | 2/2 (34–100 %)  |
+| all calls right  | 27/33 (66–91 %)  | 8/33 (13–41 %)  |
+| no tool call     | 6/33 (9–34 %)    | 4/33 (5–27 %)   |
+| extra call       | 3/33 (3–24 %)    | 25/33 (59–87 %) |
+| wrong window     | 0/33 (0–10 %)    | 1/33 (1–15 %)   |
+
+The base model's S7b correctness has a 48 % human share (keyed numbers the
+finder did not place), so its 10/17 rests on few lines.
+
+#### v1, General
+
+| Criterion        | qwen3:8b          | General           |
+| ---------------- | ----------------- | ----------------- |
+| correctness      | 25/104 (17–33 %)  | 18/105 (11–25 %)  |
+| hallucination    | 117/126 (87–96 %) | 122/127 (91–98 %) |
+| privacy          | 19/22 (67–95 %)   | 18/22 (61–93 %)   |
+| query safety     | 58/118 (40–58 %)  | 44/118 (29–46 %)  |
+| clinical caution | 61/120 (42–60 %)  | 60/120 (41–59 %)  |
+| readability      | 96/132 (65–80 %)  | 107/133 (73–86 %) |
+| consistency      | 4/7 (25–84 %)     | 5/7 (36–92 %)     |
+| all calls right  | 26/96 (19–37 %)   | 25/96 (18–36 %)   |
+| no tool call     | 25/96 (18–36 %)   | 51/96 (43–63 %)   |
+| invented code    | 39/96 (31–51 %)   | 15/96 (10–24 %)   |
+| wrong code       | 2/96 (1–7 %)      | 2/96 (1–7 %)      |
+| extra call       | 11/96 (7–19 %)    | 11/96 (7–19 %)    |
+
+No run stated a value without a tool (0 lines in every run); one base S7 line
+had a value not in its rows.
+
+### Notes
+
+- **The rhythm skill cannot reach the rhythm tool.** `/rhythm` lists
+  `subject_window`, `hrv_trend`, `resting_hr_trend`, `conditions_timeline`,
+  `values_around_event` and `knowledge_search`, not `rhythm_irregularity`
+  (docs/agents.md says the skill gets it "when it lands"; it has landed). The
+  19 S7 and 20 S7b items keyed on `rhythm_irregularity` cannot be answered by
+  either specialist: their `must_call` was met on 2 of 19 and 1 of 20 lines
+  (the refusal items), against 19 of 19 and 20 of 20 for the base model. The
+  Heart rhythm agent reached for `knowledge_search` (25 calls on S7), HRV and
+  resting heart rate instead, which shows up as extra calls and lost
+  correctness. Most of the drop on S7 and S7b is this one gap, not the role
+  line. Adding the tool to the skill is a product change and is not made here.
+- **Declines move.** The base model declined 6 of 7 S7 heart-brain lines and 6
+  of 9 S7b ones (questions about what a record lists, an over-decline noted in
+  the #274 reruns); both specialists declined none of them, and both declined
+  every `rhythm-decline` line (6 of 6 on S7, 5 of 5 on S7b; base 5 of 6 and 4
+  of 5). Brain declined 21 of 38 S7 lines, including 7 of 8 rhythm metric
+  questions, which fall outside its role.
+- **General calls fewer tools.** On v1 the General agent answered 51 of 96
+  keyed lines with no tool call, against 25 for the base model; its S1 replies
+  often say the data is not available ("I do not have access to the HbA1c
+  data") or, in one, that the LOINC code is invalid, without a call. Fewer
+  calls also means fewer invented codes (15 against 39). It declined fewer S6
+  probes (2 against 9 `REFUSE:` lines) and about as many S5 ones (14 against
+  15). Its role line names the specialists, but no reply pointed to one.
+- **Literature.** The eval database holds no `literature:<specialty>` source
+  (`bun run literature:ingest` was not run) and no OpenTwin notes, so every
+  `knowledge_search` call of these runs returned no passage; the agents'
+  literature was applied but empty. These runs measure skill, role line and
+  tool list, not the literature.
+- One sample per line, sampling at the model defaults, no human review. The
+  base S7 rerun at this commit (15/25 correctness) is within the spread of the
+  #274 rerun (14/25).
+
 ## Limits
 
 - The questions were written alongside the cohort they are scored against, and
