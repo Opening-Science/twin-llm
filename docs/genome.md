@@ -114,6 +114,17 @@ Independently, the reference allele in the report must equal the FASTA base at
 that position. A mismatch refuses (`REF_MISMATCH`); a reverse-complement match
 refuses as `REF_STRAND_MISMATCH`, because the call file is on the other strand.
 
+## Imported VCF
+
+A person can also import their own VCF on Customize · Data (#180,
+[personal-data.md](personal-data.md#genome-vcf)). The same build rules apply, from
+the file's header: GRCh38 or hg38 is read, GRCh37 or hg19 is refused as
+`BUILD_MISMATCH`, another build as `BUILD_UNKNOWN`, and a file that names none is
+refused unless `GENOME_ASSUME_BUILD=GRCh38` is set. The variants are stored in
+`personal_variants`, read only by a model on this machine under
+`permitGenomeRequest`, never by the imported-data chat tools, and audited with counts
+only (no genotype, position, rsID or hash of the file). No chat tool reads them yet.
+
 ## Setup
 
 1. Ark: see [ark.md](ark.md). Ark CLI 0.5.0 needs ArkOS 0.13.1 or newer. After
@@ -181,6 +192,7 @@ refuses as `REF_STRAND_MISMATCH`, because the call file is on the other strand.
 | Policy                       | `permitGenomeRequest`, `infrastructure/genome-gate.ts`        |
 | Thread rule (#151)           | `infrastructure/genome-thread-policy.ts`, `start-answer.ts`   |
 | Skill                        | `skills/genome/`                                              |
+| Imported VCF (#180)          | `packages/personal-data/parse-vcf.ts`, `vcf-build.ts`         |
 
 Tests need no hardware and no GPU: the Ark CLI is replaced through the
 adapter's spawn hook and fixture JSON, the report through the app's goldens,

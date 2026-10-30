@@ -7,7 +7,7 @@ import { MAX_FILE_BYTES } from "./limits";
 import { parseImport } from "./parse-import";
 import { reviewSummary } from "./review-summary";
 import { chunkRows, cleanDatasetName, defaultDatasetName, savePlan } from "./save-plan";
-import type { ParsedOk } from "./types";
+import { IMPORT_KINDS, isGenomeImportKind, type ParsedOk } from "./types";
 
 const fixtureBytes = (name: string): Uint8Array =>
   new Uint8Array(
@@ -31,6 +31,7 @@ describe("reviewSummary", () => {
       clinicalRecords: 0,
       tableRows: 0,
       tableColumns: 0,
+      variants: 0,
       unmapped: 4,
     });
     expect(review.dateRange).toEqual({
@@ -159,6 +160,7 @@ describe("savePlan", () => {
       rowCount: 9,
       firstAt: "2024-02-10T00:00:00.000Z",
       lastAt: "2025-05-20T06:30:00.000Z",
+      genomeBuild: null,
     });
     expect(plan.observations).toBe(parsed.kind === "lab-csv" ? parsed.observations : []);
     expect([plan.clinical, plan.table, plan.chunks]).toEqual([[], null, []]);
@@ -199,5 +201,96 @@ describe("savePlan", () => {
     expect(cleanDatasetName("x".repeat(200)).length).toBe(120);
     expect(defaultDatasetName(".csv")).toBe(".csv");
     expect(defaultDatasetName("")).toBe("Imported data");
+  });
+});
+
+describe("a genome VCF", () => {
+  const VCF = [
+    "##fileformat=VCFv4.2",
+    "##reference=GRCh38",
+    "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tSYNTHETIC_1",
+    "chr1\t100\trs1\tA\tG\t.\tPASS\t.\tGT\t0/0",
+    "chr1\t200\trs2\tC\tT\t.\tPASS\t.\tGT\t0/1",
+    "chr2\t300\t.\tG\tA\t.\t.\t.\tGT\t1/1",
+    "chr2\t400\trs4\tT\tC\t.\tPASS\t.\tGT\t./.",
+    "chr2\t500\trs5\tT\tC\t.\tPASS\t.\tDP\t3",
+    "",
+  ].join("\n");
+  const parsed = parseImport("vcf", new TextEncoder().encode(VCF));
+  if (!parsed.ok) throw new Error(parsed.refusal.message);
+
+  test("review: build, genotype counts, chromosomes and the preview as stored", () => {
+    const review = reviewSummary(parsed, FILE);
+    expect(review.rowsToStore).toBe(4);
+    expect(review.counts).toEqual({
+      observations: 0,
+      clinicalRecords: 0,
+      tableRows: 0,
+      tableColumns: 0,
+      variants: 4,
+      unmapped: 1,
+    });
+    expect(review.dateRange).toBeNull();
+    expect(review.genome).toEqual({
+      build: "GRCh38",
+      buildSource: "file",
+      chromosomes: [
+        { chrom: "chr1", count: 2 },
+        { chrom: "chr2", count: 2 },
+      ],
+      genotypes: { homRef: 1, het: 1, homAlt: 1, noCall: 1 },
+    });
+    expect(review.preview).toEqual({
+      columns: ["chrom", "pos", "id", "ref", "alt", "genotype", "filter"],
+      rows: [
+        ["chr1", 100, "rs1", "A", "G", "0/0", "PASS"],
+        ["chr1", 200, "rs2", "C", "T", "0/1", "PASS"],
+        ["chr2", 300, null, "G", "A", "1/1", null],
+        ["chr2", 400, "rs4", "T", "C", "no call", "PASS"],
+      ],
+    });
+    expect(review.codes).toEqual([]);
+  });
+
+  test("other formats have no genome summary", () => {
+    expect(reviewSummary(parsedOk("lab-csv", "lab-results.csv"), FILE).genome).toBeNull();
+  });
+
+  test("save plan: the variants, the build, no observations", () => {
+    const plan = savePlan(parsed, {
+      userId: "user-1",
+      name: "",
+      fileName: "synthetic.vcf.gz",
+      sha256: "b".repeat(64),
+      byteSize: VCF.length,
+    });
+    expect(plan.dataset).toEqual({
+      userId: "user-1",
+      kind: "vcf",
+      name: "synthetic.vcf",
+      sourceFileName: "synthetic.vcf.gz",
+      sha256: "b".repeat(64),
+      byteSize: VCF.length,
+      rowCount: 4,
+      firstAt: null,
+      lastAt: null,
+      genomeBuild: "GRCh38",
+    });
+    expect([plan.observations, plan.clinical, plan.chunks, plan.table]).toEqual([
+      [],
+      [],
+      [],
+      null,
+    ]);
+    expect(plan.variants.map((row) => [row.pos, row.genotype])).toEqual([
+      [100, "0/0"],
+      [200, "0/1"],
+      [300, "1/1"],
+      [400, null],
+    ]);
+  });
+
+  test("only a VCF is a genome import", () => {
+    expect(IMPORT_KINDS.filter(isGenomeImportKind)).toEqual(["vcf"]);
   });
 });

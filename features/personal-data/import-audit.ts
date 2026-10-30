@@ -1,5 +1,5 @@
 import type { AppendInput } from "@/packages/audit/append";
-import type { ImportKind } from "@/packages/personal-data/types";
+import { type ImportKind, isGenomeImportKind } from "@/packages/personal-data/types";
 
 /**
  * Audit rows for imported personal data. Pure builders, so a test can check
@@ -8,6 +8,10 @@ import type { ImportKind } from "@/packages/personal-data/types";
  * file name, and never a hash of any of those (a short value is easy to
  * recover from its hash by trying them all). The file's own SHA-256 covers
  * the whole file, so it says nothing about any one value.
+ *
+ * A genome VCF's rows carry no SHA-256 either: a small VCF is a known header
+ * and a handful of genotypes, few enough to recover from the file's hash by
+ * trying them all. Its rows hold the kind, byte size and counts only.
  */
 
 export const PERSONAL_DATA_AUDIT = {
@@ -19,6 +23,21 @@ export const PERSONAL_DATA_AUDIT = {
 } as const;
 
 export type AuditContext = Readonly<{ actor: string; sessionId: string }>;
+
+type AuditedFile = Readonly<{
+  kind: ImportKind | null;
+  byteSize: number;
+  sha256: string | null;
+}>;
+
+/** The file facts a row may hold: no SHA-256 for a genome file. */
+export const fileArgs = (
+  file: AuditedFile,
+): Readonly<{ kind: ImportKind | null; bytes: number; sha256: string | null }> => ({
+  kind: file.kind,
+  bytes: file.byteSize,
+  sha256: file.kind !== null && isGenomeImportKind(file.kind) ? null : file.sha256,
+});
 
 const event = (
   context: AuditContext,
@@ -41,13 +60,13 @@ export type ReviewCounts = Readonly<{ rowsToStore: number; unmapped: number }>;
 /** A parse for review: stored nothing. `refused` names why the file was refused. */
 export const reviewEvent = (
   context: AuditContext,
-  file: Readonly<{ kind: ImportKind | null; byteSize: number; sha256: string | null }>,
+  file: AuditedFile,
   outcome: Readonly<{ refused: string } | ReviewCounts>,
 ): AppendInput =>
   event(
     context,
     PERSONAL_DATA_AUDIT.review,
-    { kind: file.kind, bytes: file.byteSize, sha256: file.sha256 },
+    fileArgs(file),
     "refused" in outcome
       ? { stored: false, refused: outcome.refused }
       : { stored: false, rows: outcome.rowsToStore, unmapped: outcome.unmapped },
@@ -56,7 +75,7 @@ export const reviewEvent = (
 
 export const saveEvent = (
   context: AuditContext,
-  file: Readonly<{ kind: ImportKind | null; byteSize: number; sha256: string | null }>,
+  file: AuditedFile,
   outcome: Readonly<
     { refused: string } | { datasetId: string; rows: number; unmapped: number }
   >,
@@ -65,14 +84,14 @@ export const saveEvent = (
     ? event(
         context,
         PERSONAL_DATA_AUDIT.save,
-        { kind: file.kind, bytes: file.byteSize, sha256: file.sha256 },
+        fileArgs(file),
         { stored: false, refused: outcome.refused },
         0,
       )
     : event(
         context,
         PERSONAL_DATA_AUDIT.save,
-        { kind: file.kind, bytes: file.byteSize, sha256: file.sha256 },
+        fileArgs(file),
         {
           stored: true,
           dataset_id: outcome.datasetId,

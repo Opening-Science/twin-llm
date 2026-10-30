@@ -6,6 +6,8 @@ import type { SavePlan } from "@/packages/personal-data/save-plan";
 import { storedColumns, storedRows } from "@/packages/personal-data/stored-table";
 import {
   type EffectivePrecision,
+  IMPORT_KINDS,
+  isGenomeImportKind,
   isImportKind,
   type ImportKind,
 } from "@/packages/personal-data/types";
@@ -118,6 +120,11 @@ const save = async (plan: SavePlan): Promise<SaveOutcome> => {
             data: batch.map((row) => ({ ...row, datasetId, userId })),
           });
         }
+        for (const batch of batches(plan.variants)) {
+          await tx.personalVariant.createMany({
+            data: batch.map((row) => ({ ...row, datasetId, userId })),
+          });
+        }
         if (plan.table !== null) {
           await tx.personalTable.create({
             data: {
@@ -181,7 +188,7 @@ export const personalDataStore = (): PersonalDataStore => ({
         select: { rowCount: true },
       });
       if (row === null) return null;
-      // Cascades to observations, clinical records, the table and its chunks.
+      // Cascades to observations, clinical records, variants, the table and its chunks.
       await tx.personalDataset.delete({ where: { id } });
       return row.rowCount;
     }),
@@ -224,7 +231,14 @@ const toObservation = (
  * resolves the signed-in actor's row, and a person with no row has nothing.
  * Fixed `findMany` / `groupBy` only, each capped by the caller's `take`.
  * Coded reads are held to LOINC; a series by name is held to rows with no code.
+ * A genome VCF is not listed at all: its rows are read only under
+ * `permitGenomeRequest`, never by these tools.
  */
+/** Kinds the imported-data chat tools may list: every one but a genome file. */
+const CHAT_LISTED_KINDS: ImportKind[] = IMPORT_KINDS.filter(
+  (kind) => !isGenomeImportKind(kind),
+);
+
 export const importedDataReads = (
   userId: () => Promise<string | null>,
 ): Omit<ImportedDataPorts, "appendAudit"> => {
@@ -238,7 +252,7 @@ export const importedDataReads = (
         async (id) =>
           (
             await database().personalDataset.findMany({
-              where: { userId: id },
+              where: { userId: id, kind: { in: CHAT_LISTED_KINDS } },
               orderBy: { createdAt: "desc" },
               select: SELECT,
             })
