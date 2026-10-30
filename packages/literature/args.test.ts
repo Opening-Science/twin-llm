@@ -43,10 +43,13 @@ describe("parseFetchArgs", () => {
   });
 
   test.each([
-    [[], "--specialty must be one of gp, diet, anatomy, sleep, trainer, genetics"],
+    [
+      [],
+      "--specialty must be one of gp, diet, anatomy, sleep, trainer, genetics, cardiology, neurology",
+    ],
     [
       ["--specialty", "cardio"],
-      "--specialty must be one of gp, diet, anatomy, sleep, trainer, genetics",
+      "--specialty must be one of gp, diet, anatomy, sleep, trainer, genetics, cardiology, neurology",
     ],
     [
       ["--specialty", "diet", "--limit", "0"],
@@ -87,7 +90,8 @@ describe("parseIngestArgs", () => {
     });
     expect(parseIngestArgs(["--specialty", "x"])).toEqual({
       ok: false,
-      error: "--specialty must be one of gp, diet, anatomy, sleep, trainer, genetics",
+      error:
+        "--specialty must be one of gp, diet, anatomy, sleep, trainer, genetics, cardiology, neurology",
     });
   });
 });

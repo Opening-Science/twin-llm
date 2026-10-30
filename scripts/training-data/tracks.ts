@@ -50,7 +50,7 @@ export type Track = Readonly<{
   id: TrackId;
   agent: TrackAgent;
   families: readonly Family[];
-  /** The codes data questions ask about; null keeps every measure (the GP). */
+  /** The codes data questions ask about; null keeps every measure (the General agent). */
   loincs: readonly string[] | null;
   styles: readonly Style[];
   /** The genome families and tools (`--genome`). */

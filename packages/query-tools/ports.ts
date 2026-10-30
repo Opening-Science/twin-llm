@@ -106,8 +106,15 @@ export type QueryToolPorts = Readonly<{
   findMedicationRequests?: (
     query: ClinicalQuery,
   ) => Promise<readonly MedicationRequestRecord[]>;
+  /**
+   * The first and last observation time of one subject, or null with none.
+   * Optional as above; `rhythm_irregularity` falls back to the default read.
+   */
+  findObservationSpan?: (subjectRef: string) => Promise<ObservationSpan | null>;
   appendAudit: (input: AppendInput) => Promise<unknown>;
 }>;
+
+export type ObservationSpan = Readonly<{ first: Date; last: Date }>;
 
 export const toNumber = (value: unknown): number => {
   if (typeof value === "number") return value;
@@ -167,6 +174,19 @@ export const findMedicationRequestsInDatabase = (
     take: query.take,
   });
 
+export const findObservationSpanInDatabase = async (
+  subjectRef: string,
+): Promise<ObservationSpan | null> => {
+  const stats = await database().observation.aggregate({
+    where: { subjectRef },
+    _min: { effectiveAt: true },
+    _max: { effectiveAt: true },
+  });
+  return stats._min.effectiveAt === null || stats._max.effectiveAt === null
+    ? null
+    : { first: stats._min.effectiveAt, last: stats._max.effectiveAt };
+};
+
 export const defaultQueryToolPorts = (): QueryToolPorts => ({
   findSubject: (subjectRef) =>
     database().subject.findUnique({
@@ -215,5 +235,6 @@ export const defaultQueryToolPorts = (): QueryToolPorts => ({
   },
   findConditions: findConditionsInDatabase,
   findMedicationRequests: findMedicationRequestsInDatabase,
+  findObservationSpan: findObservationSpanInDatabase,
   appendAudit: (input) => append(database(), input),
 });

@@ -42,14 +42,24 @@ describe("parseWearablesArgs", () => {
       endDay: "2026-10-01",
       days: 90,
       allowEvalCohort: false,
+      generatorVersion: "3",
     });
-    expect(parseWearablesArgs(["--in", "/c/fhir", "--allow-eval-cohort"])).toEqual({
+    expect(
+      parseWearablesArgs([
+        "--in",
+        "/c/fhir",
+        "--allow-eval-cohort",
+        "--generator-version",
+        "2",
+      ]),
+    ).toEqual({
       input: "/c/fhir",
       output: "/c/wearables",
       seed: null,
       endDay: "2026-10-01",
       days: 90,
       allowEvalCohort: true,
+      generatorVersion: "2",
     });
   });
 
@@ -65,6 +75,9 @@ describe("parseWearablesArgs", () => {
     );
     expect(parseWearablesArgs(["--in", "x", "--seed", "-1"])).toBe(
       "--seed must be a whole number.",
+    );
+    expect(parseWearablesArgs(["--in", "x", "--generator-version", "1"])).toBe(
+      "--generator-version must be 2 or 3.",
     );
   });
 });
@@ -94,17 +107,72 @@ describe("runGenerateWearables", () => {
     ]);
     expect(h.written.get("/c/wearables/manifest.json")).toEqual({
       generator: "twinllm-synthetic-wearables",
-      generatorVersion: "2",
+      generatorVersion: "3",
       cohortId: "synthea-v4-seed4242",
       seed: 4242,
       endDay: "2026-10-01",
       days: 5,
       subjects: 2,
-      // 35 daily readings and one workout (4f083ce3, 29 Sep, running).
-      readings: 36,
+      // 5 worn days across both subjects x 11 daily metrics and one workout
+      // (4f083ce3, 29 Sep, running); v2 had 7 daily metrics (36 readings).
+      readings: 56,
       syntheaVersion: "v4.0.0",
+      subjectsWithConditionEffect: {
+        atrial_fibrillation: 0,
+        heart_failure: 0,
+        stroke: 0,
+        sleep_apnea: 0,
+      },
     });
     expect(h.out.join("")).toContain("Subjects: 2, deceased left out: 0, other files: 1");
+  });
+
+  test("follows a subject's conditions in v3 and ignores them with --generator-version 2", async () => {
+    const base = fixture("patient-1.json") as { entry: unknown[] };
+    const withAf = {
+      ...base,
+      entry: [
+        ...base.entry,
+        {
+          resource: {
+            resourceType: "Condition",
+            code: { coding: [{ system: "http://snomed.info/sct", code: "49436004" }] },
+            onsetDateTime: "2020-01-01T00:00:00Z",
+          },
+        },
+      ],
+    };
+    const run = async (extra: string[]) => {
+      const h = harness({
+        "/c/manifest.json": { seed: 4242, cohortId: "synthea-v4-seed4242" },
+        "/c/fhir/patient-1.json": withAf,
+      });
+      expect(
+        await runGenerateWearables(
+          ["--in", "/c/fhir", "--days", "5", ...extra],
+          h.io,
+          h.deps,
+        ),
+      ).toBe(0);
+      const bundle = h.written.get(
+        "/c/wearables/ba419d35-0dfe-8af7-347c-eebf02485a56.wearables.json",
+      ) as { entry: { resource: { code?: { coding: { code: string }[] } } }[] };
+      const codes = bundle.entry.flatMap(
+        (entry) => entry.resource.code?.coding.map((coding) => coding.code) ?? [],
+      );
+      return { h, codes };
+    };
+    const v3 = await run([]);
+    expect(v3.codes).toContain("af-burden");
+    expect(v3.codes).toContain("irregular-rhythm-notification");
+    expect(v3.h.out.join("")).toContain(
+      "Living subjects with a condition effect: atrial fibrillation 1, heart failure 0, stroke 0, sleep apnea 0",
+    );
+    const v2 = await run(["--generator-version", "2"]);
+    expect(v2.codes).not.toContain("af-burden");
+    expect(v2.h.written.get("/c/wearables/manifest.json")).toMatchObject({
+      generatorVersion: "2",
+    });
   });
 
   test("refuses the evaluation cohort, also from an older manifest's seed", async () => {

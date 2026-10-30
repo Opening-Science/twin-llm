@@ -429,6 +429,7 @@ describe("parseEvalArgs", () => {
         "60",
       ]),
     ).toEqual({
+      set: "v1",
       models: [
         { provider: "ollama", modelId: "a" },
         { provider: "ollama", modelId: "b" },
@@ -440,6 +441,14 @@ describe("parseEvalArgs", () => {
       runId: "r1",
       timeoutMs: 60_000,
     });
+  });
+
+  test("--set picks the S7 file and refuses an unknown set", () => {
+    const options = parseEvalArgs([...MODELS, "--set", "s7", "--scenario", "S7"]);
+    expect([options.set, options.scenario]).toEqual(["s7", "S7"]);
+    expect(() => parseEvalArgs([...MODELS, "--set", "v2"])).toThrow(
+      "USAGE: --set takes one of v1, s7",
+    );
   });
 
   test("refuses two selections at once and unknown flags", () => {
@@ -606,6 +615,7 @@ describe("runEval on fakes", () => {
       replay: false,
       date: "2026-10-20",
       git_sha: "b".repeat(40),
+      question_set: "v1",
       questions_sha256: questionsSha256(QUESTIONS),
       answer_key_sha256: sha256Hex(KEY_TEXT),
       cohort_id: "synthea-v4-seed42",
@@ -879,6 +889,25 @@ describe("runEval refuses to start", () => {
       files: 0,
       calls: 0,
     });
+  });
+
+  test("--set s7 reads the S7 questions and key, and names the S7 key command", async () => {
+    const read: string[] = [];
+    const result = await refusal([...MODELS, "--set", "s7"], {
+      readText: async (path) => {
+        read.push(path);
+        return path === "evaluation/questions.s7.v1.json"
+          ? QUESTIONS_TEXT
+          : JSON.stringify(answerKey("0".repeat(64)));
+      },
+    });
+    expect(read).toEqual([
+      "evaluation/questions.s7.v1.json",
+      "evaluation/answer-key.s7.v1.json",
+    ]);
+    expect(result.err).toBe(
+      `QUESTIONS_SHA_MISMATCH: questions sha256 ${questionsSha256(QUESTIONS)} is not the answer key's ${"0".repeat(64)}; rebuild the key (bun run eval:answer-key:s7)\n`,
+    );
   });
 
   test("when a model's provider is not the configured one", async () => {

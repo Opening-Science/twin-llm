@@ -119,6 +119,70 @@ worn days (15–60% per subject) one workout of running, cycling, walking or str
 `workout-<sport>` at 18:00 UTC. `training_load` reads them. Their random streams are
 their own (`workout-profile:` and `workouts:` keys), so no daily value moved.
 
+### Condition effects (generator v3)
+
+Generator v3 (the default) also reads each subject's Synthea Conditions from the same
+bundle, with their onset and abatement days (`scripts/synthetic-wearables/conditions.ts`,
+`conditionEffects(conditions, day, key)`). Four conditions change the series. An effect
+starts on the onset day and stops on the abatement day; a stroke ignores its abatement,
+because Synthea closes the acute event within days while the change in activity lasts.
+Every v3 subject gets the same metrics on every worn day, whatever their conditions, so
+the presence of a metric never tells a condition (see the baseline rows below). A subject
+with none of the four keeps the v2 values of the seven v2 metrics. `--generator-version 2`
+ignores conditions and gives the v2 series exactly (a test pins the v2 checksum); the
+evaluation key was built from v2 (`docs/evaluation/question-set.md`). The manifest
+records the version and, for v3, how many living subjects had each effect.
+
+| Condition (SNOMED CT)                          | Effect                                                 | Size                                                                 | Source                                                                                                                                                      |
+| ---------------------------------------------- | ------------------------------------------------------ | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Atrial fibrillation (`49436004`)               | Paroxysmal episodes after onset                        | An episode starts on about 1 day in 10 and lasts 1 to 3 days         | assumption                                                                                                                                                  |
+|                                                | Share of the day in AF on an episode day (`af-burden`) | 0.2 to 0.9; 0 on other days after onset                              | assumption                                                                                                                                                  |
+|                                                | Daily mean heart rate on an episode day                | +10 to +20 /min                                                      | assumption                                                                                                                                                  |
+|                                                | RMSSD on an episode day                                | times (1 + 2 x burden), so up to about 2.8 times                     | direction: HRV measures assume sinus rhythm and RR irregularity inflates RMSSD (Task Force of the ESC and NASPE 1996, Circulation 93:1043); size assumption |
+|                                                | Irregular-rhythm notifications per day                 | 0 below burden 0.35, 1 up to 0.7, 2 above                            | the kind of notification exists (Perez et al. 2019, NEJM 381:1909, Apple Heart Study); counts assumption                                                    |
+| Chronic heart failure (`88805009`, `84114007`) | Resting heart rate                                     | +5 to +10 /min, fixed per subject                                    | assumption                                                                                                                                                  |
+|                                                | RMSSD                                                  | -20 to -30%                                                          | direction: HRV is reduced in chronic heart failure and lower HRV predicts mortality (Nolan et al. 1998, Circulation 98:1510, UK-HEART); size assumption     |
+|                                                | Steps                                                  | -30 to -40%                                                          | assumption                                                                                                                                                  |
+| Stroke (`230690007`)                           | Steps                                                  | -60% at onset, recovering to about -20% over some 90 days, then flat | assumption                                                                                                                                                  |
+|                                                | Sleep score (fragmented sleep)                         | -12 at onset, easing to -5                                           | assumption                                                                                                                                                  |
+| Sleep apnea (`78275009`, `73430006`)           | Nightly SpO2 mean (LOINC `59408-5`)                    | 92.5 to 95%                                                          | assumption                                                                                                                                                  |
+|                                                | Nightly SpO2 minimum (local `spo2-min`)                | 80 to 88%                                                            | assumption                                                                                                                                                  |
+|                                                | Respiratory rate                                       | +0.5 to +1.0 /min, fixed per subject                                 | assumption                                                                                                                                                  |
+| Everyone (baseline)                            | Nightly SpO2 mean                                      | 95 to 98%                                                            | assumption                                                                                                                                                  |
+|                                                | Nightly SpO2 minimum                                   | 89 to 94%                                                            | assumption                                                                                                                                                  |
+|                                                | False irregular-rhythm notifications outside AF        | about 1 per person-year                                              | false positives exist (Perez et al. 2019, NEJM 381:1909; Lubitz et al. 2022, Circulation, Fitbit Heart Study); rate assumption                              |
+|                                                | AF burden without AF                                   | 0                                                                    | by definition                                                                                                                                               |
+| Hypertension (`59621000` and others)           | None                                                   |                                                                      | a wrist device does not measure blood pressure, so the series cannot show it                                                                                |
+
+Several conditions add up: deltas are summed and factors multiplied. The sleep score is
+set before the AF inflation of RMSSD, so an episode never reads as better recovery.
+
+New metrics in v3, for every subject on every worn day (none in v2):
+
+| Metric                         | Code                                             | Unit      |
+| ------------------------------ | ------------------------------------------------ | --------- |
+| Nightly SpO2 mean              | LOINC `59408-5`                                  | `%`       |
+| Nightly SpO2 minimum           | local `spo2-min`                                 | `%`       |
+| Irregular-rhythm notifications | local `irregular-rhythm-notification`            | `{count}` |
+| AF burden (ground truth)       | `urn:twinllm:synthetic-ground-truth` `af-burden` | `1`       |
+
+`59408-5` is the SpO2 code the Oura, Whoop and Apple Health readers use;
+`irregular-rhythm-notification` is the Google Health connector's name for the same kind
+of notification. The AF burden is something no device reports: it is the simulator's
+ground truth, in its own code system and tagged `simulator-ground-truth`, so it can be
+used to check an answer and is never a reading.
+
+Limits, stated plainly: every size above is an assumption for research data, not a
+fitted model of a disease. Persistent AF is not modelled (every AF subject has
+paroxysmal episodes). The SpO2 and notification values of a healthy subject are drawn
+from the ranges above, not from any device.
+
+On the pinned evaluation cohort `synthea-v4-seed42` (release `eval-cohort-v1`, 37
+patient files, 30 living), every onset is before the window (records end 2026-01-01),
+so the effects run through the whole window. Of the 30 living subjects, 1 has the AF
+effect and none heart failure, stroke or sleep apnea; the 3 subjects with heart
+failure died in Synthea and get no series. The evaluation key still uses v2.
+
 Each subject gets fixed baselines, a share of worn days (one in twelve wears
 the device on about 15% of days), a slow resting heart rate drift and, for
 some, a few days with raised resting heart rate near the end. Every resource
@@ -292,14 +356,14 @@ role line are read from `infrastructure/agents.ts` (#218), the agents the chat
 runs, so a role change there reaches the training data without a second copy.
 Only each agent's area and hand-over topics live in `tracks.ts`.
 
-| Track      | Agent                | Families                                                                                                                                                                                                      | Codes                                                                      | Styles         |
-| ---------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | -------------- |
-| `general`  | General Practitioner | every default family                                                                                                                                                                                          | every measure                                                              | all four       |
-| `diet`     | Diet specialist      | latest, trend, baseline, compare, outside record, near miss, unit conversion, declines, other person                                                                                                          | weight, BMI, HbA1c, glucose, total, LDL and HDL cholesterol, triglycerides | all four       |
-| `anatomy`  | Anatomy specialist   | `anatomy_note`, latest, near miss, absent code, decline condition, other person                                                                                                                               | systolic blood pressure, creatinine                                        | all four       |
-| `sleep`    | Sleep                | `sleep_summary`, `sleep_no_rows`, the five data families, outside record, wearable key, decline condition, other person                                                                                       | sleep duration, respiratory rate                                           | formal, casual |
-| `trainer`  | Trainer              | `hrv_trend`, `resting_hr_trend`, `training_load`, `wearable_too_short`, `wearable_no_rows`, the five data families, outside record, near miss, unit conversion, wearable key, decline condition, other person | resting heart rate, heart rate, daily step count                           | casual, terse  |
-| `genetics` | Genetics             | the seven genome families (turns on `--genome`)                                                                                                                                                               | none                                                                       | all four       |
+| Track      | Agent              | Families                                                                                                                                                                                                      | Codes                                                                      | Styles         |
+| ---------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | -------------- |
+| `general`  | General            | every default family                                                                                                                                                                                          | every measure                                                              | all four       |
+| `diet`     | Diet specialist    | latest, trend, baseline, compare, outside record, near miss, unit conversion, declines, other person                                                                                                          | weight, BMI, HbA1c, glucose, total, LDL and HDL cholesterol, triglycerides | all four       |
+| `anatomy`  | Anatomy specialist | `anatomy_note`, latest, near miss, absent code, decline condition, other person                                                                                                                               | systolic blood pressure, creatinine                                        | all four       |
+| `sleep`    | Sleep              | `sleep_summary`, `sleep_no_rows`, the five data families, outside record, wearable key, decline condition, other person                                                                                       | sleep duration, respiratory rate                                           | formal, casual |
+| `trainer`  | Trainer            | `hrv_trend`, `resting_hr_trend`, `training_load`, `wearable_too_short`, `wearable_no_rows`, the five data families, outside record, near miss, unit conversion, wearable key, decline condition, other person | resting heart rate, heart rate, daily step count                           | casual, terse  |
+| `genetics` | Genetics           | the seven genome families (turns on `--genome`)                                                                                                                                                               | none                                                                       | all four       |
 
 Every track also has `agent_handover`. No two specialists ask about the same
 code. A track keeps only questions in its styles, so the sleep and trainer sets
@@ -343,11 +407,11 @@ to another agent. Templates only, like every other family.
   `handover-family.ts`, `handover.<style>`) calls no tool, says the question is
   outside what it looks at and names the agent that fits with that agent's
   role line. Outcome `handed_over`.
-- The General Practitioner asked a Diet, Sleep or Trainer question reads the
+- The General agent asked a Diet, Sleep or Trainer question reads the
   latest value with `latest_by_loinc`, answers as `latest_value` does, and
   names the specialist to ask for more. Asked an anatomy question, it answers
   as `anatomy_note` does and names the Anatomy agent. Asked about the genome
-  report, which a GP turn cannot read, it calls no tool and names the
+  report, which a General turn cannot read, it calls no tool and names the
   Genetics agent.
 
 On the 1M cohort, `training:batches -- --tracks` writes one set per track in

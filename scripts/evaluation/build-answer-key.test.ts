@@ -14,7 +14,9 @@ import {
   unitNear,
   valueAt,
   windowsOf,
+  runKeyedTool,
 } from "./build-answer-key";
+import { memoryPorts } from "./cohort-ports";
 import type { KeyedTool } from "./question-set";
 
 const SUBJECT = "synthetic-subject-1";
@@ -293,6 +295,41 @@ describe("buildAnswerKey", () => {
     });
   });
 
+  test("a personal-mode value runs in personal mode and keeps its mode on the entry", async () => {
+    const modes: string[] = [];
+    const args = { subject_ref: "personal", recording: 1, duration_sec: 300 };
+    const spec = {
+      name: "refusal",
+      tool: "rhythm_irregularity",
+      args,
+      path: "code",
+      unit: null,
+      tolerance: { exact: true },
+    };
+    const set = {
+      ...questions,
+      items: [item("Q-S1-01", [{ ...spec, mode: "personal" }]), item("Q-S1-02", [spec])],
+    };
+    const ports: AnswerKeyPorts = {
+      ...fakePorts(defaultAnswer),
+      runTool: async (_tool, _args, mode) => {
+        modes.push(mode);
+        return mode === "personal"
+          ? { code: "NO_RHYTHM_DATA" }
+          : { code: "OUTSIDE_SUBJECT_WINDOW" };
+      },
+    };
+    const key = await buildAnswerKey(set, ports);
+    // The same call in two modes is two calls, never one shared read.
+    expect(modes).toEqual(["personal", "synthetic"]);
+    expect(key.entries["Q-S1-01"]?.[0]).toMatchObject({
+      value: "NO_RHYTHM_DATA",
+      mode: "personal",
+    });
+    expect(key.entries["Q-S1-02"]?.[0]?.value).toBe("OUTSIDE_SUBJECT_WINDOW");
+    expect(key.entries["Q-S1-02"]?.[0]).not.toHaveProperty("mode");
+  });
+
   test("a tool that throws names the item, never the raw error", async () => {
     const ports = fakePorts(() => {
       throw new Error("connection refused at 127.0.0.1:5434 password=secret");
@@ -300,6 +337,56 @@ describe("buildAnswerKey", () => {
     await expect(buildAnswerKey(questions, ports)).rejects.toThrow(
       "Q-S1-01 slope_per_day: trend failed",
     );
+  });
+});
+
+describe("runKeyedTool", () => {
+  const subject = {
+    subjectRef: "s1",
+    scope: { isSynthetic: true, cohortId: "synthea-v4-seed42" },
+    observations: [
+      {
+        id: "o1",
+        loinc: "8867-4",
+        value: 60,
+        unitUcum: "/min",
+        effectiveAt: new Date("2020-01-01T00:00:00Z"),
+      },
+      {
+        id: "o2",
+        loinc: "8867-4",
+        value: 62,
+        unitUcum: "/min",
+        effectiveAt: new Date("2020-06-01T00:00:00Z"),
+      },
+    ],
+    conditions: [],
+    medicationRequests: [],
+  };
+  const scope = { actor: "test", sessionId: "t", mode: "synthetic" } as const;
+
+  test("runs the real tool over the ports it is given", async () => {
+    const tools = await import("../../packages/query-tools/tools");
+    const ports = memoryPorts([subject]);
+    const result = await runKeyedTool(
+      tools,
+      scope,
+      "rhythm_irregularity",
+      { subject_ref: "s1", recording: 1, duration_sec: 300, date: "2020-03-01" },
+      ports,
+    );
+    expect(Reflect.get(result as object, "n_flagged")).toBe(0);
+    expect(ports.audit.map((row) => row.tool)).toEqual(["rhythm_irregularity"]);
+  });
+
+  test("refuses the two tools that read the database only", async () => {
+    const tools = await import("../../packages/query-tools/tools");
+    const ports = memoryPorts([subject]);
+    const args = { subject_ref: "s1", loinc: ["8867-4"] };
+    await expect(
+      runKeyedTool(tools, scope, "latest_by_loinc", args, ports),
+    ).rejects.toThrow("latest_by_loinc reads the database only");
+    expect(ports.audit).toEqual([]);
   });
 });
 
@@ -316,9 +403,9 @@ describe("helpers", () => {
       rowCountOf("compare_windows", { window_a: { n: 3 }, window_b: { n: 4 } }),
     ).toBe(7);
     expect(rowCountOf("cross_source_compare", { n_pairs: 9 })).toBe(9);
-    expect(
-      rowCountOf("values_around_event", { before: { n: 2 }, after: { n: 3 } }),
-    ).toBe(5);
+    expect(rowCountOf("values_around_event", { before: { n: 2 }, after: { n: 3 } })).toBe(
+      5,
+    );
     expect(rowCountOf("coverage", { codes: [{ n: 2 }, { n: 9 }] })).toBe(11);
     expect(rowCountOf("latest_by_loinc", { rows: [{}, {}] })).toBe(2);
     expect(rowCountOf("trend", ROW_CAP_EXCEEDED)).toBe(0);

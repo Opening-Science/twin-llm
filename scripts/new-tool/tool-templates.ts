@@ -124,7 +124,7 @@ export const rowCountCase = (names: ToolNames): string =>
 
 /** scripts/evaluation/build-answer-key.ts: the answer key runs the real tool. */
 export const answerKeyRunCase = (names: ToolNames): string =>
-  `      case "${names.snake}":\n        return tools.${names.run}(scope, KEYED_TOOLS.${names.snake}.parse(args));\n`;
+  `    case "${names.snake}":\n      return tools.${names.run}(scope, KEYED_TOOLS.${names.snake}.parse(args), ports);\n`;
 
 /** packages/query-tools/<kebab>.test.ts: exact-output stubs and the refusals. */
 export const testFile = (

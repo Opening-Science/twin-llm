@@ -123,6 +123,12 @@ export const MEASURE_NAMES: readonly MeasureName[] = [
     codes: [],
   },
   { measure: "sleep score", pattern: /\bsleep\b/i, codes: [] },
+  {
+    // A simulated RR recording (`rhythm_irregularity`, #246): no LOINC code holds it.
+    measure: "heart rhythm irregularity",
+    pattern: /\brhythm\b|\birregularity\b|\bnrmssd\b|turning.point/i,
+    codes: [],
+  },
   { measure: "workouts", pattern: /\bworkouts?\b|training load/i, codes: [] },
 ];
 
