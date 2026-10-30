@@ -319,13 +319,55 @@ describe("RR-interval irregularity", () => {
     expect(turningPoints([1, 3, 2, 4, 4, 5])).toBe(2);
   });
 
-  test("randomTurningPointRange(128): (84 ± 3.2905·√(2019/90)) / 128 ≈ 0.535 to 0.778", () => {
+  test("randomTurningPointRange(128): (84 ± 3.2905·√(2019/90)) / 128 = 0.534 to 0.778", () => {
     const spread = 3.2905 * Math.sqrt(2019 / 90);
     const range = randomTurningPointRange(128);
     expect(range.low).toBeCloseTo((84 - spread) / 128, 12);
     expect(range.high).toBeCloseTo((84 + spread) / 128, 12);
-    expect(range.low).toBeCloseTo(0.5345, 4);
-    expect(range.high).toBeCloseTo(0.778, 4);
+    expect(range.low).toBeCloseTo(0.534492, 6);
+    expect(range.high).toBeCloseTo(0.778008, 6);
+    expect(range.low.toFixed(3)).toBe("0.534");
+    expect(range.high.toFixed(3)).toBe("0.778");
+  });
+
+  test("the 128 band against the exact turning-point distribution", () => {
+    // Permutations of n values by alternating runs (turning points + 1):
+    // R(n, k) = k R(n-1, k) + 2 R(n-1, k-1) + (n - k) R(n-1, k-2), R(2, 1) = 2.
+    const n = 128;
+    const runs = Array.from({ length: n - 2 }).reduce<bigint[]>(
+      (previous, _, index) => {
+        const size = index + 3;
+        return Array.from({ length: size }, (__, k) =>
+          k === 0
+            ? 0n
+            : BigInt(k) * (previous[k] ?? 0n) +
+              2n * (previous[k - 1] ?? 0n) +
+              BigInt(size - k) * (previous[k - 2] ?? 0n),
+        );
+      },
+      [0n, 2n],
+    );
+    const total = runs.reduce((sum, count) => sum + count, 0n);
+    const share = (low: number, high: number): number =>
+      Number(
+        (runs.reduce(
+          (sum, count, k) => (k - 1 >= low && k - 1 <= high ? sum + count : sum),
+          0n,
+        ) *
+          1_000_000n) /
+          total,
+      ) / 1_000_000;
+    const range = randomTurningPointRange(n);
+    const lowCount = Math.ceil(range.low * n);
+    const highCount = Math.floor(range.high * n);
+    // The flag accepts 69 to 99 turning points out of 128.
+    expect([lowCount, highCount]).toEqual([69, 99]);
+    // Those hold 99.903 % (0.999028) of the exact distribution: the normal band is a 99.9 % band.
+    expect(share(lowCount, highCount)).toBe(0.999028);
+    // The exact central band (0.05 % in each tail) is 68 to 99, one count wider below.
+    expect(share(0, 67)).toBeLessThan(0.0005);
+    expect(share(0, 68)).toBeGreaterThan(0.0005);
+    expect(share(100, n)).toBeLessThan(0.0005);
   });
 
   test("randomTurningPointRange with z 2 at n 112: (220/3 ± 2·√(1763/90)) / 112", () => {

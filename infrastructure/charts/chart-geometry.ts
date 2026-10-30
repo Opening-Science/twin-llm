@@ -1,5 +1,5 @@
 /**
- * Axis and tooltip arithmetic for the Data page's charts. Pure, so the tests
+ * Axis and tooltip arithmetic for the Data page and Lab charts. Pure, so the tests
  * pin the numbers and the charts stay thin components.
  *
  * The charts draw at their real pixel width (measured), not a fixed viewBox

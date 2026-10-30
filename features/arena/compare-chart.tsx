@@ -3,14 +3,14 @@
 import { type CompareSpec, type ViewPoint, windowText } from "@/infrastructure/chat-view";
 import { formatNumber } from "@/infrastructure/format-measure";
 
-import { useMeasuredWidth } from "@/features/data-explorer/chart-frame";
+import { useMeasuredWidth } from "@/infrastructure/charts/chart-frame";
 import {
   dateAxisTicks,
   extent,
   niceTicks,
   tickDecimals,
   timeScale,
-} from "@/features/data-explorer/chart-geometry";
+} from "@/infrastructure/charts/chart-geometry";
 
 import { windowBounds } from "./view-chart";
 import { compareDeltaText, compareWindowText, MEAN_DECIMALS } from "./view-text";

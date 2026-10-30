@@ -36,3 +36,12 @@ export const EVAL_COHORT_ARCHIVE = {
 
 /** `bun run sbom` writes the CycloneDX file here (gitignored). */
 export const SBOM_PATH = ".sbom/twin-llm.cdx.json";
+
+/** Where `bun run eval` writes its runs (gitignored); the Lab lists them. */
+export const EVAL_RUNS_DIR = "evaluation/runs";
+
+/**
+ * Where `bun run rhythm-bench -- --out <dir>/<run>` writes its runs
+ * (gitignored); the Lab shows the newest `result.json` in it.
+ */
+export const RHYTHM_BENCH_DIR = ".rhythm-bench";

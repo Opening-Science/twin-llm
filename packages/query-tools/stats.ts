@@ -408,8 +408,11 @@ export const TPR_Z_999 = 3.2905;
 /**
  * For n independent values the turning-point count has mean (2n − 4) / 3 and
  * variance (16n − 29) / 90; this is that mean ± z SD as a ratio of n. With
- * n = 128 and the 99.9 % z it is 0.535 to 0.778, which Dash et al. 2009 report
- * rounded as 0.54 < TPR < 0.77.
+ * n = 128 and the 99.9 % z it is 0.5345 to 0.7780 (0.534 to 0.778 at three
+ * decimals; 69 to 99 turning points), which Dash et al. 2009 report rounded
+ * inwards as 0.54 < TPR < 0.77. It is the normal approximation; under the
+ * exact distribution of the count for 128 independent values those counts
+ * hold 99.903 % of the probability (stats.test.ts).
  */
 export const randomTurningPointRange = (n: number, z = TPR_Z_999): TurningPointRange => {
   const centre = (2 * n - 4) / 3;

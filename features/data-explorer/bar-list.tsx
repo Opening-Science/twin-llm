@@ -2,8 +2,12 @@
 
 import { useState } from "react";
 
-import { ChartTooltip, TooltipBody, useMeasuredWidth } from "./chart-frame";
-import { truncateLabel } from "./chart-geometry";
+import {
+  ChartTooltip,
+  TooltipBody,
+  useMeasuredWidth,
+} from "@/infrastructure/charts/chart-frame";
+import { truncateLabel } from "@/infrastructure/charts/chart-geometry";
 
 /**
  * Horizontal bars, one series: a label, a thin bar with round ends, and the

@@ -5,8 +5,8 @@ cloud health apps describe their privacy and attestation, but nobody outside can
 TwinLLM runs locally, so each claim it makes about itself can be tested here and then repeated by
 hand with the command on the card.
 
-The page has sections. Verifiability is the first; Simulations and Results are planned as later
-sections of the same page. Research use only: nothing on the page is about anyone's health.
+The page has three sections: Verifiability, Simulations and Results. Research use only: nothing on
+the page is about anyone's health.
 
 ## Verifiability
 
@@ -33,6 +33,67 @@ the command first reads that one setting from `.env.local` into the shell withou
 
 If a check cannot run, its card keeps the same title and command as the working card, so the
 command still repeats it by hand.
+
+## Simulations
+
+Simulated heart rhythm recordings of synthetic people (#252), made by `packages/rhythm-sim` the same
+way the `rhythm_irregularity` tool makes them ([query-layer.md](query-layer.md#rhythm-irregularity),
+[rhythm-sim.md](rhythm-sim.md)). Synthetic mode only: with `DATA_MODE=personal` the section says it
+is for synthetic people and reads nothing.
+
+- **The form** is a plain GET form, so a recording has a link (`/lab?subject=…&date=…&seconds=…&recording=…`)
+  that makes it again. It lists the synthetic people of the pinned evaluation cohort
+  (`synthea-v4-seed42`) in this database, first by `subject_ref` and marked when their record lists
+  atrial fibrillation (SNOMED CT `49436004`); a day (empty means the last observation day); a length
+  from 30 to 600 s; and a recording number from 1 to 1000. `parseSimulationForm` checks the fields.
+- **Same code path.** The server calls `runLabRhythmRecording` (`packages/query-tools/rhythm-tools.ts`):
+  the tool's scope check, observation span and condition read, then `describeRecording`, audited as
+  `lab.rhythm_recording` with the number of intervals. It also returns the plan, which the page uses to
+  make the same recording again to draw it. The tool takes 180 to 600 s; the Lab goes down to the
+  simulator's 30 s, and a recording under one 128-interval window shows its tachogram and the
+  tool's `WINDOW_TOO_SHORT` refusal as a sentence instead of metrics.
+- **What it shows.** The RR tachogram (interval against seconds from the first beat, the windows the
+  research flag marks shaded), the first 10 s of the pulse-wave proxy, the metrics per window with the
+  recording's totals, the research thresholds with their sources (nRMSSD and the turning-point ratio
+  after Dash et al. 2009, in the flag; Shannon entropy reported, not applied; sample entropy after
+  Richman and Moorman 2000, reported only), and the FHIR Observation from `recordingObservation` in a
+  disclosure, with its start at midnight UTC of the recording day. Downloads: the intervals and the
+  window metrics as CSV, the Observation as FHIR JSON.
+- **Simulator settings (known because this person is simulated).** The rhythm setting, AF episodes,
+  share of intervals made in AF, premature beats, whether the Synthea record has AF that day, the
+  subject's rates and variability and the seed (`rhythmGroundTruth` and the recording's config). This
+  is the researcher's view; the tool's output to a model never holds any of it.
+- **Wording.** The copy describes the recording and the research flag, never a person.
+
+The shaping is pure (`features/lab/simulation-view.ts`, tested); the reads are in
+`load-simulation.ts`. The charts use the shared chart helpers in `infrastructure/charts/` (moved there
+from the Data page so both pages can use them) and the chart colour tokens.
+
+## Results
+
+Evaluation runs and benchmark results found on this machine (#252). Every table has a "Download CSV"
+for a paper's tables and figures (`infrastructure/csv.ts`; a cell that a spreadsheet would run as a
+formula gets a leading `'`). Only files inside the repository are read, each at most 2 MB.
+
+- **Evaluation runs.** Each folder in `evaluation/runs/` (gitignored, written by `bun run eval`;
+  [evaluation/harness.md](evaluation/harness.md)), newest 100: run id, date, kind (run, replay or mock),
+  models, selection and line and error counts from `meta.json`, and from `report.md` each model's pass
+  rates per criterion and scenario as the report prints them (passes over pass + fail with the Wilson 95 %
+  interval in whole percent; not recomputed). Both files are read leniently: a run without a report says
+  so. `results.jsonl`, `review.csv` and `review-key.json` are never opened. With no runs the section
+  says so and shows the commands that make one.
+- **Rhythm benchmark.** The newest `result.json` under `.rhythm-bench/` (`RHYTHM_BENCH_DIR` in
+  `infrastructure/local-artefacts.ts`, gitignored), by its `generatedAt`. `bun run rhythm-bench -- --out
+.rhythm-bench/<run>` writes it ([rhythm-sim.md](rhythm-sim.md#benchmark)); the page reads the
+  benchmark's own file, with no copy in another shape. It shows three tables, each with its CSV: the
+  research flag's sensitivity and specificity and the AUROC of each metric on simulated windows (all,
+  windows of one rhythm only, by length, rhythm, AF rate and noise), the same on the MIT-BIH Atrial
+  Fibrillation Database when the run had `--afdb` (by dominant reference rhythm), and the distances
+  between simulated and database windows (Wasserstein-1 over the database SD, Kolmogorov-Smirnov,
+  medians). Values are shown to three decimals with their 95 % bootstrap interval; the CSVs keep
+  the file's numbers. `features/lab/benchmark-result.ts` reads only the fields it shows, and its test
+  runs the benchmark on a small grid and parses the output, so a change to the file's shape fails
+  there. With no run the section says "Not run yet" and shows the command.
 
 ## Commands
 

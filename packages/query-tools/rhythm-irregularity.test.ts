@@ -19,7 +19,11 @@ import {
   rhythmProfileOf,
   subjectRhythmSettings,
 } from "./rhythm-recording";
-import { describeRecording, RESEARCH_THRESHOLD_LABEL } from "./rhythm-tools";
+import {
+  describeRecording,
+  RESEARCH_THRESHOLD_LABEL,
+  runLabRhythmRecording,
+} from "./rhythm-tools";
 import { rhythmIrregularityInput } from "./schemas";
 import { SUBJECT_SCOPE_VIOLATION, type SessionScope } from "./scope";
 import { beatWindows, irregularityWindow } from "./stats";
@@ -369,5 +373,50 @@ describe("separation on simulated recordings", () => {
 
   test("mixed windows (an episode starts or ends inside): 41 of 91 flagged", () => {
     expect(tally.mixed).toEqual([91, 41]);
+  });
+});
+
+describe("runLabRhythmRecording", () => {
+  test("gives the tool's metrics with the plan, audited as lab.rhythm_recording", async () => {
+    const { ports, audits } = fakePorts();
+    const lab = await runLabRhythmRecording(
+      synthetic,
+      input(AF_SUBJECT, "2025-06-01"),
+      ports,
+    );
+    const tool = await runRhythmIrregularity(
+      synthetic,
+      input(AF_SUBJECT, "2025-06-01"),
+      ports,
+    );
+    expect(lab).toEqual({ plan: plan(AF_SUBJECT, true), metrics: tool });
+    expect(audits.map((row) => [row.tool, row.rowCount])).toEqual([
+      ["lab.rhythm_recording", "n" in tool ? tool.n : -1],
+      ["rhythm_irregularity", "n" in tool ? tool.n : -1],
+    ]);
+  });
+
+  test("a 30 s recording keeps its plan and the too-short refusal", async () => {
+    const { ports, audits } = fakePorts();
+    const lab = await runLabRhythmRecording(
+      synthetic,
+      { ...input(SINUS_SUBJECT, "2025-06-01"), duration_sec: 30 },
+      ports,
+    );
+    expect("plan" in lab && lab.plan.durationSec).toBe(30);
+    expect("plan" in lab && "code" in lab.metrics && lab.metrics.code).toBe(
+      "WINDOW_TOO_SHORT",
+    );
+    expect(audits.map((row) => row.rowCount)).toEqual([0]);
+  });
+
+  test("refuses personal mode and subjects outside the scope like the tool", async () => {
+    const { ports } = fakePorts();
+    expect(await runLabRhythmRecording(personal, input(SINUS_SUBJECT), ports)).toEqual(
+      NO_RHYTHM_DATA,
+    );
+    expect(await runLabRhythmRecording(synthetic, input(UNLISTED), ports)).toEqual(
+      SUBJECT_SCOPE_VIOLATION,
+    );
   });
 });
