@@ -121,5 +121,14 @@ export const SYNTHEA_1M_BATCH_COHORTS: readonly BatchCohort[] = Array.from(
   (_, index) => batchCohort(SYNTHEA_1M_BATCHES.firstSeed + index),
 ).filter((batch) => batch !== null);
 
+/**
+ * The supplementary S7 cohort (#277): three keep-module runs of the pinned
+ * Synthea, made by `scripts/synthea/s7-cohort.ts`, read by the S7b items.
+ */
+export const S7_COHORT_ID = "synthea-v4-s7";
+
 /** Cohorts the evaluation reads; training data must never come from them. */
-export const EVALUATION_COHORT_IDS: readonly string[] = [COHORT_PRESETS.eval.cohortId];
+export const EVALUATION_COHORT_IDS: readonly string[] = [
+  COHORT_PRESETS.eval.cohortId,
+  S7_COHORT_ID,
+];

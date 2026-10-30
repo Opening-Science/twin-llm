@@ -256,6 +256,35 @@ Reference material, not a statement about this person." See
 A source toggle that turns `knowledge_search` off turns the literature off with it; there is
 no separate toggle yet.
 
+## Roster page (#221)
+
+Customize · Agents (`/customize/agents`) lists every agent, offered here or not, and
+explains Auto. It is a Customize tab, next to Skills, because an agent is a preset over a
+skill and a model; the Models page stays the provider's catalog and the sidebar gets no new
+entry. Each card shows the role line, the base model it runs on here (or that it is not
+offered with this provider), its skill and number of tools, its literature specialty with
+the number of articles in the local index, the topics Auto sends it, its answers in your
+own threads (how many went through Auto, the last one, the summed cost) and one line on
+what it does not do. The Auto section says the rules in plain words and gives the share of
+each router fixture routed as labelled (126 of 130 and 36 of 36 today), with the note that
+the rules were tuned on them.
+
+An agent's page (`/customize/agents/<id>`) adds the skill's sources and tools, the model
+preference, the router fixtures per scenario (labelled for this agent and sent here, and
+labelled for another agent but sent here) and the evaluation scores of its base model per
+scenario from the runs under `evaluation/runs/` that the Lab reads. The harness calls the
+base model, not the agent, so the page says these are the model's scores without the
+agent's skill or literature; agent runs in the harness are still to come.
+
+Everything is read from the code that runs a turn (`agents.ts`, `agent-router.ts`, the
+skill, `literatureSourcesForAgent`), so the page cannot claim what the chat does not do.
+The shaping is pure (`features/agents/roster.ts`, tested); `load-roster.ts` reads only
+counts, sums and dates (answers grouped by row id and column name, documents per
+`literature:<specialty>` source), never prompt or answer text. The "does not do" lines are
+in `roster.ts` and follow each skill's own rules. Issue #221 also asked for eval scores per
+agent; until the harness can run an agent, the router fixtures and the base model's runs
+are the honest numbers.
+
 ## Model names
 
 Our own fine-tunes are listed by a readable name (`infrastructure/model-names.ts`):

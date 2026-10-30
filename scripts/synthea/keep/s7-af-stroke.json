@@ -1,0 +1,40 @@
+{
+  "name": "s7_keep_atrial_fibrillation_and_stroke",
+  "remarks": [
+    "Keep module for the synthea-v4-s7 cohort (#277): keep a generated person only when the record has atrial fibrillation (SNOMED CT 49436004) at the end of the run and the stroke module recorded a stroke (attribute stroke_history), in either order."
+  ],
+  "states": {
+    "Initial": {
+      "type": "Initial",
+      "conditional_transition": [
+        {
+          "transition": "Keep",
+          "condition": {
+            "condition_type": "And",
+            "conditions": [
+              {
+                "condition_type": "Active Condition",
+                "codes": [
+                  {
+                    "system": "SNOMED-CT",
+                    "code": "49436004",
+                    "display": "Atrial fibrillation (disorder)"
+                  }
+                ]
+              },
+              {
+                "condition_type": "Attribute",
+                "attribute": "stroke_history",
+                "operator": "is not nil"
+              }
+            ]
+          }
+        },
+        { "transition": "Terminal" }
+      ]
+    },
+    "Keep": { "type": "Terminal" },
+    "Terminal": { "type": "Terminal" }
+  },
+  "gmf_version": 2
+}

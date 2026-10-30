@@ -1,0 +1,166 @@
+{
+  "schema": "twin-llm.synthea.supplementary-cohort.v1",
+  "cohortId": "synthea-v4-s7",
+  "syntheaVersion": "v4.0.0",
+  "jarSha256": "ed43c20ad40ba5c3bc724503a5af032715fe3c491620b766148e7c2361e6ecc1",
+  "state": "Massachusetts",
+  "age": "65-90",
+  "referenceDate": "20260101",
+  "endDate": "20260101",
+  "timezone": "UTC",
+  "threadPoolSize": 1,
+  "modules": [
+    "wellness_encounters",
+    "allergies",
+    "med_rec",
+    "atrial_fibrillation",
+    "stroke",
+    "dementia",
+    "hypertension",
+    "stable_ischemic_heart_disease",
+    "myocardial_infarction",
+    "congestive_heart_failure"
+  ],
+  "configSha256": "465c563645934f50067594585ba00e03ec61e2295a8a82baae1135144df859bf",
+  "javaVersion": "21.0.12.1+1",
+  "arms": [
+    {
+      "name": "af",
+      "keep": "s7-af.json",
+      "keepSha256": "3f5614cccdbbbea9c65845d5df64283e64116ec2dff18445a3a55ae8a6327eb7",
+      "seed": 2770,
+      "clinicianSeed": 2771,
+      "population": 10,
+      "patientFileCount": 10
+    },
+    {
+      "name": "af-stroke",
+      "keep": "s7-af-stroke.json",
+      "keepSha256": "6806549193eedb9353ed848d4e6bae30454be1e8870ace85aa3265c78403f529",
+      "seed": 2772,
+      "clinicianSeed": 2773,
+      "population": 3,
+      "patientFileCount": 3
+    },
+    {
+      "name": "sinus",
+      "keep": "s7-sinus.json",
+      "keepSha256": "a6cd6a8a04bb405bdce83556688797ebfa31c4ab948ed8c759837de4413f658c",
+      "seed": 2774,
+      "clinicianSeed": 2775,
+      "population": 4,
+      "patientFileCount": 4
+    }
+  ],
+  "patientFileCount": 17,
+  "contentSha256": "2d8b7a64fb6fff2d7951c8d8640e72ef74ddd72a6bdb75da1fc355fb98d45f14",
+  "files": [
+    {
+      "name": "Alva958_Eichmann909_6cfebb99-dc56-e055-bb0b-5dc50c10d0cb.json",
+      "arm": "af",
+      "bytes": 1585875,
+      "sha256": "ed5c1a2017e4046ce61a7b45b534685dd13c9473872eaefcc0cda47ac35f544d"
+    },
+    {
+      "name": "Asa127_McGlynn426_f4f95c2d-a700-d464-8ff4-d48910b7b2b7.json",
+      "arm": "af",
+      "bytes": 1427703,
+      "sha256": "1e76b86608a02c3ebb92b5502f92c5a3610a3313faecd95da280f83f82b27382"
+    },
+    {
+      "name": "Claudio955_Irizarry542_0ba5859a-a18a-b1a6-2b0b-50bb9425b036.json",
+      "arm": "af",
+      "bytes": 1923860,
+      "sha256": "463edaff8258996b149b5f6c53abdcf037e5ca2f7c7058a97e9bcb5124182051"
+    },
+    {
+      "name": "Debby656_Brian582_Witting912_2539973f-31ed-cc8c-4de1-b0374d06d52a.json",
+      "arm": "af",
+      "bytes": 1597784,
+      "sha256": "40ff39a83e8572e4dc1d102ea32a2678aacfdab01e89b6163e2146b17a60c87d"
+    },
+    {
+      "name": "Elvis145_Thiel172_2d68b88f-a1fc-829b-a57e-fe499c2313de.json",
+      "arm": "sinus",
+      "bytes": 1418873,
+      "sha256": "6d3077ca213df54be63bab13273d5a35dffa19958463cc2ee3485a3f06157289"
+    },
+    {
+      "name": "Kathlyn335_Kunde533_8e3e0cd7-9d26-5c89-f1ba-f3ae744dfd69.json",
+      "arm": "af",
+      "bytes": 1901723,
+      "sha256": "48a39cf61f14045000b74f005e21d01cf1f9f7c1d351cfb985d30c0ba5c5bdb9"
+    },
+    {
+      "name": "Lizette501_Piper612_Goldner995_c0b3db8b-1e73-6d68-aadc-5e0914ff8a78.json",
+      "arm": "af-stroke",
+      "bytes": 1612698,
+      "sha256": "af61daae9cca74644a09ad83505d4c95cf36fb2013d31afe90b7f3bc524ccad5"
+    },
+    {
+      "name": "Marcelo725_Wuckert783_90540a0e-ef0a-4348-7cf8-9fd9779fb54e.json",
+      "arm": "af",
+      "bytes": 1481916,
+      "sha256": "ac885a17afbb0f0b25e0c15a9127efcc111093dc43234cdc49a60eed7118a2ab"
+    },
+    {
+      "name": "Mose244_Hackett68_afe8ca0b-5c31-742b-a760-b3f55d09ec74.json",
+      "arm": "af-stroke",
+      "bytes": 1828506,
+      "sha256": "01b3bde94b5e9b845076afe8adb62c4167e0d4b69b9fd087f0967abcd48f6770"
+    },
+    {
+      "name": "Nobuko304_Hane680_8ac1c852-d625-efe3-d7c8-fd267b34b731.json",
+      "arm": "af",
+      "bytes": 1619085,
+      "sha256": "ca820fb0b24b989a5c540c8e7182f780258132ba171528ad74640d0e3f47c7d0"
+    },
+    {
+      "name": "Nova124_Lemke654_45e78959-6c40-73f8-d91b-5a08faff470c.json",
+      "arm": "af",
+      "bytes": 1508538,
+      "sha256": "c61553f6fcadf19305372ade4821672a5b3683e24254c1c790a121a34029e3a0"
+    },
+    {
+      "name": "Shane235_Swift555_70ba107a-37f1-9a96-f6c3-1bce08715cfb.json",
+      "arm": "af",
+      "bytes": 1451902,
+      "sha256": "cc8c14fc74b9ce6aff0990af7e16748caa50dbba011074b4d24a3af27142b7dc"
+    },
+    {
+      "name": "Simon598_Gibson10_e0242df3-9d0a-86ba-78d5-eaddf9b5eeb2.json",
+      "arm": "sinus",
+      "bytes": 1513769,
+      "sha256": "c87f7ec94fac587ec60bbde95ba8a82faaf97cbe03dfd262ed18c98e267eaaa1"
+    },
+    {
+      "name": "Tanja584_Martha161_Pfeffer420_f3510227-8dcf-8434-40ed-8cb9ad6b2f08.json",
+      "arm": "sinus",
+      "bytes": 2119418,
+      "sha256": "05170e54498e6935ebcc2daacc8a96fa81a9a542fa045ac1db6566d8d963968b"
+    },
+    {
+      "name": "Ulysses632_Waters156_988ba55d-a3c2-ca7d-c196-f6db45f22706.json",
+      "arm": "sinus",
+      "bytes": 1741851,
+      "sha256": "c58138acee99354994009994f5afc6d7281cd2c570b9795ecf8e59e6b503c415"
+    },
+    {
+      "name": "Waldo53_Moore224_44d2905b-94a8-210d-1448-5cfc3c5c400a.json",
+      "arm": "af",
+      "bytes": 1621541,
+      "sha256": "3d3b1dba29745a77e3d32afaafb6895b2c452351f05f126b1452e72f44ce316c"
+    },
+    {
+      "name": "Yoshie761_Kohler843_cbb71edd-82ff-fb71-b250-1fee52a52f52.json",
+      "arm": "af-stroke",
+      "bytes": 1890948,
+      "sha256": "dbfdeace971705b736398461f6ecb486e54da566f9aa2ddfe99aadedb99c6f9f"
+    }
+  ],
+  "archive": {
+    "name": "supplementary-cohort-synthea-v4-s7-20260101.tar.zst",
+    "bytes": 467351,
+    "sha256": "cd1f3560513a78055127c90ebf91bad557369bd5dcb3f8123a15a93f6cf746e2"
+  }
+}

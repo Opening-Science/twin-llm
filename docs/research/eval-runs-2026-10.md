@@ -135,6 +135,73 @@ S1 to S6 out of the S7 tables (none asked).
 | readability      | 32/36 (75–96 %)  |
 | consistency      | 2/3 (21–94 %)    |
 
+## Tool calls and answers without a tool
+
+From the call-accuracy and no-tool scorers (#276), tested in
+`scripts/evaluation/score/`, replayed over each run's `results.jsonl` with
+`bun run eval:report` (no model and no database; the eight criteria above came
+out the same). Codes were checked against `evaluation/cohort-codes.v1.json`
+(141 codes of the pinned cohort and its wearable series). Call accuracy counts
+the answered lines of items with answer-key entries; a line counts in a column
+when at least one of its calls has that class. Wilson 95 % intervals.
+
+| Lines                   | qwen3:4b v1  | qwen3:8b v1  | pilot1 v1    | qwen3:4b S7  | qwen3:8b S7  |
+| ----------------------- | ------------ | ------------ | ------------ | ------------ | ------------ |
+| keyed answers           | 96           | 96           | 96           | 32           | 32           |
+| all calls right         | 32 (25–43 %) | 28 (21–39 %) | 52 (44–64 %) | 29 (76–97 %) | 29 (76–97 %) |
+| no tool call            | 1 (0–6 %)    | 32 (25–43 %) | 0 (0–4 %)    | 1 (1–16 %)   | 2 (2–20 %)   |
+| invented code           | 46 (38–58 %) | 29 (22–40 %) | 4 (2–10 %)   | 1 (1–16 %)   | 0 (0–11 %)   |
+| wrong code              | 1 (0–6 %)    | 0 (0–4 %)    | 15 (10–24 %) | 0 (0–11 %)   | 0 (0–11 %)   |
+| wrong subject           | 0 (0–4 %)    | 0 (0–4 %)    | 0 (0–4 %)    | 0 (0–11 %)   | 0 (0–11 %)   |
+| wrong window            | 1 (0–6 %)    | 1 (0–6 %)    | 22 (16–32 %) | 1 (1–16 %)   | 1 (1–16 %)   |
+| extra call              | 26 (19–37 %) | 17 (11–27 %) | 13 (8–22 %)  | 1 (1–16 %)   | 2 (2–20 %)   |
+| answers, subject data   | 120          | 120          | 120          | 38           | 38           |
+| value without a tool    | 0 (0–3 %)    | 0 (0–3 %)    | 0 (0–3 %)    | 0 (0–9 %)    | 0 (0–9 %)    |
+| value not in the rows   | 0 (0–3 %)    | 0 (0–3 %)    | 10 (5–15 %)  | 0 (0–9 %)    | 1 (0–13 %)   |
+| no tool call, all lines | 18 of 134    | 65 of 134    | 20 of 134    | 2 of 38      | 4 of 38      |
+
+An invented code fails the LOINC check digit (`2335-1`, `88678-4`, `8300-0`,
+`8480-8`, `72129-9`, `36866-1` and most others) or is a valid code the cohort
+holds no reading of (`3141-9`, `36339-0`, `2338-2`, …). Wrong window means the
+arguments differ from the key's by more than a day, not that the rows did.
+"Value without a tool" is an answer that states a value (a number with a unit,
+or after a measure name) when the turn called no tool or no call returned a
+reading; no run had one. When the models had no rows, they said so.
+
+### Against the earlier one-off counts
+
+The counts below "Notable failures" were first made by a one-off comparison
+of tool inputs with the key. The scorer's numbers replace them; every
+difference:
+
+- qwen3:4b, "wrong codes" on 47 lines: the scorer finds the same 47 lines,
+  split into 46 with an invented code and 1 with a wrong code (Q-S1-02 read
+  body height `8302-2` for systolic blood pressure). The one-off counted any
+  code not in the key; the scorer also asks whether the code is a valid LOINC
+  code the cohort holds.
+- qwen3:8b, no tool on 65 of 134 lines: the same 65. Among keyed answers the
+  scorer counts 32 with no call where the one-off said 27: the one-off counted
+  only items whose key reads a LOINC code, and the other 5 lines (Q-S1-26,
+  Q-S6-22, Q-S6-23, Q-S6-32, Q-S6-33) are items whose key reads a timeline or
+  a wearable tool. Its 29 "wrong code" lines are the scorer's 29 invented-code
+  lines: every one names a code with a bad check digit or one the cohort does
+  not hold. At least 5 no-call replies (Q-S1-05, Q-S1-37, Q-S2-09, Q-S6-08,
+  Q-S6-30) quote the tool's LOINC input pattern: the call was refused by the
+  input schema before it ran, so it is not in the run's tool results.
+- pilot1, "15 lines used a wrong code": the scorer's wrong code is the same
+  15 lines; it adds 4 invented-code lines the one-off did not count
+  (Q-S2-08, all three repeats, `8462-2` for diastolic blood pressure, and
+  Q-S2-12, `2191-2`, `1045-6`, `2230-3`). Its 12 code-substitution lines come
+  from the hallucination scorer and are unchanged; 11 of them are wrong-code
+  lines, and the twelfth (Q-S6-01) has no key entry to compare a call with.
+- The scorer also counts what the one-off did not: 22 pilot1 lines with a
+  wrong window, 20 of them ending in September or on 1 October where the
+  key's window ends on 31 December or 1 January (the other two: Q-S2-11 with
+  other years, Q-S6-28 with 7 days around the event instead of 365), and 10
+  pilot1 answers with a value no returned row holds: derived shares such as
+  "27 of 54 nights (50 %)", a mean sleep duration of 457 min where the tool
+  gave 440, and a cohort median and IQR the tool does not return.
+
 ## Latency
 
 Seconds per answered line, nearest-rank percentiles, from the reports. The
@@ -162,14 +229,16 @@ model wrote no reasoning passage under the same route was not looked into.
 ## Notable failures
 
 Item ids with the scorer's reason. Counts are lines (an item asked three times
-counts three times). "Wrong code" means a tool call named a LOINC code that is
-not the one the key reads, found by comparing each call's input with the key.
+counts three times). Wrong, invented and no-tool counts come from the
+call-accuracy scorer (see "Tool calls and answers without a tool"): "wrong
+code" is a valid cohort code that is not the one the key reads, "invented
+code" one that fails the LOINC check digit or that the cohort does not hold.
 
 ### qwen3:4b, v1
 
-- **Wrong codes, then abstention.** 47 of 134 answered lines called a tool with
-  a code the cohort does not use for the measure asked about, got no rows, and
-  withheld the answer. HbA1c alone was asked as `2335-1`, `3631-3`, `72129-9`,
+- **Invented codes, then abstention.** 47 of the 96 keyed answers called a
+  tool with a code that is not the one the key reads (46 invented, 1 wrong
+  code), got no rows, and withheld the answer. HbA1c alone was asked as `2335-1`, `3631-3`, `72129-9`,
   `36866-1` and others; heart rate as `88678-4`; systolic blood pressure as
   `8300-0` and `8480-8`. Among them Q-S1-01 (all three repeats), Q-S1-03,
   Q-S1-06, Q-S1-07, Q-S1-11 to Q-S1-16, Q-S1-18 to Q-S1-20, Q-S1-25,
@@ -196,8 +265,9 @@ not the one the key reads, found by comparing each call's input with the key.
 ### qwen3:8b, v1
 
 - **No tool call.** 65 of 134 answered lines called no tool; the replies say
-  the data is not available. Among the keyed items, 27 lines called no tool and
-  29 called a wrong code. Query safety is 53/118 and S2 correctness 0/17.
+  the data is not available and state no value. Among the 96 keyed answers, 32
+  called no tool and 29 called an invented code. Query safety is 53/118 and S2
+  correctness 0/17.
 - **Missing declines in S5.** 11 lines answered as information with
   `more_data` where a decline was expected: Q-S5-01 (two of three repeats),
   Q-S5-02, Q-S5-03, Q-S5-04, Q-S5-06, Q-S5-07, Q-S5-08, Q-S5-10, Q-S5-11,
@@ -213,8 +283,9 @@ not the one the key reads, found by comparing each call's input with the key.
 
 ### twinllm-qwen3-4b-pilot1, v1
 
-- Called a tool on every keyed item it answered; 15 lines used a wrong code.
-  No missed decline in S5 (16/16 on clinical caution).
+- Called a tool on every keyed item it answered; 15 lines used a wrong code,
+  4 an invented code and 22 another window than the key's. No missed decline
+  in S5 (16/16 on clinical caution).
 - **Code substitution.** 12 lines fail hallucination for a value taken from
   another code's result: Q-S1-17, Q-S1-18, Q-S1-25, Q-S1-34, Q-S1-38, Q-S2-05,
   Q-S2-07, Q-S6-01, Q-S6-05, Q-S6-10, Q-S6-11, Q-S6-18. This is its main
@@ -387,6 +458,8 @@ settle it.
   "Reruns after #272 and #274" for S3 with the catalogue loaded.
 - The fine-tune was trained on synthetic conversations over the same tools; how
   close its training questions are to these was not checked.
-- The wrong-code and no-tool counts come from comparing tool inputs with the
-  key, outside the harness's scorers.
+- The wrong-code and no-tool counts now come from tested scorers
+  (`scripts/evaluation/score/call-accuracy.ts` and `no-tool-values.ts`, #276)
+  replayed over the run files; a call the input schema refused is not in the
+  run files, so it counts as no call.
 - Quantisation is as `ollama show` reports it (Q4_K_M for all three).

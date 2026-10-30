@@ -14,6 +14,7 @@ bun run eval -- --models ollama:qwen3:4b --scenario S5 --run-id 2026-10-21-qwen3
 bun run eval -- --models ollama:qwen3:4b --latency-set --replay
 bun run eval -- --set s7 --models ollama:qwen3:4b --run-id 2026-10-31-qwen3-s7
 bun run eval:report -- 2026-10-21-qwen3-s5 --quantisation Q4_K_M
+bun run eval:cohort-codes -- --in .synthea   # after a cohort change only
 ```
 
 | Flag                                                    | Meaning                                                        |
@@ -53,6 +54,7 @@ Everything under `evaluation/runs/` and `evaluation/cache/` is gitignored.
 | `evaluation/runs/<id>/review.csv`      | The human sheet, blinded                                                       |
 | `evaluation/runs/<id>/review-key.json` | Which blinded label is which model; keep it from reviewers                     |
 | `evaluation/cache/<sha256>.json`       | One recorded model call                                                        |
+| `evaluation/cohort-codes.v1.json`      | Committed: the LOINC codes the pinned cohort holds, for call accuracy          |
 
 A results line holds the response document v1.1, the reply, the audit rows
 (tool, args sha256, row count, refusal code, subject), the tool results, the
@@ -175,6 +177,62 @@ blood pressure, `8480-6`).
 - Only values are checked: dates in the reply (`2026-03-03`, `3 Mar 2026`, a
   lone year) are left out, and 0 to 10 count only when written without
   decimals ("7.0 %" is a value).
+
+### Call accuracy and answers without a tool
+
+Two extra metrics (#276), reported after the eight criteria in "Tool calls
+against the key" and "Answers without a tool", with Wilson 95 % intervals. No
+pass, fail or human of the eight depends on them, so earlier runs keep their
+tallies. Each line that is not right gets a `calls:` or `value without a tool`
+entry in the review sheet's `flags`; the entries name the model's arguments
+and the key's, never a tool output.
+
+Call accuracy (`score/call-accuracy.ts`) applies to items with answer-key
+entries. Each entry's tool and arguments are one expected call, and every
+tool call of the turn gets one class, in this order:
+
+| Class         | When                                                                                                                                                                                                                        |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| invented code | A `loinc` argument fails the LOINC mod-10 check digit, or the cohort holds no reading of it (`evaluation/cohort-codes.v1.json`). A code the question, the item or the key names is never invented (the S6 probe `99999-9`). |
+| wrong code    | The call and the key both name codes, and none of the call's is the key's.                                                                                                                                                  |
+| extra call    | No expected call shares a code with it, or, for a call with no code, its tool (`subject_window`, `list_subjects`, a guideline search).                                                                                      |
+| wrong subject | Every matching expected call names another `subject_ref`. A call or entry with no subject is not compared.                                                                                                                  |
+| wrong window  | Every matching call with the right subject reads another window: by UTC day, each bound within one day; every key window (`start`/`end`, `window_a`, `window_b`, `baseline`, `target`, `date`) needs a match in the call.   |
+| right call    | Otherwise. The tool may differ: `observations_for_subject` over the key's code, subject and window reads the same rows as `trend`.                                                                                          |
+
+A `values_around_event` call must also name the same event and day counts.
+`source` (which wearable) is not compared. A line is "all right" with at least
+one right call and no invented code, wrong code, wrong subject or wrong
+window; extra calls are allowed. "No call" is a line with no tool call at all.
+A call the tool's input schema rejects never ran and is not in
+`tool_results`, so such a turn counts as no call. Wrong window means the
+arguments differ from the key's, not that the result did: a window ending
+2025-09-30 reads the same rows as one ending 2025-12-31 when the subject has
+no reading in between.
+
+`evaluation/cohort-codes.v1.json` lists every LOINC code of a numeric
+observation in the pinned cohort's Synthea bundles and its synthetic wearable
+series (generator v2), built by `bun run eval:cohort-codes -- --in .synthea`,
+which refuses a cohort whose `contentSha256` is not the key's. A test checks
+that it pins the key's cohort, that every code passes the check digit and that
+every code the key read rows of is in it. `eval:report` loads it when it pins
+the key's cohort; otherwise the report's run table says it was not loaded and
+only the check digit marks an invented code.
+
+Answers without a tool (`score/no-tool-values.ts`) apply to items that read
+subject data (`warehouse` in their corpora). In the `## Answer` section (the
+whole reply when it did not parse), dates left out, a stated value is a number
+followed by a measurement unit (`%`, `mmHg`, `bpm`, `kg`, `mg/dL`, …), or one
+after a measure name and a linking word in the same sentence ("HbA1c was
+6.1"). A count or time word after it ("7 readings", "3 years"), a scale ("out
+of 100"), a sentence about a code, or a whole number of four digits or more
+after a measure name is not a value. A value is supported when the question
+gives it or a tool result of the turn that is not a refusal holds it, by the
+hallucination matcher, in a common other unit, or as a percent of a share
+(`0.0082` as `0.8 %`). A line with an unsupported value is "no call" (no tool
+call), "no rows" (no call returned a reading) or "not in rows" (readings came
+back but none holds the value; the model may have derived it). "Without a
+tool" counts the first two.
 
 ### Rules per criterion
 

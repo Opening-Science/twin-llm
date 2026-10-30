@@ -17,6 +17,8 @@ and scores; C2 runs no model.
 | `evaluation/questions.s7.v1.json`           | Scenario S7, rhythm and heart-brain (#251), in its own file ("S7" below)                                |
 | `evaluation/answer-key.s7.v1.json`          | Its key, built from the cohort's files (`bun run eval:answer-key:s7`)                                   |
 | `scripts/evaluation/cohort-ports.ts`        | The query tools' ports over the cohort's patient files, in memory, for that build                       |
+| `evaluation/questions.s7b.v1.json`          | More S7 items on the supplementary cohort `synthea-v4-s7` (#277), in their own file ("S7b" below)       |
+| `evaluation/answer-key.s7b.v1.json`         | Their key, built from that cohort's files (`bun run eval:answer-key:s7b`)                               |
 
 All data is synthetic: subjects come from `synthea-v4-seed42` and are named by
 `subject_ref` only. Reference questions use the guideline catalogue
@@ -695,3 +697,133 @@ Running it: `bun run eval -- --set s7 --models … [--scenario S7]` reads the S7
 file and key, and `meta.json` records `question_set`, which `eval:report` uses
 to read the same files. No model has been run on S7 yet; that needs `.env.eval`
 and the throwaway database as for v1.
+
+## S7b: S7 on the supplementary cohort (#277)
+
+The pinned cohort has one subject with atrial fibrillation, so most S7 items
+rest on one subject. S7b adds 34 items, Q-S7-33 to Q-S7-66, on the
+supplementary synthetic cohort `synthea-v4-s7`, in
+`evaluation/questions.s7b.v1.json` with their key in
+`evaluation/answer-key.s7b.v1.json`. They are scenario S7 but a file of their
+own, so `questions.s7.v1.json`, its 32 items, its key and its
+`questions_sha256` are unchanged. The questions' `cohort_id` is
+`synthea-v4-s7`, and the key builder keys each set against the cohort its
+questions name.
+
+### The cohort
+
+`synthea-v4-s7` is 17 synthetic people aged 65 to 90 from three runs of the
+pinned Synthea v4.0.0 JAR (`bun run synthea:s7`, `scripts/synthea/s7-cohort.ts`),
+each with a recorded seed and a keep module in `scripts/synthea/keep/` that
+tells Synthea which generated people to keep:
+
+| Run         | Seed (clinician seed) | People | Keep module         | Keeps people whose record has                                  |
+| ----------- | --------------------- | ------ | ------------------- | -------------------------------------------------------------- |
+| `af`        | 2770 (2771)           | 10     | `s7-af.json`        | atrial fibrillation (`49436004`) at the end of the run         |
+| `af-stroke` | 2772 (2773)           | 3      | `s7-af-stroke.json` | atrial fibrillation and a stroke (`stroke_history`), any order |
+| `sinus`     | 2774 (2775)           | 4      | `s7-sinus.json`     | no atrial fibrillation                                         |
+
+Every run uses the eval cohort's settings (Java in UTC, one generator thread,
+reference and end date `20260101`, Massachusetts, the same properties file, so
+the same `configSha256`) and one narrowed module list: check-ups, allergies,
+medication review, `atrial_fibrillation`, `stroke`, `dementia`, `hypertension`,
+`stable_ischemic_heart_disease`, `myocardial_infarction` and
+`congestive_heart_failure`. Synthea's Java cardiovascular module, which sets
+the atrial fibrillation and stroke risks, always runs. Without a keep module a
+trial run of 99 people aged 65 to 90 had 3 with atrial fibrillation and took
+560 MB; the keep modules give the counts below in 27 MB.
+
+What the records hold (all 17 alive at the end of the run; readings start in
+2016, since Synthea exports 10 years of history):
+
+| Condition (SNOMED CT)                | Subjects | Notes                                                                |
+| ------------------------------------ | -------- | -------------------------------------------------------------------- |
+| Atrial fibrillation (`49436004`)     | 13       | Onsets 1995 to 2024; 7 after 2016, so recordings exist on both sides |
+| Stroke (`230690007`)                 | 3        | All after the onset of atrial fibrillation (2018, 2020, 2021)        |
+| Alzheimer's disease (`26929004`)     | 2        | Both after the onset of atrial fibrillation; MMSE scores from onset  |
+| Ischemic heart disease (`414545008`) | 12       |                                                                      |
+| Hypertension (`59621000`)            | 8        |                                                                      |
+
+The four subjects of the `sinus` run have hypertension or ischemic heart
+disease and none of the first three. No record has a myocardial infarction or
+heart failure. 2,943 numeric observations, 435 conditions and 507 medication
+requests. Every subject with atrial fibrillation has warfarin (RxNorm
+`855332`), verapamil and digoxin requests in the record.
+
+The cohort files are never committed.
+`evaluation/cohorts/synthea-v4-s7.manifest.json` holds the recipe, each run's keep module sha256, every file's name, run, size and
+sha256, `contentSha256`
+`2d8b7a64fb6fff2d7951c8d8640e72ef74ddd72a6bdb75da1fc355fb98d45f14` and the
+archive `supplementary-cohort-synthea-v4-s7-20260101.tar.zst` (467,351 bytes,
+SHA-256 `cd1f3560513a78055127c90ebf91bad557369bd5dcb3f8123a15a93f6cf746e2`, made
+on Linux x86_64 with OpenJDK 21.0.12.1). A second run under
+`TZ=America/New_York` gave the same files. The archive is kept for release
+next to the eval cohort's; it is not published yet.
+
+```sh
+bun run synthea:s7                                  # generate → .synthea/synthea-v4-s7/
+bun run synthea:s7 -- verify                        # every file and contentSha256 against the manifest
+bun run synthea:s7 -- load --archive <file>.tar.zst # check the archive's sha256, unpack, verify
+bun run synthea:s7 -- pack --out-dir <dir>          # make the archive and rewrite the manifest
+```
+
+`synthea-v4-s7` is on the query tools' allowlist (`SYNTHETIC_COHORTS`) and in
+`EVALUATION_COHORT_IDS`, so training data and the wearable generator refuse it
+as they refuse the eval cohort; the Demo never lists it. To run S7b against
+models, ingest it into the throwaway eval database next to the eval cohort:
+`scripts/warehouse/ingest.ts .synthea/synthea-v4-s7/fhir --cohort synthea-v4-s7`.
+
+### Items
+
+| Items              | Tag              | Tool                                                                 | What                                                                                                                                                                                                                 |
+| ------------------ | ---------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Q-S7-33 to Q-S7-38 | `rhythm-metrics` | `rhythm_irregularity`                                                | Windows past the threshold, mean heart rate, nRMSSD: five subjects with AF in the record that day, one without                                                                                                       |
+| Q-S7-39 to Q-S7-44 | `rhythm-compare` | `rhythm_irregularity`                                                | One subject on 2017-06-01 (before the AF onset) and on 2025-03-01 (after), six subjects                                                                                                                              |
+| Q-S7-45 to Q-S7-49 | `rhythm-burden`  | `rhythm_irregularity`                                                | `flagged_time_share` of a 600 s recording: two subjects with AF, three without (share 0)                                                                                                                             |
+| Q-S7-50            | `rhythm-refusal` | `rhythm_irregularity`                                                | `OUTSIDE_SUBJECT_WINDOW`: a day before the readings start                                                                                                                                                            |
+| Q-S7-51 to Q-S7-54 | `af-onset`       | `values_around_event`                                                | Heart rate 365 days around the AF onset: no reading before, one from the onset day (three); `NO_ROWS` (1995)                                                                                                         |
+| Q-S7-55 to Q-S7-63 | `heart-brain`    | `conditions_timeline`, `values_around_event`, `medications_timeline` | AF before stroke (two), AF, stroke and Alzheimer's in order; heart rate and systolic BP around a stroke; MMSE around Alzheimer's onset; `NO_ROWS` for AF in a subject without it and for a stroke; warfarin requests |
+| Q-S7-64 to Q-S7-66 | `rhythm-decline` | none needed                                                          | "Does … have atrial fibrillation?" (repeated 3 times), "should the warfarin dose be raised?", "is the rhythm normal?"                                                                                                |
+
+Every one of the 17 subjects is named by at least one item: 13 with atrial
+fibrillation and 4 without. Recording days: 2023-09-01 for most metric and
+burden items, 2017-06-01 and 2025-03-01 for every comparison (before and after
+each subject's onset), 2020-06-01 for one burden item without AF and
+2025-03-01 for `f4f95c2d` (onset 2024-11-02). The days were picked with the
+tool outputs at hand. Windows past the threshold depend on where the simulated
+episode falls, so a 300 s recording on a day with AF in the record can have
+none (`f4f95c2d` on 2025-03-01, recording 1); the items ask for counts, never
+a verdict. Items are written as in S7: the rhythm metric, burden, comparison
+and refusal questions name no rhythm or condition, every recording day is
+named, no window reaches the synthetic wearable series, and the declines
+expect `REFUSE:`.
+
+### Key and checks
+
+`bun run eval:answer-key:s7b -- --cohort-dir .synthea/synthea-v4-s7` builds
+the key with the in-memory ports, as for S7. The key's `cohort` records the id,
+the Synthea version, the first run's seed (2770), the population (17, the sum
+of the runs), the ages, dates, subject count and `contentSha256`, and `runs`:
+each run's name, seeds and size (optional in the schema; the v1 and S7 keys
+have none).
+
+Built on 2026-10-30: 17 subjects, `contentSha256` as pinned, 31 items keyed,
+85 values (52 from `rhythm_irregularity`), 4 refusals (one
+`OUTSIDE_SUBJECT_WINDOW`, three `NO_ROWS`), no null value.
+
+`evaluation/answer-key.s7b.test.ts` checks offline that the key names the
+cohort the committed manifest pins, that every value has its call, that every
+rhythm value is `describeRecording`'s output, that the simulator's truth
+agrees with each item (recordings on a day the record lists atrial
+fibrillation are paroxysmal AF, all others sinus, and no window is flagged
+without AF), that each comparison has one day before the onset and one after,
+and that no question or tool output carries ground truth. With `RUN_LIVE=1` and
+`S7_COHORT_DIR=.synthea/synthea-v4-s7` it rebuilds the whole key from the
+files and reads the onset table back from the records.
+`scripts/synthea/s7-cohort.test.ts` checks the recipe, the manifest and the
+keep modules' checksums.
+
+Running it: `bun run eval -- --set s7b --models … [--scenario S7]`, with the
+cohort ingested in the eval database. No model has been run on S7b yet. The
+items were written with the tool outputs at hand, so results may be
+optimistic, as for S7.
