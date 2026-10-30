@@ -87,6 +87,11 @@ allowlisted cohort.
 streaming each one without unpacking it: whether an analysis recovers the heart and
 brain relations Synthea plants. See `docs/research/heart-brain-2026-10.md`.
 
+`bun run disclosure:prepare` and `scripts/disclosure/run-gpu.sh` test whether the
+pilot fine-tune gives away which `synthea-v4-seed1001` subjects it was trained on, or
+their values, with an overfit positive control (#301). See
+`docs/research/disclosure-2026-10.md`.
+
 ## Synthetic wearable series
 
 `bun run wearables:generate -- --in .synthea/<cohort>/fhir` writes one FHIR
