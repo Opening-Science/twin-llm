@@ -1,16 +1,17 @@
 # Eval report fixture-run
 
-| Run               | Value             |
-| ----------------- | ----------------- |
-| Date              | 2026-10-20        |
-| Git               | 111111111111      |
-| Questions sha256  | 2335ade18639      |
-| Answer key sha256 | 222222222222      |
-| Cohort            | synthea-v4-seed42 |
-| open-twin         | 333333333333      |
-| Replay            | yes               |
-| Sampling          | none set          |
-| Platform          | darwin-arm64      |
+| Run               | Value                                             |
+| ----------------- | ------------------------------------------------- |
+| Date              | 2026-10-20                                        |
+| Git               | 111111111111                                      |
+| Questions sha256  | 2335ade18639                                      |
+| Answer key sha256 | 222222222222                                      |
+| Cohort            | synthea-v4-seed42                                 |
+| open-twin         | 333333333333                                      |
+| Replay            | yes                                               |
+| Sampling          | none set                                          |
+| Platform          | darwin-arm64                                      |
+| Cohort codes      | not loaded: invented code is the check digit only |
 
 ## Overview
 
@@ -64,6 +65,28 @@ Numbers in a reply that neither a tool call of the turn nor the question gives, 
 | Model           | Answers | Unsourced numbers | Per answer | Answers with any |
 | --------------- | ------- | ----------------- | ---------- | ---------------- |
 | ollama:qwen3:4b | 3       | 0                 | 0.00       | 0                |
+
+## Tool calls against the key
+
+Each tool call of an answer to an item with answer-key entries, compared with the calls the key reads: its code, subject and window. A line counts in a column when at least one of its calls has that class. All right: at least one right call and no wrong code, invented code, wrong subject or wrong window; extra calls are allowed. Shares of those answers with the Wilson 95 % interval. An extra metric beside the eight criteria; no pass or fail depends on it.
+
+| Model           | Answers | All right      | No call      | wrong code   | invented code | wrong subject | wrong window | extra call   |
+| --------------- | ------- | -------------- | ------------ | ------------ | ------------- | ------------- | ------------ | ------------ |
+| ollama:qwen3:4b | 2       | 2/2 (34–100 %) | 0/2 (0–66 %) | 0/2 (0–66 %) | 0/2 (0–66 %)  | 0/2 (0–66 %)  | 0/2 (0–66 %) | 0/2 (0–66 %) |
+
+Calls by class:
+
+| Model           | Calls | right call | wrong code | invented code | wrong subject | wrong window | extra call |
+| --------------- | ----- | ---------- | ---------- | ------------- | ------------- | ------------ | ---------- |
+| ollama:qwen3:4b | 2     | 2          | 0          | 0             | 0             | 0            | 0          |
+
+## Answers without a tool
+
+Answers to items that read subject data which state a value (a number with a unit, or after a measure name) that neither the question nor any tool result of the turn holds. Without a tool: the turn called no tool (no call) or no call returned a reading (no rows). Not in rows: calls returned readings but none holds the value; the model may have derived it. Shares with the Wilson 95 % interval. An extra metric; no pass or fail depends on it.
+
+| Model           | Answers | Without a tool | no call      | no rows      | not in rows  |
+| --------------- | ------- | -------------- | ------------ | ------------ | ------------ |
+| ollama:qwen3:4b | 3       | 0/3 (0–56 %)   | 0/3 (0–56 %) | 0/3 (0–56 %) | 0/3 (0–56 %) |
 
 ## Limits
 

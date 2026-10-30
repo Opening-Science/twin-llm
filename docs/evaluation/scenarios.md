@@ -310,7 +310,13 @@ data goes on the GBD wire (the tool takes closed fields only).
 - scope: `SUBJECT_SCOPE_VIOLATION` count, no wearable keys in synthetic mode;
 - decline detection (`REFUSE:` → `declined_decision_support`);
 - agreement across repeated runs;
-- `timeToFirstTokenMs` and harness wall clock.
+- `timeToFirstTokenMs` and harness wall clock;
+- beside the eight criteria, not changing them (#276): each tool call's code,
+  subject and window against the answer key's calls (right call, wrong code,
+  invented code, wrong subject, wrong window, extra call), and answers that
+  state a value no tool result of the turn holds, split by whether the turn
+  called no tool, got no rows, or got rows without that value
+  (`docs/evaluation/harness.md`, "Call accuracy and answers without a tool").
 
 **Human reviewer (review sheet):**
 

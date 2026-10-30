@@ -100,7 +100,20 @@ describe("resolveLanguageModel DATA_MODE permit", () => {
       expect(error).toBeInstanceOf(ProviderNotPermittedError);
       expect((error as Error).message).toBe(PROVIDER_NOT_PERMITTED_ERROR);
       expect((error as { code: string }).code).toBe(PROVIDER_NOT_PERMITTED_FOR_DATA_MODE);
-      expect(JSON.stringify(error, Object.getOwnPropertyNames(error))).not.toMatch(
+      // Stack and source fields hold file paths, which can contain any word;
+      // every other property must stay free of wearable context.
+      const location = new Set([
+        "stack",
+        "sourceURL",
+        "line",
+        "column",
+        "originalLine",
+        "originalColumn",
+      ]);
+      const shown = Object.getOwnPropertyNames(error).filter(
+        (name) => !location.has(name),
+      );
+      expect(JSON.stringify(error, shown)).not.toMatch(
         /Oura|Whoop|recovery|score|narrative/i,
       );
     }

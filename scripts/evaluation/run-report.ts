@@ -11,6 +11,10 @@
  * - the questions, the key and the run disagree on the questions' sha256;
  * - the report text would contain a claim-lint stem (it may be committed under docs/).
  *
+ * Call accuracy checks codes against `evaluation/cohort-codes.v1.json` when
+ * that file is there and pins the key's cohort; otherwise the report says it
+ * was not loaded and only the LOINC check digit marks an invented code.
+ *
  * The Markdown goes through Prettier, so a report committed under docs/ passes
  * `format:check` and the pre-commit hook leaves it byte for byte as written.
  */
@@ -20,6 +24,7 @@ import { join } from "node:path";
 import { BANNED_TERMS } from "../lint-claims";
 
 import { questionsSha256 } from "./build-answer-key";
+import { COHORT_CODES_PATH, cohortCodesSchema } from "./cohort-codes";
 import {
   metaSchema,
   QUESTION_SETS,
@@ -107,6 +112,23 @@ const stemsIn = (text: string): string[] =>
     (term) => term.id,
   );
 
+/**
+ * The cohort's codes, or null when the file is missing or pins another cohort
+ * than the key. A file that is there but does not parse stops the report.
+ */
+const loadCohortCodes = async (
+  deps: ReportDeps,
+  contentSha256: string,
+): Promise<ReadonlySet<string> | null> => {
+  const text = await deps.readText(COHORT_CODES_PATH).catch(() => null);
+  if (text === null) return null;
+  const parsed = cohortCodesSchema.safeParse(JSON.parse(text) as unknown);
+  if (!parsed.success) {
+    throw new ReportError("COHORT_CODES", `${COHORT_CODES_PATH} does not parse`);
+  }
+  return parsed.data.content_sha256 === contentSha256 ? new Set(parsed.data.codes) : null;
+};
+
 export const runReport = async (
   argv: readonly string[],
   io: ReportIo,
@@ -147,6 +169,7 @@ export const runReport = async (
       );
     }
 
+    const cohortCodes = await loadCohortCodes(deps, key.cohort.content_sha256);
     const scores = scoreRun({
       models: meta.models.map((model) => ({
         provider: model.provider,
@@ -155,9 +178,15 @@ export const runReport = async (
       items: questions.items,
       entries: key.entries,
       lines,
+      cohortCodes,
     });
     const markdown = await formatMarkdown(
-      renderReport({ meta, scores, quantisation }),
+      renderReport({
+        meta,
+        scores,
+        quantisation,
+        cohortCodes: cohortCodes?.size ?? null,
+      }),
       join(dir, "report.md"),
     );
     const stems = stemsIn(markdown);
