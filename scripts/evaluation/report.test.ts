@@ -288,6 +288,49 @@ describe("eval:report on a fixture run", () => {
   });
 });
 
+describe("eval:report on an S7 run (#251)", () => {
+  test("reads the S7 files the run names and adds an S7 column", async () => {
+    const s7Item = { ...S1, id: "Q-S7-01", scenario: "S7" };
+    const questions = { ...QUESTIONS, items: [s7Item] };
+    const sha = questionsSha256(questions);
+    const lines = LINES.slice(0, 2).map((entry) => ({
+      ...entry,
+      item_id: "Q-S7-01",
+      scenario: "S7",
+    }));
+    const { files, deps } = memoryFiles({
+      meta: {
+        ...META,
+        question_set: "s7",
+        questions_sha256: sha,
+        counts: { ...META.counts, items: 1, lines: 2, answered: 2, errors: 0 },
+      },
+      lines,
+    });
+    files.set("evaluation/questions.s7.v1.json", JSON.stringify(questions));
+    files.set(
+      "evaluation/answer-key.s7.v1.json",
+      JSON.stringify({
+        ...KEY,
+        questions_sha256: sha,
+        entries: { "Q-S7-01": TREND_KEY },
+      }),
+    );
+    const out = capture();
+    expect(await runReport(["fixture-run"], out.io, deps)).toBe(0);
+    expect(out.err()).toBe("");
+    const report = files.get(`${DIR}/report.md`) ?? "";
+    expect(report).toContain("| S6 ");
+    expect(report).toContain("| S7 ");
+  });
+
+  test("a v1 run keeps its six scenario columns", async () => {
+    const { files, deps } = memoryFiles();
+    expect(await runReport(["fixture-run"], capture().io, deps)).toBe(0);
+    expect(files.get(`${DIR}/report.md`)).not.toContain("S7");
+  });
+});
+
 describe("review sheet cells", () => {
   test("a cell a spreadsheet would run as a formula gets a leading quote", () => {
     expect(

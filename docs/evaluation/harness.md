@@ -12,12 +12,14 @@ cp .env.synthetic.example .env.eval     # DATABASE_URL at a throwaway database (
 bun run eval -- --models ollama:qwen3:4b --latency-set
 bun run eval -- --models ollama:qwen3:4b --scenario S5 --run-id 2026-10-21-qwen3-s5
 bun run eval -- --models ollama:qwen3:4b --latency-set --replay
+bun run eval -- --set s7 --models ollama:qwen3:4b --run-id 2026-10-31-qwen3-s7
 bun run eval:report -- 2026-10-21-qwen3-s5 --quantisation Q4_K_M
 ```
 
 | Flag                                                    | Meaning                                                        |
 | ------------------------------------------------------- | -------------------------------------------------------------- |
 | `--models provider:id[,…]`                              | Required. Every provider must be `LLM_PROVIDER` in `.env.eval` |
+| `--set v1` / `--set s7`                                 | Question set and key; default `v1`, `s7` is S7 (#251)          |
 | `--items Q-S1-01,…` / `--scenario S1` / `--latency-set` | One selection at most; none means all 130 items                |
 | `--replay`                                              | Cache only; never calls a model                                |
 | `--run-id <id>`                                         | Default `<date>-<provider>-<time>`; an existing run is refused |
@@ -29,6 +31,10 @@ the provider's model list before any item runs (`MODEL_NOT_LISTED`). Items
 whose `context.requires` env is missing get `MISSING_ENV` lines, counted on
 their own in `meta.json` and the report, never as passes. Exit code 0 means no
 line had an error, 2 means some did, 1 means the run did not start.
+
+`meta.json` records `question_set` (a run before #251 has none and ran `v1`),
+and `eval:report` reads that set's questions and key. The report's score table
+has a column per v1 scenario, and an S7 column when the run scored S7 lines.
 
 `bun run eval:report` reads no env and no database. It refuses a MOCK run, a
 run with results v1 lines, and a run whose questions sha256 differs from the

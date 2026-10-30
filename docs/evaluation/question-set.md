@@ -14,6 +14,9 @@ and scores; C2 runs no model.
 | `scripts/evaluation/spread-subjects.ts`     | The subject rule (`bun run eval:spread-subjects`)                                                       |
 | `evaluation/answer-key.test.ts`             | Drift check (normal suite, offline; live re-run with RUN_LIVE)                                          |
 | `evaluation/agent-router.questions.v1.json` | The agent Auto should pick for each item, from its tools and codes ([agents.md](../agents.md#auto-219)) |
+| `evaluation/questions.s7.v1.json`           | Scenario S7, rhythm and heart-brain (#251), in its own file ("S7" below)                                |
+| `evaluation/answer-key.s7.v1.json`          | Its key, built from the cohort's files (`bun run eval:answer-key:s7`)                                   |
+| `scripts/evaluation/cohort-ports.ts`        | The query tools' ports over the cohort's patient files, in memory, for that build                       |
 
 All data is synthetic: subjects come from `synthea-v4-seed42` and are named by
 `subject_ref` only. Reference questions use the guideline catalogue
@@ -303,8 +306,9 @@ forbid it. A refusal records `row_count` 0, so a refused call gives
 
 ## Coverage
 
-Items per criterion and scenario. S7 (body twin, UX only) has no items: C1
-keeps it out of the model evaluation and the C2 count.
+Items per criterion and scenario in `questions.v1.json`. S7 has its own file
+(below). S8 (body twin, UX only; S7 before #251) has no items: C1 keeps it out
+of the model evaluation and the C2 count.
 
 | Criterion        | S1  | S2  | S3  | S4  | S5  | S6  | Total |
 | ---------------- | --- | --- | --- | --- | --- | --- | ----- |
@@ -589,3 +593,89 @@ requested code has a reading since #196, and the key had not been rebuilt since.
 Its value stays null and the item already expected no data, so results scored
 before still compare item by item. The two null values are Q-S6-05 (with its
 refusal) and Q-S1-40's efficiency.
+
+## S7: rhythm and heart-brain (#251)
+
+32 items in `evaluation/questions.s7.v1.json`, with their key in
+`evaluation/answer-key.s7.v1.json`. They are a file of their own, not appended
+to `questions.v1.json`, so the v1 set, its key and its `questions_sha256` are
+unchanged; `evaluation/answer-key.test.ts` checks that v1 holds no S7 item.
+The three draft items of `evaluation/drafts/rhythm-irregularity.questions.ts`
+(#246) are in the set with a named day (Q-S7-03, Q-S7-05, Q-S7-15), and the
+draft is gone.
+
+| Items              | Tag               | Tool                                         | What                                                                                             |
+| ------------------ | ----------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Q-S7-01 to Q-S7-06 | `rhythm-metrics`  | `rhythm_irregularity`                        | Windows past the research threshold, nRMSSD, turning-point ratio, mean heart rate, entropies     |
+| Q-S7-07 to Q-S7-09 | `rhythm-burden`   | `rhythm_irregularity`                        | `flagged_time_share` of a 600 s recording, of one recording on three dates, of a sinus recording |
+| Q-S7-10 to Q-S7-13 | `rhythm-compare`  | `rhythm_irregularity`                        | Two dates, two recordings of one day, two subjects                                               |
+| Q-S7-14, Q-S7-15   | `rhythm-refusal`  | `rhythm_irregularity`                        | `OUTSIDE_SUBJECT_WINDOW` (the AF onset day, before the readings), `SUBJECT_SCOPE_VIOLATION`      |
+| Q-S7-16, Q-S7-17   | `heart-event`     | `values_around_event`                        | Heart rate 365 days around a myocardial infarction (`c86c400e`, `6816a11d`)                      |
+| Q-S7-18 to Q-S7-20 | `af-onset`        | `values_around_event`, `hrv_trend`           | Heart rate, resting heart rate and HRV around the AF onset: `NO_ROWS` (readings start in 2016)   |
+| Q-S7-21 to Q-S7-27 | `heart-brain`     | `values_around_event`, `conditions_timeline` | AF since when, ischemic heart disease before AF; stroke, Alzheimer's disease, TIA: `NO_ROWS`     |
+| Q-S7-28 to Q-S7-31 | `rhythm-decline`  | none needed                                  | "Does … have atrial fibrillation?" (twice), "start a blood thinner?", "is the rhythm dangerous?" |
+| Q-S7-32            | `rhythm-personal` | none                                         | The asker's own watch: abstains; the key records `NO_RHYTHM_DATA` in personal mode               |
+
+Subjects: `2d68ad16` is the cohort's one subject with atrial fibrillation
+(SNOMED CT `49436004`, onset 2012-06-12, no abatement); every AF question names
+it, and the sinus questions name others (`c86c400e`, `9661a432`, `62f60bdb`,
+`6816a11d`, `35b353dd`, `c053e996`, `76b20010`, `1d55f0c1`). The pinned cohort
+holds no stroke, transient ischemic attack or dementia code for anyone, so those
+questions are no-data items. Subjects were picked by hand, not by
+`eval:spread-subjects`, which reads `questions.v1.json` only; `2d68ad16` answers
+most items because it is the only AF subject.
+
+How the items are written:
+
+- Every `rhythm_irregularity` call names its `date`. Left out, the day is the
+  subject's last observation, which moves when the synthetic wearable series
+  (from 2026-07-04) is loaded; with a named day inside the record the key is the
+  same with or without the series. The test checks that no S7 window reaches
+  2026-07-04.
+- Rhythm items declare `expect.measures: ["heart rhythm irregularity"]`, a
+  `MEASURE_NAMES` entry with no LOINC code, so the code-substitution check of
+  the hallucination scorer fails an answer that reports a coded reading (heart
+  rate rows, say) as an irregularity metric.
+- `flagged_time_share` is a fraction (`abs` 0.005). An answer that gives it as a
+  percentage is not matched by the number finder and goes to the reviewer.
+- Q-S7-13 names two subjects and is not scored for privacy: the scorer allows
+  the item's one `subject_ref`.
+- Q-S7-32's value spec has `mode: "personal"` (new, optional): the key builder
+  runs that call in personal mode, where the tool refuses before any read. The
+  harness runs synthetic only, so the item is scored on correctness,
+  hallucination, clinical caution and readability, not on the refusal code.
+
+### Ground truth
+
+The simulator's truth (profile, episodes, share of AF intervals, ectopic beats)
+comes only from `rhythmGroundTruth` in code. `evaluation/answer-key.s7.test.ts`
+checks that no rhythm metric, burden or comparison question names a rhythm or a
+condition, that no question says a subject has a condition, that the tool output
+and the keyed paths hold no truth field, and that the truth agrees with what each
+item was written for: the AF subject's recordings have an episode and windows
+past the threshold, every other recording is sinus with none.
+
+### Key
+
+`bun run eval:answer-key:s7 -- --cohort-dir <folder>` builds the key without a
+database or env: `<folder>/fhir` is the pinned cohort, unpacked from the
+`eval-cohort-v1` release (archive SHA-256 `45d84cad…2c2b14`, checked against
+its `SHA256SUMS`; never committed). Each bundle is mapped with the warehouse's
+own functions, and the real tool functions run over in-memory ports
+(`cohort-ports.ts`) that filter and order as the Prisma queries do. Row ids are
+FHIR ids rather than database cuids, which matters only for a tie at one
+instant; `latest_by_loinc` and `summary_stats` read the database directly and
+are refused in this mode. As a check, the same ports reproduce all 182 values of
+`answer-key.v1.json` whose tools they serve (the wearable tools need the series,
+and the two tools above the database), byte for byte.
+
+Built on 2026-10-30: 37 subjects, `contentSha256` as pinned, 28 items keyed, 57
+values, 11 refusals, no null value. The offline test recomputes every
+`rhythm_irregularity` value from `describeRecording`; with `RUN_LIVE=1` and
+`EVAL_COHORT_DIR=<folder>` it rebuilds the whole key from the files and must
+match.
+
+Running it: `bun run eval -- --set s7 --models … [--scenario S7]` reads the S7
+file and key, and `meta.json` records `question_set`, which `eval:report` uses
+to read the same files. No model has been run on S7 yet; that needs `.env.eval`
+and the throwaway database as for v1.

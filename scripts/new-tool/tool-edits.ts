@@ -298,7 +298,7 @@ export const fileEdits = (names: ToolNames): readonly FileEdit[] => [
         rowCountCase(names),
       ),
       insertBefore(
-        '      case "latest_by_loinc":\n        return tools.runLatestByLoinc',
+        "    // These two read the database directly",
         answerKeyRunCase(names),
       ),
     ],
