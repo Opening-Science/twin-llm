@@ -21,6 +21,7 @@ import { disposeObject3D } from "../dispose-object";
 import { type Picked } from "../environment/pick-part";
 import { PickSurface } from "../environment/pick-surface";
 import { LiveConditioning, type LiveStatus } from "../live/live-conditioning";
+import { type BeatPattern } from "../live/heart-cycle";
 import { type LiveVitals } from "../live/live-rates";
 import { type AnatomyLoad } from "./anatomy-state";
 import {
@@ -84,6 +85,8 @@ export const AnatomyLayers = ({
   liveVitals?: Readonly<{
     enabled: boolean;
     vitals: LiveVitals;
+    /** The heart chambers (#53): whether they beat, and on which beats. */
+    chambers: Readonly<{ on: boolean; pattern: BeatPattern }>;
     onStatus: (status: LiveStatus) => void;
   }>;
 }>) => {
@@ -281,6 +284,8 @@ export const AnatomyLayers = ({
           vitals={liveVitals.vitals}
           scheme={ATLASES[atlasId].scheme}
           parts={prepared.parts}
+          root={prepared.root}
+          chambers={liveVitals.chambers}
           onStatus={liveVitals.onStatus}
         />
       ) : null}

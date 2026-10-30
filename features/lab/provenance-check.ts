@@ -1,42 +1,34 @@
+import { type BuildInfo } from "@/infrastructure/env";
+
 import { type LabCheck, type LabLink, shortHash } from "./lab-check";
 
 /**
- * Which code this server was built from: the app version and git commit
- * written in at build time, and the open-twin pin PROVENANCE.md records
- * against the one the `.open-twin/` checkout says it holds.
+ * Which code this server runs: the app version, git commit, clean-tree flag
+ * and open-twin pin and checkout written in at build time, against the
+ * checkout on disk now. A built server runs what it was built from, so the
+ * build's values decide, and a checkout that has moved since means a rebuild
+ * is needed. `next dev` serves edits as they are saved, so there nothing
+ * recorded at startup describes the running code.
  */
 
 const REPO = "https://github.com/Opening-Science/twin-llm";
 const SHA = /^[0-9a-f]{40}$/;
 
-/** The open-twin SHA under "Synced (not vendored) at SHA:" in PROVENANCE.md. */
-export const parseOpenTwinPin = (provenance: string): string | null => {
-  const match = /Synced \(not vendored\) at SHA:\s*-\s*`([0-9a-f]{40})`/.exec(provenance);
-  return match ? match[1] : null;
-};
-
-/** `.open-twin/OPEN_TWIN_SHA`: one SHA, maybe with a newline. */
-export const parseOpenTwinShaFile = (text: string): string | null => {
-  const sha = text.trim().toLowerCase();
-  return SHA.test(sha) ? sha : null;
-};
-
-export type ProvenanceInput = Readonly<{
-  appVersion: string | null;
+/** Read from disk when the page loads; null when it could not be read. */
+export type DiskProvenance = Readonly<{
   commit: string | null;
-  dirty: boolean;
-  /** From PROVENANCE.md. */
   openTwinPinned: string | null;
-  /** From `.open-twin/OPEN_TWIN_SHA`. */
   openTwinFound: string | null;
 }>;
+
+export type ProvenanceInput = Readonly<{ build: BuildInfo; disk: DiskProvenance }>;
 
 /** Licence files at the build's commit when it is known and clean, else on main. */
 export const provenanceLinks = (
   commit: string | null,
-  dirty: boolean,
+  dirty: boolean | null,
 ): readonly LabLink[] => {
-  const ref = commit !== null && SHA.test(commit) && !dirty ? commit : "main";
+  const ref = commit !== null && SHA.test(commit) && dirty === false ? commit : "main";
   return [
     { label: "PROVENANCE.md", href: `${REPO}/blob/${ref}/PROVENANCE.md` },
     { label: "NOTICE", href: `${REPO}/blob/${ref}/NOTICE` },
@@ -53,69 +45,128 @@ const HOW_TO = [
   "grep -A2 'Synced (not vendored)' PROVENANCE.md",
 ].join("\n");
 
-const statusAndSummary = (
-  input: ProvenanceInput,
-): Pick<LabCheck, "status" | "summary"> => {
-  const { commit, dirty, openTwinPinned, openTwinFound } = input;
+/** What the card shows even when the check cannot run. */
+export const provenanceBase = {
+  id: "provenance",
+  title: "Provenance",
+  howTo: HOW_TO,
+} as const;
+
+/** What changed on disk since the build, in words; empty when nothing did. */
+export const changedSinceBuild = (build: BuildInfo, disk: DiskProvenance): string[] =>
+  [
+    disk.commit !== null && disk.commit !== build.commit
+      ? `the checkout is at ${shortHash(disk.commit)}`
+      : "",
+    disk.openTwinPinned !== null && disk.openTwinPinned !== build.openTwinPinned
+      ? "PROVENANCE.md pins another open-twin commit"
+      : "",
+    disk.openTwinFound !== null && disk.openTwinFound !== build.openTwinFound
+      ? ".open-twin/ holds another commit"
+      : "",
+  ].filter((part) => part !== "");
+
+const statusAndSummary = ({
+  build,
+  disk,
+}: ProvenanceInput): Pick<LabCheck, "status" | "summary"> => {
+  // Under `next dev` the open-twin packages compile from disk as they are now.
+  const running = build.mode === "dev" ? disk : build;
   if (
-    openTwinPinned !== null &&
-    openTwinFound !== null &&
-    openTwinPinned !== openTwinFound
+    running.openTwinPinned !== null &&
+    running.openTwinFound !== null &&
+    running.openTwinPinned !== running.openTwinFound
   ) {
     return {
       status: "not-ok",
       summary:
-        "The open-twin checkout is not the commit PROVENANCE.md pins. Run `bun run sync:open-twin` and rebuild.",
+        "The open-twin checkout this server runs is not the commit PROVENANCE.md pins. Run `bun run sync:open-twin` and rebuild.",
     };
   }
-  if (commit === null) {
+  if (build.mode === "dev") {
+    return {
+      status: "unknown",
+      summary:
+        "This is a development server. It serves changes as they are saved, so no commit describes the code it runs. Run `bun run build` and `bun run start` for a build this card can trace.",
+    };
+  }
+  if (build.commit === null) {
     return {
       status: "unknown",
       summary:
         "This build has no git commit recorded, so the code it runs cannot be traced to one.",
     };
   }
-  if (dirty) {
+  if (build.dirty === null) {
+    return {
+      status: "unknown",
+      summary:
+        "Git could not say whether this build's working tree was clean, so it is not known whether the build matches its commit.",
+    };
+  }
+  if (build.dirty) {
     return {
       status: "unknown",
       summary:
         "This build was made from a working tree with changes that are not in its commit.",
     };
   }
-  if (openTwinPinned === null || openTwinFound === null) {
+  if (build.openTwinPinned === null || build.openTwinFound === null) {
     return {
       status: "unknown",
       summary: "The build commit is known, but the open-twin pin could not be compared.",
     };
   }
+  const changes = changedSinceBuild(build, disk);
+  if (changes.length > 0) {
+    return {
+      status: "unknown",
+      summary: `This server runs a clean build of ${shortHash(build.commit)}, but the files on disk changed since: ${changes.join("; ")}. Rebuild needed to run them.`,
+    };
+  }
   return {
     status: "ok",
     summary:
-      "Built from a clean commit, and the open-twin checkout is the commit PROVENANCE.md pins.",
+      "Built from a clean commit that is still the checkout, and the open-twin checkout is the commit PROVENANCE.md pins.",
   };
 };
 
-export const provenanceCheck = (input: ProvenanceInput): LabCheck => ({
-  id: "provenance",
-  title: "Provenance",
-  ...statusAndSummary(input),
-  evidence: [
-    { label: "App version", value: input.appVersion ?? "—", mono: true },
-    {
-      label: "Git commit (build)",
-      value:
-        input.commit === null
-          ? "—"
-          : `${shortHash(input.commit)}${input.dirty ? " with uncommitted changes" : ""}`,
-      mono: true,
-    },
-    {
-      label: "open-twin pin (PROVENANCE.md)",
-      value: shortHash(input.openTwinPinned),
-      mono: true,
-    },
-    { label: "open-twin checkout", value: shortHash(input.openTwinFound), mono: true },
-  ],
-  howTo: HOW_TO,
-  links: provenanceLinks(input.commit, input.dirty),
-});
+const commitText = (build: BuildInfo): string =>
+  build.commit === null
+    ? "—"
+    : `${shortHash(build.commit)}${
+        build.dirty === null
+          ? ", working tree not checked"
+          : build.dirty
+            ? " with uncommitted changes"
+            : ""
+      }`;
+
+export const provenanceCheck = (input: ProvenanceInput): LabCheck => {
+  const { build, disk } = input;
+  const dev = build.mode === "dev";
+  return {
+    ...provenanceBase,
+    ...statusAndSummary(input),
+    evidence: [
+      { label: "App version", value: build.appVersion ?? "—", mono: true },
+      {
+        label: dev ? "Git commit (server start)" : "Git commit (build)",
+        value: commitText(build),
+        mono: true,
+      },
+      { label: "Git commit (checkout now)", value: shortHash(disk.commit), mono: true },
+      {
+        label: dev ? "open-twin pin (PROVENANCE.md now)" : "open-twin pin (build)",
+        value: shortHash(dev ? disk.openTwinPinned : build.openTwinPinned),
+        mono: true,
+      },
+      {
+        label: dev ? "open-twin checkout (now)" : "open-twin checkout (build)",
+        value: shortHash(dev ? disk.openTwinFound : build.openTwinFound),
+        mono: true,
+      },
+    ],
+    links: provenanceLinks(dev ? null : build.commit, build.dirty),
+  };
+};

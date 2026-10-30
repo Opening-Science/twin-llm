@@ -4,13 +4,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 /**
- * Customize's four parts: the skills you can run, the agents built on them
- * (#221), the data you bring, and the services you link. Links, not buttons, so each part has its own address
+ * Customize's parts: the skills you can run, the agents built on them
+ * (#221), your twin notes (#43), the data you bring, and the services you link. Links, not buttons, so each part has its own address
  * and the browser's back button works.
  */
 export const CUSTOMIZE_TABS = [
   { href: "/customize", label: "Skills" },
   { href: "/customize/agents", label: "Agents" },
+  { href: "/customize/memory", label: "Memory" },
   { href: "/customize/data", label: "Data" },
   { href: "/customize/connectors", label: "Connectors" },
 ] as const;

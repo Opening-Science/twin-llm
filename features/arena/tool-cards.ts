@@ -5,8 +5,11 @@ import { GBD_MODEL_TOOL } from "@/packages/gbd-mcp/constants";
 import { GUIDELINE_MODEL_TOOL } from "@/packages/guidelines/constants";
 import { KNOWLEDGE_MODEL_TOOL } from "@/packages/knowledge/constants";
 import {
+  IMPORTED_CONDITIONS_TOOL,
   IMPORTED_DATASETS_TOOL,
   IMPORTED_LATEST_TOOL,
+  IMPORTED_MEDICATIONS_TOOL,
+  IMPORTED_TABLE_TOOL,
   IMPORTED_TREND_TOOL,
 } from "@/packages/query-tools/imported-names";
 
@@ -79,6 +82,9 @@ const TITLES: Readonly<Record<string, string>> = {
   [IMPORTED_DATASETS_TOOL]: "Listed your imported datasets",
   [IMPORTED_LATEST_TOOL]: "Read your newest imported readings",
   [IMPORTED_TREND_TOOL]: "Fitted a trend of one imported series",
+  [IMPORTED_TABLE_TOOL]: "Read columns of your imported table",
+  [IMPORTED_CONDITIONS_TOOL]: "Listed conditions in your imported records",
+  [IMPORTED_MEDICATIONS_TOOL]: "Listed medication requests in your imported records",
 };
 
 export const toolTitle = (tool: string): string => {
@@ -110,6 +116,8 @@ const REFUSAL_NOTES: Readonly<Record<string, string>> = {
   DATASET_NOT_FOUND: "No imported dataset with that id.",
   SERIES_NOT_COMBINED: "A coded series and one stored by name were not combined.",
   PARTIAL_DATES: "Some rows are dated only to a month or a year, so no trend was fitted.",
+  WRONG_DATASET_KIND: "That dataset is not the kind this tool reads.",
+  UNKNOWN_COLUMNS: "Those columns are not in the table, so nothing was read.",
   RSID_NOT_IN_REPORT: "That variant is not in the released report.",
   NO_CALL: "The report has no call at that variant, so nothing was asked.",
   INCOMPLETE_ROW: "The report has no position for that variant.",

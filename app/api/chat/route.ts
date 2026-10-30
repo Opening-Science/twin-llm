@@ -11,6 +11,7 @@ import { createStartAnswer } from "@/features/chat/start-answer";
 import { streamModelResponse } from "@/features/chat/stream-model-response";
 import { loadWearableContext } from "@/features/chat/wearable-context";
 import { getLatestGoogleHealthSummary } from "@/features/google-health/connection";
+import { notesBeforeThread } from "@/features/memory/note-store";
 import { loadDisabledSources } from "@/features/onboarding/onboarding-store";
 import { getLatestOuraSummary } from "@/features/oura/connection";
 import { findSkillFor } from "@/features/skills/user-skill-store";
@@ -89,6 +90,7 @@ const startAnswer = createStartAnswer({
   loadDisabledSources,
   appendAudit: (input) => append(database(), input),
   findSkill: findSkillFor,
+  loadTwinNotes: notesBeforeThread,
   stream: streamModelResponse,
   // The person still gets the refusal when the row cannot be written; a
   // reload then asks again, which is how a refused turn behaved before.

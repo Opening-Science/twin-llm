@@ -925,11 +925,13 @@
     @apply text-muted-foreground flex flex-col gap-0.5 px-3 pb-2;
   }
 
-  .twin-night {
+  .twin-night,
+  .twin-day {
     @apply mt-3 flex flex-col items-start gap-2;
   }
 
-  .twin-night > div {
+  .twin-night > div,
+  .twin-day > div {
     @apply w-full;
   }
 

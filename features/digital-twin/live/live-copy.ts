@@ -1,7 +1,11 @@
 import { formatDate, formatMeasure, formatNumber } from "@/infrastructure/format-measure";
 import { type AtlasScheme } from "@/packages/anatomy/manifest";
 
+import { AV_DELAY_S } from "./heart-cycle";
+import { type HeartRhythm } from "./heart-rhythm";
 import { type HrvBelowUsual, type LiveRate } from "./live-rates";
+
+type HeartTiming = HeartRhythm["timing"];
 import { type NightEpoch, type SleepStage } from "./night-series";
 
 /**
@@ -18,6 +22,28 @@ export const NO_RATE = "No heart rate on record for this subject.";
 export const SHOW_ORGANS =
   "Live vitals move the heart and lungs: set Depth to Organs to see them.";
 export const ILLUSTRATIVE = "Illustrative, not a physiological simulation.";
+/** Heart chambers (#53): the toolbar toggle and the lines while they beat. */
+export const CHAMBERS_TOGGLE = "Heart chambers";
+export const CHAMBERS_ILLUSTRATIVE =
+  "Illustrative simulation, not a physiological model.";
+export const CHAMBERS_LINE = `Heart chambers: the region where the atria sit contracts, then the ventricles' region ${Math.round(AV_DELAY_S * 1000)} ms later (an illustrative delay). The atlas heart is one mesh, so the regions are approximate.`;
+
+/** Where the beat times come from, and for AF what the atria are doing now. */
+export const chambersTimingLine = (timing: HeartTiming, now: "sinus" | "af"): string => {
+  switch (timing) {
+    case "regular":
+      return "Beat timing: regular, at the heart rate above. The wearable gives a rate, not the time of each beat.";
+    case "sinus":
+      return "Beat timing: a simulated sinus rhythm with beat-to-beat variation from the rhythm simulator, paced to the heart rate above.";
+    case "paroxysmal_af":
+      return `Beat timing: simulated by the rhythm simulator with an episode of atrial fibrillation, because this synthetic person's record lists it on that day. Now: ${
+        now === "af"
+          ? "atrial fibrillation, so the atria quiver and the beats come irregularly."
+          : "sinus rhythm."
+      }`;
+  }
+};
+
 export const BODYPARTS3D_HEART_NOTE =
   "On this atlas the heart is part of the whole cardiovascular system, so the system glows, more softly.";
 export const BODYPARTS3D_BREATH_NOTE =

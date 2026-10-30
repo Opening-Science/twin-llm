@@ -9,6 +9,7 @@ import {
   jitterBeats,
   NO_PERTURBATION,
   perturbBeats,
+  perturbBeatsCounted,
 } from "./perturb";
 
 const sequence = (values: readonly number[]): Random => {
@@ -81,5 +82,26 @@ describe("perturbBeats", () => {
     const b = perturbBeats(BEATS, level, randomFor(7, "p"));
     expect(a).toEqual(b);
     expect(a.beatTimesMs.length).toBe(a.labels.length + 1);
+  });
+});
+
+describe("perturbBeatsCounted", () => {
+  test("counts the beats removed and inserted", () => {
+    // Drop draws for beats 1..3 (drop beat 2), then per remaining interval an
+    // insert draw and a position draw (insert into the first).
+    const random = sequence([0.9, 0.0, 0.9, 0.0, 0.5, 0.9, 0.5, 0.9, 0.5]);
+    const counted = perturbBeatsCounted(
+      BEATS,
+      { dropShare: 0.5, spuriousShare: 0.5, jitterSdMs: 0 },
+      random,
+    );
+    expect(counted.missed).toBe(1);
+    expect(counted.spurious).toBe(1);
+    expect(counted.beats.beatTimesMs).toEqual([0, 400, 800, 2000, 2800]);
+  });
+
+  test("no perturbation counts nothing", () => {
+    const counted = perturbBeatsCounted(BEATS, NO_PERTURBATION, sequence([0]));
+    expect(counted).toEqual({ beats: BEATS, missed: 0, spurious: 0 });
   });
 });

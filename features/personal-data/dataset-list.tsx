@@ -11,7 +11,7 @@ import { UndoButton } from "@/infrastructure/ui-kit/undo-button";
 import { useSoftDelete } from "@/infrastructure/ui-kit/use-soft-delete";
 
 import { kindLabel } from "./import-formats";
-import { countLabel, dateRangeLabel, storedDateLabel } from "./import-labels";
+import { datasetContentsLabel, storedDateLabel } from "./import-labels";
 import { IMPORT_MESSAGES } from "./import-messages";
 
 /**
@@ -103,8 +103,7 @@ const DatasetRow = ({ dataset }: Readonly<{ dataset: DatasetView }>) => {
             <div className="min-w-0">
               <h3 className="text-sm break-words">{dataset.name}</h3>
               <p className="text-muted-foreground mt-1 text-xs">
-                {kindLabel(dataset.kind)} · {countLabel(dataset.rowCount, "row", "rows")}{" "}
-                · {dateRangeLabel(dataset.firstAt, dataset.lastAt)}
+                {kindLabel(dataset.kind)} · {datasetContentsLabel(dataset)}
               </p>
               <p className="text-muted-foreground mt-0.5 text-xs break-all">
                 From {dataset.sourceFileName}, imported{" "}
