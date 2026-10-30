@@ -1,6 +1,6 @@
 export const EMBEDDING_MODEL = "nomic-embed-text" as const;
 export const EMBEDDING_DIM = 768 as const;
-export const DEFAULT_OLLAMA_OPENAI_URL = "http://127.0.0.1:11434/v1" as const;
+export { DEFAULT_OLLAMA_BASE_URL as DEFAULT_OLLAMA_OPENAI_URL } from "@/infrastructure/ollama-context";
 
 export const DOCUMENT_EMBED_PREFIX = "search_document: " as const;
 export const QUERY_EMBED_PREFIX = "search_query: " as const;

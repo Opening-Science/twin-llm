@@ -19,6 +19,7 @@
  */
 import { dirname, join } from "node:path";
 
+import { SYNTHEA_VERSION } from "../../infrastructure/local-artefacts";
 import {
   isAllowedCohort,
   SYNTHEA_1M_COHORTS,
@@ -36,8 +37,8 @@ import {
 export { INGEST_FAILED_REASON, INVALID_JSON_REASON, type JsonRead } from "./ingest-shard";
 
 export const DEFAULT_COHORT = "synthea-v4-seed42";
-/** Pinned in scripts/synthea/generate-local.sh. */
-export const PINNED_SYNTHEA_VERSION = "v4.0.0";
+/** The Synthea version the generator pins (infrastructure/local-artefacts.ts). */
+export const PINNED_SYNTHEA_VERSION = SYNTHEA_VERSION;
 
 export type IngestIo = Readonly<{
   stdout: { write: (chunk: string) => void };
