@@ -371,6 +371,7 @@ const PERSONAL_READ_ROUTES: Readonly<Record<string, Entry>> = {
         today: () => "2026-10-28",
       })("thread-synthetic-1"),
   },
+  "DELETE /api/threads/[threadId]": { kind: "exempt", why: WRITE },
   "POST /api/chat": {
     kind: "open",
     why: "tool reads are audited per call, and BodyLoop context writes vitronic.chat.summary, but the Oura, Whoop and Google Health summaries put in the prompt in personal mode write no row yet",

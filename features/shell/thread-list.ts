@@ -74,3 +74,17 @@ export const withTouchedThreads = (
     ...rest.filter((group) => group.label !== "Today" && group.threads.length > 0),
   ];
 };
+
+/** The groups without the threads being deleted; a group left empty goes too. */
+export const withoutHiddenThreads = (
+  groups: readonly ThreadGroup[],
+  hidden: ReadonlySet<string>,
+): readonly ThreadGroup[] =>
+  hidden.size === 0
+    ? groups
+    : groups
+        .map((group) => ({
+          label: group.label,
+          threads: group.threads.filter((thread) => !hidden.has(thread.id)),
+        }))
+        .filter((group) => group.threads.length > 0);

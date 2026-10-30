@@ -20,7 +20,11 @@ Research use only; nothing here is clinical advice.
 5. Each import is a dataset in the list below the button: rename it
    (`PATCH /api/personal-data/datasets/<id>`) or delete it
    (`DELETE /api/personal-data/datasets/<id>`). Delete removes the dataset and every row
-   it holds, for good.
+   it holds, for good, after a five-second undo window: pressing Delete folds the row to
+   "… deleted" with Undo, and the request is sent only when the window ends, so Undo
+   leaves no trace and only the real delete is audited. Going to another page in the app
+   inside the window sends it then. Closing or reloading the tab inside the window makes
+   the browser ask first; leaving anyway sends nothing and the dataset stays.
 
 Errors are short sentences (`features/personal-data/import-messages.ts`); the server logs
 only the error name.
