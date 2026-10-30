@@ -69,6 +69,7 @@ export const COHORT_ANALYTICS_TOOLS = [
   "range_position",
   "convert_unit",
   "cohort_position",
+  "rhythm_irregularity",
   "values_around_event",
 ] as const satisfies readonly QueryToolName[];
 
@@ -117,7 +118,7 @@ export const KNOWLEDGE_SOURCE_GROUPS: readonly KnowledgeSourceGroup[] = [
         id: "cohort-analytics",
         label: "Trends and baselines",
         description:
-          "Trend, baseline deviation, coverage, window comparisons, position against the Anchor v3 published range, unit conversions and a percentile in the synthetic cohort. Needs Subjects and observations on.",
+          "Trend, baseline deviation, coverage, window comparisons, position against the Anchor v3 published range, unit conversions, a percentile in the synthetic cohort and irregularity metrics of simulated heart rhythm recordings. Needs Subjects and observations on.",
         tools: COHORT_ANALYTICS_TOOLS,
         requires: "cohort-records",
       },

@@ -47,3 +47,4 @@ export {
   type CrossSourceCompareResult,
   runCrossSourceCompare,
 } from "./wearable-tools";
+export { type RhythmIrregularityResult, runRhythmIrregularity } from "./rhythm-tools";

@@ -134,13 +134,14 @@ describe("scaffoldTool", () => {
         '      "gbd_population",',
         '      "range_position",',
         '      "resting_hr_drift",',
+        '      "rhythm_irregularity",',
         '      "trend",',
         '      "values_around_event",',
         "    ]);",
       ].join("\n"),
     );
     expect(after[PATHS.trainingToolList]).toContain(
-      '      "values_around_event",\n      "resting_hr_drift",\n      "show_view",',
+      '      "rhythm_irregularity",\n      "resting_hr_drift",\n      "show_view",',
     );
     expect(after[PATHS.questionSet]).toContain(
       "  resting_hr_drift: restingHrDriftInput,\n",
