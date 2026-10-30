@@ -46,9 +46,10 @@ stroke and cerebrovascular records, cognition scores and the autonomic nervous s
 Sleep and cognition together still go to Sleep on a tie (below), and the neurology
 literature query keeps sleep studies only where they are about cognition.
 
-The rhythm tool being built for #246 (`rhythm_irregularity`) is not part of `/rhythm` yet;
-the skill uses the wearable and record tools that exist today and gets the new tool when
-it lands.
+`/rhythm` lists the rhythm tool from #246, `rhythm_irregularity`, since #288; before that
+the Heart rhythm agent could not answer the S7 questions about simulated recordings
+([eval-runs-2026-10.md](research/eval-runs-2026-10.md#agents-vs-base-model)). Brain does
+not list it.
 
 ## In the catalog
 
@@ -272,9 +273,10 @@ the rules were tuned on them.
 An agent's page (`/customize/agents/<id>`) adds the skill's sources and tools, the model
 preference, the router fixtures per scenario (labelled for this agent and sent here, and
 labelled for another agent but sent here) and the evaluation scores of its base model per
-scenario from the runs under `evaluation/runs/` that the Lab reads. The harness calls the
-base model, not the agent, so the page says these are the model's scores without the
-agent's skill or literature; agent runs in the harness are still to come.
+scenario from the runs under `evaluation/runs/` that the Lab reads. Those are the base
+model's runs, so the page says these are the model's scores without the agent's skill or
+literature. The harness can run an agent since #279 (`bun run eval -- --models agent:<id>`,
+[harness.md](evaluation/harness.md#agents-279)); the page does not read those runs yet.
 
 Everything is read from the code that runs a turn (`agents.ts`, `agent-router.ts`, the
 skill, `literatureSourcesForAgent`), so the page cannot claim what the chat does not do.
@@ -282,8 +284,8 @@ The shaping is pure (`features/agents/roster.ts`, tested); `load-roster.ts` read
 counts, sums and dates (answers grouped by row id and column name, documents per
 `literature:<specialty>` source), never prompt or answer text. The "does not do" lines are
 in `roster.ts` and follow each skill's own rules. Issue #221 also asked for eval scores per
-agent; until the harness can run an agent, the router fixtures and the base model's runs
-are the honest numbers.
+agent; until the page reads the harness's agent runs (#279), the router fixtures and the
+base model's runs are the numbers it shows.
 
 ## Model names
 

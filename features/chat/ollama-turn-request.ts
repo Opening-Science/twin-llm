@@ -2,6 +2,7 @@ import "server-only";
 
 import type { DataMode } from "@/infrastructure/data-mode-policy";
 import {
+  DEFAULT_OLLAMA_BASE_URL,
   estimateTokens,
   JSON_CHARS_PER_TOKEN,
   TEMPLATE_OVERHEAD_TOKENS,
@@ -136,7 +137,7 @@ export const captureOllamaTurnRequest = async (
   const result = runTwinTurn(
     {
       model: ollamaChatModel("measure", {
-        baseUrl: "http://127.0.0.1:11434/v1",
+        baseUrl: DEFAULT_OLLAMA_BASE_URL,
         numCtx,
         fetch: recording,
       }),

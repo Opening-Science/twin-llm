@@ -130,6 +130,7 @@ describe("runnableSkillsIn", () => {
       "resting_hr_trend",
       "conditions_timeline",
       "values_around_event",
+      "rhythm_irregularity",
       "knowledge_search",
     ]);
     expect(skills[5]?.views).toEqual(["chart.timeseries", "chart.compare"]);
