@@ -16,6 +16,8 @@ import { z } from "zod";
 
 import { responseDocumentV1Schema } from "../../infrastructure/response-document/document-v1";
 
+import { RECORDED_ARMS } from "./context-arm";
+
 export const RESULTS_SCHEMA_VERSION = "twin-llm.eval.results.v2";
 export const META_SCHEMA_VERSION = "twin-llm.eval.meta.v1";
 
@@ -69,6 +71,8 @@ export const RESULT_ERRORS = [
   "PROVIDER_NOT_PERMITTED",
   "DOCUMENT_FAILED",
   "AUDIT_FAILED",
+  /** Context arm (#302): a server-side read for the data block failed. */
+  "CONTEXT_FAILED",
 ] as const;
 
 export type ResultError = (typeof RESULT_ERRORS)[number];
@@ -129,8 +133,46 @@ export const resultLineSchema = z
     answer_text: z.string().nullable(),
     document: responseDocumentV1Schema.nullable(),
     audit: z.array(auditLineSchema),
-    /** Every tool result of the turn, in step order; empty when the turn failed. */
+    /**
+     * Every tool result of the turn, in step order; empty when the turn failed.
+     * In the context arm (#302): the key's calls the server ran, as pasted.
+     */
     tool_results: z.array(toolResultLineSchema),
+    /**
+     * Set only for a data-in-prompt arm; a line without it ran the tools arm.
+     * `context` is the oracle arm as #302 named it, `context-oracle` the same
+     * arm since #320, `context-fair` the fair arm (#320).
+     */
+    arm: z.enum(["context", "context-oracle", "context-fair"]).optional(),
+    /** The data block of a context-arm line: its size and whether rows were cut. */
+    context: z
+      .object({
+        calls: z.number().int().nonnegative(),
+        rows_total: z.number().int().nonnegative(),
+        rows_pasted: z.number().int().nonnegative(),
+        truncated: z.boolean(),
+        tokens: z.number().int().nonnegative(),
+        cap_tokens: z.number().int().positive(),
+      })
+      .strict()
+      .optional(),
+    /** The fair arm's choice for this item (#320): the subject, and what the cap cut. */
+    fair: z
+      .object({
+        subject_ref: z.string().nullable(),
+        codes_total: z.number().int().nonnegative(),
+        codes_pasted: z.number().int().nonnegative(),
+        codes_cut: z.array(z.string()),
+        conditions: z
+          .object({ n: z.number().int().nonnegative(), pasted: z.boolean() })
+          .strict(),
+        medications: z
+          .object({ n: z.number().int().nonnegative(), pasted: z.boolean() })
+          .strict(),
+        refusal: z.string().nullable(),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 
@@ -180,6 +222,22 @@ export const metaSchema = z
         })
         .strict(),
     ),
+    /**
+     * How the model got the data: `tools` (the chat route), `context-oracle`
+     * (#302: the key's results pasted, no tools; `context` in runs before
+     * #320) or `context-fair` (#320: the named subject's record pasted, chosen
+     * without the key). Runs before #302 have none and ran `tools`.
+     */
+    arm: z.enum(RECORDED_ARMS).optional(),
+    /** Context arms: the token cap of each item's data block and how many items it cut. */
+    context: z
+      .object({
+        cap_tokens: z.number().int().positive(),
+        items_truncated: z.number().int().nonnegative(),
+        lines_over_cap: z.number().int().nonnegative(),
+      })
+      .strict()
+      .optional(),
     /** The chat route sets none, so neither does the harness. */
     sampling: z.literal("none set"),
     /** `process.platform-process.arch`; never the machine's hostname. */

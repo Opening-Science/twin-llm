@@ -37,6 +37,7 @@ import type { ToolResultLine } from "../eval-results";
 import type { KeyEntry, Question } from "../question-set";
 
 import { blankOut, LOINC_PATTERN, UUID_PATTERN } from "./numbers";
+import { serverRead } from "./turn";
 import type { AnsweredLine } from "./types";
 
 export const CALL_CLASSES = [
@@ -281,7 +282,11 @@ export const classifyCall = (
   return verdict("right call", result.tool);
 };
 
-/** Null when the item has no answer-key entries: there is no right call to compare with. */
+/**
+ * Null when the item has no answer-key entries (there is no right call to
+ * compare with), and on a context-arm line (#302): the server made the key's
+ * calls and the model none, so call accuracy is n/a there.
+ */
 export const scoreCallAccuracy = (
   {
     item,
@@ -290,7 +295,7 @@ export const scoreCallAccuracy = (
   }: Readonly<{ item: Question; keyEntries: readonly KeyEntry[]; line: AnsweredLine }>,
   cohortCodes: ReadonlySet<string> | null,
 ): CallAccuracy | null => {
-  if (keyEntries.length === 0) return null;
+  if (keyEntries.length === 0 || serverRead(line)) return null;
   const context: CallContext = {
     expected: expectedCalls(keyEntries),
     given: givenCodes(item, keyEntries),

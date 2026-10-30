@@ -4,7 +4,9 @@ import { resolveActorId } from "@/infrastructure/auth-actor";
 import { database } from "@/infrastructure/database";
 import { append } from "@/packages/audit/append";
 import { listBiomarkers } from "@/packages/biomarkers/catalogue";
-import { toNumber } from "@/packages/query-tools/ports";
+import { findConditionsInDatabase, toNumber } from "@/packages/query-tools/ports";
+import { AF_SNOMED_CODE } from "@/packages/query-tools/rhythm-recording";
+import { windowEndDate, windowStartDate } from "@/packages/query-tools/schemas";
 import {
   DEMO_SUBJECT_WHERE,
   demoSubjectInScope,
@@ -54,6 +56,17 @@ export const cohortDeps: CohortDeps = {
     });
     return rows.map((row) => ({ ...row, value: toNumber(row.value) }));
   },
+  // The same condition read as `rhythm_irregularity`'s plan; the subject was checked first.
+  afOnDay: async (ref, day) =>
+    (
+      await findConditionsInDatabase({
+        subjectRef: ref,
+        start: windowStartDate(day),
+        end: windowEndDate(day),
+        code: AF_SNOMED_CODE,
+        take: 1,
+      })
+    ).length > 0,
   anchorLoincs: () => [...new Set(listBiomarkers().map((marker) => marker.loincCode))],
   appendAudit: (input) => append(database(), input),
 };

@@ -158,7 +158,7 @@ The labelling rules, first that applies wins:
 
 1. Scenario S3 (guideline library), S4 (population, GBD) or S5 (a medicine or dose decision to
    decline): General.
-2. A genome tool (`genome_report`, `dna_ask`): Genetics.
+2. A genome tool (`genome_report`, `dna_ask`, `genome_variants`): Genetics.
 3. `sleep_summary`: Sleep.
 4. `hrv_trend`, `resting_hr_trend` or `training_load`: Trainer.
 5. LOINC codes, all of them Diet measures (body weight, BMI, glucose, HbA1c, total, LDL

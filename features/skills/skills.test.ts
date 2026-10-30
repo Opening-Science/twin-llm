@@ -268,7 +268,7 @@ describe("validateSkill", () => {
     ].join("\n");
     const result = validateSkill(files(front, [okEval]), SUBJECTS);
     expect(result.ok ? [] : result.errors).toEqual([
-      'skills/demo/SKILL.md: tools.1: unknown tool "made_up"; known tools: guideline_search, knowledge_search, list_subjects, subject_window, observations_for_subject, latest_by_loinc, summary_stats, conditions_timeline, medications_timeline, trend, baseline_deviation, coverage, compare_windows, range_position, convert_unit, cohort_position, rhythm_irregularity, values_around_event, cohort_event_rates, sleep_summary, hrv_trend, resting_hr_trend, training_load, cross_source_compare, gbd_population, genome_report, dna_ask, imported_datasets, imported_latest, imported_trend',
+      'skills/demo/SKILL.md: tools.1: unknown tool "made_up"; known tools: guideline_search, knowledge_search, list_subjects, subject_window, observations_for_subject, latest_by_loinc, summary_stats, conditions_timeline, medications_timeline, trend, baseline_deviation, coverage, compare_windows, range_position, convert_unit, cohort_position, rhythm_irregularity, values_around_event, cohort_event_rates, sleep_summary, hrv_trend, resting_hr_trend, training_load, cross_source_compare, gbd_population, genome_report, dna_ask, genome_variants, imported_datasets, imported_latest, imported_trend, imported_table, imported_conditions, imported_medications',
       'skills/demo/SKILL.md: Unrecognized key: "model"',
       'skills/demo/SKILL.md: tools.0: tool "trend" needs source "cohort-analytics" in sources',
     ]);

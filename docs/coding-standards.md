@@ -164,6 +164,48 @@ Use these from `infrastructure/ui-kit/` before writing classes by hand:
   `warn`, `neutral`, `off`) only adds to it.
 - **`Card`** for a framed block on `.surface`, with `sm`, `md` or `lg` padding.
 - **`Legend`** for the series names of a chart. Only the swatch is coloured.
+- **`StepTrace`**, **`UndoButton`**, **`HoldToConfirm`**, **`StatusLattice`** and
+  **`Rating`**: see "Interaction patterns" below.
+
+### Interaction patterns
+
+Five components show what the app is doing or ask for a deliberate act. Each has its
+words in a pure, tested module beside it, draws only with tokens (success is
+`--winner`, danger is `--destructive`; `interaction-tokens.test.ts` measures them in
+both themes), and stops its motion under reduced motion.
+
+- **`StepTrace`** for work made of steps. While working, one line names the step in
+  progress with a quiet shimmer and a live timer, over a list where finished steps are
+  ticked and the current one pulses. When it settles the line reads "Used N tools in
+  X.Xs" (no time when it was loaded already finished) and the list folds; the line is
+  a button with `aria-expanded`. A live region speaks at the start and at the end
+  only, never per step or tick. A step's `detail` replaces its label in the list. The
+  chat answer uses it for tool calls (`features/arena/tool-call-cards.tsx`): each
+  step is the call in plain words with its measure (named from the data, code in
+  brackets) and window, or "No data: <code>"
+  for a refusal, and its card keeps the arguments, rows and the answer's numbers.
+- **`UndoButton`** for a delete that can wait. Pressing it runs the soft step and the
+  button becomes Undo, with a line burning down along its bottom for `undoWindow` ms.
+  Undo or Escape reverts; when the time runs out `onExpire` does the real delete. The
+  time stands still while the tab is hidden and while a mouse rests on the button
+  after leaving it once. Focus stays on the button.
+- **`HoldToConfirm`** for what cannot be undone, such as erasing personal data. It
+  fills at a constant speed while held by a pointer, Space or Enter, empties quickly
+  on early release, cancels when the pointer drifts off, and calls `onConfirm` once.
+  A screen-reader hint states the hold time.
+- **`StatusLattice`** for a long job: a 3 by 3 dot wave while it runs, then a tick or
+  a cross, with its name, its state in words and a timer that stops.
+- **`Rating`** for a 1 to 5 score: a radio group with a label per value, a pointer
+  preview, arrows, Home, End and Backspace to clear, and a read-only mode.
+
+Where they are used: `StepTrace` in chat answers; `UndoButton` for deleting a thread
+(thread bar) and an imported dataset (Customize · Data), through `useSoftDelete`
+(`soft-delete.ts`: the item hides at once, the server delete runs only when the window
+ends, Undo sends nothing; leaving for another page in the app runs it early, closing the
+tab asks first and then deletes nothing); `StatusLattice` for a Synthea run. The app has
+no erase-everything action and no genome dataset to delete, so `HoldToConfirm` is not
+used yet; `Rating` waits for the human review protocol (#304). Their look lives in
+`globals.css` under "Interaction patterns".
 
 Charts use `text-chart-1` to `text-chart-5`, in that order. `primary` marks things you
 can click, so it is never a data colour. `chart-tokens.test.ts` checks each chart colour

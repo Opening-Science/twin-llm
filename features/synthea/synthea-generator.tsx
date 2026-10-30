@@ -7,6 +7,7 @@ import { Button, buttonClassName } from "@/infrastructure/ui-kit/button";
 import { Card } from "@/infrastructure/ui-kit/card";
 import { Field } from "@/infrastructure/ui-kit/field";
 import { StatusBadge, type StatusTone } from "@/infrastructure/ui-kit/status-badge";
+import { StatusLattice } from "@/infrastructure/ui-kit/status-lattice";
 
 import {
   DEFAULT_SYNTHEA_OPTIONS,
@@ -23,6 +24,7 @@ import {
   type SyntheaSex,
 } from "./synthea-options";
 import { type PatientPreview } from "./synthea-output";
+import { latticeStateOf } from "./synthea-job-status";
 import { type JobState, type JobView } from "./synthea-queue";
 
 /**
@@ -332,9 +334,11 @@ const JobPanel = ({
         <h2 className="text-lg font-medium">This run</h2>
         <StatusBadge tone={label.tone}>{label.text}</StatusBadge>
       </div>
-      <p className="text-muted-foreground font-mono text-xs">
-        Seed {job.seed} · {job.people} {job.people === 1 ? "person" : "people"}
-      </p>
+      <StatusLattice
+        state={latticeStateOf(job.state)}
+        label={`Seed ${job.seed} · ${job.people} ${job.people === 1 ? "person" : "people"}`}
+        className="font-mono text-xs"
+      />
       {job.state === "queued" && (
         <p className="text-sm">
           {job.position === 1
