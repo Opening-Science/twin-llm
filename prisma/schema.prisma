@@ -423,7 +423,7 @@ model GenomeReport {
   @@map("genome_reports")
 }
 
-/// One file a person imported on Customize · Data (#176, #178, #179, docs/personal-data.md).
+/// One file a person imported on Customize · Data (#176, #178, #179, #180, docs/personal-data.md).
 /// Personal data, written only with DATA_MODE=personal, owned by one user and
 /// never mixed with the synthetic warehouse. Deleting it hard-deletes its rows
 /// (cascade). `sha256` is the uploaded file's, so the same file twice is
@@ -431,7 +431,7 @@ model GenomeReport {
 model PersonalDataset {
   id             String   @id @default(cuid())
   userId         String   @map("user_id")
-  /// "fhir", "lab-csv", "table", "apple-health" or "wearable".
+  /// "fhir", "lab-csv", "table", "apple-health", "wearable" or "vcf".
   kind           String
   name           String
   sourceFileName String   @map("source_file_name")
@@ -444,6 +444,8 @@ model PersonalDataset {
   /// Earliest and latest date stored, ISO text as the review showed it.
   firstAt        String?  @map("first_at")
   lastAt         String?  @map("last_at")
+  /// "GRCh38" for a VCF (the only build imported); null for every other kind.
+  genomeBuild    String?  @map("genome_build")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
@@ -452,6 +454,7 @@ model PersonalDataset {
   clinicalRecords PersonalClinicalRecord[]
   table           PersonalTable?
   tableChunks     PersonalTableChunk[]
+  variants        PersonalVariant[]
 
   @@unique([userId, sha256])
   @@index([userId, createdAt])
@@ -534,6 +537,36 @@ model PersonalTableChunk {
 
   @@unique([datasetId, chunkIndex])
   @@map("personal_table_chunks")
+}
+
+/// One record of an imported genome VCF (#180, docs/personal-data.md): the
+/// person's genotype at one GRCh38 site. Genome data: read only by a model on
+/// this machine under `permitGenomeRequest`, never by the imported-data chat
+/// tools and never sent to a hosted provider. QUAL, INFO, the other FORMAT
+/// fields and the sample's name are not stored.
+model PersonalVariant {
+  id        String  @id @default(cuid())
+  datasetId String  @map("dataset_id")
+  userId    String  @map("user_id")
+  /// As the file names it: "chr1" or "1".
+  chrom     String
+  /// 1-based GRCh38 position.
+  pos       Int
+  /// The ID column, such as an rsID; null when ".".
+  variantId String? @map("variant_id")
+  ref       String
+  /// Alternate alleles as written, comma separated.
+  alt       String
+  /// GT as written ("0/1", "1|1"); null for a no-call.
+  genotype  String?
+  /// The FILTER column; null when ".".
+  filter    String?
+
+  dataset PersonalDataset @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+
+  @@index([datasetId])
+  @@index([userId, chrom, pos])
+  @@map("personal_variants")
 }
 
 // ─── 4. Research warehouse (synthetic only) ─────────────────────────────────
