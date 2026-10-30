@@ -22,7 +22,7 @@ import type { ChatRequest } from "./chat-request";
 import { buildResponseDocumentV1, twinBodyShown } from "./response/build-document";
 import type { ResponseDocumentV1, ResponseToolCall } from "./response/document-v1";
 import { inCallOrder } from "./tool-parts";
-import { buildTwinSystemPrompt } from "./twin-system-prompt";
+import { buildTwinSystemPrompt, type PastedDataSource } from "./twin-system-prompt";
 
 /**
  * One TwinLLM turn: the system prompt, the tools, the step limit and the
@@ -64,6 +64,15 @@ export type TwinTurnDeps = Readonly<{
   agent?: Readonly<{ name: string; role: string }> | null;
   /** The decline line; left out, the product's. Set only by the eval harness (#274). */
   declineRule?: string;
+  /**
+   * Eval harness only (#302): rows read on the server for a turn with no
+   * tools, pasted into the system prompt as a data block.
+   */
+  pastedData?: string | null;
+  /** What `pastedData` holds (#320); left out, the answer key's call results. */
+  pastedDataSource?: PastedDataSource;
+  /** The person's twin notes block (#43), already permitted and audited by the caller. */
+  twinNotes?: string | null;
   /** Audit rows for this turn's session, read after the model finishes. */
   loadAudit: (turnId: string) => Promise<readonly ResponseToolCall[]>;
 }>;
@@ -113,12 +122,26 @@ export const MAX_STEPS = 8;
 export const lastStepWithoutTools = (stepNumber: number) =>
   stepNumber >= MAX_STEPS - 1 ? { activeTools: [] } : undefined;
 
-export const runTwinTurn = (
-  deps: TwinTurnDeps,
-  { turnId, messages, wearables, abortSignal }: TwinTurnInput,
-  hooks: TwinTurnHooks,
-) => {
-  const system = buildTwinSystemPrompt({
+/** What the system prompt of a turn is built from. */
+export type TwinTurnPromptDeps = Pick<
+  TwinTurnDeps,
+  | "offeredTools"
+  | "mode"
+  | "skill"
+  | "uiContext"
+  | "agent"
+  | "pastedData"
+  | "pastedDataSource"
+  | "twinNotes"
+  | "declineRule"
+>;
+
+/** The turn's system prompt, the one `runTwinTurn` sends. */
+export const twinTurnSystem = (
+  deps: TwinTurnPromptDeps,
+  wearables: TwinTurnWearables,
+): string =>
+  buildTwinSystemPrompt({
     mode: deps.mode,
     oura: wearables.oura,
     whoop: wearables.whoop,
@@ -129,7 +152,19 @@ export const runTwinTurn = (
     uiContext: deps.uiContext ?? null,
     agent: deps.agent ?? null,
     declineRule: deps.declineRule,
+    pastedData: deps.pastedData ?? null,
+    ...(deps.pastedDataSource === undefined
+      ? {}
+      : { pastedDataSource: deps.pastedDataSource }),
+    twinNotes: deps.twinNotes ?? null,
   });
+
+export const runTwinTurn = (
+  deps: TwinTurnDeps,
+  { turnId, messages, wearables, abortSignal }: TwinTurnInput,
+  hooks: TwinTurnHooks,
+) => {
+  const system = twinTurnSystem(deps, wearables);
 
   return streamText({
     model: deps.model,

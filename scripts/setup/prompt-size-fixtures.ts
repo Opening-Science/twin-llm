@@ -5,6 +5,11 @@
  * Shaped like the summary builders' output; no real data.
  */
 import type { WearableSummaries } from "../../infrastructure/offered-keys";
+import {
+  NOTE_LIMITS,
+  type TwinNote,
+  twinNotesBlock,
+} from "../../infrastructure/twin-notes";
 import { UI_CONTEXT_MAX_VIEWS, type UiContext } from "../../infrastructure/ui-context";
 
 const DAYS = Array.from(
@@ -172,3 +177,45 @@ export const LONGEST_UI_CONTEXT: UiContext = {
   })),
   viewCount: 9999,
 };
+
+/**
+ * The twin notes that make the largest block (#43): made-up notes with
+ * every part at its line limit, or many short ones.
+ */
+const fullLines = (count: number, word: string): string[] =>
+  Array.from({ length: count }, (_, index) =>
+    `${index} ${word.repeat(NOTE_LIMITS.line)}`.slice(0, NOTE_LIMITS.line),
+  );
+
+const LONGEST_NOTE: TwinNote = {
+  id: "note-measure",
+  title: "t".repeat(NOTE_LIMITS.title),
+  topics: fullLines(NOTE_LIMITS.topics, "topic "),
+  measures: fullLines(NOTE_LIMITS.measures, "measure "),
+  openQuestions: fullLines(NOTE_LIMITS.openQuestions, "question "),
+  dataMode: "synthetic",
+  permit: "synthetic",
+  createdAt: "2026-10-01T00:00:00.000Z",
+};
+
+const SHORT_NOTES: readonly TwinNote[] = Array.from({ length: 30 }, (_, index) => ({
+  ...LONGEST_NOTE,
+  id: `note-${index}`,
+  title: `Note ${index}`,
+  topics: [`Topic ${index}`],
+  measures: [`${index}-0 · trend · 1 Jan 2026 – 31 Mar 2026`],
+  openQuestions: [`Question ${index}`],
+}));
+
+/**
+ * Many short notes fill the budget more densely than one long one; the list
+ * whose full block is longer wins. Each turn keeps as many as its room allows.
+ */
+export const LONGEST_TWIN_NOTES: readonly TwinNote[] = [
+  [LONGEST_NOTE],
+  SHORT_NOTES,
+].reduce((longest, notes) =>
+  twinNotesBlock(notes).text.length > twinNotesBlock(longest).text.length
+    ? notes
+    : longest,
+);

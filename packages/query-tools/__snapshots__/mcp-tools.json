@@ -1313,6 +1313,68 @@
       }
     },
     {
+      "name": "cohort_event_rates",
+      "description": "Rates of one recorded condition (outcome) around another (exposure) in one loaded synthetic cohort; counts only. within: the same people before and after their own exposure onset (crude and age-adjusted rate ratio). between: exposed against 4 age- and sex-matched people without it. Events, person-years, exact Poisson intervals; verdict reads the ratio's 95% interval against 1. About this synthetic cohort only, never people in general or a cause. Synthetic mode only. Refuses SUBJECT_SCOPE_VIOLATION, COHORT_NOT_SUPPORTED, DESIGN_NOT_SUPPORTED, COHORT_RECORD_CAP_EXCEEDED.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "cohort_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Cohort id"
+          },
+          "exposure_code": {
+            "type": "string",
+            "enum": [
+              "22298006",
+              "26929004",
+              "44054006",
+              "49436004",
+              "59621000",
+              "78275009",
+              "88805009",
+              "230690007",
+              "414545008",
+              "132281000119108"
+            ],
+            "description": "The exposure: SNOMED CT code (every code of that condition counts): 49436004 atrial fibrillation, 230690007 stroke, 88805009 heart failure, 59621000 hypertension, 44054006 type 2 diabetes, 22298006 myocardial infarction, 414545008 ischemic heart disease, 26929004 Alzheimer's disease, 78275009 sleep apnea, 132281000119108 venous thromboembolism"
+          },
+          "outcome_code": {
+            "type": "string",
+            "enum": [
+              "22298006",
+              "26929004",
+              "44054006",
+              "49436004",
+              "59621000",
+              "78275009",
+              "88805009",
+              "230690007",
+              "414545008",
+              "132281000119108"
+            ],
+            "description": "The outcome: a SNOMED CT code from the same list as exposure_code"
+          },
+          "design": {
+            "type": "string",
+            "enum": ["within", "between"],
+            "description": "within: the same people before and after their own exposure onset; between: people with the exposure against age- and sex-matched people without it"
+          },
+          "min_age": {
+            "description": "Age floor in years: within counts time from this age, between keeps exposure onsets from this age; default 0",
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "required": ["cohort_id", "exposure_code", "outcome_code", "design"],
+        "additionalProperties": false,
+        "description": "Outcome rates after an exposure in one loaded synthetic cohort: events, person-years and a rate ratio"
+      }
+    },
+    {
       "name": "imported_datasets",
       "description": "The person's own imported datasets: id, kind, name, rows, date range, and each series (LOINC or name, unit, n). No values.",
       "inputSchema": {
@@ -1417,6 +1479,105 @@
         "required": ["dataset_id", "start", "end"],
         "additionalProperties": false,
         "description": "Least-squares trend of one imported series in a window"
+      }
+    },
+    {
+      "name": "imported_table",
+      "description": "Selected columns (exact names from imported_datasets) of one imported table, first rows in file order. At most 20 columns and 200 rows; long text cut at 200 characters.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "dataset_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$",
+            "description": "dataset_id from imported_datasets"
+          },
+          "columns": {
+            "minItems": 1,
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "pattern": "^[^\\u0000-\\u001f]+$",
+              "description": "Exact column name from imported_datasets"
+            }
+          },
+          "limit": {
+            "default": 50,
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200
+          }
+        },
+        "required": ["dataset_id", "columns", "limit"],
+        "additionalProperties": false,
+        "description": "Selected columns of one imported research table, first rows in file order"
+      }
+    },
+    {
+      "name": "imported_conditions",
+      "description": "Conditions in one imported FHIR dataset: code system, code, display, onset, abatement, clinical status. No notes. Up to 500.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "dataset_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$",
+            "description": "dataset_id from imported_datasets"
+          }
+        },
+        "required": ["dataset_id"],
+        "additionalProperties": false,
+        "description": "Conditions recorded in one imported FHIR dataset"
+      }
+    },
+    {
+      "name": "imported_medications",
+      "description": "Medication requests in one imported FHIR dataset: code system, code, display, authored date, status. No dosage text or notes. Up to 500.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "dataset_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$",
+            "description": "dataset_id from imported_datasets"
+          }
+        },
+        "required": ["dataset_id"],
+        "additionalProperties": false,
+        "description": "Medication requests recorded in one imported FHIR dataset"
+      }
+    },
+    {
+      "name": "genome_variants",
+      "description": "Look up named variants (rsID or chrN:pos, at most 50) in the person's own imported VCF: for each, found or not, and chrom, pos, ref, alt, genotype and filter as the file wrote them. No ranges or scans. Local models only; research use only.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "dataset_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$",
+            "description": "dataset_id of the person's imported VCF"
+          },
+          "variants": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 64
+            },
+            "description": "rsIDs or GRCh38 sites written \"chrN:pos\", at most 50"
+          }
+        },
+        "required": ["dataset_id", "variants"],
+        "additionalProperties": false,
+        "description": "Look up named variants in the person's imported VCF"
       }
     }
   ]

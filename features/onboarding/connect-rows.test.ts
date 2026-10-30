@@ -63,6 +63,7 @@ describe("source availability", () => {
       "wearable-analytics": { available: true, note: null },
       gbd: { available: false, note: "Pending IHME's OK" },
       "ark-genome": { available: false, note: "Needs Ark and local Carbon-X" },
+      "vcf-variants": { available: false, note: "Needs Ark and local Carbon-X" },
       "imported-data": { available: false, note: "Personal mode and a local model only" },
     });
   });
@@ -80,7 +81,7 @@ describe("source availability", () => {
       Object.entries(all)
         .filter(([, item]) => !item.available)
         .map(([id]) => id),
-    ).toEqual(["ark-genome", "imported-data"]);
+    ).toEqual(["ark-genome", "vcf-variants", "imported-data"]);
   });
 
   test("the genome and imported-data sources are usable when their policies allow chat", () => {
@@ -93,6 +94,7 @@ describe("source availability", () => {
       importedChat: true,
     });
     expect(all["ark-genome"]).toEqual({ available: true, note: null });
+    expect(all["vcf-variants"]).toEqual({ available: true, note: null });
     expect(all["imported-data"]).toEqual({ available: true, note: null });
   });
 });

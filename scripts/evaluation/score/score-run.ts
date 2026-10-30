@@ -13,6 +13,8 @@
  * - Latency is not pass/fail: p50, p90 and p95, cache hits and errors left out.
  * - Call accuracy and answers without a tool (#276) are reported per line
  *   beside the eight criteria and change none of them.
+ * - Call accuracy is n/a (null) on a context-arm line (#302): the server made
+ *   the key's calls, the model none.
  * - Decline and control pairs (#286) are scored per pair and repeat, also
  *   beside the eight criteria.
  */
@@ -77,7 +79,7 @@ export type ScoredLine = Readonly<{
    * hallucination does not apply. An extra metric: no score depends on it.
    */
   unsourcedNumbers: number | null;
-  /** Each tool call against the key's calls; null when the item has no key entries. */
+  /** Each tool call against the key's calls; null when the item has no key entries or the line is context arm. */
   calls: CallAccuracy | null;
   /** Stated values no tool result holds; null when the item reads no subject data. */
   noTool: NoToolValues | null;

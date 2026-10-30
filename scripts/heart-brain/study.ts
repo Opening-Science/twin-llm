@@ -18,19 +18,19 @@ import {
   type TimeToStroke,
   timeToStroke,
 } from "./af-tables";
-import { type Topic, TOPICS } from "./codes";
-import { ageYears, type Person } from "./cohort";
-import { type MatchedResult, matchedIncidence } from "./matched";
-import { shuffleAfOnsets, type Spread, spreadOf } from "./permutation";
+import { type Topic, TOPICS } from "../../packages/query-tools/event-rates/codes";
+import { ageYears, type Person } from "../../packages/query-tools/event-rates/cohort";
 import {
-  type Agreement,
-  agreementOf,
-  type Planted,
-  PLANTED_RULES,
+  type MatchedResult,
+  matchedIncidence,
+} from "../../packages/query-tools/event-rates/matched";
+import { shuffleAfOnsets, type Spread, spreadOf } from "./permutation";
+import { type Agreement, agreementOf, type Planted, PLANTED_RULES } from "./planted";
+import {
   type Recovered,
   recoveredOf,
-} from "./planted";
-import { type RateRatio } from "./poisson";
+} from "../../packages/query-tools/event-rates/verdict";
+import { type RateRatio } from "../../packages/query-tools/event-rates/poisson";
 
 export type StudyOptions = Readonly<{
   seed: number;

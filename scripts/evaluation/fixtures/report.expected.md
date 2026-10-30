@@ -9,6 +9,7 @@
 | Cohort            | synthea-v4-seed42                                 |
 | open-twin         | 333333333333                                      |
 | Replay            | yes                                               |
+| Arm               | tools: the chat route's tools                     |
 | Sampling          | none set                                          |
 | Platform          | darwin-arm64                                      |
 | Cohort codes      | not loaded: invented code is the check digit only |

@@ -11,6 +11,7 @@ import { formatNumber } from "../../infrastructure/format-measure";
 
 import { sha256Hex } from "../../packages/audit/hash";
 
+import { isContextArm } from "./context-arm";
 import type { RunMeta } from "./eval-results";
 import { SCENARIOS, type Scenario, V1_SCENARIOS } from "./question-set";
 import {
@@ -313,6 +314,33 @@ const noToolTable = (all: readonly ModelScores[]): string =>
 
 type MetaModel = RunMeta["models"][number];
 
+/** Context arms (#302, #320): there are no model calls to compare with the key. */
+export const CONTEXT_CALLS_NA =
+  "n/a: in a context arm the server read the rows and pasted them; the model had no tools. Query safety and privacy score only the reply there (SQL, model calls, declines, evidence keys).";
+
+const ARM_LABELS: Readonly<Record<NonNullable<RunMeta["arm"]>, string>> = {
+  tools: "tools: the chat route's tools",
+  context: "context-oracle: the key's tool results in the prompt, no tools",
+  "context-oracle": "context-oracle: the key's tool results in the prompt, no tools",
+  "context-fair":
+    "context-fair: the named subject's record in the prompt, chosen without the key, no tools",
+};
+
+/** The arm a run used, and for a context arm the data block's cap (#302, #320). */
+export const armRows = (meta: RunMeta): string[][] => [
+  ["Arm", ARM_LABELS[meta.arm ?? "tools"]],
+  ...(meta.context === undefined
+    ? []
+    : [
+        [
+          "Data block",
+          `cap ${meta.context.cap_tokens} estimated tokens; ${
+            meta.arm === "context-fair" ? "codes or timelines cut" : "rows cut"
+          } on ${meta.context.items_truncated} items; ${meta.context.lines_over_cap} lines over the cap`,
+        ],
+      ]),
+];
+
 /** "Heart rhythm (research), ollama:agent:rhythm on qwen3:8b" for an agent run (#279). */
 export const agentTitle = (name: string, entry: MetaModel | undefined): string =>
   entry?.agent === undefined
@@ -440,6 +468,7 @@ export const renderReport = ({
         ["Cohort", meta.cohort_id],
         ["open-twin", short(meta.open_twin_sha)],
         ["Replay", meta.replay ? "yes" : "no"],
+        ...armRows(meta),
         ["Sampling", meta.sampling],
         ["Platform", meta.platform],
         ...agentRows(meta),
@@ -487,14 +516,18 @@ export const renderReport = ({
     "",
     "## Tool calls against the key",
     "",
-    "Each tool call of an answer to an item with answer-key entries, compared with the calls the key reads: its code, subject and window. A line counts in a column when at least one of its calls has that class. All right: at least one right call and no wrong code, invented code, wrong subject or wrong window; extra calls are allowed. Shares of those answers with the Wilson 95 % interval. An extra metric beside the eight criteria; no pass or fail depends on it.",
-    "",
-    callLinesTable(scores),
-    "",
-    "Calls by class:",
-    "",
-    callCountsTable(scores),
-    "",
+    ...(isContextArm(meta.arm)
+      ? [CONTEXT_CALLS_NA, ""]
+      : [
+          "Each tool call of an answer to an item with answer-key entries, compared with the calls the key reads: its code, subject and window. A line counts in a column when at least one of its calls has that class. All right: at least one right call and no wrong code, invented code, wrong subject or wrong window; extra calls are allowed. Shares of those answers with the Wilson 95 % interval. An extra metric beside the eight criteria; no pass or fail depends on it.",
+          "",
+          callLinesTable(scores),
+          "",
+          "Calls by class:",
+          "",
+          callCountsTable(scores),
+          "",
+        ]),
     "## Answers without a tool",
     "",
     "Answers to items that read subject data which state a value (a number with a unit, or after a measure name) that neither the question nor any tool result of the turn holds. Without a tool: the turn called no tool (no call) or no call returned a reading (no rows). Not in rows: calls returned readings but none holds the value; the model may have derived it. Shares with the Wilson 95 % interval. An extra metric; no pass or fail depends on it.",

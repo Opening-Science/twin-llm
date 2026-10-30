@@ -14,20 +14,24 @@ bun run eval -- --models ollama:qwen3:4b --scenario S5 --run-id 2026-10-21-qwen3
 bun run eval -- --models ollama:qwen3:4b --latency-set --replay
 bun run eval -- --set s7 --models ollama:qwen3:4b --run-id 2026-10-31-qwen3-s7
 bun run eval -- --set s7 --models agent:rhythm --run-id 2026-10-31-rhythm-s7
+bun run eval -- --models ollama:qwen3:4b --arm context-oracle --run-id 2026-10-31-qwen3-4b-ctx
+bun run eval -- --models ollama:qwen3:4b --arm context-fair --run-id 2026-10-31-qwen3-4b-fair
 bun run eval:report -- 2026-10-21-qwen3-s5 --quantisation Q4_K_M
 bun run eval:cohort-codes -- --in .synthea   # after a cohort change only
 ```
 
-| Flag                                                    | Meaning                                                          |
-| ------------------------------------------------------- | ---------------------------------------------------------------- |
-| `--models provider:id[,…]`                              | Required. Every provider must be `LLM_PROVIDER` in `.env.eval`   |
-| `--models agent:<id>`                                   | An agent ([below](#agents-279)) on `LLM_PROVIDER`                |
-| `--set v1` / `s7` / `s7b` / `s7h`                       | Question set and key; default `v1`; `s7h` is held out (#283)     |
-| `--items Q-S1-01,…` / `--scenario S1` / `--latency-set` | One selection at most; none means all 130 items                  |
-| `--replay`                                              | Cache only; never calls a model                                  |
-| `--run-id <id>`                                         | Default `<date>-<provider>-<time>`; an existing run is refused   |
-| `--timeout-s <n>`                                       | Per item, default 300                                            |
-| `--decline-wording w1` / `w2` / `w3`                    | Decline line for a wording comparison (#274); default the chat's |
+| Flag                                                    | Meaning                                                                  |
+| ------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `--models provider:id[,…]`                              | Required. Every provider must be `LLM_PROVIDER` in `.env.eval`           |
+| `--models agent:<id>`                                   | An agent ([below](#agents-279)) on `LLM_PROVIDER`                        |
+| `--set v1` / `s7` / `s7b` / `s7h`                       | Question set and key; default `v1`; `s7h` is held out (#283)             |
+| `--items Q-S1-01,…` / `--scenario S1` / `--latency-set` | One selection at most; none means all 130 items                          |
+| `--replay`                                              | Cache only; never calls a model                                          |
+| `--run-id <id>`                                         | Default `<date>-<provider>-<time>`; an existing run is refused           |
+| `--timeout-s <n>`                                       | Per item, default 300                                                    |
+| `--arm tools` / `context-oracle` / `context-fair`       | Tools (default) or data in the prompt ([below](#data-in-the-prompt-302)) |
+| `--context-cap <tokens>`                                | Context arms: estimated tokens per data block, default 6000              |
+| `--decline-wording w1` / `w2` / `w3`                    | Decline line for a wording comparison (#274); default the chat's         |
 
 `bun run eval` refuses unless `DATA_MODE=synthetic`, stops when the questions'
 sha256 is not the key's `questions_sha256`, and checks every model id against
@@ -77,6 +81,96 @@ unchanged. `meta.json` records `decline_wording` (`id` and the sha256 of the
 exact text) and the report names it in the run table. The line is part of the
 prompt and so of the cache key: two wordings never share an entry. A run
 without the flag has no `decline_wording` and used the chat's line.
+
+## Data in the prompt (#302)
+
+`--arm context-oracle` is condition (b) of the P1 plan, the "oracle paste":
+the model gets the data the key reads, but no tools. #302 called it
+`context`; `--arm context` still names it, and runs recorded then say
+`context` in `meta.json` and their lines. `--arm context-fair`
+([below](#the-fair-arm-320)) pastes rows chosen without the key.
+
+- For each item the server runs the answer key's distinct calls (tool and
+  arguments, in key order) through the same query tool functions the model
+  would call (`runKeyedTool`), under the item's eval session, so each read
+  is an audit row of actor `eval-harness:<run-id>`.
+- Their results go into the system prompt as a block between `<data>` and
+  `</data>`, after the wearable sections: one heading per call (tool and
+  arguments), the result's fields as `key=value` (dotted keys for nested
+  objects, numbers in full), and each list of rows as a table. A refusal
+  reads `refused: <code>`, a read with `n` 0 or an empty list `no rows`. An
+  item with no key entries (S3, S4, S5, the S6 probes keyed by no call) gets
+  "No rows were read for this question".
+- The cohort section of the prompt says the turn has no tools and to use only
+  the block; the tool lines, chart and unit lines are left out. The turn
+  carries no tools at all. Agents are refused with this arm: their skill
+  only cuts tools.
+- Rows are cut to fit `--context-cap` (estimated tokens, the prompt budget
+  test's conservative count at the tool JSON rate): every list keeps the same
+  number of rows from the top, the most that fit, and the block says
+  "(rows cut to fit the prompt: k of n shown)". A block whose summary alone
+  is over the cap is sent whole and counted over the cap.
+
+Results lines of this arm carry `arm: "context-oracle"` (`"context"` before
+#320) and `context` (calls, rows
+returned, rows pasted, `truncated`, estimated tokens, cap). `tool_results`
+holds the calls as pasted (rows cut as the model saw them) and `audit` the
+server's reads. `meta.json` records `arm` (a run before #302 has none and ran
+`tools`) and, for this arm, `context`: the cap, the items whose rows were cut
+and the lines over the cap. The cache key adds the arm for this arm only, so
+tools-arm entries recorded before #302 still match; it names the oracle arm
+`context` still, so a call identical to one recorded under #302 is answered
+from that entry.
+
+### The fair arm (#320)
+
+The oracle arm cannot pick a wrong code or window, so it is an upper bound.
+`--arm context-fair` pastes rows chosen by one fixed rule that never reads
+the answer key (`scripts/evaluation/fair-context.ts`, written and tested
+before any run):
+
+- The subject is the one the question text names, as the tools arm sees it:
+  a UUID, else a `subject <id>` token with a digit (`not-in-cohort-001`),
+  else "the first subject in cohort <id>", which the server resolves with
+  `list_subjects` as the lowest subject_ref. The item's `subject_ref` field
+  is not read. With none named the block says so.
+- The server checks the subject with `subject_window` (audited, so an
+  out-of-scope subject is that tool's refusal) and then reads its whole
+  record: every numeric observation, conditions and medication requests.
+- Every observation code with readings goes in, ordered by its most recent
+  reading, newest first (code breaks a tie), as one compact block: code,
+  display, unit, n, first and last date, and the 5 most recent readings,
+  newest first. Blocks go in until the next one would pass `--context-cap`;
+  the rest are cut, and the block names them.
+- Then the conditions, then the medication requests, each whole if it still
+  fits, else cut and named. Rows are never cut inside a timeline.
+- The synthetic wearable series are observation codes in this warehouse
+  (sleep duration, resting heart rate, RMSSD, workouts and so on), so they
+  enter as codes; being the newest readings, they come first. No v1 item's
+  context names a linked wearable, so there is no other wearable section.
+
+The prompt's cohort section says the block is the named subject's record,
+not chosen for the question, so the asked code or window may be missing or
+cut. Lines carry `arm: "context-fair"`, `context` as above (blocks pasted,
+rows in the record, rows pasted, estimated tokens; `truncated` means a code
+or a timeline was cut) and `fair`: the subject, codes in the record and
+pasted, the cut codes in order, whether each timeline went in, and the
+refusal if the read was refused. `tool_results` holds one `subject_record`
+result per pasted block, so the scorers tie each number to its code.
+
+Scoring the context arms:
+
+- Correctness, hallucination (code substitution included), unsourced numbers
+  and answers without a tool run as for the tools arm, with the pasted
+  results as the turn's tool results. A value not in the block is "not in
+  rows".
+- Call accuracy is n/a: the server, not the model, made the calls. The
+  report says so in place of the two tables.
+- Query safety and privacy keep only their checks of the reply (SQL text,
+  model calls; declines, wearable keys). Which tools ran, which subjects they
+  read and which refusals came back judge the harness here.
+- S3 and S4 items get no guideline passages or population figures in this
+  arm, so their scores are not comparable with the tools arm.
 
 `meta.json` records `question_set` (a run before #251 has none and ran `v1`),
 and `eval:report` reads that set's questions and key. The report's score table

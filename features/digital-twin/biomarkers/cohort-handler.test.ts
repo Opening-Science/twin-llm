@@ -74,6 +74,7 @@ const fakeDeps = (overrides: Partial<CohortDeps> = {}) => {
       asked.push({ ref, loincs });
       return ROWS;
     },
+    afOnDay: async (ref, day) => ref === "syn-b" && day === "2025-03-01",
     anchorLoincs: () => ["4548-4", "2571-8"],
     appendAudit: async (input) => {
       audits.push(input);
@@ -167,13 +168,14 @@ describe("GET /api/biomarkers/cohort/:subjectRef", () => {
         effectiveAt: "2025-03-01T08:00:00.000Z",
       },
     ];
-    expect(await res.json()).toEqual({ values, vitals });
+    const rhythm = { day: "2025-03-01", afOnDay: true };
+    expect(await res.json()).toEqual({ values, vitals, rhythm });
     expect(asked).toEqual([
       { ref: "syn-b", loincs: ["4548-4", "2571-8", "8867-4", "9279-1"] },
     ]);
     expect(
       audits.map((row) => [row.tool, row.subjectRef, row.result, row.rowCount]),
-    ).toEqual([[COHORT_VALUES_AUDIT_TOOL, "syn-b", { values, vitals }, 4]]);
+    ).toEqual([[COHORT_VALUES_AUDIT_TOOL, "syn-b", { values, vitals, rhythm }, 4]]);
   });
 
   test("a vital code Anchor also lists is asked for once and returned in both", async () => {

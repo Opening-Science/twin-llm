@@ -5,7 +5,7 @@ folder of cases. It says what a command may read and use; the code decides what 
 runs. Plan: [chat-platform.md](chat-platform.md), section 2. Issue #41.
 
 The `/` palette lists them and the chat runs them (#42); see "Running a skill" below.
-Two built-in commands come first in the palette; see "Built-in commands" at the end.
+Three built-in commands come first in the palette; see "Built-in commands" at the end.
 
 ## SKILL.md
 
@@ -40,9 +40,11 @@ personal data (OpenRouter, remote GPU, Infomaniak). A provider the skill does li
 goes through the policy on every request, so Exoscale only takes personal data with
 `EXOSCALE_PERSONAL_DATA=consented-pilot`.
 
-A skill that calls a genome tool (`genome_report`, `dna_ask`) may list only `ollama`:
+A skill that calls a genome tool (`genome_report`, `dna_ask`, `genome_variants`) may list only `ollama`:
 the genome policy never lets a genotype reach a hosted model, the consented pilot
-included ([genome.md](genome.md)).
+included ([genome.md](genome.md)). `/genome` lists `genome_variants` (#307) with its
+source `vcf-variants`, to look up a named variant from an imported VCF that is not in
+the Ark report; its eval cases cover a lookup and synthetic mode.
 
 ## Eval cases
 
@@ -88,8 +90,8 @@ Refusal codes:
 - `tool-not-allowed`: the tool is not in `tools`.
 - `invalid-tool-input`: the query tool's own schema rejects the input.
 - `view-not-allowed`: the view kind is not in `views`.
-- `genome-not-permitted`: a genome tool outside `dataMode: personal` with
-  `genomeSource: ark` on `ollama`.
+- `genome-not-permitted`: a genome tool (`genome_variants` included) outside
+  `dataMode: personal` with `genomeSource: ark` on `ollama`.
 
 The first three refuse the whole request and nothing runs. Cases may only name subjects
 from the synthetic question set (`evaluation/questions.v1.json`).
@@ -217,7 +219,11 @@ never say what a person has.
   `conditions_timeline`, recorded cognition scores such as the MMSE total (72106-8) with
   `observations_for_subject`, a measure such as systolic blood pressure (8480-6) around a
   recorded condition with `values_around_event`, and, only when asked, HRV and resting
-  heart rate as indirect autonomic measures. It may draw one `chart.timeseries`.
+  heart rate as indirect autonomic measures. It may draw one `chart.timeseries`. For a
+  question about a whole synthetic cohort, such as stroke before and after atrial
+  fibrillation onset, it calls `cohort_event_rates` (#293) with the cohort the question
+  names and reports events, person-years, the rate ratio and the verdict as the tool gives
+  them, as a description of that cohort and the generator's rules.
 
 Both quote literature from `knowledge_search` only word for word with its attribution
 line. A question about whether the person has a rhythm condition, a stroke or dementia,
@@ -227,7 +233,7 @@ tells the person what they have, or writes "normal", "abnormal" or a threshold f
 Local Ollama only. The eval cases cover the wearable series, a recorded condition with
 values around it, cognition scores, the literature, a question about whether the person
 has a condition, a hosted provider, views they may not draw and, for `/rhythm`, a
-simulated recording. `/brain` does not list `rhythm_irregularity`: its role does not
+simulated recording, and for `/brain`, a cohort question. `/brain` does not list `rhythm_irregularity`: its role does not
 cover heart rhythm.
 
 ## Built-in commands
@@ -235,6 +241,10 @@ cover heart rhythm.
 Built-ins live in `features/commands/registry.ts`. A skill may not take a built-in's name.
 
 - `/connect` shows the wearable rows under the prompt.
+- `/compact` drafts a twin note of the saved thread for the person to edit and confirm
+  (#43). Like `/twin` it starts no turn; the draft is shown under the conversation and
+  nothing is stored until Save note. Refused in incognito chats
+  ([twin-notes.md](twin-notes.md)).
 - `/twin` shows the thread's digital twin as a card in the conversation (#168). Picking
   it, or sending `/twin` on its own, clears the prompt and asks no model: it starts no
   turn, never calls `/api/chat`, and the card is not part of the history any model is

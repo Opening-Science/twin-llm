@@ -26,3 +26,15 @@ export const MAX_CODES_LISTED = 50;
 
 /** Characters kept from a dataset name. */
 export const MAX_NAME_LENGTH = 120;
+
+/**
+ * A VCF's text after gzip, read as a stream and never held whole. A file whose
+ * text runs past this is refused; 500 MB is far more than 200,000 records need.
+ */
+export const MAX_VCF_TEXT_BYTES = 500_000_000;
+
+/**
+ * Variant records stored from one VCF. More is refused, not cut. An exome or a
+ * filtered call set fits; a whole genome (4 to 5 million records) does not yet.
+ */
+export const MAX_VARIANTS = 200_000;

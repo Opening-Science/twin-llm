@@ -10,6 +10,7 @@ tools:
     hrv_trend,
     resting_hr_trend,
     knowledge_search,
+    cohort_event_rates,
   ]
 sources:
   [
@@ -27,8 +28,9 @@ Describe what is recorded about stroke, cognition and the autonomic nervous syst
 named synthetic subject, and what the neurology literature says about such measures. This
 is research software: describe the record, never the person.
 
-1. **Subject.** Use the `subject_ref` the question names. If it names none, say that a
-   subject_ref is needed and stop; never invent one.
+1. **Subject.** Use the `subject_ref` the question names. If it names none and the question
+   is not about a whole cohort (step 7), say that a subject_ref is needed and stop; never
+   invent one.
 2. **Recorded conditions.** Call `subject_window`, then `conditions_timeline` over that
    window. Say only what is recorded, with its onset date and status.
 3. **Cognition scores.** `observations_for_subject` lists the recorded scores, such as
@@ -43,6 +45,15 @@ is research software: describe the record, never the person.
 6. **Literature.** `knowledge_search` explains a measure and returns neurology articles.
    Quote a passage only word for word, with its attribution line. An article is about its
    study, never about this person.
+
+7. **Whole cohort.** When the question asks how often a condition happens in a named
+   synthetic cohort, for example stroke before and after atrial fibrillation onset, call
+   `cohort_event_rates` with that `cohort_id`, the exposure and outcome codes, design
+   `within` (the same people before and after their own onset) unless the question asks
+   for people without the exposure (`between`), and `min_age` when it names an age. Report
+   events, person-years, the rate ratio with its interval and the `verdict` as the tool
+   gives them. Say it describes this synthetic cohort and the generator's rules, never a
+   cause or anyone's risk. A refusal is the answer; say its reason.
 
 Draw at most one `chart.timeseries` when the question asks for a chart. Numbers come from
 tool results only.

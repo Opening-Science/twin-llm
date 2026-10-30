@@ -10,23 +10,37 @@ import { z } from "zod";
 
 import {
   type DataMode,
+  GENOME_NOT_PERMITTED,
+  type GenomePermitDecision,
   IMPORTED_DATA_NOT_PERMITTED,
   type ImportedDataPermitDecision,
   permitImportedDataStore,
 } from "@/infrastructure/data-mode-policy";
 
-import { IMPORTED_TOOLS, type ImportedToolName } from "./imported-names";
 import {
+  GENOME_VARIANTS_TOOL,
+  IMPORTED_TOOLS,
+  type ImportedToolName,
+} from "./imported-names";
+import {
+  importedConditionsInput,
   importedDatasetsInput,
   importedLatestInput,
+  importedMedicationsInput,
+  importedTableInput,
   importedTrendInput,
 } from "./imported-schemas";
 import {
   type ImportedToolDeps,
+  runImportedConditions,
   runImportedDatasets,
   runImportedLatest,
+  runImportedMedications,
+  runImportedTable,
   runImportedTrend,
 } from "./imported-tools";
+import { type GenomeVariantsDeps, runGenomeVariants } from "./imported-variants";
+import { genomeVariantsInput } from "./imported-variants-schema";
 import { mcpToolManifest } from "./manifests";
 import type { QueryToolPorts } from "./ports";
 import {
@@ -52,6 +66,7 @@ import {
   crossSourceCompareInput,
   valuesAroundEventInput,
   rhythmIrregularityInput,
+  cohortEventRatesInput,
 } from "./schemas";
 import type { SessionScope } from "./scope";
 import {
@@ -76,6 +91,7 @@ import {
   runCrossSourceCompare,
   runValuesAroundEvent,
   runRhythmIrregularity,
+  runCohortEventRates,
 } from "./tools";
 
 /**
@@ -100,7 +116,10 @@ export const assertTransportAllowedForDataMode = (
   }
 };
 
-export type QueryToolName = (typeof TOOL_DEFINITIONS)[number]["name"] | ImportedToolName;
+export type QueryToolName =
+  | (typeof TOOL_DEFINITIONS)[number]["name"]
+  | ImportedToolName
+  | typeof GENOME_VARIANTS_TOOL;
 
 export type QueryToolRunner = (args: unknown) => Promise<unknown>;
 
@@ -139,6 +158,34 @@ const mcpImportedDeps = (
     listSeries: NOTHING_TO_READ,
     findLatest: NOTHING_TO_READ,
     findSeries: NOTHING_TO_READ,
+    listTables: NOTHING_TO_READ,
+    readTableRows: NOTHING_TO_READ,
+    findConditions: NOTHING_TO_READ,
+    findMedications: NOTHING_TO_READ,
+    appendAudit: ports.appendAudit,
+  },
+});
+
+/**
+ * The genome policy as MCP sees it: `genome_variants` never reads here, for
+ * the same reason as the imported-data tools.
+ */
+export const mcpGenomePermit = (mode: DataMode): GenomePermitDecision => ({
+  ok: false,
+  code: GENOME_NOT_PERMITTED,
+  reason: mode === "personal" ? "chat-model-not-local" : "data-mode-not-personal",
+});
+
+/** `genome_variants` as MCP serves it: the policy refuses before any read. */
+const mcpGenomeVariantsDeps = (
+  scope: SessionScope,
+  ports: QueryToolPorts,
+): GenomeVariantsDeps => ({
+  scope,
+  permit: () => mcpGenomePermit(scope.mode),
+  ports: {
+    listDatasets: NOTHING_TO_READ,
+    findVariants: NOTHING_TO_READ,
     appendAudit: ports.appendAudit,
   },
 });
@@ -197,8 +244,23 @@ export const queryToolRunners = (
   imported_trend: bind(importedTrendInput, (input) =>
     runImportedTrend(mcpImportedDeps(scope, ports), input),
   ),
+  imported_table: bind(importedTableInput, (input) =>
+    runImportedTable(mcpImportedDeps(scope, ports), input),
+  ),
+  imported_conditions: bind(importedConditionsInput, (input) =>
+    runImportedConditions(mcpImportedDeps(scope, ports), input),
+  ),
+  imported_medications: bind(importedMedicationsInput, (input) =>
+    runImportedMedications(mcpImportedDeps(scope, ports), input),
+  ),
   rhythm_irregularity: bind(rhythmIrregularityInput, (input) =>
     runRhythmIrregularity(scope, input, ports),
+  ),
+  cohort_event_rates: bind(cohortEventRatesInput, (input) =>
+    runCohortEventRates(scope, input, ports),
+  ),
+  genome_variants: bind(genomeVariantsInput, (input) =>
+    runGenomeVariants(mcpGenomeVariantsDeps(scope, ports), input),
   ),
 });
 
@@ -209,7 +271,8 @@ export const QUERY_MCP_SERVER_INFO = {
 
 const isQueryToolName = (name: string): name is QueryToolName =>
   TOOL_DEFINITIONS.some((definition) => definition.name === name) ||
-  (IMPORTED_TOOLS as readonly string[]).includes(name);
+  (IMPORTED_TOOLS as readonly string[]).includes(name) ||
+  name === GENOME_VARIANTS_TOOL;
 
 const errorResult = (text: string): CallToolResult => ({
   isError: true,
