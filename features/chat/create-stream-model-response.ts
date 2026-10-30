@@ -11,6 +11,7 @@ import {
 } from "@/infrastructure/model-response-metrics";
 import type { OuraSummary } from "@/infrastructure/oura-types";
 import type { TurnSkill } from "@/infrastructure/skill-gate";
+import type { TwinNote } from "@/infrastructure/twin-notes";
 import type { VitronicSummary } from "@/infrastructure/vitronic-types";
 import type { WhoopSummary } from "@/infrastructure/whoop-types";
 import type { ImportedToolDeps } from "@/packages/query-tools/imported-tools";
@@ -18,7 +19,7 @@ import type { QueryToolPorts } from "@/packages/query-tools/ports";
 import type { SessionScope } from "@/packages/query-tools/scope";
 
 import type { ChatRequest } from "./chat-request";
-import { createChatTools, forSkill, forSources } from "./chat-tools";
+import { createTurnTools } from "./chat-tools";
 import { finishModelResponse } from "./finish-model-response";
 import type { GenerationFacts } from "./generation-analytics";
 import { guardGenomeHistory } from "./genome-history-guard";
@@ -28,6 +29,7 @@ import type { ResponseDocumentV1, ResponseToolCall } from "./response/document-v
 import { chatResponseMetadata } from "./response-document";
 import { runTwinTurn } from "./run-twin-turn";
 import type { ThreadView } from "./thread-views";
+import { fitTwinNotes } from "./twin-notes-room";
 import { twinUIMessageResponse } from "./twin-ui-stream";
 import type { ModelResponseCompleteParams } from "./write-model-response-complete";
 
@@ -71,6 +73,21 @@ export type StreamContext = Readonly<{
    * called is its base model, and its role line joins the system prompt.
    */
   agent?: CatalogAgent | null;
+  /**
+   * The twin notes this turn may carry (#43), already filtered by data mode
+   * and permit by `start-answer`. Incognito chats never set it.
+   */
+  twinNotes?: TwinNotesOffer | null;
+}>;
+
+/**
+ * Notes a turn may carry and how their load is audited. The turn keeps as
+ * many as its prompt room allows (`fitTwinNotes`) and records those ids
+ * before the model is called; if that write fails, the model is not called.
+ */
+export type TwinNotesOffer = Readonly<{
+  notes: readonly TwinNote[];
+  recordLoad: (ids: readonly string[]) => Promise<void>;
 }>;
 
 type RowTarget = Readonly<{ turnId: string; modelId: string }>;
@@ -163,24 +180,35 @@ export const createStreamModelResponse =
 
     const skill = context.skill ?? null;
     const scope = { actor: clerkId, sessionId: turnId, mode: settings.dataMode };
-    const { tools, offeredTools } = forSkill(
-      forSources(
-        createChatTools(scope, {
-          query: deps.query,
-          hasWearableNarrative,
-          wearables: turnWearables,
-          disabledSources: context.disabledSources,
-          views: skill?.views,
-          sources: skill?.sources,
-          loadViews: deps.store.loadViews,
-          genome: deps.genomeTools(scope),
-          imported: deps.importedTools(scope),
-          agent: context.agent?.id ?? null,
-        }),
-        context.disabledSources ?? [],
-      ).tools,
+    const { tools, offeredTools } = createTurnTools(
+      scope,
+      {
+        query: deps.query,
+        hasWearableNarrative,
+        wearables: turnWearables,
+        disabledSources: context.disabledSources,
+        loadViews: deps.store.loadViews,
+        genome: deps.genomeTools(scope),
+        imported: deps.importedTools(scope),
+        agent: context.agent?.id ?? null,
+      },
       skill,
     );
+
+    const promptDeps = {
+      tools,
+      offeredTools,
+      mode: settings.dataMode,
+      skill,
+      uiContext: request.uiContext ?? null,
+      agent: context.agent ?? null,
+    };
+    const offer = context.twinNotes ?? null;
+    const notes =
+      offer === null ? null : await fitTwinNotes(promptDeps, turnWearables, offer.notes);
+    if (offer !== null && notes !== null && notes.ids.length > 0) {
+      await offer.recordLoad(notes.ids);
+    }
 
     const logStep = (step: string) => (error: unknown) =>
       console.error(`[chat] ${modelId} ${step}`, errorNameOf(error));
@@ -190,12 +218,8 @@ export const createStreamModelResponse =
         model: deps.resolveModel(context.agent?.baseModelId ?? modelId, {
           hasWearableNarrative,
         }),
-        tools,
-        offeredTools,
-        mode: settings.dataMode,
-        skill,
-        uiContext: request.uiContext ?? null,
-        agent: context.agent ?? null,
+        ...promptDeps,
+        twinNotes: notes?.text ?? null,
         loadAudit: deps.loadAudit,
       },
       {

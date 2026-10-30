@@ -15,14 +15,14 @@ export const YourDataSection = ({ data }: Readonly<{ data: YourDataState }>) => 
       Yours
     </h2>
     <p className="text-muted-foreground mt-1 max-w-2xl text-sm leading-relaxed">
-      Bring your own records and research files: FHIR records, lab results as CSV, or any
-      table you want to explore. You see what will be stored before anything is saved, and
-      you can delete an import at any time.
+      Bring your own records and research files: FHIR records, lab results as CSV, health
+      and wearable exports, a genome VCF, or any table you want to explore. You see what
+      will be stored before anything is saved, and you can delete an import at any time.
     </p>
     <p className="mt-2 max-w-2xl text-sm leading-relaxed">
       Stored on this machine in TwinLLM&apos;s database. Not encrypted at rest yet (#141).
-      Imported data is never sent to a hosted model, and the chat cannot read it yet
-      (#181).
+      Imported data is never sent to a hosted model. A genome VCF is read only by models
+      on this machine.
     </p>
     {data.state === "synthetic" ? (
       <p className="surface text-muted-foreground mt-4 p-4 text-sm">

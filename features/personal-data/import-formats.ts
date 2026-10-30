@@ -49,13 +49,18 @@ export const IMPORT_FORMATS: readonly ImportFormat[] = [
       "An Oura JSON or trends CSV, Whoop CSVs, or Fitbit JSON from Google Takeout, alone or in a zip. Files it does not know are listed.",
     accept: ".zip,.csv,.json,application/zip,text/csv,application/json",
   },
+  {
+    kind: "vcf",
+    label: "Genome VCF (GRCh38)",
+    detail:
+      "One person's VCF 4.x, plain or gzip, on GRCh38. Genotypes are read only by models on this machine.",
+    accept: ".vcf,.gz,.vcf.gz,text/vcf,application/gzip",
+  },
 ];
 
 export type NextFormat = Readonly<{ label: string; issue: number }>;
 
-export const NEXT_FORMATS: readonly NextFormat[] = [
-  { label: "Genome VCF, local models only", issue: 180 },
-];
+export const NEXT_FORMATS: readonly NextFormat[] = [];
 
 export const ISSUES_URL = "https://github.com/Opening-Science/twin-llm/issues";
 

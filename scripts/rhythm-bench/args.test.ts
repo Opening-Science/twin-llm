@@ -11,6 +11,7 @@ describe("parseArgs", () => {
       resamples: DEFAULT_RESAMPLES,
       bootstrapSeed: 249,
       quick: false,
+      realNoise: false,
     });
   });
 
@@ -28,6 +29,7 @@ describe("parseArgs", () => {
         "--bootstrap-seed",
         "7",
         "--quick",
+        "--real-noise",
       ]),
     ).toEqual({
       out: "o",
@@ -36,6 +38,7 @@ describe("parseArgs", () => {
       resamples: 0,
       bootstrapSeed: 7,
       quick: true,
+      realNoise: true,
     });
   });
 
@@ -52,6 +55,9 @@ describe("parseArgs", () => {
     );
     expect(() => parseArgs(["--out", "o", "--afdb", "--quick"])).toThrow(
       "--afdb needs a directory",
+    );
+    expect(() => parseArgs(["--out", "o", "--real-noise"])).toThrow(
+      "--real-noise needs the database",
     );
   });
 });

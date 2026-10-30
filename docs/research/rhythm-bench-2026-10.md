@@ -19,6 +19,7 @@ How well the RR-interval irregularity metrics of `rhythm_irregularity` separate 
 
 - On clean simulated windows the flag does what its arithmetic says (300 s, no noise: sensitivity 0.96, specificity 0.91). Its specificity falls with ectopic beats, short recordings and beat-detection errors: heavy noise (5 % missed and 5 % spurious beats) takes it to 0.17 over the grid.
 - On the database the flag finds 95 % of AF windows with 80 % specificity, both with wide intervals because 25 records are 25 clusters. The database was used to derive or test the Dash et al. 2009 thresholds, so this is not an independent test of them (see Limits).
+- The same noise on the database's beats lowers specificity much more than on simulated beats: 0.29 at light and 0.01 at heavy, against 0.68 and 0.17 over the simulated grid (see "Beat-detection noise on database beats").
 - nRMSSD separates best on the database (AUROC 0.90) and the TPR best on the simulator (0.90); Shannon entropy is the weakest on the simulator and sample entropy on the database (0.80).
 
 ## Simulated recordings
@@ -122,6 +123,22 @@ Per record:
 | 08434  | qrs        | yes         | 310     | 18 (18)              | 292 (60)                 | AFIB 2284, N 37396                |
 | 08455  | qrs        | yes         | 464     | 345 (337)            | 119 (0)                  | AFIB 44105, N 15287               |
 
+## Beat-detection noise on database beats
+
+In the simulated grid, heavy noise took specificity to 0.17, but the noise was applied only to simulated recordings (#296). Here the same `perturbBeats` levels are applied to the annotated beats of all 25 records, seeded per record, and the same windows, flag and record-level bootstrap are used. Simulated columns are the "By beat-detection noise" rows above (whole grid) and the 300 s recordings, whose windows are full 128-interval windows like the database's.
+
+- Command: `bun run rhythm-bench -- --out .rhythm-bench/2026-10-real-noise --afdb <afdb>/files --real-noise`, defaults otherwise. Run id `bf576071d5c74346`, git `b7478a3924fe24380b4cec8519d7245786536384`. Simulated numbers are the same as in the run above, and level none has the same point estimates as the database section (its intervals differ in the third decimal because the bootstrap draws are keyed by subset); the figure CSVs are `real-noise.csv` (sensitivity and specificity with intervals per source and level) and `windows-real-noise.csv`, in the gitignored output directory.
+
+| Noise | Missed / spurious beats (of 1,223,168) | Real sensitivity [95 % CI] | Real specificity [95 % CI] | Sim specificity, grid | Sim specificity, 300 s |
+| ----- | -------------------------------------- | -------------------------- | -------------------------- | --------------------- | ---------------------- |
+| none  | 0 / 0                                  | 0.954 [0.930, 0.974]       | 0.796 [0.699, 0.879]       | 0.756 [0.726, 0.785]  | 0.911 [0.875, 0.943]   |
+| light | 1.00 % / 0.99 %                        | 0.980 [0.969, 0.990]       | 0.289 [0.177, 0.418]       | 0.683 [0.647, 0.715]  | 0.869 [0.826, 0.910]   |
+| heavy | 5.03 % / 4.78 %                        | 0.986 [0.980, 0.991]       | 0.008 [0.004, 0.012]       | 0.168 [0.143, 0.192]  | 0.253 [0.210, 0.298]   |
+
+Simulated sensitivity is 0.958, 0.966 and 0.995 at the three levels (grid). Spurious beats come out slightly under 5 % at heavy because they go into the intervals left after the missed beats are removed.
+
+Plain reading: yes, real specificity falls with noise as the simulated one does, but much faster. Light noise (about one missed and one spurious beat per 100) already takes it from 0.80 to 0.29 on real beats, where the simulator kept 0.68 over the grid and 0.87 at 300 s; heavy noise leaves almost no not-AF window unflagged (0.008). Sensitivity rises a little, because noise makes every window look more irregular. The difference is in the turning-point condition. Noise pushes nRMSSD above 0.1 in about the same share of not-AF windows in both sources (about 90 % at light), but real not-AF windows already have their turning-point ratio in the random band more often without noise (about 29 % against 9 % in simulated 300 s windows) and move into it quickly with noise (about 75 % at light against 12 %). A likely reason is that the smooth, breathing-driven sinus rhythm of the simulator keeps its turning points away from the band, and real sinus rhythm, with ectopic beats and 4 ms resolution, does so less. So the simulated grid understates how much beat-detection errors cost the flag: on these records it lost most of its specificity at 1 % missed and 1 % spurious beats. (Shares of windows by condition are from `windows-real-noise.csv` and `windows-sim.csv`.) The noise levels are still assumptions, not measured device error rates, and they are added on top of the database's own annotation errors.
+
 ## Simulated against real
 
 Simulated windows of a full 128 intervals, all intervals AF or none AF, against database windows whose intervals are all `AFIB` or all `N`. No added noise. W1 is the Wasserstein-1 distance (also divided by the SD of the real values, to compare across quantities), KS the two-sample Kolmogorov-Smirnov statistic. `_norm` quantities are divided by the window's mean RR.
@@ -162,6 +179,7 @@ RR and ΔRR distributions divided by the window mean are close for AF (KS 0.03),
 ## Limits
 
 - **Circular simulated AF.** Simulated AF intervals are independent log-normal draws, which is exactly the null hypothesis the turning-point test is built on. Simulated sensitivity checks the arithmetic of the flag more than it tests the method. The database shows real AF has structure the simulator lacks.
+- **Noise on database beats.** The noise section reuses the same database, which helped derive or test the Dash et al. 2009 thresholds (#264), so its level-none row is not independent of the thresholds either; the drop with noise is a statement about these records and these assumed error rates, not about any device. Perturbed beats start from annotations that have errors of their own (`.qrs` unaudited in most records).
 - **Thresholds and database overlap.** The MIT-BIH Atrial Fibrillation Database was used to derive or test the Dash et al. 2009 thresholds, so the database numbers here are not an independent test of those thresholds. An independent test needs another annotated database.
 - **Few clusters.** 25 records; the intervals are wide, and per-rhythm rows with 2 to 6 records (J, AFL) are hardly informative.
 - **Labels.** Database windows are labelled by the reference rhythm annotations at each beat; `.qrs` beat annotations are unaudited except in two records. Atrial flutter and junctional rhythm count as not AF.

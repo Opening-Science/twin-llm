@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { formatBytes } from "@/infrastructure/format-measure";
+import { DEFAULT_OLLAMA_BASE_URL, ollamaApiRoot } from "@/infrastructure/ollama-context";
 
 import { type LabCheck, plural, shortHash } from "./lab-check";
 
@@ -49,21 +50,82 @@ export const parseOllamaModels = (payload: unknown): readonly LocalModel[] | nul
     .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
 };
 
+/**
+ * Where `/api/tags` is for a configured `OLLAMA_BASE_URL`: scheme, host, port
+ * and path only, so a user name, password or query in the setting never
+ * reaches the page. Null for a value that is not a URL.
+ */
+export const ollamaTagsUrl = (baseUrl: string): string | null => {
+  try {
+    const url = new URL(baseUrl);
+    return `${ollamaApiRoot(`${url.origin}${url.pathname}`)}/tags`;
+  } catch {
+    return null;
+  }
+};
+
+const DEFAULT_TAGS_URL = ollamaTagsUrl(DEFAULT_OLLAMA_BASE_URL);
+
+/** `ollama list` and the same `/api/tags` read the page makes, for this address. */
+export const localModelsHowTo = (tagsUrl: string | null): string => {
+  if (tagsUrl === null) return "ollama list";
+  const host = new URL(tagsUrl).origin;
+  return [
+    tagsUrl === DEFAULT_TAGS_URL ? "ollama list" : `OLLAMA_HOST=${host} ollama list`,
+    `curl -s ${tagsUrl} | jq -r '.models[] | "\\(.digest)  \\(.name)"'`,
+  ].join("\n");
+};
+
+/** What the card shows even when the check cannot run. */
+export const localModelsBase = (tagsUrl: string | null) =>
+  ({
+    id: "local-models",
+    title: "Local models",
+    howTo: localModelsHowTo(tagsUrl),
+  }) as const;
+
 export type LocalModelsInput = Readonly<{
   /** False when Ollama is configured at an address that is not this machine. */
   onLoopback: boolean;
+  /** From `ollamaTagsUrl(OLLAMA_BASE_URL)`. */
+  tagsUrl: string | null;
   /** Null when Ollama did not answer or answered with something else. */
   models: readonly LocalModel[] | null;
 }>;
 
-const HOW_TO = [
-  "ollama list",
-  "curl -s http://127.0.0.1:11434/api/tags | jq -r '.models[] | \"\\(.digest)  \\(.name)\"'",
-].join("\n");
+const tableOf = (models: readonly LocalModel[]) => ({
+  caption: "Models Ollama lists",
+  columns: ["Model", "Digest", "Size", "Family"],
+  rows: models.map((model) => [
+    model.name,
+    shortHash(model.digest),
+    formatBytes(model.sizeBytes),
+    [model.family, model.parameters, model.quantization]
+      .filter((part) => part !== null)
+      .join(" · ") || "—",
+  ]),
+});
 
-const base = { id: "local-models", title: "Local models", howTo: HOW_TO } as const;
-
-export const localModelsCheck = ({ onLoopback, models }: LocalModelsInput): LabCheck => {
+export const localModelsCheck = ({
+  onLoopback,
+  tagsUrl,
+  models,
+}: LocalModelsInput): LabCheck => {
+  const base = localModelsBase(tagsUrl);
+  // Where Ollama is decides first: models on another machine never run here,
+  // whether or not that machine answered.
+  if (!onLoopback) {
+    return {
+      ...base,
+      status: "not-ok",
+      summary:
+        models === null
+          ? "Ollama is configured at an address that is not this machine, and it did not answer just now. Models there would not run here."
+          : `Ollama is configured at an address that is not this machine. It lists ${plural(models.length, "model")}, but they do not run here.`,
+      evidence: [],
+      ...(models === null ? {} : { table: tableOf(models) }),
+    };
+  }
   if (models === null) {
     return {
       ...base,
@@ -71,27 +133,6 @@ export const localModelsCheck = ({ onLoopback, models }: LocalModelsInput): LabC
       summary:
         "Ollama did not answer just now, so its models could not be listed. Start it with `ollama serve` and reload this page.",
       evidence: [],
-    };
-  }
-  const table = {
-    caption: "Models Ollama lists",
-    columns: ["Model", "Digest", "Size", "Family"],
-    rows: models.map((model) => [
-      model.name,
-      shortHash(model.digest),
-      formatBytes(model.sizeBytes),
-      [model.family, model.parameters, model.quantization]
-        .filter((part) => part !== null)
-        .join(" · ") || "—",
-    ]),
-  };
-  if (!onLoopback) {
-    return {
-      ...base,
-      status: "not-ok",
-      summary: `Ollama is configured at an address that is not this machine. It lists ${plural(models.length, "model")}, but they do not run here.`,
-      evidence: [],
-      table,
     };
   }
   if (models.length === 0) {
@@ -108,6 +149,6 @@ export const localModelsCheck = ({ onLoopback, models }: LocalModelsInput): LabC
     status: "ok",
     summary: `Ollama on this machine holds ${plural(models.length, "model")}. The digest is the start of the one \`ollama list\` shows as ID.`,
     evidence: [],
-    table,
+    table: tableOf(models),
   };
 };

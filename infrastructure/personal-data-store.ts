@@ -1,12 +1,17 @@
 import "server-only";
 
 import { Prisma } from "@/generated/prisma/client";
+import { CHUNK_ROWS } from "@/packages/personal-data/limits";
 import type { SavePlan } from "@/packages/personal-data/save-plan";
+import { storedColumns, storedRows } from "@/packages/personal-data/stored-table";
 import {
   type EffectivePrecision,
+  IMPORT_KINDS,
+  isGenomeImportKind,
   isImportKind,
   type ImportKind,
 } from "@/packages/personal-data/types";
+import type { GenomeVariantPorts } from "@/packages/query-tools/imported-variants";
 import {
   type ImportedDataPorts,
   type ImportedObservationRecord,
@@ -116,6 +121,11 @@ const save = async (plan: SavePlan): Promise<SaveOutcome> => {
             data: batch.map((row) => ({ ...row, datasetId, userId })),
           });
         }
+        for (const batch of batches(plan.variants)) {
+          await tx.personalVariant.createMany({
+            data: batch.map((row) => ({ ...row, datasetId, userId })),
+          });
+        }
         if (plan.table !== null) {
           await tx.personalTable.create({
             data: {
@@ -179,7 +189,7 @@ export const personalDataStore = (): PersonalDataStore => ({
         select: { rowCount: true },
       });
       if (row === null) return null;
-      // Cascades to observations, clinical records, the table and its chunks.
+      // Cascades to observations, clinical records, variants, the table and its chunks.
       await tx.personalDataset.delete({ where: { id } });
       return row.rowCount;
     }),
@@ -222,7 +232,14 @@ const toObservation = (
  * resolves the signed-in actor's row, and a person with no row has nothing.
  * Fixed `findMany` / `groupBy` only, each capped by the caller's `take`.
  * Coded reads are held to LOINC; a series by name is held to rows with no code.
+ * A genome VCF is not listed at all: its rows are read only under
+ * `permitGenomeRequest`, never by these tools.
  */
+/** Kinds the imported-data chat tools may list: every one but a genome file. */
+const CHAT_LISTED_KINDS: ImportKind[] = IMPORT_KINDS.filter(
+  (kind) => !isGenomeImportKind(kind),
+);
+
 export const importedDataReads = (
   userId: () => Promise<string | null>,
 ): Omit<ImportedDataPorts, "appendAudit"> => {
@@ -236,7 +253,7 @@ export const importedDataReads = (
         async (id) =>
           (
             await database().personalDataset.findMany({
-              where: { userId: id },
+              where: { userId: id, kind: { in: CHAT_LISTED_KINDS } },
               orderBy: { createdAt: "desc" },
               select: SELECT,
             })
@@ -317,5 +334,164 @@ export const importedDataReads = (
           ).map(toObservation),
         [],
       ),
+    listTables: () =>
+      withUser(
+        async (id) =>
+          (
+            await database().personalTable.findMany({
+              where: { userId: id },
+              orderBy: { datasetId: "asc" },
+              select: { datasetId: true, columns: true, rowCount: true },
+            })
+          ).map((table) => ({
+            datasetId: table.datasetId,
+            columns: storedColumns(table.columns),
+            rowCount: table.rowCount,
+          })),
+        [],
+      ),
+    // Only the chunks that hold the first `take` rows are read.
+    readTableRows: (query) =>
+      withUser(async (id) => {
+        const chunks = await database().personalTableChunk.findMany({
+          where: {
+            userId: id,
+            datasetId: query.datasetId,
+            chunkIndex: { lt: Math.ceil(query.take / CHUNK_ROWS) },
+          },
+          orderBy: { chunkIndex: "asc" },
+          select: { rows: true },
+        });
+        return chunks.flatMap((chunk) => storedRows(chunk.rows)).slice(0, query.take);
+      }, []),
+    findConditions: (query) =>
+      withUser(
+        async (id) =>
+          (
+            await database().personalClinicalRecord.findMany({
+              where: {
+                userId: id,
+                datasetId: query.datasetId,
+                resourceType: "Condition",
+              },
+              orderBy: [
+                { startAt: { sort: "asc", nulls: "last" } },
+                { display: "asc" },
+                { id: "asc" },
+              ],
+              take: query.take,
+              select: {
+                id: true,
+                codeSystem: true,
+                code: true,
+                display: true,
+                startAt: true,
+                endAt: true,
+                status: true,
+              },
+            })
+          ).map((row) => ({
+            id: row.id,
+            codeSystem: row.codeSystem,
+            code: row.code,
+            display: row.display,
+            onsetAt: row.startAt,
+            abatementAt: row.endAt,
+            status: row.status,
+          })),
+        [],
+      ),
+    // Coded fields, authored date and status only: dosage text, notes and
+    // reasons were never stored, and nothing else is selected.
+    findMedications: (query) =>
+      withUser(
+        async (id) =>
+          (
+            await database().personalClinicalRecord.findMany({
+              where: {
+                userId: id,
+                datasetId: query.datasetId,
+                resourceType: "MedicationRequest",
+              },
+              orderBy: [
+                { startAt: { sort: "asc", nulls: "last" } },
+                { display: "asc" },
+                { id: "asc" },
+              ],
+              take: query.take,
+              select: {
+                id: true,
+                codeSystem: true,
+                code: true,
+                display: true,
+                startAt: true,
+                status: true,
+              },
+            })
+          ).map((row) => ({
+            id: row.id,
+            codeSystem: row.codeSystem,
+            code: row.code,
+            display: row.display,
+            authoredAt: row.startAt,
+            status: row.status,
+          })),
+        [],
+      ),
   };
 };
+
+/** Prisma filters for an rsID as the whole ID cell, or one of several joined by `;`. */
+export const variantIdCellMatches = (rsid: string) => [
+  { variantId: rsid },
+  { variantId: { startsWith: `${rsid};` } },
+  { variantId: { endsWith: `;${rsid}` } },
+  { variantId: { contains: `;${rsid};` } },
+];
+
+/**
+ * The reads behind `genome_variants` (#307): the person's datasets, and the
+ * records of one VCF that carry a named rsID or sit at a named site. Bound to
+ * that person like `importedDataReads`. One fixed `findMany`, capped by the
+ * caller's `take`; the tool matches each record to its name again, so an ID
+ * cell that only starts like an rsID is never returned as it. Callers check
+ * `permitGenomeRequest` first; nothing here decides who may read.
+ */
+export const genomeVariantReads = (
+  userId: () => Promise<string | null>,
+): Omit<GenomeVariantPorts, "appendAudit"> => ({
+  listDatasets: async () => {
+    const id = await userId();
+    if (id === null) return [];
+    return (
+      await database().personalDataset.findMany({
+        where: { userId: id },
+        orderBy: { createdAt: "desc" },
+        select: SELECT,
+      })
+    ).map(toView);
+  },
+  findVariants: async (query) => {
+    const id = await userId();
+    if (id === null) return [];
+    const wanted = [
+      ...query.rsids.flatMap(variantIdCellMatches),
+      ...query.sites.map((site) => ({ chrom: { in: [...site.chroms] }, pos: site.pos })),
+    ];
+    if (wanted.length === 0) return [];
+    return database().personalVariant.findMany({
+      where: { userId: id, datasetId: query.datasetId, OR: wanted },
+      orderBy: [{ chrom: "asc" }, { pos: "asc" }, { id: "asc" }],
+      take: query.take,
+      select: {
+        chrom: true,
+        pos: true,
+        variantId: true,
+        ref: true,
+        alt: true,
+        genotype: true,
+        filter: true,
+      },
+    });
+  },
+});

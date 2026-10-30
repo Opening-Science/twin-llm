@@ -70,6 +70,7 @@ import {
 import { PickCard, ProjectAnchor } from "./environment/pick-card";
 import { IDLE_STATUS, type LiveStatus } from "./live/live-conditioning";
 import { LiveLines } from "./live/live-lines";
+import { heartRhythmOf } from "./live/heart-rhythm";
 import { NIGHT_NEEDS_READINGS } from "./live/live-copy";
 import { NightPlayback, useNightPlayback } from "./live/night-playback";
 import { nightPlaybackFor } from "./live/night-series";
@@ -585,6 +586,18 @@ export const BodyLoopAvatar = ({
   const liveOn =
     !reducedMotion &&
     (playing || (liveAvailable && (environment.active ? liveInEnvironment : liveInline)));
+  // Heart chambers (#53): on by default with live vitals, remembered per viewer.
+  // Only the HRA heart is a mesh of its own; the toggle shows while it can beat.
+  const [chambersWanted, toggleChambers] = usePanelOpen(PANEL_IDS.heartChambers);
+  const chambersAvailable = liveOn && liveVitals.heart !== null && scheme === "hra";
+  const heartRhythm = useMemo(
+    () => heartRhythmOf(biomarkers.rhythm ?? { kind: "measured" }),
+    [biomarkers.rhythm],
+  );
+  const chambers = useMemo(
+    () => ({ on: chambersWanted, pattern: heartRhythm.pattern }),
+    [chambersWanted, heartRhythm.pattern],
+  );
   // Primitives only, so the page hears about a change once, not on every render.
   const contextScans = listedScans.length;
   const contextValues = biomarkers.rows.filter((row) => row.value !== null).length;
@@ -798,7 +811,12 @@ export const BodyLoopAvatar = ({
             reducedMotion={reducedMotion}
             onLoad={anatomy.onLoad}
             onPick={onPick}
-            liveVitals={{ enabled: liveOn, vitals: liveVitals, onStatus: setLiveStatus }}
+            liveVitals={{
+              enabled: liveOn,
+              vitals: liveVitals,
+              chambers,
+              onStatus: setLiveStatus,
+            }}
           />
         </Canvas>
         {glLost ? (
@@ -905,6 +923,11 @@ export const BodyLoopAvatar = ({
                     }
                   : undefined
               }
+              heartChambers={
+                chambersAvailable
+                  ? { on: chambersWanted, onToggle: toggleChambers }
+                  : undefined
+              }
             />
           </CollapsiblePanel>
           {inEnvironment ? (
@@ -933,6 +956,7 @@ export const BodyLoopAvatar = ({
           <LiveLines
             status={liveOn ? liveStatus : IDLE_STATUS}
             vitals={liveVitals}
+            timing={heartRhythm.timing}
             scheme={scheme}
             context={{
               on: playing || (environment.active ? liveInEnvironment : liveInline),

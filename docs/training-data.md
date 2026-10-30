@@ -675,7 +675,7 @@ the pilot 1 models) is overridden by the request.
 
 ## Licences
 
-- **Synthea** is Apache-2.0 (v4.0.0, pinned in `scripts/synthea/generate-local.sh`).
+- **Synthea** is Apache-2.0 (v4.0.0, pinned in `infrastructure/local-artefacts.ts`).
   Its output is synthetic and ours to use.
 - **Base models**: the licence of each candidate is in `docs/models.md`.
   Qwen 3 and the Apertus and Meditron models are Apache-2.0; Apertus v1.5

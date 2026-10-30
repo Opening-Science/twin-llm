@@ -122,7 +122,7 @@ describe("runnableSkillsIn", () => {
     ]);
     expect(skills[0]?.tools).toEqual(["knowledge_search"]);
     expect(skills[1]?.views).toEqual(["chart.timeseries"]);
-    expect(skills[2]?.tools).toEqual(["genome_report", "dna_ask"]);
+    expect(skills[2]?.tools).toEqual(["genome_report", "dna_ask", "genome_variants"]);
     expect(skills[3]?.views).toEqual(["chart.timeseries", "biomarker.card"]);
     expect(skills[4]?.tools).toEqual([
       "subject_window",
@@ -130,6 +130,7 @@ describe("runnableSkillsIn", () => {
       "resting_hr_trend",
       "conditions_timeline",
       "values_around_event",
+      "rhythm_irregularity",
       "knowledge_search",
     ]);
     expect(skills[5]?.views).toEqual(["chart.timeseries", "chart.compare"]);

@@ -311,6 +311,27 @@ const noToolTable = (all: readonly ModelScores[]): string =>
     }),
   );
 
+type MetaModel = RunMeta["models"][number];
+
+/** "Heart rhythm (research), ollama:agent:rhythm on qwen3:8b" for an agent run (#279). */
+export const agentTitle = (name: string, entry: MetaModel | undefined): string =>
+  entry?.agent === undefined
+    ? name
+    : `${entry.agent.name}, ${name} on ${entry.agent.base_model_id}`;
+
+/** One run-table row per agent: what it ran on and the versions of its rules. */
+export const agentRows = (meta: RunMeta): string[][] =>
+  meta.models.flatMap(({ model_id: modelId, agent }) =>
+    agent === undefined
+      ? []
+      : [
+          [
+            `Agent ${modelId}`,
+            `${agent.name} on ${agent.base_model_id}, skill ${agent.skill === null ? "none" : `/${agent.skill}`}, rules ${short(agent.rules_sha256)}, roster ${short(agent.roster_sha256)}`,
+          ],
+        ],
+  );
+
 export type PairFigures = Readonly<{
   /** Pair repeats with both sides answered. */
   pairs: number;
@@ -388,10 +409,13 @@ export const renderReport = ({
   quantisation,
   cohortCodes = null,
 }: ReportInput): string => {
-  const hostOf = (model: ModelKey): string =>
+  const entryOf = (model: ModelKey) =>
     meta.models.find(
       (entry) => entry.provider === model.provider && entry.model_id === model.modelId,
-    )?.host ?? "not recorded";
+    );
+  const hostOf = (model: ModelKey): string => entryOf(model)?.host ?? "not recorded";
+  const titleOf = (model: ModelKey): string =>
+    agentTitle(modelName(model), entryOf(model));
   return [
     `# Eval report ${meta.run_id}`,
     "",
@@ -407,6 +431,7 @@ export const renderReport = ({
         ["Replay", meta.replay ? "yes" : "no"],
         ["Sampling", meta.sampling],
         ["Platform", meta.platform],
+        ...agentRows(meta),
         [
           "Cohort codes",
           cohortCodes === null
@@ -423,13 +448,13 @@ export const renderReport = ({
     "Error rate is errors over the lines that ran; skipped lines are left out. An error is never a pass.",
     "",
     ...scores.flatMap((model) => [
-      `## Scores: ${modelName(model.model)}`,
+      `## Scores: ${titleOf(model.model)}`,
       "",
       "Passes over scored answers (pass + fail), with the Wilson 95 % interval. Human, n/a and error counts are in the next table and never count as passes.",
       "",
       scoreTable(model),
       "",
-      `### Not scored automatically: ${modelName(model.model)}`,
+      `### Not scored automatically: ${titleOf(model.model)}`,
       "",
       "Human share is human over pass + fail + human. A high share means the pass rate rests on few answers.",
       "",
@@ -470,7 +495,7 @@ export const renderReport = ({
     `- The questions were written alongside the ${meta.cohort_id} cohort they are scored against, so these results lean optimistic.`,
     ...scores.map(
       (model) =>
-        `- ${modelName(model.model)}: quantisation ${quantisation ?? "not recorded"}, host ${hostOf(model.model)}, platform ${meta.platform}.`,
+        `- ${titleOf(model.model)}: quantisation ${quantisation ?? "not recorded"}, host ${hostOf(model.model)}, platform ${meta.platform}.`,
     ),
     "- Numbers are matched by a heuristic. A miss counts as human, not fail, so read the human share next to each pass rate.",
     "- Consistency counts once per item and model. Latency is not pass/fail.",
