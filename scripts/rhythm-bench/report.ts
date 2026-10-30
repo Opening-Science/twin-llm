@@ -9,6 +9,7 @@ import {
   type BenchmarkResult,
   type DistanceTable,
 } from "./benchmark";
+import { type RealNoiseLevel } from "./real-noise";
 import { QUANTITIES, valuesOf } from "./distance";
 import { quantileSorted, rocPoints } from "./statistics";
 import { METRICS, type MetricName, WINDOW_BEATS, type WindowRow } from "./windows";
@@ -166,6 +167,73 @@ const realSection = (real: NonNullable<BenchmarkResult["real"]>): string[] => [
 const nullLine = (summary: Summary): string =>
   `Sample entropy undefined (no template match) in ${summary.auroc.sample_entropy.nullPositive} AF and ${summary.auroc.sample_entropy.nullNegative} not-AF windows.`;
 
+/** The simulated summaries a noise level is read against: the whole grid, and the longest recordings. */
+export const simulatedForNoise = (
+  result: BenchmarkResult,
+  noise: string,
+): Readonly<{ grid: Summary | null; longest: Summary | null }> => {
+  const longest = Math.max(...result.options.grid.durations);
+  return {
+    grid: result.simulated.byNoise.find((each) => each.key === `noise=${noise}`) ?? null,
+    longest:
+      result.simulated.byDurationAndNoise.find(
+        (each) => each.key === `duration×noise=${longest}s×${noise}`,
+      ) ?? null,
+  };
+};
+
+const optionalProportion = (
+  summary: Summary | null,
+  which: "sensitivity" | "specificity",
+) => (summary === null ? "n/a" : proportionCell(summary[which]));
+
+const share = (part: number, whole: number): string =>
+  whole === 0 ? "n/a" : `${part} (${((100 * part) / whole).toFixed(2)} %)`;
+
+const realNoiseSection = (result: BenchmarkResult): string[] => {
+  const levels: readonly RealNoiseLevel[] = result.realNoise ?? [];
+  return [
+    "## Beat-detection noise on database beats",
+    "",
+    "The grid's noise levels applied to the annotated beats of every record (seeded per record and segment), then the same windows and flag. Clusters for the bootstrap are records. Simulated columns are the whole grid and the longest recordings at the same level. Missed and spurious are beats removed and inserted, as a share of the annotated beats.",
+    "",
+    table(
+      [
+        "Noise",
+        "Beats",
+        "Missed",
+        "Spurious",
+        "Windows (AF / not AF)",
+        "Real sensitivity [95 % CI]",
+        "Real specificity [95 % CI]",
+        "Sim sensitivity",
+        "Sim specificity",
+        "Sim specificity, longest",
+      ],
+      levels.map((level) => {
+        const sim = simulatedForNoise(result, level.noise);
+        return [
+          level.noise,
+          `${level.beats}`,
+          share(level.missed, level.beats),
+          share(level.spurious, level.beats),
+          `${level.summary.nWindows} (${level.summary.nPositive} / ${level.summary.nNegative})`,
+          proportionCell(level.summary.sensitivity),
+          proportionCell(level.summary.specificity),
+          optionalProportion(sim.grid, "sensitivity"),
+          optionalProportion(sim.grid, "specificity"),
+          optionalProportion(sim.longest, "specificity"),
+        ];
+      }),
+    ),
+    "",
+    "AUROC by level:",
+    "",
+    summaryTable(levels.map((level) => level.summary)),
+    "",
+  ];
+};
+
 export const markdownReport = (result: BenchmarkResult, generatedAt: string): string => {
   const sim = result.simulated;
   const gaps = largestGaps(result.simToReal, 8);
@@ -209,6 +277,7 @@ export const markdownReport = (result: BenchmarkResult, generatedAt: string): st
     ...(result.real === null
       ? ["No database given (`--afdb`), real part skipped.", ""]
       : realSection(result.real)),
+    ...(result.realNoise === null ? [] : realNoiseSection(result)),
     "## Simulated against real",
     "",
     ...(result.simToReal.length === 0
@@ -327,6 +396,91 @@ export const realWindowsCsv = (data: BenchmarkData): string =>
     ],
     data.realRows.map((row) => [
       row.record,
+      row.index,
+      row.n,
+      row.meanRrMs,
+      row.afShare,
+      row.dominant,
+      row.singleLabel,
+      row.positive,
+      row.flagged,
+      ...metricCells(row),
+    ]),
+  );
+
+const estimateCells = (estimate: ProportionEstimate) => [
+  estimate.value,
+  estimate.ci95.low,
+  estimate.ci95.high,
+  estimate.k,
+  estimate.n,
+];
+
+/** Sensitivity and specificity per noise level, database and simulated, for a figure. */
+export const realNoiseCsv = (result: BenchmarkResult): string =>
+  csv(
+    [
+      "source",
+      "noise",
+      "windows",
+      "clusters",
+      "beats",
+      "missed",
+      "spurious",
+      "sensitivity",
+      "sensitivity_low",
+      "sensitivity_high",
+      "sensitivity_k",
+      "sensitivity_n",
+      "specificity",
+      "specificity_low",
+      "specificity_high",
+      "specificity_k",
+      "specificity_n",
+    ],
+    (result.realNoise ?? []).flatMap((level) => {
+      const sim = simulatedForNoise(result, level.noise);
+      const row = (
+        source: string,
+        summary: Summary,
+        counts: readonly [number | null, number | null, number | null],
+      ) => [
+        source,
+        level.noise,
+        summary.nWindows,
+        summary.nClusters,
+        ...counts,
+        ...estimateCells(summary.sensitivity),
+        ...estimateCells(summary.specificity),
+      ];
+      return [
+        row("real", level.summary, [level.beats, level.missed, level.spurious]),
+        ...(sim.grid === null ? [] : [row("sim", sim.grid, [null, null, null])]),
+        ...(sim.longest === null
+          ? []
+          : [row("sim-longest", sim.longest, [null, null, null])]),
+      ];
+    }),
+  );
+
+export const realNoiseWindowsCsv = (data: BenchmarkData): string =>
+  csv(
+    [
+      "record",
+      "noise",
+      "index",
+      "n",
+      "mean_rr_ms",
+      "af_share",
+      "dominant",
+      "single_label",
+      "positive",
+      "flagged",
+      ...METRICS,
+    ],
+    data.realNoiseRows.map((row) => [
+      row.record,
+      row.noise,
       row.index,
       row.n,
       row.meanRrMs,

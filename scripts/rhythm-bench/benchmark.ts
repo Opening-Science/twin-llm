@@ -17,6 +17,7 @@ import { type Summary, summarise, summariseBy } from "./analysis";
 import { type Distance, distances } from "./distance";
 import { type RhythmChange } from "./mit-annotations";
 import { intervalsOf, perturbBeats } from "./perturb";
+import { type RealNoiseLevel, realNoiseLevels, type RealNoiseRow } from "./real-noise";
 import {
   cellId,
   type GridCell,
@@ -53,6 +54,8 @@ export type BenchmarkOptions = Readonly<{
   bootstrapSeed: number;
   resamples: number;
   grid: GridOptions;
+  /** Also apply the grid's noise levels to the database beats (#296); needs the database. */
+  realNoise?: boolean;
 }>;
 
 /** AF in the database is "(AFIB"; atrial flutter, junctional and sinus count as not AF. */
@@ -178,6 +181,7 @@ export type BenchmarkResult = Readonly<{
     bootstrapSeed: number;
     resamples: number;
     grid: GridOptions;
+    realNoise: boolean;
     windowBeats: number;
     afWindowRule: string;
   }>;
@@ -201,6 +205,8 @@ export type BenchmarkResult = Readonly<{
     byDominantRhythm: readonly Summary[];
   }> | null;
   simToReal: readonly DistanceTable[];
+  /** The grid's noise levels on the database beats, one summary per level; null unless asked. */
+  realNoise: readonly RealNoiseLevel[] | null;
 }>;
 
 export type BenchmarkInputs = Readonly<{
@@ -216,6 +222,7 @@ export type BenchmarkData = Readonly<{
   result: BenchmarkResult;
   simRows: readonly SimWindowRow[];
   realRows: readonly RealWindowRow[];
+  realNoiseRows: readonly RealNoiseRow[];
 }>;
 
 const pure = (row: WindowRow): boolean => !isMixed(row);
@@ -244,6 +251,10 @@ export const runBenchmark = (inputs: BenchmarkInputs): BenchmarkData => {
     rows: recordWindows(record),
   }));
   const realRows = realByRecord.flatMap((entry) => entry.rows);
+  const realNoise =
+    inputs.afdb === null || options.realNoise !== true
+      ? null
+      : realNoiseLevels(inputs.afdb.records, options.grid.noise, resamples, seed);
   const simFull = simRows.filter((row) => row.n === WINDOW_BEATS);
   const simToReal: DistanceTable[] =
     inputs.afdb === null
@@ -269,6 +280,7 @@ export const runBenchmark = (inputs: BenchmarkInputs): BenchmarkData => {
   return {
     simRows,
     realRows,
+    realNoiseRows: realNoise?.rows ?? [],
     result: {
       benchmark: "rhythm-bench",
       version: BENCHMARK_VERSION,
@@ -279,6 +291,7 @@ export const runBenchmark = (inputs: BenchmarkInputs): BenchmarkData => {
         bootstrapSeed: options.bootstrapSeed,
         resamples: options.resamples,
         grid: options.grid,
+        realNoise: realNoise !== null,
         windowBeats: WINDOW_BEATS,
         afWindowRule:
           "a window is AF when at least 50 % of its intervals are AF; simulated recordings shorter than 128 intervals are one window of all their intervals",
@@ -332,6 +345,7 @@ export const runBenchmark = (inputs: BenchmarkInputs): BenchmarkData => {
               ),
             },
       simToReal,
+      realNoise: realNoise?.levels ?? null,
     },
   };
 };
