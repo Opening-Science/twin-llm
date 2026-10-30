@@ -8,6 +8,11 @@
  *   bun run eval:answer-key
  *   bun run eval:answer-key --questions evaluation/questions.v1.json --out evaluation/answer-key.v1.json
  *
+ * The S7 set (#251) is keyed without a database: `--cohort-dir` names a folder
+ * holding the pinned cohort's `fhir/` (unpacked from the eval-cohort-v1 release)
+ * and the same tools run over it in memory (`cohort-ports.ts`):
+ *   bun run eval:answer-key:s7 -- --cohort-dir <folder>
+ *
  * Every number in the key comes from the same closed, audited query tools the
  * model calls (actor `eval-answer-key`), never from a hand-written value or a
  * second implementation of the maths, so the key and the tools cannot drift
@@ -18,7 +23,10 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 
+import type { QueryToolPorts } from "../../packages/query-tools/ports";
 import { isToolRefusal } from "../../packages/query-tools/refusals";
+import type { SessionScope } from "../../packages/query-tools/scope";
+import type * as QueryToolsModule from "../../packages/query-tools/tools";
 import { cohortContentSha256 } from "../synthea/cohort-checksum";
 import { COHORT_PRESETS } from "../synthea/cohort-presets";
 import {
@@ -38,6 +46,8 @@ export const GENERATOR_VERSION = "2";
 export const ANSWER_KEY_ACTOR = "eval-answer-key";
 export const DEFAULT_QUESTIONS = "evaluation/questions.v1.json";
 export const DEFAULT_OUT = "evaluation/answer-key.v1.json";
+export const S7_QUESTIONS = "evaluation/questions.s7.v1.json";
+export const S7_OUT = "evaluation/answer-key.s7.v1.json";
 
 /** Where `--preset eval` writes the patient files the key is built from. */
 export const EVAL_FHIR_DIR = `${COHORT_PRESETS.eval.out}/fhir`;
@@ -55,9 +65,12 @@ export const COHORT_GENERATION = {
   end_date: COHORT_PRESETS.eval.endDate,
 } as const;
 
+/** The data mode a keyed call runs in (`ValueSpec.mode`, synthetic when left out). */
+export type KeyMode = "synthetic" | "personal";
+
 export type AnswerKeyPorts = Readonly<{
   /** One audited query tool call; returns the tool's result or refusal. */
-  runTool: (tool: KeyedTool, args: unknown) => Promise<unknown>;
+  runTool: (tool: KeyedTool, args: unknown, mode: KeyMode) => Promise<unknown>;
   /** Subjects in the cohort, through the audited `list_subjects`. */
   countSubjects: () => Promise<number>;
   /** The checksum of the cohort's patient files (`contentSha256` in its manifest). */
@@ -208,14 +221,14 @@ export const valueAt = (result: unknown, path: string): number | null => {
   throw new AnswerKeyError(`no number at ${path}`);
 };
 
-type RunOnce = (tool: KeyedTool, args: unknown) => Promise<unknown>;
+type RunOnce = (tool: KeyedTool, args: unknown, mode: KeyMode) => Promise<unknown>;
 
 /** Values read from the same call share one audited read instead of repeating it. */
 const runOnce = (ports: AnswerKeyPorts): RunOnce => {
   const seen = new Map<string, Promise<unknown>>();
-  return (tool, args) => {
-    const id = `${tool} ${JSON.stringify(args)}`;
-    const pending = seen.get(id) ?? ports.runTool(tool, args);
+  return (tool, args, mode) => {
+    const id = `${mode} ${tool} ${JSON.stringify(args)}`;
+    const pending = seen.get(id) ?? ports.runTool(tool, args, mode);
     seen.set(id, pending);
     return pending;
   };
@@ -227,7 +240,7 @@ const keyEntry = async (
   run: RunOnce,
 ): Promise<KeyEntry> => {
   const args = KEYED_TOOLS[spec.tool].parse(spec.args);
-  const result = await run(spec.tool, args).catch(() => {
+  const result = await run(spec.tool, args, spec.mode ?? "synthetic").catch(() => {
     throw new AnswerKeyError(`${itemId} ${spec.name}: ${spec.tool} failed`);
   });
   const base = {
@@ -237,6 +250,7 @@ const keyEntry = async (
     path: spec.path,
     n: rowCountOf(spec.tool, result),
     windows: windowsOf(spec.args),
+    ...(spec.mode === undefined ? {} : { mode: spec.mode }),
   };
   if (isToolRefusal(result)) {
     return {
@@ -387,83 +401,154 @@ export const subjectCount = (
   return result.subjects.length;
 };
 
+type QueryTools = typeof QueryToolsModule;
+
+/** One keyed call through the real tool function; `ports` absent means the database. */
+export const runKeyedTool = (
+  tools: QueryTools,
+  scope: SessionScope,
+  tool: KeyedTool,
+  args: unknown,
+  ports?: QueryToolPorts,
+): Promise<unknown> => {
+  switch (tool) {
+    case "trend":
+      return tools.runTrend(scope, KEYED_TOOLS.trend.parse(args), ports);
+    case "baseline_deviation":
+      return tools.runBaselineDeviation(
+        scope,
+        KEYED_TOOLS.baseline_deviation.parse(args),
+        ports,
+      );
+    case "coverage":
+      return tools.runCoverage(scope, KEYED_TOOLS.coverage.parse(args), ports);
+    case "compare_windows":
+      return tools.runCompareWindows(
+        scope,
+        KEYED_TOOLS.compare_windows.parse(args),
+        ports,
+      );
+    case "range_position":
+      return tools.runRangePosition(scope, KEYED_TOOLS.range_position.parse(args), ports);
+    case "convert_unit":
+      return tools.runConvertUnit(scope, KEYED_TOOLS.convert_unit.parse(args), ports);
+    case "cohort_position":
+      return tools.runCohortPosition(
+        scope,
+        KEYED_TOOLS.cohort_position.parse(args),
+        ports,
+      );
+    case "conditions_timeline":
+      return tools.runConditionsTimeline(
+        scope,
+        KEYED_TOOLS.conditions_timeline.parse(args),
+        ports,
+      );
+    case "medications_timeline":
+      return tools.runMedicationsTimeline(
+        scope,
+        KEYED_TOOLS.medications_timeline.parse(args),
+        ports,
+      );
+    case "sleep_summary":
+      return tools.runSleepSummary(scope, KEYED_TOOLS.sleep_summary.parse(args), ports);
+    case "hrv_trend":
+      return tools.runHrvTrend(scope, KEYED_TOOLS.hrv_trend.parse(args), ports);
+    case "resting_hr_trend":
+      return tools.runRestingHrTrend(
+        scope,
+        KEYED_TOOLS.resting_hr_trend.parse(args),
+        ports,
+      );
+    case "training_load":
+      return tools.runTrainingLoad(scope, KEYED_TOOLS.training_load.parse(args), ports);
+    case "cross_source_compare":
+      return tools.runCrossSourceCompare(
+        scope,
+        KEYED_TOOLS.cross_source_compare.parse(args),
+        ports,
+      );
+    case "values_around_event":
+      return tools.runValuesAroundEvent(
+        scope,
+        KEYED_TOOLS.values_around_event.parse(args),
+        ports,
+      );
+    case "rhythm_irregularity":
+      return tools.runRhythmIrregularity(
+        scope,
+        KEYED_TOOLS.rhythm_irregularity.parse(args),
+        ports,
+      );
+    // These two read the database directly (no ports), so they cannot be keyed from files.
+    case "latest_by_loinc":
+      return ports === undefined
+        ? tools.runLatestByLoinc(scope, KEYED_TOOLS.latest_by_loinc.parse(args))
+        : Promise.reject(new AnswerKeyError(`${tool} reads the database only`));
+    case "summary_stats":
+      return ports === undefined
+        ? tools.runSummaryStats(scope, KEYED_TOOLS.summary_stats.parse(args))
+        : Promise.reject(new AnswerKeyError(`${tool} reads the database only`));
+  }
+};
+
+const scopeFor = (today: string, mode: KeyMode): SessionScope => ({
+  actor: ANSWER_KEY_ACTOR,
+  sessionId: `${ANSWER_KEY_ACTOR}-${today}`,
+  mode,
+});
+
+const openTwinHead = (): string =>
+  execFileSync("git", ["-C", ".open-twin", "rev-parse", "HEAD"], {
+    encoding: "utf8",
+  }).trim();
+
 /** The real tools, audited as `eval-answer-key`. Imported lazily: they need the server-only preload. */
 export const realPorts = async (today: string): Promise<AnswerKeyPorts> => {
   const tools = await import("../../packages/query-tools/tools");
-  const scope = {
-    actor: ANSWER_KEY_ACTOR,
-    sessionId: `${ANSWER_KEY_ACTOR}-${today}`,
-    mode: "synthetic",
-  } as const;
-  const run = (tool: KeyedTool, args: unknown): Promise<unknown> => {
-    switch (tool) {
-      case "trend":
-        return tools.runTrend(scope, KEYED_TOOLS.trend.parse(args));
-      case "baseline_deviation":
-        return tools.runBaselineDeviation(
-          scope,
-          KEYED_TOOLS.baseline_deviation.parse(args),
-        );
-      case "coverage":
-        return tools.runCoverage(scope, KEYED_TOOLS.coverage.parse(args));
-      case "compare_windows":
-        return tools.runCompareWindows(scope, KEYED_TOOLS.compare_windows.parse(args));
-      case "range_position":
-        return tools.runRangePosition(scope, KEYED_TOOLS.range_position.parse(args));
-      case "convert_unit":
-        return tools.runConvertUnit(scope, KEYED_TOOLS.convert_unit.parse(args));
-      case "cohort_position":
-        return tools.runCohortPosition(scope, KEYED_TOOLS.cohort_position.parse(args));
-      case "conditions_timeline":
-        return tools.runConditionsTimeline(
-          scope,
-          KEYED_TOOLS.conditions_timeline.parse(args),
-        );
-      case "medications_timeline":
-        return tools.runMedicationsTimeline(
-          scope,
-          KEYED_TOOLS.medications_timeline.parse(args),
-        );
-      case "sleep_summary":
-        return tools.runSleepSummary(scope, KEYED_TOOLS.sleep_summary.parse(args));
-      case "hrv_trend":
-        return tools.runHrvTrend(scope, KEYED_TOOLS.hrv_trend.parse(args));
-      case "resting_hr_trend":
-        return tools.runRestingHrTrend(scope, KEYED_TOOLS.resting_hr_trend.parse(args));
-      case "training_load":
-        return tools.runTrainingLoad(scope, KEYED_TOOLS.training_load.parse(args));
-      case "cross_source_compare":
-        return tools.runCrossSourceCompare(
-          scope,
-          KEYED_TOOLS.cross_source_compare.parse(args),
-        );
-      case "values_around_event":
-        return tools.runValuesAroundEvent(
-          scope,
-          KEYED_TOOLS.values_around_event.parse(args),
-        );
-      case "rhythm_irregularity":
-        return tools.runRhythmIrregularity(
-          scope,
-          KEYED_TOOLS.rhythm_irregularity.parse(args),
-        );
-      case "latest_by_loinc":
-        return tools.runLatestByLoinc(scope, KEYED_TOOLS.latest_by_loinc.parse(args));
-      case "summary_stats":
-        return tools.runSummaryStats(scope, KEYED_TOOLS.summary_stats.parse(args));
-    }
-  };
   return {
-    runTool: run,
+    runTool: (tool, args, mode) => runKeyedTool(tools, scopeFor(today, mode), tool, args),
     countSubjects: async () => {
-      const result = await tools.runListSubjects(scope, { cohort_id: COHORT_ID });
+      const result = await tools.runListSubjects(scopeFor(today, "synthetic"), {
+        cohort_id: COHORT_ID,
+      });
       return subjectCount(result);
     },
     cohortSha256: () => cohortContentSha256(EVAL_FHIR_DIR),
-    openTwinSha: () =>
-      execFileSync("git", ["-C", ".open-twin", "rev-parse", "HEAD"], {
-        encoding: "utf8",
-      }).trim(),
+    openTwinSha: openTwinHead,
+    today: () => today,
+  };
+};
+
+/**
+ * The same tools over the pinned cohort's patient files in memory
+ * (`cohort-ports.ts`): no database, no env. `dir` holds `fhir/`. The audit
+ * rows stay in memory and are dropped with the run.
+ */
+export const cohortFilePorts = async (
+  dir: string,
+  today: string,
+): Promise<AnswerKeyPorts> => {
+  const tools = await import("../../packages/query-tools/tools");
+  const { cohortSubjectFrom, loadCohortBundles, memoryPorts } =
+    await import("./cohort-ports");
+  const fhir = `${dir}/fhir`;
+  const subjects = (await loadCohortBundles(fhir)).flatMap((bundle) => {
+    const subject = cohortSubjectFrom(
+      bundle,
+      COHORT_ID,
+      COHORT_GENERATION.synthea_version,
+    );
+    return subject === null ? [] : [subject];
+  });
+  const ports = memoryPorts(subjects);
+  return {
+    runTool: (tool, args, mode) =>
+      runKeyedTool(tools, scopeFor(today, mode), tool, args, ports),
+    // `list_subjects` reads the database only; here the subjects are the bundles ingest would keep.
+    countSubjects: () => Promise.resolve(subjects.length),
+    cohortSha256: () => cohortContentSha256(fhir),
+    openTwinSha: openTwinHead,
     today: () => today,
   };
 };
@@ -478,12 +563,20 @@ export const formatKey = async (key: AnswerKey, path: string): Promise<string> =
 const isMain = Boolean((import.meta as { main?: boolean }).main);
 
 if (isMain) {
-  const { serverEnv } = await import("../../infrastructure/env");
   const { isoLocalDate } = await import("../../infrastructure/format-measure");
   const today = isoLocalDate();
-  const ports = await realPorts(today);
-  const code = await runBuildAnswerKey(process.argv.slice(2), process, {
-    dataMode: () => serverEnv().DATA_MODE,
+  const argv = process.argv.slice(2);
+  const cohortDir = argValue(argv, "--cohort-dir", "");
+  // Over cohort files nothing but the synthetic cohort can be read, so no env is loaded.
+  const offline = cohortDir !== "";
+  const ports = offline
+    ? await cohortFilePorts(cohortDir, today)
+    : await realPorts(today);
+  const dataMode = offline
+    ? "synthetic"
+    : (await import("../../infrastructure/env")).serverEnv().DATA_MODE;
+  const code = await runBuildAnswerKey(argv, process, {
+    dataMode: () => dataMode,
     readText: (path) => readFile(path, "utf8"),
     writeKey: async (path, key) => writeFile(path, await formatKey(key, path)),
     ports: () => ports,

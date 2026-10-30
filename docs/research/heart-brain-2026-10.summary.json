@@ -1,0 +1,1099 @@
+{
+  "title": "Heart and brain relations in the synthetic cohort",
+  "generatedAt": "2026-10-29T23:45:16.952Z",
+  "options": {
+    "seed": 250,
+    "historyYears": 10,
+    "controlsPerExposed": 4,
+    "permutations": 50
+  },
+  "batches": [
+    {
+      "batch": "001",
+      "seed": 1001,
+      "clinicianSeed": 2001,
+      "syntheaVersion": "v4.0.0",
+      "jarSha256": "ed43c20ad40ba5c3bc724503a5af032715fe3c491620b766148e7c2361e6ecc1",
+      "endDate": "2026-01-01",
+      "bundles": 11399,
+      "people": 11399,
+      "skipped": 0,
+      "seconds": 105
+    },
+    {
+      "batch": "002",
+      "seed": 1002,
+      "clinicianSeed": 2002,
+      "syntheaVersion": "v4.0.0",
+      "jarSha256": "ed43c20ad40ba5c3bc724503a5af032715fe3c491620b766148e7c2361e6ecc1",
+      "endDate": "2026-01-01",
+      "bundles": 11481,
+      "people": 11481,
+      "skipped": 0,
+      "seconds": 180
+    },
+    {
+      "batch": "003",
+      "seed": 1003,
+      "clinicianSeed": 2003,
+      "syntheaVersion": "v4.0.0",
+      "jarSha256": "ed43c20ad40ba5c3bc724503a5af032715fe3c491620b766148e7c2361e6ecc1",
+      "endDate": "2026-01-01",
+      "bundles": 11544,
+      "people": 11544,
+      "skipped": 0,
+      "seconds": 185
+    },
+    {
+      "batch": "004",
+      "seed": 1004,
+      "clinicianSeed": 2004,
+      "syntheaVersion": "v4.0.0",
+      "jarSha256": "ed43c20ad40ba5c3bc724503a5af032715fe3c491620b766148e7c2361e6ecc1",
+      "endDate": "2026-01-01",
+      "bundles": 11535,
+      "people": 11535,
+      "skipped": 0,
+      "seconds": 181
+    },
+    {
+      "batch": "005",
+      "seed": 1005,
+      "clinicianSeed": 2005,
+      "syntheaVersion": "v4.0.0",
+      "jarSha256": "ed43c20ad40ba5c3bc724503a5af032715fe3c491620b766148e7c2361e6ecc1",
+      "endDate": "2026-01-01",
+      "bundles": 11584,
+      "people": 11584,
+      "skipped": 0,
+      "seconds": 182
+    },
+    {
+      "batch": "006",
+      "seed": 1006,
+      "clinicianSeed": 2006,
+      "syntheaVersion": "v4.0.0",
+      "jarSha256": "ed43c20ad40ba5c3bc724503a5af032715fe3c491620b766148e7c2361e6ecc1",
+      "endDate": "2026-01-01",
+      "bundles": 11648,
+      "people": 11648,
+      "skipped": 0,
+      "seconds": 257
+    },
+    {
+      "batch": "007",
+      "seed": 1007,
+      "clinicianSeed": 2007,
+      "syntheaVersion": "v4.0.0",
+      "jarSha256": "ed43c20ad40ba5c3bc724503a5af032715fe3c491620b766148e7c2361e6ecc1",
+      "endDate": "2026-01-01",
+      "bundles": 11456,
+      "people": 11456,
+      "skipped": 0,
+      "seconds": 232
+    },
+    {
+      "batch": "008",
+      "seed": 1008,
+      "clinicianSeed": 2008,
+      "syntheaVersion": "v4.0.0",
+      "jarSha256": "ed43c20ad40ba5c3bc724503a5af032715fe3c491620b766148e7c2361e6ecc1",
+      "endDate": "2026-01-01",
+      "bundles": 11535,
+      "people": 11535,
+      "skipped": 0,
+      "seconds": 238
+    },
+    {
+      "batch": "009",
+      "seed": 1009,
+      "clinicianSeed": 2009,
+      "syntheaVersion": "v4.0.0",
+      "jarSha256": "ed43c20ad40ba5c3bc724503a5af032715fe3c491620b766148e7c2361e6ecc1",
+      "endDate": "2026-01-01",
+      "bundles": 11530,
+      "people": 11530,
+      "skipped": 0,
+      "seconds": 243
+    },
+    {
+      "batch": "010",
+      "seed": 1010,
+      "clinicianSeed": 2010,
+      "syntheaVersion": "v4.0.0",
+      "jarSha256": "ed43c20ad40ba5c3bc724503a5af032715fe3c491620b766148e7c2361e6ecc1",
+      "endDate": "2026-01-01",
+      "bundles": 11542,
+      "people": 11542,
+      "skipped": 0,
+      "seconds": 238
+    },
+    {
+      "batch": "011",
+      "seed": 1011,
+      "clinicianSeed": 2011,
+      "syntheaVersion": "v4.0.0",
+      "jarSha256": "ed43c20ad40ba5c3bc724503a5af032715fe3c491620b766148e7c2361e6ecc1",
+      "endDate": "2026-01-01",
+      "bundles": 11549,
+      "people": 11549,
+      "skipped": 0,
+      "seconds": 235
+    },
+    {
+      "batch": "012",
+      "seed": 1012,
+      "clinicianSeed": 2012,
+      "syntheaVersion": "v4.0.0",
+      "jarSha256": "ed43c20ad40ba5c3bc724503a5af032715fe3c491620b766148e7c2361e6ecc1",
+      "endDate": "2026-01-01",
+      "bundles": 11575,
+      "people": 11575,
+      "skipped": 0,
+      "seconds": 224
+    },
+    {
+      "batch": "013",
+      "seed": 1013,
+      "clinicianSeed": 2013,
+      "syntheaVersion": "v4.0.0",
+      "jarSha256": "ed43c20ad40ba5c3bc724503a5af032715fe3c491620b766148e7c2361e6ecc1",
+      "endDate": "2026-01-01",
+      "bundles": 11510,
+      "people": 11510,
+      "skipped": 0,
+      "seconds": 224
+    },
+    {
+      "batch": "014",
+      "seed": 1014,
+      "clinicianSeed": 2014,
+      "syntheaVersion": "v4.0.0",
+      "jarSha256": "ed43c20ad40ba5c3bc724503a5af032715fe3c491620b766148e7c2361e6ecc1",
+      "endDate": "2026-01-01",
+      "bundles": 11521,
+      "people": 11521,
+      "skipped": 0,
+      "seconds": 148
+    },
+    {
+      "batch": "015",
+      "seed": 1015,
+      "clinicianSeed": 2015,
+      "syntheaVersion": "v4.0.0",
+      "jarSha256": "ed43c20ad40ba5c3bc724503a5af032715fe3c491620b766148e7c2361e6ecc1",
+      "endDate": "2026-01-01",
+      "bundles": 11480,
+      "people": 11480,
+      "skipped": 0,
+      "seconds": 212
+    },
+    {
+      "batch": "016",
+      "seed": 1016,
+      "clinicianSeed": 2016,
+      "syntheaVersion": "v4.0.0",
+      "jarSha256": "ed43c20ad40ba5c3bc724503a5af032715fe3c491620b766148e7c2361e6ecc1",
+      "endDate": "2026-01-01",
+      "bundles": 11504,
+      "people": 11504,
+      "skipped": 0,
+      "seconds": 218
+    },
+    {
+      "batch": "017",
+      "seed": 1017,
+      "clinicianSeed": 2017,
+      "syntheaVersion": "v4.0.0",
+      "jarSha256": "ed43c20ad40ba5c3bc724503a5af032715fe3c491620b766148e7c2361e6ecc1",
+      "endDate": "2026-01-01",
+      "bundles": 11462,
+      "people": 11462,
+      "skipped": 0,
+      "seconds": 217
+    },
+    {
+      "batch": "018",
+      "seed": 1018,
+      "clinicianSeed": 2018,
+      "syntheaVersion": "v4.0.0",
+      "jarSha256": "ed43c20ad40ba5c3bc724503a5af032715fe3c491620b766148e7c2361e6ecc1",
+      "endDate": "2026-01-01",
+      "bundles": 11528,
+      "people": 11528,
+      "skipped": 0,
+      "seconds": 142
+    },
+    {
+      "batch": "019",
+      "seed": 1019,
+      "clinicianSeed": 2019,
+      "syntheaVersion": "v4.0.0",
+      "jarSha256": "ed43c20ad40ba5c3bc724503a5af032715fe3c491620b766148e7c2361e6ecc1",
+      "endDate": "2026-01-01",
+      "bundles": 11509,
+      "people": 11509,
+      "skipped": 0,
+      "seconds": 191
+    },
+    {
+      "batch": "020",
+      "seed": 1020,
+      "clinicianSeed": 2020,
+      "syntheaVersion": "v4.0.0",
+      "jarSha256": "ed43c20ad40ba5c3bc724503a5af032715fe3c491620b766148e7c2361e6ecc1",
+      "endDate": "2026-01-01",
+      "bundles": 11439,
+      "people": 11439,
+      "skipped": 0,
+      "seconds": 183
+    },
+    {
+      "batch": "021",
+      "seed": 1021,
+      "clinicianSeed": 2021,
+      "syntheaVersion": "v4.0.0",
+      "jarSha256": "ed43c20ad40ba5c3bc724503a5af032715fe3c491620b766148e7c2361e6ecc1",
+      "endDate": "2026-01-01",
+      "bundles": 11500,
+      "people": 11500,
+      "skipped": 0,
+      "seconds": 193
+    },
+    {
+      "batch": "022",
+      "seed": 1022,
+      "clinicianSeed": 2022,
+      "syntheaVersion": "v4.0.0",
+      "jarSha256": "ed43c20ad40ba5c3bc724503a5af032715fe3c491620b766148e7c2361e6ecc1",
+      "endDate": "2026-01-01",
+      "bundles": 11506,
+      "people": 11506,
+      "skipped": 0,
+      "seconds": 192
+    },
+    {
+      "batch": "023",
+      "seed": 1023,
+      "clinicianSeed": 2023,
+      "syntheaVersion": "v4.0.0",
+      "jarSha256": "ed43c20ad40ba5c3bc724503a5af032715fe3c491620b766148e7c2361e6ecc1",
+      "endDate": "2026-01-01",
+      "bundles": 11474,
+      "people": 11474,
+      "skipped": 0,
+      "seconds": 189
+    },
+    {
+      "batch": "024",
+      "seed": 1024,
+      "clinicianSeed": 2024,
+      "syntheaVersion": "v4.0.0",
+      "jarSha256": "ed43c20ad40ba5c3bc724503a5af032715fe3c491620b766148e7c2361e6ecc1",
+      "endDate": "2026-01-01",
+      "bundles": 11454,
+      "people": 11454,
+      "skipped": 0,
+      "seconds": 189
+    },
+    {
+      "batch": "025",
+      "seed": 1025,
+      "clinicianSeed": 2025,
+      "syntheaVersion": "v4.0.0",
+      "jarSha256": "ed43c20ad40ba5c3bc724503a5af032715fe3c491620b766148e7c2361e6ecc1",
+      "endDate": "2026-01-01",
+      "bundles": 11538,
+      "people": 11538,
+      "skipped": 0,
+      "seconds": 192
+    },
+    {
+      "batch": "026",
+      "seed": 1026,
+      "clinicianSeed": 2026,
+      "syntheaVersion": "v4.0.0",
+      "jarSha256": "ed43c20ad40ba5c3bc724503a5af032715fe3c491620b766148e7c2361e6ecc1",
+      "endDate": "2026-01-01",
+      "bundles": 11490,
+      "people": 11490,
+      "skipped": 0,
+      "seconds": 190
+    },
+    {
+      "batch": "027",
+      "seed": 1027,
+      "clinicianSeed": 2027,
+      "syntheaVersion": "v4.0.0",
+      "jarSha256": "ed43c20ad40ba5c3bc724503a5af032715fe3c491620b766148e7c2361e6ecc1",
+      "endDate": "2026-01-01",
+      "bundles": 11560,
+      "people": 11560,
+      "skipped": 0,
+      "seconds": 191
+    },
+    {
+      "batch": "028",
+      "seed": 1028,
+      "clinicianSeed": 2028,
+      "syntheaVersion": "v4.0.0",
+      "jarSha256": "ed43c20ad40ba5c3bc724503a5af032715fe3c491620b766148e7c2361e6ecc1",
+      "endDate": "2026-01-01",
+      "bundles": 11486,
+      "people": 11486,
+      "skipped": 0,
+      "seconds": 188
+    },
+    {
+      "batch": "029",
+      "seed": 1029,
+      "clinicianSeed": 2029,
+      "syntheaVersion": "v4.0.0",
+      "jarSha256": "ed43c20ad40ba5c3bc724503a5af032715fe3c491620b766148e7c2361e6ecc1",
+      "endDate": "2026-01-01",
+      "bundles": 11454,
+      "people": 11454,
+      "skipped": 0,
+      "seconds": 184
+    },
+    {
+      "batch": "030",
+      "seed": 1030,
+      "clinicianSeed": 2030,
+      "syntheaVersion": "v4.0.0",
+      "jarSha256": "ed43c20ad40ba5c3bc724503a5af032715fe3c491620b766148e7c2361e6ecc1",
+      "endDate": "2026-01-01",
+      "bundles": 11492,
+      "people": 11492,
+      "skipped": 0,
+      "seconds": 142
+    }
+  ],
+  "codes": {
+    "conditions": {
+      "af": [
+        {
+          "code": "49436004",
+          "display": "Atrial fibrillation"
+        }
+      ],
+      "stroke": [
+        {
+          "code": "230690007",
+          "display": "Cerebrovascular accident"
+        }
+      ],
+      "heartFailure": [
+        {
+          "code": "88805009",
+          "display": "Chronic congestive heart failure"
+        },
+        {
+          "code": "84114007",
+          "display": "Heart failure"
+        }
+      ],
+      "hypertension": [
+        {
+          "code": "59621000",
+          "display": "Essential hypertension"
+        }
+      ],
+      "diabetes": [
+        {
+          "code": "44054006",
+          "display": "Diabetes mellitus type 2"
+        }
+      ],
+      "vascular": [
+        {
+          "code": "22298006",
+          "display": "Myocardial infarction"
+        },
+        {
+          "code": "401303003",
+          "display": "Acute ST segment elevation myocardial infarction"
+        },
+        {
+          "code": "401314000",
+          "display": "Acute non-ST segment elevation myocardial infarction"
+        },
+        {
+          "code": "399211009",
+          "display": "History of myocardial infarction"
+        }
+      ],
+      "ischaemicHeart": [
+        {
+          "code": "414545008",
+          "display": "Ischemic heart disease"
+        }
+      ],
+      "dementia": [
+        {
+          "code": "26929004",
+          "display": "Alzheimer's disease"
+        },
+        {
+          "code": "230265002",
+          "display": "Familial Alzheimer's disease of early onset"
+        }
+      ],
+      "sleepApnea": [
+        {
+          "code": "78275009",
+          "display": "Obstructive sleep apnea syndrome"
+        },
+        {
+          "code": "73430006",
+          "display": "Sleep apnea"
+        }
+      ],
+      "venousThromboembolism": [
+        {
+          "code": "132281000119108",
+          "display": "Acute deep venous thrombosis"
+        },
+        {
+          "code": "706870000",
+          "display": "Acute pulmonary embolism"
+        }
+      ]
+    },
+    "oralAnticoagulants": [
+      {
+        "code": "855332",
+        "display": "Warfarin Sodium 5 MG Oral Tablet"
+      }
+    ]
+  },
+  "codesSeen": {
+    "cerebrovascular": {
+      "230690007|Cerebrovascular accident (disorder)": 1931
+    },
+    "anticoagulants": {
+      "855332|warfarin sodium 5 MG Oral Tablet": 9200,
+      "855332|Warfarin Sodium 5 MG Oral Tablet": 81089
+    }
+  },
+  "study": {
+    "people": 345285,
+    "deceased": 45285,
+    "female": 173637,
+    "counts": {
+      "af": 2930,
+      "stroke": 1931,
+      "heartFailure": 9381,
+      "hypertension": 79419,
+      "diabetes": 26186,
+      "vascular": 15182,
+      "ischaemicHeart": 57223,
+      "dementia": 10153,
+      "sleepApnea": 15786,
+      "venousThromboembolism": 3694
+    },
+    "anticoagulated": 3912,
+    "scores": {
+      "0": 347,
+      "1": 643,
+      "2": 660,
+      "3": 673,
+      "4": 426,
+      "5": 144,
+      "6": 32,
+      "7": 5
+    },
+    "strokeByScore": [
+      {
+        "group": "0-1",
+        "people": 990,
+        "rate": {
+          "events": 17,
+          "personYears": 5786.798083504449,
+          "per100": 0.29377213019509585,
+          "ci": {
+            "low": 0.17113309168046914,
+            "high": 0.47035763859628504
+          }
+        }
+      },
+      {
+        "group": "2-3",
+        "people": 1332,
+        "rate": {
+          "events": 42,
+          "personYears": 7010.316221765914,
+          "per100": 0.5991170536586737,
+          "ci": {
+            "low": 0.4317908746897001,
+            "high": 0.8098322098826767
+          }
+        }
+      },
+      {
+        "group": "4-5",
+        "people": 565,
+        "rate": {
+          "events": 29,
+          "personYears": 2833.368925393566,
+          "per100": 1.0235165544484042,
+          "ci": {
+            "low": 0.6854650999904705,
+            "high": 1.469940503169788
+          }
+        }
+      },
+      {
+        "group": "6-9",
+        "people": 32,
+        "rate": {
+          "events": 2,
+          "personYears": 117.91649555099247,
+          "per100": 1.6961155355360005,
+          "ci": {
+            "low": 0.20540746009469274,
+            "high": 6.126952496310981
+          }
+        }
+      }
+    ],
+    "anticoagulation": {
+      "everTreated": 2886,
+      "atRisk": 2919,
+      "medianDaysToFirstOrder": 0,
+      "without": {
+        "events": 0,
+        "personYears": 0.459958932238193,
+        "per100": 0,
+        "ci": {
+          "low": 0,
+          "high": 802.0019170328064
+        }
+      },
+      "with": {
+        "events": 90,
+        "personYears": 15747.939767282684,
+        "per100": 0.5715033288797596,
+        "ci": {
+          "low": 0.4595561654449524,
+          "high": 0.7024746184242923
+        }
+      },
+      "ratio": null
+    },
+    "timeToStroke": {
+      "strokes": 90,
+      "medianDays": 3133.5,
+      "quartileDays": {
+        "low": 1325,
+        "high": 4777
+      },
+      "byYears": {
+        "<1": 6,
+        "1-5": 23,
+        "5-10": 22,
+        "10+": 39
+      }
+    },
+    "order": {
+      "both": 125,
+      "strokeFirst": 11,
+      "sameDay": 0,
+      "afFirst": 114
+    },
+    "orderInWindow": {
+      "both": 37,
+      "strokeFirst": 8,
+      "sameDay": 0,
+      "afFirst": 29
+    },
+    "sleepApneaAf": {
+      "table": {
+        "both": 329,
+        "onlyA": 15457,
+        "onlyB": 2601,
+        "neither": 326898
+      },
+      "crudeOddsRatio": 2.6751158980388277,
+      "adjustedOddsRatio": 1.1273904264227366
+    },
+    "rules": [
+      {
+        "id": "af-stroke",
+        "label": "AF then stroke",
+        "planted": "direct",
+        "source": "Framingham stroke10Year adds AF points from age 55",
+        "result": {
+          "exposed": {
+            "events": 90,
+            "personYears": 15748.39972621492,
+            "per100": 0.5714866371481874,
+            "ci": {
+              "low": 0.4595427433216361,
+              "high": 0.702454101452344
+            }
+          },
+          "controls": {
+            "events": 141,
+            "personYears": 62689.43463381246,
+            "per100": 0.22491828299875846,
+            "ci": {
+              "low": 0.18932671472571366,
+              "high": 0.2652567042829227
+            }
+          },
+          "ratio": {
+            "ratio": 2.540863417276496,
+            "ci": {
+              "low": 1.9504620844291192,
+              "high": 3.3099781619921087
+            }
+          },
+          "exposedPeople": 2919,
+          "controlPeople": 11676,
+          "shortOfControls": 0
+        },
+        "ratio": {
+          "ratio": 2.540863417276496,
+          "ci": {
+            "low": 1.9504620844291192,
+            "high": 3.3099781619921087
+          }
+        },
+        "recovered": "raised",
+        "agreement": "recovered"
+      },
+      {
+        "id": "af-stroke-55",
+        "label": "AF from age 55 then stroke",
+        "planted": "direct",
+        "source": "as above, only where the AF points apply",
+        "result": {
+          "exposed": {
+            "events": 86,
+            "personYears": 12789.407255304586,
+            "per100": 0.6724314761681414,
+            "ci": {
+              "low": 0.5378583844504696,
+              "high": 0.8304474027746314
+            }
+          },
+          "controls": {
+            "events": 117,
+            "personYears": 51092.70910335387,
+            "per100": 0.2289954908504153,
+            "ci": {
+              "low": 0.18938551006063317,
+              "high": 0.27444508553853875
+            }
+          },
+          "ratio": {
+            "ratio": 2.9364398122903994,
+            "ci": {
+              "low": 2.2228889760727433,
+              "high": 3.8790415823817117
+            }
+          },
+          "exposedPeople": 2458,
+          "controlPeople": 9832,
+          "shortOfControls": 0
+        },
+        "ratio": {
+          "ratio": 2.9364398122903994,
+          "ci": {
+            "low": 2.2228889760727433,
+            "high": 3.8790415823817117
+          }
+        },
+        "recovered": "raised",
+        "agreement": "recovered"
+      },
+      {
+        "id": "diabetes-stroke",
+        "label": "Diabetes then stroke",
+        "planted": "direct",
+        "source": "Framingham stroke10Year adds diabetes points from age 55",
+        "result": {
+          "exposed": {
+            "events": 247,
+            "personYears": 172705.41820670772,
+            "per100": 0.14301809553211037,
+            "ci": {
+              "low": 0.1257369687376688,
+              "high": 0.16201084702096244
+            }
+          },
+          "controls": {
+            "events": 665,
+            "personYears": 660636.9828884326,
+            "per100": 0.10066042580487872,
+            "ci": {
+              "low": 0.09315417959949647,
+              "high": 0.10861050031366695
+            }
+          },
+          "ratio": {
+            "ratio": 1.4207976410644063,
+            "ci": {
+              "low": 1.2277381743867666,
+              "high": 1.6442153375759203
+            }
+          },
+          "exposedPeople": 26171,
+          "controlPeople": 104684,
+          "shortOfControls": 0
+        },
+        "ratio": {
+          "ratio": 1.4207976410644063,
+          "ci": {
+            "low": 1.2277381743867666,
+            "high": 1.6442153375759203
+          }
+        },
+        "recovered": "raised",
+        "agreement": "recovered"
+      },
+      {
+        "id": "hypertension-stroke",
+        "label": "Hypertension then stroke",
+        "planted": "indirect",
+        "source": "hypertension raises systolic BP, which stroke10Year reads",
+        "result": {
+          "exposed": {
+            "events": 568,
+            "personYears": 548336.9555099247,
+            "per100": 0.1035859418725097,
+            "ci": {
+              "low": 0.09524123948889605,
+              "high": 0.11246593072707875
+            }
+          },
+          "controls": {
+            "events": 1626,
+            "personYears": 1761581.541409993,
+            "per100": 0.0923034194998733,
+            "ci": {
+              "low": 0.08787094766534656,
+              "high": 0.09690156760401619
+            }
+          },
+          "ratio": {
+            "ratio": 1.1222329837157539,
+            "ci": {
+              "low": 1.0199893171609102,
+              "high": 1.234725549131299
+            }
+          },
+          "exposedPeople": 79375,
+          "controlPeople": 317500,
+          "shortOfControls": 0
+        },
+        "ratio": {
+          "ratio": 1.1222329837157539,
+          "ci": {
+            "low": 1.0199893171609102,
+            "high": 1.234725549131299
+          }
+        },
+        "recovered": "raised",
+        "agreement": "recovered"
+      },
+      {
+        "id": "hypertension-af",
+        "label": "Hypertension then AF",
+        "planted": "indirect",
+        "source": "hypertension raises systolic BP and adds BP medication, which atrialFibrillation10Year reads",
+        "result": {
+          "exposed": {
+            "events": 702,
+            "personYears": 542021.0896646132,
+            "per100": 0.12951525565811045,
+            "ci": {
+              "low": 0.12011040844568793,
+              "high": 0.13946087341391153
+            }
+          },
+          "controls": {
+            "events": 1642,
+            "personYears": 1745004.5995893225,
+            "per100": 0.09409717317572894,
+            "ci": {
+              "low": 0.08960036437899947,
+              "high": 0.09876122535622545
+            }
+          },
+          "ratio": {
+            "ratio": 1.376399006336113,
+            "ci": {
+              "low": 1.2599689238104796,
+              "high": 1.5035880558971624
+            }
+          },
+          "exposedPeople": 79303,
+          "controlPeople": 317212,
+          "shortOfControls": 0
+        },
+        "ratio": {
+          "ratio": 1.376399006336113,
+          "ci": {
+            "low": 1.2599689238104796,
+            "high": 1.5035880558971624
+          }
+        },
+        "recovered": "raised",
+        "agreement": "recovered"
+      },
+      {
+        "id": "mi-stroke",
+        "label": "Myocardial infarction then stroke",
+        "planted": "none",
+        "source": "coronary_heart_disease is read by stroke10Year but never set",
+        "result": {
+          "exposed": {
+            "events": 173,
+            "personYears": 83593.71115674196,
+            "per100": 0.20695336719244015,
+            "ci": {
+              "low": 0.17726275573832725,
+              "high": 0.24019443236687013
+            }
+          },
+          "controls": {
+            "events": 560,
+            "personYears": 305874.30527036276,
+            "per100": 0.183081739901302,
+            "ci": {
+              "low": 0.1682302414048732,
+              "high": 0.1988929340889899
+            }
+          },
+          "ratio": {
+            "ratio": 1.130387810952677,
+            "ci": {
+              "low": 0.9532071895572899,
+              "high": 1.3405024816733067
+            }
+          },
+          "exposedPeople": 14764,
+          "controlPeople": 59056,
+          "shortOfControls": 0
+        },
+        "ratio": {
+          "ratio": 1.130387810952677,
+          "ci": {
+            "low": 0.9532071895572899,
+            "high": 1.3405024816733067
+          }
+        },
+        "recovered": "no clear difference",
+        "agreement": "consistent with no rule"
+      },
+      {
+        "id": "chf-stroke",
+        "label": "Heart failure then stroke",
+        "planted": "none",
+        "source": "no calculator reads heart failure",
+        "result": {
+          "exposed": {
+            "events": 9,
+            "personYears": 7796.917180013689,
+            "per100": 0.11543023726185327,
+            "ci": {
+              "low": 0.05278205478349205,
+              "high": 0.21912254621882715
+            }
+          },
+          "controls": {
+            "events": 392,
+            "personYears": 223321.26488706365,
+            "per100": 0.17553187341932677,
+            "ci": {
+              "low": 0.15858335438782947,
+              "high": 0.19379841948216137
+            }
+          },
+          "ratio": {
+            "ratio": 0.6576027191717075,
+            "ci": {
+              "low": 0.3396183012652452,
+              "high": 1.273315762581012
+            }
+          },
+          "exposedPeople": 9324,
+          "controlPeople": 37296,
+          "shortOfControls": 0
+        },
+        "ratio": {
+          "ratio": 0.6576027191717075,
+          "ci": {
+            "low": 0.3396183012652452,
+            "high": 1.273315762581012
+          }
+        },
+        "recovered": "no clear difference",
+        "agreement": "consistent with no rule"
+      },
+      {
+        "id": "stroke-af",
+        "label": "Stroke then AF",
+        "planted": "none",
+        "source": "atrialFibrillation10Year does not read stroke",
+        "result": {
+          "exposed": {
+            "events": 9,
+            "personYears": 4937.3552361396305,
+            "per100": 0.18228382544005137,
+            "ci": {
+              "low": 0.08335177236702165,
+              "high": 0.34603148111289767
+            }
+          },
+          "controls": {
+            "events": 102,
+            "personYears": 37683.556468172486,
+            "per100": 0.2706750889772019,
+            "ci": {
+              "low": 0.22070318724833915,
+              "high": 0.3285810900415086
+            }
+          },
+          "ratio": {
+            "ratio": 0.6734414538435953,
+            "ci": {
+              "low": 0.3406535366309799,
+              "high": 1.3313332843694032
+            }
+          },
+          "exposedPeople": 1817,
+          "controlPeople": 7268,
+          "shortOfControls": 0
+        },
+        "ratio": {
+          "ratio": 0.6734414538435953,
+          "ci": {
+            "low": 0.3406535366309799,
+            "high": 1.3313332843694032
+          }
+        },
+        "recovered": "no clear difference",
+        "agreement": "consistent with no rule"
+      },
+      {
+        "id": "af-dementia",
+        "label": "AF then Alzheimer's",
+        "planted": "none",
+        "source": "dementia.json uses age and socioeconomic status only",
+        "result": {
+          "exposed": {
+            "events": 127,
+            "personYears": 14569.00205338809,
+            "per100": 0.8717137902418344,
+            "ci": {
+              "low": 0.7267085107336083,
+              "high": 1.037174025354486
+            }
+          },
+          "controls": {
+            "events": 493,
+            "personYears": 57310.759753593426,
+            "per100": 0.8602224121956236,
+            "ci": {
+              "low": 0.78595449693919,
+              "high": 0.9396170285288823
+            }
+          },
+          "ratio": {
+            "ratio": 1.013358612706777,
+            "ci": {
+              "low": 0.8337951333468542,
+              "high": 1.2315923143195187
+            }
+          },
+          "exposedPeople": 2717,
+          "controlPeople": 10868,
+          "shortOfControls": 0
+        },
+        "ratio": {
+          "ratio": 1.013358612706777,
+          "ci": {
+            "low": 0.8337951333468542,
+            "high": 1.2315923143195187
+          }
+        },
+        "recovered": "no clear difference",
+        "agreement": "consistent with no rule"
+      },
+      {
+        "id": "osa-af",
+        "label": "Sleep apnea then AF",
+        "planted": "none",
+        "source": "sleep_apnea.json onset depends on sex only; AF risk does not read it",
+        "result": {
+          "exposed": {
+            "events": 149,
+            "personYears": 108097.6153319644,
+            "per100": 0.13783837834204357,
+            "ci": {
+              "low": 0.11659494402323842,
+              "high": 0.16183264901610572
+            }
+          },
+          "controls": {
+            "events": 507,
+            "personYears": 415185.8754277892,
+            "per100": 0.12211398075081663,
+            "ci": {
+              "low": 0.11171449618668748,
+              "high": 0.133220990809468
+            }
+          },
+          "ratio": {
+            "ratio": 1.1287682007788595,
+            "ci": {
+              "low": 0.9403379056284057,
+              "high": 1.3549572376730692
+            }
+          },
+          "exposedPeople": 15763,
+          "controlPeople": 63052,
+          "shortOfControls": 0
+        },
+        "ratio": {
+          "ratio": 1.1287682007788595,
+          "ci": {
+            "low": 0.9403379056284057,
+            "high": 1.3549572376730692
+          }
+        },
+        "recovered": "no clear difference",
+        "agreement": "consistent with no rule"
+      },
+      {
+        "id": "anticoagulant-stroke",
+        "label": "Oral anticoagulant after AF, then stroke",
+        "planted": "none",
+        "source": "no calculator reads a medication",
+        "result": null,
+        "ratio": null,
+        "recovered": "too few events",
+        "agreement": "undecided"
+      }
+    ],
+    "shuffled": {
+      "observedAfFirstShare": 0.912,
+      "afFirstShare": {
+        "mean": 0.9071999999999999,
+        "low": 0.864,
+        "high": 0.96,
+        "runs": 50
+      },
+      "observedRatio": 2.540863417276496,
+      "ratio": {
+        "mean": 2.3919549747233635,
+        "low": 2.0443953567950386,
+        "high": 2.7781390831577037,
+        "runs": 50
+      }
+    }
+  }
+}

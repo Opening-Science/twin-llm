@@ -104,6 +104,39 @@ describe("wearableBundle", () => {
     expect(rows.every((row) => row.kind === "numeric")).toBe(true);
   });
 
+  test("tags the atrial fibrillation burden as simulator ground truth", () => {
+    const withAf = wearableBundle(
+      patient,
+      generateSeries({
+        seed: 4242,
+        subjectRef: PATIENT_ID,
+        endDay: "2026-10-01",
+        days: 3,
+        conditions: [
+          { kind: "atrial_fibrillation", onset: "2020-01-01", abatement: null },
+        ],
+      }),
+    );
+    const tagsOf = (code: string) =>
+      withAf.entry
+        .map((entry) => entry.resource)
+        .filter(
+          (resource) => "code" in resource && resource.code.coding[0]?.code === code,
+        )
+        .map((resource) => resource.meta.tag.map((tag) => tag.code));
+    expect(tagsOf("af-burden").length).toBeGreaterThan(0);
+    for (const tags of tagsOf("af-burden")) {
+      expect(tags).toEqual([
+        "HTEST",
+        "twinllm-synthetic-wearables",
+        "simulator-ground-truth",
+      ]);
+    }
+    for (const tags of tagsOf("irregular-rhythm-notification")) {
+      expect(tags).toEqual(["HTEST", "twinllm-synthetic-wearables"]);
+    }
+  });
+
   test("ids are stable and UUID-shaped", () => {
     expect(stableUuid("a")).toBe(stableUuid("a"));
     expect(stableUuid("a")).toMatch(

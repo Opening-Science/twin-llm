@@ -1,6 +1,8 @@
 /**
  * The shape of the C2 evaluation question set (`evaluation/questions.v1.json`)
- * and its answer key (`evaluation/answer-key.v1.json`).
+ * and its answer key (`evaluation/answer-key.v1.json`), and of the S7 set
+ * (`evaluation/questions.s7.v1.json`, #251), which has its own file and key so
+ * the v1 hash never changes.
  *
  * Expected host fields follow docs/response-schema.md v1.1 and the scenarios in
  * docs/evaluation/scenarios.md, so C3 can compare a response document field by
@@ -49,8 +51,14 @@ export const CRITERIA = [
 
 export type Criterion = (typeof CRITERIA)[number];
 
-/** S7 is UX-only and scored by a person, so it has no items here (C1). */
-export const SCENARIOS = ["S1", "S2", "S3", "S4", "S5", "S6"] as const;
+/** The scenarios of `questions.v1.json`; the drift test holds each at 6 items at least. */
+export const V1_SCENARIOS = ["S1", "S2", "S3", "S4", "S5", "S6"] as const;
+
+/**
+ * Every scored scenario. S7 (rhythm and heart-brain, #251) lives in its own
+ * file. The body twin UX scenario (S8) is scored by a person and has no items.
+ */
+export const SCENARIOS = [...V1_SCENARIOS, "S7"] as const;
 
 export type Scenario = (typeof SCENARIOS)[number];
 
@@ -141,6 +149,12 @@ export const valueSpecSchema = z
     path: z.string().min(1),
     unit: z.string().nullable(),
     tolerance,
+    /**
+     * The data mode the key builder runs this call in; left out, synthetic.
+     * `personal` keys what a tool refuses there (`NO_RHYTHM_DATA`, S7) without
+     * reading anything: the eval harness itself runs synthetic only.
+     */
+    mode: z.literal("personal").optional(),
   })
   .strict()
   .superRefine((spec, ctx) => {
@@ -206,7 +220,7 @@ export const expectSchema = z
 
 export const questionSchema = z
   .object({
-    id: z.string().regex(/^Q-S[1-6]-\d{2}$/),
+    id: z.string().regex(/^Q-S[1-7]-\d{2}$/),
     scenario: z.enum(SCENARIOS),
     criteria: z.array(z.enum(CRITERIA)).min(1),
     question: z.string().min(10),
@@ -272,6 +286,8 @@ export const keyEntrySchema = z
     n: z.number().int().nonnegative(),
     windows: z.array(windowSchema),
     refusal: z.string().nullable(),
+    /** As in the value spec: present only for a call keyed in personal mode. */
+    mode: z.literal("personal").optional(),
   })
   .strict();
 

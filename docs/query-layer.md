@@ -157,7 +157,8 @@ Oura's main sleep is its `long_sleep` segment (#85), so a nap or a short rest is
 - **Benchmark.** `bun run rhythm-bench` (#249) measures the flag and each metric on a simulated grid and on the MIT-BIH Atrial Fibrillation Database; methods in `docs/rhythm-sim.md`, "Benchmark", results in `docs/research/rhythm-bench-2026-10.md`.
 - **Wording.** `threshold` names the rule and its source and calls it a research threshold, never a finding about a person. The description tells the model to describe the recording and never to say a person has a condition.
 - **The Lab's view.** `runLabRhythmRecording` runs the same plan and `describeRecording` for the Lab's Simulations section, with the plan in its result so the page can draw the recording and the simulator's settings; audited as `lab.rhythm_recording` and never offered to a model (`docs/lab.md`, "Simulations").
-- Not yet: stored recordings (a FHIR Observation from `recordingObservation` could be ingested), the wearables v3 episode schedule, COSEn (Lake and Moorman 2011), and eval questions (a filled draft is in `evaluation/drafts/rhythm-irregularity.questions.ts`; the answer key needs the eval database).
+- Eval questions: scenario S7 (#251) in `evaluation/questions.s7.v1.json`, keyed from the pinned cohort's files without a database (`docs/evaluation/question-set.md`, "S7"). The draft's three items went in there with a named recording day, since the default (last) day moves when the wearable series is loaded.
+- Not yet: stored recordings (a FHIR Observation from `recordingObservation` could be ingested), the wearables v3 episode schedule, COSEn (Lake and Moorman 2011).
 
 Sources: Dash S, Chon KH, Lu S, Raeder EA. Automatic real time detection of atrial fibrillation. Annals of Biomedical Engineering. 2009;37(9):1701-1709 (methods read from the authors' copy). Richman JS, Moorman JR. Physiological time-series analysis using approximate entropy and sample entropy. American Journal of Physiology, Heart and Circulatory Physiology. 2000;278(6):H2039-H2049.
 
@@ -231,7 +232,7 @@ Outside the tools, the chat route and the onboarding starter questions write `pr
 
 The contract:
 
-- **Closed input.** A zod object with `.strict()`, window bounds from `schemas.ts`, `z.enum` for every fixed choice, no free text. It goes into `TOOL_DEFINITIONS`, which feeds chat (`ai-tools.ts`), the MCP server and both manifests.
+- **Closed input.** A zod object with `.strict()`, window bounds from `schemas.ts`, `z.enum` for every fixed choice, no free text. It goes into `TOOL_DEFINITIONS`, which feeds chat (`ai-tools.ts`, where the scaffold adds the entry at the end of `createQueryTools`, found by name, never in `createImportedTools`), the MCP server and both manifests.
 - **Scope first.** `subjectInScope` before any read; out of scope returns `SUBJECT_SCOPE_VIOLATION`.
 - **Audited.** The body runs inside `audited(...)`, so every call, refusal and throw writes one audit row; a refusal counts 0 rows.
 - **Capped reads.** One fixed `findMany` per window through `readWindow` (`ports.ts`), `ANALYTICS_ROW_CAP` + 1 rows, over the cap refused. No `$queryRaw`.

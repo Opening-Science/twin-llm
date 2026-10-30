@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "description": "Router fixture for Auto mode v1 (#219). Prompts and the agent expected for each. Separate from questions.v1.json, which stays the scored set.",
+  "description": "Router fixture for Auto mode (#219; heart rhythm and brain prompts added for #253). Prompts and the agent expected for each. Separate from questions.v1.json, which stays the scored set.",
   "items": [
     {
       "prompt": "How has body weight changed for subject 9661a432-4630-2cd9-142c-386845fae837 over two years?",
@@ -104,6 +104,46 @@
     },
     {
       "prompt": "How did my blood pressure change last year?",
+      "expected": "gp"
+    },
+    {
+      "prompt": "Is atrial fibrillation recorded for subject 9661a432-4630-2cd9-142c-386845fae837, and since when?",
+      "expected": "rhythm"
+    },
+    {
+      "prompt": "How irregular were the RR intervals in this recording?",
+      "expected": "rhythm"
+    },
+    {
+      "prompt": "I noticed palpitations on Tuesday; what did my heart rate look like that day?",
+      "expected": "rhythm"
+    },
+    {
+      "prompt": "What do studies say about HRV and arrhythmia?",
+      "expected": "rhythm"
+    },
+    {
+      "prompt": "What is my HRV trend this month?",
+      "expected": "trainer"
+    },
+    {
+      "prompt": "What blood pressure was recorded around the stroke for subject 9661a432-4630-2cd9-142c-386845fae837?",
+      "expected": "brain"
+    },
+    {
+      "prompt": "Which MMSE scores are recorded for subject 9661a432-4630-2cd9-142c-386845fae837?",
+      "expected": "brain"
+    },
+    {
+      "prompt": "What does research say about the autonomic nervous system after a stroke?",
+      "expected": "brain"
+    },
+    {
+      "prompt": "Should I take a blood thinner for my atrial fibrillation?",
+      "expected": "gp"
+    },
+    {
+      "prompt": "What dose of donepezil fits my latest memory score?",
       "expected": "gp"
     }
   ]
