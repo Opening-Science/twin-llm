@@ -11,6 +11,7 @@ import { userInfo } from "node:os";
 import { join } from "node:path";
 
 import {
+  DEFAULT_OLLAMA_BASE_URL,
   DEFAULT_OLLAMA_NUM_CTX,
   MIN_OLLAMA_NUM_CTX,
 } from "../../infrastructure/ollama-context";
@@ -281,7 +282,7 @@ const probeOllama = async (
 ): Promise<OllamaProbe> => {
   const provider = env.LLM_PROVIDER || "ollama";
   if (provider !== "ollama") return { kind: "not-used", provider };
-  const baseUrl = (env.OLLAMA_BASE_URL || "http://127.0.0.1:11434/v1").replace(
+  const baseUrl = (env.OLLAMA_BASE_URL || DEFAULT_OLLAMA_BASE_URL).replace(
     /\/v1\/?$/,
     "",
   );
