@@ -6,8 +6,14 @@
  * directory and the caller resolves them.
  */
 
-/** Synthea v4.0.0, the same JAR `scripts/synthea/generate-local.sh` pins. */
+/**
+ * Synthea v4.0.0, from open-twin tools/synthea/version.lock @ 130e3f64.
+ * `scripts/synthea/generate-local.sh` reads these through
+ * `scripts/synthea/synthea-pin.sh`, which `bun run synthea:pin` writes from
+ * here; `infrastructure/pinned-constants.test.ts` fails if the two differ.
+ */
 export const SYNTHEA_VERSION = "v4.0.0";
+export const SYNTHEA_JAR_URL = `https://github.com/synthetichealth/synthea/releases/download/${SYNTHEA_VERSION}/synthea-with-dependencies.jar`;
 export const SYNTHEA_JAR_SHA256 =
   "ed43c20ad40ba5c3bc724503a5af032715fe3c491620b766148e7c2361e6ecc1";
 /** Where the JAR goes when `SYNTHEA_JAR` is not set. */

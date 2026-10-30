@@ -43,7 +43,7 @@ export const DEFAULT_FIRST_BYTE_TIMEOUT_S = 120;
 export const DEFAULT_CARBON_X_TIMEOUT_S = 120;
 
 /** Ollama's OpenAI-compatible root on this machine when OLLAMA_BASE_URL is unset. */
-export const DEFAULT_OLLAMA_BASE_URL = "http://127.0.0.1:11434/v1";
+export { DEFAULT_OLLAMA_BASE_URL } from "./ollama-context";
 
 /** The Carbon-X sidecar's OpenAI-compatible root when CARBON_X_URL is unset. */
 export const DEFAULT_CARBON_X_URL = "http://127.0.0.1:8090/v1";
