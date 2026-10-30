@@ -218,6 +218,163 @@ rerun on the same batches and seeds. The condition rows moved only within
 their noise; the AF heart rate, heart failure and stroke sleep score rows
 shifted most, because episodes now fall on both sides.
 
+## Part 3: expected effect from Synthea's own stroke calculator (#294)
+
+#250 and #262 could only say that the AF-to-stroke excess is there and tied
+to the onset date; there was no planted number to check its size against.
+This part computes one from the generator itself.
+
+### The calculator, read from the jar
+
+`scripts/heart-brain/stroke-calculator.ts` is a line-by-line port of
+`Framingham.stroke10Year` from the pinned jar (SHA-256 `ed43c20a...e6ecc1`),
+read with `javap -c -l` (lines 437 to 481 for the tables, 465 to 476 for the
+range lookup, 491 to 556 for the calculator), with the table values read
+from the loaded class. Under 20 it returns -1 (no stroke), 20 to 39 and 40 to
+54 a fixed 10-year risk by sex, and from 55 points: smoker +3, left
+ventricular hypertrophy +5, age, systolic BP (a second BP table when
+`blood_pressure_controlled`), diabetes +2 (men) or +3 (women), coronary heart
+disease +4 or +2 and AF +4 or +6. A range lookup takes the lower index on a
+boundary. `CardiovascularDiseaseModule` (lines 142 to 146) turns the 10-year
+risk into a 7-day risk every time step, and `stroke.json` draws a stroke with
+that probability once every 30 days, first stroke only.
+
+`StrokeCalculatorGolden.java` calls the jar's own `stroke10Year` on
+constructed persons. The port agrees exactly on all 353,920 combinations of
+edge ages, edge BPs and the six flags (a one-off run), and on the 600 cases
+kept in `stroke-calculator.golden.json`, which a test checks.
+
+### The oracle
+
+For each person and day, `scripts/heart-brain/oracle.ts` feeds the
+calculator what the record shows: sex, age, the latest recorded systolic BP,
+the latest smoking status, diabetes and AF; coronary heart disease and left
+ventricular hypertrophy are never set in v4.0.0, so they are false. Two
+things in the generator matter here:
+
+- AF's points start the month the attribute is set, but the AF condition is
+  written at the next wellness visit (`ConditionOnset` with a target
+  encounter, dated with that encounter's time by `State$Encounter`). So the
+  oracle spreads the true start evenly between the wellness visit before the
+  recorded onset and the recorded onset. In the within-person cohort 8.7% of
+  the time counted as before onset already has AF on. Diabetes is handled the
+  same way.
+- `blood_pressure_controlled` is drawn at random visits and never exported.
+  The main run uses the uncontrolled BP table; a sensitivity uses the
+  controlled one from the recorded hypertension onset.
+
+`scripts/heart-brain/oracle-study.ts` then reruns the #250 and #262
+comparisons on the same people with the observed strokes (recovered) and with
+the expected strokes in their place (expected). It also reports the
+calculator's own AF effect on the exposed time (AF on over AF off, planted)
+and the design's estimate with AF switched off everywhere (no AF effect).
+Recovery is within tolerance when the expected value lies inside the
+recovered 95% interval.
+
+```sh
+bun run heart-brain:oracle -- --batches 001-048 --jobs 6
+```
+
+### Data
+
+Batches 001 to 048 (the ones that extract in under an hour with 6 jobs:
+49 minutes): 551,964 bundles, none skipped, 1 person with no BP on record.
+The recovered values below are on these 48 batches, so they differ from the
+100-batch tables above.
+
+### Results
+
+| Comparison                             | Recovered (95% CI)   | Expected | Planted | No AF effect | Recovered / expected | Within tolerance |
+| -------------------------------------- | -------------------- | -------- | ------- | ------------ | -------------------- | ---------------- |
+| Between-person, AF then stroke         | 2.67 (2.16 to 3.31)  | 2.35     | 2.33    | 1.01         | 1.14 (0.92 to 1.41)  | yes              |
+| Between-person, AF from 55             | 3.31 (2.64 to 4.17)  | 2.39     | 2.37    | 1.01         | 1.39 (1.10 to 1.74)  | no               |
+| Within-person, all after, age-adjusted | 3.78 (2.07 to 6.92)  | 2.01     | 2.33    | 1.00         | 1.88 (1.03 to 3.45)  | no               |
+| Within-person, all after, crude        | 5.22 (2.90 to 10.35) | 2.83     | 2.33    | 1.36         | 1.84 (1.02 to 3.65)  | no               |
+| Within-person, 0 to 2 years            | 4.70 (2.30 to 9.60)  | 2.07     | 2.36    | 1.00         | 2.27 (1.11 to 4.63)  | no               |
+| Within-person, 2 to 5 years            | 2.83 (1.34 to 5.99)  | 2.06     | 2.34    | 1.00         | 1.38 (0.65 to 2.91)  | yes              |
+| Within-person, 5 years or more         | 3.84 (2.03 to 7.24)  | 2.00     | 2.33    | 0.99         | 1.92 (1.02 to 3.63)  | no               |
+| Within-person from 55, age-adjusted    | 4.01 (2.16 to 7.45)  | 2.03     | 2.35    | 1.00         | 1.98 (1.06 to 3.67)  | no               |
+| Case series, all ages                  | 2.82 (1.24 to 6.40)  | 1.92     |         | 1.05         | 1.47 (0.65 to 3.33)  | yes              |
+| Case series, from 55                   | 2.82 (1.24 to 6.42)  | 1.93     |         | 1.05         | 1.46 (0.64 to 3.32)  | yes              |
+
+Sensitivities move the expected values little: with the controlled BP table
+from hypertension onset they change by 0.03 or less; with AF and diabetes
+starting on the recorded day (no lag) the within-person expected values rise
+to 2.26 (age-adjusted) and the case series to 2.27, and the between-person
+ones change by 0.01 or less.
+
+Observed against expected strokes (exact Poisson intervals):
+
+| Group                        | Observed | Expected | Observed / expected |
+| ---------------------------- | -------- | -------- | ------------------- |
+| AF, after onset (all ages)   | 141      | 114.2    | 1.23 (1.04 to 1.46) |
+| AF, before onset (all ages)  | 12       | 17.9     | 0.67 (0.35 to 1.17) |
+| Matched controls             | 209      | 192.4    | 1.09 (0.94 to 1.24) |
+| Matched controls, AF from 55 | 162      | 173.1    | 0.94 (0.80 to 1.09) |
+
+What this says:
+
+- The calculator's AF step, on the person-time these designs look at, is a
+  rate ratio of about 2.3 (2.33 to 2.37 across comparisons). Because the
+  people are the same, or matched on age and sex, the designs themselves add
+  almost nothing: with AF switched off they give 1.00 to 1.05 after age
+  adjustment (the crude within-person ratio gives 1.36, age).
+- The between-person design recovers the expected value for all ages
+  (2.67 against 2.35). From 55 it overshoots (3.31 against 2.39).
+- The within-person designs recover more than expected (3.78 against 2.01),
+  and so do they on 100 batches (3.09). The expected value sits below the
+  planted 2.33 because 8.7% of the time before a recorded onset already has
+  AF; that dilution is real and expected. The overshoot is not explained.
+- The oracle's level is close for people without AF (controls 1.09 and 0.94)
+  but too low after AF onset: 23% more strokes than the calculator expects
+  from the recorded inputs (1.04 to 1.46), in every age group from 60, in
+  both sexes and with or without recorded diabetes or hypertension. Before
+  onset there are fewer than expected (0.67, 0.35 to 1.17), which fits in
+  part with a person having to survive to a later wellness visit for AF to
+  be recorded (17.5% of strokes are fatal in `stroke.json`). With only 12
+  strokes before onset this side is weak.
+- Every first stroke checked in batches 001 and 002 came through
+  `stroke.json`'s emergency encounter, not the perioperative stroke states in
+  the CABG and valve modules, so a second stroke path does not explain it.
+  The likeliest gap is an input the record does not show the way the
+  calculator sees it: the BP between visits, `blood_pressure_controlled`, or
+  the `diabetes` attribute, which `metabolic_syndrome_disease.json` sets at a
+  scheduled age while the recorded condition waits for an HbA1c result. Smoking adds
+  nothing here: no person with AF has a current-smoker status on record.
+
+So the effect size is recovered within tolerance by the between-person
+design for all ages and by the case series (whose intervals are wide), and
+not by the within-person cohort. The direction and the separation from the
+shuffle stand; the within-person size does not match the calculator until
+the after-onset excess is explained.
+
+### Why heart failure RMSSD and steps seemed to miss
+
+The table in Part 2 set the recovered mean's interval against the planted
+median. For heart failure the planted values are skewed: per subject the
+planted ratio is the mean of the generator's factor after onset over its
+mean before, and a subject whose heart failure condition ends soon after onset
+(1 of 28 eligible in batch 001; `conditionEffects` stops the effect at
+abatement) has a ratio near 1. The planted mean is 0.764 for RMSSD and 0.668
+for steps, against medians of 0.750 and 0.652. Compared subject by subject
+(recovered minus planted, mean and 95% interval):
+
+| Heart failure (91) | Planted mean | Expected with floors | Recovered mean (95% CI) | Recovered - planted       | Recovered - expected      |
+| ------------------ | ------------ | -------------------- | ----------------------- | ------------------------- | ------------------------- |
+| RMSSD, ratio       | 0.764        | 0.765                | 0.767 (0.753 to 0.782)  | +0.003 (-0.001 to +0.008) | +0.003 (-0.002 to +0.007) |
+| Steps, ratio       | 0.668        | 0.672                | 0.677 (0.658 to 0.696)  | +0.008 (+0.001 to +0.016) | +0.005 (-0.003 to +0.013) |
+
+The rest is the generator's floor (`series.ts`, `dayReadings`): noise of
+1,800 steps (6 ms for RMSSD) is added after the factor and the value is
+clamped at 500 steps (10 ms), so lowering the mean pushes more days onto the
+floor after onset than before, which raises the after mean.
+`scripts/heart-brain/wearable-expected.ts` computes the expected worn-day
+means of the clamped normal; with it the steps difference covers 0. The
+episodes of #270 multiply RMSSD on both sides and do not move the ratio
+(expected without floors 0.7641 against planted 0.7640), and the windows are
+the same 90 days on each side, so neither compounding effects nor windowing
+is involved. Every other row of Part 2 is unchanged by the rerun.
+
 ## Limits
 
 - Synthea rules, not medicine. The stroke rise at AF onset is the calculator's
@@ -231,6 +388,10 @@ shifted most, because episodes now fall on both sides.
   dies cannot get AF later, so that assumption is broken; the shuffle keeps the
   same people and shows the size of what such biases leave (about 1.3 to 1.4).
 - Age is adjusted in 5-year bands only; calendar time is not adjusted.
+- The oracle reads the calculator exactly but feeds it what the record
+  shows: BP at visits, smoking status, recorded conditions with an assumed
+  lag. It does not see `blood_pressure_controlled` or BP between visits, and
+  it under-predicts strokes after AF onset by about a fifth.
 - Wearable effect sizes are the generator's assumptions, not fitted to any
   device or person, and recovering them shows the statistics work on the
   generator, not that a real device would show the same. Three batches; a
@@ -238,5 +399,9 @@ shifted most, because episodes now fall on both sides.
 
 ## What is left
 
+- Find the input behind the 23% excess of strokes after AF onset over the
+  oracle (for example by exporting `stroke_risk` from a patched Synthea run
+  on one batch); until then the within-person effect size is not recovered
+  within tolerance.
 - New batches with `exporter.years_of_history = 0` would give the whole record,
   many more strokes before AF onset, and tighter before rates.
