@@ -79,7 +79,7 @@ describe("parseFhir", () => {
     ]);
   });
 
-  test("conditions are kept as recorded", () => {
+  test("conditions and medication requests are kept as recorded, without dosage or notes", () => {
     expect(parsed.clinical).toEqual([
       {
         resourceType: "Condition",
@@ -91,7 +91,19 @@ describe("parseFhir", () => {
         status: "resolved",
         sourceRef: "f0000000-0000-4000-8000-000000000007",
       },
+      {
+        resourceType: "MedicationRequest",
+        codeSystem: "http://www.nlm.nih.gov/research/umls/rxnorm",
+        code: "314076",
+        display: "lisinopril 10 MG Oral Tablet",
+        startAt: new Date("2024-02-10T09:00:00Z"),
+        endAt: null,
+        status: "active",
+        sourceRef: "f0000000-0000-4000-8000-000000000008",
+      },
     ]);
+    expect(bundle).toContain("Made-up dosage text");
+    expect(JSON.stringify(parsed)).not.toContain("dosage");
   });
 
   test("coded answers and numbers without a unit are reported", () => {

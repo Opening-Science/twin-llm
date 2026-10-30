@@ -185,6 +185,14 @@ describe("genomeThreadRefusedEvent", () => {
   });
 });
 
+describe("genome_variants makes a thread local-only (#307)", () => {
+  test("its stored tool part, its audit row and a skill listing it count", () => {
+    expect(toolPartsUseGenome([{ tool: "genome_variants" }])).toBe(true);
+    expect(isGenomeAuditTool("genome.variants")).toBe(true);
+    expect(requestsGenomeTools(["genome_variants"])).toBe(true);
+  });
+});
+
 describe("imported-data tools make a thread local-only too", () => {
   test("a stored imported-data tool part, audit row or skill tool counts", () => {
     expect(toolPartsUseGenome([{ tool: "imported_latest" }])).toBe(true);
@@ -197,9 +205,16 @@ describe("imported-data tools make a thread local-only too", () => {
     expect(LOCAL_ONLY_AUDIT_TOOLS).toEqual([
       "genome.report",
       "genome.dna_ask",
+      "genome.variants",
       "imported_datasets",
       "imported_latest",
       "imported_trend",
+      "imported_table",
+      "imported_conditions",
+      "imported_medications",
     ]);
+    expect(requestsGenomeTools(["imported_table"])).toBe(true);
+    expect(requestsGenomeTools(["imported_conditions"])).toBe(true);
+    expect(requestsGenomeTools(["imported_medications"])).toBe(true);
   });
 });

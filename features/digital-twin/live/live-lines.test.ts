@@ -3,6 +3,8 @@ import { describe, expect, test } from "bun:test";
 import { IDLE_STATUS } from "./live-conditioning";
 import {
   BODYPARTS3D_BREATH_NOTE,
+  CHAMBERS_ILLUSTRATIVE,
+  CHAMBERS_LINE,
   BODYPARTS3D_HEART_NOTE,
   ILLUSTRATIVE,
   NO_RATE,
@@ -54,6 +56,7 @@ describe("liveLines", () => {
     pulsing,
     breathing,
     glowing,
+    chambers: null,
   });
 
   test("nothing live, nothing said", () => {
@@ -87,6 +90,31 @@ describe("liveLines", () => {
     expect(lines.join(" ").toLowerCase()).not.toContain("stress");
     expect(liveLines(on(false, false, true), VITALS, "bodyparts3d", TODAY)[1]).toContain(
       "Soft glow on the nervous system:",
+    );
+  });
+
+  test("beating chambers say it is an illustrative simulation and where the beat times come from", () => {
+    const beating = { ...on(true, false, false), chambers: "sinus" } as const;
+    const pulse =
+      "Pulse at 61 bpm · last reading 14 Mar 2025 (1 year ago) · Synthetic person 1 heart rate";
+    expect(liveLines(beating, VITALS, "hra", TODAY, "sinus")).toEqual([
+      "Illustrative simulation, not a physiological model.",
+      pulse,
+      "Heart chambers: the region where the atria sit contracts, then the ventricles' region 160 ms later (an illustrative delay). The atlas heart is one mesh, so the regions are approximate.",
+      "Beat timing: a simulated sinus rhythm with beat-to-beat variation from the rhythm simulator, paced to the heart rate above.",
+    ]);
+    expect(liveLines(beating, VITALS, "hra", TODAY, "regular")[3]).toBe(
+      "Beat timing: regular, at the heart rate above. The wearable gives a rate, not the time of each beat.",
+    );
+    const fibrillating = { ...beating, chambers: "af" } as const;
+    expect(liveLines(fibrillating, VITALS, "hra", TODAY, "paroxysmal_af")).toEqual([
+      CHAMBERS_ILLUSTRATIVE,
+      pulse,
+      CHAMBERS_LINE,
+      "Beat timing: simulated by the rhythm simulator with an episode of atrial fibrillation, because this synthetic person's record lists it on that day. Now: atrial fibrillation, so the atria quiver and the beats come irregularly.",
+    ]);
+    expect(liveLines(beating, VITALS, "hra", TODAY, "paroxysmal_af")[3]).toEndWith(
+      "Now: sinus rhythm.",
     );
   });
 

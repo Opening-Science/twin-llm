@@ -15,6 +15,7 @@ import {
 import type { KnowledgeSourceId } from "@/infrastructure/knowledge-sources";
 import type { CatalogAgent } from "@/infrastructure/model-catalog";
 import { personalDataSentEvent } from "@/infrastructure/personal-data-audit";
+import { noteAuditEvent, notesForTurn, type TwinNote } from "@/infrastructure/twin-notes";
 import {
   agentSkillUnavailable,
   permitSkillRequest,
@@ -71,6 +72,14 @@ import type { WearableContext } from "./wearable-context";
  * the audit rows name the base model, which is what saw the data, and the
  * skill row names the agent too. An agent Auto picked (#219) runs exactly the
  * same way; its skill row adds `via: "auto"`.
+ *
+ * Twin notes (#43): after every check above, the person's notes saved before
+ * this thread began are filtered to those whose data mode and permit allow
+ * this turn's model (`notesForTurn`) and handed to the stream, which keeps as
+ * many as the turn's prompt room allows and writes their ids to the audit
+ * chain as `memory.notes.load` (note ids and a count) through `recordLoad`.
+ * If that write fails, the model is not called. Without `loadTwinNotes`
+ * (incognito) no note is read.
  */
 
 export type ChatProviderSettings = Readonly<{
@@ -92,6 +101,11 @@ export type StartAnswerDeps = Readonly<{
   appendAudit: (input: AppendInput) => Promise<unknown>;
   /** A runnable skill by name, shipped or the person's own (#174), or null. */
   findSkill: (name: string, appUserId: string) => Promise<TurnSkill | null>;
+  /**
+   * The person's twin notes saved before this turn's thread began, or none
+   * when they turned loading off (#43). Left out, no note is loaded.
+   */
+  loadTwinNotes?: (appUserId: string, turnId: string) => Promise<readonly TwinNote[]>;
   stream: (call: ChatRequest, context: StreamContext) => Promise<Response>;
   /** Stores the refusal sentence on the turn's row for this model. */
   markRefused: (
@@ -218,12 +232,39 @@ export const createStartAnswer =
       );
     }
 
+    const notes =
+      deps.loadTwinNotes === undefined
+        ? null
+        : notesForTurn(await deps.loadTwinNotes(appUserId, call.turnId), {
+            mode: settings.dataMode,
+            provider: settings.provider,
+            exoscalePersonalData: settings.exoscalePersonalData,
+            chatIsLocal: deps.chatIsLocal(),
+          });
+    const twinNotes =
+      notes === null || notes.length === 0
+        ? null
+        : {
+            notes,
+            recordLoad: async (ids: readonly string[]) => {
+              await deps.appendAudit(
+                noteAuditEvent("load", {
+                  actor: actorId,
+                  sessionId: call.turnId,
+                  ids: { noteIds: ids },
+                  rowCount: ids.length,
+                }),
+              );
+            },
+          };
+
     return deps.stream(call, {
       clerkId: actorId,
       genomeThread,
       disabledSources: await deps.loadDisabledSources(appUserId),
       ...(skill === null ? {} : { skill }),
       ...(agent === null ? {} : { agent }),
+      ...(twinNotes === null ? {} : { twinNotes }),
       ...wearables,
     });
   };

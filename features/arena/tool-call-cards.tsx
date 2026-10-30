@@ -3,22 +3,29 @@
 import { useEffect, useId, useRef, useState } from "react";
 
 import type { NumberSource } from "@/infrastructure/number-sources";
+import { ChevronIcon } from "@/infrastructure/ui-kit/icons";
 import { StatusBadge, type StatusTone } from "@/infrastructure/ui-kit/status-badge";
+import { StepTrace } from "@/infrastructure/ui-kit/step-trace";
 
-import type { ToolActivity } from "./conversation";
+import type { AnswerStatus, ToolActivity } from "./conversation";
 import { cardNumbers, sourceCallIds } from "./number-links";
 import { rowsLabel, STATE_LABELS, type ToolCardState } from "./tool-cards";
+import { answerTraceState, toolStepLabels, toolStepState } from "./tool-steps";
 
 /**
- * The answer's tool calls, one compact card each, folded by default. The
- * header names the call and its first arguments; the fold-out lists every
- * named argument, the tool's own name, for a refusal why, and the answer's
- * numbers the call holds with their rows. The same cards show while the
- * answer streams and after a reload (`tool-cards.ts`).
+ * The answer's tool calls as a step trace (`StepTrace`): while the answer
+ * streams, the line names the call in progress and the steps list beneath
+ * it; once it settles the line reads "Used N tools in X.Xs" and the list
+ * folds. Each step is a compact card, folded by default: its header says
+ * what the call did in plain words (`tool-steps.ts`), with its rows and
+ * state; the fold-out lists every named argument, the call's title and the
+ * tool's own name, for a refusal why, and the answer's numbers the call
+ * holds with their rows. The same steps show while the answer streams and
+ * after a reload (`tool-cards.ts`).
  *
- * A number pressed in the answer (`ActiveNumber`) opens every card that holds
- * it and moves focus to the first; `key` changes on each press, so pressing
- * the same number again scrolls back to it.
+ * A number pressed in the answer (`ActiveNumber`) opens the trace and every
+ * card that holds it, and moves focus to the first; `key` changes on each
+ * press, so pressing the same number again scrolls back to it.
  */
 
 export type ActiveNumber = Readonly<{ text: string; key: number }>;
@@ -34,24 +41,10 @@ const TONE: Readonly<Record<ToolCardState, StatusTone>> = {
   error: "warn",
 };
 
-const Chevron = ({ open }: Readonly<{ open: boolean }>) => (
-  <svg
-    viewBox="0 0 20 20"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={1.8}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-    focusable="false"
-    className={`size-3.5 shrink-0 transition-transform ${open ? "rotate-90" : ""}`}
-  >
-    <path d="m8 5 5 5-5 5" />
-  </svg>
-);
-
 type CardProps = Readonly<{
   card: ToolActivity;
+  /** What the call did, in plain words: the header's text. */
+  heading: string;
   numbers: readonly NumberSource[];
   titleId: string | undefined;
   /** The pressed number when this card holds it. */
@@ -60,7 +53,14 @@ type CardProps = Readonly<{
   focus: boolean;
 }>;
 
-const ToolCallCard = ({ card, numbers, titleId, highlight, focus }: CardProps) => {
+const ToolCallCard = ({
+  card,
+  heading,
+  numbers,
+  titleId,
+  highlight,
+  focus,
+}: CardProps) => {
   const [open, setOpen] = useState(false);
   const [openedFor, setOpenedFor] = useState<number | null>(null);
   const header = useRef<HTMLButtonElement>(null);
@@ -77,14 +77,10 @@ const ToolCallCard = ({ card, numbers, titleId, highlight, focus }: CardProps) =
     header.current?.focus({ preventScroll: true });
   }, [focusKey]);
 
-  const summary = card.args
-    .slice(0, 2)
-    .map((arg) => arg.value)
-    .join(" · ");
   const rows = rowsLabel(card.rowCount);
   const held = cardNumbers(numbers, card.id);
   return (
-    <li className="tool-card" data-highlight={highlight === null ? undefined : ""}>
+    <div className="tool-card" data-highlight={highlight === null ? undefined : ""}>
       <button
         ref={header}
         type="button"
@@ -93,13 +89,11 @@ const ToolCallCard = ({ card, numbers, titleId, highlight, focus }: CardProps) =
         onClick={() => setOpen((was) => !was)}
         className="tool-card-header"
       >
-        <Chevron open={open} />
-        <span id={titleId} className="text-foreground min-w-12 truncate font-medium">
-          {card.title}
-        </span>
-        {/* Zero basis: the summary only takes the room the title leaves. */}
-        <span className="text-muted-foreground min-w-0 flex-1 basis-0 truncate">
-          {summary}
+        <ChevronIcon
+          className={open ? "rotate-90 transition-transform" : "transition-transform"}
+        />
+        <span id={titleId} className="text-foreground min-w-0 flex-1 sm:truncate">
+          {heading}
         </span>
         <span className="flex shrink-0 items-center gap-2">
           {rows !== null && (
@@ -116,6 +110,8 @@ const ToolCallCard = ({ card, numbers, titleId, highlight, focus }: CardProps) =
               <dd className="min-w-0 break-words">{arg.value}</dd>
             </div>
           ))}
+          <dt className="text-muted-foreground">Call</dt>
+          <dd>{card.title}</dd>
           <dt className="text-muted-foreground">Tool</dt>
           <dd className="font-mono">{card.tool}</dd>
           {rows !== null && (
@@ -144,17 +140,23 @@ const ToolCallCard = ({ card, numbers, titleId, highlight, focus }: CardProps) =
           </div>
         )}
       </div>
-    </li>
+    </div>
   );
 };
 
-export const ToolCallCards = ({
+export const ToolSteps = ({
   cards,
+  status,
+  workingLabel,
   numbers = [],
   active = null,
   idPrefix,
 }: Readonly<{
   cards: readonly ToolActivity[];
+  /** The answer's status: the trace settles when the answer does. */
+  status: AnswerStatus;
+  /** Said on the line while the answer streams and no call is running. */
+  workingLabel?: string;
   /** The answer's numbers and the calls that hold them. */
   numbers?: readonly NumberSource[];
   active?: ActiveNumber | null;
@@ -166,12 +168,17 @@ export const ToolCallCards = ({
     active === null
       ? []
       : sourceCallIds(numbers.filter((source) => source.text === active.text));
-  return (
-    <ul aria-label="Tool calls" className="flex flex-col gap-1.5">
-      {cards.map((card) => (
+  const labels = toolStepLabels(cards);
+  const steps = cards.map((card, index) => {
+    const label = labels[index] ?? card.title;
+    return {
+      id: card.id,
+      label,
+      state: toolStepState(card),
+      detail: (
         <ToolCallCard
-          key={card.id}
           card={card}
+          heading={label}
           numbers={numbers}
           titleId={
             idPrefix === undefined ? undefined : toolCardTitleId(idPrefix, card.id)
@@ -179,7 +186,17 @@ export const ToolCallCards = ({
           highlight={holders.includes(card.id) ? active : null}
           focus={holders[0] === card.id}
         />
-      ))}
-    </ul>
+      ),
+    };
+  });
+  return (
+    <StepTrace
+      steps={steps}
+      state={answerTraceState(status)}
+      workingLabel={workingLabel}
+      noun="tool"
+      listLabel="Tool calls"
+      revealKey={active === null || holders.length === 0 ? undefined : active.key}
+    />
   );
 };

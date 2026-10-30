@@ -31,6 +31,8 @@ import {
   wearableLiveVitals,
   type LiveVitals,
 } from "../live/live-rates";
+import { type HeartRhythmSource } from "../live/heart-rhythm";
+import { type CohortRhythm } from "./cohort-handler";
 
 /** Whose biomarkers: the Demo borrows synthetic labs, Self shows its own wearable vitals. */
 export type BiomarkerSubject = "demo" | "self" | "other";
@@ -51,6 +53,8 @@ export type BiomarkerTabModel = Readonly<{
   people: readonly CohortPerson[];
   /** Rates and the HRV state for the live twin (G4); none for other subjects. */
   live: LiveVitals;
+  /** Where the heart chambers' beat timing comes from (#53); null without a heart rate. */
+  rhythm: HeartRhythmSource | null;
   status: BiomarkerStatus;
   personRef: string;
   onPerson: (ref: string) => void;
@@ -98,7 +102,19 @@ type Labs = Readonly<{
   ref: string;
   values: readonly LabValue[] | null;
   vitals: readonly LabValue[] | null;
+  rhythm: CohortRhythm;
 }>;
+
+/** A synthetic person's rhythm is simulated; Self's data has a rate only. */
+export const rhythmSource = (
+  subject: BiomarkerSubject,
+  personRef: string,
+  rhythm: CohortRhythm,
+): HeartRhythmSource | null => {
+  if (subject === "self") return { kind: "measured" };
+  if (subject !== "demo" || rhythm === null || personRef === "") return null;
+  return { kind: "simulated", subjectRef: personRef, ...rhythm };
+};
 
 export const useBiomarkerTab = ({
   subject,
@@ -120,7 +136,12 @@ export const useBiomarkerTab = ({
     undefined,
   );
   const [chosenRef, setChosenRef] = useState<string | null>(initialPersonRef ?? null);
-  const [labs, setLabs] = useState<Labs>({ ref: "", values: [], vitals: [] });
+  const [labs, setLabs] = useState<Labs>({
+    ref: "",
+    values: [],
+    vitals: [],
+    rhythm: null,
+  });
   const [metricsRead, setMetrics] = useState<readonly FormattableMetric[] | undefined>(
     undefined,
   );
@@ -147,6 +168,7 @@ export const useBiomarkerTab = ({
           ref: personRef,
           values: reading?.values ?? null,
           vitals: reading?.vitals ?? null,
+          rhythm: reading?.rhythm ?? null,
         });
       }
     });
@@ -188,6 +210,12 @@ export const useBiomarkerTab = ({
           ? wearableLiveVitals(metrics)
           : NO_LIVE_VITALS,
     [subject, cohortVitals, personLabel, metrics],
+  );
+
+  const cohortRhythm = current?.rhythm ?? null;
+  const rhythm = useMemo(
+    () => rhythmSource(subject, personRef, cohortRhythm),
+    [subject, personRef, cohortRhythm],
   );
 
   const scheme = ATLASES[anatomy.atlasId].scheme;
@@ -239,5 +267,6 @@ export const useBiomarkerTab = ({
     personRef,
     onPerson: setChosenRef,
     live,
+    rhythm,
   };
 };
