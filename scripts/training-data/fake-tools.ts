@@ -24,8 +24,8 @@ import { KEYED_TOOLS } from "../evaluation/question-set";
 import {
   DEFAULT_DAYS,
   DEFAULT_END_DAY,
+  DAILY_METRICS,
   generateSeries,
-  WEARABLE_METRICS,
 } from "../synthetic-wearables/series";
 import { generateWorkouts, WORKOUT_METRICS } from "../synthetic-wearables/workouts";
 
@@ -196,7 +196,7 @@ export const generatedWearableRows = (
   const options = { seed, subjectRef, endDay: DEFAULT_END_DAY, days: DEFAULT_DAYS };
   const series = generateSeries(options);
   const daily = series.map((reading) => {
-    const metric = WEARABLE_METRICS[reading.metric];
+    const metric = DAILY_METRICS[reading.metric];
     return {
       loinc: metric.code,
       value: reading.value,

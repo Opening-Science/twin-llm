@@ -141,8 +141,9 @@ DATABASE_URL="$(grep '^DATABASE_URL=' .env.eval | cut -d= -f2-)" bunx prisma mig
 bun run synthea:generate -- --preset eval   # contentSha256 must be EVAL_CONTENT_SHA256 (x86_64; elsewhere use the eval-cohort-v1 release, docs/warehouse.md)
 bun --env-file=.env.eval --preload ./features/chat/response/preload-server-only.mjs \
   scripts/warehouse/ingest.ts .synthea/fhir --cohort synthea-v4-seed42
-# the cohort's synthetic wearable series (generator v2, seed 42, 90 days ending 2026-10-01)
-bun run wearables:generate -- --in .synthea/fhir --allow-eval-cohort
+# the cohort's synthetic wearable series (generator v2, seed 42, 90 days ending 2026-10-01);
+# the key was built from v2, so keep --generator-version 2 until it is rebuilt
+bun run wearables:generate -- --in .synthea/fhir --allow-eval-cohort --generator-version 2
 bun --env-file=.env.eval --preload ./features/chat/response/preload-server-only.mjs \
   scripts/warehouse/ingest.ts .synthea/wearables --cohort synthea-v4-seed42
 bun run eval:spread-subjects     # after a cohort change: subjects by the rule below

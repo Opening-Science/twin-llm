@@ -199,6 +199,32 @@ twin, the liver on the twin when a subject's values are asked for, a turn with l
 wearables, a "is my liver damaged?" question, tools and views it may not use, and a
 hosted provider. `/nutrition` does not draw `twin.body`.
 
+## /rhythm and /brain
+
+`skills/rhythm` and `skills/brain` (#253) are the skills of the Heart rhythm (research) and
+Brain (research) agents and can be typed as `/rhythm` and `/brain`. Both describe a named
+synthetic subject's record or the linked wearables and the agent's own literature, and
+never say what a person has.
+
+- `/rhythm` reads `hrv_trend` and `resting_hr_trend` over the 90 days ending on the
+  subject's last day, each source on its own, lists recorded rhythm conditions with
+  `conditions_timeline`, and gives heart rate (8867-4) before and after a recorded
+  condition with `values_around_event`. It may draw one `chart.timeseries`.
+- `/brain` lists recorded conditions (stroke, Alzheimer's disease and others) with
+  `conditions_timeline`, recorded cognition scores such as the MMSE total (72106-8) with
+  `observations_for_subject`, a measure such as systolic blood pressure (8480-6) around a
+  recorded condition with `values_around_event`, and, only when asked, HRV and resting
+  heart rate as indirect autonomic measures. It may draw one `chart.timeseries`.
+
+Both quote literature from `knowledge_search` only word for word with its attribution
+line. A question about whether the person has a rhythm condition, a stroke or dementia,
+or what a reading means for them, gets one fixed sentence ending "If this concerns you,
+talk to a clinician." and no tool call; a dose, medicine or plan gets another. Neither
+tells the person what they have, or writes "normal", "abnormal" or a threshold for them.
+Local Ollama only. The eval cases cover the wearable series, a recorded condition with
+values around it, cognition scores, the literature, a question about whether the person
+has a condition, a hosted provider and views they may not draw. The planned `rhythm_irregularity` tool (#246) is not listed yet.
+
 ## Built-in commands
 
 Built-ins live in `features/commands/registry.ts`. A skill may not take a built-in's name.
