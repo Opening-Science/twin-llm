@@ -70,7 +70,7 @@ describe("routeAgent", () => {
     expect(routeAgent("Chart 93832-4", ALL).agentId).toBe("sleep");
   });
 
-  test("no rule matches: the General Practitioner, with no topic", () => {
+  test("no rule matches: the General agent, with no topic", () => {
     expect(routeAgent("Summarise my record.", ALL)).toEqual({
       agentId: "gp",
       topic: null,
@@ -97,7 +97,7 @@ describe("routeAgent", () => {
     expect(routeAgent("What is my resting heart rate?", ALL).agentId).toBe("trainer");
   });
 
-  test("a medicine or dose decision goes to the General Practitioner, whatever it names", () => {
+  test("a medicine or dose decision goes to the General agent, whatever it names", () => {
     expect(routeAgent("What statin dose fits, given my latest LDL?", ALL)).toEqual({
       agentId: "gp",
       topic: "a medicine or dose decision",
@@ -134,16 +134,66 @@ describe("routeAgent", () => {
     expect(routeAgent("Write and run a SQL query.", ALL).agentId).toBe("gp");
   });
 
-  test("the General Practitioner's own topics come back on its line", () => {
-    expect(DEFAULT_AGENT_TOPICS.length).toBeGreaterThan(0);
-    expect(
-      autoChoiceLineFor("What dose of metformin?", "Auto → General Practitioner"),
-    ).toBe(
-      "Auto chose General Practitioner: the question is about a medicine or dose decision.",
+  test("heart rhythm words go to the Heart rhythm agent, HRV alone stays with Trainer", () => {
+    expect(routeAgent("Was atrial fibrillation recorded?", ALL)).toEqual({
+      agentId: "rhythm",
+      topic: "atrial fibrillation",
+    });
+    expect(routeAgent("Palpitations and RR intervals last week", ALL).agentId).toBe(
+      "rhythm",
+    );
+    expect(routeAgent("Latest 80404-7 and its rhythm", ALL).agentId).toBe("rhythm");
+    expect(routeAgent("What is my HRV trend?", ALL).agentId).toBe("trainer");
+    expect(routeAgent("HRV and arrhythmia in the literature", ALL).agentId).toBe(
+      "rhythm",
     );
   });
 
-  test("every agent but the General Practitioner has rules, and only real agents do", () => {
+  test("a heart rhythm or circadian rhythm is not the heart as an organ or a heart rhythm", () => {
+    expect(routeAgent("Describe my heart rhythm.", ALL).agentId).toBe("rhythm");
+    expect(routeAgent("How regular is my circadian rhythm?", ALL).agentId).toBe("gp");
+  });
+
+  test("stroke, cognition and autonomic words go to the Brain agent", () => {
+    expect(routeAgent("What was recorded around the stroke?", ALL)).toEqual({
+      agentId: "brain",
+      topic: "stroke",
+    });
+    expect(routeAgent("Chart 72106-8", ALL).agentId).toBe("brain");
+    expect(routeAgent("Dementia and memory scores", ALL).agentId).toBe("brain");
+    expect(routeAgent("The autonomic nervous system in studies", ALL).agentId).toBe(
+      "brain",
+    );
+    expect(routeAgent("Where is the nervous system?", ALL).agentId).toBe("anatomy");
+  });
+
+  test("a guideline library question goes to the General agent, whatever it names", () => {
+    expect(routeAgent("What does the EAN dementia guideline cover?", ALL)).toEqual({
+      agentId: "gp",
+      topic: "the guideline library",
+    });
+    expect(routeAgent("Which guideline covers atrial fibrillation?", ALL).agentId).toBe(
+      "gp",
+    );
+  });
+
+  test("a medicine or dose decision about rhythm or the brain still goes to the General agent", () => {
+    expect(routeAgent("Should I take a blood thinner for my AF?", ALL).agentId).toBe(
+      "gp",
+    );
+    expect(routeAgent("What dose of donepezil after the stroke?", ALL).agentId).toBe(
+      "gp",
+    );
+  });
+
+  test("the General agent's own topics come back on its line", () => {
+    expect(DEFAULT_AGENT_TOPICS.length).toBeGreaterThan(0);
+    expect(autoChoiceLineFor("What dose of metformin?", "Auto → General")).toBe(
+      "Auto chose General: the question is about a medicine or dose decision.",
+    );
+  });
+
+  test("every agent but the General agent has rules, and only real agents do", () => {
     expect(Object.keys(ROUTE_TOPICS).sort()).toEqual(
       ALL.filter((id) => id !== "gp").sort(),
     );
@@ -193,8 +243,8 @@ describe("Auto's column name and line", () => {
     expect(autoChoiceLine("Diet specialist", "body weight")).toBe(
       "Auto chose Diet specialist: the question is about body weight.",
     );
-    expect(autoChoiceLine("General Practitioner", null)).toBe(
-      "Auto chose General Practitioner: no specialist agent here matched the question.",
+    expect(autoChoiceLine("General", null)).toBe(
+      "Auto chose General: no specialist agent here matched the question.",
     );
   });
 
@@ -202,8 +252,8 @@ describe("Auto's column name and line", () => {
     expect(
       autoChoiceLineFor("How has my weight changed?", "Auto → Diet specialist"),
     ).toBe("Auto chose Diet specialist: the question is about body weight.");
-    expect(autoChoiceLineFor("How did I sleep?", "Auto → General Practitioner")).toBe(
-      "Auto chose General Practitioner: no specialist agent here matched the question.",
+    expect(autoChoiceLineFor("How did I sleep?", "Auto → General")).toBe(
+      "Auto chose General: no specialist agent here matched the question.",
     );
     expect(autoChoiceLineFor("How did I sleep?", "qwen3:8b")).toBeNull();
   });

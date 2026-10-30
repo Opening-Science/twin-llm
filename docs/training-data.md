@@ -352,14 +352,14 @@ role line are read from `infrastructure/agents.ts` (#218), the agents the chat
 runs, so a role change there reaches the training data without a second copy.
 Only each agent's area and hand-over topics live in `tracks.ts`.
 
-| Track      | Agent                | Families                                                                                                                                                                                                      | Codes                                                                      | Styles         |
-| ---------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | -------------- |
-| `general`  | General Practitioner | every default family                                                                                                                                                                                          | every measure                                                              | all four       |
-| `diet`     | Diet specialist      | latest, trend, baseline, compare, outside record, near miss, unit conversion, declines, other person                                                                                                          | weight, BMI, HbA1c, glucose, total, LDL and HDL cholesterol, triglycerides | all four       |
-| `anatomy`  | Anatomy specialist   | `anatomy_note`, latest, near miss, absent code, decline condition, other person                                                                                                                               | systolic blood pressure, creatinine                                        | all four       |
-| `sleep`    | Sleep                | `sleep_summary`, `sleep_no_rows`, the five data families, outside record, wearable key, decline condition, other person                                                                                       | sleep duration, respiratory rate                                           | formal, casual |
-| `trainer`  | Trainer              | `hrv_trend`, `resting_hr_trend`, `training_load`, `wearable_too_short`, `wearable_no_rows`, the five data families, outside record, near miss, unit conversion, wearable key, decline condition, other person | resting heart rate, heart rate, daily step count                           | casual, terse  |
-| `genetics` | Genetics             | the seven genome families (turns on `--genome`)                                                                                                                                                               | none                                                                       | all four       |
+| Track      | Agent              | Families                                                                                                                                                                                                      | Codes                                                                      | Styles         |
+| ---------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | -------------- |
+| `general`  | General            | every default family                                                                                                                                                                                          | every measure                                                              | all four       |
+| `diet`     | Diet specialist    | latest, trend, baseline, compare, outside record, near miss, unit conversion, declines, other person                                                                                                          | weight, BMI, HbA1c, glucose, total, LDL and HDL cholesterol, triglycerides | all four       |
+| `anatomy`  | Anatomy specialist | `anatomy_note`, latest, near miss, absent code, decline condition, other person                                                                                                                               | systolic blood pressure, creatinine                                        | all four       |
+| `sleep`    | Sleep              | `sleep_summary`, `sleep_no_rows`, the five data families, outside record, wearable key, decline condition, other person                                                                                       | sleep duration, respiratory rate                                           | formal, casual |
+| `trainer`  | Trainer            | `hrv_trend`, `resting_hr_trend`, `training_load`, `wearable_too_short`, `wearable_no_rows`, the five data families, outside record, near miss, unit conversion, wearable key, decline condition, other person | resting heart rate, heart rate, daily step count                           | casual, terse  |
+| `genetics` | Genetics           | the seven genome families (turns on `--genome`)                                                                                                                                                               | none                                                                       | all four       |
 
 Every track also has `agent_handover`. No two specialists ask about the same
 code. A track keeps only questions in its styles, so the sleep and trainer sets
@@ -403,11 +403,11 @@ to another agent. Templates only, like every other family.
   `handover-family.ts`, `handover.<style>`) calls no tool, says the question is
   outside what it looks at and names the agent that fits with that agent's
   role line. Outcome `handed_over`.
-- The General Practitioner asked a Diet, Sleep or Trainer question reads the
+- The General agent asked a Diet, Sleep or Trainer question reads the
   latest value with `latest_by_loinc`, answers as `latest_value` does, and
   names the specialist to ask for more. Asked an anatomy question, it answers
   as `anatomy_note` does and names the Anatomy agent. Asked about the genome
-  report, which a GP turn cannot read, it calls no tool and names the
+  report, which a General turn cannot read, it calls no tool and names the
   Genetics agent.
 
 On the 1M cohort, `training:batches -- --tracks` writes one set per track in

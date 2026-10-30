@@ -137,7 +137,7 @@ describe("agents in the catalog (#218)", () => {
       { id: "agent:auto", name: "Auto", providerId: "ollama", contextTokens: 16_384 },
       {
         id: "agent:gp",
-        name: "General Practitioner",
+        name: "General",
         providerId: "ollama",
         contextTokens: 16_384,
       },
@@ -206,7 +206,7 @@ describe("agents in the catalog (#218)", () => {
     expect(catalogAgentOf("agent:genetics", rows)).toBeNull();
   });
 
-  test("Auto heads the agents, runs on the General Practitioner's base and has no skill", () => {
+  test("Auto heads the agents, runs on the General agent's base and has no skill", () => {
     const rows = withAgents([ollama("qwen3:8b")], LOCAL);
     expect(rows[0]?.agent).toEqual({
       id: "auto",
@@ -255,7 +255,7 @@ describe("agents in the catalog (#218)", () => {
     );
   });
 
-  test("defaultModelSelection: General Practitioner, Diet and Anatomy where all three are offered", () => {
+  test("defaultModelSelection: General, Diet and Anatomy where all three are offered", () => {
     const skills = [
       ...SKILLS,
       { name: "nutrition", providers: ["ollama"], sources: [], tools: [] },

@@ -31,7 +31,7 @@ const LOCAL_PREFERENCE: readonly string[] = Object.freeze(["qwen3:8b", "qwen3:4b
 export const AGENTS: readonly Agent[] = Object.freeze([
   {
     id: "gp",
-    name: "General Practitioner",
+    name: "General",
     role: "Looks at the whole record and says when a question is better asked of one of the specialist agents.",
     skill: null,
     modelPreference: LOCAL_PREFERENCE,
@@ -71,6 +71,20 @@ export const AGENTS: readonly Agent[] = Object.freeze([
     skill: "genome",
     modelPreference: LOCAL_PREFERENCE,
   },
+  {
+    id: "rhythm",
+    name: "Heart rhythm (research)",
+    role: "Describes heart rate, heart rate variability and recorded rhythm conditions in the data and in the cardiology literature, and never says what rhythm or condition a person has.",
+    skill: "rhythm",
+    modelPreference: LOCAL_PREFERENCE,
+  },
+  {
+    id: "brain",
+    name: "Brain (research)",
+    role: "Describes recorded stroke, cognition and autonomic data and the neurology literature, and never says what condition a person has.",
+    skill: "brain",
+    modelPreference: LOCAL_PREFERENCE,
+  },
 ]);
 
 /**
@@ -81,7 +95,7 @@ export const AGENTS: readonly Agent[] = Object.freeze([
 export const AUTO_AGENT = Object.freeze({
   id: "auto",
   name: "Auto",
-  role: "Picks one of the agents for each question from keyword and LOINC rules, the General Practitioner when none match.",
+  role: "Picks one of the agents for each question from keyword and LOINC rules, the General agent when none match.",
 });
 
 export const agentModelId = (agent: Pick<Agent, "id">): string =>
