@@ -12,6 +12,9 @@ import {
   BODYPARTS3D_BREATH_NOTE,
   BODYPARTS3D_HEART_NOTE,
   breathingLine,
+  CHAMBERS_ILLUSTRATIVE,
+  CHAMBERS_LINE,
+  chambersTimingLine,
   hrvLine,
   ILLUSTRATIVE,
   LIVE_PANEL,
@@ -19,6 +22,7 @@ import {
   pulseLine,
   SHOW_ORGANS,
 } from "./live-copy";
+import { type HeartRhythm } from "./heart-rhythm";
 import { type LiveVitals } from "./live-rates";
 
 /** The lines for what is live right now, in order; empty when nothing is. `today` is an ISO day. */
@@ -27,12 +31,19 @@ export const liveLines = (
   vitals: LiveVitals,
   scheme: AtlasScheme,
   today: string,
+  timing: HeartRhythm["timing"] = "regular",
 ): readonly string[] => {
   const moving = status.pulsing || status.breathing;
   const bodyParts3d = scheme === "bodyparts3d";
+  const chambers = status.pulsing ? status.chambers : null;
   return [
-    ...(moving || status.glowing ? [ILLUSTRATIVE] : []),
+    ...(chambers !== null
+      ? [CHAMBERS_ILLUSTRATIVE]
+      : moving || status.glowing
+        ? [ILLUSTRATIVE]
+        : []),
     ...(status.pulsing && vitals.heart ? [pulseLine(vitals.heart, today)] : []),
+    ...(chambers !== null ? [CHAMBERS_LINE, chambersTimingLine(timing, chambers)] : []),
     ...(status.pulsing && bodyParts3d ? [BODYPARTS3D_HEART_NOTE] : []),
     ...(status.breathing && vitals.breath ? [breathingLine(vitals.breath, today)] : []),
     ...(status.breathing && bodyParts3d ? [BODYPARTS3D_BREATH_NOTE] : []),
@@ -82,17 +93,20 @@ export const LiveLines = ({
   status,
   vitals,
   scheme,
+  timing,
   context,
   extra = [],
 }: Readonly<{
   status: LiveStatus;
   vitals: LiveVitals;
+  /** Where the heart chambers' beat times come from. */
+  timing: HeartRhythm["timing"];
   scheme: AtlasScheme;
   context: LiveContext;
   extra?: readonly string[];
 }>) => {
   // The viewer's own calendar day, so "today" means today where they are.
-  const moving = liveLines(status, vitals, scheme, isoLocalDate());
+  const moving = liveLines(status, vitals, scheme, isoLocalDate(), timing);
   const note = liveNote(status, vitals, context);
   const lines = [...(moving.length > 0 ? moving : note ? [note] : []), ...extra];
   const [open, onToggle] = usePanelOpen(LIVE_PANEL_ID);
