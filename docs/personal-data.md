@@ -238,8 +238,9 @@ SHA-256 is the zip's.
 - **A genome VCF is genome data.** The import itself needs only personal mode, since no
   model sees anything at that step. Its rows are read only by a model on this machine,
   under `permitGenomeRequest` ([genome.md](genome.md), privacy rules), never by the
-  imported-data chat tools, which do not even list a VCF dataset. No chat tool reads the
-  variants yet. A save whose audit row cannot be written
+  imported-data chat tools, which do not even list a VCF dataset. Only
+  `genome_variants` (#307) reads them, by rsID or `chrN:pos`, at most 50 names a call
+  ([genome.md](genome.md#imported-vcf)). A save whose audit row cannot be written
   is undone.
 - **Fixtures are made up.** Tests use the hand-made files in
   `tests/fixtures/personal-import/` (see its `PROVENANCE`) and an in-memory store; never a
@@ -247,8 +248,7 @@ SHA-256 is the zip's.
 
 ## Next
 
-- A chat tool over imported variants, under `permitGenomeRequest`; and a way to import a
-  whole genome past the 200,000 record cap.
+- A way to import a whole genome past the 200,000 record cap.
 - Apple Health exports over the 200,000 sample cap: a way to import them (a date range, or
   per-day summaries) is not decided yet.
 - Chat tools over research tables and FHIR conditions and medication requests; the
@@ -266,4 +266,5 @@ SHA-256 is the zip's.
 | Store                          | `infrastructure/personal-data-store.ts`                      |
 | Policy                         | `permitImportedDataStore`, `permitImportedDataRequest`       |
 | Chat tools (#181)              | `packages/query-tools/imported-*.ts`, `importedDataReads`    |
+| Variant lookup (#307)          | `imported-variants.ts`, `genomeVariantReads`                 |
 | Upload size through `proxy.ts` | `proxyClientMaxBodySize` in `next.config.ts` (52 MB)         |

@@ -1418,6 +1418,33 @@
         "additionalProperties": false,
         "description": "Least-squares trend of one imported series in a window"
       }
+    },
+    {
+      "name": "genome_variants",
+      "description": "Look up named variants (rsID or chrN:pos, at most 50) in the person's own imported VCF: for each, found or not, and chrom, pos, ref, alt, genotype and filter as the file wrote them. No ranges or scans. Local models only; research use only.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "dataset_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$",
+            "description": "dataset_id of the person's imported VCF"
+          },
+          "variants": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 64
+            },
+            "description": "rsIDs or GRCh38 sites written \"chrN:pos\", at most 50"
+          }
+        },
+        "required": ["dataset_id", "variants"],
+        "additionalProperties": false,
+        "description": "Look up named variants in the person's imported VCF"
+      }
     }
   ]
 }

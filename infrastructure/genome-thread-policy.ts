@@ -4,7 +4,10 @@ import {
   GENOME_REPORT_AUDIT_TOOL,
   GENOME_TOOLS,
 } from "@/packages/carbon-x/constants";
-import { IMPORTED_TOOLS } from "@/packages/query-tools/imported-names";
+import {
+  GENOME_VARIANTS_AUDIT_TOOL,
+  IMPORTED_TOOLS,
+} from "@/packages/query-tools/imported-names";
 
 import type { LlmProvider } from "./data-mode-policy";
 
@@ -50,6 +53,7 @@ const GENOME_TOOL_NAMES: ReadonlySet<string> = new Set([
 export const LOCAL_ONLY_AUDIT_TOOLS: readonly string[] = [
   GENOME_REPORT_AUDIT_TOOL,
   DNA_ASK_AUDIT_TOOL,
+  GENOME_VARIANTS_AUDIT_TOOL,
   ...IMPORTED_TOOLS,
 ];
 

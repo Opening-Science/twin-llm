@@ -38,7 +38,11 @@ const TRAINER_TOOLS: ReadonlySet<string> = new Set([
   "resting_hr_trend",
   "training_load",
 ]);
-const GENOME_TOOLS: ReadonlySet<string> = new Set(["genome_report", "dna_ask"]);
+const GENOME_TOOLS: ReadonlySet<string> = new Set([
+  "genome_report",
+  "dna_ask",
+  "genome_variants",
+]);
 
 const LOINC = /^\d{1,7}-\d$/;
 

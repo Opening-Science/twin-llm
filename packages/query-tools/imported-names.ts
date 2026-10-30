@@ -19,3 +19,13 @@ export type ImportedToolName = (typeof IMPORTED_TOOLS)[number];
 
 export const isImportedTool = (name: string): name is ImportedToolName =>
   (IMPORTED_TOOLS as readonly string[]).includes(name);
+
+/**
+ * Looks up named variants in a person's imported VCF (#307). Not one of
+ * `IMPORTED_TOOLS`: a VCF is genome data, so this tool is held to the genome
+ * policy (`permitGenomeRequest`), not the imported-data one.
+ */
+export const GENOME_VARIANTS_TOOL = "genome_variants" as const;
+
+/** Audit-chain name of a `genome_variants` call. */
+export const GENOME_VARIANTS_AUDIT_TOOL = "genome.variants" as const;

@@ -181,6 +181,10 @@ export const sourceAvailability = (
     "ark-genome": facts.genomeChat
       ? { available: true, note: null }
       : { available: false, note: "Needs Ark and local Carbon-X" },
+    // Held to the same genome policy as the Ark report.
+    "vcf-variants": facts.genomeChat
+      ? { available: true, note: null }
+      : { available: false, note: "Needs Ark and local Carbon-X" },
     "imported-data": facts.importedChat
       ? { available: true, note: null }
       : { available: false, note: "Personal mode and a local model only" },

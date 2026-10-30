@@ -88,6 +88,7 @@ describe("chat tools and knowledge sources", () => {
         ...Object.keys(createChatTools(SCOPE, { query: ports })),
         "dna_ask",
         "genome_report",
+        "genome_variants",
         "imported_datasets",
         "imported_latest",
         "imported_trend",
