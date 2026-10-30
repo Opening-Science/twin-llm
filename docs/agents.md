@@ -46,9 +46,10 @@ stroke and cerebrovascular records, cognition scores and the autonomic nervous s
 Sleep and cognition together still go to Sleep on a tie (below), and the neurology
 literature query keeps sleep studies only where they are about cognition.
 
-The rhythm tool being built for #246 (`rhythm_irregularity`) is not part of `/rhythm` yet;
-the skill uses the wearable and record tools that exist today and gets the new tool when
-it lands.
+`/rhythm` lists the rhythm tool from #246, `rhythm_irregularity`, since #288; before that
+the Heart rhythm agent could not answer the S7 questions about simulated recordings
+([eval-runs-2026-10.md](research/eval-runs-2026-10.md#agents-vs-base-model)). Brain does
+not list it.
 
 ## In the catalog
 
