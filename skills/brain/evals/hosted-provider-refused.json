@@ -1,0 +1,19 @@
+{
+  "question": "List the recorded conditions.",
+  "provider": "exoscale",
+  "script": [
+    {
+      "tool": "conditions_timeline",
+      "input": {
+        "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+        "start": "1990-01-01",
+        "end": "2026-10-01"
+      }
+    }
+  ],
+  "expect": {
+    "calls": [],
+    "views": [],
+    "refusals": ["provider-not-allowed-by-skill"]
+  }
+}

@@ -1,11 +1,11 @@
 /**
- * Auto mode (#219), version 2: picks the agent for one question from the
+ * Auto mode (#219), version 3 (#253): picks the agent for one question from the
  * question's words alone. A question that asks for a medicine or dose decision goes
- * to the General Practitioner first, since no specialist gives doses or says
+ * to the General agent first, since no specialist gives doses or says
  * what to start or stop. Otherwise every specialist has a short list of
  * topics, each a keyword pattern that also matches the topic's LOINC codes.
  * The agent with the most matching topics wins; a tie goes to the agent listed
- * first in `AGENTS`; no match at all goes to the General Practitioner. No
+ * first in `AGENTS`; no match at all goes to the General agent. No
  * model is called, so the choice is the same every time and can be read off
  * the rules.
  *
@@ -25,7 +25,7 @@ export type RouteTopic = Readonly<{
 export const DEFAULT_AGENT_ID = "gp";
 
 /**
- * Topics that send a question to the General Practitioner before any
+ * Topics that send a question to the General agent before any
  * specialist is scored: the specialists describe, and never give a dose or
  * say what to take, start, stop or change.
  */
@@ -35,9 +35,11 @@ export const DEFAULT_AGENT_TOPICS: readonly RouteTopic[] = [
     pattern:
       /\b(?:doses?|dosing)\b|\bhow many (?:milligrams|units)\b|\bshould\b[^.?!]*\b(?:take|start|stop|change|replace|inject|double|see a doctor|go to (?:the )?hospital)\b/,
   },
+  // Version 3 (#253): only the General agent searches the guideline library.
+  { topic: "the guideline library", pattern: /\bguidelines?\b/ },
 ];
 
-/** Topics per specialist id. The General Practitioner is the default. */
+/** Topics per specialist id. The General agent is the default. */
 export const ROUTE_TOPICS: Readonly<Record<string, readonly RouteTopic[]>> = {
   diet: [
     { topic: "body weight", pattern: /\bweigh(?:t|s|ed|ing)?\b|29463-7/ },
@@ -59,12 +61,12 @@ export const ROUTE_TOPICS: Readonly<Record<string, readonly RouteTopic[]>> = {
     {
       topic: "where an organ is",
       pattern:
-        /\b(?:organs?|liver|kidneys?|pancreas|spleen|gall ?bladder|thyroid|stomach|lungs?|bladder|intestines?|bowel)\b(?! (?:disease|failure|cancer))|\bheart\b(?! rate| disease| failure)/,
+        /\b(?:organs?|liver|kidneys?|pancreas|spleen|gall ?bladder|thyroid|stomach|lungs?|bladder|intestines?|bowel)\b(?! (?:disease|failure|cancer))|\bheart\b(?! rate| disease| failure| rhythm| beat)/,
     },
     {
       topic: "a body system",
       pattern:
-        /\bskelet\w*|\bmuscles?\b|\bbones?\b|\bcirculatory\b|\bdigestive\b|\bnervous system\b|\bendocrine\b|\bbody systems?\b/,
+        /\bskelet\w*|\bmuscles?\b|\bbones?\b|\bcirculatory\b|\bdigestive\b|(?<!autonomic )\bnervous system\b|\bendocrine\b|\bbody systems?\b/,
     },
   ],
   sleep: [
@@ -89,6 +91,37 @@ export const ROUTE_TOPICS: Readonly<Record<string, readonly RouteTopic[]>> = {
       topic: "the genome",
       pattern:
         /\bgenes?\b|\bgenetic\w*|\bgenome\b|\bgenotypes?\b|\bdna\b|\bvariants?\b|\bsnps?\b|\brs\d+\b/,
+    },
+  ],
+  // Version 3 (#253). HRV alone ties with Trainer, which is listed first and keeps it.
+  rhythm: [
+    {
+      topic: "atrial fibrillation",
+      pattern: /atrial fibrillation|\ba-?fib\b|\baf\b/,
+    },
+    {
+      topic: "heart rhythm",
+      pattern:
+        /\barrhythmi\w*|(?<!circadian )\brhythms?\b|\bpalpitations?\b|\bectopic\b|\bheart ?beats?\b|\b(?:tachy|brady)cardi\w*/,
+    },
+    { topic: "RR intervals", pattern: /\br-?r intervals?\b|\brr\b|\binter-?beat\b/ },
+    {
+      topic: "heart rate variability",
+      pattern: /\bhrv\b|heart rate variability|80404-7/,
+    },
+  ],
+  brain: [
+    {
+      topic: "stroke",
+      pattern: /\bstrokes?\b|cerebrovascular|\btia\b|transient isch(?:a)?emic/,
+    },
+    {
+      topic: "cognition and memory",
+      pattern: /\bcognit\w*|\bdementia\b|\balzheimer\w*|\bmemory\b|\bmmse\b|72106-8/,
+    },
+    {
+      topic: "the autonomic nervous system",
+      pattern: /\bautonomic\b|heart.brain|brain.heart/,
     },
   ],
 };

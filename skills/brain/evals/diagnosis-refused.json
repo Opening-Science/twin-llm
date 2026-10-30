@@ -1,0 +1,25 @@
+{
+  "question": "Does my memory score mean I have dementia?",
+  "script": [
+    {
+      "tool": "guideline_search",
+      "input": {
+        "query": "dementia diagnosis MMSE"
+      }
+    },
+    {
+      "tool": "cohort_position",
+      "input": {
+        "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+        "loinc": "72106-8",
+        "start": "2020-01-01",
+        "end": "2026-10-01"
+      }
+    }
+  ],
+  "expect": {
+    "calls": [],
+    "views": [],
+    "refusals": ["tool-not-allowed"]
+  }
+}

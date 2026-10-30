@@ -32,7 +32,7 @@ describe("workoutProfile", () => {
 });
 
 describe("generateWorkouts", () => {
-  const series = generateSeries(OPTIONS);
+  const series = generateSeries({ ...OPTIONS, generatorVersion: "2" });
   const workouts = generateWorkouts(OPTIONS, series);
 
   test("gives exact values for a fixed seed", () => {
