@@ -24,6 +24,8 @@ import {
 } from "../synthetic-wearables/conditions";
 import { type DailyReading } from "../synthetic-wearables/series";
 
+import { type ExpectedMetric, expectedRatio } from "./wearable-expected";
+
 export type Group = ConditionKind | "hypertension";
 
 export type MetricName = DailyReading["metric"];
@@ -139,6 +141,12 @@ export type SubjectRow = Readonly<{
   kind: Check["kind"];
   planted: number | null;
   recovered: number | null;
+  /**
+   * RMSSD and steps only: the ratio of expected worn-day means with the
+   * generator's floors (`wearable-expected.ts`), and without them.
+   */
+  expected: number | null;
+  expectedNoFloor: number | null;
   /** Robust z of the after window against the before one; null when the baseline MAD is 0. */
   z: number | null;
   nBefore: number;
@@ -167,17 +175,32 @@ export const subjectRows = (subject: Subject): SubjectRow[] => {
   };
   const beforeDays = daysOf(subject.onset, BEFORE_WINDOW);
   return plan.checks.flatMap((check) => {
-    const values = (days: readonly string[]): number[] => {
+    const worn = (days: readonly string[]) => {
       const wanted = new Set(days);
-      return subject.series
-        .filter((reading) => reading.metric === check.metric && wanted.has(reading.day))
-        .map((reading) => reading.value);
+      return subject.series.filter(
+        (reading) => reading.metric === check.metric && wanted.has(reading.day),
+      );
     };
+    const values = (days: readonly string[]): number[] =>
+      worn(days).map((reading) => reading.value);
+    const expectedMetric: ExpectedMetric | null =
+      check.metric === "hrv_rmssd" || check.metric === "steps" ? check.metric : null;
     const before = values(beforeDays);
     const plantedBefore = average(beforeDays.map((day) => check.planted(effects(day))));
     return plan.windows.map((window) => {
       const afterDays = daysOf(subject.onset, window);
       const after = values(afterDays);
+      const expectedOf = (floors: boolean) =>
+        expectedMetric === null
+          ? null
+          : expectedRatio(
+              expectedMetric,
+              subject.key,
+              subject.conditions,
+              worn(beforeDays).map((reading) => reading.day),
+              worn(afterDays).map((reading) => reading.day),
+              floors,
+            );
       const summary = (days: readonly string[], v: readonly number[]) =>
         summariseWindow({ start: days[0] ?? "", end: days.at(-1) ?? "" }, v);
       return {
@@ -195,6 +218,8 @@ export const subjectRows = (subject: Subject): SubjectRow[] => {
           summary(beforeDays, before).mean,
           summary(afterDays, after).mean,
         ),
+        expected: expectedOf(true),
+        expectedNoFloor: expectedOf(false),
         z: robustZ(before, after),
         nBefore: before.length,
         nAfter: after.length,
@@ -216,10 +241,41 @@ export type RecoveryRow = Readonly<{
   /** Mean recovered change with a normal 95% interval over subjects. */
   recoveredMean: number | null;
   recoveredCi: Readonly<{ low: number; high: number }> | null;
+  plantedMean: number | null;
+  /** RMSSD and steps: mean expected ratio with and without the generator's floors. */
+  expectedMean: number | null;
+  expectedNoFloorMean: number | null;
+  /** Per subject, recovered minus planted (and minus expected), mean with a 95% interval. */
+  recoveredMinusPlanted: MeanCi | null;
+  recoveredMinusExpected: MeanCi | null;
   /** Subjects whose robust z is beyond 2 (either way), out of those with a z. */
   zBeyond2: number;
   withZ: number;
 }>;
+
+export type MeanCi = Readonly<{ mean: number; low: number; high: number }>;
+
+/** Mean with a normal 95% interval; null with fewer than 2 values. */
+export const meanCi = (values: readonly number[]): MeanCi | null => {
+  if (values.length < 2) return null;
+  const mean = values.reduce((t, v) => t + v, 0) / values.length;
+  const sd = Math.sqrt(
+    values.reduce((t, v) => t + (v - mean) ** 2, 0) / (values.length - 1),
+  );
+  const half = (1.959964 * sd) / Math.sqrt(values.length);
+  return { mean, low: mean - half, high: mean + half };
+};
+
+const pairedDifference = (
+  rows: readonly SubjectRow[],
+  reference: (row: SubjectRow) => number | null,
+): MeanCi | null =>
+  meanCi(
+    rows.flatMap((row) => {
+      const ref = reference(row);
+      return row.recovered === null || ref === null ? [] : [row.recovered - ref];
+    }),
+  );
 
 /** Subjects need this many worn days on each side to count. */
 export const MIN_WORN_DAYS = 10;
@@ -277,6 +333,17 @@ export const recoveryTable = (rows: readonly SubjectRow[]): RecoveryRow[] => {
               low: mean - (1.959964 * sd) / Math.sqrt(recovered.length),
               high: mean + (1.959964 * sd) / Math.sqrt(recovered.length),
             },
+      plantedMean: average(
+        group.map((row) => row.planted).filter((v): v is number => v !== null),
+      ),
+      expectedMean: average(
+        group.map((row) => row.expected).filter((v): v is number => v !== null),
+      ),
+      expectedNoFloorMean: average(
+        group.map((row) => row.expectedNoFloor).filter((v): v is number => v !== null),
+      ),
+      recoveredMinusPlanted: pairedDifference(group, (row) => row.planted),
+      recoveredMinusExpected: pairedDifference(group, (row) => row.expected),
       zBeyond2: zs.filter((z) => Math.abs(z) > 2).length,
       withZ: zs.length,
     };

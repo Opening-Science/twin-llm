@@ -15,3 +15,6 @@ tests/fixtures/synthea/*.json
 
 # Ark fixture goldens are byte-exact TSV; Prettier must not rewrite them.
 apps/ark/**/goldens/
+
+# Written by the Synthea jar (scripts/heart-brain/StrokeCalculatorGolden.java); kept as printed.
+scripts/heart-brain/stroke-calculator.golden.json

@@ -75,17 +75,30 @@ export const poolBands = (
   return groups;
 };
 
-type Case = Readonly<{ pieces: readonly Piece[] }>;
+type Case = Readonly<{ person: Person; pieces: readonly Piece[] }>;
+
+/**
+ * Instead of the observed event, how one expected event spreads over a
+ * case's pieces (any non-negative weights; they are scaled to sum to 1).
+ * Used by the oracle to fit the model to the events the calculator expects.
+ */
+export type EventWeights = (
+  person: Person,
+  pieces: readonly Piece[],
+) => readonly number[];
 
 const MAX_STEPS = 60;
 
 export const selfControlledCaseSeries = (
   people: readonly Person[],
   spec: TimingSpec,
+  eventWeights?: EventWeights,
 ): SccsResult => {
   const cases: Case[] = people.flatMap((person) => {
     const pieces = personPieces(person, spec, "case-series");
-    return pieces === null || !pieces.some((piece) => piece.event) ? [] : [{ pieces }];
+    return pieces === null || !pieces.some((piece) => piece.event)
+      ? []
+      : [{ person, pieces }];
   });
   const labels = windowLabels(spec.afterWindowsYears);
   const eventsIn = (window: string) =>
@@ -118,12 +131,27 @@ export const selfControlledCaseSeries = (
     if (g > 0) x[labels.length + g - 1] = 1;
     return x;
   };
-  const prepared = cases.map((c) => ({
-    rows: c.pieces
-      .filter((p) => p.days > 0)
-      .map((p) => ({ x: features(p), days: p.days })),
-    event: features(c.pieces.find((p) => p.event) as Piece),
-  }));
+  const expectedEvent = (c: Case, pieces: readonly Piece[]): number[] => {
+    const weights = (eventWeights as EventWeights)(c.person, pieces);
+    const total = weights.reduce((t, w) => t + w, 0);
+    return pieces.reduce(
+      (sum, piece, j) =>
+        features(piece).map(
+          (v, k) => (sum[k] as number) + (v * (weights[j] ?? 0)) / (total || 1),
+        ),
+      new Array<number>(size).fill(0),
+    );
+  };
+  const prepared = cases.map((c) => {
+    const pieces = c.pieces.filter((p) => p.days > 0);
+    return {
+      rows: pieces.map((p) => ({ x: features(p), days: p.days })),
+      event:
+        eventWeights === undefined
+          ? features(c.pieces.find((p) => p.event) as Piece)
+          : expectedEvent(c, pieces),
+    };
+  });
 
   // Windows with no events stay at 0 and are reported as null.
   const free = Array.from({ length: size }, (_, k) =>

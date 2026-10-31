@@ -133,6 +133,8 @@ describe("recoveryTable", () => {
     kind: "ratio",
     planted: 0.65,
     recovered,
+    expected: 0.7,
+    expectedNoFloor: 0.65,
     z: recovered < 0.8 ? -3 : 0.5,
     nBefore,
     nAfter: 50,
@@ -152,5 +154,33 @@ describe("recoveryTable", () => {
     expect(pooled?.recoveredMean).toBeCloseTo(2.2 / 3, 12);
     expect(pooled?.zBeyond2).toBe(2);
     expect(pooled?.withZ).toBe(3);
+  });
+
+  test("paired differences from the planted and the expected ratio", () => {
+    const [pooled] = recoveryTable([row(0.6), row(0.7), row(0.8)]);
+    expect(pooled?.plantedMean).toBeCloseTo(0.65, 12);
+    expect(pooled?.expectedMean).toBeCloseTo(0.7, 12);
+    expect(pooled?.recoveredMinusPlanted?.mean).toBeCloseTo(0.05, 12);
+    expect(pooled?.recoveredMinusExpected?.mean).toBeCloseTo(0, 12);
+    expect(pooled?.recoveredMinusExpected?.low).toBeLessThan(0);
+    expect(pooled?.recoveredMinusExpected?.high).toBeGreaterThan(0);
+  });
+});
+
+describe("expected ratios in subject rows", () => {
+  test("heart failure RMSSD and steps carry an expected ratio above the planted factor", () => {
+    const rows = subjectRows(
+      subjectWith("heart_failure", "2020-06-01", [
+        condition("heart_failure", "2020-06-01"),
+      ]),
+    );
+    for (const metric of ["hrv_rmssd", "steps"] as const) {
+      const found = rows.find((r) => r.metric === metric);
+      expect(found?.expected).not.toBeNull();
+      expect(found?.expected ?? 0).toBeGreaterThanOrEqual(
+        (found?.expectedNoFloor ?? 1) - 1e-9,
+      );
+    }
+    expect(rows.find((r) => r.metric === "resting_heart_rate")?.expected).toBeNull();
   });
 });
