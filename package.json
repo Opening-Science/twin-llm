@@ -68,6 +68,7 @@
     "synthea:s7": "bun scripts/synthea/s7-cohort.ts",
     "synthea:pin": "bun scripts/synthea/write-pin.ts",
     "rhythm-bench": "bun scripts/rhythm-bench/run.ts",
+    "rhythm-bench:resolution": "bun scripts/rhythm-bench/resolution/run.ts",
     "wearables:generate": "bun scripts/synthetic-wearables/generate.ts",
     "genome:synth": "bun scripts/genome-synth/generate.ts",
     "heart-brain": "bun scripts/heart-brain/run.ts",
