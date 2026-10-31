@@ -19,10 +19,15 @@ import { permitServerForDataMode } from "@/packages/mcp-client/policy";
 import { findServer } from "@/packages/mcp-client/registry";
 import { createImportedTools, createQueryTools } from "@/packages/query-tools/ai-tools";
 import type { ImportedToolDeps } from "@/packages/query-tools/imported-tools";
+import type { GenomeVariantsDeps } from "@/packages/query-tools/imported-variants";
 import type { QueryToolPorts } from "@/packages/query-tools/ports";
 import type { SessionScope } from "@/packages/query-tools/scope";
 
-import { createGenomeTools, type GenomeToolDeps } from "./genome-tools";
+import {
+  createGenomeTools,
+  createGenomeVariantTools,
+  type GenomeToolDeps,
+} from "./genome-tools";
 import { loadThreadViews } from "./load-thread-views";
 import { createShowViewTool } from "./show-view-tool";
 import { createViewTools, type ViewToolDeps } from "./view-tools";
@@ -117,6 +122,13 @@ export const createChatTools = (
      */
     genome?: GenomeToolDeps;
     /**
+     * Ports for `genome_variants` (#307) over an imported VCF. Only the chat
+     * route passes them, and only after the VCF permit allowed this turn
+     * (#330: personal mode, Ollama on loopback); a synthetic scope never gets
+     * them.
+     */
+    variants?: GenomeVariantsDeps;
+    /**
      * Ports for the imported-data tools (#181). Only the chat route passes
      * them, and only after the imported-data policy allowed this turn
      * (personal mode, Ollama on loopback); a synthetic scope never gets them.
@@ -156,6 +168,9 @@ export const createChatTools = (
     ...make.knowledge(scope, undefined, literatureSourcesForAgent(options?.agent)),
     ...(options?.genome !== undefined && scope.mode === "personal"
       ? createGenomeTools(options.genome)
+      : {}),
+    ...(options?.variants !== undefined && scope.mode === "personal"
+      ? createGenomeVariantTools(options.variants)
       : {}),
     ...(options?.imported !== undefined && scope.mode === "personal"
       ? createImportedTools(options.imported)

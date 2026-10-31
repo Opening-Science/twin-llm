@@ -118,6 +118,7 @@ const streamWith = (model: MockLanguageModelV4) =>
     chatIsLocal: () => true,
     resolveModel: () => model,
     genomeTools: () => undefined,
+    variantTools: () => undefined,
     importedTools: () => undefined,
     loadAudit: async () => [],
     store: {

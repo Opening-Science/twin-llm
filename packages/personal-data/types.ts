@@ -23,7 +23,7 @@ export const isImportKind = (value: unknown): value is ImportKind =>
 
 /**
  * A genome file. Its rows are never read by the imported-data chat tools;
- * a model may only read them on this machine, under `permitGenomeRequest`.
+ * a model may only read them on this machine, under `permitVcfVariantsRequest`.
  */
 export const isGenomeImportKind = (kind: ImportKind): boolean => kind === "vcf";
 

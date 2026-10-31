@@ -23,7 +23,12 @@ import {
   StartGlyph,
   TwinGlyph,
 } from "./glyphs";
-import { modelCountLabel, type ThreadGroup, withTouchedThreads } from "./thread-list";
+import {
+  modelCountLabel,
+  type ThreadGroup,
+  withoutHiddenThreads,
+  withTouchedThreads,
+} from "./thread-list";
 
 /**
  * What the sidebar and the phone menu both show: where you can go, and the
@@ -146,7 +151,11 @@ export const NavPanel = ({
   onNavigate?: () => void;
 }>) => {
   const path = usePathname();
-  const recent = withTouchedThreads(threadGroups, useThreadHistory().touched);
+  const history = useThreadHistory();
+  const recent = withoutHiddenThreads(
+    withTouchedThreads(threadGroups, history.touched),
+    history.hidden,
+  );
   const openSearch = useOpenSearch();
 
   const followLinks = (event: MouseEvent<HTMLDivElement>) => {

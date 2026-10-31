@@ -131,4 +131,6 @@ export const S7_COHORT_ID = "synthea-v4-s7";
 export const EVALUATION_COHORT_IDS: readonly string[] = [
   COHORT_PRESETS.eval.cohortId,
   S7_COHORT_ID,
+  // The AF subset of the 1M batches the hb items read (#293).
+  "synthea-v4-1m-af",
 ];

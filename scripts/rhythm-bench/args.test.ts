@@ -7,7 +7,7 @@ describe("parseArgs", () => {
     expect(parseArgs(["--out", "x"])).toEqual({
       out: "x",
       seeds: DEFAULT_SEEDS,
-      afdb: null,
+      database: null,
       resamples: DEFAULT_RESAMPLES,
       bootstrapSeed: 249,
       quick: false,
@@ -34,7 +34,7 @@ describe("parseArgs", () => {
     ).toEqual({
       out: "o",
       seeds: 3,
-      afdb: "d",
+      database: { id: "afdb", dir: "d" },
       resamples: 0,
       bootstrapSeed: 7,
       quick: true,
@@ -59,5 +59,18 @@ describe("parseArgs", () => {
     expect(() => parseArgs(["--out", "o", "--real-noise"])).toThrow(
       "--real-noise needs the database",
     );
+    expect(() => parseArgs(["--out", "o", "--ltafdb"])).toThrow(
+      "--ltafdb needs a directory",
+    );
+    expect(() => parseArgs(["--out", "o", "--afdb", "a", "--ltafdb", "b"])).toThrow(
+      "give one database",
+    );
+  });
+
+  test("the long-term AF database", () => {
+    expect(parseArgs(["--out", "o", "--ltafdb", "lt", "--real-noise"]).database).toEqual({
+      id: "ltafdb",
+      dir: "lt",
+    });
   });
 });

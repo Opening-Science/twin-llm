@@ -14,7 +14,7 @@ import {
   isAuthDisabled,
   serverEnv,
 } from "@/infrastructure/env";
-import { genomeChatPermit } from "@/infrastructure/genome-gate";
+import { genomeChatPermit, vcfVariantsChatPermit } from "@/infrastructure/genome-gate";
 import { importedDataChatPermit } from "@/infrastructure/imported-data-gate";
 import { isLoopbackUrl } from "@/infrastructure/loopback";
 import { DEFAULT_OLLAMA_BASE_URL } from "@/infrastructure/ollama-context";
@@ -54,6 +54,7 @@ export default async function StartPage() {
         knowledgeDocuments: documents.knowledge,
         gbdConfigured: gbdEnv() !== null,
         genomeChat: genomeChatPermit().ok,
+        vcfChat: vcfVariantsChatPermit().ok,
         importedChat: importedDataChatPermit().ok,
       })}
       residency={{

@@ -3,6 +3,7 @@ import type { z } from "zod";
 import {
   permitGenomeRequest,
   permitProviderForRequest,
+  permitVcfVariantsRequest,
 } from "@/infrastructure/data-mode-policy";
 import { permitSkillRequest } from "@/infrastructure/skill-gate";
 import { GENOME_TOOLS } from "@/packages/carbon-x/constants";
@@ -48,17 +49,24 @@ const INPUT_SCHEMAS: ReadonlyMap<string, z.ZodType> = new Map<string, z.ZodType>
 ]);
 
 /**
- * The genome policy for one case. The eval gate cannot see URLs, so it takes
+ * The genome policy for one call. The eval gate cannot see URLs, so it takes
  * Ollama and Carbon-X as local; the provider, mode and genome source decide.
+ * `genome_variants` needs only the VCF permit (#330): mode and provider.
  */
-const genomePermitted = (evalCase: SkillEvalCase): boolean =>
-  permitGenomeRequest({
-    mode: evalCase.dataMode,
-    genomeSource: evalCase.genomeSource,
-    chatProvider: evalCase.provider,
-    chatOnLoopback: true,
-    carbonXOnLoopback: true,
-  }).ok;
+const genomePermitted = (evalCase: SkillEvalCase, tool: string): boolean =>
+  tool === GENOME_VARIANTS_TOOL_DEFINITION.name
+    ? permitVcfVariantsRequest({
+        mode: evalCase.dataMode,
+        chatProvider: evalCase.provider,
+        chatOnLoopback: true,
+      }).ok
+    : permitGenomeRequest({
+        mode: evalCase.dataMode,
+        genomeSource: evalCase.genomeSource,
+        chatProvider: evalCase.provider,
+        chatOnLoopback: true,
+        carbonXOnLoopback: true,
+      }).ok;
 
 const requestRefusals = (
   skill: Skill,
@@ -98,7 +106,7 @@ const gateStep = (
   }
   if (!skill.tools.includes(step.tool))
     return { kind: "refused", refusal: "tool-not-allowed" };
-  if (GENOME_TOOLS.includes(step.tool) && !genomePermitted(evalCase)) {
+  if (GENOME_TOOLS.includes(step.tool) && !genomePermitted(evalCase, step.tool)) {
     return { kind: "refused", refusal: "genome-not-permitted" };
   }
   const schema = INPUT_SCHEMAS.get(step.tool);

@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { topicOf } from "./event-rates/codes";
+import { EVENT_RATE_CODES } from "./event-rates/cohort-rates";
 import { CONVERSION_ANALYTES, CONVERSION_UNITS } from "./unit-conversions";
 
 export const loincSchema = z
@@ -395,6 +397,39 @@ export const rhythmIrregularityInput = z
     "Irregularity metrics of one simulated RR-interval recording of a synthetic subject",
   );
 
+const EVENT_CODE_HELP =
+  "SNOMED CT code (every code of that condition counts): 49436004 atrial fibrillation, 230690007 stroke, 88805009 heart failure, 59621000 hypertension, 44054006 type 2 diabetes, 22298006 myocardial infarction, 414545008 ischemic heart disease, 26929004 Alzheimer's disease, 78275009 sleep apnea, 132281000119108 venous thromboembolism";
+
+export const cohortEventRatesInput = z
+  .object({
+    cohort_id: cohortIdSchema,
+    exposure_code: z.enum(EVENT_RATE_CODES).describe(`The exposure: ${EVENT_CODE_HELP}`),
+    outcome_code: z
+      .enum(EVENT_RATE_CODES)
+      .describe("The outcome: a SNOMED CT code from the same list as exposure_code"),
+    design: z
+      .enum(["within", "between"])
+      .describe(
+        "within: the same people before and after their own exposure onset; between: people with the exposure against age- and sex-matched people without it",
+      ),
+    min_age: z
+      .number()
+      .int()
+      .min(0)
+      .max(100)
+      .optional()
+      .describe(
+        "Age floor in years: within counts time from this age, between keeps exposure onsets from this age; default 0",
+      ),
+  })
+  .strict()
+  .refine((input) => topicOf(input.exposure_code) !== topicOf(input.outcome_code), {
+    message: "exposure_code and outcome_code must be different conditions",
+  })
+  .describe(
+    "Outcome rates after an exposure in one loaded synthetic cohort: events, person-years and a rate ratio",
+  );
+
 export const TOOL_DEFINITIONS = [
   {
     name: "list_subjects",
@@ -520,5 +555,11 @@ export const TOOL_DEFINITIONS = [
     description:
       "Irregularity metrics of one simulated RR-interval recording of a synthetic subject (made by the rhythm simulator, not measured), on one day, per 128-interval window: nRMSSD, Shannon entropy, sample entropy, turning-point ratio and a research-threshold flag (Dash et al. 2009), with n_flagged and flagged_time_share. Describes the recording; never say a person has a condition. Synthetic mode only: personal mode is NO_RHYTHM_DATA. Refuses SUBJECT_SCOPE_VIOLATION, OUTSIDE_SUBJECT_WINDOW and WINDOW_TOO_SHORT.",
     input: rhythmIrregularityInput,
+  },
+  {
+    name: "cohort_event_rates",
+    description:
+      "Rates of one recorded condition (outcome) around another (exposure) in one loaded synthetic cohort; counts only. within: the same people before and after their own exposure onset (crude and age-adjusted rate ratio). between: exposed against 4 age- and sex-matched people without it. Events, person-years, exact Poisson intervals; verdict reads the ratio's 95% interval against 1. About this synthetic cohort only, never people in general or a cause. Synthetic mode only. Refuses SUBJECT_SCOPE_VIOLATION, COHORT_NOT_SUPPORTED, DESIGN_NOT_SUPPORTED, COHORT_RECORD_CAP_EXCEEDED.",
+    input: cohortEventRatesInput,
   },
 ] as const;

@@ -8,10 +8,13 @@ import {
   type CodeEntry,
   ORAL_ANTICOAGULANT_CODES,
   TOPICS,
-} from "./codes";
-import { type MatchedResult } from "./matched";
+} from "../../packages/query-tools/event-rates/codes";
+import { type MatchedResult } from "../../packages/query-tools/event-rates/matched";
 import { type Spread } from "./permutation";
-import { type Rate, type RateRatio } from "./poisson";
+import {
+  type Rate,
+  type RateRatio,
+} from "../../packages/query-tools/event-rates/poisson";
 import { type Study, type StudyOptions } from "./study";
 
 export type BatchRun = Readonly<{

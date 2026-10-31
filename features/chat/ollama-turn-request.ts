@@ -10,6 +10,7 @@ import type { TurnSkill } from "@/infrastructure/skill-gate";
 import type { TwinNote } from "@/infrastructure/twin-notes";
 import type { UiContext } from "@/infrastructure/ui-context";
 import type { ImportedToolDeps } from "@/packages/query-tools/imported-tools";
+import type { GenomeVariantsDeps } from "@/packages/query-tools/imported-variants";
 import type { QueryToolPorts } from "@/packages/query-tools/ports";
 
 import { createChatTools, forSkill, forSources } from "./chat-tools";
@@ -74,14 +75,16 @@ const noGenome = (scope: GenomeToolDeps["scope"]): GenomeToolDeps => ({
     throw new Error("not used");
   },
   appendAudit: async () => undefined,
-  variants: {
-    scope,
-    permit: () => ({ ok: true }),
-    ports: {
-      listDatasets: async () => [],
-      findVariants: async () => [],
-      appendAudit: async () => undefined,
-    },
+});
+
+/** `genome_variants` as a fully local personal turn gets it (#330); nothing is read. */
+const noVariants = (scope: GenomeVariantsDeps["scope"]): GenomeVariantsDeps => ({
+  scope,
+  permit: () => ({ ok: true }),
+  ports: {
+    listDatasets: async () => [],
+    findVariants: async () => [],
+    appendAudit: async () => undefined,
   },
 });
 
@@ -133,6 +136,7 @@ export const captureOllamaTurnRequest = async (
         sources: turn.skill?.sources,
         loadViews: async () => [],
         genome: noGenome(scope),
+        variants: noVariants(scope),
         imported: noImported(scope),
       }),
       [],

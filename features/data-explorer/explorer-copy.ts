@@ -75,6 +75,8 @@ export const COHORT_ROLES: Readonly<Record<string, string>> = {
     "Reference cohort of 10,000 people from the cohort-synthea-v4-seed42-10k release.",
   "synthea-v4-s7":
     "Supplementary evaluation cohort for the rhythm and heart-brain items (S7b): 17 people aged 65 to 90. Never train on it.",
+  "synthea-v4-1m-af":
+    "Evaluation cohort for the cohort event rate items (hb): every person with atrial fibrillation in the 1M batches. Never train on it.",
 };
 
 export const EVAL_COHORT_ID = "synthea-v4-seed42";
