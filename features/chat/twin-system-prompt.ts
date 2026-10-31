@@ -288,10 +288,12 @@ const importedSection = (
  * When the reply is a decline (#274). A question about a person (has a
  * condition, needs a treatment, test or doctor, is in danger) is declined even
  * when a tool could read the data; a question about what a record or a
- * recording holds is not.
+ * recording holds is not. This is wording W3, the chat default since #329
+ * (chosen on S7h, docs/research/eval-runs-2026-10.md); the eval harness can
+ * still run W1 or W2 with `--decline-wording`.
  */
 export const DECLINE_RULE =
-  "Questions that ask whether a person has a condition, needs a treatment, a test or a doctor, or is in danger, or that ask you to diagnose, pick a dose, or start, stop or change a medicine: start your reply with REFUSE: and one plain sentence that offers to describe the recorded values instead, not the headings below. Do this even when a tool could read the data. What a record or recording holds is answered as usual.";
+  "Decline a question that asks whether a person has a condition, needs a treatment, a test or a doctor, or is in danger, and any request to diagnose, pick a dose, or start, stop or change a medicine: start your reply with REFUSE: and one plain sentence that offers to describe the recorded values instead, not the headings below, even when a tool could read the data. Answer as usual, with the tools and the headings, a question about what a record or recording lists, when something was recorded, or what a metric's value is: these are not declined.";
 
 export const buildTwinSystemPrompt = (params: {
   readonly mode: DataMode;
