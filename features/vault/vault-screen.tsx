@@ -5,6 +5,7 @@ import { type FormEvent, useEffect, useState } from "react";
 import { Button } from "@/infrastructure/ui-kit/button";
 import { Card } from "@/infrastructure/ui-kit/card";
 import { Field } from "@/infrastructure/ui-kit/field";
+import { HoldToSubmit } from "@/infrastructure/ui-kit/hold-to-submit";
 
 import { VAULT_COPY } from "./vault-copy";
 import {
@@ -22,6 +23,9 @@ import {
  * this browser is already unlocked, because the unlock cookie is
  * SameSite=Strict and is not sent when the page was reached from another
  * site (an OAuth return); a reload from here sends it.
+ *
+ * Using the recovery code replaces the passphrase and the recovery code for
+ * good, so that form submits only through a completed press and hold (#350).
  */
 
 const reload = () => window.location.replace(window.location.href);
@@ -111,6 +115,8 @@ export const VaultScreen = ({ initialStep }: Readonly<{ initialStep: VaultStep }
   const [shownCode, setShownCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // A refused try gives the hold button a fresh start, even one refused here.
+  const [tries, setTries] = useState(0);
 
   useEffect(() => {
     void fetch("/api/vault/status", { credentials: "same-origin" })
@@ -137,6 +143,7 @@ export const VaultScreen = ({ initialStep }: Readonly<{ initialStep: VaultStep }
     const problem = step === "unlock" ? null : newPassphraseProblem(passphrase, repeat);
     if (problem !== null) {
       setError(problem);
+      setTries((value) => value + 1);
       return;
     }
     setBusy(true);
@@ -229,13 +236,19 @@ export const VaultScreen = ({ initialStep }: Readonly<{ initialStep: VaultStep }
             <p role="alert" className="text-destructive min-h-5 text-sm">
               {error}
             </p>
-            <Button variant="primary" type="submit" disabled={busy}>
-              {step === "setup"
-                ? VAULT_COPY.setUp
-                : step === "recover"
-                  ? VAULT_COPY.recover
-                  : VAULT_COPY.unlock}
-            </Button>
+            {step === "recover" ? (
+              <HoldToSubmit
+                key={tries}
+                variant="primary"
+                label={VAULT_COPY.recover}
+                pendingLabel={VAULT_COPY.recovering}
+                pending={busy}
+              />
+            ) : (
+              <Button variant="primary" type="submit" disabled={busy}>
+                {step === "setup" ? VAULT_COPY.setUp : VAULT_COPY.unlock}
+              </Button>
+            )}
             {step === "unlock" ? (
               <Button variant="ghost" type="button" onClick={() => goTo("recover")}>
                 {VAULT_COPY.forgot}

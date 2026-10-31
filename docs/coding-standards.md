@@ -192,7 +192,13 @@ both themes), and stops its motion under reduced motion.
 - **`HoldToConfirm`** for what cannot be undone, such as erasing personal data. It
   fills at a constant speed while held by a pointer, Space or Enter, empties quickly
   on early release, cancels when the pointer drifts off, and calls `onConfirm` once.
-  A screen-reader hint states the hold time.
+  Under reduced motion nothing moves and the label counts down ("Keep holding: 2").
+  A screen-reader hint states the hold time. The label says what will happen ("Hold
+  to withdraw consent"). The timing is `hold-timer.ts`, tested with a fake clock.
+  **`HoldToSubmit`** is the same button as the submit control of a form: a completed
+  hold calls `requestSubmit` once, so a server action runs as for any submit, and every
+  other submission of that form (Enter in a field) is stopped. While `pending` it shows
+  `pendingLabel`; a refused submission leaves it ready to hold again.
 - **`StatusLattice`** for a long job: a 3 by 3 dot wave while it runs, then a tick or
   a cross, with its name, its state in words and a timer that stops.
 - **`Rating`** for a 1 to 5 score: a radio group with a label per value, a pointer
@@ -202,9 +208,12 @@ Where they are used: `StepTrace` in chat answers; `UndoButton` for deleting a th
 (thread bar) and an imported dataset (Customize · Data), through `useSoftDelete`
 (`soft-delete.ts`: the item hides at once, the server delete runs only when the window
 ends, Undo sends nothing; leaving for another page in the app runs it early, closing the
-tab asks first and then deletes nothing); `StatusLattice` for a Synthea run. The app has
-no erase-everything action and no genome dataset to delete, so `HoldToConfirm` is not
-used yet; `Rating` waits for the human review protocol (#304). Their look lives in
+tab asks first and then deletes nothing); `StatusLattice` for a Synthea run;
+`HoldToSubmit` for the two privacy actions that cannot be undone (#350): withdrawing a
+learning consent (Customize · Privacy) and replacing the passphrase and recovery code
+with the recovery code (the unlock screen). The app has no erase-everything action and
+no genome dataset to delete; a delete that can wait uses `UndoButton`, not a hold.
+`Rating` waits for the human review protocol (#304). Their look lives in
 `globals.css` under "Interaction patterns".
 
 Charts use `text-chart-1` to `text-chart-5`, in that order. `primary` marks things you

@@ -27,3 +27,11 @@ const seconds = (ms: number): string => formatNumber(ms / 1000, ms % 1000 === 0 
 /** The screen-reader hint: how long to hold, and how to do it from a keyboard. */
 export const holdHint = (holdMs: number): string =>
   `Press and hold for ${seconds(holdMs)} ${holdMs === 1000 ? "second" : "seconds"} to confirm. With a keyboard, hold Space or Enter.`;
+
+/** Whole seconds still to hold, counted up so the last second reads `1`. */
+export const holdSecondsLeft = (holdMs: number, elapsedMs: number): number =>
+  Math.max(0, Math.ceil((holdMs - Math.max(0, elapsedMs)) / 1000));
+
+/** The label while held under reduced motion, in place of the moving fill. */
+export const holdCountdown = (secondsLeft: number): string =>
+  `Keep holding: ${formatNumber(secondsLeft, 0)}`;
