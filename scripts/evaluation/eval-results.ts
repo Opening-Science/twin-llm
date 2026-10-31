@@ -37,7 +37,8 @@ export const ANSWER_KEY_PATH = "evaluation/answer-key.v1.json";
  * the S7 items on the supplementary cohort synthea-v4-s7 (#277), kept apart
  * so the S7 hash never changes either; `s7h` the held-out S7 items drawn by a
  * seeded rule fixed before any output was seen (#283), scored apart from the
- * S7 and S7b development sets.
+ * S7 and S7b development sets; `v1h` the held-out S1 to S6 items drawn the
+ * same way (#304), scored apart from v1.
  */
 export const QUESTION_SETS = {
   v1: { questions: QUESTIONS_PATH, key: ANSWER_KEY_PATH },
@@ -56,6 +57,10 @@ export const QUESTION_SETS = {
   hb: {
     questions: "evaluation/questions.hb.v1.json",
     key: "evaluation/answer-key.hb.v1.json",
+  },
+  v1h: {
+    questions: "evaluation/questions.v1h.v1.json",
+    key: "evaluation/answer-key.v1h.v1.json",
   },
 } as const;
 

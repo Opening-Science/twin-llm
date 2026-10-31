@@ -41,6 +41,12 @@ Every scenario runs in `DATA_MODE=synthetic`, so `next_step` is never
 `connect_wearable` and no wearable key is offered. Personas are synthetic
 research roles, not patients.
 
+S1 to S6 have two item sets. The v1 items were written alongside the
+cohort and are a development set; the held-out set v1h (#304), 32 items in
+new wordings on measures no training family uses, was drawn by a seeded rule
+committed before any output was seen. Report the two apart.
+`docs/evaluation/question-set.md`, "v1h".
+
 ### S1 Trend over two years
 
 - **Goal:** see how one measurement moved for one synthetic subject over two

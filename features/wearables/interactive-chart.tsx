@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import {
   formatDate,
@@ -45,7 +45,16 @@ type InteractiveChartProps = {
   readonly series: readonly ChartSeries[];
   readonly className?: string;
   readonly height?: number;
+  /**
+   * Fill the parent's height instead of keeping a fixed shape: the plot is
+   * measured and drawn at its real size, so text and dots keep their size.
+   * The parent must give the chart a height (a flex column, a grid cell).
+   */
+  readonly fill?: boolean;
 };
+
+/** The smallest plot a filling chart keeps, so a short card still reads. */
+const FILL_MIN_HEIGHT = 140;
 
 /**
  * Hoverable multi-series line chart from synced wearable points (real data).
@@ -54,8 +63,30 @@ export const InteractiveChart = ({
   series,
   className,
   height = 180,
+  fill = false,
 }: InteractiveChartProps) => {
   const gradId = useId();
+  const plotRef = useRef<HTMLDivElement>(null);
+  const [plotSize, setPlotSize] = useState<Size | null>(null);
+  const hasPoints = series.some((s) => s.points.length > 0);
+
+  // Only a filling chart measures itself; it redraws on resize, not on hover.
+  useEffect(() => {
+    const el = plotRef.current;
+    if (!fill || !el) return;
+    const observer = new ResizeObserver(() => {
+      const next = {
+        width: Math.round(el.clientWidth),
+        height: Math.round(el.clientHeight),
+      };
+      if (next.width === 0 || next.height === 0) return;
+      setPlotSize((prev) =>
+        prev && prev.width === next.width && prev.height === next.height ? prev : next,
+      );
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [fill, hasPoints]);
   // x is in viewBox units; chart is the rendered size of the svg in CSS pixels.
   const [hover, setHover] = useState<{
     index: number;
@@ -86,8 +117,8 @@ export const InteractiveChart = ({
     // 48 leaves room for a six-character tick ("10,635") at 10px mono,
     // about 6px a character, plus the 8px gap to the plot.
     const pad = { top: 16, right: 12, bottom: 28, left: 48 };
-    const w = 640;
-    const h = height;
+    const w = fill && plotSize ? plotSize.width : 640;
+    const h = fill && plotSize ? plotSize.height : height;
     const innerW = w - pad.left - pad.right;
     const innerH = h - pad.top - pad.bottom;
 
@@ -122,7 +153,7 @@ export const InteractiveChart = ({
     });
 
     return { dates, min, max, pad, w, h, innerW, innerH, xFor, yFor, paths };
-  }, [series, height]);
+  }, [series, height, fill, plotSize]);
 
   if (!layout || layout.dates.length < 1) {
     return (
@@ -147,11 +178,18 @@ export const InteractiveChart = ({
   const seriesNames = paths.map((s) => s.label).join(" and ");
 
   return (
-    <div className={cn("w-full", className)}>
-      <div className="relative">
+    <div className={cn("w-full", fill && "flex min-h-0 flex-1 flex-col", className)}>
+      <div
+        ref={plotRef}
+        className={cn("relative", fill && "min-h-0 flex-1")}
+        style={fill ? { minHeight: FILL_MIN_HEIGHT } : undefined}
+      >
         <svg
           viewBox={`0 0 ${w} ${h}`}
-          className="text-foreground h-auto w-full"
+          className={cn(
+            "text-foreground w-full",
+            fill ? "absolute inset-0 h-full" : "h-auto",
+          )}
           role="img"
           aria-label={`Timeline of ${seriesNames}`}
           onMouseLeave={() => setHover(null)}
