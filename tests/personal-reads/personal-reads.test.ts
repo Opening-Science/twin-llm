@@ -1116,6 +1116,7 @@ const PAGES: Readonly<Record<string, "gated" | Readonly<{ open: string }>>> = {
   },
   "app/(shell)/docs/[[...slug]]/page.tsx": { open: "the docs" },
   "app/(shell)/lab/page.tsx": { open: "this machine's self-checks" },
+  "app/(shell)/lab/rate/page.tsx": { open: "answers of synthetic evaluation runs" },
   "app/(shell)/models/page.tsx": { open: "the model list" },
   "app/synthea/layout.tsx": { open: "the public Synthea generator" },
   "app/synthea/page.tsx": { open: "the public Synthea generator" },
@@ -1150,6 +1151,9 @@ const SERVER_ACTIONS: Readonly<
       grantConsent: "vaultRefusalForAction()",
       withdrawConsent: "vaultRefusalForAction()",
     },
+  },
+  "features/lab/rating-actions.ts": {
+    open: "ratings of synthetic evaluation runs, written beside the run on this machine",
   },
   "features/skills/skill-actions.ts": {
     open: "skills: instructions the person wrote, not records (privacy-design 2.3)",

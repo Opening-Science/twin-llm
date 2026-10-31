@@ -438,6 +438,9 @@ is in `review-key.json`. A cell that starts with `=`, `+`, `-`, `@`, a tab or a
 carriage return gets a leading `'`, so a spreadsheet shows it as text rather
 than running it.
 
+For the hb set there is also a blind rating view in the Lab with written
+anchors per level and an agreement script (`second-rater.md`).
+
 Reviewers: an answer may name its own model ("As Qwen, …"). Note that in the
 comment column and do not score on it.
 

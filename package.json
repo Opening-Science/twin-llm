@@ -92,6 +92,7 @@
     "eval": "bun --env-file=.env.eval --preload ./features/chat/response/preload-server-only.mjs scripts/evaluation/run-eval.ts",
     "eval:report": "bun scripts/evaluation/run-report.ts",
     "eval:hb-verdicts": "bun scripts/evaluation/hb-verdicts-run.ts",
+    "eval:agreement": "bun scripts/evaluation/agreement-run.ts",
     "eval:guidelines": "bun --env-file=.env.eval --preload ./features/chat/response/preload-server-only.mjs packages/guidelines/ingest-cli.ts",
     "eval:cohort-codes": "bun scripts/evaluation/build-cohort-codes.ts",
     "eval:router-fixture": "bun scripts/evaluation/build-router-fixture.ts",

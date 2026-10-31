@@ -204,7 +204,8 @@ Where they are used: `StepTrace` in chat answers; `UndoButton` for deleting a th
 ends, Undo sends nothing; leaving for another page in the app runs it early, closing the
 tab asks first and then deletes nothing); `StatusLattice` for a Synthea run. The app has
 no erase-everything action and no genome dataset to delete, so `HoldToConfirm` is not
-used yet; `Rating` waits for the human review protocol (#304). Their look lives in
+used yet; `Rating` scores answers in the Lab's second-rater view
+(`features/lab/second-rater.tsx`, #351), with a written anchor per level. Their look lives in
 `globals.css` under "Interaction patterns".
 
 Charts use `text-chart-1` to `text-chart-5`, in that order. `primary` marks things you
