@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { homedir } from "node:os";
 
-import { parseServerEnv, storageEnv } from "./env";
+import { parseServerEnv, storageEnv, vaultEnv } from "./env";
 
 const BASE = {
   LOCAL_MVP: "true",
@@ -44,6 +44,26 @@ describe("storage settings (#144)", () => {
       process.platform === "darwin"
         ? `${homedir()}/Library/Application Support/TwinLLM`
         : "/xdg/twin-llm",
+    );
+  });
+});
+
+describe("unlock settings (#142)", () => {
+  test("idle lock: 15 minutes by default, 1 to 240 allowed", () => {
+    const env = parseServerEnv({ ...BASE, TWINLLM_STATE_DIR: "/srv/twin-llm-state" });
+    expect(vaultEnv(env)).toEqual({
+      dataMode: "personal",
+      stateDir: "/srv/twin-llm-state",
+      idleLockMs: 15 * 60_000,
+    });
+    expect(
+      vaultEnv(parseServerEnv({ ...BASE, VAULT_IDLE_LOCK_MINUTES: "240" })).idleLockMs,
+    ).toBe(240 * 60_000);
+    expect(() => parseServerEnv({ ...BASE, VAULT_IDLE_LOCK_MINUTES: "0" })).toThrow(
+      "VAULT_IDLE_LOCK_MINUTES must be at least 1",
+    );
+    expect(() => parseServerEnv({ ...BASE, VAULT_IDLE_LOCK_MINUTES: "241" })).toThrow(
+      "VAULT_IDLE_LOCK_MINUTES must be at most 240",
     );
   });
 });

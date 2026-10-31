@@ -3,8 +3,8 @@
 This document settles the decisions behind six issues so each can be built as its own
 pull request: #144 harden local storage, #142 local unlock, #141 encryption at rest, #145
 learning consent, #140 disclosure ledger and #300 an external anchor for the audit chain.
-Status: #144 is built (section 2.1 describes what shipped); #142, #141, #145, #140 and #300
-are not built yet. Where this document and the code differ, the code is what runs; update
+Status: #144 and #142 are built (sections 2.1 and 2.2 describe what shipped); #141, #145,
+#140 and #300 are not built yet. Where this document and the code differ, the code is what runs; update
 this document when a pull request changes a decision.
 
 TwinLLM is research software for one person on their own Linux or macOS machine. The design
@@ -170,84 +170,149 @@ Postgres yet.
 **Decision.** In personal mode each user sets a passphrase. It derives a key with
 Argon2id. That key unwraps the user's data key, which lives only in the server's memory.
 Every personal read needs the data key and an unlock cookie. The vault locks itself after
-15 minutes without a personal request, on a lock button, and on every restart.
+15 minutes without a personal request (Peter's decided default), on a lock button, and on
+every restart. No OS keyring (question 1 in section 5: no).
 
 **Why Argon2id from `node:crypto`.** Node 24.7 added `crypto.argon2` and Bun implements the
 same call; on this repository's toolchain both give the same bytes for the same inputs, so
 the server (Node) and the CLIs (Bun) share one function with no new dependency. Argon2id is
 memory-hard and is RFC 9106's recommendation for passwords. The Node API is still marked
 experimental, so the vault stores the KDF's name and parameters with each wrapped key, and
-`scrypt` (`N = 2^17, r = 8, p = 1`, also in `node:crypto`) is the documented fallback if
-the API changes. No password-hashing package is added.
+`scrypt` (`N = 2^17, r = 8, p = 1`, also in `node:crypto`) is the fallback, used when a
+runtime has no `crypto.argon2`. No password-hashing package is added. The tests check
+Argon2id against the RFC 9106 vector and scrypt against the RFC 7914 vector.
 
-**Design.**
+**Design** (as built).
 
-- **Keys.**
-  - Passphrase: at least 12 characters. The setup screen says plainly that there is no way
-    to read the data without it or the recovery code.
+- **Keys** (`infrastructure/vault-crypto.ts`, pure).
+  - Passphrase: at least 12 characters (counted after NFC normalisation). The setup
+    screen says plainly that there is no way to read the data without it or the recovery
+    code.
   - KEK (key-encryption key) = Argon2id(passphrase, salt 16 random bytes, memory 64 MiB,
     3 passes, parallelism 1, 32 bytes). About 120 ms on the maintainers' machine; the
-    parameters are stored, so they can be raised later.
-  - DEK (data key) = 32 random bytes per user. Stored only wrapped: AES-256-GCM under the
-    KEK, with the user id and key id as additional data.
-  - Recovery code: 20 random bytes shown once as base32 groups. It wraps the same DEK
-    under its own Argon2id key. Using it forces a new passphrase.
-  - Subkeys from the DEK with HKDF-SHA256: `field` for #141, `index` for blind indexes
-    (#141), `ledger` for payload fingerprints (#140).
-- **Where keys live.** New table `vault_keys`: user id, key id, status (`active`,
-  `retiring`, `retired`), wrapped DEK under the passphrase, wrapped DEK under the recovery
-  code, KDF name and parameters, salts, created and retired times. Nothing in it is usable
-  without the passphrase or the code. Keeping it in the database keeps every backup
-  consistent with its key. The unwrapped DEK and subkeys are `KeyObject`s in a module-level
-  map (`infrastructure/vault-session.ts`): user id to keys, unlock time, last use and the
-  hash of the unlock token. They are never written to disk, logs, Prisma, the audit chain
-  or a response.
-- **Unlock flow.** `POST /api/vault/unlock` with the passphrase in the JSON body (loopback
-  only, same Host and cross-site checks as today). The server derives the KEK, unwraps,
-  stores the keys in memory, and sets a cookie `twinllm_unlock` holding 32 random bytes:
-  HttpOnly, SameSite=Strict, Path=/, Secure where the browser allows it on localhost. The
-  server keeps only its SHA-256. The passphrase variable is dropped at once; the body is
-  never logged.
-- **Gate.** `requireUnlocked(userId, request)` in `infrastructure/vault-gate.ts` returns the
-  keys or a typed `PERSONAL_DATA_LOCKED` refusal (HTTP 423, a plain sentence: "Your data is
-  locked. Unlock it to continue."). Every route in the `tests/personal-reads` table calls
-  it before reading. The chat route calls it once per turn and passes the keys to the tool
-  ports; a personal tool with no keys refuses. The MCP server is a separate process with no
-  vault, so it refuses every personal tool with the same code. Before #141 lands the gate
-  is a check; after it, it is structural, because a store cannot decrypt without the keys.
-- **Lock.** `POST /api/vault/lock` (a button in the header), idle lock after
-  `VAULT_IDLE_LOCK_MINUTES` (default 15, allowed 1 to 240) checked on each request and by a
-  one-minute timer, and process exit. Locking deletes the map entry; the cookie becomes
-  useless.
-- **Brute force.** Argon2id cost, plus a per-user in-memory delay that doubles after each
-  wrong passphrase from 1 s up to 60 s. Offline guessing against a stolen disk is limited
-  only by the KDF and the passphrase's strength; the docs say so.
-- **Passphrase change and recovery.** Rewrap the DEK; no data is rewritten.
-- **Writes while locked.** A wearable sync or an import needs the field key, so it is
-  refused while locked with the same code. Syncs are started by the person, so this costs
-  nothing today. OAuth callbacks still store tokens, which keep their own env keys (see
-  2.3).
-- **Multiple users.** With sign-in on, each user has their own vault row and passphrase;
-  unlocking one user never unlocks another.
+    parameters are stored, so they can be raised later. Stored parameters above fixed
+    limits (4 GiB, 64 passes) are refused before any work, so an edited file cannot
+    exhaust memory.
+  - DEK (data key) = 32 random bytes per user, with a random key id. Stored only wrapped:
+    AES-256-GCM under the KEK, with `twinllm.vault.v1|<user key>|<key id>|<purpose>` as
+    additional data. The user key is computed from the person asking, never read from
+    the file, so one person's file never opens for another.
+  - Recovery code: 20 random bytes shown once as eight groups of four base32 characters.
+    It wraps the same DEK under its own Argon2id key. Using it forces a new passphrase
+    and issues a new code; the old code stops working.
+  - Subkeys (`field`, `index`, `ledger` with HKDF-SHA256) are not derived yet: #141 and
+    #140 add them where they are used.
+- **Where keys live.** _Changed from the first draft_, which put them in a `vault_keys`
+  table. Each user's record is one owner-only JSON file,
+  `$TWINLLM_STATE_DIR/vault/<user key>.json` (`infrastructure/vault-file.ts`): version,
+  user key (a hash of the actor id, so the id is not on disk), key id, created and
+  updated times, and for the passphrase and the recovery code each the KDF name,
+  parameters, salt, IV and wrapped key. Why a file: the #144 startup check already
+  refuses to start unless the state directory and everything in it is the owner's and
+  `0700`/`0600`, so the key gets that check for free; a database dump alone never
+  carries a wrapped key; and the unlock needs no migration. The cost: a backup must
+  include the file as well as the database, which the runbook says. The file is written
+  through a temporary file and a rename. An unreadable or malformed file is never taken
+  for "no vault". One key per file for now; #141's rotation adds `retiring` and
+  `retired` keys. The unwrapped DEK is a `KeyObject` in a process-wide map
+  (`infrastructure/vault-session.ts`, kept on `globalThis` so every route bundle shares
+  it): actor id to keys, open time, last use and the SHA-256 of the unlock token. The
+  buffer it came from is zeroed. Never written to disk, logs, Prisma, the audit chain or
+  a response.
+- **Unlock flow** (`features/vault/`, routes under `app/api/vault/`). `POST
+/api/vault/setup` (first run only; 409 once set up), `POST /api/vault/unlock` and
+  `POST /api/vault/recover` take the passphrase (and code) in a JSON body, behind the
+  same loopback Host and cross-site checks as every route. On success the server opens
+  the session and sets `twinllm_unlock`, 32 random bytes: HttpOnly, SameSite=Strict,
+  Path=/, a session cookie, and `Secure` when the request came over https (on
+  `http://localhost` it is left off, because not every browser keeps a Secure cookie
+  there). The server keeps only its SHA-256. Bodies are never logged. `GET
+/api/vault/status` says `not-set-up`, `locked` or `unlocked` for the caller. Because a
+  Strict cookie is not sent on a page reached from another site (the return from an
+  OAuth provider), the unlock screen asks the status on load and reloads itself when
+  the browser is in fact unlocked.
+- **Gate.** `checkVault` in `infrastructure/vault-gate.ts` returns the keys or a refusal:
+  HTTP 423 with `PERSONAL_DATA_LOCKED` ("Your data is locked. Unlock it to continue.")
+  or `PERSONAL_DATA_NOT_SET_UP` ("Your data is locked until you set a passphrase. Set
+  one to continue."). It is keyed by the actor id (`resolveActorId`). Synthetic mode
+  always passes. It is used three ways: route files wrap their handler,
+  `export const GET = withUnlocked(handler)` (`infrastructure/vault-runtime.ts`); personal
+  pages start with `const locked = await lockedScreen(); if (locked) return locked;`
+  (`features/vault/page-gate.tsx`), which renders the setup or unlock form; and personal
+  server actions (starting a turn, onboarding answers, twin notes) return
+  `vaultRefusalForAction()`'s sentence. The sidebar lists no thread titles while locked
+  and says "Locked". Before #141 the gate is a check; after it, it is structural, because
+  a store cannot decrypt without the keys.
+- **What is gated.** Every route in the `tests/personal-reads` table without a
+  `whileLocked` reason: the wearable summary, genome report and run, BodyLoop reads and
+  writes, the Ark status, imports and dataset edits, search (except a docs-only search),
+  thread export, `/compact` and saving notes, chat, incognito chat, chat suggestions,
+  onboarding starters and the three syncs. Open while locked, each with its reason in the
+  table: OAuth authorize and disconnect, connection status, the Ark audit list, the
+  synthetic Demo routes, anatomy, motion, GBD, Synthea, the scanner upload (checked by its
+  own secret; stores nothing yet) and the vault routes. Pages: home, threads, Customize ·
+  Connectors, Data and Memory, and `/start`; the Lab, docs, models, skills, agents, the
+  synthetic cohort explorer and the Digital Twin page (Demo bodies; its BodyLoop reads
+  go through gated routes) stay open.
+- **OAuth callbacks.** A provider's redirect is cross-site, so the Strict cookie is not
+  sent. The callback is not behind the cookie gate: it stores the tokens (they keep their
+  own env keys, see 2.3) and runs the first sync only when the person's vault is open in
+  this process (`vaultOpenFor`); otherwise the person syncs after unlocking.
+- **Chat and MCP.** In personal mode the chat route is gated as a whole, so no turn starts
+  and no personal tool runs while locked. Passing the keys to the tool ports comes with
+  #141, when the tools need them to decrypt. The MCP server already refuses the imported
+  and genome tools in every mode, and its other tools read the synthetic warehouse, so it
+  needed no change.
+- **Lock.** `POST /api/vault/lock` (the Lock button at the foot of the sidebar), which
+  locks only with the caller's valid cookie, so another user of the machine cannot lock
+  it for them; idle lock after `VAULT_IDLE_LOCK_MINUTES` (default 15, allowed 1 to 240)
+  without a personal request, checked on each gated request and by a one-minute timer
+  that does not keep the process alive; and process exit. Looking at an open page (the
+  sidebar's state) does not count as use. Locking deletes the map entry; the cookie
+  becomes useless.
+- **Brute force.** Argon2id cost, plus a per-user in-memory wait that doubles after each
+  wrong passphrase or code from 1 s up to 60 s (429 with `Retry-After`, no KDF run), and
+  is forgotten an hour after the last wrong try or at restart. Offline guessing against a
+  stolen disk is limited only by the KDF and the passphrase's strength; the docs say so.
+- **Passphrase change and recovery.** Recovery rewraps the DEK under the new passphrase and
+  a new code; no data is rewritten. A form to change a known passphrase is not built yet;
+  the same rewrap serves it.
+- **Writes while locked.** Syncs, imports, renames, deletes, BodyLoop writes, notes and new
+  turns are refused while locked with the same code. Syncs are started by the person, so
+  this costs nothing today.
+- **Multiple users.** With sign-in on, each user has their own file and passphrase;
+  unlocking one user never unlocks another (tested).
 
-**What the UI shows.** A first-run screen in personal mode: set a passphrase, then the
-recovery code with "I have saved it" before continuing. A lock icon and state in the
-header. Personal pages show an unlock form instead of their content while locked; synthetic
-content and the Lab stay available. The sidebar shows "Locked" in place of personal thread
-titles.
+**What the UI shows.** In personal mode, the first personal page shows "Set a passphrase"
+with the passphrase typed twice, then the recovery code with Copy and "I have saved my
+recovery code" before Continue. Locked pages show "Your data is locked" with the
+passphrase and "Forgot your passphrase?", which opens the recovery form. The foot of the
+sidebar shows Lock (unlocked) or Locked.
 
-**Audit rows** (ids and outcomes only): `vault.setup`, `vault.unlock` (ok or refused, with
-the failure count), `vault.lock` (manual or idle), `vault.passphrase_change`,
-`vault.recovery_used`. A restart leaves the vault locked and writes nothing.
+**Audit rows** (ids and counts only, `infrastructure/vault-audit.ts`). The event is in the
+tool name, because the chain keeps args only as a hash: `vault.setup`, `vault.unlock`,
+`vault.unlock.refused` (row count = wrong tries in a row), `vault.lock.manual`,
+`vault.lock.idle`, `vault.recovery_used`, `vault.recovery.refused`. A restart leaves the
+vault locked and writes nothing.
 
 **Failure behaviour.** Fail closed: no keys, no personal read or write. If the unlock audit
-row cannot be written, the unlock is undone. A lost passphrase and a lost recovery code
-mean the encrypted data cannot be read; the person can still delete it.
+row cannot be written, the unlock is undone. The setup row is written before the key file,
+so a setup that cannot be recorded does not happen. A lock always locks, even when its row
+fails. A lost passphrase and a lost recovery code mean the data key cannot be opened; the
+person can still delete the data.
 
-**Tests.** The `tests/personal-reads` table gains a column, and a test asserts that every
-listed route answers 423 when locked and with a missing or wrong cookie. Pure tests for
-key wrapping, wrong passphrase, stored parameters, recovery, rewrap, idle timing (with an
-injected clock) and the backoff. A chat turn while locked offers no personal tool.
+**Tests.** The `tests/personal-reads` table gained the `whileLocked` column: a route
+without it must answer 423 when called locked (no passphrase set; set up but no cookie, a
+wrong cookie, or another person's cookie), and a route that reads personal data may only
+skip the gate with a stated reason (the three OAuth callbacks, whose locked return is
+tested to store and audit nothing). The same file lists every page, layout and server
+action as gated or open with a reason and fails on any it does not name. Pure tests for
+the RFC vectors, a fixed KEK for the default parameters, wrap and unwrap with a pinned
+output, wrong passphrase, other additional data, a changed byte, stored parameters and
+their limits, the file round trip and modes, recovery and rewrap, idle timing with an
+injected clock, the sweep and the backoff, the routes' cookie attributes, and the
+`VAULT_IDLE_LOCK_MINUTES` bounds. The flow was run by hand in a browser against a
+throwaway owner cluster ([runbook.md](runbook.md#local-unlock)).
 
 **Effort.** About 5 days: crypto and session 1, routes and gate across routes and tools 2,
 screens 1, tests and docs 1.
@@ -491,7 +556,7 @@ reruns faults F3 and F4 and must now detect them.
 | Step | Issue | Depends on                                         | Touches                                                                                                                                                                                                                                                                                                                                                                |
 | ---- | ----- | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1    | #144  | none                                               | `infrastructure/env.ts` (new settings), new `infrastructure/storage-hardening.ts`, `instrumentation.ts`, `scripts/setup/{local,plan,doctor}.ts`, `features/lab/`, `docs/guidelines.md`, `docs/storage.md`, `docs/runbook.md`                                                                                                                                           |
-| 2    | #142  | #144 (state dir, loopback)                         | `prisma/schema.prisma` (`vault_keys`), new `infrastructure/vault*.ts`, `app/api/vault/*`, every route in `tests/personal-reads/personal-reads.test.ts`, chat tool ports in `packages/query-tools/`, `scripts/mcp-server.ts`, header and first-run screens                                                                                                              |
+| 2    | #142  | #144 (state dir, loopback)                         | Built: new `infrastructure/vault*.ts` (key file in the state directory, no migration), `features/vault/`, `app/api/vault/*`, every gated route, page and server action in `tests/personal-reads/personal-reads.test.ts`, the OAuth callbacks, the sidebar and the first-run screens                                                                                    |
 | 3    | #141  | #142 (keys)                                        | Migration of the columns in 2.3, `infrastructure/personal-data-store.ts`, `genome-report-store.ts`, wearable snapshot stores in `features/{oura,whoop,google-health,vitronic}`, thread and turn persistence in `features/chat` and `features/threads`, `features/memory`, `features/search`, doctor, Lab                                                               |
 | 4    | #145  | #142                                               | `learning_consents`, new `infrastructure/learning-consent.ts`, `scripts/training-data/*`, `scripts/evaluation/*`, Customize · Privacy                                                                                                                                                                                                                                  |
 | 5    | #140  | #141 (value list encrypted)                        | `disclosure_events`, `packages/audit` (generic chain), `infrastructure/personal-data-audit.ts`, the chat and starter provider paths, `features/memory/compact-handler.ts`, `features/arena/thread-export-handler.ts`, `features/wearables/` syncs, `features/digital-twin/genome-run.ts`, the #112 matcher in `infrastructure/rich-text.tsx`, Lab, Customize · Privacy |
@@ -533,11 +598,11 @@ Total about 27 working days.
 
 ## 5. Open questions for Peter
 
-1. **OS keyring.** Should a later step offer "remember on this machine" (macOS Keychain,
+1. **OS keyring.** Decided: no, for now. Should a later step offer "remember on this machine" (macOS Keychain,
    Linux Secret Service) instead of typing the passphrase? It is convenient, but the
    keyring opens for any program running as the owner after login, which undoes most of
    what locking gives. The default here is no.
-2. **Idle lock.** Is 15 minutes right as the default?
+2. **Idle lock.** Decided: 15 minutes by default (`VAULT_IDLE_LOCK_MINUTES`, 1 to 240).
 3. **Anchors off the machine.** Is a manual `anchor:export` enough, or should anchors also
    go somewhere automatically, such as a commit to a private repository? Automatic would
    be a new outgoing channel, and would get its own ledger entry.

@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { resolveActorId } from "@/infrastructure/auth-actor";
 import { ensureAppUser } from "@/infrastructure/current-user";
+import { vaultRefusalForAction } from "@/infrastructure/vault-runtime";
 
 import { completeOnboarding, saveOnboarding } from "./onboarding-store";
 import { MAX_INTEREST_LENGTH, normaliseAnswers } from "./onboarding-steps";
@@ -40,6 +41,8 @@ export const saveOnboardingAnswers = async (
 ): Promise<OnboardingSaveResult> => {
   const parsed = saveInputSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: NOT_SAVED };
+  const locked = await vaultRefusalForAction();
+  if (locked !== null) return { ok: false, error: locked };
   try {
     const userId = await actorUserId();
     if (!userId) return { ok: false, error: "Sign in to keep your choices." };
@@ -60,6 +63,8 @@ export const saveOnboardingAnswers = async (
 
 /** Skip setup: the flow is done and the app opens as usual. */
 export const skipOnboarding = async (): Promise<OnboardingSaveResult> => {
+  const locked = await vaultRefusalForAction();
+  if (locked !== null) return { ok: false, error: locked };
   try {
     const userId = await actorUserId();
     if (!userId) return { ok: false, error: "Sign in to keep your choices." };

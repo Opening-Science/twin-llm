@@ -13,6 +13,7 @@ import { ensureAppUser } from "@/infrastructure/current-user";
 import { whoopEnv } from "@/infrastructure/env";
 import { database } from "@/infrastructure/database";
 import { auditPersonalRead } from "@/infrastructure/personal-read-audit";
+import { vaultOpenFor } from "@/infrastructure/vault-runtime";
 import { append } from "@/packages/audit/append";
 
 export const GET = createWhoopCallbackHandler({
@@ -23,6 +24,7 @@ export const GET = createWhoopCallbackHandler({
   exchangeAndPersistCode: exchangeAndPersistWhoopCode,
   syncForUser: syncWhoopForUser,
   auditPersonalRead: auditPersonalRead((input) => append(database(), input)),
+  mayReadPersonal: vaultOpenFor,
   logError: console.error,
   logWarn: console.warn,
 });

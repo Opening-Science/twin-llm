@@ -94,7 +94,15 @@ const currentIf = (yes: boolean) => (yes ? ("page" as const) : undefined);
 const ThreadBuckets = ({
   groups,
   openPath,
-}: Readonly<{ groups: readonly ThreadGroup[]; openPath: string }>) => {
+  locked,
+}: Readonly<{ groups: readonly ThreadGroup[]; openPath: string; locked: boolean }>) => {
+  if (locked) {
+    return (
+      <p className="text-muted-foreground px-2.5 text-sm">
+        Locked. Unlock to see your threads.
+      </p>
+    );
+  }
   if (groups.length === 0) {
     return (
       <p className="text-muted-foreground px-2.5 text-sm">
@@ -135,11 +143,14 @@ const SignInNote = () => (
 
 export const NavPanel = ({
   threadGroups,
+  threadsLocked = false,
   footer,
   headerAction,
   onNavigate,
 }: Readonly<{
   threadGroups: readonly ThreadGroup[];
+  /** Personal data is locked (#142): the thread titles are not read or shown. */
+  threadsLocked?: boolean;
   footer: ReactNode;
   /** Beside the wordmark: the button that pins or hides the sidebar. */
   headerAction?: ReactNode;
@@ -224,7 +235,10 @@ export const NavPanel = ({
         <div className="min-h-0 overflow-y-auto pb-4">
           <AppAuth>
             {({ isLoaded, isSignedIn }) => {
-              if (isSignedIn) return <ThreadBuckets groups={recent} openPath={path} />;
+              if (isSignedIn)
+                return (
+                  <ThreadBuckets groups={recent} openPath={path} locked={threadsLocked} />
+                );
               return isLoaded && !isClientAuthDisabled() ? <SignInNote /> : null;
             }}
           </AppAuth>

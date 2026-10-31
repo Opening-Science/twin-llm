@@ -16,6 +16,7 @@ import { personalDataSentEvent } from "@/infrastructure/personal-data-audit";
 import { append } from "@/packages/audit/append";
 
 import { loadConnectFacts } from "../connect-facts";
+import { withUnlocked } from "@/infrastructure/vault-runtime";
 
 /**
  * Three starter questions for the last /start step, from the first model of
@@ -26,34 +27,36 @@ import { loadConnectFacts } from "../connect-facts";
  * The chat rate limit applies when sign-in is on, since each call runs the
  * model.
  */
-export const POST = createStarterQuestionsHandler({
-  resolveActorId,
-  findAppUserId,
-  loadLinkedNames: async (appUserId) =>
-    linkedNames(connectGroups(await loadConnectFacts(appUserId))),
-  generate: createStarterGenerate({
-    loadModelIds: async () => {
-      const catalog = await fetchActiveModelCatalog();
-      return catalog ? defaultModelSelection(catalog) : null;
-    },
-    resolveModel: resolveLanguageModel,
-    recordSend: async ({ actor, modelId, hasWearableNarrative }) => {
-      const env = serverEnv();
-      const event = personalDataSentEvent(
-        {
-          mode: env.DATA_MODE,
-          provider: env.LLM_PROVIDER,
-          hasWearableNarrative,
-          exoscalePersonalData: exoscalePersonalData(env),
-        },
-        { actor, sessionId: actor, modelId },
-      );
-      if (event !== null) await append(database(), event);
-    },
-    generateText,
+export const POST = withUnlocked(
+  createStarterQuestionsHandler({
+    resolveActorId,
+    findAppUserId,
+    loadLinkedNames: async (appUserId) =>
+      linkedNames(connectGroups(await loadConnectFacts(appUserId))),
+    generate: createStarterGenerate({
+      loadModelIds: async () => {
+        const catalog = await fetchActiveModelCatalog();
+        return catalog ? defaultModelSelection(catalog) : null;
+      },
+      resolveModel: resolveLanguageModel,
+      recordSend: async ({ actor, modelId, hasWearableNarrative }) => {
+        const env = serverEnv();
+        const event = personalDataSentEvent(
+          {
+            mode: env.DATA_MODE,
+            provider: env.LLM_PROVIDER,
+            hasWearableNarrative,
+            exoscalePersonalData: exoscalePersonalData(env),
+          },
+          { actor, sessionId: actor, modelId },
+        );
+        if (event !== null) await append(database(), event);
+      },
+      generateText,
+    }),
+    timeoutMs: STARTER_TIMEOUT_MS,
+    logError: console.error,
+    guard: (request, clerkId) =>
+      isAuthDisabled() ? Promise.resolve(null) : guardChatRequest(request, clerkId),
   }),
-  timeoutMs: STARTER_TIMEOUT_MS,
-  logError: console.error,
-  guard: (request, clerkId) =>
-    isAuthDisabled() ? Promise.resolve(null) : guardChatRequest(request, clerkId),
-});
+);

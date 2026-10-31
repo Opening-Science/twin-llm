@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { ownedThread } from "@/features/arena/thread-reads";
+import { lockedScreen } from "@/features/vault/page-gate";
 
 /**
  * Settles whether the thread exists and is the viewer's before the segment's
@@ -13,6 +14,8 @@ export default async function ThreadLayout({
   params,
   children,
 }: Readonly<{ params: Promise<{ threadId: string }>; children: ReactNode }>) {
+  // Locked (#142): the page shows the unlock screen; the thread is not read here.
+  if (await lockedScreen()) return children;
   const { threadId } = await params;
   await ownedThread(threadId);
   return children;

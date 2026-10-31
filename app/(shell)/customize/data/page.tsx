@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { loadYourData } from "@/features/personal-data/import-routes";
 import { YourDataSection } from "@/features/personal-data/your-data-section";
+import { lockedScreen } from "@/features/vault/page-gate";
 
 /**
  * Customize · Data: what you bring (your own imports, docs/personal-data.md)
@@ -32,6 +33,8 @@ const DATASETS = [
 ] as const;
 
 export default async function CustomizeDataPage() {
+  const locked = await lockedScreen();
+  if (locked) return locked;
   const yours = await loadYourData();
   return (
     <>

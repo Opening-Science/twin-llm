@@ -26,6 +26,7 @@ import { fetchChatCatalog } from "@/infrastructure/fetch-model-catalog";
 import { chatModelIsLocal } from "@/infrastructure/genome-gate";
 import { turnAgentOf } from "@/infrastructure/model-catalog";
 import { append } from "@/packages/audit/append";
+import { withUnlocked } from "@/infrastructure/vault-runtime";
 
 /**
  * Starts one model's answer for an existing turn.
@@ -103,7 +104,7 @@ const startAnswer = createStartAnswer({
     }),
 });
 
-export const POST = async (request: Request): Promise<Response> => {
+export const POST = withUnlocked(async (request: Request): Promise<Response> => {
   const actorId = await resolveActorId();
   if (!actorId) return refuse(401, "Sign in to send a prompt to TwinLLM.");
 
@@ -154,4 +155,4 @@ export const POST = async (request: Request): Promise<Response> => {
     );
     return refuse(502, "We couldn't reach that model just now. Give it another try.");
   }
-};
+});

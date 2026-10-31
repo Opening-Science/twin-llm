@@ -9,6 +9,7 @@ import {
 import { resolveActorId } from "@/infrastructure/auth-actor";
 import { findAppUserId } from "@/infrastructure/current-user";
 import { vitronicEnv } from "@/infrastructure/env";
+import { withUnlocked } from "@/infrastructure/vault-runtime";
 
 const subjectsDeps = {
   vitronicEnv,
@@ -18,5 +19,5 @@ const subjectsDeps = {
   createVitronicSubject,
 };
 
-export const GET = createVitronicSubjectsGetHandler(subjectsDeps);
-export const POST = createVitronicSubjectsPostHandler(subjectsDeps);
+export const GET = withUnlocked(createVitronicSubjectsGetHandler(subjectsDeps));
+export const POST = withUnlocked(createVitronicSubjectsPostHandler(subjectsDeps));

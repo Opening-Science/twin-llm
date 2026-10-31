@@ -11,6 +11,7 @@ import { findAppUserId } from "@/infrastructure/current-user";
 import { fetchChatCatalog } from "@/infrastructure/fetch-model-catalog";
 import { serverEnv } from "@/infrastructure/env";
 import { defaultModelSelection } from "@/infrastructure/model-catalog";
+import { lockedScreen } from "@/features/vault/page-gate";
 
 /** A thread is private to its owner; search engines get nothing either way. */
 export const metadata: Metadata = { robots: { index: false, follow: false } };
@@ -24,6 +25,8 @@ export const metadata: Metadata = { robots: { index: false, follow: false } };
 export default async function ThreadPage({
   params,
 }: Readonly<{ params: Promise<{ threadId: string }> }>) {
+  const locked = await lockedScreen();
+  if (locked) return locked;
   const { threadId } = await params;
   const actor = await resolveActorId();
   const [thread, catalog, skills] = await Promise.all([

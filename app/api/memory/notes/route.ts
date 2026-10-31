@@ -7,17 +7,20 @@ import { serverEnv } from "@/infrastructure/env";
 import { append } from "@/packages/audit/append";
 
 import { ownedThreadForNote, threadIsLocal } from "../thread-facts";
+import { withUnlocked } from "@/infrastructure/vault-runtime";
 
 /** Saves a `/compact` draft the person confirmed (#43); audited as `memory.note.write`. */
-export const POST = createSaveNoteHandler({
-  resolveActorId,
-  findAppUserId,
-  loadOwnedThread: ownedThreadForNote,
-  threadIsLocal,
-  dataMode: () => serverEnv().DATA_MODE,
-  countNotes,
-  createNote,
-  deleteNote,
-  appendAudit: (input) => append(database(), input),
-  logError: (message, name) => console.error(message, name),
-});
+export const POST = withUnlocked(
+  createSaveNoteHandler({
+    resolveActorId,
+    findAppUserId,
+    loadOwnedThread: ownedThreadForNote,
+    threadIsLocal,
+    dataMode: () => serverEnv().DATA_MODE,
+    countNotes,
+    createNote,
+    deleteNote,
+    appendAudit: (input) => append(database(), input),
+    logError: (message, name) => console.error(message, name),
+  }),
+);

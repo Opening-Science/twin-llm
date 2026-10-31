@@ -1,4 +1,5 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join, relative, sep } from "node:path";
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
@@ -30,7 +31,16 @@ import {
   type WearableSyncProvider,
 } from "@/features/wearables/sync-handler";
 import { createWhoopCallbackHandler } from "@/features/whoop/oauth-handlers";
+import { sealRecord } from "@/features/vault/vault-service";
 import { auditPersonalRead } from "@/infrastructure/personal-read-audit";
+import { newDataKey, newKeyId, newRecoveryCode } from "@/infrastructure/vault-crypto";
+import { writeVaultRecord } from "@/infrastructure/vault-file";
+import {
+  PERSONAL_DATA_LOCKED,
+  PERSONAL_DATA_NOT_SET_UP,
+  VAULT_COOKIE,
+} from "@/infrastructure/vault-gate";
+import { vaultSessions } from "@/infrastructure/vault-session";
 import type { OAuthCookieJar } from "@/infrastructure/oauth-state";
 import type { PersonalDataStore } from "@/infrastructure/personal-data-store";
 import type { AppendInput } from "@/packages/audit/append";
@@ -193,6 +203,9 @@ const syncRoute = (provider: WearableSyncProvider): Audited => ({
     })(new Request(`http://localhost/api/${provider}/sync`, { method: "POST" })),
 });
 
+/** Whether the callbacks' fake vault is open in this process (#142). */
+let unlockedInProcess = true;
+
 /** The OAuth callback writes no health data itself; its first sync does. */
 const callbackDeps = (record: Recorder) => ({
   isConfigured: () => true,
@@ -202,31 +215,52 @@ const callbackDeps = (record: Recorder) => ({
   exchangeAndPersistCode: async () => undefined,
   syncForUser: syncedSummary(record),
   auditPersonalRead: auditPersonalRead(record.append),
+  mayReadPersonal: () => unlockedInProcess,
   logError: () => undefined,
   logWarn: () => undefined,
 });
 
-type Audited = Readonly<{
-  kind: "audited";
-  /** The audit rows one call writes, in order. */
-  tools: readonly string[];
-  call: (record: Recorder) => Promise<unknown>;
-}>;
+/**
+ * The vault column (#142). A route without `whileLocked` sits behind the
+ * unlock gate and must answer 423 while the person's data is locked; the
+ * tests below call each one locked and fail on any other answer. Only a
+ * route that reads nothing personal, or has its own reason, names
+ * `whileLocked` with that reason.
+ */
+type VaultColumn = Readonly<{ whileLocked?: string }>;
 
-type Entry =
-  | Audited
-  /** Audited by code this test cannot call with fakes; `why` says where. */
-  | Readonly<{ kind: "elsewhere"; why: string }>
-  /** Reads no personal data, or only writes (each write is audited where it happens). */
-  | Readonly<{ kind: "exempt"; why: string }>
-  /** Reads personal data without a row of its own yet: a known gap, not a pass. */
-  | Readonly<{ kind: "open"; why: string }>;
+type Audited = VaultColumn &
+  Readonly<{
+    kind: "audited";
+    /** The audit rows one call writes, in order. */
+    tools: readonly string[];
+    call: (record: Recorder) => Promise<unknown>;
+  }>;
+
+type Entry = VaultColumn &
+  (
+    | Audited
+    /** Audited by code this test cannot call with fakes; `why` says where. */
+    | Readonly<{ kind: "elsewhere"; why: string }>
+    /** Reads no personal data, or only writes (each write is audited where it happens). */
+    | Readonly<{ kind: "exempt"; why: string }>
+    /** Reads personal data without a row of its own yet: a known gap, not a pass. */
+    | Readonly<{ kind: "open"; why: string }>
+  );
 
 const WRITE = "a write; its handler or reader audits it, nothing personal is read back";
 const NOT_PERSONAL = "shipped assets or settings, no personal data";
 const OAUTH = "OAuth or disconnect; no health data is read";
 const CONNECTION_ONLY =
   "connection row only (linked at, last sync), never a snapshot; nothing to audit";
+
+/** Reasons a route answers while the data is locked (#142). */
+const OPEN_NOT_PERSONAL = "reads nothing personal";
+const OPEN_CONNECTION = "says only whether a service is linked";
+const OPEN_OAUTH = "starts or ends a link; stores or removes tokens only";
+const OPEN_CALLBACK =
+  "the provider's redirect carries no SameSite=Strict cookie; tokens are stored and the first sync runs only while the vault is open in this process (tested below)";
+const OPEN_VAULT = "the unlock routes themselves";
 
 /** Route path and method → what it writes to the audit chain. */
 const PERSONAL_READ_ROUTES: Readonly<Record<string, Entry>> = {
@@ -317,6 +351,7 @@ const PERSONAL_READ_ROUTES: Readonly<Record<string, Entry>> = {
     why: "packages/ark-adapter writes one row per Ark call (status, data list, data paths); its own tests cover that",
   },
   "GET /api/ark/audit": {
+    whileLocked: OPEN_NOT_PERSONAL,
     kind: "exempt",
     why: "lists the person's own ark.* and genome.* audit rows: tool, time, hash prefix; no health data",
   },
@@ -422,18 +457,33 @@ const PERSONAL_READ_ROUTES: Readonly<Record<string, Entry>> = {
     why: "linked source names only; a send to a hosted model is audited as provider.personal_data_sent",
   },
   "GET /api/biomarkers/cohort": {
+    whileLocked: OPEN_NOT_PERSONAL,
     kind: "exempt",
     why: "synthetic Demo cohort only (its handler still writes biomarkers.cohort.list)",
   },
   "GET /api/biomarkers/cohort/[subjectRef]": {
+    whileLocked: OPEN_NOT_PERSONAL,
     kind: "exempt",
     why: "synthetic Demo cohort only (its handler still writes biomarkers.cohort.values)",
   },
-  "GET /api/oura/status": { kind: "exempt", why: CONNECTION_ONLY },
-  "GET /api/whoop/status": { kind: "exempt", why: CONNECTION_ONLY },
-  "GET /api/google-health/status": { kind: "exempt", why: CONNECTION_ONLY },
-  "GET /api/oura/authorize": { kind: "exempt", why: OAUTH },
+  "GET /api/oura/status": {
+    whileLocked: OPEN_CONNECTION,
+    kind: "exempt",
+    why: CONNECTION_ONLY,
+  },
+  "GET /api/whoop/status": {
+    whileLocked: OPEN_CONNECTION,
+    kind: "exempt",
+    why: CONNECTION_ONLY,
+  },
+  "GET /api/google-health/status": {
+    whileLocked: OPEN_CONNECTION,
+    kind: "exempt",
+    why: CONNECTION_ONLY,
+  },
+  "GET /api/oura/authorize": { whileLocked: OPEN_OAUTH, kind: "exempt", why: OAUTH },
   "GET /api/oura/callback": {
+    whileLocked: OPEN_CALLBACK,
     kind: "audited",
     tools: ["personal.read.sync-oura"],
     call: (record) =>
@@ -452,23 +502,30 @@ const PERSONAL_READ_ROUTES: Readonly<Record<string, Entry>> = {
         persistOuraTokens: async () => undefined,
         syncOuraForUser: syncedSummary(record),
         auditPersonalRead: auditPersonalRead(record.append),
+        mayReadPersonal: () => unlockedInProcess,
         logError: () => undefined,
         logWarn: () => undefined,
       })(callbackRequest("oura")),
   },
-  "DELETE /api/oura/disconnect": { kind: "exempt", why: OAUTH },
+  "DELETE /api/oura/disconnect": { whileLocked: OPEN_OAUTH, kind: "exempt", why: OAUTH },
   "POST /api/oura/sync": syncRoute("oura"),
-  "GET /api/whoop/authorize": { kind: "exempt", why: OAUTH },
+  "GET /api/whoop/authorize": { whileLocked: OPEN_OAUTH, kind: "exempt", why: OAUTH },
   "GET /api/whoop/callback": {
+    whileLocked: OPEN_CALLBACK,
     kind: "audited",
     tools: ["personal.read.sync-whoop"],
     call: (record) =>
       createWhoopCallbackHandler(callbackDeps(record))(callbackRequest("whoop")),
   },
-  "DELETE /api/whoop/disconnect": { kind: "exempt", why: OAUTH },
+  "DELETE /api/whoop/disconnect": { whileLocked: OPEN_OAUTH, kind: "exempt", why: OAUTH },
   "POST /api/whoop/sync": syncRoute("whoop"),
-  "GET /api/google-health/authorize": { kind: "exempt", why: OAUTH },
+  "GET /api/google-health/authorize": {
+    whileLocked: OPEN_OAUTH,
+    kind: "exempt",
+    why: OAUTH,
+  },
   "GET /api/google-health/callback": {
+    whileLocked: OPEN_CALLBACK,
     kind: "audited",
     tools: ["personal.read.sync-google-health"],
     call: (record) =>
@@ -476,7 +533,11 @@ const PERSONAL_READ_ROUTES: Readonly<Record<string, Entry>> = {
         callbackRequest("google-health"),
       ),
   },
-  "DELETE /api/google-health/disconnect": { kind: "exempt", why: OAUTH },
+  "DELETE /api/google-health/disconnect": {
+    whileLocked: OPEN_OAUTH,
+    kind: "exempt",
+    why: OAUTH,
+  },
   "POST /api/google-health/sync": syncRoute("google-health"),
   "POST /api/vitronic/connect": { kind: "exempt", why: WRITE },
   "POST /api/vitronic/sync": { kind: "exempt", why: WRITE },
@@ -484,24 +545,79 @@ const PERSONAL_READ_ROUTES: Readonly<Record<string, Entry>> = {
   "PUT /api/vitronic/subjects/[subjectId]/default": { kind: "exempt", why: WRITE },
   "POST /api/vitronic/subjects/[subjectId]/files": { kind: "exempt", why: WRITE },
   "POST /api/vitronic/subjects/[subjectId]/sync": { kind: "exempt", why: WRITE },
-  "POST /api/vitronic/upload/[connectionId]": { kind: "exempt", why: WRITE },
-  "GET /api/anatomy/status": { kind: "exempt", why: NOT_PERSONAL },
-  "GET /api/anatomy/atlas/[atlasId]": { kind: "exempt", why: NOT_PERSONAL },
-  "GET /api/anatomy/demo/[bodyId]": { kind: "exempt", why: NOT_PERSONAL },
-  "GET /api/anatomy/rigged/[bodyId]": { kind: "exempt", why: NOT_PERSONAL },
-  "GET /api/motion/status": { kind: "exempt", why: NOT_PERSONAL },
-  "GET /api/motion/clip/[clipId]": { kind: "exempt", why: NOT_PERSONAL },
+  "POST /api/vitronic/upload/[connectionId]": {
+    kind: "exempt",
+    why: "a scanner's upload, checked against its own secret; it stores nothing yet (the shape is pending)",
+    whileLocked: "called by the scanner, not the browser, and stores nothing yet",
+  },
+  "GET /api/anatomy/status": {
+    whileLocked: OPEN_NOT_PERSONAL,
+    kind: "exempt",
+    why: NOT_PERSONAL,
+  },
+  "GET /api/anatomy/atlas/[atlasId]": {
+    whileLocked: OPEN_NOT_PERSONAL,
+    kind: "exempt",
+    why: NOT_PERSONAL,
+  },
+  "GET /api/anatomy/demo/[bodyId]": {
+    whileLocked: OPEN_NOT_PERSONAL,
+    kind: "exempt",
+    why: NOT_PERSONAL,
+  },
+  "GET /api/anatomy/rigged/[bodyId]": {
+    whileLocked: OPEN_NOT_PERSONAL,
+    kind: "exempt",
+    why: NOT_PERSONAL,
+  },
+  "GET /api/motion/status": {
+    whileLocked: OPEN_NOT_PERSONAL,
+    kind: "exempt",
+    why: NOT_PERSONAL,
+  },
+  "GET /api/motion/clip/[clipId]": {
+    whileLocked: OPEN_NOT_PERSONAL,
+    kind: "exempt",
+    why: NOT_PERSONAL,
+  },
   "GET /api/motion/days/[subjectRef]": {
+    whileLocked: OPEN_NOT_PERSONAL,
     kind: "exempt",
     why: "synthetic Demo cohort only (its handler still writes motion.days)",
   },
-  "GET /api/gbd/status": { kind: "exempt", why: NOT_PERSONAL },
+  "GET /api/vault/status": { kind: "exempt", why: NOT_PERSONAL, whileLocked: OPEN_VAULT },
+  "POST /api/vault/setup": { kind: "exempt", why: NOT_PERSONAL, whileLocked: OPEN_VAULT },
+  "POST /api/vault/unlock": {
+    kind: "exempt",
+    why: NOT_PERSONAL,
+    whileLocked: OPEN_VAULT,
+  },
+  "POST /api/vault/recover": {
+    kind: "exempt",
+    why: NOT_PERSONAL,
+    whileLocked: OPEN_VAULT,
+  },
+  "POST /api/vault/lock": { kind: "exempt", why: NOT_PERSONAL, whileLocked: OPEN_VAULT },
+  "GET /api/gbd/status": {
+    whileLocked: OPEN_NOT_PERSONAL,
+    kind: "exempt",
+    why: NOT_PERSONAL,
+  },
   "POST /api/synthea/jobs": {
+    whileLocked: OPEN_NOT_PERSONAL,
     kind: "exempt",
     why: "runs Synthea on closed options; every record it makes is synthetic",
   },
-  "GET /api/synthea/jobs/[id]": { kind: "exempt", why: NOT_PERSONAL },
-  "GET /api/synthea/jobs/[id]/download": { kind: "exempt", why: NOT_PERSONAL },
+  "GET /api/synthea/jobs/[id]": {
+    whileLocked: OPEN_NOT_PERSONAL,
+    kind: "exempt",
+    why: NOT_PERSONAL,
+  },
+  "GET /api/synthea/jobs/[id]/download": {
+    whileLocked: OPEN_NOT_PERSONAL,
+    kind: "exempt",
+    why: NOT_PERSONAL,
+  },
 };
 
 /** A direct call to a wearable summary reader, outside the audited reader. */
@@ -539,6 +655,9 @@ const PERSONAL_READ_PAGES: Readonly<Record<string, PageEntry>> = {
 
 const originalEnv = { ...process.env };
 
+/** A throwaway state directory for the vault file; removed after the run. */
+const STATE_DIR = mkdtempSync(join(tmpdir(), "twinllm-vault-test-"));
+
 beforeAll(async () => {
   // getVitronicConnectionStatus reads the BodyLoop config; synthetic values only.
   Object.assign(process.env, {
@@ -548,12 +667,15 @@ beforeAll(async () => {
     DATA_MODE: "personal",
     DATABASE_URL: "postgresql://synthetic@localhost:1/none",
     VITRONIC_TOKEN_ENCRYPTION_KEY: "0".repeat(64),
+    TWINLLM_STATE_DIR: STATE_DIR,
+    LOCAL_USER_ID: "local-synthetic",
   });
   const { resetServerEnvCacheForTests } = await import("@/infrastructure/env");
   resetServerEnvCacheForTests();
 });
 
 afterAll(async () => {
+  rmSync(STATE_DIR, { recursive: true, force: true });
   for (const key of Object.keys(process.env)) {
     if (!(key in originalEnv)) Reflect.deleteProperty(process.env, key);
   }
@@ -713,5 +835,323 @@ describe("the list is complete", () => {
   test("every app/api route and method is listed above", () => {
     const found = apiRoutes(join(import.meta.dir, "../../app/api")).sort();
     expect(found).toEqual(Object.keys(PERSONAL_READ_ROUTES).sort());
+  });
+});
+
+/**
+ * The actor the gate sees: LOCAL_USER_ID above, unless another test file in
+ * the same run replaced the auth module, so it is asked rather than assumed.
+ */
+let LOCAL_ACTOR = "local-synthetic";
+beforeAll(async () => {
+  const { resolveActorId } = await import("@/infrastructure/auth-actor");
+  LOCAL_ACTOR = (await resolveActorId()) ?? LOCAL_ACTOR;
+});
+
+/** Values for every dynamic segment the listed routes use. */
+const ROUTE_PARAMS = {
+  subjectId: SUBJECT_ID,
+  snapshotId: "snap-synthetic-1",
+  id: "dataset-synthetic-1",
+  threadId: "thread-synthetic-1",
+};
+
+type RouteHandler = (request: Request, context: unknown) => Promise<Response>;
+
+/** The exported handler for `METHOD /api/...`, loaded from its route file. */
+const routeHandler = async (route: string): Promise<RouteHandler> => {
+  const [method, path] = route.split(" ");
+  const loaded: Readonly<Record<string, unknown>> = await import(
+    join(import.meta.dir, "../../app", path ?? "", "route.ts")
+  );
+  const handler = loaded[method ?? ""];
+  if (typeof handler !== "function") throw new Error(`${route} exports no handler`);
+  return handler as RouteHandler;
+};
+
+const call = async (route: string, cookie: string | null) => {
+  const [method, path] = route.split(" ");
+  const handler = await routeHandler(route);
+  const response = await handler(
+    new Request(`http://localhost${path ?? ""}?q=synthetic&tab=threads`, {
+      method,
+      headers: cookie === null ? {} : { cookie: `${VAULT_COOKIE}=${cookie}` },
+    }),
+    { params: Promise.resolve(ROUTE_PARAMS) },
+  );
+  const body: unknown = await response.json().catch(() => null);
+  const code =
+    typeof body === "object" && body !== null ? Reflect.get(body, "code") : null;
+  return [route, response.status, code] as const;
+};
+
+const gatedRoutes = Object.entries(PERSONAL_READ_ROUTES)
+  .filter(([, entry]) => entry.whileLocked === undefined)
+  .map(([route]) => route)
+  .sort();
+
+describe("locked personal data (#142)", () => {
+  test("every route that reads personal data is behind the gate", () => {
+    const readers = Object.entries(PERSONAL_READ_ROUTES).filter(
+      ([, entry]) => entry.kind !== "exempt",
+    );
+    expect(
+      readers
+        .filter(([, entry]) => entry.whileLocked !== undefined)
+        .map(([route, entry]) => [route, entry.whileLocked]),
+    ).toEqual([
+      ["GET /api/oura/callback", OPEN_CALLBACK],
+      ["GET /api/whoop/callback", OPEN_CALLBACK],
+      ["GET /api/google-health/callback", OPEN_CALLBACK],
+    ]);
+  });
+
+  test("with no passphrase set, every gated route answers 423 and asks for one", async () => {
+    vaultSessions().lock(LOCAL_ACTOR);
+    const results = await Promise.all(gatedRoutes.map((route) => call(route, null)));
+    expect(results).toEqual(
+      gatedRoutes.map((route) => [route, 423, PERSONAL_DATA_NOT_SET_UP] as const),
+    );
+  });
+
+  test("locked, with a missing, wrong or other person's cookie, every gated route answers 423", async () => {
+    const dek = newDataKey();
+    await writeVaultRecord(
+      STATE_DIR,
+      LOCAL_ACTOR,
+      await sealRecord({
+        actorId: LOCAL_ACTOR,
+        keyId: newKeyId(),
+        dek,
+        passphrase: "synthetic passphrase for tests",
+        recoveryCode: newRecoveryCode(),
+        createdAt: "2026-10-31T00:00:00.000Z",
+        now: new Date("2026-10-31T00:00:00.000Z"),
+        argon2: false,
+      }),
+    );
+    const sessions = vaultSessions();
+    const locked = gatedRoutes.map(
+      (route) => [route, 423, PERSONAL_DATA_LOCKED] as const,
+    );
+    try {
+      // Nothing open at all.
+      sessions.lock(LOCAL_ACTOR);
+      expect(await Promise.all(gatedRoutes.map((route) => call(route, null)))).toEqual(
+        locked,
+      );
+      // Open, but this request has no cookie or the wrong one.
+      sessions.open(LOCAL_ACTOR, "0123456789abcdef", dek, "right-token");
+      expect(await Promise.all(gatedRoutes.map((route) => call(route, null)))).toEqual(
+        locked,
+      );
+      expect(
+        await Promise.all(gatedRoutes.map((route) => call(route, "wrong-token"))),
+      ).toEqual(locked);
+      // Another person's open vault does not open this one.
+      sessions.lock(LOCAL_ACTOR);
+      sessions.open("someone-else-synthetic", "0123456789abcdef", dek, "their-token");
+      expect(
+        await Promise.all(gatedRoutes.map((route) => call(route, "their-token"))),
+      ).toEqual(locked);
+    } finally {
+      sessions.lock(LOCAL_ACTOR);
+      sessions.lock("someone-else-synthetic");
+    }
+  });
+
+  test("the gate covers all of these routes, and no more", () => {
+    expect(gatedRoutes).toEqual([
+      "DELETE /api/personal-data/datasets/[id]",
+      "GET /api/ark/status",
+      "GET /api/chat/suggestions",
+      "GET /api/genome/report",
+      "GET /api/search",
+      "GET /api/threads/[threadId]/export",
+      "GET /api/vitronic/avatar/[snapshotId]",
+      "GET /api/vitronic/status",
+      "GET /api/vitronic/subjects",
+      "GET /api/vitronic/subjects/[subjectId]/scans",
+      "GET /api/vitronic/subjects/[subjectId]/snapshots",
+      "GET /api/wearables/summary",
+      "PATCH /api/personal-data/datasets/[id]",
+      "POST /api/chat",
+      "POST /api/chat/incognito",
+      "POST /api/genome/run",
+      "POST /api/google-health/sync",
+      "POST /api/memory/compact",
+      "POST /api/memory/notes",
+      "POST /api/onboarding/starters",
+      "POST /api/oura/sync",
+      "POST /api/personal-data/datasets",
+      "POST /api/personal-data/review",
+      "POST /api/search",
+      "POST /api/vitronic/connect",
+      "POST /api/vitronic/subjects",
+      "POST /api/vitronic/subjects/[subjectId]/files",
+      "POST /api/vitronic/subjects/[subjectId]/sync",
+      "POST /api/vitronic/sync",
+      "POST /api/whoop/sync",
+      "PUT /api/vitronic/subjects/[subjectId]/default",
+    ]);
+  });
+
+  test("an OAuth return while locked stores no snapshot and writes no read row", async () => {
+    const callbacks = audited.filter(([route]) => route.endsWith("/callback"));
+    expect(callbacks.length).toBe(3);
+    unlockedInProcess = false;
+    try {
+      for (const [route, entry] of callbacks) {
+        const record = recorder();
+        await entry.call(record);
+        expect([route, record.rows, record.events]).toEqual([route, [], []]);
+      }
+    } finally {
+      unlockedInProcess = true;
+    }
+  });
+});
+
+/** Pages: each one shows the unlock screen while locked, or says why it may render. */
+const PAGES: Readonly<Record<string, "gated" | Readonly<{ open: string }>>> = {
+  "app/(shell)/(home)/page.tsx": "gated",
+  "app/(shell)/t/[threadId]/layout.tsx": "gated",
+  "app/(shell)/t/[threadId]/page.tsx": "gated",
+  "app/(shell)/customize/connectors/page.tsx": "gated",
+  "app/(shell)/customize/data/page.tsx": "gated",
+  "app/(shell)/customize/memory/page.tsx": "gated",
+  "app/(focus)/start/page.tsx": "gated",
+  "app/layout.tsx": { open: "the root frame" },
+  "app/(focus)/layout.tsx": { open: "the frame of /start" },
+  "app/(shell)/layout.tsx": {
+    open: "reads thread titles only when unlocked (checked below)",
+  },
+  "app/(shell)/connectors/page.tsx": { open: "a redirect" },
+  "app/(shell)/wearables/page.tsx": { open: "a redirect" },
+  "app/(shell)/data/[[...rest]]/page.tsx": { open: "a redirect" },
+  "app/(shell)/customize/layout.tsx": { open: "headings and tabs" },
+  "app/(shell)/customize/page.tsx": {
+    open: "skills: instructions the person wrote, not records (privacy-design 2.3)",
+  },
+  "app/(shell)/customize/skills/page.tsx": { open: "a redirect" },
+  "app/(shell)/customize/skills/new/page.tsx": { open: "an empty form" },
+  "app/(shell)/customize/skills/[skillId]/page.tsx": {
+    open: "skills: instructions the person wrote, not records (privacy-design 2.3)",
+  },
+  "app/(shell)/customize/agents/page.tsx": { open: "shipped agents and lab results" },
+  "app/(shell)/customize/agents/[agentId]/page.tsx": {
+    open: "shipped agents and lab results",
+  },
+  "app/(shell)/customize/data/cohort/page.tsx": { open: "synthetic cohort" },
+  "app/(shell)/customize/data/cohort/subjects/page.tsx": { open: "synthetic cohort" },
+  "app/(shell)/customize/data/cohort/subjects/[subjectRef]/page.tsx": {
+    open: "synthetic cohort",
+  },
+  "app/(shell)/customize/data/cohort/training/page.tsx": { open: "synthetic cohort" },
+  "app/(shell)/customize/data/cohort/training/[set]/[number]/page.tsx": {
+    open: "synthetic cohort",
+  },
+  "app/(shell)/digital-twin/page.tsx": {
+    open: "the Demo bodies are synthetic; BodyLoop reads go through gated routes",
+  },
+  "app/(shell)/docs/[[...slug]]/page.tsx": { open: "the docs" },
+  "app/(shell)/lab/page.tsx": { open: "this machine's self-checks" },
+  "app/(shell)/models/page.tsx": { open: "the model list" },
+  "app/synthea/layout.tsx": { open: "the public Synthea generator" },
+  "app/synthea/page.tsx": { open: "the public Synthea generator" },
+  "app/synthea/docs/page.tsx": { open: "the public Synthea generator" },
+};
+
+/** Server actions: each gated function refuses while locked (directly or through `via`). */
+const SERVER_ACTIONS: Readonly<
+  Record<string, Readonly<{ gated: Readonly<Record<string, string>> } | { open: string }>>
+> = {
+  "features/arena/start-turn.ts": {
+    gated: { startTurn: "vaultRefusalForAction()" },
+  },
+  "app/(focus)/start/actions.ts": {
+    gated: { startStarterThread: "startTurn(" },
+  },
+  "features/onboarding/onboarding-actions.ts": {
+    gated: {
+      saveOnboardingAnswers: "vaultRefusalForAction()",
+      skipOnboarding: "vaultRefusalForAction()",
+    },
+  },
+  "features/memory/note-actions.ts": {
+    gated: {
+      editNote: "vaultRefusalForAction()",
+      removeNote: "vaultRefusalForAction()",
+      setNotesLoading: "vaultRefusalForAction()",
+    },
+  },
+  "features/skills/skill-actions.ts": {
+    open: "skills: instructions the person wrote, not records (privacy-design 2.3)",
+  },
+};
+
+const ROOT = join(import.meta.dir, "../..");
+
+const filesUnder = (dir: string, keep: (name: string) => boolean): string[] =>
+  readdirSync(dir, { withFileTypes: true }).flatMap((item) => {
+    const path = join(dir, item.name);
+    if (item.isDirectory()) {
+      return item.name === "node_modules" ? [] : filesUnder(path, keep);
+    }
+    return keep(item.name) ? [relative(ROOT, path).split(sep).join("/")] : [];
+  });
+
+/** The body of `export const name = ...` up to the next top-level export. */
+const exportBody = (source: string, name: string): string => {
+  const start = source.indexOf(`export const ${name} =`);
+  if (start === -1) return "";
+  const next = source.indexOf("\nexport ", start + 1);
+  return source.slice(start, next === -1 ? undefined : next);
+};
+
+describe("pages and server actions while locked (#142)", () => {
+  test("every page and layout is listed", () => {
+    const found = filesUnder(
+      join(ROOT, "app"),
+      (name) => name === "page.tsx" || name === "layout.tsx",
+    ).sort();
+    expect(found).toEqual(Object.keys(PAGES).sort());
+  });
+
+  test("every gated page asks the gate before it reads", () => {
+    for (const [file, rule] of Object.entries(PAGES)) {
+      if (rule !== "gated") continue;
+      const source = readFileSync(join(ROOT, file), "utf8");
+      expect([file, source.includes("await lockedScreen()")]).toEqual([file, true]);
+    }
+  });
+
+  test("the sidebar reads thread titles only when unlocked", () => {
+    const source = readFileSync(join(ROOT, "app/(shell)/layout.tsx"), "utf8");
+    expect(source).toContain("vault.unlocked\n    ? await threadsForViewer(");
+  });
+
+  test("every server action file is listed, and each gated action asks the gate", () => {
+    const found = [
+      ...filesUnder(join(ROOT, "app"), (name) => /\.tsx?$/.test(name)),
+      ...filesUnder(join(ROOT, "features"), (name) => /\.tsx?$/.test(name)),
+    ]
+      .filter((file) => !file.endsWith(".test.ts"))
+      .filter((file) =>
+        /^["']use server["'];/m.test(readFileSync(join(ROOT, file), "utf8")),
+      )
+      .sort();
+    expect(found).toEqual(Object.keys(SERVER_ACTIONS).sort());
+    for (const [file, rule] of Object.entries(SERVER_ACTIONS)) {
+      if ("open" in rule) continue;
+      const source = readFileSync(join(ROOT, file), "utf8");
+      for (const [name, via] of Object.entries(rule.gated)) {
+        expect([file, name, exportBody(source, name).includes(via)]).toEqual([
+          file,
+          name,
+          true,
+        ]);
+      }
+    }
   });
 });

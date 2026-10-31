@@ -3,6 +3,7 @@
 import { runnableSkills } from "@/features/skills/load-skills";
 import { trackPromptSent } from "@/infrastructure/analytics-events";
 import { resolveActorId } from "@/infrastructure/auth-actor";
+import { vaultRefusalForAction } from "@/infrastructure/vault-runtime";
 import { ensureAppUser } from "@/infrastructure/current-user";
 import { database } from "@/infrastructure/database";
 import { serverEnv } from "@/infrastructure/env";
@@ -120,6 +121,9 @@ const writeTurn = async (
 export const startTurn = async (input: StartTurnInput): Promise<StartTurnResult> => {
   const actorId = await resolveActorId();
   if (actorId === null) return { ok: false, error: TURN_COPY.signIn };
+  // A turn stores the prompt in the person's thread: not while locked (#142).
+  const locked = await vaultRefusalForAction();
+  if (locked !== null) return { ok: false, error: locked };
 
   const checked = checkTurnRequest(
     {

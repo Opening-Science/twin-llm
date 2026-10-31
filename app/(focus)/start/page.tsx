@@ -21,6 +21,7 @@ import { DEFAULT_OLLAMA_BASE_URL } from "@/infrastructure/ollama-context";
 
 import { loadConnectFacts } from "../../api/onboarding/connect-facts";
 import { startStarterThread } from "./actions";
+import { lockedScreen } from "@/features/vault/page-gate";
 
 /**
  * First-run onboarding. The home page sends a person here until they
@@ -28,6 +29,8 @@ import { startStarterThread } from "./actions";
  * on the saved answers.
  */
 export default async function StartPage() {
+  const locked = await lockedScreen();
+  if (locked) return locked;
   const clerkId = await resolveActorId();
   if (!clerkId) redirect("/");
 

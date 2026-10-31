@@ -492,6 +492,7 @@ const serverEnvSchema = z
       z.string().regex(/^\//, "TWINLLM_STATE_DIR must be an absolute path").optional(),
     ),
     XDG_DATA_HOME: maybeText(),
+    VAULT_IDLE_LOCK_MINUTES: wholeNumberIn("VAULT_IDLE_LOCK_MINUTES", 1, 240, 15),
   })
   .superRefine((env, ctx) => {
     const report: Report = ({ path, message }) =>
@@ -779,6 +780,22 @@ export const storageEnv = (
       env.VITRONIC_DATA_DIR ?? "data/vitronic",
     ),
     databaseUrl: env.DATABASE_URL,
+  });
+
+export type VaultEnv = Readonly<{
+  dataMode: ServerEnv["DATA_MODE"];
+  /** Where the wrapped data keys live (`<stateDir>/vault`), owner-only (#144). */
+  stateDir: string;
+  /** VAULT_IDLE_LOCK_MINUTES in milliseconds (default 15 minutes, #142). */
+  idleLockMs: number;
+}>;
+
+/** The settings of the local unlock (#142, docs/privacy-design.md section 2.2). */
+export const vaultEnv = (env: ServerEnv = serverEnv()): VaultEnv =>
+  Object.freeze({
+    dataMode: env.DATA_MODE,
+    stateDir: storageEnv(env).stateDir,
+    idleLockMs: env.VAULT_IDLE_LOCK_MINUTES * 60_000,
   });
 
 export type AnatomyEnv = Readonly<{

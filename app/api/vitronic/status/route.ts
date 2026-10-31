@@ -3,6 +3,7 @@ import { createVitronicStatusGetHandler } from "@/features/vitronic/status-handl
 import { resolveActorId } from "@/infrastructure/auth-actor";
 import { findAppUserId } from "@/infrastructure/current-user";
 import { vitronicEnv } from "@/infrastructure/env";
+import { withUnlocked } from "@/infrastructure/vault-runtime";
 
 const statusDeps = {
   vitronicEnv,
@@ -11,4 +12,4 @@ const statusDeps = {
   getVitronicConnectionStatus,
 };
 
-export const GET = createVitronicStatusGetHandler(statusDeps);
+export const GET = withUnlocked(createVitronicStatusGetHandler(statusDeps));

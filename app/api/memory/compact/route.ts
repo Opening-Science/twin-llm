@@ -14,6 +14,7 @@ import { personalDataSentEvent } from "@/infrastructure/personal-data-audit";
 import { append } from "@/packages/audit/append";
 
 import { ownedThreadForNote, threadIsLocal } from "../thread-facts";
+import { withUnlocked } from "@/infrastructure/vault-runtime";
 
 /** A draft that takes longer than this falls back to the person's own questions. */
 const DRAFT_TIMEOUT_MS = 90_000;
@@ -72,11 +73,11 @@ const draft = createCompactHandler({
  * `/compact` (#43): a draft twin note of the person's own thread. The chat
  * rate limit applies when sign-in is on, since it runs a model.
  */
-export const POST = async (request: Request): Promise<Response> => {
+export const POST = withUnlocked(async (request: Request): Promise<Response> => {
   const actor = await resolveActorId();
   if (actor !== null && !isAuthDisabled()) {
     const throttled = await guardChatRequest(request, actor);
     if (throttled !== null) return throttled;
   }
   return draft(request);
-};
+});

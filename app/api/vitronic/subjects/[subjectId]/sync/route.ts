@@ -6,6 +6,7 @@ import { resolveActorId } from "@/infrastructure/auth-actor";
 import { findAppUserId } from "@/infrastructure/current-user";
 import { vitronicEnv } from "@/infrastructure/env";
 import { GlbTooLargeError } from "@/packages/vitronic/glb";
+import { withUnlocked } from "@/infrastructure/vault-runtime";
 
 type RouteContext = { params: Promise<{ subjectId: string }> };
 
@@ -13,7 +14,7 @@ const bodySchema = z.object({
   viatarId: z.coerce.number().int().positive(),
 });
 
-export const POST = async (request: Request, context: RouteContext) => {
+export const POST = withUnlocked(async (request: Request, context: RouteContext) => {
   if (!vitronicEnv()) {
     return NextResponse.json({ error: "BodyLoop is not configured." }, { status: 503 });
   }
@@ -57,4 +58,4 @@ export const POST = async (request: Request, context: RouteContext) => {
       { status: 502 },
     );
   }
-};
+});
