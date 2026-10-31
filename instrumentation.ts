@@ -8,6 +8,8 @@
  * owner-only. Then the storage check (#144): personal mode does not start
  * unless the state folder, env files, mesh files and the database connection
  * are open to the owner's OS user only (`infrastructure/startup-order.ts`).
+ * Last, the signed anchors of the audit chain and the disclosure ledger
+ * (#300): written while the server runs and once more on shutdown.
  */
 export const register = async (): Promise<void> => {
   if (process.env.NEXT_RUNTIME === "nodejs") {
@@ -21,5 +23,7 @@ export const register = async (): Promise<void> => {
       },
       checkStorage: storage.checkStorageAtStartup,
     });
+    const anchors = await import("./infrastructure/anchor-runtime");
+    anchors.startAnchorWriter();
   }
 };

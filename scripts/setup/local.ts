@@ -255,6 +255,32 @@ const runStep = async (
   }
 };
 
+/**
+ * Signed anchors of the audit chain and the disclosure ledger (#300), once
+ * every other step has run, so they cover the rows setup added. Never sent
+ * anywhere; the server writes later ones while it runs.
+ */
+const writeFirstAnchors = (root: string, earlier: readonly Outcome[]): Outcome => {
+  const base = { id: "anchors", title: "Signed anchors" } as const;
+  const waiting = blockedBy(
+    { ...base, after: ["migrate", "anchor-key"], status: "skip", reason: "" },
+    earlier,
+  );
+  if (waiting !== null) return { ...base, result: "blocked", detail: waiting };
+  process.stdout.write("\n== Signed anchors\n");
+  return runCommand(root, ["bun", "run", "anchor:write"])
+    ? {
+        ...base,
+        result: "done",
+        detail: "written to $TWINLLM_STATE_DIR/anchor/anchors.jsonl",
+      }
+    : {
+        ...base,
+        result: "failed",
+        detail: "bun run anchor:write failed; see its output above",
+      };
+};
+
 const main = async (): Promise<number> => {
   const argv = process.argv.slice(2);
   const ownerCluster = ownerClusterRequested(argv);
@@ -291,6 +317,7 @@ const main = async (): Promise<number> => {
   for (const step of steps) {
     outcomes.push(await runStep(root, step, outcomes));
   }
+  const anchors = writeFirstAnchors(root, outcomes);
   const nodeOutcome: readonly Outcome[] =
     node.status === "ok"
       ? []
@@ -302,7 +329,7 @@ const main = async (): Promise<number> => {
             detail: `${node.detail}: ${node.fix}`,
           },
         ];
-  process.stdout.write(formatChecklist([...outcomes, ...nodeOutcome]));
+  process.stdout.write(formatChecklist([...outcomes, anchors, ...nodeOutcome]));
   const context = ollamaContextSummary(state.ollama);
   if (context !== null) process.stdout.write(`Ollama context: ${context.detail}\n`);
   process.stdout.write("Run bun run doctor any time for what each page needs.\n");
