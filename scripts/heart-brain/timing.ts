@@ -6,7 +6,7 @@
  */
 import { randomFor } from "../synthetic-wearables/random";
 
-import { type Person } from "./cohort";
+import { type Person } from "../../packages/query-tools/event-rates/cohort";
 import { shuffleAfOnsets, type Spread, spreadOf } from "./permutation";
 import { type SccsResult, selfControlledCaseSeries } from "./sccs";
 import {
@@ -16,7 +16,7 @@ import {
   timingResult,
   type TimingSpec,
   timingTable,
-} from "./within-person";
+} from "../../packages/query-tools/event-rates/within-person";
 
 export type TimingOptions = Readonly<{ seed: number; permutations: number }>;
 

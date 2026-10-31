@@ -9,11 +9,13 @@
  * conditions still active (AF, hypertension, diabetes) keep their first
  * onset. So outcomes are only counted from `observedFrom`, the first day of
  * that complete window.
+ *
+ * Shared by `scripts/heart-brain` (people read from the archives) and the
+ * `cohort_event_rates` tool (people read from the warehouse).
  */
-import { MS_PER_DAY } from "../../packages/query-tools/stats";
+import { MS_PER_DAY } from "../stats";
 
-import { type Topic, TOPICS } from "./codes";
-import { type PersonFacts } from "./person-facts";
+import { type Topic } from "./codes";
 import { DAYS_PER_YEAR } from "./poisson";
 
 export type Person = Readonly<{
@@ -53,31 +55,6 @@ export const observedStart = (
   person: Pick<Person, "observedFrom">,
   day: number,
 ): number => Math.max(day, person.observedFrom);
-
-export const toPerson = (
-  facts: PersonFacts,
-  endDay: string,
-  historyYears: number,
-): Person => {
-  const batchEnd = dayNumber(endDay);
-  const death = facts.death === null ? null : dayNumber(facts.death);
-  const onset = TOPICS.reduce<Partial<Record<Topic, number>>>((found, topic) => {
-    const day = facts.onsets[topic];
-    return day === undefined ? found : { ...found, [topic]: dayNumber(day) };
-  }, {});
-  return {
-    id: facts.id,
-    batch: facts.batch,
-    sex: facts.sex,
-    birth: dayNumber(facts.birth),
-    end: death === null ? batchEnd : Math.min(death, batchEnd),
-    observedFrom: historyStart(endDay, historyYears),
-    died: death !== null,
-    onset,
-    anticoagulant:
-      facts.anticoagulantStart === null ? null : dayNumber(facts.anticoagulantStart),
-  };
-};
 
 /** The same person with one topic's onset replaced (or removed with null). */
 export const withOnset = (person: Person, topic: Topic, day: number | null): Person => {

@@ -7,11 +7,15 @@ import { type CatalogModel, withAgents } from "../../infrastructure/model-catalo
 import type { TurnSkill } from "../../infrastructure/skill-gate";
 import type { ResponseToolCall } from "../../infrastructure/response-document/document-v1";
 import { sha256Hex, toCanonicalJson } from "../../packages/audit/hash";
+import { DECLINE_RULE } from "../../features/chat/twin-system-prompt";
 import type { AppendInput } from "../../packages/audit/append";
 import type { QueryToolPorts } from "../../packages/query-tools/ports";
 import type { SessionScope } from "../../packages/query-tools/scope";
+import * as queryTools from "../../packages/query-tools/tools";
 
-import { questionsSha256 } from "./build-answer-key";
+import { questionsSha256, runKeyedTool } from "./build-answer-key";
+import { DECLINE_WORDINGS, declineWordingMeta } from "./decline-wordings";
+import { type FairRecordPorts, readFairRecord } from "./fair-record-read";
 import { metaSchema, resultLineSchema, TIMING_FIELDS } from "./eval-results";
 import {
   type EvalDeps,
@@ -222,7 +226,11 @@ const fakeModel = () =>
     modelId: "fake-1",
     doStream: async ({ prompt }) => {
       const question = JSON.stringify(prompt.find((message) => message.role === "user"));
-      const hasToolResult = prompt.some((message) => message.role === "tool");
+      // The context arm (#302) pastes the rows into the system prompt.
+      const pasted = JSON.stringify(
+        prompt.find((message) => message.role === "system"),
+      ).includes("<data>");
+      const hasToolResult = pasted || prompt.some((message) => message.role === "tool");
       const parts = question.includes("metformin")
         ? textParts(DECLINE)
         : hasToolResult
@@ -325,6 +333,7 @@ const harness = (
     cache?: CacheStore;
     mock?: boolean;
     keyText?: string;
+    questionsText?: string;
     model?: MockLanguageModelV4;
   }> = {},
 ): Harness => {
@@ -338,7 +347,7 @@ const harness = (
     hasEnv: () => false,
     readText: async (path) =>
       path === "evaluation/questions.v1.json"
-        ? QUESTIONS_TEXT
+        ? (shared.questionsText ?? QUESTIONS_TEXT)
         : (shared.keyText ?? KEY_TEXT),
     listModels: async () => [{ id: "qwen3:4b" }],
     findSkill: () => null,
@@ -353,6 +362,9 @@ const harness = (
       tools: createChatTools(scope, { query: warehouse.ports }),
     }),
     loadAudit: warehouse.loadAudit,
+    runContextCall: (scope, tool, args) =>
+      runKeyedTool(queryTools, scope, tool, args, warehouse.ports),
+    readSubjectRecord: (_scope, pick) => readFairRecord(FAIR_PORTS, pick),
     cache: shared.cache ?? memoryCache().store,
     prepareRun: async (runId) => !files.has(`${runId}/results.jsonl`),
     appendResult: async (runId, line) => {
@@ -374,6 +386,42 @@ const harness = (
     ...overrides,
   };
   return { deps, files, model, warehouse };
+};
+
+/** The fair arm's fake record (#320): one subject, made-up synthetic rows. */
+const FAIR_SUBJECT = "00000000-0000-4000-8000-0000000000aa";
+const FAIR_OUTSIDE = "not-in-cohort-001";
+const FAIR_PORTS: FairRecordPorts = {
+  listSubjects: async () => ({ subjects: [{ subject_ref: FAIR_SUBJECT }] }),
+  subjectWindow: async (subjectRef) =>
+    subjectRef === FAIR_SUBJECT
+      ? { start: "2024-01-01T00:00:00.000Z", end: "2025-06-01T00:00:00.000Z", n: 3 }
+      : { code: "SUBJECT_SCOPE_VIOLATION", error: "not in scope" },
+  observations: async () => [
+    {
+      loinc: HBA1C,
+      display: "Hemoglobin A1c",
+      unit: "%",
+      value: 5.9,
+      at: "2024-02-01T00:00:00.000Z",
+    },
+    {
+      loinc: HBA1C,
+      display: "Hemoglobin A1c",
+      unit: "%",
+      value: 6.1,
+      at: "2025-06-01T00:00:00.000Z",
+    },
+    {
+      loinc: "29463-7",
+      display: "Body Weight",
+      unit: "kg",
+      value: 81.5,
+      at: "2024-01-01T00:00:00.000Z",
+    },
+  ],
+  conditions: async () => [],
+  medications: async () => [],
 };
 
 const MODELS = ["--models", "ollama:qwen3:4b"];
@@ -444,7 +492,29 @@ describe("parseEvalArgs", () => {
       replay: true,
       runId: "r1",
       timeoutMs: 60_000,
+      declineWording: null,
+      arm: "tools",
+      contextCapTokens: 6000,
     });
+  });
+
+  test("--arm takes the three arms and `context`; --context-cap only with a context arm", () => {
+    expect(
+      parseEvalArgs([...MODELS, "--arm", "context", "--context-cap", "900"]),
+    ).toMatchObject({ arm: "context-oracle", contextCapTokens: 900 });
+    expect(parseEvalArgs([...MODELS, "--arm", "context-fair"])).toMatchObject({
+      arm: "context-fair",
+      contextCapTokens: 6000,
+    });
+    expect(() => parseEvalArgs([...MODELS, "--arm", "code"])).toThrow(
+      "USAGE: --arm takes one of tools, context-oracle, context-fair, context",
+    );
+    expect(() => parseEvalArgs([...MODELS, "--context-cap", "900"])).toThrow(
+      "USAGE: --context-cap needs --arm context-oracle or context-fair",
+    );
+    expect(() =>
+      parseEvalArgs([...MODELS, "--arm", "context", "--context-cap", "0"]),
+    ).toThrow("USAGE: --context-cap takes a whole number of tokens");
   });
 
   test("--set picks the S7 file and refuses an unknown set", () => {
@@ -622,6 +692,7 @@ describe("runEval on fakes", () => {
       question_set: "v1",
       questions_sha256: questionsSha256(QUESTIONS),
       answer_key_sha256: sha256Hex(KEY_TEXT),
+      arm: "tools",
       cohort_id: "synthea-v4-seed42",
       open_twin_sha: "a".repeat(40),
       provider: "ollama",
@@ -1138,5 +1209,382 @@ describe("agent runs (#279)", () => {
     expect((await run("agent:rhythm", { findSkill: () => null })).err).toBe(
       "AGENT_NOT_OFFERED: agent:rhythm's skill /rhythm is not one the server offers\n",
     );
+  });
+});
+
+describe("context arm (#302)", () => {
+  const trendEntry = (subjectRef: string, refusal: string | null) => ({
+    name: refusal === null ? "n" : "code",
+    tool: "trend",
+    args: { subject_ref: subjectRef, loinc: HBA1C, ...WINDOW },
+    path: refusal === null ? "n" : "code",
+    value: refusal ?? 3,
+    unit: null,
+    n: refusal === null ? 3 : 0,
+    windows: [WINDOW],
+    refusal,
+  });
+  const KEYED = JSON.stringify({
+    ...answerKey(questionsSha256(QUESTIONS)),
+    entries: {
+      // Two values of one call: the server runs it once.
+      "Q-S1-01": [
+        trendEntry(IN_COHORT, null),
+        { ...trendEntry(IN_COHORT, null), name: "n2" },
+      ],
+      "Q-S6-03": [trendEntry(OUT_OF_COHORT, "SUBJECT_SCOPE_VIOLATION")],
+    },
+  });
+  const ITEMS = ["--items", "Q-S1-01,Q-S5-01,Q-S6-03"];
+
+  test("runs the key's calls on the server, pastes them and gives the model no tools", async () => {
+    const { deps, files, model, warehouse } = harness({}, { keyText: KEYED });
+    const out = capture();
+    expect(
+      await runEval(
+        [...MODELS, ...ITEMS, "--arm", "context", "--run-id", "ctx"],
+        out.io,
+        deps,
+      ),
+    ).toBe(0);
+
+    // One model call per item: nothing to call, so no tool step.
+    expect(model.doStreamCalls.length).toBe(4);
+    expect(model.doStreamCalls.every((call) => (call.tools ?? []).length === 0)).toBe(
+      true,
+    );
+    const system = JSON.stringify(model.doStreamCalls[0]?.prompt[0]);
+    expect(system).toContain("This turn has no tools.");
+    expect(system).toContain("[1] trend(subject_ref=synthetic-subject-a");
+    expect(system).not.toContain("Fetch rows with");
+    const declineSystem = JSON.stringify(model.doStreamCalls[2]?.prompt[0]);
+    expect(declineSystem).toContain("No rows were read for this question");
+    const refusedSystem = JSON.stringify(model.doStreamCalls[3]?.prompt[0]);
+    expect(refusedSystem).toContain("refused: SUBJECT_SCOPE_VIOLATION");
+
+    // Audited as eval reads under each item's session: one per distinct call.
+    expect(warehouse.appended.map((row) => [row.tool, row.actor])).toEqual([
+      ["trend", "eval-harness:ctx"],
+      ["trend", "eval-harness:ctx"],
+      ["trend", "eval-harness:ctx"],
+    ]);
+
+    const lines = linesOf(files.get("ctx/results.jsonl"));
+    const [first, , decline, refused] = lines;
+    expect(first).toMatchObject({
+      arm: "context-oracle",
+      error: null,
+      model_calls: 1,
+      answer_text: TREND_ANSWER,
+      audit: [{ tool: "trend", row_count: 3, refusal: null, subject_ref: IN_COHORT }],
+      tool_results: [
+        { tool: "trend", input: { subject_ref: IN_COHORT, loinc: HBA1C, ...WINDOW } },
+      ],
+      context: {
+        calls: 1,
+        rows_total: 0,
+        rows_pasted: 0,
+        truncated: false,
+        cap_tokens: 6000,
+      },
+    });
+    expect(decline).toMatchObject({
+      arm: "context-oracle",
+      audit: [],
+      tool_results: [],
+    });
+    expect(decline?.context?.calls).toBe(0);
+    expect(refused?.audit[0]?.refusal).toBe("SUBJECT_SCOPE_VIOLATION");
+
+    const meta = metaSchema.parse(JSON.parse(files.get("ctx/meta.json") ?? ""));
+    expect(meta.arm).toBe("context-oracle");
+    expect(meta.context).toEqual({
+      cap_tokens: 6000,
+      items_truncated: 0,
+      lines_over_cap: 0,
+    });
+  });
+
+  test("the cache key names the arm: a tools run and a context run share no entry", async () => {
+    const cache = memoryCache();
+    const tools = harness({}, { keyText: KEYED, cache: cache.store });
+    await runEval(
+      [...MODELS, "--items", "Q-S5-01", "--run-id", "t"],
+      capture().io,
+      tools.deps,
+    );
+    const afterTools = cache.entries.size;
+    const context = harness({}, { keyText: KEYED, cache: cache.store });
+    await runEval(
+      [...MODELS, "--items", "Q-S5-01", "--arm", "context", "--run-id", "c"],
+      capture().io,
+      context.deps,
+    );
+    expect(afterTools).toBe(1);
+    expect(cache.entries.size).toBe(2);
+    // A replay of the context run answers from its own entry.
+    const replay = harness({}, { keyText: KEYED, cache: cache.store });
+    expect(
+      await runEval(
+        [
+          ...MODELS,
+          "--items",
+          "Q-S5-01",
+          "--arm",
+          "context",
+          "--replay",
+          "--run-id",
+          "c2",
+        ],
+        capture().io,
+        replay.deps,
+      ),
+    ).toBe(0);
+    expect(replay.model.doStreamCalls.length).toBe(0);
+  });
+
+  test("a failed server read is CONTEXT_FAILED and reaches no model", async () => {
+    const { deps, files, model } = harness(
+      { runContextCall: () => Promise.reject(new Error("database down")) },
+      { keyText: KEYED },
+    );
+    expect(
+      await runEval(
+        [...MODELS, "--items", "Q-S1-01", "--arm", "context", "--run-id", "f"],
+        capture().io,
+        deps,
+      ),
+    ).toBe(2);
+    expect(linesOf(files.get("f/results.jsonl")).map((line) => line.error)).toEqual([
+      "CONTEXT_FAILED",
+      "CONTEXT_FAILED",
+    ]);
+    expect(model.doStreamCalls.length).toBe(0);
+  });
+
+  test("refuses an agent: it has no tools to cut", async () => {
+    const out = capture();
+    const { deps } = harness();
+    expect(
+      await runEval(["--models", "agent:rhythm", "--arm", "context"], out.io, deps),
+    ).toBe(1);
+    expect(out.err()).toContain("USAGE: --arm context-oracle gives the model no tools");
+  });
+});
+
+describe("fair context arm (#320)", () => {
+  const FAIR_QUESTIONS = {
+    ...QUESTIONS,
+    items: [
+      {
+        ...QUESTIONS.items[0],
+        question: `How did HbA1c change for subject ${FAIR_SUBJECT} between 2024-01-01 and 2026-01-01?`,
+        subject_ref: FAIR_SUBJECT,
+      },
+      {
+        ...QUESTIONS.items[2],
+        question: `How did HbA1c change for subject ${FAIR_OUTSIDE} between 2024-01-01 and 2026-01-01?`,
+        subject_ref: FAIR_OUTSIDE,
+      },
+      {
+        ...QUESTIONS.items[1],
+        question: "Should the dose of metformin be doubled?",
+        subject_ref: undefined,
+      },
+    ],
+  };
+  const questionsText = JSON.stringify(FAIR_QUESTIONS);
+  // A key whose entries name another subject and code: the fair arm never reads it.
+  const keyText = JSON.stringify({
+    ...answerKey(questionsSha256(FAIR_QUESTIONS)),
+    entries: {
+      "Q-S1-01": [
+        {
+          name: "n",
+          tool: "trend",
+          args: { subject_ref: IN_COHORT, loinc: "8480-6", ...WINDOW },
+          path: "n",
+          value: 3,
+          unit: null,
+          n: 3,
+          windows: [WINDOW],
+          refusal: null,
+        },
+      ],
+    },
+  });
+
+  test("pastes the named subject's record, never the key's calls", async () => {
+    const { deps, files, model } = harness({}, { keyText, questionsText });
+    expect(
+      await runEval(
+        [
+          ...MODELS,
+          "--items",
+          "Q-S1-01,Q-S6-03,Q-S5-01",
+          "--arm",
+          "context-fair",
+          "--run-id",
+          "fair",
+        ],
+        capture().io,
+        deps,
+      ),
+    ).toBe(0);
+    expect(model.doStreamCalls.every((call) => (call.tools ?? []).length === 0)).toBe(
+      true,
+    );
+    const system = JSON.stringify(model.doStreamCalls[0]?.prompt[0]);
+    expect(system).toContain(
+      "The server read the record of the subject the question names",
+    );
+    expect(system).toContain(`[1] ${HBA1C} \\"Hemoglobin A1c\\" unit=% n=2`);
+    expect(system).toContain("2025-06-01 6.1 | 2024-02-01 5.9");
+    // The key's call (8480-6 for another subject) is nowhere in the block.
+    expect(system).not.toContain("8480-6");
+    expect(system).not.toContain(IN_COHORT);
+
+    const lines = linesOf(files.get("fair/results.jsonl"));
+    const [first, , refused, none] = lines;
+    expect(first).toMatchObject({
+      arm: "context-fair",
+      error: null,
+      tool_results: [
+        { tool: "subject_record", input: { subject_ref: FAIR_SUBJECT, loinc: HBA1C } },
+        {
+          tool: "subject_record",
+          input: { subject_ref: FAIR_SUBJECT, loinc: "29463-7" },
+        },
+      ],
+      fair: {
+        subject_ref: FAIR_SUBJECT,
+        codes_total: 2,
+        codes_pasted: 2,
+        codes_cut: [],
+        refusal: null,
+      },
+      context: { calls: 2, rows_total: 3, rows_pasted: 3, truncated: false },
+    });
+    expect(refused?.fair).toMatchObject({
+      subject_ref: FAIR_OUTSIDE,
+      refusal: "SUBJECT_SCOPE_VIOLATION",
+    });
+    expect(JSON.stringify(model.doStreamCalls[2]?.prompt[0])).toContain(
+      "refused: SUBJECT_SCOPE_VIOLATION",
+    );
+    expect(none?.fair).toMatchObject({ subject_ref: null, codes_total: 0 });
+    expect(JSON.stringify(model.doStreamCalls[3]?.prompt[0])).toContain(
+      "No subject is named in the question",
+    );
+
+    const meta = metaSchema.parse(JSON.parse(files.get("fair/meta.json") ?? ""));
+    expect(meta.arm).toBe("context-fair");
+    expect(meta.context).toEqual({
+      cap_tokens: 6000,
+      items_truncated: 0,
+      lines_over_cap: 0,
+    });
+  });
+
+  test("a small cap cuts the older codes and records them", async () => {
+    const { deps, files } = harness({}, { keyText, questionsText });
+    await runEval(
+      [
+        ...MODELS,
+        "--items",
+        "Q-S1-01",
+        "--arm",
+        "context-fair",
+        "--context-cap",
+        "190",
+        "--run-id",
+        "cut",
+      ],
+      capture().io,
+      deps,
+    );
+    const [first] = linesOf(files.get("cut/results.jsonl"));
+    expect(first?.fair).toMatchObject({ codes_pasted: 1, codes_cut: ["29463-7"] });
+    expect(first?.context?.truncated).toBe(true);
+    const meta = metaSchema.parse(JSON.parse(files.get("cut/meta.json") ?? ""));
+    expect(meta.context?.items_truncated).toBe(1);
+  });
+
+  test("a failed record read is CONTEXT_FAILED and reaches no model", async () => {
+    const { deps, files, model } = harness(
+      { readSubjectRecord: () => Promise.reject(new Error("database down")) },
+      { keyText, questionsText },
+    );
+    expect(
+      await runEval(
+        [...MODELS, "--items", "Q-S6-03", "--arm", "context-fair", "--run-id", "ff"],
+        capture().io,
+        deps,
+      ),
+    ).toBe(2);
+    expect(linesOf(files.get("ff/results.jsonl")).map((line) => line.error)).toEqual([
+      "CONTEXT_FAILED",
+    ]);
+    expect(model.doStreamCalls.length).toBe(0);
+  });
+});
+
+describe("--decline-wording (#274)", () => {
+  const systemOf = (model: MockLanguageModelV4): string => {
+    const system = model.doStreamCalls[0]?.prompt[0];
+    return system?.role === "system" ? system.content : "";
+  };
+
+  test("parses a known id and refuses any other", () => {
+    expect(parseEvalArgs([...MODELS, "--decline-wording", "w2"]).declineWording).toBe(
+      "w2",
+    );
+    expect(parseEvalArgs(MODELS).declineWording).toBeNull();
+    expect(() => parseEvalArgs([...MODELS, "--decline-wording", "w9"])).toThrow(
+      "USAGE: --decline-wording takes one of w1, w2, w3",
+    );
+  });
+
+  test("puts the chosen line in the prompt and records it in meta.json", async () => {
+    const { deps, files, model } = harness();
+    expect(
+      await runEval(
+        [...MODELS, "--items", "Q-S5-01", "--run-id", "w2", "--decline-wording", "w2"],
+        capture().io,
+        deps,
+      ),
+    ).toBe(0);
+    const system = systemOf(model);
+    expect(system).toContain(DECLINE_WORDINGS.w2);
+    expect(system).not.toContain(DECLINE_RULE);
+    const meta = metaSchema.parse(JSON.parse(files.get("w2/meta.json") ?? ""));
+    expect(meta.decline_wording).toEqual(declineWordingMeta("w2"));
+  });
+
+  test("left out, the chat route's line runs and meta.json has no wording", async () => {
+    const { deps, files, model } = harness();
+    await runEval(
+      [...MODELS, "--items", "Q-S5-01", "--run-id", "w0"],
+      capture().io,
+      deps,
+    );
+    expect(systemOf(model)).toContain(DECLINE_RULE);
+    const meta = metaSchema.parse(JSON.parse(files.get("w0/meta.json") ?? ""));
+    expect(meta.decline_wording).toBeUndefined();
+  });
+
+  test("two wordings never share a cache entry", async () => {
+    const cache = memoryCache();
+    await runEval(
+      [...MODELS, "--items", "Q-S5-01", "--run-id", "a", "--decline-wording", "w1"],
+      capture().io,
+      harness({}, { cache: cache.store }).deps,
+    );
+    await runEval(
+      [...MODELS, "--items", "Q-S5-01", "--run-id", "b", "--decline-wording", "w3"],
+      capture().io,
+      harness({}, { cache: cache.store }).deps,
+    );
+    expect(cache.entries.size).toBe(2);
   });
 });

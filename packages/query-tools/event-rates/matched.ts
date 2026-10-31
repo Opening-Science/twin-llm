@@ -12,7 +12,7 @@
  * and outcomes count only inside the complete window (`cohort.ts`), the same
  * calendar days for an exposed person and their controls.
  */
-import { type Random } from "../synthetic-wearables/random";
+import { type Random } from "@/infrastructure/seeded-random";
 
 import { type Topic } from "./codes";
 import { birthYear, observedStart, type Person } from "./cohort";
@@ -36,9 +36,14 @@ export type MatchedSpec = Readonly<{
   keepExposed?: (person: Person, index: number) => boolean;
 }>;
 
-type Follow = Readonly<{ days: number; event: boolean }>;
-
-const NOTHING: Follow = { days: 0, event: false };
+/** One person's counted time in the comparison: (from, to] in day numbers. */
+export type Follow = Readonly<{
+  person: Person;
+  from: number;
+  to: number;
+  days: number;
+  event: boolean;
+}>;
 
 /**
  * From `start` (or the start of the complete window, if later) to the outcome
@@ -48,10 +53,12 @@ const NOTHING: Follow = { days: 0, event: false };
 const follow = (person: Person, outcome: Topic, start: number, stop: number): Follow => {
   const from = observedStart(person, start);
   const at = person.onset[outcome];
-  if (from >= stop || (at !== undefined && at <= from)) return NOTHING;
+  if (from >= stop || (at !== undefined && at <= from)) {
+    return { person, from, to: from, days: 0, event: false };
+  }
   return at !== undefined && at <= stop
-    ? { days: at - from, event: true }
-    : { days: stop - from, event: false };
+    ? { person, from, to: at, days: at - from, event: true }
+    : { person, from, to: stop, days: stop - from, event: false };
 };
 
 const bucketKey = (sex: string | null, year: number): string => `${sex ?? "?"}:${year}`;
@@ -86,11 +93,18 @@ const isEligibleControl = (
 
 const TRIES_PER_CONTROL = 200;
 
-export const matchedIncidence = (
+export type MatchedFollowUp = Readonly<{
+  exposed: readonly Follow[];
+  controls: readonly Follow[];
+  shortOfControls: number;
+}>;
+
+/** Every exposed person's and every drawn control's counted time. */
+export const matchedFollowUp = (
   people: readonly Person[],
   spec: MatchedSpec,
   random: Random,
-): MatchedResult => {
+): MatchedFollowUp => {
   const buckets = index(people);
   const exposedFollow: Follow[] = [];
   const controlFollow: Follow[] = [];
@@ -130,7 +144,19 @@ export const matchedIncidence = (
     }
     if (found < spec.controlsPerExposed) shortOfControls += 1;
   });
+  return { exposed: exposedFollow, controls: controlFollow, shortOfControls };
+};
 
+export const matchedIncidence = (
+  people: readonly Person[],
+  spec: MatchedSpec,
+  random: Random,
+): MatchedResult => {
+  const {
+    exposed: exposedFollow,
+    controls: controlFollow,
+    shortOfControls,
+  } = matchedFollowUp(people, spec, random);
   const rate = (rows: readonly Follow[]): Rate =>
     rateOf(
       rows.filter((row) => row.event).length,

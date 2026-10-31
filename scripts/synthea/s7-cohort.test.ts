@@ -66,7 +66,11 @@ describe("the S7 cohort recipe", () => {
   test("the cohort is an evaluation cohort on the allowlist, never in the Demo", () => {
     expect(S7_COHORT_ID).toBe("synthea-v4-s7");
     expect(isAllowedCohort(S7_COHORT_ID)).toBe(true);
-    expect(EVALUATION_COHORT_IDS).toEqual(["synthea-v4-seed42", "synthea-v4-s7"]);
+    expect(EVALUATION_COHORT_IDS).toEqual([
+      "synthea-v4-seed42",
+      "synthea-v4-s7",
+      "synthea-v4-1m-af",
+    ]);
     expect((DEMO_COHORTS as readonly string[]).includes(S7_COHORT_ID)).toBe(false);
   });
 

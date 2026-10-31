@@ -55,6 +55,9 @@ export type Piece = Readonly<{
   window: string;
   /** Age band index: floor(age at the piece's start / band width). */
   ageBand: number;
+  /** Day numbers: the piece runs over (from, to]. */
+  from: number;
+  to: number;
   days: number;
   event: boolean;
 }>;
@@ -108,6 +111,8 @@ export const personPieces = (
     return {
       window: after === 0 ? BEFORE : (labels[after - 1] as string),
       ageBand: Math.floor((from - person.birth) / bandDays),
+      from,
+      to,
       days: to - from,
       event: event && from < (outcome as number) && (outcome as number) <= to,
     };

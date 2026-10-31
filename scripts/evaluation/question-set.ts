@@ -31,8 +31,10 @@ import {
   crossSourceCompareInput,
   valuesAroundEventInput,
   rhythmIrregularityInput,
+  cohortEventRatesInput,
 } from "../../packages/query-tools/schemas";
 
+import { AF_SUBSET_COHORT } from "../../packages/query-tools/event-rates/cohort-rates";
 import { S7_COHORT_ID } from "../synthea/cohort-presets";
 
 import { isMeasureId } from "./score/asked-measure";
@@ -40,10 +42,11 @@ import { isMeasureId } from "./score/asked-measure";
 export const COHORT_ID = "synthea-v4-seed42";
 
 /**
- * Cohorts a question set may be written against: the evaluation cohort, and
- * the supplementary S7 cohort (#277) the S7b items read.
+ * Cohorts a question set may be written against: the evaluation cohort, the
+ * supplementary S7 cohort (#277) the S7b items read, and the AF subset of
+ * the 1M batches the hb items read (#293).
  */
-export const EVAL_COHORT_IDS = [COHORT_ID, S7_COHORT_ID] as const;
+export const EVAL_COHORT_IDS = [COHORT_ID, S7_COHORT_ID, AF_SUBSET_COHORT] as const;
 
 export type EvalCohortId = (typeof EVAL_COHORT_IDS)[number];
 
@@ -92,6 +95,7 @@ export const KEYED_TOOLS = {
   cross_source_compare: crossSourceCompareInput,
   values_around_event: valuesAroundEventInput,
   rhythm_irregularity: rhythmIrregularityInput,
+  cohort_event_rates: cohortEventRatesInput,
 } as const;
 
 export type KeyedTool = keyof typeof KEYED_TOOLS;
@@ -121,6 +125,7 @@ export const AUDIT_TOOL_NAMES = [
   "cross_source_compare",
   "values_around_event",
   "rhythm_irregularity",
+  "cohort_event_rates",
   "guidelines.guideline_search",
   "knowledge.knowledge_search",
   "gbd.gbd_query",
