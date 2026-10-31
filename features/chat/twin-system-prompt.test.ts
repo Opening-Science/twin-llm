@@ -278,6 +278,25 @@ describe("buildTwinSystemPrompt pasted data (eval context arm, #302)", () => {
     );
   });
 
+  test("the code arm (#303) names run_python and the file, and no query tool", async () => {
+    const { buildTwinSystemPrompt } = await import("./twin-system-prompt");
+    const block = "<data>\nsubject_ref=s: 3 observations (1 codes)\n</data>";
+    const prompt = buildTwinSystemPrompt({
+      ...noWearables,
+      mode: "synthetic",
+      offeredTools: new Set(["run_python"]),
+      pastedData: block,
+      pastedDataSource: "code-table",
+    });
+    expect(prompt).toContain("- This turn has one tool, `run_python`.");
+    expect(prompt).toContain("Compute every number you report with a program");
+    expect(prompt).not.toContain("This turn has no tools");
+    expect(prompt).not.toContain("list_subjects");
+    expect(prompt).toContain(
+      `## Data block (read on the server for this question)\n${block}`,
+    );
+  });
+
   test("left out or in personal mode, the prompt is as before", async () => {
     const { buildTwinSystemPrompt } = await import("./twin-system-prompt");
     const synthetic = { ...noWearables, mode: "synthetic" as const };

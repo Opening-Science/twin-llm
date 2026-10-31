@@ -16,6 +16,7 @@ import { z } from "zod";
 
 import { responseDocumentV1Schema } from "../../infrastructure/response-document/document-v1";
 
+import { CODE_RUN_ERRORS } from "./code-sandbox";
 import { RECORDED_ARMS } from "./context-arm";
 /**
  * Decline wordings the harness can run with (#274); their texts are in
@@ -146,9 +147,10 @@ export const resultLineSchema = z
     /**
      * Set only for a data-in-prompt arm; a line without it ran the tools arm.
      * `context` is the oracle arm as #302 named it, `context-oracle` the same
-     * arm since #320, `context-fair` the fair arm (#320).
+     * arm since #320, `context-fair` the fair arm (#320), `code` the code
+     * arm (#303).
      */
-    arm: z.enum(["context", "context-oracle", "context-fair"]).optional(),
+    arm: z.enum(["context", "context-oracle", "context-fair", "code"]).optional(),
     /** The data block of a context-arm line: its size and whether rows were cut. */
     context: z
       .object({
@@ -175,6 +177,43 @@ export const resultLineSchema = z
           .object({ n: z.number().int().nonnegative(), pasted: z.boolean() })
           .strict(),
         refusal: z.string().nullable(),
+      })
+      .strict()
+      .optional(),
+    /**
+     * The code arm's item (#303): what the file held, and every program the
+     * model ran with how it ended and its output (capped).
+     */
+    code: z
+      .object({
+        table: z
+          .object({
+            subject_ref: z.string().nullable(),
+            refusal: z.string().nullable(),
+            observations: z.number().int().nonnegative(),
+            conditions: z.number().int().nonnegative(),
+            medications: z.number().int().nonnegative(),
+            codes_total: z.number().int().nonnegative(),
+            codes_listed: z.number().int().nonnegative(),
+          })
+          .strict(),
+        runs: z.array(
+          z
+            .object({
+              code: z.string(),
+              error: z.enum(CODE_RUN_ERRORS).nullable(),
+              exit_code: z.number().int().nullable(),
+              signal: z.string().nullable(),
+              stdout: z.string(),
+              stderr: z.string(),
+              stdout_truncated: z.boolean(),
+              stderr_truncated: z.boolean(),
+              ms: z.number().int().nonnegative(),
+            })
+            .strict(),
+        ),
+        retries: z.number().int().nonnegative(),
+        limit_hit: z.boolean(),
       })
       .strict()
       .optional(),
@@ -245,6 +284,38 @@ export const metaSchema = z
         cap_tokens: z.number().int().positive(),
         items_truncated: z.number().int().nonnegative(),
         lines_over_cap: z.number().int().nonnegative(),
+      })
+      .strict()
+      .optional(),
+    /** The code arm (#303): the sandbox, the probes it passed before any item, and the runs. */
+    code: z
+      .object({
+        language: z.literal("python"),
+        interpreter: z.string(),
+        sandbox: z.string(),
+        limits: z
+          .object({
+            wallMs: z.number().int().positive(),
+            cpuSeconds: z.number().int().positive(),
+            memoryBytes: z.number().int().positive(),
+            tasks: z.number().int().positive(),
+            workBytes: z.number().int().positive(),
+            readBytes: z.number().int().positive(),
+            stdoutChars: z.number().int().positive(),
+            stderrChars: z.number().int().positive(),
+          })
+          .strict(),
+        max_retries: z.number().int().nonnegative(),
+        probes: z.array(
+          z
+            .object({ name: z.string(), contained: z.boolean(), ended: z.string() })
+            .strict(),
+        ),
+        runs: z.number().int().nonnegative(),
+        failed_runs: z.number().int().nonnegative(),
+        lines_without_run: z.number().int().nonnegative(),
+        lines_with_retries: z.number().int().nonnegative(),
+        lines_at_limit: z.number().int().nonnegative(),
       })
       .strict()
       .optional(),
