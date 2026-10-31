@@ -7,7 +7,7 @@
 
 ## Interaction patterns
 
-Interaction ideas for the ui-kit's `StepTrace`, `UndoButton`, `HoldToConfirm`, `StatusLattice` and `Rating` came from React Bits demos (reactbits.dev); no React Bits code is included.
+The ui-kit's `StepTrace`, `UndoButton`, `HoldToConfirm`, `StatusLattice` and `Rating` were written from scratch in this repository. No third-party UI component code is included.
 
 ## open-twin pins
 
