@@ -771,6 +771,8 @@
         }
       }
     },
+    "generatorVersion": "3.1",
+    "afCalibration": "daily AF effects from docs/research/af-resolution-2026-10.summary.json (#365); resting heart rate checked for AF since then",
     "rows": [
       {
         "group": "hypertension",
@@ -1088,12 +1090,12 @@
         "recoveredMedian": 6.992,
         "recoveredQ1": 5.723,
         "recoveredQ3": 8.533,
-        "recoveredMean": 6.922,
+        "recoveredMean": 6.92,
         "zBeyond2": 83,
         "withZ": 91,
         "recoveredCi": {
-          "low": 6.443,
-          "high": 7.4
+          "low": 6.442,
+          "high": 7.398
         }
       },
       {
@@ -1107,7 +1109,7 @@
         "recoveredQ1": 0.724,
         "recoveredQ3": 0.786,
         "recoveredMean": 0.767,
-        "zBeyond2": 39,
+        "zBeyond2": 40,
         "withZ": 91,
         "recoveredCi": {
           "low": 0.753,
@@ -1138,16 +1140,34 @@
         "window": "0-89 d",
         "kind": "delta",
         "subjects": 113,
-        "plantedMedian": 2.716,
-        "recoveredMedian": 2.64,
-        "recoveredQ1": 0.996,
-        "recoveredQ3": 3.982,
-        "recoveredMean": 2.58,
+        "plantedMedian": 3.42,
+        "recoveredMedian": 3.26,
+        "recoveredQ1": 1.987,
+        "recoveredQ3": 4.899,
+        "recoveredMean": 3.383,
         "zBeyond2": 0,
         "withZ": 113,
         "recoveredCi": {
-          "low": 2.243,
-          "high": 2.917
+          "low": 3.014,
+          "high": 3.752
+        }
+      },
+      {
+        "group": "atrial_fibrillation",
+        "metric": "resting_heart_rate",
+        "window": "0-89 d",
+        "kind": "delta",
+        "subjects": 113,
+        "plantedMedian": 0.707,
+        "recoveredMedian": 0.536,
+        "recoveredQ1": -0.43,
+        "recoveredQ3": 1.607,
+        "recoveredMean": 0.629,
+        "zBeyond2": 2,
+        "withZ": 113,
+        "recoveredCi": {
+          "low": 0.4,
+          "high": 0.859
         }
       },
       {
@@ -1156,16 +1176,16 @@
         "window": "0-89 d",
         "kind": "ratio",
         "subjects": 113,
-        "plantedMedian": 1.196,
-        "recoveredMedian": 1.193,
-        "recoveredQ1": 1.149,
-        "recoveredQ3": 1.253,
-        "recoveredMean": 1.205,
+        "plantedMedian": 1.058,
+        "recoveredMedian": 1.054,
+        "recoveredQ1": 1.035,
+        "recoveredQ3": 1.086,
+        "recoveredMean": 1.062,
         "zBeyond2": 1,
         "withZ": 113,
         "recoveredCi": {
-          "low": 1.191,
-          "high": 1.219
+          "low": 1.054,
+          "high": 1.069
         }
       },
       {
@@ -1204,7 +1224,25 @@
           "high": 0.107
         }
       }
-    ]
+    ],
+    "afBefore365": {
+      "heart_rate": {
+        "plantedMedian": 2.716,
+        "recoveredMean": 2.58,
+        "recoveredCi": {
+          "low": 2.243,
+          "high": 2.917
+        }
+      },
+      "hrv_rmssd": {
+        "plantedMedian": 1.196,
+        "recoveredMean": 1.205,
+        "recoveredCi": {
+          "low": 1.191,
+          "high": 1.219
+        }
+      }
+    }
   },
   "oracle294": {
     "issue": 294,
@@ -1657,23 +1695,23 @@
         "window": "0-89 d",
         "subjects": 91,
         "plantedMedian": 0.7496,
-        "plantedMean": 0.764,
-        "expectedNoFloorMean": 0.7641,
-        "expectedMean": 0.7646,
+        "plantedMean": 0.7643,
+        "expectedNoFloorMean": 0.7642,
+        "expectedMean": 0.7647,
         "recoveredMean": 0.7674,
         "recoveredCi": {
-          "low": 0.7531,
+          "low": 0.7533,
           "high": 0.7816
         },
         "recoveredMinusPlanted": {
-          "mean": 0.0033,
-          "low": -0.0014,
-          "high": 0.0081
+          "mean": 0.0032,
+          "low": -0.0016,
+          "high": 0.0079
         },
         "recoveredMinusExpected": {
           "mean": 0.0027,
           "low": -0.0017,
-          "high": 0.0072
+          "high": 0.0071
         }
       },
       {

@@ -20,8 +20,11 @@ export const GENERATOR_ID = "twinllm-synthetic-wearables";
  * 3: the series follows the subject's Synthea conditions (`conditions.ts`), and
  * every subject gets nightly SpO2, irregular-rhythm notifications and the AF
  * burden. `--generator-version 2` still gives the v2 series exactly.
+ * 3.1: the daily AF effects (heart rate, resting heart rate, RMSSD) follow the
+ * burden as the AF resolution study measured them from simulated beats
+ * (`af-calibration.ts`, #365); nothing else moves.
  */
-export const WEARABLE_GENERATOR_VERSION = "3";
+export const WEARABLE_GENERATOR_VERSION = "3.1";
 export { WEARABLE_GENERATOR_VERSIONS, type WearableGeneratorVersion } from "./series";
 
 const SYNTHEA_IDENTIFIER_SYSTEM = "https://github.com/synthetichealth/synthea";
