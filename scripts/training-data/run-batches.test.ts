@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
+import { noConsentStore } from "../../infrastructure/learning-consent";
+
 import { type BatchRunDeps, type CommandResult, runTrainingBatches } from "./run-batches";
 
 const ARGS = ["--archives", "arch", "--work", "work", "--out", "out"] as const;
@@ -61,6 +63,8 @@ const harness = (
     databaseUrl: () => TRAINING,
     devDatabaseUrls: async () => [DEV, null],
     demoSubjects: async () => 0,
+    subjectRows: async () => [],
+    learning: noConsentStore(),
     exists: async (path) =>
       [...files.keys()].some((key) => key === path || key.startsWith(`${path}/`)),
     readJson: async (path) => files.get(path) ?? null,
@@ -410,6 +414,23 @@ describe("runTrainingBatches guards", () => {
       "Refused: this database holds 35 Demo cohort subjects, so it is a dev database. Use a database for training cohorts only.\n",
     ]);
     expect(h.cleared).toEqual([]);
+  });
+
+  test("refuses a database that holds a subject that is not synthetic (#145)", async () => {
+    const h = harness({
+      subjectRows: async () => [
+        { kind: "subject", cohortId: "synthea-v4-seed1001", isSynthetic: true },
+        { kind: "subject", cohortId: "synthea-v4-seed1001", isSynthetic: false },
+      ],
+    });
+    expect(await run(h, ["--batches", "1001"])).toBe(1);
+    expect([h.err, h.commands, h.cleared]).toEqual([
+      [
+        'Refused (SOURCE_NOT_SYNTHETIC): A subject in cohort "synthea-v4-seed1001" is not marked synthetic or its cohort is not a listed synthetic cohort, and it has no owner who could consent. Nothing was read.\n',
+      ],
+      [],
+      [],
+    ]);
   });
 
   test("names every missing archive before any batch starts", async () => {

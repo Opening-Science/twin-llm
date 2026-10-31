@@ -13,6 +13,9 @@
  * provider in that file (one provider per run); on `exoscale` and `remote-gpu`
  * each id must be listed by a vLLM server's `/v1/models` when the run starts.
  *
+ * Before any model runs and again before `meta.json`, the learning-consent gate
+ * (#145) checks that the cohort's subjects are synthetic.
+ *
  * Model calls are recorded under `evaluation/cache/`, runs under
  * `evaluation/runs/<run-id>/`; both are gitignored.
  */
@@ -68,6 +71,8 @@ if (isMain) {
     await import("../../features/chat/resolve-language-model");
   const { loadSessionAudit } =
     await import("../../features/chat/response/load-session-audit");
+  const { databaseLearningGate, warehouseSubjectRows } =
+    await import("../../infrastructure/learning-consent-store");
 
   const env = serverEnv();
 
@@ -133,6 +138,8 @@ if (isMain) {
     logError: (message, detail) => {
       console.error(message, detail);
     },
+    subjectRows: (cohortId) => warehouseSubjectRows([cohortId]),
+    learning: databaseLearningGate(),
   };
 
   const code = await runEval(process.argv.slice(2), process, deps);

@@ -6,6 +6,8 @@
  * Reads no env and no database: a replayed run reports the same anywhere.
  *
  * It refuses, writing nothing, when:
+ * - the learning-consent gate (#145) refuses the run's cohort, or the run named
+ *   consents (it read personal rows), which this file-only command cannot check;
  * - the run is MOCK (a fake model answered): that tests the harness, not a model;
  * - a line is results v1 (no tool results): replay the run to upgrade it;
  * - the questions, the key and the run disagree on the questions' sha256;
@@ -21,6 +23,12 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
+import {
+  type LearningGateDeps,
+  type LearningRow,
+  noConsentStore,
+  requireLearningConsent,
+} from "../../infrastructure/learning-consent";
 import { BANNED_TERMS } from "../lint-claims";
 
 import { questionsSha256 } from "./build-answer-key";
@@ -51,7 +59,24 @@ export class ReportError extends Error {
 export type ReportDeps = Readonly<{
   readText: (path: string) => Promise<string>;
   writeText: (path: string, text: string) => Promise<void>;
+  /** The consent gate (#145); the report reads files only, so it has no consent store. */
+  learning: LearningGateDeps;
 }>;
+
+/**
+ * What a run read, as the report can tell from its files: its cohort, synthetic
+ * unless the run named consents it relied on. The report cannot check those
+ * consents again, so such a run is refused rather than scored.
+ */
+export const reportRows = (
+  meta: Readonly<{ cohort_id: string; learning_consents?: unknown }>,
+): readonly LearningRow[] => [
+  {
+    kind: "subject",
+    cohortId: meta.cohort_id,
+    isSynthetic: meta.learning_consents === undefined,
+  },
+];
 
 export type ReportIo = Readonly<{
   stdout: { write: (chunk: string) => void };
@@ -140,6 +165,14 @@ export const runReport = async (
     const meta = metaSchema.parse(
       JSON.parse(await deps.readText(join(dir, "meta.json"))) as unknown,
     );
+    const permit = await requireLearningConsent(
+      "evaluation",
+      reportRows(meta),
+      deps.learning,
+    );
+    if (!permit.ok) {
+      throw new ReportError(permit.code, `${permit.message} Nothing was written.`);
+    }
     if (meta.mock) {
       throw new ReportError(
         "MOCK_RUN",
@@ -222,6 +255,7 @@ if (isMain) {
   const code = await runReport(process.argv.slice(2), process, {
     readText: (path) => readFile(path, "utf8"),
     writeText: (path, text) => writeFile(path, text),
+    learning: noConsentStore(),
   });
   process.exit(code);
 }

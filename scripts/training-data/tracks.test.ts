@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
-
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { AGENTS as LIVE_AGENTS } from "../../infrastructure/agents";
+import { noConsentStore } from "../../infrastructure/learning-consent";
 import { parseCatalog } from "../genome-synth/catalog";
 import { randomFor } from "../synthetic-wearables/random";
 
@@ -45,6 +45,8 @@ const harness = () => {
   const tools = fakeTools({ ...sampleRows(), "s-c": [] });
   const deps: BuildDeps = {
     dataMode: () => "synthetic",
+    subjectRows: async (cohortId) => [{ kind: "subject", cohortId, isSynthetic: true }],
+    learning: noConsentStore(),
     ports: async () => ({
       listSubjects: async () => ["s-a", "s-b", "s-c"],
       runTool: tools.run,

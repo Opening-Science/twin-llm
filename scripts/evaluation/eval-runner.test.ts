@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 
 import { MockLanguageModelV4 } from "ai/test";
 
+import { noConsentStore } from "../../infrastructure/learning-consent";
+
 import { createChatTools, createTurnTools } from "../../features/chat/chat-tools";
 import { type CatalogModel, withAgents } from "../../infrastructure/model-catalog";
 import type { TurnSkill } from "../../infrastructure/skill-gate";
@@ -371,6 +373,8 @@ const harness = (
     openTwinSha: () => "a".repeat(40),
     platform: "darwin-arm64",
     logError: () => undefined,
+    subjectRows: async (cohortId) => [{ kind: "subject", cohortId, isSynthetic: true }],
+    learning: noConsentStore(),
     ...overrides,
   };
   return { deps, files, model, warehouse };
@@ -881,6 +885,56 @@ describe("runEval refuses to start", () => {
     });
   });
 
+  test("when a subject of the cohort is not synthetic (#145)", async () => {
+    expect(
+      await refusal(MODELS, {
+        subjectRows: async (cohortId) => [
+          { kind: "subject", cohortId, isSynthetic: false },
+        ],
+      }),
+    ).toEqual({
+      code: 1,
+      err: 'SOURCE_NOT_SYNTHETIC: A subject in cohort "synthea-v4-seed42" is not marked synthetic or its cohort is not a listed synthetic cohort, and it has no owner who could consent. Nothing was read.\n',
+      files: 0,
+      calls: 0,
+    });
+  });
+
+  test("when a personal row has no consent, a withdrawn one or another scope's (#145)", async () => {
+    const owner = "app-user-synthetic-1";
+    const grant = {
+      id: "consent-1",
+      userId: owner,
+      scope: "evaluation" as const,
+      sources: ["chat" as const],
+      wordingVersion: "learning-consent.v1",
+      wordingSha256: "0".repeat(64),
+      grantedAt: new Date("2026-10-01T00:00:00Z"),
+      withdrawnAt: null,
+    };
+    const codes: string[] = [];
+    for (const consents of [
+      [],
+      [{ ...grant, withdrawnAt: new Date("2026-10-02T00:00:00Z") }],
+      [{ ...grant, scope: "training" as const }],
+    ]) {
+      const result = await refusal(MODELS, {
+        subjectRows: async () => [{ kind: "personal", ownerId: owner, source: "chat" }],
+        learning: {
+          loadConsents: async () => consents,
+          now: () => new Date("2026-10-31T00:00:00Z"),
+        },
+      });
+      expect([result.code, result.files, result.calls]).toEqual([1, 0, 0]);
+      codes.push(result.err.split(":")[0] ?? "");
+    }
+    expect(codes).toEqual([
+      "LEARNING_CONSENT_MISSING",
+      "LEARNING_CONSENT_WITHDRAWN",
+      "LEARNING_CONSENT_SCOPE",
+    ]);
+  });
+
   test("when the questions do not match the answer key's sha256", async () => {
     const result = await refusal(
       MODELS,
@@ -1138,5 +1192,72 @@ describe("agent runs (#279)", () => {
     expect((await run("agent:rhythm", { findSkill: () => null })).err).toBe(
       "AGENT_NOT_OFFERED: agent:rhythm's skill /rhythm is not one the server offers\n",
     );
+  });
+});
+
+describe("runEval and learning consent (#145)", () => {
+  const owner = "app-user-synthetic-1";
+  const grant = {
+    id: "consent-1",
+    userId: owner,
+    scope: "evaluation" as const,
+    sources: ["chat" as const],
+    wordingVersion: "learning-consent.v1",
+    wordingSha256: "0".repeat(64),
+    grantedAt: new Date("2026-10-01T00:00:00Z"),
+    withdrawnAt: null,
+  };
+  const personal = async () =>
+    [{ kind: "personal", ownerId: owner, source: "chat" }] as const;
+  const now = () => new Date("2026-10-31T00:00:00Z");
+
+  test("a synthetic run's meta.json names no consent", async () => {
+    const { deps, files } = harness();
+    await runEval([...MODELS, ...THREE_ITEMS, "--run-id", "plain"], capture().io, deps);
+    const meta = metaSchema.parse(JSON.parse(files.get("plain/meta.json") ?? "{}"));
+    expect(meta.learning_consents).toBe(undefined);
+  });
+
+  test("a matching consent is named in meta.json", async () => {
+    const { deps, files } = harness({
+      subjectRows: personal,
+      learning: { loadConsents: async () => [grant], now },
+    });
+    await runEval(
+      [...MODELS, ...THREE_ITEMS, "--run-id", "consented"],
+      capture().io,
+      deps,
+    );
+    const meta = metaSchema.parse(JSON.parse(files.get("consented/meta.json") ?? "{}"));
+    expect(meta.learning_consents).toEqual({
+      scope: "evaluation",
+      consent_ids: ["consent-1"],
+    });
+  });
+
+  test("a consent withdrawn during the run leaves no meta.json", async () => {
+    let asked = 0;
+    const { deps, files } = harness({
+      subjectRows: personal,
+      learning: {
+        loadConsents: async () => {
+          asked += 1;
+          return asked === 1 ? [grant] : [{ ...grant, withdrawnAt: now() }];
+        },
+        now,
+      },
+    });
+    const out = capture();
+    expect(
+      await runEval([...MODELS, ...THREE_ITEMS, "--run-id", "withdrawn"], out.io, deps),
+    ).toBe(1);
+    expect([
+      files.has("withdrawn/meta.json"),
+      out
+        .err()
+        .includes(
+          "LEARNING_CONSENT_WITHDRAWN: Your consent to use your chat threads for evaluation was withdrawn on 31 Oct 2026. No meta.json was written, so eval:report refuses this run; delete evaluation/runs/withdrawn.\n",
+        ),
+    ]).toEqual([false, true]);
   });
 });

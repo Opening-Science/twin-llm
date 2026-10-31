@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
+import { noConsentStore } from "../../infrastructure/learning-consent";
+
 import { ROW_CAP_EXCEEDED, mixedUnits } from "../../packages/query-tools/refusals";
 import { SUBJECT_SCOPE_VIOLATION } from "../../packages/query-tools/scope";
 import {
@@ -120,6 +122,9 @@ const fakePorts = (
     cohortSha256: async () => "c".repeat(64),
     openTwinSha: () => "a9e126c952c91e19e064a962dda7d815a43564e5",
     today: () => "2026-10-20",
+    learningRows: async () => [
+      { kind: "subject", cohortId: "synthea-v4-seed42", isSynthetic: true },
+    ],
   };
 };
 
@@ -508,6 +513,7 @@ describe("runBuildAnswerKey", () => {
       readText: async () => JSON.stringify(questions),
       writeKey: async (path) => void written.push(path),
       ports: async () => fakePorts(defaultAnswer),
+      learning: noConsentStore(),
       ...overrides,
     };
   };
@@ -528,6 +534,48 @@ describe("runBuildAnswerKey", () => {
       ].join("\n"),
     );
     expect(run.err).toEqual([]);
+  });
+
+  test("refuses a cohort with a subject that is not synthetic, before any call (#145)", async () => {
+    const run = io();
+    const ports = {
+      ...fakePorts(defaultAnswer),
+      learningRows: async () => [
+        { kind: "subject" as const, cohortId: "synthea-v4-seed42", isSynthetic: false },
+      ],
+    };
+    const d = deps({ ports: async () => ports });
+    expect(await runBuildAnswerKey([], run.io, d)).toBe(1);
+    expect([run.err, ports.calls, d.written]).toEqual([
+      [
+        'Refused (SOURCE_NOT_SYNTHETIC): A subject in cohort "synthea-v4-seed42" is not marked synthetic or its cohort is not a listed synthetic cohort, and it has no owner who could consent. Nothing was read.\n',
+      ],
+      [],
+      [],
+    ]);
+  });
+
+  test("refuses a personal row without consent, and writes no key (#145)", async () => {
+    const run = io();
+    const d = deps({
+      ports: async () => ({
+        ...fakePorts(defaultAnswer),
+        learningRows: async () => [
+          {
+            kind: "personal" as const,
+            ownerId: "app-user-synthetic-1",
+            source: "imports" as const,
+          },
+        ],
+      }),
+    });
+    expect(await runBuildAnswerKey([], run.io, d)).toBe(1);
+    expect([run.err, d.written]).toEqual([
+      [
+        "Refused (LEARNING_CONSENT_MISSING): No consent lets answer keys use your imported records. You can grant it on Customize · Privacy. Nothing was read.\n",
+      ],
+      [],
+    ]);
   });
 
   test("refuses to run outside synthetic mode", async () => {

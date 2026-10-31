@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
-
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
+import { noConsentStore } from "../../infrastructure/learning-consent";
 import { randomFor } from "../synthetic-wearables/random";
 
 import { ANATOMY_BANK, shortName, UNLISTED_MARKERS } from "./anatomy-families";
@@ -259,6 +259,8 @@ describe("track styles", () => {
     const tools = fakeTools(rows());
     const deps: BuildDeps = {
       dataMode: () => "synthetic",
+      subjectRows: async (cohortId) => [{ kind: "subject", cohortId, isSynthetic: true }],
+      learning: noConsentStore(),
       ports: async () => ({
         listSubjects: async () => ["s-a", "s-b", "s-w", "s-x"],
         runTool: tools.run,

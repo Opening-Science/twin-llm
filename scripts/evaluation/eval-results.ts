@@ -149,6 +149,11 @@ export const metaSchema = z
     questions_sha256: z.string(),
     answer_key_sha256: z.string(),
     cohort_id: z.string(),
+    /** The consents the run relied on (#145); absent when it read synthetic subjects only. */
+    learning_consents: z
+      .object({ scope: z.string(), consent_ids: z.array(z.string()) })
+      .strict()
+      .optional(),
     open_twin_sha: z.string(),
     provider: z.string(),
     models: z.array(

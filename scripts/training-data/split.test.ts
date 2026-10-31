@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 
-import { runSplitConversations, parseSplitArgs } from "./split-conversations";
+import { noConsentStore } from "../../infrastructure/learning-consent";
+
+import { runSplitConversations, parseSplitArgs, splitRows } from "./split-conversations";
 import { holdoutReasons, planSplit, type SplitMeta } from "./split";
 import { conversationStats, messageChars, percentile } from "./stats";
 
@@ -155,6 +157,8 @@ const fullMeta = (item: SplitMeta, n: number) => ({
   template_id: `${item.template_group}.1`,
   style: item.template_group.split(".")[1],
   typo: false,
+  cohort_id: "synthea-v4-seed4242",
+  synthetic: true,
   n,
 });
 
@@ -176,6 +180,7 @@ describe("runSplitConversations", () => {
       writeText: async (path: string, text: string) => {
         files.set(path, text);
       },
+      learning: noConsentStore(),
     };
     return { files, out, err, io, deps };
   };
@@ -234,6 +239,37 @@ describe("runSplitConversations", () => {
           manifest.held_out.loinc.includes(item.measure_loinc ?? ""),
       ),
     ).toEqual([]);
+  });
+
+  test("refuses a conversation not made from a synthetic subject, writing nothing (#145)", async () => {
+    const metas = METAS.slice(0, 3).map((item, n) =>
+      JSON.stringify(
+        n === 1 ? { ...fullMeta(item, n), synthetic: false } : fullMeta(item, n),
+      ),
+    );
+    const h = harness(
+      metas,
+      metas.map((_, n) => record(n)),
+    );
+    expect(await runSplitConversations(["--in", "/tmp/c.jsonl"], h.io, h.deps)).toBe(1);
+    expect([h.err, [...h.files.keys()].sort()]).toEqual([
+      [
+        'Refused (SOURCE_NOT_SYNTHETIC): A subject in cohort "synthea-v4-seed4242" is not marked synthetic or its cohort is not a listed synthetic cohort, and it has no owner who could consent. Nothing was kept.\n',
+      ],
+      ["/tmp/c.jsonl", "/tmp/c.manifest.json", "/tmp/c.meta.jsonl"],
+    ]);
+  });
+
+  test("splitRows reads the cohort and the synthetic flag of each line", () => {
+    expect(
+      splitRows([
+        { cohort_id: "synthea-v4-seed42", synthetic: true },
+        { synthetic: "yes" },
+      ]),
+    ).toEqual([
+      { kind: "subject", cohortId: "synthea-v4-seed42", isSynthetic: true },
+      { kind: "subject", cohortId: "", isSynthetic: false },
+    ]);
   });
 
   test("refuses meta lines from the older generator", async () => {

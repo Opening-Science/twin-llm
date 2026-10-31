@@ -22,6 +22,12 @@ import { sha256Hex, toCanonicalJson } from "../../packages/audit/hash";
 import { isToolRefusal } from "../../packages/query-tools/refusals";
 import type { SessionScope } from "../../packages/query-tools/scope";
 import { isAgentModelId } from "../../infrastructure/agents";
+import {
+  learningManifest,
+  type LearningGateDeps,
+  type LearningRow,
+  requireLearningConsent,
+} from "../../infrastructure/learning-consent";
 import type { TurnSkill } from "../../infrastructure/skill-gate";
 import type {
   ResponseDocumentV1,
@@ -130,6 +136,9 @@ export type EvalDeps = Readonly<{
   platform: string;
   /** Server log; gets a fixed message and an allowlisted summary, never provider text. */
   logError: (message: string, detail: unknown) => void;
+  /** What the cohort's subjects are, per `is_synthetic` flag, for the consent gate (#145). */
+  subjectRows: (cohortId: string) => Promise<readonly LearningRow[]>;
+  learning: LearningGateDeps;
 }>;
 
 export type EvalOptions = Readonly<{
@@ -577,6 +586,9 @@ const progress = (line: ResultLine): string => {
   return `${line.item_id} r${line.repeat} ${line.provider}:${line.model_id} ${state}${seconds}${cache}${line.mock ? " MOCK" : ""}\n`;
 };
 
+const evaluationPermit = async (deps: EvalDeps, cohortId: string) =>
+  requireLearningConsent("evaluation", await deps.subjectRows(cohortId), deps.learning);
+
 const setup = async (
   options: EvalOptions,
   deps: EvalDeps,
@@ -601,6 +613,11 @@ const setup = async (
     );
   }
   const loaded = await loadQuestions(deps, options.set);
+  // #145: before any model or tool runs.
+  const permit = await evaluationPermit(deps, loaded.cohortId);
+  if (!permit.ok) {
+    throw new EvalSetupError(permit.code, `${permit.message} Nothing was read.`);
+  }
   const items = selectItems(loaded.items, options);
   if (items.length === 0) throw new EvalSetupError("NO_ITEMS", "the selection is empty");
   // Every model is checked before anything runs, so an unlisted id fails in seconds.
@@ -695,6 +712,14 @@ export const runEval = async (
       }
     }
 
+    // Asked again before meta.json: a run without it is refused by eval:report.
+    const recheck = await evaluationPermit(deps, loaded.cohortId);
+    if (!recheck.ok) {
+      throw new EvalSetupError(
+        recheck.code,
+        `${recheck.message} No meta.json was written, so eval:report refuses this run; delete evaluation/runs/${runId}.`,
+      );
+    }
     const skipped = lines.filter((line) => line.skipped !== null);
     const meta: RunMeta = {
       schema_version: META_SCHEMA_VERSION,
@@ -707,6 +732,15 @@ export const runEval = async (
       questions_sha256: loaded.questionsSha256,
       answer_key_sha256: loaded.answerKeySha256,
       cohort_id: loaded.cohortId,
+      // The consents this run relied on (#145); left out when none, as for a synthetic cohort.
+      ...(recheck.consentIds.length === 0
+        ? {}
+        : {
+            learning_consents: {
+              scope: recheck.scope,
+              consent_ids: [...learningManifest(recheck).consent_ids],
+            },
+          }),
       open_twin_sha: deps.openTwinSha(),
       provider: deps.llmProvider,
       models: models.map((spec, index) => ({

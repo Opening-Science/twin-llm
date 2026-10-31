@@ -3,8 +3,8 @@
 This document settles the decisions behind six issues so each can be built as its own
 pull request: #144 harden local storage, #142 local unlock, #141 encryption at rest, #145
 learning consent, #140 disclosure ledger and #300 an external anchor for the audit chain.
-Status: #144, #142 and #141 are built (sections 2.1, 2.2 and 2.3 describe what shipped);
-#145, #140 and #300 are not built yet. Where this document and the code differ, the code is what runs; update
+Status: #144, #142, #141 and #145 are built (sections 2.1 to 2.4 describe what
+shipped); #140 and #300 are not built yet. Where this document and the code differ, the code is what runs; update
 this document when a pull request changes a decision.
 
 TwinLLM is research software for one person on their own Linux or macOS machine. The design
@@ -391,7 +391,8 @@ async per call and slower for 200,000 rows.
 - **Not encrypted, on purpose.** The synthetic warehouse, guidelines and knowledge chunks
   (public or synthetic). `audit_events` (hashes, ids and counts only; it must verify while
   locked). `user_skills` (instructions the person wrote, not records; listed so the choice
-  is visible). OAuth and BodyLoop tokens keep their own AES-256-GCM env keys
+  is visible). `learning_consents` (#145: fixed choices, dates and a shipped sentence;
+  the consent gate must read it while locked). OAuth and BodyLoop tokens keep their own AES-256-GCM env keys
   (`*_TOKEN_ENCRYPTION_KEY`); moving them under the vault is a later step, because an OAuth
   callback can arrive while locked. Row counts, dates, which values are null and which rows
   share a hashed value stay visible (section 1, out of scope).
@@ -454,45 +455,111 @@ search 1, rotation 1, doctor, Lab and docs 1.
 ### 2.4 #145 Explicit consent before any learning from personal data
 
 **Decision.** A consent record per user and scope, off by default, granted and withdrawn
-only on Customize · Privacy, audited. Every learning pipeline asks one pure function before
-it reads a row and refuses any row that is not synthetic unless a matching consent holds.
-Making a twin note, searching threads or loading notes is the person's own use, not
-learning, and needs no consent.
+only on Customize · Privacy, audited. Every learning pipeline asks one gate before it
+reads a row and refuses any row that is not synthetic unless a matching consent holds.
+Making a twin note, searching threads, loading notes and exporting a thread are the
+person's own use, not learning, and need no consent.
 
-**Design.**
+**Design** (as built).
 
-- **Table `learning_consents`.** User id; scope: `training` (fine-tuning sets),
-  `answer-key` (evaluation keys), `evaluation` (scoring runs); sources, a list from
-  `wearables`, `imports`, `genome`, `chat`, `notes`, `body-scans`; the exact sentence shown
-  and its SHA-256; granted time; withdrawn time; the `seq` of the audit row that granted
-  it. A row is never edited except to set the withdrawn time.
-- **Gate.** `permitLearningUse({ scope, rows, consents, at })` in
-  `infrastructure/learning-consent.ts`. A row is synthetic only when its subject is
-  `is_synthetic` and its cohort is in `SYNTHETIC_COHORTS`. Refusal codes:
-  `SOURCE_NOT_SYNTHETIC`, `LEARNING_CONSENT_MISSING`, `LEARNING_CONSENT_WITHDRAWN`,
-  `LEARNING_CONSENT_SCOPE`, each with a plain sentence saying which source and why.
-- **Where it runs.** `training:conversations`, `training:batches`, `training:split`,
-  `eval`, `eval:answer-key*` and the Lab's training sample. Each checks at start and again
-  before writing output, and writes the consent ids it relied on into its manifest, so a
-  set made under a consent can be found after a withdrawal.
-- **Scope of this step.** No pipeline reads personal rows today, and they would need an
-  unlocked vault (#142) to do so. This step builds the record, the screen and the gate, and
-  keeps the existing `DATA_MODE=synthetic` refusals. A pipeline that reads personal rows
-  needs its own decision and must pass this gate.
-- **Withdrawal.** Sets the withdrawn time and writes `learning.consent.withdraw`. Future
-  runs refuse. The screen says plainly that a model already trained cannot unlearn, and
-  lists the output sets whose manifests name the consent, so the person can delete them.
+- **Table `learning_consents`** (migration `20261031130000_learning_consents`). User id;
+  scope: `training` (fine-tuning sets), `answer-key` (evaluation keys), `evaluation`
+  (scoring runs); sources, a list from `wearables`, `imports`, `genome`, `chat`, `notes`,
+  `body-scans`; the exact sentence shown, its wording version (`learning-consent.v1`) and
+  its SHA-256; granted time; withdrawn time; the `seq` of the audit row that granted it. A
+  row is never edited except to set the withdrawn time; granting again after a withdrawal
+  adds a row. At most one active grant per scope. _Changed from the first draft:_ the
+  person ticks the sources a grant covers (none ticked by default), and the wording
+  version is stored next to the sentence. **Plaintext on purpose**, like `audit_events`:
+  the row holds fixed choices, dates and a shipped sentence, no health data, and the gate
+  must read it from a command line where the vault is not open. Section 2.3 lists it
+  under "Not encrypted, on purpose".
+- **Gate** (`infrastructure/learning-consent.ts`). `permitLearningUse({ scope, rows,
+consents, at })` is pure; `requireLearningConsent(scope, rows, deps)` is the one
+  function pipelines call: it reads consents through an injected `loadConsents` only when
+  a row is not synthetic, counts a failed read as no consent, and returns a permit with
+  the consent ids it relied on or the first refusal. A row is a warehouse subject (cohort
+  and `is_synthetic`) or a person's own row (owner and source). A subject is synthetic only
+  when it is `is_synthetic` and its cohort is in `SYNTHETIC_COHORTS`. Refusal codes, each
+  with a plain sentence naming the source and the use: `SOURCE_NOT_SYNTHETIC` (a subject
+  that is not synthetic has no owner who could consent, so it is always refused),
+  `LEARNING_CONSENT_MISSING`, `LEARNING_CONSENT_WITHDRAWN` (with the date) and
+  `LEARNING_CONSENT_SCOPE` (a consent exists but for another use, or it leaves out this
+  source; _changed from the first draft_, which had no case for a source left out).
+- **Where it runs.** Every package script is listed in
+  `tests/learning-consent/pipelines.test.ts` as gated or with the reason it reads no row
+  a model could learn from; a new script, or a new entry file under
+  `scripts/training-data`, `scripts/evaluation` or `scripts/heart-brain`, fails that test
+  until it is listed. Gated: `training:conversations` and `training:sample` (each subject
+  of the cohort, before the first tool call and again before the files are renamed into
+  place), `training:batches` (every subject in the training database), `training:split`
+  (each conversation's meta line), `eval:answer-key` and its `:s7`, `:s7b`, `:s7h` and
+  `:live` forms (before the first call and before the key is written; over cohort files,
+  only Synthea bundles count as synthetic), `eval` (before any model runs and before
+  `meta.json`), `eval:report`, `eval:spread-subjects`, `eval:cohort-codes` and
+  `eval:heldout:s7h`. _Changed from the first draft:_ the Lab's training sample is
+  `training:sample`, no separate path; the report, spread, cohort-codes and held-out
+  commands were added to the list.
+- **Manifests.** A set or run that relied on a consent records `learning_consents: {
+scope, consent_ids }` in its manifest (`<out>.manifest.json`, `meta.json`), so it can be
+  found after a withdrawal. A synthetic run relies on none and leaves the field out, so
+  its files stay byte for byte as before (`tracks.test.ts` pins them). The committed
+  answer keys, cohort codes and held-out set are keyed to a named synthetic cohort by
+  their schema, so they never name a consent and their format is unchanged.
+  `eval:report` reads files only and cannot check a consent again, so it refuses a run
+  that names one.
+- **Which consent store.** A pipeline that connects to a database reads
+  `learning_consents` of that database (`databaseLearningGate()`). Commands that read
+  files only (`training:split`, `eval:report`, the cohort-file modes) have no consent store
+  (`noConsentStore()`), so a personal row is always refused there.
+- **Scope of this step.** No pipeline reads personal rows today: each runs with
+  `DATA_MODE=synthetic` against its own database and keeps that refusal. This step builds
+  the record, the screen and the gate, and puts the gate in front of every pipeline. A
+  pipeline that reads personal rows needs its own decision (which database it reads, how
+  it opens the vault) and must pass this gate.
+- **Not learning, on purpose.** `/compact` drafts and saved twin notes: the person writes
+  and saves each note, and it is loaded only into their own chats (switchable on
+  Customize · Memory). Thread search and the thread export (Markdown, PDF, FHIR): the
+  person's own copy of their own data; #140 adds the export to the disclosure ledger.
+  `mcp:serve`, `heart-brain` (Synthea archives by batch number, no path to the app
+  database) and `rhythm-bench` (simulated signals and the public PhysioNet AFDB) are
+  listed with these reasons. There are no disclosure experiment scripts at this commit;
+  the decline-wording and data-in-prompt arms run through `eval`.
+- **Withdrawal.** Sets the withdrawn time, then writes `learning.consent.withdraw`. Future
+  runs refuse, including one already running when it asks again before writing. The
+  screen says plainly that a model already trained cannot unlearn and that sets, keys and
+  scores made while the consent held stay until the person deletes them, each naming the
+  consent in its manifest. _Changed from the first draft:_ the screen does not list those
+  sets, because no pipeline can make one yet; it names the manifest field instead.
+- **Audit rows** (`learningAuditEvent`): `learning.consent.grant` and
+  `learning.consent.withdraw`, with the consent id and the number of sources only, never
+  the sentence.
 
-**What the UI shows.** Customize · Privacy, "Learning from your data": off by default, one
-switch per scope with the sources it covers, the date granted, and Withdraw. It states that
-de-identification does not replace consent.
+**What the UI shows.** Customize · Privacy, "Learning from your data": one card per use,
+Off by default, with the data it may read as checkboxes (none ticked) and Grant; once
+granted, "On since <date>", what it covers, the sentence agreed to, and Withdraw; earlier
+grants that were withdrawn are listed under the card. It states that removing names or
+dates does not replace consent, that the person's own use needs none, and what
+withdrawing does and does not undo. Gated by the unlock like every personal page. In
+synthetic mode the page says there is nothing to consent to and the actions refuse.
 
 **Failure behaviour.** Fail closed. A consent table that cannot be read counts as no
-consent. A grant whose audit row cannot be written is not stored.
+consent. A grant writes its audit row first and is not stored if that fails. A withdrawal
+is never blocked: the withdrawn time is set first, and an audit row that cannot be written
+is logged by error name.
 
-**Tests.** For each pipeline: a non-synthetic row is refused without consent, with a
-withdrawn consent and with a consent of another scope; a synthetic row passes with no
-consent; the manifest records the consent ids. Pure tests of the gate's table of cases.
+**Tests.** The gate's table of cases (`infrastructure/learning-consent.test.ts`): a
+synthetic row passes with no consent and no consent read; an unflagged subject or an
+unlisted cohort is refused; a personal row is refused without consent, with a withdrawn
+one, with another scope's and with one that leaves out its source; another person's
+consent does not count; a failed read is no consent. Per pipeline, next to it: a subject
+that is not synthetic is refused before any tool runs or file is written
+(conversations, batches, split, answer key, eval, report, spread); for conversations,
+eval and the answer key also a personal row without consent, withdrawn and of another
+scope; a consent withdrawn during a run keeps nothing (conversations) or writes no
+`meta.json` (eval); the manifest names the consent ids. The entry-point list above. The
+screen, grant, withdraw, audit rows and the gate against the database were run by hand on
+a throwaway owner cluster ([runbook.md](runbook.md#learning-consent)).
 
 **Effort.** About 3 days.
 
@@ -609,13 +676,14 @@ reruns faults F3 and F4 and must now detect them.
 | 1    | #144  | none                                               | `infrastructure/env.ts` (new settings), new `infrastructure/storage-hardening.ts`, `instrumentation.ts`, `scripts/setup/{local,plan,doctor}.ts`, `features/lab/`, `docs/guidelines.md`, `docs/storage.md`, `docs/runbook.md`                                                                                                                                           |
 | 2    | #142  | #144 (state dir, loopback)                         | Built: new `infrastructure/vault*.ts` (key file in the state directory, no migration), `features/vault/`, `app/api/vault/*`, every gated route, page and server action in `tests/personal-reads/personal-reads.test.ts`, the OAuth callbacks, the sidebar and the first-run screens                                                                                    |
 | 3    | #141  | #142 (keys)                                        | Built: migration `20261031120000_encrypt_at_rest`, `infrastructure/{field-crypto,field-cipher,personal-columns,reseal,mesh-files,thread-fields}.ts`, every store of the tables in 2.3, `features/search`, `scripts/vault/{migrate,rotate}.ts`, doctor, Lab                                                                                                             |
-| 4    | #145  | #142                                               | `learning_consents`, new `infrastructure/learning-consent.ts`, `scripts/training-data/*`, `scripts/evaluation/*`, Customize · Privacy                                                                                                                                                                                                                                  |
+| 4    | #145  | #142                                               | Built: migration `20261031130000_learning_consents`, `infrastructure/learning-consent{,-store}.ts`, `features/privacy/`, Customize · Privacy, every pipeline in `tests/learning-consent/pipelines.test.ts`                                                                                                                                                             |
 | 5    | #140  | #141 (value list encrypted)                        | `disclosure_events`, `packages/audit` (generic chain), `infrastructure/personal-data-audit.ts`, the chat and starter provider paths, `features/memory/compact-handler.ts`, `features/arena/thread-export-handler.ts`, `features/wearables/` syncs, `features/digital-twin/genome-run.ts`, the #112 matcher in `infrastructure/rich-text.tsx`, Lab, Customize · Privacy |
 | 6    | #300  | #144 (state dir); covers #140's chain when present | new `packages/audit/anchor*.ts`, `verify-cli.ts` and its args, `features/lab/audit-chain-check.ts`, `instrumentation.ts`, setup scripts                                                                                                                                                                                                                                |
 
 #300 needs only #144 and can run in parallel with steps 2 to 5; it then adds the ledger
-chain as a second anchored chain. Customize · Privacy is created by #141 (key and rotation)
-and grows with #145 and #140. Each step is its own pull request with its own CHANGELOG
+chain as a second anchored chain. Customize · Privacy was first planned for #141 (key and
+rotation, which became a command); #145 created it with the consent cards, and #140 adds
+to it. Each step is its own pull request with its own CHANGELOG
 entry and doc updates.
 
 Total about 27 working days.

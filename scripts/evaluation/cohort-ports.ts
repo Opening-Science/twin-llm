@@ -25,6 +25,7 @@ import { mapObservations } from "../../packages/warehouse/map-observation";
 import { subjectFactsFrom } from "../../packages/warehouse/subject-facts";
 import { isSyntheaBundle } from "../../packages/warehouse/synthea-marker";
 import type { AppendInput } from "../../packages/audit/append";
+import { distinctRows, type LearningRow } from "../../infrastructure/learning-consent";
 import type {
   ClinicalQuery,
   ConditionRecord,
@@ -59,6 +60,22 @@ const patientIdOf = (bundle: unknown): string | null => {
 };
 
 /** One Synthea bundle as the warehouse stores it; null when ingest would reject it. */
+/**
+ * What a folder of patient files is, for the learning-consent gate (#145): a
+ * bundle is a synthetic subject of the cohort only when it is a Synthea bundle.
+ */
+export const syntheaBundleRows = (
+  bundles: readonly unknown[],
+  cohortId: string,
+): readonly LearningRow[] =>
+  distinctRows(
+    bundles.map((bundle) => ({
+      kind: "subject",
+      cohortId,
+      isSynthetic: isSyntheaBundle(bundle),
+    })),
+  );
+
 export const cohortSubjectFrom = (
   bundle: unknown,
   cohortId: string,

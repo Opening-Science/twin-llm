@@ -33,6 +33,20 @@ holds a real person's rows, a connected wearable or the Self subject. The
 generator refuses to run unless `DATA_MODE=synthetic`, reads only allowlisted
 synthetic cohorts, and the wearable generator reads only Synthea bundles.
 
+**Learning consent (#145).** Every pipeline here and in `scripts/evaluation` asks one
+gate, `requireLearningConsent` in `infrastructure/learning-consent.ts`, before it reads
+a row: `training:conversations` (and `training:sample`) for each subject of the cohort,
+`training:batches` for every subject in the training database, `training:split` for each
+conversation's meta line. A subject passes only when it is `is_synthetic` and its cohort
+is in `SYNTHETIC_COHORTS`; anything else stops the run with
+`Refused (SOURCE_NOT_SYNTHETIC): ...` before any tool call or file. A person's own rows
+would need that person's consent for `training` on Customize · Privacy; no pipeline reads
+them today. The conversations step asks again before it renames its files into place. A
+set made under a consent names it in its manifest (`learning_consents`); a synthetic set
+leaves the field out, so its files are unchanged. `tests/learning-consent/pipelines.test.ts`
+fails when a package script or a new entry file here skips the gate
+([privacy-design.md](privacy-design.md#24-145-explicit-consent-before-any-learning-from-personal-data)).
+
 ## Cohorts
 
 `bun run synthea:generate -- --preset <name>` (presets in
@@ -458,7 +472,9 @@ Validation gets every conversation in a held-out template group, about a
 held-out LOINC code, or about a held-out subject, so it measures wording and
 codes the model never saw. Nothing is held out that would leave a family or a
 question slot without training data. The manifest lists the held-out groups
-and codes, counts per reason and stats for each part. It reads files only.
+and codes, counts per reason and stats for each part. It reads files only, and refuses a
+file with a conversation whose meta line is not from a synthetic subject of a listed
+cohort, before it writes anything.
 
 ### Looking at the files
 
@@ -655,7 +671,9 @@ Before any training run, a person reads a random sample (at least 50
 conversations, every family present) and checks: the numbers match the tool
 result in the same conversation, units and dates are present, refusals are
 plain, nothing reads as a statement about a real person. Record who checked,
-the sample size and the file sha256 with the training run.
+the sample size and the file sha256 with the training run. Check that the set's manifest
+has no `learning_consents` field; if it has one, each consent it names must still be
+active on Customize · Privacy, or the set is not used.
 
 ## Training code
 

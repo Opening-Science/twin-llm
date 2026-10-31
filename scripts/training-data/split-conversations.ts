@@ -10,9 +10,19 @@
  * training:conversations and writes `<base>.train.jsonl`,
  * `<base>.train.meta.jsonl`, `<base>.val.jsonl`, `<base>.val.meta.jsonl` and
  * `<base>.split.json` (what was held out, counts and stats per part). Reads
- * files only; no database. See docs/training-data.md.
+ * files only; no database. A meta line that is not from a synthetic subject of
+ * a listed cohort is refused by the learning-consent gate (#145) before any
+ * file is written. See docs/training-data.md.
  */
 import { readFile, writeFile } from "node:fs/promises";
+
+import {
+  learningRefusalLine,
+  type LearningGateDeps,
+  type LearningRow,
+  noConsentStore,
+  requireLearningConsent,
+} from "../../infrastructure/learning-consent";
 
 import { outputPaths } from "./build-conversations";
 import { holdoutReasons, planSplit, type SplitMeta, type SplitOptions } from "./split";
@@ -21,7 +31,17 @@ import { conversationStats, messageChars, type StatsMeta } from "./stats";
 export type SplitDeps = Readonly<{
   readText: (path: string) => Promise<string | null>;
   writeText: (path: string, text: string) => Promise<void>;
+  /** The consent gate (#145); this command reads files only, so it has no consent store. */
+  learning: LearningGateDeps;
 }>;
+
+/** What each conversation came from, by its meta line: a subject of a cohort, synthetic or not. */
+export const splitRows = (metas: readonly unknown[]): readonly LearningRow[] =>
+  metas.map((meta) => ({
+    kind: "subject",
+    cohortId: String(Reflect.get(Object(meta), "cohort_id") ?? ""),
+    isSynthetic: Reflect.get(Object(meta), "synthetic") === true,
+  }));
 
 export type SplitIo = Readonly<{
   stdout: { write: (chunk: string) => void };
@@ -132,6 +152,16 @@ export const runSplitConversations = async (
     );
     return 1;
   }
+  // #145: a conversation not made from a synthetic subject is never split into a set.
+  const permit = await requireLearningConsent(
+    "training",
+    splitRows(metas),
+    deps.learning,
+  );
+  if (!permit.ok) {
+    io.stderr.write(`${learningRefusalLine(permit, "before-write")}\n`);
+    return 1;
+  }
   const typedMetas = metas.filter(isMeta);
   const plan = planSplit(typedMetas, args);
   const parts = typedMetas.map((meta, at) => ({
@@ -214,6 +244,7 @@ if (isMain) {
   const code = await runSplitConversations(process.argv.slice(2), process, {
     readText: (path) => readFile(path, "utf8").catch(() => null),
     writeText: (path, text) => writeFile(path, text),
+    learning: noConsentStore(),
   });
   process.exit(code);
 }

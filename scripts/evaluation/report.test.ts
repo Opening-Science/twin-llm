@@ -1,11 +1,13 @@
 import { describe, expect, test } from "bun:test";
+
+import { noConsentStore } from "../../infrastructure/learning-consent";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { questionsSha256 } from "./build-answer-key";
 import { type ResultLine, type RunMeta } from "./eval-results";
 import { callFigures, csvCell, noToolFigures, REVIEW_COLUMNS, shareCell } from "./report";
-import { runReport, type ReportDeps } from "./run-report";
+import { reportRows, runReport, type ReportDeps } from "./run-report";
 import {
   document,
   line,
@@ -183,6 +185,7 @@ const memoryFiles = (
     writeText: async (path, text) => {
       files.set(path, text);
     },
+    learning: noConsentStore(),
   };
   return { files, deps };
 };
@@ -324,6 +327,28 @@ describe("eval:report on an S7 run (#251)", () => {
     const report = files.get(`${DIR}/report.md`) ?? "";
     expect(report).toContain("| S6 ");
     expect(report).toContain("| S7 ");
+  });
+
+  test("refuses a run that relied on consents, writing nothing (#145)", async () => {
+    const { files, deps } = memoryFiles({
+      meta: { ...META, learning_consents: { scope: "evaluation", consent_ids: ["c-1"] } },
+    });
+    const out = capture();
+    expect(await runReport(["fixture-run"], out.io, deps)).toBe(1);
+    expect([out.err(), files.has(`${DIR}/report.md`)]).toEqual([
+      `SOURCE_NOT_SYNTHETIC: A subject in cohort "${META.cohort_id}" is not marked synthetic or its cohort is not a listed synthetic cohort, and it has no owner who could consent. Nothing was written.\n`,
+      false,
+    ]);
+  });
+
+  test("reportRows: synthetic unless the run named consents", () => {
+    expect([
+      reportRows({ cohort_id: "synthea-v4-seed42" }),
+      reportRows({ cohort_id: "synthea-v4-seed42", learning_consents: {} }),
+    ]).toEqual([
+      [{ kind: "subject", cohortId: "synthea-v4-seed42", isSynthetic: true }],
+      [{ kind: "subject", cohortId: "synthea-v4-seed42", isSynthetic: false }],
+    ]);
   });
 
   test("a v1 run keeps its six scenario columns", async () => {
