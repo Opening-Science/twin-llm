@@ -9,7 +9,7 @@ import type { LiveTurn } from "./refusals";
 import { type LiveToolPorts, runEnsemblLookup, runPubmedSearch } from "./tools";
 
 export const PUBMED_SEARCH_DESCRIPTION =
-  "Search PubMed live for published articles on a general topic. The query is sent to NCBI, so write it in words from the topic, never a value, date, name or identifier of the person; numbers are refused except in gene symbols and rsIDs. Returns up to 10 articles with PMID, title, journal, year, DOI and an abstract snippet. Cite each article you use by its PMID and URL. Literature, not evidence about this person.";
+  "Search PubMed live for published articles on a general topic. The query is sent to NCBI, so write it in words from the topic, never a value, date, name or identifier of the person; numbers are refused except in gene symbols, rsIDs and a few public topic names such as type 2 diabetes or COVID-19. Returns up to 10 articles with PMID, title, journal, year, DOI and an abstract snippet. Cite each article you use by its PMID and URL. Literature, not evidence about this person.";
 
 export const ENSEMBL_LOOKUP_DESCRIPTION =
   "Look up one human gene by symbol (such as BRCA1) or one variant by rsID (such as rs429358) in Ensembl, live. The symbol or rsID is sent to Ensembl. Returns location, biotype and description for a gene; class, consequence, minor allele frequency and clinical significance for a variant, with the Ensembl URL to cite. Reference facts, not a statement about this person.";
