@@ -111,7 +111,10 @@ and mark the fetching one `server-only`, so client code can use the pure half.
   `createWearablesSummaryHandler`). Do not use `mock.module` in new tests: Bun keeps the
   replacement for later test files in the same process, so results start depending on
   file order. `bun run test:isolation` runs the affected folders on their own as a
-  check.
+  check. An existing test that still needs one uses `mockModuleForFile`
+  (`tests/support/mock-module.ts`), which keeps the module's other exports and puts
+  the real module back after the file. Leave shared state (env, files, sessions) as
+  you found it, and check with `bun test --randomize` (#359).
 - `bunfig.toml` already preloads a `server-only` stub; do not add another.
 
 **Data.** Use synthetic or fixture data for development, tests, screenshots and

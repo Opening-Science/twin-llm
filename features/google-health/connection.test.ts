@@ -1,4 +1,6 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
+
+import { moduleMocker } from "@/tests/support/mock-module";
 
 import type { GoogleHealthSummary } from "@/infrastructure/google-health-types";
 
@@ -38,8 +40,9 @@ const recorded = {
   snapshotRows: [] as Record<string, unknown>[],
 };
 
+const mockModuleForFile = moduleMocker({ mock, afterAll });
 mock.module("server-only", () => ({}));
-mock.module("@/infrastructure/database", () => ({
+await mockModuleForFile("@/infrastructure/database", {
   database: () => ({
     googleHealthSnapshot: {
       findFirst: async (args: FindFirstArgs) => {
@@ -55,7 +58,7 @@ mock.module("@/infrastructure/database", () => ({
       },
     },
   }),
-}));
+});
 
 beforeEach(() => {
   recorded.snapshotQueries.length = 0;

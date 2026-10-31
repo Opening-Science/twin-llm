@@ -1,4 +1,6 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
+
+import { moduleMocker } from "@/tests/support/mock-module";
 
 import { sha256Hex, toCanonicalJson } from "@/packages/audit/hash";
 
@@ -210,10 +212,11 @@ const mockDb = () => ({
     fn(mockDb()),
 });
 
+const mockModuleForFile = moduleMocker({ mock, afterAll });
 mock.module("server-only", () => ({}));
-mock.module("@/infrastructure/database", () => ({
+await mockModuleForFile("@/infrastructure/database", {
   database: () => mockDb(),
-}));
+});
 
 const synthetic = {
   actor: "local",
