@@ -47,8 +47,7 @@ export const PrivacyScreen = ({
           <h3 className="font-medium">What withdrawing does</h3>
           <p className="text-muted-foreground mt-1">
             It stops every future run from reading your data for that use, from the moment
-            you press Withdraw. Each run checks before it reads and again before it
-            writes.
+            you withdraw. Each run checks before it reads and again before it writes.
           </p>
           <h3 className="mt-3 font-medium">What it does not undo</h3>
           <p className="text-muted-foreground mt-1">

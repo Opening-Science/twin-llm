@@ -12,7 +12,14 @@ import {
 import { cn } from "@/infrastructure/ui";
 
 import { buttonClassName, type ButtonStyle } from "./button";
-import { holdHint, type HoldEvent, holdReducer } from "./hold-model";
+import {
+  holdCountdown,
+  holdHint,
+  type HoldEvent,
+  holdReducer,
+  holdSecondsLeft,
+} from "./hold-model";
+import { createHoldTimer, type HoldTimer } from "./hold-timer";
 import { useReducedMotion } from "./use-reduced-motion";
 
 /**
@@ -22,9 +29,10 @@ import { useReducedMotion } from "./use-reduced-motion";
  * drifting off the button cancels. When the fill completes, `onConfirm` runs
  * once and the label becomes `doneLabel`.
  *
- * The fill is a Web Animation; under reduced motion it moves in four steps
- * instead of sliding. A screen-reader hint says how long to hold, and a live
- * region says when it is done.
+ * The fill is a Web Animation; under reduced motion nothing moves and the
+ * label counts the seconds down instead. A screen-reader hint says how long
+ * to hold, and a live region says when it is done. The timing lives in
+ * `hold-timer.ts`, where it is tested.
  */
 
 export type HoldToConfirmProps = Readonly<{
@@ -39,11 +47,6 @@ export type HoldToConfirmProps = Readonly<{
 
 const HOLD_KEYS: ReadonlySet<string> = new Set([" ", "Enter"]);
 
-type Run = Readonly<{
-  timer: ReturnType<typeof setTimeout>;
-  animation: Animation | null;
-}>;
-
 export const HoldToConfirm = ({
   label,
   icon,
@@ -56,56 +59,67 @@ export const HoldToConfirm = ({
   className,
 }: HoldToConfirmProps) => {
   const [phase, setPhase] = useState(holdReducer("idle", "reset"));
+  const [secondsLeft, setSecondsLeft] = useState(holdSecondsLeft(holdMs, 0));
   const fill = useRef<HTMLSpanElement>(null);
-  const run = useRef<Run | null>(null);
+  const animation = useRef<Animation | null>(null);
   const confirm = useRef(onConfirm);
   const hintId = useId();
   const reduced = useReducedMotion();
 
+  const send = (event: HoldEvent) => setPhase((was) => holdReducer(was, event));
+
+  // Made on the first press, outside render; one per mounted button.
+  const timer = useRef<HoldTimer | null>(null);
+  const holdTimer = (): HoldTimer => {
+    timer.current ??= createHoldTimer(holdMs, () => {
+      send("complete");
+      confirm.current();
+    });
+    return timer.current;
+  };
+
   useEffect(() => {
     confirm.current = onConfirm;
   }, [onConfirm]);
-  useEffect(
-    () => () => {
-      if (run.current) clearTimeout(run.current.timer);
-    },
-    [],
-  );
+  useEffect(() => () => void timer.current?.letGo(), []);
 
-  const send = (event: HoldEvent) => setPhase((was) => holdReducer(was, event));
+  // Under reduced motion the label counts down; a quick tick keeps it on time.
+  useEffect(() => {
+    if (!reduced || phase !== "holding") return;
+    const tick = setInterval(() => {
+      const since = timer.current?.startedAt() ?? null;
+      setSecondsLeft(holdSecondsLeft(holdMs, since === null ? 0 : Date.now() - since));
+    }, 100);
+    return () => clearInterval(tick);
+  }, [reduced, phase, holdMs]);
 
   const press = () => {
-    if (disabled || phase !== "idle") return;
-    run.current?.animation?.cancel();
-    const animation =
-      fill.current?.animate([{ transform: "scaleX(0)" }, { transform: "scaleX(1)" }], {
-        duration: holdMs,
-        easing: reduced ? "steps(4, end)" : "linear",
-        fill: "forwards",
-      }) ?? null;
-    // Letting go clears this timer, and a press only starts from idle, so
-    // when it fires the hold is complete and it fires once.
-    const timer = setTimeout(() => {
-      run.current = null;
-      send("complete");
-      confirm.current();
-    }, holdMs);
-    run.current = { timer, animation };
+    if (disabled || phase !== "idle" || !holdTimer().press()) return;
+    animation.current?.cancel();
+    animation.current = reduced
+      ? null
+      : (fill.current?.animate([{ transform: "scaleX(0)" }, { transform: "scaleX(1)" }], {
+          duration: holdMs,
+          easing: "linear",
+          fill: "forwards",
+        }) ?? null);
+    setSecondsLeft(holdSecondsLeft(holdMs, 0));
     send("press");
   };
 
   const letGo = (event: "release" | "leave") => {
-    const current = run.current;
-    if (phase !== "holding" || current === null) return;
-    clearTimeout(current.timer);
-    run.current = null;
-    const progress = Number(current.animation?.effect?.getComputedTiming().progress ?? 0);
-    current.animation?.cancel();
+    if (!timer.current?.letGo()) return;
+    const current = animation.current;
+    animation.current = null;
+    const progress = Number(current?.effect?.getComputedTiming().progress ?? 0);
+    current?.cancel();
     // Empties quickly from wherever it got to.
-    fill.current?.animate(
-      [{ transform: `scaleX(${progress})` }, { transform: "scaleX(0)" }],
-      { duration: 150, easing: "ease-out" },
-    );
+    if (current !== null) {
+      fill.current?.animate(
+        [{ transform: `scaleX(${progress})` }, { transform: "scaleX(0)" }],
+        { duration: 150, easing: "ease-out" },
+      );
+    }
     send(event);
   };
 
@@ -147,6 +161,8 @@ export const HoldToConfirm = ({
         <span className="hold-confirm-label">
           {done ? (
             doneLabel
+          ) : phase === "holding" && reduced ? (
+            holdCountdown(secondsLeft)
           ) : (
             <>
               {icon}
