@@ -24,12 +24,21 @@
  * model calls (actor `eval-answer-key`), never from a hand-written value or a
  * second implementation of the maths, so the key and the tools cannot drift
  * apart silently. The tools are injected, so the build is unit-tested with
- * fakes. Prints counts only, never observation values.
+ * fakes. The learning-consent gate (#145) is asked before the first call and
+ * again before the key is written. Prints counts only, never observation values.
  */
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 
+import {
+  distinctRows,
+  learningRefusalLine,
+  type LearningGateDeps,
+  type LearningRow,
+  noConsentStore,
+  requireLearningConsent,
+} from "../../infrastructure/learning-consent";
 import { AF_SUBSET_COHORT } from "../../packages/query-tools/event-rates/cohort-rates";
 import type { QueryToolPorts } from "../../packages/query-tools/ports";
 import { isToolRefusal } from "../../packages/query-tools/refusals";
@@ -173,6 +182,8 @@ export type AnswerKeyPorts = Readonly<{
   openTwinSha: () => string;
   /** Today as YYYY-MM-DD. */
   today: () => string;
+  /** What the key reads, per cohort and `is_synthetic` flag, for the consent gate (#145). */
+  learningRows: () => Promise<readonly LearningRow[]>;
 }>;
 
 type Window = Readonly<{ start: string; end: string }>;
@@ -450,6 +461,7 @@ export type BuildDeps = Readonly<{
   writeKey: (path: string, key: AnswerKey) => Promise<void>;
   /** The ports for the cohort the questions name. */
   ports: (cohortId: EvalCohortId) => Promise<AnswerKeyPorts>;
+  learning: LearningGateDeps;
 }>;
 
 const argValue = (argv: readonly string[], flag: string, fallback: string): string => {
@@ -482,15 +494,29 @@ export const runBuildAnswerKey = async (
     );
     return 1;
   }
+  const ports = await deps.ports(parsed.data.cohort_id);
+  // #145: asked before the first tool call and again before the key is written.
+  const ask = async () =>
+    requireLearningConsent("answer-key", await ports.learningRows(), deps.learning);
+  const permit = await ask();
+  if (!permit.ok) {
+    io.stderr.write(`${learningRefusalLine(permit)}\n`);
+    return 1;
+  }
   let key: AnswerKey;
   try {
-    key = await buildAnswerKey(raw, await deps.ports(parsed.data.cohort_id));
+    key = await buildAnswerKey(raw, ports);
   } catch (error) {
     io.stderr.write(
       error instanceof AnswerKeyError
         ? `Answer key not written: ${error.message}.\n`
         : "Answer key not written: the questions or a tool result did not validate.\n",
     );
+    return 1;
+  }
+  const recheck = await ask();
+  if (!recheck.ok) {
+    io.stderr.write(`${learningRefusalLine(recheck, "before-write")}\n`);
     return 1;
   }
   await deps.writeKey(outPath, key);
@@ -656,6 +682,10 @@ export const realPorts = async (
         : cohortContentSha256(fhirDirOf(cohortId)),
     openTwinSha: openTwinHead,
     today: () => today,
+    learningRows: async () =>
+      (await import("../../infrastructure/learning-consent-store")).warehouseSubjectRows([
+        cohortId,
+      ]),
   };
 };
 
@@ -690,6 +720,15 @@ export const cohortFilePorts = async (
     cohortSha256: () => cohortContentSha256(fhir),
     openTwinSha: openTwinHead,
     today: () => today,
+    // Only Synthea bundles become subjects here (`cohortSubjectFrom`).
+    learningRows: async () =>
+      distinctRows(
+        subjects.map((subject) => ({
+          kind: "subject",
+          cohortId: subject.scope.cohortId,
+          isSynthetic: subject.scope.isSynthetic,
+        })),
+      ),
   };
 };
 
@@ -718,6 +757,12 @@ if (isMain) {
     writeKey: async (path, key) => writeFile(path, await formatKey(key, path)),
     ports: (cohortId) =>
       offline ? cohortFilePorts(cohortDir, today, cohortId) : realPorts(today, cohortId),
+    // Over cohort files there is no app database, so no consent store either.
+    learning: offline
+      ? noConsentStore()
+      : (
+          await import("../../infrastructure/learning-consent-store")
+        ).databaseLearningGate(),
   });
   process.exit(code);
 }

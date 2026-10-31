@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
+import { noConsentStore } from "../../infrastructure/learning-consent";
+
 import { type QuestionSet, questionSetSchema } from "./question-set";
 import {
   applyMoves,
@@ -377,7 +379,11 @@ describe("runSpreadSubjects", () => {
   const raw = questions(
     ["01", "02", "03", "04"].map((n) => item(`Q-S1-${n}`, { subject: "ccc" })),
   );
-  const deps = (written: unknown[], mode = "synthetic"): SpreadDeps => ({
+  const deps = (
+    written: unknown[],
+    mode = "synthetic",
+    isSynthetic = true,
+  ): SpreadDeps => ({
     dataMode: () => mode,
     readText: () => Promise.resolve(JSON.stringify(raw)),
     writeQuestions: (_path, value) => {
@@ -385,6 +391,9 @@ describe("runSpreadSubjects", () => {
       return Promise.resolve();
     },
     inventory: () => Promise.resolve(inventory),
+    subjectRows: () =>
+      Promise.resolve([{ kind: "subject", cohortId: "synthea-v4-seed42", isSynthetic }]),
+    learning: noConsentStore(),
   });
   const io = () => {
     const out: string[] = [];
@@ -405,6 +414,20 @@ describe("runSpreadSubjects", () => {
     expect(await runSpreadSubjects([], streams, deps(written, "real"))).toBe(1);
     expect(err).toEqual(["eval:spread-subjects runs only with DATA_MODE=synthetic.\n"]);
     expect(written).toEqual([]);
+  });
+
+  test("refuses a cohort with a subject that is not synthetic (#145)", async () => {
+    const written: unknown[] = [];
+    const { io: streams, err } = io();
+    expect(await runSpreadSubjects([], streams, deps(written, "synthetic", false))).toBe(
+      1,
+    );
+    expect([err, written]).toEqual([
+      [
+        'Refused (SOURCE_NOT_SYNTHETIC): A subject in cohort "synthea-v4-seed42" is not marked synthetic or its cohort is not a listed synthetic cohort, and it has no owner who could consent. Nothing was read.\n',
+      ],
+      [],
+    ]);
   });
 
   test("--dry-run prints the plan and writes nothing", async () => {

@@ -34,8 +34,12 @@ bun run eval:cohort-codes -- --in .synthea   # after a cohort change only
 | `--decline-wording w1` / `w2` / `w3`                    | Decline line for a wording comparison (#274); default the chat's         |
 
 `bun run eval` refuses unless `DATA_MODE=synthetic`, stops when the questions'
-sha256 is not the key's `questions_sha256`, and checks every model id against
-the provider's model list before any item runs (`MODEL_NOT_LISTED`). Items
+sha256 is not the key's `questions_sha256`, refuses a cohort with a subject
+that is not synthetic (`SOURCE_NOT_SYNTHETIC`, the learning-consent gate of
+#145, asked again before `meta.json` is written), and checks every model id
+against the provider's model list before any item runs (`MODEL_NOT_LISTED`).
+A run that relied on a person's consent would name it in `meta.json`
+(`learning_consents`), and `eval:report` refuses such a run. Items
 whose `context.requires` env is missing get `MISSING_ENV` lines, counted on
 their own in `meta.json` and the report, never as passes. Exit code 0 means no
 line had an error, 2 means some did, 1 means the run did not start.

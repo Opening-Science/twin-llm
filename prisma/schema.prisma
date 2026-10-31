@@ -49,6 +49,7 @@ model User {
   personalDatasets       PersonalDataset[]
   skills                 UserSkill[]
   twinNotes              TwinNote[]
+  learningConsents       LearningConsent[]
 
   @@map("users")
 }
@@ -102,21 +103,21 @@ model Thread {
 /// deleting a thread (cascade) removes everything search knows about it.
 /// Embedded only by Ollama on this machine. Genome threads are never indexed.
 model ThreadSearchEmbedding {
-  id         String                @id @default(cuid())
-  userId     String                @map("user_id")
-  threadId   String                @map("thread_id")
+  id              String                 @id @default(cuid())
+  userId          String                 @map("user_id")
+  threadId        String                 @map("thread_id")
   /// "prompt" (sourceId is a turn id) or "answer" (a model_responses id).
-  sourceKind String                @map("source_kind")
-  sourceId   String                @map("source_id")
-  model      String
+  sourceKind      String                 @map("source_kind")
+  sourceId        String                 @map("source_id")
+  model           String
   /// vector(768) in the database, with an HNSW cosine index, set in the
   /// migration SQL because Prisma has no syntax for either. Synthetic
   /// installs only; null in personal mode (#141).
   embedding       Unsupported("vector")?
   /// Personal mode (#141): the vector as sealed JSON; search runs in memory
   /// after unlock.
-  embeddingSealed String?               @map("embedding_sealed")
-  createdAt  DateTime              @default(now()) @map("created_at")
+  embeddingSealed String?                @map("embedding_sealed")
+  createdAt       DateTime               @default(now()) @map("created_at")
 
   thread Thread @relation(fields: [threadId], references: [id], onDelete: Cascade)
 
@@ -572,22 +573,22 @@ model PersonalTableChunk {
 /// tools and never sent to a hosted provider. QUAL, INFO, the other FORMAT
 /// fields and the sample's name are not stored.
 model PersonalVariant {
-  id        String  @id @default(cuid())
-  datasetId String  @map("dataset_id")
-  userId    String  @map("user_id")
+  id             String   @id @default(cuid())
+  datasetId      String   @map("dataset_id")
+  userId         String   @map("user_id")
   /// As the file names it: "chr1" or "1".
-  chrom     String
+  chrom          String
   /// 1-based GRCh38 position, as text; sealed in personal mode (#141).
-  pos       String
+  pos            String
   /// The ID column, such as an rsID; null when ".".
-  variantId String? @map("variant_id")
-  ref       String
+  variantId      String?  @map("variant_id")
+  ref            String
   /// Alternate alleles as written, comma separated.
-  alt       String
+  alt            String
   /// GT as written ("0/1", "1|1"); null for a no-call.
-  genotype  String?
+  genotype       String?
   /// The FILTER column; null when ".".
-  filter    String?
+  filter         String?
   /// Keyed hash of `chrom:pos` as the file wrote it (#141).
   siteIndex      String?  @map("site_index")
   /// Keyed hash of each ID in the ID cell (split on ";").
@@ -853,4 +854,31 @@ model TwinNote {
 
   @@index([userId, createdAt])
   @@map("twin_notes")
+}
+
+/// Consent to learn from personal data (#145, docs/privacy-design.md 2.4). Off by
+/// default: no active row means no consent. A row is never edited except to set
+/// `withdrawnAt`; granting again after a withdrawal adds a new row. Plaintext on
+/// purpose: it holds fixed choices and a shipped sentence, no health data, and the
+/// gate must read it from a command line where the vault is not open.
+model LearningConsent {
+  id             String    @id @default(uuid())
+  userId         String    @map("user_id")
+  /// "training", "answer-key" or "evaluation" (`LEARNING_SCOPES`).
+  scope          String
+  /// What it covers, from `LEARNING_SOURCES` ("wearables", "imports", ...).
+  sources        String[]
+  /// The exact sentence shown when it was granted, its wording version and SHA-256.
+  wording        String
+  wordingVersion String    @map("wording_version")
+  wordingSha256  String    @map("wording_sha256") @db.Char(64)
+  grantedAt      DateTime  @default(now()) @map("granted_at")
+  withdrawnAt    DateTime? @map("withdrawn_at")
+  /// The `seq` of the audit row that granted it.
+  auditSeq       BigInt    @map("audit_seq")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, scope])
+  @@map("learning_consents")
 }

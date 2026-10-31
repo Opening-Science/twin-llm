@@ -1039,6 +1039,7 @@ const PAGES: Readonly<Record<string, "gated" | Readonly<{ open: string }>>> = {
   "app/(shell)/customize/connectors/page.tsx": "gated",
   "app/(shell)/customize/data/page.tsx": "gated",
   "app/(shell)/customize/memory/page.tsx": "gated",
+  "app/(shell)/customize/privacy/page.tsx": "gated",
   "app/(focus)/start/page.tsx": "gated",
   "app/layout.tsx": { open: "the root frame" },
   "app/(focus)/layout.tsx": { open: "the frame of /start" },
@@ -1102,6 +1103,12 @@ const SERVER_ACTIONS: Readonly<
       editNote: "vaultRefusalForAction()",
       removeNote: "vaultRefusalForAction()",
       setNotesLoading: "vaultRefusalForAction()",
+    },
+  },
+  "features/privacy/consent-actions.ts": {
+    gated: {
+      grantConsent: "vaultRefusalForAction()",
+      withdrawConsent: "vaultRefusalForAction()",
     },
   },
   "features/skills/skill-actions.ts": {

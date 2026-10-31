@@ -13,10 +13,18 @@
  * unit-tested with a toy inventory. An item moves when its subject has left
  * the cohort, lacks what the item needs, or is named by more than
  * SUBJECT_CAP items; it goes to the eligible subject with the fewest items so
- * far, ties to the lowest subject_ref, items in question-id order. Prints
- * subject_refs and counts only, never observation values.
+ * far, ties to the lowest subject_ref, items in question-id order. The
+ * learning-consent gate (#145) checks the cohort's subjects before the
+ * inventory is read. Prints subject_refs and counts only, never observation values.
  */
 import { readFile, writeFile } from "node:fs/promises";
+
+import {
+  learningRefusalLine,
+  type LearningGateDeps,
+  type LearningRow,
+  requireLearningConsent,
+} from "../../infrastructure/learning-consent";
 
 import { windowEndDate, windowStartDate } from "../../packages/query-tools/schemas";
 import { WEARABLE_TREND_MINIMUM } from "../../packages/query-tools/refusals";
@@ -404,6 +412,9 @@ export type SpreadDeps = Readonly<{
   readText: (path: string) => Promise<string>;
   writeQuestions: (path: string, raw: unknown) => Promise<void>;
   inventory: () => Promise<Inventory>;
+  /** What the evaluation cohort's subjects are, per `is_synthetic` flag (#145). */
+  subjectRows: () => Promise<readonly LearningRow[]>;
+  learning: LearningGateDeps;
 }>;
 
 export type SpreadIo = Readonly<{
@@ -418,6 +429,15 @@ export const runSpreadSubjects = async (
 ): Promise<number> => {
   if (deps.dataMode() !== "synthetic") {
     io.stderr.write("eval:spread-subjects runs only with DATA_MODE=synthetic.\n");
+    return 1;
+  }
+  const permit = await requireLearningConsent(
+    "evaluation",
+    await deps.subjectRows(),
+    deps.learning,
+  );
+  if (!permit.ok) {
+    io.stderr.write(`${learningRefusalLine(permit)}\n`);
     return 1;
   }
   const raw = JSON.parse(await deps.readText(DEFAULT_QUESTIONS)) as unknown;
@@ -467,6 +487,8 @@ const isMain = Boolean((import.meta as { main?: boolean }).main);
 if (isMain) {
   const { serverEnv } = await import("../../infrastructure/env");
   const prettier = await import("prettier");
+  const { databaseLearningGate, warehouseSubjectRows } =
+    await import("../../infrastructure/learning-consent-store");
   const code = await runSpreadSubjects(process.argv.slice(2), process, {
     dataMode: () => serverEnv().DATA_MODE,
     readText: (path) => readFile(path, "utf8"),
@@ -481,6 +503,8 @@ if (isMain) {
       );
     },
     inventory: warehouseInventory,
+    subjectRows: () => warehouseSubjectRows([COHORT_ID]),
+    learning: databaseLearningGate(),
   });
   process.exit(code);
 }

@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
-
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { genomeToolList } from "../../packages/carbon-x/manifest";
+import { noConsentStore } from "../../infrastructure/learning-consent";
 import { parseCatalog } from "../genome-synth/catalog";
 
 import {
@@ -43,6 +43,8 @@ const harness = (overrides: Partial<BuildDeps> = {}) => {
   const err: string[] = [];
   const deps: BuildDeps = {
     dataMode: () => "synthetic",
+    subjectRows: async (cohortId) => [{ kind: "subject", cohortId, isSynthetic: true }],
+    learning: noConsentStore(),
     ports: async () => ({
       listSubjects: async (cohortId) => (cohortId === FAKE_COHORT ? ["s-a", "s-b"] : []),
       runTool: tools.run,
@@ -480,5 +482,106 @@ describe("runBuildConversations --genome", () => {
     expect(result.err).toEqual([
       "--genome needs the variant catalog and the genome turn's tools.\n",
     ]);
+  });
+});
+
+describe("the learning-consent gate (#145)", () => {
+  const OUT = "/tmp/out.jsonl";
+  const ARGS = ["--cohort", FAKE_COHORT, "--out", OUT];
+  const AT = new Date("2026-10-31T12:00:00Z");
+  const OWNER = "app-user-synthetic-1";
+  const PERSONAL = { kind: "personal", ownerId: OWNER, source: "wearables" } as const;
+  const grant = {
+    id: "consent-1",
+    userId: OWNER,
+    scope: "training",
+    sources: ["wearables"],
+    wordingVersion: "learning-consent.v1",
+    wordingSha256: "0".repeat(64),
+    grantedAt: new Date("2026-10-01T00:00:00Z"),
+    withdrawnAt: null,
+  } as const;
+
+  test("a synthetic cohort passes and its manifest is unchanged", async () => {
+    const h = harness();
+    expect(await runBuildConversations(ARGS, h.io, h.deps)).toBe(0);
+    const manifest = JSON.parse(h.files.get("/tmp/out.manifest.json") ?? "{}") as Record<
+      string,
+      unknown
+    >;
+    expect(manifest.learning_consents).toBe(undefined);
+  });
+
+  test("a subject that is not synthetic is refused before any tool runs", async () => {
+    const h = harness({
+      subjectRows: async (cohortId) => [
+        { kind: "subject", cohortId, isSynthetic: true },
+        { kind: "subject", cohortId, isSynthetic: false },
+      ],
+    });
+    expect(await runBuildConversations(ARGS, h.io, h.deps)).toBe(1);
+    expect([h.err, h.calls.length, [...h.files.keys()]]).toEqual([
+      [
+        `Refused (SOURCE_NOT_SYNTHETIC): A subject in cohort "${FAKE_COHORT}" is not marked synthetic or its cohort is not a listed synthetic cohort, and it has no owner who could consent. Nothing was read.\n`,
+      ],
+      0,
+      [],
+    ]);
+  });
+
+  test("a personal row is refused without consent, with a withdrawn one and with another scope's", async () => {
+    const codes: string[] = [];
+    for (const consents of [
+      [],
+      [{ ...grant, withdrawnAt: new Date("2026-10-20T00:00:00Z") }],
+      [{ ...grant, scope: "evaluation" as const }],
+    ]) {
+      const h = harness({
+        subjectRows: async () => [PERSONAL],
+        learning: { loadConsents: async () => consents, now: () => AT },
+      });
+      expect(await runBuildConversations(ARGS, h.io, h.deps)).toBe(1);
+      expect([...h.files.keys()]).toEqual([]);
+      codes.push(/^Refused \((\w+)\)/.exec(h.err.join(""))?.[1] ?? "");
+    }
+    expect(codes).toEqual([
+      "LEARNING_CONSENT_MISSING",
+      "LEARNING_CONSENT_WITHDRAWN",
+      "LEARNING_CONSENT_SCOPE",
+    ]);
+  });
+
+  test("a matching consent is named in the manifest", async () => {
+    const h = harness({
+      subjectRows: async () => [PERSONAL],
+      learning: { loadConsents: async () => [grant], now: () => AT },
+    });
+    expect(await runBuildConversations(ARGS, h.io, h.deps)).toBe(0);
+    const manifest = JSON.parse(h.files.get("/tmp/out.manifest.json") ?? "{}") as Record<
+      string,
+      unknown
+    >;
+    expect(manifest.learning_consents).toEqual({
+      scope: "training",
+      consent_ids: ["consent-1"],
+    });
+  });
+
+  test("a consent withdrawn during the run keeps nothing", async () => {
+    let asked = 0;
+    const h = harness({
+      subjectRows: async () => [PERSONAL],
+      learning: {
+        loadConsents: async () => {
+          asked += 1;
+          return asked === 1 ? [grant] : [{ ...grant, withdrawnAt: AT }];
+        },
+        now: () => AT,
+      },
+    });
+    expect(await runBuildConversations(ARGS, h.io, h.deps)).toBe(1);
+    expect([[...h.files.keys()], h.err.join("").endsWith("Nothing was kept.\n")]).toEqual(
+      [[], true],
+    );
   });
 });

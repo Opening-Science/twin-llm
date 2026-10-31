@@ -20,7 +20,8 @@
  * goes to `<work>/logs/`, and this prints one line per step with its time.
  *
  * Refuses to run unless DATA_MODE=synthetic, the database is not the dev
- * database of `.env.local`, and it holds no Demo cohort. Stops at the first
+ * database of `.env.local`, it holds no Demo cohort, and the learning-consent
+ * gate (#145) finds only synthetic subjects in it. Stops at the first
  * failed step, including any rejected bundle, unless --skip-rejected: then
  * rejected FHIR bundles are listed in `<out>/<cohort>.rejected.json` and the
  * conversation manifest, their subjects' wearable series are left out, and
@@ -32,6 +33,12 @@ import { createWriteStream } from "node:fs";
 import { mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
+import {
+  learningRefusalLine,
+  type LearningGateDeps,
+  type LearningRow,
+  requireLearningConsent,
+} from "../../infrastructure/learning-consent";
 import { type BatchCohort } from "../synthea/cohort-presets";
 
 import {
@@ -75,6 +82,9 @@ export type BatchRunDeps = Readonly<{
   devDatabaseUrls: () => Promise<readonly (string | null)[]>;
   /** Subjects of a Demo cohort in this database; the training database has none. */
   demoSubjects: () => Promise<number>;
+  /** Every subject in this database, per cohort and `is_synthetic` flag, for the consent gate (#145). */
+  subjectRows: () => Promise<readonly LearningRow[]>;
+  learning: LearningGateDeps;
   exists: (path: string) => Promise<boolean>;
   readJson: (path: string) => Promise<unknown>;
   writeJson: (path: string, value: unknown) => Promise<void>;
@@ -374,6 +384,17 @@ export const runTrainingBatches = async (
     );
     return 1;
   }
+  // #145: the training database may hold synthetic subjects only (each
+  // conversations step asks the gate again for its own cohort).
+  const permit = await requireLearningConsent(
+    "training",
+    await deps.subjectRows(),
+    deps.learning,
+  );
+  if (!permit.ok) {
+    io.stderr.write(`${learningRefusalLine(permit)}\n`);
+    return 1;
+  }
 
   // Every archive a batch still needs must be there before the first one starts.
   const missing: string[] = [];
@@ -429,6 +450,8 @@ if (isMain) {
   const { serverEnv } = await import("../../infrastructure/env");
   const { database } = await import("../../infrastructure/database");
   const { DEMO_COHORTS } = await import("../../packages/query-tools/scope");
+  const { databaseLearningGate, warehouseSubjectRows } =
+    await import("../../infrastructure/learning-consent-store");
   const { syntheaPatientOf } = await import("../synthetic-wearables/bundle");
 
   const readText = async (path: string): Promise<string | null> => {
@@ -465,6 +488,8 @@ if (isMain) {
         ),
       demoSubjects: () =>
         database().subject.count({ where: { cohortId: { in: [...DEMO_COHORTS] } } }),
+      subjectRows: () => warehouseSubjectRows(null),
+      learning: databaseLearningGate(),
       exists: async (path) =>
         stat(path).then(
           () => true,

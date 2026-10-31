@@ -10,7 +10,8 @@
  * would store (`mapObservations`, as ingest maps it), in the Synthea bundles
  * and in the synthetic wearable series. The series' own local codes
  * (`hrv-rmssd`, `sleep-score`, …) are left out: a tool's `loinc` argument
- * cannot name them. `cohortCodesFrom` is pure; the CLI reads and writes.
+ * cannot name them. `cohortCodesFrom` is pure; the CLI reads and writes, after
+ * the learning-consent gate (#145) finds only Synthea patient files.
  */
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -20,7 +21,13 @@ import { z } from "zod";
 import { mapObservations } from "../../packages/warehouse/map-observation";
 
 import { COHORT_CODES_PATH, type CohortCodes, LOINC_SHAPE } from "./cohort-codes";
-import { loadCohortBundles } from "./cohort-ports";
+import {
+  learningRefusalLine,
+  noConsentStore,
+  requireLearningConsent,
+} from "../../infrastructure/learning-consent";
+
+import { loadCohortBundles, syntheaBundleRows } from "./cohort-ports";
 import { ANSWER_KEY_PATH } from "./eval-results";
 import { answerKeySchema, COHORT_ID } from "./question-set";
 
@@ -80,10 +87,19 @@ const main = async (argv: readonly string[]): Promise<number> => {
   const wearables = wearablesManifestSchema.parse(
     await readJson(join(dir, "wearables", "manifest.json")),
   );
-  const bundles = [
-    ...(await loadCohortBundles(join(dir, "fhir"))),
-    ...(await loadCohortBundles(join(dir, "wearables"))),
-  ];
+  const patients = await loadCohortBundles(join(dir, "fhir"));
+  // #145: every patient file must be a Synthea bundle; there is no consent store here.
+  // The wearable series are generated from those patients by a fixed seed.
+  const permit = await requireLearningConsent(
+    "evaluation",
+    syntheaBundleRows(patients, COHORT_ID),
+    noConsentStore(),
+  );
+  if (!permit.ok) {
+    process.stderr.write(`${learningRefusalLine(permit)}\n`);
+    return 1;
+  }
+  const bundles = [...patients, ...(await loadCohortBundles(join(dir, "wearables")))];
   const file: CohortCodes = {
     schema_version: "twin-llm.eval.cohort-codes.v1",
     cohort_id: COHORT_ID,

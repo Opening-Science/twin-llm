@@ -10,7 +10,9 @@
  * first recorded onsets of five conditions, whether warfarin was requested),
  * never a tool result. Pure: `heldoutSubjectFrom` and `generateHeldoutSet`
  * take data and return data. The CLI at the bottom reads the cohort files and
- * writes the subject table and the questions:
+ * writes the subject table and the questions; `subjects` asks the
+ * learning-consent gate (#145) first, and refuses a file that is not a Synthea
+ * bundle. `generate` reads only the table `subjects` wrote:
  *
  *   bun run eval:heldout:s7h subjects --cohort-dir .synthea/synthea-v4-s7
  *   bun run eval:heldout:s7h generate
@@ -753,11 +755,25 @@ if (isMain) {
   const argv = process.argv.slice(2);
   const command = argv[0];
   if (command === "subjects") {
-    const { cohortSubjectFrom, loadCohortBundles } = await import("./cohort-ports");
+    const { cohortSubjectFrom, loadCohortBundles, syntheaBundleRows } =
+      await import("./cohort-ports");
+    const { learningRefusalLine, noConsentStore, requireLearningConsent } =
+      await import("../../infrastructure/learning-consent");
     const { S7_RECIPE } = await import("../synthea/s7-cohort");
     const dir = argValue(argv, "--cohort-dir", ".synthea/synthea-v4-s7");
     const out = argValue(argv, "--out", S7H_SUBJECTS_PATH);
-    const subjects = (await loadCohortBundles(`${dir}/fhir`))
+    const bundles = await loadCohortBundles(`${dir}/fhir`);
+    // #145: every patient file must be a Synthea bundle; there is no consent store here.
+    const permit = await requireLearningConsent(
+      "evaluation",
+      syntheaBundleRows(bundles, S7_COHORT_ID),
+      noConsentStore(),
+    );
+    if (!permit.ok) {
+      process.stderr.write(`${learningRefusalLine(permit)}\n`);
+      process.exit(1);
+    }
+    const subjects = bundles
       .flatMap((bundle) => {
         const subject = cohortSubjectFrom(bundle, S7_COHORT_ID, S7_RECIPE.syntheaVersion);
         const facts = subject === null ? null : heldoutSubjectFrom(subject);

@@ -5,7 +5,8 @@
  *   bun scripts/disclosure/prepare.ts --out ../twin-llm-disclosure-run
  *
  * Reads the pilot's data splits and the synthetic training cohort
- * (synthea-v4-seed1001), never anything else. Writes `<out>/sets/` and
+ * (synthea-v4-seed1001), never anything else, and asks the learning-consent
+ * gate (#145) for every meta line before using any. Writes `<out>/sets/` and
  * `<out>/sets/manifest.json` (seeds, counts, sha256 of every input). Prints
  * counts, never a conversation.
  */
@@ -13,6 +14,13 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
+
+import {
+  learningRefusalLine,
+  noConsentStore,
+  requireLearningConsent,
+} from "../../infrastructure/learning-consent";
+import { splitRows } from "../training-data/split-conversations";
 
 import {
   buildControlSets,
@@ -65,7 +73,17 @@ const valText = await readFile(join(args.pilot, "data/val.jsonl"), "utf8");
 const records = lines(cohortText);
 const metas = lines(metaText).map((line) => JSON.parse(line) as Meta);
 if (records.length !== metas.length) throw new Error("cohort and meta differ in length");
-if (metas.some((m) => m.synthetic !== true)) throw new Error("a non-synthetic row");
+// #145: every conversation must come from a synthetic subject of a listed cohort.
+// This command reads files only, so it has no consent store: a personal row is refused.
+const permit = await requireLearningConsent(
+  "training",
+  splitRows(metas),
+  noConsentStore(),
+);
+if (!permit.ok) {
+  process.stderr.write(`${learningRefusalLine(permit)}\n`);
+  process.exit(1);
+}
 
 const conversations: Conversation[] = metas.flatMap((m, line) =>
   m.subject_ref ? [{ line, subject: m.subject_ref, family: m.family }] : [],

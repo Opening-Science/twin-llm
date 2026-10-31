@@ -259,6 +259,17 @@ SHA-256 is the zip's.
   `imported_table`, `imported_conditions`; #299: `imported_medications`) are
   offered only on such a turn, ask the policy again on every call, and keep the thread
   local-only afterwards ([query-layer.md](query-layer.md), "Imported data tools").
+- **Nothing learns from it without your consent (#145).** No training, answer-key or
+  evaluation pipeline may read your rows unless you granted that use on Customize ·
+  Privacy, for the kinds of data you ticked. Every use is off by default, and removing
+  names or dates does not replace consent. Each pipeline asks one gate
+  (`requireLearningConsent`) before it reads and again before it writes, and refuses with
+  a code (`LEARNING_CONSENT_MISSING`, `_WITHDRAWN`, `_SCOPE`, or `SOURCE_NOT_SYNTHETIC`)
+  and a plain sentence. Withdrawing stops future runs; it cannot make a trained model
+  unlearn, and sets made while the consent held name it in their manifest so you can
+  delete them. Your own use (chat, twin notes, search, thread export) needs no consent.
+  Today every pipeline runs on synthetic cohorts only
+  ([privacy-design.md](privacy-design.md#24-145-explicit-consent-before-any-learning-from-personal-data)).
 - **Audited, without values.** Every step appends to the audit chain
   (`features/personal-data/import-audit.ts`): `personal-data.review`, `.save`, `.list`,
   `.rename` and `.delete`. Rows hold the format, byte size, the file's SHA-256, dataset
@@ -299,3 +310,4 @@ SHA-256 is the zip's.
 | Variant lookup (#307)          | `imported-variants.ts`, `genomeVariantReads`                 |
 | Upload size through `proxy.ts` | `proxyClientMaxBodySize` in `next.config.ts` (52 MB)         |
 | Unlock gate (#142)             | `withUnlocked` in `infrastructure/vault-runtime.ts`          |
+| Learning consent (#145)        | `infrastructure/learning-consent.ts`, `features/privacy/`    |

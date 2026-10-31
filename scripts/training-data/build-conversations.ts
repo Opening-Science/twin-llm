@@ -23,12 +23,22 @@
  * cohort; the script never loads `.env.local`. Every number in an answer comes
  * from the closed, audited query tools (actor `training-conversations`), never
  * from a model. It refuses the evaluation cohort unless `--allow-eval-cohort`
- * (smoke runs only). Prints counts only, never values. See docs/training-data.md.
+ * (smoke runs only). Before it reads and again before it keeps anything it asks
+ * the learning-consent gate (#145): a subject that is not synthetic is refused,
+ * and the manifest names the consents the set relied on. Prints counts only,
+ * never values. See docs/training-data.md.
  */
 import { createWriteStream } from "node:fs";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
+import {
+  learningManifest,
+  learningRefusalLine,
+  type LearningGateDeps,
+  type LearningRow,
+  requireLearningConsent,
+} from "../../infrastructure/learning-consent";
 import { isAllowedCohort } from "../../packages/query-tools/scope";
 import { guidelineSearchInput } from "../../packages/guidelines/input";
 import { subjectWindowInput } from "../../packages/query-tools/schemas";
@@ -116,6 +126,9 @@ export type BuildDeps = Readonly<{
   readText: (path: string) => Promise<string | null>;
   /** The curated variant catalog (`scripts/genome-synth/variants.tsv`); read only with --genome. */
   genomeCatalog?: () => Promise<readonly Variant[]>;
+  /** What the cohort's subjects are, per `is_synthetic` flag, for the consent gate (#145). */
+  subjectRows: (cohortId: string) => Promise<readonly LearningRow[]>;
+  learning: LearningGateDeps;
 }>;
 
 const TOOL_INPUTS = {
@@ -318,6 +331,14 @@ export const runBuildConversations = async (
     return 1;
   }
 
+  // #145: every subject must be synthetic, or covered by its owner's consent.
+  const rows = await deps.subjectRows(args.cohortId);
+  const permit = await requireLearningConsent("training", rows, deps.learning);
+  if (!permit.ok) {
+    io.stderr.write(`${learningRefusalLine(permit)}\n`);
+    return 1;
+  }
+
   const rejected =
     args.rejected === null
       ? null
@@ -421,6 +442,14 @@ export const runBuildConversations = async (
   }
   await records.close();
   await metas.close();
+  // Asked again before anything is kept: a consent withdrawn during the run stops it.
+  const recheck = await requireLearningConsent("training", rows, deps.learning);
+  if (!recheck.ok) {
+    await deps.remove(partial(paths.records));
+    await deps.remove(partial(paths.meta));
+    io.stderr.write(`${learningRefusalLine(recheck, "before-write")}\n`);
+    return 1;
+  }
   await deps.rename(partial(paths.records), paths.records);
   await deps.rename(partial(paths.meta), paths.meta);
 
@@ -454,6 +483,11 @@ export const runBuildConversations = async (
               },
             }),
         files: { records: paths.records, meta: paths.meta, stats: paths.stats },
+        // The consents this set relied on (#145). A synthetic set relies on none
+        // and leaves the field out, so its files stay byte for byte as before.
+        ...(recheck.consentIds.length === 0
+          ? {}
+          : { learning_consents: learningManifest(recheck) }),
         ...summary,
         // Subjects whose FHIR bundle the warehouse refused (training:batches --skip-rejected).
         ...(rejected === null ? {} : { rejected_bundles: rejected }),
@@ -606,6 +640,8 @@ if (isMain) {
   const { serverEnv } = await import("../../infrastructure/env");
   const { isoLocalDate } = await import("../../infrastructure/format-measure");
   const { database } = await import("../../infrastructure/database");
+  const { databaseLearningGate, warehouseSubjectRows } =
+    await import("../../infrastructure/learning-consent-store");
   const code = await runBuildConversations(process.argv.slice(2), process, {
     dataMode: () => serverEnv().DATA_MODE,
     ports: () => realPorts(isoLocalDate()),
@@ -626,6 +662,8 @@ if (isMain) {
     readText: (path) => readFile(path, "utf8").catch(() => null),
     genomeCatalog: async () =>
       (await import("../genome-synth/read-catalog")).readCatalog(),
+    subjectRows: (cohortId) => warehouseSubjectRows([cohortId]),
+    learning: databaseLearningGate(),
   });
   await database().$disconnect();
   process.exit(code);

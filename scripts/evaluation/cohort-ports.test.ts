@@ -7,7 +7,12 @@ import type {
   MedicationRequestRecord,
 } from "../../packages/query-tools/ports";
 
-import { type CohortSubject, cohortSubjectFrom, memoryPorts } from "./cohort-ports";
+import {
+  type CohortSubject,
+  cohortSubjectFrom,
+  memoryPorts,
+  syntheaBundleRows,
+} from "./cohort-ports";
 
 const FIXTURES = join(import.meta.dir, "../../tests/fixtures/synthea");
 const readBundle = (name: string): unknown =>
@@ -216,5 +221,30 @@ describe("cohortSubjectFrom maps a bundle as ingest does", () => {
     expect(
       cohortSubjectFrom({ resourceType: "Bundle", entry: [] }, COHORT, "v4.0.0"),
     ).toBeNull();
+  });
+});
+
+describe("syntheaBundleRows (#145)", () => {
+  const synthea = {
+    resourceType: "Bundle",
+    entry: [
+      {
+        resource: {
+          resourceType: "Patient",
+          identifier: [{ system: "https://github.com/synthetichealth/synthea" }],
+        },
+      },
+    ],
+  };
+  const other = {
+    resourceType: "Bundle",
+    entry: [{ resource: { resourceType: "Patient", identifier: [] } }],
+  };
+
+  test("one row per kind of bundle: Synthea bundles are synthetic, others are not", () => {
+    expect(syntheaBundleRows([synthea, synthea, other], "synthea-v4-s7")).toEqual([
+      { kind: "subject", cohortId: "synthea-v4-s7", isSynthetic: true },
+      { kind: "subject", cohortId: "synthea-v4-s7", isSynthetic: false },
+    ]);
   });
 });
