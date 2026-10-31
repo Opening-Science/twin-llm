@@ -12,7 +12,7 @@
  * and outcomes count only inside the complete window (`cohort.ts`), the same
  * calendar days for an exposed person and their controls.
  */
-import { type Random } from "../synthetic-wearables/random";
+import { type Random } from "@/infrastructure/seeded-random";
 
 import { type Topic } from "./codes";
 import { birthYear, observedStart, type Person } from "./cohort";

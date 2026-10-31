@@ -13,7 +13,8 @@
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import { dayNumber, historyStart, toPerson } from "./cohort";
+import { dayNumber, historyStart } from "../../packages/query-tools/event-rates/cohort";
+import { toPerson } from "./to-person";
 import {
   addSums,
   afTiming,
@@ -29,7 +30,7 @@ import {
 import { oracleSubject } from "./oracle";
 import { oracleFacts } from "./oracle-facts";
 import { bundleFacts } from "./person-facts";
-import { poissonExactCi } from "./poisson";
+import { poissonExactCi } from "../../packages/query-tools/event-rates/poisson";
 import { specFor } from "./timing";
 
 const flag = (name: string, fallback: string): string => {

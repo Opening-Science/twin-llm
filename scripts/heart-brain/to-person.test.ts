@@ -4,19 +4,10 @@ import {
   ageYears,
   birthYear,
   dayNumber,
-  historyStart,
   observedStart,
-  toPerson,
-  withOnset,
-} from "./cohort";
+} from "../../packages/query-tools/event-rates/cohort";
 
-describe("dayNumber", () => {
-  test("counts UTC days from 1970-01-01", () => {
-    expect(dayNumber("1970-01-01")).toBe(0);
-    expect(dayNumber("1970-01-31")).toBe(30);
-    expect(dayNumber("1969-12-31")).toBe(-1);
-  });
-});
+import { toPerson } from "./to-person";
 
 describe("toPerson", () => {
   test("a deceased person ends on the day of death", () => {
@@ -57,39 +48,6 @@ describe("toPerson", () => {
     expect(person.end).toBe(dayNumber("2026-01-01"));
     expect(person.anticoagulant).toBe(dayNumber("2010-01-01"));
   });
-});
-
-describe("withOnset", () => {
-  test("replaces and removes one onset", () => {
-    const person = toPerson(
-      {
-        id: "p",
-        batch: "001",
-        sex: "M",
-        birth: "1950-01-01",
-        death: null,
-        onsets: { af: "2000-01-01", stroke: "2001-01-01" },
-        anticoagulantStart: null,
-      },
-      "2026-01-01",
-      10,
-    );
-    expect(withOnset(person, "af", 5).onset).toEqual({
-      af: 5,
-      stroke: dayNumber("2001-01-01"),
-    });
-    expect(withOnset(person, "af", null).onset).toEqual({
-      stroke: dayNumber("2001-01-01"),
-    });
-  });
-});
-
-describe("history window", () => {
-  test("starts the same calendar day the given years earlier", () => {
-    expect(historyStart("2026-01-01", 10)).toBe(dayNumber("2016-01-01"));
-    expect(historyStart("2026-01-01", 0)).toBe(Number.NEGATIVE_INFINITY);
-  });
-
   test("toPerson sets it and observedStart clamps to it", () => {
     const person = toPerson(
       {

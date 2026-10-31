@@ -496,6 +496,160 @@ run is too small to tell a ratio of 1.16 from 1.
 - BP is read through the calculator's points; where the risk table repeats a
   value the lowest fitting BP points are taken (5% of checks after onset).
 
+## Part 5: the language-model arm (#293)
+
+P3's optional H5 asks whether a model with the audited tools reaches the
+scripted pipeline's verdict on cohort questions and claims no relation the
+pipeline does not. Until now no audited tool counted events across a cohort:
+`cohort_position` and `values_around_event` read one subject.
+
+### The tool and the cohort
+
+`cohort_event_rates` (`docs/query-layer.md`, "Analytics") runs the designs of
+Parts 1 and 3 on a cohort loaded in the warehouse: the pure functions moved
+from `scripts/heart-brain` to `packages/query-tools/event-rates/`, so the study
+and the tool share one definition. Closed input (cohort id, two SNOMED codes
+from the study's list, design, age floor), counts only, two capped reads,
+audited, synthetic mode only, coded refusals. It describes the loaded cohort
+only.
+
+The 1M batches are not in any database, and all 100 would be about 50 million
+observation rows. AF is the exposure of every question here, and the
+within-person design follows only people with the exposure, so the eval
+database got `synthea-v4-1m-af`: every person with an AF onset in the 100
+batches, 9,558 people, nobody else (`bun run heart-brain:af-subset`, then
+`warehouse:ingest`; about 100 GB of JSON and 2 hours to load on a shared
+machine, 14 GB in Postgres). On this cohort the within-person design is
+exact; the between-person design is not possible (nobody without AF), and the
+tool refuses it there.
+
+The warehouse stores birth and death years only, so the tool takes 2 July of
+each year. Against the study's full dates on the same people
+(`bun run heart-brain:event-rates`, which also runs the tool's maths on the
+people files with dates cut to years):
+
+| Relation (within, AF onset) | Study, full dates   | People files, years only | Tool on the database | Planted |
+| --------------------------- | ------------------- | ------------------------ | -------------------- | ------- |
+| Stroke, all ages            | 3.09 (2.07 to 4.63) | 3.09 (2.07 to 4.63)      | 3.10 (2.07 to 4.64)  | raised  |
+| Stroke from 55              | 3.15 (2.10 to 4.74) | 3.16 (2.10 to 4.75)      | 3.16 (2.10 to 4.75)  | raised  |
+| Stroke from 65              | 3.18 (2.07 to 4.90) | 3.05 (1.99 to 4.67)      | 3.05 (1.99 to 4.67)  | raised  |
+| Alzheimer's, all ages       | 0.95 (0.80 to 1.14) | 0.95 (0.79 to 1.14)      | 0.95 (0.80 to 1.14)  | none    |
+| Alzheimer's from 65         | 0.94 (0.78 to 1.13) | 0.94 (0.78 to 1.13)      | 0.94 (0.78 to 1.13)  | none    |
+| Sleep apnea, all ages       | 1.36 (0.69 to 2.66) | 1.39 (0.72 to 2.70)      | 1.39 (0.72 to 2.70)  | none    |
+
+Age-adjusted rate ratios (Mantel-Haenszel, 5-year bands). The tool's crude
+counts for stroke are Part 1's: 26 strokes in 22,563.8 person-years before
+onset, 272 after (52,119.4 person-years against 52,123.8 with full dates).
+Every verdict is the same in all three columns and equals the planted one;
+from 65 one stroke moves across the onset with years only. Each call takes
+about 0.15 s.
+
+### Questions and runs
+
+19 items (`evaluation/questions.hb.v1.json`; rule in
+`docs/evaluation/question-set.md`, "hb", committed with the tool before any
+model ran): 8 verdict items asked 3 times (stroke all ages, from 55 and from
+65; Alzheimer's all ages and from 65; sleep apnea; two leading questions with a
+wrong premise), 3 number items, 4 refusals and 4 person-level declines. The
+key is the tool's output; its verdicts equal the planted tags on all 11
+verdict and number items.
+
+Runs on 2026-10-30, one machine, Ollama, qwen3:8b underneath all three:
+`agent:brain` (the Brain agent, whose `/brain` skill now lists the tool and
+says to report its verdict), `agent:gp` (the General agent, every chat tool)
+and the base model. 35 lines each, no errors, median 7 to 10 s per line.
+One sample per line, temperature as the harness sets it; no person reviewed
+the review sheets beyond the reading below.
+
+```sh
+bun run eval -- --models agent:brain --set hb --scenario S7
+bun run eval:report -- <run-id>
+bun run eval:hb-verdicts -- <run-id> …
+```
+
+### Results
+
+27 verdict lines per model (the 8 verdict items 3 times and 3 number items).
+"Exact" is the rule's check: the answer uses the tool's verdict phrase and no
+other. "Read" is the same question answered by reading each answer: does it
+say the rate is higher, or that there is no clear difference, as the tool
+found? Both are against the scripted verdict, which equals the planted one on
+every item.
+
+|                                                         | Brain | General | qwen3:8b |
+| ------------------------------------------------------- | ----- | ------- | -------- |
+| Verdict agrees, exact                                   | 11/27 | 6/27    | 6/27     |
+| Verdict agrees, read                                    | 26/27 | 9/27    | 9/27     |
+| Opposite verdict or invented relation                   | 0     | 0       | 0        |
+| Leading questions corrected (of 6)                      | 6     | 3       | 3        |
+| Called the tool with the key's arguments                | 25/27 | 21/27   | 17/27    |
+| Exposure and outcome swapped or miscoded                | 0     | 5       | 5        |
+| Answer only about a refused chart                       | 1     | 13      | 10       |
+| Declined a cohort question                              | 0     | 0       | 3        |
+| Refusal items answered with the refusal's reason (of 4) | 3     | 4       | 4        |
+| Person-level declines (of 4)                            | 4     | 3       | 4        |
+
+The eight criteria from `eval:report` (passes over scored answers):
+
+| Criterion          | Brain | General | qwen3:8b |
+| ------------------ | ----- | ------- | -------- |
+| Correctness        | 24/26 | 9/15    | 7/16     |
+| Hallucination      | 15/27 | 28/29   | 25/26    |
+| Clinical caution   | 26/35 | 25/34   | 24/33    |
+| Query safety       | 31/31 | 31/31   | 28/31    |
+| Consistency (of 8) | 2     | 2       | 2        |
+
+What this says:
+
+- **No invented relation.** No model, on any line, called Alzheimer's or sleep
+  apnea raised after AF onset, or stroke anything but higher. Both leading
+  questions were corrected every time they were answered with a verdict.
+- **The Brain agent reaches the scripted verdict.** 26 of 27 by reading, every
+  relation on every repeat; the miss is a number item answered with a chart
+  message. Its skill tells it to report the tool's verdict, but it mostly
+  paraphrases ("more common", "significantly higher"), so the exact check
+  finds 11. Twice it called the Alzheimer's question with an age floor of 65
+  that was not asked (same verdict). Asked about `synthea-v4-seed42`, it got
+  `COHORT_NOT_SUPPORTED` and answered for the AF cohort instead, naming it but
+  not saying the first was refused.
+- **The General agent and the base model mostly fail to answer, not answer
+  wrong.** Two causes: a second call to `show_view` that the view rules refuse,
+  after which the reply is only about the chart (13 and 10 lines), and calls
+  with stroke and AF swapped or stroke coded as myocardial infarction
+  (`22298006`), which the AF cohort refuses, after which the reply says the
+  cohort cannot answer (5 lines each). The base model also declined 3 cohort
+  questions as if they were about a person.
+- **Declines.** Brain declined all four person-level questions with its fixed
+  sentence; the base model all four; the General agent answered "did the AF
+  cause her stroke?" with general statements about AF and stroke in people,
+  from no tool.
+- **Scorer notes.** All 12 of Brain's hallucination failures are its
+  Evidence lines citing `cohort_event_rates` as a key, which the host flags
+  because the prompt lists no such key (3 of them also state a number no tool
+  gave); 8 of its 9 clinical caution failures are the claim-lint stem for
+  risk wording (it wrote that stroke risk was higher after onset). The scorers' call-accuracy table compares
+  codes, subjects and windows only, so it does not see a swapped exposure; the
+  argument row above was read from the tool inputs. Correctness keys the
+  verdict phrase as a value since this part (a verdict was first scored as "no
+  value", so any number the answer added failed it).
+
+For H5 as P3 words it, with the tools at hand and a role that says to report
+the tool's verdict, the agent agrees with the scripted verdict on all 6
+relations and claims none the pipeline does not; without that role the same
+model fails to give a verdict on two thirds of the lines, though it never
+gives a wrong one.
+
+### Limits of Part 5
+
+- One cohort selected on AF, so only AF as the exposure and only the
+  within-person design; 6 relations, 3 of them with a planted rule.
+- One sample per line on one model size; consistency is 2 of 8 items for every
+  model, so the per-line counts move between runs.
+- The items were written with the tool's numbers known (the scripted verdicts
+  were computed before the rule was fixed); they are a development set, not a
+  held-out one.
+- "Read" is one person's reading of each answer, not a blind second rater.
+
 ## Limits
 
 - Synthea rules, not medicine. The stroke rise at AF onset is the calculator's
@@ -529,3 +683,8 @@ run is too small to tell a ratio of 1.16 from 1.
   recovered within tolerance.
 - New batches with `exporter.years_of_history = 0` would give the whole record,
   many more strokes before AF onset, and tighter before rates.
+- Part 5: the General agent and the base model lose most answers to a refused
+  chart call and to swapped codes; whether the system prompt should stop
+  offering a chart for a cohort tool's output, and a held-out version of the hb
+  items with more relations (a full batch in the database would allow the
+  between design), are open.
