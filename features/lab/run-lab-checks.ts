@@ -13,6 +13,7 @@ import {
 } from "@/infrastructure/build-stamp";
 import { bomText, buildBom, parseBunLock } from "@/infrastructure/cyclonedx";
 import { database } from "@/infrastructure/database";
+import { plaintextFindings } from "@/infrastructure/reseal";
 import {
   anatomyEnv,
   buildInfo,
@@ -57,6 +58,7 @@ import {
 import { provenanceBase, provenanceCheck } from "./provenance-check";
 import { type CurrentSbom, sbomBase, sbomCheck } from "./sbom-check";
 import { storageBase, storageCheck } from "./storage-check";
+import { encryptionBase, encryptionCheck } from "./encryption-check";
 
 /**
  * The I/O half of the Lab page: reads the database, Ollama and files on this
@@ -319,6 +321,22 @@ const checkStorage = async (vitronic: string): Promise<LabCheck> =>
     findings: await serverStorageFindings({ logging: true }),
   });
 
+// --- Encryption at rest ---------------------------------------------------------
+
+const checkEncryption = async (): Promise<LabCheck> => {
+  const dataMode = storageEnv().dataMode;
+  return encryptionCheck({
+    dataMode,
+    findings:
+      dataMode === "personal"
+        ? await plaintextFindings(async (sql, params) => {
+            const rows: unknown = await database().$queryRawUnsafe(sql, ...params);
+            return Array.isArray(rows) ? rows : [];
+          })
+        : [],
+  });
+};
+
 // --- Section ------------------------------------------------------------------
 
 const VERIFIABILITY_INTRO =
@@ -335,6 +353,7 @@ export const loadVerifiability = async (): Promise<LabSection> => {
     checks: await Promise.all([
       guarded(localOnlyBase, checkLocalOnly),
       guarded(storageBase(vitronic), () => checkStorage(vitronic)),
+      guarded(encryptionBase, checkEncryption),
       guarded(auditChainBase, checkAuditChain),
       guarded(localModelsBase(ollama.tagsUrl), () => checkLocalModels(ollama)),
       guarded(pinnedArtefactsBase(pins.pins), () => checkPinnedArtefacts(pins)),
