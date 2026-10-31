@@ -2,6 +2,7 @@ import { readableTitle } from "@/infrastructure/readable-title";
 
 import {
   type CatalogModel,
+  findCatalogRow,
   MAX_SELECTED_MODELS,
   MIN_SELECTED_MODELS,
   turnModelName,
@@ -62,7 +63,7 @@ export const checkTurnRequest = (
   }
   if (!catalog) return refuse(TURN_COPY.noCatalog);
 
-  const models = ids.map((id) => catalog.find((model) => model.id === id));
+  const models = ids.map((id) => findCatalogRow(id, catalog) ?? undefined);
   if (models.some((model) => model === undefined)) {
     return refuse(
       provider === "openrouter" ? TURN_COPY.notFreeAnyMore : TURN_COPY.notOnProvider,

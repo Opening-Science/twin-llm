@@ -70,3 +70,14 @@ export const chatDisclosure = (input: ChatDisclosureInput): ModelDisclosure => {
     synthetic: requestDataMode(input.mode, hasWearableNarrative) === "synthetic",
   };
 };
+
+/**
+ * The number check of an Ultra answer (#366) sends the answer and the turn's
+ * tool results, nothing else: no system prompt, no wearable summary, no notes.
+ */
+export const numberReviewDisclosure = (turn: ModelDisclosure): ModelDisclosure => ({
+  ...turn,
+  purpose: "number check",
+  categories: [CATEGORY.answers, CATEGORY.tools],
+  refs: [],
+});

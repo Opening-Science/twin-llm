@@ -264,7 +264,11 @@ describe("POST /api/chat/incognito", () => {
     expect(run.resolved).toEqual([MODEL]);
     expect(run.model.doStreamCalls.length).toBe(2);
     // Reads only, and the audit chain: no thread, turn or model response row.
-    expect(run.db.writes).toEqual([{ table: "audit_events", op: "create" }]);
+    // The effort row (#366) and the tool's read.
+    expect(run.db.writes).toEqual([
+      { table: "audit_events", op: "create" },
+      { table: "audit_events", op: "create" },
+    ]);
     expect(run.db.writes.filter(({ table }) => table !== "audit_events")).toEqual([]);
     expect(run.db.reads).toEqual([
       `users ${ACTOR}`,
@@ -291,6 +295,13 @@ describe("POST /api/chat/incognito", () => {
         actor: ACTOR,
         sessionId: `incognito-${RANDOM}`,
         subjectRef: null,
+        tool: "chat.effort",
+        rowCount: 0,
+      },
+      {
+        actor: ACTOR,
+        sessionId: `incognito-${RANDOM}`,
+        subjectRef: null,
         tool: "convert_unit",
         rowCount: 0,
       },
@@ -299,6 +310,38 @@ describe("POST /api/chat/incognito", () => {
     expect(recorded.includes(PROMPT)).toBe(false);
     expect(recorded.includes("About 5 mmol/L.")).toBe(false);
     expect(recorded.includes("turn-")).toBe(false);
+  });
+});
+
+describe("POST /api/chat/incognito at Ultra effort (#366)", () => {
+  test("the answer's document records the effort and carries the number check", async () => {
+    const run = harness();
+    const response = await run.handle(post({ ...BODY, effort: "ultra" }));
+    expect(response.status).toBe(200);
+    const streamed = await response.text();
+    expect(streamed).toContain(
+      '{"type":"data-number-review","data":{"state":"running"}}',
+    );
+    // The model has no thinking capability listed, so thinking is unavailable.
+    expect(streamed).toContain(
+      '"effort":{"level":"ultra","thinking":"unavailable","max_steps":12,"review":true}',
+    );
+    // "About 5 mmol/L." has only a small constant, so no reviewer call is needed.
+    expect(streamed).toContain(
+      '"number_review":{"reviewer":"Number check (research)","status":"done","items":[],"skipped":0}',
+    );
+    expect(run.model.doGenerateCalls.length).toBe(0);
+    expect(run.db.audits.map(({ tool, args }) => [tool, args])).toContainEqual([
+      "chat.effort",
+      { modelId: MODEL, effort: "ultra" },
+    ]);
+  });
+
+  test("an unknown effort is refused like any malformed body", async () => {
+    const run = harness();
+    const response = await run.handle(post({ ...BODY, effort: "max" }));
+    expect(response.status).toBe(400);
+    expect(run.resolved).toEqual([]);
   });
 });
 

@@ -12,7 +12,11 @@ import { findAppUserId } from "@/infrastructure/current-user";
 import { database } from "@/infrastructure/database";
 import { isAuthDisabled, serverEnv } from "@/infrastructure/env";
 import { fetchChatCatalog } from "@/infrastructure/fetch-model-catalog";
-import { turnAgentOf } from "@/infrastructure/model-catalog";
+import {
+  findCatalogRow,
+  modelCanThink,
+  turnAgentOf,
+} from "@/infrastructure/model-catalog";
 import { withUnlocked } from "@/infrastructure/vault-runtime";
 
 /**
@@ -73,7 +77,7 @@ export const POST = withUnlocked(async (request: Request): Promise<Response> => 
   if (models === null) {
     return refuse(503, "We can't reach the model list right now. Try again in a moment.");
   }
-  if (!models.some(({ id }) => id === call.modelId)) {
+  if (findCatalogRow(call.modelId, models) === null) {
     return refuse(
       400,
       serverEnv().LLM_PROVIDER === "openrouter"
@@ -89,18 +93,16 @@ export const POST = withUnlocked(async (request: Request): Promise<Response> => 
   if (ownership.kind === "someone-else")
     return refuse(403, "That turn isn't yours to answer.");
 
+  const agent = turnAgentOf(
+    call.modelId,
+    models,
+    currentPrompt(call.messages),
+    ownership.modelName,
+  );
   try {
-    return await startAnswer(
-      actorId,
-      ownership.appUserId,
-      call,
-      turnAgentOf(
-        call.modelId,
-        models,
-        currentPrompt(call.messages),
-        ownership.modelName,
-      ),
-    );
+    return await startAnswer(actorId, ownership.appUserId, call, agent, {
+      canThink: modelCanThink(agent?.baseModelId ?? call.modelId, models),
+    });
   } catch (error) {
     console.error(
       "[chat] failed to start the model stream",

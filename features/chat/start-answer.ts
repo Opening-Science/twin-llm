@@ -1,3 +1,4 @@
+import { applyEffort, DEFAULT_EFFORT, effortEvent } from "@/infrastructure/chat-effort";
 import {
   type DataMode,
   type ExoscalePersonalData,
@@ -81,6 +82,12 @@ import type { WearableContext } from "./wearable-context";
  * chain as `memory.notes.load` (note ids and a count) through `recordLoad`.
  * If that write fails, the model is not called. Without `loadTwinNotes`
  * (incognito) no note is read.
+ *
+ * Effort (#366): the request's effort, Balanced when it names none, is
+ * applied to the model the turn calls (thinking only on Ollama and only for a
+ * model that lists the capability) and written to the audit chain as
+ * `chat.effort` after every check and before the model is called; if that
+ * write fails, the model is not called. The stream gets the applied effort.
  */
 
 export type ChatProviderSettings = Readonly<{
@@ -129,6 +136,8 @@ export const createStartAnswer =
     appUserId: string,
     call: ChatRequest,
     agent: CatalogAgent | null = null,
+    /** What the called model can do: `canThink` when Ollama lists `thinking`. */
+    model: Readonly<{ canThink: boolean }> = { canThink: false },
   ): Promise<Response> => {
     const refuse = async (
       refusal: Refusal,
@@ -239,6 +248,14 @@ export const createStartAnswer =
       );
     }
 
+    const effort = applyEffort(call.effort ?? DEFAULT_EFFORT, {
+      ollama: settings.provider === "ollama",
+      canThink: model.canThink,
+    });
+    await deps.appendAudit(
+      effortEvent(effort, { actor: actorId, sessionId: call.turnId, modelId }),
+    );
+
     const notes =
       deps.loadTwinNotes === undefined
         ? null
@@ -276,6 +293,7 @@ export const createStartAnswer =
       ...(skill === null ? {} : { skill }),
       ...(agent === null ? {} : { agent }),
       ...(twinNotes === null ? {} : { twinNotes }),
+      effort,
       ...wearables,
     });
   };

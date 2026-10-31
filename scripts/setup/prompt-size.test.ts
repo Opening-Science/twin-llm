@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { resolve } from "node:path";
 
 import { captureOllamaTurnRequest } from "../../features/chat/ollama-turn-request";
+import { applyEffort } from "../../infrastructure/chat-effort";
 import {
   DEFAULT_OLLAMA_NUM_CTX,
   promptBudgetTokens,
@@ -61,5 +62,31 @@ describe("prompt + tools fit the Ollama context", () => {
     expect(body.think).toBe(false);
     expect(body.messages[0]?.role).toBe("system");
     expect(body.tools?.[0]?.type).toBe("function");
+  });
+
+  test("Thorough effort on a thinking model switches thinking on and keeps the context (#366)", async () => {
+    const [first] = CASES;
+    if (first === undefined) throw new Error("no cases");
+    const body = await captureOllamaTurnRequest(
+      {
+        ...first.turn,
+        effort: applyEffort("thorough", { ollama: true, canThink: true }),
+      },
+      DEFAULT_OLLAMA_NUM_CTX,
+    );
+    expect(body.options).toEqual({ num_ctx: 16_384 });
+    expect(body.think).toBe(true);
+  });
+
+  test("effort changes no prompt text or tool, so the budget above holds at every step", async () => {
+    const [first] = CASES;
+    if (first === undefined) throw new Error("no cases");
+    const balanced = await captureOllamaTurnRequest(first.turn, DEFAULT_OLLAMA_NUM_CTX);
+    const ultra = await captureOllamaTurnRequest(
+      { ...first.turn, effort: applyEffort("ultra", { ollama: true, canThink: true }) },
+      DEFAULT_OLLAMA_NUM_CTX,
+    );
+    expect(ultra.messages).toEqual(balanced.messages);
+    expect(ultra.tools).toEqual(balanced.tools);
   });
 });

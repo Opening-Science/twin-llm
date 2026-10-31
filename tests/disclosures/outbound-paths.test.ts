@@ -319,9 +319,13 @@ describe("every outbound path goes through the disclosure ledger (#140)", () => 
       "features/onboarding/starter-generate.ts",
       "scripts/evaluation/run-eval.ts",
     ]);
-    // The pipeline every chat answer goes through hands the model its disclosure.
-    expect(read("features/chat/create-stream-model-response.ts")).toContain(
-      "disclosure: chatDisclosure({",
+    // The pipeline every chat answer goes through hands the model its
+    // disclosure, and the Ultra number check (#366) its own.
+    const pipeline = read("features/chat/create-stream-model-response.ts");
+    expect(pipeline).toContain("const disclosure = chatDisclosure({");
+    expect(pipeline).toContain(
+      "deps.resolveModel(calledModelId, { hasWearableNarrative, disclosure })",
     );
+    expect(pipeline).toContain("disclosure: numberReviewDisclosure(disclosure),");
   });
 });

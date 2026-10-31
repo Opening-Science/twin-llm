@@ -1,5 +1,6 @@
 import type { LanguageModel } from "ai";
 
+import type { AppliedEffort } from "@/infrastructure/chat-effort";
 import type { DataMode, LlmProvider } from "@/infrastructure/data-mode-policy";
 import type { GoogleHealthSummary } from "@/infrastructure/google-health-types";
 import type { KnowledgeSourceId } from "@/infrastructure/knowledge-sources";
@@ -12,6 +13,7 @@ import {
 } from "@/infrastructure/model-response-metrics";
 import type { OuraSummary } from "@/infrastructure/oura-types";
 import type { TurnSkill } from "@/infrastructure/skill-gate";
+import { splitThinking } from "@/infrastructure/think-block";
 import type { TwinNote } from "@/infrastructure/twin-notes";
 import type { VitronicSummary } from "@/infrastructure/vitronic-types";
 import type { WhoopSummary } from "@/infrastructure/whoop-types";
@@ -24,7 +26,7 @@ import type { GenomeVariantsDeps } from "@/packages/query-tools/imported-variant
 import type { QueryToolPorts } from "@/packages/query-tools/ports";
 import type { SessionScope } from "@/packages/query-tools/scope";
 
-import { chatDisclosure } from "./chat-disclosure";
+import { chatDisclosure, numberReviewDisclosure } from "./chat-disclosure";
 import type { ChatRequest } from "./chat-request";
 import { createTurnTools } from "./chat-tools";
 import { finishModelResponse } from "./finish-model-response";
@@ -34,6 +36,7 @@ import type { GenomeToolDeps } from "./genome-tools";
 import { errorNameOf, modelFailureLog } from "./model-failure-log";
 import type { ResponseDocumentV1, ResponseToolCall } from "./response/document-v1";
 import { chatResponseMetadata } from "./response-document";
+import { runNumberReview } from "./run-number-review";
 import { runTwinTurn } from "./run-twin-turn";
 import type { ThreadView } from "./thread-views";
 import { fitTwinNotes } from "./twin-notes-room";
@@ -92,6 +95,11 @@ export type StreamContext = Readonly<{
    * and permit by `start-answer`. Incognito chats never set it.
    */
   twinNotes?: TwinNotesOffer | null;
+  /**
+   * The effort this answer runs at (#366), already applied to its model and
+   * audited by `start-answer`. Left out, Balanced as before.
+   */
+  effort?: AppliedEffort | null;
 }>;
 
 /**
@@ -246,24 +254,27 @@ export const createStreamModelResponse =
     const logStep = (step: string) => (error: unknown) =>
       console.error(`[chat] ${modelId} ${step}`, errorNameOf(error));
 
+    const calledModelId = context.agent?.baseModelId ?? modelId;
+    const disclosure = chatDisclosure({
+      actor: clerkId,
+      turnId,
+      threadId: context.threadId ?? null,
+      mode: settings.dataMode,
+      messageCount: messages.length,
+      wearables: turnWearables,
+      noteIds: notes?.ids ?? [],
+      hasTools: Object.keys(tools).length > 0,
+    });
+    const effort = context.effort ?? null;
+    const reviewing = settleOnce<boolean>();
+
     const turn = runTwinTurn(
       {
-        model: deps.resolveModel(context.agent?.baseModelId ?? modelId, {
-          hasWearableNarrative,
-          disclosure: chatDisclosure({
-            actor: clerkId,
-            turnId,
-            threadId: context.threadId ?? null,
-            mode: settings.dataMode,
-            messageCount: messages.length,
-            wearables: turnWearables,
-            noteIds: notes?.ids ?? [],
-            hasTools: Object.keys(tools).length > 0,
-          }),
-        }),
+        model: deps.resolveModel(calledModelId, { hasWearableNarrative, disclosure }),
         ...promptDeps,
         twinNotes: notes?.text ?? null,
         loadAudit: deps.loadAudit,
+        effort,
       },
       {
         turnId,
@@ -276,7 +287,22 @@ export const createStreamModelResponse =
           try {
             const metrics = timer.read(usage);
             const finished = await finishModelResponse({
-              buildDocument,
+              // At Ultra the number check runs on the finished answer and joins
+              // its document; below Ultra the document is built as it was.
+              buildDocument: async () => {
+                const document = await buildDocument();
+                if (effort?.review !== true) return document;
+                reviewing.settle(true);
+                const review = await runNumberReview(
+                  deps.resolveModel(calledModelId, {
+                    hasWearableNarrative,
+                    disclosure: numberReviewDisclosure(disclosure),
+                  }),
+                  splitThinking(text).text,
+                  toolResults,
+                );
+                return { ...document, number_review: review };
+              },
               writeComplete: async (document) => {
                 await deps.store.writeComplete({
                   turnId,
@@ -322,6 +348,7 @@ export const createStreamModelResponse =
               .catch(logStep("analytics capture failed"));
           } finally {
             // Only matters when something above threw: the stream must still end.
+            reviewing.settle(false);
             outcome.settle(null);
           }
         },
@@ -331,9 +358,13 @@ export const createStreamModelResponse =
             .writeFailed({ turnId, modelId })
             .catch(logStep("could not record the answer as failed"));
           deps.analytics.answered({ clerkId, turnId, modelId, status: "FAILED" });
+          reviewing.settle(false);
           outcome.settle(null);
         },
-        onAbort: () => outcome.settle(null),
+        onAbort: () => {
+          reviewing.settle(false);
+          outcome.settle(null);
+        },
       },
     );
 
@@ -347,6 +378,7 @@ export const createStreamModelResponse =
       finished: outcome.promise.then((done) =>
         done === null ? null : chatResponseMetadata(done.metrics, done.document),
       ),
+      reviewing: reviewing.promise,
       onError: failureText,
     });
   };
