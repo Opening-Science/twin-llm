@@ -42,4 +42,12 @@ describe("labelledSegments", () => {
     const changes = [CHANGES[1], CHANGES[0]];
     expect(labelledSegments([900, 1100], changes, 250)[0].rhythms).toEqual(["AFIB"]);
   });
+
+  test("128 Hz (Long-Term AF Database): one sample is 7.8125 ms, rounded to whole ms", () => {
+    expect(
+      labelledSegments([0, 128, 256, 320, 417], [{ sample: 0, rhythm: "N" }], 128),
+    ).toEqual([
+      { startSec: 0, rrMs: [1000, 1000, 500, 758], rhythms: ["N", "N", "N", "N"] },
+    ]);
+  });
 });

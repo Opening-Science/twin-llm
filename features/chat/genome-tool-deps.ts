@@ -3,12 +3,13 @@ import "server-only";
 import { findAppUserId } from "@/infrastructure/current-user";
 import { database } from "@/infrastructure/database";
 import { genomeEnv } from "@/infrastructure/env";
-import { genomeChatPermit } from "@/infrastructure/genome-gate";
+import { genomeChatPermit, vcfVariantsChatPermit } from "@/infrastructure/genome-gate";
 import { latestGenomeReport } from "@/infrastructure/genome-report-store";
 import { genomeVariantReads } from "@/infrastructure/personal-data-store";
 import { append } from "@/packages/audit/append";
 import { askCarbonX } from "@/packages/carbon-x/client";
 import { referenceWindows } from "@/packages/genome-reference";
+import type { GenomeVariantsDeps } from "@/packages/query-tools/imported-variants";
 import type { SessionScope } from "@/packages/query-tools/scope";
 
 import type { GenomeToolDeps } from "./genome-tools";
@@ -19,15 +20,11 @@ import type { GenomeToolDeps } from "./genome-tools";
  * deps; the training generator (`--genome` only) passes ports that refuse,
  * to read the tool schemas, and never runs a genome tool.
  */
+const appendAudit = (input: Parameters<typeof append>[1]) => append(database(), input);
+
 export const genomeToolDepsFor = (scope: SessionScope): GenomeToolDeps | undefined => {
   if (scope.mode !== "personal" || !genomeChatPermit().ok) return undefined;
   const env = genomeEnv();
-  const user = { lookup: null as Promise<string | null> | null };
-  const userId = (): Promise<string | null> => {
-    user.lookup ??= findAppUserId(scope.actor);
-    return user.lookup;
-  };
-  const appendAudit = (input: Parameters<typeof append>[1]) => append(database(), input);
   return {
     scope,
     loadReport: () => latestGenomeReport(scope.actor),
@@ -36,10 +33,27 @@ export const genomeToolDepsFor = (scope: SessionScope): GenomeToolDeps | undefin
     ask: (messages) =>
       askCarbonX({ baseUrl: env.carbonXUrl, timeoutMs: env.carbonXTimeoutMs }, messages),
     appendAudit,
-    variants: {
-      scope,
-      permit: genomeChatPermit,
-      ports: { ...genomeVariantReads(userId), appendAudit },
-    },
+  };
+};
+
+/**
+ * The ports behind `genome_variants`, or undefined when this turn may not
+ * have it. An imported VCF and a local model are enough (#330): the VCF permit
+ * needs personal mode and Ollama on loopback, not `GENOME_SOURCE=ark` or
+ * Carbon-X. The tool asks the same permit again on every call.
+ */
+export const genomeVariantDepsFor = (
+  scope: SessionScope,
+): GenomeVariantsDeps | undefined => {
+  if (scope.mode !== "personal" || !vcfVariantsChatPermit().ok) return undefined;
+  const user = { lookup: null as Promise<string | null> | null };
+  const userId = (): Promise<string | null> => {
+    user.lookup ??= findAppUserId(scope.actor);
+    return user.lookup;
+  };
+  return {
+    scope,
+    permit: vcfVariantsChatPermit,
+    ports: { ...genomeVariantReads(userId), appendAudit },
   };
 };

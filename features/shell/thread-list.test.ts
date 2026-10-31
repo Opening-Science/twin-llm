@@ -1,6 +1,11 @@
 import { describe, expect, test } from "bun:test";
 
-import { bucketFor, groupThreads, withTouchedThreads } from "./thread-list";
+import {
+  bucketFor,
+  groupThreads,
+  withoutHiddenThreads,
+  withTouchedThreads,
+} from "./thread-list";
 
 const now = new Date(2026, 9, 25, 9, 30);
 
@@ -78,5 +83,28 @@ describe("withTouchedThreads", () => {
         ],
       },
     ]);
+  });
+});
+
+describe("withoutHiddenThreads", () => {
+  const groups = [
+    { label: "Today", threads: [{ id: "a", title: "A", modelCount: 1 }] },
+    {
+      label: "Earlier",
+      threads: [
+        { id: "b", title: "B", modelCount: 2 },
+        { id: "c", title: "C", modelCount: 1 },
+      ],
+    },
+  ];
+
+  test("leaves out threads being deleted and drops a group left empty", () => {
+    expect(withoutHiddenThreads(groups, new Set(["a", "b"]))).toEqual([
+      { label: "Earlier", threads: [{ id: "c", title: "C", modelCount: 1 }] },
+    ]);
+  });
+
+  test("nothing hidden: the same groups", () => {
+    expect(withoutHiddenThreads(groups, new Set())).toBe(groups);
   });
 });

@@ -107,7 +107,9 @@ panels. Synthea's built-in Java modules (life course, cardiovascular disease,
 quality of life) always run.
 
 Generate queues a job. The page shows its place in line, then how many people
-are done, then a download button and a short preview of one generated person:
+are done, with a status lattice (a dot wave while it waits or runs, a tick or
+a cross when it ends) and a timer since the page saw it start, then a download
+button and a short preview of one generated person:
 counts of conditions, observations, encounters, medication requests,
 procedures and immunizations, the first conditions and the latest
 measurements. The zip holds `fhir/` and `csv/` as chosen, `manifest.json` with

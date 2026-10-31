@@ -425,6 +425,7 @@ const PERSONAL_READ_ROUTES: Readonly<Record<string, Entry>> = {
         today: () => "2026-10-28",
       })("thread-synthetic-1"),
   },
+  "DELETE /api/threads/[threadId]": { kind: "exempt", why: WRITE },
   "POST /api/memory/compact": {
     kind: "audited",
     tools: ["memory.note.draft"],
@@ -980,6 +981,7 @@ describe("locked personal data (#142)", () => {
   test("the gate covers all of these routes, and no more", () => {
     expect(gatedRoutes).toEqual([
       "DELETE /api/personal-data/datasets/[id]",
+      "DELETE /api/threads/[threadId]",
       "GET /api/ark/status",
       "GET /api/chat/suggestions",
       "GET /api/genome/report",

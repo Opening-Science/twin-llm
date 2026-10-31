@@ -9,6 +9,7 @@ import {
   type BenchmarkResult,
   type DistanceTable,
 } from "./benchmark";
+import { DATABASES } from "./databases";
 import { type RealNoiseLevel } from "./real-noise";
 import { QUANTITIES, valuesOf } from "./distance";
 import { quantileSorted, rocPoints } from "./statistics";
@@ -131,9 +132,9 @@ export const largestGaps = (
     .slice(0, count);
 
 const realSection = (real: NonNullable<BenchmarkResult["real"]>): string[] => [
-  "## Open recordings: MIT-BIH Atrial Fibrillation Database",
+  `## Open recordings: ${real.database}`,
   "",
-  `${real.database}. SHA-256 of its SHA256SUMS.txt: \`${real.sha256SumsFile ?? "not read"}\`. Reference rhythm from the .atr files; beats from .qrsc where the database has corrected beat annotations, .qrs otherwise. Intervals before the first rhythm annotation are left out, and an interval over 3 s splits the series (a gap, not a beat).`,
+  `${real.database}. SHA-256 of its SHA256SUMS.txt: \`${real.sha256SumsFile ?? "not read"}\`. ${DATABASES[real.databaseId].annotationNote} Intervals before the first rhythm annotation are left out, and an interval over 3 s splits the series (a gap, not a beat).`,
   "",
   table(
     [
@@ -275,7 +276,7 @@ export const markdownReport = (result: BenchmarkResult, generatedAt: string): st
     summaryTable(sim.byDurationAndNoise),
     "",
     ...(result.real === null
-      ? ["No database given (`--afdb`), real part skipped.", ""]
+      ? ["No database given (`--afdb` or `--ltafdb`), real part skipped.", ""]
       : realSection(result.real)),
     ...(result.realNoise === null ? [] : realNoiseSection(result)),
     "## Simulated against real",
