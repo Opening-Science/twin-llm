@@ -28,6 +28,21 @@ describe("valuesOf", () => {
     expect(valuesOf(rows, "mean_rr_ms")).toEqual([900, 500]);
   });
 
+  test("lag-1 autocorrelation of ln RR; a constant window has none", () => {
+    const values = valuesOf(
+      [
+        row(
+          [1, 2, 3, 4].map((value) => Math.exp(value)),
+          null,
+        ),
+        row([500, 500], null),
+      ],
+      "lag1_log_rr",
+    );
+    expect(values.length).toBe(1);
+    expect(values[0]).toBeCloseTo(0.25, 12);
+  });
+
   test("metrics leave out nulls", () => {
     expect(valuesOf(rows, "nrmssd")).toEqual([0.1]);
   });

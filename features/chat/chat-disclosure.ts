@@ -14,8 +14,8 @@ import { offeredSummaries, type WearableSummaries } from "@/infrastructure/offer
  * the ids of the twin notes it loaded). Never a value. Each HTTP request of
  * the turn is recorded with this, because each one sends the turn again.
  * Free text (the person's own words, the model's answers, tool results) is
- * named as a category; the #112 matcher does not check it for stored values
- * yet, which every row says (`free_text_checked` false).
+ * named as a category; the recording fetch checks each request's text for
+ * stored values (#346) and the row records the kinds and counts found.
  */
 
 export type ChatDisclosureInput = Readonly<{

@@ -6,6 +6,8 @@
  */
 import { z } from "zod";
 
+import { AF_DEPENDENCES } from "./af-interval";
+
 export const RHYTHMS = ["sinus", "af", "paroxysmal_af"] as const;
 export type Rhythm = (typeof RHYTHMS)[number];
 
@@ -46,6 +48,11 @@ export const recordingConfigSchema = z
     afMeanHr: z.number().min(50).max(180).default(100),
     /** Coefficient of variation of RR intervals during AF. */
     afCv: z.number().min(0.05).max(0.4).default(0.2),
+    /**
+     * How AF intervals depend on each other: independent draws, or short-range
+     * dependence fitted to the MIT-BIH AF Database (#297).
+     */
+    afDependence: z.enum(AF_DEPENDENCES).default("independent"),
     /** AF episodes for `paroxysmal_af`; left out, one episode over the middle third. */
     afEpisodes: z.array(episodeSchema).max(10).optional(),
     /** Premature atrial and ventricular beats, placed in sinus rhythm. */

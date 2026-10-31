@@ -5,6 +5,7 @@
  *   bun run rhythm-bench -- --out .rhythm-bench/quick --seeds 3 --quick
  *   bun run rhythm-bench -- --out .rhythm-bench/noise --afdb ../physionet-afdb/files --real-noise
  *   bun run rhythm-bench -- --out .rhythm-bench/lt --ltafdb ../physionet-ltafdb/files --real-noise
+ *   bun run rhythm-bench -- --out .rhythm-bench/dep --afdb ../physionet-afdb/files --af-dependence short_range
  *
  * Reads the MIT-BIH Atrial Fibrillation Database or the Long-Term AF Database
  * from the given directory (never copied into the repository), runs `runBenchmark` and writes
@@ -129,6 +130,8 @@ const main = async () => {
       resamples: args.resamples,
       grid: args.quick ? QUICK_GRID : FULL_GRID,
       realNoise: args.realNoise,
+      // Only named when not the default, so independent runs keep their run id.
+      ...(args.afDependence === "independent" ? {} : { afDependence: args.afDependence }),
     },
     gitSha: gitSha(),
     afdb,

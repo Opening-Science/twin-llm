@@ -1,11 +1,12 @@
 import "server-only";
 
+import { randomBytes } from "node:crypto";
 import { mkdir, readdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { z } from "zod";
 
-import { EVAL_RUNS_DIR } from "@/infrastructure/local-artefacts";
+import { EVAL_RUNS_DIR, RATER_SETS_DIR } from "@/infrastructure/local-artefacts";
 
 import {
   emptyRatingFile,
@@ -25,13 +26,15 @@ import {
   type RunLines,
 } from "./rater-lines";
 import { RUBRIC_VERSION } from "./rater-rubric";
+import { newRaterSet, parseRaterSet, renderRaterSet } from "./rater-set";
 
 /**
  * The I/O half of the second-rater view (#351). Reads the hb runs under
  * `evaluation/runs/` (each run's meta.json and results.jsonl), the committed
  * hb questions and key, and the rater's own ratings files; writes one
- * ratings file per run beside it. Only files inside the repository are
- * touched, and nothing is sent anywhere. report.md, review.csv and
+ * ratings file per run beside it, and one rater set per rater holding the
+ * salt of the answer ids (#355). Only files inside the repository are
+ * touched, and nothing is sent anywhere; the salt stays on the server. report.md, review.csv and
  * review-key.json are never opened, so no score or model name can reach the
  * rater through here.
  */
@@ -44,6 +47,9 @@ const RUN_ID = /^[\w.:+-]{1,128}$/;
 
 /** The order seed of a rater: fixed by the rubric version and the pseudonym. */
 export const orderSeedOf = (rater: string): string => `${RUBRIC_VERSION}:${rater}`;
+
+/** 32 random bytes from the operating system, as hex. */
+export const newSalt = (): string => randomBytes(32).toString("hex");
 
 const readSmall = async (path: string): Promise<string | null> => {
   const found = await stat(path).catch(() => null);
@@ -147,20 +153,74 @@ const readRatingFile = async (
   return text === null ? null : parseRatingFile(text);
 };
 
+const raterSetPath = (root: string, rater: string): string =>
+  join(root, RATER_SETS_DIR, `${rater}.json`);
+
+const errorCode = (error: unknown): unknown =>
+  error instanceof Error && "code" in error ? error.code : undefined;
+
+/**
+ * The rater's salt (#355). Read from `evaluation/rater-sets/<rater>.json`;
+ * when there is none yet the set starts here: with `persist` a new random
+ * salt is written (create-only, so two first loads at once agree on one),
+ * without it (a view that cannot save) a throwaway salt is used and nothing
+ * is written. A set file that does not parse is an error rather than
+ * replaced, because replacing it would lose the mapping of the ids.
+ */
+export const loadRaterSalt = async (
+  rater: string,
+  persist: boolean,
+  root = process.cwd(),
+  now = (): string => new Date().toISOString(),
+): Promise<string> => {
+  const path = raterSetPath(root, rater);
+  const read = async (): Promise<string | null> => {
+    const text = await readSmall(path);
+    if (text === null) return null;
+    const set = parseRaterSet(text);
+    if (set === null || set.rater !== rater) {
+      throw new Error("The rater set file does not parse; it was left as it is.");
+    }
+    return set.salt;
+  };
+  const found = await read();
+  if (found !== null) return found;
+  const salt = newSalt();
+  if (!persist) return salt;
+  await mkdir(join(/* turbopackIgnore: true */ root, RATER_SETS_DIR), {
+    recursive: true,
+  });
+  try {
+    await writeFile(path, renderRaterSet(newRaterSet(rater, salt, now())), {
+      encoding: "utf8",
+      flag: "wx",
+    });
+    return salt;
+  } catch (error) {
+    if (errorCode(error) !== "EEXIST") throw error;
+    const other = await read();
+    if (other === null) throw error;
+    return other;
+  }
+};
+
 export type RaterData =
   | Readonly<{ kind: "ready"; runs: number; lines: readonly RaterLine[] }>
   | Readonly<{ kind: "no-runs" }>
   | Readonly<{ kind: "no-questions" }>;
 
-/** Every answered hb line on this machine, unordered and not yet blinded. */
-export const loadRaterLines = async (root = process.cwd()): Promise<RaterData> => {
+/** Every answered hb line on this machine, with tokens under `salt`, unordered and not yet blinded. */
+export const loadRaterLines = async (
+  salt: string,
+  root = process.cwd(),
+): Promise<RaterData> => {
   const items = itemsSchema.safeParse(
     parseJson(await readSmall(join(root, HB_QUESTIONS))),
   );
   const key = keySchema.safeParse(parseJson(await readSmall(join(root, HB_KEY))));
   if (!items.success || !key.success) return { kind: "no-questions" };
   const runs = await hbRuns(root);
-  const lines = raterLines(runs, items.data.items, key.data.entries);
+  const lines = raterLines(runs, items.data.items, key.data.entries, salt);
   return lines.length === 0
     ? { kind: "no-runs" }
     : { kind: "ready", runs: runs.length, lines };
@@ -184,10 +244,16 @@ const ratingsOf = async (
 export const loadRaterSession = async (
   lines: readonly RaterLine[],
   rater: string,
+  salt: string,
   root = process.cwd(),
 ): Promise<BlindLine[]> => {
   const runIds = [...new Set(lines.map((line) => line.runId))];
-  return blindLines(lines, orderSeedOf(rater), await ratingsOf(root, runIds, rater));
+  return blindLines(
+    lines,
+    orderSeedOf(rater),
+    salt,
+    await ratingsOf(root, runIds, rater),
+  );
 };
 
 /** One write at a time per file, so two quick saves cannot lose one. */

@@ -67,7 +67,7 @@ const OUTBOUND: Readonly<Record<string, Entry>> = {
   },
   "infrastructure/disclosure-ledger.ts": {
     ledger: {
-      marker: "await record(bodyBytes(init?.body));",
+      marker: "await record(bodyBytes(init?.body), init?.body);",
       tests: "infrastructure/disclosure-ledger.test.ts",
     },
   },

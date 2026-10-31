@@ -85,6 +85,8 @@ data/genome-synth/
 # eval harness output (C3a): runs and recorded model calls stay local
 evaluation/runs/
 evaluation/cache/
+# second-rater salts (#355): never committed, never sent to the browser
+evaluation/rater-sets/
 
 # Licensed brand fonts (bun run fonts:install); never commit the files
 /public/fonts/*

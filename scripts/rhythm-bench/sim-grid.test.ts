@@ -52,6 +52,14 @@ describe("recordingConfigForCell", () => {
     });
   });
 
+  test("AF dependence: independent unless asked, the same seed and episode either way", () => {
+    const cell = { ...base, rhythm: condition("paroxysmal-30%") };
+    const independent = recordingConfigForCell(cell, 2);
+    const shortRange = recordingConfigForCell(cell, 2, "short_range");
+    expect(independent.afDependence).toBe("independent");
+    expect(shortRange).toEqual({ ...independent, afDependence: "short_range" });
+  });
+
   test("paroxysmal: one episode of the burden inside the recording", () => {
     const config = recordingConfigForCell(
       { ...base, rhythm: condition("paroxysmal-30%") },

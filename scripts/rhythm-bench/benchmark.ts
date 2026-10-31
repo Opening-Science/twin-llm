@@ -10,7 +10,10 @@
 import { createHash } from "node:crypto";
 
 import { randomFor } from "@/infrastructure/seeded-random";
+import { type AfDependence } from "@/packages/rhythm-sim/af-interval";
 import { simulateRecording } from "@/packages/rhythm-sim/simulate-recording";
+
+import { DEPENDENCE_LAGS, type LagSummary, lagSummary } from "./af-dependence";
 
 import { labelledSegments } from "./afdb-series";
 import { type BeatAnnotator, DATABASES, type DatabaseId } from "./databases";
@@ -57,6 +60,11 @@ export type BenchmarkOptions = Readonly<{
   grid: GridOptions;
   /** Also apply the grid's noise levels to the database beats (#296); needs the database. */
   realNoise?: boolean;
+  /**
+   * How simulated AF intervals depend on each other (#297). Left out means
+   * independent, and keeps the run id of runs from before the option.
+   */
+  afDependence?: AfDependence;
 }>;
 
 /**
@@ -68,8 +76,12 @@ export const AFDB_AF_LABEL = "AFIB";
 const simIsAf = (label: string): boolean => label === "af";
 const realIsAf = (label: string): boolean => label === AFDB_AF_LABEL;
 
-export const simulateCellWindows = (cell: GridCell, seed: number): SimWindowRow[] => {
-  const recording = simulateRecording(recordingConfigForCell(cell, seed));
+export const simulateCellWindows = (
+  cell: GridCell,
+  seed: number,
+  afDependence: AfDependence = "independent",
+): SimWindowRow[] => {
+  const recording = simulateRecording(recordingConfigForCell(cell, seed, afDependence));
   const perturbed = perturbBeats(
     { beatTimesMs: recording.beatTimesMs, labels: recording.labels },
     cell.noise,
@@ -95,7 +107,7 @@ export const simulateCellWindows = (cell: GridCell, seed: number): SimWindowRow[
 export const simulatedWindows = (options: BenchmarkOptions): SimWindowRow[] =>
   gridCells(options.grid).flatMap((cell) =>
     Array.from({ length: options.seeds }, (_, seed) =>
-      simulateCellWindows(cell, seed),
+      simulateCellWindows(cell, seed, options.afDependence),
     ).flat(),
   );
 
@@ -190,6 +202,7 @@ export type BenchmarkResult = Readonly<{
     resamples: number;
     grid: GridOptions;
     realNoise: boolean;
+    afDependence: AfDependence;
     windowBeats: number;
     afWindowRule: string;
   }>;
@@ -214,6 +227,11 @@ export type BenchmarkResult = Readonly<{
     byDominantRhythm: readonly Summary[];
   }> | null;
   simToReal: readonly DistanceTable[];
+  /**
+   * Autocorrelation of ln RR at lags 1 to 3 in full windows that are all AF:
+   * simulated without noise, and the database's all-AFIB windows (#297).
+   */
+  afDependence: readonly Readonly<{ sim: LagSummary; real: LagSummary | null }>[];
   /** The grid's noise levels on the database beats, one summary per level; null unless asked. */
   realNoise: readonly RealNoiseLevel[] | null;
 }>;
@@ -288,6 +306,14 @@ export const runBenchmark = (inputs: BenchmarkInputs): BenchmarkData => {
             ),
           })),
         );
+  const simAfClean = simFull.filter((row) => row.noise === "none" && row.afShare === 1);
+  const realAf = realRows.filter(
+    (row) => row.singleLabel && row.dominant === AFDB_AF_LABEL,
+  );
+  const afDependence = DEPENDENCE_LAGS.map((lag) => ({
+    sim: lagSummary(simAfClean, lag),
+    real: inputs.afdb === null ? null : lagSummary(realAf, lag),
+  }));
   return {
     simRows,
     realRows,
@@ -303,6 +329,7 @@ export const runBenchmark = (inputs: BenchmarkInputs): BenchmarkData => {
         resamples: options.resamples,
         grid: options.grid,
         realNoise: realNoise !== null,
+        afDependence: options.afDependence ?? "independent",
         windowBeats: WINDOW_BEATS,
         afWindowRule:
           "a window is AF when at least 50 % of its intervals are AF; simulated recordings shorter than 128 intervals are one window of all their intervals",
@@ -357,6 +384,7 @@ export const runBenchmark = (inputs: BenchmarkInputs): BenchmarkData => {
               ),
             },
       simToReal,
+      afDependence,
       realNoise: realNoise?.levels ?? null,
     },
   };

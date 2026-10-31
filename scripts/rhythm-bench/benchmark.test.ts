@@ -145,11 +145,40 @@ describe("runBenchmark", () => {
     );
   });
 
+  test("AF dependence: independent by default with the old run id; short_range changes AF windows only", () => {
+    const independent = runBenchmark(INPUTS);
+    const shortRange = runBenchmark({
+      ...INPUTS,
+      options: { ...INPUTS.options, afDependence: "short_range" },
+    });
+    expect(independent.result.options.afDependence).toBe("independent");
+    expect(shortRange.result.options.afDependence).toBe("short_range");
+    expect(shortRange.result.runId).not.toBe(independent.result.runId);
+    const sinusOf = (data: typeof independent) =>
+      data.simRows.filter((row) => row.rhythm === "sinus+ectopy-2/1");
+    expect(sinusOf(shortRange)).toEqual(sinusOf(independent));
+    const afOf = (data: typeof independent) =>
+      data.simRows.filter((row) => row.rhythm === "persistent").map((row) => row.rr);
+    expect(afOf(shortRange)).not.toEqual(afOf(independent));
+    expect(
+      independent.result.afDependence.map(({ sim, real }) => [sim.lag, real?.lag]),
+    ).toEqual([
+      [1, 1],
+      [2, 2],
+      [3, 3],
+    ]);
+    expect(independent.result.afDependence[0].real?.clusters).toBe(0);
+    expect(markdownReport(shortRange.result, "t")).toContain(
+      "Simulated AF mode `short_range`.",
+    );
+  });
+
   test("without the database the real part is null", () => {
     const { result, realRows } = runBenchmark({ ...INPUTS, afdb: null });
     expect(result.real).toBe(null);
     expect(result.simToReal).toEqual([]);
     expect(realRows).toEqual([]);
+    expect(result.afDependence.every((each) => each.real === null)).toBe(true);
   });
 });
 
