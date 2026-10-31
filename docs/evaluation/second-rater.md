@@ -157,3 +157,25 @@ categories, kappa .492, standard error 0.051, interval 0.392 to 0.591).
   (4 and above), and the correctness scorer checks keyed values, not wording;
   the two do not measure quite the same thing.
 - The view rates one set (hb). Other sets would need their own anchors.
+
+## Follow-up: the held-out set v1h (#304)
+
+The review protocol for the held-out S1 to S6 items is in
+`question-set.md` ("v1h", "Human review"): two raters on a stratified sample
+of the blinded `review.csv`, rated on this rubric with "the numbers asked
+for" in place of "the verdict", agreement by Cohen's kappa. Rating v1h in
+this view is not wired yet. What it needs:
+
+- a v1h rubric with its own version (`rater-rubric.ts`), since the hb anchors
+  speak of verdicts and relations, and the S3 and S4 items have no keyed
+  reference; the version names the ratings file's `rubric` and the order seed;
+- a set parameter on `/lab/rate` and its actions (`load-rater.ts`,
+  `rating-actions.ts`, `rater-screen.tsx`, `second-rater.tsx`), so the view
+  reads `meta.json` runs of that set and its questions and key;
+- the "no tool value, it should be declined" line in `second-rater.tsx` made
+  per set, since a v1h item without a keyed value may be a guideline or
+  population question;
+- the stratified sample of the protocol as a pure function with a test.
+
+`eval:agreement` already reads any set's runs (`QUESTION_SETS`), so it needs
+no change once the view writes ratings beside v1h runs.
