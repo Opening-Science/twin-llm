@@ -140,7 +140,7 @@ their own (`workout-profile:` and `workouts:` keys), so no daily value moved.
 
 ### Condition effects (generator v3)
 
-Generator v3 (the default) also reads each subject's Synthea Conditions from the same
+Generator v3 (the default, version string `3.1` since #365) also reads each subject's Synthea Conditions from the same
 bundle, with their onset and abatement days (`scripts/synthetic-wearables/conditions.ts`,
 `conditionEffects(conditions, day, key)`). Four conditions change the series. An effect
 starts on the onset day and stops on the abatement day; a stroke ignores its abatement,
@@ -153,27 +153,28 @@ ignores conditions and gives the v2 series exactly (a test pins the v2 checksum)
 evaluation key was built from v2 (`docs/evaluation/question-set.md`). The manifest
 records the version and, for v3, how many living subjects had each effect.
 
-| Condition (SNOMED CT)                          | Effect                                                 | Size                                                                  | Source                                                                                                                                                      |
-| ---------------------------------------------- | ------------------------------------------------------ | --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Atrial fibrillation (`49436004`)               | Paroxysmal episodes after onset                        | An episode starts on about 1 day in 10 and lasts 1 to 3 days          | assumption                                                                                                                                                  |
-|                                                | Share of the day in AF on an episode day (`af-burden`) | 0.2 to 0.9; 0 on other days after onset                               | assumption                                                                                                                                                  |
-|                                                | Daily mean heart rate on an episode day                | +10 to +20 /min                                                       | assumption                                                                                                                                                  |
-|                                                | RMSSD on an episode day                                | times (1 + 2 x burden), so up to about 2.8 times                      | direction: HRV measures assume sinus rhythm and RR irregularity inflates RMSSD (Task Force of the ESC and NASPE 1996, Circulation 93:1043); size assumption |
-|                                                | Irregular-rhythm notifications per day                 | 0 below burden 0.35, 1 up to 0.7, 2 above                             | the kind of notification exists (Perez et al. 2019, NEJM 381:1909, Apple Heart Study); counts assumption                                                    |
-| Chronic heart failure (`88805009`, `84114007`) | Resting heart rate                                     | +5 to +10 /min, fixed per subject                                     | assumption                                                                                                                                                  |
-|                                                | RMSSD                                                  | -20 to -30%                                                           | direction: HRV is reduced in chronic heart failure and lower HRV predicts mortality (Nolan et al. 1998, Circulation 98:1510, UK-HEART); size assumption     |
-|                                                | Steps                                                  | -30 to -40%                                                           | assumption                                                                                                                                                  |
-| Stroke (`230690007`)                           | Steps                                                  | -60% at onset, recovering to about -20% over some 90 days, then flat  | assumption                                                                                                                                                  |
-|                                                | Sleep score (fragmented sleep)                         | -12 at onset, easing to -5                                            | assumption                                                                                                                                                  |
-| Sleep apnea (`78275009`, `73430006`)           | Nightly SpO2 mean (LOINC `59408-5`)                    | 92.5 to 95%                                                           | assumption                                                                                                                                                  |
-|                                                | Nightly SpO2 minimum (local `spo2-min`)                | 80 to 88%                                                             | assumption                                                                                                                                                  |
-|                                                | Respiratory rate                                       | +0.5 to +1.0 /min, fixed per subject                                  | assumption                                                                                                                                                  |
-| Everyone (baseline)                            | Nightly SpO2 mean                                      | 95 to 98%                                                             | assumption                                                                                                                                                  |
-|                                                | Nightly SpO2 minimum                                   | 89 to 94%                                                             | assumption                                                                                                                                                  |
-|                                                | False irregular-rhythm notifications outside AF        | about 1 per person-year                                               | false positives exist (Perez et al. 2019, NEJM 381:1909; Lubitz et al. 2022, Circulation, Fitbit Heart Study); rate assumption                              |
-|                                                | AF burden without AF                                   | 0                                                                     | by definition                                                                                                                                               |
-|                                                | Generic episode, not tied to a condition (#270)        | starts on about 1 day in 365 (one per person-year), lasts 4 to 6 days | assumption                                                                                                                                                  |
-| Hypertension (`59621000` and others)           | None                                                   |                                                                       | a wrist device does not measure blood pressure, so the series cannot show it                                                                                |
+| Condition (SNOMED CT)                          | Effect                                                 | Size                                                                       | Source                                                                                                                                                                                              |
+| ---------------------------------------------- | ------------------------------------------------------ | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Atrial fibrillation (`49436004`)               | Paroxysmal episodes after onset                        | An episode starts on about 1 day in 10 and lasts 1 to 3 days               | assumption                                                                                                                                                                                          |
+|                                                | Share of the day in AF on an episode day (`af-burden`) | 0.2 to 0.9; 0 on other days after onset                                    | assumption                                                                                                                                                                                          |
+|                                                | Daily mean heart rate on an episode day                | by burden (table below): +7.9 /min at 0.2, +20.9 at 0.6, +31.0 at 0.9      | AF resolution study, day aggregates from simulated beats (`docs/research/af-resolution-2026-10.md`, #365); above 0.6 extrapolated                                                                   |
+|                                                | Night resting heart rate on an episode day             | by burden (table below): +1.5 /min at 0.2, +4.3 at 0.6, +7.3 at 0.9        | same study (#365); above 0.6 extrapolated                                                                                                                                                           |
+|                                                | Night RMSSD on an episode day                          | times a burden factor (table below): 1.03 at 0.2, 1.36 at 0.6, 1.68 at 0.9 | direction: HRV measures assume sinus rhythm and RR irregularity inflates RMSSD (Task Force of the ESC and NASPE 1996, Circulation 93:1043); size from the same study (#365), above 0.6 extrapolated |
+|                                                | Irregular-rhythm notifications per day                 | 0 below burden 0.35, 1 up to 0.7, 2 above                                  | the kind of notification exists (Perez et al. 2019, NEJM 381:1909, Apple Heart Study); counts assumption                                                                                            |
+| Chronic heart failure (`88805009`, `84114007`) | Resting heart rate                                     | +5 to +10 /min, fixed per subject                                          | assumption                                                                                                                                                                                          |
+|                                                | RMSSD                                                  | -20 to -30%                                                                | direction: HRV is reduced in chronic heart failure and lower HRV predicts mortality (Nolan et al. 1998, Circulation 98:1510, UK-HEART); size assumption                                             |
+|                                                | Steps                                                  | -30 to -40%                                                                | assumption                                                                                                                                                                                          |
+| Stroke (`230690007`)                           | Steps                                                  | -60% at onset, recovering to about -20% over some 90 days, then flat       | assumption                                                                                                                                                                                          |
+|                                                | Sleep score (fragmented sleep)                         | -12 at onset, easing to -5                                                 | assumption                                                                                                                                                                                          |
+| Sleep apnea (`78275009`, `73430006`)           | Nightly SpO2 mean (LOINC `59408-5`)                    | 92.5 to 95%                                                                | assumption                                                                                                                                                                                          |
+|                                                | Nightly SpO2 minimum (local `spo2-min`)                | 80 to 88%                                                                  | assumption                                                                                                                                                                                          |
+|                                                | Respiratory rate                                       | +0.5 to +1.0 /min, fixed per subject                                       | assumption                                                                                                                                                                                          |
+| Everyone (baseline)                            | Nightly SpO2 mean                                      | 95 to 98%                                                                  | assumption                                                                                                                                                                                          |
+|                                                | Nightly SpO2 minimum                                   | 89 to 94%                                                                  | assumption                                                                                                                                                                                          |
+|                                                | False irregular-rhythm notifications outside AF        | about 1 per person-year                                                    | false positives exist (Perez et al. 2019, NEJM 381:1909; Lubitz et al. 2022, Circulation, Fitbit Heart Study); rate assumption                                                                      |
+|                                                | AF burden without AF                                   | 0                                                                          | by definition                                                                                                                                                                                       |
+|                                                | Generic episode, not tied to a condition (#270)        | starts on about 1 day in 365 (one per person-year), lasts 4 to 6 days      | assumption                                                                                                                                                                                          |
+| Hypertension (`59621000` and others)           | None                                                   |                                                                            | a wrist device does not measure blood pressure, so the series cannot show it                                                                                                                        |
 
 The generic episode raises resting heart rate by 7 /min and breathing rate by 1.5 /min
 and takes RMSSD to 72% on each of its days, as in v2. v2 put one episode (30% of
@@ -185,6 +186,48 @@ likely before an onset as after it. Episodes can overlap; the effect does not ad
 
 Several conditions add up: deltas are summed and factors multiplied. The sleep score is
 set before the AF inflation of RMSSD, so an episode never reads as better recovery.
+
+#### Daily AF effects (generator 3.1, #365)
+
+Generator 3 assumed +10 to +20 /min on the daily heart rate of every AF episode day,
+no change in resting heart rate and RMSSD times (1 + 2 x burden). The AF resolution
+study (`docs/research/af-resolution-2026-10.md`) computed the same three daily values
+from simulated beats and found those effects too strong at low burden, with the RMSSD
+inflation much larger than a night average shows. Generator 3.1 (version string
+`"3.1"`) takes all three from the study instead: `scripts/synthetic-wearables/af-calibration.ts`
+reads `dailyEffects` from the committed `af-resolution-2026-10.summary.json` (noise
+none, median over 40 simulated subjects of the change from each subject's baseline),
+interpolates linearly between the study's burdens and from no effect at burden 0,
+and follows the line through the 30% and 60% points above 60%, which the study did not
+measure. The study's daily heart rate already holds the resting change, so the
+generator adds the resting change to resting heart rate (which daily heart rate is
+built on) and the rest to daily heart rate. The effect no longer varies from day to
+day at a given burden.
+
+| Burden                      | Daily HR change, /min | Resting HR change, /min | Night RMSSD factor | Source                  |
+| --------------------------- | --------------------- | ----------------------- | ------------------ | ----------------------- |
+| 0.02                        | +1.5                  | +0.8                    | 1.00               | study                   |
+| 0.10                        | +5.0                  | +1.7                    | 1.02               | study                   |
+| 0.30                        | +10.8                 | +1.3                    | 1.05               | study                   |
+| 0.60                        | +20.9                 | +4.3                    | 1.36               | study                   |
+| 0.20, 0.45                  | +7.9, +15.9           | +1.5, +2.8              | 1.03, 1.21         | interpolated            |
+| 0.75, 0.90                  | +26.0, +31.0          | +5.8, +7.3              | 1.52, 1.68         | extrapolated            |
+| generator 3, any 0.2 to 0.9 | +10 to +20            | 0                       | 1.4 to 2.8         | assumption (until #365) |
+
+The study's resting heart rate is lower at 30% than at 10% (1.3 against 1.7 /min);
+that is the study's median as measured and is kept. `af-calibration.test.ts` checks
+the generator's effects at 2, 10, 30 and 60% against the summary within 0.05 /min and
+0.005 in the ratio, and that the series moves by them on AF days and nowhere else.
+The episode schedule, the burden (0.2 to 0.9) and the notification counts are
+unchanged; the study has nothing on notifications.
+
+What moved: on 50 test subjects with AF from 2026-08-20 (seed 4242, 90 days, 340 AF
+days with burden 0.2 to 0.9), heart rate changed on 322 AF days (by -11 to +20, mean
++4.4 /min), resting heart rate on all 340 (+1 to +8, mean +3.7) and RMSSD on all 340
+(to 59 to 74% of the generator 3 value, -39 ms on average). No other metric and no
+day outside an AF episode moved; series without AF are byte for byte those of
+generator 3 (`series.test.ts` pins both checksums). `--generator-version 3` is no
+longer accepted, since this code cannot rebuild it.
 
 New metrics in v3, for every subject on every worn day (none in v2):
 
@@ -202,7 +245,8 @@ ground truth, in its own code system and tagged `simulator-ground-truth`, so it 
 used to check an answer and is never a reading.
 
 Limits, stated plainly: every size above is an assumption for research data, not a
-fitted model of a disease. Persistent AF is not modelled (every AF subject has
+fitted model of a disease. The daily AF effects come from simulated beats, whose rate in
+AF, day model and night window are themselves assumptions (`docs/rhythm-sim.md`). Persistent AF is not modelled (every AF subject has
 paroxysmal episodes). The SpO2 and notification values of a healthy subject are drawn
 from the ranges above, not from any device.
 
