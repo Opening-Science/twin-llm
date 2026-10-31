@@ -3,6 +3,7 @@ import type { LanguageModel } from "ai";
 import type { DataMode, LlmProvider } from "@/infrastructure/data-mode-policy";
 import type { GoogleHealthSummary } from "@/infrastructure/google-health-types";
 import type { KnowledgeSourceId } from "@/infrastructure/knowledge-sources";
+import type { LiveSourceId } from "@/infrastructure/live-sources";
 import type { CatalogAgent } from "@/infrastructure/model-catalog";
 import {
   type ChatUIMessage,
@@ -74,6 +75,11 @@ export type StreamContext = Readonly<{
   vitronicSummary: VitronicSummary | null;
   /** Knowledge sources this user turned off at /start; their tools are left out. */
   disabledSources?: readonly KnowledgeSourceId[];
+  /**
+   * Live public lookups (#6) this user switched on. Left out, none: an
+   * incognito chat and local-only mode never set it.
+   */
+  liveSources?: readonly LiveSourceId[];
   /** The skill this turn runs under, already permitted by `start-answer`. */
   skill?: TurnSkill | null;
   /**
@@ -149,6 +155,8 @@ export type StreamModelResponseDeps = Readonly<{
   analytics: AnswerAnalytics;
   /** Query tool ports; left out, the tools use the warehouse. Tests pass fakes. */
   query?: QueryToolPorts;
+  /** An incognito chat: no live lookup is offered or sent, whatever the context says. */
+  incognito?: boolean;
 }>;
 
 type Outcome = Readonly<{ metrics: ModelResponseMetrics; document: ResponseDocumentV1 }>;
@@ -197,6 +205,8 @@ export const createStreamModelResponse =
 
     const skill = context.skill ?? null;
     const scope = { actor: clerkId, sessionId: turnId, mode: settings.dataMode };
+    const genome = deps.genomeTools(scope);
+    const variants = deps.variantTools(scope);
     const { tools, offeredTools } = createTurnTools(
       scope,
       {
@@ -205,10 +215,15 @@ export const createStreamModelResponse =
         wearables: turnWearables,
         disabledSources: context.disabledSources,
         loadViews: deps.store.loadViews,
-        genome: deps.genomeTools(scope),
-        variants: deps.variantTools(scope),
+        genome,
+        variants,
         imported: deps.importedTools(scope),
         agent: context.agent?.id ?? null,
+        live: {
+          enabled: context.liveSources ?? [],
+          incognito: deps.incognito ?? false,
+          genomeInTurn: genome !== undefined || variants !== undefined,
+        },
       },
       skill,
     );

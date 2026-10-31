@@ -68,6 +68,9 @@ model OnboardingProfile {
   disabledSources String[]  @default([])
   /// Set when the person turned off loading their twin notes into new chats (#43).
   twinNotesOff    Boolean   @default(false)
+  /// Live public lookups this user switched on (#6). Stored as an opt-in list,
+  /// so every live source, and any added later, is off by default.
+  liveSources     String[]  @default([])
   /// Last step reached, so the flow can resume.
   step            Int       @default(0)
   /// Set when the user finishes or skips the flow.
@@ -826,7 +829,7 @@ model DisclosureEvent {
   ts              DateTime
   actor           String
   /// "hosted-model", "vendor-sync", "vendor-auth", "export-file", "ark-release",
-  /// "remote-tool", "embedding" or "telemetry" (`DISCLOSURE_KINDS`).
+  /// "remote-tool", "embedding", "telemetry" or "public-lookup" (`DISCLOSURE_KINDS`).
   kind            String
   /// "sent", or "received" for an Ark release.
   direction       String

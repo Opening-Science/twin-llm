@@ -1144,6 +1144,9 @@ const SERVER_ACTIONS: Readonly<
       skipOnboarding: "vaultRefusalForAction()",
     },
   },
+  "features/connectors/live-source-actions.ts": {
+    gated: { saveLiveSourceChoice: "vaultRefusalForAction()" },
+  },
   "features/memory/note-actions.ts": {
     gated: {
       editNote: "vaultRefusalForAction()",

@@ -18,3 +18,6 @@ apps/ark/**/goldens/
 
 # Written by the Synthea jar (scripts/heart-brain/StrokeCalculatorGolden.java); kept as printed.
 scripts/heart-brain/stroke-calculator.golden.json
+
+# Recorded NCBI and Ensembl responses for the live lookup tests (#6); kept as received.
+packages/live-sources/fixtures/

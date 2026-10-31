@@ -15,6 +15,7 @@ import {
   ConnectStep,
   PurposeStep,
   ResidencyStep,
+  LiveSourcesList,
   SourcesStep,
 } from "./onboarding-step-views";
 import {
@@ -280,13 +281,20 @@ export const OnboardingFlow = ({
           )}
           {stepId === "connect" && <ConnectStep groups={connectGroups} />}
           {stepId === "sources" && (
-            <SourcesStep
-              disabled={state.answers.disabledSources}
-              availability={sourceAvailability}
-              onChange={(disabled) =>
-                dispatch({ type: "set-disabled-sources", disabled })
-              }
-            />
+            <>
+              <SourcesStep
+                disabled={state.answers.disabledSources}
+                availability={sourceAvailability}
+                onChange={(disabled) =>
+                  dispatch({ type: "set-disabled-sources", disabled })
+                }
+              />
+              <LiveSourcesList
+                enabled={residency.localOnly ? [] : state.answers.liveSources}
+                localOnly={residency.localOnly}
+                onChange={(enabled) => dispatch({ type: "set-live-sources", enabled })}
+              />
+            </>
           )}
           {stepId === "residency" && <ResidencyStep config={residency} />}
           {stepId === "explore" && explore.phase === "ask" && (

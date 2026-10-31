@@ -2,6 +2,7 @@ import {
   type KnowledgeSourceId,
   normaliseDisabledSources,
 } from "@/infrastructure/knowledge-sources";
+import { type LiveSourceId, normaliseLiveSources } from "@/infrastructure/live-sources";
 
 /**
  * The first-run flow as data: its steps, its answers, and every way a click
@@ -55,6 +56,8 @@ export type OnboardingAnswers = Readonly<{
   dataChoice: DataChoiceId | null;
   interest: string;
   disabledSources: readonly KnowledgeSourceId[];
+  /** Live public lookups switched on (#6); none by default. */
+  liveSources: readonly LiveSourceId[];
 }>;
 
 export type OnboardingState = Readonly<{
@@ -69,6 +72,7 @@ export const EMPTY_ANSWERS: OnboardingAnswers = {
   dataChoice: null,
   interest: "",
   disabledSources: [],
+  liveSources: [],
 };
 
 export const isRoleId = (value: unknown): value is RoleId =>
@@ -88,6 +92,7 @@ export const normaliseAnswers = (raw: {
   readonly dataChoice?: unknown;
   readonly interest?: unknown;
   readonly disabledSources?: unknown;
+  readonly liveSources?: unknown;
 }): OnboardingAnswers => {
   const roles = Array.isArray(raw.roles) ? raw.roles : [];
   return {
@@ -96,6 +101,7 @@ export const normaliseAnswers = (raw: {
     interest:
       typeof raw.interest === "string" ? raw.interest.slice(0, MAX_INTEREST_LENGTH) : "",
     disabledSources: normaliseDisabledSources(raw.disabledSources),
+    liveSources: normaliseLiveSources(raw.liveSources),
   };
 };
 
@@ -104,6 +110,7 @@ export type OnboardingAction =
   | Readonly<{ type: "set-data-choice"; choice: DataChoiceId }>
   | Readonly<{ type: "set-interest"; interest: string }>
   | Readonly<{ type: "set-disabled-sources"; disabled: readonly KnowledgeSourceId[] }>
+  | Readonly<{ type: "set-live-sources"; enabled: readonly LiveSourceId[] }>
   | Readonly<{ type: "next" }>
   | Readonly<{ type: "back" }>;
 
@@ -137,6 +144,11 @@ export const onboardingReducer = (
           ...answers,
           disabledSources: normaliseDisabledSources(action.disabled),
         },
+      };
+    case "set-live-sources":
+      return {
+        ...state,
+        answers: { ...answers, liveSources: normaliseLiveSources(action.enabled) },
       };
     case "next":
       return { ...state, step: clampStep(state.step + 1) };

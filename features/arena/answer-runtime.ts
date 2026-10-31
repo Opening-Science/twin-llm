@@ -13,8 +13,9 @@ import { findSkillFor } from "@/features/skills/user-skill-store";
 import { getLatestVitronicSummary } from "@/features/vitronic/connection";
 import { getLatestWhoopSummary } from "@/features/whoop/connection";
 import { database } from "@/infrastructure/database";
-import { exoscalePersonalData, serverEnv } from "@/infrastructure/env";
+import { exoscalePersonalData, isLocalOnly, serverEnv } from "@/infrastructure/env";
 import { chatModelIsLocal } from "@/infrastructure/genome-gate";
+import { loadLiveSources } from "@/infrastructure/live-source-store";
 import { append } from "@/packages/audit/append";
 
 /**
@@ -42,6 +43,8 @@ export const startAnswer = createStartAnswer({
       vitronic: getLatestVitronicSummary,
     }),
   loadDisabledSources,
+  // Local-only mode offers no live lookup; each call would be refused anyway.
+  loadLiveSources: async (appUserId) => (isLocalOnly() ? [] : loadLiveSources(appUserId)),
   appendAudit: (input) => append(database(), input),
   findSkill: findSkillFor,
   loadTwinNotes: notesBeforeThread,

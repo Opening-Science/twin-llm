@@ -24,6 +24,10 @@ import { GBD_MODEL_TOOL } from "@/packages/gbd-mcp/constants";
 import { GUIDELINE_MODEL_TOOL } from "@/packages/guidelines/constants";
 import { KNOWLEDGE_MODEL_TOOL } from "@/packages/knowledge/constants";
 import {
+  ENSEMBL_LOOKUP_TOOL,
+  PUBMED_SEARCH_TOOL,
+} from "@/packages/live-sources/constants";
+import {
   IMPORTED_DATASETS_TOOL,
   IMPORTED_LATEST_TOOL,
 } from "@/packages/query-tools/imported-names";
@@ -285,6 +289,29 @@ const importedSection = (
     : [];
 
 /**
+ * Only when this request carries a live public lookup (#6), which only a
+ * person who switched one on gets. Never assumed, so every other prompt is
+ * unchanged.
+ */
+const liveSection = (
+  offeredTools: ReadonlySet<string> | undefined,
+): readonly string[] => {
+  const pubmed = offeredTools?.has(PUBMED_SEARCH_TOOL) ?? false;
+  const ensembl = offeredTools?.has(ENSEMBL_LOOKUP_TOOL) ?? false;
+  if (!pubmed && !ensembl) return [];
+  const names = [
+    ...(pubmed ? [`\`${PUBMED_SEARCH_TOOL}\``] : []),
+    ...(ensembl ? [`\`${ENSEMBL_LOOKUP_TOOL}\``] : []),
+  ].join(" and ");
+  return [
+    "## Live public lookups",
+    `- ${names} ${pubmed && ensembl ? "send their terms" : "sends its terms"} to a public database off this machine. Put in only general topic words, a gene symbol or an rsID; never a value, date, name or identifier from the person's data.`,
+    "- Cite what you use by the PMID or Ensembl URL the tool returns. It is reference material, never evidence about this person.",
+    "",
+  ];
+};
+
+/**
  * When the reply is a decline (#274). A question about a person (has a
  * condition, needs a treatment, test or doctor, is in danger) is declined even
  * when a tool could read the data; a question about what a record or a
@@ -411,6 +438,7 @@ export const buildTwinSystemPrompt = (params: {
     ...unitSection((tool) => params.offeredTools?.has(tool) ?? true),
     ...genomeSection(params.offeredTools),
     ...importedSection(params.offeredTools),
+    ...liveSection(params.offeredTools),
     ...syntheticCohortSection(
       params.mode,
       (tool) => params.offeredTools?.has(tool) ?? true,

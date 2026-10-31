@@ -65,15 +65,31 @@ describe("onboarding steps", () => {
         dataChoice: "real",
         interest: null,
         disabledSources: ["pubmed", "gbd"],
+        liveSources: ["uniprot", "ensembl"],
       }),
     ).toEqual({
       roles: ["researcher", "student"],
       dataChoice: null,
       interest: "",
       disabledSources: ["gbd"],
+      liveSources: ["ensembl"],
     });
     expect(clampStep(9)).toBe(4);
     expect(clampStep(-2)).toBe(0);
     expect(clampStep(1.5)).toBe(0);
+  });
+});
+
+describe("live public lookups in the first-run flow (#6)", () => {
+  test("off by default, and a switch stores the cleaned list", () => {
+    expect(normaliseAnswers({}).liveSources).toEqual([]);
+    const state = onboardingReducer(
+      { step: 2, answers: normaliseAnswers({}) },
+      { type: "set-live-sources", enabled: ["ensembl", "pubmed", "ensembl"] },
+    );
+    expect(state).toEqual({
+      step: 2,
+      answers: { ...normaliseAnswers({}), liveSources: ["pubmed", "ensembl"] },
+    });
   });
 });
