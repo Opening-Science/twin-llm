@@ -255,3 +255,29 @@ export const permitGenomeRequest = (input: GenomeRequest): GenomePermitDecision 
     ? { ok: true }
     : { ok: false, code: GENOME_NOT_PERMITTED, reason: broken };
 };
+
+/**
+ * Reading an imported VCF (`genome_variants`, #330) needs only the rules that
+ * keep a genotype on this machine: personal mode and a chat model on loopback
+ * (Ollama). It needs no `GENOME_SOURCE=ark` and no Carbon-X, which serve the
+ * Ark report and `dna_ask` only.
+ */
+export type VcfVariantsRequest = Pick<
+  GenomeRequest,
+  "mode" | "chatProvider" | "chatOnLoopback"
+>;
+
+/** The first rule a VCF lookup breaks, in the order above, or ok. */
+export const permitVcfVariantsRequest = (
+  input: VcfVariantsRequest,
+): GenomePermitDecision => {
+  const broken: GenomeRefusalReason | null =
+    input.mode !== "personal"
+      ? "data-mode-not-personal"
+      : input.chatProvider !== "ollama" || !input.chatOnLoopback
+        ? "chat-model-not-local"
+        : null;
+  return broken === null
+    ? { ok: true }
+    : { ok: false, code: GENOME_NOT_PERMITTED, reason: broken };
+};

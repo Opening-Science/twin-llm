@@ -3,6 +3,11 @@ import "server-only";
 import { database } from "@/infrastructure/database";
 import { append, type AppendInput } from "@/packages/audit/append";
 
+import {
+  type CohortConditionRow,
+  type CohortSubjectRow,
+} from "./event-rates/cohort-rates";
+
 /**
  * What the query tools need from outside: one subject lookup, two fixed
  * observation queries (one subject's rows, or one code across a cohort), the
@@ -111,10 +116,27 @@ export type QueryToolPorts = Readonly<{
    * Optional as above; `rhythm_irregularity` falls back to the default read.
    */
   findObservationSpan?: (subjectRef: string) => Promise<ObservationSpan | null>;
+  /**
+   * `cohort_event_rates` (#293): one cohort's `is_synthetic` subjects with
+   * their stored sex, birth year and death year, by subject_ref, at most
+   * `take`. Optional as above.
+   */
+  findCohortSubjects?: (query: CohortRecordQuery) => Promise<readonly CohortSubjectRow[]>;
+  /**
+   * Dated conditions with one of `codes` of one cohort's `is_synthetic`
+   * subjects, by subject_ref, onset and id, at most `take`. Optional as above.
+   */
+  findCohortConditions?: (
+    query: CohortRecordQuery & Readonly<{ codes: readonly string[] }>,
+  ) => Promise<readonly CohortConditionRow[]>;
+  /** Which of `cohortIds` hold `is_synthetic` subjects. Optional as above. */
+  findLoadedCohorts?: (cohortIds: readonly string[]) => Promise<readonly string[]>;
   appendAudit: (input: AppendInput) => Promise<unknown>;
 }>;
 
 export type ObservationSpan = Readonly<{ first: Date; last: Date }>;
+
+export type CohortRecordQuery = Readonly<{ cohortId: string; take: number }>;
 
 export const toNumber = (value: unknown): number => {
   if (typeof value === "number") return value;
@@ -187,6 +209,45 @@ export const findObservationSpanInDatabase = async (
     : { first: stats._min.effectiveAt, last: stats._max.effectiveAt };
 };
 
+export const findCohortSubjectsInDatabase = (
+  query: CohortRecordQuery,
+): Promise<readonly CohortSubjectRow[]> =>
+  database().subject.findMany({
+    where: { cohortId: query.cohortId, isSynthetic: true },
+    select: { subjectRef: true, sex: true, birthYear: true, deathYear: true },
+    orderBy: { subjectRef: "asc" },
+    take: query.take,
+  });
+
+export const findCohortConditionsInDatabase = async (
+  query: CohortRecordQuery & Readonly<{ codes: readonly string[] }>,
+): Promise<readonly CohortConditionRow[]> => {
+  const rows = await database().condition.findMany({
+    where: {
+      code: { in: [...query.codes] },
+      onsetAt: { not: null },
+      subject: { cohortId: query.cohortId, isSynthetic: true },
+    },
+    select: { subjectRef: true, code: true, onsetAt: true },
+    orderBy: [{ subjectRef: "asc" }, { onsetAt: "asc" }, { id: "asc" }],
+    take: query.take,
+  });
+  return rows.flatMap((row) =>
+    row.onsetAt === null ? [] : [{ ...row, onsetAt: row.onsetAt }],
+  );
+};
+
+export const findLoadedCohortsInDatabase = async (
+  cohortIds: readonly string[],
+): Promise<readonly string[]> =>
+  (
+    await database().subject.groupBy({
+      by: ["cohortId"],
+      where: { cohortId: { in: [...cohortIds] }, isSynthetic: true },
+      orderBy: { cohortId: "asc" },
+    })
+  ).map((row) => row.cohortId);
+
 export const defaultQueryToolPorts = (): QueryToolPorts => ({
   findSubject: (subjectRef) =>
     database().subject.findUnique({
@@ -236,5 +297,8 @@ export const defaultQueryToolPorts = (): QueryToolPorts => ({
   findConditions: findConditionsInDatabase,
   findMedicationRequests: findMedicationRequestsInDatabase,
   findObservationSpan: findObservationSpanInDatabase,
+  findCohortSubjects: findCohortSubjectsInDatabase,
+  findCohortConditions: findCohortConditionsInDatabase,
+  findLoadedCohorts: findLoadedCohortsInDatabase,
   appendAudit: (input) => append(database(), input),
 });

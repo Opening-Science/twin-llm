@@ -29,7 +29,8 @@ export const isImportedTool = (name: string): name is ImportedToolName =>
 /**
  * Looks up named variants in a person's imported VCF (#307). Not one of
  * `IMPORTED_TOOLS`: a VCF is genome data, so this tool is held to the genome
- * policy (`permitGenomeRequest`), not the imported-data one.
+ * rules (`permitVcfVariantsRequest`, #330: personal mode and a local model),
+ * not the imported-data one.
  */
 export const GENOME_VARIANTS_TOOL = "genome_variants" as const;
 

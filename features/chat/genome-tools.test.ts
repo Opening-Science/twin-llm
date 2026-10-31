@@ -9,6 +9,7 @@ import type { RsidGenotypeRow } from "@/packages/ark-adapter/rsid-genotypes";
 import { askCarbonX } from "@/packages/carbon-x/client";
 import { startFakeCarbonX } from "@/packages/carbon-x/fake-carbon-x";
 import { referenceWindows } from "@/packages/genome-reference";
+import type { GenomeVariantsDeps } from "@/packages/query-tools/imported-variants";
 import type { QueryToolPorts } from "@/packages/query-tools/ports";
 
 import { createChatTools } from "./chat-tools";
@@ -225,26 +226,35 @@ describe("createChatTools and the genome tools", () => {
     ]);
   });
 
-  test("genome_variants comes only with the genome deps' variant ports (#307)", () => {
-    const variants = {
+  test("genome_variants comes only with its own variant ports (#307, #330)", () => {
+    const variants: GenomeVariantsDeps = {
       scope: PERSONAL,
-      permit: () => ({ ok: true }) as const,
+      permit: () => ({ ok: true }),
       ports: {
         listDatasets: async () => [],
         findVariants: async () => [],
         appendAudit: async () => undefined,
       },
     };
-    const { deps } = depsWith(null, { variants });
     const synthetic = { ...PERSONAL, mode: "synthetic" } as const;
-    const has = (scope: typeof PERSONAL | typeof synthetic, genome?: GenomeToolDeps) =>
-      Object.keys(createChatTools(scope, { query: ports, genome })).includes(
-        "genome_variants",
-      );
-    expect(has(PERSONAL, deps)).toBe(true);
-    expect(has(PERSONAL, depsWith(null).deps)).toBe(false);
-    expect(has(synthetic, deps)).toBe(false);
-    expect(has(PERSONAL)).toBe(false);
+    const names = (
+      scope: typeof PERSONAL | typeof synthetic,
+      options: Readonly<{ genome?: GenomeToolDeps; variants?: GenomeVariantsDeps }>,
+    ) => Object.keys(createChatTools(scope, { query: ports, ...options }));
+    // An imported VCF and a local model are enough: no Ark report tools needed.
+    const vcfOnly = names(PERSONAL, { variants });
+    expect(vcfOnly).toContain("genome_variants");
+    expect(vcfOnly.some((name) => name === "genome_report" || name === "dna_ask")).toBe(
+      false,
+    );
+    expect(names(PERSONAL, { genome: depsWith(null).deps, variants })).toEqual(
+      expect.arrayContaining(["genome_report", "dna_ask", "genome_variants"]),
+    );
+    expect(names(PERSONAL, { genome: depsWith(null).deps })).not.toContain(
+      "genome_variants",
+    );
+    expect(names(synthetic, { variants })).not.toContain("genome_variants");
+    expect(names(PERSONAL, {})).not.toContain("genome_variants");
   });
 
   test("a synthetic scope never gets them, even if deps are passed", () => {

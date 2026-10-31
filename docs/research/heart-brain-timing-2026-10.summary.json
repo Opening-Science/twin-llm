@@ -1205,5 +1205,689 @@
         }
       }
     ]
+  },
+  "oracle294": {
+    "issue": 294,
+    "source": "Framingham.stroke10Year in synthea-with-dependencies.jar v4.0.0 (SHA-256 ed43c20ad40ba5c3bc724503a5af032715fe3c491620b766148e7c2361e6ecc1), lines 437-481 tables, 465-476 range lookup, 491-556 calculator; CardiovascularDiseaseModule lines 142-146; stroke.json Chance_of_Stroke every 30 days",
+    "portCheck": {
+      "fullGridRows": 353920,
+      "differences": 0,
+      "goldenRowsInRepo": 600
+    },
+    "data": {
+      "batches": "001-048",
+      "bundles": 551964,
+      "skipped": 0,
+      "withoutBp": 1,
+      "extractionMinutes6Jobs": 49
+    },
+    "model": {
+      "onsets": "AF and diabetes start evenly between the previous wellness visit and the recorded onset",
+      "bpTreated": "never (sensitivity: from hypertension onset)",
+      "toleranceRule": "expected inside the recovered 95% interval"
+    },
+    "afOnShareBefore": 0.0868,
+    "comparisons": [
+      {
+        "id": "af-stroke",
+        "label": "AF then stroke",
+        "recovered": {
+          "ratio": 2.6716,
+          "ci": {
+            "low": 2.1578,
+            "high": 3.3078
+          }
+        },
+        "expected": 2.3501,
+        "planted": 2.3313,
+        "noAfEffect": 1.0105,
+        "expectedRecordedOnsets": 2.3557,
+        "expectedTreatedBp": 2.3805,
+        "withinTolerance": true,
+        "recoveredOverExpected": {
+          "ratio": 1.1368,
+          "ci": {
+            "low": 0.9182,
+            "high": 1.4075
+          }
+        },
+        "checks": [
+          {
+            "side": "AF (exposed)",
+            "observed": 141,
+            "expected": 114.1736,
+            "ratio": 1.235,
+            "ci": {
+              "low": 1.0395,
+              "high": 1.4564
+            }
+          },
+          {
+            "side": "matched controls",
+            "observed": 209,
+            "expected": 192.3879,
+            "ratio": 1.0863,
+            "ci": {
+              "low": 0.9441,
+              "high": 1.244
+            }
+          }
+        ]
+      },
+      {
+        "id": "af-stroke-55",
+        "label": "AF from age 55 then stroke",
+        "recovered": {
+          "ratio": 3.315,
+          "ci": {
+            "low": 2.6381,
+            "high": 4.1655
+          }
+        },
+        "expected": 2.3878,
+        "planted": 2.3692,
+        "noAfEffect": 1.0104,
+        "expectedRecordedOnsets": 2.3937,
+        "expectedTreatedBp": 2.4143,
+        "withinTolerance": false,
+        "recoveredOverExpected": {
+          "ratio": 1.3883,
+          "ci": {
+            "low": 1.1048,
+            "high": 1.7445
+          }
+        },
+        "checks": [
+          {
+            "side": "AF (exposed)",
+            "observed": 135,
+            "expected": 103.9103,
+            "ratio": 1.2992,
+            "ci": {
+              "low": 1.0893,
+              "high": 1.5378
+            }
+          },
+          {
+            "side": "matched controls",
+            "observed": 162,
+            "expected": 173.1057,
+            "ratio": 0.9358,
+            "ci": {
+              "low": 0.7973,
+              "high": 1.0916
+            }
+          }
+        ]
+      },
+      {
+        "id": "within-after",
+        "label": "Within-person, all ages, all after, age-adjusted",
+        "recovered": {
+          "ratio": 3.7808,
+          "ci": {
+            "low": 2.0667,
+            "high": 6.9166
+          }
+        },
+        "expected": 2.0062,
+        "planted": 2.3313,
+        "noAfEffect": 0.9959,
+        "expectedRecordedOnsets": 2.2637,
+        "expectedTreatedBp": 2.0003,
+        "withinTolerance": false,
+        "recoveredOverExpected": {
+          "ratio": 1.8845,
+          "ci": {
+            "low": 1.0301,
+            "high": 3.4476
+          }
+        },
+        "checks": [
+          {
+            "side": "before onset",
+            "observed": 12,
+            "expected": 17.9214,
+            "ratio": 0.6696,
+            "ci": {
+              "low": 0.346,
+              "high": 1.1696
+            }
+          },
+          {
+            "side": "after onset",
+            "observed": 141,
+            "expected": 114.1736,
+            "ratio": 1.235,
+            "ci": {
+              "low": 1.0395,
+              "high": 1.4564
+            }
+          }
+        ]
+      },
+      {
+        "id": "within-crude",
+        "label": "Within-person, all ages, all after, crude",
+        "recovered": {
+          "ratio": 5.2214,
+          "ci": {
+            "low": 2.8969,
+            "high": 10.3459
+          }
+        },
+        "expected": 2.831,
+        "planted": 2.3313,
+        "noAfEffect": 1.3626,
+        "expectedRecordedOnsets": 3.1748,
+        "expectedTreatedBp": 2.834,
+        "withinTolerance": false,
+        "recoveredOverExpected": {
+          "ratio": 1.8444,
+          "ci": {
+            "low": 1.0233,
+            "high": 3.6545
+          }
+        },
+        "checks": []
+      },
+      {
+        "id": "within-0-2y",
+        "label": "Within-person, all ages, 0-2 y, age-adjusted",
+        "recovered": {
+          "ratio": 4.6993,
+          "ci": {
+            "low": 2.3014,
+            "high": 9.5959
+          }
+        },
+        "expected": 2.0734,
+        "planted": 2.3554,
+        "noAfEffect": 1.0,
+        "expectedRecordedOnsets": 2.3397,
+        "expectedTreatedBp": 2.0806,
+        "withinTolerance": false,
+        "recoveredOverExpected": {
+          "ratio": 2.2664,
+          "ci": {
+            "low": 1.1099,
+            "high": 4.628
+          }
+        },
+        "checks": [
+          {
+            "side": "before onset",
+            "observed": 12,
+            "expected": 17.9214,
+            "ratio": 0.6696,
+            "ci": {
+              "low": 0.346,
+              "high": 1.1696
+            }
+          },
+          {
+            "side": "after onset",
+            "observed": 21,
+            "expected": 14.756,
+            "ratio": 1.4232,
+            "ci": {
+              "low": 0.881,
+              "high": 2.1754
+            }
+          }
+        ]
+      },
+      {
+        "id": "within-2-5y",
+        "label": "Within-person, all ages, 2-5 y, age-adjusted",
+        "recovered": {
+          "ratio": 2.8317,
+          "ci": {
+            "low": 1.3396,
+            "high": 5.9855
+          }
+        },
+        "expected": 2.0552,
+        "planted": 2.3382,
+        "noAfEffect": 1.0001,
+        "expectedRecordedOnsets": 2.321,
+        "expectedTreatedBp": 2.0563,
+        "withinTolerance": true,
+        "recoveredOverExpected": {
+          "ratio": 1.3778,
+          "ci": {
+            "low": 0.6518,
+            "high": 2.9124
+          }
+        },
+        "checks": [
+          {
+            "side": "before onset",
+            "observed": 12,
+            "expected": 17.9214,
+            "ratio": 0.6696,
+            "ci": {
+              "low": 0.346,
+              "high": 1.1696
+            }
+          },
+          {
+            "side": "after onset",
+            "observed": 17,
+            "expected": 18.9178,
+            "ratio": 0.8986,
+            "ci": {
+              "low": 0.5235,
+              "high": 1.4388
+            }
+          }
+        ]
+      },
+      {
+        "id": "within-5+y",
+        "label": "Within-person, all ages, 5+ y, age-adjusted",
+        "recovered": {
+          "ratio": 3.8378,
+          "ci": {
+            "low": 2.0341,
+            "high": 7.241
+          }
+        },
+        "expected": 1.9963,
+        "planted": 2.3253,
+        "noAfEffect": 0.9922,
+        "expectedRecordedOnsets": 2.2613,
+        "expectedTreatedBp": 1.9834,
+        "withinTolerance": false,
+        "recoveredOverExpected": {
+          "ratio": 1.9224,
+          "ci": {
+            "low": 1.0189,
+            "high": 3.6272
+          }
+        },
+        "checks": [
+          {
+            "side": "before onset",
+            "observed": 12,
+            "expected": 17.9214,
+            "ratio": 0.6696,
+            "ci": {
+              "low": 0.346,
+              "high": 1.1696
+            }
+          },
+          {
+            "side": "after onset",
+            "observed": 103,
+            "expected": 80.4998,
+            "ratio": 1.2795,
+            "ci": {
+              "low": 1.0444,
+              "high": 1.5518
+            }
+          }
+        ]
+      },
+      {
+        "id": "within-55-after",
+        "label": "Within-person, from 55, all after, age-adjusted",
+        "recovered": {
+          "ratio": 4.0126,
+          "ci": {
+            "low": 2.1601,
+            "high": 7.4538
+          }
+        },
+        "expected": 2.03,
+        "planted": 2.3459,
+        "noAfEffect": 0.9957,
+        "expectedRecordedOnsets": 2.2976,
+        "expectedTreatedBp": 2.0219,
+        "withinTolerance": false,
+        "recoveredOverExpected": {
+          "ratio": 1.9766,
+          "ci": {
+            "low": 1.0641,
+            "high": 3.6718
+          }
+        },
+        "checks": [
+          {
+            "side": "before onset",
+            "observed": 11,
+            "expected": 16.9897,
+            "ratio": 0.6475,
+            "ci": {
+              "low": 0.3232,
+              "high": 1.1585
+            }
+          },
+          {
+            "side": "after onset",
+            "observed": 141,
+            "expected": 113.6431,
+            "ratio": 1.2407,
+            "ci": {
+              "low": 1.0444,
+              "high": 1.4632
+            }
+          }
+        ]
+      },
+      {
+        "id": "within-55-crude",
+        "label": "Within-person, from 55, all after, crude",
+        "recovered": {
+          "ratio": 4.8928,
+          "ci": {
+            "low": 2.6526,
+            "high": 10.0254
+          }
+        },
+        "expected": 2.5532,
+        "planted": 2.3459,
+        "noAfEffect": 1.2295,
+        "expectedRecordedOnsets": 2.8825,
+        "expectedTreatedBp": 2.5454,
+        "withinTolerance": false,
+        "recoveredOverExpected": {
+          "ratio": 1.9163,
+          "ci": {
+            "low": 1.0389,
+            "high": 3.9265
+          }
+        },
+        "checks": []
+      },
+      {
+        "id": "sccs",
+        "label": "Case series, all ages",
+        "recovered": {
+          "ratio": 2.8223,
+          "ci": {
+            "low": 1.245,
+            "high": 6.3978
+          }
+        },
+        "expected": 1.9229,
+        "planted": null,
+        "noAfEffect": 1.0534,
+        "expectedRecordedOnsets": 2.2701,
+        "expectedTreatedBp": 1.9201,
+        "withinTolerance": true,
+        "recoveredOverExpected": {
+          "ratio": 1.4677,
+          "ci": {
+            "low": 0.6475,
+            "high": 3.3273
+          }
+        },
+        "checks": []
+      },
+      {
+        "id": "sccs-55",
+        "label": "Case series, from 55",
+        "recovered": {
+          "ratio": 2.8242,
+          "ci": {
+            "low": 1.2417,
+            "high": 6.4236
+          }
+        },
+        "expected": 1.9322,
+        "planted": null,
+        "noAfEffect": 1.0526,
+        "expectedRecordedOnsets": 2.2867,
+        "expectedTreatedBp": 1.9278,
+        "withinTolerance": true,
+        "recoveredOverExpected": {
+          "ratio": 1.4616,
+          "ci": {
+            "low": 0.6426,
+            "high": 3.3244
+          }
+        },
+        "checks": []
+      }
+    ],
+    "heartFailureWearables": [
+      {
+        "metric": "hrv_rmssd",
+        "window": "0-89 d",
+        "subjects": 91,
+        "plantedMedian": 0.7496,
+        "plantedMean": 0.764,
+        "expectedNoFloorMean": 0.7641,
+        "expectedMean": 0.7646,
+        "recoveredMean": 0.7674,
+        "recoveredCi": {
+          "low": 0.7531,
+          "high": 0.7816
+        },
+        "recoveredMinusPlanted": {
+          "mean": 0.0033,
+          "low": -0.0014,
+          "high": 0.0081
+        },
+        "recoveredMinusExpected": {
+          "mean": 0.0027,
+          "low": -0.0017,
+          "high": 0.0072
+        }
+      },
+      {
+        "metric": "steps",
+        "window": "0-89 d",
+        "subjects": 91,
+        "plantedMedian": 0.6522,
+        "plantedMean": 0.6683,
+        "expectedNoFloorMean": 0.6686,
+        "expectedMean": 0.6717,
+        "recoveredMean": 0.6767,
+        "recoveredCi": {
+          "low": 0.6578,
+          "high": 0.6957
+        },
+        "recoveredMinusPlanted": {
+          "mean": 0.0084,
+          "low": 0.0006,
+          "high": 0.0162
+        },
+        "recoveredMinusExpected": {
+          "mean": 0.005,
+          "low": -0.003,
+          "high": 0.013
+        }
+      }
+    ]
+  },
+  "excess323": {
+    "issue": 323,
+    "jarSha256": "ed43c20ad40ba5c3bc724503a5af032715fe3c491620b766148e7c2361e6ecc1",
+    "monitorModuleSha256AsRun": "5a7d409b98a922d421807d85e1e26c13876e11f8b71678fc82df77421ead2c20",
+    "monitorModuleSha256Committed": "186280acad86e215c0fa7e3ec78bd01ca394bc91f2ca6bcd184a423f76ddcd67",
+    "keepModuleSha256": "3f5614cccdbbbea9c65845d5df64283e64116ec2dff18445a3a55ae8a6327eb7",
+    "propertiesSha256": "c0d32eb12756edbf21af4ffb77b3a773d137199f5b2a613aaf7f99e6728e93f3",
+    "seed": 323,
+    "clinicianSeed": 324,
+    "population": 600,
+    "ageRange": "55-95",
+    "referenceDate": "20260101",
+    "endDate": "20260101",
+    "threads": 6,
+    "result": {
+      "run": "<run dir>/main (outside the repository)",
+      "endDay": "2026-01-01",
+      "historyYears": 10,
+      "people": 734,
+      "skipped": 0,
+      "counted": 699,
+      "monitorMissing": 24,
+      "checksOnStrokeCycle": {
+        "seen": 89709,
+        "notOnCycle": 0
+      },
+      "strokeDayMismatch": 2,
+      "monitored": {
+        "strokes": 27,
+        "expected": 21.06,
+        "ratio": 1.282,
+        "low": 0.845,
+        "high": 1.865
+      },
+      "afTiming": {
+        "in window": 734,
+        "before previous visit": 0,
+        "after recorded onset": 0
+      },
+      "afLagDays": {
+        "n": 734,
+        "median": 154,
+        "p90": 326,
+        "max": 726
+      },
+      "before": {
+        "personYears": 2085.8,
+        "observed": 5,
+        "oracle": 2.72,
+        "checks": 23661,
+        "truth": 2.77,
+        "observedOverTruth": {
+          "ratio": 1.806,
+          "low": 0.586,
+          "high": 4.214
+        },
+        "truthOverOracle": 1.019,
+        "variants": {
+          "record": {
+            "expected": 2.65,
+            "overRecord": 1
+          },
+          "trueAf": {
+            "expected": 2.64,
+            "overRecord": 0.994
+          },
+          "trueDiabetes": {
+            "expected": 2.69,
+            "overRecord": 1.014
+          },
+          "trueSmoker": {
+            "expected": 2.65,
+            "overRecord": 1
+          },
+          "trueBpTable": {
+            "expected": 2.82,
+            "overRecord": 1.063
+          },
+          "trueBp": {
+            "expected": 2.79,
+            "overRecord": 1.053
+          },
+          "allButBp": {
+            "expected": 2.67,
+            "overRecord": 1.008
+          },
+          "allTrue": {
+            "expected": 2.82,
+            "overRecord": 1.064
+          }
+        },
+        "bp": {
+          "recovered": 19927,
+          "ambiguous": 7609,
+          "meanPointsGain": 0.033,
+          "controlledShare": 0.35,
+          "sameBandAsRecordControlled": 0.478,
+          "comparedControlled": 5265,
+          "sameBandAsRecordUncontrolled": 0.607,
+          "comparedUncontrolled": 7053,
+          "gainControlled": 0.15,
+          "gainUncontrolled": -0.01
+        },
+        "afDisagreeShare": 0.166,
+        "diabetesDisagreeShare": 0.033
+      },
+      "after": {
+        "personYears": 4333.4,
+        "observed": 22,
+        "oracle": 15.33,
+        "checks": 52260,
+        "truth": 16.25,
+        "observedOverTruth": {
+          "ratio": 1.354,
+          "low": 0.849,
+          "high": 2.05
+        },
+        "truthOverOracle": 1.06,
+        "variants": {
+          "record": {
+            "expected": 15.29,
+            "overRecord": 1
+          },
+          "trueAf": {
+            "expected": 15.29,
+            "overRecord": 1
+          },
+          "trueDiabetes": {
+            "expected": 15.4,
+            "overRecord": 1.007
+          },
+          "trueSmoker": {
+            "expected": 15.29,
+            "overRecord": 1
+          },
+          "trueBpTable": {
+            "expected": 16.21,
+            "overRecord": 1.06
+          },
+          "trueBp": {
+            "expected": 16.11,
+            "overRecord": 1.054
+          },
+          "allButBp": {
+            "expected": 15.4,
+            "overRecord": 1.007
+          },
+          "allTrue": {
+            "expected": 16.25,
+            "overRecord": 1.063
+          }
+        },
+        "bp": {
+          "recovered": 48691,
+          "ambiguous": 2472,
+          "meanPointsGain": 0.189,
+          "controlledShare": 0.356,
+          "sameBandAsRecordControlled": 0.505,
+          "comparedControlled": 17081,
+          "sameBandAsRecordUncontrolled": 0.614,
+          "comparedUncontrolled": 29132,
+          "gainControlled": 0.84,
+          "gainUncontrolled": -0.01
+        },
+        "afDisagreeShare": 0,
+        "diabetesDisagreeShare": 0.018
+      }
+    },
+    "appliedToPart3": {
+      "afterOnset": {
+        "observed": 141,
+        "expected": 121.4,
+        "ratio": 1.162,
+        "low": 0.978,
+        "high": 1.37
+      },
+      "beforeOnset": {
+        "observed": 12,
+        "expected": 19.0,
+        "ratio": 0.63,
+        "low": 0.326,
+        "high": 1.101
+      },
+      "factorAfter": 1.063,
+      "factorBefore": 1.064
+    },
+    "verdict": "blood_pressure_controlled (treated BP table, never exported) adds about 6% to expected strokes before and after onset; BP between visits, AF timing, diabetes timing and smoking add nothing material; the remaining excess after onset is within chance."
   }
 }

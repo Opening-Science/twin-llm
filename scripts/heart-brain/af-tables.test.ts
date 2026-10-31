@@ -12,7 +12,10 @@ import {
   strokeByScore,
   timeToStroke,
 } from "./af-tables";
-import { day, person } from "./fixtures.test-helpers";
+import {
+  day,
+  person,
+} from "../../packages/query-tools/event-rates/fixtures.test-helpers";
 
 const YEAR = 365.25;
 

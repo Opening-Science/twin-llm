@@ -1,0 +1,671 @@
+{
+  "schema_version": "twin-llm.eval.answer-key.v1",
+  "generator_version": "2",
+  "cohort": {
+    "id": "synthea-v4-1m-af",
+    "synthea_version": "v4.0.0",
+    "seed": 1001,
+    "population": 1000000,
+    "age": "any",
+    "reference_date": "20260101",
+    "end_date": "20260101",
+    "subjects": 9558,
+    "content_sha256": "45d7257fec023e8449541c733945685dec5989a65e4fcafdcf5e6489c2649706",
+    "runs": [
+      { "name": "batch-001", "seed": 1001, "clinician_seed": 2001, "population": 10000 },
+      { "name": "batch-002", "seed": 1002, "clinician_seed": 2002, "population": 10000 },
+      { "name": "batch-003", "seed": 1003, "clinician_seed": 2003, "population": 10000 },
+      { "name": "batch-004", "seed": 1004, "clinician_seed": 2004, "population": 10000 },
+      { "name": "batch-005", "seed": 1005, "clinician_seed": 2005, "population": 10000 },
+      { "name": "batch-006", "seed": 1006, "clinician_seed": 2006, "population": 10000 },
+      { "name": "batch-007", "seed": 1007, "clinician_seed": 2007, "population": 10000 },
+      { "name": "batch-008", "seed": 1008, "clinician_seed": 2008, "population": 10000 },
+      { "name": "batch-009", "seed": 1009, "clinician_seed": 2009, "population": 10000 },
+      { "name": "batch-010", "seed": 1010, "clinician_seed": 2010, "population": 10000 },
+      { "name": "batch-011", "seed": 1011, "clinician_seed": 2011, "population": 10000 },
+      { "name": "batch-012", "seed": 1012, "clinician_seed": 2012, "population": 10000 },
+      { "name": "batch-013", "seed": 1013, "clinician_seed": 2013, "population": 10000 },
+      { "name": "batch-014", "seed": 1014, "clinician_seed": 2014, "population": 10000 },
+      { "name": "batch-015", "seed": 1015, "clinician_seed": 2015, "population": 10000 },
+      { "name": "batch-016", "seed": 1016, "clinician_seed": 2016, "population": 10000 },
+      { "name": "batch-017", "seed": 1017, "clinician_seed": 2017, "population": 10000 },
+      { "name": "batch-018", "seed": 1018, "clinician_seed": 2018, "population": 10000 },
+      { "name": "batch-019", "seed": 1019, "clinician_seed": 2019, "population": 10000 },
+      { "name": "batch-020", "seed": 1020, "clinician_seed": 2020, "population": 10000 },
+      { "name": "batch-021", "seed": 1021, "clinician_seed": 2021, "population": 10000 },
+      { "name": "batch-022", "seed": 1022, "clinician_seed": 2022, "population": 10000 },
+      { "name": "batch-023", "seed": 1023, "clinician_seed": 2023, "population": 10000 },
+      { "name": "batch-024", "seed": 1024, "clinician_seed": 2024, "population": 10000 },
+      { "name": "batch-025", "seed": 1025, "clinician_seed": 2025, "population": 10000 },
+      { "name": "batch-026", "seed": 1026, "clinician_seed": 2026, "population": 10000 },
+      { "name": "batch-027", "seed": 1027, "clinician_seed": 2027, "population": 10000 },
+      { "name": "batch-028", "seed": 1028, "clinician_seed": 2028, "population": 10000 },
+      { "name": "batch-029", "seed": 1029, "clinician_seed": 2029, "population": 10000 },
+      { "name": "batch-030", "seed": 1030, "clinician_seed": 2030, "population": 10000 },
+      { "name": "batch-031", "seed": 1031, "clinician_seed": 2031, "population": 10000 },
+      { "name": "batch-032", "seed": 1032, "clinician_seed": 2032, "population": 10000 },
+      { "name": "batch-033", "seed": 1033, "clinician_seed": 2033, "population": 10000 },
+      { "name": "batch-034", "seed": 1034, "clinician_seed": 2034, "population": 10000 },
+      { "name": "batch-035", "seed": 1035, "clinician_seed": 2035, "population": 10000 },
+      { "name": "batch-036", "seed": 1036, "clinician_seed": 2036, "population": 10000 },
+      { "name": "batch-037", "seed": 1037, "clinician_seed": 2037, "population": 10000 },
+      { "name": "batch-038", "seed": 1038, "clinician_seed": 2038, "population": 10000 },
+      { "name": "batch-039", "seed": 1039, "clinician_seed": 2039, "population": 10000 },
+      { "name": "batch-040", "seed": 1040, "clinician_seed": 2040, "population": 10000 },
+      { "name": "batch-041", "seed": 1041, "clinician_seed": 2041, "population": 10000 },
+      { "name": "batch-042", "seed": 1042, "clinician_seed": 2042, "population": 10000 },
+      { "name": "batch-043", "seed": 1043, "clinician_seed": 2043, "population": 10000 },
+      { "name": "batch-044", "seed": 1044, "clinician_seed": 2044, "population": 10000 },
+      { "name": "batch-045", "seed": 1045, "clinician_seed": 2045, "population": 10000 },
+      { "name": "batch-046", "seed": 1046, "clinician_seed": 2046, "population": 10000 },
+      { "name": "batch-047", "seed": 1047, "clinician_seed": 2047, "population": 10000 },
+      { "name": "batch-048", "seed": 1048, "clinician_seed": 2048, "population": 10000 },
+      { "name": "batch-049", "seed": 1049, "clinician_seed": 2049, "population": 10000 },
+      { "name": "batch-050", "seed": 1050, "clinician_seed": 2050, "population": 10000 },
+      { "name": "batch-051", "seed": 1051, "clinician_seed": 2051, "population": 10000 },
+      { "name": "batch-052", "seed": 1052, "clinician_seed": 2052, "population": 10000 },
+      { "name": "batch-053", "seed": 1053, "clinician_seed": 2053, "population": 10000 },
+      { "name": "batch-054", "seed": 1054, "clinician_seed": 2054, "population": 10000 },
+      { "name": "batch-055", "seed": 1055, "clinician_seed": 2055, "population": 10000 },
+      { "name": "batch-056", "seed": 1056, "clinician_seed": 2056, "population": 10000 },
+      { "name": "batch-057", "seed": 1057, "clinician_seed": 2057, "population": 10000 },
+      { "name": "batch-058", "seed": 1058, "clinician_seed": 2058, "population": 10000 },
+      { "name": "batch-059", "seed": 1059, "clinician_seed": 2059, "population": 10000 },
+      { "name": "batch-060", "seed": 1060, "clinician_seed": 2060, "population": 10000 },
+      { "name": "batch-061", "seed": 1061, "clinician_seed": 2061, "population": 10000 },
+      { "name": "batch-062", "seed": 1062, "clinician_seed": 2062, "population": 10000 },
+      { "name": "batch-063", "seed": 1063, "clinician_seed": 2063, "population": 10000 },
+      { "name": "batch-064", "seed": 1064, "clinician_seed": 2064, "population": 10000 },
+      { "name": "batch-065", "seed": 1065, "clinician_seed": 2065, "population": 10000 },
+      { "name": "batch-066", "seed": 1066, "clinician_seed": 2066, "population": 10000 },
+      { "name": "batch-067", "seed": 1067, "clinician_seed": 2067, "population": 10000 },
+      { "name": "batch-068", "seed": 1068, "clinician_seed": 2068, "population": 10000 },
+      { "name": "batch-069", "seed": 1069, "clinician_seed": 2069, "population": 10000 },
+      { "name": "batch-070", "seed": 1070, "clinician_seed": 2070, "population": 10000 },
+      { "name": "batch-071", "seed": 1071, "clinician_seed": 2071, "population": 10000 },
+      { "name": "batch-072", "seed": 1072, "clinician_seed": 2072, "population": 10000 },
+      { "name": "batch-073", "seed": 1073, "clinician_seed": 2073, "population": 10000 },
+      { "name": "batch-074", "seed": 1074, "clinician_seed": 2074, "population": 10000 },
+      { "name": "batch-075", "seed": 1075, "clinician_seed": 2075, "population": 10000 },
+      { "name": "batch-076", "seed": 1076, "clinician_seed": 2076, "population": 10000 },
+      { "name": "batch-077", "seed": 1077, "clinician_seed": 2077, "population": 10000 },
+      { "name": "batch-078", "seed": 1078, "clinician_seed": 2078, "population": 10000 },
+      { "name": "batch-079", "seed": 1079, "clinician_seed": 2079, "population": 10000 },
+      { "name": "batch-080", "seed": 1080, "clinician_seed": 2080, "population": 10000 },
+      { "name": "batch-081", "seed": 1081, "clinician_seed": 2081, "population": 10000 },
+      { "name": "batch-082", "seed": 1082, "clinician_seed": 2082, "population": 10000 },
+      { "name": "batch-083", "seed": 1083, "clinician_seed": 2083, "population": 10000 },
+      { "name": "batch-084", "seed": 1084, "clinician_seed": 2084, "population": 10000 },
+      { "name": "batch-085", "seed": 1085, "clinician_seed": 2085, "population": 10000 },
+      { "name": "batch-086", "seed": 1086, "clinician_seed": 2086, "population": 10000 },
+      { "name": "batch-087", "seed": 1087, "clinician_seed": 2087, "population": 10000 },
+      { "name": "batch-088", "seed": 1088, "clinician_seed": 2088, "population": 10000 },
+      { "name": "batch-089", "seed": 1089, "clinician_seed": 2089, "population": 10000 },
+      { "name": "batch-090", "seed": 1090, "clinician_seed": 2090, "population": 10000 },
+      { "name": "batch-091", "seed": 1091, "clinician_seed": 2091, "population": 10000 },
+      { "name": "batch-092", "seed": 1092, "clinician_seed": 2092, "population": 10000 },
+      { "name": "batch-093", "seed": 1093, "clinician_seed": 2093, "population": 10000 },
+      { "name": "batch-094", "seed": 1094, "clinician_seed": 2094, "population": 10000 },
+      { "name": "batch-095", "seed": 1095, "clinician_seed": 2095, "population": 10000 },
+      { "name": "batch-096", "seed": 1096, "clinician_seed": 2096, "population": 10000 },
+      { "name": "batch-097", "seed": 1097, "clinician_seed": 2097, "population": 10000 },
+      { "name": "batch-098", "seed": 1098, "clinician_seed": 2098, "population": 10000 },
+      { "name": "batch-099", "seed": 1099, "clinician_seed": 2099, "population": 10000 },
+      { "name": "batch-100", "seed": 1100, "clinician_seed": 2100, "population": 10000 }
+    ]
+  },
+  "open_twin_sha": "a9e126c952c91e19e064a962dda7d815a43564e5",
+  "questions_sha256": "a2351aa8ff5355af5a6ac6ee794745e53a156e021b5d31c58c38a30f4c8b3dc2",
+  "actor": "eval-answer-key",
+  "generated_on": "2026-10-30",
+  "entries": {
+    "Q-S7-70": [
+      {
+        "name": "verdict",
+        "tool": "cohort_event_rates",
+        "args": {
+          "cohort_id": "synthea-v4-1m-af",
+          "exposure_code": "49436004",
+          "outcome_code": "230690007",
+          "design": "within"
+        },
+        "path": "verdict",
+        "value": "raised",
+        "unit": null,
+        "n": 19489,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "age_adjusted_rate_ratio",
+        "tool": "cohort_event_rates",
+        "args": {
+          "cohort_id": "synthea-v4-1m-af",
+          "exposure_code": "49436004",
+          "outcome_code": "230690007",
+          "design": "within"
+        },
+        "path": "age_adjusted_rate_ratio.value",
+        "value": 3.1,
+        "unit": null,
+        "n": 19489,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-71": [
+      {
+        "name": "verdict",
+        "tool": "cohort_event_rates",
+        "args": {
+          "cohort_id": "synthea-v4-1m-af",
+          "exposure_code": "49436004",
+          "outcome_code": "230690007",
+          "design": "within",
+          "min_age": 55
+        },
+        "path": "verdict",
+        "value": "raised",
+        "unit": null,
+        "n": 19489,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "age_adjusted_rate_ratio",
+        "tool": "cohort_event_rates",
+        "args": {
+          "cohort_id": "synthea-v4-1m-af",
+          "exposure_code": "49436004",
+          "outcome_code": "230690007",
+          "design": "within",
+          "min_age": 55
+        },
+        "path": "age_adjusted_rate_ratio.value",
+        "value": 3.16,
+        "unit": null,
+        "n": 19489,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-72": [
+      {
+        "name": "verdict",
+        "tool": "cohort_event_rates",
+        "args": {
+          "cohort_id": "synthea-v4-1m-af",
+          "exposure_code": "49436004",
+          "outcome_code": "230690007",
+          "design": "within",
+          "min_age": 65
+        },
+        "path": "verdict",
+        "value": "raised",
+        "unit": null,
+        "n": 19489,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "age_adjusted_rate_ratio",
+        "tool": "cohort_event_rates",
+        "args": {
+          "cohort_id": "synthea-v4-1m-af",
+          "exposure_code": "49436004",
+          "outcome_code": "230690007",
+          "design": "within",
+          "min_age": 65
+        },
+        "path": "age_adjusted_rate_ratio.value",
+        "value": 3.05,
+        "unit": null,
+        "n": 19489,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-73": [
+      {
+        "name": "verdict",
+        "tool": "cohort_event_rates",
+        "args": {
+          "cohort_id": "synthea-v4-1m-af",
+          "exposure_code": "49436004",
+          "outcome_code": "26929004",
+          "design": "within"
+        },
+        "path": "verdict",
+        "value": "no clear difference",
+        "unit": null,
+        "n": 20757,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "age_adjusted_rate_ratio",
+        "tool": "cohort_event_rates",
+        "args": {
+          "cohort_id": "synthea-v4-1m-af",
+          "exposure_code": "49436004",
+          "outcome_code": "26929004",
+          "design": "within"
+        },
+        "path": "age_adjusted_rate_ratio.value",
+        "value": 0.95,
+        "unit": null,
+        "n": 20757,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-74": [
+      {
+        "name": "verdict",
+        "tool": "cohort_event_rates",
+        "args": {
+          "cohort_id": "synthea-v4-1m-af",
+          "exposure_code": "49436004",
+          "outcome_code": "26929004",
+          "design": "within",
+          "min_age": 65
+        },
+        "path": "verdict",
+        "value": "no clear difference",
+        "unit": null,
+        "n": 20757,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "age_adjusted_rate_ratio",
+        "tool": "cohort_event_rates",
+        "args": {
+          "cohort_id": "synthea-v4-1m-af",
+          "exposure_code": "49436004",
+          "outcome_code": "26929004",
+          "design": "within",
+          "min_age": 65
+        },
+        "path": "age_adjusted_rate_ratio.value",
+        "value": 0.94,
+        "unit": null,
+        "n": 20757,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-75": [
+      {
+        "name": "verdict",
+        "tool": "cohort_event_rates",
+        "args": {
+          "cohort_id": "synthea-v4-1m-af",
+          "exposure_code": "49436004",
+          "outcome_code": "78275009",
+          "design": "within"
+        },
+        "path": "verdict",
+        "value": "no clear difference",
+        "unit": null,
+        "n": 20117,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "age_adjusted_rate_ratio",
+        "tool": "cohort_event_rates",
+        "args": {
+          "cohort_id": "synthea-v4-1m-af",
+          "exposure_code": "49436004",
+          "outcome_code": "78275009",
+          "design": "within"
+        },
+        "path": "age_adjusted_rate_ratio.value",
+        "value": 1.39,
+        "unit": null,
+        "n": 20117,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-76": [
+      {
+        "name": "verdict",
+        "tool": "cohort_event_rates",
+        "args": {
+          "cohort_id": "synthea-v4-1m-af",
+          "exposure_code": "49436004",
+          "outcome_code": "26929004",
+          "design": "within"
+        },
+        "path": "verdict",
+        "value": "no clear difference",
+        "unit": null,
+        "n": 20757,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "age_adjusted_rate_ratio",
+        "tool": "cohort_event_rates",
+        "args": {
+          "cohort_id": "synthea-v4-1m-af",
+          "exposure_code": "49436004",
+          "outcome_code": "26929004",
+          "design": "within"
+        },
+        "path": "age_adjusted_rate_ratio.value",
+        "value": 0.95,
+        "unit": null,
+        "n": 20757,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-77": [
+      {
+        "name": "verdict",
+        "tool": "cohort_event_rates",
+        "args": {
+          "cohort_id": "synthea-v4-1m-af",
+          "exposure_code": "49436004",
+          "outcome_code": "230690007",
+          "design": "within"
+        },
+        "path": "verdict",
+        "value": "raised",
+        "unit": null,
+        "n": 19489,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "age_adjusted_rate_ratio",
+        "tool": "cohort_event_rates",
+        "args": {
+          "cohort_id": "synthea-v4-1m-af",
+          "exposure_code": "49436004",
+          "outcome_code": "230690007",
+          "design": "within"
+        },
+        "path": "age_adjusted_rate_ratio.value",
+        "value": 3.1,
+        "unit": null,
+        "n": 19489,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-78": [
+      {
+        "name": "before_events",
+        "tool": "cohort_event_rates",
+        "args": {
+          "cohort_id": "synthea-v4-1m-af",
+          "exposure_code": "49436004",
+          "outcome_code": "230690007",
+          "design": "within"
+        },
+        "path": "before_onset.events",
+        "value": 26,
+        "unit": null,
+        "n": 19489,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "after_events",
+        "tool": "cohort_event_rates",
+        "args": {
+          "cohort_id": "synthea-v4-1m-af",
+          "exposure_code": "49436004",
+          "outcome_code": "230690007",
+          "design": "within"
+        },
+        "path": "after_onset.events",
+        "value": 272,
+        "unit": null,
+        "n": 19489,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "before_person_years",
+        "tool": "cohort_event_rates",
+        "args": {
+          "cohort_id": "synthea-v4-1m-af",
+          "exposure_code": "49436004",
+          "outcome_code": "230690007",
+          "design": "within"
+        },
+        "path": "before_onset.person_years",
+        "value": 22563.8,
+        "unit": null,
+        "n": 19489,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "after_person_years",
+        "tool": "cohort_event_rates",
+        "args": {
+          "cohort_id": "synthea-v4-1m-af",
+          "exposure_code": "49436004",
+          "outcome_code": "230690007",
+          "design": "within"
+        },
+        "path": "after_onset.person_years",
+        "value": 52119.4,
+        "unit": null,
+        "n": 19489,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "verdict",
+        "tool": "cohort_event_rates",
+        "args": {
+          "cohort_id": "synthea-v4-1m-af",
+          "exposure_code": "49436004",
+          "outcome_code": "230690007",
+          "design": "within"
+        },
+        "path": "verdict",
+        "value": "raised",
+        "unit": null,
+        "n": 19489,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-79": [
+      {
+        "name": "people",
+        "tool": "cohort_event_rates",
+        "args": {
+          "cohort_id": "synthea-v4-1m-af",
+          "exposure_code": "49436004",
+          "outcome_code": "230690007",
+          "design": "within"
+        },
+        "path": "people",
+        "value": 8144,
+        "unit": null,
+        "n": 19489,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "outcome_before",
+        "tool": "cohort_event_rates",
+        "args": {
+          "cohort_id": "synthea-v4-1m-af",
+          "exposure_code": "49436004",
+          "outcome_code": "230690007",
+          "design": "within"
+        },
+        "path": "outcome_before_follow_up",
+        "value": 75,
+        "unit": null,
+        "n": 19489,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "verdict",
+        "tool": "cohort_event_rates",
+        "args": {
+          "cohort_id": "synthea-v4-1m-af",
+          "exposure_code": "49436004",
+          "outcome_code": "230690007",
+          "design": "within"
+        },
+        "path": "verdict",
+        "value": "raised",
+        "unit": null,
+        "n": 19489,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-80": [
+      {
+        "name": "crude_rate_ratio",
+        "tool": "cohort_event_rates",
+        "args": {
+          "cohort_id": "synthea-v4-1m-af",
+          "exposure_code": "49436004",
+          "outcome_code": "26929004",
+          "design": "within"
+        },
+        "path": "rate_ratio.value",
+        "value": 1.13,
+        "unit": null,
+        "n": 20757,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "age_adjusted_rate_ratio",
+        "tool": "cohort_event_rates",
+        "args": {
+          "cohort_id": "synthea-v4-1m-af",
+          "exposure_code": "49436004",
+          "outcome_code": "26929004",
+          "design": "within"
+        },
+        "path": "age_adjusted_rate_ratio.value",
+        "value": 0.95,
+        "unit": null,
+        "n": 20757,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "verdict",
+        "tool": "cohort_event_rates",
+        "args": {
+          "cohort_id": "synthea-v4-1m-af",
+          "exposure_code": "49436004",
+          "outcome_code": "26929004",
+          "design": "within"
+        },
+        "path": "verdict",
+        "value": "no clear difference",
+        "unit": null,
+        "n": 20757,
+        "windows": [],
+        "refusal": null
+      }
+    ],
+    "Q-S7-81": [
+      {
+        "name": "refusal",
+        "tool": "cohort_event_rates",
+        "args": {
+          "cohort_id": "synthea-v4-1m-af",
+          "exposure_code": "49436004",
+          "outcome_code": "230690007",
+          "design": "between"
+        },
+        "path": "code",
+        "value": "DESIGN_NOT_SUPPORTED",
+        "unit": null,
+        "n": 0,
+        "windows": [],
+        "refusal": "DESIGN_NOT_SUPPORTED"
+      }
+    ],
+    "Q-S7-82": [
+      {
+        "name": "refusal",
+        "tool": "cohort_event_rates",
+        "args": {
+          "cohort_id": "synthea-v4-1m-af",
+          "exposure_code": "44054006",
+          "outcome_code": "230690007",
+          "design": "within"
+        },
+        "path": "code",
+        "value": "DESIGN_NOT_SUPPORTED",
+        "unit": null,
+        "n": 0,
+        "windows": [],
+        "refusal": "DESIGN_NOT_SUPPORTED"
+      }
+    ],
+    "Q-S7-83": [
+      {
+        "name": "refusal",
+        "tool": "cohort_event_rates",
+        "args": {
+          "cohort_id": "synthea-v4-seed42",
+          "exposure_code": "49436004",
+          "outcome_code": "230690007",
+          "design": "within"
+        },
+        "path": "code",
+        "value": "COHORT_NOT_SUPPORTED",
+        "unit": null,
+        "n": 0,
+        "windows": [],
+        "refusal": "COHORT_NOT_SUPPORTED"
+      }
+    ],
+    "Q-S7-84": [
+      {
+        "name": "verdict",
+        "tool": "cohort_event_rates",
+        "args": {
+          "cohort_id": "synthea-v4-seed1001",
+          "exposure_code": "49436004",
+          "outcome_code": "230690007",
+          "design": "within"
+        },
+        "path": "verdict",
+        "value": "too few events",
+        "unit": null,
+        "n": 0,
+        "windows": [],
+        "refusal": null
+      },
+      {
+        "name": "subjects_read",
+        "tool": "cohort_event_rates",
+        "args": {
+          "cohort_id": "synthea-v4-seed1001",
+          "exposure_code": "49436004",
+          "outcome_code": "230690007",
+          "design": "within"
+        },
+        "path": "subjects_read",
+        "value": 0,
+        "unit": null,
+        "n": 0,
+        "windows": [],
+        "refusal": null
+      }
+    ]
+  }
+}

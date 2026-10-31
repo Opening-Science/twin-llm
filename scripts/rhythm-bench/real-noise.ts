@@ -62,35 +62,35 @@ export const perturbedRecordWindows = (
   noise: NoiseLevel,
 ): RealNoiseRecord => {
   const seed = realRecordSeed(input.record);
-  return labelledSegments(
-    input.beats,
-    input.rhythmChanges,
-    input.samplingHz,
-  ).reduce<RealNoiseRecord>(
-    (out, segment, i) => {
-      const beats = segmentBeats(segment);
+  // Appended in place: copying the rows per segment is quadratic on 24 h records.
+  const rows: RealNoiseRow[] = [];
+  let beats = 0;
+  let missed = 0;
+  let spurious = 0;
+  labelledSegments(input.beats, input.rhythmChanges, input.samplingHz).forEach(
+    (segment, i) => {
+      const original = segmentBeats(segment);
       const counted = perturbBeatsCounted(
-        beats,
+        original,
         noise,
         randomFor(seed, `perturb:${noise.id}:${i}`),
       );
-      const rows = labelledWindows(
+      const windows = labelledWindows(
         input.record,
         intervalsOf(counted.beats.beatTimesMs),
         counted.beats.labels,
         isAf,
         false,
-        out.rows.length,
-      ).map((row) => ({ ...row, record: input.record, noise: noise.id }));
-      return {
-        rows: [...out.rows, ...rows],
-        beats: out.beats + beats.beatTimesMs.length,
-        missed: out.missed + counted.missed,
-        spurious: out.spurious + counted.spurious,
-      };
+        rows.length,
+      );
+      for (const row of windows)
+        rows.push({ ...row, record: input.record, noise: noise.id });
+      beats += original.beatTimesMs.length;
+      missed += counted.missed;
+      spurious += counted.spurious;
     },
-    { rows: [], beats: 0, missed: 0, spurious: 0 },
   );
+  return { rows, beats, missed, spurious };
 };
 
 /** Every record at every level, and one summary per level (records are the bootstrap clusters). */

@@ -10,7 +10,8 @@ Summarise the rsid-genotypes report the person released from their Ark, then des
 called variant with Carbon-X.
 
 1. Call `genome_report`. If it says no report has been released, say that the report is
-   run from the Digital Twin page (Run on Ark, then approve on the phone) and stop.
+   run from the Digital Twin page (Run on Ark, then approve on the phone) and stop. If
+   `genome_report` is not offered, only an imported VCF is set up: go to step 5.
 2. List the sites as a short table: rsID, gene, star allele, genotype. Write `no call` as
    it is; it means the call file has nothing at that site, not the reference allele.
 3. For each site with a call, call `dna_ask` with its rsID only, one call per site. Skip

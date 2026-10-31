@@ -12,7 +12,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
 import { parseArgs } from "./args";
-import { toPerson } from "./cohort";
+import { toPerson } from "./to-person";
 import { metaFile, readPeople } from "./people-files";
 import { runTiming } from "./timing";
 

@@ -107,3 +107,69 @@ describe("beatSamples and rhythmChanges", () => {
     expect(rhythmChanges(parseMitAnnotations(bytes))).toEqual([]);
   });
 });
+
+// A Long-Term AF Database style .atr (#264): beats labelled by type, a NOTE
+// with an aux string and RHYTHM changes in the same file.
+const LTAFDB_ATR = new Uint8Array([
+  0,
+  112, //                  RHYTHM (28), I = 0
+  2,
+  252,
+  40,
+  78, //           AUX, 2 bytes: "(N"
+  128,
+  4, //                    NORMAL (1), I = 128
+  100,
+  20, //                   PVC (5), I = 100
+  0,
+  88, //                   NOTE (22), I = 0
+  5,
+  252,
+  77,
+  73,
+  83,
+  83,
+  66,
+  0, // AUX, 5 bytes "MISSB" and one pad byte
+  90,
+  32, //                   APC (8), I = 90
+  0,
+  112, //                  RHYTHM, I = 0
+  5,
+  252,
+  40,
+  65,
+  70,
+  73,
+  66,
+  0, // AUX, "(AFIB"
+  110,
+  52, //                   UNKNOWN (13), I = 110
+  0,
+  0,
+]);
+
+describe("a reference file with beats and rhythm (Long-Term AF Database)", () => {
+  test("beats of every type, notes and rhythm annotations left out", () => {
+    expect(beatSamples(parseMitAnnotations(LTAFDB_ATR))).toEqual([128, 228, 318, 428]);
+  });
+
+  test("rhythm changes from the same file", () => {
+    expect(rhythmChanges(parseMitAnnotations(LTAFDB_ATR))).toEqual([
+      { sample: 0, rhythm: "N" },
+      { sample: 318, rhythm: "AFIB" },
+    ]);
+  });
+
+  test("the note keeps its aux string and does not count as a beat", () => {
+    const note = parseMitAnnotations(LTAFDB_ATR).find((each) => each.code === 22);
+    expect(note).toEqual({
+      sample: 228,
+      code: 22,
+      subtype: 0,
+      chan: 0,
+      num: 0,
+      aux: "MISSB",
+    });
+  });
+});

@@ -47,4 +47,18 @@ describe("parseWfdbHeader", () => {
     expect(() => parseWfdbHeader("rec x 250\n")).toThrow("bad signal count");
     expect(() => parseWfdbHeader("rec 1 0\n")).toThrow("bad sampling frequency");
   });
+
+  test("a Long-Term AF Database record: 128 Hz, about 21 h, date after the time", () => {
+    const text = [
+      "00 2 128 9661440  9:30:00 31/01/2003",
+      "00.dat 16 166.945/mV 0 0 -1 -8202 0 ECG",
+      "00.dat 16 173.01/mV 0 0 3 6311 0 ECG",
+      "",
+    ].join("\n");
+    const header = parseWfdbHeader(text);
+    expect(header.samplingHz).toBe(128);
+    expect(header.nSamples).toBe(9_661_440);
+    expect(header.baseTime).toBe("9:30:00");
+    expect(header.signals.map((each) => each.format)).toEqual(["16", "16"]);
+  });
 });

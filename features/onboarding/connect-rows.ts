@@ -145,6 +145,8 @@ export type SourceFacts = Readonly<{
   gbdConfigured: boolean;
   /** The genome policy allows chat here (`infrastructure/genome-gate.ts`). */
   genomeChat: boolean;
+  /** The VCF permit allows `genome_variants` here (#330, `infrastructure/genome-gate.ts`). */
+  vcfChat: boolean;
   /** The imported-data policy allows chat here (`infrastructure/imported-data-gate.ts`). */
   importedChat: boolean;
 }>;
@@ -181,10 +183,10 @@ export const sourceAvailability = (
     "ark-genome": facts.genomeChat
       ? { available: true, note: null }
       : { available: false, note: "Needs Ark and local Carbon-X" },
-    // Held to the same genome policy as the Ark report.
-    "vcf-variants": facts.genomeChat
+    // An imported VCF needs only personal mode and a local model (#330).
+    "vcf-variants": facts.vcfChat
       ? { available: true, note: null }
-      : { available: false, note: "Needs Ark and local Carbon-X" },
+      : { available: false, note: "Personal mode and a local model only" },
     "imported-data": facts.importedChat
       ? { available: true, note: null }
       : { available: false, note: "Personal mode and a local model only" },

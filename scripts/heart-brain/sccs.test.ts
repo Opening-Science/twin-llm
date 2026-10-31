@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 
-import { person } from "./fixtures.test-helpers";
+import { person } from "../../packages/query-tools/event-rates/fixtures.test-helpers";
 import { poolBands, selfControlledCaseSeries, solveLinear } from "./sccs";
-import { type TimingSpec } from "./within-person";
+import { type TimingSpec } from "../../packages/query-tools/event-rates/within-person";
 
 describe("solveLinear", () => {
   test("solves a small system and refuses a singular one", () => {

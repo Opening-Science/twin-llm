@@ -20,7 +20,11 @@ Research use only; nothing here is clinical advice.
 5. Each import is a dataset in the list below the button: rename it
    (`PATCH /api/personal-data/datasets/<id>`) or delete it
    (`DELETE /api/personal-data/datasets/<id>`). Delete removes the dataset and every row
-   it holds, for good.
+   it holds, for good, after a five-second undo window: pressing Delete folds the row to
+   "… deleted" with Undo, and the request is sent only when the window ends, so Undo
+   leaves no trace and only the real delete is audited. Going to another page in the app
+   inside the window sends it then. Closing or reloading the tab inside the window makes
+   the browser ask first; leaving anyway sends nothing and the dataset stays.
 
 Errors are short sentences (`features/personal-data/import-messages.ts`); the server logs
 only the error name.
@@ -260,7 +264,8 @@ SHA-256 is the zip's.
   the file by trying them all. They hold no genotype, position or rsID either.
 - **A genome VCF is genome data.** The import itself needs only personal mode, since no
   model sees anything at that step. Its rows are read only by a model on this machine,
-  under `permitGenomeRequest` ([genome.md](genome.md), privacy rules), never by the
+  under `permitVcfVariantsRequest` (personal mode and Ollama on loopback, #330;
+  [genome.md](genome.md#imported-vcf)), never by the
   imported-data chat tools, which do not even list a VCF dataset. Only
   `genome_variants` (#307) reads them, by rsID or `chrN:pos`, at most 50 names a call
   ([genome.md](genome.md#imported-vcf)). A save whose audit row cannot be written
