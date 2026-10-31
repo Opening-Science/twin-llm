@@ -168,6 +168,8 @@ const NOT_LEARNING: Readonly<Record<string, string>> = {
   "synthea:pin": GENERATOR,
   "rhythm-bench":
     "benchmarks the rhythm detector on simulated signals and the public PhysioNet AFDB, never the app's rows",
+  "rhythm-bench:resolution":
+    "aggregates simulated rhythm days and the public PhysioNet AF databases; never the app's rows",
   "wearables:generate": GENERATOR,
   "genome:synth": GENERATOR,
   "genome:ingest": "loads synthetic genotypes (genome-synth) into a training database",
