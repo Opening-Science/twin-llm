@@ -14,12 +14,14 @@ import {
 import { parseScannerHosts, scannerOrigin } from "@/packages/vitronic/base-url";
 import {
   type FieldCipher,
+  newRowId,
   openJson,
   openNullableJson,
   sealJson,
   sealNullableJson,
 } from "@/infrastructure/field-cipher";
 import { cipherForUser } from "@/infrastructure/field-cipher-runtime";
+import { openToken, sealToken } from "@/infrastructure/connector-tokens";
 import { persistGlb, loadGlb } from "@/packages/vitronic/glb";
 import { buildStoredGeometry } from "@/packages/vitronic/geometry";
 import {
@@ -47,6 +49,7 @@ import {
   type CreateSubjectInput,
 } from "./subject-schema";
 import { liveOrFallback } from "./live-fallback";
+import type { UploadConnection } from "./upload-handler";
 import { decryptVitronicSecret, encryptVitronicSecret } from "./token-crypto";
 
 export const VITRONIC_AUDIT_TOOL = "vitronic.sync";
@@ -109,6 +112,7 @@ export type VitronicLocalReadPorts = Readonly<{
 
 const SNAPSHOTS = "vitronic_snapshots";
 const SUBJECTS = "vitronic_subjects";
+const CONNECTIONS = "vitronic_connections";
 
 const openSummary = (cipher: FieldCipher, id: string, stored: string): VitronicSummary =>
   openJson(cipher, SNAPSHOTS, "summary", id, stored) as VitronicSummary;
@@ -437,10 +441,29 @@ export const persistVitronicConnection = async (params: {
       captureTlsFingerprint({ ...cfg, urlPolicy: scannerUrlPolicy() }));
   const tlsFingerprintSha256 = await pin({ baseUrl });
 
+  // Sealed with the owner's keys (#341); nothing is stored while locked.
+  const cipher = await cipherForUser(params.userId);
+  const existing = await database().vitronicConnection.findUnique({
+    where: { userId: params.userId },
+    select: { id: true },
+  });
+  const id = existing?.id ?? newRowId();
   const data = {
     baseUrl,
-    apiTokenEnc: encryptVitronicSecret(params.input.apiToken),
-    uploadSecretEnc: encryptVitronicSecret(params.input.uploadSecret ?? "unshipped"),
+    apiTokenEnc: sealToken(
+      cipher,
+      CONNECTIONS,
+      "apiTokenEnc",
+      id,
+      encryptVitronicSecret(params.input.apiToken),
+    ),
+    uploadSecretEnc: sealToken(
+      cipher,
+      CONNECTIONS,
+      "uploadSecretEnc",
+      id,
+      encryptVitronicSecret(params.input.uploadSecret ?? "unshipped"),
+    ),
     probandId: params.input.probandId,
     tlsFingerprintSha256,
     apiTokenName: params.input.apiTokenName ?? null,
@@ -448,7 +471,7 @@ export const persistVitronicConnection = async (params: {
 
   await database().vitronicConnection.upsert({
     where: { userId: params.userId },
-    create: { userId: params.userId, ...data },
+    create: { id, userId: params.userId, ...data },
     update: data,
   });
   await ensureSelfSubjectFromConnection(params.userId);
@@ -459,13 +482,20 @@ const scannerUrlPolicy = () => ({
   allowedHosts: parseScannerHosts(vitronicScannerHosts() ?? undefined),
 });
 
-const bearerConfig = (connection: {
-  baseUrl: string;
-  apiTokenEnc: string;
-  tlsFingerprintSha256: string | null;
-}): VitronicBearerConfig => ({
+/** The scanner config with the API token opened; the cipher refuses while locked (#341). */
+const bearerConfig = (
+  connection: {
+    id: string;
+    baseUrl: string;
+    apiTokenEnc: string;
+    tlsFingerprintSha256: string | null;
+  },
+  cipher: FieldCipher,
+): VitronicBearerConfig => ({
   baseUrl: connection.baseUrl,
-  apiToken: decryptVitronicSecret(connection.apiTokenEnc),
+  apiToken: decryptVitronicSecret(
+    openToken(cipher, CONNECTIONS, "apiTokenEnc", connection.id, connection.apiTokenEnc),
+  ),
   tlsFingerprintSha256: connection.tlsFingerprintSha256,
   urlPolicy: scannerUrlPolicy(),
 });
@@ -752,7 +782,11 @@ export const listScansForSubject = async (params: {
       const probandId = subject.probandId;
       // Scanner offline or slow: fall back to the stored snapshots.
       const attempt = await liveOrFallback(
-        () => listViatarsForProbandId(bearerConfig(connection), probandId),
+        async () =>
+          listViatarsForProbandId(
+            bearerConfig(connection, await cipherForUser(params.userId)),
+            probandId,
+          ),
         [] as readonly VitronicViatar[],
       );
       live = scanRefsForViatars(attempt.value, storedByViatar, subjectKind);
@@ -838,7 +872,7 @@ const pullScannerIntoSnapshot = async (params: {
   });
   if (!connection) throw new Error("Connect BodyLoop before syncing.");
 
-  const config = bearerConfig(connection);
+  const config = bearerConfig(connection, await cipherForUser(params.userId));
   const listed = await listViatarsForProbandId(config, subject.probandId);
   const allowed = listed.find((row) => row.viatar_id === params.viatarId);
   if (!allowed) throw new Error("vitronic-viatar-not-found");
@@ -923,7 +957,10 @@ export const syncVitronicForUser = async (params: {
     where: { userId: params.userId },
   });
   if (!connection) throw new Error("Connect BodyLoop before syncing.");
-  const listed = await listViatarsForProbandId(bearerConfig(connection), self.probandId);
+  const listed = await listViatarsForProbandId(
+    bearerConfig(connection, await cipherForUser(params.userId)),
+    self.probandId,
+  );
   const match = newestViatarForProbandId(listed, self.probandId);
   if (!match) throw new Error("vitronic-viatar-not-found");
   const result = await pullScannerIntoSnapshot({
@@ -1047,9 +1084,36 @@ export const loadAvatarForSnapshot = async (
 };
 
 /** cloud_connect username/password is not shipped (VUSE XR 29 Sep). Lookup is by connection id only. */
-export const findConnectionForUpload = async (connectionId: string) => {
-  return database().vitronicConnection.findUnique({
+export const findConnectionForUpload = async (
+  connectionId: string,
+): Promise<UploadConnection | null> => {
+  const row = await database().vitronicConnection.findUnique({
     where: { id: connectionId },
-    select: { id: true, uploadSecretEnc: true },
+    select: {
+      id: true,
+      userId: true,
+      uploadSecretEnc: true,
+      user: { select: { clerkId: true } },
+    },
   });
+  return row === null
+    ? null
+    : {
+        id: row.id,
+        userId: row.userId,
+        actorId: row.user.clerkId,
+        uploadSecretEnc: row.uploadSecretEnc,
+      };
 };
+
+/** The upload secret, opened with the owner's keys (#341); throws while locked. */
+export const openUploadSecret = async (connection: UploadConnection): Promise<string> =>
+  decryptVitronicSecret(
+    openToken(
+      await cipherForUser(connection.userId),
+      CONNECTIONS,
+      "uploadSecretEnc",
+      connection.id,
+      connection.uploadSecretEnc,
+    ),
+  );

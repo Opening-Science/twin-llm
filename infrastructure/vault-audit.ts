@@ -59,3 +59,32 @@ export const vaultCountsEvent = (
     rowCount: rows,
   };
 };
+
+/**
+ * Steps that run without the person's browser and skip while their vault is
+ * locked (#341), as a scheduled task does (#54). Tokens are sealed with the
+ * vault key, so a locked vault means no token is stored or opened.
+ */
+export const LOCKED_SKIP_STEPS = [
+  "connect-oura",
+  "connect-whoop",
+  "connect-google-health",
+  "bodyloop-upload",
+] as const;
+
+export type LockedSkipStep = (typeof LOCKED_SKIP_STEPS)[number];
+
+/** `vault.locked.skip.<step>`: the step is in the tool name, since args are stored as a hash. */
+export const lockedSkipTool = (step: LockedSkipStep): string =>
+  `vault.locked.skip.${step}`;
+
+/** The row a skipped step writes: which step, and that the vault was locked. */
+export const lockedSkipEvent = (actorId: string, step: LockedSkipStep): AppendInput => ({
+  actor: actorId,
+  sessionId: actorId,
+  subjectRef: null,
+  tool: lockedSkipTool(step),
+  args: { step },
+  result: { decision: "skipped: locked" },
+  rowCount: 0,
+});

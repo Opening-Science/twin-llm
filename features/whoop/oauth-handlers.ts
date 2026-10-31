@@ -18,6 +18,8 @@ import {
 } from "@/features/wearables/audited-sync";
 import type { RecordDisclosure } from "@/infrastructure/disclosure-ledger";
 import type { PersonalRead } from "@/infrastructure/personal-read-audit";
+import { lockedSkipEvent } from "@/infrastructure/vault-audit";
+import type { AppendInput } from "@/packages/audit/append";
 
 /**
  * Whoop authorize and callback GET, as factories (same shape as Oura), so the
@@ -57,10 +59,13 @@ export type WhoopCallbackDeps = {
   /**
    * Whether this person's data is unlocked in this process (#142). The
    * return from the provider is a cross-site redirect, so the SameSite=Strict
-   * unlock cookie is not sent; the tokens are stored either way, and the
-   * first sync runs only while the vault is open.
+   * unlock cookie is not sent. Tokens are sealed with the vault key (#341),
+   * so while locked the code is not exchanged, nothing is stored, and a
+   * `vault.locked.skip.<step>` row says why.
    */
   readonly mayReadPersonal: (actorId: string) => boolean;
+  /** Appends one audit row; used for the locked skip. */
+  readonly appendAudit: (input: AppendInput) => Promise<unknown>;
   /** Receives the error name only, never the error object. */
   readonly logError: (message: string, errorName: string) => void;
   readonly logWarn: (message: string, details: Readonly<Record<string, unknown>>) => void;
@@ -155,10 +160,20 @@ export const createWhoopCallbackHandler = (deps: WhoopCallbackDeps) => {
       return back("expired", request);
     }
 
+    if (!deps.mayReadPersonal(clerkId)) {
+      await deps
+        .appendAudit(lockedSkipEvent(clerkId, "connect-whoop"))
+        .catch((error: unknown) => {
+          deps.logError("[whoop] locked skip not audited", errorName(error));
+        });
+      return back("locked", request);
+    }
+
     try {
       const { id: appUserId } = await deps.ensureAppUser(clerkId);
       await deps.recordDisclosure(vendorAuthDisclosure("whoop", clerkId));
       await deps.exchangeAndPersistCode({ userId: appUserId, code });
+      // The vault may have locked during the exchange.
       if (deps.mayReadPersonal(clerkId)) {
         await auditThenSave(
           () => deps.syncForUser(appUserId),

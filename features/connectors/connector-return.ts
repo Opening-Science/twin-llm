@@ -51,6 +51,8 @@ const sentence = (
       return dev
         ? `The sign-in return didn’t reach this browser session. Open TwinLLM at http://localhost:3000, then link ${name} again.`
         : "The sign-in return didn’t reach this browser session. Start the link again from this page.";
+    case "locked":
+      return `Your data is locked, so ${name} was not linked. Unlock it, then link ${name} again.`;
     case "signin":
       return `Sign in to link ${name}.`;
     case "unconfigured":
@@ -78,7 +80,11 @@ export const parseConnectorReturn = (
       outcome,
       text: sentence(outcome, RETURN_SOURCE_NAME[source], context),
       failed: outcome === "error" || outcome === "expired",
-      retry: outcome === "denied" || outcome === "error" || outcome === "expired",
+      retry:
+        outcome === "denied" ||
+        outcome === "error" ||
+        outcome === "expired" ||
+        outcome === "locked",
     };
   }
   return null;

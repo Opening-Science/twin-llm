@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 
+import { LOCKED_MESSAGE } from "@/infrastructure/vault-gate";
+import { lockedSkipEvent } from "@/infrastructure/vault-audit";
+import type { AppendInput } from "@/packages/audit/append";
 import { readUploadAuth, secretsEqual } from "@/packages/vitronic/auth";
 import { MAX_GLB_BYTES } from "@/packages/vitronic/glb";
 import {
@@ -11,6 +14,13 @@ import {
  * Vitronic cloud-connect upload POST, as a factory, so the Next route file can
  * export only POST and tests can pass fakes without replacing modules for the
  * whole bun process.
+ *
+ * The scanner calls this with no browser and no unlock cookie. The upload
+ * secret is sealed with the owner's vault key (#341), so while their vault is
+ * locked it is not opened: the upload is refused with 423 and a
+ * `vault.locked.skip.bodyloop-upload` row says why, as a scheduled task skips
+ * (#54), at most once per connection per 10 minutes. An unknown connection id
+ * gets 401 and no row. Checking the vault does not count as use.
  */
 type UploadRouteContext = {
   readonly params: Promise<unknown>;
@@ -18,11 +28,30 @@ type UploadRouteContext = {
 
 export type VitronicUploadDeps = {
   readonly vitronicEnv: () => unknown;
-  readonly findConnectionForUpload: (connectionId: string) => Promise<{
-    readonly uploadSecretEnc: string;
-  } | null>;
-  readonly decryptVitronicSecret: (ciphertext: string) => string;
+  readonly findConnectionForUpload: (
+    connectionId: string,
+  ) => Promise<UploadConnection | null>;
+  /** True when the owner's vault is open now; must not count as use. */
+  readonly vaultOpen: (actorId: string) => boolean;
+  /** The upload secret, opened with the owner's keys; throws while locked. */
+  readonly openUploadSecret: (connection: UploadConnection) => Promise<string>;
+  readonly appendAudit: (input: AppendInput) => Promise<unknown>;
+  /** True when a locked-skip row may be written for this connection now (`skip-throttle.ts`). */
+  readonly mayAuditSkip: (connectionId: string) => boolean;
+  /** Receives the error name only, never the error object. */
+  readonly logError: (message: string, errorName: string) => void;
 };
+
+export type UploadConnection = Readonly<{
+  id: string;
+  userId: string;
+  /** The owner's `User.clerkId`. */
+  actorId: string;
+  uploadSecretEnc: string;
+}>;
+
+const errorName = (error: unknown): string =>
+  error instanceof Error ? error.name : "unknown";
 
 export const createVitronicUploadHandler = (deps: VitronicUploadDeps) => {
   return async (request: Request, context: UploadRouteContext) => {
@@ -68,7 +97,22 @@ export const createVitronicUploadHandler = (deps: VitronicUploadDeps) => {
       return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
     }
 
-    const expected = deps.decryptVitronicSecret(connection.uploadSecretEnc);
+    const skipLocked = async () => {
+      if (!deps.mayAuditSkip(connection.id)) {
+        return NextResponse.json({ error: LOCKED_MESSAGE }, { status: 423 });
+      }
+      await deps
+        .appendAudit(lockedSkipEvent(connection.actorId, "bodyloop-upload"))
+        .catch((error: unknown) => {
+          deps.logError("[vitronic] locked skip not audited", errorName(error));
+        });
+      return NextResponse.json({ error: LOCKED_MESSAGE }, { status: 423 });
+    };
+    if (!deps.vaultOpen(connection.actorId)) return skipLocked();
+
+    // The vault may lock between the check and the read.
+    const expected = await deps.openUploadSecret(connection).catch(() => null);
+    if (expected === null) return skipLocked();
     if (!secretsEqual(auth[1], expected)) {
       return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
     }

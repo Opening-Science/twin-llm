@@ -2,9 +2,11 @@ import "server-only";
 
 import { getOuraData, type SupportedScope } from "@open-twin/provider-oura";
 
+import { openToken, sealToken } from "@/infrastructure/connector-tokens";
 import { database } from "@/infrastructure/database";
 import {
   type FieldCipher,
+  newRowId,
   openJson,
   sealJson,
   sealNullableJson,
@@ -47,6 +49,8 @@ export const OURA_OAUTH_SCOPES = [
   "spo2",
 ] as const;
 
+const TABLE = "oura_connections";
+
 export const ouraAppConfig = () => {
   const env = ouraEnv();
   if (!env) return null;
@@ -76,10 +80,14 @@ export const loadTokenHandlerForUser = async (userId: string) => {
   const connection = await database().ouraConnection.findUnique({ where: { userId } });
   if (!connection) return null;
 
+  // Tokens open only with the owner's unlocked vault (#341); locked, this throws.
+  const cipher = await cipherForUser(userId);
+  const open = (column: "accessTokenEnc" | "refreshTokenEnc") =>
+    decryptSecret(openToken(cipher, TABLE, column, connection.id, connection[column]));
   const handler = new HostOuraTokenHandler(config, "");
   handler.setTokens({
-    access_token: decryptSecret(connection.accessTokenEnc),
-    refresh_token: decryptSecret(connection.refreshTokenEnc),
+    access_token: open("accessTokenEnc"),
+    refresh_token: open("refreshTokenEnc"),
     token_type: "bearer",
     expires_in: Math.max(
       60,
@@ -98,16 +106,35 @@ export const persistOuraTokens = async (params: {
   readonly subjectKey?: string | null;
 }) => {
   const expiresAt = new Date(Date.now() + params.expiresIn * 1000);
+  // Sealed with the owner's keys (#341); nothing is stored while locked.
+  const cipher = await cipherForUser(params.userId);
+  const existing = await database().ouraConnection.findUnique({
+    where: { userId: params.userId },
+    select: { id: true },
+  });
+  const id = existing?.id ?? newRowId();
   const data = {
-    accessTokenEnc: encryptSecret(params.accessToken),
-    refreshTokenEnc: encryptSecret(params.refreshToken),
+    accessTokenEnc: sealToken(
+      cipher,
+      TABLE,
+      "accessTokenEnc",
+      id,
+      encryptSecret(params.accessToken),
+    ),
+    refreshTokenEnc: sealToken(
+      cipher,
+      TABLE,
+      "refreshTokenEnc",
+      id,
+      encryptSecret(params.refreshToken),
+    ),
     accessTokenExpiresAt: expiresAt,
     subjectKey: params.subjectKey ?? undefined,
   };
 
   await database().ouraConnection.upsert({
     where: { userId: params.userId },
-    create: { userId: params.userId, ...data },
+    create: { id, userId: params.userId, ...data },
     update: data,
   });
 };

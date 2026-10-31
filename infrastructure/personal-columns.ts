@@ -1,3 +1,4 @@
+import { TOKEN_COLUMNS } from "./connector-tokens";
 import { TEXT_PREFIX } from "./field-crypto";
 
 /**
@@ -220,6 +221,20 @@ export const PERSONAL_TABLES: readonly PersonalTable[] = [
     scope: `"synthetic" = false`,
     sealed: ["refs"],
   },
+  // OAuth and BodyLoop tokens (#341): the env-key ciphertext, sealed again.
+  ...(
+    [
+      "oura_connections",
+      "whoop_connections",
+      "google_health_connections",
+      "vitronic_connections",
+    ] as const
+  ).map((table): PersonalTable => ({
+    table,
+    idColumn: "id",
+    owner: ownerByUserId("userId"),
+    sealed: [...TOKEN_COLUMNS[table]],
+  })),
 ];
 
 export const personalTable = (table: string): PersonalTable => {
