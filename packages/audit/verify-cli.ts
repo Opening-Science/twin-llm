@@ -3,8 +3,9 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
 
 import { append } from "./append";
+import { verifyDisclosureChain } from "./disclosure-chain";
 import { verifyChain } from "./verify-chain";
-import { checkOutcome, EXIT, parseVerifyMode } from "./verify-cli-args";
+import { checkOutcome, EXIT, parseChain, parseVerifyMode } from "./verify-cli-args";
 
 const databaseUrl = (): string => {
   // CLI is outside Next. serverEnv() pulls server-only.
@@ -49,12 +50,21 @@ const main = async (): Promise<void> => {
     console.error(parsed.error);
     process.exit(EXIT.usage);
   }
+  const chain = parseChain(process.argv.slice(2), parsed.mode);
+  if ("error" in chain) {
+    console.error(chain.error);
+    process.exit(EXIT.usage);
+  }
   const client = createClient();
 
   try {
     if (parsed.mode === "--check") {
       // Read-only: the same walk the Lab page runs, on the real table.
-      const outcome = checkOutcome(await verifyChain(client));
+      // `--chain disclosures` walks the disclosure ledger (#140) instead.
+      const outcome =
+        chain.chain === "disclosures"
+          ? checkOutcome(await verifyDisclosureChain(client), "disclosures")
+          : checkOutcome(await verifyChain(client));
       if (outcome.stream === "stdout") process.stdout.write(`${outcome.line}\n`);
       else console.error(outcome.line);
       process.exitCode = outcome.code;

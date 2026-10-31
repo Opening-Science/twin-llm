@@ -13,7 +13,10 @@ import {
   auditThenSave,
   type PreparedSync,
   type SyncedMetrics,
+  vendorAuthDisclosure,
+  vendorSyncDisclosure,
 } from "@/features/wearables/audited-sync";
+import type { RecordDisclosure } from "@/infrastructure/disclosure-ledger";
 import type { PersonalRead } from "@/infrastructure/personal-read-audit";
 
 /**
@@ -46,6 +49,11 @@ export type WhoopCallbackDeps = {
   /** The first sync after connect; it goes through `auditThenSave`, which stores it only after the audit row. */
   readonly syncForUser: (userId: string) => Promise<PreparedSync<SyncedMetrics>>;
   readonly auditPersonalRead: (read: PersonalRead) => Promise<unknown>;
+  /**
+   * Writes the code exchange and the first sync's request to the disclosure
+   * ledger (#140) before each is sent; when it fails, neither is sent.
+   */
+  readonly recordDisclosure: RecordDisclosure;
   /**
    * Whether this person's data is unlocked in this process (#142). The
    * return from the provider is a cross-site redirect, so the SameSite=Strict
@@ -149,6 +157,7 @@ export const createWhoopCallbackHandler = (deps: WhoopCallbackDeps) => {
 
     try {
       const { id: appUserId } = await deps.ensureAppUser(clerkId);
+      await deps.recordDisclosure(vendorAuthDisclosure("whoop", clerkId));
       await deps.exchangeAndPersistCode({ userId: appUserId, code });
       if (deps.mayReadPersonal(clerkId)) {
         await auditThenSave(
@@ -156,6 +165,7 @@ export const createWhoopCallbackHandler = (deps: WhoopCallbackDeps) => {
           "whoop",
           clerkId,
           deps.auditPersonalRead,
+          () => deps.recordDisclosure(vendorSyncDisclosure("whoop", clerkId)),
         ).catch((error: unknown) => {
           deps.logError("[whoop] initial sync failed after connect", errorName(error));
         });

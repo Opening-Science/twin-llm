@@ -95,6 +95,8 @@ Remote GPU (`LLM_PROVIDER=remote-gpu`, Apertus on vLLM, same prompt and cohort):
 
 `resolveLanguageModel` applies the same `permitProviderForRequest` check as the chat route (defence in depth).
 
+**The disclosure ledger (#140).** Every HTTP request to a model that is not on this machine (every provider above except Ollama on loopback) is written to the disclosure ledger before it is sent: provider, model id, purpose (chat answer, note draft, starter questions), the kinds of data it carried, the stored values it carried as references (wearable and BodyLoop keys, twin note ids), and the request's size, never the content. A request that cannot be recorded is not sent, and the call fails. Synthetic requests are recorded too, labelled synthetic. The same goes for wearable syncs and the OAuth code exchange, the remote GBD server, a search query embedded by an Ollama on another machine, server-side PostHog events and thread exports. Clerk, Arcjet and PostHog in the browser are named on the Lab card when configured, since the server cannot record them first. You see it all on Customize · Privacy and the Lab card "What left this machine" ([privacy-design.md](privacy-design.md#25-140-disclosure-ledger)).
+
 `DATA_MODE=personal` (the default) forbids OpenRouter, Infomaniak and remote-gpu at env parse and at the chat route, and Exoscale unless `EXOSCALE_PERSONAL_DATA=consented-pilot`. Any other value, including the old `demo` and `real`, fails at startup.
 
 MCP servers follow the same rule by locality: `permitServerForDataMode` in `packages/mcp-client/policy.ts` allows a `local` server in both modes and a `remote` one only with `DATA_MODE=synthetic`. The registry lists each server with its locality; see [`gbd.md`](gbd.md).

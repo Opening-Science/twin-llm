@@ -11,6 +11,7 @@ import {
   formatMetricValue,
   formatNumber,
   formatRelative,
+  formatTimestamp,
   formatUnit,
   isMainSleepKey,
   isoLocalDate,
@@ -167,6 +168,22 @@ describe("isoLocalDate", () => {
 
   test("pads month and day", () => {
     expect(isoLocalDate(new Date(2026, 0, 5, 12))).toBe("2026-01-05");
+  });
+});
+
+describe("formatTimestamp", () => {
+  test("a moment in UTC with the minute", () => {
+    expect(formatTimestamp(new Date(Date.UTC(2026, 9, 16, 9, 5, 59)))).toBe(
+      "16 Oct 2026, 09:05 UTC",
+    );
+    expect(formatTimestamp(new Date(Date.UTC(2026, 0, 1, 23, 59)))).toBe(
+      "1 Jan 2026, 23:59 UTC",
+    );
+  });
+
+  test("missing or invalid is a dash", () => {
+    expect(formatTimestamp(null)).toBe("—");
+    expect(formatTimestamp(new Date(Number.NaN))).toBe("—");
   });
 });
 

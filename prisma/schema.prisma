@@ -806,6 +806,50 @@ model AuditEvent {
   @@map("audit_events")
 }
 
+/// The disclosure ledger (#140, docs/privacy-design.md 2.5): one row per event
+/// in which data leaves this machine (a hosted model, a wearable vendor, an
+/// export file, telemetry, a remote tool) or the person's Ark releases a
+/// report into it. Hash-chained like `audit_events` (`packages/audit/chain.ts`)
+/// and written in one transaction with its paired audit row, before the send.
+/// Never the content: recipient, purpose, categories, counts and size. `refs`
+/// (which stored values the request carried, as references) is sealed in
+/// personal mode (#141) and is not part of the hash, so a key rotation can
+/// reseal it; `ref_count` is.
+model DisclosureEvent {
+  seq             BigInt   @id
+  /// Row id, part of the sealed `refs` context.
+  id              String   @unique
+  ts              DateTime
+  actor           String
+  /// "hosted-model", "vendor-sync", "vendor-auth", "export-file", "ark-release",
+  /// "remote-tool", "embedding" or "telemetry" (`DISCLOSURE_KINDS`).
+  kind            String
+  /// "sent", or "received" for an Ark release.
+  direction       String
+  recipient       String
+  /// The model id, request kind or file format, when there is one.
+  target          String?
+  purpose         String
+  categories      String[]
+  refCount        Int      @map("ref_count")
+  /// Request or file size in bytes; null when it could not be measured.
+  payloadBytes    Int?     @map("payload_bytes")
+  threadId        String?  @map("thread_id")
+  /// True when the request carried synthetic data only.
+  synthetic       Boolean
+  /// False until the #112 matcher checks free text for stored values.
+  freeTextChecked Boolean  @map("free_text_checked")
+  /// Sealed JSON list of `{ category, key }`; null when there are none.
+  refs            String?
+  /// The `seq` of the audit row written in the same transaction.
+  auditSeq        BigInt   @map("audit_seq")
+  prevHash        String   @map("prev_hash") @db.Char(64)
+  hash            String   @db.Char(64)
+
+  @@index([actor, recipient])
+  @@map("disclosure_events")
+}
+
 /// A skill a person made on Customize (#174). The same fields as a SKILL.md
 /// frontmatter plus its instructions, checked by the same schema on save and
 /// again before it runs. Only its owner sees or runs it.

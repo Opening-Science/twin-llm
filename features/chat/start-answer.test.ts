@@ -189,7 +189,13 @@ describe("chat start: consented pilot audit", () => {
     expect(JSON.stringify(audits)).not.toContain("recovery");
     expect(JSON.stringify(audits)).not.toContain("Whoop");
     expect(streamed).toEqual([
-      { clerkId: ACTOR, genomeThread: false, disabledSources: ["gbd"], ...WITH_WHOOP },
+      {
+        clerkId: ACTOR,
+        threadId: THREAD_ID,
+        genomeThread: false,
+        disabledSources: ["gbd"],
+        ...WITH_WHOOP,
+      },
     ]);
   });
 
@@ -272,6 +278,7 @@ describe("chat start: a turn sent with a skill", () => {
     expect(streamed).toEqual([
       {
         clerkId: ACTOR,
+        threadId: THREAD_ID,
         genomeThread: false,
         disabledSources: ["gbd"],
         skill: SLEEP,
@@ -411,7 +418,13 @@ describe("chat start: a thread that used genome tools stays local (#151)", () =>
     expect(audits).toEqual([]);
     expect(refused).toEqual([]);
     expect(streamed).toEqual([
-      { clerkId: ACTOR, genomeThread: true, disabledSources: ["gbd"], ...NO_WEARABLES },
+      {
+        clerkId: ACTOR,
+        threadId: THREAD_ID,
+        genomeThread: true,
+        disabledSources: ["gbd"],
+        ...NO_WEARABLES,
+      },
     ]);
   });
 
@@ -427,7 +440,13 @@ describe("chat start: a thread that used genome tools stays local (#151)", () =>
     expect(calls).toEqual([`wearables personal ${APP_USER}`, "audit", "stream"]);
     expect(audits.map((event) => event.tool)).toEqual(["provider.personal_data_sent"]);
     expect(streamed).toEqual([
-      { clerkId: ACTOR, genomeThread: false, disabledSources: ["gbd"], ...WITH_WHOOP },
+      {
+        clerkId: ACTOR,
+        threadId: THREAD_ID,
+        genomeThread: false,
+        disabledSources: ["gbd"],
+        ...WITH_WHOOP,
+      },
     ]);
   });
 
@@ -594,6 +613,7 @@ describe("chat start: an agent (#218)", () => {
     expect(streamed).toEqual([
       {
         clerkId: ACTOR,
+        threadId: THREAD_ID,
         genomeThread: false,
         disabledSources: ["gbd"],
         skill: SLEEP,
@@ -661,6 +681,7 @@ describe("chat start: an agent (#218)", () => {
     expect(streamed).toEqual([
       {
         clerkId: ACTOR,
+        threadId: THREAD_ID,
         genomeThread: false,
         disabledSources: ["gbd"],
         agent: GP_AGENT,

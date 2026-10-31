@@ -3,6 +3,8 @@ import "server-only";
 import { captureAiGeneration } from "@posthog/ai";
 
 import { trackModelAnswered } from "@/infrastructure/analytics-events";
+import { telemetryDisclosure } from "@/infrastructure/disclosure-ledger";
+import { recordDisclosure } from "@/infrastructure/disclosure-ledger-runtime";
 import { serverEnv } from "@/infrastructure/env";
 import { chatModelIsLocal } from "@/infrastructure/genome-gate";
 import { posthogServer } from "@/infrastructure/posthog";
@@ -49,7 +51,16 @@ export const streamModelResponse = createStreamModelResponse({
     generation: async (facts) => {
       const client = posthogServer();
       const event = generationEvent(facts);
-      if (client !== null && event !== null) await captureAiGeneration(client, event);
+      if (client === null || event === null) return;
+      // In the disclosure ledger (#140) first; a failed write drops the event.
+      await recordDisclosure(
+        telemetryDisclosure({
+          distinctId: facts.distinctId,
+          event: "$ai_generation",
+          synthetic: facts.mode === "synthetic",
+        }),
+      );
+      await captureAiGeneration(client, event);
     },
   },
 });

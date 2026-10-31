@@ -13,7 +13,10 @@ import {
   auditThenSave,
   type PreparedSync,
   type SyncedMetrics,
+  vendorAuthDisclosure,
+  vendorSyncDisclosure,
 } from "@/features/wearables/audited-sync";
+import type { RecordDisclosure } from "@/infrastructure/disclosure-ledger";
 import type { PersonalRead } from "@/infrastructure/personal-read-audit";
 import { getAuthorizationUrl } from "@/infrastructure/open-twin-adapters/oura-authorize";
 
@@ -58,6 +61,11 @@ export type OuraCallbackDeps = {
   /** The first sync after connect; it goes through `auditThenSave`, which stores it only after the audit row. */
   readonly syncOuraForUser: (userId: string) => Promise<PreparedSync<SyncedMetrics>>;
   readonly auditPersonalRead: (read: PersonalRead) => Promise<unknown>;
+  /**
+   * Writes the code exchange and the first sync's request to the disclosure
+   * ledger (#140) before each is sent; when it fails, neither is sent.
+   */
+  readonly recordDisclosure: RecordDisclosure;
   /**
    * Whether this person's data is unlocked in this process (#142). The
    * return from the provider is a cross-site redirect, so the SameSite=Strict
@@ -152,6 +160,7 @@ export const createOuraCallbackHandler = (deps: OuraCallbackDeps) => {
 
     try {
       const { id: appUserId } = await deps.ensureAppUser(clerkId);
+      await deps.recordDisclosure(vendorAuthDisclosure("oura", clerkId));
       const handler = await deps.createTokenHandlerFromCode(code);
       const tokens = handler.lastTokens();
       if (!tokens) throw new Error("Token exchange returned no tokens.");
@@ -170,6 +179,7 @@ export const createOuraCallbackHandler = (deps: OuraCallbackDeps) => {
           "oura",
           clerkId,
           deps.auditPersonalRead,
+          () => deps.recordDisclosure(vendorSyncDisclosure("oura", clerkId)),
         ).catch((error: unknown) => {
           deps.logError("[oura] initial sync failed after connect", errorName(error));
         });

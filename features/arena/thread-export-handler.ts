@@ -1,3 +1,9 @@
+import {
+  CATEGORY,
+  type Disclosure,
+  type DisclosureCategory,
+  type RecordDisclosure,
+} from "@/infrastructure/disclosure-ledger";
 import { formatDate } from "@/infrastructure/format-measure";
 import { genomeThreadRefusedEvent } from "@/infrastructure/genome-thread-audit";
 import {
@@ -29,6 +35,11 @@ import { threadPrintHtml } from "./thread-print";
  * machine: with the app served on loopback only (`LOCAL_ONLY`), the
  * download lands on the same machine; otherwise it is refused and audited
  * (`genome-thread-policy.ts`).
+ *
+ * A file that leaves the app is a disclosure (#140): the export is written to
+ * the disclosure ledger, paired with its `thread.export` audit row in one
+ * transaction, before the file is returned. If that write fails there is no
+ * file.
  */
 export type ThreadExportDeps = Readonly<{
   /** The thread when the signed-in viewer owns it, else null. */
@@ -37,6 +48,8 @@ export type ThreadExportDeps = Readonly<{
   /** True when the app is served to this machine only. */
   recipientIsLocal: () => boolean;
   appendAudit: (input: AppendInput) => Promise<unknown>;
+  recordDisclosure: RecordDisclosure;
+  dataMode: () => "synthetic" | "personal";
   today: () => string;
 }>;
 
@@ -48,6 +61,43 @@ export const exportFormat = (value: string | null): ExportFormat =>
   value === "fhir" || value === "print" ? value : "markdown";
 
 const NO_STORE = { "Cache-Control": "no-store" };
+
+export const EXPORT_NOT_RECORDED =
+  "The export could not be recorded, so no file was made. Try again.";
+
+/** What an export file holds: the questions and answers, and tool results when any ran. */
+export const exportDisclosure = (
+  thread: ExportableThread,
+  call: Readonly<{
+    actor: string;
+    threadId: string;
+    format: ExportFormat;
+    bytes: number;
+    mode: "synthetic" | "personal";
+  }>,
+): Disclosure => {
+  const hasTools = thread.turns.some((turn) =>
+    turn.answers.some((answer) => (answer.tools ?? []).length > 0),
+  );
+  const categories: readonly DisclosureCategory[] = [
+    CATEGORY.question,
+    CATEGORY.answers,
+    ...(hasTools ? [CATEGORY.tools] : []),
+  ];
+  return {
+    actor: call.actor,
+    sessionId: call.threadId,
+    kind: "export-file",
+    recipient: "export file",
+    target: call.format,
+    purpose: "thread export",
+    categories,
+    refs: [],
+    payloadBytes: call.bytes,
+    threadId: call.threadId,
+    synthetic: call.mode === "synthetic",
+  };
+};
 
 const usesGenome = (thread: ExportableThread): boolean =>
   thread.turns.some(
@@ -88,16 +138,39 @@ export const createThreadExportHandler =
         : format === "print"
           ? threadPrintHtml(markdown, readableTitle(thread.title))
           : markdown;
-    await deps.appendAudit({
-      actor,
-      sessionId: threadId,
-      subjectRef: null,
-      tool: THREAD_EXPORT_AUDIT_TOOL,
-      // The audit log keeps only hashes of these; the content itself is never logged.
-      args: { format },
-      result: { bytes: body.length },
-      rowCount: thread.turns.reduce((sum, turn) => sum + turn.answers.length, 0),
-    });
+    const recorded = await deps
+      .recordDisclosure(
+        exportDisclosure(thread, {
+          actor,
+          threadId,
+          format,
+          bytes: Buffer.byteLength(body, "utf8"),
+          mode: deps.dataMode(),
+        }),
+        {
+          actor,
+          sessionId: threadId,
+          subjectRef: null,
+          tool: THREAD_EXPORT_AUDIT_TOOL,
+          // The audit log keeps only hashes of these; the content itself is never logged.
+          args: { format },
+          result: { bytes: body.length },
+          rowCount: thread.turns.reduce((sum, turn) => sum + turn.answers.length, 0),
+        },
+      )
+      .then(
+        () => true,
+        (error: unknown) => {
+          console.error(
+            "[export] the disclosure ledger could not be written",
+            error instanceof Error ? error.name : "unknown",
+          );
+          return false;
+        },
+      );
+    if (!recorded) {
+      return new Response(EXPORT_NOT_RECORDED, { status: 500, headers: NO_STORE });
+    }
     if (format === "print") {
       return new Response(body, {
         headers: { "Content-Type": "text/html; charset=utf-8", ...NO_STORE },

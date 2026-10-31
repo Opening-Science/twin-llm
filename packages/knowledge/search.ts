@@ -2,8 +2,14 @@ import "server-only";
 
 import type { PrismaClient } from "@/generated/prisma/client";
 import { database } from "@/infrastructure/database";
+import { recordDisclosure } from "@/infrastructure/disclosure-ledger-runtime";
 import { append } from "@/packages/audit/append";
-import { embedText, type EmbedPorts } from "@/packages/guidelines/embed";
+import {
+  defaultEmbedPorts,
+  embedText,
+  type EmbedPorts,
+  queryEmbedPorts,
+} from "@/packages/guidelines/embed";
 import type { GuidelineSearchInput } from "@/packages/guidelines/input";
 import {
   queryNearestChunks,
@@ -60,8 +66,22 @@ export const toKnowledgeCitation = (hit: KnowledgeHit): KnowledgeCitation => ({
   licence: hit.licence,
 });
 
-export const defaultKnowledgeSearchPorts = (): KnowledgeSearchPorts => ({
-  embed: (query) => embedText(query, "query"),
+/** The query embedding goes through the disclosure ledger when Ollama is elsewhere (#140). */
+export const defaultKnowledgeSearchPorts = (
+  scope: SessionScope,
+): KnowledgeSearchPorts => ({
+  embed: (query) =>
+    embedText(
+      query,
+      "query",
+      queryEmbedPorts(defaultEmbedPorts(), {
+        actor: scope.actor,
+        sessionId: scope.sessionId,
+        synthetic: scope.mode === "synthetic",
+        purpose: "knowledge search",
+        record: recordDisclosure,
+      }),
+    ),
   search: (embedding, k, sources) =>
     queryNearestChunks(database(), embedding, k, sources),
   append,
@@ -111,7 +131,7 @@ const isLiteratureHit = (hit: KnowledgeSearchHit): hit is LiteratureHit =>
 export const runKnowledgeSearch = async (
   scope: SessionScope,
   input: GuidelineSearchInput,
-  ports: KnowledgeSearchPorts = defaultKnowledgeSearchPorts(),
+  ports: KnowledgeSearchPorts = defaultKnowledgeSearchPorts(scope),
   literatureSources: readonly string[] = [],
 ): Promise<KnowledgeSearchHit[]> => {
   let hits: KnowledgeSearchHit[] = [];

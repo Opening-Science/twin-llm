@@ -32,6 +32,10 @@ import {
 } from "@/features/wearables/sync-handler";
 import { createWhoopCallbackHandler } from "@/features/whoop/oauth-handlers";
 import { sealRecord } from "@/features/vault/vault-service";
+import {
+  disclosureAuditEvent,
+  type RecordDisclosure,
+} from "@/infrastructure/disclosure-ledger";
 import { auditPersonalRead } from "@/infrastructure/personal-read-audit";
 import { newDataKey, newKeyId, newRecoveryCode } from "@/infrastructure/vault-crypto";
 import { writeVaultRecord } from "@/infrastructure/vault-file";
@@ -205,10 +209,22 @@ const emptyStore: PersonalDataStore = {
   remove: async () => null,
 };
 
+/**
+ * The disclosure ledger (#140) over the recorder: its paired audit row is
+ * the row this table sees (the ledger row itself is tested in
+ * tests/disclosures).
+ */
+const ledger =
+  (record: Recorder): RecordDisclosure =>
+  async (disclosure, paired) => {
+    await record.append(paired ?? disclosureAuditEvent(disclosure));
+    return { seq: 1n, auditSeq: 1n };
+  };
+
 /** The sync route for one provider, with a fake sync and the recorder's append. */
 const syncRoute = (provider: WearableSyncProvider): Audited => ({
   kind: "audited",
-  tools: [`personal.read.sync-${provider}`],
+  tools: ["disclosure.vendor-sync", `personal.read.sync-${provider}`],
   call: (record) =>
     createWearableSyncHandler({
       provider,
@@ -216,6 +232,7 @@ const syncRoute = (provider: WearableSyncProvider): Audited => ({
       ...signedIn,
       sync: syncedSummary(record),
       auditPersonalRead: auditPersonalRead(record.append),
+      recordDisclosure: ledger(record),
       logError: () => undefined,
     })(new Request(`http://localhost/api/${provider}/sync`, { method: "POST" })),
 });
@@ -232,6 +249,7 @@ const callbackDeps = (record: Recorder) => ({
   exchangeAndPersistCode: async () => undefined,
   syncForUser: syncedSummary(record),
   auditPersonalRead: auditPersonalRead(record.append),
+  recordDisclosure: ledger(record),
   mayReadPersonal: () => unlockedInProcess,
   logError: () => undefined,
   logWarn: () => undefined,
@@ -422,6 +440,8 @@ const PERSONAL_READ_ROUTES: Readonly<Record<string, Entry>> = {
         actorId: signedIn.resolveActorId,
         recipientIsLocal: () => true,
         appendAudit: record.append,
+        recordDisclosure: ledger(record),
+        dataMode: () => "personal",
         today: () => "2026-10-28",
       })("thread-synthetic-1"),
   },
@@ -503,7 +523,11 @@ const PERSONAL_READ_ROUTES: Readonly<Record<string, Entry>> = {
   "GET /api/oura/callback": {
     whileLocked: OPEN_CALLBACK,
     kind: "audited",
-    tools: ["personal.read.sync-oura"],
+    tools: [
+      "disclosure.vendor-auth",
+      "disclosure.vendor-sync",
+      "personal.read.sync-oura",
+    ],
     call: (record) =>
       createOuraCallbackHandler({
         ouraEnv: () => ({ configured: true }),
@@ -520,6 +544,7 @@ const PERSONAL_READ_ROUTES: Readonly<Record<string, Entry>> = {
         persistOuraTokens: async () => undefined,
         syncOuraForUser: syncedSummary(record),
         auditPersonalRead: auditPersonalRead(record.append),
+        recordDisclosure: ledger(record),
         mayReadPersonal: () => unlockedInProcess,
         logError: () => undefined,
         logWarn: () => undefined,
@@ -531,7 +556,11 @@ const PERSONAL_READ_ROUTES: Readonly<Record<string, Entry>> = {
   "GET /api/whoop/callback": {
     whileLocked: OPEN_CALLBACK,
     kind: "audited",
-    tools: ["personal.read.sync-whoop"],
+    tools: [
+      "disclosure.vendor-auth",
+      "disclosure.vendor-sync",
+      "personal.read.sync-whoop",
+    ],
     call: (record) =>
       createWhoopCallbackHandler(callbackDeps(record))(callbackRequest("whoop")),
   },
@@ -545,7 +574,11 @@ const PERSONAL_READ_ROUTES: Readonly<Record<string, Entry>> = {
   "GET /api/google-health/callback": {
     whileLocked: OPEN_CALLBACK,
     kind: "audited",
-    tools: ["personal.read.sync-google-health"],
+    tools: [
+      "disclosure.vendor-auth",
+      "disclosure.vendor-sync",
+      "personal.read.sync-google-health",
+    ],
     call: (record) =>
       createGoogleHealthCallbackHandler(callbackDeps(record))(
         callbackRequest("google-health"),
@@ -750,9 +783,11 @@ describe("every personal read route writes its audit rows", () => {
     for (const [, entry] of syncs) {
       const record = recorder();
       await entry.call(record);
-      expect(record.rows.map((row) => row.rowCount)).toEqual([SYNC_METRICS.length]);
+      const reads = record.rows.filter((row) => row.tool.startsWith("personal.read."));
+      expect(reads.map((row) => row.rowCount)).toEqual([SYNC_METRICS.length]);
       expect(JSON.stringify(record.rows)).not.toContain("synthetic.metric");
-      expect(record.events).toEqual(["row", "save"]);
+      // The disclosure rows (#140) come before the fetch; the read row before the save.
+      expect(record.events.slice(-2)).toEqual(["row", "save"]);
     }
   });
 
@@ -1023,7 +1058,12 @@ describe("locked personal data (#142)", () => {
       for (const [route, entry] of callbacks) {
         const record = recorder();
         await entry.call(record);
-        expect([route, record.rows, record.events]).toEqual([route, [], []]);
+        // Only the code exchange, which happens locked too, is in the ledger (#140).
+        expect([route, record.rows.map((row) => row.tool), record.events]).toEqual([
+          route,
+          ["disclosure.vendor-auth"],
+          ["row"],
+        ]);
       }
     } finally {
       unlockedInProcess = true;

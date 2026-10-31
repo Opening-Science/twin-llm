@@ -39,6 +39,7 @@ export const POST = withUnlocked(
         return catalog ? defaultModelSelection(catalog) : null;
       },
       resolveModel: resolveLanguageModel,
+      dataMode: () => serverEnv().DATA_MODE,
       recordSend: async ({ actor, modelId, hasWearableNarrative }) => {
         const env = serverEnv();
         const event = personalDataSentEvent(

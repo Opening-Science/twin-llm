@@ -20,6 +20,9 @@ export const createGuidelineTools = (
       GUIDELINE_ATTRIBUTION_LINE,
     inputSchema: guidelineSearchInput,
     execute: async (input) =>
-      runGuidelineSearch(scope, input, { ...defaultGuidelineSearchPorts(), ...ports }),
+      runGuidelineSearch(scope, input, {
+        ...defaultGuidelineSearchPorts(scope),
+        ...ports,
+      }),
   }),
 });

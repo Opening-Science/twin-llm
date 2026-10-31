@@ -204,6 +204,15 @@ export const PERSONAL_TABLES: readonly PersonalTable[] = [
     owner: ownerByUserId("userId"),
     sealed: ["interest"],
   },
+  {
+    // The disclosure ledger (#140) is keyed by the actor, like the audit log.
+    // Synthetic rows reference synthetic values and stay plain.
+    table: "disclosure_events",
+    idColumn: "id",
+    owner: `(SELECT u."id" FROM "users" u WHERE u."clerkId" = "disclosure_events"."actor")`,
+    scope: `"synthetic" = false`,
+    sealed: ["refs"],
+  },
 ];
 
 export const personalTable = (table: string): PersonalTable => {

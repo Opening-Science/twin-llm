@@ -8,6 +8,7 @@ import {
   permitNoteDraft,
   type TwinNoteFields,
 } from "@/infrastructure/twin-notes";
+import { CATEGORY, type ModelDisclosure } from "@/infrastructure/disclosure-ledger";
 import type { AppendInput } from "@/packages/audit/append";
 
 import {
@@ -35,6 +36,11 @@ import {
  *
  * A model that fails or replies with something other than the JSON asked
  * for still gives a draft: the person's own questions as topics.
+ *
+ * The model gets `noteDraftDisclosure`: a model that is not on this machine
+ * writes each request to the disclosure ledger (#140) before it is sent, and
+ * a request that cannot be recorded is not sent (the draft then falls back
+ * like any other model failure).
  */
 
 export type DraftModel = Readonly<{
@@ -50,8 +56,11 @@ export type CompactDeps = Readonly<{
   /** True when the thread used a genome or imported-data tool. */
   threadIsLocal: (thread: CompactThread) => Promise<boolean>;
   turn: () => NoteTurn;
-  /** The thread's model as the catalog offers it now, or null. */
-  draftModel: (source: DraftSource) => Promise<DraftModel | null>;
+  /** The thread's model as the catalog offers it now, sending through the ledger, or null. */
+  draftModel: (
+    source: DraftSource,
+    disclosure: ModelDisclosure,
+  ) => Promise<DraftModel | null>;
   /** The provider audit row for this request, or null when it needs none. */
   providerEvent: (
     actor: string,
@@ -84,6 +93,21 @@ const bodySchema = z.object({ threadId: z.string().min(1).max(64) });
 const refuse = (status: number, error: string): Response =>
   Response.json({ error }, { status, headers: { "Cache-Control": "no-store" } });
 
+/** What a draft request carries: the thread's questions and answers, no stored values. */
+export const noteDraftDisclosure = (
+  actor: string,
+  threadId: string,
+  mode: NoteTurn["mode"],
+): ModelDisclosure => ({
+  actor,
+  sessionId: threadId,
+  threadId,
+  purpose: "note draft",
+  categories: [CATEGORY.question, CATEGORY.answers],
+  refs: [],
+  synthetic: mode === "synthetic",
+});
+
 const errorName = (error: unknown): string =>
   error instanceof Error ? error.name : "unknown";
 
@@ -105,7 +129,10 @@ export const createCompactHandler =
     const permit = permitNoteDraft(facts, turn);
     if (!permit.ok) return refuse(403, permit.sentence);
 
-    const model = await deps.draftModel(source);
+    const model = await deps.draftModel(
+      source,
+      noteDraftDisclosure(actor, thread.id, turn.mode),
+    );
     if (model === null) return refuse(400, COMPACT_COPY.modelGone);
 
     try {

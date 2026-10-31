@@ -1,5 +1,8 @@
 import "server-only";
 
+import { dataMode } from "./data-mode";
+import { telemetryDisclosure } from "./disclosure-ledger";
+import { recordDisclosure } from "./disclosure-ledger-runtime";
 import { posthogServer } from "./posthog";
 
 /**
@@ -10,6 +13,9 @@ import { posthogServer } from "./posthog";
  *
  * Every function is a no-op without a PostHog key. The sink is a parameter so
  * tests can collect events without a client.
+ *
+ * Each event is written to the disclosure ledger (#140) before it is
+ * captured; an event whose row cannot be written is dropped.
  */
 export type FunnelEvent = Readonly<{
   distinctId: string;
@@ -23,8 +29,22 @@ const liveSink = (): FunnelSink | null => {
   const client = posthogServer();
   return client === null
     ? null
-    : ({ distinctId, event, properties }) =>
-        client.capture({ distinctId, event, properties: { ...properties } });
+    : ({ distinctId, event, properties }) => {
+        void recordDisclosure(
+          telemetryDisclosure({
+            distinctId,
+            event,
+            synthetic: dataMode() === "synthetic",
+          }),
+        ).then(
+          () => client.capture({ distinctId, event, properties: { ...properties } }),
+          (error: unknown) =>
+            console.error(
+              "[analytics] event dropped: the disclosure ledger could not be written",
+              error instanceof Error ? error.name : "unknown",
+            ),
+        );
+      };
 };
 
 const emit = (event: FunnelEvent, sink: FunnelSink | null): void => {

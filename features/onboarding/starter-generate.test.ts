@@ -1,14 +1,43 @@
 import { describe, expect, test } from "bun:test";
 
-import { createStarterGenerate } from "./starter-generate";
+import { createStarterGenerate, starterDisclosure } from "./starter-generate";
 import { createStarterQuestionsHandler } from "./starter-handler";
 
 const call = { system: "sys", prompt: "p", abortSignal: new AbortController().signal };
 
 describe("createStarterGenerate", () => {
+  test("the model is resolved with what the request carries, for the disclosure ledger (#140)", async () => {
+    const seen: unknown[] = [];
+    const generate = createStarterGenerate({
+      dataMode: () => "personal",
+      loadModelIds: async () => ["swiss-ai/Apertus-8B-Instruct-2509"],
+      resolveModel: (modelId, options) => {
+        seen.push(options.disclosure);
+        return modelId;
+      },
+      recordSend: async () => undefined,
+      generateText: async () => ({ text: "ok" }),
+    });
+    await generate(false, "user_synthetic_1")(call);
+    expect(seen).toEqual([
+      {
+        actor: "user_synthetic_1",
+        sessionId: "user_synthetic_1",
+        threadId: null,
+        purpose: "starter questions",
+        categories: ["onboarding answers"],
+        refs: [],
+        synthetic: false,
+      },
+    ]);
+    expect(starterDisclosure("local", "synthetic", false).synthetic).toBe(true);
+    expect(starterDisclosure("local", "synthetic", true).synthetic).toBe(false);
+  });
+
   test("passes hasLinkedData to the provider policy and uses the first model", async () => {
     const resolved: string[] = [];
     const generate = createStarterGenerate({
+      dataMode: () => "synthetic",
       loadModelIds: async () => ["qwen3:8b", "gemma3:4b"],
       resolveModel: (modelId, { hasWearableNarrative }) => {
         resolved.push(`${modelId} ${String(hasWearableNarrative)}`);
@@ -27,6 +56,7 @@ describe("createStarterGenerate", () => {
   test("records the send after the provider policy and before the model call", async () => {
     const steps: string[] = [];
     const generate = createStarterGenerate({
+      dataMode: () => "synthetic",
       loadModelIds: async () => ["swiss-ai/Apertus-8B-Instruct-2509"],
       resolveModel: (modelId) => {
         steps.push("resolve");
@@ -53,6 +83,7 @@ describe("createStarterGenerate", () => {
   test("a refused provider is never audited and never called", async () => {
     const steps: string[] = [];
     const generate = createStarterGenerate({
+      dataMode: () => "synthetic",
       loadModelIds: async () => ["synthetic-model"],
       resolveModel: (): string => {
         throw new Error("PROVIDER_NOT_PERMITTED_FOR_DATA_MODE");
@@ -73,6 +104,7 @@ describe("createStarterGenerate", () => {
 
   test("no catalog is an error, which the starter step turns into fixed starters", async () => {
     const generate = createStarterGenerate({
+      dataMode: () => "synthetic",
       loadModelIds: async () => null,
       resolveModel: () => "never",
       recordSend: async () => undefined,
@@ -93,6 +125,7 @@ describe("starter questions with a failed audit write", () => {
       findAppUserId: async () => "app-user-synthetic-1",
       loadLinkedNames: async () => ["Whoop"],
       generate: createStarterGenerate({
+        dataMode: () => "synthetic",
         loadModelIds: async () => ["swiss-ai/Apertus-8B-Instruct-2509"],
         resolveModel: (modelId) => modelId,
         recordSend: async ({ actor }) => {

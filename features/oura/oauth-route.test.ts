@@ -77,6 +77,7 @@ const callbackDeps = (): OuraCallbackDeps => ({
   persistOuraTokens: async () => {},
   syncOuraForUser: async () => ({ synced: { metrics: [] }, save: async () => undefined }),
   auditPersonalRead: async () => undefined,
+  recordDisclosure: async () => ({ seq: 1n, auditSeq: 1n }),
   mayReadPersonal: () => true,
   logError: (message, errorName) => {
     logged.push([message, errorName]);
@@ -141,6 +142,56 @@ describe("GET /api/oura/callback", () => {
     );
     expect(exchangeCalls).toBe(1);
     expect(jar.store.has(OURA_OAUTH_STATE_COOKIE)).toBe(false);
+  });
+
+  test("the code exchange and the first sync are in the disclosure ledger first (#140)", async () => {
+    jar.store.clear();
+    exchangeCalls = 0;
+    jar.set(OURA_OAUTH_STATE_COOKIE, MATCH_STATE, {
+      httpOnly: true,
+      secure: false,
+      sameSite: "lax",
+      maxAge: 600,
+      path: "/",
+    });
+    const order: string[] = [];
+    const res = await createOuraCallbackHandler({
+      ...callbackDeps(),
+      recordDisclosure: async (disclosure) => {
+        order.push(`ledger ${disclosure.kind}`);
+        return { seq: 1n, auditSeq: 1n };
+      },
+      createTokenHandlerFromCode: async () => {
+        order.push("exchange");
+        return { lastTokens: () => null };
+      },
+    })(callbackRequest(`code=${SYNTHETIC_CODE}&state=${MATCH_STATE}`));
+    expect(order).toEqual(["ledger vendor-auth", "exchange"]);
+    expect(new URL(res.headers.get("location") ?? "").searchParams.get("oura")).toBe(
+      "error",
+    );
+  });
+
+  test("when the ledger cannot be written the code is never exchanged", async () => {
+    jar.store.clear();
+    exchangeCalls = 0;
+    jar.set(OURA_OAUTH_STATE_COOKIE, MATCH_STATE, {
+      httpOnly: true,
+      secure: false,
+      sameSite: "lax",
+      maxAge: 600,
+      path: "/",
+    });
+    const res = await createOuraCallbackHandler({
+      ...callbackDeps(),
+      recordDisclosure: async () => {
+        throw new Error("ledger down");
+      },
+    })(callbackRequest(`code=${SYNTHETIC_CODE}&state=${MATCH_STATE}`));
+    expect(exchangeCalls).toBe(0);
+    expect(new URL(res.headers.get("location") ?? "").searchParams.get("oura")).toBe(
+      "error",
+    );
   });
 
   const seedCookie = () => {

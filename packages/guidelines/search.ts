@@ -3,12 +3,13 @@ import "server-only";
 import { Prisma } from "@/generated/prisma/client";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { database } from "@/infrastructure/database";
+import { recordDisclosure } from "@/infrastructure/disclosure-ledger-runtime";
 import { append } from "@/packages/audit/append";
 import type { SessionScope } from "@/packages/query-tools/scope";
 
 import { recordGuidelineTurn, type GuidelineCitation } from "./collector";
 import { GUIDELINE_AUDIT_TOOL, GUIDELINE_SOURCE } from "./constants";
-import { embedText, type EmbedPorts } from "./embed";
+import { defaultEmbedPorts, embedText, type EmbedPorts, queryEmbedPorts } from "./embed";
 import type { GuidelineSearchInput } from "./input";
 
 export type GuidelineJoinedRow = {
@@ -157,8 +158,22 @@ export const toGuidelineCitation = (hit: GuidelineHit): GuidelineCitation => ({
   page: hit.page,
 });
 
-export const defaultGuidelineSearchPorts = (): GuidelineSearchPorts => ({
-  embed: (query) => embedText(query, "query"),
+/** The query embedding goes through the disclosure ledger when Ollama is elsewhere (#140). */
+export const defaultGuidelineSearchPorts = (
+  scope: SessionScope,
+): GuidelineSearchPorts => ({
+  embed: (query) =>
+    embedText(
+      query,
+      "query",
+      queryEmbedPorts(defaultEmbedPorts(), {
+        actor: scope.actor,
+        sessionId: scope.sessionId,
+        synthetic: scope.mode === "synthetic",
+        purpose: "guideline search",
+        record: recordDisclosure,
+      }),
+    ),
   search: (embedding, k) =>
     queryNearestChunks(database(), embedding, k, GUIDELINE_SOURCE),
   append,
@@ -172,7 +187,7 @@ const errorResult = (error: unknown): { readonly error: string } => ({
 export const runGuidelineSearch = async (
   scope: SessionScope,
   input: GuidelineSearchInput,
-  ports: GuidelineSearchPorts = defaultGuidelineSearchPorts(),
+  ports: GuidelineSearchPorts = defaultGuidelineSearchPorts(scope),
 ): Promise<GuidelineHit[]> => {
   let hits: GuidelineHit[] = [];
   let result: unknown = [];
