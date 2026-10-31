@@ -844,8 +844,11 @@ model DisclosureEvent {
   threadId        String?  @map("thread_id")
   /// True when the request carried synthetic data only.
   synthetic       Boolean
-  /// False until the #112 matcher checks free text for stored values.
+  /// True when the request's free text was checked for stored values (#346).
   freeTextChecked Boolean  @map("free_text_checked")
+  /// What the check found: `[{ kind, count }]`, never a value; null when it
+  /// did not run. In the hash only when set.
+  freeTextMatches Json?    @map("free_text_matches")
   /// Sealed JSON list of `{ category, key }`; null when there are none.
   refs            String?
   /// The `seq` of the audit row written in the same transaction.
