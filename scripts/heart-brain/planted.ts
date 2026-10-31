@@ -25,8 +25,8 @@
  *   path (13% of men, 6% of women). Heart failure
  *   and coronary disease only change the device, not the onset.
  */
-import { type Topic } from "./codes";
-import { type RateRatio } from "./poisson";
+import { type Topic } from "../../packages/query-tools/event-rates/codes";
+import { type Recovered } from "../../packages/query-tools/event-rates/verdict";
 
 export type Planted = "direct" | "indirect" | "none";
 
@@ -125,15 +125,6 @@ export const PLANTED_RULES: readonly PlantedRule[] = [
     source: "sleep_apnea.json onset depends on sex only; AF risk does not read it",
   },
 ];
-
-export type Recovered = "raised" | "lowered" | "no clear difference" | "too few events";
-
-export const recoveredOf = (ratio: RateRatio): Recovered => {
-  if (ratio === null) return "too few events";
-  if (ratio.ci.low > 1) return "raised";
-  if (ratio.ci.high < 1) return "lowered";
-  return "no clear difference";
-};
 
 export type Agreement =
   | "recovered"

@@ -233,6 +233,64 @@ describe("buildTwinSystemPrompt data mode", () => {
   });
 });
 
+describe("buildTwinSystemPrompt pasted data (eval context arm, #302)", () => {
+  test("no tool lines, the rows in a delimited block after the wearables", async () => {
+    const { buildTwinSystemPrompt } = await import("./twin-system-prompt");
+    const block = "<data>\n[1] trend(loinc=4548-4)\nn=3\n</data>";
+    const prompt = buildTwinSystemPrompt({
+      ...noWearables,
+      mode: "synthetic",
+      offeredTools: new Set<string>(),
+      pastedData: block,
+    });
+    expect(prompt).toContain("- This turn has no tools.");
+    expect(prompt).not.toContain("list_subjects");
+    expect(prompt).not.toContain("cohort record tools are turned off");
+    expect(prompt).toContain(
+      `## Data block (read on the server for this question)\n${block}`,
+    );
+    expect(prompt.indexOf("## Data block")).toBeGreaterThan(
+      prompt.indexOf("## Wearable context (BodyLoop)"),
+    );
+  });
+
+  test("the fair arm (#320) says the block is the subject's record, not chosen for the question", async () => {
+    const { buildTwinSystemPrompt } = await import("./twin-system-prompt");
+    const block = "<data>\nsubject_ref=s: 1 observation codes\n</data>";
+    const base = {
+      ...noWearables,
+      mode: "synthetic" as const,
+      offeredTools: new Set<string>(),
+      pastedData: block,
+    };
+    const fair = buildTwinSystemPrompt({ ...base, pastedDataSource: "subject-record" });
+    expect(fair).toContain(
+      "The server read the record of the subject the question names",
+    );
+    expect(fair).toContain("It was not chosen for this question");
+    expect(fair).not.toContain("with TwinLLM's query tools");
+    expect(fair).toContain(
+      `## Data block (read on the server for this question)\n${block}`,
+    );
+    // Left out, the oracle wording of #302, unchanged.
+    expect(buildTwinSystemPrompt({ ...base, pastedDataSource: "key-calls" })).toBe(
+      buildTwinSystemPrompt(base),
+    );
+  });
+
+  test("left out or in personal mode, the prompt is as before", async () => {
+    const { buildTwinSystemPrompt } = await import("./twin-system-prompt");
+    const synthetic = { ...noWearables, mode: "synthetic" as const };
+    expect(buildTwinSystemPrompt({ ...synthetic, pastedData: null })).toBe(
+      buildTwinSystemPrompt(synthetic),
+    );
+    const personal = { ...noWearables, mode: "personal" as const };
+    expect(buildTwinSystemPrompt({ ...personal, pastedData: "<data></data>" })).toBe(
+      buildTwinSystemPrompt(personal),
+    );
+  });
+});
+
 describe("buildTwinSystemPrompt agent line (#218)", () => {
   const base = {
     mode: "synthetic",
@@ -264,5 +322,24 @@ describe("buildTwinSystemPrompt agent line (#218)", () => {
     expect(buildTwinSystemPrompt({ ...base, agent: null })).toBe(
       buildTwinSystemPrompt(base),
     );
+  });
+});
+
+describe("buildTwinSystemPrompt decline line (#274)", () => {
+  const base = {
+    mode: "synthetic",
+    oura: null,
+    whoop: null,
+    googleHealth: null,
+    vitronic: null,
+  } as const;
+
+  test("left out, DECLINE_RULE; given, that line in its place and nothing else changes", async () => {
+    const { buildTwinSystemPrompt, DECLINE_RULE } = await import("./twin-system-prompt");
+    const product = buildTwinSystemPrompt(base);
+    expect(product).toContain(DECLINE_RULE);
+    const other = buildTwinSystemPrompt({ ...base, declineRule: "REFUSE: test line." });
+    expect(other).not.toContain(DECLINE_RULE);
+    expect(other.replace("REFUSE: test line.", DECLINE_RULE)).toBe(product);
   });
 });

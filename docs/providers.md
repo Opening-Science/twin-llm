@@ -107,6 +107,12 @@ The first-run starter questions go to the same provider, through the same `permi
 - `fhirBundle` JSON (stays on the configured store)
 - Raw vendor API bodies
 - Cookie and state values
+- Genotypes. The Ark report tools need `GENOME_SOURCE=ark`, a local Carbon-X and
+  Ollama on loopback. `genome_variants` over an imported VCF (#330) needs only
+  `DATA_MODE=personal` and `LLM_PROVIDER=ollama` with `OLLAMA_BASE_URL` on
+  loopback (`permitVcfVariantsRequest`). Every hosted provider is refused for
+  both, the consented Exoscale pilot included, and so is Ollama on another
+  machine. See [genome.md](genome.md#imported-vcf).
 
 Chat injects only the summary narrative and `whoop.*` / Oura / Google Health citation keys.
 

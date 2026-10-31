@@ -126,6 +126,25 @@ describe("runBenchmark", () => {
     expect(realNoiseWindowsCsv(again)).toBe(realNoiseWindowsCsv(data));
   });
 
+  test("the database is named in the result and the report", () => {
+    expect(runBenchmark(INPUTS).result.real?.databaseId).toBe("afdb");
+    const lt = runBenchmark({
+      ...INPUTS,
+      afdb: {
+        database: "ltafdb",
+        records: [{ ...fakeRecord("r1", 31), beatAnnotator: "atr", samplingHz: 128 }],
+        sha256SumsFile: null,
+      },
+    }).result;
+    expect(lt.real?.database).toBe("Long-Term AF Database 1.0.0 (PhysioNet)");
+    expect(markdownReport(lt, "t")).toContain(
+      "## Open recordings: Long-Term AF Database 1.0.0 (PhysioNet)",
+    );
+    expect(markdownReport(lt, "t")).toContain(
+      "Reference rhythm and beats from the .atr files",
+    );
+  });
+
   test("without the database the real part is null", () => {
     const { result, realRows } = runBenchmark({ ...INPUTS, afdb: null });
     expect(result.real).toBe(null);

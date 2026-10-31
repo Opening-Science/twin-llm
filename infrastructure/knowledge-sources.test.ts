@@ -45,6 +45,7 @@ describe("knowledge source preferences", () => {
   test("disabled sources map to their tool names", () => {
     expect([...disabledToolNames(["cohort-analytics", "gbd"])].sort()).toEqual([
       "baseline_deviation",
+      "cohort_event_rates",
       "cohort_position",
       "compare_windows",
       "convert_unit",
@@ -115,6 +116,7 @@ describe("knowledge source preferences", () => {
     ).toEqual(["cohort-analytics"]);
     expect([...disabledToolNames(["cohort-records"])].sort()).toEqual([
       "baseline_deviation",
+      "cohort_event_rates",
       "cohort_position",
       "compare_windows",
       "conditions_timeline",

@@ -18,7 +18,7 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { parseArgs } from "./args";
-import { toPerson } from "./cohort";
+import { toPerson } from "./to-person";
 import { metaFile, peopleFile, readPeople } from "./people-files";
 import { type BundleFacts, bundleFacts } from "./person-facts";
 import { type BatchRun, buildSummary, renderReport, type Summary } from "./report";

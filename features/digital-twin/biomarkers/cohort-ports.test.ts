@@ -23,6 +23,7 @@ describe("Demo cohorts", () => {
       "synthea-v4-seed9001",
       "synthea-v4-seed42-10k",
       "synthea-v4-s7",
+      "synthea-v4-1m-af",
       ...SYNTHEA_1M_COHORTS,
     ]);
   });

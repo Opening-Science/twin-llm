@@ -53,6 +53,7 @@ describe("source availability", () => {
         knowledgeDocuments: 5,
         gbdConfigured: false,
         genomeChat: false,
+        vcfChat: false,
         importedChat: false,
       }),
     ).toEqual({
@@ -63,7 +64,7 @@ describe("source availability", () => {
       "wearable-analytics": { available: true, note: null },
       gbd: { available: false, note: "Pending IHME's OK" },
       "ark-genome": { available: false, note: "Needs Ark and local Carbon-X" },
-      "vcf-variants": { available: false, note: "Needs Ark and local Carbon-X" },
+      "vcf-variants": { available: false, note: "Personal mode and a local model only" },
       "imported-data": { available: false, note: "Personal mode and a local model only" },
     });
   });
@@ -75,6 +76,7 @@ describe("source availability", () => {
       knowledgeDocuments: 5,
       gbdConfigured: true,
       genomeChat: false,
+      vcfChat: false,
       importedChat: false,
     });
     expect(
@@ -91,10 +93,28 @@ describe("source availability", () => {
       knowledgeDocuments: 0,
       gbdConfigured: false,
       genomeChat: true,
+      vcfChat: true,
       importedChat: true,
     });
     expect(all["ark-genome"]).toEqual({ available: true, note: null });
     expect(all["vcf-variants"]).toEqual({ available: true, note: null });
     expect(all["imported-data"]).toEqual({ available: true, note: null });
+  });
+
+  test("an imported VCF with a local model needs no Ark or Carbon-X (#330)", () => {
+    const all = sourceAvailability({
+      dataMode: "personal",
+      guidelineDocuments: 0,
+      knowledgeDocuments: 0,
+      gbdConfigured: false,
+      genomeChat: false,
+      vcfChat: true,
+      importedChat: true,
+    });
+    expect(all["ark-genome"]).toEqual({
+      available: false,
+      note: "Needs Ark and local Carbon-X",
+    });
+    expect(all["vcf-variants"]).toEqual({ available: true, note: null });
   });
 });

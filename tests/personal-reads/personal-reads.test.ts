@@ -373,6 +373,7 @@ const PERSONAL_READ_ROUTES: Readonly<Record<string, Entry>> = {
         today: () => "2026-10-28",
       })("thread-synthetic-1"),
   },
+  "DELETE /api/threads/[threadId]": { kind: "exempt", why: WRITE },
   "POST /api/memory/compact": {
     kind: "audited",
     tools: ["memory.note.draft"],

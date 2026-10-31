@@ -156,10 +156,15 @@ doctor, or is in danger, or which dose or medicine change fits them
 offers to describe the recorded values instead. The rule holds even when a tool
 could read the data, so "does this recording show atrial fibrillation" is
 declined, while "does this recording have a window past the research
-threshold" asks what the recording holds and is answered as usual. In the
-reruns after #274 (`docs/research/eval-runs-2026-10.md`) this wording also made
-qwen3:8b decline some record and guideline questions; a narrower wording lost
-most of the gain on declines and was not kept.
+threshold" asks what the recording holds and is answered as usual. The line
+also says what is answered with the tools and the headings: what a record or
+recording lists, when something was recorded, or what a metric's value is.
+This is wording W3, the chat default since #329. It was chosen on the held-out
+S7h set over the first wording (W1, which made qwen3:8b decline some record
+and guideline questions) and a narrower one (W2, which missed most declines);
+see `docs/research/eval-runs-2026-10.md`, "Choosing the decline wording on
+S7h". `bun run eval -- --decline-wording w1` still runs the earlier line for a
+comparison.
 `classifyCompletion`
 (`infrastructure/classify-completion.ts`) reads a leading `REFUSE` (after
 whitespace and an optional `**` or `_`, followed by `:`, whitespace, `*`, `_`
