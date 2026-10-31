@@ -19,7 +19,8 @@ import {
  * secret is sealed with the owner's vault key (#341), so while their vault is
  * locked it is not opened: the upload is refused with 423 and a
  * `vault.locked.skip.bodyloop-upload` row says why, as a scheduled task skips
- * (#54). Checking the vault does not count as use.
+ * (#54), at most once per connection per 10 minutes. An unknown connection id
+ * gets 401 and no row. Checking the vault does not count as use.
  */
 type UploadRouteContext = {
   readonly params: Promise<unknown>;
@@ -35,6 +36,8 @@ export type VitronicUploadDeps = {
   /** The upload secret, opened with the owner's keys; throws while locked. */
   readonly openUploadSecret: (connection: UploadConnection) => Promise<string>;
   readonly appendAudit: (input: AppendInput) => Promise<unknown>;
+  /** True when a locked-skip row may be written for this connection now (`skip-throttle.ts`). */
+  readonly mayAuditSkip: (connectionId: string) => boolean;
   /** Receives the error name only, never the error object. */
   readonly logError: (message: string, errorName: string) => void;
 };
@@ -95,6 +98,9 @@ export const createVitronicUploadHandler = (deps: VitronicUploadDeps) => {
     }
 
     const skipLocked = async () => {
+      if (!deps.mayAuditSkip(connection.id)) {
+        return NextResponse.json({ error: LOCKED_MESSAGE }, { status: 423 });
+      }
       await deps
         .appendAudit(lockedSkipEvent(connection.actorId, "bodyloop-upload"))
         .catch((error: unknown) => {

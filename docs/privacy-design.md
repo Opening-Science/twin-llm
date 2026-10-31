@@ -419,7 +419,9 @@ async per call and slower for 200,000 rows.
   `vault:migrate` seals rows from before #341 without needing the env keys. Nothing opens
   or stores a token while the owner's vault is locked: an OAuth return skips (2.2), and
   the BodyLoop scanner's upload, which comes with no browser, answers 423 and writes a
-  `vault.locked.skip.bodyloop-upload` row without opening its secret, as a scheduled task
+  `vault.locked.skip.bodyloop-upload` row without opening its secret (at most one per
+  connection per 10 minutes, kept in memory; an unknown connection id gets 401 and no
+  row), as a scheduled task
   skips (#54). Checking the vault does not count as use. Synthetic installs keep the
   env-key ciphertext as it was. _Changed from the first draft_, which left tokens under
   their env keys because a callback can arrive while locked.
