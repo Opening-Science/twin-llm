@@ -67,6 +67,7 @@
     "heart-brain:timing": "bun scripts/heart-brain/timing-run.ts",
     "heart-brain:wearables": "bun scripts/heart-brain/wearable-recovery-run.ts",
     "heart-brain:oracle": "bun scripts/heart-brain/oracle-run.ts",
+    "heart-brain:excess": "bun scripts/heart-brain/excess-run.ts",
     "genome:ingest": "bun scripts/genome-synth/ingest.ts",
     "genome:ingest:db": "bun --env-file=.env.training --preload ./features/chat/response/preload-server-only.mjs scripts/genome-synth/ingest.ts --to-db",
     "training:conversations": "bun --env-file=.env.training --preload ./features/chat/response/preload-server-only.mjs scripts/training-data/build-conversations.ts",
