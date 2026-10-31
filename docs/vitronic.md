@@ -30,7 +30,7 @@ allowlisted `markers/`, `heights/`, `distances/`, `crosssections/`, and `angles/
 ## Auth
 
 Per-user API token stored AES-256-GCM (`VITRONIC_TOKEN_ENCRYPTION_KEY`, 64 hex
-characters). Minting happens off-app (`bun scripts/vitronic/mint-token.ts`).
+characters), sealed again with the vault key in personal mode (#341). Minting happens off-app (`bun scripts/vitronic/mint-token.ts`).
 The BodyLoop password is never stored by the app. Host sends
 `Authorization: Bearer` on GET only. There is no resource-owner password grant
 in the app and no call to `/api/v2/authentification/token` from host trees.

@@ -255,9 +255,13 @@ Argon2id against the RFC 9106 vector and scrypt against the RFC 7914 vector.
   synthetic cohort explorer and the Digital Twin page (Demo bodies; its BodyLoop reads
   go through gated routes) stay open.
 - **OAuth callbacks.** A provider's redirect is cross-site, so the Strict cookie is not
-  sent. The callback is not behind the cookie gate: it stores the tokens (they keep their
-  own env keys, see 2.3) and runs the first sync only when the person's vault is open in
-  this process (`vaultOpenFor`); otherwise the person syncs after unlocking.
+  sent. The callback is not behind the cookie gate: it exchanges the code, stores the
+  tokens and runs the first sync only when the person's vault is open in this process
+  (`vaultOpenFor`). _Changed by #341:_ the tokens are sealed with the vault key (2.3), so a
+  return while locked exchanges nothing, stores nothing, writes a
+  `vault.locked.skip.connect-<provider>` audit row and lands on Connectors with "Your data
+  is locked, so Oura was not linked. Unlock it, then link Oura again." Before #341 it
+  stored the tokens under their env keys and skipped only the first sync.
 - **Chat and MCP.** In personal mode the chat route is gated as a whole, so no turn starts
   and no personal tool runs while locked. Passing the keys to the tool ports comes with
   #141, when the tools need them to decrypt. The MCP server already refuses the imported
@@ -307,7 +311,7 @@ person can still delete the data.
 without it must answer 423 when called locked (no passphrase set; set up but no cookie, a
 wrong cookie, or another person's cookie), and a route that reads personal data may only
 skip the gate with a stated reason (the three OAuth callbacks, whose locked return is
-tested to store and audit nothing). The same file lists every page, layout and server
+tested to exchange and store nothing and to write only its skip row). The same file lists every page, layout and server
 action as gated or open with a reason and fails on any it does not name. Pure tests for
 the RFC vectors, a fixed KEK for the default parameters, wrap and unwrap with a pinned
 output, wrong passphrase, other additional data, a changed byte, stored parameters and
@@ -404,10 +408,21 @@ async per call and slower for 200,000 rows.
   (public or synthetic). `audit_events` (hashes, ids and counts only; it must verify while
   locked). `user_skills` (instructions the person wrote, not records; listed so the choice
   is visible). `learning_consents` (#145: fixed choices, dates and a shipped sentence;
-  the consent gate must read it while locked). OAuth and BodyLoop tokens keep their own AES-256-GCM env keys
-  (`*_TOKEN_ENCRYPTION_KEY`); moving them under the vault is a later step, because an OAuth
-  callback can arrive while locked. Row counts, dates, which values are null and which rows
-  share a hashed value stay visible (section 1, out of scope).
+  the consent gate must read it while locked). Row counts, dates, which values are null
+  and which rows share a hashed value stay visible (section 1, out of scope).
+- **OAuth and BodyLoop tokens (#341).** `oura_`, `whoop_` and
+  `google_health_connections` (`accessTokenEnc`, `refreshTokenEnc`) and
+  `vitronic_connections` (`apiTokenEnc`, `uploadSecretEnc`) are in the registry like any
+  other personal column (`infrastructure/connector-tokens.ts`). Each value is the
+  provider's env-key ciphertext (`*_TOKEN_ENCRYPTION_KEY`, `features/*/token-crypto.ts`)
+  sealed again with the `field` subkey, so a copied row opens with neither key alone, and
+  `vault:migrate` seals rows from before #341 without needing the env keys. Nothing opens
+  or stores a token while the owner's vault is locked: an OAuth return skips (2.2), and
+  the BodyLoop scanner's upload, which comes with no browser, answers 423 and writes a
+  `vault.locked.skip.bodyloop-upload` row without opening its secret, as a scheduled task
+  skips (#54). Checking the vault does not count as use. Synthetic installs keep the
+  env-key ciphertext as it was. _Changed from the first draft_, which left tokens under
+  their env keys because a callback can arrive while locked.
 - **Queries.** Tools that filter by code, name, site or rsID use the keyed hashes and
   `effective_at`, then open the matching rows. `imported_datasets`' series list groups by
   `series_index` in SQL and opens one row per series to name it. Sorting by a sealed value
@@ -607,7 +622,7 @@ recipient.
 | --------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | `hosted-model`  | Each HTTP request to a model not on this machine: chat answers (every step of the tool loop), `/compact` drafts, starter questions | The provider (`exoscale`, `openrouter`, ...) and the model id     | Purpose, categories, the injected value references, the request's exact size                    |
 | `vendor-sync`   | An Oura, Whoop or Google Health sync (a token refresh happens inside it)                                                           | The vendor                                                        | Access token and date window; no health value is uploaded. Oura's sandbox is labelled synthetic |
-| `vendor-auth`   | The OAuth code exchange on the return from the vendor (recorded while locked too; it needs no key)                                 | The vendor                                                        | The authorization code                                                                          |
+| `vendor-auth`   | The OAuth code exchange on the return from the vendor (only while the vault is open, #341)                                         | The vendor                                                        | The authorization code                                                                          |
 | `export-file`   | A thread export (`/api/threads/<id>/export`, Markdown, FHIR or print), paired with its existing `thread.export` audit row          | `export file` and the format                                      | Categories and the file's size                                                                  |
 | `ark-release`   | A genome report released from the person's Ark, after it parses and before it is stored                                            | `this machine, from the Ark`; direction `received`                | The panel sites as references (rsIDs of the app's fixed panel, never a genotype)                |
 | `remote-tool`   | A question to the remote GBD server (synthetic requests only)                                                                      | `GBD server`                                                      | The question's size                                                                             |
@@ -793,7 +808,7 @@ recipient.
 | --------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | `hosted-model`  | Each HTTP request to a model not on this machine: chat answers (every step of the tool loop), `/compact` drafts, starter questions | The provider (`exoscale`, `openrouter`, ...) and the model id     | Purpose, categories, the injected value references, the request's exact size                    |
 | `vendor-sync`   | An Oura, Whoop or Google Health sync (a token refresh happens inside it)                                                           | The vendor                                                        | Access token and date window; no health value is uploaded. Oura's sandbox is labelled synthetic |
-| `vendor-auth`   | The OAuth code exchange on the return from the vendor (recorded while locked too; it needs no key)                                 | The vendor                                                        | The authorization code                                                                          |
+| `vendor-auth`   | The OAuth code exchange on the return from the vendor (only while the vault is open, #341)                                         | The vendor                                                        | The authorization code                                                                          |
 | `export-file`   | A thread export (`/api/threads/<id>/export`, Markdown, FHIR or print), paired with its existing `thread.export` audit row          | `export file` and the format                                      | Categories and the file's size                                                                  |
 | `ark-release`   | A genome report released from the person's Ark, after it parses and before it is stored                                            | `this machine, from the Ark`; direction `received`                | The panel sites as references (rsIDs of the app's fixed panel, never a genotype)                |
 | `remote-tool`   | A question to the remote GBD server (synthetic requests only)                                                                      | `GBD server`                                                      | The question's size                                                                             |

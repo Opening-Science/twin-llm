@@ -251,6 +251,7 @@ const callbackDeps = (record: Recorder) => ({
   auditPersonalRead: auditPersonalRead(record.append),
   recordDisclosure: ledger(record),
   mayReadPersonal: () => unlockedInProcess,
+  appendAudit: record.append,
   logError: () => undefined,
   logWarn: () => undefined,
 });
@@ -294,7 +295,7 @@ const OPEN_NOT_PERSONAL = "reads nothing personal";
 const OPEN_CONNECTION = "says only whether a service is linked";
 const OPEN_OAUTH = "starts or ends a link; stores or removes tokens only";
 const OPEN_CALLBACK =
-  "the provider's redirect carries no SameSite=Strict cookie; tokens are stored and the first sync runs only while the vault is open in this process (tested below)";
+  "the provider's redirect carries no SameSite=Strict cookie; the code is exchanged, tokens stored and the first sync run only while the vault is open in this process (tested below)";
 const OPEN_VAULT = "the unlock routes themselves";
 
 /** Route path and method → what it writes to the audit chain. */
@@ -546,6 +547,7 @@ const PERSONAL_READ_ROUTES: Readonly<Record<string, Entry>> = {
         auditPersonalRead: auditPersonalRead(record.append),
         recordDisclosure: ledger(record),
         mayReadPersonal: () => unlockedInProcess,
+        appendAudit: record.append,
         logError: () => undefined,
         logWarn: () => undefined,
       })(callbackRequest("oura")),
@@ -599,7 +601,8 @@ const PERSONAL_READ_ROUTES: Readonly<Record<string, Entry>> = {
   "POST /api/vitronic/upload/[connectionId]": {
     kind: "exempt",
     why: "a scanner's upload, checked against its own secret; it stores nothing yet (the shape is pending)",
-    whileLocked: "called by the scanner, not the browser, and stores nothing yet",
+    whileLocked:
+      "called by the scanner, not the browser; while locked it opens no secret, answers 423 and writes a vault.locked.skip row (#341)",
   },
   "GET /api/anatomy/status": {
     whileLocked: OPEN_NOT_PERSONAL,
@@ -1055,7 +1058,7 @@ describe("locked personal data (#142)", () => {
     ]);
   });
 
-  test("an OAuth return while locked stores no snapshot and writes no read row", async () => {
+  test("an OAuth return while locked exchanges nothing and writes only a skip row (#341)", async () => {
     const callbacks = audited.filter(([route]) => route.endsWith("/callback"));
     expect(callbacks.length).toBe(3);
     unlockedInProcess = false;
@@ -1063,10 +1066,11 @@ describe("locked personal data (#142)", () => {
       for (const [route, entry] of callbacks) {
         const record = recorder();
         await entry.call(record);
-        // Only the code exchange, which happens locked too, is in the ledger (#140).
+        // Tokens are sealed with the vault key, so nothing is exchanged or disclosed.
+        const step = route.split("/")[2] ?? "";
         expect([route, record.rows.map((row) => row.tool), record.events]).toEqual([
           route,
-          ["disclosure.vendor-auth"],
+          [`vault.locked.skip.connect-${step}`],
           ["row"],
         ]);
       }

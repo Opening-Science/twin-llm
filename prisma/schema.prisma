@@ -204,7 +204,8 @@ model ModelResponse {
 
 // ─── 3. Personal context ────────────────────────────────────────────────────
 
-/// Linked Oura account. Both tokens are encrypted at rest.
+/// Linked Oura account. Both tokens are encrypted at rest, and sealed
+/// with the vault key in personal mode (#341).
 model OuraConnection {
   id                   String   @id @default(cuid())
   userId               String   @unique
@@ -244,7 +245,8 @@ model OuraSnapshot {
   @@map("oura_snapshots")
 }
 
-/// Linked Whoop account. Both tokens are encrypted at rest.
+/// Linked Whoop account. Both tokens are encrypted at rest, and sealed
+/// with the vault key in personal mode (#341).
 model WhoopConnection {
   id                   String   @id @default(cuid())
   userId               String   @unique
@@ -280,7 +282,8 @@ model WhoopSnapshot {
   @@map("whoop_snapshots")
 }
 
-/// Linked Google Health (Fitbit) account. Both tokens are encrypted at rest.
+/// Linked Google Health (Fitbit) account. Both tokens are encrypted at rest, and sealed
+/// with the vault key in personal mode (#341).
 model GoogleHealthConnection {
   id                   String   @id @default(cuid())
   userId               String   @unique

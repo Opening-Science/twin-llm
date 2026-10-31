@@ -8,9 +8,11 @@ import {
 } from "@open-twin/provider-whoop";
 import type { Bundle } from "fhir/r4";
 
+import { openToken, sealToken } from "@/infrastructure/connector-tokens";
 import { database } from "@/infrastructure/database";
 import {
   type FieldCipher,
+  newRowId,
   openJson,
   sealJson,
   sealNullableJson,
@@ -33,6 +35,8 @@ import { decryptWhoopSecret, encryptWhoopSecret } from "./token-crypto";
 
 type WhoopTokenResponse = Awaited<ReturnType<typeof exchangeWhoopCode>>;
 
+const TABLE = "whoop_connections";
+
 export const whoopAppConfig = (): WhoopAppConfig | null => {
   const env = whoopEnv();
   if (!env) return null;
@@ -54,15 +58,34 @@ export const persistWhoopTokens = async (params: {
   readonly tokens: WhoopTokenResponse;
 }) => {
   const expiresAt = new Date(Date.now() + params.tokens.expires_in * 1000);
+  // Sealed with the owner's keys (#341); nothing is stored while locked.
+  const cipher = await cipherForUser(params.userId);
+  const existing = await database().whoopConnection.findUnique({
+    where: { userId: params.userId },
+    select: { id: true },
+  });
+  const id = existing?.id ?? newRowId();
   const data = {
-    accessTokenEnc: encryptWhoopSecret(params.tokens.access_token),
-    refreshTokenEnc: encryptWhoopSecret(params.tokens.refresh_token),
+    accessTokenEnc: sealToken(
+      cipher,
+      TABLE,
+      "accessTokenEnc",
+      id,
+      encryptWhoopSecret(params.tokens.access_token),
+    ),
+    refreshTokenEnc: sealToken(
+      cipher,
+      TABLE,
+      "refreshTokenEnc",
+      id,
+      encryptWhoopSecret(params.tokens.refresh_token),
+    ),
     accessTokenExpiresAt: expiresAt,
   };
 
   await database().whoopConnection.upsert({
     where: { userId: params.userId },
-    create: { userId: params.userId, ...data },
+    create: { id, userId: params.userId, ...data },
     update: data,
   });
 };
@@ -84,11 +107,17 @@ const loadAccessTokenForUser = async (userId: string): Promise<string | null> =>
   const connection = await database().whoopConnection.findUnique({ where: { userId } });
   if (!connection) return null;
 
-  const refreshToken = decryptWhoopSecret(connection.refreshTokenEnc);
+  // Tokens open only with the owner's unlocked vault (#341); locked, this throws.
+  const cipher = await cipherForUser(userId);
+  const open = (column: "accessTokenEnc" | "refreshTokenEnc") =>
+    decryptWhoopSecret(
+      openToken(cipher, TABLE, column, connection.id, connection[column]),
+    );
+  const refreshToken = open("refreshTokenEnc");
   const stillValid = connection.accessTokenExpiresAt.getTime() - Date.now() > 60_000;
 
   if (stillValid) {
-    return decryptWhoopSecret(connection.accessTokenEnc);
+    return open("accessTokenEnc");
   }
 
   const tokens = await refreshWhoopToken(refreshToken, config);

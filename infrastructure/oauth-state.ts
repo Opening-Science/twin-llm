@@ -13,6 +13,7 @@ export const CONNECTOR_RETURNS = [
   "denied",
   "error",
   "expired",
+  "locked",
   "signin",
   "unconfigured",
 ] as const;

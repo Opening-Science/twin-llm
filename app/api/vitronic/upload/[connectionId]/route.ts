@@ -1,10 +1,18 @@
-import { findConnectionForUpload } from "@/features/vitronic/connection";
+import {
+  findConnectionForUpload,
+  openUploadSecret,
+} from "@/features/vitronic/connection";
 import { createVitronicUploadHandler } from "@/features/vitronic/upload-handler";
-import { decryptVitronicSecret } from "@/features/vitronic/token-crypto";
+import { database } from "@/infrastructure/database";
 import { vitronicEnv } from "@/infrastructure/env";
+import { vaultOpenFor } from "@/infrastructure/vault-runtime";
+import { append } from "@/packages/audit/append";
 
 export const POST = createVitronicUploadHandler({
   vitronicEnv,
   findConnectionForUpload,
-  decryptVitronicSecret,
+  vaultOpen: vaultOpenFor,
+  openUploadSecret,
+  appendAudit: (input) => append(database(), input),
+  logError: console.error,
 });

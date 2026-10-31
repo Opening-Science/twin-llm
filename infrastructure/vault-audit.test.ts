@@ -1,6 +1,13 @@
 import { describe, expect, test } from "bun:test";
 
-import { VAULT_AUDIT_TOOLS, vaultAuditEvent, vaultCountsEvent } from "./vault-audit";
+import {
+  LOCKED_SKIP_STEPS,
+  lockedSkipEvent,
+  lockedSkipTool,
+  VAULT_AUDIT_TOOLS,
+  vaultAuditEvent,
+  vaultCountsEvent,
+} from "./vault-audit";
 
 describe("vault audit rows (#142)", () => {
   test("ids and counts only; the event is in the tool name", () => {
@@ -42,6 +49,24 @@ describe("vault audit rows (#142)", () => {
       args: { event: "migrate" },
       result: { counts: { threads: 2, turns: 3, meshFiles: 1 } },
       rowCount: 6,
+    });
+  });
+
+  test("a step skipped while locked names the step in the tool (#341)", () => {
+    expect(LOCKED_SKIP_STEPS.map(lockedSkipTool)).toEqual([
+      "vault.locked.skip.connect-oura",
+      "vault.locked.skip.connect-whoop",
+      "vault.locked.skip.connect-google-health",
+      "vault.locked.skip.bodyloop-upload",
+    ]);
+    expect(lockedSkipEvent("actor-a", "bodyloop-upload")).toEqual({
+      actor: "actor-a",
+      sessionId: "actor-a",
+      subjectRef: null,
+      tool: "vault.locked.skip.bodyloop-upload",
+      args: { step: "bodyloop-upload" },
+      result: { decision: "skipped: locked" },
+      rowCount: 0,
     });
   });
 });

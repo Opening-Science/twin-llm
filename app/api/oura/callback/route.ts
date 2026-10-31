@@ -28,6 +28,7 @@ export const GET = createOuraCallbackHandler({
   auditPersonalRead: auditPersonalRead((input) => append(database(), input)),
   recordDisclosure,
   mayReadPersonal: vaultOpenFor,
+  appendAudit: (input) => append(database(), input),
   logError: console.error,
   logWarn: console.warn,
 });

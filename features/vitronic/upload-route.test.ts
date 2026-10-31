@@ -10,13 +10,24 @@ const OTHER_CONNECTION_ID = "conn-synthetic-other";
 const KEY_EXTERNAL = "twin-synthetic-1";
 const SECRET = "upload-secret-synthetic";
 
-const uploadDeps = (): VitronicUploadDeps => ({
+const ACTOR = "actor-synthetic-1";
+
+const uploadDeps = (overrides: Partial<VitronicUploadDeps> = {}): VitronicUploadDeps => ({
   vitronicEnv: () => ({ encryptionKey: "synthetic", dataDir: null }),
   findConnectionForUpload: async (connectionId: string) => {
     if (connectionId !== CONNECTION_ID) return null;
-    return { id: CONNECTION_ID, uploadSecretEnc: "enc" };
+    return {
+      id: CONNECTION_ID,
+      userId: "user-synthetic-1",
+      actorId: ACTOR,
+      uploadSecretEnc: "enc",
+    };
   },
-  decryptVitronicSecret: () => SECRET,
+  vaultOpen: () => true,
+  openUploadSecret: async () => SECRET,
+  appendAudit: async () => undefined,
+  logError: () => undefined,
+  ...overrides,
 });
 
 type UploadPost = (
@@ -79,5 +90,62 @@ describe("POST /api/vitronic/upload/[connectionId]", () => {
     const body = (await res.json()) as { error: string };
     expect(body.error).toBe(CLOUD_CONNECT_SHAPE_PENDING);
     expect(JSON.stringify(body)).not.toContain(SECRET);
+  });
+
+  test("locked: the secret is not opened, 423, and a skip row says why (#341)", async () => {
+    const rows: unknown[] = [];
+    let opened = 0;
+    const POST = createVitronicUploadHandler(
+      uploadDeps({
+        vaultOpen: () => false,
+        openUploadSecret: async () => {
+          opened += 1;
+          return SECRET;
+        },
+        appendAudit: async (input) => {
+          rows.push(input);
+        },
+      }),
+    );
+    const res = await callPost(POST, CONNECTION_ID, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ auth: [KEY_EXTERNAL, SECRET] }),
+    });
+    expect(res.status).toBe(423);
+    expect(await res.json()).toEqual({
+      error: "Your data is locked. Unlock it to continue.",
+    });
+    expect(opened).toBe(0);
+    expect(rows).toEqual([
+      {
+        actor: ACTOR,
+        sessionId: ACTOR,
+        subjectRef: null,
+        tool: "vault.locked.skip.bodyloop-upload",
+        args: { step: "bodyloop-upload" },
+        result: { decision: "skipped: locked" },
+        rowCount: 0,
+      },
+    ]);
+  });
+
+  test("a vault that locks between the check and the read is a skip too", async () => {
+    const tools: string[] = [];
+    const POST = createVitronicUploadHandler(
+      uploadDeps({
+        openUploadSecret: async () => Promise.reject(new Error("locked")),
+        appendAudit: async (input) => {
+          tools.push(input.tool);
+        },
+      }),
+    );
+    const res = await callPost(POST, CONNECTION_ID, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ auth: [KEY_EXTERNAL, SECRET] }),
+    });
+    expect(res.status).toBe(423);
+    expect(tools).toEqual(["vault.locked.skip.bodyloop-upload"]);
   });
 });
