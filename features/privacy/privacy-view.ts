@@ -98,4 +98,6 @@ export const PRIVACY_COPY = {
   withdrawn: "Withdrawn. No future run may use your data for this.",
   notActive: "This consent was already withdrawn.",
   failed: "The change was not saved. Try again.",
+  withdrawHold: "Hold to withdraw consent",
+  withdrawing: "Withdrawing…",
 } as const;

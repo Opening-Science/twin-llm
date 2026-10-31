@@ -286,8 +286,10 @@ Argon2id against the RFC 9106 vector and scrypt against the RFC 7914 vector.
 **What the UI shows.** In personal mode, the first personal page shows "Set a passphrase"
 with the passphrase typed twice, then the recovery code with Copy and "I have saved my
 recovery code" before Continue. Locked pages show "Your data is locked" with the
-passphrase and "Forgot your passphrase?", which opens the recovery form. The foot of the
-sidebar shows Lock (unlocked) or Locked.
+passphrase and "Forgot your passphrase?", which opens the recovery form. Its button,
+"Hold to replace passphrase and recovery code", has to be pressed and held (#350), since
+the old passphrase and code stop working; Enter in a field does not submit it. The foot
+of the sidebar shows Lock (unlocked) or Locked.
 
 **Audit rows** (ids and counts only, `infrastructure/vault-audit.ts`). The event is in the
 tool name, because the chain keeps args only as a hash: `vault.setup`, `vault.unlock`,
@@ -549,7 +551,8 @@ scope, consent_ids }` in its manifest (`<out>.manifest.json`, `meta.json`), so i
 
 **What the UI shows.** Customize · Privacy, "Learning from your data": one card per use,
 Off by default, with the data it may read as checkboxes (none ticked) and Grant; once
-granted, "On since <date>", what it covers, the sentence agreed to, and Withdraw; earlier
+granted, "On since <date>", what it covers, the sentence agreed to, and "Hold to withdraw
+consent", pressed and held because a withdrawal cannot be taken back (#350); earlier
 grants that were withdrawn are listed under the card. It states that removing names or
 dates does not replace consent, that the person's own use needs none, and what
 withdrawing does and does not undo. Gated by the unlock like every personal page. In
