@@ -493,6 +493,12 @@ const serverEnvSchema = z
     ),
     XDG_DATA_HOME: maybeText(),
     VAULT_IDLE_LOCK_MINUTES: wholeNumberIn("VAULT_IDLE_LOCK_MINUTES", 1, 240, 15),
+    AUDIT_ANCHOR_INTERVAL_MINUTES: wholeNumberIn(
+      "AUDIT_ANCHOR_INTERVAL_MINUTES",
+      1,
+      1440,
+      10,
+    ),
   })
   .superRefine((env, ctx) => {
     const report: Report = ({ path, message }) =>
@@ -796,6 +802,20 @@ export const vaultEnv = (env: ServerEnv = serverEnv()): VaultEnv =>
     dataMode: env.DATA_MODE,
     stateDir: storageEnv(env).stateDir,
     idleLockMs: env.VAULT_IDLE_LOCK_MINUTES * 60_000,
+  });
+
+export type AnchorEnv = Readonly<{
+  /** Where the anchor key and the anchors file live (`<stateDir>/anchor`, #300). */
+  stateDir: string;
+  /** AUDIT_ANCHOR_INTERVAL_MINUTES in milliseconds (default 10 minutes). */
+  intervalMs: number;
+}>;
+
+/** The settings of the signed anchors (#300, docs/privacy-design.md section 2.6). */
+export const anchorEnv = (env: ServerEnv = serverEnv()): AnchorEnv =>
+  Object.freeze({
+    stateDir: storageEnv(env).stateDir,
+    intervalMs: env.AUDIT_ANCHOR_INTERVAL_MINUTES * 60_000,
   });
 
 export type AnatomyEnv = Readonly<{

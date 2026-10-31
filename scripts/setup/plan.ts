@@ -144,7 +144,9 @@ export type StepId =
   | "rigged"
   | "cohort"
   | "example"
-  | "training-sample";
+  | "training-sample"
+  | "anchor-key"
+  | "anchors";
 
 /**
  * The trimmed fixtures are three people of the evaluation cohort (#96), and a
@@ -637,6 +639,20 @@ const evalSource = (state: DetectedState, options: SetupOptions): SourceChoice =
   return { kind: "none", reason: [zstdFix, ...generateFix].join("; ") };
 };
 
+/**
+ * The anchor key of #300: `anchor:init` creates it in the state folder once
+ * and leaves an existing one alone. The first anchors are written after the
+ * last step (`setup:local` runs `anchor:write` then), so they cover the rows
+ * setup itself added.
+ */
+const ANCHOR_KEY_STEP: Step = {
+  id: "anchor-key",
+  title: "Anchor key (signed anchors of the audit chain)",
+  after: ["install"],
+  status: "run",
+  action: { kind: "command", argv: ["bun", "run", "anchor:init"] },
+};
+
 const gigabytes = (bytes: number): string => `${(bytes / 1e9).toFixed(1)} GB`;
 
 /** Every step `setup:local` takes, in order, with what it will do and why. */
@@ -700,6 +716,7 @@ export const planSetup = (
     install,
     database,
     migrate,
+    ANCHOR_KEY_STEP,
     anatomyStep(state),
     riggedStep(state),
     cohort,

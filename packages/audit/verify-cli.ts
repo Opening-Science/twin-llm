@@ -1,11 +1,27 @@
+import { homedir } from "node:os";
+import { dirname } from "node:path";
+
 import { PrismaPg } from "@prisma/adapter-pg";
 
 import { PrismaClient } from "@/generated/prisma/client";
+import { defaultStateDir } from "@/infrastructure/storage-hardening";
 
+import { chainReaders, verifyAgainstAnchor } from "./anchor-chains";
+import { type AnchorPaths, anchorPaths, anchorPathsIn } from "./anchor-store";
 import { append } from "./append";
 import { verifyDisclosureChain } from "./disclosure-chain";
 import { verifyChain } from "./verify-chain";
-import { checkOutcome, EXIT, parseChain, parseVerifyMode } from "./verify-cli-args";
+import {
+  type AnchorOption,
+  anchorOutcome,
+  type CheckOutcome,
+  checkOutcome,
+  EXIT,
+  parseAnchorOption,
+  parseChain,
+  parseVerifyMode,
+  worstExit,
+} from "./verify-cli-args";
 
 const databaseUrl = (): string => {
   // CLI is outside Next. serverEnv() pulls server-only.
@@ -16,6 +32,28 @@ const databaseUrl = (): string => {
     process.exit(1);
   }
   return url;
+};
+
+/** The state folder as the app resolves it (docs/privacy-design.md, "State directory"). */
+const stateDir = (): string =>
+  // eslint-disable-next-line no-restricted-syntax -- verify-cli runs outside the app
+  process.env.TWINLLM_STATE_DIR ||
+  defaultStateDir({
+    platform: process.platform === "darwin" ? "darwin" : "linux",
+    home: homedir(),
+    // eslint-disable-next-line no-restricted-syntax -- verify-cli runs outside the app
+    xdgDataHome: process.env.XDG_DATA_HOME,
+  });
+
+const pathsFor = (option: AnchorOption): AnchorPaths | null => {
+  if (option.anchors === "off") return null;
+  if (option.anchors === "default") return anchorPaths(stateDir());
+  return { ...anchorPathsIn(dirname(option.path)), log: option.path };
+};
+
+const print = (outcome: CheckOutcome): void => {
+  if (outcome.stream === "stdout") process.stdout.write(`${outcome.line}\n`);
+  else console.error(outcome.line);
 };
 
 const createClient = (): PrismaClient =>
@@ -55,6 +93,11 @@ const main = async (): Promise<void> => {
     console.error(chain.error);
     process.exit(EXIT.usage);
   }
+  const anchors = parseAnchorOption(process.argv.slice(2), parsed.mode);
+  if ("error" in anchors) {
+    console.error(anchors.error);
+    process.exit(EXIT.usage);
+  }
   const client = createClient();
 
   try {
@@ -65,9 +108,19 @@ const main = async (): Promise<void> => {
         chain.chain === "disclosures"
           ? checkOutcome(await verifyDisclosureChain(client), "disclosures")
           : checkOutcome(await verifyChain(client));
-      if (outcome.stream === "stdout") process.stdout.write(`${outcome.line}\n`);
-      else console.error(outcome.line);
-      process.exitCode = outcome.code;
+      print(outcome);
+      // Then the chain against its latest signed anchor (#300), unless --no-anchors.
+      const paths = pathsFor(anchors);
+      if (paths === null) {
+        process.exitCode = outcome.code;
+        return;
+      }
+      const anchored = anchorOutcome(
+        await verifyAgainstAnchor(chainReaders(client)[chain.chain], paths, chain.chain),
+        chain.chain,
+      );
+      print(anchored);
+      process.exitCode = worstExit(outcome.code, anchored.code);
       return;
     }
 

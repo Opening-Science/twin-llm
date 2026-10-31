@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { homedir } from "node:os";
 
-import { parseServerEnv, storageEnv, vaultEnv } from "./env";
+import { anchorEnv, parseServerEnv, storageEnv, vaultEnv } from "./env";
 
 const BASE = {
   LOCAL_MVP: "true",
@@ -65,5 +65,25 @@ describe("unlock settings (#142)", () => {
     expect(() => parseServerEnv({ ...BASE, VAULT_IDLE_LOCK_MINUTES: "241" })).toThrow(
       "VAULT_IDLE_LOCK_MINUTES must be at most 240",
     );
+  });
+});
+
+describe("anchor settings (#300)", () => {
+  test("every 10 minutes by default, 1 to 1440 allowed", () => {
+    const env = parseServerEnv({ ...BASE, TWINLLM_STATE_DIR: "/srv/twin-llm-state" });
+    expect(anchorEnv(env)).toEqual({
+      stateDir: "/srv/twin-llm-state",
+      intervalMs: 10 * 60_000,
+    });
+    expect(
+      anchorEnv(parseServerEnv({ ...BASE, AUDIT_ANCHOR_INTERVAL_MINUTES: "15" }))
+        .intervalMs,
+    ).toBe(15 * 60_000);
+    expect(() => parseServerEnv({ ...BASE, AUDIT_ANCHOR_INTERVAL_MINUTES: "0" })).toThrow(
+      "AUDIT_ANCHOR_INTERVAL_MINUTES must be at least 1",
+    );
+    expect(() =>
+      parseServerEnv({ ...BASE, AUDIT_ANCHOR_INTERVAL_MINUTES: "1441" }),
+    ).toThrow("AUDIT_ANCHOR_INTERVAL_MINUTES must be at most 1440");
   });
 });

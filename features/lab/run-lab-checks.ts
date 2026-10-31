@@ -11,6 +11,7 @@ import {
   parseOpenTwinPin,
   parseOpenTwinShaFile,
 } from "@/infrastructure/build-stamp";
+import { anchorViewFor } from "@/infrastructure/anchor-runtime";
 import { bomText, buildBom, parseBunLock } from "@/infrastructure/cyclonedx";
 import { database } from "@/infrastructure/database";
 import { resolveActorId } from "@/infrastructure/auth-actor";
@@ -39,7 +40,9 @@ import { DEFAULT_OLLAMA_BASE_URL } from "@/infrastructure/ollama-context";
 import { isInside } from "@/infrastructure/storage-hardening";
 import { serverStorageFindings } from "@/infrastructure/storage-runtime";
 import { resolveAnatomyDir } from "@/packages/anatomy/paths";
+import type { ChainName } from "@/packages/audit/chain";
 
+import { type AnchorView, withAnchor } from "./anchor-evidence";
 import { auditChainBase, auditChainCheck } from "./audit-chain-check";
 import {
   AUDIT_WALK_START,
@@ -141,12 +144,23 @@ const walkAudit = (): Promise<AuditWalk> => {
   return run;
 };
 
+/** The chain against its latest signed anchor (#300); null when that could not be read. */
+const anchorView = (chain: ChainName): Promise<AnchorView | null> =>
+  anchorViewFor(chain).catch((error: unknown) => {
+    console.error(`[lab] ${chain} anchor could not be read`, errorName(error));
+    return null;
+  });
+
 const checkAuditChain = async (): Promise<LabCheck> =>
-  auditChainCheck(
-    await walkAudit().catch((error: unknown) => {
-      console.error("[lab] audit table could not be read", errorName(error));
-      return null;
-    }),
+  withAnchor(
+    auditChainCheck(
+      await walkAudit().catch((error: unknown) => {
+        console.error("[lab] audit table could not be read", errorName(error));
+        return null;
+      }),
+    ),
+    await anchorView("audit"),
+    "audit",
   );
 
 // --- Local models -------------------------------------------------------------
@@ -364,14 +378,18 @@ const viewerTotals = async () => {
 };
 
 const checkDisclosureLedger = async (): Promise<LabCheck> =>
-  disclosureLedgerCheck({
-    chain: await verifyLedger().catch((error: unknown) => {
-      console.error("[lab] disclosure ledger could not be read", errorName(error));
-      return null;
+  withAnchor(
+    disclosureLedgerCheck({
+      chain: await verifyLedger().catch((error: unknown) => {
+        console.error("[lab] disclosure ledger could not be read", errorName(error));
+        return null;
+      }),
+      totals: await viewerTotals(),
+      outside: channelsOutsideLedger(),
     }),
-    totals: await viewerTotals(),
-    outside: channelsOutsideLedger(),
-  });
+    await anchorView("disclosures"),
+    "disclosures",
+  );
 
 // --- Section ------------------------------------------------------------------
 
