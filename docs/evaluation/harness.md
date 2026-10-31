@@ -31,6 +31,7 @@ bun run eval:cohort-codes -- --in .synthea   # after a cohort change only
 | `--timeout-s <n>`                                       | Per item, default 300                                                    |
 | `--arm tools` / `context-oracle` / `context-fair`       | Tools (default) or data in the prompt ([below](#data-in-the-prompt-302)) |
 | `--context-cap <tokens>`                                | Context arms: estimated tokens per data block, default 6000              |
+| `--decline-wording w1` / `w2` / `w3`                    | Decline line for a wording comparison (#274); default the chat's         |
 
 `bun run eval` refuses unless `DATA_MODE=synthetic`, stops when the questions'
 sha256 is not the key's `questions_sha256`, and checks every model id against
@@ -72,6 +73,14 @@ blinded. The cache key names the base model, and the agent's prompt (role
 line, skill, tools) is part of the key, so an agent run and a run of its base
 model never share an entry. A replay of an agent run reads the catalog once to
 resolve the agent, and calls no model.
+
+`--decline-wording` puts one of the wordings in
+`scripts/evaluation/decline-wordings.ts` in place of the chat route's decline
+line (`DECLINE_RULE`, which is `w1`) for that run only; the chat route is
+unchanged. `meta.json` records `decline_wording` (`id` and the sha256 of the
+exact text) and the report names it in the run table. The line is part of the
+prompt and so of the cache key: two wordings never share an entry. A run
+without the flag has no `decline_wording` and used the chat's line.
 
 ## Data in the prompt (#302)
 

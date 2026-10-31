@@ -308,6 +308,11 @@ export const buildTwinSystemPrompt = (params: {
   /** The agent this turn answers as (#218): one line with its name and role. */
   readonly agent?: Readonly<{ name: string; role: string }> | null;
   /**
+   * The decline line; left out, `DECLINE_RULE`. Only the eval harness passes
+   * another, to compare wordings (#274).
+   */
+  readonly declineRule?: string;
+  /**
    * Eval harness only (#302): rows read on the server, pasted as a data block
    * for a turn with no tools. The chat route never sets it.
    */
@@ -379,7 +384,7 @@ export const buildTwinSystemPrompt = (params: {
     "You are TwinLLM, a research assistant for personalized-medicine questions.",
     ...agentLine(params.agent ?? null),
     "You are NOT a doctor. Do not diagnose or prescribe. Include uncertainty clearly.",
-    DECLINE_RULE,
+    params.declineRule ?? DECLINE_RULE,
     "Always structure your reply with these exact markdown headings, in order:",
     "",
     "## Reasoning",

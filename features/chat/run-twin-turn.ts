@@ -62,6 +62,8 @@ export type TwinTurnDeps = Readonly<{
   uiContext?: UiContext | null;
   /** The agent this turn answers as (#218); its role line joins the system prompt. */
   agent?: Readonly<{ name: string; role: string }> | null;
+  /** The decline line; left out, the product's. Set only by the eval harness (#274). */
+  declineRule?: string;
   /**
    * Eval harness only (#302): rows read on the server for a turn with no
    * tools, pasted into the system prompt as a data block.
@@ -131,6 +133,7 @@ export type TwinTurnPromptDeps = Pick<
   | "pastedData"
   | "pastedDataSource"
   | "twinNotes"
+  | "declineRule"
 >;
 
 /** The turn's system prompt, the one `runTwinTurn` sends. */
@@ -148,6 +151,7 @@ export const twinTurnSystem = (
     skill: deps.skill ?? null,
     uiContext: deps.uiContext ?? null,
     agent: deps.agent ?? null,
+    declineRule: deps.declineRule,
     pastedData: deps.pastedData ?? null,
     ...(deps.pastedDataSource === undefined
       ? {}

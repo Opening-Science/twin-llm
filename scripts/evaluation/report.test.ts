@@ -9,6 +9,7 @@ import {
   callFigures,
   CONTEXT_CALLS_NA,
   csvCell,
+  declineWordingRows,
   noToolFigures,
   renderReport,
   REVIEW_COLUMNS,
@@ -639,5 +640,17 @@ describe("context arm in the report (#302)", () => {
     ]);
     const report = renderReport({ meta, scores: [], quantisation: null });
     expect(report).toContain(CONTEXT_CALLS_NA);
+  });
+});
+
+describe("declineWordingRows (#274)", () => {
+  test("no row for the chat route's line, one row naming the wording otherwise", () => {
+    expect(declineWordingRows(META)).toEqual([]);
+    expect(
+      declineWordingRows({
+        ...META,
+        decline_wording: { id: "w3", sha256: "ab".repeat(32) },
+      }),
+    ).toEqual([["Decline wording", `w3 (sha256 ${"ab".repeat(6)})`]]);
   });
 });

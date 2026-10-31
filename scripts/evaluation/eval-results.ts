@@ -17,6 +17,11 @@ import { z } from "zod";
 import { responseDocumentV1Schema } from "../../infrastructure/response-document/document-v1";
 
 import { RECORDED_ARMS } from "./context-arm";
+/**
+ * Decline wordings the harness can run with (#274); their texts are in
+ * `decline-wordings.ts`, which reads the chat prompt and so stays out of here.
+ */
+export const DECLINE_WORDING_IDS = ["w1", "w2", "w3"] as const;
 
 export const RESULTS_SCHEMA_VERSION = "twin-llm.eval.results.v2";
 export const META_SCHEMA_VERSION = "twin-llm.eval.meta.v1";
@@ -243,6 +248,17 @@ export const metaSchema = z
     /** `process.platform-process.arch`; never the machine's hostname. */
     platform: z.string(),
     timeout_ms: z.number().int().positive(),
+    /**
+     * Set when `--decline-wording` replaced the chat route's decline line
+     * (#274): the wording's id and the sha256 of its text. Absent: the product's.
+     */
+    decline_wording: z
+      .object({
+        id: z.enum(DECLINE_WORDING_IDS),
+        sha256: z.string().regex(/^[0-9a-f]{64}$/),
+      })
+      .strict()
+      .optional(),
     selection: z
       .object({
         items: z.array(z.string()).nullable(),
