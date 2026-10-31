@@ -632,6 +632,44 @@
     @apply text-muted-foreground text-xs;
   }
 
+  /* The second-rater view (features/lab/second-rater.tsx): the rubric's
+     anchors under the rating, the chosen one marked; the answer as written. */
+  .rater-anchors {
+    @apply flex flex-col gap-1.5 text-sm;
+  }
+
+  .rater-anchor {
+    @apply rounded-md border border-transparent px-2 py-1.5;
+  }
+
+  .rater-anchor[data-chosen] {
+    @apply border-input bg-muted;
+  }
+
+  .rater-anchor dt {
+    @apply font-medium;
+  }
+
+  .rater-anchor dd {
+    @apply text-muted-foreground leading-relaxed;
+  }
+
+  .rater-answer {
+    @apply max-h-[28rem] overflow-y-auto text-sm leading-relaxed break-words whitespace-pre-wrap;
+  }
+
+  .rater-comment {
+    @apply border-input bg-background text-foreground w-full rounded-md border px-2 py-1.5 text-sm;
+  }
+
+  .rater-progress {
+    @apply bg-muted h-1.5 w-full overflow-hidden rounded-full;
+  }
+
+  .rater-progress-bar {
+    @apply bg-foreground/60 h-full;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .step-trace-working {
       background: none;

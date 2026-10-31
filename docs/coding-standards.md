@@ -215,7 +215,8 @@ tab asks first and then deletes nothing); `StatusLattice` for a Synthea run;
 learning consent (Customize · Privacy) and replacing the passphrase and recovery code
 with the recovery code (the unlock screen). The app has no erase-everything action and
 no genome dataset to delete; a delete that can wait uses `UndoButton`, not a hold.
-`Rating` waits for the human review protocol (#304). Their look lives in
+`Rating` scores answers in the Lab's second-rater view
+(`features/lab/second-rater.tsx`, #351), with a written anchor per level. Their look lives in
 `globals.css` under "Interaction patterns".
 
 Charts use `text-chart-1` to `text-chart-5`, in that order. `primary` marks things you
