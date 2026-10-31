@@ -24,7 +24,8 @@ import { cipherForActor } from "./field-cipher-runtime";
  * the one function every outbound path calls before it sends: it seals the
  * value references with the person's key (#141; only when there are any, so
  * a vendor's OAuth return can be recorded while the vault is locked), then
- * writes the paired audit row and the ledger row in one transaction. If any
+ * writes the paired audit row and the ledger row in one transaction, with
+ * what the free text check found (#346) when the caller ran it. If any
  * of it fails, it rejects and the caller does not send.
  */
 
@@ -58,7 +59,8 @@ export const createDisclosureWriter =
         payloadBytes: disclosure.payloadBytes,
         threadId: disclosure.threadId,
         synthetic: disclosure.synthetic,
-        freeTextChecked: false,
+        freeTextChecked: disclosure.freeText !== undefined,
+        freeTextMatches: disclosure.freeText?.matches ?? null,
         refs,
         auditSeq: audited.seq,
       });
@@ -87,6 +89,8 @@ const ENTRY_FIELDS = {
   payloadBytes: true,
   threadId: true,
   synthetic: true,
+  freeTextChecked: true,
+  freeTextMatches: true,
 } as const;
 
 /** One person's ledger rows, newest first, without the sealed references. */

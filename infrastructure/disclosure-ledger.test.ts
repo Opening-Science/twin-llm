@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import {
   bodyBytes,
+  checkRequestText,
   createRecordDisclosure,
   type Disclosure,
   disclosureAuditEvent,
@@ -227,6 +228,86 @@ describe("modelCallFetch", () => {
   });
 });
 
+describe("the free text check of a model request (#346)", () => {
+  const BODY = JSON.stringify({
+    messages: [{ role: "user", content: "Is rs4988235 in my file?" }],
+  });
+
+  test("the row records the kinds and counts found, never the text", async () => {
+    const rows: Disclosure[] = [];
+    const checked: string[] = [];
+    const send = modelCallFetch(fakeFetch([]), {
+      recipient: "exoscale",
+      modelId: "synthetic/model",
+      disclosure: MODEL_CALL,
+      record: async (disclosure) => {
+        rows.push(disclosure);
+        return RECEIPT;
+      },
+      checkText: async (text) => {
+        checked.push(text);
+        return { matches: [{ kind: "rsID", count: 1 }] };
+      },
+    });
+    await send("https://models.invalid/v1/chat", { body: BODY });
+    expect(checked).toEqual(["user\nIs rs4988235 in my file?"]);
+    expect(rows).toEqual([
+      {
+        ...MODEL_CALL,
+        kind: "hosted-model",
+        recipient: "exoscale",
+        target: "synthetic/model",
+        payloadBytes: Buffer.byteLength(BODY, "utf8"),
+        freeText: { matches: [{ kind: "rsID", count: 1 }] },
+      },
+    ]);
+    expect(JSON.stringify(rows)).not.toContain("rs4988235");
+  });
+
+  test("a failed check is recorded as not checked and the request still goes", async () => {
+    const order: string[] = [];
+    const rows: Disclosure[] = [];
+    const send = modelCallFetch(fakeFetch(order), {
+      recipient: "exoscale",
+      modelId: "synthetic/model",
+      disclosure: MODEL_CALL,
+      record: async (disclosure) => {
+        order.push("record");
+        rows.push(disclosure);
+        return RECEIPT;
+      },
+      checkText: async () => {
+        throw new Error("locked");
+      },
+    });
+    await send("https://models.invalid/v1/chat", { body: BODY });
+    expect(order).toEqual(["record", "send"]);
+    expect(rows[0]?.freeText).toBeUndefined();
+  });
+
+  test("checkRequestText: no checker or an unreadable body is not checked", async () => {
+    const found = async () => ({ matches: [] });
+    expect(await checkRequestText(undefined, BODY)).toBeUndefined();
+    expect(await checkRequestText(found, new ReadableStream())).toBeUndefined();
+    expect(await checkRequestText(found, BODY)).toEqual({ matches: [] });
+  });
+
+  test("the audit row carries the kinds and counts when the check ran", () => {
+    expect(
+      disclosureAuditEvent({
+        ...DISCLOSURE,
+        freeText: { matches: [{ kind: "genome site", count: 2 }] },
+      }).result,
+    ).toEqual({
+      direction: "sent",
+      categories: ["question text", "wearable summary"],
+      bytes: 1234,
+      synthetic: false,
+      freeText: [{ kind: "genome site", count: 2 }],
+    });
+  });
+});
+
 describe("telemetryDisclosure", () => {
   test("names the event and says ids and counts", () => {
     expect(
@@ -262,6 +343,8 @@ const row = (overrides: Partial<LedgerEntry>): LedgerEntry => ({
   payloadBytes: 100,
   threadId: null,
   synthetic: false,
+  freeTextChecked: false,
+  freeTextMatches: null,
   ...overrides,
 });
 

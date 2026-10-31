@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import {
   appendDisclosureInTransaction,
+  canonicalDisclosure,
   checkDisclosureChain,
   type DisclosureChainRow,
   type NewDisclosureRow,
@@ -40,6 +41,7 @@ const entry = (index: number): NewDisclosureRow => ({
   threadId: "thread-synthetic-1",
   synthetic: false,
   freeTextChecked: false,
+  freeTextMatches: null,
   refs: `sealed-${index}`,
   auditSeq: BigInt(10 + index),
 });
@@ -93,6 +95,59 @@ describe("the disclosure ledger chain (#140)", () => {
     const { rows } = await seeded(2);
     const resealed = rows.map((row) => ({ ...row, refs: `${row.refs}-new-key` }));
     expect(checkDisclosureChain(resealed).ok).toBe(true);
+  });
+
+  test("what the free text check found is in the hash once it is set (#346)", async () => {
+    const table = fakeTable();
+    await appendDisclosureInTransaction(table.tx, entry(0));
+    await appendDisclosureInTransaction(table.tx, {
+      ...entry(1),
+      freeTextChecked: true,
+      freeTextMatches: [{ kind: "rsID", count: 2 }],
+    });
+    // Postgres reads an unset JSON column back as null.
+    const read = table.rows.map((row) => ({
+      ...row,
+      freeTextMatches: row.freeTextMatches ?? null,
+    }));
+    expect(read.map((row) => row.freeTextMatches)).toEqual([
+      null,
+      [{ kind: "rsID", count: 2 }],
+    ]);
+    expect(checkDisclosureChain(read).ok).toBe(true);
+    const edited = read.map((row, index) =>
+      index === 1 ? { ...row, freeTextMatches: [{ kind: "rsID", count: 1 }] } : row,
+    );
+    expect(checkDisclosureChain(edited).brokenAtSeq).toBe(2);
+    const dropped = read.map((row, index) =>
+      index === 1 ? { ...row, freeTextMatches: null } : row,
+    );
+    expect(checkDisclosureChain(dropped).brokenAtSeq).toBe(2);
+  });
+
+  test("a row without a check hashes as rows written before #346 did", async () => {
+    const { rows } = await seeded(1);
+    const [row] = rows;
+    if (row === undefined) throw new Error("no row");
+    expect(Object.keys(canonicalDisclosure({ ...row, freeTextMatches: null }))).toEqual([
+      "actor",
+      "audit_seq",
+      "categories",
+      "direction",
+      "free_text_checked",
+      "id",
+      "kind",
+      "payload_bytes",
+      "prev_hash",
+      "purpose",
+      "recipient",
+      "ref_count",
+      "seq",
+      "synthetic",
+      "target",
+      "thread_id",
+      "ts",
+    ]);
   });
 
   test("an empty ledger holds, with nothing checked", () => {
