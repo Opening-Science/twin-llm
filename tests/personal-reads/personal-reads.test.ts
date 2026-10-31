@@ -964,6 +964,7 @@ describe("locked personal data (#142)", () => {
   test("the gate covers all of these routes, and no more", () => {
     expect(gatedRoutes).toEqual([
       "DELETE /api/personal-data/datasets/[id]",
+      "DELETE /api/threads/[threadId]",
       "GET /api/ark/status",
       "GET /api/chat/suggestions",
       "GET /api/genome/report",

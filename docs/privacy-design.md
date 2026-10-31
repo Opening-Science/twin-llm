@@ -246,7 +246,7 @@ Argon2id against the RFC 9106 vector and scrypt against the RFC 7914 vector.
 - **What is gated.** Every route in the `tests/personal-reads` table without a
   `whileLocked` reason: the wearable summary, genome report and run, BodyLoop reads and
   writes, the Ark status, imports and dataset edits, search (except a docs-only search),
-  thread export, `/compact` and saving notes, chat, incognito chat, chat suggestions,
+  thread export and delete, `/compact` and saving notes, chat, incognito chat, chat suggestions,
   onboarding starters and the three syncs. Open while locked, each with its reason in the
   table: OAuth authorize and disconnect, connection status, the Ark audit list, the
   synthetic Demo routes, anatomy, motion, GBD, Synthea, the scanner upload (checked by its
