@@ -1,0 +1,19 @@
+{
+  "question": "In the synthetic cohort synthea-v4-1m-af, is stroke more common after atrial fibrillation onset than before it?",
+  "script": [
+    {
+      "tool": "cohort_event_rates",
+      "input": {
+        "cohort_id": "synthea-v4-1m-af",
+        "exposure_code": "49436004",
+        "outcome_code": "230690007",
+        "design": "within"
+      }
+    }
+  ],
+  "expect": {
+    "calls": ["cohort_event_rates"],
+    "views": [],
+    "refusals": []
+  }
+}

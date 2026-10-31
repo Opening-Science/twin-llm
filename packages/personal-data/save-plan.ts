@@ -7,6 +7,7 @@ import type {
   ParsedOk,
   TableCell,
   TableColumn,
+  VariantDraft,
 } from "./types";
 
 /**
@@ -26,12 +27,16 @@ export type SavePlan = Readonly<{
     rowCount: number;
     firstAt: string | null;
     lastAt: string | null;
+    /** "GRCh38" for a VCF; null for every other format. */
+    genomeBuild: string | null;
   }>;
   observations: readonly ObservationDraft[];
   clinical: readonly ClinicalDraft[];
   table: Readonly<{ columns: readonly TableColumn[]; rowCount: number }> | null;
   /** Table rows in chunks of `CHUNK_ROWS`, in file order. */
   chunks: readonly (readonly (readonly TableCell[])[])[];
+  /** A VCF's records, in file order. */
+  variants: readonly VariantDraft[];
 }>;
 
 // Control characters (C0 and DEL) never belong in a name shown on a page.
@@ -65,9 +70,11 @@ export const savePlan = (
   }>,
 ): SavePlan => {
   const range = dateRangeOf(parsed);
-  const observations = parsed.kind === "table" ? [] : parsed.observations;
+  const observations =
+    parsed.kind === "table" || parsed.kind === "vcf" ? [] : parsed.observations;
   const clinical = parsed.kind === "fhir" ? parsed.clinical : [];
   const tableRows = parsed.kind === "table" ? parsed.table.rows : [];
+  const variants = parsed.kind === "vcf" ? parsed.variants : [];
   return {
     dataset: {
       userId: input.userId,
@@ -76,9 +83,11 @@ export const savePlan = (
       sourceFileName: cleanDatasetName(input.fileName) || "file",
       sha256: input.sha256,
       byteSize: input.byteSize,
-      rowCount: observations.length + clinical.length + tableRows.length,
+      rowCount:
+        observations.length + clinical.length + tableRows.length + variants.length,
       firstAt: range?.first ?? null,
       lastAt: range?.last ?? null,
+      genomeBuild: parsed.kind === "vcf" ? parsed.build : null,
     },
     observations,
     clinical,
@@ -87,5 +96,6 @@ export const savePlan = (
         ? { columns: parsed.table.columns, rowCount: tableRows.length }
         : null,
     chunks: chunkRows(tableRows),
+    variants,
   };
 };

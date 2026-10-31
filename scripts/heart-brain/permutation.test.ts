@@ -2,7 +2,10 @@ import { describe, expect, test } from "bun:test";
 
 import { randomFor } from "../synthetic-wearables/random";
 
-import { day, person } from "./fixtures.test-helpers";
+import {
+  day,
+  person,
+} from "../../packages/query-tools/event-rates/fixtures.test-helpers";
 import { shuffleAfOnsets, spreadOf } from "./permutation";
 
 describe("shuffleAfOnsets", () => {

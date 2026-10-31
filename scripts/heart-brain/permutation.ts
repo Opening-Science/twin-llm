@@ -7,8 +7,8 @@
  */
 import { type Random } from "../synthetic-wearables/random";
 
-import { type Person, withOnset } from "./cohort";
-import { DAYS_PER_YEAR } from "./poisson";
+import { type Person, withOnset } from "../../packages/query-tools/event-rates/cohort";
+import { DAYS_PER_YEAR } from "../../packages/query-tools/event-rates/poisson";
 
 const AF_RISK_START_YEARS = 45;
 

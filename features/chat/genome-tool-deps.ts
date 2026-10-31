@@ -1,9 +1,11 @@
 import "server-only";
 
+import { findAppUserId } from "@/infrastructure/current-user";
 import { database } from "@/infrastructure/database";
 import { genomeEnv } from "@/infrastructure/env";
 import { genomeChatPermit } from "@/infrastructure/genome-gate";
 import { latestGenomeReport } from "@/infrastructure/genome-report-store";
+import { genomeVariantReads } from "@/infrastructure/personal-data-store";
 import { append } from "@/packages/audit/append";
 import { askCarbonX } from "@/packages/carbon-x/client";
 import { referenceWindows } from "@/packages/genome-reference";
@@ -20,6 +22,12 @@ import type { GenomeToolDeps } from "./genome-tools";
 export const genomeToolDepsFor = (scope: SessionScope): GenomeToolDeps | undefined => {
   if (scope.mode !== "personal" || !genomeChatPermit().ok) return undefined;
   const env = genomeEnv();
+  const user = { lookup: null as Promise<string | null> | null };
+  const userId = (): Promise<string | null> => {
+    user.lookup ??= findAppUserId(scope.actor);
+    return user.lookup;
+  };
+  const appendAudit = (input: Parameters<typeof append>[1]) => append(database(), input);
   return {
     scope,
     loadReport: () => latestGenomeReport(scope.actor),
@@ -27,6 +35,11 @@ export const genomeToolDepsFor = (scope: SessionScope): GenomeToolDeps | undefin
     windows: (request) => referenceWindows(env.referenceDir, request),
     ask: (messages) =>
       askCarbonX({ baseUrl: env.carbonXUrl, timeoutMs: env.carbonXTimeoutMs }, messages),
-    appendAudit: (input) => append(database(), input),
+    appendAudit,
+    variants: {
+      scope,
+      permit: genomeChatPermit,
+      ports: { ...genomeVariantReads(userId), appendAudit },
+    },
   };
 };

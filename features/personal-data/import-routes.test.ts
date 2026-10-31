@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { describe, expect, test } from "bun:test";
-import { zipSync } from "fflate";
+import { gzipSync, zipSync } from "fflate";
 
 import type {
   DatasetView,
@@ -11,6 +11,8 @@ import type {
 import type { AppendInput } from "@/packages/audit/append";
 import type { SavePlan } from "@/packages/personal-data/save-plan";
 import { fileSha256 } from "@/packages/personal-data/text-file";
+import { parseCatalog } from "@/scripts/genome-synth/catalog";
+import { genomeFor } from "@/scripts/genome-synth/generate";
 
 import {
   deleteDatasetResponse,
@@ -88,6 +90,7 @@ const setup = (overrides: Partial<ImportPorts> = {}) => {
       audits.push(input);
     },
     sessionId: () => "session-1",
+    assumeBuild: () => null,
     ...overrides,
   };
   return { ports, audits, rows };
@@ -440,7 +443,12 @@ describe("audit rows carry no values", () => {
 
 describe("Apple Health and wearable exports", () => {
   const APPLE = new Uint8Array(readFileSync(join(FIXTURES, "apple-health-export.xml")));
-  const APPLE_ZIP = zipSync({ "apple_health_export/export.xml": APPLE });
+  // A zip entry carries its modified time, so an unpinned zip has a new SHA-256 on
+  // every run. Pin it so the bytes, and the hash in the audit, stay the same.
+  const APPLE_ZIP = zipSync(
+    { "apple_health_export/export.xml": APPLE },
+    { mtime: new Date(2026, 8, 3, 9, 0, 0) },
+  );
   const APPLE_ZIP_SHA = fileSha256(APPLE_ZIP);
   const WHOOP = new Uint8Array(
     readFileSync(join(FIXTURES, "wearables/my_whoop_data/sleeps.csv")),
@@ -470,7 +478,13 @@ describe("Apple Health and wearable exports", () => {
         { stored: true, dataset_id: "ds-1", rows: 10, unmapped: 11 },
       ],
     ]);
-    const written = JSON.stringify(audits);
+    // The file's SHA-256 is audited on purpose. It is hex, so it can hold "445" by
+    // chance; leave it out of the search for values from the file.
+    expect(audits.map((event) => (event.args as { sha256?: string }).sha256)).toEqual([
+      APPLE_ZIP_SHA,
+      APPLE_ZIP_SHA,
+    ]);
+    const written = JSON.stringify(audits).replaceAll(APPLE_ZIP_SHA, "sha256");
     for (const value of ["8867-4", "HKQuantityType", "Demo Watch", "export.zip", "445"]) {
       expect({ value, found: written.includes(value) }).toEqual({ value, found: false });
     }
@@ -490,5 +504,119 @@ describe("Apple Health and wearable exports", () => {
       2,
       "Read sleeps.csv as Whoop sleeps.",
     ]);
+  });
+});
+
+describe("genome VCF (synthetic, from genome-synth)", () => {
+  const catalog = parseCatalog(
+    readFileSync(
+      join(import.meta.dir, "../../scripts/genome-synth/variants.tsv"),
+      "utf8",
+    ),
+  );
+  if (typeof catalog === "string") throw new Error(catalog);
+  const SYNTH = genomeFor("080b069b-5108-46b6-ecef-6aacd3b9ef3f", catalog);
+  const VCF_GZ = gzipSync(new TextEncoder().encode(SYNTH.vcf));
+  const VCF_GZ_SHA = fileSha256(VCF_GZ);
+  const SITES = SYNTH.calls.length;
+
+  test("reviewed and saved like any import; the audit holds counts, no hash", async () => {
+    const { ports, audits, rows } = setup();
+    const review = await postReviewResponse(
+      upload(VCF_GZ, { kind: "vcf" }, "synthetic.vcf.gz"),
+      ports,
+    );
+    expect(review.status).toBe(200);
+    const body = (await review.json()) as {
+      review: { rowsToStore: number; sha256: string; genome: { build: string } };
+    };
+    expect([
+      body.review.rowsToStore,
+      body.review.sha256,
+      body.review.genome.build,
+    ]).toEqual([SITES, VCF_GZ_SHA, "GRCh38"]);
+    const saved = await postSaveResponse(
+      upload(VCF_GZ, { kind: "vcf", sha256: VCF_GZ_SHA }, "synthetic.vcf.gz"),
+      ports,
+    );
+    expect(saved.status).toBe(200);
+    const plan = rows.get("ds-1")?.plan;
+    expect([
+      plan?.dataset.kind,
+      plan?.dataset.genomeBuild,
+      plan?.variants.length,
+    ]).toEqual(["vcf", "GRCh38", SITES]);
+    expect(audits).toEqual([
+      {
+        actor: "actor-1",
+        sessionId: "session-1",
+        subjectRef: null,
+        tool: "personal-data.review",
+        args: { kind: "vcf", bytes: VCF_GZ.byteLength, sha256: null },
+        result: { stored: false, rows: SITES, unmapped: 0 },
+        rowCount: 0,
+      },
+      {
+        actor: "actor-1",
+        sessionId: "session-1",
+        subjectRef: null,
+        tool: "personal-data.save",
+        args: { kind: "vcf", bytes: VCF_GZ.byteLength, sha256: null },
+        result: { stored: true, dataset_id: "ds-1", rows: SITES, unmapped: 0 },
+        rowCount: SITES,
+      },
+    ]);
+    const written = JSON.stringify(audits);
+    const first = SYNTH.calls[0]!;
+    for (const value of [
+      VCF_GZ_SHA,
+      "0/1",
+      "1/1",
+      first.variant.rsid,
+      String(first.variant.pos),
+      "chr",
+      "synthetic.vcf.gz",
+    ]) {
+      expect({ value, found: written.includes(value) }).toEqual({ value, found: false });
+    }
+  });
+
+  test("a GRCh37 VCF is refused with the genome track's code, audited without a hash", async () => {
+    const { ports, audits } = setup();
+    const grch37 = new TextEncoder().encode(
+      SYNTH.vcf.replace("##reference=GRCh38", "##reference=GRCh37"),
+    );
+    const review = await postReviewResponse(
+      upload(grch37, { kind: "vcf" }, "x.vcf"),
+      ports,
+    );
+    expect(review.status).toBe(422);
+    expect(await review.json()).toEqual({
+      ok: false,
+      error:
+        "This VCF is on GRCh37 (hg19). Only GRCh38 files are imported, because GRCh37 positions point at different bases.",
+    });
+    expect(audits.at(-1)?.args).toEqual({
+      kind: "vcf",
+      bytes: grch37.byteLength,
+      sha256: null,
+    });
+    expect(audits.at(-1)?.result).toEqual({ stored: false, refused: "BUILD_MISMATCH" });
+  });
+
+  test("GENOME_ASSUME_BUILD lets a VCF that names no build through", async () => {
+    const unnamed = new TextEncoder().encode(
+      SYNTH.vcf.replace("##reference=GRCh38\n", "").replaceAll(",assembly=GRCh38", ""),
+    );
+    const refused = await postReviewResponse(
+      upload(unnamed, { kind: "vcf" }, "x.vcf"),
+      setup().ports,
+    );
+    expect(refused.status).toBe(422);
+    const assumed = await postReviewResponse(
+      upload(unnamed, { kind: "vcf" }, "x.vcf"),
+      setup({ assumeBuild: () => "GRCh38" }).ports,
+    );
+    expect(assumed.status).toBe(200);
   });
 });

@@ -126,4 +126,6 @@ video's arm heights, hip sway, knee bends and weight shifts at the compared time
 the contact flags, planted feet stay flat on the floor. It is weakest where the model
 is: depth of the arms (limiting it to the bones' lengths changed little for the arm
 reaching toward the camera in the first seconds), the head of a body without a face, and
-a few frames where the legs cross. The text-to-motion half of #59 is not covered here.
+a few frames where the legs cross. Licences, the retargeting gaps against the scan rig, a
+check against known joint angles and the text-to-motion half of #59 are in
+`docs/research/motion-spikes-2026-10.md`.

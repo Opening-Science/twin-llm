@@ -34,6 +34,10 @@ export const SYNTHETIC_COHORTS = [
   // The supplementary S7 cohort (#277, scripts/synthea/s7-cohort.ts): 17 people
   // aged 65 to 90, 13 with atrial fibrillation. Evaluation only.
   "synthea-v4-s7",
+  // Every person with atrial fibrillation in the 1M cohort's 100 batches
+  // (#293, scripts/heart-brain/af-subset.ts), for the cohort_event_rates
+  // items. Evaluation only.
+  "synthea-v4-1m-af",
   ...SYNTHEA_1M_COHORTS,
 ] as const;
 

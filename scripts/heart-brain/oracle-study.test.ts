@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { toPerson } from "./cohort";
+import { toPerson } from "./to-person";
 import { type OraclePerson } from "./oracle-facts";
 import {
   observedOverExpected,
@@ -9,7 +9,10 @@ import {
   withinInterval,
 } from "./oracle-study";
 import { specFor } from "./timing";
-import { timingResult, timingTable } from "./within-person";
+import {
+  timingResult,
+  timingTable,
+} from "../../packages/query-tools/event-rates/within-person";
 
 const visits = Array.from({ length: 10 }, (_, i) => `${2016 + i}-01-01`);
 

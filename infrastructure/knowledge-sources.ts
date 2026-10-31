@@ -2,7 +2,10 @@ import { DNA_ASK_TOOL, GENOME_REPORT_TOOL } from "@/packages/carbon-x/constants"
 import { GBD_MODEL_TOOL } from "@/packages/gbd-mcp/constants";
 import { GUIDELINE_MODEL_TOOL } from "@/packages/guidelines/constants";
 import { KNOWLEDGE_MODEL_TOOL } from "@/packages/knowledge/constants";
-import { IMPORTED_TOOLS } from "@/packages/query-tools/imported-names";
+import {
+  GENOME_VARIANTS_TOOL,
+  IMPORTED_TOOLS,
+} from "@/packages/query-tools/imported-names";
 import type { TOOL_DEFINITIONS } from "@/packages/query-tools/schemas";
 
 type QueryToolName = (typeof TOOL_DEFINITIONS)[number]["name"];
@@ -26,6 +29,7 @@ export const KNOWLEDGE_SOURCE_IDS = [
   "wearable-analytics",
   "gbd",
   "ark-genome",
+  "vcf-variants",
   "imported-data",
 ] as const;
 
@@ -71,6 +75,7 @@ export const COHORT_ANALYTICS_TOOLS = [
   "cohort_position",
   "rhythm_irregularity",
   "values_around_event",
+  "cohort_event_rates",
 ] as const satisfies readonly QueryToolName[];
 
 /** Wearable summaries: the linked snapshots in personal mode, a synthetic subject's series otherwise. */
@@ -163,6 +168,13 @@ export const KNOWLEDGE_SOURCE_GROUPS: readonly KnowledgeSourceGroup[] = [
           "The rsid-genotypes report you released from your Ark, and the local Carbon-X research model for one variant at a time.",
         tools: [GENOME_REPORT_TOOL, DNA_ASK_TOOL],
       },
+      {
+        id: "vcf-variants",
+        label: "Variants in your imported VCF",
+        description:
+          "Named variants, by rsID or position, looked up by a local model in a VCF you imported on Customize · Data.",
+        tools: [GENOME_VARIANTS_TOOL],
+      },
     ],
   },
   {
@@ -174,7 +186,7 @@ export const KNOWLEDGE_SOURCE_GROUPS: readonly KnowledgeSourceGroup[] = [
         id: "imported-data",
         label: "Imported records and wearable exports",
         description:
-          "Datasets you imported on Customize · Data: the newest reading per code and a trend of one series, read by a local model.",
+          "Datasets you imported on Customize · Data: the newest reading per code, a trend of one series, chosen table columns, recorded conditions and medication requests, read by a local model.",
         tools: IMPORTED_TOOLS,
       },
     ],

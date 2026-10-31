@@ -8,6 +8,8 @@ import { readConnectorSummaries } from "@/features/connectors/connector-summarie
 import { getGenomeReportResponse } from "@/features/digital-twin/genome-run";
 import { createGoogleHealthCallbackHandler } from "@/features/google-health/oauth-handlers";
 import { createOuraCallbackHandler } from "@/features/oura/oauth-handlers";
+import { createCompactHandler } from "@/features/memory/compact-handler";
+import { SYNTHETIC_THREAD } from "@/features/memory/fixtures";
 import { loadYourData, postReviewResponse } from "@/features/personal-data/import-routes";
 import { createSearchHandlers } from "@/features/search/search-handler";
 import { createVitronicAvatarHandler } from "@/features/vitronic/avatar-handler";
@@ -371,6 +373,39 @@ const PERSONAL_READ_ROUTES: Readonly<Record<string, Entry>> = {
         today: () => "2026-10-28",
       })("thread-synthetic-1"),
   },
+  "DELETE /api/threads/[threadId]": { kind: "exempt", why: WRITE },
+  "POST /api/memory/compact": {
+    kind: "audited",
+    tools: ["memory.note.draft"],
+    call: (record) =>
+      createCompactHandler({
+        resolveActorId: signedIn.resolveActorId,
+        loadOwnedThread: async () => SYNTHETIC_THREAD,
+        threadIsLocal: async () => false,
+        turn: () => ({
+          mode: "personal",
+          provider: "ollama",
+          exoscalePersonalData: "off",
+          chatIsLocal: true,
+        }),
+        draftModel: async () => ({
+          modelId: "qwen3:4b",
+          generate: async () => '{"topics": [], "open_questions": []}',
+        }),
+        providerEvent: () => null,
+        appendAudit: record.append,
+        logError: () => undefined,
+      })(
+        new Request("http://localhost/api/memory/compact", {
+          method: "POST",
+          body: JSON.stringify({ threadId: SYNTHETIC_THREAD.id }),
+        }),
+      ),
+  },
+  "POST /api/memory/notes": {
+    kind: "exempt",
+    why: "a write of what the person confirmed; its handler writes memory.note.write",
+  },
   "POST /api/chat": {
     kind: "open",
     why: "tool reads are audited per call, and BodyLoop context writes vitronic.chat.summary, but the Oura, Whoop and Google Health summaries put in the prompt in personal mode write no row yet",
@@ -457,6 +492,10 @@ const PERSONAL_READ_ROUTES: Readonly<Record<string, Entry>> = {
   "GET /api/anatomy/rigged/[bodyId]": { kind: "exempt", why: NOT_PERSONAL },
   "GET /api/motion/status": { kind: "exempt", why: NOT_PERSONAL },
   "GET /api/motion/clip/[clipId]": { kind: "exempt", why: NOT_PERSONAL },
+  "GET /api/motion/days/[subjectRef]": {
+    kind: "exempt",
+    why: "synthetic Demo cohort only (its handler still writes motion.days)",
+  },
   "GET /api/gbd/status": { kind: "exempt", why: NOT_PERSONAL },
   "POST /api/synthea/jobs": {
     kind: "exempt",

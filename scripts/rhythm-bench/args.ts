@@ -1,21 +1,26 @@
 import { RHYTHM_BENCH_DIR } from "@/infrastructure/local-artefacts";
 
+import { type DatabaseId } from "./databases";
+
 /** Command-line arguments of `bun run rhythm-bench`. Pure. */
 export type BenchArgs = Readonly<{
   out: string;
   seeds: number;
-  afdb: string | null;
+  /** The annotated database to read, from `--afdb <dir>` or `--ltafdb <dir>` (one at most). */
+  database: Readonly<{ id: DatabaseId; dir: string }> | null;
   resamples: number;
   bootstrapSeed: number;
   /** A small grid (60 and 300 s, three rhythms, one AF rate, two noise levels) for a quick look. */
   quick: boolean;
+  /** Apply the grid's beat-detection noise levels to the database beats too (#296). */
+  realNoise: boolean;
 }>;
 
 export const DEFAULT_SEEDS = 20;
 export const DEFAULT_RESAMPLES = 1000;
 export const DEFAULT_BOOTSTRAP_SEED = 249;
 
-export const USAGE = `usage: bun run rhythm-bench -- --out ${RHYTHM_BENCH_DIR}/<run> [--seeds N] [--afdb <dir>] [--resamples N] [--bootstrap-seed N] [--quick] (the Lab reads ${RHYTHM_BENCH_DIR}/*/result.json)`;
+export const USAGE = `usage: bun run rhythm-bench -- --out ${RHYTHM_BENCH_DIR}/<run> [--seeds N] [--afdb <dir> | --ltafdb <dir>] [--resamples N] [--bootstrap-seed N] [--quick] [--real-noise] (the Lab reads ${RHYTHM_BENCH_DIR}/*/result.json)`;
 
 const valueOf = (argv: readonly string[], name: string): string | undefined => {
   const index = argv.indexOf(name);
@@ -40,22 +45,33 @@ export const parseArgs = (argv: readonly string[]): BenchArgs => {
     "--out",
     "--seeds",
     "--afdb",
+    "--ltafdb",
     "--resamples",
     "--bootstrap-seed",
     "--quick",
+    "--real-noise",
   ]);
   const unknown = argv.filter((arg) => arg.startsWith("--") && !known.has(arg));
   if (unknown.length > 0) throw new Error(`unknown option ${unknown[0]}\n${USAGE}`);
   const out = valueOf(argv, "--out");
   if (out === undefined || out.startsWith("--"))
     throw new Error(`--out is required\n${USAGE}`);
-  const afdb = valueOf(argv, "--afdb");
-  if (afdb !== undefined && afdb.startsWith("--"))
-    throw new Error(`--afdb needs a directory\n${USAGE}`);
+  const given = (["afdb", "ltafdb"] as const).flatMap((id) => {
+    const dir = valueOf(argv, `--${id}`);
+    if (dir === undefined && !argv.includes(`--${id}`)) return [];
+    if (dir === undefined || dir.startsWith("--"))
+      throw new Error(`--${id} needs a directory\n${USAGE}`);
+    return [{ id, dir }];
+  });
+  if (given.length > 1)
+    throw new Error(`give one database, --afdb or --ltafdb, per run\n${USAGE}`);
+  const realNoise = argv.includes("--real-noise");
+  if (realNoise && given.length === 0)
+    throw new Error(`--real-noise needs the database (--afdb or --ltafdb)\n${USAGE}`);
   return {
     out,
     seeds: positiveInt(valueOf(argv, "--seeds"), "--seeds", DEFAULT_SEEDS, 1),
-    afdb: afdb ?? null,
+    database: given[0] ?? null,
     resamples: positiveInt(
       valueOf(argv, "--resamples"),
       "--resamples",
@@ -69,5 +85,6 @@ export const parseArgs = (argv: readonly string[]): BenchArgs => {
       0,
     ),
     quick: argv.includes("--quick"),
+    realNoise,
   };
 };

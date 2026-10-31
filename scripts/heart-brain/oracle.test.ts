@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { dayNumber } from "./cohort";
+import { dayNumber } from "../../packages/query-tools/event-rates/cohort";
 import {
   birthdaysOf,
   DEFAULT_VISIT_GAP_DAYS,

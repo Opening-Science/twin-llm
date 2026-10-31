@@ -800,6 +800,69 @@
   {
     "type": "function",
     "function": {
+      "name": "cohort_event_rates",
+      "description": "Rates of one recorded condition (outcome) around another (exposure) in one loaded synthetic cohort; counts only. within: the same people before and after their own exposure onset (crude and age-adjusted rate ratio). between: exposed against 4 age- and sex-matched people without it. Events, person-years, exact Poisson intervals; verdict reads the ratio's 95% interval against 1. About this synthetic cohort only, never people in general or a cause. Synthetic mode only. Refuses SUBJECT_SCOPE_VIOLATION, COHORT_NOT_SUPPORTED, DESIGN_NOT_SUPPORTED, COHORT_RECORD_CAP_EXCEEDED.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "cohort_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Cohort id"
+          },
+          "exposure_code": {
+            "type": "string",
+            "enum": [
+              "22298006",
+              "26929004",
+              "44054006",
+              "49436004",
+              "59621000",
+              "78275009",
+              "88805009",
+              "230690007",
+              "414545008",
+              "132281000119108"
+            ],
+            "description": "The exposure: SNOMED CT code (every code of that condition counts): 49436004 atrial fibrillation, 230690007 stroke, 88805009 heart failure, 59621000 hypertension, 44054006 type 2 diabetes, 22298006 myocardial infarction, 414545008 ischemic heart disease, 26929004 Alzheimer's disease, 78275009 sleep apnea, 132281000119108 venous thromboembolism"
+          },
+          "outcome_code": {
+            "type": "string",
+            "enum": [
+              "22298006",
+              "26929004",
+              "44054006",
+              "49436004",
+              "59621000",
+              "78275009",
+              "88805009",
+              "230690007",
+              "414545008",
+              "132281000119108"
+            ],
+            "description": "The outcome: a SNOMED CT code from the same list as exposure_code"
+          },
+          "design": {
+            "type": "string",
+            "enum": ["within", "between"],
+            "description": "within: the same people before and after their own exposure onset; between: people with the exposure against age- and sex-matched people without it"
+          },
+          "min_age": {
+            "description": "Age floor in years: within counts time from this age, between keeps exposure onsets from this age; default 0",
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "required": ["cohort_id", "exposure_code", "outcome_code", "design"],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
       "name": "show_view",
       "description": "Show a view of one measure in the answer. chart.timeseries draws every reading in window; chart.compare sets window against compare_with (n and mean of each); biomarker.card shows a LOINC's latest reading against its published range, with its trend; table lists the readings (first 50); twin.body shows the body twin on focus with each mapped organ's range position (subject's labs, or none); without window it uses each marker's latest reading. The server reads the rows itself; the result says how many it read. A LOINC code needs subject (a synthetic subject_ref); a wearable key reads the user's synced data. Never write numbers for a view yourself.",
       "parameters": {

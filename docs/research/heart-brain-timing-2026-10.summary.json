@@ -1701,5 +1701,193 @@
         }
       }
     ]
+  },
+  "excess323": {
+    "issue": 323,
+    "jarSha256": "ed43c20ad40ba5c3bc724503a5af032715fe3c491620b766148e7c2361e6ecc1",
+    "monitorModuleSha256AsRun": "5a7d409b98a922d421807d85e1e26c13876e11f8b71678fc82df77421ead2c20",
+    "monitorModuleSha256Committed": "186280acad86e215c0fa7e3ec78bd01ca394bc91f2ca6bcd184a423f76ddcd67",
+    "keepModuleSha256": "3f5614cccdbbbea9c65845d5df64283e64116ec2dff18445a3a55ae8a6327eb7",
+    "propertiesSha256": "c0d32eb12756edbf21af4ffb77b3a773d137199f5b2a613aaf7f99e6728e93f3",
+    "seed": 323,
+    "clinicianSeed": 324,
+    "population": 600,
+    "ageRange": "55-95",
+    "referenceDate": "20260101",
+    "endDate": "20260101",
+    "threads": 6,
+    "result": {
+      "run": "<run dir>/main (outside the repository)",
+      "endDay": "2026-01-01",
+      "historyYears": 10,
+      "people": 734,
+      "skipped": 0,
+      "counted": 699,
+      "monitorMissing": 24,
+      "checksOnStrokeCycle": {
+        "seen": 89709,
+        "notOnCycle": 0
+      },
+      "strokeDayMismatch": 2,
+      "monitored": {
+        "strokes": 27,
+        "expected": 21.06,
+        "ratio": 1.282,
+        "low": 0.845,
+        "high": 1.865
+      },
+      "afTiming": {
+        "in window": 734,
+        "before previous visit": 0,
+        "after recorded onset": 0
+      },
+      "afLagDays": {
+        "n": 734,
+        "median": 154,
+        "p90": 326,
+        "max": 726
+      },
+      "before": {
+        "personYears": 2085.8,
+        "observed": 5,
+        "oracle": 2.72,
+        "checks": 23661,
+        "truth": 2.77,
+        "observedOverTruth": {
+          "ratio": 1.806,
+          "low": 0.586,
+          "high": 4.214
+        },
+        "truthOverOracle": 1.019,
+        "variants": {
+          "record": {
+            "expected": 2.65,
+            "overRecord": 1
+          },
+          "trueAf": {
+            "expected": 2.64,
+            "overRecord": 0.994
+          },
+          "trueDiabetes": {
+            "expected": 2.69,
+            "overRecord": 1.014
+          },
+          "trueSmoker": {
+            "expected": 2.65,
+            "overRecord": 1
+          },
+          "trueBpTable": {
+            "expected": 2.82,
+            "overRecord": 1.063
+          },
+          "trueBp": {
+            "expected": 2.79,
+            "overRecord": 1.053
+          },
+          "allButBp": {
+            "expected": 2.67,
+            "overRecord": 1.008
+          },
+          "allTrue": {
+            "expected": 2.82,
+            "overRecord": 1.064
+          }
+        },
+        "bp": {
+          "recovered": 19927,
+          "ambiguous": 7609,
+          "meanPointsGain": 0.033,
+          "controlledShare": 0.35,
+          "sameBandAsRecordControlled": 0.478,
+          "comparedControlled": 5265,
+          "sameBandAsRecordUncontrolled": 0.607,
+          "comparedUncontrolled": 7053,
+          "gainControlled": 0.15,
+          "gainUncontrolled": -0.01
+        },
+        "afDisagreeShare": 0.166,
+        "diabetesDisagreeShare": 0.033
+      },
+      "after": {
+        "personYears": 4333.4,
+        "observed": 22,
+        "oracle": 15.33,
+        "checks": 52260,
+        "truth": 16.25,
+        "observedOverTruth": {
+          "ratio": 1.354,
+          "low": 0.849,
+          "high": 2.05
+        },
+        "truthOverOracle": 1.06,
+        "variants": {
+          "record": {
+            "expected": 15.29,
+            "overRecord": 1
+          },
+          "trueAf": {
+            "expected": 15.29,
+            "overRecord": 1
+          },
+          "trueDiabetes": {
+            "expected": 15.4,
+            "overRecord": 1.007
+          },
+          "trueSmoker": {
+            "expected": 15.29,
+            "overRecord": 1
+          },
+          "trueBpTable": {
+            "expected": 16.21,
+            "overRecord": 1.06
+          },
+          "trueBp": {
+            "expected": 16.11,
+            "overRecord": 1.054
+          },
+          "allButBp": {
+            "expected": 15.4,
+            "overRecord": 1.007
+          },
+          "allTrue": {
+            "expected": 16.25,
+            "overRecord": 1.063
+          }
+        },
+        "bp": {
+          "recovered": 48691,
+          "ambiguous": 2472,
+          "meanPointsGain": 0.189,
+          "controlledShare": 0.356,
+          "sameBandAsRecordControlled": 0.505,
+          "comparedControlled": 17081,
+          "sameBandAsRecordUncontrolled": 0.614,
+          "comparedUncontrolled": 29132,
+          "gainControlled": 0.84,
+          "gainUncontrolled": -0.01
+        },
+        "afDisagreeShare": 0,
+        "diabetesDisagreeShare": 0.018
+      }
+    },
+    "appliedToPart3": {
+      "afterOnset": {
+        "observed": 141,
+        "expected": 121.4,
+        "ratio": 1.162,
+        "low": 0.978,
+        "high": 1.37
+      },
+      "beforeOnset": {
+        "observed": 12,
+        "expected": 19.0,
+        "ratio": 0.63,
+        "low": 0.326,
+        "high": 1.101
+      },
+      "factorAfter": 1.063,
+      "factorBefore": 1.064
+    },
+    "verdict": "blood_pressure_controlled (treated BP table, never exported) adds about 6% to expected strokes before and after onset; BP between visits, AF timing, diabetes timing and smoking add nothing material; the remaining excess after onset is within chance."
   }
 }

@@ -13,10 +13,12 @@ import { randomFor } from "@/infrastructure/seeded-random";
 import { simulateRecording } from "@/packages/rhythm-sim/simulate-recording";
 
 import { labelledSegments } from "./afdb-series";
+import { type BeatAnnotator, DATABASES, type DatabaseId } from "./databases";
 import { type Summary, summarise, summariseBy } from "./analysis";
 import { type Distance, distances } from "./distance";
 import { type RhythmChange } from "./mit-annotations";
 import { intervalsOf, perturbBeats } from "./perturb";
+import { type RealNoiseLevel, realNoiseLevels, type RealNoiseRow } from "./real-noise";
 import {
   cellId,
   type GridCell,
@@ -40,8 +42,8 @@ export type SimWindowRow = WindowRow &
 
 export type AfdbRecordInput = Readonly<{
   record: string;
-  /** Which beat annotation file was read: "qrsc" (corrected) where present, else "qrs". */
-  beatAnnotator: "qrs" | "qrsc";
+  /** Which annotation file the beats were read from (`DATABASES[...].beatSources`). */
+  beatAnnotator: BeatAnnotator;
   samplingHz: number;
   hasSignalFile: boolean;
   beats: readonly number[];
@@ -53,9 +55,14 @@ export type BenchmarkOptions = Readonly<{
   bootstrapSeed: number;
   resamples: number;
   grid: GridOptions;
+  /** Also apply the grid's noise levels to the database beats (#296); needs the database. */
+  realNoise?: boolean;
 }>;
 
-/** AF in the database is "(AFIB"; atrial flutter, junctional and sinus count as not AF. */
+/**
+ * AF in both databases is "(AFIB"; every other rhythm (sinus, atrial flutter,
+ * junctional, bigeminy, SVTA, ...) counts as not AF.
+ */
 export const AFDB_AF_LABEL = "AFIB";
 
 const simIsAf = (label: string): boolean => label === "af";
@@ -96,7 +103,7 @@ export type RealWindowRow = WindowRow & Readonly<{ record: string }>;
 
 export type RecordSummary = Readonly<{
   record: string;
-  beatAnnotator: "qrs" | "qrsc";
+  beatAnnotator: BeatAnnotator;
   hasSignalFile: boolean;
   samplingHz: number;
   beats: number;
@@ -111,23 +118,27 @@ export type RecordSummary = Readonly<{
   rhythmIntervals: Readonly<Record<string, number>>;
 }>;
 
-export const recordWindows = (input: AfdbRecordInput): RealWindowRow[] =>
-  labelledSegments(input.beats, input.rhythmChanges, input.samplingHz).reduce<
-    RealWindowRow[]
-  >(
-    (out, segment) => [
-      ...out,
-      ...labelledWindows(
-        input.record,
-        segment.rrMs,
-        segment.rhythms,
-        realIsAf,
-        false,
-        out.length,
-      ).map((row) => ({ ...row, record: input.record })),
-    ],
-    [],
-  );
+export const recordWindows = (input: AfdbRecordInput): RealWindowRow[] => {
+  // Appended in place: a 24 h record has hundreds of segments, and copying the
+  // rows for each would be quadratic.
+  const out: RealWindowRow[] = [];
+  for (const segment of labelledSegments(
+    input.beats,
+    input.rhythmChanges,
+    input.samplingHz,
+  )) {
+    const rows = labelledWindows(
+      input.record,
+      segment.rrMs,
+      segment.rhythms,
+      realIsAf,
+      false,
+      out.length,
+    );
+    for (const row of rows) out.push({ ...row, record: input.record });
+  }
+  return out;
+};
 
 const recordSummary = (
   input: AfdbRecordInput,
@@ -178,6 +189,7 @@ export type BenchmarkResult = Readonly<{
     bootstrapSeed: number;
     resamples: number;
     grid: GridOptions;
+    realNoise: boolean;
     windowBeats: number;
     afWindowRule: string;
   }>;
@@ -193,6 +205,7 @@ export type BenchmarkResult = Readonly<{
     byDurationAndNoise: readonly Summary[];
   }>;
   real: Readonly<{
+    databaseId: DatabaseId;
     database: string;
     sha256SumsFile: string | null;
     records: readonly RecordSummary[];
@@ -201,12 +214,16 @@ export type BenchmarkResult = Readonly<{
     byDominantRhythm: readonly Summary[];
   }> | null;
   simToReal: readonly DistanceTable[];
+  /** The grid's noise levels on the database beats, one summary per level; null unless asked. */
+  realNoise: readonly RealNoiseLevel[] | null;
 }>;
 
 export type BenchmarkInputs = Readonly<{
   options: BenchmarkOptions;
   gitSha: string;
   afdb: Readonly<{
+    /** Which database the records are from; the MIT-BIH AF Database when left out. */
+    database?: DatabaseId;
     records: readonly AfdbRecordInput[];
     sha256SumsFile: string | null;
   }> | null;
@@ -216,6 +233,7 @@ export type BenchmarkData = Readonly<{
   result: BenchmarkResult;
   simRows: readonly SimWindowRow[];
   realRows: readonly RealWindowRow[];
+  realNoiseRows: readonly RealNoiseRow[];
 }>;
 
 const pure = (row: WindowRow): boolean => !isMixed(row);
@@ -244,6 +262,10 @@ export const runBenchmark = (inputs: BenchmarkInputs): BenchmarkData => {
     rows: recordWindows(record),
   }));
   const realRows = realByRecord.flatMap((entry) => entry.rows);
+  const realNoise =
+    inputs.afdb === null || options.realNoise !== true
+      ? null
+      : realNoiseLevels(inputs.afdb.records, options.grid.noise, resamples, seed);
   const simFull = simRows.filter((row) => row.n === WINDOW_BEATS);
   const simToReal: DistanceTable[] =
     inputs.afdb === null
@@ -269,6 +291,7 @@ export const runBenchmark = (inputs: BenchmarkInputs): BenchmarkData => {
   return {
     simRows,
     realRows,
+    realNoiseRows: realNoise?.rows ?? [],
     result: {
       benchmark: "rhythm-bench",
       version: BENCHMARK_VERSION,
@@ -279,6 +302,7 @@ export const runBenchmark = (inputs: BenchmarkInputs): BenchmarkData => {
         bootstrapSeed: options.bootstrapSeed,
         resamples: options.resamples,
         grid: options.grid,
+        realNoise: realNoise !== null,
         windowBeats: WINDOW_BEATS,
         afWindowRule:
           "a window is AF when at least 50 % of its intervals are AF; simulated recordings shorter than 128 intervals are one window of all their intervals",
@@ -316,7 +340,8 @@ export const runBenchmark = (inputs: BenchmarkInputs): BenchmarkData => {
         inputs.afdb === null
           ? null
           : {
-              database: "MIT-BIH Atrial Fibrillation Database 1.0.0 (PhysioNet)",
+              databaseId: inputs.afdb.database ?? "afdb",
+              database: DATABASES[inputs.afdb.database ?? "afdb"].name,
               sha256SumsFile: inputs.afdb.sha256SumsFile,
               records: realByRecord.map((entry) =>
                 recordSummary(entry.record, entry.rows),
@@ -332,6 +357,7 @@ export const runBenchmark = (inputs: BenchmarkInputs): BenchmarkData => {
               ),
             },
       simToReal,
+      realNoise: realNoise?.levels ?? null,
     },
   };
 };

@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import {
   formatBytes,
   formatDate,
+  formatElapsed,
   formatForPrompt,
   formatMeasure,
   formatMeasureCompact,
@@ -372,5 +373,24 @@ describe("formatMetricValue and formatForPrompt", () => {
         date: "2026-10-16",
       }),
     ).toBe("[sleep.hrv.2026-10-16] Average HRV during sleep (2026-10-16): 44 ms");
+  });
+});
+
+describe("formatElapsed", () => {
+  const cases: readonly [number | null, string][] = [
+    [0, "0.0s"],
+    [99, "0.0s"],
+    [3_249, "3.2s"],
+    [3_299, "3.2s"],
+    [59_999, "59.9s"],
+    [60_000, "1m 00s"],
+    [65_400, "1m 05s"],
+    [3_725_000, "62m 05s"],
+    [-1, "—"],
+    [null, "—"],
+    [Number.NaN, "—"],
+  ];
+  test.each(cases)("%p ms reads %p", (ms, expected) => {
+    expect(formatElapsed(ms)).toBe(expected);
   });
 });

@@ -5,9 +5,10 @@ import {
   loadCohortPeople,
   loadCohortValues,
   loadVitalMetrics,
+  rhythmOf,
   type Fetcher,
 } from "./cohort-client";
-import { introFor } from "./use-biomarker-tab";
+import { introFor, rhythmSource } from "./use-biomarker-tab";
 
 const answer =
   (status: number, body: unknown): Fetcher =>
@@ -37,13 +38,19 @@ describe("loadCohortValues", () => {
     const asked: string[] = [];
     const fetcher: Fetcher = async (url) => {
       asked.push(url);
-      return new Response(JSON.stringify({ values: [VALUE], vitals: [HEART] }), {
-        status: 200,
-      });
+      return new Response(
+        JSON.stringify({
+          values: [VALUE],
+          vitals: [HEART],
+          rhythm: { day: "2025-03-01", afOnDay: true },
+        }),
+        { status: 200 },
+      );
     };
     expect(await loadCohortValues("syn a/1", fetcher)).toEqual({
       values: [VALUE],
       vitals: [HEART],
+      rhythm: { day: "2025-03-01", afOnDay: true },
     });
     expect(asked).toEqual(["/api/biomarkers/cohort/syn%20a%2F1"]);
   });
@@ -52,7 +59,18 @@ describe("loadCohortValues", () => {
     expect(await loadCohortValues("syn-a", answer(200, { values: [] }))).toEqual({
       values: [],
       vitals: [],
+      rhythm: null,
     });
+  });
+
+  test("a malformed rhythm is no rhythm, never atrial fibrillation", () => {
+    expect(rhythmOf({ day: "2025-03-01", afOnDay: false })).toEqual({
+      day: "2025-03-01",
+      afOnDay: false,
+    });
+    expect(rhythmOf({ day: "2025-03-01", afOnDay: "yes" })).toBeNull();
+    expect(rhythmOf({ day: "1 March", afOnDay: true })).toBeNull();
+    expect(rhythmOf(null)).toBeNull();
   });
 
   test("an error status, a network failure or a wrong shape is a failure, never no data", async () => {
@@ -102,5 +120,25 @@ describe("introFor", () => {
     expect(introFor("demo", 33, false)).toBe(DEMO_LABS_NOTE);
     expect(introFor("demo", 0, false)).toBe(NO_COHORT);
     expect(introFor("self", 0, false)).toBe(SELF_NO_LABS);
+  });
+});
+
+describe("rhythmSource", () => {
+  const rhythm = { day: "2025-03-01", afOnDay: true };
+
+  test("a synthetic person's rhythm is simulated for the heart rate's day", () => {
+    expect(rhythmSource("demo", "syn-a", rhythm)).toEqual({
+      kind: "simulated",
+      subjectRef: "syn-a",
+      day: "2025-03-01",
+      afOnDay: true,
+    });
+  });
+
+  test("Self's data is a measured rate; no heart rate or no person, no rhythm", () => {
+    expect(rhythmSource("self", "", null)).toEqual({ kind: "measured" });
+    expect(rhythmSource("demo", "syn-a", null)).toBeNull();
+    expect(rhythmSource("demo", "", rhythm)).toBeNull();
+    expect(rhythmSource("other", "syn-a", rhythm)).toBeNull();
   });
 });

@@ -1,5 +1,5 @@
 import { EMPTY_VALUE, formatDate, formatNumber } from "@/infrastructure/format-measure";
-import type { TableCell } from "@/packages/personal-data/types";
+import type { ImportKind, TableCell } from "@/packages/personal-data/types";
 
 /**
  * Display text for the import screens. Pure, so the server and the browser
@@ -59,3 +59,19 @@ export const byteSizeLabel = (bytes: number): string =>
  */
 export const previewCellLabel = (cell: TableCell): string =>
   cell === null ? EMPTY_VALUE : String(cell);
+
+/**
+ * What a dataset holds, for its line in the list: a VCF's variant records
+ * (its kind label already names GRCh38), else rows and the date range.
+ */
+export const datasetContentsLabel = (
+  dataset: Readonly<{
+    kind: ImportKind;
+    rowCount: number;
+    firstAt: string | null;
+    lastAt: string | null;
+  }>,
+): string =>
+  dataset.kind === "vcf"
+    ? countLabel(dataset.rowCount, "variant record", "variant records")
+    : `${countLabel(dataset.rowCount, "row", "rows")} · ${dateRangeLabel(dataset.firstAt, dataset.lastAt)}`;
