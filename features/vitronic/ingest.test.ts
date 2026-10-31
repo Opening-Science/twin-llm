@@ -4,6 +4,12 @@ import { mkdtemp, readdir, readFile, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import {
+  type FieldCipher,
+  openJson,
+  plainCipher,
+  sealedCipher,
+} from "@/infrastructure/field-cipher";
 import type { AppendInput } from "@/packages/audit/append";
 import { buildTinyGlb } from "@/packages/vitronic/tiny-glb";
 import type { VitronicSummary } from "@/infrastructure/vitronic-types";
@@ -33,7 +39,9 @@ const recorded = {
   appends: [] as AppendInput[],
 };
 
-const testPorts = (): Partial<VitronicSnapshotPorts> => ({
+const testPorts = (
+  cipher: FieldCipher = plainCipher,
+): Partial<VitronicSnapshotPorts> => ({
   database: () => ({
     vitronicSubject: {
       findFirst: async (args: {
@@ -45,6 +53,7 @@ const testPorts = (): Partial<VitronicSnapshotPorts> => ({
           : null,
     },
     vitronicSnapshot: {
+      findUnique: async () => null,
       upsert: async (args: {
         where: { subjectId_viatarId: { subjectId: string; viatarId: number } };
         create: Record<string, unknown>;
@@ -74,11 +83,24 @@ const testPorts = (): Partial<VitronicSnapshotPorts> => ({
     };
   },
   persistGlb,
+  cipher: async () => cipher,
 });
+
+/** A synthetic install stores JSON text as it is (#141). */
+const parsed = (value: unknown): unknown => JSON.parse(String(value));
 
 const originalEnv = { ...process.env };
 let dataDir = "";
-let persistGlb: (userId: string, bytes: Uint8Array) => Promise<string>;
+let persistGlb: (
+  userId: string,
+  bytes: Uint8Array,
+  cipher: FieldCipher,
+) => Promise<string>;
+let loadGlb: (
+  userId: string,
+  sha: string,
+  cipher: FieldCipher,
+) => Promise<Uint8Array | null>;
 let VitronicSubjectNotOwnedError: new () => Error;
 let createVitronicSyncHandler: typeof CreateSyncHandler;
 let ingestVitronicForUser: (params: {
@@ -106,7 +128,7 @@ beforeAll(async () => {
   });
   const { resetServerEnvCacheForTests } = await import("@/infrastructure/env");
   resetServerEnvCacheForTests();
-  ({ persistGlb } = await import("@/packages/vitronic/glb"));
+  ({ persistGlb, loadGlb } = await import("@/packages/vitronic/glb"));
   ({ ingestVitronicForUser, VitronicSubjectNotOwnedError } =
     await import("./connection"));
   ({ createVitronicSyncHandler } = await import("./sync-handler"));
@@ -163,7 +185,7 @@ describe("ingestVitronicForUser", () => {
     expect(result.fhirBundle).toBeNull();
     expect(recorded.snapshots).toHaveLength(1);
     const row = recorded.snapshots[0]?.create;
-    expect(row?.summary).toEqual(result.summary);
+    expect(parsed(row?.summary)).toEqual(result.summary);
     expect(row?.fhirBundle).toBeNull();
     expect(row?.glbSha256).toBe(expectedSha);
     expect(row?.glbModelName).toBe("avatar_3d.glb");
@@ -219,9 +241,9 @@ describe("ingestVitronicForUser", () => {
     });
 
     const row = recorded.snapshots[0]?.create;
-    expect(Array.isArray(row?.markers)).toBe(true);
-    expect((row?.markers as { path: string }[])[0]?.path).toBe("head.vertex");
-    expect(Array.isArray(row?.measures)).toBe(true);
+    expect(Array.isArray(parsed(row?.markers))).toBe(true);
+    expect((parsed(row?.markers) as { path: string }[])[0]?.path).toBe("head.vertex");
+    expect(Array.isArray(parsed(row?.measures))).toBe(true);
     expect(JSON.stringify(result.summary)).not.toContain("position");
     expect(JSON.stringify(result.summary)).not.toContain("contour");
   });
@@ -283,10 +305,53 @@ describe("ingestVitronicForUser", () => {
     expect(recorded.snapshots[0]?.where).toEqual(where);
     expect(recorded.snapshots[1]?.where).toEqual(where);
     expect(recorded.snapshots[1]?.update.glbSha256).toBeTruthy();
-    expect(Array.isArray(recorded.snapshots[1]?.update.markers)).toBe(true);
-    expect((recorded.snapshots[1]?.update.markers as { path: string }[])[0]?.path).toBe(
-      "head.vertex",
+    expect(Array.isArray(parsed(recorded.snapshots[1]?.update.markers))).toBe(true);
+    expect(
+      (parsed(recorded.snapshots[1]?.update.markers) as { path: string }[])[0]?.path,
+    ).toBe("head.vertex");
+  });
+});
+
+describe("personal mode seals the scan and its mesh (#141)", () => {
+  const cipher = sealedCipher({
+    keyId: "0123456789abcdef",
+    dataKey: Buffer.alloc(32, 3),
+  });
+
+  test("the row holds ciphertext and the mesh file opens only with the key", async () => {
+    const glb = buildTinyGlb();
+    glb[glb.length - 1] = (glb[glb.length - 1] ?? 0) ^ 4;
+    const sha = createHash("sha256").update(glb).digest("hex");
+    const result = await ingestVitronicForUser({
+      userId: USER_ID,
+      actor: ACTOR,
+      input: { ...SYNTHETIC_INGEST_BODY, subjectId: "sub-self", glb },
+      ports: testPorts(cipher),
+    });
+    const row = recorded.snapshots[0]?.create ?? {};
+    const id = String(row.id);
+    expect(String(row.summary).startsWith("tlenc1.0123456789abcdef.")).toBe(true);
+    expect(String(row.summary)).not.toContain("body.height");
+    expect(
+      openJson(cipher, "vitronic_snapshots", "summary", id, String(row.summary)),
+    ).toEqual(result.summary);
+
+    const files = await readdir(join(dataDir, USER_ID));
+    expect(files).toContain(`${sha}.glb.enc`);
+    expect(files).not.toContain(`${sha}.glb`);
+    const onDisk = await readFile(join(dataDir, USER_ID, `${sha}.glb.enc`));
+    expect(onDisk.includes(Buffer.from("glTF"))).toBe(false);
+    expect((await stat(join(dataDir, USER_ID, `${sha}.glb.enc`))).mode & 0o777).toBe(
+      0o600,
     );
+    expect(
+      Buffer.from((await loadGlb(USER_ID, sha, cipher)) ?? []).equals(Buffer.from(glb)),
+    ).toBe(true);
+    const otherKey = sealedCipher({
+      keyId: "0123456789abcdef",
+      dataKey: Buffer.alloc(32, 9),
+    });
+    await expect(loadGlb(USER_ID, sha, otherKey)).rejects.toThrow();
   });
 });
 

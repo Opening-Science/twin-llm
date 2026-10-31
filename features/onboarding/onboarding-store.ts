@@ -1,6 +1,8 @@
 import "server-only";
 
 import { database } from "@/infrastructure/database";
+import { newRowId, openNullable, sealNullable } from "@/infrastructure/field-cipher";
+import { cipherForUser } from "@/infrastructure/field-cipher-runtime";
 import {
   type KnowledgeSourceId,
   normaliseDisabledSources,
@@ -18,8 +20,11 @@ import {
 /**
  * The one place the `onboarding_profiles` table is read and written. Every
  * read is cleaned through the same rules the client uses, so a stale role or
- * source id in the database never reaches a screen or the chat tools.
+ * source id in the database never reaches a screen or the chat tools. The
+ * free-text interest is sealed with the person's keys in personal mode (#141).
  */
+
+const TABLE = "onboarding_profiles";
 
 export type StoredOnboarding = Readonly<{
   answers: OnboardingAnswers;
@@ -31,6 +36,7 @@ export const loadOnboarding = async (userId: string): Promise<StoredOnboarding> 
   const row = await database().onboardingProfile.findUnique({
     where: { userId },
     select: {
+      id: true,
       roles: true,
       dataChoice: true,
       interest: true,
@@ -40,8 +46,12 @@ export const loadOnboarding = async (userId: string): Promise<StoredOnboarding> 
     },
   });
   if (!row) return { answers: EMPTY_ANSWERS, step: 0, completed: false };
+  const cipher = await cipherForUser(userId);
   return {
-    answers: normaliseAnswers(row),
+    answers: normaliseAnswers({
+      ...row,
+      interest: openNullable(cipher, TABLE, "interest", row.id, row.interest),
+    }),
     step: clampStep(row.step),
     completed: row.completedAt !== null,
   };
@@ -52,17 +62,32 @@ export const saveOnboarding = async (
   input: Readonly<{ answers: OnboardingAnswers; step: number; complete: boolean }>,
 ): Promise<void> => {
   const answers = normaliseAnswers(input.answers);
+  const cipher = await cipherForUser(userId);
+  // The row id is part of the sealed interest's context, so it is fixed first.
+  const id =
+    (
+      await database().onboardingProfile.findUnique({
+        where: { userId },
+        select: { id: true },
+      })
+    )?.id ?? newRowId();
   const data = {
     roles: [...answers.roles],
     dataChoice: answers.dataChoice,
-    interest: answers.interest.trim() || null,
+    interest: sealNullable(
+      cipher,
+      TABLE,
+      "interest",
+      id,
+      answers.interest.trim() || null,
+    ),
     disabledSources: [...answers.disabledSources],
     step: clampStep(input.step),
     ...(input.complete ? { completedAt: new Date() } : {}),
   };
   await database().onboardingProfile.upsert({
     where: { userId },
-    create: { userId, ...data },
+    create: { id, userId, ...data },
     update: data,
   });
 };

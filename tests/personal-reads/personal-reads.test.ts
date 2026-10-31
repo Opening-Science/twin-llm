@@ -41,6 +41,7 @@ import {
   VAULT_COOKIE,
 } from "@/infrastructure/vault-gate";
 import { vaultSessions } from "@/infrastructure/vault-session";
+import { sealedCipher, sealJson } from "@/infrastructure/field-cipher";
 import type { OAuthCookieJar } from "@/infrastructure/oauth-state";
 import type { PersonalDataStore } from "@/infrastructure/personal-data-store";
 import type { AppendInput } from "@/packages/audit/append";
@@ -107,14 +108,29 @@ const SUMMARY = {
   narrative: "Synthetic wearable context for 2026-01-01 to 2026-01-04.",
 };
 
+/** Personal mode: the readers open values sealed with the person's key (#141). */
+const readCipher = sealedCipher({
+  keyId: "0123456789abcdef",
+  dataKey: Buffer.alloc(32, 8),
+});
+
 const snapshotRow = {
   id: "snap-synthetic-1",
   viatarId: 4,
   glbSha256: null,
   syncedAt: new Date("2026-01-01T00:00:00.000Z"),
-  summary: { ...SUMMARY, metrics: [] },
-  markers: [],
-  measures: [],
+  summary: sealJson(readCipher, "vitronic_snapshots", "summary", "snap-synthetic-1", {
+    ...SUMMARY,
+    metrics: [],
+  }),
+  markers: sealJson(readCipher, "vitronic_snapshots", "markers", "snap-synthetic-1", []),
+  measures: sealJson(
+    readCipher,
+    "vitronic_snapshots",
+    "measures",
+    "snap-synthetic-1",
+    [],
+  ),
   presetName: "Default",
   subjectId: SUBJECT_ID,
 };
@@ -122,12 +138,13 @@ const snapshotRow = {
 /** The BodyLoop readers' own ports: a fake database and the recorder's append. */
 const vitronicPorts = (record: Recorder): VitronicLocalReadPorts => ({
   append: record.append,
+  cipher: async () => readCipher,
   database: () => ({
     vitronicSubject: {
       findMany: async () => [
         {
           id: SUBJECT_ID,
-          label: "Self",
+          label: readCipher.sealText("vitronic_subjects", "label", SUBJECT_ID, "Self"),
           source: "scanner",
           isSelf: true,
           probandId: 7,

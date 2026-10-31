@@ -23,8 +23,9 @@ const STORED_SNAPSHOT: Record<string, unknown> = {
   userId: USER_ID,
   startDate: SYNTHETIC_WINDOW.startDate,
   endDate: SYNTHETIC_WINDOW.endDate,
-  summary: STORED_SUMMARY,
-  fhirBundle: { resourceType: "Bundle", type: "collection", entry: [] },
+  // Text columns since #141; the plain cipher of a synthetic install reads them.
+  summary: JSON.stringify(STORED_SUMMARY),
+  fhirBundle: JSON.stringify({ resourceType: "Bundle", type: "collection", entry: [] }),
   syncedAt: new Date("2026-01-05T00:00:00Z"),
 };
 
@@ -210,7 +211,8 @@ describe("POST /api/whoop/sync error surface", () => {
     expect(data.startDate).toBe("2026-01-01");
     expect(data.endDate).toBe("2026-01-04");
 
-    const summary = data.summary as {
+    // A synthetic install stores the JSON text as it is (#141).
+    const summary = JSON.parse(String(data.summary)) as {
       window: unknown;
       metrics: { key: string; value: number; unit?: string }[];
       narrative: string;
@@ -224,7 +226,7 @@ describe("POST /api/whoop/sync error surface", () => {
       ["whoop.sleep.consistency.2026-01-01", 77, "%"],
       ["whoop.sleep.in_bed_min.2026-01-01", 450, "min"],
     ]);
-    expect(data.summary).toEqual(
+    expect(JSON.parse(String(data.summary))).toEqual(
       buildWhoopSummary(
         {
           recovery: [],
@@ -247,7 +249,7 @@ describe("POST /api/whoop/sync error surface", () => {
 
     await POST(syncRequest());
 
-    const bundle = recorded.snapshots[0]?.data.fhirBundle as {
+    const bundle = JSON.parse(String(recorded.snapshots[0]?.data.fhirBundle)) as {
       resourceType: string;
       entry: {
         resource: {
@@ -280,16 +282,21 @@ describe("getLatestWhoopSummary", () => {
   test("reads only the summary column, never the FHIR bundle", async () => {
     const { getLatestWhoopSummary } = await import("./connection");
 
-    const result = await getLatestWhoopSummary(USER_ID);
+    const { plainCipher } = await import("@/infrastructure/field-cipher");
+    const result = await getLatestWhoopSummary(USER_ID, {
+      cipher: async () => plainCipher,
+    });
 
     expect(recorded.snapshotQueries).toEqual([
       {
         where: { userId: USER_ID },
         orderBy: { syncedAt: "desc" },
-        select: { summary: true },
+        select: { id: true, summary: true },
       },
     ]);
-    expect(recorded.snapshotRows.map((row) => Object.keys(row))).toEqual([["summary"]]);
+    expect(recorded.snapshotRows.map((row) => Object.keys(row))).toEqual([
+      ["id", "summary"],
+    ]);
     expect(result).toEqual(STORED_SUMMARY);
     expect(Object.keys(result ?? {})).not.toContain("fhirBundle");
   });

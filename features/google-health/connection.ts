@@ -12,6 +12,13 @@ import {
 import type { Auth } from "googleapis";
 
 import { database } from "@/infrastructure/database";
+import {
+  type FieldCipher,
+  openJson,
+  sealJson,
+  sealNullableJson,
+} from "@/infrastructure/field-cipher";
+import { cipherForUser } from "@/infrastructure/field-cipher-runtime";
 import { googleHealthEnv } from "@/infrastructure/env";
 import {
   getGoogleHealthCredentials,
@@ -191,13 +198,23 @@ export const syncGoogleHealthForUser = async (
       data: { lastSyncAt: new Date() },
     });
 
+    // Sealed with the person's keys (#141); refused while their vault is locked.
+    const cipher = await cipherForUser(userId);
+    const id = crypto.randomUUID();
     await database().googleHealthSnapshot.create({
       data: {
+        id,
         userId,
         startDate,
         endDate,
-        summary,
-        fhirBundle: bundle as object,
+        summary: sealJson(cipher, "google_health_snapshots", "summary", id, summary),
+        fhirBundle: sealNullableJson(
+          cipher,
+          "google_health_snapshots",
+          "fhirBundle",
+          id,
+          bundle ?? null,
+        ),
       },
     });
   };
@@ -207,15 +224,22 @@ export const syncGoogleHealthForUser = async (
 
 export const getLatestGoogleHealthSummary = async (
   userId: string,
+  ports?: { readonly cipher?: (userId: string) => Promise<FieldCipher> },
 ): Promise<GoogleHealthSummary | null> => {
   const snap = await database().googleHealthSnapshot.findFirst({
     where: { userId },
     orderBy: { syncedAt: "desc" },
-    select: { summary: true },
+    select: { id: true, summary: true },
   });
 
   if (!snap) return null;
-  return snap.summary as unknown as GoogleHealthSummary;
+  return openJson(
+    await (ports?.cipher ?? cipherForUser)(userId),
+    "google_health_snapshots",
+    "summary",
+    snap.id,
+    snap.summary,
+  ) as GoogleHealthSummary;
 };
 
 export const getGoogleHealthConnectionStatus = async (userId: string) => {

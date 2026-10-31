@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 
+import { plainCipher } from "@/infrastructure/field-cipher";
 import type { OuraSummary } from "@/infrastructure/oura-types";
 
 import { getLatestOuraSummary, OURA_OAUTH_SCOPES, OURA_SYNC_TYPES } from "./connection";
@@ -29,8 +30,9 @@ const STORED_SNAPSHOT: Record<string, unknown> = {
   userId: USER_ID,
   startDate: "2026-01-01",
   endDate: "2026-01-04",
-  summary: STORED_SUMMARY,
-  fhirBundle: { resourceType: "Bundle", type: "collection", entry: [] },
+  // Text columns since #141; the plain cipher of a synthetic install reads them.
+  summary: JSON.stringify(STORED_SUMMARY),
+  fhirBundle: JSON.stringify({ resourceType: "Bundle", type: "collection", entry: [] }),
   syncedAt: new Date("2026-01-05T00:00:00Z"),
 };
 
@@ -80,16 +82,19 @@ describe("getLatestOuraSummary", () => {
   test("reads only the summary column, never the FHIR bundle", async () => {
     const result = await getLatestOuraSummary(USER_ID, {
       database: fakeDatabase as never,
+      cipher: async () => plainCipher,
     });
 
     expect(recorded.snapshotQueries).toEqual([
       {
         where: { userId: USER_ID },
         orderBy: { syncedAt: "desc" },
-        select: { summary: true },
+        select: { id: true, summary: true },
       },
     ]);
-    expect(recorded.snapshotRows.map((row) => Object.keys(row))).toEqual([["summary"]]);
+    expect(recorded.snapshotRows.map((row) => Object.keys(row))).toEqual([
+      ["id", "summary"],
+    ]);
     expect(result).toEqual(STORED_SUMMARY);
     expect(Object.keys(result ?? {})).not.toContain("fhirBundle");
   });

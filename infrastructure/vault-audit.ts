@@ -15,6 +15,12 @@ export const VAULT_AUDIT_TOOLS = {
   lockIdle: "vault.lock.idle",
   recoveryUsed: "vault.recovery_used",
   recoveryRefused: "vault.recovery.refused",
+  /** #141: an existing install's rows sealed in place (`bun run vault:migrate`). */
+  migrate: "vault.migrate",
+  /** #141: a new data key made, the old one retiring (`bun run vault:rotate`). */
+  rotateStart: "vault.rotate.start",
+  /** #141: every row resealed under the new key and the old key removed. */
+  rotate: "vault.rotate",
 } as const;
 
 export type VaultAuditEvent = keyof typeof VAULT_AUDIT_TOOLS;
@@ -32,3 +38,24 @@ export const vaultAuditEvent = (
   result: { failures },
   rowCount: failures,
 });
+
+/**
+ * A migration or rotation row (#141): how many rows per table and how many
+ * mesh files were sealed. Table names and counts only.
+ */
+export const vaultCountsEvent = (
+  actorId: string,
+  event: "migrate" | "rotateStart" | "rotate",
+  counts: Readonly<Record<string, number>>,
+): AppendInput => {
+  const rows = Object.values(counts).reduce((sum, count) => sum + count, 0);
+  return {
+    actor: actorId,
+    sessionId: actorId,
+    subjectRef: null,
+    tool: VAULT_AUDIT_TOOLS[event],
+    args: { event },
+    result: { counts },
+    rowCount: rows,
+  };
+};

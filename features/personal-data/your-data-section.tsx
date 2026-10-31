@@ -20,7 +20,7 @@ export const YourDataSection = ({ data }: Readonly<{ data: YourDataState }>) => 
       will be stored before anything is saved, and you can delete an import at any time.
     </p>
     <p className="mt-2 max-w-2xl text-sm leading-relaxed">
-      Stored on this machine in TwinLLM&apos;s database. Not encrypted at rest yet (#141).
+      Stored on this machine in TwinLLM&apos;s database, encrypted with your passphrase.
       Imported data is never sent to a hosted model. A genome VCF is read only by models
       on this machine.
     </p>

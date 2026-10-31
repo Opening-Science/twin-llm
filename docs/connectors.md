@@ -140,7 +140,7 @@ Live test: `RUN_LIVE`, `VITRONIC_BASE_URL`, `VITRONIC_API_TOKEN`, `VITRONIC_PROB
 
 - `VitronicConnection` (`vitronic_connections`): encrypted API token, encrypted upload secret, `baseUrl`, `probandId`, `tlsFingerprintSha256`, optional `apiTokenName`, `lastSyncAt`.
 - `VitronicSnapshot` (`vitronic_snapshots`): `summary` (numeric keys with units), `markers` / `measures` (viewer only), `presetName`, `fhirBundle` null, `glbSha256`, `viatarId`.
-- Disk: `data/vitronic/<userId>/<sha256>.glb` (gitignored).
+- Disk: `data/vitronic/<userId>/<sha256>.glb` (gitignored); in personal mode `<sha256>.glb.enc`, encrypted with the person's key (#141).
 
 ### What is encrypted
 

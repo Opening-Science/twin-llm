@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { VAULT_AUDIT_TOOLS, vaultAuditEvent } from "./vault-audit";
+import { VAULT_AUDIT_TOOLS, vaultAuditEvent, vaultCountsEvent } from "./vault-audit";
 
 describe("vault audit rows (#142)", () => {
   test("ids and counts only; the event is in the tool name", () => {
@@ -25,6 +25,23 @@ describe("vault audit rows (#142)", () => {
       "vault.lock.idle",
       "vault.recovery_used",
       "vault.recovery.refused",
+      "vault.migrate",
+      "vault.rotate.start",
+      "vault.rotate",
     ]);
+  });
+
+  test("migration and rotation rows hold table names and counts only (#141)", () => {
+    expect(
+      vaultCountsEvent("actor-a", "migrate", { threads: 2, turns: 3, meshFiles: 1 }),
+    ).toEqual({
+      actor: "actor-a",
+      sessionId: "actor-a",
+      subjectRef: null,
+      tool: "vault.migrate",
+      args: { event: "migrate" },
+      result: { counts: { threads: 2, turns: 3, meshFiles: 1 } },
+      rowCount: 6,
+    });
   });
 });

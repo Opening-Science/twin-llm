@@ -19,7 +19,7 @@ import {
   vaultUserKey,
   type WrappedWith,
 } from "@/infrastructure/vault-file";
-import { type VaultSessions } from "@/infrastructure/vault-session";
+import { type RawKey, type VaultSessions } from "@/infrastructure/vault-session";
 
 import { VAULT_COPY } from "./vault-copy";
 
@@ -97,7 +97,25 @@ const openWith = async (
   }
 };
 
-/** A record holding `dek` under a new passphrase and a new recovery code. */
+const wrapBoth = async (
+  userKey: string,
+  keyId: string,
+  dek: Buffer,
+  passphrase: string,
+  code: string,
+  argon2: boolean,
+): Promise<Readonly<{ passphrase: WrappedWith; recovery: WrappedWith }>> => {
+  const [byPassphrase, byCode] = await Promise.all([
+    wrapUnder(passphrase, dek, wrapAad(userKey, keyId, "passphrase"), argon2),
+    wrapUnder(code, dek, wrapAad(userKey, keyId, "recovery"), argon2),
+  ]);
+  return { passphrase: byPassphrase, recovery: byCode };
+};
+
+/**
+ * A record holding `dek` (and any retiring keys of a rotation, #141) under a
+ * new passphrase and a new recovery code.
+ */
 export const sealRecord = async (
   input: Readonly<{
     actorId: string;
@@ -108,40 +126,99 @@ export const sealRecord = async (
     createdAt: string;
     now: Date;
     argon2: boolean;
+    retiring?: readonly RawKey[];
   }>,
 ): Promise<VaultRecord> => {
   const userKey = vaultUserKey(input.actorId);
   const code = normaliseRecoveryCode(input.recoveryCode);
   if (code === null) throw new Error("recovery code is not well formed");
-  const [passphrase, recovery] = await Promise.all([
-    wrapUnder(
-      input.passphrase,
-      input.dek,
-      wrapAad(userKey, input.keyId, "passphrase"),
-      input.argon2,
+  const [active, ...retiring] = await Promise.all(
+    [{ keyId: input.keyId, dataKey: input.dek }, ...(input.retiring ?? [])].map(
+      async (key) => ({
+        keyId: key.keyId,
+        ...(await wrapBoth(
+          userKey,
+          key.keyId,
+          key.dataKey,
+          input.passphrase,
+          code,
+          input.argon2,
+        )),
+      }),
     ),
-    wrapUnder(code, input.dek, wrapAad(userKey, input.keyId, "recovery"), input.argon2),
-  ]);
+  );
+  if (active === undefined) throw new Error("no key to seal");
   return {
     v: 1,
     userKey,
     keyId: input.keyId,
     createdAt: input.createdAt,
     updatedAt: input.now.toISOString(),
-    passphrase,
-    recovery,
+    passphrase: active.passphrase,
+    recovery: active.recovery,
+    ...(retiring.length > 0 ? { retiring } : {}),
   };
+};
+
+export type OpenedKeys = Readonly<{ active: RawKey; retiring: readonly RawKey[] }>;
+
+/**
+ * Every data key of a record under the passphrase or the recovery code, or
+ * null when the secret is wrong. A retiring key that does not open is a
+ * wrong secret too, never a silently smaller keyring.
+ */
+export const openRecord = async (
+  actorId: string,
+  record: VaultRecord,
+  secret: string,
+  purpose: "passphrase" | "recovery",
+): Promise<OpenedKeys | null> => {
+  const userKey = vaultUserKey(actorId);
+  const entries = [
+    { keyId: record.keyId, wrapped: record[purpose] },
+    ...(record.retiring ?? []).map((key) => ({
+      keyId: key.keyId,
+      wrapped: key[purpose],
+    })),
+  ];
+  const opened = await Promise.all(
+    entries.map(async ({ keyId, wrapped }) => {
+      const dataKey = await openWith(
+        secret,
+        wrapped,
+        wrapAad(userKey, keyId, purpose),
+      ).catch(() => null);
+      return dataKey === null ? null : { keyId, dataKey };
+    }),
+  );
+  const keys = opened.filter((key): key is RawKey => key !== null);
+  const [active, ...retiring] = keys;
+  if (active === undefined || keys.length !== entries.length) {
+    for (const key of keys) key.dataKey.fill(0);
+    return null;
+  }
+  return { active, retiring };
+};
+
+export const zeroKeys = (keys: OpenedKeys): void => {
+  keys.active.dataKey.fill(0);
+  for (const key of keys.retiring) key.dataKey.fill(0);
 };
 
 const openSession = (
   deps: VaultServiceDeps,
   actorId: string,
-  keyId: string,
-  dek: Buffer,
+  keys: OpenedKeys,
 ): string => {
   const token = (deps.newToken ?? newSessionToken)();
-  deps.sessions.open(actorId, keyId, dek, token);
-  dek.fill(0);
+  deps.sessions.open(
+    actorId,
+    keys.active.keyId,
+    keys.active.dataKey,
+    token,
+    keys.retiring,
+  );
+  zeroKeys(keys);
   deps.onOpened?.();
   return token;
 };
@@ -209,7 +286,11 @@ export const setUpVault = async (
     dek.fill(0);
     return refused(503, VAULT_COPY.setupFailed);
   }
-  return { kind: "opened", token: openSession(deps, actorId, keyId, dek), recoveryCode };
+  return {
+    kind: "opened",
+    token: openSession(deps, actorId, { active: { keyId, dataKey: dek }, retiring: [] }),
+    recoveryCode,
+  };
 };
 
 export const unlockVault = async (
@@ -222,16 +303,12 @@ export const unlockVault = async (
   const record = await readFound(deps, actorId);
   if ("kind" in record) return record;
 
-  const dek = await openWith(
-    passphrase,
-    record.passphrase,
-    wrapAad(vaultUserKey(actorId), record.keyId, "passphrase"),
-  ).catch(() => null);
-  if (dek === null) {
+  const keys = await openRecord(actorId, record, passphrase, "passphrase");
+  if (keys === null) {
     return wrongAttempt(deps, actorId, "unlockRefused", VAULT_COPY.wrongPassphrase);
   }
   deps.sessions.clearFailures(actorId);
-  const token = openSession(deps, actorId, record.keyId, dek);
+  const token = openSession(deps, actorId, keys);
   try {
     await deps.audit(actorId, "unlock");
   } catch {
@@ -257,12 +334,8 @@ export const recoverVault = async (
   const record = await readFound(deps, actorId);
   if ("kind" in record) return record;
 
-  const dek = await openWith(
-    normalised,
-    record.recovery,
-    wrapAad(vaultUserKey(actorId), record.keyId, "recovery"),
-  ).catch(() => null);
-  if (dek === null) {
+  const keys = await openRecord(actorId, record, normalised, "recovery");
+  if (keys === null) {
     return wrongAttempt(deps, actorId, "recoveryRefused", VAULT_COPY.wrongCode);
   }
   deps.sessions.clearFailures(actorId);
@@ -271,22 +344,23 @@ export const recoverVault = async (
     const rewrapped = await sealRecord({
       actorId,
       keyId: record.keyId,
-      dek,
+      dek: keys.active.dataKey,
       passphrase: newPassphrase,
       recoveryCode,
       createdAt: record.createdAt,
       now: deps.now(),
       argon2: deps.argon2,
+      retiring: keys.retiring,
     });
     await deps.audit(actorId, "recoveryUsed");
     await deps.write(actorId, rewrapped);
   } catch {
-    dek.fill(0);
+    zeroKeys(keys);
     return refused(503, VAULT_COPY.notRecorded);
   }
   return {
     kind: "opened",
-    token: openSession(deps, actorId, record.keyId, dek),
+    token: openSession(deps, actorId, keys),
     recoveryCode,
   };
 };

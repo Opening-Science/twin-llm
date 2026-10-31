@@ -11,7 +11,10 @@ import {
   isImportKind,
   type ImportKind,
 } from "@/packages/personal-data/types";
-import type { GenomeVariantPorts } from "@/packages/query-tools/imported-variants";
+import type {
+  GenomeVariantPorts,
+  GenomeVariantQuery,
+} from "@/packages/query-tools/imported-variants";
 import {
   type ImportedDataPorts,
   type ImportedObservationRecord,
@@ -19,6 +22,23 @@ import {
 } from "@/packages/query-tools/imported-ports";
 
 import { database } from "./database";
+import {
+  type FieldCipher,
+  newRowId,
+  openNullable,
+  openNumber,
+  openJson,
+  sealJson,
+  sealNullable,
+  sealNumber,
+} from "./field-cipher";
+import { cipherForUser } from "./field-cipher-runtime";
+import {
+  observationLookupValue,
+  observationSeriesValue,
+  variantIdsOf,
+  variantSiteValue,
+} from "./personal-columns";
 
 /**
  * Reads and writes the personal_* tables: a person's imported files
@@ -28,6 +48,12 @@ import { database } from "./database";
  *
  * Lives in infrastructure because two features need it: Customize · Data
  * imports and deletes, and the chat tools read it (`importedDataReads`).
+ *
+ * Personal columns are sealed with the owner's keys (#141, `field-cipher.ts`)
+ * and opened after each read, so nothing here works while the owner's vault
+ * is locked. Lookups use keyed hashes (`lookup_index`, `series_index`,
+ * `site_index`, `variant_id_index`, `sha256_index`); sorting by a sealed
+ * value happens in memory after opening.
  */
 
 export type DatasetView = Readonly<{
@@ -76,17 +102,113 @@ type Row = Readonly<{
   createdAt: Date;
 }>;
 
-const toView = (row: Row): DatasetView => ({
-  id: row.id,
-  // The CHECK constraint holds kind to the import kinds.
-  kind: isImportKind(row.kind) ? row.kind : "table",
-  name: row.name,
-  sourceFileName: row.sourceFileName,
-  rowCount: row.rowCount,
-  firstAt: row.firstAt,
-  lastAt: row.lastAt,
-  createdAt: row.createdAt.toISOString(),
-});
+const DATASETS = "personal_datasets";
+const OBSERVATIONS = "personal_observations";
+const CLINICAL = "personal_clinical_records";
+const TABLES = "personal_tables";
+const CHUNKS = "personal_table_chunks";
+const VARIANTS = "personal_variants";
+
+const toView =
+  (cipher: FieldCipher) =>
+  (row: Row): DatasetView => ({
+    id: row.id,
+    // The CHECK constraint holds kind to the import kinds.
+    kind: isImportKind(row.kind) ? row.kind : "table",
+    name: cipher.openText(DATASETS, "name", row.id, row.name),
+    sourceFileName: cipher.openText(
+      DATASETS,
+      "source_file_name",
+      row.id,
+      row.sourceFileName,
+    ),
+    rowCount: row.rowCount,
+    firstAt: openNullable(cipher, DATASETS, "first_at", row.id, row.firstAt),
+    lastAt: openNullable(cipher, DATASETS, "last_at", row.id, row.lastAt),
+    createdAt: row.createdAt.toISOString(),
+  });
+
+const shaLookups = (cipher: FieldCipher, sha256: string) =>
+  cipher.indexes(DATASETS, "sha256", sha256);
+
+const observationRow = (
+  cipher: FieldCipher,
+  ids: Readonly<{ datasetId: string; userId: string }>,
+  row: SavePlan["observations"][number],
+) => {
+  const id = newRowId();
+  const seal = (column: string, value: string) =>
+    cipher.sealText(OBSERVATIONS, column, id, value);
+  return {
+    id,
+    ...ids,
+    codeSystem: sealNullable(cipher, OBSERVATIONS, "code_system", id, row.codeSystem),
+    code: sealNullable(cipher, OBSERVATIONS, "code", id, row.code),
+    display: seal("display", row.display),
+    value: sealNumber(cipher, OBSERVATIONS, "value", id, row.value),
+    unit: seal("unit", row.unit),
+    unitUcum: row.unitUcum,
+    effectiveAt: row.effectiveAt,
+    effectivePrecision: row.effectivePrecision,
+    sourceRef: seal("source_ref", row.sourceRef),
+    note: sealNullable(cipher, OBSERVATIONS, "note", id, row.note),
+    lookupIndex: cipher.index(
+      OBSERVATIONS,
+      "lookup",
+      observationLookupValue(row.codeSystem, row.code, row.display),
+    ),
+    seriesIndex: cipher.index(
+      OBSERVATIONS,
+      "series",
+      observationSeriesValue(row.codeSystem, row.code, row.display, row.unit),
+    ),
+  };
+};
+
+const clinicalRow = (
+  cipher: FieldCipher,
+  ids: Readonly<{ datasetId: string; userId: string }>,
+  row: SavePlan["clinical"][number],
+) => {
+  const id = newRowId();
+  return {
+    id,
+    ...ids,
+    resourceType: row.resourceType,
+    codeSystem: sealNullable(cipher, CLINICAL, "code_system", id, row.codeSystem),
+    code: sealNullable(cipher, CLINICAL, "code", id, row.code),
+    display: cipher.sealText(CLINICAL, "display", id, row.display),
+    startAt: row.startAt,
+    endAt: row.endAt,
+    status: sealNullable(cipher, CLINICAL, "status", id, row.status),
+    sourceRef: cipher.sealText(CLINICAL, "source_ref", id, row.sourceRef),
+  };
+};
+
+const variantRow = (
+  cipher: FieldCipher,
+  ids: Readonly<{ datasetId: string; userId: string }>,
+  row: SavePlan["variants"][number],
+) => {
+  const id = newRowId();
+  const seal = (column: string, value: string) =>
+    cipher.sealText(VARIANTS, column, id, value);
+  return {
+    id,
+    ...ids,
+    chrom: seal("chrom", row.chrom),
+    pos: seal("pos", String(row.pos)),
+    variantId: sealNullable(cipher, VARIANTS, "variant_id", id, row.variantId),
+    ref: seal("ref", row.ref),
+    alt: seal("alt", row.alt),
+    genotype: sealNullable(cipher, VARIANTS, "genotype", id, row.genotype),
+    filter: sealNullable(cipher, VARIANTS, "filter", id, row.filter),
+    siteIndex: cipher.index(VARIANTS, "site", variantSiteValue(row.chrom, row.pos)),
+    variantIdIndex: variantIdsOf(row.variantId).map((each) =>
+      cipher.index(VARIANTS, "variant_id", each),
+    ),
+  };
+};
 
 /** Large tables write up to 200 chunks and 200,000 rows; the default 5 s is too short. */
 const TRANSACTION_TIMEOUT_MS = 120_000;
@@ -103,49 +225,83 @@ const isUniqueViolation = (error: unknown): boolean =>
 
 const save = async (plan: SavePlan): Promise<SaveOutcome> => {
   const { userId } = plan.dataset;
+  // Every value is sealed before the transaction opens: a write that cannot
+  // encrypt is not made.
+  const cipher = await cipherForUser(userId);
+  const datasetId = newRowId();
+  const ids = { datasetId, userId };
+  const sealDataset = (column: string, value: string) =>
+    cipher.sealText(DATASETS, column, datasetId, value);
+  const datasetRow = {
+    id: datasetId,
+    userId,
+    kind: plan.dataset.kind,
+    name: sealDataset("name", plan.dataset.name),
+    sourceFileName: sealDataset("source_file_name", plan.dataset.sourceFileName),
+    sha256: sealDataset("sha256", plan.dataset.sha256),
+    sha256Index: cipher.index(DATASETS, "sha256", plan.dataset.sha256),
+    byteSize: plan.dataset.byteSize,
+    rowCount: plan.dataset.rowCount,
+    firstAt: sealNullable(cipher, DATASETS, "first_at", datasetId, plan.dataset.firstAt),
+    lastAt: sealNullable(cipher, DATASETS, "last_at", datasetId, plan.dataset.lastAt),
+    genomeBuild: plan.dataset.genomeBuild,
+    status: "ready",
+  };
+  const observations = plan.observations.map((row) => observationRow(cipher, ids, row));
+  const clinical = plan.clinical.map((row) => clinicalRow(cipher, ids, row));
+  const variants = plan.variants.map((row) => variantRow(cipher, ids, row));
+  const table =
+    plan.table === null
+      ? null
+      : {
+          datasetId,
+          userId,
+          columns: sealJson(
+            cipher,
+            TABLES,
+            "columns",
+            datasetId,
+            plan.table.columns.map((column) => ({ ...column })),
+          ),
+          rowCount: plan.table.rowCount,
+        };
+  const chunks = plan.chunks.map((rows, chunkIndex) => {
+    const id = newRowId();
+    return {
+      id,
+      datasetId,
+      userId,
+      chunkIndex,
+      rows: sealJson(cipher, CHUNKS, "rows", id, rows),
+    };
+  });
   try {
     const row = await database().$transaction(
       async (tx) => {
         const dataset = await tx.personalDataset.create({
-          data: { ...plan.dataset, status: "ready" },
+          data: datasetRow,
           select: SELECT,
         });
-        const datasetId = dataset.id;
-        for (const batch of batches(plan.observations)) {
-          await tx.personalObservation.createMany({
-            data: batch.map((row) => ({ ...row, datasetId, userId })),
-          });
+        for (const batch of batches(observations)) {
+          await tx.personalObservation.createMany({ data: batch });
         }
-        for (const batch of batches(plan.clinical)) {
-          await tx.personalClinicalRecord.createMany({
-            data: batch.map((row) => ({ ...row, datasetId, userId })),
-          });
+        for (const batch of batches(clinical)) {
+          await tx.personalClinicalRecord.createMany({ data: batch });
         }
-        for (const batch of batches(plan.variants)) {
-          await tx.personalVariant.createMany({
-            data: batch.map((row) => ({ ...row, datasetId, userId })),
-          });
+        for (const batch of batches(variants)) {
+          await tx.personalVariant.createMany({ data: batch });
         }
-        if (plan.table !== null) {
-          await tx.personalTable.create({
-            data: {
-              datasetId,
-              userId,
-              columns: plan.table.columns.map((column) => ({ ...column })),
-              rowCount: plan.table.rowCount,
-            },
-          });
-          for (const [chunkIndex, rows] of plan.chunks.entries()) {
-            await tx.personalTableChunk.create({
-              data: { datasetId, userId, chunkIndex, rows: rows.map((row) => [...row]) },
-            });
+        if (table !== null) {
+          await tx.personalTable.create({ data: table });
+          for (const chunk of chunks) {
+            await tx.personalTableChunk.create({ data: chunk });
           }
         }
         return dataset;
       },
       { timeout: TRANSACTION_TIMEOUT_MS },
     );
-    return { ok: true, dataset: toView(row) };
+    return { ok: true, dataset: toView(cipher)(row) };
   } catch (error) {
     // Two saves of the same file racing: the unique (user_id, sha256) index decides.
     if (isUniqueViolation(error)) return { ok: false, reason: "duplicate" };
@@ -154,33 +310,37 @@ const save = async (plan: SavePlan): Promise<SaveOutcome> => {
 };
 
 export const personalDataStore = (): PersonalDataStore => ({
-  list: async (userId) =>
-    (
+  list: async (userId) => {
+    const cipher = await cipherForUser(userId);
+    return (
       await database().personalDataset.findMany({
         where: { userId },
         orderBy: { createdAt: "desc" },
         select: SELECT,
       })
-    ).map(toView),
+    ).map(toView(cipher));
+  },
   findBySha: async (userId, sha256) => {
-    const row = await database().personalDataset.findUnique({
-      where: { userId_sha256: { userId, sha256 } },
+    const cipher = await cipherForUser(userId);
+    const row = await database().personalDataset.findFirst({
+      where: { userId, sha256Index: { in: [...shaLookups(cipher, sha256)] } },
       select: SELECT,
     });
-    return row === null ? null : toView(row);
+    return row === null ? null : toView(cipher)(row);
   },
   save,
   rename: async (userId, id, name) => {
+    const cipher = await cipherForUser(userId);
     const updated = await database().personalDataset.updateMany({
       where: { id, userId },
-      data: { name },
+      data: { name: cipher.sealText(DATASETS, "name", id, name) },
     });
     if (updated.count === 0) return null;
     const row = await database().personalDataset.findFirst({
       where: { id, userId },
       select: SELECT,
     });
-    return row === null ? null : toView(row);
+    return row === null ? null : toView(cipher)(row);
   },
   remove: async (userId, id) =>
     database().$transaction(async (tx) => {
@@ -208,23 +368,52 @@ const OBSERVATION_SELECT = {
 
 const PRECISIONS: readonly EffectivePrecision[] = ["year", "month", "day", "instant"];
 
-const toObservation = (
-  row: Readonly<{
-    id: string;
-    datasetId: string;
-    code: string | null;
-    display: string;
-    value: number;
-    unit: string;
-    effectiveAt: Date;
-    effectivePrecision: string;
-  }>,
-): ImportedObservationRecord => ({
-  ...row,
-  // The CHECK constraint holds precision to these; anything else reads as the coarsest.
-  effectivePrecision:
-    PRECISIONS.find((precision) => precision === row.effectivePrecision) ?? "year",
-});
+const toObservation =
+  (cipher: FieldCipher) =>
+  (
+    row: Readonly<{
+      id: string;
+      datasetId: string;
+      code: string | null;
+      display: string;
+      value: string;
+      unit: string;
+      effectiveAt: Date;
+      effectivePrecision: string;
+    }>,
+  ): ImportedObservationRecord => ({
+    id: row.id,
+    datasetId: row.datasetId,
+    code: openNullable(cipher, OBSERVATIONS, "code", row.id, row.code),
+    display: cipher.openText(OBSERVATIONS, "display", row.id, row.display),
+    value: openNumber(cipher, OBSERVATIONS, "value", row.id, row.value),
+    unit: cipher.openText(OBSERVATIONS, "unit", row.id, row.unit),
+    effectiveAt: row.effectiveAt,
+    // The CHECK constraint holds precision to these; anything else reads as the coarsest.
+    effectivePrecision:
+      PRECISIONS.find((precision) => precision === row.effectivePrecision) ?? "year",
+  });
+
+/** Ascending text order with nulls last, as Postgres sorts `ORDER BY ... ASC`. */
+const compareNullable = (a: string | null, b: string | null): number => {
+  if (a === b) return 0;
+  if (a === null) return 1;
+  if (b === null) return -1;
+  return a < b ? -1 : 1;
+};
+
+const compareDate = (a: Date | null, b: Date | null): number => {
+  if (a === null || b === null) return a === b ? 0 : a === null ? 1 : -1;
+  return a.getTime() - b.getTime();
+};
+
+/** Conditions and medications: by date (none last), then name, then id. */
+const byDateNameId =
+  <T extends Readonly<{ id: string; display: string }>>(date: (row: T) => Date | null) =>
+  (a: T, b: T): number =>
+    compareDate(date(a), date(b)) ||
+    compareNullable(a.display, b.display) ||
+    compareNullable(a.id, b.id);
 
 /**
  * The chat tools' reads of one person's imported observations (#181,
@@ -243,68 +432,113 @@ const CHAT_LISTED_KINDS: ImportKind[] = IMPORT_KINDS.filter(
 export const importedDataReads = (
   userId: () => Promise<string | null>,
 ): Omit<ImportedDataPorts, "appendAudit"> => {
-  const withUser = async <T>(read: (id: string) => Promise<T>, none: T): Promise<T> => {
+  const withUser = async <T>(
+    read: (id: string, cipher: FieldCipher) => Promise<T>,
+    none: T,
+  ): Promise<T> => {
     const id = await userId();
-    return id === null ? none : read(id);
+    return id === null ? none : read(id, await cipherForUser(id));
   };
   return {
     listDatasets: () =>
       withUser(
-        async (id) =>
+        async (id, cipher) =>
           (
             await database().personalDataset.findMany({
               where: { userId: id, kind: { in: CHAT_LISTED_KINDS } },
               orderBy: { createdAt: "desc" },
               select: SELECT,
             })
-          ).map(toView),
+          ).map(toView(cipher)),
         [],
       ),
+    // Grouped by the keyed series hash in SQL; one row of each group is
+    // opened to name it, then the groups are sorted as before and cut to `take`.
     listSeries: (take) =>
-      withUser(async (id) => {
+      withUser(async (id, cipher) => {
         const groups = await database().personalObservation.groupBy({
-          by: ["datasetId", "codeSystem", "code", "display", "unit"],
+          by: ["datasetId", "seriesIndex"],
           where: { userId: id },
           _count: { _all: true },
-          _min: { effectiveAt: true },
+          _min: { effectiveAt: true, id: true },
           _max: { effectiveAt: true },
-          orderBy: [
-            { datasetId: "asc" },
-            { codeSystem: "asc" },
-            { code: "asc" },
-            { display: "asc" },
-            { unit: "asc" },
-          ],
-          take,
         });
-        return groups.flatMap((group) =>
-          group._min.effectiveAt === null || group._max.effectiveAt === null
-            ? []
-            : [
-                {
-                  datasetId: group.datasetId,
-                  codeSystem: group.codeSystem,
-                  code: group.code,
-                  display: group.display,
-                  unit: group.unit,
-                  n: group._count._all,
-                  firstAt: group._min.effectiveAt,
-                  lastAt: group._max.effectiveAt,
-                },
-              ],
+        const firstIds = groups.flatMap((group) =>
+          group._min.id === null ? [] : [group._min.id],
         );
+        const named = new Map(
+          (
+            await database().personalObservation.findMany({
+              where: { userId: id, id: { in: firstIds } },
+              select: {
+                id: true,
+                codeSystem: true,
+                code: true,
+                display: true,
+                unit: true,
+              },
+            })
+          ).map((row) => [
+            row.id,
+            {
+              codeSystem: openNullable(
+                cipher,
+                OBSERVATIONS,
+                "code_system",
+                row.id,
+                row.codeSystem,
+              ),
+              code: openNullable(cipher, OBSERVATIONS, "code", row.id, row.code),
+              display: cipher.openText(OBSERVATIONS, "display", row.id, row.display),
+              unit: cipher.openText(OBSERVATIONS, "unit", row.id, row.unit),
+            },
+          ]),
+        );
+        return groups
+          .flatMap((group) => {
+            const name = group._min.id === null ? undefined : named.get(group._min.id);
+            return name === undefined ||
+              group._min.effectiveAt === null ||
+              group._max.effectiveAt === null
+              ? []
+              : [
+                  {
+                    datasetId: group.datasetId,
+                    ...name,
+                    n: group._count._all,
+                    firstAt: group._min.effectiveAt,
+                    lastAt: group._max.effectiveAt,
+                  },
+                ];
+          })
+          .sort(
+            (a, b) =>
+              compareNullable(a.datasetId, b.datasetId) ||
+              compareNullable(a.codeSystem, b.codeSystem) ||
+              compareNullable(a.code, b.code) ||
+              compareNullable(a.display, b.display) ||
+              compareNullable(a.unit, b.unit),
+          )
+          .slice(0, take);
       }, []),
     // One indexed `findFirst` per code (at most 20): Prisma's `distinct` would
     // read every row of the codes before keeping the first.
     findLatest: (query) =>
-      withUser(async (id) => {
+      withUser(async (id, cipher) => {
         const rows = await Promise.all(
           [...new Set(query.codes)].map((code) =>
             database().personalObservation.findFirst({
               where: {
                 userId: id,
-                codeSystem: LOINC_SYSTEM,
-                code,
+                lookupIndex: {
+                  in: [
+                    ...cipher.indexes(
+                      OBSERVATIONS,
+                      "lookup",
+                      observationLookupValue(LOINC_SYSTEM, code, ""),
+                    ),
+                  ],
+                },
                 ...(query.datasetId === null ? {} : { datasetId: query.datasetId }),
               },
               orderBy: [{ effectiveAt: "desc" }, { id: "asc" }],
@@ -312,31 +546,39 @@ export const importedDataReads = (
             }),
           ),
         );
-        return rows.flatMap((row) => (row === null ? [] : [toObservation(row)]));
+        return rows.flatMap((row) => (row === null ? [] : [toObservation(cipher)(row)]));
       }, []),
     findSeries: (query) =>
       withUser(
-        async (id) =>
+        async (id, cipher) =>
           (
             await database().personalObservation.findMany({
               where: {
                 userId: id,
                 datasetId: query.datasetId,
-                ...(query.code !== null
-                  ? { codeSystem: LOINC_SYSTEM, code: query.code }
-                  : { code: null, display: query.name ?? "" }),
+                lookupIndex: {
+                  in: [
+                    ...cipher.indexes(
+                      OBSERVATIONS,
+                      "lookup",
+                      query.code !== null
+                        ? observationLookupValue(LOINC_SYSTEM, query.code, "")
+                        : observationLookupValue(null, null, query.name ?? ""),
+                    ),
+                  ],
+                },
                 effectiveAt: { gte: query.start, lte: query.end },
               },
               orderBy: [{ effectiveAt: "asc" }, { id: "asc" }],
               take: query.take,
               select: OBSERVATION_SELECT,
             })
-          ).map(toObservation),
+          ).map(toObservation(cipher)),
         [],
       ),
     listTables: () =>
       withUser(
-        async (id) =>
+        async (id, cipher) =>
           (
             await database().personalTable.findMany({
               where: { userId: id },
@@ -345,14 +587,16 @@ export const importedDataReads = (
             })
           ).map((table) => ({
             datasetId: table.datasetId,
-            columns: storedColumns(table.columns),
+            columns: storedColumns(
+              openJson(cipher, TABLES, "columns", table.datasetId, table.columns),
+            ),
             rowCount: table.rowCount,
           })),
         [],
       ),
     // Only the chunks that hold the first `take` rows are read.
     readTableRows: (query) =>
-      withUser(async (id) => {
+      withUser(async (id, cipher) => {
         const chunks = await database().personalTableChunk.findMany({
           where: {
             userId: id,
@@ -360,102 +604,113 @@ export const importedDataReads = (
             chunkIndex: { lt: Math.ceil(query.take / CHUNK_ROWS) },
           },
           orderBy: { chunkIndex: "asc" },
-          select: { rows: true },
+          select: { id: true, rows: true },
         });
-        return chunks.flatMap((chunk) => storedRows(chunk.rows)).slice(0, query.take);
+        return chunks
+          .flatMap((chunk) =>
+            storedRows(openJson(cipher, CHUNKS, "rows", chunk.id, chunk.rows)),
+          )
+          .slice(0, query.take);
       }, []),
     findConditions: (query) =>
-      withUser(
-        async (id) =>
-          (
-            await database().personalClinicalRecord.findMany({
-              where: {
-                userId: id,
-                datasetId: query.datasetId,
-                resourceType: "Condition",
-              },
-              orderBy: [
-                { startAt: { sort: "asc", nulls: "last" } },
-                { display: "asc" },
-                { id: "asc" },
-              ],
-              take: query.take,
-              select: {
-                id: true,
-                codeSystem: true,
-                code: true,
-                display: true,
-                startAt: true,
-                endAt: true,
-                status: true,
-              },
-            })
-          ).map((row) => ({
+      withUser(async (id, cipher) => {
+        const rows = await database().personalClinicalRecord.findMany({
+          where: { userId: id, datasetId: query.datasetId, resourceType: "Condition" },
+          select: {
+            id: true,
+            codeSystem: true,
+            code: true,
+            display: true,
+            startAt: true,
+            endAt: true,
+            status: true,
+          },
+        });
+        return rows
+          .map((row) => ({
             id: row.id,
-            codeSystem: row.codeSystem,
-            code: row.code,
-            display: row.display,
+            codeSystem: openNullable(
+              cipher,
+              CLINICAL,
+              "code_system",
+              row.id,
+              row.codeSystem,
+            ),
+            code: openNullable(cipher, CLINICAL, "code", row.id, row.code),
+            display: cipher.openText(CLINICAL, "display", row.id, row.display),
             onsetAt: row.startAt,
             abatementAt: row.endAt,
-            status: row.status,
-          })),
-        [],
-      ),
+            status: openNullable(cipher, CLINICAL, "status", row.id, row.status),
+          }))
+          .sort(byDateNameId((row) => row.onsetAt))
+          .slice(0, query.take);
+      }, []),
     // Coded fields, authored date and status only: dosage text, notes and
     // reasons were never stored, and nothing else is selected.
     findMedications: (query) =>
-      withUser(
-        async (id) =>
-          (
-            await database().personalClinicalRecord.findMany({
-              where: {
-                userId: id,
-                datasetId: query.datasetId,
-                resourceType: "MedicationRequest",
-              },
-              orderBy: [
-                { startAt: { sort: "asc", nulls: "last" } },
-                { display: "asc" },
-                { id: "asc" },
-              ],
-              take: query.take,
-              select: {
-                id: true,
-                codeSystem: true,
-                code: true,
-                display: true,
-                startAt: true,
-                status: true,
-              },
-            })
-          ).map((row) => ({
+      withUser(async (id, cipher) => {
+        const rows = await database().personalClinicalRecord.findMany({
+          where: {
+            userId: id,
+            datasetId: query.datasetId,
+            resourceType: "MedicationRequest",
+          },
+          select: {
+            id: true,
+            codeSystem: true,
+            code: true,
+            display: true,
+            startAt: true,
+            status: true,
+          },
+        });
+        return rows
+          .map((row) => ({
             id: row.id,
-            codeSystem: row.codeSystem,
-            code: row.code,
-            display: row.display,
+            codeSystem: openNullable(
+              cipher,
+              CLINICAL,
+              "code_system",
+              row.id,
+              row.codeSystem,
+            ),
+            code: openNullable(cipher, CLINICAL, "code", row.id, row.code),
+            display: cipher.openText(CLINICAL, "display", row.id, row.display),
             authoredAt: row.startAt,
-            status: row.status,
-          })),
-        [],
-      ),
+            status: openNullable(cipher, CLINICAL, "status", row.id, row.status),
+          }))
+          .sort(byDateNameId((row) => row.authoredAt))
+          .slice(0, query.take);
+      }, []),
   };
 };
 
-/** Prisma filters for an rsID as the whole ID cell, or one of several joined by `;`. */
-export const variantIdCellMatches = (rsid: string) => [
-  { variantId: rsid },
-  { variantId: { startsWith: `${rsid};` } },
-  { variantId: { endsWith: `;${rsid}` } },
-  { variantId: { contains: `;${rsid};` } },
-];
+/** The lookup hashes of an rsID query and a site query, under every key of the keyring. */
+export const variantLookups = (
+  cipher: FieldCipher,
+  query: Pick<GenomeVariantQuery, "rsids" | "sites">,
+): Readonly<{ ids: readonly string[]; sites: readonly string[] }> => ({
+  ids: query.rsids.flatMap((rsid) => cipher.indexes(VARIANTS, "variant_id", rsid)),
+  sites: query.sites.flatMap((site) =>
+    site.chroms.flatMap((chrom) =>
+      cipher.indexes(VARIANTS, "site", variantSiteValue(chrom, site.pos)),
+    ),
+  ),
+});
+
+const compareVariant = (
+  a: Readonly<{ chrom: string; pos: number; id: string }>,
+  b: Readonly<{ chrom: string; pos: number; id: string }>,
+): number =>
+  compareNullable(a.chrom, b.chrom) || a.pos - b.pos || compareNullable(a.id, b.id);
 
 /**
  * The reads behind `genome_variants` (#307): the person's datasets, and the
  * records of one VCF that carry a named rsID or sit at a named site. Bound to
- * that person like `importedDataReads`. One fixed `findMany`, capped by the
- * caller's `take`; the tool matches each record to its name again, so an ID
- * cell that only starts like an rsID is never returned as it. Callers check
- * `permitVcfVariantsRequest` (#330) first; nothing here decides who may read.
+ * that person like `importedDataReads`. One fixed `findMany` over the keyed
+ * hashes (#141), capped by the caller's `take` after sorting; the tool matches
+ * each record to its name again. Callers check `permitVcfVariantsRequest`
+ * (#330) first; nothing here decides who may read.
  */
 export const genomeVariantReads = (
   userId: () => Promise<string | null>,
@@ -463,27 +718,31 @@ export const genomeVariantReads = (
   listDatasets: async () => {
     const id = await userId();
     if (id === null) return [];
+    const cipher = await cipherForUser(id);
     return (
       await database().personalDataset.findMany({
         where: { userId: id },
         orderBy: { createdAt: "desc" },
         select: SELECT,
       })
-    ).map(toView);
+    ).map(toView(cipher));
   },
   findVariants: async (query) => {
     const id = await userId();
     if (id === null) return [];
+    const cipher = await cipherForUser(id);
+    const lookups = variantLookups(cipher, query);
     const wanted = [
-      ...query.rsids.flatMap(variantIdCellMatches),
-      ...query.sites.map((site) => ({ chrom: { in: [...site.chroms] }, pos: site.pos })),
+      ...(lookups.ids.length > 0
+        ? [{ variantIdIndex: { hasSome: [...lookups.ids] } }]
+        : []),
+      ...(lookups.sites.length > 0 ? [{ siteIndex: { in: [...lookups.sites] } }] : []),
     ];
     if (wanted.length === 0) return [];
-    return database().personalVariant.findMany({
+    const rows = await database().personalVariant.findMany({
       where: { userId: id, datasetId: query.datasetId, OR: wanted },
-      orderBy: [{ chrom: "asc" }, { pos: "asc" }, { id: "asc" }],
-      take: query.take,
       select: {
+        id: true,
         chrom: true,
         pos: true,
         variantId: true,
@@ -493,5 +752,21 @@ export const genomeVariantReads = (
         filter: true,
       },
     });
+    const open = (column: string, rowId: string, value: string) =>
+      cipher.openText(VARIANTS, column, rowId, value);
+    return rows
+      .map((row) => ({
+        id: row.id,
+        chrom: open("chrom", row.id, row.chrom),
+        pos: openNumber(cipher, VARIANTS, "pos", row.id, row.pos),
+        variantId: openNullable(cipher, VARIANTS, "variant_id", row.id, row.variantId),
+        ref: open("ref", row.id, row.ref),
+        alt: open("alt", row.id, row.alt),
+        genotype: openNullable(cipher, VARIANTS, "genotype", row.id, row.genotype),
+        filter: openNullable(cipher, VARIANTS, "filter", row.id, row.filter),
+      }))
+      .sort(compareVariant)
+      .slice(0, query.take)
+      .map(({ id: _id, ...record }) => record);
   },
 });

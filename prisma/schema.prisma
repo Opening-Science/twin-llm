@@ -110,8 +110,12 @@ model ThreadSearchEmbedding {
   sourceId   String                @map("source_id")
   model      String
   /// vector(768) in the database, with an HNSW cosine index, set in the
-  /// migration SQL because Prisma has no syntax for either.
-  embedding  Unsupported("vector")
+  /// migration SQL because Prisma has no syntax for either. Synthetic
+  /// installs only; null in personal mode (#141).
+  embedding       Unsupported("vector")?
+  /// Personal mode (#141): the vector as sealed JSON; search runs in memory
+  /// after unlock.
+  embeddingSealed String?               @map("embedding_sealed")
   createdAt  DateTime              @default(now()) @map("created_at")
 
   thread Thread @relation(fields: [threadId], references: [id], onDelete: Cascade)
@@ -163,14 +167,15 @@ model ModelResponse {
   /// The "## Reasoning" section, when the model used the expected format.
   reasoningText    String?
   /// Wearable metrics the answer cited: [{ metricKey, label, value, observationId? }].
-  attribution      Json?
+  /// JSON text; sealed in personal mode like every personal column (#141).
+  attribution      String?
   /// Validated ResponseDocumentV1 (docs/response-schema.md). Null when it was
-  /// not built or the row predates it.
-  responseDocument Json?
+  /// not built or the row predates it. JSON text.
+  responseDocument String?
   /// Tool calls of the turn with their inputs and outputs, in step order:
   /// [{ seq, tool, input, output, argsSha256, resultSha256, rowCount, at }].
-  /// Null when the answer used no tool or the row predates it.
-  toolParts        Json?
+  /// Null when the answer used no tool or the row predates it. JSON text.
+  toolParts        String?
 
   // Measurements. Null means not measured, never zero.
   timeToFirstTokenMs Int?
@@ -218,10 +223,11 @@ model OuraSnapshot {
   userId     String
   startDate  String
   endDate    String
-  /// Metric values keyed so answers can cite them.
-  summary    Json
-  /// Full FHIR Bundle. Server-side only, never sent to a model.
-  fhirBundle Json?
+  /// Metric values keyed so answers can cite them. JSON text, sealed in
+  /// personal mode (#141).
+  summary    String
+  /// Full FHIR Bundle. Server-side only, never sent to a model. JSON text.
+  fhirBundle String?
   syncedAt   DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -254,9 +260,10 @@ model WhoopSnapshot {
   userId     String
   startDate  String
   endDate    String
-  summary    Json
-  /// Full FHIR Bundle. Server-side only.
-  fhirBundle Json?
+  /// JSON text, sealed in personal mode (#141).
+  summary    String
+  /// Full FHIR Bundle. Server-side only. JSON text.
+  fhirBundle String?
   syncedAt   DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -291,8 +298,9 @@ model GoogleHealthSnapshot {
   userId     String
   startDate  String
   endDate    String
-  summary    Json
-  fhirBundle Json?
+  /// JSON text, sealed in personal mode (#141).
+  summary    String
+  fhirBundle String?
   syncedAt   DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -361,22 +369,24 @@ model VitronicSubject {
 }
 
 /// One BodyLoop scan (viatar) for a subject. The mesh file stays on disk under
-/// data/vitronic/<userId>/; only its hash is stored here.
+/// data/vitronic/<userId>/ (sealed in personal mode, #141); only the hash of
+/// its plaintext is stored here.
 model VitronicSnapshot {
   id        String @id @default(cuid())
   userId    String
   subjectId String
   viatarId  Int
 
-  /// Numeric `vitronic.*` keys the chat prompt may read.
-  summary    Json
+  /// Numeric `vitronic.*` keys the chat prompt may read. JSON text, sealed
+  /// in personal mode (#141), like markers, measures and the bundle.
+  summary    String
   /// Viewer-only geometry. Never included in a prompt.
-  markers    Json?
-  measures   Json?
+  markers    String?
+  measures   String?
   presetName String?
   /// Intentionally left null: the provider maps BodyLoop lengths in metres and
   /// angles in radians, while the BodyLoop UI shows cm and degrees.
-  fhirBundle Json?
+  fhirBundle String?
 
   glbSha256    String?
   /// Which BodyLoop model file the mesh came from.
@@ -412,7 +422,8 @@ model GenomeReport {
   /// The build the Ark named for its call slot, as written; null when it named none.
   arkBuild    String?
   /// Parsed rows: rsid, chromosome, position, reference, genotype (null is no call).
-  rows        Json
+  /// JSON text; sealed for a user's own report in personal mode (#141).
+  rows        String
   /// The released text exactly as the app printed it.
   report      String
 
@@ -438,7 +449,11 @@ model PersonalDataset {
   kind           String
   name           String
   sourceFileName String   @map("source_file_name")
+  /// The file's SHA-256; sealed in personal mode (#141).
   sha256         String
+  /// Keyed hash of the file's SHA-256, so the same file twice is recognised
+  /// without reading `sha256`. Null only on rows a migration has not reached.
+  sha256Index    String?  @map("sha256_index")
   byteSize       Int      @map("byte_size")
   /// "ready": written whole in one transaction.
   status         String   @default("ready")
@@ -459,7 +474,7 @@ model PersonalDataset {
   tableChunks     PersonalTableChunk[]
   variants        PersonalVariant[]
 
-  @@unique([userId, sha256])
+  @@unique([userId, sha256Index])
   @@index([userId, createdAt])
   @@map("personal_datasets")
 }
@@ -474,7 +489,8 @@ model PersonalObservation {
   codeSystem         String?  @map("code_system")
   code               String?
   display            String
-  value              Float
+  /// The number as text; sealed in personal mode (#141).
+  value              String
   unit               String
   unitUcum           Boolean  @map("unit_ucum")
   effectiveAt        DateTime @map("effective_at")
@@ -483,11 +499,17 @@ model PersonalObservation {
   /// A FHIR id or "row 12".
   sourceRef          String   @map("source_ref")
   note               String?
+  /// Keyed hash of the code (system and code) or, for a row without one, of
+  /// its name: what the chat tools look a series up by (#141).
+  lookupIndex        String?  @map("lookup_index")
+  /// Keyed hash of system, code, name and unit: one series, for grouping.
+  seriesIndex        String?  @map("series_index")
 
   dataset PersonalDataset @relation(fields: [datasetId], references: [id], onDelete: Cascade)
 
   @@index([datasetId])
-  @@index([userId, code, effectiveAt])
+  @@index([userId, lookupIndex, effectiveAt])
+  @@index([userId, datasetId, seriesIndex])
   @@map("personal_observations")
 }
 
@@ -519,7 +541,8 @@ model PersonalClinicalRecord {
 model PersonalTable {
   datasetId String @id @map("dataset_id")
   userId    String @map("user_id")
-  columns   Json
+  /// JSON text, sealed in personal mode (#141).
+  columns   String
   rowCount  Int    @map("row_count")
 
   dataset PersonalDataset @relation(fields: [datasetId], references: [id], onDelete: Cascade)
@@ -534,7 +557,8 @@ model PersonalTableChunk {
   datasetId  String @map("dataset_id")
   userId     String @map("user_id")
   chunkIndex Int    @map("chunk_index")
-  rows       Json
+  /// JSON text, sealed in personal mode (#141).
+  rows       String
 
   dataset PersonalDataset @relation(fields: [datasetId], references: [id], onDelete: Cascade)
 
@@ -553,8 +577,8 @@ model PersonalVariant {
   userId    String  @map("user_id")
   /// As the file names it: "chr1" or "1".
   chrom     String
-  /// 1-based GRCh38 position.
-  pos       Int
+  /// 1-based GRCh38 position, as text; sealed in personal mode (#141).
+  pos       String
   /// The ID column, such as an rsID; null when ".".
   variantId String? @map("variant_id")
   ref       String
@@ -564,11 +588,16 @@ model PersonalVariant {
   genotype  String?
   /// The FILTER column; null when ".".
   filter    String?
+  /// Keyed hash of `chrom:pos` as the file wrote it (#141).
+  siteIndex      String?  @map("site_index")
+  /// Keyed hash of each ID in the ID cell (split on ";").
+  variantIdIndex String[] @default([]) @map("variant_id_index")
 
   dataset PersonalDataset @relation(fields: [datasetId], references: [id], onDelete: Cascade)
 
   @@index([datasetId])
-  @@index([userId, chrom, pos])
+  @@index([userId, siteIndex])
+  @@index([variantIdIndex], type: Gin)
   @@map("personal_variants")
 }
 
@@ -806,9 +835,10 @@ model TwinNote {
   id             String   @id @default(cuid())
   userId         String   @map("user_id")
   title          String
-  topics         String[]
-  measures       String[]
-  openQuestions  String[] @map("open_questions")
+  /// The three lists are JSON arrays of text, sealed in personal mode (#141).
+  topics         String
+  measures       String
+  openQuestions  String   @map("open_questions")
   /// "synthetic" or "personal": DATA_MODE when it was saved.
   dataMode       String   @map("data_mode")
   /// "synthetic", "personal" or "local" (`notePermitFor`).

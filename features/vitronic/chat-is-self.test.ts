@@ -9,7 +9,7 @@ describe("getLatestVitronicSummary", () => {
     expect(source).toContain('orderBy: { syncedAt: "desc" }');
     expect(source).toContain("toChatVitronicSummary");
     const chatFn = source.slice(source.indexOf("export const getLatestVitronicSummary"));
-    expect(chatFn).toContain("select: { summary: true, subjectId: true }");
+    expect(chatFn).toContain("select: { id: true, summary: true, subjectId: true }");
     expect(chatFn).not.toContain("markers");
     expect(chatFn).not.toContain("measures");
   });

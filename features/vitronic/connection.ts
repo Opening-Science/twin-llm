@@ -12,6 +12,14 @@ import {
   type VitronicViatar,
 } from "@/packages/vitronic/client";
 import { parseScannerHosts, scannerOrigin } from "@/packages/vitronic/base-url";
+import {
+  type FieldCipher,
+  openJson,
+  openNullableJson,
+  sealJson,
+  sealNullableJson,
+} from "@/infrastructure/field-cipher";
+import { cipherForUser } from "@/infrastructure/field-cipher-runtime";
 import { persistGlb, loadGlb } from "@/packages/vitronic/glb";
 import { buildStoredGeometry } from "@/packages/vitronic/geometry";
 import {
@@ -76,14 +84,15 @@ type LocalReadDb = () => {
         viatarId: number;
         glbSha256: string | null;
         syncedAt: Date;
-        summary: unknown;
-        markers: unknown;
-        measures: unknown;
+        summary: string;
+        markers: string | null;
+        measures: string | null;
         presetName: string | null;
       }>
     >;
     findFirst: (args: unknown) => Promise<{
-      summary: unknown;
+      id: string;
+      summary: string;
       subjectId: string;
       glbSha256?: string | null;
       syncedAt?: Date;
@@ -94,7 +103,30 @@ type LocalReadDb = () => {
 export type VitronicLocalReadPorts = Readonly<{
   append: (input: AppendInput) => Promise<AppendedEvent>;
   database: LocalReadDb;
+  /** The owner's cipher (#141); the default refuses while their vault is locked. */
+  cipher: (userId: string) => Promise<FieldCipher>;
 }>;
+
+const SNAPSHOTS = "vitronic_snapshots";
+const SUBJECTS = "vitronic_subjects";
+
+const openSummary = (cipher: FieldCipher, id: string, stored: string): VitronicSummary =>
+  openJson(cipher, SNAPSHOTS, "summary", id, stored) as VitronicSummary;
+
+const openGeometry = (
+  cipher: FieldCipher,
+  id: string,
+  row: Readonly<{ markers: string | null; measures: string | null }>,
+) => ({
+  markers: openNullableJson(cipher, SNAPSHOTS, "markers", id, row.markers),
+  measures: openNullableJson(cipher, SNAPSHOTS, "measures", id, row.measures),
+});
+
+/** A subject row as shown: the label opened; the consent note is never read back. */
+const openSubject = <T extends Readonly<{ id: string; label: string }>>(
+  cipher: FieldCipher,
+  row: T,
+): T => ({ ...row, label: cipher.openText(SUBJECTS, "label", row.id, row.label) });
 
 type HeightRow = {
   readonly height_path: string;
@@ -171,6 +203,10 @@ export type VitronicSnapshotPorts = {
       }) => Promise<{ id: string } | null>;
     };
     vitronicSnapshot: {
+      findUnique: (args: {
+        where: { subjectId_viatarId: { subjectId: string; viatarId: number } };
+        select: { id: true };
+      }) => Promise<{ id: string } | null>;
       upsert: (args: {
         where: { subjectId_viatarId: { subjectId: string; viatarId: number } };
         create: Record<string, unknown>;
@@ -185,7 +221,13 @@ export type VitronicSnapshotPorts = {
     };
   };
   readonly append: (input: AppendInput) => Promise<AppendedEvent>;
-  readonly persistGlb: (userId: string, bytes: Uint8Array) => Promise<string>;
+  /** Writes the mesh file, sealed with `cipher` in personal mode (#141). */
+  readonly persistGlb: (
+    userId: string,
+    bytes: Uint8Array,
+    cipher: FieldCipher,
+  ) => Promise<string>;
+  readonly cipher: (userId: string) => Promise<FieldCipher>;
 };
 
 const defaultSnapshotPorts = (): VitronicSnapshotPorts =>
@@ -193,6 +235,7 @@ const defaultSnapshotPorts = (): VitronicSnapshotPorts =>
     database,
     append: (input: AppendInput) => append(database(), input),
     persistGlb,
+    cipher: cipherForUser,
   }) as unknown as VitronicSnapshotPorts;
 
 const defaultLocalAppend = (input: AppendInput): Promise<AppendedEvent> =>
@@ -201,6 +244,10 @@ const defaultLocalAppend = (input: AppendInput): Promise<AppendedEvent> =>
 const localReadDb = (opts?: {
   readonly ports?: Partial<VitronicLocalReadPorts>;
 }): LocalReadDb => opts?.ports?.database ?? (database as unknown as LocalReadDb);
+
+const localReadCipher = (opts?: {
+  readonly ports?: Partial<VitronicLocalReadPorts>;
+}): ((userId: string) => Promise<FieldCipher>) => opts?.ports?.cipher ?? cipherForUser;
 
 const localReadAppend = (opts?: {
   readonly ports?: Partial<VitronicLocalReadPorts>;
@@ -287,44 +334,57 @@ const persistSnapshot = async (params: {
     cross_section: params.input.cross_section,
   });
 
+  // Sealed with the owner's keys (#141): nothing is written while locked.
+  const cipher = await ports.cipher(params.userId);
+
   let glbSha256: string | undefined;
   let glbModelName: string | undefined;
   if (params.input.glb) {
-    glbSha256 = await ports.persistGlb(params.userId, params.input.glb);
+    glbSha256 = await ports.persistGlb(params.userId, params.input.glb, cipher);
     glbModelName = params.input.glbModelName;
   }
 
   const viatarId = resolveViatarId(params.input, glbSha256);
   const syncedAt = new Date();
+  const key = { subjectId: params.input.subjectId, viatarId };
+  // The row id is part of each sealed value's context, so it is fixed first.
+  const id =
+    (
+      await ports.database().vitronicSnapshot.findUnique({
+        where: { subjectId_viatarId: key },
+        select: { id: true },
+      })
+    )?.id ?? crypto.randomUUID();
+  const sealed = {
+    summary: sealJson(cipher, SNAPSHOTS, "summary", id, summary),
+    fhirBundle: null,
+    markers: sealNullableJson(cipher, SNAPSHOTS, "markers", id, geometry.markers),
+    measures: sealNullableJson(cipher, SNAPSHOTS, "measures", id, geometry.measures),
+  };
 
   const create = {
+    id,
     userId: params.userId,
     subjectId: params.input.subjectId,
-    summary,
-    fhirBundle: null,
+    ...sealed,
     glbSha256,
     glbModelName,
     viatarId,
-    markers: geometry.markers,
-    measures: geometry.measures,
     presetName: params.input.presetName ?? null,
     syncedAt,
   };
   // userId follows the owned subject, so a row keyed on this subject is the owner's.
   const update = {
     userId: params.userId,
-    summary,
-    fhirBundle: null,
+    ...sealed,
     viatarId,
-    markers: geometry.markers,
-    measures: geometry.measures,
     presetName: params.input.presetName ?? null,
     syncedAt,
     ...(glbSha256 ? { glbSha256, glbModelName } : {}),
   };
 
   await ports.database().vitronicSnapshot.upsert({
-    where: { subjectId_viatarId: { subjectId: params.input.subjectId, viatarId } },
+    where: { subjectId_viatarId: key },
     create,
     update,
   });
@@ -416,10 +476,11 @@ export const ensureSelfSubjectFromConnection = async (
   const existing = await database().vitronicSubject.findFirst({
     where: { userId, isSelf: true },
   });
+  const cipher = await cipherForUser(userId);
   if (existing) {
     return {
       id: existing.id,
-      label: existing.label,
+      label: cipher.openText(SUBJECTS, "label", existing.id, existing.label),
       source: existing.source,
       isSelf: existing.isSelf,
       probandId: existing.probandId,
@@ -430,22 +491,29 @@ export const ensureSelfSubjectFromConnection = async (
     where: { userId },
   });
   if (!connection) return null;
+  const id = crypto.randomUUID();
   const created = await database().vitronicSubject.create({
     data: {
+      id,
       userId,
-      label: VITRONIC_SELF_LABEL,
+      label: cipher.sealText(SUBJECTS, "label", id, VITRONIC_SELF_LABEL),
       source: VITRONIC_SUBJECT_SOURCE_SCANNER,
       isSelf: true,
       selfForUserId: userId,
       probandId: connection.probandId,
       consentRecordedAt: new Date(),
       consentBy: "connection-migration",
-      consentNote: "Migrated from VitronicConnection.",
+      consentNote: cipher.sealText(
+        SUBJECTS,
+        "consentNote",
+        id,
+        "Migrated from VitronicConnection.",
+      ),
     },
   });
   return {
     id: created.id,
-    label: created.label,
+    label: VITRONIC_SELF_LABEL,
     source: created.source,
     isSelf: created.isSelf,
     probandId: created.probandId,
@@ -476,6 +544,8 @@ export const listVitronicSubjects = async (
       defaultViatarId: true,
     },
   });
+  const cipher = await localReadCipher(opts)(userId);
+  const opened = rows.map((row) => openSubject(cipher, row));
   const doAppend = localReadAppend(opts);
   await doAppend({
     actor: opts?.actor ?? userId,
@@ -486,7 +556,7 @@ export const listVitronicSubjects = async (
     result: { count: rows.length },
     rowCount: rows.length,
   });
-  return rows;
+  return opened;
 };
 
 export class VitronicConsentRequiredError extends Error {
@@ -526,17 +596,20 @@ export const createVitronicSubject = async (params: {
     if (existing) throw new VitronicSelfExistsError();
   }
 
+  const cipher = await cipherForUser(params.userId);
+  const id = crypto.randomUUID();
   const created = await database().vitronicSubject.create({
     data: {
+      id,
       userId: params.userId,
-      label: params.input.label,
+      label: cipher.sealText(SUBJECTS, "label", id, params.input.label),
       source: params.input.source,
       isSelf,
       selfForUserId: isSelf ? params.userId : null,
       probandId: params.input.probandId ?? null,
       consentRecordedAt: consentAt,
       consentBy: params.input.consentBy,
-      consentNote: params.input.consentNote,
+      consentNote: cipher.sealText(SUBJECTS, "consentNote", id, params.input.consentNote),
     },
   });
 
@@ -545,14 +618,14 @@ export const createVitronicSubject = async (params: {
     sessionId: params.userId,
     subjectRef: created.id,
     tool: VITRONIC_SUBJECTS_AUDIT_TOOL,
-    args: { label: created.label, source: created.source, isSelf },
+    args: { label: params.input.label, source: created.source, isSelf },
     result: { id: created.id },
     rowCount: 0,
   });
 
   return {
     id: created.id,
-    label: created.label,
+    label: params.input.label,
     source: created.source,
     isSelf: created.isSelf,
     probandId: created.probandId,
@@ -639,9 +712,11 @@ export const listScansForSubject = async (params: {
   readonly subjectId: string;
 }): Promise<readonly VitronicScanRef[]> => {
   const subject = await requireSubjectForUser(params.userId, params.subjectId);
+  const cipher = await cipherForUser(params.userId);
   const stored = await database().vitronicSnapshot.findMany({
     where: { userId: params.userId, subjectId: subject.id },
     select: {
+      id: true,
       viatarId: true,
       presetName: true,
       syncedAt: true,
@@ -654,12 +729,13 @@ export const listScansForSubject = async (params: {
   const subjectKind =
     subject.source === VITRONIC_SUBJECT_SOURCE_SCANNER ? "scanner" : "file";
   const facts: SnapshotSyncFacts[] = stored.map((row) => {
-    const summary = row.summary as { metrics?: unknown } | null;
+    const summary = openJson(cipher, SNAPSHOTS, "summary", row.id, row.summary) as {
+      metrics?: unknown;
+    } | null;
     return {
       viatarId: row.viatarId,
       glbSha256: row.glbSha256,
-      markers: row.markers,
-      measures: row.measures,
+      ...openGeometry(cipher, row.id, row),
       properties: Array.isArray(summary?.metrics) ? summary.metrics : [],
       presetName: row.presetName,
       crtime: row.syncedAt.toISOString(),
@@ -734,8 +810,9 @@ export const listSnapshotsForSubject = async (
     result: { count: rows.length },
     rowCount: rows.length,
   });
+  const cipher = await localReadCipher(opts)(userId);
   return rows.map((row) => {
-    const summary = row.summary as unknown as VitronicSummary;
+    const summary = openSummary(cipher, row.id, row.summary);
     return {
       id: row.id,
       viatarId: row.viatarId,
@@ -743,8 +820,7 @@ export const listSnapshotsForSubject = async (
       syncedAt: row.syncedAt.toISOString(),
       presetName: row.presetName,
       properties: propertyRowsFromSummary(summary),
-      markers: row.markers,
-      measures: row.measures,
+      ...openGeometry(cipher, row.id, row),
     };
   });
 };
@@ -871,7 +947,7 @@ export const getLatestVitronicSummary = async (
   const snap = await db().vitronicSnapshot.findFirst({
     where: { userId, subject: { isSelf: true } },
     orderBy: { syncedAt: "desc" },
-    select: { summary: true, subjectId: true },
+    select: { id: true, summary: true, subjectId: true },
   });
   const count = snap ? 1 : 0;
   const doAppend = localReadAppend(opts);
@@ -885,7 +961,9 @@ export const getLatestVitronicSummary = async (
     rowCount: count,
   });
   if (!snap) return null;
-  return toChatVitronicSummary(snap.summary as unknown as VitronicSummary);
+  return toChatVitronicSummary(
+    openSummary(await localReadCipher(opts)(userId), snap.id, snap.summary),
+  );
 };
 
 export const getVitronicConnectionStatus = async (
@@ -903,7 +981,7 @@ export const getVitronicConnectionStatus = async (
   const snapshot = await db().vitronicSnapshot.findFirst({
     where: { userId, subject: { isSelf: true } },
     orderBy: { syncedAt: "desc" },
-    select: { glbSha256: true, syncedAt: true, summary: true, subjectId: true },
+    select: { id: true, glbSha256: true, syncedAt: true, summary: true, subjectId: true },
   });
   const connected = connection !== null;
   const snapshotCount = snapshot ? 1 : 0;
@@ -918,7 +996,7 @@ export const getVitronicConnectionStatus = async (
     rowCount: (connected ? 1 : 0) + snapshotCount,
   });
   const summary = snapshot?.summary
-    ? (snapshot.summary as unknown as VitronicSummary)
+    ? openSummary(await localReadCipher(opts)(userId), snapshot.id, snapshot.summary)
     : null;
   const scanDate =
     summary && summary.window.startDate !== "unknown" ? summary.window.startDate : null;
@@ -965,7 +1043,7 @@ export const loadAvatarForSnapshot = async (
     rowCount: 0,
   });
   if (!snapshot.glbSha256) return null;
-  return loadGlb(userId, snapshot.glbSha256);
+  return loadGlb(userId, snapshot.glbSha256, await localReadCipher(opts)(userId));
 };
 
 /** cloud_connect username/password is not shipped (VUSE XR 29 Sep). Lookup is by connection id only. */

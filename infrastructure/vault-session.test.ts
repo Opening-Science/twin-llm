@@ -132,3 +132,20 @@ describe("failed attempts (#142)", () => {
     expect(sessions.noteFailure("actor-a")).toBe(1);
   });
 });
+
+describe("keys for the stores (#141)", () => {
+  test("keysOf gives the keys while open and not idle, without counting as use", () => {
+    const clock = fakeClock();
+    const sessions = createVaultSessions(clock.now);
+    expect(sessions.keysOf("actor-a", IDLE)).toBeNull();
+    sessions.open("actor-a", "0123456789abcdef", KEY, "t1", [
+      { keyId: "fedcba9876543210", dataKey: Buffer.alloc(32, 4) },
+    ]);
+    const keys = sessions.keysOf("actor-a", IDLE);
+    expect(keys?.keyId).toBe("0123456789abcdef");
+    expect(keys?.retiring.map((key) => key.keyId)).toEqual(["fedcba9876543210"]);
+    expect(sessions.keysOf("actor-b", IDLE)).toBeNull();
+    clock.advance(IDLE);
+    expect(sessions.keysOf("actor-a", IDLE)).toBeNull();
+  });
+});

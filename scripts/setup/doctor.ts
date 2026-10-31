@@ -28,6 +28,11 @@ import { TOOLS } from "./prerequisites";
 import { checkPrismaClient, type PrismaClientState } from "./prisma-client";
 import { formatFindings } from "../../infrastructure/storage-hardening";
 import { probeStorage, type StorageProbe } from "./storage-probe";
+import {
+  encryptionSection,
+  type EncryptionProbe,
+  probeEncryption,
+} from "./encryption-probe";
 
 const FINDING_MARK: Readonly<Record<Finding["mark"], string>> = {
   ok: "[ok]     ",
@@ -53,6 +58,7 @@ export const formatDoctor = (
   packages: readonly PackageProblem[] = [],
   client: PrismaClientState = "ok",
   storage: StorageProbe | null = null,
+  encryption: EncryptionProbe | null = null,
 ): string => {
   const tools = toolChecks(state).map((check) =>
     check.status === "ok"
@@ -107,6 +113,7 @@ export const formatDoctor = (
     ...dataPage,
     "",
     ...(storage === null ? [] : storageSection(storage)),
+    ...(encryption === null ? [] : encryptionSection(encryption)),
     open === 0
       ? "Everything is ready."
       : `${open} item(s) not ready. ${SETUP_COMMAND} fixes what it can and says what to install.`,
@@ -118,12 +125,14 @@ const isMain = Boolean((import.meta as { main?: boolean }).main);
 
 if (isMain) {
   const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+  const storage = await probeStorage(root);
   process.stdout.write(
     formatDoctor(
       await detectState(root),
       checkInstalledPackages(root),
       checkPrismaClient(root),
-      await probeStorage(root),
+      storage,
+      await probeEncryption(storage.settings),
     ),
   );
 }

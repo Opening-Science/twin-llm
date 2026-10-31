@@ -221,9 +221,13 @@ SHA-256 is the zip's.
 - **Personal mode only.** Importing, listing, renaming and deleting need
   `DATA_MODE=personal` (`permitImportedDataStore` in `infrastructure/data-mode-policy.ts`).
   In synthetic mode the section says imports are off and every route answers 403.
-- **On this machine, not encrypted yet.** The page says: "Stored on this machine in
-  TwinLLM's database. Not encrypted at rest yet (#141)." How encryption at rest will work
-  is decided in [privacy-design.md](privacy-design.md).
+- **On this machine, encrypted (#141).** The page says: "Stored on this machine in
+  TwinLLM's database, encrypted with your passphrase." Every value of the tables above
+  except ids, kinds, counts, sizes and dates is stored encrypted under a key that opens
+  only with your passphrase; codes, file hashes, genome sites and rsIDs that lookups need
+  are stored as keyed hashes. Details and what stays readable on purpose:
+  [privacy-design.md](privacy-design.md#23-141-encrypt-personal-data-at-rest); migrating
+  an install from before #141: [runbook.md](runbook.md#encryption-at-rest).
 - **Locked until you unlock it (#142).** In personal mode the Data page, every import
   route and every chat tool that reads these rows sit behind a passphrase. The first visit
   asks you to set one (at least 12 characters) and shows a recovery code once. While the
@@ -231,9 +235,9 @@ SHA-256 is the zip's.
   423 "Your data is locked. Unlock it to continue."; that includes importing, renaming and
   deleting. It locks on the Lock button at the foot of the sidebar, after
   `VAULT_IDLE_LOCK_MINUTES` (default 15) without a personal request, and on every restart.
-  The rows themselves are not encrypted yet; the data key the passphrase opens is what
-  #141 will encrypt them with ([privacy-design.md](privacy-design.md#22-142-local-unlock-before-personal-data-can-be-read),
-  [runbook.md](runbook.md#local-unlock)).
+  The data key the passphrase opens is the key that encrypts the rows (#141, above); see
+  [privacy-design.md](privacy-design.md#22-142-local-unlock-before-personal-data-can-be-read),
+  [runbook.md](runbook.md#local-unlock).
 - **Owner-only storage (#144).** Personal mode does not start unless the database and the
   files are open to the owner's OS user only: `.env.local` 600, the state folder and the
   BodyLoop mesh folder 700 with everything in it owner-only, and Postgres reached through

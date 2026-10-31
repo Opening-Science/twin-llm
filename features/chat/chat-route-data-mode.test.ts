@@ -24,6 +24,16 @@ let refusedRows: string[] = [];
 /** The stored tool parts of the thread's earlier turn (synthetic). */
 let earlierToolParts: unknown = null;
 
+const { plainCipher, sealedCipher, sealJson } =
+  await import("@/infrastructure/field-cipher");
+/** DATA_MODE as `useEnv` last set it. */
+let dataMode = "synthetic";
+/** Stored values are sealed with the open vault's key in personal mode (#141). */
+const storeCipher = () =>
+  dataMode === "personal"
+    ? sealedCipher({ keyId: "0123456789abcdef", dataKey: Buffer.alloc(32, 7) })
+    : plainCipher;
+
 mock.module("server-only", () => ({}));
 mock.module("@/infrastructure/auth-actor", () => ({
   resolveActorId: async () => "local",
@@ -37,12 +47,21 @@ mock.module("@/infrastructure/current-user", () => ({
 }));
 mock.module("@/infrastructure/database", () => ({
   database: () => ({
+    user: { findUnique: async () => ({ clerkId: "local" }) },
     modelResponse: {
       findUnique: async () => ({
+        id: "response-synthetic-1",
+        modelName: "Synthetic",
         turn: { thread: { userId: USER_ID } },
       }),
       update: async (args: { data: { status: string; text: string } }) => {
-        refusedRows.push(`${args.data.status} ${args.data.text}`);
+        const text = storeCipher().openText(
+          "model_responses",
+          "text",
+          "response-synthetic-1",
+          args.data.text,
+        );
+        refusedRows.push(`${args.data.status} ${text}`);
         return {};
       },
     },
@@ -50,9 +69,27 @@ mock.module("@/infrastructure/database", () => ({
       findUnique: async () => ({
         threadId: "thread-synthetic-1",
         thread: {
+          userId: USER_ID,
           turns: [
-            { id: "turn-synthetic-0", responses: [{ toolParts: earlierToolParts }] },
-            { id: TURN_ID, responses: [{ toolParts: null }] },
+            {
+              id: "turn-synthetic-0",
+              responses: [
+                {
+                  id: "response-synthetic-0",
+                  toolParts:
+                    earlierToolParts === null
+                      ? null
+                      : sealJson(
+                          storeCipher(),
+                          "model_responses",
+                          "toolParts",
+                          "response-synthetic-0",
+                          earlierToolParts,
+                        ),
+                },
+              ],
+            },
+            { id: TURN_ID, responses: [{ id: "response-synthetic-1", toolParts: null }] },
           ],
         },
       }),
@@ -63,11 +100,18 @@ mock.module("@/infrastructure/database", () => ({
       findFirst: async () => {
         whoopReads += 1;
         return {
-          summary: {
-            window: { startDate: "2026-01-01", endDate: "2026-01-04" },
-            metrics: [],
-            narrative: WHOOP_NARRATIVE,
-          },
+          id: "whoop-synthetic-1",
+          summary: sealJson(
+            storeCipher(),
+            "whoop_snapshots",
+            "summary",
+            "whoop-synthetic-1",
+            {
+              window: { startDate: "2026-01-01", endDate: "2026-01-04" },
+              metrics: [],
+              narrative: WHOOP_NARRATIVE,
+            },
+          ),
         };
       },
     },
@@ -166,6 +210,7 @@ afterAll(async () => {
 
 const useEnv = async (values: Record<string, string>) => {
   Object.assign(process.env, values);
+  dataMode = values.DATA_MODE ?? dataMode;
   const { resetServerEnvCacheForTests } = await import("@/infrastructure/env");
   resetServerEnvCacheForTests();
 };
