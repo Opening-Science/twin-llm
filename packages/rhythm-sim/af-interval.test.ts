@@ -103,14 +103,15 @@ describe("afIntervalAfter (short_range)", () => {
     expect(Math.max(...series) <= AF_MAX_RR_MS).toBe(true);
   });
 
-  test("128-interval windows: median lag-1 of ln RR near the MIT-BIH AF Database target 0.045, independent draws near −0.008", () => {
+  test("128-interval windows: median lag-1 of ln RR between the MIT-BIH AF Database per-record 0.043 and pooled 0.054, independent draws near −0.008", () => {
     const windowMedian = (phi: number): number =>
       median(
         Array.from({ length: 400 }, (_, seed) =>
           autocorrelation(shortRangeSeries(seed + 1, 128, phi).map(Math.log), 1),
         ).map((value) => value ?? 0),
       );
-    expect(Math.abs(windowMedian(AF_SHORT_RANGE_PHI) - 0.045) < 0.015).toBe(true);
+    const shortRange = windowMedian(AF_SHORT_RANGE_PHI);
+    expect(shortRange > 0.043 - 0.01 && shortRange < 0.054 + 0.01).toBe(true);
     expect(Math.abs(windowMedian(0) + 0.008) < 0.015).toBe(true);
   });
 });

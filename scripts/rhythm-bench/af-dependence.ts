@@ -1,9 +1,8 @@
 /**
  * Short-range dependence of AF intervals (#297): the sample autocorrelation of
  * ln RR at a lag in each AF window, summarised over windows and over clusters
- * (recordings or records). The median over records of each record's median
- * lag-1 value in the MIT-BIH AF Database is the target `AF_SHORT_RANGE_PHI`
- * was fitted to. Pure.
+ * (recordings or records). These lag-1 values in the MIT-BIH AF Database are
+ * what `AF_SHORT_RANGE_PHI` was fitted to. Pure.
  */
 import { autocorrelation } from "@/packages/rhythm-sim/af-interval";
 

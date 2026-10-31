@@ -26,15 +26,15 @@ export const AF_DEPENDENCES = ["independent", "short_range"] as const;
 export type AfDependence = (typeof AF_DEPENDENCES)[number];
 
 /**
- * Lag-1 coefficient of the AR(1) on ln RR in `short_range` mode. Fitted so
- * that simulated 128-interval AF windows have a median sample lag-1
- * autocorrelation of ln RR of about 0.045, the median over the 23 MIT-BIH AF
- * Database records with pure AFIB windows of each record's median (the
- * rhythm benchmark computes it, `afDependenceSummary`). The sample statistic
- * of a short window is biased low (about −0.008 for independent values), so φ
- * is a little above the target: by simulation (20,000 windows, CV 0.2), φ =
- * 0.055 gives a median of 0.046. One coefficient for every rate and spread is
- * a stated choice.
+ * Lag-1 coefficient of the AR(1) on ln RR in `short_range` mode, fitted to
+ * one summary statistic of the MIT-BIH AF Database: the sample lag-1
+ * autocorrelation of ln RR in 128-interval windows that are all AFIB, 0.043
+ * as the median over its 23 records of each record's median and 0.054 pooled
+ * over its 3845 windows (the rhythm benchmark reports both, `lagSummary`).
+ * The sample statistic of a short window is biased low (about −0.008 for
+ * independent values), so φ sits a little above the target: by simulation
+ * (20,000 windows, CV 0.2), φ = 0.055 gives a median of 0.046, between the
+ * two. One coefficient for every rate and spread is a stated choice.
  */
 export const AF_SHORT_RANGE_PHI = 0.055;
 
