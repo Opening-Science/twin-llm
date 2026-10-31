@@ -1,0 +1,49 @@
+import { describe, expect, test } from "bun:test";
+import { homedir } from "node:os";
+
+import { parseServerEnv, storageEnv } from "./env";
+
+const BASE = {
+  LOCAL_MVP: "true",
+  AUTH_DISABLED: "true",
+  LLM_PROVIDER: "ollama",
+  DATABASE_URL: "postgresql://synthetic@localhost:1/none",
+} as const;
+
+describe("storage settings (#144)", () => {
+  test("TWINLLM_STATE_DIR must be absolute", () => {
+    expect(() => parseServerEnv({ ...BASE, TWINLLM_STATE_DIR: "state" })).toThrow(
+      "TWINLLM_STATE_DIR must be an absolute path",
+    );
+    expect(parseServerEnv({ ...BASE, TWINLLM_STATE_DIR: "" }).TWINLLM_STATE_DIR).toBe(
+      undefined,
+    );
+  });
+
+  test("storageEnv uses the set folders", () => {
+    const env = parseServerEnv({
+      ...BASE,
+      DATA_MODE: "synthetic",
+      TWINLLM_STATE_DIR: "/srv/twin-llm-state",
+      VITRONIC_DATA_DIR: "scans",
+    });
+    expect(storageEnv(env, "/work/twin-llm")).toEqual({
+      dataMode: "synthetic",
+      stateDir: "/srv/twin-llm-state",
+      vitronicDir: "/work/twin-llm/scans",
+      databaseUrl: BASE.DATABASE_URL,
+    });
+  });
+
+  test("defaults: the platform state folder and data/vitronic", () => {
+    const env = parseServerEnv({ ...BASE, XDG_DATA_HOME: "/xdg" });
+    const storage = storageEnv(env, "/work/twin-llm");
+    expect(storage.dataMode).toBe("personal");
+    expect(storage.vitronicDir).toBe("/work/twin-llm/data/vitronic");
+    expect(storage.stateDir).toBe(
+      process.platform === "darwin"
+        ? `${homedir()}/Library/Application Support/TwinLLM`
+        : "/xdg/twin-llm",
+    );
+  });
+});

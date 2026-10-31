@@ -9,6 +9,7 @@
  *   bun run setup:local -- --generate-cohort  # generate the eval cohort with Synthea instead (x86_64 matches the pin)
  *   bun run setup:local -- --skip-example     # do not add the "Example (synthetic)" thread
  *   bun run setup:local -- --skip-training-sample  # do not write the Training tab's sample set
+ *   bun run setup:local -- --owner-cluster    # only: an owner-only Postgres in $TWINLLM_STATE_DIR (#144)
  *
  * Checks prerequisites and prints how to install what is missing; it never
  * installs system packages. Steps already done are skipped, so it is safe to
@@ -57,10 +58,11 @@ import {
   parseExampleFixture,
   readExampleFixture,
 } from "./example-thread";
+import { ownerClusterRequested, runOwnerCluster } from "./owner-cluster";
 import { checkTool } from "./prerequisites";
 
 const USAGE =
-  "Usage: bun run setup:local [-- --cohort-10k | --skip-cohort | [--reload-cohort] [--generate-cohort]] [--skip-example] [--skip-training-sample]";
+  "Usage: bun run setup:local [-- --cohort-10k | --skip-cohort | [--reload-cohort] [--generate-cohort]] [--skip-example] [--skip-training-sample]\n       bun run setup:local -- --owner-cluster";
 
 const COHORT_FLAGS = ["--cohort-10k", "--skip-cohort", "--reload-cohort"];
 
@@ -254,12 +256,15 @@ const runStep = async (
 };
 
 const main = async (): Promise<number> => {
-  const options = parseSetupArgs(process.argv.slice(2));
-  if (options === null) {
+  const argv = process.argv.slice(2);
+  const ownerCluster = ownerClusterRequested(argv);
+  const options = ownerCluster === false ? parseSetupArgs(argv) : null;
+  if (ownerCluster === null || (ownerCluster === false && options === null)) {
     console.error(USAGE);
     return 2;
   }
   const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+  if (ownerCluster || options === null) return runOwnerCluster(root);
   const state = await detectState(root);
 
   const bun = checkTool("bun", state.tools.bun, state.platform);

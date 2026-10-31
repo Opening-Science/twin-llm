@@ -3,8 +3,9 @@
 This document settles the decisions behind six issues so each can be built as its own
 pull request: #144 harden local storage, #142 local unlock, #141 encryption at rest, #145
 learning consent, #140 disclosure ledger and #300 an external anchor for the audit chain.
-Nothing here is built yet. Where this document and the code differ, the code is what runs;
-update this document when a pull request changes a decision.
+Status: #144 is built (section 2.1 describes what shipped); #142, #141, #145, #140 and #300
+are not built yet. Where this document and the code differ, the code is what runs; update
+this document when a pull request changes a decision.
 
 TwinLLM is research software for one person on their own Linux or macOS machine. The design
 keeps to that: one owner, one Postgres, one Next.js server on loopback, no cloud service of
@@ -76,56 +77,91 @@ reach, with owner-only files, a server umask of `077`, and a startup check that 
 start when any of it is wider. The recommended setup is a Postgres cluster owned by the
 person, in the state directory, with no TCP listener at all.
 
-**Design.**
+**Design** (as built).
 
-- **Recommended: owner cluster.** `bun run setup:local -- --owner-cluster` runs
-  `initdb -D $TWINLLM_STATE_DIR/pg --auth-local=scram-sha-256 --auth-host=reject` with a
-  per-install password (32 random bytes, base64url) and sets `listen_addresses = ''`,
-  `unix_socket_directories = '$TWINLLM_STATE_DIR/pg-socket'` and
-  `unix_socket_permissions = 0700`. Only the owner's user can open the socket, and the
-  password is still required. `DATABASE_URL` uses the socket
-  (`postgresql://twinllm@/twin_llm?host=<socket dir>`), which `@prisma/adapter-pg` supports.
-  pgvector must be installed for that Postgres version, as today.
+- **Recommended: owner cluster.** `bun run setup:local -- --owner-cluster`
+  (`scripts/setup/owner-cluster.ts`) runs `initdb -D $TWINLLM_STATE_DIR/pg
+--auth-local=scram-sha-256 --auth-host=reject` with a setup-only superuser
+  `twinllm_admin`, appends `listen_addresses = ''`,
+  `unix_socket_directories = '$TWINLLM_STATE_DIR/pg-socket'`,
+  `unix_socket_permissions = 0700`, `log_statement = 'none'` and
+  `log_min_duration_statement = -1` to its `postgresql.conf`, starts it with `pg_ctl`, and
+  creates the role `twinllm` (login, not a superuser, no CREATEDB, CREATEROLE or
+  REPLICATION) owning the database `twin_llm`, with `CONNECT` revoked from `PUBLIC`. The
+  admin adds pgvector, which is not a trusted extension. Both passwords are 32 random bytes
+  (base64url) in `$TWINLLM_STATE_DIR/owner-cluster.env` (mode `0600`), never printed. Then
+  `prisma migrate deploy` runs against the new cluster. Only the owner's user can open the
+  socket, and the password is still required. `DATABASE_URL` uses the socket:
+  `postgresql://twinllm:<password>@localhost/twin_llm?host=<socket dir>`. The `localhost`
+  is there because Prisma's migrate refuses an empty host; the `host` parameter wins, so
+  node-postgres and Prisma both connect through the socket. Setup never edits an existing
+  `.env.local`; it prints a command that copies the `DATABASE_URL` line across without
+  printing it. initdb and pg_ctl come from `TWINLLM_PG_BIN`, else `pg_config --bindir`, else
+  `PATH`. It works only inside `$TWINLLM_STATE_DIR/pg` and stops if that folder holds a
+  cluster it did not make, so no other cluster is touched. Re-running starts a stopped
+  cluster and adds what is missing. pgvector must be installed for that Postgres version,
+  as today.
 - **Accepted: shared server.** A Homebrew, apt or Docker Postgres is accepted with
   conditions: `listen_addresses` is loopback only, the app connects as its own role
   `twinllm` that owns only the TwinLLM database and is not a superuser, and the role has a
-  per-install password stored with `scram-sha-256`. Setup prints the exact `pg_hba.conf`
-  lines; it never edits system files. Homebrew's default `trust` lines and Docker's
-  `POSTGRES_PASSWORD=postgres` from `docs/guidelines.md` fail the check below.
-- **Files.** `process.umask(0o077)` in `instrumentation.ts` before anything is written.
-  The state directory, `VITRONIC_DATA_DIR`, `ANATOMY_DATA_DIR` (no personal data, checked
-  for consistency only) and `.sbom/` are created `0700`. `.env.local` must be `0600`,
-  because it holds the database password and OAuth secrets.
-- **Startup check** (`infrastructure/storage-hardening.ts`, a pure function over `stat`
-  results and the parsed URL, called from `serverEnv()`'s boot path). With
-  `DATA_MODE=personal` the server refuses to start, with a named error, when:
-  `.env.local` is readable by group or others; the state directory or
-  `VITRONIC_DATA_DIR` is wider than `0700`; `DATABASE_URL` names a host that is not
-  loopback or a socket path; `DATABASE_URL` has no password on a TCP host. In synthetic mode
-  the same findings are warnings.
-- **Doctor and Lab.** `bun run doctor` adds the checks it can only make with a connection:
-  a connection to the same database without a password must be refused (this catches
-  `trust`); `SHOW listen_addresses` must be loopback or empty; the app's role must not be a
-  superuser; `log_statement` must be `none` or `ddl`; `log_min_duration_statement` must be
-  off. A new Lab card, "Local storage", shows the same findings with names and modes only,
-  and a command that repeats them (`stat -c '%a %n'` on Linux, `stat -f '%Lp %N'` on macOS,
-  `psql -w` without a password).
+  per-install password stored with `scram-sha-256`. The runbook ("Owner-only Postgres")
+  gives the SQL and the `pg_hba.conf` lines; setup never edits system files. Homebrew's
+  default `trust` lines and Docker's `POSTGRES_PASSWORD=postgres` from `docs/guidelines.md`
+  fail the checks below.
+- **Files.** `process.umask(0o077)` is the first step of `instrumentation.ts`
+  (`infrastructure/startup-order.ts`), before the environment is read and before anything is
+  written. BodyLoop mesh files are also written with explicit modes (`0700` folders, `0600`
+  files) in `packages/vitronic/glb.ts`. Personal mode creates the state directory `0700`
+  when it is missing. `.env.local` (and `.env` when present) must be `0600`, because it holds
+  the database password and OAuth secrets. Imports and uploads are not written to disk; their
+  rows go to Postgres. `ANATOMY_DATA_DIR` and `.sbom/` hold no personal data and are not
+  checked (a change from the first draft of this section).
+- **Startup check** (`infrastructure/storage-hardening.ts`, pure, over `stat` results, the
+  parsed URL and one query; run by `infrastructure/storage-scan.ts` after `serverEnv()`).
+  With `DATA_MODE=personal` the server refuses to start, with `StorageNotOwnerOnlyError`,
+  when: the state directory, `VITRONIC_DATA_DIR` or anything inside it is wider than
+  `0700`/`0600` or owned by another user; `.env.local` is readable by group or others;
+  `DATABASE_URL` names a host that is not loopback (`localhost`, `127.0.0.0/8`, `::1`;
+  `localhost.example.com` is not) or a socket outside the state directory; the socket folder
+  is wider than `0700`; `DATABASE_URL` has no password on a TCP host; the app's role is a
+  superuser; or `listen_addresses` is not empty with a socket, or not loopback with TCP. The
+  last two need a connection, so they moved from the doctor into the startup check. A check
+  that cannot run (no permission to `stat`, the database does not answer) is a refusal. In
+  synthetic mode the same findings are one warning line and the server starts. Next.js does
+  not exit when `register` throws: it logs the message and answers every request with 500,
+  as it already did for an invalid environment.
+- **Doctor and Lab.** `bun run doctor` has a "Local storage" section, and
+  `bun run lab:storage` prints the same lines (exit 0 OK, 1 Not OK, 2 Unknown). Both add the
+  checks the server does not make at startup: a connection to the same database with an
+  empty password must be refused (this catches `trust`), and `log_statement` must be `none`
+  or `ddl` and `log_min_duration_statement` off. The Lab card, "Local storage", shows every
+  finding except the passwordless one, which needs a second connection, as a table of item,
+  found, needed, result and fix, with names and modes only. Its command is
+  `bun run lab:storage` followed by the same checks by hand (`stat -c '%a'` on Linux,
+  `stat -f '%Lp'` on macOS, `find -perm /077`, a `psql` query for the role and
+  `listen_addresses`, `psql -w` without the password).
 
-**What the UI shows.** The Lab card. A boot failure names the file or setting and the fix,
-never a path under the home directory in full (the card writes `$TWINLLM_STATE_DIR`).
+**What the UI shows.** The Lab card. A boot failure names the file or setting, its mode and
+the command that fixes it, never a password or a path under the home directory in full: the
+card writes `$TWINLLM_STATE_DIR`, and a fix writes `$HOME/...` or a path relative to the
+repository.
 
 **Failure behaviour.** Fail closed in personal mode: the server does not start. Fail open
 with a warning in synthetic mode, because synthetic rows are public by design. A check that
-cannot run (no permission to `stat`) is a refusal in personal mode and Unknown on the card.
+cannot run is a refusal in personal mode and Unknown on the card.
 
 **What remains, stated in the docs.** A program running as the owner can still read
-`.env.local` and open the socket. #142 and #141 reduce what it gets while locked. Nothing
-here stops root.
+`.env.local`, the passwords file and open the socket. #142 and #141 reduce what it gets
+while locked. Nothing here stops root. Full isolation needs OS sandboxing or a trusted
+execution environment.
 
-**Tests.** The pure check over table-driven `stat` results and URLs (loopback names,
-`localhost.example.com`, socket paths, missing password). The doctor's passwordless probe
-against a throwaway cluster made in a temporary directory in CI. A test that the umask is
-set before the first write.
+**Tests.** The pure checks over table-driven `stat` results and URLs (loopback names,
+`localhost.example.com`, socket paths, `%2F` hosts, missing password), the role and
+`listen_addresses` rules, the refusal wording (no secret, no home path), the scan over fake
+ports, the walk over a temporary folder, the startup order (umask first) and the mesh file
+modes. The doctor's passwordless probe and a personal-mode start were run by hand against a
+throwaway cluster ([runbook.md](runbook.md#owner-only-postgres)); there is no CI job with a
+Postgres yet.
 
 **Effort.** About 3 days: check and boot wiring 1, setup and doctor 1, Lab card and docs 1.
 

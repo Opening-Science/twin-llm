@@ -3,6 +3,7 @@
  * from `.env.synthetic.example` only when there is none; it never edits one
  * that exists.
  */
+import { parseDatabaseConnection } from "../../infrastructure/storage-hardening";
 import type { Platform } from "./prerequisites";
 
 /** `KEY=value` lines of a dotenv file; comments and blank lines are skipped. */
@@ -89,4 +90,62 @@ export const redactUrl = (url: string): string => {
   } catch {
     return "(not a URL)";
   }
+};
+
+/** Options for Bun's SQL client to reach a Unix socket, which it does not read from a URL. */
+export type SocketOptions = Readonly<{
+  /** The socket file itself: `<folder>/.s.PGSQL.<port>`. */
+  path: string;
+  username: string | undefined;
+  password: string | undefined;
+  database: string | undefined;
+}>;
+
+/**
+ * For a socket URL (`host=/folder` in the query, or a `%2F...` host), the
+ * options Bun's SQL client needs; null for a TCP URL, which it reads as is.
+ */
+export const socketOptions = (url: string): SocketOptions | null => {
+  const connection = parseDatabaseConnection(url);
+  if (connection.kind !== "socket") return null;
+  const parsed = URL.canParse(url)
+    ? new URL(url)
+    : new URL(url.replace("@/", "@dummy-host.invalid/"));
+  const password =
+    parsed.searchParams.get("password") ?? decodeURIComponent(parsed.password);
+  return {
+    path: `${connection.socketDir}/.s.PGSQL.${connection.port}`,
+    username: connection.user ?? undefined,
+    password: password === "" ? undefined : password,
+    database: connection.database ?? undefined,
+  };
+};
+
+/** Connection settings as options: a socket `path`, or `hostname` and `port`. */
+export type ConnectOptions =
+  | SocketOptions
+  | Readonly<{
+      hostname: string;
+      port: number;
+      username: string | undefined;
+      password: string | undefined;
+      database: string | undefined;
+    }>;
+
+/**
+ * The same server, role and database with an empty password, for the probe
+ * that catches `trust` (#144). Null when the URL cannot be read.
+ */
+export const withoutPassword = (url: string): ConnectOptions | null => {
+  const socket = socketOptions(url);
+  if (socket !== null) return { ...socket, password: "" };
+  const connection = parseDatabaseConnection(url);
+  if (connection.kind !== "tcp") return null;
+  return {
+    hostname: connection.host.replace(/^\[|\]$/g, ""),
+    port: connection.port,
+    username: connection.user ?? undefined,
+    password: "",
+    database: connection.database ?? undefined,
+  };
 };

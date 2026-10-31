@@ -26,6 +26,8 @@ import {
 } from "./plan";
 import { TOOLS } from "./prerequisites";
 import { checkPrismaClient, type PrismaClientState } from "./prisma-client";
+import { formatFindings } from "../../infrastructure/storage-hardening";
+import { probeStorage, type StorageProbe } from "./storage-probe";
 
 const FINDING_MARK: Readonly<Record<Finding["mark"], string>> = {
   ok: "[ok]     ",
@@ -36,11 +38,21 @@ const FINDING_MARK: Readonly<Record<Finding["mark"], string>> = {
 const readinessMark = (page: Readiness): string =>
   page.stale === true ? "[stale]  " : page.ready ? "[ready]  " : "[missing]";
 
+/** Owner-only storage (#144): what personal mode needs before it starts. */
+const storageSection = (storage: StorageProbe): readonly string[] => [
+  storage.settings.dataMode === "personal"
+    ? "Local storage (DATA_MODE=personal: the server refuses to start unless every line is [ok])"
+    : "Local storage (DATA_MODE=synthetic: the server only warns; personal mode needs every line [ok])",
+  ...formatFindings(storage.findings),
+  "",
+];
+
 /** The report as text. Pure. */
 export const formatDoctor = (
   state: DetectedState,
   packages: readonly PackageProblem[] = [],
   client: PrismaClientState = "ok",
+  storage: StorageProbe | null = null,
 ): string => {
   const tools = toolChecks(state).map((check) =>
     check.status === "ok"
@@ -94,6 +106,7 @@ export const formatDoctor = (
     "Data page (/data): it lists a cohort only when neither the DATA_MODE line nor that cohort's line is [no]",
     ...dataPage,
     "",
+    ...(storage === null ? [] : storageSection(storage)),
     open === 0
       ? "Everything is ready."
       : `${open} item(s) not ready. ${SETUP_COMMAND} fixes what it can and says what to install.`,
@@ -110,6 +123,7 @@ if (isMain) {
       await detectState(root),
       checkInstalledPackages(root),
       checkPrismaClient(root),
+      await probeStorage(root),
     ),
   );
 }

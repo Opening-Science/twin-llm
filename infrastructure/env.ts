@@ -1,5 +1,8 @@
 import "server-only";
 
+import { homedir } from "node:os";
+import { resolve as resolvePath } from "node:path";
+
 import { z } from "zod";
 
 import {
@@ -9,6 +12,7 @@ import {
 import { parseDirtyFlag } from "./build-stamp";
 import { isLoopbackUrl } from "./loopback";
 import { DEFAULT_OLLAMA_NUM_CTX, MIN_OLLAMA_NUM_CTX } from "./ollama-context";
+import { defaultStateDir } from "./storage-hardening";
 
 /**
  * Server configuration for TwinLLM, validated once and then read everywhere
@@ -483,6 +487,11 @@ const serverEnvSchema = z
     VITRONIC_DATA_DIR: maybeText(),
     VITRONIC_SCANNER_HOSTS: maybeText(),
     ANATOMY_DATA_DIR: maybeText(),
+    TWINLLM_STATE_DIR: z.preprocess(
+      blankAsMissing,
+      z.string().regex(/^\//, "TWINLLM_STATE_DIR must be an absolute path").optional(),
+    ),
+    XDG_DATA_HOME: maybeText(),
   })
   .superRefine((env, ctx) => {
     const report: Report = ({ path, message }) =>
@@ -741,6 +750,36 @@ export const vitronicEnv = (): VitronicEnv | null => {
 /** Raw comma-separated BodyLoop scanner host allowlist; parsed in packages/vitronic/base-url.ts. */
 export const vitronicScannerHosts = (): string | null =>
   serverEnv().VITRONIC_SCANNER_HOSTS ?? null;
+
+export type StorageEnv = Readonly<{
+  dataMode: ServerEnv["DATA_MODE"];
+  /** TWINLLM_STATE_DIR, or the platform default (docs/privacy-design.md, "State directory"). */
+  stateDir: string;
+  /** Where BodyLoop mesh files go: VITRONIC_DATA_DIR, else `data/vitronic` in the repository. */
+  vitronicDir: string;
+  databaseUrl: string;
+}>;
+
+/** What the owner-only storage check (#144) looks at; `cwd` is the repository root. */
+export const storageEnv = (
+  env: ServerEnv = serverEnv(),
+  cwd: string = process.cwd(),
+): StorageEnv =>
+  Object.freeze({
+    dataMode: env.DATA_MODE,
+    stateDir:
+      env.TWINLLM_STATE_DIR ??
+      defaultStateDir({
+        platform: process.platform === "darwin" ? "darwin" : "linux",
+        home: homedir(),
+        xdgDataHome: env.XDG_DATA_HOME,
+      }),
+    vitronicDir: resolvePath(
+      /* turbopackIgnore: true */ cwd,
+      env.VITRONIC_DATA_DIR ?? "data/vitronic",
+    ),
+    databaseUrl: env.DATABASE_URL,
+  });
 
 export type AnatomyEnv = Readonly<{
   /** Where `bun run anatomy:fetch` put the atlas GLBs; null means data/anatomy. */

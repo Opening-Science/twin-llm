@@ -224,6 +224,17 @@ SHA-256 is the zip's.
 - **On this machine, not encrypted yet.** The page says: "Stored on this machine in
   TwinLLM's database. Not encrypted at rest yet (#141)." How unlock and encryption at
   rest will work is decided in [privacy-design.md](privacy-design.md).
+- **Owner-only storage (#144).** Personal mode does not start unless the database and the
+  files are open to the owner's OS user only: `.env.local` 600, the state folder and the
+  BodyLoop mesh folder 700 with everything in it owner-only, and Postgres reached through
+  a socket in the state folder or on loopback with a password, as a role that is not a
+  superuser. The server's umask is 077, so files it writes are 600. The imported file
+  itself is never written to disk, only its rows. `bun run setup:local -- --owner-cluster`
+  makes the recommended cluster; `bun run lab:storage` and the Lab's "Local storage" card
+  repeat the checks ([runbook.md](runbook.md#owner-only-postgres)). What this does not
+  stop: a program running as the same OS user can still read `.env.local` and open the
+  socket, and root can read anything. Full isolation needs OS sandboxing or a trusted
+  execution environment.
 - **Never sent to a hosted model.** Imported data is personal like wearable context, and
   stricter: a request that carries it (`hasImportedData` on `ProviderRequest`) is allowed
   only to Ollama, never Exoscale (the consented pilot included), OpenRouter, the remote

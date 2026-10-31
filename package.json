@@ -41,6 +41,7 @@
     "verify:import": "bash scripts/verify-import.sh",
     "sbom": "bun scripts/sbom/write.ts",
     "lab:local-only": "bun --preload ./features/chat/response/preload-server-only.mjs scripts/lab/local-only.ts",
+    "lab:storage": "bun scripts/lab/storage.ts",
     "skills:check": "bun scripts/skills/check.ts",
     "new:tool": "bun scripts/new-tool/new-tool.ts",
     "new:tool:prove": "bun scripts/new-tool/prove-typecheck.ts",

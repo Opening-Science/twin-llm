@@ -13,7 +13,13 @@ import {
 } from "@/infrastructure/build-stamp";
 import { bomText, buildBom, parseBunLock } from "@/infrastructure/cyclonedx";
 import { database } from "@/infrastructure/database";
-import { anatomyEnv, buildInfo, serverEnv, syntheaEnv } from "@/infrastructure/env";
+import {
+  anatomyEnv,
+  buildInfo,
+  serverEnv,
+  storageEnv,
+  syntheaEnv,
+} from "@/infrastructure/env";
 import {
   EVAL_COHORT_ARCHIVE,
   SBOM_PATH,
@@ -21,6 +27,8 @@ import {
 } from "@/infrastructure/local-artefacts";
 import { isLoopbackUrl } from "@/infrastructure/loopback";
 import { DEFAULT_OLLAMA_BASE_URL } from "@/infrastructure/ollama-context";
+import { isInside } from "@/infrastructure/storage-hardening";
+import { serverStorageFindings } from "@/infrastructure/storage-runtime";
 import { resolveAnatomyDir } from "@/packages/anatomy/paths";
 
 import { auditChainBase, auditChainCheck } from "./audit-chain-check";
@@ -48,6 +56,7 @@ import {
 } from "./pinned-artefacts-check";
 import { provenanceBase, provenanceCheck } from "./provenance-check";
 import { type CurrentSbom, sbomBase, sbomCheck } from "./sbom-check";
+import { storageBase, storageCheck } from "./storage-check";
 
 /**
  * The I/O half of the Lab page: reads the database, Ollama and files on this
@@ -294,6 +303,22 @@ const checkSbom = async (): Promise<LabCheck> => {
   });
 };
 
+// --- Local storage ------------------------------------------------------------
+
+/** The mesh folder as the card writes it: relative inside the repository, else its variable. */
+const shownVitronic = (): string => {
+  const cwd = process.cwd();
+  const dir = storageEnv().vitronicDir;
+  return isInside(cwd, dir) ? relative(cwd, dir) || "." : "$VITRONIC_DATA_DIR";
+};
+
+const checkStorage = async (vitronic: string): Promise<LabCheck> =>
+  storageCheck({
+    dataMode: storageEnv().dataMode,
+    vitronic,
+    findings: await serverStorageFindings({ logging: true }),
+  });
+
 // --- Section ------------------------------------------------------------------
 
 const VERIFIABILITY_INTRO =
@@ -302,12 +327,14 @@ const VERIFIABILITY_INTRO =
 export const loadVerifiability = async (): Promise<LabSection> => {
   const ollama = ollamaPlan();
   const pins = pinPlan();
+  const vitronic = shownVitronic();
   return {
     id: "verifiability",
     title: "Verifiability",
     intro: VERIFIABILITY_INTRO,
     checks: await Promise.all([
       guarded(localOnlyBase, checkLocalOnly),
+      guarded(storageBase(vitronic), () => checkStorage(vitronic)),
       guarded(auditChainBase, checkAuditChain),
       guarded(localModelsBase(ollama.tagsUrl), () => checkLocalModels(ollama)),
       guarded(pinnedArtefactsBase(pins.pins), () => checkPinnedArtefacts(pins)),
