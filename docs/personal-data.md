@@ -222,7 +222,8 @@ SHA-256 is the zip's.
   `DATA_MODE=personal` (`permitImportedDataStore` in `infrastructure/data-mode-policy.ts`).
   In synthetic mode the section says imports are off and every route answers 403.
 - **On this machine, not encrypted yet.** The page says: "Stored on this machine in
-  TwinLLM's database. Not encrypted at rest yet (#141)."
+  TwinLLM's database. Not encrypted at rest yet (#141)." How unlock and encryption at
+  rest will work is decided in [privacy-design.md](privacy-design.md).
 - **Never sent to a hosted model.** Imported data is personal like wearable context, and
   stricter: a request that carries it (`hasImportedData` on `ProviderRequest`) is allowed
   only to Ollama, never Exoscale (the consented pilot included), OpenRouter, the remote

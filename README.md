@@ -52,7 +52,7 @@ bun run dev
 - The model gets numbers with units and dates, never records, images or scan meshes.
 - Threads open only for their owner, tokens are encrypted, and incognito chats are not stored.
 
-Wearable data still starts in each vendor's cloud. The full table of what goes where is in [`docs/providers.md`](docs/providers.md#what-leaves-the-host).
+Wearable data still starts in each vendor's cloud. The full table of what goes where is in [`docs/providers.md`](docs/providers.md#what-leaves-the-host). The planned unlock, encryption at rest, learning consent, disclosure ledger and audit anchor are in [`docs/privacy-design.md`](docs/privacy-design.md).
 
 ## How it works
 
