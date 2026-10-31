@@ -2,6 +2,7 @@ import { createThreadDeleteHandler } from "@/features/arena/thread-delete-handle
 import { resolveActorId } from "@/infrastructure/auth-actor";
 import { findAppUserId } from "@/infrastructure/current-user";
 import { database } from "@/infrastructure/database";
+import { withUnlocked } from "@/infrastructure/vault-runtime";
 import { append } from "@/packages/audit/append";
 
 type RouteContext = { params: Promise<{ threadId: string }> };
@@ -19,5 +20,6 @@ const deleteThread = createThreadDeleteHandler({
 });
 
 /** Deletes the signed-in person's own thread; the thread bar calls it after its undo window. */
-export const DELETE = async (_request: Request, { params }: RouteContext) =>
-  deleteThread((await params).threadId);
+export const DELETE = withUnlocked(async (_request: Request, { params }: RouteContext) =>
+  deleteThread((await params).threadId),
+);

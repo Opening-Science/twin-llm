@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { resolveActorId } from "@/infrastructure/auth-actor";
+import { vaultRefusalForAction } from "@/infrastructure/vault-runtime";
 import { ensureAppUser } from "@/infrastructure/current-user";
 import { database } from "@/infrastructure/database";
 import {
@@ -59,6 +60,8 @@ export const editNote = async (
   _previous: NoteFormState,
   form: FormData,
 ): Promise<NoteFormState> => {
+  const locked = await vaultRefusalForAction();
+  if (locked !== null) return { message: locked, saved: false };
   const who = await owner();
   if (who === null) return { message: COPY.signIn, saved: false };
   const id = text(form, "id");
@@ -87,6 +90,7 @@ export const editNote = async (
 };
 
 export const removeNote = async (form: FormData): Promise<void> => {
+  if ((await vaultRefusalForAction()) !== null) return;
   const who = await owner();
   const id = text(form, "id");
   if (who === null || id === "" || !(await noteExists(who.userId, id))) return;
@@ -108,6 +112,7 @@ export const removeNote = async (form: FormData): Promise<void> => {
 };
 
 export const setNotesLoading = async (form: FormData): Promise<void> => {
+  if ((await vaultRefusalForAction()) !== null) return;
   const who = await owner();
   if (who === null) return;
   await setNotesOff(who.userId, text(form, "load") !== "on");

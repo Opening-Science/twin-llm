@@ -46,6 +46,13 @@ export type WhoopCallbackDeps = {
   /** The first sync after connect; it goes through `auditThenSave`, which stores it only after the audit row. */
   readonly syncForUser: (userId: string) => Promise<PreparedSync<SyncedMetrics>>;
   readonly auditPersonalRead: (read: PersonalRead) => Promise<unknown>;
+  /**
+   * Whether this person's data is unlocked in this process (#142). The
+   * return from the provider is a cross-site redirect, so the SameSite=Strict
+   * unlock cookie is not sent; the tokens are stored either way, and the
+   * first sync runs only while the vault is open.
+   */
+  readonly mayReadPersonal: (actorId: string) => boolean;
   /** Receives the error name only, never the error object. */
   readonly logError: (message: string, errorName: string) => void;
   readonly logWarn: (message: string, details: Readonly<Record<string, unknown>>) => void;
@@ -143,14 +150,16 @@ export const createWhoopCallbackHandler = (deps: WhoopCallbackDeps) => {
     try {
       const { id: appUserId } = await deps.ensureAppUser(clerkId);
       await deps.exchangeAndPersistCode({ userId: appUserId, code });
-      await auditThenSave(
-        () => deps.syncForUser(appUserId),
-        "whoop",
-        clerkId,
-        deps.auditPersonalRead,
-      ).catch((error: unknown) => {
-        deps.logError("[whoop] initial sync failed after connect", errorName(error));
-      });
+      if (deps.mayReadPersonal(clerkId)) {
+        await auditThenSave(
+          () => deps.syncForUser(appUserId),
+          "whoop",
+          clerkId,
+          deps.auditPersonalRead,
+        ).catch((error: unknown) => {
+          deps.logError("[whoop] initial sync failed after connect", errorName(error));
+        });
+      }
       return back("connected", request);
     } catch (error) {
       deps.logError("[whoop] OAuth callback failed", errorName(error));

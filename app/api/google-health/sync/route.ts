@@ -7,14 +7,17 @@ import { googleHealthEnv } from "@/infrastructure/env";
 import { database } from "@/infrastructure/database";
 import { auditPersonalRead } from "@/infrastructure/personal-read-audit";
 import { append } from "@/packages/audit/append";
+import { withUnlocked } from "@/infrastructure/vault-runtime";
 
-export const POST = createWearableSyncHandler({
-  provider: "google-health",
-  isConfigured: () => Boolean(googleHealthEnv()),
-  resolveActorId,
-  findAppUserId,
-  sync: (userId, { startDate, endDate }) =>
-    syncGoogleHealthForUser(userId, { startDate, endDate }),
-  auditPersonalRead: auditPersonalRead((input) => append(database(), input)),
-  logError: console.error,
-});
+export const POST = withUnlocked(
+  createWearableSyncHandler({
+    provider: "google-health",
+    isConfigured: () => Boolean(googleHealthEnv()),
+    resolveActorId,
+    findAppUserId,
+    sync: (userId, { startDate, endDate }) =>
+      syncGoogleHealthForUser(userId, { startDate, endDate }),
+    auditPersonalRead: auditPersonalRead((input) => append(database(), input)),
+    logError: console.error,
+  }),
+);

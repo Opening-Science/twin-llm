@@ -9,6 +9,7 @@ import { utcDay } from "@/infrastructure/day-key";
 import { serverEnv } from "@/infrastructure/env";
 import { database } from "@/infrastructure/database";
 import { append } from "@/packages/audit/append";
+import { withUnlocked } from "@/infrastructure/vault-runtime";
 
 type RouteContext = { params: Promise<{ threadId: string }> };
 
@@ -21,8 +22,9 @@ const exportThread = createThreadExportHandler({
 });
 
 /** The signed-in person's own thread as Markdown, or `?format=fhir` as a DocumentReference. */
-export const GET = async (request: Request, { params }: RouteContext) =>
+export const GET = withUnlocked(async (request: Request, { params }: RouteContext) =>
   exportThread(
     (await params).threadId,
     exportFormat(new URL(request.url).searchParams.get("format")),
-  );
+  ),
+);

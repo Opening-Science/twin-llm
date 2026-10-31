@@ -13,6 +13,7 @@ import { ensureAppUser } from "@/infrastructure/current-user";
 import { googleHealthEnv } from "@/infrastructure/env";
 import { database } from "@/infrastructure/database";
 import { auditPersonalRead } from "@/infrastructure/personal-read-audit";
+import { vaultOpenFor } from "@/infrastructure/vault-runtime";
 import { append } from "@/packages/audit/append";
 
 export const GET = createGoogleHealthCallbackHandler({
@@ -23,6 +24,7 @@ export const GET = createGoogleHealthCallbackHandler({
   exchangeAndPersistCode: exchangeAndPersistGoogleHealthCode,
   syncForUser: syncGoogleHealthForUser,
   auditPersonalRead: auditPersonalRead((input) => append(database(), input)),
+  mayReadPersonal: vaultOpenFor,
   logError: console.error,
   logWarn: console.warn,
 });

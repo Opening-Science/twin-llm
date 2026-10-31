@@ -129,6 +129,9 @@ mock.module("@/features/chat/stream-model-response", () => ({
 
 let POST: (request: Request) => Promise<Response>;
 
+/** Personal mode needs an unlocked vault (#142); these tests run with it open. */
+const UNLOCK_TOKEN = "synthetic-unlock-token";
+
 beforeAll(async () => {
   Object.assign(process.env, {
     LOCAL_MVP: "true",
@@ -140,10 +143,19 @@ beforeAll(async () => {
   });
   const { resetServerEnvCacheForTests } = await import("@/infrastructure/env");
   resetServerEnvCacheForTests();
-  ({ POST } = await import("@/app/api/chat/route"));
+  const route = await import("@/app/api/chat/route");
+  const { vaultSessions } = await import("@/infrastructure/vault-session");
+  vaultSessions().open("local", "0123456789abcdef", Buffer.alloc(32, 7), UNLOCK_TOKEN);
+  POST = (request) => {
+    const headers = new Headers(request.headers);
+    headers.set("cookie", `twinllm_unlock=${UNLOCK_TOKEN}`);
+    return route.POST(new Request(request, { headers }));
+  };
 });
 
 afterAll(async () => {
+  const { vaultSessions } = await import("@/infrastructure/vault-session");
+  vaultSessions().lock("local");
   for (const key of Object.keys(process.env)) {
     if (!(key in originalEnv)) Reflect.deleteProperty(process.env, key);
   }

@@ -222,8 +222,18 @@ SHA-256 is the zip's.
   `DATA_MODE=personal` (`permitImportedDataStore` in `infrastructure/data-mode-policy.ts`).
   In synthetic mode the section says imports are off and every route answers 403.
 - **On this machine, not encrypted yet.** The page says: "Stored on this machine in
-  TwinLLM's database. Not encrypted at rest yet (#141)." How unlock and encryption at
-  rest will work is decided in [privacy-design.md](privacy-design.md).
+  TwinLLM's database. Not encrypted at rest yet (#141)." How encryption at rest will work
+  is decided in [privacy-design.md](privacy-design.md).
+- **Locked until you unlock it (#142).** In personal mode the Data page, every import
+  route and every chat tool that reads these rows sit behind a passphrase. The first visit
+  asks you to set one (at least 12 characters) and shows a recovery code once. While the
+  data is locked, the page shows the unlock form instead of the list and the routes answer
+  423 "Your data is locked. Unlock it to continue."; that includes importing, renaming and
+  deleting. It locks on the Lock button at the foot of the sidebar, after
+  `VAULT_IDLE_LOCK_MINUTES` (default 15) without a personal request, and on every restart.
+  The rows themselves are not encrypted yet; the data key the passphrase opens is what
+  #141 will encrypt them with ([privacy-design.md](privacy-design.md#22-142-local-unlock-before-personal-data-can-be-read),
+  [runbook.md](runbook.md#local-unlock)).
 - **Owner-only storage (#144).** Personal mode does not start unless the database and the
   files are open to the owner's OS user only: `.env.local` 600, the state folder and the
   BodyLoop mesh folder 700 with everything in it owner-only, and Postgres reached through
@@ -284,3 +294,4 @@ SHA-256 is the zip's.
 | Chat tools (#181)              | `packages/query-tools/imported-*.ts`, `importedDataReads`    |
 | Variant lookup (#307)          | `imported-variants.ts`, `genomeVariantReads`                 |
 | Upload size through `proxy.ts` | `proxyClientMaxBodySize` in `next.config.ts` (52 MB)         |
+| Unlock gate (#142)             | `withUnlocked` in `infrastructure/vault-runtime.ts`          |

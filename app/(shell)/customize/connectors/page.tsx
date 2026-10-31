@@ -28,6 +28,7 @@ import {
 } from "@/infrastructure/env";
 import { auditPersonalRead } from "@/infrastructure/personal-read-audit";
 import { append } from "@/packages/audit/append";
+import { lockedScreen } from "@/features/vault/page-gate";
 
 /** Summaries for this page view, audited in personal mode (#223). */
 const summaryDeps = {
@@ -50,6 +51,8 @@ export default async function ConnectorsPage({
 }: {
   readonly searchParams: Promise<Readonly<Record<string, string | string[] | undefined>>>;
 }) {
+  const locked = await lockedScreen();
+  if (locked) return locked;
   const params = await searchParams;
   const rawSource = params.source;
   const initialSource =

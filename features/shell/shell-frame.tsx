@@ -120,6 +120,7 @@ const PhoneMenu = ({
 
 export const ShellFrame = ({
   threadGroups,
+  threadsLocked = false,
   navFooter,
   residency,
   initialPinned = false,
@@ -127,6 +128,8 @@ export const ShellFrame = ({
   children,
 }: Readonly<{
   threadGroups: readonly ThreadGroup[];
+  /** Personal data is locked (#142): the sidebar says so instead of listing threads. */
+  threadsLocked?: boolean;
   navFooter: ReactNode;
   residency?: DataResidency;
   /** The pinned choice from the cookie, so the server renders the right layout. */
@@ -255,6 +258,7 @@ export const ShellFrame = ({
           <div className="border-border bg-muted/40 hidden min-h-0 border-r lg:block">
             <NavPanel
               threadGroups={threadGroups}
+              threadsLocked={threadsLocked}
               footer={navFooter}
               headerAction={pinButton}
             />
@@ -280,6 +284,7 @@ export const ShellFrame = ({
           <div className="shell-peek" onPointerEnter={stay} onPointerLeave={leave}>
             <NavPanel
               threadGroups={threadGroups}
+              threadsLocked={threadsLocked}
               footer={navFooter}
               headerAction={pinButton}
               onNavigate={() => dispatch("navigate")}
@@ -293,6 +298,7 @@ export const ShellFrame = ({
         >
           <NavPanel
             threadGroups={threadGroups}
+            threadsLocked={threadsLocked}
             footer={navFooter}
             onNavigate={() => setMenuOpen(false)}
           />

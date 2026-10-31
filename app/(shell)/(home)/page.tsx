@@ -13,6 +13,7 @@ import { chatModelIsLocal } from "@/infrastructure/genome-gate";
 import { INCOGNITO_PARAM, isIncognitoParam } from "@/infrastructure/incognito";
 import { defaultModelSelection } from "@/infrastructure/model-catalog";
 import { safeDraft, subjectDraft, subjectRefParam } from "@/infrastructure/shell-links";
+import { lockedScreen } from "@/features/vault/page-gate";
 
 /**
  * A new thread. Someone who has not been through first-run setup and has no
@@ -30,6 +31,8 @@ import { safeDraft, subjectDraft, subjectRefParam } from "@/infrastructure/shell
 export default async function HomePage({
   searchParams,
 }: Readonly<{ searchParams: Promise<Record<string, string | string[] | undefined>> }>) {
+  const locked = await lockedScreen();
+  if (locked) return locked;
   const actorId = await resolveActorId();
   if (actorId && (await needsOnboarding(actorId))) redirect("/start");
 
