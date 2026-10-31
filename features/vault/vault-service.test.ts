@@ -7,7 +7,9 @@ import { createVaultSessions } from "@/infrastructure/vault-session";
 import { VAULT_COPY } from "./vault-copy";
 import {
   lockVault,
+  openRecord,
   recoverVault,
+  sealRecord,
   setUpVault,
   unlockVault,
   type VaultServiceDeps,
@@ -238,5 +240,68 @@ describe("recovery (#142)", () => {
       status: 400,
     });
     expect(h.rows).toEqual([`${ACTOR} setup 0`]);
+  });
+});
+
+describe("a rotation's retiring key (#141)", () => {
+  const ACTIVE = { keyId: "2222222222222222", dataKey: Buffer.alloc(32, 2) };
+  const RETIRING = { keyId: "1111111111111111", dataKey: Buffer.alloc(32, 1) };
+  const CODE = "AAAA-BBBB-CCCC-DDDD-EEEE-FFFF-GGGG-HHHH";
+
+  const rotatingRecord = () =>
+    sealRecord({
+      actorId: ACTOR,
+      keyId: ACTIVE.keyId,
+      dek: Buffer.from(ACTIVE.dataKey),
+      passphrase: PASSPHRASE,
+      recoveryCode: CODE,
+      createdAt: new Date(0).toISOString(),
+      now: new Date(0),
+      argon2: false,
+      retiring: [{ keyId: RETIRING.keyId, dataKey: Buffer.from(RETIRING.dataKey) }],
+    });
+
+  test("both keys open with the passphrase and with the recovery code", async () => {
+    const record = await rotatingRecord();
+    expect(record.retiring?.map((key) => key.keyId)).toEqual([RETIRING.keyId]);
+    for (const [secret, purpose] of [
+      [PASSPHRASE, "passphrase"],
+      [CODE.replace(/-/g, ""), "recovery"],
+    ] as const) {
+      const keys = await openRecord(ACTOR, record, secret, purpose);
+      expect(keys?.active.keyId).toBe(ACTIVE.keyId);
+      expect(keys?.active.dataKey.equals(ACTIVE.dataKey)).toBe(true);
+      expect(keys?.retiring.map((key) => key.dataKey.equals(RETIRING.dataKey))).toEqual([
+        true,
+      ]);
+    }
+    expect(
+      await openRecord(ACTOR, record, "wrong synthetic passphrase", "passphrase"),
+    ).toBeNull();
+    expect(await openRecord("someone-else", record, PASSPHRASE, "passphrase")).toBeNull();
+  });
+
+  test("unlocking during a rotation puts both keys in the session", async () => {
+    const h = harness();
+    await h.deps.write(ACTOR, await rotatingRecord());
+    const result = await unlockVault(h.deps, ACTOR, PASSPHRASE);
+    expect(result.kind).toBe("opened");
+    const keys = h.sessions.keysOf(ACTOR, IDLE);
+    expect(keys?.keyId).toBe(ACTIVE.keyId);
+    expect(keys?.retiring.map((key) => key.keyId)).toEqual([RETIRING.keyId]);
+  });
+
+  test("recovery during a rotation keeps the retiring key", async () => {
+    const h = harness();
+    await h.deps.write(ACTOR, await rotatingRecord());
+    const result = await recoverVault(
+      h.deps,
+      ACTOR,
+      CODE,
+      "another synthetic passphrase",
+    );
+    expect(result.kind).toBe("opened");
+    expect(h.stored()?.retiring?.map((key) => key.keyId)).toEqual([RETIRING.keyId]);
+    expect(h.sessions.keysOf(ACTOR, IDLE)?.retiring).toHaveLength(1);
   });
 });

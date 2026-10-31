@@ -18,11 +18,20 @@ import { processSingleton } from "./process-singleton";
  * reset with the process like the keys do.
  */
 
-export type VaultKeys = Readonly<{
+export type VaultKey = Readonly<{
   keyId: string;
-  /** The data key; #141 derives its field, index and ledger subkeys from it. */
+  /** The data key; #141 derives its field, index and mesh subkeys from it. */
   dataKey: KeyObject;
 }>;
+
+export type VaultKeys = VaultKey &
+  Readonly<{
+    /** Keys being rotated out (#141): still read, never written with. */
+    retiring: readonly VaultKey[];
+  }>;
+
+/** A data key as unwrapped from the key file, before it becomes a `KeyObject`. */
+export type RawKey = Readonly<{ keyId: string; dataKey: Buffer }>;
 
 type Session = Readonly<{
   keys: VaultKeys;
@@ -53,8 +62,16 @@ export const backoffMs = (failures: number): number =>
 const FAILURE_MEMORY_MS = 60 * 60_000;
 
 export type VaultSessions = Readonly<{
-  /** Opens (or replaces) the actor's session; `dataKey` bytes are copied into a KeyObject. */
-  open: (actorId: string, keyId: string, dataKey: Buffer, token: string) => void;
+  /** Opens (or replaces) the actor's session; key bytes are copied into KeyObjects. */
+  open: (
+    actorId: string,
+    keyId: string,
+    dataKey: Buffer,
+    token: string,
+    retiring?: readonly RawKey[],
+  ) => void;
+  /** The actor's keys while the session is open and not idle; does not count as use. */
+  keysOf: (actorId: string, idleMs: number) => VaultKeys | null;
   /** Checks the token and, when it holds, marks the session used now. */
   check: (actorId: string, token: string | null, idleMs: number) => SessionCheck;
   /** True when the token opens the actor's session now; unlike `check`, it does not count as use. */
@@ -90,10 +107,17 @@ export const createVaultSessions = (now: () => number): VaultSessions => {
   };
 
   return {
-    open: (actorId, keyId, dataKey, token) => {
+    open: (actorId, keyId, dataKey, token, retiring = []) => {
       const at = now();
       sessions.set(actorId, {
-        keys: { keyId, dataKey: createSecretKey(Buffer.from(dataKey)) },
+        keys: {
+          keyId,
+          dataKey: createSecretKey(Buffer.from(dataKey)),
+          retiring: retiring.map((key) => ({
+            keyId: key.keyId,
+            dataKey: createSecretKey(Buffer.from(key.dataKey)),
+          })),
+        },
         tokenHash: hashToken(token),
         openedAt: at,
         lastUsedAt: at,
@@ -120,6 +144,10 @@ export const createVaultSessions = (now: () => number): VaultSessions => {
         token !== null &&
         timingSafeEqual(hashToken(token), session.tokenHash)
       );
+    },
+    keysOf: (actorId, idleMs) => {
+      const session = sessions.get(actorId);
+      return session === undefined || idle(session, idleMs) ? null : session.keys;
     },
     isOpen: (actorId, idleMs) => {
       const session = sessions.get(actorId);

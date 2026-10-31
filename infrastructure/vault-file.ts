@@ -55,17 +55,37 @@ const wrappedSchema = z.object({
   data: base64Url,
 });
 
-const recordSchema = z.object({
-  v: z.literal(1),
-  userKey: z.string().regex(/^[0-9a-f]{32}$/),
-  keyId: z.string().regex(/^[0-9a-f]{16}$/),
-  createdAt: z.string(),
-  updatedAt: z.string(),
+const keyIdSchema = z.string().regex(/^[0-9a-f]{16}$/);
+
+const retiringSchema = z.object({
+  keyId: keyIdSchema,
   passphrase: wrappedSchema,
   recovery: wrappedSchema,
 });
 
+const recordSchema = z.object({
+  v: z.literal(1),
+  userKey: z.string().regex(/^[0-9a-f]{32}$/),
+  keyId: keyIdSchema,
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  passphrase: wrappedSchema,
+  recovery: wrappedSchema,
+  retiring: z.array(retiringSchema).optional(),
+});
+
 export type WrappedWith = Readonly<{ kdf: KdfParams } & WrappedKey>;
+
+/**
+ * A data key being rotated out (#141): rows not yet rewritten still name it,
+ * so it opens with the same passphrase and recovery code until the rotation
+ * finishes and removes it.
+ */
+export type RetiringKey = Readonly<{
+  keyId: string;
+  passphrase: WrappedWith;
+  recovery: WrappedWith;
+}>;
 
 export type VaultRecord = Readonly<{
   v: 1;
@@ -75,6 +95,7 @@ export type VaultRecord = Readonly<{
   updatedAt: string;
   passphrase: WrappedWith;
   recovery: WrappedWith;
+  retiring?: readonly RetiringKey[];
 }>;
 
 /** A stored record, or null when the text is not one. */
