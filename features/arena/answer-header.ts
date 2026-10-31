@@ -1,5 +1,7 @@
 import { autoChoiceLineFor } from "@/infrastructure/agent-router";
-import { AUTO_MODEL_ID } from "@/infrastructure/model-catalog";
+import { AGENT_ID_PREFIX } from "@/infrastructure/agents";
+import { DEFAULT_EFFORT, effortLine } from "@/infrastructure/chat-effort";
+import { AUTO_MODEL_ID, type CatalogAgent } from "@/infrastructure/model-catalog";
 import { friendlyModelName } from "@/infrastructure/model-names";
 
 /**
@@ -23,3 +25,46 @@ export const autoLineOf = (
   answer.modelId === AUTO_MODEL_ID
     ? autoChoiceLineFor(prompt, answer.modelName, modelNameOf)
     : null;
+
+/**
+ * The model a specialist runs on in this catalog, for the Auto line (#366);
+ * null when the catalog does not offer it (a reload after it changed).
+ */
+export const specialistModelIn =
+  (catalog: readonly Readonly<{ id: string; agent?: CatalogAgent }>[] | null) =>
+  (agentId: string): string | null =>
+    catalog?.find((row) => row.id === `${AGENT_ID_PREFIX}${agentId}`)?.agent
+      ?.baseModelName ?? null;
+
+/**
+ * The line that names an answer's effort (#366), from its response document.
+ * Balanced, the default, and answers from before effort say nothing.
+ */
+export const effortLineOf = (
+  document:
+    | Readonly<{
+        effort?: Readonly<{
+          level: Parameters<typeof effortLine>[0]["level"];
+          thinking: Parameters<typeof effortLine>[0]["thinking"];
+          max_steps: number;
+          review: boolean;
+        }>;
+      }>
+    | null
+    | undefined,
+): string | null => {
+  const effort = document?.effort;
+  if (effort === undefined || effort.level === DEFAULT_EFFORT) return null;
+  return effortLine({
+    level: effort.level,
+    thinking: effort.thinking,
+    maxSteps: effort.max_steps,
+    review: effort.review,
+  });
+};
+
+/** What a stopped answer says (#366). */
+export const STOPPED_COPY = {
+  title: "You stopped this answer",
+  body: "In a saved thread the server still finishes it and keeps it, so reloading the thread shows it. You can also ask this model again.",
+} as const;

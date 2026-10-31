@@ -105,6 +105,45 @@ describe("asking for an answer", () => {
     });
   });
 
+  test("the effort goes with the answer in both modes (#366)", () => {
+    const base = {
+      modelId: "llama3.2",
+      turnId: "turn-synthetic-1",
+      messages,
+      skill: null,
+    };
+    expect(answerCall(answerRequestFor("saved", { ...base, effort: "ultra" }))).toEqual({
+      endpoint: "/api/chat",
+      body: JSON.stringify({
+        modelId: "llama3.2",
+        turnId: "turn-synthetic-1",
+        messages,
+        effort: "ultra",
+      }),
+    });
+    expect(
+      answerCall(answerRequestFor("incognito", { ...base, effort: "quick" })),
+    ).toEqual({
+      endpoint: "/api/chat/incognito",
+      body: JSON.stringify({ modelId: "llama3.2", messages, effort: "quick" }),
+    });
+  });
+
+  test("Stop aborts the request: the answer ends as failed, nothing is thrown", async () => {
+    const stop = new AbortController();
+    stop.abort();
+    const result = await streamAnswer(
+      { incognito: true, modelId: "llama3.2", messages },
+      () => undefined,
+      async (_input, init) => {
+        if (init.signal?.aborted) throw new DOMException("stopped", "AbortError");
+        return Response.json({ error: "x" }, { status: 503 });
+      },
+      stop.signal,
+    );
+    expect(result).toEqual({ ending: "FAILED", metrics: null, document: null });
+  });
+
   test("streamAnswer posts an incognito request to the incognito route", async () => {
     const calls: string[] = [];
     await streamAnswer(

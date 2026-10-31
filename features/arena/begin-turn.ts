@@ -1,3 +1,4 @@
+import type { EffortLevel } from "@/infrastructure/chat-effort";
 import type { UiContext } from "@/infrastructure/ui-context";
 
 import type { AnswerRequest, IncognitoAnswerRequest } from "./answer-stream";
@@ -71,17 +72,27 @@ export const answerRequestFor = (
     messages: readonly HistoryMessage[];
     skill: string | null;
     uiContext?: UiContext | null;
+    /** The turn's effort (#366); left out, Balanced. */
+    effort?: EffortLevel;
   }>,
 ): AnswerRequest | IncognitoAnswerRequest => {
   const skill = answer.skill === null ? {} : { skill: answer.skill };
+  const effort = answer.effort === undefined ? {} : { effort: answer.effort };
   // An incognito turn keeps nothing, so it sends no UI context to be audited.
   return mode === "incognito"
-    ? { incognito: true, modelId: answer.modelId, messages: answer.messages, ...skill }
+    ? {
+        incognito: true,
+        modelId: answer.modelId,
+        messages: answer.messages,
+        ...skill,
+        ...effort,
+      }
     : {
         modelId: answer.modelId,
         turnId: answer.turnId,
         messages: answer.messages,
         ...skill,
         ...(answer.uiContext ? { uiContext: answer.uiContext } : {}),
+        ...effort,
       };
 };

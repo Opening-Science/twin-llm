@@ -206,3 +206,36 @@ export const initialSelection = (
     compare: offeredIds.length === 0 ? base.compare : offeredIds,
   };
 };
+
+/** Adds or removes one Compare row, keeping one to three; Auto is never a row. */
+export const toggleCompare = (
+  selection: ModeSelection,
+  id: string,
+  catalog: readonly CatalogModel[],
+): ModeSelection => {
+  if (id === AUTO_MODEL_ID) return selection;
+  const current = selection.compare.filter(
+    (each) => findCatalogRow(each, catalog) !== null,
+  );
+  if (current.includes(id)) {
+    return current.length <= 1
+      ? selection
+      : { ...selection, compare: current.filter((each) => each !== id) };
+  }
+  return current.length >= MAX_SELECTED_MODELS
+    ? selection
+    : { ...selection, compare: [...current, id] };
+};
+
+/** The mode button's words: "Auto", "Manual · 2 answers", "Compare · 3 models". */
+export const modeSummary = (
+  selection: ModeSelection,
+  catalog: readonly CatalogModel[],
+): string => {
+  const count = modeModelIds(selection, catalog).length;
+  if (selection.mode === "auto") return MODE_COPY.auto.label;
+  if (selection.mode === "manual") {
+    return `${MODE_COPY.manual.label} · ${String(count)} ${count === 1 ? "answer" : "answers"}`;
+  }
+  return `${MODE_COPY.compare.label} · ${String(count)} ${count === 1 ? "model" : "models"}`;
+};

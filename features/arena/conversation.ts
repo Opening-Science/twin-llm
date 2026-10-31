@@ -1,3 +1,4 @@
+import type { EffortLevel } from "@/infrastructure/chat-effort";
 import type { ChatView } from "@/infrastructure/chat-view";
 import type { ModelResponseMetrics } from "@/infrastructure/model-response-metrics";
 import type { NumberSource } from "@/infrastructure/number-sources";
@@ -36,6 +37,10 @@ export type AnswerProgress = Readonly<{
   lost?: boolean;
   /** The server's own sentence for a refused skill turn, shown in place of the generic failure. */
   refusal?: string;
+  /** The person pressed Stop while it streamed (#366). */
+  stopped?: boolean;
+  /** An Ultra answer's number check is running (#366). */
+  reviewing?: boolean;
 }>;
 
 /** What is known once it is finished; each part may be missing. */
@@ -67,6 +72,8 @@ export type TurnState = Readonly<{
   scheduled?: boolean;
   /** What was on screen when it was sent (#47); kept for retries, never stored. */
   uiContext?: UiContext | null;
+  /** The effort it was sent at (#366); kept for retries. Left out, Balanced. */
+  effort?: EffortLevel;
   /**
    * Shown at once while the server creates the rows. Its ids are made up, so
    * nothing may stream against it until the real turn replaces it.

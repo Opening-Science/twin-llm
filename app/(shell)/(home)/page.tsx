@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { CompareScreen } from "@/features/arena/compare-screen";
+import { loadPromptSourceFacts } from "@/features/arena/prompt-source-facts";
 import { skillCommand } from "@/features/commands/registry";
 import { skillsFor } from "@/features/skills/user-skill-store";
 import { runnableSkills } from "@/features/skills/load-skills";
@@ -42,14 +43,14 @@ export default async function HomePage({
   const offered = incognito
     ? (catalog ?? []).filter(({ id }) => localModelIds.includes(id))
     : catalog;
+  const appUserId = actorId === null ? null : await findAppUserId(actorId);
   return (
     <CompareScreen
       key={incognito ? "incognito" : "new"}
       catalog={catalog}
       defaultModelIds={offered ? defaultModelSelection(offered) : []}
-      skills={(
-        await skillsFor(actorId === null ? null : await findAppUserId(actorId))
-      ).map(skillCommand)}
+      skills={(await skillsFor(appUserId)).map(skillCommand)}
+      sourceFacts={await loadPromptSourceFacts(appUserId, incognito)}
       incognito={incognito}
       localModelIds={localModelIds}
       initialDraft={

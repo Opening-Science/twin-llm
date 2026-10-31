@@ -1,10 +1,17 @@
 /**
- * The small marks the compare screen draws: send, a failed answer, remove,
+ * The small marks the compare screen draws: send, stop, sources, a failed answer, remove,
  * and the incognito toggle (a hat and glasses). Decorative only; the button or sentence beside each carries the
  * meaning. They inherit `currentColor` and the caller's size.
  */
 const MARK = {
   send: <path d="M10 16V4M5 9l5-5 5 5" />,
+  stop: <rect x="5.5" y="5.5" width="9" height="9" rx="1.5" />,
+  sources: (
+    <>
+      <circle cx="10" cy="10" r="2.75" />
+      <path d="M12.75 10v1.25a2.25 2.25 0 0 0 4.5 0V10a7.25 7.25 0 1 0-2.9 5.8" />
+    </>
+  ),
   alert: (
     <>
       <circle cx="10" cy="10" r="7.5" />

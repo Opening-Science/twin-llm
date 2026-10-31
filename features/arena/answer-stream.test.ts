@@ -284,3 +284,19 @@ describe("streamAnswer", () => {
     expect(result).toEqual({ ending: "FAILED", metrics: null, document: null });
   });
 });
+
+describe("streamAnswer and the number check (#366)", () => {
+  test("says the check is running once announced, and stops saying so with the metadata", async () => {
+    const response = twinUIMessageResponse({
+      modelStream: scriptedModel("## Answer\nSynthetic 72 bpm."),
+      finished: modelStreamDone(Promise.resolve(METRICS)),
+      reviewing: wait(80).then(() => true),
+      onError: () => "This model didn't come back.",
+      heartbeatMs: 20,
+    });
+    const { result, updates } = await run(response);
+    expect(result.ending).toBe("COMPLETE");
+    expect(updates.some((update) => update.reviewing)).toBe(true);
+    expect(updates.at(-1)?.reviewing).toBe(false);
+  });
+});

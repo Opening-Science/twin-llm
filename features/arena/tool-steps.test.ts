@@ -7,6 +7,7 @@ import {
   toolStepLabel,
   toolStepLabels,
   toolStepState,
+  reviewStep,
 } from "./tool-steps";
 
 // Synthetic calls only.
@@ -146,5 +147,49 @@ describe("answerTraceState", () => {
     expect(answerTraceState("STREAMING")).toBe("working");
     expect(answerTraceState("COMPLETE")).toBe("done");
     expect(answerTraceState("FAILED")).toBe("failed");
+  });
+});
+
+describe("reviewStep (#366)", () => {
+  const review = {
+    reviewer: "Number check (research)",
+    status: "done" as const,
+    items: [
+      { text: "80", verdict: "supported" as const, note: null, matched: true },
+      {
+        text: "95.5",
+        verdict: "unsupported" as const,
+        note: "no row holds it",
+        matched: false,
+      },
+    ],
+    skipped: 2,
+  };
+
+  test("no check, no step", () => {
+    expect(reviewStep(false, null)).toBeNull();
+    expect(reviewStep(false, undefined)).toBeNull();
+  });
+
+  test("a running check is the step in progress", () => {
+    expect(reviewStep(true, null)).toEqual({
+      label: "Checking each number against the tool results",
+      state: "current",
+      lines: [],
+    });
+  });
+
+  test("a finished check counts what it flagged and lists each number", () => {
+    expect(reviewStep(false, review)).toEqual({
+      label: "Number check: 1 of 2 numbers flagged",
+      state: "done",
+      lines: [
+        "80: supported",
+        "95.5: flagged: no row holds it",
+        "2 more numbers were not checked.",
+        "Checked by Number check (research), a model that can be wrong.",
+      ],
+    });
+    expect(reviewStep(true, { ...review, status: "failed" })?.state).toBe("failed");
   });
 });

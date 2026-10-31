@@ -154,6 +154,10 @@
   --popover-foreground: oklch(0.2308 0 0);
 
   --radius: 0.625rem;
+
+  /* The tint of the prompt box at Ultra effort (#366): decoration only, never
+     data and never a control. */
+  --effort-ultra: oklch(0.55 0.16 295);
 }
 
 .dark {
@@ -188,6 +192,8 @@
   --secondary-foreground: oklch(0.978 0.0053 106.5);
   --card-foreground: oklch(0.978 0.0053 106.5);
   --popover-foreground: oklch(0.978 0.0053 106.5);
+
+  --effort-ultra: oklch(0.76 0.12 295);
 }
 
 @theme inline {
@@ -430,6 +436,21 @@
 
   .surface[data-incognito] {
     @apply border-input border-dashed;
+  }
+
+  /* The prompt box at Ultra effort (#366): a faint tint and a tinted edge, so
+     the strongest step is visible at a glance. No motion. */
+  .surface[data-effort="ultra"] {
+    border-color: color-mix(in oklab, var(--effort-ultra) 55%, var(--border));
+    background-image: linear-gradient(
+      to top,
+      color-mix(in oklab, var(--effort-ultra) 9%, transparent),
+      transparent 70%
+    );
+  }
+
+  .effort-ultra-text {
+    color: var(--effort-ultra);
   }
 
   /* A tool call in an answer: one quiet row that folds out to its arguments. */
