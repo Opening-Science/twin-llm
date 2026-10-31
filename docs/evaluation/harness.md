@@ -16,6 +16,7 @@ bun run eval -- --set s7 --models ollama:qwen3:4b --run-id 2026-10-31-qwen3-s7
 bun run eval -- --set s7 --models agent:rhythm --run-id 2026-10-31-rhythm-s7
 bun run eval -- --models ollama:qwen3:4b --arm context-oracle --run-id 2026-10-31-qwen3-4b-ctx
 bun run eval -- --models ollama:qwen3:4b --arm context-fair --run-id 2026-10-31-qwen3-4b-fair
+bun run eval -- --models ollama:qwen3:4b --arm code --run-id 2026-10-31-qwen3-4b-code
 bun run eval:report -- 2026-10-21-qwen3-s5 --quantisation Q4_K_M
 bun run eval:cohort-codes -- --in .synthea   # after a cohort change only
 ```
@@ -30,7 +31,8 @@ bun run eval:cohort-codes -- --in .synthea   # after a cohort change only
 | `--run-id <id>`                                         | Default `<date>-<provider>-<time>`; an existing run is refused           |
 | `--timeout-s <n>`                                       | Per item, default 300                                                    |
 | `--arm tools` / `context-oracle` / `context-fair`       | Tools (default) or data in the prompt ([below](#data-in-the-prompt-302)) |
-| `--context-cap <tokens>`                                | Context arms: estimated tokens per data block, default 6000              |
+| `--arm code`                                            | Model-written code in a sandbox ([below](#the-code-arm-303))             |
+| `--context-cap <tokens>`                                | Context and code arms: estimated tokens per data block, default 6000     |
 | `--decline-wording w1` / `w2` / `w3`                    | Decline line for a wording comparison (#274); default the chat's         |
 
 `bun run eval` refuses unless `DATA_MODE=synthetic`, stops when the questions'
@@ -175,6 +177,70 @@ Scoring the context arms:
   read and which refusals came back judge the harness here.
 - S3 and S4 items get no guideline passages or population figures in this
   arm, so their scores are not comparable with the tools arm.
+
+### The code arm (#303)
+
+`--arm code` asks the model to compute its numbers with code. The server
+reads the record of the subject the question names, by the fair arm's rule
+(the question text, never the key; `subjectFromQuestion` and
+`readFairRecord`), and writes all of it to one JSON file: every numeric
+observation the warehouse holds for that subject (the rows the query tools
+read), its conditions and its medication requests, oldest first. A refused or
+unnamed subject gives a file with empty lists and the refusal.
+
+- The turn has one tool, `run_python` (`scripts/evaluation/code-arm.ts`).
+  The system prompt says so, and its Data block gives the file's layout and
+  the observation codes with their count and first and last date, newest
+  first, until `--context-cap`; no readings. The numbers come from programs.
+- Each call runs one Python 3 program (standard library only) over the file
+  in the sandbox below. The model sees exit code, stdout (first 4000
+  characters) and stderr (first 2000) and how many runs are left. An item
+  may run 3 programs: the first and at most 2 retries. A fourth call returns
+  `CODE_RUN_LIMIT` without running.
+- Agents are refused with this arm, as with the context arms.
+
+The sandbox (`scripts/evaluation/code-sandbox.ts`) is checked before
+anything else: `bun run eval` builds it, runs every escape probe in
+`SANDBOX_PROBES` and refuses to start (`SANDBOX_UNAVAILABLE`,
+`SANDBOX_UNSAFE`, nothing read, no run directory) unless all are contained.
+`code-sandbox.escape.test.ts` runs the same probes in `bun test` (skipped on a
+host without the sandbox, where the arm is refused). Layers:
+
+| Layer              | What it does                                                                                                                                                                                                                                                                               |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| bubblewrap         | Every namespace unshared and no `--share-net` (a loopback with nothing on it); a user namespace that cannot nest another; no capabilities; empty environment; new session; dies with the harness. The root is empty and read-only; no `/proc`, `/dev`, home, repository or cache is in it. |
+| bound read-only    | `/usr/bin/python3`, its standard library (site-packages hidden), the shared libraries they link, and the item's file at `/data/subject.json`. The host file sits in a private temporary directory that is removed after the item.                                                          |
+| writable           | `/work` only: a fresh tmpfs of 16 MiB.                                                                                                                                                                                                                                                     |
+| systemd user scope | 256 MiB memory and no swap, 16 tasks, one CPU, a runtime cap 5 s past the wall clock.                                                                                                                                                                                                      |
+| `prlimit`          | 10 s CPU, 16 MiB per file, 64 open files, no core dump.                                                                                                                                                                                                                                    |
+| the harness        | Kills the run and its scope at 15 s wall clock, or after 256 KiB of stdout or stderr.                                                                                                                                                                                                      |
+
+The probes: the input file is readable; no connection (public addresses,
+Ollama and the database ports on loopback) and no DNS; home, the repository,
+`/etc`, `/tmp`, `/proc`, `/run` and `/var` unreadable; no write outside
+`/work`; an empty environment; no new user, network or mount namespace; an
+infinite loop, a fork bomb, a memory hog, endless stdout and an endless file
+all stopped. `meta.json` records each probe's outcome.
+
+Results lines carry `arm: "code"`, `context` (codes listed, rows in the file,
+`rows_pasted` 0, `truncated` when the code list was cut) and `code`: the
+file's subject, refusal and counts, and every run (the program, how it ended:
+`TIMEOUT`, `OUTPUT_CAP`, `KILLED`, `EXIT_NONZERO`, `NO_OUTPUT` or
+`SANDBOX_FAILED`, else null; exit code, signal, capped stdout and stderr,
+milliseconds), `retries` (runs after the first) and `limit_hit`.
+`tool_results` holds the listed codes as `subject_record` results (counts and
+dates, no readings) and then each `run_python` result as the model saw it, so
+a printed number is a source for the scorers. `audit` holds the server's
+scope check. `meta.json` adds `code`: language, interpreter, sandbox and its
+limits, `max_retries`, the probes, and counts of runs, failed runs and lines
+with no run, with a retry, or at the limit. The cache key adds the arm, and
+the tool's definition is part of every key. A replay runs the programs again
+in the sandbox.
+
+Scoring is as for the context arms: the server read the record, so call
+accuracy is n/a, and query safety and privacy keep only their checks of the
+reply. Numbers in stderr (a traceback's line numbers) count as sources too,
+since the model saw them.
 
 `meta.json` records `question_set` (a run before #251 has none and ran `v1`),
 and `eval:report` reads that set's questions and key. The report's score table

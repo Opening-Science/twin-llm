@@ -50,6 +50,8 @@ Median over 40 subjects of the change from the subject's baseline median, comput
 
 AF beats come faster than sinus beats, so the share of intervals in AF is above the share of time. The v3 effects are assumptions written for a day with AF, not derived from beats. Against the beats they are too strong at low burden (heart rate +10 to +20 /min whatever the burden; measured +1.5 at 2 %) and the RMSSD inflation is much larger than a night average shows (×1.6 assumed at 30 %, ×1.05 measured, median), while the resting heart rate, which v3 leaves unchanged on AF days, rises a little. This is a reason to revisit the v3 AF effects (they would then follow the simulator's own assumptions about the rate in AF), not a measurement of any device.
 
+Followed up in #365: wearable generator 3.1 takes its daily heart rate, resting heart rate and night RMSSD effects on AF days from the noise none rows of this table, read from the summary JSON and interpolated by burden (`scripts/synthetic-wearables/af-calibration.ts`, `docs/training-data.md`, "Daily AF effects"). The "v3 assumes" columns above are generator 3, as compared in this run.
+
 ## AF hour against AF-free hour
 
 Hours are the largest unit both databases offer: neither has AF-free days. Positives are hours by their share of intervals in AF; negatives are hours with no AF interval (on the databases these include atrial flutter and other rhythms). Simulated hours come from the evaluation days; database hours are AUROC on the annotated beats, no noise added.
