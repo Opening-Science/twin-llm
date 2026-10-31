@@ -20,6 +20,11 @@ import { DECLINE_WORDINGS, declineWordingMeta } from "./decline-wordings";
 import { type FairRecordPorts, readFairRecord } from "./fair-record-read";
 import { metaSchema, resultLineSchema, TIMING_FIELDS } from "./eval-results";
 import {
+  type CodeSandbox,
+  DEFAULT_SANDBOX_LIMITS,
+  type ProbeOutcome,
+} from "./code-sandbox";
+import {
   type EvalDeps,
   MOCK_BANNER,
   parseEvalArgs,
@@ -367,6 +372,10 @@ const harness = (
     runContextCall: (scope, tool, args) =>
       runKeyedTool(queryTools, scope, tool, args, warehouse.ports),
     readSubjectRecord: (_scope, pick) => readFairRecord(FAIR_PORTS, pick),
+    createSandbox: () => {
+      throw new Error("no sandbox in this test");
+    },
+    probeHost: { home: "/home/someone", repo: "/home/someone/repo" },
     cache: shared.cache ?? memoryCache().store,
     prepareRun: async (runId) => !files.has(`${runId}/results.jsonl`),
     appendResult: async (runId, line) => {
@@ -502,7 +511,7 @@ describe("parseEvalArgs", () => {
     });
   });
 
-  test("--arm takes the three arms and `context`; --context-cap only with a context arm", () => {
+  test("--arm takes the four arms and `context`; --context-cap only with a context arm", () => {
     expect(
       parseEvalArgs([...MODELS, "--arm", "context", "--context-cap", "900"]),
     ).toMatchObject({ arm: "context-oracle", contextCapTokens: 900 });
@@ -510,11 +519,15 @@ describe("parseEvalArgs", () => {
       arm: "context-fair",
       contextCapTokens: 6000,
     });
-    expect(() => parseEvalArgs([...MODELS, "--arm", "code"])).toThrow(
-      "USAGE: --arm takes one of tools, context-oracle, context-fair, context",
+    expect(parseEvalArgs([...MODELS, "--arm", "code"])).toMatchObject({
+      arm: "code",
+      contextCapTokens: 6000,
+    });
+    expect(() => parseEvalArgs([...MODELS, "--arm", "python"])).toThrow(
+      "USAGE: --arm takes one of tools, context-oracle, context-fair, code, context",
     );
     expect(() => parseEvalArgs([...MODELS, "--context-cap", "900"])).toThrow(
-      "USAGE: --context-cap needs --arm context-oracle or context-fair",
+      "USAGE: --context-cap needs --arm context-oracle, context-fair or code",
     );
     expect(() =>
       parseEvalArgs([...MODELS, "--arm", "context", "--context-cap", "0"]),
@@ -1647,6 +1660,240 @@ describe("fair context arm (#320)", () => {
       "CONTEXT_FAILED",
     ]);
     expect(model.doStreamCalls.length).toBe(0);
+  });
+});
+
+describe("code arm (#303)", () => {
+  const CODE_QUESTIONS = {
+    ...QUESTIONS,
+    items: [
+      {
+        ...QUESTIONS.items[0],
+        question: `What is the mean HbA1c for subject ${FAIR_SUBJECT}?`,
+        subject_ref: FAIR_SUBJECT,
+      },
+      {
+        ...QUESTIONS.items[2],
+        question: `What is the mean HbA1c for subject ${FAIR_OUTSIDE}?`,
+        subject_ref: FAIR_OUTSIDE,
+      },
+    ],
+  };
+  const questionsText = JSON.stringify(CODE_QUESTIONS);
+  const keyText = JSON.stringify(answerKey(questionsSha256(CODE_QUESTIONS)));
+  const PROGRAM =
+    "import json, statistics\nrows = json.load(open('/data/subject.json'))['observations']\nprint(statistics.mean(r['value'] for r in rows if r['loinc'] == '4548-4'))";
+
+  /** Calls run_python `calls` times, then answers from what it printed. */
+  const codeModel = (calls: number) =>
+    new MockLanguageModelV4({
+      provider: "fake",
+      modelId: "fake-1",
+      doStream: async ({ prompt }) => {
+        const runs = prompt.filter((message) => message.role === "tool").length;
+        const parts =
+          runs < calls
+            ? [
+                { type: "stream-start", warnings: [] },
+                {
+                  type: "tool-call",
+                  toolCallId: `run-${runs}`,
+                  toolName: "run_python",
+                  input: JSON.stringify({ code: PROGRAM }),
+                },
+                {
+                  type: "finish",
+                  finishReason: { unified: "tool-calls", raw: "tool_calls" },
+                  usage: usage(80, 10),
+                },
+              ]
+            : textParts(reply("Mean HbA1c 6.0 % over 2 readings."));
+        return {
+          stream: new ReadableStream({
+            start: (controller) => {
+              parts.forEach((part) => controller.enqueue(part as never));
+              controller.close();
+            },
+          }),
+        };
+      },
+    });
+
+  const ALL_CONTAINED: readonly ProbeOutcome[] = [
+    { name: "no network", contained: true, ended: "exit 0" },
+    { name: "infinite loop killed", contained: true, ended: "wall clock" },
+  ];
+
+  const fakeSandbox = (probes: readonly ProbeOutcome[] = ALL_CONTAINED, exitCode = 0) => {
+    const inputs: string[] = [];
+    const programs: string[] = [];
+    const closed: string[] = [];
+    const sandbox: CodeSandbox = {
+      info: {
+        language: "python",
+        interpreter: "Python 3.14.7",
+        sandbox: "bubblewrap 0.12.0; systemd user scope; prlimit",
+        limits: DEFAULT_SANDBOX_LIMITS,
+      },
+      selfCheck: async () => probes,
+      open: async (input) => {
+        inputs.push(input);
+        return {
+          run: async (code) => {
+            programs.push(code);
+            return {
+              exitCode,
+              signal: null,
+              timedOut: false,
+              outputCapped: false,
+              stdout: exitCode === 0 ? "6.0\n" : "",
+              stderr: exitCode === 0 ? "" : "Traceback: KeyError",
+              stdoutTruncated: false,
+              stderrTruncated: false,
+              ms: 25,
+            };
+          },
+          close: async () => {
+            closed.push(input);
+          },
+        };
+      },
+    };
+    return { sandbox, inputs, programs, closed };
+  };
+
+  test("only run_python, over the named subject's whole record; every run recorded", async () => {
+    const box = fakeSandbox();
+    const model = codeModel(1);
+    const { deps, files } = harness(
+      { createSandbox: () => box.sandbox },
+      { keyText, questionsText, model },
+    );
+    expect(
+      await runEval(
+        [...MODELS, "--items", "Q-S1-01,Q-S6-03", "--arm", "code", "--run-id", "code"],
+        capture().io,
+        deps,
+      ),
+    ).toBe(0);
+    expect(
+      model.doStreamCalls[0]?.tools?.map((tool) => ("name" in tool ? tool.name : "")),
+    ).toEqual(["run_python"]);
+    const system = JSON.stringify(model.doStreamCalls[0]?.prompt[0]);
+    expect(system).toContain("This turn has one tool, `run_python`.");
+    expect(system).toContain(`[1] ${HBA1C} \\"Hemoglobin A1c\\" unit=% n=2`);
+    expect(system).not.toContain("6.1");
+
+    const table = JSON.parse(box.inputs[0] ?? "{}") as {
+      subject_ref: string;
+      observations: unknown[];
+    };
+    expect(table.subject_ref).toBe(FAIR_SUBJECT);
+    expect(table.observations.length).toBe(3);
+    // Q-S1-01 runs twice (repeat 2), Q-S6-03 once; one file per line, removed after.
+    expect(box.programs).toEqual([PROGRAM, PROGRAM, PROGRAM]);
+    expect(box.closed.length).toBe(3);
+
+    const [first, , refused] = linesOf(files.get("code/results.jsonl"));
+    expect(first).toMatchObject({
+      arm: "code",
+      error: null,
+      code: {
+        table: { subject_ref: FAIR_SUBJECT, observations: 3, codes_listed: 2 },
+        runs: [{ code: PROGRAM, error: null, exit_code: 0, stdout: "6.0\n" }],
+        retries: 0,
+        limit_hit: false,
+      },
+      context: { calls: 2, rows_total: 3, rows_pasted: 0 },
+    });
+    expect(first?.tool_results.map((result) => result.tool)).toEqual([
+      "subject_record",
+      "subject_record",
+      "run_python",
+    ]);
+    expect(first?.tool_results[2]?.output).toMatchObject({ ok: true, stdout: "6.0\n" });
+    expect(first?.audit.map((row) => row.tool)).toEqual([]);
+    expect(refused?.code?.table).toMatchObject({
+      subject_ref: FAIR_OUTSIDE,
+      refusal: "SUBJECT_SCOPE_VIOLATION",
+      observations: 0,
+    });
+
+    const meta = metaSchema.parse(JSON.parse(files.get("code/meta.json") ?? ""));
+    expect(meta.arm).toBe("code");
+    expect(meta.code).toMatchObject({
+      language: "python",
+      interpreter: "Python 3.14.7",
+      max_retries: 2,
+      probes: ALL_CONTAINED,
+      runs: 3,
+      failed_runs: 0,
+      lines_without_run: 0,
+      lines_with_retries: 0,
+      lines_at_limit: 0,
+    });
+  });
+
+  test("failing programs: two retries, then the limit", async () => {
+    const box = fakeSandbox(ALL_CONTAINED, 1);
+    const { deps, files } = harness(
+      { createSandbox: () => box.sandbox },
+      { keyText, questionsText, model: codeModel(4) },
+    );
+    await runEval(
+      [...MODELS, "--items", "Q-S1-01", "--arm", "code", "--run-id", "retry"],
+      capture().io,
+      deps,
+    );
+    const [line] = linesOf(files.get("retry/results.jsonl"));
+    expect(line?.code?.runs.map((run) => run.error)).toEqual([
+      "EXIT_NONZERO",
+      "EXIT_NONZERO",
+      "EXIT_NONZERO",
+    ]);
+    expect(line?.code).toMatchObject({ retries: 2, limit_hit: true });
+    expect(line?.tool_results.at(-1)?.output).toMatchObject({ code: "CODE_RUN_LIMIT" });
+    // Two repeats of the item, three programs each.
+    expect(box.programs.length).toBe(6);
+    const meta = metaSchema.parse(JSON.parse(files.get("retry/meta.json") ?? ""));
+    expect(meta.code).toMatchObject({
+      runs: 6,
+      failed_runs: 6,
+      lines_with_retries: 2,
+      lines_at_limit: 2,
+    });
+  });
+
+  test("a probe not contained stops the run before anything is read or asked", async () => {
+    const box = fakeSandbox([
+      ...ALL_CONTAINED,
+      { name: "host files unreadable", contained: false, ended: "exit 0" },
+    ]);
+    const model = codeModel(1);
+    const out = capture();
+    const { deps, files } = harness(
+      { createSandbox: () => box.sandbox },
+      { keyText, questionsText, model },
+    );
+    expect(
+      await runEval([...MODELS, "--arm", "code", "--run-id", "unsafe"], out.io, deps),
+    ).toBe(1);
+    expect(out.err()).toContain(
+      "SANDBOX_UNSAFE: escape probes not contained: host files unreadable (exit 0)",
+    );
+    expect(model.doStreamCalls.length).toBe(0);
+    expect(box.inputs.length).toBe(0);
+    expect(files.size).toBe(0);
+  });
+
+  test("no sandbox on the host: the arm is refused", async () => {
+    const out = capture();
+    const { deps, files } = harness({}, { keyText, questionsText });
+    expect(
+      await runEval([...MODELS, "--arm", "code", "--run-id", "none"], out.io, deps),
+    ).toBe(1);
+    expect(out.err()).toContain("SANDBOX_UNAVAILABLE");
+    expect(files.size).toBe(0);
   });
 });
 
