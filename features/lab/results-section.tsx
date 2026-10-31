@@ -22,7 +22,7 @@ const EVAL_COMMANDS = [
 
 const BENCH_COMMAND = [
   `bun run rhythm-bench -- --out ${RHYTHM_BENCH_DIR}/<run> --seeds 3 --afdb <afdb-dir>`,
-  "# without --afdb it runs on simulated recordings only",
+  "# --ltafdb <dir> reads the Long-Term AF Database instead; with neither it runs on simulated recordings only",
 ].join("\n");
 
 const Command = ({ label, text }: Readonly<{ label: string; text: string }>) => (

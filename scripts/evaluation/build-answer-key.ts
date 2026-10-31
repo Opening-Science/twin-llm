@@ -15,6 +15,9 @@
  * The S7b set (#277) reads the supplementary cohort `synthea-v4-s7` the same
  * way (`bun run synthea:s7 -- load`, then `.synthea/synthea-v4-s7`):
  *   bun run eval:answer-key:s7b -- --cohort-dir .synthea/synthea-v4-s7
+ * The hb set (#293) reads the AF subset of the 1M batches, `synthea-v4-1m-af`,
+ * from the throwaway eval database (it is far too large to key in memory):
+ *   bun run eval:answer-key:hb
  * The questions' `cohort_id` says which cohort a set is keyed against.
  *
  * Every number in the key comes from the same closed, audited query tools the
@@ -36,6 +39,7 @@ import {
   noConsentStore,
   requireLearningConsent,
 } from "../../infrastructure/learning-consent";
+import { AF_SUBSET_COHORT } from "../../packages/query-tools/event-rates/cohort-rates";
 import type { QueryToolPorts } from "../../packages/query-tools/ports";
 import { isToolRefusal } from "../../packages/query-tools/refusals";
 import type { SessionScope } from "../../packages/query-tools/scope";
@@ -56,6 +60,7 @@ import {
   readPath,
   type ValueSpec,
 } from "./question-set";
+import { isVerdict } from "./score/verdict-match";
 
 export const GENERATOR_VERSION = "2";
 export const ANSWER_KEY_ACTOR = "eval-answer-key";
@@ -90,23 +95,79 @@ export const S7_COHORT_GENERATION = {
   end_date: S7_RECIPE.endDate,
 } as const;
 
+/** Where the AF subset's record is committed: recipe, batches, ids and checksum. */
+export const HB_MANIFEST_PATH = "evaluation/cohorts/synthea-v4-1m-af.manifest.json";
+
+/** The AF subset's files, as `bun run heart-brain:af-subset` writes them. */
+export const HB_COHORT_DIR = `.synthea/${AF_SUBSET_COHORT}`;
+
+/**
+ * How the 1M batches were generated (seeds 1001 to 1100, clinician seed + 1000,
+ * 10,000 living people each, all ages); the AF subset keeps their people with AF.
+ */
+export const HB_COHORT_GENERATION = {
+  synthea_version: "v4.0.0",
+  seed: 1001,
+  population: 1_000_000,
+  age: "any",
+  reference_date: "20260101",
+  end_date: "20260101",
+  runs: Array.from({ length: 100 }, (_, index) => ({
+    name: `batch-${String(index + 1).padStart(3, "0")}`,
+    seed: 1001 + index,
+    clinician_seed: 2001 + index,
+    population: 10_000,
+  })),
+} as const;
+
 /** The generation fields of a key's `cohort`, for the cohort its questions name. */
 export const cohortGeneration = (cohortId: EvalCohortId) =>
-  cohortId === S7_COHORT_ID
-    ? {
-        ...S7_COHORT_GENERATION,
-        runs: S7_ARMS.map((arm) => ({
-          name: arm.name,
-          seed: arm.seed,
-          clinician_seed: arm.clinicianSeed,
-          population: arm.population,
-        })),
-      }
-    : COHORT_GENERATION;
+  cohortId === AF_SUBSET_COHORT
+    ? HB_COHORT_GENERATION
+    : cohortId === S7_COHORT_ID
+      ? {
+          ...S7_COHORT_GENERATION,
+          runs: S7_ARMS.map((arm) => ({
+            name: arm.name,
+            seed: arm.seed,
+            clinician_seed: arm.clinicianSeed,
+            population: arm.population,
+          })),
+        }
+      : COHORT_GENERATION;
 
 /** Where the patient files of a cohort are on disk after generating or loading it. */
 export const fhirDirOf = (cohortId: EvalCohortId): string =>
-  cohortId === S7_COHORT_ID ? `${S7_COHORT_DIR}/fhir` : EVAL_FHIR_DIR;
+  cohortId === AF_SUBSET_COHORT
+    ? `${HB_COHORT_DIR}/fhir`
+    : cohortId === S7_COHORT_ID
+      ? `${S7_COHORT_DIR}/fhir`
+      : EVAL_FHIR_DIR;
+
+/** `contentSha256` from a committed cohort manifest, so 100 GB need not be hashed per build. */
+export const manifestContentSha256 = (text: string): string => {
+  const parsed: unknown = JSON.parse(text);
+  const sha =
+    typeof parsed === "object" && parsed !== null
+      ? Reflect.get(parsed, "contentSha256")
+      : undefined;
+  if (typeof sha !== "string" || !/^[0-9a-f]{64}$/.test(sha)) {
+    throw new AnswerKeyError("the cohort manifest has no contentSha256");
+  }
+  return sha;
+};
+
+/** Subjects a `cohort_event_rates` call read: `list_subjects` stops at 200. */
+export const subjectsRead = (result: unknown, cohortId: EvalCohortId): number => {
+  const read =
+    typeof result === "object" && result !== null
+      ? Reflect.get(result, "subjects_read")
+      : undefined;
+  if (typeof read !== "number") {
+    throw new AnswerKeyError(`cohort_event_rates refused ${cohortId}`);
+  }
+  return read;
+};
 
 /** The data mode a keyed call runs in (`ValueSpec.mode`, synthetic when left out). */
 export type KeyMode = "synthetic" | "personal";
@@ -188,6 +249,8 @@ export const rowCountOf = (tool: KeyedTool, result: unknown): number => {
       return numberAt(result, "before.n") + numberAt(result, "after.n");
     case "rhythm_irregularity":
       return numberAt(result, "n");
+    case "cohort_event_rates":
+      return numberAt(result, "rows_read");
     case "latest_by_loinc":
       return lengthAt(result, "rows");
     case "coverage": {
@@ -307,6 +370,13 @@ const keyEntry = async (
   }
   if (spec.path === "code") {
     throw new AnswerKeyError(`${itemId} ${spec.name}: ${spec.tool} did not refuse`);
+  }
+  if (spec.path === "verdict") {
+    const verdict = Reflect.get(result as object, "verdict");
+    if (!isVerdict(verdict)) {
+      throw new AnswerKeyError(`${itemId} ${spec.name}: no verdict in the result`);
+    }
+    return { ...base, value: verdict, unit: null, refusal: null };
   }
   let value: number | null;
   try {
@@ -554,6 +624,12 @@ export const runKeyedTool = (
         KEYED_TOOLS.rhythm_irregularity.parse(args),
         ports,
       );
+    case "cohort_event_rates":
+      return tools.runCohortEventRates(
+        scope,
+        KEYED_TOOLS.cohort_event_rates.parse(args),
+        ports,
+      );
     // These two read the database directly (no ports), so they cannot be keyed from files.
     case "latest_by_loinc":
       return ports === undefined
@@ -586,12 +662,24 @@ export const realPorts = async (
   return {
     runTool: (tool, args, mode) => runKeyedTool(tools, scopeFor(today, mode), tool, args),
     countSubjects: async () => {
+      if (cohortId === AF_SUBSET_COHORT) {
+        const rates = await tools.runCohortEventRates(scopeFor(today, "synthetic"), {
+          cohort_id: cohortId,
+          exposure_code: "49436004",
+          outcome_code: "230690007",
+          design: "within",
+        });
+        return subjectsRead(rates, cohortId);
+      }
       const result = await tools.runListSubjects(scopeFor(today, "synthetic"), {
         cohort_id: cohortId,
       });
       return subjectCount(result, cohortId);
     },
-    cohortSha256: () => cohortContentSha256(fhirDirOf(cohortId)),
+    cohortSha256: async () =>
+      cohortId === AF_SUBSET_COHORT
+        ? manifestContentSha256(await readFile(HB_MANIFEST_PATH, "utf8"))
+        : cohortContentSha256(fhirDirOf(cohortId)),
     openTwinSha: openTwinHead,
     today: () => today,
     learningRows: async () =>

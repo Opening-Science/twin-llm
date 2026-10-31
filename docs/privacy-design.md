@@ -246,7 +246,7 @@ Argon2id against the RFC 9106 vector and scrypt against the RFC 7914 vector.
 - **What is gated.** Every route in the `tests/personal-reads` table without a
   `whileLocked` reason: the wearable summary, genome report and run, BodyLoop reads and
   writes, the Ark status, imports and dataset edits, search (except a docs-only search),
-  thread export, `/compact` and saving notes, chat, incognito chat, chat suggestions,
+  thread export and delete, `/compact` and saving notes, chat, incognito chat, chat suggestions,
   onboarding starters and the three syncs. Open while locked, each with its reason in the
   table: OAuth authorize and disconnect, connection status, the Ark audit list, the
   synthetic Demo routes, anatomy, motion, GBD, Synthea, the scanner upload (checked by its
@@ -493,10 +493,11 @@ consents, at })` is pure; `requireLearningConsent(scope, rows, deps)` is the one
   until it is listed. Gated: `training:conversations` and `training:sample` (each subject
   of the cohort, before the first tool call and again before the files are renamed into
   place), `training:batches` (every subject in the training database), `training:split`
-  (each conversation's meta line), `eval:answer-key` and its `:s7`, `:s7b`, `:s7h` and
-  `:live` forms (before the first call and before the key is written; over cohort files,
+  (each conversation's meta line), `disclosure:prepare` (each meta line of the set the
+  disclosure experiment trains and probes on), `eval:answer-key` and its `:s7`, `:s7b`,
+  `:s7h`, `:hb` and `:live` forms (before the first call and before the key is written; over cohort files,
   only Synthea bundles count as synthetic), `eval` (before any model runs and before
-  `meta.json`), `eval:report`, `eval:spread-subjects`, `eval:cohort-codes` and
+  `meta.json`, whatever the decline wording or context arm), `eval:report`, `eval:spread-subjects`, `eval:cohort-codes` and
   `eval:heldout:s7h`. _Changed from the first draft:_ the Lab's training sample is
   `training:sample`, no separate path; the report, spread, cohort-codes and held-out
   commands were added to the list.
@@ -510,7 +511,8 @@ scope, consent_ids }` in its manifest (`<out>.manifest.json`, `meta.json`), so i
   that names one.
 - **Which consent store.** A pipeline that connects to a database reads
   `learning_consents` of that database (`databaseLearningGate()`). Commands that read
-  files only (`training:split`, `eval:report`, the cohort-file modes) have no consent store
+  files only (`training:split`, `disclosure:prepare`, `eval:report`, the cohort-file
+  modes) have no consent store
   (`noConsentStore()`), so a personal row is always refused there.
 - **Scope of this step.** No pipeline reads personal rows today: each runs with
   `DATA_MODE=synthetic` against its own database and keeps that refusal. This step builds
@@ -521,10 +523,10 @@ scope, consent_ids }` in its manifest (`<out>.manifest.json`, `meta.json`), so i
   and saves each note, and it is loaded only into their own chats (switchable on
   Customize · Memory). Thread search and the thread export (Markdown, PDF, FHIR): the
   person's own copy of their own data; #140 adds the export to the disclosure ledger.
-  `mcp:serve`, `heart-brain` (Synthea archives by batch number, no path to the app
-  database) and `rhythm-bench` (simulated signals and the public PhysioNet AFDB) are
-  listed with these reasons. There are no disclosure experiment scripts at this commit;
-  the decline-wording and data-in-prompt arms run through `eval`.
+  `mcp:serve`, every `heart-brain` command (Synthea archives by batch number, no path to
+  the app database), `rhythm-bench` (simulated signals and the public PhysioNet AFDB),
+  `disclosure:analyze` and `eval:hb-verdicts` (they read outputs of gated runs, no
+  subject row) are listed with these reasons.
 - **Withdrawal.** Sets the withdrawn time, then writes `learning.consent.withdraw`. Future
   runs refuse, including one already running when it asks again before writing. The
   screen says plainly that a model already trained cannot unlearn and that sets, keys and

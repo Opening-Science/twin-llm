@@ -3,6 +3,7 @@
  * ran, which refusals came back, which subjects were read, and which numbers
  * the answer could legitimately have taken from somewhere. Pure.
  */
+import { isContextArm, type RecordedArm } from "../context-arm";
 import type { KeyEntry, Question } from "../question-set";
 
 import {
@@ -16,6 +17,15 @@ import {
 } from "./numbers";
 import type { AnsweredLine } from "./types";
 
+/**
+ * A line of a data-in-prompt arm (#302 oracle, #320 fair): the server read
+ * the rows and the model had no tools, so checks of which tools ran, which
+ * subjects they read and which refusals came back judge the harness, not the
+ * model. Scorers skip them and keep their checks of the reply.
+ */
+export const serverRead = (line: Readonly<{ arm?: RecordedArm }>): boolean =>
+  isContextArm(line.arm);
+
 export const auditTools = (line: AnsweredLine): readonly string[] =>
   line.audit.map((row) => row.tool);
 
@@ -26,9 +36,12 @@ export const auditRefusals = (line: AnsweredLine): readonly string[] =>
 export const expectedRefusals = (entries: readonly KeyEntry[]): readonly string[] =>
   entries.flatMap((entry) => (entry.refusal === null ? [] : [entry.refusal]));
 
-/** The key holds no value for this item: a null value or a refusal. */
+/**
+ * The key holds no value for this item: a null value or a refusal. A verdict
+ * phrase (`cohort_event_rates`, #293) is a value the answer can state.
+ */
 export const keyHoldsNoValue = (entries: readonly KeyEntry[]): readonly KeyEntry[] =>
-  entries.filter((entry) => entry.value === null || typeof entry.value === "string");
+  entries.filter((entry) => entry.value === null || entry.refusal !== null);
 
 /** The subject refs this turn's `list_subjects` calls returned. */
 export const listedSubjects = (line: AnsweredLine): readonly string[] =>

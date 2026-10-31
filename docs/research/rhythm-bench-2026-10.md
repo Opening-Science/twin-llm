@@ -18,7 +18,7 @@ How well the RR-interval irregularity metrics of `rhythm_irregularity` separate 
 | Database, 25 records       | 0.954 [0.929, 0.973] (3890/4078) | 0.796 [0.700, 0.879] (4339/5452) | 0.897 [0.827, 0.956] | 0.879 [0.818, 0.927] | 0.828 [0.746, 0.894] | 0.803 [0.717, 0.872] |
 
 - On clean simulated windows the flag does what its arithmetic says (300 s, no noise: sensitivity 0.96, specificity 0.91). Its specificity falls with ectopic beats, short recordings and beat-detection errors: heavy noise (5 % missed and 5 % spurious beats) takes it to 0.17 over the grid.
-- On the database the flag finds 95 % of AF windows with 80 % specificity, both with wide intervals because 25 records are 25 clusters. The database was used to derive or test the Dash et al. 2009 thresholds, so this is not an independent test of them (see Limits).
+- On the database the flag finds 95 % of AF windows with 80 % specificity, both with wide intervals because 25 records are 25 clusters. The database was used to derive or test the Dash et al. 2009 thresholds, so this is not an independent test of them (see Limits). On the independent Long-Term AF Database (84 records) it finds 95 % at 84 % specificity (see "Independent database").
 - The same noise on the database's beats lowers specificity much more than on simulated beats: 0.29 at light and 0.01 at heavy, against 0.68 and 0.17 over the simulated grid (see "Beat-detection noise on database beats").
 - nRMSSD separates best on the database (AUROC 0.90) and the TPR best on the simulator (0.90); Shannon entropy is the weakest on the simulator and sample entropy on the database (0.80).
 
@@ -139,6 +139,50 @@ Simulated sensitivity is 0.958, 0.966 and 0.995 at the three levels (grid). Spur
 
 Plain reading: yes, real specificity falls with noise as the simulated one does, but much faster. Light noise (about one missed and one spurious beat per 100) already takes it from 0.80 to 0.29 on real beats, where the simulator kept 0.68 over the grid and 0.87 at 300 s; heavy noise leaves almost no not-AF window unflagged (0.008). Sensitivity rises a little, because noise makes every window look more irregular. The difference is in the turning-point condition. Noise pushes nRMSSD above 0.1 in about the same share of not-AF windows in both sources (about 90 % at light), but real not-AF windows already have their turning-point ratio in the random band more often without noise (about 29 % against 9 % in simulated 300 s windows) and move into it quickly with noise (about 75 % at light against 12 %). A likely reason is that the smooth, breathing-driven sinus rhythm of the simulator keeps its turning points away from the band, and real sinus rhythm, with ectopic beats and 4 ms resolution, does so less. So the simulated grid understates how much beat-detection errors cost the flag: on these records it lost most of its specificity at 1 % missed and 1 % spurious beats. (Shares of windows by condition are from `windows-real-noise.csv` and `windows-sim.csv`.) The noise levels are still assumptions, not measured device error rates, and they are added on top of the database's own annotation errors.
 
+## Independent database: Long-Term AF Database (#264)
+
+The MIT-BIH Atrial Fibrillation Database helped set the Dash et al. 2009 thresholds, so the database numbers above are not an independent test of them. This section runs the same benchmark on the Long-Term AF Database (LTAFDB), which played no part in those thresholds.
+
+- **Why it is independent.** The Dash et al. 2009 abstract (PubMed 19533358) names the two databases the detector was tested on and its thresholds and segment lengths were chosen from: the MIT-BIH Atrial Fibrillation Database and the MIT-BIH Arrhythmia Database. The full methods are not open (no PMC copy; the publisher page is paywalled), so this rests on the abstract. Independently of that, the LTAFDB reference annotations used here (`.atr`, beats and rhythm) were contributed by MEDICALgorithmics in 2012 (file dates 2012-07-23 on PhysioNet), three years after the paper, so they could not have been used to set the thresholds.
+- **Why this database and not the 2017 PhysioNet/CinC Challenge.** Both are open (LTAFDB: Open Data Commons Attribution License v1.0, 3.4 GB, zip 1.78 GB; Challenge 2017: also open access). The Challenge set has only one label per short recording and raw ECG, so RR intervals would need a QRS detector of our own, an added confound. LTAFDB has reviewed beat and rhythm annotations the existing reader takes as they are.
+- **Data.** 84 records of about 24 h, two ECG leads at 128 Hz, downloaded from PhysioNet to a directory outside the repository; every file matched its `SHA256SUMS.txt` entry (339 files). SHA-256 of `SHA256SUMS.txt`: `9ad85f6b46d896b7a5579c70fd05bef1e39b8e2b1aeb2b2bdfde465c4aec3ad1`. Nothing from it is committed.
+- **Commands.** `bun run rhythm-bench -- --out .rhythm-bench/2026-10-ltafdb --ltafdb <ltafdb>/files` (run id `3f1f765e33ef13fd`) and the same with `--real-noise` (run id `4e64a8c74bf75786`), defaults otherwise, git `4a1da0c4c289e4bf0d448c8d358dd5f077fe70cf`. The AF database was rerun at the same commit with `--real-noise` (run id `508ab3c6c75913e1`) and gives the same numbers as the sections above, so the reader changes did not move them. The LTAFDB runs take about 7 and 13 minutes; the signal files are never read, so memory goes with the number of windows (about 2.5 GB at peak with `--real-noise` in a quick-grid trial), not with the 3.4 GB of signal.
+
+### Format differences and label choices
+
+- **Sampling rate.** 128 Hz against 250 Hz, so one sample is 7.8125 ms and RR intervals are coarser than the AF database's 4 ms; they are rounded to whole ms as before.
+- **Beats.** LTAFDB `.atr` files hold manually reviewed beats labelled by type (8.71 M normal, 152 k APC, 133 k PVC, 89 unknown), so beats come from `.atr`. The AF database has no reviewed beats and keeps `.qrs`/`.qrsc`. All beat types count as beats, as in the tool, which has no ectopic-beat filter. NOTE annotations (5959, such as `MISSB` for a missed beat and `PSE`) are not beats and are not used. `.qrs` (detector output) would be used only for a record whose `.atr` had no beats; none in 1.0.0.
+- **Rhythm mapping.** AF is `(AFIB` only, as for the AF database. Not AF: `(N`, `(SBR` (sinus bradycardia), `(AB` (atrial bigeminy), `(B` (ventricular bigeminy), `(T` (ventricular trigeminy), `(SVTA`, `(VT` and `(IVR`. There is no `(AFL` or `(J` in LTAFDB. The "N" class in the distances is `(N` only.
+- **Length.** Records are about 24 h, so there are 69,397 windows from 84 records against 9530 from 25. The bootstrap still resamples records, so the intervals reflect 84 clusters, not 69,397 windows.
+
+### Side by side
+
+| Database (records, windows)    | Sensitivity [95 % CI]              | Specificity [95 % CI]              | AUROC nRMSSD         | AUROC TPR            | AUROC ShEn           | AUROC SampEn         |
+| ------------------------------ | ---------------------------------- | ---------------------------------- | -------------------- | -------------------- | -------------------- | -------------------- |
+| MIT-BIH AF Database (25, 9530) | 0.954 [0.929, 0.973] (3890/4078)   | 0.796 [0.700, 0.879] (4339/5452)   | 0.897 [0.827, 0.956] | 0.879 [0.818, 0.927] | 0.828 [0.746, 0.894] | 0.803 [0.717, 0.872] |
+| LTAFDB (84, 69397)             | 0.947 [0.921, 0.967] (38646/40819) | 0.841 [0.773, 0.898] (24020/28578) | 0.846 [0.784, 0.909] | 0.864 [0.804, 0.914] | 0.859 [0.823, 0.895] | 0.882 [0.856, 0.906] |
+| LTAFDB, pure windows           | 0.954 [0.930, 0.973] (36701/38470) | 0.855 [0.783, 0.916] (23231/27173) | 0.860 [0.785, 0.921] | 0.869 [0.811, 0.921] | 0.862 [0.818, 0.899] | 0.889 [0.863, 0.912] |
+
+With the grid's beat-detection noise on the annotated beats (`--real-noise`):
+
+| Noise | AF database sensitivity | AF database specificity | LTAFDB sensitivity   | LTAFDB specificity   | Sim specificity, grid |
+| ----- | ----------------------- | ----------------------- | -------------------- | -------------------- | --------------------- |
+| none  | 0.954 [0.930, 0.974]    | 0.796 [0.699, 0.879]    | 0.947 [0.919, 0.968] | 0.841 [0.769, 0.898] | 0.756 [0.726, 0.785]  |
+| light | 0.980 [0.969, 0.990]    | 0.289 [0.177, 0.418]    | 0.989 [0.981, 0.994] | 0.302 [0.249, 0.356] | 0.683 [0.647, 0.715]  |
+| heavy | 0.986 [0.980, 0.991]    | 0.008 [0.004, 0.012]    | 0.992 [0.989, 0.994] | 0.028 [0.018, 0.040] | 0.168 [0.143, 0.192]  |
+
+LTAFDB noise counts: 8,903,170 annotated beats; 1.01 % missed and 0.99 % spurious at light, 5.02 % and 4.77 % at heavy.
+
+Plain reading:
+
+- On a database independent of the thresholds the flag finds 95 % of AF windows at 84 % specificity, with intervals that overlap the AF database's on both. So the AF database result was not an artefact of testing the thresholds on data that helped set them; the specificity point estimate is even a little higher. The intervals are narrower for specificity because there are 84 records.
+- AUROCs differ in order: nRMSSD separates best on the AF database (0.90) and sample entropy best on LTAFDB (0.88); nRMSSD is lowest on LTAFDB (0.85). All four lie between 0.80 and 0.90 on both.
+- The noise finding holds on the independent database too: light noise takes specificity from 0.84 to 0.30 and heavy noise to 0.03, again far below the simulated grid. This is the larger effect in the benchmark, and it does not depend on the threshold overlap.
+- Not-AF windows that are mostly `(SBR` are flagged 25 % of the time (722/969 unflagged, 17 records), `(N` 16 %. The few windows of ventricular bigeminy, trigeminy and SVTA are too rare to read.
+- Simulated against LTAFDB: the gaps are those seen with the AF database. Simulated sinus fills the Shannon bins more evenly (KS 0.62 against LTAFDB `(N`, 0.53 against the AF database), and LTAFDB sinus has lower nRMSSD (median 0.032 against 0.060 simulated; KS 0.45). Simulated AF is faster (mean RR median 475 against 678 ms) and more random (TPR 0.656 against 0.625). The RR distribution divided by the window mean is close for AF (KS 0.01). Full tables are in the run's report.
+
+Limits of this comparison: `.atr` beats are reviewed here and unaudited `.qrs` in most AF database records, so beat quality differs between the two columns; LTAFDB is 128 Hz; both still use the flag without Dash's entropy condition and without an ectopic-beat filter. Records come from people with paroxysmal or sustained AF, so most `(N` windows are sinus rhythm in people who also have AF episodes, not in people without AF.
+
 ## Simulated against real
 
 Simulated windows of a full 128 intervals, all intervals AF or none AF, against database windows whose intervals are all `AFIB` or all `N`. No added noise. W1 is the Wasserstein-1 distance (also divided by the SD of the real values, to compare across quantities), KS the two-sample Kolmogorov-Smirnov statistic. `_norm` quantities are divided by the window's mean RR.
@@ -180,7 +224,7 @@ RR and ΔRR distributions divided by the window mean are close for AF (KS 0.03),
 
 - **Circular simulated AF.** Simulated AF intervals are independent log-normal draws, which is exactly the null hypothesis the turning-point test is built on. Simulated sensitivity checks the arithmetic of the flag more than it tests the method. The database shows real AF has structure the simulator lacks.
 - **Noise on database beats.** The noise section reuses the same database, which helped derive or test the Dash et al. 2009 thresholds (#264), so its level-none row is not independent of the thresholds either; the drop with noise is a statement about these records and these assumed error rates, not about any device. Perturbed beats start from annotations that have errors of their own (`.qrs` unaudited in most records).
-- **Thresholds and database overlap.** The MIT-BIH Atrial Fibrillation Database was used to derive or test the Dash et al. 2009 thresholds, so the database numbers here are not an independent test of those thresholds. An independent test needs another annotated database.
+- **Thresholds and database overlap.** The MIT-BIH Atrial Fibrillation Database was used to derive or test the Dash et al. 2009 thresholds, so its numbers are not an independent test of those thresholds. The Long-Term AF Database section is that independent test (#264); its sensitivity and specificity overlap the AF database's.
 - **Few clusters.** 25 records; the intervals are wide, and per-rhythm rows with 2 to 6 records (J, AFL) are hardly informative.
 - **Labels.** Database windows are labelled by the reference rhythm annotations at each beat; `.qrs` beat annotations are unaudited except in two records. Atrial flutter and junctional rhythm count as not AF.
 - **Grid choices.** Ectopy rates, AF burdens, rates and noise levels are assumptions chosen to span the simulator, not population estimates; pooled numbers over the grid depend on them. Short recordings are evaluated as one window, which the tool does not do.
@@ -190,5 +234,6 @@ RR and ΔRR distributions divided by the window mean are close for AF (KS 0.03),
 
 - Moody GB, Mark RG. A new method for detecting atrial fibrillation using R-R intervals. Computers in Cardiology. 1983;10:227-230.
 - Goldberger AL, Amaral LAN, Glass L, et al. PhysioBank, PhysioToolkit, and PhysioNet: components of a new research resource for complex physiologic signals. Circulation. 2000;101(23):e215-e220.
+- Petrutiu S, Sahakian AV, Swiryn S. Abrupt changes in fibrillatory wave characteristics at the termination of paroxysmal atrial fibrillation in humans. Europace. 2007;9(7):466-470. (Long-Term AF Database; reference `.atr` annotations by MEDICALgorithmics Ltd, Warsaw, coordinated by Michal Tadeusiak.)
 - Dash S, Chon KH, Lu S, Raeder EA. Automatic real time detection of atrial fibrillation. Annals of Biomedical Engineering. 2009;37(9):1701-1709.
 - Richman JS, Moorman JR. Physiological time-series analysis using approximate entropy and sample entropy. American Journal of Physiology, Heart and Circulatory Physiology. 2000;278(6):H2039-H2049.

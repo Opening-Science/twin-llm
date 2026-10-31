@@ -422,7 +422,7 @@ const byDateNameId =
  * Fixed `findMany` / `groupBy` only, each capped by the caller's `take`.
  * Coded reads are held to LOINC; a series by name is held to rows with no code.
  * A genome VCF is not listed at all: its rows are read only under
- * `permitGenomeRequest`, never by these tools.
+ * `permitVcfVariantsRequest`, never by these tools.
  */
 /** Kinds the imported-data chat tools may list: every one but a genome file. */
 const CHAT_LISTED_KINDS: ImportKind[] = IMPORT_KINDS.filter(
@@ -708,9 +708,9 @@ const compareVariant = (
  * The reads behind `genome_variants` (#307): the person's datasets, and the
  * records of one VCF that carry a named rsID or sit at a named site. Bound to
  * that person like `importedDataReads`. One fixed `findMany` over the keyed
- * hashes, capped by the caller's `take` after sorting; the tool matches each
- * record to its name again. Callers check `permitGenomeRequest` first;
- * nothing here decides who may read.
+ * hashes (#141), capped by the caller's `take` after sorting; the tool matches
+ * each record to its name again. Callers check `permitVcfVariantsRequest`
+ * (#330) first; nothing here decides who may read.
  */
 export const genomeVariantReads = (
   userId: () => Promise<string | null>,

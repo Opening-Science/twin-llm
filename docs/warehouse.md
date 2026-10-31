@@ -67,6 +67,7 @@ Rows ingested before the migration keep null facts until they are filled in. Eit
 | `synthea-v4-seed9001`          | Held-out cohort, seed 9001, N=1,000 (`--preset held-out`)                             |
 | `synthea-v4-seed42-10k`        | 10,000 living people (11,551 records) from release `cohort-synthea-v4-seed42-10k`     |
 | `synthea-v4-s7`                | Supplementary evaluation cohort for S7b: 17 people aged 65–90, three keep-module runs |
+| `synthea-v4-1m-af`             | Every person with atrial fibrillation in the 1M cohort's 100 batches (#293)           |
 | `synthea-v4-seed1001` … `1100` | The 1M cohort, one cohort per batch of 10,000 (`training:batches`; 1100 is held out)  |
 
 The Body twin's Demo lists only `DEMO_COHORTS` (`open-twin-synthea-trimmed-3`, `synthea-v4-seed42`), never the training or held-out cohorts, the 1M batches or the 10k release cohort. The batch ids are generated in `scope.ts` (`SYNTHEA_1M_COHORTS`), not written out.
@@ -202,3 +203,31 @@ recipe, every file's sha256, `contentSha256`
 archive's sha256. Like the evaluation cohort it is for evaluation only
 (`EVALUATION_COHORT_IDS`) and never in the Demo. Recipe, counts and the items
 are in `docs/evaluation/question-set.md`, "S7b".
+
+### The `synthea-v4-1m-af` cohort
+
+The cohort the hb items read (#293): every person whose record has an atrial
+fibrillation onset (`49436004`) in the 1M cohort's 100 batches, nobody else.
+`cohort_event_rates` needs the person-level records in the warehouse, and the
+batches are not loaded anywhere; loading all 100 would be about 50 million
+observation rows. AF is the exposure of the hb questions, and the
+within-person design only follows people with the exposure, so this subset
+gives the same rates as the full batches for it. It holds nobody without AF,
+so `cohort_event_rates` refuses the between-person design and any other
+exposure on it (`DESIGN_NOT_SUPPORTED`).
+
+```sh
+bun run heart-brain -- --batches 001-100 --jobs 6        # people files (once)
+bun run heart-brain:af-subset -- --batches 001-100 --jobs 3 --dest .synthea/synthea-v4-1m-af
+bun run warehouse:ingest .synthea/synthea-v4-1m-af/fhir --cohort synthea-v4-1m-af --workers 4
+```
+
+`heart-brain:af-subset` picks the ids from the people files and copies only
+those records out of the archives (`zstd -dc | tar -x` with one name pattern
+per id), then writes `manifest.json` with the cohort id, the rule and the ids'
+sha256. 9,558 people, about 100 GB of JSON (the records of older people are
+large), 13 s per batch to extract. `evaluation/cohorts/synthea-v4-1m-af.manifest.json`
+records the rule, the batches, the ids' sha256 and the files' `contentSha256`.
+It belongs in the throwaway eval database only: it is an evaluation cohort,
+never in the Demo or training data. A subject never moves between cohorts, so
+a database holding it cannot also load the same people as their batch cohort.

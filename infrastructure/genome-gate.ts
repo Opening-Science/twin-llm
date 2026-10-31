@@ -4,6 +4,7 @@ import {
   type GenomePermitDecision,
   permitGenomeRequest,
   permitGenomeRun,
+  permitVcfVariantsRequest,
 } from "./data-mode-policy";
 import { DEFAULT_OLLAMA_BASE_URL, genomeEnv, serverEnv } from "./env";
 import { isLocalChatModel } from "./genome-thread-policy";
@@ -27,6 +28,19 @@ export const genomeChatPermit = (): GenomePermitDecision => {
     chatProvider: env.LLM_PROVIDER,
     chatOnLoopback: isLoopbackUrl(env.OLLAMA_BASE_URL ?? DEFAULT_OLLAMA_BASE_URL),
     carbonXOnLoopback: isLoopbackUrl(genomeEnv(env).carbonXUrl),
+  });
+};
+
+/**
+ * May a chat turn look up variants in an imported VCF (#330)? Personal mode
+ * and Ollama on loopback; no Ark and no Carbon-X needed.
+ */
+export const vcfVariantsChatPermit = (): GenomePermitDecision => {
+  const env = serverEnv();
+  return permitVcfVariantsRequest({
+    mode: env.DATA_MODE,
+    chatProvider: env.LLM_PROVIDER,
+    chatOnLoopback: isLoopbackUrl(env.OLLAMA_BASE_URL ?? DEFAULT_OLLAMA_BASE_URL),
   });
 };
 

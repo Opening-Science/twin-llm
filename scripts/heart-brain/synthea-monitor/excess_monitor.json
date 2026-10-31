@@ -1,0 +1,822 @@
+{
+  "name": "Excess Monitor",
+  "remarks": [
+    "Instrumentation for issue 323, outside the repo. Once a month, on the same 1-month delay cycle as stroke.json, it routes through states that name the stroke_risk bin and the calculator's flags. It writes nothing to the record and draws no random numbers; read it back from the JSON exporter's module history."
+  ],
+  "states": {
+    "Initial": {
+      "type": "Initial",
+      "direct_transition": "Tick"
+    },
+    "Tick": {
+      "type": "Delay",
+      "exact": {
+        "quantity": 1,
+        "unit": "months"
+      },
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "And",
+            "conditions": [
+              {
+                "condition_type": "Age",
+                "operator": ">=",
+                "quantity": 50,
+                "unit": "years"
+              },
+              {
+                "condition_type": "Date",
+                "operator": ">=",
+                "year": 2014
+              },
+              {
+                "condition_type": "Attribute",
+                "attribute": "stroke_risk",
+                "operator": "is not nil"
+              }
+            ]
+          },
+          "transition": "Risk"
+        },
+        {
+          "transition": "Tick"
+        }
+      ]
+    },
+    "R_neg": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_0": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_0.002": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_0.007": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_0.01": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_0.019": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_0.02": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_0.022": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_0.03": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_0.04": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_0.05": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_0.06": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_0.07": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_0.08": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_0.09": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_0.1": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_0.11": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_0.13": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_0.15": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_0.16": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_0.17": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_0.19": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_0.2": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_0.22": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_0.23": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_0.26": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_0.27": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_0.29": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_0.32": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_0.33": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_0.37": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_0.42": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_0.43": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_0.47": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_0.5": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_0.52": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_0.57": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_0.63": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_0.64": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_0.68": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_0.71": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_0.74": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_0.78": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_0.79": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_0.84": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_0.88": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "R_other": {
+      "type": "Simple",
+      "direct_transition": "bpc_check"
+    },
+    "Risk": {
+      "type": "Simple",
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 0
+          },
+          "transition": "R_neg"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 1.9197249029878627e-6
+          },
+          "transition": "R_0"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 8.655611661745333e-6
+          },
+          "transition": "R_0.002"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 1.637310223429056e-5
+          },
+          "transition": "R_0.007"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 2.8031361494873508e-5
+          },
+          "transition": "R_0.01"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 3.7766229803615214e-5
+          },
+          "transition": "R_0.019"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 4.0703034601741184e-5
+          },
+          "transition": "R_0.02"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 5.053755699030438e-5
+          },
+          "transition": "R_0.022"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 6.834945223754829e-5
+          },
+          "transition": "R_0.03"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 8.83257777278823e-5
+          },
+          "transition": "R_0.04"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 0.00010851199035527559
+          },
+          "transition": "R_0.05"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 0.00012891255197533535
+          },
+          "transition": "R_0.06"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 0.00014953206830292665
+          },
+          "transition": "R_0.07"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 0.00017037529516505945
+          },
+          "transition": "R_0.08"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 0.00019144714509705674
+          },
+          "transition": "R_0.09"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 0.0002127526943054292
+          },
+          "transition": "R_0.1"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 0.00024525340696102127
+          },
+          "transition": "R_0.11"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 0.0002893369233844534
+          },
+          "transition": "R_0.13"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 0.00032297601645892016
+          },
+          "transition": "R_0.15"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 0.0003458005089954086
+          },
+          "transition": "R_0.16"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 0.0003806607179644983
+          },
+          "transition": "R_0.17"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 0.00041594793000515606
+          },
+          "transition": "R_0.19"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 0.00045212135451738744
+          },
+          "transition": "R_0.2"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 0.000488754808824543
+          },
+          "transition": "R_0.22"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 0.0005392085060557661
+          },
+          "transition": "R_0.23"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 0.0005903339366568061
+          },
+          "transition": "R_0.26"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 0.0006299939069648319
+          },
+          "transition": "R_0.27"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 0.0006979841412738108
+          },
+          "transition": "R_0.29"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 0.0007535487606857294
+          },
+          "transition": "R_0.32"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 0.0008267236187966542
+          },
+          "transition": "R_0.33"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 0.0009649198495508271
+          },
+          "transition": "R_0.37"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 0.001060796086383875
+          },
+          "transition": "R_0.42"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 0.0011471446173377808
+          },
+          "transition": "R_0.43"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 0.001272637013351452
+          },
+          "transition": "R_0.47"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 0.001367531048192705
+          },
+          "transition": "R_0.5"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 0.0015119427252279216
+          },
+          "transition": "R_0.52"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 0.0017611159884632355
+          },
+          "transition": "R_0.57"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 0.0019311906725880679
+          },
+          "transition": "R_0.63"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 0.002070121754820131
+          },
+          "transition": "R_0.64"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 0.0022770102389023106
+          },
+          "transition": "R_0.68"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 0.0024756423123994953
+          },
+          "transition": "R_0.71"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 0.002739844687631887
+          },
+          "transition": "R_0.74"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 0.002944071546315541
+          },
+          "transition": "R_0.78"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 0.0032484597390204373
+          },
+          "transition": "R_0.79"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 0.0037831869138434393
+          },
+          "transition": "R_0.84"
+        },
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "stroke_risk",
+            "operator": "<",
+            "value": 1.0
+          },
+          "transition": "R_0.88"
+        },
+        {
+          "transition": "R_other"
+        }
+      ]
+    },
+    "bpc_check": {
+      "type": "Simple",
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "And",
+            "conditions": [
+              {
+                "condition_type": "Attribute",
+                "attribute": "blood_pressure_controlled",
+                "operator": "is not nil"
+              },
+              {
+                "condition_type": "Attribute",
+                "attribute": "blood_pressure_controlled",
+                "operator": "==",
+                "value": true
+              }
+            ]
+          },
+          "transition": "bpc_1"
+        },
+        {
+          "transition": "bpc_0"
+        }
+      ]
+    },
+    "bpc_1": {
+      "type": "Simple",
+      "direct_transition": "dm_check"
+    },
+    "bpc_0": {
+      "type": "Simple",
+      "direct_transition": "dm_check"
+    },
+    "dm_check": {
+      "type": "Simple",
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "And",
+            "conditions": [
+              {
+                "condition_type": "Attribute",
+                "attribute": "diabetes",
+                "operator": "is not nil"
+              },
+              {
+                "condition_type": "Attribute",
+                "attribute": "diabetes",
+                "operator": "==",
+                "value": true
+              }
+            ]
+          },
+          "transition": "dm_1"
+        },
+        {
+          "transition": "dm_0"
+        }
+      ]
+    },
+    "dm_1": {
+      "type": "Simple",
+      "direct_transition": "af_check"
+    },
+    "dm_0": {
+      "type": "Simple",
+      "direct_transition": "af_check"
+    },
+    "af_check": {
+      "type": "Simple",
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "Attribute",
+            "attribute": "atrial_fibrillation",
+            "operator": "is not nil"
+          },
+          "transition": "af_1"
+        },
+        {
+          "transition": "af_0"
+        }
+      ]
+    },
+    "af_1": {
+      "type": "Simple",
+      "direct_transition": "smk_check"
+    },
+    "af_0": {
+      "type": "Simple",
+      "direct_transition": "smk_check"
+    },
+    "smk_check": {
+      "type": "Simple",
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "And",
+            "conditions": [
+              {
+                "condition_type": "Attribute",
+                "attribute": "smoker",
+                "operator": "is not nil"
+              },
+              {
+                "condition_type": "Attribute",
+                "attribute": "smoker",
+                "operator": "==",
+                "value": true
+              }
+            ]
+          },
+          "transition": "smk_1"
+        },
+        {
+          "transition": "smk_0"
+        }
+      ]
+    },
+    "smk_1": {
+      "type": "Simple",
+      "direct_transition": "htn_check"
+    },
+    "smk_0": {
+      "type": "Simple",
+      "direct_transition": "htn_check"
+    },
+    "htn_check": {
+      "type": "Simple",
+      "conditional_transition": [
+        {
+          "condition": {
+            "condition_type": "And",
+            "conditions": [
+              {
+                "condition_type": "Attribute",
+                "attribute": "hypertension",
+                "operator": "is not nil"
+              },
+              {
+                "condition_type": "Attribute",
+                "attribute": "hypertension",
+                "operator": "==",
+                "value": true
+              }
+            ]
+          },
+          "transition": "htn_1"
+        },
+        {
+          "transition": "htn_0"
+        }
+      ]
+    },
+    "htn_1": {
+      "type": "Simple",
+      "direct_transition": "Tick"
+    },
+    "htn_0": {
+      "type": "Simple",
+      "direct_transition": "Tick"
+    }
+  }
+}
