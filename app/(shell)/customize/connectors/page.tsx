@@ -22,10 +22,12 @@ import {
   envLooksEmpty,
   googleHealthEnv,
   isAuthDisabled,
+  isLocalOnly,
   ouraEnv,
   serverEnv,
   whoopEnv,
 } from "@/infrastructure/env";
+import { loadLiveSources } from "@/infrastructure/live-source-store";
 import { auditPersonalRead } from "@/infrastructure/personal-read-audit";
 import { append } from "@/packages/audit/append";
 import { lockedScreen } from "@/features/vault/page-gate";
@@ -70,6 +72,7 @@ export default async function ConnectorsPage({
   // Starts now and joins the other reads below; it never rejects (errors map to "error").
   const guidelineStatusRead = getGuidelineCorpusStatus();
   const shared = { initialSource, setups, returnNotice } as const;
+  const localOnly = isLocalOnly();
 
   const clerkId = await resolveActorId();
   let appUserId = clerkId ? await findAppUserId(clerkId) : null;
@@ -87,6 +90,7 @@ export default async function ConnectorsPage({
         whoopSummary={null}
         googleHealthSummary={null}
         guidelineStatus={await guidelineStatusRead}
+        liveSources={{ enabled: [], localOnly, canSave: false }}
         {...shared}
       />
     );
@@ -98,12 +102,14 @@ export default async function ConnectorsPage({
     googleHealthStatus,
     { ouraSummary, whoopSummary, googleHealthSummary },
     guidelineStatus,
+    liveEnabled,
   ] = await Promise.all([
     getOuraConnectionStatus(appUserId),
     getWhoopConnectionStatus(appUserId),
     getGoogleHealthConnectionStatus(appUserId),
     readConnectorSummaries(summaryDeps, clerkId, appUserId),
     guidelineStatusRead,
+    loadLiveSources(appUserId),
   ]);
 
   return (
@@ -115,6 +121,7 @@ export default async function ConnectorsPage({
       whoopSummary={whoopSummary}
       googleHealthSummary={googleHealthSummary}
       guidelineStatus={guidelineStatus}
+      liveSources={{ enabled: liveEnabled, localOnly, canSave: true }}
       {...shared}
     />
   );

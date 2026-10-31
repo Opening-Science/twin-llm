@@ -6,9 +6,11 @@ import { cn } from "@/infrastructure/ui";
 
 /**
  * Small pieces the onboarding steps share. They stay in this feature: nothing
- * else in the app has a switch or step dots yet, and a primitive moves to the
- * ui-kit the day a second feature needs it.
+ * else in the app has step dots yet, and a primitive moves to the ui-kit the
+ * day a second feature needs it (the switch did, for Customize · Connectors).
  */
+
+export { Switch } from "@/infrastructure/ui-kit/switch";
 
 /** A checkbox or radio drawn as a row you can click anywhere on. */
 export const ChoiceOption = ({
@@ -53,45 +55,6 @@ export const ChoiceOption = ({
     </label>
   );
 };
-
-/**
- * An on/off switch. `role="switch"` with `aria-checked`, a real button so
- * Space and Enter work, and a label that names what it turns on.
- */
-export const Switch = ({
-  checked,
-  onChange,
-  label,
-  disabled = false,
-}: {
-  readonly checked: boolean;
-  readonly onChange: (next: boolean) => void;
-  readonly label: string;
-  readonly disabled?: boolean;
-}) => (
-  <button
-    type="button"
-    role="switch"
-    aria-checked={checked}
-    aria-label={label}
-    disabled={disabled}
-    onClick={() => onChange(!checked)}
-    className={cn(
-      "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border transition-colors disabled:cursor-not-allowed disabled:opacity-50",
-      checked ? "bg-primary border-primary" : "bg-muted border-input",
-    )}
-  >
-    <span
-      aria-hidden
-      className={cn(
-        "size-3.5 rounded-full transition-transform",
-        checked
-          ? "bg-primary-foreground translate-x-[17px]"
-          : "bg-muted-foreground translate-x-0.5",
-      )}
-    />
-  </button>
-);
 
 /** One dot per step; the words are for screen readers, the dots for the eye. */
 export const ProgressDots = ({

@@ -25,6 +25,7 @@ export const DISCLOSURE_KINDS = [
   "remote-tool",
   "embedding",
   "telemetry",
+  "public-lookup",
 ] as const;
 
 export type DisclosureKind = (typeof DISCLOSURE_KINDS)[number];
@@ -48,6 +49,8 @@ export const CATEGORY = {
   population: "population question",
   searchText: "search text",
   usage: "usage ids and counts",
+  searchTerms: "search terms",
+  publicIds: "public record ids",
 } as const;
 
 export type DisclosureCategory = (typeof CATEGORY)[keyof typeof CATEGORY];

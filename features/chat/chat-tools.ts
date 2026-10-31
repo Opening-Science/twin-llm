@@ -14,6 +14,8 @@ import { type TurnSkill, withSkillTools } from "@/infrastructure/skill-gate";
 import { createGbdTools } from "@/packages/gbd-mcp/ai-tools";
 import { createGuidelineTools } from "@/packages/guidelines/ai-tools";
 import { createKnowledgeTools } from "@/packages/knowledge/ai-tools";
+import { createLiveSourceTools } from "@/packages/live-sources/ai-tools";
+import type { LiveTurn } from "@/packages/live-sources/refusals";
 import { literatureSourcesForAgent } from "@/packages/literature/specialties";
 import { permitServerForDataMode } from "@/packages/mcp-client/policy";
 import { findServer } from "@/packages/mcp-client/registry";
@@ -72,6 +74,7 @@ export type ChatToolFactories = Readonly<{
   gbd: typeof createGbdTools;
   guidelines: typeof createGuidelineTools;
   knowledge: typeof createKnowledgeTools;
+  live: typeof createLiveSourceTools;
 }>;
 
 const CHAT_TOOL_FACTORIES: ChatToolFactories = {
@@ -81,6 +84,7 @@ const CHAT_TOOL_FACTORIES: ChatToolFactories = {
   gbd: createGbdTools,
   guidelines: createGuidelineTools,
   knowledge: createKnowledgeTools,
+  live: createLiveSourceTools,
 };
 
 /**
@@ -140,6 +144,13 @@ export const createChatTools = (
      * General (`literatureSourcesForAgent`).
      */
     agent?: string | null;
+    /**
+     * The live public lookups (#6) this person switched on, and how the turn
+     * runs. Only the chat route passes the switches; left out, or with none
+     * on, no live tool is offered. Incognito chats and local-only mode never
+     * offer one (`start-answer`, `incognito-chat`).
+     */
+    live?: LiveTurn;
   }>,
 ) => {
   const make = options?.factories ?? CHAT_TOOL_FACTORIES;
@@ -174,6 +185,11 @@ export const createChatTools = (
       : {}),
     ...(options?.imported !== undefined && scope.mode === "personal"
       ? createImportedTools(options.imported)
+      : {}),
+    ...(options?.live !== undefined &&
+    options.live.enabled.length > 0 &&
+    !options.live.incognito
+      ? make.live(scope, options.live)
       : {}),
   };
 };

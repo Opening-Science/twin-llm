@@ -15,6 +15,7 @@ With `LOCAL_ONLY=true`:
 - `LLM_PROVIDER` defaults to `ollama`, and `OLLAMA_BASE_URL` (default `http://127.0.0.1:11434/v1`) must be `localhost`, `127.0.0.0/8` or `[::1]`.
 - Guideline embeddings refuse any origin that is not on this machine (`GUIDELINE_EMBED_ORIGIN_NOT_LOCAL`).
 - The app refuses to start when any of these is set: `LLM_PROVIDER=exoscale`, `infomaniak`, `openrouter` or `remote-gpu` (a tunnel on loopback does not count: the model runs elsewhere), a non-loopback `OLLAMA_BASE_URL`, `GBD_MCP_URL`, `NEXT_PUBLIC_POSTHOG_KEY`, `ARCJET_KEY`, `CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`. It also needs `LOCAL_MVP=true` or `AUTH_DISABLED=true`.
+- Live PubMed and Ensembl lookups (#6) are refused (`LIVE_SOURCE_LOCAL_ONLY`): chat offers no live tool, a call is refused before anything is recorded or sent, and Customize · Connectors and the first-run flow show a note instead of the switches. See [Live public lookups](#live-public-lookups).
 - The footer says "Local only: models and storage run on this machine. Wearable syncs download from each vendor's cloud."
 
 What local-only mode does not change:
@@ -95,13 +96,36 @@ Remote GPU (`LLM_PROVIDER=remote-gpu`, Apertus on vLLM, same prompt and cohort):
 
 `resolveLanguageModel` applies the same `permitProviderForRequest` check as the chat route (defence in depth).
 
-**The disclosure ledger (#140).** Every HTTP request to a model that is not on this machine (every provider above except Ollama on loopback) is written to the disclosure ledger before it is sent: provider, model id, purpose (chat answer, note draft, starter questions), the kinds of data it carried, the stored values it carried as references (wearable and BodyLoop keys, twin note ids), and the request's size, never the content. A request that cannot be recorded is not sent, and the call fails. Synthetic requests are recorded too, labelled synthetic. The same goes for wearable syncs and the OAuth code exchange, the remote GBD server, a search query embedded by an Ollama on another machine, server-side PostHog events and thread exports. Clerk, Arcjet and PostHog in the browser are named on the Lab card when configured, since the server cannot record them first. You see it all on Customize · Privacy and the Lab card "What left this machine" ([privacy-design.md](privacy-design.md#25-140-disclosure-ledger)).
+**The disclosure ledger (#140).** Every HTTP request to a model that is not on this machine (every provider above except Ollama on loopback) is written to the disclosure ledger before it is sent: provider, model id, purpose (chat answer, note draft, starter questions), the kinds of data it carried, the stored values it carried as references (wearable and BodyLoop keys, twin note ids), and the request's size, never the content. A request that cannot be recorded is not sent, and the call fails. Synthetic requests are recorded too, labelled synthetic. The same goes for wearable syncs and the OAuth code exchange, each request of a live PubMed or Ensembl lookup, the remote GBD server, a search query embedded by an Ollama on another machine, server-side PostHog events and thread exports. Clerk, Arcjet and PostHog in the browser are named on the Lab card when configured, since the server cannot record them first. You see it all on Customize · Privacy and the Lab card "What left this machine" ([privacy-design.md](privacy-design.md#25-140-disclosure-ledger)).
 
 `DATA_MODE=personal` (the default) forbids OpenRouter, Infomaniak and remote-gpu at env parse and at the chat route, and Exoscale unless `EXOSCALE_PERSONAL_DATA=consented-pilot`. Any other value, including the old `demo` and `real`, fails at startup.
 
 MCP servers follow the same rule by locality: `permitServerForDataMode` in `packages/mcp-client/policy.ts` allows a `local` server in both modes and a `remote` one only with `DATA_MODE=synthetic`. The registry lists each server with its locality; see [`gbd.md`](gbd.md).
 
 The first-run starter questions go to the same provider, through the same `permitProviderForRequest` check, from the first model of the default selection. The prompt holds the chosen roles, the data choice, the names of linked sources (no values) and what the person typed. With a linked source, OpenRouter, Infomaniak and the remote GPU refuse the call, as does Exoscale without the consented pilot, and fixed starters are shown. A personal starter request to Exoscale under the consented pilot writes the same `provider.personal_data_sent` audit event before the model call; if that write fails, the model is not called and fixed starters are shown.
+
+## Live public lookups
+
+Two read-only tools look things up in public databases while a chat answers (#6). Both are off until the person switches them on, per source, on Customize · Connectors ("Live public lookups") or in the first-run flow's sources step. The choice is stored as an opt-in list (`onboarding_profiles.liveSources`), so a source added later is off too.
+
+| Tool             | Source       | Requests                                                                                         | What it returns                                                                                              |
+| ---------------- | ------------ | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| `pubmed_search`  | NCBI PubMed  | esearch with the query terms, then esummary and efetch with the PMIDs NCBI returned (at most 10) | PMID, title, journal, year, DOI, a 300-character abstract snippet and the PubMed address of each article     |
+| `ensembl_lookup` | Ensembl REST | one GET per gene symbol (`lookup/symbol/homo_sapiens`) or rsID (`variation/homo_sapiens`)        | a gene's location, biotype and description, or a variant's class, consequence, frequency and clinical labels |
+
+**What leaves.** The search terms the model writes into the tool call, the public ids the service sent back, this app's name (`NCBI_TOOL`, default `twinllm`), the operator's contact address when `NCBI_EMAIL` is set, and this machine's internet address. Nothing else: no message, answer, wearable value, record, imported file, genome, twin note or stored id.
+
+**Rules, in order.** A call is refused with a code and a plain sentence:
+
+1. `LIVE_SOURCE_LOCAL_ONLY` with `LOCAL_ONLY=true`, `LIVE_SOURCE_INCOGNITO` in an incognito chat (also when the session id alone says so), `LIVE_SOURCE_OFF` for a source the person did not switch on. Chat does not offer the tool in these cases either.
+2. `LIVE_QUERY_REFUSED` when the terms fail `packages/live-sources/query-check.ts`: a digit outside a gene symbol (at most three digits, never three in a row) or an rsID, a year, an address or link, a character outside letters, digits, spaces, hyphens, quotes, brackets and commas, or 3 to 200 characters not met. While the person's genome is part of the turn (`genome_report`, `dna_ask` or `genome_variants` offered), no rsID is sent. The check is a pattern filter: it cannot tell a word that is personal (a name, a rare condition) from a public one, which is why the sources are off by default.
+3. A cached answer (same person, same terms, within 24 hours, in this server's memory) is returned and nothing is sent.
+4. Each HTTP request is written to the disclosure ledger (`public-lookup`) before it is sent; `LIVE_SOURCE_NOT_RECORDED` and nothing more is sent when that fails.
+5. `LIVE_SOURCE_FAILED` for a timeout (15 s), a non-2xx answer or a body over 1 MB; `LIVE_NOT_FOUND` when Ensembl has no such gene or variant. The service's message never reaches the model or the person.
+
+Only `https://eutils.ncbi.nlm.nih.gov` and `https://rest.ensembl.org` are reached, as GETs without redirects. Requests to each service wait in one queue per server: one every 400 ms to NCBI (its limit is three a second without an API key) and one every 100 ms to Ensembl (fifteen a second). Every call is audited as `live.pubmed_search` or `live.ensembl_lookup` with its arguments, its outcome code, how many words, gene symbols and rsIDs the query held, and the ids returned (hashed like every audit row). A switch change is audited as `live.sources.set`.
+
+The tool result carries `citations` (source, id, title, address) and a note that it is reference material; the prompt asks the model to cite the PMID or Ensembl address. The response document's sources panel does not list live citations yet.
 
 ## What never leaves
 

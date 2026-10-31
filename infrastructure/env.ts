@@ -452,6 +452,19 @@ const serverEnvSchema = z
     ),
     GBD_MCP_URL: maybeUrl(),
     GBD_MCP_TOKEN: maybeText(),
+    // Live PubMed lookups (#6): NCBI asks E-utilities callers to name their
+    // software (`tool`) and give a contact address (`email`, optional here).
+    NCBI_TOOL: z.preprocess(
+      blankAsMissing,
+      z
+        .string()
+        .regex(/^[A-Za-z0-9_.-]{1,40}$/, "NCBI_TOOL must be one word, such as twinllm")
+        .default("twinllm"),
+    ),
+    NCBI_EMAIL: z.preprocess(
+      blankAsMissing,
+      z.string().email("NCBI_EMAIL must be an email address").optional(),
+    ),
 
     SYNTHEA_HOST: z.preprocess(
       blankAsMissing,
@@ -740,6 +753,19 @@ export type GbdEnv = Readonly<{
 export const gbdEnv = (): GbdEnv | null => {
   const { GBD_MCP_URL: url, GBD_MCP_TOKEN: token } = serverEnv();
   return url && token ? Object.freeze({ url, token }) : null;
+};
+
+export type NcbiEnv = Readonly<{
+  /** E-utilities `tool`: one word naming the software. */
+  tool: string;
+  /** E-utilities `email`, or null when the operator gave none. Never logged. */
+  email: string | null;
+}>;
+
+/** What live PubMed lookups send NCBI about this installation (#6). */
+export const ncbiEnv = (env: ServerEnv = serverEnv()): NcbiEnv => {
+  const { NCBI_TOOL: tool, NCBI_EMAIL: email } = env;
+  return Object.freeze({ tool, email: email ?? null });
 };
 
 export type VitronicEnv = Readonly<{

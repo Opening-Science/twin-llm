@@ -59,6 +59,7 @@ const KIND_LABELS: Readonly<Record<string, string>> = {
   "remote-tool": "Remote tool",
   embedding: "Search embedding",
   telemetry: "Analytics event",
+  "public-lookup": "Public lookup",
 };
 
 const SOURCE_LABELS: Readonly<Record<ValueRef["source"], string>> = {
