@@ -19,6 +19,7 @@ import type {
   UnrecordedModelCall,
 } from "@/infrastructure/disclosure-ledger";
 import type { ImportedToolDeps } from "@/packages/query-tools/imported-tools";
+import type { GenomeVariantsDeps } from "@/packages/query-tools/imported-variants";
 import type { QueryToolPorts } from "@/packages/query-tools/ports";
 import type { SessionScope } from "@/packages/query-tools/scope";
 
@@ -138,6 +139,8 @@ export type StreamModelResponseDeps = Readonly<{
   ) => LanguageModel;
   /** Genome tool ports, or undefined when the genome policy does not allow them. */
   genomeTools: (scope: SessionScope) => GenomeToolDeps | undefined;
+  /** `genome_variants` ports, or undefined when the VCF permit does not allow them (#330). */
+  variantTools: (scope: SessionScope) => GenomeVariantsDeps | undefined;
   /** The imported-data tools' ports, or undefined when the policy refuses this turn. */
   importedTools: (scope: SessionScope) => ImportedToolDeps | undefined;
   /** Audit rows of the turn's session, read once the model has finished. */
@@ -203,6 +206,7 @@ export const createStreamModelResponse =
         disabledSources: context.disabledSources,
         loadViews: deps.store.loadViews,
         genome: deps.genomeTools(scope),
+        variants: deps.variantTools(scope),
         imported: deps.importedTools(scope),
         agent: context.agent?.id ?? null,
       },

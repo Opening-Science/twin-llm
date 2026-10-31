@@ -10,8 +10,8 @@ import { LEARNING_SCOPES, type LearningScope } from "@/infrastructure/learning-c
  * routes. Each package script is listed here, either as a pipeline with the
  * file that calls `requireLearningConsent` and its scope, or with the reason
  * it reads no row a model could learn from. A new script, or a new entry file
- * under the training, evaluation or heart-brain folders, fails until it is
- * listed. The per-pipeline refusals are tested next to each pipeline.
+ * under the training, evaluation, heart-brain or disclosure folders, fails until
+ * it is listed. The per-pipeline refusals are tested next to each pipeline.
  */
 
 type Gated = Readonly<{
@@ -50,6 +50,12 @@ const GATED: Readonly<Record<string, Gated>> = {
   "eval:answer-key:s7": ANSWER_KEY,
   "eval:answer-key:s7b": ANSWER_KEY,
   "eval:answer-key:s7h": ANSWER_KEY,
+  "eval:answer-key:hb": ANSWER_KEY,
+  "disclosure:prepare": {
+    entry: "scripts/disclosure/prepare.ts",
+    gate: "scripts/disclosure/prepare.ts",
+    scope: "training",
+  },
   "eval:answer-key:live": {
     entry: "evaluation/answer-key.test.ts",
     gate: "evaluation/answer-key.test.ts",
@@ -155,6 +161,18 @@ const NOT_LEARNING: Readonly<Record<string, string>> = {
   "heart-brain:timing": "reads the people files heart-brain wrote from Synthea archives",
   "heart-brain:wearables":
     "reads the people files heart-brain wrote and synthetic wearable series",
+  "heart-brain:af-subset":
+    "reads the Synthea 1M archives by batch number; synthetic only, no path to the app database",
+  "heart-brain:event-rates":
+    "reads the Synthea 1M archives by batch number; synthetic only, no path to the app database",
+  "heart-brain:excess":
+    "reads the people files heart-brain wrote from Synthea archives; synthetic only",
+  "heart-brain:oracle":
+    "reads the Synthea 1M archives by batch number; synthetic only, no path to the app database",
+  "disclosure:analyze":
+    "scores the files the GPU steps wrote from the sets disclosure:prepare made under the gate; reads no subject row",
+  "eval:hb-verdicts":
+    "tallies verdict phrases in eval runs, each gated when it ran; reads no subject row",
   "warehouse:ingest":
     "loads synthetic cohorts into the warehouse; it refuses other labels",
   "knowledge:ingest": PUBLIC,
@@ -171,6 +189,13 @@ const NOT_LEARNING: Readonly<Record<string, string>> = {
 const OTHER_ENTRIES: Readonly<Record<string, string>> = {
   "scripts/evaluation/build-router-fixture.ts": NOT_LEARNING["eval:router-fixture"] ?? "",
   "scripts/heart-brain/run.ts": NOT_LEARNING["heart-brain"] ?? "",
+  "scripts/heart-brain/oracle-run.ts": NOT_LEARNING["heart-brain:oracle"] ?? "",
+  "scripts/heart-brain/af-subset-run.ts": NOT_LEARNING["heart-brain:af-subset"] ?? "",
+  "scripts/heart-brain/event-rates-reference-run.ts":
+    NOT_LEARNING["heart-brain:event-rates"] ?? "",
+  "scripts/heart-brain/excess-run.ts": NOT_LEARNING["heart-brain:excess"] ?? "",
+  "scripts/disclosure/analyze.ts": NOT_LEARNING["disclosure:analyze"] ?? "",
+  "scripts/evaluation/hb-verdicts-run.ts": NOT_LEARNING["eval:hb-verdicts"] ?? "",
   "scripts/heart-brain/timing-run.ts": NOT_LEARNING["heart-brain:timing"] ?? "",
   "scripts/heart-brain/wearable-recovery-run.ts":
     NOT_LEARNING["heart-brain:wearables"] ?? "",
@@ -223,13 +248,19 @@ describe("every pipeline asks the learning-consent gate (#145)", () => {
 
   test("every entry file in the learning folders is a gated pipeline or listed", () => {
     const isEntry = /\(import\.meta as \{ main\?: boolean \}\)\.main/;
-    const found = ["scripts/training-data", "scripts/evaluation", "scripts/heart-brain"]
+    const commands = Object.values(scripts).join(" ");
+    const found = [
+      "scripts/training-data",
+      "scripts/evaluation",
+      "scripts/heart-brain",
+      "scripts/disclosure",
+    ]
       .flatMap((dir) =>
         readdirSync(join(ROOT, dir))
           .filter((name) => name.endsWith(".ts") && !name.endsWith(".test.ts"))
           .map((name) => `${dir}/${name}`),
       )
-      .filter((file) => isEntry.test(read(file)))
+      .filter((file) => isEntry.test(read(file)) || commands.includes(file))
       .sort();
     const known = [
       ...new Set([

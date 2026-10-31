@@ -53,11 +53,13 @@ These are enforced in code, not only by convention.
 4. **Carbon-X is local only.** `CARBON_X_URL` must be loopback
    (`127.0.0.1`, `localhost` or `[::1]`); any other value stops the boot, and
    the client refuses again before each request.
-5. **Genome requests need all of:** `DATA_MODE=personal`, `GENOME_SOURCE=ark`,
+5. **Ark report requests need all of:** `DATA_MODE=personal`, `GENOME_SOURCE=ark`,
    `LLM_PROVIDER=ollama` with Ollama on loopback, and the local Carbon-X
    (`permitGenomeRequest` in `infrastructure/data-mode-policy.ts`). Otherwise
-   the genome tools are not on the turn at all, and they refuse again if called
-   in a synthetic scope.
+   `genome_report` and `dna_ask` are not on the turn at all, and they refuse again
+   if called in a synthetic scope. `genome_variants` over an imported VCF needs
+   only the first and third (`permitVcfVariantsRequest`, #330; see
+   [Imported VCF](#imported-vcf)).
 6. **No genotype goes to a hosted provider**, the consented Exoscale pilot
    included, nor to OpenRouter, the remote GPU, Infomaniak, GBD or any MCP
    server. The rule holds per thread, not only per question: a thread where
@@ -125,7 +127,7 @@ the file's header: GRCh38 or hg38 is read, GRCh37 or hg19 is refused as
 `BUILD_MISMATCH`, another build as `BUILD_UNKNOWN`, and a file that names none is
 refused unless `GENOME_ASSUME_BUILD=GRCh38` is set. The variants are stored in
 `personal_variants`, read only by a model on this machine under
-`permitGenomeRequest`, never by the imported-data chat tools, and audited with counts
+`permitVcfVariantsRequest`, never by the imported-data chat tools, and audited with counts
 only (no genotype, position, rsID or hash of the file).
 
 `genome_variants({ dataset_id, variants })` (#307) is the one chat tool that reads
@@ -139,11 +141,16 @@ and `filter`. A site matches a file that writes `chr1` or `1`; an rsID matches a
 whole ID, also one of several joined by `;`. Not found means the file has no record
 there, which is not the same as the reference allele, and the result says so.
 
-- **Policy.** It is on a turn only with the genome deps, so only when
-  `permitGenomeRequest` holds (personal mode, `GENOME_SOURCE=ark`, Ollama on
-  loopback, local Carbon-X), and it asks the policy again on every call before any
-  read. A refusal is `GENOME_NOT_PERMITTED` with its `reason`. Over MCP it always
-  refuses with that code.
+- **Policy.** An imported VCF and a local model are enough (#330). The tool is on a
+  turn only when `permitVcfVariantsRequest` holds: `DATA_MODE=personal` and
+  `LLM_PROVIDER=ollama` with Ollama on loopback. It needs no `GENOME_SOURCE=ark` and
+  no Carbon-X, which serve `genome_report` and `dna_ask` only, and those two keep
+  `permitGenomeRequest`. It asks the permit again on every call before any read. A
+  hosted provider (the consented Exoscale pilot included), Ollama on another machine
+  and synthetic mode are refused with `GENOME_NOT_PERMITTED` and a `reason`
+  (`chat-model-not-local` or `data-mode-not-personal`). Over MCP it always refuses
+  with that code. The Customize source `vcf-variants` is usable whenever this permit
+  holds; without it, it reads "Personal mode and a local model only".
 - **Coded refusals.** `DATASET_NOT_FOUND` (not one of the person's datasets; it lists
   the person's VCFs as `vcf_datasets`, id, name and variant count, so the model can
   pick one), `NOT_A_VCF_DATASET` (another kind of import), `TOO_MANY_VARIANTS` (more
@@ -222,6 +229,7 @@ there, which is not the same as the reference allele, and the result says so.
 | Carbon-X client and prompt   | `packages/carbon-x/`                                          |
 | Chat tools                   | `features/chat/genome-tools.ts`                               |
 | Policy                       | `permitGenomeRequest`, `infrastructure/genome-gate.ts`        |
+| VCF policy (#330)            | `permitVcfVariantsRequest`, `vcfVariantsChatPermit`           |
 | Thread rule (#151)           | `infrastructure/genome-thread-policy.ts`, `start-answer.ts`   |
 | Skill                        | `skills/genome/`                                              |
 | Imported VCF (#180)          | `packages/personal-data/parse-vcf.ts`, `vcf-build.ts`         |

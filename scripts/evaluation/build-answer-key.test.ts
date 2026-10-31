@@ -19,6 +19,8 @@ import {
   valueAt,
   windowsOf,
   runKeyedTool,
+  manifestContentSha256,
+  subjectsRead,
 } from "./build-answer-key";
 import { memoryPorts } from "./cohort-ports";
 import type { KeyedTool } from "./question-set";
@@ -270,6 +272,23 @@ describe("buildAnswerKey", () => {
     await expect(
       buildAnswerKey(withValue({ path: "baseline.median" }), fakePorts(defaultAnswer)),
     ).rejects.toThrow("Q-S1-01 v: no baseline.median in the result");
+  });
+
+  test("path verdict keys the tool's verdict phrase, and throws without one", async () => {
+    const ports = fakePorts((tool, args) =>
+      tool === "trend"
+        ? { ...trendResult, verdict: "raised" }
+        : defaultAnswer(tool, args),
+    );
+    const key = await buildAnswerKey(withValue({ path: "verdict" }), ports);
+    expect(key.entries["Q-S1-01"]?.[0]).toMatchObject({
+      value: "raised",
+      unit: null,
+      refusal: null,
+    });
+    await expect(
+      buildAnswerKey(withValue({ path: "verdict" }), fakePorts(defaultAnswer)),
+    ).rejects.toThrow("Q-S1-01 v: no verdict in the result");
   });
 
   test("path code on a call that did not refuse throws", async () => {
@@ -658,5 +677,36 @@ describe("cohort generation per question set", () => {
       ],
     });
     expect(fhirDirOf("synthea-v4-s7")).toBe(".synthea/synthea-v4-s7/fhir");
+  });
+});
+
+describe("the hb cohort (#293)", () => {
+  test("reads the checksum from the committed manifest, refusing a missing one", () => {
+    const sha = "a".repeat(64);
+    expect(manifestContentSha256(JSON.stringify({ contentSha256: sha }))).toBe(sha);
+    expect(() => manifestContentSha256("{}")).toThrow("no contentSha256");
+  });
+
+  test("counts subjects from cohort_event_rates, which has no 200 cap", () => {
+    expect(subjectsRead({ subjects_read: 9558 }, "synthea-v4-1m-af")).toBe(9558);
+    expect(() =>
+      subjectsRead({ code: "COHORT_NOT_SUPPORTED" }, "synthea-v4-1m-af"),
+    ).toThrow("cohort_event_rates refused synthea-v4-1m-af");
+  });
+
+  test("names the 1M batches as its runs and its own folder", () => {
+    const generation = cohortGeneration("synthea-v4-1m-af");
+    expect([generation.seed, generation.population, generation.age]).toEqual([
+      1001,
+      1_000_000,
+      "any",
+    ]);
+    expect("runs" in generation ? generation.runs.at(-1) : null).toEqual({
+      name: "batch-100",
+      seed: 1100,
+      clinician_seed: 2100,
+      population: 10_000,
+    });
+    expect(fhirDirOf("synthea-v4-1m-af")).toBe(".synthea/synthea-v4-1m-af/fhir");
   });
 });

@@ -89,8 +89,9 @@ formula gets a leading `'`). Only files inside the repository are read, each at 
 .rhythm-bench/<run>` writes it ([rhythm-sim.md](rhythm-sim.md#benchmark)); the page reads the
   benchmark's own file, with no copy in another shape. It shows three tables, each with its CSV: the
   research flag's sensitivity and specificity and the AUROC of each metric on simulated windows (all,
-  windows of one rhythm only, by length, rhythm, AF rate and noise), the same on the MIT-BIH Atrial
-  Fibrillation Database when the run had `--afdb` (by dominant reference rhythm), and the distances
+  windows of one rhythm only, by length, rhythm, AF rate and noise), the same on the database the run
+  read, MIT-BIH Atrial Fibrillation Database (`--afdb`) or Long-Term AF Database (`--ltafdb`), by
+  dominant reference rhythm, and the distances
   between simulated and database windows (Wasserstein-1 over the database SD, Kolmogorov-Smirnov,
   medians). Values are shown to three decimals with their 95 % bootstrap interval; the CSVs keep
   the file's numbers. `features/lab/benchmark-result.ts` reads only the fields it shows, and its test

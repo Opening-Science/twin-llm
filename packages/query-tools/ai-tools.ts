@@ -25,6 +25,7 @@ import {
   crossSourceCompareInput,
   valuesAroundEventInput,
   rhythmIrregularityInput,
+  cohortEventRatesInput,
 } from "./schemas";
 import {
   IMPORTED_CONDITIONS_TOOL,
@@ -78,6 +79,7 @@ import {
   runCrossSourceCompare,
   runValuesAroundEvent,
   runRhythmIrregularity,
+  runCohortEventRates,
 } from "./tools";
 import { NO_WEARABLE_SNAPSHOTS } from "./wearable-readings";
 
@@ -202,6 +204,17 @@ export const createQueryTools = (
     inputSchema: modelInputSchema(rhythmIrregularityInput),
     execute: async (input) => runRhythmIrregularity(scope, input, ports),
   }),
+  // Synthetic mode only: a personal turn would always be refused, so it is not
+  // offered there and its schema stays out of the personal prompt budget (#293).
+  ...(scope.mode === "synthetic"
+    ? {
+        cohort_event_rates: tool({
+          description: description("cohort_event_rates"),
+          inputSchema: modelInputSchema(cohortEventRatesInput),
+          execute: async (input) => runCohortEventRates(scope, input, ports),
+        }),
+      }
+    : {}),
 });
 
 const importedDescription = (name: ImportedToolName): string =>

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { person } from "./fixtures.test-helpers";
+import { person } from "../../packages/query-tools/event-rates/fixtures.test-helpers";
 import { permutationShare, runTiming, specFor } from "./timing";
 
 describe("permutationShare", () => {

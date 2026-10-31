@@ -198,8 +198,14 @@ both themes), and stops its motion under reduced motion.
 - **`Rating`** for a 1 to 5 score: a radio group with a label per value, a pointer
   preview, arrows, Home, End and Backspace to clear, and a read-only mode.
 
-Only `StepTrace` is wired into the app so far. Their look lives in `globals.css`
-under "Interaction patterns".
+Where they are used: `StepTrace` in chat answers; `UndoButton` for deleting a thread
+(thread bar) and an imported dataset (Customize · Data), through `useSoftDelete`
+(`soft-delete.ts`: the item hides at once, the server delete runs only when the window
+ends, Undo sends nothing; leaving for another page in the app runs it early, closing the
+tab asks first and then deletes nothing); `StatusLattice` for a Synthea run. The app has
+no erase-everything action and no genome dataset to delete, so `HoldToConfirm` is not
+used yet; `Rating` waits for the human review protocol (#304). Their look lives in
+`globals.css` under "Interaction patterns".
 
 Charts use `text-chart-1` to `text-chart-5`, in that order. `primary` marks things you
 can click, so it is never a data colour. `chart-tokens.test.ts` checks each chart colour

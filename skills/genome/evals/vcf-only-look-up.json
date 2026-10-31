@@ -1,0 +1,21 @@
+{
+  "question": "What does my imported VCF have at rs1799853, and what does my genome report say?",
+  "provider": "ollama",
+  "dataMode": "personal",
+  "genomeSource": "none",
+  "script": [
+    {
+      "tool": "genome_variants",
+      "input": {
+        "dataset_id": "ds-synthetic-vcf",
+        "variants": ["rs1799853"]
+      }
+    },
+    { "tool": "genome_report", "input": {} }
+  ],
+  "expect": {
+    "calls": ["genome_variants"],
+    "views": [],
+    "refusals": ["genome-not-permitted"]
+  }
+}

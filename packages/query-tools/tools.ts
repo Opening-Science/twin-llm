@@ -48,3 +48,4 @@ export {
   runCrossSourceCompare,
 } from "./wearable-tools";
 export { type RhythmIrregularityResult, runRhythmIrregularity } from "./rhythm-tools";
+export { type CohortEventRatesResult, runCohortEventRates } from "./cohort-event-rates";

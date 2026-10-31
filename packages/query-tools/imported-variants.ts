@@ -26,8 +26,8 @@ import type { SessionScope } from "./scope";
  * `genome_variants` (#307): named variants from a person's own imported VCF
  * (`personal_variants`, #180).
  *
- * - Every call asks `permit` first, the genome policy (`permitGenomeRequest`):
- *   personal mode and a chat model on this machine. Anything else is refused
+ * - Every call asks `permit` first, the VCF permit (`permitVcfVariantsRequest`,
+ *   #330): personal mode and a chat model on this machine; no Ark or Carbon-X. Anything else is refused
  *   before a read. Over MCP it always refuses.
  * - Lookups by name only: an rsID or one `chrN:pos`, at most 50. No range, no
  *   gene, no "all variants", so the file is never scanned for the model.
@@ -62,7 +62,7 @@ export type GenomeVariantPorts = Readonly<{
 
 export type GenomeVariantsDeps = Readonly<{
   scope: SessionScope;
-  /** Asked before every call; the chat route passes the live genome policy. */
+  /** Asked before every call; the chat route passes the live VCF permit (#330). */
   permit: () => GenomePermitDecision;
   ports: GenomeVariantPorts;
 }>;
