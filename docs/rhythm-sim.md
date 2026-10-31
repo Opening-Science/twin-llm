@@ -85,6 +85,16 @@ SampledData needs a fixed sampling period and beats are not evenly spaced, so th
 
 The summary of a full run is `docs/research/rhythm-bench-2026-10.md`.
 
+## Beats to daily summaries
+
+`bun run rhythm-bench:resolution -- --out .rhythm-bench/resolution-<run> [--subjects N] [--afdb <dir>] [--ltafdb <dir>]` (#290, `scripts/rhythm-bench/resolution/`) asks how much AF signal survives as beats are aggregated to what wearables export: 30 s and 5 min epochs, hours and the daily values of the v3 synthetic wearables. It reads the simulator and changes nothing in it. It describes methods on simulated days and database records, never a person.
+
+- **Simulated days.** A day is 144 ten-minute recordings joined end to end (each one's first beat is the previous one's last), with each subject's rates from `subjectRhythmSettings`. The simulator has no time of day, so the day layer sets each recording's sinus rate and AF ventricular rate from a circadian swing of ±7 /min (lowest at 03:00), a day offset (SD 2 /min), a per-recording offset (SD 5 /min from 07:00 to 23:00, 1.5 /min at night) and, in 10 % of daytime recordings, an activity bout of +15 to +45 /min. Sinus recordings carry 0 to 3 PACs and 0 to 2 PVCs, as `rhythm_irregularity` plans them. All of these are assumptions (`day-sim.ts`). An AF day has one episode of a fixed burden (2, 10, 30 or 60 % of 24 h) at a seeded start.
+- **Design.** Each subject (default 40) has 3 baseline sinus days, 4 sinus days and one AF day per burden. Beat-detection noise none and light (`perturbBeats`, as in the benchmark). No artefact correction is applied, which is pessimistic for the RMSSD-based scores under noise.
+- **Ladder** (`aggregate.ts`, pure). An interval belongs to the epoch of its ending beat; epochs with fewer than 10 intervals have no summary; differences never cross a gap. One score per level, higher meaning more AF-like: beats, the share of 128-interval windows the tool's flag marks; 30 s, 5 min and hourly, the share of epochs with nRMSSD (epoch RMSSD over mean RR) above 0.1, and the RMS change in epoch mean heart rate (an HR-only export); daily, nRMSSD of all the day's beats, and the v3 values computed from the beats: daily heart rate (mean of 5 min epochs), resting heart rate (mean of the 5 min epochs from midnight to 06:00) and RMSSD (mean of those epochs' RMSSD).
+- **Statistics.** AUROC of AF days of each burden against the evaluation sinus days, on each score as it is and as its change from the subject's baseline median, with 95 % percentile bootstrap intervals over subjects (seed 290, 1000 resamples). The same scores on hours: AF hours by their AF share against AF-free hours, on simulated days and on the MIT-BIH AF Database and the Long-Term AF Database (`--afdb`, `--ltafdb`, read in place, hours with at least half their span covered), bootstrapped over records. Neither database has AF-free days, so the daily level is simulated only.
+- **Output.** `summary.json` and `report.md` in `--out` (no `result.json`, so the Lab's rhythm benchmark card is not affected). The summary of a full run is `docs/research/af-resolution-2026-10.md`.
+
 ## Sources
 
 - McSharry PE, Clifford GD, Tarassenko L, Smith LA. A dynamical model for generating synthetic electrocardiogram signals. IEEE Transactions on Biomedical Engineering. 2003;50(3):289-294.
