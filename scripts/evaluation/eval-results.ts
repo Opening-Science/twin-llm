@@ -16,7 +16,7 @@ import { z } from "zod";
 
 import { responseDocumentV1Schema } from "../../infrastructure/response-document/document-v1";
 
-import { EVAL_ARMS } from "./context-arm";
+import { RECORDED_ARMS } from "./context-arm";
 
 export const RESULTS_SCHEMA_VERSION = "twin-llm.eval.results.v2";
 export const META_SCHEMA_VERSION = "twin-llm.eval.meta.v1";
@@ -134,8 +134,12 @@ export const resultLineSchema = z
      * In the context arm (#302): the key's calls the server ran, as pasted.
      */
     tool_results: z.array(toolResultLineSchema),
-    /** Set only for the context arm (#302); a line without it ran the tools arm. */
-    arm: z.literal("context").optional(),
+    /**
+     * Set only for a data-in-prompt arm; a line without it ran the tools arm.
+     * `context` is the oracle arm as #302 named it, `context-oracle` the same
+     * arm since #320, `context-fair` the fair arm (#320).
+     */
+    arm: z.enum(["context", "context-oracle", "context-fair"]).optional(),
     /** The data block of a context-arm line: its size and whether rows were cut. */
     context: z
       .object({
@@ -145,6 +149,23 @@ export const resultLineSchema = z
         truncated: z.boolean(),
         tokens: z.number().int().nonnegative(),
         cap_tokens: z.number().int().positive(),
+      })
+      .strict()
+      .optional(),
+    /** The fair arm's choice for this item (#320): the subject, and what the cap cut. */
+    fair: z
+      .object({
+        subject_ref: z.string().nullable(),
+        codes_total: z.number().int().nonnegative(),
+        codes_pasted: z.number().int().nonnegative(),
+        codes_cut: z.array(z.string()),
+        conditions: z
+          .object({ n: z.number().int().nonnegative(), pasted: z.boolean() })
+          .strict(),
+        medications: z
+          .object({ n: z.number().int().nonnegative(), pasted: z.boolean() })
+          .strict(),
+        refusal: z.string().nullable(),
       })
       .strict()
       .optional(),
@@ -198,11 +219,13 @@ export const metaSchema = z
         .strict(),
     ),
     /**
-     * How the model got the data (#302): `tools` (the chat route) or `context`
-     * (the key's results pasted, no tools). Runs before #302 have none and ran `tools`.
+     * How the model got the data: `tools` (the chat route), `context-oracle`
+     * (#302: the key's results pasted, no tools; `context` in runs before
+     * #320) or `context-fair` (#320: the named subject's record pasted, chosen
+     * without the key). Runs before #302 have none and ran `tools`.
      */
-    arm: z.enum(EVAL_ARMS).optional(),
-    /** Context arm: the token cap of each item's data block and how many items it cut. */
+    arm: z.enum(RECORDED_ARMS).optional(),
+    /** Context arms: the token cap of each item's data block and how many items it cut. */
     context: z
       .object({
         cap_tokens: z.number().int().positive(),

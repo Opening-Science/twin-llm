@@ -22,7 +22,7 @@ import type { ChatRequest } from "./chat-request";
 import { buildResponseDocumentV1, twinBodyShown } from "./response/build-document";
 import type { ResponseDocumentV1, ResponseToolCall } from "./response/document-v1";
 import { inCallOrder } from "./tool-parts";
-import { buildTwinSystemPrompt } from "./twin-system-prompt";
+import { buildTwinSystemPrompt, type PastedDataSource } from "./twin-system-prompt";
 
 /**
  * One TwinLLM turn: the system prompt, the tools, the step limit and the
@@ -67,6 +67,8 @@ export type TwinTurnDeps = Readonly<{
    * tools, pasted into the system prompt as a data block.
    */
   pastedData?: string | null;
+  /** What `pastedData` holds (#320); left out, the answer key's call results. */
+  pastedDataSource?: PastedDataSource;
   /** The person's twin notes block (#43), already permitted and audited by the caller. */
   twinNotes?: string | null;
   /** Audit rows for this turn's session, read after the model finishes. */
@@ -121,7 +123,14 @@ export const lastStepWithoutTools = (stepNumber: number) =>
 /** What the system prompt of a turn is built from. */
 export type TwinTurnPromptDeps = Pick<
   TwinTurnDeps,
-  "offeredTools" | "mode" | "skill" | "uiContext" | "agent" | "pastedData" | "twinNotes"
+  | "offeredTools"
+  | "mode"
+  | "skill"
+  | "uiContext"
+  | "agent"
+  | "pastedData"
+  | "pastedDataSource"
+  | "twinNotes"
 >;
 
 /** The turn's system prompt, the one `runTwinTurn` sends. */
@@ -140,6 +149,9 @@ export const twinTurnSystem = (
     uiContext: deps.uiContext ?? null,
     agent: deps.agent ?? null,
     pastedData: deps.pastedData ?? null,
+    ...(deps.pastedDataSource === undefined
+      ? {}
+      : { pastedDataSource: deps.pastedDataSource }),
     twinNotes: deps.twinNotes ?? null,
   });
 

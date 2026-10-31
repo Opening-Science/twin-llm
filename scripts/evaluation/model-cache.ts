@@ -26,6 +26,8 @@ import { z } from "zod";
 
 import { sha256Hex, toCanonicalJson } from "../../packages/audit/hash";
 
+import type { CacheArm } from "./context-arm";
+
 type WrapStreamOptions = Parameters<
   NonNullable<LanguageModelMiddleware["wrapStream"]>
 >[0];
@@ -111,10 +113,10 @@ export type CacheKeyInput = Readonly<{
   repeat: number;
   params: CallOptions;
   /**
-   * The eval arm (#302). The tools arm leaves it out, so its keys are the
-   * ones recorded before arms existed.
+   * The eval arm (#302) as the key names it (`cacheArm`). The tools arm
+   * leaves it out, so its keys are the ones recorded before arms existed.
    */
-  arm?: "tools" | "context";
+  arm?: CacheArm;
 }>;
 
 export const samplingParams = (params: CallOptions): Record<string, unknown> =>
@@ -187,8 +189,8 @@ export const createCachedModel = (input: {
   readonly provider: string;
   readonly modelId: string;
   readonly repeat: number;
-  /** The eval arm (#302); left out, `tools`. */
-  readonly arm?: "tools" | "context";
+  /** The eval arm (#302) as the key names it; left out, `tools`. */
+  readonly arm?: CacheArm;
   /** The wrapped model is a fake: everything it records is MOCK. */
   readonly mock: boolean;
   readonly replay: boolean;

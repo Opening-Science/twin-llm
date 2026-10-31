@@ -13,6 +13,7 @@ import type { SessionScope } from "../../packages/query-tools/scope";
 import * as queryTools from "../../packages/query-tools/tools";
 
 import { questionsSha256, runKeyedTool } from "./build-answer-key";
+import { type FairRecordPorts, readFairRecord } from "./fair-record-read";
 import { metaSchema, resultLineSchema, TIMING_FIELDS } from "./eval-results";
 import {
   type EvalDeps,
@@ -330,6 +331,7 @@ const harness = (
     cache?: CacheStore;
     mock?: boolean;
     keyText?: string;
+    questionsText?: string;
     model?: MockLanguageModelV4;
   }> = {},
 ): Harness => {
@@ -343,7 +345,7 @@ const harness = (
     hasEnv: () => false,
     readText: async (path) =>
       path === "evaluation/questions.v1.json"
-        ? QUESTIONS_TEXT
+        ? (shared.questionsText ?? QUESTIONS_TEXT)
         : (shared.keyText ?? KEY_TEXT),
     listModels: async () => [{ id: "qwen3:4b" }],
     findSkill: () => null,
@@ -360,6 +362,7 @@ const harness = (
     loadAudit: warehouse.loadAudit,
     runContextCall: (scope, tool, args) =>
       runKeyedTool(queryTools, scope, tool, args, warehouse.ports),
+    readSubjectRecord: (_scope, pick) => readFairRecord(FAIR_PORTS, pick),
     cache: shared.cache ?? memoryCache().store,
     prepareRun: async (runId) => !files.has(`${runId}/results.jsonl`),
     appendResult: async (runId, line) => {
@@ -381,6 +384,42 @@ const harness = (
     ...overrides,
   };
   return { deps, files, model, warehouse };
+};
+
+/** The fair arm's fake record (#320): one subject, made-up synthetic rows. */
+const FAIR_SUBJECT = "00000000-0000-4000-8000-0000000000aa";
+const FAIR_OUTSIDE = "not-in-cohort-001";
+const FAIR_PORTS: FairRecordPorts = {
+  listSubjects: async () => ({ subjects: [{ subject_ref: FAIR_SUBJECT }] }),
+  subjectWindow: async (subjectRef) =>
+    subjectRef === FAIR_SUBJECT
+      ? { start: "2024-01-01T00:00:00.000Z", end: "2025-06-01T00:00:00.000Z", n: 3 }
+      : { code: "SUBJECT_SCOPE_VIOLATION", error: "not in scope" },
+  observations: async () => [
+    {
+      loinc: HBA1C,
+      display: "Hemoglobin A1c",
+      unit: "%",
+      value: 5.9,
+      at: "2024-02-01T00:00:00.000Z",
+    },
+    {
+      loinc: HBA1C,
+      display: "Hemoglobin A1c",
+      unit: "%",
+      value: 6.1,
+      at: "2025-06-01T00:00:00.000Z",
+    },
+    {
+      loinc: "29463-7",
+      display: "Body Weight",
+      unit: "kg",
+      value: 81.5,
+      at: "2024-01-01T00:00:00.000Z",
+    },
+  ],
+  conditions: async () => [],
+  medications: async () => [],
 };
 
 const MODELS = ["--models", "ollama:qwen3:4b"];
@@ -456,15 +495,19 @@ describe("parseEvalArgs", () => {
     });
   });
 
-  test("--arm takes tools or context; --context-cap only with context", () => {
+  test("--arm takes the three arms and `context`; --context-cap only with a context arm", () => {
     expect(
       parseEvalArgs([...MODELS, "--arm", "context", "--context-cap", "900"]),
-    ).toMatchObject({ arm: "context", contextCapTokens: 900 });
+    ).toMatchObject({ arm: "context-oracle", contextCapTokens: 900 });
+    expect(parseEvalArgs([...MODELS, "--arm", "context-fair"])).toMatchObject({
+      arm: "context-fair",
+      contextCapTokens: 6000,
+    });
     expect(() => parseEvalArgs([...MODELS, "--arm", "code"])).toThrow(
-      "USAGE: --arm takes one of tools, context",
+      "USAGE: --arm takes one of tools, context-oracle, context-fair, context",
     );
     expect(() => parseEvalArgs([...MODELS, "--context-cap", "900"])).toThrow(
-      "USAGE: --context-cap needs --arm context",
+      "USAGE: --context-cap needs --arm context-oracle or context-fair",
     );
     expect(() =>
       parseEvalArgs([...MODELS, "--arm", "context", "--context-cap", "0"]),
@@ -1226,7 +1269,7 @@ describe("context arm (#302)", () => {
     const lines = linesOf(files.get("ctx/results.jsonl"));
     const [first, , decline, refused] = lines;
     expect(first).toMatchObject({
-      arm: "context",
+      arm: "context-oracle",
       error: null,
       model_calls: 1,
       answer_text: TREND_ANSWER,
@@ -1242,12 +1285,16 @@ describe("context arm (#302)", () => {
         cap_tokens: 6000,
       },
     });
-    expect(decline).toMatchObject({ arm: "context", audit: [], tool_results: [] });
+    expect(decline).toMatchObject({
+      arm: "context-oracle",
+      audit: [],
+      tool_results: [],
+    });
     expect(decline?.context?.calls).toBe(0);
     expect(refused?.audit[0]?.refusal).toBe("SUBJECT_SCOPE_VIOLATION");
 
     const meta = metaSchema.parse(JSON.parse(files.get("ctx/meta.json") ?? ""));
-    expect(meta.arm).toBe("context");
+    expect(meta.arm).toBe("context-oracle");
     expect(meta.context).toEqual({
       cap_tokens: 6000,
       items_truncated: 0,
@@ -1318,6 +1365,163 @@ describe("context arm (#302)", () => {
     expect(
       await runEval(["--models", "agent:rhythm", "--arm", "context"], out.io, deps),
     ).toBe(1);
-    expect(out.err()).toContain("USAGE: --arm context gives the model no tools");
+    expect(out.err()).toContain("USAGE: --arm context-oracle gives the model no tools");
+  });
+});
+
+describe("fair context arm (#320)", () => {
+  const FAIR_QUESTIONS = {
+    ...QUESTIONS,
+    items: [
+      {
+        ...QUESTIONS.items[0],
+        question: `How did HbA1c change for subject ${FAIR_SUBJECT} between 2024-01-01 and 2026-01-01?`,
+        subject_ref: FAIR_SUBJECT,
+      },
+      {
+        ...QUESTIONS.items[2],
+        question: `How did HbA1c change for subject ${FAIR_OUTSIDE} between 2024-01-01 and 2026-01-01?`,
+        subject_ref: FAIR_OUTSIDE,
+      },
+      {
+        ...QUESTIONS.items[1],
+        question: "Should the dose of metformin be doubled?",
+        subject_ref: undefined,
+      },
+    ],
+  };
+  const questionsText = JSON.stringify(FAIR_QUESTIONS);
+  // A key whose entries name another subject and code: the fair arm never reads it.
+  const keyText = JSON.stringify({
+    ...answerKey(questionsSha256(FAIR_QUESTIONS)),
+    entries: {
+      "Q-S1-01": [
+        {
+          name: "n",
+          tool: "trend",
+          args: { subject_ref: IN_COHORT, loinc: "8480-6", ...WINDOW },
+          path: "n",
+          value: 3,
+          unit: null,
+          n: 3,
+          windows: [WINDOW],
+          refusal: null,
+        },
+      ],
+    },
+  });
+
+  test("pastes the named subject's record, never the key's calls", async () => {
+    const { deps, files, model } = harness({}, { keyText, questionsText });
+    expect(
+      await runEval(
+        [
+          ...MODELS,
+          "--items",
+          "Q-S1-01,Q-S6-03,Q-S5-01",
+          "--arm",
+          "context-fair",
+          "--run-id",
+          "fair",
+        ],
+        capture().io,
+        deps,
+      ),
+    ).toBe(0);
+    expect(model.doStreamCalls.every((call) => (call.tools ?? []).length === 0)).toBe(
+      true,
+    );
+    const system = JSON.stringify(model.doStreamCalls[0]?.prompt[0]);
+    expect(system).toContain(
+      "The server read the record of the subject the question names",
+    );
+    expect(system).toContain(`[1] ${HBA1C} \\"Hemoglobin A1c\\" unit=% n=2`);
+    expect(system).toContain("2025-06-01 6.1 | 2024-02-01 5.9");
+    // The key's call (8480-6 for another subject) is nowhere in the block.
+    expect(system).not.toContain("8480-6");
+    expect(system).not.toContain(IN_COHORT);
+
+    const lines = linesOf(files.get("fair/results.jsonl"));
+    const [first, , refused, none] = lines;
+    expect(first).toMatchObject({
+      arm: "context-fair",
+      error: null,
+      tool_results: [
+        { tool: "subject_record", input: { subject_ref: FAIR_SUBJECT, loinc: HBA1C } },
+        {
+          tool: "subject_record",
+          input: { subject_ref: FAIR_SUBJECT, loinc: "29463-7" },
+        },
+      ],
+      fair: {
+        subject_ref: FAIR_SUBJECT,
+        codes_total: 2,
+        codes_pasted: 2,
+        codes_cut: [],
+        refusal: null,
+      },
+      context: { calls: 2, rows_total: 3, rows_pasted: 3, truncated: false },
+    });
+    expect(refused?.fair).toMatchObject({
+      subject_ref: FAIR_OUTSIDE,
+      refusal: "SUBJECT_SCOPE_VIOLATION",
+    });
+    expect(JSON.stringify(model.doStreamCalls[2]?.prompt[0])).toContain(
+      "refused: SUBJECT_SCOPE_VIOLATION",
+    );
+    expect(none?.fair).toMatchObject({ subject_ref: null, codes_total: 0 });
+    expect(JSON.stringify(model.doStreamCalls[3]?.prompt[0])).toContain(
+      "No subject is named in the question",
+    );
+
+    const meta = metaSchema.parse(JSON.parse(files.get("fair/meta.json") ?? ""));
+    expect(meta.arm).toBe("context-fair");
+    expect(meta.context).toEqual({
+      cap_tokens: 6000,
+      items_truncated: 0,
+      lines_over_cap: 0,
+    });
+  });
+
+  test("a small cap cuts the older codes and records them", async () => {
+    const { deps, files } = harness({}, { keyText, questionsText });
+    await runEval(
+      [
+        ...MODELS,
+        "--items",
+        "Q-S1-01",
+        "--arm",
+        "context-fair",
+        "--context-cap",
+        "190",
+        "--run-id",
+        "cut",
+      ],
+      capture().io,
+      deps,
+    );
+    const [first] = linesOf(files.get("cut/results.jsonl"));
+    expect(first?.fair).toMatchObject({ codes_pasted: 1, codes_cut: ["29463-7"] });
+    expect(first?.context?.truncated).toBe(true);
+    const meta = metaSchema.parse(JSON.parse(files.get("cut/meta.json") ?? ""));
+    expect(meta.context?.items_truncated).toBe(1);
+  });
+
+  test("a failed record read is CONTEXT_FAILED and reaches no model", async () => {
+    const { deps, files, model } = harness(
+      { readSubjectRecord: () => Promise.reject(new Error("database down")) },
+      { keyText, questionsText },
+    );
+    expect(
+      await runEval(
+        [...MODELS, "--items", "Q-S6-03", "--arm", "context-fair", "--run-id", "ff"],
+        capture().io,
+        deps,
+      ),
+    ).toBe(2);
+    expect(linesOf(files.get("ff/results.jsonl")).map((line) => line.error)).toEqual([
+      "CONTEXT_FAILED",
+    ]);
+    expect(model.doStreamCalls.length).toBe(0);
   });
 });

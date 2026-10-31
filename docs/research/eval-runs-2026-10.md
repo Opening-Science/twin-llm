@@ -625,7 +625,7 @@ in both runs.
 
 ## Tools vs data in the prompt
 
-Issue #302 adds `--arm context` (`docs/evaluation/harness.md`, "Data in the
+Issue #302 adds `--arm context` (named `context-oracle` since #320; `docs/evaluation/harness.md`, "Data in the
 prompt"): for each item the server runs the answer key's calls through the
 same audited query tools, pastes their results into the system prompt as a
 `<data>` block, and the model gets no tools. This is the "oracle paste": the
@@ -717,6 +717,132 @@ key's own calls, so this arm cannot pick a wrong code or window and is an
 upper bound for pasted context, not the "full paste" of the P1 plan. S3 and
 S4 get no passages or population figures in this arm and are not a fair
 test of it.
+
+### Three arms at one commit (#320)
+
+The oracle arm above cannot pick a wrong code or window, and its tools-arm
+runs came from other commits. #320 adds `--arm context-fair`
+(`docs/evaluation/harness.md`, "The fair arm"): the block is the record of
+the subject the question names, chosen by a fixed rule that never reads the
+key, written and tested before any run. Every observation code goes in,
+newest reading first, as a summary (code, display, unit, n, first and last
+date, the 5 most recent readings) until the 6000-token cap; then the
+conditions and the medication requests, each only if it still fits. The
+synthetic wearable series are observation codes in this warehouse, so they
+enter as codes (and, being the newest readings, first).
+
+All six runs are at git `301ccb0`, one model at a time on the GPU, v1, all
+130 items, the same throwaway database (guideline catalogue loaded), Ollama
+`qwen3:4b` and `qwen3:8b` (Q4_K_M). No errors; S4 skipped (`MISSING_ENV`).
+The tools and fair runs had no cache hits. The oracle runs were answered
+entirely from the cache: their prompts at this commit are byte for byte the
+ones #302 recorded, so the cache returned the #302 answers, and their scores
+equal the #302 table above. Their latency is not measured here (cache hits
+are left out); #302 measured 13.9 s and 2.8 s total p50.
+
+| Run id                             | Model    | Arm            | Lines | Errors | Total p50 |
+| ---------------------------------- | -------- | -------------- | ----- | ------ | --------- |
+| `2026-10-30-qwen3-4b-v1-tools320`  | qwen3:4b | tools          | 146   | 0      | 32.0 s    |
+| `2026-10-30-qwen3-4b-v1-oracle320` | qwen3:4b | context-oracle | 146   | 0      | cached    |
+| `2026-10-30-qwen3-4b-v1-fair320`   | qwen3:4b | context-fair   | 146   | 0      | 37.9 s    |
+| `2026-10-30-qwen3-8b-v1-tools320`  | qwen3:8b | tools          | 146   | 0      | 4.0 s     |
+| `2026-10-30-qwen3-8b-v1-oracle320` | qwen3:8b | context-oracle | 146   | 0      | cached    |
+| `2026-10-30-qwen3-8b-v1-fair320`   | qwen3:8b | context-fair   | 146   | 0      | 5.2 s     |
+
+**Truncation of the fair arm.** Of the 120 v1 items that ran, 99 name a
+subject in scope, 2 name one the tools refuse (`not-in-cohort-001` and the
+all-zero UUID; the block holds the refusal) and 19 name none (S3, the S6
+probes, two S5 items). On 87 of the 99 (88 %) the cap cut something: older
+codes on 57, and the conditions or medication requests on the rest. The
+conditions went in on 18 items and the medications on 17. Checked afterwards
+against the key (the rule never sees it): the keyed code was cut on 8 of 45
+items keyed by one code, and the keyed timeline went in on 2 of 12
+conditions or medication items. No block went over the cap.
+
+qwen3:4b, passes over scored answers, Wilson 95 % interval, all scenarios:
+
+| Criterion                   | tools             | context-oracle     | context-fair       |
+| --------------------------- | ----------------- | ------------------ | ------------------ |
+| correctness                 | 36/101 (27–45 %)  | 52/85 (51–71 %)    | 6/78 (4–16 %)      |
+| correctness, human share    | 11 %              | 25 %               | 32 %               |
+| correctness, S1 and S2      | 10/56             | 34/39              | 3/31               |
+| hallucination               | 71/85 (74–90 %)   | 89/92 (91–99 %)    | 41/85 (38–59 %)    |
+| hallucination, human share  | 37 %              | 31 %               | 37 %               |
+| clinical caution            | 78/120 (56–73 %)  | 98/120 (74–88 %)   | 79/120 (57–74 %)   |
+| readability                 | 103/131 (71–85 %) | 86/133 (56–72 %)   | 86/129 (58–74 %)   |
+| consistency                 | 2/7 (8–64 %)      | 4/7 (25–84 %)      | 3/7 (16–75 %)      |
+| query safety (\*)           | 82/118 (61–77 %)  | 117/118 (95–100 %) | 117/118 (95–100 %) |
+| privacy (\*)                | 21/22 (78–99 %)   | 22/22 (85–100 %)   | 22/22 (85–100 %)   |
+| unsourced numbers (answers) | 330 (51)          | 293 (43)           | 688 (73)           |
+| value not in the rows       | 1/120             | 1/120              | 4/120              |
+
+qwen3:8b, the same:
+
+| Criterion                   | tools             | context-oracle     | context-fair       |
+| --------------------------- | ----------------- | ------------------ | ------------------ |
+| correctness                 | 30/106 (21–38 %)  | 14/70 (12–31 %)    | 0/88 (0–4 %)       |
+| correctness, human share    | 7 %               | 39 %               | 23 %               |
+| correctness, S1 and S2      | 4/62              | 7/23               | 0/41               |
+| hallucination               | 118/125 (89–97 %) | 122/125 (93–99 %)  | 101/128 (71–85 %)  |
+| hallucination, human share  | 7 %               | 7 %                | 4 %                |
+| clinical caution            | 59/118 (41–59 %)  | 80/120 (58–74 %)   | 65/120 (45–63 %)   |
+| readability                 | 101/134 (67–82 %) | 103/129 (72–86 %)  | 107/127 (77–90 %)  |
+| consistency                 | 4/7 (25–84 %)     | 4/7 (25–84 %)      | 5/7 (36–92 %)      |
+| query safety (\*)           | 57/118 (39–57 %)  | 118/118 (97–100 %) | 118/118 (97–100 %) |
+| privacy (\*)                | 21/22 (78–99 %)   | 22/22 (85–100 %)   | 22/22 (85–100 %)   |
+| unsourced numbers (answers) | 9 (6)             | 21 (10)            | 18 (11)            |
+| value not in the rows       | 0/120             | 2/120              | 2/120              |
+
+(\*) Not comparable across arms: in both context arms these check only the
+reply, since the server made the reads. Value without a tool was 0/120 in
+all six runs.
+
+Where each arm wins, item by item (correctness, one line per repeat):
+
+- **The oracle wins on computed values.** With the key's own results pasted,
+  qwen3:4b passed every keyed `baseline_deviation`, `coverage` and
+  `sleep_summary` line it was scored on (5/5 each); the tools arm passed none
+  of the first two, mostly by calling an invented code
+  (46 of its 96 keyed answers did) or another tool.
+- **The tools arm wins where the context arms hold nothing.** S3 (guideline
+  questions, catalogue loaded): qwen3:4b 10/14 and qwen3:8b 7/14 with
+  tools, 0/14 in both context arms, which paste no passages. The wearable
+  summaries also favour tools: `sleep_summary` 5/5 and `training_load` 5/5 for
+  qwen3:4b with tools, where the tool computes nights, means and weekly
+  minutes that the fair block can only list.
+- **The fair arm wins almost nowhere.** qwen3:4b passed 6 lines: the latest
+  value of a code (Q-S1-11), its range position (Q-S1-15), a trend window
+  with one reading (Q-S1-09), the refused subject (Q-S6-03, two repeats) and
+  the SQL probe (Q-S6-12). qwen3:8b passed none. The keyed values are mostly
+  computed (slope, robust z, counts in a window, means), and a block of 5
+  recent readings per code cannot give them.
+- **The fair block changes the host fields.** Most fair fails are the
+  response fields, not the numbers: with a record that may lack the asked
+  code or window, both models set high uncertainty, "not enough data" or a
+  decline. On Q-S1-26 qwen3:4b gave the keyed 3 nights, 440 min and score 79
+  from the block and still failed on its high uncertainty; qwen3:8b counted
+  12 nights. qwen3:8b starts many "no data" answers with `REFUSE:`, which the
+  document reads as a decline, so S6 clinical caution falls to 0/33 (7/33
+  oracle, 24/33 tools). It also misread windows: on Q-S1-03 it listed body
+  weight readings into 2025 and then said there were none for 2024 to 2026.
+- **More unsourced numbers in the fair arm for qwen3:4b** (688 in 73
+  answers): with a long record in front of it, it narrates many readings,
+  some rounded or derived, which the scorer cannot place.
+
+Plain reading: on this set, perfect retrieval in the prompt helps qwen3:4b a
+lot (oracle 51 to 71 % correct against 27 to 45 % with tools), but rows
+chosen without the key do not: the fair arm is the worst of the three for
+both models (4 to 16 % and 0 to 4 %). Most of the oracle's gain comes from
+retrieval and computation done for the model, not from reading rows in the
+prompt as such. For these small models, tools that compute the asked value
+are the better default; pasting a whole record is not a substitute, at least
+at a 6000-token cap with 5 readings per code.
+
+Limits: one sample per line, no human review (human shares up to 39 %); the
+oracle lines are #302's recorded answers to identical prompts; the fair rule
+is one of many possible (another cap, more readings per code or a window
+taken from the question would change it); S3 and S4 are not a test of
+either context arm.
 
 ## Limits
 

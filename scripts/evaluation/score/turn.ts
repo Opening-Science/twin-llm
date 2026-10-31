@@ -3,6 +3,7 @@
  * ran, which refusals came back, which subjects were read, and which numbers
  * the answer could legitimately have taken from somewhere. Pure.
  */
+import { isContextArm, type RecordedArm } from "../context-arm";
 import type { KeyEntry, Question } from "../question-set";
 
 import {
@@ -17,13 +18,13 @@ import {
 import type { AnsweredLine } from "./types";
 
 /**
- * A context-arm line (#302): the server made the key's calls and the model
- * had no tools, so checks of which tools ran, which subjects they read and
- * which refusals came back judge the harness, not the model. Scorers skip
- * them and keep their checks of the reply.
+ * A line of a data-in-prompt arm (#302 oracle, #320 fair): the server read
+ * the rows and the model had no tools, so checks of which tools ran, which
+ * subjects they read and which refusals came back judge the harness, not the
+ * model. Scorers skip them and keep their checks of the reply.
  */
-export const serverRead = (line: Readonly<{ arm?: "context" }>): boolean =>
-  line.arm === "context";
+export const serverRead = (line: Readonly<{ arm?: RecordedArm }>): boolean =>
+  isContextArm(line.arm);
 
 export const auditTools = (line: AnsweredLine): readonly string[] =>
   line.audit.map((row) => row.tool);

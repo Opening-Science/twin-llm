@@ -91,6 +91,11 @@ describe("cacheKey", () => {
     const base = { provider: "ollama", modelId: "a", repeat: 1, params: PARAMS };
     expect(cacheKey({ ...base, arm: "tools" })).toBe(cacheKey(base));
     expect(cacheKey({ ...base, arm: "context" })).not.toBe(cacheKey(base));
+    // The fair arm (#320) shares no entry with either.
+    expect(cacheKey({ ...base, arm: "context-fair" })).not.toBe(cacheKey(base));
+    expect(cacheKey({ ...base, arm: "context-fair" })).not.toBe(
+      cacheKey({ ...base, arm: "context" }),
+    );
   });
 });
 
