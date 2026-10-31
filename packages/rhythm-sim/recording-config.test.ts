@@ -17,6 +17,7 @@ describe("parseRecordingConfig", () => {
       noiseSdMs: 5,
       afMeanHr: 100,
       afCv: 0.2,
+      afDependence: "independent",
       pacCount: 0,
       pvcCount: 0,
       pacPrematurity: 0.25,
@@ -24,6 +25,16 @@ describe("parseRecordingConfig", () => {
       pulseNoise: 0.02,
       motionArtefact: false,
     });
+  });
+
+  test("afDependence takes independent or short_range only", () => {
+    const base = { seed: 1, durationSec: 60, rhythm: "af" } as const;
+    expect(
+      parseRecordingConfig({ ...base, afDependence: "short_range" }).afDependence,
+    ).toBe("short_range");
+    expect(() =>
+      parseRecordingConfig({ ...base, afDependence: "markov" as "short_range" }),
+    ).toThrow();
   });
 
   test("a respiratory rate outside 0.15–0.4 Hz is refused", () => {

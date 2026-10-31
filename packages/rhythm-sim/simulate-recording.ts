@@ -7,7 +7,12 @@
  */
 import { normal, randomFor } from "@/infrastructure/seeded-random";
 
-import { afInterval, logNormalFor } from "./af-interval";
+import {
+  AF_SHORT_RANGE_PHI,
+  afInterval,
+  afIntervalAfter,
+  logNormalFor,
+} from "./af-interval";
 import { type BeatLabel, insertEctopicBeats } from "./ectopic-beats";
 import { type PulseWave, pulseWave } from "./pulse-wave";
 import {
@@ -62,11 +67,21 @@ const baseIntervals = (
   const durationMs = config.durationSec * 1000;
   const rrMs: number[] = [];
   const labels: BeatLabel[] = [];
+  // AR(1) state of the AF episode in progress; null outside AF, so each
+  // episode starts afresh.
+  let afState: number | null = null;
+  const nextAf = (): number => {
+    if (config.afDependence === "independent") return afInterval(afRandom, afShape);
+    const step = afIntervalAfter(afRandom, afShape, AF_SHORT_RANGE_PHI, afState);
+    afState = step.state;
+    return step.rrMs;
+  };
   for (let tMs = 0; ;) {
     const af = inEpisode(episodes, tMs / 1000);
+    if (!af) afState = null;
     const interval = Math.round(
       af
-        ? afInterval(afRandom, afShape)
+        ? nextAf()
         : Math.max(
             SINUS_MIN_RR_MS,
             meanRr +
