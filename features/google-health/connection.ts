@@ -11,9 +11,11 @@ import {
 } from "@open-twin/provider-google-health";
 import type { Auth } from "googleapis";
 
+import { openToken, sealToken } from "@/infrastructure/connector-tokens";
 import { database } from "@/infrastructure/database";
 import {
   type FieldCipher,
+  newRowId,
   openJson,
   sealJson,
   sealNullableJson,
@@ -30,6 +32,30 @@ import { resolveSyncDateWindow } from "@/features/wearables/sync-window";
 
 import { buildGoogleHealthSummary, type GoogleHealthSummary } from "./summary";
 import { decryptGoogleHealthSecret, encryptGoogleHealthSecret } from "./token-crypto";
+
+const TABLE = "google_health_connections";
+
+/** The env-key ciphertext of both tokens, sealed for one row with the owner's keys (#341). */
+const sealedTokens = (
+  cipher: FieldCipher,
+  rowId: string,
+  tokens: Readonly<{ access_token: string; refresh_token: string }>,
+) => ({
+  accessTokenEnc: sealToken(
+    cipher,
+    TABLE,
+    "accessTokenEnc",
+    rowId,
+    encryptGoogleHealthSecret(tokens.access_token),
+  ),
+  refreshTokenEnc: sealToken(
+    cipher,
+    TABLE,
+    "refreshTokenEnc",
+    rowId,
+    encryptGoogleHealthSecret(tokens.refresh_token),
+  ),
+});
 
 /** Core types for an evening demo — dense enough without flooding heart-rate samples. */
 const SYNC_TYPES = [
@@ -81,16 +107,25 @@ export const persistGoogleHealthTokens = async (params: {
     );
   }
 
+  // Sealed with the owner's keys (#341); nothing is stored while locked.
+  const cipher = await cipherForUser(params.userId);
+  const existing = await database().googleHealthConnection.findUnique({
+    where: { userId: params.userId },
+    select: { id: true },
+  });
+  const id = existing?.id ?? newRowId();
   const data = {
-    accessTokenEnc: encryptGoogleHealthSecret(params.tokens.access_token),
-    refreshTokenEnc: encryptGoogleHealthSecret(params.tokens.refresh_token),
+    ...sealedTokens(cipher, id, {
+      access_token: params.tokens.access_token,
+      refresh_token: params.tokens.refresh_token,
+    }),
     accessTokenExpiresAt: toExpiry(params.tokens),
     ...(params.subjectKey ? { subjectKey: params.subjectKey } : {}),
   };
 
   await database().googleHealthConnection.upsert({
     where: { userId: params.userId },
-    create: { userId: params.userId, ...data },
+    create: { id, userId: params.userId, ...data },
     update: data,
   });
 };
@@ -120,10 +155,16 @@ const loadClientForUser = async (userId: string): Promise<GoogleHealthClient | n
   });
   if (!connection) return null;
 
+  // Tokens open only with the owner's unlocked vault (#341); locked, this throws.
+  const cipher = await cipherForUser(userId);
+  const open = (column: "accessTokenEnc" | "refreshTokenEnc") =>
+    decryptGoogleHealthSecret(
+      openToken(cipher, TABLE, column, connection.id, connection[column]),
+    );
   const client = new GoogleHealthClient(config);
   setGoogleHealthCredentials(client, {
-    access_token: decryptGoogleHealthSecret(connection.accessTokenEnc),
-    refresh_token: decryptGoogleHealthSecret(connection.refreshTokenEnc),
+    access_token: open("accessTokenEnc"),
+    refresh_token: open("refreshTokenEnc"),
     expiry_date: connection.accessTokenExpiresAt.getTime(),
     token_type: "Bearer",
   });
@@ -138,11 +179,19 @@ const persistRefreshedCredentials = async (
   const tokens = getGoogleHealthCredentials(client);
   if (!tokens.access_token || !tokens.refresh_token) return;
 
+  const cipher = await cipherForUser(userId);
+  const connection = await database().googleHealthConnection.findUnique({
+    where: { userId },
+    select: { id: true },
+  });
+  if (!connection) return;
   await database().googleHealthConnection.update({
     where: { userId },
     data: {
-      accessTokenEnc: encryptGoogleHealthSecret(tokens.access_token),
-      refreshTokenEnc: encryptGoogleHealthSecret(tokens.refresh_token),
+      ...sealedTokens(cipher, connection.id, {
+        access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token,
+      }),
       accessTokenExpiresAt: toExpiry(tokens),
     },
   });

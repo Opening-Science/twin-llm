@@ -145,7 +145,9 @@ mock.module("@/infrastructure/database", () => ({
 // Bun's module mocks last for the whole test process, so keep the module's
 // other exports (`vllmBaseUrlFor` and the rest): replacing only this one left
 // them undefined for every later test file that imports the module (#152).
-const realCatalog = await import("@/infrastructure/fetch-model-catalog");
+// The copy is taken before mocking and put back in afterAll, so a later file
+// (fetch-model-catalog.test.ts) gets the real catalog in any order (#336).
+const realCatalog = { ...(await import("@/infrastructure/fetch-model-catalog")) };
 mock.module("@/infrastructure/fetch-model-catalog", () => ({
   ...realCatalog,
   fetchActiveModelCatalog: async () => [
@@ -198,6 +200,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  mock.module("@/infrastructure/fetch-model-catalog", () => realCatalog);
   const { vaultSessions } = await import("@/infrastructure/vault-session");
   vaultSessions().lock("local");
   for (const key of Object.keys(process.env)) {

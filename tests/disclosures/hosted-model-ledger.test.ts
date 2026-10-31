@@ -10,6 +10,13 @@ import {
   type ModelDisclosure,
   type RecordDisclosure,
 } from "@/infrastructure/disclosure-ledger";
+import {
+  type CheckFreeText,
+  freeTextCheckOf,
+  knownValueMatches,
+  lookupMatches,
+  variantCandidates,
+} from "@/infrastructure/free-text-check";
 
 import {
   createCompactHandler,
@@ -79,6 +86,7 @@ const hostedModel = (
   network: Network,
   record: RecordDisclosure,
   disclosure: ModelDisclosure,
+  checkText?: CheckFreeText,
 ) =>
   createOpenAI({
     baseURL: "https://models.invalid/v1",
@@ -88,6 +96,7 @@ const hostedModel = (
       modelId: "synthetic/model",
       disclosure,
       record,
+      ...(checkText === undefined ? {} : { checkText }),
     }),
   }).chat("synthetic/model");
 
@@ -122,6 +131,36 @@ describe("chat answer through a hosted model", () => {
         payloadBytes: Buffer.byteLength(network.requests[0] ?? "", "utf8"),
       },
     ]);
+  });
+
+  test("the question's text is checked and the row says what it held (#346)", async () => {
+    const network = fakeNetwork();
+    const book = ledger(network);
+    // A synthetic person: one imported VCF holding rs4988235, a body scan labelled "Demo body".
+    const stored = new Set(["hash.rs4988235"]);
+    const check: CheckFreeText = async (text) =>
+      freeTextCheckOf(
+        knownValueMatches(text, [{ kind: "body scan label", value: "Demo body" }]),
+        lookupMatches(
+          variantCandidates(text),
+          { rsid: (rsid) => [`hash.${rsid}`], site: (site) => [`hash.${site}`] },
+          { rsids: stored, sites: new Set() },
+        ),
+      );
+    await generateText({
+      model: hostedModel(network, book.record, CHAT, check),
+      prompt: "Does rs4988235 or rs1801133 explain the Demo body scan?",
+      maxRetries: 0,
+    });
+    expect(book.rows.map((row) => row.freeText)).toEqual([
+      {
+        matches: [
+          { kind: "rsID", count: 1 },
+          { kind: "body scan label", count: 1 },
+        ],
+      },
+    ]);
+    expect(JSON.stringify(book.rows)).not.toContain("rs4988235");
   });
 
   test("a failing ledger means nothing is sent and the call fails", async () => {

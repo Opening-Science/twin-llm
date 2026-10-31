@@ -81,7 +81,16 @@ describe("personal columns registry (#141)", () => {
       "scheduled_tasks",
       "onboarding_profiles",
       "disclosure_events",
+      "oura_connections",
+      "whoop_connections",
+      "google_health_connections",
+      "vitronic_connections",
     ]);
+    expect(personalTable("vitronic_connections").sealed).toEqual([
+      "apiTokenEnc",
+      "uploadSecretEnc",
+    ]);
+    expect(personalTable("oura_connections").owner).toBe(`"userId"`);
     expect(() => personalTable("audit_events")).toThrow();
   });
 

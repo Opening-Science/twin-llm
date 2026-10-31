@@ -90,6 +90,22 @@ describe("createDisclosureWriter (#140)", () => {
     expect(checkDisclosureChain(db.ledger as never).ok).toBe(true);
   });
 
+  test("a checked request stores the kinds and counts found (#346)", async () => {
+    const db = fakeDatabase();
+    const record = createRecordDisclosure(
+      createDisclosureWriter(db.client, () => cipher),
+    );
+    await record({ ...DISCLOSURE, freeText: { matches: [{ kind: "rsID", count: 1 }] } });
+    await record({ ...DISCLOSURE, freeText: { matches: [] } });
+    expect(
+      db.ledger.map((row) => [row.freeTextChecked, row.freeTextMatches ?? null]),
+    ).toEqual([
+      [true, [{ kind: "rsID", count: 1 }]],
+      [true, []],
+    ]);
+    expect(checkDisclosureChain(db.ledger as never).ok).toBe(true);
+  });
+
   test("the value references are sealed with the person's key, never stored in clear", async () => {
     const db = fakeDatabase();
     const record = createRecordDisclosure(

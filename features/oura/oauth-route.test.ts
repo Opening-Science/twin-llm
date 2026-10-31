@@ -79,6 +79,7 @@ const callbackDeps = (): OuraCallbackDeps => ({
   auditPersonalRead: async () => undefined,
   recordDisclosure: async () => ({ seq: 1n, auditSeq: 1n }),
   mayReadPersonal: () => true,
+  appendAudit: async () => undefined,
   logError: (message, errorName) => {
     logged.push([message, errorName]);
   },
@@ -170,6 +171,44 @@ describe("GET /api/oura/callback", () => {
     expect(new URL(res.headers.get("location") ?? "").searchParams.get("oura")).toBe(
       "error",
     );
+  });
+
+  test("locked: no ledger row, no exchange, nothing stored, a skip row (#341)", async () => {
+    jar.store.clear();
+    exchangeCalls = 0;
+    jar.set(OURA_OAUTH_STATE_COOKIE, MATCH_STATE, {
+      httpOnly: true,
+      secure: false,
+      sameSite: "lax",
+      maxAge: 600,
+      path: "/",
+    });
+    const tools: string[] = [];
+    let ledger = 0;
+    let stored = 0;
+    const res = await createOuraCallbackHandler({
+      ...callbackDeps(),
+      mayReadPersonal: () => false,
+      appendAudit: async (input) => {
+        tools.push(input.tool);
+      },
+      recordDisclosure: async () => {
+        ledger += 1;
+        return { seq: 1n, auditSeq: 1n };
+      },
+      persistOuraTokens: async () => {
+        stored += 1;
+      },
+    })(callbackRequest(`code=${SYNTHETIC_CODE}&state=${MATCH_STATE}`));
+    expect(new URL(res.headers.get("location") ?? "").searchParams.get("oura")).toBe(
+      "locked",
+    );
+    expect([exchangeCalls, ledger, stored, tools]).toEqual([
+      0,
+      0,
+      0,
+      ["vault.locked.skip.connect-oura"],
+    ]);
   });
 
   test("when the ledger cannot be written the code is never exchanged", async () => {

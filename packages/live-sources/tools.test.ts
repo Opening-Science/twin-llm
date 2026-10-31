@@ -185,7 +185,7 @@ describe("pubmed_search", () => {
       code: "LIVE_QUERY_REFUSED",
       reason: "number",
       error:
-        "Search terms may not contain numbers other than in gene symbols and rsIDs, so nothing was sent. Write the topic in words.",
+        "Search terms may not contain numbers other than in gene symbols, rsIDs and a short list of public topic names such as type 2 diabetes, so nothing was sent. Write the topic in words.",
     });
     expect(events).toEqual([]);
     expect(audits[0]?.result).toEqual({

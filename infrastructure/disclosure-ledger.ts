@@ -1,6 +1,7 @@
 import type { AppendInput } from "@/packages/audit/append";
 
 import type { LlmProvider } from "./data-mode-policy";
+import { type CheckFreeText, type FreeTextCheck, requestText } from "./free-text-check";
 
 /**
  * The disclosure ledger (#140, docs/privacy-design.md 2.5): what left this
@@ -82,6 +83,11 @@ export type Disclosure = Readonly<{
   threadId: string | null;
   /** True when the request carried synthetic data only. */
   synthetic: boolean;
+  /**
+   * What the check of the request's free text for stored values found
+   * (#346): kinds and counts only. Left out: the text was not checked.
+   */
+  freeText?: FreeTextCheck;
 }>;
 
 export type DisclosureReceipt = Readonly<{ seq: bigint; auditSeq: bigint }>;
@@ -129,6 +135,9 @@ export const disclosureAuditEvent = (disclosure: Disclosure): AppendInput => ({
     categories: [...disclosure.categories],
     bytes: disclosure.payloadBytes,
     synthetic: disclosure.synthetic,
+    ...(disclosure.freeText === undefined
+      ? {}
+      : { freeText: disclosure.freeText.matches.map((match) => ({ ...match })) }),
   },
   rowCount: disclosure.refs.length,
 });
@@ -171,7 +180,7 @@ export const createRecordDisclosure =
  */
 export type ModelDisclosure = Omit<
   Disclosure,
-  "kind" | "direction" | "recipient" | "target" | "payloadBytes"
+  "kind" | "direction" | "recipient" | "target" | "payloadBytes" | "freeText"
 >;
 
 /**
@@ -206,25 +215,49 @@ export const bodyBytes = (body: unknown): number | null => {
 };
 
 /**
- * A fetch that records each request before it is made. When `record`
+ * A fetch that records each request before it is made. `record` gets the
+ * body's size and the body itself (to check, never to store). When `record`
  * rejects, the request is not made and the fetch rejects with the
  * recorder's error.
  */
 export const ledgeredFetch =
   (
     fetchFn: typeof fetch,
-    record: (payloadBytes: number | null) => Promise<unknown>,
+    record: (payloadBytes: number | null, body: unknown) => Promise<unknown>,
   ): typeof fetch =>
   async (input, init) => {
-    await record(bodyBytes(init?.body));
+    await record(bodyBytes(init?.body), init?.body);
     return fetchFn(input, init);
   };
+
+/**
+ * Checks a request body's free text for stored values (#346). Undefined,
+ * which the ledger records as not checked, when there is no checker, the
+ * body cannot be read up front, or the check fails (a locked vault); the
+ * failure is logged by its name only. A match does not stop the send: the
+ * row records it.
+ */
+export const checkRequestText = async (
+  check: CheckFreeText | undefined,
+  body: unknown,
+): Promise<FreeTextCheck | undefined> => {
+  if (check === undefined) return undefined;
+  const text = requestText(body);
+  if (text === null) return undefined;
+  try {
+    return await check(text);
+  } catch (error) {
+    console.error("free text check failed", errorName(error));
+    return undefined;
+  }
+};
 
 /**
  * The fetch a model call sends through: the plain one for a model on this
  * machine (`recipient` null) or a call the caller states is not recorded,
  * else one that records a `hosted-model` row per HTTP request, with the
- * request's size, before it goes out.
+ * request's size and, given `checkText`, what the check of its free text
+ * found (#346), before it goes out.
  */
 export const modelCallFetch = (
   fetchFn: typeof fetch,
@@ -233,19 +266,22 @@ export const modelCallFetch = (
     modelId: string;
     disclosure: ModelDisclosure | UnrecordedModelCall;
     record: RecordDisclosure;
+    checkText?: CheckFreeText;
   }>,
 ): typeof fetch => {
   const { recipient, disclosure } = call;
   if (recipient === null || "notRecorded" in disclosure) return fetchFn;
-  return ledgeredFetch(fetchFn, (payloadBytes) =>
-    call.record({
+  return ledgeredFetch(fetchFn, async (payloadBytes, body) => {
+    const freeText = await checkRequestText(call.checkText, body);
+    return call.record({
       ...disclosure,
       kind: "hosted-model",
       recipient,
       target: call.modelId,
       payloadBytes,
-    }),
-  );
+      ...(freeText === undefined ? {} : { freeText }),
+    });
+  });
 };
 
 /**
@@ -284,6 +320,9 @@ export type LedgerEntry = Readonly<{
   payloadBytes: number | null;
   threadId: string | null;
   synthetic: boolean;
+  freeTextChecked: boolean;
+  /** Kinds and counts the free text check found; null when it did not run. */
+  freeTextMatches: unknown;
 }>;
 
 export type RecipientTotal = Readonly<{

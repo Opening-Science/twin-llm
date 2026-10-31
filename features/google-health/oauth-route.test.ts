@@ -67,6 +67,7 @@ const callbackDeps = (): GoogleHealthCallbackDeps => ({
   auditPersonalRead: async () => undefined,
   recordDisclosure: async () => ({ seq: 1n, auditSeq: 1n }),
   mayReadPersonal: () => true,
+  appendAudit: async () => undefined,
   logError: (message, errorName) => {
     logged.push([message, errorName]);
   },
