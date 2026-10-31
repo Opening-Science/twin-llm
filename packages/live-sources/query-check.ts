@@ -1,4 +1,5 @@
 import { QUERY_MAX_CHARS, QUERY_MIN_CHARS } from "./constants";
+import { removeAllowlistedTopics } from "./topic-allowlist";
 
 /**
  * The check every live lookup's terms pass before anything is recorded or
@@ -6,8 +7,9 @@ import { QUERY_MAX_CHARS, QUERY_MIN_CHARS } from "./constants";
  * has the person's data in front of it, so a value could slip into a query.
  * Nothing here can tell a personal value from a public one (the free-text
  * matcher of #112 was not built), so the check is a conservative pattern
- * filter: no digit outside a gene symbol or an rsID, no year or date, no
- * address or identifier, a small character set. A refused query is never
+ * filter: no digit outside a gene symbol, an rsID or a reviewed public topic
+ * name (`topic-allowlist.ts`, #349), no year or date, no address or
+ * identifier, a small character set. A refused query is never
  * sent, and the refusal says why in plain words.
  *
  * Pure: no I/O.
@@ -74,13 +76,14 @@ export const checkSearchTerms = (
   if (ADDRESS.test(query)) return { ok: false, reason: "identifier" };
   if (!ALLOWED_CHARACTERS.test(query)) return { ok: false, reason: "characters" };
   if (YEAR.test(query)) return { ok: false, reason: "date" };
-  const kinds = query
+  const topics = removeAllowlistedTopics(query);
+  const kinds = topics.rest
     .split(/[^A-Za-z0-9-]+/)
     .filter((token) => token.replace(/-/g, "") !== "")
     .map(kindOf);
   if (kinds.includes("number")) return { ok: false, reason: "number" };
   const terms: QueryTerms = {
-    words: kinds.filter((kind) => kind === "word").length,
+    words: topics.words + kinds.filter((kind) => kind === "word").length,
     geneSymbols: kinds.filter((kind) => kind === "gene").length,
     rsids: kinds.filter((kind) => kind === "rsid").length,
   };
@@ -115,7 +118,7 @@ export const QUERY_REFUSAL_SENTENCES: Readonly<Record<QueryRefusalReason, string
   identifier: "That looks like an address or an identifier, so nothing was sent.",
   date: "Search terms may not contain a year or a date, so nothing was sent.",
   number:
-    "Search terms may not contain numbers other than in gene symbols and rsIDs, so nothing was sent. Write the topic in words.",
+    "Search terms may not contain numbers other than in gene symbols, rsIDs and a short list of public topic names such as type 2 diabetes, so nothing was sent. Write the topic in words.",
   "genome-rsid":
     "An rsID is not sent while your genome is part of this chat, so a lookup cannot show which variants you carry. Ask about the gene instead.",
 };
