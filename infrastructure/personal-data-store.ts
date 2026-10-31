@@ -233,7 +233,7 @@ const toObservation = (
  * Fixed `findMany` / `groupBy` only, each capped by the caller's `take`.
  * Coded reads are held to LOINC; a series by name is held to rows with no code.
  * A genome VCF is not listed at all: its rows are read only under
- * `permitGenomeRequest`, never by these tools.
+ * `permitVcfVariantsRequest`, never by these tools.
  */
 /** Kinds the imported-data chat tools may list: every one but a genome file. */
 const CHAT_LISTED_KINDS: ImportKind[] = IMPORT_KINDS.filter(
@@ -455,7 +455,7 @@ export const variantIdCellMatches = (rsid: string) => [
  * that person like `importedDataReads`. One fixed `findMany`, capped by the
  * caller's `take`; the tool matches each record to its name again, so an ID
  * cell that only starts like an rsID is never returned as it. Callers check
- * `permitGenomeRequest` first; nothing here decides who may read.
+ * `permitVcfVariantsRequest` (#330) first; nothing here decides who may read.
  */
 export const genomeVariantReads = (
   userId: () => Promise<string | null>,

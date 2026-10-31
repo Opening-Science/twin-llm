@@ -242,7 +242,8 @@ SHA-256 is the zip's.
   the file by trying them all. They hold no genotype, position or rsID either.
 - **A genome VCF is genome data.** The import itself needs only personal mode, since no
   model sees anything at that step. Its rows are read only by a model on this machine,
-  under `permitGenomeRequest` ([genome.md](genome.md), privacy rules), never by the
+  under `permitVcfVariantsRequest` (personal mode and Ollama on loopback, #330;
+  [genome.md](genome.md#imported-vcf)), never by the
   imported-data chat tools, which do not even list a VCF dataset. Only
   `genome_variants` (#307) reads them, by rsID or `chrN:pos`, at most 50 names a call
   ([genome.md](genome.md#imported-vcf)). A save whose audit row cannot be written

@@ -48,9 +48,11 @@ import type { SessionScope } from "@/packages/query-tools/scope";
  * `genome_variants` (#307, `packages/query-tools/imported-variants.ts`) to an
  * imported VCF.
  *
- * They exist on a turn only when `genomeChatPermit()` holds (personal mode,
- * GENOME_SOURCE=ark, a local chat model, a local Carbon-X), and they refuse
- * again here if the scope is not personal. The model gives an rsID and
+ * The first two exist on a turn only when `genomeChatPermit()` holds (personal
+ * mode, GENOME_SOURCE=ark, a local chat model, a local Carbon-X), and they
+ * refuse again here if the scope is not personal. `genome_variants` has its
+ * own, smaller permit (`vcfVariantsChatPermit()`, #330: personal mode and a
+ * local chat model) and its own deps (`createGenomeVariantTools`). The model gives an rsID and
  * nothing else; the server reads the stored report, builds the windows from
  * the public GRCh38 reference, and asks Carbon-X. Every call writes one audit
  * row with the rsID, the report id and the outcome, never a genotype, an
@@ -69,12 +71,6 @@ export type GenomeToolDeps = Readonly<{
   appendAudit: (input: AppendInput) => Promise<unknown>;
   /** Bases each side of the site; the reference package defaults to 256. */
   flank?: number;
-  /**
-   * Ports for `genome_variants` (#307), over the person's imported VCF. Built
-   * with the other genome deps, so it exists only when the genome policy
-   * allowed this turn; the tool asks the policy again on every call.
-   */
-  variants?: GenomeVariantsDeps;
 }>;
 
 export type GenomeRefusal = Readonly<{ code: string; error: string }>;
@@ -283,16 +279,18 @@ export const runDnaAsk = async (
 
 const [REPORT_DEFINITION, DNA_ASK_DEFINITION] = GENOME_TOOL_DEFINITIONS;
 
-const variantTools = (deps: GenomeVariantsDeps | undefined): ToolSet =>
-  deps === undefined
-    ? {}
-    : {
-        [GENOME_VARIANTS_TOOL]: tool({
-          description: GENOME_VARIANTS_TOOL_DEFINITION.description,
-          inputSchema: modelInputSchema(genomeVariantsInput),
-          execute: async (input) => runGenomeVariants(deps, input),
-        }),
-      };
+/**
+ * `genome_variants` (#307) over the person's imported VCF. The chat route
+ * builds its deps only when `vcfVariantsChatPermit()` holds (#330), and the
+ * tool asks that permit again on every call.
+ */
+export const createGenomeVariantTools = (deps: GenomeVariantsDeps): ToolSet => ({
+  [GENOME_VARIANTS_TOOL]: tool({
+    description: GENOME_VARIANTS_TOOL_DEFINITION.description,
+    inputSchema: modelInputSchema(genomeVariantsInput),
+    execute: async (input) => runGenomeVariants(deps, input),
+  }),
+});
 
 export const createGenomeTools = (deps: GenomeToolDeps) => ({
   [GENOME_REPORT_TOOL]: tool({
@@ -305,5 +303,4 @@ export const createGenomeTools = (deps: GenomeToolDeps) => ({
     inputSchema: modelInputSchema(dnaAskInput),
     execute: async (input): Promise<DnaAskOutput> => runDnaAsk(deps, input),
   }),
-  ...variantTools(deps.variants),
 });

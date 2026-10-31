@@ -44,7 +44,9 @@ A skill that calls a genome tool (`genome_report`, `dna_ask`, `genome_variants`)
 the genome policy never lets a genotype reach a hosted model, the consented pilot
 included ([genome.md](genome.md)). `/genome` lists `genome_variants` (#307) with its
 source `vcf-variants`, to look up a named variant from an imported VCF that is not in
-the Ark report; its eval cases cover a lookup and synthetic mode.
+the Ark report; its eval cases cover a lookup, synthetic mode and a VCF-only setup
+(`genomeSource: none`), where `genome_variants` runs and `genome_report` is refused
+(#330).
 
 ## Eval cases
 
@@ -90,8 +92,9 @@ Refusal codes:
 - `tool-not-allowed`: the tool is not in `tools`.
 - `invalid-tool-input`: the query tool's own schema rejects the input.
 - `view-not-allowed`: the view kind is not in `views`.
-- `genome-not-permitted`: a genome tool (`genome_variants` included) outside
-  `dataMode: personal` with `genomeSource: ark` on `ollama`.
+- `genome-not-permitted`: `genome_report` or `dna_ask` outside `dataMode: personal`
+  with `genomeSource: ark` on `ollama`, or `genome_variants` outside
+  `dataMode: personal` on `ollama` (#330; it needs no Ark).
 
 The first three refuse the whole request and nothing runs. Cases may only name subjects
 from the synthetic question set (`evaluation/questions.v1.json`).
