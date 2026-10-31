@@ -3,6 +3,13 @@ import "server-only";
 import { getOuraData, type SupportedScope } from "@open-twin/provider-oura";
 
 import { database } from "@/infrastructure/database";
+import {
+  type FieldCipher,
+  openJson,
+  sealJson,
+  sealNullableJson,
+} from "@/infrastructure/field-cipher";
+import { cipherForUser } from "@/infrastructure/field-cipher-runtime";
 import { ouraEnv } from "@/infrastructure/env";
 import { HostOuraTokenHandler } from "@/infrastructure/open-twin-adapters/oura";
 import { buildOuraFhirBundle } from "@/infrastructure/open-twin-adapters/oura-bundle";
@@ -168,13 +175,23 @@ export const syncOuraForUser = async (
       data: { lastSyncAt: new Date() },
     });
 
+    // Sealed with the person's keys (#141); refused while their vault is locked.
+    const cipher = await cipherForUser(userId);
+    const id = crypto.randomUUID();
     await database().ouraSnapshot.create({
       data: {
+        id,
         userId,
         startDate,
         endDate,
-        summary,
-        fhirBundle: fhirBundle as object | undefined,
+        summary: sealJson(cipher, "oura_snapshots", "summary", id, summary),
+        fhirBundle: sealNullableJson(
+          cipher,
+          "oura_snapshots",
+          "fhirBundle",
+          id,
+          fhirBundle ?? null,
+        ),
       },
     });
   };
@@ -184,17 +201,26 @@ export const syncOuraForUser = async (
 
 export const getLatestOuraSummary = async (
   userId: string,
-  ports?: { readonly database?: typeof database },
+  ports?: {
+    readonly database?: typeof database;
+    readonly cipher?: (userId: string) => Promise<FieldCipher>;
+  },
 ): Promise<OuraSummary | null> => {
   const db = ports?.database ?? database;
   const snap = await db().ouraSnapshot.findFirst({
     where: { userId },
     orderBy: { syncedAt: "desc" },
-    select: { summary: true },
+    select: { id: true, summary: true },
   });
 
   if (!snap) return null;
-  return snap.summary as unknown as OuraSummary;
+  return openJson(
+    await (ports?.cipher ?? cipherForUser)(userId),
+    "oura_snapshots",
+    "summary",
+    snap.id,
+    snap.summary,
+  ) as OuraSummary;
 };
 
 export const getOuraConnectionStatus = async (userId: string) => {

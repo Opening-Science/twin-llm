@@ -1,11 +1,13 @@
 import "server-only";
 
 import { database } from "@/infrastructure/database";
+import { cipherForUser } from "@/infrastructure/field-cipher-runtime";
 import {
   isGenomeAuditTool,
   LOCAL_ONLY_AUDIT_TOOLS,
   toolPartsUseGenome,
 } from "@/infrastructure/genome-thread-policy";
+import { openResponse } from "@/infrastructure/thread-fields";
 
 import type { GenomeThread } from "./start-answer";
 
@@ -24,8 +26,9 @@ export const loadGenomeThread = async (turnId: string): Promise<GenomeThread> =>
       threadId: true,
       thread: {
         select: {
+          userId: true,
           turns: {
-            select: { id: true, responses: { select: { toolParts: true } } },
+            select: { id: true, responses: { select: { id: true, toolParts: true } } },
           },
         },
       },
@@ -34,8 +37,13 @@ export const loadGenomeThread = async (turnId: string): Promise<GenomeThread> =>
   if (turn === null) throw new Error("genome thread check: turn not found");
 
   const turns = turn.thread.turns;
+  const cipher = await cipherForUser(turn.thread.userId);
   if (
-    turns.some((each) => each.responses.some((row) => toolPartsUseGenome(row.toolParts)))
+    turns.some((each) =>
+      each.responses.some((row) =>
+        toolPartsUseGenome(openResponse(cipher, row).toolParts),
+      ),
+    )
   ) {
     return { threadId: turn.threadId, usedGenome: true };
   }

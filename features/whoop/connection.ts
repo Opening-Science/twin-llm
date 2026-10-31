@@ -9,6 +9,13 @@ import {
 import type { Bundle } from "fhir/r4";
 
 import { database } from "@/infrastructure/database";
+import {
+  type FieldCipher,
+  openJson,
+  sealJson,
+  sealNullableJson,
+} from "@/infrastructure/field-cipher";
+import { cipherForUser } from "@/infrastructure/field-cipher-runtime";
 import { whoopEnv } from "@/infrastructure/env";
 import {
   buildWhoopFhirBundle,
@@ -128,13 +135,23 @@ export const syncWhoopForUser = async (
       data: { lastSyncAt: new Date() },
     });
 
+    // Sealed with the person's keys (#141); refused while their vault is locked.
+    const cipher = await cipherForUser(userId);
+    const id = crypto.randomUUID();
     await database().whoopSnapshot.create({
       data: {
+        id,
         userId,
         startDate,
         endDate,
-        summary,
-        fhirBundle: fhirBundle as object | undefined,
+        summary: sealJson(cipher, "whoop_snapshots", "summary", id, summary),
+        fhirBundle: sealNullableJson(
+          cipher,
+          "whoop_snapshots",
+          "fhirBundle",
+          id,
+          fhirBundle ?? null,
+        ),
       },
     });
   };
@@ -144,15 +161,22 @@ export const syncWhoopForUser = async (
 
 export const getLatestWhoopSummary = async (
   userId: string,
+  ports?: { readonly cipher?: (userId: string) => Promise<FieldCipher> },
 ): Promise<WhoopSummary | null> => {
   const snap = await database().whoopSnapshot.findFirst({
     where: { userId },
     orderBy: { syncedAt: "desc" },
-    select: { summary: true },
+    select: { id: true, summary: true },
   });
 
   if (!snap) return null;
-  return snap.summary as unknown as WhoopSummary;
+  return openJson(
+    await (ports?.cipher ?? cipherForUser)(userId),
+    "whoop_snapshots",
+    "summary",
+    snap.id,
+    snap.summary,
+  ) as WhoopSummary;
 };
 
 export const getWhoopConnectionStatus = async (userId: string) => {

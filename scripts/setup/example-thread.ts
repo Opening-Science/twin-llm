@@ -189,7 +189,7 @@ export const insertExampleThread = async (
          "reasoningText", attribution, "responseDocument", "toolParts",
          "timeToFirstTokenMs", "tokensPerSecond", "inputTokens", "outputTokens", "totalTokens",
          "costUsd", "createdAt", "completedAt")
-       values ($1, $2, $3, $4, 'COMPLETE', $5, 0, $6, $7::text::jsonb, $8::text::jsonb, $9::text::jsonb,
+       values ($1, $2, $3, $4, 'COMPLETE', $5, 0, $6, $7::text, $8::text, $9::text,
          $10, $11, $12, $13, $14, 0, $15, $15)`,
       [
         newId(),

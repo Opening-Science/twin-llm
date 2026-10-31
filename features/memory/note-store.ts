@@ -1,6 +1,8 @@
 import "server-only";
 
 import { database } from "@/infrastructure/database";
+import { type FieldCipher, openTexts, sealJson } from "@/infrastructure/field-cipher";
+import { cipherForUser } from "@/infrastructure/field-cipher-runtime";
 import type { DataMode } from "@/infrastructure/data-mode-policy";
 import type { NotePermit, TwinNote, TwinNoteFields } from "@/infrastructure/twin-notes";
 
@@ -9,8 +11,11 @@ import type { NewNote } from "./save-note-handler";
 /**
  * Where twin notes (#43) are kept. Every read and write filters on the
  * owner; nobody else can list, load, change or delete them. The audit rows
- * are written by the callers, around these calls.
+ * are written by the callers, around these calls. Title and lists are sealed
+ * with the owner's keys in personal mode (#141).
  */
+
+const TABLE = "twin_notes";
 
 const FIELDS = {
   id: true,
@@ -26,9 +31,9 @@ const FIELDS = {
 type Row = Readonly<{
   id: string;
   title: string;
-  topics: string[];
-  measures: string[];
-  openQuestions: string[];
+  topics: string;
+  measures: string;
+  openQuestions: string;
   dataMode: string;
   permit: string;
   createdAt: Date;
@@ -38,31 +43,45 @@ const DATA_MODES: readonly DataMode[] = ["synthetic", "personal"];
 const PERMITS: readonly NotePermit[] = ["synthetic", "personal", "local"];
 
 /** A stored row as a note; one with an unknown mode or permit is never loaded. */
-const toNote = (row: Row): TwinNote | null => {
+const toNote = (cipher: FieldCipher, row: Row): TwinNote | null => {
   const dataMode = DATA_MODES.find((mode) => mode === row.dataMode);
   const permit = PERMITS.find((each) => each === row.permit);
   return dataMode === undefined || permit === undefined
     ? null
     : {
         id: row.id,
-        title: row.title,
-        topics: row.topics,
-        measures: row.measures,
-        openQuestions: row.openQuestions,
+        title: cipher.openText(TABLE, "title", row.id, row.title),
+        topics: openTexts(cipher, TABLE, "topics", row.id, row.topics),
+        measures: openTexts(cipher, TABLE, "measures", row.id, row.measures),
+        openQuestions: openTexts(
+          cipher,
+          TABLE,
+          "open_questions",
+          row.id,
+          row.openQuestions,
+        ),
         dataMode,
         permit,
         createdAt: row.createdAt.toISOString(),
       };
 };
 
-const notes = (rows: readonly Row[]): readonly TwinNote[] =>
+const notes = (cipher: FieldCipher, rows: readonly Row[]): readonly TwinNote[] =>
   rows.flatMap((row) => {
-    const note = toNote(row);
+    const note = toNote(cipher, row);
     return note === null ? [] : [note];
   });
 
+const sealedFields = (cipher: FieldCipher, id: string, note: TwinNoteFields) => ({
+  title: cipher.sealText(TABLE, "title", id, note.title),
+  topics: sealJson(cipher, TABLE, "topics", id, note.topics),
+  measures: sealJson(cipher, TABLE, "measures", id, note.measures),
+  openQuestions: sealJson(cipher, TABLE, "open_questions", id, note.openQuestions),
+});
+
 export const listNotes = async (userId: string): Promise<readonly TwinNote[]> =>
   notes(
+    await cipherForUser(userId),
     await database().twinNote.findMany({
       where: { userId },
       select: FIELDS,
@@ -74,15 +93,15 @@ export const listNotes = async (userId: string): Promise<readonly TwinNote[]> =>
 export const countNotes = async (userId: string): Promise<number> =>
   database().twinNote.count({ where: { userId } });
 
-export const createNote = async (userId: string, note: NewNote): Promise<string> =>
-  (
+export const createNote = async (userId: string, note: NewNote): Promise<string> => {
+  const cipher = await cipherForUser(userId);
+  const id = crypto.randomUUID();
+  return (
     await database().twinNote.create({
       data: {
+        id,
         userId,
-        title: note.title,
-        topics: [...note.topics],
-        measures: [...note.measures],
-        openQuestions: [...note.openQuestions],
+        ...sealedFields(cipher, id, note),
         dataMode: note.dataMode,
         permit: note.permit,
         sourceThreadId: note.sourceThreadId,
@@ -90,6 +109,7 @@ export const createNote = async (userId: string, note: NewNote): Promise<string>
       select: { id: true },
     })
   ).id;
+};
 
 /** Changes only the owner's row; false when there is none. Keeps the permit. */
 export const updateNote = async (
@@ -100,12 +120,7 @@ export const updateNote = async (
   (
     await database().twinNote.updateMany({
       where: { id, userId },
-      data: {
-        title: note.title,
-        topics: [...note.topics],
-        measures: [...note.measures],
-        openQuestions: [...note.openQuestions],
-      },
+      data: sealedFields(await cipherForUser(userId), id, note),
     })
   ).count === 1;
 
@@ -149,6 +164,7 @@ const readNotesBeforeThread = async (
   });
   if (turn === null || turn.thread.userId !== userId) return [];
   return notes(
+    await cipherForUser(userId),
     await database().twinNote.findMany({
       where: { userId, createdAt: { lt: turn.thread.createdAt } },
       select: FIELDS,

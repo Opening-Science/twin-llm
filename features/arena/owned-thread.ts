@@ -39,7 +39,11 @@ export type ThreadReads = Readonly<{
   /** The signed-in actor (the local actor when auth is off), or null. */
   actorId: () => Promise<string | null>;
   appUserIdFor: (actorId: string) => Promise<string | null>;
-  findThread: (threadId: string) => Promise<StoredThread | null>;
+  /**
+   * The thread with its sealed columns opened (#141). The viewer is passed so
+   * a thread of someone else is never opened, only refused.
+   */
+  findThread: (threadId: string, viewerId: string) => Promise<StoredThread | null>;
   /** The skill each turn ran under, from its `skill.<name>` audit rows. */
   skillsOfTurns: (turnIds: readonly string[]) => Promise<ReadonlyMap<string, string>>;
 }>;
@@ -82,7 +86,7 @@ export const loadOwnedThread = async (
   const viewerId = await reads.appUserIdFor(actorId);
   if (!viewerId) return null;
 
-  const thread = await reads.findThread(threadId);
+  const thread = await reads.findThread(threadId, viewerId);
   if (!thread || thread.userId !== viewerId) return null;
 
   const skills = await reads.skillsOfTurns(thread.turns.map((turn) => turn.id));

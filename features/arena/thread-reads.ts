@@ -5,6 +5,12 @@ import { cache } from "react";
 import { resolveActorId } from "@/infrastructure/auth-actor";
 import { findAppUserId } from "@/infrastructure/current-user";
 import { database } from "@/infrastructure/database";
+import { cipherForUser } from "@/infrastructure/field-cipher-runtime";
+import {
+  openPrompt,
+  openResponse,
+  openThreadTitle,
+} from "@/infrastructure/thread-fields";
 import { skillOfAuditTool } from "@/infrastructure/skill-gate";
 
 import {
@@ -14,8 +20,29 @@ import {
   type ThreadReads,
 } from "./owned-thread";
 
-/** The real reads behind `loadOwnedThread`: the actor, their user row, and the thread. */
-const findThread = (threadId: string): Promise<StoredThread | null> =>
+/**
+ * The real reads behind `loadOwnedThread`: the actor, their user row, and the
+ * thread. A thread that is not the viewer's is never opened.
+ */
+const findThread = async (
+  threadId: string,
+  viewerId: string,
+): Promise<StoredThread | null> => {
+  const row = await readThread(threadId);
+  if (row === null || row.userId !== viewerId) return null;
+  const cipher = await cipherForUser(row.userId);
+  return {
+    ...row,
+    title: openThreadTitle(cipher, row.id, row.title),
+    turns: row.turns.map((turn) => ({
+      ...turn,
+      prompt: openPrompt(cipher, turn.id, turn.prompt),
+      responses: turn.responses.map((response) => openResponse(cipher, response)),
+    })),
+  };
+};
+
+const readThread = (threadId: string) =>
   database().thread.findUnique({
     where: { id: threadId },
     select: {

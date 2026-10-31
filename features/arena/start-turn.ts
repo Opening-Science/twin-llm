@@ -6,6 +6,14 @@ import { resolveActorId } from "@/infrastructure/auth-actor";
 import { vaultRefusalForAction } from "@/infrastructure/vault-runtime";
 import { ensureAppUser } from "@/infrastructure/current-user";
 import { database } from "@/infrastructure/database";
+import { type FieldCipher, newRowId } from "@/infrastructure/field-cipher";
+import { cipherForUser } from "@/infrastructure/field-cipher-runtime";
+import {
+  openThreadTitle,
+  RESPONSES,
+  THREADS,
+  TURNS,
+} from "@/infrastructure/thread-fields";
 import { serverEnv } from "@/infrastructure/env";
 import { fetchChatCatalog } from "@/infrastructure/fetch-model-catalog";
 
@@ -44,79 +52,85 @@ export type StartedTurn = Readonly<{
 
 export type StartTurnResult = StartedTurn | Readonly<{ ok: false; error: string }>;
 
-/** The turn and its empty answer rows, as a nested create. */
-const newTurn = (plan: TurnPlan) => ({
-  prompt: plan.prompt,
-  responses: {
-    createMany: {
-      data: plan.models.map(({ id, name }, position) => ({
-        modelId: id,
-        modelName: name,
-        position,
-      })),
+/**
+ * The turn and its empty answer rows, as a nested create. Ids are set here
+ * because each is part of its sealed values' context (#141); the empty
+ * answer text is sealed too, so no personal row holds a plain value.
+ */
+const newTurn = (cipher: FieldCipher, plan: TurnPlan) => {
+  const turnId = newRowId();
+  const responses = plan.models.map(({ id, name }, position) => {
+    const rowId = newRowId();
+    return {
+      id: rowId,
+      modelId: id,
+      modelName: name,
+      position,
+      text: cipher.sealText(RESPONSES, "text", rowId, ""),
+    };
+  });
+  return {
+    turnId,
+    responses: responses.map(({ id, modelId, modelName }) => ({
+      id,
+      modelId,
+      modelName,
+    })),
+    create: {
+      id: turnId,
+      prompt: cipher.sealText(TURNS, "prompt", turnId, plan.prompt),
+      responses: { createMany: { data: responses } },
     },
-  },
-});
-
-/** Read back: the newest turn of the thread and its rows. */
-const turnReadBack = {
-  id: true,
-  title: true,
-  turns: {
-    orderBy: { createdAt: "desc" },
-    take: 1,
-    select: {
-      id: true,
-      responses: { select: { id: true, modelId: true, modelName: true } },
-    },
-  },
-} as const;
+  };
+};
 
 const writeTurn = async (
   ownerId: string,
   threadId: string | null,
   plan: TurnPlan,
-): Promise<StartTurnResult> =>
-  database().$transaction(async (db) => {
+): Promise<StartTurnResult> => {
+  const cipher = await cipherForUser(ownerId);
+  const turn = newTurn(cipher, plan);
+  return database().$transaction(async (db) => {
+    let thread: Readonly<{ id: string; title: string }>;
     if (threadId !== null) {
       const existing = await db.thread.findUnique({
         where: { id: threadId },
-        select: { userId: true },
+        select: { userId: true, title: true },
       });
       if (existing === null) return { ok: false, error: TURN_COPY.threadGone };
       if (existing.userId !== ownerId)
         return { ok: false, error: TURN_COPY.notYourThread };
+      await db.thread.update({
+        where: { id: threadId },
+        data: { updatedAt: new Date(), turns: { create: turn.create } },
+        select: { id: true },
+      });
+      thread = { id: threadId, title: openThreadTitle(cipher, threadId, existing.title) };
+    } else {
+      const id = newRowId();
+      await db.thread.create({
+        data: {
+          id,
+          userId: ownerId,
+          title: cipher.sealText(THREADS, "title", id, plan.title),
+          turns: { create: turn.create },
+        },
+        select: { id: true },
+      });
+      thread = { id, title: plan.title };
     }
-
-    const thread =
-      threadId === null
-        ? await db.thread.create({
-            data: {
-              userId: ownerId,
-              title: plan.title,
-              turns: { create: newTurn(plan) },
-            },
-            select: turnReadBack,
-          })
-        : await db.thread.update({
-            where: { id: threadId },
-            data: { updatedAt: new Date(), turns: { create: newTurn(plan) } },
-            select: turnReadBack,
-          });
-
-    const [turn] = thread.turns;
-    if (!turn) throw new Error("the new turn was not read back");
-    // Put the rows in the order the models were chosen, which is the order
+    // The rows are in the order the models were chosen, which is the order
     // the columns appear in.
-    const byModel = new Map(turn.responses.map((row) => [row.modelId, row]));
     return {
       ok: true,
       threadId: thread.id,
       threadTitle: thread.title,
-      turnId: turn.id,
-      responses: plan.models.flatMap(({ id }) => byModel.get(id) ?? []),
+      turnId: turn.turnId,
+      responses: turn.responses,
     };
   });
+};
 
 export const startTurn = async (input: StartTurnInput): Promise<StartTurnResult> => {
   const actorId = await resolveActorId();

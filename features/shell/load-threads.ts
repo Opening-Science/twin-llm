@@ -3,7 +3,9 @@ import "server-only";
 import { unstable_rethrow } from "next/navigation";
 
 import { database } from "@/infrastructure/database";
+import { cipherForUser } from "@/infrastructure/field-cipher-runtime";
 import { readableTitle } from "@/infrastructure/readable-title";
+import { openThreadTitle } from "@/infrastructure/thread-fields";
 
 import { groupThreads, type ThreadGroup } from "./thread-list";
 
@@ -27,10 +29,11 @@ export const listThreadHistory = async (
     },
   });
 
+  const cipher = await cipherForUser(userId);
   return groupThreads(
     threads.map((thread) => ({
       id: thread.id,
-      title: readableTitle(thread.title),
+      title: readableTitle(openThreadTitle(cipher, thread.id, thread.title)),
       updatedAt: thread.updatedAt,
       modelCount: new Set(
         thread.turns.flatMap((turn) =>

@@ -34,9 +34,10 @@ const snapshotRow = {
   viatarId: 4,
   glbSha256: "aa".repeat(32),
   syncedAt: new Date("2026-01-01T00:00:00.000Z"),
-  summary: SUMMARY,
-  markers: [{ at: "synthetic" }],
-  measures: [{ value: 99 }],
+  // Text columns since #141; a synthetic install stores the JSON as it is.
+  summary: JSON.stringify(SUMMARY),
+  markers: JSON.stringify([{ at: "synthetic" }]),
+  measures: JSON.stringify([{ value: 99 }]),
   presetName: "Default",
   subjectId: SUBJECT_ID,
 };

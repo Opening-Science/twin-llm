@@ -8,6 +8,8 @@ import {
 } from "@/packages/ark-adapter/rsid-genotypes";
 
 import { database } from "./database";
+import { type FieldCipher, openJson, plainCipher, sealJson } from "./field-cipher";
+import { cipherForActor, cipherForUser } from "./field-cipher-runtime";
 
 /**
  * The released Ark report, stored locally so the dashboard and the genome
@@ -16,7 +18,16 @@ import { database } from "./database";
  * Two features read it (the Digital Twin dashboard writes and shows it; chat
  * reads it for `genome_report` and `dna_ask`), so it lives here. Callers gate
  * on the genome policy first; this module only reads and writes rows.
+ *
+ * A person's own report is sealed with their keys (#141): `rows` and
+ * `report` open only while their vault is unlocked. A synthetic subject's
+ * report is public by design and stays plain.
  */
+
+const TABLE = "genome_reports";
+
+const parseRows = (cipher: FieldCipher, id: string, stored: string) =>
+  rowsSchema.safeParse(openJson(cipher, TABLE, "rows", id, stored));
 
 export type StoredGenomeReport = Readonly<{
   id: string;
@@ -48,7 +59,7 @@ export const latestGenomeReport = async (
     select: { id: true, app: true, arkBuild: true, rows: true, releasedAt: true },
   });
   if (row === null) return null;
-  const rows = rowsSchema.safeParse(row.rows);
+  const rows = parseRows(cipherForActor(clerkId), row.id, row.rows);
   if (!rows.success) {
     console.error("[genome] stored report rows do not parse", row.id);
     return null;
@@ -72,13 +83,16 @@ export type NewGenomeReport = Readonly<{
 export const saveGenomeReport = async (
   input: NewGenomeReport,
 ): Promise<StoredGenomeReport> => {
+  const cipher = await cipherForUser(input.userId);
+  const id = crypto.randomUUID();
   const row = await database().genomeReport.create({
     data: {
+      id,
       userId: input.userId,
       app: RSID_GENOTYPES_APP,
       arkBuild: input.arkBuild,
-      rows: input.rows.map((entry) => ({ ...entry })),
-      report: input.report,
+      rows: sealJson(cipher, TABLE, "rows", id, input.rows),
+      report: cipher.sealText(TABLE, "report", id, input.report),
     },
     select: { id: true, app: true, arkBuild: true, releasedAt: true },
   });
@@ -127,7 +141,7 @@ export const replaceSyntheticGenomeReport = async (
         isSynthetic: true,
         app: RSID_GENOTYPES_APP,
         arkBuild: input.arkBuild,
-        rows: input.rows.map((entry) => ({ ...entry })),
+        rows: sealJson(plainCipher, TABLE, "rows", input.subjectRef, input.rows),
         report: input.report,
       },
       select: { id: true },
