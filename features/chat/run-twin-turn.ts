@@ -62,6 +62,11 @@ export type TwinTurnDeps = Readonly<{
   uiContext?: UiContext | null;
   /** The agent this turn answers as (#218); its role line joins the system prompt. */
   agent?: Readonly<{ name: string; role: string }> | null;
+  /**
+   * Eval harness only (#302): rows read on the server for a turn with no
+   * tools, pasted into the system prompt as a data block.
+   */
+  pastedData?: string | null;
   /** The person's twin notes block (#43), already permitted and audited by the caller. */
   twinNotes?: string | null;
   /** Audit rows for this turn's session, read after the model finishes. */
@@ -116,7 +121,7 @@ export const lastStepWithoutTools = (stepNumber: number) =>
 /** What the system prompt of a turn is built from. */
 export type TwinTurnPromptDeps = Pick<
   TwinTurnDeps,
-  "offeredTools" | "mode" | "skill" | "uiContext" | "agent" | "twinNotes"
+  "offeredTools" | "mode" | "skill" | "uiContext" | "agent" | "pastedData" | "twinNotes"
 >;
 
 /** The turn's system prompt, the one `runTwinTurn` sends. */
@@ -134,6 +139,7 @@ export const twinTurnSystem = (
     skill: deps.skill ?? null,
     uiContext: deps.uiContext ?? null,
     agent: deps.agent ?? null,
+    pastedData: deps.pastedData ?? null,
     twinNotes: deps.twinNotes ?? null,
   });
 

@@ -623,6 +623,101 @@ in both runs.
 - S7 and S7b were used to find this gap; S7h was not looked at before these
   runs, so it is the fairer comparison.
 
+## Tools vs data in the prompt
+
+Issue #302 adds `--arm context` (`docs/evaluation/harness.md`, "Data in the
+prompt"): for each item the server runs the answer key's calls through the
+same audited query tools, pastes their results into the system prompt as a
+`<data>` block, and the model gets no tools. This is the "oracle paste": the
+model sees exactly what the key reads, so the arm separates choosing and
+calling a tool from reading its result. Items with no key entries (S3, S4,
+S5 and the S6 probes keyed by no call) get "No rows were read for this
+question".
+
+Run on 2026-10-30 at git `7a21d01`, the same throwaway database on
+127.0.0.1:5434 (guideline catalogue loaded), Ollama `qwen3:4b` and `qwen3:8b`
+(Q4_K_M), one model at a time on the GPU, v1, all 130 items. No errors; S4
+skipped (`MISSING_ENV`) as before. Seven qwen3:4b lines (Q-S1-01, Q-S5-01 and
+Q-S6-01 with their repeats) came from the cache, recorded minutes earlier by
+a smoke run at the same commit; every other line was a fresh call. No block
+reached the cap of 6000 estimated tokens, so no rows were cut (the largest
+v1 results are timelines of a few dozen rows).
+
+| Run id                        | Model             | Arm     | Lines | Errors | Total p50 |
+| ----------------------------- | ----------------- | ------- | ----- | ------ | --------- |
+| `2026-10-30-qwen3-4b-v1`      | `ollama:qwen3:4b` | tools   | 146   | 0      | 29.9 s    |
+| `2026-10-30-qwen3-4b-v1-ctx`  | `ollama:qwen3:4b` | context | 146   | 0      | 13.9 s    |
+| `2026-10-30-qwen3-8b-v1-r279` | `ollama:qwen3:8b` | tools   | 146   | 0      | 4.3 s     |
+| `2026-10-30-qwen3-8b-v1-ctx`  | `ollama:qwen3:8b` | context | 146   | 0      | 2.8 s     |
+
+The tools-arm runs are not from the same commit. qwen3:4b is the first run
+(git `7ed2d51`, before the #274 decline line and with no guideline catalogue);
+qwen3:8b is the base run of "Agents vs base model" (git `e835614`, after #272
+and #274), the closest to this commit. Both were scored again with the
+current scorers (no model, no database), with the same tallies as their
+reports. So the qwen3:4b pair also differs in the decline line, which moves
+S5 and S6.
+
+Passes over scored answers, Wilson 95 % interval, all scenarios.
+
+| Criterion                      | qwen3:4b tools    | qwen3:4b context   | qwen3:8b tools    | qwen3:8b context   |
+| ------------------------------ | ----------------- | ------------------ | ----------------- | ------------------ |
+| correctness                    | 28/102 (20–37 %)  | 52/85 (51–71 %)    | 25/104 (17–33 %)  | 14/70 (12–31 %)    |
+| correctness, human share       | 11 %              | 25 %               | 9 %               | 39 %               |
+| correctness, S1 and S2         | 11/57             | 34/39              | 3/59              | 7/23               |
+| hallucination                  | 71/83 (76–92 %)   | 89/92 (91–99 %)    | 117/126 (87–96 %) | 122/125 (93–99 %)  |
+| hallucination, human share     | 38 %              | 31 %               | 6 %               | 7 %                |
+| clinical caution               | 82/120 (60–76 %)  | 98/120 (74–88 %)   | 61/120 (42–60 %)  | 80/120 (58–74 %)   |
+| readability                    | 108/130 (76–89 %) | 86/133 (56–72 %)   | 96/132 (65–80 %)  | 103/129 (72–86 %)  |
+| consistency                    | 1/7 (3–51 %)      | 4/7 (25–84 %)      | 4/7 (25–84 %)     | 4/7 (25–84 %)      |
+| query safety (\*)              | 82/118 (61–77 %)  | 117/118 (95–100 %) | 58/118 (40–58 %)  | 118/118 (97–100 %) |
+| privacy (\*)                   | 17/22 (57–90 %)   | 22/22 (85–100 %)   | 19/22 (67–95 %)   | 22/22 (85–100 %)   |
+| call accuracy, all calls right | 32/96             | n/a                | 26/96             | n/a                |
+| code substitution lines        | 3                 | 0                  | 1                 | 0                  |
+| unsourced numbers (answers)    | 401 (48)          | 293 (43)           | 3 (3)             | 21 (10)            |
+| value without a tool           | 0/120             | 0/120              | 0/120             | 0/120              |
+| value not in the rows          | 0/120             | 1/120              | 0/120             | 2/120              |
+
+(\*) Not comparable: in the context arm query safety and privacy check only
+the reply (SQL, model calls, declines, wearable keys), since the server made
+the reads.
+
+What changes, per model:
+
+- **qwen3:4b reads the block well.** With the rows in front of it, S1 and S2
+  correctness goes from 11 of 57 to 34 of 39 scored lines. In the tools arm
+  its main error was the call, not the reading: 46 of 96 keyed answers named
+  an invented code. The higher human share (25 %) means more keyed numbers
+  went unplaced, mostly `n`, the count of readings, which the reply often
+  leaves out. It still writes its reasoning before the headings in both arms,
+  so replies stay long and readability falls (sentences over 25 words).
+- **qwen3:8b declines more with the block.** It answered 30 of 37 S6 lines
+  and 13 of 14 S3 lines with `REFUSE:` (9 and 4 in the tools arm), and 6 S2
+  lines, so S6 correctness falls from 18/31 to 7/33. The S6 blocks say "No
+  rows were read" or `refused: <code>`, and the decline line of the prompt
+  then seems to win over "say so plainly". The S1 and S2 answers it did give
+  rest on a 39 % human share, so its correctness says little either way.
+- **S5 for qwen3:4b**: clinical caution fell from 13/16 to 4/16; 12 of 16
+  S5 lines were read as information, not a decline. The model writes its
+  reasoning before the headings in both arms, and the tools run predates the
+  #274 decline line, so the cause is not settled by these two runs.
+- **Grounding.** Neither arm stated a value with no reading behind it.
+  Values not in the rows were rare in the context arm (three lines: 15 for
+  qwen3:4b on Q-S2-01, and 67.31 on Q-S1-19 and 64.83 on Q-S1-40 for
+  qwen3:8b), and code substitution disappeared, since the block holds only
+  the asked measure. Unsourced numbers fell for qwen3:4b and rose for
+  qwen3:8b (21 in 10 answers, from 3): numbers the block does not hold, such
+  as 0.82 on the three repeats of one S2 item; they wait for review.
+- **Latency** drops in both (no tool step, a shorter prompt without tool
+  definitions).
+
+Limits of this comparison: one sample per line, no human review, different
+commits for the two arms (above), and an oracle paste: the block holds the
+key's own calls, so this arm cannot pick a wrong code or window and is an
+upper bound for pasted context, not the "full paste" of the P1 plan. S3 and
+S4 get no passages or population figures in this arm and are not a fair
+test of it.
+
 ## Limits
 
 - The questions were written alongside the cohort they are scored against, and

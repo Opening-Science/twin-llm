@@ -14,19 +14,22 @@ bun run eval -- --models ollama:qwen3:4b --scenario S5 --run-id 2026-10-21-qwen3
 bun run eval -- --models ollama:qwen3:4b --latency-set --replay
 bun run eval -- --set s7 --models ollama:qwen3:4b --run-id 2026-10-31-qwen3-s7
 bun run eval -- --set s7 --models agent:rhythm --run-id 2026-10-31-rhythm-s7
+bun run eval -- --models ollama:qwen3:4b --arm context --run-id 2026-10-31-qwen3-4b-ctx
 bun run eval:report -- 2026-10-21-qwen3-s5 --quantisation Q4_K_M
 bun run eval:cohort-codes -- --in .synthea   # after a cohort change only
 ```
 
-| Flag                                                    | Meaning                                                        |
-| ------------------------------------------------------- | -------------------------------------------------------------- |
-| `--models provider:id[,…]`                              | Required. Every provider must be `LLM_PROVIDER` in `.env.eval` |
-| `--models agent:<id>`                                   | An agent ([below](#agents-279)) on `LLM_PROVIDER`              |
-| `--set v1` / `s7` / `s7b` / `s7h`                       | Question set and key; default `v1`; `s7h` is held out (#283)   |
-| `--items Q-S1-01,…` / `--scenario S1` / `--latency-set` | One selection at most; none means all 130 items                |
-| `--replay`                                              | Cache only; never calls a model                                |
-| `--run-id <id>`                                         | Default `<date>-<provider>-<time>`; an existing run is refused |
-| `--timeout-s <n>`                                       | Per item, default 300                                          |
+| Flag                                                    | Meaning                                                                  |
+| ------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `--models provider:id[,…]`                              | Required. Every provider must be `LLM_PROVIDER` in `.env.eval`           |
+| `--models agent:<id>`                                   | An agent ([below](#agents-279)) on `LLM_PROVIDER`                        |
+| `--set v1` / `s7` / `s7b` / `s7h`                       | Question set and key; default `v1`; `s7h` is held out (#283)             |
+| `--items Q-S1-01,…` / `--scenario S1` / `--latency-set` | One selection at most; none means all 130 items                          |
+| `--replay`                                              | Cache only; never calls a model                                          |
+| `--run-id <id>`                                         | Default `<date>-<provider>-<time>`; an existing run is refused           |
+| `--timeout-s <n>`                                       | Per item, default 300                                                    |
+| `--arm tools` / `context`                               | Tools (default) or data in the prompt ([below](#data-in-the-prompt-302)) |
+| `--context-cap <tokens>`                                | Context arm: estimated tokens per data block, default 6000               |
 
 `bun run eval` refuses unless `DATA_MODE=synthetic`, stops when the questions'
 sha256 is not the key's `questions_sha256`, and checks every model id against
@@ -68,6 +71,54 @@ blinded. The cache key names the base model, and the agent's prompt (role
 line, skill, tools) is part of the key, so an agent run and a run of its base
 model never share an entry. A replay of an agent run reads the catalog once to
 resolve the agent, and calls no model.
+
+## Data in the prompt (#302)
+
+`--arm context` is condition (b) of the P1 plan, the "oracle paste": the
+model gets the data the key reads, but no tools.
+
+- For each item the server runs the answer key's distinct calls (tool and
+  arguments, in key order) through the same query tool functions the model
+  would call (`runKeyedTool`), under the item's eval session, so each read
+  is an audit row of actor `eval-harness:<run-id>`.
+- Their results go into the system prompt as a block between `<data>` and
+  `</data>`, after the wearable sections: one heading per call (tool and
+  arguments), the result's fields as `key=value` (dotted keys for nested
+  objects, numbers in full), and each list of rows as a table. A refusal
+  reads `refused: <code>`, a read with `n` 0 or an empty list `no rows`. An
+  item with no key entries (S3, S4, S5, the S6 probes keyed by no call) gets
+  "No rows were read for this question".
+- The cohort section of the prompt says the turn has no tools and to use only
+  the block; the tool lines, chart and unit lines are left out. The turn
+  carries no tools at all. Agents are refused with this arm: their skill
+  only cuts tools.
+- Rows are cut to fit `--context-cap` (estimated tokens, the prompt budget
+  test's conservative count at the tool JSON rate): every list keeps the same
+  number of rows from the top, the most that fit, and the block says
+  "(rows cut to fit the prompt: k of n shown)". A block whose summary alone
+  is over the cap is sent whole and counted over the cap.
+
+Results lines of this arm carry `arm: "context"` and `context` (calls, rows
+returned, rows pasted, `truncated`, estimated tokens, cap). `tool_results`
+holds the calls as pasted (rows cut as the model saw them) and `audit` the
+server's reads. `meta.json` records `arm` (a run before #302 has none and ran
+`tools`) and, for this arm, `context`: the cap, the items whose rows were cut
+and the lines over the cap. The cache key adds the arm for this arm only, so
+tools-arm entries recorded before #302 still match.
+
+Scoring the arm:
+
+- Correctness, hallucination (code substitution included), unsourced numbers
+  and answers without a tool run as for the tools arm, with the pasted
+  results as the turn's tool results. A value not in the block is "not in
+  rows".
+- Call accuracy is n/a: the server, not the model, made the calls. The
+  report says so in place of the two tables.
+- Query safety and privacy keep only their checks of the reply (SQL text,
+  model calls; declines, wearable keys). Which tools ran, which subjects they
+  read and which refusals came back judge the harness here.
+- S3 and S4 items get no guideline passages or population figures in this
+  arm, so their scores are not comparable with the tools arm.
 
 `meta.json` records `question_set` (a run before #251 has none and ran `v1`),
 and `eval:report` reads that set's questions and key. The report's score table

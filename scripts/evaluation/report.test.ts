@@ -4,7 +4,16 @@ import { join } from "node:path";
 
 import { questionsSha256 } from "./build-answer-key";
 import { type ResultLine, type RunMeta } from "./eval-results";
-import { callFigures, csvCell, noToolFigures, REVIEW_COLUMNS, shareCell } from "./report";
+import {
+  armRows,
+  callFigures,
+  CONTEXT_CALLS_NA,
+  csvCell,
+  noToolFigures,
+  renderReport,
+  REVIEW_COLUMNS,
+  shareCell,
+} from "./report";
 import { runReport, type ReportDeps } from "./run-report";
 import {
   document,
@@ -586,5 +595,26 @@ describe("eval:report on an agent run (#279)", () => {
     expect(JSON.parse(files.get(`${DIR}/review-key.json`) ?? "").labels).toEqual({
       "Model A": "ollama:agent:rhythm",
     });
+  });
+});
+
+describe("context arm in the report (#302)", () => {
+  test("names the arm and the cap; call accuracy is n/a", () => {
+    expect(armRows(META)).toEqual([["Arm", "tools: the chat route's tools"]]);
+    const meta: RunMeta = {
+      ...META,
+      arm: "context",
+      context: { cap_tokens: 6000, items_truncated: 2, lines_over_cap: 0 },
+    };
+    expect(armRows(meta)).toEqual([
+      ["Arm", "context: the key's tool results in the prompt, no tools"],
+      [
+        "Data block",
+        "cap 6000 estimated tokens; rows cut on 2 items; 0 lines over the cap",
+      ],
+    ]);
+    const report = renderReport({ meta, scores: [], quantisation: null });
+    expect(report).toContain(CONTEXT_CALLS_NA);
+    expect(report).not.toContain("Calls by class:");
   });
 });

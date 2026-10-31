@@ -233,6 +233,40 @@ describe("buildTwinSystemPrompt data mode", () => {
   });
 });
 
+describe("buildTwinSystemPrompt pasted data (eval context arm, #302)", () => {
+  test("no tool lines, the rows in a delimited block after the wearables", async () => {
+    const { buildTwinSystemPrompt } = await import("./twin-system-prompt");
+    const block = "<data>\n[1] trend(loinc=4548-4)\nn=3\n</data>";
+    const prompt = buildTwinSystemPrompt({
+      ...noWearables,
+      mode: "synthetic",
+      offeredTools: new Set<string>(),
+      pastedData: block,
+    });
+    expect(prompt).toContain("- This turn has no tools.");
+    expect(prompt).not.toContain("list_subjects");
+    expect(prompt).not.toContain("cohort record tools are turned off");
+    expect(prompt).toContain(
+      `## Data block (read on the server for this question)\n${block}`,
+    );
+    expect(prompt.indexOf("## Data block")).toBeGreaterThan(
+      prompt.indexOf("## Wearable context (BodyLoop)"),
+    );
+  });
+
+  test("left out or in personal mode, the prompt is as before", async () => {
+    const { buildTwinSystemPrompt } = await import("./twin-system-prompt");
+    const synthetic = { ...noWearables, mode: "synthetic" as const };
+    expect(buildTwinSystemPrompt({ ...synthetic, pastedData: null })).toBe(
+      buildTwinSystemPrompt(synthetic),
+    );
+    const personal = { ...noWearables, mode: "personal" as const };
+    expect(buildTwinSystemPrompt({ ...personal, pastedData: "<data></data>" })).toBe(
+      buildTwinSystemPrompt(personal),
+    );
+  });
+});
+
 describe("buildTwinSystemPrompt agent line (#218)", () => {
   const base = {
     mode: "synthetic",

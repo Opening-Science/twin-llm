@@ -10,8 +10,9 @@ import { sha256Hex, toCanonicalJson } from "../../packages/audit/hash";
 import type { AppendInput } from "../../packages/audit/append";
 import type { QueryToolPorts } from "../../packages/query-tools/ports";
 import type { SessionScope } from "../../packages/query-tools/scope";
+import * as queryTools from "../../packages/query-tools/tools";
 
-import { questionsSha256 } from "./build-answer-key";
+import { questionsSha256, runKeyedTool } from "./build-answer-key";
 import { metaSchema, resultLineSchema, TIMING_FIELDS } from "./eval-results";
 import {
   type EvalDeps,
@@ -222,7 +223,11 @@ const fakeModel = () =>
     modelId: "fake-1",
     doStream: async ({ prompt }) => {
       const question = JSON.stringify(prompt.find((message) => message.role === "user"));
-      const hasToolResult = prompt.some((message) => message.role === "tool");
+      // The context arm (#302) pastes the rows into the system prompt.
+      const pasted = JSON.stringify(
+        prompt.find((message) => message.role === "system"),
+      ).includes("<data>");
+      const hasToolResult = pasted || prompt.some((message) => message.role === "tool");
       const parts = question.includes("metformin")
         ? textParts(DECLINE)
         : hasToolResult
@@ -353,6 +358,8 @@ const harness = (
       tools: createChatTools(scope, { query: warehouse.ports }),
     }),
     loadAudit: warehouse.loadAudit,
+    runContextCall: (scope, tool, args) =>
+      runKeyedTool(queryTools, scope, tool, args, warehouse.ports),
     cache: shared.cache ?? memoryCache().store,
     prepareRun: async (runId) => !files.has(`${runId}/results.jsonl`),
     appendResult: async (runId, line) => {
@@ -444,7 +451,24 @@ describe("parseEvalArgs", () => {
       replay: true,
       runId: "r1",
       timeoutMs: 60_000,
+      arm: "tools",
+      contextCapTokens: 6000,
     });
+  });
+
+  test("--arm takes tools or context; --context-cap only with context", () => {
+    expect(
+      parseEvalArgs([...MODELS, "--arm", "context", "--context-cap", "900"]),
+    ).toMatchObject({ arm: "context", contextCapTokens: 900 });
+    expect(() => parseEvalArgs([...MODELS, "--arm", "code"])).toThrow(
+      "USAGE: --arm takes one of tools, context",
+    );
+    expect(() => parseEvalArgs([...MODELS, "--context-cap", "900"])).toThrow(
+      "USAGE: --context-cap needs --arm context",
+    );
+    expect(() =>
+      parseEvalArgs([...MODELS, "--arm", "context", "--context-cap", "0"]),
+    ).toThrow("USAGE: --context-cap takes a whole number of tokens");
   });
 
   test("--set picks the S7 file and refuses an unknown set", () => {
@@ -622,6 +646,7 @@ describe("runEval on fakes", () => {
       question_set: "v1",
       questions_sha256: questionsSha256(QUESTIONS),
       answer_key_sha256: sha256Hex(KEY_TEXT),
+      arm: "tools",
       cohort_id: "synthea-v4-seed42",
       open_twin_sha: "a".repeat(40),
       provider: "ollama",
@@ -1138,5 +1163,161 @@ describe("agent runs (#279)", () => {
     expect((await run("agent:rhythm", { findSkill: () => null })).err).toBe(
       "AGENT_NOT_OFFERED: agent:rhythm's skill /rhythm is not one the server offers\n",
     );
+  });
+});
+
+describe("context arm (#302)", () => {
+  const trendEntry = (subjectRef: string, refusal: string | null) => ({
+    name: refusal === null ? "n" : "code",
+    tool: "trend",
+    args: { subject_ref: subjectRef, loinc: HBA1C, ...WINDOW },
+    path: refusal === null ? "n" : "code",
+    value: refusal ?? 3,
+    unit: null,
+    n: refusal === null ? 3 : 0,
+    windows: [WINDOW],
+    refusal,
+  });
+  const KEYED = JSON.stringify({
+    ...answerKey(questionsSha256(QUESTIONS)),
+    entries: {
+      // Two values of one call: the server runs it once.
+      "Q-S1-01": [
+        trendEntry(IN_COHORT, null),
+        { ...trendEntry(IN_COHORT, null), name: "n2" },
+      ],
+      "Q-S6-03": [trendEntry(OUT_OF_COHORT, "SUBJECT_SCOPE_VIOLATION")],
+    },
+  });
+  const ITEMS = ["--items", "Q-S1-01,Q-S5-01,Q-S6-03"];
+
+  test("runs the key's calls on the server, pastes them and gives the model no tools", async () => {
+    const { deps, files, model, warehouse } = harness({}, { keyText: KEYED });
+    const out = capture();
+    expect(
+      await runEval(
+        [...MODELS, ...ITEMS, "--arm", "context", "--run-id", "ctx"],
+        out.io,
+        deps,
+      ),
+    ).toBe(0);
+
+    // One model call per item: nothing to call, so no tool step.
+    expect(model.doStreamCalls.length).toBe(4);
+    expect(model.doStreamCalls.every((call) => (call.tools ?? []).length === 0)).toBe(
+      true,
+    );
+    const system = JSON.stringify(model.doStreamCalls[0]?.prompt[0]);
+    expect(system).toContain("This turn has no tools.");
+    expect(system).toContain("[1] trend(subject_ref=synthetic-subject-a");
+    expect(system).not.toContain("Fetch rows with");
+    const declineSystem = JSON.stringify(model.doStreamCalls[2]?.prompt[0]);
+    expect(declineSystem).toContain("No rows were read for this question");
+    const refusedSystem = JSON.stringify(model.doStreamCalls[3]?.prompt[0]);
+    expect(refusedSystem).toContain("refused: SUBJECT_SCOPE_VIOLATION");
+
+    // Audited as eval reads under each item's session: one per distinct call.
+    expect(warehouse.appended.map((row) => [row.tool, row.actor])).toEqual([
+      ["trend", "eval-harness:ctx"],
+      ["trend", "eval-harness:ctx"],
+      ["trend", "eval-harness:ctx"],
+    ]);
+
+    const lines = linesOf(files.get("ctx/results.jsonl"));
+    const [first, , decline, refused] = lines;
+    expect(first).toMatchObject({
+      arm: "context",
+      error: null,
+      model_calls: 1,
+      answer_text: TREND_ANSWER,
+      audit: [{ tool: "trend", row_count: 3, refusal: null, subject_ref: IN_COHORT }],
+      tool_results: [
+        { tool: "trend", input: { subject_ref: IN_COHORT, loinc: HBA1C, ...WINDOW } },
+      ],
+      context: {
+        calls: 1,
+        rows_total: 0,
+        rows_pasted: 0,
+        truncated: false,
+        cap_tokens: 6000,
+      },
+    });
+    expect(decline).toMatchObject({ arm: "context", audit: [], tool_results: [] });
+    expect(decline?.context?.calls).toBe(0);
+    expect(refused?.audit[0]?.refusal).toBe("SUBJECT_SCOPE_VIOLATION");
+
+    const meta = metaSchema.parse(JSON.parse(files.get("ctx/meta.json") ?? ""));
+    expect(meta.arm).toBe("context");
+    expect(meta.context).toEqual({
+      cap_tokens: 6000,
+      items_truncated: 0,
+      lines_over_cap: 0,
+    });
+  });
+
+  test("the cache key names the arm: a tools run and a context run share no entry", async () => {
+    const cache = memoryCache();
+    const tools = harness({}, { keyText: KEYED, cache: cache.store });
+    await runEval(
+      [...MODELS, "--items", "Q-S5-01", "--run-id", "t"],
+      capture().io,
+      tools.deps,
+    );
+    const afterTools = cache.entries.size;
+    const context = harness({}, { keyText: KEYED, cache: cache.store });
+    await runEval(
+      [...MODELS, "--items", "Q-S5-01", "--arm", "context", "--run-id", "c"],
+      capture().io,
+      context.deps,
+    );
+    expect(afterTools).toBe(1);
+    expect(cache.entries.size).toBe(2);
+    // A replay of the context run answers from its own entry.
+    const replay = harness({}, { keyText: KEYED, cache: cache.store });
+    expect(
+      await runEval(
+        [
+          ...MODELS,
+          "--items",
+          "Q-S5-01",
+          "--arm",
+          "context",
+          "--replay",
+          "--run-id",
+          "c2",
+        ],
+        capture().io,
+        replay.deps,
+      ),
+    ).toBe(0);
+    expect(replay.model.doStreamCalls.length).toBe(0);
+  });
+
+  test("a failed server read is CONTEXT_FAILED and reaches no model", async () => {
+    const { deps, files, model } = harness(
+      { runContextCall: () => Promise.reject(new Error("database down")) },
+      { keyText: KEYED },
+    );
+    expect(
+      await runEval(
+        [...MODELS, "--items", "Q-S1-01", "--arm", "context", "--run-id", "f"],
+        capture().io,
+        deps,
+      ),
+    ).toBe(2);
+    expect(linesOf(files.get("f/results.jsonl")).map((line) => line.error)).toEqual([
+      "CONTEXT_FAILED",
+      "CONTEXT_FAILED",
+    ]);
+    expect(model.doStreamCalls.length).toBe(0);
+  });
+
+  test("refuses an agent: it has no tools to cut", async () => {
+    const out = capture();
+    const { deps } = harness();
+    expect(
+      await runEval(["--models", "agent:rhythm", "--arm", "context"], out.io, deps),
+    ).toBe(1);
+    expect(out.err()).toContain("USAGE: --arm context gives the model no tools");
   });
 });
