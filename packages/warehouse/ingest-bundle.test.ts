@@ -1,4 +1,6 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
+
+import { moduleMocker } from "@/tests/support/mock-module";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -109,10 +111,11 @@ const mockDb = () => ({
   },
 });
 
+const mockModuleForFile = moduleMocker({ mock, afterAll });
 mock.module("server-only", () => ({}));
-mock.module("@/infrastructure/database", () => ({
+await mockModuleForFile("@/infrastructure/database", {
   database: () => mockDb(),
-}));
+});
 
 const FIXTURE_DIR = join(import.meta.dir, "../../tests/fixtures/synthea");
 const COHORT = "open-twin-synthea-trimmed-3";

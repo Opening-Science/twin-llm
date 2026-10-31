@@ -48,7 +48,9 @@ export const startAnswer = createStartAnswer({
   appendAudit: (input) => append(database(), input),
   findSkill: findSkillFor,
   loadTwinNotes: notesBeforeThread,
-  stream: streamModelResponse,
+  // Looked up per call, not held from load time, so a test file that replaces
+  // the stream module still reaches it when another file loaded this one first (#359).
+  stream: (call, context) => streamModelResponse(call, context),
   // The person still gets the refusal when the row cannot be written; a
   // reload then asks again, which is how a refused turn behaved before.
   markRefused: (target) =>

@@ -9,6 +9,8 @@ import {
   test,
 } from "bun:test";
 
+import { moduleMocker } from "@/tests/support/mock-module";
+
 const USER_ID = "user-synthetic-1";
 
 type CookieEntry = {
@@ -36,17 +38,18 @@ const jar = {
 
 const originalEnv = { ...process.env };
 
+const mockModuleForFile = moduleMocker({ mock, afterAll });
 mock.module("server-only", () => ({}));
-mock.module("next/headers", () => ({
+await mockModuleForFile("next/headers", {
   cookies: async () => jar,
-}));
-mock.module("@/infrastructure/auth-actor", () => ({
+});
+await mockModuleForFile("@/infrastructure/auth-actor", {
   resolveActorId: async () => "local",
-}));
-mock.module("@/infrastructure/current-user", () => ({
+});
+await mockModuleForFile("@/infrastructure/current-user", {
   findAppUserId: async () => USER_ID,
   ensureAppUser: async () => ({ id: USER_ID }),
-}));
+});
 
 let authorizeGET: () => Promise<Response>;
 
