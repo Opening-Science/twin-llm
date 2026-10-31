@@ -79,6 +79,7 @@ describe("personal columns registry (#141)", () => {
       "personal_variants",
       "twin_notes",
       "onboarding_profiles",
+      "disclosure_events",
     ]);
     expect(() => personalTable("audit_events")).toThrow();
   });

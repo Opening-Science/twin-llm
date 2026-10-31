@@ -1,9 +1,14 @@
 import { describe, expect, test } from "bun:test";
 
+import type { Disclosure } from "@/infrastructure/disclosure-ledger";
 import type { AppendInput } from "@/packages/audit/append";
 
 import type { ResponseState } from "./conversation";
-import { createThreadExportHandler, exportFormat } from "./thread-export-handler";
+import {
+  createThreadExportHandler,
+  EXPORT_NOT_RECORDED,
+  exportFormat,
+} from "./thread-export-handler";
 import type { ExportableThread } from "./thread-markdown";
 
 const THREAD: ExportableThread = { title: "What was their latest HbA1c?", turns: [] };
@@ -15,9 +20,10 @@ const GENOME_THREAD: ExportableThread = {
 
 const handler = (
   thread: ExportableThread | null,
-  options: Readonly<{ local?: boolean }> = {},
+  options: Readonly<{ local?: boolean; ledgerFails?: boolean }> = {},
 ) => {
   const audits: AppendInput[] = [];
+  const disclosures: Disclosure[] = [];
   const run = createThreadExportHandler({
     loadOwnedThread: async () => thread,
     actorId: async () => "local",
@@ -25,12 +31,50 @@ const handler = (
     appendAudit: async (input) => {
       audits.push(input);
     },
+    // The ledger row and its paired audit row are written together, or neither.
+    recordDisclosure: async (disclosure, paired) => {
+      if (options.ledgerFails === true) throw new Error("ledger down");
+      disclosures.push(disclosure);
+      if (paired !== undefined) audits.push(paired);
+      return { seq: 1n, auditSeq: 1n };
+    },
+    dataMode: () => "personal",
     today: () => "2026-10-28",
   });
-  return { run, audits };
+  return { run, audits, disclosures };
 };
 
 describe("createThreadExportHandler", () => {
+  test("an export is in the disclosure ledger before the file is returned (#140)", async () => {
+    const { run, disclosures } = handler(THREAD);
+    const response = await run("t1", "fhir");
+    const body = await response.text();
+    expect(disclosures).toEqual([
+      {
+        actor: "local",
+        sessionId: "t1",
+        kind: "export-file",
+        recipient: "export file",
+        target: "fhir",
+        purpose: "thread export",
+        categories: ["question text", "answers"],
+        refs: [],
+        payloadBytes: Buffer.byteLength(body, "utf8"),
+        threadId: "t1",
+        synthetic: false,
+      },
+    ]);
+  });
+
+  test("when the ledger cannot be written there is no file and no audit row", async () => {
+    const { run, audits } = handler(THREAD, { ledgerFails: true });
+    const response = await run("t1");
+    expect(response.status).toBe(500);
+    expect(response.headers.get("Content-Disposition")).toBe(null);
+    expect(await response.text()).toBe(EXPORT_NOT_RECORDED);
+    expect(audits).toEqual([]);
+  });
+
   test("the owner gets a Markdown attachment named after the thread, audited", async () => {
     const { run, audits } = handler(THREAD);
     const response = await run("t1");

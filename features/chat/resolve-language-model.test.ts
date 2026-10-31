@@ -12,6 +12,17 @@ mock.module("server-only", () => ({}));
 
 const originalEnv = { ...process.env };
 
+/** What a chat turn passes; the ledger itself is tested in hosted-model-ledger.test.ts. */
+const DISCLOSURE = {
+  actor: "user_synthetic_1",
+  sessionId: "turn-synthetic-1",
+  threadId: null,
+  purpose: "chat answer",
+  categories: ["question text"],
+  refs: [],
+  synthetic: true,
+} as const;
+
 const applyEnv = async (values: {
   readonly DATA_MODE: string;
   readonly LLM_PROVIDER: string;
@@ -90,11 +101,17 @@ describe("resolveLanguageModel DATA_MODE permit", () => {
       await import("./resolve-language-model");
 
     expect(() =>
-      resolveLanguageModel("synthetic-model", { hasWearableNarrative: true }),
+      resolveLanguageModel("synthetic-model", {
+        hasWearableNarrative: true,
+        disclosure: DISCLOSURE,
+      }),
     ).toThrow(ProviderNotPermittedError);
 
     try {
-      resolveLanguageModel("synthetic-model", { hasWearableNarrative: true });
+      resolveLanguageModel("synthetic-model", {
+        hasWearableNarrative: true,
+        disclosure: DISCLOSURE,
+      });
       expect.unreachable();
     } catch (error) {
       expect(error).toBeInstanceOf(ProviderNotPermittedError);
@@ -124,7 +141,10 @@ describe("resolveLanguageModel DATA_MODE permit", () => {
     const { ProviderNotPermittedError, resolveLanguageModel } =
       await import("./resolve-language-model");
     try {
-      resolveLanguageModel("synthetic-model", { hasWearableNarrative: true });
+      resolveLanguageModel("synthetic-model", {
+        hasWearableNarrative: true,
+        disclosure: DISCLOSURE,
+      });
       expect.unreachable();
     } catch (error) {
       expect(error).toBeInstanceOf(ProviderNotPermittedError);
@@ -136,7 +156,10 @@ describe("resolveLanguageModel DATA_MODE permit", () => {
     await applyEnv({ DATA_MODE: "synthetic", LLM_PROVIDER: "infomaniak" });
     const { resolveLanguageModel } = await import("./resolve-language-model");
     expect(() =>
-      resolveLanguageModel("synthetic-model", { hasWearableNarrative: false }),
+      resolveLanguageModel("synthetic-model", {
+        hasWearableNarrative: false,
+        disclosure: DISCLOSURE,
+      }),
     ).not.toThrow();
   });
 
@@ -176,6 +199,7 @@ describe("resolveLanguageModel DATA_MODE permit", () => {
         expect(() =>
           resolveLanguageModel("synthetic-model", {
             hasWearableNarrative: combo.hasWearableNarrative,
+            disclosure: DISCLOSURE,
           }),
         ).not.toThrow();
         return;
@@ -184,6 +208,7 @@ describe("resolveLanguageModel DATA_MODE permit", () => {
       try {
         resolveLanguageModel("synthetic-model", {
           hasWearableNarrative: combo.hasWearableNarrative,
+          disclosure: DISCLOSURE,
         });
         expect.unreachable();
       } catch (error) {
@@ -232,7 +257,10 @@ describe("remote-gpu routing", () => {
     const { ProviderNotPermittedError, resolveLanguageModel } =
       await import("./resolve-language-model");
     try {
-      resolveLanguageModel("apertus-70b-fp8", { hasWearableNarrative: true });
+      resolveLanguageModel("apertus-70b-fp8", {
+        hasWearableNarrative: true,
+        disclosure: DISCLOSURE,
+      });
       expect.unreachable();
     } catch (error) {
       expect(error).toBeInstanceOf(ProviderNotPermittedError);
@@ -250,7 +278,10 @@ describe("remote-gpu routing", () => {
     const { REMOTE_GPU_MODEL_NOT_LISTED, resolveLanguageModel } =
       await import("./resolve-language-model");
     expect(() =>
-      resolveLanguageModel("apertus-70b-fp8", { hasWearableNarrative: false }),
+      resolveLanguageModel("apertus-70b-fp8", {
+        hasWearableNarrative: false,
+        disclosure: DISCLOSURE,
+      }),
     ).toThrow(REMOTE_GPU_MODEL_NOT_LISTED);
   });
 });
@@ -364,6 +395,7 @@ describe("exoscale routing and data policy", () => {
       try {
         resolveLanguageModel("swiss-ai/Apertus-8B-Instruct-2509", {
           hasWearableNarrative,
+          disclosure: DISCLOSURE,
         });
         expect.unreachable();
       } catch (error) {
@@ -391,6 +423,7 @@ describe("exoscale routing and data policy", () => {
     expect(() =>
       resolveLanguageModel("swiss-ai/Apertus-8B-Instruct-2509", {
         hasWearableNarrative: false,
+        disclosure: DISCLOSURE,
       }),
     ).toThrow("EXOSCALE_PERSONAL_DATA=consented-pilot");
   });

@@ -7,6 +7,12 @@ import { resolveActorId } from "@/infrastructure/auth-actor";
 import { ensureAppUser } from "@/infrastructure/current-user";
 import type { GenomePermitDecision } from "@/infrastructure/data-mode-policy";
 import { database } from "@/infrastructure/database";
+import {
+  CATEGORY,
+  type Disclosure,
+  type RecordDisclosure,
+} from "@/infrastructure/disclosure-ledger";
+import { recordDisclosure } from "@/infrastructure/disclosure-ledger-runtime";
 import { genomeEnv } from "@/infrastructure/env";
 import { genomeRunPermit } from "@/infrastructure/genome-gate";
 import { personalReadEvent } from "@/infrastructure/personal-read-audit";
@@ -51,6 +57,11 @@ import {
  * by the adapter; the store and every read of the stored report are audited
  * here with counts only, never a genotype or a hash of one. A report read
  * whose row cannot be written is not shown.
+ *
+ * A released report is a disclosure the other way (#140): the person's Ark
+ * releases genome data into this machine. It is written to the disclosure
+ * ledger as "received" after it parses and before it is stored; when that
+ * write fails the report is not stored.
  */
 
 /** Machine and network waits for one run; phone approval is on top (docs/ark.md). */
@@ -75,6 +86,7 @@ export type GenomeRunPorts = Readonly<{
   latest: (actor: string) => Promise<StoredGenomeReport | null>;
   save: (input: NewGenomeReport) => Promise<StoredGenomeReport>;
   audit: (input: AppendInput) => Promise<unknown>;
+  recordDisclosure: RecordDisclosure;
   sessionId: () => string;
 }>;
 
@@ -94,7 +106,30 @@ const defaultPorts = (): GenomeRunPorts => ({
   latest: latestGenomeReport,
   save: saveGenomeReport,
   audit: (input) => append(database(), input),
+  recordDisclosure,
   sessionId: () => crypto.randomUUID(),
+});
+
+/**
+ * One report released from the Ark into this machine: the app, and the panel
+ * sites it holds as references (rsIDs of the app's fixed panel, never a
+ * genotype).
+ */
+export const arkReleaseDisclosure = (
+  call: Readonly<{ actor: string; sessionId: string; rsids: readonly string[] }>,
+): Disclosure => ({
+  actor: call.actor,
+  sessionId: call.sessionId,
+  kind: "ark-release",
+  direction: "received",
+  recipient: "this machine, from the Ark",
+  target: RSID_GENOTYPES_APP,
+  purpose: "genome report",
+  categories: [CATEGORY.genome],
+  refs: call.rsids.map((rsid) => ({ source: "genome", key: rsid })),
+  payloadBytes: null,
+  threadId: null,
+  synthetic: false,
 });
 
 /**
@@ -188,6 +223,26 @@ export const postGenomeRunResponse = async (
     await ports.audit({ ...auditBase, result: { stored: false }, rowCount: 0 });
     return failed("report-unreadable", 502);
   }
+
+  const recorded = await ports
+    .recordDisclosure(
+      arkReleaseDisclosure({
+        actor,
+        sessionId: ctx.sessionId,
+        rsids: parsed.rows.map((row) => row.rsid),
+      }),
+    )
+    .then(
+      () => true,
+      (error: unknown) => {
+        console.error(
+          "[genome] the disclosure ledger could not be written",
+          error instanceof Error ? error.name : "unknown",
+        );
+        return false;
+      },
+    );
+  if (!recorded) return failed("not-recorded", 500);
 
   const arkBuild = arkBuildOf(listed.data);
   const stored = await ports.save({

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 
+import type { Disclosure } from "@/infrastructure/disclosure-ledger";
 import type { PersonalRead } from "@/infrastructure/personal-read-audit";
 
 import {
@@ -46,6 +47,7 @@ let logged: Array<readonly [string, string]> = [];
 let syncCalls: Array<readonly [string, WearableSyncRequest]> = [];
 let auditRows: PersonalRead[] = [];
 let saves = 0;
+let disclosures: Disclosure[] = [];
 
 const deps = (provider: WearableSyncProvider): WearableSyncDeps => ({
   provider,
@@ -63,6 +65,10 @@ const deps = (provider: WearableSyncProvider): WearableSyncDeps => ({
   },
   auditPersonalRead: async (read) => {
     auditRows.push(read);
+  },
+  recordDisclosure: async (disclosure) => {
+    disclosures.push(disclosure);
+    return { seq: 1n, auditSeq: 1n };
   },
   logError: (message, errorName) => {
     logged.push([message, errorName]);
@@ -166,6 +172,30 @@ describe("POST /api/{provider}/sync", () => {
     expect(await res.json()).toEqual({
       error: "Could not sync Whoop data. Reconnect and try again.",
     });
+    expect(saves).toBe(0);
+  });
+
+  test("the request to the vendor is in the disclosure ledger (#140)", async () => {
+    disclosures = [];
+    await createWearableSyncHandler(deps("oura"))(
+      syncRequest({ ...WINDOW, sandbox: true }),
+    );
+    expect(disclosures.map((row) => [row.kind, row.recipient, row.synthetic])).toEqual([
+      ["vendor-sync", "Oura", true],
+    ]);
+  });
+
+  test("when the ledger cannot be written the vendor is never asked", async () => {
+    const res = await createWearableSyncHandler({
+      ...deps("google-health"),
+      recordDisclosure: async () => {
+        throw new Error("ledger down");
+      },
+    })(syncRequest(WINDOW));
+
+    expect(res.status).toBe(502);
+    expect(syncCalls).toEqual([]);
+    expect(auditRows).toEqual([]);
     expect(saves).toBe(0);
   });
 

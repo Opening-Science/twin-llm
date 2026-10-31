@@ -266,6 +266,13 @@ SHA-256 is the zip's.
   delete them. Your own use (chat, twin notes, search, thread export) needs no consent.
   Today every pipeline runs on synthetic cohorts only
   ([privacy-design.md](privacy-design.md#24-145-explicit-consent-before-any-learning-from-personal-data)).
+- **What left this machine (#140).** Imported data never leaves (above). What does leave
+  (a request to a hosted model under the consented pilot, a wearable sync, an exported
+  thread) is written to the disclosure ledger before it is sent, with the recipient, the
+  purpose, the kinds of data and how much, and the stored values it carried as
+  references, sealed with your key; never the values. If the entry cannot be written,
+  nothing is sent. Customize · Privacy lists every entry and the running totals per
+  recipient ([privacy-design.md](privacy-design.md#25-140-disclosure-ledger)).
 - **Audited, without values.** Every step appends to the audit chain
   (`features/personal-data/import-audit.ts`): `personal-data.review`, `.save`, `.list`,
   `.rename` and `.delete`. Rows hold the format, byte size, the file's SHA-256, dataset

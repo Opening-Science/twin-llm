@@ -45,7 +45,7 @@ export const createKnowledgeTools = (
       runKnowledgeSearch(
         scope,
         input,
-        { ...defaultKnowledgeSearchPorts(), ...ports },
+        { ...defaultKnowledgeSearchPorts(scope), ...ports },
         literatureSources,
       ),
   }),

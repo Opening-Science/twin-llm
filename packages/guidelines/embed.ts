@@ -1,3 +1,8 @@
+import {
+  CATEGORY,
+  ledgeredFetch,
+  type RecordDisclosure,
+} from "@/infrastructure/disclosure-ledger";
 import { serverEnv } from "@/infrastructure/env";
 import { isLoopbackUrl } from "@/infrastructure/loopback";
 
@@ -75,6 +80,43 @@ export const defaultEmbedPorts = (
   dim: EMBEDDING_DIM,
   requireLoopback: env.LOCAL_ONLY ?? false,
 });
+
+/**
+ * Ports for embedding a search query that a chat turn wrote. On this machine
+ * nothing leaves, so the ports are unchanged. An Ollama elsewhere receives
+ * the query text, so each request is written to the disclosure ledger (#140)
+ * first and is not sent when that fails (the search then has no vector).
+ */
+export const queryEmbedPorts = (
+  base: EmbedPorts,
+  call: Readonly<{
+    actor: string;
+    sessionId: string;
+    synthetic: boolean;
+    purpose: string;
+    record: RecordDisclosure;
+  }>,
+): EmbedPorts =>
+  isLoopbackUrl(base.origin)
+    ? base
+    : {
+        ...base,
+        fetch: ledgeredFetch(base.fetch, (payloadBytes) =>
+          call.record({
+            actor: call.actor,
+            sessionId: call.sessionId,
+            kind: "embedding",
+            recipient: "ollama on another machine",
+            target: base.model,
+            purpose: call.purpose,
+            categories: [CATEGORY.searchText],
+            refs: [],
+            payloadBytes,
+            threadId: null,
+            synthetic: call.synthetic,
+          }),
+        ),
+      };
 
 /**
  * Prefer POST /api/embed (current Ollama native API, `input` field).

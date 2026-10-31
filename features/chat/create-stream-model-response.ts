@@ -14,10 +14,15 @@ import type { TurnSkill } from "@/infrastructure/skill-gate";
 import type { TwinNote } from "@/infrastructure/twin-notes";
 import type { VitronicSummary } from "@/infrastructure/vitronic-types";
 import type { WhoopSummary } from "@/infrastructure/whoop-types";
+import type {
+  ModelDisclosure,
+  UnrecordedModelCall,
+} from "@/infrastructure/disclosure-ledger";
 import type { ImportedToolDeps } from "@/packages/query-tools/imported-tools";
 import type { QueryToolPorts } from "@/packages/query-tools/ports";
 import type { SessionScope } from "@/packages/query-tools/scope";
 
+import { chatDisclosure } from "./chat-disclosure";
 import type { ChatRequest } from "./chat-request";
 import { createTurnTools } from "./chat-tools";
 import { finishModelResponse } from "./finish-model-response";
@@ -55,6 +60,8 @@ import type { ModelResponseCompleteParams } from "./write-model-response-complet
 
 export type StreamContext = Readonly<{
   clerkId: string;
+  /** The saved thread, for the disclosure ledger (#140); null for an incognito chat. */
+  threadId?: string | null;
   /**
    * The thread used a genome tool, the history shows one, or the turn asks
    * for one (`start-answer`). Required, so no caller can forget to decide.
@@ -118,9 +125,16 @@ export type StreamModelResponseDeps = Readonly<{
   settings: () => Readonly<{ dataMode: DataMode; provider: LlmProvider }>;
   /** True when the chat model runs on this machine (Ollama on loopback). */
   chatIsLocal: () => boolean;
+  /**
+   * The model, sending through the disclosure ledger (#140): `disclosure`
+   * says what the turn's requests carry.
+   */
   resolveModel: (
     modelId: string,
-    options: Readonly<{ hasWearableNarrative: boolean }>,
+    options: Readonly<{
+      hasWearableNarrative: boolean;
+      disclosure: ModelDisclosure | UnrecordedModelCall;
+    }>,
   ) => LanguageModel;
   /** Genome tool ports, or undefined when the genome policy does not allow them. */
   genomeTools: (scope: SessionScope) => GenomeToolDeps | undefined;
@@ -217,6 +231,16 @@ export const createStreamModelResponse =
       {
         model: deps.resolveModel(context.agent?.baseModelId ?? modelId, {
           hasWearableNarrative,
+          disclosure: chatDisclosure({
+            actor: clerkId,
+            turnId,
+            threadId: context.threadId ?? null,
+            mode: settings.dataMode,
+            messageCount: messages.length,
+            wearables: turnWearables,
+            noteIds: notes?.ids ?? [],
+            hasTools: Object.keys(tools).length > 0,
+          }),
         }),
         ...promptDeps,
         twinNotes: notes?.text ?? null,

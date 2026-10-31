@@ -260,6 +260,7 @@ export const createStartAnswer =
 
     return deps.stream(call, {
       clerkId: actorId,
+      threadId: thread.threadId,
       genomeThread,
       disabledSources: await deps.loadDisabledSources(appUserId),
       ...(skill === null ? {} : { skill }),

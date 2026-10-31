@@ -9,6 +9,13 @@ import {
   PROVIDER_NOT_PERMITTED_FOR_DATA_MODE,
 } from "@/infrastructure/data-mode";
 import {
+  modelCallFetch,
+  modelRecipient,
+  type ModelDisclosure,
+  type UnrecordedModelCall,
+} from "@/infrastructure/disclosure-ledger";
+import { recordDisclosure } from "@/infrastructure/disclosure-ledger-runtime";
+import {
   DEFAULT_OLLAMA_BASE_URL,
   exoscaleEnv,
   exoscalePersonalData,
@@ -17,6 +24,7 @@ import {
 } from "@/infrastructure/env";
 import { vllmBaseUrlFor } from "@/infrastructure/fetch-model-catalog";
 import { withFirstByteTimeout } from "@/infrastructure/first-byte-timeout-fetch";
+import { isLoopbackUrl } from "@/infrastructure/loopback";
 
 import { ollamaChatModel } from "./ollama-chat-model";
 import { openrouter } from "./openrouter";
@@ -110,10 +118,21 @@ export const exoscaleTarget = (
  * hasWearableNarrative is true, and so is exoscale unless
  * EXOSCALE_PERSONAL_DATA=consented-pilot. Same permitProviderForRequest check
  * as the chat route (defence in depth).
+ *
+ * Every HTTP request to a model that is not on this machine (anything but
+ * Ollama on loopback) is first written to the disclosure ledger (#140) with
+ * the caller's `disclosure` and the request's size; if that write fails the
+ * request is not sent and the call fails. `{ notRecorded }` is for the
+ * evaluation harness only (`tests/disclosures/outbound-paths.test.ts`).
  */
+export type ModelCallOptions = Readonly<{
+  hasWearableNarrative: boolean;
+  disclosure: ModelDisclosure | UnrecordedModelCall;
+}>;
+
 export const resolveLanguageModel = (
   modelId: string,
-  { hasWearableNarrative }: { readonly hasWearableNarrative: boolean },
+  { hasWearableNarrative, disclosure }: ModelCallOptions,
 ): LanguageModel => {
   const env = serverEnv();
   const permit = permitProviderForRequest({
@@ -126,10 +145,19 @@ export const resolveLanguageModel = (
     throw new ProviderNotPermittedError();
   }
 
+  const ollamaBaseUrl = env.OLLAMA_BASE_URL ?? DEFAULT_OLLAMA_BASE_URL;
+  const sendFetch = modelCallFetch(fetch, {
+    recipient: modelRecipient(env.LLM_PROVIDER, isLoopbackUrl(ollamaBaseUrl)),
+    modelId,
+    disclosure,
+    record: recordDisclosure,
+  });
+
   if (env.LLM_PROVIDER === "ollama") {
     return ollamaChatModel(modelId, {
-      baseUrl: env.OLLAMA_BASE_URL ?? DEFAULT_OLLAMA_BASE_URL,
+      baseUrl: ollamaBaseUrl,
       numCtx: env.OLLAMA_NUM_CTX,
+      fetch: sendFetch,
     });
   }
 
@@ -139,7 +167,7 @@ export const resolveLanguageModel = (
       baseUrlFor: (id) => vllmBaseUrlFor("exoscale", id),
       apiKey: exoscale.apiKey,
       firstByteTimeoutMs: exoscale.firstByteTimeoutMs,
-      fetch,
+      fetch: sendFetch,
     });
     return createOpenAI(target).chat(modelId);
   }
@@ -155,6 +183,7 @@ export const resolveLanguageModel = (
     const infomaniak = createOpenAI({
       apiKey: token,
       baseURL,
+      fetch: sendFetch,
     });
     return infomaniak.chat(modelId);
   }
@@ -164,8 +193,8 @@ export const resolveLanguageModel = (
       baseUrlFor: (id) => vllmBaseUrlFor("remote-gpu", id),
       apiKey: env.REMOTE_GPU_API_KEY ?? null,
     });
-    return createOpenAI(target).chat(modelId);
+    return createOpenAI({ ...target, fetch: sendFetch }).chat(modelId);
   }
 
-  return openrouter()(modelId);
+  return openrouter(sendFetch)(modelId);
 };

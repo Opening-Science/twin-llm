@@ -64,6 +64,7 @@ const callbackDeps = (): WhoopCallbackDeps => ({
   },
   syncForUser: async () => ({ synced: { metrics: [] }, save: async () => undefined }),
   auditPersonalRead: async () => undefined,
+  recordDisclosure: async () => ({ seq: 1n, auditSeq: 1n }),
   mayReadPersonal: () => true,
   logError: (message, errorName) => {
     logged.push([message, errorName]);

@@ -6,6 +6,7 @@ import {
 import { threadReads } from "@/features/arena/thread-reads";
 import { resolveActorId } from "@/infrastructure/auth-actor";
 import { utcDay } from "@/infrastructure/day-key";
+import { recordDisclosure } from "@/infrastructure/disclosure-ledger-runtime";
 import { serverEnv } from "@/infrastructure/env";
 import { database } from "@/infrastructure/database";
 import { append } from "@/packages/audit/append";
@@ -18,6 +19,8 @@ const exportThread = createThreadExportHandler({
   actorId: resolveActorId,
   recipientIsLocal: () => serverEnv().LOCAL_ONLY,
   appendAudit: (input) => append(database(), input),
+  recordDisclosure,
+  dataMode: () => serverEnv().DATA_MODE,
   today: () => utcDay(new Date()),
 });
 

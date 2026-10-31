@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
 
+import type { RecordDisclosure } from "@/infrastructure/disclosure-ledger";
 import type { PersonalRead } from "@/infrastructure/personal-read-audit";
 
-import { auditThenSave, type PreparedSync, type SyncedProvider } from "./audited-sync";
+import {
+  auditThenSave,
+  type PreparedSync,
+  type SyncedProvider,
+  vendorSyncDisclosure,
+} from "./audited-sync";
 
 /**
  * Wearable sync POST, as one factory for Oura, Whoop and Google Health. The
@@ -13,6 +19,9 @@ import { auditThenSave, type PreparedSync, type SyncedProvider } from "./audited
  * Each sync writes one `personal.read.sync-<provider>` row with the metric count
  * before its snapshot is stored (`auditThenSave`); when the row cannot be
  * written nothing is stored and the sync reports failed.
+ *
+ * The request to the vendor is written to the disclosure ledger first (#140);
+ * when that write fails nothing is fetched and the sync reports failed.
  *
  * `logError` gets the error name, never the error: a provider message can
  * carry token or response-body text into the server log.
@@ -38,6 +47,7 @@ export type WearableSyncDeps = {
     PreparedSync<{ readonly metrics: readonly unknown[]; readonly window: unknown }>
   >;
   readonly auditPersonalRead: (read: PersonalRead) => Promise<unknown>;
+  readonly recordDisclosure: RecordDisclosure;
   readonly logError: (message: string, errorName: string) => void;
 };
 
@@ -96,6 +106,10 @@ export const createWearableSyncHandler = (deps: WearableSyncDeps) => {
         deps.provider,
         clerkId,
         deps.auditPersonalRead,
+        () =>
+          deps.recordDisclosure(
+            vendorSyncDisclosure(deps.provider, clerkId, { sandbox: sandbox === true }),
+          ),
       );
       return NextResponse.json({
         ok: true,

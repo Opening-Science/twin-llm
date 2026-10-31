@@ -33,12 +33,15 @@ const draft = createCompactHandler({
   loadOwnedThread: ownedThreadForNote,
   threadIsLocal,
   turn: () => ({ ...settings(), chatIsLocal: chatModelIsLocal() }),
-  draftModel: async (source) => {
+  draftModel: async (source, disclosure) => {
     const catalog = await fetchChatCatalog(runnableSkills());
     if (catalog === null || !catalog.some(({ id }) => id === source.modelId)) return null;
     const agent = turnAgentOf(source.modelId, catalog, source.prompt, source.modelName);
     const modelId = agent?.baseModelId ?? source.modelId;
-    const model = resolveLanguageModel(modelId, { hasWearableNarrative: false });
+    const model = resolveLanguageModel(modelId, {
+      hasWearableNarrative: false,
+      disclosure,
+    });
     return {
       modelId,
       generate: async ({ system, prompt }) =>

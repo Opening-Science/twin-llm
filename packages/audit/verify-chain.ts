@@ -1,5 +1,6 @@
 import type { PrismaClient } from "@/generated/prisma/client";
 
+import { checkLinks, firstBrokenLink, type VerifyChainResult } from "./chain";
 import { GENESIS_PREV_HASH, hashEvent } from "./hash";
 
 /**
@@ -12,14 +13,7 @@ import { GENESIS_PREV_HASH, hashEvent } from "./hash";
  * holds, so a reader can note it and compare later.
  */
 
-export type VerifyChainResult = (
-  | { readonly ok: true; readonly brokenAtSeq: null }
-  | { readonly ok: false; readonly brokenAtSeq: number }
-) & {
-  readonly checked: number;
-  readonly total: number;
-  readonly latestHash: string | null;
-};
+export type { VerifyChainResult };
 
 export type ChainRow = Readonly<{
   seq: bigint | number;
@@ -35,8 +29,8 @@ export type ChainRow = Readonly<{
   hash: string;
 }>;
 
-const rowIsSound = (row: ChainRow, expectedPrev: string): boolean =>
-  row.prevHash === expectedPrev &&
+/** A row's hash recomputed from its fields; the chain is in `chain.ts`. */
+export const auditRowHash = (row: ChainRow): string =>
   hashEvent({
     actor: row.actor,
     args_sha256: row.argsSha256,
@@ -48,7 +42,7 @@ const rowIsSound = (row: ChainRow, expectedPrev: string): boolean =>
     subject_ref: row.subjectRef,
     tool: row.tool,
     ts: row.ts.toISOString(),
-  }) === row.hash;
+  });
 
 /**
  * The index of the first row in `rows` that does not hash or does not point
@@ -58,26 +52,11 @@ const rowIsSound = (row: ChainRow, expectedPrev: string): boolean =>
 export const firstBrokenIndex = (
   rows: readonly ChainRow[],
   prevHash: string = GENESIS_PREV_HASH,
-): number =>
-  rows.findIndex(
-    (row, index) => !rowIsSound(row, index === 0 ? prevHash : rows[index - 1].hash),
-  );
+): number => firstBrokenLink(rows, auditRowHash, prevHash);
 
 /** Rows must already be in ascending `seq` order. */
-export const checkChain = (rows: readonly ChainRow[]): VerifyChainResult => {
-  const total = rows.length;
-  const latestHash = rows.at(-1)?.hash ?? null;
-  const brokenIndex = firstBrokenIndex(rows);
-  return brokenIndex === -1
-    ? { ok: true, brokenAtSeq: null, checked: total, total, latestHash }
-    : {
-        ok: false,
-        brokenAtSeq: Number(rows[brokenIndex].seq),
-        checked: brokenIndex + 1,
-        total,
-        latestHash,
-      };
-};
+export const checkChain = (rows: readonly ChainRow[]): VerifyChainResult =>
+  checkLinks(rows, auditRowHash);
 
 export const verifyChain = async (client: PrismaClient): Promise<VerifyChainResult> =>
   checkChain(await client.auditEvent.findMany({ orderBy: { seq: "asc" } }));

@@ -105,6 +105,8 @@ export const RUN_FAILURE_TEXT: Readonly<Record<string, string>> = {
   "app-not-built": "The rsid-genotypes app is not built. Run bun run ark:build first.",
   "report-unreadable":
     "The Ark released something that is not the rsid-genotypes report, so nothing was stored.",
+  "not-recorded":
+    "The release could not be written to the disclosure ledger, so nothing was stored. Run again.",
   "not-permitted":
     "Genome runs need DATA_MODE=personal and GENOME_SOURCE=ark on this server.",
   "sign-in": "Sign in to run the Ark app.",

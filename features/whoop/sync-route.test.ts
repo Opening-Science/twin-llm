@@ -56,6 +56,14 @@ mock.module("@/infrastructure/database", () => ({
             return {};
           },
         },
+        // The disclosure ledger (#140): the request to Whoop, before the fetch.
+        disclosureEvent: {
+          findFirst: async () => null,
+          create: async (args: { data: { kind: string } }) => {
+            recorded.auditTools.push(`ledger ${args.data.kind}`);
+            return {};
+          },
+        },
       }),
     user: { findUnique: async () => ({ id: USER_ID }) },
     whoopConnection: {
@@ -180,7 +188,8 @@ describe("POST /api/whoop/sync error surface", () => {
     });
     expect(recorded.snapshots).toEqual([]);
     expect(recorded.connectionUpdates).toEqual([]);
-    expect(recorded.auditTools).toEqual([]);
+    // The request was recorded before it was sent; no read row, nothing stored.
+    expect(recorded.auditTools).toEqual(["disclosure.vendor-sync", "ledger vendor-sync"]);
   });
 
   test("one failed collection keeps the partial summary and persists it", async () => {
@@ -200,7 +209,11 @@ describe("POST /api/whoop/sync error surface", () => {
       window: { startDate: "2026-01-01", endDate: "2026-01-04" },
     });
 
-    expect(recorded.auditTools).toEqual(["personal.read.sync-whoop"]);
+    expect(recorded.auditTools).toEqual([
+      "disclosure.vendor-sync",
+      "ledger vendor-sync",
+      "personal.read.sync-whoop",
+    ]);
 
     expect(recorded.connectionUpdates).toHaveLength(1);
     expect(recorded.connectionUpdates[0]?.where).toEqual({ userId: USER_ID });

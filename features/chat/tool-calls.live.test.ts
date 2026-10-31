@@ -25,6 +25,9 @@ import { describe, expect, test } from "bun:test";
  * synthetic-scope audit rows.
  */
 const runLive = Reflect.get(process.env, "RUN_LIVE") === "1";
+// Not in the disclosure ledger (#140): a hand-run smoke test over the
+// synthetic cohort, like the evaluation harness.
+const LIVE_NOT_RECORDED = "live tool-call smoke test: synthetic cohort only";
 const HEART_RATE_LOINC = "8867-4";
 
 type ModelRun = {
@@ -115,7 +118,10 @@ describe.skipIf(!runLive)("tool calls by model (RUN_LIVE=1)", () => {
         try {
           // Streaming, like the chat route: a long thinking pass keeps the connection alive.
           const result = streamText({
-            model: resolveLanguageModel(model, { hasWearableNarrative: false }),
+            model: resolveLanguageModel(model, {
+              hasWearableNarrative: false,
+              disclosure: { notRecorded: LIVE_NOT_RECORDED },
+            }),
             system,
             prompt,
             tools: createChatTools({ actor: "live-smoke", sessionId, mode: "synthetic" }),

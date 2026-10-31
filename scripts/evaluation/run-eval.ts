@@ -76,6 +76,12 @@ if (isMain) {
 
   const env = serverEnv();
 
+  // Not in the disclosure ledger (#140): the harness reads synthetic cohorts
+  // only (the #145 gate refuses any other row) and runs against its own
+  // database, not the person's.
+  const EVAL_NOT_RECORDED =
+    "evaluation harness: synthetic cohorts only, its own database";
+
   const endpointHost = (spec: ModelSpec): string | null => {
     switch (spec.provider) {
       case "ollama":
@@ -102,7 +108,10 @@ if (isMain) {
     listModels: async () => (await fetchChatCatalog(runnableSkills())) ?? [],
     findSkill: findRunnableSkill,
     resolveModel: async (spec) => {
-      const model = resolveLanguageModel(spec.modelId, { hasWearableNarrative: false });
+      const model = resolveLanguageModel(spec.modelId, {
+        hasWearableNarrative: false,
+        disclosure: { notRecorded: EVAL_NOT_RECORDED },
+      });
       if (typeof model === "string") {
         throw new EvalSetupError("MODEL_NOT_LISTED", `${spec.modelId} did not resolve`);
       }

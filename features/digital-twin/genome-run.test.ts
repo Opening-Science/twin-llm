@@ -3,6 +3,7 @@ import { join } from "node:path";
 
 import { describe, expect, test } from "bun:test";
 
+import type { Disclosure } from "@/infrastructure/disclosure-ledger";
 import { personalReadEvent } from "@/infrastructure/personal-read-audit";
 import type { AppendInput } from "@/packages/audit/append";
 import type {
@@ -42,12 +43,22 @@ type Recorder = {
   saved: NewGenomeReport[];
   audits: AppendInput[];
   contexts: ArkAuditContext[];
+  disclosures: Disclosure[];
+  /** "ledger" and "save", in order. */
+  order: string[];
 };
 
 const fakePorts = (
   overrides: Partial<GenomeRunPorts> = {},
 ): { ports: Partial<GenomeRunPorts>; seen: Recorder } => {
-  const seen: Recorder = { runs: [], saved: [], audits: [], contexts: [] };
+  const seen: Recorder = {
+    runs: [],
+    saved: [],
+    audits: [],
+    contexts: [],
+    disclosures: [],
+    order: [],
+  };
   const ports: Partial<GenomeRunPorts> = {
     resolveActorId: async () => "local",
     permit: () => ({ ok: true }),
@@ -65,8 +76,14 @@ const fakePorts = (
     },
     ensureUserId: async () => "user-1",
     latest: async () => null,
+    recordDisclosure: async (disclosure) => {
+      seen.disclosures.push(disclosure);
+      seen.order.push("ledger");
+      return { seq: 1n, auditSeq: 1n };
+    },
     save: async (input): Promise<StoredGenomeReport> => {
       seen.saved.push(input);
+      seen.order.push("save");
       return {
         id: "report-1",
         app: "rsid-genotypes",
@@ -85,6 +102,45 @@ const fakePorts = (
 };
 
 describe("POST /api/genome/run", () => {
+  test("a released report is in the disclosure ledger as received, before it is stored (#140)", async () => {
+    const { ports, seen } = fakePorts();
+    await postGenomeRunResponse(ports);
+    expect(seen.order).toEqual(["ledger", "save"]);
+    expect(seen.disclosures).toEqual([
+      {
+        actor: "local",
+        sessionId: "session-1",
+        kind: "ark-release",
+        direction: "received",
+        recipient: "this machine, from the Ark",
+        target: "rsid-genotypes",
+        purpose: "genome report",
+        categories: ["genome report"],
+        refs: (seen.saved[0]?.rows ?? []).map((row) => ({
+          source: "genome",
+          key: row.rsid,
+        })),
+        payloadBytes: null,
+        threadId: null,
+        synthetic: false,
+      },
+    ]);
+    expect(seen.disclosures[0]?.refs.length).toBe(11);
+    expect(JSON.stringify(seen.disclosures)).not.toContain("A/G");
+  });
+
+  test("when the ledger cannot be written the report is not stored", async () => {
+    const { ports, seen } = fakePorts({
+      recordDisclosure: async () => {
+        throw new Error("ledger down");
+      },
+    });
+    const response = await postGenomeRunResponse(ports);
+    expect(response.status).toBe(500);
+    expect(((await response.json()) as { code: string }).code).toBe("not-recorded");
+    expect(seen.saved).toEqual([]);
+  });
+
   test("runs rsid-genotypes with the panel grants, stores and shows the report", async () => {
     const { ports, seen } = fakePorts();
     const response = await postGenomeRunResponse(ports);

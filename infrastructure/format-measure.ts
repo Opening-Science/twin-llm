@@ -190,6 +190,22 @@ export const formatDate = (
   return dateFormats[style].format(date);
 };
 
+const timeFormat = new Intl.DateTimeFormat(DISPLAY_LOCALE, {
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+  timeZone: "UTC",
+});
+
+/**
+ * A moment as `16 Oct 2026, 09:12 UTC`, for event logs such as the
+ * disclosure ledger. UTC, so a row reads the same for every viewer.
+ */
+export const formatTimestamp = (moment: Date | null | undefined): string => {
+  if (!moment || Number.isNaN(moment.getTime())) return EMPTY_VALUE;
+  return `${dateFormats.long.format(moment)}, ${timeFormat.format(moment)} UTC`;
+};
+
 const MS_PER_HOUR = 3_600_000;
 
 /** `just now`, `5 h ago`, `3 d ago`. Future timestamps (clock skew) read "just now". */

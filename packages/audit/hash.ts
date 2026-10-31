@@ -36,5 +36,15 @@ export const toCanonicalJson = (value: unknown): string =>
 export const sha256Hex = (input: string): string =>
   createHash("sha256").update(input, "utf8").digest("hex");
 
+/**
+ * One link of a hash chain: SHA-256 of the previous row's hash followed by
+ * the row's canonical JSON. The audit log and the disclosure ledger (#140)
+ * both hash their rows with this (`chain.ts`).
+ */
+export const hashLink = (
+  prevHash: string,
+  canonical: Readonly<Record<string, unknown>>,
+): string => sha256Hex(prevHash + toCanonicalJson(canonical));
+
 export const hashEvent = (event: CanonicalAuditEvent): string =>
-  sha256Hex(event.prev_hash + toCanonicalJson(event));
+  hashLink(event.prev_hash, event);

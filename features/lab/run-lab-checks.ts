@@ -13,6 +13,14 @@ import {
 } from "@/infrastructure/build-stamp";
 import { bomText, buildBom, parseBunLock } from "@/infrastructure/cyclonedx";
 import { database } from "@/infrastructure/database";
+import { resolveActorId } from "@/infrastructure/auth-actor";
+import { ledgerTotals } from "@/infrastructure/disclosure-ledger";
+import {
+  ledgerEntriesOf,
+  verifyLedger,
+} from "@/infrastructure/disclosure-ledger-runtime";
+import { browserAnalyticsConfig, isClerkEnabled } from "@/infrastructure/public-env";
+import { vaultShellState } from "@/infrastructure/vault-runtime";
 import { plaintextFindings } from "@/infrastructure/reseal";
 import {
   anatomyEnv,
@@ -59,6 +67,7 @@ import { provenanceBase, provenanceCheck } from "./provenance-check";
 import { type CurrentSbom, sbomBase, sbomCheck } from "./sbom-check";
 import { storageBase, storageCheck } from "./storage-check";
 import { encryptionBase, encryptionCheck } from "./encryption-check";
+import { disclosureLedgerBase, disclosureLedgerCheck } from "./disclosure-ledger-check";
 
 /**
  * The I/O half of the Lab page: reads the database, Ollama and files on this
@@ -337,6 +346,33 @@ const checkEncryption = async (): Promise<LabCheck> => {
   });
 };
 
+// --- Disclosure ledger ----------------------------------------------------------
+
+/** Configured channels the server cannot record before they send (#140). */
+const channelsOutsideLedger = (): readonly string[] => [
+  ...(isClerkEnabled() ? ["Clerk sign-in"] : []),
+  ...(serverEnv().ARCJET_KEY ? ["Arcjet"] : []),
+  ...(browserAnalyticsConfig() === null ? [] : ["PostHog in the browser"]),
+];
+
+/** The viewer's own totals, or null while their data is locked. */
+const viewerTotals = async () => {
+  const vault = await vaultShellState();
+  const actor = await resolveActorId();
+  if (!vault.unlocked || actor === null) return null;
+  return ledgerTotals(await ledgerEntriesOf(actor));
+};
+
+const checkDisclosureLedger = async (): Promise<LabCheck> =>
+  disclosureLedgerCheck({
+    chain: await verifyLedger().catch((error: unknown) => {
+      console.error("[lab] disclosure ledger could not be read", errorName(error));
+      return null;
+    }),
+    totals: await viewerTotals(),
+    outside: channelsOutsideLedger(),
+  });
+
 // --- Section ------------------------------------------------------------------
 
 const VERIFIABILITY_INTRO =
@@ -355,6 +391,7 @@ export const loadVerifiability = async (): Promise<LabSection> => {
       guarded(storageBase(vitronic), () => checkStorage(vitronic)),
       guarded(encryptionBase, checkEncryption),
       guarded(auditChainBase, checkAuditChain),
+      guarded(disclosureLedgerBase, checkDisclosureLedger),
       guarded(localModelsBase(ollama.tagsUrl), () => checkLocalModels(ollama)),
       guarded(pinnedArtefactsBase(pins.pins), () => checkPinnedArtefacts(pins)),
       guarded(provenanceBase, checkProvenance),
