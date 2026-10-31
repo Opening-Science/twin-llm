@@ -482,6 +482,13 @@ export const WearablesScreen = ({
           whoopSummary={whoopSummary}
           busy={busy !== null}
           onSync={() => void sync(source)}
+          linkedSources={WEARABLES.filter(
+            (wearable) => statuses[wearable.id].connected,
+          ).map((wearable) => ({
+            id: wearable.id,
+            name: wearable.name,
+            detail: syncDetail(statuses[wearable.id].lastSyncAt),
+          }))}
         />
       </div>
 
