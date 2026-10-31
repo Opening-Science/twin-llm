@@ -220,9 +220,55 @@ Where the simulator is least like the database (largest KS):
 
 RR and ΔRR distributions divided by the window mean are close for AF (KS 0.03), as expected when the coefficient of variation the profiles draw is in the range of real AF. Adding beat-detection noise moves nRMSSD further from the database (AF KS 0.11 without noise, 0.86 with heavy noise) and the TPR and sample entropy of AF windows closer; the full table by noise level is in the run's report.
 
+## AF intervals with short-range dependence (#297)
+
+The simulator now has a second AF mode, `short_range`: ln RR is a Gaussian AR(1) with lag-1 coefficient 0.055, fitted to the lag-1 autocorrelation of ln RR in the AF database's all-AFIB windows (`docs/rhythm-sim.md`, "Atrial fibrillation"). The intervals keep the same log-normal distribution; only their order changes. The full benchmark was rerun with both modes against both databases.
+
+- Commands: `bun run rhythm-bench -- --out .rhythm-bench/297-<db>-<mode> --afdb <afdb>/files` (or `--ltafdb <ltafdb>/files`), with `--af-dependence short_range` for the second mode, and the defaults otherwise. Git `61ce0499ed109b255dd0d8ab4da1a4ea7d422a9b`. Run ids: AF database `413ec686ec7da59f` (independent), `10f31462074c634e` (short_range); LTAFDB `abcb37b8b9c360bc`, `60b53198e2a42fd6`. The output directories are gitignored, as before.
+- The independent runs reproduce every simulated and database number in this note: the default mode draws the same intervals as before.
+
+Lag autocorrelation of ln RR in full 128-interval all-AF windows (simulated: noise none, 379 or 380 windows from the grid; median over recordings or records of each one's median, pooled median in brackets):
+
+| Lag | Sim independent | Sim short_range | AF database (23 records) | LTAFDB (76 records) |
+| --- | --------------- | --------------- | ------------------------ | ------------------- |
+| 1   | -0.019 (-0.016) | 0.033 (0.037)   | 0.043 (0.054)            | 0.042 (0.027)       |
+| 2   | -0.002 (0.000)  | 0.001 (-0.001)  | 0.005 (0.012)            | 0.015 (0.014)       |
+| 3   | -0.004 (-0.009) | -0.002 (-0.007) | 0.004 (0.005)            | 0.002 (0.004)       |
+
+The grid's AF windows sit a little below the fitting target (0.046 at CV 0.2 and 600 ms); the grid's rates and spreads differ and 380 windows give a median with a standard error of about 0.006.
+
+How the flag and metrics moved (simulated; the database rows do not use the simulator and are unchanged):
+
+| Subset                           | Sensitivity, independent | Sensitivity, short_range | Specificity, independent | Specificity, short_range | AUROC TPR, independent | AUROC TPR, short_range |
+| -------------------------------- | ------------------------ | ------------------------ | ------------------------ | ------------------------ | ---------------------- | ---------------------- |
+| Whole grid                       | 0.973 [0.966, 0.979]     | 0.960 [0.951, 0.967]     | 0.536 [0.516, 0.558]     | 0.540 [0.519, 0.561]     | 0.903 [0.895, 0.911]   | 0.892 [0.883, 0.900]   |
+| Pure windows                     | 1.000 [1.000, 1.000]     | 0.997 [0.993, 0.999]     | 0.600 [0.570, 0.631]     | 0.601 [0.571, 0.633]     | 0.950 [0.941, 0.958]   | 0.939 [0.928, 0.948]   |
+| 300 s, no noise                  | 0.964 [0.944, 0.980]     | 0.957 [0.935, 0.976]     | 0.911 [0.875, 0.943]     | 0.911 [0.877, 0.942]     |                        |                        |
+| Paroxysmal, 10 % burden          | 0.767 [0.607, 0.909]     | 0.645 [0.469, 0.815]     | 0.616 [0.582, 0.650]     | 0.614 [0.578, 0.649]     |                        |                        |
+| MIT-BIH AF Database (25 records) | 0.954 [0.929, 0.973]     | 0.954 (unchanged)        | 0.796 [0.700, 0.879]     | 0.796 (unchanged)        | 0.879 [0.818, 0.927]   | unchanged              |
+| LTAFDB (84 records)              | 0.947 [0.921, 0.967]     | 0.947 (unchanged)        | 0.841 [0.773, 0.898]     | 0.841 (unchanged)        | 0.864 [0.804, 0.914]   | unchanged              |
+
+Simulated AF against database AFIB windows (noise none, medians, KS):
+
+| Quantity    | Real (AF database) | Sim independent | Sim short_range | KS independent | KS short_range |
+| ----------- | ------------------ | --------------- | --------------- | -------------- | -------------- |
+| TPR         | 0.625              | 0.656           | 0.648           | 0.29           | 0.19           |
+| SampEn      | 1.938              | 2.159           | 2.145           | 0.33           | 0.33           |
+| nRMSSD      | 0.299              | 0.298           | 0.290           | 0.11           | 0.10           |
+| lag-1 ln RR | 0.054              | -0.016          | 0.037           | 0.30           | 0.15           |
+
+Against LTAFDB the TPR KS goes from 0.29 to 0.19 and SampEn from 0.25 to 0.25 (medians 2.159 and 2.145 against 2.004).
+
+Plain reading:
+
+- The real AF series are close to uncorrelated beat to beat: lag-1 autocorrelation about 0.04 to 0.05 and nothing at lags 2 and 3. This agrees with Hayano et al. 1997, who found a nearly white short-term RR spectrum in AF.
+- With that dependence the simulated sensitivity falls by about one point over the grid (0.973 to 0.960) and most in short AF episodes (10 % burden, 0.77 to 0.65, wide intervals). Specificity does not move, as sinus windows are unchanged. So the circularity in #249 is real but small: independent draws made the turning-point test look a little better than it would on dependent AF.
+- The dependence explains only part of the gap to real AF. The TPR median moves from 0.656 to 0.648 against 0.625 real, and sample entropy hardly moves (2.159 to 2.145 against 1.94). For a Gaussian AR(1) with φ = 0.055 the expected TPR is about 0.657, so a TPR of 0.625 would need far stronger dependence than the data show; the rest of the gap comes from something else (candidates: RR resolution of 4 and 7.8 ms giving ties, or within-window changes in rate), which this note does not test.
+- `independent` stays the simulator's default and what the product uses.
+
 ## Limits
 
-- **Circular simulated AF.** Simulated AF intervals are independent log-normal draws, which is exactly the null hypothesis the turning-point test is built on. Simulated sensitivity checks the arithmetic of the flag more than it tests the method. The database shows real AF has structure the simulator lacks.
+- **Circular simulated AF.** (See the #297 section: with fitted short-range dependence simulated sensitivity falls by about one point.) Simulated AF intervals are independent log-normal draws, which is exactly the null hypothesis the turning-point test is built on. Simulated sensitivity checks the arithmetic of the flag more than it tests the method. The database shows real AF has structure the simulator lacks.
 - **Noise on database beats.** The noise section reuses the same database, which helped derive or test the Dash et al. 2009 thresholds (#264), so its level-none row is not independent of the thresholds either; the drop with noise is a statement about these records and these assumed error rates, not about any device. Perturbed beats start from annotations that have errors of their own (`.qrs` unaudited in most records).
 - **Thresholds and database overlap.** The MIT-BIH Atrial Fibrillation Database was used to derive or test the Dash et al. 2009 thresholds, so its numbers are not an independent test of those thresholds. The Long-Term AF Database section is that independent test (#264); its sensitivity and specificity overlap the AF database's.
 - **Few clusters.** 25 records; the intervals are wide, and per-rhythm rows with 2 to 6 records (J, AFL) are hardly informative.
@@ -236,4 +282,5 @@ RR and ΔRR distributions divided by the window mean are close for AF (KS 0.03),
 - Goldberger AL, Amaral LAN, Glass L, et al. PhysioBank, PhysioToolkit, and PhysioNet: components of a new research resource for complex physiologic signals. Circulation. 2000;101(23):e215-e220.
 - Petrutiu S, Sahakian AV, Swiryn S. Abrupt changes in fibrillatory wave characteristics at the termination of paroxysmal atrial fibrillation in humans. Europace. 2007;9(7):466-470. (Long-Term AF Database; reference `.atr` annotations by MEDICALgorithmics Ltd, Warsaw, coordinated by Michal Tadeusiak.)
 - Dash S, Chon KH, Lu S, Raeder EA. Automatic real time detection of atrial fibrillation. Annals of Biomedical Engineering. 2009;37(9):1701-1709.
+- Hayano J, Yamasaki F, Sakata S, Okada A, Mukai S, Fujinami T. Spectral characteristics of ventricular response to atrial fibrillation. American Journal of Physiology. 1997;273(6):H2811-H2816.
 - Richman JS, Moorman JR. Physiological time-series analysis using approximate entropy and sample entropy. American Journal of Physiology, Heart and Circulatory Physiology. 2000;278(6):H2039-H2049.

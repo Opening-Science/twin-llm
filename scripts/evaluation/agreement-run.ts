@@ -5,20 +5,32 @@
  * and every `ratings/<rater>.json` the rating view wrote, scores the run as
  * `eval:report` does, and prints Cohen's kappa with a 95 % interval for each
  * rater against the correctness scorer and for each pair of raters, pooled
- * over the runs given. Reads no env and no database and writes nothing.
+ * over the runs given. With `--ids` it also reads each rater's salt from
+ * `evaluation/rater-sets/<rater>.json` (#355) and lists the answer ids that
+ * rater's page used for the rated lines, mapped back to run, item and
+ * repeat. Reads no env and no database and writes nothing.
  */
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import { lineKey, parseRatingFile, RATINGS_DIR } from "../../features/lab/rating-file";
+import {
+  lineKey,
+  parseRatingFile,
+  RATINGS_DIR,
+  type RatingFile,
+} from "../../features/lab/rating-file";
+import { parseRaterSet } from "../../features/lab/rater-set";
 import { EMPTY_VALUE, formatNumber } from "../../infrastructure/format-measure";
 import {
   noConsentStore,
   requireLearningConsent,
 } from "../../infrastructure/learning-consent";
+import { RATER_SETS_DIR } from "../../infrastructure/local-artefacts";
 
 import {
   agreementRows,
+  type AnswerIdRow,
+  answerIdRows,
   type Kappa,
   type RunAgreementInput,
   type ScorerOutcome,
@@ -33,7 +45,9 @@ const RUN_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$/;
 const readJson = async (path: string): Promise<unknown> =>
   JSON.parse(await readFile(path, "utf8")) as unknown;
 
-const loadRun = async (runId: string): Promise<RunAgreementInput> => {
+type LoadedRun = Readonly<{ input: RunAgreementInput; files: readonly RatingFile[] }>;
+
+const loadRun = async (runId: string): Promise<LoadedRun> => {
   const dir = join(RUNS_DIR, runId);
   const meta = metaSchema.parse(await readJson(join(dir, "meta.json")));
   const permit = await requireLearningConsent(
@@ -71,6 +85,7 @@ const loadRun = async (runId: string): Promise<RunAgreementInput> => {
   );
   const names = await readdir(join(dir, RATINGS_DIR)).catch(() => [] as string[]);
   const raters = new Map<string, ReadonlyMap<string, number>>();
+  const rated: RatingFile[] = [];
   for (const name of names.filter((each) => each.endsWith(".json")).sort()) {
     const file = parseRatingFile(await readFile(join(dir, RATINGS_DIR, name), "utf8"));
     if (file === null || file.run_id !== runId) {
@@ -79,6 +94,7 @@ const loadRun = async (runId: string): Promise<RunAgreementInput> => {
       );
       continue;
     }
+    rated.push(file);
     raters.set(
       file.rater,
       new Map(
@@ -89,7 +105,37 @@ const loadRun = async (runId: string): Promise<RunAgreementInput> => {
       ),
     );
   }
-  return { runId, scorer, raters };
+  return { input: { runId, scorer, raters }, files: rated };
+};
+
+/** The rater's salt, or null when this machine has no readable rater set for them. */
+const saltOf = async (rater: string): Promise<string | null> => {
+  const text = await readFile(join(RATER_SETS_DIR, `${rater}.json`), "utf8").catch(
+    () => null,
+  );
+  const set = text === null ? null : parseRaterSet(text);
+  return set !== null && set.rater === rater ? set.salt : null;
+};
+
+const answerIds = async (
+  runs: readonly LoadedRun[],
+): Promise<{ rows: AnswerIdRow[]; missing: string[] }> => {
+  const files = runs.flatMap((run) => run.files);
+  const raters = [...new Set(files.map((file) => file.rater))].sort();
+  const salts = new Map(
+    await Promise.all(raters.map(async (rater) => [rater, await saltOf(rater)] as const)),
+  );
+  return {
+    rows: files
+      .flatMap((file) => {
+        const salt = salts.get(file.rater);
+        return salt === null || salt === undefined
+          ? []
+          : answerIdRows(file.rater, salt, file.run_id, file.ratings);
+      })
+      .sort((a, b) => a.rater.localeCompare(b.rater) || a.id.localeCompare(b.id)),
+    missing: raters.filter((rater) => salts.get(rater) === null),
+  };
 };
 
 const number = (value: number | null): string =>
@@ -109,13 +155,16 @@ const kappaText = (result: Kappa | null): string[] =>
       ];
 
 const main = async (argv: readonly string[]): Promise<number> => {
-  const runIds = argv.filter((arg) => arg !== "--");
+  const withIds = argv.includes("--ids");
+  const runIds = argv.filter((arg) => arg !== "--" && arg !== "--ids");
   if (runIds.length === 0 || runIds.some((id) => !RUN_ID.test(id))) {
-    process.stderr.write("Usage: bun run eval:agreement -- <run-id> [<run-id> …]\n");
+    process.stderr.write(
+      "Usage: bun run eval:agreement -- [--ids] <run-id> [<run-id> …]\n",
+    );
     return 2;
   }
-  const runs = await Promise.all(runIds.map(loadRun));
-  const rows = agreementRows(runs);
+  const loaded = await Promise.all(runIds.map(loadRun));
+  const rows = agreementRows(loaded.map((run) => run.input));
   if (rows.length === 0) {
     process.stdout.write("No ratings found in these runs.\n");
     return 0;
@@ -127,6 +176,22 @@ const main = async (argv: readonly string[]): Promise<number> => {
     process.stdout.write(
       `| ${[row.comparison, ...kappaText(row.result)].join(" | ")} |\n`,
     );
+  }
+  if (withIds) {
+    const ids = await answerIds(loaded);
+    process.stdout.write(
+      "\n| Rater | Answer id | Run | Item | Repeat |\n| --- | --- | --- | --- | --- |\n",
+    );
+    for (const row of ids.rows) {
+      process.stdout.write(
+        `| ${[row.rater, row.id, row.runId, row.itemId, String(row.repeat)].join(" | ")} |\n`,
+      );
+    }
+    for (const rater of ids.missing) {
+      process.stderr.write(
+        `${rater}: no rater set in ${RATER_SETS_DIR}; that rater's answer ids cannot be mapped\n`,
+      );
+    }
   }
   return 0;
 };

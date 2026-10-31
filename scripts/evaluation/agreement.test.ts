@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 
-import { agreementRows, cohenKappa, pairsFromTable } from "./agreement";
+import { lineToken } from "../../features/lab/rater-lines";
+
+import { agreementRows, answerIdRows, cohenKappa, pairsFromTable } from "./agreement";
 
 /**
  * Cohen's worked example: two judges, 200 cases, three categories (Cohen
@@ -150,5 +152,31 @@ describe("agreementRows", () => {
 
   test("no raters: no rows", () => {
     expect(agreementRows([run("r1", { "Q-1#1": "pass" }, {})])).toEqual([]);
+  });
+});
+
+describe("answerIdRows", () => {
+  const SALT = "c".repeat(64);
+
+  test("maps the rater's ids back to run, item and repeat", () => {
+    const rows = answerIdRows("rater-b", SALT, "run-a", [
+      { item_id: "Q-1", repeat: 1 },
+      { item_id: "Q-2", repeat: 1 },
+    ]);
+    expect(rows.map((row) => [row.runId, row.itemId, row.repeat]).sort()).toEqual([
+      ["run-a", "Q-1", 1],
+      ["run-a", "Q-2", 1],
+    ]);
+    expect(rows.find((row) => row.itemId === "Q-1")?.id).toBe(
+      lineToken(SALT, "run-a", "Q-1", 1),
+    );
+    expect(rows.map((row) => row.id)).toEqual(rows.map((row) => row.id).sort());
+  });
+
+  test("another salt gives other ids", () => {
+    const line = [{ item_id: "Q-1", repeat: 1 }];
+    expect(answerIdRows("rater-b", SALT, "run-a", line)[0]?.id).not.toBe(
+      answerIdRows("rater-b", "d".repeat(64), "run-a", line)[0]?.id,
+    );
   });
 });

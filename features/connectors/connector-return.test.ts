@@ -43,6 +43,16 @@ describe("parseConnectorReturn", () => {
     });
   });
 
+  test("locked says nothing was linked and offers a retry (#341)", () => {
+    expect(parseConnectorReturn({ oura: "locked" }, PROD)).toEqual({
+      source: "oura",
+      outcome: "locked",
+      text: "Your data is locked, so Oura was not linked. Unlock it, then link Oura again.",
+      failed: false,
+      retry: true,
+    });
+  });
+
   test("connected, signin and unconfigured carry no retry", () => {
     expect(parseConnectorReturn({ oura: "connected" }, DEV)).toEqual({
       source: "oura",

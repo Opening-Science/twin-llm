@@ -66,6 +66,37 @@ describe("simulateRecording is deterministic", () => {
     expect(sha(recording)).toBe("f29fd9fbeb317987");
   });
 
+  // #297 added afDependence with default "independent" and left the
+  // independent draws untouched, so the snapshots above are unchanged; these
+  // pin the new short_range mode.
+  test("persistent AF, short_range, seed 42, 60 s: fixed intervals; the first matches independent", () => {
+    const recording = simulateRecording({
+      seed: 42,
+      durationSec: 60,
+      rhythm: "af",
+      afDependence: "short_range",
+    });
+    expect(recording.rrMs.length).toBe(99);
+    expect(recording.rrMs.slice(0, 10)).toEqual([
+      414, 615, 667, 597, 518, 519, 626, 699, 726, 638,
+    ]);
+    expect(sha(recording)).toBe("bba5198cae9e7c21");
+  });
+
+  test("paroxysmal AF, short_range: same sinus stream, the episode starts afresh", () => {
+    const recording = simulateRecording({
+      ...config,
+      rhythm: "paroxysmal_af",
+      afDependence: "short_range",
+    });
+    const firstAf = recording.labels.indexOf("af");
+    expect(recording.rrMs.slice(0, 10)).toEqual([
+      901, 917, 928, 926, 928, 921, 927, 931, 917, 922,
+    ]);
+    expect(recording.rrMs.slice(firstAf, firstAf + 5)).toEqual([414, 615, 667, 597, 518]);
+    expect(sha(recording)).toBe("517da3c1c1ffc909");
+  });
+
   test("paroxysmal AF shares the sinus stream before its episode", () => {
     const recording = simulateRecording({ ...config, rhythm: "paroxysmal_af" });
     expect(recording.rrMs.slice(0, 10)).toEqual([

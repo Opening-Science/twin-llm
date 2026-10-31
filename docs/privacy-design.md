@@ -255,9 +255,13 @@ Argon2id against the RFC 9106 vector and scrypt against the RFC 7914 vector.
   synthetic cohort explorer and the Digital Twin page (Demo bodies; its BodyLoop reads
   go through gated routes) stay open.
 - **OAuth callbacks.** A provider's redirect is cross-site, so the Strict cookie is not
-  sent. The callback is not behind the cookie gate: it stores the tokens (they keep their
-  own env keys, see 2.3) and runs the first sync only when the person's vault is open in
-  this process (`vaultOpenFor`); otherwise the person syncs after unlocking.
+  sent. The callback is not behind the cookie gate: it exchanges the code, stores the
+  tokens and runs the first sync only when the person's vault is open in this process
+  (`vaultOpenFor`). _Changed by #341:_ the tokens are sealed with the vault key (2.3), so a
+  return while locked exchanges nothing, stores nothing, writes a
+  `vault.locked.skip.connect-<provider>` audit row and lands on Connectors with "Your data
+  is locked, so Oura was not linked. Unlock it, then link Oura again." Before #341 it
+  stored the tokens under their env keys and skipped only the first sync.
 - **Chat and MCP.** In personal mode the chat route is gated as a whole, so no turn starts
   and no personal tool runs while locked. Passing the keys to the tool ports comes with
   #141, when the tools need them to decrypt. The MCP server already refuses the imported
@@ -307,7 +311,7 @@ person can still delete the data.
 without it must answer 423 when called locked (no passphrase set; set up but no cookie, a
 wrong cookie, or another person's cookie), and a route that reads personal data may only
 skip the gate with a stated reason (the three OAuth callbacks, whose locked return is
-tested to store and audit nothing). The same file lists every page, layout and server
+tested to exchange and store nothing and to write only its skip row). The same file lists every page, layout and server
 action as gated or open with a reason and fails on any it does not name. Pure tests for
 the RFC vectors, a fixed KEK for the default parameters, wrap and unwrap with a pinned
 output, wrong passphrase, other additional data, a changed byte, stored parameters and
@@ -404,10 +408,23 @@ async per call and slower for 200,000 rows.
   (public or synthetic). `audit_events` (hashes, ids and counts only; it must verify while
   locked). `user_skills` (instructions the person wrote, not records; listed so the choice
   is visible). `learning_consents` (#145: fixed choices, dates and a shipped sentence;
-  the consent gate must read it while locked). OAuth and BodyLoop tokens keep their own AES-256-GCM env keys
-  (`*_TOKEN_ENCRYPTION_KEY`); moving them under the vault is a later step, because an OAuth
-  callback can arrive while locked. Row counts, dates, which values are null and which rows
-  share a hashed value stay visible (section 1, out of scope).
+  the consent gate must read it while locked). Row counts, dates, which values are null
+  and which rows share a hashed value stay visible (section 1, out of scope).
+- **OAuth and BodyLoop tokens (#341).** `oura_`, `whoop_` and
+  `google_health_connections` (`accessTokenEnc`, `refreshTokenEnc`) and
+  `vitronic_connections` (`apiTokenEnc`, `uploadSecretEnc`) are in the registry like any
+  other personal column (`infrastructure/connector-tokens.ts`). Each value is the
+  provider's env-key ciphertext (`*_TOKEN_ENCRYPTION_KEY`, `features/*/token-crypto.ts`)
+  sealed again with the `field` subkey, so a copied row opens with neither key alone, and
+  `vault:migrate` seals rows from before #341 without needing the env keys. Nothing opens
+  or stores a token while the owner's vault is locked: an OAuth return skips (2.2), and
+  the BodyLoop scanner's upload, which comes with no browser, answers 423 and writes a
+  `vault.locked.skip.bodyloop-upload` row without opening its secret (at most one per
+  connection per 10 minutes, kept in memory; an unknown connection id gets 401 and no
+  row), as a scheduled task
+  skips (#54). Checking the vault does not count as use. Synthetic installs keep the
+  env-key ciphertext as it was. _Changed from the first draft_, which left tokens under
+  their env keys because a callback can arrive while locked.
 - **Queries.** Tools that filter by code, name, site or rsID use the keyed hashes and
   `effective_at`, then open the matching rows. `imported_datasets`' series list groups by
   `series_index` in SQL and opens one row per series to name it. Sorting by a sealed value
@@ -507,10 +524,10 @@ consents, at })` is pure; `requireLearningConsent(scope, rows, deps)` is the one
   place), `training:batches` (every subject in the training database), `training:split`
   (each conversation's meta line), `disclosure:prepare` (each meta line of the set the
   disclosure experiment trains and probes on), `eval:answer-key` and its `:s7`, `:s7b`,
-  `:s7h`, `:hb` and `:live` forms (before the first call and before the key is written; over cohort files,
+  `:s7h`, `:v1h`, `:hb` and `:live` forms (before the first call and before the key is written; over cohort files,
   only Synthea bundles count as synthetic), `eval` (before any model runs and before
   `meta.json`, whatever the decline wording or context arm), `eval:report`, `eval:spread-subjects`, `eval:cohort-codes` and
-  `eval:heldout:s7h`. _Changed from the first draft:_ the Lab's training sample is
+  `eval:heldout:s7h` and `eval:heldout:v1h`. _Changed from the first draft:_ the Lab's training sample is
   `training:sample`, no separate path; the report, spread, cohort-codes and held-out
   commands were added to the list.
 - **Manifests.** A set or run that relied on a consent records `learning_consents: {
@@ -607,7 +624,7 @@ recipient.
 | --------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | `hosted-model`  | Each HTTP request to a model not on this machine: chat answers (every step of the tool loop), `/compact` drafts, starter questions | The provider (`exoscale`, `openrouter`, ...) and the model id     | Purpose, categories, the injected value references, the request's exact size                    |
 | `vendor-sync`   | An Oura, Whoop or Google Health sync (a token refresh happens inside it)                                                           | The vendor                                                        | Access token and date window; no health value is uploaded. Oura's sandbox is labelled synthetic |
-| `vendor-auth`   | The OAuth code exchange on the return from the vendor (recorded while locked too; it needs no key)                                 | The vendor                                                        | The authorization code                                                                          |
+| `vendor-auth`   | The OAuth code exchange on the return from the vendor (only while the vault is open, #341)                                         | The vendor                                                        | The authorization code                                                                          |
 | `export-file`   | A thread export (`/api/threads/<id>/export`, Markdown, FHIR or print), paired with its existing `thread.export` audit row          | `export file` and the format                                      | Categories and the file's size                                                                  |
 | `ark-release`   | A genome report released from the person's Ark, after it parses and before it is stored                                            | `this machine, from the Ark`; direction `received`                | The panel sites as references (rsIDs of the app's fixed panel, never a genotype)                |
 | `remote-tool`   | A question to the remote GBD server (synthetic requests only)                                                                      | `GBD server`                                                      | The question's size                                                                             |
@@ -627,16 +644,34 @@ recipient.
   Twin prompt lists (`offeredKeys`, such as `oura.sleep.score.2026-10-20`), the ids of
   the twin notes a turn loaded, and the Ark panel's rsIDs. Each keeps its source
   (`wearable`, `scan`, `note`, `genome`). The list is sealed under the field key (#141)
-  in personal mode. _Not built:_ the #112 matcher over free text (the person's words,
-  answers, tool results). Every row stores `free_text_checked = false` and the Privacy
-  page says that free text is named by kind but not checked, rather than counting zero.
+  in personal mode.
+- **Free text check** (#346). Before each hosted-model request is recorded, the recording
+  fetch (`modelCallFetch`, with `freeTextCheckerFor` from
+  `infrastructure/free-text-check-runtime.ts`) reads the string values of the request body
+  (the person's words, earlier answers, tool results) and looks for values stored here:
+  rsIDs and genome sites (`chr7:117559590` or `7:117559590`, positions of four digits or
+  more), hashed with the person's index key and looked up in the keyed hash columns of
+  their imported VCFs, so no variant is opened; and, as whole words ignoring case, the
+  file names of their imports, their body scan labels other than their own subject, and
+  their account id when it is not a plain word. The row stores `free_text_checked = true`
+  and `free_text_matches`, a list of `{ kind, count }` (distinct values per kind), never a
+  value; the paired audit row carries the same list. The matcher is pure
+  (`infrastructure/free-text-check.ts`), with at most 500 lookups per request. A body
+  that cannot be read up front, or a check that fails (a locked vault), is recorded as
+  not checked, with the error's name in the log. _Open, for Peter:_ a match is recorded
+  and does not stop the send. _Limits:_ approximate. A value written another way (a unit
+  conversion, a rounded number, another spelling) is missed, and lab values, clinical
+  records, twin notes and wearable numbers are not searched yet; wearable and twin note
+  values are recorded as references above. Exports, embeddings and live lookups are not
+  checked (live lookups have their own query check).
 - **Row.** `seq`, row id, time, actor (like the audit log; _changed from_ the user id),
   kind, direction, recipient, target (model id, request kind or format), purpose,
   categories, `ref_count`, `payload_bytes` (null when it cannot be measured up front),
-  thread id when there is one, `synthetic`, `free_text_checked`, the sealed `refs`, the
+  thread id when there is one, `synthetic`, `free_text_checked`, `free_text_matches`
+  (#346; null when the check did not run), the sealed `refs`, the
   paired audit `seq`, `prev_hash` and `hash`. The hash (`packages/audit/disclosure-chain.ts`)
   covers every column but `refs`, so `vault:rotate` can reseal it without breaking the
-  chain; `ref_count` is covered, and the sealed value is bound to its row by its
+  chain (`free_text_matches` only when set, so rows written before it keep their hashes); `ref_count` is covered, and the sealed value is bound to its row by its
   encryption context. _Left out:_ the HMAC of the payload under a `ledger` subkey. Nothing
   can check it against a person's copy yet, and a rotation would leave old ones
   uncheckable.
@@ -655,7 +690,9 @@ recipient.
 like the page): one line per recipient and direction with events (and how many were
 synthetic), values, size, first and last time; then the latest 100 events, each with
 recipient, purpose, what it carried, size, a Synthetic badge where it applies, a link to
-the thread, and its stored values as references under "Which stored values". The Lab
+the thread, its stored values as references under "Which stored values", and "Free
+text": the kinds and counts the check found (a warning badge when there are any), "no
+stored values found", or "not checked". The Lab
 card "What left this machine" checks the chain while locked too and shows the running
 totals only to a viewer whose data is unlocked (_changed from the first draft_, which
 showed counts while locked). Its command is
@@ -681,7 +718,10 @@ paths (`tests/disclosures/outbound-paths.test.ts`) walks `app`, `features`,
 not name. The chain over seeded rows, each kind of tampering, a removed row and a
 resealed `refs`; the writer over a fake transaction (both rows or neither, refs sealed,
 no key needed without refs); the cumulative view and the two views as pure functions;
-the CLI's `--chain`. Run by hand on a throwaway owner cluster with a local stand-in
+the CLI's `--chain`. The free text check (#346): the matcher on synthetic text
+(`infrastructure/free-text-check.test.ts`), the recording fetch with a checker that finds,
+fails or is absent, the chain with and without `free_text_matches`, and a chat request
+through the AI SDK (`tests/disclosures/hosted-model-ledger.test.ts`). Run by hand on a throwaway owner cluster with a local stand-in
 model server: chat, `/compact` and both exports wrote their rows before the requests,
 the chain verified with the command, and the Lab card and the Privacy section were
 checked locked and unlocked, light and dark.
@@ -764,178 +804,16 @@ table truncated, and both `verify-cli --check` and the Lab card reported it
 
 **Effort.** About 3 days.
 
-### 2.5 #140 Disclosure ledger
-
-**Decision.** A separate hash-chained table, `disclosure_events`, with one entry per event
-in which data leaves this machine or a device of the person's reaches it. It reuses the
-audit chain's hashing and is written in the same transaction as an audit row for the
-event, before the data is sent. The Lab and Customize · Privacy show running totals per
-recipient.
-
-**Design** (as built).
-
-- **One function.** Every outbound path calls `recordDisclosure`
-  (`infrastructure/disclosure-ledger-runtime.ts`) before it sends. It seals the value
-  references (below), then writes the paired audit row and the ledger row in one
-  transaction (`appendInTransaction` and `appendDisclosureInTransaction` in
-  `packages/audit`). Any failure rejects with `DisclosureNotRecordedError` (the error's
-  name only) and the caller does not send. The pure half (types, the audit row, the
-  recorder over an injected writer, the recording fetch, the cumulative view) is
-  `infrastructure/disclosure-ledger.ts`.
-- **Events and recipients.** _Changed from the first draft_, which recorded only
-  personal requests to the Exoscale pilot, vendor syncs, exports and Ark releases: every
-  send to a recipient off this machine is recorded, and a send that carried synthetic data
-  only is recorded too, labelled `synthetic`. Ollama on loopback is not a recipient.
-  Providers that the data-mode policy refuses never get an entry, because nothing is
-  sent.
-
-| Kind            | When                                                                                                                               | Recipient                                                         | What is recorded                                                                                |
-| --------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `hosted-model`  | Each HTTP request to a model not on this machine: chat answers (every step of the tool loop), `/compact` drafts, starter questions | The provider (`exoscale`, `openrouter`, ...) and the model id     | Purpose, categories, the injected value references, the request's exact size                    |
-| `vendor-sync`   | An Oura, Whoop or Google Health sync (a token refresh happens inside it)                                                           | The vendor                                                        | Access token and date window; no health value is uploaded. Oura's sandbox is labelled synthetic |
-| `vendor-auth`   | The OAuth code exchange on the return from the vendor (recorded while locked too; it needs no key)                                 | The vendor                                                        | The authorization code                                                                          |
-| `export-file`   | A thread export (`/api/threads/<id>/export`, Markdown, FHIR or print), paired with its existing `thread.export` audit row          | `export file` and the format                                      | Categories and the file's size                                                                  |
-| `ark-release`   | A genome report released from the person's Ark, after it parses and before it is stored                                            | `this machine, from the Ark`; direction `received`                | The panel sites as references (rsIDs of the app's fixed panel, never a genotype)                |
-| `remote-tool`   | A question to the remote GBD server (synthetic requests only)                                                                      | `GBD server`                                                      | The question's size                                                                             |
-| `embedding`     | A guideline or knowledge search query embedded by an Ollama that is not on this machine                                            | `ollama on another machine`                                       | The request's size                                                                              |
-| `telemetry`     | A server-side PostHog event, when PostHog is configured                                                                            | `PostHog`                                                         | The event name; ids and counts only                                                             |
-| `public-lookup` | Each HTTP request of a live PubMed or Ensembl lookup (#6), only for a source the person switched on                                | `NCBI PubMed` or `Ensembl`, and the step (`esearch`, `gene`, ...) | `search terms` or `public record ids` and the address's size; never a stored value              |
-
-- **Hosted models, per request.** _Changed from the first draft_, which wrote one row per
-  turn next to `provider.personal_data_sent`. `resolveLanguageModel` takes the caller's
-  `disclosure` (who, why, categories, references) and gives the provider a recording
-  fetch (`modelCallFetch`): each HTTP request is written with its body's size before it
-  goes out, so the tool loop's later requests, which carry tool results, are counted too.
-  The `provider.personal_data_sent` row stays as it was, one per turn. Only the
-  evaluation harness and the live tool-call smoke test pass `{ notRecorded }` (synthetic
-  cohorts, their own database); `tests/disclosures/outbound-paths.test.ts` lists them.
-- **Which values left.** As references, never values: the wearable and BodyLoop keys the
-  Twin prompt lists (`offeredKeys`, such as `oura.sleep.score.2026-10-20`), the ids of
-  the twin notes a turn loaded, and the Ark panel's rsIDs. Each keeps its source
-  (`wearable`, `scan`, `note`, `genome`). The list is sealed under the field key (#141)
-  in personal mode. _Not built:_ the #112 matcher over free text (the person's words,
-  answers, tool results). Every row stores `free_text_checked = false` and the Privacy
-  page says that free text is named by kind but not checked, rather than counting zero.
-- **Row.** `seq`, row id, time, actor (like the audit log; _changed from_ the user id),
-  kind, direction, recipient, target (model id, request kind or format), purpose,
-  categories, `ref_count`, `payload_bytes` (null when it cannot be measured up front),
-  thread id when there is one, `synthetic`, `free_text_checked`, the sealed `refs`, the
-  paired audit `seq`, `prev_hash` and `hash`. The hash (`packages/audit/disclosure-chain.ts`)
-  covers every column but `refs`, so `vault:rotate` can reseal it without breaking the
-  chain; `ref_count` is covered, and the sealed value is bound to its row by its
-  encryption context. _Left out:_ the HMAC of the payload under a `ledger` subkey. Nothing
-  can check it against a person's copy yet, and a rotation would leave old ones
-  uncheckable.
-- **Shared chain.** `packages/audit/chain.ts` has the one hash (`hashLink`, which the
-  audit log's `hashEvent` now uses), `nextLink` and the walk (`checkLinks`); the audit log
-  and the ledger each only say which fields their canonical form holds.
-- **Order.** Ledger row and audit row in one transaction, then the send. If the
-  transaction fails, nothing is sent.
-- **Outside the ledger, named.** Clerk sign-in, Arcjet request protection and PostHog in
-  the browser cannot be recorded by the server before they send (the first two are per
-  request, the last is the browser's). The Lab card lists whichever are configured. The
-  BodyLoop scanner on the local network is not a recipient here: the request carries its
-  pairing token and ids and the scan comes in.
-
-**What the UI shows.** Customize · Privacy, "What left this machine" (behind the unlock,
-like the page): one line per recipient and direction with events (and how many were
-synthetic), values, size, first and last time; then the latest 100 events, each with
-recipient, purpose, what it carried, size, a Synthetic badge where it applies, a link to
-the thread, and its stored values as references under "Which stored values". The Lab
-card "What left this machine" checks the chain while locked too and shows the running
-totals only to a viewer whose data is unlocked (_changed from the first draft_, which
-showed counts while locked). Its command is
-`verify-cli.ts --check --chain disclosures`. _Not built:_ a cumulative chart over time;
-the table holds the running totals.
-
-**Failure behaviour.** Fail closed on every path: a chat or `/compact` model call fails
-before the request (a draft falls back to the person's own questions; starter questions
-fall back to the fixed ones), a sync reports failed before the vendor is asked, an OAuth
-return goes back with an error before the code is exchanged, an export answers 500
-with no file, an Ark report is not stored, a GBD call returns no rows marked
-`gbd-not-recorded`, a remote embedding has no vector, a PostHog event is dropped, a live lookup returns `LIVE_SOURCE_NOT_RECORDED` and sends nothing more. A
-database that has not run the migration refuses every one of these, including GBD calls
-from the evaluation harness, until `bun run db:deploy`.
-
-**Tests.** Per path with a failing ledger, checking nothing was sent: the hosted model
-through the AI SDK for chat, `/compact` and starters
-(`tests/disclosures/hosted-model-ledger.test.ts`), syncs and the code exchange
-(`audited-sync`, `sync-route`, `oura/oauth-route`, and the Whoop sync route against a fake
-database), exports, the Ark release, GBD and remote embeddings. The table of outbound
-paths (`tests/disclosures/outbound-paths.test.ts`) walks `app`, `features`,
-`infrastructure`, `packages` and `scripts` for outbound clients and fails on any it does
-not name. The chain over seeded rows, each kind of tampering, a removed row and a
-resealed `refs`; the writer over a fake transaction (both rows or neither, refs sealed,
-no key needed without refs); the cumulative view and the two views as pure functions;
-the CLI's `--chain`. Run by hand on a throwaway owner cluster with a local stand-in
-model server: chat, `/compact` and both exports wrote their rows before the requests,
-the chain verified with the command, and the Lab card and the Privacy section were
-checked locked and unlocked, light and dark.
-
-**Effort.** About 5 days.
-
-### 2.6 #300 An external anchor for the audit chain head
-
-**Decision.** A dedicated Ed25519 key, generated at setup and kept outside the repository
-and the database, signs the head of the audit chain and of the disclosure ledger. It is
-not the git signing key: Peter chose a key that does one job, so rotating or losing it
-touches nothing else.
-
-**Design.**
-
-- **Key.** `bun run anchor:init` (also run by `setup:local`) calls
-  `generateKeyPairSync("ed25519")` from `node:crypto` and writes
-  `$TWINLLM_STATE_DIR/anchor/anchor-key.pem` (PKCS#8, mode `0600`) and `anchor-key.pub`,
-  in a directory of mode `0700`. The key id is the SHA-256 of the public key, shown in the
-  Lab. The private key is not encrypted with the vault passphrase, so anchors can be
-  written while locked and in synthetic installs. Anyone who can read the key file as the
-  owner can forge anchors; that is the stated limit.
-- **Anchor.** One JSON line per anchor in `$TWINLLM_STATE_DIR/anchor/anchors.jsonl`
-  (`0600`): `{ v: 1, chain, seq, hash, headTs, at, keyId, prev }` plus `sig`, an Ed25519
-  signature over the canonical JSON without `sig`. `prev` is the SHA-256 of the line
-  before, so a removed line in the middle shows. One line per chain (`audit`,
-  `disclosures`).
-- **When.** Every `AUDIT_ANCHOR_INTERVAL_MINUTES` (default 10) when a head moved, on clean
-  shutdown (SIGTERM and SIGINT in `instrumentation.ts`), and at the end of
-  `setup:local`. A failed write is logged by error name and retried at the next interval;
-  it never blocks a request.
-- **Verify.** Pure `checkAnchors(lines, publicKeys, chainRowAt)`: each signature holds
-  under a known key; each line's `prev` matches; the newest anchor's `seq` exists in the
-  chain with the same hash; the chain's head is at or after it. The Lab's "Audit chain"
-  card adds "Latest anchor: seq N at <time>, signature OK, chain matches", and Not OK for a
-  shorter chain (truncation), a different hash at that seq (rebuild), a bad signature or an
-  unknown key. `verify-cli --check` reads the anchors file by default and takes
-  `--anchors <path>`; `--no-anchors` keeps today's check.
-- **Off the machine.** The file is still on the same disk. `bun run anchor:export` prints
-  the newest line so the person can keep it somewhere else (a note, a USB stick, a commit
-  in a private repository). The Lab card shows when the last export was made, if the
-  person records it.
-- **Rotation.** `bun run anchor:rotate` makes a new key and writes a rotation line, signed
-  by the old key, that names the new public key; later lines use the new key. A lost or
-  exposed key: `anchor:rotate --without-old-key` starts a new key with an unsigned
-  rotation line, which the Lab shows as a break in continuity (Unknown up to that point),
-  never as OK.
-
-**Failure behaviour.** No key: the card says anchors are off and how to create one
-(Unknown, not OK). An anchors file that cannot be read: Unknown. A verification failure:
-Not OK with the reason, never a silent pass.
-
-**Tests.** Sign and verify; truncation, rebuild, a removed middle line, a bad signature,
-an unknown key, rotation with and without the old key, an empty chain. E1 in the P4 plan
-reruns faults F3 and F4 and must now detect them.
-
-**Effort.** About 3 days.
-
 ## 3. Order of work
 
-| Step | Issue | Depends on                                         | Touches                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| ---- | ----- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1    | #144  | none                                               | `infrastructure/env.ts` (new settings), new `infrastructure/storage-hardening.ts`, `instrumentation.ts`, `scripts/setup/{local,plan,doctor}.ts`, `features/lab/`, `docs/guidelines.md`, `docs/storage.md`, `docs/runbook.md`                                                                                                                                                                                                                                         |
-| 2    | #142  | #144 (state dir, loopback)                         | Built: new `infrastructure/vault*.ts` (key file in the state directory, no migration), `features/vault/`, `app/api/vault/*`, every gated route, page and server action in `tests/personal-reads/personal-reads.test.ts`, the OAuth callbacks, the sidebar and the first-run screens                                                                                                                                                                                  |
-| 3    | #141  | #142 (keys)                                        | Built: migration `20261031120000_encrypt_at_rest`, `infrastructure/{field-crypto,field-cipher,personal-columns,reseal,mesh-files,thread-fields}.ts`, every store of the tables in 2.3, `features/search`, `scripts/vault/{migrate,rotate}.ts`, doctor, Lab                                                                                                                                                                                                           |
-| 4    | #145  | #142                                               | Built: migration `20261031130000_learning_consents`, `infrastructure/learning-consent{,-store}.ts`, `features/privacy/`, Customize · Privacy, every pipeline in `tests/learning-consent/pipelines.test.ts`                                                                                                                                                                                                                                                           |
-| 5    | #140  | #141 (value list encrypted)                        | Built: migration `20261031140000_disclosure_ledger`, `packages/audit/{chain,disclosure-chain}.ts`, `infrastructure/disclosure-ledger{,-runtime}.ts`, `resolveLanguageModel` and its callers, `features/wearables/` syncs and the OAuth returns, `features/arena/thread-export-handler.ts`, `features/digital-twin/genome-run.ts`, GBD, search embeddings, PostHog events, `tests/disclosures/`, Lab, Customize · Privacy. Not built: the #112 matcher over free text |
-| 6    | #300  | #144 (state dir); covers #140's chain when present | Built: `packages/audit/anchor{,-store,-chains}.ts`, `verify-cli.ts` and its args, `infrastructure/anchor-{writer,runtime}.ts`, `features/lab/anchor-evidence.ts`, `instrumentation.ts`, `scripts/anchor/`, `setup:local`                                                                                                                                                                                                                                             |
+| Step | Issue | Depends on                                         | Touches                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ---- | ----- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1    | #144  | none                                               | `infrastructure/env.ts` (new settings), new `infrastructure/storage-hardening.ts`, `instrumentation.ts`, `scripts/setup/{local,plan,doctor}.ts`, `features/lab/`, `docs/guidelines.md`, `docs/storage.md`, `docs/runbook.md`                                                                                                                                                                                                                                                                                                                                                   |
+| 2    | #142  | #144 (state dir, loopback)                         | Built: new `infrastructure/vault*.ts` (key file in the state directory, no migration), `features/vault/`, `app/api/vault/*`, every gated route, page and server action in `tests/personal-reads/personal-reads.test.ts`, the OAuth callbacks, the sidebar and the first-run screens                                                                                                                                                                                                                                                                                            |
+| 3    | #141  | #142 (keys)                                        | Built: migration `20261031120000_encrypt_at_rest`, `infrastructure/{field-crypto,field-cipher,personal-columns,reseal,mesh-files,thread-fields}.ts`, every store of the tables in 2.3, `features/search`, `scripts/vault/{migrate,rotate}.ts`, doctor, Lab                                                                                                                                                                                                                                                                                                                     |
+| 4    | #145  | #142                                               | Built: migration `20261031130000_learning_consents`, `infrastructure/learning-consent{,-store}.ts`, `features/privacy/`, Customize · Privacy, every pipeline in `tests/learning-consent/pipelines.test.ts`                                                                                                                                                                                                                                                                                                                                                                     |
+| 5    | #140  | #141 (value list encrypted)                        | Built: migration `20261031140000_disclosure_ledger`, `packages/audit/{chain,disclosure-chain}.ts`, `infrastructure/disclosure-ledger{,-runtime}.ts`, `resolveLanguageModel` and its callers, `features/wearables/` syncs and the OAuth returns, `features/arena/thread-export-handler.ts`, `features/digital-twin/genome-run.ts`, GBD, search embeddings, PostHog events, `tests/disclosures/`, Lab, Customize · Privacy. #346: the free text check of hosted-model requests (`infrastructure/free-text-check{,-runtime}.ts`, migration `20261031170000_disclosure_free_text`) |
+| 6    | #300  | #144 (state dir); covers #140's chain when present | Built: `packages/audit/anchor{,-store,-chains}.ts`, `verify-cli.ts` and its args, `infrastructure/anchor-{writer,runtime}.ts`, `features/lab/anchor-evidence.ts`, `instrumentation.ts`, `scripts/anchor/`, `setup:local`                                                                                                                                                                                                                                                                                                                                                       |
 
 #300 needs only #144 and can run in parallel with steps 2 to 5; it then adds the ledger
 chain as a second anchored chain. Customize · Privacy was first planned for #141 (key and

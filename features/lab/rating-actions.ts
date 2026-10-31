@@ -6,6 +6,7 @@ import { isAuthDisabled } from "@/infrastructure/env";
 
 import {
   loadRaterLines,
+  loadRaterSalt,
   loadRaterSession,
   loadRatingFiles,
   saveLineRating,
@@ -47,7 +48,7 @@ export const saveRating = async (input: unknown): Promise<ActionResult<null>> =>
   if (!parsed.success)
     return { ok: false, message: "That rating is not one this view can save." };
   try {
-    const data = await loadRaterLines();
+    const data = await loadRaterLines(await loadRaterSalt(parsed.data.rater, true));
     const line =
       data.kind === "ready"
         ? data.lines.find((each) => each.token === parsed.data.token)
@@ -82,9 +83,10 @@ export const exportRatings = async (rater: unknown): Promise<ActionResult<string
     return { ok: false, message: "That pseudonym is not one this view can use." };
   }
   try {
-    const data = await loadRaterLines();
+    const salt = await loadRaterSalt(rater, true);
+    const data = await loadRaterLines(salt);
     if (data.kind !== "ready") return { ok: false, message: "No answers to export." };
-    const session = await loadRaterSession(data.lines, rater);
+    const session = await loadRaterSession(data.lines, rater, salt);
     if (session.some((line) => line.level === null)) {
       return { ok: false, message: "Export opens once every answer is rated." };
     }

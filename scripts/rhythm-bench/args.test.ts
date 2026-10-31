@@ -12,6 +12,7 @@ describe("parseArgs", () => {
       bootstrapSeed: 249,
       quick: false,
       realNoise: false,
+      afDependence: "independent",
     });
   });
 
@@ -30,6 +31,8 @@ describe("parseArgs", () => {
         "7",
         "--quick",
         "--real-noise",
+        "--af-dependence",
+        "short_range",
       ]),
     ).toEqual({
       out: "o",
@@ -39,6 +42,7 @@ describe("parseArgs", () => {
       bootstrapSeed: 7,
       quick: true,
       realNoise: true,
+      afDependence: "short_range",
     });
   });
 
@@ -64,6 +68,12 @@ describe("parseArgs", () => {
     );
     expect(() => parseArgs(["--out", "o", "--afdb", "a", "--ltafdb", "b"])).toThrow(
       "give one database",
+    );
+    expect(() => parseArgs(["--out", "o", "--af-dependence", "ar2"])).toThrow(
+      "--af-dependence takes independent or short_range",
+    );
+    expect(() => parseArgs(["--out", "o", "--af-dependence"])).toThrow(
+      "--af-dependence takes",
     );
   });
 

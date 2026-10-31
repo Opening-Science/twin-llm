@@ -1,4 +1,5 @@
 import { RHYTHM_BENCH_DIR } from "@/infrastructure/local-artefacts";
+import { AF_DEPENDENCES, type AfDependence } from "@/packages/rhythm-sim/af-interval";
 
 import { type DatabaseId } from "./databases";
 
@@ -14,13 +15,15 @@ export type BenchArgs = Readonly<{
   quick: boolean;
   /** Apply the grid's beat-detection noise levels to the database beats too (#296). */
   realNoise: boolean;
+  /** How simulated AF intervals depend on each other (#297); independent by default. */
+  afDependence: AfDependence;
 }>;
 
 export const DEFAULT_SEEDS = 20;
 export const DEFAULT_RESAMPLES = 1000;
 export const DEFAULT_BOOTSTRAP_SEED = 249;
 
-export const USAGE = `usage: bun run rhythm-bench -- --out ${RHYTHM_BENCH_DIR}/<run> [--seeds N] [--afdb <dir> | --ltafdb <dir>] [--resamples N] [--bootstrap-seed N] [--quick] [--real-noise] (the Lab reads ${RHYTHM_BENCH_DIR}/*/result.json)`;
+export const USAGE = `usage: bun run rhythm-bench -- --out ${RHYTHM_BENCH_DIR}/<run> [--seeds N] [--afdb <dir> | --ltafdb <dir>] [--resamples N] [--bootstrap-seed N] [--quick] [--real-noise] [--af-dependence independent|short_range] (the Lab reads ${RHYTHM_BENCH_DIR}/*/result.json)`;
 
 const valueOf = (argv: readonly string[], name: string): string | undefined => {
   const index = argv.indexOf(name);
@@ -50,6 +53,7 @@ export const parseArgs = (argv: readonly string[]): BenchArgs => {
     "--bootstrap-seed",
     "--quick",
     "--real-noise",
+    "--af-dependence",
   ]);
   const unknown = argv.filter((arg) => arg.startsWith("--") && !known.has(arg));
   if (unknown.length > 0) throw new Error(`unknown option ${unknown[0]}\n${USAGE}`);
@@ -68,6 +72,10 @@ export const parseArgs = (argv: readonly string[]): BenchArgs => {
   const realNoise = argv.includes("--real-noise");
   if (realNoise && given.length === 0)
     throw new Error(`--real-noise needs the database (--afdb or --ltafdb)\n${USAGE}`);
+  const dependence = valueOf(argv, "--af-dependence");
+  const afDependence = AF_DEPENDENCES.find((each) => each === dependence);
+  if (argv.includes("--af-dependence") && afDependence === undefined)
+    throw new Error(`--af-dependence takes ${AF_DEPENDENCES.join(" or ")}\n${USAGE}`);
   return {
     out,
     seeds: positiveInt(valueOf(argv, "--seeds"), "--seeds", DEFAULT_SEEDS, 1),
@@ -86,5 +94,6 @@ export const parseArgs = (argv: readonly string[]): BenchArgs => {
     ),
     quick: argv.includes("--quick"),
     realNoise,
+    afDependence: afDependence ?? "independent",
   };
 };

@@ -281,3 +281,64 @@ describe("resealing a table: migration, resumption and rotation (#141)", () => {
     expect(formatPlaintextFindings([])[0]).toContain("[ok]");
   });
 });
+
+describe("migrating stored OAuth and BodyLoop tokens (#341)", () => {
+  // Made-up env-key ciphertext as an install from before #341 holds it, built at run time.
+  const envValue = (label: string): string =>
+    Buffer.from(`synthetic-${label}-${"0".repeat(12)}`).toString("base64");
+
+  test("vault:migrate seals plain token rows, a second run changes nothing, rotation moves them", async () => {
+    const OURA = personalTable("oura_connections");
+    const rows: Record<string, unknown>[] = [
+      {
+        id: "conn-a",
+        owner: OWNER,
+        accessTokenEnc: envValue("access"),
+        refreshTokenEnc: envValue("refresh"),
+      },
+      {
+        id: "conn-other",
+        owner: "user-synthetic-2",
+        accessTokenEnc: envValue("other-access"),
+        refreshTokenEnc: envValue("other-refresh"),
+      },
+    ];
+    const table = memoryTable(OURA, rows);
+    expect(await plaintextFindings(table.ports.query)).toEqual([
+      { table: "oura_connections", column: "accessTokenEnc", rows: 2 },
+      { table: "oura_connections", column: "refreshTokenEnc", rows: 2 },
+    ]);
+
+    const cipher = sealedCipher(OLD);
+    expect(await resealTable(table.ports, cipher, OURA, OWNER)).toBe(1);
+    expect(await resealTable(table.ports, cipher, OURA, OWNER)).toBe(0);
+    const mine = table.rows.find((row) => row.id === "conn-a");
+    expect(sealedTextKeyId(String(mine?.accessTokenEnc))).toBe(OLD.keyId);
+    expect(
+      cipher.openText(
+        "oura_connections",
+        "refreshTokenEnc",
+        "conn-a",
+        String(mine?.refreshTokenEnc),
+      ),
+    ).toBe(envValue("refresh"));
+    expect(JSON.stringify(mine)).not.toContain(envValue("access"));
+    // Another owner's row waits for that owner's own run.
+    expect(table.rows.find((row) => row.id === "conn-other")?.accessTokenEnc).toBe(
+      envValue("other-access"),
+    );
+
+    const rotating = sealedCipher(NEW, [OLD]);
+    expect(await resealTable(table.ports, rotating, OURA, OWNER)).toBe(1);
+    expect(await rowsWithKey(table.ports.query, OWNER, OLD.keyId)).toBe(0);
+    const rotated = table.rows.find((row) => row.id === "conn-a");
+    expect(
+      sealedCipher(NEW).openText(
+        "oura_connections",
+        "accessTokenEnc",
+        "conn-a",
+        String(rotated?.accessTokenEnc),
+      ),
+    ).toBe(envValue("access"));
+  });
+});

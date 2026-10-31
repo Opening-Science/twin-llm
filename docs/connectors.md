@@ -5,10 +5,10 @@ Three OAuth connectors feed wearable context into the twin: Oura, Whoop and Goog
 Shared behaviour:
 
 - **Sync window:** `resolveSyncDateWindow` (`features/wearables/sync-window.ts`) takes an optional `startDate` / `endDate` (`YYYY-MM-DD`). The default is the last 14 days inclusive and the maximum is 90 days. Whoop's timestamp API gets UTC day bounds from `syncWindowToUtcTimestamps` (`T00:00:00.000Z` to `T23:59:59.999Z`).
-- **Token encryption:** access and refresh tokens are stored AES-256-GCM encrypted (`features/<connector>/token-crypto.ts`). Each connector has its own key, `*_TOKEN_ENCRYPTION_KEY`, which is 64 hex characters (32 bytes).
+- **Token encryption:** access and refresh tokens are stored AES-256-GCM encrypted (`features/<connector>/token-crypto.ts`). Each connector has its own key, `*_TOKEN_ENCRYPTION_KEY`, which is 64 hex characters (32 bytes). In personal mode that ciphertext is sealed again with the person's vault key (#341, `infrastructure/connector-tokens.ts`), so tokens are stored and opened only while their vault is unlocked; `bun run vault:migrate` seals tokens stored before.
 - **Server-side only:** snapshot `summary` and `fhirBundle` are read on the server. Chat injects only the summary narrative and citation keys.
 - **Audited syncs (#223):** every sync, from `POST /api/<provider>/sync` or the first sync after a callback, writes one `personal.read.sync-<provider>` audit row (`sync-oura`, `sync-whoop`, `sync-google-health`) with the number of metrics written, never a value (`features/wearables/audited-sync.ts`). In personal mode the Connectors page writes `personal.read.connectors-page` per view. See `docs/query-layer.md` Audit.
-- **Every OAuth exit returns to Connectors (2026-10-21):** authorize and callback never answer with JSON. They redirect to `/connectors?<oura|whoop|google-health>=<outcome>`, where the outcome is `connected`, `denied`, `error`, `expired` (state missing or mismatched), `signin` or `unconfigured`. `/connectors` forwards to `/customize/connectors` with the query intact, so registered redirect URIs did not change. The card shows one plain sentence and, for `denied`, `error` and `expired`, a "Try again" link. An `expired` exit still happens before any token exchange and logs only `hasState` and `hasCookie`.
+- **Every OAuth exit returns to Connectors (2026-10-21):** authorize and callback never answer with JSON. They redirect to `/connectors?<oura|whoop|google-health>=<outcome>`, where the outcome is `connected`, `denied`, `error`, `expired` (state missing or mismatched), `locked` (personal data was locked when the provider returned; nothing was exchanged or stored, #341), `signin` or `unconfigured`. `/connectors` forwards to `/customize/connectors` with the query intact, so registered redirect URIs did not change. The card shows one plain sentence and, for `denied`, `error`, `expired` and `locked`, a "Try again" link. An `expired` exit still happens before any token exchange and logs only `hasState` and `hasCookie`.
 - **Open TwinLLM at `http://localhost:3000`:** every proxy returns to `localhost`. To a browser `127.0.0.1` is a different host, so the state cookie set there never reaches the callback and the return ends as `expired`. The page shows a hint when it is opened on a loopback IP.
 - **Setup on the page:** each card's Setup disclosure lists the env names it needs with set / missing, the redirect URI to register and the commands below. It is built from names and booleans only (`features/connectors/connector-setup.ts`). In development a name that is present but blank or starts with `#` reads "looks empty, check .env.local".
 
@@ -37,7 +37,7 @@ Shared behaviour:
 
 ### What is encrypted
 
-`accessTokenEnc` and `refreshTokenEnc`, with `OURA_TOKEN_ENCRYPTION_KEY`.
+`accessTokenEnc` and `refreshTokenEnc`, with `OURA_TOKEN_ENCRYPTION_KEY`, then sealed with the vault key in personal mode (#341).
 
 ### What is never logged
 
@@ -70,7 +70,7 @@ Certificate, once per machine: create `certificates/localhost.pem` and `certific
 
 ### What is encrypted
 
-`accessTokenEnc` and `refreshTokenEnc`, with `WHOOP_TOKEN_ENCRYPTION_KEY`.
+`accessTokenEnc` and `refreshTokenEnc`, with `WHOOP_TOKEN_ENCRYPTION_KEY`, then sealed with the vault key in personal mode (#341).
 
 ### What is never logged
 
@@ -102,7 +102,7 @@ None. The redirect is `http://localhost:3000/api/google-health/callback` directl
 
 ### What is encrypted
 
-`accessTokenEnc` and `refreshTokenEnc`, with `GOOGLE_HEALTH_TOKEN_ENCRYPTION_KEY`.
+`accessTokenEnc` and `refreshTokenEnc`, with `GOOGLE_HEALTH_TOKEN_ENCRYPTION_KEY`, then sealed with the vault key in personal mode (#341).
 
 ### What is never logged
 
@@ -144,7 +144,7 @@ Live test: `RUN_LIVE`, `VITRONIC_BASE_URL`, `VITRONIC_API_TOKEN`, `VITRONIC_PROB
 
 ### What is encrypted
 
-`apiTokenEnc` and `uploadSecretEnc`, with `VITRONIC_TOKEN_ENCRYPTION_KEY`.
+`apiTokenEnc` and `uploadSecretEnc`, with `VITRONIC_TOKEN_ENCRYPTION_KEY`, then sealed with the vault key in personal mode (#341). While the owner's vault is locked a scanner upload answers 423 without opening its secret.
 
 ### What is never logged
 

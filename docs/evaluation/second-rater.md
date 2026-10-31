@@ -23,7 +23,9 @@ reader and the scorer agree, and how far two readers do.
 2. Start the app on a local install (`LOCAL_MVP=true` or
    `AUTH_DISABLED=true`) and open Lab, "Second rating", or `/lab/rate`.
 3. Enter a pseudonym such as `rater-b`, not your name. It names your ratings
-   file and fixes the order of the answers.
+   file. The first time, the server starts your rating set: it makes a
+   random salt that fixes your answer ids and the order of the answers
+   (see Blinding).
 4. Rate each answer with the stars, read the anchor of the level you chose,
    add a comment if it helps, and press Save and next.
 5. Stop at any time. Opening `/lab/rate?rater=rater-b` again resumes at the
@@ -31,7 +33,8 @@ reader and the scorer agree, and how far two readers do.
    changed or cleared.
 6. When every answer is rated, Export ratings downloads all your files as one
    JSON document.
-7. `bun run eval:agreement -- <run-id> [<run-id> …]` prints the agreement.
+7. `bun run eval:agreement -- <run-id> [<run-id> …]` prints the agreement;
+   add `--ids` to also map each rater's answer ids back to their runs.
 
 ## What the rater sees
 
@@ -39,16 +42,38 @@ One answer at a time: the question, the reference (the answer key's values
 for that item: the verdict, the numbers, or the tool's refusal code), the
 item's note on what a good answer does, and the whole reply as the model
 wrote it. The answers of every hb run on the machine are pooled and ordered
-by a hash of `second-rater.v1:<pseudonym>` and the line, so models are mixed
-and each rater has their own fixed order.
+by a keyed hash of `second-rater.v1:<pseudonym>` and the line, so models are
+mixed and each rater has their own fixed order.
 
 Hidden: the run id, the model or agent name, the item id, the tool calls and
 the automatic scores. The page gets each answer with an opaque 16-character
-token (a hash of run, item and repeat) instead; only the server can map it
-back. The view never opens `report.md`, `review.csv` or `review-key.json`.
+answer id instead, keyed by a salt only the server holds (see Blinding). The
+view never opens `report.md`, `review.csv` or `review-key.json`.
 
 As on the review sheet (`harness.md`), a reply may name its own model ("As
 Qwen, …"). Note that in the comment and do not rate on it.
+
+## Blinding
+
+Methods text (#355): Each answer was shown to the rater without the run,
+model, item identifier or automatic score. When a rater's rating set
+started, the server drew a 32-byte salt from the operating system's
+cryptographic random source and stored it on the server, beside the
+ratings; it was never sent to the rater's browser and is not part of the
+exported ratings. The browser identified each answer only by an answer id,
+the first 64 bits of HMAC-SHA256 keyed by that salt over the run, item and
+repeat, so knowing the run identifiers is not enough to recompute the ids
+and map them back to models. The order of presentation was the answers of
+all runs pooled and sorted by HMAC-SHA256 under the same salt of the
+rater's order seed (rubric version and pseudonym) and the answer id, so
+models were interleaved, each rater had their own order, and the order was
+the same on every resume. The salt was used afterwards only to map answer
+ids back to runs (`eval:agreement --ids`); agreement itself was computed
+from the ratings files, which record run, item and repeat.
+
+Limits of the blinding: the reply itself can name its model, and a rater
+who reads the server's files can unblind; the rater sets are meant to be
+kept by whoever runs the study, not by the raters.
 
 ## Rubric
 
@@ -76,6 +101,22 @@ For comparison with the scorer, levels 4 and 5 count as a pass and 1 to 3 as
 a fail.
 
 ## Files
+
+Rater set: `evaluation/rater-sets/<pseudonym>.json` (gitignored), one per
+rater, written once when the set starts, create-only so two first loads at
+once agree on one salt. It is never rewritten; if it does not parse, the view
+stops with an error rather than replace it. A view that cannot save (not a
+local install) writes nothing and uses a throwaway salt for that page load.
+
+```json
+{
+  "schema_version": "twin-llm.eval.rater-set.v1",
+  "rubric": "second-rater.v1",
+  "rater": "rater-b",
+  "salt": "<64 hex characters>",
+  "created": "2026-10-31T10:00:00.000Z"
+}
+```
 
 Ratings: `evaluation/runs/<run-id>/ratings/<pseudonym>.json`, one per run and
 rater, written after every save (to a temporary file, then renamed). They stay
@@ -107,7 +148,7 @@ on this machine with the run; nothing is sent anywhere.
 | `rubric`         | The rubric the levels mean, `second-rater.v1`                     |
 | `run_id`         | The run folder the file sits in                                   |
 | `rater`          | The pseudonym: lowercase letters, digits, dashes, 2 to 32 long    |
-| `order_seed`     | The seed of the order the rater saw                               |
+| `order_seed`     | The seed of the order the rater saw (keyed by the rater's salt)   |
 | `updated`        | Time of the last save, UTC                                        |
 | `ratings`        | One per rated line, sorted by `item_id` then `repeat`             |
 | `level`          | 1 to 5, as in the rubric; a cleared rating is removed, not zeroed |
@@ -118,7 +159,15 @@ Export (`ratings-<pseudonym>.json`): `schema_version`
 the files above. It opens only once every answer is rated, because it names
 each run and a run id can name its model. To use ratings made on another
 machine, put each file of `files` back as
-`evaluation/runs/<run_id>/ratings/<rater>.json`.
+`evaluation/runs/<run_id>/ratings/<rater>.json`. The export has no salt, so
+`--ids` works only where the rater set is.
+
+Ratings made before #355 have no rater set. They need no change: ratings are
+keyed by item and repeat, not by answer id, so they still parse, resume and
+count for agreement. The first load after the update starts the rater's set
+with a new salt; from then on the ids and the order are new, the earlier
+ratings show on their answers, and resume goes to the first unrated answer
+in the new order. The unsalted ids of #354 are not kept anywhere.
 
 ## Agreement
 
@@ -133,6 +182,11 @@ given:
   pass or fail (its n/a and human lines are left out), with levels 4 and 5 as
   pass;
 - each pair of raters on the five levels, and on 4 to 5 against 1 to 3.
+
+With `--ids` it then lists, for every rated line, the rater, the answer id
+that rater's page used, and the run, item and repeat, recomputed from
+`evaluation/rater-sets/<rater>.json`. A rater without a set on this machine
+is named on stderr and left out of that list.
 
 Each row gives the lines both sides rated, the observed agreement, and
 Cohen's kappa (Cohen 1960) with a 95 % interval from the large-sample
@@ -157,3 +211,25 @@ categories, kappa .492, standard error 0.051, interval 0.392 to 0.591).
   (4 and above), and the correctness scorer checks keyed values, not wording;
   the two do not measure quite the same thing.
 - The view rates one set (hb). Other sets would need their own anchors.
+
+## Follow-up: the held-out set v1h (#304)
+
+The review protocol for the held-out S1 to S6 items is in
+`question-set.md` ("v1h", "Human review"): two raters on a stratified sample
+of the blinded `review.csv`, rated on this rubric with "the numbers asked
+for" in place of "the verdict", agreement by Cohen's kappa. Rating v1h in
+this view is not wired yet. What it needs:
+
+- a v1h rubric with its own version (`rater-rubric.ts`), since the hb anchors
+  speak of verdicts and relations, and the S3 and S4 items have no keyed
+  reference; the version names the ratings file's `rubric` and the order seed;
+- a set parameter on `/lab/rate` and its actions (`load-rater.ts`,
+  `rating-actions.ts`, `rater-screen.tsx`, `second-rater.tsx`), so the view
+  reads `meta.json` runs of that set and its questions and key;
+- the "no tool value, it should be declined" line in `second-rater.tsx` made
+  per set, since a v1h item without a keyed value may be a guideline or
+  population question;
+- the stratified sample of the protocol as a pure function with a test.
+
+`eval:agreement` already reads any set's runs (`QUESTION_SETS`), so it needs
+no change once the view writes ratings beside v1h runs.

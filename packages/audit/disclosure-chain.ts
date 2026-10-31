@@ -7,6 +7,8 @@ import { checkLinks, hashLink, nextLink, type VerifyChainResult } from "./chain"
  * log (`chain.ts`) over its own row. The hash covers every column but the
  * sealed `refs`, which a key rotation rewrites; `ref_count` stands for it,
  * and the sealed value is bound to its row by its encryption context.
+ * `free_text_matches` (#346) is in the hash only when it is set, so rows
+ * written before it existed keep their hashes.
  */
 
 export type DisclosureChainRow = Readonly<{
@@ -25,14 +27,25 @@ export type DisclosureChainRow = Readonly<{
   threadId: string | null;
   synthetic: boolean;
   freeTextChecked: boolean;
+  /**
+   * What the free text check found (#346): a list of `{ kind, count }`, or
+   * null when it did not run. Rows written before #346 hold null.
+   */
+  freeTextMatches: unknown;
   auditSeq: bigint | number;
   prevHash: string;
   hash: string;
 }>;
 
+/** One kind of stored value the free text held, and how many. */
+export type FreeTextMatchRow = Readonly<{ kind: string; count: number }>;
+
 /** The fields one new row adds; `seq`, the links and the hash come from the chain. */
-export type NewDisclosureRow = Omit<DisclosureChainRow, "seq" | "prevHash" | "hash"> &
-  Readonly<{ refs: string | null }>;
+export type NewDisclosureRow = Omit<
+  DisclosureChainRow,
+  "seq" | "prevHash" | "hash" | "freeTextMatches"
+> &
+  Readonly<{ refs: string | null; freeTextMatches: readonly FreeTextMatchRow[] | null }>;
 
 export const canonicalDisclosure = (
   row: Omit<DisclosureChainRow, "hash">,
@@ -42,6 +55,9 @@ export const canonicalDisclosure = (
   categories: [...row.categories],
   direction: row.direction,
   free_text_checked: row.freeTextChecked,
+  ...(row.freeTextMatches === null || row.freeTextMatches === undefined
+    ? {}
+    : { free_text_matches: row.freeTextMatches }),
   id: row.id,
   kind: row.kind,
   payload_bytes: row.payloadBytes,
@@ -78,9 +94,19 @@ export const appendDisclosureInTransaction = async (
   });
   const { seq, prevHash } = nextLink(last);
   const hash = disclosureRowHash({ ...row, seq, prevHash });
+  const { freeTextMatches, ...rest } = row;
   await tx.disclosureEvent.create({
     data: {
-      ...row,
+      ...rest,
+      // Left out when null, so the column stays SQL NULL.
+      ...(freeTextMatches === null
+        ? {}
+        : {
+            freeTextMatches: freeTextMatches.map((match) => ({
+              kind: match.kind,
+              count: match.count,
+            })),
+          }),
       categories: [...row.categories],
       auditSeq: BigInt(row.auditSeq),
       seq,

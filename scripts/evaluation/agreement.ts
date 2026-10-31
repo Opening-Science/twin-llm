@@ -19,6 +19,7 @@
  * one side used a single category, kappa is 0 and the standard error
  * formula gives 0, which is not a real certainty: the interval is null.
  */
+import { lineToken } from "../../features/lab/rater-lines";
 import { isAcceptable } from "../../features/lab/rater-rubric";
 
 const Z_95 = 1.959963984540054;
@@ -173,3 +174,32 @@ export const agreementRows = (runs: readonly RunAgreementInput[]): AgreementRow[
   );
   return [...againstScorer, ...pairsOfRaters];
 };
+
+export type AnswerIdRow = Readonly<{
+  rater: string;
+  id: string;
+  runId: string;
+  itemId: string;
+  repeat: number;
+}>;
+
+/**
+ * The answer ids one rater's page used for these lines of one run (#355),
+ * recomputed from the rater's salt, so an id a rater quotes can be traced to
+ * its run. Sorted by id.
+ */
+export const answerIdRows = (
+  rater: string,
+  salt: string,
+  runId: string,
+  lines: readonly Readonly<{ item_id: string; repeat: number }>[],
+): AnswerIdRow[] =>
+  lines
+    .map((line) => ({
+      rater,
+      id: lineToken(salt, runId, line.item_id, line.repeat),
+      runId,
+      itemId: line.item_id,
+      repeat: line.repeat,
+    }))
+    .sort((a, b) => a.id.localeCompare(b.id));
