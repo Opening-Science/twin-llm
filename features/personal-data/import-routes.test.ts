@@ -443,7 +443,12 @@ describe("audit rows carry no values", () => {
 
 describe("Apple Health and wearable exports", () => {
   const APPLE = new Uint8Array(readFileSync(join(FIXTURES, "apple-health-export.xml")));
-  const APPLE_ZIP = zipSync({ "apple_health_export/export.xml": APPLE });
+  // A zip entry carries its modified time, so an unpinned zip has a new SHA-256 on
+  // every run. Pin it so the bytes, and the hash in the audit, stay the same.
+  const APPLE_ZIP = zipSync(
+    { "apple_health_export/export.xml": APPLE },
+    { mtime: new Date(2026, 8, 3, 9, 0, 0) },
+  );
   const APPLE_ZIP_SHA = fileSha256(APPLE_ZIP);
   const WHOOP = new Uint8Array(
     readFileSync(join(FIXTURES, "wearables/my_whoop_data/sleeps.csv")),
@@ -473,7 +478,13 @@ describe("Apple Health and wearable exports", () => {
         { stored: true, dataset_id: "ds-1", rows: 10, unmapped: 11 },
       ],
     ]);
-    const written = JSON.stringify(audits);
+    // The file's SHA-256 is audited on purpose. It is hex, so it can hold "445" by
+    // chance; leave it out of the search for values from the file.
+    expect(audits.map((event) => (event.args as { sha256?: string }).sha256)).toEqual([
+      APPLE_ZIP_SHA,
+      APPLE_ZIP_SHA,
+    ]);
+    const written = JSON.stringify(audits).replaceAll(APPLE_ZIP_SHA, "sha256");
     for (const value of ["8867-4", "HKQuantityType", "Demo Watch", "export.zip", "445"]) {
       expect({ value, found: written.includes(value) }).toEqual({ value, found: false });
     }

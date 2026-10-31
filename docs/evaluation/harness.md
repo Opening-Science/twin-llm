@@ -76,7 +76,7 @@ resolve the agent, and calls no model.
 
 `--decline-wording` puts one of the wordings in
 `scripts/evaluation/decline-wordings.ts` in place of the chat route's decline
-line (`DECLINE_RULE`, which is `w1`) for that run only; the chat route is
+line (`DECLINE_RULE`, which is `w3` since #329) for that run only; the chat route is
 unchanged. `meta.json` records `decline_wording` (`id` and the sha256 of the
 exact text) and the report names it in the run table. The line is part of the
 prompt and so of the cache key: two wordings never share an entry. A run

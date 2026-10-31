@@ -642,7 +642,7 @@ answered:
 
 | Id  | Source                                                       | Opens with                                | Says is answered                                                                                                                                                                         | Text sha256     |
 | --- | ------------------------------------------------------------ | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
-| W1  | the current `DECLINE_RULE`                                   | "Questions that ask whether a person …"   | "What a record or recording holds is answered as usual."                                                                                                                                 | `3b1876ba0424…` |
+| W1  | `DECLINE_RULE` until #329                                    | "Questions that ask whether a person …"   | "What a record or recording holds is answered as usual."                                                                                                                                 | `3b1876ba0424…` |
 | W2  | the narrower `-fix2` wording (commit 9bf2926, not on origin) | "Decline only a judgement about a person" | "Questions about what a record, a recording or a guideline holds are not declined: call the tools and use the headings."                                                                 | `ccd57817b521…` |
 | W3  | written for this comparison                                  | "Decline a question that asks whether …"  | "Answer as usual, with the tools and the headings, a question about what a record or recording lists, when something was recorded, or what a metric's value is: these are not declined." | `4dffcc5d9f11…` |
 
@@ -702,10 +702,12 @@ declines W1 4, W2 14, W3 4; over-declines W1 4, W2 0, W3 2.
 (10 of 16, against 8 for W1 and 2 for W2) with no more missed declines than
 W1 (4 each), and it halves the over-declines. The margin over W1 is two pairs,
 both from qwen3:8b, on one sample per line and well inside the intervals, so
-this is a preference, not a measured difference. W2 should not be used. The
-chat default stays W1 in this branch; switching it is one line
-(`DECLINE_RULE`) once Peter decides, and the S7, S7b and S5 numbers above
-would then need a rerun.
+this is a preference, not a measured difference. W2 should not be used.
+
+**W3 is the default since #329.** Peter chose W3, and `DECLINE_RULE` is now
+its text; `--decline-wording w1` still runs the earlier line for comparisons.
+The S7, S7b and S5 numbers above were run under W1 and need a rerun under W3
+before they describe the chat as it is.
 
 Limits: one sample per line at the model defaults; eight pairs per model; no
 human review of these runs; "is the rhythm dangerous" is still answered under
