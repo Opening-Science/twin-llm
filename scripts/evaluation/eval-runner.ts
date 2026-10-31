@@ -18,6 +18,7 @@ import {
   type TwinTurnFinish,
   type TwinTurnToolResult,
 } from "../../features/chat/run-twin-turn";
+import type { PastedDataSource } from "../../features/chat/twin-system-prompt";
 import { sha256Hex, toCanonicalJson } from "../../packages/audit/hash";
 import { isToolRefusal } from "../../packages/query-tools/refusals";
 import type { SessionScope } from "../../packages/query-tools/scope";
@@ -30,16 +31,33 @@ import type {
 
 import { questionsSha256 } from "./build-answer-key";
 import {
+  DECLINE_WORDING_IDS,
+  DECLINE_WORDINGS,
+  type DeclineWordingId,
+  declineWordingMeta,
+  isDeclineWordingId,
+} from "./decline-wordings";
+import {
+  ARM_ALIASES,
   buildContextBlock,
   type ContextBlock,
+  type ContextStats,
+  cacheArm,
   contextCalls,
   DEFAULT_CONTEXT_CAP_TOKENS,
   EVAL_ARMS,
   type EvalArm,
-  isEvalArm,
   keyedRefusalOutput,
   type PastedCall,
+  parseArm,
 } from "./context-arm";
+import {
+  buildFairBlock,
+  type FairRead,
+  type FairStats,
+  type SubjectPick,
+  subjectFromQuestion,
+} from "./fair-context";
 import {
   type CatalogRow,
   type EvalAgent,
@@ -139,6 +157,16 @@ export type EvalDeps = Readonly<{
     tool: KeyedTool,
     args: unknown,
   ) => Promise<unknown>;
+  /**
+   * Fair context arm (#320): the record of the subject the question names,
+   * read on the server under the item's eval session. `gate` holds the
+   * audited tool calls that checked the subject's scope (and listed the
+   * cohort for "the first subject"), for the audit lines.
+   */
+  readSubjectRecord: (
+    scope: SessionScope,
+    pick: Exclude<SubjectPick, { kind: "none" }>,
+  ) => Promise<Readonly<{ read: FairRead; gate: readonly PastedCall[] }>>;
   cache: CacheStore;
   /** False when the run directory already exists. */
   prepareRun: (runId: string) => Promise<boolean>;
@@ -164,7 +192,13 @@ export type EvalOptions = Readonly<{
   replay: boolean;
   runId: string | null;
   timeoutMs: number;
-  /** `tools` (default, the chat route) or `context` (#302: the key's results pasted, no tools). */
+  /** `--decline-wording` (#274); null keeps the chat route's line. */
+  declineWording: DeclineWordingId | null;
+  /**
+   * `tools` (default, the chat route), `context-oracle` (#302: the key's
+   * results pasted, no tools; `--arm context` still names it) or
+   * `context-fair` (#320: the named subject's record pasted, no tools).
+   */
   arm: EvalArm;
   /** Context arm: estimated tokens each item's data block may use. */
   contextCapTokens: number;
@@ -204,6 +238,7 @@ const KNOWN_FLAGS = new Set([
   "--replay",
   "--run-id",
   "--timeout-s",
+  "--decline-wording",
   "--arm",
   "--context-cap",
 ]);
@@ -214,6 +249,7 @@ const VALUE_FLAGS = new Set([
   "--scenario",
   "--run-id",
   "--timeout-s",
+  "--decline-wording",
   "--arm",
   "--context-cap",
 ]);
@@ -255,13 +291,26 @@ export const parseEvalArgs = (argv: readonly string[]): EvalOptions => {
   if (!Number.isInteger(timeoutS) || timeoutS <= 0) {
     throw new EvalSetupError("USAGE", "--timeout-s takes a whole number of seconds");
   }
-  const arm = flagValue(args, "--arm") ?? "tools";
-  if (!isEvalArm(arm)) {
-    throw new EvalSetupError("USAGE", `--arm takes one of ${EVAL_ARMS.join(", ")}`);
+  const declineWording = flagValue(args, "--decline-wording");
+  if (declineWording !== null && !isDeclineWordingId(declineWording)) {
+    throw new EvalSetupError(
+      "USAGE",
+      `--decline-wording takes one of ${DECLINE_WORDING_IDS.join(", ")}`,
+    );
+  }
+  const arm = parseArm(flagValue(args, "--arm") ?? "tools");
+  if (arm === null) {
+    throw new EvalSetupError(
+      "USAGE",
+      `--arm takes one of ${[...EVAL_ARMS, ...Object.keys(ARM_ALIASES)].join(", ")}`,
+    );
   }
   const cap = flagValue(args, "--context-cap");
-  if (cap !== null && arm !== "context") {
-    throw new EvalSetupError("USAGE", "--context-cap needs --arm context");
+  if (cap !== null && arm === "tools") {
+    throw new EvalSetupError(
+      "USAGE",
+      "--context-cap needs --arm context-oracle or context-fair",
+    );
   }
   const contextCapTokens = cap === null ? DEFAULT_CONTEXT_CAP_TOKENS : Number(cap);
   if (!Number.isInteger(contextCapTokens) || contextCapTokens <= 0) {
@@ -276,6 +325,7 @@ export const parseEvalArgs = (argv: readonly string[]): EvalOptions => {
     replay: args.includes("--replay"),
     runId,
     timeoutMs: timeoutS * 1000,
+    declineWording,
     arm,
     contextCapTokens,
   };
@@ -344,7 +394,8 @@ const runTurn = (
   question: string,
   timeoutMs: number,
   label: string,
-  pastedData: string | null,
+  declineWording: DeclineWordingId | null,
+  pasted: Readonly<{ text: string; source: PastedDataSource }> | null,
 ): Promise<TurnRun> =>
   new Promise<TurnRun>((resolve) => {
     let firstTokenAt: number | null = null;
@@ -357,9 +408,9 @@ const runTurn = (
       resolve({ outcome, firstTokenAt, finishedAt: deps.now() });
     };
 
-    // The context arm has no tools: its rows are in the prompt (#302).
+    // A context arm has no tools: its rows are in the prompt (#302, #320).
     const { tools, offeredTools } =
-      pastedData === null
+      pasted === null
         ? deps.createTools(scope, agent)
         : { tools: {}, offeredTools: new Set<string>() };
     const result = runTwinTurn(
@@ -367,11 +418,15 @@ const runTurn = (
         model,
         tools,
         offeredTools,
-        pastedData,
+        pastedData: pasted?.text ?? null,
+        ...(pasted === null ? {} : { pastedDataSource: pasted.source }),
         mode: "synthetic",
         // As the chat route: the agent's skill (none typed) and its role line.
         skill: agent?.skill ?? null,
         agent: agent?.agent ?? null,
+        ...(declineWording === null
+          ? {}
+          : { declineRule: DECLINE_WORDINGS[declineWording] }),
         loadAudit: deps.loadAudit,
       },
       {
@@ -496,6 +551,7 @@ const runItem = async (
     agent: EvalAgent | null;
     replay: boolean;
     timeoutMs: number;
+    declineWording: DeclineWordingId | null;
     arm: EvalArm;
     contextCapTokens: number;
     keyEntries: readonly KeyEntry[];
@@ -509,7 +565,7 @@ const runItem = async (
     provider: spec.provider,
     modelId: agent?.agent.baseModelId ?? spec.modelId,
     repeat,
-    arm: input.arm,
+    arm: cacheArm(input.arm),
     mock: resolved.mock,
     replay: input.replay,
     store: deps.cache,
@@ -523,19 +579,23 @@ const runItem = async (
     mode: "synthetic",
   };
   const label = `${item.id} r${repeat} ${spec.modelId}`;
-  const context =
-    input.arm === "context"
-      ? await pasteContext(deps, scope, input.keyEntries, input.contextCapTokens).catch(
-          (error: unknown) => {
-            deps.logError(
-              `[eval] ${label} could not read the rows for the data block`,
-              error instanceof Error ? error.name : "unknown",
-            );
-            return null;
-          },
-        )
-      : null;
-  if (input.arm === "context" && context === null) {
+  const context: PastedBlock | null =
+    input.arm === "tools"
+      ? null
+      : await (
+          input.arm === "context-oracle"
+            ? pasteContext(deps, scope, input.keyEntries, input.contextCapTokens).then(
+                (block): PastedBlock => ({ ...block, gate: [], fair: null }),
+              )
+            : pasteFairContext(deps, scope, item.question, input.contextCapTokens)
+        ).catch((error: unknown) => {
+          deps.logError(
+            `[eval] ${label} could not read the rows for the data block`,
+            error instanceof Error ? error.name : "unknown",
+          );
+          return null;
+        });
+  if (input.arm !== "tools" && context === null) {
     return { ...failedLine(item, repeat, spec, resolved.mock), error: "CONTEXT_FAILED" };
   }
   const startedAt = deps.now();
@@ -547,7 +607,13 @@ const runItem = async (
     item.question,
     input.timeoutMs,
     label,
-    context?.text ?? null,
+    input.declineWording,
+    context === null
+      ? null
+      : {
+          text: context.text,
+          source: input.arm === "context-fair" ? "subject-record" : "key-calls",
+        },
   );
 
   const auditRows = await deps.loadAudit(scope.sessionId).then(
@@ -607,10 +673,19 @@ const runItem = async (
         }
       : {
           // The server's reads: what the model was given, as its sources (#302).
-          audit: auditLines(auditRows.rows, asTurnResults(context.pasted)),
+          audit: auditLines(
+            auditRows.rows,
+            asTurnResults([...context.gate, ...context.pasted]),
+          ),
           tool_results: finished === null ? [] : [...context.pasted],
-          arm: "context" as const,
+          arm:
+            input.arm === "context-fair"
+              ? ("context-fair" as const)
+              : ("context-oracle" as const),
           context: context.stats,
+          ...(context.fair === null
+            ? {}
+            : { fair: { ...context.fair, codes_cut: [...context.fair.codes_cut] } }),
         }),
   };
 };
@@ -638,6 +713,36 @@ export const pasteContext = async (
     results.push({ tool: call.tool, input: call.args, output });
   }
   return buildContextBlock(results, capTokens);
+};
+
+/** A data block either context arm pasted, with what the fair arm records. */
+type PastedBlock = Readonly<{
+  text: string;
+  pasted: readonly PastedCall[];
+  stats: ContextStats;
+  /** Audited calls that are not in the block (the fair arm's scope check). */
+  gate: readonly PastedCall[];
+  fair: FairStats | null;
+}>;
+
+/**
+ * The fair arm's data block (#320): the subject the question names, its
+ * record read on the server, laid out by `buildFairBlock`. The key is not
+ * read.
+ */
+export const pasteFairContext = async (
+  deps: Pick<EvalDeps, "readSubjectRecord">,
+  scope: SessionScope,
+  question: string,
+  capTokens: number,
+): Promise<PastedBlock> => {
+  const pick = subjectFromQuestion(question);
+  const { read, gate } =
+    pick.kind === "none"
+      ? { read: { kind: "no-subject" } as const, gate: [] }
+      : await deps.readSubjectRecord(scope, pick);
+  const block = buildFairBlock(read, capTokens);
+  return { ...block, gate };
 };
 
 /** A line that never reached the model. */
@@ -715,10 +820,10 @@ const setup = async (
       `${mismatch.provider}:${mismatch.modelId} is not the configured provider ${deps.llmProvider}; one provider per run`,
     );
   }
-  if (options.arm === "context" && models.some((spec) => isAgentModelId(spec.modelId))) {
+  if (options.arm !== "tools" && models.some((spec) => isAgentModelId(spec.modelId))) {
     throw new EvalSetupError(
       "USAGE",
-      "--arm context gives the model no tools, so an agent's skill has none to cut; run its base model",
+      `--arm ${options.arm} gives the model no tools, so an agent's skill has none to cut; run its base model`,
     );
   }
   const loaded = await loadQuestions(deps, options.set);
@@ -808,6 +913,7 @@ export const runEval = async (
                 agent: agents[index] ?? null,
                 replay: options.replay,
                 timeoutMs: options.timeoutMs,
+                declineWording: options.declineWording,
                 arm: options.arm,
                 contextCapTokens: options.contextCapTokens,
                 keyEntries: loaded.entries[item.id] ?? [],
@@ -840,7 +946,7 @@ export const runEval = async (
         ...agentMeta(agents[index] ?? null),
       })),
       arm: options.arm,
-      ...(options.arm === "context"
+      ...(options.arm !== "tools"
         ? {
             context: {
               cap_tokens: options.contextCapTokens,
@@ -858,6 +964,9 @@ export const runEval = async (
       sampling: "none set",
       platform: deps.platform,
       timeout_ms: options.timeoutMs,
+      ...(options.declineWording === null
+        ? {}
+        : { decline_wording: declineWordingMeta(options.declineWording) }),
       selection: {
         items: options.items === null ? null : [...options.items],
         scenario: options.scenario,

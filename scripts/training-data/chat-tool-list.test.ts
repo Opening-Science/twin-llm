@@ -39,6 +39,7 @@ describe("openAiToolsFrom", () => {
       "cross_source_compare",
       "values_around_event",
       "rhythm_irregularity",
+      "cohort_event_rates",
       "show_view",
       "list_views",
       "open_view",
@@ -61,5 +62,14 @@ describe("openAiToolsFrom", () => {
       "query",
       "k",
     ]);
+  });
+
+  test("a personal turn is not offered the synthetic-only cohort_event_rates (#293)", async () => {
+    const personal = { ...SCOPE, mode: "personal" } as const;
+    const names = (
+      await openAiToolsFrom(createChatTools(personal, { query: ports }))
+    ).map((tool) => tool.function.name);
+    expect(names).not.toContain("cohort_event_rates");
+    expect(names).toContain("rhythm_irregularity");
   });
 });

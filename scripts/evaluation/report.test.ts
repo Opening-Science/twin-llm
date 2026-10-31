@@ -9,6 +9,7 @@ import {
   callFigures,
   CONTEXT_CALLS_NA,
   csvCell,
+  declineWordingRows,
   noToolFigures,
   renderReport,
   REVIEW_COLUMNS,
@@ -606,15 +607,50 @@ describe("context arm in the report (#302)", () => {
       arm: "context",
       context: { cap_tokens: 6000, items_truncated: 2, lines_over_cap: 0 },
     };
-    expect(armRows(meta)).toEqual([
-      ["Arm", "context: the key's tool results in the prompt, no tools"],
+    const oracle = [
+      ["Arm", "context-oracle: the key's tool results in the prompt, no tools"],
       [
         "Data block",
         "cap 6000 estimated tokens; rows cut on 2 items; 0 lines over the cap",
       ],
-    ]);
+    ];
+    // A #302 run says `context`; it is the oracle arm.
+    expect(armRows(meta)).toEqual(oracle);
+    expect(armRows({ ...meta, arm: "context-oracle" })).toEqual(oracle);
     const report = renderReport({ meta, scores: [], quantisation: null });
     expect(report).toContain(CONTEXT_CALLS_NA);
     expect(report).not.toContain("Calls by class:");
+  });
+
+  test("the fair arm (#320): its own label, cuts named as codes or timelines", () => {
+    const meta: RunMeta = {
+      ...META,
+      arm: "context-fair",
+      context: { cap_tokens: 6000, items_truncated: 9, lines_over_cap: 0 },
+    };
+    expect(armRows(meta)).toEqual([
+      [
+        "Arm",
+        "context-fair: the named subject's record in the prompt, chosen without the key, no tools",
+      ],
+      [
+        "Data block",
+        "cap 6000 estimated tokens; codes or timelines cut on 9 items; 0 lines over the cap",
+      ],
+    ]);
+    const report = renderReport({ meta, scores: [], quantisation: null });
+    expect(report).toContain(CONTEXT_CALLS_NA);
+  });
+});
+
+describe("declineWordingRows (#274)", () => {
+  test("no row for the chat route's line, one row naming the wording otherwise", () => {
+    expect(declineWordingRows(META)).toEqual([]);
+    expect(
+      declineWordingRows({
+        ...META,
+        decline_wording: { id: "w3", sha256: "ab".repeat(32) },
+      }),
+    ).toEqual([["Decline wording", `w3 (sha256 ${"ab".repeat(6)})`]]);
   });
 });

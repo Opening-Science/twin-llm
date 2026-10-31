@@ -6,9 +6,19 @@
 import { median } from "../../packages/query-tools/stats";
 
 import { cha2ds2Vasc, SCORE_GROUPS, type ScoreGroup, scoreGroup } from "./cha2ds2-vasc";
-import { type Topic } from "./codes";
-import { ageYears, observedStart, type Person } from "./cohort";
-import { DAYS_PER_YEAR, type Rate, rateOf, type RateRatio, rateRatio } from "./poisson";
+import { type Topic } from "../../packages/query-tools/event-rates/codes";
+import {
+  ageYears,
+  observedStart,
+  type Person,
+} from "../../packages/query-tools/event-rates/cohort";
+import {
+  DAYS_PER_YEAR,
+  type Rate,
+  rateOf,
+  type RateRatio,
+  rateRatio,
+} from "../../packages/query-tools/event-rates/poisson";
 
 const before = (person: Person, topic: Topic, day: number): boolean => {
   const at = person.onset[topic];

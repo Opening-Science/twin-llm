@@ -6,7 +6,9 @@
  *   bun run eval -- --models ollama:qwen3:4b --items Q-S1-11,Q-S5-05 --run-id smoke
  *   bun run eval -- --models ollama:qwen3:4b --latency-set --replay
  *   bun run eval -- --models agent:rhythm --set s7
- *   bun run eval -- --models ollama:qwen3:4b --arm context
+ *   bun run eval -- --models ollama:qwen3:8b --set s7h --decline-wording w2
+ *   bun run eval -- --models ollama:qwen3:4b --arm context-oracle
+ *   bun run eval -- --models ollama:qwen3:4b --arm context-fair
  *
  * The package script passes `--env-file=.env.eval`, a copy of
  * `.env.synthetic.example` pointed at a throwaway database holding only
@@ -71,6 +73,16 @@ if (isMain) {
     await import("../../features/chat/response/load-session-audit");
   const queryTools = await import("../../packages/query-tools/tools");
   const { runKeyedTool } = await import("./build-answer-key");
+  const { database } = await import("../../infrastructure/database");
+  const { findConditionsInDatabase, findMedicationRequestsInDatabase, toNumber } =
+    await import("../../packages/query-tools/ports");
+  const { readFairRecord } = await import("./fair-record-read");
+  /** Every dated record of a subject (#320); the cap only guards a runaway read. */
+  const WHOLE_RECORD = {
+    start: new Date("1900-01-01T00:00:00Z"),
+    end: new Date("2100-01-01T00:00:00Z"),
+    take: 100_000,
+  } as const;
 
   const env = serverEnv();
 
@@ -116,6 +128,64 @@ if (isMain) {
     loadAudit: loadSessionAudit,
     // Context arm (#302): the key's call through the real tool, on the database.
     runContextCall: (scope, tool, args) => runKeyedTool(queryTools, scope, tool, args),
+    // Fair context arm (#320): the scope checked by the audited tools, then the
+    // subject's whole record; synthetic subjects only, as the tools allow.
+    readSubjectRecord: (scope, pick) =>
+      readFairRecord(
+        {
+          listSubjects: (cohortId) =>
+            queryTools.runListSubjects(scope, { cohort_id: cohortId }),
+          subjectWindow: (subjectRef) =>
+            queryTools.runSubjectWindow(scope, { subject_ref: subjectRef }),
+          observations: async (subjectRef) =>
+            (
+              await database().observation.findMany({
+                where: { subjectRef },
+                select: {
+                  loinc: true,
+                  display: true,
+                  value: true,
+                  unitUcum: true,
+                  effectiveAt: true,
+                },
+                orderBy: [{ effectiveAt: "asc" }, { loinc: "asc" }, { id: "asc" }],
+              })
+            ).map((row) => ({
+              loinc: row.loinc,
+              display: row.display,
+              unit: row.unitUcum,
+              value: toNumber(row.value),
+              at: row.effectiveAt.toISOString(),
+            })),
+          conditions: async (subjectRef) =>
+            (
+              await findConditionsInDatabase({
+                subjectRef,
+                ...WHOLE_RECORD,
+              })
+            ).map((row) => ({
+              code: row.code,
+              display: row.display,
+              onset: row.onsetAt?.toISOString() ?? null,
+              abatement: row.abatementAt?.toISOString() ?? null,
+              status: row.clinicalStatus,
+            })),
+          medications: async (subjectRef) =>
+            (
+              await findMedicationRequestsInDatabase({
+                subjectRef,
+                ...WHOLE_RECORD,
+              })
+            ).map((row) => ({
+              code: row.code,
+              display: row.display,
+              authored: row.authoredAt?.toISOString() ?? null,
+              status: row.status,
+              dosage: row.dosageText.length === 0 ? null : row.dosageText.join("; "),
+            })),
+        },
+        pick,
+      ),
     cache: fileCacheStore(CACHE_DIR),
     prepareRun: async (runId) => {
       const dir = join(RUNS_DIR, runId);

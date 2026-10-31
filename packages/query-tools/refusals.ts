@@ -84,6 +84,9 @@ export type ToolRefusal =
   | SourcesUnitMismatch
   | NoRhythmData
   | OutsideSubjectWindow
+  | CohortNotSupported
+  | DesignNotSupported
+  | CohortRecordCapExceeded
   | ImportedRefusal;
 
 const REFUSAL_CODES: readonly string[] = [
@@ -100,6 +103,9 @@ const REFUSAL_CODES: readonly string[] = [
   "WINDOW_TOO_SHORT",
   "NO_RHYTHM_DATA",
   "OUTSIDE_SUBJECT_WINDOW",
+  "COHORT_NOT_SUPPORTED",
+  "DESIGN_NOT_SUPPORTED",
+  "COHORT_RECORD_CAP_EXCEEDED",
   ...IMPORTED_REFUSAL_CODES,
 ];
 
@@ -424,4 +430,70 @@ export const outsideSubjectWindow = (
       : "date is outside the days this subject has observations; pick a day within window",
   date,
   window: { start: window.start, end: window.end },
+});
+
+export type CohortNotSupported = Readonly<{
+  code: "COHORT_NOT_SUPPORTED";
+  error: string;
+  cohort_id: string;
+  /** Loaded cohorts `cohort_event_rates` can read. */
+  cohorts: readonly string[];
+}>;
+
+/**
+ * `cohort_event_rates` needs a cohort's end date and history window, which
+ * are known only for the 1M batches and their AF subset.
+ */
+export const cohortNotSupported = (
+  cohortId: string,
+  cohorts: readonly string[],
+): CohortNotSupported => ({
+  code: "COHORT_NOT_SUPPORTED",
+  error:
+    "cohort_event_rates knows the follow-up window of the 1M Synthea batches and their AF subset only; use one listed in cohorts",
+  cohort_id: cohortId,
+  cohorts: [...cohorts],
+});
+
+export type DesignNotSupported = Readonly<{
+  code: "DESIGN_NOT_SUPPORTED";
+  error: string;
+  cohort_id: string;
+  /** The condition code the cohort was selected on. */
+  selected_on: string;
+}>;
+
+/**
+ * A cohort made of the people with one condition has nobody without it, so
+ * only the within-person design with that condition as the exposure can be
+ * computed on it.
+ */
+export const designNotSupported = (
+  cohortId: string,
+  selectedOn: string,
+): DesignNotSupported => ({
+  code: "DESIGN_NOT_SUPPORTED",
+  error: `this cohort holds only people with condition ${selectedOn}, so it supports the within design with ${selectedOn} as the exposure only`,
+  cohort_id: cohortId,
+  selected_on: selectedOn,
+});
+
+/** People or condition records one `cohort_event_rates` read may hold. */
+export const COHORT_RECORD_CAP = 50_000;
+
+export type CohortRecordCapExceeded = Readonly<{
+  code: "COHORT_RECORD_CAP_EXCEEDED";
+  error: string;
+  record: "subject" | "condition";
+  cap: typeof COHORT_RECORD_CAP;
+}>;
+
+/** More is refused, not truncated: a cut read would drop people or events. */
+export const cohortRecordCapExceeded = (
+  record: "subject" | "condition",
+): CohortRecordCapExceeded => ({
+  code: "COHORT_RECORD_CAP_EXCEEDED",
+  error: `more than ${COHORT_RECORD_CAP} ${record} records in this cohort for this question`,
+  record,
+  cap: COHORT_RECORD_CAP,
 });

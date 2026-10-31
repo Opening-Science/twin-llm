@@ -1,6 +1,6 @@
 /**
- * The data-in-prompt arm of the eval harness (#302): `bun run eval -- --arm
- * context`. For each item the server runs the calls the answer key expects,
+ * The oracle data-in-prompt arm of the eval harness (#302): `bun run eval --
+ * --arm context-oracle` (`context` is its old name and still works). For each item the server runs the calls the answer key expects,
  * through the same audited query tools the model would call, and the model
  * gets their results as a delimited data block in the system prompt and no
  * tools. The default arm, `tools`, is the chat route as it is.
@@ -20,12 +20,46 @@ import { sha256Hex, toCanonicalJson } from "../../packages/audit/hash";
 
 import type { KeyedTool, KeyEntry } from "./question-set";
 
-export const EVAL_ARMS = ["tools", "context"] as const;
+/**
+ * How the model gets the data: `tools` (the chat route), `context-oracle`
+ * (#302: the key's call results pasted) or `context-fair` (#320: the named
+ * subject's record pasted, chosen without the key; `fair-context.ts`).
+ */
+export const EVAL_ARMS = ["tools", "context-oracle", "context-fair"] as const;
 
 export type EvalArm = (typeof EVAL_ARMS)[number];
 
+/** `context`, the #302 name of the oracle arm, still names it, so its run ids and commands keep working. */
+export const ARM_ALIASES: Readonly<Record<string, EvalArm>> = {
+  context: "context-oracle",
+};
+
+/** Every arm a run file may record: the three, and `context` from runs before #320. */
+export const RECORDED_ARMS = [...EVAL_ARMS, "context"] as const;
+
+export type RecordedArm = (typeof RECORDED_ARMS)[number];
+
+/** The arm a `--arm` value names, aliases resolved; null for none. */
+export const parseArm = (value: string): EvalArm | null =>
+  (EVAL_ARMS as readonly string[]).includes(value)
+    ? (value as EvalArm)
+    : (ARM_ALIASES[value] ?? null);
+
 export const isEvalArm = (value: string): value is EvalArm =>
   (EVAL_ARMS as readonly string[]).includes(value);
+
+/** A data-in-prompt arm: the server reads, the model gets no tools. */
+export const isContextArm = (arm: RecordedArm | undefined): boolean =>
+  arm !== undefined && arm !== "tools";
+
+/**
+ * The arm as the cache key names it. The oracle arm keeps `context`, its
+ * #302 name, so a call identical to one recorded then is answered from it.
+ */
+export type CacheArm = "tools" | "context" | "context-fair";
+
+export const cacheArm = (arm: EvalArm): CacheArm =>
+  arm === "context-oracle" ? "context" : arm;
 
 /**
  * Estimated tokens the block may use. The context arm sends no tool
