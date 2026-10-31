@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHmac } from "node:crypto";
 
 import { formatNumber } from "@/infrastructure/format-measure";
 
@@ -10,10 +10,12 @@ import { lineKey, type LineRating } from "./rating-file";
  *
  * Blind by construction: a `BlindLine`, the only shape sent to the browser,
  * carries the question, the reply, the reference and an opaque token. No run
- * id, model name, item id or automatic score. The token is a hash of run,
- * item and repeat, so the server can find the line again and the browser
- * cannot. Lines of every run are pooled and put in an order fixed by a seed,
- * so models are interleaved and the same rater sees the same order on resume.
+ * id, model name, item id or automatic score. The token is an HMAC-SHA256 of
+ * run, item and repeat keyed by the rater's salt (#355), a random value kept
+ * on the server, so the server can find the line again and the browser
+ * cannot, even knowing every run id. Lines of every run are pooled and put in
+ * an order fixed by a seed and the same salt, so models are interleaved and
+ * the same rater sees the same order on resume.
  */
 
 export type RunLine = Readonly<{
@@ -60,19 +62,35 @@ export type BlindLine = Readonly<{
   comment: string;
 }>;
 
-const sha256 = (text: string): string => createHash("sha256").update(text).digest("hex");
+/** A rater's salt: 32 random bytes as 64 lowercase hex characters. */
+export const SALT_PATTERN = /^[0-9a-f]{64}$/;
 
-/** 16 hex characters naming one line of one run; the same inputs give the same token. */
-export const lineToken = (runId: string, itemId: string, repeat: number): string =>
-  sha256(`${runId}\n${itemId}\n${repeat}`).slice(0, 16);
+const hmac = (salt: string, text: string): string =>
+  createHmac("sha256", Buffer.from(salt, "hex")).update(text).digest("hex");
 
-/** The tokens in an order fixed by `seed`: sorted by a hash of seed and token. */
+/**
+ * 16 hex characters naming one line of one run for one rater: HMAC-SHA256
+ * keyed by the rater's salt, cut to 64 bits. The same salt and line give the
+ * same token; without the salt it cannot be recomputed from the run id.
+ */
+export const lineToken = (
+  salt: string,
+  runId: string,
+  itemId: string,
+  repeat: number,
+): string => hmac(salt, `line\n${runId}\n${itemId}\n${repeat}`).slice(0, 16);
+
+/**
+ * The tokens in an order fixed by `seed` and `salt`: sorted by an HMAC of
+ * seed and token keyed by the salt, so the order says nothing about the run.
+ */
 export const seededOrder = <T extends Readonly<{ token: string }>>(
   lines: readonly T[],
   seed: string,
+  salt: string,
 ): T[] =>
   lines
-    .map((line) => ({ line, rank: sha256(`${seed}\n${line.token}`) }))
+    .map((line) => ({ line, rank: hmac(salt, `order\n${seed}\n${line.token}`) }))
     .sort(
       (a, b) => a.rank.localeCompare(b.rank) || a.line.token.localeCompare(b.line.token),
     )
@@ -101,6 +119,7 @@ export const raterLines = (
   runs: readonly RunLines[],
   items: readonly RaterItem[],
   key: Readonly<Record<string, readonly RaterKeyEntry[]>>,
+  salt: string,
 ): RaterLine[] => {
   const byId = new Map(items.map((item) => [item.id, item]));
   return runs.flatMap((run) =>
@@ -109,7 +128,7 @@ export const raterLines = (
       if (item === undefined || line.error !== null || line.text === null) return [];
       return [
         {
-          token: lineToken(run.runId, line.item_id, line.repeat),
+          token: lineToken(salt, run.runId, line.item_id, line.repeat),
           runId: run.runId,
           itemId: line.item_id,
           repeat: line.repeat,
@@ -126,14 +145,16 @@ export const raterLines = (
 /**
  * The lines in the rater's order with their ratings so far, stripped of
  * everything that would unblind them. `ratings` maps run id to that run's
- * ratings by `item_id#repeat`.
+ * ratings by `item_id#repeat`. The salt orders the lines and is not part of
+ * what comes out.
  */
 export const blindLines = (
   lines: readonly RaterLine[],
   seed: string,
+  salt: string,
   ratings: ReadonlyMap<string, ReadonlyMap<string, LineRating>>,
 ): BlindLine[] =>
-  seededOrder(lines, seed).map((line) => {
+  seededOrder(lines, seed, salt).map((line) => {
     const rating = ratings.get(line.runId)?.get(lineKey(line.itemId, line.repeat));
     return {
       token: line.token,

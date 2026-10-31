@@ -41,6 +41,12 @@ export const SBOM_PATH = ".sbom/twin-llm.cdx.json";
 export const EVAL_RUNS_DIR = "evaluation/runs";
 
 /**
+ * Where the second-rater view keeps each rater's salt (gitignored, #355);
+ * outside the runs folder so the Lab does not list it as a run.
+ */
+export const RATER_SETS_DIR = "evaluation/rater-sets";
+
+/**
  * Where `bun run rhythm-bench -- --out <dir>/<run>` writes its runs
  * (gitignored); the Lab shows the newest `result.json` in it.
  */
