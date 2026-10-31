@@ -156,6 +156,27 @@ The backup holds your data in plain text, so `bun run doctor` warns while it is 
 - **Doctor and Lab.** `bun run doctor` counts plain values per listed column (names and counts only) and lists leftover backups; the Lab card "Encryption at rest" shows the same counts while locked.
 - Last run: 2026-10-31, Linux, Postgres 18.6 with pgvector, throwaway owner cluster in a new folder (deleted afterwards). A database at the schema before #141 was filled from the synthetic fixtures (lab CSV, FHIR bundle, Apple Health zip, a genome-synth VCF, a research table, a thread with a tool answer, a twin note, an Oura snapshot, a BodyLoop scan with a made-up mesh, an onboarding answer, a user genome report and a synthetic subject's report). Before: `pg_dump` held every fixture marker and the doctor listed 45 columns. `db:deploy`, then `vault:migrate`: refused without the typed confirmation; with it, 133 rows and 1 mesh file sealed in batches of 10; a second run sealed 0. After: no fixture text in `pg_dump --data-only` (only the synthetic subject's report stayed plain), the doctor `[ok]`, the mesh folder held only `.glb.enc`. Read back through the stores and the chat tools (`imported_datasets`, `imported_latest`, `imported_trend`, `imported_table`, `imported_conditions`, `imported_medications`, `genome_variants`), the sidebar, the thread, notes, Oura summary, scan and mesh: the same values; while locked every read refused. `vault:rotate`: every value under the new key id, the old key gone from the key file, reads unchanged. Then `next dev` in personal mode on a fresh database of the same cluster: unlock, the five fixtures imported through Customize · Data (a second lab CSV refused as a duplicate), a chat question answered by a local model through `imported_latest` (HbA1c 5.4 % on 2024-02-10), a twin note saved, search by words and by meaning (sealed vectors) found the threads; `pg_dump` again held no fixture or prompt text.
 
+### Signed anchors
+
+Added 2026-10-31 (#300). The audit chain and the disclosure ledger catch an edited or removed row in the middle, but not rows cut from the end or a chain rebuilt from the start. A signed anchor records each chain's head (row number, hash, time) outside the database, signed with an Ed25519 key of its own ([privacy-design.md](privacy-design.md#26-300-an-external-anchor-for-the-audit-chain-head)). Anchors stay on this machine; nothing sends them anywhere.
+
+```sh
+bun run anchor:init                    # once: the key and the file's first line (setup:local runs it)
+bun run anchor:write                   # anchor each chain whose head moved, now
+bun --env-file=.env.local packages/audit/verify-cli.ts --check                       # audit chain and its anchor
+bun --env-file=.env.local packages/audit/verify-cli.ts --check --chain disclosures   # the ledger and its anchor
+bun run anchor:export                  # the newest anchors and the public key, to keep somewhere else
+bun run anchor:rotate                  # a new key, signed over by the old one
+bun run anchor:rotate -- --without-old-key   # the old key is lost or exposed
+```
+
+- **Where.** `$TWINLLM_STATE_DIR/anchor/`, mode 700: `anchor-key.pem` (private, 600), `anchor-key.pub` (600), `retired/<key id>.pub` for earlier keys, and `anchors.jsonl` (600), one signed line per anchor, each naming the hash of the line before. The #144 storage check covers them with the rest of the state folder. The private key is not behind the passphrase, so anchors are written while locked.
+- **When.** While the server runs it reads both heads every minute and writes an anchor for a chain whose head moved, at most once per `AUDIT_ANCHOR_INTERVAL_MINUTES` (default 10, 1 to 1440), and once more when it stops on SIGTERM or Ctrl-C. `setup:local` writes anchors after its last step. It never writes an anchor over a chain that is shorter than, or different from, its latest anchor; the server log says `[anchor] the audit chain does not match its latest anchor (truncated)` once instead, and `anchor:write` prints REFUSED and exits 1.
+- **Reading the check.** `verify-cli --check` prints the chain line and an anchor line; the exit code is 1 when either is broken, else 2 when either is Unknown. The Lab's Audit chain and What left this machine cards show the same, with the key id and the public key. Not OK reasons: the chain is shorter than its anchor (rows removed from the end), the anchored row is missing, its hash differs (rebuilt), a line of the anchors file was removed, changed or badly signed, or the anchors file is gone while the key is there. Unknown: no key yet, no anchor yet for that chain, or a key replaced without the old key.
+- **A lost or exposed key.** `anchor:rotate -- --without-old-key` removes the old private key, keeps its public key in `retired/`, and starts a new key with a line it signs itself. The check starts over at that line and shows Unknown for as long as the line is in the file. To start clean instead, move the whole `anchor` folder aside and run `anchor:init`; earlier anchors then no longer count.
+- **Limits.** Rows added since the latest anchor can still be removed unseen. Anyone who can write as your OS user can replace the key and the file; a copy of `anchor:export` kept elsewhere is what guards against that.
+- Last run: 2026-10-31, Linux, `next start` in synthetic mode against a throwaway owner cluster (Postgres 18.6 with pgvector, `TWINLLM_STATE_DIR` a new folder, deleted afterwards) with made-up rows only: audit rows from `verify-cli --seed-ok` and one synthetic ledger row. Before `anchor:init` the check said UNKNOWN (exit 2). `anchor:init` and `anchor:write` left the key 600 in a 700 folder and anchored both chains; both checks and both Lab cards said OK with the key id and public key. `anchor:rotate` and a new anchor still verified, the old public key in `retired/`. After `TRUNCATE audit_events` in that database `verify-cli --check` printed "The audit chain is shorter than its latest signed anchor (row 5)" and exited 1, the Audit chain card said Not OK, and `anchor:write` refused. Rows seeded again from row 1 gave "Row 5 of the audit chain has a different hash from its signed anchor" and the server logged its refusal once. With a 2 minute interval, a ledger row added after the last write was anchored when the server was stopped with SIGTERM. Screenshots light and dark.
+
 ## open-twin sync
 
 ### `bash scripts/sync-open-twin.sh <sha>`
@@ -444,6 +465,13 @@ bun run lint:claims
 
 - Good: exit 0. Prints `0 findings`, then `N allowlisted` and each `file:line reason`.
 - Last run: 2026-09-27 14:50 CEST, `0 findings` / `1 allowlisted` (`features/shell/research-footer.tsx:2 required C4 footer`).
+
+## Scheduled tasks
+
+Customize · Tasks (#54, [skills.md](skills.md#scheduled-tasks)). The scheduler starts with the server (`instrumentation.ts`); there is nothing to run by hand. A task is checked every 15 seconds; `scheduled_tasks.running_since` is set while a run is in flight.
+
+- Good: a task's card shows the StatusLattice while it runs and Answered afterwards; the thread has a new turn with the Scheduled chip; `audit_events` has one `task.run` row per run followed by the turn's `skill.<name>` row.
+- Last run: 2026-10-31, Linux, `next dev` in synthetic mode against a throwaway owner cluster (Postgres 18.6 with pgvector, deleted afterwards), `qwen3:4b` on Ollama with the GPU otherwise idle. A `/sleep` task made in the form (every hour, bell on, new thread) was set to every minute in the database for the check. It ran four times into one new thread, one run at a time, each with one `task.run` and one `skill.sleep` row; pausing and resuming wrote `task.pause` and `task.resume`. With another page open the sidebar showed a badge and a toast linked to the thread. The first check found the thread page opening a second stream for an answer the run was still writing (two extra `skill.sleep` rows); the browser now leaves scheduled answers to the server, and the repeat check had none. Screenshots light and dark.
 
 ## Providers
 

@@ -156,6 +156,21 @@ describe("a turn sent with a skill, after a reload", () => {
     expect(thread?.turns[0]?.skill).toBeNull();
   });
 
+  test("a turn a scheduled task asked comes back marked, a typed one does not", async () => {
+    const typed = await loadOwnedThread("thread-1", reads("clerk-owner", owner));
+    expect(typed?.turns[0]?.scheduled).toBeUndefined();
+    const scheduledThread: StoredThread = {
+      ...stored,
+      turns: stored.turns.map((turn) => ({ ...turn, scheduled: true })),
+    };
+    const scheduled = await loadOwnedThread(
+      "thread-1",
+      reads("clerk-owner", owner, new Map([["turn-1", "sleep"]]), scheduledThread),
+    );
+    expect(scheduled?.turns[0]?.scheduled).toBe(true);
+    expect(scheduled?.turns[0]?.skill).toBe("sleep");
+  });
+
   test("the skill comes back from the turn's skill audit row", async () => {
     const thread = await loadOwnedThread(
       "thread-1",

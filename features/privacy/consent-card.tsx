@@ -3,15 +3,18 @@
 import { useActionState } from "react";
 
 import { Button } from "@/infrastructure/ui-kit/button";
+import { HoldToSubmit } from "@/infrastructure/ui-kit/hold-to-submit";
 import { StatusBadge } from "@/infrastructure/ui-kit/status-badge";
 
 import { type ConsentFormState, grantConsent, withdrawConsent } from "./consent-actions";
-import type { ScopeView, SourceChoice } from "./privacy-view";
+import { PRIVACY_COPY, type ScopeView, type SourceChoice } from "./privacy-view";
 
 /**
  * One use on Customize · Privacy (#145): off with a choice of data and Grant,
  * or on with what it covers, the sentence agreed to and Withdraw. Earlier
- * grants that were withdrawn are listed under it.
+ * grants that were withdrawn are listed under it. A withdrawal cannot be
+ * taken back (granting again makes a new consent), so it is pressed and held
+ * (#350).
  */
 
 const START: ConsentFormState = { message: null, ok: false };
@@ -80,9 +83,11 @@ export const ConsentCard = ({
           </blockquote>
           <Message state={withdrawn} />
           <div>
-            <Button type="submit" variant="secondary" disabled={withdrawing}>
-              {withdrawing ? "Withdrawing…" : "Withdraw"}
-            </Button>
+            <HoldToSubmit
+              label={PRIVACY_COPY.withdrawHold}
+              pendingLabel={PRIVACY_COPY.withdrawing}
+              pending={withdrawing}
+            />
           </div>
         </form>
       )}

@@ -9,6 +9,7 @@ import {
   GENOME_THREAD_LOCAL_ONLY,
   GENOME_THREAD_SENTENCE,
 } from "@/infrastructure/genome-thread-policy";
+import type { LiveSourceId } from "@/infrastructure/live-sources";
 import type { CatalogAgent } from "@/infrastructure/model-catalog";
 import type { TurnSkill } from "@/infrastructure/skill-gate";
 import type { WhoopSummary } from "@/infrastructure/whoop-types";
@@ -62,6 +63,7 @@ const harness = (
     skill?: TurnSkill;
     genomeThread?: boolean;
     chatIsLocal?: boolean;
+    liveSources?: readonly LiveSourceId[];
   }> = {},
 ) => {
   const calls: string[] = [];
@@ -81,6 +83,9 @@ const harness = (
       return wearables;
     },
     loadDisabledSources: async () => ["gbd"],
+    ...(options.liveSources === undefined
+      ? {}
+      : { loadLiveSources: async () => options.liveSources ?? [] }),
     findSkill: async (name) => (name === SLEEP.name ? (options.skill ?? SLEEP) : null),
     appendAudit: async (input) => {
       calls.push("audit");
@@ -758,5 +763,26 @@ describe("chat start: an agent (#218)", () => {
     expect(audits.map(({ args }) => Reflect.get(Object(args), "modelId"))).toEqual([
       "qwen3:8b",
     ]);
+  });
+});
+
+describe("chat start: live public lookups (#6)", () => {
+  test("the person's switched-on live sources reach the turn", async () => {
+    const { startAnswer, streamed } = harness(
+      { dataMode: "synthetic", provider: "openrouter", exoscalePersonalData: "off" },
+      NO_WEARABLES,
+      { liveSources: ["pubmed"] },
+    );
+    expect((await startAnswer(ACTOR, APP_USER, CALL)).status).toBe(200);
+    expect(streamed.map((context) => context.liveSources)).toEqual([["pubmed"]]);
+  });
+
+  test("without a loader (an incognito chat) the turn has none", async () => {
+    const { startAnswer, streamed } = harness(
+      { dataMode: "synthetic", provider: "openrouter", exoscalePersonalData: "off" },
+      NO_WEARABLES,
+    );
+    await startAnswer(ACTOR, APP_USER, CALL);
+    expect(streamed.map((context) => context.liveSources)).toEqual([undefined]);
   });
 });

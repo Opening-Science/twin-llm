@@ -78,6 +78,7 @@ describe("personal columns registry (#141)", () => {
       "personal_table_chunks",
       "personal_variants",
       "twin_notes",
+      "scheduled_tasks",
       "onboarding_profiles",
       "disclosure_events",
     ]);

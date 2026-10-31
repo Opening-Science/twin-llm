@@ -157,6 +157,8 @@ Use these from `infrastructure/ui-kit/` before writing classes by hand:
 - **`SegmentedControl`** for a set of exclusive options that apply immediately. It sets
   `aria-pressed`. A server-rendered group of links uses the `.segmented` and
   `.segmented-item` classes with `aria-current` instead.
+- **`Switch`** for one setting that turns on or off at once (`role="switch"`, a
+  real button, a label naming what it turns on).
 - **`Field`** for a labelled input or select. It connects the label, hint and error for
   screen readers. A placeholder never replaces the label.
 - **`Tabs`** for panels of one view, with Radix roles and arrow-key navigation.
@@ -192,7 +194,13 @@ both themes), and stops its motion under reduced motion.
 - **`HoldToConfirm`** for what cannot be undone, such as erasing personal data. It
   fills at a constant speed while held by a pointer, Space or Enter, empties quickly
   on early release, cancels when the pointer drifts off, and calls `onConfirm` once.
-  A screen-reader hint states the hold time.
+  Under reduced motion nothing moves and the label counts down ("Keep holding: 2").
+  A screen-reader hint states the hold time. The label says what will happen ("Hold
+  to withdraw consent"). The timing is `hold-timer.ts`, tested with a fake clock.
+  **`HoldToSubmit`** is the same button as the submit control of a form: a completed
+  hold calls `requestSubmit` once, so a server action runs as for any submit, and every
+  other submission of that form (Enter in a field) is stopped. While `pending` it shows
+  `pendingLabel`; a refused submission leaves it ready to hold again.
 - **`StatusLattice`** for a long job: a 3 by 3 dot wave while it runs, then a tick or
   a cross, with its name, its state in words and a timer that stops.
 - **`Rating`** for a 1 to 5 score: a radio group with a label per value, a pointer
@@ -202,9 +210,12 @@ Where they are used: `StepTrace` in chat answers; `UndoButton` for deleting a th
 (thread bar) and an imported dataset (Customize · Data), through `useSoftDelete`
 (`soft-delete.ts`: the item hides at once, the server delete runs only when the window
 ends, Undo sends nothing; leaving for another page in the app runs it early, closing the
-tab asks first and then deletes nothing); `StatusLattice` for a Synthea run. The app has
-no erase-everything action and no genome dataset to delete, so `HoldToConfirm` is not
-used yet; `Rating` scores answers in the Lab's second-rater view
+tab asks first and then deletes nothing); `StatusLattice` for a Synthea run;
+`HoldToSubmit` for the two privacy actions that cannot be undone (#350): withdrawing a
+learning consent (Customize · Privacy) and replacing the passphrase and recovery code
+with the recovery code (the unlock screen). The app has no erase-everything action and
+no genome dataset to delete; a delete that can wait uses `UndoButton`, not a hold.
+`Rating` scores answers in the Lab's second-rater view
 (`features/lab/second-rater.tsx`, #351), with a written anchor per level. Their look lives in
 `globals.css` under "Interaction patterns".
 

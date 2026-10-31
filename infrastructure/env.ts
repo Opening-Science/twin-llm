@@ -452,6 +452,19 @@ const serverEnvSchema = z
     ),
     GBD_MCP_URL: maybeUrl(),
     GBD_MCP_TOKEN: maybeText(),
+    // Live PubMed lookups (#6): NCBI asks E-utilities callers to name their
+    // software (`tool`) and give a contact address (`email`, optional here).
+    NCBI_TOOL: z.preprocess(
+      blankAsMissing,
+      z
+        .string()
+        .regex(/^[A-Za-z0-9_.-]{1,40}$/, "NCBI_TOOL must be one word, such as twinllm")
+        .default("twinllm"),
+    ),
+    NCBI_EMAIL: z.preprocess(
+      blankAsMissing,
+      z.string().email("NCBI_EMAIL must be an email address").optional(),
+    ),
 
     SYNTHEA_HOST: z.preprocess(
       blankAsMissing,
@@ -493,6 +506,12 @@ const serverEnvSchema = z
     ),
     XDG_DATA_HOME: maybeText(),
     VAULT_IDLE_LOCK_MINUTES: wholeNumberIn("VAULT_IDLE_LOCK_MINUTES", 1, 240, 15),
+    AUDIT_ANCHOR_INTERVAL_MINUTES: wholeNumberIn(
+      "AUDIT_ANCHOR_INTERVAL_MINUTES",
+      1,
+      1440,
+      10,
+    ),
   })
   .superRefine((env, ctx) => {
     const report: Report = ({ path, message }) =>
@@ -736,6 +755,19 @@ export const gbdEnv = (): GbdEnv | null => {
   return url && token ? Object.freeze({ url, token }) : null;
 };
 
+export type NcbiEnv = Readonly<{
+  /** E-utilities `tool`: one word naming the software. */
+  tool: string;
+  /** E-utilities `email`, or null when the operator gave none. Never logged. */
+  email: string | null;
+}>;
+
+/** What live PubMed lookups send NCBI about this installation (#6). */
+export const ncbiEnv = (env: ServerEnv = serverEnv()): NcbiEnv => {
+  const { NCBI_TOOL: tool, NCBI_EMAIL: email } = env;
+  return Object.freeze({ tool, email: email ?? null });
+};
+
 export type VitronicEnv = Readonly<{
   encryptionKey: string;
   dataDir: string | null;
@@ -796,6 +828,20 @@ export const vaultEnv = (env: ServerEnv = serverEnv()): VaultEnv =>
     dataMode: env.DATA_MODE,
     stateDir: storageEnv(env).stateDir,
     idleLockMs: env.VAULT_IDLE_LOCK_MINUTES * 60_000,
+  });
+
+export type AnchorEnv = Readonly<{
+  /** Where the anchor key and the anchors file live (`<stateDir>/anchor`, #300). */
+  stateDir: string;
+  /** AUDIT_ANCHOR_INTERVAL_MINUTES in milliseconds (default 10 minutes). */
+  intervalMs: number;
+}>;
+
+/** The settings of the signed anchors (#300, docs/privacy-design.md section 2.6). */
+export const anchorEnv = (env: ServerEnv = serverEnv()): AnchorEnv =>
+  Object.freeze({
+    stateDir: storageEnv(env).stateDir,
+    intervalMs: env.AUDIT_ANCHOR_INTERVAL_MINUTES * 60_000,
   });
 
 export type AnatomyEnv = Readonly<{

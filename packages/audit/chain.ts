@@ -12,6 +12,11 @@ export { hashLink } from "./hash";
  * Pure: no database, no clock.
  */
 
+/** The two chains: the audit log and the disclosure ledger. */
+export const CHAINS = ["audit", "disclosures"] as const;
+
+export type ChainName = (typeof CHAINS)[number];
+
 export type ChainLink = Readonly<{
   seq: bigint | number;
   prevHash: string;

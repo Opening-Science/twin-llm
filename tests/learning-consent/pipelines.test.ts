@@ -135,6 +135,11 @@ const NOT_LEARNING: Readonly<Record<string, string>> = {
   "lab:local-only": SETUP,
   "lab:storage": SETUP,
   "vault:migrate": "seals the person's own rows in place (#141); no learning",
+  "anchor:init": SETUP,
+  "anchor:write":
+    "signs the chains' heads (row, hash, time) into the anchors file (#300); no learning",
+  "anchor:rotate": SETUP,
+  "anchor:export": "prints the newest anchors and the public key (#300); no learning",
   "vault:rotate": "reseals the person's own rows under a new key (#141); no learning",
   "skills:check": "runs skill evals over shipped synthetic fixtures; no person's rows",
   "new:tool": TOOLING,

@@ -205,10 +205,17 @@ export const CompareScreen = ({
                       <li key={item.turn.id} className="flex flex-col gap-4">
                         <h2 className="sr-only">Prompt {item.index + 1}</h2>
                         <div className="bg-muted ml-auto flex max-w-[85%] flex-col items-start gap-1.5 rounded-2xl rounded-br-md px-4 py-3 sm:max-w-[70%]">
-                          {item.turn.skill ? (
-                            <span className="skill-chip">
-                              <span className="sr-only">Sent with the skill </span>
-                              {`/${item.turn.skill}`}
+                          {item.turn.skill || item.turn.scheduled ? (
+                            <span className="flex flex-wrap items-center gap-1.5">
+                              {item.turn.scheduled ? (
+                                <span className="skill-chip">Scheduled</span>
+                              ) : null}
+                              {item.turn.skill ? (
+                                <span className="skill-chip">
+                                  <span className="sr-only">Sent with the skill </span>
+                                  {`/${item.turn.skill}`}
+                                </span>
+                              ) : null}
                             </span>
                           ) : null}
                           <p className="text-[15px] leading-relaxed whitespace-pre-wrap">

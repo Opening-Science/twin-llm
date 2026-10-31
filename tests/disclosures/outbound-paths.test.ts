@@ -47,6 +47,12 @@ const HOSTED_MODEL = {
   tests: "tests/disclosures/hosted-model-ledger.test.ts",
 } as const;
 
+const LIVE_LOOKUP = {
+  marker: "await ports.recordDisclosure(liveLookupDisclosure(scope, request));",
+  via: "packages/live-sources/tools.ts",
+  tests: "packages/live-sources/tools.test.ts",
+} as const;
+
 const OUTBOUND: Readonly<Record<string, Entry>> = {
   // Model providers: every request to a model not on this machine.
   "features/chat/resolve-language-model.ts": { ledger: HOSTED_MODEL },
@@ -92,6 +98,12 @@ const OUTBOUND: Readonly<Record<string, Entry>> = {
       tests: "packages/gbd-mcp/audit.test.ts",
     },
   },
+
+  // Live public lookups (#6): PubMed and Ensembl, off until the person switches
+  // one on. Each request is recorded before it is sent; search terms and public
+  // record ids only, never a stored value.
+  "packages/live-sources/fetch.ts": { ledger: LIVE_LOOKUP },
+  "packages/live-sources/tools.ts": { ledger: { ...LIVE_LOOKUP, via: undefined } },
 
   // Search embeddings: only an Ollama on another machine receives text.
   "packages/guidelines/embed.ts": {

@@ -206,6 +206,37 @@ export const formatTimestamp = (moment: Date | null | undefined): string => {
   return `${dateFormats.long.format(moment)}, ${timeFormat.format(moment)} UTC`;
 };
 
+const zonedFormats = new Map<string, Intl.DateTimeFormat>();
+
+/**
+ * A moment on a named clock, `31 Oct 2026, 08:00`: when a scheduled task (#54)
+ * runs, in the zone it was set in. An unknown zone or a bad moment shows `—`.
+ */
+export const formatZonedMoment = (
+  moment: Date | string | null | undefined,
+  timeZone: string,
+): string => {
+  const date = typeof moment === "string" ? new Date(moment) : moment;
+  if (!date || Number.isNaN(date.getTime())) return EMPTY_VALUE;
+  try {
+    const format =
+      zonedFormats.get(timeZone) ??
+      new Intl.DateTimeFormat(DISPLAY_LOCALE, {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hourCycle: "h23",
+        timeZone,
+      });
+    zonedFormats.set(timeZone, format);
+    return format.format(date);
+  } catch {
+    return EMPTY_VALUE;
+  }
+};
+
 const MS_PER_HOUR = 3_600_000;
 
 /** `just now`, `5 h ago`, `3 d ago`. Future timestamps (clock skew) read "just now". */

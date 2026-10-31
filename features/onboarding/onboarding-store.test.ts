@@ -53,7 +53,13 @@ describe("loadOnboardingOrEmpty", () => {
       logError: (message, name) => logged.push(`${message} ${name}`),
     });
     expect(result).toEqual({
-      answers: { roles: [], dataChoice: null, interest: "", disabledSources: [] },
+      answers: {
+        roles: [],
+        dataChoice: null,
+        interest: "",
+        disabledSources: [],
+        liveSources: [],
+      },
       step: 0,
       completed: false,
     });

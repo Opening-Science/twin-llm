@@ -63,6 +63,8 @@ export type TurnState = Readonly<{
   answers: readonly ResponseState[];
   /** The skill the prompt was sent with (`sleep` for `/sleep`), or null. */
   skill?: string | null;
+  /** Asked by a scheduled task (#54), not typed. */
+  scheduled?: boolean;
   /** What was on screen when it was sent (#47); kept for retries, never stored. */
   uiContext?: UiContext | null;
   /**

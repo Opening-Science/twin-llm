@@ -1,4 +1,5 @@
-import type { VerifyChainResult } from "./chain";
+import { ANCHOR_CHAIN_WORDS, type AnchorVerdict, anchorSentence } from "./anchor";
+import { CHAINS, type ChainName, type VerifyChainResult } from "./chain";
 
 /**
  * The pure half of `verify-cli.ts`: which mode and chain the flags ask for,
@@ -25,9 +26,7 @@ export const parseVerifyMode = (
     : { error: `verify-cli: pass only one of ${modes.join(", ")}` };
 };
 
-export const CHAINS = ["audit", "disclosures"] as const;
-
-export type ChainName = (typeof CHAINS)[number];
+export { CHAINS, type ChainName };
 
 /** `--chain <name>`, or the audit log when absent. Seeding is for the audit log only. */
 export const parseChain = (
@@ -84,3 +83,71 @@ export const checkOutcome = (
     line: `${tag} OK: ${result.total} rows checked, latest hash ${latest}`,
   };
 };
+
+// ---------------------------------------------------------------------------
+// Signed anchors (#300)
+// ---------------------------------------------------------------------------
+
+export type AnchorOption =
+  | Readonly<{ anchors: "default" }>
+  | Readonly<{ anchors: "off" }>
+  | Readonly<{ anchors: "file"; path: string }>;
+
+/**
+ * `--check` compares the chain with its latest signed anchor in the state
+ * folder by default; `--anchors <file>` reads another anchors file (its keys
+ * next to it) and `--no-anchors` checks the chain alone, as before #300.
+ */
+export const parseAnchorOption = (
+  argv: readonly string[],
+  mode: VerifyMode,
+): AnchorOption | Readonly<{ error: string }> => {
+  const off = argv.includes("--no-anchors");
+  const at = argv.indexOf("--anchors");
+  if (!off && at === -1) return { anchors: mode === "--check" ? "default" : "off" };
+  if (mode !== "--check") {
+    return { error: "verify-cli: --anchors and --no-anchors go with --check only" };
+  }
+  if (off && at !== -1) {
+    return { error: "verify-cli: pass only one of --anchors, --no-anchors" };
+  }
+  if (off) return { anchors: "off" };
+  const path = argv[at + 1];
+  return path === undefined || path.startsWith("--")
+    ? { error: "verify-cli: --anchors takes the path of an anchors file" }
+    : { anchors: "file", path };
+};
+
+const ANCHOR_STATUS = {
+  ok: { code: EXIT.ok, stream: "stdout", word: "OK" },
+  "not-ok": { code: EXIT.broken, stream: "stderr", word: "FAIL" },
+  unknown: { code: EXIT.unknown, stream: "stderr", word: "UNKNOWN" },
+} as const;
+
+/** What `--check` prints about the anchor, and its exit code. */
+export const anchorOutcome = (
+  verdict: AnchorVerdict,
+  chain: ChainName = "audit",
+): CheckOutcome => {
+  const { code, stream, word } = ANCHOR_STATUS[verdict.status];
+  const where =
+    verdict.anchor === null
+      ? ""
+      : ` Latest anchor: row ${verdict.anchor.seq} at ${verdict.anchor.at}.`;
+  const key = verdict.keyId === null ? "" : ` Key ${verdict.keyId.slice(0, 16)}.`;
+  return {
+    code,
+    stream,
+    line: `${NAMES[chain].tag} anchor ${word}: ${anchorSentence(verdict, ANCHOR_CHAIN_WORDS[chain])}${where}${key}`,
+  };
+};
+
+/** Not OK wins over Unknown, which wins over OK. */
+export const worstExit = (
+  ...codes: readonly CheckOutcome["code"][]
+): CheckOutcome["code"] =>
+  codes.includes(EXIT.broken)
+    ? EXIT.broken
+    : codes.includes(EXIT.unknown)
+      ? EXIT.unknown
+      : EXIT.ok;

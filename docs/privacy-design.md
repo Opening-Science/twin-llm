@@ -3,8 +3,8 @@
 This document settles the decisions behind six issues so each can be built as its own
 pull request: #144 harden local storage, #142 local unlock, #141 encryption at rest, #145
 learning consent, #140 disclosure ledger and #300 an external anchor for the audit chain.
-Status: #144, #142, #141, #145 and #140 are built (sections 2.1 to 2.5 describe what
-shipped); #300 is not built yet. Where this document and the code differ, the code is what runs; update
+Status: all six are built (sections 2.1 to 2.6 describe what shipped). Where this
+document and the code differ, the code is what runs; update
 this document when a pull request changes a decision.
 
 TwinLLM is research software for one person on their own Linux or macOS machine. The design
@@ -286,8 +286,10 @@ Argon2id against the RFC 9106 vector and scrypt against the RFC 7914 vector.
 **What the UI shows.** In personal mode, the first personal page shows "Set a passphrase"
 with the passphrase typed twice, then the recovery code with Copy and "I have saved my
 recovery code" before Continue. Locked pages show "Your data is locked" with the
-passphrase and "Forgot your passphrase?", which opens the recovery form. The foot of the
-sidebar shows Lock (unlocked) or Locked.
+passphrase and "Forgot your passphrase?", which opens the recovery form. Its button,
+"Hold to replace passphrase and recovery code", has to be pressed and held (#350), since
+the old passphrase and code stop working; Enter in a field does not submit it. The foot
+of the sidebar shows Lock (unlocked) or Locked.
 
 **Audit rows** (ids and counts only, `infrastructure/vault-audit.ts`). The event is in the
 tool name, because the chain keeps args only as a hash: `vault.setup`, `vault.unlock`,
@@ -316,6 +318,15 @@ throwaway owner cluster ([runbook.md](runbook.md#local-unlock)).
 
 **Effort.** About 5 days: crypto and session 1, routes and gate across routes and tools 2,
 screens 1, tests and docs 1.
+
+**Scheduled runs (#54).** A scheduled task runs on the server with no browser and no
+cookie, so it asks the session store directly: in personal mode it runs only while the
+owner's vault is open in this process, and asking does not count as use, so a schedule
+never keeps the vault from idle-locking. Locked at the scheduled time, the run is skipped,
+its `task.run` row says `skipped: locked`, and it waits for its next time. The turn then
+uses the same keys and the same pipeline as a typed turn; anything sent to a hosted
+provider goes through the disclosure ledger as usual ([skills.md](skills.md#scheduled-tasks)).
+The notice the shell polls answers zero while locked instead of touching the session.
 
 ### 2.3 #141 Encrypt personal data at rest
 
@@ -382,6 +393,7 @@ async per call and slower for 200,000 rows.
 | `personal_tables`, `_chunks`                 | `columns`, `rows`                                                       |                                                                                                               | counts, chunk index                                                  |
 | `personal_variants`                          | `chrom`, `pos`, `variant_id`, `ref`, `alt`, `genotype`, `filter`        | `site_index` (`chrom:pos` as written), `variant_id_index` (one per ID in the cell, GIN index)                 | none of the content                                                  |
 | `twin_notes`                                 | `title`, `topics`, `measures`, `open_questions`                         |                                                                                                               | `data_mode`, `permit`, dates                                         |
+| `scheduled_tasks`                            | `question`                                                              |                                                                                                               | skill, model id, schedule, time zone, run status and dates           |
 | `onboarding_profiles`                        | `interest`                                                              |                                                                                                               | roles and steps (fixed choices)                                      |
 
 - _Changed from the first draft:_ `personal_datasets.sha256` stays (sealed) next to its
@@ -539,7 +551,8 @@ scope, consent_ids }` in its manifest (`<out>.manifest.json`, `meta.json`), so i
 
 **What the UI shows.** Customize · Privacy, "Learning from your data": one card per use,
 Off by default, with the data it may read as checkboxes (none ticked) and Grant; once
-granted, "On since <date>", what it covers, the sentence agreed to, and Withdraw; earlier
+granted, "On since <date>", what it covers, the sentence agreed to, and "Hold to withdraw
+consent", pressed and held because a withdrawal cannot be taken back (#350); earlier
 grants that were withdrawn are listed under the card. It states that removing names or
 dates does not replace consent, that the person's own use needs none, and what
 withdrawing does and does not undo. Gated by the unlock like every personal page. In
@@ -590,16 +603,17 @@ recipient.
   Providers that the data-mode policy refuses never get an entry, because nothing is
   sent.
 
-| Kind           | When                                                                                                                               | Recipient                                                     | What is recorded                                                                                |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `hosted-model` | Each HTTP request to a model not on this machine: chat answers (every step of the tool loop), `/compact` drafts, starter questions | The provider (`exoscale`, `openrouter`, ...) and the model id | Purpose, categories, the injected value references, the request's exact size                    |
-| `vendor-sync`  | An Oura, Whoop or Google Health sync (a token refresh happens inside it)                                                           | The vendor                                                    | Access token and date window; no health value is uploaded. Oura's sandbox is labelled synthetic |
-| `vendor-auth`  | The OAuth code exchange on the return from the vendor (recorded while locked too; it needs no key)                                 | The vendor                                                    | The authorization code                                                                          |
-| `export-file`  | A thread export (`/api/threads/<id>/export`, Markdown, FHIR or print), paired with its existing `thread.export` audit row          | `export file` and the format                                  | Categories and the file's size                                                                  |
-| `ark-release`  | A genome report released from the person's Ark, after it parses and before it is stored                                            | `this machine, from the Ark`; direction `received`            | The panel sites as references (rsIDs of the app's fixed panel, never a genotype)                |
-| `remote-tool`  | A question to the remote GBD server (synthetic requests only)                                                                      | `GBD server`                                                  | The question's size                                                                             |
-| `embedding`    | A guideline or knowledge search query embedded by an Ollama that is not on this machine                                            | `ollama on another machine`                                   | The request's size                                                                              |
-| `telemetry`    | A server-side PostHog event, when PostHog is configured                                                                            | `PostHog`                                                     | The event name; ids and counts only                                                             |
+| Kind            | When                                                                                                                               | Recipient                                                         | What is recorded                                                                                |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `hosted-model`  | Each HTTP request to a model not on this machine: chat answers (every step of the tool loop), `/compact` drafts, starter questions | The provider (`exoscale`, `openrouter`, ...) and the model id     | Purpose, categories, the injected value references, the request's exact size                    |
+| `vendor-sync`   | An Oura, Whoop or Google Health sync (a token refresh happens inside it)                                                           | The vendor                                                        | Access token and date window; no health value is uploaded. Oura's sandbox is labelled synthetic |
+| `vendor-auth`   | The OAuth code exchange on the return from the vendor (recorded while locked too; it needs no key)                                 | The vendor                                                        | The authorization code                                                                          |
+| `export-file`   | A thread export (`/api/threads/<id>/export`, Markdown, FHIR or print), paired with its existing `thread.export` audit row          | `export file` and the format                                      | Categories and the file's size                                                                  |
+| `ark-release`   | A genome report released from the person's Ark, after it parses and before it is stored                                            | `this machine, from the Ark`; direction `received`                | The panel sites as references (rsIDs of the app's fixed panel, never a genotype)                |
+| `remote-tool`   | A question to the remote GBD server (synthetic requests only)                                                                      | `GBD server`                                                      | The question's size                                                                             |
+| `embedding`     | A guideline or knowledge search query embedded by an Ollama that is not on this machine                                            | `ollama on another machine`                                       | The request's size                                                                              |
+| `telemetry`     | A server-side PostHog event, when PostHog is configured                                                                            | `PostHog`                                                         | The event name; ids and counts only                                                             |
+| `public-lookup` | Each HTTP request of a live PubMed or Ensembl lookup (#6), only for a source the person switched on                                | `NCBI PubMed` or `Ensembl`, and the step (`esearch`, `gene`, ...) | `search terms` or `public record ids` and the address's size; never a stored value              |
 
 - **Hosted models, per request.** _Changed from the first draft_, which wrote one row per
   turn next to `provider.personal_data_sent`. `resolveLanguageModel` takes the caller's
@@ -653,7 +667,193 @@ before the request (a draft falls back to the person's own questions; starter qu
 fall back to the fixed ones), a sync reports failed before the vendor is asked, an OAuth
 return goes back with an error before the code is exchanged, an export answers 500
 with no file, an Ark report is not stored, a GBD call returns no rows marked
-`gbd-not-recorded`, a remote embedding has no vector, a PostHog event is dropped. A
+`gbd-not-recorded`, a remote embedding has no vector, a PostHog event is dropped, a live lookup returns `LIVE_SOURCE_NOT_RECORDED` and sends nothing more. A
+database that has not run the migration refuses every one of these, including GBD calls
+from the evaluation harness, until `bun run db:deploy`.
+
+**Tests.** Per path with a failing ledger, checking nothing was sent: the hosted model
+through the AI SDK for chat, `/compact` and starters
+(`tests/disclosures/hosted-model-ledger.test.ts`), syncs and the code exchange
+(`audited-sync`, `sync-route`, `oura/oauth-route`, and the Whoop sync route against a fake
+database), exports, the Ark release, GBD and remote embeddings. The table of outbound
+paths (`tests/disclosures/outbound-paths.test.ts`) walks `app`, `features`,
+`infrastructure`, `packages` and `scripts` for outbound clients and fails on any it does
+not name. The chain over seeded rows, each kind of tampering, a removed row and a
+resealed `refs`; the writer over a fake transaction (both rows or neither, refs sealed,
+no key needed without refs); the cumulative view and the two views as pure functions;
+the CLI's `--chain`. Run by hand on a throwaway owner cluster with a local stand-in
+model server: chat, `/compact` and both exports wrote their rows before the requests,
+the chain verified with the command, and the Lab card and the Privacy section were
+checked locked and unlocked, light and dark.
+
+**Effort.** About 5 days.
+
+### 2.6 #300 An external anchor for the audit chain head
+
+**Decision.** A dedicated Ed25519 key, generated at setup and kept outside the repository
+and the database, signs the head of the audit chain and of the disclosure ledger. It is
+not the git signing key: Peter chose a key that does one job, so rotating or losing it
+touches nothing else.
+
+**Design** (as built).
+
+- **Key.** `bun run anchor:init` (also run by `setup:local`) calls
+  `generateKeyPairSync("ed25519")` from `node:crypto` and writes
+  `$TWINLLM_STATE_DIR/anchor/anchor-key.pem` (PKCS#8, mode `0600`) and `anchor-key.pub`
+  (SPKI, `0600`), in a directory of mode `0700`, which the #144 owner-only check walks
+  with the rest of the state folder. The key id is the SHA-256 of the public key, shown in
+  the Lab with the public key itself. The private key is not encrypted with the vault
+  passphrase, so anchors can be written while locked and in synthetic installs. Anyone who
+  can read the key file as the owner can forge anchors; that is the stated limit.
+- **Anchor file.** One JSON line per record in `$TWINLLM_STATE_DIR/anchor/anchors.jsonl`
+  (`0600`, appended under a lock file), each with an Ed25519 signature `sig` over its
+  canonical JSON without `sig`, and `prev`, the SHA-256 of the line before, so a removed
+  line in the middle shows. _Changed from the first draft_, which had anchor lines only:
+  the first line (`kind: "key"`) names the first public key, signed by it; anchor lines
+  (`kind: "anchor"`) hold `{ v: 1, chain, seq, hash, headTs, at, keyId, prev }`, one line
+  per chain (`audit`, `disclosures`); rotation lines are described below.
+  `packages/audit/anchor.ts` has the pure record format, signing, the line-by-line check
+  and the comparison; `anchor-store.ts` the files; `anchor-chains.ts` the database reads.
+- **When.** The server reads both heads every minute and writes an anchor for each chain
+  whose head moved, at most once per `AUDIT_ANCHOR_INTERVAL_MINUTES` (default 10, 1 to
+  1440), and once more on SIGTERM and SIGINT (`instrumentation.ts`,
+  `infrastructure/anchor-runtime.ts`). The shutdown write is synchronous and uses the
+  heads of the last read, so it is at most a minute old. `setup:local` writes anchors
+  after its last step, and `bun run anchor:write` does it by hand. A failed write is logged
+  by error name and retried at the next read; it never blocks a request. The writer never
+  anchors a chain that is shorter than, or different from, its latest anchor: that would
+  hide what the anchor is there to show. It logs the refusal once.
+- **Verify.** Pure `checkAnchorLog(lines, knownKeys)` checks each line's link and
+  signature under the current key, and `anchorVerdict` compares the newest anchor of a
+  chain with the database: the anchored `seq` must exist with the same hash, and the
+  chain's head must be at or after it. Not OK for a shorter chain (truncation), a
+  missing anchored row, a different hash at that seq (rebuild), a bad signature, a removed
+  or changed line, an unknown key, a key on disk that is not the key the file ends with,
+  and a missing anchors file next to an existing key. The Lab's "Audit chain" and "What
+  left this machine" cards show the latest anchor (row and time), the result, the key id
+  and the public key, and take the worse status of the chain and its anchor.
+  `verify-cli --check` (also with `--chain disclosures`) prints a second line for the
+  anchor, reads the anchors file in the state folder by default and takes
+  `--anchors <path>` (keys next to it); `--no-anchors` keeps the check of before.
+- **Off the machine.** Anchors are never sent anywhere automatically (Peter's decision on
+  question 3 below). `bun run anchor:export` prints the newest anchor of each chain and
+  the public key so the person can keep them somewhere else (a note, a USB stick, a
+  commit in a private repository). _Not built:_ recording when the last export was made.
+- **Rotation.** `bun run anchor:rotate` makes a new key and writes a rotation line, signed
+  by the old key, that names the new public key; later lines use the new key, and the old
+  public key moves to `anchor/retired/<key id>.pub` so old anchors still verify. A lost or
+  exposed key: `anchor:rotate -- --without-old-key` removes the old private key, starts a
+  new key and writes a rotation line signed by the new key only. The check starts over at
+  that line, and the Lab shows it as a break in continuity (Unknown, never OK) for as long
+  as the line is in the file.
+
+**Failure behaviour.** No key: the card says anchors are off and how to create one
+(Unknown, not OK). An anchors file or key that cannot be read: Unknown. No anchor yet for
+a chain: Unknown. A verification failure: Not OK with the reason, never a silent pass.
+
+**Tests.** `packages/audit/anchor.test.ts`: sign and verify; truncation, rebuild, a
+missing anchored row, a removed middle line, a changed line, a bad signature, an unknown
+key, a second key line, rotation with and without the old key, an empty chain, the
+verdicts and their sentences. `anchor-store.test.ts`: modes `0600` and `0700`, linking
+across writes, init refused without the key, a damaged line stops the writer, both
+rotations. `infrastructure/anchor-writer.test.ts`: the interval, the shutdown flush, and
+no anchor over a truncated or rebuilt chain. The CLI flags and the Lab evidence have
+their own tests. Run by hand on a throwaway owner cluster: anchors written, the audit
+table truncated, and both `verify-cli --check` and the Lab card reported it
+([runbook.md](runbook.md#signed-anchors)).
+
+**Effort.** About 3 days.
+
+### 2.5 #140 Disclosure ledger
+
+**Decision.** A separate hash-chained table, `disclosure_events`, with one entry per event
+in which data leaves this machine or a device of the person's reaches it. It reuses the
+audit chain's hashing and is written in the same transaction as an audit row for the
+event, before the data is sent. The Lab and Customize · Privacy show running totals per
+recipient.
+
+**Design** (as built).
+
+- **One function.** Every outbound path calls `recordDisclosure`
+  (`infrastructure/disclosure-ledger-runtime.ts`) before it sends. It seals the value
+  references (below), then writes the paired audit row and the ledger row in one
+  transaction (`appendInTransaction` and `appendDisclosureInTransaction` in
+  `packages/audit`). Any failure rejects with `DisclosureNotRecordedError` (the error's
+  name only) and the caller does not send. The pure half (types, the audit row, the
+  recorder over an injected writer, the recording fetch, the cumulative view) is
+  `infrastructure/disclosure-ledger.ts`.
+- **Events and recipients.** _Changed from the first draft_, which recorded only
+  personal requests to the Exoscale pilot, vendor syncs, exports and Ark releases: every
+  send to a recipient off this machine is recorded, and a send that carried synthetic data
+  only is recorded too, labelled `synthetic`. Ollama on loopback is not a recipient.
+  Providers that the data-mode policy refuses never get an entry, because nothing is
+  sent.
+
+| Kind            | When                                                                                                                               | Recipient                                                         | What is recorded                                                                                |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `hosted-model`  | Each HTTP request to a model not on this machine: chat answers (every step of the tool loop), `/compact` drafts, starter questions | The provider (`exoscale`, `openrouter`, ...) and the model id     | Purpose, categories, the injected value references, the request's exact size                    |
+| `vendor-sync`   | An Oura, Whoop or Google Health sync (a token refresh happens inside it)                                                           | The vendor                                                        | Access token and date window; no health value is uploaded. Oura's sandbox is labelled synthetic |
+| `vendor-auth`   | The OAuth code exchange on the return from the vendor (recorded while locked too; it needs no key)                                 | The vendor                                                        | The authorization code                                                                          |
+| `export-file`   | A thread export (`/api/threads/<id>/export`, Markdown, FHIR or print), paired with its existing `thread.export` audit row          | `export file` and the format                                      | Categories and the file's size                                                                  |
+| `ark-release`   | A genome report released from the person's Ark, after it parses and before it is stored                                            | `this machine, from the Ark`; direction `received`                | The panel sites as references (rsIDs of the app's fixed panel, never a genotype)                |
+| `remote-tool`   | A question to the remote GBD server (synthetic requests only)                                                                      | `GBD server`                                                      | The question's size                                                                             |
+| `embedding`     | A guideline or knowledge search query embedded by an Ollama that is not on this machine                                            | `ollama on another machine`                                       | The request's size                                                                              |
+| `telemetry`     | A server-side PostHog event, when PostHog is configured                                                                            | `PostHog`                                                         | The event name; ids and counts only                                                             |
+| `public-lookup` | Each HTTP request of a live PubMed or Ensembl lookup (#6), only for a source the person switched on                                | `NCBI PubMed` or `Ensembl`, and the step (`esearch`, `gene`, ...) | `search terms` or `public record ids` and the address's size; never a stored value              |
+
+- **Hosted models, per request.** _Changed from the first draft_, which wrote one row per
+  turn next to `provider.personal_data_sent`. `resolveLanguageModel` takes the caller's
+  `disclosure` (who, why, categories, references) and gives the provider a recording
+  fetch (`modelCallFetch`): each HTTP request is written with its body's size before it
+  goes out, so the tool loop's later requests, which carry tool results, are counted too.
+  The `provider.personal_data_sent` row stays as it was, one per turn. Only the
+  evaluation harness and the live tool-call smoke test pass `{ notRecorded }` (synthetic
+  cohorts, their own database); `tests/disclosures/outbound-paths.test.ts` lists them.
+- **Which values left.** As references, never values: the wearable and BodyLoop keys the
+  Twin prompt lists (`offeredKeys`, such as `oura.sleep.score.2026-10-20`), the ids of
+  the twin notes a turn loaded, and the Ark panel's rsIDs. Each keeps its source
+  (`wearable`, `scan`, `note`, `genome`). The list is sealed under the field key (#141)
+  in personal mode. _Not built:_ the #112 matcher over free text (the person's words,
+  answers, tool results). Every row stores `free_text_checked = false` and the Privacy
+  page says that free text is named by kind but not checked, rather than counting zero.
+- **Row.** `seq`, row id, time, actor (like the audit log; _changed from_ the user id),
+  kind, direction, recipient, target (model id, request kind or format), purpose,
+  categories, `ref_count`, `payload_bytes` (null when it cannot be measured up front),
+  thread id when there is one, `synthetic`, `free_text_checked`, the sealed `refs`, the
+  paired audit `seq`, `prev_hash` and `hash`. The hash (`packages/audit/disclosure-chain.ts`)
+  covers every column but `refs`, so `vault:rotate` can reseal it without breaking the
+  chain; `ref_count` is covered, and the sealed value is bound to its row by its
+  encryption context. _Left out:_ the HMAC of the payload under a `ledger` subkey. Nothing
+  can check it against a person's copy yet, and a rotation would leave old ones
+  uncheckable.
+- **Shared chain.** `packages/audit/chain.ts` has the one hash (`hashLink`, which the
+  audit log's `hashEvent` now uses), `nextLink` and the walk (`checkLinks`); the audit log
+  and the ledger each only say which fields their canonical form holds.
+- **Order.** Ledger row and audit row in one transaction, then the send. If the
+  transaction fails, nothing is sent.
+- **Outside the ledger, named.** Clerk sign-in, Arcjet request protection and PostHog in
+  the browser cannot be recorded by the server before they send (the first two are per
+  request, the last is the browser's). The Lab card lists whichever are configured. The
+  BodyLoop scanner on the local network is not a recipient here: the request carries its
+  pairing token and ids and the scan comes in.
+
+**What the UI shows.** Customize · Privacy, "What left this machine" (behind the unlock,
+like the page): one line per recipient and direction with events (and how many were
+synthetic), values, size, first and last time; then the latest 100 events, each with
+recipient, purpose, what it carried, size, a Synthetic badge where it applies, a link to
+the thread, and its stored values as references under "Which stored values". The Lab
+card "What left this machine" checks the chain while locked too and shows the running
+totals only to a viewer whose data is unlocked (_changed from the first draft_, which
+showed counts while locked). Its command is
+`verify-cli.ts --check --chain disclosures`. _Not built:_ a cumulative chart over time;
+the table holds the running totals.
+
+**Failure behaviour.** Fail closed on every path: a chat or `/compact` model call fails
+before the request (a draft falls back to the person's own questions; starter questions
+fall back to the fixed ones), a sync reports failed before the vendor is asked, an OAuth
+return goes back with an error before the code is exchanged, an export answers 500
+with no file, an Ark report is not stored, a GBD call returns no rows marked
+`gbd-not-recorded`, a remote embedding has no vector, a PostHog event is dropped, a live lookup returns `LIVE_SOURCE_NOT_RECORDED` and sends nothing more. A
 database that has not run the migration refuses every one of these, including GBD calls
 from the evaluation harness, until `bun run db:deploy`.
 
@@ -735,7 +935,7 @@ reruns faults F3 and F4 and must now detect them.
 | 3    | #141  | #142 (keys)                                        | Built: migration `20261031120000_encrypt_at_rest`, `infrastructure/{field-crypto,field-cipher,personal-columns,reseal,mesh-files,thread-fields}.ts`, every store of the tables in 2.3, `features/search`, `scripts/vault/{migrate,rotate}.ts`, doctor, Lab                                                                                                                                                                                                           |
 | 4    | #145  | #142                                               | Built: migration `20261031130000_learning_consents`, `infrastructure/learning-consent{,-store}.ts`, `features/privacy/`, Customize · Privacy, every pipeline in `tests/learning-consent/pipelines.test.ts`                                                                                                                                                                                                                                                           |
 | 5    | #140  | #141 (value list encrypted)                        | Built: migration `20261031140000_disclosure_ledger`, `packages/audit/{chain,disclosure-chain}.ts`, `infrastructure/disclosure-ledger{,-runtime}.ts`, `resolveLanguageModel` and its callers, `features/wearables/` syncs and the OAuth returns, `features/arena/thread-export-handler.ts`, `features/digital-twin/genome-run.ts`, GBD, search embeddings, PostHog events, `tests/disclosures/`, Lab, Customize · Privacy. Not built: the #112 matcher over free text |
-| 6    | #300  | #144 (state dir); covers #140's chain when present | new `packages/audit/anchor*.ts`, `verify-cli.ts` and its args, `features/lab/audit-chain-check.ts`, `instrumentation.ts`, setup scripts                                                                                                                                                                                                                                                                                                                              |
+| 6    | #300  | #144 (state dir); covers #140's chain when present | Built: `packages/audit/anchor{,-store,-chains}.ts`, `verify-cli.ts` and its args, `infrastructure/anchor-{writer,runtime}.ts`, `features/lab/anchor-evidence.ts`, `instrumentation.ts`, `scripts/anchor/`, `setup:local`                                                                                                                                                                                                                                             |
 
 #300 needs only #144 and can run in parallel with steps 2 to 5; it then adds the ledger
 chain as a second anchored chain. Customize · Privacy was first planned for #141 (key and
@@ -789,6 +989,7 @@ Total about 27 working days.
    keyring opens for any program running as the owner after login, which undoes most of
    what locking gives. The default here is no.
 2. **Idle lock.** Decided: 15 minutes by default (`VAULT_IDLE_LOCK_MINUTES`, 1 to 240).
-3. **Anchors off the machine.** Is a manual `anchor:export` enough, or should anchors also
-   go somewhere automatically, such as a commit to a private repository? Automatic would
-   be a new outgoing channel, and would get its own ledger entry.
+3. **Anchors off the machine.** Decided: manual. Anchors stay on the machine and are never
+   sent automatically; `anchor:export` prints them for the person to keep elsewhere. An
+   automatic copy, such as a commit to a private repository, would be a new outgoing
+   channel with its own ledger entry.

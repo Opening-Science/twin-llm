@@ -10,6 +10,7 @@ import { useThreadHistory } from "@/infrastructure/thread-history-store";
 import { Button } from "@/infrastructure/ui-kit/button";
 
 import { useOpenSearch } from "@/features/search/search-context";
+import { TaskNoticeBadge } from "@/features/tasks/task-notices";
 
 import { BrandAttribution } from "./brand-attribution";
 import {
@@ -215,6 +216,7 @@ export const NavPanel = ({
           >
             <Glyph className="size-4 shrink-0" />
             {label}
+            {href === "/customize" ? <TaskNoticeBadge /> : null}
           </Link>
         ))}
       </nav>
