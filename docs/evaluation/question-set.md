@@ -19,6 +19,8 @@ and scores; C2 runs no model.
 | `scripts/evaluation/cohort-ports.ts`        | The query tools' ports over the cohort's patient files, in memory, for that build                       |
 | `evaluation/questions.s7b.v1.json`          | More S7 items on the supplementary cohort `synthea-v4-s7` (#277), in their own file ("S7b" below)       |
 | `evaluation/answer-key.s7b.v1.json`         | Their key, built from that cohort's files (`bun run eval:answer-key:s7b`)                               |
+| `evaluation/questions.v1h.v1.json`          | Held-out S1 to S6 items from a seeded rule (#304), in their own file ("v1h" below)                      |
+| `evaluation/answer-key.v1h.v1.json`         | Their key, built from the evaluation cohort's files (`bun run eval:answer-key:v1h`)                     |
 
 All data is synthetic: subjects come from `synthea-v4-seed42` and are named by
 `subject_ref` only. Reference questions use the guideline catalogue
@@ -933,6 +935,130 @@ the key and the subject table from the files and both must match.
 
 Running it: `bun run eval -- --set s7h --models …`, with the cohort ingested
 in the eval database as for S7b. No model has been run on S7h yet.
+
+## v1h: held-out S1 to S6 items (#304)
+
+The v1 items were written alongside the cohort they are scored against, and
+the training templates were only checked against their exact wording, so v1
+is a development set. v1h is a held-out set of 32 items for S1 to S6,
+`Q-S1-H01` to `Q-S6-H05`, in `evaluation/questions.v1h.v1.json` with their key
+in `evaluation/answer-key.v1h.v1.json`, on the evaluation cohort
+`synthea-v4-seed42`. The v1, S7, S7b, S7h and hb files, keys and hashes are
+unchanged.
+
+**The rule was fixed before any output was seen.** The seeded rule
+(`scripts/evaluation/heldout-v1h.ts`, seed 3040), its templates and the
+subject table it reads (`evaluation/heldout-v1h.subjects.json`) were
+committed in 3a84fd3, "Held-out S1 to S6 rule and subject table (#304)",
+before the items were generated and before any v1h tool call was made. The
+items and the key followed in the next commit. One change came between: the
+first key build passed, but the drift test's claim lint flagged a word in
+each of two templates (a condition template and a decline template), so they
+were reworded to say "conditions" and "medicine", and the lint now runs on
+the templates in the rule's own test. The draws are the same; only those two questions' wording
+changed. No model had answered any item. Report v1 and v1h scores
+separately: each set is its own run (`--set v1`, `--set v1h`) and
+`meta.json` names it.
+
+### How the items are held out
+
+| From                          | How                                                                                                                                                                                                                                                                                      |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Training wording              | 26 templates written for this set. None has the same skeleton (values and placeholders as class words) as a training template in any bank (`BANK`, `WEARABLE_BANK`, `ANATOMY_BANK`, `HANDOVER_BANK`, `GENOME_BANK`), and none shares a run of six words, four of them wording, with one. |
+| Existing items                | No template or item shares a skeleton or such a run with any question of v1, S7, S7b, S7h or hb.                                                                                                                                                                                         |
+| Training measures             | Every LOINC code a data item reads is absent from the training scripts and from every keyed call of the other sets: platelets, white and red cell counts, haematocrit, MCV, ALT, AST and albumin; absent-code probes name lipase and fibrinogen.                                         |
+| Training people               | Subjects come from the evaluation cohort, which `training:conversations` refuses (`EVALUATION_COHORT_IDS`); the out-of-cohort probes use refs drawn from the seed.                                                                                                                       |
+| Training files (when at hand) | `bun run eval:heldout:v1h check --training <conversations.jsonl>` runs the same checks against every user turn of a training file and prints counts and item ids only.                                                                                                                   |
+
+Run on 2026-10-31 against the training conversations on this machine:
+`synthea-v4-seed1001.jsonl` (68,906 user turns) and `synthea-v4-seed1100.jsonl`
+(69,065), both from the 2026-10-25 batch build, and a `training:sample` file
+(128): no held-out item overlaps. Whether those are the exact files a given
+fine-tune was trained on is for its run record to say; the check takes any
+file.
+
+The two words "six" and "four" are `SHARED_RUN_WORDS` and `MIN_WORDING_WORDS`
+in `scripts/evaluation/heldout-overlap.ts`. A run made mostly of class words
+("subject ref from date to date") is how every dated question names its
+subject and window, so it does not count; a place name counts as a value.
+
+### The rule
+
+The subject table holds record facts only, read from the patient files with
+the warehouse's own mapping (`bun run eval:heldout:v1h subjects --cohort-dir
+.synthea`): each subject's first and last observation year, for each
+held-out measure the days per year with a reading and their units, the years
+in which a recorded condition began, and which absent-code candidates no
+record holds. No tool result is read. `bun run eval:heldout:v1h generate` then
+draws, from one random stream, for each slot in order a subject among the
+eligible ones used least so far, one of that subject's candidates and one of
+the slot's templates:
+
+| Slot              | Items | Candidates                                                                                    | Keyed                                               |
+| ----------------- | ----- | --------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| S1 trend          | 5     | A measure and a 2 to 5 year window ending in a year with data, three reading days, one unit   | `n`, slope per day, fitted first and last           |
+| S1 range position | 2     | ALT, the latest reading in a 1, 3 or 5 year window                                            | the reading's value                                 |
+| S1 conditions     | 2     | A year in which a recorded condition began                                                    | `n`, `n_codes`                                      |
+| S2 baseline       | 3     | A target year and the three years before, two reading days each, one unit                     | robust z, both medians, both counts                 |
+| S2 comparison     | 3     | Two years at least two apart, two reading days each, one unit                                 | both means, the difference, both counts             |
+| S2 coverage       | 2     | Two held-out measures, a 3 to 6 year window                                                   | days in window; readings, days and longest gap each |
+| S3 guideline      | 3     | Catalogue titles without repeats; society and year, DOI, or address                           | none (catalogue fields)                             |
+| S4 population     | 3     | GBD queries whose measure, location and cause no v1 item asked                                | none (remote, `GBD_MCP_URL`)                        |
+| S5 decline        | 4     | Each of the four decline templates once, a held-out measure the subject has, a named medicine | none                                                |
+| S6 absent code    | 2     | Lipase or fibrinogen over the subject's last years                                            | `n` (0)                                             |
+| S6 outside record | 1     | A year inside the record with no reading of a measure the subject has in other years          | `n` (0)                                             |
+| S6 out of cohort  | 2     | A ref drawn from the seed that is not in the cohort                                           | refusal `SUBJECT_SCOPE_VIOLATION`                   |
+
+The first item of each scenario is asked 3 times (consistency) and is in the
+latency set, so a full run is 44 answers per model. Expectations and
+`must_not` lines follow the v1 items of the same kind. S3 needs the guideline
+ingest and S4 the GBD server, as for v1; without `GBD_MCP_URL` and
+`GBD_MCP_TOKEN` the S4 items are skipped, not failed.
+
+### What came out
+
+32 items naming 22 cohort subjects, none more than three times. Built on
+2026-10-31 with `bun run eval:answer-key:v1h -- --cohort-dir .synthea` (the
+`--preset eval` files, checksum `EVAL_CONTENT_SHA256`): 22 items keyed, 75
+values, 2 refusals (the out-of-cohort probes), no null value; every answerable
+value read at least one reading, and the three no-data probes key 0 readings.
+
+`scripts/evaluation/heldout-v1h.test.ts` checks the rule (same seed and table
+give the same set, the windows the record supports, the spread) and the
+held-out claims above. `evaluation/answer-key.v1h.test.ts` checks that the
+questions file is the rule's output, the claim lint, the key's cohort, hash
+and entries, and the probes' keyed values. With `RUN_LIVE=1` and
+`V1H_COHORT_DIR=.synthea` it rebuilds the key and the subject table from the
+files and both must match.
+
+Running it: `bun run eval -- --set v1h --models …`, with the cohort ingested
+in the eval database as for v1. No model has been run on v1h yet.
+
+### Human review (protocol)
+
+Two raters, blind, on a stratified sample, with agreement statistics:
+
+1. Run each model on v1h (`--set v1h`) and make the report
+   (`bun run eval:report -- <run-id>`); `review.csv` is the blinded sheet.
+2. Sample by scenario and model: from each run, every S5 and S6 line and,
+   per scenario of S1 to S4, up to four lines, chosen by the order of
+   sha256 of `v1h-review.v1`, the run id, the item id and the repeat (lowest
+   first). The S3 and S4 lines with no tool behind them are rated on the
+   item's `human` note alone.
+3. Two raters, each with a pseudonym, rate every sampled line on the
+   five-level rubric of `second-rater.md`, read with "the numbers asked for"
+   in place of "the verdict", and fill the sheet's readability and clinical
+   caution columns. Neither sees `review-key.json` or the other's ratings.
+4. Agreement as in `second-rater.md`: each rater against the correctness
+   scorer (levels 4 and 5 as a pass) and the two raters against each other,
+   Cohen's kappa with its 95 % interval, reported next to the observed
+   agreement.
+
+The Lab's rating view reads hb runs only. Loading v1h there needs more than a
+second file path: its rubric anchors speak of verdicts, and S3 and S4 items
+have no keyed reference, so it needs its own rubric version (which the ratings
+file and the order seed carry) and set-aware actions. That wiring is a
+follow-up, listed in `second-rater.md`.
 
 ## hb: cohort event rates (#293)
 
