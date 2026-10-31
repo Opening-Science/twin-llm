@@ -3,8 +3,8 @@
 This document settles the decisions behind six issues so each can be built as its own
 pull request: #144 harden local storage, #142 local unlock, #141 encryption at rest, #145
 learning consent, #140 disclosure ledger and #300 an external anchor for the audit chain.
-Status: #144 and #142 are built (sections 2.1 and 2.2 describe what shipped); #141, #145,
-#140 and #300 are not built yet. Where this document and the code differ, the code is what runs; update
+Status: #144, #142 and #141 are built (sections 2.1, 2.2 and 2.3 describe what shipped);
+#145, #140 and #300 are not built yet. Where this document and the code differ, the code is what runs; update
 this document when a pull request changes a decision.
 
 TwinLLM is research software for one person on their own Linux or macOS machine. The design
@@ -200,8 +200,8 @@ Argon2id against the RFC 9106 vector and scrypt against the RFC 7914 vector.
   - Recovery code: 20 random bytes shown once as eight groups of four base32 characters.
     It wraps the same DEK under its own Argon2id key. Using it forces a new passphrase
     and issues a new code; the old code stops working.
-  - Subkeys (`field`, `index`, `ledger` with HKDF-SHA256) are not derived yet: #141 and
-    #140 add them where they are used.
+  - Subkeys with HKDF-SHA256: #141 derives `field`, `index` and `mesh` (section 2.3);
+    #140 adds `ledger`.
 - **Where keys live.** _Changed from the first draft_, which put them in a `vault_keys`
   table. Each user's record is one owner-only JSON file,
   `$TWINLLM_STATE_DIR/vault/<user key>.json` (`infrastructure/vault-file.ts`): version,
@@ -213,8 +213,8 @@ Argon2id against the RFC 9106 vector and scrypt against the RFC 7914 vector.
   carries a wrapped key; and the unlock needs no migration. The cost: a backup must
   include the file as well as the database, which the runbook says. The file is written
   through a temporary file and a rename. An unreadable or malformed file is never taken
-  for "no vault". One key per file for now; #141's rotation adds `retiring` and
-  `retired` keys. The unwrapped DEK is a `KeyObject` in a process-wide map
+  for "no vault". #141's rotation adds a `retiring` list: keys being rotated out, wrapped
+  under the same passphrase and recovery code until no row names them. The unwrapped DEK is a `KeyObject` in a process-wide map
   (`infrastructure/vault-session.ts`, kept on `globalThis` so every route bundle shares
   it): actor id to keys, open time, last use and the SHA-256 of the unlock token. The
   buffer it came from is zeroed. Never written to disk, logs, Prisma, the audit chain or
@@ -319,83 +319,134 @@ screens 1, tests and docs 1.
 
 ### 2.3 #141 Encrypt personal data at rest
 
-**Decision.** Field-level envelope encryption with AES-256-GCM under the user's data key
-from #142, for the personal columns listed below. Columns that are only needed to find rows
-use a keyed blind index or stay plaintext, as listed. The issue's "OS keyring, env-file
-fallback" is replaced by the passphrase: an env-file key would sit next to the database
-and protect nothing against the threats above. Encryption uses `node:crypto`
-`createCipheriv`, as `features/*/token-crypto.ts` already does, because it is synchronous
-and fast for many small fields; Web Crypto's `subtle` is async per call and slower for
-200,000 rows.
+**Decision.** Field-level encryption with AES-256-GCM under subkeys of the person's data
+key from #142, for the personal columns listed below, and for BodyLoop mesh files. Columns
+that are only needed to find rows hold a keyed hash (HMAC-SHA256) or stay plaintext, as
+listed. The issue's "OS keyring, env-file fallback" is replaced by the passphrase: an
+env-file key would sit next to the database and protect nothing against the threats above.
+Encryption uses `node:crypto` `createCipheriv`, as `features/*/token-crypto.ts` already
+does, because it is synchronous and fast for many small fields; Web Crypto's `subtle` is
+async per call and slower for 200,000 rows.
 
-**Design.**
+**Design** (as built).
 
-- **Format.** A text column holds `tlenc1.<keyId>.<iv>.<ciphertext+tag>` (base64url, 12
-  byte random IV, 16 byte tag). The additional data is `<table>.<column>.<row id>`, so a
-  value cannot be moved to another row or column. Stores set row ids themselves before
-  encrypting. A `Json` or numeric column becomes a text column holding the encrypted
-  canonical JSON or number. One pure module, `infrastructure/field-crypto.ts`, encrypts,
-  decrypts and checks the prefix.
-- **Blind index.** `HMAC-SHA256(index key, <table>.<column>.<value>)`, first 16 bytes, hex.
-  It allows lookups by equality without showing the value. It reveals which rows share a
-  value, not what the value is.
-- **Columns.**
+- **Subkeys** (`infrastructure/field-crypto.ts`, pure). HKDF-SHA256 of the data key with
+  info `twinllm.<purpose>.v1`, one per purpose: `field` seals column values, `index` makes
+  the keyed hashes, `mesh` seals mesh files. A rotation changes all three.
+- **Envelope.** Binary: format version (1 byte), key id (8 bytes), a random 96-bit nonce,
+  the ciphertext and the 16-byte tag. The additional data is the header (version and key
+  id) followed by `|<table>.<column>.<row id>` with SQL names, so a value moved to another
+  row, column or key, or relabelled with another key id or version, does not open. A text
+  column holds `tlenc1.<key id>.<base64url envelope>`, so SQL tells sealed from plain
+  (`LIKE 'tlenc1.%'`) and finds one key's rows during a rotation (`LIKE
+'tlenc1.<key id>.%'`) without decrypting. _Changed from the first draft_, which had the
+  nonce and ciphertext as separate text parts and no version byte. Tests: round trip of
+  text, JSON, numbers and lists; one changed byte anywhere fails; wrong additional data,
+  wrong key, unknown key id and an unknown version are refused; an error names the
+  problem, never the value.
+- **One module for every store** (`infrastructure/field-cipher.ts`). A store asks
+  `cipherForUser(userId)` (`field-cipher-runtime.ts`) and seals before it writes and
+  opens after it reads. A personal install gets a cipher built from the person's keys in
+  this process's session store; while the vault is locked there are no keys, so the call
+  throws `PersonalDataLockedError` and nothing is read or written. A synthetic install gets
+  the plain cipher, which stores values as they are and refuses a sealed value. The gate
+  of #142 still checks the unlock cookie in front of every route, page and action; after
+  #141 a store cannot read without the keys even if a route forgot the gate. _Changed from
+  the first draft_, which passed the keys to the tool ports: the stores look them up by
+  the row's owner instead, so a thread is opened only for its owner
+  (`findThread(threadId, viewerId)` refuses before opening anything).
+- **Types.** Every encrypted column is a text column. JSON, numbers and string lists are
+  sealed as their JSON text (`Json`, `Float`, `Int` and `String[]` columns became text in
+  migration `20261031120000_encrypt_at_rest`). Stores set row ids (UUIDs) before sealing;
+  rows written before keep their ids. Null stays null.
+- **Keyed hashes** (`tlix1.` and the first 16 bytes of HMAC-SHA256 under the `index` key
+  over `<table>.<column>|<value>`, hex). They allow equality lookups without showing the
+  value; they show which rows share a value, not what it is. During a rotation a lookup
+  asks for the hash under every key of the keyring.
+- **Columns.** The list lives in `infrastructure/personal-columns.ts`, which the doctor,
+  the Lab, the migration and rotation read; a test checks it against the schema.
 
-| Table                                        | Encrypted                                                               | Blind index                                    | Stays plaintext, and why                                             |
-| -------------------------------------------- | ----------------------------------------------------------------------- | ---------------------------------------------- | -------------------------------------------------------------------- |
-| `threads`                                    | `title`                                                                 |                                                | ids, dates                                                           |
-| `turns`                                      | `prompt`                                                                |                                                | ids, dates                                                           |
-| `model_responses`                            | `text`, `reasoningText`, `attribution`, `responseDocument`, `toolParts` |                                                | model id and name, status, timings, token counts                     |
-| `thread_search_embeddings`                   | the vector, as encrypted bytes; search runs in memory after unlock      |                                                | ids, kind                                                            |
-| `oura_`, `whoop_`, `google_health_snapshots` | `summary`, `fhirBundle`                                                 |                                                | `startDate`, `endDate`, `syncedAt` (to pick the newest window)       |
-| `vitronic_snapshots`                         | `summary`, `markers`, `measures`, `fhirBundle`; the mesh file on disk   |                                                | ids, `glbSha256` (of the plaintext, for the pin check)               |
-| `vitronic_subjects`                          | `label`, `consentNote`                                                  |                                                | consent time and actor                                               |
-| `genome_reports` (user rows)                 | `rows`, `report`                                                        |                                                | `app`, `arkBuild`, dates; synthetic subjects' reports stay plaintext |
-| `personal_datasets`                          | `name`, `sourceFileName`, `firstAt`, `lastAt`                           | `sha256` becomes an HMAC of the file's SHA-256 | `kind`, `byteSize`, `rowCount`, `status`                             |
-| `personal_observations`                      | `codeSystem`, `code`, `display`, `value`, `unit`, `sourceRef`, `note`   | `code`                                         | `effectiveAt` (range queries), `effectivePrecision`, `unitUcum`      |
-| `personal_clinical_records`                  | `codeSystem`, `code`, `display`, `status`, `sourceRef`                  | `code`                                         | `resourceType`, `startAt`, `endAt`                                   |
-| `personal_tables`, `_chunks`                 | `columns`, `rows`                                                       |                                                | counts, chunk index                                                  |
-| `personal_variants`                          | `chrom`, `pos`, `variantId`, `ref`, `alt`, `genotype`, `filter`         | site (`chrom:pos`), `variantId`                | none of the content                                                  |
-| `twin_notes`                                 | `title`, `topics`, `measures`, `openQuestions`                          |                                                | `dataMode`, `permit`, dates                                          |
-| `onboarding_profiles`                        | `interest`                                                              |                                                | roles and steps (fixed choices)                                      |
-| `disclosure_events` (#140)                   | `values`                                                                |                                                | recipient, categories, counts                                        |
+| Table                                        | Encrypted                                                               | Keyed hash                                                                                                    | Stays plaintext, and why                                             |
+| -------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `threads`                                    | `title`                                                                 |                                                                                                               | ids, dates                                                           |
+| `turns`                                      | `prompt`                                                                |                                                                                                               | ids, dates                                                           |
+| `model_responses`                            | `text`, `reasoningText`, `attribution`, `responseDocument`, `toolParts` |                                                                                                               | model id and name, status, timings, token counts                     |
+| `thread_search_embeddings`                   | `embedding_sealed` (the vector as JSON); `embedding` is null            |                                                                                                               | ids, kind                                                            |
+| `oura_`, `whoop_`, `google_health_snapshots` | `summary`, `fhirBundle`                                                 |                                                                                                               | `startDate`, `endDate`, `syncedAt` (to pick the newest window)       |
+| `vitronic_snapshots`                         | `summary`, `markers`, `measures`, `fhirBundle`; the mesh file on disk   |                                                                                                               | ids, `glbSha256` (of the plaintext, for the pin check)               |
+| `vitronic_subjects`                          | `label`, `consentNote`                                                  |                                                                                                               | consent time and actor                                               |
+| `genome_reports` (user rows)                 | `rows`, `report`                                                        |                                                                                                               | `app`, `arkBuild`, dates; synthetic subjects' reports stay plaintext |
+| `personal_datasets`                          | `name`, `source_file_name`, `sha256`, `first_at`, `last_at`             | `sha256_index` (the file's SHA-256)                                                                           | `kind`, `byte_size`, `row_count`, `status`, `genome_build`           |
+| `personal_observations`                      | `code_system`, `code`, `display`, `value`, `unit`, `source_ref`, `note` | `lookup_index` (system and code, or the name of a row without one), `series_index` (system, code, name, unit) | `effective_at` (range queries), `effective_precision`, `unit_ucum`   |
+| `personal_clinical_records`                  | `code_system`, `code`, `display`, `status`, `source_ref`                |                                                                                                               | `resource_type`, `start_at`, `end_at`                                |
+| `personal_tables`, `_chunks`                 | `columns`, `rows`                                                       |                                                                                                               | counts, chunk index                                                  |
+| `personal_variants`                          | `chrom`, `pos`, `variant_id`, `ref`, `alt`, `genotype`, `filter`        | `site_index` (`chrom:pos` as written), `variant_id_index` (one per ID in the cell, GIN index)                 | none of the content                                                  |
+| `twin_notes`                                 | `title`, `topics`, `measures`, `open_questions`                         |                                                                                                               | `data_mode`, `permit`, dates                                         |
+| `onboarding_profiles`                        | `interest`                                                              |                                                                                                               | roles and steps (fixed choices)                                      |
 
+- _Changed from the first draft:_ `personal_datasets.sha256` stays (sealed) next to its
+  keyed hash, so a rotation can compute the hash under the new key; clinical records have
+  no keyed hash of `code`, because no query looks them up by code. `disclosure_events`
+  joins the list with #140.
 - **Not encrypted, on purpose.** The synthetic warehouse, guidelines and knowledge chunks
   (public or synthetic). `audit_events` (hashes, ids and counts only; it must verify while
   locked). `user_skills` (instructions the person wrote, not records; listed so the choice
   is visible). OAuth and BodyLoop tokens keep their own AES-256-GCM env keys
   (`*_TOKEN_ENCRYPTION_KEY`); moving them under the vault is a later step, because an OAuth
-  callback can arrive while locked.
-- **Queries.** Tools that filter by code use the blind index and `effectiveAt`, then
-  decrypt the matching rows and compute in memory. Ordering by value, text search inside a
-  column and SQL aggregates over encrypted columns are gone; the current tools do not need
-  them except `imported_trend`'s statistics, which move into TypeScript.
-- **Thread search.** Personal installs keep embeddings encrypted and search a user's
-  vectors in memory after unlock (a person's threads give thousands of vectors, not
-  millions). Synthetic installs keep the pgvector HNSW index.
-- **Rotation.** Each value names its key id, so old and new keys can be read side by
-  side. A passphrase change rewraps only (2.2). Data key rotation runs in the app from
-  Customize · Privacy while unlocked: new DEK `active`, old one `retiring`, rows rewritten
-  in batches of 500 per transaction (resumable from the last id), blind indexes
-  recomputed, then the old key `retired` once no row names it. Audited as `vault.rotate`
-  with counts.
-- **Doctor and Lab.** `bun run doctor` and a Lab card, "Encryption at rest", count rows per
-  listed column that do not start with `tlenc1.`. Any count above zero in personal mode is
-  Not OK, with the table and column names, never a value. The command is a `psql` query
-  with the same `LIKE` test.
+  callback can arrive while locked. Row counts, dates, which values are null and which rows
+  share a hashed value stay visible (section 1, out of scope).
+- **Queries.** Tools that filter by code, name, site or rsID use the keyed hashes and
+  `effective_at`, then open the matching rows. `imported_datasets`' series list groups by
+  `series_index` in SQL and opens one row per series to name it. Sorting by a sealed value
+  (conditions and medications by name, variants by position) happens in memory after
+  opening, before the `take` cut. The current tools needed nothing else.
+- **Thread search.** Personal installs keep vectors sealed and search one person's titles,
+  prompts, answers and vectors in memory after unlock (cosine distance, as pgvector's
+  `<=>`). Synthetic installs keep `ILIKE` and the pgvector HNSW index.
+- **Mesh files** (`infrastructure/mesh-files.ts`, `packages/vitronic/glb.ts`). Personal
+  mode writes `<sha>.glb.enc`: the binary envelope under the `mesh` key with
+  `vitronic.mesh.<user id>.<sha>` as context, written through a temporary file and a
+  rename. Reading checks the plaintext against the hash in its name.
+- **Rotation** (`bun run vault:rotate`, app stopped). _Changed from the first draft_,
+  which put a Rotate button on Customize · Privacy while unlocked: that page is not built
+  yet, and rewriting rows under a running app would leave its session with only the old
+  key. The command asks for the passphrase, makes a new data key, keeps the old one in the
+  key file's `retiring` list and rewraps both under the passphrase and a new recovery code
+  (the old code cannot be read back to rewrap the new key, so it is replaced and shown
+  once). It rewrites every row and mesh file that names a retiring key in batches of 500
+  per transaction, recomputes the keyed hashes, and removes the retiring key once no row or
+  file names it. Unlocking during a rotation opens both keys; the app reads with both and
+  writes with the new one. Resumable: a stopped run carries on at the next. Audited as
+  `vault.rotate.start` and `vault.rotate` with counts. A passphrase change rewraps only
+  (2.2).
+- **Doctor and Lab.** `bun run doctor` has an "Encryption at rest" section, and the Lab a
+  card of the same name: rows per listed column that hold a non-null value not starting
+  with `tlenc1.`, and plain search vectors. Any count above zero in personal mode is Not
+  OK, with table and column names and counts, never a value; synthetic mode is Unknown
+  (nothing to encrypt). The doctor also warns while a pre-encryption backup exists. The
+  card's command is the doctor and a `psql` count with the same `LIKE` test.
 
-**What the UI shows.** The "Not encrypted at rest yet (#141)" line in Customize · Data
-becomes "Encrypted on this machine with your passphrase." Customize · Privacy shows the
-key id, its age and a Rotate button.
+**What the UI shows.** Customize · Data says "Stored on this machine in TwinLLM's
+database, encrypted with your passphrase." The Lab card above. Customize · Privacy (key
+id, its age and a Rotate button) is not built; rotation is the command.
 
-**Failure behaviour.** A value that fails to decrypt (wrong key, edited ciphertext) is an
-error for that request, never a silent empty value, and is logged by error name only. A
-write that cannot encrypt is not made. Rotation stops at the first failure and can resume.
+**Failure behaviour.** A value that fails to decrypt (wrong key, edited ciphertext, moved
+value) is an error for that request (`FieldDecryptError`, logged by error name only),
+never a silent empty value. A write that cannot encrypt is not made: imports seal every
+row before their transaction opens. Migration and rotation stop at the first value that
+does not open or does not check, before that batch is written, and resume.
 
-**Tests.** Round trip per column type; tamper (one changed byte) fails; a value moved to
-another row fails on its additional data; mixed key ids during rotation; rotation
-resumption; blind index lookups; the doctor's plaintext count. Every store test runs with
-an in-memory key from a fixed test passphrase. Fixtures stay synthetic and made up.
+**Tests.** The envelope (above); the keyring with mixed key ids; the typed helpers; keyed
+hash lookups for codes, names, sites and rsIDs (an rsID matches a whole cell or one part
+of a `;` list, never a prefix); the registry against the schema and its SQL; the reseal
+walk over an in-memory table (batches, a stop mid-way that rolls back one batch, resume,
+a second run that changes nothing, rotation, other owners untouched); mesh files
+(migration, resume, rotation, a file that does not match its hash); the session's keys and
+the locked cipher; recovery and unlock with a retiring key; the doctor lines and the Lab
+card; store fixtures sealed with a test key in the route and BodyLoop tests. The
+migration, rotation and the app on a throwaway owner cluster, with a `pg_dump` free of
+fixture text: [runbook.md](runbook.md#encryption-at-rest). There is still no CI job with
+a Postgres.
 
 **Effort.** About 8 days: crypto and format 1, schema migration 1, stores and tools 3,
 search 1, rotation 1, doctor, Lab and docs 1.
@@ -557,7 +608,7 @@ reruns faults F3 and F4 and must now detect them.
 | ---- | ----- | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1    | #144  | none                                               | `infrastructure/env.ts` (new settings), new `infrastructure/storage-hardening.ts`, `instrumentation.ts`, `scripts/setup/{local,plan,doctor}.ts`, `features/lab/`, `docs/guidelines.md`, `docs/storage.md`, `docs/runbook.md`                                                                                                                                           |
 | 2    | #142  | #144 (state dir, loopback)                         | Built: new `infrastructure/vault*.ts` (key file in the state directory, no migration), `features/vault/`, `app/api/vault/*`, every gated route, page and server action in `tests/personal-reads/personal-reads.test.ts`, the OAuth callbacks, the sidebar and the first-run screens                                                                                    |
-| 3    | #141  | #142 (keys)                                        | Migration of the columns in 2.3, `infrastructure/personal-data-store.ts`, `genome-report-store.ts`, wearable snapshot stores in `features/{oura,whoop,google-health,vitronic}`, thread and turn persistence in `features/chat` and `features/threads`, `features/memory`, `features/search`, doctor, Lab                                                               |
+| 3    | #141  | #142 (keys)                                        | Built: migration `20261031120000_encrypt_at_rest`, `infrastructure/{field-crypto,field-cipher,personal-columns,reseal,mesh-files,thread-fields}.ts`, every store of the tables in 2.3, `features/search`, `scripts/vault/{migrate,rotate}.ts`, doctor, Lab                                                                                                             |
 | 4    | #145  | #142                                               | `learning_consents`, new `infrastructure/learning-consent.ts`, `scripts/training-data/*`, `scripts/evaluation/*`, Customize · Privacy                                                                                                                                                                                                                                  |
 | 5    | #140  | #141 (value list encrypted)                        | `disclosure_events`, `packages/audit` (generic chain), `infrastructure/personal-data-audit.ts`, the chat and starter provider paths, `features/memory/compact-handler.ts`, `features/arena/thread-export-handler.ts`, `features/wearables/` syncs, `features/digital-twin/genome-run.ts`, the #112 matcher in `infrastructure/rich-text.tsx`, Lab, Customize · Privacy |
 | 6    | #300  | #144 (state dir); covers #140's chain when present | new `packages/audit/anchor*.ts`, `verify-cli.ts` and its args, `features/lab/audit-chain-check.ts`, `instrumentation.ts`, setup scripts                                                                                                                                                                                                                                |
@@ -572,29 +623,39 @@ Total about 27 working days.
 ## 4. Migration of existing local data
 
 - **Synthetic-only installs** (`DATA_MODE=synthetic`, no personal rows): nothing to
-  migrate. The new migrations add tables and change column types on empty personal tables.
+  migrate. The #141 migration changes column types; synthetic rows keep their values as
+  plain text (JSON as its text, lists as JSON arrays). `vault:migrate` refuses to run.
   #144's checks apply; #300 creates a key at the next `setup:local`.
-- **Personal installs** migrate in place with `bun run vault:migrate`, with the app
-  stopped:
-  1. Check: the #144 startup check passes, and there is free space for a backup.
-  2. Backup: `pg_dump` of the TwinLLM database to
-     `$TWINLLM_STATE_DIR/backups/pre-encryption-<date>.dump` (mode `0600`), and a copy of
-     `VITRONIC_DATA_DIR`. The command prints the path and the dump's SHA-256.
-  3. Set the passphrase on the terminal (no echo) and show the recovery code; the person
-     confirms they saved it.
-  4. Add the new encrypted columns next to the old ones, encrypt rows in batches of 500
-     per transaction (resumable), and check each batch by decrypting it and comparing with
-     the source.
-  5. Encrypt the mesh files, verify, then remove the plaintext copies.
-  6. A second migration drops the plaintext columns only when the doctor's plaintext count
-     is zero.
+- **Personal installs** (as built for #141, [runbook.md](runbook.md#encryption-at-rest))
+  migrate in place, with the app stopped:
+  1. `bun run db:deploy`: the schema migration turns the listed columns into text and
+     adds the keyed-hash columns, empty. It encrypts nothing; the app refuses to read the
+     plain rows until step 2 is done.
+  2. `bun run vault:migrate` refuses in synthetic mode and while another session uses the
+     database. It backs up first: `pg_dump --format=custom` to
+     `$TWINLLM_STATE_DIR/backups/pre-encryption-<time>.dump` (mode `0600`) and a copy of
+     the person's mesh folder, and prints the path and the dump's SHA-256 (or takes
+     `--backup <file>`). It goes on only when the person types `backed up` (or passes
+     `--backup-confirmed`).
+  3. It unlocks the vault with the passphrase on the terminal (no echo), or sets one up
+     and shows the recovery code, which the person confirms they saved.
+  4. It drops the plain search vectors (the app rebuilds them sealed) and seals every
+     listed column in place, in batches of 500 rows per transaction, checking each value
+     by decrypting it and comparing with the source, and computes the keyed hashes.
+     _Changed from the first draft_, which added encrypted columns next to the old ones
+     and dropped the old ones in a second migration: the in-place walk only selects rows
+     that still need work, so it is resumable and idempotent, and the backup is the undo.
+  5. It seals the mesh files, checks them, then removes the plain copies.
+  6. It checks that no row of the person is left unsealed and writes `vault.migrate` with
+     counts.
   7. The doctor warns while a pre-encryption backup exists, because it holds plaintext.
      The person decides when to delete it; the command prints how.
-- **Undo.** Until step 6 the old columns are intact, so stopping and restoring is safe.
-  After step 6 the backup is the only plaintext copy.
-- **Tests.** The migration runs in CI on a throwaway database seeded with synthetic
-  personal-shaped rows (made-up fixtures from `tests/fixtures/personal-import/`), with an
-  interruption at a batch boundary and a resume.
+- **Undo.** Restore the backup (and the mesh copy) and remove the key file if the
+  migration created it. Until the backup is deleted it is the only plaintext copy.
+- **Tests.** The walk over an in-memory table: batches, a stop mid-way, resume, a second
+  run, rotation. The whole migration was run by hand on a throwaway owner cluster seeded
+  from the made-up fixtures in `tests/fixtures/personal-import/` and a genome-synth VCF
+  ([runbook.md](runbook.md#encryption-at-rest)); a CI job with a Postgres is still open.
 
 ## 5. Open questions for Peter
 
