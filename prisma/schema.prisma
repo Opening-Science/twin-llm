@@ -50,6 +50,7 @@ model User {
   skills                 UserSkill[]
   twinNotes              TwinNote[]
   learningConsents       LearningConsent[]
+  scheduledTasks         ScheduledTask[]
 
   @@map("users")
 }
@@ -93,6 +94,7 @@ model Thread {
   user             User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
   turns            Turn[]
   searchEmbeddings ThreadSearchEmbedding[]
+  scheduledTasks   ScheduledTask[]
 
   @@index([userId, updatedAt])
   @@map("threads")
@@ -132,6 +134,8 @@ model Turn {
   threadId  String
   prompt    String
   createdAt DateTime @default(now())
+  /// Set when a scheduled task (#54) asked this, not the person typing.
+  scheduled Boolean  @default(false)
 
   thread    Thread          @relation(fields: [threadId], references: [id], onDelete: Cascade)
   responses ModelResponse[]
@@ -925,4 +929,47 @@ model LearningConsent {
 
   @@index([userId, scope])
   @@map("learning_consents")
+}
+
+/// A scheduled run of a skill (#54, docs/skills.md "Scheduled tasks"): the skill,
+/// the thread its answers go to, when it runs and whether it may notify. Created by
+/// the person only; nothing is scheduled by default and notifications start off.
+/// `question` is sealed in personal mode (#141); the rest holds no health data.
+model ScheduledTask {
+  id              String    @id @default(cuid())
+  userId          String    @map("user_id")
+  /// Null until the first run starts a new thread.
+  threadId        String?   @map("thread_id")
+  skill           String
+  /// What the run asks with the skill; sealed in personal mode.
+  question        String
+  modelId         String    @map("model_id")
+  /// "daily", "weekly" or "interval" (`scheduleSchema`).
+  scheduleKind    String    @map("schedule_kind")
+  /// "HH:MM" on the person's clock, for daily and weekly.
+  timeOfDay       String?   @map("time_of_day")
+  /// 0 is Sunday, for weekly.
+  weekday         Int?
+  intervalMinutes Int?      @map("interval_minutes")
+  timeZone        String    @map("time_zone")
+  enabled         Boolean   @default(false)
+  notify          Boolean   @default(false)
+  nextRunAt       DateTime? @map("next_run_at")
+  /// Set while a run is in flight; cleared when it ends or the server restarts.
+  runningSince    DateTime? @map("running_since")
+  lastRunAt       DateTime? @map("last_run_at")
+  /// "complete", "failed", "refused", "skipped-locked" or "interrupted".
+  lastStatus      String?   @map("last_status")
+  lastTurnId      String?   @map("last_turn_id")
+  /// A finished run the person asked to hear about and has not seen yet.
+  unseen          Boolean   @default(false)
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  thread Thread? @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([enabled, nextRunAt])
+  @@map("scheduled_tasks")
 }

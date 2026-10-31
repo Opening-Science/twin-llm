@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { CompareScreen } from "@/features/arena/compare-screen";
 import { skillCommand } from "@/features/commands/registry";
 import { ownedThread } from "@/features/arena/thread-reads";
+import { scheduledStillWriting } from "@/features/arena/turn-updates";
 import { ThreadTitle } from "@/features/shell/thread-title";
 import { skillsFor } from "@/features/skills/user-skill-store";
 import { runnableSkills } from "@/features/skills/load-skills";
@@ -46,7 +47,8 @@ export default async function ThreadPage({
     <>
       <ThreadTitle threadId={thread.id} title={thread.title} />
       <CompareScreen
-        key={thread.id}
+        // Remounts once a scheduled run's answer is written (#54), with the stored rows.
+        key={`${thread.id}:${scheduledStillWriting(thread.turns) ? "writing" : "settled"}`}
         catalog={catalog}
         defaultModelIds={defaultModelIds}
         threadId={thread.id}

@@ -199,6 +199,13 @@ export const PERSONAL_TABLES: readonly PersonalTable[] = [
     sealed: ["title", "topics", "measures", "open_questions"],
   },
   {
+    // A scheduled task's question (#54) may name a measure or a condition.
+    table: "scheduled_tasks",
+    idColumn: "id",
+    owner: ownerByUserId("user_id"),
+    sealed: ["question"],
+  },
+  {
     table: "onboarding_profiles",
     idColumn: "id",
     owner: ownerByUserId("userId"),

@@ -9,7 +9,10 @@
  * unless the state folder, env files, mesh files and the database connection
  * are open to the owner's OS user only (`infrastructure/startup-order.ts`).
  * Last, the signed anchors of the audit chain and the disclosure ledger
- * (#300): written while the server runs and once more on shutdown.
+ * (#300): written while the server runs and once more on shutdown. Then the
+ * task scheduler (#54): one tick loop per process that runs the person's
+ * scheduled skills through the chat's own turn pipeline. With no task it
+ * only reads an empty list.
  */
 export const register = async (): Promise<void> => {
   if (process.env.NEXT_RUNTIME === "nodejs") {
@@ -25,5 +28,8 @@ export const register = async (): Promise<void> => {
     });
     const anchors = await import("./infrastructure/anchor-runtime");
     anchors.startAnchorWriter();
+    const tasks = await import("./features/tasks/scheduler-runtime");
+    const turns = await import("./features/arena/scheduled-turn-runtime");
+    tasks.startTaskScheduler(turns.runScheduledTurn);
   }
 };

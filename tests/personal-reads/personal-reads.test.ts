@@ -636,6 +636,11 @@ const PERSONAL_READ_ROUTES: Readonly<Record<string, Entry>> = {
     kind: "exempt",
     why: "synthetic Demo cohort only (its handler still writes motion.days)",
   },
+  "GET /api/tasks/notice": {
+    kind: "exempt",
+    why: "counts unseen scheduled runs (#54): skill names and thread ids, no question or answer",
+    whileLocked: "answers zero while locked without counting as use",
+  },
   "GET /api/vault/status": { kind: "exempt", why: NOT_PERSONAL, whileLocked: OPEN_VAULT },
   "POST /api/vault/setup": { kind: "exempt", why: NOT_PERSONAL, whileLocked: OPEN_VAULT },
   "POST /api/vault/unlock": {
@@ -1080,6 +1085,7 @@ const PAGES: Readonly<Record<string, "gated" | Readonly<{ open: string }>>> = {
   "app/(shell)/customize/data/page.tsx": "gated",
   "app/(shell)/customize/memory/page.tsx": "gated",
   "app/(shell)/customize/privacy/page.tsx": "gated",
+  "app/(shell)/customize/tasks/page.tsx": "gated",
   "app/(focus)/start/page.tsx": "gated",
   "app/layout.tsx": { open: "the root frame" },
   "app/(focus)/layout.tsx": { open: "the frame of /start" },
@@ -1154,6 +1160,16 @@ const SERVER_ACTIONS: Readonly<
   "features/skills/skill-actions.ts": {
     open: "skills: instructions the person wrote, not records (privacy-design 2.3)",
   },
+  // Each asks `owner()`, which asks `vaultRefusalForAction()` first (#54).
+  "app/(shell)/customize/tasks/actions.ts": {
+    gated: {
+      createTaskAction: "await owner()",
+      setTaskEnabledAction: "change(",
+      setTaskNotifyAction: "change(",
+      deleteTaskAction: "change(",
+      markTasksSeenAction: "await owner()",
+    },
+  },
 };
 
 const ROOT = join(import.meta.dir, "../..");
@@ -1190,6 +1206,17 @@ describe("pages and server actions while locked (#142)", () => {
       const source = readFileSync(join(ROOT, file), "utf8");
       expect([file, source.includes("await lockedScreen()")]).toEqual([file, true]);
     }
+  });
+
+  test("the task actions ask the gate before anything else (#54)", () => {
+    const source = readFileSync(
+      join(ROOT, "app/(shell)/customize/tasks/actions.ts"),
+      "utf8",
+    );
+    expect(source).toContain(
+      "const owner = async (): Promise<Owner | string> => {\n  const locked = await vaultRefusalForAction();",
+    );
+    expect(source).toContain("const who = await owner();");
   });
 
   test("the sidebar reads thread titles only when unlocked", () => {

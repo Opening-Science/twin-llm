@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  formatZonedMoment,
   formatBytes,
   formatDate,
   formatElapsed,
@@ -409,5 +410,22 @@ describe("formatElapsed", () => {
   ];
   test.each(cases)("%p ms reads %p", (ms, expected) => {
     expect(formatElapsed(ms)).toBe(expected);
+  });
+});
+
+describe("formatZonedMoment", () => {
+  test("shows the moment on the named clock", () => {
+    expect(formatZonedMoment("2026-01-15T07:00:00.000Z", "Europe/Zurich")).toBe(
+      "15 Jan 2026, 08:00",
+    );
+    expect(formatZonedMoment(new Date("2026-07-15T06:00:00Z"), "Europe/Zurich")).toBe(
+      "15 Jul 2026, 08:00",
+    );
+  });
+
+  test("a missing moment or unknown zone shows the dash", () => {
+    expect(formatZonedMoment(null, "Europe/Zurich")).toBe("—");
+    expect(formatZonedMoment("not a date", "Europe/Zurich")).toBe("—");
+    expect(formatZonedMoment("2026-01-15T07:00:00.000Z", "Mars/Olympus")).toBe("—");
   });
 });

@@ -31,6 +31,8 @@ export type StoredThread = Readonly<{
   turns: readonly Readonly<{
     id: string;
     prompt: string;
+    /** Asked by a scheduled task (#54). */
+    scheduled?: boolean;
     responses: readonly SavedResponseRow[];
   }>[];
 }>;
@@ -99,6 +101,7 @@ export const loadOwnedThread = async (
         id: turn.id,
         prompt: turn.prompt,
         skill: skillOfTurn(turn.id, answers, skills),
+        ...(turn.scheduled === true ? { scheduled: true } : {}),
         answers,
       };
     }),
