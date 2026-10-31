@@ -47,7 +47,7 @@ import { IMPORT_MESSAGES } from "./import-messages";
  * on one dataset of the signed-in person. Every step needs DATA_MODE=personal
  * and is audited with counts only (`import-audit.ts`). No model sees a file
  * at any of these steps; a genome VCF's rows are read later only by a model
- * on this machine, under `permitGenomeRequest`.
+ * on this machine, under `permitVcfVariantsRequest` (#330).
  */
 
 export type ImportPorts = Readonly<{
