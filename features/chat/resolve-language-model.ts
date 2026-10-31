@@ -15,6 +15,7 @@ import {
   type UnrecordedModelCall,
 } from "@/infrastructure/disclosure-ledger";
 import { recordDisclosure } from "@/infrastructure/disclosure-ledger-runtime";
+import { freeTextCheckerFor } from "@/infrastructure/free-text-check-runtime";
 import {
   DEFAULT_OLLAMA_BASE_URL,
   exoscaleEnv,
@@ -121,8 +122,9 @@ export const exoscaleTarget = (
  *
  * Every HTTP request to a model that is not on this machine (anything but
  * Ollama on loopback) is first written to the disclosure ledger (#140) with
- * the caller's `disclosure` and the request's size; if that write fails the
- * request is not sent and the call fails. `{ notRecorded }` is for the
+ * the caller's `disclosure`, the request's size and what the check of its
+ * free text for the person's stored values found (#346; recorded, not
+ * blocking); if that write fails the request is not sent and the call fails. `{ notRecorded }` is for the
  * evaluation harness only (`tests/disclosures/outbound-paths.test.ts`).
  */
 export type ModelCallOptions = Readonly<{
@@ -151,6 +153,9 @@ export const resolveLanguageModel = (
     modelId,
     disclosure,
     record: recordDisclosure,
+    ...("notRecorded" in disclosure
+      ? {}
+      : { checkText: freeTextCheckerFor(disclosure.actor) }),
   });
 
   if (env.LLM_PROVIDER === "ollama") {

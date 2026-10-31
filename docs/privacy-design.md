@@ -627,16 +627,34 @@ recipient.
   Twin prompt lists (`offeredKeys`, such as `oura.sleep.score.2026-10-20`), the ids of
   the twin notes a turn loaded, and the Ark panel's rsIDs. Each keeps its source
   (`wearable`, `scan`, `note`, `genome`). The list is sealed under the field key (#141)
-  in personal mode. _Not built:_ the #112 matcher over free text (the person's words,
-  answers, tool results). Every row stores `free_text_checked = false` and the Privacy
-  page says that free text is named by kind but not checked, rather than counting zero.
+  in personal mode.
+- **Free text check** (#346). Before each hosted-model request is recorded, the recording
+  fetch (`modelCallFetch`, with `freeTextCheckerFor` from
+  `infrastructure/free-text-check-runtime.ts`) reads the string values of the request body
+  (the person's words, earlier answers, tool results) and looks for values stored here:
+  rsIDs and genome sites (`chr7:117559590` or `7:117559590`, positions of four digits or
+  more), hashed with the person's index key and looked up in the keyed hash columns of
+  their imported VCFs, so no variant is opened; and, as whole words ignoring case, the
+  file names of their imports, their body scan labels other than their own subject, and
+  their account id when it is not a plain word. The row stores `free_text_checked = true`
+  and `free_text_matches`, a list of `{ kind, count }` (distinct values per kind), never a
+  value; the paired audit row carries the same list. The matcher is pure
+  (`infrastructure/free-text-check.ts`), with at most 500 lookups per request. A body
+  that cannot be read up front, or a check that fails (a locked vault), is recorded as
+  not checked, with the error's name in the log. _Open, for Peter:_ a match is recorded
+  and does not stop the send. _Limits:_ approximate. A value written another way (a unit
+  conversion, a rounded number, another spelling) is missed, and lab values, clinical
+  records, twin notes and wearable numbers are not searched yet; wearable and twin note
+  values are recorded as references above. Exports, embeddings and live lookups are not
+  checked (live lookups have their own query check).
 - **Row.** `seq`, row id, time, actor (like the audit log; _changed from_ the user id),
   kind, direction, recipient, target (model id, request kind or format), purpose,
   categories, `ref_count`, `payload_bytes` (null when it cannot be measured up front),
-  thread id when there is one, `synthetic`, `free_text_checked`, the sealed `refs`, the
+  thread id when there is one, `synthetic`, `free_text_checked`, `free_text_matches`
+  (#346; null when the check did not run), the sealed `refs`, the
   paired audit `seq`, `prev_hash` and `hash`. The hash (`packages/audit/disclosure-chain.ts`)
   covers every column but `refs`, so `vault:rotate` can reseal it without breaking the
-  chain; `ref_count` is covered, and the sealed value is bound to its row by its
+  chain (`free_text_matches` only when set, so rows written before it keep their hashes); `ref_count` is covered, and the sealed value is bound to its row by its
   encryption context. _Left out:_ the HMAC of the payload under a `ledger` subkey. Nothing
   can check it against a person's copy yet, and a rotation would leave old ones
   uncheckable.
@@ -655,7 +673,9 @@ recipient.
 like the page): one line per recipient and direction with events (and how many were
 synthetic), values, size, first and last time; then the latest 100 events, each with
 recipient, purpose, what it carried, size, a Synthetic badge where it applies, a link to
-the thread, and its stored values as references under "Which stored values". The Lab
+the thread, its stored values as references under "Which stored values", and "Free
+text": the kinds and counts the check found (a warning badge when there are any), "no
+stored values found", or "not checked". The Lab
 card "What left this machine" checks the chain while locked too and shows the running
 totals only to a viewer whose data is unlocked (_changed from the first draft_, which
 showed counts while locked). Its command is
@@ -681,7 +701,10 @@ paths (`tests/disclosures/outbound-paths.test.ts`) walks `app`, `features`,
 not name. The chain over seeded rows, each kind of tampering, a removed row and a
 resealed `refs`; the writer over a fake transaction (both rows or neither, refs sealed,
 no key needed without refs); the cumulative view and the two views as pure functions;
-the CLI's `--chain`. Run by hand on a throwaway owner cluster with a local stand-in
+the CLI's `--chain`. The free text check (#346): the matcher on synthetic text
+(`infrastructure/free-text-check.test.ts`), the recording fetch with a checker that finds,
+fails or is absent, the chain with and without `free_text_matches`, and a chat request
+through the AI SDK (`tests/disclosures/hosted-model-ledger.test.ts`). Run by hand on a throwaway owner cluster with a local stand-in
 model server: chat, `/compact` and both exports wrote their rows before the requests,
 the chain verified with the command, and the Lab card and the Privacy section were
 checked locked and unlocked, light and dark.
@@ -813,16 +836,34 @@ recipient.
   Twin prompt lists (`offeredKeys`, such as `oura.sleep.score.2026-10-20`), the ids of
   the twin notes a turn loaded, and the Ark panel's rsIDs. Each keeps its source
   (`wearable`, `scan`, `note`, `genome`). The list is sealed under the field key (#141)
-  in personal mode. _Not built:_ the #112 matcher over free text (the person's words,
-  answers, tool results). Every row stores `free_text_checked = false` and the Privacy
-  page says that free text is named by kind but not checked, rather than counting zero.
+  in personal mode.
+- **Free text check** (#346). Before each hosted-model request is recorded, the recording
+  fetch (`modelCallFetch`, with `freeTextCheckerFor` from
+  `infrastructure/free-text-check-runtime.ts`) reads the string values of the request body
+  (the person's words, earlier answers, tool results) and looks for values stored here:
+  rsIDs and genome sites (`chr7:117559590` or `7:117559590`, positions of four digits or
+  more), hashed with the person's index key and looked up in the keyed hash columns of
+  their imported VCFs, so no variant is opened; and, as whole words ignoring case, the
+  file names of their imports, their body scan labels other than their own subject, and
+  their account id when it is not a plain word. The row stores `free_text_checked = true`
+  and `free_text_matches`, a list of `{ kind, count }` (distinct values per kind), never a
+  value; the paired audit row carries the same list. The matcher is pure
+  (`infrastructure/free-text-check.ts`), with at most 500 lookups per request. A body
+  that cannot be read up front, or a check that fails (a locked vault), is recorded as
+  not checked, with the error's name in the log. _Open, for Peter:_ a match is recorded
+  and does not stop the send. _Limits:_ approximate. A value written another way (a unit
+  conversion, a rounded number, another spelling) is missed, and lab values, clinical
+  records, twin notes and wearable numbers are not searched yet; wearable and twin note
+  values are recorded as references above. Exports, embeddings and live lookups are not
+  checked (live lookups have their own query check).
 - **Row.** `seq`, row id, time, actor (like the audit log; _changed from_ the user id),
   kind, direction, recipient, target (model id, request kind or format), purpose,
   categories, `ref_count`, `payload_bytes` (null when it cannot be measured up front),
-  thread id when there is one, `synthetic`, `free_text_checked`, the sealed `refs`, the
+  thread id when there is one, `synthetic`, `free_text_checked`, `free_text_matches`
+  (#346; null when the check did not run), the sealed `refs`, the
   paired audit `seq`, `prev_hash` and `hash`. The hash (`packages/audit/disclosure-chain.ts`)
   covers every column but `refs`, so `vault:rotate` can reseal it without breaking the
-  chain; `ref_count` is covered, and the sealed value is bound to its row by its
+  chain (`free_text_matches` only when set, so rows written before it keep their hashes); `ref_count` is covered, and the sealed value is bound to its row by its
   encryption context. _Left out:_ the HMAC of the payload under a `ledger` subkey. Nothing
   can check it against a person's copy yet, and a rotation would leave old ones
   uncheckable.
@@ -841,7 +882,9 @@ recipient.
 like the page): one line per recipient and direction with events (and how many were
 synthetic), values, size, first and last time; then the latest 100 events, each with
 recipient, purpose, what it carried, size, a Synthetic badge where it applies, a link to
-the thread, and its stored values as references under "Which stored values". The Lab
+the thread, its stored values as references under "Which stored values", and "Free
+text": the kinds and counts the check found (a warning badge when there are any), "no
+stored values found", or "not checked". The Lab
 card "What left this machine" checks the chain while locked too and shows the running
 totals only to a viewer whose data is unlocked (_changed from the first draft_, which
 showed counts while locked). Its command is
@@ -867,7 +910,10 @@ paths (`tests/disclosures/outbound-paths.test.ts`) walks `app`, `features`,
 not name. The chain over seeded rows, each kind of tampering, a removed row and a
 resealed `refs`; the writer over a fake transaction (both rows or neither, refs sealed,
 no key needed without refs); the cumulative view and the two views as pure functions;
-the CLI's `--chain`. Run by hand on a throwaway owner cluster with a local stand-in
+the CLI's `--chain`. The free text check (#346): the matcher on synthetic text
+(`infrastructure/free-text-check.test.ts`), the recording fetch with a checker that finds,
+fails or is absent, the chain with and without `free_text_matches`, and a chat request
+through the AI SDK (`tests/disclosures/hosted-model-ledger.test.ts`). Run by hand on a throwaway owner cluster with a local stand-in
 model server: chat, `/compact` and both exports wrote their rows before the requests,
 the chain verified with the command, and the Lab card and the Privacy section were
 checked locked and unlocked, light and dark.
@@ -928,14 +974,14 @@ reruns faults F3 and F4 and must now detect them.
 
 ## 3. Order of work
 
-| Step | Issue | Depends on                                         | Touches                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| ---- | ----- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1    | #144  | none                                               | `infrastructure/env.ts` (new settings), new `infrastructure/storage-hardening.ts`, `instrumentation.ts`, `scripts/setup/{local,plan,doctor}.ts`, `features/lab/`, `docs/guidelines.md`, `docs/storage.md`, `docs/runbook.md`                                                                                                                                                                                                                                         |
-| 2    | #142  | #144 (state dir, loopback)                         | Built: new `infrastructure/vault*.ts` (key file in the state directory, no migration), `features/vault/`, `app/api/vault/*`, every gated route, page and server action in `tests/personal-reads/personal-reads.test.ts`, the OAuth callbacks, the sidebar and the first-run screens                                                                                                                                                                                  |
-| 3    | #141  | #142 (keys)                                        | Built: migration `20261031120000_encrypt_at_rest`, `infrastructure/{field-crypto,field-cipher,personal-columns,reseal,mesh-files,thread-fields}.ts`, every store of the tables in 2.3, `features/search`, `scripts/vault/{migrate,rotate}.ts`, doctor, Lab                                                                                                                                                                                                           |
-| 4    | #145  | #142                                               | Built: migration `20261031130000_learning_consents`, `infrastructure/learning-consent{,-store}.ts`, `features/privacy/`, Customize · Privacy, every pipeline in `tests/learning-consent/pipelines.test.ts`                                                                                                                                                                                                                                                           |
-| 5    | #140  | #141 (value list encrypted)                        | Built: migration `20261031140000_disclosure_ledger`, `packages/audit/{chain,disclosure-chain}.ts`, `infrastructure/disclosure-ledger{,-runtime}.ts`, `resolveLanguageModel` and its callers, `features/wearables/` syncs and the OAuth returns, `features/arena/thread-export-handler.ts`, `features/digital-twin/genome-run.ts`, GBD, search embeddings, PostHog events, `tests/disclosures/`, Lab, Customize · Privacy. Not built: the #112 matcher over free text |
-| 6    | #300  | #144 (state dir); covers #140's chain when present | Built: `packages/audit/anchor{,-store,-chains}.ts`, `verify-cli.ts` and its args, `infrastructure/anchor-{writer,runtime}.ts`, `features/lab/anchor-evidence.ts`, `instrumentation.ts`, `scripts/anchor/`, `setup:local`                                                                                                                                                                                                                                             |
+| Step | Issue | Depends on                                         | Touches                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ---- | ----- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1    | #144  | none                                               | `infrastructure/env.ts` (new settings), new `infrastructure/storage-hardening.ts`, `instrumentation.ts`, `scripts/setup/{local,plan,doctor}.ts`, `features/lab/`, `docs/guidelines.md`, `docs/storage.md`, `docs/runbook.md`                                                                                                                                                                                                                                                                                                                                                   |
+| 2    | #142  | #144 (state dir, loopback)                         | Built: new `infrastructure/vault*.ts` (key file in the state directory, no migration), `features/vault/`, `app/api/vault/*`, every gated route, page and server action in `tests/personal-reads/personal-reads.test.ts`, the OAuth callbacks, the sidebar and the first-run screens                                                                                                                                                                                                                                                                                            |
+| 3    | #141  | #142 (keys)                                        | Built: migration `20261031120000_encrypt_at_rest`, `infrastructure/{field-crypto,field-cipher,personal-columns,reseal,mesh-files,thread-fields}.ts`, every store of the tables in 2.3, `features/search`, `scripts/vault/{migrate,rotate}.ts`, doctor, Lab                                                                                                                                                                                                                                                                                                                     |
+| 4    | #145  | #142                                               | Built: migration `20261031130000_learning_consents`, `infrastructure/learning-consent{,-store}.ts`, `features/privacy/`, Customize · Privacy, every pipeline in `tests/learning-consent/pipelines.test.ts`                                                                                                                                                                                                                                                                                                                                                                     |
+| 5    | #140  | #141 (value list encrypted)                        | Built: migration `20261031140000_disclosure_ledger`, `packages/audit/{chain,disclosure-chain}.ts`, `infrastructure/disclosure-ledger{,-runtime}.ts`, `resolveLanguageModel` and its callers, `features/wearables/` syncs and the OAuth returns, `features/arena/thread-export-handler.ts`, `features/digital-twin/genome-run.ts`, GBD, search embeddings, PostHog events, `tests/disclosures/`, Lab, Customize · Privacy. #346: the free text check of hosted-model requests (`infrastructure/free-text-check{,-runtime}.ts`, migration `20261031170000_disclosure_free_text`) |
+| 6    | #300  | #144 (state dir); covers #140's chain when present | Built: `packages/audit/anchor{,-store,-chains}.ts`, `verify-cli.ts` and its args, `infrastructure/anchor-{writer,runtime}.ts`, `features/lab/anchor-evidence.ts`, `instrumentation.ts`, `scripts/anchor/`, `setup:local`                                                                                                                                                                                                                                                                                                                                                       |
 
 #300 needs only #144 and can run in parallel with steps 2 to 5; it then adds the ledger
 chain as a second anchored chain. Customize · Privacy was first planned for #141 (key and
