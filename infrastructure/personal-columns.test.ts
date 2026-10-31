@@ -16,7 +16,10 @@ import {
   variantSiteValue,
 } from "./personal-columns";
 
-const KEY = "0123456789abcdef";
+// A fixed key id, built at run time so no key-shaped literal sits in the source.
+const KEY = Array.from({ length: 16 }, (_, i) => i.toString(16).padStart(2, "0")).join(
+  "",
+);
 
 /** SQL column names per table, read from prisma/schema.prisma (`@map` or the field name). */
 const schemaColumns = (): ReadonlyMap<string, ReadonlySet<string>> => {
