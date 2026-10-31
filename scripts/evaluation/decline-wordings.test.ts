@@ -11,8 +11,10 @@ import {
 } from "./decline-wordings";
 
 describe("decline wordings (#274)", () => {
-  test("w1 is the chat route's line and the three texts differ", () => {
-    expect(DECLINE_WORDINGS.w1).toBe(DECLINE_RULE);
+  test("w3 is the chat route's line (#329) and the three texts differ", () => {
+    expect(DECLINE_WORDINGS.w3).toBe(DECLINE_RULE);
+    expect(sha256Hex(DECLINE_WORDINGS.w1).startsWith("3b1876ba0424")).toBe(true);
+    expect(sha256Hex(DECLINE_WORDINGS.w3).startsWith("4dffcc5d9f11")).toBe(true);
     expect(new Set(DECLINE_WORDING_IDS.map((id) => DECLINE_WORDINGS[id])).size).toBe(3);
   });
 
