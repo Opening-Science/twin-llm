@@ -41,6 +41,7 @@ export const loadOnboarding = async (userId: string): Promise<StoredOnboarding> 
       dataChoice: true,
       interest: true,
       disabledSources: true,
+      liveSources: true,
       step: true,
       completedAt: true,
     },
@@ -82,6 +83,7 @@ export const saveOnboarding = async (
       answers.interest.trim() || null,
     ),
     disabledSources: [...answers.disabledSources],
+    liveSources: [...answers.liveSources],
     step: clampStep(input.step),
     ...(input.complete ? { completedAt: new Date() } : {}),
   };

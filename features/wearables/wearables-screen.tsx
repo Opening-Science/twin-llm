@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import type { OuraSummary } from "@/infrastructure/oura-types";
 import type { WhoopSummary } from "@/infrastructure/whoop-types";
 import type { GoogleHealthSummary } from "@/infrastructure/google-health-types";
+import type { LiveSourceId } from "@/infrastructure/live-sources";
 import { ArkCard } from "@/features/connectors/ark-card";
 import { ConnectorCard } from "@/features/connectors/connector-card";
 import {
@@ -24,6 +25,7 @@ import {
 } from "@/features/connectors/connector-status";
 import { GbdCard } from "@/features/connectors/gbd-card";
 import { GuidelinesCard } from "@/features/connectors/guidelines-card";
+import { LiveSourceCards } from "@/features/connectors/live-sources-card";
 import type { GuidelineCorpusStatus } from "@/features/connectors/guideline-status-view";
 import { SetupDisclosure } from "@/features/connectors/setup-disclosure";
 import { VitronicCard } from "@/features/vitronic/vitronic-card";
@@ -63,6 +65,12 @@ type WearablesScreenProps = {
   /** What `/connectors?oura=…` said, parsed on the server. */
   readonly returnNotice: ConnectorReturnNotice | null;
   readonly guidelineStatus: GuidelineCorpusStatus;
+  /** Live public lookups (#6): the person's switches, off by default. */
+  readonly liveSources: Readonly<{
+    enabled: readonly LiveSourceId[];
+    localOnly: boolean;
+    canSave: boolean;
+  }>;
 };
 
 type CardNotice = Readonly<{
@@ -225,6 +233,7 @@ export const WearablesScreen = ({
   setups,
   returnNotice,
   guidelineStatus,
+  liveSources,
 }: WearablesScreenProps) => {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
@@ -426,6 +435,14 @@ export const WearablesScreen = ({
       <Group title="Population and knowledge">
         <GbdCard setup={setups.gbd} />
         <GuidelinesCard status={guidelineStatus} setup={setups.guidelines} />
+      </Group>
+
+      <Group title="Live public lookups">
+        <LiveSourceCards
+          initialEnabled={liveSources.enabled}
+          localOnly={liveSources.localOnly}
+          canSave={liveSources.canSave}
+        />
       </Group>
 
       <Group title="Devices">

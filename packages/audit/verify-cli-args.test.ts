@@ -1,6 +1,14 @@
 import { describe, expect, test } from "bun:test";
 
-import { checkOutcome, EXIT, parseChain, parseVerifyMode } from "./verify-cli-args";
+import {
+  anchorOutcome,
+  checkOutcome,
+  EXIT,
+  parseAnchorOption,
+  parseChain,
+  parseVerifyMode,
+  worstExit,
+} from "./verify-cli-args";
 
 const HASH = "a".repeat(64);
 
@@ -106,5 +114,80 @@ describe("--chain (#140)", () => {
       stream: "stderr",
       line: "verify-disclosures UNKNOWN: the disclosure ledger has no rows, so there is no chain to check",
     });
+  });
+});
+
+describe("anchors on --check (#300)", () => {
+  test("on by default, another file with --anchors, off with --no-anchors", () => {
+    expect(parseAnchorOption(["--check"], "--check")).toEqual({ anchors: "default" });
+    expect(
+      parseAnchorOption(["--check", "--anchors", "/x/anchors.jsonl"], "--check"),
+    ).toEqual({ anchors: "file", path: "/x/anchors.jsonl" });
+    expect(parseAnchorOption(["--check", "--no-anchors"], "--check")).toEqual({
+      anchors: "off",
+    });
+    expect(parseAnchorOption(["--seed-ok"], "--seed-ok")).toEqual({ anchors: "off" });
+  });
+
+  test("flags that do not fit together", () => {
+    expect(parseAnchorOption(["--check", "--anchors"], "--check")).toEqual({
+      error: "verify-cli: --anchors takes the path of an anchors file",
+    });
+    expect(
+      parseAnchorOption(["--check", "--anchors", "a", "--no-anchors"], "--check"),
+    ).toEqual({ error: "verify-cli: pass only one of --anchors, --no-anchors" });
+    expect(parseAnchorOption(["--seed-ok", "--no-anchors"], "--seed-ok")).toEqual({
+      error: "verify-cli: --anchors and --no-anchors go with --check only",
+    });
+  });
+
+  test("the anchor line and its exit code", () => {
+    expect(
+      anchorOutcome({
+        status: "unknown",
+        reason: "no-key",
+        anchor: null,
+        line: null,
+        keyId: null,
+      }),
+    ).toEqual({
+      code: EXIT.unknown,
+      stream: "stderr",
+      line: "verify-audit anchor UNKNOWN: Signed anchors are off: there is no anchor key yet. Create one with `bun run anchor:init`.",
+    });
+    const keyId = "b".repeat(64);
+    expect(
+      anchorOutcome(
+        {
+          status: "not-ok",
+          reason: "truncated",
+          anchor: {
+            v: 1,
+            kind: "anchor",
+            at: "2026-10-31T12:00:00.000Z",
+            keyId,
+            prev: "0".repeat(64),
+            sig: "c2ln",
+            chain: "disclosures",
+            seq: 7,
+            hash: "d".repeat(64),
+            headTs: "2026-10-31T11:59:00.000Z",
+          },
+          line: null,
+          keyId,
+        },
+        "disclosures",
+      ),
+    ).toEqual({
+      code: EXIT.broken,
+      stream: "stderr",
+      line: "verify-disclosures anchor FAIL: The disclosure ledger is shorter than its latest signed anchor (row 7), so rows were removed from its end. Latest anchor: row 7 at 2026-10-31T12:00:00.000Z. Key bbbbbbbbbbbbbbbb.",
+    });
+  });
+
+  test("Not OK wins over Unknown, which wins over OK", () => {
+    expect(worstExit(EXIT.ok, EXIT.ok)).toBe(EXIT.ok);
+    expect(worstExit(EXIT.ok, EXIT.unknown)).toBe(EXIT.unknown);
+    expect(worstExit(EXIT.unknown, EXIT.broken)).toBe(EXIT.broken);
   });
 });
