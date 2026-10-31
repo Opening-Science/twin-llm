@@ -235,13 +235,42 @@ const realNoiseSection = (result: BenchmarkResult): string[] => {
   ];
 };
 
+/** Lag autocorrelation of ln RR in all-AF windows, simulated and real (#297). */
+export const afDependenceSection = (result: BenchmarkResult): string[] => [
+  "## Short-range dependence of AF intervals",
+  "",
+  `Simulated AF mode \`${result.options.afDependence}\`. Sample autocorrelation of ln RR at each lag in full ${WINDOW_BEATS}-interval windows whose intervals are all AF (simulated, noise none) or all ${AFDB_AF_LABEL} (database). Per-record is the median over records (recordings) of each one's median; independent values give about -0.008 at lag 1 in windows this long.`,
+  "",
+  table(
+    [
+      "Lag",
+      "Sim windows",
+      "Sim pooled median",
+      "Sim per-recording median",
+      "Real windows (records)",
+      "Real pooled median",
+      "Real per-record median",
+    ],
+    result.afDependence.map(({ sim, real }) => [
+      `${sim.lag}`,
+      `${sim.windows}`,
+      fixed(sim.pooledMedian),
+      fixed(sim.medianOfClusterMedians),
+      real === null ? "n/a" : `${real.windows} (${real.clusters})`,
+      fixed(real?.pooledMedian ?? null),
+      fixed(real?.medianOfClusterMedians ?? null),
+    ]),
+  ),
+  "",
+];
+
 export const markdownReport = (result: BenchmarkResult, generatedAt: string): string => {
   const sim = result.simulated;
   const gaps = largestGaps(result.simToReal, 8);
   return [
     "# Rhythm benchmark",
     "",
-    `Run \`${result.runId}\`, git \`${result.gitSha}\`, ${generatedAt}. Benchmark version ${result.version}; ${result.options.seeds} seeds per grid cell; ${result.options.resamples} cluster-bootstrap resamples (seed ${result.options.bootstrapSeed}).`,
+    `Run \`${result.runId}\`, git \`${result.gitSha}\`, ${generatedAt}. Benchmark version ${result.version}; ${result.options.seeds} seeds per grid cell; ${result.options.resamples} cluster-bootstrap resamples (seed ${result.options.bootstrapSeed}); simulated AF intervals \`${result.options.afDependence}\`.`,
     "",
     "Research use only. It describes recordings and methods, never a person.",
     "",
@@ -279,6 +308,7 @@ export const markdownReport = (result: BenchmarkResult, generatedAt: string): st
       ? ["No database given (`--afdb` or `--ltafdb`), real part skipped.", ""]
       : realSection(result.real)),
     ...(result.realNoise === null ? [] : realNoiseSection(result)),
+    ...afDependenceSection(result),
     "## Simulated against real",
     "",
     ...(result.simToReal.length === 0

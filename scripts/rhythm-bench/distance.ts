@@ -2,8 +2,10 @@
  * How far simulated windows are from real ones, per rhythm class: the
  * Wasserstein-1 distance and the Kolmogorov-Smirnov statistic of each metric,
  * of the window mean RR and of the intervals and successive differences,
- * raw and divided by their window's mean RR. Pure.
+ * raw and divided by their window's mean RR, and the window's lag-1
+ * autocorrelation of ln RR (#297). Pure.
  */
+import { windowLag } from "./af-dependence";
 import { ksStatistic, wasserstein1 } from "./statistics";
 import { METRICS, type WindowRow } from "./windows";
 
@@ -14,6 +16,7 @@ export const QUANTITIES = [
   "drr_ms",
   "rr_norm",
   "drr_norm",
+  "lag1_log_rr",
 ] as const;
 export type Quantity = (typeof QUANTITIES)[number];
 
@@ -35,6 +38,8 @@ export const valuesOf = (rows: readonly WindowRow[], quantity: Quantity): number
       return rows.flatMap((row) =>
         row.rr.slice(1).map((value, i) => (value - row.rr[i]) / row.meanRrMs),
       );
+    case "lag1_log_rr":
+      return nonNull(rows.map((row) => windowLag(row, 1)));
     default:
       return nonNull(rows.map((row) => row.metrics[quantity]));
   }

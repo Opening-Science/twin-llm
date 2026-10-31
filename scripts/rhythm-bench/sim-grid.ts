@@ -10,6 +10,7 @@
  */
 import { hash32, randomFor } from "@/infrastructure/seeded-random";
 import { subjectRhythmSettings } from "@/packages/query-tools/rhythm-recording";
+import { type AfDependence } from "@/packages/rhythm-sim/af-interval";
 import { type RecordingConfigInput } from "@/packages/rhythm-sim/recording-config";
 
 import { NO_PERTURBATION, type Perturbation } from "./perturb";
@@ -109,6 +110,7 @@ const roundTenth = (value: number): number => Math.round(value * 10) / 10;
 export const recordingConfigForCell = (
   cell: GridCell,
   seed: number,
+  afDependence: AfDependence = "independent",
 ): RecordingConfigInput => {
   const settings = subjectRhythmSettings(`rhythm-bench-profile-${seed}`);
   const recordingSeedValue = recordingSeed(cell, seed);
@@ -120,6 +122,7 @@ export const recordingConfigForCell = (
     respRateHz: settings.respRateHz,
     afCv: settings.afCv,
     afMeanHr: cell.afRate ?? settings.afMeanHr,
+    afDependence,
   };
   switch (cell.rhythm.kind) {
     case "sinus":
