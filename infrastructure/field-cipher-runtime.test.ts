@@ -1,8 +1,10 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 
 const originalEnv = { ...process.env };
 
-beforeAll(async () => {
+// Each test starts from personal mode with a locked vault; the synthetic test
+// changes DATA_MODE, so a shared beforeAll made the order matter (#336).
+beforeEach(async () => {
   Object.assign(process.env, {
     LOCAL_MVP: "true",
     AUTH_DISABLED: "true",
@@ -14,7 +16,7 @@ beforeAll(async () => {
   resetServerEnvCacheForTests();
 });
 
-afterAll(async () => {
+afterEach(async () => {
   const { vaultSessions } = await import("./vault-session");
   vaultSessions().lock("actor-runtime-test");
   for (const key of Object.keys(process.env)) {
