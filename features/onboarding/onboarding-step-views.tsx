@@ -10,6 +10,13 @@ import {
   setGroupEnabled,
   setSourceEnabled,
 } from "@/infrastructure/knowledge-sources";
+import {
+  LIVE_SOURCES,
+  LIVE_SOURCES_LOCAL_ONLY_NOTE,
+  LIVE_SOURCES_NEVER_NOTE,
+  type LiveSourceId,
+  setLiveSourceEnabled,
+} from "@/infrastructure/live-sources";
 import { cn } from "@/infrastructure/ui";
 import { buttonClassName } from "@/infrastructure/ui-kit/button";
 import { StatusBadge, type StatusTone } from "@/infrastructure/ui-kit/status-badge";
@@ -263,6 +270,63 @@ export const SourcesStep = ({
     </div>
   );
 };
+
+/**
+ * Live public lookups (#6) on the sources step: off by default, each with what
+ * a lookup sends and what it never sends, the same words as Customize ·
+ * Connectors. In local-only mode a note replaces the switches.
+ */
+export const LiveSourcesList = ({
+  enabled,
+  localOnly,
+  onChange,
+}: {
+  readonly enabled: readonly LiveSourceId[];
+  readonly localOnly: boolean;
+  readonly onChange: (next: readonly LiveSourceId[]) => void;
+}) => (
+  <section className="mt-6" aria-labelledby="live-sources-heading">
+    <h3 id="live-sources-heading" className="text-sm font-medium">
+      Live public lookups
+    </h3>
+    <p className="text-muted-foreground text-xs leading-relaxed">
+      {LIVE_SOURCES_NEVER_NOTE}
+    </p>
+    <ul className="border-border divide-border mt-2 divide-y rounded-lg border">
+      {LIVE_SOURCES.map((source) => (
+        <li key={source.id} className="flex items-start gap-3 px-3 py-2.5">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm">{source.label}</p>
+            <p className="text-muted-foreground text-xs leading-relaxed">
+              {source.description}
+            </p>
+            <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+              <span className="text-foreground font-medium">
+                Sent to {source.recipient}:
+              </span>{" "}
+              {source.sends}
+            </p>
+            <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+              <span className="text-foreground font-medium">Never sent:</span>{" "}
+              {source.keeps}
+            </p>
+          </div>
+          {localOnly ? (
+            <StatusBadge tone="off">{LIVE_SOURCES_LOCAL_ONLY_NOTE}</StatusBadge>
+          ) : (
+            <Switch
+              checked={enabled.includes(source.id)}
+              label={`Live ${source.label} lookups`}
+              onChange={(next) =>
+                onChange(setLiveSourceEnabled(enabled, source.id, next))
+              }
+            />
+          )}
+        </li>
+      ))}
+    </ul>
+  </section>
+);
 
 const RESIDENCY_BADGE: Readonly<Record<ResidencyTone, StatusTone>> = {
   stays: "ok",

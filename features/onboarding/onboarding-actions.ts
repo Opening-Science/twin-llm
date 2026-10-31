@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { resolveActorId } from "@/infrastructure/auth-actor";
 import { ensureAppUser } from "@/infrastructure/current-user";
+import { isLocalOnly } from "@/infrastructure/env";
 import { vaultRefusalForAction } from "@/infrastructure/vault-runtime";
 
 import { completeOnboarding, saveOnboarding } from "./onboarding-store";
@@ -24,6 +25,7 @@ const saveInputSchema = z.object({
     dataChoice: z.string().nullable(),
     interest: z.string().max(MAX_INTEREST_LENGTH * 2),
     disabledSources: z.array(z.string()).max(20),
+    liveSources: z.array(z.string()).max(10).default([]),
   }),
   step: z.number().int(),
   complete: z.boolean(),
@@ -46,8 +48,10 @@ export const saveOnboardingAnswers = async (
   try {
     const userId = await actorUserId();
     if (!userId) return { ok: false, error: "Sign in to keep your choices." };
+    const answers = normaliseAnswers(parsed.data.answers);
     await saveOnboarding(userId, {
-      answers: normaliseAnswers(parsed.data.answers),
+      // Local-only mode sends nothing to public databases (#6): no live source is kept on.
+      answers: isLocalOnly() ? { ...answers, liveSources: [] } : answers,
       step: parsed.data.step,
       complete: parsed.data.complete,
     });

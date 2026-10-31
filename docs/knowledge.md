@@ -90,3 +90,13 @@ The notes are © 2026 Open Science Foundation, CC BY 4.0
 Apache-2.0. `biomarker-catalogue.md` is built from `@open-twin/anchor-layer` (MIT);
 LOINC codes and names are © Regenstrief Institute, Inc., used under the LOINC
 licence. See `NOTICE`.
+
+## Live public lookups
+
+The corpus above is local and searched on this machine. Live lookups are
+different: `pubmed_search` and `ensembl_lookup` (#6) send search terms to
+NCBI PubMed or Ensembl while a chat answers, and are off until the person
+switches them on (Customize · Connectors, or the first-run flow). They are
+not part of the knowledge corpus and are not stored in the guideline tables;
+answers are kept in memory for a day only. What leaves, the refusals and the
+ledger rows are in [providers.md](providers.md#live-public-lookups).

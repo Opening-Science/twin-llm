@@ -111,6 +111,8 @@ export const createIncognitoChatHandler = (deps: IncognitoChatDeps) => {
     chatIsLocal: deps.chatIsLocal,
     store: INCOGNITO_ANSWER_STORE,
     analytics: INCOGNITO_ANALYTICS,
+    // Nothing may leave an incognito chat: no live public lookup (#6).
+    incognito: true,
   });
 
   return async (request: Request): Promise<Response> => {

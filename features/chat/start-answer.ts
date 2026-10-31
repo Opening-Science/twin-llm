@@ -13,6 +13,7 @@ import {
   requestsGenomeTools,
 } from "@/infrastructure/genome-thread-policy";
 import type { KnowledgeSourceId } from "@/infrastructure/knowledge-sources";
+import type { LiveSourceId } from "@/infrastructure/live-sources";
 import type { CatalogAgent } from "@/infrastructure/model-catalog";
 import { personalDataSentEvent } from "@/infrastructure/personal-data-audit";
 import { noteAuditEvent, notesForTurn, type TwinNote } from "@/infrastructure/twin-notes";
@@ -98,6 +99,12 @@ export type StartAnswerDeps = Readonly<{
   loadGenomeThread: (turnId: string) => Promise<GenomeThread>;
   loadWearables: (mode: DataMode, appUserId: string) => Promise<WearableContext>;
   loadDisabledSources: (appUserId: string) => Promise<readonly KnowledgeSourceId[]>;
+  /**
+   * The live public lookups (#6) this person switched on. Left out, none:
+   * an incognito chat never passes it, and the chat route returns none in
+   * local-only mode.
+   */
+  loadLiveSources?: (appUserId: string) => Promise<readonly LiveSourceId[]>;
   appendAudit: (input: AppendInput) => Promise<unknown>;
   /** A runnable skill by name, shipped or the person's own (#174), or null. */
   findSkill: (name: string, appUserId: string) => Promise<TurnSkill | null>;
@@ -263,6 +270,9 @@ export const createStartAnswer =
       threadId: thread.threadId,
       genomeThread,
       disabledSources: await deps.loadDisabledSources(appUserId),
+      ...(deps.loadLiveSources === undefined
+        ? {}
+        : { liveSources: await deps.loadLiveSources(appUserId) }),
       ...(skill === null ? {} : { skill }),
       ...(agent === null ? {} : { agent }),
       ...(twinNotes === null ? {} : { twinNotes }),

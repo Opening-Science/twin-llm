@@ -8,7 +8,7 @@ import type { StatusTone } from "@/infrastructure/ui-kit/status-badge";
  */
 
 export type ConnectorBadge = Readonly<{
-  label: "Not configured" | "Not connected" | "Connected" | "Error";
+  label: "Not configured" | "Not connected" | "Connected" | "Error" | "On" | "Off";
   tone: StatusTone;
 }>;
 
