@@ -85,7 +85,11 @@ export const updateResponse = (
 export const restartResponse = (response: ResponseState): ResponseState =>
   streamingAnswer(response.id, response);
 
-/** Answers that should be streaming and are not yet, with the turn they belong to. */
+/**
+ * Answers that should be streaming and are not yet, with the turn they belong to.
+ * A scheduled turn (#54) is being written by the server's own run, so the
+ * browser never opens a stream for it.
+ */
 export const answersToStream = (
   turns: readonly TurnState[],
   inFlight: ReadonlySet<string>,
@@ -98,7 +102,7 @@ export const answersToStream = (
   response: ResponseState;
 }>[] =>
   turns.flatMap((turn, turnIndex) =>
-    turn.pending
+    turn.pending || turn.scheduled === true
       ? []
       : turn.answers
           .filter(
@@ -111,4 +115,12 @@ export const answersToStream = (
             ...(turn.uiContext ? { uiContext: turn.uiContext } : {}),
             response,
           })),
+  );
+
+/** True while a scheduled turn's answer is still being written on the server (#54). */
+export const scheduledStillWriting = (turns: readonly TurnState[]): boolean =>
+  turns.some(
+    (turn) =>
+      turn.scheduled === true &&
+      turn.answers.some((answer) => answer.status === "STREAMING"),
   );

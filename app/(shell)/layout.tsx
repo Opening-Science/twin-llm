@@ -8,6 +8,7 @@ import { ShellFrame } from "@/features/shell/shell-frame";
 import { pinnedFromCookie, SIDEBAR_COOKIE } from "@/features/shell/sidebar-state";
 import { ThreadTitleProvider } from "@/features/shell/thread-title";
 import { skillsFor } from "@/features/skills/user-skill-store";
+import { TaskNotices } from "@/features/tasks/task-notices";
 import { ThemeToggle } from "@/features/theme/theme-toggle";
 import { LockButton } from "@/features/vault/lock-button";
 import { resolveActorId } from "@/infrastructure/auth-actor";
@@ -16,6 +17,8 @@ import { serverEnv } from "@/infrastructure/env";
 import { isClerkEnabled } from "@/infrastructure/public-env";
 import { ThreadHistoryProvider as RecentThreads } from "@/infrastructure/thread-history-store";
 import { vaultShellState, type VaultShellState } from "@/infrastructure/vault-runtime";
+
+import { markTasksSeenAction } from "./customize/tasks/actions";
 
 /** Every shell page reads the signed-in person and their threads per request. */
 export const dynamic = "force-dynamic";
@@ -58,6 +61,7 @@ export default async function ShellPagesLayout({
           commands={paletteCommands(skills.map(skillCommand))}
         >
           {children}
+          {actor === null ? null : <TaskNotices markSeen={markTasksSeenAction} />}
         </ShellFrame>
       </ThreadTitleProvider>
     </RecentThreads>

@@ -648,6 +648,25 @@
     }
   }
 
+  /* Scheduled tasks (#54, features/tasks): the bell switch, the sidebar badge and
+     the toast. In-app only; the toast sits above the page, top right under the thread bar, clear of the
+     prompt bar and the research footer. */
+  .task-bell[aria-pressed="true"] {
+    @apply border-primary text-foreground bg-[color-mix(in_oklab,var(--primary)_12%,transparent)];
+  }
+
+  .task-notice-badge {
+    @apply bg-foreground text-background inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 font-mono text-[10px] leading-none;
+  }
+
+  .task-toast-region {
+    @apply pointer-events-none fixed top-16 right-4 z-50 flex max-w-[calc(100vw-2rem)] flex-col items-end gap-2;
+  }
+
+  .task-toast {
+    @apply pointer-events-auto flex flex-wrap items-center gap-3 px-4 py-3 shadow-lg;
+  }
+
   /* A number in the answer that a tool call holds: a quiet dotted underline,
      no colour of its own, so it reads as text first and a link second. */
   .number-link {

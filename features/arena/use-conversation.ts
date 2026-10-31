@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
@@ -21,6 +22,7 @@ import { startTurn } from "./start-turn";
 import { historyFor } from "./turn-history";
 import {
   answersToStream,
+  scheduledStillWriting,
   confirmTurn,
   dropPending,
   pendingTurn,
@@ -44,6 +46,8 @@ import {
  * `startTurn` is never called, the thread history is not touched and the URL
  * stays as it is, so a reload or a new chat discards the conversation.
  */
+
+const SCHEDULED_REFRESH_MS = 5_000;
 
 const NO_SUMMARIES: WearableSummaries = {
   oura: null,
@@ -99,6 +103,16 @@ export const useConversation = (
       current = false;
     };
   }, []);
+
+  // A scheduled run writes its answer on the server; the page reloads its
+  // rows until it is done (the thread page remounts on the change).
+  const router = useRouter();
+  const scheduledWriting = scheduledStillWriting(turns);
+  useEffect(() => {
+    if (!scheduledWriting) return;
+    const timer = setInterval(() => router.refresh(), SCHEDULED_REFRESH_MS);
+    return () => clearInterval(timer);
+  }, [scheduledWriting, router]);
 
   useEffect(() => {
     answersToStream(turns, streaming.current).forEach(

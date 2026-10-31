@@ -319,6 +319,15 @@ throwaway owner cluster ([runbook.md](runbook.md#local-unlock)).
 **Effort.** About 5 days: crypto and session 1, routes and gate across routes and tools 2,
 screens 1, tests and docs 1.
 
+**Scheduled runs (#54).** A scheduled task runs on the server with no browser and no
+cookie, so it asks the session store directly: in personal mode it runs only while the
+owner's vault is open in this process, and asking does not count as use, so a schedule
+never keeps the vault from idle-locking. Locked at the scheduled time, the run is skipped,
+its `task.run` row says `skipped: locked`, and it waits for its next time. The turn then
+uses the same keys and the same pipeline as a typed turn; anything sent to a hosted
+provider goes through the disclosure ledger as usual ([skills.md](skills.md#scheduled-tasks)).
+The notice the shell polls answers zero while locked instead of touching the session.
+
 ### 2.3 #141 Encrypt personal data at rest
 
 **Decision.** Field-level encryption with AES-256-GCM under subkeys of the person's data
@@ -384,6 +393,7 @@ async per call and slower for 200,000 rows.
 | `personal_tables`, `_chunks`                 | `columns`, `rows`                                                       |                                                                                                               | counts, chunk index                                                  |
 | `personal_variants`                          | `chrom`, `pos`, `variant_id`, `ref`, `alt`, `genotype`, `filter`        | `site_index` (`chrom:pos` as written), `variant_id_index` (one per ID in the cell, GIN index)                 | none of the content                                                  |
 | `twin_notes`                                 | `title`, `topics`, `measures`, `open_questions`                         |                                                                                                               | `data_mode`, `permit`, dates                                         |
+| `scheduled_tasks`                            | `question`                                                              |                                                                                                               | skill, model id, schedule, time zone, run status and dates           |
 | `onboarding_profiles`                        | `interest`                                                              |                                                                                                               | roles and steps (fixed choices)                                      |
 
 - _Changed from the first draft:_ `personal_datasets.sha256` stays (sealed) next to its

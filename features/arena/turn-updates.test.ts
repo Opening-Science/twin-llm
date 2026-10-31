@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import type { TurnState } from "./conversation";
 import {
   answersToStream,
+  scheduledStillWriting,
   confirmTurn,
   dropPending,
   pendingTurn,
@@ -48,6 +49,33 @@ const saved: TurnState = {
 const pending = pendingTurn("Synthetic question two", [
   { id: "model-a", name: "Model A" },
 ]);
+
+describe("scheduled turns (#54)", () => {
+  const scheduled = { ...saved, id: "turn-s", scheduled: true };
+
+  test("the browser never streams an answer a scheduled run is writing", () => {
+    expect(answersToStream([scheduled], new Set())).toEqual([]);
+    expect(answersToStream([saved, scheduled], new Set()).map((a) => a.turnId)).toEqual([
+      "turn-1",
+    ]);
+  });
+
+  test("still writing while a scheduled answer is STREAMING", () => {
+    expect(scheduledStillWriting([saved])).toBe(false);
+    expect(scheduledStillWriting([scheduled])).toBe(true);
+    expect(
+      scheduledStillWriting([
+        {
+          ...scheduled,
+          answers: scheduled.answers.map((answer) => ({
+            ...answer,
+            status: "COMPLETE" as const,
+          })),
+        },
+      ]),
+    ).toBe(false);
+  });
+});
 
 describe("turn updates", () => {
   test("a pending turn streams nothing until the server confirms it", () => {

@@ -278,3 +278,58 @@ Customize · Skills has a form for making a skill without a SKILL.md: a name, on
 - It may not take the name of a shipped skill or a built-in command, so `/sleep` always means the shipped one.
 - The palette, search and the chat route find shipped skills first, then the person's own (`findSkillFor`). A stored row is checked again before it runs, so one that breaks today's rules does not run.
 - It has no eval cases; Customize and the palette say "Yours · not evaluated". It runs under the same gate and `skill.<name>` audit as a shipped skill.
+
+## Scheduled tasks
+
+Customize · Tasks (#54) runs a skill on a schedule. Nothing is scheduled until the person
+makes a task, and a task's notifications start off.
+
+A task is a skill (shipped or the person's own), a thread (a saved one, or a new one the
+first run starts), a model, an optional question (empty asks with the skill's description,
+as a bare `/sleep` does) and a schedule: daily or weekly at a time on the person's clock,
+or every 1 to 168 hours. The time zone is the browser's when the task is made. Daily and
+weekly times follow that zone's daylight saving rules: a time that does not exist on the
+spring-forward night runs the gap's length later (02:30 becomes 03:30), a time that
+happens twice on the fall-back night runs at the first. Every N hours counts elapsed time
+and ignores clock changes (`features/tasks/schedule.ts`).
+
+**How a run happens.** One tick loop per server process (`instrumentation.ts`,
+`features/tasks/scheduler-runtime.ts`), every 15 seconds, no external cron. A due task is
+claimed by moving its next run forward in the same database write that marks it running,
+so a task runs at most once per slot and never twice at the same time. At most one run is
+in flight when the chat model runs on this machine, two otherwise. Catch-up: a task whose
+time passed while the server was down runs once, however many runs it missed, and its
+next run is the first after now. A run that was in flight when the server stopped is
+marked "Interrupted by a restart" and is not repeated. Pausing clears the next run;
+resuming sets it from now.
+
+**Same rules as a typed turn.** A run writes its turn with the same code as a typed prompt
+(`features/arena/write-turn.ts`), marked `scheduled`, and calls the same `startAnswer` as
+`POST /api/chat` (`features/arena/answer-runtime.ts`) with the request the browser would
+send for `/skill question`. The skill gate, the genome rule, the data-mode policy, the
+`skill.<name>` audit row, twin notes and the disclosure ledger all apply unchanged
+(`features/arena/scheduled-turn.test.ts` checks that the same ports are called in the same
+order). A run sends only its own question, not the thread's earlier turns. Tasks always
+name a saved thread, so an incognito chat cannot be scheduled. In the thread the turn
+shows a Scheduled chip next to its skill.
+
+**Locked.** In personal mode a run happens only while the owner's vault is open in this
+process; checking does not count as use. Locked at the scheduled time, it is skipped and
+listed as "Skipped: locked" (privacy-design 2.2).
+
+**Audit.** Every run writes `task.run` before anything else (task id, skill, model,
+scheduled time, missed runs, and `run` or `skipped: locked`; never the question). If that
+row cannot be written, the model is not called. Making, pausing, resuming, deleting and the
+bell write `task.create`, `task.pause`, `task.resume`, `task.delete`, `task.notify-on` and
+`task.notify-off`. The question is sealed in personal mode (#141).
+
+**The panel.** Each task shows its schedule and zone, thread, model, next and last run, and
+a StatusLattice while it runs or after it answered, failed or was refused (a badge for a
+skipped or interrupted run). Pause and Resume act at once; Delete becomes Undo for five
+seconds, as for a thread. The panel refreshes every 10 seconds while a task is on.
+
+**Notifications.** In-app only: no OS, email or push notification. With a task's bell on,
+a run that posted a message counts as unseen; the shell polls `GET /api/tasks/notice`
+every 30 seconds, shows the count beside Customize in the sidebar and a toast with a link
+to the thread. Opening Customize · Tasks, or the toast's link, marks them seen. The notice
+holds skill names and thread ids only, and answers zero while locked.

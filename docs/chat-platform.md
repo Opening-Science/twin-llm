@@ -88,6 +88,8 @@ Issues: #47 context, #48 `twin.body`, #49 organ map, #50 playback, #51 clips, #5
 
 Opt-in scheduled runs of a skill, a Tasks panel, results as messages in the thread. Off by default, every run audited, notifications only for what the person enabled. Issue #54.
 
+Since #54: Customize · Tasks schedules a skill daily, weekly or every N hours on the person's clock. Each run goes through the same turn pipeline and permits as a typed `/skill` turn, is marked Scheduled in its thread and writes a `task.run` audit row; in personal mode it runs only while unlocked and is otherwise skipped. Notices are in-app and off per task until its bell is on ([skills.md](skills.md#scheduled-tasks)).
+
 ## 6. MCP both ways
 
 Out: the nine query tools as an MCP server (the manifest and snapshot exist), same scope and audit rules, personal mode only over local stdio. In: a registry of MCP servers tagged local or remote, policy applied per server; GBD moves onto it. Issues #55 and #56.

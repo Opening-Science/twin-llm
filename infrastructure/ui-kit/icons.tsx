@@ -56,3 +56,19 @@ export const StarIcon = ({ filled, ...props }: IconProps & { filled: boolean }) 
     <path d="m10 2.8 2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5L2.8 8.1l5-.7Z" />
   </Icon>
 );
+
+export const BellIcon = (props: IconProps) => (
+  <Icon {...props}>
+    <path d="M5.5 13.5V9a4.5 4.5 0 0 1 9 0v4.5l1.5 1.5h-12z" />
+    <path d="M8.5 17a1.6 1.6 0 0 0 3 0" />
+  </Icon>
+);
+
+export const BellOffIcon = (props: IconProps) => (
+  <Icon {...props}>
+    <path d="M7 5.6A4.5 4.5 0 0 1 14.5 9v3" />
+    <path d="M5.5 9v4.5l-1.5 1.5h10" />
+    <path d="M8.5 17a1.6 1.6 0 0 0 3 0" />
+    <path d="m3.5 3.5 13 13" />
+  </Icon>
+);

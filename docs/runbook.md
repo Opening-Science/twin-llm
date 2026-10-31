@@ -466,6 +466,13 @@ bun run lint:claims
 - Good: exit 0. Prints `0 findings`, then `N allowlisted` and each `file:line reason`.
 - Last run: 2026-09-27 14:50 CEST, `0 findings` / `1 allowlisted` (`features/shell/research-footer.tsx:2 required C4 footer`).
 
+## Scheduled tasks
+
+Customize · Tasks (#54, [skills.md](skills.md#scheduled-tasks)). The scheduler starts with the server (`instrumentation.ts`); there is nothing to run by hand. A task is checked every 15 seconds; `scheduled_tasks.running_since` is set while a run is in flight.
+
+- Good: a task's card shows the StatusLattice while it runs and Answered afterwards; the thread has a new turn with the Scheduled chip; `audit_events` has one `task.run` row per run followed by the turn's `skill.<name>` row.
+- Last run: 2026-10-31, Linux, `next dev` in synthetic mode against a throwaway owner cluster (Postgres 18.6 with pgvector, deleted afterwards), `qwen3:4b` on Ollama with the GPU otherwise idle. A `/sleep` task made in the form (every hour, bell on, new thread) was set to every minute in the database for the check. It ran four times into one new thread, one run at a time, each with one `task.run` and one `skill.sleep` row; pausing and resuming wrote `task.pause` and `task.resume`. With another page open the sidebar showed a badge and a toast linked to the thread. The first check found the thread page opening a second stream for an answer the run was still writing (two extra `skill.sleep` rows); the browser now leaves scheduled answers to the server, and the repeat check had none. Screenshots light and dark.
+
 ## Providers
 
 ### Infomaniak allowlist (mocked)

@@ -54,6 +54,7 @@ const readThread = (threadId: string) =>
         select: {
           id: true,
           prompt: true,
+          scheduled: true,
           responses: {
             select: {
               id: true,
