@@ -34,8 +34,13 @@ export const DisclosureSection = ({ view }: Readonly<{ view: LedgerView }>) => (
       metric and its day.
     </p>
     <p className="text-muted-foreground mt-2 max-w-2xl text-sm">
-      Your own words, answers and tool results are named by kind; they are not yet checked
-      for stored values. A model on this machine (Ollama on loopback) is not a recipient.
+      Before a request to a model goes out, its text (your own words, answers and tool
+      results) is checked for values stored here: rsIDs and genome sites of your imported
+      files, their file names, body scan labels and your account id. Each entry says what
+      kinds were found and how many, never the values. The check is approximate: a value
+      written another way is missed, and lab values and notes are not checked yet. A match
+      is recorded; it does not stop the request. Entries from before the check say not
+      checked. A model on this machine (Ollama on loopback) is not a recipient.
     </p>
     {view.recipients.length === 0 ? (
       <p className="mt-4 text-sm">
@@ -101,6 +106,15 @@ export const DisclosureSection = ({ view }: Readonly<{ view: LedgerView }>) => (
                     </Link>
                   </>
                 )}
+              </p>
+              <p className="text-muted-foreground">
+                Free text:{" "}
+                {entry.freeTextFound ? (
+                  <StatusBadge tone="warn">{entry.freeText}</StatusBadge>
+                ) : (
+                  entry.freeText
+                )}
+                .
               </p>
               {entry.refs.length === 0 ? null : (
                 <details className="setup-disclosure">

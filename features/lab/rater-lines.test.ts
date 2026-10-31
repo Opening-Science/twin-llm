@@ -1,11 +1,14 @@
 import { describe, expect, test } from "bun:test";
 
+import { createHash } from "node:crypto";
+
 import { lineKey, type LineRating } from "./rating-file";
 import {
   blindLines,
   lineToken,
   raterLines,
   referenceLines,
+  SALT_PATTERN,
   seededOrder,
 } from "./rater-lines";
 
@@ -25,6 +28,9 @@ const KEY = {
   ],
 };
 
+const SALT = "a".repeat(64);
+const OTHER_SALT = "b".repeat(64);
+
 const RUNS = [
   {
     runId: "run-model-a",
@@ -42,12 +48,32 @@ const RUNS = [
 ];
 
 describe("rater lines", () => {
-  test("a token is 16 hex characters, fixed by run, item and repeat", () => {
-    expect(lineToken("run-model-a", "Q-1", 1)).toMatch(/^[0-9a-f]{16}$/);
-    expect(lineToken("run-model-a", "Q-1", 1)).toBe(lineToken("run-model-a", "Q-1", 1));
-    expect(lineToken("run-model-a", "Q-1", 1)).not.toBe(
-      lineToken("run-model-b", "Q-1", 1),
+  test("a token is 16 hex characters, fixed by salt, run, item and repeat", () => {
+    const token = lineToken(SALT, "run-model-a", "Q-1", 1);
+    expect(token).toMatch(/^[0-9a-f]{16}$/);
+    expect(lineToken(SALT, "run-model-a", "Q-1", 1)).toBe(token);
+    expect(lineToken(SALT, "run-model-b", "Q-1", 1)).not.toBe(token);
+    expect(lineToken(SALT, "run-model-a", "Q-1", 2)).not.toBe(token);
+  });
+
+  test("the same answer gets another token under another salt", () => {
+    expect(lineToken(OTHER_SALT, "run-model-a", "Q-1", 1)).not.toBe(
+      lineToken(SALT, "run-model-a", "Q-1", 1),
     );
+  });
+
+  test("the token is not the unsalted hash of #354", () => {
+    const unsalted = createHash("sha256")
+      .update("run-model-a\nQ-1\n1")
+      .digest("hex")
+      .slice(0, 16);
+    expect(lineToken(SALT, "run-model-a", "Q-1", 1)).not.toBe(unsalted);
+  });
+
+  test("a salt is 64 lowercase hex characters", () => {
+    expect(SALT_PATTERN.test(SALT)).toBe(true);
+    expect(SALT_PATTERN.test("A".repeat(64))).toBe(false);
+    expect(SALT_PATTERN.test("a".repeat(63))).toBe(false);
   });
 
   test("references read as words", () => {
@@ -72,14 +98,14 @@ describe("rater lines", () => {
   });
 
   test("answered lines of known items, from every run", () => {
-    const lines = raterLines(RUNS, ITEMS, KEY);
+    const lines = raterLines(RUNS, ITEMS, KEY, SALT);
     expect(lines.map((line) => [line.runId, line.itemId, line.repeat])).toEqual([
       ["run-model-a", "Q-1", 1],
       ["run-model-a", "Q-2", 1],
       ["run-model-b", "Q-1", 1],
     ]);
     expect(lines[1]).toEqual({
-      token: lineToken("run-model-a", "Q-2", 1),
+      token: lineToken(SALT, "run-model-a", "Q-2", 1),
       runId: "run-model-a",
       itemId: "Q-2",
       repeat: 1,
@@ -90,18 +116,19 @@ describe("rater lines", () => {
     });
   });
 
-  test("the seed fixes the order; another seed gives another one", () => {
+  test("seed and salt fix the order; another seed or salt gives another one", () => {
     const tokens = Array.from({ length: 12 }, (_, index) => ({ token: `t${index}` }));
-    const a = seededOrder(tokens, "seed-a");
-    expect(seededOrder([...tokens].reverse(), "seed-a")).toEqual(a);
-    expect(seededOrder(tokens, "seed-b")).not.toEqual(a);
+    const a = seededOrder(tokens, "seed-a", SALT);
+    expect(seededOrder([...tokens].reverse(), "seed-a", SALT)).toEqual(a);
+    expect(seededOrder(tokens, "seed-b", SALT)).not.toEqual(a);
+    expect(seededOrder(tokens, "seed-a", OTHER_SALT)).not.toEqual(a);
     expect([...a].sort((x, y) => x.token.localeCompare(y.token))).toEqual(
       [...tokens].sort((x, y) => x.token.localeCompare(y.token)),
     );
   });
 
   test("blind lines carry no run, item or model, and bring back earlier ratings", () => {
-    const lines = raterLines(RUNS, ITEMS, KEY);
+    const lines = raterLines(RUNS, ITEMS, KEY, SALT);
     const rating: LineRating = {
       item_id: "Q-1",
       repeat: 1,
@@ -110,7 +137,7 @@ describe("rater lines", () => {
       rated_at: "2026-10-31T10:00:00.000Z",
     };
     const ratings = new Map([["run-model-b", new Map([[lineKey("Q-1", 1), rating]])]]);
-    const blind = blindLines(lines, "seed", ratings);
+    const blind = blindLines(lines, "seed", SALT, ratings);
     expect(blind.map((line) => Object.keys(line).sort())).toEqual(
       blind.map(() => [
         "answer",
@@ -123,7 +150,10 @@ describe("rater lines", () => {
       ]),
     );
     expect(JSON.stringify(blind)).not.toContain("run-model");
-    const rated = blind.find((line) => line.token === lineToken("run-model-b", "Q-1", 1));
+    expect(JSON.stringify(blind)).not.toContain(SALT);
+    const rated = blind.find(
+      (line) => line.token === lineToken(SALT, "run-model-b", "Q-1", 1),
+    );
     expect([rated?.level, rated?.comment]).toEqual([4, "paraphrase"]);
     expect(blind.filter((line) => line.level === null).length).toBe(2);
   });

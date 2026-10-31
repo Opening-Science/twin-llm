@@ -5,6 +5,10 @@ import {
   type ValueRef,
 } from "@/infrastructure/disclosure-ledger";
 import {
+  describeFreeTextCheck,
+  parseFreeTextMatches,
+} from "@/infrastructure/free-text-check";
+import {
   formatBytes,
   formatNumber,
   formatTimestamp,
@@ -41,6 +45,10 @@ export type EntryView = Readonly<{
   synthetic: boolean;
   threadHref: string | null;
   refs: readonly string[];
+  /** What the free text check found (#346), or that it did not run. */
+  freeText: string;
+  /** True when the check found stored values in the free text. */
+  freeTextFound: boolean;
 }>;
 
 export type LedgerView = Readonly<{
@@ -105,6 +113,17 @@ const whatOf = (kind: string, purpose: string): string => {
   return label.toLowerCase() === purpose.toLowerCase() ? label : `${label}: ${purpose}`;
 };
 
+/** The free text check of one row, in words: kinds and counts, never a value. */
+export const freeTextOf = (
+  entry: Pick<LedgerEntry, "freeTextChecked" | "freeTextMatches">,
+): Readonly<{ text: string; found: boolean }> => {
+  const check = entry.freeTextChecked
+    ? parseFreeTextMatches(entry.freeTextMatches)
+    : null;
+  if (check === null) return { text: "not checked", found: false };
+  return { text: describeFreeTextCheck(check), found: check.matches.length > 0 };
+};
+
 const entryView = (entry: LedgerEntry & Readonly<{ refs: readonly ValueRef[] }>) => ({
   key: String(entry.seq),
   when: formatTimestamp(entry.ts),
@@ -118,6 +137,8 @@ const entryView = (entry: LedgerEntry & Readonly<{ refs: readonly ValueRef[] }>)
   synthetic: entry.synthetic,
   threadHref: entry.threadId === null ? null : `/t/${encodeURIComponent(entry.threadId)}`,
   refs: entry.refs.map((ref) => `${SOURCE_LABELS[ref.source]}: ${ref.key}`),
+  freeText: freeTextOf(entry).text,
+  freeTextFound: freeTextOf(entry).found,
 });
 
 /**

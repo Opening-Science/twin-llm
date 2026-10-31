@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import type { LedgerEntry } from "@/infrastructure/disclosure-ledger";
 
-import { ledgerView } from "./disclosure-view";
+import { freeTextOf, ledgerView } from "./disclosure-view";
 
 const at = (hour: number): Date => new Date(Date.UTC(2026, 9, 31, hour, 0));
 
@@ -19,6 +19,8 @@ const MODEL: LedgerEntry = {
   payloadBytes: 4200,
   threadId: "thread-synthetic-1",
   synthetic: false,
+  freeTextChecked: true,
+  freeTextMatches: [{ kind: "rsID", count: 1 }],
 };
 
 const SYNC: LedgerEntry = {
@@ -34,6 +36,8 @@ const SYNC: LedgerEntry = {
   payloadBytes: null,
   threadId: null,
   synthetic: true,
+  freeTextChecked: false,
+  freeTextMatches: null,
 };
 
 describe("ledgerView (#140)", () => {
@@ -83,6 +87,8 @@ describe("ledgerView (#140)", () => {
           synthetic: false,
           threadHref: "/t/thread-synthetic-1",
           refs: ["Wearable: oura.sleep.score.2026-10-30"],
+          freeText: "1 rsID",
+          freeTextFound: true,
         },
         {
           key: "1",
@@ -96,6 +102,8 @@ describe("ledgerView (#140)", () => {
           synthetic: true,
           threadHref: null,
           refs: [],
+          freeText: "not checked",
+          freeTextFound: false,
         },
       ],
       shownOf: null,
@@ -119,6 +127,29 @@ describe("ledgerView (#140)", () => {
     expect(ledgerView([exported], [{ ...exported, refs: [] }]).entries[0]?.what).toBe(
       "Thread export",
     );
+  });
+
+  test("the free text check reads as kinds and counts, or as not checked (#346)", () => {
+    expect(freeTextOf({ freeTextChecked: true, freeTextMatches: [] })).toEqual({
+      text: "no stored values found",
+      found: false,
+    });
+    expect(
+      freeTextOf({
+        freeTextChecked: true,
+        freeTextMatches: [
+          { kind: "genome site", count: 2 },
+          { kind: "body scan label", count: 1 },
+        ],
+      }),
+    ).toEqual({ text: "2 genome sites, 1 body scan label", found: true });
+    expect(freeTextOf({ freeTextChecked: false, freeTextMatches: null })).toEqual({
+      text: "not checked",
+      found: false,
+    });
+    expect(
+      freeTextOf({ freeTextChecked: true, freeTextMatches: [{ kind: "x", count: 1 }] }),
+    ).toEqual({ text: "not checked", found: false });
   });
 
   test("an empty ledger shows nothing", () => {
