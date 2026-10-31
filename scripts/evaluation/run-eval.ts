@@ -9,6 +9,7 @@
  *   bun run eval -- --models ollama:qwen3:8b --set s7h --decline-wording w2
  *   bun run eval -- --models ollama:qwen3:4b --arm context-oracle
  *   bun run eval -- --models ollama:qwen3:4b --arm context-fair
+ *   bun run eval -- --models ollama:qwen3:4b --arm code
  *
  * The package script passes `--env-file=.env.eval`, a copy of
  * `.env.synthetic.example` pointed at a throwaway database holding only
@@ -24,6 +25,7 @@
  */
 import { execFileSync } from "node:child_process";
 import { access, appendFile, mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { homedir } from "node:os";
 import { join } from "node:path";
 
 import { type EvalDeps, type ModelSpec, EvalSetupError, runEval } from "./eval-runner";
@@ -82,6 +84,7 @@ if (isMain) {
   const { findConditionsInDatabase, findMedicationRequestsInDatabase, toNumber } =
     await import("../../packages/query-tools/ports");
   const { readFairRecord } = await import("./fair-record-read");
+  const { createHostSandbox } = await import("./code-sandbox-host");
   /** Every dated record of a subject (#320); the cap only guards a runaway read. */
   const WHOLE_RECORD = {
     start: new Date("1900-01-01T00:00:00Z"),
@@ -200,6 +203,9 @@ if (isMain) {
         },
         pick,
       ),
+    // Code arm (#303): built and probed only when the run asks for it.
+    createSandbox: () => createHostSandbox(),
+    probeHost: { home: homedir(), repo: process.cwd() },
     cache: fileCacheStore(CACHE_DIR),
     prepareRun: async (runId) => {
       const dir = join(RUNS_DIR, runId);

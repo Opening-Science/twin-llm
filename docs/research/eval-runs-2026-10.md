@@ -934,6 +934,60 @@ is one of many possible (another cap, more readings per code or a window
 taken from the question would change it); S3 and S4 are not a test of
 either context arm.
 
+### Code over the record (#303)
+
+#303 adds `--arm code` (`docs/evaluation/harness.md`, "The code arm"): the
+model gets one tool, `run_python`, and a JSON file holding the whole record
+of the subject the question names (the fair arm's choice, never the key);
+the prompt lists the file's layout and its codes with counts and dates, no
+readings. Each program runs in the bubblewrap sandbox with no network and
+time, memory, task and output limits; an item may run 3 programs.
+
+Run `2026-10-31-qwen3-4b-v1-code303` at git `9202c1d`, the same throwaway
+database on 127.0.0.1:5434, Ollama `qwen3:4b` (Q4_K_M) alone on the GPU, v1,
+all 130 items (S1 to S6). All 11 escape probes were contained before the
+first item (`meta.json`). 146 lines, 134 answered, no errors, S4 skipped
+(`MISSING_ENV`). Four lines (Q-S1-01, three repeats, and Q-S1-09) came from
+the cache of a two-item smoke run minutes earlier at the same commit. Total
+p50 49.0 s.
+
+Programs: 144 runs, 75 exited 0 with output, 53 failed with an exception
+(most often parsing the ISO dates with a format that did not match) and 16
+printed nothing; none hit the wall clock or the output cap. 66 lines ran at
+least one program, 53 got a usable result, 48 retried and 13 used all three
+runs. 68 lines ran none: all 14 S3, 15 of 16 S5, 30 of 37 S6, 8 of 49 S1 and
+1 of 18 S2.
+
+qwen3:4b, correctness (passes over scored answers, Wilson 95 %), against the
+three arms of #320:
+
+| Arm            | Correctness      | Human share |
+| -------------- | ---------------- | ----------- |
+| tools          | 36/101 (27–45 %) | 11 %        |
+| context-oracle | 52/85 (51–71 %)  | 25 %        |
+| context-fair   | 6/78 (4–16 %)    | 32 %        |
+| code           | 6/70 (4–17 %)    | 39 %        |
+
+Other criteria of the code run: hallucination 41/80 (40–62 %, human share
+40 %), clinical caution 83/120 (60–77 %), readability 112/130 (79–91 %),
+consistency 2/7, query safety 117/118 and privacy 22/22 (reply checks only,
+as in the context arms); unsourced numbers 735 in 88 answers; value not in
+the rows 11/120, without a tool 0/120.
+
+Plain reading: on this set, giving qwen3:4b the whole record and a sandbox
+did no better than pasting the record (both 4 to 17 %), and well below the
+tools arm. Where it did run code, it mostly listed readings rather than
+computing the keyed value (a slope, robust z, a window count), and it often
+lost a run to date parsing. Its S1 and S2 correctness (2/16 and 0/7) rests on
+a 39 % human share, so the number of correct values is not settled until
+review.
+
+Limits: one sample per line, no human review; the tools, oracle and fair
+lines are from git `301ccb0`, not this commit; the prompt, the file layout
+and the run limit were fixed before the run and not tuned, and another
+layout (date-only strings, a CSV per code) or a larger model may change the
+picture; S3 and S4 are not a test of this arm.
+
 ## Limits
 
 - The questions were written alongside the cohort they are scored against, and
