@@ -9,6 +9,7 @@ import { GENOME_BANK } from "../training-data/genome-questions";
 import { HANDOVER_BANK } from "../training-data/handover-family";
 import { BANK } from "../training-data/questions";
 import { WEARABLE_BANK } from "../training-data/wearable-families";
+import { BANNED_TERMS } from "../lint-claims";
 import { EVALUATION_COHORT_IDS } from "../synthea/cohort-presets";
 
 import type { CohortSubject } from "./cohort-ports";
@@ -323,6 +324,17 @@ const heldoutTemplates = (): Text[] =>
       text,
     })),
   );
+
+describe("templates", () => {
+  test("pass the claim lint stems", () => {
+    const hits = heldoutTemplates().flatMap((template) =>
+      BANNED_TERMS.filter((term) => new RegExp(term.source, "i").test(template.text)).map(
+        (term) => `${term.id}: ${template.id}`,
+      ),
+    );
+    expect(hits).toEqual([]);
+  });
+});
 
 describe("held out from training and from the other sets", () => {
   test("no template shares a skeleton or a six-word run with a training template", () => {

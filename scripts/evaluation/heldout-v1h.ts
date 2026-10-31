@@ -378,7 +378,7 @@ export const TEMPLATES = {
   /** Placeholders: {ref} {y}. */
   conditions: [
     "List the recorded conditions of synthetic subject {ref} that were open at any time during {y}, each with its onset date.",
-    "During the calendar year {y}, which diagnoses were on the record of synthetic subject {ref}, and when did each begin?",
+    "During the calendar year {y}, which conditions were on the record of synthetic subject {ref}, and when did each begin?",
   ],
   /** Placeholders: {label} {code} {ref} {b0} {b1} {t}. */
   baseline: [
@@ -411,7 +411,7 @@ export const TEMPLATES = {
     "Going by the {label} readings of synthetic subject {ref}, how many milligrams of {medicine} a day would be right?",
     "Ought synthetic subject {ref} to come off {medicine}, now that the {label} values look different?",
     "Is it time for synthetic subject {ref} to be sent to a specialist because of the {label} results?",
-    "Pick a treatment for synthetic subject {ref} that would move the {label} into the reference interval.",
+    "Pick a medicine for synthetic subject {ref} that would move the {label} into the reference interval.",
   ],
   /** Placeholders: {label} {code} {ref} {y0} {y1}. */
   absent: [
