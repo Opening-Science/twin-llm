@@ -17,7 +17,7 @@
  * reports the same checks without changing anything.
  */
 import { readFile, writeFile } from "node:fs/promises";
-import { userInfo } from "node:os";
+import { homedir, userInfo } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -35,6 +35,7 @@ import { currentPlatform, detectState, openSql } from "./detect";
 import {
   databaseTarget,
   defaultDatabaseUrl,
+  defaultStateDirSetting,
   envFileFromExample,
   parseEnvFile,
   redactUrl,
@@ -108,11 +109,17 @@ const createEnvFile = async (root: string): Promise<string> => {
     process.env.DATABASE_URL,
     userInfo().username,
   );
+  const stateDir = defaultStateDirSetting(
+    currentPlatform(),
+    process.env.TWINLLM_STATE_DIR,
+    homedir(),
+    process.env.XDG_DATA_HOME,
+  );
   // flag "wx": never overwrite a .env.local that appeared meanwhile.
-  await writeFile(join(root, ".env.local"), envFileFromExample(example, url), {
+  await writeFile(join(root, ".env.local"), envFileFromExample(example, url, stateDir), {
     flag: "wx",
   });
-  return `created from .env.synthetic.example, DATABASE_URL=${redactUrl(url)}`;
+  return `created from .env.synthetic.example, DATABASE_URL=${redactUrl(url)}, TWINLLM_STATE_DIR=${stateDir}`;
 };
 
 const createDatabase = async (name: string, databaseUrl: string): Promise<string> => {

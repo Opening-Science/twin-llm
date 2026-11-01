@@ -3,6 +3,7 @@ import { generateKeyPairSync, type KeyObject } from "node:crypto";
 
 import {
   ANCHOR_CHAIN_WORDS,
+  ANCHOR_DATABASE_MISMATCH,
   type AnchorLine,
   anchorBody,
   anchorSentence,
@@ -11,6 +12,11 @@ import {
   type ChainHead,
   checkAnchorLog,
   compareWithAnchor,
+  databaseBody,
+  databaseGate,
+  databaseIdOf,
+  databaseMismatchMessage,
+  type DatabaseRead,
   keyBody,
   keyIdOf,
   lineHash,
@@ -20,6 +26,7 @@ import {
   rotationBody,
   scanAnchorLog,
   serializeLine,
+  shortDatabaseId,
   signatureHolds,
   signLine,
   splitLines,
@@ -77,6 +84,14 @@ const rotationLine = (from: Pair | null, to: Pair) => (prev: string) =>
       prev,
     }),
     (from ?? to).privateKey,
+  );
+
+const NO_DATABASE: DatabaseRead = { kind: "none" };
+
+const databaseLine = (pair: Pair, rawId: string) => (prev: string) =>
+  signLine(
+    databaseBody({ databaseId: databaseIdOf(rawId), at: AT, keyId: pair.keyId, prev }),
+    pair.privateKey,
   );
 
 const known = (...pairs: readonly Pair[]) =>
@@ -245,6 +260,7 @@ describe("scanAnchorLog", () => {
       prev: GENESIS_PREV_HASH,
       latest: {},
       keyId: null,
+      databaseId: null,
     });
   });
 });
@@ -295,6 +311,7 @@ describe("anchorVerdict", () => {
 
   test("OK when the signature holds and the chain matches", () => {
     const verdict = anchorVerdict({
+      database: NO_DATABASE,
       chain: "audit",
       key,
       log,
@@ -309,6 +326,7 @@ describe("anchorVerdict", () => {
 
   test("truncation and rewrite are Not OK with the reason", () => {
     const truncated = anchorVerdict({
+      database: NO_DATABASE,
       chain: "audit",
       key,
       log,
@@ -319,6 +337,7 @@ describe("anchorVerdict", () => {
       "The audit chain is shorter than its latest signed anchor (row 5), so rows were removed from its end.",
     );
     const rewritten = anchorVerdict({
+      database: NO_DATABASE,
       chain: "audit",
       key,
       log,
@@ -331,6 +350,7 @@ describe("anchorVerdict", () => {
     const b = newPair();
     const forged = fileOf([keyLine(a), anchorLine(a, "audit", 5, b)]);
     const verdict = anchorVerdict({
+      database: NO_DATABASE,
       chain: "audit",
       key,
       log: { kind: "found", check: checkAnchorLog(forged, known(a)) },
@@ -344,34 +364,62 @@ describe("anchorVerdict", () => {
 
   test("no key, no anchor yet, an unreadable chain: Unknown, never OK", () => {
     expect(
-      anchorVerdict({ chain: "audit", key: { kind: "missing" }, log, facts: null }),
+      anchorVerdict({
+        database: NO_DATABASE,
+        chain: "audit",
+        key: { kind: "missing" },
+        log,
+        facts: null,
+      }),
     ).toMatchObject({ status: "unknown", reason: "no-key" });
     expect(
-      anchorVerdict({ chain: "disclosures", key, log, facts: facts("disclosures", 2) }),
+      anchorVerdict({
+        database: NO_DATABASE,
+        chain: "disclosures",
+        key,
+        log,
+        facts: facts("disclosures", 2),
+      }),
     ).toMatchObject({ status: "unknown", reason: "no-anchor" });
     expect(
       anchorVerdict({
+        database: NO_DATABASE,
         chain: "disclosures",
         key,
         log,
         facts: facts("disclosures", null),
       }),
     ).toMatchObject({ status: "unknown", reason: "no-anchor" });
-    expect(anchorVerdict({ chain: "audit", key, log, facts: null })).toMatchObject({
+    expect(
+      anchorVerdict({ database: NO_DATABASE, chain: "audit", key, log, facts: null }),
+    ).toMatchObject({
       status: "unknown",
       reason: "chain-unreadable",
     });
     expect(
-      anchorVerdict({ chain: "audit", key, log: { kind: "unreadable" }, facts: null }),
+      anchorVerdict({
+        database: NO_DATABASE,
+        chain: "audit",
+        key,
+        log: { kind: "unreadable" },
+        facts: null,
+      }),
     ).toMatchObject({ status: "unknown", reason: "log-unreadable" });
   });
 
   test("a missing file next to a key, or a key the file does not end with, is Not OK", () => {
     expect(
-      anchorVerdict({ chain: "audit", key, log: { kind: "missing" }, facts: null }),
+      anchorVerdict({
+        database: NO_DATABASE,
+        chain: "audit",
+        key,
+        log: { kind: "missing" },
+        facts: null,
+      }),
     ).toMatchObject({ status: "not-ok", reason: "log-missing" });
     expect(
       anchorVerdict({
+        database: NO_DATABASE,
         chain: "audit",
         key: { kind: "found", keyId: newPair().keyId },
         log,
@@ -390,6 +438,7 @@ describe("anchorVerdict", () => {
     ]);
     expect(
       anchorVerdict({
+        database: NO_DATABASE,
         chain: "audit",
         key: { kind: "found", keyId: b.keyId },
         log: { kind: "found", check: checkAnchorLog(rotated, known(a)) },
@@ -405,6 +454,7 @@ describe("anchorVerdict", () => {
       anchorLine(c, "audit", 6),
     ]);
     const verdict = anchorVerdict({
+      database: NO_DATABASE,
       chain: "audit",
       key: { kind: "found", keyId: c.keyId },
       log: { kind: "found", check: checkAnchorLog(broken, known(a, c)) },
@@ -415,5 +465,122 @@ describe("anchorVerdict", () => {
       reason: "continuity-break",
       line: 3,
     });
+  });
+});
+
+describe("database identity (#382)", () => {
+  const a = newPair();
+  const idA = databaseIdOf("database-a");
+  const idB = databaseIdOf("database-b");
+  const key = { kind: "found", keyId: a.keyId } as const;
+  const found = (databaseId: string): DatabaseRead => ({ kind: "found", databaseId });
+  const verdictFor = (lines: readonly string[], database: DatabaseRead) =>
+    anchorVerdict({
+      chain: "audit",
+      key,
+      log: { kind: "found", check: checkAnchorLog(lines, known(a)) },
+      facts: facts("audit", 5, 5),
+      database,
+    });
+
+  test("databaseIdOf is a stable hex hash that tells ids apart", () => {
+    expect(idA).toMatch(/^[0-9a-f]{64}$/);
+    expect(databaseIdOf("database-a")).toBe(idA);
+    expect(idB).not.toBe(idA);
+    expect(shortDatabaseId(idA)).toBe(idA.slice(0, 12));
+    expect(shortDatabaseId(null)).toBe("none yet");
+  });
+
+  test("a database line is checked and recorded; scan sees the first one", () => {
+    const lines = fileOf([
+      keyLine(a),
+      databaseLine(a, "database-a"),
+      anchorLine(a, "audit", 5),
+    ]);
+    const check = checkAnchorLog(lines, known(a));
+    expect(check.ok).toBe(true);
+    expect(check.state.databaseId).toBe(idA);
+    expect(scanAnchorLog(lines)?.databaseId).toBe(idA);
+  });
+
+  test("a second database line naming another database fails the file", () => {
+    const lines = fileOf([
+      keyLine(a),
+      databaseLine(a, "database-a"),
+      anchorLine(a, "audit", 5),
+      databaseLine(a, "database-b"),
+    ]);
+    const check = checkAnchorLog(lines, known(a));
+    expect(check.ok ? null : check.problem).toEqual({
+      line: 4,
+      reason: "database-changed",
+    });
+  });
+
+  test("a file from before #382 names no database and still verifies", () => {
+    const lines = fileOf([keyLine(a), anchorLine(a, "audit", 5)]);
+    expect(scanAnchorLog(lines)?.databaseId).toBe(null);
+    expect(verdictFor(lines, NO_DATABASE).status).toBe("ok");
+    expect(verdictFor(lines, found(idB)).status).toBe("ok");
+    expect(verdictFor(lines, { kind: "unreadable" }).status).toBe("ok");
+  });
+
+  test("the verdict is Not OK when the file names another database", () => {
+    const lines = fileOf([
+      keyLine(a),
+      databaseLine(a, "database-a"),
+      anchorLine(a, "audit", 5),
+    ]);
+    expect(verdictFor(lines, found(idA)).status).toBe("ok");
+    const other = verdictFor(lines, found(idB));
+    expect(other).toMatchObject({
+      status: "not-ok",
+      reason: "database-mismatch",
+      databases: { log: idA, current: idB },
+    });
+    expect(verdictFor(lines, NO_DATABASE)).toMatchObject({
+      status: "not-ok",
+      reason: "database-mismatch",
+      databases: { log: idA, current: null },
+    });
+    expect(verdictFor(lines, { kind: "unreadable" })).toMatchObject({
+      status: "unknown",
+      reason: "database-unreadable",
+    });
+    const sentence = anchorSentence(other, ANCHOR_CHAIN_WORDS.audit);
+    expect(sentence).toContain("belongs to another database");
+    expect(sentence).toContain(idA.slice(0, 12));
+    expect(sentence).toContain("TWINLLM_STATE_DIR");
+  });
+
+  test("databaseGate: same goes, other is refused, an unnamed file adopts unless a chain is off", () => {
+    expect(
+      databaseGate({ logDatabaseId: idA, databaseId: idA, plans: ["write"] }),
+    ).toEqual({ kind: "go" });
+    expect(
+      databaseGate({ logDatabaseId: idA, databaseId: idB, plans: ["write"] }),
+    ).toEqual({ kind: "mismatch", logDatabaseId: idA, databaseId: idB });
+    expect(databaseGate({ logDatabaseId: idA, databaseId: null, plans: [] })).toEqual({
+      kind: "mismatch",
+      logDatabaseId: idA,
+      databaseId: null,
+    });
+    expect(
+      databaseGate({ logDatabaseId: null, databaseId: null, plans: ["write", "empty"] }),
+    ).toEqual({ kind: "go" });
+    expect(
+      databaseGate({
+        logDatabaseId: null,
+        databaseId: idB,
+        plans: ["write", "rewritten"],
+      }),
+    ).toEqual({ kind: "hold" });
+  });
+
+  test("the mismatch message carries the code and both short ids", () => {
+    const message = databaseMismatchMessage({ logDatabaseId: idA, databaseId: idB });
+    expect(message.startsWith(`${ANCHOR_DATABASE_MISMATCH}:`)).toBe(true);
+    expect(message).toContain(idA.slice(0, 12));
+    expect(message).toContain(idB.slice(0, 12));
   });
 });

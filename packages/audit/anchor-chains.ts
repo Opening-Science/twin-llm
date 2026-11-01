@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import type { PrismaClient } from "@/generated/prisma/client";
 
 import {
@@ -7,6 +9,8 @@ import {
   anchorVerdict,
   type ChainAtAnchor,
   type ChainHead,
+  type DatabaseRead,
+  databaseIdOf,
   planAnchor,
 } from "./anchor";
 import {
@@ -38,7 +42,54 @@ const headOf = (row: HeadRow): ChainHead | null =>
     ? null
     : { seq: Number(row.seq), hash: row.hash, ts: row.ts.toISOString() };
 
-export type AnchorClient = Pick<PrismaClient, "auditEvent" | "disclosureEvent">;
+export type AnchorClient = Pick<
+  PrismaClient,
+  "auditEvent" | "disclosureEvent" | "anchorIdentity"
+>;
+
+/**
+ * This database's identity for the anchors (#382), as `databaseIdOf` hashes
+ * it. `read` never writes; `ensure` writes the random id on first use (the
+ * first anchor) and returns the stored one when it is already there.
+ */
+export type DatabaseIdentity = Readonly<{
+  read: () => Promise<string | null>;
+  ensure: () => Promise<string>;
+}>;
+
+export const databaseIdentity = (
+  client: Pick<PrismaClient, "anchorIdentity">,
+): DatabaseIdentity => {
+  const read = async (): Promise<string | null> => {
+    const row = await client.anchorIdentity.findUnique({
+      where: { id: 1 },
+      select: { databaseId: true },
+    });
+    return row === null ? null : databaseIdOf(row.databaseId);
+  };
+  return {
+    read,
+    ensure: async () => {
+      await client.anchorIdentity.createMany({
+        data: [{ id: 1, databaseId: randomUUID() }],
+        skipDuplicates: true,
+      });
+      const id = await read();
+      if (id === null) throw new Error("the database identity could not be written");
+      return id;
+    },
+  };
+};
+
+/** The identity as the verdict takes it; unreadable when the read fails. */
+export const readDatabase = async (identity: DatabaseIdentity): Promise<DatabaseRead> => {
+  try {
+    const databaseId = await identity.read();
+    return databaseId === null ? { kind: "none" } : { kind: "found", databaseId };
+  } catch {
+    return { kind: "unreadable" };
+  }
+};
 
 export const chainReaders = (
   client: AnchorClient,
@@ -125,11 +176,18 @@ export const planFromFile = (
 /** One chain checked against its latest anchor, signatures and all. */
 export const verifyAgainstAnchor = async (
   reader: ChainReader,
+  identity: DatabaseIdentity,
   paths: AnchorPaths,
   chain: ChainName,
 ): Promise<AnchorVerdict> => {
   const key = diskKeyOf(readAnchorKey(paths));
   const log = readAnchorLog(paths);
   const anchor = log.kind === "found" ? log.check.state.latest[chain] : undefined;
-  return anchorVerdict({ chain, key, log, facts: await factsAt(reader, anchor) });
+  return anchorVerdict({
+    chain,
+    key,
+    log,
+    facts: await factsAt(reader, anchor),
+    database: await readDatabase(identity),
+  });
 };

@@ -7,7 +7,7 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { createReadStream, existsSync } from "node:fs";
 import { readdir, readFile, statfs } from "node:fs/promises";
-import { userInfo } from "node:os";
+import { homedir, userInfo } from "node:os";
 import { join } from "node:path";
 
 import {
@@ -23,6 +23,7 @@ import { BUNDLE_SET_SQL } from "./cohort-fingerprint";
 import { EVAL_COHORT } from "./cohort-pins";
 import {
   defaultDatabaseUrl,
+  defaultStateDirSetting,
   databaseTarget,
   EXAMPLE_DATABASE_URL,
   envFileFromExample,
@@ -134,6 +135,12 @@ export const effectiveEnv = async (
     envFileFromExample(
       (await readText(join(root, ".env.synthetic.example"))) ?? "",
       defaultDatabaseUrl(platform, process.env.DATABASE_URL, userInfo().username),
+      defaultStateDirSetting(
+        platform,
+        process.env.TWINLLM_STATE_DIR,
+        homedir(),
+        process.env.XDG_DATA_HOME,
+      ),
     );
   return { envFile: existing !== null, env: { ...parseEnvFile(text), ...process.env } };
 };
