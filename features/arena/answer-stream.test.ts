@@ -8,7 +8,9 @@ import type {
   ModelResponseMetrics,
 } from "@/infrastructure/model-response-metrics";
 
-import { type StreamProgress, streamAnswer } from "./answer-stream";
+import { GENOME_IDS_BLOCKED_SENTENCE } from "@/infrastructure/free-text-check";
+
+import { type StreamProgress, streamAnswer, streamRefusalOf } from "./answer-stream";
 import { streamingView } from "./streaming-view";
 
 /**
@@ -298,5 +300,15 @@ describe("streamAnswer and the number check (#366)", () => {
     expect(result.ending).toBe("COMPLETE");
     expect(updates.some((update) => update.reviewing)).toBe(true);
     expect(updates.at(-1)?.reviewing).toBe(false);
+  });
+});
+
+describe("streamRefusalOf (#356)", () => {
+  test("only the fixed sentence of a blocked send is a refusal", () => {
+    expect(streamRefusalOf(new Error(GENOME_IDS_BLOCKED_SENTENCE))).toBe(
+      GENOME_IDS_BLOCKED_SENTENCE,
+    );
+    expect(streamRefusalOf(new Error("provider said something"))).toBeNull();
+    expect(streamRefusalOf(GENOME_IDS_BLOCKED_SENTENCE)).toBeNull();
   });
 });
