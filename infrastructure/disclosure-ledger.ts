@@ -1,7 +1,14 @@
 import type { AppendInput } from "@/packages/audit/append";
 
 import type { LlmProvider } from "./data-mode-policy";
-import { type CheckFreeText, type FreeTextCheck, requestText } from "./free-text-check";
+import {
+  blocksSend,
+  type CheckFreeText,
+  GENOME_IDS_BLOCKED_SENTENCE,
+  type FreeTextCheck,
+  hasGenomeShapedText,
+  requestText,
+} from "./free-text-check";
 
 /**
  * The disclosure ledger (#140, docs/privacy-design.md 2.5): what left this
@@ -31,7 +38,15 @@ export const DISCLOSURE_KINDS = [
 
 export type DisclosureKind = (typeof DISCLOSURE_KINDS)[number];
 
-export type DisclosureDirection = "sent" | "received";
+/**
+ * `blocked`: a request that was stopped before it was sent (#356), recorded
+ * so the person can see what would have gone. Nothing left this machine.
+ */
+export type DisclosureDirection = "sent" | "received" | "blocked";
+
+/** The direction as the Privacy page and the Lab card name it. */
+export const directionLabel = (value: string): "Sent" | "Received" | "Blocked" =>
+  value === "received" ? "Received" : value === "blocked" ? "Blocked" : "Sent";
 
 /** What a request carried, in words a person reads. Fixed strings only. */
 export const CATEGORY = {
@@ -70,7 +85,7 @@ export type Disclosure = Readonly<{
   /** The session of the paired audit row: a turn id, a thread id or a fresh id. */
   sessionId: string;
   kind: DisclosureKind;
-  /** Left out: sent. */
+  /** Left out: sent. `blocked`: stopped before the send (#356). */
   direction?: DisclosureDirection;
   recipient: string;
   /** The model id, request kind or file format. */
@@ -230,26 +245,78 @@ export const ledgeredFetch =
     return fetchFn(input, init);
   };
 
+/** What the free text check of one request came to (#346). */
+export type FreeTextOutcome =
+  | Readonly<{ status: "checked"; check: FreeTextCheck }>
+  /** No checker, or a body that cannot be read up front. */
+  | Readonly<{ status: "not-checked" }>
+  /** The check failed (a locked vault); `genomeShaped` when the text held rsID- or site-shaped text. */
+  | Readonly<{ status: "failed"; genomeShaped: boolean }>;
+
 /**
- * Checks a request body's free text for stored values (#346). Undefined,
- * which the ledger records as not checked, when there is no checker, the
- * body cannot be read up front, or the check fails (a locked vault); the
- * failure is logged by its name only. A match does not stop the send: the
- * row records it.
+ * Checks a request body's free text for stored values (#346). Not checked
+ * when there is no checker or the body cannot be read up front. A check
+ * that fails is logged by the error's name only.
  */
 export const checkRequestText = async (
   check: CheckFreeText | undefined,
   body: unknown,
-): Promise<FreeTextCheck | undefined> => {
-  if (check === undefined) return undefined;
+): Promise<FreeTextOutcome> => {
+  if (check === undefined) return { status: "not-checked" };
   const text = requestText(body);
-  if (text === null) return undefined;
+  if (text === null) return { status: "not-checked" };
   try {
-    return await check(text);
+    return { status: "checked", check: await check(text) };
   } catch (error) {
     console.error("free text check failed", errorName(error));
-    return undefined;
+    return { status: "failed", genomeShaped: hasGenomeShapedText(text) };
   }
+};
+
+/**
+ * Whether a request may go, and what its row records (#356). Blocked when
+ * the check found the person's own rsIDs or genome sites, or when the check
+ * failed on text that holds rsID- or site-shaped text (fail closed: it
+ * cannot be told apart from the person's own). Any other match, and a
+ * failed check on other text, is recorded and the request goes.
+ */
+export const sendDecision = (
+  outcome: FreeTextOutcome,
+): Readonly<{ blocked: boolean; freeText?: FreeTextCheck }> => {
+  if (outcome.status === "checked") {
+    return { blocked: blocksSend(outcome.check), freeText: outcome.check };
+  }
+  return { blocked: outcome.status === "failed" && outcome.genomeShaped };
+};
+
+export const GENOME_IDS_BLOCKED = "GENOME_IDS_BLOCKED" as const;
+
+/**
+ * A request to a hosted model that was not sent because it carried the
+ * person's own genome identifiers (#356). Its message is the fixed sentence
+ * the person reads, never anything from the request.
+ */
+export class GenomeIdsBlockedError extends Error {
+  readonly code = GENOME_IDS_BLOCKED;
+  constructor() {
+    super(GENOME_IDS_BLOCKED_SENTENCE);
+    this.name = "GenomeIdsBlockedError";
+  }
+}
+
+/**
+ * True when the error, or one it wraps (a `cause`, or the AI SDK's retry
+ * error's `lastError`), is a blocked send.
+ */
+export const isGenomeIdsBlocked = (error: unknown, depth = 0): boolean => {
+  if (depth > 5 || typeof error !== "object" || error === null) return false;
+  if (error instanceof GenomeIdsBlockedError) return true;
+  if ("code" in error && error.code === GENOME_IDS_BLOCKED) return true;
+  const inner = [
+    "cause" in error ? error.cause : undefined,
+    "lastError" in error ? error.lastError : undefined,
+  ];
+  return inner.some((each) => isGenomeIdsBlocked(each, depth + 1));
 };
 
 /**
@@ -257,7 +324,9 @@ export const checkRequestText = async (
  * machine (`recipient` null) or a call the caller states is not recorded,
  * else one that records a `hosted-model` row per HTTP request, with the
  * request's size and, given `checkText`, what the check of its free text
- * found (#346), before it goes out.
+ * found (#346), before it goes out. A request that carries the person's own
+ * genome identifiers is not sent (#356, `sendDecision`): its row is written
+ * as `blocked` and the fetch rejects with `GenomeIdsBlockedError`.
  */
 export const modelCallFetch = (
   fetchFn: typeof fetch,
@@ -272,15 +341,24 @@ export const modelCallFetch = (
   const { recipient, disclosure } = call;
   if (recipient === null || "notRecorded" in disclosure) return fetchFn;
   return ledgeredFetch(fetchFn, async (payloadBytes, body) => {
-    const freeText = await checkRequestText(call.checkText, body);
-    return call.record({
+    const { blocked, freeText } = sendDecision(
+      await checkRequestText(call.checkText, body),
+    );
+    const row: Disclosure = {
       ...disclosure,
       kind: "hosted-model",
+      ...(blocked ? { direction: "blocked" } : {}),
       recipient,
       target: call.modelId,
       payloadBytes,
       ...(freeText === undefined ? {} : { freeText }),
+    };
+    if (!blocked) return call.record(row);
+    // Nothing is sent either way; a row that cannot be written is only logged.
+    await call.record(row).catch((error: unknown) => {
+      console.error("blocked model request not recorded", errorName(error));
     });
+    throw new GenomeIdsBlockedError();
   });
 };
 
@@ -344,7 +422,7 @@ export type RecipientTotal = Readonly<{
 }>;
 
 const directionOf = (value: string): DisclosureDirection =>
-  value === "received" ? "received" : "sent";
+  value === "received" ? "received" : value === "blocked" ? "blocked" : "sent";
 
 const addCategories = (
   counts: RecipientTotal["categories"],

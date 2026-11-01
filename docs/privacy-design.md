@@ -658,14 +658,33 @@ recipient.
   value; the paired audit row carries the same list. The matcher is pure
   (`infrastructure/free-text-check.ts`), with at most 500 lookups per request. A body
   that cannot be read up front, or a check that fails (a locked vault), is recorded as
-  not checked, with the error's name in the log. _Open, for Peter:_ a match is recorded
-  and does not stop the send. _Limits:_ approximate. A value written another way (a unit
+  not checked, with the error's name in the log. _Limits:_ approximate. A value written another way (a unit
   conversion, a rounded number, another spelling) is missed, and lab values, clinical
   records, twin notes and wearable numbers are not searched yet; wearable and twin note
   values are recorded as references above. Exports, embeddings and live lookups are not
   checked (live lookups have their own query check).
+- **Blocking genome identifiers** (#356, option C). When the check finds an rsID or a
+  genome site that the person's VCFs hold, the request is not sent: `modelCallFetch`
+  writes the row with direction `blocked` (the paired audit row's result says `blocked`
+  too), still with kinds and counts only, and the fetch rejects with
+  `GenomeIdsBlockedError` (`sendDecision` in `infrastructure/disclosure-ledger.ts`). The
+  chat stream stores the answer row as `REFUSED` with the fixed sentence "This question
+  would have sent identifiers from your genome to a hosted model, so it was not sent. Ask
+  with a local model, or without the variant IDs." and the answer column shows it. If the
+  blocked row cannot be written, the request is still not sent and the error's name is
+  logged. Every other kind (file names, body scan labels, the account id) is recorded and
+  the request goes. _Fail closed for genome-shaped text:_ when the check fails (a locked
+  vault) and the text holds anything shaped like an rsID or a site (`rs` and digits, or a
+  chromosome 1 to 22, X, Y, M or MT with a position of four digits or more), the request
+  is blocked with `free_text_checked = false`, since it cannot be told whether the value
+  is the person's own; on other text a failed check is recorded as not checked and the
+  request goes. A body that cannot be read up front is not checked and goes. Ollama on
+  loopback is not a recipient, so it is neither checked nor blocked. _Limits:_ the same
+  as the check above: an identifier written another way is not found, so the block is
+  a safeguard, not a guarantee. Other callers of a hosted model (`/compact` drafts,
+  starter questions, the Ultra number check) fail as they do for any model error.
 - **Row.** `seq`, row id, time, actor (like the audit log; _changed from_ the user id),
-  kind, direction, recipient, target (model id, request kind or format), purpose,
+  kind, direction (`sent`, `received` or `blocked`), recipient, target (model id, request kind or format), purpose,
   categories, `ref_count`, `payload_bytes` (null when it cannot be measured up front),
   thread id when there is one, `synthetic`, `free_text_checked`, `free_text_matches`
   (#346; null when the check did not run), the sealed `refs`, the
@@ -692,7 +711,8 @@ synthetic), values, size, first and last time; then the latest 100 events, each 
 recipient, purpose, what it carried, size, a Synthetic badge where it applies, a link to
 the thread, its stored values as references under "Which stored values", and "Free
 text": the kinds and counts the check found (a warning badge when there are any), "no
-stored values found", or "not checked". The Lab
+stored values found", or "not checked". A blocked request (#356) reads "Blocked" where
+the others read "Sent", and has its own line in the running totals. The Lab
 card "What left this machine" checks the chain while locked too and shows the running
 totals only to a viewer whose data is unlocked (_changed from the first draft_, which
 showed counts while locked). Its command is

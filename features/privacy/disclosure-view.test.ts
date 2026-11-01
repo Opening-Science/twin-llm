@@ -152,6 +152,18 @@ describe("ledgerView (#140)", () => {
     ).toEqual({ text: "not checked", found: false });
   });
 
+  test("a blocked request reads as Blocked, in its own total (#356)", () => {
+    const blocked: LedgerEntry = { ...MODEL, seq: 3n, ts: at(15), direction: "blocked" };
+    const view = ledgerView([blocked, MODEL], [{ ...blocked, refs: [] }]);
+    expect(view.recipients.map((row) => [row.recipient, row.direction])).toEqual([
+      ["exoscale", "Blocked"],
+      ["exoscale", "Sent"],
+    ]);
+    expect(view.entries.map((entry) => [entry.direction, entry.freeText])).toEqual([
+      ["Blocked", "1 rsID"],
+    ]);
+  });
+
   test("an empty ledger shows nothing", () => {
     expect(ledgerView([], [])).toEqual({ recipients: [], entries: [], shownOf: null });
   });

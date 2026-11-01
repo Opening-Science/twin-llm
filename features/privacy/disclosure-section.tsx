@@ -38,9 +38,12 @@ export const DisclosureSection = ({ view }: Readonly<{ view: LedgerView }>) => (
       results) is checked for values stored here: rsIDs and genome sites of your imported
       files, their file names, body scan labels and your account id. Each entry says what
       kinds were found and how many, never the values. The check is approximate: a value
-      written another way is missed, and lab values and notes are not checked yet. A match
-      is recorded; it does not stop the request. Entries from before the check say not
-      checked. A model on this machine (Ollama on loopback) is not a recipient.
+      written another way is missed, and lab values and notes are not checked yet. A
+      request that holds rsIDs or genome sites from your imported files is not sent, and
+      its entry says Blocked. So is one with rsID- or site-shaped text when the check
+      itself fails. Other matches are recorded and the request still goes. Entries from
+      before the check say not checked. A model on this machine (Ollama on loopback) is
+      not a recipient.
     </p>
     {view.recipients.length === 0 ? (
       <p className="mt-4 text-sm">

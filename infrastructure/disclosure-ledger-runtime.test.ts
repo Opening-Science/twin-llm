@@ -1,10 +1,15 @@
 import { describe, expect, test } from "bun:test";
 
 import { checkDisclosureChain } from "@/packages/audit/disclosure-chain";
+import { sha256Hex, toCanonicalJson } from "@/packages/audit/hash";
 import { checkChain } from "@/packages/audit/verify-chain";
 
 import { createDisclosureWriter } from "./disclosure-ledger-runtime";
-import { createRecordDisclosure, type Disclosure } from "./disclosure-ledger";
+import {
+  createRecordDisclosure,
+  type Disclosure,
+  disclosureAuditEvent,
+} from "./disclosure-ledger";
 import { openJson, sealedCipher } from "./field-cipher";
 import { PersonalDataLockedError } from "./field-cipher-runtime";
 
@@ -102,6 +107,29 @@ describe("createDisclosureWriter (#140)", () => {
     ).toEqual([
       [true, [{ kind: "rsID", count: 1 }]],
       [true, []],
+    ]);
+    expect(checkDisclosureChain(db.ledger as never).ok).toBe(true);
+  });
+
+  test("a blocked request writes ledger and audit rows that say blocked (#356)", async () => {
+    const db = fakeDatabase();
+    const record = createRecordDisclosure(
+      createDisclosureWriter(db.client, () => cipher),
+    );
+    const blocked: Disclosure = {
+      ...DISCLOSURE,
+      direction: "blocked",
+      freeText: { matches: [{ kind: "rsID", count: 2 }] },
+    };
+    await record(blocked);
+    expect(
+      db.ledger.map((row) => [row.direction, row.freeTextChecked, row.freeTextMatches]),
+    ).toEqual([["blocked", true, [{ kind: "rsID", count: 2 }]]]);
+    // The audit row stores its result's hash: the result that says blocked.
+    const audit = disclosureAuditEvent(blocked);
+    expect(audit.result).toMatchObject({ direction: "blocked" });
+    expect(db.audit.map((row) => row.resultSha256)).toEqual([
+      sha256Hex(toCanonicalJson(audit.result)),
     ]);
     expect(checkDisclosureChain(db.ledger as never).ok).toBe(true);
   });

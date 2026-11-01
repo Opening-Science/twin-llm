@@ -149,18 +149,15 @@ describe("chat answer through a hosted model", () => {
       );
     await generateText({
       model: hostedModel(network, book.record, CHAT, check),
-      prompt: "Does rs4988235 or rs1801133 explain the Demo body scan?",
+      // rs1801133 is not in their file. One of theirs blocks the send (#356,
+      // genome-ids-blocked.test.ts).
+      prompt: "Does rs1801133 explain the Demo body scan?",
       maxRetries: 0,
     });
     expect(book.rows.map((row) => row.freeText)).toEqual([
-      {
-        matches: [
-          { kind: "rsID", count: 1 },
-          { kind: "body scan label", count: 1 },
-        ],
-      },
+      { matches: [{ kind: "body scan label", count: 1 }] },
     ]);
-    expect(JSON.stringify(book.rows)).not.toContain("rs4988235");
+    expect(JSON.stringify(book.rows)).not.toContain("Demo body");
   });
 
   test("a failing ledger means nothing is sent and the call fails", async () => {
