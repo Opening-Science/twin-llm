@@ -6,6 +6,7 @@ import {
   observedOverExpected,
   overExpected,
   runOracleStudy,
+  scenariosFor,
   withinInterval,
 } from "./oracle-study";
 import { specFor } from "./timing";
@@ -48,6 +49,7 @@ const options = {
   historyYears: 10,
   seed: 250,
   controlsPerExposed: 4,
+  afFactor: 1,
 };
 
 describe("helpers", () => {
@@ -121,5 +123,37 @@ describe("runOracleStudy", () => {
     ]);
     expect(study.subjects).toBe(100);
     expect(study.withoutBp).toBe(0);
+  });
+});
+
+describe("the AF hazard factor (#295 rule change)", () => {
+  test("every scenario carries the factor", () => {
+    const scenarios = scenariosFor(2);
+    expect(Object.values(scenarios).map((o) => o.afFactor)).toEqual([2, 2, 2, 2, 2]);
+    expect(scenarios.off.af).toBe("off");
+    expect(scenarios.on.af).toBe("on");
+  });
+
+  test("doubling the AF hazard doubles the planted ratio and leaves no-AF alone", () => {
+    const base = runOracleStudy(cohort, options);
+    const doubled = runOracleStudy(cohort, { ...options, afFactor: 2 });
+    const pick = (study: typeof base, id: string) =>
+      study.comparisons.find((c) => c.id === id);
+    expect(pick(doubled, "af-stroke")?.planted).toBeCloseTo(
+      2 * (pick(base, "af-stroke")?.planted ?? 0),
+      6,
+    );
+    expect(pick(doubled, "af-stroke")?.noAfEffect).toBeCloseTo(
+      pick(base, "af-stroke")?.noAfEffect ?? 0,
+      6,
+    );
+    // Within person the factor also applies to the lagged AF time before the
+    // recorded onset, so the expected ratio rises by less than the factor.
+    const within = pick(base, "within-after")?.expected ?? 0;
+    expect(pick(doubled, "within-after")?.expected).toBeGreaterThan(1.3 * within);
+    expect(pick(doubled, "within-after")?.expected).toBeLessThan(2 * within);
+    expect(pick(doubled, "within-after")?.recovered).toEqual(
+      pick(base, "within-after")?.recovered ?? null,
+    );
   });
 });

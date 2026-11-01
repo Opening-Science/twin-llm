@@ -698,7 +698,9 @@ gives a wrong one.
   test the remaining 16% directly. The within-person overshoot is still not
   recovered within tolerance.
 - New batches with `exporter.years_of_history = 0` would give the whole record,
-  many more strokes before AF onset, and tighter before rates.
+  many more strokes before AF onset, and tighter before rates. Six such
+  batches and a rule-change test are in `heart-brain-full-history-2026-11.md`
+  (#295): 14 strokes before onset where the 10-year export has 1.
 - Part 5: the General agent and the base model lose most answers to a refused
   chart call and to swapped codes; whether the system prompt should stop
   offering a chart for a cohort tool's output, and a held-out version of the hb

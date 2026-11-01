@@ -60,6 +60,8 @@ export type OracleStudyOptions = Readonly<{
   historyYears: number;
   seed: number;
   controlsPerExposed: number;
+  /** The oracle's AF hazard factor (`OracleOptions.afFactor`); 1 for the released jar. */
+  afFactor: number;
 }>;
 
 export type ObservedOverExpected = Readonly<{
@@ -127,10 +129,25 @@ export const withinInterval = (
     ? null
     : expected >= recovered.ci.low && expected <= recovered.ci.high;
 
-const OFF: OracleOptions = { ...MAIN, af: "off" };
-const ON: OracleOptions = { ...MAIN, af: "on" };
-const RECORDED: OracleOptions = { ...MAIN, onsets: "recorded" };
-const TREATED: OracleOptions = { ...MAIN, bpTreated: "from hypertension onset" };
+type Scenarios = Readonly<{
+  main: OracleOptions;
+  off: OracleOptions;
+  on: OracleOptions;
+  recorded: OracleOptions;
+  treated: OracleOptions;
+}>;
+
+/** The oracle scenarios, all with the same AF hazard factor. */
+export const scenariosFor = (afFactor: number): Scenarios => {
+  const main: OracleOptions = { ...MAIN, afFactor };
+  return {
+    main,
+    off: { ...main, af: "off" },
+    on: { ...main, af: "on" },
+    recorded: { ...main, onsets: "recorded" },
+    treated: { ...main, bpTreated: "from hypertension onset" },
+  };
+};
 
 // ---- Within-person cohort ---------------------------------------------------
 
@@ -185,6 +202,7 @@ const crudeOf = (cells: readonly Cell[]): number | null => {
 const withinPerson = (
   people: readonly Person[],
   subjects: ReadonlyMap<string, OracleSubject>,
+  oracle: Scenarios,
   spec: TimingSpec,
   idPrefix: string,
   labelPrefix: string,
@@ -204,12 +222,12 @@ const withinPerson = (
     );
   const scenarios = {
     observed: pieces.map(({ piece }) => (piece.event ? 1 : 0)),
-    expected: expectedUnder(MAIN),
-    noAfEffect: expectedUnder(OFF),
-    recordedOnsets: expectedUnder(RECORDED),
-    treatedBp: expectedUnder(TREATED),
-    afterOn: expectedUnder(ON, true),
-    afterOff: expectedUnder(OFF, true),
+    expected: expectedUnder(oracle.main),
+    noAfEffect: expectedUnder(oracle.off),
+    recordedOnsets: expectedUnder(oracle.recorded),
+    treatedBp: expectedUnder(oracle.treated),
+    afterOn: expectedUnder(oracle.on, true),
+    afterOff: expectedUnder(oracle.off, true),
   };
 
   const labels = windowLabels(spec.afterWindowsYears);
@@ -285,6 +303,7 @@ const withinPerson = (
 const caseSeries = (
   people: readonly Person[],
   subjects: ReadonlyMap<string, OracleSubject>,
+  oracle: Scenarios,
   spec: TimingSpec,
   id: string,
   label: string,
@@ -307,16 +326,16 @@ const caseSeries = (
             ),
     ).windows[0]?.ratio ?? null;
   const recovered = fit(null);
-  const expected = fit(MAIN)?.ratio ?? null;
+  const expected = fit(oracle.main)?.ratio ?? null;
   return {
     id,
     label,
     recovered,
     expected,
     planted: null,
-    noAfEffect: fit(OFF)?.ratio ?? null,
-    expectedRecordedOnsets: fit(RECORDED)?.ratio ?? null,
-    expectedTreatedBp: fit(TREATED)?.ratio ?? null,
+    noAfEffect: fit(oracle.off)?.ratio ?? null,
+    expectedRecordedOnsets: fit(oracle.recorded)?.ratio ?? null,
+    expectedTreatedBp: fit(oracle.treated)?.ratio ?? null,
     withinTolerance: withinInterval(recovered, expected),
     recoveredOverExpected: overExpected(recovered, expected),
     checks: [],
@@ -328,6 +347,7 @@ const caseSeries = (
 const matched = (
   people: readonly Person[],
   subjects: ReadonlyMap<string, OracleSubject>,
+  oracle: Scenarios,
   options: OracleStudyOptions,
   rule: Readonly<{ id: string; label: string; minAge?: number }>,
 ): Comparison => {
@@ -365,22 +385,22 @@ const matched = (
     const control = expectedOf(controls, scenario) / years(controls);
     return control > 0 ? expectedOf(exposed, scenario) / years(exposed) / control : null;
   };
-  const expectedExposed = expectedOf(exposed, MAIN);
-  const expectedControls = expectedOf(controls, MAIN);
+  const expectedExposed = expectedOf(exposed, oracle.main);
+  const expectedControls = expectedOf(controls, oracle.main);
   const expected =
     expectedControls > 0
       ? expectedExposed / years(exposed) / (expectedControls / years(controls))
       : null;
-  const exposedOff = expectedOf(exposed, OFF);
+  const exposedOff = expectedOf(exposed, oracle.off);
   return {
     id: rule.id,
     label: rule.label,
     recovered,
     expected,
-    planted: exposedOff > 0 ? expectedOf(exposed, ON) / exposedOff : null,
-    noAfEffect: ratioOf(OFF),
-    expectedRecordedOnsets: ratioOf(RECORDED),
-    expectedTreatedBp: ratioOf(TREATED),
+    planted: exposedOff > 0 ? expectedOf(exposed, oracle.on) / exposedOff : null,
+    noAfEffect: ratioOf(oracle.off),
+    expectedRecordedOnsets: ratioOf(oracle.recorded),
+    expectedTreatedBp: ratioOf(oracle.treated),
     withinTolerance: withinInterval(recovered, expected),
     recoveredOverExpected: overExpected(recovered, expected),
     checks: [
@@ -408,6 +428,7 @@ export const runOracleStudy = (
     ),
   );
 
+  const scenarios = scenariosFor(options.afFactor);
   const overall = specFor(0, [0]);
   const before = people.flatMap((person) => {
     const subject = subjects.get(person.id);
@@ -430,8 +451,11 @@ export const runOracleStudy = (
     withoutBp: rows.filter((row) => row.oracle.systolic.length === 0).length,
     afOnShareBefore: beforeDays > 0 ? afOnDays / beforeDays : null,
     comparisons: [
-      matched(people, subjects, options, { id: "af-stroke", label: "AF then stroke" }),
-      matched(people, subjects, options, {
+      matched(people, subjects, scenarios, options, {
+        id: "af-stroke",
+        label: "AF then stroke",
+      }),
+      matched(people, subjects, scenarios, options, {
         id: "af-stroke-55",
         label: "AF from age 55 then stroke",
         minAge: 55,
@@ -439,6 +463,7 @@ export const runOracleStudy = (
       ...withinPerson(
         people,
         subjects,
+        scenarios,
         specFor(0, [0, 2, 5]),
         "within",
         "Within-person, all ages",
@@ -446,12 +471,27 @@ export const runOracleStudy = (
       ...withinPerson(
         people,
         subjects,
+        scenarios,
         specFor(55, [0]),
         "within-55",
         "Within-person, from 55",
       ),
-      caseSeries(people, subjects, specFor(0, [0]), "sccs", "Case series, all ages"),
-      caseSeries(people, subjects, specFor(55, [0]), "sccs-55", "Case series, from 55"),
+      caseSeries(
+        people,
+        subjects,
+        scenarios,
+        specFor(0, [0]),
+        "sccs",
+        "Case series, all ages",
+      ),
+      caseSeries(
+        people,
+        subjects,
+        scenarios,
+        specFor(55, [0]),
+        "sccs-55",
+        "Case series, from 55",
+      ),
     ],
   };
 };
