@@ -50,6 +50,7 @@ describe("knowledge source preferences", () => {
       "compare_windows",
       "convert_unit",
       "coverage",
+      "gbd_estimate",
       "gbd_population",
       "range_position",
       "rhythm_irregularity",

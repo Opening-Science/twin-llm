@@ -13,6 +13,7 @@ import {
   PROVIDER_NOT_PERMITTED_FOR_DATA_MODE,
   PROVIDER_NOT_PERMITTED_SENTENCE,
 } from "@/infrastructure/data-mode-policy";
+import { GENOME_IDS_BLOCKED_SENTENCE } from "@/infrastructure/free-text-check";
 import {
   GENOME_THREAD_LOCAL_ONLY,
   GENOME_THREAD_SENTENCE,
@@ -185,6 +186,16 @@ export const refusalOf = async (response: Response): Promise<string | null> => {
     : null;
 };
 
+/**
+ * The refusal an error in the stream carries, or null. Only the fixed
+ * sentence of a blocked send (#356) counts; any other error text is not
+ * shown.
+ */
+export const streamRefusalOf = (error: unknown): string | null =>
+  error instanceof Error && error.message === GENOME_IDS_BLOCKED_SENTENCE
+    ? GENOME_IDS_BLOCKED_SENTENCE
+    : null;
+
 /** The response document carried in a message's metadata, if it is a valid one. */
 export const documentFromMetadata = (metadata: unknown): ResponseDocumentV1 | null => {
   if (typeof metadata !== "object" || metadata === null) return null;
@@ -244,6 +255,7 @@ export const streamAnswer = async (
     // callbacks, so these are written from them and read once at the end.
     let finished = false;
     let errored = false;
+    let refusal: string | null = null;
     let metrics: ModelResponseMetrics | null = null;
     let document: ResponseDocumentV1 | null = null;
     let last: ChatUIMessage | null = null;
@@ -252,8 +264,9 @@ export const streamAnswer = async (
       stream: validChunks(response.body, () => {
         finished = true;
       }),
-      onError: () => {
+      onError: (error) => {
         errored = true;
+        refusal = streamRefusalOf(error) ?? refusal;
       },
     });
 
@@ -280,7 +293,9 @@ export const streamAnswer = async (
           document,
           numberSources: numberSources(textOf(last), sourceParts(last.parts)),
         }
-      : { ending, metrics, document };
+      : ending === "FAILED" && refusal !== null
+        ? { ending, metrics, document, refusal }
+        : { ending, metrics, document };
   } catch (error) {
     // The error's name only: an incognito answer leaves nothing in the console.
     console.error(

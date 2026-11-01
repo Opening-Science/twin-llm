@@ -273,6 +273,8 @@ never repeated. Codes (`answer_class`, reasons, `next_step`) are never shown.
 - Guideline-only banner: `Answer drawn from published guidelines only; no data about you was used.`
 - Guideline references: `Published guideline passage as reference material, not a statement about this person.`
 - Population context: `Population estimate (IHME GBD 2021), not a statement about this person.`
+  The round is the one the rows carry: rows from the local store (`gbd_estimate`,
+  #387) read `IHME GBD 2023` (`gbdAttributionFor`).
   Each row is formatted by `formatGbdRow` (`infrastructure/response-document/gbd-labels.ts`):
   codes become plain labels (`deaths` → `Deaths`, `both` → `Both sexes`,
   `age_standardized` → `Age-standardised`, metric `rate` → `per 100,000`), and

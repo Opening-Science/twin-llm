@@ -52,12 +52,26 @@ const QUESTION = "Show me a chart of heart rate for subject synthetic-subject.";
 const CONTEXTS = [
   { label: "synthetic", mode: "synthetic", wearables: NO_WEARABLES, large: false },
   {
+    label: "synthetic, GBD imported",
+    mode: "synthetic",
+    wearables: NO_WEARABLES,
+    large: false,
+    gbdImported: true,
+  },
+  {
     label: "personal, no wearable",
     mode: "personal",
     wearables: NO_WEARABLES,
     large: false,
   },
   { label: "personal, Oura", mode: "personal", wearables: ONE_WEARABLE, large: false },
+  {
+    label: "personal, Oura, GBD imported",
+    mode: "personal",
+    wearables: ONE_WEARABLE,
+    large: false,
+    gbdImported: true,
+  },
   {
     label: "personal, all 4 wearables",
     mode: "personal",
@@ -83,6 +97,7 @@ export const promptSizeCases = (skills: readonly TurnSkill[]): readonly SizeCase
       uiContext: LONGEST_UI_CONTEXT,
       twinNotes: LONGEST_TWIN_NOTES,
       agent,
+      gbdImported: "gbdImported" in context && context.gbdImported,
     });
     return [
       ...[null, ...skills].map((skill) => ({

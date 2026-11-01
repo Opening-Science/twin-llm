@@ -59,3 +59,7 @@ Here "this repository" is TwinLLM (`scripts/anatomy/bake-anny-rigged.py`). The w
 ## Natural Earth
 
 The country and state boundaries in `public/geo/natural-earth/` and the location index in `infrastructure/charts/choropleth/location-index.json` are derived from [Natural Earth](https://www.naturalearthdata.com/) 5.1.1 (1:50m admin-0 countries, 1:10m admin-1 states and provinces), which is in the public domain. Made with Natural Earth. Version, archive hashes and the simplification: `public/geo/natural-earth/README.md`.
+
+## IHME Global Burden of Disease
+
+`bun run gbd:import` reads GBD 2023 results that a person downloads from IHME's GBD Results Tool (https://vizhub.healthdata.org/gbd-results/) with their own IHME account. Those results are free for non-commercial use with attribution under the IHME Free-of-Charge Non-Commercial User Agreement; they are not part of this repository and stay in the person's local database. Every figure is shown as "Population estimate (IHME GBD 2023), not a statement about this person." The location map in `packages/gbd-local/location-table.ts` holds GBD location ids, names and levels from IHME's public location metadata file (https://github.com/ihmeuw/CHAIN_IHME_adultmortality_edu_sysreview, `loction_metadata.csv`) with ISO 3166 codes; it holds no estimates. Details: `docs/gbd.md`.

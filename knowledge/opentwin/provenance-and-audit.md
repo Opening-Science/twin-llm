@@ -44,10 +44,11 @@ the database refuses rows from any other source. These rows describe no real per
 
 # Section: Population figures and guidelines
 
-- Population figures come from the IHME Global Burden of Disease study (GBD 2021)
-  through an optional connector. They describe populations, not this person. The
-  connector receives only fixed fields (cause, measure, location, age, sex, year),
-  never wearable values.
+- Population figures come from the IHME Global Burden of Disease study: GBD 2023
+  results a person imported on this machine, or GBD 2021 through an optional
+  connector. They describe populations, not this person. Both take only fixed
+  fields (cause or risk, measure, metric, location, age, sex, year), never
+  wearable values, and the imported results never leave the machine.
 - Guideline passages come from published clinical guidelines stored locally. Only
   guidelines with an open licence (CC BY-NC or CC BY-NC-ND) are stored in full; the
   others are cited by title and DOI only.

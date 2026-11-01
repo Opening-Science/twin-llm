@@ -12,7 +12,6 @@ import { fetchChatCatalog } from "@/infrastructure/fetch-model-catalog";
 import { serverEnv } from "@/infrastructure/env";
 import { chatModelIsLocal } from "@/infrastructure/genome-gate";
 import { INCOGNITO_PARAM, isIncognitoParam } from "@/infrastructure/incognito";
-import { defaultModelSelection } from "@/infrastructure/model-catalog";
 import { safeDraft, subjectDraft, subjectRefParam } from "@/infrastructure/shell-links";
 import { lockedScreen } from "@/features/vault/page-gate";
 
@@ -40,15 +39,11 @@ export default async function HomePage({
   const incognito = isIncognitoParam((await searchParams)[INCOGNITO_PARAM]);
   const catalog = await fetchChatCatalog(runnableSkills());
   const localModelIds = catalog && chatModelIsLocal() ? catalog.map(({ id }) => id) : [];
-  const offered = incognito
-    ? (catalog ?? []).filter(({ id }) => localModelIds.includes(id))
-    : catalog;
   const appUserId = actorId === null ? null : await findAppUserId(actorId);
   return (
     <NewChatScreen
       key={incognito ? "incognito" : "new"}
       catalog={catalog}
-      defaultModelIds={offered ? defaultModelSelection(offered) : []}
       skills={(await skillsFor(appUserId)).map(skillCommand)}
       sourceFacts={await loadPromptSourceFacts(appUserId, incognito)}
       incognito={incognito}

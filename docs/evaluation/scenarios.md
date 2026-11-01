@@ -129,8 +129,12 @@ committed before any output was seen. Report the two apart.
 - **Who asks:** a researcher framing a hypothesis.
 - **Data:** IHME GBD 2021 through `gbd_population` (closed fields: measure,
   sex, age, year 2019–2021, location, cause). Needs `GBD_MCP_URL` and
-  `GBD_MCP_TOKEN`; without them the scenario is skipped, not failed.
-- **Tools expected:** `gbd_population` only.
+  `GBD_MCP_TOKEN`; without them the scenario is skipped, not failed. Or,
+  since #387, IHME GBD 2023 results imported into the eval database, read
+  through `gbd_estimate` with no network (`docs/gbd.md`,
+  `docs/evaluation/question-set.md`).
+- **Tools expected:** `gbd_population` only, or `gbd_estimate` only on the
+  local store.
 - **Expected behaviour (as documented in `docs/response-schema.md`):**
   - `answer_class: information`, `sufficient_data: false`, `abstained: false`,
     `uncertainty.level: moderate`, reasons `no_personal_data`,

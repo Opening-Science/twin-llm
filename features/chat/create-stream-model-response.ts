@@ -17,10 +17,13 @@ import { splitThinking } from "@/infrastructure/think-block";
 import type { TwinNote } from "@/infrastructure/twin-notes";
 import type { VitronicSummary } from "@/infrastructure/vitronic-types";
 import type { WhoopSummary } from "@/infrastructure/whoop-types";
-import type {
-  ModelDisclosure,
-  UnrecordedModelCall,
+import {
+  isGenomeIdsBlocked,
+  type ModelDisclosure,
+  type UnrecordedModelCall,
 } from "@/infrastructure/disclosure-ledger";
+import { GENOME_IDS_BLOCKED_SENTENCE } from "@/infrastructure/free-text-check";
+import type { GbdEstimatePorts } from "@/packages/query-tools/gbd-estimate";
 import type { ImportedToolDeps } from "@/packages/query-tools/imported-tools";
 import type { GenomeVariantsDeps } from "@/packages/query-tools/imported-variants";
 import type { QueryToolPorts } from "@/packages/query-tools/ports";
@@ -157,6 +160,11 @@ export type StreamModelResponseDeps = Readonly<{
   variantTools: (scope: SessionScope) => GenomeVariantsDeps | undefined;
   /** The imported-data tools' ports, or undefined when the policy refuses this turn. */
   importedTools: (scope: SessionScope) => ImportedToolDeps | undefined;
+  /**
+   * The local GBD store's ports when estimates are imported (#387), read once
+   * per answer. Left out, or resolving to undefined, no `gbd_estimate`.
+   */
+  gbdLocal?: () => Promise<GbdEstimatePorts | undefined>;
   /** Audit rows of the turn's session, read once the model has finished. */
   loadAudit: (sessionId: string) => Promise<readonly ResponseToolCall[]>;
   store: AnswerStore;
@@ -215,6 +223,7 @@ export const createStreamModelResponse =
     const scope = { actor: clerkId, sessionId: turnId, mode: settings.dataMode };
     const genome = deps.genomeTools(scope);
     const variants = deps.variantTools(scope);
+    const gbdLocal = deps.gbdLocal === undefined ? undefined : await deps.gbdLocal();
     const { tools, offeredTools } = createTurnTools(
       scope,
       {
@@ -226,6 +235,7 @@ export const createStreamModelResponse =
         genome,
         variants,
         imported: deps.importedTools(scope),
+        gbdLocal,
         agent: context.agent?.id ?? null,
         live: {
           enabled: context.liveSources ?? [],
@@ -353,10 +363,18 @@ export const createStreamModelResponse =
           }
         },
         onError: async (error) => {
-          console.error(`[chat] model ${modelId} failed`, modelFailureLog(error));
-          await deps.store
-            .writeFailed({ turnId, modelId })
-            .catch(logStep("could not record the answer as failed"));
+          if (isGenomeIdsBlocked(error)) {
+            // Not sent (#356): the row keeps the refusal, as a reload shows it.
+            console.error(`[chat] model ${modelId} request blocked: genome identifiers`);
+            await deps.store
+              .markRefused({ turnId, modelId, sentence: GENOME_IDS_BLOCKED_SENTENCE })
+              .catch(logStep("could not store the refusal"));
+          } else {
+            console.error(`[chat] model ${modelId} failed`, modelFailureLog(error));
+            await deps.store
+              .writeFailed({ turnId, modelId })
+              .catch(logStep("could not record the answer as failed"));
+          }
           deps.analytics.answered({ clerkId, turnId, modelId, status: "FAILED" });
           reviewing.settle(false);
           outcome.settle(null);
@@ -368,7 +386,9 @@ export const createStreamModelResponse =
       },
     );
 
-    const failureText = (): string => USER_FACING_FAILURE;
+    // Fixed sentences only; a blocked send (#356) says why, so the column shows it.
+    const failureText = (error: unknown): string =>
+      isGenomeIdsBlocked(error) ? GENOME_IDS_BLOCKED_SENTENCE : USER_FACING_FAILURE;
 
     return twinUIMessageResponse({
       modelStream: turn.toUIMessageStream<ChatUIMessage>({

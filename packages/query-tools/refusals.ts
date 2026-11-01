@@ -1,3 +1,4 @@
+import { GBD_REFUSAL_CODES, type GbdRefusal } from "./gbd-refusals";
 import { IMPORTED_REFUSAL_CODES, type ImportedRefusal } from "./imported-refusals";
 import { SUBJECT_SCOPE_VIOLATION, type SubjectScopeViolation } from "./scope";
 
@@ -87,7 +88,8 @@ export type ToolRefusal =
   | CohortNotSupported
   | DesignNotSupported
   | CohortRecordCapExceeded
-  | ImportedRefusal;
+  | ImportedRefusal
+  | GbdRefusal;
 
 const REFUSAL_CODES: readonly string[] = [
   SUBJECT_SCOPE_VIOLATION.code,
@@ -107,6 +109,7 @@ const REFUSAL_CODES: readonly string[] = [
   "DESIGN_NOT_SUPPORTED",
   "COHORT_RECORD_CAP_EXCEEDED",
   ...IMPORTED_REFUSAL_CODES,
+  ...GBD_REFUSAL_CODES,
 ];
 
 export const isToolRefusal = (value: unknown): value is ToolRefusal =>

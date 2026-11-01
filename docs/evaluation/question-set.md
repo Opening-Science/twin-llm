@@ -182,6 +182,29 @@ bun run eval -- --models ollama:qwen3:8b --scenario S4 --run-id <date>-qwen3-8b-
 Without both names every S4 item is written as `MISSING_ENV` (the items list
 them in `context.requires`) and counted as skipped, not failed.
 
+S4 can instead run on the local GBD store (#387, `docs/gbd.md`), with no
+network and no token. Import GBD 2023 Results Tool CSVs into the eval
+database covering the measures, causes, locations, sexes, ages and years
+Q-S4-01 to Q-S4-08 ask. Leave Germany and the year 2015 out: Q-S4-09 and
+Q-S4-10 are out-of-catalogue probes, and an import that holds them turns the
+probes into answerable questions their expectations do not fit.
+
+```sh
+bun --env-file=.env.eval --preload ./features/chat/response/preload-server-only.mjs \
+  scripts/gbd/import.ts ~/Downloads/IHME-GBD_2023_DATA-*.csv
+bun run eval -- --models ollama:qwen3:8b --scenario S4 --run-id <date>-qwen3-8b-s4-local
+```
+
+When the eval database holds any GBD estimate, the harness offers
+`gbd_estimate` in place of `gbd_population`, counts `GBD_MCP_URL` and
+`GBD_MCP_TOKEN` as met (`scripts/evaluation/gbd-local-route.ts`), and the
+scorers read a `gbd_estimate` audit row as the GBD call: it meets a
+`must_call` of `gbd.gbd_query` and breaks a `must_not_call` of it
+(`auditTools` in `scripts/evaluation/score/turn.ts`). The question file is
+unchanged, so `questions_sha256` and the answer key stay as they are. Its
+`human` notes still name GBD 2021; a local run is labelled GBD 2023, and the
+run notes should say which route ran.
+
 S3 needs the guideline step: without it every `guideline_search` returns
 nothing and every S3 item abstains. The ingest needs Ollama with
 `nomic-embed-text` on `OLLAMA_BASE_URL`. Only the open (CC) titles may be

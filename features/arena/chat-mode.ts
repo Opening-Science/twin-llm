@@ -246,6 +246,16 @@ export const modeSummary = (
 };
 
 /**
+ * The ids a prompt bar opens with (#386): the rows a thread's last turn went
+ * to, so `initialSelection` reopens it in that turn's mode, or none for a new
+ * chat (or a thread with no turn yet), which then opens in Auto. The same
+ * approach as `initialEffort`, read from the same turns.
+ */
+export const initialModelIds = (
+  turns: readonly Readonly<{ answers: readonly Readonly<{ modelId: string }>[] }>[],
+): readonly string[] => turns.at(-1)?.answers.map((answer) => answer.modelId) ?? [];
+
+/**
  * The effort a prompt bar opens with (#379): a new chat starts at Balanced, a
  * thread at the effort its last turn ran at, read from that turn's stored
  * answers (their documents record it) or, for a turn sent in this tab, the

@@ -4,17 +4,22 @@ import {
   bodyBytes,
   checkRequestText,
   createRecordDisclosure,
+  directionLabel,
   type Disclosure,
   disclosureAuditEvent,
   DisclosureNotRecordedError,
+  GenomeIdsBlockedError,
+  isGenomeIdsBlocked,
   type LedgerEntry,
   ledgerTotals,
   ledgeredFetch,
   modelCallFetch,
   type ModelDisclosure,
   modelRecipient,
+  sendDecision,
   telemetryDisclosure,
 } from "./disclosure-ledger";
+import { type CheckFreeText, GENOME_IDS_BLOCKED_SENTENCE } from "./free-text-check";
 
 const DISCLOSURE: Disclosure = {
   actor: "user_synthetic_1",
@@ -246,7 +251,7 @@ describe("the free text check of a model request (#346)", () => {
       },
       checkText: async (text) => {
         checked.push(text);
-        return { matches: [{ kind: "rsID", count: 1 }] };
+        return { matches: [{ kind: "body scan label", count: 1 }] };
       },
     });
     await send("https://models.invalid/v1/chat", { body: BODY });
@@ -258,16 +263,19 @@ describe("the free text check of a model request (#346)", () => {
         recipient: "exoscale",
         target: "synthetic/model",
         payloadBytes: Buffer.byteLength(BODY, "utf8"),
-        freeText: { matches: [{ kind: "rsID", count: 1 }] },
+        freeText: { matches: [{ kind: "body scan label", count: 1 }] },
       },
     ]);
     expect(JSON.stringify(rows)).not.toContain("rs4988235");
   });
 
-  test("a failed check is recorded as not checked and the request still goes", async () => {
-    const order: string[] = [];
-    const rows: Disclosure[] = [];
-    const send = modelCallFetch(fakeFetch(order), {
+  /** A synthetic person's request with no rsID- or site-shaped text. */
+  const PLAIN = JSON.stringify({
+    messages: [{ role: "user", content: "How did the Demo body sleep?" }],
+  });
+
+  const sendWith = (checkText: CheckFreeText, order: string[], rows: Disclosure[]) =>
+    modelCallFetch(fakeFetch(order), {
       recipient: "exoscale",
       modelId: "synthetic/model",
       disclosure: MODEL_CALL,
@@ -276,22 +284,50 @@ describe("the free text check of a model request (#346)", () => {
         rows.push(disclosure);
         return RECEIPT;
       },
-      checkText: async () => {
+      checkText,
+    });
+
+  test("a failed check on text with no genome shape is not checked and the request goes", async () => {
+    const order: string[] = [];
+    const rows: Disclosure[] = [];
+    const send = sendWith(
+      async () => {
         throw new Error("locked");
       },
-    });
-    await send("https://models.invalid/v1/chat", { body: BODY });
+      order,
+      rows,
+    );
+    await send("https://models.invalid/v1/chat", { body: PLAIN });
     expect(order).toEqual(["record", "send"]);
     expect(rows[0]?.freeText).toBeUndefined();
+    expect(rows[0]?.direction).toBeUndefined();
   });
 
   test("checkRequestText: no checker or an unreadable body is not checked", async () => {
     const found = async () => ({ matches: [] });
-    expect(await checkRequestText(undefined, BODY)).toBeUndefined();
-    expect(await checkRequestText(found, new ReadableStream())).toBeUndefined();
-    expect(await checkRequestText(found, BODY)).toEqual({ matches: [] });
+    expect(await checkRequestText(undefined, BODY)).toEqual({ status: "not-checked" });
+    expect(await checkRequestText(found, new ReadableStream())).toEqual({
+      status: "not-checked",
+    });
+    expect(await checkRequestText(found, BODY)).toEqual({
+      status: "checked",
+      check: { matches: [] },
+    });
   });
 
+  test("checkRequestText: a failed check says whether the text had a genome shape", async () => {
+    const fails = async () => {
+      throw new Error("locked");
+    };
+    expect(await checkRequestText(fails, BODY)).toEqual({
+      status: "failed",
+      genomeShaped: true,
+    });
+    expect(await checkRequestText(fails, PLAIN)).toEqual({
+      status: "failed",
+      genomeShaped: false,
+    });
+  });
   test("the audit row carries the kinds and counts when the check ran", () => {
     expect(
       disclosureAuditEvent({
@@ -305,6 +341,187 @@ describe("the free text check of a model request (#346)", () => {
       synthetic: false,
       freeText: [{ kind: "genome site", count: 2 }],
     });
+  });
+});
+
+describe("blocking a request with the person's genome identifiers (#356)", () => {
+  const body = (content: string) =>
+    JSON.stringify({ messages: [{ role: "user", content }] });
+
+  const run = async (
+    content: string,
+    check: CheckFreeText,
+    record?: () => Promise<never>,
+  ) => {
+    const order: string[] = [];
+    const rows: Disclosure[] = [];
+    const send = modelCallFetch(fakeFetch(order), {
+      recipient: "exoscale",
+      modelId: "synthetic/model",
+      disclosure: MODEL_CALL,
+      record:
+        record ??
+        (async (disclosure) => {
+          order.push("record");
+          rows.push(disclosure);
+          return RECEIPT;
+        }),
+      checkText: check,
+    });
+    const sent = send("https://models.invalid/v1/chat", { body: body(content) });
+    return { order, rows, sent };
+  };
+
+  test("an rsID of the person's own blocks the send and the row says blocked", async () => {
+    const { order, rows, sent } = await run("Is rs4988235 in my file?", async () => ({
+      matches: [{ kind: "rsID", count: 1 }],
+    }));
+    await expect(sent).rejects.toBeInstanceOf(GenomeIdsBlockedError);
+    expect(order).toEqual(["record"]);
+    expect(rows).toEqual([
+      {
+        ...MODEL_CALL,
+        kind: "hosted-model",
+        direction: "blocked",
+        recipient: "exoscale",
+        target: "synthetic/model",
+        payloadBytes: Buffer.byteLength(body("Is rs4988235 in my file?"), "utf8"),
+        freeText: { matches: [{ kind: "rsID", count: 1 }] },
+      },
+    ]);
+    expect(JSON.stringify(rows)).not.toContain("rs4988235");
+  });
+
+  test("a genome site of the person's own blocks the send", async () => {
+    const { order, rows, sent } = await run("What is at chr7:117559590?", async () => ({
+      matches: [{ kind: "genome site", count: 1 }],
+    }));
+    await expect(sent).rejects.toThrow(GENOME_IDS_BLOCKED_SENTENCE);
+    expect(order).toEqual(["record"]);
+    expect(rows[0]?.direction).toBe("blocked");
+    expect(JSON.stringify(rows)).not.toContain("117559590");
+  });
+
+  test("a name, file name, scan label or account id is recorded and the request goes", async () => {
+    const { order, rows, sent } = await run("How did the Demo body sleep?", async () => ({
+      matches: [
+        { kind: "file name", count: 1 },
+        { kind: "body scan label", count: 1 },
+        { kind: "account id", count: 1 },
+      ],
+    }));
+    await sent;
+    expect(order).toEqual(["record", "send"]);
+    expect(rows[0]?.direction).toBeUndefined();
+    expect(rows[0]?.freeText?.matches.length).toBe(3);
+  });
+
+  test("an rsID that is not the person's own is not blocked", async () => {
+    const { order, sent } = await run("What does rs1801133 do?", async () => ({
+      matches: [],
+    }));
+    await sent;
+    expect(order).toEqual(["record", "send"]);
+  });
+
+  test("a failed check on rsID- or site-shaped text blocks (fail closed)", async () => {
+    for (const content of ["Is rs4988235 in my file?", "What is at 7:117559590?"]) {
+      const { order, rows, sent } = await run(content, async () => {
+        throw new Error("PersonalDataLockedError");
+      });
+      await expect(sent).rejects.toBeInstanceOf(GenomeIdsBlockedError);
+      expect(order).toEqual(["record"]);
+      expect(rows[0]?.direction).toBe("blocked");
+      expect(rows[0]?.freeText).toBeUndefined();
+    }
+  });
+
+  test("a blocked request stays unsent when its row cannot be written", async () => {
+    const { order, sent } = await run(
+      "Is rs4988235 in my file?",
+      async () => ({ matches: [{ kind: "rsID", count: 1 }] }),
+      async () => {
+        throw new DisclosureNotRecordedError("Error");
+      },
+    );
+    await expect(sent).rejects.toBeInstanceOf(GenomeIdsBlockedError);
+    expect(order).toEqual([]);
+  });
+
+  test("a model on this machine is never checked or blocked", async () => {
+    const order: string[] = [];
+    const checked: string[] = [];
+    const send = modelCallFetch(fakeFetch(order), {
+      recipient: null,
+      modelId: "qwen3:4b",
+      disclosure: MODEL_CALL,
+      record: async () => {
+        throw new Error("no ledger row for a local model");
+      },
+      checkText: async (text) => {
+        checked.push(text);
+        return { matches: [{ kind: "rsID", count: 1 }] };
+      },
+    });
+    await send("http://127.0.0.1:11434/api/chat", { body: body("rs4988235") });
+    expect(order).toEqual(["send"]);
+    expect(checked).toEqual([]);
+  });
+
+  test("sendDecision: genome kinds block, other kinds and unchecked text do not", () => {
+    expect(
+      sendDecision({
+        status: "checked",
+        check: { matches: [{ kind: "rsID", count: 2 }] },
+      }),
+    ).toEqual({ blocked: true, freeText: { matches: [{ kind: "rsID", count: 2 }] } });
+    expect(
+      sendDecision({
+        status: "checked",
+        check: { matches: [{ kind: "file name", count: 1 }] },
+      }).blocked,
+    ).toBe(false);
+    expect(sendDecision({ status: "not-checked" })).toEqual({ blocked: false });
+    expect(sendDecision({ status: "failed", genomeShaped: true })).toEqual({
+      blocked: true,
+    });
+    expect(sendDecision({ status: "failed", genomeShaped: false })).toEqual({
+      blocked: false,
+    });
+  });
+
+  test("the audit row of a blocked request says blocked, with kinds and counts", () => {
+    expect(
+      disclosureAuditEvent({
+        ...DISCLOSURE,
+        direction: "blocked",
+        freeText: { matches: [{ kind: "rsID", count: 1 }] },
+      }).result,
+    ).toEqual({
+      direction: "blocked",
+      categories: ["question text", "wearable summary"],
+      bytes: 1234,
+      synthetic: false,
+      freeText: [{ kind: "rsID", count: 1 }],
+    });
+  });
+
+  test("isGenomeIdsBlocked finds the error itself or wrapped", () => {
+    const blocked = new GenomeIdsBlockedError();
+    expect(isGenomeIdsBlocked(blocked)).toBe(true);
+    expect(isGenomeIdsBlocked(new Error("outer", { cause: blocked }))).toBe(true);
+    expect(isGenomeIdsBlocked({ lastError: blocked })).toBe(true);
+    expect(isGenomeIdsBlocked(new Error(GENOME_IDS_BLOCKED_SENTENCE))).toBe(false);
+    expect(isGenomeIdsBlocked(null)).toBe(false);
+  });
+
+  test("directionLabel names each direction", () => {
+    expect(["sent", "received", "blocked", "other"].map(directionLabel)).toEqual([
+      "Sent",
+      "Received",
+      "Blocked",
+      "Sent",
+    ]);
   });
 });
 
@@ -413,6 +630,17 @@ describe("ledgerTotals", () => {
           { category: "date window", events: 1 },
         ],
       },
+    ]);
+  });
+
+  test("blocked requests are totalled apart from sent ones (#356)", () => {
+    const totals = ledgerTotals([
+      row({ ts: at(1) }),
+      row({ ts: at(2), direction: "blocked" }),
+    ]);
+    expect(totals.map((total) => [total.direction, total.events])).toEqual([
+      ["blocked", 1],
+      ["sent", 1],
     ]);
   });
 

@@ -123,9 +123,11 @@ export const exoscaleTarget = (
  * Every HTTP request to a model that is not on this machine (anything but
  * Ollama on loopback) is first written to the disclosure ledger (#140) with
  * the caller's `disclosure`, the request's size and what the check of its
- * free text for the person's stored values found (#346; recorded, not
- * blocking); if that write fails the request is not sent and the call fails. `{ notRecorded }` is for the
- * evaluation harness only (`tests/disclosures/outbound-paths.test.ts`).
+ * free text for the person's stored values found (#346); if that write fails
+ * the request is not sent and the call fails. A request that carries the
+ * person's own rsIDs or genome sites is not sent either (#356): its row says
+ * blocked and the call fails with `GenomeIdsBlockedError`. `{ notRecorded }`
+ * is for the evaluation harness only (`tests/disclosures/outbound-paths.test.ts`).
  */
 export type ModelCallOptions = Readonly<{
   hasWearableNarrative: boolean;

@@ -1,9 +1,12 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  blocksSend,
+  BLOCKING_KINDS,
   describeFreeTextCheck,
   FREE_TEXT_KIND,
   freeTextCheckOf,
+  hasGenomeShapedText,
   isDistinctiveId,
   type KnownValue,
   knownValueMatches,
@@ -186,5 +189,34 @@ describe("freeTextCheckOf and its words", () => {
     expect(parseFreeTextMatches(null)).toBeNull();
     expect(parseFreeTextMatches([{ kind: "a value", count: 1 }])).toBeNull();
     expect(parseFreeTextMatches([{ kind: "rsID", count: 0 }])).toBeNull();
+  });
+});
+
+describe("blocking (#356)", () => {
+  test("only rsIDs and genome sites block", () => {
+    expect(BLOCKING_KINDS).toEqual([FREE_TEXT_KIND.rsid, FREE_TEXT_KIND.site]);
+    expect(blocksSend({ matches: [{ kind: "rsID", count: 1 }] })).toBe(true);
+    expect(blocksSend({ matches: [{ kind: "genome site", count: 3 }] })).toBe(true);
+    expect(
+      blocksSend({
+        matches: [
+          { kind: "file name", count: 1 },
+          { kind: "body scan label", count: 1 },
+          { kind: "account id", count: 1 },
+        ],
+      }),
+    ).toBe(false);
+    expect(blocksSend({ matches: [] })).toBe(false);
+  });
+
+  test("genome-shaped text: rsIDs and sites on human chromosomes only", () => {
+    expect(hasGenomeShapedText("Is rs4988235 in there?")).toBe(true);
+    expect(hasGenomeShapedText("What is at chrX:153000000?")).toBe(true);
+    expect(hasGenomeShapedText("and at 22:21000000")).toBe(true);
+    expect(hasGenomeShapedText("Slept at 10:30, Ann Biomed Eng 37:1701-1709")).toBe(
+      false,
+    );
+    expect(hasGenomeShapedText("chr23:12345 and 0:12345")).toBe(false);
+    expect(hasGenomeShapedText("How did the Demo body sleep?")).toBe(false);
   });
 });
