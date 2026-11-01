@@ -114,7 +114,7 @@ export const IMPORTED_TOOL_DEFINITIONS = [
   {
     name: IMPORTED_DATASETS_TOOL,
     description:
-      "The person's own imported datasets: id, kind, name, rows, date range, and each series (LOINC or name, unit, n). No values.",
+      "The person's own imported datasets: id, kind, name, rows, date range, and each series (LOINC or name, unit, n). No values. Call it first; cite a value with its dataset and date as stored.",
     input: importedDatasetsInput,
   },
   {
@@ -126,7 +126,7 @@ export const IMPORTED_TOOL_DEFINITIONS = [
   {
     name: IMPORTED_TREND_TOOL,
     description:
-      "Least-squares slope per day of one imported series (dataset_id and loinc or name) in a window. Up to 5000 rows; refuses mixed units and month or year dates.",
+      "Least-squares slope per day of one imported series (dataset_id and loinc or name) in a window. Up to 5000 rows; refuses mixed units and month or year dates. A series stored by name is not the LOINC of a similar name (HRV RMSSD is not SDNN, 80404-7): never combine them or mix datasets in one trend.",
     input: importedTrendInput,
   },
   {

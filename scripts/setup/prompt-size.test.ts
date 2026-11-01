@@ -7,7 +7,12 @@ import {
   DEFAULT_OLLAMA_NUM_CTX,
   promptBudgetTokens,
 } from "../../infrastructure/ollama-context";
-import { loadSkills, promptSizeCases, sizeRow } from "./prompt-size";
+import {
+  loadSkills,
+  PROMPT_HEADROOM_TOKENS,
+  promptSizeCases,
+  sizeRow,
+} from "./prompt-size";
 
 /**
  * The context budget (issue #149): the system prompt and model-facing tool
@@ -50,6 +55,20 @@ describe("prompt + tools fit the Ollama context", () => {
       const body = await captureOllamaTurnRequest(sizeCase.turn, 32_768);
       expect(sizeRow(sizeCase.label, body).estimate).toBeLessThanOrEqual(
         promptBudgetTokens(32_768),
+      );
+    },
+  );
+
+  test.each(CASES.map((c) => [c.label, c]))(
+    "%s leaves PROMPT_HEADROOM_TOKENS free before twin notes (#393)",
+    async (_label, sizeCase) => {
+      const numCtx = sizeCase.largeContext ? 32_768 : DEFAULT_OLLAMA_NUM_CTX;
+      const body = await captureOllamaTurnRequest(
+        { ...sizeCase.turn, twinNotes: [] },
+        numCtx,
+      );
+      expect(sizeRow(sizeCase.label, body).estimate).toBeLessThanOrEqual(
+        promptBudgetTokens(numCtx) - PROMPT_HEADROOM_TOKENS,
       );
     },
   );

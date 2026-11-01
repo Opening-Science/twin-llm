@@ -1,6 +1,17 @@
 import { describe, expect, test } from "bun:test";
 
+import { GENOME_TOOL_DEFINITIONS } from "@/packages/carbon-x/schema";
+import { IMPORTED_TOOL_DEFINITIONS } from "@/packages/query-tools/imported-schemas";
+import { TOOL_DEFINITIONS } from "@/packages/query-tools/schemas";
+import { showViewInput, VIEW_TOOL_DEFINITIONS } from "@/packages/query-tools/view-schema";
+
 import { buildTwinSystemPrompt } from "./twin-system-prompt";
+
+const descriptionOf = (
+  definitions: readonly Readonly<{ name: string; description: string }>[],
+  name: string,
+): string =>
+  definitions.find((definition) => definition.name === name)?.description ?? "";
 
 const noWearables = {
   oura: null,
@@ -81,45 +92,65 @@ describe("system prompt with sources turned off", () => {
     ).toBe(buildTwinSystemPrompt({ ...noWearables, mode: "personal" }));
   });
 
-  test("the units line is there only when convert_unit is offered", () => {
-    const line =
-      "## Units\nUse `convert_unit` for any unit conversion; never convert a number in the answer text. If it refuses a pair, give the value in the unit it came in.\n";
+  test("the units rule is in convert_unit's description, not the prompt (#393)", () => {
     const prompt = (mode: "personal" | "synthetic", tools: readonly string[]) =>
       buildTwinSystemPrompt({ ...noWearables, mode, offeredTools: new Set(tools) });
-    expect(prompt("synthetic", ["convert_unit"])).toContain(line);
-    expect(prompt("personal", ["convert_unit"])).toContain(line);
-    expect(prompt("synthetic", ["latest_by_loinc"])).not.toContain("convert_unit");
+    expect(prompt("synthetic", ["convert_unit"])).not.toContain("## Units");
+    expect(prompt("personal", ["convert_unit"])).not.toContain("convert_unit");
+    expect(descriptionOf(TOOL_DEFINITIONS, "convert_unit")).toContain(
+      "Use it for every unit conversion, never convert in the answer text; if refused, give the value in the unit it came in.",
+    );
   });
 
-  test("the reopen line is there only when open_view is offered", () => {
-    const line = "call `list_views` and then `open_view` with its id";
-    const prompt = (tools: readonly string[]) =>
-      buildTwinSystemPrompt({
-        ...noWearables,
-        mode: "personal",
-        offeredTools: new Set(tools),
-      });
-    expect(prompt(["show_view", "list_views", "open_view"])).toContain(line);
-    expect(prompt(["show_view"])).not.toContain(line);
+  test("reopening a chart and the other view kinds are in the view tools' descriptions (#393)", () => {
+    const prompt = buildTwinSystemPrompt({
+      ...noWearables,
+      mode: "personal",
+      offeredTools: new Set(["show_view", "list_views", "open_view"]),
+    });
+    expect(prompt).not.toContain("list_views");
+    expect(prompt).not.toContain("Other kinds");
+    expect(descriptionOf(VIEW_TOOL_DEFINITIONS, "open_view")).toContain(
+      "by its list_views id",
+    );
+    expect(descriptionOf(VIEW_TOOL_DEFINITIONS, "show_view")).toContain(
+      "chart.compare: window against compare_with (n and mean each)",
+    );
+  });
+
+  test("twin.body without a window uses each marker's latest reading (#393)", () => {
+    expect(showViewInput.shape.window.description).toBe(
+      "Needed except for twin.body and map.choropleth; twin.body without it uses each marker's latest reading",
+    );
   });
 });
 
-describe("imported-data section", () => {
-  test("appears only when the turn carries the imported-data tools", () => {
-    const withImported = buildTwinSystemPrompt({
+describe("imported-data and genome guidance (#393)", () => {
+  test("lives in the tools' descriptions, paid only when the tools are offered", () => {
+    const prompt = buildTwinSystemPrompt({
       ...noWearables,
       mode: "personal",
-      offeredTools: new Set(["imported_datasets", "imported_latest", "imported_trend"]),
+      offeredTools: new Set([
+        "imported_datasets",
+        "imported_latest",
+        "imported_trend",
+        "genome_report",
+        "dna_ask",
+      ]),
     });
-    expect(withImported).toContain(
-      [
-        "## Imported data (the person's own files)",
-        "- Call `imported_datasets` first to see which datasets, codes and names exist. Cite a value with its dataset and date as stored.",
-        "- A series stored by name is not the LOINC code of a similar name: HRV RMSSD is not SDNN (80404-7). Never combine them, and never mix datasets in one trend.",
-      ].join("\n"),
+    expect(prompt).not.toContain("## Imported data");
+    expect(prompt).not.toContain("## Genome");
+    expect(descriptionOf(IMPORTED_TOOL_DEFINITIONS, "imported_datasets")).toContain(
+      "Call it first; cite a value with its dataset and date as stored.",
     );
-    expect(buildTwinSystemPrompt({ ...noWearables, mode: "personal" })).not.toContain(
-      "## Imported data",
+    expect(descriptionOf(IMPORTED_TOOL_DEFINITIONS, "imported_trend")).toContain(
+      "A series stored by name is not the LOINC of a similar name (HRV RMSSD is not SDNN, 80404-7): never combine them or mix datasets in one trend.",
+    );
+    expect(descriptionOf(GENOME_TOOL_DEFINITIONS, "dna_ask")).toContain(
+      "Quote its answer labelled Carbon-X (research model): research output, not a fact about the person. Say what a variant is known to affect; never give a dose or say to start, stop or change a medicine.",
+    );
+    expect(descriptionOf(GENOME_TOOL_DEFINITIONS, "genome_report")).toContain(
+      "no call (the call file has nothing there; not the reference allele)",
     );
   });
 });

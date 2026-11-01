@@ -52,6 +52,25 @@ The answer runs through the same pipeline as a saved one: `createStartAnswer` (s
 
 `list_views` and `open_view` find no earlier views, since nothing was stored. Twin notes are never loaded, and `/compact` says there is nothing saved to draft from. The genome tools stay available where the genome policy allows them, because the model is local. Ollama's own logs on this machine are outside TwinLLM.
 
+## Prompt budget and tools by need (#393)
+
+The system prompt and the tool list of a first turn must fit 12,288 tokens (the 16,384 context chat asks Ollama for, less 4,096 for the turn), checked per data mode, skill and agent by `scripts/setup/prompt-size.test.ts`. Since #393 every case must also leave `PROMPT_HEADROOM_TOKENS` (500) free before twin notes, so the next tool does not have to cut another line. Twin notes are left out of that check because they are cut to whatever room the turn leaves (`features/chat/twin-notes-room.ts`); with more room a turn simply carries more notes.
+
+Before #393 the largest case (personal, Oura, GBD imported, General agent) estimated 12,286 tokens. After it, 11,727 before notes: 561 free. Run `bun run prompt:size` for every case.
+
+What changed, without changing any tool's behaviour, refusal codes or closed schema:
+
+- Guidance for one tool lives in that tool's description, so a turn pays for it only when the tool is offered, and at the tool list's lower estimated rate (4 characters a token against 2.5 for prompt prose). The units rule moved to `convert_unit`; the genome lines to `genome_report` (`no call` is not the reference allele) and `dna_ask` (quote it as Carbon-X (research model), no dose or medicine change); the imported-data lines to `imported_datasets` (call it first, cite dataset and date) and `imported_trend` (a series stored by name is not a LOINC of a similar name; never combine or mix datasets).
+- Wording said twice is said once. The prompt's "Other kinds" line repeated the `show_view` description and its reopen line repeated `open_view`; both are gone from the prompt. The window object's description no longer repeats the date format its `start` and `end` already give. `guideline_search` and `knowledge_search` go through `modelInputSchema` like the other tools, which drops the `$schema` line.
+- The note dropped in #392 is back, in `show_view`'s `window` description: twin.body without a window uses each marker's latest reading.
+
+Options looked at and not taken:
+
+- Offering GBD and the map only on population questions. `gbd_estimate` is about 225 tokens and the map kind and `level` about 60. A population question needs both, so the measured worst case keeps them and routing frees nothing there; on other questions it would only give twin notes more room, and a follow-up such as "and for women?" could lose the tools. No question router was added.
+- Genome tools only with a VCF and a local model. `genome_report` and `dna_ask` are offered only when the genome policy allows them (personal mode, `GENOME_SOURCE=ark`, Ollama and Carbon-X on loopback), and `genome_variants` and the imported-data tools only in personal mode with Ollama on loopback. `genome_variants` (about 170 tokens) is offered whether or not a VCF is imported; gating it on an imported VCF needs a store read per turn and does not change the worst case, which assumes one. Left as a follow-up.
+
+The eval harness builds the same prompt, so runs before and after #393 differ by these lines.
+
 ## Modes and effort
 
 Auto, Manual and Compare, and five effort steps from Quick to Ultra (#366): see

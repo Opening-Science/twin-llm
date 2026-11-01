@@ -44,7 +44,10 @@ describe("notes room", () => {
   });
 
   test("the turn with the largest tool set gets fewer notes and stays under the budget", async () => {
-    const turn = { ...caseOf("personal, Oura"), twinNotes: LONGEST_TWIN_NOTES };
+    const turn = {
+      ...caseOf("personal, Oura, GBD imported agent:gp"),
+      twinNotes: LONGEST_TWIN_NOTES,
+    };
     const body = await captureOllamaTurnRequest(turn, DEFAULT_OLLAMA_NUM_CTX);
     const carried = notesIn(systemTextOf(body));
     expect(carried.length).toBeLessThan(FULL.text.length);
