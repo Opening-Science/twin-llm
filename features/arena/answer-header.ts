@@ -27,14 +27,20 @@ export const autoLineOf = (
     : null;
 
 /**
- * The model a specialist runs on in this catalog, for the Auto line (#366);
- * null when the catalog does not offer it (a reload after it changed).
+ * The model Auto runs a specialist on in this catalog, for the Auto line
+ * (#366): Auto's own base model (#379). Null when the catalog does not offer
+ * the specialist (a reload after it changed).
  */
 export const specialistModelIn =
   (catalog: readonly Readonly<{ id: string; agent?: CatalogAgent }>[] | null) =>
-  (agentId: string): string | null =>
-    catalog?.find((row) => row.id === `${AGENT_ID_PREFIX}${agentId}`)?.agent
-      ?.baseModelName ?? null;
+  (agentId: string): string | null => {
+    const specialist = catalog?.find(
+      (row) => row.id === `${AGENT_ID_PREFIX}${agentId}`,
+    )?.agent;
+    if (specialist === undefined) return null;
+    const auto = catalog?.find((row) => row.id === AUTO_MODEL_ID)?.agent;
+    return (auto ?? specialist).baseModelName;
+  };
 
 /**
  * The line that names an answer's effort (#366), from its response document.

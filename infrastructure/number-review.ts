@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { answerNumbers, numberSources, type NumberSourcePart } from "./number-sources";
+import { sectionSpans, sectionText } from "./parse-twin-answer";
 import { splitThinking } from "./think-block";
 
 /**
@@ -71,13 +72,29 @@ export type ReviewNumber = Readonly<{ text: string; context: string; matched: bo
 
 const oneLine = (text: string): string => text.replace(/\s+/g, " ").trim();
 
-/** The answer's numbers to check, in text order, each with a little context. */
+/**
+ * The part of a reply the check reads (#379): the Answer section when the reply
+ * has one, else the whole reply. The Reasoning, Evidence Used and Uncertainty
+ * sections often repeat the answer's numbers, which listed them twice.
+ */
+export const reviewedAnswer = (reply: string): string =>
+  sectionText(sectionSpans(reply), reply, "answer") ?? reply;
+
+/**
+ * The answer's numbers to check, in text order, each with a little context.
+ * A value written more than once is checked once, at its first place (#379);
+ * it counts as matched when the matcher found any of its places.
+ */
 export const reviewNumbers = (
   answer: string,
   parts: readonly NumberSourcePart[],
 ): Readonly<{ numbers: readonly ReviewNumber[]; skipped: number }> => {
-  const all = answerNumbers(answer);
+  const found = answerNumbers(answer);
   const sourced = new Set(numberSources(answer, parts).map((source) => source.start));
+  const all = found.filter(
+    (narrated, index) =>
+      found.findIndex((other) => other.value === narrated.value) === index,
+  );
   const numbers = all.slice(0, MAX_REVIEW_NUMBERS).map((narrated) => ({
     text: narrated.text,
     context: oneLine(
@@ -86,7 +103,9 @@ export const reviewNumbers = (
         narrated.end + CONTEXT_CHARS,
       ),
     ),
-    matched: sourced.has(narrated.start),
+    matched: found.some(
+      (other) => other.value === narrated.value && sourced.has(other.start),
+    ),
   }));
   return { numbers, skipped: Math.max(0, all.length - MAX_REVIEW_NUMBERS) };
 };

@@ -97,6 +97,7 @@ const disconnect = (path: string, refresh: () => Promise<void>) => () => {
 export const PromptBar = ({
   catalog,
   initialModelIds,
+  initialEffort = DEFAULT_EFFORT,
   busy,
   streaming = false,
   skills = [],
@@ -112,6 +113,8 @@ export const PromptBar = ({
 }: Readonly<{
   catalog: readonly CatalogModel[] | null;
   initialModelIds: readonly string[];
+  /** The effort a reopened thread's last turn ran at (#379); Balanced for a new chat. */
+  initialEffort?: EffortLevel;
   /** A prompt is being written down; the box waits. */
   busy: boolean;
   /** Answers are streaming into this tab: Send becomes Stop. */
@@ -147,7 +150,7 @@ export const PromptBar = ({
   const [selection, setSelection] = useState(() =>
     initialSelection(initialModelIds, offered ?? []),
   );
-  const [effort, setEffort] = useState<EffortLevel>(DEFAULT_EFFORT);
+  const [effort, setEffort] = useState<EffortLevel>(initialEffort);
   const [menuDismissed, setMenuDismissed] = useState(false);
   const [sourcesOpen, setSourcesOpen] = useState(false);
   const [picked, setPicked] = useState<Command | null>(null);

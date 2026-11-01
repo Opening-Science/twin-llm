@@ -7,6 +7,7 @@ import {
 } from "@/infrastructure/model-catalog";
 
 import {
+  initialEffort,
   initialSelection,
   manualAnswerCount,
   modeModelIds,
@@ -232,5 +233,29 @@ describe("modeSummary", () => {
         CATALOG,
       ),
     ).toBe("Compare · 2 models");
+  });
+});
+
+describe("initialEffort (#379)", () => {
+  const answer = (level: "quick" | "balanced" | "ultra" | null) => ({
+    document:
+      level === null
+        ? null
+        : { effort: { level, thinking: "on", max_steps: 12, review: false } },
+  });
+
+  test("a reopened thread starts at its last turn's effort", () => {
+    expect(
+      initialEffort([
+        { answers: [answer("quick")] },
+        { answers: [answer(null), answer("ultra")] },
+      ]),
+    ).toBe("ultra");
+  });
+
+  test("a turn sent in this tab, a turn from before effort and a new chat", () => {
+    expect(initialEffort([{ effort: "quick", answers: [answer(null)] }])).toBe("quick");
+    expect(initialEffort([{ answers: [answer(null)] }])).toBe("balanced");
+    expect(initialEffort([])).toBe("balanced");
   });
 });

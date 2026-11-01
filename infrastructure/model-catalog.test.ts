@@ -218,6 +218,24 @@ describe("agents in the catalog (#218)", () => {
     });
   });
 
+  test("Auto runs its pick on the model that calls tools most, a hand-picked specialist on its own (#379)", () => {
+    const rows = withAgents([ollama("qwen3:8b"), ollama("qwen3:4b")], LOCAL);
+    expect(rows[0]?.agent?.baseModelId).toBe("qwen3:4b");
+    expect(turnAgentOf("agent:auto", rows, "How did I sleep last night?")).toEqual({
+      ...catalogAgentOf("agent:sleep", rows),
+      baseModelId: "qwen3:4b",
+      baseModelName: "qwen3:4b",
+      via: "auto",
+    } as CatalogAgent);
+    expect(turnAgentOf("agent:sleep", rows, "How did I sleep?")?.baseModelId).toBe(
+      "qwen3:8b",
+    );
+    const only8b = withAgents([ollama("qwen3:8b")], LOCAL);
+    expect(turnAgentOf("agent:auto", only8b, "How did I sleep?")?.baseModelId).toBe(
+      "qwen3:8b",
+    );
+  });
+
   test("turnAgentOf: Auto runs as the agent the router picks, marked via auto", () => {
     const rows = withAgents([ollama("qwen3:8b")], LOCAL);
     expect(turnAgentOf("agent:auto", rows, "How did I sleep last night?")).toEqual({

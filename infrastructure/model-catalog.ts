@@ -324,15 +324,24 @@ export const withAgents = (
     },
   );
   const [first] = agents;
+  const autoBase = agentBaseModel(AUTO_AGENT.modelPreference, models);
   const auto: CatalogModel[] =
-    first?.agent === undefined
+    first?.agent === undefined || autoBase === null
       ? []
       : [
           {
-            ...first,
+            ...autoBase,
             id: agentModelId(AUTO_AGENT),
             name: AUTO_AGENT.name,
-            agent: { ...first.agent, ...AUTO_AGENT, skill: null },
+            agent: {
+              ...first.agent,
+              id: AUTO_AGENT.id,
+              name: AUTO_AGENT.name,
+              role: AUTO_AGENT.role,
+              skill: null,
+              baseModelId: autoBase.id,
+              baseModelName: autoBase.name,
+            },
           },
         ];
   return [...auto, ...agents, ...models];
@@ -411,7 +420,8 @@ export const modelCanThink = (
  * The agent Auto runs as for one question (#219): the one the router picks
  * among the agents this catalog offers, marked `via: "auto"`. A stored column
  * name ("Auto → Sleep") wins when that agent is still offered, so a retry runs
- * as the agent the header names.
+ * as the agent the header names. It runs on Auto's own base model (#379), the
+ * one that calls tools most reliably (`AUTO_AGENT.modelPreference`).
  */
 export const autoAgentFor = (
   prompt: string,
@@ -433,7 +443,16 @@ export const autoAgentFor = (
         ).agentId,
     ) ??
     offered[0];
-  return chosen === undefined ? null : { ...chosen, via: "auto" };
+  const autoBase = catalog.find((row) => row.id === AUTO_MODEL_ID)?.agent;
+  if (chosen === undefined) return null;
+  return autoBase === undefined
+    ? { ...chosen, via: "auto" }
+    : {
+        ...chosen,
+        baseModelId: autoBase.baseModelId,
+        baseModelName: autoBase.baseModelName,
+        via: "auto",
+      };
 };
 
 /**
