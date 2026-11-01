@@ -19,9 +19,13 @@ and those go through the same checks as before (`checkTurnRequest`, `/api/chat`)
 The interface calls the agents "specialists", never doctors, and keeps their research
 labels, such as Heart rhythm (research).
 
-A new chat starts in Auto when the catalog offers the specialists, else in Compare. A
-saved thread reopens in the mode its last ids show: Auto's one row is Auto, a pair or a
-single row is Manual, anything else is Compare (every thread from before modes).
+A new chat starts in Auto at Balanced when the catalog offers the specialists, else in
+Compare. A saved thread reopens in the mode its last ids show: Auto's one row is Auto, a
+pair or a single row is Manual, anything else is Compare (every thread from before
+modes). A thread with no turn yet opens like a new chat. Both read the thread's last
+turn (`initialModelIds` and `initialEffort` in `chat-mode.ts`); the pages pass no
+default ids, since a list of two or three ids reads as Compare (#386). In an incognito
+chat Auto is offered only when its model runs on this machine.
 
 ### Specialist on a chosen model
 
