@@ -73,6 +73,20 @@ describe("prompt + tools fit the Ollama context", () => {
     },
   );
 
+  test("genome_variants is sent only when a VCF is imported (#399)", async () => {
+    const named = async (label: string) => {
+      const sizeCase = CASES.find((candidate) => candidate.label === label);
+      if (sizeCase === undefined) throw new Error(`no case ${label}`);
+      const body = await captureOllamaTurnRequest(sizeCase.turn, DEFAULT_OLLAMA_NUM_CTX);
+      return (body.tools ?? []).map((tool) => tool.function.name);
+    };
+    expect(await named("personal, no wearable")).not.toContain("genome_variants");
+    expect(await named("personal, no wearable, VCF imported")).toContain(
+      "genome_variants",
+    );
+    expect(await named("synthetic")).not.toContain("genome_variants");
+  });
+
   test("the request asks Ollama for the context, with thinking off", async () => {
     const [first] = CASES;
     if (first === undefined) throw new Error("no cases");

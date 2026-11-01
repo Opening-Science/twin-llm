@@ -64,19 +64,28 @@ const CONTEXTS = [
     wearables: NO_WEARABLES,
     large: false,
   },
+  {
+    label: "personal, no wearable, VCF imported",
+    mode: "personal",
+    wearables: NO_WEARABLES,
+    large: false,
+    vcfImported: true,
+  },
   { label: "personal, Oura", mode: "personal", wearables: ONE_WEARABLE, large: false },
   {
-    label: "personal, Oura, GBD imported",
+    label: "personal, Oura, GBD and VCF imported",
     mode: "personal",
     wearables: ONE_WEARABLE,
     large: false,
     gbdImported: true,
+    vcfImported: true,
   },
   {
-    label: "personal, all 4 wearables",
+    label: "personal, all 4 wearables, VCF imported",
     mode: "personal",
     wearables: WORST_CASE_WEARABLES,
     large: true,
+    vcfImported: true,
   },
 ] as const;
 
@@ -98,6 +107,7 @@ export const promptSizeCases = (skills: readonly TurnSkill[]): readonly SizeCase
       twinNotes: LONGEST_TWIN_NOTES,
       agent,
       gbdImported: "gbdImported" in context && context.gbdImported,
+      vcfImported: "vcfImported" in context && context.vcfImported,
     });
     return [
       ...[null, ...skills].map((skill) => ({

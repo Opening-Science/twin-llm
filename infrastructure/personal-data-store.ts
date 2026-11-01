@@ -429,6 +429,9 @@ const CHAT_LISTED_KINDS: ImportKind[] = IMPORT_KINDS.filter(
   (kind) => !isGenomeImportKind(kind),
 );
 
+/** The genome kinds: an imported VCF. */
+const GENOME_LISTED_KINDS: ImportKind[] = IMPORT_KINDS.filter(isGenomeImportKind);
+
 export const importedDataReads = (
   userId: () => Promise<string | null>,
 ): Omit<ImportedDataPorts, "appendAudit"> => {
@@ -703,6 +706,17 @@ const compareVariant = (
   b: Readonly<{ chrom: string; pos: number; id: string }>,
 ): number =>
   compareNullable(a.chrom, b.chrom) || a.pos - b.pos || compareNullable(a.id, b.id);
+
+/**
+ * Has this person imported a VCF (#399)? A count over the plain `kind` column,
+ * so nothing is opened and the vault may stay locked. The chat route asks it
+ * only after the VCF permit holds, to leave `genome_variants` off a turn with
+ * no VCF to read.
+ */
+export const hasImportedVcf = async (userId: string): Promise<boolean> =>
+  (await database().personalDataset.count({
+    where: { userId, kind: { in: GENOME_LISTED_KINDS } },
+  })) > 0;
 
 /**
  * The reads behind `genome_variants` (#307): the person's datasets, and the
