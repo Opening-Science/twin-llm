@@ -243,7 +243,7 @@ describe("buildTwinSystemPrompt map line (#388)", () => {
       offeredTools: new Set(["gbd_estimate", "show_view"]),
     });
     expect(prompt).toContain(
-      "- To map `gbd_estimate` estimates this turn looked up, call `show_view` with kind `map.choropleth`: level world or region by country, or level country for one country's states (look them up with `children_of` the country). It needs no measure or window.",
+      "- To map `gbd_estimate` estimates this turn looked up, call `show_view` with kind `map.choropleth`: level world or region by country, or level country for one country's states (look them up with `children_of` World for every country, or `children_of` the country for its states). It needs no measure or window.",
     );
     expect(prompt).not.toContain("To map `gbd_population`");
   });

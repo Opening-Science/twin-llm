@@ -22,6 +22,26 @@ describe("formatGbdRow", () => {
     );
   });
 
+  test("HALE at birth has no cause and is in years (#394)", () => {
+    expect(
+      formatGbdRow({
+        ...base,
+        measure: "hale",
+        cause: "",
+        age: "at_birth",
+        value: 70.5,
+        lower: 68,
+        upper: 73,
+        unit: "years",
+      }),
+    ).toBe(
+      "Healthy life expectancy (HALE) · Switzerland · 2021 · Both sexes · At birth · 70.5 years (uncertainty interval 68–73)",
+    );
+    expect(formatGbdRow({ ...base, measure: "life_expectancy" })).toContain(
+      "Life expectancy · ",
+    );
+  });
+
   test("labels every measure, sex and age code", () => {
     expect(
       formatGbdRow({ ...base, measure: "dalys", sex: "female", age: "age_standardized" }),

@@ -53,3 +53,36 @@ export const binText = (from: number, to: number, decimals: number): string =>
   formatNumber(from, decimals) === formatNumber(to, decimals)
     ? formatNumber(from, decimals)
     : `${formatNumber(from, decimals)} to ${formatNumber(to, decimals)}`;
+
+/** Measures where a higher value means people live longer or longer in health. */
+const HIGHER_IS_BETTER: ReadonlySet<string> = new Set(["hale", "life_expectancy"]);
+
+/** Burden measures: a higher value means more illness, disability or death. */
+const LOWER_IS_BETTER: ReadonlySet<string> = new Set([
+  "deaths",
+  "dalys",
+  "yld",
+  "yll",
+  "prevalence",
+  "incidence",
+]);
+
+/**
+ * Which way is better for a measure, by its code: higher for HALE and life
+ * expectancy, lower for burden measures, null when the measure does not say
+ * (#394). The scale is the same either way: a stronger colour is a higher value, in the light and the dark theme.
+ */
+export const betterDirection = (measure: string): "higher" | "lower" | null => {
+  const code = measure.trim().toLowerCase();
+  if (HIGHER_IS_BETTER.has(code)) return "higher";
+  if (LOWER_IS_BETTER.has(code)) return "lower";
+  return null;
+};
+
+/** The legend line on direction: `Stronger colour is higher; higher is better`. */
+export const directionText = (measure: string): string => {
+  const better = betterDirection(measure);
+  return better === null
+    ? "Stronger colour is higher"
+    : `Stronger colour is higher; ${better} is better`;
+};

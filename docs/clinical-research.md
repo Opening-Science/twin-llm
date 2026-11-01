@@ -90,6 +90,24 @@ fibrillation". And they run on simulated people, so the evaluation can ask wheth
 tool recovers the episodes we simulated. A tool that told a real person they have a
 condition would have a medical purpose, and the section above applies.
 
+## Population estimates stay calm
+
+`gbd_estimate` reads IHME GBD population estimates (#387, #394). A figure for
+Switzerland or the world says how a population fares on average. It is not a
+person's risk, and it says nothing about the person asking.
+
+When a question names no measure, the tool leads with measures of living well:
+healthy life expectancy (HALE), life expectancy, then DALYs, YLDs and
+prevalence. Deaths come only when the question asks for deaths. A question
+about health in a country is usually a question about how long and how well
+people live there, and leading with death counts reads as alarm the data does
+not support.
+
+The map follows the same idea. Its colours are one neutral scale, never a red
+alarm scale; a stronger colour is always a higher value (darker in the light
+theme, brighter in the dark one), and the legend says which way is
+better (higher for HALE and life expectancy, lower for burden measures).
+
 ## See also
 
 - [agents.md](agents.md) for the roster and the router.

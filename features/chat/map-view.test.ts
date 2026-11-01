@@ -44,6 +44,22 @@ const row = (
 });
 
 describe("estimateLabel", () => {
+  test("names HALE at birth without a cause (#394)", () => {
+    expect(
+      estimateLabel({
+        location: "Switzerland",
+        value: 70.5,
+        lower: null,
+        upper: null,
+        unit: "years",
+        measure: "hale",
+        year: "2023",
+        sex: "both",
+        age: "at_birth",
+      }),
+    ).toBe("Healthy life expectancy (HALE), 2023, both sexes, at birth");
+  });
+
   test("names the estimate from its own fields", () => {
     expect(estimateLabel(row("Nigeria", 1))).toBe(
       "Prevalence, Diabetes mellitus, 2021, both sexes, age-standardised",

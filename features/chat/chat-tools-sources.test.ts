@@ -167,7 +167,7 @@ describe("chat tools and knowledge sources", () => {
 
 describe("the local GBD store (#387)", () => {
   const gbdLocal: GbdEstimatePorts = {
-    catalog: async () => ({ locations: [], causes: [], risks: [] }),
+    catalog: async () => ({ locations: [], causes: [], risks: [], ages: [] }),
     findEstimates: async () => [],
     appendAudit: async () => undefined,
   };

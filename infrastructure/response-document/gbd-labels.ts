@@ -2,6 +2,8 @@ import { GBD_ATTRIBUTION_LINE, gbdAttributionLine } from "@/packages/gbd-mcp/con
 import type { GbdRow } from "@/packages/gbd-mcp/normalize";
 
 const MEASURE_LABELS: Readonly<Record<string, string>> = {
+  hale: "Healthy life expectancy (HALE)",
+  life_expectancy: "Life expectancy",
   deaths: "Deaths",
   dalys: "Disability-adjusted life years (DALYs)",
   yld: "Years lived with disability (YLDs)",
@@ -19,6 +21,7 @@ const SEX_LABELS: Readonly<Record<string, string>> = {
 const AGE_LABELS: Readonly<Record<string, string>> = {
   all_ages: "All ages",
   age_standardized: "Age-standardised",
+  at_birth: "At birth",
 };
 
 /** IHME metric codes as they may arrive in `unit`; anything else is shown as given. */
@@ -55,7 +58,8 @@ export type GbdRowLabel = Pick<
  * One population-context row in plain words, e.g.
  * "Deaths · Cardiovascular diseases · Switzerland · 2021 · Both sexes · All ages ·
  * 12.5 per 100,000 (uncertainty interval 10–15)". The interval is shown only
- * when both bounds are present.
+ * when both bounds are present. HALE and life expectancy have no cause, so
+ * that part is left out.
  */
 export const formatGbdRow = (row: GbdRowLabel): string => {
   const interval =
@@ -70,7 +74,9 @@ export const formatGbdRow = (row: GbdRowLabel): string => {
     label(SEX_LABELS, row.sex),
     label(AGE_LABELS, row.age),
     `${withUnit(row.value, row.unit)}${interval}`,
-  ].join(" · ");
+  ]
+    .filter((part) => part !== "")
+    .join(" · ");
 };
 
 /**

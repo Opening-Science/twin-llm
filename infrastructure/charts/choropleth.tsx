@@ -28,6 +28,7 @@ import { binFill, binIndex, legendBins, quantileBreaks } from "./choropleth/colo
 import { centreLongitude, layoutMap } from "./choropleth/map-shapes";
 import {
   binText,
+  directionText,
   intervalText,
   regionLabel,
   uiText,
@@ -112,6 +113,8 @@ const useBoundaries = (country: string | null): Loaded => {
 export type ChoroplethProps = Readonly<{
   title: string;
   unit: string | null;
+  /** The estimate's measure code; the legend says which way is better for it. */
+  measure?: string;
   level: MapLevel;
   /** ISO 3166-1 alpha-3 of the country whose states are drawn; level country only. */
   country?: string | null;
@@ -144,6 +147,7 @@ const cell = (value: number | null, decimals: number): string =>
 export const Choropleth = ({
   title,
   unit,
+  measure = "",
   level,
   country = null,
   regions,
@@ -407,6 +411,7 @@ export const Choropleth = ({
             </span>
           </span>
         ))}
+        <span className="text-muted-foreground">{directionText(measure)}</span>
         <span className="flex items-center gap-1.5">
           <svg width={16} height={12} className="rounded-sm">
             {/* The no-data hatch; the map's places without a value use it too. */}
@@ -447,7 +452,8 @@ export const Choropleth = ({
       <table className="sr-only">
         <caption>
           {title}
-          {unit === null || unit === "" ? "" : ` (${formatUnit(unit)})`}
+          {unit === null || unit === "" ? "" : ` (${formatUnit(unit)})`}.{" "}
+          {directionText(measure)}.
         </caption>
         <thead>
           <tr>

@@ -3,8 +3,11 @@
  * row counts 0 rows and the model can say plainly why there is no figure.
  */
 
-/** Rows one `gbd_estimate` call may return. More is refused, not cut. */
-export const GBD_ROW_CAP = 200;
+/**
+ * Rows one `gbd_estimate` call may return: every GBD country (204) for one
+ * year fits, for a world map (#394). More is refused, not cut.
+ */
+export const GBD_ROW_CAP = 250;
 
 export const GBD_REFUSAL_CODES = [
   "GBD_NOT_IMPORTED",

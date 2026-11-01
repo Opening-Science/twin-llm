@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import {
   MADE_UP_CAUSE_CSV,
+  MADE_UP_HALE_CSV,
   MADE_UP_RISK_CSV,
 } from "@/packages/gbd-local/made-up-results.test-helpers";
 import { type GbdCsvRow, parseGbdResultsCsv } from "@/packages/gbd-local/results-csv";
@@ -11,10 +12,12 @@ import {
   type GbdCatalog,
   type GbdEstimatePorts,
   type GbdEstimateQuery,
+  type GbdEstimateResult,
+  gbdModelOutput,
   runGbdEstimate,
 } from "./gbd-estimate";
 import { gbdEstimateInput } from "./gbd-estimate-schema";
-import { GBD_NOT_IMPORTED, GBD_TOO_MANY_ROWS } from "./gbd-refusals";
+import { GBD_NOT_IMPORTED, GBD_ROW_CAP, GBD_TOO_MANY_ROWS } from "./gbd-refusals";
 import type { SessionScope } from "./scope";
 import { QUERY_TOOL_FAILED } from "./tool-core";
 
@@ -29,7 +32,11 @@ const rowsOf = (text: string): readonly GbdCsvRow[] => {
   return parsed.rows;
 };
 
-const STORED = [...rowsOf(MADE_UP_CAUSE_CSV), ...rowsOf(MADE_UP_RISK_CSV)];
+const STORED = [
+  ...rowsOf(MADE_UP_CAUSE_CSV),
+  ...rowsOf(MADE_UP_RISK_CSV),
+  ...rowsOf(MADE_UP_HALE_CSV),
+];
 
 const distinct = (pairs: readonly (readonly [number | null, string | null])[]) =>
   [
@@ -47,6 +54,7 @@ const fakePorts = (stored: readonly GbdCsvRow[] = STORED) => {
     locations: distinct(stored.map((row) => [row.locationId, row.locationName])),
     causes: distinct(stored.map((row) => [row.causeId, row.causeName])),
     risks: distinct(stored.map((row) => [row.reiId, row.reiName])),
+    ages: [...new Set(stored.map((row) => row.ageId))].sort((a, b) => a - b),
   });
   const ports: GbdEstimatePorts = {
     catalog,
@@ -109,7 +117,84 @@ describe("gbd_estimate input", () => {
   });
 });
 
+const HALE_AT_BIRTH = {
+  measure: "hale",
+  metric: "years",
+  sex: "both",
+  age: "at_birth",
+} as const;
+
+describe("gbd_estimate input: HALE and life expectancy (#394)", () => {
+  test("take metric years and no cause or risk", () => {
+    const ok = { ...HALE_AT_BIRTH, locations: ["CHE"], years: [2023] };
+    expect(gbdEstimateInput.safeParse(ok).success).toBe(true);
+    expect(
+      gbdEstimateInput.safeParse({ ...ok, measure: "life_expectancy" }).success,
+    ).toBe(true);
+    expect(gbdEstimateInput.safeParse({ ...ok, metric: "rate" }).success).toBe(false);
+    expect(
+      gbdEstimateInput.safeParse({ ...ok, cause: "Cardiovascular diseases" }).success,
+    ).toBe(false);
+  });
+
+  test("years and at_birth are theirs only", () => {
+    const deaths = { ...CVD_DEATHS, locations: ["CHE"], years: [2023] };
+    expect(gbdEstimateInput.safeParse({ ...deaths, metric: "years" }).success).toBe(
+      false,
+    );
+    expect(gbdEstimateInput.safeParse({ ...deaths, age: "at_birth" }).success).toBe(
+      false,
+    );
+  });
+});
+
 describe("gbd_estimate", () => {
+  test("HALE at birth reads the youngest age group, 0-6 days (id 2), with no cause", async () => {
+    const { ports, queries } = fakePorts();
+    const result = await runGbdEstimate(
+      synthetic,
+      { ...HALE_AT_BIRTH, locations: ["Switzerland", "Germany"], years: [2023] },
+      ports,
+    );
+    expect(queries[0]?.ageId).toBe(2);
+    expect(queries[0]?.causeId).toBeNull();
+    expect(queries[0]?.reiId).toBeNull();
+    if (!("rows" in result)) throw new Error("refused");
+    expect([result.unit, result.cause, result.risk]).toEqual(["years", null, null]);
+    expect(result.rows.map((row) => [row.location, row.value])).toEqual([
+      ["Switzerland", 70.25],
+      ["Germany", 68.75],
+    ]);
+  });
+
+  test("life expectancy at birth is its own measure", async () => {
+    const { ports } = fakePorts();
+    const result = await runGbdEstimate(
+      synthetic,
+      {
+        ...HALE_AT_BIRTH,
+        measure: "life_expectancy",
+        locations: ["Switzerland"],
+        years: [2023],
+      },
+      ports,
+    );
+    expect("rows" in result ? result.rows.map((row) => row.value) : result).toEqual([
+      80.5,
+    ]);
+  });
+
+  test("at birth with no life table age group imported is refused", async () => {
+    const { ports, queries } = fakePorts(rowsOf(MADE_UP_CAUSE_CSV));
+    const result = await runGbdEstimate(
+      synthetic,
+      { ...HALE_AT_BIRTH, locations: ["Switzerland"], years: [2023] },
+      ports,
+    );
+    expect("code" in result ? result.code : null).toBe("GBD_NO_ESTIMATE");
+    expect(queries).toEqual([]);
+  });
+
   test("two countries, two years: exact rows and 95% UI, audited without a subject", async () => {
     const { ports, audits } = fakePorts();
     const input = {
@@ -354,10 +439,10 @@ describe("gbd_estimate", () => {
     expect("code" in sdi ? sdi.code : sdi).toBe("GBD_NO_SDI");
   });
 
-  test("more than 200 matching estimates is refused, not cut", async () => {
+  test("more than GBD_ROW_CAP matching estimates is refused, not cut", async () => {
     const [first] = rowsOf(MADE_UP_CAUSE_CSV);
     if (first === undefined) throw new Error("fixture");
-    const many = Array.from({ length: 201 }, (_, index) => ({
+    const many = Array.from({ length: GBD_ROW_CAP + 1 }, (_, index) => ({
       ...first,
       locationId: 100_000 + index,
       locationName: `Made-up place ${index}`,
@@ -394,5 +479,48 @@ describe("gbd_estimate", () => {
     expect(audits.map((audit) => [audit.result, audit.rowCount])).toEqual([
       [QUERY_TOOL_FAILED, 0],
     ]);
+  });
+});
+
+describe("gbdModelOutput (#394)", () => {
+  const rowAt = (index: number) => ({
+    location: `Made-up place ${index}`,
+    location_id: 100_000 + index,
+    iso3: null,
+    iso3166_2: null,
+    year: 2023,
+    value: 100 - index,
+    lower: null,
+    upper: null,
+  });
+  const resultOf = (n: number): GbdEstimateResult => ({
+    attribution: ATTRIBUTION,
+    source: "IHME GBD 2023",
+    measure: "hale",
+    metric: "years",
+    unit: "years",
+    sex: "both",
+    age: "at_birth",
+    cause: null,
+    risk: null,
+    n,
+    rows: Array.from({ length: n }, (_, index) => rowAt(index)),
+    not_imported: [],
+  });
+
+  test("a short result reaches the model whole", () => {
+    expect(gbdModelOutput(resultOf(30))).toEqual(resultOf(30));
+    expect(gbdModelOutput(GBD_NOT_IMPORTED)).toEqual(GBD_NOT_IMPORTED);
+  });
+
+  test("a long one keeps n and gives the 10 highest and 5 lowest values", () => {
+    const out = gbdModelOutput(resultOf(204));
+    expect("n" in out ? out.n : null).toBe(204);
+    expect("rows" in out ? out.rows.map((row) => row.value) : []).toEqual([
+      100, 99, 98, 97, 96, 95, 94, 93, 92, 91, -99, -100, -101, -102, -103,
+    ]);
+    expect("rows_shown" in out ? out.rows_shown : null).toBe(
+      "15 of 204 rows: the 10 highest and 5 lowest values; the map and the panel show all",
+    );
   });
 });

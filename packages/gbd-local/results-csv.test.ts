@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  HALE_EXPORT_HEADER,
   MADE_UP_CAUSE_CSV,
+  MADE_UP_HALE_CSV,
   MADE_UP_HEADER,
   MADE_UP_RISK_CSV,
 } from "./made-up-results.test-helpers";
@@ -99,10 +101,53 @@ describe("parseGbdResultsCsv", () => {
           "val",
           "upper",
           "lower",
-          "cause_id or rei_id",
         ],
       },
     });
+  });
+
+  test("reads a HALE export: population group columns, no cause or risk", () => {
+    const result = parseGbdResultsCsv(MADE_UP_HALE_CSV);
+    if (!result.ok) throw new Error(result.error.code);
+    expect(result.rows.length).toBe(4);
+    expect(result.rows[0]).toEqual({
+      measureId: 28,
+      measureName: "HALE (Healthy life expectancy)",
+      locationId: 94,
+      locationName: "Switzerland",
+      sexId: 3,
+      sexName: "Both",
+      ageId: 2,
+      ageName: "0-6 days",
+      causeId: null,
+      causeName: null,
+      reiId: null,
+      reiName: null,
+      metricId: 5,
+      metricName: "Years",
+      year: 2023,
+      val: 70.25,
+      upper: 75.5,
+      lower: 60.5,
+    });
+    expect(gbdRowKey(result.rows[0]!)).toBe("28:94:3:2:-:-:5:2023");
+  });
+
+  test("a population group other than All Population is refused with its line", () => {
+    const result = parseGbdResultsCsv(
+      `${HALE_EXPORT_HEADER}\n2,Pregnant,28,HALE,94,Switzerland,3,Both,2,0-6 days,5,Years,2023,1,2,0`,
+    );
+    expect(result.ok ? null : [result.error.code, result.error.line]).toEqual([
+      "GBD_CSV_POPULATION_GROUP",
+      2,
+    ]);
+  });
+
+  test("half a cause pair is refused with the missing column", () => {
+    const result = parseGbdResultsCsv(
+      "measure_id,measure_name,location_id,location_name,sex_id,sex_name,age_id,age_name,cause_id,metric_id,metric_name,year,val,upper,lower\n",
+    );
+    expect(result.ok ? null : result.error.missing).toEqual(["cause_name"]);
   });
 
   test("a row with a non-numeric value is refused with its line", () => {

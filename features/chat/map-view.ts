@@ -50,6 +50,8 @@ const NOTHING_TO_MAP: MapRefusal = {
 };
 
 const MEASURE_LABELS: Readonly<Record<string, string>> = {
+  hale: "Healthy life expectancy (HALE)",
+  life_expectancy: "Life expectancy",
   deaths: "Deaths",
   dalys: "DALYs",
   yld: "YLDs",
@@ -67,6 +69,7 @@ const SEX_LABELS: Readonly<Record<string, string>> = {
 const AGE_LABELS: Readonly<Record<string, string>> = {
   all_ages: "all ages",
   age_standardized: "age-standardised",
+  at_birth: "at birth",
 };
 
 const words = (value: string): string => value.replace(/_/g, " ");

@@ -997,17 +997,26 @@
     "type": "function",
     "function": {
       "name": "gbd_estimate",
-      "description": "IHME GBD population estimates imported on this machine, never about one person: value and uncertainty interval. Cause or risk (IHME names) or both; one of locations (names or ISO codes), children_of or sdi.",
+      "description": "IHME GBD population estimates, never about one person. Lead with hale, life_expectancy (years, no cause); deaths if asked. Others: cause or risk (IHME names).",
       "parameters": {
         "type": "object",
         "properties": {
           "measure": {
             "type": "string",
-            "enum": ["deaths", "dalys", "yld", "yll", "prevalence", "incidence"]
+            "enum": [
+              "hale",
+              "life_expectancy",
+              "dalys",
+              "yld",
+              "prevalence",
+              "incidence",
+              "yll",
+              "deaths"
+            ]
           },
           "metric": {
             "type": "string",
-            "enum": ["number", "percent", "rate"]
+            "enum": ["number", "percent", "rate", "years"]
           },
           "cause": {
             "type": "string"
@@ -1034,7 +1043,7 @@
           },
           "age": {
             "type": "string",
-            "enum": ["all_ages", "age_standardized"]
+            "enum": ["all_ages", "age_standardized", "at_birth"]
           },
           "years": {
             "type": "array",

@@ -75,3 +75,46 @@ export const MADE_UP_RISK_CSV = [
   "2,DALYs (Disability-Adjusted Life Years),94,Switzerland,3,Both,22,All ages,107,High systolic blood pressure,294,All causes,3,Rate,2021,800,900,700",
   "2,DALYs (Disability-Adjusted Life Years),94,Switzerland,3,Both,22,All ages,107,High systolic blood pressure,491,Cardiovascular diseases,3,Rate,2021,600,680,520",
 ].join("\n");
+
+/**
+ * The header of a GBD 2023 HALE export as the Results Tool writes it: a
+ * population group pair first, no cause or risk columns, metric Years.
+ */
+export const HALE_EXPORT_HEADER =
+  "population_group_id,population_group_name,measure_id,measure_name,location_id,location_name,sex_id,sex_name,age_id,age_name,metric_id,metric_name,year,val,upper,lower";
+
+const haleLine = (
+  location: readonly [number, string],
+  age: readonly [number, string],
+  val: string,
+  measure: readonly [number, string] = [28, "HALE (Healthy life expectancy)"],
+): string =>
+  [
+    1,
+    "All Population",
+    measure[0],
+    measure[1],
+    location[0],
+    `"${location[1]}"`,
+    3,
+    "Both",
+    age[0],
+    age[1],
+    5,
+    "Years",
+    2023,
+    val,
+    "75.5",
+    "60.5",
+  ].join(",");
+
+const EARLY_NEONATAL = [2, "0-6 days"] as const;
+
+/** Made-up HALE and life expectancy rows in the GBD 2023 export layout. */
+export const MADE_UP_HALE_CSV = [
+  HALE_EXPORT_HEADER,
+  haleLine(SWITZERLAND, EARLY_NEONATAL, "70.25"),
+  haleLine(SWITZERLAND, [8, "15-19 years"], "55.5"),
+  haleLine(GERMANY, EARLY_NEONATAL, "68.75"),
+  haleLine(SWITZERLAND, EARLY_NEONATAL, "80.5", [26, "Life expectancy"]),
+].join("\n");

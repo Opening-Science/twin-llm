@@ -12,9 +12,14 @@
  *   val, upper, lower
  *
  * and a risk factor export has rei_id, rei_name next to (or instead of) the
- * cause pair. Columns are found by name, so their order does not matter. A
- * file in another layout is refused with a code that says which export
- * option to pick; nothing is guessed.
+ * cause pair. An export of life expectancy or HALE (healthy life
+ * expectancy) has neither pair: its rows are about no cause, so cause and
+ * risk are optional and such a row has no subject. GBD 2023 exports may
+ * start with population_group_id, population_group_name; only "All
+ * Population" (id 1) is read, since the store does not key rows by group.
+ * Columns are found by name, so their order does not matter. A file in
+ * another layout is refused with a code that says which export option to
+ * pick; nothing is guessed.
  */
 import { parseDelimited } from "@/packages/personal-data/delimited";
 import { parsePlainNumber } from "@/packages/personal-data/decimal-text";
@@ -46,9 +51,10 @@ export type GbdCsvError = Readonly<{
     | "GBD_CSV_IDS_ONLY"
     | "GBD_CSV_NAMES_ONLY"
     | "GBD_CSV_COLUMNS"
+    | "GBD_CSV_POPULATION_GROUP"
     | "GBD_CSV_ROW";
   message: string;
-  /** 1-based line of the file, for GBD_CSV_ROW and GBD_CSV_UNREADABLE. */
+  /** 1-based line of the file, for GBD_CSV_ROW, GBD_CSV_POPULATION_GROUP and GBD_CSV_UNREADABLE. */
   line?: number;
   missing?: readonly string[];
 }>;
@@ -60,7 +66,7 @@ export type GbdCsvResult =
 const PAIRS = ["measure", "location", "sex", "age", "metric"] as const;
 const VALUES = ["year", "val", "upper", "lower"] as const;
 
-/** The columns every "ID and name" export has, without the cause or risk pair. */
+/** The columns every "ID and name" export has; the cause and risk pairs are optional. */
 export const GBD_REQUIRED_COLUMNS: readonly string[] = [
   ...PAIRS.flatMap((pair) => [`${pair}_id`, `${pair}_name`]),
   ...VALUES,
@@ -68,7 +74,6 @@ export const GBD_REQUIRED_COLUMNS: readonly string[] = [
 
 const layoutError = (header: readonly string[]): GbdCsvError | null => {
   const has = (name: string) => header.includes(name);
-  const hasSubject = (suffix: string) => has(`cause${suffix}`) || has(`rei${suffix}`);
   if (has("measure") && has("location") && !has("location_id")) {
     return {
       code: "GBD_CSV_NAMES_ONLY",
@@ -85,7 +90,11 @@ const layoutError = (header: readonly string[]): GbdCsvError | null => {
   }
   const missing = [
     ...GBD_REQUIRED_COLUMNS.filter((name) => !has(name)),
-    ...(hasSubject("_id") && hasSubject("_name") ? [] : ["cause_id or rei_id"]),
+    ...(["cause", "rei"] as const).flatMap((pair) =>
+      has(`${pair}_id`) === has(`${pair}_name`)
+        ? []
+        : [has(`${pair}_id`) ? `${pair}_name` : `${pair}_id`],
+    ),
   ];
   return missing.length === 0
     ? null
@@ -95,6 +104,9 @@ const layoutError = (header: readonly string[]): GbdCsvError | null => {
         missing,
       };
 };
+
+/** The Results Tool's "All Population" group. */
+export const GBD_ALL_POPULATION_GROUP = 1;
 
 const int = (raw: string | undefined): number | null => {
   const value = parsePlainNumber(raw);
@@ -133,6 +145,18 @@ export const parseGbdResultsCsv = (text: string): GbdCsvResult => {
       const at = column(name);
       return at === -1 ? undefined : cells[at];
     };
+    const group = (cell("population_group_id") ?? "").trim();
+    if (group !== "" && int(group) !== GBD_ALL_POPULATION_GROUP) {
+      return {
+        ok: false,
+        error: {
+          code: "GBD_CSV_POPULATION_GROUP",
+          message:
+            "A row is for a population group other than All Population. Download it again with All Population only.",
+          line: index + 2,
+        },
+      };
+    }
     const ids = PAIRS.map((pair) => int(cell(`${pair}_id`)));
     const names = PAIRS.map((pair) => (cell(`${pair}_name`) ?? "").trim());
     const year = int(cell("year"));
@@ -155,7 +179,6 @@ export const parseGbdResultsCsv = (text: string): GbdCsvResult => {
       val === null ||
       cause === "bad" ||
       rei === "bad" ||
-      (cause.id === null && rei.id === null) ||
       (upperText !== "" && upper === null) ||
       (lowerText !== "" && lower === null)
     ) {

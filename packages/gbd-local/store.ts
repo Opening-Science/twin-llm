@@ -29,13 +29,14 @@ const named = (
     .sort((a, b) => a.name.localeCompare(b.name, "en") || a.id - b.id);
 
 export const gbdCatalog = async (db: PrismaClient): Promise<GbdCatalog> => {
-  const [locations, causes, risks] = await Promise.all([
+  const [locations, causes, risks, ages] = await Promise.all([
     db.gbdEstimate.groupBy({ by: ["locationId", "locationName"] }),
     db.gbdEstimate.groupBy({
       by: ["causeId", "causeName"],
       where: { causeId: { not: null } },
     }),
     db.gbdEstimate.groupBy({ by: ["reiId", "reiName"], where: { reiId: { not: null } } }),
+    db.gbdEstimate.groupBy({ by: ["ageId"] }),
   ]);
   return {
     locations: named(
@@ -43,6 +44,7 @@ export const gbdCatalog = async (db: PrismaClient): Promise<GbdCatalog> => {
     ),
     causes: named(causes.map((row) => ({ id: row.causeId, name: row.causeName }))),
     risks: named(risks.map((row) => ({ id: row.reiId, name: row.reiName }))),
+    ages: ages.map((row) => row.ageId).sort((a, b) => a - b),
   };
 };
 

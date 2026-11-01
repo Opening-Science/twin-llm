@@ -1,7 +1,8 @@
-import { tool } from "ai";
+import { type JSONValue, tool } from "ai";
 
 import { recordGbdRows } from "@/packages/gbd-mcp/collector";
 import {
+  gbdModelOutput,
   runGbdEstimate,
   type GbdEstimatePorts,
 } from "@/packages/query-tools/gbd-estimate";
@@ -21,6 +22,10 @@ import { gbdPanelRows } from "./panel-rows";
  * are imported (`chat-tools.ts`), in either data mode: it reads population
  * rows on this machine and sends nothing.
  */
+/** The model's copy as plain JSON: what a tool result is on the wire. */
+const asJson = (value: unknown): JSONValue =>
+  JSON.parse(JSON.stringify(value)) as JSONValue;
+
 export const createGbdEstimateTool = (scope: SessionScope, ports: GbdEstimatePorts) => ({
   [GBD_ESTIMATE_TOOL]: tool({
     description: GBD_ESTIMATE_TOOL_DEFINITION.description,
@@ -32,5 +37,9 @@ export const createGbdEstimateTool = (scope: SessionScope, ports: GbdEstimatePor
       }
       return result;
     },
+    toModelOutput: ({ output }) => ({
+      type: "json",
+      value: asJson(gbdModelOutput(output)),
+    }),
   }),
 });
