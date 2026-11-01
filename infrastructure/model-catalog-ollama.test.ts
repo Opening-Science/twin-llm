@@ -25,6 +25,8 @@ describe("parseOllamaTags", () => {
         name: "qwen3:8b",
         provider: "Ollama",
         providerId: "ollama",
+        // Listed with the `thinking` capability, so effort may switch it on (#366).
+        thinking: true,
         contextTokens: 40960,
       },
       {

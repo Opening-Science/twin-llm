@@ -1,0 +1,191 @@
+import { describe, expect, test } from "bun:test";
+
+import {
+  AUTO_MODEL_ID,
+  type CatalogModel,
+  withAgents,
+} from "@/infrastructure/model-catalog";
+
+import {
+  initialSelection,
+  manualAnswerCount,
+  modeModelIds,
+  modeProblem,
+  type ModeSelection,
+  plainModels,
+  specialistRows,
+  toggleManual,
+} from "./chat-mode";
+
+/** A synthetic local catalog: two models, the specialists that need no skill or sleep. */
+const ollama = (id: string): CatalogModel => ({
+  id,
+  name: id,
+  provider: "Ollama",
+  providerId: "ollama",
+  contextTokens: 16_384,
+});
+
+const CATALOG = withAgents([ollama("qwen3:4b"), ollama("llama3.2")], {
+  provider: "ollama",
+  chatIsLocal: true,
+  skills: [
+    { name: "sleep", providers: ["ollama"], sources: [], tools: ["sleep_summary"] },
+  ],
+});
+
+const MODELS_ONLY = [ollama("qwen3:4b"), ollama("llama3.2"), ollama("mistral")];
+
+const selection = (overrides: Partial<ModeSelection>): ModeSelection => ({
+  mode: "auto",
+  specialists: [],
+  models: [],
+  compare: [],
+  ...overrides,
+});
+
+describe("catalog halves", () => {
+  test("specialists leave Auto out; models leave every agent out", () => {
+    expect(specialistRows(CATALOG).map((row) => row.id)).toEqual([
+      "agent:gp",
+      "agent:sleep",
+    ]);
+    expect(plainModels(CATALOG).map((row) => row.id)).toEqual(["qwen3:4b", "llama3.2"]);
+  });
+});
+
+describe("modeModelIds (#366)", () => {
+  test("Auto is one answer from the Auto row", () => {
+    expect(modeModelIds(selection({ mode: "auto" }), CATALOG)).toEqual([AUTO_MODEL_ID]);
+    expect(modeModelIds(selection({ mode: "auto" }), MODELS_ONLY)).toEqual([]);
+  });
+
+  test("Manual runs each specialist on each model, its own row on its own base", () => {
+    expect(
+      modeModelIds(
+        selection({
+          mode: "manual",
+          specialists: ["gp"],
+          models: ["qwen3:4b", "llama3.2"],
+        }),
+        CATALOG,
+      ),
+    ).toEqual(["agent:gp", "agent:gp@llama3.2"]);
+    expect(
+      modeModelIds(
+        selection({ mode: "manual", specialists: ["gp", "sleep"], models: ["llama3.2"] }),
+        CATALOG,
+      ),
+    ).toEqual(["agent:gp@llama3.2", "agent:sleep@llama3.2"]);
+  });
+
+  test("Manual without a specialist sends the models as themselves", () => {
+    expect(
+      modeModelIds(selection({ mode: "manual", models: ["llama3.2"] }), CATALOG),
+    ).toEqual(["llama3.2"]);
+  });
+
+  test("Compare keeps its rows, never Auto, at most three, only offered ones", () => {
+    expect(
+      modeModelIds(
+        selection({
+          mode: "compare",
+          compare: [
+            AUTO_MODEL_ID,
+            "qwen3:4b",
+            "gone:1b",
+            "agent:sleep",
+            "llama3.2",
+            "agent:gp",
+          ],
+        }),
+        CATALOG,
+      ),
+    ).toEqual(["qwen3:4b", "agent:sleep", "llama3.2"]);
+  });
+});
+
+describe("modeProblem", () => {
+  test("says in words what is missing, null when the prompt can go", () => {
+    expect(modeProblem(selection({ mode: "auto" }), CATALOG)).toBeNull();
+    expect(modeProblem(selection({ mode: "auto" }), MODELS_ONLY)).toBe(
+      "Auto needs the specialists, which this server does not offer. Choose Manual or Compare.",
+    );
+    expect(
+      modeProblem(selection({ mode: "compare", compare: ["qwen3:4b"] }), CATALOG),
+    ).toBe("Compare needs two or three models.");
+    expect(modeProblem(selection({ mode: "manual", specialists: ["gp"] }), CATALOG)).toBe(
+      "Pick at least one model.",
+    );
+    expect(
+      modeProblem(
+        selection({
+          mode: "manual",
+          specialists: ["gp", "sleep"],
+          models: ["qwen3:4b", "llama3.2"],
+        }),
+        CATALOG,
+      ),
+    ).toBe(
+      "Three answers is the most one prompt can ask for. Pick fewer specialists or models.",
+    );
+  });
+});
+
+describe("toggleManual", () => {
+  const start = selection({ mode: "manual", specialists: ["gp"], models: ["qwen3:4b"] });
+
+  test("adds and removes, keeping at least one model", () => {
+    expect(toggleManual(start, "models", "llama3.2").models).toEqual([
+      "qwen3:4b",
+      "llama3.2",
+    ]);
+    expect(toggleManual(start, "models", "qwen3:4b")).toEqual(start);
+    expect(toggleManual(start, "specialists", "gp").specialists).toEqual([]);
+  });
+
+  test("never asks for more than three answers", () => {
+    const two = toggleManual(start, "models", "llama3.2");
+    expect(toggleManual(two, "specialists", "sleep")).toEqual(two);
+    expect(manualAnswerCount(0, 3)).toBe(3);
+    expect(manualAnswerCount(2, 2)).toBe(4);
+  });
+});
+
+describe("initialSelection", () => {
+  test("a new chat starts in Auto, with Manual and Compare ready to switch to", () => {
+    expect(initialSelection([], CATALOG)).toEqual({
+      mode: "auto",
+      specialists: ["gp"],
+      models: ["qwen3:4b"],
+      compare: ["agent:gp", "qwen3:4b", "llama3.2"],
+    });
+  });
+
+  test("without specialists a new chat starts in Compare", () => {
+    expect(initialSelection([], MODELS_ONLY).mode).toBe("compare");
+  });
+
+  test("a thread reopens in the mode its last ids say", () => {
+    expect(initialSelection([AUTO_MODEL_ID], CATALOG).mode).toBe("auto");
+    expect(initialSelection(["agent:gp", "agent:gp@llama3.2"], CATALOG)).toMatchObject({
+      mode: "manual",
+      specialists: ["gp"],
+      models: ["qwen3:4b", "llama3.2"],
+    });
+    expect(initialSelection(["agent:sleep"], CATALOG)).toMatchObject({
+      mode: "manual",
+      specialists: ["sleep"],
+      models: ["qwen3:4b"],
+    });
+    expect(initialSelection(["llama3.2"], CATALOG)).toMatchObject({
+      mode: "manual",
+      specialists: [],
+      models: ["llama3.2"],
+    });
+    expect(initialSelection(["agent:gp", "llama3.2", "gone:1b"], CATALOG)).toMatchObject({
+      mode: "compare",
+      compare: ["agent:gp", "llama3.2"],
+    });
+  });
+});

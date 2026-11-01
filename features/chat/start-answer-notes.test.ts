@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
+import { EFFORT_AUDIT_TOOL } from "@/infrastructure/chat-effort";
+
 import type {
   ExoscalePersonalData,
   LlmProvider,
@@ -67,7 +69,8 @@ const harness = (
     findSkill: async () => null,
     appendAudit: async (input) => {
       if (auditFails) throw new Error("audit down");
-      audits.push(input);
+      // Every turn records its effort (#366); start-answer.test.ts covers it.
+      if (input.tool !== EFFORT_AUDIT_TOOL) audits.push(input);
       return {};
     },
     ...(notes === undefined

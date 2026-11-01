@@ -2,6 +2,11 @@ import "server-only";
 
 import { isStepCount, type LanguageModel, streamText, type ToolSet } from "ai";
 
+import {
+  type AppliedEffort,
+  EFFORT_AUDIT_TOOL,
+  thinkingProviderOptions,
+} from "@/infrastructure/chat-effort";
 import type { DataMode } from "@/infrastructure/data-mode-policy";
 import type { GoogleHealthSummary } from "@/infrastructure/google-health-types";
 import type { OuraSummary } from "@/infrastructure/oura-types";
@@ -73,6 +78,11 @@ export type TwinTurnDeps = Readonly<{
   pastedDataSource?: PastedDataSource;
   /** The person's twin notes block (#43), already permitted and audited by the caller. */
   twinNotes?: string | null;
+  /**
+   * The effort the turn runs at (#366): its step limit and whether the model
+   * thinks. Left out, Balanced as before (eight steps, no thinking set here).
+   */
+  effort?: AppliedEffort | null;
   /** Audit rows for this turn's session, read after the model finishes. */
   loadAudit: (turnId: string) => Promise<readonly ResponseToolCall[]>;
 }>;
@@ -111,7 +121,10 @@ export type TwinTurnHooks = Readonly<{
   onAbort: () => void;
 }>;
 
-/** Model calls in one turn; the last one is kept for writing the answer. */
+/**
+ * Model calls in one turn at Balanced effort; the last one is kept for
+ * writing the answer. Other efforts set their own (`chat-effort.ts`).
+ */
 export const MAX_STEPS = 8;
 
 /**
@@ -119,8 +132,8 @@ export const MAX_STEPS = 8;
  * from what it has instead of stopping with nothing (the pilot fine-tune
  * spent all eight steps on lookups and wrote no answer).
  */
-export const lastStepWithoutTools = (stepNumber: number) =>
-  stepNumber >= MAX_STEPS - 1 ? { activeTools: [] } : undefined;
+export const lastStepWithoutTools = (stepNumber: number, maxSteps: number = MAX_STEPS) =>
+  stepNumber >= maxSteps - 1 ? { activeTools: [] } : undefined;
 
 /** What the system prompt of a turn is built from. */
 export type TwinTurnPromptDeps = Pick<
@@ -165,6 +178,8 @@ export const runTwinTurn = (
   hooks: TwinTurnHooks,
 ) => {
   const system = twinTurnSystem(deps, wearables);
+  const maxSteps = deps.effort?.maxSteps ?? MAX_STEPS;
+  const thinking = deps.effort ? thinkingProviderOptions(deps.effort) : null;
 
   return streamText({
     model: deps.model,
@@ -174,8 +189,10 @@ export const runTwinTurn = (
       content: message.content,
     })),
     tools: deps.tools,
-    stopWhen: isStepCount(MAX_STEPS),
-    prepareStep: ({ stepNumber }) => lastStepWithoutTools(stepNumber),
+    stopWhen: isStepCount(maxSteps),
+    prepareStep: ({ stepNumber }) => lastStepWithoutTools(stepNumber, maxSteps),
+    // Merged over the model's defaults (`think: false` on Ollama), only when on.
+    ...(thinking === null ? {} : { providerOptions: thinking }),
     abortSignal,
     onChunk: ({ chunk }) => {
       if (chunk.type === "text-delta") hooks.onFirstToken();
@@ -199,11 +216,13 @@ export const runTwinTurn = (
         parsed,
         toolResults,
         buildDocument: async () => {
-          // The skill-run and UI context rows record the turn; they read nothing,
-          // so they are not tool calls.
+          // The skill-run, UI context and effort rows record the turn; they
+          // read nothing, so they are not tool calls.
           const toolCalls = (await deps.loadAudit(turnId)).filter(
             (row) =>
-              skillOfAuditTool(row.tool) === null && row.tool !== UI_CONTEXT_AUDIT_TOOL,
+              skillOfAuditTool(row.tool) === null &&
+              row.tool !== UI_CONTEXT_AUDIT_TOOL &&
+              row.tool !== EFFORT_AUDIT_TOOL,
           );
           const gbd = drainGbdTurn(turnId);
           const guidelines = drainGuidelineTurn(turnId);
@@ -221,6 +240,7 @@ export const runTwinTurn = (
             skill: deps.skill?.name ?? null,
             uiContext: deps.uiContext ?? null,
             twinBody: twinBodyShown(toolResults.map((result) => result.output)),
+            effort: deps.effort ?? null,
           });
         },
       });

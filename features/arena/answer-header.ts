@@ -18,5 +18,8 @@ export const columnRawId = (modelId: string): string | null =>
 export const autoLineOf = (
   answer: Readonly<{ modelId: string; modelName: string }>,
   prompt: string,
+  modelNameOf: (agentId: string) => string | null = () => null,
 ): string | null =>
-  answer.modelId === AUTO_MODEL_ID ? autoChoiceLineFor(prompt, answer.modelName) : null;
+  answer.modelId === AUTO_MODEL_ID
+    ? autoChoiceLineFor(prompt, answer.modelName, modelNameOf)
+    : null;
