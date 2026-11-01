@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { effortSchema } from "@/infrastructure/chat-effort";
 import { SKILL_NAME_PATTERN } from "@/infrastructure/skill-gate";
 import { uiContextSchema } from "@/infrastructure/ui-context";
 
@@ -16,6 +17,9 @@ import { uiContextSchema } from "@/infrastructure/ui-context";
  *
  * `uiContext` is what the person had on screen as they asked (#47): a closed,
  * size-capped structure with no values (`infrastructure/ui-context.ts`).
+ *
+ * `effort` (#366) is one of five steps (`infrastructure/chat-effort.ts`); left
+ * out, Balanced.
  */
 const MAX_MESSAGES = 100;
 const MAX_MESSAGE_CHARS = 32_000;
@@ -32,6 +36,7 @@ export const chatRequestSchema = z.object({
   messages: z.array(conversationMessage).min(1).max(MAX_MESSAGES),
   skill: z.string().regex(SKILL_NAME_PATTERN).optional(),
   uiContext: uiContextSchema.optional(),
+  effort: effortSchema.optional(),
 });
 
 export type ChatRequest = Readonly<z.infer<typeof chatRequestSchema>>;
@@ -47,6 +52,7 @@ export const incognitoChatRequestSchema = z
     modelId: z.string().min(1).max(MAX_MODEL_ID_CHARS),
     messages: z.array(conversationMessage.strict()).min(1).max(MAX_MESSAGES),
     skill: z.string().regex(SKILL_NAME_PATTERN).optional(),
+    effort: effortSchema.optional(),
   })
   .strict();
 

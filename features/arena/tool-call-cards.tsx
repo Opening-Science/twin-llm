@@ -10,7 +10,12 @@ import { StepTrace } from "@/infrastructure/ui-kit/step-trace";
 import type { AnswerStatus, ToolActivity } from "./conversation";
 import { cardNumbers, sourceCallIds } from "./number-links";
 import { rowsLabel, STATE_LABELS, type ToolCardState } from "./tool-cards";
-import { answerTraceState, toolStepLabels, toolStepState } from "./tool-steps";
+import {
+  answerTraceState,
+  type ReviewStep,
+  toolStepLabels,
+  toolStepState,
+} from "./tool-steps";
 
 /**
  * The answer's tool calls as a step trace (`StepTrace`): while the answer
@@ -151,6 +156,7 @@ export const ToolSteps = ({
   numbers = [],
   active = null,
   idPrefix,
+  review = null,
 }: Readonly<{
   cards: readonly ToolActivity[];
   /** The answer's status: the trace settles when the answer does. */
@@ -162,8 +168,10 @@ export const ToolSteps = ({
   active?: ActiveNumber | null;
   /** Gives each card title an id the answer's numbers point to. */
   idPrefix?: string;
+  /** The Ultra number check (#366), the trace's last step when there is one. */
+  review?: ReviewStep | null;
 }>) => {
-  if (cards.length === 0) return null;
+  if (cards.length === 0 && (review === null || review === undefined)) return null;
   const holders =
     active === null
       ? []
@@ -189,13 +197,37 @@ export const ToolSteps = ({
       ),
     };
   });
+  const reviewSteps =
+    review === null || review === undefined
+      ? []
+      : [
+          {
+            id: "number-review",
+            label: review.label,
+            state: review.state,
+            detail:
+              review.lines.length === 0 ? undefined : (
+                <div className="tool-card">
+                  <p className="tool-card-header text-foreground">{review.label}</p>
+                  <ul className="tool-card-body flex flex-col gap-0.5">
+                    {review.lines.map((line, index) => (
+                      // A number can appear twice with the same verdict.
+                      <li key={`${String(index)}-${line}`}>{line}</li>
+                    ))}
+                  </ul>
+                </div>
+              ),
+          },
+        ];
   return (
     <StepTrace
-      steps={steps}
+      steps={[...steps, ...reviewSteps]}
       state={answerTraceState(status)}
       workingLabel={workingLabel}
-      noun="tool"
-      listLabel="Tool calls"
+      noun={reviewSteps.length === 0 ? "tool" : "step"}
+      listLabel={
+        reviewSteps.length === 0 ? "Tool calls" : "Tool calls and the number check"
+      }
       revealKey={active === null || holders.length === 0 ? undefined : active.key}
     />
   );

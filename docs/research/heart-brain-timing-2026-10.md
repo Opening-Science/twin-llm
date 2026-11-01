@@ -169,12 +169,13 @@ The table gives the median over subjects and, for recovered, the mean with a
 
 | Group (subjects)            | Metric, window                 | Planted | Recovered median (IQR)  | Recovered mean (95% CI) | Robust z beyond 2 |
 | --------------------------- | ------------------------------ | ------- | ----------------------- | ----------------------- | ----------------- |
-| AF (113)                    | Heart rate, difference         | +2.72   | +2.64 (1.00 to 3.98)    | +2.58 (2.24 to 2.92)    | 0 of 113          |
-|                             | RMSSD, ratio                   | 1.196   | 1.193 (1.149 to 1.253)  | 1.205 (1.191 to 1.219)  | 1 of 113          |
+| AF (113)                    | Heart rate, difference         | +3.42   | +3.26 (1.99 to 4.90)    | +3.38 (3.01 to 3.75)    | 0 of 113          |
+|                             | Resting heart rate, difference | +0.71   | +0.54 (-0.43 to 1.61)   | +0.63 (0.40 to 0.86)    | 2 of 113          |
+|                             | RMSSD, ratio                   | 1.058   | 1.054 (1.035 to 1.086)  | 1.062 (1.054 to 1.069)  | 1 of 113          |
 |                             | Notifications per day          | +0.189  | +0.195 (0.148 to 0.244) | +0.202 (0.188 to 0.216) | no z (MAD 0)      |
 |                             | AF burden (ground truth)       | +0.098  | +0.100                  | +0.101 (0.095 to 0.107) | no z (MAD 0)      |
 | Heart failure (91)          | Resting heart rate, difference | +6.61   | +6.99 (5.72 to 8.53)    | +6.92 (6.44 to 7.40)    | 83 of 91          |
-|                             | RMSSD, ratio                   | 0.750   | 0.757 (0.724 to 0.786)  | 0.767 (0.753 to 0.782)  | 39 of 91          |
+|                             | RMSSD, ratio                   | 0.750   | 0.757 (0.724 to 0.786)  | 0.767 (0.753 to 0.782)  | 40 of 91          |
 |                             | Steps, ratio                   | 0.652   | 0.664 (0.622 to 0.700)  | 0.677 (0.658 to 0.696)  | 13 of 91          |
 | Stroke (85)                 | Steps, ratio, days 0 to 29     | 0.543   | 0.548 (0.500 to 0.580)  | 0.542 (0.531 to 0.553)  | 29 of 85          |
 |                             | Steps, ratio, days 60 to 89    | 0.765   | 0.755 (0.725 to 0.795)  | 0.758 (0.743 to 0.772)  | 0 of 85           |
@@ -197,7 +198,7 @@ size. The robust z per person tells a different story by metric: a fixed
 shift that is large against day-to-day noise (heart failure resting heart
 rate, sleep apnea SpO2) is visible in most single people, while AF, whose
 effect falls on about one day in five, is invisible to a median-based z in
-every one of 113 people even though the mean heart rate rises by 2.6 /min.
+every one of 113 people even though the mean heart rate rises by 3.4 /min.
 For AF the notification count and the burden carry the signal; a check on
 medians alone would miss it.
 
@@ -217,6 +218,21 @@ they are as likely before an onset as after it, and the table above is the
 rerun on the same batches and seeds. The condition rows moved only within
 their noise; the AF heart rate, heart failure and stroke sleep score rows
 shifted most, because episodes now fall on both sides.
+
+Changed with #365. Wearable generator 3.1 takes its daily AF effects from the
+AF resolution study (`docs/research/af-resolution-2026-10.md`) instead of
+fixed assumptions, and raises the resting heart rate on AF days, so AF now
+also checks resting heart rate. Rerun on the same batches and seeds: the AF
+heart rate row went from planted +2.72 and recovered +2.58 (2.24 to 2.92) to
++3.42 and +3.38 (3.01 to 3.75), because the burdens of 0.2 to 0.9 now give
++7.9 to +31 /min instead of +10 to +20; the AF RMSSD ratio went from planted
+1.196 and recovered 1.205 (1.191 to 1.219) to 1.058 and 1.062 (1.054 to
+1.069). The new AF resting heart rate row comes back at +0.63 (0.40 to 0.86)
+against +0.71 planted. Heart failure subjects whose AF was active in their
+window moved too, within rounding: RMSSD robust z beyond 2 in 40 of 91
+instead of 39, and in Part 3 the RMSSD planted mean 0.7643 (was 0.7640) and
+the recovered minus planted interval -0.002 to +0.008 (was -0.001 to
++0.008). Every other row is unchanged.
 
 ## Part 3: expected effect from Synthea's own stroke calculator (#294)
 
@@ -361,7 +377,7 @@ for steps, against medians of 0.750 and 0.652. Compared subject by subject
 
 | Heart failure (91) | Planted mean | Expected with floors | Recovered mean (95% CI) | Recovered - planted       | Recovered - expected      |
 | ------------------ | ------------ | -------------------- | ----------------------- | ------------------------- | ------------------------- |
-| RMSSD, ratio       | 0.764        | 0.765                | 0.767 (0.753 to 0.782)  | +0.003 (-0.001 to +0.008) | +0.003 (-0.002 to +0.007) |
+| RMSSD, ratio       | 0.764        | 0.765                | 0.767 (0.753 to 0.782)  | +0.003 (-0.002 to +0.008) | +0.003 (-0.002 to +0.007) |
 | Steps, ratio       | 0.668        | 0.672                | 0.677 (0.658 to 0.696)  | +0.008 (+0.001 to +0.016) | +0.005 (-0.003 to +0.013) |
 
 The rest is the generator's floor (`series.ts`, `dayReadings`): noise of
@@ -371,7 +387,7 @@ floor after onset than before, which raises the after mean.
 `scripts/heart-brain/wearable-expected.ts` computes the expected worn-day
 means of the clamped normal; with it the steps difference covers 0. The
 episodes of #270 multiply RMSSD on both sides and do not move the ratio
-(expected without floors 0.7641 against planted 0.7640), and the windows are
+(expected without floors 0.7642 against planted 0.7643), and the windows are
 the same 90 days on each side, so neither compounding effects nor windowing
 is involved. Every other row of Part 2 is unchanged by the rerun.
 

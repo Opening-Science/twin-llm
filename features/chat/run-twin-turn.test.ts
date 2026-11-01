@@ -9,9 +9,11 @@ import {
 } from "@/packages/knowledge/collector";
 import type { QueryToolPorts } from "@/packages/query-tools/ports";
 
+import { type AppliedEffort, applyEffort } from "@/infrastructure/chat-effort";
+
 import { createChatTools } from "./chat-tools";
 import type { ResponseToolCall } from "./response/document-v1";
-import { runTwinTurn, type TwinTurnFinish } from "./run-twin-turn";
+import { lastStepWithoutTools, runTwinTurn, type TwinTurnFinish } from "./run-twin-turn";
 import { buildTwinSystemPrompt } from "./twin-system-prompt";
 
 /**
@@ -66,7 +68,11 @@ const ports: QueryToolPorts = {
   appendAudit: async () => undefined,
 };
 
-const run = (model: MockLanguageModelV4) =>
+const run = (
+  model: MockLanguageModelV4,
+  effort: AppliedEffort | null = null,
+  auditRows: readonly ResponseToolCall[] = [],
+) =>
   new Promise<{ finish: TwinTurnFinish; firstTokens: number; audited: string[] }>(
     (resolve, reject) => {
       let firstTokens = 0;
@@ -79,9 +85,10 @@ const run = (model: MockLanguageModelV4) =>
             { query: ports },
           ),
           mode: "synthetic",
+          effort,
           loadAudit: async (turnId): Promise<readonly ResponseToolCall[]> => {
             audited.push(turnId);
-            return [];
+            return auditRows;
           },
         },
         {
@@ -282,5 +289,69 @@ describe("runTwinTurn", () => {
     const document = await finish.buildDocument();
     expect(document.data_basis.sources.knowledge).toEqual([CITATION]);
     expect(drainKnowledgeTurn("turn-1")).toEqual({ sources: [] });
+  });
+});
+
+describe("runTwinTurn at an effort (#366)", () => {
+  // A model that calls a tool whenever it is offered one.
+  const eager = () =>
+    new MockLanguageModelV4({
+      doStream: async ({ tools }) =>
+        streamOf(
+          (tools ?? []).length === 0 ? text("Answer") : toolCall(`call-${Math.random()}`),
+        ),
+    });
+
+  test("the last step loses its tools at the step limit it is given", () => {
+    expect([2, 3].map((step) => lastStepWithoutTools(step, 4))).toEqual([
+      undefined,
+      { activeTools: [] },
+    ]);
+    expect(lastStepWithoutTools(7)).toEqual({ activeTools: [] });
+    expect(lastStepWithoutTools(6)).toBeUndefined();
+  });
+
+  test("Quick stops after four model calls and sends no thinking option", async () => {
+    const model = eager();
+    const quick = applyEffort("quick", { ollama: true, canThink: true });
+    const { finish } = await run(model, quick);
+    expect(model.doStreamCalls.length).toBe(4);
+    expect(model.doStreamCalls.map((call) => call.providerOptions)).toEqual(
+      Array.from({ length: 4 }, () => undefined),
+    );
+    expect(finish.text).toBe("Answer more");
+  });
+
+  test("Deep on a thinking model asks Ollama to think on every call, for twelve calls", async () => {
+    const model = eager();
+    const deep = applyEffort("deep", { ollama: true, canThink: true });
+    await run(model, deep);
+    expect(model.doStreamCalls.length).toBe(12);
+    expect(model.doStreamCalls.map((call) => call.providerOptions)).toEqual(
+      Array.from({ length: 12 }, () => ({ ollama: { think: true } })),
+    );
+  });
+
+  test("the document records the effort and leaves the effort row out of tool calls", async () => {
+    const model = new MockLanguageModelV4({ doStream: async () => streamOf(text("Hi")) });
+    const ultra = applyEffort("ultra", { ollama: false, canThink: false });
+    const { finish } = await run(model, ultra, [
+      {
+        seq: 1,
+        tool: "chat.effort",
+        args_sha256: "a".repeat(64),
+        result_sha256: "b".repeat(64),
+        row_count: 0,
+        ts: "2026-10-31T10:00:00.000Z",
+      },
+    ]);
+    const document = await finish.buildDocument();
+    expect(document.effort).toEqual({
+      level: "ultra",
+      thinking: "provider-default",
+      max_steps: 12,
+      review: true,
+    });
+    expect(document.data_basis.tool_calls).toEqual([]);
   });
 });

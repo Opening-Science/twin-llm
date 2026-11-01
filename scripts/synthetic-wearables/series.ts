@@ -88,7 +88,8 @@ export const WEARABLE_METRICS = {
   },
 } as const;
 
-export const WEARABLE_GENERATOR_VERSIONS = ["2", "3"] as const;
+/** "3.1" is v3 with the daily AF effects read from the resolution study (#365). */
+export const WEARABLE_GENERATOR_VERSIONS = ["2", "3.1"] as const;
 export type WearableGeneratorVersion = (typeof WEARABLE_GENERATOR_VERSIONS)[number];
 
 /**
@@ -176,7 +177,7 @@ export type SeriesOptions = Readonly<{
   days: number;
   /** v3: the subject's conditions with a wearable effect. */
   conditions?: readonly SubjectCondition[];
-  /** "2" gives the v2 series exactly (conditions ignored); default "3". */
+  /** "2" gives the v2 series exactly (conditions ignored); default "3.1". */
   generatorVersion?: WearableGeneratorVersion;
 }>;
 

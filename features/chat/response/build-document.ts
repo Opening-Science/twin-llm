@@ -1,3 +1,4 @@
+import type { AppliedEffort } from "@/infrastructure/chat-effort";
 import { toChatView } from "@/infrastructure/chat-view";
 import type { DataMode } from "@/infrastructure/data-mode-policy";
 import type { ParsedTwinAnswer } from "@/infrastructure/parse-twin-answer";
@@ -145,6 +146,8 @@ export const buildResponseDocumentV1 = (input: {
   readonly uiContext?: UiContext | null;
   /** A `twin.body` view was shown this turn (`twinBodyShown`). */
   readonly twinBody?: boolean;
+  /** The effort the turn ran at (#366), or null when the caller set none. */
+  readonly effort?: AppliedEffort | null;
 }): ResponseDocumentV1 => {
   // Only keys the prompt offered count; an invented key cannot stop abstaining.
   const evidence_keys = [...input.parsed.evidenceKeys];
@@ -218,6 +221,17 @@ export const buildResponseDocumentV1 = (input: {
     ...(input.skill ? { skill: input.skill } : {}),
     // Only present when the turn carried one, so other documents are unchanged.
     ...(input.uiContext ? { ui_context: input.uiContext } : {}),
+    // Only present when the caller set one (the chat does; the eval harness not).
+    ...(input.effort
+      ? {
+          effort: {
+            level: input.effort.level,
+            thinking: input.effort.thinking,
+            max_steps: input.effort.maxSteps,
+            review: input.effort.review,
+          },
+        }
+      : {}),
   };
 
   return responseDocumentV1Schema.parse(document);

@@ -1,0 +1,5892 @@
+{
+  "generatedAt": "2026-10-31T20:04:36.571Z",
+  "title": "AF signal from beats to daily summaries (#290)",
+  "note": "Simulated days from packages/rhythm-sim and open annotated databases; methods on recordings, not people. Research use only, not medical advice.",
+  "version": 1,
+  "gitSha": "61c647f8a028c1a41fecf2c21e47c3bdfbb89520-dirty",
+  "options": {
+    "subjects": 40,
+    "baselineDays": 3,
+    "sinusDays": 4,
+    "burdens": [0.02, 0.1, 0.3, 0.6],
+    "noise": ["none", "light"],
+    "resamples": 1000,
+    "bootstrapSeed": 290
+  },
+  "counts": {
+    "days": 440,
+    "simulatedHours": 7680
+  },
+  "databases": [
+    {
+      "id": "afdb",
+      "name": "MIT-BIH Atrial Fibrillation Database 1.0.0 (PhysioNet)",
+      "records": 25,
+      "hours": 249,
+      "sha256SumsFile": "8f3ab7b38bf0591235680a855d6a7f00fe8fdaf2e457fa4c00edad2c735e0d9a"
+    },
+    {
+      "id": "ltafdb",
+      "name": "Long-Term AF Database 1.0.0 (PhysioNet)",
+      "records": 84,
+      "hours": 1889,
+      "sha256SumsFile": "9ad85f6b46d896b7a5579c70fd05bef1e39b8e2b1aeb2b2bdfde465c4aec3ad1"
+    }
+  ],
+  "dayAurocs": [
+    {
+      "noise": "none",
+      "feature": "beat.flag_share",
+      "variant": "absolute",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.96875,
+        "ci95": {
+          "low": 0.9171796875,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "beat.flag_share",
+      "variant": "absolute",
+      "burden": 0.1,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "beat.flag_share",
+      "variant": "absolute",
+      "burden": 0.3,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "beat.flag_share",
+      "variant": "absolute",
+      "burden": 0.6,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "beat.flag_share",
+      "variant": "absolute",
+      "burden": "all",
+      "positives": 160,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.9921875,
+        "ci95": {
+          "low": 0.9801513671875,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "beat.flag_share",
+      "variant": "change",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "beat.flag_share",
+      "variant": "change",
+      "burden": 0.1,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "beat.flag_share",
+      "variant": "change",
+      "burden": 0.3,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "beat.flag_share",
+      "variant": "change",
+      "burden": 0.6,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "beat.flag_share",
+      "variant": "change",
+      "burden": "all",
+      "positives": 160,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "30s.irregular_share",
+      "variant": "absolute",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.674921875,
+        "ci95": {
+          "low": 0.635150390625,
+          "high": 0.743130859375
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "30s.irregular_share",
+      "variant": "absolute",
+      "burden": 0.1,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.9440625,
+        "ci95": {
+          "low": 0.8941386718750001,
+          "high": 0.9882089843749999
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "30s.irregular_share",
+      "variant": "absolute",
+      "burden": 0.3,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "30s.irregular_share",
+      "variant": "absolute",
+      "burden": 0.6,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "30s.irregular_share",
+      "variant": "absolute",
+      "burden": "all",
+      "positives": 160,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.90474609375,
+        "ci95": {
+          "low": 0.885583984375,
+          "high": 0.92893017578125
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "30s.irregular_share",
+      "variant": "change",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.9809375,
+        "ci95": {
+          "low": 0.9590429687500001,
+          "high": 0.9971875
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "30s.irregular_share",
+      "variant": "change",
+      "burden": 0.1,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "30s.irregular_share",
+      "variant": "change",
+      "burden": 0.3,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "30s.irregular_share",
+      "variant": "change",
+      "burden": 0.6,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "30s.irregular_share",
+      "variant": "change",
+      "burden": "all",
+      "positives": 160,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.995234375,
+        "ci95": {
+          "low": 0.9894912109375,
+          "high": 0.9993759765625
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "30s.hr_jumps",
+      "variant": "absolute",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.738125,
+        "ci95": {
+          "low": 0.642625,
+          "high": 0.8239257812499999
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "30s.hr_jumps",
+      "variant": "absolute",
+      "burden": 0.1,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.89921875,
+        "ci95": {
+          "low": 0.85140625,
+          "high": 0.94219140625
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "30s.hr_jumps",
+      "variant": "absolute",
+      "burden": 0.3,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.9859375,
+        "ci95": {
+          "low": 0.97328125,
+          "high": 0.99516015625
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "30s.hr_jumps",
+      "variant": "absolute",
+      "burden": 0.6,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "30s.hr_jumps",
+      "variant": "absolute",
+      "burden": "all",
+      "positives": 160,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.9058203125,
+        "ci95": {
+          "low": 0.8723759765625001,
+          "high": 0.9356787109375
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "30s.hr_jumps",
+      "variant": "change",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.66390625,
+        "ci95": {
+          "low": 0.59405859375,
+          "high": 0.7411054687499999
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "30s.hr_jumps",
+      "variant": "change",
+      "burden": 0.1,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.82640625,
+        "ci95": {
+          "low": 0.77201953125,
+          "high": 0.88578515625
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "30s.hr_jumps",
+      "variant": "change",
+      "burden": 0.3,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.96078125,
+        "ci95": {
+          "low": 0.9360898437499999,
+          "high": 0.98234375
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "30s.hr_jumps",
+      "variant": "change",
+      "burden": 0.6,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.99859375,
+        "ci95": {
+          "low": 0.99609375,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "30s.hr_jumps",
+      "variant": "change",
+      "burden": "all",
+      "positives": 160,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.862421875,
+        "ci95": {
+          "low": 0.8324970703125,
+          "high": 0.8945341796875
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "5min.irregular_share",
+      "variant": "absolute",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.989296875,
+        "ci95": {
+          "low": 0.968828125,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "5min.irregular_share",
+      "variant": "absolute",
+      "burden": 0.1,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "5min.irregular_share",
+      "variant": "absolute",
+      "burden": 0.3,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "5min.irregular_share",
+      "variant": "absolute",
+      "burden": 0.6,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "5min.irregular_share",
+      "variant": "absolute",
+      "burden": "all",
+      "positives": 160,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.99732421875,
+        "ci95": {
+          "low": 0.9921484375,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "5min.irregular_share",
+      "variant": "change",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "5min.irregular_share",
+      "variant": "change",
+      "burden": 0.1,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "5min.irregular_share",
+      "variant": "change",
+      "burden": 0.3,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "5min.irregular_share",
+      "variant": "change",
+      "burden": 0.6,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "5min.irregular_share",
+      "variant": "change",
+      "burden": "all",
+      "positives": 160,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "5min.hr_jumps",
+      "variant": "absolute",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.68390625,
+        "ci95": {
+          "low": 0.58201171875,
+          "high": 0.77844140625
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "5min.hr_jumps",
+      "variant": "absolute",
+      "burden": 0.1,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.6959375,
+        "ci95": {
+          "low": 0.6021796875,
+          "high": 0.77720703125
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "5min.hr_jumps",
+      "variant": "absolute",
+      "burden": 0.3,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.6575,
+        "ci95": {
+          "low": 0.54405859375,
+          "high": 0.76704296875
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "5min.hr_jumps",
+      "variant": "absolute",
+      "burden": 0.6,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.80828125,
+        "ci95": {
+          "low": 0.7285781250000001,
+          "high": 0.87921875
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "5min.hr_jumps",
+      "variant": "absolute",
+      "burden": "all",
+      "positives": 160,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.71140625,
+        "ci95": {
+          "low": 0.631951171875,
+          "high": 0.783486328125
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "5min.hr_jumps",
+      "variant": "change",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.63,
+        "ci95": {
+          "low": 0.55671484375,
+          "high": 0.70705078125
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "5min.hr_jumps",
+      "variant": "change",
+      "burden": 0.1,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.65171875,
+        "ci95": {
+          "low": 0.58593359375,
+          "high": 0.71859765625
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "5min.hr_jumps",
+      "variant": "change",
+      "burden": 0.3,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.6159375,
+        "ci95": {
+          "low": 0.5248359375,
+          "high": 0.7067265625
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "5min.hr_jumps",
+      "variant": "change",
+      "burden": 0.6,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.7253125,
+        "ci95": {
+          "low": 0.6470273437499999,
+          "high": 0.799078125
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "5min.hr_jumps",
+      "variant": "change",
+      "burden": "all",
+      "positives": 160,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.6557421875,
+        "ci95": {
+          "low": 0.6010048828125001,
+          "high": 0.713173828125
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "1h.irregular_share",
+      "variant": "absolute",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "1h.irregular_share",
+      "variant": "absolute",
+      "burden": 0.1,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "1h.irregular_share",
+      "variant": "absolute",
+      "burden": 0.3,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "1h.irregular_share",
+      "variant": "absolute",
+      "burden": 0.6,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "1h.irregular_share",
+      "variant": "absolute",
+      "burden": "all",
+      "positives": 160,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "1h.irregular_share",
+      "variant": "change",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "1h.irregular_share",
+      "variant": "change",
+      "burden": 0.1,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "1h.irregular_share",
+      "variant": "change",
+      "burden": 0.3,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "1h.irregular_share",
+      "variant": "change",
+      "burden": 0.6,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "1h.irregular_share",
+      "variant": "change",
+      "burden": "all",
+      "positives": 160,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "1h.hr_jumps",
+      "variant": "absolute",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.73515625,
+        "ci95": {
+          "low": 0.65169140625,
+          "high": 0.8184648437500001
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "1h.hr_jumps",
+      "variant": "absolute",
+      "burden": 0.1,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.9203125,
+        "ci95": {
+          "low": 0.8621875,
+          "high": 0.9743828125
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "1h.hr_jumps",
+      "variant": "absolute",
+      "burden": 0.3,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.91140625,
+        "ci95": {
+          "low": 0.8546796875,
+          "high": 0.95797265625
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "1h.hr_jumps",
+      "variant": "absolute",
+      "burden": 0.6,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.96453125,
+        "ci95": {
+          "low": 0.9312421875,
+          "high": 0.9895390625
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "1h.hr_jumps",
+      "variant": "absolute",
+      "burden": "all",
+      "positives": 160,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.8828515625,
+        "ci95": {
+          "low": 0.830732421875,
+          "high": 0.9263007812499999
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "1h.hr_jumps",
+      "variant": "change",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.7178125,
+        "ci95": {
+          "low": 0.6296835937499999,
+          "high": 0.7982851562500001
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "1h.hr_jumps",
+      "variant": "change",
+      "burden": 0.1,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.9271875,
+        "ci95": {
+          "low": 0.868421875,
+          "high": 0.97470703125
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "1h.hr_jumps",
+      "variant": "change",
+      "burden": 0.3,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.90734375,
+        "ci95": {
+          "low": 0.85530859375,
+          "high": 0.9526640625
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "1h.hr_jumps",
+      "variant": "change",
+      "burden": 0.6,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.9646875,
+        "ci95": {
+          "low": 0.9351484375,
+          "high": 0.9884375
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "1h.hr_jumps",
+      "variant": "change",
+      "burden": "all",
+      "positives": 160,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.8792578125,
+        "ci95": {
+          "low": 0.829599609375,
+          "high": 0.9226962890625
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "unit.nrmssd",
+      "variant": "absolute",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.7021875,
+        "ci95": {
+          "low": 0.68124609375,
+          "high": 0.7453164062500001
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "unit.nrmssd",
+      "variant": "absolute",
+      "burden": 0.1,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.99140625,
+        "ci95": {
+          "low": 0.97796875,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "unit.nrmssd",
+      "variant": "absolute",
+      "burden": 0.3,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "unit.nrmssd",
+      "variant": "absolute",
+      "burden": 0.6,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "unit.nrmssd",
+      "variant": "absolute",
+      "burden": "all",
+      "positives": 160,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.9233984375,
+        "ci95": {
+          "low": 0.9159365234375,
+          "high": 0.9345380859375
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "unit.nrmssd",
+      "variant": "change",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "unit.nrmssd",
+      "variant": "change",
+      "burden": 0.1,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "unit.nrmssd",
+      "variant": "change",
+      "burden": 0.3,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "unit.nrmssd",
+      "variant": "change",
+      "burden": 0.6,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "unit.nrmssd",
+      "variant": "change",
+      "burden": "all",
+      "positives": 160,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "unit.heart_rate",
+      "variant": "absolute",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.53375,
+        "ci95": {
+          "low": 0.5098320312500001,
+          "high": 0.56828125
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "unit.heart_rate",
+      "variant": "absolute",
+      "burden": 0.1,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.61109375,
+        "ci95": {
+          "low": 0.57889453125,
+          "high": 0.65954296875
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "unit.heart_rate",
+      "variant": "absolute",
+      "burden": 0.3,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.7634375,
+        "ci95": {
+          "low": 0.7209375,
+          "high": 0.8232890625
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "unit.heart_rate",
+      "variant": "absolute",
+      "burden": 0.6,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.9559375,
+        "ci95": {
+          "low": 0.9173359375,
+          "high": 0.98703125
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "unit.heart_rate",
+      "variant": "absolute",
+      "burden": "all",
+      "positives": 160,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.7160546875,
+        "ci95": {
+          "low": 0.6924589843750001,
+          "high": 0.7482500000000001
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "unit.heart_rate",
+      "variant": "change",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.6203125,
+        "ci95": {
+          "low": 0.54039453125,
+          "high": 0.7057890625000001
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "unit.heart_rate",
+      "variant": "change",
+      "burden": 0.1,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.80625,
+        "ci95": {
+          "low": 0.73026953125,
+          "high": 0.8804765625000001
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "unit.heart_rate",
+      "variant": "change",
+      "burden": 0.3,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.93828125,
+        "ci95": {
+          "low": 0.8821875,
+          "high": 0.9807851562500001
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "unit.heart_rate",
+      "variant": "change",
+      "burden": 0.6,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.98484375,
+        "ci95": {
+          "low": 0.96483203125,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "unit.heart_rate",
+      "variant": "change",
+      "burden": "all",
+      "positives": 160,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.837421875,
+        "ci95": {
+          "low": 0.800603515625,
+          "high": 0.873677734375
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "day.resting_heart_rate",
+      "variant": "absolute",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.5203125,
+        "ci95": {
+          "low": 0.49140625,
+          "high": 0.55563671875
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "day.resting_heart_rate",
+      "variant": "absolute",
+      "burden": 0.1,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.5846875,
+        "ci95": {
+          "low": 0.53857421875,
+          "high": 0.64563671875
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "day.resting_heart_rate",
+      "variant": "absolute",
+      "burden": 0.3,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.61703125,
+        "ci95": {
+          "low": 0.55528515625,
+          "high": 0.6861015625
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "day.resting_heart_rate",
+      "variant": "absolute",
+      "burden": 0.6,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.69453125,
+        "ci95": {
+          "low": 0.61871875,
+          "high": 0.78080078125
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "day.resting_heart_rate",
+      "variant": "absolute",
+      "burden": "all",
+      "positives": 160,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.604140625,
+        "ci95": {
+          "low": 0.5725751953125,
+          "high": 0.6379892578124999
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "day.resting_heart_rate",
+      "variant": "change",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.5746875,
+        "ci95": {
+          "low": 0.48511328125000003,
+          "high": 0.67016015625
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "day.resting_heart_rate",
+      "variant": "change",
+      "burden": 0.1,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.6709375,
+        "ci95": {
+          "low": 0.58433203125,
+          "high": 0.76421875
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "day.resting_heart_rate",
+      "variant": "change",
+      "burden": 0.3,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.65390625,
+        "ci95": {
+          "low": 0.560453125,
+          "high": 0.7490625
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "day.resting_heart_rate",
+      "variant": "change",
+      "burden": 0.6,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.76375,
+        "ci95": {
+          "low": 0.670578125,
+          "high": 0.8535976562500001
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "day.resting_heart_rate",
+      "variant": "change",
+      "burden": "all",
+      "positives": 160,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.6658203125,
+        "ci95": {
+          "low": 0.6166113281250001,
+          "high": 0.7187138671875001
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "day.hrv_rmssd",
+      "variant": "absolute",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.50640625,
+        "ci95": {
+          "low": 0.47530859375,
+          "high": 0.5396953125
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "day.hrv_rmssd",
+      "variant": "absolute",
+      "burden": 0.1,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.68609375,
+        "ci95": {
+          "low": 0.5965546875,
+          "high": 0.77812890625
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "day.hrv_rmssd",
+      "variant": "absolute",
+      "burden": 0.3,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.69546875,
+        "ci95": {
+          "low": 0.61343359375,
+          "high": 0.7795546875
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "day.hrv_rmssd",
+      "variant": "absolute",
+      "burden": 0.6,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.759375,
+        "ci95": {
+          "low": 0.6721171875,
+          "high": 0.8398671875
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "day.hrv_rmssd",
+      "variant": "absolute",
+      "burden": "all",
+      "positives": 160,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.6618359375,
+        "ci95": {
+          "low": 0.6187490234375,
+          "high": 0.7034003906249999
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "day.hrv_rmssd",
+      "variant": "change",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.50875,
+        "ci95": {
+          "low": 0.40873046875,
+          "high": 0.60147265625
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "day.hrv_rmssd",
+      "variant": "change",
+      "burden": 0.1,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.6365625,
+        "ci95": {
+          "low": 0.52437109375,
+          "high": 0.74094921875
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "day.hrv_rmssd",
+      "variant": "change",
+      "burden": 0.3,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.69734375,
+        "ci95": {
+          "low": 0.5984375,
+          "high": 0.79642578125
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "day.hrv_rmssd",
+      "variant": "change",
+      "burden": 0.6,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.78828125,
+        "ci95": {
+          "low": 0.67979296875,
+          "high": 0.8816015625
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "day.hrv_rmssd",
+      "variant": "change",
+      "burden": "all",
+      "positives": 160,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.657734375,
+        "ci95": {
+          "low": 0.599009765625,
+          "high": 0.7137509765625
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "beat.flag_share",
+      "variant": "absolute",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.72296875,
+        "ci95": {
+          "low": 0.64419921875,
+          "high": 0.8167226562500001
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "beat.flag_share",
+      "variant": "absolute",
+      "burden": 0.1,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.78890625,
+        "ci95": {
+          "low": 0.71999609375,
+          "high": 0.87769140625
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "beat.flag_share",
+      "variant": "absolute",
+      "burden": 0.3,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.9009375,
+        "ci95": {
+          "low": 0.8445234374999999,
+          "high": 0.9617578124999999
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "beat.flag_share",
+      "variant": "absolute",
+      "burden": 0.6,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.98734375,
+        "ci95": {
+          "low": 0.96202734375,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "beat.flag_share",
+      "variant": "absolute",
+      "burden": "all",
+      "positives": 160,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.8500390625,
+        "ci95": {
+          "low": 0.7963984375,
+          "high": 0.9075703125
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "beat.flag_share",
+      "variant": "change",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.8203125,
+        "ci95": {
+          "low": 0.73761328125,
+          "high": 0.90062890625
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "beat.flag_share",
+      "variant": "change",
+      "burden": 0.1,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.93765625,
+        "ci95": {
+          "low": 0.879671875,
+          "high": 0.98687890625
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "beat.flag_share",
+      "variant": "change",
+      "burden": 0.3,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.99953125,
+        "ci95": {
+          "low": 0.998125,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "beat.flag_share",
+      "variant": "change",
+      "burden": 0.6,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "beat.flag_share",
+      "variant": "change",
+      "burden": "all",
+      "positives": 160,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.939375,
+        "ci95": {
+          "low": 0.9101015625000001,
+          "high": 0.964380859375
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "30s.irregular_share",
+      "variant": "absolute",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.54859375,
+        "ci95": {
+          "low": 0.522953125,
+          "high": 0.58328515625
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "30s.irregular_share",
+      "variant": "absolute",
+      "burden": 0.1,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.7509375,
+        "ci95": {
+          "low": 0.71765234375,
+          "high": 0.8018964843749999
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "30s.irregular_share",
+      "variant": "absolute",
+      "burden": 0.3,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.99359375,
+        "ci95": {
+          "low": 0.9823398437499999,
+          "high": 0.99953125
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "30s.irregular_share",
+      "variant": "absolute",
+      "burden": 0.6,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "30s.irregular_share",
+      "variant": "absolute",
+      "burden": "all",
+      "positives": 160,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.82328125,
+        "ci95": {
+          "low": 0.81150390625,
+          "high": 0.84158203125
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "30s.irregular_share",
+      "variant": "change",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.68046875,
+        "ci95": {
+          "low": 0.5923164062499999,
+          "high": 0.7577597656249999
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "30s.irregular_share",
+      "variant": "change",
+      "burden": 0.1,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.992109375,
+        "ci95": {
+          "low": 0.9837480468750001,
+          "high": 0.99796875
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "30s.irregular_share",
+      "variant": "change",
+      "burden": 0.3,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "30s.irregular_share",
+      "variant": "change",
+      "burden": 0.6,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "30s.irregular_share",
+      "variant": "change",
+      "burden": "all",
+      "positives": 160,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.91814453125,
+        "ci95": {
+          "low": 0.89665087890625,
+          "high": 0.9393193359375
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "30s.hr_jumps",
+      "variant": "absolute",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.7246875,
+        "ci95": {
+          "low": 0.6385624999999999,
+          "high": 0.8095390625000001
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "30s.hr_jumps",
+      "variant": "absolute",
+      "burden": 0.1,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.89421875,
+        "ci95": {
+          "low": 0.8551523437499999,
+          "high": 0.93062890625
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "30s.hr_jumps",
+      "variant": "absolute",
+      "burden": 0.3,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.98453125,
+        "ci95": {
+          "low": 0.9695273437499999,
+          "high": 0.99484375
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "30s.hr_jumps",
+      "variant": "absolute",
+      "burden": 0.6,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.99984375,
+        "ci95": {
+          "low": 0.9990625,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "30s.hr_jumps",
+      "variant": "absolute",
+      "burden": "all",
+      "positives": 160,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.9008203125,
+        "ci95": {
+          "low": 0.8687080078124999,
+          "high": 0.93023828125
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "30s.hr_jumps",
+      "variant": "change",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.66296875,
+        "ci95": {
+          "low": 0.60060546875,
+          "high": 0.73421875
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "30s.hr_jumps",
+      "variant": "change",
+      "burden": 0.1,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.848125,
+        "ci95": {
+          "low": 0.7912382812500001,
+          "high": 0.90469140625
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "30s.hr_jumps",
+      "variant": "change",
+      "burden": 0.3,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.96421875,
+        "ci95": {
+          "low": 0.9365625,
+          "high": 0.9890625
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "30s.hr_jumps",
+      "variant": "change",
+      "burden": 0.6,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.99921875,
+        "ci95": {
+          "low": 0.9975,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "30s.hr_jumps",
+      "variant": "change",
+      "burden": "all",
+      "positives": 160,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.8686328125,
+        "ci95": {
+          "low": 0.838744140625,
+          "high": 0.8971113281249999
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "5min.irregular_share",
+      "variant": "absolute",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.523671875,
+        "ci95": {
+          "low": 0.4707578125,
+          "high": 0.5821132812500001
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "5min.irregular_share",
+      "variant": "absolute",
+      "burden": 0.1,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.5365625,
+        "ci95": {
+          "low": 0.47186328125,
+          "high": 0.598296875
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "5min.irregular_share",
+      "variant": "absolute",
+      "burden": 0.3,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.599296875,
+        "ci95": {
+          "low": 0.53474609375,
+          "high": 0.6718457031249999
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "5min.irregular_share",
+      "variant": "absolute",
+      "burden": 0.6,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.7396875,
+        "ci95": {
+          "low": 0.672537109375,
+          "high": 0.8033613281249999
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "5min.irregular_share",
+      "variant": "absolute",
+      "burden": "all",
+      "positives": 160,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.5998046875,
+        "ci95": {
+          "low": 0.55841064453125,
+          "high": 0.64625048828125
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "5min.irregular_share",
+      "variant": "change",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.544609375,
+        "ci95": {
+          "low": 0.46007421875,
+          "high": 0.626572265625
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "5min.irregular_share",
+      "variant": "change",
+      "burden": 0.1,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.56625,
+        "ci95": {
+          "low": 0.478392578125,
+          "high": 0.656734375
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "5min.irregular_share",
+      "variant": "change",
+      "burden": 0.3,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.646875,
+        "ci95": {
+          "low": 0.553341796875,
+          "high": 0.72487890625
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "5min.irregular_share",
+      "variant": "change",
+      "burden": 0.6,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.79890625,
+        "ci95": {
+          "low": 0.7329609374999999,
+          "high": 0.863283203125
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "5min.irregular_share",
+      "variant": "change",
+      "burden": "all",
+      "positives": 160,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.63916015625,
+        "ci95": {
+          "low": 0.5810654296875,
+          "high": 0.6941430664062499
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "5min.hr_jumps",
+      "variant": "absolute",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.681875,
+        "ci95": {
+          "low": 0.58591796875,
+          "high": 0.7840703125
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "5min.hr_jumps",
+      "variant": "absolute",
+      "burden": 0.1,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.69609375,
+        "ci95": {
+          "low": 0.610234375,
+          "high": 0.77406640625
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "5min.hr_jumps",
+      "variant": "absolute",
+      "burden": 0.3,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.6571875,
+        "ci95": {
+          "low": 0.53171484375,
+          "high": 0.76394140625
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "5min.hr_jumps",
+      "variant": "absolute",
+      "burden": 0.6,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.81546875,
+        "ci95": {
+          "low": 0.7401054687499999,
+          "high": 0.8858046875
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "5min.hr_jumps",
+      "variant": "absolute",
+      "burden": "all",
+      "positives": 160,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.71265625,
+        "ci95": {
+          "low": 0.6387431640625001,
+          "high": 0.7816513671875
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "5min.hr_jumps",
+      "variant": "change",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.62953125,
+        "ci95": {
+          "low": 0.5509062499999999,
+          "high": 0.7048515625
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "5min.hr_jumps",
+      "variant": "change",
+      "burden": 0.1,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.651875,
+        "ci95": {
+          "low": 0.5884062499999999,
+          "high": 0.7220390625
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "5min.hr_jumps",
+      "variant": "change",
+      "burden": 0.3,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.62078125,
+        "ci95": {
+          "low": 0.53046484375,
+          "high": 0.70921875
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "5min.hr_jumps",
+      "variant": "change",
+      "burden": 0.6,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.7334375,
+        "ci95": {
+          "low": 0.6693671875,
+          "high": 0.8009687499999999
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "5min.hr_jumps",
+      "variant": "change",
+      "burden": "all",
+      "positives": 160,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.65890625,
+        "ci95": {
+          "low": 0.60409765625,
+          "high": 0.7144941406249999
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "1h.irregular_share",
+      "variant": "absolute",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.5,
+        "ci95": {
+          "low": 0.5,
+          "high": 0.5
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "1h.irregular_share",
+      "variant": "absolute",
+      "burden": 0.1,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.5,
+        "ci95": {
+          "low": 0.5,
+          "high": 0.5
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "1h.irregular_share",
+      "variant": "absolute",
+      "burden": 0.3,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.5,
+        "ci95": {
+          "low": 0.5,
+          "high": 0.5
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "1h.irregular_share",
+      "variant": "absolute",
+      "burden": 0.6,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.5,
+        "ci95": {
+          "low": 0.5,
+          "high": 0.5
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "1h.irregular_share",
+      "variant": "absolute",
+      "burden": "all",
+      "positives": 160,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.5,
+        "ci95": {
+          "low": 0.5,
+          "high": 0.5
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "1h.irregular_share",
+      "variant": "change",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.5,
+        "ci95": {
+          "low": 0.5,
+          "high": 0.5
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "1h.irregular_share",
+      "variant": "change",
+      "burden": 0.1,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.5,
+        "ci95": {
+          "low": 0.5,
+          "high": 0.5
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "1h.irregular_share",
+      "variant": "change",
+      "burden": 0.3,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.5,
+        "ci95": {
+          "low": 0.5,
+          "high": 0.5
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "1h.irregular_share",
+      "variant": "change",
+      "burden": 0.6,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.5,
+        "ci95": {
+          "low": 0.5,
+          "high": 0.5
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "1h.irregular_share",
+      "variant": "change",
+      "burden": "all",
+      "positives": 160,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.5,
+        "ci95": {
+          "low": 0.5,
+          "high": 0.5
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "1h.hr_jumps",
+      "variant": "absolute",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.7359375,
+        "ci95": {
+          "low": 0.6541171874999999,
+          "high": 0.82016015625
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "1h.hr_jumps",
+      "variant": "absolute",
+      "burden": 0.1,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.91921875,
+        "ci95": {
+          "low": 0.86,
+          "high": 0.97000390625
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "1h.hr_jumps",
+      "variant": "absolute",
+      "burden": 0.3,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.91453125,
+        "ci95": {
+          "low": 0.8576328125,
+          "high": 0.9628125
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "1h.hr_jumps",
+      "variant": "absolute",
+      "burden": 0.6,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.9653125,
+        "ci95": {
+          "low": 0.9343671874999999,
+          "high": 0.98953125
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "1h.hr_jumps",
+      "variant": "absolute",
+      "burden": "all",
+      "positives": 160,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.88375,
+        "ci95": {
+          "low": 0.8357685546875,
+          "high": 0.9306650390625
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "1h.hr_jumps",
+      "variant": "change",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.72,
+        "ci95": {
+          "low": 0.6335546875,
+          "high": 0.8001953125
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "1h.hr_jumps",
+      "variant": "change",
+      "burden": 0.1,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.92609375,
+        "ci95": {
+          "low": 0.86858984375,
+          "high": 0.9721992187499999
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "1h.hr_jumps",
+      "variant": "change",
+      "burden": 0.3,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.9115625,
+        "ci95": {
+          "low": 0.85934765625,
+          "high": 0.95796875
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "1h.hr_jumps",
+      "variant": "change",
+      "burden": 0.6,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.96328125,
+        "ci95": {
+          "low": 0.9315546874999999,
+          "high": 0.98687890625
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "1h.hr_jumps",
+      "variant": "change",
+      "burden": "all",
+      "positives": 160,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.880234375,
+        "ci95": {
+          "low": 0.8321044921875,
+          "high": 0.9245322265625
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "unit.nrmssd",
+      "variant": "absolute",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.70109375,
+        "ci95": {
+          "low": 0.6504453125,
+          "high": 0.7621953125
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "unit.nrmssd",
+      "variant": "absolute",
+      "burden": 0.1,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.99578125,
+        "ci95": {
+          "low": 0.98874609375,
+          "high": 0.9996875
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "unit.nrmssd",
+      "variant": "absolute",
+      "burden": 0.3,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "unit.nrmssd",
+      "variant": "absolute",
+      "burden": 0.6,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "unit.nrmssd",
+      "variant": "absolute",
+      "burden": "all",
+      "positives": 160,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.92421875,
+        "ci95": {
+          "low": 0.9112880859375,
+          "high": 0.9391015625
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "unit.nrmssd",
+      "variant": "change",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.84375,
+        "ci95": {
+          "low": 0.77247265625,
+          "high": 0.9022109375
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "unit.nrmssd",
+      "variant": "change",
+      "burden": 0.1,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.99515625,
+        "ci95": {
+          "low": 0.98359375,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "unit.nrmssd",
+      "variant": "change",
+      "burden": 0.3,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "unit.nrmssd",
+      "variant": "change",
+      "burden": 0.6,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "unit.nrmssd",
+      "variant": "change",
+      "burden": "all",
+      "positives": 160,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.9597265625,
+        "ci95": {
+          "low": 0.9413271484375,
+          "high": 0.9751962890625
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "unit.heart_rate",
+      "variant": "absolute",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.53375,
+        "ci95": {
+          "low": 0.5065507812500001,
+          "high": 0.56750390625
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "unit.heart_rate",
+      "variant": "absolute",
+      "burden": 0.1,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.61125,
+        "ci95": {
+          "low": 0.57544921875,
+          "high": 0.6593789062500001
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "unit.heart_rate",
+      "variant": "absolute",
+      "burden": 0.3,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.763125,
+        "ci95": {
+          "low": 0.715296875,
+          "high": 0.824375
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "unit.heart_rate",
+      "variant": "absolute",
+      "burden": 0.6,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.9559375,
+        "ci95": {
+          "low": 0.91875,
+          "high": 0.9875
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "unit.heart_rate",
+      "variant": "absolute",
+      "burden": "all",
+      "positives": 160,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.716015625,
+        "ci95": {
+          "low": 0.6909677734374999,
+          "high": 0.7478203125
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "unit.heart_rate",
+      "variant": "change",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.6184375,
+        "ci95": {
+          "low": 0.53624609375,
+          "high": 0.6982890625
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "unit.heart_rate",
+      "variant": "change",
+      "burden": 0.1,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.8059375,
+        "ci95": {
+          "low": 0.72577734375,
+          "high": 0.88408203125
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "unit.heart_rate",
+      "variant": "change",
+      "burden": 0.3,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.9378125,
+        "ci95": {
+          "low": 0.8879453125,
+          "high": 0.9803125
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "unit.heart_rate",
+      "variant": "change",
+      "burden": 0.6,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.9846875,
+        "ci95": {
+          "low": 0.964375,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "unit.heart_rate",
+      "variant": "change",
+      "burden": "all",
+      "positives": 160,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.83671875,
+        "ci95": {
+          "low": 0.801580078125,
+          "high": 0.8738496093749999
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "day.resting_heart_rate",
+      "variant": "absolute",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.5209375,
+        "ci95": {
+          "low": 0.49264843750000004,
+          "high": 0.55595703125
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "day.resting_heart_rate",
+      "variant": "absolute",
+      "burden": 0.1,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.5853125,
+        "ci95": {
+          "low": 0.5393671875,
+          "high": 0.6451679687499999
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "day.resting_heart_rate",
+      "variant": "absolute",
+      "burden": 0.3,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.6171875,
+        "ci95": {
+          "low": 0.5540390625,
+          "high": 0.689234375
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "day.resting_heart_rate",
+      "variant": "absolute",
+      "burden": 0.6,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.69484375,
+        "ci95": {
+          "low": 0.61951953125,
+          "high": 0.78203515625
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "day.resting_heart_rate",
+      "variant": "absolute",
+      "burden": "all",
+      "positives": 160,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.6045703125,
+        "ci95": {
+          "low": 0.576287109375,
+          "high": 0.6390263671875
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "day.resting_heart_rate",
+      "variant": "change",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.57265625,
+        "ci95": {
+          "low": 0.47951171875000004,
+          "high": 0.66785546875
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "day.resting_heart_rate",
+      "variant": "change",
+      "burden": 0.1,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.67140625,
+        "ci95": {
+          "low": 0.58919921875,
+          "high": 0.76158203125
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "day.resting_heart_rate",
+      "variant": "change",
+      "burden": 0.3,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.6525,
+        "ci95": {
+          "low": 0.5529335937500001,
+          "high": 0.748484375
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "day.resting_heart_rate",
+      "variant": "change",
+      "burden": 0.6,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.76578125,
+        "ci95": {
+          "low": 0.67232421875,
+          "high": 0.8607851562500001
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "day.resting_heart_rate",
+      "variant": "change",
+      "burden": "all",
+      "positives": 160,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.6655859375,
+        "ci95": {
+          "low": 0.6143681640625,
+          "high": 0.7170673828124999
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "day.hrv_rmssd",
+      "variant": "absolute",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.4865625,
+        "ci95": {
+          "low": 0.45453125,
+          "high": 0.517359375
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "day.hrv_rmssd",
+      "variant": "absolute",
+      "burden": 0.1,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.53828125,
+        "ci95": {
+          "low": 0.48217187499999997,
+          "high": 0.5979726562500001
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "day.hrv_rmssd",
+      "variant": "absolute",
+      "burden": 0.3,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.57984375,
+        "ci95": {
+          "low": 0.5240546875,
+          "high": 0.64125390625
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "day.hrv_rmssd",
+      "variant": "absolute",
+      "burden": 0.6,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.6246875,
+        "ci95": {
+          "low": 0.55060546875,
+          "high": 0.70203125
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "day.hrv_rmssd",
+      "variant": "absolute",
+      "burden": "all",
+      "positives": 160,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.55734375,
+        "ci95": {
+          "low": 0.5240185546875,
+          "high": 0.5953925781249999
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "day.hrv_rmssd",
+      "variant": "change",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.4615625,
+        "ci95": {
+          "low": 0.37858203125,
+          "high": 0.54672265625
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "day.hrv_rmssd",
+      "variant": "change",
+      "burden": 0.1,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.5521875,
+        "ci95": {
+          "low": 0.45483203125,
+          "high": 0.65844921875
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "day.hrv_rmssd",
+      "variant": "change",
+      "burden": 0.3,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.61078125,
+        "ci95": {
+          "low": 0.5092109375,
+          "high": 0.7028437499999999
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "day.hrv_rmssd",
+      "variant": "change",
+      "burden": 0.6,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.65359375,
+        "ci95": {
+          "low": 0.55218359375,
+          "high": 0.7515703125000001
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "day.hrv_rmssd",
+      "variant": "change",
+      "burden": "all",
+      "positives": 160,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.56953125,
+        "ci95": {
+          "low": 0.5205048828125,
+          "high": 0.622548828125
+        }
+      }
+    }
+  ],
+  "hourAurocs": [
+    {
+      "source": "sim",
+      "noise": "none",
+      "feature": "beat.flag_share",
+      "bin": "0-5%",
+      "positives": 10,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.7661522004889976,
+        "ci95": {
+          "low": 0.6062051295029287,
+          "high": 0.9172197081989828
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "none",
+      "feature": "beat.flag_share",
+      "bin": "5-30%",
+      "positives": 51,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.996017905939882,
+        "ci95": {
+          "low": 0.9893651233440579,
+          "high": 0.9998983976509134
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "none",
+      "feature": "beat.flag_share",
+      "bin": "30-70%",
+      "positives": 145,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "none",
+      "feature": "beat.flag_share",
+      "bin": "70-100%",
+      "positives": 930,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "none",
+      "feature": "beat.flag_share",
+      "bin": "any",
+      "positives": 1136,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.9977627070491408,
+        "ci95": {
+          "low": 0.9959358827000598,
+          "high": 0.9993666002736198
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "none",
+      "feature": "30s.irregular_share",
+      "bin": "0-5%",
+      "positives": 10,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.6421378361858191,
+        "ci95": {
+          "low": 0.517811539380664,
+          "high": 0.7568209370904324
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "none",
+      "feature": "30s.irregular_share",
+      "bin": "5-30%",
+      "positives": 51,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.9247027661920514,
+        "ci95": {
+          "low": 0.8782744667872769,
+          "high": 0.9616367406018429
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "none",
+      "feature": "30s.irregular_share",
+      "bin": "30-70%",
+      "positives": 145,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.9996970112132197,
+        "ci95": {
+          "low": 0.9988399101358273,
+          "high": 0.9999989860531742
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "none",
+      "feature": "30s.irregular_share",
+      "bin": "70-100%",
+      "positives": 930,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "none",
+      "feature": "30s.irregular_share",
+      "bin": "any",
+      "positives": 1136,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.9934307095630015,
+        "ci95": {
+          "low": 0.9907905893289509,
+          "high": 0.9958142833362763
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "none",
+      "feature": "30s.hr_jumps",
+      "bin": "0-5%",
+      "positives": 10,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.7621943765281174,
+        "ci95": {
+          "low": 0.6307070504973825,
+          "high": 0.8699022947846113
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "none",
+      "feature": "30s.hr_jumps",
+      "bin": "5-30%",
+      "positives": 51,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.8313078287549739,
+        "ci95": {
+          "low": 0.768300939681732,
+          "high": 0.8863275006725745
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "none",
+      "feature": "30s.hr_jumps",
+      "bin": "30-70%",
+      "positives": 145,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.9073181013405278,
+        "ci95": {
+          "low": 0.8878365743450258,
+          "high": 0.9271683530175616
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "none",
+      "feature": "30s.hr_jumps",
+      "bin": "70-100%",
+      "positives": 930,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.9391196400872834,
+        "ci95": {
+          "low": 0.9275887985999322,
+          "high": 0.94906083572231
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "none",
+      "feature": "30s.hr_jumps",
+      "bin": "any",
+      "positives": 1136,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.9286628811684287,
+        "ci95": {
+          "low": 0.9145807820165369,
+          "high": 0.9419223459584524
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "none",
+      "feature": "5min.irregular_share",
+      "bin": "0-5%",
+      "positives": 10,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.8963783618581908,
+        "ci95": {
+          "low": 0.7473858958393682,
+          "high": 0.9989301707044473
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "none",
+      "feature": "5min.irregular_share",
+      "bin": "5-30%",
+      "positives": 51,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.9984239417038209,
+        "ci95": {
+          "low": 0.9953954815064185,
+          "high": 0.9999799572023512
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "none",
+      "feature": "5min.irregular_share",
+      "bin": "30-70%",
+      "positives": 145,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.9999778686451395,
+        "ci95": {
+          "low": 0.9999132174577153,
+          "high": 1
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "none",
+      "feature": "5min.irregular_share",
+      "bin": "70-100%",
+      "positives": 930,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "none",
+      "feature": "5min.irregular_share",
+      "bin": "any",
+      "positives": 1136,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.9990142566892799,
+        "ci95": {
+          "low": 0.9977155330484472,
+          "high": 0.9999911557680514
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "none",
+      "feature": "5min.hr_jumps",
+      "bin": "0-5%",
+      "positives": 10,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.5932151589242054,
+        "ci95": {
+          "low": 0.4423549456542396,
+          "high": 0.7319527520439267
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "none",
+      "feature": "5min.hr_jumps",
+      "bin": "5-30%",
+      "positives": 51,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.7613590057049715,
+        "ci95": {
+          "low": 0.6602736627774026,
+          "high": 0.8467356675666221
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "none",
+      "feature": "5min.hr_jumps",
+      "bin": "30-70%",
+      "positives": 145,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.8212882556276874,
+        "ci95": {
+          "low": 0.7812432430138397,
+          "high": 0.8600680864869492
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "none",
+      "feature": "5min.hr_jumps",
+      "bin": "70-100%",
+      "positives": 930,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.6564895693666692,
+        "ci95": {
+          "low": 0.6333470918857391,
+          "high": 0.6792531091817494
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "none",
+      "feature": "5min.hr_jumps",
+      "bin": "any",
+      "positives": 1136,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.6816756667757154,
+        "ci95": {
+          "low": 0.6576273118614955,
+          "high": 0.7052300734941517
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "none",
+      "feature": "unit.nrmssd",
+      "bin": "0-5%",
+      "positives": 10,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.6739914425427873,
+        "ci95": {
+          "low": 0.5269871661074749,
+          "high": 0.8212850682609779
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "none",
+      "feature": "unit.nrmssd",
+      "bin": "5-30%",
+      "positives": 51,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.9661057577065055,
+        "ci95": {
+          "low": 0.9340960739540186,
+          "high": 0.9904053347377062
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "none",
+      "feature": "unit.nrmssd",
+      "bin": "30-70%",
+      "positives": 145,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.9999989461259591,
+        "ci95": {
+          "low": 0.9999936728546653,
+          "high": 1
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "none",
+      "feature": "unit.nrmssd",
+      "bin": "70-100%",
+      "positives": 930,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "none",
+      "feature": "unit.nrmssd",
+      "bin": "any",
+      "positives": 1136,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.9956084113175385,
+        "ci95": {
+          "low": 0.9937607100702828,
+          "high": 0.9975716597645823
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "none",
+      "feature": "unit.heart_rate",
+      "bin": "0-5%",
+      "positives": 10,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.48192237163814183,
+        "ci95": {
+          "low": 0.3397773244810838,
+          "high": 0.6272898179609543
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "none",
+      "feature": "unit.heart_rate",
+      "bin": "5-30%",
+      "positives": 51,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.6541181264681912,
+        "ci95": {
+          "low": 0.5830380933040904,
+          "high": 0.7191067172357993
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "none",
+      "feature": "unit.heart_rate",
+      "bin": "30-70%",
+      "positives": 145,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.8010327965601551,
+        "ci95": {
+          "low": 0.757059531890086,
+          "high": 0.8493816526585963
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "none",
+      "feature": "unit.heart_rate",
+      "bin": "70-100%",
+      "positives": 930,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.9716503010226885,
+        "ci95": {
+          "low": 0.9476876279597017,
+          "high": 0.9881223796882092
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "none",
+      "feature": "unit.heart_rate",
+      "bin": "any",
+      "positives": 1136,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.9313061475515686,
+        "ci95": {
+          "low": 0.9051632391702114,
+          "high": 0.952070654199508
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "light",
+      "feature": "beat.flag_share",
+      "bin": "0-5%",
+      "positives": 10,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.6565479828850855,
+        "ci95": {
+          "low": 0.5089143974391215,
+          "high": 0.7895512210367297
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "light",
+      "feature": "beat.flag_share",
+      "bin": "5-30%",
+      "positives": 51,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.814216884797929,
+        "ci95": {
+          "low": 0.7348780473450878,
+          "high": 0.8967200435707291
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "light",
+      "feature": "beat.flag_share",
+      "bin": "30-70%",
+      "positives": 145,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.8990588904814096,
+        "ci95": {
+          "low": 0.845689570600023,
+          "high": 0.9499612991972711
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "light",
+      "feature": "beat.flag_share",
+      "bin": "70-100%",
+      "positives": 930,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.996590983778952,
+        "ci95": {
+          "low": 0.993130429879104,
+          "high": 0.9990710953528885
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "light",
+      "feature": "beat.flag_share",
+      "bin": "any",
+      "positives": 1136,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.972960999108957,
+        "ci95": {
+          "low": 0.9604365245221254,
+          "high": 0.98554095839377
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "light",
+      "feature": "30s.irregular_share",
+      "bin": "0-5%",
+      "positives": 10,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.5351008557457213,
+        "ci95": {
+          "low": 0.37757838166462043,
+          "high": 0.6759126965812015
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "light",
+      "feature": "30s.irregular_share",
+      "bin": "5-30%",
+      "positives": 51,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.7587222541828468,
+        "ci95": {
+          "low": 0.7014526991713618,
+          "high": 0.8184288433647401
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "light",
+      "feature": "30s.irregular_share",
+      "bin": "30-70%",
+      "positives": 145,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.9495594806508726,
+        "ci95": {
+          "low": 0.9170665541928354,
+          "high": 0.977292622911014
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "light",
+      "feature": "30s.irregular_share",
+      "bin": "70-100%",
+      "positives": 930,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.9999983568630544,
+        "ci95": {
+          "low": 0.999995200747612,
+          "high": 1
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "light",
+      "feature": "30s.irregular_share",
+      "bin": "any",
+      "positives": 1136,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.9786359507903165,
+        "ci95": {
+          "low": 0.9736134093916926,
+          "high": 0.9833155296703762
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "light",
+      "feature": "30s.hr_jumps",
+      "bin": "0-5%",
+      "positives": 10,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.7453086797066014,
+        "ci95": {
+          "low": 0.603473717038215,
+          "high": 0.8653977979189844
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "light",
+      "feature": "30s.hr_jumps",
+      "bin": "5-30%",
+      "positives": 51,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.8238320389280407,
+        "ci95": {
+          "low": 0.7609545041480886,
+          "high": 0.8809077382929983
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "light",
+      "feature": "30s.hr_jumps",
+      "bin": "30-70%",
+      "positives": 145,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.9077101424837704,
+        "ci95": {
+          "low": 0.886325136691028,
+          "high": 0.9280944266285571
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "light",
+      "feature": "30s.hr_jumps",
+      "bin": "70-100%",
+      "positives": 930,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.9473170859952151,
+        "ci95": {
+          "low": 0.9359873881201084,
+          "high": 0.9587330560907569
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "light",
+      "feature": "30s.hr_jumps",
+      "bin": "any",
+      "positives": 1136,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.9349395963187438,
+        "ci95": {
+          "low": 0.9198378265505666,
+          "high": 0.9479699590973892
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "light",
+      "feature": "5min.irregular_share",
+      "bin": "0-5%",
+      "positives": 10,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.3628820293398533,
+        "ci95": {
+          "low": 0.2042478856661955,
+          "high": 0.5467598842284748
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "light",
+      "feature": "5min.irregular_share",
+      "bin": "5-30%",
+      "positives": 51,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.5501072678460137,
+        "ci95": {
+          "low": 0.507135939853875,
+          "high": 0.5931597304811398
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "light",
+      "feature": "5min.irregular_share",
+      "bin": "30-70%",
+      "positives": 145,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.5381702638900598,
+        "ci95": {
+          "low": 0.5136267850878671,
+          "high": 0.5628366189312133
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "light",
+      "feature": "5min.irregular_share",
+      "bin": "70-100%",
+      "positives": 930,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.6145118568761995,
+        "ci95": {
+          "low": 0.5984065363318931,
+          "high": 0.630611734419977
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "light",
+      "feature": "5min.irregular_share",
+      "bin": "any",
+      "positives": 1136,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.5996610969299907,
+        "ci95": {
+          "low": 0.5851512702759041,
+          "high": 0.6145797446723198
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "light",
+      "feature": "5min.hr_jumps",
+      "bin": "0-5%",
+      "positives": 10,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.5923746943765281,
+        "ci95": {
+          "low": 0.445520568820619,
+          "high": 0.7345311498974145
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "light",
+      "feature": "5min.hr_jumps",
+      "bin": "5-30%",
+      "positives": 51,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.7632946210268948,
+        "ci95": {
+          "low": 0.6564776458986412,
+          "high": 0.8501072245887962
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "light",
+      "feature": "5min.hr_jumps",
+      "bin": "30-70%",
+      "positives": 145,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.8234687210184639,
+        "ci95": {
+          "low": 0.7871200430007098,
+          "high": 0.8612385314300814
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "light",
+      "feature": "5min.hr_jumps",
+      "bin": "70-100%",
+      "positives": 930,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.6580484133869653,
+        "ci95": {
+          "low": 0.6346230111628043,
+          "high": 0.6792095074925885
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "light",
+      "feature": "5min.hr_jumps",
+      "bin": "any",
+      "positives": 1136,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.6833096493078274,
+        "ci95": {
+          "low": 0.6585955903003148,
+          "high": 0.7047652792734519
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "light",
+      "feature": "unit.nrmssd",
+      "bin": "0-5%",
+      "positives": 10,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.609489608801956,
+        "ci95": {
+          "low": 0.46163920366952277,
+          "high": 0.7418549023748665
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "light",
+      "feature": "unit.nrmssd",
+      "bin": "5-30%",
+      "positives": 51,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.8915216453329498,
+        "ci95": {
+          "low": 0.8304148761064373,
+          "high": 0.9477694800952207
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "light",
+      "feature": "unit.nrmssd",
+      "bin": "30-70%",
+      "positives": 145,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.9950214990304359,
+        "ci95": {
+          "low": 0.9850507204865175,
+          "high": 0.9998162415525731
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "light",
+      "feature": "unit.nrmssd",
+      "bin": "70-100%",
+      "positives": 930,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "light",
+      "feature": "unit.nrmssd",
+      "bin": "any",
+      "positives": 1136,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.9910568814783567,
+        "ci95": {
+          "low": 0.9876947051738099,
+          "high": 0.9941942122316104
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "light",
+      "feature": "unit.heart_rate",
+      "bin": "0-5%",
+      "positives": 10,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.48245721271393643,
+        "ci95": {
+          "low": 0.33713971214536875,
+          "high": 0.6369941294824776
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "light",
+      "feature": "unit.heart_rate",
+      "bin": "5-30%",
+      "positives": 51,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.6541870415647921,
+        "ci95": {
+          "low": 0.5860405820411427,
+          "high": 0.7272386405154947
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "light",
+      "feature": "unit.heart_rate",
+      "bin": "30-70%",
+      "positives": 145,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.8010043419610489,
+        "ci95": {
+          "low": 0.7556571953504264,
+          "high": 0.8487045097666733
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "light",
+      "feature": "unit.heart_rate",
+      "bin": "70-100%",
+      "positives": 930,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.971643728474906,
+        "ci95": {
+          "low": 0.9496575000968107,
+          "high": 0.9894299446778452
+        }
+      }
+    },
+    {
+      "source": "sim",
+      "noise": "light",
+      "feature": "unit.heart_rate",
+      "bin": "any",
+      "positives": 1136,
+      "negatives": 6544,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.9313049368952099,
+        "ci95": {
+          "low": 0.9066369280304802,
+          "high": 0.9519792006827386
+        }
+      }
+    },
+    {
+      "source": "afdb",
+      "noise": "none",
+      "feature": "beat.flag_share",
+      "bin": "0-5%",
+      "positives": 24,
+      "negatives": 101,
+      "clusters": 22,
+      "auroc": {
+        "value": 0.5457920792079208,
+        "ci95": {
+          "low": 0.41570441394948787,
+          "high": 0.7147083493265406
+        }
+      }
+    },
+    {
+      "source": "afdb",
+      "noise": "none",
+      "feature": "beat.flag_share",
+      "bin": "5-30%",
+      "positives": 24,
+      "negatives": 101,
+      "clusters": 22,
+      "auroc": {
+        "value": 0.7054455445544554,
+        "ci95": {
+          "low": 0.5668621125869703,
+          "high": 0.8403495238555949
+        }
+      }
+    },
+    {
+      "source": "afdb",
+      "noise": "none",
+      "feature": "beat.flag_share",
+      "bin": "30-70%",
+      "positives": 14,
+      "negatives": 101,
+      "clusters": 22,
+      "auroc": {
+        "value": 0.8871994342291372,
+        "ci95": {
+          "low": 0.7678623081151944,
+          "high": 0.9702019074675324
+        }
+      }
+    },
+    {
+      "source": "afdb",
+      "noise": "none",
+      "feature": "beat.flag_share",
+      "bin": "70-100%",
+      "positives": 86,
+      "negatives": 101,
+      "clusters": 25,
+      "auroc": {
+        "value": 0.984169928620769,
+        "ci95": {
+          "low": 0.9560961112162837,
+          "high": 1
+        }
+      }
+    },
+    {
+      "source": "afdb",
+      "noise": "none",
+      "feature": "beat.flag_share",
+      "bin": "any",
+      "positives": 148,
+      "negatives": 101,
+      "clusters": 25,
+      "auroc": {
+        "value": 0.8587101953438587,
+        "ci95": {
+          "low": 0.7727270501727024,
+          "high": 0.9258302604705971
+        }
+      }
+    },
+    {
+      "source": "afdb",
+      "noise": "none",
+      "feature": "30s.irregular_share",
+      "bin": "0-5%",
+      "positives": 24,
+      "negatives": 101,
+      "clusters": 22,
+      "auroc": {
+        "value": 0.5420792079207921,
+        "ci95": {
+          "low": 0.378265595322887,
+          "high": 0.7016654980657641
+        }
+      }
+    },
+    {
+      "source": "afdb",
+      "noise": "none",
+      "feature": "30s.irregular_share",
+      "bin": "5-30%",
+      "positives": 24,
+      "negatives": 101,
+      "clusters": 22,
+      "auroc": {
+        "value": 0.6070544554455446,
+        "ci95": {
+          "low": 0.4507121010675247,
+          "high": 0.7869042416215419
+        }
+      }
+    },
+    {
+      "source": "afdb",
+      "noise": "none",
+      "feature": "30s.irregular_share",
+      "bin": "30-70%",
+      "positives": 14,
+      "negatives": 101,
+      "clusters": 22,
+      "auroc": {
+        "value": 0.82991513437058,
+        "ci95": {
+          "low": 0.7000504459273247,
+          "high": 0.9409674584119362
+        }
+      }
+    },
+    {
+      "source": "afdb",
+      "noise": "none",
+      "feature": "30s.irregular_share",
+      "bin": "70-100%",
+      "positives": 86,
+      "negatives": 101,
+      "clusters": 25,
+      "auroc": {
+        "value": 0.9833064701819019,
+        "ci95": {
+          "low": 0.9547096532091097,
+          "high": 1
+        }
+      }
+    },
+    {
+      "source": "afdb",
+      "noise": "none",
+      "feature": "30s.irregular_share",
+      "bin": "any",
+      "positives": 148,
+      "negatives": 101,
+      "clusters": 25,
+      "auroc": {
+        "value": 0.8362322718758363,
+        "ci95": {
+          "low": 0.7442800111734444,
+          "high": 0.9140070975536092
+        }
+      }
+    },
+    {
+      "source": "afdb",
+      "noise": "none",
+      "feature": "30s.hr_jumps",
+      "bin": "0-5%",
+      "positives": 24,
+      "negatives": 101,
+      "clusters": 22,
+      "auroc": {
+        "value": 0.7863036303630363,
+        "ci95": {
+          "low": 0.6890723978230366,
+          "high": 0.8860249638433
+        }
+      }
+    },
+    {
+      "source": "afdb",
+      "noise": "none",
+      "feature": "30s.hr_jumps",
+      "bin": "5-30%",
+      "positives": 24,
+      "negatives": 101,
+      "clusters": 22,
+      "auroc": {
+        "value": 0.9377062706270627,
+        "ci95": {
+          "low": 0.8990070812807882,
+          "high": 0.9786454909434968
+        }
+      }
+    },
+    {
+      "source": "afdb",
+      "noise": "none",
+      "feature": "30s.hr_jumps",
+      "bin": "30-70%",
+      "positives": 14,
+      "negatives": 101,
+      "clusters": 22,
+      "auroc": {
+        "value": 0.9787835926449788,
+        "ci95": {
+          "low": 0.9577251241405653,
+          "high": 0.9979984448734449
+        }
+      }
+    },
+    {
+      "source": "afdb",
+      "noise": "none",
+      "feature": "30s.hr_jumps",
+      "bin": "70-100%",
+      "positives": 86,
+      "negatives": 101,
+      "clusters": 25,
+      "auroc": {
+        "value": 0.9293115358047432,
+        "ci95": {
+          "low": 0.8535736749630923,
+          "high": 0.9855597762360758
+        }
+      }
+    },
+    {
+      "source": "afdb",
+      "noise": "none",
+      "feature": "30s.hr_jumps",
+      "bin": "any",
+      "positives": 148,
+      "negatives": 101,
+      "clusters": 25,
+      "auroc": {
+        "value": 0.9121621621621622,
+        "ci95": {
+          "low": 0.8568250048374613,
+          "high": 0.9561011524076517
+        }
+      }
+    },
+    {
+      "source": "afdb",
+      "noise": "none",
+      "feature": "5min.irregular_share",
+      "bin": "0-5%",
+      "positives": 24,
+      "negatives": 101,
+      "clusters": 22,
+      "auroc": {
+        "value": 0.5548679867986799,
+        "ci95": {
+          "low": 0.3937658755879442,
+          "high": 0.7083451704545455
+        }
+      }
+    },
+    {
+      "source": "afdb",
+      "noise": "none",
+      "feature": "5min.irregular_share",
+      "bin": "5-30%",
+      "positives": 24,
+      "negatives": 101,
+      "clusters": 22,
+      "auroc": {
+        "value": 0.614480198019802,
+        "ci95": {
+          "low": 0.46963501288278076,
+          "high": 0.7609285058600993
+        }
+      }
+    },
+    {
+      "source": "afdb",
+      "noise": "none",
+      "feature": "5min.irregular_share",
+      "bin": "30-70%",
+      "positives": 14,
+      "negatives": 101,
+      "clusters": 22,
+      "auroc": {
+        "value": 0.7920792079207921,
+        "ci95": {
+          "low": 0.6607638136234835,
+          "high": 0.9088653846153846
+        }
+      }
+    },
+    {
+      "source": "afdb",
+      "noise": "none",
+      "feature": "5min.irregular_share",
+      "bin": "70-100%",
+      "positives": 86,
+      "negatives": 101,
+      "clusters": 25,
+      "auroc": {
+        "value": 0.9294842274925167,
+        "ci95": {
+          "low": 0.8510392635591321,
+          "high": 0.9903465366384654
+        }
+      }
+    },
+    {
+      "source": "afdb",
+      "noise": "none",
+      "feature": "5min.irregular_share",
+      "bin": "any",
+      "positives": 148,
+      "negatives": 101,
+      "clusters": 25,
+      "auroc": {
+        "value": 0.8046561412898047,
+        "ci95": {
+          "low": 0.6995456819358178,
+          "high": 0.8963006535947712
+        }
+      }
+    },
+    {
+      "source": "afdb",
+      "noise": "none",
+      "feature": "5min.hr_jumps",
+      "bin": "0-5%",
+      "positives": 24,
+      "negatives": 101,
+      "clusters": 22,
+      "auroc": {
+        "value": 0.6316006600660066,
+        "ci95": {
+          "low": 0.5003637278081965,
+          "high": 0.7606124116840662
+        }
+      }
+    },
+    {
+      "source": "afdb",
+      "noise": "none",
+      "feature": "5min.hr_jumps",
+      "bin": "5-30%",
+      "positives": 24,
+      "negatives": 101,
+      "clusters": 22,
+      "auroc": {
+        "value": 0.8424092409240924,
+        "ci95": {
+          "low": 0.7543779172702397,
+          "high": 0.9457983193277311
+        }
+      }
+    },
+    {
+      "source": "afdb",
+      "noise": "none",
+      "feature": "5min.hr_jumps",
+      "bin": "30-70%",
+      "positives": 14,
+      "negatives": 101,
+      "clusters": 22,
+      "auroc": {
+        "value": 0.8500707213578501,
+        "ci95": {
+          "low": 0.7140009033628247,
+          "high": 0.9861767006299412
+        }
+      }
+    },
+    {
+      "source": "afdb",
+      "noise": "none",
+      "feature": "5min.hr_jumps",
+      "bin": "70-100%",
+      "positives": 86,
+      "negatives": 101,
+      "clusters": 25,
+      "auroc": {
+        "value": 0.7011282523601198,
+        "ci95": {
+          "low": 0.5756025007557168,
+          "high": 0.8127691756328297
+        }
+      }
+    },
+    {
+      "source": "afdb",
+      "noise": "none",
+      "feature": "5min.hr_jumps",
+      "bin": "any",
+      "positives": 148,
+      "negatives": 101,
+      "clusters": 25,
+      "auroc": {
+        "value": 0.7268530907144769,
+        "ci95": {
+          "low": 0.6372225080445645,
+          "high": 0.8186686949442704
+        }
+      }
+    },
+    {
+      "source": "afdb",
+      "noise": "none",
+      "feature": "unit.nrmssd",
+      "bin": "0-5%",
+      "positives": 24,
+      "negatives": 101,
+      "clusters": 22,
+      "auroc": {
+        "value": 0.6035478547854786,
+        "ci95": {
+          "low": 0.430479302832244,
+          "high": 0.7490030966532324
+        }
+      }
+    },
+    {
+      "source": "afdb",
+      "noise": "none",
+      "feature": "unit.nrmssd",
+      "bin": "5-30%",
+      "positives": 24,
+      "negatives": 101,
+      "clusters": 22,
+      "auroc": {
+        "value": 0.7178217821782178,
+        "ci95": {
+          "low": 0.5712097651152674,
+          "high": 0.8663597009051555
+        }
+      }
+    },
+    {
+      "source": "afdb",
+      "noise": "none",
+      "feature": "unit.nrmssd",
+      "bin": "30-70%",
+      "positives": 14,
+      "negatives": 101,
+      "clusters": 22,
+      "auroc": {
+        "value": 0.8769448373408769,
+        "ci95": {
+          "low": 0.7437175217309145,
+          "high": 0.9670457887700534
+        }
+      }
+    },
+    {
+      "source": "afdb",
+      "noise": "none",
+      "feature": "unit.nrmssd",
+      "bin": "70-100%",
+      "positives": 86,
+      "negatives": 101,
+      "clusters": 25,
+      "auroc": {
+        "value": 0.9357586921482846,
+        "ci95": {
+          "low": 0.8347133625182406,
+          "high": 0.9972852521301371
+        }
+      }
+    },
+    {
+      "source": "afdb",
+      "noise": "none",
+      "feature": "unit.nrmssd",
+      "bin": "any",
+      "positives": 148,
+      "negatives": 101,
+      "clusters": 25,
+      "auroc": {
+        "value": 0.8409820711800909,
+        "ci95": {
+          "low": 0.73487096647689,
+          "high": 0.927650867130214
+        }
+      }
+    },
+    {
+      "source": "afdb",
+      "noise": "none",
+      "feature": "unit.heart_rate",
+      "bin": "0-5%",
+      "positives": 24,
+      "negatives": 101,
+      "clusters": 22,
+      "auroc": {
+        "value": 0.4183168316831683,
+        "ci95": {
+          "low": 0.2508743660185968,
+          "high": 0.5814625084957475
+        }
+      }
+    },
+    {
+      "source": "afdb",
+      "noise": "none",
+      "feature": "unit.heart_rate",
+      "bin": "5-30%",
+      "positives": 24,
+      "negatives": 101,
+      "clusters": 22,
+      "auroc": {
+        "value": 0.7132838283828383,
+        "ci95": {
+          "low": 0.45007101086048457,
+          "high": 0.8508014696945142
+        }
+      }
+    },
+    {
+      "source": "afdb",
+      "noise": "none",
+      "feature": "unit.heart_rate",
+      "bin": "30-70%",
+      "positives": 14,
+      "negatives": 101,
+      "clusters": 22,
+      "auroc": {
+        "value": 0.8415841584158416,
+        "ci95": {
+          "low": 0.7122081043956044,
+          "high": 0.9270014436343036
+        }
+      }
+    },
+    {
+      "source": "afdb",
+      "noise": "none",
+      "feature": "unit.heart_rate",
+      "bin": "70-100%",
+      "positives": 86,
+      "negatives": 101,
+      "clusters": 25,
+      "auroc": {
+        "value": 0.7955330416762606,
+        "ci95": {
+          "low": 0.6361809190908049,
+          "high": 0.9564933240540262
+        }
+      }
+    },
+    {
+      "source": "afdb",
+      "noise": "none",
+      "feature": "unit.heart_rate",
+      "bin": "any",
+      "positives": 148,
+      "negatives": 101,
+      "clusters": 25,
+      "auroc": {
+        "value": 0.7253813219159754,
+        "ci95": {
+          "low": 0.6167321765666027,
+          "high": 0.8197688557290597
+        }
+      }
+    },
+    {
+      "source": "ltafdb",
+      "noise": "none",
+      "feature": "beat.flag_share",
+      "bin": "0-5%",
+      "positives": 117,
+      "negatives": 651,
+      "clusters": 49,
+      "auroc": {
+        "value": 0.7005921199469587,
+        "ci95": {
+          "low": 0.6225149773016757,
+          "high": 0.7681602424732786
+        }
+      }
+    },
+    {
+      "source": "ltafdb",
+      "noise": "none",
+      "feature": "beat.flag_share",
+      "bin": "5-30%",
+      "positives": 78,
+      "negatives": 651,
+      "clusters": 50,
+      "auroc": {
+        "value": 0.8463113946984915,
+        "ci95": {
+          "low": 0.7754460829380228,
+          "high": 0.9089148724409041
+        }
+      }
+    },
+    {
+      "source": "ltafdb",
+      "noise": "none",
+      "feature": "beat.flag_share",
+      "bin": "30-70%",
+      "positives": 48,
+      "negatives": 651,
+      "clusters": 50,
+      "auroc": {
+        "value": 0.8985695084485407,
+        "ci95": {
+          "low": 0.8358332387617426,
+          "high": 0.950970916544174
+        }
+      }
+    },
+    {
+      "source": "ltafdb",
+      "noise": "none",
+      "feature": "beat.flag_share",
+      "bin": "70-100%",
+      "positives": 995,
+      "negatives": 651,
+      "clusters": 84,
+      "auroc": {
+        "value": 0.9862214297292916,
+        "ci95": {
+          "low": 0.9651566161607632,
+          "high": 0.9981603177848108
+        }
+      }
+    },
+    {
+      "source": "ltafdb",
+      "noise": "none",
+      "feature": "beat.flag_share",
+      "bin": "any",
+      "positives": 1238,
+      "negatives": 651,
+      "clusters": 84,
+      "auroc": {
+        "value": 0.9470139142216895,
+        "ci95": {
+          "low": 0.919730156888903,
+          "high": 0.9688119844518259
+        }
+      }
+    },
+    {
+      "source": "ltafdb",
+      "noise": "none",
+      "feature": "30s.irregular_share",
+      "bin": "0-5%",
+      "positives": 117,
+      "negatives": 651,
+      "clusters": 49,
+      "auroc": {
+        "value": 0.7273688080139693,
+        "ci95": {
+          "low": 0.6535678586579828,
+          "high": 0.8005455693773281
+        }
+      }
+    },
+    {
+      "source": "ltafdb",
+      "noise": "none",
+      "feature": "30s.irregular_share",
+      "bin": "5-30%",
+      "positives": 78,
+      "negatives": 651,
+      "clusters": 50,
+      "auroc": {
+        "value": 0.794074205364528,
+        "ci95": {
+          "low": 0.7065521242403929,
+          "high": 0.8614932958481273
+        }
+      }
+    },
+    {
+      "source": "ltafdb",
+      "noise": "none",
+      "feature": "30s.irregular_share",
+      "bin": "30-70%",
+      "positives": 48,
+      "negatives": 651,
+      "clusters": 50,
+      "auroc": {
+        "value": 0.8453341013824884,
+        "ci95": {
+          "low": 0.7780560769102436,
+          "high": 0.9027365728514753
+        }
+      }
+    },
+    {
+      "source": "ltafdb",
+      "noise": "none",
+      "feature": "30s.irregular_share",
+      "bin": "70-100%",
+      "positives": 995,
+      "negatives": 651,
+      "clusters": 84,
+      "auroc": {
+        "value": 0.9613219708372893,
+        "ci95": {
+          "low": 0.9246030563427686,
+          "high": 0.9862793212125454
+        }
+      }
+    },
+    {
+      "source": "ltafdb",
+      "noise": "none",
+      "feature": "30s.irregular_share",
+      "bin": "any",
+      "positives": 1238,
+      "negatives": 651,
+      "clusters": 84,
+      "auroc": {
+        "value": 0.9241771699560016,
+        "ci95": {
+          "low": 0.8847172097729851,
+          "high": 0.957586815579242
+        }
+      }
+    },
+    {
+      "source": "ltafdb",
+      "noise": "none",
+      "feature": "30s.hr_jumps",
+      "bin": "0-5%",
+      "positives": 117,
+      "negatives": 651,
+      "clusters": 49,
+      "auroc": {
+        "value": 0.7182375569472343,
+        "ci95": {
+          "low": 0.639500522957877,
+          "high": 0.7932962155926339
+        }
+      }
+    },
+    {
+      "source": "ltafdb",
+      "noise": "none",
+      "feature": "30s.hr_jumps",
+      "bin": "5-30%",
+      "positives": 78,
+      "negatives": 651,
+      "clusters": 50,
+      "auroc": {
+        "value": 0.8990113828823506,
+        "ci95": {
+          "low": 0.8334916481801306,
+          "high": 0.9534368131364335
+        }
+      }
+    },
+    {
+      "source": "ltafdb",
+      "noise": "none",
+      "feature": "30s.hr_jumps",
+      "bin": "30-70%",
+      "positives": 48,
+      "negatives": 651,
+      "clusters": 50,
+      "auroc": {
+        "value": 0.9392601126472094,
+        "ci95": {
+          "low": 0.8860758225390676,
+          "high": 0.9768506375663738
+        }
+      }
+    },
+    {
+      "source": "ltafdb",
+      "noise": "none",
+      "feature": "30s.hr_jumps",
+      "bin": "70-100%",
+      "positives": 995,
+      "negatives": 651,
+      "clusters": 84,
+      "auroc": {
+        "value": 0.8558707516074998,
+        "ci95": {
+          "low": 0.7985063149436994,
+          "high": 0.9139468700676001
+        }
+      }
+    },
+    {
+      "source": "ltafdb",
+      "noise": "none",
+      "feature": "30s.hr_jumps",
+      "bin": "any",
+      "positives": 1238,
+      "negatives": 651,
+      "clusters": 84,
+      "auroc": {
+        "value": 0.8488146730889969,
+        "ci95": {
+          "low": 0.7941128305189048,
+          "high": 0.89900893080522
+        }
+      }
+    },
+    {
+      "source": "ltafdb",
+      "noise": "none",
+      "feature": "5min.irregular_share",
+      "bin": "0-5%",
+      "positives": 117,
+      "negatives": 651,
+      "clusters": 49,
+      "auroc": {
+        "value": 0.7245329342103536,
+        "ci95": {
+          "low": 0.6443000947521713,
+          "high": 0.783709749536457
+        }
+      }
+    },
+    {
+      "source": "ltafdb",
+      "noise": "none",
+      "feature": "5min.irregular_share",
+      "bin": "5-30%",
+      "positives": 78,
+      "negatives": 651,
+      "clusters": 50,
+      "auroc": {
+        "value": 0.7998936547323644,
+        "ci95": {
+          "low": 0.7188618003361067,
+          "high": 0.8616968894822604
+        }
+      }
+    },
+    {
+      "source": "ltafdb",
+      "noise": "none",
+      "feature": "5min.irregular_share",
+      "bin": "30-70%",
+      "positives": 48,
+      "negatives": 651,
+      "clusters": 50,
+      "auroc": {
+        "value": 0.8284850230414746,
+        "ci95": {
+          "low": 0.7594017661940251,
+          "high": 0.8857821148738081
+        }
+      }
+    },
+    {
+      "source": "ltafdb",
+      "noise": "none",
+      "feature": "5min.irregular_share",
+      "bin": "70-100%",
+      "positives": 995,
+      "negatives": 651,
+      "clusters": 84,
+      "auroc": {
+        "value": 0.9261345128098248,
+        "ci95": {
+          "low": 0.8869816672777736,
+          "high": 0.9628074569568725
+        }
+      }
+    },
+    {
+      "source": "ltafdb",
+      "noise": "none",
+      "feature": "5min.irregular_share",
+      "bin": "any",
+      "positives": 1238,
+      "negatives": 651,
+      "clusters": 84,
+      "auroc": {
+        "value": 0.8953418253016981,
+        "ci95": {
+          "low": 0.851608692952616,
+          "high": 0.9363603228376802
+        }
+      }
+    },
+    {
+      "source": "ltafdb",
+      "noise": "none",
+      "feature": "5min.hr_jumps",
+      "bin": "0-5%",
+      "positives": 117,
+      "negatives": 651,
+      "clusters": 49,
+      "auroc": {
+        "value": 0.6243911405201727,
+        "ci95": {
+          "low": 0.5429040708667441,
+          "high": 0.6937706583399301
+        }
+      }
+    },
+    {
+      "source": "ltafdb",
+      "noise": "none",
+      "feature": "5min.hr_jumps",
+      "bin": "5-30%",
+      "positives": 78,
+      "negatives": 651,
+      "clusters": 50,
+      "auroc": {
+        "value": 0.7668675410610895,
+        "ci95": {
+          "low": 0.6776956853015843,
+          "high": 0.8586473553892211
+        }
+      }
+    },
+    {
+      "source": "ltafdb",
+      "noise": "none",
+      "feature": "5min.hr_jumps",
+      "bin": "30-70%",
+      "positives": 48,
+      "negatives": 651,
+      "clusters": 50,
+      "auroc": {
+        "value": 0.906458013312852,
+        "ci95": {
+          "low": 0.8611456006879166,
+          "high": 0.9469554924242424
+        }
+      }
+    },
+    {
+      "source": "ltafdb",
+      "noise": "none",
+      "feature": "5min.hr_jumps",
+      "bin": "70-100%",
+      "positives": 995,
+      "negatives": 651,
+      "clusters": 84,
+      "auroc": {
+        "value": 0.6067881650958324,
+        "ci95": {
+          "low": 0.5540665070408832,
+          "high": 0.6617552941369482
+        }
+      }
+    },
+    {
+      "source": "ltafdb",
+      "noise": "none",
+      "feature": "5min.hr_jumps",
+      "bin": "any",
+      "positives": 1238,
+      "negatives": 651,
+      "clusters": 84,
+      "auroc": {
+        "value": 0.6301564140169591,
+        "ci95": {
+          "low": 0.5837173048155138,
+          "high": 0.6806112120304972
+        }
+      }
+    },
+    {
+      "source": "ltafdb",
+      "noise": "none",
+      "feature": "unit.nrmssd",
+      "bin": "0-5%",
+      "positives": 117,
+      "negatives": 651,
+      "clusters": 49,
+      "auroc": {
+        "value": 0.7577559835624351,
+        "ci95": {
+          "low": 0.6885635924546937,
+          "high": 0.824918293334986
+        }
+      }
+    },
+    {
+      "source": "ltafdb",
+      "noise": "none",
+      "feature": "unit.nrmssd",
+      "bin": "5-30%",
+      "positives": 78,
+      "negatives": 651,
+      "clusters": 50,
+      "auroc": {
+        "value": 0.8468234274685887,
+        "ci95": {
+          "low": 0.7761272890468127,
+          "high": 0.9067282062700975
+        }
+      }
+    },
+    {
+      "source": "ltafdb",
+      "noise": "none",
+      "feature": "unit.nrmssd",
+      "bin": "30-70%",
+      "positives": 48,
+      "negatives": 651,
+      "clusters": 50,
+      "auroc": {
+        "value": 0.8795762928827445,
+        "ci95": {
+          "low": 0.8140942748091603,
+          "high": 0.9364089338081274
+        }
+      }
+    },
+    {
+      "source": "ltafdb",
+      "noise": "none",
+      "feature": "unit.nrmssd",
+      "bin": "70-100%",
+      "positives": 995,
+      "negatives": 651,
+      "clusters": 84,
+      "auroc": {
+        "value": 0.9067055708650781,
+        "ci95": {
+          "low": 0.8352649651764715,
+          "high": 0.955597331917008
+        }
+      }
+    },
+    {
+      "source": "ltafdb",
+      "noise": "none",
+      "feature": "unit.nrmssd",
+      "bin": "any",
+      "positives": 1238,
+      "negatives": 651,
+      "clusters": 84,
+      "auroc": {
+        "value": 0.8878040246272045,
+        "ci95": {
+          "low": 0.8295317808667181,
+          "high": 0.9367302796924486
+        }
+      }
+    },
+    {
+      "source": "ltafdb",
+      "noise": "none",
+      "feature": "unit.heart_rate",
+      "bin": "0-5%",
+      "positives": 117,
+      "negatives": 651,
+      "clusters": 49,
+      "auroc": {
+        "value": 0.46106581590452556,
+        "ci95": {
+          "low": 0.36638037698274245,
+          "high": 0.5606821900244847
+        }
+      }
+    },
+    {
+      "source": "ltafdb",
+      "noise": "none",
+      "feature": "unit.heart_rate",
+      "bin": "5-30%",
+      "positives": 78,
+      "negatives": 651,
+      "clusters": 50,
+      "auroc": {
+        "value": 0.4594903304580724,
+        "ci95": {
+          "low": 0.35752712030350003,
+          "high": 0.580109984051367
+        }
+      }
+    },
+    {
+      "source": "ltafdb",
+      "noise": "none",
+      "feature": "unit.heart_rate",
+      "bin": "30-70%",
+      "positives": 48,
+      "negatives": 651,
+      "clusters": 50,
+      "auroc": {
+        "value": 0.7312467997951869,
+        "ci95": {
+          "low": 0.6503948153501177,
+          "high": 0.8066995595459119
+        }
+      }
+    },
+    {
+      "source": "ltafdb",
+      "noise": "none",
+      "feature": "unit.heart_rate",
+      "bin": "70-100%",
+      "positives": 995,
+      "negatives": 651,
+      "clusters": 84,
+      "auroc": {
+        "value": 0.7285166230538251,
+        "ci95": {
+          "low": 0.6410621107885307,
+          "high": 0.8063231634310928
+        }
+      }
+    },
+    {
+      "source": "ltafdb",
+      "noise": "none",
+      "feature": "unit.heart_rate",
+      "bin": "any",
+      "positives": 1238,
+      "negatives": 651,
+      "clusters": 84,
+      "auroc": {
+        "value": 0.6863964721852053,
+        "ci95": {
+          "low": 0.6129842191203618,
+          "high": 0.7586898080926134
+        }
+      }
+    }
+  ],
+  "dailyEffects": [
+    {
+      "noise": "none",
+      "burden": 0,
+      "days": 160,
+      "heartRateChange": -0.10311286348249382,
+      "restingHeartRateChange": -0.039426965309267814,
+      "hrvRmssdRatio": 1.0017069400274805,
+      "afShare": 0
+    },
+    {
+      "noise": "none",
+      "burden": 0.02,
+      "days": 40,
+      "heartRateChange": 1.5111506945577844,
+      "restingHeartRateChange": 0.8083282493309021,
+      "hrvRmssdRatio": 1.0007210638262483,
+      "afShare": 0.030369083933360012
+    },
+    {
+      "noise": "none",
+      "burden": 0.1,
+      "days": 40,
+      "heartRateChange": 4.958347125036127,
+      "restingHeartRateChange": 1.7447346574715183,
+      "hrvRmssdRatio": 1.016961536982691,
+      "afShare": 0.13658600395313605
+    },
+    {
+      "noise": "none",
+      "burden": 0.3,
+      "days": 40,
+      "heartRateChange": 10.838988002703463,
+      "restingHeartRateChange": 1.2945980301863074,
+      "hrvRmssdRatio": 1.046323584314156,
+      "afShare": 0.399795571913738
+    },
+    {
+      "noise": "none",
+      "burden": 0.6,
+      "days": 40,
+      "heartRateChange": 20.94132829263929,
+      "restingHeartRateChange": 4.309513329863329,
+      "hrvRmssdRatio": 1.3642977220479442,
+      "afShare": 0.7121723136340194
+    },
+    {
+      "noise": "light",
+      "burden": 0,
+      "days": 160,
+      "heartRateChange": -0.09821744473553196,
+      "restingHeartRateChange": -0.06732178546327461,
+      "hrvRmssdRatio": 0.9953734249008679,
+      "afShare": 0
+    },
+    {
+      "noise": "light",
+      "burden": 0.02,
+      "days": 40,
+      "heartRateChange": 1.4396996746387174,
+      "restingHeartRateChange": 0.8097788181039434,
+      "hrvRmssdRatio": 0.9845795661176311,
+      "afShare": 0.030404497574969925
+    },
+    {
+      "noise": "light",
+      "burden": 0.1,
+      "days": 40,
+      "heartRateChange": 4.9875548562618555,
+      "restingHeartRateChange": 1.75276629390671,
+      "hrvRmssdRatio": 1.0147237242249836,
+      "afShare": 0.13668811208579187
+    },
+    {
+      "noise": "light",
+      "burden": 0.3,
+      "days": 40,
+      "heartRateChange": 10.928625791996367,
+      "restingHeartRateChange": 1.2408518144422729,
+      "hrvRmssdRatio": 1.0108722837442685,
+      "afShare": 0.3997844077763184
+    },
+    {
+      "noise": "light",
+      "burden": 0.6,
+      "days": 40,
+      "heartRateChange": 20.97357911654378,
+      "restingHeartRateChange": 4.352534472899041,
+      "hrvRmssdRatio": 1.0223647930522328,
+      "afShare": 0.7123373477758312
+    }
+  ]
+}

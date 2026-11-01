@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { CompareScreen } from "@/features/arena/compare-screen";
+import { loadPromptSourceFacts } from "@/features/arena/prompt-source-facts";
 import { skillCommand } from "@/features/commands/registry";
 import { ownedThread } from "@/features/arena/thread-reads";
 import { scheduledStillWriting } from "@/features/arena/turn-updates";
@@ -30,10 +31,12 @@ export default async function ThreadPage({
   if (locked) return locked;
   const { threadId } = await params;
   const actor = await resolveActorId();
-  const [thread, catalog, skills] = await Promise.all([
+  const appUserId = actor === null ? null : await findAppUserId(actor);
+  const [thread, catalog, skills, sourceFacts] = await Promise.all([
     ownedThread(threadId),
     fetchChatCatalog(runnableSkills()),
-    actor === null ? skillsFor(null) : findAppUserId(actor).then(skillsFor),
+    skillsFor(appUserId),
+    loadPromptSourceFacts(appUserId, false),
   ]);
 
   const lastTurn = thread.turns.at(-1);
@@ -54,6 +57,7 @@ export default async function ThreadPage({
         threadId={thread.id}
         initialTurns={thread.turns}
         skills={skills.map(skillCommand)}
+        sourceFacts={sourceFacts}
         dataMode={serverEnv().DATA_MODE}
       />
     </>

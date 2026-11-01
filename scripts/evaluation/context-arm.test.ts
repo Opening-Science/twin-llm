@@ -37,10 +37,12 @@ const MEDICATIONS = {
 };
 
 describe("isEvalArm", () => {
-  test("knows the three arms; `context` is only an alias", () => {
+  test("knows the four arms; `context` is only an alias", () => {
     expect(
-      ["tools", "context-oracle", "context-fair", "context", "code"].map(isEvalArm),
-    ).toEqual([true, true, true, false, false]);
+      ["tools", "context-oracle", "context-fair", "context", "code", "python"].map(
+        isEvalArm,
+      ),
+    ).toEqual([true, true, true, false, true, false]);
   });
 });
 
@@ -52,15 +54,15 @@ describe("parseArm and cacheArm (#320)", () => {
   });
 
   test("the oracle arm keeps its #302 cache name, so identical calls are reused", () => {
-    expect(EVAL_ARMS.map(cacheArm)).toEqual(["tools", "context", "context-fair"]);
+    expect(EVAL_ARMS.map(cacheArm)).toEqual(["tools", "context", "context-fair", "code"]);
   });
 
   test("isContextArm: every arm but tools, the old name included", () => {
     expect(
-      [undefined, "tools", "context", "context-oracle", "context-fair"].map((arm) =>
-        isContextArm(arm as RecordedArm | undefined),
+      [undefined, "tools", "context", "context-oracle", "context-fair", "code"].map(
+        (arm) => isContextArm(arm as RecordedArm | undefined),
       ),
-    ).toEqual([false, false, true, true, true]);
+    ).toEqual([false, false, true, true, true, true]);
   });
 });
 

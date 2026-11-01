@@ -1,0 +1,1353 @@
+{
+  "schema_version": "twin-llm.eval.answer-key.v1",
+  "generator_version": "2",
+  "cohort": {
+    "id": "synthea-v4-seed42",
+    "synthea_version": "v4.0.0",
+    "seed": 42,
+    "population": 30,
+    "age": "40-75",
+    "reference_date": "20260101",
+    "end_date": "20260101",
+    "subjects": 37,
+    "content_sha256": "f4941fab7a56e17f9dd66b6b6e0fbed379dab8c564c6024831c5fd4aa0ba09eb"
+  },
+  "open_twin_sha": "a9e126c952c91e19e064a962dda7d815a43564e5",
+  "questions_sha256": "b0ba8e635fd813ad7034401193285d40a6e08ed8901f0e61fbc5915cba73184d",
+  "actor": "eval-answer-key",
+  "generated_on": "2026-10-31",
+  "entries": {
+    "Q-S1-H01": [
+      {
+        "name": "n",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "loinc": "1920-8",
+          "start": "2020-01-01T00:00:00Z",
+          "end": "2022-12-31T23:59:59Z"
+        },
+        "path": "n",
+        "value": 3,
+        "unit": null,
+        "n": 3,
+        "windows": [{ "start": "2020-01-01T00:00:00Z", "end": "2022-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "slope_per_day",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "loinc": "1920-8",
+          "start": "2020-01-01T00:00:00Z",
+          "end": "2022-12-31T23:59:59Z"
+        },
+        "path": "slope_per_day",
+        "value": 0.015219624708506171,
+        "unit": "U/L/d",
+        "n": 3,
+        "windows": [{ "start": "2020-01-01T00:00:00Z", "end": "2022-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "fitted_first",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "loinc": "1920-8",
+          "start": "2020-01-01T00:00:00Z",
+          "end": "2022-12-31T23:59:59Z"
+        },
+        "path": "fitted_first",
+        "value": 16.91895848256122,
+        "unit": "U/L",
+        "n": 3,
+        "windows": [{ "start": "2020-01-01T00:00:00Z", "end": "2022-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "fitted_last",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "080b069b-5108-46b6-ecef-6aacd3b9ef3f",
+          "loinc": "1920-8",
+          "start": "2020-01-01T00:00:00Z",
+          "end": "2022-12-31T23:59:59Z"
+        },
+        "path": "fitted_last",
+        "value": 28.2119200162728,
+        "unit": "U/L",
+        "n": 3,
+        "windows": [{ "start": "2020-01-01T00:00:00Z", "end": "2022-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S1-H02": [
+      {
+        "name": "n",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "46ee9d82-b52c-856d-069b-5064ff052225",
+          "loinc": "6690-2",
+          "start": "2017-01-01T00:00:00Z",
+          "end": "2021-12-31T23:59:59Z"
+        },
+        "path": "n",
+        "value": 20,
+        "unit": null,
+        "n": 20,
+        "windows": [{ "start": "2017-01-01T00:00:00Z", "end": "2021-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "slope_per_day",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "46ee9d82-b52c-856d-069b-5064ff052225",
+          "loinc": "6690-2",
+          "start": "2017-01-01T00:00:00Z",
+          "end": "2021-12-31T23:59:59Z"
+        },
+        "path": "slope_per_day",
+        "value": -0.0034873016867943665,
+        "unit": "10*3/uL/d",
+        "n": 20,
+        "windows": [{ "start": "2017-01-01T00:00:00Z", "end": "2021-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "fitted_first",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "46ee9d82-b52c-856d-069b-5064ff052225",
+          "loinc": "6690-2",
+          "start": "2017-01-01T00:00:00Z",
+          "end": "2021-12-31T23:59:59Z"
+        },
+        "path": "fitted_first",
+        "value": 4.632509285974569,
+        "unit": "10*3/uL",
+        "n": 20,
+        "windows": [{ "start": "2017-01-01T00:00:00Z", "end": "2021-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "fitted_last",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "46ee9d82-b52c-856d-069b-5064ff052225",
+          "loinc": "6690-2",
+          "start": "2017-01-01T00:00:00Z",
+          "end": "2021-12-31T23:59:59Z"
+        },
+        "path": "fitted_last",
+        "value": 3.47410124607258,
+        "unit": "10*3/uL",
+        "n": 20,
+        "windows": [{ "start": "2017-01-01T00:00:00Z", "end": "2021-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S1-H03": [
+      {
+        "name": "n",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "46976cf7-b0bf-be20-39a5-9f425a52886d",
+          "loinc": "1920-8",
+          "start": "2020-01-01T00:00:00Z",
+          "end": "2024-12-31T23:59:59Z"
+        },
+        "path": "n",
+        "value": 5,
+        "unit": null,
+        "n": 5,
+        "windows": [{ "start": "2020-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "slope_per_day",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "46976cf7-b0bf-be20-39a5-9f425a52886d",
+          "loinc": "1920-8",
+          "start": "2020-01-01T00:00:00Z",
+          "end": "2024-12-31T23:59:59Z"
+        },
+        "path": "slope_per_day",
+        "value": 0.00960054794520548,
+        "unit": "U/L/d",
+        "n": 5,
+        "windows": [{ "start": "2020-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "fitted_first",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "46976cf7-b0bf-be20-39a5-9f425a52886d",
+          "loinc": "1920-8",
+          "start": "2020-01-01T00:00:00Z",
+          "end": "2024-12-31T23:59:59Z"
+        },
+        "path": "fitted_first",
+        "value": 15.799299999999999,
+        "unit": "U/L",
+        "n": 5,
+        "windows": [{ "start": "2020-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "fitted_last",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "46976cf7-b0bf-be20-39a5-9f425a52886d",
+          "loinc": "1920-8",
+          "start": "2020-01-01T00:00:00Z",
+          "end": "2024-12-31T23:59:59Z"
+        },
+        "path": "fitted_last",
+        "value": 29.816100000000002,
+        "unit": "U/L",
+        "n": 5,
+        "windows": [{ "start": "2020-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S1-H04": [
+      {
+        "name": "n",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "6816a11d-3700-1d60-8b4d-b7252c529f11",
+          "loinc": "1751-7",
+          "start": "2017-01-01T00:00:00Z",
+          "end": "2019-12-31T23:59:59Z"
+        },
+        "path": "n",
+        "value": 3,
+        "unit": null,
+        "n": 3,
+        "windows": [{ "start": "2017-01-01T00:00:00Z", "end": "2019-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "slope_per_day",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "6816a11d-3700-1d60-8b4d-b7252c529f11",
+          "loinc": "1751-7",
+          "start": "2017-01-01T00:00:00Z",
+          "end": "2019-12-31T23:59:59Z"
+        },
+        "path": "slope_per_day",
+        "value": 0.001421424599789469,
+        "unit": "g/dL/d",
+        "n": 3,
+        "windows": [{ "start": "2017-01-01T00:00:00Z", "end": "2019-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "fitted_first",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "6816a11d-3700-1d60-8b4d-b7252c529f11",
+          "loinc": "1751-7",
+          "start": "2017-01-01T00:00:00Z",
+          "end": "2019-12-31T23:59:59Z"
+        },
+        "path": "fitted_first",
+        "value": 3.9218086428128447,
+        "unit": "g/dL",
+        "n": 3,
+        "windows": [{ "start": "2017-01-01T00:00:00Z", "end": "2019-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "fitted_last",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "6816a11d-3700-1d60-8b4d-b7252c529f11",
+          "loinc": "1751-7",
+          "start": "2017-01-01T00:00:00Z",
+          "end": "2019-12-31T23:59:59Z"
+        },
+        "path": "fitted_last",
+        "value": 4.986455668055157,
+        "unit": "g/dL",
+        "n": 3,
+        "windows": [{ "start": "2017-01-01T00:00:00Z", "end": "2019-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S1-H05": [
+      {
+        "name": "n",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "c53d2b30-e23b-ae02-ed09-833abd033a39",
+          "loinc": "1920-8",
+          "start": "2017-01-01T00:00:00Z",
+          "end": "2019-12-31T23:59:59Z"
+        },
+        "path": "n",
+        "value": 34,
+        "unit": null,
+        "n": 34,
+        "windows": [{ "start": "2017-01-01T00:00:00Z", "end": "2019-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "slope_per_day",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "c53d2b30-e23b-ae02-ed09-833abd033a39",
+          "loinc": "1920-8",
+          "start": "2017-01-01T00:00:00Z",
+          "end": "2019-12-31T23:59:59Z"
+        },
+        "path": "slope_per_day",
+        "value": 0.0065789898202449,
+        "unit": "U/L/d",
+        "n": 34,
+        "windows": [{ "start": "2017-01-01T00:00:00Z", "end": "2019-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "fitted_first",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "c53d2b30-e23b-ae02-ed09-833abd033a39",
+          "loinc": "1920-8",
+          "start": "2017-01-01T00:00:00Z",
+          "end": "2019-12-31T23:59:59Z"
+        },
+        "path": "fitted_first",
+        "value": 21.60800480145027,
+        "unit": "U/L",
+        "n": 34,
+        "windows": [{ "start": "2017-01-01T00:00:00Z", "end": "2019-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "fitted_last",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "c53d2b30-e23b-ae02-ed09-833abd033a39",
+          "loinc": "1920-8",
+          "start": "2017-01-01T00:00:00Z",
+          "end": "2019-12-31T23:59:59Z"
+        },
+        "path": "fitted_last",
+        "value": 28.64849248261363,
+        "unit": "U/L",
+        "n": 34,
+        "windows": [{ "start": "2017-01-01T00:00:00Z", "end": "2019-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S1-H06": [
+      {
+        "name": "value",
+        "tool": "range_position",
+        "args": {
+          "subject_ref": "62f60bdb-cc5c-8305-b98b-f2b229a55eca",
+          "loinc": "1742-6",
+          "start": "2021-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z",
+          "pick": "latest"
+        },
+        "path": "value",
+        "value": 15.357,
+        "unit": "U/L",
+        "n": 20,
+        "windows": [{ "start": "2021-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S1-H07": [
+      {
+        "name": "value",
+        "tool": "range_position",
+        "args": {
+          "subject_ref": "4f083ce3-f12b-bb4b-7353-e17f0cd55b0a",
+          "loinc": "1742-6",
+          "start": "2023-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z",
+          "pick": "latest"
+        },
+        "path": "value",
+        "value": 25.142,
+        "unit": "U/L",
+        "n": 3,
+        "windows": [{ "start": "2023-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S1-H08": [
+      {
+        "name": "n",
+        "tool": "conditions_timeline",
+        "args": {
+          "subject_ref": "2d68ad16-268a-478c-1f84-d0f1976e1a46",
+          "start": "1992-01-01T00:00:00Z",
+          "end": "1992-12-31T23:59:59Z"
+        },
+        "path": "n",
+        "value": 3,
+        "unit": null,
+        "n": 3,
+        "windows": [{ "start": "1992-01-01T00:00:00Z", "end": "1992-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "n_codes",
+        "tool": "conditions_timeline",
+        "args": {
+          "subject_ref": "2d68ad16-268a-478c-1f84-d0f1976e1a46",
+          "start": "1992-01-01T00:00:00Z",
+          "end": "1992-12-31T23:59:59Z"
+        },
+        "path": "n_codes",
+        "value": 3,
+        "unit": null,
+        "n": 3,
+        "windows": [{ "start": "1992-01-01T00:00:00Z", "end": "1992-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S1-H09": [
+      {
+        "name": "n",
+        "tool": "conditions_timeline",
+        "args": {
+          "subject_ref": "922fb35e-148d-9e82-7e65-bfa05e3b3515",
+          "start": "1998-01-01T00:00:00Z",
+          "end": "1998-12-31T23:59:59Z"
+        },
+        "path": "n",
+        "value": 3,
+        "unit": null,
+        "n": 3,
+        "windows": [{ "start": "1998-01-01T00:00:00Z", "end": "1998-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "n_codes",
+        "tool": "conditions_timeline",
+        "args": {
+          "subject_ref": "922fb35e-148d-9e82-7e65-bfa05e3b3515",
+          "start": "1998-01-01T00:00:00Z",
+          "end": "1998-12-31T23:59:59Z"
+        },
+        "path": "n_codes",
+        "value": 3,
+        "unit": null,
+        "n": 3,
+        "windows": [{ "start": "1998-01-01T00:00:00Z", "end": "1998-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S2-H01": [
+      {
+        "name": "robust_z",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "ba419d35-0dfe-8af7-347c-eebf02485a56",
+          "loinc": "1751-7",
+          "baseline": { "start": "2021-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
+          "target": { "start": "2024-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" }
+        },
+        "path": "robust_z",
+        "value": -6.785266969313027,
+        "unit": null,
+        "n": 11,
+        "windows": [
+          { "start": "2021-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
+          { "start": "2024-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "baseline_median",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "ba419d35-0dfe-8af7-347c-eebf02485a56",
+          "loinc": "1751-7",
+          "baseline": { "start": "2021-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
+          "target": { "start": "2024-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" }
+        },
+        "path": "baseline.median",
+        "value": 5.261,
+        "unit": "g/dL",
+        "n": 11,
+        "windows": [
+          { "start": "2021-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
+          { "start": "2024-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "target_median",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "ba419d35-0dfe-8af7-347c-eebf02485a56",
+          "loinc": "1751-7",
+          "baseline": { "start": "2021-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
+          "target": { "start": "2024-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" }
+        },
+        "path": "target.median",
+        "value": 4.1514,
+        "unit": "g/dL",
+        "n": 11,
+        "windows": [
+          { "start": "2021-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
+          { "start": "2024-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "baseline_n",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "ba419d35-0dfe-8af7-347c-eebf02485a56",
+          "loinc": "1751-7",
+          "baseline": { "start": "2021-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
+          "target": { "start": "2024-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" }
+        },
+        "path": "baseline.n",
+        "value": 3,
+        "unit": null,
+        "n": 11,
+        "windows": [
+          { "start": "2021-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
+          { "start": "2024-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "target_n",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "ba419d35-0dfe-8af7-347c-eebf02485a56",
+          "loinc": "1751-7",
+          "baseline": { "start": "2021-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
+          "target": { "start": "2024-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" }
+        },
+        "path": "target.n",
+        "value": 8,
+        "unit": null,
+        "n": 11,
+        "windows": [
+          { "start": "2021-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
+          { "start": "2024-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      }
+    ],
+    "Q-S2-H02": [
+      {
+        "name": "robust_z",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "c86c400e-ff88-a1e3-2e23-caa4d8311f47",
+          "loinc": "1920-8",
+          "baseline": { "start": "2021-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
+          "target": { "start": "2024-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" }
+        },
+        "path": "robust_z",
+        "value": 0.50646137758057,
+        "unit": null,
+        "n": 5,
+        "windows": [
+          { "start": "2021-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
+          { "start": "2024-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "baseline_median",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "c86c400e-ff88-a1e3-2e23-caa4d8311f47",
+          "loinc": "1920-8",
+          "baseline": { "start": "2021-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
+          "target": { "start": "2024-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" }
+        },
+        "path": "baseline.median",
+        "value": 14.794,
+        "unit": "U/L",
+        "n": 5,
+        "windows": [
+          { "start": "2021-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
+          { "start": "2024-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "target_median",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "c86c400e-ff88-a1e3-2e23-caa4d8311f47",
+          "loinc": "1920-8",
+          "baseline": { "start": "2021-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
+          "target": { "start": "2024-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" }
+        },
+        "path": "target.median",
+        "value": 20.342550000000003,
+        "unit": "U/L",
+        "n": 5,
+        "windows": [
+          { "start": "2021-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
+          { "start": "2024-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "baseline_n",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "c86c400e-ff88-a1e3-2e23-caa4d8311f47",
+          "loinc": "1920-8",
+          "baseline": { "start": "2021-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
+          "target": { "start": "2024-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" }
+        },
+        "path": "baseline.n",
+        "value": 3,
+        "unit": null,
+        "n": 5,
+        "windows": [
+          { "start": "2021-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
+          { "start": "2024-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "target_n",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "c86c400e-ff88-a1e3-2e23-caa4d8311f47",
+          "loinc": "1920-8",
+          "baseline": { "start": "2021-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
+          "target": { "start": "2024-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" }
+        },
+        "path": "target.n",
+        "value": 2,
+        "unit": null,
+        "n": 5,
+        "windows": [
+          { "start": "2021-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" },
+          { "start": "2024-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      }
+    ],
+    "Q-S2-H03": [
+      {
+        "name": "robust_z",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "c053e996-a4c4-6c02-e2b6-284227156c67",
+          "loinc": "1920-8",
+          "baseline": { "start": "2019-01-01T00:00:00Z", "end": "2021-12-31T23:59:59Z" },
+          "target": { "start": "2022-01-01T00:00:00Z", "end": "2022-12-31T23:59:59Z" }
+        },
+        "path": "robust_z",
+        "value": -0.642604710586498,
+        "unit": null,
+        "n": 40,
+        "windows": [
+          { "start": "2019-01-01T00:00:00Z", "end": "2021-12-31T23:59:59Z" },
+          { "start": "2022-01-01T00:00:00Z", "end": "2022-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "baseline_median",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "c053e996-a4c4-6c02-e2b6-284227156c67",
+          "loinc": "1920-8",
+          "baseline": { "start": "2019-01-01T00:00:00Z", "end": "2021-12-31T23:59:59Z" },
+          "target": { "start": "2022-01-01T00:00:00Z", "end": "2022-12-31T23:59:59Z" }
+        },
+        "path": "baseline.median",
+        "value": 26.588,
+        "unit": "U/L",
+        "n": 40,
+        "windows": [
+          { "start": "2019-01-01T00:00:00Z", "end": "2021-12-31T23:59:59Z" },
+          { "start": "2022-01-01T00:00:00Z", "end": "2022-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "target_median",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "c053e996-a4c4-6c02-e2b6-284227156c67",
+          "loinc": "1920-8",
+          "baseline": { "start": "2019-01-01T00:00:00Z", "end": "2021-12-31T23:59:59Z" },
+          "target": { "start": "2022-01-01T00:00:00Z", "end": "2022-12-31T23:59:59Z" }
+        },
+        "path": "target.median",
+        "value": 16.3905,
+        "unit": "U/L",
+        "n": 40,
+        "windows": [
+          { "start": "2019-01-01T00:00:00Z", "end": "2021-12-31T23:59:59Z" },
+          { "start": "2022-01-01T00:00:00Z", "end": "2022-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "baseline_n",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "c053e996-a4c4-6c02-e2b6-284227156c67",
+          "loinc": "1920-8",
+          "baseline": { "start": "2019-01-01T00:00:00Z", "end": "2021-12-31T23:59:59Z" },
+          "target": { "start": "2022-01-01T00:00:00Z", "end": "2022-12-31T23:59:59Z" }
+        },
+        "path": "baseline.n",
+        "value": 36,
+        "unit": null,
+        "n": 40,
+        "windows": [
+          { "start": "2019-01-01T00:00:00Z", "end": "2021-12-31T23:59:59Z" },
+          { "start": "2022-01-01T00:00:00Z", "end": "2022-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "target_n",
+        "tool": "baseline_deviation",
+        "args": {
+          "subject_ref": "c053e996-a4c4-6c02-e2b6-284227156c67",
+          "loinc": "1920-8",
+          "baseline": { "start": "2019-01-01T00:00:00Z", "end": "2021-12-31T23:59:59Z" },
+          "target": { "start": "2022-01-01T00:00:00Z", "end": "2022-12-31T23:59:59Z" }
+        },
+        "path": "target.n",
+        "value": 4,
+        "unit": null,
+        "n": 40,
+        "windows": [
+          { "start": "2019-01-01T00:00:00Z", "end": "2021-12-31T23:59:59Z" },
+          { "start": "2022-01-01T00:00:00Z", "end": "2022-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      }
+    ],
+    "Q-S2-H04": [
+      {
+        "name": "mean_a",
+        "tool": "compare_windows",
+        "args": {
+          "subject_ref": "1d55f0c1-61a7-4b6f-d3f2-c851cb83ec60",
+          "loinc": "1751-7",
+          "window_a": { "start": "2016-01-01T00:00:00Z", "end": "2016-12-31T23:59:59Z" },
+          "window_b": { "start": "2018-01-01T00:00:00Z", "end": "2018-12-31T23:59:59Z" }
+        },
+        "path": "window_a.mean",
+        "value": 4.38924,
+        "unit": "g/dL",
+        "n": 21,
+        "windows": [
+          { "start": "2016-01-01T00:00:00Z", "end": "2016-12-31T23:59:59Z" },
+          { "start": "2018-01-01T00:00:00Z", "end": "2018-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "mean_b",
+        "tool": "compare_windows",
+        "args": {
+          "subject_ref": "1d55f0c1-61a7-4b6f-d3f2-c851cb83ec60",
+          "loinc": "1751-7",
+          "window_a": { "start": "2016-01-01T00:00:00Z", "end": "2016-12-31T23:59:59Z" },
+          "window_b": { "start": "2018-01-01T00:00:00Z", "end": "2018-12-31T23:59:59Z" }
+        },
+        "path": "window_b.mean",
+        "value": 4.440318181818182,
+        "unit": "g/dL",
+        "n": 21,
+        "windows": [
+          { "start": "2016-01-01T00:00:00Z", "end": "2016-12-31T23:59:59Z" },
+          { "start": "2018-01-01T00:00:00Z", "end": "2018-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "delta_mean",
+        "tool": "compare_windows",
+        "args": {
+          "subject_ref": "1d55f0c1-61a7-4b6f-d3f2-c851cb83ec60",
+          "loinc": "1751-7",
+          "window_a": { "start": "2016-01-01T00:00:00Z", "end": "2016-12-31T23:59:59Z" },
+          "window_b": { "start": "2018-01-01T00:00:00Z", "end": "2018-12-31T23:59:59Z" }
+        },
+        "path": "delta_b_minus_a.mean",
+        "value": 0.051078181818182244,
+        "unit": "g/dL",
+        "n": 21,
+        "windows": [
+          { "start": "2016-01-01T00:00:00Z", "end": "2016-12-31T23:59:59Z" },
+          { "start": "2018-01-01T00:00:00Z", "end": "2018-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "n_a",
+        "tool": "compare_windows",
+        "args": {
+          "subject_ref": "1d55f0c1-61a7-4b6f-d3f2-c851cb83ec60",
+          "loinc": "1751-7",
+          "window_a": { "start": "2016-01-01T00:00:00Z", "end": "2016-12-31T23:59:59Z" },
+          "window_b": { "start": "2018-01-01T00:00:00Z", "end": "2018-12-31T23:59:59Z" }
+        },
+        "path": "window_a.n",
+        "value": 10,
+        "unit": null,
+        "n": 21,
+        "windows": [
+          { "start": "2016-01-01T00:00:00Z", "end": "2016-12-31T23:59:59Z" },
+          { "start": "2018-01-01T00:00:00Z", "end": "2018-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "n_b",
+        "tool": "compare_windows",
+        "args": {
+          "subject_ref": "1d55f0c1-61a7-4b6f-d3f2-c851cb83ec60",
+          "loinc": "1751-7",
+          "window_a": { "start": "2016-01-01T00:00:00Z", "end": "2016-12-31T23:59:59Z" },
+          "window_b": { "start": "2018-01-01T00:00:00Z", "end": "2018-12-31T23:59:59Z" }
+        },
+        "path": "window_b.n",
+        "value": 11,
+        "unit": null,
+        "n": 21,
+        "windows": [
+          { "start": "2016-01-01T00:00:00Z", "end": "2016-12-31T23:59:59Z" },
+          { "start": "2018-01-01T00:00:00Z", "end": "2018-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      }
+    ],
+    "Q-S2-H05": [
+      {
+        "name": "mean_a",
+        "tool": "compare_windows",
+        "args": {
+          "subject_ref": "c53d2b30-e23b-ae02-ed09-833abd033a39",
+          "loinc": "1920-8",
+          "window_a": { "start": "2017-01-01T00:00:00Z", "end": "2017-12-31T23:59:59Z" },
+          "window_b": { "start": "2019-01-01T00:00:00Z", "end": "2019-12-31T23:59:59Z" }
+        },
+        "path": "window_a.mean",
+        "value": 20.619666666666664,
+        "unit": "U/L",
+        "n": 23,
+        "windows": [
+          { "start": "2017-01-01T00:00:00Z", "end": "2017-12-31T23:59:59Z" },
+          { "start": "2019-01-01T00:00:00Z", "end": "2019-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "mean_b",
+        "tool": "compare_windows",
+        "args": {
+          "subject_ref": "c53d2b30-e23b-ae02-ed09-833abd033a39",
+          "loinc": "1920-8",
+          "window_a": { "start": "2017-01-01T00:00:00Z", "end": "2017-12-31T23:59:59Z" },
+          "window_b": { "start": "2019-01-01T00:00:00Z", "end": "2019-12-31T23:59:59Z" }
+        },
+        "path": "window_b.mean",
+        "value": 27.820545454545456,
+        "unit": "U/L",
+        "n": 23,
+        "windows": [
+          { "start": "2017-01-01T00:00:00Z", "end": "2017-12-31T23:59:59Z" },
+          { "start": "2019-01-01T00:00:00Z", "end": "2019-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "delta_mean",
+        "tool": "compare_windows",
+        "args": {
+          "subject_ref": "c53d2b30-e23b-ae02-ed09-833abd033a39",
+          "loinc": "1920-8",
+          "window_a": { "start": "2017-01-01T00:00:00Z", "end": "2017-12-31T23:59:59Z" },
+          "window_b": { "start": "2019-01-01T00:00:00Z", "end": "2019-12-31T23:59:59Z" }
+        },
+        "path": "delta_b_minus_a.mean",
+        "value": 7.200878787878793,
+        "unit": "U/L",
+        "n": 23,
+        "windows": [
+          { "start": "2017-01-01T00:00:00Z", "end": "2017-12-31T23:59:59Z" },
+          { "start": "2019-01-01T00:00:00Z", "end": "2019-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "n_a",
+        "tool": "compare_windows",
+        "args": {
+          "subject_ref": "c53d2b30-e23b-ae02-ed09-833abd033a39",
+          "loinc": "1920-8",
+          "window_a": { "start": "2017-01-01T00:00:00Z", "end": "2017-12-31T23:59:59Z" },
+          "window_b": { "start": "2019-01-01T00:00:00Z", "end": "2019-12-31T23:59:59Z" }
+        },
+        "path": "window_a.n",
+        "value": 12,
+        "unit": null,
+        "n": 23,
+        "windows": [
+          { "start": "2017-01-01T00:00:00Z", "end": "2017-12-31T23:59:59Z" },
+          { "start": "2019-01-01T00:00:00Z", "end": "2019-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "n_b",
+        "tool": "compare_windows",
+        "args": {
+          "subject_ref": "c53d2b30-e23b-ae02-ed09-833abd033a39",
+          "loinc": "1920-8",
+          "window_a": { "start": "2017-01-01T00:00:00Z", "end": "2017-12-31T23:59:59Z" },
+          "window_b": { "start": "2019-01-01T00:00:00Z", "end": "2019-12-31T23:59:59Z" }
+        },
+        "path": "window_b.n",
+        "value": 11,
+        "unit": null,
+        "n": 23,
+        "windows": [
+          { "start": "2017-01-01T00:00:00Z", "end": "2017-12-31T23:59:59Z" },
+          { "start": "2019-01-01T00:00:00Z", "end": "2019-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      }
+    ],
+    "Q-S2-H06": [
+      {
+        "name": "mean_a",
+        "tool": "compare_windows",
+        "args": {
+          "subject_ref": "6816a11d-3700-1d60-8b4d-b7252c529f11",
+          "loinc": "4544-3",
+          "window_a": { "start": "2018-01-01T00:00:00Z", "end": "2018-12-31T23:59:59Z" },
+          "window_b": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "window_a.mean",
+        "value": 40.28204,
+        "unit": "%",
+        "n": 27,
+        "windows": [
+          { "start": "2018-01-01T00:00:00Z", "end": "2018-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "mean_b",
+        "tool": "compare_windows",
+        "args": {
+          "subject_ref": "6816a11d-3700-1d60-8b4d-b7252c529f11",
+          "loinc": "4544-3",
+          "window_a": { "start": "2018-01-01T00:00:00Z", "end": "2018-12-31T23:59:59Z" },
+          "window_b": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "window_b.mean",
+        "value": 45.87,
+        "unit": "%",
+        "n": 27,
+        "windows": [
+          { "start": "2018-01-01T00:00:00Z", "end": "2018-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "delta_mean",
+        "tool": "compare_windows",
+        "args": {
+          "subject_ref": "6816a11d-3700-1d60-8b4d-b7252c529f11",
+          "loinc": "4544-3",
+          "window_a": { "start": "2018-01-01T00:00:00Z", "end": "2018-12-31T23:59:59Z" },
+          "window_b": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "delta_b_minus_a.mean",
+        "value": 5.587959999999995,
+        "unit": "%",
+        "n": 27,
+        "windows": [
+          { "start": "2018-01-01T00:00:00Z", "end": "2018-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "n_a",
+        "tool": "compare_windows",
+        "args": {
+          "subject_ref": "6816a11d-3700-1d60-8b4d-b7252c529f11",
+          "loinc": "4544-3",
+          "window_a": { "start": "2018-01-01T00:00:00Z", "end": "2018-12-31T23:59:59Z" },
+          "window_b": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "window_a.n",
+        "value": 25,
+        "unit": null,
+        "n": 27,
+        "windows": [
+          { "start": "2018-01-01T00:00:00Z", "end": "2018-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      },
+      {
+        "name": "n_b",
+        "tool": "compare_windows",
+        "args": {
+          "subject_ref": "6816a11d-3700-1d60-8b4d-b7252c529f11",
+          "loinc": "4544-3",
+          "window_a": { "start": "2018-01-01T00:00:00Z", "end": "2018-12-31T23:59:59Z" },
+          "window_b": { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        },
+        "path": "window_b.n",
+        "value": 2,
+        "unit": null,
+        "n": 27,
+        "windows": [
+          { "start": "2018-01-01T00:00:00Z", "end": "2018-12-31T23:59:59Z" },
+          { "start": "2025-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }
+        ],
+        "refusal": null
+      }
+    ],
+    "Q-S2-H07": [
+      {
+        "name": "days_in_window",
+        "tool": "coverage",
+        "args": {
+          "subject_ref": "aee7bbe1-0c45-c028-1e62-1f4cdb30c273",
+          "loinc": ["777-3", "1751-7"],
+          "start": "2016-01-01T00:00:00Z",
+          "end": "2021-12-31T23:59:59Z"
+        },
+        "path": "days_in_window",
+        "value": 2192,
+        "unit": null,
+        "n": 1,
+        "windows": [{ "start": "2016-01-01T00:00:00Z", "end": "2021-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "n_777_3",
+        "tool": "coverage",
+        "args": {
+          "subject_ref": "aee7bbe1-0c45-c028-1e62-1f4cdb30c273",
+          "loinc": ["777-3", "1751-7"],
+          "start": "2016-01-01T00:00:00Z",
+          "end": "2021-12-31T23:59:59Z"
+        },
+        "path": "codes.0.n",
+        "value": 1,
+        "unit": null,
+        "n": 1,
+        "windows": [{ "start": "2016-01-01T00:00:00Z", "end": "2021-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "days_with_data_777_3",
+        "tool": "coverage",
+        "args": {
+          "subject_ref": "aee7bbe1-0c45-c028-1e62-1f4cdb30c273",
+          "loinc": ["777-3", "1751-7"],
+          "start": "2016-01-01T00:00:00Z",
+          "end": "2021-12-31T23:59:59Z"
+        },
+        "path": "codes.0.days_with_data",
+        "value": 1,
+        "unit": null,
+        "n": 1,
+        "windows": [{ "start": "2016-01-01T00:00:00Z", "end": "2021-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "longest_gap_days_777_3",
+        "tool": "coverage",
+        "args": {
+          "subject_ref": "aee7bbe1-0c45-c028-1e62-1f4cdb30c273",
+          "loinc": ["777-3", "1751-7"],
+          "start": "2016-01-01T00:00:00Z",
+          "end": "2021-12-31T23:59:59Z"
+        },
+        "path": "codes.0.longest_gap_days",
+        "value": 1996,
+        "unit": null,
+        "n": 1,
+        "windows": [{ "start": "2016-01-01T00:00:00Z", "end": "2021-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "n_1751_7",
+        "tool": "coverage",
+        "args": {
+          "subject_ref": "aee7bbe1-0c45-c028-1e62-1f4cdb30c273",
+          "loinc": ["777-3", "1751-7"],
+          "start": "2016-01-01T00:00:00Z",
+          "end": "2021-12-31T23:59:59Z"
+        },
+        "path": "codes.1.n",
+        "value": 0,
+        "unit": null,
+        "n": 1,
+        "windows": [{ "start": "2016-01-01T00:00:00Z", "end": "2021-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "days_with_data_1751_7",
+        "tool": "coverage",
+        "args": {
+          "subject_ref": "aee7bbe1-0c45-c028-1e62-1f4cdb30c273",
+          "loinc": ["777-3", "1751-7"],
+          "start": "2016-01-01T00:00:00Z",
+          "end": "2021-12-31T23:59:59Z"
+        },
+        "path": "codes.1.days_with_data",
+        "value": 0,
+        "unit": null,
+        "n": 1,
+        "windows": [{ "start": "2016-01-01T00:00:00Z", "end": "2021-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "longest_gap_days_1751_7",
+        "tool": "coverage",
+        "args": {
+          "subject_ref": "aee7bbe1-0c45-c028-1e62-1f4cdb30c273",
+          "loinc": ["777-3", "1751-7"],
+          "start": "2016-01-01T00:00:00Z",
+          "end": "2021-12-31T23:59:59Z"
+        },
+        "path": "codes.1.longest_gap_days",
+        "value": 2192,
+        "unit": null,
+        "n": 1,
+        "windows": [{ "start": "2016-01-01T00:00:00Z", "end": "2021-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S2-H08": [
+      {
+        "name": "days_in_window",
+        "tool": "coverage",
+        "args": {
+          "subject_ref": "5ba0a3f3-32f7-02b1-ec6a-8f568923954c",
+          "loinc": ["789-8", "787-2"],
+          "start": "2014-01-01T00:00:00Z",
+          "end": "2019-12-31T23:59:59Z"
+        },
+        "path": "days_in_window",
+        "value": 2191,
+        "unit": null,
+        "n": 2,
+        "windows": [{ "start": "2014-01-01T00:00:00Z", "end": "2019-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "n_789_8",
+        "tool": "coverage",
+        "args": {
+          "subject_ref": "5ba0a3f3-32f7-02b1-ec6a-8f568923954c",
+          "loinc": ["789-8", "787-2"],
+          "start": "2014-01-01T00:00:00Z",
+          "end": "2019-12-31T23:59:59Z"
+        },
+        "path": "codes.0.n",
+        "value": 1,
+        "unit": null,
+        "n": 2,
+        "windows": [{ "start": "2014-01-01T00:00:00Z", "end": "2019-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "days_with_data_789_8",
+        "tool": "coverage",
+        "args": {
+          "subject_ref": "5ba0a3f3-32f7-02b1-ec6a-8f568923954c",
+          "loinc": ["789-8", "787-2"],
+          "start": "2014-01-01T00:00:00Z",
+          "end": "2019-12-31T23:59:59Z"
+        },
+        "path": "codes.0.days_with_data",
+        "value": 1,
+        "unit": null,
+        "n": 2,
+        "windows": [{ "start": "2014-01-01T00:00:00Z", "end": "2019-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "longest_gap_days_789_8",
+        "tool": "coverage",
+        "args": {
+          "subject_ref": "5ba0a3f3-32f7-02b1-ec6a-8f568923954c",
+          "loinc": ["789-8", "787-2"],
+          "start": "2014-01-01T00:00:00Z",
+          "end": "2019-12-31T23:59:59Z"
+        },
+        "path": "codes.0.longest_gap_days",
+        "value": 1915,
+        "unit": null,
+        "n": 2,
+        "windows": [{ "start": "2014-01-01T00:00:00Z", "end": "2019-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "n_787_2",
+        "tool": "coverage",
+        "args": {
+          "subject_ref": "5ba0a3f3-32f7-02b1-ec6a-8f568923954c",
+          "loinc": ["789-8", "787-2"],
+          "start": "2014-01-01T00:00:00Z",
+          "end": "2019-12-31T23:59:59Z"
+        },
+        "path": "codes.1.n",
+        "value": 1,
+        "unit": null,
+        "n": 2,
+        "windows": [{ "start": "2014-01-01T00:00:00Z", "end": "2019-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "days_with_data_787_2",
+        "tool": "coverage",
+        "args": {
+          "subject_ref": "5ba0a3f3-32f7-02b1-ec6a-8f568923954c",
+          "loinc": ["789-8", "787-2"],
+          "start": "2014-01-01T00:00:00Z",
+          "end": "2019-12-31T23:59:59Z"
+        },
+        "path": "codes.1.days_with_data",
+        "value": 1,
+        "unit": null,
+        "n": 2,
+        "windows": [{ "start": "2014-01-01T00:00:00Z", "end": "2019-12-31T23:59:59Z" }],
+        "refusal": null
+      },
+      {
+        "name": "longest_gap_days_787_2",
+        "tool": "coverage",
+        "args": {
+          "subject_ref": "5ba0a3f3-32f7-02b1-ec6a-8f568923954c",
+          "loinc": ["789-8", "787-2"],
+          "start": "2014-01-01T00:00:00Z",
+          "end": "2019-12-31T23:59:59Z"
+        },
+        "path": "codes.1.longest_gap_days",
+        "value": 1915,
+        "unit": null,
+        "n": 2,
+        "windows": [{ "start": "2014-01-01T00:00:00Z", "end": "2019-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S6-H01": [
+      {
+        "name": "n",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "7fff03da-06e1-4c8f-091b-a415e649d0c8",
+          "loinc": "3040-3",
+          "start": "2021-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z"
+        },
+        "path": "n",
+        "value": 0,
+        "unit": null,
+        "n": 0,
+        "windows": [{ "start": "2021-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S6-H02": [
+      {
+        "name": "n",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "f95a6723-14a5-c4b6-78df-fa97f7ab361c",
+          "loinc": "3255-7",
+          "start": "2023-01-01T00:00:00Z",
+          "end": "2024-12-31T23:59:59Z"
+        },
+        "path": "n",
+        "value": 0,
+        "unit": null,
+        "n": 0,
+        "windows": [{ "start": "2023-01-01T00:00:00Z", "end": "2024-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S6-H03": [
+      {
+        "name": "n",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "9661a432-4630-2cd9-142c-386845fae837",
+          "loinc": "787-2",
+          "start": "2019-01-01T00:00:00Z",
+          "end": "2019-12-31T23:59:59Z"
+        },
+        "path": "n",
+        "value": 0,
+        "unit": null,
+        "n": 0,
+        "windows": [{ "start": "2019-01-01T00:00:00Z", "end": "2019-12-31T23:59:59Z" }],
+        "refusal": null
+      }
+    ],
+    "Q-S6-H04": [
+      {
+        "name": "refusal",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "6db680e4-1aef-2bf4-fdbf-4ac4b08aa3b5",
+          "loinc": "1751-7",
+          "start": "2022-01-01T00:00:00Z",
+          "end": "2025-12-31T23:59:59Z"
+        },
+        "path": "code",
+        "value": "SUBJECT_SCOPE_VIOLATION",
+        "unit": null,
+        "n": 0,
+        "windows": [{ "start": "2022-01-01T00:00:00Z", "end": "2025-12-31T23:59:59Z" }],
+        "refusal": "SUBJECT_SCOPE_VIOLATION"
+      }
+    ],
+    "Q-S6-H05": [
+      {
+        "name": "refusal",
+        "tool": "trend",
+        "args": {
+          "subject_ref": "02e90320-5691-2573-fda9-8c690335d153",
+          "loinc": "789-8",
+          "start": "2019-01-01T00:00:00Z",
+          "end": "2023-12-31T23:59:59Z"
+        },
+        "path": "code",
+        "value": "SUBJECT_SCOPE_VIOLATION",
+        "unit": null,
+        "n": 0,
+        "windows": [{ "start": "2019-01-01T00:00:00Z", "end": "2023-12-31T23:59:59Z" }],
+        "refusal": "SUBJECT_SCOPE_VIOLATION"
+      }
+    ]
+  }
+}

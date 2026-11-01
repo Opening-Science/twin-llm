@@ -78,6 +78,15 @@ open panels, the organ picked on a twin, the chart drawn large with its days and
 the thread's views by kind and measure, with no values. It is set by the host
 from the request and is absent when the turn carried none and on older
 documents. Its `ui.context` audit row is left out of `tool_calls` too.
+`effort` (#366) is the effort the answer ran at: `level` (`quick`, `balanced`,
+`thorough`, `deep`, `ultra`), `thinking` (`on`, `off`, `unavailable`,
+`provider-default`), `max_steps` and `review`. It is set by the chat host and absent from
+the evaluation harness's documents and older ones. Its `chat.effort` audit row is left
+out of `tool_calls`. `number_review` (#366) is the Ultra number check: `reviewer`,
+`status` (`done` or `failed`), `items` (each `text`, `verdict` of `supported`,
+`unsupported` or `unchecked`, a `note` for `unsupported`, and `matched`, what the
+deterministic number matcher found) and `skipped`, the numbers past the first 30. It is
+absent below Ultra ([chat-modes.md](chat-modes.md)).
 
 `interpretation.kind` is `narration` | `none` | `unrenderable`. The builder
 never emits `kind=contract`. `unrenderable` is the interpreter stub only

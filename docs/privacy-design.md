@@ -524,10 +524,10 @@ consents, at })` is pure; `requireLearningConsent(scope, rows, deps)` is the one
   place), `training:batches` (every subject in the training database), `training:split`
   (each conversation's meta line), `disclosure:prepare` (each meta line of the set the
   disclosure experiment trains and probes on), `eval:answer-key` and its `:s7`, `:s7b`,
-  `:s7h`, `:hb` and `:live` forms (before the first call and before the key is written; over cohort files,
+  `:s7h`, `:v1h`, `:hb` and `:live` forms (before the first call and before the key is written; over cohort files,
   only Synthea bundles count as synthetic), `eval` (before any model runs and before
   `meta.json`, whatever the decline wording or context arm), `eval:report`, `eval:spread-subjects`, `eval:cohort-codes` and
-  `eval:heldout:s7h`. _Changed from the first draft:_ the Lab's training sample is
+  `eval:heldout:s7h` and `eval:heldout:v1h`. _Changed from the first draft:_ the Lab's training sample is
   `training:sample`, no separate path; the report, spread, cohort-codes and held-out
   commands were added to the list.
 - **Manifests.** A set or run that relied on a consent records `learning_consents: {

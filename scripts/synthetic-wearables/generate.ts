@@ -6,7 +6,7 @@
  *   bun run wearables:generate -- --in <dir> --out <dir> --seed 4242 --end 2026-10-01 --days 90
  *   bun run warehouse:ingest .synthea/synthea-v4-seed4242/wearables --cohort synthea-v4-seed4242
  *
- * Version 3 (the default) reads each subject's Synthea conditions and lets
+ * Version 3.1 (the default) reads each subject's Synthea conditions and lets
  * atrial fibrillation, heart failure, stroke and sleep apnea change the
  * series (`conditions.ts`). `--generator-version 2` ignores them and rebuilds
  * the v2 series the evaluation answer key was made from.
@@ -58,7 +58,7 @@ export type WearablesArgs = Readonly<{
   days: number;
   /** The evaluation cohort's series, for the answer-key and eval databases only. */
   allowEvalCohort: boolean;
-  /** "2" ignores conditions; "3" (the default) follows them. */
+  /** "2" ignores conditions; "3.1" (the default) follows them. */
   generatorVersion: WearableGeneratorVersion;
 }>;
 
@@ -92,7 +92,7 @@ export const parseWearablesArgs = (argv: readonly string[]): WearablesArgs | str
   const generatorVersion =
     flag(argv, "--generator-version") ?? WEARABLE_GENERATOR_VERSION;
   if (!isGeneratorVersion(generatorVersion)) {
-    return "--generator-version must be 2 or 3.";
+    return "--generator-version must be 2 or 3.1.";
   }
   return {
     input,

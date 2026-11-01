@@ -1,5 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from "bun:test";
 
+import { moduleMocker } from "@/tests/support/mock-module";
+
 import {
   SYNTHETIC_WHOOP_PAYLOAD,
   SYNTHETIC_WINDOW,
@@ -39,11 +41,12 @@ const recorded = {
 
 let connectionRow: Record<string, unknown> | null = null;
 
+const mockModuleForFile = moduleMocker({ mock, afterAll });
 mock.module("server-only", () => ({}));
-mock.module("@/infrastructure/auth-actor", () => ({
+await mockModuleForFile("@/infrastructure/auth-actor", {
   resolveActorId: async () => "local",
-}));
-mock.module("@/infrastructure/database", () => ({
+});
+await mockModuleForFile("@/infrastructure/database", {
   database: () => ({
     // The audit append (#223): records the tool name only.
     $transaction: async (run: (tx: unknown) => Promise<unknown>) =>
@@ -91,7 +94,7 @@ mock.module("@/infrastructure/database", () => ({
       },
     },
   }),
-}));
+});
 
 type Collection = "recovery" | "cycle" | "sleep" | "workout";
 let responses: Record<Collection, { status: number; records: unknown[] }>;

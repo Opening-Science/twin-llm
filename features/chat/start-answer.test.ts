@@ -9,6 +9,7 @@ import {
   GENOME_THREAD_LOCAL_ONLY,
   GENOME_THREAD_SENTENCE,
 } from "@/infrastructure/genome-thread-policy";
+import { type AppliedEffort, EFFORT_AUDIT_TOOL } from "@/infrastructure/chat-effort";
 import type { LiveSourceId } from "@/infrastructure/live-sources";
 import type { CatalogAgent } from "@/infrastructure/model-catalog";
 import type { TurnSkill } from "@/infrastructure/skill-gate";
@@ -68,6 +69,8 @@ const harness = (
 ) => {
   const calls: string[] = [];
   const audits: AppendInput[] = [];
+  const efforts: AppendInput[] = [];
+  const applied: (AppliedEffort | null)[] = [];
   const streamed: StreamContext[] = [];
   const refused: RefusedRow[] = [];
   const threadReads: string[] = [];
@@ -88,14 +91,24 @@ const harness = (
       : { loadLiveSources: async () => options.liveSources ?? [] }),
     findSkill: async (name) => (name === SLEEP.name ? (options.skill ?? SLEEP) : null),
     appendAudit: async (input) => {
+      if (options.auditFails) {
+        calls.push("audit");
+        throw new Error("audit-down");
+      }
+      // The effort row (#366) is on every turn; its own tests read `efforts`.
+      if (input.tool === EFFORT_AUDIT_TOOL) {
+        efforts.push(input);
+        return {};
+      }
       calls.push("audit");
-      if (options.auditFails) throw new Error("audit-down");
       audits.push(input);
       return {};
     },
-    stream: async (_call, context) => {
+    stream: async (_call, { effort, ...context }) => {
       calls.push("stream");
+      // Effort (#366) is on every stream; its own tests read `applied`.
       streamed.push(context);
+      applied.push(effort ?? null);
       return new Response("streamed");
     },
     markRefused: async (target) => {
@@ -103,7 +116,16 @@ const harness = (
       refused.push(target);
     },
   });
-  return { startAnswer, calls, audits, streamed, refused, threadReads };
+  return {
+    startAnswer,
+    calls,
+    audits,
+    efforts,
+    applied,
+    streamed,
+    refused,
+    threadReads,
+  };
 };
 
 const SLEEP: TurnSkill = {
@@ -784,5 +806,76 @@ describe("chat start: live public lookups (#6)", () => {
     );
     await startAnswer(ACTOR, APP_USER, CALL);
     expect(streamed.map((context) => context.liveSources)).toEqual([undefined]);
+  });
+});
+
+describe("chat start: effort (#366)", () => {
+  const OLLAMA: ChatProviderSettings = {
+    dataMode: "synthetic",
+    provider: "ollama",
+    exoscalePersonalData: "off",
+  };
+
+  test("no effort sent runs Balanced, audited before the stream", async () => {
+    const { startAnswer, calls, efforts, applied } = harness(OLLAMA, NO_WEARABLES);
+    expect((await startAnswer(ACTOR, APP_USER, CALL)).status).toBe(200);
+    expect(calls).toEqual([`wearables synthetic ${APP_USER}`, "stream"]);
+    expect(efforts).toEqual([
+      {
+        actor: ACTOR,
+        sessionId: CALL.turnId,
+        subjectRef: null,
+        tool: EFFORT_AUDIT_TOOL,
+        args: { modelId: CALL.modelId, effort: "balanced" },
+        result: { thinking: "off", maxSteps: 8, review: false },
+        rowCount: 0,
+      },
+    ]);
+    expect(applied).toEqual([
+      { level: "balanced", thinking: "off", maxSteps: 8, review: false },
+    ]);
+  });
+
+  test("Ultra on a model that can think: thinking on, 12 steps, the number check", async () => {
+    const { startAnswer, applied, efforts } = harness(OLLAMA, NO_WEARABLES);
+    const response = await startAnswer(
+      ACTOR,
+      APP_USER,
+      { ...CALL, effort: "ultra" },
+      null,
+      { canThink: true },
+    );
+    expect(response.status).toBe(200);
+    expect(applied).toEqual([
+      { level: "ultra", thinking: "on", maxSteps: 12, review: true },
+    ]);
+    expect(efforts.map((row) => row.result)).toEqual([
+      { thinking: "on", maxSteps: 12, review: true },
+    ]);
+  });
+
+  test("Thorough on a model without thinking says so instead of switching it on", async () => {
+    const { startAnswer, applied } = harness(OLLAMA, NO_WEARABLES);
+    await startAnswer(ACTOR, APP_USER, { ...CALL, effort: "thorough" });
+    expect(applied).toEqual([
+      { level: "thorough", thinking: "unavailable", maxSteps: 8, review: false },
+    ]);
+  });
+
+  test("a refused turn writes no effort row", async () => {
+    const { startAnswer, efforts } = harness(
+      { dataMode: "synthetic", provider: "exoscale", exoscalePersonalData: "off" },
+      WITH_WHOOP,
+    );
+    expect(
+      (await startAnswer(ACTOR, APP_USER, { ...CALL, effort: "quick" })).status,
+    ).toBe(400);
+    expect(efforts).toEqual([]);
+  });
+
+  test("if the effort row cannot be written, the model is not called", async () => {
+    const { startAnswer, calls } = harness(OLLAMA, NO_WEARABLES, { auditFails: true });
+    await expect(startAnswer(ACTOR, APP_USER, CALL)).rejects.toThrow("audit-down");
+    expect(calls).toEqual([`wearables synthetic ${APP_USER}`, "audit"]);
   });
 });

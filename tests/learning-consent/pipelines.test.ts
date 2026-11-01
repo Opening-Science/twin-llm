@@ -51,6 +51,7 @@ const GATED: Readonly<Record<string, Gated>> = {
   "eval:answer-key:s7b": ANSWER_KEY,
   "eval:answer-key:s7h": ANSWER_KEY,
   "eval:answer-key:hb": ANSWER_KEY,
+  "eval:answer-key:v1h": ANSWER_KEY,
   "disclosure:prepare": {
     entry: "scripts/disclosure/prepare.ts",
     gate: "scripts/disclosure/prepare.ts",
@@ -89,6 +90,11 @@ const GATED: Readonly<Record<string, Gated>> = {
   "eval:heldout:s7h": {
     entry: "scripts/evaluation/heldout-s7h.ts",
     gate: "scripts/evaluation/heldout-s7h.ts",
+    scope: "evaluation",
+  },
+  "eval:heldout:v1h": {
+    entry: "scripts/evaluation/heldout-v1h.ts",
+    gate: "scripts/evaluation/heldout-v1h.ts",
     scope: "evaluation",
   },
 };
@@ -162,6 +168,8 @@ const NOT_LEARNING: Readonly<Record<string, string>> = {
   "synthea:pin": GENERATOR,
   "rhythm-bench":
     "benchmarks the rhythm detector on simulated signals and the public PhysioNet AFDB, never the app's rows",
+  "rhythm-bench:resolution":
+    "aggregates simulated rhythm days and the public PhysioNet AF databases; never the app's rows",
   "wearables:generate": GENERATOR,
   "genome:synth": GENERATOR,
   "genome:ingest": "loads synthetic genotypes (genome-synth) into a training database",
