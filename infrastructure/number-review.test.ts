@@ -7,6 +7,7 @@ import {
   NUMBER_REVIEWER,
   parseReview,
   reviewItemLine,
+  reviewedAnswer,
   reviewNumbers,
   reviewPrompt,
   reviewStepLabel,
@@ -48,6 +49,35 @@ describe("reviewNumbers (#366)", () => {
     ).join(", ");
     const { numbers, skipped } = reviewNumbers(many, []);
     expect([numbers.length, skipped]).toEqual([MAX_REVIEW_NUMBERS, 3]);
+  });
+});
+
+describe("the answer text only, once per value (#379)", () => {
+  test("reads the Answer section and gives a repeated value one entry", () => {
+    const reply = [
+      "## Reasoning",
+      "The rows show 80 kg and 81.2 kg, so weight rose by 1.2 kg.",
+      "",
+      "## Answer",
+      "Weight went from 80 kg to 81.2 kg. That is 81.2 kg at the last reading.",
+      "",
+      "## Uncertainty",
+      "Two readings, 80 and 81.2, are few.",
+    ].join("\n");
+    const answer = reviewedAnswer(reply);
+    expect(answer).toBe(
+      "Weight went from 80 kg to 81.2 kg. That is 81.2 kg at the last reading.",
+    );
+    const { numbers, skipped } = reviewNumbers(answer, [WEIGHTS]);
+    expect(skipped).toBe(0);
+    expect(numbers.map(({ text, matched }) => [text, matched])).toEqual([
+      ["80", true],
+      ["81.2", true],
+    ]);
+  });
+
+  test("a reply without sections is read whole", () => {
+    expect(reviewedAnswer(ANSWER)).toBe(ANSWER);
   });
 });
 

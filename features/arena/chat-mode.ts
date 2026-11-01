@@ -1,5 +1,10 @@
 import { AGENT_ID_PREFIX } from "@/infrastructure/agents";
 import {
+  DEFAULT_EFFORT,
+  type EffortLevel,
+  parseEffort,
+} from "@/infrastructure/chat-effort";
+import {
   AUTO_MODEL_ID,
   type CatalogModel,
   defaultModelSelection,
@@ -238,4 +243,25 @@ export const modeSummary = (
     return `${MODE_COPY.manual.label} · ${String(count)} ${count === 1 ? "answer" : "answers"}`;
   }
   return `${MODE_COPY.compare.label} · ${String(count)} ${count === 1 ? "model" : "models"}`;
+};
+
+/**
+ * The effort a prompt bar opens with (#379): a new chat starts at Balanced, a
+ * thread at the effort its last turn ran at, read from that turn's stored
+ * answers (their documents record it) or, for a turn sent in this tab, the
+ * effort it was sent with.
+ */
+export const initialEffort = (
+  turns: readonly Readonly<{
+    effort?: EffortLevel;
+    answers: readonly Readonly<{
+      document?: Readonly<{ effort?: Readonly<{ level: EffortLevel }> }> | null;
+    }>[];
+  }>[],
+): EffortLevel => {
+  const last = turns.at(-1);
+  if (last === undefined) return DEFAULT_EFFORT;
+  const stored = last.answers.find((answer) => answer.document?.effort !== undefined)
+    ?.document?.effort?.level;
+  return parseEffort(stored ?? last.effort);
 };

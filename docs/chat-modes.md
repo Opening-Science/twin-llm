@@ -38,9 +38,25 @@ own preferred model keeps its plain `agent:<id>` row.
 
 Auto's answer carries one muted line that says which specialist ran, on which model when
 the screen knows it, and why: "Auto chose Diet specialist on Qwen3 4B: the question is
-about body weight." The rules are in [agents.md](agents.md#auto-219). Today every
-specialist prefers the same local models, so Auto changes the specialist from turn to
-turn and the model only when the preferred one is not offered.
+about body weight." The rules are in [agents.md](agents.md#auto-219).
+
+### Which model Auto uses (#379)
+
+Auto runs the specialist it picks on Auto's own model, not on the specialist's
+preference: qwen3:4b first, then qwen3:8b, else the catalog's first model
+(`AUTO_AGENT.modelPreference` in `infrastructure/agents.ts`). A specialist picked by
+hand in Manual or Compare keeps its own preference (qwen3:8b first).
+
+The rule comes from the committed eval runs
+([eval-runs-2026-10.md](research/eval-runs-2026-10.md), "Tool calls and answers without
+a tool"). On the v1 set qwen3:4b answered 1 of 96 keyed lines without calling a tool and
+qwen3:8b 32 of 96 (18 and 65 of 134 lines in all); on S7, 1 and 2 of 32. A subject
+question answered without a tool is withheld, so the model that calls tools more often
+answers more of them. The live check that led here saw two Auto turns on qwen3:8b with
+no tool call. The trade-offs, from the same runs: qwen3:4b invents LOINC codes more
+often (46 against 29 of 96 keyed lines on v1) and writes a long reasoning passage, so
+it is slower. The specialists were only evaluated on qwen3:8b; their call rate on
+qwen3:4b is not yet measured. Auto does not retry a turn that made no tool call.
 
 ## Effort
 
@@ -54,7 +70,9 @@ Five steps. Each changes what the turn does (`infrastructure/chat-effort.ts`):
 | Deep     | on       | 12          | no           |
 | Ultra    | on       | 12          | yes          |
 
-Balanced is the default and is the turn exactly as it ran before effort existed.
+Balanced is the default and is the turn exactly as it ran before effort existed. A new
+chat starts at Balanced; a saved thread reopens at the effort its last turn ran at, read
+from that turn's response documents (#379).
 
 - **Model calls** is the step limit of one turn (`runTwinTurn`). The last call has no
   tools, so a model still looking things up writes its answer from what it has.
@@ -84,9 +102,12 @@ default. It is given:
 
 - the answer's numbers, found by the same matcher as the answer's number links
   (`answerNumbers`: dates and the counts 0 to 10 left out), at most 30, each with a little
-  of the sentence around it;
+  of the sentence around it. Only the Answer section is read (the whole reply when it has
+  no sections), since Reasoning and Uncertainty often repeat its numbers, and a value
+  written more than once is listed once, at its first place, so it gets one verdict
+  (#379);
 - the turn's tool results as JSON, cut at 12,000 characters with a note;
-- the answer.
+- the Answer section.
 
 It replies with one line per number, `supported` or `unsupported: <reason>`. A number it
 skips stays `unchecked`. Each number also keeps what the deterministic matcher found

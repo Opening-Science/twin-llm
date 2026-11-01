@@ -15,6 +15,7 @@ import type { TwinFocusId } from "@/packages/anatomy/twin-focus";
 
 import { AnswerColumn } from "./answer-column";
 import { specialistModelIn } from "./answer-header";
+import { initialEffort } from "./chat-mode";
 import type { TurnState } from "./conversation";
 import { IncognitoBanner } from "./incognito-controls";
 import { OutputsPanel } from "./outputs-panel";
@@ -279,6 +280,7 @@ export const CompareScreen = ({
         <PromptBar
           catalog={catalog}
           initialModelIds={defaultModelIds}
+          initialEffort={initialEffort(initialTurns)}
           busy={sending}
           streaming={streamingNow}
           onStop={stop}

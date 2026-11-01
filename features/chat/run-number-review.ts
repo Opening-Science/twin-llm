@@ -8,6 +8,7 @@ import {
   REVIEW_SYSTEM,
   reviewNumbers,
   reviewPrompt,
+  reviewedAnswer,
   reviewToolText,
 } from "@/infrastructure/number-review";
 
@@ -26,9 +27,10 @@ export const NUMBER_REVIEW_TIMEOUT_MS = 120_000;
 
 export const runNumberReview = async (
   model: LanguageModel,
-  answer: string,
+  reply: string,
   toolResults: readonly TwinTurnToolResult[],
 ): Promise<NumberReview> => {
+  const answer = reviewedAnswer(reply);
   const { numbers, skipped } = reviewNumbers(
     answer,
     toolResults.map((result, index) => ({

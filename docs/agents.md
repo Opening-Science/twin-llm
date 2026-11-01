@@ -142,6 +142,10 @@ specialist's model the line names it too (#366): "Auto chose Diet specialist on 
 …". A medicine or dose decision
 reads "Auto chose General: the question is about a medicine or dose decision."
 
+The agent Auto picks runs on Auto's own model, qwen3:4b before qwen3:8b, because it
+called tools far more often in the October eval runs; an agent picked by hand keeps its
+own preference ([chat-modes.md](chat-modes.md#which-model-auto-uses-379), #379).
+
 The turn stores the column name when it starts (`checkTurnRequest`), and `/api/chat` runs
 Auto as the agent that name holds while it is still offered, so a retry runs as the agent
 the header shows. An incognito turn routes the prompt in the request. The muted line is

@@ -88,14 +88,26 @@ export const AGENTS: readonly Agent[] = Object.freeze([
 ]);
 
 /**
+ * The models Auto runs its pick on, best first (#379). Auto puts the model that
+ * calls tools most reliably first, from the October eval runs
+ * (`docs/research/eval-runs-2026-10.md`, "Tool calls and answers without a
+ * tool"): on the v1 set qwen3:4b answered 1 of 96 keyed lines without a tool
+ * call and qwen3:8b 32 of 96 (18 and 65 of 134 lines in all). A specialist
+ * picked by hand keeps its own `modelPreference`.
+ */
+const AUTO_PREFERENCE: readonly string[] = Object.freeze(["qwen3:4b", "qwen3:8b"]);
+
+/**
  * Auto (#219): not an agent of its own but a row that picks one of the agents
  * above for each turn (`agent-router.ts`). It never runs as itself, so it is
- * kept out of `AGENTS` and has no skill.
+ * kept out of `AGENTS` and has no skill. The agent it picks runs on Auto's
+ * model (`AUTO_PREFERENCE`), not on the agent's own preference.
  */
 export const AUTO_AGENT = Object.freeze({
   id: "auto",
   name: "Auto",
   role: "Picks one of the agents for each question from keyword and LOINC rules, the General agent when none match.",
+  modelPreference: AUTO_PREFERENCE,
 });
 
 export const agentModelId = (agent: Pick<Agent, "id">): string =>
