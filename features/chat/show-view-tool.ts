@@ -465,7 +465,7 @@ const showMap = async (
 ): Promise<ShowViewOutput> => {
   const built = buildMapSpec(LOCATION_INDEX, deps.estimates?.() ?? [], {
     level: input.level ?? "world",
-    country: input.country ?? null,
+    country: null,
   });
   if ("code" in built) return built;
   const audit = recordingAudit(deps.ports ?? defaultQueryToolPorts());

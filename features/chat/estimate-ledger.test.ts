@@ -45,6 +45,41 @@ describe("createEstimateLedger", () => {
     ]);
   });
 
+  test("keeps a gbd_estimate result as its rows", () => {
+    const ledger = createEstimateLedger();
+    ledger.record("gbd_estimate", "c1", {
+      source: "IHME GBD 2023",
+      measure: "deaths",
+      metric: "rate",
+      unit: "per 100,000",
+      sex: "both",
+      age: "all_ages",
+      cause: "Cardiovascular diseases",
+      risk: null,
+      rows: [
+        {
+          location: "Alabama",
+          location_id: 523,
+          iso3: "USA",
+          iso3166_2: "US-AL",
+          year: 2021,
+          value: 220,
+          lower: 200,
+          upper: 240,
+        },
+      ],
+    });
+    const [entry] = ledger.recorded();
+    expect(entry?.tool).toBe("gbd_estimate");
+    expect(entry?.rows[0]).toMatchObject({
+      location: "Alabama",
+      iso3166_2: "US-AL",
+      level: "subnational",
+      value: 220,
+      year: "2021",
+    });
+  });
+
   test("hands out a copy", () => {
     const ledger = createEstimateLedger();
     const first = ledger.recorded();

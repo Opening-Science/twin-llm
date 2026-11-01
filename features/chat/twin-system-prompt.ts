@@ -117,6 +117,20 @@ const REFERENCE_TOOL_LINES: readonly Readonly<{ tool: string; text: string }>[] 
 const LISTED_ONLY: ReadonlySet<string> = new Set([GBD_ESTIMATE_TOOL]);
 
 /**
+ * How to map the estimates of whichever GBD tool the turn carries
+ * (`gbd_estimate` when results are imported, else `gbd_population`).
+ */
+const mapLine = (offered: (tool: string) => boolean): readonly string[] => {
+  const source = [GBD_ESTIMATE_TOOL, GBD_MODEL_TOOL].find(offered);
+  if (source === undefined || !offered(SHOW_VIEW_TOOL)) return [];
+  const states =
+    source === GBD_ESTIMATE_TOOL ? " (look them up with `children_of` the country)" : "";
+  return [
+    `- To map \`${source}\` estimates this turn looked up, call \`${SHOW_VIEW_TOOL}\` with kind \`map.choropleth\`: level world or region by country, or level country for one country's states${states}. It needs no measure or window.`,
+  ];
+};
+
+/**
  * Only in synthetic mode: the model gets the query tools on every request, and
  * this tells it what they read and how to cite them. Personal mode adds nothing,
  * so its prompt stays exactly as it was.
@@ -163,11 +177,7 @@ const syntheticCohortSection = (
     ...(references.length > 0
       ? [`- ${references.map((line) => line.text).join("; ")}.`]
       : []),
-    ...(offered(GBD_MODEL_TOOL) && offered(SHOW_VIEW_TOOL)
-      ? [
-          `- To map \`${GBD_MODEL_TOOL}\` estimates this turn looked up, call \`${SHOW_VIEW_TOOL}\` with kind \`map.choropleth\`: level world or region by country, or level country with an ISO3 country for its states. It needs no measure or window.`,
-        ]
-      : []),
+    ...mapLine(offered),
     "- Cite tool results in Reasoning by tool, subject_ref, LOINC and date; they are recorded in tool_calls. Tool rows are not wearable keys, so they do not go under Evidence Used.",
     "- When a tool returns no rows or refuses a subject, say so plainly and do not guess values.",
     "",

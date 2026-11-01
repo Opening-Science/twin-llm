@@ -146,7 +146,6 @@ describe("map.choropleth", () => {
     const view = await runShowView(deps(ports, []), {
       kind: "map.choropleth",
       level: "country",
-      country: "NGA",
     });
     expect(view).toEqual({
       code: "ESTIMATES_REQUIRED",
@@ -170,12 +169,12 @@ describe("map.choropleth", () => {
 
   test("the input schema stays closed: a model cannot pass values", () => {
     const ok = (input: unknown) => showViewInput.safeParse(input).success;
-    expect(ok({ kind: "map.choropleth", level: "country", country: "NGA" })).toBe(true);
+    expect(ok({ kind: "map.choropleth", level: "country" })).toBe(true);
     expect(ok({ kind: "map.choropleth", regions: [{ code: "NGA", value: 1 }] })).toBe(
       false,
     );
     expect(ok({ kind: "map.choropleth", values: [1] })).toBe(false);
-    expect(ok({ kind: "map.choropleth", country: "nga" })).toBe(false);
+    expect(ok({ kind: "map.choropleth", country: "NGA" })).toBe(false);
     expect(ok({ kind: "map.choropleth", level: "continent" })).toBe(false);
   });
 });

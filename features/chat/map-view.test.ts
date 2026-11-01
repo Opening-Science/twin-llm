@@ -3,7 +3,13 @@ import { describe, expect, test } from "bun:test";
 import type { LocationIndex } from "@/infrastructure/charts/choropleth/match-location";
 
 import type { LocationEstimate } from "./estimate-ledger";
-import { buildMapSpec, estimateKey, estimateLabel } from "./map-view";
+import {
+  buildMapSpec,
+  estimateKey,
+  estimateLabel,
+  matchEstimate,
+  statesCountry,
+} from "./map-view";
 
 /** Made-up estimates; the shape follows `gbd_population` rows. */
 const INDEX: LocationIndex = {
@@ -151,16 +157,38 @@ describe("buildMapSpec", () => {
     ).toEqual(["NGA", "Nigeria, by state or province", null]);
   });
 
-  test("refuses a country level without a country, or without boundaries", () => {
-    const recorded = [{ tool: "t", callId: "x", rows: [row("Lagos", 1)] }];
+  test("refuses a country level without states of one country, or without boundaries", () => {
+    const recorded = [{ tool: "t", callId: "x", rows: [row("Ghana", 1)] }];
     expect(buildMapSpec(INDEX, recorded, { level: "country", country: null })).toEqual({
-      code: "COUNTRY_REQUIRED",
-      error: "level country needs country: an ISO 3166-1 alpha-3 code such as NGA",
+      code: "STATES_REQUIRED",
+      error:
+        "level country maps the states of one country; look up estimates for one country's states first (gbd_estimate: children_of the country)",
     });
     expect(buildMapSpec(INDEX, recorded, { level: "country", country: "GHA" })).toEqual({
       code: "NO_SUBNATIONAL_BOUNDARIES",
       error: "no state or province boundaries for this country; these have them: NGA",
     });
+    const polish = [
+      {
+        tool: "gbd_estimate",
+        callId: "p",
+        rows: [
+          row("Mazowieckie", 1, { iso3: "POL", iso3166_2: null, level: "subnational" }),
+        ],
+      },
+    ];
+    expect(
+      buildMapSpec(INDEX, polish, { level: "country", country: null }),
+    ).toMatchObject({
+      code: "NO_SUBNATIONAL_BOUNDARIES",
+    });
+  });
+
+  test("finds the country of states looked up by name", () => {
+    const recorded = [{ tool: "t", callId: "x", rows: [row("Lagos State", 1)] }];
+    const built = buildMapSpec(INDEX, recorded, { level: "country", country: null });
+    if ("code" in built) throw new Error(built.error);
+    expect(built.spec.country).toBe("NGA");
   });
 
   test("refuses when no location is a place at this level", () => {
@@ -174,5 +202,156 @@ describe("buildMapSpec", () => {
       error:
         "none of the estimate's locations is a place at this level, so nothing is drawn",
     });
+  });
+});
+
+/** Made-up `gbd_estimate` rows: GBD ids and ISO codes from the location map. */
+const GBD_INDEX: LocationIndex = {
+  version: "test",
+  countries: [
+    { code: "USA", name: "United States of America", names: ["United States"] },
+    { code: "GEO", name: "Georgia", names: [] },
+    { code: "CHE", name: "Switzerland", names: [] },
+  ],
+  states: [
+    { code: "US-GA", country: "USA", name: "Georgia", names: [] },
+    { code: "US-AL", country: "USA", name: "Alabama", names: [] },
+    { code: "US-AK", country: "USA", name: "Alaska", names: [] },
+  ],
+};
+
+const gbdRow = (
+  location: string,
+  value: number,
+  place: Pick<LocationEstimate, "location_id" | "iso3" | "iso3166_2" | "level">,
+): LocationEstimate => ({
+  ...row(location, value, { metric: "rate", source: "IHME GBD 2023" }),
+  ...place,
+});
+
+const GEORGIA_STATE = gbdRow("Georgia", 210, {
+  location_id: 533,
+  iso3: "USA",
+  iso3166_2: "US-GA",
+  level: "subnational",
+});
+const GEORGIA_COUNTRY = gbdRow("Georgia", 300, {
+  location_id: 35,
+  iso3: "GEO",
+  iso3166_2: null,
+  level: "country",
+});
+const ALABAMA = gbdRow("Alabama", 220, {
+  location_id: 523,
+  iso3: "USA",
+  iso3166_2: "US-AL",
+  level: "subnational",
+});
+const SWISS = gbdRow("Schweiz", 100, {
+  location_id: 94,
+  iso3: "CHE",
+  iso3166_2: null,
+  level: "country",
+});
+
+describe("matchEstimate", () => {
+  const states = { level: "states", country: "USA" } as const;
+  const countries = { level: "countries" } as const;
+
+  test("matches by ISO code before the name", () => {
+    expect(matchEstimate(GBD_INDEX, SWISS, countries)).toEqual({
+      code: "CHE",
+      name: "Switzerland",
+    });
+    expect(matchEstimate(GBD_INDEX, GEORGIA_STATE, states)).toEqual({
+      code: "US-GA",
+      name: "Georgia",
+    });
+  });
+
+  test("falls back to the name when the code has no boundary", () => {
+    const renamed = { ...ALABAMA, iso3166_2: "US-XX" };
+    expect(matchEstimate(GBD_INDEX, renamed, states)?.code).toBe("US-AL");
+    const noCode = { ...ALABAMA, iso3166_2: null };
+    expect(matchEstimate(GBD_INDEX, noCode, states)?.code).toBe("US-AL");
+  });
+
+  test("never matches a place at another level or in another country", () => {
+    expect(matchEstimate(GBD_INDEX, GEORGIA_STATE, countries)).toBeNull();
+    expect(matchEstimate(GBD_INDEX, GEORGIA_COUNTRY, states)).toBeNull();
+    expect(
+      matchEstimate(GBD_INDEX, { ...GEORGIA_STATE, iso3: "MEX" }, states),
+    ).toBeNull();
+    expect(
+      matchEstimate(GBD_INDEX, { ...SWISS, level: "aggregate" }, countries),
+    ).toBeNull();
+  });
+
+  test("matches rows without a level by name, as before", () => {
+    expect(matchEstimate(GBD_INDEX, row("Georgia", 1), countries)?.code).toBe("GEO");
+  });
+});
+
+describe("statesCountry", () => {
+  const index: LocationIndex = {
+    ...GBD_INDEX,
+    states: [
+      ...GBD_INDEX.states,
+      { code: "MX-SON", country: "MEX", name: "Sonora", names: [] },
+    ],
+  };
+  const SONORA = gbdRow("Sonora", 5, {
+    location_id: 4669,
+    iso3: "MEX",
+    iso3166_2: "MX-SON",
+    level: "subnational",
+  });
+
+  test("is the country with boundaries most rows are states of", () => {
+    expect(statesCountry(index, [GEORGIA_STATE, ALABAMA, GEORGIA_COUNTRY])).toBe("USA");
+    expect(statesCountry(index, [GEORGIA_STATE, ALABAMA, SONORA])).toBe("USA");
+    expect(statesCountry(index, [row("Alaska", 1)])).toBe("USA");
+  });
+
+  test("is null when no row is a state, or two countries tie", () => {
+    expect(statesCountry(index, [GEORGIA_COUNTRY])).toBeNull();
+    expect(statesCountry(index, [ALABAMA, SONORA])).toBeNull();
+  });
+});
+
+describe("buildMapSpec with gbd_estimate rows", () => {
+  const recorded = [
+    {
+      tool: "gbd_estimate",
+      callId: "e1",
+      rows: [GEORGIA_COUNTRY, GEORGIA_STATE, ALABAMA],
+    },
+  ];
+
+  test("draws a country's states by ISO 3166-2 and lists the rest", () => {
+    const built = buildMapSpec(GBD_INDEX, recorded, { level: "country", country: "USA" });
+    if ("code" in built) throw new Error(built.error);
+    expect(built.spec.regions.map((region) => [region.code, region.value])).toEqual([
+      ["US-GA", 210],
+      ["US-AL", 220],
+    ]);
+    expect(built.spec.unmatched).toEqual(["Georgia"]);
+    expect(built.spec.n).toBe(3);
+    expect(built.place).toBe("United States of America, by state or province");
+  });
+
+  test("takes the states' country when level country names none", () => {
+    const built = buildMapSpec(GBD_INDEX, recorded, { level: "country", country: null });
+    if ("code" in built) throw new Error(built.error);
+    expect(built.spec.country).toBe("USA");
+  });
+
+  test("keeps two places with one name apart at country level", () => {
+    const built = buildMapSpec(GBD_INDEX, recorded, { level: "world", country: null });
+    if ("code" in built) throw new Error(built.error);
+    expect(built.spec.regions.map((region) => [region.code, region.value])).toEqual([
+      ["GEO", 300],
+    ]);
+    expect(built.spec.unmatched).toEqual(["Georgia", "Alabama"]);
   });
 });

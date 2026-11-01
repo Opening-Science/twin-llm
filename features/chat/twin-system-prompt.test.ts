@@ -213,7 +213,7 @@ describe("buildTwinSystemPrompt data mode", () => {
       "- Fetch rows with `latest_by_loinc`, `observations_for_subject`, `subject_window` and `summary_stats`. Observations use LOINC codes and UCUM units.",
       "- `conditions_timeline` and `medications_timeline` list what the record holds, with dates. Say what came before or after, never that one thing caused another. Quote dosage text only as `dosage_as_recorded` gives it, labelled as recorded; never add a dose, a change or advice.",
       "- `gbd_population` gives population figures from GBD; `guideline_search` gives guideline passages; `knowledge_search` explains TwinLLM's own metrics, units, data sources and limits.",
-      "- To map `gbd_population` estimates this turn looked up, call `show_view` with kind `map.choropleth`: level world or region by country, or level country with an ISO3 country for its states. It needs no measure or window.",
+      "- To map `gbd_population` estimates this turn looked up, call `show_view` with kind `map.choropleth`: level world or region by country, or level country for one country's states. It needs no measure or window.",
       "- Cite tool results in Reasoning by tool, subject_ref, LOINC and date; they are recorded in tool_calls. Tool rows are not wearable keys, so they do not go under Evidence Used.",
       "- When a tool returns no rows or refuses a subject, say so plainly and do not guess values.",
       "",
@@ -231,6 +231,33 @@ describe("buildTwinSystemPrompt data mode", () => {
     const end = synthetic.indexOf("## Wearable context (Oura)");
     expect(synthetic.slice(0, start) + synthetic.slice(end)).toBe(personal);
     expect(personal).not.toContain("synthetic research cohort");
+  });
+});
+
+describe("buildTwinSystemPrompt map line (#388)", () => {
+  test("names gbd_estimate and children_of when the turn carries it", async () => {
+    const { buildTwinSystemPrompt } = await import("./twin-system-prompt");
+    const prompt = buildTwinSystemPrompt({
+      ...noWearables,
+      mode: "synthetic",
+      offeredTools: new Set(["gbd_estimate", "show_view"]),
+    });
+    expect(prompt).toContain(
+      "- To map `gbd_estimate` estimates this turn looked up, call `show_view` with kind `map.choropleth`: level world or region by country, or level country for one country's states (look them up with `children_of` the country). It needs no measure or window.",
+    );
+    expect(prompt).not.toContain("To map `gbd_population`");
+  });
+
+  test("has no map line without show_view or a GBD tool", async () => {
+    const { buildTwinSystemPrompt } = await import("./twin-system-prompt");
+    for (const tools of [["gbd_estimate"], ["show_view"]]) {
+      const prompt = buildTwinSystemPrompt({
+        ...noWearables,
+        mode: "synthetic",
+        offeredTools: new Set(tools),
+      });
+      expect(prompt).not.toContain("map.choropleth");
+    }
   });
 });
 
