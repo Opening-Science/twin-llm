@@ -204,7 +204,7 @@ The model's copy of the schema leaves out the string and list bounds and the
 year range (zod still enforces them), and the tool offers three age options
 only: with one wearable linked the default chat context had about 230 tokens
 free, and the tool now takes almost all of them (`bun run prompt:size`, case
-"personal, Oura, GBD imported agent:gp").
+"personal, Oura, GBD and VCF imported agent:gp").
 
 Coded refusals (`packages/query-tools/gbd-refusals.ts`), each audited with 0
 rows: `GBD_NOT_IMPORTED`, `GBD_UNKNOWN_LOCATION`, `GBD_AMBIGUOUS_LOCATION`

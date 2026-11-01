@@ -7,7 +7,12 @@ import {
   DEFAULT_OLLAMA_NUM_CTX,
   promptBudgetTokens,
 } from "../../infrastructure/ollama-context";
-import { loadSkills, promptSizeCases, sizeRow } from "./prompt-size";
+import {
+  loadSkills,
+  PROMPT_HEADROOM_TOKENS,
+  promptSizeCases,
+  sizeRow,
+} from "./prompt-size";
 
 /**
  * The context budget (issue #149): the system prompt and model-facing tool
@@ -53,6 +58,34 @@ describe("prompt + tools fit the Ollama context", () => {
       );
     },
   );
+
+  test.each(CASES.map((c) => [c.label, c]))(
+    "%s leaves PROMPT_HEADROOM_TOKENS free before twin notes (#393)",
+    async (_label, sizeCase) => {
+      const numCtx = sizeCase.largeContext ? 32_768 : DEFAULT_OLLAMA_NUM_CTX;
+      const body = await captureOllamaTurnRequest(
+        { ...sizeCase.turn, twinNotes: [] },
+        numCtx,
+      );
+      expect(sizeRow(sizeCase.label, body).estimate).toBeLessThanOrEqual(
+        promptBudgetTokens(numCtx) - PROMPT_HEADROOM_TOKENS,
+      );
+    },
+  );
+
+  test("genome_variants is sent only when a VCF is imported (#399)", async () => {
+    const named = async (label: string) => {
+      const sizeCase = CASES.find((candidate) => candidate.label === label);
+      if (sizeCase === undefined) throw new Error(`no case ${label}`);
+      const body = await captureOllamaTurnRequest(sizeCase.turn, DEFAULT_OLLAMA_NUM_CTX);
+      return (body.tools ?? []).map((tool) => tool.function.name);
+    };
+    expect(await named("personal, no wearable")).not.toContain("genome_variants");
+    expect(await named("personal, no wearable, VCF imported")).toContain(
+      "genome_variants",
+    );
+    expect(await named("synthetic")).not.toContain("genome_variants");
+  });
 
   test("the request asks Ollama for the context, with thinking off", async () => {
     const [first] = CASES;

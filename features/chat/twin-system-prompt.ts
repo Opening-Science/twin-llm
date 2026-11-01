@@ -2,11 +2,7 @@ import { SECTION_GUIDANCE } from "@/infrastructure/twin-section-guidance";
 import "server-only";
 
 import type { DataMode } from "@/infrastructure/data-mode-policy";
-import {
-  LIST_VIEWS_TOOL,
-  OPEN_VIEW_TOOL,
-  SHOW_VIEW_TOOL,
-} from "@/infrastructure/chat-view";
+import { SHOW_VIEW_TOOL } from "@/infrastructure/chat-view";
 import { formatForPrompt } from "@/infrastructure/format-measure";
 import type { GoogleHealthSummary } from "@/infrastructure/google-health-types";
 import { offeredSummaries } from "@/infrastructure/offered-keys";
@@ -15,11 +11,6 @@ import { type UiContext, uiContextBlock } from "@/infrastructure/ui-context";
 import type { OuraSummary } from "@/infrastructure/oura-types";
 import type { VitronicSummary } from "@/infrastructure/vitronic-types";
 import type { WhoopSummary } from "@/infrastructure/whoop-types";
-import {
-  CARBON_X_LABEL,
-  DNA_ASK_TOOL,
-  GENOME_REPORT_TOOL,
-} from "@/packages/carbon-x/constants";
 import { GBD_ESTIMATE_TOOL } from "@/packages/gbd-local/constants";
 import { GBD_MODEL_TOOL } from "@/packages/gbd-mcp/constants";
 import { GUIDELINE_MODEL_TOOL } from "@/packages/guidelines/constants";
@@ -28,10 +19,6 @@ import {
   ENSEMBL_LOOKUP_TOOL,
   PUBMED_SEARCH_TOOL,
 } from "@/packages/live-sources/constants";
-import {
-  IMPORTED_DATASETS_TOOL,
-  IMPORTED_LATEST_TOOL,
-} from "@/packages/query-tools/imported-names";
 import type { TOOL_DEFINITIONS } from "@/packages/query-tools/schemas";
 
 /**
@@ -272,64 +259,16 @@ const agentLine = (
   agent: Readonly<{ name: string; role: string }> | null,
 ): readonly string[] => (agent === null ? [] : [`Agent: ${agent.name}. ${agent.role}`]);
 
-/** One line on charts, when this request carries `show_view`. */
+/**
+ * One line on charts, when this request carries `show_view`. The other kinds,
+ * reopening a chart and every tool's own rules live in the tool descriptions
+ * (#393), so a turn pays for them only when the tool is offered, and once.
+ */
 const viewSection = (offered: (tool: string) => boolean): readonly string[] =>
   offered(SHOW_VIEW_TOOL)
     ? [
         "## Charts",
         `To show a measure over time, call \`${SHOW_VIEW_TOOL}\` with kind \`chart.timeseries\`, a measure (a LOINC code with subject, or a wearable key without its date, such as sleep.score) and a window. The server draws it from its own rows; do not list the points yourself.`,
-        `Other kinds: \`chart.compare\` sets window against an earlier \`compare_with\` window (n and mean of each); \`biomarker.card\` shows a LOINC code's latest reading against its published range, with its trend; \`table\` lists the readings; \`twin.body\` shows the body twin on a \`focus\` organ or system, with each mapped organ's range position for subject.`,
-        ...(offered(OPEN_VIEW_TOOL)
-          ? [
-              `To show a chart from earlier in this thread again, call \`${LIST_VIEWS_TOOL}\` and then \`${OPEN_VIEW_TOOL}\` with its id instead of drawing it again.`,
-            ]
-          : []),
-        "",
-      ]
-    : [];
-
-/** One line on units, when this request carries `convert_unit` (either data mode). */
-const unitSection = (offered: (tool: string) => boolean): readonly string[] =>
-  offered("convert_unit")
-    ? [
-        "## Units",
-        `Use ${queryTool("convert_unit")} for any unit conversion; never convert a number in the answer text. If it refuses a pair, give the value in the unit it came in.`,
-        "",
-      ]
-    : [];
-
-/**
- * Only when this request carries the genome tools, which only a personal turn
- * on a fully local setup ever does. Absent `offeredTools` means none here:
- * the genome tools are never assumed.
- */
-const genomeSection = (
-  offeredTools: ReadonlySet<string> | undefined,
-): readonly string[] =>
-  offeredTools?.has(DNA_ASK_TOOL)
-    ? [
-        "## Genome (released Ark report)",
-        `- \`${GENOME_REPORT_TOOL}\` reads the rsid-genotypes report the person released from their Ark. \`${DNA_ASK_TOOL}\` asks ${CARBON_X_LABEL} about one rsID from it; give only the rsID.`,
-        `- Quote a ${CARBON_X_LABEL} answer as that model's, labelled with its name. It is research output, not a fact about the person.`,
-        "- Describe what a variant is known to affect. Never give a dose, and never say to start, stop or change a medicine.",
-        "- `no call` means the call file has nothing there; it is not the reference allele.",
-        "",
-      ]
-    : [];
-
-/**
- * Only when this request carries the imported-data tools (#181), which only a
- * personal turn on a local chat model ever does. Never assumed.
- */
-const importedSection = (
-  offeredTools: ReadonlySet<string> | undefined,
-): readonly string[] =>
-  offeredTools?.has(IMPORTED_LATEST_TOOL)
-    ? [
-        "## Imported data (the person's own files)",
-        `- Call \`${IMPORTED_DATASETS_TOOL}\` first to see which datasets, codes and names exist. Cite a value with its dataset and date as stored.`,
-        "- A series stored by name is not the LOINC code of a similar name: HRV RMSSD is not SDNN (80404-7). Never combine them, and never mix datasets in one trend.",
-        "- Ask a table only for columns `imported_datasets` lists, by exact name.",
         "",
       ]
     : [];
@@ -481,9 +420,6 @@ export const buildTwinSystemPrompt = (params: {
     SECTION_GUIDANCE.uncertainty,
     "",
     ...viewSection((tool) => params.offeredTools?.has(tool) ?? true),
-    ...unitSection((tool) => params.offeredTools?.has(tool) ?? true),
-    ...genomeSection(params.offeredTools),
-    ...importedSection(params.offeredTools),
     ...liveSection(params.offeredTools),
     ...syntheticCohortSection(
       params.mode,

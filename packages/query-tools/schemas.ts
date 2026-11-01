@@ -87,7 +87,7 @@ export const windowSchema = z
   })
   .strict()
   .refine(startBeforeEnd, START_BEFORE_END)
-  .describe("Time window, ISO-8601 UTC or YYYY-MM-DD, start before end");
+  .describe("Time window, start before end");
 
 export const trendInput = z
   .object({
@@ -493,7 +493,7 @@ export const TOOL_DEFINITIONS = [
   {
     name: "convert_unit",
     description:
-      "Convert one value of glucose, creatinine, HbA1c, total/LDL/HDL cholesterol, triglycerides or body temperature between units with a fixed table: value rounded half away from zero, unrounded, unit, the formula used and the rounding rule. Reads no rows. A pair the table does not hold is refused with UNSUPPORTED_CONVERSION and the pairs it does hold.",
+      "Convert one value of glucose, creatinine, HbA1c, total/LDL/HDL cholesterol, triglycerides or body temperature between units with a fixed table: value rounded half away from zero, unrounded, unit, the formula used and the rounding rule. Reads no rows. A pair the table does not hold is refused with UNSUPPORTED_CONVERSION and the pairs it does hold. Use it for every unit conversion, never convert in the answer text; if refused, give the value in the unit it came in.",
     input: convertUnitInput,
   },
   {

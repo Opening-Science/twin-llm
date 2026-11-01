@@ -1,10 +1,14 @@
+import { databaseGate, databaseMismatchMessage } from "@/packages/audit/anchor";
 import {
   type ChainPlan,
   type ChainReader,
+  type DatabaseIdentity,
   dueHeads,
   planFromFile,
 } from "@/packages/audit/anchor-chains";
 import {
+  AnchorDatabaseMismatch,
+  anchoredDatabase,
   type AnchorPaths,
   type DueHead,
   readAnchorKey,
@@ -20,12 +24,19 @@ import type { ChainName } from "@/packages/audit/chain";
  * `flush` writes what the last poll found, synchronously, for a clean
  * shutdown, so the head written then is at most one poll old.
  *
+ * The anchors file belongs to one database (#382). When it names another,
+ * nothing is written and the log says `ANCHOR_DATABASE_MISMATCH` once. A file
+ * from before #382 names none; it takes this database's identity with the
+ * next anchor, unless a chain does not match it (then it may be another
+ * database's, and nothing is written).
+ *
  * A failure is logged by error name and retried at the next poll; it never
  * reaches a request. Nothing here sends anything off the machine.
  */
 
 export type AnchorWriterDeps = Readonly<{
   readers: Readonly<Record<ChainName, ChainReader>>;
+  identity: DatabaseIdentity;
   paths: AnchorPaths;
   intervalMs: number;
   now: () => Date;
@@ -43,8 +54,14 @@ const errorName = (error: unknown): string =>
 const REFUSED = new Set(["truncated", "removed", "rewritten"]);
 
 export const createAnchorWriter = (deps: AnchorWriterDeps): AnchorWriter => {
-  const state: { pending: readonly DueHead[]; lastWrite: number; said: Set<string> } = {
+  const state: {
+    pending: readonly DueHead[];
+    databaseId: string | null;
+    lastWrite: number;
+    said: Set<string>;
+  } = {
     pending: [],
+    databaseId: null,
     lastWrite: Number.NEGATIVE_INFINITY,
     said: new Set(),
   };
@@ -55,13 +72,19 @@ export const createAnchorWriter = (deps: AnchorWriterDeps): AnchorWriter => {
   };
   const write = (): number => {
     const due = state.pending;
-    if (due.length === 0) return 0;
+    const databaseId = state.databaseId;
+    if (due.length === 0 || databaseId === null) return 0;
     try {
-      const written = writeAnchors(deps.paths, due, deps.now());
+      const written = writeAnchors(deps.paths, due, deps.now(), databaseId);
       state.pending = [];
       state.lastWrite = deps.now().getTime();
-      return written.length;
+      return written.filter((line) => line.kind === "anchor").length;
     } catch (error) {
+      state.pending = [];
+      if (error instanceof AnchorDatabaseMismatch) {
+        once("database-mismatch", `[anchor] ${error.message}`);
+        return 0;
+      }
       deps.log(`[anchor] could not write anchors: ${errorName(error)}`);
       return 0;
     }
@@ -80,7 +103,28 @@ export const createAnchorWriter = (deps: AnchorWriterDeps): AnchorWriter => {
       return [];
     }
     try {
+      const logDatabaseId = anchoredDatabase(deps.paths);
+      const current = await deps.identity.read();
+      if (logDatabaseId !== null && logDatabaseId !== current) {
+        once(
+          "database-mismatch",
+          `[anchor] ${databaseMismatchMessage({ logDatabaseId, databaseId: current })}`,
+        );
+        state.pending = [];
+        return [];
+      }
       const plans = await planFromFile(deps.readers, deps.paths);
+      const gate = databaseGate({
+        logDatabaseId,
+        databaseId: current,
+        plans: plans.map((plan) => (plan.plan === "unreadable" ? "empty" : plan.plan)),
+      });
+      if (gate.kind === "hold") {
+        once(
+          "database-hold",
+          "[anchor] the anchors file names no database yet and a chain does not match it, so it is not tied to this database; no anchors are written",
+        );
+      }
       for (const plan of plans) {
         if (REFUSED.has(plan.plan)) {
           once(
@@ -89,7 +133,10 @@ export const createAnchorWriter = (deps: AnchorWriterDeps): AnchorWriter => {
           );
         }
       }
-      state.pending = dueHeads(plans);
+      state.pending = gate.kind === "go" ? dueHeads(plans) : [];
+      if (state.pending.length > 0) {
+        state.databaseId = current ?? (await deps.identity.ensure());
+      }
       if (deps.now().getTime() - state.lastWrite >= deps.intervalMs) write();
       return plans;
     } catch (error) {

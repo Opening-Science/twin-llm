@@ -214,7 +214,7 @@ describe("the answer column after a blocked request (#356)", () => {
       chatIsLocal: () => false,
       resolveModel: () => modelFor(network, ledger.record, syntheticCheck),
       genomeTools: () => undefined,
-      variantTools: () => undefined,
+      variantTools: async () => undefined,
       importedTools: () => undefined,
       loadAudit: async () => [],
       store: {

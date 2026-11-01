@@ -206,7 +206,7 @@
             },
             "required": ["start", "end"],
             "additionalProperties": false,
-            "description": "Time window, ISO-8601 UTC or YYYY-MM-DD, start before end"
+            "description": "Time window, start before end"
           },
           "target": {
             "type": "object",
@@ -222,7 +222,7 @@
             },
             "required": ["start", "end"],
             "additionalProperties": false,
-            "description": "Time window, ISO-8601 UTC or YYYY-MM-DD, start before end"
+            "description": "Time window, start before end"
           }
         },
         "required": ["subject_ref", "loinc", "baseline", "target"],
@@ -299,7 +299,7 @@
             },
             "required": ["start", "end"],
             "additionalProperties": false,
-            "description": "Time window, ISO-8601 UTC or YYYY-MM-DD, start before end"
+            "description": "Time window, start before end"
           },
           "window_b": {
             "type": "object",
@@ -315,7 +315,7 @@
             },
             "required": ["start", "end"],
             "additionalProperties": false,
-            "description": "Time window, ISO-8601 UTC or YYYY-MM-DD, start before end"
+            "description": "Time window, start before end"
           }
         },
         "required": ["subject_ref", "loinc", "window_a", "window_b"],
@@ -368,7 +368,7 @@
     "type": "function",
     "function": {
       "name": "convert_unit",
-      "description": "Convert one value of glucose, creatinine, HbA1c, total/LDL/HDL cholesterol, triglycerides or body temperature between units with a fixed table: value rounded half away from zero, unrounded, unit, the formula used and the rounding rule. Reads no rows. A pair the table does not hold is refused with UNSUPPORTED_CONVERSION and the pairs it does hold.",
+      "description": "Convert one value of glucose, creatinine, HbA1c, total/LDL/HDL cholesterol, triglycerides or body temperature between units with a fixed table: value rounded half away from zero, unrounded, unit, the formula used and the rounding rule. Reads no rows. A pair the table does not hold is refused with UNSUPPORTED_CONVERSION and the pairs it does hold. Use it for every unit conversion, never convert in the answer text; if refused, give the value in the unit it came in.",
       "parameters": {
         "type": "object",
         "properties": {
@@ -908,7 +908,7 @@
             ]
           },
           "window": {
-            "description": "Needed except for twin.body and map.choropleth",
+            "description": "Needed except for twin.body and map.choropleth; twin.body without it uses each marker's latest reading",
             "type": "object",
             "properties": {
               "start": {

@@ -64,19 +64,28 @@ const CONTEXTS = [
     wearables: NO_WEARABLES,
     large: false,
   },
+  {
+    label: "personal, no wearable, VCF imported",
+    mode: "personal",
+    wearables: NO_WEARABLES,
+    large: false,
+    vcfImported: true,
+  },
   { label: "personal, Oura", mode: "personal", wearables: ONE_WEARABLE, large: false },
   {
-    label: "personal, Oura, GBD imported",
+    label: "personal, Oura, GBD and VCF imported",
     mode: "personal",
     wearables: ONE_WEARABLE,
     large: false,
     gbdImported: true,
+    vcfImported: true,
   },
   {
-    label: "personal, all 4 wearables",
+    label: "personal, all 4 wearables, VCF imported",
     mode: "personal",
     wearables: WORST_CASE_WEARABLES,
     large: true,
+    vcfImported: true,
   },
 ] as const;
 
@@ -98,6 +107,7 @@ export const promptSizeCases = (skills: readonly TurnSkill[]): readonly SizeCase
       twinNotes: LONGEST_TWIN_NOTES,
       agent,
       gbdImported: "gbdImported" in context && context.gbdImported,
+      vcfImported: "vcfImported" in context && context.vcfImported,
     });
     return [
       ...[null, ...skills].map((skill) => ({
@@ -112,6 +122,14 @@ export const promptSizeCases = (skills: readonly TurnSkill[]): readonly SizeCase
       })),
     ];
   });
+
+/**
+ * Tokens every case must leave free under its budget before twin notes
+ * (#393), so the next tool or prompt line does not have to cut another. Twin
+ * notes are left out of this check: they are cut to whatever room the turn
+ * leaves (`twin-notes-room.ts`), so they shrink rather than break the budget.
+ */
+export const PROMPT_HEADROOM_TOKENS = 500;
 
 /** The runnable skills under `skills/`, as the chat offers them. */
 export const loadSkills = (root: string): readonly TurnSkill[] =>

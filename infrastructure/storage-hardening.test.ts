@@ -22,7 +22,9 @@ import {
   shellWord,
   shownPath,
   socketDirFinding,
+  stateDirFrom,
   storageVerdict,
+  syntheticStateDir,
   syntheticWarning,
 } from "./storage-hardening";
 
@@ -53,6 +55,38 @@ describe("defaultStateDir", () => {
     expect(defaultStateDir({ platform: "darwin", home: "/Users/someone" })).toBe(
       "/Users/someone/Library/Application Support/TwinLLM",
     );
+  });
+});
+
+describe("syntheticStateDir and stateDirFrom (#382)", () => {
+  test("the synthetic folder sits next to the default one, never inside it", () => {
+    expect(syntheticStateDir({ platform: "linux", home: HOME })).toBe(
+      `${STATE}-synthetic`,
+    );
+    expect(syntheticStateDir({ platform: "darwin", home: "/Users/someone" })).toBe(
+      "/Users/someone/Library/Application Support/TwinLLM-synthetic",
+    );
+    expect(isInside(STATE, syntheticStateDir({ platform: "linux", home: HOME }))).toBe(
+      false,
+    );
+  });
+
+  test("unset or blank gives the default; absolute is taken; `~` and relative are refused", () => {
+    const where = { platform: "linux", home: HOME } as const;
+    expect(stateDirFrom({ ...where, value: undefined })).toEqual({
+      ok: true,
+      dir: STATE,
+    });
+    expect(stateDirFrom({ ...where, value: "  " })).toEqual({ ok: true, dir: STATE });
+    expect(stateDirFrom({ ...where, value: "/srv/state" })).toEqual({
+      ok: true,
+      dir: "/srv/state",
+    });
+    for (const value of ["~/.local/share/twin-llm-synthetic", "$HOME/x", "state"]) {
+      const result = stateDirFrom({ ...where, value });
+      expect(result.ok).toBe(false);
+      expect(result.ok ? "" : result.error).toContain("absolute path");
+    }
   });
 });
 

@@ -156,8 +156,8 @@ export type StreamModelResponseDeps = Readonly<{
   ) => LanguageModel;
   /** Genome tool ports, or undefined when the genome policy does not allow them. */
   genomeTools: (scope: SessionScope) => GenomeToolDeps | undefined;
-  /** `genome_variants` ports, or undefined when the VCF permit does not allow them (#330). */
-  variantTools: (scope: SessionScope) => GenomeVariantsDeps | undefined;
+  /** `genome_variants` ports, or undefined when the VCF permit does not allow them (#330) or no VCF is imported (#399). */
+  variantTools: (scope: SessionScope) => Promise<GenomeVariantsDeps | undefined>;
   /** The imported-data tools' ports, or undefined when the policy refuses this turn. */
   importedTools: (scope: SessionScope) => ImportedToolDeps | undefined;
   /**
@@ -222,7 +222,7 @@ export const createStreamModelResponse =
     const skill = context.skill ?? null;
     const scope = { actor: clerkId, sessionId: turnId, mode: settings.dataMode };
     const genome = deps.genomeTools(scope);
-    const variants = deps.variantTools(scope);
+    const variants = await deps.variantTools(scope);
     const gbdLocal = deps.gbdLocal === undefined ? undefined : await deps.gbdLocal();
     const { tools, offeredTools } = createTurnTools(
       scope,

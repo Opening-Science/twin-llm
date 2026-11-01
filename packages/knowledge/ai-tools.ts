@@ -1,6 +1,7 @@
 import { tool } from "ai";
 
 import { guidelineSearchInput } from "@/packages/guidelines/input";
+import { modelInputSchema } from "@/packages/query-tools/model-schema";
 import type { SessionScope } from "@/packages/query-tools/scope";
 
 import { KNOWLEDGE_MODEL_TOOL } from "./constants";
@@ -40,7 +41,7 @@ export const createKnowledgeTools = (
 ) => ({
   [KNOWLEDGE_MODEL_TOOL]: tool({
     description: knowledgeToolDescription(literatureSources),
-    inputSchema: guidelineSearchInput,
+    inputSchema: modelInputSchema(guidelineSearchInput),
     execute: async (input) =>
       runKnowledgeSearch(
         scope,

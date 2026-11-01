@@ -12,10 +12,21 @@ import { homedir } from "node:os";
 import { PrismaPg } from "@prisma/adapter-pg";
 
 import { PrismaClient } from "../../generated/prisma/client";
-import { defaultStateDir } from "../../infrastructure/storage-hardening";
-import { serializeLine } from "../../packages/audit/anchor";
-import { chainReaders, dueHeads, planFromFile } from "../../packages/audit/anchor-chains";
+import { stateDirFrom } from "../../infrastructure/storage-hardening";
 import {
+  databaseGate,
+  databaseMismatchMessage,
+  serializeLine,
+} from "../../packages/audit/anchor";
+import {
+  chainReaders,
+  databaseIdentity,
+  dueHeads,
+  planFromFile,
+} from "../../packages/audit/anchor-chains";
+import {
+  AnchorDatabaseMismatch,
+  anchoredDatabase,
   type AnchorPaths,
   anchorPaths,
   initAnchorKey,
@@ -27,9 +38,9 @@ import {
 import { CHAINS } from "../../packages/audit/chain";
 import { parseAnchorArgs } from "./anchor-args";
 
-const stateDir = (): string =>
-  process.env.TWINLLM_STATE_DIR ||
-  defaultStateDir({
+const stateDir = () =>
+  stateDirFrom({
+    value: process.env.TWINLLM_STATE_DIR,
     platform: process.platform === "darwin" ? "darwin" : "linux",
     home: homedir(),
     xdgDataHome: process.env.XDG_DATA_HOME,
@@ -46,8 +57,43 @@ const writeNow = async (paths: AnchorPaths): Promise<number> => {
   }
   const client = new PrismaClient({ adapter: new PrismaPg({ connectionString: url }) });
   try {
+    // One anchors file per database (#382): refuse another database's file.
+    const identity = databaseIdentity(client);
+    const logDatabaseId = anchoredDatabase(paths);
+    const current = await identity.read();
+    if (logDatabaseId !== null && logDatabaseId !== current) {
+      console.error(
+        `anchor: ${databaseMismatchMessage({ logDatabaseId, databaseId: current })}`,
+      );
+      return 1;
+    }
     const plans = await planFromFile(chainReaders(client), paths);
-    const written = writeAnchors(paths, dueHeads(plans), new Date());
+    const gate = databaseGate({
+      logDatabaseId,
+      databaseId: current,
+      plans: plans.map((plan) => (plan.plan === "unreadable" ? "empty" : plan.plan)),
+    });
+    const due = gate.kind === "go" ? dueHeads(plans) : [];
+    if (gate.kind === "hold") {
+      console.error(
+        "anchor: the anchors file names no database yet and a chain does not match it, so it is not tied to this database",
+      );
+    }
+    const databaseId = due.length === 0 ? null : (current ?? (await identity.ensure()));
+    const attempt = ((): ReturnType<typeof writeAnchors> | AnchorDatabaseMismatch => {
+      if (databaseId === null) return [];
+      try {
+        return writeAnchors(paths, due, new Date(), databaseId);
+      } catch (error) {
+        if (error instanceof AnchorDatabaseMismatch) return error;
+        throw error;
+      }
+    })();
+    if (attempt instanceof AnchorDatabaseMismatch) {
+      console.error(`anchor: ${attempt.message}`);
+      return 1;
+    }
+    const written = attempt;
     for (const plan of plans) {
       const line = written.find(
         (entry) => entry.kind === "anchor" && entry.chain === plan.chain,
@@ -69,7 +115,7 @@ const writeNow = async (paths: AnchorPaths): Promise<number> => {
     const refused = plans.some((plan) =>
       ["truncated", "removed", "rewritten"].includes(plan.plan),
     );
-    return refused ? 1 : 0;
+    return refused || gate.kind === "hold" ? 1 : 0;
   } finally {
     await client.$disconnect();
   }
@@ -101,7 +147,12 @@ const main = async (): Promise<number> => {
     console.error(parsed.error);
     return 64;
   }
-  const paths = anchorPaths(stateDir());
+  const dir = stateDir();
+  if (!dir.ok) {
+    console.error(`anchor: ${dir.error}`);
+    return 64;
+  }
+  const paths = anchorPaths(dir.dir);
   const now = new Date();
   switch (parsed.args.command) {
     case "init": {

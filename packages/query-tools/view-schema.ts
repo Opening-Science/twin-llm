@@ -39,7 +39,9 @@ export const showViewInput = z
       .describe("twin.body: the organ or body system to show"),
     window: windowSchema
       .optional()
-      .describe("Needed except for twin.body and map.choropleth"),
+      .describe(
+        "Needed except for twin.body and map.choropleth; twin.body without it uses each marker's latest reading",
+      ),
     subject: subjectRefSchema
       .optional()
       .describe("subject_ref for a LOINC code; leave out for wearable keys"),
