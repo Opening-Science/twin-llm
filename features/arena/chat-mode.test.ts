@@ -11,9 +11,11 @@ import {
   manualAnswerCount,
   modeModelIds,
   modeProblem,
+  modeSummary,
   type ModeSelection,
   plainModels,
   specialistRows,
+  toggleCompare,
   toggleManual,
 } from "./chat-mode";
 
@@ -187,5 +189,48 @@ describe("initialSelection", () => {
       mode: "compare",
       compare: ["agent:gp", "llama3.2"],
     });
+  });
+});
+
+describe("toggleCompare", () => {
+  const two = selection({ mode: "compare", compare: ["qwen3:4b", "llama3.2"] });
+
+  test("adds up to three, keeps one, never adds Auto", () => {
+    expect(toggleCompare(two, "agent:gp", CATALOG).compare).toEqual([
+      "qwen3:4b",
+      "llama3.2",
+      "agent:gp",
+    ]);
+    const three = toggleCompare(two, "agent:gp", CATALOG);
+    expect(toggleCompare(three, "agent:sleep", CATALOG)).toEqual(three);
+    const one = toggleCompare(two, "llama3.2", CATALOG);
+    expect(one.compare).toEqual(["qwen3:4b"]);
+    expect(toggleCompare(one, "qwen3:4b", CATALOG)).toEqual(one);
+    expect(toggleCompare(two, AUTO_MODEL_ID, CATALOG)).toEqual(two);
+  });
+});
+
+describe("modeSummary", () => {
+  test("names the mode and how many answers it asks for", () => {
+    expect(modeSummary(selection({ mode: "auto" }), CATALOG)).toBe("Auto");
+    expect(
+      modeSummary(
+        selection({
+          mode: "manual",
+          specialists: ["gp"],
+          models: ["qwen3:4b", "llama3.2"],
+        }),
+        CATALOG,
+      ),
+    ).toBe("Manual · 2 answers");
+    expect(
+      modeSummary(selection({ mode: "manual", models: ["llama3.2"] }), CATALOG),
+    ).toBe("Manual · 1 answer");
+    expect(
+      modeSummary(
+        selection({ mode: "compare", compare: ["qwen3:4b", "llama3.2"] }),
+        CATALOG,
+      ),
+    ).toBe("Compare · 2 models");
   });
 });

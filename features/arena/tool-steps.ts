@@ -1,4 +1,10 @@
 import { metricLabel } from "@/infrastructure/format-measure";
+import {
+  type NumberReview,
+  NUMBER_REVIEWER,
+  reviewItemLine,
+  reviewStepLabel,
+} from "@/infrastructure/number-review";
 import type { StepState, TraceState } from "@/infrastructure/ui-kit/step-trace-model";
 
 import type { AnswerStatus } from "./conversation";
@@ -131,3 +137,38 @@ export const toolStepState = (card: ToolCard): StepState => STEP_STATES[card.sta
 /** The trace settles when the answer does; a failed answer stops it. */
 export const answerTraceState = (status: AnswerStatus): TraceState =>
   status === "STREAMING" ? "working" : status === "COMPLETE" ? "done" : "failed";
+
+/** The Ultra number check as one more step of the trace (#366). */
+export type ReviewStep = Readonly<{
+  label: string;
+  state: StepState;
+  /** One line per number checked, then a note on numbers left out. */
+  lines: readonly string[];
+}>;
+
+/** While it runs, the step in progress; once back, its count and a line per number. */
+export const reviewStep = (
+  reviewing: boolean,
+  review: NumberReview | null | undefined,
+): ReviewStep | null => {
+  if (review !== null && review !== undefined) {
+    return {
+      label: reviewStepLabel(review),
+      state: review.status === "failed" ? "failed" : "done",
+      lines: [
+        ...review.items.map(reviewItemLine),
+        ...(review.skipped > 0
+          ? [`${String(review.skipped)} more numbers were not checked.`]
+          : []),
+        `Checked by ${NUMBER_REVIEWER.name}, a model that can be wrong.`,
+      ],
+    };
+  }
+  return reviewing
+    ? {
+        label: "Checking each number against the tool results",
+        state: "current",
+        lines: [],
+      }
+    : null;
+};

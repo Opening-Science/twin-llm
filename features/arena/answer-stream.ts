@@ -7,6 +7,7 @@ import {
   type UIMessageChunk,
 } from "ai";
 
+import type { EffortLevel } from "@/infrastructure/chat-effort";
 import { type ChatView, viewsOf } from "@/infrastructure/chat-view";
 import {
   PROVIDER_NOT_PERMITTED_FOR_DATA_MODE,
@@ -24,6 +25,7 @@ import type {
   ChatUIMessage,
   ModelResponseMetrics,
 } from "@/infrastructure/model-response-metrics";
+import { NUMBER_REVIEW_PART } from "@/infrastructure/number-review";
 import {
   type NumberSource,
   numberSources,
@@ -67,6 +69,8 @@ export type StreamProgress = Readonly<{
   text: string;
   tools: readonly ToolActivity[];
   views: readonly ChatView[];
+  /** An Ultra answer's number check has started and not yet come back (#366). */
+  reviewing: boolean;
 }>;
 
 export type AnswerRequest = Readonly<{
@@ -77,6 +81,8 @@ export type AnswerRequest = Readonly<{
   skill?: string;
   /** What was on screen when it was sent (#47); left out when nothing was. */
   uiContext?: UiContext;
+  /** The effort (#366); left out, Balanced. */
+  effort?: EffortLevel;
 }>;
 
 /**
@@ -89,6 +95,7 @@ export type IncognitoAnswerRequest = Readonly<{
   modelId: string;
   messages: readonly HistoryMessage[];
   skill?: string;
+  effort?: EffortLevel;
 }>;
 
 export const CHAT_ENDPOINT = "/api/chat";
@@ -101,12 +108,15 @@ export const answerCall = (
   if (!("incognito" in request)) {
     return { endpoint: CHAT_ENDPOINT, body: JSON.stringify(request) };
   }
-  const { modelId, messages, skill } = request;
+  const { modelId, messages, skill, effort } = request;
   return {
     endpoint: INCOGNITO_CHAT_ENDPOINT,
-    body: JSON.stringify(
-      skill === undefined ? { modelId, messages } : { modelId, messages, skill },
-    ),
+    body: JSON.stringify({
+      modelId,
+      messages,
+      ...(skill === undefined ? {} : { skill }),
+      ...(effort === undefined ? {} : { effort }),
+    }),
   };
 };
 
@@ -202,10 +212,20 @@ const validChunks = (body: ReadableStream<Uint8Array>, onFinish: () => void) =>
     }),
   );
 
+/** True once the stream announced a number check and before its document came back. */
+export const reviewRunning = (message: ChatUIMessage): boolean =>
+  message.metadata === undefined &&
+  message.parts.some((part) => part.type === NUMBER_REVIEW_PART);
+
+/**
+ * `signal` is the Stop button (#366): aborting it closes this browser's
+ * stream. The server is not told; a saved answer still finishes and is stored.
+ */
 export const streamAnswer = async (
   request: AnswerRequest | IncognitoAnswerRequest,
   onProgress: (progress: StreamProgress) => void,
   fetcher: Fetcher = fetch,
+  signal?: AbortSignal,
 ): Promise<StreamResult> => {
   try {
     const { endpoint, body } = answerCall(request);
@@ -213,6 +233,7 @@ export const streamAnswer = async (
       method: "POST",
       headers: { "content-type": "application/json" },
       body,
+      ...(signal === undefined ? {} : { signal }),
     });
     if (!response.ok || !response.body) {
       const refusal = await refusalOf(response);
@@ -242,6 +263,7 @@ export const streamAnswer = async (
         text: textOf(message),
         tools: toolActivity(message.parts),
         views: viewsOf(message.parts),
+        reviewing: reviewRunning(message),
       });
       if (message.metadata) {
         metrics = message.metadata;
