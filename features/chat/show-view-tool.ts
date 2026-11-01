@@ -5,11 +5,13 @@ import { type JSONValue, tool } from "ai";
 import {
   biomarkerCardView,
   type ChatView,
+  choroplethView,
   compareView,
   tableView,
   timeseriesView,
   viewReadings,
 } from "@/infrastructure/chat-view";
+import { LOCATION_INDEX } from "@/infrastructure/charts/choropleth/match-location";
 import { metricLabel, metricStem } from "@/infrastructure/format-measure";
 import type { OfferedMetric, WearableSummaries } from "@/infrastructure/offered-keys";
 import { biomarkerByLoinc } from "@/packages/biomarkers/catalogue";
@@ -32,6 +34,8 @@ import {
 import { showViewInput, VIEW_TOOL_DEFINITIONS } from "@/packages/query-tools/view-schema";
 import type { z } from "zod";
 
+import type { RecordedEstimates } from "./estimate-ledger";
+import { buildMapSpec, type MapRefusal } from "./map-view";
 import { buildTwinBodyView, runTwinBodyState } from "./twin-body-view";
 import { cardLabel, cardSpecOf, compareSpecOf, tableSpecOf } from "./view-builders";
 
@@ -47,6 +51,7 @@ type ShowViewInput = z.infer<typeof showViewInput>;
 
 export type ShowViewRefusal =
   | ToolRefusal
+  | MapRefusal
   | Readonly<{
       code:
         | "COHORT_TOOLS_OFF"
@@ -239,6 +244,8 @@ export type ShowViewDeps = Readonly<{
   skillRecords?: boolean;
   /** View kinds this turn may draw (a skill's `views`); left out, every kind. */
   views?: readonly string[];
+  /** The population estimates this turn looked up (`estimate-ledger.ts`); left out, none. */
+  estimates?: () => readonly RecordedEstimates[];
 }>;
 
 type Window = Readonly<{ start: string; end: string }>;
@@ -445,6 +452,40 @@ const showTwinBody = async (
   );
 };
 
+/** The audit row a map is drawn under: which lookups it read, and what it drew. */
+export const MAP_AUDIT_TOOL = "show_view.map";
+
+/**
+ * A map of the estimates the turn already looked up. Nothing is read again;
+ * the audit row records which tool calls the map was drawn from.
+ */
+const showMap = async (
+  deps: ShowViewDeps,
+  input: ShowViewInput,
+): Promise<ShowViewOutput> => {
+  const built = buildMapSpec(LOCATION_INDEX, deps.estimates?.() ?? [], {
+    level: input.level ?? "world",
+    country: null,
+  });
+  if ("code" in built) return built;
+  const audit = recordingAudit(deps.ports ?? defaultQueryToolPorts());
+  await audit.ports.appendAudit({
+    actor: deps.scope.actor,
+    sessionId: deps.scope.sessionId,
+    subjectRef: null,
+    tool: MAP_AUDIT_TOOL,
+    args: { level: built.spec.level, country: built.spec.country, calls: built.callIds },
+    result: {
+      regions: built.spec.regions.map((region) => region.code),
+      unmatched: built.spec.unmatched,
+    },
+    rowCount: built.spec.n,
+  });
+  return audited(audit.seqs, (sourceAuditIds) =>
+    choroplethView({ spec: built.spec, place: built.place, sourceAuditIds }),
+  );
+};
+
 export const runShowView = async (
   deps: ShowViewDeps,
   input: ShowViewInput,
@@ -453,6 +494,7 @@ export const runShowView = async (
     return VIEW_NOT_ALLOWED;
   }
   if (input.kind === "twin.body") return showTwinBody(deps, input);
+  if (input.kind === "map.choropleth") return showMap(deps, input);
   if (input.measure === undefined) return MEASURE_REQUIRED;
   if (input.window === undefined) return WINDOW_REQUIRED;
   const source = sourceOf(deps, input, input.measure);
@@ -505,6 +547,18 @@ export const modelNoteOf = (
       })),
       ...(output.spec.organs.length === 0
         ? { note: "the body is shown on the focus; no organ has a lab position" }
+        : {}),
+    };
+  }
+  if (output.kind === "map.choropleth") {
+    return {
+      shown: true,
+      view_id: output.id,
+      title: output.title,
+      places: output.spec.regions.length,
+      unit: output.spec.unit,
+      ...(output.spec.unmatched.length > 0
+        ? { not_on_map: [...output.spec.unmatched] }
         : {}),
     };
   }

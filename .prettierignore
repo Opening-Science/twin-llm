@@ -21,3 +21,6 @@ scripts/heart-brain/stroke-calculator.golden.json
 
 # Recorded NCBI and Ensembl responses for the live lookup tests (#6); kept as received.
 packages/live-sources/fixtures/
+
+# Generated with the boundaries by scripts/geo/build-natural-earth.ts (#388); kept as written.
+infrastructure/charts/choropleth/location-index.json

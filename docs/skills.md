@@ -22,14 +22,14 @@ views: [chart.timeseries, chart.compare]
 Instructions for the model.
 ```
 
-| Field         | Required | Meaning                                                                                                 |
-| ------------- | -------- | ------------------------------------------------------------------------------------------------------- |
-| `name`        | yes      | Lower-case letters, digits and dashes; equals the folder name.                                          |
-| `description` | yes      | One line, at most 200 characters.                                                                       |
-| `tools`       | yes      | Chat tools the skill may call. Each must belong to a listed source.                                     |
-| `sources`     | yes      | Knowledge sources from `infrastructure/knowledge-sources.ts`, plus `wearable-context`.                  |
-| `providers`   | no       | Model providers the skill may run on. Defaults to `[ollama]`, local only.                               |
-| `views`       | no       | View kinds it may ask for: `chart.timeseries`, `chart.compare`, `biomarker.card`, `twin.body`, `table`. |
+| Field         | Required | Meaning                                                                                                                   |
+| ------------- | -------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `name`        | yes      | Lower-case letters, digits and dashes; equals the folder name.                                                            |
+| `description` | yes      | One line, at most 200 characters.                                                                                         |
+| `tools`       | yes      | Chat tools the skill may call. Each must belong to a listed source.                                                       |
+| `sources`     | yes      | Knowledge sources from `infrastructure/knowledge-sources.ts`, plus `wearable-context`.                                    |
+| `providers`   | no       | Model providers the skill may run on. Defaults to `[ollama]`, local only.                                                 |
+| `views`       | no       | View kinds it may ask for: `chart.timeseries`, `chart.compare`, `biomarker.card`, `twin.body`, `table`, `map.choropleth`. |
 
 Unknown keys are errors. Lists are `[a, b]` or indented `- item` lines. The body after
 the frontmatter is the skill's instructions and may not be empty.
@@ -130,7 +130,7 @@ description when there is none). On `POST /api/chat` the server, before any mode
 The turn then gets only the skill's tools, intersected with the user's sources and what
 the data-mode policy left (`show_view`, `list_views` and `open_view` stay when the skill
 allows a kind `show_view` draws: `chart.timeseries`, `chart.compare`, `biomarker.card`,
-`table` or `twin.body`; `show_view` refuses any other kind and the other two offer only the allowed kinds), and the skill's instructions at the end of the system prompt.
+`table`, `twin.body` or `map.choropleth`; `show_view` refuses any other kind and the other two offer only the allowed kinds), and the skill's instructions at the end of the system prompt.
 A skill that does not list `cohort-records` reads no subject through `show_view` either
 (`RECORDS_NOT_IN_SKILL`).
 The response document records `skill`, and the prompt shows a `/sleep` chip, also after

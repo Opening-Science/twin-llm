@@ -32,6 +32,7 @@ import {
   createGenomeVariantTools,
   type GenomeToolDeps,
 } from "./genome-tools";
+import { createEstimateLedger, recordEstimates } from "./estimate-ledger";
 import { loadThreadViews } from "./load-thread-views";
 import { createShowViewTool } from "./show-view-tool";
 import { createViewTools, type ViewToolDeps } from "./view-tools";
@@ -108,6 +109,9 @@ const CHAT_TOOL_FACTORIES: ChatToolFactories = {
  *
  * `list_views` and `open_view` read the views this thread already showed
  * (`thread-views.ts`); a synthetic request is not offered wearable ones.
+ *
+ * The GBD tools note their rows in a ledger for this turn
+ * (`estimate-ledger.ts`), which `show_view` maps with `map.choropleth`.
  */
 export const createChatTools = (
   scope: SessionScope,
@@ -167,6 +171,7 @@ export const createChatTools = (
 ) => {
   const make = options?.factories ?? CHAT_TOOL_FACTORIES;
   const hasWearableNarrative = options?.hasWearableNarrative ?? false;
+  const estimates = createEstimateLedger();
   return {
     ...make.query(scope, options?.query, options?.wearables ?? NO_WEARABLES),
     ...make.showView({
@@ -178,6 +183,7 @@ export const createChatTools = (
       ),
       views: options?.views,
       skillRecords: options?.sources?.includes(COHORT_RECORDS_SOURCE) ?? true,
+      estimates: estimates.recorded,
     }),
     ...make.views({
       scope,
@@ -187,9 +193,9 @@ export const createChatTools = (
       views: options?.views,
     }),
     ...(options?.gbdLocal !== undefined
-      ? createGbdEstimateTool(scope, options.gbdLocal)
+      ? recordEstimates(createGbdEstimateTool(scope, options.gbdLocal), estimates)
       : mcpServerPermitted("gbd", scope, hasWearableNarrative)
-        ? make.gbd(scope)
+        ? recordEstimates(make.gbd(scope), estimates)
         : {}),
     ...make.guidelines(scope),
     ...make.knowledge(scope, undefined, literatureSourcesForAgent(options?.agent)),

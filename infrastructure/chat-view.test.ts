@@ -2,10 +2,12 @@ import { describe, expect, test } from "bun:test";
 
 import {
   type ChatView,
+  choroplethView,
   compareView,
   timeseriesView,
   toChatView,
   twinBodyTitle,
+  viewIsPersonal,
   viewReadings,
   viewsOf,
   viewTitle,
@@ -143,5 +145,46 @@ describe("twinBodyTitle", () => {
     expect(twinBodyTitle({ ...spec, window: null, subject: null })).toBe(
       "Body twin: Liver",
     );
+  });
+});
+
+describe("choroplethView", () => {
+  const spec = {
+    level: "country" as const,
+    country: "NGA",
+    measure: "prevalence",
+    label: "Prevalence, made up",
+    unit: "%",
+    source: "made-up source",
+    subject: null,
+    regions: [
+      { code: "NG-LA", name: "Lagos", location: "Lagos", value: 4, lower: 3, upper: 5 },
+    ],
+    unmatched: ["Abuja FCT"],
+    n: 2,
+  };
+
+  test("titles the map by its label and place, and is never personal", () => {
+    const view = choroplethView({
+      spec,
+      place: "Nigeria, by state or province",
+      sourceAuditIds: ["9"],
+    });
+    expect(view).toEqual({
+      id: "view-9",
+      kind: "map.choropleth",
+      title: "Prevalence, made up, Nigeria, by state or province",
+      spec,
+      sourceAuditIds: ["9"],
+    });
+    expect(viewIsPersonal(view)).toBe(false);
+    expect(viewReadings(view)).toBe(2);
+    expect(toChatView(view)).toEqual(view);
+  });
+
+  test("a map spec with a subject or a lowercase country is not a view", () => {
+    const view = { id: "v", kind: "map.choropleth", title: "t", sourceAuditIds: ["1"] };
+    expect(toChatView({ ...view, spec: { ...spec, subject: "someone" } })).toBeNull();
+    expect(toChatView({ ...view, spec: { ...spec, country: "nga" } })).toBeNull();
   });
 });

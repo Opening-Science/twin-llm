@@ -127,11 +127,16 @@ const viewRefOf = (view: ChatView): ViewRef | null => {
   return MEASURE.test(measure) ? { kind: view.kind, measure } : null;
 };
 
-/** A compare chart's range runs from its earlier window to its later one; a twin view may have none. */
-const rangeOf = (view: ChatView): Readonly<{ start: string; end: string }> | null =>
-  view.kind === "chart.compare"
-    ? { start: view.spec.before.start, end: view.spec.after.end }
-    : view.spec.window;
+/**
+ * A compare chart's range runs from its earlier window to its later one; a
+ * twin view may have none, and a map of population estimates has none.
+ */
+const rangeOf = (view: ChatView): Readonly<{ start: string; end: string }> | null => {
+  if (view.kind === "chart.compare") {
+    return { start: view.spec.before.start, end: view.spec.after.end };
+  }
+  return view.kind === "map.choropleth" ? null : view.spec.window;
+};
 
 const chartOf = (view: ChatView | null): UiContext["chart"] => {
   if (view === null) return null;
