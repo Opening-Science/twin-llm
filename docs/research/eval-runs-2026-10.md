@@ -988,6 +988,20 @@ and the run limit were fixed before the run and not tuned, and another
 layout (date-only strings, a CSV per code) or a larger model may change the
 picture; S3 and S4 are not a test of this arm.
 
+## Held-out set v1h (#304)
+
+Run `2026-11-01-qwen3-4b-v1h` at commit 4b58ef5: qwen3:4b, tools arm, the 32 held-out items of v1h (`evaluation/questions.v1h.v1.json`), with repeats as in v1. 44 lines, 39 answered, no errors; the 5 S4 lines were skipped because the eval env has no GBD settings (#273). Results are under the gitignored `evaluation/runs/`.
+
+| Criterion        | S1    | S2    | S3  | S5  | S6  | All              |
+| ---------------- | ----- | ----- | --- | --- | --- | ---------------- |
+| correctness      | 6/8   | 4/10  | 1/5 | —   | 7/7 | 18/30 (42–75 %)  |
+| hallucination    | 5/7   | 1/7   | 1/5 | 6/6 | 7/7 | 20/32 (45–77 %)  |
+| privacy          | 11/11 | 10/10 | —   | —   | 7/7 | 28/28 (88–100 %) |
+| query safety     | 11/11 | 6/10  | 5/5 | —   | 7/7 | 29/33 (73–95 %)  |
+| clinical caution | 11/11 | 10/10 | —   | 3/6 | 7/7 | 31/34 (77–97 %)  |
+
+Correctness on v1h (18/30, 42–75 %) is not lower than the tools arm on v1 (36/101, 27–45 % in #320), and the intervals overlap. So the held-out wording gives no sign that v1 scores rest on familiar templates. The sets differ in mix (S6, no data to answer, is 27 % of v1 and 16 % of v1h; S2 is 11 % and 25 %), so the totals are not a like-for-like comparison of difficulty; a per-scenario comparison needs more items. Nothing here is reviewed by a person yet: 3 correctness and 7 hallucination lines are marked for human review.
+
 ## Limits
 
 - The questions were written alongside the cohort they are scored against, and
