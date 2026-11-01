@@ -1,4 +1,4 @@
-import type { RecipientTotal } from "@/infrastructure/disclosure-ledger";
+import { directionLabel, type RecipientTotal } from "@/infrastructure/disclosure-ledger";
 import {
   formatBytes,
   formatNumber,
@@ -68,7 +68,7 @@ export const recipientRows = (
 ): readonly (readonly string[])[] =>
   totals.map((total) => [
     total.recipient,
-    total.direction === "received" ? "Received" : "Sent",
+    directionLabel(total.direction),
     eventsCell(total),
     formatNumber(total.refs, 0),
     bytesCell(total),

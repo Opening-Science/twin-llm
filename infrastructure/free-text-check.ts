@@ -15,6 +15,9 @@
  *   opened once and searched for as whole words, ignoring case
  *   (`knownValueMatches`).
  *
+ * A match of the person's own rsIDs or genome sites stops a request to a
+ * hosted model (#356, `blocksSend`); every other kind is only recorded.
+ *
  * Approximate: a value written differently (another spelling, a unit
  * conversion, a rounded number) is not found, and lab values and twin notes
  * are not searched yet. Pure; the runtime is `free-text-check-runtime.ts`.
@@ -89,8 +92,12 @@ export const requestText = (body: unknown): string | null => {
 // ─── Sealed lookups ─────────────────────────────────────────────────────────
 
 const RSID = /(?<![A-Za-z0-9])rs\d{1,10}(?![A-Za-z0-9])/gi;
-/** A chromosome and a position of four digits or more, so a time such as 10:30 is not one. */
-const SITE = /(?<![A-Za-z0-9:])(chr)?(\d{1,2}|X|Y|MT|M):(\d{4,10})(?![A-Za-z0-9:])/gi;
+/**
+ * A human chromosome (1 to 22, X, Y, M or MT) and a position of four digits
+ * or more, so a time such as 10:30 or a citation such as 37:1701 is not one.
+ */
+const SITE =
+  /(?<![A-Za-z0-9:])(chr)?(2[0-2]|1\d|[1-9]|X|Y|MT|M):(\d{4,10})(?![A-Za-z0-9:])/gi;
 
 const unique = (values: readonly string[]): readonly string[] => [...new Set(values)];
 
@@ -148,6 +155,12 @@ export const lookupMatches = (
     { kind: FREE_TEXT_KIND.rsid, count: rsids },
     { kind: FREE_TEXT_KIND.site, count: sites },
   ];
+};
+
+/** True when the text holds something shaped like an rsID or a genome site. */
+export const hasGenomeShapedText = (text: string): boolean => {
+  const candidates = variantCandidates(text);
+  return candidates.rsids.length > 0 || candidates.sites.length > 0;
 };
 
 // ─── Known values ───────────────────────────────────────────────────────────
@@ -217,6 +230,25 @@ export const freeTextCheckOf = (
       .reduce((sum, match) => sum + match.count, 0),
   })).filter((match) => match.count > 0),
 });
+
+// ─── Blocking (#356) ────────────────────────────────────────────────────────
+
+/**
+ * The kinds that stop a request to a hosted model: the person's own genome
+ * identifiers. Every other kind is recorded and the request still goes.
+ */
+export const BLOCKING_KINDS: readonly FreeTextKind[] = [
+  FREE_TEXT_KIND.rsid,
+  FREE_TEXT_KIND.site,
+];
+
+/** True when the check found any of the person's own rsIDs or genome sites. */
+export const blocksSend = (check: FreeTextCheck): boolean =>
+  check.matches.some((match) => BLOCKING_KINDS.includes(match.kind) && match.count > 0);
+
+/** What the person reads in the answer when a request was blocked. Fixed text. */
+export const GENOME_IDS_BLOCKED_SENTENCE =
+  "This question would have sent identifiers from your genome to a hosted model, so it was not sent. Ask with a local model, or without the variant IDs.";
 
 /** "2 rsIDs, 1 genome site"; "no stored values found" when there are none. */
 export const describeFreeTextCheck = (check: FreeTextCheck): string =>

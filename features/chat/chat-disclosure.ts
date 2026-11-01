@@ -15,7 +15,8 @@ import { offeredSummaries, type WearableSummaries } from "@/infrastructure/offer
  * the turn is recorded with this, because each one sends the turn again.
  * Free text (the person's own words, the model's answers, tool results) is
  * named as a category; the recording fetch checks each request's text for
- * stored values (#346) and the row records the kinds and counts found.
+ * stored values (#346) and the row records the kinds and counts found; a
+ * request with the person's own rsIDs or genome sites is not sent (#356).
  */
 
 export type ChatDisclosureInput = Readonly<{

@@ -1,4 +1,5 @@
 import {
+  directionLabel,
   type LedgerEntry,
   ledgerTotals,
   type RecipientTotal,
@@ -24,7 +25,7 @@ import {
 export type RecipientView = Readonly<{
   key: string;
   recipient: string;
-  direction: "Sent" | "Received";
+  direction: "Sent" | "Received" | "Blocked";
   events: string;
   since: string;
   last: string;
@@ -37,7 +38,7 @@ export type EntryView = Readonly<{
   key: string;
   when: string;
   recipient: string;
-  direction: "Sent" | "Received";
+  direction: "Sent" | "Received" | "Blocked";
   what: string;
   categories: string;
   values: string;
@@ -79,16 +80,13 @@ const SOURCE_LABELS: Readonly<Record<ValueRef["source"], string>> = {
   chat: "Chat",
 };
 
-const directionOf = (value: string): "Sent" | "Received" =>
-  value === "received" ? "Received" : "Sent";
-
 const sizeOf = (bytes: number | null): string =>
   bytes === null ? "not measured" : formatBytes(bytes);
 
 const recipientView = (total: RecipientTotal): RecipientView => ({
   key: `${total.direction}|${total.recipient}`,
   recipient: total.recipient,
-  direction: total.direction === "received" ? "Received" : "Sent",
+  direction: directionLabel(total.direction),
   events:
     total.syntheticEvents === 0
       ? formatNumber(total.events, 0)
@@ -129,7 +127,7 @@ const entryView = (entry: LedgerEntry & Readonly<{ refs: readonly ValueRef[] }>)
   when: formatTimestamp(entry.ts),
   recipient:
     entry.target === null ? entry.recipient : `${entry.recipient} · ${entry.target}`,
-  direction: directionOf(entry.direction),
+  direction: directionLabel(entry.direction),
   what: whatOf(entry.kind, entry.purpose),
   categories: entry.categories.join(", "),
   values: formatNumber(entry.refCount, 0),
