@@ -52,12 +52,19 @@ export type OracleOptions = Readonly<{
   onsets: "lagged" | "recorded";
   /** Use the treated BP table from the recorded hypertension onset (an upper bound). */
   bpTreated: "never" | "from hypertension onset";
+  /**
+   * Multiplies the hazard on days with AF on (1: the jar as released). The
+   * rule-change test of #295 draws `stroke.json`'s monthly chance twice while
+   * AF is set, so its oracle uses 2 (exactly 2 - p for a monthly chance p).
+   */
+  afFactor: number;
 }>;
 
 export const MAIN: OracleOptions = {
   af: "as recorded",
   onsets: "lagged",
   bpTreated: "never",
+  afFactor: 1,
 };
 
 /** If no wellness visit precedes a recorded onset, assume one a year before. */
@@ -196,6 +203,7 @@ export const expectedStrokes = (
         total +=
           afWeight *
           diabetesWeight *
+          (afOn ? options.afFactor : 1) *
           strokeHazardPerDay({
             ...base,
             atrialFibrillation: afOn,

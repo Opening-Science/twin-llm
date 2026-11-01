@@ -118,6 +118,7 @@ const main = async (argv: readonly string[]): Promise<number> => {
     historyYears: parsed.historyYears,
     seed: parsed.seed,
     controlsPerExposed: parsed.controlsPerExposed,
+    afFactor: parsed.afFactor,
   });
   const target = join(out, "oracle.json");
   await writeFile(

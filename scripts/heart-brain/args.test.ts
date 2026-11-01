@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { parseArgs, parseBatches, USAGE } from "./args";
+import { parseAfFactor, parseArgs, parseBatches, USAGE } from "./args";
 
 describe("parseBatches", () => {
   test("ranges, lists and single numbers become sorted three-digit ids", () => {
@@ -28,6 +28,7 @@ describe("parseArgs", () => {
       controlsPerExposed: 4,
       permutations: 50,
       historyYears: 10,
+      afFactor: 1,
       fresh: false,
     });
   });
@@ -49,6 +50,8 @@ describe("parseArgs", () => {
         "0",
         "--history-years",
         "0",
+        "--af-factor",
+        "2",
         "--fresh",
       ]),
     ).toEqual({
@@ -60,6 +63,7 @@ describe("parseArgs", () => {
       controlsPerExposed: 2,
       permutations: 0,
       historyYears: 0,
+      afFactor: 2,
       fresh: true,
     });
   });
@@ -70,5 +74,16 @@ describe("parseArgs", () => {
     );
     expect(parseArgs(["--out"])).toBe("--out needs a directory.");
     expect(parseArgs(["--help"])).toBe(USAGE);
+    expect(parseArgs(["--af-factor", "0"])).toBe(
+      "--af-factor must be a number above 0 (got: 0).",
+    );
+    expect(parseArgs(["--af-factor"])).toBe(
+      "--af-factor must be a number above 0 (got: ).",
+    );
+  });
+
+  test("--af-factor takes decimals", () => {
+    expect(parseAfFactor(["--af-factor", "1.5"])).toBe(1.5);
+    expect(parseAfFactor([])).toBe(1);
   });
 });

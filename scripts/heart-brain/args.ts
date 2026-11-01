@@ -18,12 +18,14 @@ export type HeartBrainArgs = Readonly<{
   permutations: number;
   /** Synthea's `exporter.years_of_history` for these batches (10, its default); 0 for none. */
   historyYears: number;
+  /** The oracle's AF hazard factor (`heart-brain:oracle` only); 1 for the released jar. */
+  afFactor: number;
   /** Extract again even when a batch's people file is already there. */
   fresh: boolean;
 }>;
 
 export const USAGE =
-  "Usage: bun run heart-brain -- [--batches 001-005] [--archives <dir>] [--out <dir>] [--jobs 2] [--seed 250] [--controls 4] [--permutations 50] [--history-years 10] [--fresh]";
+  "Usage: bun run heart-brain -- [--batches 001-005] [--archives <dir>] [--out <dir>] [--jobs 2] [--seed 250] [--controls 4] [--permutations 50] [--history-years 10] [--af-factor 1] [--fresh]";
 
 const flag = (argv: readonly string[], name: string): string | undefined => {
   const index = argv.indexOf(name);
@@ -69,6 +71,17 @@ const positive = (
   return Number(text);
 };
 
+const DECIMAL = /^\d+(\.\d+)?$/;
+
+/** `--af-factor`: a number above 0, 1 when absent; or what is wrong. */
+export const parseAfFactor = (argv: readonly string[]): number | string => {
+  if (!argv.includes("--af-factor")) return 1;
+  const text = flag(argv, "--af-factor") ?? "";
+  return DECIMAL.test(text) && Number(text) > 0
+    ? Number(text)
+    : `--af-factor must be a number above 0 (got: ${text}).`;
+};
+
 export const parseArgs = (argv: readonly string[]): HeartBrainArgs | string => {
   if (argv.includes("--help")) return USAGE;
   const batches = parseBatches(flag(argv, "--batches") ?? DEFAULT_BATCHES);
@@ -87,6 +100,8 @@ export const parseArgs = (argv: readonly string[]): HeartBrainArgs | string => {
   for (const value of [jobs, seed, controlsPerExposed, permutations, historyYears]) {
     if (typeof value === "string") return value;
   }
+  const afFactor = parseAfFactor(argv);
+  if (typeof afFactor === "string") return afFactor;
   return {
     batches,
     archives: flag(argv, "--archives") ?? DEFAULT_ARCHIVES,
@@ -96,6 +111,7 @@ export const parseArgs = (argv: readonly string[]): HeartBrainArgs | string => {
     controlsPerExposed: controlsPerExposed as number,
     permutations: permutations as number,
     historyYears: historyYears as number,
+    afFactor,
     fresh: argv.includes("--fresh"),
   };
 };

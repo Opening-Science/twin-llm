@@ -98,6 +98,28 @@ describe("expectedStrokes", () => {
     );
   });
 
+  test("afFactor scales only the AF-on hazard (#295 rule change)", () => {
+    const withAf = subject({ af: "2019-06-01" });
+    const doubled = { ...MAIN, afFactor: 2 };
+    expect(expectedStrokes(withAf, from, to, doubled)).toBeCloseTo(
+      2 * expectedStrokes(withAf, from, to),
+      12,
+    );
+    const noAf = subject({});
+    expect(expectedStrokes(noAf, from, to, doubled)).toBeCloseTo(
+      expectedStrokes(noAf, from, to),
+      12,
+    );
+    // Lagged: only the share of the year with AF started is doubled.
+    const recordedNextYear = subject({ af: "2021-01-01" });
+    const off = 366 * strokeHazardPerDay(man);
+    const on = 366 * strokeHazardPerDay({ ...man, atrialFibrillation: true });
+    expect(expectedStrokes(recordedNextYear, from, to, doubled)).toBeCloseTo(
+      (off + 2 * on) / 2,
+      2,
+    );
+  });
+
   test("lagged AF is half on, on average, over the year before a recorded onset", () => {
     const recordedNextYear = subject({ af: "2021-01-01" });
     const lagged = expectedStrokes(recordedNextYear, from, to);
