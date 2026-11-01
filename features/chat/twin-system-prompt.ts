@@ -20,6 +20,7 @@ import {
   DNA_ASK_TOOL,
   GENOME_REPORT_TOOL,
 } from "@/packages/carbon-x/constants";
+import { GBD_ESTIMATE_TOOL } from "@/packages/gbd-local/constants";
 import { GBD_MODEL_TOOL } from "@/packages/gbd-mcp/constants";
 import { GUIDELINE_MODEL_TOOL } from "@/packages/guidelines/constants";
 import { KNOWLEDGE_MODEL_TOOL } from "@/packages/knowledge/constants";
@@ -95,6 +96,10 @@ const REFERENCE_TOOL_LINES: readonly Readonly<{ tool: string; text: string }>[] 
     text: `\`${GBD_MODEL_TOOL}\` gives population figures from GBD`,
   },
   {
+    tool: GBD_ESTIMATE_TOOL,
+    text: `\`${GBD_ESTIMATE_TOOL}\` gives GBD 2023 population figures imported on this machine`,
+  },
+  {
     tool: GUIDELINE_MODEL_TOOL,
     text: `\`${GUIDELINE_MODEL_TOOL}\` gives guideline passages`,
   },
@@ -103,6 +108,13 @@ const REFERENCE_TOOL_LINES: readonly Readonly<{ tool: string; text: string }>[] 
     text: `\`${KNOWLEDGE_MODEL_TOOL}\` explains TwinLLM's own metrics, units, data sources and limits`,
   },
 ];
+
+/**
+ * Tools named only when the turn's list carries them: `gbd_estimate` is
+ * offered only once GBD results are imported (#387), so a prompt built
+ * without a list keeps the text it always had.
+ */
+const LISTED_ONLY: ReadonlySet<string> = new Set([GBD_ESTIMATE_TOOL]);
 
 /**
  * Only in synthetic mode: the model gets the query tools on every request, and
@@ -458,7 +470,7 @@ export const buildTwinSystemPrompt = (params: {
     ...liveSection(params.offeredTools),
     ...syntheticCohortSection(
       params.mode,
-      (tool) => params.offeredTools?.has(tool) ?? true,
+      (tool) => params.offeredTools?.has(tool) ?? !LISTED_ONLY.has(tool),
       (params.pastedData ?? null) === null
         ? null
         : (params.pastedDataSource ?? "key-calls"),

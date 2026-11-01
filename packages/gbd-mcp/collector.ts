@@ -25,6 +25,15 @@ export const recordGbdTurn = (
   });
 };
 
+/**
+ * Rows from the local store (`gbd_estimate`, #387) for the explainability
+ * panel. They have no closed `gbd_population` fields, so no source is added.
+ */
+export const recordGbdRows = (sessionId: string, rows: readonly GbdRow[]): void => {
+  const prev = turns.get(sessionId) ?? { sources: [], rows: [] };
+  turns.set(sessionId, { sources: prev.sources, rows: [...prev.rows, ...rows] });
+};
+
 export const drainGbdTurn = (sessionId: string): GbdTurn => {
   const value = turns.get(sessionId);
   turns.delete(sessionId);

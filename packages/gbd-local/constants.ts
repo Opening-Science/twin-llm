@@ -1,0 +1,52 @@
+import { gbdAttributionLine } from "@/packages/gbd-mcp/constants";
+
+/**
+ * The local GBD store (#387): GBD 2023 results a person downloaded from IHME's
+ * GBD Results Tool and imported with `bun run gbd:import`. Population
+ * estimates only; nothing here reads or sends personal data.
+ *
+ * The ids below are IHME's own codes as they appear in the Results Tool's
+ * "ID and name" export. Age ids 22 (All ages) and 27 (Age-standardized) are
+ * from IHME_GBD_2023_A4_CONTEXTS_BY_AGE (GBD 2023 data and tools guide). The
+ * tool offers these two only: each further age group is prompt room the
+ * smallest chat context does not have (#149).
+ */
+
+export const GBD_ESTIMATE_TOOL = "gbd_estimate";
+export const GBD_LOCAL_RELEASE = "2023";
+export const GBD_LOCAL_SOURCE = `IHME GBD ${GBD_LOCAL_RELEASE}`;
+export const GBD_LOCAL_ATTRIBUTION = gbdAttributionLine(GBD_LOCAL_RELEASE);
+
+export const GBD_MEASURE_IDS = {
+  deaths: 1,
+  dalys: 2,
+  yld: 3,
+  yll: 4,
+  prevalence: 5,
+  incidence: 6,
+} as const;
+
+export const GBD_METRIC_IDS = { number: 1, percent: 2, rate: 3 } as const;
+
+export const GBD_SEX_IDS = { male: 1, female: 2, both: 3 } as const;
+
+export const GBD_AGE_IDS = {
+  all_ages: 22,
+  age_standardized: 27,
+} as const;
+
+export type GbdMeasure = keyof typeof GBD_MEASURE_IDS;
+export type GbdMetric = keyof typeof GBD_METRIC_IDS;
+export type GbdSex = keyof typeof GBD_SEX_IDS;
+export type GbdAge = keyof typeof GBD_AGE_IDS;
+
+/** What one value means, by metric: the unit the tool reports. */
+export const GBD_METRIC_UNITS: Readonly<Record<GbdMetric, string>> = {
+  number: "number",
+  percent: "percent",
+  rate: "per 100,000",
+};
+
+/** The GBD 2023 Results Tool covers 1990 to 2023. */
+export const GBD_FIRST_YEAR = 1990;
+export const GBD_LAST_YEAR = 2023;

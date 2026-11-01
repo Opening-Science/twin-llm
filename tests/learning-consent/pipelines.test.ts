@@ -191,6 +191,8 @@ const NOT_LEARNING: Readonly<Record<string, string>> = {
     "scores the files the GPU steps wrote from the sets disclosure:prepare made under the gate; reads no subject row",
   "eval:hb-verdicts":
     "tallies verdict phrases in eval runs, each gated when it ran; reads no subject row",
+  "gbd:import":
+    "imports IHME GBD population estimates from files a person downloaded (#387); reads no subject row",
   "warehouse:ingest":
     "loads synthetic cohorts into the warehouse; it refuses other labels",
   "knowledge:ingest": PUBLIC,

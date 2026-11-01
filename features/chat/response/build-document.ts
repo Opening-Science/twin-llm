@@ -5,6 +5,7 @@ import type { ParsedTwinAnswer } from "@/infrastructure/parse-twin-answer";
 import type { UiContext } from "@/infrastructure/ui-context";
 
 import { CHAT_RESPONSE_DOCUMENT } from "../response-document";
+import { GBD_ESTIMATE_TOOL } from "@/packages/gbd-local/constants";
 import type { GbdSource } from "@/packages/gbd-mcp/collector";
 import { GBD_AUDIT_TOOL } from "@/packages/gbd-mcp/constants";
 import type { GbdRow } from "@/packages/gbd-mcp/normalize";
@@ -34,6 +35,7 @@ import {
 const REFERENCE_TOOLS: ReadonlySet<string> = new Set([
   GUIDELINE_AUDIT_TOOL,
   GBD_AUDIT_TOOL,
+  GBD_ESTIMATE_TOOL,
   KNOWLEDGE_AUDIT_TOOL,
 ]);
 
@@ -46,6 +48,7 @@ export const hasSufficientToolRows = (toolCalls: readonly ResponseToolCall[]): b
  */
 const NOT_READABLE_TOOLS: ReadonlySet<string> = new Set([
   GBD_AUDIT_TOOL,
+  GBD_ESTIMATE_TOOL,
   KNOWLEDGE_AUDIT_TOOL,
 ]);
 

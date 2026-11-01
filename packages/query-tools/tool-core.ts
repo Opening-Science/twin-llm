@@ -51,7 +51,7 @@ export const audited = async <T>(
   subjectRef: string | null,
   work: () => Promise<T>,
   rowCountOf: (result: T) => number,
-  ports: QueryToolPorts = defaultQueryToolPorts(),
+  ports: Pick<QueryToolPorts, "appendAudit"> = defaultQueryToolPorts(),
 ): Promise<T> => {
   // A call that throws (database down, a bad decimal) still happened, so it
   // gets an audit row with 0 rows before the error goes back to the caller.

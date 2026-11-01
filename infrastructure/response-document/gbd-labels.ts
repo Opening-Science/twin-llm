@@ -1,3 +1,4 @@
+import { GBD_ATTRIBUTION_LINE, gbdAttributionLine } from "@/packages/gbd-mcp/constants";
 import type { GbdRow } from "@/packages/gbd-mcp/normalize";
 
 const MEASURE_LABELS: Readonly<Record<string, string>> = {
@@ -70,4 +71,19 @@ export const formatGbdRow = (row: GbdRowLabel): string => {
     label(AGE_LABELS, row.age),
     `${withUnit(row.value, row.unit)}${interval}`,
   ].join(" · ");
+};
+
+/**
+ * The attribution under the rows: the GBD round they name when every row
+ * names the same one (`IHME GBD 2023` from the local store, #387), else the
+ * remote connector's line.
+ */
+export const gbdAttributionFor = (rows: readonly Pick<GbdRow, "source">[]): string => {
+  const rounds = new Set(
+    rows.map((row) => /^IHME GBD (\d{4})$/.exec(row.source)?.[1] ?? ""),
+  );
+  const [round] = [...rounds];
+  return rounds.size === 1 && round !== undefined && round !== ""
+    ? gbdAttributionLine(round)
+    : GBD_ATTRIBUTION_LINE;
 };

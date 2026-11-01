@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { formatGbdRow } from "./gbd-labels";
+import { formatGbdRow, gbdAttributionFor } from "./gbd-labels";
 
 const base = {
   measure: "deaths",
@@ -56,5 +56,19 @@ describe("formatGbdRow", () => {
     expect(formatGbdRow({ ...base, unit: "", lower: null, upper: null })).toBe(
       "Deaths · Cardiovascular diseases · Switzerland · 2021 · Both sexes · All ages · 12.5",
     );
+  });
+});
+
+describe("gbdAttributionFor", () => {
+  test("names the round all rows share, else the remote connector's line", () => {
+    expect(
+      gbdAttributionFor([{ source: "IHME GBD 2023" }, { source: "IHME GBD 2023" }]),
+    ).toBe("Population estimate (IHME GBD 2023), not a statement about this person.");
+    expect(gbdAttributionFor([{ source: "IHME GBD 2021" }])).toBe(
+      "Population estimate (IHME GBD 2021), not a statement about this person.",
+    );
+    expect(
+      gbdAttributionFor([{ source: "IHME GBD 2021" }, { source: "IHME GBD 2023" }]),
+    ).toBe("Population estimate (IHME GBD 2021), not a statement about this person.");
   });
 });
