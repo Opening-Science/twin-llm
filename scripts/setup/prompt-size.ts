@@ -113,6 +113,14 @@ export const promptSizeCases = (skills: readonly TurnSkill[]): readonly SizeCase
     ];
   });
 
+/**
+ * Tokens every case must leave free under its budget before twin notes
+ * (#393), so the next tool or prompt line does not have to cut another. Twin
+ * notes are left out of this check: they are cut to whatever room the turn
+ * leaves (`twin-notes-room.ts`), so they shrink rather than break the budget.
+ */
+export const PROMPT_HEADROOM_TOKENS = 500;
+
 /** The runnable skills under `skills/`, as the chat offers them. */
 export const loadSkills = (root: string): readonly TurnSkill[] =>
   checkSkills(

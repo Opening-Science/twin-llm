@@ -3,7 +3,7 @@
     "type": "function",
     "function": {
       "name": "genome_report",
-      "description": "Read the owner's released Ark rsid-genotypes report: each panel site with its gene, star allele, position and genotype or no call. Research use only.",
+      "description": "Read the owner's released Ark rsid-genotypes report: each panel site with its gene, star allele, position and genotype or no call (the call file has nothing there; not the reference allele). Research use only.",
       "parameters": {
         "type": "object",
         "properties": {},
@@ -15,7 +15,7 @@
     "type": "function",
     "function": {
       "name": "dna_ask",
-      "description": "Ask Carbon-X, a local research DNA model, about one variant in the released report. The server builds the DNA windows from the public GRCh38 reference and the recorded genotype; give only the rsID. The answer is labelled as a research model's and is never clinical or dosing advice.",
+      "description": "Ask Carbon-X, a local research DNA model, about one variant in the released report. The server builds the DNA windows from the public GRCh38 reference and the recorded genotype; give only the rsID. Quote its answer labelled Carbon-X (research model): research output, not a fact about the person. Say what a variant is known to affect; never give a dose or say to start, stop or change a medicine.",
       "parameters": {
         "type": "object",
         "properties": {
