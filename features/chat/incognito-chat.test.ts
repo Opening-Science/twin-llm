@@ -187,7 +187,7 @@ const harness = (
         return model;
       },
       genomeTools: () => undefined,
-      variantTools: () => undefined,
+      variantTools: async () => undefined,
       importedTools: () => undefined,
       loadAudit: db.loadAudit,
       query,

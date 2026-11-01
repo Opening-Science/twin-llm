@@ -139,8 +139,8 @@ export const createChatTools = (
     /**
      * Ports for `genome_variants` (#307) over an imported VCF. Only the chat
      * route passes them, and only after the VCF permit allowed this turn
-     * (#330: personal mode, Ollama on loopback); a synthetic scope never gets
-     * them.
+     * (#330: personal mode, Ollama on loopback) and the person has imported a
+     * VCF (#399, `genome-variant-offer.ts`); a synthetic scope never gets them.
      */
     variants?: GenomeVariantsDeps;
     /**

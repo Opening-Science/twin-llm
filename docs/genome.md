@@ -143,7 +143,10 @@ there, which is not the same as the reference allele, and the result says so.
 
 - **Policy.** An imported VCF and a local model are enough (#330). The tool is on a
   turn only when `permitVcfVariantsRequest` holds: `DATA_MODE=personal` and
-  `LLM_PROVIDER=ollama` with Ollama on loopback. It needs no `GENOME_SOURCE=ark` and
+  `LLM_PROVIDER=ollama` with Ollama on loopback, and the person has imported a VCF
+  (#399; `offerGenomeVariants` counts their VCF datasets after the permit holds and
+  opens nothing). Without a VCF the tool is left off the turn, which saves about 170
+  prompt tokens. It needs no `GENOME_SOURCE=ark` and
   no Carbon-X, which serve `genome_report` and `dna_ask` only, and those two keep
   `permitGenomeRequest`. It asks the permit again on every call before any read. A
   hosted provider (the consented Exoscale pilot included), Ollama on another machine

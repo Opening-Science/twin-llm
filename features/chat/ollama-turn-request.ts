@@ -66,6 +66,12 @@ export type TurnRequestCase = Readonly<{
    * in place of the remote `gbd_population`.
    */
   gbdImported?: boolean;
+  /**
+   * The person imported a VCF (#399): a personal turn on a local model then
+   * gets `genome_variants`. Left out, the tool is not offered, as on the chat
+   * route.
+   */
+  vcfImported?: boolean;
 }>;
 
 const NO_PORTS: QueryToolPorts = {
@@ -93,7 +99,7 @@ const noGenome = (scope: GenomeToolDeps["scope"]): GenomeToolDeps => ({
   appendAudit: async () => undefined,
 });
 
-/** `genome_variants` as a fully local personal turn gets it (#330); nothing is read. */
+/** `genome_variants` as a fully local personal turn with a VCF gets it (#330, #399); nothing is read. */
 const noVariants = (scope: GenomeVariantsDeps["scope"]): GenomeVariantsDeps => ({
   scope,
   permit: () => ({ ok: true }),
@@ -152,7 +158,7 @@ export const captureOllamaTurnRequest = async (
         sources: turn.skill?.sources,
         loadViews: async () => [],
         genome: noGenome(scope),
-        variants: noVariants(scope),
+        variants: turn.vcfImported === true ? noVariants(scope) : undefined,
         imported: noImported(scope),
         gbdLocal: turn.gbdImported === true ? NO_GBD : undefined,
       }),
