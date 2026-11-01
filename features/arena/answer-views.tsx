@@ -1,5 +1,6 @@
 "use client";
 
+import { Choropleth } from "@/infrastructure/charts/choropleth";
 import { type ChatView, type ViewOf } from "@/infrastructure/chat-view";
 
 import { TimeLineChart } from "@/features/data-explorer/time-line-chart";
@@ -45,6 +46,17 @@ const ViewBody = ({ view, height }: Readonly<{ view: ChatView; height: number }>
       return <ViewTable spec={view.spec} label={view.title} />;
     case "twin.body":
       return <TwinBodyFigure spec={view.spec} />;
+    case "map.choropleth":
+      return (
+        <Choropleth
+          title={view.title}
+          unit={view.spec.unit}
+          level={view.spec.level}
+          country={view.spec.country}
+          regions={view.spec.regions}
+          unmatched={view.spec.unmatched}
+        />
+      );
   }
 };
 

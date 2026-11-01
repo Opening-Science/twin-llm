@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { COMPARE_LAYOUTS } from "@/infrastructure/view-specs";
+import { COMPARE_LAYOUTS, MAP_LEVELS } from "@/infrastructure/view-specs";
 import { TWIN_FOCUS_IDS } from "@/packages/anatomy/twin-focus";
 
 import { subjectRefSchema, windowSchema } from "./schemas";
@@ -19,6 +19,7 @@ export const VIEW_KINDS = [
   "biomarker.card",
   "table",
   "twin.body",
+  "map.choropleth",
 ] as const;
 
 export const showViewInput = z
@@ -55,6 +56,17 @@ export const showViewInput = z
       .describe(
         "chart.compare only: side-by-side (default) or overlaid by day of window",
       ),
+    level: z
+      .enum(MAP_LEVELS)
+      .optional()
+      .describe(
+        "map.choropleth only: world (default), region (the places with a value), or country (its states; needs country)",
+      ),
+    country: z
+      .string()
+      .regex(/^[A-Z]{3}$/)
+      .optional()
+      .describe("map.choropleth with level country: ISO 3166-1 alpha-3, such as NGA"),
   })
   .strict()
   .describe("A view of one measure in a window, drawn from audited rows");
@@ -75,7 +87,7 @@ export const VIEW_TOOL_DEFINITIONS = [
   {
     name: "show_view",
     description:
-      "Show a view of one measure in the answer. chart.timeseries draws every reading in window; chart.compare sets window against compare_with (n and mean of each); biomarker.card shows a LOINC's latest reading against its published range, with its trend; table lists the readings (first 50); twin.body shows the body twin on focus with each mapped organ's range position (subject's labs, or none); without window it uses each marker's latest reading. The server reads the rows itself; the result says how many it read. A LOINC code needs subject (a synthetic subject_ref); a wearable key reads the user's synced data. Never write numbers for a view yourself.",
+      "Show a view of one measure in the answer. chart.timeseries draws every reading in window; chart.compare sets window against compare_with (n and mean of each); biomarker.card shows a LOINC's latest reading against its published range, with its trend; table lists the readings (first 50); twin.body shows the body twin on focus with each mapped organ's range position (subject's labs, or none); without window it uses each marker's latest reading; map.choropleth maps the population estimates this turn already looked up, by country or by a country's states (no measure or window). The server reads the rows itself; the result says how many it read. A LOINC code needs subject (a synthetic subject_ref); a wearable key reads the user's synced data. Never write numbers for a view yourself.",
     input: showViewInput,
   },
   {

@@ -213,6 +213,7 @@ describe("buildTwinSystemPrompt data mode", () => {
       "- Fetch rows with `latest_by_loinc`, `observations_for_subject`, `subject_window` and `summary_stats`. Observations use LOINC codes and UCUM units.",
       "- `conditions_timeline` and `medications_timeline` list what the record holds, with dates. Say what came before or after, never that one thing caused another. Quote dosage text only as `dosage_as_recorded` gives it, labelled as recorded; never add a dose, a change or advice.",
       "- `gbd_population` gives population figures from GBD; `guideline_search` gives guideline passages; `knowledge_search` explains TwinLLM's own metrics, units, data sources and limits.",
+      "- To map `gbd_population` estimates this turn looked up, call `show_view` with kind `map.choropleth`: level world or region by country, or level country with an ISO3 country for its states. It needs no measure or window.",
       "- Cite tool results in Reasoning by tool, subject_ref, LOINC and date; they are recorded in tool_calls. Tool rows are not wearable keys, so they do not go under Evidence Used.",
       "- When a tool returns no rows or refuses a subject, say so plainly and do not guess values.",
       "",

@@ -4,6 +4,7 @@ import { EMPTY_VALUE, formatDate } from "./format-measure";
 import {
   type biomarkerCardSpecSchema,
   chatViewSchema,
+  type choroplethSpecSchema,
   type compareSpecSchema,
   type tableSpecSchema,
   type timeseriesSpecSchema,
@@ -46,6 +47,7 @@ export type CompareSpec = z.infer<typeof compareSpecSchema>;
 export type BiomarkerCardSpec = z.infer<typeof biomarkerCardSpecSchema>;
 export type TableSpec = z.infer<typeof tableSpecSchema>;
 export type TwinBodySpec = z.infer<typeof twinBodySpecSchema>;
+export type ChoroplethSpec = z.infer<typeof choroplethSpecSchema>;
 
 export type ChatView = z.infer<typeof chatViewSchema>;
 export type ViewKind = ChatView["kind"];
@@ -126,6 +128,21 @@ export const twinBodyView = (input: Built<TwinBodySpec>): ChatView => ({
   sourceAuditIds: [...input.sourceAuditIds],
 });
 
+/** `Prevalence of diabetes mellitus, 2021, by country`; the label comes from the rows. */
+export const choroplethView = (
+  input: Built<ChoroplethSpec> & Readonly<{ place: string }>,
+): ChatView => ({
+  id: viewId(input.sourceAuditIds),
+  kind: "map.choropleth",
+  title: `${input.spec.label}, ${input.place}`,
+  spec: {
+    ...input.spec,
+    regions: [...input.spec.regions],
+    unmatched: [...input.spec.unmatched],
+  },
+  sourceAuditIds: [...input.sourceAuditIds],
+});
+
 /**
  * The decimals a stored number was written with, at most three: 0.35 keeps
  * both. A card shows its value and range this way, and its trend arrow
@@ -150,6 +167,8 @@ export const viewReadings = (view: ChatView): number => {
       return view.spec.total;
     case "twin.body":
       return view.spec.n;
+    case "map.choropleth":
+      return view.spec.n;
   }
 };
 
@@ -158,10 +177,14 @@ export const viewSubject = (view: ChatView): string | null => view.spec.subject;
 
 /**
  * True when a view shows the person's own data: their wearables, or their
- * own body. A twin of the Demo body with no lab subject is not personal.
+ * own body. A twin of the Demo body with no lab subject is not personal,
+ * and neither is a map of population estimates.
  */
-export const viewIsPersonal = (view: ChatView): boolean =>
-  view.kind === "twin.body" ? view.spec.body === "self" : view.spec.subject === null;
+export const viewIsPersonal = (view: ChatView): boolean => {
+  if (view.kind === "twin.body") return view.spec.body === "self";
+  if (view.kind === "map.choropleth") return false;
+  return view.spec.subject === null;
+};
 
 /** A view only when its spec parses; a view without an audit source is not one. */
 export const toChatView = (value: unknown): ChatView | null => {

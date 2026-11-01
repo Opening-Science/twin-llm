@@ -55,3 +55,7 @@ Here "this repository" is TwinLLM (`scripts/anatomy/bake-anny-rigged.py`). The w
 ## Synthea
 
 `bun run synthea:generate` and the Synthea generator page (`/synthea`, synthea.opening.science) download and run [Synthea](https://github.com/synthetichealth/synthea) v4.0.0 (`synthea-with-dependencies.jar`, checked by SHA-256), Copyright The MITRE Corporation and contributors, licensed under the Apache License, Version 2.0. The JAR is not part of this repository; it is kept in the gitignored `.synthea/cache/`. Records it generates are synthetic. The generator page and each downloaded zip credit Synthea. Details: `docs/synthea-generator.md`.
+
+## Natural Earth
+
+The country and state boundaries in `public/geo/natural-earth/` and the location index in `infrastructure/charts/choropleth/location-index.json` are derived from [Natural Earth](https://www.naturalearthdata.com/) 5.1.1 (1:50m admin-0 countries, 1:10m admin-1 states and provinces), which is in the public domain. Made with Natural Earth. Version, archive hashes and the simplification: `public/geo/natural-earth/README.md`.

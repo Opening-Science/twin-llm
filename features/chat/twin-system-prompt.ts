@@ -151,6 +151,11 @@ const syntheticCohortSection = (
     ...(references.length > 0
       ? [`- ${references.map((line) => line.text).join("; ")}.`]
       : []),
+    ...(offered(GBD_MODEL_TOOL) && offered(SHOW_VIEW_TOOL)
+      ? [
+          `- To map \`${GBD_MODEL_TOOL}\` estimates this turn looked up, call \`${SHOW_VIEW_TOOL}\` with kind \`map.choropleth\`: level world or region by country, or level country with an ISO3 country for its states. It needs no measure or window.`,
+        ]
+      : []),
     "- Cite tool results in Reasoning by tool, subject_ref, LOINC and date; they are recorded in tool_calls. Tool rows are not wearable keys, so they do not go under Evidence Used.",
     "- When a tool returns no rows or refuses a subject, say so plainly and do not guess values.",
     "",

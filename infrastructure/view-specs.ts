@@ -151,6 +151,54 @@ export const twinBodySpecSchema = z.object({
   n: z.number().int().nonnegative(),
 });
 
+/**
+ * map.choropleth: where a population estimate is drawn. `world` shows every
+ * country, `region` the countries with a value and their neighbours,
+ * `country` one country's states or provinces.
+ */
+export const MAP_LEVELS = ["world", "region", "country"] as const;
+
+export type MapLevel = (typeof MAP_LEVELS)[number];
+
+const ISO3 = /^[A-Z]{3}$/;
+
+/**
+ * map.choropleth: one population estimate (one measure, cause, year, sex
+ * and age) by place, exactly as the turn's estimate lookups returned it.
+ * Places are matched to Natural Earth boundaries by code or name on the
+ * server; a place that matched none is listed, never dropped quietly.
+ */
+export const choroplethSpecSchema = z.object({
+  level: z.enum(MAP_LEVELS),
+  /** ISO 3166-1 alpha-3 of the country whose states are drawn; null for world and region. */
+  country: z.string().regex(ISO3).nullable(),
+  /** The estimate's measure, such as `prevalence`. */
+  measure: z.string(),
+  label: z.string(),
+  unit: z.string().nullable(),
+  /** Where the estimates come from, such as `IHME GBD 2021`. */
+  source: z.string(),
+  /** Population estimates are about no one. */
+  subject: z.null(),
+  regions: z
+    .array(
+      z.object({
+        code: z.string(),
+        name: z.string(),
+        /** The location as the estimate named it. */
+        location: z.string(),
+        value: z.number(),
+        lower: z.number().nullable(),
+        upper: z.number().nullable(),
+      }),
+    )
+    .readonly(),
+  /** Locations of the estimate that match no boundary at this level. */
+  unmatched: z.array(z.string()).readonly(),
+  /** Estimate rows read; regions plus unmatched. */
+  n: z.number().int().nonnegative(),
+});
+
 const sources = z.array(z.string()).min(1).readonly();
 
 const viewOf = <K extends string, S extends z.ZodType>(kind: K, spec: S) =>
@@ -169,4 +217,5 @@ export const chatViewSchema = z.discriminatedUnion("kind", [
   viewOf("biomarker.card", biomarkerCardSpecSchema),
   viewOf("table", tableSpecSchema),
   viewOf("twin.body", twinBodySpecSchema),
+  viewOf("map.choropleth", choroplethSpecSchema),
 ]);

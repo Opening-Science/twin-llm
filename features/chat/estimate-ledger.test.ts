@@ -1,0 +1,81 @@
+import { describe, expect, test } from "bun:test";
+
+import { tool, type ToolExecutionOptions } from "ai";
+import { z } from "zod";
+
+import { createEstimateLedger, recordEstimates } from "./estimate-ledger";
+
+const ROW = {
+  location: "Nigeria",
+  value: 5,
+  lower: 4,
+  upper: 6,
+  unit: "per 100,000",
+  measure: "prevalence",
+  extra: "ignored",
+};
+
+const options = (toolCallId: string): ToolExecutionOptions => ({
+  toolCallId,
+  messages: [],
+});
+
+describe("createEstimateLedger", () => {
+  test("keeps outputs that are estimate rows, in order, without unknown fields", () => {
+    const ledger = createEstimateLedger();
+    ledger.record("gbd_population", "c1", [ROW]);
+    ledger.record("gbd_population", "c2", []);
+    ledger.record("gbd_population", "c3", { error: "gbd-not-recorded" });
+    ledger.record("gbd_population", "c4", [{ ...ROW, value: "5" }]);
+    expect(ledger.recorded()).toEqual([
+      {
+        tool: "gbd_population",
+        callId: "c1",
+        rows: [
+          {
+            location: "Nigeria",
+            value: 5,
+            lower: 4,
+            upper: 6,
+            unit: "per 100,000",
+            measure: "prevalence",
+          },
+        ],
+      },
+    ]);
+  });
+
+  test("hands out a copy", () => {
+    const ledger = createEstimateLedger();
+    const first = ledger.recorded();
+    ledger.record("t", "c", [ROW]);
+    expect(first).toEqual([]);
+  });
+});
+
+describe("recordEstimates", () => {
+  test("records each call's output by call id and returns it unchanged", async () => {
+    const ledger = createEstimateLedger();
+    const tools = recordEstimates(
+      {
+        lookup: tool({
+          description: "made-up estimates",
+          inputSchema: z.object({ value: z.number() }),
+          execute: async ({ value }) => [{ ...ROW, value }],
+        }),
+      },
+      ledger,
+    );
+    const output = await tools.lookup.execute?.({ value: 7 }, options("call-7"));
+    expect(output).toEqual([{ ...ROW, value: 7 }]);
+    expect(
+      ledger.recorded().map((entry) => [entry.tool, entry.callId, entry.rows[0].value]),
+    ).toEqual([["lookup", "call-7", 7]]);
+  });
+
+  test("leaves a tool without execute as it is", () => {
+    const ledger = createEstimateLedger();
+    const plain = tool({ description: "client side", inputSchema: z.object({}) });
+    expect(recordEstimates({ plain }, ledger).plain).toBe(plain);
+  });
+});

@@ -758,6 +758,23 @@
     @apply outline-primary outline-2 outline-offset-2;
   }
 
+  /* Choropleth (map.choropleth): a place with a value takes the focus ring
+     as its outline; colour changes fade only when motion is welcome. */
+  .choropleth-region {
+    @apply cursor-pointer outline-none;
+  }
+
+  .choropleth-region:focus-visible {
+    stroke: var(--ring);
+    stroke-width: 2.5;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .choropleth-region {
+      transition: fill 150ms ease-out;
+    }
+  }
+
   /* Connector "Setup" disclosure: a quiet summary row that opens to env
      names, the redirect URI and commands. Names and commands only. */
   .setup-disclosure > summary {

@@ -33,6 +33,7 @@ const VIEW_LABELS: Readonly<Record<string, string>> = {
   "chart.compare": "Comparison chart",
   "biomarker.card": "Biomarker card",
   "twin.body": "Body twin",
+  "map.choropleth": "Map",
   table: "Table",
 };
 

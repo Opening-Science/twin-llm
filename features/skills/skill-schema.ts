@@ -40,6 +40,7 @@ export const SKILL_VIEW_KINDS = [
   "biomarker.card",
   "twin.body",
   "table",
+  "map.choropleth",
 ] as const;
 
 export type SkillViewKind = (typeof SKILL_VIEW_KINDS)[number];

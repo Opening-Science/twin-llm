@@ -82,3 +82,7 @@ Copied unchanged from [Opening-Science/Open-Science-Foundation-brand-guide](http
 | ----------------------------------------------------------------- | ------------------------------------------------------------------ |
 | `public/brand/Open-Science-Foundation_logo_positive_original.svg` | `6a2813ca6de4b2c10f99948a1c1124cbc2a0c2a51c457d62cecdb1d5e86d5f8a` |
 | `public/brand/Open-Science-Foundation_logo_negative_original.svg` | `a4effe8c61e077fa7881ed6e87412b2de1cc2ca11db8cbf00096727c48db4f2a` |
+
+## Natural Earth boundaries (committed, public domain)
+
+`public/geo/natural-earth/` and `infrastructure/charts/choropleth/location-index.json` are built by `scripts/geo/build-natural-earth.ts` from Natural Earth 5.1.1 (`ne_50m_admin_0_countries.zip`, SHA-256 `5fed433373581fa648920435f937d95f2d3c0200e067409c6478dcdf1b853139`; `ne_10m_admin_1_states_provinces.zip`, SHA-256 `efc59726337323058f9446210adc96673179cd344e053666ee3d28cb58ba2b05`), simplified as `public/geo/natural-earth/README.md` describes. No code from another map library is used; the projection (Equal Earth) and the SVG paths are our own (`infrastructure/charts/choropleth/`).
