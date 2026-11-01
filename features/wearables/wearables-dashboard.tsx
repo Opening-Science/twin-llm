@@ -6,21 +6,34 @@ import type { OuraSummary } from "@/infrastructure/oura-types";
 import type { WhoopSummary } from "@/infrastructure/whoop-types";
 import {
   formatDate,
+  formatMeasure,
   formatMeasureCompact,
+  formatNumber,
   measureKindFor,
   type MeasureKind,
 } from "@/infrastructure/format-measure";
+import { BentoCard, BentoGrid } from "@/infrastructure/ui-kit/bento-grid";
+import { type BentoSpan } from "@/infrastructure/ui-kit/bento-model";
 import { Button } from "@/infrastructure/ui-kit/button";
 
 import {
+  SOURCE_LABEL,
   heroEyebrow,
   heroHeadline,
   sectionHeading,
   sectionScorePrefix,
   type WearableSource,
 } from "./dashboard-headings";
+import {
+  DASHBOARD_TRENDS,
+  dashboardCards,
+  type DashboardCard,
+  type TrendSpec,
+} from "./dashboard-cards";
 import { type DateRangeValue } from "./date-range-bar";
 import { InteractiveChart } from "./interactive-chart";
+import { lastItems } from "./mini-chart-geometry";
+import { MiniBars, MiniTrend } from "./mini-charts";
 import { primaryCharts } from "./primary-charts";
 import {
   COMPARE_ROWS,
@@ -91,6 +104,13 @@ type RingSpec = Readonly<{
   progress: boolean;
   kind?: MeasureKind;
 }>;
+
+/** Chart colours in token order, never `primary`. */
+const FIGURE_COLOR = {
+  sleep: "text-chart-1",
+  hrv: "text-chart-2",
+  steps: "text-chart-4",
+} as const;
 
 const ScoreRing = ({
   label,
@@ -309,6 +329,91 @@ const ComparePanel = ({
   );
 };
 
+/** Days a small card shows: two weeks reads as a trend at card size. */
+const MINI_DAYS = 14;
+
+/** The latest value and recent days of one series, formatted by its kind. */
+const trendOf = (metrics: readonly Metric[], spec: TrendSpec) => {
+  const points = pointsByPrefix(metrics, spec.prefix);
+  const kind = measureKindFor(spec.prefix) ?? undefined;
+  const latest = points.at(-1) ?? null;
+  return {
+    points,
+    kind,
+    recent: lastItems(points, MINI_DAYS).map((point) => point.value),
+    latestText: latest
+      ? kind
+        ? formatMeasure(kind, latest.value)
+        : formatNumber(latest.value, 1)
+      : "—",
+    latestDate: latest ? formatDate(latest.date) : null,
+  };
+};
+
+const daysCaption = (count: number, noun: "days" | "nights"): string =>
+  count === 1 ? `Last ${noun === "days" ? "day" : "night"}` : `Last ${count} ${noun}`;
+
+const CardHeading = ({
+  eyebrow,
+  value,
+  date,
+}: {
+  readonly eyebrow: string;
+  readonly value: string;
+  readonly date: string | null;
+}) => (
+  <div>
+    <p className="text-eyebrow">{eyebrow}</p>
+    <p className="font-display mt-2 text-2xl leading-tight tracking-tight tabular-nums">
+      {value}
+    </p>
+    {date && <p className="text-muted-foreground mt-1 font-mono text-xs">{date}</p>}
+  </div>
+);
+
+const FigureCard = ({
+  spec,
+  metrics,
+  span,
+  bars,
+  color,
+}: {
+  readonly spec: TrendSpec;
+  readonly metrics: readonly Metric[];
+  readonly span: BentoSpan;
+  readonly bars: boolean;
+  readonly color: string;
+}) => {
+  const trend = trendOf(metrics, spec);
+  const count = trend.recent.length;
+  return (
+    <BentoCard span={span}>
+      <CardHeading
+        eyebrow={spec.label}
+        value={trend.latestText}
+        date={trend.latestDate}
+      />
+      <div className="mt-auto pt-4">
+        {bars ? (
+          <MiniBars values={trend.recent} className={color} />
+        ) : (
+          <MiniTrend values={trend.recent} className={color} />
+        )}
+        <p className="text-muted-foreground mt-1 text-xs">
+          {daysCaption(count, bars ? "nights" : "days")}
+        </p>
+      </div>
+    </BentoCard>
+  );
+};
+
+export type DashboardSource = Readonly<{
+  id: WearableSource;
+  name: string;
+  /** "Synced 3 h ago", from the connector status. */
+  detail: string;
+}>;
+
 const ringsFor = (source: WearableSource, metrics: readonly Metric[]): RingSpec[] => {
   if (source === "oura") {
     return [
@@ -412,6 +517,8 @@ type WearablesDashboardProps = {
   readonly whoopSummary: WhoopSummary | null;
   readonly busy: boolean;
   readonly onSync: () => void;
+  /** Linked sources for the data sources card. */
+  readonly linkedSources: readonly DashboardSource[];
 };
 
 export const WearablesDashboard = ({
@@ -424,6 +531,7 @@ export const WearablesDashboard = ({
   whoopSummary,
   busy,
   onSync,
+  linkedSources,
 }: WearablesDashboardProps) => {
   const metrics = useMemo(() => {
     if (!activeSummary) return [];
@@ -441,6 +549,17 @@ export const WearablesDashboard = ({
   );
 
   const timelineCharts = useMemo(() => primaryCharts(source, metrics), [metrics, source]);
+
+  const cards = useMemo(
+    () =>
+      dashboardCards({
+        source,
+        metrics,
+        timelineCharts: timelineCharts.length,
+        linkedSources: linkedSources.length,
+      }),
+    [source, metrics, timelineCharts, linkedSources.length],
+  );
 
   if (view === "compare" && ouraSummary && whoopSummary) {
     return <ComparePanel oura={ouraSummary} whoop={whoopSummary} range={range} />;
@@ -467,50 +586,154 @@ export const WearablesDashboard = ({
     );
   }
 
+  const trends = DASHBOARD_TRENDS[source];
+
+  const renderCard = (card: DashboardCard) => {
+    switch (card.id) {
+      case "summary":
+        return (
+          <BentoCard key={card.id} span={card.span} className="wearables-hero">
+            <div className="@container flex flex-1 flex-col justify-center">
+              <div className="flex flex-col gap-8 @2xl:flex-row @2xl:items-center @2xl:justify-between">
+                <div className="min-w-0">
+                  <p className="text-eyebrow">
+                    {heroEyebrow(source, range.startDate, range.endDate)}
+                  </p>
+                  <h2 className="font-display mt-4 max-w-xl text-3xl leading-[1.15] tracking-tight sm:text-4xl">
+                    {heroHeadline(source, metrics)}
+                  </h2>
+                  <p className="metric metric-value mt-4">
+                    {`${metrics.length} metrics in view · ${activeSummary.metrics.length} in latest sync`}
+                  </p>
+                </div>
+                {rings.length > 0 && (
+                  <div className="grid shrink-0 grid-cols-2 justify-items-center gap-6 @md:grid-cols-4">
+                    {rings.map((ring) => (
+                      <ScoreRing
+                        key={ring.label}
+                        label={ring.label}
+                        value={ring.value}
+                        kind={ring.kind}
+                        max={ring.max}
+                        progress={ring.progress}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </BentoCard>
+        );
+      case "heart": {
+        if (!trends.heart) return null;
+        const trend = trendOf(metrics, trends.heart);
+        return (
+          <BentoCard key={card.id} span={card.span}>
+            <CardHeading
+              eyebrow={trends.heart.label}
+              value={trend.latestText}
+              date={trend.latestDate}
+            />
+            <InteractiveChart
+              fill
+              className="mt-4"
+              series={[
+                {
+                  id: trends.heart.prefix,
+                  label: trends.heart.label,
+                  points: trend.points,
+                  kind: trend.kind,
+                  className: "text-chart-3",
+                },
+              ]}
+            />
+          </BentoCard>
+        );
+      }
+      case "timeline":
+        return (
+          <BentoCard key={card.id} span={card.span}>
+            <p className="text-eyebrow">Timeline chart</p>
+            <h3 className="font-display mt-2 text-xl tracking-tight">
+              Hover for daily values
+            </h3>
+            <div className="mt-4 flex min-h-0 flex-1 flex-col gap-6">
+              {timelineCharts.map((chart) => (
+                <InteractiveChart
+                  fill
+                  key={chart.map((series) => series.id).join("+")}
+                  series={chart}
+                />
+              ))}
+            </div>
+          </BentoCard>
+        );
+      case "sleep":
+      case "hrv":
+      case "steps": {
+        const spec = trends[card.id];
+        if (!spec) return null;
+        return (
+          <FigureCard
+            key={card.id}
+            spec={spec}
+            metrics={metrics}
+            span={card.span}
+            bars={card.id === "sleep"}
+            color={FIGURE_COLOR[card.id]}
+          />
+        );
+      }
+      case "sources":
+        return (
+          <BentoCard key={card.id} span={card.span}>
+            <p className="text-eyebrow">Data sources</p>
+            <ul className="mt-3 flex flex-col">
+              {linkedSources.map((linked) => (
+                <li
+                  key={linked.id}
+                  className="border-border flex items-baseline justify-between gap-3 border-t py-2.5 first:border-t-0"
+                >
+                  <span className="text-sm font-medium">
+                    {linked.name}
+                    {linked.id === source && (
+                      <span className="text-muted-foreground ml-2 text-xs font-normal">
+                        Viewing
+                      </span>
+                    )}
+                  </span>
+                  <span className="text-muted-foreground font-mono text-xs">
+                    {linked.detail}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p className="text-muted-foreground mt-auto pt-3 text-xs">
+              {`Snapshot window ${formatDate(activeSummary.window.startDate)} → ${formatDate(activeSummary.window.endDate)}`}
+            </p>
+          </BentoCard>
+        );
+      case "privacy":
+        return (
+          <BentoCard key={card.id} span={card.span} href="/customize/privacy">
+            <p className="text-eyebrow">Privacy and audit</p>
+            <p className="text-muted-foreground mt-3 text-sm leading-relaxed">
+              Consent to learn from your data, and a ledger of what left this machine. In
+              personal mode each read of these snapshots is audited.
+            </p>
+            <span className="text-foreground mt-auto pt-3 text-sm font-medium underline underline-offset-4">
+              Open Privacy
+            </span>
+          </BentoCard>
+        );
+    }
+  };
+
   return (
     <>
-      <div className="wearables-hero relative overflow-hidden rounded-2xl px-5 py-8 sm:px-8">
-        <p className="text-eyebrow">
-          {heroEyebrow(source, range.startDate, range.endDate)}
-        </p>
-
-        {rings.length > 0 && (
-          <div className="mt-6 flex flex-wrap justify-between gap-6 sm:justify-start sm:gap-10">
-            {rings.map((ring) => (
-              <ScoreRing
-                key={ring.label}
-                label={ring.label}
-                value={ring.value}
-                kind={ring.kind}
-                max={ring.max}
-                progress={ring.progress}
-              />
-            ))}
-          </div>
-        )}
-
-        <h2 className="font-display mt-8 max-w-xl text-3xl leading-[1.15] tracking-tight sm:text-4xl">
-          {heroHeadline(source, metrics)}
-        </h2>
-        <p className="metric metric-value mt-4">
-          {`${metrics.length} metrics in view · ${activeSummary.metrics.length} in latest sync`}
-        </p>
-      </div>
-
-      <section className="surface mt-6 px-5 py-5">
-        <p className="text-eyebrow">Timeline chart</p>
-        <h3 className="font-display mt-2 text-xl tracking-tight">
-          Hover for daily values
-        </h3>
-        <div className="mt-4 flex flex-col gap-6">
-          {timelineCharts.map((chart) => (
-            <InteractiveChart
-              key={chart.map((series) => series.id).join("+")}
-              series={chart}
-            />
-          ))}
-        </div>
-      </section>
+      <BentoGrid label={`${SOURCE_LABEL[source]} dashboard`}>
+        {cards.map(renderCard)}
+      </BentoGrid>
 
       <div className="mt-6 flex flex-col gap-4">
         {sections.map((section) => {

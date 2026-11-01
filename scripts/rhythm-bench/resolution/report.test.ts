@@ -3,7 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { effectsTable, hourTable } from "./report";
 
 describe("effectsTable", () => {
-  test("measured change next to v3's assumption", () => {
+  test("measured change next to generator 3's assumption", () => {
     expect(
       effectsTable(
         [

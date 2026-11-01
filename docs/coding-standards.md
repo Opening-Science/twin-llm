@@ -111,7 +111,10 @@ and mark the fetching one `server-only`, so client code can use the pure half.
   `createWearablesSummaryHandler`). Do not use `mock.module` in new tests: Bun keeps the
   replacement for later test files in the same process, so results start depending on
   file order. `bun run test:isolation` runs the affected folders on their own as a
-  check.
+  check. An existing test that still needs one uses `mockModuleForFile`
+  (`tests/support/mock-module.ts`), which keeps the module's other exports and puts
+  the real module back after the file. Leave shared state (env, files, sessions) as
+  you found it, and check with `bun test --randomize` (#359).
 - `bunfig.toml` already preloads a `server-only` stub; do not add another.
 
 **Data.** Use synthetic or fixture data for development, tests, screenshots and
@@ -166,6 +169,18 @@ Use these from `infrastructure/ui-kit/` before writing classes by hand:
   `warn`, `neutral`, `off`) only adds to it.
 - **`Card`** for a framed block on `.surface`, with `sm`, `md` or `lg` padding.
 - **`Legend`** for the series names of a chart. Only the swatch is coloured.
+- **`BentoGrid`** and **`BentoCard`** for a dashboard of cards. The grid measures its
+  own width: 4 columns from 840px, 2 from 480px, 1 below (`bento-model.ts`). Rows are
+  at least 200px and grow with their content, with a 12px gap and 20px corners. A card's
+  `span` is clamped to the columns and ignored on one column. A card is a link with
+  `href`, a button with `onClick` and a plain block otherwise. A faint `--ring` light
+  follows the pointer inside the hovered card and along nearby card edges, a click on a
+  link or button card sends one ring across the grid, and cards rise in one after
+  another the first time the grid is on screen. The grid has one set of pointer
+  listeners, writes CSS custom properties once per animation frame, never renders React
+  on a pointer move and detaches while off screen. Under reduced motion, also when the
+  setting changes on an open page, there is no movement, no light and no ring. The look
+  lives in `globals.css` under "Bento grid".
 - **`StepTrace`**, **`UndoButton`**, **`HoldToConfirm`**, **`StatusLattice`** and
   **`Rating`**: see "Interaction patterns" below.
 

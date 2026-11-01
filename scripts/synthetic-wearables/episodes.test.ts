@@ -12,7 +12,7 @@ const AROUND_ONSET = { endDay: "2024-09-12", days: 180 } as const;
 const episodeDays = (
   subjectRef: string,
   window: Readonly<{ endDay: string; days: number }>,
-  generatorVersion?: "2" | "3",
+  generatorVersion?: "2" | "3.1",
 ): string[] => {
   const options = { seed: SEED, subjectRef, ...window, generatorVersion };
   const flags = seriesEpisodeFlags(options);

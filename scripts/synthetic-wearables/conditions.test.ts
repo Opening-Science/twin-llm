@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  afDayEffects,
   baselineDay,
   conditionEffects,
   type SubjectCondition,
@@ -156,11 +157,13 @@ describe("conditionEffects", () => {
     expect(episodes.length).toBeGreaterThan(5);
     expect(quiet.length).toBeGreaterThan(episodes.length);
     for (const effects of episodes) {
-      expect(effects.heartRateDelta).toBeGreaterThanOrEqual(10);
-      expect(effects.heartRateDelta).toBeLessThan(20);
-      expect(effects.irregularHrvFactor).toBeCloseTo(1 + 2 * (effects.afBurden ?? 0), 5);
+      expect(effects).toMatchObject(afDayEffects(effects.afBurden ?? 0));
+      expect(effects.restingHrDelta).toBeGreaterThan(0);
+      expect(effects.heartRateDelta).toBeGreaterThan(0);
+      expect(effects.irregularHrvFactor).toBeGreaterThanOrEqual(1);
     }
     for (const effects of quiet) {
+      expect(effects.restingHrDelta).toBe(0);
       expect(effects.heartRateDelta).toBe(0);
       expect(effects.irregularHrvFactor).toBe(1);
     }

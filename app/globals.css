@@ -876,7 +876,8 @@
 
   /* Wearables hero: soft warm atmosphere without leaving the app’s hue family.
      Inspired by Oura’s “today” hierarchy (rings → status → detail), not a clone. */
-  .wearables-hero {
+  .wearables-hero,
+  .bento > .bento-card.wearables-hero {
     background:
       radial-gradient(
         120% 80% at 50% -10%,
@@ -1124,6 +1125,135 @@
 
   .twin-chat-status {
     @apply text-muted-foreground pt-4 text-sm;
+  }
+
+  /* --- Bento grid (infrastructure/ui-kit/bento-grid.tsx) -------------------
+     Columns come from the grid's measured width (bento-model.ts) as
+     `--bento-columns`. The pointer light is one radial gradient in grid
+     coordinates (`--bento-x`, `--bento-y`), shifted into each card by its
+     offset, so the light inside the hovered card and the thin light on
+     nearby card edges are the same spot. Brand blue from `--ring`, kept
+     faint. Every effect is decoration: the cards read the same without it. */
+  .bento {
+    --bento-x: -9999px;
+    --bento-y: -9999px;
+    --bento-tint: color-mix(in oklch, var(--ring) 8%, transparent);
+    --bento-edge: color-mix(in oklch, var(--ring) 55%, transparent);
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(var(--bento-columns, 1), minmax(0, 1fr));
+    grid-auto-rows: minmax(200px, auto);
+    gap: 12px;
+  }
+  .dark .bento {
+    --bento-tint: color-mix(in oklch, var(--ring) 11%, transparent);
+    --bento-edge: color-mix(in oklch, var(--ring) 60%, transparent);
+  }
+  .bento-card {
+    --bento-lx: calc(var(--bento-x) - var(--bento-card-x, 0px));
+    --bento-ly: calc(var(--bento-y) - var(--bento-card-y, 0px));
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: var(--card);
+    padding: 20px;
+    color: inherit;
+    text-align: left;
+    transition: border-color 150ms ease-out;
+  }
+  .bento-card::before,
+  .bento-card::after {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 200ms ease-out;
+  }
+  /* The soft light inside the card under the pointer. */
+  .bento-card::before {
+    background: radial-gradient(
+      280px circle at var(--bento-lx) var(--bento-ly),
+      var(--bento-tint),
+      transparent 70%
+    );
+  }
+  /* The thin light on the border, cut to a 1px ring by the mask. */
+  .bento-card::after {
+    padding: 1px;
+    background: radial-gradient(
+      200px circle at var(--bento-lx) var(--bento-ly),
+      var(--bento-edge),
+      transparent 70%
+    );
+    mask:
+      linear-gradient(#000 0 0) content-box exclude,
+      linear-gradient(#000 0 0);
+  }
+  .bento[data-bento-lit] > .bento-card:hover::before,
+  .bento[data-bento-lit] > .bento-card::after {
+    opacity: 1;
+  }
+  .bento-card[data-bento-action] {
+    cursor: pointer;
+  }
+  .bento-card[data-bento-action]:hover {
+    border-color: color-mix(in oklch, var(--ring) 40%, var(--border));
+  }
+  .bento-card:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  .bento-ripples {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    overflow: hidden;
+    border-radius: 20px;
+    pointer-events: none;
+  }
+  .bento-ring {
+    position: absolute;
+    border: 1.5px solid var(--bento-edge);
+    border-radius: 9999px;
+    box-shadow:
+      0 0 24px var(--bento-tint),
+      inset 0 0 24px var(--bento-tint);
+    opacity: 0;
+    pointer-events: none;
+  }
+  /* First view: cards wait hidden only after script has run, then rise in. */
+  @media (prefers-reduced-motion: no-preference) {
+    .bento[data-bento-reveal="pending"] > .bento-card {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+    .bento[data-bento-reveal="shown"] > .bento-card {
+      transition:
+        opacity 520ms ease-out var(--bento-delay, 0ms),
+        transform 520ms cubic-bezier(0.2, 0.7, 0.2, 1) var(--bento-delay, 0ms),
+        border-color 150ms ease-out;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .bento-card::before,
+    .bento-card::after,
+    .bento-ripples {
+      display: none;
+    }
+  }
+  @media (forced-colors: active) {
+    .bento-card::before,
+    .bento-card::after,
+    .bento-ripples {
+      display: none;
+    }
   }
 }
 

@@ -1,10 +1,12 @@
 /**
  * What a subject's Synthea conditions do to their synthetic wearable days
- * (generator v3).
+ * (generator v3, version string "3.1").
  *
- * Every effect size here is a stated assumption or a direction taken from the
- * literature, listed with its source in docs/training-data.md ("Condition
- * effects"). None is fitted to a device or a person. An effect starts on the
+ * Every effect size here is a stated assumption, a direction taken from the
+ * literature or, for the daily AF effects, read from the AF resolution study
+ * on simulated beats (`af-calibration.ts`, #365); each is listed with its
+ * source in docs/training-data.md ("Condition effects"). None is fitted to a
+ * device or a person. An effect starts on the
  * onset day and, except for stroke, ends the day the condition abates.
  * Hypertension has no wearable effect on purpose: a wrist device does not
  * measure blood pressure.
@@ -18,6 +20,7 @@
  * the day, so any day can be computed alone and nothing touches the v2 random
  * streams.
  */
+import { afDailyEffectAt } from "./af-calibration";
 import { hash32, mulberry32 } from "./random";
 
 export const SNOMED_SYSTEM = "http://snomed.info/sct";
@@ -131,6 +134,24 @@ const afBurdenOn = (key: string, onset: string, day: string): number => {
   return covering.some(Boolean) ? round(0.2 + 0.7 * draw(key, "af-burden", day), 2) : 0;
 };
 
+/**
+ * The daily heart rate, resting heart rate and RMSSD effects of a day with
+ * this AF burden, as the resolution study measured them from simulated beats
+ * (`af-calibration.ts`). The study's daily heart rate change already holds the
+ * resting change, so `heartRateDelta` is the rest. The RMSSD factor is kept at
+ * 1 or above: an irregular rhythm never lowers it.
+ */
+export const afDayEffects = (
+  burden: number,
+): Pick<DayEffects, "restingHrDelta" | "heartRateDelta" | "irregularHrvFactor"> => {
+  const effect = afDailyEffectAt(burden);
+  return {
+    restingHrDelta: effect.restingHeartRateChange,
+    heartRateDelta: effect.heartRateChange - effect.restingHeartRateChange,
+    irregularHrvFactor: Math.max(1, effect.hrvRmssdRatio),
+  };
+};
+
 const afEffects = (key: string, onset: string, day: string): Partial<DayEffects> => {
   const burden = afBurdenOn(key, onset, day);
   // A day outside an episode keeps the baseline (burden 0, rare false positives).
@@ -139,8 +160,7 @@ const afEffects = (key: string, onset: string, day: string): Partial<DayEffects>
     afBurden: burden,
     // Short or low-burden episodes often go without a notification.
     irregularRhythmNotifications: burden >= 0.7 ? 2 : burden >= 0.35 ? 1 : 0,
-    heartRateDelta: 10 + 10 * draw(key, "af-hr", day),
-    irregularHrvFactor: 1 + 2 * burden,
+    ...afDayEffects(burden),
   };
 };
 
