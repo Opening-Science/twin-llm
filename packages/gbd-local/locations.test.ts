@@ -34,10 +34,16 @@ describe("GBD location map", () => {
       iso3: "GBR",
       iso3166_2: "GB-ENG",
     });
-    // A Kenyan county: no ISO 3166-2 code is written without a check.
+    // A Kenyan county, checked against ISO 3166-2:KE (#397).
     expect(isoMapping(35619)).toEqual({
       status: "subnational",
       iso3: "KEN",
+      iso3166_2: "KE-03",
+    });
+    // An English local authority is no ISO subdivision here: no code is guessed.
+    expect(isoMapping(44701)).toEqual({
+      status: "subnational",
+      iso3: "GBR",
       iso3166_2: null,
     });
     expect(isoMapping(1)).toEqual({ status: "aggregate" });

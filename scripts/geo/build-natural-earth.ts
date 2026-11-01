@@ -9,7 +9,9 @@
  * public/geo/natural-earth/admin1/<ISO3>.json (states and provinces, 1:10m,
  * one file per country GBD estimates subnationally) and
  * infrastructure/charts/choropleth/location-index.json (codes and names only, for
- * matching estimate locations on the server).
+ * matching estimate locations on the server). States follow the reviewed
+ * rules in gbd-boundaries.ts (#397): some are joined into GBD's units, some
+ * recoded to current ISO 3166-2 codes. The README next to the files is kept.
  */
 import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
@@ -22,6 +24,10 @@ import {
   GBD_SUBNATIONAL,
   splitAltNames,
 } from "./boundary-rules";
+import { GBD_LOCATION_TABLE } from "../../packages/gbd-local/location-table";
+
+import { applyCountryRules, reserveGbdNames, type StateUnit } from "./apply-rules";
+import { GBD_BOUNDARY_RULES } from "./gbd-boundaries";
 import { mergeByCode } from "./merge-units";
 import { readShapes, readTable, type DbfValue } from "./shapefile";
 import { nestRings, simplifyFeature, type SimplifyOptions } from "./simplify";
@@ -77,7 +83,8 @@ const main = async () => {
   });
   const countries = mergeByCode(units);
 
-  await rm(OUT, { recursive: true, force: true });
+  await rm(join(OUT, "admin0.json"), { force: true });
+  await rm(join(OUT, "admin1"), { recursive: true, force: true });
   await mkdir(join(OUT, "admin1"), { recursive: true });
   await writeFile(
     join(OUT, "admin0.json"),
@@ -91,7 +98,7 @@ const main = async () => {
     }),
   );
 
-  const states = admin1.rows.flatMap((row, index) => {
+  const source = admin1.rows.flatMap((row, index): StateUnit[] => {
     const country = text(row.adm0_a3);
     const code = text(row.iso_3166_2);
     if (country === null || code === null || !GBD_SUBNATIONAL.includes(country))
@@ -108,9 +115,21 @@ const main = async () => {
           text(row.woe_name),
           ...splitAltNames(text(row.name_alt)),
         ]),
-        rings: admin1.shapes[index],
+        rings: admin1.shapes[index] ?? [],
+        fields: row,
       },
     ];
+  });
+  const states = GBD_SUBNATIONAL.flatMap((country) => {
+    const rules = GBD_BOUNDARY_RULES[country] ?? {};
+    const gbdUnits = GBD_LOCATION_TABLE.flatMap(([, , level, name, iso3, iso3166_2]) =>
+      level >= 4 && iso3 === country ? [{ name, iso3166_2 }] : [],
+    );
+    return reserveGbdNames(
+      applyCountryRules(country, rules, source),
+      gbdUnits,
+      rules.aliases,
+    );
   });
 
   await Promise.all(
