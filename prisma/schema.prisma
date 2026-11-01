@@ -864,6 +864,18 @@ model DisclosureEvent {
   @@map("disclosure_events")
 }
 
+/// Which database this is, for the signed anchors (#382): one row with a
+/// random id, written the first time an anchor is written for this database.
+/// The anchors file records a hash of it and refuses anchors of any other
+/// database. Not secret; a restored dump keeps it, with the chains it anchors.
+model AnchorIdentity {
+  id         Int      @id @default(1)
+  databaseId String   @map("database_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("anchor_identity")
+}
+
 /// A skill a person made on Customize (#174). The same fields as a SKILL.md
 /// frontmatter plus its instructions, checked by the same schema on save and
 /// again before it runs. Only its owner sees or runs it.

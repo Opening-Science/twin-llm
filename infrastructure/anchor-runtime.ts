@@ -1,7 +1,12 @@
 import "server-only";
 
 import { type AnchorVerdict, anchorVerdict, type LogRead } from "@/packages/audit/anchor";
-import { chainReaders, factsAt } from "@/packages/audit/anchor-chains";
+import {
+  chainReaders,
+  databaseIdentity,
+  factsAt,
+  readDatabase,
+} from "@/packages/audit/anchor-chains";
 import {
   type AnchorPaths,
   anchorPaths,
@@ -36,6 +41,7 @@ export const startAnchorWriter = (): void => {
   const env = anchorEnv();
   const writer = createAnchorWriter({
     readers: chainReaders(database()),
+    identity: databaseIdentity(database()),
     paths: anchorPaths(env.stateDir),
     intervalMs: env.intervalMs,
     now: () => new Date(),
@@ -81,6 +87,7 @@ export const anchorViewFor = async (
     key,
     log,
     facts: await factsAt(chainReaders(database())[chain], anchor),
+    database: await readDatabase(databaseIdentity(database())),
   });
   return { verdict, publicKey: loaded.kind === "found" ? loaded.publicKey : null };
 };

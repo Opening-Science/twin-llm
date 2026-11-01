@@ -3,7 +3,10 @@
  * from `.env.synthetic.example` only when there is none; it never edits one
  * that exists.
  */
-import { parseDatabaseConnection } from "../../infrastructure/storage-hardening";
+import {
+  parseDatabaseConnection,
+  syntheticStateDir,
+} from "../../infrastructure/storage-hardening";
 import type { Platform } from "./prerequisites";
 
 /** `KEY=value` lines of a dotenv file; comments and blank lines are skipped. */
@@ -46,12 +49,37 @@ export const defaultDatabaseUrl = (
   return EXAMPLE_DATABASE_URL;
 };
 
-/** The example file with its `DATABASE_URL` line replaced. */
-export const envFileFromExample = (example: string, databaseUrl: string): string =>
+/**
+ * The `TWINLLM_STATE_DIR` a new `.env.local` gets (#382): the shell's when it
+ * is an absolute path, else the synthetic folder next to the default one, so
+ * a synthetic install never writes keys or anchors into a personal folder.
+ */
+export const defaultStateDirSetting = (
+  platform: Platform,
+  shellValue: string | undefined,
+  home: string,
+  xdgDataHome: string | undefined,
+): string => {
+  const shell = shellValue?.trim();
+  return shell !== undefined && shell.startsWith("/")
+    ? shell
+    : syntheticStateDir({ platform, home, xdgDataHome });
+};
+
+/** The example file with its `DATABASE_URL` (and, when given, `TWINLLM_STATE_DIR`) line replaced. */
+export const envFileFromExample = (
+  example: string,
+  databaseUrl: string,
+  stateDir?: string,
+): string =>
   example
     .split("\n")
     .map((line) =>
-      line.startsWith("DATABASE_URL=") ? `DATABASE_URL=${databaseUrl}` : line,
+      line.startsWith("DATABASE_URL=")
+        ? `DATABASE_URL=${databaseUrl}`
+        : stateDir !== undefined && line.startsWith("TWINLLM_STATE_DIR=")
+          ? `TWINLLM_STATE_DIR=${stateDir}`
+          : line,
     )
     .join("\n");
 

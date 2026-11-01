@@ -806,6 +806,28 @@ touches nothing else.
   new key and writes a rotation line signed by the new key only. The check starts over at
   that line, and the Lab shows it as a break in continuity (Unknown, never OK) for as long
   as the line is in the file.
+- **One database per anchors file** (#382, added 2026-11-01). A synthetic install that
+  shared the default state folder once wrote its anchors into the file a personal install
+  then used, and the personal check failed. Now the first anchor written for a database
+  stores a random id in that database (table `anchor_identity`, one row) and writes a
+  `kind: "database"` line before it, signed like the others, holding
+  `databaseId = SHA-256("twinllm-anchor-database\n" + id)`. It is not secret; it only tells
+  two databases apart, and a restored dump keeps it together with the chains it anchors.
+  The writer, `anchor:write` and `writeAnchors` refuse to append anchors for another
+  database to a file that names one: nothing is written, the server logs
+  `[anchor] ANCHOR_DATABASE_MISMATCH: ...` once with both short ids, `anchor:write`
+  prints the same and exits 1, and `writeAnchors` throws `AnchorDatabaseMismatch` (code
+  `ANCHOR_DATABASE_MISMATCH`). `verify-cli --check` and the Lab cards show Not OK, "anchors
+  file is for another database", with both ids; a database whose identity cannot be read
+  is Unknown. A second `database` line naming another database fails the file
+  (`database-changed`). Files written before #382 have no `database` line: they verify as
+  before and take the database's line on their next write, unless a chain does not match
+  the file (then it may be another database's file, and nothing is written; the log says
+  so once). `.env.synthetic.example` sets its own `TWINLLM_STATE_DIR`, and `setup:local`
+  writes `~/.local/share/twin-llm-synthetic` (macOS `TwinLLM-synthetic`), as an absolute
+  path, into a new `.env.local`. `TWINLLM_STATE_DIR` must be absolute: `.env` files do not
+  expand `~`, so the app refuses a relative value at startup, and `anchor:*` and
+  `verify-cli` refuse it too.
 
 **Failure behaviour.** No key: the card says anchors are off and how to create one
 (Unknown, not OK). An anchors file or key that cannot be read: Unknown. No anchor yet for
@@ -816,8 +838,11 @@ missing anchored row, a removed middle line, a changed line, a bad signature, an
 key, a second key line, rotation with and without the old key, an empty chain, the
 verdicts and their sentences. `anchor-store.test.ts`: modes `0600` and `0700`, linking
 across writes, init refused without the key, a damaged line stops the writer, both
-rotations. `infrastructure/anchor-writer.test.ts`: the interval, the shutdown flush, and
-no anchor over a truncated or rebuilt chain. The CLI flags and the Lab evidence have
+rotations, another database refused with the file untouched, a file from before #382
+taking the database on its next write. `infrastructure/anchor-writer.test.ts`: the
+interval, the shutdown flush, no anchor over a truncated or rebuilt chain, and the coded
+refusal of a second database. `scripts/setup/synthetic-state.test.ts`: the template does
+not resolve to or inside the default state folder. The CLI flags and the Lab evidence have
 their own tests. Run by hand on a throwaway owner cluster: anchors written, the audit
 table truncated, and both `verify-cli --check` and the Lab card reported it
 ([runbook.md](runbook.md#signed-anchors)).

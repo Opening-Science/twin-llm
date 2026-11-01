@@ -28,6 +28,11 @@ import { CHAINS, type ChainName } from "./chain";
  * - `rotation`: a new key, signed by the old one; or, when the old key is
  *   lost or exposed, signed by the new one only (`withoutOldKey`), which is
  *   a break in continuity and never counts as OK.
+ * - `database`: which database the file anchors (#382), written once before
+ *   the first anchor: a hash of a random id kept in that database. A file
+ *   that names one database never takes anchors of another. Files written
+ *   before #382 have no such line; they still verify, and take the line of
+ *   the database they are next written for.
  *
  * Pure: keys come in as objects or text, the clock and the files come in as
  * data. `anchor-store.ts` reads and writes the files.
@@ -62,6 +67,13 @@ const recordSchema = z.discriminatedUnion("kind", [
     .strict(),
   z
     .object({
+      kind: z.literal("database"),
+      ...common,
+      databaseId: hex64,
+    })
+    .strict(),
+  z
+    .object({
       kind: z.literal("rotation"),
       ...common,
       newKeyId: hex64,
@@ -75,6 +87,7 @@ export type AnchorLine = Readonly<z.infer<typeof recordSchema>>;
 export type AnchorRecord = Extract<AnchorLine, { kind: "anchor" }>;
 export type KeyRecord = Extract<AnchorLine, { kind: "key" }>;
 export type RotationRecord = Extract<AnchorLine, { kind: "rotation" }>;
+export type DatabaseRecord = Extract<AnchorLine, { kind: "database" }>;
 
 type Unsigned<T> = Omit<T, "sig">;
 
@@ -92,6 +105,22 @@ export const keyIdOf = (publicKey: string): string =>
 
 /** Public keys this machine trusts, by key id: the current one and retired ones. */
 export type KnownKeys = ReadonlyMap<string, string>;
+
+// ---------------------------------------------------------------------------
+// Database identity (#382)
+// ---------------------------------------------------------------------------
+
+/**
+ * The database's identity as the anchors file records it: SHA-256 of the
+ * random id kept in that database's `anchor_identity` row, in hex. Not
+ * secret; it only tells two databases apart.
+ */
+export const databaseIdOf = (rawId: string): string =>
+  sha256Hex(`twinllm-anchor-database\n${rawId}`);
+
+/** The first 12 characters, enough to tell two databases apart in a sentence. */
+export const shortDatabaseId = (id: string | null): string =>
+  id === null ? "none yet" : id.slice(0, 12);
 
 // ---------------------------------------------------------------------------
 // Records
@@ -178,6 +207,17 @@ export const anchorBody = (
   headTs: input.head.ts,
 });
 
+export const databaseBody = (
+  input: Readonly<{ databaseId: string; at: string; keyId: string; prev: string }>,
+): Unsigned<DatabaseRecord> => ({
+  v: ANCHOR_VERSION,
+  kind: "database",
+  at: input.at,
+  keyId: input.keyId,
+  prev: input.prev,
+  databaseId: input.databaseId,
+});
+
 /**
  * A new key. Signed by the old key (`keyId` is the old key's id), or, with
  * `withoutOldKey`, by the new key itself (`keyId` is the new key's id).
@@ -220,6 +260,8 @@ export type AnchorLogState = Readonly<{
   latest: Readonly<Partial<Record<ChainName, AnchorRecord>>>;
   /** Line numbers (from 1) of rotations made without the old key. */
   breaks: readonly number[];
+  /** The database the file anchors; null in a file written before #382. */
+  databaseId: string | null;
 }>;
 
 export const ANCHOR_LOG_START: AnchorLogState = {
@@ -229,6 +271,7 @@ export const ANCHOR_LOG_START: AnchorLogState = {
   keyIds: [],
   latest: {},
   breaks: [],
+  databaseId: null,
 };
 
 export const LOG_PROBLEMS = [
@@ -238,6 +281,7 @@ export const LOG_PROBLEMS = [
   "unknown-key",
   "no-key-line",
   "second-key-line",
+  "database-changed",
 ] as const;
 
 export type LogProblemReason = (typeof LOG_PROBLEMS)[number];
@@ -286,6 +330,15 @@ export const stepAnchorLog = (
       if (line.keyId !== state.key.keyId) return fail(at, "unknown-key");
       if (!signatureHolds(line, state.key.publicKey)) return fail(at, "bad-signature");
       return advance({ latest: { ...state.latest, [line.chain]: line } });
+    }
+    case "database": {
+      if (state.key === null) return fail(at, "no-key-line");
+      if (line.keyId !== state.key.keyId) return fail(at, "unknown-key");
+      if (!signatureHolds(line, state.key.publicKey)) return fail(at, "bad-signature");
+      if (state.databaseId !== null && state.databaseId !== line.databaseId) {
+        return fail(at, "database-changed");
+      }
+      return advance({ databaseId: line.databaseId });
     }
     case "rotation": {
       const next = { keyId: line.newKeyId, publicKey: line.newPublicKey };
@@ -361,20 +414,18 @@ export const checkAnchorLog = (
  * signatures: enough for the writer to decide and to link the next line.
  * Null when a line does not parse, so nothing is appended to a damaged file.
  */
-export const scanAnchorLog = (
-  lines: readonly string[],
-): Readonly<{
+export type AnchorLogScan = Readonly<{
   prev: string;
   latest: Partial<Record<ChainName, AnchorRecord>>;
   keyId: string | null;
-}> | null => {
+  /** The database the file anchors (its first `database` line); null before #382. */
+  databaseId: string | null;
+}>;
+
+export const scanAnchorLog = (lines: readonly string[]): AnchorLogScan | null => {
   const parsed = lines.map(parseLine);
   if (parsed.some((line) => line === null)) return null;
-  return (parsed as AnchorLine[]).reduce<{
-    prev: string;
-    latest: Partial<Record<ChainName, AnchorRecord>>;
-    keyId: string | null;
-  }>(
+  return (parsed as AnchorLine[]).reduce<AnchorLogScan>(
     (scan, line) => ({
       prev: lineHash(line),
       latest:
@@ -385,8 +436,12 @@ export const scanAnchorLog = (
           : line.kind === "rotation"
             ? line.newKeyId
             : scan.keyId,
+      databaseId:
+        line.kind === "database" && scan.databaseId === null
+          ? line.databaseId
+          : scan.databaseId,
     }),
-    { prev: GENESIS_PREV_HASH, latest: {}, keyId: null },
+    { prev: GENESIS_PREV_HASH, latest: {}, keyId: null, databaseId: null },
   );
 };
 
@@ -436,6 +491,50 @@ export const planAnchor = (
   return facts.head !== null && facts.head.seq === latest.seq ? "unchanged" : "write";
 };
 
+/**
+ * Whether anchors of this database may go into this file (#382). `mismatch`:
+ * the file names another database (or this one has no identity yet, so it
+ * cannot be the one named). `hold`: the file names no database yet (written
+ * before #382) and a chain does not match it, so it may belong to another
+ * database and is not tied to this one. `go` otherwise; a file that names
+ * no database then takes this one's on the next write.
+ */
+export type DatabaseGate =
+  | Readonly<{ kind: "go" }>
+  | Readonly<{ kind: "hold" }>
+  | Readonly<{ kind: "mismatch"; logDatabaseId: string; databaseId: string | null }>;
+
+export const databaseGate = (
+  input: Readonly<{
+    logDatabaseId: string | null;
+    databaseId: string | null;
+    plans: readonly AnchorPlan[];
+  }>,
+): DatabaseGate => {
+  const { logDatabaseId, databaseId } = input;
+  if (logDatabaseId !== null) {
+    return logDatabaseId === databaseId
+      ? { kind: "go" }
+      : { kind: "mismatch", logDatabaseId, databaseId };
+  }
+  const refused = input.plans.some(
+    (plan) => plan === "truncated" || plan === "removed" || plan === "rewritten",
+  );
+  return refused ? { kind: "hold" } : { kind: "go" };
+};
+
+/** The coded log line and command-line message for a refused database (#382). */
+export const ANCHOR_DATABASE_MISMATCH = "ANCHOR_DATABASE_MISMATCH";
+
+export const databaseMismatchMessage = (
+  input: Readonly<{ logDatabaseId: string; databaseId: string | null }>,
+): string =>
+  `${ANCHOR_DATABASE_MISMATCH}: the anchors file belongs to database ${shortDatabaseId(
+    input.logDatabaseId,
+  )}, but this database is ${shortDatabaseId(
+    input.databaseId,
+  )}; no anchors are written. Give each database its own TWINLLM_STATE_DIR (docs/runbook.md, "Signed anchors").`;
+
 // ---------------------------------------------------------------------------
 // Verdict
 // ---------------------------------------------------------------------------
@@ -450,6 +549,12 @@ export type LogRead =
   | Readonly<{ kind: "unreadable" }>
   | Readonly<{ kind: "found"; check: AnchorLogCheck }>;
 
+/** The database's identity as read for the check: its id, none yet, or unreadable. */
+export type DatabaseRead =
+  | Readonly<{ kind: "found"; databaseId: string }>
+  | Readonly<{ kind: "none" }>
+  | Readonly<{ kind: "unreadable" }>;
+
 export type AnchorVerdict =
   | Readonly<{ status: "ok"; anchor: AnchorRecord; keyId: string }>
   | Readonly<{
@@ -458,10 +563,13 @@ export type AnchorVerdict =
         | LogProblemReason
         | "log-missing"
         | "key-mismatch"
+        | "database-mismatch"
         | Exclude<AnchorMatch, "matches">;
       anchor: AnchorRecord | null;
       line: number | null;
       keyId: string | null;
+      /** Both identities, on `database-mismatch` only. */
+      databases?: Readonly<{ log: string; current: string | null }>;
     }>
   | Readonly<{
       status: "unknown";
@@ -471,6 +579,7 @@ export type AnchorVerdict =
         | "log-unreadable"
         | "no-anchor"
         | "chain-unreadable"
+        | "database-unreadable"
         | "continuity-break";
       anchor: AnchorRecord | null;
       line: number | null;
@@ -483,6 +592,8 @@ export type VerdictInput = Readonly<{
   log: LogRead;
   /** The chain at the latest anchor's `seq` (head only when there is none); null when unreadable. */
   facts: ChainAtAnchor | null;
+  /** This database's identity (#382), compared with the one the file names. */
+  database: DatabaseRead;
 }>;
 
 /**
@@ -512,6 +623,23 @@ export const anchorVerdict = (input: VerdictInput): AnchorVerdict => {
   const anchor = check.state.latest[input.chain] ?? null;
   if (!check.ok) return notOk(check.problem.reason, anchor, check.problem.line);
   if (check.state.key?.keyId !== key.keyId) return notOk("key-mismatch", anchor);
+  const logDatabaseId = check.state.databaseId;
+  if (logDatabaseId !== null) {
+    // A file written before #382 names no database and is checked as before.
+    if (input.database.kind === "unreadable")
+      return unknown("database-unreadable", anchor);
+    const current = input.database.kind === "found" ? input.database.databaseId : null;
+    if (current !== logDatabaseId) {
+      return {
+        status: "not-ok",
+        reason: "database-mismatch",
+        anchor,
+        line: null,
+        keyId,
+        databases: { log: logDatabaseId, current },
+      };
+    }
+  }
   if (facts === null) return unknown("chain-unreadable", anchor);
   if (anchor === null) return unknown("no-anchor");
   const match = compareWithAnchor(anchor, facts);
@@ -536,6 +664,7 @@ const LOG_PROBLEM_TEXT: Readonly<Record<LogProblemReason, string>> = {
   "unknown-key": "is signed with a key this machine does not know",
   "no-key-line": "comes before the line that names the first key",
   "second-key-line": "names a first key again",
+  "database-changed": "names a different database from the line that first named one",
 };
 
 /** One plain sentence for the Lab card and the command line. */
@@ -560,6 +689,14 @@ export const anchorSentence = (
       return "The anchor key on disk is not the key the anchors file ends with.";
     case "chain-unreadable":
       return `The ${chain.name} could not be read to compare with its anchor.`;
+    case "database-unreadable":
+      return "This database's identity could not be read to compare with the anchors file.";
+    case "database-mismatch":
+      return `The anchors file belongs to another database (${shortDatabaseId(
+        verdict.databases?.log ?? null,
+      )}), not this one (${shortDatabaseId(
+        verdict.databases?.current ?? null,
+      )}), so its anchors say nothing about this ${chain.name}. Give each database its own TWINLLM_STATE_DIR.`;
     case "no-anchor":
       return `The ${chain.name} has no signed anchor yet. One is written while the server runs, or now with \`${chain.command}\`.`;
     case "truncated":

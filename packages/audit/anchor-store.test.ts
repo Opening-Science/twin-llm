@@ -3,8 +3,19 @@ import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { checkAnchorLog, splitLines } from "./anchor";
 import {
+  anchorBody,
+  checkAnchorLog,
+  databaseIdOf,
+  lineHash,
+  parseLine,
+  serializeLine,
+  signLine,
+  splitLines,
+} from "./anchor";
+import {
+  AnchorDatabaseMismatch,
+  anchoredDatabase,
   anchorPaths,
   initAnchorKey,
   latestAnchors,
@@ -22,6 +33,9 @@ const head = (seq: number) => ({
   hash: sha256Hex(`row ${seq}`),
   ts: NOW.toISOString(),
 });
+
+const DB_A = databaseIdOf("database-a");
+const DB_B = databaseIdOf("database-b");
 
 const mode = (path: string): number => statSync(path).mode & 0o777;
 
@@ -57,7 +71,7 @@ describe("anchor store (#300)", () => {
   test("anchors append, link and verify; the writer's view sees the newest", () => {
     const paths = anchorPaths(stateDir);
     initAnchorKey(paths, NOW);
-    writeAnchors(paths, [{ chain: "audit", head: head(3) }], NOW);
+    writeAnchors(paths, [{ chain: "audit", head: head(3) }], NOW, DB_A);
     writeAnchors(
       paths,
       [
@@ -65,8 +79,10 @@ describe("anchor store (#300)", () => {
         { chain: "disclosures", head: head(1) },
       ],
       NOW,
+      DB_A,
     );
-    expect(splitLines(readFileSync(paths.log, "utf8"))).toHaveLength(4);
+    // The key line, the line naming the database, three anchors.
+    expect(splitLines(readFileSync(paths.log, "utf8"))).toHaveLength(5);
     const log = readAnchorLog(paths);
     expect(log.kind === "found" && log.check.ok).toBe(true);
     expect(latestAnchors(paths).audit?.seq).toBe(5);
@@ -78,27 +94,27 @@ describe("anchor store (#300)", () => {
     initAnchorKey(paths, NOW);
     rmSync(paths.privateKey);
     expect(initAnchorKey(paths, NOW).kind).toBe("refused");
-    expect(() => writeAnchors(paths, [{ chain: "audit", head: head(1) }], NOW)).toThrow(
-      "no usable anchor key",
-    );
+    expect(() =>
+      writeAnchors(paths, [{ chain: "audit", head: head(1) }], NOW, DB_A),
+    ).toThrow("no usable anchor key");
   });
 
   test("a damaged line stops the writer", () => {
     const paths = anchorPaths(stateDir);
     initAnchorKey(paths, NOW);
     writeFileSync(paths.log, "damaged\n", { flag: "a" });
-    expect(() => writeAnchors(paths, [{ chain: "audit", head: head(1) }], NOW)).toThrow(
-      "a line of the anchors file is damaged",
-    );
+    expect(() =>
+      writeAnchors(paths, [{ chain: "audit", head: head(1) }], NOW, DB_A),
+    ).toThrow("a line of the anchors file is damaged");
   });
 
   test("rotation: the old key signs over, old anchors still verify with the retired key", () => {
     const paths = anchorPaths(stateDir);
     const first = initAnchorKey(paths, NOW);
-    writeAnchors(paths, [{ chain: "audit", head: head(3) }], NOW);
+    writeAnchors(paths, [{ chain: "audit", head: head(3) }], NOW, DB_A);
     const rotated = rotateAnchorKey(paths, NOW, { withoutOldKey: false });
     expect(rotated.kind).toBe("rotated");
-    writeAnchors(paths, [{ chain: "audit", head: head(4) }], NOW);
+    writeAnchors(paths, [{ chain: "audit", head: head(4) }], NOW, DB_A);
 
     const known = readKnownKeys(paths);
     expect(known.size).toBe(2);
@@ -115,14 +131,75 @@ describe("anchor store (#300)", () => {
   test("rotation without the old key leaves a break the check reports", () => {
     const paths = anchorPaths(stateDir);
     initAnchorKey(paths, NOW);
-    writeAnchors(paths, [{ chain: "audit", head: head(3) }], NOW);
+    writeAnchors(paths, [{ chain: "audit", head: head(3) }], NOW, DB_A);
     rmSync(paths.privateKey);
     expect(rotateAnchorKey(paths, NOW, { withoutOldKey: false }).kind).toBe("refused");
     const rotated = rotateAnchorKey(paths, NOW, { withoutOldKey: true });
     expect(rotated.kind).toBe("rotated");
-    writeAnchors(paths, [{ chain: "audit", head: head(4) }], NOW);
+    writeAnchors(paths, [{ chain: "audit", head: head(4) }], NOW, DB_A);
     const log = readAnchorLog(paths);
     expect(log.kind === "found" && log.check.ok).toBe(true);
-    expect(log.kind === "found" ? log.check.state.breaks : null).toEqual([3]);
+    expect(log.kind === "found" ? log.check.state.breaks : null).toEqual([4]);
+  });
+
+  test("the first write names the database; another database is refused, the file untouched (#382)", () => {
+    const paths = anchorPaths(stateDir);
+    initAnchorKey(paths, NOW);
+    expect(anchoredDatabase(paths)).toBe(null);
+    writeAnchors(paths, [{ chain: "audit", head: head(3) }], NOW, DB_A);
+    expect(anchoredDatabase(paths)).toBe(DB_A);
+    const before = readFileSync(paths.log, "utf8");
+
+    const attempt = () =>
+      writeAnchors(paths, [{ chain: "audit", head: head(1) }], NOW, DB_B);
+    expect(attempt).toThrow(AnchorDatabaseMismatch);
+    try {
+      attempt();
+    } catch (error) {
+      expect(error instanceof AnchorDatabaseMismatch ? error.code : null).toBe(
+        "ANCHOR_DATABASE_MISMATCH",
+      );
+      expect(error instanceof Error ? error.message : "").toContain(DB_A.slice(0, 12));
+    }
+    expect(readFileSync(paths.log, "utf8")).toBe(before);
+
+    writeAnchors(paths, [{ chain: "audit", head: head(4) }], NOW, DB_A);
+    const log = readAnchorLog(paths);
+    expect(log.kind === "found" && log.check.ok).toBe(true);
+    expect(latestAnchors(paths).audit?.seq).toBe(4);
+  });
+
+  test("a file from before #382 keeps verifying and takes the database on its next write", () => {
+    const paths = anchorPaths(stateDir);
+    initAnchorKey(paths, NOW);
+    const key = readAnchorKey(paths);
+    if (key.kind !== "found") throw new Error("no key");
+    // An anchor written the way #300 wrote it: no line naming a database.
+    const [first] = splitLines(readFileSync(paths.log, "utf8"));
+    const parsed = first === undefined ? null : parseLine(first);
+    if (parsed === null) throw new Error("no key line");
+    const legacy = signLine(
+      anchorBody({
+        chain: "audit",
+        head: head(3),
+        at: NOW.toISOString(),
+        keyId: key.keyId,
+        prev: lineHash(parsed),
+      }),
+      key.privateKey,
+    );
+    writeFileSync(paths.log, serializeLine(legacy), { flag: "a" });
+    const old = readAnchorLog(paths);
+    expect(old.kind === "found" && old.check.ok).toBe(true);
+    expect(anchoredDatabase(paths)).toBe(null);
+
+    writeAnchors(paths, [{ chain: "audit", head: head(4) }], NOW, DB_B);
+    expect(anchoredDatabase(paths)).toBe(DB_B);
+    const log = readAnchorLog(paths);
+    expect(log.kind === "found" && log.check.ok).toBe(true);
+    expect(log.kind === "found" ? log.check.state.databaseId : null).toBe(DB_B);
+    expect(() =>
+      writeAnchors(paths, [{ chain: "audit", head: head(5) }], NOW, DB_A),
+    ).toThrow(AnchorDatabaseMismatch);
   });
 });

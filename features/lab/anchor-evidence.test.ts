@@ -110,4 +110,32 @@ describe("anchor evidence on the chain cards (#300)", () => {
       value: "could not be read",
     });
   });
+
+  test("another database's anchors file is Not OK and names both databases (#382)", () => {
+    const verdict: AnchorVerdict = {
+      status: "not-ok",
+      reason: "database-mismatch",
+      anchor: ANCHOR,
+      line: null,
+      keyId: KEY_ID,
+      databases: { log: "a".repeat(64), current: null },
+    };
+    const card = withAnchor(CHAIN_OK, { verdict, publicKey: PUBLIC }, "audit");
+    expect(card.status).toBe("not-ok");
+    expect(card.summary).toContain("belongs to another database");
+    expect(card.evidence).toContainEqual({
+      label: "Anchor check",
+      value: "anchors file is for another database",
+    });
+    expect(card.evidence).toContainEqual({
+      label: "Anchors file database",
+      value: "a".repeat(12),
+      mono: true,
+    });
+    expect(card.evidence).toContainEqual({
+      label: "This database",
+      value: "none yet",
+      mono: false,
+    });
+  });
 });
