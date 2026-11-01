@@ -33,6 +33,14 @@ describe("ThreadBarView", () => {
     expect(html).toContain("sle…</p>");
   });
 
+  test("narrow screens get one actions menu instead of the row (#378)", () => {
+    const html = render("/t/f3a9c1", "Sleep and HRV");
+    expect(html).toContain('<div class="hidden shrink-0 items-center gap-3 md:flex">');
+    expect(html).toContain('<div class="shrink-0 md:hidden">');
+    expect(html).toContain('aria-label="Thread actions"');
+    expect(html).toContain('aria-haspopup="dialog" aria-expanded="false"');
+  });
+
   test("a thread with no title reads Thread", () => {
     expect(render("/t/f3a9c1")).toContain(">Thread</p>");
   });
