@@ -142,7 +142,10 @@ describe("generateSeries with conditions (v3)", () => {
   const AF: readonly SubjectCondition[] = [
     { kind: "atrial_fibrillation", onset: ONSET, abatement: null },
   ];
-  const fifty = (generatorVersion: "2" | "3", conditions?: readonly SubjectCondition[]) =>
+  const fifty = (
+    generatorVersion: "2" | "3.1",
+    conditions?: readonly SubjectCondition[],
+  ) =>
     Array.from({ length: 50 }, (_, index) => {
       const options = {
         ...OPTIONS,
@@ -159,6 +162,23 @@ describe("generateSeries with conditions (v3)", () => {
   test("version 2 gives exactly the v2 series, conditions or not", () => {
     expect(sha256(fifty("2"))).toBe(V2_SHA256);
     expect(sha256(fifty("2", AF))).toBe(V2_SHA256);
+  });
+
+  test("3.1 moved only the AF days: other v3 series are the v3 ones exactly (#365)", () => {
+    // sha256 of 50 subjects' series and workouts, taken from generator 3
+    // before the AF calibration.
+    const v3None = "b62cbec543da77bfa7e8372143bba70b85aa95f64daa2aa0e6b1facc0f4cb1b4";
+    const v3NoAf = "6362b59ab6e5a4b77fcf9887834f5cd6772175d5851e4d44c706d30ea38416e3";
+    const noAf: SubjectCondition[] = (
+      ["heart_failure", "stroke", "sleep_apnea"] as const
+    ).map((kind) => ({ kind, onset: ONSET, abatement: null }));
+    expect(sha256(fifty("3.1"))).toBe(v3None);
+    expect(sha256(fifty("3.1", noAf))).toBe(v3NoAf);
+    // Generator 3 gave 23fde7bd...; 3.1 changes heart rate, resting heart rate
+    // and RMSSD on the AF days (docs/training-data.md, "Condition effects").
+    expect(sha256(fifty("3.1", AF))).toBe(
+      "2242948576c481baacad39b0f1b6df029b47562c36eacfa7afeea731ded02c09",
+    );
   });
 
   test("a healthy subject keeps the v2 values of the v2 metrics outside episodes", () => {

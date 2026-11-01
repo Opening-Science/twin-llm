@@ -350,7 +350,7 @@ export type DailyEffect = Readonly<{
   afShare: number | null;
 }>;
 
-/** How the daily summaries move on AF days (and on sinus days, burden 0), for comparison with v3's assumptions. */
+/** How the daily summaries move on AF days (and on sinus days, burden 0), for comparison with v3's assumptions; generator 3.1 reads its AF effects from them (#365). */
 export const dailyEffects = (
   rows: readonly DayRow[],
   options: Pick<StudyOptions, "noise" | "burdens">,

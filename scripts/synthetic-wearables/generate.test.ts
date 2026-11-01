@@ -42,7 +42,7 @@ describe("parseWearablesArgs", () => {
       endDay: "2026-10-01",
       days: 90,
       allowEvalCohort: false,
-      generatorVersion: "3",
+      generatorVersion: "3.1",
     });
     expect(
       parseWearablesArgs([
@@ -77,7 +77,11 @@ describe("parseWearablesArgs", () => {
       "--seed must be a whole number.",
     );
     expect(parseWearablesArgs(["--in", "x", "--generator-version", "1"])).toBe(
-      "--generator-version must be 2 or 3.",
+      "--generator-version must be 2 or 3.1.",
+    );
+    // 3.1 replaced 3 (#365): a "3" series cannot be rebuilt from this code.
+    expect(parseWearablesArgs(["--in", "x", "--generator-version", "3"])).toBe(
+      "--generator-version must be 2 or 3.1.",
     );
   });
 });
@@ -107,7 +111,7 @@ describe("runGenerateWearables", () => {
     ]);
     expect(h.written.get("/c/wearables/manifest.json")).toEqual({
       generator: "twinllm-synthetic-wearables",
-      generatorVersion: "3",
+      generatorVersion: "3.1",
       cohortId: "synthea-v4-seed4242",
       seed: 4242,
       endDay: "2026-10-01",

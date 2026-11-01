@@ -86,8 +86,15 @@ const ALL_CHECKS: readonly Check[] = Object.values(CHECKS);
 export const PLAN: Readonly<
   Record<Group, Readonly<{ checks: readonly Check[]; windows: readonly AfterWindow[] }>>
 > = {
+  // Resting heart rate since generator 3.1 (#365), which raises it on AF days.
   atrial_fibrillation: {
-    checks: [CHECKS.heartRate, CHECKS.rmssd, CHECKS.notifications, CHECKS.afBurden],
+    checks: [
+      CHECKS.heartRate,
+      CHECKS.restingHeartRate,
+      CHECKS.rmssd,
+      CHECKS.notifications,
+      CHECKS.afBurden,
+    ],
     windows: [AFTER_WINDOWS.all],
   },
   heart_failure: {

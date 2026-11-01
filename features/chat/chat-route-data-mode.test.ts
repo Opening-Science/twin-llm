@@ -9,6 +9,8 @@ import {
   test,
 } from "bun:test";
 
+import { moduleMocker } from "@/tests/support/mock-module";
+
 const USER_ID = "user-synthetic-1";
 const TURN_ID = "turn-synthetic-1";
 const MODEL_ID = "synthetic-model";
@@ -34,18 +36,19 @@ const storeCipher = () =>
     ? sealedCipher({ keyId: "0123456789abcdef", dataKey: Buffer.alloc(32, 7) })
     : plainCipher;
 
+const mockModuleForFile = moduleMocker({ mock, afterAll });
 mock.module("server-only", () => ({}));
-mock.module("@/infrastructure/auth-actor", () => ({
+await mockModuleForFile("@/infrastructure/auth-actor", {
   resolveActorId: async () => "local",
-}));
-mock.module("@/features/chat/chat-protection", () => ({
+});
+await mockModuleForFile("@/features/chat/chat-protection", {
   guardChatRequest: async () => null,
-}));
-mock.module("@/infrastructure/current-user", () => ({
+});
+await mockModuleForFile("@/infrastructure/current-user", {
   findAppUserId: async () => USER_ID,
   ensureAppUser: async () => ({ id: USER_ID }),
-}));
-mock.module("@/infrastructure/database", () => ({
+});
+await mockModuleForFile("@/infrastructure/database", {
   database: () => ({
     user: { findUnique: async () => ({ clerkId: "local" }) },
     modelResponse: {
@@ -141,15 +144,12 @@ mock.module("@/infrastructure/database", () => ({
       });
     },
   }),
-}));
-// Bun's module mocks last for the whole test process, so keep the module's
-// other exports (`vllmBaseUrlFor` and the rest): replacing only this one left
-// them undefined for every later test file that imports the module (#152).
-// The copy is taken before mocking and put back in afterAll, so a later file
-// (fetch-model-catalog.test.ts) gets the real catalog in any order (#336).
-const realCatalog = { ...(await import("@/infrastructure/fetch-model-catalog")) };
-mock.module("@/infrastructure/fetch-model-catalog", () => ({
-  ...realCatalog,
+});
+// Bun's module mocks last for the whole test process, so every mock here keeps
+// the module's other exports (#152) and the real module is put back after this
+// file (#336, #359): later files such as fetch-model-catalog.test.ts get the
+// real one in any order.
+await mockModuleForFile("@/infrastructure/fetch-model-catalog", {
   fetchActiveModelCatalog: async () => [
     {
       id: MODEL_ID,
@@ -159,8 +159,8 @@ mock.module("@/infrastructure/fetch-model-catalog", () => ({
       contextTokens: 8_000,
     },
   ],
-}));
-mock.module("@/features/chat/stream-model-response", () => ({
+});
+await mockModuleForFile("@/features/chat/stream-model-response", {
   streamModelResponse: async (_request: unknown, context: Record<string, unknown>) => {
     streamCalls += 1;
     streamWearables = {
@@ -171,7 +171,7 @@ mock.module("@/features/chat/stream-model-response", () => ({
     };
     return new Response("streamed");
   },
-}));
+});
 
 let POST: (request: Request) => Promise<Response>;
 
@@ -200,7 +200,6 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  mock.module("@/infrastructure/fetch-model-catalog", () => realCatalog);
   const { vaultSessions } = await import("@/infrastructure/vault-session");
   vaultSessions().lock("local");
   for (const key of Object.keys(process.env)) {

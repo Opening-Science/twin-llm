@@ -38,7 +38,7 @@ import {
 } from "@/infrastructure/disclosure-ledger";
 import { auditPersonalRead } from "@/infrastructure/personal-read-audit";
 import { newDataKey, newKeyId, newRecoveryCode } from "@/infrastructure/vault-crypto";
-import { writeVaultRecord } from "@/infrastructure/vault-file";
+import { vaultFilePath, writeVaultRecord } from "@/infrastructure/vault-file";
 import {
   PERSONAL_DATA_LOCKED,
   PERSONAL_DATA_NOT_SET_UP,
@@ -1018,6 +1018,8 @@ describe("locked personal data (#142)", () => {
     } finally {
       sessions.lock(LOCAL_ACTOR);
       sessions.lock("someone-else-synthetic");
+      // Tests run in random order: the no-passphrase test expects no vault file (#359).
+      rmSync(vaultFilePath(STATE_DIR, LOCAL_ACTOR), { force: true });
     }
   });
 

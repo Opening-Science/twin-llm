@@ -121,11 +121,11 @@ export const effectsTable = (rows: readonly DailyEffect[], noise: string): strin
       "Days",
       "AF share (median)",
       "Daily HR change, /min",
-      "v3 assumes",
+      "generator 3 assumed",
       "Resting HR change, /min",
-      "v3 assumes",
+      "generator 3 assumed",
       "Night RMSSD ratio",
-      "v3 assumes",
+      "generator 3 assumed",
     ],
     rows
       .filter((row) => row.noise === noise)
@@ -168,7 +168,13 @@ export const markdownReport = (
       );
     }
   }
-  parts.push("", "## Daily summaries on AF days against v3's assumptions", "");
+  parts.push(
+    "",
+    "## Daily summaries on AF days against generator 3's assumptions",
+    "",
+    "Wearable generator 3.1 takes its daily AF effects from the noise none rows (#365).",
+    "",
+  );
   for (const noise of options.noise) {
     parts.push(`Noise ${noise}:`, "", effectsTable(summary.dailyEffects, noise), "");
   }

@@ -58,6 +58,15 @@ import {
   parseArm,
 } from "./context-arm";
 import {
+  buildCodeBlock,
+  MAX_CODE_RETRIES,
+  type CodeArmRecord,
+  codeArmRecord,
+  codeTable,
+  createRunPythonTool,
+} from "./code-arm";
+import type { CodeSandbox, ProbeHost, ProbeOutcome } from "./code-sandbox";
+import {
   buildFairBlock,
   type FairRead,
   type FairStats,
@@ -173,6 +182,13 @@ export type EvalDeps = Readonly<{
     scope: SessionScope,
     pick: Exclude<SubjectPick, { kind: "none" }>,
   ) => Promise<Readonly<{ read: FairRead; gate: readonly PastedCall[] }>>;
+  /**
+   * Code arm (#303): the sandbox on this host. Throws when it cannot be
+   * built (bubblewrap, a systemd user session, prlimit or Python missing).
+   */
+  createSandbox: () => CodeSandbox;
+  /** Host paths the sandbox probes try to read (home, repository). */
+  probeHost: ProbeHost;
   cache: CacheStore;
   /** False when the run directory already exists. */
   prepareRun: (runId: string) => Promise<boolean>;
@@ -318,7 +334,7 @@ export const parseEvalArgs = (argv: readonly string[]): EvalOptions => {
   if (cap !== null && arm === "tools") {
     throw new EvalSetupError(
       "USAGE",
-      "--context-cap needs --arm context-oracle or context-fair",
+      "--context-cap needs --arm context-oracle, context-fair or code",
     );
   }
   const contextCapTokens = cap === null ? DEFAULT_CONTEXT_CAP_TOKENS : Number(cap);
@@ -404,7 +420,12 @@ const runTurn = (
   timeoutMs: number,
   label: string,
   declineWording: DeclineWordingId | null,
-  pasted: Readonly<{ text: string; source: PastedDataSource }> | null,
+  pasted: Readonly<{
+    text: string;
+    source: PastedDataSource;
+    /** The code arm's `run_python`; the context arms have none. */
+    tools?: ToolSet;
+  }> | null,
 ): Promise<TurnRun> =>
   new Promise<TurnRun>((resolve) => {
     let firstTokenAt: number | null = null;
@@ -418,10 +439,14 @@ const runTurn = (
     };
 
     // A context arm has no tools: its rows are in the prompt (#302, #320).
+    // The code arm has only `run_python` (#303).
     const { tools, offeredTools } =
       pasted === null
         ? deps.createTools(scope, agent)
-        : { tools: {}, offeredTools: new Set<string>() };
+        : {
+            tools: pasted.tools ?? {},
+            offeredTools: new Set<string>(Object.keys(pasted.tools ?? {})),
+          };
     const result = runTwinTurn(
       {
         model,
@@ -564,6 +589,8 @@ const runItem = async (
     arm: EvalArm;
     contextCapTokens: number;
     keyEntries: readonly KeyEntry[];
+    /** Set for the code arm, after its probes were all contained. */
+    sandbox: CodeSandbox | null;
   }>,
 ): Promise<ResultLine> => {
   const { runId, item, repeat, spec, resolved, agent } = input;
@@ -594,9 +621,17 @@ const runItem = async (
       : await (
           input.arm === "context-oracle"
             ? pasteContext(deps, scope, input.keyEntries, input.contextCapTokens).then(
-                (block): PastedBlock => ({ ...block, gate: [], fair: null }),
+                (block): PastedBlock => ({ ...block, gate: [], fair: null, code: null }),
               )
-            : pasteFairContext(deps, scope, item.question, input.contextCapTokens)
+            : input.arm === "code"
+              ? prepareCodeArm(
+                  deps,
+                  scope,
+                  item.question,
+                  input.contextCapTokens,
+                  input.sandbox,
+                )
+              : pasteFairContext(deps, scope, item.question, input.contextCapTokens)
         ).catch((error: unknown) => {
           deps.logError(
             `[eval] ${label} could not read the rows for the data block`,
@@ -607,6 +642,7 @@ const runItem = async (
   if (input.arm !== "tools" && context === null) {
     return { ...failedLine(item, repeat, spec, resolved.mock), error: "CONTEXT_FAILED" };
   }
+  const code = context?.code ?? null;
   const startedAt = deps.now();
   const run = await runTurn(
     deps,
@@ -621,9 +657,10 @@ const runItem = async (
       ? null
       : {
           text: context.text,
-          source: input.arm === "context-fair" ? "subject-record" : "key-calls",
+          source: pastedSource(input.arm),
+          ...(code === null ? {} : { tools: code.tools }),
         },
-  );
+  ).finally(() => code?.close());
 
   const auditRows = await deps.loadAudit(scope.sessionId).then(
     (rows) => ({ ok: true as const, rows }),
@@ -686,18 +723,40 @@ const runItem = async (
             auditRows.rows,
             asTurnResults([...context.gate, ...context.pasted]),
           ),
-          tool_results: finished === null ? [] : [...context.pasted],
-          arm:
-            input.arm === "context-fair"
-              ? ("context-fair" as const)
-              : ("context-oracle" as const),
+          // The code arm adds the model's runs after the listed codes (#303).
+          tool_results:
+            finished === null
+              ? []
+              : [
+                  ...context.pasted,
+                  ...finished.finish.toolResults.map((result) => ({
+                    tool: result.toolName,
+                    input: result.input,
+                    output: result.output,
+                  })),
+                ],
+          arm: lineArm(input.arm),
           context: context.stats,
           ...(context.fair === null
             ? {}
             : { fair: { ...context.fair, codes_cut: [...context.fair.codes_cut] } }),
+          ...(code === null ? {} : { code: codeLineRecord(code.record()) }),
         }),
   };
 };
+
+const pastedSource = (arm: EvalArm): PastedDataSource =>
+  arm === "context-fair" ? "subject-record" : arm === "code" ? "code-table" : "key-calls";
+
+const lineArm = (arm: EvalArm): "context-oracle" | "context-fair" | "code" =>
+  arm === "context-fair" || arm === "code" ? arm : "context-oracle";
+
+/** The record as the results line holds it (mutable arrays for the schema type). */
+const codeLineRecord = (record: CodeArmRecord): NonNullable<ResultLine["code"]> => ({
+  ...record,
+  table: { ...record.table },
+  runs: record.runs.map((run) => ({ ...run })),
+});
 
 const asTurnResults = (pasted: readonly PastedCall[]): TwinTurnToolResult[] =>
   pasted.map((call) => ({ toolName: call.tool, input: call.input, output: call.output }));
@@ -724,7 +783,14 @@ export const pasteContext = async (
   return buildContextBlock(results, capTokens);
 };
 
-/** A data block either context arm pasted, with what the fair arm records. */
+/** The code arm's tool over one item's file, and what it recorded (#303). */
+type CodeItem = Readonly<{
+  tools: ToolSet;
+  record: () => CodeArmRecord;
+  close: () => Promise<void>;
+}>;
+
+/** A data block either context arm pasted, with what the fair and code arms record. */
 type PastedBlock = Readonly<{
   text: string;
   pasted: readonly PastedCall[];
@@ -732,7 +798,52 @@ type PastedBlock = Readonly<{
   /** Audited calls that are not in the block (the fair arm's scope check). */
   gate: readonly PastedCall[];
   fair: FairStats | null;
+  code: CodeItem | null;
 }>;
+
+/** The record read for the fair and code arms: the named subject, never the key. */
+const readNamedRecord = async (
+  deps: Pick<EvalDeps, "readSubjectRecord">,
+  scope: SessionScope,
+  question: string,
+): Promise<Readonly<{ read: FairRead; gate: readonly PastedCall[] }>> => {
+  const pick = subjectFromQuestion(question);
+  return pick.kind === "none"
+    ? { read: { kind: "no-subject" }, gate: [] }
+    : deps.readSubjectRecord(scope, pick);
+};
+
+/**
+ * The code arm's item (#303): the named subject's record (the fair arm's
+ * read) written as the sandbox's input file, the block that describes it,
+ * and `run_python` over it.
+ */
+export const prepareCodeArm = async (
+  deps: Pick<EvalDeps, "readSubjectRecord">,
+  scope: SessionScope,
+  question: string,
+  capTokens: number,
+  sandbox: CodeSandbox | null,
+): Promise<PastedBlock> => {
+  if (sandbox === null) throw new Error("the code arm needs a checked sandbox");
+  const { read, gate } = await readNamedRecord(deps, scope, question);
+  const table = codeTable(read);
+  const block = buildCodeBlock(table, capTokens);
+  const session = await sandbox.open(`${JSON.stringify(table)}\n`);
+  const { tools, log } = createRunPythonTool(session.run);
+  return {
+    text: block.text,
+    pasted: block.pasted,
+    stats: block.stats,
+    gate,
+    fair: null,
+    code: {
+      tools,
+      record: () => codeArmRecord(block.table, log.runs(), log.refusedCalls()),
+      close: session.close,
+    },
+  };
+};
 
 /**
  * The fair arm's data block (#320): the subject the question names, its
@@ -745,13 +856,9 @@ export const pasteFairContext = async (
   question: string,
   capTokens: number,
 ): Promise<PastedBlock> => {
-  const pick = subjectFromQuestion(question);
-  const { read, gate } =
-    pick.kind === "none"
-      ? { read: { kind: "no-subject" } as const, gate: [] }
-      : await deps.readSubjectRecord(scope, pick);
+  const { read, gate } = await readNamedRecord(deps, scope, question);
   const block = buildFairBlock(read, capTokens);
-  return { ...block, gate };
+  return { ...block, gate, code: null };
 };
 
 /** A line that never reached the model. */
@@ -819,6 +926,7 @@ const setup = async (
     models: readonly ModelSpec[];
     resolved: ResolvedModel[];
     agents: readonly (EvalAgent | null)[];
+    sandbox: CheckedSandbox | null;
   }>
 > => {
   if (deps.dataMode !== "synthetic") {
@@ -838,6 +946,8 @@ const setup = async (
       `--arm ${options.arm} gives the model no tools, so an agent's skill has none to cut; run its base model`,
     );
   }
+  // #303: the sandbox is checked before anything else runs.
+  const sandbox = options.arm === "code" ? await checkSandbox(deps) : null;
   const loaded = await loadQuestions(deps, options.set);
   // #145: before any model or tool runs.
   const permit = await evaluationPermit(deps, loaded.cohortId);
@@ -876,7 +986,41 @@ const setup = async (
         : deps.resolveModel(base);
     }),
   );
-  return { loaded, items, models, resolved, agents };
+  return { loaded, items, models, resolved, agents, sandbox };
+};
+
+/** A sandbox whose escape probes were all contained, with their outcomes. */
+type CheckedSandbox = Readonly<{
+  sandbox: CodeSandbox;
+  probes: readonly ProbeOutcome[];
+}>;
+
+/**
+ * The code arm runs model code only in a sandbox that exists on this host
+ * and contains every escape probe (`SANDBOX_PROBES`); otherwise the run does
+ * not start.
+ */
+export const checkSandbox = async (
+  deps: Pick<EvalDeps, "createSandbox" | "probeHost">,
+): Promise<CheckedSandbox> => {
+  let sandbox: CodeSandbox;
+  try {
+    sandbox = deps.createSandbox();
+  } catch {
+    throw new EvalSetupError(
+      "SANDBOX_UNAVAILABLE",
+      "the code arm needs bubblewrap, a systemd user session, prlimit and /usr/bin/python3; nothing ran",
+    );
+  }
+  const probes = await sandbox.selfCheck(deps.probeHost);
+  const open = probes.filter((probe) => !probe.contained);
+  if (open.length > 0 || probes.length === 0) {
+    throw new EvalSetupError(
+      "SANDBOX_UNSAFE",
+      `escape probes not contained: ${open.map((probe) => `${probe.name} (${probe.ended})`).join(", ") || "none ran"}; nothing ran`,
+    );
+  }
+  return { sandbox, probes };
 };
 
 /** What meta.json records about an agent run (#279); nothing for a plain model. */
@@ -903,7 +1047,10 @@ export const runEval = async (
 ): Promise<number> => {
   try {
     const options = parseEvalArgs(argv);
-    const { loaded, items, models, resolved, agents } = await setup(options, deps);
+    const { loaded, items, models, resolved, agents, sandbox } = await setup(
+      options,
+      deps,
+    );
     const runId = options.runId ?? deps.newRunId();
     if (!(await deps.prepareRun(runId))) {
       throw new EvalSetupError("RUN_EXISTS", `evaluation/runs/${runId} already exists`);
@@ -934,6 +1081,7 @@ export const runEval = async (
                 arm: options.arm,
                 contextCapTokens: options.contextCapTokens,
                 keyEntries: loaded.entries[item.id] ?? [],
+                sandbox: sandbox?.sandbox ?? null,
               });
           lines.push(line);
           await deps.appendResult(runId, `${JSON.stringify(line)}\n`);
@@ -995,6 +1143,7 @@ export const runEval = async (
             },
           }
         : {}),
+      ...(sandbox === null ? {} : { code: codeMeta(sandbox, lines) }),
       sampling: "none set",
       platform: deps.platform,
       timeout_ms: options.timeoutMs,
@@ -1042,4 +1191,26 @@ export const runEval = async (
     io.stderr.write("The eval run stopped on an unexpected error; see the log above.\n");
     return 1;
   }
+};
+
+/** What meta.json records about the code arm (#303): the sandbox, its check, the runs. */
+export const codeMeta = (
+  checked: CheckedSandbox,
+  lines: readonly ResultLine[],
+): NonNullable<RunMeta["code"]> => {
+  const records = lines.flatMap((line) => (line.code === undefined ? [] : [line.code]));
+  const runs = records.flatMap((record) => record.runs);
+  return {
+    language: checked.sandbox.info.language,
+    interpreter: checked.sandbox.info.interpreter,
+    sandbox: checked.sandbox.info.sandbox,
+    limits: { ...checked.sandbox.info.limits },
+    max_retries: MAX_CODE_RETRIES,
+    probes: checked.probes.map((probe) => ({ ...probe })),
+    runs: runs.length,
+    failed_runs: runs.filter((run) => run.error !== null).length,
+    lines_without_run: records.filter((record) => record.runs.length === 0).length,
+    lines_with_retries: records.filter((record) => record.retries > 0).length,
+    lines_at_limit: records.filter((record) => record.limit_hit).length,
+  };
 };
