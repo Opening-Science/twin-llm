@@ -3,6 +3,7 @@ import {
   genomeToolDepsFor,
   genomeVariantDepsFor,
 } from "@/features/chat/genome-tool-deps";
+import { gbdLocalPortsIfImported } from "@/features/chat/gbd-local-tool-deps";
 import { importedToolDepsFor } from "@/features/chat/imported-tool-deps";
 import { createIncognitoChatHandler } from "@/features/chat/incognito-chat";
 import { resolveLanguageModel } from "@/features/chat/resolve-language-model";
@@ -61,6 +62,7 @@ export const POST = withUnlocked(
       genomeTools: genomeToolDepsFor,
       variantTools: genomeVariantDepsFor,
       importedTools: importedToolDepsFor,
+      gbdLocal: gbdLocalPortsIfImported,
       loadAudit: loadSessionAudit,
     },
   }),

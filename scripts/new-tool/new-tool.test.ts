@@ -132,6 +132,7 @@ describe("scaffoldTool", () => {
         '      "compare_windows",',
         '      "convert_unit",',
         '      "coverage",',
+        '      "gbd_estimate",',
         '      "gbd_population",',
         '      "range_position",',
         '      "resting_hr_drift",',

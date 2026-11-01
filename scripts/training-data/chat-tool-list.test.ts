@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import { createChatTools } from "../../features/chat/chat-tools";
 import { openaiToolList } from "../../packages/query-tools/manifests";
+import type { GbdEstimatePorts } from "../../packages/query-tools/gbd-estimate";
 import type { QueryToolPorts } from "../../packages/query-tools/ports";
 
 import { openAiToolsFrom } from "./chat-tool-list";
@@ -50,7 +51,15 @@ describe("openAiToolsFrom", () => {
   });
 
   test("the query tools and view tools are in the slim form the manifest gives models", async () => {
-    const tools = await openAiToolsFrom(createChatTools(SCOPE, { query: ports }));
+    // With GBD results imported (#387), gbd_estimate follows the view tools, as in the manifest.
+    const gbdLocal: GbdEstimatePorts = {
+      catalog: async () => ({ locations: [], causes: [], risks: [] }),
+      findEstimates: async () => [],
+      appendAudit: async () => undefined,
+    };
+    const tools = await openAiToolsFrom(
+      createChatTools(SCOPE, { query: ports, gbdLocal }),
+    );
     expect(tools.slice(0, openaiToolList().length)).toEqual(openaiToolList());
   });
 

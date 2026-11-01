@@ -26,8 +26,24 @@ import type { AnsweredLine } from "./types";
 export const serverRead = (line: Readonly<{ arm?: RecordedArm }>): boolean =>
   isContextArm(line.arm);
 
-export const auditTools = (line: AnsweredLine): readonly string[] =>
-  line.audit.map((row) => row.tool);
+/**
+ * The local GBD store's `gbd_estimate` (#387) answers what the remote
+ * `gbd.gbd_query` answers, so an S4 item can run on either: a `must_call` of
+ * the remote tool is met by the local one, and a `must_not_call` of it
+ * forbids both.
+ */
+export const GBD_EQUIVALENTS: Readonly<Record<string, string>> = {
+  gbd_estimate: "gbd.gbd_query",
+};
+
+export const auditTools = (line: AnsweredLine): readonly string[] => [
+  ...new Set(
+    line.audit.flatMap((row) => {
+      const stands = GBD_EQUIVALENTS[row.tool];
+      return stands === undefined ? [row.tool] : [row.tool, stands];
+    }),
+  ),
+];
 
 export const auditRefusals = (line: AnsweredLine): readonly string[] =>
   line.audit.flatMap((row) => (row.refusal === null ? [] : [row.refusal]));

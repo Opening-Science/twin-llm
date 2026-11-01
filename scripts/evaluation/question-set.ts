@@ -129,11 +129,13 @@ export const AUDIT_TOOL_NAMES = [
   "guidelines.guideline_search",
   "knowledge.knowledge_search",
   "gbd.gbd_query",
+  // The local GBD store (#387); it reads no subject.
+  "gbd_estimate",
 ] as const;
 
-/** Every warehouse read, for items that must not touch subject data. `convert_unit` reads none. */
+/** Every warehouse read, for items that must not touch subject data. `convert_unit` and `gbd_estimate` read none. */
 export const WAREHOUSE_TOOLS = AUDIT_TOOL_NAMES.filter(
-  (name) => !name.includes(".") && name !== "convert_unit",
+  (name) => !name.includes(".") && name !== "convert_unit" && name !== "gbd_estimate",
 );
 
 const auditToolName = z.enum(AUDIT_TOOL_NAMES);

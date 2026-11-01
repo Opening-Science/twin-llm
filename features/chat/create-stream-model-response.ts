@@ -21,6 +21,7 @@ import type {
   ModelDisclosure,
   UnrecordedModelCall,
 } from "@/infrastructure/disclosure-ledger";
+import type { GbdEstimatePorts } from "@/packages/query-tools/gbd-estimate";
 import type { ImportedToolDeps } from "@/packages/query-tools/imported-tools";
 import type { GenomeVariantsDeps } from "@/packages/query-tools/imported-variants";
 import type { QueryToolPorts } from "@/packages/query-tools/ports";
@@ -157,6 +158,11 @@ export type StreamModelResponseDeps = Readonly<{
   variantTools: (scope: SessionScope) => GenomeVariantsDeps | undefined;
   /** The imported-data tools' ports, or undefined when the policy refuses this turn. */
   importedTools: (scope: SessionScope) => ImportedToolDeps | undefined;
+  /**
+   * The local GBD store's ports when estimates are imported (#387), read once
+   * per answer. Left out, or resolving to undefined, no `gbd_estimate`.
+   */
+  gbdLocal?: () => Promise<GbdEstimatePorts | undefined>;
   /** Audit rows of the turn's session, read once the model has finished. */
   loadAudit: (sessionId: string) => Promise<readonly ResponseToolCall[]>;
   store: AnswerStore;
@@ -215,6 +221,7 @@ export const createStreamModelResponse =
     const scope = { actor: clerkId, sessionId: turnId, mode: settings.dataMode };
     const genome = deps.genomeTools(scope);
     const variants = deps.variantTools(scope);
+    const gbdLocal = deps.gbdLocal === undefined ? undefined : await deps.gbdLocal();
     const { tools, offeredTools } = createTurnTools(
       scope,
       {
@@ -226,6 +233,7 @@ export const createStreamModelResponse =
         genome,
         variants,
         imported: deps.importedTools(scope),
+        gbdLocal,
         agent: context.agent?.id ?? null,
         live: {
           enabled: context.liveSources ?? [],

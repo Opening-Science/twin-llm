@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { MockLanguageModelV4 } from "ai/test";
 
 import { ALL_KNOWLEDGE_SOURCES } from "@/infrastructure/knowledge-sources";
+import type { GbdEstimatePorts } from "@/packages/query-tools/gbd-estimate";
 import type { ImportedToolDeps } from "@/packages/query-tools/imported-tools";
 import type { QueryToolPorts } from "@/packages/query-tools/ports";
 
@@ -87,6 +88,7 @@ describe("chat tools and knowledge sources", () => {
       [
         ...Object.keys(createChatTools(SCOPE, { query: ports })),
         "dna_ask",
+        "gbd_estimate",
         "genome_report",
         "genome_variants",
         "imported_conditions",
@@ -160,6 +162,35 @@ describe("chat tools and knowledge sources", () => {
       ].filter((name) => tools.includes(name)),
     ).toEqual([]);
     expect(tools).toContain("trend");
+  });
+});
+
+describe("the local GBD store (#387)", () => {
+  const gbdLocal: GbdEstimatePorts = {
+    catalog: async () => ({ locations: [], causes: [], risks: [] }),
+    findEstimates: async () => [],
+    appendAudit: async () => undefined,
+  };
+  const names = (scope: typeof SCOPE | typeof PERSONAL, local?: GbdEstimatePorts) =>
+    Object.keys(createChatTools(scope, { query: ports, gbdLocal: local })).filter(
+      (name) => name.startsWith("gbd_"),
+    );
+
+  test("with estimates imported, both modes get gbd_estimate and not the remote tool", () => {
+    expect(names(SCOPE, gbdLocal)).toEqual(["gbd_estimate"]);
+    expect(names(PERSONAL, gbdLocal)).toEqual(["gbd_estimate"]);
+  });
+
+  test("without them the remote tool stays as before", () => {
+    expect(names(SCOPE)).toEqual(["gbd_population"]);
+    expect(names(PERSONAL)).toEqual([]);
+  });
+
+  test("turning the GBD source off removes gbd_estimate too", () => {
+    const { tools } = forSources(createChatTools(SCOPE, { query: ports, gbdLocal }), [
+      "gbd",
+    ]);
+    expect(Object.keys(tools).filter((name) => name.startsWith("gbd_"))).toEqual([]);
   });
 });
 

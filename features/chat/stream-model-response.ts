@@ -10,6 +10,7 @@ import { chatModelIsLocal } from "@/infrastructure/genome-gate";
 import { posthogServer } from "@/infrastructure/posthog";
 
 import { createStreamModelResponse } from "./create-stream-model-response";
+import { gbdLocalPortsIfImported } from "./gbd-local-tool-deps";
 import { generationEvent } from "./generation-analytics";
 import { genomeToolDepsFor, genomeVariantDepsFor } from "./genome-tool-deps";
 import { importedToolDepsFor } from "./imported-tool-deps";
@@ -39,6 +40,7 @@ export const streamModelResponse = createStreamModelResponse({
   genomeTools: genomeToolDepsFor,
   variantTools: genomeVariantDepsFor,
   importedTools: importedToolDepsFor,
+  gbdLocal: gbdLocalPortsIfImported,
   loadAudit: loadSessionAudit,
   store: {
     writeComplete: markModelResponseComplete,

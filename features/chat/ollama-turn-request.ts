@@ -10,6 +10,7 @@ import type { WearableSummaries } from "@/infrastructure/offered-keys";
 import type { TurnSkill } from "@/infrastructure/skill-gate";
 import type { TwinNote } from "@/infrastructure/twin-notes";
 import type { UiContext } from "@/infrastructure/ui-context";
+import type { GbdEstimatePorts } from "@/packages/query-tools/gbd-estimate";
 import type { ImportedToolDeps } from "@/packages/query-tools/imported-tools";
 import type { GenomeVariantsDeps } from "@/packages/query-tools/imported-variants";
 import type { QueryToolPorts } from "@/packages/query-tools/ports";
@@ -60,12 +61,24 @@ export type TurnRequestCase = Readonly<{
   twinNotes?: readonly TwinNote[];
   /** The effort the turn runs at (#366); left out, Balanced. */
   effort?: AppliedEffort | null;
+  /**
+   * GBD results imported on this machine (#387): the turn gets `gbd_estimate`
+   * in place of the remote `gbd_population`.
+   */
+  gbdImported?: boolean;
 }>;
 
 const NO_PORTS: QueryToolPorts = {
   findSubject: async () => null,
   findObservations: async () => [],
   findCohortObservations: async () => [],
+  appendAudit: async () => undefined,
+};
+
+/** The local GBD store as a turn with imported results gets it; nothing is read. */
+const NO_GBD: GbdEstimatePorts = {
+  catalog: async () => ({ locations: [], causes: [], risks: [] }),
+  findEstimates: async () => [],
   appendAudit: async () => undefined,
 };
 
@@ -141,6 +154,7 @@ export const captureOllamaTurnRequest = async (
         genome: noGenome(scope),
         variants: noVariants(scope),
         imported: noImported(scope),
+        gbdLocal: turn.gbdImported === true ? NO_GBD : undefined,
       }),
       [],
     ).tools,

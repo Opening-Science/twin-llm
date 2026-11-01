@@ -28,8 +28,10 @@ import {
 } from "@/infrastructure/response-document/copy";
 import type { ResponseDocumentV1 } from "@/infrastructure/response-document/document-v1";
 import { uiContextLines } from "@/infrastructure/ui-context";
-import { formatGbdRow } from "@/infrastructure/response-document/gbd-labels";
-import { GBD_ATTRIBUTION_LINE } from "@/packages/gbd-mcp/constants";
+import {
+  formatGbdRow,
+  gbdAttributionFor,
+} from "@/infrastructure/response-document/gbd-labels";
 
 const EvidencePanel = ({
   attribution,
@@ -232,7 +234,7 @@ export const ExplainabilityPanel = ({
                 ))}
               </ul>
               <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-                {GBD_ATTRIBUTION_LINE}
+                {gbdAttributionFor(gbdRows)}
               </p>
             </div>
           )}

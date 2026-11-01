@@ -1,4 +1,5 @@
 import { DNA_ASK_TOOL, GENOME_REPORT_TOOL } from "@/packages/carbon-x/constants";
+import { GBD_ESTIMATE_TOOL } from "@/packages/gbd-local/constants";
 import { GBD_MODEL_TOOL } from "@/packages/gbd-mcp/constants";
 import { GUIDELINE_MODEL_TOOL } from "@/packages/guidelines/constants";
 import { KNOWLEDGE_MODEL_TOOL } from "@/packages/knowledge/constants";
@@ -151,8 +152,9 @@ export const KNOWLEDGE_SOURCE_GROUPS: readonly KnowledgeSourceGroup[] = [
       {
         id: "gbd",
         label: "IHME GBD estimates",
-        description: "Population estimates from the Global Burden of Disease study.",
-        tools: [GBD_MODEL_TOOL],
+        description:
+          "Population estimates from the Global Burden of Disease study: GBD 2023 results imported on this machine, or the IHME GBD server.",
+        tools: [GBD_MODEL_TOOL, GBD_ESTIMATE_TOOL],
       },
     ],
   },

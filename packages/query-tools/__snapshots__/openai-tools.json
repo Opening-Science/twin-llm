@@ -986,5 +986,60 @@
         "additionalProperties": false
       }
     }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "gbd_estimate",
+      "description": "IHME GBD population estimates imported on this machine, never about one person: value and uncertainty interval. Cause or risk (IHME names) or both; one of locations (names or ISO codes), children_of or sdi.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "measure": {
+            "type": "string",
+            "enum": ["deaths", "dalys", "yld", "yll", "prevalence", "incidence"]
+          },
+          "metric": {
+            "type": "string",
+            "enum": ["number", "percent", "rate"]
+          },
+          "cause": {
+            "type": "string"
+          },
+          "risk": {
+            "type": "string"
+          },
+          "locations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "children_of": {
+            "type": "string"
+          },
+          "sdi": {
+            "type": "boolean",
+            "const": true
+          },
+          "sex": {
+            "type": "string",
+            "enum": ["male", "female", "both"]
+          },
+          "age": {
+            "type": "string",
+            "enum": ["all_ages", "age_standardized"]
+          },
+          "years": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          }
+        },
+        "required": ["measure", "metric", "sex", "age", "years"],
+        "additionalProperties": false
+      }
+    }
   }
 ]

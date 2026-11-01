@@ -30,6 +30,7 @@ import { join } from "node:path";
 
 import { type EvalDeps, type ModelSpec, EvalSetupError, runEval } from "./eval-runner";
 import { DEFAULT_OLLAMA_BASE_URL } from "../../infrastructure/ollama-context";
+import { withLocalGbd } from "./gbd-local-route";
 import { type CacheStore } from "./model-cache";
 
 const RUNS_DIR = "evaluation/runs";
@@ -84,6 +85,8 @@ if (isMain) {
   const { findConditionsInDatabase, findMedicationRequestsInDatabase, toNumber } =
     await import("../../packages/query-tools/ports");
   const { readFairRecord } = await import("./fair-record-read");
+  const { gbdLocalPortsIfImported } =
+    await import("../../features/chat/gbd-local-tool-deps");
   const { createHostSandbox } = await import("./code-sandbox-host");
   /** Every dated record of a subject (#320); the cap only guards a runaway read. */
   const WHOLE_RECORD = {
@@ -116,10 +119,16 @@ if (isMain) {
     }
   };
 
+  // S4 runs on the local GBD store when the eval database holds imported results (#387).
+  const gbdLocal = await gbdLocalPortsIfImported();
+
   const deps: EvalDeps = {
     dataMode: env.DATA_MODE,
     llmProvider: env.LLM_PROVIDER,
-    hasEnv: (name) => Boolean(Reflect.get(env, name)),
+    hasEnv: withLocalGbd(
+      (name) => Boolean(Reflect.get(env, name)),
+      gbdLocal !== undefined,
+    ),
     readText: (path) => readFile(path, "utf8"),
     // Read at run time: vLLM providers route each id to the server that lists it.
     // The same catalog the chat route checks, agents included.
@@ -140,8 +149,8 @@ if (isMain) {
     // entries still match; an agent gets the chat route's turn tools.
     createTools: (scope, agent) =>
       agent === null
-        ? { tools: createChatTools(scope) }
-        : createTurnTools(scope, { agent: agent.agent.id }, agent.skill),
+        ? { tools: createChatTools(scope, { gbdLocal }) }
+        : createTurnTools(scope, { agent: agent.agent.id, gbdLocal }, agent.skill),
     loadAudit: loadSessionAudit,
     // Context arm (#302): the key's call through the real tool, on the database.
     runContextCall: (scope, tool, args) => runKeyedTool(queryTools, scope, tool, args),

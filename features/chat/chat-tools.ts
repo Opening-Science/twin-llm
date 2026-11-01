@@ -11,6 +11,7 @@ import {
 import type { WearableSummaries } from "@/infrastructure/offered-keys";
 import { type TurnSkill, withSkillTools } from "@/infrastructure/skill-gate";
 
+import { createGbdEstimateTool } from "@/packages/gbd-local/ai-tools";
 import { createGbdTools } from "@/packages/gbd-mcp/ai-tools";
 import { createGuidelineTools } from "@/packages/guidelines/ai-tools";
 import { createKnowledgeTools } from "@/packages/knowledge/ai-tools";
@@ -20,6 +21,7 @@ import { literatureSourcesForAgent } from "@/packages/literature/specialties";
 import { permitServerForDataMode } from "@/packages/mcp-client/policy";
 import { findServer } from "@/packages/mcp-client/registry";
 import { createImportedTools, createQueryTools } from "@/packages/query-tools/ai-tools";
+import type { GbdEstimatePorts } from "@/packages/query-tools/gbd-estimate";
 import type { ImportedToolDeps } from "@/packages/query-tools/imported-tools";
 import type { GenomeVariantsDeps } from "@/packages/query-tools/imported-variants";
 import type { QueryToolPorts } from "@/packages/query-tools/ports";
@@ -92,6 +94,11 @@ const CHAT_TOOL_FACTORIES: ChatToolFactories = {
  * eval harness send the same set. Tests pass fake query ports. Tools served by
  * a remote MCP server (GBD) are left out of a personal request.
  *
+ * With `gbdLocal` (GBD results imported on this machine, #387) the turn gets
+ * `gbd_estimate` in either data mode and the remote `gbd_population` is left
+ * out: the local store is preferred, and one population tool keeps the
+ * prompt small.
+ *
  * `show_view` belongs to no source: it is how any answer shows a chart. It
  * reads cohort rows only while the cohort record tools are on, and wearable
  * readings only from the snapshots this turn already loaded, which synthetic
@@ -151,6 +158,11 @@ export const createChatTools = (
      * offer one (`start-answer`, `incognito-chat`).
      */
     live?: LiveTurn;
+    /**
+     * Ports of the local GBD store (#387), passed only when estimates are
+     * imported (`gbd-local-tool-deps.ts`). Left out, no `gbd_estimate`.
+     */
+    gbdLocal?: GbdEstimatePorts;
   }>,
 ) => {
   const make = options?.factories ?? CHAT_TOOL_FACTORIES;
@@ -174,7 +186,11 @@ export const createChatTools = (
       personal: requestDataMode(scope.mode, hasWearableNarrative) === "personal",
       views: options?.views,
     }),
-    ...(mcpServerPermitted("gbd", scope, hasWearableNarrative) ? make.gbd(scope) : {}),
+    ...(options?.gbdLocal !== undefined
+      ? createGbdEstimateTool(scope, options.gbdLocal)
+      : mcpServerPermitted("gbd", scope, hasWearableNarrative)
+        ? make.gbd(scope)
+        : {}),
     ...make.guidelines(scope),
     ...make.knowledge(scope, undefined, literatureSourcesForAgent(options?.agent)),
     ...(options?.genome !== undefined && scope.mode === "personal"

@@ -10,6 +10,7 @@
 //   4. Research warehouse: synthetic Synthea cohorts only.
 //   5. Retrieval: guideline and OpenTwin knowledge chunks with pgvector.
 //   6. Tool audit log, hash-chained.
+//   7. Population reference: IHME GBD results a person imported (#387).
 //
 // Things Prisma cannot express live as hand-written SQL in the baseline
 // migration: the pgvector extension, vector(768), the HNSW index and the
@@ -981,4 +982,56 @@ model ScheduledTask {
   @@index([userId, createdAt])
   @@index([enabled, nextRunAt])
   @@map("scheduled_tasks")
+}
+
+// ─── 7. Population reference (IHME GBD) ─────────────────────────────────────
+
+/// One GBD Results Tool CSV imported with `bun run gbd:import`, by the
+/// SHA-256 of its bytes. Population estimates, never a person's data. The
+/// file itself stays where the person saved it; only its base name is kept.
+model GbdImport {
+  sha256     String   @id
+  fileName   String   @map("file_name")
+  /// GBD round, "2023".
+  release    String
+  /// Data rows in the file, and how many were new (the rest were already stored).
+  rowCount   Int      @map("row_count")
+  newRows    Int      @map("new_rows")
+  importedAt DateTime @default(now()) @map("imported_at")
+
+  estimates GbdEstimate[]
+
+  @@map("gbd_imports")
+}
+
+/// One estimate from an imported file, with its 95% uncertainty interval.
+/// Ids and names are IHME's as exported. `key` (`gbdRowKey`) makes the same
+/// estimate from two files one row; the first file to bring it keeps it.
+model GbdEstimate {
+  key          String  @id
+  importSha    String  @map("import_sha")
+  measureId    Int     @map("measure_id")
+  measureName  String  @map("measure_name")
+  locationId   Int     @map("location_id")
+  locationName String  @map("location_name")
+  sexId        Int     @map("sex_id")
+  sexName      String  @map("sex_name")
+  ageId        Int     @map("age_id")
+  ageName      String  @map("age_name")
+  causeId      Int?    @map("cause_id")
+  causeName    String? @map("cause_name")
+  reiId        Int?    @map("rei_id")
+  reiName      String? @map("rei_name")
+  metricId     Int     @map("metric_id")
+  metricName   String  @map("metric_name")
+  year         Int
+  val          Float
+  upper        Float?
+  lower        Float?
+
+  import GbdImport @relation(fields: [importSha], references: [sha256], onDelete: Cascade)
+
+  @@index([measureId, metricId, sexId, ageId, year])
+  @@index([locationId])
+  @@map("gbd_estimates")
 }
