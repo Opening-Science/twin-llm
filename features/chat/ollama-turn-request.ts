@@ -77,7 +77,7 @@ const NO_PORTS: QueryToolPorts = {
 
 /** The local GBD store as a turn with imported results gets it; nothing is read. */
 const NO_GBD: GbdEstimatePorts = {
-  catalog: async () => ({ locations: [], causes: [], risks: [] }),
+  catalog: async () => ({ locations: [], causes: [], risks: [], ages: [] }),
   findEstimates: async () => [],
   appendAudit: async () => undefined,
 };

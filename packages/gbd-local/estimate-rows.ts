@@ -3,6 +3,7 @@
  * the estimates are ordered, and which asked location-year pairs have none.
  * No I/O; the store and the audit are in packages/query-tools/gbd-estimate.ts.
  */
+import { GBD_AGE_IDS, type GbdAge } from "./constants";
 import {
   foldGbdName,
   gbdChildIds,
@@ -17,6 +18,12 @@ export type PlaceResolution =
   | Readonly<{ kind: "found"; id: number }>
   | Readonly<{ kind: "unknown" }>
   | Readonly<{ kind: "ambiguous"; options: readonly string[] }>;
+
+/** GBD's id for Global, the whole world. */
+export const GBD_GLOBAL_ID = 1;
+
+/** Everyday names for Global, which GBD names only "Global". */
+const WORLD_NAMES: ReadonlySet<string> = new Set(["world", "the world"]);
 
 const describeId = (id: number, imported: readonly GbdNamed[]): string => {
   const location = gbdLocationById(id);
@@ -42,6 +49,7 @@ export const resolveGbdPlace = (
       ? { kind: "found", id }
       : { kind: "unknown" };
   }
+  if (WORLD_NAMES.has(foldGbdName(trimmed))) return { kind: "found", id: GBD_GLOBAL_ID };
   const byCode = gbdLocationByCode(trimmed);
   if (byCode !== null) return { kind: "found", id: byCode.id };
   const ids = [
@@ -57,12 +65,20 @@ export const resolveGbdPlace = (
   return { kind: "ambiguous", options: ids.map((id) => describeId(id, imported)) };
 };
 
-/** The imported locations directly inside one place, by id. */
+/**
+ * The imported locations directly inside one place, by id. Inside Global
+ * (#394) that is every imported country, not the super-regions: a world map
+ * is by country.
+ */
 export const importedChildIds = (
   parentId: number,
   imported: readonly GbdNamed[],
 ): readonly number[] => {
-  const children = new Set(gbdChildIds(parentId));
+  const children = new Set(
+    parentId === GBD_GLOBAL_ID
+      ? imported.map((entry) => entry.id).filter((id) => gbdLocationById(id)?.level === 3)
+      : gbdChildIds(parentId),
+  );
   return imported
     .map((entry) => entry.id)
     .filter((id) => children.has(id))
@@ -105,3 +121,11 @@ export const missingPairs = (
       .map((year) => ({ locationId, year })),
   );
 };
+
+/**
+ * The GBD age id an age option reads: the first of its ids the import holds
+ * (`at_birth` is the youngest life table group, 0-6 days in GBD 2023). Null
+ * when none is imported.
+ */
+export const gbdAgeId = (age: GbdAge, importedAgeIds: readonly number[]): number | null =>
+  GBD_AGE_IDS[age].find((id) => importedAgeIds.includes(id)) ?? null;

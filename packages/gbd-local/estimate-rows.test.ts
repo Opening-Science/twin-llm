@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import {
   findImportedName,
+  gbdAgeId,
   importedChildIds,
   importedSdiIds,
   missingPairs,
@@ -32,6 +33,12 @@ describe("resolveGbdPlace", () => {
     expect(resolveGbdPlace("France", IMPORTED)).toEqual({ kind: "found", id: 80 });
   });
 
+  test("World is GBD's Global (#394)", () => {
+    expect(resolveGbdPlace("World", IMPORTED)).toEqual({ kind: "found", id: 1 });
+    expect(resolveGbdPlace("the world", IMPORTED)).toEqual({ kind: "found", id: 1 });
+    expect(resolveGbdPlace("Global", IMPORTED)).toEqual({ kind: "found", id: 1 });
+  });
+
   test("a repeated name is ambiguous, with the codes to ask again", () => {
     expect(resolveGbdPlace("Georgia", IMPORTED)).toEqual({
       kind: "ambiguous",
@@ -49,6 +56,12 @@ describe("children and SDI groups", () => {
   test("imported children of the United States", () => {
     expect(importedChildIds(102, IMPORTED)).toEqual([523, 524, 533]);
     expect(importedChildIds(94, IMPORTED)).toEqual([]);
+  });
+
+  test("inside Global: every imported country, no regions or states (#394)", () => {
+    expect(
+      importedChildIds(1, [...IMPORTED, { id: 73, name: "Western Europe" }]),
+    ).toEqual([35, 81, 94]);
   });
 
   test("SDI groups by name", () => {
@@ -138,5 +151,19 @@ describe("gbdPanelRows", () => {
         source: "IHME GBD 2023",
       },
     ]);
+  });
+});
+
+describe("gbdAgeId", () => {
+  test("fixed ages read their own id once imported", () => {
+    expect(gbdAgeId("all_ages", [22, 27])).toBe(22);
+    expect(gbdAgeId("age_standardized", [2, 27])).toBe(27);
+    expect(gbdAgeId("all_ages", [27])).toBeNull();
+  });
+
+  test("at birth is the youngest life table group imported: 0-6 days, else <1 year", () => {
+    expect(gbdAgeId("at_birth", [2, 3, 8, 28])).toBe(2);
+    expect(gbdAgeId("at_birth", [5, 28])).toBe(28);
+    expect(gbdAgeId("at_birth", [22, 27])).toBeNull();
   });
 });

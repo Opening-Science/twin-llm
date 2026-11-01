@@ -97,7 +97,7 @@ const REFERENCE_TOOL_LINES: readonly Readonly<{ tool: string; text: string }>[] 
   },
   {
     tool: GBD_ESTIMATE_TOOL,
-    text: `\`${GBD_ESTIMATE_TOOL}\` gives GBD 2023 population figures imported on this machine`,
+    text: `\`${GBD_ESTIMATE_TOOL}\` gives GBD 2023 population figures imported on this machine; unless deaths are asked for, lead with healthy life expectancy`,
   },
   {
     tool: GUIDELINE_MODEL_TOOL,
@@ -124,7 +124,9 @@ const mapLine = (offered: (tool: string) => boolean): readonly string[] => {
   const source = [GBD_ESTIMATE_TOOL, GBD_MODEL_TOOL].find(offered);
   if (source === undefined || !offered(SHOW_VIEW_TOOL)) return [];
   const states =
-    source === GBD_ESTIMATE_TOOL ? " (look them up with `children_of` the country)" : "";
+    source === GBD_ESTIMATE_TOOL
+      ? " (look them up with `children_of` World for every country, or `children_of` the country for its states)"
+      : "";
   return [
     `- To map \`${source}\` estimates this turn looked up, call \`${SHOW_VIEW_TOOL}\` with kind \`map.choropleth\`: level world or region by country, or level country for one country's states${states}. It needs no measure or window.`,
   ];

@@ -1,6 +1,14 @@
 import { describe, expect, test } from "bun:test";
 
-import { binText, intervalText, regionLabel, uiText, valueText } from "./map-text";
+import {
+  betterDirection,
+  binText,
+  directionText,
+  intervalText,
+  regionLabel,
+  uiText,
+  valueText,
+} from "./map-text";
 
 describe("valueText", () => {
   test("adds the unit, attaching a percent sign", () => {
@@ -44,5 +52,24 @@ describe("binText", () => {
   test("one number when both ends round the same", () => {
     expect(binText(1.01, 1.04, 1)).toBe("1.0");
     expect(binText(1, 2, 0)).toBe("1 to 2");
+  });
+});
+
+describe("directionText (#394)", () => {
+  test("HALE and life expectancy: higher is better", () => {
+    expect(betterDirection("hale")).toBe("higher");
+    expect(directionText("life_expectancy")).toBe(
+      "Stronger colour is higher; higher is better",
+    );
+  });
+
+  test("burden measures: lower is better", () => {
+    expect(betterDirection("Deaths")).toBe("lower");
+    expect(directionText("dalys")).toBe("Stronger colour is higher; lower is better");
+  });
+
+  test("an unknown measure says only the scale", () => {
+    expect(betterDirection("sdi")).toBeNull();
+    expect(directionText("sdi")).toBe("Stronger colour is higher");
   });
 });

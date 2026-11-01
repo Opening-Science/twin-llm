@@ -53,7 +53,7 @@ describe("openAiToolsFrom", () => {
   test("the query tools and view tools are in the slim form the manifest gives models", async () => {
     // With GBD results imported (#387), gbd_estimate follows the view tools, as in the manifest.
     const gbdLocal: GbdEstimatePorts = {
-      catalog: async () => ({ locations: [], causes: [], risks: [] }),
+      catalog: async () => ({ locations: [], causes: [], risks: [], ages: [] }),
       findEstimates: async () => [],
       appendAudit: async () => undefined,
     };

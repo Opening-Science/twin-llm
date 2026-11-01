@@ -1,7 +1,6 @@
 import "server-only";
 
 import {
-  GBD_AGE_IDS,
   GBD_ESTIMATE_TOOL,
   GBD_LOCAL_ATTRIBUTION,
   GBD_LOCAL_SOURCE,
@@ -12,6 +11,7 @@ import {
 } from "@/packages/gbd-local/constants";
 import {
   findImportedName,
+  gbdAgeId,
   type GbdNamed,
   importedChildIds,
   importedSdiIds,
@@ -49,6 +49,8 @@ export type GbdCatalog = Readonly<{
   locations: readonly GbdNamed[];
   causes: readonly GbdNamed[];
   risks: readonly GbdNamed[];
+  /** GBD age ids with at least one imported estimate. */
+  ages: readonly number[];
 }>;
 
 export type GbdEstimateQuery = Readonly<{
@@ -107,6 +109,33 @@ export type GbdEstimateResult = Readonly<{
   /** Asked location-year pairs the import holds no estimate for. */
   not_imported: readonly Readonly<{ location: string; year: number }>[];
 }>;
+
+/** Rows the model gets whole; a longer result reaches it summarised. */
+const MODEL_ROWS = 30;
+const MODEL_TOP = 10;
+const MODEL_BOTTOM = 5;
+
+export type GbdModelResult = GbdEstimateResult & Readonly<{ rows_shown?: string }>;
+
+/**
+ * What the model reads of a `gbd_estimate` result. Up to 30 rows it is the
+ * result itself. A longer one (every country for a world map, #394) would
+ * not fit the chat context, so the model gets `n`, the 10 highest and the 5
+ * lowest values and a note; the map, the panel and the number check keep
+ * every row. Pure.
+ */
+export const gbdModelOutput = (
+  result: GbdEstimateResult | GbdRefusal,
+): GbdModelResult | GbdRefusal => {
+  if (!("rows" in result) || result.rows.length <= MODEL_ROWS) return result;
+  const byValue = [...result.rows].sort((a, b) => b.value - a.value);
+  const shown = [...byValue.slice(0, MODEL_TOP), ...byValue.slice(-MODEL_BOTTOM)];
+  return {
+    ...result,
+    rows: shown,
+    rows_shown: `${shown.length} of ${result.rows.length} rows: the ${MODEL_TOP} highest and ${MODEL_BOTTOM} lowest values; the map and the panel show all`,
+  };
+};
 
 type Places =
   | Readonly<{ ok: true; ids: readonly number[] }>
@@ -188,12 +217,16 @@ const work = async (
   }
   const places = resolvePlaces(input, catalog.locations);
   if (!places.ok) return places.refusal;
+  const ageId = gbdAgeId(input.age, catalog.ages);
+  const subject = [cause?.name, risk?.name].filter(Boolean).join(" and ");
+  const asked = `${input.measure} (${input.metric}), ${input.sex}, ${input.age}${subject === "" ? "" : `, ${subject}`}`;
+  if (ageId === null) return gbdNoEstimate(`${asked}: no such age group is imported`);
   const years = [...new Set(input.years)].sort((a, b) => a - b);
   const found = await ports.findEstimates({
     measureId: GBD_MEASURE_IDS[input.measure],
     metricId: GBD_METRIC_IDS[input.metric],
     sexId: GBD_SEX_IDS[input.sex],
-    ageId: GBD_AGE_IDS[input.age],
+    ageId,
     years,
     locationIds: places.ids,
     causeId: cause?.id ?? null,
@@ -202,9 +235,7 @@ const work = async (
   });
   if (found.length > GBD_ROW_CAP) return GBD_TOO_MANY_ROWS;
   if (found.length === 0) {
-    return gbdNoEstimate(
-      `${input.measure} (${input.metric}), ${input.sex}, ${input.age}, ${[cause?.name, risk?.name].filter(Boolean).join(" and ")} in these places and years`,
-    );
+    return gbdNoEstimate(`${asked} in these places and years`);
   }
   const rows = sortGbdEstimates(found.map(rowOf));
   return {

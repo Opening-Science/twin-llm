@@ -42,12 +42,14 @@ The steps follow IHME's
 
 1. Open <https://vizhub.healthdata.org/gbd-results/> and sign in or register;
    the tool needs an account to download.
-2. GBD Estimate: "Cause of death or injury", or "Risk factor" for burden
-   attributable to a risk.
-3. Measure: any of Deaths, DALYs, YLDs, YLLs, Prevalence, Incidence.
-4. Metric: Number, Rate and/or Percent.
+2. GBD Estimate: "Cause of death or injury", "Risk factor" for burden
+   attributable to a risk, or "Life expectancy and HALE".
+3. Measure: any of Deaths, DALYs, YLDs, YLLs, Prevalence, Incidence, Life
+   expectancy, HALE (Healthy life expectancy).
+4. Metric: Number, Rate and/or Percent (Years for life expectancy and HALE).
 5. Cause (and Risk for a risk factor query), Location, Age ("All ages" and/or
-   "Age-standardized", the two `gbd_estimate` reads), Sex and Year. To compare
+   "Age-standardized"; for life expectancy and HALE the youngest age group,
+   which `gbd_estimate` reads as at birth), Sex and Year. To compare
    by SDI, also tick the SDI groups (High SDI to Low SDI) under Location.
 6. Click Search, then Download.
 7. Choose **Both** (IDs and names), enter an email address and click Submit.
@@ -77,13 +79,28 @@ val, upper, lower
 ```
 
 A risk factor export adds `rei_id, rei_name` (risk, etiology or impairment)
-next to or instead of the cause pair. Columns are found by name, so order does
-not matter. `val` is the estimate, `upper` and `lower` the 95% uncertainty
+next to or instead of the cause pair. A life expectancy or HALE export has
+neither pair, and GBD 2023 exports start with `population_group_id,
+population_group_name` (#394):
+
+```
+population_group_id, population_group_name, measure_id, measure_name,
+location_id, location_name, sex_id, sex_name, age_id, age_name, metric_id,
+metric_name, year, val, upper, lower
+```
+
+So the cause and risk pairs are optional, and a row with neither is stored
+with no subject. Only the "All Population" group (id 1) is read; the store does
+not key rows by group, so a file with another group is refused rather than
+merged into it. Columns are found by name, so order does not matter. `val` is the estimate, `upper` and `lower` the 95% uncertainty
 interval; an empty bound stays empty, never 0. The parser
 (`packages/gbd-local/results-csv.ts`) refuses with a code:
 
 - `GBD_CSV_NAMES_ONLY`, `GBD_CSV_IDS_ONLY`: download again with Both.
-- `GBD_CSV_COLUMNS`: not a Results Tool export; the missing columns are named.
+- `GBD_CSV_COLUMNS`: not a Results Tool export; the missing columns are named
+  (also half of a cause or risk pair).
+- `GBD_CSV_POPULATION_GROUP`: a row for a population group other than All
+  Population, with its line.
 - `GBD_CSV_ROW`: a row with a missing or non-numeric id, year or value, with
   its line.
 - `GBD_CSV_UNREADABLE`: a quoted field is not closed.
@@ -133,29 +150,48 @@ hierarchy file on the GHDx needs a sign-in, so it is not used.
 
 Closed `.strict()` input (`packages/query-tools/gbd-estimate-schema.ts`):
 
-| Field         | Values                                                                |
-| ------------- | --------------------------------------------------------------------- |
-| `measure`     | `deaths`, `dalys`, `yld`, `yll`, `prevalence`, `incidence`            |
-| `metric`      | `number`, `percent`, `rate` (per 100,000)                             |
-| `cause`       | IHME cause name, e.g. `Cardiovascular diseases`                       |
-| `risk`        | IHME risk name, e.g. `High systolic blood pressure`                   |
-| `locations`   | 1 to 10 GBD names, ISO 3166-1 alpha-3 or ISO 3166-2 codes, or GBD ids |
-| `children_of` | one place: every imported unit directly inside it                     |
-| `sdi`         | `true`: every imported SDI group                                      |
-| `sex`         | `both`, `male`, `female`                                              |
-| `age`         | `all_ages`, `age_standardized`                                        |
-| `years`       | 1 to 10 years, 1990 to 2023                                           |
+| Field         | Values                                                                                   |
+| ------------- | ---------------------------------------------------------------------------------------- |
+| `measure`     | `hale`, `life_expectancy`, `dalys`, `yld`, `prevalence`, `incidence`, `yll`, `deaths`    |
+| `metric`      | `number`, `percent`, `rate` (per 100,000), `years`                                       |
+| `cause`       | IHME cause name, e.g. `Cardiovascular diseases`                                          |
+| `risk`        | IHME risk name, e.g. `High systolic blood pressure`                                      |
+| `locations`   | 1 to 10 GBD names, ISO 3166-1 alpha-3 or ISO 3166-2 codes, or GBD ids                    |
+| `children_of` | one place: every imported unit directly inside it; inside Global, every imported country |
+| `sdi`         | `true`: every imported SDI group                                                         |
+| `sex`         | `both`, `male`, `female`                                                                 |
+| `age`         | `all_ages`, `age_standardized`, `at_birth`                                               |
+| `years`       | 1 to 10 years, 1990 to 2023                                                              |
 
 Give a cause, a risk or both (a risk alone is its burden from all causes), and
-exactly one of `locations`, `children_of` or `sdi`. Names are matched without
+exactly one of `locations`, `children_of` or `sdi`. `World` is GBD's
+`Global` (id 1), and `children_of` Global gives every imported country rather
+than the super-regions, so one call can fill a world map. HALE and life expectancy
+(#394) take metric `years` and no cause or risk; `years` and `at_birth` are
+theirs only. `at_birth` reads the first imported of GBD age ids 2 (0-6 days)
+and 28 (<1 year): GBD 2023 exports HALE and life expectancy by age group, each
+group's value at its start age, so the youngest group, which starts at age 0,
+is the value at birth.
+
+The measures are listed calm first: living-well measures (HALE, life
+expectancy), then DALYs, YLDs, prevalence and incidence, and deaths last. The
+tool description tells the model to lead with them and to read deaths only
+when the question asks for deaths; see
+[clinical-research.md](clinical-research.md#population-estimates-stay-calm). Names are matched without
 case or accents. The result carries the attribution, `source: IHME GBD 2023`,
 the unit, and one row per location and year with `value`, `lower`, `upper`,
 `location_id`, `iso3` and `iso3166_2`, sorted by year and then by value,
 largest first. Asked location-year pairs with no estimate are listed in
 `not_imported`, never filled.
 
+Up to 250 rows are returned (all 204 countries for one year fit). The model
+gets a result of up to 30 rows whole; a longer one would not fit the chat
+context, so it gets `n`, the 10 highest and the 5 lowest values and a
+`rows_shown` note (`gbdModelOutput`). The map, the explainability panel and
+the audit keep every row.
+
 The model's copy of the schema leaves out the string and list bounds and the
-year range (zod still enforces them), and the tool offers two age groups
+year range (zod still enforces them), and the tool offers three age options
 only: with one wearable linked the default chat context had about 230 tokens
 free, and the tool now takes almost all of them (`bun run prompt:size`, case
 "personal, Oura, GBD imported agent:gp").
@@ -165,7 +201,7 @@ rows: `GBD_NOT_IMPORTED`, `GBD_UNKNOWN_LOCATION`, `GBD_AMBIGUOUS_LOCATION`
 (Georgia the country and the US state; ask with `GEO` or `US-GA`),
 `GBD_UNKNOWN_CAUSE` and `GBD_UNKNOWN_RISK` (with the imported names),
 `GBD_NO_ESTIMATE`, `GBD_NO_SDI` (no SDI group imported) and
-`GBD_TOO_MANY_ROWS` (more than 200 rows; refused, not cut).
+`GBD_TOO_MANY_ROWS` (more than 250 rows; refused, not cut).
 
 Every call goes through `audited()` as `gbd_estimate` with `subject_ref` null.
 The tool reads no subject and no personal data and opens no network

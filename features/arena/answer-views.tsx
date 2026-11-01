@@ -51,6 +51,7 @@ const ViewBody = ({ view, height }: Readonly<{ view: ChatView; height: number }>
         <Choropleth
           title={view.title}
           unit={view.spec.unit}
+          measure={view.spec.measure}
           level={view.spec.level}
           country={view.spec.country}
           regions={view.spec.regions}

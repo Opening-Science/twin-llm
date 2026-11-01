@@ -5,12 +5,13 @@ import {
   GBD_ESTIMATE_TOOL,
   GBD_FIRST_YEAR,
   GBD_LAST_YEAR,
+  GBD_LIFE_TABLE_MEASURES,
   GBD_MEASURE_IDS,
   GBD_METRIC_IDS,
   GBD_SEX_IDS,
 } from "@/packages/gbd-local/constants";
 
-const keys = <T extends Record<string, number>>(record: T) =>
+const keys = <T extends Record<string, unknown>>(record: T) =>
   Object.keys(record) as [keyof T & string, ...(keyof T & string)[]];
 
 // Bounds as a pattern and refinements: zod enforces them, and the model's
@@ -24,7 +25,8 @@ const between = (min: number, max: number) => (items: readonly unknown[]) =>
  * `gbd_estimate` (#387): closed fields over the imported GBD 2023 results.
  * Cause and risk are the names IHME uses ("Cardiovascular diseases", "High
  * systolic blood pressure"); places are GBD names or ISO codes. Exactly one
- * of `locations`, `children_of` or `sdi`.
+ * of `locations`, `children_of` or `sdi`. HALE and life expectancy (#394)
+ * are about no cause: metric years, no cause or risk; `at_birth` is theirs.
  */
 export const gbdEstimateInput = z
   .object({
@@ -48,9 +50,25 @@ export const gbdEstimateInput = z
       ),
   })
   .strict()
-  .refine((input) => input.cause !== undefined || input.risk !== undefined, {
-    message: "give cause, risk or both",
-  })
+  .refine(
+    (input) =>
+      GBD_LIFE_TABLE_MEASURES.has(input.measure)
+        ? input.metric === "years" &&
+          input.cause === undefined &&
+          input.risk === undefined
+        : input.metric !== "years" && input.age !== "at_birth",
+    {
+      message:
+        "hale and life_expectancy take metric years and no cause or risk; at_birth and years are theirs only",
+    },
+  )
+  .refine(
+    (input) =>
+      GBD_LIFE_TABLE_MEASURES.has(input.measure) ||
+      input.cause !== undefined ||
+      input.risk !== undefined,
+    { message: "give cause, risk or both" },
+  )
   .refine(
     (input) =>
       [input.locations, input.children_of, input.sdi].filter(
@@ -65,6 +83,6 @@ export type GbdEstimateInput = z.infer<typeof gbdEstimateInput>;
 export const GBD_ESTIMATE_TOOL_DEFINITION = {
   name: GBD_ESTIMATE_TOOL,
   description:
-    "IHME GBD population estimates imported on this machine, never about one person: value and uncertainty interval. Cause or risk (IHME names) or both; one of locations (names or ISO codes), children_of or sdi.",
+    "IHME GBD population estimates, never about one person. Lead with hale, life_expectancy (years, no cause); deaths if asked. Others: cause or risk (IHME names).",
   input: gbdEstimateInput,
 } as const;
