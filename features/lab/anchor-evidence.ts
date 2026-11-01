@@ -3,6 +3,7 @@ import {
   ANCHOR_CHAIN_WORDS,
   type AnchorVerdict,
   anchorSentence,
+  shortDatabaseId,
 } from "@/packages/audit/anchor";
 import type { ChainName } from "@/packages/audit/chain";
 
@@ -36,6 +37,9 @@ const RESULT: Readonly<Record<ResultKey, string>> = {
   "log-missing": "anchors file missing",
   "key-mismatch": "key does not match the file",
   "chain-unreadable": "chain could not be read",
+  "database-unreadable": "database identity could not be read",
+  "database-mismatch": "anchors file is for another database",
+  "database-changed": "the file names a second database",
   "no-anchor": "no anchor yet",
   truncated: "chain shorter than the anchor",
   removed: "anchored row missing",
@@ -67,6 +71,20 @@ export const anchorEvidence = (view: AnchorView | null): readonly Evidence[] => 
       label: "Anchor check",
       value: RESULT[verdict.status === "ok" ? "ok" : verdict.reason],
     },
+    ...(verdict.status === "not-ok" && verdict.databases !== undefined
+      ? [
+          {
+            label: "Anchors file database",
+            value: shortDatabaseId(verdict.databases.log),
+            mono: true,
+          },
+          {
+            label: "This database",
+            value: shortDatabaseId(verdict.databases.current),
+            mono: verdict.databases.current !== null,
+          },
+        ]
+      : []),
     {
       label: "Anchor key id",
       value: verdict.keyId === null ? "none" : verdict.keyId.slice(0, 16),

@@ -4,9 +4,9 @@ import { dirname } from "node:path";
 import { PrismaPg } from "@prisma/adapter-pg";
 
 import { PrismaClient } from "@/generated/prisma/client";
-import { defaultStateDir } from "@/infrastructure/storage-hardening";
+import { stateDirFrom } from "@/infrastructure/storage-hardening";
 
-import { chainReaders, verifyAgainstAnchor } from "./anchor-chains";
+import { chainReaders, databaseIdentity, verifyAgainstAnchor } from "./anchor-chains";
 import { type AnchorPaths, anchorPaths, anchorPathsIn } from "./anchor-store";
 import { append } from "./append";
 import { verifyDisclosureChain } from "./disclosure-chain";
@@ -35,15 +35,21 @@ const databaseUrl = (): string => {
 };
 
 /** The state folder as the app resolves it (docs/privacy-design.md, "State directory"). */
-const stateDir = (): string =>
-  // eslint-disable-next-line no-restricted-syntax -- verify-cli runs outside the app
-  process.env.TWINLLM_STATE_DIR ||
-  defaultStateDir({
+const stateDir = (): string => {
+  const dir = stateDirFrom({
+    // eslint-disable-next-line no-restricted-syntax -- verify-cli runs outside the app
+    value: process.env.TWINLLM_STATE_DIR,
     platform: process.platform === "darwin" ? "darwin" : "linux",
     home: homedir(),
     // eslint-disable-next-line no-restricted-syntax -- verify-cli runs outside the app
     xdgDataHome: process.env.XDG_DATA_HOME,
   });
+  if (!dir.ok) {
+    console.error(`verify-cli: ${dir.error}`);
+    process.exit(EXIT.usage);
+  }
+  return dir.dir;
+};
 
 const pathsFor = (option: AnchorOption): AnchorPaths | null => {
   if (option.anchors === "off") return null;
@@ -116,7 +122,12 @@ const main = async (): Promise<void> => {
         return;
       }
       const anchored = anchorOutcome(
-        await verifyAgainstAnchor(chainReaders(client)[chain.chain], paths, chain.chain),
+        await verifyAgainstAnchor(
+          chainReaders(client)[chain.chain],
+          databaseIdentity(client),
+          paths,
+          chain.chain,
+        ),
         chain.chain,
       );
       print(anchored);

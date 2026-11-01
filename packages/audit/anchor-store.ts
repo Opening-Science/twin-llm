@@ -26,6 +26,8 @@ import {
   anchorBody,
   type ChainHead,
   checkAnchorLog,
+  databaseBody,
+  databaseMismatchMessage,
   type DiskKey,
   keyBody,
   keyIdOf,
@@ -218,6 +220,19 @@ export class AnchorKeyMissing extends Error {
   override name = "AnchorKeyMissing";
 }
 
+/** The anchors file names another database (#382); nothing was written. */
+export class AnchorDatabaseMismatch extends Error {
+  override name = "AnchorDatabaseMismatch";
+  readonly code = "ANCHOR_DATABASE_MISMATCH";
+  readonly logDatabaseId: string;
+  readonly databaseId: string;
+  constructor(input: Readonly<{ logDatabaseId: string; databaseId: string }>) {
+    super(databaseMismatchMessage(input));
+    this.logDatabaseId = input.logDatabaseId;
+    this.databaseId = input.databaseId;
+  }
+}
+
 const withLock = <T>(paths: AnchorPaths, run: () => T): T => {
   for (let attempt = 0; attempt < LOCK_TRIES; attempt += 1) {
     try {
@@ -334,11 +349,17 @@ export const initAnchorKey = (paths: AnchorPaths, now: Date): InitResult => {
 
 export type DueHead = Readonly<{ chain: ChainName; head: ChainHead }>;
 
-/** Signs and appends one anchor per head, under the lock. */
+/**
+ * Signs and appends one anchor per head, under the lock, for the database
+ * `databaseId` (`databaseIdOf`, #382). A file that names no database yet
+ * first gets a line naming this one; a file that names another database is
+ * left as it is and `AnchorDatabaseMismatch` is thrown.
+ */
 export const writeAnchors = (
   paths: AnchorPaths,
   heads: readonly DueHead[],
   now: Date,
+  databaseId: string,
 ): readonly AnchorLine[] => {
   if (heads.length === 0) return [];
   const key = readAnchorKey(paths);
@@ -348,20 +369,37 @@ export const writeAnchors = (
     if (scan.keyId !== key.keyId) {
       throw new AnchorLogDamaged("the anchors file does not end with this key");
     }
-    return appendLines(
-      paths,
-      scan.prev,
-      heads.map(
+    if (scan.databaseId !== null && scan.databaseId !== databaseId) {
+      throw new AnchorDatabaseMismatch({ logDatabaseId: scan.databaseId, databaseId });
+    }
+    const at = now.toISOString();
+    const naming =
+      scan.databaseId === null
+        ? [
+            (prev: string) =>
+              signLine(
+                databaseBody({ databaseId, at, keyId: key.keyId, prev }),
+                key.privateKey,
+              ),
+          ]
+        : [];
+    return appendLines(paths, scan.prev, [
+      ...naming,
+      ...heads.map(
         ({ chain, head }) =>
           (prev: string) =>
             signLine(
-              anchorBody({ chain, head, at: now.toISOString(), keyId: key.keyId, prev }),
+              anchorBody({ chain, head, at, keyId: key.keyId, prev }),
               key.privateKey,
             ),
       ),
-    );
+    ]);
   });
 };
+
+/** The database the anchors file names, or null (a file from before #382, or none yet). */
+export const anchoredDatabase = (paths: AnchorPaths): string | null =>
+  scanLog(paths).databaseId;
 
 /** The newest anchor per chain, without checking signatures (the writer's view). */
 export const latestAnchors = (paths: AnchorPaths): Scan["latest"] =>

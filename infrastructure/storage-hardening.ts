@@ -44,6 +44,53 @@ export const defaultStateDir = (
   return `${base}/twin-llm`;
 };
 
+/**
+ * The state folder a synthetic install gets (#382): the default folder's
+ * name with `-synthetic`, next to it, so its anchors and keys never mix with
+ * a personal install's.
+ */
+export const syntheticStateDir = (
+  input: Readonly<{
+    platform: StoragePlatform;
+    home: string;
+    xdgDataHome?: string | undefined;
+  }>,
+): string => `${defaultStateDir(input)}-synthetic`;
+
+/**
+ * The state folder from a raw TWINLLM_STATE_DIR (blank counts as unset), as
+ * the app resolves it. Only an absolute path is taken: `~` and `$HOME` are
+ * not expanded by `.env` files, so `~/x` would become a folder named `~`
+ * under the working directory (#382). The app refuses such a value at
+ * startup (`infrastructure/env.ts`); the commands outside it refuse it here.
+ */
+export const stateDirFrom = (
+  input: Readonly<{
+    value: string | undefined;
+    platform: StoragePlatform;
+    home: string;
+    xdgDataHome?: string | undefined;
+  }>,
+): Readonly<{ ok: true; dir: string }> | Readonly<{ ok: false; error: string }> => {
+  const value = input.value?.trim();
+  if (value === undefined || value === "") {
+    return {
+      ok: true,
+      dir: defaultStateDir({
+        platform: input.platform,
+        home: input.home,
+        xdgDataHome: input.xdgDataHome,
+      }),
+    };
+  }
+  return value.startsWith("/")
+    ? { ok: true, dir: value }
+    : {
+        ok: false,
+        error: `${STATE_DIR_VARIABLE} must be an absolute path (\`~\` and $HOME are not expanded)`,
+      };
+};
+
 // ---------------------------------------------------------------------------
 // Paths as shown
 // ---------------------------------------------------------------------------
