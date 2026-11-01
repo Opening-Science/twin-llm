@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 
-import { buildLocations } from "./build-location-map";
+import { GBD_LOCATION_TABLE } from "../../packages/gbd-local/location-table";
+
+import { buildLocations, recodeTable, subdivisionCode } from "./build-location-map";
 
 /** A made-up slice in the layout of IHME's location metadata file. */
 const META = [
@@ -66,5 +68,31 @@ describe("buildLocations", () => {
         ].join("\n"),
       ),
     ).toThrow("Alabama does not sit under its country");
+  });
+});
+
+describe("subdivisionCode and recodeTable", () => {
+  test("codes come from the hand table by country and GBD name", () => {
+    expect(subdivisionCode("KEN", "Nairobi")).toBe("KE-30");
+    expect(subdivisionCode("KEN", "Made-up County")).toBeNull();
+    expect(subdivisionCode(null, "Nairobi")).toBeNull();
+  });
+
+  test("a unit is looked up under its level-3 ancestor, not its own alpha-3", () => {
+    const rows = recodeTable([
+      [6, 5, 3, "China", "CHN", null],
+      [354, 6, 4, "Hong Kong Special Administrative Region of China", "HKG", null],
+      [180, 5, 3, "Kenya", "KEN", null],
+      [35646, 180, 4, "Nairobi", "KEN", "stale"],
+      [999, 180, 4, "Made-up County", "KEN", "stale"],
+    ]);
+    expect(rows.map((row) => row.iso31662)).toEqual([null, "CN-HK", null, "KE-30", null]);
+  });
+
+  test("the committed table carries the hand table's codes", () => {
+    const recoded = recodeTable(GBD_LOCATION_TABLE);
+    expect(recoded.map((row) => row.iso31662)).toEqual(
+      GBD_LOCATION_TABLE.map((entry) => entry[5]),
+    );
   });
 });

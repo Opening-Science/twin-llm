@@ -133,15 +133,25 @@ hierarchy file on the GHDx needs a sign-in, so it is not used.
 
 - 1,075 locations: Global, 7 super-regions, 21 regions, 204 countries and
   territories, and 842 subnational units.
-- ISO 3166-2 for 215 subnational units, checked by hand against the ISO Online
-  Browsing Platform (`scripts/gbd/iso-3166-2.ts`): US states and DC, Brazilian
-  states, Mexican states, Japanese prefectures, Chinese provinces (Hong Kong
-  and Macao also get their own alpha-3, HKG and MAC), Italian regions and
-  autonomous provinces, and the four UK nations.
-- Every other subnational unit (Ethiopia, India, Indonesia, Iran, Kenya,
-  Nigeria, Norway, New Zealand, Pakistan, the Philippines, Poland, Russia,
-  Sweden, Ukraine, South Africa, English regions and local authorities) keeps
-  its country's alpha-3 and a null ISO 3166-2 code.
+- ISO 3166-2 for 614 subnational units (`scripts/gbd/iso-3166-2.ts`). US states
+  and DC, Brazilian states, Mexican states, Japanese prefectures, Chinese
+  provinces (Hong Kong and Macao also get their own alpha-3, HKG and MAC),
+  Italian regions and autonomous provinces and the four UK nations were checked
+  by hand against the ISO Online Browsing Platform. The states, provinces,
+  regions and counties of Ethiopia, India, Indonesia, Iran, Kenya, Nigeria,
+  Norway (the 11 counties of 2020), Pakistan, the Philippines, Poland, Russia
+  and South Africa, Stockholm, Crimea and Sevastopol were paired by hand with
+  the current codes listed on the Wikipedia "ISO 3166-2" page of each country
+  (#397). After a change to that file, `bun scripts/gbd/build-location-map.ts
+--codes` rewrites the table's codes.
+- Units that are not ISO subdivisions keep their country's alpha-3 and a null
+  ISO 3166-2 code: English regions and local authorities, the urban and rural
+  halves of Indian states, India's "Other Union Territories" and "Jammu &
+  Kashmir and Ladakh", Sweden except Stockholm, Ukraine without Crimea and
+  Sevastopol, New Zealand's two population groups, and Maguindanao (its code
+  was withdrawn when it split in 2022).
+- How these units meet the map's boundaries is in
+  [`gbd-map-coverage.md`](gbd-map-coverage.md).
 - An id the table does not hold, such as a unit GBD 2023 added after the
   source file, is `unmapped`; nothing is guessed. Its rows still import and
   are found by name.

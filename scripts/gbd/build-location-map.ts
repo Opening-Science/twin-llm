@@ -5,6 +5,12 @@
  * parent, level, name, ISO 3166-1 alpha-3 code and, for the subnational sets
  * in iso-3166-2.ts, its ISO 3166-2 code.
  *
+ * bun scripts/gbd/build-location-map.ts --codes
+ *
+ * Rewrites the committed table with the ISO 3166-2 codes of iso-3166-2.ts
+ * and nothing else changed, for when that hand table grows (#397) and the
+ * metadata file is not at hand.
+ *
  * Input: IHME's public location metadata file
  * https://github.com/ihmeuw/CHAIN_IHME_adultmortality_edu_sysreview/blob/main/loction_metadata.csv
  * (columns location_name, location_id, ihme_loc_id, level, region_name,
@@ -21,6 +27,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { GBD_LOCATION_TABLE } from "../../packages/gbd-local/location-table";
 import { parseDelimited } from "../../packages/personal-data/delimited";
 
 import { ISO_3166_2_BY_NAME } from "./iso-3166-2";
@@ -84,10 +91,38 @@ export const buildLocations = (text: string): readonly BuiltLocation[] => {
       level,
       name,
       iso3: OWN_ALPHA3[String(id)] ?? country,
-      iso31662:
-        level >= 4 && country !== null
-          ? (ISO_3166_2_BY_NAME[country]?.[name] ?? null)
-          : null,
+      iso31662: level >= 4 ? subdivisionCode(country, name) : null,
+    };
+  });
+};
+
+/** The hand table's ISO 3166-2 code for a subnational unit of this country, or null. */
+export const subdivisionCode = (country: string | null, name: string): string | null =>
+  country === null ? null : (ISO_3166_2_BY_NAME[country]?.[name] ?? null);
+
+type TableEntry = (typeof GBD_LOCATION_TABLE)[number];
+
+/**
+ * The committed table's rows with their ISO 3166-2 codes taken again from the
+ * hand table. A unit's country is its level-3 ancestor (so Hong Kong, which
+ * has an alpha-3 code of its own, is still looked up under China).
+ */
+export const recodeTable = (table: readonly TableEntry[]): readonly BuiltLocation[] => {
+  const byId = new Map(table.map((entry) => [entry[0], entry] as const));
+  const countryOf = (entry: TableEntry): string | null => {
+    if (entry[2] <= 3) return entry[2] === 3 ? entry[4] : null;
+    const parent = entry[1] === null ? undefined : byId.get(entry[1]);
+    return parent === undefined ? null : countryOf(parent);
+  };
+  return table.map((entry) => {
+    const [id, parentId, level, name, iso3] = entry;
+    return {
+      id,
+      parentId,
+      level,
+      name,
+      iso3,
+      iso31662: level >= 4 ? subdivisionCode(countryOf(entry), name) : null,
     };
   });
 };
@@ -131,10 +166,15 @@ const isMain = Boolean((import.meta as { main?: boolean }).main);
 if (isMain) {
   const path = process.argv[2];
   if (path === undefined) {
-    console.error("usage: bun scripts/gbd/build-location-map.ts <location_metadata.csv>");
+    console.error(
+      "usage: bun scripts/gbd/build-location-map.ts <location_metadata.csv> | --codes",
+    );
     process.exit(1);
   }
-  const locations = buildLocations(readFileSync(path, "utf8"));
+  const locations =
+    path === "--codes"
+      ? recodeTable(GBD_LOCATION_TABLE)
+      : buildLocations(readFileSync(path, "utf8"));
   writeFileSync(OUT, render(locations));
   const subnational = locations.filter((location) => location.level >= 4);
   console.log(
