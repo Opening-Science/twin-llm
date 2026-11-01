@@ -50,6 +50,11 @@ The answer runs through the same pipeline as a saved one: `createStartAnswer` (s
 
 `list_views` and `open_view` find no earlier views, since nothing was stored. Twin notes are never loaded, and `/compact` says there is nothing saved to draft from. The genome tools stay available where the genome policy allows them, because the model is local. Ollama's own logs on this machine are outside TwinLLM.
 
+## Modes and effort
+
+Auto, Manual and Compare, and five effort steps from Quick to Ultra (#366): see
+[chat-modes.md](chat-modes.md).
+
 ## 2. Skills and the command palette
 
 The slash menu becomes a palette: built-in commands and skills, each showing what it may read. A skill is `skills/<name>/SKILL.md` (name, description, allowed tools, sources, providers, views) plus `evals/`, run in CI like the question set. Built-ins: `/sleep`, `/compact` (a twin note in a per-user memory the person edits), `/report` (PDF or FHIR DocumentReference). `/connect` keeps the wearable rows.

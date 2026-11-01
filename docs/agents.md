@@ -80,6 +80,11 @@ On local Ollama that is the three agents; on a hosted provider it is the General
 agent and two models. The models page and the starter questions read the catalog
 without agents, so they keep models only.
 
+Since #366 the prompt bar picks a mode first ([chat-modes.md](chat-modes.md)): Auto
+sends `agent:auto`, Manual runs chosen specialists on chosen models (a specialist on a
+model other than its own is the row `agent:<id>@<model id>`), and Compare keeps the one to
+three picks described here, with at least two.
+
 ## In a turn
 
 The chat routes (`/api/chat` and `/api/chat/incognito`) check `agent:<id>` against the
@@ -132,7 +137,9 @@ roster, so HRV alone stays with Trainer (listed before Heart rhythm) and HRV wit
 word goes to Heart rhythm; no match, or a match only for an agent not offered here, goes to the General
 agent. The answer column reads "Auto → Diet specialist", and one muted line under
 it says why: "Auto chose Diet specialist: the question is about body weight." or "Auto
-chose General: no specialist agent here matched the question." A medicine or dose decision
+chose General: no specialist agent here matched the question." Where the screen knows the
+specialist's model the line names it too (#366): "Auto chose Diet specialist on Qwen3 4B:
+…". A medicine or dose decision
 reads "Auto chose General: the question is about a medicine or dose decision."
 
 The turn stores the column name when it starts (`checkTurnRequest`), and `/api/chat` runs

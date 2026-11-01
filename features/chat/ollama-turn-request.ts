@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { AppliedEffort } from "@/infrastructure/chat-effort";
 import type { DataMode } from "@/infrastructure/data-mode-policy";
 import {
   DEFAULT_OLLAMA_BASE_URL,
@@ -57,6 +58,8 @@ export type TurnRequestCase = Readonly<{
    * route cuts them; the size cases carry the notes that make the longest block.
    */
   twinNotes?: readonly TwinNote[];
+  /** The effort the turn runs at (#366); left out, Balanced. */
+  effort?: AppliedEffort | null;
 }>;
 
 const NO_PORTS: QueryToolPorts = {
@@ -171,6 +174,7 @@ export const captureOllamaTurnRequest = async (
       ...promptDeps,
       twinNotes: notes.text,
       loadAudit: async () => [],
+      effort: turn.effort ?? null,
     },
     {
       turnId: "measure",

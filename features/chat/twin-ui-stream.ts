@@ -13,6 +13,7 @@ import type {
   ChatUIMessage,
   ModelResponseMetrics,
 } from "@/infrastructure/model-response-metrics";
+import { NUMBER_REVIEW_PART } from "@/infrastructure/number-review";
 
 /**
  * A slow local model can think for minutes before its first text token, and
@@ -57,15 +58,21 @@ export const withViewParts = (): TransformStream<Chunk, Chunk> => {
  * come, each view after the tool call that drew it, without their `finish` chunk; that waits for `finished`, so metadata
  * (metrics and the response document) always lands before the stream ends.
  * `finished` resolving to null still ends the stream, just without metadata.
+ *
+ * `reviewing` resolves true when an Ultra answer's number check starts (#366);
+ * a `data-number-review` part then tells the browser, before the
+ * metadata that carries the check's result.
  */
 export const twinUIMessageResponse = ({
   modelStream,
   finished,
+  reviewing,
   onError,
   heartbeatMs = HEARTBEAT_INTERVAL_MS,
 }: Readonly<{
   modelStream: ReadableStream<Chunk>;
   finished: Promise<ModelResponseMetrics | null>;
+  reviewing?: Promise<boolean>;
   onError: (error: unknown) => string;
   heartbeatMs?: number;
 }>): Response =>
@@ -73,6 +80,12 @@ export const twinUIMessageResponse = ({
     stream: createUIMessageStream<ChatUIMessage>({
       execute: async ({ writer }) => {
         writer.merge(modelStream.pipeThrough(withViewParts()));
+        void reviewing?.then((started) => {
+          if (started) {
+            // Not transient: the browser reads it from the message's parts.
+            writer.write({ type: NUMBER_REVIEW_PART, data: { state: "running" } });
+          }
+        });
         const heartbeat = setInterval(() => {
           writer.write({ type: "data-heartbeat", data: null, transient: true });
         }, heartbeatMs);

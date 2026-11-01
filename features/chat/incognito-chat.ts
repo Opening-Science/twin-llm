@@ -1,6 +1,11 @@
 import { incognitoSessionId, permitIncognitoModel } from "@/infrastructure/incognito";
 import type { DataMode } from "@/infrastructure/data-mode-policy";
-import { type CatalogAgent, turnAgentOf } from "@/infrastructure/model-catalog";
+import {
+  type CatalogAgent,
+  findCatalogRow,
+  modelCanThink,
+  turnAgentOf,
+} from "@/infrastructure/model-catalog";
 import type { KnowledgeSourceId } from "@/infrastructure/knowledge-sources";
 import type { TurnSkill } from "@/infrastructure/skill-gate";
 import type { AppendInput } from "@/packages/audit/append";
@@ -142,7 +147,7 @@ export const createIncognitoChatHandler = (deps: IncognitoChatDeps) => {
         "We can't reach the model list right now. Try again in a moment.",
       );
     }
-    if (!models.some(({ id }) => id === body.modelId)) {
+    if (findCatalogRow(body.modelId, models) === null) {
       return refuse(400, "That model isn't available for the active LLM provider.");
     }
 
@@ -167,13 +172,11 @@ export const createIncognitoChatHandler = (deps: IncognitoChatDeps) => {
     });
     const call: ChatRequest = { ...body, turnId: sessionId };
 
+    const agent = turnAgentOf(body.modelId, models, currentPrompt(body.messages));
     try {
-      return await startAnswer(
-        actorId,
-        appUserId ?? "",
-        call,
-        turnAgentOf(body.modelId, models, currentPrompt(body.messages)),
-      );
+      return await startAnswer(actorId, appUserId ?? "", call, agent, {
+        canThink: modelCanThink(agent?.baseModelId ?? body.modelId, models),
+      });
     } catch (error) {
       console.error(
         "[chat] failed to start the incognito model stream",

@@ -2,6 +2,8 @@ import { z } from "zod";
 
 import { gbdPopulationInput } from "@/packages/gbd-mcp/input";
 
+import { effortSchema } from "../chat-effort";
+import { numberReviewSchema } from "../number-review";
 import { uiContextSchema } from "../ui-context";
 import { CHAT_RESPONSE_DOCUMENT } from "./constants";
 
@@ -175,6 +177,19 @@ export const responseDocumentV1Schema = z.object({
   // Additive (#47): what the person had on screen as they asked. Absent when
   // the turn carried none and on documents saved before it.
   ui_context: uiContextSchema.optional(),
+  // Additive (#366): the effort the answer ran at and what it became for its
+  // model. Absent on documents saved before it.
+  effort: z
+    .object({
+      level: effortSchema,
+      thinking: z.enum(["on", "off", "unavailable", "provider-default"]),
+      max_steps: z.number().int().positive(),
+      review: z.boolean(),
+    })
+    .optional(),
+  // Additive (#366): the Ultra number check. Absent below Ultra and on older
+  // documents.
+  number_review: numberReviewSchema.optional(),
 });
 
 export type ResponseToolCall = z.infer<typeof toolCallSchema>;

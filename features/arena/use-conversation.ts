@@ -7,6 +7,7 @@ import {
   parseTwinAnswer,
   type WearableSummaries,
 } from "@/infrastructure/parse-twin-answer";
+import type { EffortLevel } from "@/infrastructure/chat-effort";
 import { useThreadHistory } from "@/infrastructure/thread-history-store";
 import type { UiContext } from "@/infrastructure/ui-context";
 
@@ -21,8 +22,10 @@ import type { TurnState } from "./conversation";
 import { startTurn } from "./start-turn";
 import { historyFor } from "./turn-history";
 import {
+  answersStreaming,
   answersToStream,
   scheduledStillWriting,
+  stopResponse,
   confirmTurn,
   dropPending,
   pendingTurn,
@@ -41,6 +44,10 @@ import {
  *   are still being written (onboarding starts threads that way).
  * - Nothing here navigates. A new thread's URL is set with `replaceState`, so
  *   the open streams are not torn down by a route change.
+ *
+ * Stop (#366) aborts every open stream of this browser and marks those
+ * answers stopped. The server is not told: a saved answer still finishes and
+ * is stored, and a reload shows it.
  *
  * In incognito mode (`begin-turn.ts`) the turns live in this state only:
  * `startTurn` is never called, the thread history is not touched and the URL
@@ -93,6 +100,7 @@ export const useConversation = (
   const [error, setError] = useState<string | null>(null);
   const [summaries, setSummaries] = useState<WearableSummaries>(NO_SUMMARIES);
   const streaming = useRef(new Set<string>());
+  const aborts = useRef(new Map<string, AbortController>());
 
   useEffect(() => {
     let current = true;
@@ -116,20 +124,33 @@ export const useConversation = (
 
   useEffect(() => {
     answersToStream(turns, streaming.current).forEach(
-      ({ turnIndex, turnId, skill, uiContext, response }) => {
+      ({ turnIndex, turnId, skill, uiContext, effort, response }) => {
         streaming.current.add(response.id);
+        const stop = new AbortController();
+        aborts.current.set(response.id, stop);
         const request = answerRequestFor(mode, {
           modelId: response.modelId,
           turnId,
           messages: historyFor(turns, turnIndex, response.modelId),
           skill,
           uiContext,
+          ...(effort === undefined ? {} : { effort }),
         });
-        void streamAnswer(request, (progress) =>
-          setTurns((all) =>
-            updateResponse(all, response.id, (answer) => ({ ...answer, ...progress })),
-          ),
+        void streamAnswer(
+          request,
+          (progress) =>
+            setTurns((all) =>
+              updateResponse(all, response.id, (answer) => ({ ...answer, ...progress })),
+            ),
+          fetch,
+          stop.signal,
         ).then(async (result) => {
+          aborts.current.delete(response.id);
+          if (stop.signal.aborted) {
+            // Stop already marked it; only the bookkeeping is left.
+            streaming.current.delete(response.id);
+            return;
+          }
           // Wearable data may have synced while the model worked; the evidence
           // panel reads the answer against what is current now.
           const fresh = await fetchSummaries();
@@ -153,6 +174,7 @@ export const useConversation = (
                   result.ending === "COMPLETE" ? new Date().toISOString() : null,
                 reasoningText: parsed.reasoningText,
                 attribution: parsed.attribution,
+                reviewing: false,
               };
             }),
           );
@@ -167,10 +189,11 @@ export const useConversation = (
       models: readonly SendModel[],
       skill: string | null = null,
       uiContext: UiContext | null = null,
+      effort: EffortLevel | null = null,
     ) => {
       setSending(true);
       setError(null);
-      setTurns((all) => [...all, pendingTurn(prompt, models, skill, uiContext)]);
+      setTurns((all) => [...all, pendingTurn(prompt, models, skill, uiContext, effort)]);
 
       const started = await beginTurn(mode, BEGIN_TURN, {
         threadId,
@@ -214,5 +237,26 @@ export const useConversation = (
     [],
   );
 
-  return { threadId, turns, sending, error, summaries, send, retry };
+  const stop = useCallback(() => {
+    const open = [...aborts.current.entries()];
+    open.forEach(([, controller]) => controller.abort());
+    setTurns((all) =>
+      open.reduce(
+        (updated, [responseId]) => updateResponse(updated, responseId, stopResponse),
+        all,
+      ),
+    );
+  }, []);
+
+  return {
+    threadId,
+    turns,
+    sending,
+    streamingNow: answersStreaming(turns),
+    error,
+    summaries,
+    send,
+    retry,
+    stop,
+  };
 };

@@ -172,20 +172,37 @@ export const agentIdOfAutoColumn = (columnName: string): string | null => {
   return AGENTS.find((agent) => agent.name === name)?.id ?? null;
 };
 
-/** The muted line under an Auto answer. */
-export const autoChoiceLine = (agentName: string, topic: string | null): string =>
-  topic === null
-    ? `${AUTO_AGENT.name} chose ${agentName}: no specialist agent here matched the question.`
-    : `${AUTO_AGENT.name} chose ${agentName}: the question is about ${topic}.`;
+/**
+ * The muted line under an Auto answer: which agent, on which model when that
+ * is known (#366), and why.
+ */
+export const autoChoiceLine = (
+  agentName: string,
+  topic: string | null,
+  modelName: string | null = null,
+): string => {
+  const ran = modelName === null ? agentName : `${agentName} on ${modelName}`;
+  return topic === null
+    ? `${AUTO_AGENT.name} chose ${ran}: no specialist agent here matched the question.`
+    : `${AUTO_AGENT.name} chose ${ran}: the question is about ${topic}.`;
+};
 
 /**
  * The line for a stored Auto answer, from its prompt and column name. The
  * column name holds the agent that ran; the topic is found again by routing
  * the prompt among that one agent, which gives the same topic it won with.
  */
-export const autoChoiceLineFor = (prompt: string, columnName: string): string | null => {
+export const autoChoiceLineFor = (
+  prompt: string,
+  columnName: string,
+  modelNameOf: (agentId: string) => string | null = () => null,
+): string | null => {
   const agentId = agentIdOfAutoColumn(columnName);
   const agent = AGENTS.find(({ id }) => id === agentId);
   if (agent === undefined) return null;
-  return autoChoiceLine(agent.name, routeAgent(prompt, [agent.id]).topic);
+  return autoChoiceLine(
+    agent.name,
+    routeAgent(prompt, [agent.id]).topic,
+    modelNameOf(agent.id),
+  );
 };

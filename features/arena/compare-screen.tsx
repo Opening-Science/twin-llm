@@ -14,10 +14,12 @@ import { buildUiContext } from "@/infrastructure/ui-context";
 import type { TwinFocusId } from "@/packages/anatomy/twin-focus";
 
 import { AnswerColumn } from "./answer-column";
+import { specialistModelIn } from "./answer-header";
 import type { TurnState } from "./conversation";
 import { IncognitoBanner } from "./incognito-controls";
 import { OutputsPanel } from "./outputs-panel";
 import { PromptBar } from "./prompt-bar";
+import { NO_SOURCE_FACTS, type PromptSourceFacts } from "./prompt-sources";
 import { useSuggestedQuestions } from "./suggestion-chips";
 import { threadOutputs } from "./thread-outputs";
 import { conversationItems } from "./twin-card-state";
@@ -29,7 +31,8 @@ import { useTwinCard } from "./use-twin-card";
 import { Welcome } from "./welcome";
 
 /**
- * TwinLLM's main screen: a prompt goes to one to three models and their
+ * TwinLLM's main screen: a prompt goes to one to three models (Auto, Manual
+ * or Compare, #366) and their
  * answers sit side by side, each with its reasoning, evidence and measured
  * numbers. The same screen serves a new thread at `/` and a saved one at
  * `/t/<id>`; only the starting turns differ.
@@ -73,6 +76,7 @@ export const CompareScreen = ({
   localModelIds = [],
   initialDraft,
   subjectRef,
+  sourceFacts = NO_SOURCE_FACTS,
 }: Readonly<{
   catalog: readonly CatalogModel[] | null;
   defaultModelIds: readonly string[];
@@ -90,16 +94,20 @@ export const CompareScreen = ({
   initialDraft?: string;
   /** A subject page's subject: the suggestions are about it. */
   subjectRef?: string;
+  /** What the prompt bar's sources list may offer (#366). */
+  sourceFacts?: PromptSourceFacts;
 }>) => {
   const router = useRouter();
   const {
     threadId: currentThreadId,
     turns,
     sending,
+    streamingNow,
     error,
     summaries,
     send,
     retry,
+    stop,
   } = useConversation(threadId, initialTurns, incognito ? "incognito" : "saved");
   const twin = useTwinCard({
     initialThreadId: threadId,
@@ -114,6 +122,7 @@ export const CompareScreen = ({
     subjectRef,
   );
   const outputs = useMemo(() => threadOutputs(turns), [turns]);
+  const modelNameOf = useMemo(() => specialistModelIn(catalog), [catalog]);
   const [largeOutput, setLargeOutput] = useState(false);
   const withPanel = outputs.length > 0;
   const [outputsShown, setOutputsShown] = useState<
@@ -121,7 +130,12 @@ export const CompareScreen = ({
   >({ open: false, large: null });
   const [organ, setOrgan] = useState<TwinFocusId | null>(null);
   const onSubmit = useCallback(
-    (prompt: string, models: Parameters<typeof send>[1], skill: string | null) => {
+    (
+      prompt: string,
+      models: Parameters<typeof send>[1],
+      skill: string | null,
+      effort: Parameters<typeof send>[4],
+    ) => {
       const uiContext = incognito
         ? null
         : buildUiContext({
@@ -131,7 +145,7 @@ export const CompareScreen = ({
             largeView: withPanel ? outputsShown.large : null,
             views: outputs.map((entry) => entry.view),
           });
-      void send(prompt, models, skill, uiContext);
+      void send(prompt, models, skill, uiContext, effort);
     },
     [send, incognito, withPanel, outputsShown, twin.card, organ, outputs],
   );
@@ -232,6 +246,7 @@ export const CompareScreen = ({
                               prompt={item.turn.prompt}
                               wearables={summaries}
                               onRetry={() => retry(response.id)}
+                              modelNameOf={modelNameOf}
                             />
                           ))}
                         </div>
@@ -265,6 +280,9 @@ export const CompareScreen = ({
           catalog={catalog}
           initialModelIds={defaultModelIds}
           busy={sending}
+          streaming={streamingNow}
+          onStop={stop}
+          sourceFacts={sourceFacts}
           skills={skills}
           incognito={incognito}
           localModelIds={localModelIds}

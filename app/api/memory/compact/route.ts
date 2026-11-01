@@ -9,7 +9,7 @@ import { database } from "@/infrastructure/database";
 import { exoscalePersonalData, isAuthDisabled, serverEnv } from "@/infrastructure/env";
 import { fetchChatCatalog } from "@/infrastructure/fetch-model-catalog";
 import { chatModelIsLocal } from "@/infrastructure/genome-gate";
-import { turnAgentOf } from "@/infrastructure/model-catalog";
+import { findCatalogRow, turnAgentOf } from "@/infrastructure/model-catalog";
 import { personalDataSentEvent } from "@/infrastructure/personal-data-audit";
 import { append } from "@/packages/audit/append";
 
@@ -35,7 +35,7 @@ const draft = createCompactHandler({
   turn: () => ({ ...settings(), chatIsLocal: chatModelIsLocal() }),
   draftModel: async (source, disclosure) => {
     const catalog = await fetchChatCatalog(runnableSkills());
-    if (catalog === null || !catalog.some(({ id }) => id === source.modelId)) return null;
+    if (catalog === null || findCatalogRow(source.modelId, catalog) === null) return null;
     const agent = turnAgentOf(source.modelId, catalog, source.prompt, source.modelName);
     const modelId = agent?.baseModelId ?? source.modelId;
     const model = resolveLanguageModel(modelId, {

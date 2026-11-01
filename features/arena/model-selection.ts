@@ -1,6 +1,7 @@
 import {
   AUTO_MODEL_ID,
   type CatalogModel,
+  findCatalogRow,
   MAX_SELECTED_MODELS,
   MIN_SELECTED_MODELS,
 } from "@/infrastructure/model-catalog";
@@ -42,7 +43,7 @@ export const missingCount = (
   catalog: readonly CatalogModel[] | null,
   ids: readonly string[],
 ): number =>
-  catalog ? ids.filter((id) => !catalog.some((model) => model.id === id)).length : 0;
+  catalog ? ids.filter((id) => findCatalogRow(id, catalog) === null).length : 0;
 
 export type ToggleLimit = "floor" | "cap" | null;
 

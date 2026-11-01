@@ -24,6 +24,7 @@ import { resolveActorId } from "@/infrastructure/auth-actor";
 import { ensureAppUser } from "@/infrastructure/current-user";
 import { database } from "@/infrastructure/database";
 import { fetchChatCatalog } from "@/infrastructure/fetch-model-catalog";
+import { findCatalogRow } from "@/infrastructure/model-catalog";
 import { vaultRefusalForAction } from "@/infrastructure/vault-runtime";
 import { append } from "@/packages/audit/append";
 
@@ -90,7 +91,7 @@ export const createTaskAction = async (
   const skill = await findSkillFor(task.skill, who.userId);
   if (skill === null) return { ok: false, message: COPY.noSkill };
   const catalog = await fetchChatCatalog(runnableSkills());
-  if (catalog === null || !catalog.some((model) => model.id === task.modelId)) {
+  if (catalog === null || findCatalogRow(task.modelId, catalog) === null) {
     return { ok: false, message: COPY.noModel };
   }
   if (task.threadId !== null && !(await threadOwnedBy(who.userId, task.threadId))) {

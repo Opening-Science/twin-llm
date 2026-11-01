@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import { offeredKeys } from "@/infrastructure/offered-keys";
 
-import { chatDisclosure } from "./chat-disclosure";
+import { chatDisclosure, numberReviewDisclosure } from "./chat-disclosure";
 
 const WINDOW = { startDate: "2026-07-10", endDate: "2026-07-10" };
 
@@ -95,5 +95,26 @@ describe("chatDisclosure (#140)", () => {
         hasTools: false,
       }).synthetic,
     ).toBe(false);
+  });
+});
+
+describe("numberReviewDisclosure (#366)", () => {
+  test("the number check sends the answer and tool results, no references", () => {
+    const turn = chatDisclosure({
+      actor: "user_synthetic_1",
+      turnId: "turn-synthetic-1",
+      threadId: "thread-synthetic-1",
+      mode: "personal",
+      messageCount: 3,
+      wearables: WEARABLES,
+      noteIds: ["note-synthetic-1"],
+      hasTools: true,
+    });
+    expect(numberReviewDisclosure(turn)).toEqual({
+      ...turn,
+      purpose: "number check",
+      categories: ["answers", "tool results"],
+      refs: [],
+    });
   });
 });

@@ -2,7 +2,7 @@ import type { WearableSummaries } from "@/infrastructure/parse-twin-answer";
 import { Button } from "@/infrastructure/ui-kit/button";
 
 import { AnswerBody } from "./answer-body";
-import { autoLineOf, columnRawId } from "./answer-header";
+import { autoLineOf, columnRawId, effortLineOf, STOPPED_COPY } from "./answer-header";
 import { AnswerStats } from "./answer-stats";
 import type { ResponseState } from "./conversation";
 import { Mark } from "./marks";
@@ -17,20 +17,40 @@ import { Mark } from "./marks";
 
 const FailedAnswer = ({
   lost,
+  stopped,
   refusal,
   onRetry,
-}: Readonly<{ lost: boolean; refusal?: string; onRetry: () => void }>) => (
-  <div role="alert" className="flex flex-col items-start gap-2 text-sm">
-    <p className="text-destructive flex items-center gap-2 font-medium">
-      <Mark name="alert" />
+}: Readonly<{
+  lost: boolean;
+  stopped: boolean;
+  refusal?: string;
+  onRetry: () => void;
+}>) => (
+  <div
+    role={stopped ? "status" : "alert"}
+    className="flex flex-col items-start gap-2 text-sm"
+  >
+    <p
+      className={
+        stopped
+          ? "flex items-center gap-2 font-medium"
+          : "text-destructive flex items-center gap-2 font-medium"
+      }
+    >
+      {stopped ? null : <Mark name="alert" />}
       {refusal !== undefined
         ? "This model did not run"
-        : lost
-          ? "The connection closed while this model was still working"
-          : "No answer came back from this model"}
+        : stopped
+          ? STOPPED_COPY.title
+          : lost
+            ? "The connection closed while this model was still working"
+            : "No answer came back from this model"}
     </p>
     <p className="text-muted-foreground">
-      {refusal ?? "The other answers are not affected. You can ask this model again."}
+      {refusal ??
+        (stopped
+          ? STOPPED_COPY.body
+          : "The other answers are not affected. You can ask this model again.")}
     </p>
     <Button size="sm" onClick={onRetry}>
       Try again
@@ -43,15 +63,19 @@ export const AnswerColumn = ({
   prompt,
   wearables,
   onRetry,
+  modelNameOf,
 }: Readonly<{
   response: ResponseState;
+  /** The model a specialist runs on, for the Auto line (#366). */
+  modelNameOf?: (agentId: string) => string | null;
   /** The turn's prompt, for the line that says why Auto chose its agent. */
   prompt: string;
   wearables: WearableSummaries;
   onRetry: () => void;
 }>) => {
   const rawId = columnRawId(response.modelId);
-  const autoLine = autoLineOf(response, prompt);
+  const autoLine = autoLineOf(response, prompt, modelNameOf);
+  const effortLine = effortLineOf(response.document);
   return (
     <article
       aria-labelledby={`answer-${response.id}`}
@@ -78,10 +102,14 @@ export const AnswerColumn = ({
       {autoLine === null ? null : (
         <p className="text-muted-foreground text-xs">{autoLine}</p>
       )}
+      {effortLine === null ? null : (
+        <p className="text-muted-foreground text-xs">{effortLine}</p>
+      )}
       <div className="flex-1">
         {response.status === "FAILED" ? (
           <FailedAnswer
             lost={response.lost === true}
+            stopped={response.stopped === true}
             refusal={response.refusal}
             onRetry={onRetry}
           />

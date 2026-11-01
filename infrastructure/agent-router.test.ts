@@ -248,6 +248,17 @@ describe("Auto's column name and line", () => {
     );
   });
 
+  test("the line names the model too when it is known (#366)", () => {
+    expect(autoChoiceLine("Diet specialist", "body weight", "Qwen3 4B")).toBe(
+      "Auto chose Diet specialist on Qwen3 4B: the question is about body weight.",
+    );
+    expect(
+      autoChoiceLineFor("How has my weight changed?", "Auto → Diet specialist", (id) =>
+        id === "diet" ? "Qwen3 4B" : null,
+      ),
+    ).toBe("Auto chose Diet specialist on Qwen3 4B: the question is about body weight.");
+  });
+
   test("a stored answer gets the same line back from its prompt and column", () => {
     expect(
       autoChoiceLineFor("How has my weight changed?", "Auto → Diet specialist"),

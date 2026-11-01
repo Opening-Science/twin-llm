@@ -5,7 +5,7 @@ import type { InferUIMessageChunk } from "ai";
 import { timeseriesView } from "@/infrastructure/chat-view";
 import type { ChatUIMessage } from "@/infrastructure/model-response-metrics";
 
-import { withViewParts } from "./twin-ui-stream";
+import { twinUIMessageResponse, withViewParts } from "./twin-ui-stream";
 
 type Chunk = InferUIMessageChunk<ChatUIMessage>;
 
@@ -71,5 +71,31 @@ describe("withViewParts", () => {
       },
     ];
     expect(await run(chunks)).toEqual(chunks);
+  });
+});
+
+describe("twinUIMessageResponse and the number check (#366)", () => {
+  const empty = () =>
+    new ReadableStream<Chunk>({
+      start: (controller) => controller.close(),
+    });
+
+  const partsOf = async (reviewing?: Promise<boolean>): Promise<string> =>
+    twinUIMessageResponse({
+      modelStream: empty(),
+      finished: Promise.resolve(null),
+      ...(reviewing === undefined ? {} : { reviewing }),
+      onError: () => "failed",
+    }).text();
+
+  test("a started check is announced before the stream ends", async () => {
+    const body = await partsOf(Promise.resolve(true));
+    expect(body).toContain('{"type":"data-number-review","data":{"state":"running"}}');
+    expect(body.indexOf("data-number-review")).toBeLessThan(body.indexOf('"finish"'));
+  });
+
+  test("no check, no part", async () => {
+    expect(await partsOf(Promise.resolve(false))).not.toContain("data-number-review");
+    expect(await partsOf()).not.toContain("data-number-review");
   });
 });

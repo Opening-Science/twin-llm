@@ -1,0 +1,60 @@
+import { generateText, type LanguageModel } from "ai";
+
+import {
+  failedReview,
+  NUMBER_REVIEWER,
+  type NumberReview,
+  parseReview,
+  REVIEW_SYSTEM,
+  reviewNumbers,
+  reviewPrompt,
+  reviewToolText,
+} from "@/infrastructure/number-review";
+
+import { errorNameOf } from "./model-failure-log";
+import type { TwinTurnToolResult } from "./run-twin-turn";
+
+/**
+ * Runs the Ultra number check (#366) on a finished answer: one call, no tools,
+ * thinking left at the model's default (off on Ollama). An answer without
+ * numbers asks no model. A failed or timed-out call gives a `failed` review
+ * with every number unchecked; it never fails the answer.
+ */
+
+/** The check gives up after this long; the answer itself is already done. */
+export const NUMBER_REVIEW_TIMEOUT_MS = 120_000;
+
+export const runNumberReview = async (
+  model: LanguageModel,
+  answer: string,
+  toolResults: readonly TwinTurnToolResult[],
+): Promise<NumberReview> => {
+  const { numbers, skipped } = reviewNumbers(
+    answer,
+    toolResults.map((result, index) => ({
+      toolCallId: String(index),
+      input: result.input,
+      output: result.output,
+    })),
+  );
+  if (numbers.length === 0) {
+    return { reviewer: NUMBER_REVIEWER.name, status: "done", items: [], skipped };
+  }
+  try {
+    const { text } = await generateText({
+      model,
+      system: REVIEW_SYSTEM,
+      prompt: reviewPrompt(answer, reviewToolText(toolResults), numbers),
+      abortSignal: AbortSignal.timeout(NUMBER_REVIEW_TIMEOUT_MS),
+    });
+    return {
+      reviewer: NUMBER_REVIEWER.name,
+      status: "done",
+      items: [...parseReview(text, numbers)],
+      skipped,
+    };
+  } catch (error) {
+    console.error("[chat] number check failed", errorNameOf(error));
+    return failedReview(numbers, skipped);
+  }
+};

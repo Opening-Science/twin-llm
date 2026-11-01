@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { agentIdOfAutoColumn, autoColumnName, routeAgent } from "./agent-router";
 import {
+  AGENT_ID_PREFIX,
   type AgentOffer,
   AGENTS,
   agentIsOffered,
@@ -37,6 +38,11 @@ export type CatalogModel = {
   readonly contextUnknown?: true;
   /** Set on an agent's row (`withAgents`): who it is and the model it runs on. */
   readonly agent?: CatalogAgent;
+  /**
+   * Set when Ollama lists the `thinking` capability for the model, so effort
+   * may switch `think` on (#366). Absent for every other provider.
+   */
+  readonly thinking?: true;
 };
 
 /** An agent as the catalog offers it, with its base model already chosen. */
@@ -165,6 +171,7 @@ export const parseOllamaTags = (
         name: displayModelName(id),
         provider: "Ollama",
         providerId: "ollama",
+        ...(tag.capabilities?.includes("thinking") === true ? { thinking: true } : {}),
         ...windowOf(
           runWindow === undefined
             ? tag.details?.context_length
@@ -333,7 +340,72 @@ export const withAgents = (
 
 export const AUTO_MODEL_ID = agentModelId(AUTO_AGENT);
 
-type AgentRow = Readonly<{ id: string; agent?: CatalogAgent }>;
+type AgentRow = Readonly<{ id: string; name?: string; agent?: CatalogAgent }>;
+
+/**
+ * Manual mode (#366) runs a chosen specialist on a chosen model: the row id
+ * `agent:<specialist>@<model id>`, such as `agent:diet@qwen3:4b`. Such a row
+ * is not listed in the catalog; `findCatalogRow` builds it from the
+ * specialist's row and the model's row, so a pair is offered exactly when
+ * both are. Auto cannot be paired.
+ */
+const PAIR_SEPARATOR = "@";
+
+export const pairedModelId = (agentId: string, modelId: string): string =>
+  `${AGENT_ID_PREFIX}${agentId}${PAIR_SEPARATOR}${modelId}`;
+
+/** The specialist and model a paired id names, or null for any other id. */
+export const parsePairedModelId = (
+  id: string,
+): Readonly<{ agentId: string; modelId: string }> | null => {
+  if (!id.startsWith(AGENT_ID_PREFIX)) return null;
+  const rest = id.slice(AGENT_ID_PREFIX.length);
+  const at = rest.indexOf(PAIR_SEPARATOR);
+  if (at <= 0 || at === rest.length - 1) return null;
+  return { agentId: rest.slice(0, at), modelId: rest.slice(at + 1) };
+};
+
+/** A paired row's name: "Diet specialist · Qwen3 4B". */
+export const pairedModelName = (agentName: string, modelName: string): string =>
+  `${agentName} · ${modelName}`;
+
+/**
+ * The catalog row for an id: a listed row, or a specialist paired with a
+ * model when the catalog offers both. Null when the id is not offered.
+ */
+export const findCatalogRow = <Row extends AgentRow>(
+  id: string,
+  catalog: readonly Row[],
+): Row | null => {
+  const listed = catalog.find((row) => row.id === id);
+  if (listed !== undefined) return listed;
+  const pair = parsePairedModelId(id);
+  if (pair === null) return null;
+  const specialist = catalog.find(
+    (row) =>
+      row.id === `${AGENT_ID_PREFIX}${pair.agentId}` &&
+      row.id !== AUTO_MODEL_ID &&
+      row.agent !== undefined,
+  );
+  const base = catalog.find((row) => row.id === pair.modelId && row.agent === undefined);
+  if (specialist?.agent === undefined || base === undefined) return null;
+  return {
+    ...base,
+    id,
+    name: pairedModelName(specialist.agent.name, base.name ?? base.id),
+    agent: {
+      ...specialist.agent,
+      baseModelId: base.id,
+      baseModelName: base.name ?? base.id,
+    },
+  };
+};
+
+/** Whether the model a turn calls lists the `thinking` capability. */
+export const modelCanThink = (
+  modelId: string,
+  catalog: readonly Readonly<{ id: string; thinking?: true }>[],
+): boolean => catalog.find((row) => row.id === modelId)?.thinking === true;
 
 /**
  * The agent Auto runs as for one question (#219): the one the router picks
@@ -387,7 +459,8 @@ export const turnModelName = (
   catalog: readonly AgentRow[],
   prompt: string,
 ): string => {
-  if (model.id !== AUTO_MODEL_ID) return model.name;
+  if (model.id !== AUTO_MODEL_ID)
+    return findCatalogRow(model.id, catalog)?.name ?? model.name;
   const agent = autoAgentFor(prompt, catalog);
   return agent === null ? model.name : autoColumnName(agent.name);
 };
@@ -395,8 +468,8 @@ export const turnModelName = (
 /** The agent a catalog row stands for, or null for a plain model. */
 export const catalogAgentOf = (
   modelId: string,
-  catalog: readonly Readonly<{ id: string; agent?: CatalogAgent }>[],
-): CatalogAgent | null => catalog.find((model) => model.id === modelId)?.agent ?? null;
+  catalog: readonly AgentRow[],
+): CatalogAgent | null => findCatalogRow(modelId, catalog)?.agent ?? null;
 
 // --- selection and display ------------------------------------------------------
 

@@ -18,6 +18,7 @@ import { streamingView } from "./streaming-view";
 import type { ResponseState } from "./conversation";
 import { numberLinkPieces, sourceCallIds, sourcesByText } from "./number-links";
 import { type ActiveNumber, ToolSteps, toolCardTitleId } from "./tool-call-cards";
+import { reviewStep } from "./tool-steps";
 
 /** The step trace's line once the Answer section streams and no call runs. */
 const WRITING_LINE = "Writing the answer…";
@@ -88,7 +89,7 @@ type AnswerBodyResponse = Pick<
   | "views"
   | "numberSources"
 > &
-  Partial<Pick<ResponseState, "id">>;
+  Partial<Pick<ResponseState, "id" | "reviewing">>;
 
 const SettledAnswer = ({
   response,
@@ -190,9 +191,16 @@ export const AnswerBody = ({
         numbers={sources ?? []}
         active={active}
         idPrefix={idPrefix}
+        review={reviewStep(
+          streaming && response.reviewing === true,
+          response.document?.number_review,
+        )}
       />
       {streaming ? (
-        <StreamingAnswer response={response} hasSteps={tools.length > 0} />
+        <StreamingAnswer
+          response={response}
+          hasSteps={tools.length > 0 || response.reviewing === true}
+        />
       ) : (
         <SettledAnswer response={response} wearables={wearables} decorate={decorate} />
       )}

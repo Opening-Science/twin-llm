@@ -2,12 +2,14 @@ import { describe, expect, test } from "bun:test";
 
 import type { TurnState } from "./conversation";
 import {
+  answersStreaming,
   answersToStream,
   scheduledStillWriting,
   confirmTurn,
   dropPending,
   pendingTurn,
   restartResponse,
+  stopResponse,
   updateResponse,
 } from "./turn-updates";
 
@@ -124,5 +126,45 @@ describe("turn updates", () => {
       },
       saved.answers[1]!,
     ]);
+  });
+});
+
+describe("effort and Stop (#366)", () => {
+  test("a turn keeps its effort from pending to confirmed, and its answers stream with it", () => {
+    const sent = pendingTurn(
+      "Synthetic question",
+      [{ id: "model-a", name: "A" }],
+      null,
+      null,
+      "ultra",
+    );
+    const [confirmed] = confirmTurn([sent], "turn-9", [
+      { id: "r-9", modelId: "model-a", modelName: "A" },
+    ]);
+    expect(confirmed?.effort).toBe("ultra");
+    expect(
+      answersToStream(confirmed ? [confirmed] : [], new Set()).map((each) => each.effort),
+    ).toEqual(["ultra"]);
+    expect(pendingTurn("Q", []).effort).toBeUndefined();
+  });
+
+  test("Stop shows while an answer streams here, never for a scheduled run", () => {
+    expect(answersStreaming([saved])).toBe(true);
+    expect(answersStreaming([{ ...saved, scheduled: true }])).toBe(false);
+    expect(answersStreaming([{ ...saved, answers: saved.answers.slice(0, 1) }])).toBe(
+      false,
+    );
+  });
+
+  test("a stopped answer ends as stopped; a finished one is left alone", () => {
+    const [failed, streaming] = saved.answers;
+    if (failed === undefined || streaming === undefined) throw new Error("fixture");
+    expect(stopResponse(streaming)).toEqual({
+      ...streaming,
+      status: "FAILED",
+      stopped: true,
+      reviewing: false,
+    });
+    expect(stopResponse(failed)).toBe(failed);
   });
 });
