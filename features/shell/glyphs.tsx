@@ -169,3 +169,14 @@ export const TickGlyph = (props: GlyphProps) => (
     <path d="m4 10.5 4 4 8-9" />
   </Svg>
 );
+
+/** Three dots in a row: more actions. */
+export const MoreGlyph = (props: GlyphProps) => (
+  <Svg {...props}>
+    <>
+      <circle cx="4.5" cy="10" r="0.9" />
+      <circle cx="10" cy="10" r="0.9" />
+      <circle cx="15.5" cy="10" r="0.9" />
+    </>
+  </Svg>
+);

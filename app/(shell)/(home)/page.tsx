@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-import { CompareScreen } from "@/features/arena/compare-screen";
+import { NewChatScreen } from "@/features/arena/new-chat-screen";
 import { loadPromptSourceFacts } from "@/features/arena/prompt-source-facts";
 import { skillCommand } from "@/features/commands/registry";
 import { skillsFor } from "@/features/skills/user-skill-store";
@@ -45,7 +45,7 @@ export default async function HomePage({
     : catalog;
   const appUserId = actorId === null ? null : await findAppUserId(actorId);
   return (
-    <CompareScreen
+    <NewChatScreen
       key={incognito ? "incognito" : "new"}
       catalog={catalog}
       defaultModelIds={offered ? defaultModelSelection(offered) : []}
