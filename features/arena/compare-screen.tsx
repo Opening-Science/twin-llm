@@ -15,7 +15,7 @@ import type { TwinFocusId } from "@/packages/anatomy/twin-focus";
 
 import { AnswerColumn } from "./answer-column";
 import { specialistModelIn } from "./answer-header";
-import { initialEffort } from "./chat-mode";
+import { initialEffort, initialModelIds } from "./chat-mode";
 import type { TurnState } from "./conversation";
 import { IncognitoBanner } from "./incognito-controls";
 import { OutputsPanel } from "./outputs-panel";
@@ -68,7 +68,6 @@ const columnsClass = (count: number): string =>
 
 export const CompareScreen = ({
   catalog,
-  defaultModelIds,
   threadId = null,
   initialTurns = [],
   skills = [],
@@ -80,7 +79,6 @@ export const CompareScreen = ({
   sourceFacts = NO_SOURCE_FACTS,
 }: Readonly<{
   catalog: readonly CatalogModel[] | null;
-  defaultModelIds: readonly string[];
   threadId?: string | null;
   initialTurns?: readonly TurnState[];
   /** Skills the server offers, listed in the palette. */
@@ -279,7 +277,7 @@ export const CompareScreen = ({
         </div>
         <PromptBar
           catalog={catalog}
-          initialModelIds={defaultModelIds}
+          initialModelIds={initialModelIds(initialTurns)}
           initialEffort={initialEffort(initialTurns)}
           busy={sending}
           streaming={streamingNow}

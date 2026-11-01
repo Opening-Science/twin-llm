@@ -8,6 +8,7 @@ import {
 
 import {
   initialEffort,
+  initialModelIds,
   initialSelection,
   manualAnswerCount,
   modeModelIds,
@@ -257,5 +258,38 @@ describe("initialEffort (#379)", () => {
     expect(initialEffort([{ effort: "quick", answers: [answer(null)] }])).toBe("quick");
     expect(initialEffort([{ answers: [answer(null)] }])).toBe("balanced");
     expect(initialEffort([])).toBe("balanced");
+  });
+});
+
+describe("a new chat and a reopened thread (#386)", () => {
+  const turn = (ids: readonly string[], level: "quick" | "deep" | null = null) => ({
+    answers: ids.map((modelId) => ({
+      modelId,
+      document: level === null ? null : { effort: { level } },
+    })),
+  });
+  const opening = (turns: readonly ReturnType<typeof turn>[]) => ({
+    mode: initialSelection(initialModelIds(turns), CATALOG).mode,
+    effort: initialEffort(turns),
+  });
+
+  test("a new chat opens in Auto at Balanced", () => {
+    expect(initialModelIds([])).toEqual([]);
+    expect(opening([])).toEqual({ mode: "auto", effort: "balanced" });
+  });
+
+  test("a thread reopens in the mode and effort of its last turn", () => {
+    expect(
+      opening([turn(["qwen3:4b", "llama3.2"], "deep"), turn([AUTO_MODEL_ID])]),
+    ).toEqual({ mode: "auto", effort: "balanced" });
+    expect(
+      opening([turn([AUTO_MODEL_ID]), turn(["qwen3:4b", "llama3.2"], "deep")]),
+    ).toEqual({ mode: "compare", effort: "deep" });
+    expect(
+      opening([turn([AUTO_MODEL_ID]), turn(["agent:gp@llama3.2"], "quick")]),
+    ).toEqual({
+      mode: "manual",
+      effort: "quick",
+    });
   });
 });
