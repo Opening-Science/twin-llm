@@ -3,16 +3,18 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import posthog from "posthog-js";
-import { useEffect, useState } from "react";
+import { type KeyboardEvent, type ReactNode, useEffect, useState } from "react";
 
 import { threadExportHref } from "@/infrastructure/shell-links";
 import { useThreadHistory } from "@/infrastructure/thread-history-store";
 import { Button, buttonClassName } from "@/infrastructure/ui-kit/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/infrastructure/ui-kit/popover";
 import { isSoftHidden } from "@/infrastructure/ui-kit/soft-delete";
 import { UndoButton } from "@/infrastructure/ui-kit/undo-button";
 import { useSoftDelete } from "@/infrastructure/ui-kit/use-soft-delete";
 
-import { CopyGlyph, DownloadGlyph, TickGlyph } from "./glyphs";
+import { CopyGlyph, DownloadGlyph, MoreGlyph, TickGlyph } from "./glyphs";
+import { menuFocusIndex } from "./menu-focus";
 import { threadCrumb, threadSection } from "./thread-crumb";
 import { useThreadTitle } from "./thread-title";
 
@@ -21,6 +23,8 @@ import { useThreadTitle } from "./thread-title";
  * ("Chat / …", "Twin / …"), a button that copies
  * its address, a link that downloads it as Markdown and Delete. Other pages
  * have no bar; their own heading leads.
+ *
+ * Below the `md` breakpoint the four actions fold into one menu (#378).
  *
  * Delete takes the thread out of the sidebar at once and becomes Undo for
  * five seconds; the server deletes it only when that time runs out, and the
@@ -36,7 +40,13 @@ import { useThreadTitle } from "./thread-title";
 
 const COPIED_FOR_MS = 2000;
 
-const CopyLinkButton = () => {
+const PILL = "text-muted-foreground hover:text-foreground shrink-0 py-1.5";
+
+/** One row of the narrow-screen menu: full width, text on the left. */
+const MENU_ITEM =
+  "text-foreground hover:bg-muted w-full justify-start rounded-md border-transparent px-3 py-2 text-sm";
+
+const CopyLinkButton = ({ className = PILL }: Readonly<{ className?: string }>) => {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -61,7 +71,7 @@ const CopyLinkButton = () => {
       size="sm"
       onClick={() => void copy()}
       title="Copy this thread's address. Only you can open it."
-      className="text-muted-foreground hover:text-foreground shrink-0 py-1.5"
+      className={className}
     >
       {copied ? <TickGlyph className="size-3.5" /> : <CopyGlyph className="size-3.5" />}
       <span aria-live="polite">{copied ? "Copied" : "Copy link"}</span>
@@ -69,7 +79,39 @@ const CopyLinkButton = () => {
   );
 };
 
-const PILL = "text-muted-foreground hover:text-foreground shrink-0 py-1.5";
+const ExportLinks = ({
+  threadId,
+  className = PILL,
+  onPick,
+}: Readonly<{ threadId: string; className?: string; onPick?: () => void }>) => (
+  <>
+    <a
+      href={threadExportHref(threadId, "print")}
+      target="_blank"
+      rel="noopener"
+      title="Open this thread for printing or saving as PDF."
+      className={buttonClassName({ variant: "pill", size: "sm", className })}
+      onClick={onPick}
+    >
+      <span>PDF</span>
+    </a>
+    <a
+      href={threadExportHref(threadId)}
+      download
+      title="Download this thread as Markdown: prompts, lookups and answers."
+      className={buttonClassName({ variant: "pill", size: "sm", className })}
+      onClick={onPick}
+    >
+      <DownloadGlyph className="size-3.5" />
+      <span>Download</span>
+    </a>
+  </>
+);
+
+const focusables = (panel: EventTarget | null): HTMLElement[] =>
+  panel instanceof HTMLElement
+    ? Array.from(panel.querySelectorAll<HTMLElement>("a[href], button:not([disabled])"))
+    : [];
 
 const deleteFailure = async (threadId: string): Promise<string | null> => {
   const response = await fetch(`/api/threads/${encodeURIComponent(threadId)}`, {
@@ -78,7 +120,81 @@ const deleteFailure = async (threadId: string): Promise<string | null> => {
   return response.ok ? null : "This thread could not be deleted. Try again.";
 };
 
-const DeleteThreadButton = ({ threadId }: Readonly<{ threadId: string }>) => {
+/** What the layout needs to draw Delete in either place. */
+type DeleteSlot = Readonly<{
+  button: (className: string) => ReactNode;
+  error: ReactNode;
+  /** The undo window or the request is running: the menu must stay open. */
+  busy: boolean;
+}>;
+
+/**
+ * Below `md` the actions sit in one menu behind a "…" button, so a long
+ * title only ever truncates (#378). Both layouts are in the page and CSS
+ * shows one; the menu's panel exists only while it is open.
+ *
+ * The menu holds itself open while a Delete is waiting out its undo window:
+ * closing it would take Undo away, and unmounting the button would stop its
+ * clock. Escape then means Undo, as it does on the button itself.
+ */
+const ThreadActions = ({
+  threadId,
+  remove,
+}: Readonly<{ threadId: string; remove?: DeleteSlot }>) => {
+  const [open, setOpen] = useState(false);
+  const busy = remove?.busy ?? false;
+  const close = () => setOpen(false);
+
+  const moveFocus = (event: KeyboardEvent<HTMLDivElement>) => {
+    const items = focusables(event.currentTarget);
+    const current = items.findIndex((item) => item === document.activeElement);
+    const next = menuFocusIndex(current, items.length, event.key);
+    if (next === null) return;
+    event.preventDefault();
+    items[next]?.focus();
+  };
+
+  return (
+    <>
+      <div className="hidden shrink-0 items-center gap-3 md:flex">
+        <ExportLinks threadId={threadId} />
+        <CopyLinkButton />
+        {remove?.button(PILL)}
+        {remove?.error}
+      </div>
+      <div className="shrink-0 md:hidden">
+        <Popover open={open} onOpenChange={(next) => setOpen(next || busy)}>
+          <PopoverTrigger
+            aria-label="Thread actions"
+            title="Thread actions: PDF, Download, Copy link and Delete."
+            className={buttonClassName({ variant: "pill", size: "sm", className: PILL })}
+          >
+            <MoreGlyph className="size-4" />
+          </PopoverTrigger>
+          <PopoverContent
+            align="end"
+            collisionPadding={16}
+            aria-label="Thread actions"
+            className="flex w-48 flex-col gap-0.5 p-1.5"
+            onKeyDown={moveFocus}
+            onOpenAutoFocus={(event) => {
+              // Start on the first item, whatever Radix would pick.
+              event.preventDefault();
+              focusables(event.currentTarget)[0]?.focus();
+            }}
+          >
+            <ExportLinks threadId={threadId} className={MENU_ITEM} onPick={close} />
+            <CopyLinkButton className={MENU_ITEM} />
+            {remove?.button(MENU_ITEM)}
+            {remove?.error}
+          </PopoverContent>
+        </Popover>
+      </div>
+    </>
+  );
+};
+
+const DeletableThreadActions = ({ threadId }: Readonly<{ threadId: string }>) => {
   const router = useRouter();
   const { setThreadHidden } = useThreadHistory();
   const { phase, error, controls } = useSoftDelete(async () => {
@@ -92,14 +208,15 @@ const DeleteThreadButton = ({ threadId }: Readonly<{ threadId: string }>) => {
     router.refresh();
     return null;
   });
-  return (
-    <>
+  const remove: DeleteSlot = {
+    busy: phase === "pending" || phase === "deleting",
+    button: (className) => (
       <UndoButton
         label="Delete"
         actedText="Thread deleted."
         variant="pill"
         size="sm"
-        className={PILL}
+        className={className}
         disabled={phase === "deleting" || phase === "deleted"}
         onAct={() => {
           setThreadHidden(threadId, true);
@@ -111,13 +228,15 @@ const DeleteThreadButton = ({ threadId }: Readonly<{ threadId: string }>) => {
         }}
         onExpire={controls.expire}
       />
-      {error !== null && !isSoftHidden(phase) && (
-        <p role="alert" className="text-destructive shrink-0 text-xs">
+    ),
+    error:
+      error !== null && !isSoftHidden(phase) ? (
+        <p role="alert" className="text-destructive shrink-0 px-1 text-xs">
           {error}
         </p>
-      )}
-    </>
-  );
+      ) : null,
+  };
+  return <ThreadActions threadId={threadId} remove={remove} />;
 };
 
 export const isThreadPath = (pathname: string): boolean => pathname.startsWith("/t/");
@@ -150,34 +269,11 @@ export const ThreadBarView = ({
           {crumb.label}
         </p>
       </nav>
-      <a
-        href={threadExportHref(threadId, "print")}
-        target="_blank"
-        rel="noopener"
-        title="Open this thread for printing or saving as PDF."
-        className={buttonClassName({
-          variant: "pill",
-          size: "sm",
-          className: "text-muted-foreground hover:text-foreground shrink-0 py-1.5",
-        })}
-      >
-        <span>PDF</span>
-      </a>
-      <a
-        href={threadExportHref(threadId)}
-        download
-        title="Download this thread as Markdown: prompts, lookups and answers."
-        className={buttonClassName({
-          variant: "pill",
-          size: "sm",
-          className: "text-muted-foreground hover:text-foreground shrink-0 py-1.5",
-        })}
-      >
-        <DownloadGlyph className="size-3.5" />
-        <span>Download</span>
-      </a>
-      <CopyLinkButton />
-      {deletable && <DeleteThreadButton key={threadId} threadId={threadId} />}
+      {deletable ? (
+        <DeletableThreadActions key={threadId} threadId={threadId} />
+      ) : (
+        <ThreadActions threadId={threadId} />
+      )}
     </div>
   );
 };
