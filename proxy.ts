@@ -21,6 +21,12 @@ import { isAuthDisabled, syntheaEnv } from "@/infrastructure/env";
  * never reach the rest of the app: that host serves the public Synthea
  * generator only, which needs no sign-in and holds no personal data
  * (`features/synthea/synthea-host-route.ts`).
+ *
+ * One route is left out: `POST /api/gbd/imports` takes GBD files up to 1 GB
+ * (#434). Next buffers in memory every request body the proxy sees and cuts
+ * it at `proxyClientMaxBodySize` (next.config.ts), so that route gets its
+ * body unbuffered and makes the same checks itself
+ * (`features/gbd/gbd-upload-gate.ts`). Every other route keeps the limit.
  */
 const applyThreadRules = async (request: NextRequest): Promise<Response> => {
   const isThreadPage = request.nextUrl.pathname.startsWith("/t/");
@@ -70,8 +76,9 @@ const proxy = async (request: NextRequest, event: NextFetchEvent): Promise<Respo
 export default proxy;
 
 export const config = {
-  // Everything except Next internals and static files, plus every API route.
+  // Everything except Next internals and static files, plus every API route
+  // except the GBD upload (see above; `/api/gbd/imports/<sha256>` stays in).
   matcher: [
-    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest))(?:.*)|api|trpc)(.*)",
+    "/((?!api/gbd/imports/?$)(?:(?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest))(?:.*)|api|trpc))(.*)",
   ],
 };

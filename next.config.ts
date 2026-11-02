@@ -73,10 +73,12 @@ const config: NextConfig = {
   transpilePackages: OPEN_TWIN_SOURCE_PACKAGES,
   env: BUILD_ENV,
   experimental: {
-    // proxy.ts runs on every API route, and Next buffers a request body for it
-    // only up to this size, then passes the route a silently cut body. Imports
-    // on Customize · Data take files up to 50 MB plus the multipart envelope
-    // (docs/personal-data.md); the route refuses anything larger itself.
+    // proxy.ts runs on every API route but the GBD upload, and Next buffers a
+    // request body for it only up to this size, then passes the route a
+    // silently cut body. Imports on Customize · Data take files up to 50 MB
+    // plus the multipart envelope (docs/personal-data.md); the route refuses
+    // anything larger itself. The GBD upload is left out of the proxy so its
+    // body streams unbuffered, up to 1 GB (docs/gbd.md, #434).
     proxyClientMaxBodySize: "52mb",
   },
 };

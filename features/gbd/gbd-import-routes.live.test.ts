@@ -22,6 +22,7 @@ import {
   type GbdImportPorts,
   loadGbdImports,
 } from "./gbd-import-routes";
+import { GBD_FREE_SPACE_MARGIN_BYTES } from "./gbd-upload-limits";
 
 /**
  * Customize · Data's GBD routes against a real Postgres (#428): overlapping
@@ -53,6 +54,7 @@ describe.skipIf(!runLive)("GBD import routes with shared estimates (RUN_LIVE=1)"
     },
     chunks: (path) => [uploads.get(path) ?? new Uint8Array()],
     removeUpload: async (path) => void uploads.delete(path),
+    freeBytes: async () => 100 * GBD_FREE_SPACE_MARGIN_BYTES,
   };
   const handlers = createGbdImportHandlers(ports);
 
