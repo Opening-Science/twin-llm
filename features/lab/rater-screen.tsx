@@ -5,6 +5,7 @@ import { buttonClassName } from "@/infrastructure/ui-kit/button";
 import { Card } from "@/infrastructure/ui-kit/card";
 import { Field } from "@/infrastructure/ui-kit/field";
 
+import { LabDetail } from "./lab-detail";
 import { RATED_SET_COPY, ratePath } from "./rated-set-copy";
 import { type BlindLine } from "./rater-lines";
 import { RATED_SETS, type RatedSet } from "./rater-rubric";
@@ -78,18 +79,30 @@ const ScopeNote = ({
     </p>
   );
 
+const AGREEMENT_COMMAND = "bun run eval:agreement -- <run-id> [<run-id> …]";
+
 const Frame = ({
   set,
   rater,
   children,
 }: Readonly<{ set: RatedSet; rater?: string; children: ReactNode }>) => (
-  <div className="mx-auto flex w-full max-w-3xl min-w-0 flex-col gap-6 px-4 py-10 sm:px-6">
-    <header className="flex flex-col gap-3">
-      <Link href="/lab#second-rating" className="setup-link text-sm">
-        Lab
-      </Link>
-      <h1 className="text-display">Second rating</h1>
-      <p className="text-muted-foreground max-w-prose leading-relaxed">
+  <LabDetail
+    part="rate"
+    about={
+      <>
+        <p>
+          For the hb and v1h runs in evaluation/runs/, one set at a time, each with its
+          own rubric. The pseudonym sets the order of the answers, so you can stop and
+          resume at any time. Agreement with the automatic scorer, as Cohen&rsquo;s kappa:
+        </p>
+        <pre className="command-block" aria-label="Command that reports agreement">
+          <code>{AGREEMENT_COMMAND}</code>
+        </pre>
+      </>
+    }
+  >
+    <div className="flex flex-col gap-3">
+      <p className="text-muted-foreground max-w-prose text-sm leading-relaxed">
         Rate the answers to {RATED_SET_COPY[set].questions} against the reference, one at
         a time, with the anchors below the stars. The model and the automatic score stay
         hidden. Ratings are saved beside each run on this machine and never sent anywhere.
@@ -101,9 +114,9 @@ const Frame = ({
         .
       </p>
       <SetTabs set={set} rater={rater} />
-    </header>
+    </div>
     {children}
-  </div>
+  </LabDetail>
 );
 
 const AskPseudonym = ({
@@ -125,7 +138,10 @@ const AskPseudonym = ({
             : undefined
         }
       />
-      <button type="submit" className={buttonClassName({ variant: "primary" })}>
+      <button
+        type="submit"
+        className={buttonClassName({ variant: "primary", className: "self-start" })}
+      >
         Start or resume
       </button>
     </form>

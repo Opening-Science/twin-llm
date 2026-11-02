@@ -203,10 +203,10 @@ const ScoresSection = ({
       <Muted>
         No evaluation run of <span className="font-mono">{entry.baseModel.id}</span> on
         this machine. The{" "}
-        <Link href="/lab#results" className="underline">
-          Lab&rsquo;s Results
+        <Link href="/lab/evaluations" className="underline">
+          Lab&rsquo;s evaluation runs page
         </Link>{" "}
-        say how to make one.
+        says how to make one.
       </Muted>
     ) : (
       scores.map((table) => <ScoresTable key={table.runId} scores={table} />)

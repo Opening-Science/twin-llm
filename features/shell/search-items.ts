@@ -76,7 +76,8 @@ const PAGES: readonly (SearchItem & { kind: "page" })[] = [
     kind: "page",
     id: "lab",
     title: "Lab",
-    detail: "verify local only, audit chain, model digests, checksums, SBOM",
+    detail:
+      "verify local only, audit chain, model digests, checksums, SBOM, heart rhythm simulations, evaluation runs, benchmark, second rating",
     href: "/lab",
   },
   { kind: "page", id: "docs", title: "Docs", detail: "documentation", href: "/docs" },
