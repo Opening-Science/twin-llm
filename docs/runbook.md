@@ -402,6 +402,42 @@ bun run db:verify
 - Good: migrations applied, empty diff or only the unmodelable HNSW `DROP INDEX`, pgvector probes hold, `verify-source-filter OK` (pgvector 0.8+, HNSW plan, 1 to 3 knowledge rows, usually 3/3, and 3 guideline rows over 5000 guideline chunks, each of the requested source), oura INSERT rejected by observations_source_synthea, synthea INSERT + ROLLBACK ok, audit chain ok then tamper breaks verifyChain at seq 1, verify-migrations OK.
 - Last run: 2026-10-15 18:03 CEST, `verify-migrations OK` from an empty scratch (post-audit; fresh `pgvector/pgvector:pg16` containers on 5443/5444).
 
+### `bun run test:live-db`
+
+The `RUN_LIVE=1` tests that need only a migrated Postgres (#430). Plain `bun test` skips them; CI runs them in the `prisma` job after `db:verify`, on the same service database. `scripts/db/run-live-db-tests.ts` runs them with `RUN_LIVE=1` and fails unless exactly the expected number pass with none skipped or failed, so a test that quietly skips fails the run. The list and the count are in `scripts/db/live-db-tests.ts`.
+
+```sh
+DATABASE_URL=postgresql://<user>@127.0.0.1:<port>/<throwaway, migrated> bun run test:live-db
+```
+
+Use a throwaway database: the tests write and delete synthetic warehouse rows (cohort `synthea-v4-seed1099`) and made-up GBD imports, and refuse to start if those are already there.
+
+| Runs                                                 | Tests |
+| ---------------------------------------------------- | ----: |
+| `features/data-explorer/cohort-queries.live.test.ts` |     7 |
+| `packages/gbd-local/store.live.test.ts`              |     6 |
+| `features/gbd/gbd-import-routes.live.test.ts`        |     2 |
+| `scripts/gbd/import.live.test.ts`                    |     2 |
+
+Left out, because they need more than a database:
+
+| File                                             | Needs                                                                   |
+| ------------------------------------------------ | ----------------------------------------------------------------------- |
+| `packages/gbd-mcp/live.test.ts`                  | the hosted GBD MCP server: network and `GBD_MCP_TOKEN`                  |
+| `packages/vitronic/live.test.ts`                 | a BodyLoop server; never CI                                             |
+| `features/chat/tool-calls.live.test.ts`          | a model (Ollama or a remote GPU) and a seeded warehouse                 |
+| `tests/knowledge/search-db.live.test.ts`         | Ollama embeddings and both corpora ingested                             |
+| `tests/knowledge/retrieval.test.ts`              | Ollama embeddings                                                       |
+| `scripts/synthea/reproducible.live.test.ts`      | Java 21+, the Synthea JAR and a few minutes                             |
+| `evaluation/answer-key.test.ts`                  | `.env.eval` and the evaluation cohort                                   |
+| `evaluation/answer-key.{s7,s7b,s7h,v1h}.test.ts` | the cohort files (`EVAL_COHORT_DIR`, `S7_COHORT_DIR`, `V1H_COHORT_DIR`) |
+| `tests/guardrails/runner.test.ts`                | nothing; a local hook that checks `RUN_LIVE` is unset                   |
+
+`scripts/db/live-db-tests.test.ts` (in plain `bun test`) fails when a test file that reads `RUN_LIVE` is in neither list, so a new database live test has to be added to the run (and the count) or excluded with a reason.
+
+- Good: `test:live-db OK: 17 pass, 0 skip, 0 fail`.
+- Last run: 2026-11-02 04:25 CET on a throwaway database (local Postgres 18, pgvector 0.8.6), after `migrate deploy` and again after `db:verify`: 17 pass, 0 skip, 0 fail. With one file forced to skip: `test:live-db FAIL: 4 skipped; 15 passed, expected 17`, exit 1.
+
 ## Parallel worktrees
 
 Added 2026-10-14. Each worktree owns one issue, one branch and one worktree beside the main checkout. Next allows one dev server per checkout, so each worktree runs its own on a fixed lane port.
