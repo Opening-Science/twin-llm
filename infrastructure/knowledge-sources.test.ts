@@ -52,6 +52,7 @@ describe("knowledge source preferences", () => {
       "coverage",
       "gbd_estimate",
       "gbd_population",
+      "gbd_profile",
       "range_position",
       "rhythm_irregularity",
       "trend",

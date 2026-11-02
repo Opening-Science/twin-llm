@@ -6,6 +6,7 @@ import {
   compareView,
   timeseriesView,
   toChatView,
+  toChatViews,
   twinBodyTitle,
   viewIsPersonal,
   viewReadings,
@@ -76,6 +77,43 @@ describe("viewsOf", () => {
         { type: "tool-show_view", state: "output-available", output: { code: "X" } },
         { type: "tool-trend", state: "output-available", output: view },
         { type: "data-view", data: other },
+      ]),
+    ).toEqual([view, other]);
+  });
+});
+
+describe("toChatViews (#403)", () => {
+  test("one view, every view of a views list that parses, or none", () => {
+    const other = timeseriesView({
+      spec: { ...spec, points: [] },
+      sourceAuditIds: ["42"],
+    });
+    expect(toChatViews(view)).toEqual([view]);
+    expect(
+      toChatViews({ kind: "location", views: [view, { kind: "x" }, other] }),
+    ).toEqual([view, other]);
+    expect(toChatViews({ views: "no" })).toEqual([]);
+    expect(toChatViews({ code: "GBD_UNKNOWN_LOCATION" })).toEqual([]);
+    expect(toChatViews(null)).toEqual([]);
+  });
+
+  test("viewsOf reads every view a stored gbd_profile output holds", () => {
+    const other = timeseriesView({
+      spec: { ...spec, points: [] },
+      sourceAuditIds: ["42"],
+    });
+    expect(
+      viewsOf([
+        {
+          type: "tool-gbd_profile",
+          state: "output-available",
+          output: { views: [view, other] },
+        },
+        {
+          type: "tool-gbd_estimate",
+          state: "output-available",
+          output: { views: [view] },
+        },
       ]),
     ).toEqual([view, other]);
   });

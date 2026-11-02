@@ -226,6 +226,54 @@ applied) offers nothing. The tool belongs to the "IHME GBD estimates" source,
 so turning that source off removes it. It is in the OpenAI tool snapshot, not
 in the `mcp:serve` manifest.
 
+### Profiles: `gbd_profile` (#403)
+
+Like IHME's GBD profiles, the `/profile` skill builds one structured answer
+about one place or one cause from the local store. Its only tool is
+`gbd_profile` (`features/chat/gbd-profile-tool.ts`), which runs a fixed
+sequence of `gbd_estimate` calls through the same code as the chat tool, so
+each call is audited as `gbd_estimate` with `subject_ref` null and its rows
+reach the explainability panel. The model passes `kind` (`location` or
+`cause`), the place or the cause, and `deaths: true` only when the question
+asks for deaths.
+
+A location profile, in this order:
+
+1. HALE at birth for the place, its parent (a region for a country, the
+   country for a state) and Global, for the profile years 1990, 2000, 2010,
+   2015, 2019 to 2023; the latest year with a row for the place is the
+   profile's year.
+2. Life expectancy at birth, the same way.
+3. The trend of both for the place, when more than one year is imported.
+4. Top causes of DALYs: one call per imported cause (All causes left out, at
+   most 40 by name), age-standardised rate in the profile's year, ranked.
+5. HALE for the units inside the place (`children_of` the place), else for its
+   neighbours (`children_of` its parent), for the map.
+6. With `deaths: true` only: top causes of deaths, as for DALYs.
+
+A cause profile: the world's DALY rate over the profile years
+(age-standardised, else all ages); every imported country in the latest year,
+ranked (top 10) and mapped by country; the world's rate for females and for
+males; with `deaths: true`, the world's death rate over the years. A cause
+that is not imported makes one refused call and every section says so.
+
+The sections are assembled by pure functions
+(`packages/gbd-local/profile.ts`) and drawn by
+`features/chat/gbd-profile-views.ts`: a table of the sections and whether
+each is shown or not imported, a table per section with rows (a numbered
+list for a ranking; years and rates to one decimal), and a choropleth whose
+own audit row is `gbd_profile.map`. A section without imported estimates says
+so in one plain sentence ("Life expectancy at birth for Switzerland is not
+imported."); it never fails the profile. The model gets each section's
+title, status, note and up to 10 rounded rows, and writes the prose from
+them. Like `gbd_estimate`, the profile is reference material: its rows never
+make an answer `sufficient_data`.
+
+The tool is built only for a turn whose skill lists it and only when
+estimates are imported (`createChatTools`, `skillTools`), so other turns
+carry neither its definition nor the skill's text. It is not in the OpenAI
+tool snapshot or the `mcp:serve` manifest.
+
 ## Remote MCP server
 
 GBD is the entry `gbd` in the MCP server registry (`packages/mcp-client/registry.ts`:

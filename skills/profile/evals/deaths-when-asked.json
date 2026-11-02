@@ -1,0 +1,10 @@
+{
+  "question": "Profile of Germany including deaths",
+  "script": [
+    {
+      "tool": "gbd_profile",
+      "input": { "kind": "location", "location": "DEU", "deaths": true }
+    }
+  ],
+  "expect": { "calls": ["gbd_profile"], "views": [], "refusals": [] }
+}

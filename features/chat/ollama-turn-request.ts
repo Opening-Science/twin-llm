@@ -156,6 +156,7 @@ export const captureOllamaTurnRequest = async (
         wearables: turn.wearables,
         views: turn.skill?.views,
         sources: turn.skill?.sources,
+        skillTools: turn.skill?.tools,
         loadViews: async () => [],
         genome: noGenome(scope),
         variants: turn.vcfImported === true ? noVariants(scope) : undefined,
