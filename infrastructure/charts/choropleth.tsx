@@ -25,6 +25,7 @@ import {
   parseBoundaries,
 } from "./choropleth/boundaries";
 import { binFill, binIndex, legendBins, quantileBreaks } from "./choropleth/color-scale";
+import { fitView } from "./choropleth/fit-view";
 import { centreLongitude, layoutMap } from "./choropleth/map-shapes";
 import {
   binText,
@@ -46,6 +47,8 @@ import {
  * countries of a region, or one country's states and provinces. Our own
  * Equal Earth projection and SVG paths over the committed Natural Earth
  * boundaries, which load on demand (a country's states only when asked).
+ * Countries with a value that lie in one part of the world are fitted with
+ * a margin (`fitView`); spread over the world, the map is the world.
  *
  * Beside the map: the legend with units, the top places with their 95%
  * uncertainty intervals, and a table for screen readers. The ranking and
@@ -175,12 +178,21 @@ export const Choropleth = ({
 
   const layout = useMemo(() => {
     if (loaded.state !== "ready") return null;
+    const size = { width: VIEW_WIDTH, padding: PADDING, maxHeight: MAX_HEIGHT[level] };
+    if (level === "country") {
+      return layoutMap(loaded.features, {
+        ...size,
+        lon0: centreLongitude(loaded.features),
+      });
+    }
+    const codes = new Set(ranked.map((region) => region.code));
+    const view = fitView(
+      loaded.features.filter((feature) => codes.has(feature.properties.code)),
+    );
     return layoutMap(loaded.features, {
-      lon0: level === "country" ? centreLongitude(loaded.features) : 0,
-      width: VIEW_WIDTH,
-      padding: PADDING,
-      maxHeight: MAX_HEIGHT[level],
-      fitTo: level === "region" ? ranked.map((region) => region.code) : undefined,
+      ...size,
+      lon0: view.lon0,
+      box: view.kind === "fit" ? view.box : undefined,
     });
   }, [loaded, level, ranked]);
 
