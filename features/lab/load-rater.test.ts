@@ -65,22 +65,120 @@ const fixture = async (): Promise<string> => {
   return root;
 };
 
+/** Adds the v1h questions and key and one synthetic v1h run to a fixture. */
+const withV1h = async (root: string): Promise<string> => {
+  await mkdir(join(root, "evaluation/runs/run-v1h"), { recursive: true });
+  await writeFile(
+    join(root, "evaluation/questions.v1h.v1.json"),
+    JSON.stringify({
+      items: [
+        { id: "Q-S1-H01", question: "Slope?", expect: { answer_class: "analytics" } },
+        {
+          id: "Q-S3-H01",
+          question: "Address?",
+          human: "The URL from the catalogue.",
+          expect: { answer_class: "information" },
+        },
+        {
+          id: "Q-S5-H01",
+          question: "Dose?",
+          expect: { answer_class: "declined_decision_support" },
+        },
+      ],
+    }),
+  );
+  await writeFile(
+    join(root, "evaluation/answer-key.v1h.v1.json"),
+    JSON.stringify({
+      entries: { "Q-S1-H01": [{ name: "n", value: 3, refusal: null }] },
+    }),
+  );
+  await writeFile(
+    join(root, "evaluation/runs/run-v1h/meta.json"),
+    JSON.stringify({ question_set: "v1h", mock: false }),
+  );
+  const line = (item: string) =>
+    JSON.stringify({ item_id: item, repeat: 1, error: null, text: `About ${item}.` });
+  await writeFile(
+    join(root, "evaluation/runs/run-v1h/results.jsonl"),
+    ["Q-S1-H01", "Q-S3-H01", "Q-S5-H01"].map(line).join("\n"),
+  );
+  return root;
+};
+
 describe("load-rater", () => {
-  test("the order seed names the rubric and the rater", () => {
+  test("the order seed names the set's rubric and the rater", () => {
     expect(orderSeedOf("rater-b")).toBe("second-rater.v1:rater-b");
+    expect(orderSeedOf("rater-b", "hb")).toBe("second-rater.v1:rater-b");
+    expect(orderSeedOf("rater-b", "v1h")).toBe("second-rater.v1h.v1:rater-b");
+  });
+
+  test("v1h reads only v1h runs, with its own salt file, rubric and reference kinds", async () => {
+    const root = await withV1h(await fixture());
+    const hbSalt = await loadRaterSalt("hb", "rater-b", true, root);
+    const salt = await loadRaterSalt("v1h", "rater-b", true, root);
+    expect(salt).not.toBe(hbSalt);
+    const set = parseRaterSet(
+      await readFile(join(root, "evaluation/rater-sets/v1h/rater-b.json"), "utf8"),
+    );
+    expect([set?.rubric, set?.salt]).toEqual(["second-rater.v1h.v1", salt]);
+    expect(
+      parseRaterSet(
+        await readFile(join(root, "evaluation/rater-sets/rater-b.json"), "utf8"),
+      )?.rubric,
+    ).toBe("second-rater.v1");
+    const data = await loadRaterLines("v1h", salt, root);
+    if (data.kind !== "ready") throw new Error(data.kind);
+    expect(
+      data.lines.map((line) => [line.runId, line.itemId, line.referenceKind]),
+    ).toEqual([
+      ["run-v1h", "Q-S1-H01", "keyed"],
+      ["run-v1h", "Q-S3-H01", "unkeyed"],
+      ["run-v1h", "Q-S5-H01", "decline"],
+    ]);
+    const hb = await loadRaterLines("hb", hbSalt, root);
+    if (hb.kind !== "ready") throw new Error(hb.kind);
+    expect(new Set(hb.lines.map((line) => line.runId))).toEqual(new Set(["run-a"]));
+    await saveLineRating(
+      "v1h",
+      data.lines[0]!,
+      "rater-b",
+      5,
+      "",
+      "2026-11-02T10:00:00.000Z",
+      root,
+    );
+    const file = parseRatingFile(
+      await readFile(join(root, "evaluation/runs/run-v1h/ratings/rater-b.json"), "utf8"),
+    );
+    expect([file?.rubric, file?.order_seed]).toEqual([
+      "second-rater.v1h.v1",
+      "second-rater.v1h.v1:rater-b",
+    ]);
+    const session = await loadRaterSession("v1h", data.lines, "rater-b", salt, root);
+    expect(session.filter((line) => line.level === 5).length).toBe(1);
+    expect(JSON.stringify(session)).not.toContain("run-v1h");
   });
 
   test("reads hb runs, skips mock runs, saves beside the run and resumes", async () => {
     const root = await fixture();
-    const salt = await loadRaterSalt("rater-b", true, root);
-    const data = await loadRaterLines(salt, root);
+    const salt = await loadRaterSalt("hb", "rater-b", true, root);
+    const data = await loadRaterLines("hb", salt, root);
     if (data.kind !== "ready") throw new Error(data.kind);
     expect([data.runs, data.lines.map((line) => `${line.runId}/${line.itemId}`)]).toEqual(
       [1, ["run-a/Q-1", "run-a/Q-2"]],
     );
     const first = data.lines[0]!;
-    await saveLineRating(first, "rater-b", 5, "fine", "2026-10-31T10:00:00.000Z", root);
-    await saveLineRating(first, "rater-b", 4, "", "2026-10-31T10:01:00.000Z", root);
+    await saveLineRating(
+      "hb",
+      first,
+      "rater-b",
+      5,
+      "fine",
+      "2026-10-31T10:00:00.000Z",
+      root,
+    );
+    await saveLineRating("hb", first, "rater-b", 4, "", "2026-10-31T10:01:00.000Z", root);
     const file = parseRatingFile(
       await readFile(join(root, "evaluation/runs/run-a/ratings/rater-b.json"), "utf8"),
     );
@@ -93,12 +191,16 @@ describe("load-rater", () => {
         rated_at: "2026-10-31T10:01:00.000Z",
       },
     ]);
-    const again = await loadRaterLines(await loadRaterSalt("rater-b", true, root), root);
+    const again = await loadRaterLines(
+      "hb",
+      await loadRaterSalt("hb", "rater-b", true, root),
+      root,
+    );
     if (again.kind !== "ready") throw new Error(again.kind);
     expect(again.lines.map((line) => line.token)).toEqual(
       data.lines.map((line) => line.token),
     );
-    const session = await loadRaterSession(data.lines, "rater-b", salt, root);
+    const session = await loadRaterSession("hb", data.lines, "rater-b", salt, root);
     expect(session.find((line) => line.token === first.token)?.level).toBe(4);
     expect(session.filter((line) => line.level === null).length).toBe(1);
     expect(
@@ -110,12 +212,13 @@ describe("load-rater", () => {
   test("says when there are no runs", async () => {
     const root = await fixture();
     await rm(join(root, "evaluation/runs/run-a"), { recursive: true });
-    expect(await loadRaterLines("a".repeat(64), root)).toEqual({ kind: "no-runs" });
+    expect(await loadRaterLines("hb", "a".repeat(64), root)).toEqual({ kind: "no-runs" });
   });
 
   test("a rater set starts with a random salt kept on the server", async () => {
     const root = await fixture();
     const salt = await loadRaterSalt(
+      "hb",
       "rater-b",
       true,
       root,
@@ -130,20 +233,28 @@ describe("load-rater", () => {
       salt,
       "2026-10-31T09:00:00.000Z",
     ]);
-    expect(await loadRaterSalt("rater-b", true, root)).toBe(salt);
-    const other = await loadRaterSalt("rater-c", true, root);
+    expect(await loadRaterSalt("hb", "rater-b", true, root)).toBe(salt);
+    const other = await loadRaterSalt("hb", "rater-c", true, root);
     expect(other).not.toBe(salt);
     const [a, b] = await Promise.all([
-      loadRaterSalt("rater-d", true, root),
-      loadRaterSalt("rater-d", true, root),
+      loadRaterSalt("hb", "rater-d", true, root),
+      loadRaterSalt("hb", "rater-d", true, root),
     ]);
     expect(a).toBe(b);
   });
 
   test("the same answers get other ids for another rater", async () => {
     const root = await fixture();
-    const b = await loadRaterLines(await loadRaterSalt("rater-b", true, root), root);
-    const c = await loadRaterLines(await loadRaterSalt("rater-c", true, root), root);
+    const b = await loadRaterLines(
+      "hb",
+      await loadRaterSalt("hb", "rater-b", true, root),
+      root,
+    );
+    const c = await loadRaterLines(
+      "hb",
+      await loadRaterSalt("hb", "rater-c", true, root),
+      root,
+    );
     if (b.kind !== "ready" || c.kind !== "ready") throw new Error("not ready");
     const tokensOf = (lines: typeof b.lines) => new Set(lines.map((line) => line.token));
     const shared = [...tokensOf(b.lines)].filter((token) => tokensOf(c.lines).has(token));
@@ -152,9 +263,9 @@ describe("load-rater", () => {
 
   test("a view that cannot save writes no salt", async () => {
     const root = await fixture();
-    const first = await loadRaterSalt("rater-b", false, root);
+    const first = await loadRaterSalt("hb", "rater-b", false, root);
     expect(first).toMatch(SALT_PATTERN);
-    expect(await loadRaterSalt("rater-b", false, root)).not.toBe(first);
+    expect(await loadRaterSalt("hb", "rater-b", false, root)).not.toBe(first);
     expect(
       await readFile(join(root, "evaluation/rater-sets/rater-b.json"), "utf8").catch(
         () => null,
@@ -166,7 +277,7 @@ describe("load-rater", () => {
     const root = await fixture();
     await mkdir(join(root, "evaluation/rater-sets"), { recursive: true });
     await writeFile(join(root, "evaluation/rater-sets/rater-b.json"), "{");
-    await expect(loadRaterSalt("rater-b", true, root)).rejects.toThrow();
+    await expect(loadRaterSalt("hb", "rater-b", true, root)).rejects.toThrow();
     expect(await readFile(join(root, "evaluation/rater-sets/rater-b.json"), "utf8")).toBe(
       "{",
     );
@@ -195,23 +306,31 @@ describe("load-rater", () => {
         ],
       }),
     );
-    const salt = await loadRaterSalt("rater-b", true, root);
-    const data = await loadRaterLines(salt, root);
+    const salt = await loadRaterSalt("hb", "rater-b", true, root);
+    const data = await loadRaterLines("hb", salt, root);
     if (data.kind !== "ready") throw new Error(data.kind);
-    const session = await loadRaterSession(data.lines, "rater-b", salt, root);
+    const session = await loadRaterSession("hb", data.lines, "rater-b", salt, root);
     const q2 = data.lines.find((line) => line.itemId === "Q-2");
     expect(session.find((line) => line.token === q2?.token)?.level).toBe(2);
   });
 
   test("the browser payload and the export never carry the salt", async () => {
     const root = await fixture();
-    const salt = await loadRaterSalt("rater-b", true, root);
-    const data = await loadRaterLines(salt, root);
+    const salt = await loadRaterSalt("hb", "rater-b", true, root);
+    const data = await loadRaterLines("hb", salt, root);
     if (data.kind !== "ready") throw new Error(data.kind);
     for (const line of data.lines) {
-      await saveLineRating(line, "rater-b", 5, "", "2026-10-31T10:00:00.000Z", root);
+      await saveLineRating(
+        "hb",
+        line,
+        "rater-b",
+        5,
+        "",
+        "2026-10-31T10:00:00.000Z",
+        root,
+      );
     }
-    const session = await loadRaterSession(data.lines, "rater-b", salt, root);
+    const session = await loadRaterSession("hb", data.lines, "rater-b", salt, root);
     expect(session.every((line) => line.level === 5)).toBe(true);
     const payload = JSON.stringify(session);
     expect(payload).not.toContain(salt);

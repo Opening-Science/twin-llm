@@ -5,10 +5,13 @@
  * and every `ratings/<rater>.json` the rating view wrote, scores the run as
  * `eval:report` does, and prints Cohen's kappa with a 95 % interval for each
  * rater against the correctness scorer and for each pair of raters, pooled
- * over the runs given. With `--ids` it also reads each rater's salt from
- * `evaluation/rater-sets/<rater>.json` (#355) and lists the answer ids that
- * rater's page used for the rated lines, mapped back to run, item and
- * repeat. Reads no env and no database and writes nothing.
+ * over the runs of each question set given (#304: runs of hb and v1h are
+ * reported apart, each on its own rubric, and a ratings file whose rubric is
+ * not its run's set's is left out). With `--ids` it also reads each rater's
+ * salt for the set (`evaluation/rater-sets/<rater>.json` for hb,
+ * `evaluation/rater-sets/<set>/<rater>.json` otherwise, #355) and lists the
+ * answer ids that rater's page used for the rated lines, mapped back to run,
+ * item and repeat. Reads no env and no database and writes nothing.
  */
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -19,19 +22,20 @@ import {
   RATINGS_DIR,
   type RatingFile,
 } from "../../features/lab/rating-file";
-import { parseRaterSet } from "../../features/lab/rater-set";
+import { isRatedSet, rubricOf, type RatedSet } from "../../features/lab/rater-rubric";
+import { parseRaterSet, raterSetFile } from "../../features/lab/rater-set";
 import { EMPTY_VALUE, formatNumber } from "../../infrastructure/format-measure";
 import {
   noConsentStore,
   requireLearningConsent,
 } from "../../infrastructure/learning-consent";
-import { RATER_SETS_DIR } from "../../infrastructure/local-artefacts";
-
 import {
   agreementRows,
   type AnswerIdRow,
   answerIdRows,
   type Kappa,
+  groupBySet,
+  ratedSetForFile,
   type RunAgreementInput,
   type ScorerOutcome,
 } from "./agreement";
@@ -45,7 +49,11 @@ const RUN_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$/;
 const readJson = async (path: string): Promise<unknown> =>
   JSON.parse(await readFile(path, "utf8")) as unknown;
 
-type LoadedRun = Readonly<{ input: RunAgreementInput; files: readonly RatingFile[] }>;
+type LoadedRun = Readonly<{
+  set: string;
+  input: RunAgreementInput;
+  files: readonly RatingFile[];
+}>;
 
 const loadRun = async (runId: string): Promise<LoadedRun> => {
   const dir = join(RUNS_DIR, runId);
@@ -61,7 +69,8 @@ const loadRun = async (runId: string): Promise<LoadedRun> => {
     .split("\n")
     .filter((row) => row.trim() !== "")
     .map((row) => resultLineSchema.parse(JSON.parse(row) as unknown));
-  const files = QUESTION_SETS[meta.question_set ?? "v1"];
+  const set = meta.question_set ?? "v1";
+  const files = QUESTION_SETS[set];
   const questions = questionSetSchema.parse(await readJson(files.questions));
   const key = answerKeySchema.parse(await readJson(files.key));
   const scores = scoreRun({
@@ -94,6 +103,12 @@ const loadRun = async (runId: string): Promise<LoadedRun> => {
       );
       continue;
     }
+    if (ratedSetForFile(set, file.rubric) === null) {
+      process.stderr.write(
+        `${runId}: ${name} is rated on ${file.rubric}, not the rubric of set ${set}; left out\n`,
+      );
+      continue;
+    }
     rated.push(file);
     raters.set(
       file.rater,
@@ -105,25 +120,26 @@ const loadRun = async (runId: string): Promise<LoadedRun> => {
       ),
     );
   }
-  return { input: { runId, scorer, raters }, files: rated };
+  return { set, input: { runId, scorer, raters }, files: rated };
 };
 
-/** The rater's salt, or null when this machine has no readable rater set for them. */
-const saltOf = async (rater: string): Promise<string | null> => {
-  const text = await readFile(join(RATER_SETS_DIR, `${rater}.json`), "utf8").catch(
-    () => null,
-  );
-  const set = text === null ? null : parseRaterSet(text);
-  return set !== null && set.rater === rater ? set.salt : null;
+/** The rater's salt for the set, or null when this machine has no readable rater set for them. */
+const saltOf = async (rated: RatedSet, rater: string): Promise<string | null> => {
+  const text = await readFile(raterSetFile(rated, rater), "utf8").catch(() => null);
+  const found = text === null ? null : parseRaterSet(text);
+  return found !== null && found.rater === rater ? found.salt : null;
 };
 
 const answerIds = async (
+  set: RatedSet,
   runs: readonly LoadedRun[],
 ): Promise<{ rows: AnswerIdRow[]; missing: string[] }> => {
   const files = runs.flatMap((run) => run.files);
   const raters = [...new Set(files.map((file) => file.rater))].sort();
   const salts = new Map(
-    await Promise.all(raters.map(async (rater) => [rater, await saltOf(rater)] as const)),
+    await Promise.all(
+      raters.map(async (rater) => [rater, await saltOf(set, rater)] as const),
+    ),
   );
   return {
     rows: files
@@ -164,33 +180,39 @@ const main = async (argv: readonly string[]): Promise<number> => {
     return 2;
   }
   const loaded = await Promise.all(runIds.map(loadRun));
-  const rows = agreementRows(loaded.map((run) => run.input));
-  if (rows.length === 0) {
-    process.stdout.write("No ratings found in these runs.\n");
-    return 0;
-  }
-  process.stdout.write(
-    `Runs: ${runIds.join(", ")}\n\n| Comparison | Lines | Observed agreement | Kappa (95 % CI) |\n| --- | --- | --- | --- |\n`,
-  );
-  for (const row of rows) {
+  process.stdout.write(`Runs: ${runIds.join(", ")}\n`);
+  for (const [set, runs] of groupBySet(loaded)) {
+    process.stdout.write(`\n## Set ${set}\n\n`);
+    const rows = agreementRows(runs.map((run) => run.input));
+    const rated = isRatedSet(set) ? set : null;
+    if (rows.length === 0) {
+      process.stdout.write("No ratings found in these runs.\n");
+      continue;
+    }
+    if (rated !== null) process.stdout.write(`Rubric: ${rubricOf(rated).version}\n\n`);
     process.stdout.write(
-      `| ${[row.comparison, ...kappaText(row.result)].join(" | ")} |\n`,
+      "| Comparison | Lines | Observed agreement | Kappa (95 % CI) |\n| --- | --- | --- | --- |\n",
     );
-  }
-  if (withIds) {
-    const ids = await answerIds(loaded);
-    process.stdout.write(
-      "\n| Rater | Answer id | Run | Item | Repeat |\n| --- | --- | --- | --- | --- |\n",
-    );
-    for (const row of ids.rows) {
+    for (const row of rows) {
       process.stdout.write(
-        `| ${[row.rater, row.id, row.runId, row.itemId, String(row.repeat)].join(" | ")} |\n`,
+        `| ${[row.comparison, ...kappaText(row.result)].join(" | ")} |\n`,
       );
     }
-    for (const rater of ids.missing) {
-      process.stderr.write(
-        `${rater}: no rater set in ${RATER_SETS_DIR}; that rater's answer ids cannot be mapped\n`,
+    if (withIds && rated !== null) {
+      const ids = await answerIds(rated, runs);
+      process.stdout.write(
+        "\n| Rater | Answer id | Run | Item | Repeat |\n| --- | --- | --- | --- | --- |\n",
       );
+      for (const row of ids.rows) {
+        process.stdout.write(
+          `| ${[row.rater, row.id, row.runId, row.itemId, String(row.repeat)].join(" | ")} |\n`,
+        );
+      }
+      for (const rater of ids.missing) {
+        process.stderr.write(
+          `${rater}: no rater set at ${raterSetFile(rated, rater)}; that rater's answer ids cannot be mapped\n`,
+        );
+      }
     }
   }
   return 0;

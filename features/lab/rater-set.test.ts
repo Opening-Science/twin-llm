@@ -4,6 +4,7 @@ import {
   newRaterSet,
   parseRaterSet,
   RATER_SET_SCHEMA_VERSION,
+  raterSetFile,
   renderRaterSet,
 } from "./rater-set";
 
@@ -30,5 +31,14 @@ describe("rater set", () => {
     expect(parseRaterSet(JSON.stringify({ ...set, salt: "short" }))).toBeNull();
     expect(parseRaterSet(JSON.stringify({ ...set, extra: 1 }))).toBeNull();
     expect(parseRaterSet(JSON.stringify({ ...set, schema_version: "v0" }))).toBeNull();
+  });
+
+  test("hb keeps its path; v1h has its own folder and rubric (#304)", () => {
+    expect(raterSetFile("hb", "rater-b")).toBe("evaluation/rater-sets/rater-b.json");
+    expect(raterSetFile("v1h", "rater-b")).toBe("evaluation/rater-sets/v1h/rater-b.json");
+    expect(
+      newRaterSet("rater-b", SALT, "2026-11-02T10:00:00.000Z", "second-rater.v1h.v1")
+        .rubric,
+    ).toBe("second-rater.v1h.v1");
   });
 });

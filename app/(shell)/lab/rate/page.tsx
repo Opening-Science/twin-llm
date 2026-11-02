@@ -4,22 +4,25 @@ import {
   loadRaterSession,
 } from "@/features/lab/load-rater";
 import { type RaterScreenState, RaterScreen } from "@/features/lab/rater-screen";
-import { isPseudonym } from "@/features/lab/rater-rubric";
+import { isPseudonym, type RatedSet, ratedSetOf } from "@/features/lab/rater-rubric";
 import { isAuthDisabled } from "@/infrastructure/env";
 
-const stateFor = async (rater: string | undefined): Promise<RaterScreenState> => {
+const stateFor = async (
+  set: RatedSet,
+  rater: string | undefined,
+): Promise<RaterScreenState> => {
   if (rater === undefined || !isPseudonym(rater)) {
     return { kind: "ask", invalid: rater !== undefined && rater !== "" };
   }
   const canSave = isAuthDisabled();
-  const salt = await loadRaterSalt(rater, canSave);
-  const data = await loadRaterLines(salt);
+  const salt = await loadRaterSalt(set, rater, canSave);
+  const data = await loadRaterLines(set, salt);
   if (data.kind !== "ready") return { kind: data.kind };
   return {
     kind: "rate",
     rater,
     runs: data.runs,
-    lines: await loadRaterSession(data.lines, rater, salt),
+    lines: await loadRaterSession(set, data.lines, rater, salt),
     canSave,
   };
 };
@@ -27,8 +30,13 @@ const stateFor = async (rater: string | undefined): Promise<RaterScreenState> =>
 export default async function RatePage({
   searchParams,
 }: Readonly<{ searchParams: Promise<Record<string, string | string[] | undefined>> }>) {
-  const { rater } = await searchParams;
+  const { rater, set } = await searchParams;
+  const rated = ratedSetOf(set);
+  if (rated === null) return <RaterScreen set="hb" state={{ kind: "unknown-set" }} />;
   return (
-    <RaterScreen state={await stateFor(typeof rater === "string" ? rater : undefined)} />
+    <RaterScreen
+      set={rated}
+      state={await stateFor(rated, typeof rater === "string" ? rater : undefined)}
+    />
   );
 }

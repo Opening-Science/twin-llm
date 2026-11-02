@@ -2,7 +2,14 @@ import { describe, expect, test } from "bun:test";
 
 import { lineToken } from "../../features/lab/rater-lines";
 
-import { agreementRows, answerIdRows, cohenKappa, pairsFromTable } from "./agreement";
+import {
+  agreementRows,
+  answerIdRows,
+  cohenKappa,
+  groupBySet,
+  pairsFromTable,
+  ratedSetForFile,
+} from "./agreement";
 
 /**
  * Cohen's worked example: two judges, 200 cases, three categories (Cohen
@@ -178,5 +185,65 @@ describe("answerIdRows", () => {
     expect(answerIdRows("rater-b", SALT, "run-a", line)[0]?.id).not.toBe(
       answerIdRows("rater-b", "d".repeat(64), "run-a", line)[0]?.id,
     );
+  });
+});
+
+describe("agreement per set (#304)", () => {
+  test("runs are grouped by set, in the order given, never pooled across sets", () => {
+    const runs = [
+      { set: "hb", runId: "hb-a" },
+      { set: "v1h", runId: "v1h-a" },
+      { set: "hb", runId: "hb-b" },
+    ];
+    expect(
+      groupBySet(runs).map(([set, group]) => [set, group.map((run) => run.runId)]),
+    ).toEqual([
+      ["hb", ["hb-a", "hb-b"]],
+      ["v1h", ["v1h-a"]],
+    ]);
+    expect(groupBySet([])).toEqual([]);
+  });
+
+  test("a ratings file counts only in a run of its rubric's set", () => {
+    expect(ratedSetForFile("hb", "second-rater.v1")).toBe("hb");
+    expect(ratedSetForFile("v1h", "second-rater.v1h.v1")).toBe("v1h");
+    expect(ratedSetForFile("v1h", "second-rater.v1")).toBeNull();
+    expect(ratedSetForFile("hb", "second-rater.v1h.v1")).toBeNull();
+    expect(ratedSetForFile("v1", "second-rater.v1")).toBeNull();
+  });
+
+  test("per set, each set's raters are compared on that set's lines only", () => {
+    const hb = {
+      runId: "hb-a",
+      scorer: new Map([["Q-1#1", "pass" as const]]),
+      raters: new Map([["rater-b", new Map([["Q-1#1", 5]])]]),
+    };
+    const v1h = {
+      runId: "v1h-a",
+      scorer: new Map([
+        ["Q-S1-H01#1", "fail" as const],
+        ["Q-S1-H02#1", "pass" as const],
+      ]),
+      raters: new Map([
+        [
+          "rater-b",
+          new Map([
+            ["Q-S1-H01#1", 2],
+            ["Q-S1-H02#1", 4],
+          ]),
+        ],
+      ]),
+    };
+    const rows = groupBySet([
+      { set: "hb", input: hb },
+      { set: "v1h", input: v1h },
+    ]).map(([set, group]) => [
+      set,
+      agreementRows(group.map((run) => run.input)).map((row) => row.result?.n),
+    ]);
+    expect(rows).toEqual([
+      ["hb", [1]],
+      ["v1h", [2]],
+    ]);
   });
 });

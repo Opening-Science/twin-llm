@@ -6,28 +6,33 @@ import { Button } from "@/infrastructure/ui-kit/button";
 import { Card } from "@/infrastructure/ui-kit/card";
 import { Rating } from "@/infrastructure/ui-kit/rating";
 
+import { exportFileName, noReferenceText } from "./rated-set-copy";
 import { exportRatings, saveRating } from "./rating-actions";
 import { type BlindLine } from "./rater-lines";
 import { nextIndex, progressText, ratedCount, resumeIndex } from "./rater-progress";
-import { RUBRIC_LABELS, RUBRIC_LEVELS } from "./rater-rubric";
+import { type RatedSet, type Rubric, rubricLabels, rubricOf } from "./rater-rubric";
 
 /**
  * The second-rater view (#351): one answer at a time, with its question and
- * the reference, a 1 to 5 rating with a written anchor per level, and a
- * comment. It never sees a run, a model or an automatic score (`BlindLine`).
+ * the reference, a 1 to 5 rating with a written anchor per level from the
+ * set's rubric (hb or v1h, #304), and a comment. It never sees a run, a model or an automatic score (`BlindLine`).
  * Each save goes to the server action, which writes the ratings file beside
  * the run; reloading the page resumes at the first unrated answer.
  */
 
 type Props = Readonly<{
+  set: RatedSet;
   rater: string;
   lines: readonly BlindLine[];
   canSave: boolean;
 }>;
 
-const Anchors = ({ chosen }: Readonly<{ chosen: number | null }>) => (
+const Anchors = ({
+  rubric,
+  chosen,
+}: Readonly<{ rubric: Rubric; chosen: number | null }>) => (
   <dl className="rater-anchors">
-    {[...RUBRIC_LEVELS].reverse().map((each) => (
+    {[...rubric.levels].reverse().map((each) => (
       <div
         key={each.level}
         className="rater-anchor"
@@ -43,11 +48,13 @@ const Anchors = ({ chosen }: Readonly<{ chosen: number | null }>) => (
 );
 
 const LineView = ({
+  set,
   line,
   canSave,
   saving,
   onSave,
 }: Readonly<{
+  set: RatedSet;
   line: BlindLine;
   canSave: boolean;
   saving: boolean;
@@ -56,6 +63,7 @@ const LineView = ({
   const [level, setLevel] = useState<number | null>(line.level);
   const [comment, setComment] = useState(line.comment);
   const commentId = useId();
+  const rubric = rubricOf(set);
   const changed = level !== line.level || comment.trim() !== line.comment;
   return (
     <div className="flex min-w-0 flex-col gap-4">
@@ -75,7 +83,7 @@ const LineView = ({
           </ul>
         ) : (
           <p className="text-muted-foreground text-sm">
-            No tool value for this item; it should be declined.
+            {noReferenceText(set, line.referenceKind)}
           </p>
         )}
         {line.note !== null && (
@@ -100,10 +108,10 @@ const LineView = ({
           label="Your rating"
           value={level}
           onChange={setLevel}
-          labels={RUBRIC_LABELS}
+          labels={rubricLabels(rubric)}
           readOnly={!canSave}
         />
-        <Anchors chosen={level} />
+        <Anchors rubric={rubric} chosen={level} />
         <div className="flex flex-col gap-1">
           <label
             htmlFor={commentId}
@@ -144,7 +152,7 @@ const LineView = ({
   );
 };
 
-export const SecondRater = ({ rater, lines: initial, canSave }: Props) => {
+export const SecondRater = ({ set, rater, lines: initial, canSave }: Props) => {
   const [lines, setLines] = useState<readonly BlindLine[]>(initial);
   const [index, setIndex] = useState(() => resumeIndex(initial));
   const [status, setStatus] = useState("");
@@ -155,7 +163,7 @@ export const SecondRater = ({ rater, lines: initial, canSave }: Props) => {
   const save = (level: number | null, comment: string) => {
     if (line === undefined) return;
     startSaving(async () => {
-      const result = await saveRating({ rater, token: line.token, level, comment });
+      const result = await saveRating({ set, rater, token: line.token, level, comment });
       if (!result.ok) {
         setStatus(result.message);
         return;
@@ -173,7 +181,7 @@ export const SecondRater = ({ rater, lines: initial, canSave }: Props) => {
 
   const download = () => {
     startSaving(async () => {
-      const result = await exportRatings(rater);
+      const result = await exportRatings(rater, set);
       if (!result.ok) {
         setStatus(result.message);
         return;
@@ -183,7 +191,7 @@ export const SecondRater = ({ rater, lines: initial, canSave }: Props) => {
       );
       const link = Object.assign(document.createElement("a"), {
         href: url,
-        download: `ratings-${rater}.json`,
+        download: exportFileName(set, rater),
       });
       link.click();
       URL.revokeObjectURL(url);
@@ -197,7 +205,10 @@ export const SecondRater = ({ rater, lines: initial, canSave }: Props) => {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm">
           <span className="font-medium">{progressText(lines, index)}</span>
-          <span className="text-muted-foreground"> · rater {rater}</span>
+          <span className="text-muted-foreground">
+            {" "}
+            · set {set} · rater {rater}
+          </span>
         </p>
         <div className="flex flex-wrap gap-2">
           <Button size="sm" disabled={index === 0} onClick={() => setIndex(index - 1)}>
@@ -238,6 +249,7 @@ export const SecondRater = ({ rater, lines: initial, canSave }: Props) => {
       </p>
       <LineView
         key={line.token}
+        set={set}
         line={line}
         canSave={canSave}
         saving={saving}

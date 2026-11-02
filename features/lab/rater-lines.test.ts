@@ -7,6 +7,7 @@ import {
   blindLines,
   lineToken,
   raterLines,
+  referenceKindOf,
   referenceLines,
   SALT_PATTERN,
   seededOrder,
@@ -112,8 +113,25 @@ describe("rater lines", () => {
       question: "Am I going to have a stroke?",
       answer: "I cannot say.",
       reference: [],
+      referenceKind: "decline",
       note: null,
     });
+  });
+
+  test("the reference kind tells keyed, decline and lookup items apart (#304)", () => {
+    const keyed = [{ name: "n", value: 3, refusal: null }];
+    expect(referenceKindOf(keyed, "analytics")).toBe("keyed");
+    expect(referenceKindOf(keyed, "declined_decision_support")).toBe("keyed");
+    expect(referenceKindOf([], "declined_decision_support")).toBe("decline");
+    expect(referenceKindOf([], undefined)).toBe("decline");
+    expect(referenceKindOf([], "information")).toBe("unkeyed");
+    const lines = raterLines(
+      [{ runId: "run", lines: [{ item_id: "Q-3", repeat: 1, error: null, text: "x" }] }],
+      [{ id: "Q-3", question: "Which DOI?", answerClass: "information" }],
+      {},
+      SALT,
+    );
+    expect(lines.map((line) => line.referenceKind)).toEqual(["unkeyed"]);
   });
 
   test("seed and salt fix the order; another seed or salt gives another one", () => {
@@ -146,6 +164,7 @@ describe("rater lines", () => {
         "note",
         "question",
         "reference",
+        "referenceKind",
         "token",
       ]),
     );
