@@ -88,7 +88,7 @@ const PROFILE: GbdProfile = assembleLocationProfile({
     auditIds: ["22"],
   },
   year: 2023,
-  causes: { names: [], total: 0 },
+  causes: { level: 2, names: [], total: 0, otherLevels: 0, unknown: [] },
   dalys: [],
   map: call(
     mapInputs(SWITZERLAND, 2023)[1]!,
@@ -127,7 +127,7 @@ describe("profile tables", () => {
       ["Not imported", "Only 2023 is imported for Switzerland, so there is no trend."],
       [
         "Not imported",
-        "No causes other than All causes are imported, so top causes of DALYs are not shown.",
+        "No level 2 causes are imported, so top causes of DALYs are not shown.",
       ],
       ["Shown", null],
     ]);
