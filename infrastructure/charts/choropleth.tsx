@@ -11,7 +11,7 @@ import {
 } from "react";
 
 import { EMPTY_VALUE, formatNumber, formatUnit } from "@/infrastructure/format-measure";
-import type { MapLevel } from "@/infrastructure/view-specs";
+import type { BoundaryLayer, MapLevel } from "@/infrastructure/view-specs";
 
 import {
   ChartTooltip,
@@ -91,8 +91,8 @@ const loadBoundaries = (file: string): Promise<readonly BoundaryFeature[] | null
   return loading;
 };
 
-const useBoundaries = (country: string | null): Loaded => {
-  const url = boundaryFile(country);
+const useBoundaries = (country: string | null, layer: BoundaryLayer | null): Loaded => {
+  const url = boundaryFile(country, layer);
   const [loaded, setLoaded] = useState<Readonly<{ url: string; value: Loaded }>>({
     url,
     value: { state: "loading" },
@@ -121,6 +121,8 @@ export type ChoroplethProps = Readonly<{
   level: MapLevel;
   /** ISO 3166-1 alpha-3 of the country whose states are drawn; level country only. */
   country?: string | null;
+  /** The country's layer drawn instead of its states (the UK's nations or regions); level country only. */
+  layer?: BoundaryLayer | null;
   regions: readonly MapRegion[];
   /** Places named by the data that have no boundary here; listed under the map. */
   unmatched?: readonly string[];
@@ -153,13 +155,17 @@ export const Choropleth = ({
   measure = "",
   level,
   country = null,
+  layer = null,
   regions,
   unmatched = [],
   top = DEFAULT_TOP,
 }: ChoroplethProps) => {
   const id = useId();
   const hatchId = `${id}-no-data`;
-  const loaded = useBoundaries(level === "country" ? country : null);
+  const loaded = useBoundaries(
+    level === "country" ? country : null,
+    level === "country" ? layer : null,
+  );
   const [frameRef, frameWidth] = useMeasuredWidth(VIEW_WIDTH);
   const svgRef = useRef<SVGSVGElement>(null);
   const [hover, setHover] = useState<Hover | null>(null);

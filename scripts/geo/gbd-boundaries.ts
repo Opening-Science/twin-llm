@@ -1,3 +1,7 @@
+import type { BoundaryLayer } from "../../infrastructure/view-specs";
+
+import { ukLayers } from "./uk-levels";
+
 /**
  * How Natural Earth's admin-1 units become the boundaries GBD's subnational
  * units are matched to (#397). Reviewed by hand, country by country; the
@@ -18,6 +22,10 @@
  *   where Natural Earth gives two units one code.
  * - `rename`: Natural Earth names that are wrong for the code they carry.
  *
+ * `layers` build a country's upper levels as files of their own, each by
+ * dissolving every one of the country's units into exactly one unit of the
+ * layer (the United Kingdom's nations and regions, uk-levels.ts, #421).
+ *
  * `aliases` give GBD names that match no Natural Earth name, to the code of
  * the boundary they name. A dissolved unit with no ISO code gets a code of
  * the form `GBD-<location id>`, and GBD's name as its own.
@@ -35,12 +43,16 @@ export type Dissolve = Readonly<{
   names?: readonly string[];
 }>;
 
+/** One upper level of a country, drawn from its own file (`admin1/<ISO3>-<layer>.json`). */
+export type Layer = Readonly<{ layer: BoundaryLayer; units: readonly Dissolve[] }>;
+
 export type CountryRules = Readonly<{
   borrow?: readonly string[];
   dissolve?: readonly Dissolve[];
   recode?: Readonly<Record<string, string>>;
   rename?: Readonly<Record<string, string>>;
   aliases?: Readonly<Record<string, string>>;
+  layers?: readonly Layer[];
 }>;
 
 /** Italy: Natural Earth has the 107 provinces; GBD has the 19 regions and the two autonomous provinces of Trentino-Alto Adige. */
@@ -78,6 +90,8 @@ export const GBD_BOUNDARY_RULES: Readonly<Record<string, CountryRules>> = {
       "Kingston upon Hull, City of": "GB-KHL",
       "Windsor and Maidenhead": "GB-WNM",
     },
+    // GBD's nations and England's regions, joined from the local units (#421).
+    layers: ukLayers(),
   },
   IND: {
     dissolve: [
@@ -221,18 +235,6 @@ export type UnmatchedReason = Readonly<{ pattern: RegExp; reason: string }>;
  */
 export const UNMATCHED_ON_PURPOSE: Readonly<Record<string, readonly UnmatchedReason[]>> =
   {
-    GBR: [
-      {
-        pattern: /^(England|Scotland|Wales|Northern Ireland)$/,
-        reason:
-          "a nation; the boundary file has local authorities, one level per country",
-      },
-      {
-        pattern:
-          /^(East Midlands|East of England|Greater London|North East England|North West England|South East England|South West England|West Midlands|Yorkshire and the Humber)$/,
-        reason: "a region of England; the boundary file has local authorities",
-      },
-    ],
     IDN: [
       {
         pattern: /^North Kalimantan$/,

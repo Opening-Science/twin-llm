@@ -3,7 +3,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 import { boundaryFile, parseBoundaries } from "./boundaries";
-import { LOCATION_INDEX, subnationalCountries } from "./match-location";
+import { layersOf, LOCATION_INDEX, subnationalCountries } from "./match-location";
 
 const DATA = join(import.meta.dir, "../../../public/geo/natural-earth");
 
@@ -11,6 +11,13 @@ describe("boundaryFile", () => {
   test("names the countries file or one country's states", () => {
     expect(boundaryFile(null)).toBe("admin0.json");
     expect(boundaryFile("NGA")).toBe("admin1/NGA.json");
+    expect(boundaryFile("NGA", null)).toBe("admin1/NGA.json");
+  });
+
+  test("names a country's upper layer file (#421)", () => {
+    expect(boundaryFile("GBR", "nations")).toBe("admin1/GBR-nations.json");
+    expect(boundaryFile("GBR", "regions")).toBe("admin1/GBR-regions.json");
+    expect(boundaryFile(null, "nations")).toBe("admin0.json");
   });
 });
 
@@ -54,22 +61,40 @@ describe("committed boundaries", () => {
     expect(new Set(codes).size).toBe(codes?.length ?? -1);
   });
 
-  test("every country with states has a file whose codes match the index", () => {
+  test("every country with states has a file per layer whose codes match the index", () => {
+    const layered = subnationalCountries(LOCATION_INDEX).flatMap((country) =>
+      layersOf(LOCATION_INDEX, country).map((layer) => ({ country, layer })),
+    );
     const files = readdirSync(join(DATA, "admin1")).toSorted();
     expect(files).toEqual(
-      subnationalCountries(LOCATION_INDEX)
-        .toSorted()
-        .map((code) => `${code}.json`),
+      layered
+        .map(({ country, layer }) =>
+          boundaryFile(country, layer).replace(/^admin1\//, ""),
+        )
+        .toSorted(),
     );
-    for (const code of subnationalCountries(LOCATION_INDEX)) {
-      expect(
-        read(`admin1/${code}.json`)?.map((feature) => feature.properties.code),
-      ).toEqual(
+    for (const { country, layer } of layered) {
+      const codes = read(boundaryFile(country, layer))?.map(
+        (feature) => feature.properties.code,
+      );
+      expect(codes).toEqual(
         LOCATION_INDEX.states
-          .filter((state) => state.country === code)
+          .filter((state) => state.country === country && (state.layer ?? null) === layer)
           .map((state) => state.code),
       );
+      if (layer !== null) expect(new Set(codes).size).toBe(codes?.length ?? -1);
     }
+  });
+
+  test("the United Kingdom has its nations and its 12 regions as layers (#421)", () => {
+    expect(layersOf(LOCATION_INDEX, "GBR")).toEqual([null, "nations", "regions"]);
+    expect(read("admin1/GBR-nations.json")?.map((f) => f.properties.name)).toEqual([
+      "England",
+      "Northern Ireland",
+      "Scotland",
+      "Wales",
+    ]);
+    expect(read("admin1/GBR-regions.json")?.length).toBe(12);
   });
 
   test("stays within the size budget: under 2.5 MB in all", () => {

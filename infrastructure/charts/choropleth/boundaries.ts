@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import type { BoundaryLayer } from "@/infrastructure/view-specs";
+
 /**
  * The committed Natural Earth boundaries (`public/geo/natural-earth/`), as
  * the browser fetches them: GeoJSON MultiPolygons in degrees with an ISO
@@ -31,11 +33,17 @@ export const boundaryCollectionSchema = z.object({
 export type BoundaryFeature = z.infer<typeof boundaryFeatureSchema>;
 
 /**
- * The file under `/geo/natural-earth/` with the countries, or with one
- * country's states and provinces.
+ * The file under `/geo/natural-earth/` with the countries, with one
+ * country's states and provinces, or with one of its upper layers (the
+ * United Kingdom's nations or regions, #421).
  */
-export const boundaryFile = (country: string | null): string =>
-  country === null ? "admin0.json" : `admin1/${country}.json`;
+export const boundaryFile = (
+  country: string | null,
+  layer: BoundaryLayer | null = null,
+): string => {
+  if (country === null) return "admin0.json";
+  return layer === null ? `admin1/${country}.json` : `admin1/${country}-${layer}.json`;
+};
 
 export const parseBoundaries = (value: unknown): readonly BoundaryFeature[] | null => {
   const parsed = boundaryCollectionSchema.safeParse(value);
