@@ -9,7 +9,9 @@ export const GBD_IMPORT_MESSAGES = {
   otherSite: "Import GBD files from Customize · Data.",
   notCsv: "Choose the CSV files of a GBD Results Tool download.",
   tooLarge:
-    "This file is larger than 50 MB. Download a narrower query from the GBD Results Tool.",
+    "This file is larger than 1 GB. Download a narrower query from the GBD Results Tool, or import it with bun run gbd:import.",
+  noSpace:
+    "There is not enough free disk space for this file: the import keeps 1 GB free in the state folder. Free some space and try again.",
   empty: "This file is empty.",
   incomplete: "The file did not arrive whole. Try again.",
   failed: "The import did not finish. Nothing from this file was kept. Try again.",

@@ -131,16 +131,37 @@ fails, leaves no record and no rows behind.
 
 Customize · Data, "Population data (IHME GBD)", imports the same files from the
 browser (#426). Choose the CSV files of one download together with its
-`citation.txt` and press Import. Each CSV is sent on its own, up to 50 MB (the
-request body limit in `next.config.ts`; use `bun run gbd:import` for larger
-files). The server writes the upload to an owner-only temporary file in
-`<state folder>/gbd-uploads` as it arrives, hashing it on the way, then reads
+`citation.txt` and press Import. Each CSV is sent on its own, up to 1 GB
+(#434); use `bun run gbd:import` for larger files. The server writes the upload
+to an owner-only temporary file in `<state folder>/gbd-uploads` as it arrives,
+hashing it on the way, then reads
 that file a megabyte at a time and answers with progress lines, which the page
 shows with a status lattice: sending, reading with a row count, then the
 outcome. The temporary file is removed when the import ends, whatever the
 outcome; one left by a stopped server is removed by the next upload after an
 hour. A refused file shows the importer's message and code (above); a file
 already imported is skipped.
+
+How the 1 GB is allowed. Every other route runs through `proxy.ts`, and Next
+holds in memory each request body the proxy sees, cutting it at
+`proxyClientMaxBodySize` (52 MB, `next.config.ts`). That limit stays for every
+other route. The proxy's matcher leaves out `POST /api/gbd/imports` alone, so
+its body streams straight to the temporary file; the route makes the proxy's
+checks itself first (`features/gbd/gbd-upload-gate.ts`: not on the Synthea
+host, local install only, a loopback host and same-site request), then the
+unlock gate. The limits are in `features/gbd/gbd-upload-limits.ts`:
+
+- A file over 1 GB is refused before it is sent: the page checks its size, and
+  the route refuses a larger `Content-Length` before reading a byte. A body
+  that grows past 1 GB anyway is stopped and its partial file removed. The
+  message names the code `GBD_UPLOAD_TOO_LARGE` (HTTP 413).
+- Before writing, the route reads the free space in `<state folder>/gbd-uploads`.
+  If the file would leave less than 1 GB free, it is refused with
+  `GBD_UPLOAD_NO_SPACE` (HTTP 507). A disk that fills while writing gives the
+  same refusal and removes the partial file. Free space that cannot be read
+  does not refuse the file.
+- Each refusal writes the `gbd.import` audit row with its code (`too-large`,
+  `no-space`).
 
 Below the form the page lists every imported file with its release, row counts
 (rows in the file, new when imported, held now), import day, citation and

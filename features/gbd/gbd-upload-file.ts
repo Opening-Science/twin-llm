@@ -2,7 +2,7 @@ import "server-only";
 
 import { createHash, randomUUID } from "node:crypto";
 import { createReadStream } from "node:fs";
-import { mkdir, open, readdir, rm, stat } from "node:fs/promises";
+import { mkdir, open, readdir, rm, stat, statfs } from "node:fs/promises";
 import { join } from "node:path";
 
 import { storageEnv } from "@/infrastructure/env";
@@ -13,7 +13,8 @@ import type { SavedUpload } from "./gbd-import-routes";
  * Where an uploaded GBD file waits while it is read (#426): one file per
  * upload in `<state folder>/gbd-uploads`, owner-only, removed as soon as the
  * import ends. The upload is written as it arrives and hashed on the way, so
- * the server never holds the whole file in memory.
+ * the server never holds the whole file in memory. Past `maxBytes`, or when
+ * the disk fills, the write stops and the partial file is removed.
  */
 
 /** Read size for the import: a megabyte of text per chunk. */
@@ -21,7 +22,8 @@ const READ_CHUNK_BYTES = 1024 * 1024;
 /** A file left behind by a stopped server is removed by the next upload after this. */
 const STALE_MS = 60 * 60 * 1000;
 
-export const gbdUploadDir = (): string => join(storageEnv().stateDir, "gbd-uploads");
+export const gbdUploadDir = (stateDir: string = storageEnv().stateDir): string =>
+  join(stateDir, "gbd-uploads");
 
 const removeStale = async (dir: string, now: number): Promise<void> => {
   const names = await readdir(dir).catch(() => []);
@@ -34,6 +36,16 @@ const removeStale = async (dir: string, now: number): Promise<void> => {
       }
     }),
   );
+};
+
+const isDiskFull = (error: unknown): boolean =>
+  error instanceof Error && Reflect.get(error, "code") === "ENOSPC";
+
+/** Bytes free to this process where uploads are written (#434). */
+export const uploadFreeBytes = async (dir: string = gbdUploadDir()): Promise<number> => {
+  await mkdir(dir, { recursive: true, mode: 0o700 });
+  const info = await statfs(dir);
+  return info.bavail * info.bsize;
 };
 
 /** Streams `body` to a new owner-only file; stops and removes it past `maxBytes`. */
@@ -68,6 +80,7 @@ export const saveUpload = async (
   } catch (error: unknown) {
     await handle.close().catch(() => undefined);
     await rm(path, { force: true });
+    if (isDiskFull(error)) return { ok: false, reason: "no-space" };
     throw error;
   }
   if (seen.bytes === 0) {

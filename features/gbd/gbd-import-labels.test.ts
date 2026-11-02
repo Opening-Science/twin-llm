@@ -46,6 +46,13 @@ describe("GBD import labels (#426)", () => {
     );
     expect(gbdStatusText({ phase: "skipped" })).toBe("Already imported, skipped");
     expect(gbdStatusText({ phase: "failed", message: "Try again." })).toBe("Try again.");
+    expect(
+      gbdStatusText({
+        phase: "failed",
+        message: "Too large.",
+        code: "GBD_UPLOAD_TOO_LARGE",
+      }),
+    ).toBe("Too large. (GBD_UPLOAD_TOO_LARGE)");
   });
 
   test("a refusal keeps the importer's message, code, line and missing columns", () => {

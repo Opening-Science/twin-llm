@@ -6,7 +6,13 @@ import { afterAll, describe, expect, test } from "bun:test";
 
 import { sha256Of } from "@/packages/gbd-local/import-chunks";
 
-import { removeUpload, saveUpload, uploadChunks } from "./gbd-upload-file";
+import {
+  gbdUploadDir,
+  removeUpload,
+  saveUpload,
+  uploadChunks,
+  uploadFreeBytes,
+} from "./gbd-upload-file";
 
 /** The upload folder in a throwaway directory; the text is made up. */
 
@@ -56,5 +62,38 @@ describe("saveUpload (#426)", () => {
     const dir = join(ROOT, "c");
     expect(await saveUpload(streamOf(), 8, dir)).toEqual({ ok: false, reason: "empty" });
     expect(readdirSync(dir)).toEqual([]);
+  });
+
+  test("uploads wait in the state folder (#434)", () => {
+    expect(gbdUploadDir("/made/up/state")).toBe("/made/up/state/gbd-uploads");
+  });
+
+  test("a disk that fills mid-write leaves no file (#434)", async () => {
+    const dir = join(ROOT, "d");
+    const full = Object.assign(new Error("no space left on device"), { code: "ENOSPC" });
+    const body = new ReadableStream<Uint8Array>({
+      start: (controller) => {
+        controller.enqueue(new TextEncoder().encode("made,up\n"));
+      },
+      pull: (controller) => controller.error(full),
+    });
+    expect(await saveUpload(body, 1000, dir)).toEqual({ ok: false, reason: "no-space" });
+    expect(readdirSync(dir)).toEqual([]);
+  });
+
+  test("other write errors still throw and leave no file", async () => {
+    const dir = join(ROOT, "e");
+    const body = new ReadableStream<Uint8Array>({
+      pull: (controller) => controller.error(new Error("made up")),
+    });
+    await expect(saveUpload(body, 1000, dir)).rejects.toThrow("made up");
+    expect(readdirSync(dir)).toEqual([]);
+  });
+
+  test("free space is read from the upload folder, which it creates owner-only", async () => {
+    const dir = join(ROOT, "f");
+    const free = await uploadFreeBytes(dir);
+    expect(free).toBeGreaterThan(0);
+    expect(statSync(dir).mode & 0o777).toBe(0o700);
   });
 });

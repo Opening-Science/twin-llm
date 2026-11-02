@@ -944,7 +944,11 @@ const call = async (route: string, cookie: string | null) => {
   const response = await handler(
     new Request(`http://localhost${path ?? ""}?q=synthetic&tab=threads`, {
       method,
-      headers: cookie === null ? {} : { cookie: `${VAULT_COOKIE}=${cookie}` },
+      // A server request always names its host; the GBD upload checks it (#434).
+      headers: {
+        host: "localhost",
+        ...(cookie === null ? {} : { cookie: `${VAULT_COOKIE}=${cookie}` }),
+      },
     }),
     { params: Promise.resolve(ROUTE_PARAMS) },
   );

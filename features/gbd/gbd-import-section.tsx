@@ -28,6 +28,7 @@ import {
 } from "./gbd-import-labels";
 import { GBD_IMPORT_MESSAGES } from "./gbd-import-messages";
 import type { GbdImportsState } from "./gbd-import-routes";
+import { GBD_MAX_UPLOAD_BYTES, GBD_UPLOAD_CODES } from "./gbd-upload-limits";
 
 /**
  * Customize · Data, "Population data": import CSV files from IHME's GBD
@@ -61,6 +62,15 @@ const sendFile = (
   update: (status: GbdUploadStatus) => void,
 ): Promise<void> =>
   new Promise((resolve) => {
+    if (file.size > GBD_MAX_UPLOAD_BYTES) {
+      update({
+        phase: "failed",
+        message: GBD_IMPORT_MESSAGES.tooLarge,
+        code: GBD_UPLOAD_CODES.tooLarge,
+      });
+      resolve();
+      return;
+    }
     const request = new XMLHttpRequest();
     // Mutable on purpose: how much of the streamed answer has been read.
     const read = { at: 0, rest: "", last: null as GbdUploadStatus | null };
@@ -96,11 +106,14 @@ const sendFile = (
             return null;
           }
         })();
-        const error =
-          typeof body === "object" && body !== null ? Reflect.get(body, "error") : null;
+        const field = (name: string): unknown =>
+          typeof body === "object" && body !== null ? Reflect.get(body, name) : null;
+        const error = field("error");
+        const code = field("code");
         update({
           phase: "failed",
           message: typeof error === "string" ? error : GBD_IMPORT_MESSAGES.failed,
+          ...(typeof code === "string" ? { code } : {}),
         });
         resolve();
         return;
@@ -158,7 +171,7 @@ const ImportForm = () => {
         multiple
         accept=".csv,.txt,text/csv,text/plain"
         disabled={busy}
-        hint="The CSV files of one Results Tool download (Both IDs and names), and its citation.txt. Up to 50 MB each."
+        hint="The CSV files of one Results Tool download (Both IDs and names), and its citation.txt. Up to 1 GB each."
         error={error ?? undefined}
         onChange={(event) => {
           setError(null);

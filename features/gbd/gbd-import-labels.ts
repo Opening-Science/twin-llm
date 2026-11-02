@@ -13,7 +13,7 @@ export type GbdUploadStatus =
   | Readonly<{ phase: "imported"; rowCount: number; newRows: number }>
   | Readonly<{ phase: "skipped" }>
   | Readonly<{ phase: "refused"; error: GbdCsvError }>
-  | Readonly<{ phase: "failed"; message: string }>;
+  | Readonly<{ phase: "failed"; message: string; code?: string }>;
 
 const count = (value: number, one: string, many: string): string =>
   `${formatNumber(value, 0)} ${value === 1 ? one : many}`;
@@ -50,7 +50,9 @@ export const gbdStatusText = (status: GbdUploadStatus): string => {
     case "refused":
       return gbdRefusalText(status.error);
     case "failed":
-      return status.message;
+      return status.code === undefined
+        ? status.message
+        : `${status.message} (${status.code})`;
   }
 };
 

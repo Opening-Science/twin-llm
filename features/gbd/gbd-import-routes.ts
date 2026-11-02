@@ -11,6 +11,11 @@ import {
   type GbdImportEvent,
 } from "./gbd-import-events";
 import { GBD_IMPORT_MESSAGES } from "./gbd-import-messages";
+import {
+  GBD_MAX_UPLOAD_BYTES,
+  GBD_UPLOAD_CODES,
+  gbdUploadHasRoom,
+} from "./gbd-upload-limits";
 
 /**
  * The GBD import on Customize · Data (#426), as a handler factory so tests
@@ -25,6 +30,13 @@ import { GBD_IMPORT_MESSAGES } from "./gbd-import-messages";
  * the outcome (`gbd-import-events.ts`). The file is removed when the import
  * ends, whatever the outcome.
  *
+ * The file may be up to 1 GB (#434). `proxy.ts` does not run on this route,
+ * so Next does not buffer the body; the route makes the proxy's checks itself
+ * (`gbd-upload-gate.ts`). A file declared larger than the cap is refused
+ * before a byte is read, one that grows past it is stopped and its partial
+ * file removed, and a file that would leave less than 1 GB free in the state
+ * folder is refused before it is read.
+ *
  * GBD results are population data, not personal data, but the GBD store is
  * shared by everyone using the server, so every route here works on a local
  * install only (LOCAL_MVP or AUTH_DISABLED), answers same-site requests only,
@@ -34,7 +46,7 @@ import { GBD_IMPORT_MESSAGES } from "./gbd-import-messages";
 
 export type SavedUpload =
   | Readonly<{ ok: true; path: string; sha256: string; bytes: number }>
-  | Readonly<{ ok: false; reason: "too-large" | "empty" }>;
+  | Readonly<{ ok: false; reason: "too-large" | "empty" | "no-space" }>;
 
 export type GbdImportPorts = Readonly<{
   isLocalInstall: () => boolean;
@@ -48,24 +60,21 @@ export type GbdImportPorts = Readonly<{
     body: ReadableStream<Uint8Array>,
     maxBytes: number,
   ) => Promise<SavedUpload>;
+  /** Free bytes where uploads are written, or null when it cannot be told. */
+  freeBytes: () => Promise<number | null>;
   chunks: (path: string) => AsyncIterable<Uint8Array> | Iterable<Uint8Array>;
   removeUpload: (path: string) => Promise<void>;
 }>;
 
-/**
- * 50 MB: `proxy.ts` buffers a request body only up to 52 MB
- * (`proxyClientMaxBodySize` in next.config.ts) and would cut a larger one.
- */
-export const GBD_MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 const MAX_CITATION_CHARS = 4000;
 const MAX_NAME_CHARS = 255;
 const SHA256 = /^[0-9a-f]{64}$/;
 
-const failure = (error: string, status: number): Response =>
-  Response.json(
-    { ok: false, error },
-    { status, headers: { "cache-control": "no-store" } },
-  );
+const failure = (error: string, status: number, code?: string): Response =>
+  Response.json(code === undefined ? { ok: false, error } : { ok: false, error, code }, {
+    status,
+    headers: { "cache-control": "no-store" },
+  });
 
 /** Only this app's own pages may import or delete. */
 const fromOtherSite = (request: Request): boolean => {
@@ -123,12 +132,34 @@ export const createGbdImportHandlers = (ports: GbdImportPorts) => {
     const admitted = await admit(request);
     if (!admitted.ok) return admitted.response;
     const { context } = admitted;
-    const refuse = async (code: string, message: string, status: number, bytes = 0) => {
+    const refuse = async (
+      code: string,
+      message: string,
+      status: number,
+      bytes = 0,
+      shownCode?: string,
+    ) => {
       await ports.audit(
         gbdImportEvent(context, { bytes, sha256: null }, { kind: "refused", code }),
       );
-      return failure(message, status);
+      return failure(message, status, shownCode);
     };
+    const tooLarge = (bytes = 0) =>
+      refuse(
+        "too-large",
+        GBD_IMPORT_MESSAGES.tooLarge,
+        413,
+        bytes,
+        GBD_UPLOAD_CODES.tooLarge,
+      );
+    const noSpace = (bytes = 0) =>
+      refuse(
+        "no-space",
+        GBD_IMPORT_MESSAGES.noSpace,
+        507,
+        bytes,
+        GBD_UPLOAD_CODES.noSpace,
+      );
 
     const rawName = request.headers.get(GBD_FILE_NAME_HEADER);
     if (decoded(rawName)?.trim().toLowerCase() === "citation.txt") {
@@ -138,10 +169,15 @@ export const createGbdImportHandlers = (ports: GbdImportPorts) => {
     if (fileName === null) return refuse("not-csv", GBD_IMPORT_MESSAGES.notCsv, 400);
     const declaredText = request.headers.get("content-length");
     const declared = declaredText === null ? null : Number(declaredText);
-    if (declared !== null && declared > GBD_MAX_UPLOAD_BYTES) {
-      return refuse("too-large", GBD_IMPORT_MESSAGES.tooLarge, 413, declared);
-    }
+    if (declared !== null && declared > GBD_MAX_UPLOAD_BYTES) return tooLarge(declared);
     if (request.body === null) return refuse("empty", GBD_IMPORT_MESSAGES.empty, 400);
+    const free = await ports.freeBytes().catch((error: unknown) => {
+      console.error("[gbd] free space not read:", errorName(error));
+      return null;
+    });
+    const declaredBytes =
+      declared !== null && Number.isFinite(declared) ? declared : null;
+    if (!gbdUploadHasRoom(free, declaredBytes)) return noSpace(declaredBytes ?? 0);
 
     const saved = await ports
       .saveUpload(request.body, GBD_MAX_UPLOAD_BYTES)
@@ -151,11 +187,11 @@ export const createGbdImportHandlers = (ports: GbdImportPorts) => {
       });
     if (saved === null) return refuse("upload-failed", GBD_IMPORT_MESSAGES.failed, 500);
     if (!saved.ok) {
-      return saved.reason === "too-large"
-        ? refuse("too-large", GBD_IMPORT_MESSAGES.tooLarge, 413)
-        : refuse("empty", GBD_IMPORT_MESSAGES.empty, 400);
+      if (saved.reason === "too-large") return tooLarge();
+      if (saved.reason === "no-space") return noSpace();
+      return refuse("empty", GBD_IMPORT_MESSAGES.empty, 400);
     }
-    if (declared !== null && Number.isFinite(declared) && saved.bytes !== declared) {
+    if (declaredBytes !== null && saved.bytes !== declaredBytes) {
       await ports.removeUpload(saved.path);
       return refuse("incomplete", GBD_IMPORT_MESSAGES.incomplete, 400, saved.bytes);
     }

@@ -12,12 +12,12 @@ import {
 import { GBD_IMPORT_MESSAGES } from "./gbd-import-messages";
 import {
   createGbdImportHandlers,
-  GBD_MAX_UPLOAD_BYTES,
   type GbdImportPorts,
   gbdUploadCitation,
   gbdUploadName,
   loadGbdImports,
 } from "./gbd-import-routes";
+import { GBD_FREE_SPACE_MARGIN_BYTES, GBD_MAX_UPLOAD_BYTES } from "./gbd-upload-limits";
 
 /** The GBD import routes with fakes; every CSV here is MADE UP. */
 
@@ -61,6 +61,7 @@ const world = (
       calls.push(`saved ${path}`);
       return { ok: true, path, sha256: sha256Of(bytes), bytes: bytes.length };
     },
+    freeBytes: async () => 100 * GBD_FREE_SPACE_MARGIN_BYTES,
     chunks: (path) => {
       const bytes = uploads.get(path) ?? new Uint8Array();
       return [bytes.subarray(0, 100), bytes.subarray(100)];
@@ -266,13 +267,6 @@ describe("POST /api/gbd/imports (#426)", () => {
         GBD_IMPORT_MESSAGES.citationOnly,
       ],
       ["not a CSV", {}, upload("x", "notes.pdf"), 400, GBD_IMPORT_MESSAGES.notCsv],
-      [
-        "declared too large",
-        {},
-        upload("x", "a.csv", { "content-length": String(GBD_MAX_UPLOAD_BYTES + 1) }),
-        413,
-        GBD_IMPORT_MESSAGES.tooLarge,
-      ],
       ["empty", {}, upload("", "a.csv"), 400, GBD_IMPORT_MESSAGES.empty],
     ];
     for (const [name, overrides, request, status, error] of cases) {
@@ -288,6 +282,85 @@ describe("POST /api/gbd/imports (#426)", () => {
         [],
       ]);
     }
+  });
+
+  test("a file declared over 1 GB is refused with its code before a byte is read (#434)", async () => {
+    const { handlers, calls, audit } = world({
+      freeBytes: async () => {
+        calls.push("free");
+        return null;
+      },
+    });
+    const response = await handlers.postImport(
+      upload("x", "a.csv", { "content-length": String(GBD_MAX_UPLOAD_BYTES + 1) }),
+    );
+    expect([response.status, await response.json()]).toEqual([
+      413,
+      { ok: false, error: GBD_IMPORT_MESSAGES.tooLarge, code: "GBD_UPLOAD_TOO_LARGE" },
+    ]);
+    expect(calls).toEqual([]);
+    expect(audit.map((row) => [row.args, row.result])).toEqual([
+      [
+        { bytes: GBD_MAX_UPLOAD_BYTES + 1, sha256: null },
+        { stored: false, refused: "too-large" },
+      ],
+    ]);
+  });
+
+  test("a body that grows past the cap is stopped and leaves no upload (#434)", async () => {
+    const { handlers, calls } = world({
+      saveUpload: async () => {
+        calls.push("stopped past the cap");
+        return { ok: false, reason: "too-large" };
+      },
+    });
+    const response = await handlers.postImport(upload(MADE_UP_CAUSE_CSV, "a.csv"));
+    expect([response.status, await response.json()]).toEqual([
+      413,
+      { ok: false, error: GBD_IMPORT_MESSAGES.tooLarge, code: "GBD_UPLOAD_TOO_LARGE" },
+    ]);
+    expect(calls).toEqual(["stopped past the cap"]);
+  });
+
+  test("too little free disk refuses before the upload is written (#434)", async () => {
+    const declared = MADE_UP_CAUSE_CSV.length;
+    const { handlers, calls, audit } = world({
+      freeBytes: async () => GBD_FREE_SPACE_MARGIN_BYTES + declared - 1,
+    });
+    const response = await handlers.postImport(
+      upload(MADE_UP_CAUSE_CSV, "a.csv", { "content-length": String(declared) }),
+    );
+    expect([response.status, await response.json()]).toEqual([
+      507,
+      { ok: false, error: GBD_IMPORT_MESSAGES.noSpace, code: "GBD_UPLOAD_NO_SPACE" },
+    ]);
+    expect(calls).toEqual([]);
+    expect(audit.map((row) => row.result)).toEqual([
+      { stored: false, refused: "no-space" },
+    ]);
+  });
+
+  test("a disk that fills while writing is refused with the same code (#434)", async () => {
+    const { handlers } = world({
+      saveUpload: async () => ({ ok: false, reason: "no-space" }),
+    });
+    const response = await handlers.postImport(upload(MADE_UP_CAUSE_CSV, "a.csv"));
+    expect([response.status, await response.json()]).toEqual([
+      507,
+      { ok: false, error: GBD_IMPORT_MESSAGES.noSpace, code: "GBD_UPLOAD_NO_SPACE" },
+    ]);
+  });
+
+  test("free space that cannot be read does not refuse the file", async () => {
+    const { handlers } = world({
+      freeBytes: async () => {
+        throw new Error("made up");
+      },
+    });
+    const response = await handlers.postImport(upload(MADE_UP_CAUSE_CSV, "a.csv"));
+    expect(await lastEvent(response)).toEqual(
+      expect.objectContaining({ type: "imported" }),
+    );
   });
 
   test("a body shorter than its declared length is refused and removed", async () => {
