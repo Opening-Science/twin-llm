@@ -1,3 +1,5 @@
+import { isGenomeIdsBlocked } from "@/infrastructure/disclosure-ledger";
+import { GENOME_IDS_BLOCKED_SENTENCE } from "@/infrastructure/free-text-check";
 import { splitThinking } from "@/infrastructure/think-block";
 import { type DataChoiceId, type RoleId, ROLES } from "./onboarding-steps";
 
@@ -8,7 +10,9 @@ import { type DataChoiceId, type RoleId, ROLES } from "./onboarding-steps";
  * linked sources and own words. A model is slow on a laptop and may be down,
  * so a call that fails, times out or returns fewer than three usable lines is
  * topped up from fixed starters per role. The person never sees why: the real
- * error goes to the server log as an error name only.
+ * error goes to the server log as an error name only. The one exception is a
+ * request blocked for the person's own genome identifiers (#356, #414): the
+ * fixed starters come with the fixed refusal sentence as `notice`.
  *
  * The model call is injected, so every path here is tested with fakes.
  */
@@ -139,11 +143,24 @@ export type StarterSource = "model" | "fallback";
 export type StarterResult = Readonly<{
   questions: readonly string[];
   source: StarterSource;
+  /** The fixed refusal when the request was blocked for genome identifiers. */
+  notice?: string;
 }>;
 
+/** `typed` is what the person wrote themselves: their interest, when given (#414). */
 export type StarterGenerate = (
-  input: Readonly<{ system: string; prompt: string; abortSignal: AbortSignal }>,
+  input: Readonly<{
+    system: string;
+    prompt: string;
+    abortSignal: AbortSignal;
+    typed: readonly string[];
+  }>,
 ) => Promise<string>;
+
+/** The person's own words in the starter prompt: the interest, when they wrote one. */
+export const starterTyped = (
+  context: Pick<StarterContext, "interest">,
+): readonly string[] => (context.interest.trim() === "" ? [] : [context.interest.trim()]);
 
 export type StarterDeps = Readonly<{
   generate: StarterGenerate;
@@ -171,6 +188,7 @@ export const generateStarterQuestions = async (
         system: STARTER_SYSTEM_PROMPT,
         prompt: buildStarterPrompt(context),
         abortSignal: controller.signal,
+        typed: starterTyped(context),
       }),
       timeout,
     ]);
@@ -187,11 +205,16 @@ export const generateStarterQuestions = async (
     const toppedUp = [...new Set([...fromModel, ...fixed])].slice(0, STARTER_COUNT);
     return { questions: toppedUp, source: "model" };
   } catch (error) {
+    const blocked = isGenomeIdsBlocked(error);
     deps.logError(
-      "[onboarding] starter questions failed",
+      blocked
+        ? "[onboarding] starter questions blocked: genome identifiers"
+        : "[onboarding] starter questions failed",
       error instanceof Error ? error.name : "unknown",
     );
-    return { questions: fixed, source: "fallback" };
+    return blocked
+      ? { questions: fixed, source: "fallback", notice: GENOME_IDS_BLOCKED_SENTENCE }
+      : { questions: fixed, source: "fallback" };
   } finally {
     clearTimeout(timer);
   }

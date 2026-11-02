@@ -13,6 +13,7 @@ import { STREAM_STATUS_LINES } from "@/infrastructure/response-document/stream-c
 import { type DecorateText, RichText } from "@/infrastructure/rich-text";
 
 import { AnswerViews } from "./answer-views";
+import { ProfileFrameFooter, ProfileFrameHeader } from "./profile-frame";
 import { ExplainabilityPanel } from "./explainability-panel";
 import { streamingView } from "./streaming-view";
 import type { ResponseState } from "./conversation";
@@ -29,16 +30,19 @@ const StreamingAnswer = ({
   hasSteps,
 }: {
   readonly response: Pick<ResponseState, "text" | "views"> &
-    Partial<Pick<ResponseState, "id">>;
+    Partial<Pick<ResponseState, "id" | "profileFrame">>;
   /** The step trace above already says what is happening. */
   readonly hasSteps: boolean;
 }) => {
   const view = streamingView(response.text);
+  const frame = response.profileFrame ?? null;
   if (view.kind === "answer") {
     return (
       <>
+        {frame !== null && <ProfileFrameHeader frame={frame} />}
         <RichText text={view.text} />
         <AnswerViews views={response.views ?? []} answerId={response.id} />
+        {frame !== null && <ProfileFrameFooter frame={frame} />}
       </>
     );
   }
@@ -89,7 +93,7 @@ type AnswerBodyResponse = Pick<
   | "views"
   | "numberSources"
 > &
-  Partial<Pick<ResponseState, "id" | "reviewing">>;
+  Partial<Pick<ResponseState, "id" | "reviewing" | "profileFrame">>;
 
 const SettledAnswer = ({
   response,
@@ -108,9 +112,11 @@ const SettledAnswer = ({
   const shown = parsed.answerText || splitThinking(response.text).text;
   // A model can run its lookups and stop without writing anything.
   const silent = !withheld && shown.trim() === "";
+  const frame = withheld ? null : (response.profileFrame ?? null);
 
   return (
     <>
+      {frame !== null && <ProfileFrameHeader frame={frame} />}
       {!withheld && !silent && document?.interpretation.kind === "narration" && (
         <p className="text-eyebrow">{UNVERIFIED_NARRATION}</p>
       )}
@@ -123,6 +129,7 @@ const SettledAnswer = ({
           show the full reply, less any thinking a model leaked. */}
       {!withheld && !silent && <RichText text={shown} decorate={decorate} />}
       {!withheld && <AnswerViews views={response.views ?? []} answerId={response.id} />}
+      {frame !== null && <ProfileFrameFooter frame={frame} />}
       {response.status === "COMPLETE" && (
         <ExplainabilityPanel
           reasoningText={

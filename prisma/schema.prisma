@@ -1010,6 +1010,8 @@ model GbdImport {
   rowCount   Int      @map("row_count")
   newRows    Int      @map("new_rows")
   importedAt DateTime @default(now()) @map("imported_at")
+  /// IHME's citation from the download's citation.txt, as one line; null when none came with the file.
+  citation   String?
 
   estimates GbdEstimate[]
 

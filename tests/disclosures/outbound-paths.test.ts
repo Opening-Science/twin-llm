@@ -328,5 +328,12 @@ describe("every outbound path goes through the disclosure ledger (#140)", () => 
       /deps\.resolveModel\(calledModelId, \{\s*hasWearableNarrative,\s*disclosure,\s*typed,?\s*\}\)/,
     );
     expect(pipeline).toContain("disclosure: numberReviewDisclosure(disclosure),");
+    // The single-prompt calls pass what the person typed too (#414).
+    expect(pipeline).toMatch(
+      /disclosure: numberReviewDisclosure\(disclosure\),\s*(\/\/[^\n]*\n\s*)?typed,/,
+    );
+    expect(read("app/api/memory/compact/route.ts")).toMatch(
+      /hasWearableNarrative: false,\s*disclosure,\s*typed,/,
+    );
   });
 });
