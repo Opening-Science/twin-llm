@@ -114,7 +114,9 @@ and mark the fetching one `server-only`, so client code can use the pure half.
   check. An existing test that still needs one uses `mockModuleForFile`
   (`tests/support/mock-module.ts`), which keeps the module's other exports and puts
   the real module back after the file. Leave shared state (env, files, sessions) as
-  you found it, and check with `bun test --randomize` (#359).
+  you found it, and check with `bun test --randomize` (#359). CI runs the whole suite
+  randomized once a day on main (`.github/workflows/randomized-tests.yml`); a failed run
+  names its seed, and `bun test --randomize --seed=<seed>` repeats the order.
 - `bunfig.toml` already preloads a `server-only` stub; do not add another.
 
 **Data.** Use synthetic or fixture data for development, tests, screenshots and
