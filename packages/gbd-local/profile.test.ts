@@ -23,11 +23,14 @@ import {
   rankableCauses,
   unknownCauseNote,
 } from "./profile";
+import { GBD_CAUSE_TABLE } from "./cause-table";
 
 /**
  * The pure half of `gbd_profile` (#403) over MADE-UP results: every value
  * below is invented for the test and is not an IHME estimate.
  */
+
+const NO_CAUSES = { level: 2, names: [], total: 0, otherLevels: 0, unknown: [] };
 
 const SWITZERLAND = { id: 94, name: "Switzerland", parentId: 73 };
 const ATTRIBUTION =
@@ -117,21 +120,45 @@ describe("the plan", () => {
     expect(latestYear([refused(hale, ["2"])], 94)).toBeNull();
   });
 
-  test("ranks imported causes by name, never All causes, capped", () => {
-    expect(
-      rankableCauses([
-        { id: 294, name: "All causes" },
-        { id: 587, name: "Diabetes mellitus" },
-        { id: 491, name: "Cardiovascular diseases" },
-      ]),
-    ).toEqual({ names: ["Cardiovascular diseases", "Diabetes mellitus"], total: 2 });
-    const many = Array.from({ length: PROFILE_CAUSE_CAP + 5 }, (_, index) => ({
-      id: index + 1000,
-      name: `Cause ${String(index).padStart(2, "0")}`,
-    }));
-    const ranked = rankableCauses(many);
+  test("ranks level 2 causes by default, never All causes, and lists unknown levels apart", () => {
+    // A mixed-level import: All causes (0), a level 1 group, two level 2
+    // causes, a level 3 child of one of them, and two ids the table lacks.
+    const mixed = [
+      { id: 294, name: "All causes" },
+      { id: 409, name: "Non-communicable diseases" },
+      { id: 491, name: "Cardiovascular diseases" },
+      { id: 974, name: "Diabetes and kidney diseases" },
+      { id: 587, name: "Diabetes mellitus" },
+      { id: 900_001, name: "Made-up cause B" },
+      { id: 900_002, name: "Made-up cause A" },
+    ];
+    expect(rankableCauses(mixed)).toEqual({
+      level: 2,
+      names: ["Cardiovascular diseases", "Diabetes and kidney diseases"],
+      total: 2,
+      otherLevels: 2,
+      unknown: ["Made-up cause A", "Made-up cause B"],
+    });
+    expect(rankableCauses(mixed, 1)).toMatchObject({
+      level: 1,
+      names: ["Non-communicable diseases"],
+      otherLevels: 3,
+    });
+    expect(rankableCauses(mixed, 3).names).toEqual(["Diabetes mellitus"]);
+  });
+
+  test("caps the causes of one level", () => {
+    const many = GBD_CAUSE_TABLE.filter((entry) => entry[2] === 3)
+      .slice(0, PROFILE_CAUSE_CAP + 5)
+      .map(([id]) => ({ id, name: `Cause ${String(id).padStart(4, "0")}` }));
+    const ranked = rankableCauses(many, 3);
     expect(ranked.names).toHaveLength(PROFILE_CAUSE_CAP);
     expect(ranked.total).toBe(PROFILE_CAUSE_CAP + 5);
+    expect(rankableCauses(many)).toMatchObject({
+      names: [],
+      total: 0,
+      otherLevels: PROFILE_CAUSE_CAP + 5,
+    });
   });
 
   test("one age-standardised rate call per cause, place and year", () => {
@@ -212,7 +239,7 @@ describe("a location profile", () => {
       hale: haleCall,
       lifeExpectancy: refused(lifeExpectancy, ["12"]),
       year: 2023,
-      causes: { names: [], total: 0 },
+      causes: NO_CAUSES,
       dalys: [],
       map: null,
     });
@@ -236,7 +263,7 @@ describe("a location profile", () => {
         [
           "top_dalys",
           "not_imported",
-          "No causes other than All causes are imported, so top causes of DALYs are not shown.",
+          "No level 2 causes are imported, so top causes of DALYs are not shown.",
         ],
         [
           "map",
@@ -281,7 +308,9 @@ describe("a location profile", () => {
         ["4"],
         { cause: "Neoplasms" },
       ),
-      refused(causeRateInputs("dalys", 94, 2023, ["Diabetes mellitus"])[0]!, ["5"]),
+      refused(causeRateInputs("dalys", 94, 2023, ["Diabetes and kidney diseases"])[0]!, [
+        "5",
+      ]),
     ];
     const mapCall = found(
       mapInputs(SWITZERLAND, 2023)[1]!,
@@ -294,7 +323,8 @@ describe("a location profile", () => {
       lifeExpectancy: null,
       year: 2023,
       causes: {
-        names: ["Cardiovascular diseases", "Diabetes mellitus", "Neoplasms"],
+        ...NO_CAUSES,
+        names: ["Cardiovascular diseases", "Diabetes and kidney diseases", "Neoplasms"],
         total: 3,
       },
       dalys,
@@ -325,13 +355,61 @@ describe("a location profile", () => {
     expect(profile.sections.at(-1)?.id).toBe("top_deaths");
   });
 
+  test("a mixed-level import ranks level 2 only and names causes of unknown level apart", () => {
+    const causes = rankableCauses([
+      { id: 294, name: "All causes" },
+      { id: 409, name: "Non-communicable diseases" },
+      { id: 491, name: "Cardiovascular diseases" },
+      { id: 493, name: "Ischemic heart disease" },
+      { id: 900_001, name: "Made-up cause" },
+    ]);
+    expect(causes.names).toEqual(["Cardiovascular diseases"]);
+    const dalys = [
+      found(
+        causeRateInputs("dalys", 94, 2023, causes.names)[0]!,
+        [{ location: "Switzerland", id: 94, year: 2023, value: 2000 }],
+        ["7"],
+        { cause: "Cardiovascular diseases" },
+      ),
+    ];
+    const profile = assembleLocationProfile({
+      place: SWITZERLAND,
+      hale: null,
+      lifeExpectancy: null,
+      year: 2023,
+      causes,
+      dalys,
+      map: null,
+    });
+    const top = profile.sections.find((entry) => entry.id === "top_dalys");
+    expect(top?.title).toBe(
+      "Top level 2 causes of DALYs, 2023: Switzerland, rate per 100,000, age-standardised",
+    );
+    expect(top?.rows.map((row) => row.label)).toEqual(["Cardiovascular diseases"]);
+    expect(top?.note).toBe(
+      "2 imported causes at other levels left out. Not ranked, level in the GBD cause hierarchy not known: Made-up cause.",
+    );
+    const none = assembleLocationProfile({
+      place: SWITZERLAND,
+      hale: null,
+      lifeExpectancy: null,
+      year: 2023,
+      causes: rankableCauses([{ id: 900_001, name: "Made-up cause" }]),
+      dalys: [],
+      map: null,
+    }).sections.find((entry) => entry.id === "top_dalys");
+    expect(none?.note).toBe(
+      "No level 2 causes are imported, so top causes of DALYs are not shown. Not ranked, level in the GBD cause hierarchy not known: Made-up cause.",
+    );
+  });
+
   test("leaves deaths out unless asked", () => {
     const profile = assembleLocationProfile({
       place: SWITZERLAND,
       hale: null,
       lifeExpectancy: null,
       year: null,
-      causes: { names: [], total: 0 },
+      causes: NO_CAUSES,
       dalys: [],
       map: null,
     });
