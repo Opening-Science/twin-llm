@@ -662,6 +662,14 @@ const PERSONAL_READ_ROUTES: Readonly<Record<string, Entry>> = {
     kind: "exempt",
     why: NOT_PERSONAL,
   },
+  "POST /api/gbd/imports": {
+    kind: "exempt",
+    why: "imports a GBD Results Tool file: population estimates, no personal data; its handler audits it (#426)",
+  },
+  "DELETE /api/gbd/imports/[sha256]": {
+    kind: "exempt",
+    why: "deletes an imported GBD file: population estimates, no personal data; its handler audits it (#426)",
+  },
   "POST /api/synthea/jobs": {
     whileLocked: OPEN_NOT_PERSONAL,
     kind: "exempt",
@@ -936,7 +944,11 @@ const call = async (route: string, cookie: string | null) => {
   const response = await handler(
     new Request(`http://localhost${path ?? ""}?q=synthetic&tab=threads`, {
       method,
-      headers: cookie === null ? {} : { cookie: `${VAULT_COOKIE}=${cookie}` },
+      // A server request always names its host; the GBD upload checks it (#434).
+      headers: {
+        host: "localhost",
+        ...(cookie === null ? {} : { cookie: `${VAULT_COOKIE}=${cookie}` }),
+      },
     }),
     { params: Promise.resolve(ROUTE_PARAMS) },
   );
@@ -1025,6 +1037,7 @@ describe("locked personal data (#142)", () => {
 
   test("the gate covers all of these routes, and no more", () => {
     expect(gatedRoutes).toEqual([
+      "DELETE /api/gbd/imports/[sha256]",
       "DELETE /api/personal-data/datasets/[id]",
       "DELETE /api/threads/[threadId]",
       "GET /api/ark/status",
@@ -1041,6 +1054,7 @@ describe("locked personal data (#142)", () => {
       "PATCH /api/personal-data/datasets/[id]",
       "POST /api/chat",
       "POST /api/chat/incognito",
+      "POST /api/gbd/imports",
       "POST /api/genome/run",
       "POST /api/google-health/sync",
       "POST /api/memory/compact",

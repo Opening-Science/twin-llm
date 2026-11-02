@@ -62,6 +62,7 @@ describe("committed boundaries against GBD's units", () => {
     const made = Object.values(GBD_BOUNDARY_RULES).flatMap((rules) => [
       ...Object.values(rules.recode ?? {}),
       ...(rules.dissolve ?? []).map((rule) => rule.code),
+      ...(rules.layers ?? []).flatMap((layer) => layer.units.map((rule) => rule.code)),
     ]);
     expect(made.filter((code) => !isoCodes.has(code) && !/^GBD-\d+$/.test(code))).toEqual(
       [],
@@ -77,6 +78,6 @@ describe("committed boundaries against GBD's units", () => {
       (sum, report) => sum + report.byCode + report.byName + report.byOtherName,
       0,
     );
-    expect(matched).toBeGreaterThanOrEqual(714);
+    expect(matched).toBeGreaterThanOrEqual(773);
   });
 });

@@ -1,7 +1,9 @@
 import { normalizeName } from "../../infrastructure/charts/choropleth/match-location";
 
+import type { BoundaryLayer } from "../../infrastructure/view-specs";
+
 import { dissolveRings } from "./dissolve";
-import type { CountryRules, Members } from "./gbd-boundaries";
+import type { CountryRules, Layer, Members } from "./gbd-boundaries";
 import type { DbfValue, Ring } from "./shapefile";
 
 /** One Natural Earth admin-1 unit, or one built from several. */
@@ -12,6 +14,8 @@ export type StateUnit = Readonly<{
   names: readonly string[];
   rings: readonly Ring[];
   fields: Readonly<Record<string, DbfValue>>;
+  /** Set on a unit of one of the country's upper layers (#421); its states have none. */
+  layer?: BoundaryLayer;
 }>;
 
 const isMember = (unit: StateUnit, members: Members): boolean =>
@@ -140,5 +144,46 @@ export const reserveGbdNames = (
       const wanted = normalizeName(name);
       return name === unit.name || !owner.has(wanted) || owner.get(wanted) === unit.code;
     }),
+  }));
+};
+
+/**
+ * One upper layer of a country (gbd-boundaries.ts `layers`, #421): every
+ * unit of the country dissolved into exactly one unit of the layer. Throws
+ * when a listed member is not there, or a unit of the country lies in no
+ * unit of the layer or in two, so the layer always covers the country once.
+ * Pure.
+ */
+export const applyLayer = (
+  country: string,
+  layer: Layer,
+  all: readonly StateUnit[],
+): StateUnit[] => {
+  const pool = all.filter((unit) => unit.country === country);
+  const where = `${country} ${layer.layer}`;
+  const groups = layer.units.map((rule) => {
+    const listed = Array.isArray(rule.members) ? rule.members : [];
+    const missing = listed.filter((code) => !pool.some((unit) => unit.code === code));
+    if (missing.length > 0) {
+      throw new Error(`${where}: ${rule.name} lists missing ${missing.join(", ")}`);
+    }
+    const members = pool.filter((unit) => isMember(unit, rule.members));
+    if (members.length === 0) throw new Error(`${where}: ${rule.name} has no members`);
+    return { rule, members };
+  });
+  const problems = pool.flatMap((unit) => {
+    const n = groups.filter(({ members }) => members.includes(unit)).length;
+    if (n === 1) return [];
+    return [`${unit.code} in ${n === 0 ? "no unit" : `${n} units`}`];
+  });
+  if (problems.length > 0) throw new Error(`${where}: ${problems.join(", ")}`);
+  return groups.map(({ rule, members }) => ({
+    country,
+    code: rule.code,
+    name: rule.name,
+    names: unique([rule.name, ...(rule.names ?? [])]),
+    rings: dissolveRings(members.flatMap((member) => member.rings)),
+    fields: {},
+    layer: layer.layer,
   }));
 };

@@ -1,13 +1,14 @@
 import { type ChoroplethSpec } from "@/infrastructure/chat-view";
 import {
   countryName,
+  layersOf,
   type LocationIndex,
   type Match,
   matchLocation,
   type MatchScope,
   subnationalCountries,
 } from "@/infrastructure/charts/choropleth/match-location";
-import type { MapLevel } from "@/infrastructure/view-specs";
+import type { BoundaryLayer, MapLevel } from "@/infrastructure/view-specs";
 
 import type { LocationEstimate, RecordedEstimates } from "./estimate-ledger";
 
@@ -105,9 +106,19 @@ export type MapBuilt = Readonly<{
   callIds: readonly string[];
 }>;
 
-const placeOf = (index: LocationIndex, request: MapRequest): string => {
+const LAYER_WORDS: Readonly<Record<BoundaryLayer, string>> = {
+  nations: "by nation",
+  regions: "by region",
+};
+
+const placeOf = (
+  index: LocationIndex,
+  request: MapRequest,
+  layer: BoundaryLayer | null,
+): string => {
   if (request.level === "country" && request.country !== null) {
-    return `${countryName(index, request.country)}, by state or province`;
+    const by = layer === null ? "by state or province" : LAYER_WORDS[layer];
+    return `${countryName(index, request.country)}, ${by}`;
   }
   return request.level === "region" ? "selected countries" : "by country";
 };
@@ -164,10 +175,39 @@ const isoCountryOfStates = (rows: readonly LocationEstimate[]): string | null =>
   return countries.size === 1 ? ([...countries][0] ?? null) : null;
 };
 
+/** How many rows match a boundary of `country` on `layer`. */
+const matchCount = (
+  index: LocationIndex,
+  rows: readonly LocationEstimate[],
+  country: string,
+  layer: BoundaryLayer | null,
+): number =>
+  rows.filter(
+    (row) => matchEstimate(index, row, { level: "states", country, layer }) !== null,
+  ).length;
+
+/**
+ * The layer of `country` to draw (#421): the one most rows match, its states
+ * (null) on a tie, so GBD's UK nations draw as nations and England's regions
+ * as regions. Each layer is one file, so rows of another level are listed
+ * under the map. Pure.
+ */
+export const pickLayer = (
+  index: LocationIndex,
+  rows: readonly LocationEstimate[],
+  country: string,
+): BoundaryLayer | null =>
+  layersOf(index, country)
+    .map((layer) => ({ layer, n: matchCount(index, rows, country, layer) }))
+    .reduce<{ layer: BoundaryLayer | null; n: number }>(
+      (best, entry) => (entry.n > best.n ? entry : best),
+      { layer: null, n: 0 },
+    ).layer;
+
 /**
  * The country whose states the rows are, when the request names none: of
  * the countries with state boundaries, the one most rows match (by code or
- * name). Null when none matches or two match as many.
+ * name, on any of its layers). Null when none matches or two match as many.
  */
 export const statesCountry = (
   index: LocationIndex,
@@ -176,8 +216,11 @@ export const statesCountry = (
   const scored = subnationalCountries(index)
     .map((country) => ({
       country,
-      n: rows.filter(
-        (row) => matchEstimate(index, row, { level: "states", country }) !== null,
+      n: rows.filter((row) =>
+        layersOf(index, country).some(
+          (layer) =>
+            matchEstimate(index, row, { level: "states", country, layer }) !== null,
+        ),
       ).length,
     }))
     .filter((entry) => entry.n > 0)
@@ -207,8 +250,9 @@ export const buildMapSpec = (
     return iso !== null && !withBoundaries(iso) ? noSubnational(index) : STATES_REQUIRED;
   }
   if (country !== null && !withBoundaries(country)) return noSubnational(index);
+  const layer = country === null ? null : pickLayer(index, rows, country);
   const scope: MatchScope =
-    country === null ? { level: "countries" } : { level: "states", country };
+    country === null ? { level: "countries" } : { level: "states", country, layer };
   const matched = rows.map((row) => ({ row, match: matchEstimate(index, row, scope) }));
   const regions = [
     ...new Map(
@@ -236,6 +280,7 @@ export const buildMapSpec = (
     spec: {
       level: request.level,
       country: scope.level === "states" ? scope.country : null,
+      ...(layer === null ? {} : { layer }),
       measure: latest.measure ?? "estimate",
       label: estimateLabel(latest),
       unit: latest.unit === "" ? null : latest.unit,
@@ -247,7 +292,7 @@ export const buildMapSpec = (
       ),
       n: rows.length,
     },
-    place: placeOf(index, { ...request, country }),
+    place: placeOf(index, { ...request, country }, layer),
     callIds: [...new Set(rows.map((row) => row.callId))],
   };
 };

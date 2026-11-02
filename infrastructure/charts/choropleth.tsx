@@ -11,7 +11,7 @@ import {
 } from "react";
 
 import { EMPTY_VALUE, formatNumber, formatUnit } from "@/infrastructure/format-measure";
-import type { MapLevel } from "@/infrastructure/view-specs";
+import type { BoundaryLayer, MapLevel } from "@/infrastructure/view-specs";
 
 import {
   ChartTooltip,
@@ -21,6 +21,7 @@ import {
 } from "./chart-frame";
 import {
   type BoundaryFeature,
+  boundaryCredit,
   boundaryFile,
   parseBoundaries,
 } from "./choropleth/boundaries";
@@ -46,7 +47,8 @@ import {
  * A choropleth of one estimate by place: countries of the world, the
  * countries of a region, or one country's states and provinces. Our own
  * Equal Earth projection and SVG paths over the committed Natural Earth
- * boundaries, which load on demand (a country's states only when asked).
+ * boundaries, which load on demand (a country's states only when asked);
+ * Kenya's counties come from geoBoundaries and carry its CC BY credit.
  * Countries with a value that lie in one part of the world are fitted with
  * a margin (`fitView`); spread over the world, the map is the world.
  *
@@ -79,7 +81,7 @@ const loads = new Map<string, Promise<readonly BoundaryFeature[] | null>>();
 const loadBoundaries = (file: string): Promise<readonly BoundaryFeature[] | null> => {
   const cached = loads.get(file);
   if (cached !== undefined) return cached;
-  const loading = fetch(`/geo/natural-earth/${file}`)
+  const loading = fetch(`/geo/${file}`)
     .then((response) => (response.ok ? response.json() : null))
     .then((json: unknown) => (json === null ? null : parseBoundaries(json)))
     .catch(() => null)
@@ -91,8 +93,8 @@ const loadBoundaries = (file: string): Promise<readonly BoundaryFeature[] | null
   return loading;
 };
 
-const useBoundaries = (country: string | null): Loaded => {
-  const url = boundaryFile(country);
+const useBoundaries = (country: string | null, layer: BoundaryLayer | null): Loaded => {
+  const url = boundaryFile(country, layer);
   const [loaded, setLoaded] = useState<Readonly<{ url: string; value: Loaded }>>({
     url,
     value: { state: "loading" },
@@ -121,6 +123,8 @@ export type ChoroplethProps = Readonly<{
   level: MapLevel;
   /** ISO 3166-1 alpha-3 of the country whose states are drawn; level country only. */
   country?: string | null;
+  /** The country's layer drawn instead of its states (the UK's nations or regions); level country only. */
+  layer?: BoundaryLayer | null;
   regions: readonly MapRegion[];
   /** Places named by the data that have no boundary here; listed under the map. */
   unmatched?: readonly string[];
@@ -153,13 +157,16 @@ export const Choropleth = ({
   measure = "",
   level,
   country = null,
+  layer = null,
   regions,
   unmatched = [],
   top = DEFAULT_TOP,
 }: ChoroplethProps) => {
   const id = useId();
   const hatchId = `${id}-no-data`;
-  const loaded = useBoundaries(level === "country" ? country : null);
+  const shownCountry = level === "country" ? country : null;
+  const loaded = useBoundaries(shownCountry, level === "country" ? layer : null);
+  const credit = boundaryCredit(shownCountry);
   const [frameRef, frameWidth] = useMeasuredWidth(VIEW_WIDTH);
   const svgRef = useRef<SVGSVGElement>(null);
   const [hover, setHover] = useState<Hover | null>(null);
@@ -459,6 +466,24 @@ export const Choropleth = ({
       {unmatched.length > 0 && (
         <p className="text-muted-foreground text-xs">
           Not on the map: {unmatched.join(", ")}
+        </p>
+      )}
+      {credit !== null && (
+        <p className="text-muted-foreground text-xs">
+          Boundaries:{" "}
+          <a href={credit.url} target="_blank" rel="noreferrer" className="underline">
+            {credit.source}
+          </a>{" "}
+          (
+          <a
+            href={credit.licenceUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="underline"
+          >
+            {credit.licence}
+          </a>
+          )
         </p>
       )}
       <table className="sr-only">

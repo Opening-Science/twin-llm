@@ -86,3 +86,7 @@ Copied unchanged from [Opening-Science/Open-Science-Foundation-brand-guide](http
 ## Natural Earth boundaries (committed, public domain)
 
 `public/geo/natural-earth/` and `infrastructure/charts/choropleth/location-index.json` are built by `scripts/geo/build-natural-earth.ts` from Natural Earth 5.1.1 (`ne_50m_admin_0_countries.zip`, SHA-256 `5fed433373581fa648920435f937d95f2d3c0200e067409c6478dcdf1b853139`; `ne_10m_admin_1_states_provinces.zip`, SHA-256 `efc59726337323058f9446210adc96673179cd344e053666ee3d28cb58ba2b05`), simplified as `public/geo/natural-earth/README.md` describes. No code from another map library is used; the projection (Equal Earth) and the SVG paths are our own (`infrastructure/charts/choropleth/`).
+
+## geoBoundaries boundaries (committed, CC BY 4.0)
+
+`public/geo/geoboundaries/admin1/KEN.json` and Kenya's states in `infrastructure/charts/choropleth/location-index.json` are built by `scripts/geo/build-geoboundaries.ts` (#422) from geoBoundaries `geoBoundaries-KEN-ADM1.geojson` (gbOpen, boundary `KEN-ADM1-32016919`; repository `wmgeolab/geoBoundaries` at commit `8ce2700661a28ee944350e2b329bbabb58d2ff83`; SHA-256 `a3e073594494eb740e42fadec63acda982f6a745bb64ee4aa152453ccc46f94e`), simplified like the Natural Earth states as `public/geo/geoboundaries/README.md` describes. geoBoundaries is CC BY 4.0 (its source, the RCMRD GeoPortal counties, is public domain); the credit is in `NOTICE` and under every map drawn from the file.

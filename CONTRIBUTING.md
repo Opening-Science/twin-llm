@@ -87,6 +87,7 @@ bun run lint
 bun test
 bun run test:isolation
 bun run lint:claims
+bun run lint:links
 bunx prisma generate
 gitleaks detect --source . --no-git --config .gitleaks.toml
 ```

@@ -7,11 +7,14 @@
  *
  * Writes public/geo/natural-earth/admin0.json (countries, 1:50m),
  * public/geo/natural-earth/admin1/<ISO3>.json (states and provinces, 1:10m,
- * one file per country GBD estimates subnationally) and
+ * one file per country GBD estimates subnationally, and one per upper layer
+ * such as admin1/GBR-nations.json) and
  * infrastructure/charts/choropleth/location-index.json (codes and names only, for
  * matching estimate locations on the server). States follow the reviewed
  * rules in gbd-boundaries.ts (#397): some are joined into GBD's units, some
  * recoded to current ISO 3166-2 codes. The README next to the files is kept.
+ * Countries whose states come from geoBoundaries (#422, build-geoboundaries.ts)
+ * get no file here, and their states in the index are kept as they are.
  */
 import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
@@ -24,10 +27,18 @@ import {
   GBD_SUBNATIONAL,
   splitAltNames,
 } from "./boundary-rules";
+import { GEOBOUNDARIES_COUNTRIES } from "../../infrastructure/charts/choropleth/boundaries";
+import type { LocationIndex } from "../../infrastructure/charts/choropleth/match-location";
 import { GBD_LOCATION_TABLE } from "../../packages/gbd-local/location-table";
 
-import { applyCountryRules, reserveGbdNames, type StateUnit } from "./apply-rules";
+import {
+  applyCountryRules,
+  applyLayer,
+  reserveGbdNames,
+  type StateUnit,
+} from "./apply-rules";
 import { GBD_BOUNDARY_RULES } from "./gbd-boundaries";
+import { replaceStates } from "./geoboundaries";
 import { mergeByCode } from "./merge-units";
 import { readShapes, readTable, type DbfValue } from "./shapefile";
 import { nestRings, simplifyFeature, type SimplifyOptions } from "./simplify";
@@ -49,6 +60,11 @@ const geometry = (rings: Parameters<typeof nestRings>[0], options: SimplifyOptio
   coordinates: nestRings(simplifyFeature(rings, options)),
 });
 
+/** GBD's subnational countries whose states Natural Earth draws. */
+const NATURAL_EARTH_STATES = GBD_SUBNATIONAL.filter(
+  (country) => !GEOBOUNDARIES_COUNTRIES.includes(country),
+);
+
 const unique = (values: readonly (string | null)[]): string[] => [
   ...new Set(values.filter((value): value is string => value !== null)),
 ];
@@ -58,6 +74,7 @@ const main = async () => {
   if (folder === undefined) throw new Error("usage: build-natural-earth.ts <folder>");
   const admin0 = await load(folder, "ne_50m_admin_0_countries");
   const admin1 = await load(folder, "ne_10m_admin_1_states_provinces");
+  const previous = JSON.parse(await readFile(INDEX, "utf8")) as LocationIndex;
 
   const units = admin0.rows.flatMap((row, index) => {
     const code = admin0Code(row);
@@ -101,7 +118,7 @@ const main = async () => {
   const source = admin1.rows.flatMap((row, index): StateUnit[] => {
     const country = text(row.adm0_a3);
     const code = text(row.iso_3166_2);
-    if (country === null || code === null || !GBD_SUBNATIONAL.includes(country))
+    if (country === null || code === null || !NATURAL_EARTH_STATES.includes(country))
       return [];
     return [
       {
@@ -120,31 +137,44 @@ const main = async () => {
       },
     ];
   });
-  const states = GBD_SUBNATIONAL.flatMap((country) => {
-    const rules = GBD_BOUNDARY_RULES[country] ?? {};
-    const gbdUnits = GBD_LOCATION_TABLE.flatMap(([, , level, name, iso3, iso3166_2]) =>
+  const gbdUnitsOf = (country: string) =>
+    GBD_LOCATION_TABLE.flatMap(([, , level, name, iso3, iso3166_2]) =>
       level >= 4 && iso3 === country ? [{ name, iso3166_2 }] : [],
     );
+  const states = NATURAL_EARTH_STATES.flatMap((country) => {
+    const rules = GBD_BOUNDARY_RULES[country] ?? {};
     return reserveGbdNames(
       applyCountryRules(country, rules, source),
-      gbdUnits,
+      gbdUnitsOf(country),
       rules.aliases,
     );
   });
+  // Upper layers (the UK's nations and regions, #421), each its own file.
+  const layers = NATURAL_EARTH_STATES.flatMap((country) =>
+    (GBD_BOUNDARY_RULES[country]?.layers ?? []).map((layer) => ({
+      file: `admin1/${country}-${layer.layer}.json`,
+      units: reserveGbdNames(applyLayer(country, layer, source), gbdUnitsOf(country)),
+    })),
+  );
+  const files = [
+    ...NATURAL_EARTH_STATES.map((country) => ({
+      file: `admin1/${country}.json`,
+      units: states.filter((state) => state.country === country),
+    })),
+    ...layers,
+  ];
 
   await Promise.all(
-    GBD_SUBNATIONAL.map((country) =>
+    files.map(({ file, units }) =>
       writeFile(
-        join(OUT, "admin1", `${country}.json`),
+        join(OUT, file),
         JSON.stringify({
           type: "FeatureCollection",
-          features: states
-            .filter((state) => state.country === country)
-            .map((state) => ({
-              type: "Feature",
-              properties: { code: state.code, name: state.name },
-              geometry: geometry(state.rings, ADMIN1_OPTIONS),
-            })),
+          features: units.map((state) => ({
+            type: "Feature",
+            properties: { code: state.code, name: state.name },
+            geometry: geometry(state.rings, ADMIN1_OPTIONS),
+          })),
         }),
       ),
     ),
@@ -159,17 +189,35 @@ const main = async () => {
         name: country.name,
         names: country.names,
       })),
-      states: states.map((state) => ({
-        code: state.code,
-        country: state.country,
-        name: state.name,
-        names: state.names,
-      })),
+      states: [
+        ...replaceStates(
+          states.map((state) => ({
+            code: state.code,
+            country: state.country,
+            name: state.name,
+            names: state.names,
+          })),
+          GEOBOUNDARIES_COUNTRIES,
+          previous.states.filter((state) =>
+            GEOBOUNDARIES_COUNTRIES.includes(state.country),
+          ),
+          GBD_SUBNATIONAL,
+        ),
+        ...layers
+          .flatMap((entry) => entry.units)
+          .map((state) => ({
+            code: state.code,
+            country: state.country,
+            ...(state.layer === undefined ? {} : { layer: state.layer }),
+            name: state.name,
+            names: state.names,
+          })),
+      ],
     })}\n`,
   );
 
   const sizes = await Promise.all(
-    ["admin0.json", ...GBD_SUBNATIONAL.map((country) => `admin1/${country}.json`)].map(
+    ["admin0.json", ...files.map((entry) => entry.file)].map(
       async (file) => [file, (await stat(join(OUT, file))).size] as const,
     ),
   );

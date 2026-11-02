@@ -16,15 +16,23 @@ public domain; no permission is needed to use it ("Made with Natural Earth").
   ISO 3166-1 alpha-3 (`ISO_A3`, else `ISO_A3_EH`, else Natural Earth's `ADM0_A3`, so France
   and Norway keep their codes); `name` is Natural Earth's `NAME`; `label` is its label point.
   Units sharing one code (Australia and two of its territories) are one feature.
-- `admin1/<ISO3>.json`: states and provinces at 1:10m for the 22 countries GBD reports below
-  country level (GBD 2021): BRA, CHN, ETH, GBR, IDN, IND, IRN, ITA, JPN, KEN, MEX, NGA, NOR,
-  NZL, PAK, PHL, POL, RUS, SWE, UKR, USA, ZAF (1.5 MB together, 10 to 390 KB each). `code` is
+- `admin1/<ISO3>.json`: states and provinces at 1:10m for 21 of the 22 countries GBD reports
+  below country level (GBD 2021): BRA, CHN, ETH, GBR, IDN, IND, IRN, ITA, JPN, MEX, NGA, NOR,
+  NZL, PAK, PHL, POL, RUS, SWE, UKR, USA, ZAF (1.5 MB together, 10 to 390 KB each). Kenya's
+  counties come from geoBoundaries instead (#422, `public/geo/geoboundaries/README.md`). `code` is
   ISO 3166-2 (`iso_3166_2`, brought up to date where Natural Earth's is old, see below) or
   `GBD-<location id>` for a unit joined to fit GBD that has no ISO code; `name` is `name`.
   The browser loads one file when a map of that country is shown.
-- `infrastructure/charts/choropleth/location-index.json` (113 KB, not served): codes and the
+- `admin1/GBR-nations.json` (23 KB) and `admin1/GBR-regions.json` (31 KB): the United
+  Kingdom's upper levels, joined from the GBR units (#421, below). Nations: England, Scotland,
+  Wales and Northern Ireland, `code` their ISO 3166-2 code. Regions: the 12 ITL1 regions,
+  England's nine (`code` `GBD-<location id>`, as they have no ISO code; GBD's name, ONS's as
+  another name where it differs) with Scotland, Wales and Northern Ireland. A map uses the
+  file most of its places match.
+- `infrastructure/charts/choropleth/location-index.json` (115 KB, not served): codes and the
   names Natural Earth gives (`NAME`, `NAME_LONG`, `ADMIN`, `FORMAL_EN`, `name_alt` and others),
-  used on the server to match an estimate's location to a boundary.
+  used on the server to match an estimate's location to a boundary. Units of an upper layer
+  carry `layer` (`nations`, `regions`).
 
 ## Fitted to GBD's units (#397)
 
@@ -46,19 +54,53 @@ source of each; the build stops when a rule names a unit that is not there.
   Philippines: the cities of the National Capital Region into the region (PH-00).
 - Recoded (`recode`): Natural Earth carries codes ISO 3166-2 has since changed, for Poland
   (2018), Iran (2020, where Natural Earth also gives Alborz Tehran's old code), India (2023),
-  South Africa (2020) and Mexico City (MX-DIF to MX-CMX). Nairobi province gets Nairobi City
-  County's code, KE-30, as they are one area. Natural Earth has the codes of Moscow city and
+  South Africa (2020) and Mexico City (MX-DIF to MX-CMX). Natural Earth has the codes of Moscow city and
   Moscow oblast swapped, and wrong names for Wirral and St Helens (`rename`).
 - Names: GBD names that differ from Natural Earth's are added to the boundary they name
   (`aliases`, such as "Bristol, City of"), and a GBD unit's name is taken out of every other
   boundary's alternative names, so "Southampton" no longer finds Hampshire.
 
 Natural Earth's admin-1 units are still not always GBD's. Kenya has 8 former provinces where
-GBD uses 47 counties, which cannot be split; the United Kingdom file has local authorities, so
-GBD's nations and English regions are not drawn; North Kalimantan, Davao Occidental and the
+GBD uses 47 counties, which cannot be split; North Kalimantan, Davao Occidental and the
 Dinagat Islands are drawn inside their former provinces. `docs/gbd-map-coverage.md` has the
 match rate per country. A location that matches no boundary is listed under the map, never
 dropped quietly.
+
+## United Kingdom: nations and English regions (#421)
+
+GBD reports the United Kingdom at three levels: four nations, England's nine regions and
+England's local authorities. `admin1/GBR.json` has Natural Earth's 232 local units; the two
+upper levels are built from the same units, joined before simplifying as above
+(`layers` in `scripts/geo/gbd-boundaries.ts`, the mapping in `scripts/geo/uk-levels.ts`, tested
+in `uk-levels.test.ts`). The build stops if a GBR unit lies in no unit of a layer or in two.
+
+Mapping, local unit to English region to nation:
+
+- English regions: ONS, "Local Authority District to Region (December 2018) Lookup in England"
+  and "Local Authority District to County (December 2018) Lookup in England", from the ONS
+  Open Geography Portal, under the Open Government Licence v3.0 (contains National Statistics
+  data, Crown copyright and database right 2018). Each of Natural Earth's 152 English units
+  was found by name as a 2018 district or unitary authority, or, for a two-tier county, through
+  its districts, which all lie in one region. ONS's region agrees with Natural Earth's own
+  `region` field for all 152.
+- Nations: Natural Earth's `geonunit` (England, Scotland, Wales, Northern Ireland).
+
+Where Natural Earth's units differ from today's ONS units (none of these moves a unit to
+another region or nation, so the joined outlines are not affected):
+
+- Natural Earth's English units are of 2009 to 2019: Bournemouth and Poole apart from Dorset
+  (since 2019 Bournemouth, Christchurch and Poole, and Dorset), Northamptonshire (since 2021
+  North and West Northamptonshire), and the two-tier counties Buckinghamshire, Cumbria, North
+  Yorkshire and Somerset (unitary or split since 2020 to 2023). Two-tier counties stand for
+  all their districts.
+- Northern Ireland has the 26 districts before 2015, not today's 11.
+- Natural Earth files Wirral under GB-WRL with the name Halton and St Helens under GB-SHN
+  with the name Merseyside (renamed above), and spells North Ayrshire "North Ayshire".
+- Natural Earth's `region` field for Wales has the two NUTS 2 areas swapped (Swansea under
+  East Wales); it is not used.
+- The outlines are Natural Earth's at 1:10m, simplified, not ONS boundaries: the Isles of
+  Scilly and other small islands fall below the minimum ring area, and coasts follow Natural
+  Earth's line.
 
 ## Method
 

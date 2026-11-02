@@ -1,12 +1,15 @@
 import Link from "next/link";
 
+import { GbdImportSection } from "@/features/gbd/gbd-import-section";
+import { loadGbdImportsForPage } from "@/features/gbd/gbd-import-runtime";
 import { loadYourData } from "@/features/personal-data/import-routes";
 import { YourDataSection } from "@/features/personal-data/your-data-section";
 import { lockedScreen } from "@/features/vault/page-gate";
 
 /**
  * Customize · Data: what you bring (your own imports, docs/personal-data.md)
- * and the open datasets TwinLLM already holds to explore.
+ * IHME GBD population files (#426), and the open datasets TwinLLM already
+ * holds to explore.
  */
 
 // Reads the person's imports on every visit (and audits it); never prerendered.
@@ -35,10 +38,11 @@ const DATASETS = [
 export default async function CustomizeDataPage() {
   const locked = await lockedScreen();
   if (locked) return locked;
-  const yours = await loadYourData();
+  const [yours, gbd] = await Promise.all([loadYourData(), loadGbdImportsForPage()]);
   return (
     <>
       <YourDataSection data={yours} />
+      <GbdImportSection data={gbd} />
       <section aria-labelledby="open-data" className="mt-10">
         <h2 id="open-data" className="text-lg">
           Discover

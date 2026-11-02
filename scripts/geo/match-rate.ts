@@ -4,7 +4,9 @@
  * How many GBD subnational units find a state or province boundary, per
  * country GBD estimates below country level. Each unit is matched the way the
  * map matches an estimate (`features/chat/map-view.ts`): its ISO 3166-2 code
- * first, then its name, among the boundaries of its own country. Prints a
+ * first, then its name, among the boundaries of its own country, on the
+ * country's states first and then on each upper layer it has (the UK's
+ * nations and regions, #421), so a unit counts at its own level. Prints a
  * Markdown report; `docs/gbd-map-coverage.md` holds its output.
  *
  * Reads the committed location table (ids, names and codes, no estimates) and
@@ -12,10 +14,13 @@
  */
 import { GBD_LOCATION_TABLE } from "../../packages/gbd-local/location-table";
 import {
+  layersOf,
   LOCATION_INDEX,
+  type IndexedState,
   type LocationIndex,
   normalizeName,
 } from "../../infrastructure/charts/choropleth/match-location";
+import type { BoundaryLayer } from "../../infrastructure/view-specs";
 
 import { GBD_SUBNATIONAL } from "./boundary-rules";
 import { UNMATCHED_ON_PURPOSE } from "./gbd-boundaries";
@@ -30,23 +35,48 @@ export type Unit = Readonly<{
 
 export type How = "code" | "name" | "other name" | "none";
 
-export type UnitMatch = Unit & Readonly<{ how: How; code: string | null }>;
+export type UnitMatch = Unit &
+  Readonly<{ how: How; code: string | null; layer: BoundaryLayer | null }>;
 
-/** The boundary a unit matches and how: by code, by the boundary's own name or by one of its other names. */
-export const matchUnit = (index: LocationIndex, unit: Unit): UnitMatch => {
-  const states = index.states.filter((state) => state.country === unit.iso3);
+type Found = Readonly<{ how: Exclude<How, "none">; code: string }>;
+
+const matchAmong = (states: readonly IndexedState[], unit: Unit): Found | null => {
   const byCode =
     unit.iso3166_2 === null
       ? undefined
       : states.find((state) => state.code === unit.iso3166_2);
-  if (byCode !== undefined) return { ...unit, how: "code", code: byCode.code };
+  if (byCode !== undefined) return { how: "code", code: byCode.code };
   const wanted = normalizeName(unit.name);
   const byName = states.find((state) =>
     [state.name, ...state.names].some((name) => normalizeName(name) === wanted),
   );
-  if (byName === undefined) return { ...unit, how: "none", code: null };
-  const how = normalizeName(byName.name) === wanted ? "name" : "other name";
-  return { ...unit, how, code: byName.code };
+  if (byName === undefined) return null;
+  return {
+    how: normalizeName(byName.name) === wanted ? "name" : "other name",
+    code: byName.code,
+  };
+};
+
+/**
+ * The boundary a unit matches and how: by code, by the boundary's own name or
+ * by one of its other names; on the first of its country's layers where it
+ * matches (states, then nations, then regions).
+ */
+export const matchUnit = (index: LocationIndex, unit: Unit): UnitMatch => {
+  const found = layersOf(index, unit.iso3)
+    .map((layer) => ({
+      layer,
+      found: matchAmong(
+        index.states.filter(
+          (state) => state.country === unit.iso3 && (state.layer ?? null) === layer,
+        ),
+        unit,
+      ),
+    }))
+    .find((entry) => entry.found !== null);
+  if (found === undefined || found.found === null)
+    return { ...unit, how: "none", code: null, layer: null };
+  return { ...unit, ...found.found, layer: found.layer };
 };
 
 export type CountryReport = Readonly<{
@@ -57,6 +87,8 @@ export type CountryReport = Readonly<{
   byOtherName: number;
   unmatched: readonly UnitMatch[];
   otherName: readonly UnitMatch[];
+  /** Units matched on an upper layer (#421), by layer. */
+  layered: readonly Readonly<{ layer: BoundaryLayer; names: readonly string[] }>[];
   /** Boundaries two or more units match; the map can colour only one of them. */
   shared: readonly Readonly<{ code: string; names: readonly string[] }>[];
 }>;
@@ -84,8 +116,12 @@ export const countryReport = (
 ): CountryReport => {
   const matches = units.map((unit) => matchUnit(index, unit));
   const count = (how: How) => matches.filter((match) => match.how === how).length;
-  const codes = [
-    ...new Set(matches.flatMap((match) => (match.code === null ? [] : [match.code]))),
+  const keyOf = (match: UnitMatch) => `${match.layer ?? ""}|${match.code ?? ""}`;
+  const keys = [
+    ...new Set(matches.flatMap((match) => (match.code === null ? [] : [keyOf(match)]))),
+  ];
+  const layers = [
+    ...new Set(matches.flatMap((match) => (match.layer === null ? [] : [match.layer]))),
   ];
   return {
     country,
@@ -95,8 +131,16 @@ export const countryReport = (
     byOtherName: count("other name"),
     unmatched: matches.filter((match) => match.how === "none"),
     otherName: matches.filter((match) => match.how === "other name"),
-    shared: codes.flatMap((code) => {
-      const names = matches.filter((match) => match.code === code).map((m) => m.name);
+    layered: layers.map((layer) => ({
+      layer,
+      names: matches.filter((match) => match.layer === layer).map((m) => m.name),
+    })),
+    shared: keys.flatMap((key) => {
+      const group = matches.filter(
+        (match) => match.code !== null && keyOf(match) === key,
+      );
+      const names = group.map((match) => match.name);
+      const code = group[0]?.code ?? "";
       return names.length > 1 ? [{ code, names }] : [];
     }),
   };
@@ -138,6 +182,9 @@ export const renderReport = (reports: readonly CountryReport[]): string => {
           .map((unit) => unit.name);
         return `- unmatched, ${reason ?? "no reason recorded"}: ${names.join("; ")}`;
       }),
+      ...report.layered.map(
+        (entry) => `- on the ${entry.layer} layer: ${entry.names.join("; ")}`,
+      ),
       ...report.otherName.map(
         (unit) => `- by other name: ${unit.name} -> ${unit.code ?? ""}`,
       ),

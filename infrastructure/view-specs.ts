@@ -160,6 +160,16 @@ export const MAP_LEVELS = ["world", "region", "country"] as const;
 
 export type MapLevel = (typeof MAP_LEVELS)[number];
 
+/**
+ * A country's boundaries above its states, where GBD reports such a level
+ * (#421): the United Kingdom's four `nations` and its 12 `regions` (England's
+ * nine and the other three nations). Without one, a country map draws the
+ * country's own state or province file.
+ */
+export const BOUNDARY_LAYERS = ["nations", "regions"] as const;
+
+export type BoundaryLayer = (typeof BOUNDARY_LAYERS)[number];
+
 const ISO3 = /^[A-Z]{3}$/;
 
 /**
@@ -172,6 +182,8 @@ export const choroplethSpecSchema = z.object({
   level: z.enum(MAP_LEVELS),
   /** ISO 3166-1 alpha-3 of the country whose states are drawn; null for world and region. */
   country: z.string().regex(ISO3).nullable(),
+  /** Level country only: the country's boundary layer drawn, when not its states (#421). */
+  layer: z.enum(BOUNDARY_LAYERS).nullable().optional(),
   /** The estimate's measure, such as `prevalence`. */
   measure: z.string(),
   label: z.string(),

@@ -8,6 +8,7 @@ import {
   estimateKey,
   estimateLabel,
   matchEstimate,
+  pickLayer,
   statesCountry,
 } from "./map-view";
 
@@ -369,5 +370,95 @@ describe("buildMapSpec with gbd_estimate rows", () => {
       ["GEO", 300],
     ]);
     expect(built.spec.unmatched).toEqual(["Georgia", "Alabama"]);
+  });
+});
+
+/** A made-up UK with local units, nations and regions as layers (#421). */
+const UK_INDEX: LocationIndex = {
+  version: "test",
+  countries: [{ code: "GBR", name: "United Kingdom", names: [] }],
+  states: [
+    { code: "GB-LDS", country: "GBR", name: "Leeds", names: [] },
+    { code: "GB-YOR", country: "GBR", name: "York", names: [] },
+    { code: "GB-ENG", country: "GBR", layer: "nations", name: "England", names: [] },
+    { code: "GB-SCT", country: "GBR", layer: "nations", name: "Scotland", names: [] },
+    {
+      code: "GBD-4620",
+      country: "GBR",
+      layer: "regions",
+      name: "Yorkshire and the Humber",
+      names: [],
+    },
+    {
+      code: "GBD-4624",
+      country: "GBR",
+      layer: "regions",
+      name: "Greater London",
+      names: ["London"],
+    },
+    { code: "GB-SCT", country: "GBR", layer: "regions", name: "Scotland", names: [] },
+  ],
+};
+
+const ukRow = (location: string, value: number, iso3166_2: string | null = null) =>
+  row(location, value, { level: "subnational", iso3: "GBR", iso3166_2 });
+
+describe("UK nations and regions (#421)", () => {
+  const nations = [ukRow("England", 1, "GB-ENG"), ukRow("Scotland", 2, "GB-SCT")];
+  const regions = [
+    ukRow("Yorkshire and the Humber", 3),
+    ukRow("Greater London", 4),
+    ukRow("Scotland", 5, "GB-SCT"),
+  ];
+  const local = [ukRow("Leeds", 6), ukRow("York", 7)];
+
+  test("pickLayer takes the layer most rows match, the states on a tie", () => {
+    expect(pickLayer(UK_INDEX, nations, "GBR")).toBe("nations");
+    expect(pickLayer(UK_INDEX, regions, "GBR")).toBe("regions");
+    expect(pickLayer(UK_INDEX, local, "GBR")).toBeNull();
+    expect(pickLayer(UK_INDEX, [], "GBR")).toBeNull();
+    expect(pickLayer(INDEX, [row("Lagos", 1)], "NGA")).toBeNull();
+  });
+
+  test("statesCountry counts rows on any layer", () => {
+    expect(statesCountry(UK_INDEX, nations)).toBe("GBR");
+  });
+
+  test("draws GBD's nations on the nations file", () => {
+    const built = buildMapSpec(UK_INDEX, [{ tool: "t", callId: "c", rows: nations }], {
+      level: "country",
+      country: null,
+    });
+    if ("code" in built) throw new Error(built.error);
+    expect(built.spec.layer).toBe("nations");
+    expect(built.spec.regions.map((region) => region.code)).toEqual(["GB-ENG", "GB-SCT"]);
+    expect(built.place).toBe("United Kingdom, by nation");
+  });
+
+  test("draws England's regions with Scotland on the regions file, other levels listed", () => {
+    const rows = [...regions, ukRow("Leeds", 8)];
+    const built = buildMapSpec(UK_INDEX, [{ tool: "t", callId: "c", rows }], {
+      level: "country",
+      country: "GBR",
+    });
+    if ("code" in built) throw new Error(built.error);
+    expect(built.spec.layer).toBe("regions");
+    expect(built.spec.regions.map((region) => region.code)).toEqual([
+      "GBD-4620",
+      "GBD-4624",
+      "GB-SCT",
+    ]);
+    expect(built.spec.unmatched).toEqual(["Leeds"]);
+    expect(built.place).toBe("United Kingdom, by region");
+  });
+
+  test("local units keep the states file and no layer in the spec", () => {
+    const built = buildMapSpec(UK_INDEX, [{ tool: "t", callId: "c", rows: local }], {
+      level: "country",
+      country: "GBR",
+    });
+    if ("code" in built) throw new Error(built.error);
+    expect("layer" in built.spec).toBe(false);
+    expect(built.place).toBe("United Kingdom, by state or province");
   });
 });

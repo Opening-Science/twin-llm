@@ -11,11 +11,26 @@ import type {
 } from "@/packages/query-tools/gbd-estimate";
 
 import { GBD_LOCAL_RELEASE } from "./constants";
-import { gbdRowKey, type GbdCsvRow } from "./results-csv";
+import type { GbdImportStore } from "./import-chunks";
+import { gbdRowKey } from "./results-csv";
+import {
+  GBD_STORE_BATCH,
+  type GbdFileImport,
+  type GbdImportOutcome,
+  type GbdImportView,
+} from "./store-types";
+
+export {
+  GBD_STORE_BATCH,
+  type GbdFileImport,
+  type GbdImportOutcome,
+  type GbdImportView,
+} from "./store-types";
 
 /**
  * The local GBD store in Postgres (`gbd_imports`, `gbd_estimates`). Reads for
- * `gbd_estimate`, and the write `bun run gbd:import` uses. Nothing here talks
+ * `gbd_estimate`, and the writes `bun run gbd:import` and Customize · Data
+ * use (#426). Nothing here talks
  * to anything but the local database.
  */
 
@@ -106,59 +121,125 @@ export const gbdEstimatePorts = (db: () => PrismaClient): GbdEstimatePorts => ({
   importSource: () => gbdImportSource(db()),
 });
 
-export type GbdFileImport = Readonly<{
-  sha256: string;
-  fileName: string;
-  rows: readonly GbdCsvRow[];
-  /** From the download's citation.txt (#417); left out when there was none. */
-  citation?: string;
-}>;
+/**
+ * Removes one file's record and its links, then the estimates no other file
+ * still links to (#428); answers how many estimates went, or null when the
+ * file is unknown.
+ */
+const removeGbdImport = async (
+  db: PrismaClient,
+  sha256: string,
+): Promise<number | null> =>
+  db.$transaction(async (tx) => {
+    const known = await tx.gbdImport.findUnique({ where: { sha256 } });
+    if (known === null) return null;
+    const { count } = await tx.gbdEstimate.deleteMany({
+      where: { files: { some: { importSha: sha256 }, every: { importSha: sha256 } } },
+    });
+    await tx.gbdImport.delete({ where: { sha256 } });
+    return count;
+  });
 
-export type GbdImportOutcome =
-  | Readonly<{ kind: "already-imported"; sha256: string }>
-  | Readonly<{ kind: "imported"; sha256: string; rowCount: number; newRows: number }>;
-
-const BATCH = 5_000;
+/**
+ * The store as `importGbdChunks` (import-chunks.ts) uses it, one file at a
+ * time: `known` before reading, `begin` once rows are ready, `addRows` per
+ * batch, then `finish`, or `abort` to drop the file's record and the rows
+ * no other file has. Every row of the file is linked to it, new or not, so
+ * a file imported again after a delete has all its estimates back.
+ */
+export const gbdImportStore = (db: PrismaClient): GbdImportStore => ({
+  known: async (sha256) =>
+    (await db.gbdImport.findUnique({ where: { sha256 }, select: { sha256: true } })) !==
+    null,
+  begin: async (file) => {
+    await db.gbdImport.create({
+      data: {
+        sha256: file.sha256,
+        fileName: file.fileName,
+        release: GBD_LOCAL_RELEASE,
+        rowCount: 0,
+        newRows: 0,
+        citation: file.citation ?? null,
+      },
+    });
+  },
+  addRows: async (sha256, rows) => {
+    let added = 0;
+    for (let start = 0; start < rows.length; start += GBD_STORE_BATCH) {
+      const batch = rows
+        .slice(start, start + GBD_STORE_BATCH)
+        .map((row) => ({ key: gbdRowKey(row), ...row }));
+      const created = await db.gbdEstimate.createMany({
+        data: batch,
+        skipDuplicates: true,
+      });
+      await db.gbdEstimateFile.createMany({
+        data: batch.map((row) => ({ importSha: sha256, estimateKey: row.key })),
+        skipDuplicates: true,
+      });
+      added += created.count;
+    }
+    return added;
+  },
+  finish: async (sha256, counts) => {
+    await db.gbdImport.update({ where: { sha256 }, data: counts });
+  },
+  abort: async (sha256) => {
+    await removeGbdImport(db, sha256);
+  },
+});
 
 /**
  * Stores one parsed file. A file whose checksum is already recorded is
- * skipped. An estimate another file already brought is kept as it was and
- * not counted as new. If a write fails, the file's record and rows go.
+ * skipped. An estimate another file already brought is kept as it was,
+ * linked to this file too, and not counted as new. If a write fails, the
+ * file's record goes, with the rows no other file has.
  */
 export const importGbdFile = async (
   db: PrismaClient,
   file: GbdFileImport,
 ): Promise<GbdImportOutcome> => {
-  const known = await db.gbdImport.findUnique({ where: { sha256: file.sha256 } });
-  if (known !== null) return { kind: "already-imported", sha256: file.sha256 };
-  await db.gbdImport.create({
-    data: {
-      sha256: file.sha256,
-      fileName: file.fileName,
-      release: GBD_LOCAL_RELEASE,
-      rowCount: file.rows.length,
-      newRows: 0,
-      citation: file.citation ?? null,
-    },
-  });
+  const store = gbdImportStore(db);
+  if (await store.known(file.sha256)) {
+    return { kind: "already-imported", sha256: file.sha256 };
+  }
+  await store.begin(file);
   try {
-    let newRows = 0;
-    for (let start = 0; start < file.rows.length; start += BATCH) {
-      const batch = file.rows.slice(start, start + BATCH);
-      const created = await db.gbdEstimate.createMany({
-        data: batch.map((row) => ({
-          key: gbdRowKey(row),
-          importSha: file.sha256,
-          ...row,
-        })),
-        skipDuplicates: true,
-      });
-      newRows += created.count;
-    }
-    await db.gbdImport.update({ where: { sha256: file.sha256 }, data: { newRows } });
+    const newRows = await store.addRows(file.sha256, file.rows);
+    await store.finish(file.sha256, { rowCount: file.rows.length, newRows });
     return { kind: "imported", sha256: file.sha256, rowCount: file.rows.length, newRows };
   } catch (error: unknown) {
-    await db.gbdImport.delete({ where: { sha256: file.sha256 } });
+    await store.abort(file.sha256);
     throw error;
   }
 };
+
+/** Every imported file, newest first, with the estimates each has. */
+export const listGbdImports = async (
+  db: PrismaClient,
+): Promise<readonly GbdImportView[]> => {
+  const [imports, counts] = await Promise.all([
+    db.gbdImport.findMany({ orderBy: { importedAt: "desc" } }),
+    db.gbdEstimateFile.groupBy({ by: ["importSha"], _count: { _all: true } }),
+  ]);
+  const stored = new Map(counts.map((row) => [row.importSha, row._count._all]));
+  return imports.map((row) => ({
+    sha256: row.sha256,
+    fileName: row.fileName,
+    release: row.release,
+    rowCount: row.rowCount,
+    newRows: row.newRows,
+    importedAt: row.importedAt.toISOString(),
+    citation: row.citation,
+    storedRows: stored.get(row.sha256) ?? 0,
+  }));
+};
+
+/**
+ * Deletes one file's record and the estimates no other file has; answers
+ * how many estimates went, or null when the file is unknown.
+ */
+export const deleteGbdImport = (
+  db: PrismaClient,
+  sha256: string,
+): Promise<number | null> => removeGbdImport(db, sha256);

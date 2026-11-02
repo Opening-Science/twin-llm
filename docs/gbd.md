@@ -4,7 +4,8 @@ Population estimates from the IHME Global Burden of Disease study. They are
 never a statement about a person. TwinLLM has two routes to them:
 
 1. **Local store (GBD 2023, preferred).** A person downloads results from
-   IHME's GBD Results Tool, imports the CSV files with `bun run gbd:import`,
+   IHME's GBD Results Tool, imports the CSV files on Customize · Data or with
+   `bun run gbd:import`,
    and chat reads them with the closed tool `gbd_estimate`. Nothing is sent
    anywhere, so it works in synthetic and personal mode (#387).
 2. **Remote MCP server.** The optional `gbd_population` connector to an IHME
@@ -55,9 +56,11 @@ The steps follow IHME's
 7. Choose **Both** (IDs and names), enter an email address and click Submit.
 8. Open the "download ready" email, follow the link to the status page and
    download the file or files (they stay there for 7 days). Unzip if needed.
-9. Run `bun run gbd:import ~/Downloads/IHME-GBD_2023_DATA-*.csv`.
-   Keep the download's `citation.txt` next to the CSV files: the import stores
-   its citation, which GBD profiles show (#417).
+9. Import them on Customize · Data, choosing the CSV files and the download's
+   `citation.txt` together, or run
+   `bun run gbd:import ~/Downloads/IHME-GBD_2023_DATA-*.csv` with the
+   `citation.txt` next to the CSV files. Either way the import stores the
+   citation, which GBD profiles show (#417).
 
 IHME advises narrow queries: a very large query can return files that leave
 out some ages or years. Several smaller downloads import fine; the same
@@ -118,9 +121,69 @@ names, checksums and counts only. The database is `DATABASE_URL`, as for the
 app; for the eval database run
 `bun --env-file=.env.eval --preload ./features/chat/response/preload-server-only.mjs scripts/gbd/import.ts <files...>`.
 
-Import is CLI only. An upload on Customize · Data would need large-file
-handling (one query can be hundreds of megabytes), which is more than a small
-addition to that page.
+Both ways share the import code in `packages/gbd-local`
+(`import-chunks.ts`): the file is read a chunk at a time (`createGbdCsvReader`
+in `results-csv.ts`) and its rows written in batches of 5,000 as they are read,
+so a large file is never one string. A file that is refused, or a write that
+fails, leaves no record and no rows behind.
+
+### Import from Customize · Data
+
+Customize · Data, "Population data (IHME GBD)", imports the same files from the
+browser (#426). Choose the CSV files of one download together with its
+`citation.txt` and press Import. Each CSV is sent on its own, up to 1 GB
+(#434); use `bun run gbd:import` for larger files. The server writes the upload
+to an owner-only temporary file in `<state folder>/gbd-uploads` as it arrives,
+hashing it on the way, then reads
+that file a megabyte at a time and answers with progress lines, which the page
+shows with a status lattice: sending, reading with a row count, then the
+outcome. The temporary file is removed when the import ends, whatever the
+outcome; one left by a stopped server is removed by the next upload after an
+hour. A refused file shows the importer's message and code (above); a file
+already imported is skipped.
+
+How the 1 GB is allowed. Every other route runs through `proxy.ts`, and Next
+holds in memory each request body the proxy sees, cutting it at
+`proxyClientMaxBodySize` (52 MB, `next.config.ts`). That limit stays for every
+other route. The proxy's matcher leaves out `POST /api/gbd/imports` alone, so
+its body streams straight to the temporary file; the route makes the proxy's
+checks itself first (`features/gbd/gbd-upload-gate.ts`: not on the Synthea
+host, local install only, a loopback host and same-site request), then the
+unlock gate. The limits are in `features/gbd/gbd-upload-limits.ts`:
+
+- A file over 1 GB is refused before it is sent: the page checks its size, and
+  the route refuses a larger `Content-Length` before reading a byte. A body
+  that grows past 1 GB anyway is stopped and its partial file removed. The
+  message names the code `GBD_UPLOAD_TOO_LARGE` (HTTP 413).
+- Before writing, the route reads the free space in `<state folder>/gbd-uploads`.
+  If the file would leave less than 1 GB free, it is refused with
+  `GBD_UPLOAD_NO_SPACE` (HTTP 507). A disk that fills while writing gives the
+  same refusal and removes the partial file. Free space that cannot be read
+  does not refuse the file.
+- Each refusal writes the `gbd.import` audit row with its code (`too-large`,
+  `no-space`).
+
+Below the form the page lists every imported file with its release, row counts
+(rows in the file, new when imported, held now), import day, citation and
+SHA-256, and a Delete button with five seconds to undo. An estimate is stored
+once, however many files have it, and `gbd_estimate_files` records which
+imported files have each one (#428). Delete removes the file's record and its
+links, then only the estimates no other imported file still has; it does not
+matter which of two overlapping files goes first. "Held now" counts every
+estimate the file has, shared or not. Importing a deleted file again links all
+its rows to it again. The migration that added the links linked each estimate
+stored before it to the file that brought it first, since later files were not
+recorded; to link a later file to the estimates it shares, delete it and import
+it again.
+
+GBD results are population data, not personal data, but every person using a
+server shares its GBD store. So the routes (`POST /api/gbd/imports`,
+`DELETE /api/gbd/imports/[sha256]`, `features/gbd/gbd-import-routes.ts`) work
+on a local install only (LOCAL_MVP or AUTH_DISABLED), answer requests from the
+app's own pages only, and sit behind the unlock gate like the rest of the page
+(#142). Each import writes one `gbd.import` audit row and each delete one
+`gbd.delete` row, with byte size, SHA-256, row counts and the refusal code;
+never an estimate, a file name or the citation.
 
 ### Location map
 

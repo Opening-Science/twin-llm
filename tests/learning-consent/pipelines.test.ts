@@ -121,12 +121,15 @@ const NOT_LEARNING: Readonly<Record<string, string>> = {
   typecheck: TOOLING,
   lint: TOOLING,
   "lint:claims": TOOLING,
+  "lint:links": TOOLING,
   "mcp:serve":
     "serves the query tools to an MCP client; they read the synthetic warehouse, refuse the imported and genome tools, and train nothing",
   format: TOOLING,
   "format:check": TOOLING,
   test: TOOLING,
   "test:isolation": TOOLING,
+  "test:live-db":
+    "runs the live database tests on a throwaway database with their own synthetic rows; no learning",
   postinstall: TOOLING,
   prepare: TOOLING,
   "db:generate": DB,

@@ -122,76 +122,68 @@ const optionalPair = (
   return parsed === null ? "bad" : { id: parsed, name: (name ?? "").trim() };
 };
 
-export const parseGbdResultsCsv = (text: string): GbdCsvResult => {
-  const parsed = parseDelimited(text.replace(/^﻿/, ""), ",");
-  if (!parsed.ok) {
+type RowResult =
+  Readonly<{ ok: true; row: GbdCsvRow }> | Readonly<{ ok: false; error: GbdCsvError }>;
+
+/** One data row, by the header's column names; `line` is its 1-based row in the file. */
+const rowOf = (
+  header: readonly string[],
+  cells: readonly string[],
+  line: number,
+): RowResult => {
+  const cell = (name: string): string | undefined => {
+    const at = header.indexOf(name);
+    return at === -1 ? undefined : cells[at];
+  };
+  const group = (cell("population_group_id") ?? "").trim();
+  if (group !== "" && int(group) !== GBD_ALL_POPULATION_GROUP) {
     return {
       ok: false,
       error: {
-        code: "GBD_CSV_UNREADABLE",
-        message: "A quoted field is not closed.",
-        line: parsed.line,
+        code: "GBD_CSV_POPULATION_GROUP",
+        message:
+          "A row is for a population group other than All Population. Download it again with All Population only.",
+        line,
       },
     };
   }
-  const [rawHeader = [], ...body] = parsed.rows;
-  const header = rawHeader.map((name) => name.trim().toLowerCase());
-  const problem = layoutError(header);
-  if (problem !== null) return { ok: false, error: problem };
-  const column = (name: string) => header.indexOf(name);
-  const rows: GbdCsvRow[] = [];
-  for (const [index, cells] of body.entries()) {
-    const cell = (name: string): string | undefined => {
-      const at = column(name);
-      return at === -1 ? undefined : cells[at];
+  const ids = PAIRS.map((pair) => int(cell(`${pair}_id`)));
+  const names = PAIRS.map((pair) => (cell(`${pair}_name`) ?? "").trim());
+  const year = int(cell("year"));
+  const val = parsePlainNumber(cell("val"));
+  const cause = optionalPair(cell("cause_id"), cell("cause_name"));
+  const rei = optionalPair(cell("rei_id"), cell("rei_name"));
+  const upperText = (cell("upper") ?? "").trim();
+  const lowerText = (cell("lower") ?? "").trim();
+  const upper = upperText === "" ? null : parsePlainNumber(upperText);
+  const lower = lowerText === "" ? null : parsePlainNumber(lowerText);
+  const [measureId, locationId, sexId, ageId, metricId] = ids;
+  const [measureName, locationName, sexName, ageName, metricName] = names;
+  if (
+    measureId == null ||
+    locationId == null ||
+    sexId == null ||
+    ageId == null ||
+    metricId == null ||
+    year === null ||
+    val === null ||
+    cause === "bad" ||
+    rei === "bad" ||
+    (upperText !== "" && upper === null) ||
+    (lowerText !== "" && lower === null)
+  ) {
+    return {
+      ok: false,
+      error: {
+        code: "GBD_CSV_ROW",
+        message: "A row has a missing or non-numeric id, year or value.",
+        line,
+      },
     };
-    const group = (cell("population_group_id") ?? "").trim();
-    if (group !== "" && int(group) !== GBD_ALL_POPULATION_GROUP) {
-      return {
-        ok: false,
-        error: {
-          code: "GBD_CSV_POPULATION_GROUP",
-          message:
-            "A row is for a population group other than All Population. Download it again with All Population only.",
-          line: index + 2,
-        },
-      };
-    }
-    const ids = PAIRS.map((pair) => int(cell(`${pair}_id`)));
-    const names = PAIRS.map((pair) => (cell(`${pair}_name`) ?? "").trim());
-    const year = int(cell("year"));
-    const val = parsePlainNumber(cell("val"));
-    const cause = optionalPair(cell("cause_id"), cell("cause_name"));
-    const rei = optionalPair(cell("rei_id"), cell("rei_name"));
-    const upperText = (cell("upper") ?? "").trim();
-    const lowerText = (cell("lower") ?? "").trim();
-    const upper = upperText === "" ? null : parsePlainNumber(upperText);
-    const lower = lowerText === "" ? null : parsePlainNumber(lowerText);
-    const [measureId, locationId, sexId, ageId, metricId] = ids;
-    const [measureName, locationName, sexName, ageName, metricName] = names;
-    if (
-      measureId == null ||
-      locationId == null ||
-      sexId == null ||
-      ageId == null ||
-      metricId == null ||
-      year === null ||
-      val === null ||
-      cause === "bad" ||
-      rei === "bad" ||
-      (upperText !== "" && upper === null) ||
-      (lowerText !== "" && lower === null)
-    ) {
-      return {
-        ok: false,
-        error: {
-          code: "GBD_CSV_ROW",
-          message: "A row has a missing or non-numeric id, year or value.",
-          line: index + 2,
-        },
-      };
-    }
-    rows.push({
+  }
+  return {
+    ok: true,
+    row: {
       measureId,
       measureName: measureName ?? "",
       locationId,
@@ -210,9 +202,174 @@ export const parseGbdResultsCsv = (text: string): GbdCsvResult => {
       val,
       upper,
       lower,
-    });
+    },
+  };
+};
+
+/** A record longer than this is not a Results Tool row; reading stops rather than grow. */
+export const GBD_MAX_RECORD_CHARS = 1_000_000;
+
+/**
+ * Where the last complete record of `text` ends: the index after its newline,
+ * or 0 when there is none yet. `from` and `quoted` resume an earlier scan of
+ * the same text, so a long open quote is not scanned again on every chunk.
+ */
+export const lastRecordEnd = (
+  text: string,
+  from: number,
+  quoted: boolean,
+): Readonly<{ end: number; quoted: boolean }> => {
+  // As parseDelimited reads quotes: one opens a field only at its start, and
+  // inside a quoted field a doubled quote is a quote. A quote that closes and
+  // a doubled one look alike until the next character, which both treat the same.
+  let inQuote = quoted;
+  let end = 0;
+  for (let index = from; index < text.length; index += 1) {
+    const char = text[index];
+    if (inQuote) {
+      if (char === '"') inQuote = false;
+      continue;
+    }
+    if (char === "\n") end = index + 1;
+    else if (char === '"') {
+      const before = index === 0 ? "\n" : text[index - 1];
+      if (before === "," || before === "\n" || before === "\r" || before === '"') {
+        inQuote = true;
+      }
+    }
   }
-  return { ok: true, rows };
+  return { end, quoted: inQuote };
+};
+
+export type GbdCsvChunkResult =
+  | Readonly<{ ok: true; rows: readonly GbdCsvRow[] }>
+  | Readonly<{ ok: false; error: GbdCsvError }>;
+
+export type GbdCsvReader = Readonly<{
+  /** The rows of every record this chunk completes; a record split across chunks waits. */
+  push: (chunk: string) => GbdCsvChunkResult;
+  /** The rows of the last record, and the layout check when the file had no rows. */
+  end: () => GbdCsvChunkResult;
+}>;
+
+const UNREADABLE = "A quoted field is not closed.";
+
+/**
+ * Reads a Results Tool export a chunk of text at a time (#426), so a file of
+ * tens of megabytes never has to be one string. The header is checked as
+ * soon as it is complete. After an error the reader answers that error to
+ * every later call. The text is held only until its records are complete.
+ */
+export const createGbdCsvReader = (): GbdCsvReader => {
+  // Mutable on purpose: the carried text and scan state between chunks, private to this reader.
+  const state: {
+    carry: string;
+    scanned: number;
+    quoted: boolean;
+    header: readonly string[] | null;
+    rowNumber: number;
+    physicalLines: number;
+    started: boolean;
+    failed: GbdCsvError | null;
+  } = {
+    carry: "",
+    scanned: 0,
+    quoted: false,
+    header: null,
+    rowNumber: 0,
+    physicalLines: 0,
+    started: false,
+    failed: null,
+  };
+
+  const fail = (error: GbdCsvError): GbdCsvChunkResult => {
+    state.failed = error;
+    state.carry = "";
+    return { ok: false, error };
+  };
+
+  const readRecords = (block: string): GbdCsvChunkResult => {
+    const parsed = parseDelimited(block, ",");
+    if (!parsed.ok) {
+      return fail({
+        code: "GBD_CSV_UNREADABLE",
+        message: UNREADABLE,
+        line: state.physicalLines + parsed.line,
+      });
+    }
+    state.physicalLines += block.split("\n").length - 1;
+    const rows: GbdCsvRow[] = [];
+    for (const cells of parsed.rows) {
+      state.rowNumber += 1;
+      if (state.header === null) {
+        const header = cells.map((name) => name.trim().toLowerCase());
+        const problem = layoutError(header);
+        if (problem !== null) return fail(problem);
+        state.header = header;
+        continue;
+      }
+      const result = rowOf(state.header, cells, state.rowNumber);
+      if (!result.ok) return fail(result.error);
+      rows.push(result.row);
+    }
+    return { ok: true, rows };
+  };
+
+  const push = (chunk: string): GbdCsvChunkResult => {
+    if (state.failed !== null) return { ok: false, error: state.failed };
+    const text = state.carry + (state.started ? chunk : chunk.replace(/^\uFEFF/, ""));
+    state.started = true;
+    const scan = lastRecordEnd(text, state.scanned, state.quoted);
+    if (scan.end === 0) {
+      state.carry = text;
+      state.scanned = text.length;
+      state.quoted = scan.quoted;
+      if (text.length > GBD_MAX_RECORD_CHARS) {
+        return fail({
+          code: "GBD_CSV_UNREADABLE",
+          message: UNREADABLE,
+          line: state.physicalLines + 1,
+        });
+      }
+      return { ok: true, rows: [] };
+    }
+    state.carry = text.slice(scan.end);
+    state.scanned = state.carry.length;
+    state.quoted = scan.quoted;
+    return readRecords(text.slice(0, scan.end));
+  };
+
+  const end = (): GbdCsvChunkResult => {
+    if (state.failed !== null) return { ok: false, error: state.failed };
+    const rest = state.carry;
+    state.carry = "";
+    const read = rest === "" ? ({ ok: true, rows: [] } as const) : readRecords(rest);
+    if (!read.ok) return read;
+    if (state.header === null) {
+      return fail(layoutError([]) ?? { code: "GBD_CSV_COLUMNS", message: "" });
+    }
+    return read;
+  };
+
+  return { push, end };
+};
+
+/** A whole file's text at once: the reader with one chunk. */
+export const parseGbdResultsCsv = (text: string): GbdCsvResult => {
+  const reader = createGbdCsvReader();
+  const first = reader.push(text);
+  if (!first.ok) return first;
+  const last = reader.end();
+  if (!last.ok) return last;
+  return { ok: true, rows: [...first.rows, ...last.rows] };
+};
+
+/** A refusal as one line: code, line and missing columns, as the CLI prints it. */
+export const gbdCsvErrorText = (error: GbdCsvError): string => {
+  const where = error.line === undefined ? "" : ` (line ${error.line})`;
+  const missing =
+    error.missing === undefined ? "" : ` Missing: ${error.missing.join(", ")}.`;
+  return `${error.code}${where}: ${error.message}${missing}`;
 };
 
 /**

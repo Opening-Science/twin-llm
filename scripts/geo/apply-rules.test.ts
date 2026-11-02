@@ -1,6 +1,11 @@
 import { describe, expect, test } from "bun:test";
 
-import { applyCountryRules, reserveGbdNames, type StateUnit } from "./apply-rules";
+import {
+  applyCountryRules,
+  applyLayer,
+  reserveGbdNames,
+  type StateUnit,
+} from "./apply-rules";
 import type { Ring } from "./shapefile";
 
 const square = (x: number): Ring => [
@@ -172,5 +177,74 @@ describe("reserveGbdNames", () => {
     const out = reserveGbdNames(units, [{ name: "Southampton", iso3166_2: "AA-1" }]);
     expect(out[0]?.names).toContain("Southampton");
     expect(out[1]?.names).toEqual(["Southampton"]);
+  });
+});
+
+describe("applyLayer (#421)", () => {
+  const COUNTRY = ALL.filter((one) => one.country === "AAA" && one.code !== "AA-9");
+
+  test("joins every unit into exactly one unit of the layer, outlines dissolved", () => {
+    const units = applyLayer(
+      "AAA",
+      {
+        layer: "regions",
+        units: [
+          { code: "GBD-1", name: "West", members: ["AA-1", "AA-2"], names: ["W"] },
+          { code: "AA-R2", name: "East", members: ["AA-3", "AA-OLD"] },
+        ],
+      },
+      COUNTRY,
+    );
+    expect(units.map((one) => [one.code, one.name, one.names, one.layer])).toEqual([
+      ["GBD-1", "West", ["West", "W"], "regions"],
+      ["AA-R2", "East", ["East"], "regions"],
+    ]);
+    // Two squares side by side lose the edge they share: one ring of six points.
+    expect(units[0]?.rings).toHaveLength(1);
+    expect(units[0]?.rings[0]).toHaveLength(7);
+  });
+
+  test("members can be a field, as in the other rules", () => {
+    const units = applyLayer(
+      "AAA",
+      {
+        layer: "nations",
+        units: [
+          { code: "N1", name: "One", members: { field: "region", value: "R1" } },
+          { code: "N2", name: "Rest", members: ["AA-3", "AA-OLD"] },
+        ],
+      },
+      COUNTRY,
+    );
+    expect(units.map((one) => one.code)).toEqual(["N1", "N2"]);
+  });
+
+  test("a unit left out, a unit in two, or a missing member stops the build", () => {
+    const layer = (units: { code: string; name: string; members: string[] }[]) => ({
+      layer: "nations" as const,
+      units,
+    });
+    expect(() =>
+      applyLayer("AAA", layer([{ code: "N", name: "N", members: ["AA-1"] }]), COUNTRY),
+    ).toThrow("AA-2 in no unit");
+    expect(() =>
+      applyLayer(
+        "AAA",
+        layer([
+          { code: "N", name: "N", members: ["AA-1", "AA-2", "AA-3", "AA-OLD"] },
+          { code: "M", name: "M", members: ["AA-3"] },
+        ]),
+        COUNTRY,
+      ),
+    ).toThrow("AA-3 in 2 units");
+    expect(() =>
+      applyLayer(
+        "AAA",
+        layer([
+          { code: "N", name: "N", members: ["AA-1", "AA-2", "AA-3", "AA-OLD", "AA-X"] },
+        ]),
+        COUNTRY,
+      ),
+    ).toThrow("lists missing AA-X");
   });
 });
