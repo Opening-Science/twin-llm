@@ -13,6 +13,7 @@ describe("parseArgs", () => {
       quick: false,
       realNoise: false,
       afDependence: "independent",
+      rrGridMs: 0,
     });
   });
 
@@ -33,6 +34,8 @@ describe("parseArgs", () => {
         "--real-noise",
         "--af-dependence",
         "short_range",
+        "--rr-grid-ms",
+        "7.8125",
       ]),
     ).toEqual({
       out: "o",
@@ -43,6 +46,7 @@ describe("parseArgs", () => {
       quick: true,
       realNoise: true,
       afDependence: "short_range",
+      rrGridMs: 7.8125,
     });
   });
 
@@ -75,6 +79,10 @@ describe("parseArgs", () => {
     expect(() => parseArgs(["--out", "o", "--af-dependence"])).toThrow(
       "--af-dependence takes",
     );
+    for (const bad of [["-1"], ["x"], [], ["--quick"]])
+      expect(() => parseArgs(["--out", "o", "--rr-grid-ms", ...bad])).toThrow(
+        "--rr-grid-ms takes a number of ms",
+      );
   });
 
   test("the long-term AF database", () => {

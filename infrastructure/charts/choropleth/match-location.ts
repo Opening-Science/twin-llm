@@ -1,3 +1,5 @@
+import { BOUNDARY_LAYERS, type BoundaryLayer } from "@/infrastructure/view-specs";
+
 import locationIndex from "./location-index.json";
 
 /**
@@ -15,7 +17,11 @@ export type IndexedPlace = Readonly<{
   names: readonly string[];
 }>;
 
-export type IndexedState = IndexedPlace & Readonly<{ country: string }>;
+/**
+ * A state, or a unit of one of its country's upper layers (`layer`, the
+ * United Kingdom's nations or regions, #421), each layer its own file.
+ */
+export type IndexedState = IndexedPlace & Readonly<{ country: string; layer?: string }>;
 
 export type LocationIndex = Readonly<{
   version: string;
@@ -39,14 +45,19 @@ export const normalizeName = (name: string): string =>
     .replace(SUFFIX, "");
 
 export type MatchScope =
-  Readonly<{ level: "countries" }> | Readonly<{ level: "states"; country: string }>;
+  | Readonly<{ level: "countries" }>
+  | Readonly<{ level: "states"; country: string; layer?: BoundaryLayer | null }>;
 
 export type Match = Readonly<{ code: string; name: string }>;
 
 const placesIn = (index: LocationIndex, scope: MatchScope): readonly IndexedPlace[] =>
   scope.level === "countries"
     ? index.countries
-    : index.states.filter((state) => state.country === scope.country);
+    : index.states.filter(
+        (state) =>
+          state.country === scope.country &&
+          (state.layer ?? null) === (scope.layer ?? null),
+      );
 
 /**
  * The place `location` names within `scope`, or null. A code wins over a
@@ -74,6 +85,22 @@ export const matchLocation = (
 export const subnationalCountries = (index: LocationIndex): readonly string[] => [
   ...new Set(index.states.map((state) => state.country)),
 ];
+
+/**
+ * A country's boundary layers: null for its states when it has them, then
+ * each upper layer it has (`nations`, `regions`), in that order. Pure.
+ */
+export const layersOf = (
+  index: LocationIndex,
+  country: string,
+): readonly (BoundaryLayer | null)[] => {
+  const present = new Set(
+    index.states
+      .filter((state) => state.country === country)
+      .map((state) => state.layer ?? null),
+  );
+  return [null, ...BOUNDARY_LAYERS].filter((layer) => present.has(layer));
+};
 
 /** A country's own name, for titles; the code when it has none. */
 export const countryName = (index: LocationIndex, code: string): string =>

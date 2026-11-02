@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import type { BoundaryLayer } from "@/infrastructure/view-specs";
+
 /**
  * The committed boundaries (`public/geo/natural-earth/`, and
  * `public/geo/geoboundaries/` for a few countries' states), as
@@ -39,16 +41,21 @@ export type BoundaryFeature = z.infer<typeof boundaryFeatureSchema>;
 export const GEOBOUNDARIES_COUNTRIES: readonly string[] = ["KEN"];
 
 /**
- * The file under `/geo/` with the countries, or with one country's states
- * and provinces: `natural-earth/` for most, `geoboundaries/` for the
+ * The file under `/geo/` with the countries, with one country's states and
+ * provinces, or with one of its upper layers (the United Kingdom's nations
+ * or regions, #421): `natural-earth/` for most, `geoboundaries/` for the
  * countries above.
  */
-export const boundaryFile = (country: string | null): string =>
-  country === null
-    ? "natural-earth/admin0.json"
-    : GEOBOUNDARIES_COUNTRIES.includes(country)
-      ? `geoboundaries/admin1/${country}.json`
-      : `natural-earth/admin1/${country}.json`;
+export const boundaryFile = (
+  country: string | null,
+  layer: BoundaryLayer | null = null,
+): string => {
+  if (country === null) return "natural-earth/admin0.json";
+  if (layer !== null) return `natural-earth/admin1/${country}-${layer}.json`;
+  return GEOBOUNDARIES_COUNTRIES.includes(country)
+    ? `geoboundaries/admin1/${country}.json`
+    : `natural-earth/admin1/${country}.json`;
+};
 
 /** The credit CC BY asks for, shown on a map drawn from these files. */
 export type BoundaryCredit = Readonly<{

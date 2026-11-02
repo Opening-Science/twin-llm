@@ -8,7 +8,7 @@ import {
   GEOBOUNDARIES_COUNTRIES,
   parseBoundaries,
 } from "./boundaries";
-import { LOCATION_INDEX, subnationalCountries } from "./match-location";
+import { layersOf, LOCATION_INDEX, subnationalCountries } from "./match-location";
 
 const GEO = join(import.meta.dir, "../../../public/geo");
 const DATA = join(GEO, "natural-earth");
@@ -18,6 +18,13 @@ describe("boundaryFile", () => {
   test("names the countries file or one country's states", () => {
     expect(boundaryFile(null)).toBe("natural-earth/admin0.json");
     expect(boundaryFile("NGA")).toBe("natural-earth/admin1/NGA.json");
+    expect(boundaryFile("NGA", null)).toBe("natural-earth/admin1/NGA.json");
+  });
+
+  test("names a country's upper layer file (#421)", () => {
+    expect(boundaryFile("GBR", "nations")).toBe("natural-earth/admin1/GBR-nations.json");
+    expect(boundaryFile("GBR", "regions")).toBe("natural-earth/admin1/GBR-regions.json");
+    expect(boundaryFile(null, "nations")).toBe("natural-earth/admin0.json");
   });
 
   test("names the geoBoundaries file for Kenya's counties", () => {
@@ -69,38 +76,50 @@ describe("parseBoundaries", () => {
 
 describe("committed boundaries", () => {
   const read = (file: string) =>
-    parseBoundaries(JSON.parse(readFileSync(join(DATA, file), "utf8")));
+    parseBoundaries(JSON.parse(readFileSync(join(GEO, file), "utf8")));
 
   test("the countries file parses, with one feature per index country", () => {
-    const codes = read("admin0.json")?.map((feature) => feature.properties.code);
+    const codes = read(boundaryFile(null))?.map((feature) => feature.properties.code);
     expect(codes).toEqual(LOCATION_INDEX.countries.map((country) => country.code));
     expect(new Set(codes).size).toBe(codes?.length ?? -1);
   });
 
-  test("every country with states has one file, from its source, whose codes match the index", () => {
-    const countries = subnationalCountries(LOCATION_INDEX);
-    expect(readdirSync(join(DATA, "admin1")).toSorted()).toEqual(
-      countries
-        .filter((code) => !GEOBOUNDARIES_COUNTRIES.includes(code))
-        .toSorted()
-        .map((code) => `${code}.json`),
+  test("every country with states has a file per layer, from its source, whose codes match the index", () => {
+    const layered = subnationalCountries(LOCATION_INDEX).flatMap((country) =>
+      layersOf(LOCATION_INDEX, country).map((layer) => ({ country, layer })),
     );
-    expect(readdirSync(join(GEOBOUNDARIES, "admin1")).toSorted()).toEqual(
-      countries
-        .filter((code) => GEOBOUNDARIES_COUNTRIES.includes(code))
-        .toSorted()
-        .map((code) => `${code}.json`),
+    const listed = (folder: string) =>
+      readdirSync(join(GEO, folder, "admin1"))
+        .map((file) => `${folder}/admin1/${file}`)
+        .toSorted();
+    expect([...listed("natural-earth"), ...listed("geoboundaries")].toSorted()).toEqual(
+      layered.map(({ country, layer }) => boundaryFile(country, layer)).toSorted(),
     );
-    for (const code of countries) {
-      const features = parseBoundaries(
-        JSON.parse(readFileSync(join(GEO, boundaryFile(code)), "utf8")),
+    expect(listed("geoboundaries")).toEqual(
+      GEOBOUNDARIES_COUNTRIES.map((code) => boundaryFile(code)).toSorted(),
+    );
+    for (const { country, layer } of layered) {
+      const codes = read(boundaryFile(country, layer))?.map(
+        (feature) => feature.properties.code,
       );
-      expect(features?.map((feature) => feature.properties.code)).toEqual(
+      expect(codes).toEqual(
         LOCATION_INDEX.states
-          .filter((state) => state.country === code)
+          .filter((state) => state.country === country && (state.layer ?? null) === layer)
           .map((state) => state.code),
       );
+      if (layer !== null) expect(new Set(codes).size).toBe(codes?.length ?? -1);
     }
+  });
+
+  test("the United Kingdom has its nations and its 12 regions as layers (#421)", () => {
+    expect(layersOf(LOCATION_INDEX, "GBR")).toEqual([null, "nations", "regions"]);
+    expect(read(boundaryFile("GBR", "nations"))?.map((f) => f.properties.name)).toEqual([
+      "England",
+      "Northern Ireland",
+      "Scotland",
+      "Wales",
+    ]);
+    expect(read(boundaryFile("GBR", "regions"))?.length).toBe(12);
   });
 
   test("stays within the size budget: under 2.5 MB in all", () => {

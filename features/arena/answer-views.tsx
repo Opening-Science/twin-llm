@@ -54,6 +54,7 @@ const ViewBody = ({ view, height }: Readonly<{ view: ChatView; height: number }>
           measure={view.spec.measure}
           level={view.spec.level}
           country={view.spec.country}
+          layer={view.spec.layer ?? null}
           regions={view.spec.regions}
           unmatched={view.spec.unmatched}
         />

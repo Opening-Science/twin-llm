@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import {
   countryName,
+  layersOf,
   LOCATION_INDEX,
   type LocationIndex,
   matchLocation,
@@ -115,5 +116,48 @@ describe("subnationalCountries and countryName", () => {
       "USA",
       "ZAF",
     ]);
+  });
+});
+
+describe("layers (#421)", () => {
+  const LAYERED: LocationIndex = {
+    version: "test",
+    countries: [],
+    states: [
+      { code: "GB-LDS", country: "GBR", name: "Leeds", names: [] },
+      { code: "GB-SCT", country: "GBR", layer: "regions", name: "Scotland", names: [] },
+      { code: "GB-SCT", country: "GBR", layer: "nations", name: "Scotland", names: [] },
+      { code: "NG-LA", country: "NGA", name: "Lagos", names: [] },
+    ],
+  };
+
+  test("layersOf lists the states, then nations, then regions", () => {
+    expect(layersOf(LAYERED, "GBR")).toEqual([null, "nations", "regions"]);
+    expect(layersOf(LAYERED, "NGA")).toEqual([null]);
+    expect(layersOf(LAYERED, "XXX")).toEqual([]);
+  });
+
+  test("a scope matches only its own layer, the states without one", () => {
+    const states = { level: "states", country: "GBR" } as const;
+    expect(matchLocation(LAYERED, "Scotland", states)).toBeNull();
+    expect(matchLocation(LAYERED, "Leeds", states)?.code).toBe("GB-LDS");
+    expect(matchLocation(LAYERED, "GB-SCT", { ...states, layer: "nations" })?.code).toBe(
+      "GB-SCT",
+    );
+    expect(matchLocation(LAYERED, "Leeds", { ...states, layer: "nations" })).toBeNull();
+  });
+
+  test("the committed index draws GBD's UK nations and English regions", () => {
+    const scope = (layer: "nations" | "regions") =>
+      ({ level: "states", country: "GBR", layer }) as const;
+    expect(matchLocation(LOCATION_INDEX, "GB-ENG", scope("nations"))?.name).toBe(
+      "England",
+    );
+    expect(
+      matchLocation(LOCATION_INDEX, "North East England", scope("regions"))?.code,
+    ).toBe("GBD-4618");
+    expect(matchLocation(LOCATION_INDEX, "London", scope("regions"))?.code).toBe(
+      "GBD-4624",
+    );
   });
 });
