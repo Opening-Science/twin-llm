@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { analyticsEnv, DEFAULT_POSTHOG_HOST, parseServerEnv } from "./env";
 
 const AUTH_OFF = {
+  NODE_ENV: "test",
   LOCAL_MVP: "true",
   AUTH_DISABLED: "true",
   LLM_PROVIDER: "ollama",
@@ -10,6 +11,7 @@ const AUTH_OFF = {
 } as const;
 
 const AUTH_ON = {
+  NODE_ENV: "test",
   LLM_PROVIDER: "ollama",
   DATABASE_URL: "postgresql://synthetic@localhost:1/none",
   OPENROUTER_API_KEY: "sk-synthetic",
@@ -90,6 +92,7 @@ describe("PostHog settings", () => {
 
   test("the other auth-on keys stay required", () => {
     const message = failureOf({
+      NODE_ENV: "test",
       LLM_PROVIDER: "ollama",
       DATABASE_URL: AUTH_ON.DATABASE_URL,
     });

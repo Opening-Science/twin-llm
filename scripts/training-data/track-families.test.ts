@@ -239,7 +239,9 @@ describe("knowledge stand-in and anatomy_note", () => {
       );
     }
     for (const draft of empty) {
-      expect(UNLISTED_MARKERS.map((marker) => marker.code)).toContain(draft.measureLoinc);
+      expect<(string | null)[]>(UNLISTED_MARKERS.map((marker) => marker.code)).toContain(
+        draft.measureLoinc,
+      );
       expect(draft.calls[0]?.result).toEqual([]);
       expect(answerOf(draft)).toContain("I will not guess one.");
     }

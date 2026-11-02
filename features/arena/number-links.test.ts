@@ -76,6 +76,7 @@ const row = {
   id: "response-1",
   modelId: "synthetic/model",
   modelName: "Synthetic",
+  position: null,
   status: "COMPLETE" as const,
   text: "## Answer\nYour resting heart rate was 62 bpm on 1 Mar 2026; 90 is a guess.",
   reasoningText: null,

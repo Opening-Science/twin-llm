@@ -60,6 +60,7 @@ describe("toSavedResponseState", () => {
     id: "response-1",
     modelId: "synthetic/model",
     modelName: "Synthetic",
+    position: null,
     status: "COMPLETE" as const,
     text: "## Answer\nSynthetic answer.",
     reasoningText: null,

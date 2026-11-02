@@ -10,6 +10,7 @@ import {
   nightPlaybackFor,
   nightVitals,
   type Night,
+  type SleepStage,
   seekPlayback,
   START_PLAYBACK,
   syntheticNight,
@@ -60,7 +61,8 @@ describe("syntheticNight", () => {
 
   test("holds every stage", () => {
     const stages = new Set(night.epochs.map((epoch) => epoch.stage));
-    expect([...stages].sort()).toEqual(["awake", "deep", "light", "rem", null].sort());
+    const every: (SleepStage | null)[] = ["awake", "deep", "light", "rem", null];
+    expect([...stages].sort()).toEqual(every.sort());
   });
 });
 

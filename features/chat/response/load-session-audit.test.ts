@@ -83,7 +83,7 @@ describe("loadSessionAudit", () => {
       mode: "synthetic",
     });
 
-    expect(document.data_basis.tool_calls).toEqual(rows);
+    expect(document.data_basis.tool_calls).toEqual([...rows]);
     expect(document.sufficient_data).toBe(true);
     expect(document.interpretation.kind).toBe("narration");
   });

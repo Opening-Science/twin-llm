@@ -30,6 +30,7 @@ const fakePorts = (rows: readonly ObservationRecord[]) => {
       isSynthetic: true,
       cohortId: "open-twin-synthea-trimmed-3",
     }),
+    findCohortObservations: async () => [],
     findObservations: async (query) => {
       queries.push(query);
       return rows
@@ -151,7 +152,9 @@ describe("chart.compare", () => {
       compare_with: { start: "2026-01-01", end: "2026-01-31" },
       layout: "overlaid",
     });
-    expect(view.kind === "chart.compare" ? view.spec : view).toMatchObject({
+    expect(
+      !("code" in view) && view.kind === "chart.compare" ? view.spec : view,
+    ).toMatchObject({
       layout: "overlaid",
       before: { n: 0, mean: null, points: [] },
       after: { n: 2, mean: 6.25 },
@@ -191,7 +194,9 @@ describe("chart.compare", () => {
         compare_with: { start: "2026-08-31", end: "2026-09-27" },
       },
     );
-    expect(view.kind === "chart.compare" ? view.spec : view).toMatchObject({
+    expect(
+      !("code" in view) && view.kind === "chart.compare" ? view.spec : view,
+    ).toMatchObject({
       label: "Sleep score",
       subject: null,
       before: { n: 2, mean: 75 },
@@ -269,7 +274,9 @@ describe("biomarker.card", () => {
     });
     // Days 0, 89 and 181 from 1 Feb: slope 634 / 16382 mmol/L a day.
     expect(
-      view.kind === "biomarker.card" ? view.spec.trend.slopePerDay : null,
+      !("code" in view) && view.kind === "biomarker.card"
+        ? view.spec.trend.slopePerDay
+        : null,
     ).toBeCloseTo(634 / 16382, 12);
     expect(auditTrail(audits)).toEqual([
       ["range_position", SUBJECT, 3],
@@ -288,7 +295,9 @@ describe("biomarker.card", () => {
       subject: SUBJECT,
       window: WINDOW,
     });
-    expect(view.kind === "biomarker.card" ? view.spec : view).toMatchObject({
+    expect(
+      !("code" in view) && view.kind === "biomarker.card" ? view.spec : view,
+    ).toMatchObject({
       label: "Cholesterol",
       value: 185,
       range: null,
@@ -344,7 +353,7 @@ describe("table", () => {
       subject: SUBJECT,
       window: { start: "2026-01-01", end: "2026-04-30" },
     });
-    if (view.kind !== "table") throw new Error("expected a table");
+    if ("code" in view || view.kind !== "table") throw new Error("expected a table");
     expect(view.title).toBe("Sleep duration, 1 Jan 2026 – 30 Apr 2026");
     expect(view.spec.columns).toEqual([
       { key: "at", label: "Date", format: "date" },
@@ -380,6 +389,7 @@ describe("stored views", () => {
       window: { start: "2026-01-01", end: "2026-10-31" },
     });
     const stored = JSON.parse(JSON.stringify([card, table])) as unknown[];
-    expect(stored.map(toChatView)).toEqual([card, table]);
+    const readBack: readonly unknown[] = stored.map(toChatView);
+    expect(readBack).toEqual([card, table]);
   });
 });

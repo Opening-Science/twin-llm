@@ -107,6 +107,7 @@ const trendCall = async (start: string) => {
   const audits: AppendInput[] = [];
   const ports: QueryToolPorts = {
     findSubject: async () => ({ isSynthetic: true, cohortId: "synthea-v4-seed42" }),
+    findCohortObservations: async () => [],
     findObservations: async (query) => {
       queries.push(query);
       return [];

@@ -213,6 +213,7 @@ describe("genome_report", () => {
 describe("createChatTools and the genome tools", () => {
   const ports: QueryToolPorts = {
     findSubject: async () => null,
+    findCohortObservations: async () => [],
     findObservations: async () => [],
     appendAudit: async () => undefined,
   };

@@ -44,6 +44,7 @@ const SLEEP: TurnSkill = {
 
 const ports: QueryToolPorts = {
   findSubject: async () => null,
+  findCohortObservations: async () => [],
   findObservations: async () => [],
   appendAudit: async () => undefined,
 };
@@ -249,7 +250,7 @@ describe("show_view under a skill", () => {
     });
     const output = await tools.show_view.execute?.(
       { kind: "twin.body", focus: "liver", subject: "synthetic-subject-1" },
-      { toolCallId: "call-1", messages: [] },
+      { toolCallId: "call-1", messages: [], context: {} },
     );
     expect(output).toEqual({
       code: "RECORDS_NOT_IN_SKILL",

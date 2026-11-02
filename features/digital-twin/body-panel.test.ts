@@ -7,6 +7,7 @@ import type { StoredMarker, StoredMeasure } from "@/packages/vitronic/geometry";
 import { LAB_SOURCE_LABEL } from "./biomarkers/biomarker-copy";
 import { markerRows as biomarkerRows } from "./biomarkers/biomarker-rows";
 import { type BiomarkerTabModel } from "./biomarkers/use-biomarker-tab";
+import { NO_LIVE_VITALS } from "./live/live-rates";
 import {
   BODY_PANEL_LABEL,
   BodyPanel,
@@ -369,6 +370,7 @@ describe("Biomarkers tab", () => {
   ]).filter((row) => ["bm:BM-383", "bm:BM-107"].includes(row.id));
   const model = (overrides: Partial<BiomarkerTabModel> = {}): BiomarkerTabModel => ({
     rows,
+    organs: [],
     selectedId: null,
     notes: [],
     onSelect: noop,
@@ -377,6 +379,9 @@ describe("Biomarkers tab", () => {
       { ref: "syn-a", label: "Synthetic person 1", sex: null },
       { ref: "syn-b", label: "Synthetic person 2", sex: "female" },
     ],
+    live: NO_LIVE_VITALS,
+    rhythm: null,
+    status: "ok",
     personRef: "syn-a",
     onPerson: noop,
     ...overrides,

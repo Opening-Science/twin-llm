@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  type AtlasPartClass,
   classifyAtlasNode,
   classifyBodyParts3dNode,
   classifyHraNode,
@@ -8,7 +9,7 @@ import {
 import { normaliseGroup } from "./hra-groups";
 
 describe("classifyBodyParts3dNode", () => {
-  test.each([
+  test.each<[Readonly<Record<string, unknown>>, AtlasPartClass]>([
     [
       { system: "musculoskeletal", layer: "muscle" },
       { kind: "layer", layer: "muscle", system: "musculoskeletal" },
@@ -37,7 +38,7 @@ describe("classifyBodyParts3dNode", () => {
 });
 
 describe("classifyHraNode", () => {
-  test.each([
+  test.each<[string, string, string | undefined, AtlasPartClass]>([
     [
       "#VHFLiver",
       "VH_F_liver",

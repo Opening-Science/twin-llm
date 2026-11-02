@@ -5,6 +5,7 @@ import { MockLanguageModelV4 } from "ai/test";
 
 import {
   CacheCorruptError,
+  type CacheEntry,
   cacheKey,
   CacheMissError,
   type CacheStore,
@@ -200,7 +201,7 @@ describe("createCachedModel", () => {
 
 describe("parseCacheEntry", () => {
   const key = "a".repeat(64);
-  const entry = {
+  const entry: CacheEntry = {
     schema_version: "twin-llm.eval.model-cache.v1",
     key,
     provider: "ollama",

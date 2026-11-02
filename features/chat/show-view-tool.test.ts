@@ -21,6 +21,7 @@ const fakePorts = (
       isSynthetic: true,
       cohortId: "open-twin-synthea-trimmed-3",
     }),
+    findCohortObservations: async () => [],
     findObservations: async (query) => {
       queries.push(query);
       return rows;
@@ -84,7 +85,9 @@ describe("show_view with a LOINC measure", () => {
       { scope: SCOPE, ports, wearables: NO_WEARABLES, cohortRecords: true },
       input("8867-4", "synthetic-subject-1"),
     );
-    expect("spec" in view ? view.spec.points : null).toEqual([]);
+    expect(
+      !("code" in view) && view.kind === "chart.timeseries" ? view.spec.points : null,
+    ).toEqual([]);
     expect(modelNoteOf(view)).toEqual({
       shown: true,
       view_id: "view-41",
@@ -161,7 +164,9 @@ describe("show_view with a wearable key", () => {
       },
       input("sleep.score"),
     );
-    expect("spec" in view ? view.spec.points : view).toEqual([
+    expect(
+      !("code" in view) && view.kind === "chart.timeseries" ? view.spec.points : view,
+    ).toEqual([
       { at: "2026-10-01T00:00:00.000Z", value: 77 },
       { at: "2026-10-02T00:00:00.000Z", value: 81 },
     ]);
@@ -202,7 +207,11 @@ describe("show_view with a wearable key", () => {
       },
       input("custom.load"),
     );
-    expect("spec" in view ? view.spec.points.length : view).toBe(1);
+    expect(
+      !("code" in view) && view.kind === "chart.timeseries"
+        ? view.spec.points.length
+        : view,
+    ).toBe(1);
   });
 
   test("without a snapshot the view has no points", async () => {
@@ -211,6 +220,8 @@ describe("show_view with a wearable key", () => {
       { scope: SCOPE, ports, wearables: NO_WEARABLES, cohortRecords: true },
       input("sleep.score"),
     );
-    expect("spec" in view ? view.spec.points : view).toEqual([]);
+    expect(
+      !("code" in view) && view.kind === "chart.timeseries" ? view.spec.points : view,
+    ).toEqual([]);
   });
 });

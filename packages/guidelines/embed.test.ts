@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
+import { asFetch } from "@/infrastructure/as-fetch";
+
 import {
   DOCUMENT_EMBED_PREFIX,
   EMBEDDING_DIM,
@@ -115,10 +117,10 @@ describe("guideline embeddings", () => {
       origin: "http://127.0.0.1:11434",
       model: EMBEDDING_MODEL,
       dim: EMBEDDING_DIM,
-      fetch: (async (input) => {
+      fetch: asFetch(async (input) => {
         urls.push(String(input));
         throw new Error("connect ECONNREFUSED");
-      }) as typeof fetch,
+      }, fetch),
     });
     expect(result).toBeNull();
     expect(urls.every((url) => url.startsWith("http://127.0.0.1:11434/"))).toBe(true);
@@ -129,11 +131,14 @@ describe("guideline embeddings", () => {
       origin: "http://127.0.0.1:11434",
       model: EMBEDDING_MODEL,
       dim: EMBEDDING_DIM,
-      fetch: (async () =>
-        new Response(JSON.stringify({ embedding: [1, 2, 3] }), {
-          status: 200,
-          headers: { "content-type": "application/json" },
-        })) as typeof fetch,
+      fetch: asFetch(
+        async () =>
+          new Response(JSON.stringify({ embedding: [1, 2, 3] }), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          }),
+        fetch,
+      ),
     });
     expect(result).toBeNull();
   });

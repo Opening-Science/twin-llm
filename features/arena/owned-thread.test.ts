@@ -75,6 +75,7 @@ const savedRow = (
   reasoningText: null,
   attribution: null,
   responseDocument: null,
+  toolParts: null,
   timeToFirstTokenMs: null,
   tokensPerSecond: null,
   inputTokens: null,

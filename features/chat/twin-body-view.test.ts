@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import type { AppendInput } from "@/packages/audit/append";
 import type { ObservationQuery, QueryToolPorts } from "@/packages/query-tools/ports";
+import type { SessionScope } from "@/packages/query-tools/scope";
 import { showViewInput } from "@/packages/query-tools/view-schema";
 
 import { modelNoteOf, runShowView } from "./show-view-tool";
@@ -55,7 +56,7 @@ const twin = (focus?: string, subject?: string, window: typeof WINDOW | null = W
     ...(subject ? { subject } : {}),
   });
 
-const deps = (ports: QueryToolPorts, scope = SCOPE) => ({
+const deps = (ports: QueryToolPorts, scope: SessionScope = SCOPE) => ({
   scope,
   ports,
   wearables: NO_WEARABLES,
@@ -172,12 +173,14 @@ describe("show_view with twin.body", () => {
       deps(ports),
       twin("cardiovascular", "synthetic-1", null),
     );
-    expect("spec" in view ? [view.title, view.spec.window, view.spec.n] : null).toEqual([
-      "Body twin: Cardiovascular system, latest readings",
-      null,
-      3,
-    ]);
-    expect("spec" in view ? view.spec.organs : null).toEqual([
+    expect(
+      !("code" in view) && view.kind === "twin.body"
+        ? [view.title, view.spec.window, view.spec.n]
+        : null,
+    ).toEqual(["Body twin: Cardiovascular system, latest readings", null, 3]);
+    expect(
+      !("code" in view) && view.kind === "twin.body" ? view.spec.organs : null,
+    ).toEqual([
       {
         organ: "bloodvasculature",
         label: "Blood vessels",
@@ -216,7 +219,9 @@ describe("show_view with twin.body", () => {
   test("without a subject nothing is read, but the call is still audited", async () => {
     const { ports, audits, queries } = fakePorts(ROWS);
     const view = await runShowView(deps(ports), twin("liver"));
-    expect("spec" in view ? view.spec : null).toMatchObject({
+    expect(
+      !("code" in view) && view.kind === "twin.body" ? view.spec : null,
+    ).toMatchObject({
       focus: "liver",
       body: "demo",
       subject: null,
@@ -232,14 +237,20 @@ describe("show_view with twin.body", () => {
   test("an organ with no mapped marker reads nothing", async () => {
     const { ports, queries } = fakePorts(ROWS);
     const view = await runShowView(deps(ports), twin("heart", "synthetic-1"));
-    expect("spec" in view ? [view.spec.organs, view.spec.n] : null).toEqual([[], 0]);
+    expect(
+      !("code" in view) && view.kind === "twin.body"
+        ? [view.spec.organs, view.spec.n]
+        : null,
+    ).toEqual([[], 0]);
     expect(queries).toEqual([]);
   });
 
   test("personal mode shows Self and refuses a cohort subject", async () => {
     const { ports } = fakePorts(ROWS);
     const self = await runShowView(deps(ports, PERSONAL), twin("lung"));
-    expect("spec" in self ? self.spec.body : null).toBe("self");
+    expect(!("code" in self) && self.kind === "twin.body" ? self.spec.body : null).toBe(
+      "self",
+    );
     expect(
       await runShowView(deps(ports, PERSONAL), twin("liver", "synthetic-1")),
     ).toMatchObject({ code: "SUBJECT_SCOPE_VIOLATION" });
@@ -278,11 +289,11 @@ describe("show_view with twin.body", () => {
       { ...deps(ports), skillRecords: false, views: ["twin.body"] },
       twin("liver", undefined, null),
     );
-    expect("spec" in view ? [view.title, view.spec.subject, view.spec.n] : null).toEqual([
-      "Body twin: Liver",
-      null,
-      0,
-    ]);
+    expect(
+      !("code" in view) && view.kind === "twin.body"
+        ? [view.title, view.spec.subject, view.spec.n]
+        : null,
+    ).toEqual(["Body twin: Liver", null, 0]);
     expect(queries).toEqual([]);
   });
 });

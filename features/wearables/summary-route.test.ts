@@ -61,7 +61,7 @@ describe("GET /api/wearables/summary", () => {
     expect(blob).not.toContain("audit-down");
     expect(blob.toLowerCase()).not.toContain("prisma");
     expect(blob).not.toContain(WHOOP_NARRATIVE);
-    expect(receivedAuditTool).toBe(WEARABLES_SUMMARY_AUDIT_TOOL);
+    expect<string | undefined>(receivedAuditTool).toBe(WEARABLES_SUMMARY_AUDIT_TOOL);
   });
 
   test("returns all four summaries", async () => {
@@ -76,7 +76,7 @@ describe("GET /api/wearables/summary", () => {
       googleHealth: dummySummary,
       vitronic: dummySummary,
     });
-    expect(receivedAuditTool).toBe(WEARABLES_SUMMARY_AUDIT_TOOL);
+    expect<string | undefined>(receivedAuditTool).toBe(WEARABLES_SUMMARY_AUDIT_TOOL);
   });
 
   test("writes one personal read row: how many of Oura, Whoop and Google Health had one", async () => {

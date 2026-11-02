@@ -284,7 +284,7 @@ describe.skipIf(!runLive)("Data page cohort queries (RUN_LIVE=1)", () => {
     const aggregates = await readCohortAggregates(db, COHORT);
     const codeUnits = aggregates.codeUnits
       .map((row) => [row.loinc, row.unit, row.rows, row.subjects])
-      .toSorted((a, b) => String(a[0] + a[1]).localeCompare(String(b[0] + b[1])));
+      .toSorted((a, b) => `${a[0]}${a[1]}`.localeCompare(`${b[0]}${b[1]}`));
     expect(codeUnits).toEqual([
       ["2085-9", "mg/dL", 1, 1],
       ["2093-3", "mg/dL", 1, 1],

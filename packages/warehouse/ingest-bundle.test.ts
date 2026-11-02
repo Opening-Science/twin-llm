@@ -26,7 +26,7 @@ const resetStore = () => {
   store.transactionTimeouts.length = 0;
 };
 
-const mockDb = () => ({
+const mockTables = () => ({
   bundle: {
     findUnique: async ({ where }: { where: { sha: string } }) =>
       store.bundles.get(where.sha) ?? null,
@@ -102,10 +102,19 @@ const mockDb = () => ({
       return { count: matches.length };
     },
   },
-  $transaction: async (
-    fn: (tx: ReturnType<typeof mockDb>) => Promise<unknown>,
+});
+
+// Named, so `$transaction` can hand the callback a client of the same type.
+type MockDb = ReturnType<typeof mockTables> & {
+  $transaction: (
+    fn: (tx: MockDb) => Promise<unknown>,
     options?: { timeout?: number },
-  ) => {
+  ) => Promise<unknown>;
+};
+
+const mockDb = (): MockDb => ({
+  ...mockTables(),
+  $transaction: async (fn, options) => {
     store.transactionTimeouts.push(options?.timeout);
     return fn(mockDb());
   },

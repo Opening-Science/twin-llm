@@ -11,6 +11,7 @@ import {
 } from "./env-file";
 import { parseIngestSummary, sha256For } from "./ingest-summary";
 import { parseSetupArgs } from "./local";
+import type { SetupOptions } from "./plan";
 import { checkTool, parseVersion } from "./prerequisites";
 
 describe("parseVersion", () => {
@@ -120,7 +121,7 @@ describe("ingest output", () => {
 
 describe("parseSetupArgs", () => {
   test("flags", () => {
-    const eval_ = {
+    const eval_: SetupOptions = {
       cohort: "eval",
       reloadCohort: false,
       generateCohort: false,

@@ -14,6 +14,7 @@ import {
   type ModelDisclosure,
   type UnrecordedModelCall,
 } from "@/infrastructure/disclosure-ledger";
+import { asFetch } from "@/infrastructure/as-fetch";
 import { recordDisclosure } from "@/infrastructure/disclosure-ledger-runtime";
 import { freeTextCheckerFor } from "@/infrastructure/free-text-check-runtime";
 import {
@@ -95,10 +96,13 @@ export const exoscaleTarget = (
   return {
     baseURL,
     apiKey: deps.apiKey ?? EXOSCALE_PLACEHOLDER_KEY,
-    fetch: withFirstByteTimeout({
-      fetch: deps.fetch,
-      timeoutMs: deps.firstByteTimeoutMs,
-    }),
+    fetch: asFetch(
+      withFirstByteTimeout({
+        fetch: deps.fetch,
+        timeoutMs: deps.firstByteTimeoutMs,
+      }),
+      deps.fetch,
+    ),
   };
 };
 

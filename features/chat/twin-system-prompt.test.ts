@@ -5,13 +5,13 @@ mock.module("server-only", () => ({}));
 type CitationRow = readonly [string, string, string | number, string | undefined];
 
 const metricsFromRows = (rows: readonly CitationRow[]) =>
-  rows.map(([citation, label, value, unit]) =>
-    Object.assign(
-      { label, value, date: "2026-07-10" },
-      Object.fromEntries([["key", citation]]),
-      unit === undefined ? {} : { unit },
-    ),
-  );
+  rows.map(([citation, label, value, unit]) => ({
+    label,
+    value,
+    date: "2026-07-10",
+    key: citation,
+    ...(unit === undefined ? {} : { unit }),
+  }));
 
 describe("buildTwinSystemPrompt BodyLoop keys", () => {
   test("passes only numeric vitronic.* keys with units; never positions, contours, or mesh", async () => {

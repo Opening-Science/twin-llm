@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { genomeEnv, parseServerEnv } from "./env";
 
 const BASE = {
+  NODE_ENV: "test",
   LOCAL_ONLY: "true",
   LOCAL_MVP: "true",
   AUTH_DISABLED: "true",

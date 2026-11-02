@@ -254,7 +254,10 @@ describe("1M cohort batches", () => {
 
   test("no batch shares a seed or cohort with a preset", () => {
     const presets = Object.values(COHORT_PRESETS);
-    const presetSeeds = presets.flatMap((preset) => [preset.seed, preset.clinicianSeed]);
+    const presetSeeds: readonly number[] = presets.flatMap((preset) => [
+      preset.seed,
+      preset.clinicianSeed,
+    ]);
     const batchSeeds = SYNTHEA_1M_BATCH_COHORTS.flatMap((batch) => [
       batch.seed,
       batch.clinicianSeed,

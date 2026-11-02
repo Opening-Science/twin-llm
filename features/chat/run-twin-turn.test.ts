@@ -64,6 +64,7 @@ const text = (delta: string) => [
 
 const ports: QueryToolPorts = {
   findSubject: async () => ({ isSynthetic: true, cohortId: "synthea-v4-seed42" }),
+  findCohortObservations: async () => [],
   findObservations: async () => [],
   appendAudit: async () => undefined,
 };

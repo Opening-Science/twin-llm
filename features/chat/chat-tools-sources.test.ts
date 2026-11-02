@@ -18,6 +18,7 @@ import { runTwinTurn } from "./run-twin-turn";
 
 const ports: QueryToolPorts = {
   findSubject: async () => null,
+  findCohortObservations: async () => [],
   findObservations: async () => [],
   appendAudit: async () => undefined,
 };
@@ -224,6 +225,7 @@ describe("the local GBD store (#387)", () => {
         sources: ["gbd", "wearable-context"],
         providers: ["ollama"],
         views: ["table", "map.choropleth"],
+        instructions: "Synthetic skill instructions.",
       },
     );
     expect(Object.keys(tools).sort()).toEqual([

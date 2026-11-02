@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  type GenomePermitDecision,
+  type GenomeRefusalReason,
   type GenomeRequest,
   permitGenomeRequest,
   permitGenomeRun,
@@ -16,7 +18,11 @@ const ALLOWED: GenomeRequest = {
   carbonXOnLoopback: true,
 };
 
-const refusal = (reason: string) => ({ ok: false, code: "GENOME_NOT_PERMITTED", reason });
+const refusal = (reason: GenomeRefusalReason): GenomePermitDecision => ({
+  ok: false,
+  code: "GENOME_NOT_PERMITTED",
+  reason,
+});
 
 describe("permitGenomeRequest", () => {
   test("personal mode, Ark, local Ollama and local Carbon-X: allowed", () => {

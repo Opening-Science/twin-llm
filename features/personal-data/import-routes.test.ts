@@ -97,7 +97,7 @@ const setup = (overrides: Partial<ImportPorts> = {}) => {
 };
 
 const upload = (
-  bytes: Uint8Array,
+  bytes: Uint8Array<ArrayBuffer>,
   fields: Readonly<Record<string, string>>,
   fileName = "my-labs.csv",
 ): Request => {

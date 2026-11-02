@@ -31,9 +31,8 @@ const SUBJECTS: Readonly<Record<string, SubjectScopeRow>> = {
 
 const at = (iso: string) => new Date(iso);
 let nextId = 0;
-const reading = (iso: string, value: number, unit = "mm[Hg]") => ({
-  id: BigInt(++nextId),
-  subjectRef: SUBJECT,
+const reading = (iso: string, value: number, unit = "mm[Hg]"): ObservationRecord => ({
+  id: String(++nextId),
   loinc: SYS,
   value,
   unitUcum: unit,
@@ -91,6 +90,7 @@ const fakePorts = (rows: readonly ObservationRecord[] = ROWS) => {
   const audits: AppendInput[] = [];
   const ports: QueryToolPorts = {
     findSubject: async (ref) => SUBJECTS[ref] ?? null,
+    findCohortObservations: async () => [],
     findObservations: async (query) =>
       rows
         .filter(

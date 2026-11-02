@@ -3,12 +3,13 @@ import { describe, expect, test } from "bun:test";
 import {
   decideLicence,
   LICENCE_TERMS,
+  type LiteratureLicence,
   normaliseLicenceCode,
   trainingLicences,
 } from "./licence";
 
 describe("normaliseLicenceCode", () => {
-  test.each([
+  test.each<[string, LiteratureLicence]>([
     ["CC BY", "cc-by"],
     ["CC0", "cc0"],
     ["cc by 4.0", "cc-by"],

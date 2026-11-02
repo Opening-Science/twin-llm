@@ -235,6 +235,7 @@ describe("createRunPythonTool", () => {
           {
             toolCallId: `c${call}`,
             messages: [],
+            context: {},
           },
         ),
       );

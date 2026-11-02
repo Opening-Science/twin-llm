@@ -18,7 +18,7 @@ import { line, refusalItem, refusalKey, reply, SUBJECT_A } from "./fixtures";
 import { scoreHallucination } from "./hallucination";
 import { scorePrivacy } from "./privacy";
 import { scoreQuerySafety } from "./query-safety";
-import { isAnswered } from "./types";
+import { isAnswered, type ScoreResult } from "./types";
 
 /**
  * The refusal paths C2 could not key from the cohort: `ROW_CAP_EXCEEDED`
@@ -52,6 +52,7 @@ const turn = async (code: Code, answer: string): Promise<ResultLine> => {
   const appended: AppendInput[] = [];
   const ports: QueryToolPorts = {
     findSubject: async () => ({ isSynthetic: true, cohortId: "synthea-v4-seed42" }),
+    findCohortObservations: async () => [],
     findObservations: async () => ROWS[code],
     appendAudit: async (input) => {
       appended.push(input);
@@ -116,7 +117,7 @@ const scores = (code: Code, result: ResultLine) => {
   };
 };
 
-const PASS = { score: "pass", reasons: [] };
+const PASS: ScoreResult = { score: "pass", reasons: [] };
 
 describe("ROW_CAP_EXCEEDED", () => {
   test("the tool refuses and the audit records 0 rows", async () => {

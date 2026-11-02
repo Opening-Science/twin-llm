@@ -1,5 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { TwinChatCard } from "./twin-chat-card";
@@ -8,17 +7,15 @@ const noop = () => undefined;
 
 const render = (collapsed: boolean) =>
   renderToStaticMarkup(
-    createElement(
-      TwinChatCard,
-      {
-        label: "Digital twin · Synthetic person 3",
-        collapsed,
-        onCollapse: noop,
-        onExpand: noop,
-        onClose: noop,
-      },
-      createElement("p", { id: "viewer-stub" }, "viewer"),
-    ),
+    <TwinChatCard
+      label="Digital twin · Synthetic person 3"
+      collapsed={collapsed}
+      onCollapse={noop}
+      onExpand={noop}
+      onClose={noop}
+    >
+      <p id="viewer-stub">viewer</p>
+    </TwinChatCard>,
   );
 
 /** Every `<button …>` opening tag, in order. */

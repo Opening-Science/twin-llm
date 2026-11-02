@@ -9,6 +9,7 @@ import { openAiToolsFrom } from "./chat-tool-list";
 
 const ports: QueryToolPorts = {
   findSubject: async () => null,
+  findCohortObservations: async () => [],
   findObservations: async () => [],
   appendAudit: async () => undefined,
 };

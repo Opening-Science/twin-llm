@@ -51,7 +51,7 @@ await mockModuleForFile("@/infrastructure/current-user", {
   ensureAppUser: async () => ({ id: USER_ID }),
 });
 
-let authorizeGET: () => Promise<Response>;
+let authorizeGET: (request: Request) => Promise<Response>;
 
 beforeAll(async () => {
   Object.assign(process.env, {
@@ -93,7 +93,9 @@ describe("GET /api/google-health/authorize", () => {
       lines.push(args.map(String).join(" "));
     });
 
-    const res = await authorizeGET();
+    const res = await authorizeGET(
+      new Request("http://localhost:3000/api/google-health/authorize"),
+    );
     expect(res.status).toBe(307);
 
     const joined = lines.join("\n");

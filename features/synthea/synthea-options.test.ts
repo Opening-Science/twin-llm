@@ -5,9 +5,10 @@ import {
   parseSyntheaOptions,
   SYNTHEA_MODULE_KEYS,
   SYNTHEA_STATES,
+  type SyntheaOptions,
 } from "./synthea-options";
 
-const valid = {
+const valid: SyntheaOptions = {
   people: 3,
   seed: 7,
   ageMin: 40,

@@ -20,7 +20,7 @@ const sha256 = (bytes: Uint8Array): string =>
   createHash("sha256").update(bytes).digest("hex");
 
 /** Synthetic tiny "atlases" with honest pins, so no real download is needed. */
-const BYTES: Record<AtlasId, Uint8Array> = {
+const BYTES: Record<AtlasId, Uint8Array<ArrayBuffer>> = {
   bodyparts3d: new Uint8Array([1, 2, 3, 4]),
   "hra-f": new Uint8Array([5, 6, 7]),
   "hra-m": new Uint8Array([8, 9]),
@@ -32,7 +32,7 @@ const SYNTHETIC: Record<AtlasId, AtlasEntry> = {
   "hra-m": { ...ATLASES["hra-m"], bytes: 2, sha256: sha256(BYTES["hra-m"]) },
 };
 
-const DEMO_BYTES: Record<DemoBodyId, Uint8Array> = {
+const DEMO_BYTES: Record<DemoBodyId, Uint8Array<ArrayBuffer>> = {
   "anny-adult-m": new Uint8Array([10, 11, 12]),
   "anny-adult-f": new Uint8Array([13, 14]),
 };
@@ -50,7 +50,7 @@ const SYNTHETIC_DEMO: Record<DemoBodyId, DemoBodyEntry> = {
   },
 };
 
-const RIGGED_BYTES: Record<DemoBodyId, Uint8Array> = {
+const RIGGED_BYTES: Record<DemoBodyId, Uint8Array<ArrayBuffer>> = {
   "anny-adult-m": new Uint8Array([20, 21, 22, 23]),
   "anny-adult-f": new Uint8Array([24, 25]),
 };

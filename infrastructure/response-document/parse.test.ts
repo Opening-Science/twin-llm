@@ -1,11 +1,13 @@
 import { describe, expect, test } from "bun:test";
 
+import type { ResponseDocumentV1 } from "./document-v1";
 import { toResponseDocument } from "./parse";
 
+// An old v1 row: no answer_class, no uncertainty level, two source lists.
 const valid = {
-  schema_version: "twin-llm.response.v1",
-  intended_use: "research_hypothesis_generation_n_of_1",
-  not_for_diagnostic_use: true,
+  schema_version: "twin-llm.response.v1" as const,
+  intended_use: "research_hypothesis_generation_n_of_1" as const,
+  not_for_diagnostic_use: true as const,
   sufficient_data: false,
   abstained: true,
   data_basis: {
@@ -16,13 +18,13 @@ const valid = {
     gbd_rows: [],
   },
   uncertainty: { model_statement: null },
-  next_step: "more_data",
-  interpretation: { kind: "none" },
+  next_step: "more_data" as const,
+  interpretation: { kind: "none" as const },
 };
 
 describe("toResponseDocument", () => {
   test("an old v1 row parses as v1 with the v1.1 defaults", () => {
-    expect(toResponseDocument(valid)).toEqual({
+    const expected: ResponseDocumentV1 = {
       ...valid,
       data_basis: {
         ...valid.data_basis,
@@ -31,11 +33,12 @@ describe("toResponseDocument", () => {
       schema_version: "twin-llm.response.v1",
       answer_class: "information",
       uncertainty: { model_statement: null, level: "unknown", reasons: [] },
-    });
+    };
+    expect(toResponseDocument(valid)).toEqual(expected);
   });
 
   test("a v1.1 document parses unchanged", () => {
-    const v11 = {
+    const v11: ResponseDocumentV1 = {
       ...valid,
       data_basis: {
         ...valid.data_basis,

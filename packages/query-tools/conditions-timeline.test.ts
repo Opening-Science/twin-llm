@@ -107,6 +107,7 @@ const fakePorts = (rows: readonly FakeCondition[] = FIXTURE) => {
   const queries: ClinicalQuery[] = [];
   const ports: QueryToolPorts = {
     findSubject: async (subjectRef) => SUBJECTS[subjectRef] ?? null,
+    findCohortObservations: async () => [],
     findObservations: async () => [],
     findConditions: async (query) => {
       queries.push(query);

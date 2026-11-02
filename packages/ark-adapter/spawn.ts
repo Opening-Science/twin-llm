@@ -68,11 +68,23 @@ const NODE_SPAWN_OPTIONS = {
   stdio: ["ignore", "pipe", "pipe"],
 } as const;
 
+/** The parts of the child process `spawnArk` uses; a test fake needs no more. */
+export type ArkChild = {
+  readonly stdout: ChildProcess["stdout"];
+  readonly stderr: ChildProcess["stderr"];
+  kill(): boolean;
+  once(event: "error", listener: (error: Error) => void): unknown;
+  once(
+    event: "close",
+    listener: (code: number | null, signal: NodeJS.Signals | null) => void,
+  ): unknown;
+};
+
 export type ArkNodeSpawn = (
   command: string,
   args: readonly string[],
   options: typeof NODE_SPAWN_OPTIONS,
-) => ChildProcess;
+) => ArkChild;
 
 let nodeSpawn: ArkNodeSpawn = spawn as ArkNodeSpawn;
 

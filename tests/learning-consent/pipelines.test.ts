@@ -119,6 +119,7 @@ const NOT_LEARNING: Readonly<Record<string, string>> = {
   build: TOOLING,
   start: APP,
   typecheck: TOOLING,
+  "typecheck:tests": TOOLING,
   lint: TOOLING,
   "lint:claims": TOOLING,
   "lint:links": TOOLING,

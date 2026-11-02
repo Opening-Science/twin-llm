@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { LOINC_CODINGS } from "@open-twin/fhir-core";
 import type { Observation } from "fhir/r4";
 
+import { asFetch } from "@/infrastructure/as-fetch";
 import { buildWhoopFhirBundle } from "@/infrastructure/open-twin-adapters/whoop";
 import { fetchWhoopWorkouts } from "@/infrastructure/open-twin-adapters/whoop-workout";
 
@@ -227,7 +228,7 @@ describe("fetchWhoopWorkouts", () => {
 
   test("a failed response throws instead of returning rows", async () => {
     const original = globalThis.fetch;
-    globalThis.fetch = (async () => new Response(null, { status: 403 })) as typeof fetch;
+    globalThis.fetch = asFetch(async () => new Response(null, { status: 403 }), original);
     try {
       await expect(
         fetchWhoopWorkouts("synthetic-access", { start: "a", end: "b" }),

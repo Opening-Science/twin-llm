@@ -3,6 +3,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:tes
 import type { AppendInput } from "@/packages/audit/append";
 import type { VitronicSummary } from "@/infrastructure/vitronic-types";
 
+import type { VitronicSummaryAuditTool } from "./connection";
+
 const USER_ID = "user-synthetic-1";
 const SUBJECT_ID = "subj-synthetic-1";
 const ACTOR = "local";
@@ -100,14 +102,16 @@ let listSnapshots: (
 ) => Promise<readonly unknown[]>;
 let latestSummary: (
   userId: string,
-  opts?: LocalReadOpts,
+  opts?: Omit<LocalReadOpts, "auditTool"> & {
+    readonly auditTool?: VitronicSummaryAuditTool;
+  },
 ) => Promise<VitronicSummary | null>;
 let connectionStatus: (userId: string, opts?: LocalReadOpts) => Promise<unknown>;
 let toChatVitronicSummary: (summary: VitronicSummary) => VitronicSummary;
 let VITRONIC_SUBJECTS_LIST_AUDIT_TOOL: string;
 let VITRONIC_SNAPSHOTS_LIST_AUDIT_TOOL: string;
-let VITRONIC_CHAT_SUMMARY_AUDIT_TOOL: string;
-let VITRONIC_WEARABLES_SUMMARY_AUDIT_TOOL: string;
+let VITRONIC_CHAT_SUMMARY_AUDIT_TOOL: VitronicSummaryAuditTool;
+let VITRONIC_WEARABLES_SUMMARY_AUDIT_TOOL: VitronicSummaryAuditTool;
 let VITRONIC_CONNECTION_STATUS_AUDIT_TOOL: string;
 
 beforeAll(async () => {

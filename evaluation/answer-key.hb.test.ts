@@ -40,7 +40,7 @@ describe("hb answer key", () => {
   test("is the key of these questions, on the cohort the manifest pins", () => {
     expect(key.questions_sha256).toBe(questionsSha256(rawQuestions));
     expect(set.cohort_id).toBe("synthea-v4-1m-af");
-    expect(key.cohort.id).toBe(manifest.cohortId);
+    expect<string>(key.cohort.id).toBe(manifest.cohortId);
     expect(key.cohort.content_sha256).toBe(manifest.contentSha256);
     expect(key.cohort.subjects).toBe(manifest.people);
   });

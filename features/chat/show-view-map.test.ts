@@ -36,6 +36,7 @@ const fakePorts = () => {
   const audits: AppendInput[] = [];
   const ports: QueryToolPorts = {
     findSubject: async () => null,
+    findCohortObservations: async () => [],
     findObservations: async () => [],
     appendAudit: async (input) => {
       audits.push(input);
@@ -201,12 +202,18 @@ describe("estimates in a chat turn", () => {
         live: createLiveSourceTools,
       },
     });
-    const options = (toolCallId: string): ToolExecutionOptions => ({
+    const options = (
+      toolCallId: string,
+    ): ToolExecutionOptions<Record<string, unknown>> => ({
       toolCallId,
       messages: [],
+      context: {},
     });
     const gbd = tools[GBD_MODEL_TOOL as keyof typeof tools] as {
-      execute: (input: unknown, options: ToolExecutionOptions) => Promise<unknown>;
+      execute: (
+        input: unknown,
+        options: ToolExecutionOptions<Record<string, unknown>>,
+      ) => unknown;
     };
     await gbd.execute({}, options("call-k"));
     const view = await tools.show_view.execute?.(

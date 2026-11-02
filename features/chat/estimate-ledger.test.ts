@@ -15,9 +15,11 @@ const ROW = {
   extra: "ignored",
 };
 
-const options = (toolCallId: string): ToolExecutionOptions => ({
+// These tools take no context, so each call passes an empty one.
+const options = (toolCallId: string): ToolExecutionOptions<Record<string, unknown>> => ({
   toolCallId,
   messages: [],
+  context: {},
 });
 
 describe("createEstimateLedger", () => {

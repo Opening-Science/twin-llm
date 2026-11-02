@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { X509Certificate } from "node:crypto";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import type { RequestListener } from "node:http";
 import https from "node:https";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
@@ -62,13 +63,13 @@ const impostor = makeCert("synthetic-impostor");
 type Received = { url: string | undefined; authorization: string | undefined };
 const received: Received[] = [];
 
-const listen = async (cert: Cert, handler: https.RequestListener) => {
+const listen = async (cert: Cert, handler: RequestListener) => {
   const server = https.createServer({ key: cert.key, cert: cert.cert }, handler);
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   return { server, port: (server.address() as AddressInfo).port };
 };
 
-const record: https.RequestListener = (req, res) => {
+const record: RequestListener = (req, res) => {
   received.push({ url: req.url, authorization: req.headers.authorization });
   if (req.url === "/big") {
     res.end(Buffer.alloc(4096, 1));

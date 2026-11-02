@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { parseServerEnv, syntheaEnv } from "./env";
 
 const BASE = {
+  NODE_ENV: "test",
   LOCAL_MVP: "true",
   AUTH_DISABLED: "true",
   LLM_PROVIDER: "ollama",

@@ -213,8 +213,10 @@ describe("resolveLanguageModel DATA_MODE permit", () => {
         expect.unreachable();
       } catch (error) {
         expect(error).toBeInstanceOf(ProviderNotPermittedError);
-        expect((error as Error).message).toBe(permit.error);
-        expect((error as { code: string }).code).toBe(permit.code);
+        expect((error as Error).message).toBe(PROVIDER_NOT_PERMITTED_ERROR);
+        expect((error as { code: string }).code).toBe(
+          PROVIDER_NOT_PERMITTED_FOR_DATA_MODE,
+        );
       }
     });
   }

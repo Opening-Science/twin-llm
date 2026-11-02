@@ -17,6 +17,7 @@ const fakePorts = () => {
   const audits: AppendInput[] = [];
   const ports: QueryToolPorts = {
     findSubject: async () => null,
+    findCohortObservations: async () => [],
     findObservations: async () => [],
     appendAudit: async (input) => {
       audits.push(input);

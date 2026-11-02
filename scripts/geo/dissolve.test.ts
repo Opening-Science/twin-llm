@@ -20,7 +20,7 @@ describe("dissolveRings", () => {
   test("two squares sharing an edge become one ring with the same area and winding", () => {
     const rings = dissolveRings([square(0, 0), square(1, 0)]);
     expect(rings).toHaveLength(1);
-    expect(rings[0]?.[0]).toEqual(rings[0]?.at(-1));
+    expect(rings[0]?.at(0)).toEqual(rings[0]?.at(-1));
     expect(area(rings)).toBeCloseTo(area([square(0, 0), square(1, 0)]));
     const ring = rings[0] ?? [];
     const innerEdges = ring

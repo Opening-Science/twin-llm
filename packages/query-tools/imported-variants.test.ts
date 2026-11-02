@@ -215,7 +215,7 @@ describe("genome_variants on a genome-synth VCF", () => {
         take: MAX_VARIANT_RECORDS + 1,
       },
     ]);
-    if (!("variants" in result)) throw new Error(result.code);
+    if ("code" in result) throw new Error(result.code);
     expect(result.variants.map((each) => [each.name, each.records[0]?.chrom])).toEqual([
       ["chr1:230710048", "1"],
     ]);

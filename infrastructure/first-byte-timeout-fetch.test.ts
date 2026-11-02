@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { createOpenAI } from "@ai-sdk/openai";
 import { streamText } from "ai";
 
+import { asFetch } from "./as-fetch";
 import {
   FIRST_BYTE_TIMEOUT_MESSAGE,
   type TimerPort,
@@ -186,7 +187,7 @@ describe("withFirstByteTimeout", () => {
     const provider = createOpenAI({
       baseURL: "https://gpu1.example.invalid/v1",
       apiKey: "synthetic-key",
-      fetch: withFirstByteTimeout({ fetch: silent.fetch, timeoutMs: 20 }),
+      fetch: asFetch(withFirstByteTimeout({ fetch: silent.fetch, timeoutMs: 20 }), fetch),
     });
     const errors: unknown[] = [];
 

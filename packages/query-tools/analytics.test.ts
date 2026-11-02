@@ -80,6 +80,7 @@ const fakePorts = (rows: readonly FakeRow[] = FIXTURE) => {
       subjectLookups.push(subjectRef);
       return SUBJECTS[subjectRef] ?? null;
     },
+    findCohortObservations: async () => [],
     findObservations: async (query) => {
       queries.push(query);
       return rows
@@ -107,11 +108,19 @@ const synthetic: SessionScope = {
 };
 const personal: SessionScope = { actor: "local", sessionId: "turn-b3", mode: "personal" };
 
-const auditRow = (tool: string, args: unknown, result: unknown, rowCount: number) => ({
+const auditRow = (
+  tool: string,
+  args: unknown,
+  result: unknown,
+  rowCount: number,
+): AppendInput => ({
   actor: "local",
   sessionId: "turn-b3",
   subjectRef:
-    args !== null && typeof args === "object" && "subject_ref" in args
+    args !== null &&
+    typeof args === "object" &&
+    "subject_ref" in args &&
+    typeof args.subject_ref === "string"
       ? args.subject_ref
       : null,
   tool,
@@ -594,6 +603,7 @@ describe("runWearableCoverage", () => {
     const audits: AppendInput[] = [];
     const ports: QueryToolPorts = {
       findSubject: async () => null,
+      findCohortObservations: async () => [],
       findObservations: async () => [],
       appendAudit: async (input) => {
         audits.push(input);

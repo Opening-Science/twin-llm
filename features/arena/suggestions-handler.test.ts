@@ -25,6 +25,7 @@ const fakePorts = (rows: readonly ObservationRecord[]) => {
   const ports: QueryToolPorts = {
     findSubject: async (ref) =>
       ref === SUBJECT.ref ? { isSynthetic: true, cohortId: "synthea-v4-seed42" } : null,
+    findCohortObservations: async () => [],
     findObservations: async (query) =>
       rows.filter((row) => query.loinc.includes(row.loinc)),
     appendAudit: async (input) => {

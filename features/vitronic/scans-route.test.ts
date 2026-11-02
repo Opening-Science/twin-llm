@@ -43,7 +43,8 @@ describe("GET /api/vitronic/subjects/:id/scans", () => {
       },
     );
     expect(res.status).toBe(200);
-    expect(requestedSubject).toBe("sub-self");
+    // Set inside the handler; the explicit type stops TS narrowing it to null here.
+    expect<string | null>(requestedSubject).toBe("sub-self");
     const body = (await res.json()) as { scans: Array<Record<string, unknown>> };
     expect(body.scans).toEqual([
       {
