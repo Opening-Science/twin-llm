@@ -324,6 +324,7 @@ const fakePorts = () => {
       reads.push(`subject ${subjectRef}`);
       return null;
     },
+    findCohortObservations: async () => [],
     findObservations: async () => {
       reads.push("observations");
       return [];

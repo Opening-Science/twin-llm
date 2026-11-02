@@ -194,6 +194,7 @@ describe("abstained answers withhold the model's uncertainty statement", () => {
       id: "response-1",
       modelId: "synthetic/model",
       modelName: "Synthetic",
+      position: null,
       status: "COMPLETE",
       text,
       reasoningText: "Synthetic reasoning line.",

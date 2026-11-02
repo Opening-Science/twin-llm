@@ -60,7 +60,7 @@ const harness = (
 };
 
 /** GitHub's answer: a redirect from the release URL to the asset host. */
-const github = (body: Uint8Array) => (url: string) =>
+const github = (body: Uint8Array<ArrayBuffer>) => (url: string) =>
   url === PIN.url ? redirect(ASSET) : new Response(body);
 
 describe("EVAL_RELEASE pin", () => {

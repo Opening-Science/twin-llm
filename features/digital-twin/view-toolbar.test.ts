@@ -198,6 +198,7 @@ describe("ViewToolbar", () => {
       unavailable: null,
       tempo: 110,
       onTempo: noop,
+      dayLines: null,
     };
     expect(
       groups({ ...BASE, liveVitals: { on: false, onToggle: noop }, motion }),
@@ -231,6 +232,7 @@ describe("ViewToolbar", () => {
           unavailable: null,
           tempo: 128,
           onTempo: (tempo) => void tempos.push(tempo),
+          dayLines: null,
         },
       }),
     );
@@ -261,6 +263,7 @@ describe("ViewToolbar", () => {
           unavailable: "This scan has no skeleton the walk can drive.",
           tempo: 110,
           onTempo: noop,
+          dayLines: null,
         },
       }),
     );

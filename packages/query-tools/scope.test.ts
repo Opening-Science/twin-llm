@@ -19,7 +19,7 @@ describe("cohort allowlist", () => {
       "synthea-v4-1m-af",
       "synthea-v4-seed1001",
     ]);
-    expect(SYNTHEA_1M_COHORTS).toEqual(
+    expect<readonly string[]>(SYNTHEA_1M_COHORTS).toEqual(
       Array.from({ length: 100 }, (_, index) => `synthea-v4-seed${1001 + index}`),
     );
     expect(SYNTHETIC_COHORTS.length).toBe(107);
@@ -39,7 +39,7 @@ describe("cohort allowlist", () => {
     const before: SyntheticCohortId = "synthea-v4-seed1000";
     // @ts-expect-error seed 1101 is not a batch
     const after: SyntheticCohortId = "synthea-v4-seed1101";
-    expect([batch, before, after]).toEqual([
+    expect<readonly string[]>([batch, before, after]).toEqual([
       "synthea-v4-seed1050",
       "synthea-v4-seed1000",
       "synthea-v4-seed1101",

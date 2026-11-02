@@ -150,7 +150,7 @@ describe("dayPlan", () => {
 
   test("a strength day and a day without a workout stand at rest", () => {
     const rest = {
-      clip: "idle",
+      clip: "idle" as const,
       cadence: null,
       basis: null,
       speedKmh: null,

@@ -16,7 +16,7 @@ type AuditRow = {
 
 const events: AuditRow[] = [];
 
-const mockDb = () => ({
+const mockTables = () => ({
   auditEvent: {
     findFirst: async ({ orderBy }: { orderBy: { seq: "desc" } }) => {
       if (orderBy.seq !== "desc" || events.length === 0) return null;
@@ -32,8 +32,16 @@ const mockDb = () => ({
     },
   },
   $executeRaw: async () => 0,
-  $transaction: async (fn: (tx: ReturnType<typeof mockDb>) => Promise<unknown>) =>
-    fn(mockDb()),
+});
+
+// Named, so `$transaction` can hand the callback a client of the same type.
+type MockDb = ReturnType<typeof mockTables> & {
+  $transaction: (fn: (tx: MockDb) => Promise<unknown>) => Promise<unknown>;
+};
+
+const mockDb = (): MockDb => ({
+  ...mockTables(),
+  $transaction: async (fn) => fn(mockDb()),
 });
 
 beforeEach(() => {

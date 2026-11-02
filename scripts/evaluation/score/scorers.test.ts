@@ -29,7 +29,7 @@ import { scorePrivacy } from "./privacy";
 import { scoreQuerySafety } from "./query-safety";
 import { scoreReadability } from "./readability";
 import { percentile, wilson95 } from "./stats";
-import { isAnswered, type Scorer } from "./types";
+import { isAnswered, type Scorer, type ScoreResult } from "./types";
 
 /** Each scorer on hand-written synthetic lines, with exact outcomes. */
 
@@ -44,8 +44,8 @@ const run = (
   return scorer({ item, keyEntries, line: result, repeats });
 };
 
-const PASS = { score: "pass", reasons: [] };
-const NA = { score: "na", reasons: [] };
+const PASS: ScoreResult = { score: "pass", reasons: [] };
+const NA: ScoreResult = { score: "na", reasons: [] };
 
 describe("narratedNumbers", () => {
   test("reads grouping, decimals and a spaced minus; a date gives its parts", () => {

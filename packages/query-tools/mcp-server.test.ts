@@ -41,6 +41,7 @@ const fakePorts = () => {
       subjectRef === SUBJECT
         ? { isSynthetic: true, cohortId: "synthea-v4-seed42" }
         : null,
+    findCohortObservations: async () => [],
     findObservations: async (query) =>
       ROWS.filter(
         (row) =>
@@ -77,7 +78,10 @@ const snapshot = (): unknown =>
     readFileSync(join(import.meta.dir, "__snapshots__", "mcp-tools.json"), "utf8"),
   );
 
-const textOf = (result: { content: unknown }): string => {
+// A call result; the SDK's type also allows the legacy `toolResult` shape, so
+// `content` is checked here rather than assumed.
+const textOf = (result: Readonly<Record<string, unknown>>): string => {
+  if (!Array.isArray(result.content)) throw new Error("expected a content list");
   const [first] = result.content as ReadonlyArray<{ type: string; text?: string }>;
   if (first?.type !== "text" || first.text === undefined) {
     throw new Error("expected one text content block");

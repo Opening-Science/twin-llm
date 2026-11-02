@@ -5,6 +5,7 @@ import {
   loadOnboardingOrEmpty,
   needsOnboarding,
   type OnboardingUserState,
+  type StoredOnboarding,
 } from "./onboarding-store";
 
 const needs = (state: OnboardingUserState | null) =>
@@ -67,12 +68,13 @@ describe("loadOnboardingOrEmpty", () => {
   });
 
   test("saved answers come back as stored; no user is a fresh flow", async () => {
-    const saved = {
+    const saved: StoredOnboarding = {
       answers: {
-        roles: ["student"] as const,
-        dataChoice: "demo" as const,
+        roles: ["student"],
+        dataChoice: "demo",
         interest: "HRV",
-        disabledSources: ["gbd"] as const,
+        disabledSources: ["gbd"],
+        liveSources: [],
       },
       step: 3,
       completed: false,

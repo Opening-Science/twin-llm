@@ -5,6 +5,7 @@ import { sha256Hex } from "@/packages/audit/hash";
 import { genomeThreadRefusedEvent } from "./genome-thread-audit";
 import {
   assertHistoryMayLeave,
+  type GenomeThreadDecision,
   historyShowsGenome,
   isGenomeAuditTool,
   isLocalChatModel,
@@ -15,7 +16,7 @@ import {
   toolPartsUseGenome,
 } from "./genome-thread-policy";
 
-const REFUSED = {
+const REFUSED: GenomeThreadDecision = {
   ok: false,
   code: "GENOME_THREAD_LOCAL_ONLY",
   error:

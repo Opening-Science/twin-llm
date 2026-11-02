@@ -7,6 +7,7 @@ import {
   boundaryFile,
   GEOBOUNDARIES_COUNTRIES,
   parseBoundaries,
+  type BoundaryFeature,
 } from "./boundaries";
 import { layersOf, LOCATION_INDEX, subnationalCountries } from "./match-location";
 
@@ -51,7 +52,7 @@ describe("parseBoundaries", () => {
   });
 
   test("keeps code, name and rings", () => {
-    const feature = {
+    const feature: BoundaryFeature = {
       type: "Feature",
       properties: { code: "XXX", name: "Somewhere" },
       geometry: {

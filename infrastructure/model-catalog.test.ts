@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { AUTO_AGENT } from "./agents";
+import { type AgentOffer, AUTO_AGENT } from "./agents";
 import {
   agentBaseModel,
   type CatalogAgent,
@@ -274,7 +274,7 @@ describe("agents in the catalog (#218)", () => {
   });
 
   test("defaultModelSelection: General, Diet and Anatomy where all three are offered", () => {
-    const skills = [
+    const skills: AgentOffer["skills"] = [
       ...SKILLS,
       { name: "nutrition", providers: ["ollama"], sources: [], tools: [] },
       { name: "anatomy", providers: ["ollama"], sources: [], tools: [] },

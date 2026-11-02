@@ -86,6 +86,7 @@ describe("writeModelResponseComplete", () => {
           reasoningText: "Synthetic reasoning.",
           attribution: [],
           responseDocument: document!,
+          toolParts: undefined,
           completedAt,
         },
       },

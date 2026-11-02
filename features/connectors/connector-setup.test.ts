@@ -6,6 +6,7 @@ import { connectorSetupView, connectorSetupViews, setupGap } from "./connector-s
 
 // Synthetic values only. Each is unique so a leak into the view is easy to spot.
 const BASE = {
+  NODE_ENV: "test",
   LOCAL_MVP: "true",
   AUTH_DISABLED: "true",
   LLM_PROVIDER: "ollama",

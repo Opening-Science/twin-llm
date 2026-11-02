@@ -27,6 +27,7 @@ const fakePorts = (rows: readonly FakeRow[] = []) => {
   const queries: unknown[] = [];
   const ports: QueryToolPorts = {
     findSubject: async (subjectRef) => SUBJECTS[subjectRef] ?? null,
+    findCohortObservations: async () => [],
     findObservations: async (query) => {
       queries.push(query);
       return rows

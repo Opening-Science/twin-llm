@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
+import { asFetch } from "@/infrastructure/as-fetch";
 import fixture from "@/packages/gbd-mcp/fixtures/tools-list.json";
 
 import { createMcpHttpClient } from "./http-client";
@@ -19,13 +20,12 @@ const jsonResponse = (id: number, result: unknown): Response =>
 const fakeFetch = (
   calls: Call[],
   respond: (method: string, id: number) => Response,
-): typeof fetch => {
-  return async (input, init) => {
+): typeof fetch =>
+  asFetch(async (input, init) => {
     const body = JSON.parse(String(init?.body)) as { method: string; id: number };
     calls.push({ url: String(input), headers: init?.headers, body });
     return respond(body.method, body.id);
-  };
-};
+  }, fetch);
 
 describe("createMcpHttpClient", () => {
   test("listTools initializes once and returns the fixture tools", async () => {
@@ -110,11 +110,14 @@ describe("createMcpHttpClient", () => {
       server,
       url: URL,
       timeoutMs: 1000,
-      fetch: async () =>
-        new Response(
-          'event: message\ndata: {"jsonrpc":"2.0","id":1,"result":{"tools":[{"name":"a"}]}}\n\n',
-          { status: 200, headers: { "content-type": "text/event-stream" } },
-        ),
+      fetch: asFetch(
+        async () =>
+          new Response(
+            'event: message\ndata: {"jsonrpc":"2.0","id":1,"result":{"tools":[{"name":"a"}]}}\n\n',
+            { status: 200, headers: { "content-type": "text/event-stream" } },
+          ),
+        fetch,
+      ),
     });
     expect(await client.listTools()).toEqual([{ name: "a" }]);
   });
@@ -124,7 +127,7 @@ describe("createMcpHttpClient", () => {
       server,
       url: URL,
       timeoutMs: 1000,
-      fetch: async () => new Response("secret body", { status: 500 }),
+      fetch: asFetch(async () => new Response("secret body", { status: 500 }), fetch),
     });
     await expect(http.initialize()).rejects.toThrow("gbd-http-error");
 
@@ -132,11 +135,14 @@ describe("createMcpHttpClient", () => {
       server,
       url: URL,
       timeoutMs: 1000,
-      fetch: async () =>
-        new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, error: { code: -1 } }), {
-          status: 200,
-          headers: { "content-type": "application/json" },
-        }),
+      fetch: asFetch(
+        async () =>
+          new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, error: { code: -1 } }), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          }),
+        fetch,
+      ),
     });
     await expect(rpc.initialize()).rejects.toThrow("gbd-rpc-error");
   });

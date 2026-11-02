@@ -1,16 +1,18 @@
 import { describe, expect, test } from "bun:test";
-import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { CollapsiblePanel } from "./collapsible-panel";
 
 const render = (open: boolean, className?: string) =>
   renderToStaticMarkup(
-    createElement(
-      CollapsiblePanel,
-      { label: "Anatomy", open, onToggle: () => undefined, className },
-      createElement("p", null, "inside"),
-    ),
+    <CollapsiblePanel
+      label="Anatomy"
+      open={open}
+      onToggle={() => undefined}
+      className={className}
+    >
+      <p>inside</p>
+    </CollapsiblePanel>,
   );
 
 describe("CollapsiblePanel", () => {

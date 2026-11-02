@@ -247,7 +247,7 @@ describe("cohort_event_rates", () => {
   test("the AF subset refuses between and another exposure", async () => {
     const { ports, reads } = fakePorts();
     const refusal = {
-      code: "DESIGN_NOT_SUPPORTED",
+      code: "DESIGN_NOT_SUPPORTED" as const,
       error:
         "this cohort holds only people with condition 49436004, so it supports the within design with 49436004 as the exposure only",
       cohort_id: AF_ONLY,

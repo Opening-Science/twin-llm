@@ -58,9 +58,10 @@ describe("the UK mapping: local unit to English region to nation (#421)", () => 
         ([, , level, , iso3]) => level === 4 && iso3 === "GBR",
       ).map(([, , , name, , iso]) => [name, iso]),
     );
-    expect(UK_NATIONS.map((nation) => [nation.name, nation.code])).toEqual(
-      UK_NATIONS.map((nation) => [nation.name, codes.get(nation.name)]),
-    );
+    // The table side may miss a nation, so compare as optional strings.
+    expect<(string | null | undefined)[][]>(
+      UK_NATIONS.map((nation) => [nation.name, nation.code]),
+    ).toEqual(UK_NATIONS.map((nation) => [nation.name, codes.get(nation.name)]));
   });
 
   test("looks a unit up", () => {

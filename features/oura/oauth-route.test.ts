@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
+import type { SupportedScope } from "@open-twin/provider-oura";
+
 import {
   createOuraAuthorizeHandler,
   createOuraCallbackHandler,
@@ -18,7 +20,8 @@ const OURA_CONFIG = {
   clientId: "synthetic-oura-client",
   clientSecret: "synthetic-oura-secret",
   redirectUri: "http://localhost:8787/callback",
-  scopes: ["email", "personal", "daily"] as const,
+  // As in connection.ts: OpenTwin types `scopes` as API collections, OAuth takes these.
+  scopes: ["email", "personal", "daily"] as never as SupportedScope[],
 };
 
 type CookieEntry = {
@@ -112,7 +115,7 @@ describe("GET /api/oura/authorize", () => {
 
     expect(urlState).toBeTruthy();
     expect(urlState).toHaveLength(8);
-    expect(cookie?.value).toBe(urlState);
+    expect(cookie?.value ?? null).toBe(urlState);
     expect(cookie?.httpOnly).toBe(true);
     expect(cookie?.sameSite).toBe("lax");
     expect(cookie?.path).toBe("/");

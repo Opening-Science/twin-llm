@@ -4,6 +4,7 @@ import { envValueLooksEmpty } from "./env";
 
 // Synthetic values only; none of these is a real credential.
 const SOURCE = {
+  NODE_ENV: "test",
   OURA_CLIENT_ID: "",
   OURA_CLIENT_SECRET: "   ",
   WHOOP_CLIENT_ID: "# paste the client id here",

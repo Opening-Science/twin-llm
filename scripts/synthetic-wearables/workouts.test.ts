@@ -71,7 +71,7 @@ describe("generateWorkouts", () => {
   });
 
   test("uses the codes training_load reads, in minutes", () => {
-    expect(
+    expect<string[][]>(
       WORKOUT_METRIC_NAMES.map((name) => [
         WORKOUT_METRICS[name].code,
         WORKOUT_METRICS[name].unit,

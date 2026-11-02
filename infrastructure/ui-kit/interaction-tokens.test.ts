@@ -23,7 +23,7 @@ const section = (() => {
 const MARKS = ["winner", "destructive", "foreground", "muted-foreground"] as const;
 
 describe.each([":root", ".dark"])("interaction marks in %s", (scope) => {
-  test.each(MARKS)("--%s clears 3:1 on the card and the page", (name) => {
+  test.each([...MARKS])("--%s clears 3:1 on the card and the page", (name) => {
     const mark = readToken(css, scope, name);
     expect(contrast(mark, readToken(css, scope, "card"))).toBeGreaterThanOrEqual(3);
     expect(contrast(mark, readToken(css, scope, "background"))).toBeGreaterThanOrEqual(3);

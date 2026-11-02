@@ -10,6 +10,7 @@ import {
 import {
   createGbdCsvReader,
   GBD_MAX_RECORD_CHARS,
+  type GbdCsvResult,
   type GbdCsvRow,
   gbdCsvErrorText,
   gbdRowKey,
@@ -194,7 +195,7 @@ describe("gbdRowKey", () => {
   });
 });
 
-const readInChunks = (text: string, size: number) => {
+const readInChunks = (text: string, size: number): GbdCsvResult => {
   const reader = createGbdCsvReader();
   const rows: GbdCsvRow[] = [];
   for (let start = 0; start < text.length; start += size) {

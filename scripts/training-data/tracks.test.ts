@@ -130,10 +130,10 @@ describe("track definitions", () => {
   test("every track's agent has the id, name and role line of the live agent (#218)", () => {
     for (const id of TRACK_IDS) {
       const live = LIVE_AGENTS.find((agent) => agent.id === AGENTS[id].id);
-      expect(live).toBeDefined();
+      if (live === undefined) throw new Error(`no live agent ${AGENTS[id].id}`);
       expect({ name: AGENTS[id].name, role: AGENTS[id].role }).toEqual({
-        name: live?.name,
-        role: live?.role,
+        name: live.name,
+        role: live.role,
       });
     }
     expect(AGENTS.diet.name).toBe("Diet specialist");
@@ -166,9 +166,9 @@ describe("track definitions", () => {
       expect(track.families).toContain("agent_handover");
       expect(track.families.every((family) => known.has(family))).toBe(true);
       expect(track.styles.every((style) => STYLES.includes(style))).toBe(true);
-      expect(trackMeasures(track)?.map((measure) => measure.loinc) ?? null).toEqual(
-        track.loincs,
-      );
+      expect<readonly string[] | null>(
+        trackMeasures(track)?.map((measure) => measure.loinc) ?? null,
+      ).toEqual(track.loincs);
       // A track with genome families turns the genome tools on.
       expect(track.families.some((family) => family.startsWith("genome_"))).toBe(
         track.genome,

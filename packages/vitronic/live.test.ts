@@ -15,16 +15,27 @@ describe.skipIf(!runLive || inCi)("BodyLoop live (RUN_LIVE=1, never CI)", () => 
     const apiToken = Reflect.get(process.env, "VITRONIC_API_TOKEN");
     const rawId = Reflect.get(process.env, "VITRONIC_PROBAND_ID");
     const pinned = Reflect.get(process.env, "VITRONIC_TLS_FINGERPRINT");
-    if (typeof baseUrl !== "string" || typeof apiToken !== "string" || typeof rawId !== "string") {
-      throw new Error("VITRONIC_BASE_URL, VITRONIC_API_TOKEN, and VITRONIC_PROBAND_ID are required");
+    if (
+      typeof baseUrl !== "string" ||
+      typeof apiToken !== "string" ||
+      typeof rawId !== "string"
+    ) {
+      throw new Error(
+        "VITRONIC_BASE_URL, VITRONIC_API_TOKEN, and VITRONIC_PROBAND_ID are required",
+      );
     }
     const scanKey = Number.parseInt(rawId, 10);
     if (!Number.isInteger(scanKey) || scanKey < 1) {
       throw new Error("VITRONIC_PROBAND_ID must be a positive integer");
     }
 
-    const { captureTlsFingerprint, fetchAvatarGlb, getMeasurementSets, getViatar, listViatarsForProbandId } =
-      await import("./client");
+    const {
+      captureTlsFingerprint,
+      fetchAvatarGlb,
+      getMeasurementSets,
+      getViatar,
+      listViatarsForProbandId,
+    } = await import("./client");
 
     const paths: string[] = [];
     const onRequestPath = (path: string) => {
@@ -34,7 +45,7 @@ describe.skipIf(!runLive || inCi)("BodyLoop live (RUN_LIVE=1, never CI)", () => 
     const tlsFingerprintSha256 =
       typeof pinned === "string" && pinned.length > 0
         ? pinned
-        : await captureTlsFingerprint({ baseUrl, apiToken, onRequestPath });
+        : await captureTlsFingerprint({ baseUrl, onRequestPath });
 
     const config = {
       baseUrl,
@@ -69,9 +80,13 @@ describe.skipIf(!runLive || inCi)("BodyLoop live (RUN_LIVE=1, never CI)", () => 
       expect(typeof metric.unit).toBe("string");
       expect(metric.unit?.length).toBeGreaterThan(0);
     }
-    const heightMetric = summary.metrics.find((row) => row.key.startsWith("vitronic.property.body.height."));
+    const heightMetric = summary.metrics.find((row) =>
+      row.key.startsWith("vitronic.property.body.height."),
+    );
     if (heightMetric) expect(heightMetric.unit).toBe("m");
-    const bmiMetric = summary.metrics.find((row) => row.key.startsWith("vitronic.property.body.bmi."));
+    const bmiMetric = summary.metrics.find((row) =>
+      row.key.startsWith("vitronic.property.body.bmi."),
+    );
     if (bmiMetric) expect(bmiMetric.unit).toBe("kg/m2");
     expect(paths.some((path) => path.includes("/viatars"))).toBe(true);
     expect(paths.some((path) => path.includes("/probands"))).toBe(false);

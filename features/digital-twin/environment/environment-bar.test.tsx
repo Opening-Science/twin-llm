@@ -88,11 +88,9 @@ test("the research-use line from the shell footer stands on its own", () => {
 describe("EnvironmentPanel", () => {
   const render = (floating: boolean, open: boolean) =>
     renderToStaticMarkup(
-      createElement(
-        EnvironmentPanel,
-        { label: "Anatomy", floating, open, onToggle: noop },
-        createElement("p", null, "inside"),
-      ),
+      <EnvironmentPanel label="Anatomy" floating={floating} open={open} onToggle={noop}>
+        <p>inside</p>
+      </EnvironmentPanel>,
     );
   const toggleText = (html: string) =>
     /aria-expanded="(true|false)"[^>]*><span>([^<]*)<\/span>/.exec(html)?.slice(1);

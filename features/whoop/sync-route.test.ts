@@ -97,7 +97,7 @@ await mockModuleForFile("@/infrastructure/database", {
 });
 
 type Collection = "recovery" | "cycle" | "sleep" | "workout";
-let responses: Record<Collection, { status: number; records: unknown[] }>;
+let responses: Record<Collection, { status: number; records: readonly unknown[] }>;
 
 const originalFetch = globalThis.fetch;
 const originalEnv = { ...process.env };

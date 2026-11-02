@@ -1,0 +1,24 @@
+// Type checking for test files (#436). tsconfig.json leaves them out so the
+// app typecheck stays fast; this config checks them with the same options.
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // Own cache, so the two checks do not overwrite each other's.
+    "tsBuildInfoFile": "tsconfig.test.tsbuildinfo"
+  },
+  // Bun's own types (bun:test, Bun, import.meta.dir) for the test runner,
+  // listed here only so app code does not see them.
+  "files": ["node_modules/bun-types/index.d.ts"],
+  // Test files and whatever they import. The vendored open-twin tests run
+  // under their own vitest setup and stay out, as in tsconfig.json.
+  "include": ["next-env.d.ts", "**/*.test.ts", "**/*.test.tsx"],
+  "exclude": [
+    "node_modules",
+    ".open-twin/**/tests",
+    ".open-twin/**/*.test.ts",
+    ".open-twin/**/vitest.config.ts",
+    ".open-twin/**/testSetup.ts",
+    ".open-twin/**/verification/**",
+    ".open-twin/**/scripts/**"
+  ]
+}

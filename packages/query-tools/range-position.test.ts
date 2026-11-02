@@ -105,6 +105,7 @@ const fakePorts = (rows: readonly FakeRow[] = FIXTURE) => {
   const queries: unknown[] = [];
   const ports: QueryToolPorts = {
     findSubject: async (subjectRef) => SUBJECTS[subjectRef] ?? null,
+    findCohortObservations: async () => [],
     findObservations: async (query) => {
       queries.push(query);
       return rows
@@ -250,7 +251,7 @@ describe("placeReading with stored sex and birth year (#4)", () => {
   const WITH_AGE = {
     age_years: [53, 54],
     age_note: AGE_NOTE,
-  };
+  } as const;
 
   test("HDL 42 mg/dL: below the women's range (≥ 45), within the men's (≥ 40)", () => {
     const reading = { value: 42, unitUcum: "mg/dL", effectiveAt: AT };
@@ -288,7 +289,7 @@ describe("placeReading with stored sex and birth year (#4)", () => {
       marker_id: "BM-140",
       range: null,
       position: null,
-      depends_on: ["sex"],
+      depends_on: ["sex"] as const,
       facts_used: null,
     };
     expect(placeReading(HDL, reading, { sex: "unknown", birthYear: 1970 })).toEqual(

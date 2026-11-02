@@ -179,7 +179,10 @@ describe("genome families", () => {
       switch (draft.family) {
         case "genome_variant":
         case "genome_variants":
-          expect(names).toEqual(["genome_report", ...asked.map(() => "dna_ask")]);
+          expect(names).toEqual([
+            "genome_report",
+            ...asked.map(() => "dna_ask" as const),
+          ]);
           for (const rsid of asked) {
             const genotype = genotypeAt(draft.ref, rsid);
             expect(genotype).not.toBeNull();

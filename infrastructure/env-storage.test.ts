@@ -4,6 +4,7 @@ import { homedir } from "node:os";
 import { anchorEnv, parseServerEnv, storageEnv, vaultEnv } from "./env";
 
 const BASE = {
+  NODE_ENV: "test",
   LOCAL_MVP: "true",
   AUTH_DISABLED: "true",
   LLM_PROVIDER: "ollama",

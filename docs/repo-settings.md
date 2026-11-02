@@ -35,8 +35,8 @@ no force push) and adds:
 - [ ] Code-owner approval; stale approvals dismissed on push; the last push approved by
       someone other than its author.
 - [ ] Review threads resolved before merge.
-- [ ] Required checks, up to date with `main`: `typecheck`, `build`, `lint`, `lint-claims`,
-      `test`, `test-isolation`, `prisma`, `gitleaks`, `ark-app`. The classic protection
+- [ ] Required checks, up to date with `main`: `typecheck`, `typecheck-tests`, `build`,
+      `lint`, `lint-claims`, `test`, `test-isolation`, `prisma`, `gitleaks`, `ark-app`. The classic protection
       lacks `build`, `test-isolation` and `ark-app`.
 - [ ] Signed commits on `main`. Squash merges made on GitHub are signed by GitHub; 24 of
       the last 30 commits on `main` already verify.

@@ -407,7 +407,7 @@ describe.skipIf(!runLive)("answer key against the cohort (RUN_LIVE=1)", () => {
     const onDisk = await cohortContentSha256(EVAL_FHIR_DIR);
     expect(onDisk).toBe(Reflect.get(manifest as object, "contentSha256"));
     expect(onDisk).toBe(key.cohort.content_sha256);
-    const ports = await realPorts(key.generated_on);
+    const ports = await realPorts(key.generated_on, key.cohort.id);
     // #145: the same gate the key builder asks; this database must hold synthetic subjects only.
     const { requireLearningConsent } = await import("../infrastructure/learning-consent");
     const { databaseLearningGate } =

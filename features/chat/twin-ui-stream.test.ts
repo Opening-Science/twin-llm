@@ -28,7 +28,12 @@ const run = async (chunks: readonly Chunk[]): Promise<Chunk[]> => {
       controller.close();
     },
   }).pipeThrough(withViewParts());
-  return Array.fromAsync(stream);
+  const reader = stream.getReader();
+  const read = async (done: readonly Chunk[]): Promise<Chunk[]> => {
+    const next = await reader.read();
+    return next.done ? [...done] : read([...done, next.value]);
+  };
+  return read([]);
 };
 
 describe("withViewParts", () => {

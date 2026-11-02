@@ -176,7 +176,10 @@ describe("POST /api/vitronic/upload/[connectionId]", () => {
       const res = await lockedPost(POST, CONNECTION_ID);
       answers.push([res.status, await res.json()]);
     }
-    const locked = [423, { error: "Your data is locked. Unlock it to continue." }];
+    const locked: [number, unknown] = [
+      423,
+      { error: "Your data is locked. Unlock it to continue." },
+    ];
     expect(answers).toEqual([locked, locked, locked, locked, locked]);
     expect(tools).toEqual([
       "vault.locked.skip.bodyloop-upload",

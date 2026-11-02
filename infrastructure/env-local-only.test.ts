@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { applyLocalOnlyDefaults, parseServerEnv } from "./env";
 
 const LOCAL_BASE = {
+  NODE_ENV: "test",
   LOCAL_ONLY: "true",
   LOCAL_MVP: "true",
   AUTH_DISABLED: "true",
@@ -31,23 +32,34 @@ describe("LOCAL_ONLY env", () => {
   });
 
   test("an empty LLM_PROVIDER also becomes ollama", () => {
-    expect(applyLocalOnlyDefaults({ LOCAL_ONLY: "true", LLM_PROVIDER: " " })).toEqual({
+    expect(
+      applyLocalOnlyDefaults({ NODE_ENV: "test", LOCAL_ONLY: "true", LLM_PROVIDER: " " }),
+    ).toEqual({
+      NODE_ENV: "test",
       LOCAL_ONLY: "true",
       LLM_PROVIDER: "ollama",
     });
   });
 
   test("leaves a named provider untouched", () => {
-    const source = { LOCAL_ONLY: "false", LLM_PROVIDER: "infomaniak" };
+    const source = {
+      NODE_ENV: "test",
+      LOCAL_ONLY: "false",
+      LLM_PROVIDER: "infomaniak",
+    } as const;
     expect(applyLocalOnlyDefaults(source)).toBe(source);
   });
 
   test("with LOCAL_ONLY off, no provider means exoscale, never infomaniak", () => {
-    expect(applyLocalOnlyDefaults({ LOCAL_ONLY: "false" })).toEqual({
+    expect(applyLocalOnlyDefaults({ NODE_ENV: "test", LOCAL_ONLY: "false" })).toEqual({
+      NODE_ENV: "test",
       LOCAL_ONLY: "false",
       LLM_PROVIDER: "exoscale",
     });
-    expect(applyLocalOnlyDefaults({})).toEqual({ LLM_PROVIDER: "exoscale" });
+    expect(applyLocalOnlyDefaults({ NODE_ENV: "test" })).toEqual({
+      NODE_ENV: "test",
+      LLM_PROVIDER: "exoscale",
+    });
     expect(
       parseServerEnv({
         ...LOCAL_BASE,

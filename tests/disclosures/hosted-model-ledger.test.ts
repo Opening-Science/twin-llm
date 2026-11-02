@@ -248,6 +248,7 @@ const starterCall = {
   system: "sys",
   prompt: "p",
   abortSignal: new AbortController().signal,
+  typed: [],
 };
 
 describe("starter questions through a hosted model", () => {

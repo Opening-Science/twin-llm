@@ -101,6 +101,7 @@ const recording = () => {
     findSubject: async () => {
       throw new Error("open_view must not query");
     },
+    findCohortObservations: async () => [],
     findObservations: async () => {
       throw new Error("open_view must not query");
     },

@@ -148,7 +148,7 @@ export const probePeerCertificate = (
           : reject(new TlsPinMismatchError()),
       );
     });
-    socket.once("error", (error) => settle(() => reject(error)));
+    socket.once("error", (error: Error) => settle(() => reject(error)));
     socket.once("close", () => settle(() => reject(new TlsPinMismatchError())));
   });
 

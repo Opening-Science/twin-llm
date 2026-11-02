@@ -7,14 +7,14 @@ import { askedMeasure, askedYears, measureCall } from "./asked-measure";
 import { keyEntry, line, refusalItem, SUBJECT_A, toolResult } from "./fixtures";
 import { scoreHallucination } from "./hallucination";
 import { narratedNumbers } from "./numbers";
-import { isAnswered } from "./types";
+import { isAnswered, type ScoreResult } from "./types";
 
 /**
  * S6-style turns where a model answers one measure with another code's value
  * (issue #30). Synthetic subject and values; the shapes follow the real tools.
  */
 
-const PASS = { score: "pass", reasons: [] };
+const PASS: ScoreResult = { score: "pass", reasons: [] };
 
 const item = (question: string): Question =>
   refusalItem("NONE", { id: "Q-S6-01", question, human: "Says the data is absent." });

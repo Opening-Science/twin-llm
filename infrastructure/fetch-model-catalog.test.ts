@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 
+import { asFetch } from "./as-fetch";
+
 mock.module("server-only", () => ({}));
 
 const originalEnv = { ...process.env };
@@ -37,7 +39,7 @@ afterEach(async () => {
 
 describe("Infomaniak allowlist", () => {
   test("200 with two ids uses the live list and caches", async () => {
-    globalThis.fetch = (async (input: RequestInfo | URL) => {
+    globalThis.fetch = asFetch(async (input: RequestInfo | URL) => {
       fetchCalls += 1;
       const url = input instanceof URL ? input.href : String(input);
       expect(url).toBe(
@@ -47,7 +49,7 @@ describe("Infomaniak allowlist", () => {
         status: 200,
         headers: { "Content-Type": "application/json" },
       });
-    }) as typeof fetch;
+    }, originalFetch);
 
     const { fetchActiveModelCatalog } = await import("./fetch-model-catalog");
     const first = await fetchActiveModelCatalog();
@@ -64,12 +66,12 @@ describe("Infomaniak allowlist", () => {
       warnings.push(args);
     });
     try {
-      globalThis.fetch = (async () => {
+      globalThis.fetch = asFetch(async () => {
         fetchCalls += 1;
         return new Response("sk-test-123 Bearer abc Tell me about my recovery.", {
           status: 500,
         });
-      }) as typeof fetch;
+      }, originalFetch);
 
       const { fetchActiveModelCatalog } = await import("./fetch-model-catalog");
       const catalog = await fetchActiveModelCatalog();

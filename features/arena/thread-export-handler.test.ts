@@ -3,7 +3,6 @@ import { describe, expect, test } from "bun:test";
 import type { Disclosure } from "@/infrastructure/disclosure-ledger";
 import type { AppendInput } from "@/packages/audit/append";
 
-import type { ResponseState } from "./conversation";
 import {
   createThreadExportHandler,
   EXPORT_NOT_RECORDED,
@@ -150,7 +149,8 @@ describe("createThreadExportHandler", () => {
                   note: null,
                 },
               ],
-            } as ResponseState,
+              metrics: null,
+            },
           ],
         },
       ],

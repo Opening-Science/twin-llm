@@ -1,5 +1,6 @@
 import type { AppendInput } from "@/packages/audit/append";
 
+import { asFetch } from "./as-fetch";
 import type { LlmProvider } from "./data-mode-policy";
 import {
   blocksSend,
@@ -235,15 +236,14 @@ export const bodyBytes = (body: unknown): number | null => {
  * rejects, the request is not made and the fetch rejects with the
  * recorder's error.
  */
-export const ledgeredFetch =
-  (
-    fetchFn: typeof fetch,
-    record: (payloadBytes: number | null, body: unknown) => Promise<unknown>,
-  ): typeof fetch =>
-  async (input, init) => {
+export const ledgeredFetch = (
+  fetchFn: typeof fetch,
+  record: (payloadBytes: number | null, body: unknown) => Promise<unknown>,
+): typeof fetch =>
+  asFetch(async (input, init) => {
     await record(bodyBytes(init?.body), init?.body);
     return fetchFn(input, init);
-  };
+  }, fetchFn);
 
 /** What the free text check of one request came to (#346). */
 export type FreeTextOutcome =

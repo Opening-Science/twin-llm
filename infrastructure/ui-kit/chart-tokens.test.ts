@@ -25,21 +25,27 @@ const CHART = ["chart-1", "chart-2", "chart-3", "chart-4", "chart-5"] as const;
 describe.each([":root", ".dark"])("chart tokens in %s", (scope) => {
   const card = token(scope, "card");
 
-  test.each(CHART)("%s clears 3:1 against the card and is a real sRGB colour", (name) => {
-    const colour = token(scope, name);
-    expect(inGamut(colour)).toBe(true);
-    expect(contrast(colour, card)).toBeGreaterThanOrEqual(3);
-  });
+  test.each([...CHART])(
+    "%s clears 3:1 against the card and is a real sRGB colour",
+    (name) => {
+      const colour = token(scope, name);
+      expect(inGamut(colour)).toBe(true);
+      expect(contrast(colour, card)).toBeGreaterThanOrEqual(3);
+    },
+  );
 
   // A grey accent (light mode's charcoal) has no hue to collide with; the
   // check matters where the accent is a colour, as the dark-mode blue is.
-  test.each(CHART)("%s hue sits at least 30° from a coloured accent's hue", (name) => {
-    const [, chroma, accent] = token(scope, "primary");
-    if (chroma < 0.02) return;
-    const hue = token(scope, name)[2];
-    const gap = Math.abs(hue - accent) % 360;
-    expect(Math.min(gap, 360 - gap)).toBeGreaterThanOrEqual(30);
-  });
+  test.each([...CHART])(
+    "%s hue sits at least 30° from a coloured accent's hue",
+    (name) => {
+      const [, chroma, accent] = token(scope, "primary");
+      if (chroma < 0.02) return;
+      const hue = token(scope, name)[2];
+      const gap = Math.abs(hue - accent) % 360;
+      expect(Math.min(gap, 360 - gap)).toBeGreaterThanOrEqual(30);
+    },
+  );
 
   test("no chart colour is the interactive accent", () => {
     const primary = token(scope, "primary");

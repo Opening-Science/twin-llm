@@ -1,12 +1,15 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  type ImportedDataPermitDecision,
+  type ImportedDataRefusalReason,
   type ImportedDataRequest,
   LLM_PROVIDERS,
   permitImportedDataRequest,
   permitImportedDataStore,
   permitProviderForRequest,
   PROVIDER_NOT_PERMITTED_ERROR,
+  type ProviderPermitDecision,
   type ProviderRequest,
 } from "./data-mode-policy";
 
@@ -16,13 +19,13 @@ const LOCAL: ImportedDataRequest = {
   chatOnLoopback: true,
 };
 
-const refusal = (reason: string) => ({
+const refusal = (reason: ImportedDataRefusalReason): ImportedDataPermitDecision => ({
   ok: false,
   code: "IMPORTED_DATA_NOT_PERMITTED",
   reason,
 });
 
-const NOT_PERMITTED = {
+const NOT_PERMITTED: ProviderPermitDecision = {
   ok: false,
   code: "PROVIDER_NOT_PERMITTED_FOR_DATA_MODE",
   error: PROVIDER_NOT_PERMITTED_ERROR,

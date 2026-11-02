@@ -66,6 +66,7 @@ describe("a refused answer on reload", () => {
         response: toSavedResponseState(
           refusedRow("r-2", PROVIDER_NOT_PERMITTED_SENTENCE),
         ),
+        prompt: "/sleep last 7 nights",
         wearables: { oura: null, whoop: null, googleHealth: null, vitronic: null },
         onRetry: () => {},
       }),

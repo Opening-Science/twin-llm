@@ -54,7 +54,7 @@ const okDatabase = (
   warehouse: readonly CohortRows[],
   evalBundles: BundleSet | null = null,
   evalClinical: ClinicalCounts | null = null,
-): DatabaseProbe => ({
+): Extract<DatabaseProbe, { kind: "ok" }> => ({
   kind: "ok",
   pgvector: true,
   serverMajor: 18,

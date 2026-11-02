@@ -9,6 +9,7 @@ import { createViewTools } from "./view-tools";
 import { createGbdTools } from "@/packages/gbd-mcp/ai-tools";
 import { createGuidelineTools } from "@/packages/guidelines/ai-tools";
 import { createKnowledgeTools } from "@/packages/knowledge/ai-tools";
+import { createLiveSourceTools } from "@/packages/live-sources/ai-tools";
 import { createQueryTools } from "@/packages/query-tools/ai-tools";
 
 /**
@@ -20,6 +21,7 @@ import { createQueryTools } from "@/packages/query-tools/ai-tools";
 
 const ports: QueryToolPorts = {
   findSubject: async () => null,
+  findCohortObservations: async () => [],
   findObservations: async () => [],
   appendAudit: async () => undefined,
 };
@@ -63,6 +65,7 @@ const spied = (): { factories: ChatToolFactories; calls: Calls } => {
     gbd: [],
     guidelines: [],
     knowledge: [],
+    live: [],
   };
   const spy =
     <A extends unknown[], R>(name: keyof Calls, factory: (...args: A) => R) =>
@@ -79,6 +82,7 @@ const spied = (): { factories: ChatToolFactories; calls: Calls } => {
       gbd: spy("gbd", createGbdTools),
       guidelines: spy("guidelines", createGuidelineTools),
       knowledge: spy("knowledge", createKnowledgeTools),
+      live: spy("live", createLiveSourceTools),
     },
   };
 };

@@ -1,11 +1,13 @@
 import { describe, expect, test } from "bun:test";
 
-import { timeseriesView } from "@/infrastructure/chat-view";
+import { timeseriesView, type ViewOf } from "@/infrastructure/chat-view";
 
 import { viewChart } from "./view-chart";
 
-const viewWith = (points: readonly { at: string; value: number }[]) =>
-  timeseriesView({
+const viewWith = (
+  points: readonly { at: string; value: number }[],
+): ViewOf<"chart.timeseries"> => {
+  const view = timeseriesView({
     spec: {
       measure: "8867-4",
       label: "Heart rate",
@@ -16,6 +18,9 @@ const viewWith = (points: readonly { at: string; value: number }[]) =>
     },
     sourceAuditIds: ["9"],
   });
+  if (view.kind !== "chart.timeseries") throw new Error("expected a time series view");
+  return view;
+};
 
 describe("viewChart", () => {
   test("keeps every reading at its own time, and the window is the x range", () => {

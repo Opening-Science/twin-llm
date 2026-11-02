@@ -119,12 +119,12 @@ const matchesWhere = (row: Row, where: Row): boolean => {
   return true;
 };
 
-const mockDb = () => ({
+const mockTables = () => ({
   subject: {
     findUnique: async ({ where }: { where: { subjectRef: string } }) =>
       store.subjects.get(where.subjectRef) ?? null,
     groupBy: async ({ where }: { where: { cohortId: { in: string[] } } }) =>
-      [...new Set([...store.subjects.values()].map((row) => row.cohortId))]
+      [...new Set([...store.subjects.values()].map((row) => String(row.cohortId)))]
         .filter((cohortId) => where.cohortId.in.includes(cohortId))
         .sort()
         .map((cohortId) => ({ cohortId })),
@@ -208,8 +208,16 @@ const mockDb = () => ({
     },
   },
   $executeRaw: async () => 0,
-  $transaction: async (fn: (tx: ReturnType<typeof mockDb>) => Promise<unknown>) =>
-    fn(mockDb()),
+});
+
+// Named, so `$transaction` can hand the callback a client of the same type.
+type MockDb = ReturnType<typeof mockTables> & {
+  $transaction: (fn: (tx: MockDb) => Promise<unknown>) => Promise<unknown>;
+};
+
+const mockDb = (): MockDb => ({
+  ...mockTables(),
+  $transaction: async (fn) => fn(mockDb()),
 });
 
 const mockModuleForFile = moduleMocker({ mock, afterAll });

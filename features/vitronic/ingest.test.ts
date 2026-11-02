@@ -161,7 +161,6 @@ describe("ingestVitronicForUser", () => {
         ...SYNTHETIC_INGEST_BODY,
         subjectId: "sub-self",
         glb,
-        glb,
         glbModelName: "avatar_3d.glb",
       },
       ports: testPorts(),

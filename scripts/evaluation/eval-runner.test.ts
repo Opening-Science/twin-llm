@@ -264,6 +264,7 @@ const fakeWarehouse = () => {
       subjectRef === IN_COHORT
         ? { isSynthetic: true, cohortId: "synthea-v4-seed42" }
         : null,
+    findCohortObservations: async () => [],
     findObservations: async () => [
       {
         loinc: HBA1C,
