@@ -263,7 +263,7 @@ describe("the Ultra number check (#414)", () => {
 });
 
 describe("starter questions (#414)", () => {
-  test("no typed text is passed, and a blocked request shows the refusal", async () => {
+  const starters = async (interest: string) => {
     const net = network();
     const ledger = book();
     const options: unknown[] = [];
@@ -271,30 +271,34 @@ describe("starter questions (#414)", () => {
       loadModelIds: async () => ["synthetic/model"],
       resolveModel: (_modelId, given) => {
         options.push(given);
-        return hostedModel(net, ledger.record, checkerFor([]));
+        return hostedModel(net, ledger.record, checkerFor(given.typed ?? []));
       },
       dataMode: () => "personal",
       recordSend: async () => undefined,
       generateText,
     })(true, "user_synthetic_1");
-    const context = {
-      roles: ["self-tracker" as const],
-      dataChoice: "own" as const,
-      interest: "what rs4988235 means for lactose",
-      connected: ["Oura"],
-    };
-    const result = await generateStarterQuestions(context, {
-      generate,
-      timeoutMs: 5000,
-      logError: () => undefined,
-    });
+    const result = await generateStarterQuestions(
+      { roles: ["self-tracker"], dataChoice: "own", interest, connected: ["Oura"] },
+      { generate, timeoutMs: 5000, logError: () => undefined },
+    );
+    return { net, ledger, options, result };
+  };
+
+  test("a stored value the person typed in their interest is not counted", async () => {
+    const interest = "why my cholesterol of 195 mg/dL moves with sleep";
+    const { net, ledger, options } = await starters(interest);
+    expect(net.requests.length).toBe(1);
+    expect(Reflect.get(Object(options[0]), "typed")).toEqual([interest]);
+    expect(freeTextOf(ledger.rows)).toEqual([[undefined, { matches: [] }]]);
+  });
+
+  test("an interest holding their rsID is not sent, and the refusal shows", async () => {
+    const { net, ledger, result } = await starters("what rs4988235 means for lactose");
     expect(net.requests).toEqual([]);
+    expect(freeTextOf(ledger.rows)).toEqual([
+      ["blocked", { matches: [{ kind: "rsID", count: 1 }] }],
+    ]);
     expect(result.source).toBe("fallback");
     expect(result.notice).toBe(GENOME_IDS_BLOCKED_SENTENCE);
-    expect(options.length).toBe(1);
-    expect(Object.keys(Object(options[0])).sort()).toEqual([
-      "disclosure",
-      "hasWearableNarrative",
-    ]);
   });
 });

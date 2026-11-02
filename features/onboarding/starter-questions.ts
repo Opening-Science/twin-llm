@@ -147,9 +147,20 @@ export type StarterResult = Readonly<{
   notice?: string;
 }>;
 
+/** `typed` is what the person wrote themselves: their interest, when given (#414). */
 export type StarterGenerate = (
-  input: Readonly<{ system: string; prompt: string; abortSignal: AbortSignal }>,
+  input: Readonly<{
+    system: string;
+    prompt: string;
+    abortSignal: AbortSignal;
+    typed: readonly string[];
+  }>,
 ) => Promise<string>;
+
+/** The person's own words in the starter prompt: the interest, when they wrote one. */
+export const starterTyped = (
+  context: Pick<StarterContext, "interest">,
+): readonly string[] => (context.interest.trim() === "" ? [] : [context.interest.trim()]);
 
 export type StarterDeps = Readonly<{
   generate: StarterGenerate;
@@ -177,6 +188,7 @@ export const generateStarterQuestions = async (
         system: STARTER_SYSTEM_PROMPT,
         prompt: buildStarterPrompt(context),
         abortSignal: controller.signal,
+        typed: starterTyped(context),
       }),
       timeout,
     ]);

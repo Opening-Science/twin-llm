@@ -10,6 +10,7 @@ import {
   parseStarterQuestions,
   type StarterContext,
   type StarterGenerate,
+  starterTyped,
 } from "./starter-questions";
 
 const context: StarterContext = {
@@ -84,7 +85,29 @@ describe("parseStarterQuestions", () => {
   });
 });
 
+describe("starterTyped (#414)", () => {
+  test("is the interest the person wrote, trimmed, or nothing", () => {
+    expect(starterTyped({ interest: "  sleep after runs " })).toEqual([
+      "sleep after runs",
+    ]);
+    expect(starterTyped({ interest: "   " })).toEqual([]);
+  });
+});
+
 describe("generateStarterQuestions", () => {
+  test("the generate call gets the interest as typed (#414)", async () => {
+    const typed: (readonly string[])[] = [];
+    await generateStarterQuestions(context, {
+      generate: async (input) => {
+        typed.push(input.typed);
+        return "How does my deep sleep change after long runs?";
+      },
+      timeoutMs: 1000,
+      logError: quietLog().logError,
+    });
+    expect(typed).toEqual([["sleep after hard training days"]]);
+  });
+
   test("model questions, topped up from the fixed ones", async () => {
     const seen: string[] = [];
     const generate: StarterGenerate = async ({ prompt }) => {

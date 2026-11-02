@@ -666,7 +666,7 @@ recipient.
   a whole phrase, ignoring case and spacing. A stored value that also stands in what the
   person typed in the call's messages (`typed`: the `user` messages of a chat turn and of
   its Ultra number check, and the questions of a thread a `/compact` draft summarises;
-  starter questions pass none, #414) is not counted: they sent it themselves, even where an answer repeats it. Names, file
+  starter questions the interest the person wrote, #414) is not counted: they sent it themselves, even where an answer repeats it. Names, file
   names and genome identifiers are counted wherever they stand, as before. These four
   kinds are record-only: they are the person's values, not identifiers, so option C
   (#356) does not apply. Wearable numbers are not searched: a bare number such as a

@@ -3,9 +3,30 @@ import { describe, expect, test } from "bun:test";
 import { createStarterGenerate, starterDisclosure } from "./starter-generate";
 import { createStarterQuestionsHandler } from "./starter-handler";
 
-const call = { system: "sys", prompt: "p", abortSignal: new AbortController().signal };
+const call = {
+  system: "sys",
+  prompt: "p",
+  abortSignal: new AbortController().signal,
+  typed: ["sleep after hard training days"],
+};
 
 describe("createStarterGenerate", () => {
+  test("the model gets the person's own words as typed (#414)", async () => {
+    const typed: unknown[] = [];
+    const generate = createStarterGenerate({
+      dataMode: () => "personal",
+      loadModelIds: async () => ["synthetic/model"],
+      resolveModel: (modelId, options) => {
+        typed.push(options.typed);
+        return modelId;
+      },
+      recordSend: async () => undefined,
+      generateText: async () => ({ text: "ok" }),
+    });
+    await generate(true, "user_synthetic_1")(call);
+    expect(typed).toEqual([["sleep after hard training days"]]);
+  });
+
   test("the model is resolved with what the request carries, for the disclosure ledger (#140)", async () => {
     const seen: unknown[] = [];
     const generate = createStarterGenerate({
