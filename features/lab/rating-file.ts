@@ -55,9 +55,10 @@ export const emptyRatingFile = (
   rater: string,
   orderSeed: string,
   now: string,
+  rubric: string = RUBRIC_VERSION,
 ): RatingFile => ({
   schema_version: RATINGS_SCHEMA_VERSION,
-  rubric: RUBRIC_VERSION,
+  rubric,
   run_id: runId,
   rater,
   order_seed: orderSeed,
@@ -122,9 +123,10 @@ export type RatingsExport = Readonly<{
 export const ratingsExport = (
   rater: string,
   files: readonly RatingFile[],
+  rubric: string = RUBRIC_VERSION,
 ): RatingsExport => ({
   schema_version: RATINGS_EXPORT_SCHEMA_VERSION,
   rater,
-  rubric: RUBRIC_VERSION,
+  rubric,
   files: [...files].sort((a, b) => a.run_id.localeCompare(b.run_id)),
 });

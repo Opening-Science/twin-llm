@@ -20,7 +20,11 @@
  * formula gives 0, which is not a real certainty: the interval is null.
  */
 import { lineToken } from "../../features/lab/rater-lines";
-import { isAcceptable } from "../../features/lab/rater-rubric";
+import {
+  isAcceptable,
+  type RatedSet,
+  ratedSetOfRubric,
+} from "../../features/lab/rater-rubric";
 
 const Z_95 = 1.959963984540054;
 
@@ -203,3 +207,26 @@ export const answerIdRows = (
       repeat: line.repeat,
     }))
     .sort((a, b) => a.id.localeCompare(b.id));
+
+/**
+ * The runs grouped by question set (#304), sets in the order they first
+ * appear and runs in the order given, so agreement is never pooled across
+ * sets whose rubrics differ.
+ */
+export const groupBySet = <T extends Readonly<{ set: string }>>(
+  runs: readonly T[],
+): [string, T[]][] =>
+  [...new Set(runs.map((run) => run.set))].map((set) => [
+    set,
+    runs.filter((run) => run.set === set),
+  ]);
+
+/**
+ * The rated set a ratings file belongs in a run of `set`: the set itself when
+ * the file's rubric is that set's rubric, otherwise null (the file is left
+ * out: its levels mean something else, or the set is not rated at all).
+ */
+export const ratedSetForFile = (set: string, rubric: string): RatedSet | null => {
+  const rated = ratedSetOfRubric(rubric);
+  return rated !== null && rated === set ? rated : null;
+};

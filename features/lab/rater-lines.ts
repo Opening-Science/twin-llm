@@ -5,8 +5,8 @@ import { formatNumber } from "@/infrastructure/format-measure";
 import { lineKey, type LineRating } from "./rating-file";
 
 /**
- * The answers a second rater sees (#351), built from evaluation runs of the
- * hb set. Pure, server side (it hashes with node:crypto).
+ * The answers a second rater sees (#351), built from evaluation runs of one
+ * rated set (hb or v1h, #304). Pure, server side (it hashes with node:crypto).
  *
  * Blind by construction: a `BlindLine`, the only shape sent to the browser,
  * carries the question, the reply, the reference and an opaque token. No run
@@ -31,6 +31,8 @@ export type RaterItem = Readonly<{
   id: string;
   question: string;
   human?: string | undefined;
+  /** The item's `expect.answer_class`, which tells a decline from a lookup. */
+  answerClass?: string | undefined;
 }>;
 
 export type RaterKeyEntry = Readonly<{
@@ -38,6 +40,14 @@ export type RaterKeyEntry = Readonly<{
   value: number | string | null;
   refusal: string | null;
 }>;
+
+/**
+ * What the reference rests on: keyed values (or a tool's refusal), no keyed
+ * value because the item should be declined, or no keyed value because the
+ * item is a lookup the key does not hold (a v1h guideline or population
+ * question), rated on its note.
+ */
+export type ReferenceKind = "keyed" | "decline" | "unkeyed";
 
 /** A line as the server keeps it: where it came from, and what the rater sees. */
 export type RaterLine = Readonly<{
@@ -48,6 +58,7 @@ export type RaterLine = Readonly<{
   question: string;
   answer: string;
   reference: readonly string[];
+  referenceKind: ReferenceKind;
   note: string | null;
 }>;
 
@@ -57,6 +68,7 @@ export type BlindLine = Readonly<{
   question: string;
   answer: string;
   reference: readonly string[];
+  referenceKind: ReferenceKind;
   note: string | null;
   level: number | null;
   comment: string;
@@ -114,6 +126,23 @@ export const referenceLines = (entries: readonly RaterKeyEntry[]): string[] =>
     return `${name.charAt(0).toUpperCase()}${name.slice(1)}: ${valueText(entry.value)}`;
   });
 
+const DECLINE_CLASS = "declined_decision_support";
+
+/**
+ * Keyed when the key has entries for the item; otherwise a decline when the
+ * item expects one or no answer class is given (every unkeyed hb item is a
+ * decline), and unkeyed for any other answer class.
+ */
+export const referenceKindOf = (
+  entries: readonly RaterKeyEntry[],
+  answerClass: string | undefined,
+): ReferenceKind =>
+  entries.length > 0
+    ? "keyed"
+    : answerClass === undefined || answerClass === DECLINE_CLASS
+      ? "decline"
+      : "unkeyed";
+
 /** Every answered line of every run, with its question and reference, unordered. */
 export const raterLines = (
   runs: readonly RunLines[],
@@ -126,6 +155,7 @@ export const raterLines = (
     run.lines.flatMap((line) => {
       const item = byId.get(line.item_id);
       if (item === undefined || line.error !== null || line.text === null) return [];
+      const entries = key[line.item_id] ?? [];
       return [
         {
           token: lineToken(salt, run.runId, line.item_id, line.repeat),
@@ -134,7 +164,8 @@ export const raterLines = (
           repeat: line.repeat,
           question: item.question,
           answer: line.text,
-          reference: referenceLines(key[line.item_id] ?? []),
+          reference: referenceLines(entries),
+          referenceKind: referenceKindOf(entries, item.answerClass),
           note: item.human ?? null,
         },
       ];
@@ -161,6 +192,7 @@ export const blindLines = (
       question: line.question,
       answer: line.answer,
       reference: line.reference,
+      referenceKind: line.referenceKind,
       note: line.note,
       level: rating?.level ?? null,
       comment: rating?.comment ?? "",
