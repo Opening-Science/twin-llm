@@ -143,6 +143,8 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run db:generate
       - run: bun run db:verify
+      # The RUN_LIVE=1 tests that need only this database (#430); fails if any is skipped.
+      - run: bun run test:live-db
 
   gitleaks:
     runs-on: ubuntu-latest

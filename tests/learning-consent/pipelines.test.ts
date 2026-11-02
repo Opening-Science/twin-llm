@@ -128,6 +128,8 @@ const NOT_LEARNING: Readonly<Record<string, string>> = {
   "format:check": TOOLING,
   test: TOOLING,
   "test:isolation": TOOLING,
+  "test:live-db":
+    "runs the live database tests on a throwaway database with their own synthetic rows; no learning",
   postinstall: TOOLING,
   prepare: TOOLING,
   "db:generate": DB,
