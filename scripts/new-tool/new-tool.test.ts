@@ -134,6 +134,7 @@ describe("scaffoldTool", () => {
         '      "coverage",',
         '      "gbd_estimate",',
         '      "gbd_population",',
+        '      "gbd_profile",',
         '      "range_position",',
         '      "resting_hr_drift",',
         '      "rhythm_irregularity",',

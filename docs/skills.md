@@ -239,6 +239,21 @@ has a condition, a hosted provider, views they may not draw and, for `/rhythm`, 
 simulated recording, and for `/brain`, a cohort question. `/brain` does not list `rhythm_irregularity`: its role does not
 cover heart rhythm.
 
+## /profile
+
+`skills/profile` (#403) builds a GBD location or cause profile from the IHME estimates
+imported on this machine: `/profile Switzerland`, `/profile cause Cardiovascular
+diseases`. Its one tool, `gbd_profile`, runs a fixed sequence of audited `gbd_estimate`
+calls and draws the sections itself as tables, a ranked list and a map
+([gbd.md](gbd.md), "Profiles"); the model writes one short paragraph per section from
+the rows the tool gives, healthy life expectancy and life expectancy first, and deaths
+only when the question asks. A section that is not imported is said in one sentence,
+with no number. It lists `wearable-context` only so that a turn with a linked wearable is
+not refused. Local Ollama only. The eval cases cover a location, a cause, deaths when
+asked, World with a linked wearable, a place and a cause together, tools and views it may
+not use, and a hosted provider. Without imported estimates the turn has no tool and the
+skill says how to import them.
+
 ## Built-in commands
 
 Built-ins live in `features/commands/registry.ts`. A skill may not take a built-in's name.

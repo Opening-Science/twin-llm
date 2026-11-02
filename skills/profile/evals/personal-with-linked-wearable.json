@@ -1,0 +1,9 @@
+{
+  "question": "World",
+  "dataMode": "personal",
+  "wearableContext": true,
+  "script": [
+    { "tool": "gbd_profile", "input": { "kind": "location", "location": "World" } }
+  ],
+  "expect": { "calls": ["gbd_profile"], "views": [], "refusals": [] }
+}

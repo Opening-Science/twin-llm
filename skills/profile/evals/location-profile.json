@@ -1,0 +1,7 @@
+{
+  "question": "Switzerland",
+  "script": [
+    { "tool": "gbd_profile", "input": { "kind": "location", "location": "Switzerland" } }
+  ],
+  "expect": { "calls": ["gbd_profile"], "views": [], "refusals": [] }
+}

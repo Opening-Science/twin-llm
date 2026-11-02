@@ -59,6 +59,28 @@ describe("withViewParts", () => {
     ]);
   });
 
+  test("a gbd_profile output adds one data-view part per view (#403)", async () => {
+    const other = { ...view, id: "view-8", sourceAuditIds: ["8"] };
+    const chunks: Chunk[] = [
+      {
+        type: "tool-input-available",
+        toolCallId: "c4",
+        toolName: "gbd_profile",
+        input: {},
+      },
+      {
+        type: "tool-output-available",
+        toolCallId: "c4",
+        output: { views: [view, other] },
+      },
+    ];
+    expect(await run(chunks)).toEqual([
+      ...chunks,
+      { type: "data-view", id: "view-7", data: view },
+      { type: "data-view", id: "view-8", data: other },
+    ]);
+  });
+
   test("other tools and show_view refusals add nothing", async () => {
     const chunks: Chunk[] = [
       { type: "tool-input-available", toolCallId: "c1", toolName: "trend", input: {} },

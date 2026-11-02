@@ -12,6 +12,7 @@ import type { WearableSummaries } from "@/infrastructure/offered-keys";
 import { type TurnSkill, withSkillTools } from "@/infrastructure/skill-gate";
 
 import { createGbdEstimateTool } from "@/packages/gbd-local/ai-tools";
+import { GBD_PROFILE_TOOL } from "@/packages/gbd-local/constants";
 import { createGbdTools } from "@/packages/gbd-mcp/ai-tools";
 import { createGuidelineTools } from "@/packages/guidelines/ai-tools";
 import { createKnowledgeTools } from "@/packages/knowledge/ai-tools";
@@ -33,6 +34,7 @@ import {
   type GenomeToolDeps,
 } from "./genome-tools";
 import { createEstimateLedger, recordEstimates } from "./estimate-ledger";
+import { createGbdProfileTool } from "./gbd-profile-tool";
 import { loadThreadViews } from "./load-thread-views";
 import { createShowViewTool } from "./show-view-tool";
 import { createViewTools, type ViewToolDeps } from "./view-tools";
@@ -167,6 +169,12 @@ export const createChatTools = (
      * imported (`gbd-local-tool-deps.ts`). Left out, no `gbd_estimate`.
      */
     gbdLocal?: GbdEstimatePorts;
+    /**
+     * A skill's `tools`. `gbd_profile` (#403) is built only when they list
+     * it and estimates are imported, so a turn without that skill never
+     * carries its definition.
+     */
+    skillTools?: readonly string[];
   }>,
 ) => {
   const make = options?.factories ?? CHAT_TOOL_FACTORIES;
@@ -197,6 +205,10 @@ export const createChatTools = (
       : mcpServerPermitted("gbd", scope, hasWearableNarrative)
         ? recordEstimates(make.gbd(scope), estimates)
         : {}),
+    ...(options?.gbdLocal !== undefined &&
+    options.skillTools?.includes(GBD_PROFILE_TOOL) === true
+      ? createGbdProfileTool({ scope, ports: options.gbdLocal, views: options.views })
+      : {}),
     ...make.guidelines(scope),
     ...make.knowledge(scope, undefined, literatureSourcesForAgent(options?.agent)),
     ...(options?.genome !== undefined && scope.mode === "personal"
@@ -256,7 +268,7 @@ type ChatToolOptions = NonNullable<Parameters<typeof createChatTools>[1]>;
  */
 export const createTurnTools = (
   scope: SessionScope,
-  options: Omit<ChatToolOptions, "views" | "sources">,
+  options: Omit<ChatToolOptions, "views" | "sources" | "skillTools">,
   skill: TurnSkill | null,
 ): Readonly<{ tools: ToolSet; offeredTools: ReadonlySet<string> }> =>
   forSkill(
@@ -265,6 +277,7 @@ export const createTurnTools = (
         ...options,
         views: skill?.views,
         sources: skill?.sources,
+        skillTools: skill?.tools,
       }),
       options.disabledSources ?? [],
     ).tools,

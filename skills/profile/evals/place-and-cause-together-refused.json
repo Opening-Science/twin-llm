@@ -1,0 +1,14 @@
+{
+  "question": "Switzerland and diabetes",
+  "script": [
+    {
+      "tool": "gbd_profile",
+      "input": {
+        "kind": "location",
+        "location": "Switzerland",
+        "cause": "Diabetes mellitus"
+      }
+    }
+  ],
+  "expect": { "calls": [], "views": [], "refusals": ["invalid-tool-input"] }
+}

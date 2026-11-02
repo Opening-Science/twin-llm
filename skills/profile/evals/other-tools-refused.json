@@ -1,0 +1,23 @@
+{
+  "question": "Switzerland",
+  "script": [
+    {
+      "tool": "gbd_estimate",
+      "input": {
+        "measure": "hale",
+        "metric": "years",
+        "sex": "both",
+        "age": "at_birth",
+        "locations": ["CHE"],
+        "years": [2023]
+      }
+    },
+    { "tool": "knowledge_search", "input": { "query": "healthy life expectancy" } },
+    { "view": "chart.timeseries" }
+  ],
+  "expect": {
+    "calls": [],
+    "views": [],
+    "refusals": ["tool-not-allowed", "view-not-allowed"]
+  }
+}

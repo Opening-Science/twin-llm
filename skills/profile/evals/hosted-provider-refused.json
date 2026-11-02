@@ -1,0 +1,8 @@
+{
+  "question": "Switzerland",
+  "provider": "openrouter",
+  "script": [
+    { "tool": "gbd_profile", "input": { "kind": "location", "location": "Switzerland" } }
+  ],
+  "expect": { "calls": [], "views": [], "refusals": ["provider-not-allowed-by-skill"] }
+}

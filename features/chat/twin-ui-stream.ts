@@ -6,7 +6,7 @@ import {
 
 import {
   DATA_VIEW_PART,
-  toChatView,
+  toChatViews,
   VIEW_OUTPUT_TOOLS,
 } from "@/infrastructure/chat-view";
 import type {
@@ -28,7 +28,8 @@ type Chunk = InferUIMessageChunk<ChatUIMessage>;
 
 /**
  * Passes every chunk on and, after a `show_view` or `open_view` call's output,
- * adds a `data-view` part with the view it returned. The view is built on the
+ * adds a `data-view` part with the view it returned (one per view for
+ * `gbd_profile`, #403). The view is built on the
  * server from audited rows (`show-view-tool.ts`) or read back from the thread
  * (`view-tools.ts`); this only forwards it. A refusal is not a view, so it adds
  * nothing.
@@ -47,8 +48,9 @@ export const withViewParts = (): TransformStream<Chunk, Chunk> => {
       }
       if (chunk.type !== "tool-output-available") return;
       if (!viewCalls.has(chunk.toolCallId)) return;
-      const view = toChatView(chunk.output);
-      if (view) controller.enqueue({ type: DATA_VIEW_PART, id: view.id, data: view });
+      for (const view of toChatViews(chunk.output)) {
+        controller.enqueue({ type: DATA_VIEW_PART, id: view.id, data: view });
+      }
     },
   });
 };
