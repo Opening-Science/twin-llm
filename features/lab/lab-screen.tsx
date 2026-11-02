@@ -1,7 +1,9 @@
 import { type ReactNode } from "react";
 
 import { CheckCard } from "./check-card";
+import { JobLines } from "./job-lines";
 import { type LabSection } from "./lab-check";
+import { type LabJob } from "./lab-jobs";
 
 /**
  * `/lab`: what runs on this machine, checked (Verifiability), simulated
@@ -17,13 +19,14 @@ export type LabPageSection = Readonly<{
   body: ReactNode;
 }>;
 
-/** The Verifiability checks as a page section. */
-export const checksSection = (section: LabSection): LabPageSection => ({
+/** The Verifiability checks as a page section, with how long they took. */
+export const checksSection = (section: LabSection, job: LabJob): LabPageSection => ({
   id: section.id,
   title: section.title,
   intro: section.intro,
   body: (
     <div className="flex flex-col gap-4">
+      <JobLines jobs={[job]} refresh={false} />
       {section.checks.map((check) => (
         <CheckCard key={check.id} check={check} />
       ))}
