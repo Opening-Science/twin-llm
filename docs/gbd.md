@@ -245,8 +245,9 @@ A location profile, in this order:
    profile's year.
 2. Life expectancy at birth, the same way.
 3. The trend of both for the place, when more than one year is imported.
-4. Top causes of DALYs: one call per imported cause (All causes left out, at
-   most 40 by name), age-standardised rate in the profile's year, ranked.
+4. Top causes of DALYs: one call per imported level 2 cause (at most 40 by
+   name), age-standardised rate in the profile's year, ranked. See "Cause
+   levels" below.
 5. HALE for the units inside the place (`children_of` the place), else for its
    neighbours (`children_of` its parent), for the map.
 6. With `deaths: true` only: top causes of deaths, as for DALYs.
@@ -268,6 +269,40 @@ imported."); it never fails the profile. The model gets each section's
 title, status, note and up to 10 rounded rows, and writes the prose from
 them. Like `gbd_estimate`, the profile is reference material: its rows never
 make an answer `sufficient_data`.
+
+#### Cause levels (#409)
+
+GBD causes form a hierarchy: All causes (level 0); level 1, the three groups
+(communicable, maternal, neonatal and nutritional diseases; non-communicable
+diseases; injuries); level 2, such as cardiovascular diseases or neoplasms;
+then levels 3 and 4. A parent's estimate includes its children's, so ranking
+causes of different levels against each other would put a parent above its own
+children. A location profile ranks only causes at one level, level 2 by
+default (`PROFILE_CAUSE_LEVEL`; `rankableCauses(causes, level)` takes another).
+Causes at other levels are left out and counted in the section's note. A
+cause whose id the table below does not hold has no known level: it is never
+ranked, and the note names it ("Not ranked, level in the GBD cause hierarchy
+not known: ...", the first 10 by name). Levels are matched by cause id, which
+every "Both" export carries.
+
+`packages/gbd-local/cause-table.ts` holds each cause id with its parent, level
+and name; `packages/gbd-local/causes.ts` reads it. `scripts/gbd/build-cause-table.ts`
+builds it from `cause.py` of IHME's public, BSD-3-Clause `vivarium-gbd-mapping`
+package at a pinned commit
+([ihmeuw/vivarium-suite, `libs/gbd-mapping/src/vivarium/gbd_mapping/cause.py`](https://github.com/ihmeuw/vivarium-suite/blob/61376fb6da915e10c7bcc82e2145a2fbe6c2b0b9/libs/gbd-mapping/src/vivarium/gbd_mapping/cause.py)),
+which its changelog says was updated for GBD 2023 (5.0.0). The GBD 2023 cause
+hierarchy file on the GHDx needs a sign-in, so it is not used. The script
+checks that each cause has a parent one level up and stops otherwise.
+
+- 395 causes: All causes, 8 at level 1, 22 at level 2, 178 at level 3 and 186
+  at level 4. Five of the level 1 entries are IHME aggregates outside the
+  three groups (total cancers, total cancers excluding non-melanoma skin
+  cancer, and total burden related to hepatitis B, hepatitis C and NAFLD);
+  they are never level 2, so they are not ranked by default.
+- Names are the package's snake_case keys (`cardiovascular_diseases`), not
+  IHME's display names; the profile shows the imported name.
+- Ids, parents, levels and names only, no estimates. A cause the package does
+  not list is of unknown level; nothing is guessed.
 
 The tool is built only for a turn whose skill lists it and only when
 estimates are imported (`createChatTools`, `skillTools`), so other turns

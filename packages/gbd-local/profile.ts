@@ -13,6 +13,7 @@ import type { GbdEstimateResult } from "@/packages/query-tools/gbd-estimate";
 import type { GbdEstimateInput } from "@/packages/query-tools/gbd-estimate-schema";
 import type { GbdRefusal } from "@/packages/query-tools/gbd-refusals";
 
+import { gbdCauseLevel } from "./causes";
 import { GBD_LAST_YEAR, GBD_LOCAL_ATTRIBUTION } from "./constants";
 import { GBD_GLOBAL_ID, type GbdNamed } from "./estimate-rows";
 
@@ -23,6 +24,12 @@ export const PROFILE_YEARS: readonly number[] = [
 
 /** Causes a location profile ranks, by name; more are left out and said so. */
 export const PROFILE_CAUSE_CAP = 40;
+
+/** The level of the GBD cause hierarchy a location profile ranks by default (#409). */
+export const PROFILE_CAUSE_LEVEL = 2;
+
+/** Causes of unknown level a section names before it says how many more there are. */
+const UNKNOWN_LISTED = 10;
 
 /** Rows of a ranked list. */
 export const PROFILE_RANK_TOP = 10;
@@ -145,14 +152,52 @@ export const latestYear = (
   return years.length === 0 ? null : Math.max(...years);
 };
 
-/** The causes a location profile ranks: imported, not All causes, by name, capped. */
+/**
+ * The causes a location profile ranks, chosen from the imported ones (#409).
+ * Only causes at one level of the GBD cause hierarchy are ranked against each
+ * other, so a parent never outranks its own children. A cause whose id the
+ * cause table does not hold has no known level: it is listed by name in
+ * `unknown`, never ranked. All causes (level 0) is never ranked.
+ */
+export type RankableCauses = Readonly<{
+  level: number;
+  /** Causes at `level`, by name, capped at `PROFILE_CAUSE_CAP`. */
+  names: readonly string[];
+  /** Imported causes at `level`, before the cap. */
+  total: number;
+  /** Imported causes of a known level other than `level` (All causes aside), left out. */
+  otherLevels: number;
+  /** Imported causes of unknown level, by name. */
+  unknown: readonly string[];
+}>;
+
+const byName = (names: readonly string[]): readonly string[] =>
+  [...new Set(names)].sort((a, b) => a.localeCompare(b, "en"));
+
 export const rankableCauses = (
   causes: readonly GbdNamed[],
-): Readonly<{ names: readonly string[]; total: number }> => {
-  const names = [
-    ...new Set(causes.map((cause) => cause.name).filter((name) => name !== ALL_CAUSES)),
-  ].sort((a, b) => a.localeCompare(b, "en"));
-  return { names: names.slice(0, PROFILE_CAUSE_CAP), total: names.length };
+  level: number = PROFILE_CAUSE_LEVEL,
+): RankableCauses => {
+  const listed = causes
+    .filter((cause) => cause.name !== ALL_CAUSES)
+    .map((cause) => ({ name: cause.name, level: gbdCauseLevel(cause.id) }))
+    .filter((cause) => cause.level !== 0);
+  const names = byName(
+    listed.filter((cause) => cause.level === level).map((cause) => cause.name),
+  );
+  return {
+    level,
+    names: names.slice(0, PROFILE_CAUSE_CAP),
+    total: names.length,
+    otherLevels: byName(
+      listed
+        .filter((cause) => cause.level !== null && cause.level !== level)
+        .map((cause) => cause.name),
+    ).length,
+    unknown: byName(
+      listed.filter((cause) => cause.level === null).map((cause) => cause.name),
+    ),
+  };
 };
 
 /** One call per cause: an age-standardised rate in one place and year. */
@@ -361,37 +406,53 @@ const ranking = (rows: readonly ProfileRow[]): readonly ProfileRow[] =>
     .sort((a, b) => b.value - a.value || a.label.localeCompare(b.label, "en"))
     .slice(0, PROFILE_RANK_TOP);
 
+/** `Not ranked, level in the GBD cause hierarchy not known: A, B.` or null. */
+const unknownLevelNote = (unknown: readonly string[]): string | null => {
+  if (unknown.length === 0) return null;
+  const shown = unknown.slice(0, UNKNOWN_LISTED).join(", ");
+  const more = unknown.length - UNKNOWN_LISTED;
+  return `Not ranked, level in the GBD cause hierarchy not known: ${shown}${more > 0 ? ` and ${more} more` : ""}.`;
+};
+
 const causeRankSection = (
   id: "top_dalys" | "top_deaths",
   measureName: string,
   place: ProfilePlace,
   year: number | null,
   causeCalls: readonly ProfileCall[],
-  causes: Readonly<{ names: readonly string[]; total: number }>,
+  causes: RankableCauses,
 ): ProfileSection => {
   const rows = causeCalls.flatMap((call) =>
     rowsOf(call).map((row) =>
       toRow(isEstimate(call.result) ? (call.result.cause ?? "") : "", row),
     ),
   );
-  const cut =
+  const notes = [
     causes.total > causes.names.length
-      ? `Ranked among the first ${causes.names.length} of ${causes.total} imported causes by name.`
-      : null;
+      ? `Ranked among the first ${causes.names.length} of ${causes.total} imported level ${causes.level} causes by name.`
+      : null,
+    causes.otherLevels > 0
+      ? `${causes.otherLevels} imported ${causes.otherLevels === 1 ? "cause" : "causes"} at other levels left out.`
+      : null,
+    unknownLevelNote(causes.unknown),
+  ].filter((note): note is string => note !== null);
+  const missing =
+    causes.names.length === 0
+      ? `No level ${causes.level} causes are imported, so top causes of ${measureName} are not shown.`
+      : `Age-standardised ${id === "top_dalys" ? "DALY" : "death"} rates by cause for ${place.name}${year === null ? "" : ` in ${year}`} are not imported.`;
+  const unknown = unknownLevelNote(causes.unknown);
   return section(
     {
       id,
-      title: `Top causes of ${measureName}${year === null ? "" : `, ${year}`}: ${place.name}, rate per 100,000, age-standardised`,
+      title: `Top level ${causes.level} causes of ${measureName}${year === null ? "" : `, ${year}`}: ${place.name}, rate per 100,000, age-standardised`,
       rowLabel: "Cause",
       unit: unitOf(causeCalls),
       ranked: true,
       rows: ranking(rows),
       auditIds: auditIdsOf(causeCalls),
-      note: cut,
+      note: notes.length === 0 ? null : notes.join(" "),
     },
-    causes.names.length === 0
-      ? `No causes other than All causes are imported, so top causes of ${measureName} are not shown.`
-      : `Age-standardised ${id === "top_dalys" ? "DALY" : "death"} rates by cause for ${place.name}${year === null ? "" : ` in ${year}`} are not imported.`,
+    unknown === null ? missing : `${missing} ${unknown}`,
   );
 };
 
@@ -426,7 +487,7 @@ export type LocationCalls = Readonly<{
   hale: ProfileCall | null;
   lifeExpectancy: ProfileCall | null;
   year: number | null;
-  causes: Readonly<{ names: readonly string[]; total: number }>;
+  causes: RankableCauses;
   dalys: readonly ProfileCall[];
   /** Left out unless deaths were asked for. */
   deaths?: readonly ProfileCall[];
