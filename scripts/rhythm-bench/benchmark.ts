@@ -22,6 +22,7 @@ import { type Distance, distances } from "./distance";
 import { type RhythmChange } from "./mit-annotations";
 import { intervalsOf, perturbBeats } from "./perturb";
 import { type RealNoiseLevel, realNoiseLevels, type RealNoiseRow } from "./real-noise";
+import { quantiseIntervals } from "./rr-grid";
 import {
   cellId,
   type GridCell,
@@ -65,6 +66,13 @@ export type BenchmarkOptions = Readonly<{
    * independent, and keeps the run id of runs from before the option.
    */
   afDependence?: AfDependence;
+  /**
+   * Put simulated intervals on this sampling grid, ms, as the database
+   * intervals are (#418): 4 for 250 Hz, 7.8125 for 128 Hz. Left out or 0
+   * means whole ms as simulated, and keeps the run id of runs from before
+   * the option.
+   */
+  rrGridMs?: number;
 }>;
 
 /**
@@ -80,6 +88,7 @@ export const simulateCellWindows = (
   cell: GridCell,
   seed: number,
   afDependence: AfDependence = "independent",
+  rrGridMs = 0,
 ): SimWindowRow[] => {
   const recording = simulateRecording(recordingConfigForCell(cell, seed, afDependence));
   const perturbed = perturbBeats(
@@ -87,7 +96,7 @@ export const simulateCellWindows = (
     cell.noise,
     randomFor(recordingSeed(cell, seed), `perturb:${cell.noise.id}`),
   );
-  const rr = intervalsOf(perturbed.beatTimesMs);
+  const rr = quantiseIntervals(intervalsOf(perturbed.beatTimesMs), rrGridMs);
   return labelledWindows(
     `${cellId(cell)}|${seed}`,
     rr,
@@ -107,7 +116,7 @@ export const simulateCellWindows = (
 export const simulatedWindows = (options: BenchmarkOptions): SimWindowRow[] =>
   gridCells(options.grid).flatMap((cell) =>
     Array.from({ length: options.seeds }, (_, seed) =>
-      simulateCellWindows(cell, seed, options.afDependence),
+      simulateCellWindows(cell, seed, options.afDependence, options.rrGridMs),
     ).flat(),
   );
 
@@ -203,6 +212,8 @@ export type BenchmarkResult = Readonly<{
     grid: GridOptions;
     realNoise: boolean;
     afDependence: AfDependence;
+    /** Sampling grid of the simulated intervals, ms; 0 is whole ms as simulated (#418). */
+    rrGridMs: number;
     windowBeats: number;
     afWindowRule: string;
   }>;
@@ -330,6 +341,7 @@ export const runBenchmark = (inputs: BenchmarkInputs): BenchmarkData => {
         grid: options.grid,
         realNoise: realNoise !== null,
         afDependence: options.afDependence ?? "independent",
+        rrGridMs: options.rrGridMs ?? 0,
         windowBeats: WINDOW_BEATS,
         afWindowRule:
           "a window is AF when at least 50 % of its intervals are AF; simulated recordings shorter than 128 intervals are one window of all their intervals",

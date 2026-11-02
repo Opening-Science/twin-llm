@@ -173,6 +173,25 @@ describe("runBenchmark", () => {
     );
   });
 
+  test("RR grid: off by default with the old run id; 4 ms puts every simulated interval on the grid", () => {
+    const plain = runBenchmark(INPUTS);
+    const grid = runBenchmark({ ...INPUTS, options: { ...INPUTS.options, rrGridMs: 4 } });
+    expect(plain.result.options.rrGridMs).toBe(0);
+    expect(grid.result.options.rrGridMs).toBe(4);
+    expect(grid.result.runId).not.toBe(plain.result.runId);
+    expect(
+      runBenchmark({ ...INPUTS, options: { ...INPUTS.options, rrGridMs: 0 } }).result
+        .simToReal,
+    ).toEqual(plain.result.simToReal);
+    expect(grid.simRows.every((row) => row.rr.every((value) => value % 4 === 0))).toBe(
+      true,
+    );
+    expect(grid.simRows.map((row) => row.rr)).not.toEqual(
+      plain.simRows.map((row) => row.rr),
+    );
+    expect(grid.realRows).toEqual(plain.realRows);
+  });
+
   test("without the database the real part is null", () => {
     const { result, realRows } = runBenchmark({ ...INPUTS, afdb: null });
     expect(result.real).toBe(null);

@@ -17,13 +17,15 @@ export type BenchArgs = Readonly<{
   realNoise: boolean;
   /** How simulated AF intervals depend on each other (#297); independent by default. */
   afDependence: AfDependence;
+  /** Sampling grid for the simulated intervals, ms (#418); 0, the default, leaves them as simulated. */
+  rrGridMs: number;
 }>;
 
 export const DEFAULT_SEEDS = 20;
 export const DEFAULT_RESAMPLES = 1000;
 export const DEFAULT_BOOTSTRAP_SEED = 249;
 
-export const USAGE = `usage: bun run rhythm-bench -- --out ${RHYTHM_BENCH_DIR}/<run> [--seeds N] [--afdb <dir> | --ltafdb <dir>] [--resamples N] [--bootstrap-seed N] [--quick] [--real-noise] [--af-dependence independent|short_range] (the Lab reads ${RHYTHM_BENCH_DIR}/*/result.json)`;
+export const USAGE = `usage: bun run rhythm-bench -- --out ${RHYTHM_BENCH_DIR}/<run> [--seeds N] [--afdb <dir> | --ltafdb <dir>] [--resamples N] [--bootstrap-seed N] [--quick] [--real-noise] [--af-dependence independent|short_range] [--rr-grid-ms <ms>] (the Lab reads ${RHYTHM_BENCH_DIR}/*/result.json)`;
 
 const valueOf = (argv: readonly string[], name: string): string | undefined => {
   const index = argv.indexOf(name);
@@ -54,6 +56,7 @@ export const parseArgs = (argv: readonly string[]): BenchArgs => {
     "--quick",
     "--real-noise",
     "--af-dependence",
+    "--rr-grid-ms",
   ]);
   const unknown = argv.filter((arg) => arg.startsWith("--") && !known.has(arg));
   if (unknown.length > 0) throw new Error(`unknown option ${unknown[0]}\n${USAGE}`);
@@ -76,6 +79,16 @@ export const parseArgs = (argv: readonly string[]): BenchArgs => {
   const afDependence = AF_DEPENDENCES.find((each) => each === dependence);
   if (argv.includes("--af-dependence") && afDependence === undefined)
     throw new Error(`--af-dependence takes ${AF_DEPENDENCES.join(" or ")}\n${USAGE}`);
+  const grid = valueOf(argv, "--rr-grid-ms");
+  const rrGridMs = grid === undefined ? 0 : Number(grid);
+  if (
+    argv.includes("--rr-grid-ms") &&
+    (grid === undefined ||
+      grid.trim() === "" ||
+      !Number.isFinite(rrGridMs) ||
+      rrGridMs < 0)
+  )
+    throw new Error(`--rr-grid-ms takes a number of ms, 0 or more\n${USAGE}`);
   return {
     out,
     seeds: positiveInt(valueOf(argv, "--seeds"), "--seeds", DEFAULT_SEEDS, 1),
@@ -95,5 +108,6 @@ export const parseArgs = (argv: readonly string[]): BenchArgs => {
     quick: argv.includes("--quick"),
     realNoise,
     afDependence: afDependence ?? "independent",
+    rrGridMs,
   };
 };
