@@ -122,10 +122,30 @@ export const gbdEstimatePorts = (db: () => PrismaClient): GbdEstimatePorts => ({
 });
 
 /**
+ * Removes one file's record and its links, then the estimates no other file
+ * still links to (#428); answers how many estimates went, or null when the
+ * file is unknown.
+ */
+const removeGbdImport = async (
+  db: PrismaClient,
+  sha256: string,
+): Promise<number | null> =>
+  db.$transaction(async (tx) => {
+    const known = await tx.gbdImport.findUnique({ where: { sha256 } });
+    if (known === null) return null;
+    const { count } = await tx.gbdEstimate.deleteMany({
+      where: { files: { some: { importSha: sha256 }, every: { importSha: sha256 } } },
+    });
+    await tx.gbdImport.delete({ where: { sha256 } });
+    return count;
+  });
+
+/**
  * The store as `importGbdChunks` (import-chunks.ts) uses it, one file at a
  * time: `known` before reading, `begin` once rows are ready, `addRows` per
- * batch, then `finish`, or `abort` to drop the file's record and every row
- * it brought.
+ * batch, then `finish`, or `abort` to drop the file's record and the rows
+ * no other file has. Every row of the file is linked to it, new or not, so
+ * a file imported again after a delete has all its estimates back.
  */
 export const gbdImportStore = (db: PrismaClient): GbdImportStore => ({
   known: async (sha256) =>
@@ -146,10 +166,15 @@ export const gbdImportStore = (db: PrismaClient): GbdImportStore => ({
   addRows: async (sha256, rows) => {
     let added = 0;
     for (let start = 0; start < rows.length; start += GBD_STORE_BATCH) {
+      const batch = rows
+        .slice(start, start + GBD_STORE_BATCH)
+        .map((row) => ({ key: gbdRowKey(row), ...row }));
       const created = await db.gbdEstimate.createMany({
-        data: rows
-          .slice(start, start + GBD_STORE_BATCH)
-          .map((row) => ({ key: gbdRowKey(row), importSha: sha256, ...row })),
+        data: batch,
+        skipDuplicates: true,
+      });
+      await db.gbdEstimateFile.createMany({
+        data: batch.map((row) => ({ importSha: sha256, estimateKey: row.key })),
         skipDuplicates: true,
       });
       added += created.count;
@@ -160,14 +185,15 @@ export const gbdImportStore = (db: PrismaClient): GbdImportStore => ({
     await db.gbdImport.update({ where: { sha256 }, data: counts });
   },
   abort: async (sha256) => {
-    await db.gbdImport.deleteMany({ where: { sha256 } });
+    await removeGbdImport(db, sha256);
   },
 });
 
 /**
  * Stores one parsed file. A file whose checksum is already recorded is
- * skipped. An estimate another file already brought is kept as it was and
- * not counted as new. If a write fails, the file's record and rows go.
+ * skipped. An estimate another file already brought is kept as it was,
+ * linked to this file too, and not counted as new. If a write fails, the
+ * file's record goes, with the rows no other file has.
  */
 export const importGbdFile = async (
   db: PrismaClient,
@@ -188,13 +214,13 @@ export const importGbdFile = async (
   }
 };
 
-/** Every imported file, newest first, with the estimates each holds. */
+/** Every imported file, newest first, with the estimates each has. */
 export const listGbdImports = async (
   db: PrismaClient,
 ): Promise<readonly GbdImportView[]> => {
   const [imports, counts] = await Promise.all([
     db.gbdImport.findMany({ orderBy: { importedAt: "desc" } }),
-    db.gbdEstimate.groupBy({ by: ["importSha"], _count: { _all: true } }),
+    db.gbdEstimateFile.groupBy({ by: ["importSha"], _count: { _all: true } }),
   ]);
   const stored = new Map(counts.map((row) => [row.importSha, row._count._all]));
   return imports.map((row) => ({
@@ -209,15 +235,11 @@ export const listGbdImports = async (
   }));
 };
 
-/** Deletes one file's record and the estimates it brought; null when unknown. */
-export const deleteGbdImport = async (
+/**
+ * Deletes one file's record and the estimates no other file has; answers
+ * how many estimates went, or null when the file is unknown.
+ */
+export const deleteGbdImport = (
   db: PrismaClient,
   sha256: string,
-): Promise<number | null> =>
-  db.$transaction(async (tx) => {
-    const known = await tx.gbdImport.findUnique({ where: { sha256 } });
-    if (known === null) return null;
-    const { count } = await tx.gbdEstimate.deleteMany({ where: { importSha: sha256 } });
-    await tx.gbdImport.delete({ where: { sha256 } });
-    return count;
-  });
+): Promise<number | null> => removeGbdImport(db, sha256);

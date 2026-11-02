@@ -29,6 +29,6 @@ export type GbdImportView = Readonly<{
   /** ISO time. */
   importedAt: string;
   citation: string | null;
-  /** Estimates this file holds now: the ones it brought first. */
+  /** Estimates this file has, including ones other files have too (#428). */
   storedRows: number;
 }>;
