@@ -28,8 +28,8 @@ export const DocsIndex = ({ pages }: Readonly<{ pages: readonly DocPage[] }>) =>
             href={`/docs/${slug}`}
             className="hover:bg-muted flex items-baseline justify-between gap-4 px-4 py-3"
           >
-            <span>{title}</span>
-            <span className="text-muted-foreground shrink-0 font-mono text-xs">
+            <span className="min-w-0">{title}</span>
+            <span className="text-muted-foreground hidden max-w-[50%] min-w-0 text-right font-mono text-xs wrap-anywhere sm:block">
               {path}
             </span>
           </Link>
