@@ -39,5 +39,9 @@ describe("rated set copy (#304)", () => {
     expect(ratePath("hb", "rater-b")).toBe("/lab/rate?rater=rater-b");
     expect(ratePath("v1h")).toBe("/lab/rate?set=v1h");
     expect(ratePath("v1h", "rater-b")).toBe("/lab/rate?set=v1h&rater=rater-b");
+    expect(ratePath("v1h", "rater-b", "sample")).toBe("/lab/rate?set=v1h&rater=rater-b");
+    expect(ratePath("v1h", "rater-b", "all")).toBe(
+      "/lab/rate?set=v1h&rater=rater-b&all=1",
+    );
   });
 });

@@ -25,6 +25,7 @@ import {
   type RatedSet,
   ratedSetOfRubric,
 } from "../../features/lab/rater-rubric";
+import { type Score } from "./score/types";
 
 const Z_95 = 1.959963984540054;
 
@@ -230,3 +231,66 @@ export const ratedSetForFile = (set: string, rubric: string): RatedSet | null =>
   const rated = ratedSetOfRubric(rubric);
   return rated !== null && rated === set ? rated : null;
 };
+
+/** The correctness outcome of a line, or `unscored` for an answered line the scorer did not score. */
+export type LineOutcome = Score | "unscored";
+
+/** A line of the v1h review sample (#413), as the agreement script lists it. */
+export type SampledLine = Readonly<{
+  runId: string;
+  itemId: string;
+  repeat: number;
+  scenario: string;
+  outcome: LineOutcome;
+}>;
+
+/**
+ * The run's comparison limited to the lines in `keys` (`item_id#repeat`):
+ * the scorer's outcomes and every rater's levels outside them are dropped.
+ */
+export const restrictToLines = (
+  run: RunAgreementInput,
+  keys: ReadonlySet<string>,
+): RunAgreementInput => {
+  const keep = <V>(map: ReadonlyMap<string, V>): ReadonlyMap<string, V> =>
+    new Map([...map].filter(([key]) => keys.has(key)));
+  return {
+    runId: run.runId,
+    scorer: keep(run.scorer),
+    raters: new Map([...run.raters].map(([rater, levels]) => [rater, keep(levels)])),
+  };
+};
+
+export type StratumRow = Readonly<{
+  scenario: string;
+  counts: Readonly<Record<LineOutcome, number>>;
+  total: number;
+}>;
+
+/** The outcome columns of `strataRows`, in the order the script prints them. */
+export const STRATUM_OUTCOMES: readonly LineOutcome[] = [
+  "pass",
+  "fail",
+  "human",
+  "na",
+  "unscored",
+];
+
+/** Sampled lines per scenario and correctness outcome, scenarios in sorted order. */
+export const strataRows = (lines: readonly SampledLine[]): StratumRow[] =>
+  [...new Set(lines.map((line) => line.scenario))].sort().map((scenario) => {
+    const of = lines.filter((line) => line.scenario === scenario);
+    const count = (outcome: LineOutcome): number =>
+      of.filter((line) => line.outcome === outcome).length;
+    return {
+      scenario,
+      counts: {
+        pass: count("pass"),
+        fail: count("fail"),
+        human: count("human"),
+        na: count("na"),
+        unscored: count("unscored"),
+      },
+      total: of.length,
+    };
+  });

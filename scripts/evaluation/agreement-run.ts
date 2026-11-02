@@ -12,6 +12,12 @@
  * `evaluation/rater-sets/<set>/<rater>.json` otherwise, #355) and lists the
  * answer ids that rater's page used for the rated lines, mapped back to run,
  * item and repeat. Reads no env and no database and writes nothing.
+ *
+ * For v1h (#413) it compares on the protocol's review sample only
+ * (`reviewSample` in `features/lab/rater-sample.ts`, the lines the rating
+ * view shows) and lists the sampled lines with their scenario and
+ * correctness outcome; `--all` compares on every rated line instead, for a
+ * second pass. hb has no sample and is always compared on every line.
  */
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -23,6 +29,7 @@ import {
   type RatingFile,
 } from "../../features/lab/rating-file";
 import { isRatedSet, rubricOf, type RatedSet } from "../../features/lab/rater-rubric";
+import { reviewSample } from "../../features/lab/rater-sample";
 import { parseRaterSet, raterSetFile } from "../../features/lab/rater-set";
 import { EMPTY_VALUE, formatNumber } from "../../infrastructure/format-measure";
 import {
@@ -36,8 +43,13 @@ import {
   type Kappa,
   groupBySet,
   ratedSetForFile,
+  type LineOutcome,
+  restrictToLines,
   type RunAgreementInput,
+  type SampledLine,
   type ScorerOutcome,
+  STRATUM_OUTCOMES,
+  strataRows,
 } from "./agreement";
 import { metaSchema, QUESTION_SETS, resultLineSchema } from "./eval-results";
 import { answerKeySchema, questionSetSchema } from "./question-set";
@@ -53,6 +65,8 @@ type LoadedRun = Readonly<{
   set: string;
   input: RunAgreementInput;
   files: readonly RatingFile[];
+  /** The v1h review sample of the run (#413); null for a set without one. */
+  sampled: readonly SampledLine[] | null;
 }>;
 
 const loadRun = async (runId: string): Promise<LoadedRun> => {
@@ -82,6 +96,38 @@ const loadRun = async (runId: string): Promise<LoadedRun> => {
     entries: key.entries,
     lines,
   });
+  const outcomes = new Map<string, LineOutcome>(
+    scores.flatMap((model) =>
+      model.scored.map(
+        (scored) =>
+          [
+            lineKey(scored.line.item_id, scored.line.repeat),
+            scored.scores.correctness.score,
+          ] as const,
+      ),
+    ),
+  );
+  const itemIds = new Set(questions.items.map((item) => item.id));
+  const sampled =
+    set === "v1h"
+      ? reviewSample(
+          lines
+            .filter(
+              (line) =>
+                line.error === null &&
+                line.text !== null &&
+                !line.mock &&
+                itemIds.has(line.item_id),
+            )
+            .map((line) => ({
+              runId,
+              itemId: line.item_id,
+              repeat: line.repeat,
+              scenario: line.scenario,
+              outcome: outcomes.get(lineKey(line.item_id, line.repeat)) ?? "unscored",
+            })),
+        )
+      : null;
   const scorer = new Map<string, ScorerOutcome>(
     scores.flatMap((model) =>
       model.scored.flatMap((scored) => {
@@ -120,7 +166,7 @@ const loadRun = async (runId: string): Promise<LoadedRun> => {
       ),
     );
   }
-  return { set, input: { runId, scorer, raters }, files: rated };
+  return { set, input: { runId, scorer, raters }, files: rated, sampled };
 };
 
 /** The rater's salt for the set, or null when this machine has no readable rater set for them. */
@@ -170,12 +216,50 @@ const kappaText = (result: Kappa | null): string[] =>
             : `${number(result.kappa)} (${number(result.low)} to ${number(result.high)})`,
       ];
 
+/** The comparison of one run: on its review sample, or on every line with `--all` or no sample. */
+const compared = (run: LoadedRun, everyLine: boolean): RunAgreementInput =>
+  run.sampled === null || everyLine
+    ? run.input
+    : restrictToLines(
+        run.input,
+        new Set(run.sampled.map((line) => lineKey(line.itemId, line.repeat))),
+      );
+
+const writeSample = (runs: readonly LoadedRun[], everyLine: boolean): void => {
+  const lines = runs.flatMap((run) => run.sampled ?? []);
+  process.stdout.write(
+    everyLine
+      ? `Compared on every rated line (--all); the review sample (${lines.length} lines) is listed for reference.\n\n`
+      : `Compared on the review sample: ${lines.length} lines (v1h-review.v1).\n\n`,
+  );
+  process.stdout.write(
+    `| Scenario | ${STRATUM_OUTCOMES.join(" | ")} | Lines |\n|${" --- |".repeat(STRATUM_OUTCOMES.length + 2)}\n`,
+  );
+  for (const row of strataRows(lines)) {
+    process.stdout.write(
+      `| ${[row.scenario, ...STRATUM_OUTCOMES.map((outcome) => String(row.counts[outcome])), String(row.total)].join(" | ")} |\n`,
+    );
+  }
+  process.stdout.write(
+    "\n| Run | Item | Repeat | Scenario | Correctness |\n| --- | --- | --- | --- | --- |\n",
+  );
+  for (const line of lines) {
+    process.stdout.write(
+      `| ${[line.runId, line.itemId, String(line.repeat), line.scenario, line.outcome].join(" | ")} |\n`,
+    );
+  }
+  process.stdout.write("\n");
+};
+
+const FLAGS = new Set(["--", "--ids", "--all"]);
+
 const main = async (argv: readonly string[]): Promise<number> => {
   const withIds = argv.includes("--ids");
-  const runIds = argv.filter((arg) => arg !== "--" && arg !== "--ids");
+  const everyLine = argv.includes("--all");
+  const runIds = argv.filter((arg) => !FLAGS.has(arg));
   if (runIds.length === 0 || runIds.some((id) => !RUN_ID.test(id))) {
     process.stderr.write(
-      "Usage: bun run eval:agreement -- [--ids] <run-id> [<run-id> …]\n",
+      "Usage: bun run eval:agreement -- [--ids] [--all] <run-id> [<run-id> …]\n",
     );
     return 2;
   }
@@ -183,7 +267,8 @@ const main = async (argv: readonly string[]): Promise<number> => {
   process.stdout.write(`Runs: ${runIds.join(", ")}\n`);
   for (const [set, runs] of groupBySet(loaded)) {
     process.stdout.write(`\n## Set ${set}\n\n`);
-    const rows = agreementRows(runs.map((run) => run.input));
+    if (runs.some((run) => run.sampled !== null)) writeSample(runs, everyLine);
+    const rows = agreementRows(runs.map((run) => compared(run, everyLine)));
     const rated = isRatedSet(set) ? set : null;
     if (rows.length === 0) {
       process.stdout.write("No ratings found in these runs.\n");
