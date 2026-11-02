@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 
 import { MockLanguageModelV4 } from "ai/test";
 
+import { GenomeIdsBlockedError } from "@/infrastructure/disclosure-ledger";
+import { GENOME_IDS_BLOCKED_SENTENCE } from "@/infrastructure/free-text-check";
 import { NUMBER_REVIEWER, REVIEW_SYSTEM } from "@/infrastructure/number-review";
 
 import { runNumberReview } from "./run-number-review";
@@ -91,5 +93,28 @@ describe("runNumberReview", () => {
       console.error = original;
     }
     expect(errors).toEqual([["[chat] number check failed", "Error"]]);
+  });
+
+  test("a blocked call is a failed review that carries the refusal (#414)", async () => {
+    const model = new MockLanguageModelV4({
+      doGenerate: async () => {
+        throw new GenomeIdsBlockedError();
+      },
+    });
+    const errors: unknown[][] = [];
+    const original = console.error;
+    console.error = (...args: unknown[]) => void errors.push(args);
+    try {
+      const review = await runNumberReview(model, ANSWER, RESULTS);
+      expect(review.status).toBe("failed");
+      expect(review.refusal).toBe(GENOME_IDS_BLOCKED_SENTENCE);
+      expect(review.items.map((item) => item.verdict)).toEqual([
+        "unchecked",
+        "unchecked",
+      ]);
+    } finally {
+      console.error = original;
+    }
+    expect(errors).toEqual([["[chat] number check blocked: genome identifiers"]]);
   });
 });
