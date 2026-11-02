@@ -14,13 +14,19 @@
  *   imported files, body scan labels other than their own, the account id),
  *   opened once and searched for as whole words, ignoring case
  *   (`knownValueMatches`).
+ * - **Stored values.** The person's imported readings, clinical records and
+ *   twin notes, opened once per model call and matched in memory
+ *   (`storedValueMatches`): a reading's number written with its own unit, a
+ *   reading's code with its own number nearby, a clinical record's code or
+ *   long name, a twin note line. A value the person typed in their own
+ *   messages is not counted: they sent it themselves.
  *
  * A match of the person's own rsIDs or genome sites stops a request to a
  * hosted model (#356, `blocksSend`); every other kind is only recorded.
  *
  * Approximate: a value written differently (another spelling, a unit
- * conversion, a rounded number) is not found, and lab values and twin notes
- * are not searched yet. Pure; the runtime is `free-text-check-runtime.ts`.
+ * conversion, a rounded number) is not found, and wearable numbers are not
+ * searched. Pure; the runtime is `free-text-check-runtime.ts`.
  */
 
 export const FREE_TEXT_KIND = {
@@ -29,6 +35,10 @@ export const FREE_TEXT_KIND = {
   file: "file name",
   label: "body scan label",
   account: "account id",
+  lab: "lab value",
+  coded: "coded value",
+  clinical: "clinical record",
+  note: "twin note line",
 } as const;
 
 export type FreeTextKind = (typeof FREE_TEXT_KIND)[keyof typeof FREE_TEXT_KIND];
@@ -44,7 +54,11 @@ export type FreeTextCheck = Readonly<{ matches: readonly FreeTextMatch[] }>;
 /** Checks one request's text; rejects when the stored values cannot be read. */
 export type CheckFreeText = (text: string) => Promise<FreeTextCheck>;
 
-/** Lookups per request are capped; the rest of a very long text is not looked up. */
+/**
+ * Sealed lookups per request are capped; the rest of a very long text is not
+ * looked up. Stored values are matched in memory against values already
+ * opened, so they make no lookups and need no cap.
+ */
 export const MAX_LOOKUPS = 500;
 
 /** Known values shorter than this are not searched for: too many words would match. */
@@ -215,6 +229,187 @@ export const knownValueMatches = (
  */
 export const isDistinctiveId = (id: string): boolean =>
   id.length >= 8 && /\p{L}/u.test(id) && /\p{N}/u.test(id);
+
+// ─── Stored values ──────────────────────────────────────────────────────────
+
+/** One imported reading, opened: its code (null without one), number and unit as stored. */
+export type StoredReading = Readonly<{
+  code: string | null;
+  value: string;
+  unit: string;
+}>;
+
+/** One imported clinical record, opened: its code (null without one) and name. */
+export type StoredRecord = Readonly<{ code: string | null; display: string }>;
+
+/** The person's stored values to search for, opened once per model call. */
+export type StoredValues = Readonly<{
+  readings: readonly StoredReading[];
+  records: readonly StoredRecord[];
+  /** Note titles and the lines of their lists. */
+  noteLines: readonly string[];
+}>;
+
+export const NO_STORED_VALUES: StoredValues = {
+  readings: [],
+  records: [],
+  noteLines: [],
+};
+
+/** A code shorter than this, or without a digit, is too common a token to search for. */
+export const MIN_CODE_LENGTH = 4;
+
+/** Clinical record names shorter than this are not searched for: "Asthma" is a word anyone writes. */
+export const MIN_RECORD_NAME_LENGTH = 24;
+
+/** Twin note lines shorter than this are not searched for. */
+export const MIN_NOTE_LINE_LENGTH = 24;
+
+/** How far around a code, in characters, a reading's number is looked for. */
+export const CODE_WINDOW = 80;
+
+/** A number without its sign: `195`, `5.4`. Not a part of a longer number or word. */
+const NUMBER = /(?<![\p{L}\p{N}_.])\d+(?:\.\d+)?(?![\p{N}]|\.\d)/gu;
+
+/** The number as one spelling: `5.40` and `5.4` are the same; null when not a number. */
+export const canonicalNumber = (text: string): string | null => {
+  const trimmed = text.trim().replace(/^[-+]/, "");
+  if (!/^\d+(?:\.\d+)?$/.test(trimmed)) return null;
+  return String(Number(trimmed));
+};
+
+const numbersIn = (text: string): readonly Readonly<{ value: string; end: number }>[] =>
+  [...text.matchAll(NUMBER)].map((match) => ({
+    value: String(Number(match[0])),
+    end: (match.index ?? 0) + match[0].length,
+  }));
+
+const isDistinctiveCode = (code: string): boolean =>
+  code.length >= MIN_CODE_LENGTH && /\p{N}/u.test(code);
+
+/** A unit worth matching after a number: it has a letter or is `%`. */
+const isUnit = (unit: string): boolean => /[\p{L}%]/u.test(unit);
+
+const groupBy = (
+  pairs: readonly (readonly [string, string])[],
+): ReadonlyMap<string, ReadonlySet<string>> =>
+  pairs.reduce((map, [key, value]) => {
+    map.set(key, new Set([...(map.get(key) ?? []), value]));
+    return map;
+  }, new Map<string, Set<string>>());
+
+/** `195 mg/dL`, `5.4mmol/L`: a stored number followed by its own unit, ignoring case. */
+const labKeysIn = (text: string, readings: readonly StoredReading[]): Set<string> => {
+  const unitsOf = groupBy(
+    readings.flatMap((reading) => {
+      const value = canonicalNumber(reading.value);
+      const unit = normalized(reading.unit);
+      return value === null || !isUnit(unit) ? [] : [[value, unit] as const];
+    }),
+  );
+  const lower = text.toLocaleLowerCase("en-GB");
+  return new Set(
+    numbersIn(lower).flatMap(({ value, end }) => {
+      const rest = lower.slice(end).replace(/^[ \u00a0]/, "");
+      return [...(unitsOf.get(value) ?? [])]
+        .filter((unit) => rest.startsWith(unit) && !isWordChar(rest[unit.length]))
+        .map((unit) => `${value}|${unit}`);
+    }),
+  );
+};
+
+const tokenAt = (haystack: string, needle: string, index: number): boolean => {
+  const before = haystack[index - 1];
+  const after = haystack[index + needle.length];
+  const edge = (char: string | undefined) =>
+    char === undefined || !/[\p{L}\p{N}_-]/u.test(char);
+  return edge(before) && edge(after);
+};
+
+/** Where a code stands as a whole token (`2093-3`, not `12093-3`). */
+const tokenIndexes = (haystack: string, needle: string): readonly number[] => {
+  const from = (start: number): readonly number[] => {
+    const index = haystack.indexOf(needle, start);
+    if (index < 0) return [];
+    return [...(tokenAt(haystack, needle, index) ? [index] : []), ...from(index + 1)];
+  };
+  return needle === "" ? [] : from(0);
+};
+
+/** A stored code as a whole token with that code's own number within `CODE_WINDOW`. */
+const codedKeysIn = (text: string, readings: readonly StoredReading[]): Set<string> => {
+  const valuesOf = groupBy(
+    readings.flatMap((reading) => {
+      const value = canonicalNumber(reading.value);
+      const code = reading.code === null ? "" : normalized(reading.code);
+      return value === null || !isDistinctiveCode(code) ? [] : [[code, value] as const];
+    }),
+  );
+  const lower = text.toLocaleLowerCase("en-GB");
+  return new Set(
+    [...valuesOf].flatMap(([code, values]) =>
+      tokenIndexes(lower, code).flatMap((index) => {
+        // The code's own digits are not a reading.
+        const around = `${lower.slice(Math.max(0, index - CODE_WINDOW), index)} ${lower.slice(
+          index + code.length,
+          index + code.length + CODE_WINDOW,
+        )}`;
+        return numbersIn(around)
+          .filter(({ value }) => values.has(value))
+          .map(({ value }) => `${code}|${value}`);
+      }),
+    ),
+  );
+};
+
+/** A clinical record whose code stands as a whole token, or whose long name is a whole phrase. */
+const recordKeysIn = (text: string, records: readonly StoredRecord[]): Set<string> => {
+  const haystack = normalized(text);
+  return new Set(
+    records.flatMap((record) => {
+      const code = record.code === null ? "" : normalized(record.code);
+      const name = normalized(record.display);
+      const byCode = isDistinctiveCode(code) && tokenIndexes(haystack, code).length > 0;
+      const byName =
+        name.length >= MIN_RECORD_NAME_LENGTH && containsWord(haystack, name);
+      return byCode || byName ? [`${code}|${name}`] : [];
+    }),
+  );
+};
+
+/** A twin note line, as a whole phrase, ignoring case and spacing. */
+const noteKeysIn = (text: string, lines: readonly string[]): Set<string> => {
+  const haystack = normalized(text);
+  return new Set(
+    lines
+      .map(normalized)
+      .filter(
+        (line) => line.length >= MIN_NOTE_LINE_LENGTH && containsWord(haystack, line),
+      ),
+  );
+};
+
+/**
+ * Counts the distinct stored values the text holds, per kind, leaving out
+ * those that also stand in `typed`, the person's own messages: a value they
+ * typed themselves is theirs to send. Record-only kinds; none of them blocks.
+ */
+export const storedValueMatches = (
+  text: string,
+  stored: StoredValues,
+  typed: string = "",
+): readonly FreeTextMatch[] => {
+  const kinds: readonly (readonly [FreeTextKind, (each: string) => Set<string>])[] = [
+    [FREE_TEXT_KIND.lab, (each) => labKeysIn(each, stored.readings)],
+    [FREE_TEXT_KIND.coded, (each) => codedKeysIn(each, stored.readings)],
+    [FREE_TEXT_KIND.clinical, (each) => recordKeysIn(each, stored.records)],
+    [FREE_TEXT_KIND.note, (each) => noteKeysIn(each, stored.noteLines)],
+  ];
+  return kinds.map(([kind, keysIn]) => {
+    const own = typed === "" ? new Set<string>() : keysIn(typed);
+    return { kind, count: [...keysIn(text)].filter((key) => !own.has(key)).length };
+  });
+};
 
 // ─── The result ─────────────────────────────────────────────────────────────
 

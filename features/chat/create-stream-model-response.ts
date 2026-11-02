@@ -145,13 +145,14 @@ export type StreamModelResponseDeps = Readonly<{
   chatIsLocal: () => boolean;
   /**
    * The model, sending through the disclosure ledger (#140): `disclosure`
-   * says what the turn's requests carry.
+   * says what the turn's requests carry, `typed` what the person typed (#346).
    */
   resolveModel: (
     modelId: string,
     options: Readonly<{
       hasWearableNarrative: boolean;
       disclosure: ModelDisclosure | UnrecordedModelCall;
+      typed?: readonly string[];
     }>,
   ) => LanguageModel;
   /** Genome tool ports, or undefined when the genome policy does not allow them. */
@@ -275,12 +276,20 @@ export const createStreamModelResponse =
       noteIds: notes?.ids ?? [],
       hasTools: Object.keys(tools).length > 0,
     });
+    // What the person typed: the free text check does not count a stored value they typed (#346).
+    const typed = messages.flatMap((message) =>
+      message.role === "user" ? [message.content] : [],
+    );
     const effort = context.effort ?? null;
     const reviewing = settleOnce<boolean>();
 
     const turn = runTwinTurn(
       {
-        model: deps.resolveModel(calledModelId, { hasWearableNarrative, disclosure }),
+        model: deps.resolveModel(calledModelId, {
+          hasWearableNarrative,
+          disclosure,
+          typed,
+        }),
         ...promptDeps,
         twinNotes: notes?.text ?? null,
         loadAudit: deps.loadAudit,
