@@ -653,15 +653,34 @@ recipient.
   more), hashed with the person's index key and looked up in the keyed hash columns of
   their imported VCFs, so no variant is opened; and, as whole words ignoring case, the
   file names of their imports, their body scan labels other than their own subject, and
-  their account id when it is not a plain word. The row stores `free_text_checked = true`
+  their account id when it is not a plain word. Then the person's stored values, opened
+  once per model call because none of these stores keeps a keyed hash of a value
+  (`storedValueMatches`): a **lab value** is a stored reading's number followed by its own
+  stored unit (`195 mg/dL`, `5.40mmol/L`; numbers compared as numbers, units ignoring
+  case); a **coded value** is a stored reading's code (four characters or more, with a
+  digit) as a whole token with that reading's own number within 80 characters, not
+  counting the code's own digits; a **clinical record** is a stored Condition or
+  MedicationRequest whose code stands as a whole token or whose name, 24 characters or
+  more, stands as a whole phrase (shorter names such as "Asthma" are words anyone
+  writes); a **twin note line** is a note title or list line of 24 characters or more as
+  a whole phrase, ignoring case and spacing. A stored value that also stands in what the
+  person typed in the call's messages (`typed`, the `user` messages of a chat turn) is
+  not counted: they sent it themselves, even where an answer repeats it. Names, file
+  names and genome identifiers are counted wherever they stand, as before. These four
+  kinds are record-only: they are the person's values, not identifiers, so option C
+  (#356) does not apply. Wearable numbers are not searched: a bare number such as a
+  heart rate matches too much ordinary text, and wearable summaries are sent on purpose
+  and recorded as references above. The row stores `free_text_checked = true`
   and `free_text_matches`, a list of `{ kind, count }` (distinct values per kind), never a
   value; the paired audit row carries the same list. The matcher is pure
-  (`infrastructure/free-text-check.ts`), with at most 500 lookups per request. A body
+  (`infrastructure/free-text-check.ts`), with at most 500 sealed lookups per request; the
+  stored values are matched in memory against values already opened, so they make no
+  lookups and the cap stays as it was. A body
   that cannot be read up front, or a check that fails (a locked vault), is recorded as
   not checked, with the error's name in the log. _Limits:_ approximate. A value written another way (a unit
-  conversion, a rounded number, another spelling) is missed, and lab values, clinical
-  records, twin notes and wearable numbers are not searched yet; wearable and twin note
-  values are recorded as references above. Exports, embeddings and live lookups are not
+  conversion, a rounded number, a decimal comma, another spelling) is missed, a value
+  the person typed and a reply repeats is not counted, and wearable numbers are not
+  searched; wearable and twin note values are recorded as references above. Exports, embeddings and live lookups are not
   checked (live lookups have their own query check).
 - **Blocking genome identifiers** (#356, option C). When the check finds an rsID or a
   genome site that the person's VCFs hold, the request is not sent: `modelCallFetch`

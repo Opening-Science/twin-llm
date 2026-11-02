@@ -12,7 +12,11 @@ import {
   knownValueMatches,
   lookupMatches,
   MAX_LOOKUPS,
+  canonicalNumber,
+  NO_STORED_VALUES,
   parseFreeTextMatches,
+  type StoredValues,
+  storedValueMatches,
   requestText,
   variantCandidates,
 } from "./free-text-check";
@@ -126,6 +130,10 @@ describe("knownValueMatches", () => {
       { kind: "file name", count: 1 },
       { kind: "body scan label", count: 1 },
       { kind: "account id", count: 0 },
+      { kind: "lab value", count: 0 },
+      { kind: "coded value", count: 0 },
+      { kind: "clinical record", count: 0 },
+      { kind: "twin note line", count: 0 },
     ]);
   });
 
@@ -138,12 +146,18 @@ describe("knownValueMatches", () => {
       { kind: "file name", count: 0 },
       { kind: "body scan label", count: 0 },
       { kind: "account id", count: 0 },
+      { kind: "lab value", count: 0 },
+      { kind: "coded value", count: 0 },
+      { kind: "clinical record", count: 0 },
+      { kind: "twin note line", count: 0 },
     ]);
   });
 
   test("a later whole-word occurrence still counts after a partial one", () => {
     expect(
-      knownValueMatches("user_synthetic_10, then user_synthetic_1.", known).at(-1),
+      knownValueMatches("user_synthetic_10, then user_synthetic_1.", known).find(
+        (match) => match.kind === "account id",
+      ),
     ).toEqual({ kind: "account id", count: 1 });
   });
 });
@@ -218,5 +232,106 @@ describe("blocking (#356)", () => {
     );
     expect(hasGenomeShapedText("chr23:12345 and 0:12345")).toBe(false);
     expect(hasGenomeShapedText("How did the Demo body sleep?")).toBe(false);
+  });
+});
+
+describe("storedValueMatches", () => {
+  /** A synthetic person: two readings, two clinical records, one twin note. */
+  const stored: StoredValues = {
+    readings: [
+      { code: "2093-3", value: "195.0", unit: "mg/dL" },
+      { code: "8867-4", value: "72", unit: "/min" },
+      { code: null, value: "5.4", unit: "mmol/L" },
+      { code: "1", value: "3", unit: "{score}" },
+    ],
+    records: [
+      { code: "38341003", display: "Hypertension" },
+      { code: null, display: "Lisinopril 10 MG Oral Tablet" },
+    ],
+    noteLines: ["Sleep", "Does evening exercise change my resting heart rate?"],
+  };
+
+  const counts = (text: string, typed = "") =>
+    Object.fromEntries(
+      storedValueMatches(text, stored, typed).map((match) => [match.kind, match.count]),
+    );
+
+  test("a stored number with its own unit, in any spelling of the number", () => {
+    expect(counts("Total cholesterol 195 mg/dl, glucose 5.40mmol/L.")["lab value"]).toBe(
+      2,
+    );
+  });
+
+  test("a stored number with another unit, inside a longer number, or alone is not a lab value", () => {
+    expect(
+      counts("195 mmol/L, 1195 mg/dL, 195 mg/dLx, 5.4 and mg/dL apart, 3 {score}x")[
+        "lab value"
+      ],
+    ).toBe(0);
+  });
+
+  test("a code with its own number nearby is a coded value; the code's own digits are not", () => {
+    expect(
+      counts('{"loinc":"2093-3","name":"Cholesterol","value":195}')["coded value"],
+    ).toBe(1);
+    expect(counts("LOINC 2093-3 is total cholesterol")["coded value"]).toBe(0);
+    expect(counts("LOINC 12093-3 near 195")["coded value"]).toBe(0);
+    // Too short to search for: "1" next to a 3.
+    expect(counts("code 1, score 3")["coded value"]).toBe(0);
+  });
+
+  test("a clinical record by its code or its long name, not by a short name", () => {
+    expect(counts("SNOMED 38341003 on file")["clinical record"]).toBe(1);
+    expect(counts("Takes lisinopril 10 mg oral tablet daily")["clinical record"]).toBe(1);
+    expect(counts("What is hypertension? See 383410031.")["clinical record"]).toBe(0);
+  });
+
+  test("a twin note line as a whole phrase; short lines are not searched", () => {
+    expect(
+      counts("Topics: does evening exercise change my  resting heart rate?; Sleep")[
+        "twin note line"
+      ],
+    ).toBe(1);
+    expect(counts("Sleep well")["twin note line"]).toBe(0);
+  });
+
+  test("a value the person typed is theirs: not counted, even where a reply repeats it", () => {
+    const typed =
+      "My cholesterol was 195 mg/dL. Does evening exercise change my resting heart rate?";
+    const text = `${typed}\nEarlier answer: your cholesterol of 195 mg/dL is noted.`;
+    expect(counts(text, typed)).toEqual({
+      "lab value": 0,
+      "coded value": 0,
+      "clinical record": 0,
+      "twin note line": 0,
+    });
+    // A stored value they did not type still counts.
+    expect(counts(`${text} Glucose 5.4 mmol/L.`, typed)["lab value"]).toBe(1);
+  });
+
+  test("nothing stored, nothing found", () => {
+    expect(
+      storedValueMatches("195 mg/dL 2093-3", NO_STORED_VALUES).every(
+        (match) => match.count === 0,
+      ),
+    ).toBe(true);
+  });
+
+  test("stored value kinds never block", () => {
+    expect(
+      blocksSend(
+        freeTextCheckOf(storedValueMatches("195 mg/dL and 2093-3: 195", stored)),
+      ),
+    ).toBe(false);
+  });
+});
+
+describe("canonicalNumber", () => {
+  test("one spelling per number; anything else is null", () => {
+    expect(canonicalNumber("195.0")).toBe("195");
+    expect(canonicalNumber(" 5.40 ")).toBe("5.4");
+    expect(canonicalNumber("-2.5")).toBe("2.5");
+    expect(canonicalNumber("positive")).toBeNull();
+    expect(canonicalNumber("1e3")).toBeNull();
   });
 });

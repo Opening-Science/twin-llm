@@ -128,15 +128,18 @@ export const exoscaleTarget = (
  * person's own rsIDs or genome sites is not sent either (#356): its row says
  * blocked and the call fails with `GenomeIdsBlockedError`. `{ notRecorded }`
  * is for the evaluation harness only (`tests/disclosures/outbound-paths.test.ts`).
+ * `typed` is what the person typed in the call's messages; the check does not
+ * count a stored value they typed themselves (#346).
  */
 export type ModelCallOptions = Readonly<{
   hasWearableNarrative: boolean;
   disclosure: ModelDisclosure | UnrecordedModelCall;
+  typed?: readonly string[];
 }>;
 
 export const resolveLanguageModel = (
   modelId: string,
-  { hasWearableNarrative, disclosure }: ModelCallOptions,
+  { hasWearableNarrative, disclosure, typed = [] }: ModelCallOptions,
 ): LanguageModel => {
   const env = serverEnv();
   const permit = permitProviderForRequest({
@@ -157,7 +160,7 @@ export const resolveLanguageModel = (
     record: recordDisclosure,
     ...("notRecorded" in disclosure
       ? {}
-      : { checkText: freeTextCheckerFor(disclosure.actor) }),
+      : { checkText: freeTextCheckerFor(disclosure.actor, typed) }),
   });
 
   if (env.LLM_PROVIDER === "ollama") {
