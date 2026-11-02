@@ -1,6 +1,6 @@
 /**
  * How Natural Earth's admin-1 units become the boundaries GBD's subnational
- * units are matched to (#397). Reviewed by hand, country by country; the
+ * units are matched to (#397); for Kenya, geoBoundaries' units (#422). Reviewed by hand, country by country; the
  * method and sources are in public/geo/natural-earth/README.md and the
  * resulting match rate in docs/gbd-map-coverage.md.
  *
@@ -139,10 +139,13 @@ export const GBD_BOUNDARY_RULES: Readonly<Record<string, CountryRules>> = {
       ...(other === undefined ? {} : { names: [other] }),
     })),
   },
+  // ---- Kenya (#422): rules on geoBoundaries' counties, not Natural Earth ----
   KEN: {
-    // Nairobi province and Nairobi City County (KE-30) are the same area.
-    recode: { "KE-110": "KE-30" },
+    // The 47 counties come from geoBoundaries (build-geoboundaries.ts), with
+    // ISO 3166-2 codes. It names KE-41 "Tharaka"; the county is Tharaka-Nithi.
+    rename: { "KE-41": "Tharaka-Nithi" },
   },
+  // ---- end Kenya ----
   MEX: { recode: { "MX-DIF": "MX-CMX" } },
   NOR: {
     // Natural Earth has the 19 counties before 2020; GBD 2023 has the 11 of
@@ -244,13 +247,6 @@ export const UNMATCHED_ON_PURPOSE: Readonly<Record<string, readonly UnmatchedRea
       {
         pattern: /, (Rural|Urban)$/,
         reason: "the urban or rural population of a state, not an area",
-      },
-    ],
-    KEN: [
-      {
-        pattern: /./,
-        reason:
-          "a county; Natural Earth has the eight former provinces, which hold several counties each",
       },
     ],
     NZL: [

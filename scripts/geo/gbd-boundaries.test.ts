@@ -77,6 +77,6 @@ describe("committed boundaries against GBD's units", () => {
       (sum, report) => sum + report.byCode + report.byName + report.byOtherName,
       0,
     );
-    expect(matched).toBeGreaterThanOrEqual(714);
+    expect(matched).toBeGreaterThanOrEqual(760);
   });
 });

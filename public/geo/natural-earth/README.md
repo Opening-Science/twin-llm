@@ -16,9 +16,10 @@ public domain; no permission is needed to use it ("Made with Natural Earth").
   ISO 3166-1 alpha-3 (`ISO_A3`, else `ISO_A3_EH`, else Natural Earth's `ADM0_A3`, so France
   and Norway keep their codes); `name` is Natural Earth's `NAME`; `label` is its label point.
   Units sharing one code (Australia and two of its territories) are one feature.
-- `admin1/<ISO3>.json`: states and provinces at 1:10m for the 22 countries GBD reports below
-  country level (GBD 2021): BRA, CHN, ETH, GBR, IDN, IND, IRN, ITA, JPN, KEN, MEX, NGA, NOR,
-  NZL, PAK, PHL, POL, RUS, SWE, UKR, USA, ZAF (1.5 MB together, 10 to 390 KB each). `code` is
+- `admin1/<ISO3>.json`: states and provinces at 1:10m for 21 of the 22 countries GBD reports
+  below country level (GBD 2021): BRA, CHN, ETH, GBR, IDN, IND, IRN, ITA, JPN, MEX, NGA, NOR,
+  NZL, PAK, PHL, POL, RUS, SWE, UKR, USA, ZAF (1.5 MB together, 10 to 390 KB each). Kenya's
+  counties come from geoBoundaries instead (#422, `public/geo/geoboundaries/README.md`). `code` is
   ISO 3166-2 (`iso_3166_2`, brought up to date where Natural Earth's is old, see below) or
   `GBD-<location id>` for a unit joined to fit GBD that has no ISO code; `name` is `name`.
   The browser loads one file when a map of that country is shown.
@@ -46,8 +47,7 @@ source of each; the build stops when a rule names a unit that is not there.
   Philippines: the cities of the National Capital Region into the region (PH-00).
 - Recoded (`recode`): Natural Earth carries codes ISO 3166-2 has since changed, for Poland
   (2018), Iran (2020, where Natural Earth also gives Alborz Tehran's old code), India (2023),
-  South Africa (2020) and Mexico City (MX-DIF to MX-CMX). Nairobi province gets Nairobi City
-  County's code, KE-30, as they are one area. Natural Earth has the codes of Moscow city and
+  South Africa (2020) and Mexico City (MX-DIF to MX-CMX). Natural Earth has the codes of Moscow city and
   Moscow oblast swapped, and wrong names for Wirral and St Helens (`rename`).
 - Names: GBD names that differ from Natural Earth's are added to the boundary they name
   (`aliases`, such as "Bristol, City of"), and a GBD unit's name is taken out of every other

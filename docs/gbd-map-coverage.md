@@ -28,7 +28,7 @@ boundary; they were checked by hand and are listed below.
 | IRN     |        31 |              29 |              1 |           90% |             31 |  100% |
 | ITA     |        21 |               8 |              6 |           10% |             21 |  100% |
 | JPN     |        47 |              47 |              0 |          100% |             47 |  100% |
-| KEN     |        47 |               1 |              0 |            2% |              1 |    2% |
+| KEN     |        47 |               1 |              0 |            2% |             47 |  100% |
 | MEX     |        32 |              31 |              0 |           97% |             32 |  100% |
 | NGA     |        37 |              36 |              0 |           97% |             37 |  100% |
 | NOR     |        11 |               4 |              0 |           36% |             11 |  100% |
@@ -41,12 +41,11 @@ boundary; they were checked by hand and are listed below.
 | UKR     |         3 |               0 |              0 |            0% |              3 |  100% |
 | USA     |        51 |              51 |              0 |          100% |             51 |  100% |
 | ZAF     |         9 |               9 |              0 |          100% |              9 |  100% |
-| All     |       840 |             656 |             13 |           77% |            714 |   85% |
+| All     |       840 |             656 |             13 |           77% |            760 |   90% |
 
-Of the 126 units still unmatched, 64 are not areas (the urban and rural halves of India's
-states, New Zealand's Maori and non-Maori populations) and 46 are Kenyan counties, which
-Natural Earth's eight former provinces cannot be split into. Counting areas only and leaving
-Kenya out, 713 of 729 units are matched (98%).
+Of the 80 units still unmatched, 64 are not areas (the urban and rural halves of India's
+states, New Zealand's Maori and non-Maori populations). Counting areas only, 760 of 776 units
+are matched (98%).
 
 Wrong before:
 
@@ -76,8 +75,31 @@ Wrong before:
 Left unmatched on purpose: GBD's UK nations and English regions (the UK file has local
 authorities, and a country has one boundary file, so they would overlap), North Kalimantan,
 Davao Occidental and the Dinagat Islands (newer than Natural Earth's provinces), Kenya's
-counties and the groups that are not areas. Hong Kong and Macao carry their own alpha-3 codes
+counties (until #422) and the groups that are not areas. Hong Kong and Macao carry their own alpha-3 codes
 and are drawn on the world map, not China's.
+
+<!-- Kenya and New Zealand (#422) -->
+
+## Kenya and New Zealand (#422)
+
+| Country | GBD units | Before #422: matched | After #422: matched |
+| ------- | --------: | -------------------: | ------------------: |
+| KEN     |        47 |               1 (2%) |           47 (100%) |
+| NZL     |         2 |               0 (0%) |              0 (0%) |
+
+- Kenya: GBD reports the 47 counties of 2013 (ISO 3166-2 KE-01 to KE-47); Natural Earth has
+  the eight former provinces, so only Nairobi matched. Kenya's file now comes from
+  geoBoundaries `KEN-ADM1` (CC BY 4.0, from the RCMRD GeoPortal counties of 2020), 47 counties
+  with their ISO codes, so each county matches by code. Tharaka-Nithi also matches by GBD's
+  name. Simplified like the other state files (30.6 KB); maps of Kenya credit geoBoundaries.
+  Method and sources: `public/geo/geoboundaries/README.md`.
+- New Zealand: GBD's two units below the country (`packages/gbd-local/location-table.ts`, ids
+  44850 and 44851) are the Maori and non-Maori populations. They are groups of people, not
+  areas, so no boundary set can draw them, Stats NZ's regions included; they stay unmatched
+  with that reason. A map of New Zealand's states would only make sense if GBD reported its
+  regions.
+
+<!-- end Kenya and New Zealand -->
 
 ## After (output of `bun scripts/geo/match-rate.ts`)
 
@@ -92,7 +114,7 @@ and are drawn on the world map, not China's.
 | IRN     |        31 |      31 |       0 |             0 |         0 |    100% |
 | ITA     |        21 |      21 |       0 |             0 |         0 |    100% |
 | JPN     |        47 |      47 |       0 |             0 |         0 |    100% |
-| KEN     |        47 |       1 |       0 |             0 |        46 |      2% |
+| KEN     |        47 |      47 |       0 |             0 |         0 |    100% |
 | MEX     |        32 |      32 |       0 |             0 |         0 |    100% |
 | NGA     |        37 |      37 |       0 |             0 |         0 |    100% |
 | NOR     |        11 |      11 |       0 |             0 |         0 |    100% |
@@ -105,7 +127,7 @@ and are drawn on the world map, not China's.
 | UKR     |         3 |       2 |       1 |             0 |         0 |    100% |
 | USA     |        51 |      51 |       0 |             0 |         0 |    100% |
 | ZAF     |         9 |       9 |       0 |             0 |         0 |    100% |
-| All     |       840 |         |         |               |       126 |     85% |
+| All     |       840 |         |         |               |        80 |     90% |
 
 ### GBR
 
@@ -124,10 +146,6 @@ and are drawn on the world map, not China's.
 ### IND
 
 - unmatched, the urban or rural population of a state, not an area: Andhra Pradesh, Rural; Andhra Pradesh, Urban; Arunachal Pradesh, Rural; Arunachal Pradesh, Urban; Assam, Rural; Assam, Urban; Bihar, Rural; Bihar, Urban; Chhattisgarh, Rural; Chhattisgarh, Urban; Delhi, Rural; Delhi, Urban; Goa, Rural; Goa, Urban; Gujarat, Rural; Gujarat, Urban; Haryana, Rural; Haryana, Urban; Himachal Pradesh, Rural; Himachal Pradesh, Urban; Jammu & Kashmir and Ladakh, Rural; Jammu & Kashmir and Ladakh, Urban; Jharkhand, Rural; Jharkhand, Urban; Karnataka, Rural; Karnataka, Urban; Kerala, Rural; Kerala, Urban; Madhya Pradesh, Rural; Madhya Pradesh, Urban; Maharashtra, Rural; Maharashtra, Urban; Manipur, Rural; Manipur, Urban; Meghalaya, Rural; Meghalaya, Urban; Mizoram, Rural; Mizoram, Urban; Nagaland, Rural; Nagaland, Urban; Odisha, Rural; Odisha, Urban; Other Union Territories, Rural; Other Union Territories, Urban; Punjab, Rural; Punjab, Urban; Rajasthan, Rural; Rajasthan, Urban; Sikkim, Rural; Sikkim, Urban; Tamil Nadu, Rural; Tamil Nadu, Urban; Telangana, Rural; Telangana, Urban; Tripura, Rural; Tripura, Urban; Uttar Pradesh, Rural; Uttar Pradesh, Urban; Uttarakhand, Rural; Uttarakhand, Urban; West Bengal, Rural; West Bengal, Urban
-
-### KEN
-
-- unmatched, a county; Natural Earth has the eight former provinces, which hold several counties each: Baringo; Bomet; Bungoma; Busia; Elgeyo-Marakwet; Embu; Garissa; Homa Bay; Isiolo; Kajiado; Kakamega; Kericho; Kiambu; Kilifi; Kirinyaga; Kisii; Kisumu; Kitui; Kwale; Laikipia; Lamu; Machakos; Makueni; Mandera; Marsabit; Meru; Migori; Mombasa; Murang'a; Nakuru; Nandi; Narok; Nyamira; Nyandarua; Nyeri; Samburu; Siaya; Taita Taveta; Tana River; Tharaka Nithi; Trans Nzoia; Turkana; Uasin Gishu; Vihiga; Wajir; West Pokot
 
 ### NZL
 

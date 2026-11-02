@@ -2,15 +2,38 @@ import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
-import { boundaryFile, parseBoundaries } from "./boundaries";
+import {
+  boundaryCredit,
+  boundaryFile,
+  GEOBOUNDARIES_COUNTRIES,
+  parseBoundaries,
+} from "./boundaries";
 import { LOCATION_INDEX, subnationalCountries } from "./match-location";
 
-const DATA = join(import.meta.dir, "../../../public/geo/natural-earth");
+const GEO = join(import.meta.dir, "../../../public/geo");
+const DATA = join(GEO, "natural-earth");
+const GEOBOUNDARIES = join(GEO, "geoboundaries");
 
 describe("boundaryFile", () => {
   test("names the countries file or one country's states", () => {
-    expect(boundaryFile(null)).toBe("admin0.json");
-    expect(boundaryFile("NGA")).toBe("admin1/NGA.json");
+    expect(boundaryFile(null)).toBe("natural-earth/admin0.json");
+    expect(boundaryFile("NGA")).toBe("natural-earth/admin1/NGA.json");
+  });
+
+  test("names the geoBoundaries file for Kenya's counties", () => {
+    expect(boundaryFile("KEN")).toBe("geoboundaries/admin1/KEN.json");
+  });
+});
+
+describe("boundaryCredit", () => {
+  test("credits geoBoundaries under CC BY 4.0 on a map of Kenya's counties", () => {
+    expect(boundaryCredit("KEN")?.text).toBe("Boundaries: geoBoundaries (CC BY 4.0)");
+    expect(boundaryCredit("KEN")?.url).toBe("https://www.geoboundaries.org");
+  });
+
+  test("asks for no credit on Natural Earth's public domain files", () => {
+    expect(boundaryCredit(null)).toBeNull();
+    expect(boundaryCredit("NGA")).toBeNull();
   });
 });
 
@@ -54,17 +77,25 @@ describe("committed boundaries", () => {
     expect(new Set(codes).size).toBe(codes?.length ?? -1);
   });
 
-  test("every country with states has a file whose codes match the index", () => {
-    const files = readdirSync(join(DATA, "admin1")).toSorted();
-    expect(files).toEqual(
-      subnationalCountries(LOCATION_INDEX)
+  test("every country with states has one file, from its source, whose codes match the index", () => {
+    const countries = subnationalCountries(LOCATION_INDEX);
+    expect(readdirSync(join(DATA, "admin1")).toSorted()).toEqual(
+      countries
+        .filter((code) => !GEOBOUNDARIES_COUNTRIES.includes(code))
         .toSorted()
         .map((code) => `${code}.json`),
     );
-    for (const code of subnationalCountries(LOCATION_INDEX)) {
-      expect(
-        read(`admin1/${code}.json`)?.map((feature) => feature.properties.code),
-      ).toEqual(
+    expect(readdirSync(join(GEOBOUNDARIES, "admin1")).toSorted()).toEqual(
+      countries
+        .filter((code) => GEOBOUNDARIES_COUNTRIES.includes(code))
+        .toSorted()
+        .map((code) => `${code}.json`),
+    );
+    for (const code of countries) {
+      const features = parseBoundaries(
+        JSON.parse(readFileSync(join(GEO, boundaryFile(code)), "utf8")),
+      );
+      expect(features?.map((feature) => feature.properties.code)).toEqual(
         LOCATION_INDEX.states
           .filter((state) => state.country === code)
           .map((state) => state.code),
@@ -75,8 +106,10 @@ describe("committed boundaries", () => {
   test("stays within the size budget: under 2.5 MB in all", () => {
     const sizes = [
       statSync(join(DATA, "admin0.json")).size,
-      ...readdirSync(join(DATA, "admin1")).map(
-        (file) => statSync(join(DATA, "admin1", file)).size,
+      ...[DATA, GEOBOUNDARIES].flatMap((folder) =>
+        readdirSync(join(folder, "admin1")).map(
+          (file) => statSync(join(folder, "admin1", file)).size,
+        ),
       ),
     ];
     expect(sizes.reduce((sum, size) => sum + size, 0)).toBeLessThan(2_500_000);

@@ -21,6 +21,7 @@ import {
 } from "./chart-frame";
 import {
   type BoundaryFeature,
+  boundaryCredit,
   boundaryFile,
   parseBoundaries,
 } from "./choropleth/boundaries";
@@ -46,7 +47,8 @@ import {
  * A choropleth of one estimate by place: countries of the world, the
  * countries of a region, or one country's states and provinces. Our own
  * Equal Earth projection and SVG paths over the committed Natural Earth
- * boundaries, which load on demand (a country's states only when asked).
+ * boundaries, which load on demand (a country's states only when asked);
+ * Kenya's counties come from geoBoundaries and carry its CC BY credit.
  * Countries with a value that lie in one part of the world are fitted with
  * a margin (`fitView`); spread over the world, the map is the world.
  *
@@ -79,7 +81,7 @@ const loads = new Map<string, Promise<readonly BoundaryFeature[] | null>>();
 const loadBoundaries = (file: string): Promise<readonly BoundaryFeature[] | null> => {
   const cached = loads.get(file);
   if (cached !== undefined) return cached;
-  const loading = fetch(`/geo/natural-earth/${file}`)
+  const loading = fetch(`/geo/${file}`)
     .then((response) => (response.ok ? response.json() : null))
     .then((json: unknown) => (json === null ? null : parseBoundaries(json)))
     .catch(() => null)
@@ -159,7 +161,9 @@ export const Choropleth = ({
 }: ChoroplethProps) => {
   const id = useId();
   const hatchId = `${id}-no-data`;
-  const loaded = useBoundaries(level === "country" ? country : null);
+  const shownCountry = level === "country" ? country : null;
+  const loaded = useBoundaries(shownCountry);
+  const credit = boundaryCredit(shownCountry);
   const [frameRef, frameWidth] = useMeasuredWidth(VIEW_WIDTH);
   const svgRef = useRef<SVGSVGElement>(null);
   const [hover, setHover] = useState<Hover | null>(null);
@@ -459,6 +463,24 @@ export const Choropleth = ({
       {unmatched.length > 0 && (
         <p className="text-muted-foreground text-xs">
           Not on the map: {unmatched.join(", ")}
+        </p>
+      )}
+      {credit !== null && (
+        <p className="text-muted-foreground text-xs">
+          Boundaries:{" "}
+          <a href={credit.url} target="_blank" rel="noreferrer" className="underline">
+            {credit.source}
+          </a>{" "}
+          (
+          <a
+            href={credit.licenceUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="underline"
+          >
+            {credit.licence}
+          </a>
+          )
         </p>
       )}
       <table className="sr-only">
