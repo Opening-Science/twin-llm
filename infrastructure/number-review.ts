@@ -63,6 +63,8 @@ export const numberReviewSchema = z.object({
   items: z.array(numberReviewItemSchema).max(MAX_REVIEW_NUMBERS),
   /** Numbers past `MAX_REVIEW_NUMBERS` that were not checked. */
   skipped: z.number().int().min(0),
+  /** The fixed refusal when the check's request was blocked (#356, #414). */
+  refusal: z.string().max(400).optional(),
 });
 
 export type NumberReviewItem = z.infer<typeof numberReviewItemSchema>;
@@ -190,10 +192,14 @@ export const parseReview = (
   });
 };
 
-/** A review that could not run: every number unchecked, with the matcher's view. */
+/**
+ * A review that could not run: every number unchecked, with the matcher's
+ * view, and the fixed refusal sentence when the request was blocked.
+ */
 export const failedReview = (
   numbers: readonly ReviewNumber[],
   skipped: number,
+  refusal?: string,
 ): NumberReview => ({
   reviewer: NUMBER_REVIEWER.name,
   status: "failed",
@@ -204,6 +210,7 @@ export const failedReview = (
     matched: number.matched,
   })),
   skipped,
+  ...(refusal === undefined ? {} : { refusal }),
 });
 
 const plural = (count: number, one: string, many: string): string =>

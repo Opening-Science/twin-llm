@@ -192,4 +192,14 @@ describe("reviewStep (#366)", () => {
     });
     expect(reviewStep(true, { ...review, status: "failed" })?.state).toBe("failed");
   });
+
+  test("a blocked check shows its refusal first (#414)", () => {
+    const step = reviewStep(false, {
+      ...review,
+      status: "failed",
+      refusal: "Not sent: synthetic refusal.",
+    });
+    expect(step?.state).toBe("failed");
+    expect(step?.lines[0]).toBe("Not sent: synthetic refusal.");
+  });
 });

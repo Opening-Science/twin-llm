@@ -664,8 +664,9 @@ recipient.
   more, stands as a whole phrase (shorter names such as "Asthma" are words anyone
   writes); a **twin note line** is a note title or list line of 24 characters or more as
   a whole phrase, ignoring case and spacing. A stored value that also stands in what the
-  person typed in the call's messages (`typed`, the `user` messages of a chat turn) is
-  not counted: they sent it themselves, even where an answer repeats it. Names, file
+  person typed in the call's messages (`typed`: the `user` messages of a chat turn and of
+  its Ultra number check, and the questions of a thread a `/compact` draft summarises;
+  starter questions pass none, #414) is not counted: they sent it themselves, even where an answer repeats it. Names, file
   names and genome identifiers are counted wherever they stand, as before. These four
   kinds are record-only: they are the person's values, not identifiers, so option C
   (#356) does not apply. Wearable numbers are not searched: a bare number such as a
@@ -700,8 +701,10 @@ recipient.
   request goes. A body that cannot be read up front is not checked and goes. Ollama on
   loopback is not a recipient, so it is neither checked nor blocked. _Limits:_ the same
   as the check above: an identifier written another way is not found, so the block is
-  a safeguard, not a guarantee. Other callers of a hosted model (`/compact` drafts,
-  starter questions, the Ultra number check) fail as they do for any model error.
+  a safeguard, not a guarantee. The single-prompt callers show the same sentence (#414):
+  a `/compact` draft falls back to the person's own questions with it as the notice,
+  starter questions fall back to the fixed ones with it above them, and the Ultra number
+  check is a failed check whose step shows it.
 - **Row.** `seq`, row id, time, actor (like the audit log; _changed from_ the user id),
   kind, direction (`sent`, `received` or `blocked`), recipient, target (model id, request kind or format), purpose,
   categories, `ref_count`, `payload_bytes` (null when it cannot be measured up front),

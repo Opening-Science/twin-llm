@@ -316,6 +316,8 @@ export const createStreamModelResponse =
                   deps.resolveModel(calledModelId, {
                     hasWearableNarrative,
                     disclosure: numberReviewDisclosure(disclosure),
+                    // The answer it checks may repeat the person's question (#414).
+                    typed,
                   }),
                   splitThinking(text).text,
                   toolResults,

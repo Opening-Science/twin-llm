@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
 
+import { GenomeIdsBlockedError } from "@/infrastructure/disclosure-ledger";
+import { GENOME_IDS_BLOCKED_SENTENCE } from "@/infrastructure/free-text-check";
+
 import {
   buildStarterPrompt,
   fallbackStarters,
@@ -125,6 +128,28 @@ describe("generateStarterQuestions", () => {
     });
     expect(result).toEqual({ source: "fallback", questions: fallbackStarters(context) });
     expect(log.calls).toEqual([["[onboarding] starter questions failed", "TypeError"]]);
+  });
+
+  test("a request blocked for genome identifiers falls back with the refusal (#414)", async () => {
+    const log = quietLog();
+    const result = await generateStarterQuestions(context, {
+      generate: async () => {
+        throw new GenomeIdsBlockedError();
+      },
+      timeoutMs: 1000,
+      logError: log.logError,
+    });
+    expect(result).toEqual({
+      source: "fallback",
+      questions: fallbackStarters(context),
+      notice: GENOME_IDS_BLOCKED_SENTENCE,
+    });
+    expect(log.calls).toEqual([
+      [
+        "[onboarding] starter questions blocked: genome identifiers",
+        "GenomeIdsBlockedError",
+      ],
+    ]);
   });
 
   test("a slow model times out, is aborted and falls back", async () => {
