@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef } from "react";
 
 /**
  * Customize's parts: the skills you can run, the agents built on them
@@ -24,8 +25,15 @@ export const currentTab = (path: string): string =>
 
 export const CustomizeTabs = () => {
   const current = currentTab(usePathname());
+  const nav = useRef<HTMLElement>(null);
+  // On a phone the row scrolls sideways; keep the open tab in sight.
+  useEffect(() => {
+    nav.current
+      ?.querySelector('[aria-current="page"]')
+      ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [current]);
   return (
-    <nav aria-label="Customize" className="segmented mt-6">
+    <nav ref={nav} aria-label="Customize" className="segmented mt-6">
       {CUSTOMIZE_TABS.map(({ href, label }) => (
         <Link
           key={href}
