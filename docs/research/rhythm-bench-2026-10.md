@@ -263,8 +263,56 @@ Plain reading:
 
 - The real AF series are close to uncorrelated beat to beat: lag-1 autocorrelation about 0.04 to 0.05 and nothing at lags 2 and 3. This agrees with Hayano et al. 1997, who found a nearly white short-term RR spectrum in AF.
 - With that dependence the simulated sensitivity falls by about one point over the grid (0.973 to 0.960) and most in short AF episodes (10 % burden, 0.77 to 0.65, wide intervals). Specificity does not move, as sinus windows are unchanged. So the circularity in #249 is real but small: independent draws made the turning-point test look a little better than it would on dependent AF.
-- The dependence explains only part of the gap to real AF. The TPR median moves from 0.656 to 0.648 against 0.625 real, and sample entropy hardly moves (2.159 to 2.145 against 1.94). For a Gaussian AR(1) with φ = 0.055 the expected TPR is about 0.657, so a TPR of 0.625 would need far stronger dependence than the data show; the rest of the gap comes from something else (candidates: RR resolution of 4 and 7.8 ms giving ties, or within-window changes in rate), which this note does not test.
+- The dependence explains only part of the gap to real AF. The TPR median moves from 0.656 to 0.648 against 0.625 real, and sample entropy hardly moves (2.159 to 2.145 against 1.94). For a Gaussian AR(1) with φ = 0.055 the expected TPR is about 0.657, so a TPR of 0.625 would need far stronger dependence than the data show; the rest of the gap comes from something else (candidates: RR resolution of 4 and 7.8 ms giving ties, or within-window changes in rate). The next section tests resolution: it explains most of the TPR gap and none of the sample entropy gap.
 - `independent` stays the simulator's default and what the product uses.
+
+## RR resolution (#418)
+
+The #297 section left most of the gap to real AF open: TPR median 0.648 (short_range) against 0.625, sample entropy 2.145 against 1.94. The database intervals are differences of beat sample indices, at 250 Hz (4 ms) in the AF database and 128 Hz (7.8125 ms) in LTAFDB, so neighbouring intervals are often exactly equal, while the simulator's are whole ms. This section tests whether that resolution explains the gap.
+
+- Command: `bun run rhythm-bench:rr-grid -- --out .rhythm-bench/rr-grid-2026-11 --afdb <afdb>/files --ltafdb <ltafdb>/files`, with the defaults: 20 seeds per grid cell, 1000 bootstrap resamples, bootstrap seed 418. 42 s on one core. Git `87e4b199d8a79237c9712a91abf4851634d4c2fe`, study version 1. `rhythm-bench-2026-10.rr-grid.summary.json` next to this file is the run's `summary.json`; the same command and seeds rebuild it apart from the timestamp. Both databases were read in place (same `SHA256SUMS.txt` hashes as above); nothing was downloaded.
+- Method: `--rr-grid-ms` (`docs/rhythm-sim.md`, "Benchmark") puts the simulated beat times on the grid and takes intervals as differences of grid samples rounded to whole ms, the way the database intervals are made. Windows are those of the simulated-against-real table: full 128-interval windows that are all AF, simulated without beat-detection noise (the benchmark's own recordings: same cells and seeds), and all-AFIB database windows. Medians as in the tables above, and means, because a window's TPR is a count over 128 and its median moves in steps of 0.0078. 95 % percentile bootstrap intervals resample recordings (the same recordings at every grid of a mode) and records together, so the gaps and the share closed have intervals of their own.
+- The grid is off by default; every other run and number in this note is unchanged.
+
+| Source                     | Windows | TPR, mean            | TPR, median | TPR, ties broken, mean | SampEn, mean      | SampEn, median | Tied neighbours, mean |
+| -------------------------- | ------- | -------------------- | ----------- | ---------------------- | ----------------- | -------------- | --------------------- |
+| AF database (23 records)   | 3845    | 0.629 [0.619, 0.640] | 0.625       | 0.642 [0.632, 0.652]   | 1.91 [1.76, 2.03] | 1.938          | 1.3 %                 |
+| LTAFDB (76 records)        | 38470   | 0.625 [0.618, 0.630] | 0.625       | 0.648 [0.643, 0.652]   | 2.01 [1.96, 2.05] | 2.004          | 2.4 %                 |
+| Sim independent, 0 ms      | 380     | 0.659 [0.654, 0.663] | 0.656       | 0.662 [0.657, 0.666]   | 2.19 [2.17, 2.22] | 2.159          | 0.3 %                 |
+| Sim independent, 4 ms      | 380     | 0.650 [0.646, 0.655] | 0.648       | 0.661 [0.657, 0.666]   | 2.20 [2.17, 2.23] | 2.155          | 1.1 %                 |
+| Sim independent, 7.8125 ms | 380     | 0.641 [0.636, 0.645] | 0.641       | 0.661 [0.657, 0.666]   | 2.21 [2.18, 2.24] | 2.173          | 2.2 %                 |
+| Sim short_range, 0 ms      | 379     | 0.648 [0.643, 0.652] | 0.648       | 0.651 [0.646, 0.655]   | 2.19 [2.16, 2.22] | 2.145          | 0.3 %                 |
+| Sim short_range, 4 ms      | 379     | 0.640 [0.635, 0.644] | 0.641       | 0.651 [0.646, 0.655]   | 2.19 [2.16, 2.22] | 2.145          | 1.1 %                 |
+| Sim short_range, 7.8125 ms | 379     | 0.630 [0.626, 0.635] | 0.633       | 0.652 [0.648, 0.656]   | 2.22 [2.19, 2.26] | 2.188          | 2.2 %                 |
+
+Each database against the simulator on its own grid (differences of means, simulated minus real; share closed is 1 minus the gap at the grid over the same mode's gap at 0 ms):
+
+| Mode        | Database, grid    | TPR gap at 0 ms      | TPR gap at the grid   | Share closed   | SampEn gap at 0 ms | SampEn gap at the grid | Share closed    |
+| ----------- | ----------------- | -------------------- | --------------------- | -------------- | ------------------ | ---------------------- | --------------- |
+| independent | AF database, 4 ms | 0.030 [0.018, 0.041] | 0.021 [0.009, 0.033]  | 29 % [20, 49]  | 0.28 [0.16, 0.44]  | 0.29 [0.16, 0.45]      | -2 % [-9, 4]    |
+| independent | LTAFDB, 7.8125 ms | 0.034 [0.027, 0.043] | 0.016 [0.009, 0.025]  | 53 % [42, 67]  | 0.18 [0.13, 0.25]  | 0.20 [0.15, 0.26]      | -8 % [-25, 6]   |
+| short_range | AF database, 4 ms | 0.019 [0.006, 0.030] | 0.011 [-0.001, 0.022] | 44 % [27, 122] | 0.27 [0.15, 0.43]  | 0.28 [0.16, 0.44]      | -1 % [-8, 6]    |
+| short_range | LTAFDB, 7.8125 ms | 0.023 [0.016, 0.031] | 0.006 [-0.001, 0.014] | 76 % [56, 107] | 0.18 [0.12, 0.23]  | 0.21 [0.15, 0.27]      | -20 % [-39, -5] |
+
+The TPR KS statistic falls with the grid in the same way: against the AF database from 0.29 (independent, 0 ms) to 0.20 at 4 ms, and from 0.19 (short_range, 0 ms) to 0.12; against LTAFDB from 0.29 to 0.12 and from 0.19 to 0.06 at 7.8125 ms. The sample entropy KS stays between 0.22 and 0.35 throughout.
+
+Ties and the turning-point count. The textbook turning-point test (Brockwell and Davis 2016, section 1.6) counts a turning point at i when y(i-1) < y(i) > y(i+1) or y(i-1) > y(i) < y(i+1), strictly, and its mean of 2(n − 2) / 3 for independent values assumes continuous values with no ties. `turningPoints` in `packages/query-tools/stats.ts` follows that definition: a point tied with a neighbour is never a turning point. On data with ties the strict count is therefore biased low against the band it is compared with. Three ways of counting the same windows (means):
+
+| Source                | Strict (the tool) | Non-strict (ties count) | Ties broken at random |
+| --------------------- | ----------------- | ----------------------- | --------------------- |
+| AF database           | 0.629             | 0.655                   | 0.642                 |
+| LTAFDB                | 0.625             | 0.670                   | 0.648                 |
+| Sim independent, 0 ms | 0.659             | 0.665                   | 0.662                 |
+| Sim short_range, 0 ms | 0.648             | 0.654                   | 0.651                 |
+
+Breaking ties at random asks what the count would have been had the intervals been continuous and only rounded; it is the fair comparison across resolutions, and it does not change with the simulated grid (0.661 to 0.662 independent, 0.651 to 0.652 short_range). Non-strict counting overshoots as much as strict counting undershoots.
+
+Plain reading:
+
+- **Resolution explains most of the TPR gap; it explains none of the sample entropy gap.** The simulated grid reproduces the databases' share of tied neighbours (1.1 % against 1.3 % at 4 ms, 2.2 % against 2.4 % at 7.8125 ms) and lowers the simulated TPR by about 0.009 at 4 ms and 0.018 at 7.8125 ms. That closes 29 to 53 % of the TPR gap for independent AF and 44 to 76 % for short_range, the larger share on LTAFDB, whose grid is coarser. With short_range on each database's own grid the remaining TPR gap is 0.011 [-0.001, 0.022] (AF database) and 0.006 [-0.001, 0.014] (LTAFDB), both intervals including 0. Against the #249 starting point (independent, whole ms) the two together close about 65 % (AF database) and 84 % (LTAFDB) of the gap, as point estimates. Sample entropy does not fall with the grid; it rises a little (by up to 0.04, closing -1 to -20 %), so its gap of 0.18 to 0.28 comes from something else, such as within-window changes in rate or the shape of the real interval distribution.
+- **Real AF, counted fairly, is close to the simulator.** With ties broken at random the databases' TPR is 0.642 and 0.648, against 0.656 expected for independent values at n = 128, 0.662 for independent simulated AF and 0.651 for short_range. So most of the apparent extra structure of real AF in the strict TPR (0.625) is resolution, and what is left fits a dependence about as weak as the lag-1 autocorrelation shows.
+- **For the tool,** strict counting on 4 ms or 7.8 ms beats lowers the TPR of real windows by about 0.013 to 0.023 relative to continuous values, small against the width of the 99.9 % band (0.534 to 0.778) but in the direction of its lower edge. Nothing in the product changes here; whether to break ties at random, or to widen the band for tied data, would be a separate decision.
+- The simulated grid only rounds beat times; it does not add the timing error of a real QRS detector, which is a different thing (the light and heavy noise levels).
 
 ## Limits
 
@@ -274,7 +322,7 @@ Plain reading:
 - **Few clusters.** 25 records; the intervals are wide, and per-rhythm rows with 2 to 6 records (J, AFL) are hardly informative.
 - **Labels.** Database windows are labelled by the reference rhythm annotations at each beat; `.qrs` beat annotations are unaudited except in two records. Atrial flutter and junctional rhythm count as not AF.
 - **Grid choices.** Ectopy rates, AF burdens, rates and noise levels are assumptions chosen to span the simulator, not population estimates; pooled numbers over the grid depend on them. Short recordings are evaluated as one window, which the tool does not do.
-- **Method gaps.** No ectopic-beat filter (Dash et al. use one), no entropy condition in the flag, RR resolution of 4 ms in the database (250 Hz) against 1 ms in the simulator.
+- **Method gaps.** No ectopic-beat filter (Dash et al. use one), no entropy condition in the flag, RR resolution of 4 ms in the AF database (250 Hz) and 7.8125 ms in LTAFDB (128 Hz) against 1 ms in the simulator; the strict turning-point count is biased low on tied intervals (see the #418 section, where a simulated grid closes most of the TPR gap).
 
 ## Sources
 
@@ -282,5 +330,6 @@ Plain reading:
 - Goldberger AL, Amaral LAN, Glass L, et al. PhysioBank, PhysioToolkit, and PhysioNet: components of a new research resource for complex physiologic signals. Circulation. 2000;101(23):e215-e220.
 - Petrutiu S, Sahakian AV, Swiryn S. Abrupt changes in fibrillatory wave characteristics at the termination of paroxysmal atrial fibrillation in humans. Europace. 2007;9(7):466-470. (Long-Term AF Database; reference `.atr` annotations by MEDICALgorithmics Ltd, Warsaw, coordinated by Michal Tadeusiak.)
 - Dash S, Chon KH, Lu S, Raeder EA. Automatic real time detection of atrial fibrillation. Annals of Biomedical Engineering. 2009;37(9):1701-1709.
+- Brockwell PJ, Davis RA. Introduction to Time Series and Forecasting. 3rd ed. Springer; 2016. Section 1.6, tests of the residual sequence (turning-point test).
 - Hayano J, Yamasaki F, Sakata S, Okada A, Mukai S, Fujinami T. Spectral characteristics of ventricular response to atrial fibrillation. American Journal of Physiology. 1997;273(6):H2811-H2816.
 - Richman JS, Moorman JR. Physiological time-series analysis using approximate entropy and sample entropy. American Journal of Physiology, Heart and Circulatory Physiology. 2000;278(6):H2039-H2049.
