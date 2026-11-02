@@ -1,7 +1,7 @@
 import { toChatView, viewReadings } from "@/infrastructure/chat-view";
 import { EMPTY_VALUE, formatDate, formatNumber } from "@/infrastructure/format-measure";
 import { DNA_ASK_TOOL, GENOME_REPORT_TOOL } from "@/packages/carbon-x/constants";
-import { GBD_ESTIMATE_TOOL } from "@/packages/gbd-local/constants";
+import { GBD_ESTIMATE_TOOL, GBD_PROFILE_TOOL } from "@/packages/gbd-local/constants";
 import { GBD_MODEL_TOOL } from "@/packages/gbd-mcp/constants";
 import { GUIDELINE_MODEL_TOOL } from "@/packages/guidelines/constants";
 import { KNOWLEDGE_MODEL_TOOL } from "@/packages/knowledge/constants";
@@ -79,6 +79,7 @@ const TITLES: Readonly<Record<string, string>> = {
   [GUIDELINE_MODEL_TOOL]: "Searched guidelines",
   [GBD_MODEL_TOOL]: "Looked up population data",
   [GBD_ESTIMATE_TOOL]: "Looked up imported GBD estimates",
+  [GBD_PROFILE_TOOL]: "Assembled a GBD profile from imported estimates",
   [KNOWLEDGE_MODEL_TOOL]: "Searched TwinLLM notes",
   [GENOME_REPORT_TOOL]: "Read the released genome report",
   [DNA_ASK_TOOL]: "Asked Carbon-X (research model) about a variant",

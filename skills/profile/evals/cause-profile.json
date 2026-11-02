@@ -1,0 +1,10 @@
+{
+  "question": "Cause profile for cardiovascular diseases",
+  "script": [
+    {
+      "tool": "gbd_profile",
+      "input": { "kind": "cause", "cause": "Cardiovascular diseases" }
+    }
+  ],
+  "expect": { "calls": ["gbd_profile"], "views": [], "refusals": [] }
+}

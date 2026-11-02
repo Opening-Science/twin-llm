@@ -679,6 +679,20 @@ describe("ResponseDocument v1.1 answer_class", () => {
     });
   });
 
+  test("a GBD profile (#403), its estimate calls and its map, stays population-only", () => {
+    const document = buildResponseDocumentV1({
+      parsed: parseTwinAnswer(POPULATION_TEXT, emptySummaries),
+      toolCalls: [
+        { ...GBD_QUERY, tool: "gbd_estimate" },
+        { ...GBD_QUERY, seq: 5, tool: "gbd_profile.map", row_count: 12 },
+      ],
+      mode: "personal",
+      gbdRows: [syntheticGbdRow],
+    });
+    expect(document.sufficient_data).toBe(false);
+    expect(document.next_step).toBe("connect_wearable");
+  });
+
   test("information: a knowledge-only answer", () => {
     const document = buildResponseDocumentV1({
       parsed: parseTwinAnswer(KNOWLEDGE_TEXT, emptySummaries),

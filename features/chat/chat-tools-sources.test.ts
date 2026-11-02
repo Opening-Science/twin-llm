@@ -7,7 +7,7 @@ import type { GbdEstimatePorts } from "@/packages/query-tools/gbd-estimate";
 import type { ImportedToolDeps } from "@/packages/query-tools/imported-tools";
 import type { QueryToolPorts } from "@/packages/query-tools/ports";
 
-import { createChatTools, forSources } from "./chat-tools";
+import { createChatTools, createTurnTools, forSources } from "./chat-tools";
 import { runTwinTurn } from "./run-twin-turn";
 
 /**
@@ -83,12 +83,13 @@ describe("chat tools and knowledge sources", () => {
   test("every chat tool but the view tools is owned by exactly one source", () => {
     const owned = ALL_KNOWLEDGE_SOURCES.flatMap((source) => source.tools);
     // The genome and imported-data tools are owned too, but only a turn their
-    // policies permit gets them.
+    // policies permit gets them; gbd_profile only a skill turn that lists it.
     expect([...owned, "show_view", "list_views", "open_view"].sort()).toEqual(
       [
         ...Object.keys(createChatTools(SCOPE, { query: ports })),
         "dna_ask",
         "gbd_estimate",
+        "gbd_profile",
         "genome_report",
         "genome_variants",
         "imported_conditions",
@@ -191,6 +192,46 @@ describe("the local GBD store (#387)", () => {
       "gbd",
     ]);
     expect(Object.keys(tools).filter((name) => name.startsWith("gbd_"))).toEqual([]);
+  });
+
+  test("gbd_profile (#403) is built only for a skill that lists it, with estimates imported", () => {
+    const withSkill = (local?: GbdEstimatePorts) =>
+      Object.keys(
+        createChatTools(SCOPE, {
+          query: ports,
+          gbdLocal: local,
+          skillTools: ["gbd_profile"],
+        }),
+      ).filter((name) => name.startsWith("gbd_"));
+    expect(names(SCOPE, gbdLocal)).not.toContain("gbd_profile");
+    expect(withSkill(gbdLocal)).toEqual(["gbd_estimate", "gbd_profile"]);
+    expect(withSkill()).toEqual(["gbd_population"]);
+    const { tools } = forSources(
+      createChatTools(SCOPE, { query: ports, gbdLocal, skillTools: ["gbd_profile"] }),
+      ["gbd"],
+    );
+    expect(Object.keys(tools)).not.toContain("gbd_profile");
+  });
+
+  test("the /profile skill turn gets gbd_profile and the view tools only", () => {
+    const { tools } = createTurnTools(
+      SCOPE,
+      { query: ports, gbdLocal },
+      {
+        name: "profile",
+        description: "A GBD profile.",
+        tools: ["gbd_profile"],
+        sources: ["gbd", "wearable-context"],
+        providers: ["ollama"],
+        views: ["table", "map.choropleth"],
+      },
+    );
+    expect(Object.keys(tools).sort()).toEqual([
+      "gbd_profile",
+      "list_views",
+      "open_view",
+      "show_view",
+    ]);
   });
 });
 

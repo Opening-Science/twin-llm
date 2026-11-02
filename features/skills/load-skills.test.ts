@@ -96,7 +96,7 @@ describe("runnableSkillsIn", () => {
     logged.mockRestore();
   });
 
-  test("the repository's own skills/ offers its seven skills", () => {
+  test("the repository's own skills/ offers its eight skills", () => {
     const repo = join(import.meta.dir, "..", "..");
     const skills = runnableSkillsIn({
       skillsDir: join(repo, "skills"),
@@ -107,6 +107,7 @@ describe("runnableSkillsIn", () => {
       "brain",
       "genome",
       "nutrition",
+      "profile",
       "rhythm",
       "sleep",
       "trainer",
@@ -119,12 +120,15 @@ describe("runnableSkillsIn", () => {
       ["ollama"],
       ["ollama"],
       ["ollama"],
+      ["ollama"],
     ]);
     expect(skills[0]?.tools).toEqual(["knowledge_search"]);
     expect(skills[1]?.views).toEqual(["chart.timeseries"]);
     expect(skills[2]?.tools).toEqual(["genome_report", "dna_ask", "genome_variants"]);
     expect(skills[3]?.views).toEqual(["chart.timeseries", "biomarker.card"]);
-    expect(skills[4]?.tools).toEqual([
+    expect(skills[4]?.tools).toEqual(["gbd_profile"]);
+    expect(skills[4]?.views).toEqual(["table", "map.choropleth"]);
+    expect(skills[5]?.tools).toEqual([
       "subject_window",
       "hrv_trend",
       "resting_hr_trend",
@@ -133,7 +137,7 @@ describe("runnableSkillsIn", () => {
       "rhythm_irregularity",
       "knowledge_search",
     ]);
-    expect(skills[5]?.views).toEqual(["chart.timeseries", "chart.compare"]);
-    expect(skills[6]?.views).toEqual(["chart.timeseries"]);
+    expect(skills[6]?.views).toEqual(["chart.timeseries", "chart.compare"]);
+    expect(skills[7]?.views).toEqual(["chart.timeseries"]);
   });
 });

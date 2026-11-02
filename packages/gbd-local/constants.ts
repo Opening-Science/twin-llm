@@ -15,6 +15,13 @@ import { gbdAttributionLine } from "@/packages/gbd-mcp/constants";
  */
 
 export const GBD_ESTIMATE_TOOL = "gbd_estimate";
+/**
+ * A location or cause profile (#403): a fixed sequence of `gbd_estimate`
+ * calls assembled into one answer. Offered only to a skill turn that lists it.
+ */
+export const GBD_PROFILE_TOOL = "gbd_profile";
+/** The audit row of a profile's map: which calls it was drawn from. */
+export const GBD_PROFILE_MAP_AUDIT_TOOL = "gbd_profile.map";
 export const GBD_LOCAL_RELEASE = "2023";
 export const GBD_LOCAL_SOURCE = `IHME GBD ${GBD_LOCAL_RELEASE}`;
 export const GBD_LOCAL_ATTRIBUTION = gbdAttributionLine(GBD_LOCAL_RELEASE);

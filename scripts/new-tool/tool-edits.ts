@@ -274,7 +274,10 @@ export const fileEdits = (names: ToolNames): readonly FileEdit[] => [
   {
     path: PATHS.skillsTest,
     steps: [
-      insertBefore(", gbd_population, gbd_estimate, genome_report", `, ${names.snake}`),
+      insertBefore(
+        ", gbd_population, gbd_estimate, gbd_profile, genome_report",
+        `, ${names.snake}`,
+      ),
     ],
   },
   {

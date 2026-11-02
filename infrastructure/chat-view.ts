@@ -1,5 +1,7 @@
 import type { z } from "zod";
 
+import { GBD_PROFILE_TOOL } from "@/packages/gbd-local/constants";
+
 import { EMPTY_VALUE, formatDate } from "./format-measure";
 import {
   type biomarkerCardSpecSchema,
@@ -34,10 +36,14 @@ export const VIEW_TOOLS: ReadonlySet<string> = new Set([
   OPEN_VIEW_TOOL,
 ]);
 
-/** Tools whose output is a view (or a refusal), streamed on as a `data-view` part. */
+/**
+ * Tools whose output is a view (or a refusal), streamed on as a `data-view`
+ * part. `gbd_profile` (#403) returns several, in its `views`.
+ */
 export const VIEW_OUTPUT_TOOLS: ReadonlySet<string> = new Set([
   SHOW_VIEW_TOOL,
   OPEN_VIEW_TOOL,
+  GBD_PROFILE_TOOL,
 ]);
 
 export type ViewPoint = Readonly<{ at: string; value: number }>;
@@ -192,6 +198,23 @@ export const toChatView = (value: unknown): ChatView | null => {
   return parsed.success ? parsed.data : null;
 };
 
+/**
+ * The views a view tool returned: the output itself when it is one, or each
+ * entry of its `views` list that parses (`gbd_profile`). Anything else: none.
+ */
+export const toChatViews = (value: unknown): ChatView[] => {
+  const single = toChatView(value);
+  if (single !== null) return [single];
+  if (typeof value !== "object" || value === null || !("views" in value)) return [];
+  const { views } = value;
+  return Array.isArray(views)
+    ? views.flatMap((view) => {
+        const parsed = toChatView(view);
+        return parsed === null ? [] : [parsed];
+      })
+    : [];
+};
+
 type PartLike = Readonly<{
   type: string;
   data?: unknown;
@@ -204,14 +227,14 @@ const isViewToolPart = (part: PartLike): boolean =>
 
 /**
  * The views of a message, in order, once each: from `data-view` parts while
- * it streams and from `show_view` and `open_view` tool outputs once it is
- * stored.
+ * it streams and from `show_view`, `open_view` and `gbd_profile` tool
+ * outputs once it is stored.
  */
 export const viewsOf = (parts: readonly PartLike[]): ChatView[] => {
   const found = parts.flatMap((part) => {
     if (part.type === DATA_VIEW_PART) return [toChatView(part.data)];
     if (isViewToolPart(part) && part.state === "output-available")
-      return [toChatView(part.output)];
+      return toChatViews(part.output);
     return [];
   });
   return [
