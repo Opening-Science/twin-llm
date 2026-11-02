@@ -121,6 +121,7 @@ const NOT_LEARNING: Readonly<Record<string, string>> = {
   typecheck: TOOLING,
   lint: TOOLING,
   "lint:claims": TOOLING,
+  "lint:links": TOOLING,
   "mcp:serve":
     "serves the query tools to an MCP client; they read the synthetic warehouse, refuse the imported and genome tools, and train nothing",
   format: TOOLING,

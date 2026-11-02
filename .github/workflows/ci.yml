@@ -79,6 +79,7 @@ jobs:
       - run: bun run sync:open-twin
       - run: bun install --frozen-lockfile
       - run: bun run lint:claims
+      - run: bun run lint:links
 
   test:
     runs-on: ubuntu-latest
