@@ -5,19 +5,23 @@ import { buttonClassName } from "@/infrastructure/ui-kit/button";
 import { Card } from "@/infrastructure/ui-kit/card";
 import { Field } from "@/infrastructure/ui-kit/field";
 
+import { RATED_SET_COPY, ratePath } from "./rated-set-copy";
 import { type BlindLine } from "./rater-lines";
+import { RATED_SETS, type RatedSet } from "./rater-rubric";
 import { SecondRater } from "./second-rater";
 
 /**
- * `/lab/rate`: the second-rater view of the hb set (#351). Server-rendered
- * frame; the rating itself is the client `SecondRater`. Without a pseudonym
- * it asks for one; without runs it says how to make them.
+ * `/lab/rate`: the second-rater view (#351) of one rated set, hb or v1h
+ * (`?set=v1h`, #304). Server-rendered frame; the rating itself is the client
+ * `SecondRater`. Without a pseudonym it asks for one; without runs it says
+ * how to make them.
  */
 
 export type RaterScreenState =
   | Readonly<{ kind: "ask"; invalid: boolean }>
   | Readonly<{ kind: "no-runs" }>
   | Readonly<{ kind: "no-questions" }>
+  | Readonly<{ kind: "unknown-set" }>
   | Readonly<{
       kind: "rate";
       rater: string;
@@ -26,12 +30,26 @@ export type RaterScreenState =
       canSave: boolean;
     }>;
 
-const RUN_COMMANDS = [
-  "bun run eval -- --models agent:brain --set hb --scenario S7",
-  "bun run eval -- --models ollama:qwen3:8b --set hb --scenario S7",
-].join("\n");
+const SetTabs = ({ set, rater }: Readonly<{ set: RatedSet; rater?: string }>) => (
+  <nav aria-label="Question set" className="segmented self-start">
+    {RATED_SETS.map((each) => (
+      <Link
+        key={each}
+        href={ratePath(each, rater)}
+        aria-current={each === set ? "page" : undefined}
+        className="segmented-item"
+      >
+        {RATED_SET_COPY[each].label}
+      </Link>
+    ))}
+  </nav>
+);
 
-const Frame = ({ children }: Readonly<{ children: ReactNode }>) => (
+const Frame = ({
+  set,
+  rater,
+  children,
+}: Readonly<{ set: RatedSet; rater?: string; children: ReactNode }>) => (
   <div className="mx-auto flex w-full max-w-3xl min-w-0 flex-col gap-6 px-4 py-10 sm:px-6">
     <header className="flex flex-col gap-3">
       <Link href="/lab#second-rating" className="setup-link text-sm">
@@ -39,8 +57,8 @@ const Frame = ({ children }: Readonly<{ children: ReactNode }>) => (
       </Link>
       <h1 className="text-display">Second rating</h1>
       <p className="text-muted-foreground max-w-prose leading-relaxed">
-        Rate the answers to the heart-brain questions against the reference, one at a
-        time, with the anchors below the stars. The model and the automatic score stay
+        Rate the answers to {RATED_SET_COPY[set].questions} against the reference, one at
+        a time, with the anchors below the stars. The model and the automatic score stay
         hidden. Ratings are saved beside each run on this machine and never sent anywhere.
         Synthetic data only; for research use, not about anyone&rsquo;s health. The rubric
         is in{" "}
@@ -49,14 +67,19 @@ const Frame = ({ children }: Readonly<{ children: ReactNode }>) => (
         </Link>
         .
       </p>
+      <SetTabs set={set} rater={rater} />
     </header>
     {children}
   </div>
 );
 
-const AskPseudonym = ({ invalid }: Readonly<{ invalid: boolean }>) => (
+const AskPseudonym = ({
+  set,
+  invalid,
+}: Readonly<{ set: RatedSet; invalid: boolean }>) => (
   <Card padding="md" className="flex max-w-md flex-col gap-3">
     <form method="get" action="/lab/rate" className="flex flex-col gap-3">
+      {set !== "hb" && <input type="hidden" name="set" value={set} />}
       <Field
         label="Pseudonym"
         name="rater"
@@ -76,13 +99,23 @@ const AskPseudonym = ({ invalid }: Readonly<{ invalid: boolean }>) => (
   </Card>
 );
 
-export const RaterScreen = ({ state }: Readonly<{ state: RaterScreenState }>) => (
-  <Frame>
-    {state.kind === "ask" && <AskPseudonym invalid={state.invalid} />}
+export const RaterScreen = ({
+  set,
+  state,
+}: Readonly<{ set: RatedSet; state: RaterScreenState }>) => (
+  <Frame set={set} rater={state.kind === "rate" ? state.rater : undefined}>
+    {state.kind === "ask" && <AskPseudonym set={set} invalid={state.invalid} />}
+    {state.kind === "unknown-set" && (
+      <Card padding="md">
+        <p className="text-sm leading-relaxed">
+          This view rates the hb and v1h sets only. Pick one above.
+        </p>
+      </Card>
+    )}
     {state.kind === "no-questions" && (
       <Card padding="md">
         <p className="text-sm leading-relaxed">
-          The hb questions or their key could not be read from evaluation/. They are
+          The {set} questions or their key could not be read from evaluation/. They are
           committed; check the checkout.
         </p>
       </Card>
@@ -90,11 +123,11 @@ export const RaterScreen = ({ state }: Readonly<{ state: RaterScreenState }>) =>
     {state.kind === "no-runs" && (
       <Card padding="md" className="flex flex-col gap-3">
         <p className="text-sm leading-relaxed">
-          No answered hb runs on this machine. Runs are written to evaluation/runs/
+          No answered {set} runs on this machine. Runs are written to evaluation/runs/
           (gitignored) by:
         </p>
-        <pre className="command-block" aria-label="Commands that make hb runs">
-          <code>{RUN_COMMANDS}</code>
+        <pre className="command-block" aria-label={`Commands that make ${set} runs`}>
+          <code>{RATED_SET_COPY[set].runCommands.join("\n")}</code>
         </pre>
       </Card>
     )}
@@ -108,7 +141,12 @@ export const RaterScreen = ({ state }: Readonly<{ state: RaterScreenState }>) =>
             </p>
           </Card>
         )}
-        <SecondRater rater={state.rater} lines={state.lines} canSave={state.canSave} />
+        <SecondRater
+          set={set}
+          rater={state.rater}
+          lines={state.lines}
+          canSave={state.canSave}
+        />
       </>
     )}
   </Frame>

@@ -1069,19 +1069,19 @@ Two raters, blind, on a stratified sample, with agreement statistics:
    first). The S3 and S4 lines with no tool behind them are rated on the
    item's `human` note alone.
 3. Two raters, each with a pseudonym, rate every sampled line on the
-   five-level rubric of `second-rater.md`, read with "the numbers asked for"
-   in place of "the verdict", and fill the sheet's readability and clinical
+   five-level v1h rubric of `second-rater.md` (`second-rater.v1h.v1`, in the
+   Lab's rating view at `/lab/rate?set=v1h`), and fill the sheet's readability and clinical
    caution columns. Neither sees `review-key.json` or the other's ratings.
 4. Agreement as in `second-rater.md`: each rater against the correctness
    scorer (levels 4 and 5 as a pass) and the two raters against each other,
    Cohen's kappa with its 95 % interval, reported next to the observed
    agreement.
 
-The Lab's rating view reads hb runs only. Loading v1h there needs more than a
-second file path: its rubric anchors speak of verdicts, and S3 and S4 items
-have no keyed reference, so it needs its own rubric version (which the ratings
-file and the order seed carry) and set-aware actions. That wiring is a
-follow-up, listed in `second-rater.md`.
+The Lab's rating view reads v1h runs with `?set=v1h` (#304), on a rubric
+version of its own (the hb anchors speak of verdicts, and S3 and S4 items
+have no keyed reference), which the ratings file and the order seed carry.
+It shows every answered line; drawing the stratified sample in the view is
+still open (`second-rater.md`).
 
 ## hb: cohort event rates (#293)
 
