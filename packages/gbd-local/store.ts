@@ -5,6 +5,7 @@ import { append } from "@/packages/audit/append";
 import type {
   GbdCatalog,
   GbdEstimatePorts,
+  GbdImportSource,
   GbdEstimateQuery,
   GbdStoredEstimate,
 } from "@/packages/query-tools/gbd-estimate";
@@ -75,6 +76,25 @@ export const findGbdEstimates = async (
     take: query.take,
   });
 
+/** The latest import's day and the latest citation an import recorded (#417). */
+export const gbdImportSource = async (db: PrismaClient): Promise<GbdImportSource> => {
+  const [latest, cited] = await Promise.all([
+    db.gbdImport.findFirst({
+      orderBy: { importedAt: "desc" },
+      select: { importedAt: true },
+    }),
+    db.gbdImport.findFirst({
+      where: { citation: { not: null } },
+      orderBy: { importedAt: "desc" },
+      select: { citation: true },
+    }),
+  ]);
+  return {
+    importedOn: latest === null ? null : latest.importedAt.toISOString().slice(0, 10),
+    citation: cited?.citation ?? null,
+  };
+};
+
 /** True once any GBD estimate is stored: the chat offers `gbd_estimate` only then. */
 export const hasGbdEstimates = async (db: PrismaClient): Promise<boolean> =>
   (await db.gbdEstimate.findFirst({ select: { key: true } })) !== null;
@@ -83,12 +103,15 @@ export const gbdEstimatePorts = (db: () => PrismaClient): GbdEstimatePorts => ({
   catalog: () => gbdCatalog(db()),
   findEstimates: (query) => findGbdEstimates(db(), query),
   appendAudit: (input) => append(db(), input),
+  importSource: () => gbdImportSource(db()),
 });
 
 export type GbdFileImport = Readonly<{
   sha256: string;
   fileName: string;
   rows: readonly GbdCsvRow[];
+  /** From the download's citation.txt (#417); left out when there was none. */
+  citation?: string;
 }>;
 
 export type GbdImportOutcome =
@@ -115,6 +138,7 @@ export const importGbdFile = async (
       release: GBD_LOCAL_RELEASE,
       rowCount: file.rows.length,
       newRows: 0,
+      citation: file.citation ?? null,
     },
   });
   try {

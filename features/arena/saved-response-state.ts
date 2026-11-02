@@ -1,4 +1,5 @@
 import { viewsOf } from "@/infrastructure/chat-view";
+import { profileFrameOf } from "@/infrastructure/gbd-profile-frame";
 import { toStoredToolParts } from "@/infrastructure/model-response-tool-parts";
 import { numberSources } from "@/infrastructure/number-sources";
 import type { EvidenceAttribution } from "@/infrastructure/oura-types";
@@ -96,6 +97,7 @@ export const toSavedResponseState = (row: SavedResponseRow): ResponseState => {
             })),
           ),
     views: withheld ? [] : viewsOf(parts),
+    profileFrame: withheld ? null : profileFrameOf(parts),
     metrics:
       row.status === "COMPLETE"
         ? {
