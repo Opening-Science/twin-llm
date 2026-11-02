@@ -323,8 +323,9 @@ describe("every outbound path goes through the disclosure ledger (#140)", () => 
     // disclosure, and the Ultra number check (#366) its own.
     const pipeline = read("features/chat/create-stream-model-response.ts");
     expect(pipeline).toContain("const disclosure = chatDisclosure({");
-    expect(pipeline).toContain(
-      "deps.resolveModel(calledModelId, { hasWearableNarrative, disclosure })",
+    // With what the person typed, for the free text check (#346).
+    expect(pipeline).toMatch(
+      /deps\.resolveModel\(calledModelId, \{\s*hasWearableNarrative,\s*disclosure,\s*typed,?\s*\}\)/,
     );
     expect(pipeline).toContain("disclosure: numberReviewDisclosure(disclosure),");
   });

@@ -114,7 +114,9 @@ and mark the fetching one `server-only`, so client code can use the pure half.
   check. An existing test that still needs one uses `mockModuleForFile`
   (`tests/support/mock-module.ts`), which keeps the module's other exports and puts
   the real module back after the file. Leave shared state (env, files, sessions) as
-  you found it, and check with `bun test --randomize` (#359).
+  you found it, and check with `bun test --randomize` (#359). CI runs the whole suite
+  randomized once a day on main (`.github/workflows/randomized-tests.yml`); a failed run
+  names its seed, and `bun test --randomize --seed=<seed>` repeats the order.
 - `bunfig.toml` already preloads a `server-only` stub; do not add another.
 
 **Data.** Use synthetic or fixture data for development, tests, screenshots and
@@ -225,7 +227,8 @@ Where they are used: `StepTrace` in chat answers; `UndoButton` for deleting a th
 (thread bar) and an imported dataset (Customize · Data), through `useSoftDelete`
 (`soft-delete.ts`: the item hides at once, the server delete runs only when the window
 ends, Undo sends nothing; leaving for another page in the app runs it early, closing the
-tab asks first and then deletes nothing); `StatusLattice` for a Synthea run;
+tab asks first and then deletes nothing); `StatusLattice` for a Synthea run and the Lab's long jobs (checks, evaluation run, rhythm
+benchmark, Synthea cohort; `features/lab/lab-jobs.ts`);
 `HoldToSubmit` for the two privacy actions that cannot be undone (#350): withdrawing a
 learning consent (Customize · Privacy) and replacing the passphrase and recovery code
 with the recovery code (the unlock screen). The app has no erase-everything action and

@@ -1,0 +1,54 @@
+name: Randomized tests
+
+# The whole suite once a day in a random order, so a test that leaks state into
+# another (a process-wide mock.module or env change, as in #336 and #359) shows
+# up early. A failing run names its seed; rerun it locally with
+# `bun test --randomize --seed=<seed>`, or here with the seed input.
+on:
+  schedule:
+    - cron: "17 4 * * *"
+  workflow_dispatch:
+    inputs:
+      seed:
+        description: Seed to rerun (empty for a new one)
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: randomized-tests
+  cancel-in-progress: false
+
+jobs:
+  test-randomized:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.4.2
+      - run: bun run sync:open-twin
+      - run: bun install --frozen-lockfile
+      - name: Pick the seed
+        id: seed
+        env:
+          INPUT_SEED: ${{ github.event.inputs.seed }}
+        run: |
+          if [ -n "${INPUT_SEED}" ]; then
+            case "${INPUT_SEED}" in
+              *[!0-9]*) echo "seed must be a number" >&2; exit 1 ;;
+            esac
+            seed="${INPUT_SEED}"
+          else
+            seed="$(od -An -N4 -tu4 /dev/urandom | tr -d ' ')"
+          fi
+          echo "seed=${seed}" >> "${GITHUB_OUTPUT}"
+          echo "Randomized test run, seed ${seed}. Rerun: \`bun test --randomize --seed=${seed}\`" >> "${GITHUB_STEP_SUMMARY}"
+      - run: bun test --randomize --seed="${SEED}"
+        env:
+          SEED: ${{ steps.seed.outputs.seed }}
