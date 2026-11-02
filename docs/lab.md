@@ -36,6 +36,9 @@ the command first reads that one setting from `.env.local` into the shell withou
 If a check cannot run, its card keeps the same title and command as the working card, so the
 command still repeats it by hand.
 
+Above the cards a status lattice (#310) says the checks ran on this load, how many came out OK, Not
+OK and Unknown, and how long they took.
+
 ## Simulations
 
 Simulated heart rhythm recordings of synthetic people (#252), made by `packages/rhythm-sim` the same
@@ -77,6 +80,17 @@ Evaluation runs and benchmark results found on this machine (#252). Every table 
 for a paper's tables and figures (`infrastructure/csv.ts`; a cell that a spreadsheet would run as a
 formula gets a leading `'`). Only files inside the repository are read, each at most 2 MB.
 
+- **Long jobs** (#310). One status lattice per job that runs from the command line: the newest
+  evaluation run, the newest rhythm benchmark and the newest Synthea cohort from
+  `bun run synthea:generate`. The page starts none of them; `features/lab/load-jobs.ts` reads file
+  times and `features/lab/lab-jobs.ts` (pure, tested) decides the state. A run whose final file
+  (`meta.json`, `manifest.json`) is there is done, with the time from its folder's start to that
+  file. Without it, a run written to in the last 15 minutes (evaluation) or 10 minutes (Synthea) is
+  running, with a timer that counts from its start, and the page looks again every 5 seconds while
+  the tab is visible; quieter than that it stopped, with a cross. Synthea's start is its
+  `synthea.properties`, written as each run begins, and a running cohort shows its patient files so
+  far. The rhythm benchmark writes every file at the end, so it shows only finished runs, without a
+  time. For an evaluation run only file times are read and, once it has finished, its `meta.json`.
 - **Evaluation runs.** Each folder in `evaluation/runs/` (gitignored, written by `bun run eval`;
   [evaluation/harness.md](evaluation/harness.md)), newest 100: run id, date, kind (run, replay or mock),
   models, selection and line and error counts from `meta.json`, and from `report.md` each model's pass
