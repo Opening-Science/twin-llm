@@ -33,6 +33,8 @@ export type RaterItem = Readonly<{
   human?: string | undefined;
   /** The item's `expect.answer_class`, which tells a decline from a lookup. */
   answerClass?: string | undefined;
+  /** The item's scenario (S1 to S7); the v1h review sample is drawn by it (#413). */
+  scenario?: string | undefined;
 }>;
 
 export type RaterKeyEntry = Readonly<{
@@ -55,6 +57,8 @@ export type RaterLine = Readonly<{
   runId: string;
   itemId: string;
   repeat: number;
+  /** Server side only, for the review sample; never in a `BlindLine`. */
+  scenario: string;
   question: string;
   answer: string;
   reference: readonly string[];
@@ -162,6 +166,7 @@ export const raterLines = (
           runId: run.runId,
           itemId: line.item_id,
           repeat: line.repeat,
+          scenario: item.scenario ?? "",
           question: item.question,
           answer: line.text,
           reference: referenceLines(entries),

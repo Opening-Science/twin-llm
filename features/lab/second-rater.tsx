@@ -11,6 +11,7 @@ import { exportRatings, saveRating } from "./rating-actions";
 import { type BlindLine } from "./rater-lines";
 import { nextIndex, progressText, ratedCount, resumeIndex } from "./rater-progress";
 import { type RatedSet, type Rubric, rubricLabels, rubricOf } from "./rater-rubric";
+import { type RaterScope } from "./rater-sample";
 
 /**
  * The second-rater view (#351): one answer at a time, with its question and
@@ -23,6 +24,8 @@ import { type RatedSet, type Rubric, rubricLabels, rubricOf } from "./rater-rubr
 type Props = Readonly<{
   set: RatedSet;
   rater: string;
+  /** The v1h review sample or every line (#413); export opens when these are all rated. */
+  scope: RaterScope;
   lines: readonly BlindLine[];
   canSave: boolean;
 }>;
@@ -152,7 +155,7 @@ const LineView = ({
   );
 };
 
-export const SecondRater = ({ set, rater, lines: initial, canSave }: Props) => {
+export const SecondRater = ({ set, rater, scope, lines: initial, canSave }: Props) => {
   const [lines, setLines] = useState<readonly BlindLine[]>(initial);
   const [index, setIndex] = useState(() => resumeIndex(initial));
   const [status, setStatus] = useState("");
@@ -181,7 +184,7 @@ export const SecondRater = ({ set, rater, lines: initial, canSave }: Props) => {
 
   const download = () => {
     startSaving(async () => {
-      const result = await exportRatings(rater, set);
+      const result = await exportRatings(rater, set, scope);
       if (!result.ok) {
         setStatus(result.message);
         return;

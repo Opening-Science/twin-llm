@@ -8,6 +8,7 @@ import { Field } from "@/infrastructure/ui-kit/field";
 import { RATED_SET_COPY, ratePath } from "./rated-set-copy";
 import { type BlindLine } from "./rater-lines";
 import { RATED_SETS, type RatedSet } from "./rater-rubric";
+import { type RaterScope } from "./rater-sample";
 import { SecondRater } from "./second-rater";
 
 /**
@@ -26,6 +27,10 @@ export type RaterScreenState =
       kind: "rate";
       rater: string;
       runs: number;
+      /** The protocol's sample, or every answered line (#413). */
+      scope: RaterScope;
+      /** Every answered line of the set on this machine, sampled or not. */
+      answered: number;
       lines: readonly BlindLine[];
       canSave: boolean;
     }>;
@@ -44,6 +49,34 @@ const SetTabs = ({ set, rater }: Readonly<{ set: RatedSet; rater?: string }>) =>
     ))}
   </nav>
 );
+
+/** Which lines are shown, and the way to the other scope. v1h only: hb has no sample. */
+const ScopeNote = ({
+  set,
+  rater,
+  scope,
+  shown,
+  answered,
+}: Readonly<{
+  set: RatedSet;
+  rater: string;
+  scope: RaterScope;
+  shown: number;
+  answered: number;
+}>) =>
+  set === "hb" ? null : (
+    <p className="text-muted-foreground text-sm leading-relaxed">
+      {scope === "sample"
+        ? `The review sample: ${shown} of the ${answered} answered lines, drawn as the protocol in docs/evaluation/question-set.md says, in your own order. `
+        : `Every answered line (${answered}), for a second pass after the sample. `}
+      <Link
+        href={ratePath(set, rater, scope === "sample" ? "all" : "sample")}
+        className="setup-link"
+      >
+        {scope === "sample" ? "Rate every line" : "Back to the sample"}
+      </Link>
+    </p>
+  );
 
 const Frame = ({
   set,
@@ -141,9 +174,17 @@ export const RaterScreen = ({
             </p>
           </Card>
         )}
+        <ScopeNote
+          set={set}
+          rater={state.rater}
+          scope={state.scope}
+          shown={state.lines.length}
+          answered={state.answered}
+        />
         <SecondRater
           set={set}
           rater={state.rater}
+          scope={state.scope}
           lines={state.lines}
           canSave={state.canSave}
         />

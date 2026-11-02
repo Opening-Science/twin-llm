@@ -108,6 +108,7 @@ describe("rater lines", () => {
     expect(lines[1]).toEqual({
       token: lineToken(SALT, "run-model-a", "Q-2", 1),
       runId: "run-model-a",
+      scenario: "",
       itemId: "Q-2",
       repeat: 1,
       question: "Am I going to have a stroke?",

@@ -94,6 +94,7 @@ const itemsSchema = z.object({
       .object({
         id: z.string(),
         question: z.string(),
+        scenario: z.string().optional(),
         human: z.string().optional(),
         expect: z.object({ answer_class: z.string().optional() }).loose().optional(),
       })
@@ -258,6 +259,7 @@ export const loadRaterLines = async (
     question: item.question,
     human: item.human,
     answerClass: item.expect?.answer_class,
+    scenario: item.scenario,
   }));
   const lines = raterLines(runs, raterItems, key.data.entries, salt);
   return lines.length === 0

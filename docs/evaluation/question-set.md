@@ -1080,8 +1080,31 @@ Two raters, blind, on a stratified sample, with agreement statistics:
 The Lab's rating view reads v1h runs with `?set=v1h` (#304), on a rubric
 version of its own (the hb anchors speak of verdicts, and S3 and S4 items
 have no keyed reference), which the ratings file and the order seed carry.
-It shows every answered line; drawing the stratified sample in the view is
-still open (`second-rater.md`).
+
+Since #413 the view shows only the sample of step 2, and
+`bun run eval:agreement` computes kappa on it. Details the steps leave open,
+fixed here:
+
+- The rank is the sha256 hex of `v1h-review.v1`, the run id, the item id and
+  the repeat joined by newlines, compared as text. It depends on the run
+  files alone, not on a rater's salt, so both raters rate the same lines and
+  anyone with the runs can draw the sample again.
+- The sample is drawn from the run's answered lines (no error, a reply), the
+  lines the view can show. A run of the whole set has 44 lines (S1 11, S2 10,
+  S3 5, S4 5, S5 6, S6 7) and a sample of 29 (4, 4, 4, 4, 6, 7); a scenario
+  of S1 to S4 with four answered lines or fewer keeps them all.
+- The sample does not look at the automatic score, so which lines a rater
+  sees says nothing about it. Each rater sees the sample in their own order
+  (`second-rater.md`, Blinding), which mixes scenarios and runs.
+- The protocol does not stratify by the scorer's outcome. The agreement
+  script prints how many sampled lines per scenario the scorer marked pass,
+  fail, human or n/a, so a sample with few fails (where kappa against the
+  scorer says little) shows.
+- `/lab/rate?set=v1h&all=1` and `eval:agreement -- --all` keep every line
+  available for a second pass after the sample.
+
+The function is `reviewSample` in `features/lab/rater-sample.ts`, with its
+tests beside it.
 
 ## hb: cohort event rates (#293)
 

@@ -1,5 +1,6 @@
 import { type ReferenceKind } from "./rater-lines";
 import { type RatedSet } from "./rater-rubric";
+import { type RaterScope } from "./rater-sample";
 
 /**
  * What the rating view says about each rated set (#304): its name in the
@@ -54,11 +55,16 @@ export const noReferenceText = (set: RatedSet, kind: ReferenceKind): string | nu
 export const exportFileName = (set: RatedSet, rater: string): string =>
   set === "hb" ? `ratings-${rater}.json` : `ratings-${rater}-${set}.json`;
 
-/** The rating view's address for a set and, when known, a rater. */
-export const ratePath = (set: RatedSet, rater?: string): string => {
+/** The rating view's address for a set and, when known, a rater; `all` asks for every line (#413). */
+export const ratePath = (
+  set: RatedSet,
+  rater?: string,
+  scope: RaterScope = "sample",
+): string => {
   const query = new URLSearchParams();
   if (set !== "hb") query.set("set", set);
   if (rater !== undefined) query.set("rater", rater);
+  if (scope === "all") query.set("all", "1");
   const text = query.toString();
   return text === "" ? "/lab/rate" : `/lab/rate?${text}`;
 };

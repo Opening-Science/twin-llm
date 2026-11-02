@@ -19,6 +19,7 @@ import {
   ratedSetOf,
   rubricOf,
 } from "./rater-rubric";
+import { linesInScope, raterScopeOf } from "./rater-sample";
 
 /**
  * Server actions of the second-rater view (#351). They write and read only
@@ -87,12 +88,14 @@ export const saveRating = async (input: unknown): Promise<ActionResult<null>> =>
 };
 
 /**
- * The rater's files as one JSON document. Offered only once every answer is
+ * The rater's files as one JSON document. Offered only once every answer the
+ * rater is shown (the v1h review sample, or with `all` every line, #413) is
  * rated: the file names each run, and a run's name can name its model.
  */
 export const exportRatings = async (
   rater: unknown,
   setName?: unknown,
+  scopeName?: unknown,
 ): Promise<ActionResult<string>> => {
   if (!isAuthDisabled()) return { ok: false, message: NOT_LOCAL };
   const set: RatedSet | null = ratedSetOf(setName);
@@ -104,7 +107,8 @@ export const exportRatings = async (
     const salt = await loadRaterSalt(set, rater, true);
     const data = await loadRaterLines(set, salt);
     if (data.kind !== "ready") return { ok: false, message: "No answers to export." };
-    const session = await loadRaterSession(set, data.lines, rater, salt);
+    const shown = linesInScope(set, data.lines, raterScopeOf(scopeName));
+    const session = await loadRaterSession(set, shown, rater, salt);
     if (session.some((line) => line.level === null)) {
       return { ok: false, message: "Export opens once every answer is rated." };
     }
