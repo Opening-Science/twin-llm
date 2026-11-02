@@ -1013,17 +1013,17 @@ model GbdImport {
   /// IHME's citation from the download's citation.txt, as one line; null when none came with the file.
   citation   String?
 
-  estimates GbdEstimate[]
+  estimates GbdEstimateFile[]
 
   @@map("gbd_imports")
 }
 
 /// One estimate from an imported file, with its 95% uncertainty interval.
 /// Ids and names are IHME's as exported. `key` (`gbdRowKey`) makes the same
-/// estimate from two files one row; the first file to bring it keeps it.
+/// estimate from two files one row; `files` says which imported files have it
+/// (#428), and it stays while any of them does.
 model GbdEstimate {
   key          String  @id
-  importSha    String  @map("import_sha")
   measureId    Int     @map("measure_id")
   measureName  String  @map("measure_name")
   locationId   Int     @map("location_id")
@@ -1043,9 +1043,23 @@ model GbdEstimate {
   upper        Float?
   lower        Float?
 
-  import GbdImport @relation(fields: [importSha], references: [sha256], onDelete: Cascade)
+  files GbdEstimateFile[]
 
   @@index([measureId, metricId, sexId, ageId, year])
   @@index([locationId])
   @@map("gbd_estimates")
+}
+
+/// One imported file has one estimate (#428). Deleting a file removes its
+/// links, then the estimates no other file still links to.
+model GbdEstimateFile {
+  importSha   String @map("import_sha")
+  estimateKey String @map("estimate_key")
+
+  import   GbdImport   @relation(fields: [importSha], references: [sha256], onDelete: Cascade)
+  estimate GbdEstimate @relation(fields: [estimateKey], references: [key], onDelete: Cascade)
+
+  @@id([importSha, estimateKey])
+  @@index([estimateKey])
+  @@map("gbd_estimate_files")
 }

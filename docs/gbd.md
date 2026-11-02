@@ -144,10 +144,16 @@ already imported is skipped.
 
 Below the form the page lists every imported file with its release, row counts
 (rows in the file, new when imported, held now), import day, citation and
-SHA-256, and a Delete button with five seconds to undo. Delete removes the
-file's record and the estimates it brought. An estimate is stored once, by the
-first file that brought it, so deleting that file removes it even when a later
-file also had it; to restore it, delete and import the later file again.
+SHA-256, and a Delete button with five seconds to undo. An estimate is stored
+once, however many files have it, and `gbd_estimate_files` records which
+imported files have each one (#428). Delete removes the file's record and its
+links, then only the estimates no other imported file still has; it does not
+matter which of two overlapping files goes first. "Held now" counts every
+estimate the file has, shared or not. Importing a deleted file again links all
+its rows to it again. The migration that added the links linked each estimate
+stored before it to the file that brought it first, since later files were not
+recorded; to link a later file to the estimates it shares, delete it and import
+it again.
 
 GBD results are population data, not personal data, but every person using a
 server shares its GBD store. So the routes (`POST /api/gbd/imports`,
