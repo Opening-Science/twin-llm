@@ -1,8 +1,26 @@
 # TwinLLM (Open Science Foundation)
 
-Application companion to open-twin: coded FHIR R4 in, cited evidence out. Several models answer the same question side by side, with optional wearable context and explainability scaffolding.
+Application companion to open-twin: coded FHIR R4 in, cited evidence out. A question goes to one research specialist (Auto), to the specialists and models a person picks (Manual) or to two or three models side by side (Compare), with optional wearable context and explainability scaffolding. Personal data stays on the person's machine.
 
-Research-use visualisation only. Where the chat goes next: [`chat-platform.md`](chat-platform.md).
+Research use only; nothing here is clinical advice. Where the chat goes next: [`chat-platform.md`](chat-platform.md).
+
+## What is in the app
+
+Each line links to the page with the detail; this page does not repeat it.
+
+| Area                  | What it does                                                                                                                                                            | Read                                                                                                  |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Chat modes and effort | Auto, Manual and Compare; five effort steps from Quick to Ultra that set thinking, model calls and a number check (#366)                                                | [chat-modes.md](chat-modes.md)                                                                        |
+| Query tools           | Closed, audited reads over the Synthea warehouse and the turn's wearable snapshots                                                                                      | [query-layer.md](query-layer.md)                                                                      |
+| Privacy               | Owner-only storage, passphrase unlock, encryption at rest, consent before learning, a disclosure ledger that blocks genome identifiers to hosted models, signed anchors | [privacy-design.md](privacy-design.md), [providers.md](providers.md#what-leaves-the-host)             |
+| Your own data         | FHIR records, lab CSV and research tables imported on Customize · Data                                                                                                  | [personal-data.md](personal-data.md)                                                                  |
+| Population context    | IHME GBD 2023 imported on this machine, `gbd_estimate`, `/profile`, choropleth maps by country or state                                                                 | [gbd.md](gbd.md), [gbd-map-coverage.md](gbd-map-coverage.md)                                          |
+| Live public lookups   | PubMed and Ensembl, off until switched on per source, recorded in the ledger (#6)                                                                                       | [providers.md](providers.md#live-public-lookups)                                                      |
+| Skills and tasks      | Shipped and own skills; scheduled tasks on Customize · Tasks, none by default (#54)                                                                                     | [skills.md](skills.md), [scheduled tasks](skills.md#scheduled-tasks)                                  |
+| Twin notes            | `/compact` notes holding only what the person confirmed                                                                                                                 | [twin-notes.md](twin-notes.md)                                                                        |
+| Lab                   | Self-checks, long-job status (#310), evaluation and benchmark results, the blind second rater                                                                           | [lab.md](lab.md), [evaluation/second-rater.md](evaluation/second-rater.md)                            |
+| Evaluation            | The harness, scenarios and question sets on synthetic cohorts; the first full runs                                                                                      | [evaluation/harness.md](evaluation/harness.md), [eval-runs-2026-10.md](research/eval-runs-2026-10.md) |
+| Intended use          | What TwinLLM is for and what would make it a device                                                                                                                     | [clinical-research.md](clinical-research.md)                                                          |
 
 ## Quick start (local MVP)
 
@@ -28,7 +46,7 @@ A person who has not finished or skipped setup and has no thread yet is sent fro
 1. **What brings you here**: roles (researcher, clinician-researcher, self-tracker, student) and the synthetic demo cohort or own data. Tailors the starter questions.
 2. **Connect your data**: Oura, Whoop, Google Health, BodyLoop and Ark with their real state. Link opens the same authorize route as Connectors; setups that need more go to the Connectors page.
 3. **Knowledge sources**: guideline passages, OpenTwin knowledge notes, the synthetic cohort tools and GBD, with a switch per group and per source. A source that is off loses its chat tools and its line in the system prompt. Trends and baselines need Subjects and observations (they take its `subject_ref` values), so turning records off turns them off too. Sources that cannot answer on this server (empty index, personal mode, GBD pending) show why instead of a switch.
-4. **Where your data goes**: the env-driven provider setting, read-only, and what leaves this machine (README "What leaves this machine").
+4. **Where your data goes**: the env-driven provider setting, read-only, and what leaves this machine ([providers.md](providers.md#what-leaves-the-host)).
 5. **What do you want to explore**: a hint under the box says to leave out personal details and where the text goes. Three starter questions from the configured model, or fixed starters per role when the call fails or takes over 40 s. Picking one opens a new thread on the default models.
 
 Answers live in `onboarding_profiles`, one row per user. "Get started" in the sidebar reopens the flow on the saved answers.
@@ -71,21 +89,27 @@ Exoscale: set `EXOSCALE_BASE_URLS` (one vLLM `/v1` URL per GPU); without it, sta
 - New in the sidebar (and every other link to `/`) always opens an empty conversation with no thread id, also right after a first send on `/` has moved the address to `/t/<id>` and while its answers are still streaming (#377, `features/arena/new-conversation.ts`). Answers already streaming finish on the server and show when the thread is reopened.
 - Twin notes (`/compact`, Customize · Memory) hold only what the person confirmed: topics, measures with the tool and dates, open questions; no tool rows. Each keeps the permit of its thread: synthetic notes load into synthetic turns only, personal notes only on a provider allowed personal data, notes from a genome or imported-data thread only on Ollama on this machine. Writing, editing, deleting and loading are audited ([twin-notes.md](twin-notes.md))
 - Scheduled tasks (Customize · Tasks, #54) run a skill into a saved thread under the same policy as a typed turn; nothing is scheduled by default, a personal-mode run happens only while unlocked (otherwise "Skipped: locked"), every run is audited, and notices stay in the app and are off until a task's bell is on ([skills.md](skills.md#scheduled-tasks))
+- With `DATA_MODE=personal` the privacy layer of [privacy-design.md](privacy-design.md) applies: the server starts only on owner-only storage (#144), personal data stays locked until the passphrase unlocks it (#142) and is encrypted at rest (#141), nothing learns from it without a consent per use (#145), every send off this machine is written to the disclosure ledger first and a hosted model request holding identifiers from the person's genome files is not sent (#140, #356), and the audit and ledger chain heads are signed (#300)
+- Live PubMed and Ensembl lookups are off until the person switches each source on, are refused with `LOCAL_ONLY=true` and in incognito chats, and send search terms, never a stored value ([providers.md](providers.md#live-public-lookups))
 - Incognito chats (`/?incognito=1`) are never saved and run only on Ollama on loopback: no thread, turn or answer row, no thread history entry, no analytics event about the conversation, and no prompt or answer text in a log. Tool reads are audited as usual, under a random session id per answer with no thread or turn id ([chat-platform.md](chat-platform.md#incognito-chats))
 
 ## Key paths
 
-| Area                         | Path                                                                           |
-| ---------------------------- | ------------------------------------------------------------------------------ |
-| Env / local MVP / DATA_MODE  | `infrastructure/env.ts`, `infrastructure/data-mode.ts`                         |
-| Actor (auth bypass)          | `infrastructure/auth-actor.ts`                                                 |
-| Providers                    | `features/chat/resolve-language-model.ts`                                      |
-| Catalog                      | `infrastructure/fetch-model-catalog.ts`                                        |
-| Oura / Whoop / Google Health | `features/oura/`, `features/whoop/`, `features/google-health/`                 |
-| System prompt / XAI          | `features/chat/twin-system-prompt.ts`                                          |
-| Twin notes (`/compact`)      | `infrastructure/twin-notes.ts`, `features/memory/`                             |
-| Scheduled tasks              | `features/tasks/`, `features/arena/scheduled-turn.ts`                          |
-| First run (`/start`)         | `features/onboarding/`, `infrastructure/knowledge-sources.ts`                  |
-| Docs (`/docs`)               | `features/docs/`: these pages rendered from `docs/*.md`                        |
-| Lab (`/lab`)                 | `features/lab/`: verifiability checks, simulations, results ([lab.md](lab.md)) |
-| open-twin pins               | `.open-twin/` via `bun run sync:open-twin` (`PROVENANCE.md`)                   |
+| Area                         | Path                                                                                    |
+| ---------------------------- | --------------------------------------------------------------------------------------- |
+| Env / local MVP / DATA_MODE  | `infrastructure/env.ts`, `infrastructure/data-mode.ts`                                  |
+| Actor (auth bypass)          | `infrastructure/auth-actor.ts`                                                          |
+| Providers                    | `features/chat/resolve-language-model.ts`                                               |
+| Catalog                      | `infrastructure/fetch-model-catalog.ts`                                                 |
+| Oura / Whoop / Google Health | `features/oura/`, `features/whoop/`, `features/google-health/`                          |
+| System prompt / XAI          | `features/chat/twin-system-prompt.ts`                                                   |
+| Twin notes (`/compact`)      | `infrastructure/twin-notes.ts`, `features/memory/`                                      |
+| Scheduled tasks              | `features/tasks/`, `features/arena/scheduled-turn.ts`                                   |
+| First run (`/start`)         | `features/onboarding/`, `infrastructure/knowledge-sources.ts`                           |
+| Chat modes and effort        | `features/arena/chat-mode.ts`, `infrastructure/chat-effort.ts`                          |
+| Unlock, consent, ledger      | `infrastructure/vault-*.ts`, `features/privacy/`, `infrastructure/disclosure-ledger.ts` |
+| GBD local store              | `packages/gbd-local/`, `scripts/gbd/`                                                   |
+| Live lookups                 | `packages/live-sources/`                                                                |
+| Docs (`/docs`)               | `features/docs/`: these pages rendered from `docs/*.md`                                 |
+| Lab (`/lab`)                 | `features/lab/`: verifiability checks, simulations, results ([lab.md](lab.md))          |
+| open-twin pins               | `.open-twin/` via `bun run sync:open-twin` (`PROVENANCE.md`)                            |

@@ -2,7 +2,7 @@
 
 Ask questions about health data with open models, side by side, and see which numbers each answer used.
 
-TwinLLM is an open-source research app from the [Open Science Foundation](https://github.com/Opening-Science). It reads wearables, body scans and synthetic patient cohorts through [open-twin](https://github.com/Opening-Science/open-twin), lets up to three open models answer the same question, and shows the tool calls and values behind every answer. It can run entirely on your own machine.
+TwinLLM is an open-source research app from the [Open Science Foundation](https://github.com/Opening-Science). It reads wearables, body scans and synthetic patient cohorts through [open-twin](https://github.com/Opening-Science/open-twin), lets one or up to three open models answer a question, and shows the tool calls and values behind every answer. It runs on your own machine and keeps your data there.
 
 [![CI](https://github.com/Opening-Science/twin-llm/actions/workflows/ci.yml/badge.svg)](https://github.com/Opening-Science/twin-llm/actions/workflows/ci.yml)
 [![Licence: Apache-2.0](https://img.shields.io/badge/licence-Apache--2.0-blue.svg)](LICENSE)
@@ -18,9 +18,12 @@ TwinLLM is an open-source research app from the [Open Science Foundation](https:
 ## What it does
 
 - **Answers come from tools.** Models never see raw records. They call a small set of closed, capped query tools (latest value, trend, baseline, sleep, HRV, two wearables compared, values around an event), and every call is written to a hash-linked audit log.
-- **Several models, one question.** Up to three answer side by side, each with its reasoning, cited values and uncertainty.
-- **Local first.** With `LOCAL_ONLY=true` the models, embeddings and database stay on your machine.
-- **Synthetic data to start.** A Synthea cohort ships with setup, so you can try everything without a real person's records.
+- **Three ways to ask.** Auto picks a research specialist for each question, Manual runs the specialists and models you choose, and Compare puts two or three answers side by side, each with its reasoning, cited values and uncertainty. An effort control from Quick to Ultra sets thinking, the number of model calls and, at Ultra, a number check. [Chat modes](docs/chat-modes.md).
+- **Population context on your machine.** Import IHME GBD 2023 results on Customize · Data; chat reads them with `gbd_estimate`, the `/profile` skill builds a location or cause profile, and estimates can be drawn as a map by country or by state. Nothing is sent anywhere. [GBD](docs/gbd.md), [map coverage](docs/gbd-map-coverage.md).
+- **Scheduled tasks.** Customize · Tasks runs a skill into a saved thread daily, weekly or every few hours, under the same rules as a typed question. Nothing is scheduled by default. [Scheduled tasks](docs/skills.md#scheduled-tasks).
+- **Live public lookups, opt-in.** PubMed and Ensembl lookups are off until you switch each one on, never run with `LOCAL_ONLY=true` or in an incognito chat, and send the search terms, never your messages or stored values. [Live public lookups](docs/providers.md#live-public-lookups).
+- **A Lab to check it.** `/lab` runs the self-checks behind the privacy claims, shows the status of long command-line jobs and the evaluation and benchmark results on this machine, and has a blind second rater for evaluation answers. [Lab](docs/lab.md), [second rater](docs/evaluation/second-rater.md).
+- **Synthetic data to start.** A Synthea cohort ships with setup, so you can try everything without a real person's records. The first full evaluation runs, three local models on synthetic data, are in [`docs/research/eval-runs-2026-10.md`](docs/research/eval-runs-2026-10.md).
 
 <p>
   <img src="docs/images/digital-twin-dark.png" width="49%" alt="The Digital Twin in dark mode: a synthetic demo body at the Skeleton depth with the anatomy panel.">
@@ -47,12 +50,19 @@ bun run dev
 
 ## Privacy
 
-- With `LOCAL_ONLY=true`, nothing about you needs to leave your machine.
-- No outside model service sees personal data; hosted models are for synthetic data only.
-- The model gets numbers with units and dates, never records, images or scan meshes.
-- Threads open only for their owner, tokens are encrypted, and incognito chats are not stored.
+Your data stays on your machine. With `LOCAL_ONLY=true` the models, embeddings and database all run locally. Third-party model services get synthetic data only, and the model gets numbers with units and dates, never records, images or scan meshes.
 
-Wearable data still starts in each vendor's cloud. The full table of what goes where is in [`docs/providers.md`](docs/providers.md#what-leaves-the-host). The planned unlock, encryption at rest, learning consent, disclosure ledger and audit anchor are in [`docs/privacy-design.md`](docs/privacy-design.md).
+With your own data (`DATA_MODE=personal`):
+
+- **Owner-only storage.** The server does not start unless its state folder, `.env.local` and scan folder are open to your OS user only and Postgres is reached on this machine.
+- **Locked until you unlock it.** Personal data opens only after your passphrase; the key is held in the server's memory, and a recovery code is shown once.
+- **Encrypted at rest.** Threads, answers, wearable and scan snapshots, genome reports, imports, twin notes and search vectors are stored encrypted (AES-256-GCM).
+- **Consent before learning.** Nothing builds training sets, answer keys or evaluation runs from your data unless you grant that use; every use is off by default and can be withdrawn.
+- **A ledger of what leaves.** Every send off this machine (hosted model requests, wearable syncs, exports, live lookups) is recorded in a hash-chained ledger before it goes, and a request to a hosted model that holds identifiers from your own genome files is blocked.
+- **Signed anchors.** A local Ed25519 key signs the heads of the audit chain and the ledger, and the Lab checks each chain against its latest anchor.
+- **Private threads.** Threads open only for their owner, and incognito chats are not stored.
+
+Wearable data still starts in each vendor's cloud. What goes where: [`docs/providers.md`](docs/providers.md#what-leaves-the-host). How each protection works and what is not built yet: [`docs/privacy-design.md`](docs/privacy-design.md).
 
 ## How it works
 
