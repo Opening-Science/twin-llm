@@ -225,7 +225,8 @@ Where they are used: `StepTrace` in chat answers; `UndoButton` for deleting a th
 (thread bar) and an imported dataset (Customize · Data), through `useSoftDelete`
 (`soft-delete.ts`: the item hides at once, the server delete runs only when the window
 ends, Undo sends nothing; leaving for another page in the app runs it early, closing the
-tab asks first and then deletes nothing); `StatusLattice` for a Synthea run;
+tab asks first and then deletes nothing); `StatusLattice` for a Synthea run and the Lab's long jobs (checks, evaluation run, rhythm
+benchmark, Synthea cohort; `features/lab/lab-jobs.ts`);
 `HoldToSubmit` for the two privacy actions that cannot be undone (#350): withdrawing a
 learning consent (Customize · Privacy) and replacing the passphrase and recovery code
 with the recovery code (the unlock screen). The app has no erase-everything action and

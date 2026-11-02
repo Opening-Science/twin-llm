@@ -4,6 +4,8 @@ import { RHYTHM_BENCH_DIR } from "@/infrastructure/local-artefacts";
 
 import { benchmarkRunLine, benchmarkTables } from "./benchmark-result";
 import { DownloadButton } from "./download-button";
+import { JobLines } from "./job-lines";
+import { type LabJob } from "./lab-jobs";
 import { type EvalRun, runsCsv, runsTable, scoresCsv, scoreTable } from "./eval-runs";
 import { LabTable } from "./lab-table";
 import { type BenchmarkData, type ResultsData } from "./load-results";
@@ -161,8 +163,23 @@ const Benchmark = ({ data }: Readonly<{ data: BenchmarkData }>) => {
   );
 };
 
-export const ResultsSection = ({ data }: Readonly<{ data: ResultsData }>) => (
+const LongJobs = ({ jobs }: Readonly<{ jobs: readonly LabJob[] }>) => (
+  <Card padding="md" className="flex min-w-0 flex-col gap-3">
+    <SubHeading>Long jobs</SubHeading>
+    <p className="text-muted-foreground text-sm leading-relaxed">
+      The last run of each job that runs from the command line, read from the files it
+      writes. The page starts none of them.
+    </p>
+    <JobLines jobs={jobs} />
+  </Card>
+);
+
+export const ResultsSection = ({
+  data,
+  jobs,
+}: Readonly<{ data: ResultsData; jobs: readonly LabJob[] }>) => (
   <div className="flex flex-col gap-4">
+    <LongJobs jobs={jobs} />
     <EvalRuns data={data} />
     <Benchmark data={data.benchmark} />
   </div>
