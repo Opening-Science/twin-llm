@@ -64,6 +64,49 @@ describe("countryReport", () => {
   });
 });
 
+describe("layers (#421)", () => {
+  const LAYERED: LocationIndex = {
+    version: "test",
+    countries: [],
+    states: [
+      { code: "AA-1", country: "AAA", name: "North", names: [] },
+      { code: "AA-N", country: "AAA", layer: "nations", name: "Land", names: [] },
+      { code: "AA-N", country: "AAA", layer: "regions", name: "Land", names: [] },
+      { code: "GBD-9", country: "AAA", layer: "regions", name: "Middle", names: [] },
+    ],
+  };
+
+  test("a unit matches on the first layer that has it, states first", () => {
+    expect(matchUnit(LAYERED, unit("North"))).toMatchObject({
+      code: "AA-1",
+      layer: null,
+    });
+    expect(matchUnit(LAYERED, unit("Land", "AA-N"))).toMatchObject({
+      how: "code",
+      layer: "nations",
+    });
+    expect(matchUnit(LAYERED, unit("Middle"))).toMatchObject({
+      how: "name",
+      code: "GBD-9",
+      layer: "regions",
+    });
+  });
+
+  test("one code on two layers is two boundaries, and the report names the layers", () => {
+    const report = countryReport(LAYERED, "AAA", [
+      unit("North"),
+      unit("Land", "AA-N"),
+      unit("Middle"),
+    ]);
+    expect(report.shared).toEqual([]);
+    expect(report.layered).toEqual([
+      { layer: "nations", names: ["Land"] },
+      { layer: "regions", names: ["Middle"] },
+    ]);
+    expect(renderReport([report])).toContain("- on the regions layer: Middle");
+  });
+});
+
 describe("unitsOf", () => {
   test("subnational rows of one alpha-3 only", () => {
     expect(

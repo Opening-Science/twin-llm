@@ -1,9 +1,10 @@
 # GBD units on the map: match rate
 
 How many of GBD's subnational units find a state or province boundary on the choropleth
-map (#388), per country GBD estimates below country level, before and after #397. A unit is
-matched the way the map matches an estimate: by its ISO 3166-2 code first, then by name,
-among the boundaries of its own country. Units come from the committed location table
+map (#388), per country GBD estimates below country level, before and after #397, and for the
+United Kingdom after #421. A unit is matched the way the map matches an estimate: by its ISO
+3166-2 code first, then by name, among the boundaries of its own country, on the country's
+state file first and then on each upper layer it has (the UK's nations and regions). Units come from the committed location table
 (`packages/gbd-local/location-table.ts`, ids and names only); boundaries from the committed
 Natural Earth index (`infrastructure/charts/choropleth/location-index.json`). No estimates
 are read. Research use only.
@@ -43,10 +44,11 @@ boundary; they were checked by hand and are listed below.
 | ZAF     |         9 |               9 |              0 |          100% |              9 |  100% |
 | All     |       840 |             656 |             13 |           77% |            714 |   85% |
 
-Of the 126 units still unmatched, 64 are not areas (the urban and rural halves of India's
-states, New Zealand's Maori and non-Maori populations) and 46 are Kenyan counties, which
-Natural Earth's eight former provinces cannot be split into. Counting areas only and leaving
-Kenya out, 713 of 729 units are matched (98%).
+After #397, 126 units were still unmatched. #421 draws the 13 UK ones (below), which leaves
+113: 64 are not areas (the urban and rural halves of India's states, New Zealand's Maori and
+non-Maori populations), 46 are Kenyan counties, which Natural Earth's eight former provinces
+cannot be split into, and 3 are provinces newer than Natural Earth's. Counting areas only and
+leaving Kenya out, 726 of 729 units are matched (over 99%).
 
 Wrong before:
 
@@ -73,11 +75,29 @@ Wrong before:
 - A short alias table for GBD names Natural Earth spells differently, and GBD names removed
   from the alternative names of boundaries they do not name.
 
-Left unmatched on purpose: GBD's UK nations and English regions (the UK file has local
-authorities, and a country has one boundary file, so they would overlap), North Kalimantan,
-Davao Occidental and the Dinagat Islands (newer than Natural Earth's provinces), Kenya's
-counties and the groups that are not areas. Hong Kong and Macao carry their own alpha-3 codes
+Left unmatched on purpose: North Kalimantan, Davao Occidental and the Dinagat Islands (newer
+than Natural Earth's provinces), Kenya's counties and the groups that are not areas. Hong Kong and Macao carry their own alpha-3 codes
 and are drawn on the world map, not China's.
+
+## United Kingdom: nations and English regions (#421)
+
+GBD reports the UK as four nations, England's nine regions and 150 English local authorities.
+Before, the GBR file had Natural Earth's local units only, so the 13 nations and regions
+matched nothing (a country had one boundary file, and the levels would overlap). Now the UK has
+two more files, nations and regions (the 12 ITL1 regions), joined from the same Natural Earth
+units by an ONS lookup (`public/geo/natural-earth/README.md`, "United Kingdom"). A map draws
+the file most of its places match, so GBD's nations draw as nations and England's regions as
+regions; a place of another level in the same map is listed under it.
+
+| GBR                 | GBD units | Before: matched | Before | After: matched | After |
+| ------------------- | --------: | --------------: | -----: | -------------: | ----: |
+| Nations             |         4 |               0 |     0% |              4 |  100% |
+| Regions of England  |         9 |               0 |     0% |              9 |  100% |
+| English local units |       150 |             150 |   100% |            150 |  100% |
+| All                 |       163 |             150 |    92% |            163 |  100% |
+
+Before is `main` at 0d4e8c9b. The nations match by ISO 3166-2 code (GB-ENG, GB-SCT, GB-WLS,
+GB-NIR), the regions by GBD's name.
 
 ## After (output of `bun scripts/geo/match-rate.ts`)
 
@@ -86,7 +106,7 @@ and are drawn on the world map, not China's.
 | BRA     |        27 |      27 |       0 |             0 |         0 |    100% |
 | CHN     |        31 |      31 |       0 |             0 |         0 |    100% |
 | ETH     |        11 |      11 |       0 |             0 |         0 |    100% |
-| GBR     |       163 |       0 |     145 |             5 |        13 |     92% |
+| GBR     |       163 |       4 |     154 |             5 |         0 |    100% |
 | IDN     |        34 |      33 |       0 |             0 |         1 |     97% |
 | IND     |        93 |      29 |       2 |             0 |        62 |     33% |
 | IRN     |        31 |      31 |       0 |             0 |         0 |    100% |
@@ -105,12 +125,12 @@ and are drawn on the world map, not China's.
 | UKR     |         3 |       2 |       1 |             0 |         0 |    100% |
 | USA     |        51 |      51 |       0 |             0 |         0 |    100% |
 | ZAF     |         9 |       9 |       0 |             0 |         0 |    100% |
-| All     |       840 |         |         |               |       126 |     85% |
+| All     |       840 |         |         |               |       113 |     87% |
 
 ### GBR
 
-- unmatched, a nation; the boundary file has local authorities, one level per country: England; Northern Ireland; Scotland; Wales
-- unmatched, a region of England; the boundary file has local authorities: East Midlands; East of England; Greater London; North East England; North West England; South East England; South West England; West Midlands; Yorkshire and the Humber
+- on the nations layer: England; Northern Ireland; Scotland; Wales
+- on the regions layer: East Midlands; East of England; Greater London; North East England; North West England; South East England; South West England; West Midlands; Yorkshire and the Humber
 - by other name: County Durham -> GB-DUR
 - by other name: Windsor and Maidenhead -> GB-WNM
 - by other name: Bristol, City of -> GB-BST
