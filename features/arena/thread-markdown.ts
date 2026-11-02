@@ -1,3 +1,7 @@
+import {
+  frameFooterMarkdown,
+  frameHeaderMarkdown,
+} from "@/infrastructure/gbd-profile-frame";
 import { parseTwinAnswer } from "@/infrastructure/parse-twin-answer";
 import { readableTitle } from "@/infrastructure/readable-title";
 
@@ -8,7 +12,8 @@ import type { ToolCard } from "./tool-cards";
  * A thread as Markdown, for an issue, a lab notebook or a paper's appendix:
  * each prompt, then each model's lookups (with their arguments, row counts
  * and refusals) and its answer as the page shows it. Withheld and refused
- * answers say so instead of showing text.
+ * answers say so instead of showing text. A GBD profile's answer keeps the
+ * app's header and footer around it (#417), as on the page.
  *
  * Pure. The route checks the thread is the viewer's before calling it.
  */
@@ -45,9 +50,12 @@ const answerBody = (answer: ResponseState): string[] => {
   }
   const parsed = parseTwinAnswer(answer.text, null);
   const body = parsed.answerText.trim();
+  const frame = answer.profileFrame ?? null;
   return [
+    ...(frame === null ? [] : frameHeaderMarkdown(frame)),
     body === "" ? "_No written answer._" : body,
     ...(parsed.uncertaintyText ? ["", `**Uncertainty.** ${parsed.uncertaintyText}`] : []),
+    ...(frame === null ? [] : frameFooterMarkdown(frame)),
   ];
 };
 

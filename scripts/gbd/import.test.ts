@@ -58,6 +58,22 @@ describe("bun run gbd:import", () => {
     ]);
   });
 
+  test("stores the citation from a citation.txt next to the file (#417)", async () => {
+    const { deps, stored } = fakes({
+      "/downloads/IHME-GBD_2023_DATA-1.csv": MADE_UP_CAUSE_CSV,
+      "/downloads/citation.txt":
+        "GBD Results tool:\nUse the following to cite data included in this download:\nA made-up citation.\n",
+    });
+    expect(await runGbdImport(["/downloads/IHME-GBD_2023_DATA-1.csv"], deps)).toBe(0);
+    expect(stored.map((file) => file.citation)).toEqual(["A made-up citation."]);
+  });
+
+  test("a file without a citation.txt is stored without one", async () => {
+    const { deps, stored } = fakes({ "/d/a.csv": MADE_UP_CAUSE_CSV });
+    expect(await runGbdImport(["/d/a.csv"], deps)).toBe(0);
+    expect(stored[0]?.citation).toBeUndefined();
+  });
+
   test("a known checksum is skipped; a bad file is refused and the rest still run", async () => {
     const { deps, out, err } = fakes(
       { "a.csv": MADE_UP_CAUSE_CSV, "b.csv": "x,y\n1,2" },

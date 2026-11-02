@@ -7,6 +7,9 @@
  * file's SHA-256 is recorded with its base name and row counts; a file
  * already imported is skipped. Nothing is sent anywhere and no file is
  * copied into the repository. Prints file names, checksums and counts only.
+ * A `citation.txt` next to a file (IHME puts one in each download) is read
+ * and its citation stored with the file's record (#417), for the footer of
+ * a GBD profile.
  *
  * The database is DATABASE_URL, from .env.local as for the app; for the
  * eval database pass --env-file=.env.eval to bun (docs/evaluation/question-set.md).
@@ -14,9 +17,10 @@
  */
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
-import { basename } from "node:path";
+import { basename, dirname, join } from "node:path";
 
 import { database } from "../../infrastructure/database";
+import { GBD_CITATION_FILE, parseGbdCitation } from "../../packages/gbd-local/citation";
 import { parseGbdResultsCsv } from "../../packages/gbd-local/results-csv";
 import { type GbdImportOutcome, importGbdFile } from "../../packages/gbd-local/store";
 
@@ -59,8 +63,17 @@ export const runGbdImport = async (
       failed += 1;
       continue;
     }
+    const citation = await deps
+      .readFile(join(dirname(path), GBD_CITATION_FILE))
+      .then((text) => parseGbdCitation(text.toString("utf8")))
+      .catch(() => null);
     try {
-      const outcome = await deps.store({ sha256, fileName: name, rows: parsed.rows });
+      const outcome = await deps.store({
+        sha256,
+        fileName: name,
+        rows: parsed.rows,
+        ...(citation === null ? {} : { citation }),
+      });
       deps.stdout.write(
         outcome.kind === "already-imported"
           ? `${name} sha256 ${sha256}: already imported, skipped\n`

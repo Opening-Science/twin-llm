@@ -3,6 +3,7 @@ import "server-only";
 import { type JSONValue, tool } from "ai";
 
 import type { ChatView } from "@/infrastructure/chat-view";
+import type { GbdProfileFrame } from "@/infrastructure/gbd-profile-frame";
 import { LOCATION_INDEX } from "@/infrastructure/charts/choropleth/match-location";
 import { recordGbdRows } from "@/packages/gbd-mcp/collector";
 import {
@@ -51,18 +52,24 @@ import {
 import { modelInputSchema } from "@/packages/query-tools/model-schema";
 import type { SessionScope } from "@/packages/query-tools/scope";
 
-import { profileMapSpec, profileModelNote, profileViews } from "./gbd-profile-views";
+import {
+  profileFrame,
+  profileMapSpec,
+  profileModelNote,
+  profileViews,
+} from "./gbd-profile-views";
 
 /**
  * `gbd_profile` (#403): runs a profile's fixed sequence of `gbd_estimate`
  * calls, each through `runGbdEstimate` and so each audited as
  * `gbd_estimate`, assembles the sections (`packages/gbd-local/profile.ts`)
  * and draws them (`gbd-profile-views.ts`). The browser gets the views as
- * `data-view` parts; the model gets the sections, never more numbers than
- * the rows hold.
+ * `data-view` parts and the header and footer as `frame` (#417); the model
+ * gets the sections, never more numbers than the rows hold.
  */
 
-export type GbdProfileOutput = GbdProfile & Readonly<{ views: readonly ChatView[] }>;
+export type GbdProfileOutput = GbdProfile &
+  Readonly<{ views: readonly ChatView[]; frame: GbdProfileFrame }>;
 
 export type GbdProfileDeps = Readonly<{
   scope: SessionScope;
@@ -265,7 +272,15 @@ export const runGbdProfile = async (
     profile = await runCause(deps, input, input.cause ?? "");
   }
   const map = await auditMap(deps, profile);
-  return { ...profile, views: profileViews(profile, map, deps.views) };
+  const source =
+    deps.ports.importSource === undefined
+      ? null
+      : await deps.ports.importSource().catch(() => null);
+  return {
+    ...profile,
+    views: profileViews(profile, map, deps.views),
+    frame: profileFrame(profile, source),
+  };
 };
 
 const asJson = (value: unknown): JSONValue =>

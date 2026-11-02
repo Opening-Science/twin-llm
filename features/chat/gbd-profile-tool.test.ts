@@ -184,6 +184,50 @@ describe("a location profile", () => {
     drainGbdTurn(scope.sessionId);
   });
 
+  test("carries the app's header and footer from the import (#417)", async () => {
+    const { ports } = fakePorts();
+    const profile = asProfile(
+      await runGbdProfile(
+        {
+          scope,
+          ports: {
+            ...ports,
+            importSource: async () => ({
+              importedOn: "2026-11-01",
+              citation: "A made-up citation.",
+            }),
+          },
+        },
+        { kind: "location", location: "Switzerland" },
+      ),
+    );
+    expect(profile.frame).toEqual({
+      title: `Location profile: Switzerland, ${profile.year}`,
+      source: "IHME GBD 2023",
+      importedOn: "2026-11-01",
+      attribution:
+        "Population estimate (IHME GBD 2023), not a statement about this person.",
+      citation: "A made-up citation.",
+    });
+  });
+
+  test("a failed import read leaves the day unknown and the citation IHME's", async () => {
+    const { ports } = fakePorts();
+    const profile = asProfile(
+      await runGbdProfile(
+        {
+          scope,
+          ports: { ...ports, importSource: () => Promise.reject(new Error("down")) },
+        },
+        { kind: "location", location: "Switzerland" },
+      ),
+    );
+    expect(profile.frame.importedOn).toBeNull();
+    expect(profile.frame.citation).toStartWith(
+      "Global Burden of Disease Collaborative Network.",
+    );
+  });
+
   test("an unknown place is refused before any estimate is read", async () => {
     const { ports, audits } = fakePorts();
     const output = await runGbdProfile(

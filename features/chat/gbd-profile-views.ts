@@ -1,7 +1,13 @@
 import { type ChatView, choroplethView, viewId } from "@/infrastructure/chat-view";
 import type { LocationIndex } from "@/infrastructure/charts/choropleth/match-location";
-import { GBD_ESTIMATE_TOOL } from "@/packages/gbd-local/constants";
+import type { GbdProfileFrame } from "@/infrastructure/gbd-profile-frame";
+import {
+  GBD_ESTIMATE_TOOL,
+  GBD_LOCAL_CITATION,
+  GBD_LOCAL_SOURCE,
+} from "@/packages/gbd-local/constants";
 import type { GbdProfile, ProfileSection } from "@/packages/gbd-local/profile";
+import type { GbdImportSource } from "@/packages/query-tools/gbd-estimate";
 
 import { gbdEstimateRows } from "./gbd-estimate-rows";
 import { buildMapSpec, type MapBuilt } from "./map-view";
@@ -31,6 +37,22 @@ const PROFILE_TITLES = { location: "Location profile", cause: "Cause profile" } 
 /** `Location profile: Switzerland, 2023`. */
 export const profileTitle = (profile: GbdProfile): string =>
   `${PROFILE_TITLES[profile.kind]}: ${profile.subject}${profile.year === null ? "" : `, ${profile.year}`}`;
+
+/**
+ * The header and footer the app draws around the model's narration (#417):
+ * title, source and import day; attribution and citation. Without a recorded
+ * citation, IHME's GBD 2023 citation.
+ */
+export const profileFrame = (
+  profile: GbdProfile,
+  source: GbdImportSource | null,
+): GbdProfileFrame => ({
+  title: profileTitle(profile),
+  source: GBD_LOCAL_SOURCE,
+  importedOn: source?.importedOn ?? null,
+  attribution: profile.attribution,
+  citation: source?.citation ?? GBD_LOCAL_CITATION,
+});
 
 const allAuditIds = (profile: GbdProfile): readonly string[] => [
   ...new Set(profile.sections.flatMap((entry) => entry.auditIds)),
@@ -170,10 +192,11 @@ const MODEL_ROWS = 10;
 /**
  * What the model reads of a profile: each section's title, status, note and
  * its first rows rounded as the tables show them, and how many views were
- * drawn. It writes the prose; the numbers are these.
+ * drawn. It writes the prose; the numbers are these. The title, source and
+ * attribution are the app's to draw (`profileFrame`), so they are not here
+ * beyond the title.
  */
 export const profileModelNote = (profile: GbdProfile, views: readonly ChatView[]) => ({
-  attribution: profile.attribution,
   profile: profileTitle(profile),
   views_drawn: views.length,
   sections: profile.sections.map((entry) => ({

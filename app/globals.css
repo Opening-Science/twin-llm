@@ -343,6 +343,14 @@
     letter-spacing: var(--tracking-tight);
   }
 
+  /* A GBD profile's fixed header and footer around the model's text (#417). */
+  .profile-frame-header {
+    @apply border-border flex flex-col gap-1 border-b pb-2;
+  }
+  .profile-frame-footer {
+    @apply border-border text-muted-foreground flex flex-col gap-1 border-t pt-2 text-xs leading-relaxed;
+  }
+
   /* Small uppercase label above a heading or a value. */
   .text-eyebrow {
     font-family: var(--font-mono);

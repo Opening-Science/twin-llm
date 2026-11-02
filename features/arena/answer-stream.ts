@@ -9,6 +9,7 @@ import {
 
 import type { EffortLevel } from "@/infrastructure/chat-effort";
 import { type ChatView, viewsOf } from "@/infrastructure/chat-view";
+import { type GbdProfileFrame, profileFrameOf } from "@/infrastructure/gbd-profile-frame";
 import {
   PROVIDER_NOT_PERMITTED_FOR_DATA_MODE,
   PROVIDER_NOT_PERMITTED_SENTENCE,
@@ -70,6 +71,8 @@ export type StreamProgress = Readonly<{
   text: string;
   tools: readonly ToolActivity[];
   views: readonly ChatView[];
+  /** A GBD profile's header and footer (#417); null for any other answer. */
+  profileFrame: GbdProfileFrame | null;
   /** An Ultra answer's number check has started and not yet come back (#366). */
   reviewing: boolean;
 }>;
@@ -276,6 +279,7 @@ export const streamAnswer = async (
         text: textOf(message),
         tools: toolActivity(message.parts),
         views: viewsOf(message.parts),
+        profileFrame: profileFrameOf(message.parts),
         reviewing: reviewRunning(message),
       });
       if (message.metadata) {

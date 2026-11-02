@@ -15,6 +15,7 @@ import { gbdNoEstimate } from "@/packages/query-tools/gbd-refusals";
 
 import {
   overviewView,
+  profileFrame,
   profileMapSpec,
   profileModelNote,
   profileTitle,
@@ -225,6 +226,8 @@ describe("profileViews", () => {
   test("the model reads each section's status, note and rounded rows", () => {
     const note = profileModelNote(PROFILE, profileViews(PROFILE, null));
     expect(note.profile).toBe("Location profile: Switzerland, 2023");
+    // The app draws the attribution (#417); the model is not asked to.
+    expect("attribution" in note).toBe(false);
     expect(note.views_drawn).toBe(2);
     expect(note.sections[0]).toEqual({
       title:
@@ -242,5 +245,34 @@ describe("profileViews", () => {
       status: "not imported",
       note: "Life expectancy at birth for Switzerland is not imported.",
     });
+  });
+});
+
+describe("profileFrame (#417)", () => {
+  test("title, source and import day above; attribution and citation below", () => {
+    expect(
+      profileFrame(PROFILE, {
+        importedOn: "2026-11-01",
+        citation: "A made-up citation.",
+      }),
+    ).toEqual({
+      title: "Location profile: Switzerland, 2023",
+      source: "IHME GBD 2023",
+      importedOn: "2026-11-01",
+      attribution:
+        "Population estimate (IHME GBD 2023), not a statement about this person.",
+      citation: "A made-up citation.",
+    });
+  });
+
+  test("without a recorded import, no day and IHME's GBD 2023 citation", () => {
+    const frame = profileFrame(PROFILE, null);
+    expect(frame.importedOn).toBeNull();
+    expect(frame.citation).toBe(
+      "Global Burden of Disease Collaborative Network. Global Burden of Disease Study 2023 (GBD 2023) Results. Seattle, United States: Institute for Health Metrics and Evaluation (IHME), 2024. Available from https://vizhub.healthdata.org/gbd-results/.",
+    );
+    expect(profileFrame(PROFILE, { importedOn: null, citation: null }).citation).toBe(
+      frame.citation,
+    );
   });
 });
