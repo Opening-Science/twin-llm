@@ -4,9 +4,11 @@ import type { BoundaryFeature } from "./boundaries";
 import { equalEarth } from "./projection";
 import {
   centreLongitude,
+  crossesEdge,
   fitBox,
   layoutMap,
   projectedBox,
+  ringsBox,
   ringsPath,
 } from "./map-shapes";
 
@@ -108,6 +110,56 @@ describe("projectedBox", () => {
   });
 });
 
+describe("ringsBox", () => {
+  test("is null without points and matches projectedBox", () => {
+    expect(ringsBox([], 0)).toBeNull();
+    const feature = square("A", 5, 5, 10);
+    expect(ringsBox(feature.geometry.coordinates.flat(), 20)).toEqual(
+      projectedBox([feature], 20),
+    );
+  });
+});
+
+describe("crossesEdge", () => {
+  const ring = [
+    [-1, 0],
+    [1, 0],
+    [1, 1],
+  ] as const;
+
+  test("a ring over the meridian opposite the centre crosses", () => {
+    expect(crossesEdge(ring, 180)).toBe(true);
+    expect(crossesEdge(ring, 0)).toBe(false);
+  });
+
+  test("a ring cut at 180 does not cross on a world map", () => {
+    expect(
+      crossesEdge(
+        [
+          [170, 0],
+          [180, 0],
+          [180, 10],
+          [170, 10],
+        ],
+        0,
+      ),
+    ).toBe(false);
+  });
+
+  test("a jump the boundaries make on purpose (Antarctica's 180 to -180) is kept", () => {
+    expect(
+      crossesEdge(
+        [
+          [180, -80],
+          [-180, -80],
+          [-180, -90],
+        ],
+        30,
+      ),
+    ).toBe(false);
+  });
+});
+
 describe("layoutMap", () => {
   const features = [square("A", 0, 0, 10), square("B", 40, 0, 10)];
 
@@ -124,18 +176,30 @@ describe("layoutMap", () => {
     expect(layout.shapes[1].d).toContain("L200 ");
   });
 
-  test("fits a region to its own codes and still draws the rest", () => {
+  test("fits a given box and still draws the rest", () => {
+    const box = projectedBox([features[0]], 0);
     const layout = layoutMap(features, {
       lon0: 0,
       width: 100,
       padding: 0,
       maxHeight: 999,
-      fitTo: ["A"],
+      box: box ?? undefined,
     });
     // A's box is about 0.150 wide and 0.202 tall in projected units.
     expect(layout.height).toBe(134);
     expect(layout.shapes[0].anchor[0]).toBeCloseTo(50, 5);
     expect(layout.shapes.length).toBe(2);
+  });
+
+  test("leaves out rings that cross the map's edge", () => {
+    // Centred on 175, the edge is at -5: B stays, the square over 0 is left out.
+    const layout = layoutMap([square("A", -10, 0, 10), square("B", 170, 0, 10)], {
+      lon0: 175,
+      width: 100,
+      padding: 0,
+      maxHeight: 999,
+    });
+    expect(layout.shapes.map((shape) => shape.d === "")).toEqual([true, false]);
   });
 
   test("an empty set has no height", () => {
