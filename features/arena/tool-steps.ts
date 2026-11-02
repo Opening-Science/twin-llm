@@ -156,6 +156,7 @@ export const reviewStep = (
       label: reviewStepLabel(review),
       state: review.status === "failed" ? "failed" : "done",
       lines: [
+        ...(review.refusal === undefined ? [] : [review.refusal]),
         ...review.items.map(reviewItemLine),
         ...(review.skipped > 0
           ? [`${String(review.skipped)} more numbers were not checked.`]

@@ -8,7 +8,12 @@ import {
   permitNoteDraft,
   type TwinNoteFields,
 } from "@/infrastructure/twin-notes";
-import { CATEGORY, type ModelDisclosure } from "@/infrastructure/disclosure-ledger";
+import {
+  CATEGORY,
+  isGenomeIdsBlocked,
+  type ModelDisclosure,
+} from "@/infrastructure/disclosure-ledger";
+import { GENOME_IDS_BLOCKED_SENTENCE } from "@/infrastructure/free-text-check";
 import type { AppendInput } from "@/packages/audit/append";
 
 import {
@@ -17,6 +22,7 @@ import {
   DRAFT_SYSTEM,
   draftPrompt,
   type DraftSource,
+  type DraftReply,
   draftSourceOf,
   parseDraftReply,
 } from "./compact-draft";
@@ -40,7 +46,10 @@ import {
  * The model gets `noteDraftDisclosure`: a model that is not on this machine
  * writes each request to the disclosure ledger (#140) before it is sent, and
  * a request that cannot be recorded is not sent (the draft then falls back
- * like any other model failure).
+ * like any other model failure). The thread's questions go with it as what
+ * the person typed (#414), so the check does not count a stored value they
+ * wrote themselves. A request blocked for the person's own genome
+ * identifiers (#356) falls back too, and its notice is the fixed refusal.
  */
 
 export type DraftModel = Readonly<{
@@ -56,10 +65,14 @@ export type CompactDeps = Readonly<{
   /** True when the thread used a genome or imported-data tool. */
   threadIsLocal: (thread: CompactThread) => Promise<boolean>;
   turn: () => NoteTurn;
-  /** The thread's model as the catalog offers it now, sending through the ledger, or null. */
+  /**
+   * The thread's model as the catalog offers it now, sending through the
+   * ledger, or null. `typed` is what the person wrote in the thread.
+   */
   draftModel: (
     source: DraftSource,
     disclosure: ModelDisclosure,
+    typed: readonly string[],
   ) => Promise<DraftModel | null>;
   /** The provider audit row for this request, or null when it needs none. */
   providerEvent: (
@@ -74,7 +87,7 @@ export type CompactDeps = Readonly<{
 export type CompactResponse = Readonly<{
   draft: TwinNoteFields;
   permit: NotePermit;
-  /** Set when the model gave no usable reply. */
+  /** Set when the model gave no usable reply, or the request was blocked. */
   notice?: string;
 }>;
 
@@ -111,6 +124,12 @@ export const noteDraftDisclosure = (
 const errorName = (error: unknown): string =>
   error instanceof Error ? error.name : "unknown";
 
+/** What the person wrote in the thread: its questions, never its answers. */
+export const typedInThread = (thread: CompactThread): readonly string[] =>
+  thread.turns.map((turn) => turn.prompt);
+
+type Drafted = Readonly<{ reply: DraftReply | null; blocked: boolean }>;
+
 export const createCompactHandler =
   (deps: CompactDeps) =>
   async (request: Request): Promise<Response> => {
@@ -132,6 +151,7 @@ export const createCompactHandler =
     const model = await deps.draftModel(
       source,
       noteDraftDisclosure(actor, thread.id, turn.mode),
+      typedInThread(thread),
     );
     if (model === null) return refuse(400, COMPACT_COPY.modelGone);
 
@@ -151,17 +171,28 @@ export const createCompactHandler =
       return refuse(500, COMPACT_COPY.failed);
     }
 
-    const reply = await model
+    const { reply, blocked } = await model
       .generate({ system: DRAFT_SYSTEM, prompt: draftPrompt(thread) })
-      .then(parseDraftReply)
-      .catch((error: unknown) => {
-        deps.logError("[memory] the draft model failed", errorName(error));
-        return null;
+      .then((text): Drafted => ({ reply: parseDraftReply(text), blocked: false }))
+      .catch((error: unknown): Drafted => {
+        const isBlocked = isGenomeIdsBlocked(error);
+        deps.logError(
+          isBlocked
+            ? "[memory] the draft request was blocked: genome identifiers"
+            : "[memory] the draft model failed",
+          errorName(error),
+        );
+        return { reply: null, blocked: isBlocked };
       });
+    const notice = blocked
+      ? GENOME_IDS_BLOCKED_SENTENCE
+      : reply === null
+        ? COMPACT_COPY.noReply
+        : null;
     const response: CompactResponse = {
       draft: compactDraft(thread, reply),
       permit: notePermitFor(facts),
-      ...(reply === null ? { notice: COMPACT_COPY.noReply } : {}),
+      ...(notice === null ? {} : { notice }),
     };
     return Response.json(response, { headers: { "Cache-Control": "no-store" } });
   };

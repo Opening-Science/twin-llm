@@ -7,8 +7,16 @@ import {
 } from "@/infrastructure/twin-notes";
 import type { AppendInput } from "@/packages/audit/append";
 
+import { GenomeIdsBlockedError } from "@/infrastructure/disclosure-ledger";
+import { GENOME_IDS_BLOCKED_SENTENCE } from "@/infrastructure/free-text-check";
+
 import { measureLines } from "./compact-draft";
-import { COMPACT_COPY, type CompactDeps, createCompactHandler } from "./compact-handler";
+import {
+  COMPACT_COPY,
+  type CompactDeps,
+  createCompactHandler,
+  typedInThread,
+} from "./compact-handler";
 import { SYNTHETIC_THREAD } from "./fixtures";
 
 const ACTOR = "user_synthetic_1";
@@ -214,5 +222,56 @@ describe("POST /api/memory/compact", () => {
     expect(response.status).toBe(200);
     expect(failing.errors).toEqual(["[memory] the draft model failed"]);
     expect(JSON.stringify(await response.json())).not.toContain("private");
+  });
+
+  test("the model is given the thread's questions as what the person typed (#414)", async () => {
+    const typedSeen: (readonly string[])[] = [];
+    const { handle } = harness({
+      draftModel: async (source, _disclosure, typed) => {
+        typedSeen.push(typed);
+        return {
+          modelId: source.modelId,
+          generate: async () => '{"topics": ["Heart rate"], "open_questions": []}',
+        };
+      },
+    });
+    await handle(request({ threadId: SYNTHETIC_THREAD.id }));
+    expect(typedSeen).toEqual([
+      [
+        "How did heart rate change for synthetic subject 29bbf012 in spring 2026?",
+        "And sleep?",
+      ],
+    ]);
+  });
+
+  test("a request blocked for genome identifiers shows the refusal, not a model error (#414)", async () => {
+    const blocked = harness({
+      draftModel: async () => ({
+        modelId: "synthetic-hosted",
+        generate: async () => {
+          throw new Error("retry gave up", { cause: new GenomeIdsBlockedError() });
+        },
+      }),
+    });
+    const response = await blocked.handle(request({ threadId: SYNTHETIC_THREAD.id }));
+    expect(response.status).toBe(200);
+    const body = Object(await response.json());
+    expect(Reflect.get(body, "notice")).toBe(GENOME_IDS_BLOCKED_SENTENCE);
+    expect(Reflect.get(Reflect.get(body, "draft"), "topics")).toEqual([
+      "How did heart rate change for synthetic subject 29bbf012 in spring 2026?",
+      "And sleep?",
+    ]);
+    expect(blocked.errors).toEqual([
+      "[memory] the draft request was blocked: genome identifiers",
+    ]);
+  });
+});
+
+describe("typedInThread", () => {
+  test("is the person's questions, never the answers", () => {
+    expect(typedInThread(SYNTHETIC_THREAD)).toEqual(
+      SYNTHETIC_THREAD.turns.map((turn) => turn.prompt),
+    );
+    expect(typedInThread({ ...SYNTHETIC_THREAD, turns: [] })).toEqual([]);
   });
 });

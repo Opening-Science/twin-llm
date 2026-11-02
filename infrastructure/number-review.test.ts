@@ -172,6 +172,14 @@ describe("failedReview and the step line", () => {
     expect(reviewStepLabel(failedReview(numbers, 0))).toBe("Number check could not run");
   });
 
+  test("a blocked check carries the fixed refusal (#414)", () => {
+    const blocked = failedReview(numbers, 1, "Not sent.");
+    expect(blocked.refusal).toBe("Not sent.");
+    expect(blocked.skipped).toBe(1);
+    expect(blocked.status).toBe("failed");
+    expect("refusal" in failedReview(numbers, 0)).toBe(false);
+  });
+
   test("names how many numbers were flagged", () => {
     const review = {
       reviewer: NUMBER_REVIEWER.name,

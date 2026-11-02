@@ -20,6 +20,8 @@ import type { StarterGenerate } from "./starter-questions";
  * The model gets `starterDisclosure`: a model that is not on this machine
  * writes the request to the disclosure ledger (#140) before it is sent; a
  * request that cannot be recorded is not sent, and the fixed starters show.
+ * The person's interest goes with it as what they typed (#414), so the free
+ * text check does not count a stored value they wrote there themselves.
  */
 
 export type StarterModelDeps<Model> = Readonly<{
@@ -30,6 +32,7 @@ export type StarterModelDeps<Model> = Readonly<{
     options: Readonly<{
       hasWearableNarrative: boolean;
       disclosure: ModelDisclosure | UnrecordedModelCall;
+      typed?: readonly string[];
     }>,
   ) => Model;
   dataMode: () => DataMode;
@@ -66,12 +69,13 @@ export const starterDisclosure = (
 export const createStarterGenerate =
   <Model>(deps: StarterModelDeps<Model>) =>
   (hasLinkedData: boolean, actor: string): StarterGenerate =>
-  async ({ system, prompt, abortSignal }) => {
+  async ({ system, prompt, abortSignal, typed }) => {
     const modelId = (await deps.loadModelIds())?.[0];
     if (!modelId) throw new Error("No model in the active catalog");
     const model = deps.resolveModel(modelId, {
       hasWearableNarrative: hasLinkedData,
       disclosure: starterDisclosure(actor, deps.dataMode(), hasLinkedData),
+      typed,
     });
     await deps.recordSend({ actor, modelId, hasWearableNarrative: hasLinkedData });
     const { text } = await deps.generateText({

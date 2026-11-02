@@ -102,7 +102,11 @@ const fetchStarters = async (
     });
     if (!res.ok) return null;
     const data = (await res.json()) as StarterResult;
-    return Array.isArray(data.questions) ? data : null;
+    if (!Array.isArray(data.questions)) return null;
+    // Only a string notice is shown: the server's fixed refusal sentence (#414).
+    return typeof data.notice === "string"
+      ? data
+      : { questions: data.questions, source: data.source };
   } catch {
     return null;
   }
@@ -335,6 +339,11 @@ export const OnboardingFlow = ({
           )}
           {picking && (
             <div className="flex flex-col gap-4">
+              {explore.result.notice !== undefined && (
+                <p role="status" className="text-sm leading-relaxed">
+                  {explore.result.notice}
+                </p>
+              )}
               {explore.result.questions.length > 0 && (
                 <ul className="flex flex-col gap-2">
                   {explore.result.questions.map((question) => (
