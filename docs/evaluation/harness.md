@@ -14,6 +14,7 @@ bun run eval -- --models ollama:qwen3:4b --scenario S5 --run-id 2026-10-21-qwen3
 bun run eval -- --models ollama:qwen3:4b --latency-set --replay
 bun run eval -- --set s7 --models ollama:qwen3:4b --run-id 2026-10-31-qwen3-s7
 bun run eval -- --set s7 --models agent:rhythm --run-id 2026-10-31-rhythm-s7
+bun run eval -- --set s7 --models agent:rhythm@qwen3:4b --run-id 2026-11-02-rhythm-s7-4b
 bun run eval -- --models ollama:qwen3:4b --arm context-oracle --run-id 2026-10-31-qwen3-4b-ctx
 bun run eval -- --models ollama:qwen3:4b --arm context-fair --run-id 2026-10-31-qwen3-4b-fair
 bun run eval -- --models ollama:qwen3:4b --arm code --run-id 2026-10-31-qwen3-4b-code
@@ -25,6 +26,7 @@ bun run eval:cohort-codes -- --in .synthea   # after a cohort change only
 | ------------------------------------------------------- | ------------------------------------------------------------------------ |
 | `--models provider:id[,…]`                              | Required. Every provider must be `LLM_PROVIDER` in `.env.eval`           |
 | `--models agent:<id>`                                   | An agent ([below](#agents-279)) on `LLM_PROVIDER`                        |
+| `--models agent:<id>@<model id>`                        | That agent on another model the provider lists (#425)                    |
 | `--set v1` / `s7` / `s7b` / `s7h` / `v1h`               | Question set and key; default `v1`; `s7h` (#283), `v1h` (#304) held out  |
 | `--items Q-S1-01,…` / `--scenario S1` / `--latency-set` | One selection at most; none means all 130 items                          |
 | `--replay`                                              | Cache only; never calls a model                                          |
@@ -69,7 +71,14 @@ unknown id with `UNKNOWN_AGENT`. Auto (`agent:auto`) is refused: it picks a
 different agent per question, so one run would mix agents. The harness writes
 no `skill.<name>` audit row; the response document still names the skill.
 
-Results lines keep `agent:<id>` as `model_id`, as the answer row does.
+`--models agent:rhythm@qwen3:4b` runs the agent on a model other than its
+own, as Manual mode's pair does (#366): the row comes from `findCatalogRow`,
+so it runs only when the catalog offers both the agent and the model. The
+skill, role line and literature are the agent's; only the base model
+changes. Its `rules_sha256` is the agent's own, so a pair run and a run of
+the agent on its own model can be checked for the same rules (#425).
+
+Results lines keep `agent:<id>` (or the pair id) as `model_id`, as the answer row does.
 `meta.json` adds `agent` to that model's entry: `id`, `name`,
 `base_model_id`, `skill`, `rules_sha256` (sha256 of the agent's roster row and
 its skill: instructions, tools, sources, providers, views) and
