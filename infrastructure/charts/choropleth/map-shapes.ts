@@ -1,5 +1,5 @@
 import type { BoundaryFeature } from "./boundaries";
-import { projectLonLat, type XY } from "./projection";
+import { projectLonLat, wrapLongitude, type XY } from "./projection";
 
 /**
  * Boundaries to SVG: every ring projected, the drawing fitted to a box and
@@ -21,7 +21,7 @@ export type MapLayout = Readonly<{
   shapes: readonly MapShape[];
 }>;
 
-type Box = Readonly<{ minX: number; minY: number; maxX: number; maxY: number }>;
+export type Box = Readonly<{ minX: number; minY: number; maxX: number; maxY: number }>;
 
 const EMPTY_BOX: Box = {
   minX: Infinity,
@@ -40,13 +40,9 @@ const grow = (box: Box, [x, y]: XY): Box => ({
 const ringsOf = (feature: BoundaryFeature): readonly (readonly XY[])[] =>
   feature.geometry.coordinates.flat();
 
-/** The projected bounding box of some features; null when they have no points. */
-export const projectedBox = (
-  features: readonly BoundaryFeature[],
-  lon0: number,
-): Box | null => {
-  const box = features
-    .flatMap(ringsOf)
+/** The projected bounding box of some rings in degrees; null when they have no points. */
+export const ringsBox = (rings: readonly (readonly XY[])[], lon0: number): Box | null => {
+  const box = rings
     .flat()
     .reduce<Box>(
       (acc, [lon, lat]) => grow(acc, projectLonLat(lon, lat, lon0)),
@@ -54,6 +50,12 @@ export const projectedBox = (
     );
   return Number.isFinite(box.minX) ? box : null;
 };
+
+/** The projected bounding box of some features; null when they have no points. */
+export const projectedBox = (
+  features: readonly BoundaryFeature[],
+  lon0: number,
+): Box | null => ringsBox(features.flatMap(ringsOf), lon0);
 
 export type Fit = Readonly<{ scale: number; dx: number; dy: number; height: number }>;
 
@@ -117,24 +119,35 @@ export type LayoutOptions = Readonly<{
   width: number;
   padding: number;
   maxHeight: number;
-  /** Codes to fit the view to (a region); left out, every feature. */
-  fitTo?: readonly string[];
+  /** The projected box to show (see `fitView`); left out, every feature. */
+  box?: Box;
 }>;
 
 /**
- * Every feature as a shape, fitted to the features in `fitTo` (or all of
- * them). Features outside the fitted box are still drawn and clipped by the
- * SVG, so neighbours show at the edges of a region.
+ * Whether a ring crosses the map's edge, the meridian opposite `lon0`: two
+ * neighbouring points close on the globe land on opposite sides of the map.
+ * Such a ring would be drawn as a band across the whole map, so it is left
+ * out; it lies half a world from the centre, outside any fitted view. With
+ * `lon0` 0 nothing crosses, as the boundaries are cut at 180.
+ */
+export const crossesEdge = (ring: readonly XY[], lon0: number): boolean =>
+  ring.some(([lon], index) => {
+    if (index === 0) return false;
+    const [before] = ring[index - 1];
+    const wrapped = wrapLongitude(lon, lon0) - wrapLongitude(before, lon0);
+    return Math.abs(wrapped) > 180 && Math.abs(lon - before) <= 180;
+  });
+
+/**
+ * Every feature as a shape, fitted to `box` (or to all of them). Features
+ * outside the box are still drawn and clipped by the SVG, so neighbours
+ * show at the edges of a region.
  */
 export const layoutMap = (
   features: readonly BoundaryFeature[],
   options: LayoutOptions,
 ): MapLayout => {
-  const fitted =
-    options.fitTo === undefined
-      ? features
-      : features.filter((feature) => options.fitTo?.includes(feature.properties.code));
-  const box = projectedBox(fitted.length > 0 ? fitted : features, options.lon0);
+  const box = options.box ?? projectedBox(features, options.lon0);
   if (box === null) return { width: options.width, height: 0, shapes: [] };
   const fit = fitBox(box, options.width, options.padding, options.maxHeight);
   const place = ([lon, lat]: XY): XY => {
@@ -145,7 +158,9 @@ export const layoutMap = (
     width: options.width,
     height: Math.round(fit.height),
     shapes: features.map((feature) => {
-      const rings = ringsOf(feature).map((ring) => ring.map(place));
+      const rings = ringsOf(feature)
+        .filter((ring) => !crossesEdge(ring, options.lon0))
+        .map((ring) => ring.map(place));
       const largest = rings.reduce(
         (best, ring) => (ringArea(ring) > ringArea(best) ? ring : best),
         rings[0] ?? [],
