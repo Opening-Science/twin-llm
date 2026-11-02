@@ -1,6 +1,7 @@
 # Second rater
 
-Written 2026-10-31 (#351); the held-out set v1h added 2026-11-02 (#304). A
+Written 2026-10-31 (#351); the held-out set v1h added 2026-11-02 (#304),
+and its review sample (#413). A
 second, blind rating of the answers to the heart-brain (hb) questions and to
 the held-out S1 to S6 questions (v1h), next to the automatic scorer. It
 reads evaluation runs of one set at a time on this machine (synthetic
@@ -24,7 +25,10 @@ reader and the scorer agree, and how far two readers do.
 2. Start the app on a local install (`LOCAL_MVP=true` or
    `AUTH_DISABLED=true`) and open Lab, "Second rating", or `/lab/rate`
    (hb) or `/lab/rate?set=v1h` (v1h). The tabs at the top switch the set;
-   each set is rated on its own rubric, with its own salt and order.
+   each set is rated on its own rubric, with its own salt and order. For
+   v1h the view shows the protocol's review sample only (see "The v1h
+   review sample"); `&all=1`, or the "Rate every line" link, shows every
+   answered line for a second pass.
 3. Enter a pseudonym such as `rater-b`, not your name. It names your ratings
    file. The first time, the server starts your rating set: it makes a
    random salt that fixes your answer ids and the order of the answers
@@ -34,11 +38,13 @@ reader and the scorer agree, and how far two readers do.
 5. Stop at any time. Opening `/lab/rate?rater=rater-b` (or
    `/lab/rate?set=v1h&rater=rater-b`) again resumes at the first answer
    without a rating; earlier ratings are shown and can be changed or cleared.
-6. When every answer of the set is rated, Export ratings downloads all your
-   files of that set as one JSON document.
+6. When every answer shown is rated (for v1h, the sample; with `all`,
+   every line), Export ratings downloads all your files of that set as one
+   JSON document.
 7. `bun run eval:agreement -- <run-id> [<run-id> …]` prints the agreement,
-   one table per set; add `--ids` to also map each rater's answer ids back
-   to their runs.
+   one table per set, for v1h on the sample; add `--all` to compare on every
+   rated line, and `--ids` to also map each rater's answer ids back to
+   their runs.
 
 ## What the rater sees
 
@@ -226,6 +232,14 @@ pooled over that set's runs:
   pass;
 - each pair of raters on the five levels, and on 4 to 5 against 1 to 3.
 
+For v1h it first lists the review sample: a table of the sampled lines per
+scenario and correctness outcome (pass, fail, human, n/a, or unscored for a
+line the scorer did not score), then every sampled line with its run, item,
+repeat, scenario and outcome. The comparisons use the sampled lines only;
+ratings of other lines (from a second pass) are left out. With `--all` the
+comparisons use every rated line and the sample is still listed. hb has no
+sample and always uses every line.
+
 A ratings file whose `rubric` is not the rubric of its run's set (a hb file
 in a v1h run, say) is named on stderr and left out, since its levels mean
 something else.
@@ -244,7 +258,11 @@ categories, kappa .492, standard error 0.051, interval 0.392 to 0.591).
 
 ## Limits
 
-- About 30 lines per run: the interval is wide, roughly ±0.2 to ±0.3.
+- About 30 lines per run (29 in the v1h sample): the interval is wide,
+  roughly ±0.2 to ±0.3.
+- The v1h sample is stratified by scenario, not by the scorer's outcome; if
+  few sampled lines fail, kappa against the scorer says little. The
+  agreement script prints the mix so this shows.
 - When nearly every line is a pass on both sides, kappa can be low or not
   defined although the two agree on almost every line (the prevalence
   effect). Read it with the observed agreement beside it; when every line is
@@ -272,6 +290,27 @@ with `?set=v1h`: its own rubric version (in the ratings file, the rater set
 and the order seed), its own salts, and the page, actions and client carry
 the set. The hb flow, its files and its ids are as before.
 
-Still open: the view shows every answered v1h line, not the protocol's
-stratified sample. Drawing that sample as a pure function, and letting the
-view show only the sampled lines, is a follow-up.
+### The v1h review sample (#413)
+
+The view shows each rater the protocol's sample of every v1h run: every S5
+and S6 line, and per scenario of S1 to S4 up to four lines, those with the
+lowest sha256 of `v1h-review.v1`, run id, item id and repeat
+(`question-set.md`, "Human review", gives the details). About 29 of 44
+lines per run.
+
+- Both raters get the same lines. The sample rests on the run files alone,
+  not on a rater's salt, because kappa between two raters needs lines both
+  rated. What differs per rater is the order: the sample is put in the
+  rater's own salted order, as before, so scenarios and runs are mixed and
+  the order is the same on every resume.
+- The automatic score plays no part in drawing it, and the page gets the
+  same blind lines as before (`BlindLine`: no run, item, scenario or
+  score). The scenario is kept on the server only, to draw the sample.
+- Ratings stay keyed by run, item and repeat, so ratings made before the
+  sample still count where their line is in it, and a second pass with
+  `all` adds to the same files.
+
+The function is `reviewSample` in `features/lab/rater-sample.ts`; its tests
+check the strata sizes, that the sample is reproducible and the same under
+any salt, that the order is reproducible for one salt and differs for
+another, and that no run, item, scenario or score reaches the page payload.

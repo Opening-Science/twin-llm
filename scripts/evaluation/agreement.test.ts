@@ -9,6 +9,8 @@ import {
   groupBySet,
   pairsFromTable,
   ratedSetForFile,
+  restrictToLines,
+  strataRows,
 } from "./agreement";
 
 /**
@@ -244,6 +246,64 @@ describe("agreement per set (#304)", () => {
     expect(rows).toEqual([
       ["hb", [1]],
       ["v1h", [2]],
+    ]);
+  });
+});
+
+describe("restrictToLines (#413)", () => {
+  test("keeps the scorer and every rater on the given lines only", () => {
+    const run = {
+      runId: "run-a",
+      scorer: new Map([
+        ["Q-1#1", "pass" as const],
+        ["Q-2#1", "fail" as const],
+      ]),
+      raters: new Map([
+        [
+          "rater-b",
+          new Map([
+            ["Q-1#1", 5],
+            ["Q-2#1", 1],
+            ["Q-3#1", 4],
+          ]),
+        ],
+      ]),
+    };
+    const kept = restrictToLines(run, new Set(["Q-1#1", "Q-3#1"]));
+    expect([...kept.scorer.keys()]).toEqual(["Q-1#1"]);
+    expect([...(kept.raters.get("rater-b")?.keys() ?? [])]).toEqual(["Q-1#1", "Q-3#1"]);
+    expect(agreementRows([kept])[0]?.result?.n).toBe(1);
+  });
+});
+
+describe("strataRows (#413)", () => {
+  test("counts sampled lines per scenario and outcome", () => {
+    const line = (scenario: string, outcome: "pass" | "fail" | "human" | "unscored") => ({
+      runId: "run-a",
+      itemId: `Q-${scenario}`,
+      repeat: 1,
+      scenario,
+      outcome,
+    });
+    expect(
+      strataRows([
+        line("S5", "pass"),
+        line("S1", "pass"),
+        line("S1", "fail"),
+        line("S1", "human"),
+        line("S5", "unscored"),
+      ]),
+    ).toEqual([
+      {
+        scenario: "S1",
+        counts: { pass: 1, fail: 1, human: 1, na: 0, unscored: 0 },
+        total: 3,
+      },
+      {
+        scenario: "S5",
+        counts: { pass: 1, fail: 0, human: 0, na: 0, unscored: 1 },
+        total: 2,
+      },
     ]);
   });
 });
