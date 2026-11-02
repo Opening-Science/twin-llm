@@ -1,11 +1,18 @@
 import { describe, expect, test } from "bun:test";
 
 import { MADE_UP_CAUSE_CSV } from "../../packages/gbd-local/made-up-results.test-helpers";
-import type { GbdFileImport, GbdImportOutcome } from "../../packages/gbd-local/store";
+import type { GbdImportStore } from "../../packages/gbd-local/import-chunks";
 
 import { type GbdImportDeps, runGbdImport, sha256Of } from "./import";
 
 /** The CLI with fakes; the CSV is MADE UP in the Results Tool layout. */
+
+type Stored = Readonly<{
+  fileName: string;
+  sha256: string;
+  rows: number;
+  citation?: string;
+}>;
 
 const fakes = (
   files: Readonly<Record<string, string>>,
@@ -13,24 +20,29 @@ const fakes = (
 ) => {
   const out: string[] = [];
   const err: string[] = [];
-  const stored: GbdFileImport[] = [];
+  const stored: Stored[] = [];
+  const store: GbdImportStore = {
+    known: async (sha256) => known.includes(sha256),
+    begin: async (file) => void stored.push({ ...file, rows: 0 }),
+    addRows: async (sha256, rows) => {
+      const at = stored.findIndex((file) => file.sha256 === sha256);
+      const file = stored[at]!;
+      stored.splice(at, 1, { ...file, rows: file.rows + rows.length });
+      return rows.length;
+    },
+    finish: async () => undefined,
+    abort: async (sha256) => {
+      const at = stored.findIndex((file) => file.sha256 === sha256);
+      if (at !== -1) stored.splice(at, 1);
+    },
+  };
   const deps: GbdImportDeps = {
     readFile: async (path) => {
       const text = files[path];
       if (text === undefined) throw new Error("missing");
       return Buffer.from(text, "utf8");
     },
-    store: async (file): Promise<GbdImportOutcome> => {
-      if (known.includes(file.sha256))
-        return { kind: "already-imported", sha256: file.sha256 };
-      stored.push(file);
-      return {
-        kind: "imported",
-        sha256: file.sha256,
-        rowCount: file.rows.length,
-        newRows: file.rows.length,
-      };
-    },
+    store,
     stdout: { write: (chunk) => void out.push(chunk) },
     stderr: { write: (chunk) => void err.push(chunk) },
   };
@@ -53,7 +65,7 @@ describe("bun run gbd:import", () => {
     expect(await runGbdImport(["/downloads/IHME-GBD_2023_DATA-1.csv"], deps)).toBe(0);
     expect(out).toEqual([`IHME-GBD_2023_DATA-1.csv sha256 ${SHA}: 12 rows, 12 new\n`]);
     expect(err).toEqual([]);
-    expect(stored.map((file) => [file.fileName, file.sha256, file.rows.length])).toEqual([
+    expect(stored.map((file) => [file.fileName, file.sha256, file.rows])).toEqual([
       ["IHME-GBD_2023_DATA-1.csv", SHA, 12],
     ]);
   });

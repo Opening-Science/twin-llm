@@ -1,0 +1,34 @@
+import type { GbdCsvRow } from "./results-csv";
+
+/**
+ * Types and the batch size of the local GBD store, apart from `store.ts`
+ * (server only), so the import code and its tests can use them.
+ */
+
+export type GbdFileImport = Readonly<{
+  sha256: string;
+  fileName: string;
+  rows: readonly GbdCsvRow[];
+  /** From the download's citation.txt (#417); left out when there was none. */
+  citation?: string;
+}>;
+
+export type GbdImportOutcome =
+  | Readonly<{ kind: "already-imported"; sha256: string }>
+  | Readonly<{ kind: "imported"; sha256: string; rowCount: number; newRows: number }>;
+
+/** Rows per write; the store's `addRows` writes any number in batches this size. */
+export const GBD_STORE_BATCH = 5_000;
+
+export type GbdImportView = Readonly<{
+  sha256: string;
+  fileName: string;
+  release: string;
+  rowCount: number;
+  newRows: number;
+  /** ISO time. */
+  importedAt: string;
+  citation: string | null;
+  /** Estimates this file holds now: the ones it brought first. */
+  storedRows: number;
+}>;

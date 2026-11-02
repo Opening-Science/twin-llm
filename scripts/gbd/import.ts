@@ -15,24 +15,27 @@
  * eval database pass --env-file=.env.eval to bun (docs/evaluation/question-set.md).
  * Exit code 1 when any file was refused or failed; the others are imported.
  */
-import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 
 import { database } from "../../infrastructure/database";
 import { GBD_CITATION_FILE, parseGbdCitation } from "../../packages/gbd-local/citation";
-import { parseGbdResultsCsv } from "../../packages/gbd-local/results-csv";
-import { type GbdImportOutcome, importGbdFile } from "../../packages/gbd-local/store";
+import {
+  type GbdImportStore,
+  importGbdChunks,
+  sha256Of,
+} from "../../packages/gbd-local/import-chunks";
+import { gbdCsvErrorText } from "../../packages/gbd-local/results-csv";
+import { gbdImportStore } from "../../packages/gbd-local/store";
+
+export { sha256Of } from "../../packages/gbd-local/import-chunks";
 
 export type GbdImportDeps = Readonly<{
   readFile: (path: string) => Promise<Buffer>;
-  store: (file: Parameters<typeof importGbdFile>[1]) => Promise<GbdImportOutcome>;
+  store: GbdImportStore;
   stdout: { write: (chunk: string) => void };
   stderr: { write: (chunk: string) => void };
 }>;
-
-export const sha256Of = (bytes: Buffer): string =>
-  createHash("sha256").update(bytes).digest("hex");
 
 /** Imports every path in turn; returns the exit code. */
 export const runGbdImport = async (
@@ -53,27 +56,21 @@ export const runGbdImport = async (
       continue;
     }
     const sha256 = sha256Of(bytes);
-    const parsed = parseGbdResultsCsv(bytes.toString("utf8"));
-    if (!parsed.ok) {
-      const { error } = parsed;
-      const where = error.line === undefined ? "" : ` (line ${error.line})`;
-      const missing =
-        error.missing === undefined ? "" : ` Missing: ${error.missing.join(", ")}.`;
-      deps.stderr.write(`${name}: ${error.code}${where}: ${error.message}${missing}\n`);
-      failed += 1;
-      continue;
-    }
     const citation = await deps
       .readFile(join(dirname(path), GBD_CITATION_FILE))
       .then((text) => parseGbdCitation(text.toString("utf8")))
       .catch(() => null);
     try {
-      const outcome = await deps.store({
-        sha256,
-        fileName: name,
-        rows: parsed.rows,
-        ...(citation === null ? {} : { citation }),
-      });
+      const outcome = await importGbdChunks(
+        { sha256, fileName: name, citation },
+        [bytes],
+        deps.store,
+      );
+      if (outcome.kind === "refused") {
+        deps.stderr.write(`${name}: ${gbdCsvErrorText(outcome.error)}\n`);
+        failed += 1;
+        continue;
+      }
       deps.stdout.write(
         outcome.kind === "already-imported"
           ? `${name} sha256 ${sha256}: already imported, skipped\n`
@@ -94,7 +91,7 @@ const isMain = Boolean((import.meta as { main?: boolean }).main);
 if (isMain) {
   const code = await runGbdImport(process.argv.slice(2), {
     readFile: (path) => readFile(path),
-    store: (file) => importGbdFile(database(), file),
+    store: gbdImportStore(database()),
     stdout: process.stdout,
     stderr: process.stderr,
   });
