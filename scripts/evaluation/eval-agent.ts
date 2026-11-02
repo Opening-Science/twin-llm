@@ -14,7 +14,12 @@ import {
   agentModelId,
   findAgent,
 } from "../../infrastructure/agents";
-import { type CatalogAgent, turnAgentOf } from "../../infrastructure/model-catalog";
+import {
+  type CatalogAgent,
+  findCatalogRow,
+  parsePairedModelId,
+  turnAgentOf,
+} from "../../infrastructure/model-catalog";
 import type { TurnSkill } from "../../infrastructure/skill-gate";
 import { sha256Hex, toCanonicalJson } from "../../packages/audit/hash";
 
@@ -56,27 +61,39 @@ export const agentRulesSha256 = (modelId: string, skill: TurnSkill | null): stri
   sha256Hex(toCanonicalJson({ agent: findAgent(modelId), skill }));
 
 /**
- * The agent behind an `agent:<id>` model id, resolved against the chat
- * catalog the way `/api/chat` does, or the reason it cannot run. Auto picks
- * an agent per question, so a run of it would mix agents; it is refused.
+ * The specialist's own id behind a model id: `agent:rhythm@qwen3:4b` (a
+ * Manual pair, #366) is `agent:rhythm`; any other id is unchanged.
+ */
+export const specialistModelId = (modelId: string): string => {
+  const pair = parsePairedModelId(modelId);
+  return pair === null ? modelId : `${AGENT_ID_PREFIX}${pair.agentId}`;
+};
+
+/**
+ * The agent behind an `agent:<id>` model id, or a pair
+ * `agent:<id>@<model id>` that runs it on another model (#425), resolved
+ * against the chat catalog the way `/api/chat` does, or the reason it cannot
+ * run. Auto picks an agent per question, so a run of it would mix agents; it
+ * is refused. A pair's rules hash is its specialist's, so runs of one agent
+ * on two models can be checked for the same rules.
  */
 export const resolveEvalAgent = (
   modelId: string,
   catalog: readonly CatalogRow[],
   findSkill: (name: string) => TurnSkill | null,
 ): EvalAgent | AgentProblem => {
-  if (modelId === agentModelId(AUTO_AGENT)) {
+  const specialistId = specialistModelId(modelId);
+  if (specialistId === agentModelId(AUTO_AGENT)) {
     return {
       code: "USAGE",
       message: `${modelId} picks an agent for each question; run the agents one by one`,
     };
   }
-  if (findAgent(modelId) === null) {
+  if (findAgent(specialistId) === null) {
     return { code: "UNKNOWN_AGENT", message: `${modelId} is not an agent in agents.ts` };
   }
-  const agent = catalog.some((row) => row.id === modelId)
-    ? turnAgentOf(modelId, catalog, "")
-    : null;
+  const agent =
+    findCatalogRow(modelId, catalog) === null ? null : turnAgentOf(modelId, catalog, "");
   if (agent === null) {
     return {
       code: "AGENT_NOT_OFFERED",
@@ -93,7 +110,7 @@ export const resolveEvalAgent = (
   return {
     agent,
     skill,
-    rulesSha256: agentRulesSha256(modelId, skill),
+    rulesSha256: agentRulesSha256(specialistId, skill),
     rosterSha256: rosterSha256(),
   };
 };

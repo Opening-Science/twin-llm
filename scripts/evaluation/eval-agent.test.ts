@@ -10,6 +10,7 @@ import {
   normalizeAgentSpec,
   resolveEvalAgent,
   rosterSha256,
+  specialistModelId,
 } from "./eval-agent";
 
 const BRAIN: TurnSkill = {
@@ -93,6 +94,38 @@ describe("resolveEvalAgent", () => {
     expect(resolveEvalAgent("agent:sleep", catalog, findSkill)).toEqual({
       code: "AGENT_NOT_OFFERED",
       message: "the chat catalog does not offer agent:sleep with this provider",
+    });
+  });
+});
+
+describe("specialist on another model (#425)", () => {
+  test("specialistModelId strips the paired model", () => {
+    expect(specialistModelId("agent:rhythm@qwen3:4b")).toBe("agent:rhythm");
+    expect(specialistModelId("agent:rhythm")).toBe("agent:rhythm");
+    expect(specialistModelId("qwen3:8b")).toBe("qwen3:8b");
+  });
+
+  test("a pair runs the specialist's skill on the named model, with its rules hash", () => {
+    const resolved = resolveEvalAgent("agent:brain@llama3:8b", catalog, findSkill);
+    if (isAgentProblem(resolved)) throw new Error(resolved.message);
+    expect(resolved.agent).toMatchObject({
+      id: "brain",
+      skill: "brain",
+      baseModelId: "llama3:8b",
+    });
+    expect(resolved.skill).toBe(BRAIN);
+    expect(resolved.rulesSha256).toBe(agentRulesSha256("agent:brain", BRAIN));
+  });
+
+  test("a pair with a model or agent the catalog does not offer is refused", () => {
+    expect(resolveEvalAgent("agent:brain@qwen3:14b", catalog, findSkill)).toMatchObject({
+      code: "AGENT_NOT_OFFERED",
+    });
+    expect(resolveEvalAgent("agent:nobody@qwen3:4b", catalog, findSkill)).toMatchObject({
+      code: "UNKNOWN_AGENT",
+    });
+    expect(resolveEvalAgent("agent:auto@qwen3:4b", catalog, findSkill)).toMatchObject({
+      code: "USAGE",
     });
   });
 });

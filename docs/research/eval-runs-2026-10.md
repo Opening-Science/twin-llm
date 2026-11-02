@@ -1002,6 +1002,110 @@ Run `2026-11-01-qwen3-4b-v1h` at commit 4b58ef5: qwen3:4b, tools arm, the 32 hel
 
 Correctness on v1h (18/30, 42–75 %) is not lower than the tools arm on v1 (36/101, 27–45 % in #320), and the intervals overlap. So the held-out wording gives no sign that v1 scores rest on familiar templates. The sets differ in mix (S6, no data to answer, is 27 % of v1 and 16 % of v1h; S2 is 11 % and 25 %), so the totals are not a like-for-like comparison of difficulty; a per-scenario comparison needs more items. Nothing here is reviewed by a person yet: 3 correctness and 7 hallucination lines are marked for human review.
 
+## Specialists on qwen3:4b (#425)
+
+Since #379 Auto runs the agent it picks on qwen3:4b, because qwen3:4b skipped
+tools less in the base runs above; a specialist picked by hand keeps qwen3:8b
+first. The specialists had only been run on qwen3:8b ("Agents vs base model").
+Here each one was run on both models, on the sets its qwen3:8b runs used:
+Heart rhythm on S7, S7b and S7h, Brain on S7, General on v1. No agent was run
+on v1h before, so v1h is not in this comparison. qwen3:4b runs use the new
+pair `agent:<id>@qwen3:4b` (`docs/evaluation/harness.md`, "Agents"); qwen3:8b
+runs use `agent:<id>`, the agent's own preference.
+
+Run on 2026-11-02 at git `f7a101e`, the throwaway eval database on
+127.0.0.1:5434 (cohort `synthea-v4-seed42`, `synthea-v4-s7` for S7b and S7h),
+Ollama `qwen3:4b` and `qwen3:8b` (Q4_K_M), one run at a time, alone on the
+GPU. Both models of each pair ran at the same commit with the same rules
+sha256 (Heart rhythm `cbd1b4ac02ed…`, Brain `38a8fa61599b…`, General
+`c7067d25ab9e…`), so the two runs differ only in the base model. No errors.
+One qwen3:4b S7 line (Q-S7-02) came from the cache of a one-item smoke run at
+the same commit; every other line was a fresh call. v1 skipped 12 S4 lines
+(`MISSING_ENV`) in both runs. The qwen3:8b numbers below are reruns, not the
+earlier runs above, which were at older commits (before #288, #329, #393).
+Run ids are `2026-11-02-agent-<agent>-<set>-<4b|8b>`; the numbers are in
+`eval-specialists-4b-2026-11.summary.json`.
+
+Correctness is passes over scored answers; no tool call, wrong code and
+invented code are out of keyed answers (call accuracy, #276). Wilson 95 %
+intervals.
+
+| Agent, set        | Correctness 4b   | Correctness 8b  | No tool call 4b | No tool call 8b | Wrong code 4b | Wrong code 8b | Invented code 4b | Invented code 8b |
+| ----------------- | ---------------- | --------------- | --------------- | --------------- | ------------- | ------------- | ---------------- | ---------------- |
+| Heart rhythm, S7  | 15/31 (32–65 %)  | 10/20 (30–70 %) | 4/32 (5–28 %)   | 7/32 (11–39 %)  | 0/32 (0–11 %) | 0/32 (0–11 %) | 0/32 (0–11 %)    | 0/32 (0–11 %)    |
+| Heart rhythm, S7b | 13/30 (27–61 %)  | 7/18 (20–61 %)  | 2/33 (2–20 %)   | 5/33 (7–31 %)   | 0/33 (0–10 %) | 0/33 (0–10 %) | 0/33 (0–10 %)    | 0/33 (0–10 %)    |
+| Heart rhythm, S7h | 21/32 (48–80 %)  | 11/21 (32–72 %) | 0/34 (0–10 %)   | 8/34 (12–40 %)  | 0/34 (0–10 %) | 0/34 (0–10 %) | 0/34 (0–10 %)    | 0/34 (0–10 %)    |
+| Brain, S7         | 5/31 (7–33 %)    | 6/31 (9–36 %)   | 15/32 (31–64 %) | 7/32 (11–39 %)  | 0/32 (0–11 %) | 0/32 (0–11 %) | 0/32 (0–11 %)    | 1/32 (1–16 %)    |
+| General, v1       | 29/106 (20–37 %) | 16/109 (9–23 %) | 3/96 (1–9 %)    | 64/96 (57–75 %) | 2/96 (1–7 %)  | 1/96 (0–6 %)  | 55/96 (47–67 %)  | 14/96 (9–23 %)   |
+
+What else moved, same runs:
+
+| Agent, set        | Hallucination 4b | Hallucination 8b  | Unsourced numbers 4b | Unsourced numbers 8b | Correctness human share 4b / 8b | Total p50 4b / 8b |
+| ----------------- | ---------------- | ----------------- | -------------------- | -------------------- | ------------------------------- | ----------------- |
+| Heart rhythm, S7  | 16/27 (41–75 %)  | 33/37 (75–96 %)   | 50 in 18 of 38       | 1 in 1 of 38         | 3 % / 38 %                      | 24.3 s / 4.6 s    |
+| Heart rhythm, S7b | 17/30 (39–73 %)  | 30/36 (68–92 %)   | 62 in 14 of 38       | 3 in 3 of 38         | 9 % / 45 %                      | 25.5 s / 4.8 s    |
+| Heart rhythm, S7h | 24/33 (56–85 %)  | 41/43 (85–99 %)   | 62 in 12 of 44       | 1 in 1 of 44         | 6 % / 38 %                      | 26.4 s / 3.8 s    |
+| Brain, S7         | 26/30 (70–95 %)  | 30/36 (68–92 %)   | 19 in 9 of 38        | 2 in 2 of 38         | 3 % / 3 %                       | 22.7 s / 4.2 s    |
+| General, v1       | 73/99 (64–81 %)  | 124/129 (91–98 %) | 294 in 42 of 134     | 12 in 5 of 134       | 7 % / 4 %                       | 29.3 s / 3.3 s    |
+
+Query safety on v1 was 86/118 (64–80 %) for General on qwen3:4b against
+30/118 (18–34 %) on qwen3:8b, mostly the lines where qwen3:8b called no tool.
+
+### Notes
+
+- **Tool calls.** The reason Auto moved to qwen3:4b holds for General and
+  Heart rhythm: on qwen3:4b General answered 3 of 96 keyed lines with no tool
+  call against 64 of 96 on qwen3:8b, and Heart rhythm called a tool on every
+  keyed S7h line. It does not hold for Brain, which on qwen3:4b left 15 of 32
+  keyed S7 lines without a call against 7 of 32: it declined more of the
+  rhythm questions outside its role.
+- **More calls bring more invented codes.** General on qwen3:4b invented a
+  code on 55 of 96 keyed lines against 14 of 96 on qwen3:8b, as the base
+  qwen3:4b did in the first v1 run (46 of 96). Wrong codes (a real code, not
+  the keyed one) stayed at 1 or 2 lines on every run. The rhythm items take no
+  code, so S7, S7b and S7h say nothing about codes.
+- **Correctness.** qwen3:4b scored higher on S7b, S7h and v1 and about the same on S7 (48 % against 50 %) and Brain, but every pair's intervals overlap; General on v1 comes
+  closest to apart (20–37 % against 9–23 %). The qwen3:8b rhythm correctness
+  has a human share of 38 to 45 % (keyed numbers the finder did not place),
+  against 3 to 9 % on qwen3:4b, so those qwen3:8b rates rest on few lines and
+  may move with review.
+- **Hallucination and unsourced numbers go the other way.** qwen3:4b passed hallucination less often on every set but Brain, with the intervals clear of each other on v1, touching on S7 and S7h and overlapping on S7b, and wrote 10 to 60 times as many numbers
+  that no tool result or question holds. Its hallucination human share is 21
+  to 29 % (2 to 5 % on qwen3:8b), so part of this waits for a reviewer.
+- **The reasoning passage.** Every qwen3:4b answer starts with a free
+  reasoning passage ("Okay, let me…", median 2,600 to 2,900 output tokens per line on S7, S7b, S7h and Brain, against 327 for Heart rhythm on qwen3:8b on S7) before the structured sections;
+  qwen3:8b writes none. The scorers read the whole text. As a check, the
+  qwen3:4b runs were rescored with that passage cut at the first
+  `## Reasoning` heading (no model call, runs `…-4b-cut`): correctness fell a
+  little (S7 14/30, S7b 10/27, S7h 17/28, Brain 4/30, General 29/105) and
+  hallucination rose a little (S7 18/29, S7h 27/36, General 83/108), so
+  neither the correctness gain nor the hallucination loss comes mainly from
+  the passage.
+- **Latency.** qwen3:4b took 5 to 9 times as long per line (p50 23 to 29 s
+  against 3 to 5 s), almost all of it the reasoning passage.
+- **Same sets as before.** S7 and S7b were used to find the rhythm tool gap
+  (#288); S7h was not, and gives the same direction. The qwen3:8b reruns are
+  close to the earlier qwen3:8b agent runs (Heart rhythm S7h 11/21 against
+  9/20, General v1 16/109 against 18/105), though General on qwen3:8b skipped
+  tools more now (64 of 96 against 51 of 96).
+- One sample per line, sampling at the model defaults, no human review, no
+  specialty literature in the eval database (as before). Other specialists
+  (Diet, Sleep, Anatomy and the rest) have no runs on either model.
+
+### Recommendation (not applied)
+
+On this evidence, keep qwen3:8b first for hand-picked specialists for now.
+qwen3:4b calls tools more and scores as well or better on correctness, but no
+correctness difference is clear of its interval, while its hallucination
+pass rate is lower on four of five pairs (clearly so on v1) and it writes many more unsourced numbers on all five,
+General invents codes on more than half its keyed lines, and each answer
+takes several times as long. The strongest case for qwen3:4b is General,
+where qwen3:8b called no tool on two thirds of the keyed lines. The same
+costs apply to the agents Auto runs on qwen3:4b since #379, which is worth
+weighing there too. A human review of the hallucination lines marked
+`human`, and a held-out set for General (v1h), would decide this better than
+another automatic run. Product defaults are unchanged.
+
 ## Limits
 
 - The questions were written alongside the cohort they are scored against, and
