@@ -76,11 +76,21 @@ export type GbdStoredEstimate = Readonly<{
   lower: number | null;
 }>;
 
+/** When the estimates were last imported and the citation the import recorded (#417). */
+export type GbdImportSource = Readonly<{
+  /** Day of the latest import, `YYYY-MM-DD`; null when none is recorded. */
+  importedOn: string | null;
+  /** The latest citation an import recorded; null when none did. */
+  citation: string | null;
+}>;
+
 export type GbdEstimatePorts = Readonly<{
   /** Imported names of the locations, causes and risk factors. */
   catalog: () => Promise<GbdCatalog>;
   findEstimates: (query: GbdEstimateQuery) => Promise<readonly GbdStoredEstimate[]>;
   appendAudit: (input: AppendInput) => Promise<unknown>;
+  /** Read by `gbd_profile` for its header and footer; left out, neither is known. */
+  importSource?: () => Promise<GbdImportSource>;
 }>;
 
 export type GbdEstimateRow = Readonly<{

@@ -25,6 +25,13 @@ export const GBD_PROFILE_MAP_AUDIT_TOOL = "gbd_profile.map";
 export const GBD_LOCAL_RELEASE = "2023";
 export const GBD_LOCAL_SOURCE = `IHME GBD ${GBD_LOCAL_RELEASE}`;
 export const GBD_LOCAL_ATTRIBUTION = gbdAttributionLine(GBD_LOCAL_RELEASE);
+/**
+ * IHME's citation for GBD 2023 Results Tool data, as the `citation.txt` of a
+ * download gives it (#417). A profile shows the imported file's own text when
+ * the import recorded one, else this.
+ */
+export const GBD_LOCAL_CITATION =
+  "Global Burden of Disease Collaborative Network. Global Burden of Disease Study 2023 (GBD 2023) Results. Seattle, United States: Institute for Health Metrics and Evaluation (IHME), 2024. Available from https://vizhub.healthdata.org/gbd-results/.";
 
 /**
  * In the order the model sees them: measures of living well first, deaths

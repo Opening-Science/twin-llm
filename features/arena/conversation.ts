@@ -1,5 +1,6 @@
 import type { EffortLevel } from "@/infrastructure/chat-effort";
 import type { ChatView } from "@/infrastructure/chat-view";
+import type { GbdProfileFrame } from "@/infrastructure/gbd-profile-frame";
 import type { ModelResponseMetrics } from "@/infrastructure/model-response-metrics";
 import type { NumberSource } from "@/infrastructure/number-sources";
 import type { EvidenceAttribution } from "@/infrastructure/oura-types";
@@ -33,6 +34,8 @@ export type AnswerProgress = Readonly<{
   tools?: readonly ToolActivity[];
   /** Charts the server drew from audited rows; a saved answer reads them from its stored tool parts. */
   views?: readonly ChatView[];
+  /** A GBD profile's header and footer, drawn by the app around the text (#417). */
+  profileFrame?: GbdProfileFrame | null;
   /** The connection closed before the server said it was done. */
   lost?: boolean;
   /** The server's own sentence for a refused skill turn, shown in place of the generic failure. */

@@ -56,6 +56,8 @@ The steps follow IHME's
 8. Open the "download ready" email, follow the link to the status page and
    download the file or files (they stay there for 7 days). Unzip if needed.
 9. Run `bun run gbd:import ~/Downloads/IHME-GBD_2023_DATA-*.csv`.
+   Keep the download's `citation.txt` next to the CSV files: the import stores
+   its citation, which GBD profiles show (#417).
 
 IHME advises narrow queries: a very large query can return files that leave
 out some ages or years. Several smaller downloads import fine; the same
@@ -269,6 +271,19 @@ imported."); it never fails the profile. The model gets each section's
 title, status, note and up to 10 rounded rows, and writes the prose from
 them. Like `gbd_estimate`, the profile is reference material: its rows never
 make an answer `sufficient_data`.
+
+The app, not the model, draws a fixed header and footer around the model's
+text (#417), because small models do not reliably write headings or end with
+the attribution. The header gives the profile's title ("Location profile:
+Switzerland, 2023"), the source (IHME GBD 2023) and the day of the latest
+import; the footer gives the attribution line ("Population estimate (IHME GBD
+2023), not a statement about this person.") and IHME's citation. The tool
+returns them as `frame` in its output, which the model does not see
+(`infrastructure/gbd-profile-frame.ts`), and the thread's PDF and Download
+exports carry the same lines. The citation is the one `bun run gbd:import`
+read from the `citation.txt` next to the imported files (IHME puts one in
+each download; it is stored with the file's record in `gbd_imports`), else
+IHME's citation for GBD 2023 Results Tool data.
 
 #### Cause levels (#409)
 
