@@ -2,8 +2,9 @@
  * Where a stop's label goes under a native range input. The thumb's centre
  * runs from half a thumb in from the left edge to half a thumb in from the
  * right, so a label at plain `index / (count - 1)` drifts off its stop
- * towards the ends. The thumb width is the browsers' default for an
- * unstyled range input.
+ * towards the ends. The thumb width is Chrome's default for an unstyled
+ * range input. Firefox draws 20px and Safari about 16, so the label at the
+ * 25 % stop is 1px off in Firefox; that is left as it is.
  */
 
 export const RANGE_THUMB_PX = 16;
