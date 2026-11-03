@@ -430,6 +430,12 @@
     @apply text-muted-foreground hover:text-foreground shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium whitespace-nowrap transition-colors;
   }
 
+  /* The pill clips what overflows it, which the usual ring 2px outside the
+     item would; the ring goes 2px inside the item instead. */
+  .segmented-item:focus-visible {
+    outline-offset: -2px;
+  }
+
   .segmented-item-sm {
     @apply px-2.5 py-1 text-xs;
   }

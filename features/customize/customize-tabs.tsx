@@ -26,11 +26,12 @@ export const currentTab = (path: string): string =>
 export const CustomizeTabs = () => {
   const current = currentTab(usePathname());
   const nav = useRef<HTMLElement>(null);
-  // On a phone the row scrolls sideways; keep the open tab in sight.
+  // On a phone the row scrolls sideways; keep the open tab in sight. Only the
+  // row moves, never the page around it.
   useEffect(() => {
-    nav.current
-      ?.querySelector('[aria-current="page"]')
-      ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    const row = nav.current;
+    const tab = row?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (row && tab) row.scrollLeft = tab.offsetLeft - row.offsetLeft;
   }, [current]);
   return (
     <nav ref={nav} aria-label="Customize" className="segmented mt-6">
