@@ -129,7 +129,7 @@ export const labHubCards = (input: LabHubInput): readonly LabHubCard[] => {
     benchmark: benchmarkMeta(input.benchmarkRuns),
     jobs: jobsMeta(input.jobs),
     rate: {
-      meta: `Question sets ${new Intl.ListFormat("en-GB").format(RATED_SETS)}`,
+      meta: `Question sets ${RATED_SETS.join(" and ")}`,
       tone: "neutral",
     },
   };

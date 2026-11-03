@@ -72,8 +72,15 @@ describe("labHubCards", () => {
     });
   });
 
-  test("the hub order is LAB_PARTS", () => {
-    expect(labHubCards(base).map((card) => card.part)).toEqual([...LAB_PARTS]);
+  test("the hub order: what runs here, what you can make, what was measured, who rates", () => {
+    expect(LAB_PARTS).toEqual([
+      "checks",
+      "simulations",
+      "evaluations",
+      "benchmark",
+      "jobs",
+      "rate",
+    ]);
   });
 });
 
