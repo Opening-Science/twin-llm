@@ -1,5 +1,3 @@
-import { Card } from "@/infrastructure/ui-kit/card";
-
 import { RHYTHM_BENCH_DIR } from "@/infrastructure/local-artefacts";
 
 import { benchmarkRunLine, benchmarkTables } from "./benchmark-result";
@@ -160,7 +158,7 @@ export const BenchmarkBody = ({ data }: Readonly<{ data: BenchmarkData }>) => {
 };
 
 export const LongJobsBody = ({ jobs }: Readonly<{ jobs: readonly LabJob[] }>) => (
-  <Card padding="md" className="flex min-w-0 flex-col gap-3">
+  <div className="flex min-w-0 flex-col gap-3">
     <JobLines jobs={jobs} />
-  </Card>
+  </div>
 );

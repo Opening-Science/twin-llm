@@ -92,8 +92,12 @@ const Frame = ({
       <>
         <p>
           For the hb and v1h runs in evaluation/runs/, one set at a time, each with its
-          own rubric. The pseudonym sets the order of the answers, so you can stop and
-          resume at any time. Agreement with the automatic scorer, as Cohen&rsquo;s kappa:
+          own rubric (
+          <Link href="/docs/evaluation/second-rater" className="setup-link">
+            docs/evaluation/second-rater.md
+          </Link>
+          ). The pseudonym sets the order of the answers, so you can stop and resume at
+          any time. Agreement with the automatic scorer, as Cohen&rsquo;s kappa:
         </p>
         <pre className="command-block" aria-label="Command that reports agreement">
           <code>{AGREEMENT_COMMAND}</code>
@@ -103,15 +107,7 @@ const Frame = ({
   >
     <div className="flex flex-col gap-3">
       <p className="text-muted-foreground max-w-prose text-sm leading-relaxed">
-        Rate the answers to {RATED_SET_COPY[set].questions} against the reference, one at
-        a time, with the anchors below the stars. The model and the automatic score stay
-        hidden. Ratings are saved beside each run on this machine and never sent anywhere.
-        Synthetic data only; for research use, not about anyone&rsquo;s health. The rubric
-        is in{" "}
-        <Link href="/docs/evaluation/second-rater" className="setup-link">
-          docs/evaluation/second-rater.md
-        </Link>
-        .
+        Ratings are saved beside each run on this machine and never sent anywhere.
       </p>
       <SetTabs set={set} rater={rater} />
     </div>

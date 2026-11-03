@@ -2,34 +2,36 @@ import { redirect } from "next/navigation";
 
 import { labHubCards, legacySimulationHref } from "@/features/lab/lab-hub";
 import { LabHubScreen } from "@/features/lab/lab-hub-screen";
-import { loadJobs, loadTimedChecks } from "@/features/lab/load-jobs";
-import { loadResults } from "@/features/lab/load-results";
-import { loadSimulation } from "@/features/lab/load-simulation";
+import { loadJobStates } from "@/features/lab/load-jobs";
+import { countBenchmarkRuns, countRuns } from "@/features/lab/load-results";
+import { countSubjects } from "@/features/lab/load-simulation";
+import { LAB_CHECK_COUNT } from "@/features/lab/run-lab-checks";
 
+/**
+ * The hub is the page everyone passes through, so it only counts: run
+ * folders, a stat per job, one database count. The checks run on
+ * `/lab/checks`; the reports are read on the pages that show them.
+ */
 export default async function LabPage({
   searchParams,
 }: Readonly<{ searchParams: Promise<Record<string, string | string[] | undefined>> }>) {
   const params = await searchParams;
   const legacy = legacySimulationHref(params);
   if (legacy !== null) redirect(legacy);
-  const [checks, simulation, results] = await Promise.all([
-    loadTimedChecks(),
-    loadSimulation({}),
-    loadResults(),
+  const [simulationSubjects, runs, benchmarkRuns, jobs] = await Promise.all([
+    countSubjects(),
+    countRuns(),
+    countBenchmarkRuns(),
+    loadJobStates(),
   ]);
-  const jobs = await loadJobs(results.benchmark);
   return (
     <LabHubScreen
       cards={labHubCards({
-        checks: checks.section.checks.map((check) => check.status),
-        simulationSubjects:
-          simulation.kind === "synthetic" ? simulation.subjects.length : null,
-        runs: { count: results.runs.length, more: results.more, failed: results.failed },
-        benchmark: {
-          found: results.benchmark.read.kind === "found",
-          runs: results.benchmark.runs,
-        },
-        jobs: jobs.map((job) => job.state),
+        checkCount: LAB_CHECK_COUNT,
+        simulationSubjects,
+        runs,
+        benchmarkRuns,
+        jobs,
       })}
     />
   );

@@ -8,9 +8,11 @@ hand with the command on the card.
 `/lab` is a hub of cards, one per experiment, and each card opens its own page with the same frame
 (`features/lab/lab-detail.tsx`): the way back to the hub, the title, one line on what it is, the
 thing itself, and the longer explanation folded under "About this". The cards and their meta lines
-(how many checks came out OK, how many synthetic people, whether a run exists) come from
-`features/lab/lab-hub.ts` (pure, tested); the card itself is `HubCard` in
-`infrastructure/ui-kit/hub-card.tsx`.
+(how many checks there are, how many synthetic people, how many runs, whether a job is running)
+come from `features/lab/lab-hub.ts` (pure, tested); the card itself is `HubCard` in
+`infrastructure/ui-kit/hub-card.tsx`. The hub only counts, with a `readdir`, a `stat` per job
+and one database count: the checks run on `/lab/checks` and the reports are read on the pages
+that show them. Search finds each page by its title and line.
 
 | Card                     | Page               | Section below         |
 | ------------------------ | ------------------ | --------------------- |

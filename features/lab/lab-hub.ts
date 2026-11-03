@@ -1,18 +1,29 @@
 import { type StatusTone } from "@/infrastructure/ui-kit/status-badge";
 
-import { type CheckStatus } from "./lab-check";
 import { type JobState } from "./lab-jobs";
+import { RATED_SETS } from "./rater-rubric";
 
 /**
  * The Lab hub (`/lab`): one card per experiment, each opening its own page.
  * This module only decides the words and the tone of each card from what the
- * loaders found; the page draws them. Order is the order a newcomer meets
- * them: what runs here, what you can make, what has been measured, who
- * rates it.
+ * loaders counted; the page draws them. The hub runs no check and parses no
+ * file: each meta line costs a readdir, a stat or one database count, so the
+ * page everyone passes through stays cheap. No server-only import belongs
+ * here; the search items read the titles and paths too.
  */
 
 export type LabPart =
   "checks" | "simulations" | "evaluations" | "benchmark" | "jobs" | "rate";
+
+/** The hub's order: what runs here, what you can make, what has been measured, who rates it. */
+export const LAB_PARTS: readonly LabPart[] = [
+  "checks",
+  "simulations",
+  "evaluations",
+  "benchmark",
+  "jobs",
+  "rate",
+];
 
 export const LAB_PATH: Readonly<Record<LabPart, string>> = {
   checks: "/lab/checks",
@@ -45,12 +56,17 @@ export const LAB_LINE: Readonly<Record<LabPart, string>> = {
   rate: "Rate answers blind, one at a time, next to the automatic scorer.",
 };
 
+/** Synthetic people the simulator can use; "personal" in personal mode, "unread" when the database did not answer. */
+export type SubjectCount = number | "personal" | "unread";
+
 export type LabHubInput = Readonly<{
-  checks: readonly CheckStatus[];
-  /** Synthetic people the simulator can use; null in personal mode. */
-  simulationSubjects: number | null;
-  runs: Readonly<{ count: number; more: boolean; failed: boolean }>;
-  benchmark: Readonly<{ found: boolean; runs: number }>;
+  /** How many checks `/lab/checks` runs; the hub only counts them. */
+  checkCount: number;
+  simulationSubjects: SubjectCount;
+  /** Run folders found; `failed` when the folder could not be listed. */
+  runs: Readonly<{ count: number; failed: boolean }>;
+  /** Benchmark run folders with a result file. */
+  benchmarkRuns: number;
   jobs: readonly JobState[];
 }>;
 
@@ -66,45 +82,37 @@ export type LabHubCard = Readonly<{
 const count = (n: number, one: string, many = `${one}s`): string =>
   `${n.toLocaleString("en")} ${n === 1 ? one : many}`;
 
+/** The checks are counted, never run, on the hub; their page runs them. */
 export const checksMeta = (
-  checks: readonly CheckStatus[],
-): Readonly<{ meta: string; tone: StatusTone }> => {
-  if (checks.length === 0) return { meta: "No checks ran", tone: "off" };
-  const of = (status: CheckStatus) => checks.filter((each) => each === status).length;
-  const notOk = of("not-ok");
-  return {
-    meta: `${String(of("ok"))} OK · ${String(notOk)} Not OK · ${String(of("unknown"))} Unknown`,
-    tone: notOk > 0 ? "warn" : of("unknown") > 0 ? "neutral" : "ok",
-  };
-};
+  checkCount: number,
+): Readonly<{ meta: string; tone: StatusTone }> => ({
+  meta: count(checkCount, "check"),
+  tone: "neutral",
+});
 
-const simulationsMeta = (subjects: number | null) =>
-  subjects === null
+const simulationsMeta = (subjects: SubjectCount) =>
+  subjects === "personal"
     ? { meta: "Synthetic mode only", tone: "off" as const }
-    : subjects === 0
-      ? { meta: "No synthetic people loaded", tone: "off" as const }
-      : {
-          meta: `${count(subjects, "synthetic person", "synthetic people")}`,
-          tone: "neutral" as const,
-        };
+    : subjects === "unread"
+      ? { meta: "Synthetic people could not be counted", tone: "warn" as const }
+      : subjects === 0
+        ? { meta: "No synthetic people loaded", tone: "off" as const }
+        : {
+            meta: count(subjects, "synthetic person", "synthetic people"),
+            tone: "neutral" as const,
+          };
 
 const runsMeta = (runs: LabHubInput["runs"]) =>
   runs.failed
     ? { meta: "Runs folder could not be read", tone: "warn" as const }
     : runs.count === 0
       ? { meta: "Not run yet", tone: "off" as const }
-      : {
-          meta: `${runs.more ? "Newest " : ""}${count(runs.count, "run")}`,
-          tone: "neutral" as const,
-        };
+      : { meta: count(runs.count, "run"), tone: "neutral" as const };
 
-const benchmarkMeta = (benchmark: LabHubInput["benchmark"]) =>
-  benchmark.found
-    ? {
-        meta: benchmark.runs > 1 ? `Newest of ${count(benchmark.runs, "run")}` : "1 run",
-        tone: "neutral" as const,
-      }
-    : { meta: "Not run yet", tone: "off" as const };
+const benchmarkMeta = (runs: number) =>
+  runs === 0
+    ? { meta: "Not run yet", tone: "off" as const }
+    : { meta: count(runs, "run"), tone: "neutral" as const };
 
 const jobsMeta = (jobs: readonly JobState[]) => {
   const running = jobs.filter((state) => state === "working").length;
@@ -115,14 +123,17 @@ const jobsMeta = (jobs: readonly JobState[]) => {
 
 export const labHubCards = (input: LabHubInput): readonly LabHubCard[] => {
   const metas: Readonly<Record<LabPart, Readonly<{ meta: string; tone: StatusTone }>>> = {
-    checks: checksMeta(input.checks),
+    checks: checksMeta(input.checkCount),
     simulations: simulationsMeta(input.simulationSubjects),
     evaluations: runsMeta(input.runs),
-    benchmark: benchmarkMeta(input.benchmark),
+    benchmark: benchmarkMeta(input.benchmarkRuns),
     jobs: jobsMeta(input.jobs),
-    rate: { meta: "Question sets hb and v1h", tone: "neutral" },
+    rate: {
+      meta: `Question sets ${new Intl.ListFormat("en-GB").format(RATED_SETS)}`,
+      tone: "neutral",
+    },
   };
-  return (Object.keys(LAB_PATH) as LabPart[]).map((part) => ({
+  return LAB_PARTS.map((part) => ({
     part,
     href: LAB_PATH[part],
     title: LAB_TITLE[part],

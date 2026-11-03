@@ -1,13 +1,13 @@
 import { describe, expect, test } from "bun:test";
 
-import { checksMeta, labHubCards, legacySimulationHref } from "./lab-hub";
+import { checksMeta, LAB_PARTS, labHubCards, legacySimulationHref } from "./lab-hub";
 
 const base = {
-  checks: ["ok", "ok", "not-ok", "unknown"] as const,
+  checkCount: 9,
   simulationSubjects: 37,
-  runs: { count: 0, more: false, failed: false },
-  benchmark: { found: false, runs: 0 },
-  jobs: ["done", "none", "none"] as const,
+  runs: { count: 0, failed: false },
+  benchmarkRuns: 0,
+  jobs: ["done", "none"] as const,
 };
 
 describe("labHubCards", () => {
@@ -24,7 +24,7 @@ describe("labHubCards", () => {
 
   test("meta lines on a fresh synthetic machine", () => {
     expect(labHubCards(base).map((card) => [card.meta, card.tone])).toEqual([
-      ["2 OK · 1 Not OK · 1 Unknown", "warn"],
+      ["9 checks", "neutral"],
       ["37 synthetic people", "neutral"],
       ["Not run yet", "off"],
       ["Not run yet", "off"],
@@ -36,27 +36,27 @@ describe("labHubCards", () => {
   test("meta lines once things have run", () => {
     const cards = labHubCards({
       ...base,
-      simulationSubjects: null,
-      runs: { count: 100, more: true, failed: false },
-      benchmark: { found: true, runs: 3 },
-      jobs: ["working", "done", "working"],
+      simulationSubjects: "personal",
+      runs: { count: 100, failed: false },
+      benchmarkRuns: 3,
+      jobs: ["working", "working"],
     });
     expect(cards.map((card) => card.meta)).toEqual([
-      "2 OK · 1 Not OK · 1 Unknown",
+      "9 checks",
       "Synthetic mode only",
-      "Newest 100 runs",
-      "Newest of 3 runs",
+      "100 runs",
+      "3 runs",
       "2 jobs running",
       "Question sets hb and v1h",
     ]);
   });
 
-  test("a runs folder that cannot be read, one run, one benchmark run, nobody loaded", () => {
+  test("a runs folder that cannot be read, one benchmark run, nobody loaded", () => {
     const cards = labHubCards({
       ...base,
       simulationSubjects: 0,
-      runs: { count: 1, more: false, failed: true },
-      benchmark: { found: true, runs: 1 },
+      runs: { count: 1, failed: true },
+      benchmarkRuns: 1,
     });
     expect(cards.slice(1, 4).map((card) => [card.meta, card.tone])).toEqual([
       ["No synthetic people loaded", "off"],
@@ -64,19 +64,23 @@ describe("labHubCards", () => {
       ["1 run", "neutral"],
     ]);
   });
+
+  test("a database that did not answer is said, not counted as nobody", () => {
+    expect(labHubCards({ ...base, simulationSubjects: "unread" })[1]).toMatchObject({
+      meta: "Synthetic people could not be counted",
+      tone: "warn",
+    });
+  });
+
+  test("the hub order is LAB_PARTS", () => {
+    expect(labHubCards(base).map((card) => card.part)).toEqual([...LAB_PARTS]);
+  });
 });
 
 describe("checksMeta", () => {
-  test("all OK is ok; Unknown alone is neutral; none ran is off", () => {
-    expect(checksMeta(["ok", "ok"])).toEqual({
-      meta: "2 OK · 0 Not OK · 0 Unknown",
-      tone: "ok",
-    });
-    expect(checksMeta(["ok", "unknown"])).toEqual({
-      meta: "1 OK · 0 Not OK · 1 Unknown",
-      tone: "neutral",
-    });
-    expect(checksMeta([])).toEqual({ meta: "No checks ran", tone: "off" });
+  test("counts the checks without a status: none has run on the hub", () => {
+    expect(checksMeta(9)).toEqual({ meta: "9 checks", tone: "neutral" });
+    expect(checksMeta(1)).toEqual({ meta: "1 check", tone: "neutral" });
   });
 });
 
