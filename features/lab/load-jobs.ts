@@ -202,7 +202,11 @@ export const loadJobs = async (benchmark: BenchmarkData): Promise<readonly LabJo
   ];
 };
 
-/** For the hub: which command-line jobs are running, from file times alone; nothing is read. */
+/**
+ * For the hub: which command-line jobs are running, from file times alone;
+ * nothing is read. The benchmark is left out on purpose: its job never
+ * reports running, only done or error, so it has nothing to add here.
+ */
 export const loadJobStates = async (): Promise<readonly JobState[]> => {
   const root = process.cwd();
   const now = Date.now();
