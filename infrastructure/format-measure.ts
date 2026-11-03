@@ -160,12 +160,13 @@ export const isoLocalDate = (date: Date = new Date()): string =>
   `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
 
 /**
- * en-GB month abbreviations, written here instead of read from ICU. bun on
- * macOS uses the system ICU and bun on Linux its own, and CLDR 48 renamed
- * September from `Sept` to `Sep`, so the same code printed two spellings.
- * A fixed table keeps every build byte for byte the same.
+ * Month abbreviations for `DISPLAY_LOCALE` (en-GB), written here instead of
+ * read from ICU, so a locale change updates both. bun on macOS uses the
+ * system ICU and bun on Linux its own, and CLDR 48 renamed September from
+ * `Sept` to `Sep`, so the same code printed two spellings. A fixed table
+ * keeps every build byte for byte the same.
  */
-const MONTHS = [
+const EN_GB_MONTHS = [
   "Jan",
   "Feb",
   "Mar",
@@ -183,8 +184,8 @@ const MONTHS = [
 /** `16 Oct 2026`, or `16 Oct` without a year. `month` is 1 to 12. */
 const dayLabel = (day: number, month: number, year?: number): string =>
   year === undefined
-    ? `${day} ${MONTHS[month - 1]}`
-    : `${day} ${MONTHS[month - 1]} ${year}`;
+    ? `${day} ${EN_GB_MONTHS[month - 1]}`
+    : `${day} ${EN_GB_MONTHS[month - 1]} ${year}`;
 
 /**
  * A calendar day as `16 Oct 2026` (or `16 Oct`). Takes YYYY-MM-DD, which is
