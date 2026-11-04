@@ -43,7 +43,8 @@ export const storageHowTo = (vitronic: string): string => {
   ].join("\n");
 };
 
-const ID = "local-storage";
+export const STORAGE_CHECK_ID = "local-storage";
+const ID = STORAGE_CHECK_ID;
 const TITLE = "Local storage";
 
 /** What the card shows even when the check cannot run. */

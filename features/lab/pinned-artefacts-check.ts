@@ -139,7 +139,8 @@ export const pinnedHowTo = (pins: readonly PinnedArtefact[]): string => {
   ].join("\n");
 };
 
-const ID = "pinned-artefacts";
+export const PINNED_ARTEFACTS_CHECK_ID = "pinned-artefacts";
+const ID = PINNED_ARTEFACTS_CHECK_ID;
 const TITLE = "Pinned artefacts";
 
 /** What the card shows even when the check cannot run. */

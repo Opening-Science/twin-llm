@@ -54,6 +54,7 @@ import {
 import { createFileHasher } from "./file-hash";
 import { type LabCheck, type LabSection, unavailableCheck } from "./lab-check";
 import {
+  LOCAL_MODELS_CHECK_ID,
   localModelsBase,
   localModelsCheck,
   ollamaTagsUrl,
@@ -63,12 +64,13 @@ import { localOnlyBase, localOnlyCheck } from "./local-only-check";
 import {
   type PinnedArtefact,
   pinnedArtefacts,
+  PINNED_ARTEFACTS_CHECK_ID,
   pinnedArtefactsBase,
   pinnedArtefactsCheck,
 } from "./pinned-artefacts-check";
 import { provenanceBase, provenanceCheck } from "./provenance-check";
 import { type CurrentSbom, sbomBase, sbomCheck } from "./sbom-check";
-import { storageBase, storageCheck } from "./storage-check";
+import { STORAGE_CHECK_ID, storageBase, storageCheck } from "./storage-check";
 import { encryptionBase, encryptionCheck } from "./encryption-check";
 import { disclosureLedgerBase, disclosureLedgerCheck } from "./disclosure-ledger-check";
 
@@ -396,26 +398,44 @@ const checkDisclosureLedger = async (): Promise<LabCheck> =>
 const VERIFIABILITY_INTRO =
   "What runs on this machine, checked against what the repository says. Each check runs on the server when this page loads, and each card has a command that repeats it without the app. These are checks of this machine by this machine; they are not a remote attestation.";
 
-/** One entry per check, in page order. `/lab/checks` runs them; the hub only counts them. */
-const CHECK_RUNS: readonly (() => Promise<LabCheck>)[] = [
-  () => guarded(localOnlyBase, checkLocalOnly),
-  () => {
-    const vitronic = shownVitronic();
-    return guarded(storageBase(vitronic), () => checkStorage(vitronic));
+type CheckRun = Readonly<{ id: string; run: () => Promise<LabCheck> }>;
+
+/**
+ * One entry per check, in list order, under the id its page is at.
+ * `/lab/checks` runs them all; `/lab/checks/<id>` runs one; the hub only
+ * counts them.
+ */
+const CHECK_RUNS: readonly CheckRun[] = [
+  { id: localOnlyBase.id, run: () => guarded(localOnlyBase, checkLocalOnly) },
+  {
+    id: STORAGE_CHECK_ID,
+    run: () => {
+      const vitronic = shownVitronic();
+      return guarded(storageBase(vitronic), () => checkStorage(vitronic));
+    },
   },
-  () => guarded(encryptionBase, checkEncryption),
-  () => guarded(auditChainBase, checkAuditChain),
-  () => guarded(disclosureLedgerBase, checkDisclosureLedger),
-  () => {
-    const ollama = ollamaPlan();
-    return guarded(localModelsBase(ollama.tagsUrl), () => checkLocalModels(ollama));
+  { id: encryptionBase.id, run: () => guarded(encryptionBase, checkEncryption) },
+  { id: auditChainBase.id, run: () => guarded(auditChainBase, checkAuditChain) },
+  {
+    id: disclosureLedgerBase.id,
+    run: () => guarded(disclosureLedgerBase, checkDisclosureLedger),
   },
-  () => {
-    const pins = pinPlan();
-    return guarded(pinnedArtefactsBase(pins.pins), () => checkPinnedArtefacts(pins));
+  {
+    id: LOCAL_MODELS_CHECK_ID,
+    run: () => {
+      const ollama = ollamaPlan();
+      return guarded(localModelsBase(ollama.tagsUrl), () => checkLocalModels(ollama));
+    },
   },
-  () => guarded(provenanceBase, checkProvenance),
-  () => guarded(sbomBase, checkSbom),
+  {
+    id: PINNED_ARTEFACTS_CHECK_ID,
+    run: () => {
+      const pins = pinPlan();
+      return guarded(pinnedArtefactsBase(pins.pins), () => checkPinnedArtefacts(pins));
+    },
+  },
+  { id: provenanceBase.id, run: () => guarded(provenanceBase, checkProvenance) },
+  { id: sbomBase.id, run: () => guarded(sbomBase, checkSbom) },
 ];
 
 export const LAB_CHECK_COUNT = CHECK_RUNS.length;
@@ -424,5 +444,11 @@ export const loadVerifiability = async (): Promise<LabSection> => ({
   id: "verifiability",
   title: "Verifiability",
   intro: VERIFIABILITY_INTRO,
-  checks: await Promise.all(CHECK_RUNS.map((run) => run())),
+  checks: await Promise.all(CHECK_RUNS.map(({ run }) => run())),
 });
+
+/** One check for its own page; null when no check has that id. */
+export const loadCheck = async (id: string): Promise<LabCheck | null> => {
+  const entry = CHECK_RUNS.find((each) => each.id === id);
+  return entry === undefined ? null : entry.run();
+};

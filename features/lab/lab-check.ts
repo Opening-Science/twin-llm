@@ -1,4 +1,5 @@
 import { EMPTY_VALUE, formatNumber } from "@/infrastructure/format-measure";
+import { type StatusTone } from "@/infrastructure/ui-kit/status-badge";
 
 /**
  * The shape every Lab check returns: what was found, the evidence behind it,
@@ -13,6 +14,16 @@ export const STATUS_LABEL: Readonly<Record<CheckStatus, string>> = {
   "not-ok": "Not OK",
   unknown: "Unknown",
 };
+
+/** The badge's colour for each state; the words always say it. */
+export const STATUS_TONE: Readonly<Record<CheckStatus, StatusTone>> = {
+  ok: "ok",
+  "not-ok": "warn",
+  unknown: "neutral",
+};
+
+/** Each check has its own page under the list (#459). */
+export const checkHref = (id: string): string => `/lab/checks/${id}`;
 
 export type Evidence = Readonly<{ label: string; value: string; mono?: boolean }>;
 

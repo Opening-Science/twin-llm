@@ -422,6 +422,25 @@
     @apply text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm;
   }
 
+  /* The Lab's checks as one list (#459, `features/lab/check-list.tsx`): a row
+     per check, its state in words first, then its title; each row is a link
+     to the check's page. */
+  .check-list {
+    @apply border-border divide-border flex flex-col divide-y rounded-xl border;
+  }
+
+  .check-row {
+    @apply hover:bg-muted/60 focus-visible:ring-ring flex items-center gap-4 px-4 py-3 outline-none focus-visible:ring-2 focus-visible:ring-inset;
+  }
+
+  .check-list > li:first-child > .check-row {
+    @apply rounded-t-xl;
+  }
+
+  .check-list > li:last-child > .check-row {
+    @apply rounded-b-xl;
+  }
+
   /* Hub cards (`infrastructure/ui-kit/hub-card.tsx`): a grid of links, one per
      part of a hub such as the Lab. Calm by default; the border and title
      darken on hover, and focus gets the usual ring. */

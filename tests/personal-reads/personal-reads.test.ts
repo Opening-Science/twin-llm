@@ -1145,6 +1145,7 @@ const PAGES: Readonly<Record<string, "gated" | Readonly<{ open: string }>>> = {
     open: "the Lab hub: this machine's self-checks and file counts",
   },
   "app/(shell)/lab/checks/page.tsx": { open: "this machine's self-checks" },
+  "app/(shell)/lab/checks/[checkId]/page.tsx": { open: "this machine's self-checks" },
   "app/(shell)/lab/simulations/page.tsx": {
     open: "synthetic people of the pinned cohort",
   },

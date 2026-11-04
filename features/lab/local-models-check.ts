@@ -76,10 +76,12 @@ export const localModelsHowTo = (tagsUrl: string | null): string => {
   ].join("\n");
 };
 
-/** What the card shows even when the check cannot run. */
+export const LOCAL_MODELS_CHECK_ID = "local-models";
+
+/** What the page shows even when the check cannot run. */
 export const localModelsBase = (tagsUrl: string | null) =>
   ({
-    id: "local-models",
+    id: LOCAL_MODELS_CHECK_ID,
     title: "Local models",
     howTo: localModelsHowTo(tagsUrl),
   }) as const;
