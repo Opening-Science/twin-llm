@@ -6,6 +6,7 @@ import { parseTwinAnswer } from "@/infrastructure/parse-twin-answer";
 import { readableTitle } from "@/infrastructure/readable-title";
 
 import type { ResponseState, TurnState } from "./conversation";
+import { stoppedAnswerText } from "./streaming-view";
 import type { ToolCard } from "./tool-cards";
 
 /**
@@ -41,7 +42,7 @@ const STOPPED_LINE = "_Stopped before it finished._";
 
 const answerBody = (answer: ResponseState): string[] => {
   if (answer.status === "FAILED" && answer.stopped === true) {
-    const written = parseTwinAnswer(answer.text, null).answerText.trim();
+    const written = stoppedAnswerText(answer.text).trim();
     return written === "" ? [STOPPED_LINE] : [written, "", STOPPED_LINE];
   }
   if (answer.status === "FAILED") {

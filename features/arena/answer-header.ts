@@ -72,5 +72,5 @@ export const effortLineOf = (
 /** What a stopped answer says (#366, #373). */
 export const STOPPED_COPY = {
   title: "You stopped this answer",
-  body: "Anything it wrote before that stays here. You can also ask this model again.",
+  body: "Any part of the answer it had written stays here. You can also ask this model again.",
 } as const;

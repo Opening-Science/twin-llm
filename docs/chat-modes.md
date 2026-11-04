@@ -150,10 +150,11 @@ Under the text box, from left to right (`features/arena/prompt-bar.tsx`):
   `globals.css`, light and dark); nothing moves.
 - **Linked wearables** as before, with their disconnect buttons.
 - **Send**, which becomes **Stop** while answers stream into this tab. Stop closes this
-  tab's streams and marks those answers "You stopped this answer", keeping what they had
-  written. In a saved thread it also calls `POST /api/chat/stop` for each answer (#373):
-  the server ends the model call and stores what was written as `STOPPED`, and a reload
-  shows the same. The thread's views are read from finished answers only
+  tab's streams and marks those answers "You stopped this answer", keeping the part of the answer written so
+  far. In a saved thread it also calls `POST /api/chat/stop` for each answer (#373):
+  the server ends the model call and stores the whole reply so far as `STOPPED`. A reload
+  shows the same as the live column: text before the Answer section stays hidden, as it
+  was while streaming. The thread's views are read from finished answers only
   (`load-thread-views.ts`), so a view a stopped answer had shown does not count as shown
   and the next turn can draw it again. Closing the tab is not Stop: the server finishes
   and stores the answer.

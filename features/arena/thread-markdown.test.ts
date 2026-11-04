@@ -204,14 +204,18 @@ describe("a stopped answer in an export (#373)", () => {
       "2026-11-04T12:00:00.000Z",
     );
 
-  test("keeps what it wrote and says it was stopped", () => {
-    const markdown = exported("Written so far");
+  test("keeps the part of the answer it wrote and says it was stopped", () => {
+    const markdown = exported(
+      "## Reasoning\nWorking it out\n\n## Answer\nWritten so far\n",
+    );
     expect(markdown).toContain("Written so far\n\n_Stopped before it finished._");
+    expect(markdown).not.toContain("Working it out");
     expect(markdown).not.toContain("Refused or failed");
   });
 
-  test("with nothing written, says only that", () => {
-    const markdown = exported("");
+  test("with no Answer section yet, says only that", () => {
+    const markdown = exported("Okay, so the user wants me to explain this.");
+    expect(markdown).not.toContain("the user wants me");
     expect(markdown).toContain("_Stopped before it finished._");
     expect(markdown).not.toContain("Refused or failed");
   });

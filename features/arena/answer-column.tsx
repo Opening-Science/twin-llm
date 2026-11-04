@@ -6,14 +6,16 @@ import { autoLineOf, columnRawId, effortLineOf, STOPPED_COPY } from "./answer-he
 import { AnswerStats } from "./answer-stats";
 import type { ResponseState } from "./conversation";
 import { Mark } from "./marks";
+import { stoppedAnswerText } from "./streaming-view";
 
 /**
  * One model's answer to one prompt: who answered, the answer itself (or why
  * there is none), and what the call measured. A fine-tune's raw id sits
  * under its readable name, and an Auto answer says which agent it ran as. A
  * failed column offers its own retry, because the other models in the turn
- * are independent of it. A stopped column keeps what the model had written and
- * looked up (#373), above the line that says it was stopped.
+ * are independent of it. A stopped column keeps the part of the answer written
+ * so far and what the model looked up (#373), above the line that says it was
+ * stopped.
  */
 
 const FailedAnswer = ({
@@ -60,7 +62,7 @@ const FailedAnswer = ({
 );
 
 const hasPartial = (response: ResponseState): boolean =>
-  response.text.trim() !== "" || (response.tools?.length ?? 0) > 0;
+  stoppedAnswerText(response.text).trim() !== "" || (response.tools?.length ?? 0) > 0;
 
 export const AnswerColumn = ({
   response,
