@@ -108,6 +108,25 @@ const panel = (props: Partial<BodyPanelProps> = {}) =>
 const tags = (markup: string, tag: string) =>
   [...markup.matchAll(new RegExp(`<${tag}[^>]*>`, "g"))].map((m) => m[0]);
 
+/** The panel's tab buttons, in order. */
+const tabButtons = (markup: string) =>
+  tags(markup, "button").filter((tag) => tag.includes('class="segmented-item'));
+
+const pressedTabs = (markup: string) =>
+  tabButtons(markup).map((tag) => tag.includes('aria-pressed="true"'));
+
+/** The row buttons: pressed for the selection, unlike the tabs. */
+const rowButtons = (markup: string) =>
+  tags(markup, "button").filter(
+    (tag) => tag.includes("aria-pressed") && !tag.includes("segmented-item"),
+  );
+
+const pressedTab = (label: string) =>
+  `aria-pressed="true" class="segmented-item segmented-item-sm">${label}</button>`;
+
+const SCROLL_LIST =
+  '<div class="twin-body-panel-list min-h-0 flex-1 overflow-y-auto overscroll-contain">';
+
 describe("formatPropertyDisplay", () => {
   test("metres and their powers keep two decimals; kg uses the mass precision", () => {
     expect(formatPropertyDisplay({ value: 1.7, unit: "m" })).toBe("1.70 m");
@@ -277,31 +296,50 @@ describe("PanelRowButton", () => {
 });
 
 describe("BodyPanel markup", () => {
-  test("a labelled tablist with three tabs; Markers is selected when there are no properties", () => {
+  test("a labelled group of three tab buttons; Markers is pressed when there are no properties", () => {
     const html = panel();
-    const tablist = tags(html, "div").find((tag) => tag.includes('role="tablist"'));
-    expect(tablist).toContain(`aria-label="${BODY_PANEL_LABEL}"`);
-    const tabs = tags(html, "button").filter((tag) => tag.includes('role="tab"'));
-    expect(tabs).toHaveLength(3);
-    expect(tabs.map((tag) => tag.includes('aria-selected="true"'))).toEqual([
-      false,
-      true,
-      false,
-    ]);
+    expect(html).toContain(
+      `<div role="group" aria-label="${BODY_PANEL_LABEL}" class="segmented flex-wrap self-start">`,
+    );
+    expect(html).not.toContain('role="tablist"');
+    expect(tabButtons(html)).toHaveLength(3);
+    expect(pressedTabs(html)).toEqual([false, true, false]);
     expect(html).toContain(">Properties</button>");
-    expect(html).toContain(">Markers</button>");
+    expect(html).toContain(pressedTab("Markers"));
     expect(html).toContain(">Measurements</button>");
   });
 
-  test("Properties is selected when the scan has properties", () => {
+  test("Properties is pressed when the scan has properties", () => {
     const html = panel({ properties: [{ path: "body.height", value: 1.7, unit: "m" }] });
-    const tabs = tags(html, "button").filter((tag) => tag.includes('role="tab"'));
-    expect(tabs.map((tag) => tag.includes('aria-selected="true"'))).toEqual([
-      true,
-      false,
-      false,
-    ]);
+    expect(pressedTabs(html)).toEqual([true, false, false]);
     expect(html).toContain('<span class="shrink-0 tabular-nums">1.70 m</span>');
+  });
+
+  test("an Anatomy tab comes first when the viewer gives its controls, pressed by default, without the search", () => {
+    const anatomy = createElement("p", null, "Depth slider");
+    const html = panel({ anatomy });
+    expect(tabButtons(html)).toHaveLength(4);
+    expect(html).toContain(pressedTab("Anatomy"));
+    expect(html).toContain(`${SCROLL_LIST}<p>Depth slider</p></div>`);
+    expect(html).not.toContain('type="search"');
+    expect(html).not.toContain(">Vertex<");
+    expect(html).toContain('class="twin-body-panel border-input flex min-h-0 flex-col');
+  });
+
+  test("only the pressed tab's content is in the tree", () => {
+    const anatomy = createElement("p", null, "Depth slider");
+    const html = panel({ anatomy, panel: { ...initialPanel, tab: "markers" } });
+    expect(html).toContain(pressedTab("Markers"));
+    expect(pressedTabs(html)).toEqual([false, false, true, false]);
+    expect(html).toContain('type="search"');
+    expect(html).toContain(">Vertex<");
+    expect(html).not.toContain("Depth slider");
+  });
+
+  test("no Anatomy tab without the controls, even when it is asked for", () => {
+    const html = panel({ tabs: ["anatomy", "markers"] });
+    expect(tabButtons(html)).toHaveLength(1);
+    expect(html).toContain(pressedTab("Markers"));
   });
 
   test("the search field has a visible label tied to the input", () => {
@@ -314,9 +352,9 @@ describe("BodyPanel markup", () => {
     expect(input).toContain(`id="${labelFor}"`);
   });
 
-  test("rows are pressed only for the selection, under group headings, in a capped scroll area", () => {
+  test("rows are pressed only for the selection, under group headings, in the one list that scrolls", () => {
     const html = panel({ selectedId: "torso.acromion_r" });
-    const pressed = tags(html, "button").filter((tag) => tag.includes("aria-pressed"));
+    const pressed = rowButtons(html);
     expect(pressed).toHaveLength(4);
     expect(pressed.filter((tag) => tag.includes('aria-pressed="true"'))).toHaveLength(1);
     const buttonFor = (label: string) =>
@@ -329,8 +367,10 @@ describe("BodyPanel markup", () => {
     expect(html).toContain(
       '<p class="text-muted-foreground px-2.5 text-xs capitalize">torso</p>',
     );
-    expect(html).toContain('role="tabpanel"');
-    expect(html).toContain("max-h-[min(70vh,640px)] overflow-y-auto overscroll-contain");
+    expect(html).not.toContain('role="tabpanel"');
+    // The list has no height of its own: beside the view the panel's height caps it.
+    expect(html).toContain(SCROLL_LIST);
+    expect(html).not.toContain("max-h-");
   });
 
   test("an empty list says so", () => {
@@ -348,7 +388,7 @@ describe("BodyPanel markup", () => {
 
 describe("default tab", () => {
   test("the first offered tab with rows; only measurements opens Measurements", () => {
-    const counts = { properties: 0, markers: 0, measures: 3, biomarkers: 67 };
+    const counts = { anatomy: 0, properties: 0, markers: 0, measures: 3, biomarkers: 67 };
     expect(
       defaultPanelTab(["properties", "markers", "measures", "biomarkers"], counts),
     ).toBe("measures");
@@ -356,6 +396,14 @@ describe("default tab", () => {
       defaultPanelTab(["properties", "markers", "measures"], { ...counts, measures: 0 }),
     ).toBe("properties");
     expect(defaultPanelTab(["biomarkers"], counts)).toBe("biomarkers");
+  });
+
+  test("Anatomy, when offered, comes before every list", () => {
+    const counts = { anatomy: 1, properties: 5, markers: 0, measures: 3, biomarkers: 67 };
+    expect(defaultPanelTab(["anatomy", "properties", "measures"], counts)).toBe(
+      "anatomy",
+    );
+    expect(defaultPanelTab(["anatomy", "biomarkers"], counts)).toBe("anatomy");
   });
 });
 
@@ -394,22 +442,36 @@ describe("Biomarkers tab", () => {
 
   test("a fourth tab when the panel has a biomarker model", () => {
     const html = panel({ biomarkers: model() });
-    expect(tags(html, "button").filter((tag) => tag.includes('role="tab"'))).toHaveLength(
-      4,
-    );
+    expect(tabButtons(html)).toHaveLength(4);
     expect(html).toContain(">Biomarkers</button>");
   });
 
-  test("the Demo offers only Biomarkers: lab source, intro, grouped rows with their lines", () => {
+  test("beside the view the Demo gets Anatomy, then Biomarkers", () => {
+    const html = panel({
+      anatomy: createElement("p", null, "Depth slider"),
+      biomarkers: model(),
+      tabs: ["anatomy", "biomarkers"],
+      markers: [],
+      measures: [],
+    });
+    expect(tabButtons(html).map((tag) => tag.includes('aria-pressed="true"'))).toEqual([
+      true,
+      false,
+    ]);
+    expect(html).toContain(">Biomarkers</button>");
+    expect(html).toContain("Depth slider");
+    expect(html).not.toContain("Synthetic labs.");
+  });
+
+  test("the Demo's Details in the environment offers only Biomarkers: lab source, intro, grouped rows with their lines", () => {
     const html = panel({
       biomarkers: model(),
       tabs: ["biomarkers"],
       markers: [],
       measures: [],
     });
-    const tabs = tags(html, "button").filter((tag) => tag.includes('role="tab"'));
-    expect(tabs).toHaveLength(1);
-    expect(tabs[0]).toContain('aria-selected="true"');
+    expect(tabButtons(html)).toHaveLength(1);
+    expect(html).toContain(pressedTab("Biomarkers"));
     expect(html).toContain(`>${LAB_SOURCE_LABEL}</label>`);
     expect(html).toContain('<option value="syn-b">Synthetic person 2 · female</option>');
     expect(html).toContain("Synthetic labs.");
@@ -425,9 +487,7 @@ describe("Biomarkers tab", () => {
       biomarkers: model({ selectedId: "bm:BM-107", notes: ["No single body location"] }),
       tabs: ["biomarkers"],
     });
-    const pressed = tags(html, "button").filter((tag) =>
-      tag.includes('aria-pressed="true"'),
-    );
+    const pressed = rowButtons(html).filter((tag) => tag.includes('aria-pressed="true"'));
     expect(pressed).toHaveLength(1);
     expect(html.match(/No single body location/g)).toHaveLength(1);
     expect(html.indexOf("No single body location")).toBeGreaterThan(
@@ -454,11 +514,8 @@ describe("Biomarkers tab", () => {
 
   test("the panel shows the tab the viewer keeps", () => {
     const html = panel({ panel: { ...initialPanel, tab: "measures" } });
-    const selected = tags(html, "button").filter((tag) =>
-      tag.includes('aria-selected="true"'),
-    );
-    expect(selected).toHaveLength(1);
-    expect(html).toMatch(/aria-selected="true"[^>]*>Measurements</);
+    expect(pressedTabs(html)).toEqual([false, false, true]);
+    expect(html).toContain(pressedTab("Measurements"));
   });
 
   test("biomarker rows light on select only, not on hover", () => {

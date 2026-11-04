@@ -307,7 +307,9 @@ describe("BodyLoop avatar viewer", () => {
     );
     expect(markup).toContain(BODYLOOP_NO_SCANS);
     expect(markup).toContain(">Biomarkers</button>");
-    expect(markup).toContain('aria-selected="true" aria-controls="radix-');
+    expect(markup).toContain(
+      'aria-pressed="true" class="segmented-item segmented-item-sm">Biomarkers</button>',
+    );
     expect(markup).toContain(SELF_NO_LABS);
     expect(markup).toContain(">Gamma-GT (GGT)</span>");
     expect(markup.indexOf(BODYLOOP_NO_SCANS)).toBeLessThan(

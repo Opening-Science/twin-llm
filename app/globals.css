@@ -1120,8 +1120,19 @@
 
   /* At least a few rows stay visible when the rail is short. */
   .twin-environment .twin-body-panel-list {
-    @apply max-h-none min-h-16 flex-1;
+    @apply min-h-16 flex-1;
   }
+
+  /* --- Body twin side panel (#458, features/digital-twin/body-panel.tsx) ---
+     The one panel with tabs beside the inline 3D view. From lg it sits in the
+     view's row with the view's height (the same numbers as the canvas in
+     bodyloop-avatar.tsx); below lg it goes under the view and grows with its
+     content up to that height. Either way its list is the only thing that
+     scrolls: the tabs and search stay put. */
+  .twin-side-panel {
+    @apply max-lg:max-h-[min(70vh,640px)] lg:col-start-2 lg:row-start-2 lg:h-[min(70vh,640px)] lg:min-h-[360px];
+  }
+  /* --- end of the side panel --- */
 
   /* A value drawn to scale (the context-window column on the models page).
      Neutral grey on purpose: the accent colour is reserved for things you

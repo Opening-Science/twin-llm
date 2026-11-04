@@ -8,6 +8,7 @@ import type {
 } from "@/features/connectors/ark-status-view";
 import type { BodyTwinPreview } from "./bodyloop-avatar";
 
+import { BODY_PANEL_LABEL } from "./body-panel";
 import { BODY_TWIN_LOADING, BODYLOOP_NO_SCANS } from "./bodyloop-avatar";
 import { DigitalTwinScreen } from "./digital-twin-screen";
 import { type TwinContext } from "./page-sections";
@@ -152,6 +153,17 @@ describe("DigitalTwinScreen", () => {
     expect(markup).toContain("Scan mesh needs WebGL.");
     expect(markup).not.toContain("Reset view");
     expect(markup).not.toContain("Inventory");
+  });
+
+  test("the body panel is tab buttons over one list, never a tablist or a capped box", () => {
+    const markup = html({ enabled: false }, bodyFilled);
+    expect(markup).toContain(`<div role="group" aria-label="${BODY_PANEL_LABEL}"`);
+    expect(markup).toContain(
+      'aria-pressed="true" class="segmented-item segmented-item-sm">Properties</button>',
+    );
+    expect(markup).not.toContain('role="tablist"');
+    expect(markup).not.toContain("max-h-[");
+    expect(markup.match(/overflow-y-auto/g)).toHaveLength(1);
   });
 
   test("both sections can be filled at once", () => {
