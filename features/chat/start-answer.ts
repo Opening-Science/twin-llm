@@ -30,6 +30,7 @@ import { uiContextEvent } from "@/infrastructure/ui-context";
 import type { AppendInput } from "@/packages/audit/append";
 
 import type { ChatRequest } from "./chat-request";
+import type { RunningAnswer } from "./running-answers";
 import type { StreamContext } from "./stream-model-response";
 import type { WearableContext } from "./wearable-context";
 
@@ -88,6 +89,9 @@ import type { WearableContext } from "./wearable-context";
  * model that lists the capability) and written to the audit chain as
  * `chat.effort` after every check and before the model is called; if that
  * write fails, the model is not called. The stream gets the applied effort.
+ *
+ * Stop (#373): the chat route passes `stop` so `POST /api/chat/stop` can end
+ * the answer. A scheduled run (#54) passes none, so it runs to its end.
  */
 
 export type ChatProviderSettings = Readonly<{
@@ -138,6 +142,7 @@ export const createStartAnswer =
     agent: CatalogAgent | null = null,
     /** What the called model can do: `canThink` when Ollama lists `thinking`. */
     model: Readonly<{ canThink: boolean }> = { canThink: false },
+    stop: RunningAnswer | null = null,
   ): Promise<Response> => {
     const refuse = async (
       refusal: Refusal,
@@ -293,6 +298,7 @@ export const createStartAnswer =
       ...(skill === null ? {} : { skill }),
       ...(agent === null ? {} : { agent }),
       ...(twinNotes === null ? {} : { twinNotes }),
+      ...(stop === null ? {} : { stop }),
       effort,
       ...wearables,
     });
