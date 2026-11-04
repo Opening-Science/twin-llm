@@ -205,6 +205,8 @@ export const runTwinTurn = (
 
   /** Text of the step being written; a new step starts over, as `onFinish`'s `text` does. */
   const writing = { text: "", ended: false };
+  /** For an abort reported as an error, where the SDK hands over no steps. */
+  const finishedSteps: TurnStep[] = [];
 
   const documentOf =
     (parsed: ParsedTwinAnswer, toolResults: readonly TwinTurnToolResult[]) =>
@@ -272,6 +274,9 @@ export const runTwinTurn = (
       writing.text += chunk.text;
       hooks.onFirstToken();
     },
+    onStepFinish: (step) => {
+      finishedSteps.push(step);
+    },
     onFinish: async ({ text, totalUsage, steps }) => {
       // A provider may end its stream quietly on abort; that is not an answer.
       if (abortSignal?.aborted) return stoppedWith(steps);
@@ -291,7 +296,7 @@ export const runTwinTurn = (
     },
     onError: async ({ error }) => {
       // A provider may report the abort as an error part; the person asked for this.
-      if (abortSignal?.aborted) return stoppedWith([]);
+      if (abortSignal?.aborted) return stoppedWith(finishedSteps);
       await hooks.onError(error);
     },
     onAbort: ({ steps }) => stoppedWith(steps),

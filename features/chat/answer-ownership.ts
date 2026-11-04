@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { ModelResponseStatus } from "@/generated/prisma/client";
 import { findAppUserId } from "@/infrastructure/current-user";
 import { database } from "@/infrastructure/database";
 
@@ -8,7 +9,7 @@ export type AnswerOwnership =
       kind: "owner";
       appUserId: string;
       modelName: string;
-      status: string;
+      status: ModelResponseStatus;
     }>
   | Readonly<{ kind: "missing" }>
   | Readonly<{ kind: "someone-else" }>;

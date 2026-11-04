@@ -317,6 +317,49 @@ describe("runTwinTurn", () => {
     expect((await stopped.buildDocument()).data_basis.tool_calls).toEqual([]);
   });
 
+  test("an abort reported as an error keeps the finished steps' tool results (#373)", async () => {
+    const controller = new AbortController();
+    const calls = { count: 0 };
+    const model = new MockLanguageModelV4({
+      doStream: async () => {
+        calls.count += 1;
+        if (calls.count === 1) return streamOf(toolCall("c1"));
+        return streamOf([
+          { type: "text-start", id: "t" },
+          { type: "text-delta", id: "t", delta: "Written so far" },
+          { type: "error", error: new Error("provider says aborted") },
+        ]);
+      },
+    });
+    const stopped = await new Promise<TwinTurnStopped>((resolve, reject) => {
+      const result = runTwinTurn(
+        {
+          model,
+          tools: createChatTools(
+            { actor: "test", sessionId: "turn-error", mode: "synthetic" },
+            { query: ports },
+          ),
+          mode: "synthetic",
+          loadAudit: async () => [],
+        },
+        {
+          turnId: "turn-error",
+          messages: [{ role: "user", content: "Question" }],
+          wearables: NO_WEARABLES,
+          abortSignal: controller.signal,
+        },
+        {
+          onFirstToken: () => controller.abort(),
+          onFinish: async () => reject(new Error("finished")),
+          onError: async (error) => reject(error),
+          onAbort: resolve,
+        },
+      );
+      void result.consumeStream({ onError: () => undefined });
+    });
+    expect(stopped.toolResults.map((result) => result.toolName)).toEqual(["trend"]);
+  });
+
   test("an aborted signal reaches onAbort, not onFinish", async () => {
     const controller = new AbortController();
     const model = new MockLanguageModelV4({

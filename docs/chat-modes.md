@@ -153,7 +153,10 @@ Under the text box, from left to right (`features/arena/prompt-bar.tsx`):
   tab's streams and marks those answers "You stopped this answer", keeping what they had
   written. In a saved thread it also calls `POST /api/chat/stop` for each answer (#373):
   the server ends the model call and stores what was written as `STOPPED`, and a reload
-  shows the same. Closing the tab is not Stop: the server finishes and stores the answer.
+  shows the same. The thread's views are read from finished answers only
+  (`load-thread-views.ts`), so a view a stopped answer had shown does not count as shown
+  and the next turn can draw it again. Closing the tab is not Stop: the server finishes
+  and stores the answer.
   A scheduled run cannot be stopped this way. An incognito answer only has its stream
   closed. Enter in the text box still sends.
 

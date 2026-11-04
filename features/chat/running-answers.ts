@@ -11,7 +11,10 @@ import { processSingleton } from "@/infrastructure/process-singleton";
  *
  * A Stop can reach the server before the answer's own request has got through
  * its checks. Then there is nothing to end yet, so the stop is held for a short
- * while and the answer is ended as soon as it starts.
+ * while and the answer is ended as soon as it starts. The next start for the
+ * key takes the held stop: if the original request was refused before it got
+ * here and the person retries within the hold, that retry is ended on arrival.
+ * It is rare, and the retry after it runs.
  */
 
 export type AnswerKey = Readonly<{ turnId: string; modelId: string }>;

@@ -22,7 +22,7 @@ const TURN = "turn-synthetic-1";
 const MODEL = "synthetic/model";
 const ANSWER = { turnId: TURN, modelId: MODEL };
 
-const writesThenWaits = () =>
+const writesThenWaits = (order: string[]) =>
   new MockLanguageModelV4({
     doStream: async ({ abortSignal }) => ({
       stream: new ReadableStream<never>({
@@ -30,9 +30,10 @@ const writesThenWaits = () =>
           const enqueue = (part: unknown) => controller.enqueue(part as never);
           enqueue({ type: "text-start", id: "t" });
           enqueue({ type: "text-delta", id: "t", delta: "Written so far" });
-          abortSignal?.addEventListener("abort", () =>
-            controller.error(abortSignal.reason),
-          );
+          abortSignal?.addEventListener("abort", () => {
+            order.push("model call ended");
+            controller.error(abortSignal.reason);
+          });
         },
       }),
     }),
@@ -56,10 +57,11 @@ const setUp = (
   const stopped: ModelResponseStoppedParams[] = [];
   const audited: AppendInput[] = [];
   const log: string[] = [];
+  const order: string[] = [];
   const respond = createStreamModelResponse({
     settings: () => ({ dataMode: "synthetic", provider: "ollama" }),
     chatIsLocal: () => true,
-    resolveModel: () => writesThenWaits(),
+    resolveModel: () => writesThenWaits(order),
     genomeTools: () => undefined,
     variantTools: async () => undefined,
     importedTools: () => undefined,
@@ -71,6 +73,7 @@ const setUp = (
       writeStopped:
         store.writeStopped ??
         (async (params) => {
+          order.push("row stored");
           stopped.push(params);
         }),
       writeFailed: async () => {
@@ -84,11 +87,12 @@ const setUp = (
     appendAudit:
       store.appendAudit ??
       (async (input) => {
+        order.push("audited");
         audited.push(input);
       }),
     analytics: { answered: () => undefined, generation: async () => undefined },
   });
-  return { respond, stopped, audited, log };
+  return { respond, stopped, audited, log, order };
 };
 
 const request = {
@@ -104,17 +108,22 @@ const stopOne = async (setup: ReturnType<typeof setUp>) => {
     stop: answers.start(ANSWER),
   });
   const pressed = setTimeout(() => answers.stop(ANSWER, true), 20);
-  const started = Date.now();
   await response.text();
   clearTimeout(pressed);
-  return { answers, tookMs: Date.now() - started };
+  setup.order.push("stream ended");
+  return { answers };
 };
 
 describe("Stop on the server (#373)", () => {
   test("the model call ends, the row is STOPPED with the text, and the stop is audited", async () => {
     const setup = setUp();
-    const { tookMs } = await stopOne(setup);
-    expect(tookMs).toBeLessThan(1_000);
+    await stopOne(setup);
+    expect(setup.order).toEqual([
+      "model call ended",
+      "row stored",
+      "audited",
+      "stream ended",
+    ]);
     expect(
       setup.stopped.map(({ turnId, modelId, text }) => [turnId, modelId, text]),
     ).toEqual([[TURN, MODEL, "Written so far"]]);
