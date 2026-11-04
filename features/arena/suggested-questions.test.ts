@@ -8,9 +8,11 @@ import type {
 import {
   COHORT_SUGGESTION_LOINCS,
   cohortSuggestions,
+  startersShown,
   wearableSuggestionKeys,
   wearableSuggestions,
 } from "./suggested-questions";
+import { pendingTurn } from "./turn-updates";
 
 const SUBJECT = { ref: "synthetic-subject-1", label: "Synthetic person 1" };
 
@@ -222,5 +224,19 @@ describe("wearableSuggestionKeys", () => {
       "whoop.recovery.rhr",
       "workout.duration.cycling",
     ]);
+  });
+});
+
+describe("startersShown (#454)", () => {
+  test("an empty thread offers the chips, new or saved, whatever the mode", () => {
+    expect(startersShown([])).toBe(true);
+  });
+
+  test("the first turn takes them away from the moment it is pending", () => {
+    const pending = pendingTurn("What was their latest heart rate?", [
+      { id: "agent:auto", name: "Auto" },
+    ]);
+    expect(startersShown([pending])).toBe(false);
+    expect(startersShown([{ ...pending, id: "turn-1", pending: false }])).toBe(false);
   });
 });
