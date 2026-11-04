@@ -12,6 +12,8 @@ import { ChevronIcon } from "@/infrastructure/ui-kit/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "@/infrastructure/ui-kit/popover";
 import { cn } from "@/infrastructure/ui";
 
+import { sliderStopLeft } from "./slider-stop";
+
 /**
  * The effort control of the prompt bar (#366): a button that names the step
  * and opens a slider over the five steps, with what the chosen step does in
@@ -67,17 +69,23 @@ export const EffortMenu = ({
         />
         <ol
           aria-hidden="true"
-          className="text-muted-foreground mt-1 grid grid-cols-5 text-[11px]"
+          className="text-muted-foreground relative mt-1 h-4 text-[11px]"
         >
           {EFFORT_LEVELS.map((level, i) => (
             <li
               key={level}
+              style={
+                i === 0 || i === EFFORT_LEVELS.length - 1
+                  ? undefined
+                  : { left: sliderStopLeft(i, EFFORT_LEVELS.length) }
+              }
               className={cn(
+                "absolute top-0 whitespace-nowrap",
                 i === 0
-                  ? "text-left"
+                  ? "left-0"
                   : i === EFFORT_LEVELS.length - 1
-                    ? "text-right"
-                    : "text-center",
+                    ? "right-0"
+                    : "-translate-x-1/2",
                 level === effort && "text-foreground font-medium",
               )}
             >
