@@ -1141,7 +1141,18 @@ const PAGES: Readonly<Record<string, "gated" | Readonly<{ open: string }>>> = {
     open: "the Demo bodies are synthetic; BodyLoop reads go through gated routes",
   },
   "app/(shell)/docs/[[...slug]]/page.tsx": { open: "the docs" },
-  "app/(shell)/lab/page.tsx": { open: "this machine's self-checks" },
+  "app/(shell)/lab/page.tsx": {
+    open: "the Lab hub: this machine's self-checks and file counts",
+  },
+  "app/(shell)/lab/checks/page.tsx": { open: "this machine's self-checks" },
+  "app/(shell)/lab/simulations/page.tsx": {
+    open: "synthetic people of the pinned cohort",
+  },
+  "app/(shell)/lab/evaluations/page.tsx": {
+    open: "evaluation run files on this machine",
+  },
+  "app/(shell)/lab/benchmark/page.tsx": { open: "the rhythm benchmark's result file" },
+  "app/(shell)/lab/jobs/page.tsx": { open: "file times of command-line jobs" },
   "app/(shell)/lab/rate/page.tsx": { open: "answers of synthetic evaluation runs" },
   "app/(shell)/models/page.tsx": { open: "the model list" },
   "app/synthea/layout.tsx": { open: "the public Synthea generator" },

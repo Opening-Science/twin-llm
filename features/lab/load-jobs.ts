@@ -11,8 +11,12 @@ import {
   checksJob,
   type EvalRunFiles,
   evaluationJob,
+  fileJobState,
+  type JobFiles,
+  type JobState,
   type LabJob,
   newestFiles,
+  QUIET_MS,
   type SyntheaFiles,
   syntheaJob,
 } from "./lab-jobs";
@@ -68,7 +72,8 @@ const readMeta = async (path: string) => {
   return text === null ? null : parseRunMeta(text);
 };
 
-const newestEvalRun = async (root: string): Promise<EvalRunFiles | null> => {
+/** The newest run's file times: stats only. */
+const newestEvalRunFiles = async (root: string): Promise<EvalRunFiles | null> => {
   const dir = join(root, EVAL_RUNS_DIR);
   const ids = (await childDirs(dir)).sort().reverse().slice(0, MAX_RUNS);
   const runs = await Promise.all(
@@ -88,9 +93,13 @@ const newestEvalRun = async (root: string): Promise<EvalRunFiles | null> => {
       };
     }),
   );
-  const run = newestFiles(runs);
+  return newestFiles(runs);
+};
+
+const newestEvalRun = async (root: string): Promise<EvalRunFiles | null> => {
+  const run = await newestEvalRunFiles(root);
   if (run === null || run.finishedMs === null) return run;
-  const meta = await readMeta(join(dir, run.id, "meta.json"));
+  const meta = await readMeta(join(root, EVAL_RUNS_DIR, run.id, "meta.json"));
   return {
     ...run,
     lines: meta?.counts?.lines ?? null,
@@ -127,7 +136,10 @@ const readManifest = async (
   }
 };
 
-const newestSynthea = async (root: string): Promise<SyntheaFiles | null> => {
+type SyntheaRun = JobFiles & Readonly<{ folder: CohortFolder }>;
+
+/** The newest cohort's file times: stats only. */
+const newestSyntheaFiles = async (root: string): Promise<SyntheaRun | null> => {
   const folders = await syntheaFolders(root);
   const found = await Promise.all(
     folders.map(async (folder) => {
@@ -151,7 +163,11 @@ const newestSynthea = async (root: string): Promise<SyntheaFiles | null> => {
       };
     }),
   );
-  const run = newestFiles(found.filter((each) => each !== null));
+  return newestFiles(found.filter((each) => each !== null));
+};
+
+const newestSynthea = async (root: string): Promise<SyntheaFiles | null> => {
+  const run = await newestSyntheaFiles(root);
   if (run === null) return null;
   const patientFiles = await readdir(join(run.folder.path, "fhir"))
     .then((names) => names.filter((name) => name.endsWith(".json")).length)
@@ -183,6 +199,24 @@ export const loadJobs = async (benchmark: BenchmarkData): Promise<readonly LabJo
     evaluationJob(evaluation, now),
     benchmarkJob(benchmark.read, benchmark.path, written?.mtimeMs ?? null),
     syntheaJob(synthea, now),
+  ];
+};
+
+/**
+ * For the hub: which command-line jobs are running, from file times alone;
+ * nothing is read. The benchmark is left out on purpose: its job never
+ * reports running, only done or error, so it has nothing to add here.
+ */
+export const loadJobStates = async (): Promise<readonly JobState[]> => {
+  const root = process.cwd();
+  const now = Date.now();
+  const [evaluation, synthea] = await Promise.all([
+    newestEvalRunFiles(root),
+    newestSyntheaFiles(root),
+  ]);
+  return [
+    evaluation === null ? "none" : fileJobState(evaluation, now, QUIET_MS.evaluation),
+    synthea === null ? "none" : fileJobState(synthea, now, QUIET_MS.synthea),
   ];
 };
 
