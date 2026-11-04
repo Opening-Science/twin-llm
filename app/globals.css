@@ -412,6 +412,17 @@
     @apply border-primary text-foreground bg-[color-mix(in_oklab,var(--primary)_12%,transparent)];
   }
 
+  /* Hub cards (`infrastructure/ui-kit/hub-card.tsx`): a grid of links, one per
+     part of a hub such as the Lab. Calm by default; the border and title
+     darken on hover, and focus gets the usual ring. */
+  .hub-grid {
+    @apply grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3;
+  }
+
+  .hub-card {
+    @apply bg-card border-border hover:border-foreground/30 focus-visible:ring-ring flex w-full flex-col gap-1.5 rounded-xl border p-4 transition-colors outline-none focus-visible:ring-2;
+  }
+
   /* A segmented control: mutually exclusive choices in one pill. The pressed
      item is marked by `aria-pressed` (buttons) or `aria-current` (links), so the
      selected look can never drift from what assistive tech is told. */
@@ -429,6 +440,26 @@
 
   .segmented-item[aria-pressed="true"],
   .segmented-item[aria-current]:not([aria-current="false"]) {
+    @apply bg-muted text-foreground;
+  }
+
+  /* Customize's sections (#457, `features/customize/customize-sections.tsx`):
+     on a wide screen the sections are a column of links on the left and one
+     section shows at a time on the right; on a phone the `.segmented` tab row
+     stays. The open section is marked by `aria-current`, as in the tab row. */
+  .customize-body {
+    @apply mt-8 lg:grid lg:grid-cols-[11rem_minmax(0,1fr)] lg:gap-10;
+  }
+
+  .customize-sections {
+    @apply flex-col gap-0.5 self-start lg:sticky lg:top-6;
+  }
+
+  .customize-section-link {
+    @apply text-muted-foreground hover:text-foreground rounded-md px-3 py-1.5 text-sm font-medium transition-colors;
+  }
+
+  .customize-section-link[aria-current="page"] {
     @apply bg-muted text-foreground;
   }
 

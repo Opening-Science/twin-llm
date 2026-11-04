@@ -27,7 +27,7 @@ TwinLLM is an open-source research app from the [Open Science Foundation](https:
 
 <p>
   <img src="docs/images/digital-twin-dark.png" width="49%" alt="The Digital Twin in dark mode: a synthetic demo body at the Skeleton depth with the anatomy panel.">
-  <img src="docs/images/customize-light.png" width="49%" alt="Customize, Skills: the shipped /genome, /sleep and /trainer skills with what each reads, and a button to make your own.">
+  <img src="docs/images/customize-light.png" width="49%" alt="Customize, Skills: the sections on the left, cards for the shipped skills with what each does and how many tools it may call, and a button to make your own.">
 </p>
 <p>
   <img src="docs/images/search-light.png" width="49%" alt="The search dialog: threads matching heart rate, with readable titles, then matching docs.">

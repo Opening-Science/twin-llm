@@ -274,13 +274,14 @@ no separate toggle yet.
 ## Roster page (#221)
 
 Customize · Agents (`/customize/agents`) lists every agent, offered here or not, and
-explains Auto. It is a Customize tab, next to Skills, because an agent is a preset over a
+explains Auto. It is a Customize section, next to Skills, because an agent is a preset over a
 skill and a model; the Models page stays the provider's catalog and the sidebar gets no new
-entry. Each card shows the role line, the base model it runs on here (or that it is not
-offered with this provider), its skill and number of tools, its literature specialty with
-the number of articles in the local index, the topics Auto sends it, its answers in your
-own threads (how many went through Auto, the last one, the summed cost) and one line on
-what it does not do. The Auto section says the rules in plain words and gives the share of
+entry. Each card shows the name, the role line and whether the agent is offered here, and
+opens the agent's page (#457): the base model it runs on here (or that it is not offered
+with this provider), its skill and tools, its literature specialty with the number of
+articles in the local index, the topics Auto sends it, its answers in your own threads
+(how many went through Auto, the last one, the summed cost) and one line on what it does
+not do. The Auto section says the rules in plain words and gives the share of
 each router fixture routed as labelled (126 of 130 and 36 of 36 today), with the note that
 the rules were tuned on them.
 
