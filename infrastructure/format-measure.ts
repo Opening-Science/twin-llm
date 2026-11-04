@@ -159,19 +159,33 @@ const pad2 = (n: number): string => String(n).padStart(2, "0");
 export const isoLocalDate = (date: Date = new Date()): string =>
   `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
 
-const dateFormats = {
-  long: new Intl.DateTimeFormat(DISPLAY_LOCALE, {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    timeZone: "UTC",
-  }),
-  short: new Intl.DateTimeFormat(DISPLAY_LOCALE, {
-    day: "numeric",
-    month: "short",
-    timeZone: "UTC",
-  }),
-} as const;
+/**
+ * Month abbreviations for `DISPLAY_LOCALE` (en-GB), written here instead of
+ * read from ICU, so a locale change updates both. bun on macOS uses the
+ * system ICU and bun on Linux its own, and CLDR 48 renamed September from
+ * `Sept` to `Sep`, so the same code printed two spellings. A fixed table
+ * keeps every build byte for byte the same.
+ */
+const EN_GB_MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sept",
+  "Oct",
+  "Nov",
+  "Dec",
+] as const;
+
+/** `16 Oct 2026`, or `16 Oct` without a year. `month` is 1 to 12. */
+const dayLabel = (day: number, month: number, year?: number): string =>
+  year === undefined
+    ? `${day} ${EN_GB_MONTHS[month - 1]}`
+    : `${day} ${EN_GB_MONTHS[month - 1]} ${year}`;
 
 /**
  * A calendar day as `16 Oct 2026` (or `16 Oct`). Takes YYYY-MM-DD, which is
@@ -180,22 +194,15 @@ const dateFormats = {
  */
 export const formatDate = (
   isoDay: string | null | undefined,
-  style: keyof typeof dateFormats = "long",
+  style: "long" | "short" = "long",
 ): string => {
   if (!isoDay || !ISO_DATE_ONLY.test(isoDay)) return EMPTY_VALUE;
   const [y, m, d] = isoDay.split("-").map(Number);
   const date = new Date(Date.UTC(y!, m! - 1, d!));
   // Reject days that roll over (2026-02-31 would quietly become 3 Mar).
   if (date.getUTCMonth() !== m! - 1 || date.getUTCDate() !== d) return EMPTY_VALUE;
-  return dateFormats[style].format(date);
+  return style === "long" ? dayLabel(d!, m!, y!) : dayLabel(d!, m!);
 };
-
-const timeFormat = new Intl.DateTimeFormat(DISPLAY_LOCALE, {
-  hour: "2-digit",
-  minute: "2-digit",
-  hourCycle: "h23",
-  timeZone: "UTC",
-});
 
 /**
  * A moment as `16 Oct 2026, 09:12 UTC`, for event logs such as the
@@ -203,10 +210,34 @@ const timeFormat = new Intl.DateTimeFormat(DISPLAY_LOCALE, {
  */
 export const formatTimestamp = (moment: Date | null | undefined): string => {
   if (!moment || Number.isNaN(moment.getTime())) return EMPTY_VALUE;
-  return `${dateFormats.long.format(moment)}, ${timeFormat.format(moment)} UTC`;
+  const day = dayLabel(
+    moment.getUTCDate(),
+    moment.getUTCMonth() + 1,
+    moment.getUTCFullYear(),
+  );
+  return `${day}, ${pad2(moment.getUTCHours())}:${pad2(moment.getUTCMinutes())} UTC`;
 };
 
 const zonedFormats = new Map<string, Intl.DateTimeFormat>();
+
+/** The numeric date and time parts of `date` on the `timeZone` clock, by name. */
+const zonedParts = (date: Date, timeZone: string): Record<string, number> => {
+  const format =
+    zonedFormats.get(timeZone) ??
+    new Intl.DateTimeFormat(DISPLAY_LOCALE, {
+      day: "numeric",
+      month: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+      timeZone,
+    });
+  zonedFormats.set(timeZone, format);
+  return Object.fromEntries(
+    format.formatToParts(date).map((part) => [part.type, Number(part.value)]),
+  );
+};
 
 /**
  * A moment on a named clock, `31 Oct 2026, 08:00`: when a scheduled task (#54)
@@ -219,19 +250,8 @@ export const formatZonedMoment = (
   const date = typeof moment === "string" ? new Date(moment) : moment;
   if (!date || Number.isNaN(date.getTime())) return EMPTY_VALUE;
   try {
-    const format =
-      zonedFormats.get(timeZone) ??
-      new Intl.DateTimeFormat(DISPLAY_LOCALE, {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        hourCycle: "h23",
-        timeZone,
-      });
-    zonedFormats.set(timeZone, format);
-    return format.format(date);
+    const { day, month, year, hour, minute } = zonedParts(date, timeZone);
+    return `${dayLabel(day!, month!, year!)}, ${pad2(hour!)}:${pad2(minute!)}`;
   } catch {
     return EMPTY_VALUE;
   }
