@@ -19,6 +19,7 @@ import { initialEffort, initialModelIds } from "./chat-mode";
 import type { TurnState } from "./conversation";
 import { IncognitoBanner } from "./incognito-controls";
 import { OutputsPanel } from "./outputs-panel";
+import { composerInsetClass, threadGridClass } from "./panel-layout";
 import { PromptBar } from "./prompt-bar";
 import { NO_SOURCE_FACTS, type PromptSourceFacts } from "./prompt-sources";
 import { useSuggestedQuestions } from "./suggestion-chips";
@@ -152,13 +153,7 @@ export const CompareScreen = ({
   return (
     <TwinPickContext value={setOrgan}>
       <div className="flex flex-1 flex-col">
-        <div
-          className={
-            withPanel
-              ? `flex-1 px-4 py-6 sm:px-6 xl:grid xl:items-start xl:gap-6 ${largeOutput ? "xl:grid-cols-[minmax(0,1fr)_30rem]" : "xl:grid-cols-[minmax(0,1fr)_18rem]"}`
-              : "flex-1 px-4 py-6 sm:px-6"
-          }
-        >
+        <div className={threadGridClass(withPanel, largeOutput)}>
           {withPanel && (
             <div className="xl:col-start-2 xl:row-start-1 xl:self-stretch">
               <OutputsPanel
@@ -291,6 +286,7 @@ export const CompareScreen = ({
           onSubmit={onSubmit}
           onTwin={twin.open}
           onCompact={compact.open}
+          className={composerInsetClass(withPanel, largeOutput)}
         />
       </div>
     </TwinPickContext>

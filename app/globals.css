@@ -412,15 +412,49 @@
     @apply border-primary text-foreground bg-[color-mix(in_oklab,var(--primary)_12%,transparent)];
   }
 
+  /* The Lab's pages (`features/lab/lab-detail.tsx`): one column, the same
+     width as Customize, so the hub and every experiment line up. */
+  .lab-page {
+    @apply mx-auto flex w-full max-w-5xl min-w-0 flex-col gap-8 px-4 py-10 sm:px-6;
+  }
+
+  .lab-back {
+    @apply text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm;
+  }
+
+  /* Hub cards (`infrastructure/ui-kit/hub-card.tsx`): a grid of links, one per
+     part of a hub such as the Lab. Calm by default; the border and title
+     darken on hover, and focus gets the usual ring. */
+  .hub-grid {
+    @apply grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3;
+  }
+
+  .hub-card {
+    @apply bg-card border-border hover:border-foreground/30 focus-visible:ring-ring flex w-full flex-col gap-1.5 rounded-xl border p-4 transition-colors outline-none focus-visible:ring-2;
+  }
+
   /* A segmented control: mutually exclusive choices in one pill. The pressed
      item is marked by `aria-pressed` (buttons) or `aria-current` (links), so the
-     selected look can never drift from what assistive tech is told. */
+     selected look can never drift from what assistive tech is told. A row wider
+     than its column (seven Customize tabs on a phone) scrolls sideways inside the
+     pill instead of pushing the whole page wider. */
   .segmented {
-    @apply border-border inline-flex rounded-full border p-0.5;
+    @apply border-border inline-flex max-w-full overflow-x-auto overscroll-x-contain rounded-full border p-0.5;
+    scrollbar-width: none;
+  }
+
+  .segmented::-webkit-scrollbar {
+    display: none;
   }
 
   .segmented-item {
-    @apply text-muted-foreground hover:text-foreground rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors;
+    @apply text-muted-foreground hover:text-foreground shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium whitespace-nowrap transition-colors;
+  }
+
+  /* The pill clips what overflows it, which the usual ring 2px outside the
+     item would; the ring goes 2px inside the item instead. */
+  .segmented-item:focus-visible {
+    outline-offset: -2px;
   }
 
   .segmented-item-sm {

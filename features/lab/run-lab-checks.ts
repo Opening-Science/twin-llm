@@ -396,24 +396,33 @@ const checkDisclosureLedger = async (): Promise<LabCheck> =>
 const VERIFIABILITY_INTRO =
   "What runs on this machine, checked against what the repository says. Each check runs on the server when this page loads, and each card has a command that repeats it without the app. These are checks of this machine by this machine; they are not a remote attestation.";
 
-export const loadVerifiability = async (): Promise<LabSection> => {
-  const ollama = ollamaPlan();
-  const pins = pinPlan();
-  const vitronic = shownVitronic();
-  return {
-    id: "verifiability",
-    title: "Verifiability",
-    intro: VERIFIABILITY_INTRO,
-    checks: await Promise.all([
-      guarded(localOnlyBase, checkLocalOnly),
-      guarded(storageBase(vitronic), () => checkStorage(vitronic)),
-      guarded(encryptionBase, checkEncryption),
-      guarded(auditChainBase, checkAuditChain),
-      guarded(disclosureLedgerBase, checkDisclosureLedger),
-      guarded(localModelsBase(ollama.tagsUrl), () => checkLocalModels(ollama)),
-      guarded(pinnedArtefactsBase(pins.pins), () => checkPinnedArtefacts(pins)),
-      guarded(provenanceBase, checkProvenance),
-      guarded(sbomBase, checkSbom),
-    ]),
-  };
-};
+/** One entry per check, in page order. `/lab/checks` runs them; the hub only counts them. */
+const CHECK_RUNS: readonly (() => Promise<LabCheck>)[] = [
+  () => guarded(localOnlyBase, checkLocalOnly),
+  () => {
+    const vitronic = shownVitronic();
+    return guarded(storageBase(vitronic), () => checkStorage(vitronic));
+  },
+  () => guarded(encryptionBase, checkEncryption),
+  () => guarded(auditChainBase, checkAuditChain),
+  () => guarded(disclosureLedgerBase, checkDisclosureLedger),
+  () => {
+    const ollama = ollamaPlan();
+    return guarded(localModelsBase(ollama.tagsUrl), () => checkLocalModels(ollama));
+  },
+  () => {
+    const pins = pinPlan();
+    return guarded(pinnedArtefactsBase(pins.pins), () => checkPinnedArtefacts(pins));
+  },
+  () => guarded(provenanceBase, checkProvenance),
+  () => guarded(sbomBase, checkSbom),
+];
+
+export const LAB_CHECK_COUNT = CHECK_RUNS.length;
+
+export const loadVerifiability = async (): Promise<LabSection> => ({
+  id: "verifiability",
+  title: "Verifiability",
+  intro: VERIFIABILITY_INTRO,
+  checks: await Promise.all(CHECK_RUNS.map((run) => run())),
+});
