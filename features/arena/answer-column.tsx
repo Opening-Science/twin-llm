@@ -12,7 +12,8 @@ import { Mark } from "./marks";
  * there is none), and what the call measured. A fine-tune's raw id sits
  * under its readable name, and an Auto answer says which agent it ran as. A
  * failed column offers its own retry, because the other models in the turn
- * are independent of it.
+ * are independent of it. A stopped column keeps what the model had written and
+ * looked up (#373), above the line that says it was stopped.
  */
 
 const FailedAnswer = ({
@@ -57,6 +58,9 @@ const FailedAnswer = ({
     </Button>
   </div>
 );
+
+const hasPartial = (response: ResponseState): boolean =>
+  response.text.trim() !== "" || (response.tools?.length ?? 0) > 0;
 
 export const AnswerColumn = ({
   response,
@@ -107,12 +111,17 @@ export const AnswerColumn = ({
       )}
       <div className="flex-1">
         {response.status === "FAILED" ? (
-          <FailedAnswer
-            lost={response.lost === true}
-            stopped={response.stopped === true}
-            refusal={response.refusal}
-            onRetry={onRetry}
-          />
+          <div className="flex flex-col gap-4">
+            {response.stopped === true && hasPartial(response) ? (
+              <AnswerBody response={response} wearables={wearables} />
+            ) : null}
+            <FailedAnswer
+              lost={response.lost === true}
+              stopped={response.stopped === true}
+              refusal={response.refusal}
+              onRetry={onRetry}
+            />
+          </div>
         ) : (
           <AnswerBody response={response} wearables={wearables} />
         )}

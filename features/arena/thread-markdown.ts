@@ -37,7 +37,13 @@ const lookupLine = (card: ToolCard): string => {
   return `- ${card.title}${args ? ` (${args})` : ""} · ${outcome}`;
 };
 
+const STOPPED_LINE = "_Stopped before it finished._";
+
 const answerBody = (answer: ResponseState): string[] => {
+  if (answer.status === "FAILED" && answer.stopped === true) {
+    const written = parseTwinAnswer(answer.text, null).answerText.trim();
+    return written === "" ? [STOPPED_LINE] : [written, "", STOPPED_LINE];
+  }
   if (answer.status === "FAILED") {
     return [`_Refused or failed: ${answer.refusal ?? "no answer"}_`];
   }

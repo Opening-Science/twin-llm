@@ -19,7 +19,8 @@ export type SavedResponseRow = Readonly<{
   /** Index among the models picked for the turn; null on older rows. */
   position: number | null;
   /** REFUSED: no model ran, and `text` is TwinLLM's refusal sentence. */
-  status: ResponseState["status"] | "REFUSED";
+  /** STOPPED: the person pressed Stop (#373); `text` is what the model had written. */
+  status: ResponseState["status"] | "REFUSED" | "STOPPED";
   text: string;
   reasoningText: string | null;
   attribution: unknown;
@@ -53,6 +54,9 @@ export type SavedResponseRow = Readonly<{
  * A refused row reads the way the live refusal did: a failed answer carrying
  * the stored sentence and no text. It is not STREAMING, so a reload does not
  * ask the model again.
+ *
+ * A stopped row (#373) reads as the live Stop did: a failed answer marked
+ * stopped, with what it had written. It is not asked again either.
  */
 export const toSavedResponseState = (row: SavedResponseRow): ResponseState => {
   if (row.status === "REFUSED") {
@@ -78,7 +82,8 @@ export const toSavedResponseState = (row: SavedResponseRow): ResponseState => {
     id: row.id,
     modelId: row.modelId,
     modelName: row.modelName,
-    status: row.status,
+    status: row.status === "STOPPED" ? "FAILED" : row.status,
+    ...(row.status === "STOPPED" ? { stopped: true } : {}),
     text: withheld ? "" : row.text,
     reasoningText: withheld ? null : row.reasoningText,
     attribution: (row.attribution as EvidenceAttribution[] | null) ?? null,
