@@ -1,5 +1,3 @@
-import { Card } from "@/infrastructure/ui-kit/card";
-
 import { RHYTHM_BENCH_DIR } from "@/infrastructure/local-artefacts";
 
 import { benchmarkRunLine, benchmarkTables } from "./benchmark-result";
@@ -11,9 +9,11 @@ import { LabTable } from "./lab-table";
 import { type BenchmarkData, type ResultsData } from "./load-results";
 
 /**
- * The Results section: evaluation runs found under `evaluation/runs/` and
- * the rhythm benchmark's result file, each table with a CSV download for a
- * paper's tables and figures. Server-rendered except the download buttons.
+ * The bodies of three Lab pages: evaluation runs found under
+ * `evaluation/runs/`, the rhythm benchmark's result file and the long jobs,
+ * each table with a CSV download for a paper's tables and figures.
+ * Server-rendered except the download buttons. The page frame
+ * (`lab-detail.tsx`) gives each its title.
  */
 
 const EVAL_COMMANDS = [
@@ -31,10 +31,6 @@ const Command = ({ label, text }: Readonly<{ label: string; text: string }>) => 
   <pre className="command-block" aria-label={label}>
     <code>{text}</code>
   </pre>
-);
-
-const SubHeading = ({ children }: Readonly<{ children: string }>) => (
-  <h3 className="text-base font-medium">{children}</h3>
 );
 
 const RunScores = ({ run }: Readonly<{ run: EvalRun }>) => {
@@ -57,9 +53,9 @@ const RunScores = ({ run }: Readonly<{ run: EvalRun }>) => {
     <>
       {run.scores.map((model) => (
         <div key={`${run.id}:${model.model}`} className="flex min-w-0 flex-col gap-2">
-          <h4 className="text-sm font-medium break-all">
+          <h2 className="text-base font-medium break-all">
             {run.id} · {model.model}
-          </h4>
+          </h2>
           <LabTable table={scoreTable(model)} />
           <div className="flex flex-wrap gap-2">
             <DownloadButton
@@ -75,9 +71,8 @@ const RunScores = ({ run }: Readonly<{ run: EvalRun }>) => {
   );
 };
 
-const EvalRuns = ({ data }: Readonly<{ data: ResultsData }>) => (
-  <Card padding="md" className="flex min-w-0 flex-col gap-3">
-    <SubHeading>Evaluation runs</SubHeading>
+export const EvalRunsBody = ({ data }: Readonly<{ data: ResultsData }>) => (
+  <div className="flex min-w-0 flex-col gap-4">
     {data.runs.length === 0 ? (
       <>
         <p className="text-sm leading-relaxed">
@@ -109,14 +104,13 @@ const EvalRuns = ({ data }: Readonly<{ data: ResultsData }>) => (
         ))}
       </>
     )}
-  </Card>
+  </div>
 );
 
-const Benchmark = ({ data }: Readonly<{ data: BenchmarkData }>) => {
+export const BenchmarkBody = ({ data }: Readonly<{ data: BenchmarkData }>) => {
   const read = data.read;
   return (
-    <Card padding="md" className="flex min-w-0 flex-col gap-3">
-      <SubHeading>Rhythm benchmark</SubHeading>
+    <div className="flex min-w-0 flex-col gap-4">
       {read.kind === "found" && data.path !== null ? (
         <>
           <p className="text-muted-foreground text-sm leading-relaxed">
@@ -128,7 +122,7 @@ const Benchmark = ({ data }: Readonly<{ data: BenchmarkData }>) => {
           </p>
           {benchmarkTables(read.result).map((each) => (
             <div key={each.slug} className="flex min-w-0 flex-col gap-2">
-              <h4 className="text-sm font-medium">{each.table.caption}</h4>
+              <h2 className="text-base font-medium">{each.table.caption}</h2>
               <LabTable table={each.table} />
               <div className="flex flex-wrap gap-2">
                 <DownloadButton
@@ -159,28 +153,12 @@ const Benchmark = ({ data }: Readonly<{ data: BenchmarkData }>) => {
           <Command label="Command that runs the rhythm benchmark" text={BENCH_COMMAND} />
         </>
       )}
-    </Card>
+    </div>
   );
 };
 
-const LongJobs = ({ jobs }: Readonly<{ jobs: readonly LabJob[] }>) => (
-  <Card padding="md" className="flex min-w-0 flex-col gap-3">
-    <SubHeading>Long jobs</SubHeading>
-    <p className="text-muted-foreground text-sm leading-relaxed">
-      The last run of each job that runs from the command line, read from the files it
-      writes. The page starts none of them.
-    </p>
+export const LongJobsBody = ({ jobs }: Readonly<{ jobs: readonly LabJob[] }>) => (
+  <div className="flex min-w-0 flex-col gap-3">
     <JobLines jobs={jobs} />
-  </Card>
-);
-
-export const ResultsSection = ({
-  data,
-  jobs,
-}: Readonly<{ data: ResultsData; jobs: readonly LabJob[] }>) => (
-  <div className="flex flex-col gap-4">
-    <LongJobs jobs={jobs} />
-    <EvalRuns data={data} />
-    <Benchmark data={data.benchmark} />
   </div>
 );

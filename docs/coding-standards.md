@@ -173,6 +173,9 @@ Use these from `infrastructure/ui-kit/` before writing classes by hand:
 - **`StatusBadge`** for a connection or job state. It always has text; the tone (`ok`,
   `warn`, `neutral`, `off`) only adds to it.
 - **`Card`** for a framed block on `.surface`, with `sm`, `md` or `lg` padding.
+- **`HubGrid`** and **`HubCard`** for a hub whose cards each open their own page (the Lab):
+  a title, one line and a meta line with a `StatusBadge` tone, nothing more. Detail lives on
+  the page the card opens.
 - **`Legend`** for the series names of a chart. Only the swatch is coloured.
 - **`BentoGrid`** and **`BentoCard`** for a dashboard of cards. The grid measures its
   own width: 4 columns from 840px, 2 from 480px, 1 below (`bento-model.ts`). Rows are

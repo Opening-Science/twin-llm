@@ -35,9 +35,9 @@ export const CheckCard = ({ check }: Readonly<{ check: LabCheck }>) => {
   return (
     <Card as="article" padding="md" className="flex min-w-0 flex-col gap-3">
       <header className="flex flex-wrap items-center justify-between gap-2">
-        <h3 id={headingId} className="text-base font-medium">
+        <h2 id={headingId} className="text-base font-medium">
           {check.title}
-        </h3>
+        </h2>
         <StatusBadge tone={TONE[check.status]}>{STATUS_LABEL[check.status]}</StatusBadge>
       </header>
       <p className="text-muted-foreground text-sm leading-relaxed">

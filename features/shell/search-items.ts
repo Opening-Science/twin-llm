@@ -1,4 +1,5 @@
 import type { Command } from "@/features/commands/registry";
+import { LAB_LINE, LAB_PARTS, LAB_PATH, LAB_TITLE } from "@/features/lab/lab-hub";
 import type { SearchItem } from "@/features/search/search-model";
 import { draftHref, INCOGNITO_HREF } from "@/infrastructure/shell-links";
 
@@ -76,9 +77,17 @@ const PAGES: readonly (SearchItem & { kind: "page" })[] = [
     kind: "page",
     id: "lab",
     title: "Lab",
-    detail: "verify local only, audit chain, model digests, checksums, SBOM",
+    detail:
+      "verify local only, audit chain, model digests, checksums, SBOM, heart rhythm simulations, evaluation runs, benchmark, second rating",
     href: "/lab",
   },
+  ...LAB_PARTS.map((part) => ({
+    kind: "page" as const,
+    id: `lab-${part}`,
+    title: `Lab · ${LAB_TITLE[part]}`,
+    detail: LAB_LINE[part],
+    href: LAB_PATH[part],
+  })),
   { kind: "page", id: "docs", title: "Docs", detail: "documentation", href: "/docs" },
   {
     kind: "page",

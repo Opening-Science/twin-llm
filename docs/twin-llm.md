@@ -111,5 +111,5 @@ Exoscale: set `EXOSCALE_BASE_URLS` (one vLLM `/v1` URL per GPU); without it, sta
 | GBD local store              | `packages/gbd-local/`, `scripts/gbd/`                                                   |
 | Live lookups                 | `packages/live-sources/`                                                                |
 | Docs (`/docs`)               | `features/docs/`: these pages rendered from `docs/*.md`                                 |
-| Lab (`/lab`)                 | `features/lab/`: verifiability checks, simulations, results ([lab.md](lab.md))          |
+| Lab (`/lab`)                 | `features/lab/`: a hub of cards, one page per experiment ([lab.md](lab.md))             |
 | open-twin pins               | `.open-twin/` via `bun run sync:open-twin` (`PROVENANCE.md`)                            |

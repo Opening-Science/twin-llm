@@ -54,10 +54,10 @@ export type ResultsData = Readonly<{
   benchmark: BenchmarkData;
 }>;
 
-const loadRuns = async (
-  root: string,
-): Promise<Pick<ResultsData, "runs" | "more" | "failed">> => {
-  const dir = join(root, EVAL_RUNS_DIR);
+/** Run folder names, newest id first; `failed` when the folder is there but could not be listed. */
+const runFolders = async (
+  dir: string,
+): Promise<Readonly<{ ids: readonly string[]; failed: boolean }>> => {
   try {
     const entries = await readdir(dir, { withFileTypes: true });
     const ids = entries
@@ -65,36 +65,69 @@ const loadRuns = async (
       .map((entry) => entry.name)
       .sort()
       .reverse();
-    const runs = await Promise.all(
-      ids.slice(0, MAX_RUNS).map(async (id) => {
-        const [meta, report] = await Promise.all([
-          readSmall(join(dir, id, "meta.json")),
-          readSmall(join(dir, id, "report.md")),
-        ]);
-        return summariseRun(id, meta, report);
-      }),
-    );
-    return { runs: sortRuns(runs), more: ids.length > MAX_RUNS, failed: false };
+    return { ids, failed: false };
   } catch (error) {
     const missing = error instanceof Error && "code" in error && error.code === "ENOENT";
     if (!missing)
       console.error("[lab] evaluation runs could not be listed", errorName(error));
-    return { runs: [], more: false, failed: !missing };
+    return { ids: [], failed: !missing };
   }
+};
+
+const loadRuns = async (
+  root: string,
+): Promise<Pick<ResultsData, "runs" | "more" | "failed">> => {
+  const dir = join(root, EVAL_RUNS_DIR);
+  const { ids, failed } = await runFolders(dir);
+  const runs = await Promise.all(
+    ids.slice(0, MAX_RUNS).map(async (id) => {
+      const [meta, report] = await Promise.all([
+        readSmall(join(dir, id, "meta.json")),
+        readSmall(join(dir, id, "report.md")),
+      ]);
+      return summariseRun(id, meta, report);
+    }),
+  );
+  return { runs: sortRuns(runs), more: ids.length > MAX_RUNS, failed };
+};
+
+/** For the hub: how many run folders there are, from one readdir; nothing in them is read. */
+export const countRuns = async (): Promise<
+  Readonly<{ count: number; failed: boolean }>
+> => {
+  const { ids, failed } = await runFolders(join(process.cwd(), EVAL_RUNS_DIR));
+  return { count: ids.length, failed };
+};
+
+const benchmarkFolders = (dir: string): Promise<string[]> =>
+  readdir(dir, { withFileTypes: true })
+    .then((entries) =>
+      entries
+        .filter((entry) => entry.isDirectory() && RUN_ID.test(entry.name))
+        .map((entry) => entry.name)
+        .slice(0, MAX_RUNS),
+    )
+    .catch(() => []);
+
+/** For the hub: benchmark runs with a result.json, from one readdir and a stat each; none is read. */
+export const countBenchmarkRuns = async (): Promise<number> => {
+  const dir = join(process.cwd(), RHYTHM_BENCH_DIR);
+  const found = await Promise.all(
+    (await benchmarkFolders(dir)).map((name) =>
+      stat(join(dir, name, "result.json"))
+        .then((file) => file.isFile())
+        .catch(() => false),
+    ),
+  );
+  return found.filter(Boolean).length;
 };
 
 /** Every `<RHYTHM_BENCH_DIR>/<run>/result.json`; the page shows the newest. */
 const loadBenchmark = async (root: string): Promise<BenchmarkData> => {
   const dir = join(root, RHYTHM_BENCH_DIR);
-  const names = await readdir(dir, { withFileTypes: true })
-    .then((entries) =>
-      entries
-        .filter((entry) => entry.isDirectory() && RUN_ID.test(entry.name))
-        .map((entry) => entry.name),
-    )
-    .catch(() => []);
+  const names = await benchmarkFolders(dir);
   const runs = await Promise.all(
-    names.slice(0, MAX_RUNS).map(async (name) => ({
+    names.map(async (name) => ({
       dir: name,
       read: parseBenchmark(await readSmall(join(dir, name, "result.json"))),
     })),
