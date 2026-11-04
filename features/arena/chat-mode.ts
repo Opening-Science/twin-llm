@@ -49,6 +49,16 @@ export const MODE_COPY: Readonly<Record<ChatMode, { label: string; line: string 
   },
 };
 
+/**
+ * The Auto popover (#456) says what Auto does, in `MODE_COPY.auto.line`, and
+ * links to the agents page, where the specialists are listed. It names none
+ * of them: the router picks, and the roster is Customize · Agents' to show.
+ */
+export const AUTO_AGENTS_LINK = {
+  href: "/customize/agents",
+  label: "The specialists Auto picks from",
+} as const;
+
 /** Compare needs at least this many rows; one row is Manual. */
 export const MIN_COMPARE = 2;
 

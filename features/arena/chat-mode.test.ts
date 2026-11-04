@@ -7,10 +7,12 @@ import {
 } from "@/infrastructure/model-catalog";
 
 import {
+  AUTO_AGENTS_LINK,
   initialEffort,
   initialModelIds,
   initialSelection,
   manualAnswerCount,
+  MODE_COPY,
   modeModelIds,
   modeProblem,
   modeSummary,
@@ -291,5 +293,24 @@ describe("a new chat and a reopened thread (#386)", () => {
       mode: "manual",
       effort: "quick",
     });
+  });
+});
+
+describe("the Auto popover (#456)", () => {
+  test("one line on what Auto does and a link to the agents page", () => {
+    expect(MODE_COPY.auto.line).toBe(
+      "One answer. TwinLLM picks the specialist and the model for each question.",
+    );
+    expect(AUTO_AGENTS_LINK).toEqual({
+      href: "/customize/agents",
+      label: "The specialists Auto picks from",
+    });
+  });
+
+  test("the copy names no specialist; the roster stays on the agents page", () => {
+    const names = specialistRows(CATALOG).map((row) => row.name);
+    expect(names).toEqual(["General", "Sleep"]);
+    const copy = `${MODE_COPY.auto.line} ${AUTO_AGENTS_LINK.label}`;
+    expect(names.filter((name) => copy.includes(name))).toEqual([]);
   });
 });
