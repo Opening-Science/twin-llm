@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment } from "react";
+import { Fragment, useEffect } from "react";
 
 import { cn } from "@/infrastructure/ui";
 
@@ -87,9 +87,17 @@ export const CommandPalette = ({
   notice?: string;
 }>) => {
   const firstSkill = commands.findIndex((command) => command.kind === "skill");
+  const activeName = commands[activeIndex]?.name;
+  // Arrow keys move the highlight; keep it in view inside the scrolling list.
+  useEffect(() => {
+    if (!activeName) return;
+    document
+      .getElementById(commandOptionId(activeName))
+      ?.scrollIntoView({ block: "nearest" });
+  }, [activeName]);
   return (
-    <div className="border-border bg-background absolute bottom-full left-0 z-20 mb-2 w-80 max-w-full overflow-hidden rounded-lg border shadow-md">
-      <div className="border-border border-b px-3 py-2">
+    <div className="border-border bg-background absolute bottom-full left-0 z-20 mb-2 flex max-h-[min(28rem,60vh)] w-80 max-w-full flex-col overflow-hidden rounded-lg border shadow-md">
+      <div className="border-border shrink-0 border-b px-3 py-2">
         <p className="text-eyebrow">Commands</p>
       </div>
       {commands.length === 0 ? (
@@ -97,7 +105,11 @@ export const CommandPalette = ({
           {notice ?? "No command with that name."}
         </p>
       ) : (
-        <ul role="listbox" aria-label="Commands" className="p-1.5">
+        <ul
+          role="listbox"
+          aria-label="Commands"
+          className="min-h-0 overflow-y-auto overscroll-contain p-1.5"
+        >
           {commands.map((command, index) => (
             <Fragment key={command.name}>
               {index === firstSkill ? (

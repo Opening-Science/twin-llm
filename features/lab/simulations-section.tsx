@@ -34,14 +34,14 @@ const EvidenceList = ({ items }: Readonly<{ items: readonly Evidence[] }>) => (
 );
 
 const SubHeading = ({ children }: Readonly<{ children: string }>) => (
-  <h4 className="text-sm font-medium">{children}</h4>
+  <h3 className="text-sm font-medium">{children}</h3>
 );
 
 const Recording = ({ recording }: Readonly<{ recording: MadeRecording }>) => (
   <div className="flex flex-col gap-4">
     <Card as="article" padding="md" className="flex min-w-0 flex-col gap-4">
       <header className="flex flex-col gap-1">
-        <h3 className="text-base font-medium">{recording.title}</h3>
+        <h2 className="text-base font-medium">{recording.title}</h2>
         <p className="text-muted-foreground text-sm">{recording.subjectLabel}</p>
         <p className="text-muted-foreground text-sm leading-relaxed">
           A simulated RR-interval recording, the same one the rhythm_irregularity tool
@@ -153,9 +153,9 @@ const Recording = ({ recording }: Readonly<{ recording: MadeRecording }>) => (
     </Card>
 
     <Card as="section" padding="md" className="flex min-w-0 flex-col gap-3">
-      <h3 className="text-base font-medium">
+      <h2 className="text-base font-medium">
         Simulator settings (known because this person is simulated)
-      </h3>
+      </h2>
       <p className="text-muted-foreground text-sm leading-relaxed">
         What the simulator was set to and put in this recording. Shown here for the
         researcher; the rhythm_irregularity tool never gives it to a model.
@@ -215,7 +215,7 @@ export const SimulationsSection = ({ data }: Readonly<{ data: SimulationData }>)
         ) : (
           <form
             method="get"
-            action="/lab#simulations"
+            action="/lab/simulations"
             className="grid grid-cols-1 gap-3 sm:grid-cols-2"
           >
             <Field

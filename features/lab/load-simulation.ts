@@ -14,6 +14,7 @@ import { recordingObservation } from "@/packages/rhythm-sim/recording-observatio
 import { simulateRecording } from "@/packages/rhythm-sim/simulate-recording";
 
 import { type Evidence, type EvidenceTable } from "./lab-check";
+import { type SubjectCount } from "./lab-hub";
 import {
   parseSimulationForm,
   type SearchParams,
@@ -88,9 +89,22 @@ export type SimulationData =
 const errorName = (error: unknown): string =>
   error instanceof Error ? error.name : typeof error;
 
+const COHORT_WHERE = { isSynthetic: true, cohortId: SIMULATION_COHORT } as const;
+
+/** For the hub: how many synthetic people the simulator can use, as one count; no row is read. */
+export const countSubjects = async (): Promise<SubjectCount> => {
+  if (dataMode() !== "synthetic") return "personal";
+  try {
+    return await database().subject.count({ where: COHORT_WHERE });
+  } catch (error) {
+    console.error("[lab] synthetic people could not be counted", errorName(error));
+    return "unread";
+  }
+};
+
 const listSubjects = async (): Promise<readonly SubjectOption[]> => {
   const client = database();
-  const where = { isSynthetic: true, cohortId: SIMULATION_COHORT } as const;
+  const where = COHORT_WHERE;
   const [subjects, withAf] = await Promise.all([
     client.subject.findMany({
       where,

@@ -5,8 +5,28 @@ cloud health apps describe their privacy and attestation, but nobody outside can
 TwinLLM runs locally, so each claim it makes about itself can be tested here and then repeated by
 hand with the command on the card.
 
-The page has three sections: Verifiability, Simulations and Results. Research use only: nothing on
-the page is about anyone's health.
+`/lab` is a hub of cards, one per experiment, and each card opens its own page with the same frame
+(`features/lab/lab-detail.tsx`): the way back to the hub, the title, one line on what it is, the
+thing itself, and the longer explanation folded under "About this". The cards and their meta lines
+(how many checks there are, how many synthetic people, how many runs, whether a job is running)
+come from `features/lab/lab-hub.ts` (pure, tested); the card itself is `HubCard` in
+`infrastructure/ui-kit/hub-card.tsx`. The hub only counts, with a `readdir`, a `stat` per job
+and one database count: the checks run on `/lab/checks` and the reports are read on the pages
+that show them. Search finds each page by its title and line.
+
+| Card                     | Page               | Section below         |
+| ------------------------ | ------------------ | --------------------- |
+| Verifiability            | `/lab/checks`      | Verifiability         |
+| Heart rhythm simulations | `/lab/simulations` | Simulations           |
+| Evaluation runs          | `/lab/evaluations` | Results               |
+| Rhythm benchmark         | `/lab/benchmark`   | Results               |
+| Long jobs                | `/lab/jobs`        | Results               |
+| Second rating            | `/lab/rate`        | [second-rater.md][sr] |
+
+An old recording link (`/lab?subject=…`) redirects to `/lab/simulations` with the same fields.
+Research use only: nothing on these pages is about anyone's health.
+
+[sr]: evaluation/second-rater.md
 
 ## Verifiability
 
@@ -36,7 +56,7 @@ the command first reads that one setting from `.env.local` into the shell withou
 If a check cannot run, its card keeps the same title and command as the working card, so the
 command still repeats it by hand.
 
-Above the cards a status lattice (#310) says the checks ran on this load, how many came out OK, Not
+Above the cards on `/lab/checks` a status lattice (#310) says the checks ran on this load, how many came out OK, Not
 OK and Unknown, and how long they took.
 
 ## Simulations
@@ -46,7 +66,7 @@ way the `rhythm_irregularity` tool makes them ([query-layer.md](query-layer.md#r
 [rhythm-sim.md](rhythm-sim.md)). Synthetic mode only: with `DATA_MODE=personal` the section says it
 is for synthetic people and reads nothing.
 
-- **The form** is a plain GET form, so a recording has a link (`/lab?subject=…&date=…&seconds=…&recording=…`)
+- **The form** is a plain GET form, so a recording has a link (`/lab/simulations?subject=…&date=…&seconds=…&recording=…`)
   that makes it again. It lists the synthetic people of the pinned evaluation cohort
   (`synthea-v4-seed42`) in this database, first by `subject_ref` and marked when their record lists
   atrial fibrillation (SNOMED CT `49436004`); a day (empty means the last observation day); a length

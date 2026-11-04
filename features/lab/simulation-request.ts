@@ -1,6 +1,6 @@
 /**
  * What the Simulations form asks for, read from the page's query string
- * (`/lab?subject=…&date=…&seconds=…&recording=…`). The form is a plain GET
+ * (`/lab/simulations?subject=…&date=…&seconds=…&recording=…`). The form is a plain GET
  * form, so a recording has a link that gives the same recording again. Pure.
  */
 
