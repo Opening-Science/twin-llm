@@ -108,24 +108,44 @@ const panel = (props: Partial<BodyPanelProps> = {}) =>
 const tags = (markup: string, tag: string) =>
   [...markup.matchAll(new RegExp(`<${tag}[^>]*>`, "g"))].map((m) => m[0]);
 
-/** The panel's tab buttons, in order. */
-const tabButtons = (markup: string) =>
-  tags(markup, "button").filter((tag) => tag.includes('class="segmented-item'));
+const attr = (tag: string, name: string) =>
+  new RegExp(`\\s${name}="([^"]*)"`).exec(tag)?.[1];
 
-const pressedTabs = (markup: string) =>
-  tabButtons(markup).map((tag) => tag.includes('aria-pressed="true"'));
+const hasClass = (tag: string, name: string) =>
+  (attr(tag, "class") ?? "").split(/\s+/).includes(name);
 
-/** The row buttons: pressed for the selection, unlike the tabs. */
-const rowButtons = (markup: string) =>
-  tags(markup, "button").filter(
-    (tag) => tag.includes("aria-pressed") && !tag.includes("segmented-item"),
+/** The panel's tabs (`role="tab"`), in order, with their text. */
+const tabs = (markup: string) =>
+  [...markup.matchAll(/<button([^>]*)>([^<]*)<\/button>/g)]
+    .filter(([, attrs]) => attr(attrs ?? "", "role") === "tab")
+    .map(([tag, , text]) => ({ tag: tag ?? "", text: text ?? "" }));
+
+const tabButtons = (markup: string) => tabs(markup).map((tab) => tab.tag);
+
+const selectedTabs = (markup: string) =>
+  tabs(markup).map((tab) => attr(tab.tag, "aria-selected") === "true");
+
+/** The text of the one selected tab. */
+const selectedTab = (markup: string) =>
+  tabs(markup)
+    .filter((tab) => attr(tab.tag, "aria-selected") === "true")
+    .map((tab) => tab.text);
+
+/** The tab panels that are shown: only the active one, never a hidden one. */
+const openPanels = (markup: string) =>
+  tags(markup, "div").filter(
+    (tag) => attr(tag, "role") === "tabpanel" && attr(tag, "hidden") === undefined,
   );
 
-const pressedTab = (label: string) =>
-  `aria-pressed="true" class="segmented-item segmented-item-sm">${label}</button>`;
+/** What the open tab panel starts with. */
+const openPanelContent = (markup: string) => {
+  const [open] = openPanels(markup);
+  return open === undefined ? "" : markup.slice(markup.indexOf(open) + open.length);
+};
 
-const SCROLL_LIST =
-  '<div class="twin-body-panel-list min-h-0 flex-1 overflow-y-auto overscroll-contain">';
+/** The row buttons: pressed for the selection; the tabs are selected instead. */
+const rowButtons = (markup: string) =>
+  tags(markup, "button").filter((tag) => attr(tag, "aria-pressed") !== undefined);
 
 describe("formatPropertyDisplay", () => {
   test("metres and their powers keep two decimals; kg uses the mass precision", () => {
@@ -296,41 +316,53 @@ describe("PanelRowButton", () => {
 });
 
 describe("BodyPanel markup", () => {
-  test("a labelled group of three tab buttons; Markers is pressed when there are no properties", () => {
+  test("a labelled tablist of three tabs; Markers is selected when there are no properties", () => {
     const html = panel();
-    expect(html).toContain(
-      `<div role="group" aria-label="${BODY_PANEL_LABEL}" class="segmented flex-wrap self-start">`,
-    );
-    expect(html).not.toContain('role="tablist"');
-    expect(tabButtons(html)).toHaveLength(3);
-    expect(pressedTabs(html)).toEqual([false, true, false]);
-    expect(html).toContain(">Properties</button>");
-    expect(html).toContain(pressedTab("Markers"));
-    expect(html).toContain(">Measurements</button>");
+    const [list] = tags(html, "div").filter((tag) => attr(tag, "role") === "tablist");
+    expect(list).toBeDefined();
+    expect(attr(list!, "aria-label")).toBe(BODY_PANEL_LABEL);
+    expect(tabs(html).map((tab) => tab.text)).toEqual([
+      "Properties",
+      "Markers",
+      "Measurements",
+    ]);
+    expect(selectedTabs(html)).toEqual([false, true, false]);
   });
 
-  test("Properties is pressed when the scan has properties", () => {
+  test("the selected tab controls the one open tab panel", () => {
+    const html = panel();
+    const [selected] = tabButtons(html).filter(
+      (tag) => attr(tag, "aria-selected") === "true",
+    );
+    const open = openPanels(html);
+    expect(open).toHaveLength(1);
+    expect(attr(selected!, "aria-controls")).toBe(attr(open[0]!, "id"));
+    expect(attr(open[0]!, "aria-labelledby")).toBe(attr(selected!, "id"));
+  });
+
+  test("Properties is selected when the scan has properties", () => {
     const html = panel({ properties: [{ path: "body.height", value: 1.7, unit: "m" }] });
-    expect(pressedTabs(html)).toEqual([true, false, false]);
+    expect(selectedTabs(html)).toEqual([true, false, false]);
     expect(html).toContain('<span class="shrink-0 tabular-nums">1.70 m</span>');
   });
 
-  test("an Anatomy tab comes first when the viewer gives its controls, pressed by default, without the search", () => {
+  test("an Anatomy tab comes first when the viewer gives its controls, selected by default, without the search", () => {
     const anatomy = createElement("p", null, "Depth slider");
     const html = panel({ anatomy });
     expect(tabButtons(html)).toHaveLength(4);
-    expect(html).toContain(pressedTab("Anatomy"));
-    expect(html).toContain(`${SCROLL_LIST}<p>Depth slider</p></div>`);
+    expect(selectedTab(html)).toEqual(["Anatomy"]);
+    expect(openPanelContent(html).startsWith("<p>Depth slider</p></div>")).toBe(true);
     expect(html).not.toContain('type="search"');
     expect(html).not.toContain(">Vertex<");
-    expect(html).toContain('class="twin-body-panel border-input flex min-h-0 flex-col');
+    const [root] = tags(html, "div");
+    expect(hasClass(root!, "twin-body-panel")).toBe(true);
   });
 
-  test("only the pressed tab's content is in the tree", () => {
+  test("only the selected tab's content is in the tree", () => {
     const anatomy = createElement("p", null, "Depth slider");
     const html = panel({ anatomy, panel: { ...initialPanel, tab: "markers" } });
-    expect(html).toContain(pressedTab("Markers"));
-    expect(pressedTabs(html)).toEqual([false, false, true, false]);
+    expect(selectedTabs(html)).toEqual([false, false, true, false]);
+    expect(selectedTab(html)).toEqual(["Markers"]);
     expect(html).toContain('type="search"');
     expect(html).toContain(">Vertex<");
     expect(html).not.toContain("Depth slider");
@@ -339,7 +371,7 @@ describe("BodyPanel markup", () => {
   test("no Anatomy tab without the controls, even when it is asked for", () => {
     const html = panel({ tabs: ["anatomy", "markers"] });
     expect(tabButtons(html)).toHaveLength(1);
-    expect(html).toContain(pressedTab("Markers"));
+    expect(selectedTab(html)).toEqual(["Markers"]);
   });
 
   test("the search field has a visible label tied to the input", () => {
@@ -367,9 +399,11 @@ describe("BodyPanel markup", () => {
     expect(html).toContain(
       '<p class="text-muted-foreground px-2.5 text-xs capitalize">torso</p>',
     );
-    expect(html).not.toContain('role="tabpanel"');
-    // The list has no height of its own: beside the view the panel's height caps it.
-    expect(html).toContain(SCROLL_LIST);
+    // The open tab panel is the list that scrolls; it has no height of its
+    // own: beside the view the panel's height caps it.
+    const open = openPanels(html);
+    expect(open).toHaveLength(1);
+    expect(hasClass(open[0]!, "twin-body-panel-list")).toBe(true);
     expect(html).not.toContain("max-h-");
   });
 
@@ -454,10 +488,7 @@ describe("Biomarkers tab", () => {
       markers: [],
       measures: [],
     });
-    expect(tabButtons(html).map((tag) => tag.includes('aria-pressed="true"'))).toEqual([
-      true,
-      false,
-    ]);
+    expect(selectedTabs(html)).toEqual([true, false]);
     expect(html).toContain(">Biomarkers</button>");
     expect(html).toContain("Depth slider");
     expect(html).not.toContain("Synthetic labs.");
@@ -471,7 +502,7 @@ describe("Biomarkers tab", () => {
       measures: [],
     });
     expect(tabButtons(html)).toHaveLength(1);
-    expect(html).toContain(pressedTab("Biomarkers"));
+    expect(selectedTab(html)).toEqual(["Biomarkers"]);
     expect(html).toContain(`>${LAB_SOURCE_LABEL}</label>`);
     expect(html).toContain('<option value="syn-b">Synthetic person 2 · female</option>');
     expect(html).toContain("Synthetic labs.");
@@ -514,8 +545,8 @@ describe("Biomarkers tab", () => {
 
   test("the panel shows the tab the viewer keeps", () => {
     const html = panel({ panel: { ...initialPanel, tab: "measures" } });
-    expect(pressedTabs(html)).toEqual([false, false, true]);
-    expect(html).toContain(pressedTab("Measurements"));
+    expect(selectedTabs(html)).toEqual([false, false, true]);
+    expect(selectedTab(html)).toEqual(["Measurements"]);
   });
 
   test("biomarker rows light on select only, not on hover", () => {

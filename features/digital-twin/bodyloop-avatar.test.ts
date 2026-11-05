@@ -8,6 +8,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 import { DEMO_BODIES } from "@/packages/anatomy/demo-bodies";
 
+import { AnatomyControls } from "./anatomy/anatomy-controls";
+import { initialAnatomyState } from "./anatomy/anatomy-state";
 import { DEMO_BODY_NOTE, DEMO_SUBJECT_LABEL } from "./anatomy/demo-copy";
 import { BODY_PANEL_LABEL } from "./body-panel";
 import { SELF_NO_LABS } from "./biomarkers/biomarker-copy";
@@ -28,8 +30,10 @@ import {
   SCAN_SET_DEFAULT,
   SCAN_SYNC_AGAIN,
   snapshotStature,
+  TwinSidePanel,
   ZOOM_STEP,
 } from "./bodyloop-avatar";
+import { initialPanel } from "./panel-state";
 
 /** The line that used to stand above a Demo-only picker (removed in D6). */
 const NO_SUBJECTS_LINE = "No BodyLoop subjects";
@@ -307,8 +311,8 @@ describe("BodyLoop avatar viewer", () => {
     );
     expect(markup).toContain(BODYLOOP_NO_SCANS);
     expect(markup).toContain(">Biomarkers</button>");
-    expect(markup).toContain(
-      'aria-pressed="true" class="segmented-item segmented-item-sm">Biomarkers</button>',
+    expect(markup).toMatch(
+      /<button[^>]*role="tab"[^>]*aria-selected="true"[^>]*>Biomarkers<\/button>/,
     );
     expect(markup).toContain(SELF_NO_LABS);
     expect(markup).toContain(">Gamma-GT (GGT)</span>");
@@ -538,5 +542,63 @@ describe("BodyLoop avatar viewer", () => {
       ["Subject", true],
       ["Body", true],
     ]);
+  });
+});
+
+describe("TwinSidePanel", () => {
+  // The inline path beside the canvas, which a server render never reaches
+  // (no WebGL there), so it is rendered on its own here.
+  const render = (tab: "anatomy" | "markers" | null) =>
+    renderToStaticMarkup(
+      createElement(TwinSidePanel, {
+        anatomy: createElement(AnatomyControls, {
+          state: initialAnatomyState,
+          installed: { bodyparts3d: true, "hra-f": true, "hra-m": true },
+          dispatch: () => undefined,
+          onInteract: () => undefined,
+        }),
+        panel: {
+          properties: [],
+          markers: [
+            {
+              path: "head.vertex",
+              label: "Vertex",
+              group: "head",
+              source: "auto",
+              position: [0, 0, 1.6],
+            },
+          ],
+          measures: [],
+          selectedId: null,
+          panel: { ...initialPanel, tab },
+          onPanel: () => undefined,
+        },
+      }),
+    );
+  const selectedTab = (markup: string) =>
+    /<button[^>]*role="tab"[^>]*aria-selected="true"[^>]*>([^<]*)<\/button>/.exec(
+      markup,
+    )?.[1];
+
+  test("one tabbed panel with the side-panel hook, Anatomy first and selected", () => {
+    const markup = render(null);
+    const root = /^<div [^>]*>/.exec(markup)?.[0] ?? "";
+    const classes = /class="([^"]*)"/.exec(root)?.[1]?.split(/\s+/) ?? [];
+    expect(classes).toContain("twin-side-panel");
+    expect(classes).toContain("twin-body-panel");
+    expect(markup).toMatch(
+      new RegExp(`role="tablist"[^>]*aria-label="${BODY_PANEL_LABEL}"`),
+    );
+    expect(selectedTab(markup)).toBe("Anatomy");
+    expect(markup.match(/role="tabpanel"(?![^>]*hidden)/g)).toHaveLength(1);
+    expect(markup).not.toContain('type="search"');
+    expect(markup).not.toContain(">Vertex<");
+  });
+
+  test("the kept tab wins over Anatomy", () => {
+    const markup = render("markers");
+    expect(selectedTab(markup)).toBe("Markers");
+    expect(markup).toContain(">Vertex<");
+    expect(markup).toContain('type="search"');
   });
 });

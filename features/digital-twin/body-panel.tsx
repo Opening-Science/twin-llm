@@ -13,7 +13,7 @@ import {
 import { cn } from "@/infrastructure/ui";
 import { Button } from "@/infrastructure/ui-kit/button";
 import { Field } from "@/infrastructure/ui-kit/field";
-import { SegmentedControl } from "@/infrastructure/ui-kit/segmented-control";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/infrastructure/ui-kit/tabs";
 import type { StoredMarker, StoredMeasure } from "@/packages/vitronic/geometry";
 import { BIOMARKERS_TAB, NO_VALUE_SECTION } from "./biomarkers/biomarker-copy";
 import { BiomarkerDetail, BiomarkerSource } from "./biomarkers/biomarker-detail";
@@ -385,10 +385,10 @@ const ListContent = ({
 
 /**
  * One panel with tabs: the viewer's anatomy controls, the properties, markers
- * and measurements of one scan, and the biomarkers. Tabs are toggle buttons
- * with `aria-pressed`; only the pressed tab's content is in the tree. The
- * tabs and the search stay put and the list under them is the only part that
- * scrolls.
+ * and measurements of one scan, and the biomarkers. Radix `Tabs` give the
+ * tablist/tab/tabpanel roles and arrow keys; only the active tab's panel is
+ * in the tree. The tabs and the search stay put and the panel under them is
+ * the only part that scrolls.
  */
 export const BodyPanel = ({
   properties,
@@ -433,16 +433,41 @@ export const BodyPanel = ({
       </p>
     );
   }
-  const listTab = activeTab !== "anatomy" && activeTab !== "biomarkers";
+  const tabContent = (tab: PanelTab) => {
+    if (tab === "anatomy") return anatomy;
+    if (tab === "biomarkers")
+      return biomarkers ? (
+        <BiomarkerList
+          model={biomarkers}
+          rows={filterRows(biomarkers.rows, query)}
+          query={query}
+          otherOpen={panel.otherOpen}
+          onOther={(open) => onPanel({ type: "other", open })}
+        />
+      ) : null;
+    return (
+      <ListContent
+        tab={tab}
+        lists={lists}
+        query={query}
+        selectedId={selectedId}
+        onSelect={onSelect}
+        onHover={onHover}
+      />
+    );
+  };
   return (
-    // Not a control: it only hears Escape bubbling up from the tabs, the
-    // search field and the rows.
-    // eslint-disable-next-line jsx-a11y/no-static-element-interactions
-    <div
+    <Tabs
+      value={activeTab}
+      onValueChange={(value) => {
+        const tab = offeredTabs.find((offeredTab) => offeredTab === value);
+        if (tab) onPanel({ type: "tab", tab });
+      }}
       className={cn(
-        "twin-body-panel border-input flex min-h-0 flex-col gap-2 rounded-md border p-2",
+        "twin-body-panel border-input min-h-0 gap-2 rounded-md border p-2",
         className,
       )}
+      // Keys from the tabs, the search field and the rows all pass through here.
       onKeyDown={(event) => {
         const cleared =
           clearOnEscape(event.key, selectedId, onSelect) ||
@@ -451,15 +476,13 @@ export const BodyPanel = ({
         if (cleared) event.stopPropagation();
       }}
     >
-      <SegmentedControl
-        label={BODY_PANEL_LABEL}
-        options={offered}
-        value={activeTab}
-        onChange={(tab) => onPanel({ type: "tab", tab })}
-        size="sm"
-        // Five tabs do not fit the rail in one row.
-        className="flex-wrap self-start"
-      />
+      <TabsList aria-label={BODY_PANEL_LABEL}>
+        {offered.map((tab) => (
+          <TabsTrigger key={tab.value} value={tab.value} className="px-2 text-xs">
+            {tab.label}
+          </TabsTrigger>
+        ))}
+      </TabsList>
       {activeTab === "anatomy" ? null : (
         <Field
           type="search"
@@ -468,35 +491,21 @@ export const BodyPanel = ({
           onChange={(event) => onPanel({ type: "query", query: event.target.value })}
         />
       )}
-      {/* Not a control: the pointer leaving the rows ends the hover highlight. */}
-      {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
-      <div
-        className={SCROLL_AREA}
-        onMouseLeave={listTab ? () => onHover(null) : undefined}
-      >
-        {activeTab === "anatomy" ? (
-          anatomy
-        ) : activeTab === "biomarkers" ? (
-          biomarkers ? (
-            <BiomarkerList
-              model={biomarkers}
-              rows={filterRows(biomarkers.rows, query)}
-              query={query}
-              otherOpen={panel.otherOpen}
-              onOther={(open) => onPanel({ type: "other", open })}
-            />
-          ) : null
-        ) : (
-          <ListContent
-            tab={activeTab}
-            lists={lists}
-            query={query}
-            selectedId={selectedId}
-            onSelect={onSelect}
-            onHover={onHover}
-          />
-        )}
-      </div>
-    </div>
+      {/* Without forceMount only the active tab's panel is in the tree; it is the one part that scrolls. */}
+      {offered.map((tab) => (
+        <TabsContent
+          key={tab.value}
+          value={tab.value}
+          className={SCROLL_AREA}
+          onMouseLeave={
+            tab.value === "anatomy" || tab.value === "biomarkers"
+              ? undefined
+              : () => onHover(null)
+          }
+        >
+          {tabContent(tab.value)}
+        </TabsContent>
+      ))}
+    </Tabs>
   );
 };

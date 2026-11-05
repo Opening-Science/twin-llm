@@ -155,15 +155,21 @@ describe("DigitalTwinScreen", () => {
     expect(markup).not.toContain("Inventory");
   });
 
-  test("the body panel is tab buttons over one list, never a tablist or a capped box", () => {
+  test("the body panel is a tablist over one open tab panel, never a capped box", () => {
     const markup = html({ enabled: false }, bodyFilled);
-    expect(markup).toContain(`<div role="group" aria-label="${BODY_PANEL_LABEL}"`);
-    expect(markup).toContain(
-      'aria-pressed="true" class="segmented-item segmented-item-sm">Properties</button>',
+    expect(markup).toMatch(
+      new RegExp(`<div role="tablist"[^>]*aria-label="${BODY_PANEL_LABEL}"`),
     );
-    expect(markup).not.toContain('role="tablist"');
+    expect(markup).toMatch(
+      /<button[^>]*role="tab"[^>]*aria-selected="true"[^>]*>Properties<\/button>/,
+    );
+    expect(markup.match(/role="tabpanel"(?![^>]*hidden)/g)).toHaveLength(1);
     expect(markup).not.toContain("max-h-[");
-    expect(markup.match(/overflow-y-auto/g)).toHaveLength(1);
+    // Hidden tab panels are empty; the one shown is the only box that scrolls.
+    const shown = [...markup.matchAll(/<[a-z]+ [^>]*>/g)]
+      .map(([tag]) => tag)
+      .filter((tag) => !tag.includes('hidden=""'));
+    expect(shown.filter((tag) => tag.includes("overflow-y-auto"))).toHaveLength(1);
   });
 
   test("both sections can be filled at once", () => {

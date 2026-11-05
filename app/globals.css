@@ -1159,12 +1159,17 @@
 
   /* --- Body twin side panel (#458, features/digital-twin/body-panel.tsx) ---
      The one panel with tabs beside the inline 3D view. From lg it sits in the
-     view's row with the view's height (the same numbers as the canvas in
-     bodyloop-avatar.tsx); below lg it goes under the view and grows with its
-     content up to that height. Either way its list is the only thing that
-     scrolls: the tabs and search stay put. */
+     view's row with the view's height; below lg it comes after the live lines
+     and the playback bars and grows with its content up to that height.
+     Either way its active tab panel is the only thing that scrolls: the tabs
+     and search stay put. The canvas in bodyloop-avatar.tsx reads the same two
+     properties, so the view and the panel change height together. */
+  :root {
+    --twin-view-height: min(70vh, 640px);
+    --twin-view-min-height: 360px;
+  }
   .twin-side-panel {
-    @apply max-lg:max-h-[min(70vh,640px)] lg:col-start-2 lg:row-start-2 lg:h-[min(70vh,640px)] lg:min-h-[360px];
+    @apply max-lg:max-h-(--twin-view-height) lg:col-start-2 lg:row-start-2 lg:h-(--twin-view-height) lg:min-h-(--twin-view-min-height);
   }
   /* --- end of the side panel --- */
 

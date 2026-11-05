@@ -227,6 +227,18 @@ export type InitialFocus = Readonly<{
 
 export type PickedPart = Readonly<{ group: string | null; system: string | null }>;
 
+/**
+ * Inline beside the 3D view: the one panel, with the viewer's anatomy
+ * controls as its first tab. Its own component so a test reaches it without
+ * WebGL.
+ */
+export const TwinSidePanel = ({
+  anatomy,
+  panel,
+}: Readonly<{ anatomy: ReactNode; panel: BodyPanelProps }>) => (
+  <BodyPanel {...panel} anatomy={anatomy} className="twin-side-panel" />
+);
+
 /** BodyLoop helper geometry that must not show inside the (glass) scan. */
 export const BodyLoopAvatar = ({
   preview,
@@ -719,7 +731,8 @@ export const BodyLoopAvatar = ({
         className={
           environment.active
             ? "twin-environment-view relative overflow-hidden"
-            : "wearables-hero relative h-[min(70vh,640px)] min-h-[360px] overflow-hidden rounded-xl"
+            : // The same height as the side panel (`--twin-view-height` in globals.css).
+              "wearables-hero relative h-(--twin-view-height) min-h-(--twin-view-min-height) overflow-hidden rounded-xl"
         }
         // The 3D view takes focus (a click, or Tab); focused or hovered, the
         // keys walk (walk-controls.tsx). Inline, focus is also what lets the
@@ -993,7 +1006,7 @@ export const BodyLoopAvatar = ({
           ))}
         </div>
       ) : (
-        <BodyPanel {...rail.panel} anatomy={rail.anatomy} className="twin-side-panel" />
+        <TwinSidePanel anatomy={rail.anatomy} panel={rail.panel} />
       )}
       {inEnvironment ? <ResearchLine /> : null}
     </div>
