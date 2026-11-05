@@ -1,9 +1,7 @@
+import { toolsText } from "@/infrastructure/format-measure";
 import type { TurnSkill } from "@/infrastructure/skill-gate";
 
 /** The words on a skill's card (#457): pure, so the lines are tested. */
-
-export const toolsText = (count: number): string =>
-  count === 0 ? "no tools" : count === 1 ? "1 tool" : `${count} tools`;
 
 export const providerLine = (providers: readonly string[]): string =>
   providers.length === 1 && providers[0] === "ollama"

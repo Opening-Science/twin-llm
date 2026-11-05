@@ -14,7 +14,13 @@ import { providerLine } from "./skill-card-lines";
  */
 export const SkillDetail = ({ skill }: Readonly<{ skill: TurnSkill }>) => (
   <section aria-labelledby="skill">
-    <div className="flex items-start justify-between gap-4">
+    <Link
+      href="/customize"
+      className="text-muted-foreground hover:text-foreground text-sm"
+    >
+      ← Skills
+    </Link>
+    <div className="mt-3 flex items-start justify-between gap-4">
       <h2 id="skill" className="font-mono text-lg">
         /{skill.name}
       </h2>
