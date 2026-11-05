@@ -1,6 +1,8 @@
 import { EMPTY_VALUE, formatNumber } from "@/infrastructure/format-measure";
 import { type StatusTone } from "@/infrastructure/ui-kit/status-badge";
 
+import { LAB_PATH } from "./lab-hub";
+
 /**
  * The shape every Lab check returns: what was found, the evidence behind it,
  * and a command that repeats the check outside the app. Pure data, so the
@@ -23,7 +25,7 @@ export const STATUS_TONE: Readonly<Record<CheckStatus, StatusTone>> = {
 };
 
 /** Each check has its own page under the list (#459). */
-export const checkHref = (id: string): string => `/lab/checks/${id}`;
+export const checkHref = (id: string): string => `${LAB_PATH.checks}/${id}`;
 
 export type Evidence = Readonly<{ label: string; value: string; mono?: boolean }>;
 

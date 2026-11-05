@@ -12,7 +12,7 @@ import { type LabCheck, plural, shortHash } from "./lab-check";
 
 const HOW_TO = "bun --env-file=.env.local packages/audit/verify-cli.ts --check";
 
-/** What the card shows even when the check cannot run. */
+/** What the list and the check's page show even when the check cannot run. */
 export const auditChainBase = {
   id: "audit-chain",
   title: "Audit chain",

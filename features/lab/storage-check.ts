@@ -12,7 +12,7 @@ import { type LabCheck, plural, STATUS_LABEL } from "./lab-check";
  * Local storage (#144): whether the state folder, the env files, the mesh
  * files and the database connection are open to the owner's OS user only.
  * The findings come from `infrastructure/storage-scan.ts`, the same code the
- * startup check runs; this module only words the card. Names and modes only:
+ * startup check runs; this module only words the check. Names and modes only:
  * no password, URL or path under the home folder.
  */
 
@@ -21,13 +21,13 @@ const readSetting = (name: string): string =>
   `${name}="$(grep -m1 '^${name}=' .env.local | cut -d= -f2- | tr -d "\\"'")"`;
 
 /**
- * The shell lines that repeat the card by hand. `vitronic` is the mesh folder
- * as the card shows it: `data/vitronic` or `$VITRONIC_DATA_DIR`.
+ * The shell lines that repeat the check by hand. `vitronic` is the mesh folder
+ * as the check shows it: `data/vitronic` or `$VITRONIC_DATA_DIR`.
  */
 export const storageHowTo = (vitronic: string): string => {
   const meshFolder = vitronic.startsWith("$") ? `"${vitronic}"` : vitronic;
   return [
-    `${STORAGE_CHECK_COMMAND}   # the same findings as this card, names and modes only`,
+    `${STORAGE_CHECK_COMMAND}   # the same findings as this check, names and modes only`,
     "",
     "# By hand, Linux (on macOS: stat -f '%Lp' and find -perm +077).",
     "# Reads settings from .env.local without printing them; set by hand if not there.",
@@ -47,7 +47,7 @@ export const STORAGE_CHECK_ID = "local-storage";
 const ID = STORAGE_CHECK_ID;
 const TITLE = "Local storage";
 
-/** What the card shows even when the check cannot run. */
+/** What the list and the check's page show even when the check cannot run. */
 export const storageBase = (vitronic: string) =>
   ({ id: ID, title: TITLE, howTo: storageHowTo(vitronic) }) as const;
 

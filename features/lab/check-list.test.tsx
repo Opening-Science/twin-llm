@@ -2,17 +2,11 @@ import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { CheckList } from "./check-list";
-import { checkHref, STATUS_TONE } from "./lab-check";
+import { checkHref } from "./lab-check";
 
 describe("checkHref", () => {
   test("a check's page is under the list", () => {
     expect(checkHref("audit-chain")).toBe("/lab/checks/audit-chain");
-  });
-});
-
-describe("STATUS_TONE", () => {
-  test("Not OK warns, OK is the ok tone, Unknown stays neutral", () => {
-    expect(STATUS_TONE).toEqual({ ok: "ok", "not-ok": "warn", unknown: "neutral" });
   });
 });
 

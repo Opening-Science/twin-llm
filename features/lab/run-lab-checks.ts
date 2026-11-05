@@ -78,7 +78,7 @@ import { disclosureLedgerBase, disclosureLedgerCheck } from "./disclosure-ledger
  * The I/O half of the Lab page: reads the database, Ollama and files on this
  * machine, and hands what it found to the pure checks. Every check catches
  * its own failure, logs the reason here and shows a plain "could not run"
- * card with the same title and command as the working one, so one broken
+ * result with the same title and command as the working one, so one broken
  * source never hides the others.
  */
 
@@ -332,7 +332,7 @@ const checkSbom = async (): Promise<LabCheck> => {
 
 // --- Local storage ------------------------------------------------------------
 
-/** The mesh folder as the card writes it: relative inside the repository, else its variable. */
+/** The mesh folder as the check writes it: relative inside the repository, else its variable. */
 const shownVitronic = (): string => {
   const cwd = process.cwd();
   const dir = storageEnv().vitronicDir;
@@ -396,7 +396,7 @@ const checkDisclosureLedger = async (): Promise<LabCheck> =>
 // --- Section ------------------------------------------------------------------
 
 const VERIFIABILITY_INTRO =
-  "What runs on this machine, checked against what the repository says. Each check runs on the server when this page loads, and each card has a command that repeats it without the app. These are checks of this machine by this machine; they are not a remote attestation.";
+  "What runs on this machine, checked against what the repository says. Each check runs on the server when this page loads, and each check's page has a command that repeats it without the app. These are checks of this machine by this machine; they are not a remote attestation.";
 
 type CheckRun = Readonly<{ id: string; run: () => Promise<LabCheck> }>;
 

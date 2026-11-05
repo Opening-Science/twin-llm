@@ -78,7 +78,7 @@ export const localModelsHowTo = (tagsUrl: string | null): string => {
 
 export const LOCAL_MODELS_CHECK_ID = "local-models";
 
-/** What the page shows even when the check cannot run. */
+/** What the list and the check's page show even when the check cannot run. */
 export const localModelsBase = (tagsUrl: string | null) =>
   ({
     id: LOCAL_MODELS_CHECK_ID,
