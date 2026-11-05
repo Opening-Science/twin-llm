@@ -25,7 +25,7 @@ import { googleHealthEnv } from "@/infrastructure/env";
 import {
   getGoogleHealthCredentials,
   setGoogleHealthCredentials,
-} from "@/infrastructure/open-twin-adapters/google-health";
+} from "@/infrastructure/open-twin-adapters";
 
 import type { PreparedSync } from "@/features/wearables/audited-sync";
 import { resolveSyncDateWindow } from "@/features/wearables/sync-window";

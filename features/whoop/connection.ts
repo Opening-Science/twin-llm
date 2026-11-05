@@ -22,7 +22,7 @@ import { whoopEnv } from "@/infrastructure/env";
 import {
   buildWhoopFhirBundle,
   fetchWhoopWindow,
-} from "@/infrastructure/open-twin-adapters/whoop";
+} from "@/infrastructure/open-twin-adapters";
 
 import type { PreparedSync } from "@/features/wearables/audited-sync";
 import {

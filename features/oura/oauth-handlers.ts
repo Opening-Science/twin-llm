@@ -20,7 +20,7 @@ import type { RecordDisclosure } from "@/infrastructure/disclosure-ledger";
 import type { PersonalRead } from "@/infrastructure/personal-read-audit";
 import { lockedSkipEvent } from "@/infrastructure/vault-audit";
 import type { AppendInput } from "@/packages/audit/append";
-import { getAuthorizationUrl } from "@/infrastructure/open-twin-adapters/oura-authorize";
+import { getAuthorizationUrl } from "@/infrastructure/open-twin-adapters";
 
 /**
  * Oura authorize and callback GET, as factories, so the Next route files can

@@ -4,8 +4,10 @@ import { LOINC_CODINGS } from "@open-twin/fhir-core";
 import type { Observation } from "fhir/r4";
 
 import { asFetch } from "@/infrastructure/as-fetch";
-import { buildWhoopFhirBundle } from "@/infrastructure/open-twin-adapters/whoop";
-import { fetchWhoopWorkouts } from "@/infrastructure/open-twin-adapters/whoop-workout";
+import {
+  buildWhoopFhirBundle,
+  fetchWhoopWorkouts,
+} from "@/infrastructure/open-twin-adapters";
 
 import { SYNTHETIC_WHOOP_PAYLOAD } from "./fixtures/synthetic-sync-payload";
 

@@ -3,9 +3,11 @@ import { describe, expect, test } from "bun:test";
 import { SYNTHETIC_OURA_DATA } from "@/features/oura/fixtures/synthetic-sync-data";
 import { SYNTHETIC_WHOOP_PAYLOAD } from "@/features/whoop/fixtures/synthetic-sync-payload";
 
-import { aggregateWearableBundles } from "@/infrastructure/open-twin-adapters/aggregate";
-import { buildOuraFhirBundle } from "@/infrastructure/open-twin-adapters/oura-bundle";
-import { buildWhoopFhirBundle } from "@/infrastructure/open-twin-adapters/whoop";
+import {
+  aggregateWearableBundles,
+  buildOuraFhirBundle,
+  buildWhoopFhirBundle,
+} from "@/infrastructure/open-twin-adapters";
 
 const SYNTHETIC_SUBJECT = "synthetic-wearer-1";
 const TIMESTAMP = "2026-01-05T00:00:00Z";

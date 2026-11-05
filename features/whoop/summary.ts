@@ -1,9 +1,9 @@
 import { dayKey } from "@/infrastructure/day-key";
-import type { WhoopHostPayload } from "@/infrastructure/open-twin-adapters/whoop";
 import {
   WHOOP_HR_ZONES,
+  type WhoopHostPayload,
   whoopSportName,
-} from "@/infrastructure/open-twin-adapters/whoop-workout";
+} from "@/infrastructure/open-twin-adapters";
 import type { WhoopMetric, WhoopSummary } from "@/infrastructure/whoop-types";
 
 export type { WhoopMetric, WhoopSummary };
