@@ -13,20 +13,21 @@ The ui-kit's `StepTrace`, `UndoButton`, `HoldToConfirm`, `StatusLattice` and `Ra
 
 Synced (not vendored) at SHA:
 
-- `a9e126c952c91e19e064a962dda7d815a43564e5`
+- `c37d8004d93d5accb9b91bebcbd89376837776bd`
 
 See `docs/open-twin-pins.md` and `scripts/sync-open-twin.sh`. Checkout lives in gitignored `.open-twin/`.
 
 | Package                              | Path                                          | Pin                                        |
 | ------------------------------------ | --------------------------------------------- | ------------------------------------------ |
-| `@open-twin/fhir-core`               | `.open-twin/packages/fhir-core`               | `a9e126c952c91e19e064a962dda7d815a43564e5` |
-| `@open-twin/fhir-r4`                 | `.open-twin/packages/fhir-r4`                 | `a9e126c952c91e19e064a962dda7d815a43564e5` |
-| `@open-twin/interpretation-contract` | `.open-twin/packages/interpretation-contract` | `a9e126c952c91e19e064a962dda7d815a43564e5` |
-| `@open-twin/provider-oura`           | `.open-twin/packages/provider-oura`           | `a9e126c952c91e19e064a962dda7d815a43564e5` |
-| `@open-twin/provider-google-health`  | `.open-twin/packages/provider-google-health`  | `a9e126c952c91e19e064a962dda7d815a43564e5` |
-| `@open-twin/provider-whoop`          | `.open-twin/packages/provider-whoop`          | `a9e126c952c91e19e064a962dda7d815a43564e5` |
-| `@open-twin/provider-vitronic`       | `.open-twin/packages/provider-vitronic`       | `a9e126c952c91e19e064a962dda7d815a43564e5` |
-| `@open-twin/anchor-layer`            | `.open-twin/packages/anchor-layer`            | `a9e126c952c91e19e064a962dda7d815a43564e5` |
+| `@open-twin/fhir-core`               | `.open-twin/packages/fhir-core`               | `c37d8004d93d5accb9b91bebcbd89376837776bd` |
+| `@open-twin/fhir-r4`                 | `.open-twin/packages/fhir-r4`                 | `c37d8004d93d5accb9b91bebcbd89376837776bd` |
+| `@open-twin/aggregate`               | `.open-twin/packages/aggregate`               | `c37d8004d93d5accb9b91bebcbd89376837776bd` |
+| `@open-twin/interpretation-contract` | `.open-twin/packages/interpretation-contract` | `c37d8004d93d5accb9b91bebcbd89376837776bd` |
+| `@open-twin/provider-oura`           | `.open-twin/packages/provider-oura`           | `c37d8004d93d5accb9b91bebcbd89376837776bd` |
+| `@open-twin/provider-google-health`  | `.open-twin/packages/provider-google-health`  | `c37d8004d93d5accb9b91bebcbd89376837776bd` |
+| `@open-twin/provider-whoop`          | `.open-twin/packages/provider-whoop`          | `c37d8004d93d5accb9b91bebcbd89376837776bd` |
+| `@open-twin/provider-vitronic`       | `.open-twin/packages/provider-vitronic`       | `c37d8004d93d5accb9b91bebcbd89376837776bd` |
+| `@open-twin/anchor-layer`            | `.open-twin/packages/anchor-layer`            | `c37d8004d93d5accb9b91bebcbd89376837776bd` |
 
 `@open-twin/anchor-layer` is used for its data only (`data/anchor-layer.v1.json`, sha256 `7adc42afaa03ee568a9f8eea5b451a8b51c9851e116f90951009d1b31894682e`, checked against its sidecar by `bun run sync:verify`). Upstream compiled it from the Anchor workbook `2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx` (source sha256 `42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e`). What TwinLLM adds on top is listed in `docs/biomarkers.md`.
 
@@ -35,6 +36,7 @@ See `docs/open-twin-pins.md` and `scripts/sync-open-twin.sh`. Checkout lives in 
 - `infrastructure/open-twin-adapters/oura.ts` — `HostOuraTokenHandler.lastTokens()` (renamed from `getTokens()` because upstream now has its own); `getAuthorizationUrl` via `.open-twin` src path
 - `infrastructure/open-twin-adapters/whoop.ts` — `fetchWhoopWindow` / `buildWhoopFhirBundle` over the public barrel (`getWhoopData`, `buildWhoopBundleFromPayload`)
 - `infrastructure/open-twin-adapters/google-health.ts` — restore/persist credential helpers
+- `infrastructure/open-twin-adapters/aggregate.ts` — `aggregateWearableBundles` over `aggregate` from the public barrel; not read by any screen yet
 - Sync packaging only (no upstream `*.ts` edits): `workspace:*` → `file:../fhir-core`, then peer-pin for host install; flatten nested bun redirects
 - Upgrade: `bash scripts/sync-open-twin.sh <sha>` then `bun install` (see `docs/open-twin-pins.md`)
 

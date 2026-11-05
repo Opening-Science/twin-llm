@@ -7,10 +7,10 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-OPEN_TWIN_SHA="${1:-${OPEN_TWIN_SHA:-a9e126c952c91e19e064a962dda7d815a43564e5}}"
+OPEN_TWIN_SHA="${1:-${OPEN_TWIN_SHA:-c37d8004d93d5accb9b91bebcbd89376837776bd}}"
 OPEN_TWIN_REPO="${OPEN_TWIN_REPO:-https://github.com/Opening-Science/open-twin.git}"
 DEST="${ROOT}/.open-twin"
-PACKAGES=(fhir-core fhir-r4 provider-oura provider-google-health provider-whoop provider-vitronic interpretation-contract anchor-layer)
+PACKAGES=(fhir-core fhir-r4 aggregate provider-oura provider-google-health provider-whoop provider-vitronic interpretation-contract anchor-layer)
 
 echo "sync-open-twin: pinning ${OPEN_TWIN_SHA}"
 
@@ -20,6 +20,7 @@ cd "${DEST}"
 git sparse-checkout set \
   packages/fhir-core \
   packages/fhir-r4 \
+  packages/aggregate \
   packages/provider-oura \
   packages/provider-google-health \
   packages/provider-whoop \
@@ -35,7 +36,7 @@ if [[ "${GOT}" != "${OPEN_TWIN_SHA}" ]]; then
 fi
 
 # Standalone installs cannot resolve monorepo workspace:* protocol.
-for pkg in fhir-r4 provider-oura provider-google-health provider-whoop provider-vitronic; do
+for pkg in fhir-r4 aggregate provider-oura provider-google-health provider-whoop provider-vitronic; do
   python3 - <<PY
 from pathlib import Path
 p = Path("packages/${pkg}/package.json")
@@ -71,6 +72,7 @@ build_pkg() {
 
 build_pkg fhir-core
 build_pkg fhir-r4
+build_pkg aggregate
 build_pkg provider-oura
 build_pkg provider-google-health
 build_pkg provider-whoop
@@ -85,8 +87,8 @@ build_pkg anchor-layer
 # so they are not copied into the host tree.
 FHIR_VERSION="$(python3 -c "import json; print(json.load(open('${DEST}/packages/fhir-core/package.json'))['version'])")"
 # fhir-r4 keeps file:../fhir-core — @open-twin/fhir-core@0.1.0 is not on npm.
-# provider-vitronic keeps file:../fhir-core in dependencies so the first host
-# bun install can resolve it without hitting registry.npmjs.org (404).
+# provider-vitronic and aggregate keep file:../fhir-core in dependencies so the
+# first host bun install can resolve them without hitting registry.npmjs.org (404).
 for pkg in provider-oura provider-google-health provider-whoop; do
   python3 - <<PY
 import json

@@ -122,6 +122,7 @@
     "@clerk/nextjs": "7.6.4",
     "@googleapis/health": "2.0.0",
     "@modelcontextprotocol/sdk": "1.32.2",
+    "@open-twin/aggregate": "file:.open-twin/packages/aggregate",
     "@open-twin/anchor-layer": "file:.open-twin/packages/anchor-layer",
     "@open-twin/fhir-core": "file:.open-twin/packages/fhir-core",
     "@open-twin/fhir-r4": "file:.open-twin/packages/fhir-r4",
