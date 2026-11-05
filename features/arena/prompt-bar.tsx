@@ -360,6 +360,7 @@ export const PromptBar = ({
             commands={commands}
             activeIndex={active}
             onPick={pickCommand}
+            onHover={setActiveIndex}
             notice={notice}
           />
         ) : null}

@@ -34,19 +34,29 @@ export const unknownCommandHint = (draft: string): string =>
 export const commandDetailId = (name: string): string => `command-detail-${name}`;
 
 /**
- * What a command reads and may call (#455). The highlighted command's detail
- * is rendered twice: under its row, which a phone shows and which the option
- * names with `aria-describedby`, and beside the list from `sm` up, which is a
- * visual copy and hidden from assistive technology.
+ * What a command reads and may call (#455). What a command reads is the
+ * privacy point of the list, so it is on screen before anyone picks:
+ *
+ * - Below `sm` every row shows its detail under it, since a tap picks at once
+ *   and a phone has no hover to move the highlight.
+ * - From `sm` up the highlighted command's detail sits beside the list, and
+ *   pointing at a row highlights it, as in the `@` menu.
+ *
+ * Assistive technology gets one description, the highlighted option's: its
+ * detail under the row carries the id its `aria-describedby` names and stays
+ * in the accessibility tree from `sm` up (`sr-only`, not `hidden`). The other
+ * rows' details are visual copies passed `hidden`; the side pane is hidden
+ * as a whole.
  */
 const CommandDetail = ({
   command,
   id,
+  hidden,
   className,
-}: Readonly<{ command: Command; id?: string; className: string }>) => (
+}: Readonly<{ command: Command; id?: string; hidden: boolean; className: string }>) => (
   <div
     id={id}
-    aria-hidden={id === undefined ? true : undefined}
+    aria-hidden={hidden ? true : undefined}
     className={cn("text-muted-foreground text-xs leading-snug", className)}
   >
     <p>{readsLine(command.reads)}</p>
@@ -56,15 +66,20 @@ const CommandDetail = ({
   </div>
 );
 
-/** One option on one line: its name and what it does. The active one carries its detail. */
-const CommandOption = ({
+/**
+ * One option on one line: its name and what it does, with its detail under it.
+ * Exported for its test, which calls it to reach the button's handlers.
+ */
+export const CommandOption = ({
   command,
   active,
   onPick,
+  onHover,
 }: Readonly<{
   command: Command;
   active: boolean;
   onPick: (command: Command) => void;
+  onHover: () => void;
 }>) => (
   <li>
     <button
@@ -74,6 +89,7 @@ const CommandOption = ({
       aria-selected={active}
       aria-describedby={active ? commandDetailId(command.name) : undefined}
       onMouseDown={(event) => event.preventDefault()}
+      onPointerEnter={onHover}
       onClick={() => onPick(command)}
       className={cn(
         "hover:bg-muted flex w-full items-baseline gap-2 rounded-lg px-2 py-1.5 text-left transition-colors",
@@ -92,9 +108,12 @@ const CommandOption = ({
       <CommandDetail
         command={command}
         id={commandDetailId(command.name)}
-        className="px-2 pt-1 pb-2 sm:hidden"
+        hidden={false}
+        className="px-2 pt-1 pb-2 sm:sr-only"
       />
-    ) : null}
+    ) : (
+      <CommandDetail command={command} hidden className="px-2 pt-1 pb-2 sm:hidden" />
+    )}
   </li>
 );
 
@@ -106,19 +125,22 @@ export const CommandPalette = ({
   commands,
   activeIndex,
   onPick,
+  onHover,
   notice,
 }: Readonly<{
   commands: readonly Command[];
   activeIndex: number;
   onPick: (command: Command) => void;
+  /** Pointing at a row highlights it, so its detail shows beside the list. */
+  onHover: (index: number) => void;
   /** Replaces the empty-list line, e.g. after Enter on an unknown command. */
   notice?: string;
 }>) => {
   const firstSkill = commands.findIndex((command) => command.kind === "skill");
   const active = commands[activeIndex];
   const activeName = active?.name;
-  // Arrow keys move the highlight; keep its row, with the detail folded under
-  // it on a phone, in view inside the scrolling list.
+  // Arrow keys move the highlight; keep its row, with the detail under it on
+  // a phone, in view inside the scrolling list.
   useEffect(() => {
     if (!activeName) return;
     document
@@ -153,6 +175,7 @@ export const CommandPalette = ({
                   command={command}
                   active={index === activeIndex}
                   onPick={onPick}
+                  onHover={() => onHover(index)}
                 />
               </Fragment>
             ))}
@@ -165,7 +188,8 @@ export const CommandPalette = ({
             <p className="text-muted-foreground mt-0.5 text-xs leading-snug">
               {active.description}
             </p>
-            <CommandDetail command={active} className="mt-2" />
+            {/* The aside is aria-hidden already, so its copy needs no mark of its own. */}
+            <CommandDetail command={active} hidden={false} className="mt-2" />
           </aside>
         </div>
       )}
