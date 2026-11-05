@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 
 import {
   deriveKek,
+  type KdfCost,
   newDataKey,
   newKdfParams,
   newKeyId,
@@ -41,6 +42,8 @@ export type VaultServiceDeps = Readonly<{
   now: () => Date;
   /** Argon2id when true, scrypt otherwise (docs/privacy-design.md 2.2). */
   argon2: boolean;
+  /** KDF work factors for new wrapped keys; the production defaults when absent. */
+  kdfCost?: KdfCost;
   newToken?: () => string;
   /** Called after a session opens, to start the idle sweep. */
   onOpened?: () => void;
@@ -74,8 +77,9 @@ const wrapUnder = async (
   dek: Buffer,
   aad: Buffer,
   argon2: boolean,
+  cost: KdfCost | undefined,
 ): Promise<WrappedWith> => {
-  const kdf = newKdfParams({ argon2 });
+  const kdf = newKdfParams({ argon2, cost });
   const kek = await deriveKek(secret, kdf);
   try {
     return { kdf, ...wrapKey(kek, dek, aad) };
@@ -104,10 +108,11 @@ const wrapBoth = async (
   passphrase: string,
   code: string,
   argon2: boolean,
+  cost: KdfCost | undefined,
 ): Promise<Readonly<{ passphrase: WrappedWith; recovery: WrappedWith }>> => {
   const [byPassphrase, byCode] = await Promise.all([
-    wrapUnder(passphrase, dek, wrapAad(userKey, keyId, "passphrase"), argon2),
-    wrapUnder(code, dek, wrapAad(userKey, keyId, "recovery"), argon2),
+    wrapUnder(passphrase, dek, wrapAad(userKey, keyId, "passphrase"), argon2, cost),
+    wrapUnder(code, dek, wrapAad(userKey, keyId, "recovery"), argon2, cost),
   ]);
   return { passphrase: byPassphrase, recovery: byCode };
 };
@@ -126,6 +131,7 @@ export const sealRecord = async (
     createdAt: string;
     now: Date;
     argon2: boolean;
+    kdfCost?: KdfCost;
     retiring?: readonly RawKey[];
   }>,
 ): Promise<VaultRecord> => {
@@ -143,6 +149,7 @@ export const sealRecord = async (
           input.passphrase,
           code,
           input.argon2,
+          input.kdfCost,
         )),
       }),
     ),
@@ -278,6 +285,7 @@ export const setUpVault = async (
       createdAt: now.toISOString(),
       now,
       argon2: deps.argon2,
+      kdfCost: deps.kdfCost,
     });
     // The row first: a setup that cannot be recorded does not happen.
     await deps.audit(actorId, "setup");
@@ -350,6 +358,7 @@ export const recoverVault = async (
       createdAt: record.createdAt,
       now: deps.now(),
       argon2: deps.argon2,
+      kdfCost: deps.kdfCost,
       retiring: keys.retiring,
     });
     await deps.audit(actorId, "recoveryUsed");

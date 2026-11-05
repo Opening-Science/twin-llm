@@ -32,17 +32,27 @@ const man = (
   oracle: { systolic: [["2016-01-01", 140]], smoker: [], wellness: visits },
 });
 
-const cohort: OraclePerson[] = [
-  ...Array.from({ length: 20 }, (_, i) =>
+/**
+ * `afMen` men with AF recorded in mid-2021 (15% with a stroke before it, 45%
+ * after) and four times as many without AF (one in eight with a stroke).
+ */
+const cohortOf = (afMen: number): OraclePerson[] => [
+  ...Array.from({ length: afMen }, (_, i) =>
     man(`af${i}`, {
       af: "2021-07-01",
-      ...(i < 3 ? { stroke: "2018-06-01" } : i < 12 ? { stroke: "2023-06-01" } : {}),
+      ...(i < Math.round(0.15 * afMen)
+        ? { stroke: "2018-06-01" }
+        : i < Math.round(0.6 * afMen)
+          ? { stroke: "2023-06-01" }
+          : {}),
     }),
   ),
-  ...Array.from({ length: 80 }, (_, i) =>
-    man(`no${i}`, i < 10 ? { stroke: "2022-03-01" } : {}),
+  ...Array.from({ length: 4 * afMen }, (_, i) =>
+    man(`no${i}`, i < Math.round(0.5 * afMen) ? { stroke: "2022-03-01" } : {}),
   ),
 ];
+
+const cohort = cohortOf(20);
 
 const options = {
   endDay: "2026-01-01",
@@ -135,8 +145,12 @@ describe("the AF hazard factor (#295 rule change)", () => {
   });
 
   test("doubling the AF hazard doubles the planted ratio and leaves no-AF alone", () => {
-    const base = runOracleStudy(cohort, options);
-    const doubled = runOracleStudy(cohort, { ...options, afFactor: 2 });
+    // A quarter of the cohort (#465): the oracle sums a hazard per person-day,
+    // so two runs of 100 people took seconds. Every man is alike and the
+    // factor multiplies each AF-on day, so these hold at any size.
+    const small = cohortOf(5);
+    const base = runOracleStudy(small, options);
+    const doubled = runOracleStudy(small, { ...options, afFactor: 2 });
     const pick = (study: typeof base, id: string) =>
       study.comparisons.find((c) => c.id === id);
     expect(pick(doubled, "af-stroke")?.planted).toBeCloseTo(

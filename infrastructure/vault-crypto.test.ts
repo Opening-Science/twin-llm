@@ -6,6 +6,7 @@ import {
   argon2id,
   deriveKek,
   formatRecoveryCode,
+  KDF_DEFAULT_COST,
   kdfParamsProblem,
   newKdfParams,
   newRecoveryCode,
@@ -88,6 +89,31 @@ describe("key derivation (#142)", () => {
       salt: salt.toString("base64url"),
     });
     expect(Buffer.from(newKdfParams().salt, "base64url").length).toBe(16);
+  });
+
+  test("an injected cost changes only the work factors (#465)", () => {
+    const salt = Buffer.alloc(16, 7);
+    const cost = {
+      argon2id: { memoryKiB: 1024, passes: 1, parallelism: 1 },
+      scrypt: { N: 1024, r: 8, p: 1 },
+    };
+    expect(newKdfParams({ argon2: true, salt, cost })).toEqual({
+      name: "argon2id",
+      ...cost.argon2id,
+      salt: salt.toString("base64url"),
+    });
+    expect(newKdfParams({ argon2: false, salt, cost })).toEqual({
+      name: "scrypt",
+      ...cost.scrypt,
+      salt: salt.toString("base64url"),
+    });
+    expect(newKdfParams({ argon2: true, salt, cost: KDF_DEFAULT_COST })).toEqual(
+      newKdfParams({ argon2: true, salt }),
+    );
+    expect(KDF_DEFAULT_COST).toEqual({
+      argon2id: ARGON2ID_DEFAULTS,
+      scrypt: SCRYPT_DEFAULTS,
+    });
   });
 
   test("stored parameters outside the limits are refused before any work", async () => {
