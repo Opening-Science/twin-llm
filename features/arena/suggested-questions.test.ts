@@ -228,7 +228,7 @@ describe("wearableSuggestionKeys", () => {
 });
 
 describe("startersShown (#454)", () => {
-  test("an empty thread offers the chips, new or saved, whatever the mode", () => {
+  test("an empty list of turns offers the chips", () => {
     expect(startersShown([])).toBe(true);
   });
 
