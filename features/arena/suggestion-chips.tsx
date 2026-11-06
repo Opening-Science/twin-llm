@@ -7,8 +7,9 @@ import { Button } from "@/infrastructure/ui-kit/button";
 import type { SuggestedQuestion, SuggestedQuestions } from "./suggested-questions";
 
 /**
- * Suggested first questions for an empty chat. They are fetched once for a
- * new thread; a chip writes its question into the prompt and sends nothing.
+ * Suggested first questions for an empty thread, new or saved. They are
+ * fetched while `startersShown` holds and go with the first turn; a chip
+ * writes its question into the prompt and sends nothing.
  * A failed fetch shows no chips: the chat works without them.
  */
 

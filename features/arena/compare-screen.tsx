@@ -22,6 +22,7 @@ import { OutputsPanel } from "./outputs-panel";
 import { composerInsetClass, threadGridClass } from "./panel-layout";
 import { PromptBar } from "./prompt-bar";
 import { NO_SOURCE_FACTS, type PromptSourceFacts } from "./prompt-sources";
+import { startersShown } from "./suggested-questions";
 import { useSuggestedQuestions } from "./suggestion-chips";
 import { threadOutputs } from "./thread-outputs";
 import { conversationItems } from "./twin-card-state";
@@ -42,6 +43,8 @@ import { Welcome } from "./welcome";
  * Saved threads reach this screen only for their owner (see
  * `owned-thread.ts`), so there is no read-only mode here. Once an answer
  * shows a chart, the Outputs panel lists the thread's charts beside it.
+ * Every empty thread offers the suggested questions above the prompt
+ * (`startersShown`, #454), whatever the mode; they go with the first turn.
  *
  * `/twin` adds the twin card to the list, after the turns there were when it
  * was opened. It is not a turn, so no model ever sees it. `/compact` shows a
@@ -117,10 +120,7 @@ export const CompareScreen = ({
   });
   const compact = useCompactNote(currentThreadId, incognito);
   const items = useMemo(() => conversationItems(turns, twin.card), [turns, twin.card]);
-  const suggestions = useSuggestedQuestions(
-    threadId === null && turns.length === 0,
-    subjectRef,
-  );
+  const suggestions = useSuggestedQuestions(startersShown(turns), subjectRef);
   const outputs = useMemo(() => threadOutputs(turns), [turns]);
   const modelNameOf = useMemo(() => specialistModelIn(catalog), [catalog]);
   const [largeOutput, setLargeOutput] = useState(false);
