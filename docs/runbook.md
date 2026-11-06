@@ -183,15 +183,15 @@ bun run anchor:rotate -- --without-old-key   # the old key is lost or exposed
 
 ### `bash scripts/sync-open-twin.sh <sha>`
 
-Checks out open-twin at `<sha>` into the gitignored `.open-twin/`, builds `fhir-core`, `fhir-r4`, `interpretation-contract`, `anchor-layer` and the four providers, and pins their `fhir-core` peer. It never edits upstream `*.ts`. `@open-twin/interpreter` is not synced. Upgrade procedure: `docs/open-twin-pins.md`.
+Checks out open-twin at `<sha>` into the gitignored `.open-twin/`, builds `fhir-core`, `fhir-r4`, `aggregate`, `interpretation-contract`, `anchor-layer` and the four providers, and pins their `fhir-core` peer. It never edits upstream `*.ts`. `@open-twin/interpreter` is not synced. Upgrade procedure: `docs/open-twin-pins.md`.
 
 ```sh
-bash scripts/sync-open-twin.sh a9e126c952c91e19e064a962dda7d815a43564e5
+bash scripts/sync-open-twin.sh c37d8004d93d5accb9b91bebcbd89376837776bd
 git -C .open-twin rev-parse HEAD
 git -C .open-twin status --porcelain -- '*.ts' | wc -l
 ```
 
-- Good: `sync-open-twin OK: … @ a9e126c…`, `rev-parse` prints the same SHA, and porcelain prints `0`.
+- Good: `sync-open-twin OK: … @ c37d800…`, `rev-parse` prints the same SHA, and porcelain prints `0`.
 - Then run `bun install` and `bun run sync:verify`, as in the upgrade procedure in `docs/open-twin-pins.md`.
 - Last run: 2026-10-17 21:36 CEST (default SHA `a9e126c`; `rev-parse` matches; `anchor-layer` dist present; porcelain `*.ts` 0). Package.json rewrites for `workspace:*` → peer-pin are expected and are not `*.ts` edits.
 
