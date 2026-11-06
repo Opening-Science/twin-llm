@@ -69,8 +69,8 @@ export const effortLineOf = (
   });
 };
 
-/** What a stopped answer says (#366). */
+/** What a stopped answer says (#366, #373). */
 export const STOPPED_COPY = {
   title: "You stopped this answer",
-  body: "In a saved thread the server still finishes it and keeps it, so reloading the thread shows it. You can also ask this model again.",
+  body: "Any part of the answer it had written stays here. You can also ask this model again.",
 } as const;

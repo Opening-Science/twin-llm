@@ -6,8 +6,10 @@ import { trackModelAnswered } from "@/infrastructure/analytics-events";
 import { telemetryDisclosure } from "@/infrastructure/disclosure-ledger";
 import { recordDisclosure } from "@/infrastructure/disclosure-ledger-runtime";
 import { serverEnv } from "@/infrastructure/env";
+import { database } from "@/infrastructure/database";
 import { chatModelIsLocal } from "@/infrastructure/genome-gate";
 import { posthogServer } from "@/infrastructure/posthog";
+import { append } from "@/packages/audit/append";
 
 import { createStreamModelResponse } from "./create-stream-model-response";
 import { gbdLocalPortsIfImported } from "./gbd-local-tool-deps";
@@ -19,6 +21,7 @@ import {
   markModelResponseComplete,
   markModelResponseFailed,
   markModelResponseRefused,
+  markModelResponseStopped,
 } from "./persist-model-response";
 import { resolveLanguageModel } from "./resolve-language-model";
 import { loadSessionAudit } from "./response/load-session-audit";
@@ -44,10 +47,12 @@ export const streamModelResponse = createStreamModelResponse({
   loadAudit: loadSessionAudit,
   store: {
     writeComplete: markModelResponseComplete,
+    writeStopped: markModelResponseStopped,
     writeFailed: markModelResponseFailed,
     markRefused: markModelResponseRefused,
     loadViews: loadThreadViews,
   },
+  appendAudit: (input) => append(database(), input),
   analytics: {
     answered: trackModelAnswered,
     generation: async (facts) => {

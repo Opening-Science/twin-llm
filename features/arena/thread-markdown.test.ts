@@ -187,3 +187,36 @@ describe("threadMarkdown", () => {
     ).toBe("how-has-their-heart-rate-changed-across-their-records.md");
   });
 });
+
+describe("a stopped answer in an export (#373)", () => {
+  const exported = (text: string) =>
+    threadMarkdown(
+      {
+        title: "t",
+        turns: [
+          {
+            id: "t1",
+            prompt: "p",
+            answers: [answer({ status: "FAILED", stopped: true, text })],
+          },
+        ],
+      },
+      "2026-11-04T12:00:00.000Z",
+    );
+
+  test("keeps the part of the answer it wrote and says it was stopped", () => {
+    const markdown = exported(
+      "## Reasoning\nWorking it out\n\n## Answer\nWritten so far\n",
+    );
+    expect(markdown).toContain("Written so far\n\n_Stopped before it finished._");
+    expect(markdown).not.toContain("Working it out");
+    expect(markdown).not.toContain("Refused or failed");
+  });
+
+  test("with no Answer section yet, says only that", () => {
+    const markdown = exported("Okay, so the user wants me to explain this.");
+    expect(markdown).not.toContain("the user wants me");
+    expect(markdown).toContain("_Stopped before it finished._");
+    expect(markdown).not.toContain("Refused or failed");
+  });
+});

@@ -33,6 +33,8 @@ export const runNumberReview = async (
   model: LanguageModel,
   reply: string,
   toolResults: readonly TwinTurnToolResult[],
+  /** Stop (#373) ends the check too; the finished answer is kept without it. */
+  stop?: AbortSignal,
 ): Promise<NumberReview> => {
   const answer = reviewedAnswer(reply);
   const { numbers, skipped } = reviewNumbers(
@@ -51,7 +53,10 @@ export const runNumberReview = async (
       model,
       system: REVIEW_SYSTEM,
       prompt: reviewPrompt(answer, reviewToolText(toolResults), numbers),
-      abortSignal: AbortSignal.timeout(NUMBER_REVIEW_TIMEOUT_MS),
+      abortSignal: AbortSignal.any([
+        AbortSignal.timeout(NUMBER_REVIEW_TIMEOUT_MS),
+        ...(stop === undefined ? [] : [stop]),
+      ]),
     });
     return {
       reviewer: NUMBER_REVIEWER.name,

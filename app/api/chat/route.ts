@@ -1,3 +1,4 @@
+import { answerOwnership } from "@/features/chat/answer-ownership";
 import {
   chatRequestSchema,
   type ChatRequest,
@@ -6,10 +7,9 @@ import {
 import { startAnswer } from "@/features/arena/answer-runtime";
 import { guardChatRequest } from "@/features/chat/chat-protection";
 import { publicProviderFailure } from "@/features/chat/public-provider-failure";
+import { runningAnswers } from "@/features/chat/running-answers";
 import { runnableSkills } from "@/features/skills/load-skills";
 import { resolveActorId } from "@/infrastructure/auth-actor";
-import { findAppUserId } from "@/infrastructure/current-user";
-import { database } from "@/infrastructure/database";
 import { isAuthDisabled, serverEnv } from "@/infrastructure/env";
 import { fetchChatCatalog } from "@/infrastructure/fetch-model-catalog";
 import {
@@ -29,6 +29,10 @@ import { withUnlocked } from "@/infrastructure/vault-runtime";
  * target a turn this person owns. Auto (`agent:auto`) runs as the agent its
  * column names, which the turn stored when it started. Every
  * refusal is a plain sentence; internal errors stay in the server log.
+ *
+ * The answer is listed as running from here on, so `POST /api/chat/stop` can
+ * end it (#373). Closing this request does not: the browser going away leaves
+ * the answer to finish and be stored.
  */
 
 const refuse = (status: number, error: string): Response =>
@@ -38,27 +42,6 @@ const readBody = async (request: Request): Promise<ChatRequest | null> => {
   const body: unknown = await request.json().catch(() => null);
   const parsed = chatRequestSchema.safeParse(body);
   return parsed.success ? parsed.data : null;
-};
-
-type Ownership =
-  | Readonly<{ kind: "owner"; appUserId: string; modelName: string }>
-  | Readonly<{ kind: "missing" }>
-  | Readonly<{ kind: "someone-else" }>;
-
-/** The turn's thread must belong to the person making the call. */
-const ownershipOf = async (actorId: string, call: ChatRequest): Promise<Ownership> => {
-  const row = await database().modelResponse.findUnique({
-    where: { turnId_modelId: { turnId: call.turnId, modelId: call.modelId } },
-    select: {
-      modelName: true,
-      turn: { select: { thread: { select: { userId: true } } } },
-    },
-  });
-  if (row === null) return { kind: "missing" };
-  const appUserId = await findAppUserId(actorId);
-  return appUserId !== null && row.turn.thread.userId === appUserId
-    ? { kind: "owner", appUserId, modelName: row.modelName }
-    : { kind: "someone-else" };
 };
 
 export const POST = withUnlocked(async (request: Request): Promise<Response> => {
@@ -86,7 +69,7 @@ export const POST = withUnlocked(async (request: Request): Promise<Response> => 
     );
   }
 
-  const ownership = await ownershipOf(actorId, call);
+  const ownership = await answerOwnership(actorId, call);
   if (ownership.kind === "missing") {
     return refuse(400, "That turn hasn't been started for this model.");
   }
@@ -99,11 +82,21 @@ export const POST = withUnlocked(async (request: Request): Promise<Response> => 
     currentPrompt(call.messages),
     ownership.modelName,
   );
+  const running = runningAnswers().start(call);
   try {
-    return await startAnswer(actorId, ownership.appUserId, call, agent, {
-      canThink: modelCanThink(agent?.baseModelId ?? call.modelId, models),
-    });
+    const response = await startAnswer(
+      actorId,
+      ownership.appUserId,
+      call,
+      agent,
+      { canThink: modelCanThink(agent?.baseModelId ?? call.modelId, models) },
+      running,
+    );
+    // A refusal ran no model; a stream takes itself off the list when it ends.
+    if (response.status !== 200) running.release();
+    return response;
   } catch (error) {
+    running.release();
     console.error(
       "[chat] failed to start the model stream",
       publicProviderFailure(error),
