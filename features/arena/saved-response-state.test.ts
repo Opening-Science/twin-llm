@@ -76,3 +76,63 @@ describe("a refused answer on reload", () => {
     expect(markup).not.toContain("No answer came back from this model");
   });
 });
+
+describe("a stopped answer on reload (#373)", () => {
+  const row: SavedResponseRow = {
+    ...refusedRow(
+      "s-1",
+      "## Reasoning\nThe model working it out\n\n## Answer\nWhat it wrote before Stop\n",
+    ),
+    status: "STOPPED",
+  };
+
+  test("reads as stopped with its text, not as an error, and has no metrics", () => {
+    const state = toSavedResponseState(row);
+    expect(state.status).toBe("FAILED");
+    expect(state.stopped).toBe(true);
+    expect(state.text).toBe(row.text);
+    expect(state.metrics).toBe(null);
+    expect(state.refusal).toBe(undefined);
+  });
+
+  test("the column shows the text and says it was stopped, with no alert", () => {
+    const markup = renderToStaticMarkup(
+      createElement(AnswerColumn, {
+        response: toSavedResponseState(row),
+        prompt: "How is my heart rate?",
+        wearables: { oura: null, whoop: null, googleHealth: null, vitronic: null },
+        onRetry: () => undefined,
+      }),
+    );
+    expect(markup).toContain("What it wrote before Stop");
+    expect(markup).not.toContain("The model working it out");
+    expect(markup).toContain("You stopped this answer");
+    expect(markup).not.toContain('role="alert"');
+  });
+
+  test("stopped before any Answer section, the column says only that", () => {
+    const markup = renderToStaticMarkup(
+      createElement(AnswerColumn, {
+        response: toSavedResponseState({
+          ...row,
+          text: "Okay, so the user wants me to explain this.",
+        }),
+        prompt: "How is my heart rate?",
+        wearables: { oura: null, whoop: null, googleHealth: null, vitronic: null },
+        onRetry: () => undefined,
+      }),
+    );
+    expect(markup).not.toContain("the user wants me");
+    expect(markup).not.toContain("wrote no answer");
+    expect(markup).toContain("You stopped this answer");
+  });
+
+  test("is not streamed again when the thread opens", () => {
+    const turn: TurnState = {
+      id: "t-1",
+      prompt: "p",
+      answers: [toSavedResponseState(row)],
+    };
+    expect(answersToStream([turn], new Set())).toEqual([]);
+  });
+});

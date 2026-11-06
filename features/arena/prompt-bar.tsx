@@ -27,6 +27,7 @@ import {
   findCatalogRow,
   turnModelName,
 } from "@/infrastructure/model-catalog";
+import { cn } from "@/infrastructure/ui";
 import { Button } from "@/infrastructure/ui-kit/button";
 
 import { initialSelection, MODE_COPY, modeModelIds, modeProblem } from "./chat-mode";
@@ -110,6 +111,7 @@ export const PromptBar = ({
   onStop = () => undefined,
   onTwin,
   onCompact,
+  className,
 }: Readonly<{
   catalog: readonly CatalogModel[] | null;
   initialModelIds: readonly string[];
@@ -136,12 +138,14 @@ export const PromptBar = ({
     skill: string | null,
     effort: EffortLevel,
   ) => void;
-  /** Stop: closes this tab's open answer streams. */
+  /** Stop: ends this tab's open answers, on the server too in a saved thread (#373). */
   onStop?: () => void;
   /** `/twin`: show the twin card. Never a turn. */
   onTwin: () => void;
   /** `/compact`: draft a twin note of the thread (#43). Never a turn. */
   onCompact: () => void;
+  /** Extra classes for the bar, such as room for the Outputs panel. */
+  className?: string;
 }>) => {
   const router = useRouter();
   const wearables = useWearableStatus();
@@ -328,7 +332,12 @@ export const PromptBar = ({
         MODE_COPY[selection.mode].line);
 
   return (
-    <div className="bg-background/90 sticky bottom-0 z-10 px-4 pt-2 pb-3 backdrop-blur sm:px-6">
+    <div
+      className={cn(
+        "bg-background/90 sticky bottom-0 z-10 px-4 pt-2 pb-3 backdrop-blur sm:px-6",
+        className,
+      )}
+    >
       {suggestions ? (
         <SuggestionChips
           suggestions={suggestions}

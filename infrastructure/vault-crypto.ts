@@ -58,6 +58,22 @@ export const ARGON2ID_DEFAULTS = Object.freeze({
 /** The documented fallback: N = 2^17, r = 8, p = 1 (128 MiB). */
 export const SCRYPT_DEFAULTS = Object.freeze({ N: 2 ** 17, r: 8, p: 1 });
 
+/**
+ * The work factors of a new wrapped key. Production always uses
+ * `KDF_DEFAULT_COST`; tests pass a lower one so a suite under load does not
+ * spend seconds deriving keys. A stored key keeps its own parameters, so a
+ * lower cost never changes how an existing key opens.
+ */
+export type KdfCost = Readonly<{
+  argon2id: Readonly<{ memoryKiB: number; passes: number; parallelism: number }>;
+  scrypt: Readonly<{ N: number; r: number; p: number }>;
+}>;
+
+export const KDF_DEFAULT_COST: KdfCost = Object.freeze({
+  argon2id: ARGON2ID_DEFAULTS,
+  scrypt: SCRYPT_DEFAULTS,
+});
+
 /** Highest stored parameters this build accepts, so a crafted file cannot exhaust memory. */
 const LIMITS = Object.freeze({
   memoryKiB: 4 * 1024 * 1024,
@@ -152,12 +168,15 @@ const fromBase64Url = (text: string): Buffer => Buffer.from(text, "base64url");
 
 /** Fresh parameters for a new wrapped key: Argon2id when the runtime has it, else scrypt. */
 export const newKdfParams = (
-  options: Readonly<{ argon2: boolean; salt?: Buffer }> = { argon2: argon2Available() },
+  options: Readonly<{ argon2: boolean; salt?: Buffer; cost?: KdfCost }> = {
+    argon2: argon2Available(),
+  },
 ): KdfParams => {
   const salt = toBase64Url(options.salt ?? randomBytes(SALT_BYTES));
+  const cost = options.cost ?? KDF_DEFAULT_COST;
   return options.argon2
-    ? { name: "argon2id", ...ARGON2ID_DEFAULTS, salt }
-    : { name: "scrypt", ...SCRYPT_DEFAULTS, salt };
+    ? { name: "argon2id", ...cost.argon2id, salt }
+    : { name: "scrypt", ...cost.scrypt, salt };
 };
 
 /** Null when stored parameters are within what this build accepts; else why not. */

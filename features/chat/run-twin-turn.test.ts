@@ -13,7 +13,12 @@ import { type AppliedEffort, applyEffort } from "@/infrastructure/chat-effort";
 
 import { createChatTools } from "./chat-tools";
 import type { ResponseToolCall } from "./response/document-v1";
-import { lastStepWithoutTools, runTwinTurn, type TwinTurnFinish } from "./run-twin-turn";
+import {
+  lastStepWithoutTools,
+  runTwinTurn,
+  type TwinTurnFinish,
+  type TwinTurnStopped,
+} from "./run-twin-turn";
 import { buildTwinSystemPrompt } from "./twin-system-prompt";
 
 /**
@@ -157,6 +162,17 @@ const hookEvents = (model: MockLanguageModelV4, abortSignal?: AbortSignal) =>
     void Promise.resolve(result.consumeStream({ onError: () => undefined }));
   });
 
+/** Writes `written`, then says nothing until its signal fires, as a real fetch does. */
+const writesThenWaits = (written: string, signal: AbortSignal | undefined) =>
+  new ReadableStream<never>({
+    start: (controller) => {
+      const enqueue = (part: unknown) => controller.enqueue(part as never);
+      enqueue({ type: "text-start", id: "t" });
+      enqueue({ type: "text-delta", id: "t", delta: written });
+      signal?.addEventListener("abort", () => controller.error(signal.reason));
+    },
+  });
+
 const CITATION: KnowledgeCitation = {
   tool: "knowledge.knowledge_search",
   id: "opentwin-metric-glossary",
@@ -268,6 +284,80 @@ describe("runTwinTurn", () => {
     const { events, error } = await hookEvents(model);
     expect(events).toEqual(["error"]);
     expect(error).toBe(failure);
+  });
+
+  test("onAbort gets the text written so far, parsed, and a document (#373)", async () => {
+    const controller = new AbortController();
+    const model = new MockLanguageModelV4({
+      doStream: async ({ abortSignal }) => ({
+        stream: writesThenWaits("Written so far", abortSignal),
+      }),
+    });
+    const stopped = await new Promise<TwinTurnStopped>((resolve, reject) => {
+      const result = runTwinTurn(
+        { model, tools: {}, mode: "synthetic", loadAudit: async () => [] },
+        {
+          turnId: "turn-stop",
+          messages: [{ role: "user", content: "Question" }],
+          wearables: NO_WEARABLES,
+          abortSignal: controller.signal,
+        },
+        {
+          onFirstToken: () => void setTimeout(() => controller.abort(), 10),
+          onFinish: async () => reject(new Error("finished")),
+          onError: async (error) => reject(error),
+          onAbort: resolve,
+        },
+      );
+      void result.consumeStream({ onError: () => undefined });
+    });
+    expect(stopped.text).toBe("Written so far");
+    expect(stopped.parsed.answerText).toBe("Written so far");
+    expect(stopped.toolResults).toEqual([]);
+    expect((await stopped.buildDocument()).data_basis.tool_calls).toEqual([]);
+  });
+
+  test("an abort reported as an error keeps the finished steps' tool results (#373)", async () => {
+    const controller = new AbortController();
+    const calls = { count: 0 };
+    const model = new MockLanguageModelV4({
+      doStream: async () => {
+        calls.count += 1;
+        if (calls.count === 1) return streamOf(toolCall("c1"));
+        return streamOf([
+          { type: "text-start", id: "t" },
+          { type: "text-delta", id: "t", delta: "Written so far" },
+          { type: "error", error: new Error("provider says aborted") },
+        ]);
+      },
+    });
+    const stopped = await new Promise<TwinTurnStopped>((resolve, reject) => {
+      const result = runTwinTurn(
+        {
+          model,
+          tools: createChatTools(
+            { actor: "test", sessionId: "turn-error", mode: "synthetic" },
+            { query: ports },
+          ),
+          mode: "synthetic",
+          loadAudit: async () => [],
+        },
+        {
+          turnId: "turn-error",
+          messages: [{ role: "user", content: "Question" }],
+          wearables: NO_WEARABLES,
+          abortSignal: controller.signal,
+        },
+        {
+          onFirstToken: () => controller.abort(),
+          onFinish: async () => reject(new Error("finished")),
+          onError: async (error) => reject(error),
+          onAbort: resolve,
+        },
+      );
+      void result.consumeStream({ onError: () => undefined });
+    });
+    expect(stopped.toolResults.map((result) => result.toolName)).toEqual(["trend"]);
   });
 
   test("an aborted signal reaches onAbort, not onFinish", async () => {

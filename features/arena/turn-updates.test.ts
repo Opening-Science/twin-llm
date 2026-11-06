@@ -166,5 +166,6 @@ describe("effort and Stop (#366)", () => {
       reviewing: false,
     });
     expect(stopResponse(failed)).toBe(failed);
+    expect(stopResponse({ ...streaming, text: "So far" }).text).toBe("So far");
   });
 });
