@@ -45,6 +45,7 @@ import {
   VAULT_COOKIE,
 } from "@/infrastructure/vault-gate";
 import { vaultSessions } from "@/infrastructure/vault-session";
+import { TEST_KDF_COST } from "@/tests/support/vault-kdf-cost";
 import { sealedCipher, sealJson } from "@/infrastructure/field-cipher";
 import type { OAuthCookieJar } from "@/infrastructure/oauth-state";
 import type { PersonalDataStore } from "@/infrastructure/personal-data-store";
@@ -1005,6 +1006,7 @@ describe("locked personal data (#142)", () => {
         createdAt: "2026-10-31T00:00:00.000Z",
         now: new Date("2026-10-31T00:00:00.000Z"),
         argon2: false,
+        kdfCost: TEST_KDF_COST,
       }),
     );
     const sessions = vaultSessions();

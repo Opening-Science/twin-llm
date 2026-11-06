@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import { type VaultRead, type VaultRecord } from "@/infrastructure/vault-file";
 import { createVaultSessions } from "@/infrastructure/vault-session";
+import { TEST_KDF_COST } from "@/tests/support/vault-kdf-cost";
 
 import { VAULT_COPY } from "./vault-copy";
 import { clearedUnlockCookie, createVaultHandlers, unlockCookie } from "./vault-handlers";
@@ -30,6 +31,7 @@ const harness = (mode: "synthetic" | "personal" = "personal") => {
       },
       now: () => new Date(1_000_000),
       argon2: true,
+      kdfCost: TEST_KDF_COST,
       newToken: () => `token-${++tokens}`,
     }),
     sessions: () => sessions,
