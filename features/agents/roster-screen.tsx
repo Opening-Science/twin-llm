@@ -1,80 +1,31 @@
-import Link from "next/link";
-
 import { AUTO_AGENT } from "@/infrastructure/agents";
 import { Card } from "@/infrastructure/ui-kit/card";
+import { HubCard, HubGrid } from "@/infrastructure/ui-kit/hub-card";
 
-import { BaseModelText, costText, OfferBadge, SkillText, UsageText } from "./agent-parts";
-import {
-  articlesText,
-  AUTO_DOES_NOT,
-  shareText,
-  toolsText,
-  type AgentUsage,
-  type RosterEntry,
-} from "./roster";
+import { offerLine, UsageText } from "./agent-parts";
+import { AUTO_DOES_NOT, shareText, type AgentUsage, type RosterEntry } from "./roster";
 
 /**
- * Customize · Agents (#221): every agent as a card, then Auto in plain
- * words. Each card opens the agent's own page with its tools, routing and
- * scores. Server-rendered.
+ * Customize · Agents (#221): every agent as a card (its name, its role and
+ * whether it is offered here), then Auto in plain words. Each card opens
+ * the agent's own page with its model, tools, routing and scores (#457).
+ * Server-rendered.
  */
 
 export type RouterScore = Readonly<{ name: string; right: number; total: number }>;
 
-const AgentCard = ({ entry }: Readonly<{ entry: RosterEntry }>) => (
-  <li className="surface flex flex-col gap-3 p-4">
-    <div className="flex items-start justify-between gap-3">
-      <h3 className="text-base font-medium">
-        <Link href={`/customize/agents/${entry.id}`} className="hover:underline">
-          {entry.name}
-        </Link>
-      </h3>
-      <OfferBadge entry={entry} />
-    </div>
-    <p className="text-muted-foreground text-sm leading-relaxed">{entry.role}</p>
-    <dl className="lab-evidence text-sm">
-      <dt>Runs on</dt>
-      <dd className="break-normal">
-        <BaseModelText entry={entry} />
-      </dd>
-      <dt>Skill</dt>
-      <dd>
-        <SkillText entry={entry} />
-        {entry.skill === null ? null : (
-          <span className="text-muted-foreground">
-            {" "}
-            · {toolsText(entry.skill.tools.length)}
-          </span>
-        )}
-      </dd>
-      <dt>Literature</dt>
-      <dd className="break-normal">
-        {entry.literature.specialties.length > 1
-          ? "Every specialty"
-          : entry.literature.specialties.join(", ")}
-        <span className="text-muted-foreground">
-          {" "}
-          · {articlesText(entry.literature.articles)}
-        </span>
-      </dd>
-      <dt>Auto sends it</dt>
-      <dd className="break-normal">{entry.topics.join("; ")}</dd>
-      <dt>In your threads</dt>
-      <dd className="break-normal">
-        <UsageText usage={entry.usage} />
-      </dd>
-      <dt>Recorded cost</dt>
-      <dd>{costText(entry.usage)}</dd>
-    </dl>
-    <p className="text-sm">
-      <span className="text-muted-foreground">What it does not do: </span>
-      {entry.doesNot}
-    </p>
-    <Link href={`/customize/agents/${entry.id}`} className="chip self-start">
-      Tools, routing and scores
-    </Link>
-  </li>
-);
+const AgentCard = ({ entry }: Readonly<{ entry: RosterEntry }>) => {
+  const offer = offerLine(entry.offered);
+  return (
+    <HubCard
+      href={`/customize/agents/${entry.id}`}
+      title={entry.name}
+      line={entry.role}
+      meta={offer.text}
+      tone={offer.tone}
+    />
+  );
+};
 
 const AutoSection = ({
   agents,
@@ -107,9 +58,9 @@ const AutoSection = ({
             the guideline library.
           </li>
           <li>
-            Otherwise each specialist has a few topics, listed on its card as &ldquo;Auto
-            sends it&rdquo;. The agent with the most matching topics answers; a tie goes
-            to the one listed first.
+            Otherwise each specialist has a few topics, listed on its page under
+            &ldquo;What Auto sends it&rdquo;. The agent with the most matching topics
+            answers; a tie goes to the one listed first.
           </li>
           <li>
             When nothing matches, or only an agent that is not offered here matches,
@@ -177,11 +128,11 @@ export const RosterScreen = ({
       {note === null ? null : (
         <p className="text-muted-foreground mt-2 text-sm">{note}</p>
       )}
-      <ul className="mt-4 grid gap-3 md:grid-cols-2">
+      <HubGrid label="Agents" className="mt-4">
         {entries.map((entry) => (
           <AgentCard key={entry.id} entry={entry} />
         ))}
-      </ul>
+      </HubGrid>
     </section>
     <AutoSection agents={entries} usage={autoUsage} scores={routerScores} />
   </>

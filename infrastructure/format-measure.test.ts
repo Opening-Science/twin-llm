@@ -21,6 +21,7 @@ import {
   metricStem,
   propertyLabel,
   roundTo,
+  toolsText,
   type MeasureKind,
 } from "./format-measure";
 
@@ -47,6 +48,15 @@ describe("formatNumber", () => {
   ];
   test.each(cases)("%p at %p dp → %p", (value, decimals, expected) => {
     expect(formatNumber(value, decimals)).toBe(expected);
+  });
+});
+
+describe("toolsText", () => {
+  test("counts the tools in words, none as 'no tools'", () => {
+    expect(toolsText(0)).toBe("no tools");
+    expect(toolsText(1)).toBe("1 tool");
+    expect(toolsText(7)).toBe("7 tools");
+    expect(toolsText(1200)).toBe("1,200 tools");
   });
 });
 

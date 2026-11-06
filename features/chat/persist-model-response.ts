@@ -7,10 +7,13 @@ import { cipherForUser } from "@/infrastructure/field-cipher-runtime";
 import {
   type ModelResponseCompleteParams,
   type ModelResponseCompleteUpdate,
+  type ModelResponseStoppedParams,
+  type ModelResponseStoppedUpdate,
   type ModelResponseWritePort,
   writeModelResponseComplete,
   writeModelResponseFailed,
   writeModelResponseRefused,
+  writeModelResponseStopped,
 } from "./write-model-response-complete";
 
 /**
@@ -47,36 +50,52 @@ const sealOptionalJson = (
       ? null
       : sealJson(cipher, TABLE, column, id, value);
 
+const sealAnswer = <
+  Data extends ModelResponseCompleteUpdate["data"] | ModelResponseStoppedUpdate["data"],
+>(
+  cipher: FieldCipher,
+  id: string,
+  data: Data,
+) => ({
+  ...data,
+  text: cipher.sealText(TABLE, "text", id, data.text),
+  reasoningText: sealNullable(cipher, TABLE, "reasoningText", id, data.reasoningText),
+  attribution: sealOptionalJson(cipher, "attribution", id, data.attribution),
+  responseDocument: sealOptionalJson(
+    cipher,
+    "responseDocument",
+    id,
+    data.responseDocument,
+  ),
+  toolParts: sealOptionalJson(cipher, "toolParts", id, data.toolParts),
+});
+
 const completePort: ModelResponseWritePort = {
   update: async ({ where, data }) => {
     const { id, cipher } = await rowOf(where);
     return database().modelResponse.update({
       where: { id },
-      data: {
-        ...data,
-        text: cipher.sealText(TABLE, "text", id, data.text),
-        reasoningText: sealNullable(
-          cipher,
-          TABLE,
-          "reasoningText",
-          id,
-          data.reasoningText,
-        ),
-        attribution: sealOptionalJson(cipher, "attribution", id, data.attribution),
-        responseDocument: sealOptionalJson(
-          cipher,
-          "responseDocument",
-          id,
-          data.responseDocument,
-        ),
-        toolParts: sealOptionalJson(cipher, "toolParts", id, data.toolParts),
-      },
+      data: sealAnswer(cipher, id, data),
     });
   },
 };
 
 export const markModelResponseComplete = (params: ModelResponseCompleteParams) =>
   writeModelResponseComplete(completePort, params);
+
+export const markModelResponseStopped = (params: ModelResponseStoppedParams) =>
+  writeModelResponseStopped(
+    {
+      update: async ({ where, data }) => {
+        const { id, cipher } = await rowOf(where);
+        return database().modelResponse.update({
+          where: { id },
+          data: sealAnswer(cipher, id, data),
+        });
+      },
+    },
+    params,
+  );
 
 export const markModelResponseFailed = (
   target: Readonly<{ turnId: string; modelId: string }>,

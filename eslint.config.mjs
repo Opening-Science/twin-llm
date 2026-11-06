@@ -64,8 +64,13 @@ const asErrorsWith = (table) =>
 const aliasesOf = (...folders) =>
   folders.flatMap((folder) => [`@/${folder}/*`, `@/${folder}/**`]);
 
-const banImports = (patterns) => ({
-  "no-restricted-imports": ["error", { patterns }],
+/**
+ * `rule` defaults to the core rule. A ban that must hold alongside another
+ * block's patterns uses the typescript-eslint copy: ESLint replaces a rule's
+ * options per block rather than merging them.
+ */
+const banImports = (patterns, rule = "no-restricted-imports") => ({
+  [rule]: ["error", { patterns }],
 });
 
 const FEATURE_SOURCES = "features/**/*.{ts,tsx}";
@@ -146,6 +151,23 @@ export default defineConfig([
         message: "infrastructure/ may not import features or routes.",
       },
     ]),
+  },
+
+  {
+    // Test helpers stay in tests: source never imports tests/ (#465). Its
+    // own rule, so the walls above and the boundary debt below leave it on.
+    name: "twin-llm/no-tests-in-source",
+    files: ["app/**/*.{ts,tsx}", FEATURE_SOURCES, "infrastructure/**/*.{ts,tsx}"],
+    ignores: ["**/*.test.{ts,tsx}"],
+    rules: banImports(
+      [
+        {
+          group: aliasesOf("tests"),
+          message: "tests/ holds test helpers; source code never imports them.",
+        },
+      ],
+      "@typescript-eslint/no-restricted-imports",
+    ),
   },
 
   {

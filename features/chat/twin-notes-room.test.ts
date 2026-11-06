@@ -126,6 +126,7 @@ const streamWith = (model: MockLanguageModelV4) =>
     loadAudit: async () => [],
     store: {
       writeComplete: async () => undefined,
+      writeStopped: async () => undefined,
       writeFailed: async () => undefined,
       markRefused: async () => undefined,
       loadViews: async () => [],

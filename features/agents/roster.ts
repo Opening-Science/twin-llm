@@ -436,7 +436,3 @@ export const usageNote = (signedIn: boolean, usageRead: boolean): string | null 
     : !usageRead
       ? "Answer counts could not be read just now."
       : null;
-
-/** "1 tool", "7 tools". */
-export const toolsText = (count: number): string =>
-  `${formatNumber(count, 0)} ${count === 1 ? "tool" : "tools"}`;

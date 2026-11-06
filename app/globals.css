@@ -485,6 +485,26 @@
     @apply bg-muted text-foreground;
   }
 
+  /* Customize's sections (#457, `features/customize/customize-sections.tsx`):
+     on a wide screen the sections are a column of links on the left and one
+     section shows at a time on the right; on a phone the `.segmented` tab row
+     stays. The open section is marked by `aria-current`, as in the tab row. */
+  .customize-body {
+    @apply mt-8 lg:grid lg:grid-cols-[11rem_minmax(0,1fr)] lg:gap-10;
+  }
+
+  .customize-sections {
+    @apply flex-col gap-0.5 self-start lg:sticky lg:top-6;
+  }
+
+  .customize-section-link {
+    @apply text-muted-foreground hover:text-foreground rounded-md px-3 py-1.5 text-sm font-medium transition-colors;
+  }
+
+  .customize-section-link[aria-current="page"] {
+    @apply bg-muted text-foreground;
+  }
+
   /* Incognito chat: a calm banner and a dashed prompt bar, in the neutral
      tokens only, so the mode is plain to see without reading as a warning. */
   .incognito-banner {
@@ -1173,8 +1193,24 @@
 
   /* At least a few rows stay visible when the rail is short. */
   .twin-environment .twin-body-panel-list {
-    @apply max-h-none min-h-16 flex-1;
+    @apply min-h-16 flex-1;
   }
+
+  /* --- Body twin side panel (#458, features/digital-twin/body-panel.tsx) ---
+     The one panel with tabs beside the inline 3D view. From lg it sits in the
+     view's row with the view's height; below lg it comes after the live lines
+     and the playback bars and grows with its content up to that height.
+     Either way its active tab panel is the only thing that scrolls: the tabs
+     and search stay put. The canvas in bodyloop-avatar.tsx reads the same two
+     properties, so the view and the panel change height together. */
+  :root {
+    --twin-view-height: min(70vh, 640px);
+    --twin-view-min-height: 360px;
+  }
+  .twin-side-panel {
+    @apply max-lg:max-h-(--twin-view-height) lg:col-start-2 lg:row-start-2 lg:h-(--twin-view-height) lg:min-h-(--twin-view-min-height);
+  }
+  /* --- end of the side panel --- */
 
   /* A value drawn to scale (the context-window column on the models page).
      Neutral grey on purpose: the accent colour is reserved for things you
