@@ -155,6 +155,9 @@ enum ModelResponseStatus {
   /// Refused before any model ran (data-mode policy or a skill rule). The
   /// row's text holds TwinLLM's own refusal sentence, never a provider message.
   REFUSED
+  /// The person pressed Stop (#373). The row's text is what the model had
+  /// written by then, and the audit chain has a `chat.stop` row for it.
+  STOPPED
 
   @@map("model_response_status")
 }

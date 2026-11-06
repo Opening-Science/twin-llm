@@ -23,6 +23,8 @@ import {
   type UnrecordedModelCall,
 } from "@/infrastructure/disclosure-ledger";
 import { GENOME_IDS_BLOCKED_SENTENCE } from "@/infrastructure/free-text-check";
+import { chatStopEvent } from "@/infrastructure/chat-stop";
+import type { AppendInput } from "@/packages/audit/append";
 import type { GbdEstimatePorts } from "@/packages/query-tools/gbd-estimate";
 import type { ImportedToolDeps } from "@/packages/query-tools/imported-tools";
 import type { GenomeVariantsDeps } from "@/packages/query-tools/imported-variants";
@@ -41,10 +43,14 @@ import type { ResponseDocumentV1, ResponseToolCall } from "./response/document-v
 import { chatResponseMetadata } from "./response-document";
 import { runNumberReview } from "./run-number-review";
 import { runTwinTurn } from "./run-twin-turn";
+import type { RunningAnswer } from "./running-answers";
 import type { ThreadView } from "./thread-views";
 import { fitTwinNotes } from "./twin-notes-room";
 import { twinUIMessageResponse } from "./twin-ui-stream";
-import type { ModelResponseCompleteParams } from "./write-model-response-complete";
+import type {
+  ModelResponseCompleteParams,
+  ModelResponseStoppedParams,
+} from "./write-model-response-complete";
 
 /**
  * One model's answer, streamed to the browser, with where it is kept and who
@@ -64,6 +70,11 @@ import type { ModelResponseCompleteParams } from "./write-model-response-complet
  * finish chunk and keeps the connection alive with heartbeats. If the browser
  * leaves, the turn still finishes and is stored (when the store keeps it), so a
  * reload shows it.
+ *
+ * Stop (#373) is the one way a turn ends early, and only `POST /api/chat/stop`
+ * fires it (`running-answers.ts`). What the model had written is stored as
+ * STOPPED with what it read so far, and the stop goes on the audit chain. A
+ * caller that passes no `stop`, such as a scheduled run (#54), cannot be stopped.
  */
 
 export type StreamContext = Readonly<{
@@ -103,6 +114,8 @@ export type StreamContext = Readonly<{
    * audited by `start-answer`. Left out, Balanced as before.
    */
   effort?: AppliedEffort | null;
+  /** Set on an answer `POST /api/chat/stop` can end (#373). */
+  stop?: RunningAnswer;
 }>;
 
 /**
@@ -120,6 +133,7 @@ type RowTarget = Readonly<{ turnId: string; modelId: string }>;
 /** Where an answer is kept. Every write is keyed by the turn id and model. */
 export type AnswerStore = Readonly<{
   writeComplete: (params: ModelResponseCompleteParams) => Promise<unknown>;
+  writeStopped: (params: ModelResponseStoppedParams) => Promise<unknown>;
   writeFailed: (target: RowTarget) => Promise<unknown>;
   markRefused: (target: RowTarget & Readonly<{ sentence: string }>) => Promise<void>;
   /** The views the turn's thread already showed, for `list_views` and `open_view`. */
@@ -172,6 +186,8 @@ export type StreamModelResponseDeps = Readonly<{
   analytics: AnswerAnalytics;
   /** Query tool ports; left out, the tools use the warehouse. Tests pass fakes. */
   query?: QueryToolPorts;
+  /** Writes the `chat.stop` audit row. Left out, none: an incognito chat is not stopped here. */
+  appendAudit?: (input: AppendInput) => Promise<unknown>;
   /** An incognito chat: no live lookup is offered or sent, whatever the context says. */
   incognito?: boolean;
 }>;
@@ -205,6 +221,7 @@ export const createStreamModelResponse =
     const settings = deps.settings();
     const timer = createResponseTimer(modelId);
     const outcome = settleOnce<Outcome | null>();
+    void outcome.promise.then(() => context.stop?.release());
 
     const sources = {
       oura: context.ouraSummary !== null,
@@ -299,6 +316,7 @@ export const createStreamModelResponse =
         turnId,
         messages,
         wearables: turnWearables,
+        abortSignal: context.stop?.signal,
       },
       {
         onFirstToken: () => timer.markFirstToken(),
@@ -321,6 +339,7 @@ export const createStreamModelResponse =
                   }),
                   splitThinking(text).text,
                   toolResults,
+                  context.stop?.signal,
                 );
                 return { ...document, number_review: review };
               },
@@ -390,9 +409,44 @@ export const createStreamModelResponse =
           reviewing.settle(false);
           outcome.settle(null);
         },
-        onAbort: () => {
-          reviewing.settle(false);
-          outcome.settle(null);
+        onAbort: async ({ text, parsed, toolResults, buildDocument }) => {
+          try {
+            const document = await buildDocument().catch((error: unknown) => {
+              logStep("could not build the stopped answer's document")(error);
+              return null;
+            });
+            await deps.store
+              .writeStopped({
+                turnId,
+                modelId,
+                text,
+                reasoningText: parsed.reasoningText,
+                attribution: parsed.attribution,
+                document,
+                toolResults,
+              })
+              .catch(async (error: unknown) => {
+                logStep("could not store the stopped answer")(error);
+                await deps.store
+                  .writeFailed({ turnId, modelId })
+                  .catch(logStep("could not record the answer as failed"));
+              });
+            // The answer the person stopped is theirs either way: a failed
+            // audit write is logged and does not take the row with it.
+            await deps
+              .appendAudit?.(
+                chatStopEvent({
+                  actor: clerkId,
+                  sessionId: turnId,
+                  modelId: calledModelId,
+                }),
+              )
+              .catch(logStep("could not audit the stop"));
+          } finally {
+            // The stream must end whatever happened above.
+            reviewing.settle(false);
+            outcome.settle(null);
+          }
         },
       },
     );
