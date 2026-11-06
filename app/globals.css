@@ -466,6 +466,26 @@
     @apply bg-muted text-foreground;
   }
 
+  /* Customize's sections (#457, `features/customize/customize-sections.tsx`):
+     on a wide screen the sections are a column of links on the left and one
+     section shows at a time on the right; on a phone the `.segmented` tab row
+     stays. The open section is marked by `aria-current`, as in the tab row. */
+  .customize-body {
+    @apply mt-8 lg:grid lg:grid-cols-[11rem_minmax(0,1fr)] lg:gap-10;
+  }
+
+  .customize-sections {
+    @apply flex-col gap-0.5 self-start lg:sticky lg:top-6;
+  }
+
+  .customize-section-link {
+    @apply text-muted-foreground hover:text-foreground rounded-md px-3 py-1.5 text-sm font-medium transition-colors;
+  }
+
+  .customize-section-link[aria-current="page"] {
+    @apply bg-muted text-foreground;
+  }
+
   /* Incognito chat: a calm banner and a dashed prompt bar, in the neutral
      tokens only, so the mode is plain to see without reading as a warning. */
   .incognito-banner {

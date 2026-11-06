@@ -9,12 +9,18 @@ import { answersText, type AgentUsage, type RosterEntry } from "./roster";
 
 /** Pieces the roster list and an agent's own page both show. Server-rendered. */
 
-export const OfferBadge = ({ entry }: Readonly<{ entry: RosterEntry }>) =>
-  entry.offered ? (
-    <StatusBadge tone="ok">Offered here</StatusBadge>
-  ) : (
-    <StatusBadge tone="off">Not offered here</StatusBadge>
-  );
+/** Whether the chat's picker lists the agent with the active provider, in words and a tone. */
+export const offerLine = (
+  offered: boolean,
+): Readonly<{ text: string; tone: "ok" | "off" }> =>
+  offered
+    ? { text: "Offered here", tone: "ok" }
+    : { text: "Not offered here", tone: "off" };
+
+export const OfferBadge = ({ entry }: Readonly<{ entry: RosterEntry }>) => {
+  const { text, tone } = offerLine(entry.offered);
+  return <StatusBadge tone={tone}>{text}</StatusBadge>;
+};
 
 /** "Qwen3 8B" with its id, or why there is none. */
 export const BaseModelText = ({ entry }: Readonly<{ entry: RosterEntry }>) =>
