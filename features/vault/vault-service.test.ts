@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { type VaultAuditEvent } from "@/infrastructure/vault-audit";
 import { type VaultRead, type VaultRecord } from "@/infrastructure/vault-file";
 import { createVaultSessions } from "@/infrastructure/vault-session";
+import { TEST_KDF_COST } from "@/tests/support/vault-kdf-cost";
 
 import { VAULT_COPY } from "./vault-copy";
 import {
@@ -39,6 +40,7 @@ const harness = (options: Readonly<{ auditFails?: VaultAuditEvent }> = {}) => {
     },
     now: () => new Date(at),
     argon2: true,
+    kdfCost: TEST_KDF_COST,
     newToken: () => `token-${++tokens}`,
   };
   return {
@@ -258,6 +260,7 @@ describe("a rotation's retiring key (#141)", () => {
       createdAt: new Date(0).toISOString(),
       now: new Date(0),
       argon2: false,
+      kdfCost: TEST_KDF_COST,
       retiring: [{ keyId: RETIRING.keyId, dataKey: Buffer.from(RETIRING.dataKey) }],
     });
 

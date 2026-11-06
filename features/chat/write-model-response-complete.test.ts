@@ -7,9 +7,11 @@ import {
   type ModelResponseCompleteUpdate,
   type ModelResponseFailedUpdate,
   type ModelResponseRefusedUpdate,
+  type ModelResponseStoppedUpdate,
   writeModelResponseComplete,
   writeModelResponseFailed,
   writeModelResponseRefused,
+  writeModelResponseStopped,
 } from "./write-model-response-complete";
 
 const metrics = {
@@ -208,6 +210,40 @@ describe("writeModelResponseRefused", () => {
           status: "REFUSED",
           text: "/sleep runs only on local Ollama.",
           completedAt,
+        },
+      },
+    ]);
+  });
+});
+
+describe("writeModelResponseStopped (#373)", () => {
+  const stoppedAt = new Date("2026-11-04T12:00:00.000Z");
+
+  test("stores what the model had written, with no metrics", async () => {
+    const updates: ModelResponseStoppedUpdate[] = [];
+    await writeModelResponseStopped(
+      { update: async (args) => updates.push(args) },
+      {
+        turnId: "turn-1",
+        modelId: "synthetic/model",
+        text: "Resting heart rate rose",
+        reasoningText: null,
+        attribution: [],
+        toolResults: [],
+      },
+      () => stoppedAt,
+    );
+    expect(updates).toEqual([
+      {
+        where: { turnId_modelId: { turnId: "turn-1", modelId: "synthetic/model" } },
+        data: {
+          status: "STOPPED",
+          text: "Resting heart rate rose",
+          reasoningText: null,
+          attribution: [],
+          responseDocument: undefined,
+          toolParts: null,
+          completedAt: stoppedAt,
         },
       },
     ]);

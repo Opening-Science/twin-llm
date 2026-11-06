@@ -51,6 +51,7 @@ import type { WearableContext } from "./wearable-context";
 /** Keeps nothing: every write is dropped and no earlier views exist. */
 export const INCOGNITO_ANSWER_STORE: AnswerStore = Object.freeze({
   writeComplete: async () => undefined,
+  writeStopped: async () => undefined,
   writeFailed: async () => undefined,
   markRefused: async () => undefined,
   loadViews: async () => [],

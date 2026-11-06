@@ -65,3 +65,14 @@ export const streamingView = (reply: string): StreamingView => {
     ? { kind: "status", stage: "preparing" }
     : { kind: "answer", text: answer };
 };
+
+/**
+ * What a stopped answer shows (#373): the same as the moment it stopped. Text
+ * before the Answer section is the model working things out, often its own
+ * instructions, and was never on screen, so stopping does not reveal it. The
+ * row still stores the whole reply.
+ */
+export const stoppedAnswerText = (reply: string): string => {
+  const view = streamingView(reply);
+  return view.kind === "answer" ? view.text : "";
+};

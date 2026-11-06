@@ -188,6 +188,7 @@ describe("a chat turn passes what the person typed to the check (#346)", () => {
       loadAudit: async () => [],
       store: {
         writeComplete: async () => undefined,
+        writeStopped: async () => undefined,
         writeFailed: async () => undefined,
         markRefused: async () => undefined,
         loadViews: async () => [],

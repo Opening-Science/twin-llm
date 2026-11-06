@@ -146,8 +146,8 @@ export const answersStreaming = (turns: readonly TurnState[]): boolean =>
 
 /**
  * An answer the person stopped (#366): its stream is closed, so it ends here
- * as stopped. In a saved thread the server still finishes and stores it, and
- * a reload shows it.
+ * as stopped, keeping what it had written. In a saved thread the server stops
+ * too and stores the same (#373), and a reload shows it.
  */
 export const stopResponse = (response: ResponseState): ResponseState =>
   response.status === "STREAMING"

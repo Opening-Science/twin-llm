@@ -14,6 +14,7 @@ import {
   type ParsedTwinAnswer,
   parseTwinAnswer,
 } from "@/infrastructure/parse-twin-answer";
+import { CHAT_STOP_AUDIT_TOOL } from "@/infrastructure/chat-stop";
 import { skillOfAuditTool, type TurnSkill } from "@/infrastructure/skill-gate";
 import { UI_CONTEXT_AUDIT_TOOL, type UiContext } from "@/infrastructure/ui-context";
 import type { VitronicSummary } from "@/infrastructure/vitronic-types";
@@ -114,11 +115,18 @@ export type TwinTurnFinish = Readonly<{
   buildDocument: () => Promise<ResponseDocumentV1>;
 }>;
 
+/**
+ * What a turn had when its signal fired. `text` is the step being written, as
+ * `TwinTurnFinish.text` is the last step's; `toolResults` are the finished steps'.
+ */
+export type TwinTurnStopped = Omit<TwinTurnFinish, "usage">;
+
 export type TwinTurnHooks = Readonly<{
   onFirstToken: () => void;
   onFinish: (finish: TwinTurnFinish) => Promise<void>;
   onError: (error: unknown) => Promise<void>;
-  onAbort: () => void;
+  /** Fires once, and in place of the other two, when the signal has fired. */
+  onAbort: (stopped: TwinTurnStopped) => Promise<void> | void;
 }>;
 
 /**
@@ -172,6 +180,20 @@ export const twinTurnSystem = (
     twinNotes: deps.twinNotes ?? null,
   });
 
+type TurnStep = Readonly<{
+  toolCalls: readonly Readonly<{ toolCallId: string }>[];
+  toolResults: readonly (TwinTurnToolResult & Readonly<{ toolCallId: string }>)[];
+}>;
+
+const toolResultsOf = (steps: readonly TurnStep[]): readonly TwinTurnToolResult[] =>
+  steps.flatMap((step) =>
+    inCallOrder(step.toolCalls, step.toolResults).map((result) => ({
+      toolName: result.toolName,
+      input: result.input,
+      output: result.output,
+    })),
+  );
+
 export const runTwinTurn = (
   deps: TwinTurnDeps,
   { turnId, messages, wearables, abortSignal }: TwinTurnInput,
@@ -180,6 +202,56 @@ export const runTwinTurn = (
   const system = twinTurnSystem(deps, wearables);
   const maxSteps = deps.effort?.maxSteps ?? MAX_STEPS;
   const thinking = deps.effort ? thinkingProviderOptions(deps.effort) : null;
+
+  /** Text of the step being written; a new step starts over, as `onFinish`'s `text` does. */
+  const writing = { text: "", ended: false };
+  /** For an abort reported as an error, where the SDK hands over no steps. */
+  const finishedSteps: TurnStep[] = [];
+
+  const documentOf =
+    (parsed: ParsedTwinAnswer, toolResults: readonly TwinTurnToolResult[]) =>
+    async () => {
+      // The skill-run, UI context, effort and stop rows record the turn; they
+      // read nothing, so they are not tool calls.
+      const toolCalls = (await deps.loadAudit(turnId)).filter(
+        (row) =>
+          skillOfAuditTool(row.tool) === null &&
+          row.tool !== UI_CONTEXT_AUDIT_TOOL &&
+          row.tool !== EFFORT_AUDIT_TOOL &&
+          row.tool !== CHAT_STOP_AUDIT_TOOL,
+      );
+      const gbd = drainGbdTurn(turnId);
+      const guidelines = drainGuidelineTurn(turnId);
+      const knowledge = drainKnowledgeTurn(turnId);
+      const literature = drainLiteratureTurn(turnId);
+      return buildResponseDocumentV1({
+        parsed,
+        toolCalls,
+        mode: deps.mode,
+        gbdSources: gbd.sources,
+        gbdRows: gbd.rows,
+        guidelineSources: guidelines.sources,
+        knowledgeSources: knowledge.sources,
+        literatureSources: literature.sources,
+        skill: deps.skill?.name ?? null,
+        uiContext: deps.uiContext ?? null,
+        twinBody: twinBodyShown(toolResults.map((result) => result.output)),
+        effort: deps.effort ?? null,
+      });
+    };
+
+  const stoppedWith = async (steps: readonly TurnStep[]) => {
+    if (writing.ended) return;
+    writing.ended = true;
+    const parsed = parseTwinAnswer(writing.text, wearables);
+    const toolResults = toolResultsOf(steps);
+    await hooks.onAbort({
+      text: writing.text,
+      parsed,
+      toolResults,
+      buildDocument: documentOf(parsed, toolResults),
+    });
+  };
 
   return streamText({
     model: deps.model,
@@ -190,22 +262,26 @@ export const runTwinTurn = (
     })),
     tools: deps.tools,
     stopWhen: isStepCount(maxSteps),
-    prepareStep: ({ stepNumber }) => lastStepWithoutTools(stepNumber, maxSteps),
+    prepareStep: ({ stepNumber }) => {
+      writing.text = "";
+      return lastStepWithoutTools(stepNumber, maxSteps);
+    },
     // Merged over the model's defaults (`think: false` on Ollama), only when on.
     ...(thinking === null ? {} : { providerOptions: thinking }),
     abortSignal,
     onChunk: ({ chunk }) => {
-      if (chunk.type === "text-delta") hooks.onFirstToken();
+      if (chunk.type !== "text-delta") return;
+      writing.text += chunk.text;
+      hooks.onFirstToken();
+    },
+    onStepFinish: (step) => {
+      finishedSteps.push(step);
     },
     onFinish: async ({ text, totalUsage, steps }) => {
+      // A provider may end its stream quietly on abort; that is not an answer.
+      if (abortSignal?.aborted) return stoppedWith(steps);
       const parsed = parseTwinAnswer(text, wearables);
-      const toolResults = steps.flatMap((step) =>
-        inCallOrder(step.toolCalls, step.toolResults).map((result) => ({
-          toolName: result.toolName,
-          input: result.input,
-          output: result.output,
-        })),
-      );
+      const toolResults = toolResultsOf(steps);
       await hooks.onFinish({
         text,
         usage: {
@@ -215,41 +291,14 @@ export const runTwinTurn = (
         },
         parsed,
         toolResults,
-        buildDocument: async () => {
-          // The skill-run, UI context and effort rows record the turn; they
-          // read nothing, so they are not tool calls.
-          const toolCalls = (await deps.loadAudit(turnId)).filter(
-            (row) =>
-              skillOfAuditTool(row.tool) === null &&
-              row.tool !== UI_CONTEXT_AUDIT_TOOL &&
-              row.tool !== EFFORT_AUDIT_TOOL,
-          );
-          const gbd = drainGbdTurn(turnId);
-          const guidelines = drainGuidelineTurn(turnId);
-          const knowledge = drainKnowledgeTurn(turnId);
-          const literature = drainLiteratureTurn(turnId);
-          return buildResponseDocumentV1({
-            parsed,
-            toolCalls,
-            mode: deps.mode,
-            gbdSources: gbd.sources,
-            gbdRows: gbd.rows,
-            guidelineSources: guidelines.sources,
-            knowledgeSources: knowledge.sources,
-            literatureSources: literature.sources,
-            skill: deps.skill?.name ?? null,
-            uiContext: deps.uiContext ?? null,
-            twinBody: twinBodyShown(toolResults.map((result) => result.output)),
-            effort: deps.effort ?? null,
-          });
-        },
+        buildDocument: documentOf(parsed, toolResults),
       });
     },
     onError: async ({ error }) => {
+      // A provider may report the abort as an error part; the person asked for this.
+      if (abortSignal?.aborted) return stoppedWith(finishedSteps);
       await hooks.onError(error);
     },
-    onAbort: () => {
-      hooks.onAbort();
-    },
+    onAbort: ({ steps }) => stoppedWith(steps),
   });
 };

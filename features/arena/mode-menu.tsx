@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import {
   AUTO_MODEL_ID,
   type CatalogModel,
@@ -13,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/infrastructure/ui-kit
 import { SegmentedControl } from "@/infrastructure/ui-kit/segmented-control";
 
 import {
+  AUTO_AGENTS_LINK,
   CHAT_MODES,
   type ChatMode,
   MODE_COPY,
@@ -34,7 +37,8 @@ import { menuSubline } from "./model-selection";
  * one model at least) is disabled and the line under the lists says why. A
  * locked row (a model an incognito chat may not use) is disabled with its
  * reason on the row. The words are "specialists", never doctors: they are
- * research agents that describe data (docs/clinical-research.md).
+ * research agents that describe data (docs/clinical-research.md). In Auto the
+ * popover names no specialist, only the agents page that lists them (#456).
  */
 
 type Row = Readonly<{
@@ -154,12 +158,13 @@ export const ModeMenu = ({
           </p>
         </div>
         {selection.mode === "auto" ? (
-          <p className="text-muted-foreground border-border border-t px-4 py-3 text-xs">
-            Specialists Auto can pick here:{" "}
-            {specialistRows(offered)
-              .map((model) => model.name)
-              .join(", ")}
-            . Each describes data in its area, for research only.
+          <p className="border-border border-t px-4 py-3 text-xs">
+            <Link
+              href={AUTO_AGENTS_LINK.href}
+              className="text-muted-foreground hover:text-foreground underline underline-offset-2"
+            >
+              {AUTO_AGENTS_LINK.label}
+            </Link>
           </p>
         ) : (
           <div className="border-border max-h-72 overflow-y-auto border-y py-1">

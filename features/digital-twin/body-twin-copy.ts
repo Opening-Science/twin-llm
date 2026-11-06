@@ -20,8 +20,6 @@ export const OVERLAYS_PANEL = "Scan overlays";
 /** Stored keys of the viewer's collapsible panels (infrastructure/ui-kit/panel-memory.ts). */
 export const PANEL_IDS = {
   toolbar: "twin-toolbar",
-  anatomy: "twin-anatomy",
-  details: "twin-details",
   overlays: "twin-scan-overlays",
   /** Not a panel: the Heart chambers toggle (#53), kept the same way. */
   heartChambers: "twin-heart-chambers",
