@@ -484,6 +484,10 @@ const PERSONAL_READ_ROUTES: Readonly<Record<string, Entry>> = {
     kind: "open",
     why: "tool reads are audited per call, and BodyLoop context writes vitronic.chat.summary, but the Oura, Whoop and Google Health summaries put in the prompt in personal mode write no row yet",
   },
+  "POST /api/chat/stop": {
+    kind: "exempt",
+    why: "reads whose turn it is and ends a running answer; the answer's own stream writes chat.stop",
+  },
   "POST /api/chat/incognito": {
     kind: "open",
     why: "the same wearable context as /api/chat, through the same start",
@@ -1056,6 +1060,7 @@ describe("locked personal data (#142)", () => {
       "PATCH /api/personal-data/datasets/[id]",
       "POST /api/chat",
       "POST /api/chat/incognito",
+      "POST /api/chat/stop",
       "POST /api/gbd/imports",
       "POST /api/genome/run",
       "POST /api/google-health/sync",

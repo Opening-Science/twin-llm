@@ -20,6 +20,7 @@ import {
 } from "./begin-turn";
 import type { TurnState } from "./conversation";
 import { startTurn } from "./start-turn";
+import { stopOnServer } from "./stop-answer";
 import { historyFor } from "./turn-history";
 import {
   answersStreaming,
@@ -46,8 +47,9 @@ import {
  *   the open streams are not torn down by a route change.
  *
  * Stop (#366) aborts every open stream of this browser and marks those
- * answers stopped. The server is not told: a saved answer still finishes and
- * is stored, and a reload shows it.
+ * answers stopped. In a saved thread it also tells the server (#373), which
+ * ends each model call and stores what the model had written. Closing the tab
+ * is not Stop: the server finishes and stores the answer, and a reload shows it.
  *
  * In incognito mode (`begin-turn.ts`) the turns live in this state only:
  * `startTurn` is never called, the thread history is not touched and the URL
@@ -86,6 +88,12 @@ const BEGIN_TURN: BeginTurnDeps = {
   randomId: () => crypto.randomUUID(),
 };
 
+type OpenAnswer = Readonly<{
+  controller: AbortController;
+  turnId: string;
+  modelId: string;
+}>;
+
 export type SendModel = Readonly<{ id: string; name: string }>;
 
 export const useConversation = (
@@ -100,7 +108,7 @@ export const useConversation = (
   const [error, setError] = useState<string | null>(null);
   const [summaries, setSummaries] = useState<WearableSummaries>(NO_SUMMARIES);
   const streaming = useRef(new Set<string>());
-  const aborts = useRef(new Map<string, AbortController>());
+  const aborts = useRef(new Map<string, OpenAnswer>());
 
   useEffect(() => {
     let current = true;
@@ -127,7 +135,11 @@ export const useConversation = (
       ({ turnIndex, turnId, skill, uiContext, effort, response }) => {
         streaming.current.add(response.id);
         const stop = new AbortController();
-        aborts.current.set(response.id, stop);
+        aborts.current.set(response.id, {
+          controller: stop,
+          turnId,
+          modelId: response.modelId,
+        });
         const request = answerRequestFor(mode, {
           modelId: response.modelId,
           turnId,
@@ -239,14 +251,18 @@ export const useConversation = (
 
   const stop = useCallback(() => {
     const open = [...aborts.current.entries()];
-    open.forEach(([, controller]) => controller.abort());
+    open.forEach(([, { controller, turnId, modelId }]) => {
+      // An incognito answer has no row to end; closing its stream is all there is.
+      if (mode === "saved") void stopOnServer({ turnId, modelId });
+      controller.abort();
+    });
     setTurns((all) =>
       open.reduce(
         (updated, [responseId]) => updateResponse(updated, responseId, stopResponse),
         all,
       ),
     );
-  }, []);
+  }, [mode]);
 
   return {
     threadId,

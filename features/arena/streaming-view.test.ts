@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { streamingView } from "./streaming-view";
+import { stoppedAnswerText, streamingView } from "./streaming-view";
 
 const REASONING = "## Reasoning\nSynthetic reasoning line.\n\n";
 const EVIDENCE = "## Evidence Used\n- [oura.sleep.score.2026-01-01]\n\n";
@@ -100,5 +100,16 @@ describe("streamingView, one partial stage at a time", () => {
 
   test("no headings at all: status until the reply finishes", () => {
     expect(streamingView("Plain synthetic reply with no headings.")).toEqual(preparing);
+  });
+});
+
+describe("stoppedAnswerText (#373)", () => {
+  test("is the Answer section written so far, and nothing before it", () => {
+    expect(stoppedAnswerText(`${REASONING}${EVIDENCE}## Answer\nSo far`)).toBe("So far");
+  });
+
+  test("is empty before the Answer section, or with no headings at all", () => {
+    expect(stoppedAnswerText(REASONING)).toBe("");
+    expect(stoppedAnswerText("Okay, so the user wants me to explain this.")).toBe("");
   });
 });
