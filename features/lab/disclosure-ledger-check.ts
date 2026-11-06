@@ -14,7 +14,7 @@ import { type LabCheck, plural, shortHash } from "./lab-check";
  * while the vault is locked; the recipients are shown only to a viewer
  * whose data is unlocked (or on a synthetic install). Channels that cannot
  * be itemised (Clerk, Arcjet, PostHog in the browser) are named when
- * configured, so the card never claims more than the ledger holds.
+ * configured, so the check never claims more than the ledger holds.
  */
 
 const ID = "disclosure-ledger";

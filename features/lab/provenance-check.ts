@@ -45,7 +45,7 @@ const HOW_TO = [
   "grep -A2 'Synced (not vendored)' PROVENANCE.md",
 ].join("\n");
 
-/** What the card shows even when the check cannot run. */
+/** What the list and the check's page show even when the check cannot run. */
 export const provenanceBase = {
   id: "provenance",
   title: "Provenance",
@@ -87,7 +87,7 @@ const statusAndSummary = ({
     return {
       status: "unknown",
       summary:
-        "This is a development server. It serves changes as they are saved, so no commit describes the code it runs. Run `bun run build` and `bun run start` for a build this card can trace.",
+        "This is a development server. It serves changes as they are saved, so no commit describes the code it runs. Run `bun run build` and `bun run start` for a build this check can trace.",
     };
   }
   if (build.commit === null) {

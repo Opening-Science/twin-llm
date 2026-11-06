@@ -45,6 +45,7 @@ import {
   VAULT_COOKIE,
 } from "@/infrastructure/vault-gate";
 import { vaultSessions } from "@/infrastructure/vault-session";
+import { TEST_KDF_COST } from "@/tests/support/vault-kdf-cost";
 import { sealedCipher, sealJson } from "@/infrastructure/field-cipher";
 import type { OAuthCookieJar } from "@/infrastructure/oauth-state";
 import type { PersonalDataStore } from "@/infrastructure/personal-data-store";
@@ -482,6 +483,10 @@ const PERSONAL_READ_ROUTES: Readonly<Record<string, Entry>> = {
   "POST /api/chat": {
     kind: "open",
     why: "tool reads are audited per call, and BodyLoop context writes vitronic.chat.summary, but the Oura, Whoop and Google Health summaries put in the prompt in personal mode write no row yet",
+  },
+  "POST /api/chat/stop": {
+    kind: "exempt",
+    why: "reads whose turn it is and ends a running answer; the answer's own stream writes chat.stop",
   },
   "POST /api/chat/incognito": {
     kind: "open",
@@ -1001,6 +1006,7 @@ describe("locked personal data (#142)", () => {
         createdAt: "2026-10-31T00:00:00.000Z",
         now: new Date("2026-10-31T00:00:00.000Z"),
         argon2: false,
+        kdfCost: TEST_KDF_COST,
       }),
     );
     const sessions = vaultSessions();
@@ -1054,6 +1060,7 @@ describe("locked personal data (#142)", () => {
       "PATCH /api/personal-data/datasets/[id]",
       "POST /api/chat",
       "POST /api/chat/incognito",
+      "POST /api/chat/stop",
       "POST /api/gbd/imports",
       "POST /api/genome/run",
       "POST /api/google-health/sync",
@@ -1145,6 +1152,7 @@ const PAGES: Readonly<Record<string, "gated" | Readonly<{ open: string }>>> = {
     open: "the Lab hub: this machine's self-checks and file counts",
   },
   "app/(shell)/lab/checks/page.tsx": { open: "this machine's self-checks" },
+  "app/(shell)/lab/checks/[checkId]/page.tsx": { open: "this machine's self-checks" },
   "app/(shell)/lab/simulations/page.tsx": {
     open: "synthetic people of the pinned cohort",
   },

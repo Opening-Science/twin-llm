@@ -7,8 +7,8 @@ import { type LabCheck, plural, STATUS_LABEL } from "./lab-check";
  * Encryption at rest (#141): whether every listed personal column holds
  * sealed values (`tlenc1.`). The counts come from the same SQL as
  * `bun run doctor` (`plaintextCountSql` in `infrastructure/personal-columns.ts`);
- * this module only words the card. Table and column names and counts only,
- * never a value; the count reads nothing personal, so the card works while
+ * this module only words the check. Table and column names and counts only,
+ * never a value; the count reads nothing personal, so the check works while
  * the vault is locked.
  */
 
@@ -52,7 +52,7 @@ export const encryptionCheck = (input: EncryptionCheckInput): LabCheck => {
       ...encryptionBase,
       status: "unknown",
       summary:
-        "Synthetic mode: synthetic rows stay plain by design, so there is nothing to encrypt. In personal mode this card counts plain values in every listed column.",
+        "Synthetic mode: synthetic rows stay plain by design, so there is nothing to encrypt. In personal mode this check counts plain values in every listed column.",
       evidence,
       links,
     };

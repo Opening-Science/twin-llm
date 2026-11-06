@@ -3,7 +3,7 @@
 `/lab` (Lab in the sidebar) is one place to see what runs on this machine and to check it. Closed
 cloud health apps describe their privacy and attestation, but nobody outside can repeat the check.
 TwinLLM runs locally, so each claim it makes about itself can be tested here and then repeated by
-hand with the command on the card.
+hand with the command on the check's page.
 
 `/lab` is a hub of cards, one per experiment, and each card opens its own page with the same frame
 (`features/lab/lab-detail.tsx`): the way back to the hub, the title, one line on what it is, the
@@ -32,14 +32,16 @@ Research use only: nothing on these pages is about anyone's health.
 
 Each check runs on the server when the page loads (`features/lab/run-lab-checks.ts`) and hands what
 it found to a pure function that decides the status (`features/lab/*-check.ts`, each with a test).
-A card says OK, Not OK or Unknown in words, shows the evidence, and gives a shell command that
-repeats the check without the app. A check that cannot run shows Unknown with a plain sentence; the
+`/lab/checks` is one list, a row per check with its state in words (OK, Not OK or Unknown) and
+its title (`features/lab/check-list.tsx`, #459); each row opens `/lab/checks/<id>`, the check's
+own page in the same frame, with what it found as the lead line, the evidence, and a shell command
+that repeats the check without the app. A check that cannot run shows Unknown with a plain sentence; the
 reason goes to the server log only.
 
 | Check                      | What it proves                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | What it does not prove                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Local only                 | Whether `LOCAL_ONLY` is on, the chat provider, and for each configured service (chat models, Carbon-X, GBD, PostHog, Clerk, Arcjet, and the Oura, Whoop and Google Health syncs) whether it runs on this machine. A wearable app that is set counts as off this machine even with `LOCAL_ONLY` on, since the switch does not turn syncs off. Names and switches only; no key or URL is shown.                                                                                                                                                                                                                                                                                                                                                                             | That nothing else leaves the machine. The check reads the configuration, not the network ([providers.md](providers.md#local-only-mode)).                                                                                                                                                                                                                                                                                                                                        |
-| Local storage              | Whether the state folder (`$TWINLLM_STATE_DIR`), `.env.local`, the BodyLoop mesh folder and every file in it are open to the owner's OS user only (mode and owner), whether `DATABASE_URL` is a socket in the state folder or loopback TCP with a password, whether the app's role is a superuser, what `listen_addresses` allows and whether statement logging is off (#144). The same findings the server checks at startup: personal mode refuses to start on any of them, synthetic mode warns. Names, modes and fixes only.                                                                                                                                                                                                                                          | That no program running as the same OS user can read the data; it can read `.env.local` and open the socket. Root can read anything. Whether a sign-in without a password is refused needs a second connection, so `bun run lab:storage` and `bun run doctor` check it, not the card.                                                                                                                                                                                           |
+| Local storage              | Whether the state folder (`$TWINLLM_STATE_DIR`), `.env.local`, the BodyLoop mesh folder and every file in it are open to the owner's OS user only (mode and owner), whether `DATABASE_URL` is a socket in the state folder or loopback TCP with a password, whether the app's role is a superuser, what `listen_addresses` allows and whether statement logging is off (#144). The same findings the server checks at startup: personal mode refuses to start on any of them, synthetic mode warns. Names, modes and fixes only.                                                                                                                                                                                                                                          | That no program running as the same OS user can read the data; it can read `.env.local` and open the socket. Root can read anything. Whether a sign-in without a password is refused needs a second connection, so `bun run lab:storage` and `bun run doctor` check it, not the page.                                                                                                                                                                                           |
 | Audit chain                | The audit rows hash correctly in `seq` order and each points at the one before. The page reads them in pages of 2,000, gives the server a turn between pages and reads at most 50,000 rows per load (`features/lab/audit-chain-walk.ts`); a longer log is checked over several loads and says how far it got. Shows rows checked, the first broken row and the latest hash checked. Then the chain against its latest signed anchor (#300): the anchor's row and time, whether its signature holds and the chain matches, the key id and the public key. A chain shorter than the anchor, a different hash at the anchored row, a bad signature or a removed line of the anchors file is Not OK; no key or no anchor yet is Unknown. The card takes the worse of the two. | Rows this server has already checked are not read again while it runs, so a change to an older row shows up after a restart or with the command, which reads every row. Rows added since the latest anchor (at most `AUDIT_ANCHOR_INTERVAL_MINUTES`, default 10) can still be removed unseen. The anchors file is on the same disk: someone who can write as the owner can replace the key and the file, which `bun run anchor:export` and a copy kept elsewhere guard against. |
 | What left this machine     | The disclosure ledger (#140) hashes correctly in `seq` order and each row points at the one before, with rows checked, the first broken row and the latest hash. To a viewer whose data is unlocked (or on a synthetic install) it shows running totals per recipient: events (and how many synthetic), values sent as references, size and the last time. Names the configured channels the ledger cannot itemise (Clerk, Arcjet, PostHog in the browser). An empty ledger is Unknown.                                                                                                                                                                                                                                                                                   | That nothing left outside the ledger: it covers the paths in `tests/disclosures/outbound-paths.test.ts`. Free text is named by kind, not checked for stored values. Its signed anchor works as on the Audit chain card, with the same limits.                                                                                                                                                                                                                                   |
 | Local models               | Whether `OLLAMA_BASE_URL` is this machine, and the models Ollama lists there (`/api/tags`) with digest, size and family. An address on another machine is Not OK whether or not it answers. The command reads the same address (host, port and path only). The digest's start is the ID `ollama list` prints.                                                                                                                                                                                                                                                                                                                                                                                                                                                             | Where the weights came from, or that they are the published ones. The digest identifies what Ollama holds; compare it with the registry yourself.                                                                                                                                                                                                                                                                                                                               |
@@ -53,11 +55,11 @@ not trust the machine. Paths on the page are relative to the repository root. A 
 it is written as its variable (`$ANATOMY_DATA_DIR`, `$SYNTHEA_JAR`), so no home path is shown, and
 the command first reads that one setting from `.env.local` into the shell without printing it.
 
-If a check cannot run, its card keeps the same title and command as the working card, so the
+If a check cannot run, its page keeps the same title and command as the working check, so the
 command still repeats it by hand.
 
-Above the cards on `/lab/checks` a status lattice (#310) says the checks ran on this load, how many came out OK, Not
-OK and Unknown, and how long they took.
+Above the list on `/lab/checks` a status lattice (#310) says the checks ran on this load, how many came out OK, Not
+OK and Unknown, and how long they took. A check's page runs that one check again on its load.
 
 ## Simulations
 
@@ -135,10 +137,10 @@ formula gets a leading `'`). Only files inside the repository are read, each at 
 ## Commands
 
 ```bash
-# Local only: the same switches and service list as the card, names only
+# Local only: the same switches and service list as its page, names only
 bun run lab:local-only
 
-# Local storage: the card's findings plus a sign-in without a password. Exit 0 OK, 1 Not OK, 2 Unknown
+# Local storage: the page's findings plus a sign-in without a password. Exit 0 OK, 1 Not OK, 2 Unknown
 bun run lab:storage
 
 # Audit chain, every row (read-only). Exit 0 OK, 1 broken, 2 no rows, 64 bad flags
@@ -155,7 +157,7 @@ bun run anchor:export   # the newest anchors and the public key, to keep somewhe
 sha256sum .sbom/twin-llm.cdx.json
 fresh="$(mktemp)" && bun run sbom --out "$fresh" && sha256sum "$fresh"
 
-# Models and pinned files (the cards print the exact lines for this machine)
+# Models and pinned files (their pages print the exact lines for this machine)
 ollama list
 sha256sum .synthea/cache/synthea-with-dependencies.jar data/anatomy/*.glb
 ```
@@ -168,7 +170,7 @@ sha256sum .synthea/cache/synthea-with-dependencies.jar data/anatomy/*.glb
 `package.json` and writes CycloneDX 1.6 JSON with no extra tool. Every package the lockfile
 resolves is listed once, with its package URL and the lockfile's integrity hash as hex SHA-512. The
 open-twin packages are local `file:` packages with no registry hash; their path is kept as a
-property. `bun run sbom --out <path>` writes the file somewhere else, which the Lab card's command
+property. `bun run sbom --out <path>` writes the file somewhere else, which the Lab check's command
 uses so it never overwrites the file it is checking. The file has no timestamp or serial number, so the same lockfile always gives the same
 bytes. The lockfile covers development tools as well as what the app ships, so the list is longer
 than the running app needs.

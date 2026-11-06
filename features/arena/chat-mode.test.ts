@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
+import { AGENTS } from "@/infrastructure/agents";
 import {
   AUTO_MODEL_ID,
   type CatalogModel,
@@ -7,10 +8,12 @@ import {
 } from "@/infrastructure/model-catalog";
 
 import {
+  AUTO_AGENTS_LINK,
   initialEffort,
   initialModelIds,
   initialSelection,
   manualAnswerCount,
+  MODE_COPY,
   modeModelIds,
   modeProblem,
   modeSummary,
@@ -291,5 +294,15 @@ describe("a new chat and a reopened thread (#386)", () => {
       mode: "manual",
       effort: "quick",
     });
+  });
+});
+
+describe("the Auto popover (#456)", () => {
+  test("the copy names no specialist; the roster stays on the agents page", () => {
+    // Every agent in the roster, not only the test catalog's two, so one added later is covered.
+    const names = AGENTS.map((agent) => agent.name);
+    expect(specialistRows(CATALOG).map((row) => row.name)).toEqual(["General", "Sleep"]);
+    const copy = `${MODE_COPY.auto.line} ${AUTO_AGENTS_LINK.label}`;
+    expect(names.filter((name) => copy.includes(name))).toEqual([]);
   });
 });

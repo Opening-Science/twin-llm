@@ -58,6 +58,19 @@ export const incognitoChatRequestSchema = z
 
 export type IncognitoChatRequest = Readonly<z.infer<typeof incognitoChatRequestSchema>>;
 
+/**
+ * Body of `POST /api/chat/stop` (#373): the answer to end, by its turn and
+ * model, the key of its row. Closed, and it carries no text.
+ */
+export const stopRequestSchema = z
+  .object({
+    modelId: z.string().min(1).max(MAX_MODEL_ID_CHARS),
+    turnId: z.string().min(1),
+  })
+  .strict();
+
+export type StopRequest = Readonly<z.infer<typeof stopRequestSchema>>;
+
 /** The prompt this request answers: its last user message, or "" if none. */
 export const currentPrompt = (
   messages: readonly Readonly<{ role: "user" | "assistant"; content: string }>[],

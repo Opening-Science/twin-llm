@@ -23,8 +23,8 @@ tab below.
 
 ## The Biomarkers tab
 
-The fourth tab of the body panel (Properties · Markers · Measurements ·
-Biomarkers). The Demo body shows only this tab, since it has no scan.
+The last tab of the body panel (Anatomy · Properties · Markers · Measurements ·
+Biomarkers). The Demo body shows Anatomy and this tab, since it has no scan.
 
 - One row per Anchor marker (`bm:BM-107`), under Anchor's own system, then a
   **Vitals** group (`vital:heartRate`). Search also matches the Anchor id, the

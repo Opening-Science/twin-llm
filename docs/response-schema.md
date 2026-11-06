@@ -82,7 +82,8 @@ documents. Its `ui.context` audit row is left out of `tool_calls` too.
 `thorough`, `deep`, `ultra`), `thinking` (`on`, `off`, `unavailable`,
 `provider-default`), `max_steps` and `review`. It is set by the chat host and absent from
 the evaluation harness's documents and older ones. Its `chat.effort` audit row is left
-out of `tool_calls`. `number_review` (#366) is the Ultra number check: `reviewer`,
+out of `tool_calls`, and so is the `chat.stop` row of a stopped answer (#373).
+`number_review` (#366) is the Ultra number check: `reviewer`,
 `status` (`done` or `failed`), `items` (each `text`, `verdict` of `supported`,
 `unsupported` or `unchecked`, a `note` for `unsupported`, and `matched`, what the
 deterministic number matcher found) and `skipped`, the numbers past the first 30. It is
@@ -243,7 +244,11 @@ the row fails, the row is marked `FAILED` rather than left `STREAMING`
 (`features/chat/finish-model-response.ts`). A turn refused before any model
 runs (data-mode policy or a skill rule) builds no document: its row is marked
 `REFUSED` with TwinLLM's refusal sentence as its text
-(`features/chat/start-answer.ts`), and a reload shows that sentence.
+(`features/chat/start-answer.ts`), and a reload shows that sentence. An answer
+the person stopped (#373) gets its document from what it had written and read
+by then, and is stored as `STOPPED` with that text and no metrics
+(`features/chat/create-stream-model-response.ts`). The same rules withhold its
+text on reload as for a finished answer.
 
 The document is stored on `model_responses."responseDocument"` (nullable
 JSONB) and reloaded on `/t/[threadId]`. Both the browser stream and the

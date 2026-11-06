@@ -10,6 +10,7 @@ import {
   propertyLabel,
   withUnit,
 } from "@/infrastructure/format-measure";
+import { cn } from "@/infrastructure/ui";
 import { Button } from "@/infrastructure/ui-kit/button";
 import { Field } from "@/infrastructure/ui-kit/field";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/infrastructure/ui-kit/tabs";
@@ -18,6 +19,7 @@ import { BIOMARKERS_TAB, NO_VALUE_SECTION } from "./biomarkers/biomarker-copy";
 import { BiomarkerDetail, BiomarkerSource } from "./biomarkers/biomarker-detail";
 import { noValueOpen, splitByValue, valueCountLine } from "./biomarkers/biomarker-rows";
 import { type BiomarkerTabModel } from "./biomarkers/use-biomarker-tab";
+import { PANEL_TEXT } from "./environment/environment-copy";
 import { type PanelAction, type PanelState } from "./panel-state";
 import { groupedMarkerRows, groupedMeasureRows, measureValueText } from "./scan-overlays";
 
@@ -29,6 +31,7 @@ export const PANEL_NO_MATCH = "Nothing matches.";
 export const PANEL_PICK_PROMPT = "Click a part of the body to see its details.";
 
 const PANEL_TABS = [
+  { value: "anatomy", label: PANEL_TEXT.anatomy },
   { value: "properties", label: "Properties" },
   { value: "markers", label: "Markers" },
   { value: "measures", label: "Measurements" },
@@ -37,13 +40,18 @@ const PANEL_TABS = [
 
 export type PanelTab = (typeof PANEL_TABS)[number]["value"];
 
+/** The tabs that list rows of a scan, so they get the search and the hover. */
+type ListTab = Exclude<PanelTab, "anatomy" | "biomarkers">;
+
 /**
- * Inline, the same height as the canvas in bodyloop-avatar.tsx. In the
- * environment globals.css drops the cap: the list fills what is left of the
- * rail under the panel's fixed title, tabs and search.
+ * The one part of the panel that scrolls, under the tabs and the search. It
+ * has no height of its own: beside the inline 3D view the panel has the
+ * view's height (`.twin-side-panel` in globals.css) and in the environment
+ * the rail's, so the list takes what is left; standing alone on the page it
+ * grows with its rows and the page scrolls instead.
  */
 const SCROLL_AREA =
-  "twin-body-panel-list max-h-[min(70vh,640px)] overflow-y-auto overscroll-contain";
+  "twin-body-panel-list min-h-0 flex-1 overflow-y-auto overscroll-contain";
 
 /**
  * UI-only rounding; stored SI values stay as received. A unit with a known kind
@@ -313,19 +321,22 @@ export type BodyPanelProps = Partial<Pick<RowHandlers, "onSelect">> &
     markers: readonly StoredMarker[];
     measures: readonly StoredMeasure[];
     selectedId: string | null;
+    /** The Anatomy tab shows only when given: the viewer's controls beside its 3D view. */
+    anatomy?: ReactNode;
     /** The Biomarkers tab shows only when given. */
     biomarkers?: BiomarkerTabModel;
-    /** Which tabs to offer; the Demo has no scan, so it shows Biomarkers only. */
+    /** Which tabs to offer; the Demo has no scan, so it shows Anatomy and Biomarkers. */
     tabs?: readonly PanelTab[];
     /** Search, tab and hover, kept by the viewer (panel-state.ts). */
     panel: PanelState;
     onPanel: (action: PanelAction) => void;
+    className?: string;
   }>;
 
 /** Scan rows need a handler only where there is a scan; the Demo passes none. */
 const keepSelection = (): void => undefined;
 
-/** The first offered tab with rows, so a scan with only measurements opens there. */
+/** The first offered tab with something to show, so a scan with only measurements opens there. */
 export const defaultPanelTab = (
   offered: readonly PanelTab[],
   counts: Readonly<Record<PanelTab, number>>,
@@ -339,21 +350,62 @@ export const activePanelTab = (
 ): PanelTab | undefined =>
   chosen !== null && offered.includes(chosen) ? chosen : defaultPanelTab(offered, counts);
 
-/** Properties, markers and measurements of one scan, and biomarkers: tabbed, searchable, each list capped. */
+const ListContent = ({
+  tab,
+  lists,
+  query,
+  selectedId,
+  onSelect,
+  onHover,
+}: RowHandlers &
+  Readonly<{
+    tab: ListTab;
+    lists: Readonly<Record<ListTab, readonly PanelRow[]>>;
+    query: string;
+    selectedId: string | null;
+  }>) => {
+  const all = lists[tab];
+  const shown = filterRows(all, query);
+  if (shown.length === 0)
+    return (
+      <p className="text-muted-foreground px-2.5 py-1 text-xs">
+        {all.length === 0 ? PANEL_EMPTY : PANEL_NO_MATCH}
+      </p>
+    );
+  if (tab === "properties") return <PropertyList rows={shown} />;
+  return (
+    <GroupedList
+      rows={shown}
+      selectedId={selectedId}
+      onSelect={onSelect}
+      onHover={onHover}
+    />
+  );
+};
+
+/**
+ * One panel with tabs: the viewer's anatomy controls, the properties, markers
+ * and measurements of one scan, and the biomarkers. Radix `Tabs` give the
+ * tablist/tab/tabpanel roles and arrow keys; only the active tab's panel is
+ * in the tree. The tabs and the search stay put and the panel under them is
+ * the only part that scrolls.
+ */
 export const BodyPanel = ({
   properties,
   markers,
   measures,
   selectedId,
   onSelect = keepSelection,
+  anatomy,
   biomarkers,
   tabs,
   panel,
   onPanel,
+  className,
 }: BodyPanelProps) => {
   const { query } = panel;
   const onHover = (id: string | null) => onPanel({ type: "hover", id });
-  const lists: Readonly<Record<Exclude<PanelTab, "biomarkers">, readonly PanelRow[]>> = {
+  const lists: Readonly<Record<ListTab, readonly PanelRow[]>> = {
     properties: propertyRows(properties),
     markers: markerRows(markers),
     measures: measureRows(measures),
@@ -361,22 +413,49 @@ export const BodyPanel = ({
   const offered = PANEL_TABS.filter(
     (tab) =>
       (tabs === undefined || tabs.includes(tab.value)) &&
+      (tab.value !== "anatomy" || anatomy !== undefined) &&
       (tab.value !== "biomarkers" || biomarkers !== undefined),
   );
   const offeredTabs = offered.map((tab) => tab.value);
   const counts = {
+    anatomy: anatomy === undefined ? 0 : 1,
     properties: lists.properties.length,
     markers: lists.markers.length,
     measures: lists.measures.length,
     biomarkers: biomarkers?.rows.length ?? 0,
   };
   const activeTab = activePanelTab(panel.tab, offeredTabs, counts);
-  // An open panel is never an empty box: with no rows anywhere it says what to do.
-  if (offeredTabs.every((tab) => counts[tab] === 0)) {
+  // An open panel is never an empty box: with nothing to show it says what to do.
+  if (activeTab === undefined || offeredTabs.every((tab) => counts[tab] === 0)) {
     return (
-      <p className="text-muted-foreground px-1.5 py-1 text-xs">{PANEL_PICK_PROMPT}</p>
+      <p className={cn("text-muted-foreground px-1.5 py-1 text-xs", className)}>
+        {PANEL_PICK_PROMPT}
+      </p>
     );
   }
+  const tabContent = (tab: PanelTab) => {
+    if (tab === "anatomy") return anatomy;
+    if (tab === "biomarkers")
+      return biomarkers ? (
+        <BiomarkerList
+          model={biomarkers}
+          rows={filterRows(biomarkers.rows, query)}
+          query={query}
+          otherOpen={panel.otherOpen}
+          onOther={(open) => onPanel({ type: "other", open })}
+        />
+      ) : null;
+    return (
+      <ListContent
+        tab={tab}
+        lists={lists}
+        query={query}
+        selectedId={selectedId}
+        onSelect={onSelect}
+        onHover={onHover}
+      />
+    );
+  };
   return (
     <Tabs
       value={activeTab}
@@ -384,7 +463,10 @@ export const BodyPanel = ({
         const tab = offeredTabs.find((offeredTab) => offeredTab === value);
         if (tab) onPanel({ type: "tab", tab });
       }}
-      className="twin-body-panel border-input gap-2 rounded-md border p-2"
+      className={cn(
+        "twin-body-panel border-input min-h-0 gap-2 rounded-md border p-2",
+        className,
+      )}
       // Keys from the tabs, the search field and the rows all pass through here.
       onKeyDown={(event) => {
         const cleared =
@@ -401,52 +483,29 @@ export const BodyPanel = ({
           </TabsTrigger>
         ))}
       </TabsList>
-      <Field
-        type="search"
-        label={PANEL_SEARCH_LABEL}
-        value={query}
-        onChange={(event) => onPanel({ type: "query", query: event.target.value })}
-      />
-      {offered.map((tab) => {
-        if (tab.value === "biomarkers") {
-          return biomarkers ? (
-            <TabsContent key={tab.value} value={tab.value} className={SCROLL_AREA}>
-              <BiomarkerList
-                model={biomarkers}
-                rows={filterRows(biomarkers.rows, query)}
-                query={query}
-                otherOpen={panel.otherOpen}
-                onOther={(open) => onPanel({ type: "other", open })}
-              />
-            </TabsContent>
-          ) : null;
-        }
-        const all = lists[tab.value];
-        const shown = filterRows(all, query);
-        return (
-          <TabsContent
-            key={tab.value}
-            value={tab.value}
-            className={SCROLL_AREA}
-            onMouseLeave={() => onHover(null)}
-          >
-            {shown.length === 0 ? (
-              <p className="text-muted-foreground px-2.5 py-1 text-xs">
-                {all.length === 0 ? PANEL_EMPTY : PANEL_NO_MATCH}
-              </p>
-            ) : tab.value === "properties" ? (
-              <PropertyList rows={shown} />
-            ) : (
-              <GroupedList
-                rows={shown}
-                selectedId={selectedId}
-                onSelect={onSelect}
-                onHover={onHover}
-              />
-            )}
-          </TabsContent>
-        );
-      })}
+      {activeTab === "anatomy" ? null : (
+        <Field
+          type="search"
+          label={PANEL_SEARCH_LABEL}
+          value={query}
+          onChange={(event) => onPanel({ type: "query", query: event.target.value })}
+        />
+      )}
+      {/* Without forceMount only the active tab's panel is in the tree; it is the one part that scrolls. */}
+      {offered.map((tab) => (
+        <TabsContent
+          key={tab.value}
+          value={tab.value}
+          className={SCROLL_AREA}
+          onMouseLeave={
+            tab.value === "anatomy" || tab.value === "biomarkers"
+              ? undefined
+              : () => onHover(null)
+          }
+        >
+          {tabContent(tab.value)}
+        </TabsContent>
+      ))}
     </Tabs>
   );
 };
