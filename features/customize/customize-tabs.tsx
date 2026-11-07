@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+
+import { centredScrollLeft, type RowOverflow, rowOverflow } from "./row-overflow";
 
 /**
  * Customize's parts: the skills you can run, the agents built on them
@@ -26,15 +28,47 @@ export const currentTab = (path: string): string =>
 export const CustomizeTabs = () => {
   const current = currentTab(usePathname());
   const nav = useRef<HTMLElement>(null);
-  // On a phone the row scrolls sideways; keep the open tab in sight. Only the
-  // row moves, never the page around it.
+  const [more, setMore] = useState<RowOverflow>({ start: false, end: false });
+
+  // On a phone the row scrolls sideways (#485): the side with more tabs fades
+  // out, and the open tab, or the one reached by keyboard, sits in the
+  // middle, clear of the fades. Only the row moves, never the page around it.
   useEffect(() => {
     const row = nav.current;
-    const tab = row?.querySelector<HTMLElement>('[aria-current="page"]');
-    if (row && tab) row.scrollLeft = tab.offsetLeft - row.offsetLeft;
+    if (!row) return;
+    const measure = () => setMore(rowOverflow(row));
+    const centre = (tab: HTMLElement) => {
+      row.scrollLeft = centredScrollLeft(
+        tab.offsetLeft - row.offsetLeft,
+        tab.offsetWidth,
+        row.clientWidth,
+      );
+    };
+    const onFocus = (event: FocusEvent) => {
+      if (event.target instanceof HTMLElement) centre(event.target);
+    };
+    const open = row.querySelector<HTMLElement>('[aria-current="page"]');
+    if (open) centre(open);
+    measure();
+    row.addEventListener("scroll", measure, { passive: true });
+    row.addEventListener("focusin", onFocus);
+    const resize = new ResizeObserver(measure);
+    resize.observe(row);
+    return () => {
+      row.removeEventListener("scroll", measure);
+      row.removeEventListener("focusin", onFocus);
+      resize.disconnect();
+    };
   }, [current]);
+
   return (
-    <nav ref={nav} aria-label="Customize" className="segmented mt-6">
+    <nav
+      ref={nav}
+      aria-label="Customize"
+      className="segmented mt-6"
+      data-more-start={more.start || undefined}
+      data-more-end={more.end || undefined}
+    >
       {CUSTOMIZE_TABS.map(({ href, label }) => (
         <Link
           key={href}
