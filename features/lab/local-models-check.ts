@@ -132,6 +132,7 @@ export const localModelsCheck = ({
     return {
       ...base,
       status: "unknown",
+      reason: "Ollama did not answer.",
       summary:
         "Ollama did not answer just now, so its models could not be listed. Start it with `ollama serve` and reload this page.",
       evidence: [],
@@ -141,6 +142,7 @@ export const localModelsCheck = ({
     return {
       ...base,
       status: "unknown",
+      reason: "Ollama answered but holds no models.",
       summary:
         "Ollama on this machine answered but holds no models. Add one with `ollama pull qwen3:8b`.",
       evidence: [],
