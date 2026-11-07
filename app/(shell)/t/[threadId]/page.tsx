@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { CompareScreen } from "@/features/arena/compare-screen";
+import { arenaSettings } from "@/features/arena/arena-settings";
 import { loadPromptSourceFacts } from "@/features/arena/prompt-source-facts";
 import { skillCommand } from "@/features/commands/registry";
 import { ownedThread } from "@/features/arena/thread-reads";
@@ -11,7 +12,6 @@ import { runnableSkills } from "@/features/skills/load-skills";
 import { resolveActorId } from "@/infrastructure/auth-actor";
 import { findAppUserId } from "@/infrastructure/current-user";
 import { fetchChatCatalog } from "@/infrastructure/fetch-model-catalog";
-import { serverEnv } from "@/infrastructure/env";
 import { lockedScreen } from "@/features/vault/page-gate";
 
 /** A thread is private to its owner; search engines get nothing either way. */
@@ -50,7 +50,7 @@ export default async function ThreadPage({
         initialTurns={thread.turns}
         skills={skills.map(skillCommand)}
         sourceFacts={sourceFacts}
-        dataMode={serverEnv().DATA_MODE}
+        {...arenaSettings()}
       />
     </>
   );

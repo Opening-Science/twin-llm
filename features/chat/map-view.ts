@@ -1,4 +1,4 @@
-import { type ChoroplethSpec } from "@/infrastructure/chat-view";
+import { type ChoroplethSpec, type MAP_REFUSAL_CODES } from "@/infrastructure/chat-view";
 import {
   countryName,
   layersOf,
@@ -20,11 +20,7 @@ import type { LocationEstimate, RecordedEstimates } from "./estimate-ledger";
  */
 
 export type MapRefusal = Readonly<{
-  code:
-    | "ESTIMATES_REQUIRED"
-    | "STATES_REQUIRED"
-    | "NO_SUBNATIONAL_BOUNDARIES"
-    | "NOTHING_TO_MAP";
+  code: (typeof MAP_REFUSAL_CODES)[number];
   error: string;
 }>;
 

@@ -141,12 +141,8 @@ import {
   useWebglAvailable,
   ContextLossWatcher,
 } from "./scan-scene";
-import {
-  scanLabel,
-  isSubjectsPayload,
-  isScansPayload,
-  isSnapshotsPayload,
-} from "./body-twin-payloads";
+import { scanLabel, isScansPayload, isSnapshotsPayload } from "./body-twin-payloads";
+import { loadSubjects } from "./load-subjects";
 export {
   BODY_TWIN_LOADING,
   BODYLOOP_NO_SCANS,
@@ -216,6 +212,8 @@ type BodyLoopAvatarProps = {
   readonly initialFocus?: InitialFocus;
   /** A tap on the body, as the HRA group and system it names; null when cleared. */
   readonly onPickPart?: (part: PickedPart | null) => void;
+  /** False when the server knows BodyLoop is off: no subjects call, the demo only. */
+  readonly bodyLoopConfigured?: boolean;
 };
 
 export type InitialFocus = Readonly<{
@@ -248,6 +246,7 @@ export const BodyLoopAvatar = ({
   initialPersonRef,
   initialFocus,
   onPickPart,
+  bodyLoopConfigured = true,
 }: BodyLoopAvatarProps) => {
   const [subjects, setSubjects] = useState<readonly BodyTwinSubject[]>(
     preview?.subjects ?? [],
@@ -327,12 +326,16 @@ export const BodyLoopAvatar = ({
   useEffect(() => {
     if (preview !== undefined) return;
     let cancelled = false;
-    void fetch("/api/vitronic/subjects")
-      .then((response) => (response.ok ? response.json() : null))
-      .then((value: unknown) => {
+    void loadSubjects({
+      bodyLoopConfigured,
+      fetchSubjects: () =>
+        fetch("/api/vitronic/subjects").then((response) =>
+          response.ok ? response.json() : null,
+        ),
+    })
+      .then((rows) => {
         if (cancelled) return;
         // No BodyLoop connection or no subjects: the demo subject still works.
-        const rows = isSubjectsPayload(value) ? (value.subjects ?? []) : [];
         setSubjects(rows);
         setSubjectId(defaultSubjectId(rows));
         setSubjectsReady(true);
@@ -345,7 +348,7 @@ export const BodyLoopAvatar = ({
     return () => {
       cancelled = true;
     };
-  }, [preview]);
+  }, [preview, bodyLoopConfigured]);
 
   useEffect(() => {
     if (preview !== undefined || !subjectId || isDemoSubject(subjectId)) return;

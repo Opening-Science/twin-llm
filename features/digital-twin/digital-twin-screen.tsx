@@ -57,6 +57,8 @@ type DigitalTwinScreenProps = {
   readonly contextPreview?: TwinContext;
   /** Tests only: a fixed phase for the rsid-genotypes report. */
   readonly reportPreview?: ComponentProps<typeof GenomeReport>["preview"];
+  /** From the server environment; false skips the BodyLoop subjects call. */
+  readonly bodyLoopConfigured?: boolean;
 };
 
 const SectionHead = ({
@@ -137,6 +139,7 @@ export const DigitalTwinScreen = ({
   bodyPreview,
   contextPreview,
   reportPreview,
+  bodyLoopConfigured,
 }: DigitalTwinScreenProps) => {
   const [payload, setPayload] = useState<ArkStatusPayload | null>(preview ?? null);
   const [context, setContext] = useState<TwinContext | null>(contextPreview ?? null);
@@ -165,7 +168,11 @@ export const DigitalTwinScreen = ({
       <section className="mt-6">
         <SectionHead title={BODY_TWIN} note={BODY_TWIN_NOTE} />
         <div className="surface mt-4 px-4 py-5">
-          <BodyLoopAvatar preview={bodyPreview} onContext={setContext} />
+          <BodyLoopAvatar
+            preview={bodyPreview}
+            onContext={setContext}
+            bodyLoopConfigured={bodyLoopConfigured}
+          />
         </div>
       </section>
       {context && plan.sections.includes("sources") ? (

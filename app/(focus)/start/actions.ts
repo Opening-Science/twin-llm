@@ -3,11 +3,11 @@
 import { startTurn } from "@/features/arena/start-turn";
 import type { StartThreadResult } from "@/features/onboarding/onboarding-flow";
 import { completeOnboarding } from "@/features/onboarding/onboarding-store";
+import { starterModels } from "@/features/onboarding/starter-models";
 import { resolveActorId } from "@/infrastructure/auth-actor";
 import { ensureAppUser } from "@/infrastructure/current-user";
 import { runnableSkills } from "@/features/skills/load-skills";
 import { fetchChatCatalog } from "@/infrastructure/fetch-model-catalog";
-import { defaultModelSelection } from "@/infrastructure/model-catalog";
 
 const MAX_STARTER_PROMPT = 2000;
 
@@ -31,10 +31,7 @@ export const startStarterThread = async (
     };
   }
 
-  const models = defaultModelSelection(catalog).flatMap((id) => {
-    const model = catalog.find((candidate) => candidate.id === id);
-    return model ? [{ id: model.id, name: model.name }] : [];
-  });
+  const models = starterModels(catalog, prompt);
 
   const result = await startTurn({ threadId: null, prompt, models });
   if (!result.ok) return { ok: false, error: result.error };
