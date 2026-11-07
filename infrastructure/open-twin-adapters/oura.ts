@@ -4,6 +4,7 @@ import { TokenHandler, type OuraRingAppConfig } from "@open-twin/provider-oura";
 import type { TokenResponse } from "@open-twin/provider-oura/api/schemas/auth";
 
 export { getAuthorizationUrl } from "./oura-authorize";
+export { buildOuraFhirBundle } from "./oura-bundle";
 
 /**
  * Capture the last pair via setTokens so the host can persist after OAuth /

@@ -34,7 +34,7 @@ import {
   createBodyLoopClient,
 } from "@open-twin/provider-vitronic";
 
-import { getAuthorizationUrl } from "@/infrastructure/open-twin-adapters/oura-authorize";
+import { getAuthorizationUrl } from "@/infrastructure/open-twin-adapters/oura";
 
 /** The JSON is the package's only data export; its sha256 sidecar sits next to it. */
 const ANCHOR_JSON = fileURLToPath(
