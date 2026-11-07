@@ -10,7 +10,6 @@ import {
   DATA_LEDE,
   DATA_TITLE,
   NO_COHORT_BODY,
-  NO_COHORT_COMMANDS,
   NO_COHORT_TITLE,
   SYNTHETIC_DATA_LABEL,
 } from "./explorer-copy";
@@ -119,9 +118,9 @@ export const BlockedNotice = ({ kind }: { readonly kind: BlockedKind }) => (
   </div>
 );
 
-/** The warehouse is empty here: say so, and give the command that fills it. */
+/** No synthetic cohort here: say so, and who can load one. */
 export const NoCohortPanel = () => (
-  <SetupPanel title={NO_COHORT_TITLE} commands={NO_COHORT_COMMANDS}>
+  <SetupPanel title={NO_COHORT_TITLE}>
     <p>{NO_COHORT_BODY}</p>
   </SetupPanel>
 );

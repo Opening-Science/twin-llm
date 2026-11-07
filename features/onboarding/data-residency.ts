@@ -8,8 +8,9 @@ import type {
  * "Where your data goes", from the server's real configuration.
  *
  * Which provider runs is read from env at startup (`LOCAL_ONLY`,
- * `LLM_PROVIDER`), so the step shows it read-only and says how it is set,
- * rather than offering a switch that could not do anything. The rows follow
+ * `LLM_PROVIDER`), so the step shows it read-only and says who can change
+ * it, rather than offering a switch that could not do anything. The words
+ * are for the person, so no env names or commands appear in them (#480). The rows follow
  * README "What leaves this machine" and docs/providers.md; keep them in step.
  */
 
@@ -78,14 +79,14 @@ export const residencyChoice = (config: ResidencyConfig): ResidencyChoice =>
       : "other";
 
 export const HOW_TO_SWITCH =
-  "Whoever runs this server sets this in .env.local (LOCAL_ONLY and LLM_PROVIDER) and restarts it. It cannot be switched from the browser.";
+  "Whoever runs TwinLLM here sets this and restarts it. It cannot be switched from the browser.";
 
 export const residencyRows = (config: ResidencyConfig): readonly ResidencyRow[] => [
   {
     id: "chat",
     label: "Chat prompt, wearable summaries, BodyLoop measurements, tool results",
     where: modelOnThisMachine(config)
-      ? "Stays on this machine: Ollama on loopback."
+      ? "Stays on this machine: the model runs here."
       : config.provider === "exoscale"
         ? EXOSCALE_DESTINATION[config.exoscalePersonalData]
         : PROVIDER_DESTINATION[config.provider],
@@ -147,8 +148,8 @@ export const residencyRows = (config: ResidencyConfig): readonly ResidencyRow[] 
 
 export const dataModeSentence = (mode: DataMode): string =>
   mode === "synthetic"
-    ? "This server runs on synthetic data (DATA_MODE=synthetic)."
-    : "This server runs on personal data (DATA_MODE=personal). OpenRouter, Infomaniak and the remote GPU are refused, and Exoscale is used only in a consented pilot.";
+    ? "This server runs on synthetic data."
+    : "This server runs on personal data. OpenRouter, Infomaniak and the remote GPU are refused, and Exoscale is used only in a consented pilot.";
 
 /** The line under the "what do you want to explore" box. */
 export const interestHint = (config: ResidencyConfig): string => {

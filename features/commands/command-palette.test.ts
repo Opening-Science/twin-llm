@@ -215,7 +215,7 @@ describe("CommandPalette with skills", () => {
     tools: ["coverage", "baseline_deviation"],
   });
 
-  test("skills sit under a Skills heading and show what they read and may call", () => {
+  test("skills sit under a Skills heading and show what they read and may use, in words", () => {
     const html = render(1, [commands[0]!, sleep]);
     expect(html).toMatch(
       /<li\b[^>]*\brole="presentation"[^>]*>Skills<\/li><li><button\b[^>]*\bid="command-option-sleep"/,
@@ -225,14 +225,15 @@ describe("CommandPalette with skills", () => {
       hidden: null,
       lines: [
         "reads: Subjects and observations, Your linked wearables",
-        "may call: coverage, baseline_deviation",
+        "may use: Checked data coverage, Compared with a baseline",
       ],
     });
+    expect(html).not.toContain("baseline_deviation");
   });
 
   test("without skills there is no Skills heading and no tools line", () => {
     const html = render(0);
     expect(html).not.toContain(">Skills</li>");
-    expect(html).not.toContain("may call");
+    expect(html).not.toContain("may use");
   });
 });

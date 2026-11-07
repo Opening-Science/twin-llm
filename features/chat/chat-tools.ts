@@ -9,7 +9,11 @@ import {
   withoutDisabledTools,
 } from "@/infrastructure/knowledge-sources";
 import type { WearableSummaries } from "@/infrastructure/offered-keys";
-import { type TurnSkill, withSkillTools } from "@/infrastructure/skill-gate";
+import {
+  type TurnSkill,
+  WEARABLE_CONTEXT_SOURCE,
+  withSkillTools,
+} from "@/infrastructure/skill-gate";
 
 import { createGbdEstimateTool } from "@/packages/gbd-local/ai-tools";
 import { GBD_PROFILE_TOOL } from "@/packages/gbd-local/constants";
@@ -197,7 +201,12 @@ export const createChatTools = (
       scope,
       ports: options?.query,
       loadViews: options?.loadViews ?? loadThreadViews,
-      personal: requestDataMode(scope.mode, hasWearableNarrative) === "personal",
+      // A skill that does not read wearables runs with them withheld (#480), so
+      // it is not offered the person's own stored views either.
+      personal:
+        requestDataMode(scope.mode, hasWearableNarrative) === "personal" &&
+        (options?.sources === undefined ||
+          options.sources.includes(WEARABLE_CONTEXT_SOURCE)),
       views: options?.views,
     }),
     ...(options?.gbdLocal !== undefined

@@ -58,7 +58,7 @@ export const personOptionLabel = (
   person: Readonly<{ label: string; sex: "female" | "male" | null }>,
 ): string => (person.sex ? `${person.label} · ${person.sex}` : person.label);
 export const NO_COHORT =
-  "No synthetic cohort loaded on this machine, so only the catalogue is listed. Run bun run setup:local to load one.";
+  "No synthetic cohort loaded on this machine, so only the catalogue is listed. Whoever runs TwinLLM here can load one.";
 export const SELF_NO_LABS = "No lab source yet. Vitals come from connected wearables.";
 export const OTHER_NO_LABS =
   "No lab source for this subject; only the catalogue is listed.";

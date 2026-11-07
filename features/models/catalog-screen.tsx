@@ -18,7 +18,7 @@ import { catalogOrder, defaultsCopy, ORDER_COPY } from "./defaults-copy";
  */
 
 const PROVIDER_SENTENCE =
-  "With LOCAL_ONLY=true the only provider is Ollama on this machine; otherwise the default is our own open models on Exoscale in Switzerland. OpenRouter and the remote GPU (SSH tunnel) are only available when DATA_MODE is synthetic and no wearable snapshot is loaded.";
+  "When TwinLLM is set to run only on this machine, the only provider is Ollama here; otherwise the default is our own open models on Exoscale in Switzerland. OpenRouter and the remote GPU are only available on synthetic data with no wearable snapshot loaded.";
 
 const Unavailable = () => (
   <div className="flex flex-col items-start gap-4">

@@ -78,7 +78,7 @@ const SLEEP_COMMAND = skillCommand({
 });
 
 describe("skills in the palette", () => {
-  test("a skill lists its sources by label and its tools by name", () => {
+  test("a skill lists its sources by label, and its tools line words them without ids", () => {
     expect(SLEEP_COMMAND).toEqual({
       name: "sleep",
       description: "Chart the last 7 or 30 nights of sleep.",
@@ -87,9 +87,9 @@ describe("skills in the palette", () => {
       kind: "skill",
     });
     expect(toolsLine(SLEEP_COMMAND.tools ?? [])).toBe(
-      "may call: coverage, baseline_deviation",
+      "may use: Checked data coverage, Compared with a baseline",
     );
-    expect(toolsLine([])).toBe("calls no tools");
+    expect(toolsLine([])).toBe("uses no tools");
   });
 
   test("built-ins come first, and a skill cannot take a built-in's name", () => {
