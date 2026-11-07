@@ -1,5 +1,5 @@
 import { skillSourceLabel, type TurnSkill } from "@/infrastructure/skill-gate";
-import { toolTitle } from "@/infrastructure/tool-titles";
+import { toolDoes } from "@/infrastructure/tool-titles";
 
 /**
  * The commands behind `/` in the prompt bar: built-ins, then the skills the
@@ -75,7 +75,7 @@ export const readsLine = (reads: readonly string[]): string =>
 
 /** A skill's tools in the words its answer's steps use, never the tool ids (#480). */
 export const toolsLine = (tools: readonly string[]): string =>
-  tools.length === 0 ? "uses no tools" : `may use: ${tools.map(toolTitle).join(", ")}`;
+  tools.length === 0 ? "uses no tools" : `may use: ${tools.map(toolDoes).join(", ")}`;
 
 const SKILL_DRAFT = /^\/([a-z][a-z0-9-]*)(?:\s+([\s\S]*))?$/;
 

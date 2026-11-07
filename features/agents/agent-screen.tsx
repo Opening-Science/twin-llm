@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { formatDate } from "@/infrastructure/format-measure";
-import { toolTitle } from "@/infrastructure/tool-titles";
+import { toolDoes } from "@/infrastructure/tool-titles";
 import { Card } from "@/infrastructure/ui-kit/card";
 
 import { BaseModelText, costText, OfferBadge, SkillText, UsageText } from "./agent-parts";
@@ -61,7 +61,7 @@ const SkillSection = ({ entry }: Readonly<{ entry: RosterEntry }>) => (
         <dd className="break-normal">{entry.skill.sources.join(", ") || "nothing"}</dd>
         <dt>May use</dt>
         <dd className="break-normal">
-          {entry.skill.tools.map(toolTitle).join(", ") || "no tools"}
+          {entry.skill.tools.map(toolDoes).join(", ") || "no tools"}
         </dd>
         <dt>Where it runs</dt>
         <dd className="break-normal">

@@ -225,7 +225,7 @@ describe("CommandPalette with skills", () => {
       hidden: null,
       lines: [
         "reads: Subjects and observations, Your linked wearables",
-        "may use: Checked data coverage, Compared with a baseline",
+        "may use: checks data coverage, compares with a baseline",
       ],
     });
     expect(html).not.toContain("baseline_deviation");
