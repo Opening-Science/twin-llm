@@ -80,3 +80,51 @@ describe("traceAnnouncement", () => {
     expect(traceAnnouncement("failed", steps.slice(0, 1))).toBe("Stopped after 1 tool.");
   });
 });
+
+describe("refused steps", () => {
+  const ran: TraceStep = { id: "r", label: "Reading HRV", state: "done" };
+  const empty: TraceStep = { id: "e", label: "No data: NO_ROWS", state: "skipped" };
+  const gated: TraceStep = {
+    id: "g",
+    label: "Refused: VIEW_NOT_ALLOWED",
+    state: "refused",
+  };
+
+  test("are not counted as used and are named apart", () => {
+    expect(traceHeadline({ state: "done", steps: [ran, gated], elapsedMs: 3_000 })).toBe(
+      "Used 1 tool in 3.0s; 1 call was refused",
+    );
+    expect(
+      traceHeadline({
+        state: "done",
+        steps: [ran, empty, gated, gated],
+        elapsedMs: null,
+      }),
+    ).toBe("Used 2 tools; 2 calls were refused");
+    expect(traceAnnouncement("done", [ran, gated])).toBe(
+      "Done. Used 1 tool; 1 call was refused.",
+    );
+  });
+
+  test("when none ran, the line says only what was refused", () => {
+    expect(traceHeadline({ state: "done", steps: [gated], elapsedMs: 3_000 })).toBe(
+      "1 tool call was refused",
+    );
+    expect(traceHeadline({ state: "done", steps: [gated, gated], elapsedMs: null })).toBe(
+      "2 tool calls were refused",
+    );
+    expect(traceAnnouncement("done", [gated])).toBe("Done. 1 tool call was refused.");
+    expect(traceHeadline({ state: "failed", steps: [gated], elapsedMs: null })).toBe(
+      "Stopped; 1 tool call was refused",
+    );
+    expect(traceAnnouncement("failed", [ran, gated])).toBe(
+      "Stopped after 1 tool; 1 call was refused.",
+    );
+  });
+
+  test("a lookup that ran and found nothing still counts as used", () => {
+    expect(traceHeadline({ state: "done", steps: [empty], elapsedMs: null })).toBe(
+      "Used 1 tool",
+    );
+  });
+});
