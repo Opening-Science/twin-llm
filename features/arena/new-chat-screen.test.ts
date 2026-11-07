@@ -20,6 +20,7 @@ describe("NewChatScreen (#377)", () => {
         catalog: null,
         initialDraft: "/sleep ",
         dataMode: "synthetic",
+        bodyLoopConfigured: false,
       }),
     );
     expect(html).toBe("<main>compare /sleep </main>");

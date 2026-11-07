@@ -6,7 +6,7 @@ import {
   type StorageStatus,
 } from "@/infrastructure/storage-hardening";
 
-import { type LabCheck, plural, STATUS_LABEL } from "./lab-check";
+import { checkState, type LabCheck, plural, STATUS_LABEL } from "./lab-check";
 
 /**
  * Local storage (#144): whether the state folder, the env files, the mesh
@@ -65,6 +65,14 @@ const overall = (findings: readonly StorageFinding[]): StorageStatus =>
       ? "unknown"
       : "ok";
 
+/** Why it is Unknown: nothing was found, or the items that could not be checked. */
+const unknownReasonOf = (findings: readonly StorageFinding[]): string => {
+  const unchecked = findings.filter((finding) => finding.status === "unknown");
+  return unchecked.length === 0
+    ? "Nothing could be checked."
+    : `Could not check: ${unchecked.map((finding) => finding.subject).join(", ")}.`;
+};
+
 const PASSWORDLESS_NOTE =
   "Whether Postgres lets the same role in without a password needs a second connection, so `bun run doctor` and the last command below check it.";
 
@@ -89,7 +97,7 @@ const summaryOf = (
 
 export const storageCheck = (input: StorageCheckInput): LabCheck => ({
   ...storageBase(input.vitronic),
-  status: overall(input.findings),
+  ...checkState(overall(input.findings), unknownReasonOf(input.findings)),
   summary: summaryOf(input.dataMode, input.findings),
   evidence: [
     { label: "DATA_MODE", value: input.dataMode, mono: true },

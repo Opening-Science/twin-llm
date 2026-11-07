@@ -2,7 +2,7 @@ import { type ServerEnv } from "@/infrastructure/env";
 import { isLoopbackUrl } from "@/infrastructure/loopback";
 import { DEFAULT_OLLAMA_BASE_URL } from "@/infrastructure/ollama-context";
 
-import { type LabCheck, plural, STATUS_LABEL } from "./lab-check";
+import { checkState, type LabCheck, plural, STATUS_LABEL } from "./lab-check";
 
 /**
  * Whether LOCAL_ONLY is on, and where each configured service runs. Reads
@@ -108,7 +108,10 @@ export const localOnlyCheck = (env: LocalOnlyEnv): LabCheck => {
   const remote = endpoints.filter((endpoint) => !endpoint.local);
   return {
     ...localOnlyBase,
-    status: remote.length > 0 ? "not-ok" : env.LOCAL_ONLY ? "ok" : "unknown",
+    ...checkState(
+      remote.length > 0 ? "not-ok" : env.LOCAL_ONLY ? "ok" : "unknown",
+      "LOCAL_ONLY is off, so nothing stops a cloud setting being added.",
+    ),
     summary: summaryOf(env, remote),
     evidence: [
       { label: "LOCAL_ONLY", value: env.LOCAL_ONLY ? "on" : "off", mono: true },
