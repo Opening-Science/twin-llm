@@ -16,6 +16,22 @@ and those go through the same checks as before (`checkTurnRequest`, `/api/chat`)
 | Manual  | one to three | Each chosen specialist on each chosen model, at most three answers in all. No specialist sends the models as themselves.                          |
 | Compare | two or three | The rows picked, models or specialists, side by side, as the arena has always worked.                                                             |
 
+### Compare's defaults (#493)
+
+Until the person ticks or unticks a Compare row, Compare's rows are defaults and follow
+the question as it is typed (`fitCompare` in `chat-mode.ts`): the General agent, then the
+specialists the router ranks for the question (`rankAgents` in
+`infrastructure/agent-router.ts`, the same scoring Auto takes its pick from), then the
+default agents and models of [agents.md](agents.md#in-the-catalog), as many as fit in
+three. "How does resting heart rate change during sleep?" goes to General, Sleep and
+Trainer; before anything is typed the list is General, Diet and Anatomy as before. The
+mode menu shows the rows that will be sent. Once the person changes a row the list is
+theirs and the question no longer moves it, and a reopened thread keeps its last turn's
+rows. The first question on `/start` goes to the same fitted rows
+(`features/onboarding/starter-models.ts`). A medicine or dose question still lists its
+matching specialists beside General;
+only Auto sends such a question to General alone.
+
 The interface calls the agents "specialists", never doctors, and keeps their research
 labels, such as Heart rhythm (research).
 

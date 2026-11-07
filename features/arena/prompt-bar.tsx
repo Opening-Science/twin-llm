@@ -30,7 +30,13 @@ import {
 import { cn } from "@/infrastructure/ui";
 import { Button } from "@/infrastructure/ui-kit/button";
 
-import { initialSelection, MODE_COPY, modeModelIds, modeProblem } from "./chat-mode";
+import {
+  fitCompare,
+  initialSelection,
+  MODE_COPY,
+  modeModelIds,
+  modeProblem,
+} from "./chat-mode";
 import { EffortMenu } from "./effort-menu";
 import { Mark } from "./marks";
 import { ModeMenu } from "./mode-menu";
@@ -168,13 +174,15 @@ export const PromptBar = ({
   const [notice, setNotice] = useState<string | undefined>(undefined);
   const promptRef = useRef<HTMLTextAreaElement>(null);
 
+  // Compare's defaults follow the question as it is typed (#493); picks stay.
+  const fitted = offered ? fitCompare(selection, offered, draft) : selection;
   const chosen = offered
-    ? modeModelIds(selection, offered).flatMap((id) => {
+    ? modeModelIds(fitted, offered).flatMap((id) => {
         const row = findCatalogRow(id, offered);
         return row === null ? [] : [row];
       })
     : [];
-  const problem = offered ? modeProblem(selection, offered) : null;
+  const problem = offered ? modeProblem(fitted, offered) : null;
   const lockedIds =
     catalog && offered && incognito
       ? catalog.filter((model) => !offered.includes(model)).map((model) => model.id)
@@ -435,7 +443,7 @@ export const PromptBar = ({
             {catalog && offered ? (
               <ModeMenu
                 catalog={catalog}
-                selection={selection}
+                selection={fitted}
                 lockedIds={lockedIds}
                 lockedNote={INCOGNITO_MODEL_NOT_LOCAL}
                 onChange={setSelection}

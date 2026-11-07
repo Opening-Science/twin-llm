@@ -70,6 +70,11 @@ export type ModeSelection = Readonly<{
   models: readonly string[];
   /** Compare: catalog row ids, models or specialists. */
   compare: readonly string[];
+  /**
+   * Compare's rows were picked by the person or read from a reopened thread.
+   * While false they are defaults, fitted to the question by `fitCompare`.
+   */
+  compareChosen: boolean;
 }>;
 
 /** The specialists the catalog offers, without Auto. */
@@ -189,6 +194,7 @@ export const initialSelection = (
     specialists: firstSpecialist === undefined ? [] : [firstSpecialist],
     models: firstModel === undefined ? [] : [firstModel],
     compare: defaultModelSelection(catalog).filter((id) => id !== AUTO_MODEL_ID),
+    compareChosen: false,
   };
   if (ids.length === 0) return base;
   if (ids.length === 1 && ids[0] === AUTO_MODEL_ID) return { ...base, mode: "auto" };
@@ -219,8 +225,29 @@ export const initialSelection = (
     ...base,
     mode: offeredIds.length === 0 && autoOffered ? "auto" : "compare",
     compare: offeredIds.length === 0 ? base.compare : offeredIds,
+    compareChosen: offeredIds.length > 0,
   };
 };
+
+/**
+ * Compare's rows for this question (#493). Defaults follow the question: the
+ * General agent, then the specialists the router ranks for it, then the usual
+ * defaults (`defaultModelSelection`). Rows the person picked, or a reopened
+ * thread's rows, are kept as they are.
+ */
+export const fitCompare = (
+  selection: ModeSelection,
+  catalog: readonly CatalogModel[],
+  prompt: string,
+): ModeSelection =>
+  selection.compareChosen
+    ? selection
+    : {
+        ...selection,
+        compare: defaultModelSelection(catalog, prompt).filter(
+          (id) => id !== AUTO_MODEL_ID,
+        ),
+      };
 
 /** Adds or removes one Compare row, keeping one to three; Auto is never a row. */
 export const toggleCompare = (
@@ -235,11 +262,15 @@ export const toggleCompare = (
   if (current.includes(id)) {
     return current.length <= 1
       ? selection
-      : { ...selection, compare: current.filter((each) => each !== id) };
+      : {
+          ...selection,
+          compare: current.filter((each) => each !== id),
+          compareChosen: true,
+        };
   }
   return current.length >= MAX_SELECTED_MODELS
     ? selection
-    : { ...selection, compare: [...current, id] };
+    : { ...selection, compare: [...current, id], compareChosen: true };
 };
 
 /** The mode button's words: "Auto", "Manual · 2 answers", "Compare · 3 models". */
