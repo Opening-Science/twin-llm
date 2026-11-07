@@ -14,6 +14,11 @@ describe("tool titles", () => {
     expect(CHAT_TOOL_NAMES.filter((tool) => !hasToolTitle(tool))).toEqual([]);
   });
 
+  test("an object's own keys are not tool titles", () => {
+    expect(hasToolTitle("toString")).toBe(false);
+    expect(toolTitle("constructor")).toBe("Constructor");
+  });
+
   test("a title never shows a tool id written with underscores", () => {
     expect(CHAT_TOOL_NAMES.filter((tool) => toolTitle(tool).includes("_"))).toEqual([]);
     expect(toolTitle("genome_variants")).toBe(

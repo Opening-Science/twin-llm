@@ -34,12 +34,19 @@ export type SuggestedQuestion = Readonly<{
  * The text a send carries for a draft (#480). A chip writes its short question
  * into the box, so the person never reads a subject_ref or a LOINC code; sent
  * unchanged, the model gets the chip's grounded prompt, which names them so
- * the lookup is reliable. A draft the person changed is sent as typed.
+ * the lookup is reliable. A draft that still starts with the question and adds
+ * to it sends the grounded prompt with the added text, so "their" still names
+ * the subject; any other draft is sent as typed.
  */
 export const promptForDraft = (
   draft: string,
   picked: SuggestedQuestion | null,
-): string => (picked !== null && draft.trim() === picked.label ? picked.prompt : draft);
+): string => {
+  const text = draft.trim();
+  if (picked === null || !text.startsWith(picked.label)) return draft;
+  const added = text.slice(picked.label.length).trim();
+  return added === "" ? picked.prompt : `${picked.prompt} ${added}`;
+};
 
 export type SuggestedQuestions = Readonly<{
   /** Whose data the questions come from, shown above the chips. */

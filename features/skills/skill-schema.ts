@@ -98,6 +98,23 @@ const policyCanTakeImportedData = (provider: LlmProvider): boolean =>
     chatOnLoopback: true,
   }).ok;
 
+/**
+ * The source a skill source needs beside it: a knowledge source's own
+ * `requires`, and for `wearable-analytics` the `wearable-context` source
+ * (#480). A skill without `wearable-context` runs with the linked wearables
+ * withheld, so one listing the wearable tools without it would claim to read
+ * sleep and HRV and get nothing. `wearable-context` is a skill source only, not
+ * a toggle in the person's source choices, so it is kept here rather than in
+ * `knowledge-sources.ts`, where `requires` also drives those toggles.
+ */
+const SKILL_SOURCE_REQUIRES: Readonly<Record<string, string>> = {
+  "wearable-analytics": WEARABLE_CONTEXT_SOURCE,
+};
+
+const sourceRequires = (id: string): string | undefined =>
+  SKILL_SOURCE_REQUIRES[id] ??
+  ALL_KNOWLEDGE_SOURCES.find((source) => source.id === id)?.requires;
+
 export const skillFrontmatterSchema = z
   .strictObject({
     name: z.string().regex(SKILL_NAME_PATTERN, {
@@ -124,7 +141,7 @@ export const skillFrontmatterSchema = z
       }
     });
     skill.sources.forEach((id, index) => {
-      const required = ALL_KNOWLEDGE_SOURCES.find((source) => source.id === id)?.requires;
+      const required = sourceRequires(id);
       if (required !== undefined && !sources.has(required)) {
         ctx.addIssue({
           code: "custom",

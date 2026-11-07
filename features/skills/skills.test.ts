@@ -287,6 +287,25 @@ describe("validateSkill", () => {
     ]);
   });
 
+  test("the wearable tools need wearable-context, so a skill cannot read wearables it never gets (#480)", () => {
+    const front = (sources: string) =>
+      [
+        "name: demo",
+        "description: A demo skill",
+        "tools: [sleep_summary]",
+        `sources: [${sources}]`,
+      ].join("\n");
+    const without = validateSkill(files(front("wearable-analytics"), [okEval]), SUBJECTS);
+    expect(without.ok ? [] : without.errors).toEqual([
+      'skills/demo/SKILL.md: sources.0: source "wearable-analytics" needs source "wearable-context" in sources',
+    ]);
+    const withContext = validateSkill(
+      files(front("wearable-analytics, wearable-context"), [okEval]),
+      SUBJECTS,
+    );
+    expect(withContext.ok ? [] : withContext.errors).toEqual([]);
+  });
+
   test("a skill reading wearable context cannot list a synthetic-only provider", () => {
     const front = `${BASE_FRONT}\n`.replace(
       "sources: [cohort-records]",

@@ -254,6 +254,12 @@ describe("promptForDraft (#480)", () => {
     expect(promptForDraft("  What was their latest HbA1c? ", chip)).toBe(chip.prompt);
   });
 
+  test("a draft that adds to the chip's question keeps the grounding", () => {
+    expect(promptForDraft("What was their latest HbA1c? And in 2020?", chip)).toBe(
+      "For synthetic subject synthetic-subject-1, using LOINC 4548-4, what was their latest HbA1c? And in 2020?",
+    );
+  });
+
   test("a changed draft, or one no chip wrote, is sent as typed", () => {
     expect(promptForDraft("What was their HbA1c in 2020?", chip)).toBe(
       "What was their HbA1c in 2020?",

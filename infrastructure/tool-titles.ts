@@ -64,11 +64,11 @@ const TITLES: Readonly<Record<string, string>> = {
 
 /** The tool's plain title; an unknown id is spelled out as words, never shown raw. */
 export const toolTitle = (tool: string): string => {
-  const known = TITLES[tool];
+  const known = Object.hasOwn(TITLES, tool) ? TITLES[tool] : undefined;
   if (known) return known;
   const words = tool.replace(/[_.-]+/g, " ").trim();
   return words === "" ? "Tool call" : words.charAt(0).toUpperCase() + words.slice(1);
 };
 
 /** True when the tool has a written title, not the spelled-out fallback. */
-export const hasToolTitle = (tool: string): boolean => tool in TITLES;
+export const hasToolTitle = (tool: string): boolean => Object.hasOwn(TITLES, tool);

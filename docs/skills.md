@@ -34,6 +34,11 @@ Instructions for the model.
 Unknown keys are errors. Lists are `[a, b]` or indented `- item` lines. The body after
 the frontmatter is the skill's instructions and may not be empty.
 
+A source that needs another must list it too: `cohort-analytics` needs `cohort-records`,
+and `wearable-analytics` needs `wearable-context` (#480), since a skill without
+`wearable-context` runs with the linked wearables withheld and its wearable tools would
+read nothing.
+
 Providers never widen the data-mode policy (`infrastructure/data-mode-policy.ts`). A
 skill that reads `wearable-context` cannot list a provider the policy never lets see
 personal data (OpenRouter, remote GPU, Infomaniak). A provider the skill does list still

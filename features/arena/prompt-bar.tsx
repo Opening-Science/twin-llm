@@ -204,6 +204,7 @@ export const PromptBar = ({
 
   const reset = () => {
     setPicked(null);
+    setPickedChip(null);
     setActiveIndex(0);
     setNotice(undefined);
     setSourcesOpen(false);
@@ -239,7 +240,6 @@ export const PromptBar = ({
           effort,
         );
         setDraft("");
-        setPickedChip(null);
         reset();
       },
     });
@@ -350,9 +350,10 @@ export const PromptBar = ({
           suggestions={suggestions}
           onPick={(question) => {
             setDraft(question.label);
-            setPickedChip(question);
             setMenuDismissed(false);
             reset();
+            // After reset, which clears it.
+            setPickedChip(question);
             promptRef.current?.focus();
           }}
         />
