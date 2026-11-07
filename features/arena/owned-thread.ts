@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 
-import type { ResponseState, TurnState } from "./conversation";
+import type { TurnState } from "./conversation";
 import { type SavedResponseRow, toSavedResponseState } from "./saved-response-state";
 
 /**
@@ -33,6 +33,8 @@ export type StoredThread = Readonly<{
     prompt: string;
     /** Asked by a scheduled task (#54). */
     scheduled?: boolean;
+    /** The skill the person sent the turn with; null for Auto, agents and plain prompts. */
+    skill?: string | null;
     responses: readonly SavedResponseRow[];
   }>[];
 }>;
@@ -46,8 +48,6 @@ export type ThreadReads = Readonly<{
    * a thread of someone else is never opened, only refused.
    */
   findThread: (threadId: string, viewerId: string) => Promise<StoredThread | null>;
-  /** The skill each turn ran under, from its `skill.<name>` audit rows. */
-  skillsOfTurns: (turnIds: readonly string[]) => Promise<ReadonlyMap<string, string>>;
 }>;
 
 export type OwnedThread = Readonly<{
@@ -66,19 +66,6 @@ const NO_POSITION = Number.MAX_SAFE_INTEGER;
 export const inPickOrder = (rows: readonly SavedResponseRow[]): SavedResponseRow[] =>
   [...rows].sort((a, b) => (a.position ?? NO_POSITION) - (b.position ?? NO_POSITION));
 
-/**
- * The skill a saved turn ran under: its audit row, which is written before any
- * model is called, or else a stored answer's response document.
- */
-const skillOfTurn = (
-  turnId: string,
-  answers: readonly ResponseState[],
-  fromAudit: ReadonlyMap<string, string>,
-): string | null =>
-  fromAudit.get(turnId) ??
-  answers.find((answer) => answer.document?.skill !== undefined)?.document?.skill ??
-  null;
-
 export const loadOwnedThread = async (
   threadId: string,
   reads: ThreadReads,
@@ -91,7 +78,6 @@ export const loadOwnedThread = async (
   const thread = await reads.findThread(threadId, viewerId);
   if (!thread || thread.userId !== viewerId) return null;
 
-  const skills = await reads.skillsOfTurns(thread.turns.map((turn) => turn.id));
   return {
     id: thread.id,
     title: thread.title,
@@ -100,7 +86,9 @@ export const loadOwnedThread = async (
       return {
         id: turn.id,
         prompt: turn.prompt,
-        skill: skillOfTurn(turn.id, answers, skills),
+        // Only what the person chose; a skill Auto or an agent ran under is
+        // named on its answer, not on the prompt (#479).
+        skill: turn.skill ?? null,
         ...(turn.scheduled === true ? { scheduled: true } : {}),
         answers,
       };

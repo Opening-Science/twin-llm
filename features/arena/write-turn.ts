@@ -58,6 +58,7 @@ const newTurn = (cipher: FieldCipher, plan: TurnPlan, scheduled: boolean) => {
       id: turnId,
       prompt: cipher.sealText(TURNS, "prompt", turnId, plan.prompt),
       scheduled,
+      skill: plan.skill,
       responses: { createMany: { data: responses } },
     },
   };
