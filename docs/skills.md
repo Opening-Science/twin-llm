@@ -115,7 +115,8 @@ The server reads `skills/` once per process (on every request in development) an
 offers a skill only if it validates and every case passes; anything else is logged and
 left out (`features/skills/load-skills.ts`). The `/` palette lists the offered skills
 under "Skills" with their description, the sources they read and the tools they may
-call, so a person sees that before running one.
+call (in words, `infrastructure/tool-titles.ts`, never by id), so a person sees that
+before running one.
 
 Picking a skill writes `/sleep ` into the prompt; a prompt that starts with an offered
 skill is sent tagged with it, and the rest of the text is the question (the skill's
