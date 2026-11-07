@@ -485,6 +485,40 @@
     @apply bg-muted text-foreground;
   }
 
+  /* A row that scrolls says so (#485): the side with more items out of sight
+     fades out, marked by `data-more-start` and `data-more-end` from the row
+     (`features/customize/customize-tabs.tsx`, which also centres the open or
+     focused item, clear of the fade). */
+  .segmented {
+    --segmented-fade: 4rem;
+  }
+
+  .segmented[data-more-end] {
+    mask-image: linear-gradient(
+      to right,
+      #000 calc(100% - var(--segmented-fade)),
+      transparent
+    );
+  }
+
+  .segmented[data-more-start] {
+    mask-image: linear-gradient(
+      to left,
+      #000 calc(100% - var(--segmented-fade)),
+      transparent
+    );
+  }
+
+  .segmented[data-more-start][data-more-end] {
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      #000 var(--segmented-fade),
+      #000 calc(100% - var(--segmented-fade)),
+      transparent
+    );
+  }
+
   /* Customize's sections (#457, `features/customize/customize-sections.tsx`):
      on a wide screen the sections are a column of links on the left and one
      section shows at a time on the right; on a phone the `.segmented` tab row
