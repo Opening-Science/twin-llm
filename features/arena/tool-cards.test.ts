@@ -5,7 +5,14 @@ import type { ChatUIMessage } from "@/infrastructure/model-response-metrics";
 
 import { toolActivity } from "./answer-stream";
 import { toSavedResponseState } from "./saved-response-state";
-import { rowCountOf, rowsLabel, toolArgs, toolCard, toolTitle } from "./tool-cards";
+import {
+  refusedBeforeRun,
+  rowCountOf,
+  rowsLabel,
+  toolArgs,
+  toolCard,
+  toolTitle,
+} from "./tool-cards";
 
 const view = timeseriesView({
   spec: {
@@ -159,7 +166,18 @@ describe("toolCard", () => {
       rowCount: 0,
       note: "A cohort measure needs a subject.",
       refusalCode: "SUBJECT_REQUIRED",
+      notRun: true,
     });
+  });
+
+  test("only a gate's code marks a call that did not run (#492)", () => {
+    expect(refusedBeforeRun("show_view", "VIEW_NOT_ALLOWED")).toBe(true);
+    expect(refusedBeforeRun("show_view", "ESTIMATES_REQUIRED")).toBe(true);
+    expect(refusedBeforeRun("show_view", "NO_ROWS")).toBe(false);
+    expect(refusedBeforeRun("summary_stats", "NO_ROWS")).toBe(false);
+    expect(refusedBeforeRun("open_view", "VIEW_NOT_FOUND")).toBe(false);
+    expect(refusedBeforeRun("genome_report", "GENOME_NOT_PERMITTED")).toBe(true);
+    expect(refusedBeforeRun("genome_variants", "GENOME_NOT_PERMITTED")).toBe(false);
   });
 
   test("a timeline card shows its filters, counts records and words NO_ROWS for records", () => {

@@ -8,7 +8,7 @@ import { DEMO_BODIES, DEMO_BODY_IDS } from "@/packages/anatomy/demo-bodies";
 import { RIGGED_BODIES } from "@/packages/anatomy/rigged-bodies";
 
 import { type FileHash } from "./file-hash";
-import { type LabCheck, plural, shortHash } from "./lab-check";
+import { checkState, type LabCheck, plural, shortHash } from "./lab-check";
 
 /**
  * Files the app downloads or builds and pins by SHA-256: the Synthea JAR, the
@@ -174,6 +174,15 @@ export const pinnedArtefactsCheck = (
       : present.length === 0 || unconfirmed.length > 0 || unreadable.length > 0
         ? "unknown"
         : "ok";
+  const names = (list: readonly { pin: PinnedArtefact }[]): string =>
+    list.map((row) => row.pin.name).join(", ");
+  // The first thing that keeps it from OK, in one line.
+  const reason =
+    present.length === 0
+      ? "None of the pinned files is on this machine yet."
+      : unreadable.length > 0
+        ? `Could not read: ${names(unreadable)}.`
+        : `${names(unconfirmed)} ${unconfirmed.length === 1 ? "differs" : "differ"}, which a local bake can do.`;
   const missing = rows.length - present.length;
   const parts = [
     present.length === 0
@@ -194,7 +203,7 @@ export const pinnedArtefactsCheck = (
   ];
   return {
     ...pinnedArtefactsBase(pins),
-    status,
+    ...checkState(status, reason),
     summary: parts.filter((part) => part !== "").join(" "),
     evidence: [],
     table: {

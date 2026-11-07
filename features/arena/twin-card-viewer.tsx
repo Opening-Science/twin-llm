@@ -7,6 +7,7 @@ import { DEMO_SUBJECT_ID } from "@/features/digital-twin/demo-subject";
 import { type TwinContext } from "@/features/digital-twin/page-sections";
 import { focusOfPick } from "@/packages/anatomy/twin-focus";
 
+import { useBodyLoopConfigured } from "./body-loop-context";
 import { useTwinPick } from "./twin-pick-context";
 import { type ShownSubject, type TwinTarget } from "./twin-subject";
 
@@ -32,6 +33,7 @@ export const TwinCardViewer = ({
     [onShown],
   );
   const pick = useTwinPick();
+  const bodyLoopConfigured = useBodyLoopConfigured();
   const onPickPart = useCallback(
     (part: PickedPart | null) =>
       pick(part === null ? null : focusOfPick(part.group, part.system)),
@@ -43,6 +45,7 @@ export const TwinCardViewer = ({
       onPickPart={onPickPart}
       initialSubjectId={target.kind === "self" ? undefined : DEMO_SUBJECT_ID}
       initialPersonRef={target.kind === "synthetic" ? target.ref : undefined}
+      bodyLoopConfigured={bodyLoopConfigured}
     />
   );
 };

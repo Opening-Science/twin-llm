@@ -202,13 +202,16 @@ both themes), and stops its motion under reduced motion.
 - **`StepTrace`** for work made of steps. While working, one line names the step in
   progress with a quiet shimmer and a live timer, over a list where finished steps are
   ticked and the current one pulses. When it settles the line reads "Used N tools in
-  X.Xs" (no time when it was loaded already finished) and the list folds; the line is
+  X.Xs" (no time when it was loaded already finished) and the list folds. A call a
+  gate refused before it ran (`refused`) is not counted as used but named apart:
+  "Used 1 tool in 3.0s; 1 call was refused", or "1 tool call was refused" when none
+  ran. A lookup that ran and found nothing (`skipped`) counts as used. The line is
   a button with `aria-expanded`. A live region speaks at the start and at the end
   only, never per step or tick. A step's `detail` replaces its label in the list. The
   chat answer uses it for tool calls (`features/arena/tool-call-cards.tsx`): each
   step is the call in plain words with its measure (named from the data, code in
-  brackets) and window, or "No data: <code>"
-  for a refusal, and its card keeps the arguments, rows and the answer's numbers.
+  brackets) and window, "No data: <code>" for a lookup that ran and was refused, or
+  "Refused: <code>" for a call that never ran, and its card keeps the arguments, rows and the answer's numbers.
 - **`UndoButton`** for a delete that can wait. Pressing it runs the soft step and the
   button becomes Undo, with a line burning down along its bottom for `undoWindow` ms.
   Undo or Escape reverts; when the time runs out `onExpire` does the real delete. The

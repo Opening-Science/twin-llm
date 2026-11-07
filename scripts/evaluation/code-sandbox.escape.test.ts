@@ -10,7 +10,7 @@ import { execFileSync } from "node:child_process";
 import { homedir } from "node:os";
 
 import { PROBE_LIMITS, SANDBOX_PROBES } from "./code-sandbox";
-import { createHostSandbox } from "./code-sandbox-host";
+import { createHostSandbox, ownUnitPrefix } from "./code-sandbox-host";
 
 const sandbox = (() => {
   try {
@@ -20,11 +20,15 @@ const sandbox = (() => {
   }
 })();
 
+/**
+ * A scope this test run left behind. Only this process's scopes count: another
+ * suite running at the same time has scopes of its own (#482).
+ */
 const scopeLeft = (): boolean => {
   try {
     const text = execFileSync(
       "systemctl",
-      ["--user", "list-units", "--type=scope", "--no-legend", "twin-eval-code-*"],
+      ["--user", "list-units", "--type=scope", "--no-legend", `${ownUnitPrefix()}*`],
       { encoding: "utf8" },
     );
     return text.trim().length > 0;

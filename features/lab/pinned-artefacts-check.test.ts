@@ -70,6 +70,7 @@ describe("pinnedArtefactsCheck", () => {
   test("nothing present is unknown", () => {
     const check = pinnedArtefactsCheck([pin("x")], { x: MISSING });
     expect(check.status).toBe("unknown");
+    expect(check.reason).toBe("None of the pinned files is on this machine yet.");
     expect(check.summary).toBe("None of the pinned files is on this machine yet.");
     expect(check.table?.rows).toEqual([
       ["File x", "aaaaaaaaaaaa", "—", "Not on this machine"],
@@ -98,6 +99,7 @@ describe("pinnedArtefactsCheck", () => {
       r: hash(B),
     });
     expect(check.status).toBe("unknown");
+    expect(check.reason).toBe("File r differs, which a local bake can do.");
   });
 
   test("a file that cannot be read stays in its row and hides no other", () => {
@@ -107,6 +109,7 @@ describe("pinnedArtefactsCheck", () => {
       z: MISSING,
     });
     expect(check.status).toBe("unknown");
+    expect(check.reason).toBe("Could not read: File y.");
     expect(check.summary).toBe(
       "Files on this machine that match their pins: 1 of 2. Could not read: File y. Check the file's permissions and reload. Not on this machine: 1 file.",
     );
