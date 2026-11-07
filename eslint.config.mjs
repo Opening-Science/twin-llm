@@ -65,6 +65,21 @@ const aliasesOf = (...folders) =>
   folders.flatMap((folder) => [`@/${folder}/*`, `@/${folder}/**`]);
 
 /**
+ * Wearable adapters are reached through one entry per vendor (#463), never a
+ * file behind it: an Oura route then loads Oura's code only, not Google's auth
+ * stack (#475). The entries are `oura`, `whoop`, `google-health` and `aggregate`.
+ */
+const ADAPTER_ENTRIES = ["oura", "whoop", "google-health", "aggregate"];
+const ADAPTER_ENTRY = {
+  group: [
+    "**/open-twin-adapters/*",
+    ...ADAPTER_ENTRIES.map((entry) => `!**/open-twin-adapters/${entry}`),
+  ],
+  message:
+    "Import a wearable adapter from its vendor entry (open-twin-adapters/oura, whoop, google-health or aggregate), not a file behind it.",
+};
+
+/**
  * `rule` defaults to the core rule. A ban that must hold alongside another
  * block's patterns uses the typescript-eslint copy: ESLint replaces a rule's
  * options per block rather than merging them.
@@ -74,6 +89,20 @@ const banImports = (patterns, rule = "no-restricted-imports") => ({
 });
 
 const FEATURE_SOURCES = "features/**/*.{ts,tsx}";
+
+/** Features that still compose pieces from sibling features (see boundary-debt). */
+const BOUNDARY_DEBT_FEATURES = [
+  "arena",
+  "auth",
+  "digital-twin",
+  "google-health",
+  "leaderboard",
+  "oura",
+  "shell",
+  "vitronic",
+  "wearables",
+  "whoop",
+];
 const INFRASTRUCTURE_SOURCES = "infrastructure/**/*.ts";
 
 // --- Config -----------------------------------------------------------------
@@ -138,6 +167,7 @@ export default defineConfig([
         message:
           "This path climbs out of the feature folder; shared code lives in @/infrastructure/*.",
       },
+      ADAPTER_ENTRY,
     ]),
   },
 
@@ -150,6 +180,7 @@ export default defineConfig([
         group: aliasesOf("app", "features"),
         message: "infrastructure/ may not import features or routes.",
       },
+      ADAPTER_ENTRY,
     ]),
   },
 
@@ -191,22 +222,25 @@ export default defineConfig([
     name: "twin-llm/boundary-debt",
     files: [
       "app/api/**/*.{ts,tsx}",
-      ...[
-        "arena",
-        "auth",
-        "digital-twin",
-        "google-health",
-        "leaderboard",
-        "oura",
-        "shell",
-        "vitronic",
-        "wearables",
-        "whoop",
-      ].map((feature) => `features/${feature}/**/*.{ts,tsx}`),
+      ...BOUNDARY_DEBT_FEATURES.map((feature) => `features/${feature}/**/*.{ts,tsx}`),
     ],
     rules: {
       "no-restricted-imports": "off",
       "react-hooks/set-state-in-effect": "off",
     },
+  },
+
+  {
+    // The adapter entry rule for everything the blocks above leave without
+    // one: routes, boundary-debt features, packages, scripts and tests. Last,
+    // so it is back on where boundary-debt switched the rule off.
+    name: "twin-llm/wearable-entry",
+    files: [
+      "app/**/*.{ts,tsx}",
+      ...BOUNDARY_DEBT_FEATURES.map((feature) => `features/${feature}/**/*.{ts,tsx}`),
+      "{packages,scripts,tests,evaluation}/**/*.{ts,tsx,mjs}",
+      "*.{ts,mjs}",
+    ],
+    rules: banImports([ADAPTER_ENTRY]),
   },
 ]);

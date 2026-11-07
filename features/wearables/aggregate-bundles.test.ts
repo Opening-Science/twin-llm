@@ -4,7 +4,7 @@ import { SYNTHETIC_OURA_DATA } from "@/features/oura/fixtures/synthetic-sync-dat
 import { SYNTHETIC_WHOOP_PAYLOAD } from "@/features/whoop/fixtures/synthetic-sync-payload";
 
 import { aggregateWearableBundles } from "@/infrastructure/open-twin-adapters/aggregate";
-import { buildOuraFhirBundle } from "@/infrastructure/open-twin-adapters/oura-bundle";
+import { buildOuraFhirBundle } from "@/infrastructure/open-twin-adapters/oura";
 import { buildWhoopFhirBundle } from "@/infrastructure/open-twin-adapters/whoop";
 
 const SYNTHETIC_SUBJECT = "synthetic-wearer-1";

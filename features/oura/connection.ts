@@ -13,8 +13,10 @@ import {
 } from "@/infrastructure/field-cipher";
 import { cipherForUser } from "@/infrastructure/field-cipher-runtime";
 import { ouraEnv } from "@/infrastructure/env";
-import { HostOuraTokenHandler } from "@/infrastructure/open-twin-adapters/oura";
-import { buildOuraFhirBundle } from "@/infrastructure/open-twin-adapters/oura-bundle";
+import {
+  buildOuraFhirBundle,
+  HostOuraTokenHandler,
+} from "@/infrastructure/open-twin-adapters/oura";
 
 import type { PreparedSync } from "@/features/wearables/audited-sync";
 import { resolveSyncDateWindow } from "@/features/wearables/sync-window";

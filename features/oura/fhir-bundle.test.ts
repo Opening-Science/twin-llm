@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import type { Observation } from "fhir/r4";
 
-import { buildOuraFhirBundle } from "@/infrastructure/open-twin-adapters/oura-bundle";
+import { buildOuraFhirBundle } from "@/infrastructure/open-twin-adapters/oura";
 
 import { SYNTHETIC_OURA_DATA } from "./fixtures/synthetic-sync-data";
 

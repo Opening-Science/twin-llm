@@ -79,6 +79,11 @@ read anywhere. Config files, scripts and `proxy.ts` run outside the app and are 
    `infrastructure/`.
 3. `infrastructure/` is shared code with no knowledge of features or routes.
 
+The wearable adapters in `infrastructure/open-twin-adapters/` are imported through one entry
+per vendor, `…/open-twin-adapters/oura`, `whoop`, `google-health` or `aggregate`, never a file
+behind them. One entry per vendor keeps an Oura route from loading Google's auth library. This
+rule stays on everywhere, including the folders listed below.
+
 Some feature folders still have this rule switched off while they are being separated;
 `eslint.config.mjs` lists them. Do not add to that list.
 
