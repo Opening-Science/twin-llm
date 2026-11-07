@@ -83,7 +83,9 @@ without agents, so they keep models only.
 Since #366 the prompt bar picks a mode first ([chat-modes.md](chat-modes.md)): Auto
 sends `agent:auto`, Manual runs chosen specialists on chosen models (a specialist on a
 model other than its own is the row `agent:<id>@<model id>`), and Compare keeps the one to
-three picks described here, with at least two.
+three picks described here, with at least two. Compare's defaults put the specialists the
+router ranks for the question after General, before Diet and Anatomy, until the person
+changes a row ([chat-modes.md](chat-modes.md#compares-defaults-493), #493).
 
 ## In a turn
 
