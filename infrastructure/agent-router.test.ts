@@ -8,6 +8,7 @@ import {
   autoChoiceLineFor,
   autoColumnName,
   DEFAULT_AGENT_TOPICS,
+  rankAgents,
   ROUTE_TOPICS,
   routeAgent,
 } from "./agent-router";
@@ -197,6 +198,51 @@ describe("routeAgent", () => {
     expect(Object.keys(ROUTE_TOPICS).sort()).toEqual(
       ALL.filter((id) => id !== "gp").sort(),
     );
+  });
+});
+
+describe("rankAgents (#493)", () => {
+  const ids = (prompt: string, offered: readonly string[] = ALL) =>
+    rankAgents(prompt, offered).map(({ agentId }) => agentId);
+
+  test("a sleep question ranks Sleep first", () => {
+    expect(ids("How does resting heart rate change during sleep?")).toEqual([
+      "sleep",
+      "trainer",
+    ]);
+  });
+
+  test("a heart rhythm question ranks Heart rhythm first", () => {
+    expect(ids("Were there palpitations or an arrhythmia in my RR intervals?")[0]).toBe(
+      "rhythm",
+    );
+  });
+
+  test("a diet question ranks Diet first", () => {
+    expect(ids("How have my weight and LDL cholesterol changed?")[0]).toBe("diet");
+  });
+
+  test("more matching topics rank higher, a tie keeps the roster order", () => {
+    expect(ids("Does my HRV show palpitations?")).toEqual(["rhythm", "trainer"]);
+    expect(ids("How is my HRV?")).toEqual(["trainer", "rhythm"]);
+  });
+
+  test("leaves out the General agent, agents not offered and agents with no match", () => {
+    expect(ids("How did I sleep after my workout?", ["gp", "trainer"])).toEqual([
+      "trainer",
+    ]);
+    expect(ids("What is in my record?")).toEqual([]);
+  });
+
+  test("Auto's pick is the first of the ranking", () => {
+    const prompts = [
+      "How does resting heart rate change during sleep?",
+      "How have my weight and LDL cholesterol changed?",
+      "Does my HRV show palpitations?",
+    ];
+    for (const prompt of prompts) {
+      expect(routeAgent(prompt, ALL).agentId).toBe(ids(prompt)[0] ?? "gp");
+    }
   });
 });
 

@@ -123,6 +123,35 @@ describe("show_view with a LOINC measure", () => {
     });
   });
 
+  test("a refusal from the read itself ran: it is audited with 0 rows (#492)", async () => {
+    const { ports, audits } = fakePorts([row("02", 61)]);
+    expect(
+      await runShowView(
+        { scope: PERSONAL, ports, wearables: NO_WEARABLES, cohortRecords: true },
+        input("8867-4", "synthetic-subject-1"),
+      ),
+    ).toMatchObject({ code: "SUBJECT_SCOPE_VIOLATION" });
+    expect(audits).toHaveLength(1);
+    expect(audits[0]).toMatchObject({ rowCount: 0 });
+  });
+
+  test("a kind the turn may not draw is refused before it runs: no audit row (#492)", async () => {
+    const { ports, audits } = fakePorts([row("02", 61)]);
+    expect(
+      await runShowView(
+        {
+          scope: SCOPE,
+          ports,
+          wearables: NO_WEARABLES,
+          cohortRecords: true,
+          views: ["chart.compare"],
+        },
+        input("8867-4", "synthetic-subject-1"),
+      ),
+    ).toMatchObject({ code: "VIEW_NOT_ALLOWED" });
+    expect(audits).toEqual([]);
+  });
+
   test("a read whose audit row has no seq draws nothing", async () => {
     const { ports } = fakePorts([row("02", 61)], { ok: true });
     expect(

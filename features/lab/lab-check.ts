@@ -37,18 +37,41 @@ export type EvidenceTable = Readonly<{
 
 export type LabLink = Readonly<{ label: string; href: string }>;
 
-export type LabCheck = Readonly<{
-  id: string;
-  title: string;
-  status: CheckStatus;
-  /** One or two plain sentences: what this check found. */
-  summary: string;
-  evidence: readonly Evidence[];
-  table?: EvidenceTable;
-  /** Shell lines that repeat the check by hand. */
-  howTo: string;
-  links?: readonly LabLink[];
-}>;
+/**
+ * A check's state. Unknown always carries its reason: one plain line the
+ * list and the check's page show beside the badge, so no Unknown is left
+ * unexplained (#483).
+ */
+export type CheckState = Readonly<
+  { status: "ok" | "not-ok"; reason?: never } | { status: "unknown"; reason: string }
+>;
+
+/** The state for `status`; `reason` is kept only when it is Unknown. */
+export const checkState = (status: CheckStatus, reason: string): CheckState =>
+  status === "unknown" ? { status, reason } : { status };
+
+/** Why the check is Unknown, or null when it is not. */
+export const unknownReason = (state: CheckState): string | null =>
+  state.status === "unknown" ? state.reason : null;
+
+export type LabCheck = CheckState &
+  Readonly<{
+    id: string;
+    title: string;
+    /** One or two plain sentences: what this check found. */
+    summary: string;
+    evidence: readonly Evidence[];
+    table?: EvidenceTable;
+    /** Shell lines that repeat the check by hand. */
+    howTo: string;
+    links?: readonly LabLink[];
+  }>;
+
+/** The same check in another state; a reason it had before is dropped. */
+export const withState = (check: LabCheck, state: CheckState): LabCheck => {
+  const { status: _status, reason: _reason, ...body } = check;
+  return { ...body, ...state };
+};
 
 /** A section of the Lab page; Verifiability is the first. */
 export type LabSection = Readonly<{
@@ -72,6 +95,7 @@ export const unavailableCheck = (
 ): LabCheck => ({
   ...base,
   status: "unknown",
+  reason: "The check could not run just now.",
   summary: "This check could not run just now. Reload the page to try again.",
   evidence: [],
 });

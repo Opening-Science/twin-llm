@@ -7,6 +7,7 @@ import {
   type ChatView,
   choroplethView,
   compareView,
+  type SHOW_VIEW_REFUSAL_CODES,
   tableView,
   timeseriesView,
   viewReadings,
@@ -53,18 +54,7 @@ export type ShowViewRefusal =
   | ToolRefusal
   | MapRefusal
   | Readonly<{
-      code:
-        | "COHORT_TOOLS_OFF"
-        | "SUBJECT_REQUIRED"
-        | "NOT_AUDITED"
-        | "VIEW_NOT_ALLOWED"
-        | "UNKNOWN_MEASURE"
-        | "LOINC_REQUIRED"
-        | "COMPARE_WINDOW_REQUIRED"
-        | "MEASURE_REQUIRED"
-        | "FOCUS_REQUIRED"
-        | "WINDOW_REQUIRED"
-        | "RECORDS_NOT_IN_SKILL";
+      code: (typeof SHOW_VIEW_REFUSAL_CODES)[number];
       error: string;
     }>;
 
