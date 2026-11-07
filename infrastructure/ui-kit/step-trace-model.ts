@@ -6,12 +6,17 @@ import { formatElapsed } from "@/infrastructure/format-measure";
  * A trace is `working` until the work settles as `done` or `failed`. While
  * it works, the line names the step in progress (the newest `current` one),
  * or the caller's own words when no step is running. Once settled, the line
- * counts the steps and, when the trace watched the work happen, how long it
- * took. A trace loaded already settled never saw the clock, so it gives no
- * time rather than a made-up one.
+ * counts the steps that ran and, when the trace watched the work happen, how
+ * long it took. A trace loaded already settled never saw the clock, so it
+ * gives no time rather than a made-up one.
+ *
+ * A `refused` step never ran (a gate turned it away before it did anything),
+ * so it is not counted as used; the line names it apart: "Used 1 tool in
+ * 3.0s; 1 call was refused", or "1 tool call was refused" when none ran. A
+ * `skipped` step ran and found nothing, and counts as used.
  */
 
-export type StepState = "pending" | "current" | "done" | "skipped" | "failed";
+export type StepState = "pending" | "current" | "done" | "skipped" | "refused" | "failed";
 
 export type TraceState = "working" | "done" | "failed";
 
@@ -36,19 +41,36 @@ export type HeadlineInput = Readonly<{
   noun?: string;
 }>;
 
+const wasRefused = (n: number, noun: string): string =>
+  `${n} ${noun}${n === 1 ? " was" : "s were"} refused`;
+
+/** The settled count: the steps that ran, then the refused ones apart. */
+const settled = (
+  state: Exclude<TraceState, "working">,
+  steps: readonly TraceStep[],
+  time: string,
+  noun = "tool",
+): string => {
+  const refused = steps.filter((step) => step.state === "refused").length;
+  const ran = steps.length - refused;
+  if (refused === 0 || ran > 0) {
+    const used = `${state === "done" ? "Used" : "Stopped after"} ${count(ran, noun)}${time}`;
+    return refused === 0 ? used : `${used}; ${wasRefused(refused, "call")}`;
+  }
+  const none = wasRefused(refused, `${noun} call`);
+  return state === "done" ? none : `Stopped; ${none}`;
+};
+
 export const traceHeadline = ({
   state,
   steps,
   elapsedMs,
   workingLabel = "Working…",
   noun,
-}: HeadlineInput): string => {
-  if (state === "working") return currentStep(steps)?.label ?? workingLabel;
-  const n = count(steps.length, noun);
-  return state === "done"
-    ? `Used ${n}${took(elapsedMs)}`
-    : `Stopped after ${n}${took(elapsedMs)}`;
-};
+}: HeadlineInput): string =>
+  state === "working"
+    ? (currentStep(steps)?.label ?? workingLabel)
+    : settled(state, steps, took(elapsedMs), noun);
 
 /**
  * The words the live region holds. They change only when the trace starts
@@ -61,8 +83,8 @@ export const traceAnnouncement = (
   noun?: string,
 ): string => {
   if (state === "working") return "Working.";
-  const n = count(steps.length, noun);
-  return state === "done" ? `Done. Used ${n}.` : `Stopped after ${n}.`;
+  const line = `${settled(state, steps, "", noun)}.`;
+  return state === "done" ? `Done. ${line}` : line;
 };
 
 /** The words a screen reader gets for a step's marker. */
@@ -71,5 +93,6 @@ export const STEP_STATE_WORDS: Readonly<Record<StepState, string>> = {
   current: "In progress",
   done: "Done",
   skipped: "No data",
+  refused: "Refused",
   failed: "Failed",
 };

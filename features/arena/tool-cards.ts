@@ -1,4 +1,11 @@
-import { toChatView, viewReadings } from "@/infrastructure/chat-view";
+import {
+  MAP_REFUSAL_CODES,
+  SHOW_VIEW_REFUSAL_CODES,
+  SHOW_VIEW_TOOL,
+  toChatView,
+  viewReadings,
+} from "@/infrastructure/chat-view";
+import { GENOME_NOT_PERMITTED } from "@/infrastructure/data-mode-policy";
 import { EMPTY_VALUE, formatDate, formatNumber } from "@/infrastructure/format-measure";
 import { DNA_ASK_TOOL, GENOME_REPORT_TOOL } from "@/packages/carbon-x/constants";
 import { GBD_ESTIMATE_TOOL, GBD_PROFILE_TOOL } from "@/packages/gbd-local/constants";
@@ -42,6 +49,12 @@ export type ToolCard = Readonly<{
   note: string | null;
   /** A refused call's code (`NO_ROWS`), for the step line; absent otherwise. */
   refusalCode?: string;
+  /**
+   * True when a gate turned the call away before it read anything or wrote
+   * an audit row (`VIEW_NOT_ALLOWED`): it did not run. Absent for a call that
+   * ran, including one refused with `NO_ROWS`, which is audited with 0 rows.
+   */
+  notRun?: true;
   /**
    * The measure's display name as the call's own output gives it (a chart's
    * label, or the `display` of a row with the asked code), for the step
@@ -162,6 +175,24 @@ const TOOL_REFUSAL_NOTES: Readonly<Record<string, Readonly<Record<string, string
 };
 
 const REFUSED = "The tool declined this call.";
+
+/**
+ * Codes a tool returns before it runs: no read, no audit row. Every other
+ * code comes back from a call that ran: the query tools return theirs
+ * (`isToolRefusal`, `packages/query-tools/refusals.ts`) from inside the audit
+ * wrapper, which records them with 0 rows, and the genome and live tools audit
+ * theirs too. The genome permit is checked before `genome_report` and
+ * `dna_ask` write anything; `genome_variants` audits it.
+ */
+const NOT_RUN_CODES: Readonly<Record<string, readonly string[]>> = {
+  [SHOW_VIEW_TOOL]: [...SHOW_VIEW_REFUSAL_CODES, ...MAP_REFUSAL_CODES],
+  [GENOME_REPORT_TOOL]: [GENOME_NOT_PERMITTED],
+  [DNA_ASK_TOOL]: [GENOME_NOT_PERMITTED],
+};
+
+/** Did a refusal with this code stop the call before it ran? */
+export const refusedBeforeRun = (tool: string, code: string): boolean =>
+  NOT_RUN_CODES[tool]?.includes(code) ?? false;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -356,6 +387,7 @@ export const toolCard = (
         ? null
         : (TOOL_REFUSAL_NOTES[part.tool]?.[code] ?? REFUSAL_NOTES[code] ?? REFUSED),
     ...(code === null ? {} : { refusalCode: code }),
+    ...(code !== null && refusedBeforeRun(part.tool, code) ? { notRun: true } : {}),
     ...measureField(state === "done" ? measureNameOf(part.input, part.output) : null),
   };
 };

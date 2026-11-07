@@ -17,7 +17,9 @@ import { RANGE_DASH, type ToolCard, type ToolCardState } from "./tool-cards";
  * display a call's output gave it (`measureNameOf`), shared by every call of
  * the answer that asked for the same code, with the code in brackets; with no
  * name known the code stands alone. A wearable key gets its metric label. A
- * refused call reads "No data: <code>"; the card under it keeps the fixed
+ * call that ran and was refused (`NO_ROWS`) reads "No data: <code>"; one a
+ * gate turned away before it ran (`VIEW_NOT_ALLOWED`) reads "Refused: <code>"
+ * and is not counted as a tool used. The card under it keeps the fixed
  * sentence for the code. Built from the same cards a saved answer stores, so a
  * reload says the same thing.
  */
@@ -109,7 +111,10 @@ export const toolStepLabel = (
   card: ToolCard,
   names: ReadonlyMap<string, string> = measureNames([card]),
 ): string => {
-  if (card.state === "refused") return `No data: ${card.refusalCode ?? "REFUSED"}`;
+  if (card.state === "refused") {
+    const code = card.refusalCode ?? "REFUSED";
+    return card.notRun === true ? `Refused: ${code}` : `No data: ${code}`;
+  }
   const phrase = PHRASES[card.tool];
   const code = arg(card, "Measure");
   const what = phrase
@@ -132,7 +137,9 @@ const STEP_STATES: Readonly<Record<ToolCardState, StepState>> = {
   error: "failed",
 };
 
-export const toolStepState = (card: ToolCard): StepState => STEP_STATES[card.state];
+/** A call refused before it ran is `refused`; one that ran and found nothing, `skipped`. */
+export const toolStepState = (card: ToolCard): StepState =>
+  card.notRun === true ? "refused" : STEP_STATES[card.state];
 
 /** The trace settles when the answer does; a failed answer stops it. */
 export const answerTraceState = (status: AnswerStatus): TraceState =>
