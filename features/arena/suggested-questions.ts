@@ -24,11 +24,22 @@ const TREND_MIN = 3;
 const CHART_MIN = 10;
 
 export type SuggestedQuestion = Readonly<{
-  /** What the chip shows. */
+  /** What the chip shows, and what a pick writes into the prompt box. */
   label: string;
-  /** What the chip writes into the prompt. */
+  /** What is sent to the model when the box still holds the label (#480). */
   prompt: string;
 }>;
+
+/**
+ * The text a send carries for a draft (#480). A chip writes its short question
+ * into the box, so the person never reads a subject_ref or a LOINC code; sent
+ * unchanged, the model gets the chip's grounded prompt, which names them so
+ * the lookup is reliable. A draft the person changed is sent as typed.
+ */
+export const promptForDraft = (
+  draft: string,
+  picked: SuggestedQuestion | null,
+): string => (picked !== null && draft.trim() === picked.label ? picked.prompt : draft);
 
 export type SuggestedQuestions = Readonly<{
   /** Whose data the questions come from, shown above the chips. */
