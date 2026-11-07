@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { skillSourceLabel, type TurnSkill } from "@/infrastructure/skill-gate";
 import { draftHref } from "@/infrastructure/shell-links";
-import { toolTitle } from "@/infrastructure/tool-titles";
+import { toolDoes } from "@/infrastructure/tool-titles";
 import { BackLink } from "@/infrastructure/ui-kit/back-link";
 import { Card } from "@/infrastructure/ui-kit/card";
 
@@ -36,7 +36,7 @@ export const SkillDetail = ({ skill }: Readonly<{ skill: TurnSkill }>) => (
         </dd>
         <dt>May use</dt>
         <dd className="break-normal">
-          {skill.tools.map(toolTitle).join(", ") || "no tools"}
+          {skill.tools.map(toolDoes).join(", ") || "no tools"}
         </dd>
         <dt>Model</dt>
         <dd className="break-normal">{providerLine(skill.providers)}</dd>
