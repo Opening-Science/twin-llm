@@ -137,25 +137,42 @@ const topicsMatched = (agentId: string, text: string): readonly string[] =>
     .filter(({ pattern }) => pattern.test(text))
     .map(({ topic }) => topic);
 
+export type RankedAgent = Readonly<{
+  agentId: string;
+  /** The agent's topics the question matched, in the agent's order. */
+  topics: readonly string[];
+}>;
+
+/**
+ * The specialists offered here that match the question, best first: most
+ * matching topics, a tie to the one listed first in `AGENTS`. The General
+ * agent and agents without a match are left out. Auto takes the first;
+ * Compare's defaults (#493) take as many as fit.
+ */
+export const rankAgents = (
+  prompt: string,
+  offeredIds: readonly string[],
+): readonly RankedAgent[] => {
+  const text = prompt.toLowerCase();
+  return AGENTS.filter(({ id }) => id !== DEFAULT_AGENT_ID && offeredIds.includes(id))
+    .map(({ id }) => ({ agentId: id, topics: topicsMatched(id, text) }))
+    .filter(({ topics }) => topics.length > 0)
+    .toSorted((a, b) => b.topics.length - a.topics.length);
+};
+
 /**
  * The agent for one question among the agents offered here (`agent:<id>`
  * rows minus Auto). An agent that is not offered is never picked.
  */
 export const routeAgent = (prompt: string, offeredIds: readonly string[]): AutoChoice => {
-  const text = prompt.toLowerCase();
-  const decision = DEFAULT_AGENT_TOPICS.find(({ pattern }) => pattern.test(text));
-  if (decision !== undefined) return { agentId: DEFAULT_AGENT_ID, topic: decision.topic };
-  const scored = AGENTS.filter(
-    ({ id }) => id !== DEFAULT_AGENT_ID && offeredIds.includes(id),
-  ).map(({ id }) => ({ id, topics: topicsMatched(id, text) }));
-  const best = scored.reduce<(typeof scored)[number] | null>(
-    (leader, candidate) =>
-      candidate.topics.length > (leader?.topics.length ?? 0) ? candidate : leader,
-    null,
+  const decision = DEFAULT_AGENT_TOPICS.find(({ pattern }) =>
+    pattern.test(prompt.toLowerCase()),
   );
-  return best === null
+  if (decision !== undefined) return { agentId: DEFAULT_AGENT_ID, topic: decision.topic };
+  const [best] = rankAgents(prompt, offeredIds);
+  return best === undefined
     ? { agentId: DEFAULT_AGENT_ID, topic: null }
-    : { agentId: best.id, topic: best.topics[0] ?? null };
+    : { agentId: best.agentId, topic: best.topics[0] ?? null };
 };
 
 const AUTO_SEPARATOR = " → ";

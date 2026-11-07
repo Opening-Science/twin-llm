@@ -1,8 +1,13 @@
 import { describe, expect, test } from "bun:test";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 
 import { AGENTS } from "@/infrastructure/agents";
 import { type CatalogModel } from "@/infrastructure/model-catalog";
 import { type TurnSkill } from "@/infrastructure/skill-gate";
+import { toolDoes, toolTitle } from "@/infrastructure/tool-titles";
+
+import { AgentScreen } from "./agent-screen";
 
 import {
   answersText,
@@ -385,6 +390,20 @@ describe("rosterEntry", () => {
       usage: { ...NO_USAGE, answers: 2 },
       routing: [{ scenario: "S6", labelled: 1, routed: 1, strays: 0 }],
     });
+  });
+
+  test("its page says what each tool does, not a step an answer took (#503)", () => {
+    const shown = renderToStaticMarkup(
+      createElement(AgentScreen, {
+        entry: rosterEntry(agent("sleep"), input),
+        scores: [],
+        usageNote: null,
+      }),
+    );
+    expect(shown).toContain(sleepSkill.tools.map(toolDoes).join(", "));
+    expect(sleepSkill.tools.filter((tool) => shown.includes(toolTitle(tool)))).toEqual(
+      [],
+    );
   });
 
   test("an agent the catalog leaves out is listed, not offered, with no base model", () => {

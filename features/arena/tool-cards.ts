@@ -1,18 +1,16 @@
-import { toChatView, viewReadings } from "@/infrastructure/chat-view";
-import { EMPTY_VALUE, formatDate, formatNumber } from "@/infrastructure/format-measure";
-import { DNA_ASK_TOOL, GENOME_REPORT_TOOL } from "@/packages/carbon-x/constants";
-import { GBD_ESTIMATE_TOOL, GBD_PROFILE_TOOL } from "@/packages/gbd-local/constants";
-import { GBD_MODEL_TOOL } from "@/packages/gbd-mcp/constants";
-import { GUIDELINE_MODEL_TOOL } from "@/packages/guidelines/constants";
-import { KNOWLEDGE_MODEL_TOOL } from "@/packages/knowledge/constants";
 import {
-  IMPORTED_CONDITIONS_TOOL,
-  IMPORTED_DATASETS_TOOL,
-  IMPORTED_LATEST_TOOL,
-  IMPORTED_MEDICATIONS_TOOL,
-  IMPORTED_TABLE_TOOL,
-  IMPORTED_TREND_TOOL,
-} from "@/packages/query-tools/imported-names";
+  MAP_REFUSAL_CODES,
+  SHOW_VIEW_REFUSAL_CODES,
+  SHOW_VIEW_TOOL,
+  toChatView,
+  viewReadings,
+} from "@/infrastructure/chat-view";
+import { GENOME_NOT_PERMITTED } from "@/infrastructure/data-mode-policy";
+import { EMPTY_VALUE, formatDate, formatNumber } from "@/infrastructure/format-measure";
+import { toolTitle } from "@/infrastructure/tool-titles";
+import { DNA_ASK_TOOL, GENOME_REPORT_TOOL } from "@/packages/carbon-x/constants";
+
+export { toolTitle };
 
 /**
  * A tool call as the answer column shows it: what was asked, in plain words,
@@ -43,60 +41,18 @@ export type ToolCard = Readonly<{
   /** A refused call's code (`NO_ROWS`), for the step line; absent otherwise. */
   refusalCode?: string;
   /**
+   * True when a gate turned the call away before it read anything or wrote
+   * an audit row (`VIEW_NOT_ALLOWED`): it did not run. Absent for a call that
+   * ran, including one refused with `NO_ROWS`, which is audited with 0 rows.
+   */
+  notRun?: true;
+  /**
    * The measure's display name as the call's own output gives it (a chart's
    * label, or the `display` of a row with the asked code), for the step
    * line; absent when the output names none.
    */
   measureName?: string;
 }>;
-
-const TITLES: Readonly<Record<string, string>> = {
-  list_subjects: "Listed cohort subjects",
-  subject_window: "Checked a subject's date range",
-  observations_for_subject: "Read observations",
-  latest_by_loinc: "Read latest values",
-  summary_stats: "Summarised a measure",
-  trend: "Fitted a trend",
-  baseline_deviation: "Compared with a baseline",
-  coverage: "Checked data coverage",
-  compare_windows: "Compared two windows",
-  range_position: "Placed a value against its published range",
-  convert_unit: "Converted a unit",
-  cohort_position: "Placed a value among the synthetic cohort",
-  conditions_timeline: "Listed recorded conditions",
-  medications_timeline: "Listed recorded medication requests",
-  values_around_event: "Compared values before and after an event",
-  show_view: "Showed a view",
-  list_views: "Listed this thread's views",
-  open_view: "Reopened a view",
-  sleep_summary: "Summarised sleep per night",
-  hrv_trend: "Fitted an HRV trend",
-  resting_hr_trend: "Fitted a resting heart rate trend",
-  training_load: "Summed workout minutes",
-  cross_source_compare: "Compared two wearables",
-  rhythm_irregularity: "Described a simulated heart rhythm recording",
-  cohort_event_rates: "Counted event rates in a synthetic cohort",
-  [GUIDELINE_MODEL_TOOL]: "Searched guidelines",
-  [GBD_MODEL_TOOL]: "Looked up population data",
-  [GBD_ESTIMATE_TOOL]: "Looked up imported GBD estimates",
-  [GBD_PROFILE_TOOL]: "Assembled a GBD profile from imported estimates",
-  [KNOWLEDGE_MODEL_TOOL]: "Searched TwinLLM notes",
-  [GENOME_REPORT_TOOL]: "Read the released genome report",
-  [DNA_ASK_TOOL]: "Asked Carbon-X (research model) about a variant",
-  [IMPORTED_DATASETS_TOOL]: "Listed your imported datasets",
-  [IMPORTED_LATEST_TOOL]: "Read your newest imported readings",
-  [IMPORTED_TREND_TOOL]: "Fitted a trend of one imported series",
-  [IMPORTED_TABLE_TOOL]: "Read columns of your imported table",
-  [IMPORTED_CONDITIONS_TOOL]: "Listed conditions in your imported records",
-  [IMPORTED_MEDICATIONS_TOOL]: "Listed medication requests in your imported records",
-};
-
-export const toolTitle = (tool: string): string => {
-  const known = TITLES[tool];
-  if (known) return known;
-  const words = tool.replace(/[_.-]+/g, " ").trim();
-  return words === "" ? "Tool call" : words.charAt(0).toUpperCase() + words.slice(1);
-};
 
 const REFUSAL_NOTES: Readonly<Record<string, string>> = {
   SUBJECT_SCOPE_VIOLATION: "That subject is outside this session's scope.",
@@ -162,6 +118,24 @@ const TOOL_REFUSAL_NOTES: Readonly<Record<string, Readonly<Record<string, string
 };
 
 const REFUSED = "The tool declined this call.";
+
+/**
+ * Codes a tool returns before it runs: no read, no audit row. Every other
+ * code comes back from a call that ran: the query tools return theirs
+ * (`isToolRefusal`, `packages/query-tools/refusals.ts`) from inside the audit
+ * wrapper, which records them with 0 rows, and the genome and live tools audit
+ * theirs too. The genome permit is checked before `genome_report` and
+ * `dna_ask` write anything; `genome_variants` audits it.
+ */
+const NOT_RUN_CODES: Readonly<Record<string, readonly string[]>> = {
+  [SHOW_VIEW_TOOL]: [...SHOW_VIEW_REFUSAL_CODES, ...MAP_REFUSAL_CODES],
+  [GENOME_REPORT_TOOL]: [GENOME_NOT_PERMITTED],
+  [DNA_ASK_TOOL]: [GENOME_NOT_PERMITTED],
+};
+
+/** Did a refusal with this code stop the call before it ran? */
+export const refusedBeforeRun = (tool: string, code: string): boolean =>
+  NOT_RUN_CODES[tool]?.includes(code) ?? false;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -356,6 +330,7 @@ export const toolCard = (
         ? null
         : (TOOL_REFUSAL_NOTES[part.tool]?.[code] ?? REFUSAL_NOTES[code] ?? REFUSED),
     ...(code === null ? {} : { refusalCode: code }),
+    ...(code !== null && refusedBeforeRun(part.tool, code) ? { notRun: true } : {}),
     ...measureField(state === "done" ? measureNameOf(part.input, part.output) : null),
   };
 };

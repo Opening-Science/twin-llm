@@ -7,6 +7,7 @@ import { DEMO_SUBJECT_ID } from "@/features/digital-twin/demo-subject";
 import type { TwinBodySpec } from "@/infrastructure/chat-view";
 import { focusOfPick } from "@/packages/anatomy/twin-focus";
 
+import { useBodyLoopConfigured } from "./body-loop-context";
 import { twinBodyFocus } from "./twin-body-text";
 import { useTwinPick } from "./twin-pick-context";
 
@@ -18,6 +19,7 @@ import { useTwinPick } from "./twin-pick-context";
  */
 export const TwinBodyViewer = ({ spec }: Readonly<{ spec: TwinBodySpec }>) => {
   const pick = useTwinPick();
+  const bodyLoopConfigured = useBodyLoopConfigured();
   const onPickPart = useCallback(
     (part: PickedPart | null) =>
       pick(part === null ? null : focusOfPick(part.group, part.system)),
@@ -29,6 +31,7 @@ export const TwinBodyViewer = ({ spec }: Readonly<{ spec: TwinBodySpec }>) => {
       initialPersonRef={spec.subject ?? undefined}
       initialFocus={twinBodyFocus(spec)}
       onPickPart={onPickPart}
+      bodyLoopConfigured={bodyLoopConfigured}
     />
   );
 };

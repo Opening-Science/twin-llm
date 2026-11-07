@@ -25,6 +25,7 @@ describe("auditChainCheck", () => {
   test("an unreadable table is unknown", () => {
     const check = auditChainCheck(null);
     expect(check.status).toBe("unknown");
+    expect(check.reason).toBe("The audit table could not be read.");
     expect(check.evidence).toEqual([]);
     expect(unavailableCheck(auditChainBase).howTo).toBe(check.howTo);
   });
@@ -32,6 +33,7 @@ describe("auditChainCheck", () => {
   test("an empty table is unknown, with nothing to check", () => {
     const check = auditChainCheck({ state: AUDIT_WALK_START, total: 0, complete: true });
     expect(check.status).toBe("unknown");
+    expect(check.reason).toBe("The audit log has no rows yet.");
     expect(check.evidence).toEqual([
       { label: "Rows checked", value: "0 of 0" },
       { label: "First broken link", value: "none", mono: false },
@@ -42,6 +44,7 @@ describe("auditChainCheck", () => {
   test("a walk that stopped at its budget is unknown and says how far it got", () => {
     const check = auditChainCheck(walk(50_000, 250_000, false));
     expect(check.status).toBe("unknown");
+    expect(check.reason).toBe("50,000 of 250,000 rows checked so far; reload to go on.");
     expect(check.summary).toBe(
       "Checked 50,000 of 250,000 rows so far. The page reads at most 50,000 rows per load so the server stays responsive; reload to go on, or run the command below to check the whole chain now.",
     );

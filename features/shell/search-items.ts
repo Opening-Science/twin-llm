@@ -49,7 +49,7 @@ const PAGES: readonly (SearchItem & { kind: "page" })[] = [
     kind: "page",
     id: "data",
     title: "Customize · Data",
-    detail: "your imports, synthetic cohort, warehouse",
+    detail: "your imports, synthetic cohort",
     href: "/customize/data",
   },
   {

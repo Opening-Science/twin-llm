@@ -1,6 +1,15 @@
 import { describe, expect, test } from "bun:test";
 
-import { plural, shortHash, splitCode, unavailableCheck } from "./lab-check";
+import {
+  checkState,
+  type LabCheck,
+  plural,
+  shortHash,
+  splitCode,
+  unavailableCheck,
+  unknownReason,
+  withState,
+} from "./lab-check";
 
 describe("shortHash", () => {
   test("keeps the first characters and drops an sha256: prefix", () => {
@@ -41,8 +50,36 @@ describe("unavailableCheck", () => {
       title: "X",
       howTo: "true",
       status: "unknown",
+      reason: "The check could not run just now.",
       summary: "This check could not run just now. Reload the page to try again.",
       evidence: [],
     });
+  });
+});
+
+describe("an Unknown says why (#483)", () => {
+  test("checkState keeps the reason only for Unknown", () => {
+    expect(checkState("unknown", "Why.")).toEqual({ status: "unknown", reason: "Why." });
+    expect(checkState("ok", "Why.")).toEqual({ status: "ok" });
+    expect(checkState("not-ok", "Why.")).toEqual({ status: "not-ok" });
+  });
+  test("unknownReason is null unless Unknown", () => {
+    expect(unknownReason({ status: "unknown", reason: "Why." })).toBe("Why.");
+    expect(unknownReason({ status: "ok" })).toBeNull();
+  });
+  test("withState drops a reason the check had before", () => {
+    const before: LabCheck = {
+      id: "x",
+      title: "X",
+      howTo: "true",
+      status: "unknown",
+      reason: "Why.",
+      summary: "S.",
+      evidence: [],
+    };
+    const after = withState(before, { status: "not-ok" });
+    expect(after.status).toBe("not-ok");
+    expect("reason" in after).toBe(false);
+    expect(after.summary).toBe("S.");
   });
 });

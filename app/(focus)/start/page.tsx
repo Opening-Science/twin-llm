@@ -1,7 +1,12 @@
 import { redirect } from "next/navigation";
 
 import { connectGroups, sourceAvailability } from "@/features/onboarding/connect-rows";
+import { countSubjects } from "@/features/lab/load-simulation";
 import { OnboardingFlow } from "@/features/onboarding/onboarding-flow";
+import {
+  demoAvailable,
+  withAvailableChoice,
+} from "@/features/onboarding/onboarding-steps";
 import {
   countIndexedDocuments,
   loadOnboardingOrEmpty,
@@ -39,15 +44,17 @@ export default async function StartPage() {
     (isAuthDisabled() ? (await ensureAppUser(clerkId)).id : null);
 
   const env = serverEnv();
-  const [stored, facts, documents] = await Promise.all([
+  const [stored, facts, documents, people] = await Promise.all([
     loadOnboardingOrEmpty(appUserId),
     loadConnectFacts(appUserId),
     countIndexedDocuments(),
+    countSubjects(),
   ]);
+  const demo = demoAvailable(people);
 
   return (
     <OnboardingFlow
-      initialAnswers={stored.answers}
+      initialAnswers={withAvailableChoice(stored.answers, demo)}
       // A finished flow reopens at the start; an unfinished one where it was left.
       initialStep={stored.completed ? 0 : stored.step}
       connectGroups={connectGroups(facts)}
@@ -68,6 +75,7 @@ export default async function StartPage() {
         ollamaOnLoopback: isLoopbackUrl(env.OLLAMA_BASE_URL ?? DEFAULT_OLLAMA_BASE_URL),
         exoscalePersonalData: exoscalePersonalData(env),
       }}
+      demo={demo}
       onStartThread={startStarterThread}
     />
   );

@@ -30,7 +30,13 @@ import {
 import { cn } from "@/infrastructure/ui";
 import { Button } from "@/infrastructure/ui-kit/button";
 
-import { initialSelection, MODE_COPY, modeModelIds, modeProblem } from "./chat-mode";
+import {
+  fitCompare,
+  initialSelection,
+  MODE_COPY,
+  modeModelIds,
+  modeProblem,
+} from "./chat-mode";
 import { EffortMenu } from "./effort-menu";
 import { Mark } from "./marks";
 import { ModeMenu } from "./mode-menu";
@@ -45,7 +51,11 @@ import {
 } from "./prompt-sources";
 import { promptToken, withMention } from "./prompt-tokens";
 import { SourceMenu, sourceOptionId } from "./source-menu";
-import type { SuggestedQuestions } from "./suggested-questions";
+import {
+  promptForDraft,
+  type SuggestedQuestion,
+  type SuggestedQuestions,
+} from "./suggested-questions";
 import { SuggestionChips } from "./suggestion-chips";
 
 /**
@@ -151,6 +161,8 @@ export const PromptBar = ({
   const wearables = useWearableStatus();
   const offered = catalog ? offeredModels(catalog, incognito, localModelIds) : null;
   const [draft, setDraft] = useState(initialDraft);
+  // The chip whose short question is in the box; its grounded prompt is what is sent.
+  const [pickedChip, setPickedChip] = useState<SuggestedQuestion | null>(null);
   const [selection, setSelection] = useState(() =>
     initialSelection(initialModelIds, offered ?? []),
   );
@@ -162,13 +174,15 @@ export const PromptBar = ({
   const [notice, setNotice] = useState<string | undefined>(undefined);
   const promptRef = useRef<HTMLTextAreaElement>(null);
 
+  // Compare's defaults follow the question as it is typed (#493); picks stay.
+  const fitted = offered ? fitCompare(selection, offered, draft) : selection;
   const chosen = offered
-    ? modeModelIds(selection, offered).flatMap((id) => {
+    ? modeModelIds(fitted, offered).flatMap((id) => {
         const row = findCatalogRow(id, offered);
         return row === null ? [] : [row];
       })
     : [];
-  const problem = offered ? modeProblem(selection, offered) : null;
+  const problem = offered ? modeProblem(fitted, offered) : null;
   const lockedIds =
     catalog && offered && incognito
       ? catalog.filter((model) => !offered.includes(model)).map((model) => model.id)
@@ -198,6 +212,7 @@ export const PromptBar = ({
 
   const reset = () => {
     setPicked(null);
+    setPickedChip(null);
     setActiveIndex(0);
     setNotice(undefined);
     setSourcesOpen(false);
@@ -222,7 +237,7 @@ export const PromptBar = ({
       openCompact,
       send: () => {
         if (!ready || catalog === null) return;
-        const prompt = skillTurn?.prompt ?? draft;
+        const prompt = skillTurn?.prompt ?? promptForDraft(draft, pickedChip);
         onSubmit(
           prompt,
           chosen.map((model) => ({
@@ -342,9 +357,11 @@ export const PromptBar = ({
         <SuggestionChips
           suggestions={suggestions}
           onPick={(question) => {
-            setDraft(question.prompt);
+            setDraft(question.label);
             setMenuDismissed(false);
             reset();
+            // After reset, which clears it.
+            setPickedChip(question);
             promptRef.current?.focus();
           }}
         />
@@ -426,7 +443,7 @@ export const PromptBar = ({
             {catalog && offered ? (
               <ModeMenu
                 catalog={catalog}
-                selection={selection}
+                selection={fitted}
                 lockedIds={lockedIds}
                 lockedNote={INCOGNITO_MODEL_NOT_LOCAL}
                 onChange={setSelection}

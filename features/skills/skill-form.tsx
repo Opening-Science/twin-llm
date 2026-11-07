@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useState } from "react";
 
 import { LLM_PROVIDERS, type LlmProvider } from "@/infrastructure/data-mode-policy";
 import { KNOWLEDGE_SOURCE_GROUPS } from "@/infrastructure/knowledge-sources";
@@ -10,14 +10,22 @@ import { Button } from "@/infrastructure/ui-kit/button";
 import { Field } from "@/infrastructure/ui-kit/field";
 
 import { saveSkill, type SkillFormState } from "./skill-actions";
+import {
+  type SkillSelection,
+  tickSource,
+  tickTool,
+  unreadSources,
+  unreadSourcesNote,
+} from "./skill-form-rules";
 import { SKILL_VIEW_KINDS } from "./skill-schema";
 import { USER_SKILL_INSTRUCTIONS_MAX, type UserSkillRow } from "./user-skill";
 
 /**
  * The skill builder (#174). Each choice says what it allows, and the card on
  * the right shows the skill as the `/` palette will: what it reads, which
- * tools it may call, where it runs. Ticking a tool ticks its source, since a
- * tool never runs without it; the server checks every rule again on save.
+ * tools it may call, where it runs. Ticking a tool ticks its source, and
+ * ticking a source ticks its tools and the sources it needs
+ * (`skill-form-rules.ts`); the server checks every rule again on save.
  */
 
 const PROVIDER_LABELS: Readonly<Record<LlmProvider, string>> = {
@@ -74,27 +82,21 @@ export const SkillForm = ({ skill = EMPTY }: Readonly<{ skill?: UserSkillRow }>)
   });
   const [name, setName] = useState(skill.name);
   const [description, setDescription] = useState(skill.description);
-  const [sources, setSources] = useState<readonly string[]>(skill.sources);
-  const [tools, setTools] = useState<readonly string[]>(skill.tools);
+  const [selection, setSelection] = useState<SkillSelection>({
+    sources: skill.sources,
+    tools: skill.tools,
+  });
   const [providers, setProviders] = useState<readonly string[]>(skill.providers);
   const [instructions, setInstructions] = useState(skill.instructions);
   const errors = state.errors;
+  const { sources, tools } = selection;
+  const unread = unreadSources(selection);
+  const unreadNote = unreadSourcesNote(unread);
 
-  const toolSource = useMemo(
-    () =>
-      new Map(SOURCES.flatMap((source) => source.tools.map((tool) => [tool, source.id]))),
-    [],
-  );
-
-  const setTool = (tool: string, on: boolean) => {
-    setTools((list) => toggle(list, tool, on));
-    const owner = toolSource.get(tool);
-    if (on && owner !== undefined) setSources((list) => toggle(list, owner, true));
-  };
-  const setSource = (id: string, on: boolean) => {
-    setSources((list) => toggle(list, id, on));
-    if (!on) setTools((list) => list.filter((tool) => toolSource.get(tool) !== id));
-  };
+  const setTool = (tool: string, on: boolean) =>
+    setSelection((current) => tickTool(current, tool, on));
+  const setSource = (id: string, on: boolean) =>
+    setSelection((current) => tickSource(current, id, on));
 
   return (
     <form action={action} className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem]">
@@ -149,6 +151,9 @@ export const SkillForm = ({ skill = EMPTY }: Readonly<{ skill?: UserSkillRow }>)
             What it may read, and which tools it may call
           </legend>
           <ErrorLine message={errors.sources ?? errors.tools} />
+          {unreadNote === null ? null : (
+            <p className="text-muted-foreground mt-1 text-xs">{unreadNote}</p>
+          )}
           <div className="mt-3 flex flex-col gap-3">
             {SOURCES.map((source) => (
               <div key={source.id} className="surface p-3">
@@ -257,11 +262,20 @@ export const SkillForm = ({ skill = EMPTY }: Readonly<{ skill?: UserSkillRow }>)
             {description.trim() || "What it does"}
           </span>
           <span className="text-muted-foreground text-xs">
-            Reads: {sources.map(skillSourceLabel).join(", ") || "nothing yet"}
+            Reads:{" "}
+            {sources
+              .filter((id) => !unread.includes(id))
+              .map(skillSourceLabel)
+              .join(", ") || "nothing yet"}
           </span>
           <span className="text-muted-foreground text-xs">
             May call: <span className="font-mono">{tools.join(", ") || "no tools"}</span>
           </span>
+          {unread.length === 0 ? null : (
+            <span className="text-muted-foreground text-xs">
+              Not read, no tool ticked: {unread.map(skillSourceLabel).join(", ")}
+            </span>
+          )}
           <span className="text-muted-foreground text-xs">
             {providers.length === 1 && providers[0] === "ollama"
               ? "Runs on local models only"

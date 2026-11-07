@@ -4,8 +4,7 @@
  */
 export const IMPORT_MESSAGES = {
   signIn: "Sign in to import your data.",
-  syntheticMode:
-    "Importing your own data is off while TwinLLM runs on synthetic data (DATA_MODE=synthetic).",
+  syntheticMode: "Importing your own data is off while TwinLLM runs on synthetic data.",
   noFile: "Choose a file to import.",
   noKind: "Choose what kind of file this is.",
   tooLarge: "The file is larger than 50 MB.",

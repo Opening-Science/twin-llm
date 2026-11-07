@@ -51,6 +51,7 @@ export const encryptionCheck = (input: EncryptionCheckInput): LabCheck => {
     return {
       ...encryptionBase,
       status: "unknown",
+      reason: "Synthetic mode: there is no personal data to encrypt.",
       summary:
         "Synthetic mode: synthetic rows stay plain by design, so there is nothing to encrypt. In personal mode this check counts plain values in every listed column.",
       evidence,

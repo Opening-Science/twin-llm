@@ -26,8 +26,8 @@ export const YourDataSection = ({ data }: Readonly<{ data: YourDataState }>) => 
     </p>
     {data.state === "synthetic" ? (
       <p className="surface text-muted-foreground mt-4 p-4 text-sm">
-        {IMPORT_MESSAGES.syntheticMode} Your own data is imported only with
-        DATA_MODE=personal.
+        {IMPORT_MESSAGES.syntheticMode} Whoever runs TwinLLM here can switch it to
+        personal data.
       </p>
     ) : data.state === "signed-out" ? (
       <p className="surface text-muted-foreground mt-4 p-4 text-sm">

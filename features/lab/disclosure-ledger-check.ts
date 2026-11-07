@@ -81,6 +81,7 @@ export const disclosureLedgerCheck = (input: DisclosureLedgerInput): LabCheck =>
     return {
       ...disclosureLedgerBase,
       status: "unknown",
+      reason: "The disclosure ledger could not be read.",
       summary:
         "The disclosure ledger could not be read just now. Check that the database is running and migrated (`bun run db:deploy`).",
       evidence: [],
@@ -127,6 +128,7 @@ export const disclosureLedgerCheck = (input: DisclosureLedgerInput): LabCheck =>
     return {
       ...disclosureLedgerBase,
       status: "unknown",
+      reason: "The ledger has no rows yet, so there is no chain to check.",
       summary:
         "The ledger has no rows yet: nothing has been sent to a hosted model, a wearable vendor, an export file or another recipient since it was added, so there is no chain to check.",
       evidence,

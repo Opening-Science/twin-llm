@@ -50,10 +50,10 @@ export const MOTION_HIDES_ANATOMY =
 export const MOTION_REDUCED = "Motion is off because the system asks for reduced motion.";
 /**
  * The demo body loads without a skeleton only when the rigged copy was never
- * installed on this machine, so the reason names the command that downloads it.
+ * installed on this machine, so the reason says who can install it (#480).
  */
 export const MOTION_NO_RIG_DEMO =
-  "The demo body that can walk is not installed on this machine. Run bun run anatomy:fetch.";
+  "The demo body that can walk is not installed on this machine. Whoever runs TwinLLM here can install it.";
 export const MOTION_NO_RIG_SCAN = "This scan has no skeleton the walk can drive.";
 
 /**
@@ -92,8 +92,7 @@ export const DAY_ABOUT =
   "The day's workout picks the motion and its cadence the speed; Night lies the body down breathing at that night's respiratory rate. A visual cue, not a physiological simulation.";
 export const DAY_LOADING = "Loading wearable days…";
 export const DAY_FAILED = "Could not load wearable days.";
-export const DAY_NONE_DEMO =
-  "This synthetic person has no synthetic wearable series in the warehouse.";
+export const DAY_NONE_DEMO = "This synthetic person has no synthetic wearable series.";
 export const DAY_NONE_SELF =
   "No workouts or breathing rates in the linked wearables' recent data.";
 export const DAY_NONE_OTHER = "Only the Demo and Self have wearable days.";

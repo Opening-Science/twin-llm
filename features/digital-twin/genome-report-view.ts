@@ -102,13 +102,14 @@ export const RUN_FAILURE_TEXT: Readonly<Record<string, string>> = {
   locked: "The Ark is locked. Unlock it in the Companion app and run again.",
   unpaired: "This computer is not paired with the Ark.",
   error: "The Ark run did not finish. Run again.",
-  "app-not-built": "The rsid-genotypes app is not built. Run bun run ark:build first.",
+  "app-not-built":
+    "The rsid-genotypes app is not built on this server yet. Whoever runs TwinLLM here can build it.",
   "report-unreadable":
     "The Ark released something that is not the rsid-genotypes report, so nothing was stored.",
   "not-recorded":
     "The release could not be written to the disclosure ledger, so nothing was stored. Run again.",
   "not-permitted":
-    "Genome runs need DATA_MODE=personal and GENOME_SOURCE=ark on this server.",
+    "Genome runs need this server to run on personal data with the Ark as its genome source. Whoever runs TwinLLM here can set that up.",
   "sign-in": "Sign in to run the Ark app.",
 };
 
