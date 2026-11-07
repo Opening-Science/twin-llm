@@ -36,6 +36,7 @@ import { ChoiceOption, LaterNote, Switch } from "./onboarding-parts";
 import {
   DATA_CHOICES,
   type DataChoiceId,
+  DEMO_MISSING_HINT,
   type OnboardingAnswers,
   type RoleId,
   ROLES,
@@ -49,11 +50,14 @@ import {
 export const PurposeStep = ({
   answers,
   dataModeNote,
+  demo,
   onToggleRole,
   onDataChoice,
 }: {
   readonly answers: OnboardingAnswers;
   readonly dataModeNote: string;
+  /** Whether synthetic people are loaded to explore (#477). */
+  readonly demo: boolean;
   readonly onToggleRole: (role: RoleId) => void;
   readonly onDataChoice: (choice: DataChoiceId) => void;
 }) => (
@@ -77,17 +81,21 @@ export const PurposeStep = ({
     <fieldset>
       <legend className="text-eyebrow mb-2">Start with</legend>
       <div className="grid gap-2">
-        {DATA_CHOICES.map((choice) => (
-          <ChoiceOption
-            key={choice.id}
-            type="radio"
-            name="data-choice"
-            checked={answers.dataChoice === choice.id}
-            onChange={() => onDataChoice(choice.id)}
-            label={choice.label}
-            hint={choice.hint}
-          />
-        ))}
+        {DATA_CHOICES.map((choice) => {
+          const missing = choice.id === "demo" && !demo;
+          return (
+            <ChoiceOption
+              key={choice.id}
+              type="radio"
+              name="data-choice"
+              checked={answers.dataChoice === choice.id}
+              onChange={() => onDataChoice(choice.id)}
+              label={choice.label}
+              hint={missing ? DEMO_MISSING_HINT : choice.hint}
+              disabled={missing}
+            />
+          );
+        })}
       </div>
     </fieldset>
     <LaterNote>This tailors the starter questions at the end. {dataModeNote}</LaterNote>

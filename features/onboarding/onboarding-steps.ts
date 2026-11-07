@@ -51,6 +51,24 @@ export const DATA_CHOICES = [
 
 export type DataChoiceId = (typeof DATA_CHOICES)[number]["id"];
 
+/** What the demo choice says when no synthetic people are loaded (#477). */
+export const DEMO_MISSING_HINT =
+  "No synthetic people are loaded on this machine yet. Whoever runs TwinLLM here can load them.";
+
+/**
+ * The demo cohort can be chosen only when synthetic people are loaded; a count
+ * that is personal mode or could not be read offers it as missing (#477).
+ */
+export const demoAvailable = (people: number | "personal" | "unread"): boolean =>
+  typeof people === "number" && people > 0;
+
+/** A saved "demo" answer is dropped when the demo is not there to explore. */
+export const withAvailableChoice = (
+  answers: OnboardingAnswers,
+  demo: boolean,
+): OnboardingAnswers =>
+  !demo && answers.dataChoice === "demo" ? { ...answers, dataChoice: null } : answers;
+
 export type OnboardingAnswers = Readonly<{
   roles: readonly RoleId[];
   dataChoice: DataChoiceId | null;

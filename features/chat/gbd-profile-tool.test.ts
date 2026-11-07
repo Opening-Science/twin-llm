@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 
 import { toChatView } from "@/infrastructure/chat-view";
 import type { AppendInput } from "@/packages/audit/append";
@@ -82,6 +82,12 @@ const scope: SessionScope = {
   sessionId: "profile-turn",
   mode: "personal",
 };
+
+// The turn's GBD rows are kept per session for the whole process; each test
+// starts with an empty turn, whatever ran before it (#481).
+beforeEach(() => {
+  drainGbdTurn(scope.sessionId);
+});
 
 const asProfile = (output: unknown): GbdProfileOutput => {
   if (typeof output !== "object" || output === null || !("sections" in output)) {

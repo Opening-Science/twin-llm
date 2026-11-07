@@ -20,6 +20,7 @@ export const ChoiceOption = ({
   onChange,
   label,
   hint,
+  disabled = false,
 }: {
   readonly type: "checkbox" | "radio";
   readonly name: string;
@@ -27,14 +28,19 @@ export const ChoiceOption = ({
   readonly onChange: () => void;
   readonly label: string;
   readonly hint: string;
+  readonly disabled?: boolean;
 }) => {
   const id = useId();
   return (
     <label
       htmlFor={id}
       className={cn(
-        "flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2.5 transition-colors",
-        checked ? "border-primary bg-muted" : "border-border hover:bg-muted/60",
+        "flex items-start gap-3 rounded-lg border px-3 py-2.5 transition-colors",
+        disabled
+          ? "border-border cursor-not-allowed opacity-60"
+          : checked
+            ? "border-primary bg-muted cursor-pointer"
+            : "border-border hover:bg-muted/60 cursor-pointer",
       )}
     >
       <input
@@ -43,6 +49,7 @@ export const ChoiceOption = ({
         name={name}
         checked={checked}
         onChange={onChange}
+        disabled={disabled}
         className="accent-primary mt-0.5 size-4 shrink-0"
       />
       <span className="min-w-0 text-sm font-medium">

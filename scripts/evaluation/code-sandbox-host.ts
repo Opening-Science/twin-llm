@@ -73,10 +73,14 @@ export const discoverPython = (python: string = HOST_PYTHON): PythonLayout => {
 
 const firstLine = (text: string): string => text.trim().split("\n")[0] ?? "";
 
+/** Every scope this process starts begins with this, so a check can tell its own apart (#482). */
+export const ownUnitPrefix = (pid: number = process.pid): string =>
+  `twin-eval-code-${pid}-`;
+
 let unitCounter = 0;
 const newUnit = (): string => {
   unitCounter += 1;
-  return `twin-eval-code-${process.pid}-${unitCounter}-${randomBytes(4).toString("hex")}`;
+  return `${ownUnitPrefix()}${unitCounter}-${randomBytes(4).toString("hex")}`;
 };
 
 /** The sandbox on this host, or a throw naming what is missing. */

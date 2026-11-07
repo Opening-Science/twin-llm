@@ -29,6 +29,35 @@ export const LIST_VIEWS_TOOL = "list_views";
 /** Returns a stored view again, unchanged, so it is drawn without a new query. */
 export const OPEN_VIEW_TOOL = "open_view";
 
+/**
+ * `show_view`'s own refusals (`features/chat/show-view-tool.ts`). Each is
+ * returned before the call reads anything or writes an audit row, and
+ * `NOT_AUDITED` means no row was written, so a call refused with one did not
+ * run. A refusal from the read itself (`NO_ROWS`, the query tools' codes) is
+ * audited with 0 rows: that call ran.
+ */
+export const SHOW_VIEW_REFUSAL_CODES = [
+  "COHORT_TOOLS_OFF",
+  "SUBJECT_REQUIRED",
+  "NOT_AUDITED",
+  "VIEW_NOT_ALLOWED",
+  "UNKNOWN_MEASURE",
+  "LOINC_REQUIRED",
+  "COMPARE_WINDOW_REQUIRED",
+  "MEASURE_REQUIRED",
+  "FOCUS_REQUIRED",
+  "WINDOW_REQUIRED",
+  "RECORDS_NOT_IN_SKILL",
+] as const;
+
+/** `map.choropleth`'s refusals (`features/chat/map-view.ts`), returned before its audit row. */
+export const MAP_REFUSAL_CODES = [
+  "ESTIMATES_REQUIRED",
+  "STATES_REQUIRED",
+  "NO_SUBNATIONAL_BOUNDARIES",
+  "NOTHING_TO_MAP",
+] as const;
+
 /** Every tool that draws or reopens a view; a skill keeps them only when it allows views. */
 export const VIEW_TOOLS: ReadonlySet<string> = new Set([
   SHOW_VIEW_TOOL,
