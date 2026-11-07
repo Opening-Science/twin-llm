@@ -7,7 +7,14 @@ import {
 } from "@/packages/audit/anchor";
 import type { ChainName } from "@/packages/audit/chain";
 
-import { type CheckStatus, type Evidence, type LabCheck } from "./lab-check";
+import {
+  checkState,
+  type CheckStatus,
+  type Evidence,
+  type LabCheck,
+  unknownReason,
+  withState,
+} from "./lab-check";
 
 /**
  * Adds the signed anchor (#300) to the Audit chain and the disclosure ledger
@@ -96,6 +103,36 @@ export const anchorEvidence = (view: AnchorView | null): readonly Evidence[] => 
   ];
 };
 
+type UnknownAnchor = Extract<AnchorVerdict, { status: "unknown" }>["reason"];
+
+/** Why the anchor is Unknown, as the end of one line on the list. */
+const ANCHOR_UNKNOWN: Readonly<Record<UnknownAnchor, string>> = {
+  "no-key": "signed anchors are off because there is no anchor key yet",
+  "key-unreadable": "the anchor key could not be read",
+  "log-unreadable": "the anchors file could not be read",
+  "no-anchor": "no signed anchor has been written yet",
+  "chain-unreadable": "the chain could not be read to compare with its anchor",
+  "database-unreadable": "this database's identity could not be read",
+  "continuity-break": "the anchor key was replaced without the old key",
+};
+
+/**
+ * The card's reason when it is Unknown: the chain's own reason when the
+ * chain is Unknown, else that its rows verify and why the anchor does not
+ * say more.
+ */
+const anchorReason = (check: LabCheck, view: AnchorView | null): string => {
+  const chain = unknownReason(check);
+  if (chain !== null) return chain;
+  const anchor =
+    view === null
+      ? "the signed anchor could not be read"
+      : view.verdict.status === "unknown"
+        ? ANCHOR_UNKNOWN[view.verdict.reason]
+        : "";
+  return `Rows verify, but ${anchor}.`;
+};
+
 /** The chain's card with the anchor folded in. */
 export const withAnchor = (
   check: LabCheck,
@@ -109,8 +146,10 @@ export const withAnchor = (
       ? "The signed anchor could not be read just now."
       : anchorSentence(view.verdict, ANCHOR_CHAIN_WORDS[chain]);
   return {
-    ...check,
-    status: worseStatus(check.status, status),
+    ...withState(
+      check,
+      checkState(worseStatus(check.status, status), anchorReason(check, view)),
+    ),
     summary: `${check.summary} ${sentence}`,
     evidence: [...check.evidence, ...anchorEvidence(view)],
   };
