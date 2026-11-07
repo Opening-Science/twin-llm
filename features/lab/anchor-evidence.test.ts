@@ -55,7 +55,12 @@ describe("anchor evidence on the chain cards (#300)", () => {
   });
 
   test("an empty chain after truncation is Not OK, not Unknown", () => {
-    const empty: LabCheck = { ...CHAIN_OK, status: "unknown", summary: "No rows yet." };
+    const empty: LabCheck = {
+      ...CHAIN_OK,
+      status: "unknown",
+      reason: "No rows yet.",
+      summary: "No rows yet.",
+    };
     const check = withAnchor(
       empty,
       {
@@ -71,6 +76,7 @@ describe("anchor evidence on the chain cards (#300)", () => {
       "audit",
     );
     expect(check.status).toBe("not-ok");
+    expect(check.reason).toBeUndefined();
     expect(check.summary).toBe(
       "No rows yet. The audit chain is shorter than its latest signed anchor (row 12), so rows were removed from its end.",
     );
@@ -96,15 +102,38 @@ describe("anchor evidence on the chain cards (#300)", () => {
       "disclosures",
     );
     expect(check.status).toBe("unknown");
+    expect(check.reason).toBe(
+      "Rows verify, but signed anchors are off because there is no anchor key yet.",
+    );
     expect(check.summary).toBe(
       "All 12 rows hash correctly. Signed anchors are off: there is no anchor key yet. Create one with `bun run anchor:init`.",
     );
     expect(anchorEvidence({ verdict: ok, publicKey: null })).toHaveLength(3);
   });
 
+  test("an Unknown chain keeps its own reason over the anchor's (#483)", () => {
+    const empty: LabCheck = {
+      ...CHAIN_OK,
+      status: "unknown",
+      reason: "The audit log has no rows yet.",
+      summary: "No rows yet.",
+    };
+    const verdict: AnchorVerdict = {
+      status: "unknown",
+      reason: "no-anchor",
+      anchor: null,
+      line: null,
+      keyId: KEY_ID,
+    };
+    const check = withAnchor(empty, { verdict, publicKey: PUBLIC }, "audit");
+    expect(check.status).toBe("unknown");
+    expect(check.reason).toBe("The audit log has no rows yet.");
+  });
+
   test("an anchor that could not be read is Unknown", () => {
     const check = withAnchor(CHAIN_OK, null, "audit");
     expect(check.status).toBe("unknown");
+    expect(check.reason).toBe("Rows verify, but the signed anchor could not be read.");
     expect(check.evidence.at(-1)).toEqual({
       label: "Signed anchor",
       value: "could not be read",

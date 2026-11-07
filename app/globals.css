@@ -908,6 +908,57 @@
     @apply font-mono text-xs;
   }
 
+  /* --- Lab checks that fit (#483, features/lab/check-*.tsx, lab-table.tsx) ---
+     An Unknown check says why in one muted line: under the title on the
+     list, beside the badge on the check's page. A check's table wraps its
+     cells, long paths included, instead of running past its card; below sm
+     each row becomes a block of label and value pairs. A command line wraps
+     under a hanging indent, so a wrapped line still reads as one command. */
+  .check-reason {
+    @apply text-muted-foreground text-xs leading-snug;
+  }
+  .check-detail-head {
+    @apply flex flex-wrap items-baseline gap-x-3 gap-y-1;
+  }
+  .lab-table-stack .lab-table th,
+  .lab-table-stack .lab-table td {
+    @apply whitespace-normal;
+    overflow-wrap: anywhere;
+  }
+  .lab-table-stack .lab-table thead th {
+    @apply whitespace-nowrap;
+  }
+  .lab-table-stack .lab-table tbody th {
+    overflow-wrap: break-word;
+  }
+  @media (width < 40rem) {
+    .lab-table-stack .lab-table thead {
+      @apply sr-only;
+    }
+    .lab-table-stack .lab-table,
+    .lab-table-stack .lab-table tbody {
+      @apply block;
+    }
+    .lab-table-stack .lab-table tbody tr {
+      @apply border-border block border-t px-3 py-2 first:border-t-0;
+    }
+    .lab-table-stack .lab-table tbody th {
+      @apply block border-t-0 p-0 pb-1 font-medium;
+    }
+    .lab-table-stack .lab-table tbody td {
+      @apply grid grid-cols-[5.5rem_minmax(0,1fr)] gap-x-2 border-t-0 px-0 py-0.5;
+    }
+    .lab-table-stack .lab-table tbody td::before {
+      @apply text-muted-foreground font-sans;
+      content: attr(data-label);
+    }
+  }
+  .command-line {
+    @apply block min-h-[1lh] pl-[2ch] -indent-[2ch] whitespace-pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  /* --- end Lab checks that fit (#483) --- */
+
   /* A docs page rendered from Markdown: the repository's own docs/ files. */
   .doc-prose {
     @apply leading-relaxed;
