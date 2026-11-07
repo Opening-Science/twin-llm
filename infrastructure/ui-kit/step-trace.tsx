@@ -22,8 +22,8 @@ import { useElapsed } from "./use-elapsed";
  *
  * Working: one line names the step in progress, with a quiet shimmer and a
  * live timer, and the steps list beneath it (done steps ticked, the current
- * one pulsing). Settled: the line becomes "Used N tools in X.Xs" and the
- * list folds; the line is the toggle (a button with `aria-expanded`). A step
+ * one pulsing). Settled: the line becomes "Used N tools in X.Xs", naming
+ * any refused calls apart, and the list folds; the line is the toggle (a button with `aria-expanded`). A step
  * may carry a `detail` that replaces its plain label in the list, such as a
  * card that folds out further.
  *
@@ -55,6 +55,7 @@ const MARKERS: Readonly<Record<StepState, ReactNode>> = {
   current: <span className="step-trace-dot" data-pulse="" />,
   done: <TickIcon className="text-winner" />,
   skipped: <DashIcon className="text-muted-foreground" />,
+  refused: <CrossIcon className="text-muted-foreground" />,
   failed: <CrossIcon className="text-destructive" />,
 };
 
