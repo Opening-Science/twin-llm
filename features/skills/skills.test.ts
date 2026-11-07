@@ -397,11 +397,11 @@ describe("runSkillEvals", () => {
     expect(outcome({ dataMode: "personal" })?.refusals).toEqual(["genome-not-permitted"]);
   });
 
-  test("wearable context needs the wearable-context source", () => {
+  test("without the wearable-context source the turn runs with wearables withheld (#480)", () => {
     const [result] = run(BASE_FRONT, {
       wearableContext: true,
       script: [statsStep],
-      expect: { calls: [], refusals: ["source-not-allowed"] },
+      expect: { calls: ["summary_stats"], refusals: [] },
     });
     expect(result?.passed).toBe(true);
   });

@@ -134,8 +134,7 @@ export type AgentOffer = Readonly<{
 /**
  * Whether the agent may be offered at all: an agent without a skill always,
  * one with a skill only when that skill could run here. That is the skill
- * gate's provider rule (`permitSkillRequest`, before any wearable context is
- * known) and, for a skill that asks for genome tools, a local chat model
+ * gate's provider rule (`permitSkillRequest`) and, for a skill that asks for genome tools, a local chat model
  * (`genome-thread-policy.ts`). An agent that could not run is left out
  * instead of being refused on every turn.
  */
@@ -143,9 +142,6 @@ export const agentIsOffered = (agent: Agent, offer: AgentOffer): boolean => {
   if (agent.skill === null) return true;
   const skill = offer.skills.find(({ name }) => name === agent.skill);
   if (skill === undefined) return false;
-  const permit = permitSkillRequest(skill, {
-    provider: offer.provider,
-    hasWearableContext: false,
-  });
+  const permit = permitSkillRequest(skill, { provider: offer.provider });
   return permit.ok && (!requestsGenomeTools(skill.tools) || offer.chatIsLocal);
 };

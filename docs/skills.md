@@ -87,7 +87,6 @@ and the refusals. `provider` defaults to `ollama`, `dataMode` to `synthetic`,
 Refusal codes:
 
 - `provider-not-allowed-by-skill`: the provider is not in `providers`.
-- `source-not-allowed`: the turn has wearable context and the skill does not list it.
 - `provider-not-permitted-for-data-mode`: the data-mode policy refuses the provider.
 - `tool-not-allowed`: the tool is not in `tools`.
 - `invalid-tool-input`: the query tool's own schema rejects the input.
@@ -96,7 +95,9 @@ Refusal codes:
   with `genomeSource: ark` on `ollama`, or `genome_variants` outside
   `dataMode: personal` on `ollama` (#330; it needs no Ark).
 
-The first three refuse the whole request and nothing runs. Cases may only name subjects
+The first two refuse the whole request and nothing runs. A case with `wearableContext`
+for a skill that does not list `wearable-context` runs with the wearables withheld, so
+they do not make the request personal. Cases may only name subjects
 from the synthetic question set (`evaluation/questions.v1.json`).
 
 ## Checking
@@ -121,11 +122,13 @@ skill is sent tagged with it, and the rest of the text is the question (the skil
 description when there is none). On `POST /api/chat` the server, before any model call:
 
 1. refuses a skill it does not offer (`skill-not-offered`);
-2. refuses a provider the skill does not list (`provider-not-allowed-by-skill`) and
-   wearable context the skill does not read (`source-not-allowed`), each with a sentence
-   that names the skill, shown in the answer column;
-3. applies the data-mode policy as for any turn;
-4. writes a `skill.<name>` audit row (skill, model, provider, allowlists; no prompt).
+2. refuses a provider the skill does not list (`provider-not-allowed-by-skill`), with a
+   sentence that names the skill, shown in the answer column;
+3. withholds the person's linked wearables when the skill does not list
+   `wearable-context` (#480): they are not loaded, so they neither reach the model nor
+   make the turn personal, and a skill lists only what it reads;
+4. applies the data-mode policy as for any turn;
+5. writes a `skill.<name>` audit row (skill, model, provider, allowlists; no prompt).
 
 The turn then gets only the skill's tools, intersected with the user's sources and what
 the data-mode policy left (`show_view`, `list_views` and `open_view` stay when the skill
@@ -180,8 +183,8 @@ what was recorded around a named condition or medication (`values_around_event`)
 draw one `chart.timeseries` or one `biomarker.card`. `knowledge_search` only explains a
 measure. A question asking for a diet, meal plan, food list, calorie or macro target,
 supplement, medicine or dose gets one fixed sentence and no tool call. It never names a
-target value and never labels the person. It lists `wearable-context` so that a turn with
-a linked wearable is not refused; a body weight key in the Available keys may be reported
+target value and never labels the person. It lists `wearable-context` because
+a body weight key in the Available keys may be reported
 with its date. Local Ollama only. The eval cases cover a weight change, every weight reading over the subject's window, lipids against the
 range, HbA1c against a baseline with a chart, glucose around a condition, a meal plan
 request, tools and views it may not use, and a hosted provider.
@@ -197,8 +200,8 @@ draws one `twin.body` view on the focus, with no subject and no window; it does 
 it shows the body without them and says it reads no values. A
 question asking whether something is wrong with an organ, or what a pain or a value means
 for it, gets one fixed sentence ending "If this concerns you, talk to a clinician." and
-no tool call. It lists `wearable-context` only so that a turn with a
-linked wearable is not refused; its instructions say not to describe it. Local Ollama
+no tool call. It does not list `wearable-context`, so a turn
+runs with the linked wearables withheld. Local Ollama
 only. The eval cases cover an organ's place, a system's markers, an organ shown on the
 twin, the liver on the twin when a subject's values are asked for, a turn with linked
 wearables, a "is my liver damaged?" question, tools and views it may not use, and a
@@ -248,8 +251,8 @@ calls and draws the sections itself as tables, a ranked list and a map
 ([gbd.md](gbd.md), "Profiles"); the model writes one short paragraph per section from
 the rows the tool gives, healthy life expectancy and life expectancy first, and deaths
 only when the question asks. A section that is not imported is said in one sentence,
-with no number. It lists `wearable-context` only so that a turn with a linked wearable is
-not refused. Local Ollama only. The eval cases cover a location, a cause, deaths when
+with no number. It does not list `wearable-context`; a turn runs with the linked wearables
+withheld. Local Ollama only. The eval cases cover a location, a cause, deaths when
 asked, World with a linked wearable, a place and a cause together, tools and views it may
 not use, and a hosted provider. Without imported estimates the turn has no tool and the
 skill says how to import them.
