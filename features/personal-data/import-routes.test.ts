@@ -117,8 +117,7 @@ describe("synthetic mode", () => {
     expect(review.status).toBe(403);
     expect(await review.json()).toEqual({
       ok: false,
-      error:
-        "Importing your own data is off while TwinLLM runs on synthetic data (DATA_MODE=synthetic).",
+      error: "Importing your own data is off while TwinLLM runs on synthetic data.",
     });
     const save = await postSaveResponse(
       upload(LAB, { kind: "lab-csv", sha256: LAB_SHA }),

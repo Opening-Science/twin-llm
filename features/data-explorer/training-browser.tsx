@@ -7,7 +7,7 @@ import { Card } from "@/infrastructure/ui-kit/card";
 import { SetupPanel } from "@/infrastructure/ui-kit/setup-panel";
 
 import { BarList } from "./bar-list";
-import { COHORT_ROLES, EVAL_COHORT_ID } from "./explorer-copy";
+import { COHORT_ROLES, EVAL_COHORT_ID, NO_TRAINING_SETS_BODY } from "./explorer-copy";
 import { type TrainingSet, type TrainingSetDetail } from "./training-files";
 import { countBy, type Count, pageMeta } from "./training-sets";
 import { COHORT_TRAINING } from "./data-paths";
@@ -31,30 +31,9 @@ export const trainingHref = (
 export const conversationHref = (set: string, index: number): string =>
   `${COHORT_TRAINING}/${encodeURIComponent(set)}/${index + 1}`;
 
-const Code = ({ children }: { readonly children: React.ReactNode }) => (
-  <code className="setup-code">{children}</code>
-);
-
 export const NoTrainingSets = () => (
-  <SetupPanel
-    title="No training conversations yet"
-    commands={[
-      "bun run setup:local   # loads the evaluation cohort and writes a sample set",
-      "",
-      "# or, with the evaluation cohort already loaded, the sample alone:",
-      "bun run training:sample",
-      "",
-      "# a full set, from a synthetic-only database (docs/training-data.md):",
-      "cp .env.synthetic.example .env.training",
-      "bun run training:conversations -- --cohort synthea-v4-seed4242",
-    ]}
-  >
-    <p>
-      Conversation sets live in <Code>training-data/out/</Code> (gitignored). Setup writes
-      a small sample there: 12 subjects of the synthetic evaluation cohort, every number
-      read by the real query tools. It is for looking at, never for training. It needs{" "}
-      <Code>DATA_MODE=synthetic</Code> and the evaluation cohort in the warehouse.
-    </p>
+  <SetupPanel title="No training conversations yet">
+    <p>{NO_TRAINING_SETS_BODY}</p>
   </SetupPanel>
 );
 

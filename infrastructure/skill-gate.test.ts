@@ -7,6 +7,7 @@ import {
   skillAuditTool,
   skillNotOffered,
   skillOfAuditTool,
+  skillReadsWearables,
   skillRunEvent,
   skillSourceLabel,
   type TurnSkill,
@@ -30,15 +31,11 @@ const SLEEP: TurnSkill = {
 
 describe("permitSkillRequest", () => {
   test("a provider the skill lists may run it", () => {
-    expect(
-      permitSkillRequest(SLEEP, { provider: "ollama", hasWearableContext: true }),
-    ).toEqual({ ok: true });
+    expect(permitSkillRequest(SLEEP, { provider: "ollama" })).toEqual({ ok: true });
   });
 
   test("a provider the skill does not list is refused with a sentence naming both", () => {
-    expect(
-      permitSkillRequest(SLEEP, { provider: "openrouter", hasWearableContext: false }),
-    ).toEqual({
+    expect(permitSkillRequest(SLEEP, { provider: "openrouter" })).toEqual({
       ok: false,
       code: "provider-not-allowed-by-skill",
       error:
@@ -49,26 +46,24 @@ describe("permitSkillRequest", () => {
   test("several providers are listed with 'or'", () => {
     const decision = permitSkillRequest(
       { ...SLEEP, providers: ["ollama", "exoscale"] },
-      { provider: "remote-gpu", hasWearableContext: false },
+      { provider: "remote-gpu" },
     );
     expect(decision.ok ? "" : decision.error).toBe(
       "/sleep runs only on local Ollama or Exoscale. The models here come from the remote GPU, so /sleep did not run. Ask without /sleep instead.",
     );
   });
 
-  test("wearable context needs a skill that reads it", () => {
+  test("a skill that does not read wearables is not refused for them (#480)", () => {
     const cohortOnly = { ...SLEEP, sources: ["cohort-records"] };
-    expect(
-      permitSkillRequest(cohortOnly, { provider: "ollama", hasWearableContext: true }),
-    ).toEqual({
-      ok: false,
-      code: "source-not-allowed",
-      error:
-        "/sleep does not read linked wearables, and this question would carry them, so /sleep did not run.",
-    });
-    expect(
-      permitSkillRequest(cohortOnly, { provider: "ollama", hasWearableContext: false }),
-    ).toEqual({ ok: true });
+    expect(permitSkillRequest(cohortOnly, { provider: "ollama" })).toEqual({ ok: true });
+  });
+});
+
+describe("skillReadsWearables (#480)", () => {
+  test("a turn carries the linked wearables only for a skill that lists them", () => {
+    expect(skillReadsWearables(null)).toBe(true);
+    expect(skillReadsWearables(SLEEP)).toBe(true);
+    expect(skillReadsWearables({ sources: ["opentwin-knowledge"] })).toBe(false);
   });
 });
 
@@ -184,7 +179,6 @@ describe("skill audit rows", () => {
 describe("refusal codes the browser may show", () => {
   test("only skill refusals qualify", () => {
     expect(isSkillRefusalCode("provider-not-allowed-by-skill")).toBe(true);
-    expect(isSkillRefusalCode("source-not-allowed")).toBe(true);
     expect(isSkillRefusalCode(skillNotOffered("x").code)).toBe(true);
     expect(isSkillRefusalCode("PROVIDER_NOT_PERMITTED_FOR_DATA_MODE")).toBe(false);
     expect(isSkillRefusalCode(undefined)).toBe(false);

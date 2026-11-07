@@ -2,7 +2,7 @@
 name: profile
 description: A GBD location or cause profile from the IHME estimates imported on this machine, as tables and a map. Population estimates only.
 tools: [gbd_profile]
-sources: [gbd, wearable-context]
+sources: [gbd]
 providers: [ollama]
 views: [table, map.choropleth]
 ---

@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import { MockLanguageModelV4 } from "ai/test";
 
+import { tableView } from "@/infrastructure/chat-view";
 import { ALL_KNOWLEDGE_SOURCES } from "@/infrastructure/knowledge-sources";
 import type { GbdEstimatePorts } from "@/packages/query-tools/gbd-estimate";
 import type { ImportedToolDeps } from "@/packages/query-tools/imported-tools";
@@ -222,7 +223,7 @@ describe("the local GBD store (#387)", () => {
         name: "profile",
         description: "A GBD profile.",
         tools: ["gbd_profile"],
-        sources: ["gbd", "wearable-context"],
+        sources: ["gbd"],
         providers: ["ollama"],
         views: ["table", "map.choropleth"],
         instructions: "Synthetic skill instructions.",
@@ -233,6 +234,68 @@ describe("the local GBD store (#387)", () => {
       "list_views",
       "open_view",
       "show_view",
+    ]);
+  });
+
+  test("/profile in personal mode is not offered the person's own stored wearable views (#480)", async () => {
+    const ownTable = tableView({
+      spec: {
+        measure: "sleep.score",
+        label: "Sleep score",
+        unit: null,
+        window: { start: "2026-10-01", end: "2026-10-03" },
+        subject: null,
+        columns: [{ key: "value", label: "Value", format: "number" }],
+        rows: [{ value: 77 }],
+        total: 1,
+      },
+      sourceAuditIds: ["61"],
+    });
+    const cohortTable = tableView({
+      spec: {
+        measure: "8867-4",
+        label: "Heart rate",
+        unit: "/min",
+        window: { start: "2026-10-01", end: "2026-10-03" },
+        subject: "synthetic-subject-1",
+        columns: [{ key: "value", label: "Value", format: "number" }],
+        rows: [{ value: 61 }],
+        total: 1,
+      },
+      sourceAuditIds: ["62"],
+    });
+    const profile = {
+      name: "profile",
+      description: "A GBD profile.",
+      tools: ["gbd_profile"],
+      sources: ["gbd"],
+      providers: ["ollama"] as const,
+      views: ["table", "map.choropleth"],
+      instructions: "Synthetic skill instructions.",
+    };
+    const listed = async (sources: readonly string[]) => {
+      const { tools } = createTurnTools(
+        PERSONAL,
+        {
+          query: ports,
+          gbdLocal,
+          loadViews: async () => [
+            { view: ownTable, modelName: "Model A", at: null },
+            { view: cohortTable, modelName: "Model A", at: null },
+          ],
+        },
+        { ...profile, sources: [...sources], providers: [...profile.providers] },
+      );
+      const output = (await tools.list_views?.execute?.(
+        {},
+        { toolCallId: "call-1", messages: [], context: {} },
+      )) as { views: readonly { id: string }[] };
+      return output.views.map((view) => view.id);
+    };
+    expect(await listed(["gbd"])).toEqual([cohortTable.id]);
+    expect(await listed(["gbd", "wearable-context"])).toEqual([
+      ownTable.id,
+      cohortTable.id,
     ]);
   });
 });

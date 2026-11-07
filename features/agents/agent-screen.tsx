@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { formatDate } from "@/infrastructure/format-measure";
+import { toolTitle } from "@/infrastructure/tool-titles";
 import { Card } from "@/infrastructure/ui-kit/card";
 
 import { BaseModelText, costText, OfferBadge, SkillText, UsageText } from "./agent-parts";
@@ -58,9 +59,9 @@ const SkillSection = ({ entry }: Readonly<{ entry: RosterEntry }>) => (
         </dd>
         <dt>Reads</dt>
         <dd className="break-normal">{entry.skill.sources.join(", ") || "nothing"}</dd>
-        <dt>May call</dt>
-        <dd className="font-mono text-xs leading-relaxed break-normal">
-          {entry.skill.tools.join(", ") || "no tools"}
+        <dt>May use</dt>
+        <dd className="break-normal">
+          {entry.skill.tools.map(toolTitle).join(", ") || "no tools"}
         </dd>
         <dt>Where it runs</dt>
         <dd className="break-normal">
@@ -90,17 +91,11 @@ const LiteratureSection = ({ entry }: Readonly<{ entry: RosterEntry }>) => (
       </dd>
     </dl>
     <Muted>
-      Open-access articles from PubMed Central, each under its own licence, searched by{" "}
-      <span className="font-mono">knowledge_search</span> on this agent&rsquo;s turns.
-      Reference material, never a statement about the person.
-      {entry.literature.articles === 0 ? (
-        <>
-          {" "}
-          None is on this machine yet;{" "}
-          <code className="setup-code">bun run literature:ingest</code> adds what{" "}
-          <code className="setup-code">literature:fetch</code> downloaded.
-        </>
-      ) : null}
+      Open-access articles from PubMed Central, each under its own licence, searched when
+      this agent answers. Reference material, never a statement about the person.
+      {entry.literature.articles === 0
+        ? " None is on this machine yet; whoever runs TwinLLM here can add them."
+        : null}
     </Muted>
   </Section>
 );
