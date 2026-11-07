@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import {
   dataModeSentence,
+  HOW_TO_SWITCH,
   interestHint,
   residencyChoice,
   type ResidencyConfig,
@@ -24,7 +25,7 @@ describe("where your data goes", () => {
   test("local-only keeps the model and embeddings here and turns cloud services off", () => {
     expect(residencyChoice(localOnly)).toBe("local-only");
     expect(where(localOnly)).toEqual({
-      chat: ["stays", "Stays on this machine: Ollama on loopback."],
+      chat: ["stays", "Stays on this machine: the model runs here."],
       embeddings: ["stays", "Stay on this machine."],
       wearables: [
         "download",
@@ -87,11 +88,9 @@ describe("where your data goes", () => {
 
   test("the personal data sentence names every refusal", () => {
     expect(dataModeSentence("personal")).toBe(
-      "This server runs on personal data (DATA_MODE=personal). OpenRouter, Infomaniak and the remote GPU are refused, and Exoscale is used only in a consented pilot.",
+      "This server runs on personal data. OpenRouter, Infomaniak and the remote GPU are refused, and Exoscale is used only in a consented pilot.",
     );
-    expect(dataModeSentence("synthetic")).toBe(
-      "This server runs on synthetic data (DATA_MODE=synthetic).",
-    );
+    expect(dataModeSentence("synthetic")).toBe("This server runs on synthetic data.");
   });
 
   test("ollama elsewhere and OpenRouter read as leaving, never as local", () => {
@@ -126,6 +125,34 @@ describe("interest hint", () => {
     );
     expect(interestHint({ ...localOnly, localOnly: false, provider: "exoscale" })).toBe(
       "Leave out names and other personal details. What you type goes to the model that writes the starters. Sent to our own open models on Exoscale in Switzerland, synthetic data only.",
+    );
+  });
+});
+
+describe("plain words for the person (#480)", () => {
+  const configs: readonly ResidencyConfig[] = [
+    localOnly,
+    { ...localOnly, localOnly: false, provider: "exoscale", dataMode: "personal" },
+    { ...localOnly, localOnly: false, provider: "openrouter", ollamaOnLoopback: false },
+  ];
+  const developerWords = /DATA_MODE|LOCAL_ONLY|LLM_PROVIDER|\.env|loopback|bun run/;
+
+  test("no step text names an env variable, a file or a command", () => {
+    const shown = [
+      HOW_TO_SWITCH,
+      dataModeSentence("synthetic"),
+      dataModeSentence("personal"),
+      ...configs.flatMap((config) => [
+        interestHint(config),
+        ...residencyRows(config).flatMap((row) => [row.label, row.where]),
+      ]),
+    ];
+    expect(shown.filter((text) => developerWords.test(text))).toEqual([]);
+  });
+
+  test("the switch line says who can change it", () => {
+    expect(HOW_TO_SWITCH).toBe(
+      "Whoever runs TwinLLM here sets this and restarts it. It cannot be switched from the browser.",
     );
   });
 });

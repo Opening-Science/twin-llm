@@ -44,8 +44,7 @@ export const DisclosureSection = ({ view }: Readonly<{ view: LedgerView }>) => (
       request that holds rsIDs or genome sites from your imported files is not sent, and
       its entry says Blocked. So is one with rsID- or site-shaped text when the check
       itself fails. Other matches are recorded and the request still goes. Entries from
-      before the check say not checked. A model on this machine (Ollama on loopback) is
-      not a recipient.
+      before the check say not checked. A model on this machine is not a recipient.
     </p>
     {view.recipients.length === 0 ? (
       <p className="mt-4 text-sm">

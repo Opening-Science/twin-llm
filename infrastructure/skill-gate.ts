@@ -15,8 +15,10 @@ import { ALL_KNOWLEDGE_SOURCES } from "./knowledge-sources";
  *
  * A skill only narrows. Its tools are intersected with what the turn already
  * has after the user's source choices and the data-mode policy, its providers
- * are checked before the data-mode policy (which still runs), and its views
- * limit which kinds `show_view` will draw and `open_view` will reopen.
+ * are checked before the data-mode policy (which still runs), its views
+ * limit which kinds `show_view` will draw and `open_view` will reopen, and a
+ * skill that does not list `wearable-context` runs with the person's linked
+ * wearables withheld (#480), so a skill lists only what it reads.
  */
 
 /** Wearable context the person attached to the turn. Makes a request personal. */
@@ -38,10 +40,7 @@ export type TurnSkill = Readonly<{
 export const SKILL_NAME_PATTERN = /^[a-z][a-z0-9-]{0,39}$/;
 
 /** Refusals that stop a whole request before the model is called. */
-export const SKILL_REQUEST_REFUSALS = [
-  "provider-not-allowed-by-skill",
-  "source-not-allowed",
-] as const;
+export const SKILL_REQUEST_REFUSALS = ["provider-not-allowed-by-skill"] as const;
 
 export type SkillRequestRefusal = (typeof SKILL_REQUEST_REFUSALS)[number];
 
@@ -98,30 +97,27 @@ export const isSkillRefusalCode = (value: unknown): boolean =>
   (typeof value === "string" &&
     (SKILL_REQUEST_REFUSALS as readonly string[]).includes(value));
 
-/**
- * May this skill run for this request at all? The provider must be one the
- * skill lists, and a turn carrying wearable context needs a skill that reads it.
- */
+/** May this skill run for this request at all? The provider must be one the skill lists. */
 export const permitSkillRequest = (
-  skill: Pick<TurnSkill, "name" | "providers" | "sources">,
-  request: Readonly<{ provider: LlmProvider; hasWearableContext: boolean }>,
-): SkillRequestDecision => {
-  if (!skill.providers.includes(request.provider)) {
-    return {
-      ok: false,
-      code: "provider-not-allowed-by-skill",
-      error: `/${skill.name} runs only on ${orList(skill.providers.map((provider) => PROVIDER_LABELS[provider]))}. The models here come from ${PROVIDER_LABELS[request.provider]}, so /${skill.name} did not run. Ask without /${skill.name} instead.`,
-    };
-  }
-  if (request.hasWearableContext && !skill.sources.includes(WEARABLE_CONTEXT_SOURCE)) {
-    return {
-      ok: false,
-      code: "source-not-allowed",
-      error: `/${skill.name} does not read linked wearables, and this question would carry them, so /${skill.name} did not run.`,
-    };
-  }
-  return { ok: true };
-};
+  skill: Pick<TurnSkill, "name" | "providers">,
+  request: Readonly<{ provider: LlmProvider }>,
+): SkillRequestDecision =>
+  skill.providers.includes(request.provider)
+    ? { ok: true }
+    : {
+        ok: false,
+        code: "provider-not-allowed-by-skill",
+        error: `/${skill.name} runs only on ${orList(skill.providers.map((provider) => PROVIDER_LABELS[provider]))}. The models here come from ${PROVIDER_LABELS[request.provider]}, so /${skill.name} did not run. Ask without /${skill.name} instead.`,
+      };
+
+/**
+ * Whether a turn may carry the person's linked wearables: always without a
+ * skill, and with one only when it lists `wearable-context`. Otherwise the
+ * turn runs with them withheld rather than being refused (#480), which lets
+ * a skill such as /anatomy leave `wearable-context` out of what it reads.
+ */
+export const skillReadsWearables = (skill: Pick<TurnSkill, "sources"> | null): boolean =>
+  skill === null || skill.sources.includes(WEARABLE_CONTEXT_SOURCE);
 
 /** True when `show_view` can draw at least one kind the skill allows. */
 const allowsViews = (skill: Pick<TurnSkill, "views">): boolean =>

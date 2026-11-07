@@ -54,6 +54,10 @@ const TOOL_SOURCE: ReadonlyMap<string, SkillSourceId> = new Map(
 
 export const CHAT_TOOL_NAMES: readonly string[] = [...TOOL_SOURCE.keys()];
 
+/** The knowledge source that owns a chat tool, or undefined for an unknown name. */
+export const toolOwner = (tool: string): SkillSourceId | undefined =>
+  TOOL_SOURCE.get(tool);
+
 /** Providers start local only; a skill must name any other provider itself. */
 export const DEFAULT_SKILL_PROVIDERS: readonly LlmProvider[] = ["ollama"];
 
@@ -98,6 +102,24 @@ const policyCanTakeImportedData = (provider: LlmProvider): boolean =>
     chatOnLoopback: true,
   }).ok;
 
+/**
+ * The source a skill source needs beside it: a knowledge source's own
+ * `requires`, and for `wearable-analytics` the `wearable-context` source
+ * (#480). A skill without `wearable-context` runs with the linked wearables
+ * withheld, so one listing the wearable tools without it would claim to read
+ * sleep and HRV and get nothing. `wearable-context` is a skill source only, not
+ * a toggle in the person's source choices, so it is kept here rather than in
+ * `knowledge-sources.ts`, where `requires` also drives those toggles.
+ */
+const SKILL_SOURCE_REQUIRES: Readonly<Record<string, string>> = {
+  "wearable-analytics": WEARABLE_CONTEXT_SOURCE,
+};
+
+/** The source `id` needs beside it, if any; the skill form applies the same rule. */
+export const sourceRequires = (id: string): string | undefined =>
+  SKILL_SOURCE_REQUIRES[id] ??
+  ALL_KNOWLEDGE_SOURCES.find((source) => source.id === id)?.requires;
+
 export const skillFrontmatterSchema = z
   .strictObject({
     name: z.string().regex(SKILL_NAME_PATTERN, {
@@ -124,7 +146,7 @@ export const skillFrontmatterSchema = z
       }
     });
     skill.sources.forEach((id, index) => {
-      const required = ALL_KNOWLEDGE_SOURCES.find((source) => source.id === id)?.requires;
+      const required = sourceRequires(id);
       if (required !== undefined && !sources.has(required)) {
         ctx.addIssue({
           code: "custom",

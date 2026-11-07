@@ -6,8 +6,8 @@
   "wearableContext": true,
   "script": [{ "tool": "genome_report", "input": {} }],
   "expect": {
-    "calls": [],
+    "calls": ["genome_report"],
     "views": [],
-    "refusals": ["source-not-allowed"]
+    "refusals": []
   }
 }

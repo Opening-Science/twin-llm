@@ -23,6 +23,7 @@ import {
   permitSkillRequest,
   SKILL_NOT_OFFERED,
   skillNotOffered,
+  skillReadsWearables,
   skillRunEvent,
   type TurnSkill,
 } from "@/infrastructure/skill-gate";
@@ -32,7 +33,7 @@ import type { AppendInput } from "@/packages/audit/append";
 import type { ChatRequest } from "./chat-request";
 import type { RunningAnswer } from "./running-answers";
 import type { StreamContext } from "./stream-model-response";
-import type { WearableContext } from "./wearable-context";
+import { NO_WEARABLES, type WearableContext } from "./wearable-context";
 
 /**
  * The provider check and model start for one chat request, as a factory so
@@ -44,9 +45,11 @@ import type { WearableContext } from "./wearable-context";
  * that write fails, the model is not called.
  *
  * A turn sent with a skill (`/sleep`) runs only if the server offers that
- * skill, the active provider is one it lists, and it reads wearable context
- * when the turn carries some. Those refusals come first, with a sentence that
- * names the skill; the data-mode policy still applies after them. The run is
+ * skill and the active provider is one it lists. That refusal comes first,
+ * with a sentence that names the skill; the data-mode policy still applies
+ * after it. A skill that does not read wearable context runs with the linked
+ * wearables withheld: they are not loaded, so the turn is not personal on
+ * their account and the model never sees them (#480). The run is
  * written to the audit chain before the model is called, and the stream gets
  * the skill so tools, views and the system prompt follow it.
  *
@@ -173,7 +176,9 @@ export const createStartAnswer =
       thread.usedGenome ||
       historyShowsGenome(call.messages) ||
       (skill !== null && requestsGenomeTools(skill.tools));
-    const wearables = await deps.loadWearables(settings.dataMode, appUserId);
+    const wearables = skillReadsWearables(skill)
+      ? await deps.loadWearables(settings.dataMode, appUserId)
+      : NO_WEARABLES;
     const request = {
       mode: settings.dataMode,
       provider: settings.provider,
@@ -181,10 +186,7 @@ export const createStartAnswer =
       exoscalePersonalData: settings.exoscalePersonalData,
     };
     if (skill !== null) {
-      const skillPermit = permitSkillRequest(skill, {
-        provider: request.provider,
-        hasWearableContext: request.hasWearableNarrative,
-      });
+      const skillPermit = permitSkillRequest(skill, { provider: request.provider });
       if (!skillPermit.ok) {
         return refuse(
           agentSkill !== null &&

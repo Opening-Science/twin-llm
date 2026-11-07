@@ -5,7 +5,7 @@ import {
   permitProviderForRequest,
   permitVcfVariantsRequest,
 } from "@/infrastructure/data-mode-policy";
-import { permitSkillRequest } from "@/infrastructure/skill-gate";
+import { permitSkillRequest, skillReadsWearables } from "@/infrastructure/skill-gate";
 import { GENOME_TOOLS } from "@/packages/carbon-x/constants";
 import { GENOME_TOOL_DEFINITIONS } from "@/packages/carbon-x/schema";
 import { GBD_ESTIMATE_TOOL_DEFINITION } from "@/packages/query-tools/gbd-estimate-schema";
@@ -76,15 +76,13 @@ const requestRefusals = (
   skill: Skill,
   evalCase: SkillEvalCase,
 ): readonly SkillRefusal[] => {
-  const skillPermit = permitSkillRequest(skill, {
-    provider: evalCase.provider,
-    hasWearableContext: evalCase.wearableContext,
-  });
+  const skillPermit = permitSkillRequest(skill, { provider: evalCase.provider });
   if (!skillPermit.ok) return [skillPermit.code];
   const permit = permitProviderForRequest({
     mode: evalCase.dataMode,
     provider: evalCase.provider,
-    hasWearableNarrative: evalCase.wearableContext,
+    // A skill that does not read wearables runs with them withheld (#480).
+    hasWearableNarrative: evalCase.wearableContext && skillReadsWearables(skill),
     exoscalePersonalData: evalCase.exoscalePersonalData,
   });
   return permit.ok ? [] : ["provider-not-permitted-for-data-mode"];

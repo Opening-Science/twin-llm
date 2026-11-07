@@ -18,7 +18,7 @@ export type WearableLoaders = {
   readonly vitronic: (appUserId: string) => Promise<VitronicSummary | null>;
 };
 
-const NO_WEARABLES: WearableContext = {
+export const NO_WEARABLES: WearableContext = {
   ouraSummary: null,
   whoopSummary: null,
   googleHealthSummary: null,

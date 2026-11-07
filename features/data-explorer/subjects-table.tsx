@@ -91,7 +91,7 @@ export const SubjectsTable = ({
             htmlFor="subject-search"
             className="text-muted-foreground text-xs font-medium"
           >
-            subject_ref starts with
+            Subject id starts with
           </label>
           <input
             id="subject-search"
@@ -167,7 +167,7 @@ export const SubjectsTable = ({
                   colSpan={COLUMNS.length}
                   className="text-muted-foreground px-3 py-6 text-sm"
                 >
-                  No subject_ref starts with that text.
+                  No subject id starts with that text.
                 </td>
               </tr>
             )}

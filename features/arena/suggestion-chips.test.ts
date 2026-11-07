@@ -22,7 +22,7 @@ const buttons = (html: string): readonly (readonly [string, string | null])[] =>
   ]);
 
 describe("SuggestionChips (#454)", () => {
-  test("the heading, then a pill per question titled with the prompt it writes", () => {
+  test("the heading, then a pill per question showing only its short question (#480)", () => {
     const html = render({
       heading: "From Synthetic person 1, synthetic",
       questions: [
@@ -36,14 +36,13 @@ describe("SuggestionChips (#454)", () => {
     });
     expect(html).toMatch(/^<section\b[^>]*\baria-label="Suggested questions"/);
     expect(paragraphs(html)).toEqual(["From Synthetic person 1, synthetic"]);
-    // A prompt that is the label needs no title.
+    // The grounded prompt is for the model; not even a tooltip shows it.
     expect(buttons(html)).toEqual([
-      [
-        "What was their latest heart rate?",
-        "For synthetic subject synthetic-subject-1, using LOINC 8867-4, what was their latest heart rate?",
-      ],
+      ["What was their latest heart rate?", null],
       ["Show a chart of my HRV.", null],
     ]);
+    expect(html).not.toContain("synthetic-subject-1");
+    expect(html).not.toContain("LOINC");
   });
 
   test("no questions leaves nothing above the prompt", () => {
