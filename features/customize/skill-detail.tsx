@@ -3,6 +3,7 @@ import Link from "next/link";
 import { skillSourceLabel, type TurnSkill } from "@/infrastructure/skill-gate";
 import { draftHref } from "@/infrastructure/shell-links";
 import { toolTitle } from "@/infrastructure/tool-titles";
+import { BackLink } from "@/infrastructure/ui-kit/back-link";
 import { Card } from "@/infrastructure/ui-kit/card";
 
 import { providerLine } from "./skill-card-lines";
@@ -15,12 +16,7 @@ import { providerLine } from "./skill-card-lines";
  */
 export const SkillDetail = ({ skill }: Readonly<{ skill: TurnSkill }>) => (
   <section aria-labelledby="skill">
-    <Link
-      href="/customize"
-      className="text-muted-foreground hover:text-foreground text-sm"
-    >
-      ← Skills
-    </Link>
+    <BackLink href="/customize">Skills</BackLink>
     <div className="mt-3 flex items-start justify-between gap-4">
       <h2 id="skill" className="font-mono text-lg">
         /{skill.name}

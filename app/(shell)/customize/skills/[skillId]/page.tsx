@@ -1,15 +1,13 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { SkillDetail } from "@/features/customize/skill-detail";
 import { findRunnableSkill } from "@/features/skills/load-skills";
+import { OwnSkillHeader } from "@/features/skills/own-skill-header";
 import { removeSkill } from "@/features/skills/skill-actions";
 import { SkillForm } from "@/features/skills/skill-form";
 import { getUserSkill } from "@/features/skills/user-skill-store";
 import { resolveActorId } from "@/infrastructure/auth-actor";
 import { findAppUserId } from "@/infrastructure/current-user";
-import { draftHref } from "@/infrastructure/shell-links";
-import { Button } from "@/infrastructure/ui-kit/button";
 
 /**
  * One skill's page: a shipped skill by its name, read-only (#457); your own
@@ -32,22 +30,7 @@ export default async function SkillPage({
 
   return (
     <section aria-labelledby="edit-skill">
-      <div className="mb-6 flex items-center justify-between gap-4">
-        <h2 id="edit-skill" className="font-mono text-lg">
-          /{skill.name}
-        </h2>
-        <div className="flex shrink-0 items-center gap-2">
-          <Link href={draftHref(skill.name)} className="chip">
-            Try
-          </Link>
-          <form action={removeSkill}>
-            <input type="hidden" name="id" value={skill.id} />
-            <Button type="submit" variant="ghost" className="text-destructive">
-              Delete skill
-            </Button>
-          </form>
-        </div>
-      </div>
+      <OwnSkillHeader skill={skill} deleteAction={removeSkill} />
       <SkillForm skill={skill} />
     </section>
   );
