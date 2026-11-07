@@ -15,6 +15,7 @@ import type { TwinFocusId } from "@/packages/anatomy/twin-focus";
 
 import { AnswerColumn } from "./answer-column";
 import { specialistModelIn } from "./answer-header";
+import { BodyLoopContext } from "./body-loop-context";
 import { initialEffort, initialModelIds } from "./chat-mode";
 import type { TurnState } from "./conversation";
 import { IncognitoBanner } from "./incognito-controls";
@@ -76,6 +77,7 @@ export const CompareScreen = ({
   initialTurns = [],
   skills = [],
   dataMode,
+  bodyLoopConfigured,
   incognito = false,
   localModelIds = [],
   initialDraft,
@@ -89,6 +91,8 @@ export const CompareScreen = ({
   skills?: readonly Command[];
   /** The server's DATA_MODE: which twin `/twin` shows. */
   dataMode: TwinDataMode;
+  /** Whether the server has BodyLoop configured; off, the chat's twins make no subjects call. */
+  bodyLoopConfigured: boolean;
   /** A new chat that is never saved; only the home page sets it. */
   incognito?: boolean;
   /** Catalog models that run on this machine, the only ones incognito offers. */
@@ -152,143 +156,145 @@ export const CompareScreen = ({
 
   return (
     <TwinPickContext value={setOrgan}>
-      <div className="flex flex-1 flex-col">
-        <div className={threadGridClass(withPanel, largeOutput)}>
-          {withPanel && (
-            <div className="xl:col-start-2 xl:row-start-1 xl:self-stretch">
-              <OutputsPanel
-                entries={outputs}
-                onLargeChange={setLargeOutput}
-                onShownChange={setOutputsShown}
-              />
-            </div>
-          )}
-          <div className="min-w-0 xl:col-start-1 xl:row-start-1">
-            {items.length === 0 ? (
-              <Welcome
-                incognito={incognito}
-                onToggleIncognito={
-                  threadId === null
-                    ? () => router.push(incognito ? NEW_CHAT_HREF : INCOGNITO_HREF)
-                    : undefined
-                }
-              />
-            ) : (
-              <>
-                <h1 className="sr-only">{turns[0]?.prompt ?? "TwinLLM"}</h1>
-                {incognito ? (
-                  <div className="mx-auto mb-6 max-w-5xl">
-                    <IncognitoBanner />
-                  </div>
-                ) : null}
-                <ol
-                  aria-label="Answers in this thread"
-                  className="mx-auto flex max-w-5xl flex-col gap-10"
-                >
-                  {items.map((item) =>
-                    item.kind === "twin" ? (
-                      <li key="twin-card">
-                        <TwinChatCard
-                          ref={twin.cardRef}
-                          label={twin.label}
-                          collapsed={item.card.collapsed}
-                          onCollapse={twin.collapse}
-                          onExpand={twin.expand}
-                          onClose={twin.close}
-                        >
-                          {twin.target === null ? (
-                            <p className="twin-chat-status">
-                              Finding the thread&rsquo;s subject…
-                            </p>
-                          ) : (
-                            <TwinCardViewer
-                              key={twin.targetKey}
-                              target={twin.target}
-                              onShown={twin.onShown}
-                            />
-                          )}
-                        </TwinChatCard>
-                      </li>
-                    ) : (
-                      <li key={item.turn.id} className="flex flex-col gap-4">
-                        <h2 className="sr-only">Prompt {item.index + 1}</h2>
-                        <div className="bg-muted ml-auto flex max-w-[85%] flex-col items-start gap-1.5 rounded-2xl rounded-br-md px-4 py-3 sm:max-w-[70%]">
-                          {item.turn.skill || item.turn.scheduled ? (
-                            <span className="flex flex-wrap items-center gap-1.5">
-                              {item.turn.scheduled ? (
-                                <span className="skill-chip">Scheduled</span>
-                              ) : null}
-                              {item.turn.skill ? (
-                                <span className="skill-chip">
-                                  <span className="sr-only">Sent with the skill </span>
-                                  {`/${item.turn.skill}`}
-                                </span>
-                              ) : null}
-                            </span>
-                          ) : null}
-                          <p className="text-[15px] leading-relaxed whitespace-pre-wrap">
-                            {item.turn.prompt}
-                          </p>
-                        </div>
-                        <div
-                          className={`surface divide-border grid grid-cols-1 divide-y overflow-hidden lg:divide-x lg:divide-y-0 ${columnsClass(item.turn.answers.length)}`}
-                        >
-                          {item.turn.answers.map((response) => (
-                            <AnswerColumn
-                              key={response.id}
-                              response={response}
-                              prompt={item.turn.prompt}
-                              wearables={summaries}
-                              onRetry={() => retry(response.id)}
-                              modelNameOf={modelNameOf}
-                            />
-                          ))}
-                        </div>
-                      </li>
-                    ),
-                  )}
-                </ol>
-              </>
-            )}
-            {compact.card !== null && (
-              <div className="mx-auto mt-6 max-w-5xl">
-                <CompactDraftCard
-                  key={compact.card.kind}
-                  state={compact.card}
-                  onSaved={compact.saved}
-                  onClose={compact.close}
+      <BodyLoopContext value={bodyLoopConfigured}>
+        <div className="flex flex-1 flex-col">
+          <div className={threadGridClass(withPanel, largeOutput)}>
+            {withPanel && (
+              <div className="xl:col-start-2 xl:row-start-1 xl:self-stretch">
+                <OutputsPanel
+                  entries={outputs}
+                  onLargeChange={setLargeOutput}
+                  onShownChange={setOutputsShown}
                 />
               </div>
             )}
-            {error && (
-              <p
-                role="alert"
-                className="text-destructive mx-auto mt-6 max-w-5xl text-center text-sm"
-              >
-                {error}
-              </p>
-            )}
+            <div className="min-w-0 xl:col-start-1 xl:row-start-1">
+              {items.length === 0 ? (
+                <Welcome
+                  incognito={incognito}
+                  onToggleIncognito={
+                    threadId === null
+                      ? () => router.push(incognito ? NEW_CHAT_HREF : INCOGNITO_HREF)
+                      : undefined
+                  }
+                />
+              ) : (
+                <>
+                  <h1 className="sr-only">{turns[0]?.prompt ?? "TwinLLM"}</h1>
+                  {incognito ? (
+                    <div className="mx-auto mb-6 max-w-5xl">
+                      <IncognitoBanner />
+                    </div>
+                  ) : null}
+                  <ol
+                    aria-label="Answers in this thread"
+                    className="mx-auto flex max-w-5xl flex-col gap-10"
+                  >
+                    {items.map((item) =>
+                      item.kind === "twin" ? (
+                        <li key="twin-card">
+                          <TwinChatCard
+                            ref={twin.cardRef}
+                            label={twin.label}
+                            collapsed={item.card.collapsed}
+                            onCollapse={twin.collapse}
+                            onExpand={twin.expand}
+                            onClose={twin.close}
+                          >
+                            {twin.target === null ? (
+                              <p className="twin-chat-status">
+                                Finding the thread&rsquo;s subject…
+                              </p>
+                            ) : (
+                              <TwinCardViewer
+                                key={twin.targetKey}
+                                target={twin.target}
+                                onShown={twin.onShown}
+                              />
+                            )}
+                          </TwinChatCard>
+                        </li>
+                      ) : (
+                        <li key={item.turn.id} className="flex flex-col gap-4">
+                          <h2 className="sr-only">Prompt {item.index + 1}</h2>
+                          <div className="bg-muted ml-auto flex max-w-[85%] flex-col items-start gap-1.5 rounded-2xl rounded-br-md px-4 py-3 sm:max-w-[70%]">
+                            {item.turn.skill || item.turn.scheduled ? (
+                              <span className="flex flex-wrap items-center gap-1.5">
+                                {item.turn.scheduled ? (
+                                  <span className="skill-chip">Scheduled</span>
+                                ) : null}
+                                {item.turn.skill ? (
+                                  <span className="skill-chip">
+                                    <span className="sr-only">Sent with the skill </span>
+                                    {`/${item.turn.skill}`}
+                                  </span>
+                                ) : null}
+                              </span>
+                            ) : null}
+                            <p className="text-[15px] leading-relaxed whitespace-pre-wrap">
+                              {item.turn.prompt}
+                            </p>
+                          </div>
+                          <div
+                            className={`surface divide-border grid grid-cols-1 divide-y overflow-hidden lg:divide-x lg:divide-y-0 ${columnsClass(item.turn.answers.length)}`}
+                          >
+                            {item.turn.answers.map((response) => (
+                              <AnswerColumn
+                                key={response.id}
+                                response={response}
+                                prompt={item.turn.prompt}
+                                wearables={summaries}
+                                onRetry={() => retry(response.id)}
+                                modelNameOf={modelNameOf}
+                              />
+                            ))}
+                          </div>
+                        </li>
+                      ),
+                    )}
+                  </ol>
+                </>
+              )}
+              {compact.card !== null && (
+                <div className="mx-auto mt-6 max-w-5xl">
+                  <CompactDraftCard
+                    key={compact.card.kind}
+                    state={compact.card}
+                    onSaved={compact.saved}
+                    onClose={compact.close}
+                  />
+                </div>
+              )}
+              {error && (
+                <p
+                  role="alert"
+                  className="text-destructive mx-auto mt-6 max-w-5xl text-center text-sm"
+                >
+                  {error}
+                </p>
+              )}
+            </div>
           </div>
+          <PromptBar
+            catalog={catalog}
+            initialModelIds={initialModelIds(initialTurns)}
+            initialEffort={initialEffort(initialTurns)}
+            busy={sending}
+            streaming={streamingNow}
+            onStop={stop}
+            sourceFacts={sourceFacts}
+            skills={skills}
+            incognito={incognito}
+            localModelIds={localModelIds}
+            suggestions={suggestions}
+            initialDraft={initialDraft}
+            onSubmit={onSubmit}
+            onTwin={twin.open}
+            onCompact={compact.open}
+            className={composerInsetClass(withPanel, largeOutput)}
+          />
         </div>
-        <PromptBar
-          catalog={catalog}
-          initialModelIds={initialModelIds(initialTurns)}
-          initialEffort={initialEffort(initialTurns)}
-          busy={sending}
-          streaming={streamingNow}
-          onStop={stop}
-          sourceFacts={sourceFacts}
-          skills={skills}
-          incognito={incognito}
-          localModelIds={localModelIds}
-          suggestions={suggestions}
-          initialDraft={initialDraft}
-          onSubmit={onSubmit}
-          onTwin={twin.open}
-          onCompact={compact.open}
-          className={composerInsetClass(withPanel, largeOutput)}
-        />
-      </div>
+      </BodyLoopContext>
     </TwinPickContext>
   );
 };
