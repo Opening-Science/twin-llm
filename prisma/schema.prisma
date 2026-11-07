@@ -140,6 +140,9 @@ model Turn {
   createdAt DateTime @default(now())
   /// Set when a scheduled task (#54) asked this, not the person typing.
   scheduled Boolean  @default(false)
+  /// The skill the person sent this with (`/sleep`), or null. Never the one an
+  /// agent or Auto ran under (#479).
+  skill     String?
 
   thread    Thread          @relation(fields: [threadId], references: [id], onDelete: Cascade)
   responses ModelResponse[]

@@ -11,7 +11,6 @@ import {
   openResponse,
   openThreadTitle,
 } from "@/infrastructure/thread-fields";
-import { skillOfAuditTool } from "@/infrastructure/skill-gate";
 
 import {
   type OwnedThread,
@@ -55,6 +54,7 @@ const readThread = (threadId: string) =>
           id: true,
           prompt: true,
           scheduled: true,
+          skill: true,
           responses: {
             select: {
               id: true,
@@ -81,29 +81,10 @@ const readThread = (threadId: string) =>
     },
   });
 
-/** `skill.<name>` audit rows of these turns; the session id of a chat row is its turn id. */
-const skillsOfTurns = async (
-  turnIds: readonly string[],
-): Promise<ReadonlyMap<string, string>> => {
-  if (turnIds.length === 0) return new Map();
-  const rows = await database().auditEvent.findMany({
-    where: { sessionId: { in: [...turnIds] }, tool: { startsWith: "skill." } },
-    orderBy: { seq: "asc" },
-    select: { sessionId: true, tool: true },
-  });
-  return new Map(
-    rows.flatMap((row) => {
-      const skill = skillOfAuditTool(row.tool);
-      return skill === null ? [] : [[row.sessionId, skill] as const];
-    }),
-  );
-};
-
 export const threadReads: ThreadReads = {
   actorId: resolveActorId,
   appUserIdFor: findAppUserId,
   findThread,
-  skillsOfTurns,
 };
 
 /**
