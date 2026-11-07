@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
 
+import {
+  traceAnnouncement,
+  traceHeadline,
+} from "@/infrastructure/ui-kit/step-trace-model";
+
 import { measureNameOf, toolCard } from "./tool-cards";
 import {
   answerTraceState,
@@ -122,6 +127,37 @@ describe("measure names from the answer's own data", () => {
       "Fitting a trend of 2093-3",
     ]);
   });
+
+  test("a call a gate turned away is refused; one that ran and found nothing is skipped", () => {
+    const gated = done(
+      "show_view",
+      { kind: "chart.timeseries", measure: "8867-4" },
+      { code: "VIEW_NOT_ALLOWED", error: "synthetic" },
+    );
+    const empty = done(
+      "show_view",
+      { kind: "chart.timeseries", measure: "8867-4" },
+      { code: "NO_ROWS", error: "synthetic" },
+    );
+    const permit = done(
+      "genome_report",
+      {},
+      { code: "GENOME_NOT_PERMITTED", error: "x" },
+    );
+    const audited = done(
+      "genome_variants",
+      {},
+      { code: "GENOME_NOT_PERMITTED", error: "x" },
+    );
+    expect([gated, empty, permit, audited].map(toolStepState)).toEqual([
+      "refused",
+      "skipped",
+      "refused",
+      "skipped",
+    ]);
+    expect(toolStepLabel(gated)).toBe("Refused: VIEW_NOT_ALLOWED");
+    expect(toolStepLabel(empty)).toBe("No data: NO_ROWS");
+  });
 });
 
 describe("toolStepState", () => {
@@ -201,5 +237,62 @@ describe("reviewStep (#366)", () => {
     });
     expect(step?.state).toBe("failed");
     expect(step?.lines[0]).toBe("Not sent: synthetic refusal.");
+  });
+});
+
+describe("a show_view call refused with VIEW_NOT_ALLOWED (#492)", () => {
+  const part = (toolCallId: string, tool: string, output: unknown) =>
+    toolCard({
+      toolCallId,
+      tool,
+      state: "output-available",
+      input: {
+        kind: "chart.timeseries",
+        measure: "8867-4",
+        subject: "synthetic-subject-1",
+        window: { start: "2026-10-01", end: "2026-10-31" },
+      },
+      output,
+    });
+  const gated = part("v1", "show_view", {
+    code: "VIEW_NOT_ALLOWED",
+    error: "this view kind is not allowed for the skill this turn runs",
+  });
+  const stepsOf = (cards: readonly ReturnType<typeof toolCard>[]) => {
+    const labels = toolStepLabels(cards);
+    return cards.map((card, index) => ({
+      id: card.id,
+      label: labels[index] ?? card.title,
+      state: toolStepState(card),
+    }));
+  };
+
+  test("alone: no tool was used, and the line says the call was refused", () => {
+    const steps = stepsOf([gated]);
+    expect(gated.notRun).toBe(true);
+    expect(steps[0]).toMatchObject({
+      label: "Refused: VIEW_NOT_ALLOWED",
+      state: "refused",
+    });
+    expect(traceHeadline({ state: "done", steps, elapsedMs: 3_000 })).toBe(
+      "1 tool call was refused",
+    );
+    expect(traceAnnouncement("done", steps)).toBe("Done. 1 tool call was refused.");
+  });
+
+  test("beside a lookup that ran and found nothing, only the lookup counts", () => {
+    const empty = part("s1", "summary_stats", { code: "NO_ROWS", error: "synthetic" });
+    const steps = stepsOf([empty, gated]);
+    expect(empty.notRun).toBeUndefined();
+    expect(steps.map((step) => step.label)).toEqual([
+      "No data: NO_ROWS",
+      "Refused: VIEW_NOT_ALLOWED",
+    ]);
+    expect(traceHeadline({ state: "done", steps, elapsedMs: 3_000 })).toBe(
+      "Used 1 tool in 3.0s; 1 call was refused",
+    );
+    expect(traceAnnouncement("done", steps)).toBe(
+      "Done. Used 1 tool; 1 call was refused.",
+    );
   });
 });

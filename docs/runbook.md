@@ -448,9 +448,27 @@ Added 2026-10-14. Each worktree owns one issue, one branch and one worktree besi
 git fetch origin
 git worktree add ../twin-llm-<issue> -b <issue>-<slug> origin/main
 cd ../twin-llm-<issue>
-cp ../twin-llm/.env.local .env.local   # own copy per worktree; never commit
+cp .env.synthetic.example .env.local   # synthetic settings; never commit
+bun run sync:open-twin                 # the pinned open-twin packages, before bun install
 bun install
 ```
+
+Never copy the main checkout's `.env.local` into a worktree. It holds the personal state
+folder and the database login, so a worktree would read and write personal data.
+
+The example's `DATABASE_URL` is a placeholder and a fresh local Postgres refuses it. Give
+each worktree a throwaway database of its own and point `DATABASE_URL` in its `.env.local`
+at it:
+
+```sh
+initdb -D ../pg-<issue> -U user --auth=trust
+pg_ctl -D ../pg-<issue> -o "-p 54<nn> -k '' -c listen_addresses=127.0.0.1" -l ../pg-<issue>.log start
+createdb -h 127.0.0.1 -p 54<nn> -U user twin_llm_synthetic
+# DATABASE_URL=postgresql://user@127.0.0.1:54<nn>/twin_llm_synthetic
+bunx prisma migrate deploy
+```
+
+Stop it with `pg_ctl -D ../pg-<issue> stop` when the worktree is removed.
 
 Anatomy meshes: either run `bun run anatomy:fetch` in the worktree, or set `ANATOMY_DATA_DIR` in its `.env.local` to the main checkout's `data/anatomy` as an absolute path.
 
@@ -468,7 +486,7 @@ git worktree remove ../twin-llm-<issue>
 ```
 
 - Good: `git worktree list` shows the main checkout plus one entry per open lane; each lane's dev server answers on its own port.
-- Last run: not yet run.
+- Last run: 2026-11-05 and 06, Linux, three worktrees, each with its own throwaway Postgres (ports 5451, 5461, 5462); migrations applied and all gates passed in each.
 
 ## Onboarding
 

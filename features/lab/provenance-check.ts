@@ -1,6 +1,6 @@
 import { type BuildInfo } from "@/infrastructure/env";
 
-import { type LabCheck, type LabLink, shortHash } from "./lab-check";
+import { type CheckState, type LabCheck, type LabLink, shortHash } from "./lab-check";
 
 /**
  * Which code this server runs: the app version, git commit, clean-tree flag
@@ -69,7 +69,7 @@ export const changedSinceBuild = (build: BuildInfo, disk: DiskProvenance): strin
 const statusAndSummary = ({
   build,
   disk,
-}: ProvenanceInput): Pick<LabCheck, "status" | "summary"> => {
+}: ProvenanceInput): CheckState & Pick<LabCheck, "summary"> => {
   // Under `next dev` the open-twin packages compile from disk as they are now.
   const running = build.mode === "dev" ? disk : build;
   if (
@@ -86,6 +86,7 @@ const statusAndSummary = ({
   if (build.mode === "dev") {
     return {
       status: "unknown",
+      reason: "A development server: no commit describes the code it runs.",
       summary:
         "This is a development server. It serves changes as they are saved, so no commit describes the code it runs. Run `bun run build` and `bun run start` for a build this check can trace.",
     };
@@ -93,6 +94,7 @@ const statusAndSummary = ({
   if (build.commit === null) {
     return {
       status: "unknown",
+      reason: "This build has no git commit recorded.",
       summary:
         "This build has no git commit recorded, so the code it runs cannot be traced to one.",
     };
@@ -100,6 +102,7 @@ const statusAndSummary = ({
   if (build.dirty === null) {
     return {
       status: "unknown",
+      reason: "Git could not say whether the build's working tree was clean.",
       summary:
         "Git could not say whether this build's working tree was clean, so it is not known whether the build matches its commit.",
     };
@@ -107,6 +110,7 @@ const statusAndSummary = ({
   if (build.dirty) {
     return {
       status: "unknown",
+      reason: "Built from a working tree with uncommitted changes.",
       summary:
         "This build was made from a working tree with changes that are not in its commit.",
     };
@@ -114,6 +118,7 @@ const statusAndSummary = ({
   if (build.openTwinPinned === null || build.openTwinFound === null) {
     return {
       status: "unknown",
+      reason: "The open-twin pin could not be compared.",
       summary: "The build commit is known, but the open-twin pin could not be compared.",
     };
   }
@@ -121,6 +126,7 @@ const statusAndSummary = ({
   if (changes.length > 0) {
     return {
       status: "unknown",
+      reason: "Files on disk changed since this build; rebuild to run them.",
       summary: `This server runs a clean build of ${shortHash(build.commit)}, but the files on disk changed since: ${changes.join("; ")}. Rebuild needed to run them.`,
     };
   }
