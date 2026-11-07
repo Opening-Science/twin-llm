@@ -182,13 +182,13 @@ export const CompareScreen = ({
                 <>
                   <h1 className="sr-only">{turns[0]?.prompt ?? "TwinLLM"}</h1>
                   {incognito ? (
-                    <div className="mx-auto mb-6 max-w-5xl">
+                    <div className="page-column mb-6">
                       <IncognitoBanner />
                     </div>
                   ) : null}
                   <ol
                     aria-label="Answers in this thread"
-                    className="mx-auto flex max-w-5xl flex-col gap-10"
+                    className="page-column flex flex-col gap-10"
                   >
                     {items.map((item) =>
                       item.kind === "twin" ? (
@@ -256,7 +256,7 @@ export const CompareScreen = ({
                 </>
               )}
               {compact.card !== null && (
-                <div className="mx-auto mt-6 max-w-5xl">
+                <div className="page-column mt-6">
                   <CompactDraftCard
                     key={compact.card.kind}
                     state={compact.card}
@@ -268,7 +268,7 @@ export const CompareScreen = ({
               {error && (
                 <p
                   role="alert"
-                  className="text-destructive mx-auto mt-6 max-w-5xl text-center text-sm"
+                  className="text-destructive page-column mt-6 text-center text-sm"
                 >
                   {error}
                 </p>

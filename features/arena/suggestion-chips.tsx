@@ -58,7 +58,7 @@ export const SuggestionChips = ({
   suggestions.questions.length === 0 ? null : (
     <section
       aria-label="Suggested questions"
-      className="mx-auto mb-2 flex max-w-5xl flex-col items-center gap-1.5"
+      className="page-column mb-2 flex flex-col items-center gap-1.5"
     >
       <p className="text-muted-foreground text-xs">{suggestions.heading}</p>
       <ul className="flex flex-wrap justify-center gap-1.5">
