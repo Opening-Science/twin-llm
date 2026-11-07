@@ -96,7 +96,12 @@ export const ExplainabilityPanel = ({
   readonly document?: ResponseDocumentV1 | null;
   readonly contractStates?: readonly ContractStateRow[];
 }) => {
-  const [open, setOpen] = useState(Boolean(document));
+  // An answer withheld for lack of data says so in one line; its reasoning
+  // and evidence stay folded until asked for (#478). A declined answer keeps
+  // its panel open: it names who to ask instead.
+  const withheld =
+    document?.abstained === true && document.answer_class !== "declined_decision_support";
+  const [open, setOpen] = useState(Boolean(document) && !withheld);
   const hasAttribution = Boolean(attribution && attribution.length > 0);
   const hasReasoning = Boolean(reasoningText && reasoningText.trim());
   const evidenceKeys = document?.data_basis.evidence_keys ?? [];
