@@ -221,6 +221,9 @@ describe("the answer column after a blocked request (#356)", () => {
         writeComplete: async () => {
           stored.push("complete");
         },
+        writeStopped: async () => {
+          stored.push("stopped");
+        },
         writeFailed: async () => {
           stored.push("failed");
         },

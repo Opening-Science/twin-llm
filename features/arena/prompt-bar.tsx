@@ -138,7 +138,7 @@ export const PromptBar = ({
     skill: string | null,
     effort: EffortLevel,
   ) => void;
-  /** Stop: closes this tab's open answer streams. */
+  /** Stop: ends this tab's open answers, on the server too in a saved thread (#373). */
   onStop?: () => void;
   /** `/twin`: show the twin card. Never a turn. */
   onTwin: () => void;
@@ -360,6 +360,7 @@ export const PromptBar = ({
             commands={commands}
             activeIndex={active}
             onPick={pickCommand}
+            onHover={setActiveIndex}
             notice={notice}
           />
         ) : null}

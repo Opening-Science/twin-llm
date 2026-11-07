@@ -8,6 +8,7 @@ import type {
 } from "@/features/connectors/ark-status-view";
 import type { BodyTwinPreview } from "./bodyloop-avatar";
 
+import { BODY_PANEL_LABEL } from "./body-panel";
 import { BODY_TWIN_LOADING, BODYLOOP_NO_SCANS } from "./bodyloop-avatar";
 import { DigitalTwinScreen } from "./digital-twin-screen";
 import { type TwinContext } from "./page-sections";
@@ -152,6 +153,23 @@ describe("DigitalTwinScreen", () => {
     expect(markup).toContain("Scan mesh needs WebGL.");
     expect(markup).not.toContain("Reset view");
     expect(markup).not.toContain("Inventory");
+  });
+
+  test("the body panel is a tablist over one open tab panel, never a capped box", () => {
+    const markup = html({ enabled: false }, bodyFilled);
+    expect(markup).toMatch(
+      new RegExp(`<div role="tablist"[^>]*aria-label="${BODY_PANEL_LABEL}"`),
+    );
+    expect(markup).toMatch(
+      /<button[^>]*role="tab"[^>]*aria-selected="true"[^>]*>Properties<\/button>/,
+    );
+    expect(markup.match(/role="tabpanel"(?![^>]*hidden)/g)).toHaveLength(1);
+    expect(markup).not.toContain("max-h-[");
+    // Hidden tab panels are empty; the one shown is the only box that scrolls.
+    const shown = [...markup.matchAll(/<[a-z]+ [^>]*>/g)]
+      .map(([tag]) => tag)
+      .filter((tag) => !tag.includes('hidden=""'));
+    expect(shown.filter((tag) => tag.includes("overflow-y-auto"))).toHaveLength(1);
   });
 
   test("both sections can be filled at once", () => {

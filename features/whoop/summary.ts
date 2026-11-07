@@ -3,7 +3,7 @@ import {
   WHOOP_HR_ZONES,
   type WhoopHostPayload,
   whoopSportName,
-} from "@/infrastructure/open-twin-adapters";
+} from "@/infrastructure/open-twin-adapters/whoop";
 import type { WhoopMetric, WhoopSummary } from "@/infrastructure/whoop-types";
 
 export type { WhoopMetric, WhoopSummary };

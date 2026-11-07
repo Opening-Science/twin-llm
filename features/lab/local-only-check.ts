@@ -80,10 +80,10 @@ export const configuredEndpoints = (env: LocalOnlyEnv): readonly Endpoint[] => [
   ).map(({ name }) => ({ name, local: false })),
 ];
 
-/** Prints the same switches and service list as the card; names only, no values. */
+/** Prints the same switches and service list as the check; names only, no values. */
 const HOW_TO = "bun run lab:local-only";
 
-/** What the card shows even when the check cannot run. */
+/** What the list and the check's page show even when the check cannot run. */
 export const localOnlyBase = {
   id: "local-only",
   title: "Local only",
@@ -127,7 +127,7 @@ export const localOnlyCheck = (env: LocalOnlyEnv): LabCheck => {
   };
 };
 
-/** The card as plain lines for `bun run lab:local-only`: names and switches only. */
+/** The check as plain lines for `bun run lab:local-only`: names and switches only. */
 export const localOnlyReport = (check: LabCheck): string =>
   [
     `${check.title}: ${STATUS_LABEL[check.status]}`,

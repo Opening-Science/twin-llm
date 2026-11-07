@@ -151,6 +151,12 @@ export const formatBytes = (value: number | null | undefined): string => {
   return `${formatNumber(scaled, 1)} ${BYTE_UNITS[step]}`;
 };
 
+/** How many tools a skill or agent may call: "no tools", "1 tool", "7 tools". */
+export const toolsText = (count: number): string =>
+  count === 0
+    ? "no tools"
+    : `${formatNumber(count, 0)} ${count === 1 ? "tool" : "tools"}`;
+
 const ISO_DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
 const pad2 = (n: number): string => String(n).padStart(2, "0");

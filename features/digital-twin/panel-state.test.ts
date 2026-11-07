@@ -37,7 +37,7 @@ describe("panelReducer", () => {
 
 describe("activePanelTab", () => {
   const offered = ["properties", "markers", "measures", "biomarkers"] as const;
-  const empty = { properties: 0, markers: 0, measures: 0, biomarkers: 0 };
+  const empty = { anatomy: 0, properties: 0, markers: 0, measures: 0, biomarkers: 0 };
 
   test("follows the data until the person picks a tab", () => {
     expect(activePanelTab(null, offered, empty)).toBe("properties");

@@ -7,7 +7,7 @@ import { asFetch } from "@/infrastructure/as-fetch";
 import {
   buildWhoopFhirBundle,
   fetchWhoopWorkouts,
-} from "@/infrastructure/open-twin-adapters";
+} from "@/infrastructure/open-twin-adapters/whoop";
 
 import { SYNTHETIC_WHOOP_PAYLOAD } from "./fixtures/synthetic-sync-payload";
 

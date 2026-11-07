@@ -40,7 +40,7 @@ import { Legend } from "@/infrastructure/ui-kit/legend";
 import { AnatomyControls } from "./anatomy/anatomy-controls";
 import { AnatomyLayers } from "./anatomy/anatomy-layers";
 import { highlightValue } from "./anatomy/highlight-options";
-import { BodyPanel, type PanelTab } from "./body-panel";
+import { BodyPanel, type BodyPanelProps, type PanelTab } from "./body-panel";
 import { useBiomarkerTab } from "./biomarkers/use-biomarker-tab";
 import {
   DEMO_BODY_NOTE,
@@ -186,7 +186,7 @@ export {
 const DEMO_SEXES: readonly DemoSex[] = ["male", "female"];
 const NO_MARKERS: ReturnType<typeof visibleMarkers> = [];
 const NO_MEASURES: ReturnType<typeof visibleMeasures> = [];
-const DEMO_PANEL_TABS: readonly PanelTab[] = ["biomarkers"];
+const DEMO_PANEL_TABS: readonly PanelTab[] = ["anatomy", "biomarkers"];
 
 /** Measured stature in metres from a snapshot's `body.height`, or null. */
 export const snapshotStature = (
@@ -226,6 +226,18 @@ export type InitialFocus = Readonly<{
 }>;
 
 export type PickedPart = Readonly<{ group: string | null; system: string | null }>;
+
+/**
+ * Inline beside the 3D view: the one panel, with the viewer's anatomy
+ * controls as its first tab. Its own component so a test reaches it without
+ * WebGL.
+ */
+export const TwinSidePanel = ({
+  anatomy,
+  panel,
+}: Readonly<{ anatomy: ReactNode; panel: BodyPanelProps }>) => (
+  <BodyPanel {...panel} anatomy={anatomy} className="twin-side-panel" />
+);
 
 /** BodyLoop helper geometry that must not show inside the (glass) scan. */
 export const BodyLoopAvatar = ({
@@ -495,15 +507,9 @@ export const BodyLoopAvatar = ({
   useEffect(() => {
     anatomyDispatch({ type: "bodySex", sex: bodySex });
   }, [anatomyDispatch, bodySex]);
-  // Every viewer panel folds away; inline the choice is remembered per viewer.
+  // The toolbar and the overlays fold away; inline the choice is remembered per viewer.
   const [toolbarOpen, toggleToolbar] = usePanelOpen(PANEL_IDS.toolbar);
-  const [anatomyOpen, toggleAnatomy] = usePanelOpen(PANEL_IDS.anatomy);
-  const [detailsOpen, toggleDetails, setDetailsOpen] = usePanelOpen(PANEL_IDS.details);
   const [overlaysOpen, toggleOverlays] = usePanelOpen(PANEL_IDS.overlays);
-  const inlinePanels = {
-    anatomy: { open: anatomyOpen, toggle: toggleAnatomy },
-    details: { open: detailsOpen, toggle: toggleDetails },
-  };
   // G3b: a tap on the body picks a part, lights it and opens its card.
   const [picked, setPicked] = useState<Picked | null>(null);
   const [anchorStore] = useState(createAnchorStore);
@@ -656,18 +662,16 @@ export const BodyLoopAvatar = ({
       geometry.measures.length +
       biomarkers.rows.length >
     0;
-  const bodyPanel = (
-    <BodyPanel
-      properties={properties}
-      markers={shownMarkers}
-      measures={shownMeasures}
-      selectedId={highlightId}
-      onSelect={setHighlightId}
-      biomarkers={biomarkers}
-      panel={panel}
-      onPanel={onPanel}
-    />
-  );
+  const scanPanel: BodyPanelProps = {
+    properties,
+    markers: shownMarkers,
+    measures: shownMeasures,
+    selectedId: highlightId,
+    onSelect: setHighlightId,
+    biomarkers,
+    panel,
+    onPanel,
+  };
   const scanMeta = selectedScan
     ? [
         selectedScan.crtime ? selectedScan.crtime.slice(0, 10) : null,
@@ -709,10 +713,10 @@ export const BodyLoopAvatar = ({
       store={anchorStore}
       onSelectRow={(id) => {
         biomarkers.onSelect(id);
-        // The row and its notes are in Details, so it opens.
+        // The row and its notes are on the Biomarkers tab, so the panel shows it.
         if (!id) return;
         if (environment.active) environment.openPanel("details");
-        else setDetailsOpen(true);
+        onPanel({ type: "tab", tab: "biomarkers" });
       }}
       onClose={closeCard}
     />
@@ -727,7 +731,8 @@ export const BodyLoopAvatar = ({
         className={
           environment.active
             ? "twin-environment-view relative overflow-hidden"
-            : "wearables-hero relative h-[min(70vh,640px)] min-h-[360px] overflow-hidden rounded-xl"
+            : // The same height as the side panel (`--twin-view-height` in globals.css).
+              "wearables-hero relative h-(--twin-view-height) min-h-(--twin-view-min-height) overflow-hidden rounded-xl"
         }
         // The 3D view takes focus (a click, or Tab); focused or hovered, the
         // keys walk (walk-controls.tsx). Inline, focus is also what lets the
@@ -860,16 +865,19 @@ export const BodyLoopAvatar = ({
     </div>
   );
 
-  // Toolbar and canvas on the left; on lg the rail sits beside them, below lg
-  // it stacks directly under the canvas. In the environment the same elements
-  // cover the window: the canvas fills it and the toolbar and rail float over
-  // it. Only classes change, so the canvas and the panels are never remounted on
-  // enter or exit. The move between rail and standalone below does remount the
-  // panel; its search and tab live in `panel` here, so they survive it.
+  // Inline on lg: the toolbar across the top, the canvas on the left with the
+  // live lines under it, and the side panel beside the canvas with its height
+  // (`.twin-side-panel`); below lg they stack in that order. In the environment
+  // the same elements cover the window: the canvas fills it and the toolbar
+  // floats over it, as do the Anatomy and Details panels of the rail. The
+  // canvas and the toolbar only change class on enter or exit, so they never
+  // remount; the rail is rebuilt, and the panel's search and tab live in
+  // `panel` here, so they survive it, as they do the move between the side
+  // panel and standing alone below.
   const inEnvironment = environment.active;
   const viewer = (
     body: Readonly<{ kind: "scan" | "demo"; url: string }>,
-    rail: Readonly<{ anatomy: ReactNode; details: ReactNode }>,
+    rail: Readonly<{ anatomy: ReactNode; panel: BodyPanelProps }>,
   ) => (
     <div
       ref={environment.setContainer}
@@ -881,135 +889,125 @@ export const BodyLoopAvatar = ({
       className={
         inEnvironment
           ? "twin-environment"
-          : "mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start"
+          : "mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]"
       }
     >
-      <div className={inEnvironment ? "contents" : "min-w-0"}>
-        <div className={inEnvironment ? "twin-environment-bar" : undefined}>
-          <CollapsiblePanel
-            label={TOOLBAR_PANEL}
-            open={toolbarOpen}
-            onToggle={toggleToolbar}
-            className={inEnvironment ? "twin-toolbar" : "twin-panel twin-toolbar mb-2"}
-          >
-            <ViewToolbar
-              autoRotate={autoRotate}
-              onReset={() => setResetKey((value) => value + 1)}
-              onToggleRotate={() => {
-                const next = !wantRotate;
-                setWantRotate(next);
-                setAutoRotate(next);
-              }}
-              onZoom={zoom}
-              landmarks={
-                body.kind === "scan"
-                  ? {
-                      shown: showLandmarks,
-                      onToggle: () => setShowLandmarks((value) => !value),
-                    }
-                  : undefined
-              }
-              motion={motion.control}
-              environment={{ active: inEnvironment, onToggle: environment.toggle }}
-              environmentRef={environment.buttonRef}
-              liveVitals={
-                liveAvailable
-                  ? {
-                      on: liveOn,
-                      onToggle: () =>
-                        environment.active
-                          ? setLiveInEnvironment((on) => !on)
-                          : setLiveInline((on) => !on),
-                    }
-                  : undefined
-              }
-              heartChambers={
-                chambersAvailable
-                  ? { on: chambersWanted, onToggle: toggleChambers }
-                  : undefined
-              }
-            />
-          </CollapsiblePanel>
-          {inEnvironment ? (
-            <EnvironmentPanel
-              label={PANEL_TEXT.scene}
-              floating
-              open={environment.state.open.scene}
-              onToggle={() => environment.togglePanel("scene")}
-            >
-              <EnvironmentBar
-                shown={environment.state.open.scene}
-                preset={preset}
-                followTime={followTime}
-                onPreset={(next) =>
-                  environment.dispatch({ type: "preset", preset: next })
-                }
-                onFollowTime={() => environment.dispatch({ type: "followTime" })}
-              />
-            </EnvironmentPanel>
-          ) : null}
-        </div>
-        {viewport(body)}
-        {/* Beside the 3D view, not in its role="application", so both read as text.
-            Below 640 px in the environment they stack at the bottom (globals.css). */}
-        <div className="twin-bottom-stack">
-          <LiveLines
-            status={liveOn ? liveStatus : IDLE_STATUS}
-            vitals={liveVitals}
-            timing={heartRhythm.timing}
-            scheme={scheme}
-            context={{
-              on: playing || (environment.active ? liveInEnvironment : liveInline),
-              inEnvironment: environment.active,
-              reducedMotion,
+      <div className={inEnvironment ? "twin-environment-bar" : "lg:col-span-2"}>
+        <CollapsiblePanel
+          label={TOOLBAR_PANEL}
+          open={toolbarOpen}
+          onToggle={toggleToolbar}
+          className={inEnvironment ? "twin-toolbar" : "twin-panel twin-toolbar"}
+        >
+          <ViewToolbar
+            autoRotate={autoRotate}
+            onReset={() => setResetKey((value) => value + 1)}
+            onToggleRotate={() => {
+              const next = !wantRotate;
+              setWantRotate(next);
+              setAutoRotate(next);
             }}
-            extra={motionLines(motion.control, anatomy.state.targetDepth > 0)}
+            onZoom={zoom}
+            landmarks={
+              body.kind === "scan"
+                ? {
+                    shown: showLandmarks,
+                    onToggle: () => setShowLandmarks((value) => !value),
+                  }
+                : undefined
+            }
+            motion={motion.control}
+            environment={{ active: inEnvironment, onToggle: environment.toggle }}
+            environmentRef={environment.buttonRef}
+            liveVitals={
+              liveAvailable
+                ? {
+                    on: liveOn,
+                    onToggle: () =>
+                      environment.active
+                        ? setLiveInEnvironment((on) => !on)
+                        : setLiveInline((on) => !on),
+                  }
+                : undefined
+            }
+            heartChambers={
+              chambersAvailable
+                ? { on: chambersWanted, onToggle: toggleChambers }
+                : undefined
+            }
           />
-          {environment.active || !motion.control ? null : (
-            <DayMotionBar
-              state={{
-                ...dayMotion,
-                onFollow: (next) => {
-                  motion.clearManual();
-                  dayMotion.onFollow(next);
-                },
-              }}
-              unavailable={motion.control.unavailable}
-            />
-          )}
-          {environment.active ? null : nightSynthetic ? (
-            <NightPlayback state={night} reducedMotion={reducedMotion} />
-          ) : (
-            <p className="text-muted-foreground mt-2 text-xs">{NIGHT_NEEDS_READINGS}</p>
-          )}
-          {environment.active ? pickCard : null}
-        </div>
-      </div>
-      <div
-        className={
-          inEnvironment ? "twin-environment-rail" : "flex min-w-0 flex-col gap-3"
-        }
-      >
-        {/* In the environment the panels open by screen size on entry
-            (environment-state.ts); inline each keeps the viewer's own choice. */}
-        {(["anatomy", "details"] as const).map((panel) => (
+        </CollapsiblePanel>
+        {inEnvironment ? (
           <EnvironmentPanel
-            key={panel}
-            label={PANEL_TEXT[panel]}
-            floating={inEnvironment}
-            open={
-              inEnvironment ? environment.state.open[panel] : inlinePanels[panel].open
-            }
-            onToggle={
-              inEnvironment
-                ? () => environment.togglePanel(panel)
-                : inlinePanels[panel].toggle
-            }
+            label={PANEL_TEXT.scene}
+            floating
+            open={environment.state.open.scene}
+            onToggle={() => environment.togglePanel("scene")}
           >
-            {rail[panel]}
+            <EnvironmentBar
+              shown={environment.state.open.scene}
+              preset={preset}
+              followTime={followTime}
+              onPreset={(next) => environment.dispatch({ type: "preset", preset: next })}
+              onFollowTime={() => environment.dispatch({ type: "followTime" })}
+            />
           </EnvironmentPanel>
-        ))}
+        ) : null}
       </div>
+      {viewport(body)}
+      {/* Beside the 3D view, not in its role="application", so both read as text.
+            Below 640 px in the environment they stack at the bottom (globals.css);
+            inline they sit under the canvas, in its column. */}
+      <div className={inEnvironment ? "twin-bottom-stack" : "lg:col-start-1"}>
+        <LiveLines
+          status={liveOn ? liveStatus : IDLE_STATUS}
+          vitals={liveVitals}
+          timing={heartRhythm.timing}
+          scheme={scheme}
+          context={{
+            on: playing || (environment.active ? liveInEnvironment : liveInline),
+            inEnvironment: environment.active,
+            reducedMotion,
+          }}
+          extra={motionLines(motion.control, anatomy.state.targetDepth > 0)}
+        />
+        {environment.active || !motion.control ? null : (
+          <DayMotionBar
+            state={{
+              ...dayMotion,
+              onFollow: (next) => {
+                motion.clearManual();
+                dayMotion.onFollow(next);
+              },
+            }}
+            unavailable={motion.control.unavailable}
+          />
+        )}
+        {environment.active ? null : nightSynthetic ? (
+          <NightPlayback state={night} reducedMotion={reducedMotion} />
+        ) : (
+          <p className="text-muted-foreground mt-2 text-xs">{NIGHT_NEEDS_READINGS}</p>
+        )}
+        {environment.active ? pickCard : null}
+      </div>
+      {inEnvironment ? (
+        <div className="twin-environment-rail">
+          {/* The panels open by screen size on entry (environment-state.ts). */}
+          {(["anatomy", "details"] as const).map((panel) => (
+            <EnvironmentPanel
+              key={panel}
+              label={PANEL_TEXT[panel]}
+              floating
+              open={environment.state.open[panel]}
+              onToggle={() => environment.togglePanel(panel)}
+            >
+              {panel === "anatomy" ? rail.anatomy : <BodyPanel {...rail.panel} />}
+            </EnvironmentPanel>
+          ))}
+        </div>
+      ) : (
+        <TwinSidePanel anatomy={rail.anatomy} panel={rail.panel} />
+      )}
       {inEnvironment ? <ResearchLine /> : null}
     </div>
   );
@@ -1086,18 +1084,16 @@ export const BodyLoopAvatar = ({
                     envelope="demo"
                   />
                 ),
-                details: (
-                  <BodyPanel
-                    properties={[]}
-                    markers={NO_MARKERS}
-                    measures={NO_MEASURES}
-                    selectedId={null}
-                    biomarkers={biomarkers}
-                    tabs={DEMO_PANEL_TABS}
-                    panel={panel}
-                    onPanel={onPanel}
-                  />
-                ),
+                panel: {
+                  properties: [],
+                  markers: NO_MARKERS,
+                  measures: NO_MEASURES,
+                  selectedId: null,
+                  biomarkers,
+                  tabs: DEMO_PANEL_TABS,
+                  panel,
+                  onPanel,
+                },
               },
             )
           ) : (
@@ -1234,7 +1230,7 @@ export const BodyLoopAvatar = ({
                             onInteract={onUserRotate}
                           />
                         ),
-                        details: bodyPanel,
+                        panel: scanPanel,
                       },
                     )
                   ) : readyMesh ? (
@@ -1247,9 +1243,13 @@ export const BodyLoopAvatar = ({
             </>
           )}
           {/* Without a mesh the panel stands here, under the selectors. Swapping to a
-              scan with one moves it into the rail and remounts it; `panel` keeps
+              scan with one moves it beside the view and remounts it; `panel` keeps
               its search and tab. */}
-          {!panelInRail && hasPanelRows ? <div className="mt-3">{bodyPanel}</div> : null}
+          {!panelInRail && hasPanelRows ? (
+            <div className="mt-3">
+              <BodyPanel {...scanPanel} />
+            </div>
+          ) : null}
         </>
       )}
     </div>

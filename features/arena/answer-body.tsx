@@ -15,7 +15,7 @@ import { type DecorateText, RichText } from "@/infrastructure/rich-text";
 import { AnswerViews } from "./answer-views";
 import { ProfileFrameFooter, ProfileFrameHeader } from "./profile-frame";
 import { ExplainabilityPanel } from "./explainability-panel";
-import { streamingView } from "./streaming-view";
+import { stoppedAnswerText, streamingView } from "./streaming-view";
 import type { ResponseState } from "./conversation";
 import { numberLinkPieces, sourceCallIds, sourcesByText } from "./number-links";
 import { type ActiveNumber, ToolSteps, toolCardTitleId } from "./tool-call-cards";
@@ -93,7 +93,7 @@ type AnswerBodyResponse = Pick<
   | "views"
   | "numberSources"
 > &
-  Partial<Pick<ResponseState, "id" | "reviewing" | "profileFrame">>;
+  Partial<Pick<ResponseState, "id" | "reviewing" | "profileFrame" | "stopped">>;
 
 const SettledAnswer = ({
   response,
@@ -109,7 +109,10 @@ const SettledAnswer = ({
   const withheld =
     document?.abstained === true ||
     document?.answer_class === "declined_decision_support";
-  const shown = parsed.answerText || splitThinking(response.text).text;
+  const stopped = response.stopped === true;
+  const shown = stopped
+    ? stoppedAnswerText(response.text)
+    : parsed.answerText || splitThinking(response.text).text;
   // A model can run its lookups and stop without writing anything.
   const silent = !withheld && shown.trim() === "";
   const frame = withheld ? null : (response.profileFrame ?? null);
@@ -120,7 +123,7 @@ const SettledAnswer = ({
       {!withheld && !silent && document?.interpretation.kind === "narration" && (
         <p className="text-eyebrow">{UNVERIFIED_NARRATION}</p>
       )}
-      {silent && (
+      {silent && !stopped && (
         <p className="text-muted-foreground text-sm">
           {noAnswerLine(response.tools?.length ?? 0)}
         </p>

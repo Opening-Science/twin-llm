@@ -3,6 +3,8 @@ import type {
   WearableCoverageResult,
 } from "@/packages/query-tools/tools";
 
+import type { TurnState } from "./conversation";
+
 /**
  * Suggested first questions for an empty chat, built from what the subject
  * actually has. Each measure family asks one fixed, neutral question, and only
@@ -270,3 +272,11 @@ export const wearableSuggestions = (
     questions: pick(families).map((label) => ({ label, prompt: label })),
   };
 };
+
+/**
+ * Whether a thread offers the chips (#454): every empty thread does, new or
+ * saved, incognito or not, in any mode, and none does from the moment its
+ * first turn starts, which is the pending turn the screen shows before the
+ * server has written it. A twin card or a draft note is not a turn.
+ */
+export const startersShown = (turns: readonly TurnState[]): boolean => turns.length === 0;

@@ -14,6 +14,7 @@ import {
 } from "./whoop-workout";
 
 export type { WhoopWorkout };
+export { fetchWhoopWorkouts, WHOOP_HR_ZONES, whoopSportName } from "./whoop-workout";
 
 /** Upstream recovery / cycles / sleep plus the workouts this host fetches itself. */
 export type WhoopHostPayload = WhoopSyncPayload & {

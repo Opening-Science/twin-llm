@@ -65,17 +65,27 @@ const aliasesOf = (...folders) =>
   folders.flatMap((folder) => [`@/${folder}/*`, `@/${folder}/**`]);
 
 /**
- * Wearable adapters are reached through their folder's entry module only
- * (`@/infrastructure/open-twin-adapters`), never a file inside it (#463).
+ * Wearable adapters are reached through one entry per vendor (#463), never a
+ * file behind it: an Oura route then loads Oura's code only, not Google's auth
+ * stack (#475). The entries are `oura`, `whoop`, `google-health` and `aggregate`.
  */
+const ADAPTER_ENTRIES = ["oura", "whoop", "google-health", "aggregate"];
 const ADAPTER_ENTRY = {
-  group: ["**/open-twin-adapters/*"],
+  group: [
+    "**/open-twin-adapters/*",
+    ...ADAPTER_ENTRIES.map((entry) => `!**/open-twin-adapters/${entry}`),
+  ],
   message:
-    "Import the wearable adapters from @/infrastructure/open-twin-adapters, not a file inside it.",
+    "Import a wearable adapter from its vendor entry (open-twin-adapters/oura, whoop, google-health or aggregate), not a file behind it.",
 };
 
-const banImports = (patterns) => ({
-  "no-restricted-imports": ["error", { patterns }],
+/**
+ * `rule` defaults to the core rule. A ban that must hold alongside another
+ * block's patterns uses the typescript-eslint copy: ESLint replaces a rule's
+ * options per block rather than merging them.
+ */
+const banImports = (patterns, rule = "no-restricted-imports") => ({
+  [rule]: ["error", { patterns }],
 });
 
 const FEATURE_SOURCES = "features/**/*.{ts,tsx}";
@@ -172,6 +182,23 @@ export default defineConfig([
       },
       ADAPTER_ENTRY,
     ]),
+  },
+
+  {
+    // Test helpers stay in tests: source never imports tests/ (#465). Its
+    // own rule, so the walls above and the boundary debt below leave it on.
+    name: "twin-llm/no-tests-in-source",
+    files: ["app/**/*.{ts,tsx}", FEATURE_SOURCES, "infrastructure/**/*.{ts,tsx}"],
+    ignores: ["**/*.test.{ts,tsx}"],
+    rules: banImports(
+      [
+        {
+          group: aliasesOf("tests"),
+          message: "tests/ holds test helpers; source code never imports them.",
+        },
+      ],
+      "@typescript-eslint/no-restricted-imports",
+    ),
   },
 
   {

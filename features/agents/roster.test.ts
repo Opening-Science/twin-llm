@@ -21,7 +21,6 @@ import {
   scenarioOf,
   scoreText,
   shareText,
-  toolsText,
   withoutEmptyColumns,
   type ScoredRun,
   topicsFor,
@@ -250,11 +249,6 @@ describe("baseModelScores", () => {
         { criterion: "privacy", cells: [null, cell] },
       ],
     });
-  });
-
-  test("tools text", () => {
-    expect(toolsText(1)).toBe("1 tool");
-    expect(toolsText(7)).toBe("7 tools");
   });
 
   test("score text", () => {

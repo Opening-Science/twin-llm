@@ -1,4 +1,4 @@
-import type { WhoopHostPayload } from "@/infrastructure/open-twin-adapters";
+import type { WhoopHostPayload } from "@/infrastructure/open-twin-adapters/whoop";
 
 /**
  * Hand-written synthetic Whoop sync payload. No real wearer, device or vendor

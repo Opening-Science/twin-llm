@@ -16,7 +16,7 @@ import { ouraEnv } from "@/infrastructure/env";
 import {
   buildOuraFhirBundle,
   HostOuraTokenHandler,
-} from "@/infrastructure/open-twin-adapters";
+} from "@/infrastructure/open-twin-adapters/oura";
 
 import type { PreparedSync } from "@/features/wearables/audited-sync";
 import { resolveSyncDateWindow } from "@/features/wearables/sync-window";

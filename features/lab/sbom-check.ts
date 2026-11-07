@@ -94,7 +94,7 @@ const HOW_TO = [
   'fresh="$(mktemp)" && bun run sbom --out "$fresh" && sha256sum "$fresh"',
 ].join("\n");
 
-/** What the card shows even when the check cannot run. */
+/** What the list and the check's page show even when the check cannot run. */
 export const sbomBase = {
   id: "sbom",
   title: "Software bill of materials",
