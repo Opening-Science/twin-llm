@@ -27,7 +27,9 @@ three. "How does resting heart rate change during sleep?" goes to General, Sleep
 Trainer; before anything is typed the list is General, Diet and Anatomy as before. The
 mode menu shows the rows that will be sent. Once the person changes a row the list is
 theirs and the question no longer moves it, and a reopened thread keeps its last turn's
-rows. A medicine or dose question still lists its matching specialists beside General;
+rows. The first question on `/start` goes to the same fitted rows
+(`features/onboarding/starter-models.ts`). A medicine or dose question still lists its
+matching specialists beside General;
 only Auto sends such a question to General alone.
 
 The interface calls the agents "specialists", never doctors, and keeps their research
