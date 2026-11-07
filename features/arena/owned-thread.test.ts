@@ -87,14 +87,17 @@ const savedRow = (
 const reads = (
   actorId: string | null,
   userIds: Record<string, string>,
-  skills: ReadonlyMap<string, string> = new Map(),
   thread: StoredThread = stored,
 ): ThreadReads => ({
   actorId: async () => actorId,
   appUserIdFor: async (actor) => userIds[actor] ?? null,
   findThread: async (id) => (id === thread.id ? thread : null),
-  skillsOfTurns: async (turnIds) =>
-    new Map([...skills].filter(([turnId]) => turnIds.includes(turnId))),
+});
+
+/** The stored thread with the person's skill on its first turn. */
+const sentWith = (skill: string, thread: StoredThread = stored): StoredThread => ({
+  ...thread,
+  turns: thread.turns.map((turn, index) => (index === 0 ? { ...turn, skill } : turn)),
 });
 
 describe("loadOwnedThread", () => {
@@ -160,27 +163,27 @@ describe("a turn sent with a skill, after a reload", () => {
   test("a turn a scheduled task asked comes back marked, a typed one does not", async () => {
     const typed = await loadOwnedThread("thread-1", reads("clerk-owner", owner));
     expect(typed?.turns[0]?.scheduled).toBeUndefined();
-    const scheduledThread: StoredThread = {
+    const scheduledThread: StoredThread = sentWith("sleep", {
       ...stored,
       turns: stored.turns.map((turn) => ({ ...turn, scheduled: true })),
-    };
+    });
     const scheduled = await loadOwnedThread(
       "thread-1",
-      reads("clerk-owner", owner, new Map([["turn-1", "sleep"]]), scheduledThread),
+      reads("clerk-owner", owner, scheduledThread),
     );
     expect(scheduled?.turns[0]?.scheduled).toBe(true);
     expect(scheduled?.turns[0]?.skill).toBe("sleep");
   });
 
-  test("the skill comes back from the turn's skill audit row", async () => {
+  test("the skill the person sent the turn with comes back from the turn", async () => {
     const thread = await loadOwnedThread(
       "thread-1",
-      reads("clerk-owner", owner, new Map([["turn-1", "sleep"]])),
+      reads("clerk-owner", owner, sentWith("sleep")),
     );
     expect(thread?.turns[0]?.skill).toBe("sleep");
   });
 
-  test("without an audit row it comes back from a stored response document", async () => {
+  test("a skill a specialist ran under never labels the person's prompt (#479)", async () => {
     const [turn] = stored.turns;
     const withSkillDocument: StoredThread = {
       ...stored,
@@ -199,9 +202,9 @@ describe("a turn sent with a skill, after a reload", () => {
     };
     const thread = await loadOwnedThread(
       "thread-1",
-      reads("clerk-owner", owner, new Map(), withSkillDocument),
+      reads("clerk-owner", owner, withSkillDocument),
     );
-    expect(thread?.turns[0]?.skill).toBe("sleep");
+    expect(thread?.turns[0]?.skill).toBeNull();
   });
 });
 

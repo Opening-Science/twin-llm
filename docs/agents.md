@@ -102,8 +102,10 @@ same catalog, then:
   name, so the column reads "General". Audit rows name the base model,
   which is the one that saw the data.
 
-A reloaded turn reads its `/skill` chip back from the skill audit row, which is per turn,
-so an agent's own skill shows as a chip there too.
+A reloaded turn shows a `/skill` chip only for a skill the person sent it with, stored on
+the turn itself (`turns.skill`, #479). An agent's own skill, including the one Auto ran,
+stays on its answer ("Auto → Sleep") and never labels the person's prompt, as it does not
+while the turn streams. The `skill.<name>` audit row still records every skill run.
 
 ## Auto (#219)
 
