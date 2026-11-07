@@ -9,6 +9,7 @@ import {
 
 import {
   AUTO_AGENTS_LINK,
+  fitCompare,
   initialEffort,
   initialModelIds,
   initialSelection,
@@ -48,6 +49,7 @@ const selection = (overrides: Partial<ModeSelection>): ModeSelection => ({
   specialists: [],
   models: [],
   compare: [],
+  compareChosen: false,
   ...overrides,
 });
 
@@ -166,6 +168,7 @@ describe("initialSelection", () => {
       specialists: ["gp"],
       models: ["qwen3:4b"],
       compare: ["agent:gp", "qwen3:4b", "llama3.2"],
+      compareChosen: false,
     });
   });
 
@@ -193,7 +196,62 @@ describe("initialSelection", () => {
     expect(initialSelection(["agent:gp", "llama3.2", "gone:1b"], CATALOG)).toMatchObject({
       mode: "compare",
       compare: ["agent:gp", "llama3.2"],
+      compareChosen: true,
     });
+  });
+});
+
+describe("fitCompare (#493)", () => {
+  const skill = (name: string) => ({
+    name,
+    providers: ["ollama" as const],
+    sources: [],
+    tools: [],
+  });
+  const FULL = withAgents([ollama("qwen3:8b"), ollama("llama3.2")], {
+    provider: "ollama",
+    chatIsLocal: true,
+    skills: ["nutrition", "anatomy", "sleep", "trainer", "rhythm", "brain"].map(skill),
+  });
+  const SLEEP_QUESTION = "How does resting heart rate change during sleep?";
+  const fresh = { ...initialSelection([], FULL), mode: "compare" as const };
+
+  test("before a question, the usual defaults", () => {
+    expect(fitCompare(fresh, FULL, "").compare).toEqual([
+      "agent:gp",
+      "agent:diet",
+      "agent:anatomy",
+    ]);
+  });
+
+  test("the sleep question keeps General and brings Sleep in", () => {
+    const ids = modeModelIds(fitCompare(fresh, FULL, SLEEP_QUESTION), FULL);
+    expect(ids).toEqual(["agent:gp", "agent:sleep", "agent:trainer"]);
+  });
+
+  test("a heart rhythm question brings Heart rhythm in, a diet question Diet", () => {
+    expect(
+      fitCompare(fresh, FULL, "Any palpitations or arrhythmia this week?").compare,
+    ).toContain("agent:rhythm");
+    expect(fitCompare(fresh, FULL, "How has my weight changed?").compare).toEqual([
+      "agent:gp",
+      "agent:diet",
+      "agent:anatomy",
+    ]);
+  });
+
+  test("rows the person picked stay as they are", () => {
+    const picked = toggleCompare(fresh, "agent:anatomy", FULL);
+    expect(picked.compareChosen).toBe(true);
+    expect(fitCompare(picked, FULL, SLEEP_QUESTION)).toEqual(picked);
+  });
+
+  test("a reopened thread's rows stay as they are", () => {
+    const reopened = initialSelection(["agent:diet", "llama3.2"], FULL);
+    expect(fitCompare(reopened, FULL, SLEEP_QUESTION).compare).toEqual([
+      "agent:diet",
+      "llama3.2",
+    ]);
   });
 });
 

@@ -1,4 +1,5 @@
 import { skillSourceLabel, type TurnSkill } from "@/infrastructure/skill-gate";
+import { toolDoes } from "@/infrastructure/tool-titles";
 
 /**
  * The commands behind `/` in the prompt bar: built-ins, then the skills the
@@ -42,7 +43,7 @@ export const BUILT_IN_COMMANDS: readonly Command[] = [
   },
 ];
 
-/** A runnable skill as the palette lists it: sources by their labels, tools by name. */
+/** A runnable skill as the palette lists it: sources by their labels, tools by id (`toolsLine` words them). */
 export const skillCommand = (
   skill: Pick<TurnSkill, "name" | "description" | "sources" | "tools">,
 ): Command => ({
@@ -72,8 +73,9 @@ export const matchCommands = (
 export const readsLine = (reads: readonly string[]): string =>
   reads.length === 0 ? "reads nothing" : `reads: ${reads.join(", ")}`;
 
+/** A skill's tools in the words its answer's steps use, never the tool ids (#480). */
 export const toolsLine = (tools: readonly string[]): string =>
-  tools.length === 0 ? "calls no tools" : `may call: ${tools.join(", ")}`;
+  tools.length === 0 ? "uses no tools" : `may use: ${tools.map(toolDoes).join(", ")}`;
 
 const SKILL_DRAFT = /^\/([a-z][a-z0-9-]*)(?:\s+([\s\S]*))?$/;
 

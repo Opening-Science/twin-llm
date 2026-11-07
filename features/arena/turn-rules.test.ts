@@ -37,6 +37,7 @@ describe("checkTurnRequest", () => {
       plan: {
         prompt: "Synthetic: sleep and resting heart rate?",
         title: "Synthetic: sleep and resting heart rate?",
+        skill: null,
         models: [
           { id: "medgemma:4b", name: "MedGemma 4B" },
           { id: "qwen3:8b", name: "qwen3:8b" },
@@ -69,6 +70,16 @@ describe("checkTurnRequest", () => {
     const prompt = "x".repeat(81);
     const check = checkTurnRequest({ prompt, modelIds: ["qwen3:8b"] }, catalog, "ollama");
     expect(check.ok && check.plan.title).toBe("x".repeat(80));
+  });
+
+  test("a skill the person sent with names the title and is kept for the turn (#479)", () => {
+    const check = checkTurnRequest(
+      { prompt: "last 30 nights", modelIds: ["qwen3:8b"], skill: "sleep" },
+      catalog,
+      "ollama",
+    );
+    expect(check.ok && check.plan.title).toBe("/sleep last 30 nights");
+    expect(check.ok && check.plan.skill).toBe("sleep");
   });
 
   test("refuses in order: empty prompt, model count, catalog, unknown model", () => {

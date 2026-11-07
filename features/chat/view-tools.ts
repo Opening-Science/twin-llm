@@ -41,7 +41,11 @@ export type ViewToolDeps = Readonly<{
   ports?: QueryToolPorts;
   /** The views of the thread this audit session's turn belongs to, newest first. */
   loadViews: (sessionId: string) => Promise<readonly ThreadView[]>;
-  /** True when this request may carry personal data (`requestDataMode`). */
+  /**
+   * True when this request may carry personal data (`requestDataMode`) and,
+   * on a skill turn, the skill reads wearables (#480): only then are the
+   * person's own stored views offered.
+   */
   personal: boolean;
   /** View kinds this turn may show (a skill's `views`); left out, every kind. */
   views?: readonly string[];

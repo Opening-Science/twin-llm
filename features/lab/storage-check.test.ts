@@ -56,8 +56,11 @@ describe("storageCheck", () => {
   });
 
   test("a check that could not run is Unknown, and nothing is Unknown-free OK", () => {
-    expect(check("personal", [socket, unknownRole]).status).toBe("unknown");
+    const partly = check("personal", [socket, unknownRole]);
+    expect(partly.status).toBe("unknown");
+    expect(partly.reason).toBe(`Could not check: ${unknownRole.subject}.`);
     expect(check("personal", []).status).toBe("unknown");
+    expect(check("personal", []).reason).toBe("Nothing could be checked.");
   });
 
   test("no home path or password on the card", () => {

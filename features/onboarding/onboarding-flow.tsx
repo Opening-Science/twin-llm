@@ -118,6 +118,7 @@ export const OnboardingFlow = ({
   connectGroups,
   sourceAvailability,
   residency,
+  demo,
   onStartThread,
 }: {
   readonly initialAnswers: OnboardingAnswers;
@@ -125,6 +126,8 @@ export const OnboardingFlow = ({
   readonly connectGroups: readonly ConnectGroup[];
   readonly sourceAvailability: Readonly<Record<KnowledgeSourceId, SourceAvailability>>;
   readonly residency: ResidencyConfig;
+  /** Whether synthetic people are loaded, so the demo cohort can be chosen (#477). */
+  readonly demo: boolean;
   readonly onStartThread: (question: string) => Promise<StartThreadResult>;
 }) => {
   const router = useRouter();
@@ -279,6 +282,7 @@ export const OnboardingFlow = ({
             <PurposeStep
               answers={state.answers}
               dataModeNote={dataModeSentence(residency.dataMode)}
+              demo={demo}
               onToggleRole={(role) => dispatch({ type: "toggle-role", role })}
               onDataChoice={(choice) => dispatch({ type: "set-data-choice", choice })}
             />

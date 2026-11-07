@@ -2,7 +2,7 @@
 name: anatomy
 description: Explain where organs and body systems are and what the Anchor biomarkers relate to anatomically. Reference anatomy only, not the person's own body.
 tools: [knowledge_search]
-sources: [opentwin-knowledge, wearable-context]
+sources: [opentwin-knowledge]
 providers: [ollama]
 views: [twin.body]
 ---

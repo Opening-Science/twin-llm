@@ -4,12 +4,12 @@
  */
 export const GBD_IMPORT_MESSAGES = {
   notLocal:
-    "GBD files are imported on a local install only (LOCAL_MVP or AUTH_DISABLED), because every person using this server shares the GBD store.",
+    "GBD files are imported on a local install only, because every person using this server shares the GBD store.",
   signIn: "Sign in to import GBD files.",
   otherSite: "Import GBD files from Customize · Data.",
   notCsv: "Choose the CSV files of a GBD Results Tool download.",
   tooLarge:
-    "This file is larger than 1 GB. Download a narrower query from the GBD Results Tool, or import it with bun run gbd:import.",
+    "This file is larger than 1 GB. Download a narrower query from the GBD Results Tool, or ask whoever runs TwinLLM here to import it.",
   noSpace:
     "There is not enough free disk space for this file: the import keeps 1 GB free in the state folder. Free some space and try again.",
   empty: "This file is empty.",

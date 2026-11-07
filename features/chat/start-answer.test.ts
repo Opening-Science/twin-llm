@@ -357,22 +357,28 @@ describe("chat start: a turn sent with a skill", () => {
     expect(refused).toEqual([refusedRow(PROVIDER_NOT_PERMITTED_SENTENCE)]);
   });
 
-  test("wearable context with a skill that does not read it is refused", async () => {
-    const { startAnswer, calls, refused } = harness(
+  test("a skill that does not read wearables runs with them withheld (#480)", async () => {
+    const { startAnswer, calls, audits, streamed, refused } = harness(
       { dataMode: "personal", provider: "ollama", exoscalePersonalData: "off" },
       WITH_WHOOP,
       { skill: { ...SLEEP, sources: ["cohort-records"] } },
     );
     const response = await startAnswer(ACTOR, APP_USER, SLEEP_CALL);
-    const sentence =
-      "/sleep does not read linked wearables, and this question would carry them, so /sleep did not run.";
-    expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({
-      code: "source-not-allowed",
-      error: sentence,
-    });
-    expect(calls).toEqual([`wearables personal ${APP_USER}`, "refused"]);
-    expect(refused).toEqual([refusedRow(sentence)]);
+    expect(await response.text()).toBe("streamed");
+    expect(calls).toEqual(["audit", "stream"]);
+    expect(audits.map((input) => input.tool)).toEqual(["skill.sleep"]);
+    expect(streamed.map((context) => context.whoopSummary)).toEqual([null]);
+    expect(refused).toEqual([]);
+  });
+
+  test("a skill that reads wearables gets them", async () => {
+    const { startAnswer, calls, streamed } = harness(
+      { dataMode: "personal", provider: "ollama", exoscalePersonalData: "off" },
+      WITH_WHOOP,
+    );
+    await startAnswer(ACTOR, APP_USER, SLEEP_CALL);
+    expect(calls[0]).toBe(`wearables personal ${APP_USER}`);
+    expect(streamed.map((context) => context.whoopSummary)).toEqual([WHOOP]);
   });
 
   test("a skill the server does not offer is refused before anything is read", async () => {
@@ -527,7 +533,7 @@ describe("chat start: a thread that used genome tools stays local (#151)", () =>
     });
     const response = await startAnswer(ACTOR, APP_USER, SLEEP_CALL);
     expect(await response.json()).toEqual(GENOME_REFUSAL);
-    expect(calls).toEqual([`wearables personal ${APP_USER}`, "audit", "refused"]);
+    expect(calls).toEqual(["audit", "refused"]);
   });
 
   test("a failed audit write still refuses and still sends nothing", async () => {

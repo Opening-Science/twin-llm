@@ -19,9 +19,9 @@ describe("motionUnavailable", () => {
     expect(motionUnavailable(true, false, "scan")).toBe(null);
   });
 
-  test("a demo body without a rig names the bake command", () => {
+  test("a demo body without a rig says who can install it (#480)", () => {
     expect(motionUnavailable(false, false, "demo")).toBe(
-      "The demo body that can walk is not installed on this machine. Run bun run anatomy:fetch.",
+      "The demo body that can walk is not installed on this machine. Whoever runs TwinLLM here can install it.",
     );
   });
 });

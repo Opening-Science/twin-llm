@@ -1,6 +1,12 @@
 import { z } from "zod";
 
-import { agentIdOfAutoColumn, autoColumnName, routeAgent } from "./agent-router";
+import {
+  agentIdOfAutoColumn,
+  autoColumnName,
+  DEFAULT_AGENT_ID,
+  rankAgents,
+  routeAgent,
+} from "./agent-router";
 import {
   AGENT_ID_PREFIX,
   type AgentOffer,
@@ -510,11 +516,29 @@ export const DEFAULT_AGENT_IDS: readonly string[] = Object.freeze([
  * spans vendors instead of three variants of one; top up from the rest when
  * there are fewer vendors than slots. A catalog without agents (the models
  * page, the starter questions) gets models only, as before.
+ *
+ * Given the question (#493), the General agent stays first and the
+ * specialists the router ranks for it (`rankAgents`, the scoring Auto uses)
+ * come next, before the other default agents: "How does resting heart rate
+ * change during sleep?" starts with General, Sleep and Trainer.
  */
 export const defaultModelSelection = (
   catalog: readonly CatalogModel[],
+  prompt = "",
 ): readonly string[] => {
-  const agents = DEFAULT_AGENT_IDS.filter((id) => catalog.some((row) => row.id === id));
+  const offeredAgentIds = catalog.flatMap((row) =>
+    row.agent === undefined ? [] : [row.agent.id],
+  );
+  const ranked = rankAgents(prompt, offeredAgentIds).map(
+    ({ agentId }) => `${AGENT_ID_PREFIX}${agentId}`,
+  );
+  const agents = [
+    ...new Set([
+      `${AGENT_ID_PREFIX}${DEFAULT_AGENT_ID}`,
+      ...ranked,
+      ...DEFAULT_AGENT_IDS,
+    ]),
+  ].filter((id) => catalog.some((row) => row.id === id));
   return [...agents, ...defaultPlainModels(catalog)].slice(0, MAX_SELECTED_MODELS);
 };
 

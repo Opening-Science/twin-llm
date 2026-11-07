@@ -23,7 +23,7 @@ bun run doctor                         # read-only: the same checks, what each p
 1. Checks bun, Node.js, git, Python 3, Java 21+, shasum, curl, uv, zstd and Ollama, and whether Postgres answers at `DATABASE_URL` with pgvector available. Anything missing is printed with its Homebrew or apt line; nothing is installed.
 2. Writes `.env.local` from `.env.synthetic.example` when there is none (`DATABASE_URL` from the shell; on macOS without one, `postgresql://$USER@127.0.0.1:5432/twin_llm_synthetic`). An existing `.env.local` is never touched.
 3. `sync:open-twin` (skipped when `.open-twin/OPEN_TWIN_SHA` is the pin), `bun install`, creates the database when the server has none of that name, `prisma migrate deploy`.
-4. `anatomy:fetch --skip-rigged` when an atlas or demo body is missing. When a rigged body is missing, `anatomy:fetch --rigged <id>` downloads it from the `anatomy-rigged-v1` release; only if that fails, `anatomy:bake-rigged` bakes it (needs uv; without uv the step is skipped with the install line). Walk/Idle/Dance say "Run bun run anatomy:fetch." until then.
+4. `anatomy:fetch --skip-rigged` when an atlas or demo body is missing. When a rigged body is missing, `anatomy:fetch --rigged <id>` downloads it from the `anatomy-rigged-v1` release; only if that fails, `anatomy:bake-rigged` bakes it (needs uv; without uv the step is skipped with the install line). Walk/Idle/Dance say that whoever runs TwinLLM here can install it until then.
 5. When the warehouse has `synthea-v4-seed42` but not the pinned copy (subjects other than 37, ingested bundles whose fingerprint is not `bundleSetSha256` in `scripts/setup/cohort-pins.ts`: the SHA-256 of the sorted bundle hashes, computed in SQL from `bundles`, or condition and medication request counts other than `conditionCount` and `medicationRequestCount`, as when the pinned bundles were ingested before those tables existed), the step is `[stale]` with the fix and nothing is loaded. `--reload-cohort` downloads (or generates) and verifies the pinned cohort first, then deletes that cohort's rows from `observations`, `observation_non_numeric`, `conditions`, `medication_requests`, `bundles` and `subjects` (each scoped by the cohort id, in one transaction that rolls back if any other cohort's counts move or a row of this cohort is left), then ingests. Only `synthea-v4-seed42` can be reloaded, and only it and `open-twin-synthea-trimmed-3` can be deleted. When no allowlisted cohort other than the trimmed fixtures has subjects: downloads `eval-cohort-synthea-v4-seed42-20260101.tar.zst` (4,911,581 bytes) from release `eval-cohort-v1` to `.synthea/downloads/` (kept for re-runs; redirects only to GitHub's asset hosts), checks its SHA-256, unpacks it with zstd, checks 37 files, `contentSha256` `f4941fab7a56e17f9dd66b6b6e0fbed379dab8c564c6024831c5fd4aa0ba09eb` and the manifest's cohort id, puts it in `.synthea/fhir`, then `warehouse:ingest`. When the release is not published yet or cannot be reached, setup says so and runs `synthea:generate -- --preset eval` instead (needs Java); `--generate-cohort` does that on purpose. A generated cohort is checked against the same pin; a mismatch ingests nothing, and on arm64 (Apple Silicon) the checklist says it is a platform difference (floating point) and to use the download (`docs/warehouse.md`, "Other CPU architectures"). Without zstd setup generates; without zstd and Java, an empty warehouse gets the three trimmed fixtures instead and the checklist says what to install.
 6. `--cohort-10k`: checks the release's `SHA256SUMS` against the pinned archive hash, downloads `synthea-v4-seed42-10k-fhir.tar.zst` (925,850,184 bytes) to `.synthea/downloads/` (kept for re-runs), checks its sha256, unpacks with zstd (about 41 GB), checks 11,551 files and the release's content checksum, ingests as `synthea-v4-seed42-10k` (rejected bundles are counted, not fatal), then deletes the unpacked files. Refused with less than 45 GB free.
 7. Writes the Data page Training tab's sample with `bun run training:sample`: the training generator (`scripts/training-data/build-conversations.ts`, `docs/training-data.md`) on the first 12 subjects of `synthea-v4-seed42` with `--allow-eval-cohort`, through the real, audited query tools (actor `training-conversations`), to `training-data/out/sample-synthea-v4-seed42.jsonl` with its meta, manifest and stats files (gitignored). It is for looking at, never for training: the Training tab says so for any set from the evaluation cohort. Only with `DATA_MODE=synthetic`, and only when the pinned evaluation cohort is in the warehouse or this run loads it; skipped when the manifest is there; `--skip-training-sample` leaves it out. `bun run doctor` lists the sets it finds.
@@ -448,9 +448,27 @@ Added 2026-10-14. Each worktree owns one issue, one branch and one worktree besi
 git fetch origin
 git worktree add ../twin-llm-<issue> -b <issue>-<slug> origin/main
 cd ../twin-llm-<issue>
-cp ../twin-llm/.env.local .env.local   # own copy per worktree; never commit
+cp .env.synthetic.example .env.local   # synthetic settings; never commit
+bun run sync:open-twin                 # the pinned open-twin packages, before bun install
 bun install
 ```
+
+Never copy the main checkout's `.env.local` into a worktree. It holds the personal state
+folder and the database login, so a worktree would read and write personal data.
+
+The example's `DATABASE_URL` is a placeholder and a fresh local Postgres refuses it. Give
+each worktree a throwaway database of its own and point `DATABASE_URL` in its `.env.local`
+at it:
+
+```sh
+initdb -D ../pg-<issue> -U user --auth=trust
+pg_ctl -D ../pg-<issue> -o "-p 54<nn> -k '' -c listen_addresses=127.0.0.1" -l ../pg-<issue>.log start
+createdb -h 127.0.0.1 -p 54<nn> -U user twin_llm_synthetic
+# DATABASE_URL=postgresql://user@127.0.0.1:54<nn>/twin_llm_synthetic
+bunx prisma migrate deploy
+```
+
+Stop it with `pg_ctl -D ../pg-<issue> stop` when the worktree is removed.
 
 Anatomy meshes: either run `bun run anatomy:fetch` in the worktree, or set `ANATOMY_DATA_DIR` in its `.env.local` to the main checkout's `data/anatomy` as an absolute path.
 
@@ -468,7 +486,7 @@ git worktree remove ../twin-llm-<issue>
 ```
 
 - Good: `git worktree list` shows the main checkout plus one entry per open lane; each lane's dev server answers on its own port.
-- Last run: not yet run.
+- Last run: 2026-11-05 and 06, Linux, three worktrees, each with its own throwaway Postgres (ports 5451, 5461, 5462); migrations applied and all gates passed in each.
 
 ## Onboarding
 

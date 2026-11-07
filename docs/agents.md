@@ -78,12 +78,16 @@ agent, the Diet specialist and the Anatomy specialist, as many of them as the
 catalog offers, topped up with the usual one model per vendor (`defaultModelSelection`).
 On local Ollama that is the three agents; on a hosted provider it is the General
 agent and two models. The models page and the starter questions read the catalog
-without agents, so they keep models only.
+without agents, so they keep models only. Given the question, the specialists the router
+ranks for it come after General and before Diet and Anatomy (#493); the first question on
+`/start` gets these too.
 
 Since #366 the prompt bar picks a mode first ([chat-modes.md](chat-modes.md)): Auto
 sends `agent:auto`, Manual runs chosen specialists on chosen models (a specialist on a
 model other than its own is the row `agent:<id>@<model id>`), and Compare keeps the one to
-three picks described here, with at least two.
+three picks described here, with at least two. Compare's defaults put the specialists the
+router ranks for the question after General, before Diet and Anatomy, until the person
+changes a row ([chat-modes.md](chat-modes.md#compares-defaults-493), #493).
 
 ## In a turn
 
@@ -102,8 +106,10 @@ same catalog, then:
   name, so the column reads "General". Audit rows name the base model,
   which is the one that saw the data.
 
-A reloaded turn reads its `/skill` chip back from the skill audit row, which is per turn,
-so an agent's own skill shows as a chip there too.
+A reloaded turn shows a `/skill` chip only for a skill the person sent it with, stored on
+the turn itself (`turns.skill`, #479). An agent's own skill, including the one Auto ran,
+stays on its answer ("Auto → Sleep") and never labels the person's prompt, as it does not
+while the turn streams. The `skill.<name>` audit row still records every skill run.
 
 ## Auto (#219)
 

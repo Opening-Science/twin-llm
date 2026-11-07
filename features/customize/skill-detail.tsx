@@ -2,24 +2,21 @@ import Link from "next/link";
 
 import { skillSourceLabel, type TurnSkill } from "@/infrastructure/skill-gate";
 import { draftHref } from "@/infrastructure/shell-links";
+import { toolDoes } from "@/infrastructure/tool-titles";
+import { BackLink } from "@/infrastructure/ui-kit/back-link";
 import { Card } from "@/infrastructure/ui-kit/card";
 
 import { providerLine } from "./skill-card-lines";
 
 /**
  * One shipped skill on its own page (#457): what it does, what it reads,
- * which tools it may call and where its model runs, the same words the `/`
+ * which tools it may use (in words, never ids) and where its model runs, the same words the `/`
  * palette shows. Try opens a new chat with `/name ` typed in; nothing is
  * sent until the person does.
  */
 export const SkillDetail = ({ skill }: Readonly<{ skill: TurnSkill }>) => (
   <section aria-labelledby="skill">
-    <Link
-      href="/customize"
-      className="text-muted-foreground hover:text-foreground text-sm"
-    >
-      ← Skills
-    </Link>
+    <BackLink href="/customize">Skills</BackLink>
     <div className="mt-3 flex items-start justify-between gap-4">
       <h2 id="skill" className="font-mono text-lg">
         /{skill.name}
@@ -37,9 +34,9 @@ export const SkillDetail = ({ skill }: Readonly<{ skill: TurnSkill }>) => (
         <dd className="break-normal">
           {skill.sources.map(skillSourceLabel).join(", ") || "nothing"}
         </dd>
-        <dt>May call</dt>
-        <dd className="font-mono text-xs leading-relaxed break-normal">
-          {skill.tools.join(", ") || "no tools"}
+        <dt>May use</dt>
+        <dd className="break-normal">
+          {skill.tools.map(toolDoes).join(", ") || "no tools"}
         </dd>
         <dt>Model</dt>
         <dd className="break-normal">{providerLine(skill.providers)}</dd>

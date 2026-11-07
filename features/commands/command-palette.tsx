@@ -60,9 +60,7 @@ const CommandDetail = ({
     className={cn("text-muted-foreground text-xs leading-snug", className)}
   >
     <p>{readsLine(command.reads)}</p>
-    {command.tools ? (
-      <p className="mt-1 font-mono text-[11px]">{toolsLine(command.tools)}</p>
-    ) : null}
+    {command.tools ? <p className="mt-1">{toolsLine(command.tools)}</p> : null}
   </div>
 );
 

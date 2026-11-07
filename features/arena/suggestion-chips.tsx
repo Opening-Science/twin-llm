@@ -9,7 +9,8 @@ import type { SuggestedQuestion, SuggestedQuestions } from "./suggested-question
 /**
  * Suggested first questions for an empty thread, new or saved. They are
  * fetched while `startersShown` holds and go with the first turn; a chip
- * writes its question into the prompt and sends nothing.
+ * writes its short question into the prompt and sends nothing; the grounded
+ * prompt goes to the model only if the question is sent unchanged (#480).
  * A failed fetch shows no chips: the chat works without them.
  */
 
@@ -66,7 +67,6 @@ export const SuggestionChips = ({
             <Button
               variant="pill"
               size="sm"
-              title={question.prompt === question.label ? undefined : question.prompt}
               onClick={() => onPick(question)}
               className="bg-background text-muted-foreground hover:text-foreground font-normal"
             >

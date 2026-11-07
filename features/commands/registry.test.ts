@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
+import { TOOLS_IN_WORDS, toolDoes, toolTitle } from "@/infrastructure/tool-titles";
+
 import {
   BUILT_IN_COMMANDS,
   type Command,
@@ -78,7 +80,7 @@ const SLEEP_COMMAND = skillCommand({
 });
 
 describe("skills in the palette", () => {
-  test("a skill lists its sources by label and its tools by name", () => {
+  test("a skill lists its sources by label, and its tools line words them without ids", () => {
     expect(SLEEP_COMMAND).toEqual({
       name: "sleep",
       description: "Chart the last 7 or 30 nights of sleep.",
@@ -87,9 +89,15 @@ describe("skills in the palette", () => {
       kind: "skill",
     });
     expect(toolsLine(SLEEP_COMMAND.tools ?? [])).toBe(
-      "may call: coverage, baseline_deviation",
+      "may use: checks data coverage, compares with a baseline",
     );
-    expect(toolsLine([])).toBe("calls no tools");
+    expect(toolsLine([])).toBe("uses no tools");
+  });
+
+  test("the may-use line says what tools do, never a step an answer took (#503)", () => {
+    const line = toolsLine(TOOLS_IN_WORDS);
+    expect(line).toBe(`may use: ${TOOLS_IN_WORDS.map(toolDoes).join(", ")}`);
+    expect(TOOLS_IN_WORDS.filter((tool) => line.includes(toolTitle(tool)))).toEqual([]);
   });
 
   test("built-ins come first, and a skill cannot take a built-in's name", () => {

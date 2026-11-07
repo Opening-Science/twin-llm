@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { NewChatScreen } from "@/features/arena/new-chat-screen";
+import { arenaSettings } from "@/features/arena/arena-settings";
 import { loadPromptSourceFacts } from "@/features/arena/prompt-source-facts";
 import { skillCommand } from "@/features/commands/registry";
 import { skillsFor } from "@/features/skills/user-skill-store";
@@ -9,7 +10,6 @@ import { findAppUserId } from "@/infrastructure/current-user";
 import { needsOnboarding } from "@/features/onboarding/onboarding-store";
 import { resolveActorId } from "@/infrastructure/auth-actor";
 import { fetchChatCatalog } from "@/infrastructure/fetch-model-catalog";
-import { serverEnv } from "@/infrastructure/env";
 import { chatModelIsLocal } from "@/infrastructure/genome-gate";
 import { INCOGNITO_PARAM, isIncognitoParam } from "@/infrastructure/incognito";
 import { safeDraft, subjectDraft, subjectRefParam } from "@/infrastructure/shell-links";
@@ -53,7 +53,7 @@ export default async function HomePage({
         subjectDraft((await searchParams).subject)
       }
       subjectRef={subjectRefParam((await searchParams).subject)}
-      dataMode={serverEnv().DATA_MODE}
+      {...arenaSettings()}
     />
   );
 }

@@ -31,6 +31,8 @@ export const TURN_COPY = {
 export type TurnPlan = Readonly<{
   prompt: string;
   title: string;
+  /** The skill the person sent the prompt with, stored on the turn (#479). */
+  skill: string | null;
   models: readonly Readonly<{ id: string; name: string }>[];
 }>;
 
@@ -74,6 +76,7 @@ export const checkTurnRequest = (
     ok: true,
     plan: {
       prompt,
+      skill: request.skill ?? null,
       title: readableTitle(request.skill ? `/${request.skill} ${prompt}` : prompt).slice(
         0,
         TITLE_LENGTH,

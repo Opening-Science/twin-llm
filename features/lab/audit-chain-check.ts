@@ -26,6 +26,7 @@ export const auditChainCheck = (walk: AuditWalk | null): LabCheck => {
     return {
       ...base,
       status: "unknown",
+      reason: "The audit table could not be read.",
       summary:
         "The audit table could not be read just now. Check that the database is running.",
       evidence: [],
@@ -61,6 +62,7 @@ export const auditChainCheck = (walk: AuditWalk | null): LabCheck => {
     return {
       ...base,
       status: "unknown",
+      reason: "The audit log has no rows yet.",
       summary: "The audit log has no rows yet, so there is no chain to check.",
       evidence,
     };
@@ -69,6 +71,7 @@ export const auditChainCheck = (walk: AuditWalk | null): LabCheck => {
     return {
       ...base,
       status: "unknown",
+      reason: `${formatNumber(state.checked, 0)} of ${plural(total, "row")} checked so far; reload to go on.`,
       summary: `Checked ${formatNumber(state.checked, 0)} of ${plural(total, "row")} so far. The page reads at most ${formatNumber(AUDIT_ROWS_PER_LOAD, 0)} rows per load so the server stays responsive; reload to go on, or run the command below to check the whole chain now.`,
       evidence,
     };
