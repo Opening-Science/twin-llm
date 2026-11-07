@@ -54,6 +54,10 @@ const TOOL_SOURCE: ReadonlyMap<string, SkillSourceId> = new Map(
 
 export const CHAT_TOOL_NAMES: readonly string[] = [...TOOL_SOURCE.keys()];
 
+/** The knowledge source that owns a chat tool, or undefined for an unknown name. */
+export const toolOwner = (tool: string): SkillSourceId | undefined =>
+  TOOL_SOURCE.get(tool);
+
 /** Providers start local only; a skill must name any other provider itself. */
 export const DEFAULT_SKILL_PROVIDERS: readonly LlmProvider[] = ["ollama"];
 
@@ -111,7 +115,8 @@ const SKILL_SOURCE_REQUIRES: Readonly<Record<string, string>> = {
   "wearable-analytics": WEARABLE_CONTEXT_SOURCE,
 };
 
-const sourceRequires = (id: string): string | undefined =>
+/** The source `id` needs beside it, if any; the skill form applies the same rule. */
+export const sourceRequires = (id: string): string | undefined =>
   SKILL_SOURCE_REQUIRES[id] ??
   ALL_KNOWLEDGE_SOURCES.find((source) => source.id === id)?.requires;
 
