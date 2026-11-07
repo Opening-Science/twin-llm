@@ -3,12 +3,14 @@ import { describe, expect, test } from "bun:test";
 import {
   canContinue,
   clampStep,
+  demoAvailable,
   EMPTY_ANSWERS,
   isLastStep,
   normaliseAnswers,
   onboardingReducer,
   type OnboardingState,
   stepLabel,
+  withAvailableChoice,
 } from "./onboarding-steps";
 
 const start: OnboardingState = { step: 0, answers: EMPTY_ANSWERS };
@@ -91,5 +93,22 @@ describe("live public lookups in the first-run flow (#6)", () => {
       step: 2,
       answers: { ...normaliseAnswers({}), liveSources: ["pubmed", "ensembl"] },
     });
+  });
+});
+
+describe("the demo cohort choice (#477)", () => {
+  test("is offered only when synthetic people are loaded", () => {
+    expect(demoAvailable(30)).toBe(true);
+    expect(demoAvailable(0)).toBe(false);
+    expect(demoAvailable("personal")).toBe(false);
+    expect(demoAvailable("unread")).toBe(false);
+  });
+
+  test("a saved demo answer is dropped when the demo is not there", () => {
+    const saved = { ...EMPTY_ANSWERS, dataChoice: "demo" as const };
+    expect(withAvailableChoice(saved, false).dataChoice).toBeNull();
+    expect(withAvailableChoice(saved, true).dataChoice).toBe("demo");
+    const own = { ...EMPTY_ANSWERS, dataChoice: "own" as const };
+    expect(withAvailableChoice(own, false).dataChoice).toBe("own");
   });
 });
