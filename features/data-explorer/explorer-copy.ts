@@ -1,7 +1,8 @@
 /**
  * Words on the Data page, in one place so the claim lint and a reviewer can
  * read them together. Plain language: the page is for people who did not
- * build the warehouse.
+ * build the warehouse, so it names no command, env variable or internal word
+ * (#480); "whoever runs TwinLLM here" says who can fill an empty part.
  */
 
 export const DATA_TITLE = "Synthetic cohort";
@@ -10,7 +11,7 @@ export const DATA_TITLE = "Synthetic cohort";
 export const SYNTHETIC_DATA_LABEL = "Synthetic data";
 
 export const DATA_LEDE =
-  "The synthetic people TwinLLM is tested and trained on: what is in the warehouse, and the training conversations made from it.";
+  "The synthetic people TwinLLM is tested and trained on: what is stored about them, and the training conversations made from it.";
 
 export const INTRO_TITLE = "What am I looking at?";
 
@@ -20,10 +21,7 @@ export const INTRO_PARAGRAPHS = [
 ] as const;
 
 export const TERMS: readonly (readonly [string, string])[] = [
-  [
-    "Subject",
-    "One synthetic person, known only by an opaque subject_ref. No name, no address.",
-  ],
+  ["Subject", "One synthetic person, known only by an opaque id. No name, no address."],
   [
     "Observation",
     "One measurement at one time: a blood pressure, a weight, a lab value. Text answers, such as survey items, are counted apart.",
@@ -43,7 +41,7 @@ export const TERMS: readonly (readonly [string, string])[] = [
 ];
 
 export const NOT_STORED_NOTE =
-  "For each synthetic person the warehouse keeps sex, birth year and, for people who died, the year of death: years only, never a full date. Nothing else about them is stored.";
+  "For each synthetic person TwinLLM keeps sex, birth year and, for people who died, the year of death: years only, never a full date. Nothing else about them is stored.";
 
 export const SEX_AGE_TITLE = "Sex and age";
 
@@ -62,7 +60,7 @@ export const sexAgeNote = (referenceYear: number | null, deceased: number): stri
     .join(" ");
 
 export const SEX_AGE_MISSING =
-  "Sex and birth year are not stored for this cohort yet: it was ingested before they were kept. Running bun run warehouse:ingest over its files again fills them in without changing any observation; for the evaluation cohort, bun run setup:local -- --reload-cohort does the same.";
+  "Sex and birth year are not stored for this cohort yet: it was loaded before they were kept. Whoever runs TwinLLM here can load it again to fill them in, without changing any observation.";
 
 /** What each allowlisted cohort is for (docs/training-data.md). */
 export const COHORT_ROLES: Readonly<Record<string, string>> = {
@@ -84,20 +82,17 @@ export const EVAL_COHORT_ID = "synthea-v4-seed42";
 export const BLOCKED_COPY = {
   "sign-in": "Sign in to explore the synthetic cohorts.",
   "not-found": "That cohort or subject is not in the synthetic scope of this server.",
-  failed: "Could not read the warehouse just now. Reload the page to try again.",
+  failed: "Could not read the synthetic cohort just now. Reload the page to try again.",
   "too-large":
     "This subject has more numeric observations than one page reads, so nothing is shown rather than a cut record.",
 } as const;
 
 export const NO_COHORT_TITLE = "No synthetic cohort loaded on this machine";
 export const NO_COHORT_BODY =
-  "The warehouse in this database has no subjects in an allowlisted synthetic cohort, so there is nothing to show yet. One command sets up a fresh checkout and generates the 30-person evaluation cohort with Synthea (fixed seed and dates, so every machine gets the same people). It needs Java 21; without it, it loads three small fixtures and says what to install. docs/runbook.md has the details.";
-export const NO_COHORT_COMMANDS = [
-  "bun run setup:local",
-  "",
-  "# or the 10,000-person release (about 1 GB download, 45 GB free disk):",
-  "bun run setup:local -- --cohort-10k",
-] as const;
+  "No synthetic people are loaded here yet, so there is nothing to show. Whoever runs TwinLLM here can load them: the 30-person evaluation cohort comes out the same on every machine.";
+
+export const NO_TRAINING_SETS_BODY =
+  "Whoever runs TwinLLM here can write a small sample set: 12 people of the synthetic evaluation cohort, every number read by the real query tools. It is for looking at, never for training, and it needs the evaluation cohort to be loaded.";
 
 export const TRAINING_FAILED =
   "Could not read the training files just now. Reload to try again.";

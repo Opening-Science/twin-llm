@@ -51,7 +51,11 @@ import {
 } from "./prompt-sources";
 import { promptToken, withMention } from "./prompt-tokens";
 import { SourceMenu, sourceOptionId } from "./source-menu";
-import type { SuggestedQuestions } from "./suggested-questions";
+import {
+  promptForDraft,
+  type SuggestedQuestion,
+  type SuggestedQuestions,
+} from "./suggested-questions";
 import { SuggestionChips } from "./suggestion-chips";
 
 /**
@@ -157,6 +161,8 @@ export const PromptBar = ({
   const wearables = useWearableStatus();
   const offered = catalog ? offeredModels(catalog, incognito, localModelIds) : null;
   const [draft, setDraft] = useState(initialDraft);
+  // The chip whose short question is in the box; its grounded prompt is what is sent.
+  const [pickedChip, setPickedChip] = useState<SuggestedQuestion | null>(null);
   const [selection, setSelection] = useState(() =>
     initialSelection(initialModelIds, offered ?? []),
   );
@@ -206,6 +212,7 @@ export const PromptBar = ({
 
   const reset = () => {
     setPicked(null);
+    setPickedChip(null);
     setActiveIndex(0);
     setNotice(undefined);
     setSourcesOpen(false);
@@ -230,7 +237,7 @@ export const PromptBar = ({
       openCompact,
       send: () => {
         if (!ready || catalog === null) return;
-        const prompt = skillTurn?.prompt ?? draft;
+        const prompt = skillTurn?.prompt ?? promptForDraft(draft, pickedChip);
         onSubmit(
           prompt,
           chosen.map((model) => ({
@@ -350,9 +357,11 @@ export const PromptBar = ({
         <SuggestionChips
           suggestions={suggestions}
           onPick={(question) => {
-            setDraft(question.prompt);
+            setDraft(question.label);
             setMenuDismissed(false);
             reset();
+            // After reset, which clears it.
+            setPickedChip(question);
             promptRef.current?.focus();
           }}
         />
