@@ -242,7 +242,7 @@ describe("v1.1 answers", () => {
     expect(markup).not.toContain(UNVERIFIED_NARRATION);
   });
 
-  test("abstained, level high: rating and reasons shown, model statement withheld", () => {
+  test("abstained: one plain line, the panel folded, model text withheld (#478)", () => {
     const markup = render({
       status: "COMPLETE",
       text: answerText("Synthetic withheld sentence."),
@@ -260,11 +260,10 @@ describe("v1.1 answers", () => {
       }),
     });
     expect(markup).toContain(ABSTAIN_BANNER);
-    expect(markup).toContain("Uncertainty: high (based on the data behind this answer).");
-    expect(markup).toContain("No person-level data was used.");
-    expect(markup).toContain(
-      "Connect and sync a wearable so answers can use your own data.",
-    );
+    expect(markup).toContain("Show reasoning &amp; evidence");
+    // Folded until asked for: none of the panel's lines repeat the banner.
+    expect(markup).not.toContain("Uncertainty: high");
+    expect(markup).not.toContain("No person-level data was used.");
     expect(markup).not.toContain("Synthetic model-written uncertainty.");
     expect(markup).not.toContain("Synthetic withheld sentence.");
   });

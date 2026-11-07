@@ -108,6 +108,7 @@ export const sbomCheck = (input: SbomInput): LabCheck => {
     return {
       ...base,
       status: "unknown",
+      reason: "No SBOM has been written on this machine yet.",
       summary:
         "No SBOM has been written on this machine yet. Run `bun run sbom` and reload.",
       evidence: [{ label: "File", value: SBOM_PATH, mono: true }],
@@ -136,6 +137,7 @@ export const sbomCheck = (input: SbomInput): LabCheck => {
     return {
       ...base,
       status: "unknown",
+      reason: `${current.file} could not be read, so whether the SBOM is current is not known.`,
       summary: `The SBOM lists ${plural(components, "component")}. ${current.file === "bun.lock" ? "bun.lock could not be read" : "package.json could not be read as JSON"}, so whether it is current is not known.`,
       evidence,
     };
