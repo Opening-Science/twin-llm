@@ -214,3 +214,42 @@ export type LabResultCardProps = Base &
 
 /** C18: three to about eight axes, each on its own 0 to max; today against the reference. */
 export type RadarProps = Base & Interactive & Readonly<{ axes: readonly RadarAxis[] }>;
+
+/**
+ * A vendor's own logo file, shown unmodified: never recoloured, cropped or
+ * redrawn. `width` and `height` are the file's own proportions; the row
+ * draws it `size` pixels high (30 by default) centred on its tile. `darkSrc` is the vendor's version for dark
+ * backgrounds, when the guidelines give one. `attribution` is the word
+ * the vendor asks for with its data, such as "Data by"; the row leads its
+ * detail line with it and the vendor's name.
+ */
+export type VendorLogo = Readonly<{
+  src: string;
+  darkSrc?: string;
+  alt: string;
+  width: number;
+  height: number;
+  size?: number;
+  attribution?: string;
+}>;
+
+/** One device or source in a C15 list. */
+export type DeviceRow = Readonly<{
+  name: string;
+  /** A short line under the name, e.g. "Synced 4 minutes ago". */
+  detail?: string;
+  /** A word on the right; colour follows the word, never replaces it. */
+  status?: Readonly<{ word: string; tone: "ok" | "warn" | "neutral" }>;
+  logo?: VendorLogo;
+  /** Makes the row a link with a chevron. */
+  href?: string;
+}>;
+
+/** C15: a titled group of rows, one per device or source. */
+export type DeviceListProps = Base &
+  Readonly<{
+    title: string;
+    rows: readonly DeviceRow[];
+    /** Shown in place of the rows when state is empty, e.g. "No device linked yet". */
+    emptyNote?: string;
+  }>;

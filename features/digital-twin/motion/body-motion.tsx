@@ -1,7 +1,9 @@
 "use client";
 
 import { useFrame, useThree } from "@react-three/fiber";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
+
+import { type DemoStance } from "@/packages/anatomy/stance";
 
 import { nextAutoRotateDelay } from "../frame-pacing";
 import {
@@ -16,6 +18,7 @@ import { createFootPlanter } from "./foot-contact";
 import { type MotionClip, stepWeight, weighPose } from "./gait";
 import { type KeyframeClip } from "./keyframe-clip";
 import { applyPose, restorePose, type RigBinding } from "./rig-map";
+import { stancePose, withStance } from "./stance-pose";
 
 /** Longer gaps (a hidden tab, a stall) do not jump the blend. */
 const MAX_DELTA_S = 0.1;
@@ -32,7 +35,9 @@ export const MOTION_FRAME_MS = 1000 / 60;
  * dance on from the beat it had reached, and a new cadence or breathing rate
  * from a wearable day (`rates`) carries the clip on from its phase. The
  * "video" clip plays `video`, the installed keyframe clip, and holds its
- * planted feet on the floor (`foot-contact.ts`). Renders nothing.
+ * planted feet on the floor (`foot-contact.ts`). A demo body's `stance`
+ * (`DEMO_STANCE`) is its pose at rest, and every clip plays on top of it, so
+ * stopping returns to the stance rather than the bind pose. Renders nothing.
  */
 export const BodyMotion = ({
   binding,
@@ -40,12 +45,14 @@ export const BodyMotion = ({
   tempo = DEFAULT_TEMPO,
   video = null,
   rates = GENERIC_RATES,
+  stance = null,
 }: Readonly<{
   binding: RigBinding | null;
   clip: MotionClip | null;
   tempo?: number;
   video?: KeyframeClip | null;
   rates?: ClipRates;
+  stance?: DemoStance | null;
 }>) => {
   const gl = useThree((state) => state.gl);
   const invalidate = useThree((state) => state.invalidate);
@@ -59,10 +66,11 @@ export const BodyMotion = ({
     tempo,
     rate: null as number | null,
   });
-  const live = useRef({ binding, clip, tempo, video, rates });
+  const restPose = useMemo(() => (stance ? stancePose(stance) : null), [stance]);
+  const live = useRef({ binding, clip, tempo, video, rates, restPose });
   const planter = useRef(createFootPlanter());
   useEffect(() => {
-    live.current = { binding, clip, tempo, video, rates };
+    live.current = { binding, clip, tempo, video, rates, restPose };
   });
 
   useEffect(() => {
@@ -90,6 +98,15 @@ export const BodyMotion = ({
     invalidate();
   }, [clip, invalidate]);
 
+  // A new stance (another atlas) moves a body standing still at once; a
+  // playing clip picks it up on its next frame.
+  useEffect(() => {
+    if (!binding || motion.current.playing !== null) return;
+    if (restPose) applyPose(binding, restPose);
+    else restorePose(binding);
+    invalidate();
+  }, [binding, restPose, invalidate]);
+
   // A new body, or leaving: the old skeleton goes back to its bind pose.
   useEffect(
     () => () => {
@@ -116,6 +133,7 @@ export const BodyMotion = ({
       tempo: wantedTempo,
       video: keyframes,
       rates: wantedRates,
+      restPose: rest,
     } = live.current;
     const state = motion.current;
     if (!rig) return;
@@ -140,7 +158,8 @@ export const BodyMotion = ({
     const target = wanted !== null && wanted === state.playing ? 1 : 0;
     state.weight = stepWeight(state.weight, target, delta);
     if (state.weight === 0 && target === 0) {
-      restorePose(rig);
+      if (rest) applyPose(rig, rest);
+      else restorePose(rig);
       planter.current.reset();
       state.playing = wanted;
       state.startS = nowS;
@@ -150,9 +169,12 @@ export const BodyMotion = ({
       state.lastS = null;
       return;
     }
-    const pose = weighPose(
-      clipPose(state.playing, nowS - state.startS, state.tempo, keyframes, wantedRates),
-      state.weight,
+    const pose = withStance(
+      weighPose(
+        clipPose(state.playing, nowS - state.startS, state.tempo, keyframes, wantedRates),
+        state.weight,
+      ),
+      rest,
     );
     applyPose(rig, pose);
     planter.current.plant(rig, pose);

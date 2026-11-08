@@ -11,6 +11,10 @@ The logo in `public/brand/` is the Open Science Foundation's artwork, copied unc
 
 The typefaces Selecta (Maxitype) and ABC Diatype Semi Mono (Dinamo Typefaces) are licensed to the foundation and are not in this repository (`docs/brand.md`).
 
+## Vendor logos
+
+The files in `public/brand/vendors/` are the WHOOP and Google Health logos, copied unchanged from each company's brand assets. They are their owners' trademarks, **not** covered by the Apache License (`LICENSES/LicenseRef-Vendor-Trademarks.txt`), and are shown only to identify a service a user has connected. Source and hashes: `PROVENANCE.md`.
+
 ## open-twin connectors
 
 Packages synced at a pinned SHA into the gitignored `.open-twin/` are from [Opening-Science/open-twin](https://github.com/Opening-Science/open-twin) (MIT). See `PROVENANCE.md` for the exact SHA and TwinLLM-only host patches.

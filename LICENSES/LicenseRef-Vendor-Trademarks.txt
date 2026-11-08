@@ -1,0 +1,13 @@
+Vendor trademarks
+SPDX identifier: LicenseRef-Vendor-Trademarks
+
+The files under public/brand/vendors/ are logos of third-party companies.
+They are their owners' trademarks and are not licensed under Apache-2.0 or
+any other open licence by this repository. No rights in them are granted.
+
+TwinLLM shows each logo unchanged, at or above the owner's minimum size and
+with its clear space, only to identify a service a user has connected, as
+the owner's brand guidelines for developers allow. Do not reuse these files
+for anything else; get them from the owner instead.
+
+The owners and the source of each file are listed in PROVENANCE.md.
