@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import {
   barsWithLine,
   cumulativeDay,
+  edgeAnchor,
   estimateLayout,
   estimateRows,
   exactDecimals,
@@ -345,5 +346,20 @@ describe("estimate layout", () => {
     expect(spacedTicks(ticks).map((t) => t.value)).toEqual([0, 2, 4]);
     expect(spacedTicks(ticks, 10)).toHaveLength(5);
     expect(spacedTicks(ticks.slice(0, 2))).toHaveLength(2);
+  });
+});
+
+describe("edge anchor", () => {
+  test("a label near an edge grows inward", () => {
+    expect(edgeAnchor(0, 300)).toBe("start");
+    expect(edgeAnchor(47, 300)).toBe("start");
+    expect(edgeAnchor(150, 300)).toBe("middle");
+    expect(edgeAnchor(260, 300)).toBe("end");
+    expect(edgeAnchor(300, 300)).toBe("end");
+  });
+
+  test("the margin is adjustable", () => {
+    expect(edgeAnchor(60, 300, 80)).toBe("start");
+    expect(edgeAnchor(60, 300, 40)).toBe("middle");
   });
 });

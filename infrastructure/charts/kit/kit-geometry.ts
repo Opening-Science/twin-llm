@@ -628,3 +628,15 @@ export const estimateLayout = (
   width - labels - pad >= minPlot
     ? { stacked: false, left: labels, plot: width - labels - pad, row: 32 }
     : { stacked: true, left: pad, plot: Math.max(60, width - 2 * pad), row: 48 };
+
+/**
+ * How to anchor a label at `x` on a plot `width` wide so it stays inside:
+ * from its start near the left edge, from its end near the right, centred
+ * otherwise. `margin` is about half the widest label.
+ */
+export const edgeAnchor = (
+  x: number,
+  width: number,
+  margin = 48,
+): "start" | "middle" | "end" =>
+  x < margin ? "start" : x > width - margin ? "end" : "middle";

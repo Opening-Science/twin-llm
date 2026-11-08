@@ -2,6 +2,7 @@
 
 import { conditionToken, tokenTextClass } from "../category-token";
 import {
+  edgeAnchor,
   estimateLayout,
   estimateRows,
   exactDecimals,
@@ -122,7 +123,7 @@ const EstimatePlot = ({
                   <text
                     x={out.referenceX}
                     y={10}
-                    textAnchor="middle"
+                    textAnchor={edgeAnchor(out.referenceX, plotWidth)}
                     className={AXIS_TEXT}
                   >
                     {reference.label}
@@ -230,7 +231,7 @@ export const ResearchFigure = (props: ResearchFigureProps) => {
                   <text
                     x={out.observedX}
                     y={-10}
-                    textAnchor={out.observedX > width - 80 ? "end" : "middle"}
+                    textAnchor={edgeAnchor(out.observedX, width, 80)}
                     className="text-axis fill-current font-mono tabular-nums"
                   >
                     {props.observedLabel} {format(props.observed)}
