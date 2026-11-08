@@ -5,7 +5,7 @@
  */
 export default function DigitalTwinLoading() {
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6">
+    <div className="page-wide">
       <div className="bg-muted h-12 w-64 animate-pulse rounded" />
       <div className="bg-muted mt-6 h-8 w-40 animate-pulse rounded" />
       <div className="bg-muted mt-2 h-5 max-w-xl animate-pulse rounded" />

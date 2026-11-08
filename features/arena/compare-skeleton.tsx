@@ -13,7 +13,7 @@ const Block = ({ className }: Readonly<{ className: string }>) => (
 
 const PromptBarShape = () => (
   <div className="sticky bottom-0 px-4 pt-2 pb-3 sm:px-6">
-    <div className="surface mx-auto flex h-[7.5rem] max-w-5xl flex-col justify-between p-4">
+    <div className="surface page-column flex h-[7.5rem] flex-col justify-between p-4">
       <Block className="h-4 w-1/3" />
       <div className="flex items-center gap-2">
         <Block className="h-6 w-20 rounded-full" />
@@ -66,7 +66,7 @@ const ColumnShape = () => (
 
 export const ThreadSkeleton = () => (
   <Loading label="Loading this thread">
-    <div className="mx-auto flex max-w-5xl flex-col gap-4">
+    <div className="page-column flex flex-col gap-4">
       <Block className="ml-auto h-16 w-2/3 rounded-2xl sm:w-1/2" />
       <div className="surface divide-border grid grid-cols-1 divide-y lg:grid-cols-3 lg:divide-x lg:divide-y-0">
         <ColumnShape />

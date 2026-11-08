@@ -122,7 +122,7 @@ export const CatalogScreen = ({
   const widest = Math.max(1, ...measured.map((model) => model.contextTokens));
   const costKnown = costCopy(provider)?.perModel === true;
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-10 sm:px-6">
+    <div className="page-wide page-stack">
       <h1 className="text-display">Models</h1>
       {catalog === null ? (
         <Unavailable />

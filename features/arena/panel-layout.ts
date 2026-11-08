@@ -9,13 +9,14 @@
 
 export const threadGridClass = (withPanel: boolean, large: boolean): string =>
   withPanel
-    ? `flex-1 px-4 py-6 sm:px-6 xl:grid xl:items-start xl:gap-6 ${large ? "xl:grid-cols-[minmax(0,1fr)_30rem]" : "xl:grid-cols-[minmax(0,1fr)_18rem]"}`
-    : "flex-1 px-4 py-6 sm:px-6";
+    ? `flex-1 px-(--page-gutter) py-6 xl:grid xl:items-start xl:gap-6 ${large ? "xl:grid-cols-[minmax(0,1fr)_30rem]" : "xl:grid-cols-[minmax(0,1fr)_18rem]"}`
+    : "flex-1 px-(--page-gutter) py-6";
 
 /**
  * Right padding for the prompt bar: the panel's width plus 3rem, which is the
- * `xl:gap-6` (1.5rem) and the `sm:px-6` (1.5rem) of `threadGridClass`. Change
- * the gap or the padding there and this 3rem has to follow.
+ * `xl:gap-6` (1.5rem) of `threadGridClass` and the page gutter (`--page-gutter`
+ * in `globals.css`, 1.5rem from 640px). Change the gap or the gutter and this
+ * 3rem has to follow.
  */
 export const composerInsetClass = (withPanel: boolean, large: boolean): string =>
   withPanel ? (large ? "xl:pr-[calc(30rem+3rem)]" : "xl:pr-[calc(18rem+3rem)]") : "";

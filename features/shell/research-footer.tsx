@@ -26,15 +26,21 @@ export const residencyText = (residency: DataResidency): string =>
   residency.localOnly ? LOCAL_ONLY_TEXT : PROVIDER_TEXT[residency.provider];
 
 /**
- * One compact line: the research sentence, then where models run. Each half is
- * an inline block, so a narrower screen breaks between them, not mid-sentence.
- * Both halves together need about 1,250 px, so the separator only shows from
- * 1600 px, where they share a line; below that it would dangle at a line end. The
- * space between the halves keeps them apart when a page without the sidebar fits
- * both on one line below 1600 px.
+ * The phone line (#461): the research note in a few words, worded so the claim
+ * lint passes without an allowlist entry; the full sentence is one tap away.
  */
-export const ResearchFooter = ({ residency }: { readonly residency?: DataResidency }) => (
-  <footer className="border-border text-muted-foreground border-t px-4 py-1.5 text-center text-xs leading-snug">
+export const RESEARCH_FOOTER_SHORT_TEXT = "Research use only, not clinical advice.";
+
+/**
+ * The research sentence, then where models run. Each half is an inline block,
+ * so a narrower screen breaks between them, not mid-sentence. Both halves
+ * together need about 1,250 px, so the separator only shows from 1600 px, where
+ * they share a line; below that it would dangle at a line end. The space between
+ * the halves keeps them apart when a page without the sidebar fits both on one
+ * line below 1600 px.
+ */
+const FullText = ({ residency }: { readonly residency?: DataResidency }) => (
+  <>
     <span className="inline-block">{RESEARCH_FOOTER_TEXT}</span>
     {residency ? (
       <>
@@ -45,5 +51,31 @@ export const ResearchFooter = ({ residency }: { readonly residency?: DataResiden
         <span className="inline-block">{residencyText(residency)}</span>
       </>
     ) : null}
+  </>
+);
+
+/**
+ * From 640 px the footer shows the full text. On a phone it is one line
+ * (#461): the short note and "More", which opens the full text in place. The
+ * footer is a row of the page's grid, under the page rather than over it, so
+ * it covers nothing, open or closed.
+ */
+export const ResearchFooter = ({ residency }: { readonly residency?: DataResidency }) => (
+  <footer className="border-border text-muted-foreground border-t px-4 py-1.5 text-center text-xs leading-snug">
+    <details className="group sm:hidden">
+      <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+        {RESEARCH_FOOTER_SHORT_TEXT}{" "}
+        <span className="text-foreground underline underline-offset-2">
+          <span className="group-open:hidden">More</span>
+          <span className="hidden group-open:inline">Less</span>
+        </span>
+      </summary>
+      <p className="mt-1">
+        <FullText residency={residency} />
+      </p>
+    </details>
+    <p className="hidden sm:block">
+      <FullText residency={residency} />
+    </p>
   </footer>
 );
