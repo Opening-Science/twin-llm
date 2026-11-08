@@ -19,7 +19,7 @@ import {
   WeeklyBars,
   dimmed,
   hoursMinutes,
-  logoBox,
+  detailLine,
   radar,
   radarHeight,
   type ChartState,
@@ -784,7 +784,7 @@ describe("device list", () => {
     expect(out).not.toContain("bg-muted size-10");
   });
 
-  test("a logo is the vendor's file at 30px, in its own proportions, with clear space", () => {
+  test("a logo is the vendor's file at 30px, in its own proportions, on a tile", () => {
     const out = html(
       <DeviceList
         category="vitals"
@@ -797,27 +797,36 @@ describe("device list", () => {
     expect(out).toContain('src="/brand/vendors/example.svg"');
     expect(out).toContain('width="120"');
     expect(out).toContain('height="30"');
-    // Half the size as clear space, and no border or tile inside it.
-    expect(out).toContain("padding:15px");
-    expect(out).not.toMatch(/border[^"]*"[^>]*><img/);
-    // The row without a logo keeps an empty spacer as wide as the logo box.
-    expect(out).toContain("width:150px");
+    // Every row leads with a tile, logo or not, so the names line up.
+    expect(out.match(/bg-muted flex h-11/g)).toHaveLength(2);
   });
 
-  test("an attribution word comes before the logo", () => {
+  test("the vendor's attribution leads the detail line, with its name", () => {
+    const row = {
+      name: "WHOOP",
+      detail: "synced 2 hours ago",
+      logo: { ...logo, attribution: "Data by" },
+    };
+    expect(detailLine(row)).toBe("Data by WHOOP · synced 2 hours ago");
+    expect(detailLine({ name: "Oura", detail: "synced 4 min ago" })).toBe(
+      "synced 4 min ago",
+    );
+    expect(detailLine({ name: "Oura" })).toBeNull();
+    const out = html(<DeviceList category="vitals" title="Devices" rows={[row]} />);
+    expect(out).toContain("Data by WHOOP · synced 2 hours ago");
+  });
+
+  test("the detail line wraps rather than cutting off", () => {
     const out = html(
       <DeviceList
         category="vitals"
         title="Devices"
-        rows={[{ name: "Band", logo: { ...logo, attribution: "Data by" } }]}
+        rows={[{ name: "Ring", detail: "a long detail line" }]}
       />,
     );
-    expect(out.indexOf("Data by")).toBeLessThan(out.indexOf("<img"));
-  });
-
-  test("the logo box is the logo plus half its size on every side", () => {
-    expect(logoBox(logo)).toEqual({ width: 150, height: 60, clear: 15 });
-    expect(logoBox({ ...logo, size: 40 })).toEqual({ width: 200, height: 80, clear: 20 });
+    expect(out).toMatch(
+      /text-muted-foreground block text-xs leading-snug">a long detail line/,
+    );
   });
 
   test("a dark version shows per theme", () => {

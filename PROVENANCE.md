@@ -89,7 +89,7 @@ Copied unchanged from [Opening-Science/Open-Science-Foundation-brand-guide](http
 
 Copied unchanged from each company's brand assets for developers, checked against their brand guidelines on 8 Nov 2026 (the guideline documents are not committed). They identify a service a user has connected and nothing else. Licence note: `LICENSES/LicenseRef-Vendor-Trademarks.txt`, with a `.license` file beside each file; `infrastructure/charts/kit/vendor-logos.test.ts` checks the hashes.
 
-- WHOOP: the outline circle ("Puck") in black for light backgrounds and white for dark ones, at 30px or more with clear space, always after an attribution word ("Data by"). Not recoloured, not placed on WHOOP's own charts.
+- WHOOP: the outline circle ("Puck") in black for light backgrounds and white for dark ones, at 30px or more, always with its attribution in the same row ("Data by WHOOP"). Not recoloured, not placed on WHOOP's own charts.
 - Google Health: the colour heart, which works on both themes, undistorted. Fitbit's name and logo are not used.
 - Oura: no file. Oura's only official mark is the ŌURA wordmark, whose files sit behind Oura's brand portal; until then Oura is shown by its name in text.
 

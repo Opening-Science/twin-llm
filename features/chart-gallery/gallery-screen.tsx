@@ -126,7 +126,7 @@ const SOURCES: readonly DeviceRow[] = [
   {
     // Oura's only official mark is its wordmark, not in the repository yet.
     name: "Oura",
-    detail: "Made-up: synced 4 minutes ago",
+    detail: "Made-up: synced 4 min ago",
     status: { word: "Linked", tone: "ok" },
   },
   {
@@ -486,11 +486,11 @@ export const GalleryScreen = () => (
       <header>
         <h2 className="text-foreground font-sans text-lg">C15 Device rows with logos</h2>
         <p className="text-muted-foreground text-sm">
-          The vendors&apos; own files, unchanged: WHOOP&apos;s outline circle at 30px with
-          &ldquo;Data by&rdquo; before it, black on light and white on dark; Google
-          Health&apos;s colour heart on both. Oura is its name until its wordmark is in.
-          Each has half its size as clear space and only the card behind it. Switch the
-          theme to see the other WHOOP file.
+          Each row leads with a tile holding the vendor&apos;s own file, unchanged:
+          WHOOP&apos;s outline circle at 30px, black on the light tile and white on the
+          dark one, with &ldquo;Data by WHOOP&rdquo; in its detail line; Google
+          Health&apos;s colour heart on both. Oura&apos;s tile stays empty until its
+          wordmark is in. Switch the theme to see the other WHOOP file.
         </p>
       </header>
       <div className="grid gap-4 lg:grid-cols-2">
