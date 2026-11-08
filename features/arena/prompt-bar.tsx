@@ -349,7 +349,7 @@ export const PromptBar = ({
   return (
     <div
       className={cn(
-        "bg-background/90 sticky bottom-0 z-10 px-4 pt-2 pb-3 backdrop-blur sm:px-6",
+        "bg-background/90 sticky bottom-0 z-10 px-(--page-gutter) pt-2 pb-3 backdrop-blur",
         className,
       )}
     >
@@ -370,7 +370,7 @@ export const PromptBar = ({
         onSubmit={onFormSubmit}
         data-incognito={incognito ? "true" : undefined}
         data-effort={effort}
-        className="surface relative mx-auto max-w-5xl"
+        className="surface page-column relative"
       >
         {paletteOpen ? (
           <CommandPalette

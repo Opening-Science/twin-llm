@@ -257,7 +257,7 @@ export const OnboardingFlow = ({
   const picking = stepId === "explore" && explore.phase === "pick";
 
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col px-4 py-8 sm:py-14">
+    <div className="page-form flex flex-col">
       <Card as="section" padding="lg" className="flex flex-col">
         <ProgressDots
           step={state.step}

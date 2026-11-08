@@ -3,9 +3,13 @@
 // from the synced checkout (sync must not patch upstream *.ts). No server-only so
 // tests can build a bundle from a fixture.
 import { buildOuraBundle } from "../../.open-twin/packages/provider-oura/src/fhir/bundleBuilder";
+import { SYSTEMS } from "@open-twin/fhir-core";
 import type { OuraTypedData, SupportedScope } from "@open-twin/provider-oura";
 import type { Bundle } from "fhir/r4";
 
+import { personSubject, withPersonPatient } from "./person-subject";
+
+/** Every Observation names the person's shared subject (person-subject.ts), not an Oura-only one. */
 export const buildOuraFhirBundle = (
   data: readonly OuraTypedData[],
   request: {
@@ -15,12 +19,19 @@ export const buildOuraFhirBundle = (
   },
   options: { readonly subjectKey: string; readonly timestamp: string },
 ): Bundle =>
-  buildOuraBundle(
-    [...data],
-    {
-      types: [...request.types],
-      start_date: request.start_date,
-      end_date: request.end_date,
-    },
-    { subjectKey: options.subjectKey, timestamp: options.timestamp },
+  withPersonPatient(
+    buildOuraBundle(
+      [...data],
+      {
+        types: [...request.types],
+        start_date: request.start_date,
+        end_date: request.end_date,
+      },
+      {
+        subject: personSubject(options.subjectKey),
+        subjectKey: options.subjectKey,
+        timestamp: options.timestamp,
+      },
+    ),
+    { subjectKey: options.subjectKey, identifierSystem: SYSTEMS.OURA_IDENTIFIER },
   );

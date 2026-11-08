@@ -10,10 +10,8 @@ import {
   dataAbsentReason,
   deterministicId,
   fromHttpStatus,
-  minimalPatient,
   optionalNumericComponent,
   SYSTEMS,
-  subjectReference,
   UCUM,
   type CodingInput,
 } from "@open-twin/fhir-core";
@@ -223,19 +221,21 @@ export const mapWhoopWorkoutsToFHIR = (
 
 /**
  * Adds workout Observations to the bundle provider-whoop built for recovery,
- * cycles and sleep. With no scored workout the upstream bundle is returned as is.
+ * cycles and sleep, under the subject that bundle was built with. With no
+ * scored workout the upstream bundle is returned as is. The Patient the
+ * subject points at is added by the caller (`withPersonPatient`).
  */
 export const withWhoopWorkouts = (
   base: Bundle,
   workouts: readonly WhoopWorkout[],
-  options: { readonly subjectKey: string; readonly timestamp: string },
+  options: {
+    readonly subject: Reference;
+    readonly subjectKey: string;
+    readonly timestamp: string;
+  },
 ): Bundle => {
-  const subject = subjectReference({
-    connector: CONNECTOR.connector,
-    subjectKey: options.subjectKey,
-  });
   const mapped = mapWhoopWorkoutsToFHIR(workouts, {
-    subject,
+    subject: options.subject,
     subjectKey: options.subjectKey,
   });
   if (mapped.length === 0) return base;
@@ -243,20 +243,10 @@ export const withWhoopWorkouts = (
   const existing = (base.entry ?? [])
     .map((entry) => entry.resource)
     .filter((resource): resource is FhirResource => resource !== undefined);
-  const hasPatient = existing.some((resource) => resource.resourceType === "Patient");
-  const patient = hasPatient
-    ? []
-    : [
-        minimalPatient({
-          connector: CONNECTOR.connector,
-          subjectKey: options.subjectKey,
-          identifierSystem: SYSTEMS.WHOOP_IDENTIFIER,
-        }),
-      ];
 
   return buildBundle({
     connector: CONNECTOR,
-    resources: [...patient, ...existing, ...mapped],
+    resources: [...existing, ...mapped],
     timestamp: options.timestamp,
     bundleKey: [
       CONNECTOR.connector,
