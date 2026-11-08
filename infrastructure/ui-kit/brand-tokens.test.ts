@@ -25,6 +25,7 @@ const BRAND: Record<":root" | ".dark", Record<string, string>> = {
     "primary-foreground": "#ffffff",
     ring: "#1c4e8f", // blue-ink
     muted: "#efeee7", // cream
+    "chart-track": "#efeee7", // cream
   },
   ".dark": {
     background: "#1d1d1d", // black
@@ -34,6 +35,7 @@ const BRAND: Record<":root" | ".dark", Record<string, string>> = {
     "primary-foreground": "#1d1d1d",
     ring: "#73adff",
     muted: "#323232", // button
+    "chart-track": "#323232", // button
   },
 };
 

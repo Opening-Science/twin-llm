@@ -19,22 +19,24 @@ chart series.
 
 Light follows the guide's "Open editorial" option, and dark follows "Evening stage".
 
-| Token                    | Light                                             | Dark                                              | Job                           |
-| ------------------------ | ------------------------------------------------- | ------------------------------------------------- | ----------------------------- |
-| background               | `#f8f8f4` cream-light                             | `#1d1d1d` black                                   | page                          |
-| card                     | `#ffffff` white                                   | `#242424`                                         | framed blocks                 |
-| popover                  | `#ffffff`                                         | `#2b2b2b`                                         | menus                         |
-| foreground               | `#1d1d1d` black                                   | `#f8f8f4` cream-light                             | body text                     |
-| muted-foreground         | `#646363` gray                                    | `#c0beb2` cream-dark                              | quiet text                    |
-| muted, accent, secondary | `#efeee7` cream                                   | `#323232` button                                  | hover and chip fills          |
-| border                   | `#d9d8cf`                                         | `#404040`                                         | dividers                      |
-| input                    | `#6f6e66` cream-darker                            | `#828178`                                         | control edges                 |
-| primary                  | `#323232` button                                  | `#73adff` blue                                    | the one interactive accent    |
-| primary-foreground       | `#ffffff`                                         | `#1d1d1d`                                         | label on primary              |
-| ring                     | `#1c4e8f` blue-ink                                | `#73adff` blue                                    | focus outline                 |
-| winner                   | `#197037`                                         | `#5cb572`                                         | TwinLLM's own, marks success  |
-| destructive              | `#b7162d`                                         | `#f8767a`                                         | TwinLLM's own, marks an error |
-| chart-1 to chart-5       | `#1e7777` `#926e10` `#974391` `#6a51a4` `#6f6e66` | `#50bfbe` `#dbb155` `#d285cb` `#aa95e8` `#c0beb2` | data series only              |
+| Token                     | Light                                             | Dark                                              | Job                           |
+| ------------------------- | ------------------------------------------------- | ------------------------------------------------- | ----------------------------- |
+| background                | `#f8f8f4` cream-light                             | `#1d1d1d` black                                   | page                          |
+| card                      | `#ffffff` white                                   | `#242424`                                         | framed blocks                 |
+| popover                   | `#ffffff`                                         | `#2b2b2b`                                         | menus                         |
+| foreground                | `#1d1d1d` black                                   | `#f8f8f4` cream-light                             | body text                     |
+| muted-foreground          | `#646363` gray                                    | `#c0beb2` cream-dark                              | quiet text                    |
+| muted, accent, secondary  | `#efeee7` cream                                   | `#323232` button                                  | hover and chip fills          |
+| border                    | `#d9d8cf`                                         | `#404040`                                         | dividers                      |
+| input                     | `#6f6e66` cream-darker                            | `#828178`                                         | control edges                 |
+| primary                   | `#323232` button                                  | `#73adff` blue                                    | the one interactive accent    |
+| primary-foreground        | `#ffffff`                                         | `#1d1d1d`                                         | label on primary              |
+| ring                      | `#1c4e8f` blue-ink                                | `#73adff` blue                                    | focus outline                 |
+| winner                    | `#197037`                                         | `#5cb572`                                         | TwinLLM's own, marks success  |
+| destructive               | `#b7162d`                                         | `#f8767a`                                         | TwinLLM's own, marks an error |
+| chart-1 to chart-5        | `#1e7777` `#926e10` `#974391` `#6a51a4` `#6f6e66` | `#50bfbe` `#dbb155` `#d285cb` `#aa95e8` `#c0beb2` | data series only              |
+| chart-track               | `#efeee7` cream                                   | `#323232` button                                  | ring track, future, loading   |
+| stage-deep to stage-awake | `#3d2a65` `#533c87` `#6a51a4` `#8572bb`           | `#e0d8fd` `#c5b6f6` `#aa95e8` `#8d7dbf`           | sleep stages, deepest first   |
 
 Measured contrast, light and dark:
 
@@ -63,6 +65,17 @@ Rules carried over from the guide:
   own. Colour is never the only signal: a status always carries a word.
 - Chart hues keep away from the brand blue, the winner green and the error red,
   so a data line never reads as a link, a verdict or an error.
+- The chart kit (`infrastructure/charts/category-token.ts`) maps categories to
+  chart-1 to chart-4: sleep chart-4; heart and HRV chart-3; activity and steps
+  chart-2; readiness, recovery and vitals chart-1; research conditions take
+  chart-1 to chart-4 in order. chart-5's grey is only the reference series
+  (`chart-reference`). The category's word is always written beside its chart.
+- Sleep stages are lightness steps of chart-4's violet. The deepest stage has
+  the most contrast against the card, so the order flips in dark mode; each
+  clears 3:1 and a hypnogram lane always carries its word.
+- Kit cards use `rounded-card` (20px); other cards keep the radius scale. Kit
+  type steps: `text-hero` 44/48 (mono, bold), `text-insight` 20/26 (sans),
+  `text-axis` 13/16 (mono, normal), every number `tabular-nums`.
 
 The border tone and the dark card and popover steps are not guide colours. The
 guide has no dark theme and no divider tone between cream and cream-dark, so

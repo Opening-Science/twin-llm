@@ -143,6 +143,21 @@
   --chart-4: oklch(0.5 0.13 295);
   --chart-5: oklch(0.5366 0.0123 101);
 
+  /* --- Chart kit tokens (begin) ---------------------------------------------
+     The reference series is chart-5's grey, mapped as --color-chart-reference
+     below. The track is the fill under a ring, a future bar and a loading
+     shape: the guide's cream, so every chart colour clears 3:1 on it too.
+     Sleep stages are lightness steps of chart-4's violet; the deepest stage
+     has the most contrast against the card in either theme, so in dark mode
+     the order runs the other way. Each stage clears 3:1 on the card, and a
+     hypnogram lane always carries its word. chart-tokens.test.ts measures it. */
+  --chart-track: oklch(0.948 0.0094 100); /* cream #efeee7 */
+  --stage-deep: oklch(0.34 0.1 295); /* #3d2a65 */
+  --stage-core: oklch(0.42 0.12 295); /* #533c87 */
+  --stage-rem: oklch(0.5 0.13 295); /* #6a51a4, chart-4 */
+  --stage-awake: oklch(0.6 0.11 295); /* #8572bb */
+  /* --- Chart kit tokens (end) ----------------------------------------------- */
+
   /* shadcn expects these; they are the quiet fill behind a hovered row or a
      muted chip, never a third accent. */
   --muted: oklch(0.948 0.0094 100); /* cream #efeee7 */
@@ -185,6 +200,14 @@
   --chart-4: oklch(0.72 0.12 295);
   --chart-5: oklch(0.7997 0.0167 99.1);
 
+  /* --- Chart kit tokens (begin) ----------------------------------------------- */
+  --chart-track: oklch(0.3171 0 0); /* button #323232 */
+  --stage-deep: oklch(0.9 0.05 295); /* #e0d8fd */
+  --stage-core: oklch(0.81 0.09 295); /* #c5b6f6 */
+  --stage-rem: oklch(0.72 0.12 295); /* #aa95e8, chart-4 */
+  --stage-awake: oklch(0.63 0.1 295); /* #8d7dbf */
+  /* --- Chart kit tokens (end) ------------------------------------------------- */
+
   --muted: oklch(0.3171 0 0); /* button #323232 */
   --accent: oklch(0.3171 0 0);
   --accent-foreground: oklch(0.978 0.0053 106.5);
@@ -222,6 +245,27 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+
+  /* --- Chart kit tokens (begin) ---------------------------------------------
+     Roles for the chart kit (infrastructure/charts). The reference series is
+     always chart-5's grey. Kit cards take the one larger radius; existing
+     cards keep the scale below. Hero numbers, insight sentences and axis
+     labels get their own steps: hero and axis are set in font-mono with
+     tabular-nums, hero bold and axis normal; the insight is font-sans. */
+  --color-chart-reference: var(--chart-5);
+  --color-chart-track: var(--chart-track);
+  --color-stage-deep: var(--stage-deep);
+  --color-stage-core: var(--stage-core);
+  --color-stage-rem: var(--stage-rem);
+  --color-stage-awake: var(--stage-awake);
+  --radius-card: 20px;
+  --text-hero: 2.75rem; /* 44px */
+  --text-hero--line-height: 3rem;
+  --text-insight: 1.25rem; /* 20px */
+  --text-insight--line-height: 1.625rem;
+  --text-axis: 0.8125rem; /* 13px */
+  --text-axis--line-height: 1rem;
+  /* --- Chart kit tokens (end) ----------------------------------------------- */
 
   /* Two faces, per the brand guide. Selecta sets titles and body; display
      is the same face, kept as a role so headings can change in one place.
