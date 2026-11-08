@@ -1,9 +1,10 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 
 import {
   type Category,
+  type ChartRange,
   type ChartState,
   ComparisonPair,
   Consistency,
@@ -22,16 +23,17 @@ import {
 
 import {
   BEDTIME_TARGET,
+  BEDTIME_READOUTS,
   BEDTIMES,
   DAY_AVERAGE,
   DAY_NOW,
-  DAY_TODAY,
-  HEART_RANGES,
+  DAY_TODAY_READ,
+  HEART_RANGES_READ,
   NIGHT,
   NULL_DRAWS,
   NULL_OBSERVED,
-  P2_GROUPS,
-  P3_ESTIMATES,
+  P2_GROUPS_READ,
+  P3_ESTIMATES_READ,
   RADAR_HEART,
   RADAR_READINESS,
   RADAR_SLEEP,
@@ -40,6 +42,8 @@ import {
   STREAK_TODAY,
   WEEK_STEPS,
   WEEK_STEPS_AVERAGE,
+  WEEK_STEPS_READOUTS,
+  RANGE_DEMO,
 } from "./sample-data";
 
 const STATES: readonly ChartState[] = ["default", "loading", "empty"];
@@ -85,6 +89,33 @@ const Row = ({
     </div>
   </section>
 );
+
+/** The range switch: the card only reports the choice; this page swaps the data. */
+const RangeDemo = () => {
+  const [range, setRange] = useState<ChartRange>("day");
+  const data = RANGE_DEMO[range];
+  const words: Readonly<Record<ChartRange, string>> = {
+    day: "today, by hour",
+    week: "this week, by day",
+    month: "this month, by day",
+  };
+  return (
+    <InsightCard
+      category="heart"
+      label="Heart rate"
+      interactive
+      sentence={`Your heart rate range ${words[range]}.`}
+      ranges={{ value: range, onChange: setRange }}
+    >
+      <RangeBars
+        category="heart"
+        buckets={data.buckets}
+        axis={data.axis}
+        label="Heart rate"
+      />
+    </InsightCard>
+  );
+};
 
 /**
  * The chart kit, every component in every state, on made-up data. A page
@@ -148,12 +179,13 @@ export const GalleryScreen = () => (
 
     <Row
       name="C04 Comparison pair and C05 cumulative day"
-      note="Today in colour, the usual day in grey; after now the usual day is faded."
+      note="Today in colour, the usual day in grey; after now the usual day is faded. Try: hover or drag, tap, arrow keys."
       render={(state) => (
         <InsightCard
           category="steps"
           state={state}
           label="Steps"
+          interactive={state === "default"}
           sentence={
             state === "empty"
               ? "Today's steps appear here once your device syncs."
@@ -171,9 +203,11 @@ export const GalleryScreen = () => (
             <CumulativeDay
               category="steps"
               state={state}
-              today={DAY_TODAY}
+              today={DAY_TODAY_READ}
               average={DAY_AVERAGE}
               now={DAY_NOW}
+              label="Steps"
+              defaultFocus={12}
             />
           </div>
         </InsightCard>
@@ -182,12 +216,13 @@ export const GalleryScreen = () => (
 
     <Row
       name="C06 Weekly bars"
-      note="The average line spans the whole width, as a baseline."
+      note="The average line spans the whole width, as a baseline. Try: hover or drag, tap, arrow keys."
       render={(state) => (
         <InsightCard
           category="steps"
           state={state}
           label="Steps: Weekly"
+          interactive={state === "default"}
           sentence={
             state === "empty"
               ? "Your weekly average appears after 7 days of steps."
@@ -199,9 +234,12 @@ export const GalleryScreen = () => (
             category="steps"
             state={state}
             values={WEEK_STEPS}
+            readouts={WEEK_STEPS_READOUTS}
             average={WEEK_STEPS_AVERAGE}
             caption="Average steps"
             hero={fmt(WEEK_STEPS_AVERAGE)}
+            label="Steps: Weekly"
+            defaultFocus={3}
           />
         </InsightCard>
       )}
@@ -234,12 +272,13 @@ export const GalleryScreen = () => (
 
     <Row
       name="C08 Range bars"
-      note="Minimum to maximum per hour; MIN and MAX are written, not hovered."
+      note="Minimum to maximum per hour; MIN and MAX are written, not hovered. Try: hover or drag, tap, arrow keys."
       render={(state) => (
         <InsightCard
           category="heart"
           state={state}
           label="Heart rate"
+          interactive={state === "default"}
           sentence={
             state === "empty"
               ? "Today's heart rate range appears once your device syncs."
@@ -250,12 +289,27 @@ export const GalleryScreen = () => (
           <RangeBars
             category="heart"
             state={state}
-            buckets={HEART_RANGES}
-            axis={["8 AM", "6 PM"]}
+            buckets={HEART_RANGES_READ}
+            axis={["8 AM", "5 PM"]}
+            label="Heart rate"
+            defaultFocus={4}
           />
         </InsightCard>
       )}
     />
+
+    <section className="flex flex-col gap-3">
+      <header>
+        <h2 className="text-foreground font-sans text-lg">Range switch</h2>
+        <p className="text-muted-foreground text-sm">
+          Day, Week or Month in the card&apos;s header. The card only reports the choice;
+          the screen swaps the data. Try: switch, then hover or use the arrow keys.
+        </p>
+      </header>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <RangeDemo />
+      </div>
+    </section>
 
     <Row
       name="C09 Hypnogram"
@@ -335,12 +389,13 @@ export const GalleryScreen = () => (
 
     <Row
       name="C13 Consistency"
-      note="Nights in grey, the last one in colour, the target dashed."
+      note="Nights in grey, the last one in colour, the target dashed. Try: hover or drag, tap, arrow keys."
       render={(state) => (
         <InsightCard
           category="sleep"
           state={state}
           label="Sleep: Bedtime"
+          interactive={state === "default"}
           sentence={
             state === "empty"
               ? "Your bedtime pattern appears after 14 nights."
@@ -352,6 +407,9 @@ export const GalleryScreen = () => (
             category="sleep"
             state={state}
             values={BEDTIMES}
+            readouts={BEDTIME_READOUTS}
+            label="Sleep: Bedtime"
+            defaultFocus={13}
             target={BEDTIME_TARGET}
             reference={{ label: "Average bedtime", value: "11:04 PM" }}
             last={{ label: "Last night", value: "11:48 PM" }}
@@ -419,12 +477,13 @@ export const GalleryScreen = () => (
 
     <Row
       name="R1 Research figure: estimates"
-      note="Point estimates with intervals against a reference."
+      note="Point estimates with intervals against a reference. Try: hover or drag, tap, arrow keys."
       render={(state) => (
         <InsightCard
           category="vitals"
           state={state}
           label="Within-person effect"
+          interactive={state === "default"}
           sentence={
             state === "empty"
               ? "The estimates appear here once the run has finished."
@@ -436,8 +495,10 @@ export const GalleryScreen = () => (
             kind="estimates"
             category="vitals"
             state={state}
-            estimates={P3_ESTIMATES}
+            estimates={P3_ESTIMATES_READ}
             reference={{ value: 1, label: "No effect" }}
+            label="Within-person effect"
+            defaultFocus={0}
           />
         </InsightCard>
       )}
@@ -445,12 +506,13 @@ export const GalleryScreen = () => (
 
     <Row
       name="R1 Research figure: pairs"
-      note="Sensitivity and specificity per dataset, on a 0 to 1 axis."
+      note="Sensitivity and specificity per dataset, on a 0 to 1 axis. Try: hover or drag, tap, arrow keys."
       render={(state) => (
         <InsightCard
           category="heart"
           state={state}
           label="AF detection"
+          interactive={state === "default"}
           sentence={
             state === "empty"
               ? "Sensitivity and specificity appear once the run has finished."
@@ -462,7 +524,8 @@ export const GalleryScreen = () => (
             kind="pairs"
             category="heart"
             state={state}
-            groups={P2_GROUPS}
+            groups={P2_GROUPS_READ}
+            label="AF detection"
           />
         </InsightCard>
       )}

@@ -14,6 +14,14 @@ export {
   type SeriesToken,
 } from "../category-token";
 export * from "./kit-geometry";
+export {
+  ChartFocusFrame,
+  ChartReadout,
+  dimmed,
+  useChartFocus,
+  type ChartFocus,
+  type Pick,
+} from "./chart-focus";
 
 export { InsightCard } from "./c03-insight-card";
 export { ComparisonPair } from "./c04-comparison-pair";

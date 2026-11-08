@@ -27,7 +27,12 @@ const clamp01 = (value: number): number => Math.min(1, Math.max(0, value));
 /* --- C05 cumulative day line ------------------------------------------------ */
 
 /** A value at a time of day, `at` from 0 (midnight) to 1 (the next midnight). */
-export type DaySample = Readonly<{ at: number; value: number }>;
+export type DaySample = Readonly<{
+  at: number;
+  value: number;
+  /** What the readout says when this point is focused, e.g. "2 PM · 3,140 steps". */
+  readout?: string;
+}>;
 
 export type CumulativeDay = Readonly<{
   /** The reference curve up to now, grey. */
@@ -39,7 +44,19 @@ export type CumulativeDay = Readonly<{
   /** Where today ends; null when there is no today yet. */
   now: Point | null;
   nowX: number;
+  /** Today's samples up to now in time order, and where each is drawn. */
+  samples: readonly DaySample[];
+  points: readonly Point[];
 }>;
+
+/** Today's samples up to `now`, in time order: the points a chart can focus. */
+export const samplesUpTo = (
+  today: readonly DaySample[],
+  now: number,
+): readonly DaySample[] =>
+  [...today]
+    .filter((s) => finite(s.value) && s.at <= clamp01(now))
+    .sort((a, b) => a.at - b.at);
 
 /**
  * Today's running total against the usual running total, on one scale (the
@@ -71,16 +88,16 @@ export const cumulativeDay = (
   const join = { at: cut, value: valueAtNow };
   const past = [...sorted.filter((s) => s.at < cut), join];
   const future = [join, ...sorted.filter((s) => s.at > cut)];
-  const todayPoints = [...today]
-    .filter((s) => finite(s.value) && s.at <= cut)
-    .sort((a, b) => a.at - b.at)
-    .map(at);
+  const samples = samplesUpTo(today, cut);
+  const todayPoints = samples.map(at);
   return {
     averagePast: sorted.length < 1 ? "" : linePath(past.map(at)),
     averageFuture: sorted.length < 1 || cut >= 1 ? "" : linePath(future.map(at)),
     today: todayPoints.length < 2 ? "" : linePath(todayPoints),
     now: todayPoints.at(-1) ?? null,
     nowX: cut * box.width,
+    samples,
+    points: todayPoints,
   };
 };
 
@@ -194,7 +211,12 @@ export const weekdayLetters = (weekStart: 0 | 1 = 1): readonly string[] => {
 
 /* --- C08 range bars ---------------------------------------------------------- */
 
-export type Range = Readonly<{ min: number; max: number }>;
+export type Range = Readonly<{
+  min: number;
+  max: number;
+  /** What the readout says when this bucket is focused. */
+  readout?: string;
+}>;
 
 export type RangeBars = Readonly<{
   bars: readonly (Bar | null)[];
@@ -386,6 +408,8 @@ export type Estimate = Readonly<{
   estimate: number;
   low?: number | null;
   high?: number | null;
+  /** What the readout says when this row is focused. */
+  readout?: string;
 }>;
 
 export type EstimateRow = Readonly<{
@@ -640,3 +664,59 @@ export const edgeAnchor = (
   margin = 48,
 ): "start" | "middle" | "end" =>
   x < margin ? "start" : x > width - margin ? "end" : "middle";
+
+/* --- Focus: which point a key or a pointer lands on -------------------------- */
+
+export type KeyStep = Readonly<
+  { kind: "move"; index: number } | { kind: "clear" } | { kind: "ignore" }
+>;
+
+/** Which arrow keys step: across (Left/Right), down (Up/Down) or either. */
+export type StepAxis = "x" | "y" | "both";
+
+const PREVIOUS: Readonly<Record<StepAxis, readonly string[]>> = {
+  x: ["ArrowLeft"],
+  y: ["ArrowUp"],
+  both: ["ArrowLeft", "ArrowUp"],
+};
+const NEXT: Readonly<Record<StepAxis, readonly string[]>> = {
+  x: ["ArrowRight"],
+  y: ["ArrowDown"],
+  both: ["ArrowRight", "ArrowDown"],
+};
+
+/**
+ * What a key does to the focused point: arrows step one point and stop at
+ * the ends, Home and End jump, Escape clears. From no focus, "next" lands
+ * on the first point and "previous" on the last.
+ */
+export const stepKey = (
+  key: string,
+  current: number | null,
+  count: number,
+  axis: StepAxis = "x",
+): KeyStep => {
+  if (count <= 0) return { kind: "ignore" };
+  if (key === "Escape") return current === null ? { kind: "ignore" } : { kind: "clear" };
+  if (key === "Home") return { kind: "move", index: 0 };
+  if (key === "End") return { kind: "move", index: count - 1 };
+  if (NEXT[axis].includes(key)) {
+    return {
+      kind: "move",
+      index: current === null ? 0 : Math.min(count - 1, current + 1),
+    };
+  }
+  if (PREVIOUS[axis].includes(key)) {
+    return {
+      kind: "move",
+      index: current === null ? count - 1 : Math.max(0, current - 1),
+    };
+  }
+  return { kind: "ignore" };
+};
+
+/** The slot under `x` when `count` slots share `width` evenly; null outside. */
+export const slotIndex = (x: number, width: number, count: number): number | null => {
+  if (count <= 0 || width <= 0 || x < 0 || x > width) return null;
+  return Math.min(count - 1, Math.floor((x / width) * count));
+};

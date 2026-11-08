@@ -1,12 +1,23 @@
 import { cn } from "@/infrastructure/ui";
+import { SegmentedControl } from "@/infrastructure/ui-kit/segmented-control";
 
 import { categoryTextClass } from "../category-token";
-import type { InsightCardProps } from "./types";
+import type { ChartRange, InsightCardProps } from "./types";
+
+const RANGE_WORD: Readonly<Record<ChartRange, string>> = {
+  day: "Day",
+  week: "Week",
+  month: "Month",
+};
 
 /**
  * C03, the card every chart sits in: a label row, one sentence, a hairline,
  * one body. The sentence is the chart's text for a screen reader, so the
- * body under it is hidden from assistive technology.
+ * body under it is hidden from assistive technology, unless the body is an
+ * interactive chart: then its group and readout are read instead.
+ *
+ * `ranges` adds a Day / Week / Month switch to the header. The card only
+ * reports the choice; the screen loads the data for it.
  */
 export const InsightCard = ({
   category,
@@ -14,6 +25,8 @@ export const InsightCard = ({
   label,
   sentence,
   emptyNote,
+  interactive = false,
+  ranges,
   children,
 }: InsightCardProps) => (
   <article
@@ -30,6 +43,19 @@ export const InsightCard = ({
         )}
       />
       <h3 className="text-foreground font-sans">{label}</h3>
+      {ranges ? (
+        <SegmentedControl
+          label={`${label}: range`}
+          size="sm"
+          className="ml-auto"
+          options={(ranges.options ?? ["day", "week", "month"]).map((value) => ({
+            value,
+            label: RANGE_WORD[value],
+          }))}
+          value={ranges.value}
+          onChange={ranges.onChange}
+        />
+      ) : null}
     </header>
     {state === "loading" ? (
       <div className="space-y-2" role="status" aria-label="Loading">
@@ -42,7 +68,7 @@ export const InsightCard = ({
     {children ? (
       <>
         <hr className="border-border" />
-        <div aria-hidden="true">{children}</div>
+        <div aria-hidden={interactive ? undefined : true}>{children}</div>
       </>
     ) : null}
     {state === "empty" && emptyNote ? (

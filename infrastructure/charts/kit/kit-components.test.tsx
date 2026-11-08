@@ -16,6 +16,7 @@ import {
   ScoreRing,
   StreakGrid,
   WeeklyBars,
+  dimmed,
   hoursMinutes,
   radar,
   radarHeight,
@@ -330,4 +331,195 @@ test("durations read as hours and minutes", () => {
   expect(hoursMinutes(439)).toBe("7 hr 19 min");
   expect(hoursMinutes(45)).toBe("45 min");
   expect(hoursMinutes(-3)).toBe("0 min");
+});
+
+describe("interactive charts", () => {
+  const weekly = (readouts?: readonly (string | null)[], defaultFocus?: number) =>
+    html(
+      <WeeklyBars
+        category="steps"
+        values={[6, 8, 7]}
+        average={7}
+        caption="Average steps"
+        hero="7"
+        readouts={readouts}
+        label="Steps: Weekly"
+        defaultFocus={defaultFocus}
+      />,
+    );
+
+  test("without readouts a chart stays a picture: no tab stop, no readout", () => {
+    const out = weekly();
+    expect(out).not.toContain('role="group"');
+    expect(out).not.toContain("aria-live");
+    expect(out).not.toContain("tabindex");
+  });
+
+  test("with readouts it is one named tab stop with a live readout", () => {
+    const out = weekly(["Mon · 6", "Tue · 8", "Wed · 7"]);
+    expect(out.match(/role="group"/g)).toHaveLength(1);
+    expect(out).toContain('tabindex="0"');
+    expect(out).toContain('aria-label="Steps: Weekly"');
+    expect(out).toContain('aria-live="polite"');
+    expect(out).not.toContain("Tue · 8");
+  });
+
+  test("a focused point is named and the rest step back", () => {
+    const out = weekly(["Mon · 6", "Tue · 8", "Wed · 7"], 1);
+    expect(out).toContain("Tue · 8");
+    expect(out.match(/fill-opacity="0.4"/g)?.length).toBeGreaterThanOrEqual(2);
+  });
+
+  test("a focus outside the data is ignored", () => {
+    expect(weekly(["Mon · 6", "Tue · 8", "Wed · 7"], 9)).not.toContain("fill-opacity");
+  });
+
+  test("loading and empty charts are never interactive", () => {
+    const out = html(
+      <WeeklyBars
+        category="steps"
+        state="loading"
+        values={[6, 8, 7]}
+        average={7}
+        caption="Average steps"
+        hero="7"
+        readouts={["a", "b", "c"]}
+      />,
+    );
+    expect(out).not.toContain('role="group"');
+  });
+
+  test.each([
+    [
+      "C05",
+      <CumulativeDay
+        key="c05"
+        category="steps"
+        today={[
+          { at: 0, value: 0, readout: "12 AM · 0 steps" },
+          { at: 0.5, value: 4100, readout: "12 PM · 4,100 steps" },
+        ]}
+        average={[
+          { at: 0, value: 0 },
+          { at: 1, value: 8000 },
+        ]}
+        now={0.5}
+        defaultFocus={1}
+      />,
+      "12 PM · 4,100 steps",
+    ],
+    [
+      "C08",
+      <RangeBars
+        key="c08"
+        category="heart"
+        buckets={[
+          { min: 58, max: 92, readout: "8 AM · 58 to 92 bpm" },
+          { min: 61, max: 114, readout: "9 AM · 61 to 114 bpm" },
+        ]}
+        defaultFocus={0}
+      />,
+      "8 AM · 58 to 92 bpm",
+    ],
+    [
+      "C13",
+      <Consistency
+        key="c13"
+        category="sleep"
+        values={[30, 40]}
+        readouts={["2 Nov · 11:30 PM", "3 Nov · 11:40 PM"]}
+        target={30}
+        reference={{ label: "Average bedtime", value: "11:12 PM" }}
+        last={{ label: "Last night", value: "11:40 PM" }}
+        defaultFocus={1}
+      />,
+      "3 Nov · 11:40 PM",
+    ],
+    [
+      "R1",
+      <ResearchFigure
+        key="r1"
+        kind="estimates"
+        category="vitals"
+        estimates={[
+          {
+            label: "A",
+            estimate: 2,
+            low: 1,
+            high: 3,
+            readout: "A · 2.00 (1.00 to 3.00)",
+          },
+          { label: "B", estimate: 1, readout: "B · 1.00" },
+        ]}
+        defaultFocus={0}
+      />,
+      "A · 2.00 (1.00 to 3.00)",
+    ],
+  ])("%s becomes interactive with readouts and names its focus", (_, node, readout) => {
+    const out = html(node);
+    expect(out).toContain('role="group"');
+    expect(out).toContain('aria-live="polite"');
+    expect(out).toContain(readout);
+  });
+
+  test("lines and bars carry the draw-in, empty outlines do not", () => {
+    const out = weekly(["a", "b", "c"]);
+    expect(out).toContain("kit-grow");
+    expect(out).toContain("kit-draw");
+    const empty = html(
+      <WeeklyBars
+        category="steps"
+        state="empty"
+        values={[1, 2]}
+        average={1}
+        caption="x"
+        hero="x"
+      />,
+    );
+    expect(empty).not.toContain("kit-grow");
+  });
+
+  test("dimmed steps back every mark but the focused one", () => {
+    expect(dimmed(null, 2)).toBeUndefined();
+    expect(dimmed(2, 2)).toBeUndefined();
+    expect(dimmed(2, 1)).toBe(0.4);
+  });
+});
+
+describe("insight card options", () => {
+  test("an interactive body is not hidden", () => {
+    const out = html(
+      <InsightCard category="steps" label="Steps" sentence="x" interactive>
+        <span>chart</span>
+      </InsightCard>,
+    );
+    expect(out).not.toContain('aria-hidden="true"><span>chart');
+    expect(out).toContain("<span>chart</span>");
+  });
+
+  test("ranges render a Day / Week / Month switch with the choice pressed", () => {
+    const out = html(
+      <InsightCard
+        category="steps"
+        label="Steps"
+        sentence="x"
+        ranges={{ value: "week", onChange: () => undefined }}
+      />,
+    );
+    expect(out).toContain('aria-label="Steps: range"');
+    for (const word of ["Day", "Week", "Month"]) expect(out).toContain(`>${word}<`);
+    expect(out).toMatch(/aria-pressed="true"[^>]*>Week</);
+  });
+
+  test("ranges can offer fewer choices", () => {
+    const out = html(
+      <InsightCard
+        category="steps"
+        label="Steps"
+        sentence="x"
+        ranges={{ value: "day", onChange: () => undefined, options: ["day", "week"] }}
+      />,
+    );
+    expect(out).not.toContain(">Month<");
+  });
 });
