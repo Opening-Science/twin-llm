@@ -6,6 +6,7 @@ import {
   type Category,
   type ChartRange,
   type ChartState,
+  type DeviceRow,
   ComparisonPair,
   DeviceList,
   Consistency,
@@ -19,6 +20,7 @@ import {
   ResearchFigure,
   ScoreRing,
   StreakGrid,
+  VENDOR_LOGOS,
   WeeklyBars,
 } from "@/infrastructure/charts/kit";
 
@@ -118,6 +120,28 @@ const RangeDemo = () => {
     </InsightCard>
   );
 };
+
+/** Made-up sources with the vendors' own logos, where the rules allow one. */
+const SOURCES: readonly DeviceRow[] = [
+  {
+    // Oura's only official mark is its wordmark, not in the repository yet.
+    name: "Oura",
+    detail: "Made-up: synced 4 minutes ago",
+    status: { word: "Linked", tone: "ok" },
+  },
+  {
+    name: "WHOOP",
+    detail: "Made-up: synced 2 hours ago",
+    status: { word: "Linked", tone: "ok" },
+    logo: VENDOR_LOGOS.whoop,
+  },
+  {
+    name: "Google Health",
+    detail: "Connected to Google Health · made-up: synced 12 minutes ago",
+    status: { word: "Linked", tone: "ok" },
+    logo: VENDOR_LOGOS.googleHealth,
+  },
+];
 
 /**
  * The chart kit, every component in every state, on made-up data. A page
@@ -457,6 +481,22 @@ export const GalleryScreen = () => (
         />
       )}
     />
+
+    <section className="flex flex-col gap-3">
+      <header>
+        <h2 className="text-foreground font-sans text-lg">C15 Device rows with logos</h2>
+        <p className="text-muted-foreground text-sm">
+          The vendors&apos; own files, unchanged: WHOOP&apos;s outline circle at 30px with
+          &ldquo;Data by&rdquo; before it, black on light and white on dark; Google
+          Health&apos;s colour heart on both. Oura is its name until its wordmark is in.
+          Each has half its size as clear space and only the card behind it. Switch the
+          theme to see the other WHOOP file.
+        </p>
+      </header>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <DeviceList category="vitals" title="Sources" rows={SOURCES} />
+      </div>
+    </section>
 
     <section className="flex flex-col gap-3">
       <header>

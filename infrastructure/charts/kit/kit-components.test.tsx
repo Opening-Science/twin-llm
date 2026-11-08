@@ -19,6 +19,7 @@ import {
   WeeklyBars,
   dimmed,
   hoursMinutes,
+  logoBox,
   radar,
   radarHeight,
   type ChartState,
@@ -783,7 +784,7 @@ describe("device list", () => {
     expect(out).not.toContain("bg-muted size-10");
   });
 
-  test("a logo is the vendor's file, unoptimised, sized by height in its own proportions", () => {
+  test("a logo is the vendor's file at 30px, in its own proportions, with clear space", () => {
     const out = html(
       <DeviceList
         category="vitals"
@@ -794,10 +795,29 @@ describe("device list", () => {
     expect(out.match(/<img/g)).toHaveLength(1);
     expect(out).toContain('alt="Example"');
     expect(out).toContain('src="/brand/vendors/example.svg"');
-    expect(out).toContain('width="80"');
-    expect(out).toContain('height="20"');
-    // The row without a logo keeps an empty tile so names line up.
-    expect(out).toContain("bg-muted size-10");
+    expect(out).toContain('width="120"');
+    expect(out).toContain('height="30"');
+    // Half the size as clear space, and no border or tile inside it.
+    expect(out).toContain("padding:15px");
+    expect(out).not.toMatch(/border[^"]*"[^>]*><img/);
+    // The row without a logo keeps an empty spacer as wide as the logo box.
+    expect(out).toContain("width:150px");
+  });
+
+  test("an attribution word comes before the logo", () => {
+    const out = html(
+      <DeviceList
+        category="vitals"
+        title="Devices"
+        rows={[{ name: "Band", logo: { ...logo, attribution: "Data by" } }]}
+      />,
+    );
+    expect(out.indexOf("Data by")).toBeLessThan(out.indexOf("<img"));
+  });
+
+  test("the logo box is the logo plus half its size on every side", () => {
+    expect(logoBox(logo)).toEqual({ width: 150, height: 60, clear: 15 });
+    expect(logoBox({ ...logo, size: 40 })).toEqual({ width: 200, height: 80, clear: 20 });
   });
 
   test("a dark version shows per theme", () => {

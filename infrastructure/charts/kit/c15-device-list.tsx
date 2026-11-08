@@ -8,8 +8,8 @@ import { ChevronIcon } from "@/infrastructure/ui-kit/icons";
 import { categoryTextClass } from "../category-token";
 import type { DeviceListProps, DeviceRow, VendorLogo } from "./types";
 
-/** Logos are sized by height; the width follows the file's own proportions. */
-const LOGO_HEIGHT = 20;
+/** WHOOP's minimum; other vendors give none or a smaller one. */
+const LOGO_SIZE = 30;
 
 const STATUS_TONE: Readonly<Record<NonNullable<DeviceRow["status"]>["tone"], string>> = {
   ok: "text-winner",
@@ -17,44 +17,69 @@ const STATUS_TONE: Readonly<Record<NonNullable<DeviceRow["status"]>["tone"], str
   neutral: "text-muted-foreground",
 };
 
+/** The box a logo takes with its clear space: half its size on every side. */
+export const logoBox = (
+  logo: VendorLogo,
+): Readonly<{ width: number; height: number; clear: number }> => {
+  const size = logo.size ?? LOGO_SIZE;
+  const clear = size / 2;
+  return {
+    width: Math.round((size * logo.width) / logo.height) + 2 * clear,
+    height: size + 2 * clear,
+    clear,
+  };
+};
+
 /**
- * The vendor's file as it is, on a card-coloured tile. With a dark version
- * the right one shows per theme; without one the same file shows in both.
+ * The vendor's file as it is, with nothing inside its clear space: no
+ * border, no tile, only the card behind it. With a dark version the right
+ * one shows per theme; without one the same file shows in both. The
+ * attribution word sits before it, outside the clear space.
  */
 const Logo = ({ logo }: Readonly<{ logo: VendorLogo }>) => {
-  const width = Math.round((LOGO_HEIGHT * logo.width) / logo.height);
+  const size = logo.size ?? LOGO_SIZE;
+  const width = Math.round((size * logo.width) / logo.height);
+  const { clear } = logoBox(logo);
   const image = (src: string, className?: string) => (
     <Image
       src={src}
       alt={logo.alt}
       width={width}
-      height={LOGO_HEIGHT}
+      height={size}
       unoptimized
-      className={cn("h-5 w-auto", className)}
+      className={cn("block max-w-none", className)}
+      style={{ width, height: size }}
     />
   );
   return (
-    <span className="bg-card border-border flex h-10 min-w-10 shrink-0 items-center justify-center rounded-lg border px-2">
-      {logo.darkSrc ? (
-        <>
-          {image(logo.src, "dark:hidden")}
-          {image(logo.darkSrc, "hidden dark:block")}
-        </>
-      ) : (
-        image(logo.src)
-      )}
+    <span className="flex shrink-0 items-center">
+      {logo.attribution ? (
+        <span className="text-muted-foreground font-mono text-xs">
+          {logo.attribution}
+        </span>
+      ) : null}
+      <span className="flex shrink-0 items-center" style={{ padding: clear }}>
+        {logo.darkSrc ? (
+          <>
+            {image(logo.src, "dark:hidden")}
+            {image(logo.darkSrc, "hidden dark:block")}
+          </>
+        ) : (
+          image(logo.src)
+        )}
+      </span>
     </span>
   );
 };
 
 /** One row's content: logo tile, name and detail, status word, chevron. */
-const RowBody = ({ row, tile }: Readonly<{ row: DeviceRow; tile: boolean }>) => (
+const RowBody = ({ row, tile }: Readonly<{ row: DeviceRow; tile: number }>) => (
   <>
     {row.logo ? (
       <Logo logo={row.logo} />
     ) : tile ? (
       // Keeps the names aligned when other rows have a logo; never a drawn glyph.
-      <span aria-hidden="true" className="bg-muted size-10 shrink-0 rounded-lg" />
+      <span aria-hidden="true" className="shrink-0" style={{ width: tile }} />
     ) : null}
     <span className="min-w-0 flex-1">
       <span className="text-foreground block truncate font-sans">{row.name}</span>
@@ -71,13 +96,14 @@ const RowBody = ({ row, tile }: Readonly<{ row: DeviceRow; tile: boolean }>) => 
   </>
 );
 
-const ROW = "flex min-h-16 items-center gap-3 px-5 py-3";
+/** Little vertical padding: a logo's own clear space fills the row's height. */
+const ROW = "flex min-h-16 items-center gap-3 px-5 py-1";
 
 /**
  * C15: a titled group of rows, one per device or source, with hairlines
  * between them. A row with `href` is a link with a chevron. A logo is the
- * vendor's own file, unmodified, sized by height on a card-coloured tile;
- * the kit never draws a device glyph. Loading shows row shapes; empty
+ * vendor's own file, unmodified, at its size with clear space and only the
+ * card behind it; the kit never draws a device glyph. Loading shows row shapes; empty
  * shows the outline of a row with what is needed.
  */
 export const DeviceList = ({
@@ -87,7 +113,14 @@ export const DeviceList = ({
   rows,
   emptyNote,
 }: DeviceListProps) => {
-  const tile = rows.some((r) => r.logo);
+  // The widest logo box among rows without an attribution word sets the
+  // spacer for rows without a logo, so names line up; 0 when none has one.
+  const tile = Math.max(
+    0,
+    ...rows.flatMap((r) =>
+      r.logo && !r.logo.attribution ? [logoBox(r.logo).width] : [],
+    ),
+  );
   const body: ReactNode =
     state === "loading" ? (
       <ul aria-hidden="true">
@@ -132,7 +165,9 @@ export const DeviceList = ({
     );
   return (
     <section
-      className="flex flex-col gap-2"
+      // Inline-size containment: long, truncated detail lines never widen a
+      // grid or flex parent; the list takes the width it is given.
+      className="flex flex-col gap-2 [contain:inline-size]"
       aria-busy={state === "loading" ? true : undefined}
       data-state={state}
     >

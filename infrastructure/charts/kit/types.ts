@@ -218,8 +218,10 @@ export type RadarProps = Base & Interactive & Readonly<{ axes: readonly RadarAxi
 /**
  * A vendor's own logo file, shown unmodified: never recoloured, cropped or
  * redrawn. `width` and `height` are the file's own proportions; the row
- * sizes it by height. `darkSrc` is the vendor's version for dark
- * backgrounds, when the guidelines give one.
+ * draws it `size` pixels high (30 by default) with half that as clear
+ * space on every side. `darkSrc` is the vendor's version for dark
+ * backgrounds, when the guidelines give one. `attribution` is a word the
+ * vendor asks for before its logo, such as "Data by".
  */
 export type VendorLogo = Readonly<{
   src: string;
@@ -227,6 +229,8 @@ export type VendorLogo = Readonly<{
   alt: string;
   width: number;
   height: number;
+  size?: number;
+  attribution?: string;
 }>;
 
 /** One device or source in a C15 list. */

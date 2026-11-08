@@ -85,6 +85,20 @@ Copied unchanged from [Opening-Science/Open-Science-Foundation-brand-guide](http
 | `public/brand/Open-Science-Foundation_logo_positive_original.svg` | `6a2813ca6de4b2c10f99948a1c1124cbc2a0c2a51c457d62cecdb1d5e86d5f8a` |
 | `public/brand/Open-Science-Foundation_logo_negative_original.svg` | `a4effe8c61e077fa7881ed6e87412b2de1cc2ca11db8cbf00096727c48db4f2a` |
 
+## Vendor logos (committed, trademarks, not Apache-2.0)
+
+Copied unchanged from each company's brand assets for developers, checked against their brand guidelines on 8 Nov 2026 (the guideline documents are not committed). They identify a service a user has connected and nothing else. Licence note: `LICENSES/LicenseRef-Vendor-Trademarks.txt`, with a `.license` file beside each file; `infrastructure/charts/kit/vendor-logos.test.ts` checks the hashes.
+
+- WHOOP: the outline circle ("Puck") in black for light backgrounds and white for dark ones, at 30px or more with clear space, always after an attribution word ("Data by"). Not recoloured, not placed on WHOOP's own charts.
+- Google Health: the colour heart, which works on both themes, undistorted. Fitbit's name and logo are not used.
+- Oura: no file. Oura's only official mark is the ŌURA wordmark, whose files sit behind Oura's brand portal; until then Oura is shown by its name in text.
+
+| File                                                         | Source file                   | SHA-256                                                            |
+| ------------------------------------------------------------ | ----------------------------- | ------------------------------------------------------------------ |
+| `public/brand/vendors/whoop/whoop-circle-black.svg`          | `WHOOP Circle Black.svg`      | `74cc38d55e786eaeacfdf6f6cc151c12ae560aa2b67d38872178e6bb032f3cda` |
+| `public/brand/vendors/whoop/whoop-circle-white.svg`          | `WHOOP Circle White.svg`      | `393a9a82e69ea2d45a2a1894cd4c890119ef19cf514beb7a96048eaa49140007` |
+| `public/brand/vendors/google-health/google-health-heart.png` | `Google_Health_Heart_RGB.png` | `6c37cb48899a1359df640db130b77215feb78aae52d6bf647ef5451f88269d6f` |
+
 ## Natural Earth boundaries (committed, public domain)
 
 `public/geo/natural-earth/` and `infrastructure/charts/choropleth/location-index.json` are built by `scripts/geo/build-natural-earth.ts` from Natural Earth 5.1.1 (`ne_50m_admin_0_countries.zip`, SHA-256 `5fed433373581fa648920435f937d95f2d3c0200e067409c6478dcdf1b853139`; `ne_10m_admin_1_states_provinces.zip`, SHA-256 `efc59726337323058f9446210adc96673179cd344e053666ee3d28cb58ba2b05`), simplified as `public/geo/natural-earth/README.md` describes. No code from another map library is used; the projection (Equal Earth) and the SVG paths are our own (`infrastructure/charts/choropleth/`).
