@@ -151,6 +151,8 @@
      has the most contrast against the card in either theme, so in dark mode
      the order runs the other way. Each stage clears 3:1 on the card, and a
      hypnogram lane always carries its word. chart-tokens.test.ts measures it. */
+  /* Deliberately the same cream as --muted: a separate role, so a chart can
+     change its track without moving every hover fill, and the other way round. */
   --chart-track: oklch(0.948 0.0094 100); /* cream #efeee7 */
   --stage-deep: oklch(0.34 0.1 295); /* #3d2a65 */
   --stage-core: oklch(0.42 0.12 295); /* #533c87 */
