@@ -17,6 +17,7 @@ describe("labHubCards", () => {
       ["/lab/simulations", "Heart rhythm simulations"],
       ["/lab/evaluations", "Evaluation runs"],
       ["/lab/benchmark", "Rhythm benchmark"],
+      ["/lab/results", "Research results"],
       ["/lab/jobs", "Long jobs"],
       ["/lab/rate", "Second rating"],
     ]);
@@ -28,6 +29,7 @@ describe("labHubCards", () => {
       ["37 synthetic people", "neutral"],
       ["Not run yet", "off"],
       ["Not run yet", "off"],
+      ["Read from docs/research", "neutral"],
       ["Nothing running", "neutral"],
       ["Question sets hb and v1h", "neutral"],
     ]);
@@ -46,6 +48,7 @@ describe("labHubCards", () => {
       "Synthetic mode only",
       "100 runs",
       "3 runs",
+      "Read from docs/research",
       "2 jobs running",
       "Question sets hb and v1h",
     ]);
@@ -78,6 +81,7 @@ describe("labHubCards", () => {
       "simulations",
       "evaluations",
       "benchmark",
+      "results",
       "jobs",
       "rate",
     ]);

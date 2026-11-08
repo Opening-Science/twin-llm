@@ -1,0 +1,47 @@
+{
+  "title": "Heart-brain: within-person timing and wearable recovery (#262)",
+  "timing": {
+    "batches001to100": [
+      {
+        "minAgeYears": 0,
+        "withinPerson": {
+          "people": 8144,
+          "windows": [
+            {
+              "window": "after",
+              "events": 272,
+              "personYears": 52123.8,
+              "per100": 0.522,
+              "crudeExact": {
+                "ratio": 4.529,
+                "low": 3.024,
+                "high": 7.058
+              },
+              "ageAdjustedMH": {
+                "ratio": 3.093,
+                "low": 2.067,
+                "high": 4.627
+              }
+            },
+            {
+              "window": "0-2 y",
+              "events": 40,
+              "personYears": 7903.7,
+              "per100": 0.506,
+              "crudeExact": {
+                "ratio": 4.392,
+                "low": 2.615,
+                "high": 7.496
+              },
+              "ageAdjustedMH": {
+                "ratio": 3.807,
+                "low": 2.345,
+                "high": 6.183
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

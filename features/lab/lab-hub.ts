@@ -13,7 +13,7 @@ import { RATED_SETS } from "./rater-rubric";
  */
 
 export type LabPart =
-  "checks" | "simulations" | "evaluations" | "benchmark" | "jobs" | "rate";
+  "checks" | "simulations" | "evaluations" | "benchmark" | "results" | "jobs" | "rate";
 
 /** The hub's order: what runs here, what you can make, what has been measured, who rates it. */
 export const LAB_PARTS: readonly LabPart[] = [
@@ -21,6 +21,7 @@ export const LAB_PARTS: readonly LabPart[] = [
   "simulations",
   "evaluations",
   "benchmark",
+  "results",
   "jobs",
   "rate",
 ];
@@ -30,6 +31,7 @@ export const LAB_PATH: Readonly<Record<LabPart, string>> = {
   simulations: "/lab/simulations",
   evaluations: "/lab/evaluations",
   benchmark: "/lab/benchmark",
+  results: "/lab/results",
   jobs: "/lab/jobs",
   rate: "/lab/rate",
 };
@@ -39,6 +41,7 @@ export const LAB_TITLE: Readonly<Record<LabPart, string>> = {
   simulations: "Heart rhythm simulations",
   evaluations: "Evaluation runs",
   benchmark: "Rhythm benchmark",
+  results: "Research results",
   jobs: "Long jobs",
   rate: "Second rating",
 };
@@ -52,6 +55,8 @@ export const LAB_LINE: Readonly<Record<LabPart, string>> = {
     "Pass rates per model and scenario from the evaluation runs on this machine.",
   benchmark:
     "How the research flag and rhythm metrics do on simulated and database recordings.",
+  results:
+    "Figures from the committed research notes: grounding, in-silico arrhythmia, heart–brain cohorts and disclosure.",
   jobs: "The last run of each command-line job, read from the files it writes.",
   rate: "Rate answers blind, one at a time, next to the automatic scorer.",
 };
@@ -127,6 +132,8 @@ export const labHubCards = (input: LabHubInput): readonly LabHubCard[] => {
     simulations: simulationsMeta(input.simulationSubjects),
     evaluations: runsMeta(input.runs),
     benchmark: benchmarkMeta(input.benchmarkRuns),
+    // Committed files in the repository: nothing to count on the hub.
+    results: { meta: "Read from docs/research", tone: "neutral" },
     jobs: jobsMeta(input.jobs),
     rate: {
       meta: `Question sets ${RATED_SETS.join(" and ")}`,
