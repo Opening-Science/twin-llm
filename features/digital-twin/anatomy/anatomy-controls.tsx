@@ -52,6 +52,7 @@ export const AnatomyControls = ({
   dispatch,
   onInteract,
   envelope = "scan",
+  posed = false,
 }: Readonly<{
   state: AnatomyState;
   /** null until /api/anatomy/status answers (or if it cannot be reached). */
@@ -60,6 +61,8 @@ export const AnatomyControls = ({
   onInteract: () => void;
   /** The demo body changes the fit and shape notes; real scans keep theirs. */
   envelope?: AnatomyEnvelope;
+  /** The demo body is posed to the atlas's stance: only a rigged body is. */
+  posed?: boolean;
 }>) => {
   const sliderId = useId();
   const listId = useId();
@@ -171,7 +174,9 @@ export const AnatomyControls = ({
           </p>
         ) : null}
         {ready && !ready.fitOk ? <p>{ANATOMY_FIT_FAILED}</p> : null}
-        {ready && ready.fitOk ? <p>{anatomyFitNote(ready.anchor, envelope)}</p> : null}
+        {ready && ready.fitOk ? (
+          <p>{anatomyFitNote(ready.anchor, envelope, posed)}</p>
+        ) : null}
         {state.requested ? <p>{anatomyTypicalNote(envelope)}</p> : null}
         {state.requested && coverage ? <p>{coverage}</p> : null}
         {absentLayers.map((layer) => (

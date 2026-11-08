@@ -1091,6 +1091,8 @@ export const BodyLoopAvatar = ({
                     dispatch={anatomy.dispatch}
                     onInteract={onUserRotate}
                     envelope="demo"
+                    // BodyMotion poses a body to its stance once it has a rig binding.
+                    posed={motion.binding !== null}
                   />
                 ),
                 panel: {

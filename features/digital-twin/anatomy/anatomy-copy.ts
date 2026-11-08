@@ -2,7 +2,7 @@ import { type AtlasId } from "@/packages/anatomy/manifest";
 import { depthPosition, type LayerId } from "@/packages/anatomy/layers";
 import { type OrganSystem } from "@/packages/anatomy/systems";
 
-import { DEMO_FIT_NOTE, DEMO_TYPICAL_NOTE } from "./demo-copy";
+import { DEMO_FIT_NOTE, DEMO_FIT_NOTE_UNPOSED, DEMO_TYPICAL_NOTE } from "./demo-copy";
 
 /**
  * Every user-facing string for the anatomy layers, in one place so lint:claims
@@ -51,12 +51,16 @@ export type AnatomyEnvelope = "scan" | "demo";
 export const anatomyTypicalNote = (envelope: AnatomyEnvelope = "scan"): string =>
   envelope === "demo" ? DEMO_TYPICAL_NOTE : ANATOMY_TYPICAL_NOTE;
 
+/** `posed`: the demo body stands in the atlas's stance (a rigged body); scans ignore it. */
 export const anatomyFitNote = (
   anchor: "hips" | "bbox",
   envelope: AnatomyEnvelope = "scan",
+  posed = false,
 ): string =>
   envelope === "demo"
-    ? DEMO_FIT_NOTE
+    ? posed
+      ? DEMO_FIT_NOTE
+      : DEMO_FIT_NOTE_UNPOSED
     : anchor === "hips"
       ? "Reference anatomy from a donor atlas, scaled to this scan's height and aligned at the hips. Not the scanned person's anatomy."
       : "Reference anatomy from a donor atlas, scaled to this scan's height and centred on the scan outline. Not the scanned person's anatomy.";

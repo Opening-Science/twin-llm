@@ -17,7 +17,7 @@ import {
   HIGHLIGHT_SYSTEMS_ONLY,
 } from "./anatomy-copy";
 import { initialAnatomyState, type AnatomyState } from "./anatomy-state";
-import { DEMO_FIT_NOTE, DEMO_TYPICAL_NOTE } from "./demo-copy";
+import { DEMO_FIT_NOTE, DEMO_FIT_NOTE_UNPOSED, DEMO_TYPICAL_NOTE } from "./demo-copy";
 import { highlightOptions, highlightValue } from "./highlight-options";
 
 const ALL_INSTALLED = { bodyparts3d: true, "hra-f": true, "hra-m": true } as const;
@@ -155,8 +155,8 @@ describe("AnatomyControls", () => {
     expect(html).toContain('aria-pressed="false">Nervous</button>');
   });
 
-  test("inside the demo body the notes say synthetic and bbox, never 'scanned person'", () => {
-    const html = renderToStaticMarkup(
+  const demoHtml = (posed?: boolean) =>
+    renderToStaticMarkup(
       createElement(AnatomyControls, {
         state: {
           ...initialAnatomyState,
@@ -168,9 +168,13 @@ describe("AnatomyControls", () => {
         dispatch: () => undefined,
         onInteract: () => undefined,
         envelope: "demo",
+        ...(posed === undefined ? {} : { posed }),
       }),
     ).replaceAll("&#x27;", "'");
-    expect(anatomyFitNote("bbox", "demo")).toBe(
+
+  test("inside the demo body the notes say synthetic and bbox, never 'scanned person'", () => {
+    const html = demoHtml(true);
+    expect(anatomyFitNote("bbox", "demo", true)).toBe(
       "Reference anatomy from a donor atlas, scaled to the demo body's height and centred on its outline. The demo body is posed to the atlas's stance, its feet over the atlas's feet. The hips are not aligned.",
     );
     expect(html).toContain(DEMO_FIT_NOTE);
@@ -178,6 +182,15 @@ describe("AnatomyControls", () => {
     expect(html).not.toContain(ANATOMY_TYPICAL_NOTE);
     expect(html).not.toContain("scanned person");
     expect(html).toContain(ATLASES.bodyparts3d.attribution);
+  });
+
+  test("a demo body that is not posed (the static fallback) never claims the stance", () => {
+    expect(anatomyFitNote("bbox", "demo")).toBe(DEMO_FIT_NOTE_UNPOSED);
+    expect(DEMO_FIT_NOTE_UNPOSED).not.toContain("stance");
+    for (const html of [demoHtml(), demoHtml(false)]) {
+      expect(html).toContain(DEMO_FIT_NOTE_UNPOSED);
+      expect(html).not.toContain("stance");
+    }
   });
 });
 

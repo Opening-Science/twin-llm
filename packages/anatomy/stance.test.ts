@@ -1,13 +1,15 @@
 import { describe, expect, test } from "bun:test";
 
 import { DEMO_BODY_IDS } from "./demo-bodies";
-import { ATLAS_IDS } from "./manifest";
+import { ATLAS_IDS, ATLASES } from "./manifest";
+import { RIGGED_BODIES } from "./rigged-bodies";
 import {
   adductionToReach,
   ankleCentres,
   ankleOffsets,
   ankleSpread,
   DEMO_STANCE,
+  DEMO_STANCE_MEASURED_ON,
   type Point3,
 } from "./stance";
 
@@ -98,6 +100,15 @@ describe("adductionToReach", () => {
 });
 
 describe("DEMO_STANCE", () => {
+  test("was measured on the pinned files: a new pin means measuring the angles again", () => {
+    for (const body of DEMO_BODY_IDS) {
+      expect(RIGGED_BODIES[body].sha256).toBe(DEMO_STANCE_MEASURED_ON.riggedBodies[body]);
+    }
+    for (const atlas of ATLAS_IDS) {
+      expect(ATLASES[atlas].sha256).toBe(DEMO_STANCE_MEASURED_ON.atlases[atlas]);
+    }
+  });
+
   test("has a small hip angle for every demo body and atlas", () => {
     for (const body of DEMO_BODY_IDS) {
       for (const atlas of ATLAS_IDS) {

@@ -35,7 +35,10 @@ export const DEMO_TYPICAL_NOTE =
 
 /**
  * The rigged demo body's legs are posed to the atlas's stance
- * (`packages/anatomy/stance.ts`); the static fallback body is not.
+ * (`packages/anatomy/stance.ts`): `DEMO_FIT_NOTE`. The static fallback body
+ * has no skeleton and is not posed: `DEMO_FIT_NOTE_UNPOSED`.
  */
 export const DEMO_FIT_NOTE =
   "Reference anatomy from a donor atlas, scaled to the demo body's height and centred on its outline. The demo body is posed to the atlas's stance, its feet over the atlas's feet. The hips are not aligned.";
+export const DEMO_FIT_NOTE_UNPOSED =
+  "Reference anatomy from a donor atlas, scaled to the demo body's height and centred on its outline. The hips are not aligned.";

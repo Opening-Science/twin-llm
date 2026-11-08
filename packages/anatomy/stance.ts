@@ -98,6 +98,27 @@ export type DemoStance = Readonly<{
  * 43 cm. A negative angle turns the legs outward. The measurement is in
  * docs/anatomy.md.
  */
+/**
+ * The SHA-256 pins of the files `DEMO_STANCE` was measured on (2026-11-08):
+ * the rigged demo bodies (`rigged-bodies.ts`) and the atlases (`manifest.ts`).
+ * `stance.test.ts` fails when a pin moves, so the angles are measured again
+ * on the new files and these updated with them, rather than left to drift.
+ */
+export const DEMO_STANCE_MEASURED_ON: Readonly<{
+  riggedBodies: Readonly<Record<DemoBodyId, string>>;
+  atlases: Readonly<Record<AtlasId, string>>;
+}> = {
+  riggedBodies: {
+    "anny-adult-m": "16d101090af7719069cd78d0a091d7d9c4975bc45df44201f23761ea89553589",
+    "anny-adult-f": "9032bfeb29ba4be8aeb0eb38a81e72c5dd5420a38005913d907c83c4f87fdbe1",
+  },
+  atlases: {
+    bodyparts3d: "a65116b5ac9e33f37794e0f364bbf1375e29af3212a458caace107a983274855",
+    "hra-f": "37468cf1180b0367a698d40eefd962df0b12a53c1ce74a29d8b70a8af5dc0eb1",
+    "hra-m": "5d820f289a529ef6ee6d2a1158c867d33f25dceaf269eebbbcd46f85b602addc",
+  },
+};
+
 export const DEMO_STANCE: Readonly<
   Record<DemoBodyId, Readonly<Record<AtlasId, DemoStance>>>
 > = {
