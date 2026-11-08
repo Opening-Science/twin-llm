@@ -17,6 +17,7 @@ import type { AppendInput } from "@/packages/audit/append";
 
 export const PERSONAL_READ_PURPOSES = [
   "wearables-summary",
+  "wearables-detail",
   "genome-report",
   "connectors-page",
   "sync-oura",

@@ -25,6 +25,7 @@ import {
 import { createVitronicSnapshotsHandler } from "@/features/vitronic/snapshots-handler";
 import { createVitronicStatusGetHandler } from "@/features/vitronic/status-handler";
 import { createVitronicSubjectsGetHandler } from "@/features/vitronic/subjects-handler";
+import { createWearablesDetailHandler } from "@/features/wearables/detail-handler";
 import { createWearablesSummaryHandler } from "@/features/wearables/summary-handler";
 import {
   createWearableSyncHandler,
@@ -314,6 +315,20 @@ const PERSONAL_READ_ROUTES: Readonly<Record<string, Entry>> = {
           getLatestVitronicSummary(userId, { ...opts, ports: vitronicPorts(record) }),
         auditPersonalRead: auditPersonalRead(record.append),
       })(),
+  },
+  "GET /api/wearables/detail": {
+    kind: "audited",
+    tools: ["personal.read.wearables-detail"],
+    call: (record) =>
+      createWearablesDetailHandler({
+        ...signedIn,
+        getLatestBundle: async () => ({ resourceType: "Bundle", type: "collection" }),
+        auditPersonalRead: auditPersonalRead(record.append),
+      })(
+        new Request(
+          "http://localhost/api/wearables/detail?source=oura&start=2026-01-01&end=2026-01-04",
+        ),
+      ),
   },
   "GET /api/genome/report": {
     kind: "audited",
@@ -1056,6 +1071,7 @@ describe("locked personal data (#142)", () => {
       "GET /api/vitronic/subjects",
       "GET /api/vitronic/subjects/[subjectId]/scans",
       "GET /api/vitronic/subjects/[subjectId]/snapshots",
+      "GET /api/wearables/detail",
       "GET /api/wearables/summary",
       "PATCH /api/personal-data/datasets/[id]",
       "POST /api/chat",
