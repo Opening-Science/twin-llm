@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 import {
   ComparisonPair,
+  DeviceList,
   Consistency,
   CumulativeDay,
   Hypnogram,
@@ -739,5 +740,100 @@ describe("text never fades below AA", () => {
   test("marks still step back", () => {
     expect(html(focused.weekly)).toContain('fill-opacity="0.4"');
     expect(html(focused.radar)).toContain('fill-opacity="0.4"');
+  });
+});
+
+describe("device list", () => {
+  const logo = {
+    src: "/brand/vendors/example.svg",
+    alt: "Example",
+    width: 120,
+    height: 30,
+  };
+
+  test("rows with names, details, status words and a link with a chevron", () => {
+    const out = html(
+      <DeviceList
+        category="vitals"
+        title="Devices"
+        rows={[
+          {
+            name: "Ring",
+            detail: "Synced 4 minutes ago",
+            status: { word: "Linked", tone: "ok" },
+            href: "/wearables",
+          },
+          { name: "Band", status: { word: "Not synced", tone: "warn" } },
+        ]}
+      />,
+    );
+    expect(out).toContain("Devices");
+    expect(out).toContain("Synced 4 minutes ago");
+    expect(out).toContain("Linked");
+    expect(out).toContain("Not synced");
+    expect(out).toContain('href="/wearables"');
+    expect(out.match(/<svg/g)).toHaveLength(1);
+  });
+
+  test("no logo anywhere, no tile column", () => {
+    const out = html(
+      <DeviceList category="vitals" title="Devices" rows={[{ name: "Ring" }]} />,
+    );
+    expect(out).not.toContain("<img");
+    expect(out).not.toContain("bg-muted size-10");
+  });
+
+  test("a logo is the vendor's file, unoptimised, sized by height in its own proportions", () => {
+    const out = html(
+      <DeviceList
+        category="vitals"
+        title="Devices"
+        rows={[{ name: "Ring", logo }, { name: "Band" }]}
+      />,
+    );
+    expect(out.match(/<img/g)).toHaveLength(1);
+    expect(out).toContain('alt="Example"');
+    expect(out).toContain('src="/brand/vendors/example.svg"');
+    expect(out).toContain('width="80"');
+    expect(out).toContain('height="20"');
+    // The row without a logo keeps an empty tile so names line up.
+    expect(out).toContain("bg-muted size-10");
+  });
+
+  test("a dark version shows per theme", () => {
+    const out = html(
+      <DeviceList
+        category="vitals"
+        title="Devices"
+        rows={[
+          { name: "Ring", logo: { ...logo, darkSrc: "/brand/vendors/example-dark.svg" } },
+        ]}
+      />,
+    );
+    expect(out.match(/<img/g)).toHaveLength(2);
+    expect(out).toContain("example-dark.svg");
+  });
+
+  test("loading shows row shapes, empty says what is needed", () => {
+    const loading = html(
+      <DeviceList
+        category="vitals"
+        state="loading"
+        title="Devices"
+        rows={[{ name: "Ring" }]}
+      />,
+    );
+    expect(loading).toContain('aria-busy="true"');
+    expect(loading).not.toContain("Ring");
+    const empty = html(
+      <DeviceList
+        category="vitals"
+        state="empty"
+        title="Devices"
+        rows={[]}
+        emptyNote="No device linked yet"
+      />,
+    );
+    expect(empty).toContain("No device linked yet");
   });
 });

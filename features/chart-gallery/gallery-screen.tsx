@@ -7,6 +7,7 @@ import {
   type ChartRange,
   type ChartState,
   ComparisonPair,
+  DeviceList,
   Consistency,
   CumulativeDay,
   Hypnogram,
@@ -426,6 +427,34 @@ export const GalleryScreen = () => (
             axis={["25 Oct", "7 Nov"]}
           />
         </InsightCard>
+      )}
+    />
+
+    <Row
+      name="C15 Device rows"
+      note="One row per source, with a status word; a row can link on. A logo, when given, is the vendor's own file, unmodified and sized by height. This example has none."
+      render={(state) => (
+        <DeviceList
+          category="vitals"
+          state={state}
+          title="Sources"
+          emptyNote="No source linked yet"
+          rows={[
+            {
+              name: "Oura",
+              detail: "Made-up: synced 4 minutes ago",
+              status: { word: "Linked", tone: "ok" },
+              href: "/lab/design",
+            },
+            {
+              name: "WHOOP",
+              detail: "Made-up: last sync 3 days ago",
+              status: { word: "Stale", tone: "warn" },
+              href: "/lab/design",
+            },
+            { name: "Google Health", status: { word: "Not linked", tone: "neutral" } },
+          ]}
+        />
       )}
     />
 

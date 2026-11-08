@@ -32,6 +32,7 @@ export { StreakGrid } from "./c07-streak-grid";
 export { RangeBars } from "./c08-range-bars";
 export { Hypnogram, hoursMinutes } from "./c09-hypnogram";
 export { ScoreRing } from "./c10-score-ring";
+export { DeviceList } from "./c15-device-list";
 export { MonthComparison } from "./c12-month-comparison";
 export { Consistency } from "./c13-consistency";
 export { Radar, radarHeight } from "./c18-radar";
