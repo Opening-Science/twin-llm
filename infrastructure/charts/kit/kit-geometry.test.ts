@@ -4,9 +4,11 @@ import {
   barsWithLine,
   cumulativeDay,
   estimateRows,
+  exactDecimals,
   hypnogram,
   monthShares,
   nullFigure,
+  radar,
   rangeBars,
   scoreRing,
   streakGrid,
@@ -247,5 +249,77 @@ describe("null figure", () => {
 
   test("no draws, no bars", () => {
     expect(nullFigure([], 1, box).bars).toEqual([]);
+  });
+});
+
+describe("exact decimals", () => {
+  test("write every tick exactly", () => {
+    expect(exactDecimals([0, 0.25, 0.5, 0.75, 1])).toBe(2);
+    expect(exactDecimals([1, 2, 3])).toBe(0);
+    expect(exactDecimals([0.1, 0.2])).toBe(1);
+    expect(exactDecimals([1 / 3])).toBe(4);
+  });
+});
+
+describe("radar", () => {
+  const axis = (value: number | null, max = 10, reference: number | null = null) => ({
+    label: "x",
+    value,
+    display: "",
+    reference,
+    max,
+  });
+  const square = { width: 200, height: 200 };
+  const room = { x: 0, y: 0 };
+
+  test.each([3, 4, 5, 8])("%i axes give that many vertices, first at the top", (n) => {
+    const out = radar(
+      Array.from({ length: n }, () => axis(10)),
+      square,
+      room,
+    );
+    expect(out.points).toHaveLength(n);
+    expect(out.spokes).toHaveLength(n);
+    expect(out.anchors).toHaveLength(n);
+    expect(out.rings).toHaveLength(3);
+    expect(out.points[0]!.x).toBeCloseTo(100);
+    expect(out.points[0]!.y).toBeCloseTo(0);
+    expect(out.anchors[0]).toMatchObject({ align: "middle", above: true });
+  });
+
+  test("each axis is its own scale", () => {
+    const out = radar([axis(5, 10), axis(50, 100), axis(1, 2)], square, room);
+    const distance = (p: { x: number; y: number }) => Math.hypot(p.x - 100, p.y - 100);
+    for (const p of out.points) expect(distance(p)).toBeCloseTo(50);
+  });
+
+  test("a value above its maximum stops at the rim", () => {
+    const out = radar([axis(30), axis(10), axis(10), axis(10)], square, room);
+    expect(out.points[0]).toEqual({ x: 100, y: 0 });
+  });
+
+  test("a missing value sits at the centre", () => {
+    const out = radar([axis(null), axis(10), axis(10)], square, room);
+    expect(out.points[0]).toEqual({ x: 100, y: 100 });
+  });
+
+  test("the reference is drawn only when an axis has one", () => {
+    expect(radar([axis(5), axis(5), axis(5)], square, room).reference).toBe("");
+    expect(radar([axis(5, 10, 8), axis(5), axis(5)], square, room).reference).toMatch(
+      /Z$/,
+    );
+  });
+
+  test("the chart shrinks to leave room for its labels", () => {
+    const wide = radar([axis(1), axis(1), axis(1)], { width: 600, height: 300 });
+    const narrow = radar([axis(1), axis(1), axis(1)], { width: 300, height: 300 });
+    expect(narrow.radius).toBeLessThan(wide.radius);
+    expect(narrow.radius).toBe((300 - 2 * 84) / 2);
+    expect(narrow.anchors[1]!.align).toBe("start");
+    expect(narrow.anchors[2]!.align).toBe("end");
+  });
+
+  test("fewer than three axes draw nothing", () => {
+    expect(radar([axis(1), axis(1)], square).value).toBe("");
   });
 });

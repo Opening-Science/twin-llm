@@ -1,6 +1,7 @@
+import { cn } from "@/infrastructure/ui";
+
 import { categoryTextClass } from "../category-token";
 import { monthShares } from "./kit-geometry";
-import { join } from "./kit-parts";
 import type { MonthComparisonProps } from "./types";
 
 /**
@@ -27,14 +28,14 @@ export const MonthComparison = ({
             {state === "default" ? row.display : "–"}
           </p>
           <div
-            className={join(
+            className={cn(
               "flex h-8 items-center rounded-lg px-3 font-mono text-xs",
               state === "loading" && "bg-chart-track w-full motion-safe:animate-pulse",
               state === "empty" &&
                 "border-chart-reference text-muted-foreground w-full border",
               state === "default" &&
                 (row.now
-                  ? join(categoryTextClass(category), "bg-current")
+                  ? cn(categoryTextClass(category), "bg-current")
                   : "bg-chart-track text-foreground"),
             )}
             style={

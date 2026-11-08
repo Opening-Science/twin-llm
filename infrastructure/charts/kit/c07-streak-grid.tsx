@@ -1,6 +1,7 @@
+import { cn } from "@/infrastructure/ui";
+
 import { categoryTextClass } from "../category-token";
 import { streakGrid, weekdayLetters } from "./kit-geometry";
-import { join } from "./kit-parts";
 import type { StreakGridProps } from "./types";
 
 /**
@@ -29,7 +30,7 @@ export const StreakGrid = ({
         ? Array.from({ length: rows * 7 }, (_, i) => (
             <span
               key={i}
-              className={join(
+              className={cn(
                 "aspect-square rounded-[10px]",
                 state === "loading"
                   ? "bg-chart-track motion-safe:animate-pulse"
@@ -43,22 +44,28 @@ export const StreakGrid = ({
             return (
               <span
                 key={cell.date}
-                className={join(
-                  "text-axis relative flex aspect-square items-center justify-center rounded-[10px] font-mono tabular-nums",
+                className={cn(
+                  "text-axis flex aspect-square flex-col items-center justify-center rounded-[10px] font-mono leading-none tabular-nums",
                   cell.done
-                    ? join(tone, "bg-current")
+                    ? cn(tone, "bg-current")
                     : "bg-chart-track text-muted-foreground",
                   cell.today && "outline-foreground outline-2 outline-offset-1",
                 )}
               >
-                <span className={cell.done ? "text-card font-bold" : undefined}>
-                  {cell.day}
-                </span>
+                {/* The month sits inside its first cell, so it never covers a neighbour. */}
                 {cell.month ? (
-                  <span className="text-muted-foreground absolute -top-3.5 left-0 text-[10px]">
+                  <span
+                    className={cn(
+                      "text-[9px]",
+                      cell.done ? "text-card" : "text-muted-foreground",
+                    )}
+                  >
                     {cell.month}
                   </span>
                 ) : null}
+                <span className={cell.done ? "text-card font-bold" : undefined}>
+                  {cell.day}
+                </span>
               </span>
             );
           })}

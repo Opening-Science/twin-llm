@@ -39,8 +39,9 @@ export const Consistency = ({
           </>
         ) : (
           <>
-            <Hero hero={reference} category={category} reference />
+            <Hero pair hero={reference} category={category} reference />
             <Hero
+              pair
               hero={state === "empty" ? { ...last, value: "–" } : last}
               category={category}
             />

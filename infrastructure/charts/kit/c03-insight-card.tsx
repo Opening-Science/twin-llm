@@ -1,5 +1,6 @@
+import { cn } from "@/infrastructure/ui";
+
 import { categoryTextClass } from "../category-token";
-import { join } from "./kit-parts";
 import type { InsightCardProps } from "./types";
 
 /**
@@ -23,7 +24,7 @@ export const InsightCard = ({
     <header className="flex items-center gap-2 text-sm">
       <span
         aria-hidden="true"
-        className={join(
+        className={cn(
           "inline-block size-2.5 rounded-full bg-current",
           categoryTextClass(category),
         )}

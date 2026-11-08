@@ -10,6 +10,7 @@ import {
   InsightCard,
   LabResultCard,
   MonthComparison,
+  Radar,
   RangeBars,
   ResearchFigure,
   ScoreRing,
@@ -119,6 +120,17 @@ const charts = (state: ChartState) => ({
       target={30}
       reference={{ label: "Average bedtime", value: "11:12 PM" }}
       last={{ label: "Last night", value: "11:48 PM" }}
+    />
+  ),
+  radar: (
+    <Radar
+      category="sleep"
+      state={state}
+      axes={[
+        { label: "REM", value: 96, display: "1 hr 36 min", reference: 88, max: 150 },
+        { label: "Deep", value: 70, display: "1 hr 10 min", max: 120 },
+        { label: "Core", value: null, display: "4 hr 8 min", max: 330 },
+      ]}
     />
   ),
   estimates: (
@@ -253,6 +265,17 @@ describe("words, not tooltips", () => {
     expect(empty).not.toContain("6,204");
     expect(empty).toContain("7,950");
   });
+});
+
+test("radar vertices carry their word and value; a missing value is a dash", () => {
+  const out = html(charts("default").radar);
+  expect(out).toContain("REM");
+  expect(out).toContain("1 hr 36 min");
+  expect(out).not.toContain("4 hr 8 min");
+  expect(out).toContain("–");
+  const empty = html(charts("empty").radar);
+  expect(empty).toContain("Deep");
+  expect(empty).not.toContain("1 hr 36 min");
 });
 
 describe("lab result card", () => {

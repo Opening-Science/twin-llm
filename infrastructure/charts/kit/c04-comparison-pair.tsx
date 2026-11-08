@@ -17,10 +17,11 @@ export const ComparisonPair = ({
     ) : (
       <>
         <Hero
+          pair
           hero={state === "empty" ? { ...today, value: "–" } : today}
           category={category}
         />
-        <Hero hero={reference} category={category} reference />
+        <Hero pair hero={reference} category={category} reference />
       </>
     )}
   </div>

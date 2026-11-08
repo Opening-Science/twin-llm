@@ -481,3 +481,112 @@ export const nullFigure = (
     atOrBeyond: values.filter((v) => v >= observed).length / values.length,
   };
 };
+
+/**
+ * The fewest decimals (at most 4) that write every value exactly, so a
+ * quarter step reads 0.25, not 0.3.
+ */
+export const exactDecimals = (values: readonly number[]): number =>
+  [0, 1, 2, 3, 4].find((d) =>
+    values.every((v) => Math.abs(Number(v.toFixed(d)) - v) < 1e-9),
+  ) ?? 4;
+
+/* --- C18 radar --------------------------------------------------------------- */
+
+/** One axis of a radar: its own 0 to `max`, since the parts have different units. */
+export type RadarAxis = Readonly<{
+  label: string;
+  value: number | null;
+  /** The value written beside the label, formatted by the screen. */
+  display: string;
+  reference?: number | null;
+  max: number;
+}>;
+
+export type RadarAnchor = Readonly<{
+  x: number;
+  y: number;
+  /** SVG text-anchor for the label, so it grows away from the chart. */
+  align: "start" | "middle" | "end";
+  /** Whether the two label lines sit above the anchor (top axes) or below. */
+  above: boolean;
+}>;
+
+export type Radar = Readonly<{
+  centre: Point;
+  radius: number;
+  /** Guide polygons at a third, two thirds and the full radius. */
+  rings: readonly string[];
+  spokes: readonly Point[];
+  /** Today's polygon and its vertices; a missing value sits at the centre. */
+  value: string;
+  points: readonly Point[];
+  /** The reference polygon; empty when no axis has a reference. */
+  reference: string;
+  anchors: readonly RadarAnchor[];
+}>;
+
+const closed = (points: readonly Point[]): string =>
+  points.length === 0 ? "" : `${linePath(points)} Z`;
+
+/**
+ * A radar of three or more axes, clockwise from the top. The radius is what
+ * is left of the box after `room` for the labels on each side, so on a
+ * narrow screen the chart shrinks before its words do. Values are clamped
+ * to their axis.
+ */
+export const radar = (
+  axes: readonly RadarAxis[],
+  box: Box,
+  room: Readonly<{ x: number; y: number }> = { x: 84, y: 36 },
+  gap = 10,
+): Radar => {
+  const centre = { x: box.width / 2, y: box.height / 2 };
+  const radius = Math.max(
+    24,
+    Math.min((box.width - 2 * room.x) / 2, (box.height - 2 * room.y) / 2),
+  );
+  const n = axes.length;
+  const angle = (i: number): number => -Math.PI / 2 + (i * 2 * Math.PI) / n;
+  const at = (i: number, share: number): Point => ({
+    x: centre.x + Math.cos(angle(i)) * radius * share,
+    y: centre.y + Math.sin(angle(i)) * radius * share,
+  });
+  const share = (v: number | null | undefined, max: number): number =>
+    finite(v) && max > 0 ? clamp01(v / max) : 0;
+  if (n < 3) {
+    return {
+      centre,
+      radius,
+      rings: [],
+      spokes: [],
+      value: "",
+      points: [],
+      reference: "",
+      anchors: [],
+    };
+  }
+  const points = axes.map((a, i) => at(i, share(a.value, a.max)));
+  const hasReference = axes.some((a) => finite(a.reference));
+  return {
+    centre,
+    radius,
+    rings: [1 / 3, 2 / 3, 1].map((s) => closed(axes.map((_, i) => at(i, s)))),
+    spokes: axes.map((_, i) => at(i, 1)),
+    value: closed(points),
+    points,
+    reference: hasReference
+      ? closed(axes.map((a, i) => at(i, share(a.reference, a.max))))
+      : "",
+    anchors: axes.map((_, i) => {
+      const cos = Math.cos(angle(i));
+      const sin = Math.sin(angle(i));
+      return {
+        x: centre.x + cos * (radius + gap),
+        y: centre.y + sin * (radius + gap),
+        align: Math.abs(cos) < 0.3 ? "middle" : cos > 0 ? "start" : "end",
+        above: sin < -0.3,
+      };
+    }),
+  };
+};

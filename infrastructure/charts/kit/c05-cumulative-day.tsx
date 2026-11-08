@@ -10,7 +10,7 @@ const PLOT = 112;
 /**
  * C05: today's running total in the category colour, ending in a dot at
  * now, over the usual day in grey. After now the usual day continues in the
- * track tone: the future is faded, not empty.
+ * same grey at lower opacity: the future is faded, not empty.
  */
 export const CumulativeDay = ({
   category,
@@ -55,7 +55,8 @@ export const CumulativeDay = ({
               />
               <path
                 d={day.averageFuture}
-                className="stroke-chart-track fill-none"
+                className="stroke-chart-reference fill-none"
+                strokeOpacity={0.45}
                 strokeWidth={3}
                 strokeLinecap="round"
                 strokeLinejoin="round"
