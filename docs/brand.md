@@ -19,24 +19,25 @@ chart series.
 
 Light follows the guide's "Open editorial" option, and dark follows "Evening stage".
 
-| Token                     | Light                                             | Dark                                              | Job                           |
-| ------------------------- | ------------------------------------------------- | ------------------------------------------------- | ----------------------------- |
-| background                | `#f8f8f4` cream-light                             | `#1d1d1d` black                                   | page                          |
-| card                      | `#ffffff` white                                   | `#242424`                                         | framed blocks                 |
-| popover                   | `#ffffff`                                         | `#2b2b2b`                                         | menus                         |
-| foreground                | `#1d1d1d` black                                   | `#f8f8f4` cream-light                             | body text                     |
-| muted-foreground          | `#646363` gray                                    | `#c0beb2` cream-dark                              | quiet text                    |
-| muted, accent, secondary  | `#efeee7` cream                                   | `#323232` button                                  | hover and chip fills          |
-| border                    | `#d9d8cf`                                         | `#404040`                                         | dividers                      |
-| input                     | `#6f6e66` cream-darker                            | `#828178`                                         | control edges                 |
-| primary                   | `#323232` button                                  | `#73adff` blue                                    | the one interactive accent    |
-| primary-foreground        | `#ffffff`                                         | `#1d1d1d`                                         | label on primary              |
-| ring                      | `#1c4e8f` blue-ink                                | `#73adff` blue                                    | focus outline                 |
-| winner                    | `#197037`                                         | `#5cb572`                                         | TwinLLM's own, marks success  |
-| destructive               | `#b7162d`                                         | `#f8767a`                                         | TwinLLM's own, marks an error |
-| chart-1 to chart-5        | `#1e7777` `#926e10` `#974391` `#6a51a4` `#6f6e66` | `#50bfbe` `#dbb155` `#d285cb` `#aa95e8` `#c0beb2` | data series only              |
-| chart-track               | `#efeee7` cream                                   | `#323232` button                                  | ring track, future, loading   |
-| stage-deep to stage-awake | `#3d2a65` `#533c87` `#6a51a4` `#8572bb`           | `#e0d8fd` `#c5b6f6` `#aa95e8` `#8d7dbf`           | sleep stages, deepest first   |
+| Token                     | Light                                             | Dark                                              | Job                            |
+| ------------------------- | ------------------------------------------------- | ------------------------------------------------- | ------------------------------ |
+| background                | `#f8f8f4` cream-light                             | `#1d1d1d` black                                   | page                           |
+| card                      | `#ffffff` white                                   | `#242424`                                         | framed blocks                  |
+| popover                   | `#ffffff`                                         | `#2b2b2b`                                         | menus                          |
+| foreground                | `#1d1d1d` black                                   | `#f8f8f4` cream-light                             | body text                      |
+| muted-foreground          | `#646363` gray                                    | `#c0beb2` cream-dark                              | quiet text                     |
+| muted, accent, secondary  | `#efeee7` cream                                   | `#323232` button                                  | hover and chip fills           |
+| border                    | `#d9d8cf`                                         | `#404040`                                         | dividers                       |
+| input                     | `#6f6e66` cream-darker                            | `#828178`                                         | control edges                  |
+| primary                   | `#323232` button                                  | `#73adff` blue                                    | the one interactive accent     |
+| primary-foreground        | `#ffffff`                                         | `#1d1d1d`                                         | label on primary               |
+| ring                      | `#1c4e8f` blue-ink                                | `#73adff` blue                                    | focus outline                  |
+| winner                    | `#197037`                                         | `#5cb572`                                         | TwinLLM's own, marks success   |
+| destructive               | `#b7162d`                                         | `#f8767a`                                         | TwinLLM's own, marks an error  |
+| chart-1 to chart-5        | `#1e7777` `#926e10` `#974391` `#6a51a4` `#6f6e66` | `#50bfbe` `#dbb155` `#d285cb` `#aa95e8` `#c0beb2` | data series only               |
+| chart-track               | `#efeee7` cream                                   | `#323232` button                                  | ring track, future, loading    |
+| chart-band                | `#eddcb9` ochre tint                              | `#483b20` ochre tint                              | a flagged window behind a line |
+| stage-deep to stage-awake | `#3d2a65` `#533c87` `#6a51a4` `#8572bb`           | `#e0d8fd` `#c5b6f6` `#aa95e8` `#8d7dbf`           | sleep stages, deepest first    |
 
 Measured contrast, light and dark:
 

@@ -48,6 +48,9 @@ import {
   WEEK_STEPS_AVERAGE,
   WEEK_STEPS_READOUTS,
   RANGE_DEMO,
+  P3_RATIOS,
+  P3_RULE_CHANGE,
+  SPECIALISTS_BY_MODEL,
 } from "./sample-data";
 
 const STATES: readonly ChartState[] = ["default", "loading", "empty"];
@@ -619,6 +622,60 @@ export const GalleryScreen = () => (
       )}
     />
 
+    <section className="flex flex-col gap-3">
+      <header>
+        <h2 className="text-foreground font-sans text-lg">R1 options</h2>
+        <p className="text-muted-foreground text-sm">
+          A study takes a series colour, not a wearable category. Rows of one series share
+          a colour and a legend names them; ratios read on a log axis; an expected value
+          is a grey tick on its row.
+        </p>
+      </header>
+      <div className="grid gap-4 lg:grid-cols-3">
+        <InsightCard
+          category="vitals"
+          series="chart-1"
+          label="Specialists by model"
+          sentence="Made-up: each specialist scores a little higher on qwen3:8b than on qwen3:4b."
+        >
+          <ResearchFigure
+            kind="estimates"
+            category="vitals"
+            estimates={SPECIALISTS_BY_MODEL}
+            domain={[0, 1]}
+          />
+        </InsightCard>
+        <InsightCard
+          category="vitals"
+          series="chart-3"
+          label="Ratios on a log axis"
+          sentence="The within-person estimate is 3.09 (2.07 to 4.63); the made-up rows show the spread near 1."
+        >
+          <ResearchFigure
+            kind="estimates"
+            category="vitals"
+            series="chart-3"
+            scale="log"
+            estimates={P3_RATIOS}
+            reference={{ value: 1, label: "1 = no difference" }}
+          />
+        </InsightCard>
+        <InsightCard
+          category="vitals"
+          series="chart-4"
+          label="Rule change"
+          sentence="After the change the estimate is 3.95, against 3.93 expected."
+        >
+          <ResearchFigure
+            kind="estimates"
+            category="vitals"
+            series="chart-4"
+            estimates={P3_RULE_CHANGE}
+          />
+        </InsightCard>
+      </div>
+    </section>
+
     <Row
       name="R1 Research figure: null"
       note="An observed value against its null distribution."
@@ -645,6 +702,34 @@ export const GalleryScreen = () => (
         </InsightCard>
       )}
     />
+
+    <section className="flex flex-col gap-3">
+      <header>
+        <h2 className="text-foreground font-sans text-lg">R1 null from a summary</h2>
+        <p className="text-muted-foreground text-sm">
+          When only the null&apos;s mean and interval are kept, it is a grey band with its
+          mean; the observed value is in colour.
+        </p>
+      </header>
+      <div className="grid gap-4 lg:grid-cols-3">
+        <InsightCard
+          category="vitals"
+          series="chart-2"
+          label="Observed against a null"
+          sentence="Made-up: an AUC of 0.61 against a shuffled null of 0.50 (0.46 to 0.54)."
+        >
+          <ResearchFigure
+            kind="null"
+            category="vitals"
+            series="chart-2"
+            summary={{ mean: 0.5, low: 0.46, high: 0.54, runs: 200 }}
+            nullLabel="Shuffled, 200 runs"
+            observed={0.61}
+            observedLabel="AUC"
+          />
+        </InsightCard>
+      </div>
+    </section>
 
     <Row
       name="R2 Lab result card"

@@ -12,10 +12,12 @@
 
 import type { ReactNode } from "react";
 
-import type { Category } from "../category-token";
+import type { Category, SeriesToken } from "../category-token";
 import type {
+  AxisScale,
   DaySample,
   Estimate,
+  NullSummary,
   RadarAxis,
   Range,
   RingPart,
@@ -63,6 +65,8 @@ export type ChartRange = "day" | "week" | "month";
 /** C03: label row, one sentence, a hairline, one body. */
 export type InsightCardProps = Base &
   Readonly<{
+    /** A study series colour in place of the category's: a study is not a wearable category. */
+    series?: SeriesToken;
     /** A noun, optionally scoped: "Sleep: Stages". */
     label: string;
     /** The one insight sentence; also what a screen reader reads for the chart. */
@@ -177,13 +181,20 @@ export type ConsistencyProps = Base &
 /** R1: a research figure. */
 export type ResearchFigureProps = Base &
   Interactive &
+  Readonly<{
+    /** A study series colour in place of the category's; rows with their own `series` keep theirs. */
+    series?: SeriesToken;
+  }> &
   (
     | Readonly<{
         kind: "estimates";
+        /** Rows may carry `series` (shared colour, named in a legend) and `expected` (a grey tick). */
         estimates: readonly Estimate[];
         /** A null, control or expected value, drawn as a grey rule. */
         reference?: Readonly<{ value: number; label: string }>;
         domain?: readonly [number, number];
+        /** "log" for ratios: ticks at 0.5, 1, 2, 4, 8. */
+        scale?: AxisScale;
       }>
     | Readonly<{
         kind: "pairs";
@@ -195,7 +206,12 @@ export type ResearchFigureProps = Base &
       }>
     | Readonly<{
         kind: "null";
-        draws: readonly number[];
+        /** The null's draws, drawn as a histogram… */
+        draws?: readonly number[];
+        /** …or its summary, drawn as a band with its mean. */
+        summary?: NullSummary;
+        /** Words under the null's mean when given as a summary, e.g. "Shuffled, 200 runs". */
+        nullLabel?: string;
         observed: number;
         observedLabel: string;
         format?: (value: number) => string;

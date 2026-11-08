@@ -154,6 +154,11 @@
   /* Deliberately the same cream as --muted: a separate role, so a chart can
      change its track without moving every hover fill, and the other way round. */
   --chart-track: oklch(0.948 0.0094 100); /* cream #efeee7 */
+  /* A flagged window behind a line: a tint of chart-2's ochre, so it reads on
+     white where the track's cream nearly vanishes. Every series clears 3:1
+     on it. A band is a background, so a flagged window always carries a word
+     (a legend or label) or an edge too; colour is never the only signal. */
+  --chart-band: oklch(0.9 0.05 85); /* #eddcb9 */
   --stage-deep: oklch(0.34 0.1 295); /* #3d2a65 */
   --stage-core: oklch(0.42 0.12 295); /* #533c87 */
   --stage-rem: oklch(0.5 0.13 295); /* #6a51a4, chart-4 */
@@ -204,6 +209,7 @@
 
   /* --- Chart kit tokens (begin) ----------------------------------------------- */
   --chart-track: oklch(0.3171 0 0); /* button #323232 */
+  --chart-band: oklch(0.36 0.045 85); /* #483b20 */
   --stage-deep: oklch(0.9 0.05 295); /* #e0d8fd */
   --stage-core: oklch(0.81 0.09 295); /* #c5b6f6 */
   --stage-rem: oklch(0.72 0.12 295); /* #aa95e8, chart-4 */
@@ -256,6 +262,7 @@
      tabular-nums, hero bold and axis normal; the insight is font-sans. */
   --color-chart-reference: var(--chart-5);
   --color-chart-track: var(--chart-track);
+  --color-chart-band: var(--chart-band);
   --color-stage-deep: var(--stage-deep);
   --color-stage-core: var(--stage-core);
   --color-stage-rem: var(--stage-rem);

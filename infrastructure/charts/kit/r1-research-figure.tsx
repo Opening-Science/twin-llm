@@ -1,6 +1,6 @@
 "use client";
 
-import { conditionToken, tokenTextClass } from "../category-token";
+import { conditionToken, type SeriesToken, tokenTextClass } from "../category-token";
 import {
   ChartFocusFrame,
   ChartReadout,
@@ -13,26 +13,68 @@ import {
   estimateLayout,
   estimateRows,
   exactDecimals,
+  nullBand,
   nullFigure,
   spacedTicks,
+  type AxisScale,
   type Estimate,
 } from "./kit-geometry";
 import { AXIS_TEXT, ChartSvg, EMPTY_STROKE, LOADING_FILL, toneClass } from "./kit-parts";
 import type { ResearchFigureProps } from "./types";
 
 const AXIS = 22;
+/** Room at either end of the plot, so a dot at 0 or 1 clears its row label. */
+const PAD = 8;
 
 const fixed = (value: number, decimals: number): string => value.toFixed(decimals);
 
+/** A tick on a log axis reads as the ratio itself: 0.5, 1, 2, 4. */
+const ratio = (value: number): string => String(Number(value.toPrecision(3)));
+
 /**
- * Rows of estimates with whiskers on one axis; colour per row from `tone`.
- * With readouts, the row under the pointer or the keys stays full, the
+ * The legend under a figure whose rows are grouped by series, and the
+ * expected tick when rows carry one. Colour is never the only signal: each
+ * series is named here, and each row names its own condition.
+ */
+const Legend = ({
+  series,
+  expected,
+}: Readonly<{ series: readonly string[]; expected: boolean }>) =>
+  series.length === 0 && !expected ? null : (
+    <ul className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 font-mono text-xs">
+      {series.map((name, i) => (
+        <li key={name} className="flex items-center gap-1.5">
+          <span
+            aria-hidden="true"
+            className={`inline-block size-2.5 rounded-full bg-current ${tokenTextClass(conditionToken(i))}`}
+          />
+          {name}
+        </li>
+      ))}
+      {expected ? (
+        <li className="flex items-center gap-1.5">
+          <span
+            aria-hidden="true"
+            className="bg-chart-reference inline-block h-3 w-0.5"
+          />
+          Expected
+        </li>
+      ) : null}
+    </ul>
+  );
+
+/**
+ * Rows of estimates with whiskers on one axis. A row's colour comes from its
+ * `series` when it has one (every row of a series shares it, and a legend
+ * names them), else from `tone`. An expected value is a grey tick on its
+ * row. With readouts, the row under the pointer or the keys stays full, the
  * others step back, and the readout names it.
  */
 const EstimatePlot = ({
   estimates,
   reference,
   domain,
+  scale = "linear",
   tone,
   state,
   label,
@@ -41,11 +83,20 @@ const EstimatePlot = ({
   readonly estimates: readonly Estimate[];
   readonly reference?: Readonly<{ value: number; label: string }>;
   readonly domain?: readonly [number, number];
+  readonly scale?: AxisScale;
   readonly tone: (index: number) => string;
   readonly state: "default" | "loading" | "empty";
   readonly label?: string;
   readonly defaultFocus?: number;
 }) => {
+  const seriesKeys = [...new Set(estimates.flatMap((e) => (e.series ? [e.series] : [])))];
+  const hasExpected = estimates.some(
+    (e) => e.expected !== undefined && e.expected !== null,
+  );
+  const rowTone = (i: number): string => {
+    const key = estimates[i]?.series;
+    return key ? tokenTextClass(conditionToken(seriesKeys.indexOf(key))) : tone(i);
+  };
   const top = reference ? 16 : 0;
   const heightFor = (width: number): number =>
     Math.max(1, estimates.length) * estimateLayout(width).row + AXIS + top;
@@ -71,8 +122,12 @@ const EstimatePlot = ({
           { width: plotWidth, height: estimates.length * layout.row },
           reference?.value ?? null,
           domain,
+          scale,
+          PAD,
         );
         const decimals = exactDecimals(out.ticks.map((t) => t.value));
+        const tickLabel = (value: number): string =>
+          scale === "log" ? ratio(value) : fixed(value, decimals);
         // Stacked: the label sits above its row and the marks a little below it.
         const markY = layout.stacked ? 8 : 0;
         return (
@@ -117,7 +172,7 @@ const EstimatePlot = ({
                       strokeDasharray="2 6"
                     />
                   ) : (
-                    <g className={tone(i)}>
+                    <g className={rowTone(i)}>
                       {row.low !== null && row.high !== null ? (
                         <line
                           x1={row.low}
@@ -137,6 +192,18 @@ const EstimatePlot = ({
                         className="stroke-card fill-current"
                         strokeWidth={2}
                       />
+                      {/* On top of the dot and taller than it, so it shows when the two nearly meet. */}
+                      {row.expected !== null ? (
+                        <line
+                          x1={row.expected}
+                          x2={row.expected}
+                          y1={-11}
+                          y2={11}
+                          className="stroke-chart-reference"
+                          strokeWidth={2}
+                          strokeLinecap="round"
+                        />
+                      ) : null}
                     </g>
                   )}
                 </g>
@@ -158,7 +225,10 @@ const EstimatePlot = ({
                     x={out.referenceX}
                     y={10}
                     textAnchor={edgeAnchor(out.referenceX, plotWidth)}
-                    className={AXIS_TEXT}
+                    // The card-coloured outline keeps its own dotted line out of the words.
+                    className={`${AXIS_TEXT} stroke-card`}
+                    strokeWidth={4}
+                    paintOrder="stroke"
                   >
                     {reference.label}
                   </text>
@@ -172,7 +242,7 @@ const EstimatePlot = ({
                   textAnchor="middle"
                   className={AXIS_TEXT}
                 >
-                  {fixed(t.value, decimals)}
+                  {tickLabel(t.value)}
                 </text>
               ))}
             </g>
@@ -181,7 +251,18 @@ const EstimatePlot = ({
       }}
     </ChartSvg>
   );
-  if (!live) return chart;
+  const legend =
+    state === "default" ? <Legend series={seriesKeys} expected={hasExpected} /> : null;
+  if (!live) {
+    return legend ? (
+      <div className="flex flex-col gap-2">
+        {chart}
+        {legend}
+      </div>
+    ) : (
+      chart
+    );
+  }
   return (
     <div className="flex flex-col gap-2">
       <ChartReadout
@@ -191,6 +272,7 @@ const EstimatePlot = ({
       <ChartFocusFrame focus={focus} label={label ?? "Estimates"}>
         {chart}
       </ChartFocusFrame>
+      {legend}
     </div>
   );
 };
@@ -199,17 +281,21 @@ const EstimatePlot = ({
  * R1, a research figure in the kit's style, in one of three kinds:
  * estimates with interval whiskers across conditions against a reference;
  * a pair of estimates (such as sensitivity and specificity) per dataset; an
- * observed value against a null distribution.
+ * observed value against a null distribution, given as its draws or as a
+ * summary. `series` colours a figure by a study series rather than a
+ * wearable category.
  */
 export const ResearchFigure = (props: ResearchFigureProps) => {
   const state = props.state ?? "default";
+  const single: SeriesToken | undefined = props.series;
   if (props.kind === "estimates") {
     return (
       <EstimatePlot
         estimates={props.estimates}
         reference={props.reference}
         domain={props.domain}
-        tone={(i) => tokenTextClass(conditionToken(i))}
+        scale={props.scale}
+        tone={(i) => tokenTextClass(single ?? conditionToken(i))}
         state={state}
         label={props.label}
         defaultFocus={props.defaultFocus}
@@ -233,15 +319,17 @@ export const ResearchFigure = (props: ResearchFigureProps) => {
     );
   }
   const format = props.format ?? ((v: number) => v.toFixed(2));
+  const observedTone = single ? tokenTextClass(single) : toneClass(props.category, false);
+  const { summary } = props;
   return (
     <ChartSvg height={140}>
       {(width) => {
-        const out = nullFigure(
-          state === "default" ? props.draws : [],
-          props.observed,
-          { width, height: 96 },
-          24,
-        );
+        const draws = state === "default" && !summary ? (props.draws ?? []) : [];
+        const out = nullFigure(draws, props.observed, { width, height: 96 }, 24);
+        const band = summary
+          ? nullBand(summary, props.observed, { width, height: 96 })
+          : null;
+        const observedX = band ? band.observedX : out.observedX;
         return (
           <g data-state={state} transform="translate(0 20)">
             {state === "loading" ? (
@@ -265,13 +353,46 @@ export const ResearchFigure = (props: ResearchFigureProps) => {
               />
             ) : (
               <>
-                {out.bars.map((b, i) => (
-                  <rect key={i} {...b} rx={2} className="fill-chart-reference" />
-                ))}
-                <g className={toneClass(props.category, false)}>
+                {band ? (
+                  <>
+                    {/* The null's interval as a grey band, its mean as a tick. */}
+                    <rect
+                      x={band.low}
+                      y={44}
+                      width={Math.max(2, band.high - band.low)}
+                      height={40}
+                      rx={6}
+                      className="fill-chart-reference"
+                      fillOpacity={0.35}
+                    />
+                    <line
+                      x1={band.mean}
+                      x2={band.mean}
+                      y1={40}
+                      y2={88}
+                      className="stroke-chart-reference"
+                      strokeWidth={2}
+                    />
+                    {props.nullLabel ? (
+                      <text
+                        x={band.mean}
+                        y={104}
+                        textAnchor={edgeAnchor(band.mean, width, 80)}
+                        className={AXIS_TEXT}
+                      >
+                        {props.nullLabel}
+                      </text>
+                    ) : null}
+                  </>
+                ) : (
+                  out.bars.map((b, i) => (
+                    <rect key={i} {...b} rx={2} className="fill-chart-reference" />
+                  ))
+                )}
+                <g className={observedTone}>
                   <line
-                    x1={out.observedX}
-                    x2={out.observedX}
+                    x1={observedX}
+                    x2={observedX}
                     y1={-8}
                     y2={96}
                     className="stroke-current"
@@ -279,9 +400,9 @@ export const ResearchFigure = (props: ResearchFigureProps) => {
                     strokeLinecap="round"
                   />
                   <text
-                    x={out.observedX}
+                    x={observedX}
                     y={-10}
-                    textAnchor={edgeAnchor(out.observedX, width, 80)}
+                    textAnchor={edgeAnchor(observedX, width, 80)}
                     className="text-axis fill-current font-mono tabular-nums"
                   >
                     {props.observedLabel} {format(props.observed)}
