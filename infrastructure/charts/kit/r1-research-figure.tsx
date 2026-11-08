@@ -132,6 +132,23 @@ const EstimatePlot = ({
         const markY = layout.stacked ? 8 : 0;
         return (
           <g data-state={state}>
+            {/* The reference is a dotted segment through each row's marks,
+                under them, never across a label: in a narrow card the labels
+                sit above the marks, on the line's path. */}
+            {out.referenceX !== null && reference && state === "default"
+              ? out.rows.map((row) => (
+                  <line
+                    key={`ref-${row.label}`}
+                    x1={layout.left + out.referenceX!}
+                    x2={layout.left + out.referenceX!}
+                    y1={top + row.y + (layout.stacked ? 8 : 0) - 12}
+                    y2={top + row.y + (layout.stacked ? 8 : 0) + 12}
+                    className="stroke-chart-reference"
+                    strokeWidth={1.5}
+                    strokeDasharray="3 3"
+                  />
+                ))
+              : null}
             {out.rows.map((row, i) => (
               <g key={row.label} transform={`translate(0 ${top + row.y})`}>
                 <text
@@ -212,15 +229,6 @@ const EstimatePlot = ({
             <g transform={`translate(${layout.left} 0)`}>
               {out.referenceX !== null && reference && state === "default" ? (
                 <>
-                  <line
-                    x1={out.referenceX}
-                    x2={out.referenceX}
-                    y1={top - 4}
-                    y2={top + estimates.length * layout.row}
-                    className="stroke-chart-reference"
-                    strokeWidth={1.5}
-                    strokeDasharray="3 3"
-                  />
                   <text
                     x={out.referenceX}
                     y={10}
