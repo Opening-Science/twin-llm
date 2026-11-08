@@ -20,6 +20,7 @@ that show them. Search finds each page by its title and line.
 | Heart rhythm simulations | `/lab/simulations` | Simulations           |
 | Evaluation runs          | `/lab/evaluations` | Results               |
 | Rhythm benchmark         | `/lab/benchmark`   | Results               |
+| Research results         | `/lab/results`     | Research results      |
 | Long jobs                | `/lab/jobs`        | Results               |
 | Second rating            | `/lab/rate`        | [second-rater.md][sr] |
 
@@ -94,7 +95,10 @@ is for synthetic people and reads nothing.
 
 The shaping is pure (`features/lab/simulation-view.ts`, tested); the reads are in
 `load-simulation.ts`. The charts use the shared chart helpers in `infrastructure/charts/` (moved there
-from the Data page so both pages can use them) and the chart colour tokens.
+from the Data page so both pages can use them) and the chart colour tokens, drawn as the chart kit
+draws: the line in the heart colour, flagged windows in the track tone, no gridlines or Y axis, the
+highest and lowest value as grey rules with MAX and MIN written, and seconds as axis words
+(`features/lab/signal-geometry.ts`, tested).
 
 ## Results
 
@@ -133,6 +137,21 @@ formula gets a leading `'`). Only files inside the repository are read, each at 
   the file's numbers. `features/lab/benchmark-result.ts` reads only the fields it shows, and its test
   runs the benchmark on a small grid and parses the output, so a change to the file's shape fails
   there. With no run the section says "Not run yet" and shows the command.
+
+## Research results
+
+`/lab/results` shows the committed research results (`docs/research/`) as figures in the chart
+kit's R1 style, under four studies: numbers from tools, in-silico arrhythmia, virtual heart–brain
+cohorts and disclosure. Each figure reads one file: a `*.summary.json` a study wrote, or, where a
+study has none, one table of its page found by its exact header (the arms of
+`eval-runs-2026-10.md` and its held-out set, and the noise table of `rhythm-bench-2026-10.md`).
+Every number on a figure is a number in that file; `features/lab/research-results.ts` (pure) only
+picks, orders and labels them, and its test runs on excerpts of the files and on the committed
+files themselves. Each card has one sentence on what it shows, the file under the figure and the
+run date when the summary records one; hovering, a finger or the arrow keys name a row with its
+interval. A file that is missing or has changed shape drops its figure, and the page names it.
+The summaries keep the shuffled runs' mean and range, not the draws, so observed against shuffled
+is drawn as two estimates rather than as a null distribution.
 
 ## Commands
 

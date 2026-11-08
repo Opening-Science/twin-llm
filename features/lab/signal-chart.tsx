@@ -7,26 +7,26 @@ import {
   TooltipBody,
   useMeasuredWidth,
 } from "@/infrastructure/charts/chart-frame";
-import {
-  extent,
-  labelIndexes,
-  nearestIndex,
-  niceTicks,
-  tickDecimals,
-} from "@/infrastructure/charts/chart-geometry";
+import { nearestIndex } from "@/infrastructure/charts/chart-geometry";
+import { categoryTextClass } from "@/infrastructure/charts/category-token";
 import { formatNumber } from "@/infrastructure/format-measure";
 
+import { signalLayout } from "./signal-geometry";
 import { type ChartPoint, type Span } from "./simulation-view";
 
 /**
  * One simulated signal against seconds from the first beat: the RR
  * tachogram (interval per beat, with the windows the research flag marks as
- * shaded bands) or the pulse-wave proxy strip. A thin line in the first chart
- * colour, bands in the third, a crosshair and tooltip at the nearest point.
- * Draws at its measured width so axis text stays 11px on a phone.
+ * bands in the track tone) or the pulse-wave proxy strip. Drawn as the chart
+ * kit draws: the line in the heart category's colour, no gridlines and no Y
+ * axis; the highest and lowest value are grey rules with MAX and MIN written
+ * beside them, and seconds stay as axis words. A crosshair and tooltip follow
+ * the nearest point. Draws at its measured width so axis text keeps its size
+ * on a phone. The layout is `signal-geometry.ts`.
  */
 
-const PAD = { top: 22, right: 14, bottom: 28, left: 52 } as const;
+const AXIS_TEXT = "fill-muted-foreground font-mono text-axis font-normal tabular-nums";
+const LINE_CLASS = categoryTextClass("heart");
 
 export const SignalChart = ({
   points,
@@ -53,28 +53,12 @@ export const SignalChart = ({
   const [hover, setHover] = useState<number | null>(null);
   if (points.length === 0) return null;
 
-  const [minValue, maxValue] = extent(points.map((point) => point.value));
-  const yTicks = niceTicks(minValue, maxValue);
-  const low = yTicks[0]!;
-  const high = yTicks.at(-1)!;
-  const xTicksAll = niceTicks(0, durationSec, 6).filter((tick) => tick <= durationSec);
-  const plotW = width - PAD.left - PAD.right;
-  const plotH = height - PAD.top - PAD.bottom;
-  const xOf = (t: number) => PAD.left + (t / durationSec) * plotW;
-  const yOf = (value: number) => PAD.top + plotH * (1 - (value - low) / (high - low));
-  const xs = points.map((point) => xOf(point.t));
-  const path = points
-    .map(
-      (point, i) =>
-        `${i === 0 ? "M" : "L"}${xs[i]!.toFixed(1)},${yOf(point.value).toFixed(1)}`,
-    )
-    .join(" ");
-  const xTicks = labelIndexes(xTicksAll.length, Math.floor(plotW / 44)).map(
-    (i) => xTicksAll[i]!,
-  );
-  const yText = tickDecimals(yTicks);
-  const xText = tickDecimals(xTicksAll);
+  const layout = signalLayout(points, durationSec, spans, { width, height });
+  const { plot, xs, ys } = layout;
+  const withUnit = (value: number) =>
+    `${formatNumber(value, decimals)}${unit ? ` ${unit}` : ""}`;
   const hovered = hover === null ? null : (points[hover] ?? null);
+  const right = plot.left + plot.width;
 
   return (
     <div ref={ref} className="relative w-full">
@@ -91,67 +75,54 @@ export const SignalChart = ({
           setHover(nearestIndex(xs, ((event.clientX - rect.left) / rect.width) * width));
         }}
       >
-        {spans.map((span) => (
+        {layout.bands.map((band) => (
           <rect
-            key={`${span.start}-${span.end}`}
-            x={xOf(span.start)}
-            y={PAD.top}
-            width={Math.max(1, xOf(span.end) - xOf(span.start))}
-            height={plotH}
-            className="text-chart-3 fill-current"
-            fillOpacity={0.14}
+            key={`${band.x}-${band.width}`}
+            x={band.x}
+            y={plot.top}
+            width={band.width}
+            height={plot.height}
+            rx={4}
+            className="fill-chart-track"
           />
         ))}
-        {yTicks.map((tick) => (
-          <g key={tick}>
+        {[
+          { word: "MAX", rule: layout.max, textY: layout.max.y - 8 },
+          { word: "MIN", rule: layout.min, textY: layout.min.y + 16 },
+        ].map(({ word, rule, textY }) => (
+          <g key={word}>
             <line
-              x1={PAD.left}
-              x2={width - PAD.right}
-              y1={yOf(tick)}
-              y2={yOf(tick)}
-              className="stroke-border"
+              x1={plot.left}
+              x2={right}
+              y1={rule.y}
+              y2={rule.y}
+              className="stroke-chart-reference"
               strokeWidth={1}
+              strokeDasharray="3 3"
             />
-            <text
-              x={PAD.left - 8}
-              y={yOf(tick) + 4}
-              textAnchor="end"
-              className="fill-muted-foreground font-mono text-[11px] tabular-nums"
-            >
-              {formatNumber(tick, yText)}
+            <text x={plot.left} y={textY} className={AXIS_TEXT}>
+              {`${word} ${withUnit(rule.value)}`}
             </text>
           </g>
         ))}
-        {unit === "" ? null : (
-          <text
-            x={PAD.left - 8}
-            y={11}
-            textAnchor="end"
-            className="fill-muted-foreground font-mono text-[11px]"
-          >
-            {unit}
-          </text>
-        )}
         <path
-          d={path}
+          d={layout.path}
           fill="none"
-          className="text-chart-1"
+          className={LINE_CLASS}
           stroke="currentColor"
-          strokeWidth={1.25}
+          strokeWidth={1.5}
           strokeLinejoin="round"
           strokeLinecap="round"
         />
-        {xTicks.map((tick) => (
+        {layout.ticks.map((tick) => (
           <text
-            key={tick}
-            x={xOf(tick)}
-            y={height - 10}
-            textAnchor={
-              tick === 0 ? "start" : xOf(tick) > width - PAD.right - 24 ? "end" : "middle"
-            }
-            className="fill-muted-foreground font-mono text-[11px] tabular-nums"
+            key={tick.t}
+            x={tick.x}
+            y={height - 6}
+            textAnchor={tick.anchor}
+            className={AXIS_TEXT}
           >
-            {`${formatNumber(tick, xText)} s`}
+            {`${formatNumber(tick.t, layout.tickDecimals)} s`}
           </text>
         ))}
         {hovered && hover !== null && (
@@ -159,36 +130,31 @@ export const SignalChart = ({
             <line
               x1={xs[hover]}
               x2={xs[hover]}
-              y1={PAD.top}
-              y2={height - PAD.bottom}
-              className="stroke-muted-foreground"
+              y1={plot.top}
+              y2={plot.top + plot.height}
+              className="stroke-chart-reference"
               strokeDasharray="3 3"
               strokeWidth={1}
             />
             <circle
               cx={xs[hover]}
-              cy={yOf(hovered.value)}
+              cy={ys[hover]}
               r={4}
-              className="text-chart-1 stroke-card fill-current"
+              className={`${LINE_CLASS} stroke-card fill-current`}
               strokeWidth={2}
             />
           </g>
         )}
       </svg>
       <ChartTooltip
-        anchor={
-          hovered && hover !== null ? { x: xs[hover]!, y: yOf(hovered.value) } : null
-        }
+        anchor={hovered && hover !== null ? { x: xs[hover]!, y: ys[hover]! } : null}
         chart={{ width, height }}
       >
         {hovered && (
           <TooltipBody
             title={`${formatNumber(hovered.t, 2)} s`}
             rows={[
-              [
-                valueLabel,
-                `${formatNumber(hovered.value, decimals)}${unit ? ` ${unit}` : ""}`,
-              ],
+              [valueLabel, withUnit(hovered.value)],
               ...(spans.length > 0
                 ? ([
                     [

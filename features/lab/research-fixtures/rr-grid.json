@@ -1,0 +1,40 @@
+{
+  "generatedAt": "2026-11-02T01:31:33.139Z",
+  "real": [
+    {
+      "database": "afdb",
+      "records": 23,
+      "windows": 3845,
+      "centres": {
+        "mean": {
+          "tpr": {
+            "value": 0.6291998537061119,
+            "ci95": {
+              "low": 0.6186825201429763,
+              "high": 0.6404113411440401
+            }
+          }
+        }
+      }
+    }
+  ],
+  "sim": [
+    {
+      "mode": "independent",
+      "gridMs": 7.8125,
+      "recordings": 196,
+      "windows": 380,
+      "centres": {
+        "mean": {
+          "tpr": {
+            "value": 0.6409128289473685,
+            "ci95": {
+              "low": 0.6363196472515418,
+              "high": 0.6450187567349138
+            }
+          }
+        }
+      }
+    }
+  ]
+}
