@@ -1,13 +1,17 @@
 "use client";
 
 import { conditionToken, tokenTextClass } from "../category-token";
-import { estimateRows, exactDecimals, nullFigure, type Estimate } from "./kit-geometry";
+import {
+  estimateLayout,
+  estimateRows,
+  exactDecimals,
+  nullFigure,
+  spacedTicks,
+  type Estimate,
+} from "./kit-geometry";
 import { AXIS_TEXT, ChartSvg, EMPTY_STROKE, LOADING_FILL, toneClass } from "./kit-parts";
 import type { ResearchFigureProps } from "./types";
 
-/** Room for a row label such as "LTAFDB · Specificity" before the plot starts. */
-const LABELS = 176;
-const ROW = 32;
 const AXIS = 22;
 
 const fixed = (value: number, decimals: number): string => value.toFixed(decimals);
@@ -26,27 +30,39 @@ const EstimatePlot = ({
   readonly tone: (index: number) => string;
   readonly state: "default" | "loading" | "empty";
 }) => {
-  const height = Math.max(1, estimates.length) * ROW + AXIS + (reference ? 16 : 0);
+  const top = reference ? 16 : 0;
+  const heightFor = (width: number): number =>
+    Math.max(1, estimates.length) * estimateLayout(width).row + AXIS + top;
   return (
-    <ChartSvg height={height}>
+    <ChartSvg height={heightFor}>
       {(width) => {
-        const plotWidth = Math.max(60, width - LABELS - 8);
-        const top = reference ? 16 : 0;
+        const layout = estimateLayout(width);
+        const height = heightFor(width);
+        const plotWidth = layout.plot;
         const out = estimateRows(
           estimates,
-          { width: plotWidth, height: estimates.length * ROW },
+          { width: plotWidth, height: estimates.length * layout.row },
           reference?.value ?? null,
           domain,
         );
         const decimals = exactDecimals(out.ticks.map((t) => t.value));
+        // Stacked: the label sits above its row and the marks a little below it.
+        const markY = layout.stacked ? 8 : 0;
         return (
           <g data-state={state}>
             {out.rows.map((row, i) => (
               <g key={row.label} transform={`translate(0 ${top + row.y})`}>
-                <text y={4} className="fill-foreground font-sans text-sm">
+                <text
+                  x={layout.stacked ? layout.left : 0}
+                  y={layout.stacked ? -8 : 4}
+                  // A card-coloured outline keeps the word clear of the reference line.
+                  className="fill-foreground stroke-card font-sans text-sm"
+                  strokeWidth={4}
+                  paintOrder="stroke"
+                >
                   {row.label}
                 </text>
-                <g transform={`translate(${LABELS} 0)`}>
+                <g transform={`translate(${layout.left} ${markY})`}>
                   {state === "loading" ? (
                     <rect
                       x={0}
@@ -91,14 +107,14 @@ const EstimatePlot = ({
                 </g>
               </g>
             ))}
-            <g transform={`translate(${LABELS} 0)`}>
+            <g transform={`translate(${layout.left} 0)`}>
               {out.referenceX !== null && reference && state === "default" ? (
                 <>
                   <line
                     x1={out.referenceX}
                     x2={out.referenceX}
                     y1={top - 4}
-                    y2={top + estimates.length * ROW}
+                    y2={top + estimates.length * layout.row}
                     className="stroke-chart-reference"
                     strokeWidth={1.5}
                     strokeDasharray="3 3"
@@ -113,7 +129,7 @@ const EstimatePlot = ({
                   </text>
                 </>
               ) : null}
-              {out.ticks.map((t) => (
+              {spacedTicks(out.ticks).map((t) => (
                 <text
                   key={t.value}
                   x={t.x}
