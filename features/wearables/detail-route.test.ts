@@ -12,8 +12,10 @@ import type { AppendInput } from "@/packages/audit/append";
 import { createWearablesDetailHandler, type WearablesDetailDeps } from "./detail-handler";
 import type { WearableSource } from "./dashboard-headings";
 
+const SYNTHETIC_SUBJECT = "synthetic-wearer-1";
+
 const BUNDLE = buildBundleFromResponses(SYNTHETIC_GOOGLE_HEALTH_RESPONSES, {
-  subjectKey: "synthetic-wearer-1",
+  subjectKey: SYNTHETIC_SUBJECT,
   timestamp: "2026-01-09T00:00:00Z",
 }).bundle;
 
