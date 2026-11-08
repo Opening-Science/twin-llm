@@ -30,6 +30,7 @@ import {
 import { type Highlight } from "@/packages/anatomy/highlight";
 import { ATLASES, type AtlasScheme } from "@/packages/anatomy/manifest";
 import { RIGGED_ATTRIBUTION, riggedBodyApiUrl } from "@/packages/anatomy/rigged-bodies";
+import { DEMO_STANCE } from "@/packages/anatomy/stance";
 import { Button } from "@/infrastructure/ui-kit/button";
 import {
   CollapsiblePanel,
@@ -803,6 +804,11 @@ export const BodyLoopAvatar = ({
             tempo={motion.tempo}
             video={motion.video}
             rates={motion.rates}
+            stance={
+              body.kind === "demo"
+                ? DEMO_STANCE[demoBody.id][anatomy.state.atlasId]
+                : null
+            }
           />
           <ProjectAnchor point={picked?.point ?? null} store={anchorStore} />
           <AnatomyLayers
@@ -1085,6 +1091,8 @@ export const BodyLoopAvatar = ({
                     dispatch={anatomy.dispatch}
                     onInteract={onUserRotate}
                     envelope="demo"
+                    // BodyMotion poses a body to its stance once it has a rig binding.
+                    posed={motion.binding !== null}
                   />
                 ),
                 panel: {

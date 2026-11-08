@@ -51,6 +51,18 @@ Measured on the pinned files (2026-10-13):
 - `Rx(+90°)` maps the atlas frame onto the scan frame with no mirror (`packages/anatomy/fit.ts`).
 - Fit: one uniform scale from height (the scan's measured `body.height` when present and within 0.85–1.02 of its box height, else the box, which includes hair), feet on the scan's floor, hips aligned horizontally. Scan hips are the midpoint of the `LeftUpLeg` and `RightUpLeg` joints of the scan's skeleton. Atlas hips: BodyParts3D midpoint of the left and right hip-bone centroids (x=0, z=0.0715); HRA pelvis node centre (female x=−0.009, z=−0.091; male x=0.005, z=−0.032). Without hip joints the fit centres the two bounding boxes instead (the atlas box takes its height from the whole atlas and its x/z from the parts that are kept, so the hidden placenta does not pull it forward), and the note under the slider changes to say so.
 - Scan 28's upper arms hang about 15° from vertical; BodyParts3D's about 10°. Limb pose is not matched, and the copy says pose and organ positions are typical, not measured.
+- Demo stance: the fit never bends the atlas, and the donors stand narrower or wider than ANNY. So the rigged demo body is posed instead: each hip turns inward by `DEMO_STANCE[body][atlas]` (`packages/anatomy/stance.ts`) and each ankle back by the same angle, so the sole stays flat, with the lowest foot kept on the floor. The angle follows the atlas shown; a scan and the static fallback body are not posed, and for the static body the note under the slider leaves the stance out. `BodyMotion` puts the body in its stance when nothing plays and adds the stance to every clip's angles (walk, run, idle, dance, video, cycle, sleep), so a clip starts and ends at the stance. The fits use the bind-pose box, taken once at load (`prepareDemoBody`), so the stance and clip frames do not move them. Measured on the pinned files (their SHA-256 values are kept in `DEMO_STANCE_MEASURED_ON`, and a test fails when a pin changes, so the angles are measured again) with `ankleCentres` (scan frame, the mean x of points 4–7 % of height above the floor, per side): body skin against the atlas's skeleton and vessels. Offset is how far the body's ankle stands outside the atlas's, per side.
+
+| Body   | Atlas       | Angle | Ankles apart, before → after (atlas) | Offset L / R before | Offset L / R after |
+| ------ | ----------- | ----- | ------------------------------------ | ------------------- | ------------------ |
+| Male   | BodyParts3D | 9.1°  | 44.5 → 14.9 cm (15.3)                | 14.6 / 14.6 cm      | −0.2 / −0.2 cm     |
+| Male   | HRA male    | 0.3°  | 44.5 → 43.5 cm (43.4)                | 0.5 / 0.5 cm        | 0.1 / 0.0 cm       |
+| Male   | HRA female  | 3.6°  | 44.5 → 32.8 cm (33.0)                | 5.8 / 5.7 cm        | −0.1 / −0.1 cm     |
+| Female | HRA female  | 1.6°  | 35.0 → 30.2 cm (30.5)                | 2.3 / 2.2 cm        | −0.1 / −0.2 cm     |
+| Female | BodyParts3D | 7.1°  | 35.0 → 14.0 cm (14.2)                | 10.5 / 10.4 cm      | 0.0 / −0.1 cm      |
+| Female | HRA male    | −1.8° | 35.0 → 40.3 cm (40.2)                | −2.6 / −2.6 cm      | 0.1 / 0.1 cm       |
+
+- HRA has no bones below its knee meshes and no vessels below the upper thigh, so its ankle is the lower end of its tibia and fibula. The hands already line up with BodyParts3D side to side (wrist joint against the lunate, within 0.2 cm), so the shoulders are not posed; HRA has no arm bones.
 
 ## Layers
 
@@ -137,7 +149,7 @@ The Body twin subject picker always offers **Demo (synthetic)** next to the Body
 
 - Served from `https://opentwin.opening.science/models/` (Last-Modified 18 Aug 2026). open-twin-xr bakes ANNY (NAVER LABS Europe) to static geometry posed to match BodyParts3D; no scan of any person was used. Licence: Apache-2.0 (code) over CC0-1.0 (shape assets derived from MakeHuman); cite arXiv:2511.03589. The pins live in `packages/anatomy/demo-bodies.ts`.
 - Measured on the pinned files (2026-10-15, decoded with three's meshopt decoder): one mesh, 13,718 vertices, 27,420 triangles, `POSITION` and `COLOR_0` only (no normals, no material, no skeleton), `EXT_meshopt_compression` and `KHR_mesh_quantization` required. Metres, +Y up, feet at y=0, faces +Z (nose at z=+0.137 m / +0.170 m, toes in front of heels). Left and right cannot be told apart from the geometry; the mesh is symmetric to within 7 mm, so a mirror would not show.
-- The demo body is the envelope, like a scan: normals are computed at load, the material is made matte like a scan's, and it is wrapped in the same `Rx(+90°)` as the atlases to reach the scan frame. The glass fade and `fitAtlasToScan` then run unchanged. The fit always uses the bounding-box anchor (the static body has no skeleton, and the rigged body's ANNY joint names are not the scan's hip joints), and the note under the slider says the hips are not aligned.
+- The demo body is the envelope, like a scan: normals are computed at load, the material is made matte like a scan's, and it is wrapped in the same `Rx(+90°)` as the atlases to reach the scan frame. The glass fade and `fitAtlasToScan` then run unchanged. The fit always uses the bounding-box anchor (the static body has no skeleton, and the rigged body's ANNY joint names are not the scan's hip joints), and the note under the slider says the hips are not aligned and that the demo body is posed to the atlas's stance (see "Frames and fit").
 - The atlas follows the demo body's sex (see "Atlas and body sex").
 
 ### Rigged demo bodies
