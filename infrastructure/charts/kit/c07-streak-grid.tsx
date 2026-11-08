@@ -3,7 +3,12 @@
 import { cn } from "@/infrastructure/ui";
 
 import { categoryTextClass } from "../category-token";
-import { ChartFocusFrame, ChartReadout, useChartFocus } from "./chart-focus";
+import {
+  ChartFocusFrame,
+  ChartReadout,
+  mutedUnlessFocused,
+  useChartFocus,
+} from "./chart-focus";
 import { streakGrid, weekdayLetters } from "./kit-geometry";
 import type { StreakGridProps } from "./types";
 
@@ -52,17 +57,23 @@ export const StreakGrid = ({
             const at = cells.findIndex((c) => c.row * 7 + c.col === i);
             const cell = cells[at];
             if (!cell) return <span key={i} className="aspect-square" />;
+            // A done day that steps back keeps its colour as an outline, and
+            // its number takes the muted colour, so nothing falls below AA.
+            const back = mutedUnlessFocused(focused, at);
+            const filled = cell.done && !back;
             return (
               <span
                 key={cell.date}
                 data-focus-index={live ? at : undefined}
-                style={focused !== null && focused !== at ? { opacity: 0.4 } : undefined}
                 className={cn(
                   "text-axis flex aspect-square flex-col items-center justify-center rounded-[10px] font-mono leading-none tabular-nums",
-                  cell.done
+                  filled
                     ? cn(tone, "bg-current")
-                    : "bg-chart-track text-muted-foreground",
+                    : cell.done
+                      ? cn(tone, "border-2 border-current")
+                      : "bg-chart-track text-muted-foreground",
                   cell.today && "outline-foreground outline-2 outline-offset-1",
+                  focused === at && "ring-ring ring-offset-card ring-2 ring-offset-2",
                 )}
               >
                 {/* The month sits inside its first cell, so it never covers a neighbour. */}
@@ -70,13 +81,21 @@ export const StreakGrid = ({
                   <span
                     className={cn(
                       "text-[9px]",
-                      cell.done ? "text-card" : "text-muted-foreground",
+                      filled ? "text-card" : "text-muted-foreground",
                     )}
                   >
                     {cell.month}
                   </span>
                 ) : null}
-                <span className={cell.done ? "text-card font-bold" : undefined}>
+                <span
+                  className={
+                    filled
+                      ? "text-card font-bold"
+                      : cell.done
+                        ? "text-muted-foreground font-bold"
+                        : undefined
+                  }
+                >
                   {cell.day}
                 </span>
               </span>

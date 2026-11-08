@@ -1,6 +1,12 @@
 "use client";
 
-import { ChartFocusFrame, ChartReadout, dimmed, useChartFocus } from "./chart-focus";
+import {
+  ChartFocusFrame,
+  ChartReadout,
+  dimmed,
+  mutedUnlessFocused,
+  useChartFocus,
+} from "./chart-focus";
 import { radar, radarAxisAt } from "./kit-geometry";
 import { ChartSvg, EMPTY_STROKE, LOADING_FILL, toneClass } from "./kit-parts";
 import type { RadarProps } from "./types";
@@ -115,14 +121,17 @@ export const Radar = ({
                   key={axis.label}
                   x={a.x}
                   textAnchor={a.align}
-                  opacity={dimmed(focused, i)}
                   data-focus-index={live ? i : undefined}
                 >
                   <tspan
                     x={a.x}
                     y={first}
                     dy="0.7em"
-                    className="fill-foreground font-sans text-xs"
+                    className={
+                      mutedUnlessFocused(focused, i)
+                        ? "fill-muted-foreground font-sans text-xs"
+                        : "fill-foreground font-sans text-xs"
+                    }
                   >
                     {axis.label}
                   </tspan>
@@ -130,7 +139,11 @@ export const Radar = ({
                     x={a.x}
                     y={first + 15}
                     dy="0.7em"
-                    className="fill-muted-foreground text-axis font-mono tabular-nums"
+                    className={
+                      focused === i
+                        ? "fill-foreground text-axis font-mono tabular-nums"
+                        : "fill-muted-foreground text-axis font-mono tabular-nums"
+                    }
                   >
                     {shown}
                   </tspan>

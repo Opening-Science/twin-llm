@@ -93,7 +93,8 @@ export const ScoreRing = ({
               {parts.map((p) => (
                 <li
                   key={p.label}
-                  className={dimmed(focused, parts.indexOf(p)) ? "opacity-40" : undefined}
+                  // The focused part reads in foreground; the list is muted already.
+                  className={focused === parts.indexOf(p) ? "text-foreground" : undefined}
                 >
                   {p.label}: {Math.round(p.value)}/{Math.round(p.max)}
                 </li>

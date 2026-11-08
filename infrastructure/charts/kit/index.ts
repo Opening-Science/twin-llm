@@ -18,6 +18,7 @@ export {
   ChartFocusFrame,
   ChartReadout,
   dimmed,
+  mutedUnlessFocused,
   useChartFocus,
   type ChartFocus,
   type Pick,

@@ -186,6 +186,14 @@ export const ChartFocusFrame = ({
   </div>
 );
 
-/** A dimmed mark: the focused one stays full, the rest step back. */
+/**
+ * A dimmed mark: the focused one stays full, the rest step back. Marks
+ * only: text never fades, since 40% would fall below AA. Text steps back
+ * to the muted colour instead (`mutedUnlessFocused`).
+ */
 export const dimmed = (focused: number | null, index: number): number | undefined =>
   focused === null || focused === index ? undefined : 0.4;
+
+/** Whether a label should take the muted colour: another point is focused. */
+export const mutedUnlessFocused = (focused: number | null, index: number): boolean =>
+  focused !== null && focused !== index;

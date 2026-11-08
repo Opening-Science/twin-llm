@@ -1,5 +1,7 @@
 "use client";
 
+import { cn } from "@/infrastructure/ui";
+
 import { ChartFocusFrame, ChartReadout, dimmed, useChartFocus } from "./chart-focus";
 import { barsWithLine, slotIndex, weekdayLetters } from "./kit-geometry";
 import {
@@ -97,8 +99,9 @@ export const WeeklyBars = ({
                 x={x}
                 y={HEIGHT - 2}
                 textAnchor="middle"
-                className={AXIS_TEXT}
-                fillOpacity={dimmed(focused, i)}
+                // The focused day's letter is foreground; the others keep the
+                // muted axis colour rather than fading below AA.
+                className={cn(AXIS_TEXT, focused === i && "fill-foreground")}
               >
                 {letters[i % 7]}
               </text>
