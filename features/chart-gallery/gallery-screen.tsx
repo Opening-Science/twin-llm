@@ -139,7 +139,7 @@ export const GalleryScreen = () => (
           sentence={
             state === "empty"
               ? "Your sleep compared with your average appears after 7 nights."
-              : "You slept 7 hr 19 min, 37 minutes more than your 7-night average."
+              : "You slept 7 hr 19 min, 37 minutes more than your average over 7 nights."
           }
           emptyNote="7 nights needed"
         />
@@ -373,7 +373,7 @@ export const GalleryScreen = () => (
         <InsightCard
           category="sleep"
           label="Sleep: Stages"
-          sentence="Last night you had more REM and deep sleep than your 7-night usual."
+          sentence="Last night you had more REM and deep sleep than your usual over 7 nights."
         >
           <Radar category="sleep" axes={RADAR_SLEEP} />
         </InsightCard>
@@ -384,13 +384,16 @@ export const GalleryScreen = () => (
         >
           <Radar category="heart" axes={RADAR_HEART} />
         </InsightCard>
-        <InsightCard
-          category="readiness"
-          label="Readiness"
-          sentence="Sleep was above usual and recovery a little below; HRV is not in yet."
-        >
-          <Radar category="readiness" axes={RADAR_READINESS} />
-        </InsightCard>
+        {/* The odd one out spans the row rather than leaving half of it empty. */}
+        <div className="lg:col-span-2">
+          <InsightCard
+            category="readiness"
+            label="Readiness"
+            sentence="Sleep was above usual and recovery a little below; HRV is not in yet."
+          >
+            <Radar category="readiness" axes={RADAR_READINESS} />
+          </InsightCard>
+        </div>
       </div>
     </section>
 
@@ -405,7 +408,7 @@ export const GalleryScreen = () => (
           sentence={
             state === "empty"
               ? "Your sleep stages compared with your usual appear after a night with your device on."
-              : "Last night you had more REM and deep sleep than your 7-night usual."
+              : "Last night you had more REM and deep sleep than your usual over 7 nights."
           }
           emptyNote="A night of sleep needed"
         >
