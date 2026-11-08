@@ -1,7 +1,7 @@
 /** The Data page's shape while the warehouse is read: header, tiles, a chart. */
 export default function DataLoading() {
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6">
+    <div>
       <div className="bg-muted h-9 w-32 animate-pulse rounded" />
       <div className="bg-muted mt-4 h-12 max-w-xl animate-pulse rounded" />
       <div className="bg-muted mt-6 h-9 w-72 max-w-full animate-pulse rounded-full" />

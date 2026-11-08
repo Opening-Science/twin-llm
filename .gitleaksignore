@@ -1,3 +1,5 @@
 # Findings gitleaks may ignore, by exact fingerprint (commit:file:rule:line).
 # Each entry must be a test constant, never a real secret. See #342.
 1662ed275a5768513060e311c345c7c16638eaaf:infrastructure/personal-columns.test.ts:generic-api-key:19
+# #476: "synthetic-wearer-2", a synthetic subject key in a test, moved to a constant in 1bafaca.
+03c0cf6d2f3d56b077d9571e712465f29a976fe4:features/wearables/aggregate-bundles.test.ts:generic-api-key:126
