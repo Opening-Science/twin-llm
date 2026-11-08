@@ -163,7 +163,7 @@ export const DigitalTwinScreen = ({
   const plan = twinSections({ context, genomeEnabled: status?.enabled === true });
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6">
+    <div className="page-wide">
       <h1 className="text-display">{PAGE_TITLE}</h1>
       <section className="mt-6">
         <SectionHead title={BODY_TWIN} note={BODY_TWIN_NOTE} />

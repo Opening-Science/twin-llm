@@ -27,7 +27,7 @@ export const LabDetail = ({
   about?: ReactNode;
   children: ReactNode;
 }>) => (
-  <div className="lab-page">
+  <div className="page-wide page-stack">
     <header className="flex flex-col gap-2">
       <nav aria-label="Breadcrumb">
         <Link href={back.href} className="lab-back">
