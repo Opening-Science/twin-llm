@@ -11,7 +11,7 @@ import { CustomizeTabs } from "@/features/customize/customize-tabs";
  */
 export default function CustomizeLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6">
+    <div className="page-wide">
       <h1 className="text-display">Customize</h1>
       <p className="text-muted-foreground mt-3 max-w-xl text-[15px] leading-relaxed">
         Skills you can run in a chat, the agents built on them, your twin notes, skills

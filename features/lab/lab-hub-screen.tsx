@@ -7,7 +7,7 @@ import { type LabHubCard } from "./lab-hub";
  * each opens its own page under `/lab/…`.
  */
 export const LabHubScreen = ({ cards }: Readonly<{ cards: readonly LabHubCard[] }>) => (
-  <div className="lab-page">
+  <div className="page-wide page-stack">
     <header className="flex flex-col gap-2">
       <h1 className="text-display">Lab</h1>
       <p className="text-muted-foreground max-w-prose leading-relaxed">
