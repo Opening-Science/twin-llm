@@ -69,9 +69,9 @@ export const filterMetricsByRange = (
 export const scoreBand = (score: number | null): string => {
   if (score === null) return "No reading";
   if (score >= 85) return "Optimal";
-  if (score >= 70) return "Solid";
+  if (score >= 70) return "Good";
   if (score >= 60) return "Fair";
-  return "Pay attention";
+  return "Low";
 };
 
 export const groupMetrics = (
