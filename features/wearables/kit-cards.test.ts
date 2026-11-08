@@ -325,32 +325,34 @@ describe("kitSections, detail cards", () => {
     expect(bed.axis).toEqual(["24 Oct", "6 Nov"]);
   });
 
-  test("while the route answers, the three cards draw their loading shape", () => {
-    const loading = kitSections({
-      source: "oura",
-      metrics: [],
-      today: TODAY,
-      detail: "loading",
-    });
-    expect(
-      [...section(loading, "daily").cards, ...section(loading, "weekly").cards].map(
-        (c) => `${c.id} ${c.state}`,
-      ),
-    ).toEqual(["night:stages loading", "day:steps loading", "nights:bedtime loading"]);
+  test("while the route answers, only cards the source can fill draw their loading shape", () => {
+    const ids = (source: "oura" | "whoop" | "google-health") => {
+      const loading = kitSections({
+        source,
+        metrics: [],
+        today: TODAY,
+        detail: "loading",
+      });
+      return [...section(loading, "daily").cards, ...section(loading, "weekly").cards]
+        .filter((c) => c.state === "loading")
+        .map((c) => c.id);
+    };
+    expect(ids("google-health")).toEqual(["night:stages", "day:steps", "nights:bedtime"]);
+    expect(ids("oura")).toEqual(["night:stages", "nights:bedtime"]);
+    expect(ids("whoop")).toEqual(["nights:bedtime"]);
   });
 
-  test("what a source never sends is said plainly, or left out", () => {
+  test("Oura, which never sends steps by the hour, gets no steps-by-the-hour card", () => {
     const oura = kitSections({
       source: "oura",
       metrics: [],
       today: TODAY,
       detail: { ...DETAIL, steps: { status: "not-provided" } },
     });
-    expect(card(section(oura, "daily").cards, "day:steps")).toMatchObject({
-      state: "empty",
-      sentence:
-        "Oura sends steps as one total a day, so your day cannot be drawn by the hour.",
-    });
+    expect(section(oura, "daily").cards.map((c) => c.id)).toEqual(["night:stages"]);
+  });
+
+  test("WHOOP, which never sends stage segments, gets no stages card", () => {
     const whoop = kitSections({
       source: "whoop",
       metrics: [],
@@ -358,14 +360,24 @@ describe("kitSections, detail cards", () => {
       detail: {
         steps: { status: "not-provided" },
         night: { status: "totals-only" },
-        nights: { status: "missing" },
+        nights: { status: "ok", nights: NIGHTS },
       },
     });
-    expect(
-      section(whoop, "daily").cards.map((c) => `${c.id} ${c.state}: ${c.sentence}`),
-    ).toEqual([
-      "night:stages empty: Whoop sends how long each sleep stage lasted, not when, so the night cannot be drawn stage by stage.",
-    ]);
+    expect(section(whoop, "daily").cards.map((c) => c.id)).toEqual(["empty:daily"]);
+    expect(section(whoop, "weekly").cards.map((c) => c.id)).toEqual(["nights:bedtime"]);
+  });
+
+  test("Google Health with no hourly steps yet keeps the steps card, empty", () => {
+    const none = kitSections({
+      source: "google-health",
+      metrics: [],
+      today: TODAY,
+      detail: { ...DETAIL, steps: { status: "missing" } },
+    });
+    expect(card(section(none, "daily").cards, "day:steps")).toMatchObject({
+      state: "empty",
+      sentence: "Your day by the hour appears here once a sync brings in hourly steps.",
+    });
   });
 
   test("with no usual day yet, the steps card waits in its empty state", () => {

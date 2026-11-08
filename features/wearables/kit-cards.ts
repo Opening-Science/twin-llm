@@ -17,7 +17,7 @@ import {
 } from "@/infrastructure/format-measure";
 
 import { DASHBOARD_TRENDS, type TrendSpec } from "./dashboard-cards";
-import { SOURCE_LABEL, type WearableSource } from "./dashboard-headings";
+import { type WearableSource } from "./dashboard-headings";
 import type { ChartPoint } from "./interactive-chart";
 import { formatDuration, insight, type InsightMetric } from "./insight";
 import { EVENING_MINUTES } from "./local-clock";
@@ -742,6 +742,12 @@ const STAGE_WORD: Readonly<Record<SleepStage, string>> = {
   core: "Light",
   deep: "Deep",
 };
+/**
+ * Which sources can ever send steps by the hour and stage segments. A card a
+ * source can never fill is left out; an empty state means "none yet".
+ */
+const SENDS_HOURLY_STEPS: ReadonlySet<WearableSource> = new Set(["google-health"]);
+const SENDS_STAGES: ReadonlySet<WearableSource> = new Set(["oura", "google-health"]);
 /** Oura and Google Health both call it light sleep. */
 const STAGE_LABELS = { core: "Light" } as const;
 
@@ -795,16 +801,13 @@ const cumulativeCard = (
     average: [],
     now: 0,
   });
-  if (steps === "loading") {
-    return { ...base, ...loading("cumulative"), today: [], average: [], now: 0 };
+  // A source that never sends hourly steps gets no card, not even while loading.
+  if (!SENDS_HOURLY_STEPS.has(source) || steps === "loading") {
+    return SENDS_HOURLY_STEPS.has(source)
+      ? { ...base, ...loading("cumulative"), today: [], average: [], now: 0 }
+      : null;
   }
-  if (steps.status === "not-provided") {
-    return source === "whoop"
-      ? null
-      : empty(
-          `${SOURCE_LABEL[source]} sends steps as one total a day, so your day cannot be drawn by the hour.`,
-        );
-  }
+  if (steps.status === "not-provided") return null;
   if (steps.status === "missing") {
     return empty("Your day by the hour appears here once a sync brings in hourly steps.");
   }
@@ -859,7 +862,7 @@ const usualNight = (
     : before.reduce((sum, v) => sum + v, 0) / before.length;
 };
 
-/** C09: last night's stages; a source that sends only totals says so. */
+/** C09: last night's stages; a source that never sends them (WHOOP) gets no card. */
 const hypnogramCard = (
   source: WearableSource,
   night: NightDetail | "loading",
@@ -879,13 +882,9 @@ const hypnogramCard = (
     state: "empty",
     spans: [],
   });
+  if (!SENDS_STAGES.has(source)) return null;
   if (night === "loading") return { ...base, ...loading("hypnogram"), spans: [] };
-  if (night.status === "not-provided") return null;
-  if (night.status === "totals-only") {
-    return empty(
-      `${SOURCE_LABEL[source]} sends how long each sleep stage lasted, not when, so the night cannot be drawn stage by stage.`,
-    );
-  }
+  if (night.status === "not-provided" || night.status === "totals-only") return null;
   if (night.status === "missing") {
     return empty(
       "Last night's sleep stages appear here once a sync brings in a night with stages.",
