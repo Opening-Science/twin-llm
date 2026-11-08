@@ -1595,3 +1595,42 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* --- Chart kit motion (begin) ------------------------------------------------
+   On first mount only, lines stroke in and bars and rings grow from their
+   baseline, over 400ms. A line using kit-draw sets pathLength="1", so one
+   dash is the whole line whatever its length. Only with no motion
+   preference; the reduced-motion rule above stops it otherwise. */
+@keyframes kit-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+
+@keyframes kit-grow {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .kit-draw {
+    stroke-dasharray: 1;
+    animation: kit-draw 400ms ease-out both;
+  }
+
+  .kit-grow,
+  .kit-grow-centre {
+    transform-box: fill-box;
+    animation: kit-grow 400ms ease-out both;
+  }
+
+  .kit-grow {
+    transform-origin: bottom;
+  }
+
+  .kit-grow-centre {
+    transform-origin: center;
+  }
+}
+/* --- Chart kit motion (end) -------------------------------------------------- */

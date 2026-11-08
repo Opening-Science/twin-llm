@@ -128,3 +128,85 @@ export const RADAR_READINESS = [
   { label: "Recovery", value: 68, display: "68", reference: 71, max: 100 },
   { label: "HRV balance", value: null, display: "", reference: 64, max: 100 },
 ];
+
+/* --- Readouts for the interactive examples, all made up ---------------------- */
+
+const steps = (n: number): string => `${n.toLocaleString("en-US")} steps`;
+
+/** "2 PM" for a share of the day. */
+const clock = (at: number): string => {
+  const hour = Math.round(at * 24) % 24;
+  const twelve = hour % 12 === 0 ? 12 : hour % 12;
+  return `${twelve} ${hour < 12 ? "AM" : "PM"}`;
+};
+
+export const DAY_TODAY_READ = DAY_TODAY.map((s) => ({
+  ...s,
+  readout: `${clock(s.at)} · ${steps(s.value)}`,
+}));
+
+const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+export const WEEK_STEPS_READOUTS = WEEK_STEPS.map(
+  (n, i) => `${WEEKDAYS[i]} · ${steps(n)}`,
+);
+
+export const HEART_RANGES_READ: readonly (Range | null)[] = HEART_RANGES.map((r, i) =>
+  r ? { ...r, readout: `${clock((8 + i) / 24)} · ${r.min} to ${r.max} bpm` } : null,
+);
+
+/** Minutes after 10 PM as a clock time, "11:02 PM". */
+const bedtime = (minutes: number): string => {
+  const total = 22 * 60 + minutes;
+  const hour = Math.floor(total / 60) % 24;
+  const twelve = hour % 12 === 0 ? 12 : hour % 12;
+  return `${twelve}:${String(total % 60).padStart(2, "0")} ${hour < 12 ? "AM" : "PM"}`;
+};
+
+export const BEDTIME_READOUTS = BEDTIMES.map((m, i) => {
+  const day = new Date(Date.UTC(2026, 9, 25 + i));
+  const date = `${day.getUTCDate()} ${day.getUTCMonth() === 9 ? "Oct" : "Nov"}`;
+  return `${date} · ${bedtime(m)}`;
+});
+
+export const P3_ESTIMATES_READ = P3_ESTIMATES.map((e) => ({
+  ...e,
+  readout:
+    e.low === undefined
+      ? `${e.label} · ${e.estimate.toFixed(2)}`
+      : `${e.label} · ${e.estimate.toFixed(2)} (${e.low.toFixed(2)} to ${e.high.toFixed(2)})`,
+}));
+
+export const P2_GROUPS_READ = P2_GROUPS.map((g) => ({
+  label: g.label,
+  estimates: [
+    {
+      ...g.estimates[0],
+      readout: `${g.label} · ${g.estimates[0].label} ${g.estimates[0].estimate}`,
+    },
+    {
+      ...g.estimates[1],
+      readout: `${g.label} · ${g.estimates[1].label} ${g.estimates[1].estimate}`,
+    },
+  ] as const,
+}));
+
+/** Made-up heart rate ranges for the range switch: by hour, by day, by week. */
+export const RANGE_DEMO = {
+  day: { buckets: HEART_RANGES_READ, axis: ["8 AM", "5 PM"] as const },
+  week: {
+    buckets: WEEKDAYS.map((d, i) => ({
+      min: 52 + (i % 3) * 2,
+      max: 118 + ((i * 7) % 20),
+      readout: `${d} · ${52 + (i % 3) * 2} to ${118 + ((i * 7) % 20)} bpm`,
+    })),
+    axis: ["Mon", "Sun"] as const,
+  },
+  month: {
+    buckets: Array.from({ length: 30 }, (_, i) => ({
+      min: 50 + (i % 5),
+      max: 110 + ((i * 11) % 30),
+      readout: `${i + 1} Nov · ${50 + (i % 5)} to ${110 + ((i * 11) % 30)} bpm`,
+    })),
+    axis: ["1 Nov", "30 Nov"] as const,
+  },
+};
