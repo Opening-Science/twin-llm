@@ -140,18 +140,30 @@ formula gets a leading `'`). Only files inside the repository are read, each at 
 
 ## Research results
 
-`/lab/results` shows the committed research results (`docs/research/`) as figures in the chart
-kit's R1 style, under four studies: numbers from tools, in-silico arrhythmia, virtual heart–brain
-cohorts and disclosure. Each figure reads one file: a `*.summary.json` a study wrote, or, where a
-study has none, one table of its page found by its exact header (the arms of
-`eval-runs-2026-10.md` and its held-out set, and the noise table of `rhythm-bench-2026-10.md`).
-Every number on a figure is a number in that file; `features/lab/research-results.ts` (pure) only
-picks, orders and labels them, and its test runs on excerpts of the files and on the committed
-files themselves. Each card has one sentence on what it shows, the file under the figure and the
-run date when the summary records one; hovering, a finger or the arrow keys name a row with its
-interval. A file that is missing or has changed shape drops its figure, and the page names it.
-The summaries keep the shuffled runs' mean and range, not the draws, so observed against shuffled
-is drawn as two estimates rather than as a null distribution.
+`/lab/results` shows the committed research results (`docs/research/`) for readers who did not run
+the studies. A "How to read these" box opens the page (dot, line, dotted reference line, and one
+line on each source: the synthetic cohort, the question sets, AFDB, LTAFDB, pilot 1 and the
+positive control). Each of the four studies (numbers from tools, in-silico arrhythmia, virtual
+heart–brain cohorts, disclosure) opens with "What we found" in two or three plain sentences and
+status chips. The chips are fixed words, each said in the study's page or its paper dossier
+(`features/lab/research-summary.ts` names which).
+
+Each figure card leads with a plain headline built from its numbers, keeps the technical sentence
+as a smaller caption, names its axis ("% of scored answers right", "rate ratio (1 = no
+difference)", "AUROC (0.5 = chance)"), and shows the main comparison; the other rows are under
+"Show all". The specialists are one figure per model size. The file and, when the summary records
+one, the run date are under each figure; hovering, a finger or the arrow keys name a row with its
+interval.
+
+Each figure reads one file: a `*.summary.json` a study wrote, or, where a study has none, one table
+of its page found by its exact header (the arms of `eval-runs-2026-10.md` and its held-out set, and
+the noise table of `rhythm-bench-2026-10.md`). `features/lab/research-read.ts` reads the files,
+`research-results.ts` builds the figures and headlines and `research-summary.ts` the summaries, all
+pure; every number they write is a number in a file, rounded at most. The tests run on excerpts of
+the files and on the committed files themselves. A file that is missing or has changed shape drops
+its figure and summary line, and the page names it. The summaries keep the shuffled runs' mean and
+range, not the draws, so observed against shuffled is drawn as two estimates rather than as a null
+distribution.
 
 ## Commands
 
