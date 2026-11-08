@@ -25,5 +25,6 @@ export { Hypnogram, hoursMinutes } from "./c09-hypnogram";
 export { ScoreRing } from "./c10-score-ring";
 export { MonthComparison } from "./c12-month-comparison";
 export { Consistency } from "./c13-consistency";
+export { Radar, radarHeight } from "./c18-radar";
 export { ResearchFigure } from "./r1-research-figure";
 export { LabResultCard } from "./r2-lab-result-card";

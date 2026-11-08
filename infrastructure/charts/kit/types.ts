@@ -16,6 +16,7 @@ import type { Category } from "../category-token";
 import type {
   DaySample,
   Estimate,
+  RadarAxis,
   Range,
   RingPart,
   SleepStage,
@@ -27,6 +28,7 @@ export type { Category } from "../category-token";
 export type {
   DaySample,
   Estimate,
+  RadarAxis,
   Range,
   RingPart,
   SleepStage,
@@ -170,3 +172,6 @@ export type LabResultCardProps = Base &
     sentence: string;
     rows: readonly Readonly<{ label: string; value: string }>[];
   }>;
+
+/** C18: three to about eight axes, each on its own 0 to max; today against the reference. */
+export type RadarProps = Base & Readonly<{ axes: readonly RadarAxis[] }>;

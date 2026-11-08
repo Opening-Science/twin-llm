@@ -1,6 +1,7 @@
+import { cn } from "@/infrastructure/ui";
+
 import { categoryTextClass } from "../category-token";
 import { scoreRing } from "./kit-geometry";
-import { join } from "./kit-parts";
 import type { ScoreRingProps } from "./types";
 
 const SIZE = 132;
@@ -25,7 +26,7 @@ export const ScoreRing = ({
         <p className="text-foreground font-sans">{title}</p>
         {state === "default" ? (
           <>
-            <p className={join("text-insight font-sans", categoryTextClass(category))}>
+            <p className={cn("text-insight font-sans", categoryTextClass(category))}>
               {band}
             </p>
             <ul className="text-muted-foreground space-y-0.5 font-mono text-xs tabular-nums">
@@ -58,7 +59,7 @@ export const ScoreRing = ({
             <g key={i}>
               <path
                 d={a.track}
-                className={join(
+                className={cn(
                   state === "empty" ? "stroke-chart-reference" : "stroke-chart-track",
                   state === "loading" && "motion-safe:animate-pulse",
                 )}

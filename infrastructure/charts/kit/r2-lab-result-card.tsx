@@ -1,5 +1,6 @@
+import { cn } from "@/infrastructure/ui";
+
 import { categoryTextClass } from "../category-token";
-import { join } from "./kit-parts";
 import type { LabResultCardProps } from "./types";
 
 /** Status colours follow the word; the word is what carries the outcome. */
@@ -30,7 +31,7 @@ export const LabResultCard = ({
       <span className="flex items-center gap-2">
         <span
           aria-hidden="true"
-          className={join(
+          className={cn(
             "inline-block size-2.5 rounded-full bg-current",
             categoryTextClass(category),
           )}
@@ -38,9 +39,7 @@ export const LabResultCard = ({
         <h3 className="text-foreground font-sans">{title}</h3>
       </span>
       {state === "default" ? (
-        <span
-          className={join("font-mono text-xs font-bold uppercase", TONE[outcome.tone])}
-        >
+        <span className={cn("font-mono text-xs font-bold uppercase", TONE[outcome.tone])}>
           {outcome.word}
         </span>
       ) : null}

@@ -2,6 +2,8 @@
 
 import type { ReactNode } from "react";
 
+import { cn } from "@/infrastructure/ui";
+
 import { useMeasuredWidth } from "../chart-frame";
 import {
   categoryTextClass,
@@ -10,28 +12,23 @@ import {
 } from "../category-token";
 import type { HeroValue } from "./types";
 
+/** Pieces every kit chart shares: the measured svg, the axis word, the hero number and the loading pulse. */
+
 /**
- * Pieces every kit chart shares: the measured svg, the axis word, the hero
- * number and the loading pulse.
- *
- * Class lists are joined by hand rather than through `cn`: tailwind-merge
- * reads `text-axis` and `text-chart-1` as two text colours and would drop one.
+ * Charts draw at their real width. `height` is fixed per chart, or a
+ * function of the width for a chart that grows in a wide card.
  */
-
-export const join = (...parts: readonly (string | false | null | undefined)[]): string =>
-  parts.filter(Boolean).join(" ");
-
-/** Charts draw at their real width; `height` is fixed per chart. */
 export const ChartSvg = ({
-  height,
+  height: heightFor,
   fallback = 320,
   children,
 }: {
-  readonly height: number;
+  readonly height: number | ((width: number) => number);
   readonly fallback?: number;
   readonly children: (width: number) => ReactNode;
 }) => {
   const [ref, width] = useMeasuredWidth(fallback);
+  const height = typeof heightFor === "number" ? heightFor : heightFor(width);
   return (
     <div ref={ref} className="w-full">
       <svg
@@ -61,23 +58,29 @@ export const EMPTY_STROKE = "fill-none stroke-chart-reference";
 export const toneClass = (category: Category, reference: boolean): string =>
   reference ? REFERENCE_TEXT_CLASS : categoryTextClass(category);
 
-/** A hero number with its label and unit; today in colour, the reference grey. */
+/**
+ * A hero number with its label and unit; today in colour, the reference grey.
+ * `pair` is for two heroes side by side: a smaller step, and the unit wraps
+ * under the number rather than running into the next column.
+ */
 export const Hero = ({
   hero,
   category,
   reference = false,
   dot = true,
+  pair = false,
 }: {
   readonly hero: HeroValue;
   readonly category: Category;
   readonly reference?: boolean;
   readonly dot?: boolean;
+  readonly pair?: boolean;
 }) => (
   <div className="min-w-0">
     <p className="text-muted-foreground flex items-center gap-1.5 font-mono text-xs">
       {dot ? (
         <span
-          className={join(
+          className={cn(
             "inline-block size-2 rounded-full bg-current",
             toneClass(category, reference),
           )}
@@ -86,14 +89,15 @@ export const Hero = ({
       {hero.label}
     </p>
     <p
-      className={join(
-        "text-hero font-mono font-bold tabular-nums",
+      className={cn(
+        "flex flex-wrap items-baseline gap-x-1 font-mono font-bold tabular-nums",
+        pair ? "text-3xl" : "text-hero",
         toneClass(category, reference),
       )}
     >
-      {hero.value}
+      <span>{hero.value}</span>
       {hero.unit ? (
-        <span className="text-muted-foreground ml-1 font-sans text-base font-normal">
+        <span className="text-muted-foreground font-sans text-base font-normal">
           {hero.unit}
         </span>
       ) : null}

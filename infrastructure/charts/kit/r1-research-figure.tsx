@@ -1,12 +1,12 @@
 "use client";
 
 import { conditionToken, tokenTextClass } from "../category-token";
-import { tickDecimals } from "../chart-geometry";
-import { estimateRows, nullFigure, type Estimate } from "./kit-geometry";
+import { estimateRows, exactDecimals, nullFigure, type Estimate } from "./kit-geometry";
 import { AXIS_TEXT, ChartSvg, EMPTY_STROKE, LOADING_FILL, toneClass } from "./kit-parts";
 import type { ResearchFigureProps } from "./types";
 
-const LABELS = 120;
+/** Room for a row label such as "LTAFDB · Specificity" before the plot starts. */
+const LABELS = 176;
 const ROW = 32;
 const AXIS = 22;
 
@@ -38,7 +38,7 @@ const EstimatePlot = ({
           reference?.value ?? null,
           domain,
         );
-        const decimals = tickDecimals(out.ticks.map((t) => t.value));
+        const decimals = exactDecimals(out.ticks.map((t) => t.value));
         return (
           <g data-state={state}>
             {out.rows.map((row, i) => (
