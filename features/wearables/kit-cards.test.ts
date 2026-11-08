@@ -76,10 +76,10 @@ describe("kitSections, Oura", () => {
     );
   });
 
-  test("steps use the review wording and keep their unit beside the number", () => {
+  test("steps compare the last full day and keep their unit beside the number", () => {
     const steps = card(section(sections, "daily").cards, "daily:activity.steps.");
     expect(steps).toMatchObject({
-      sentence: "You've taken more steps than usual by this time of day.",
+      sentence: "You took 12,000 steps on your last full day, more than usual.",
       today: { label: "7 Nov 2026", value: "12,000", unit: "steps" },
       reference: { label: "Usual (7 days)", value: "8,000", unit: "steps" },
     });
@@ -105,7 +105,14 @@ describe("kitSections, Oura", () => {
     expect(nights.sentence).toBe("You slept 6 hr 40 min last night, less than usual.");
     expect(nights.values.length).toBe(14);
     expect(nights.target).toBe(450);
-    expect(nights.readouts.at(-1)).toBe("Sat 7 Nov · 6 h 40 min");
+    expect(nights.readouts.at(-1)).toBe("Sat 7 Nov · 6 hr 40 min");
+    // Hours in the number, minutes beside it: one line in a pair, read as "7 hr 30 min".
+    expect(nights.reference).toEqual({
+      label: "Usual (7 nights)",
+      value: "7 hr",
+      unit: "30 min",
+    });
+    expect(nights.last).toEqual({ label: "Last night", value: "6 hr", unit: "40 min" });
     expect(nights.axis).toEqual(["25 Oct", "7 Nov"]);
   });
 
@@ -194,5 +201,16 @@ describe("kitSections, thin data", () => {
       "daily",
     );
     expect(daily.cards.map((c) => c.id)).toEqual(["ring:whoop.recovery.score."]);
+  });
+});
+
+describe("band words", () => {
+  test("describe the score and never advise", () => {
+    const metrics = series("whoop.recovery.score", 10, (i) => (i === 0 ? 40 : 60));
+    const daily = section(
+      kitSections({ source: "whoop", metrics, today: TODAY }),
+      "daily",
+    );
+    expect(daily.cards[0]).toMatchObject({ band: "Low" });
   });
 });

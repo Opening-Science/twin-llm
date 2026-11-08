@@ -59,6 +59,18 @@ export type TodayData = Readonly<{
   tolerance?: number;
 }>;
 
+/**
+ * T1 for a whole day: the latest finished day's total against the usual
+ * daily total. For a dashboard that holds one value per day, where "by this
+ * time of day" would compare a finished day with nothing.
+ */
+export type DayData = Readonly<{
+  template: "day";
+  day: Value;
+  usual: Value;
+  tolerance?: number;
+}>;
+
 /** T2: the average over the last 7 days. Sleep is in minutes. */
 export type WeeklyData = Readonly<{ template: "weekly"; average: Value }>;
 
@@ -109,7 +121,7 @@ export type TargetData = Readonly<{
 
 /** Which templates each metric takes; anything else does not compile. */
 export type InsightDataFor = {
-  steps: TodayData | WeeklyData | MonthlyData | StreakDaysData;
+  steps: TodayData | DayData | WeeklyData | MonthlyData | StreakDaysData;
   sleepDuration: TodayData | WeeklyData | MonthlyData | StreakNightsData;
   restingHeartRate: TodayData | WeeklyData | MonthlyData;
   heartRate: WeeklyData | MonthlyData | RangeData;
@@ -277,6 +289,17 @@ const todayInsight = (metric: InsightMetric, data: TodayData, locale: string) =>
   return `Your ${level.noun} today is ${level.value(data.today, locale)}, ${compared[where]}.`;
 };
 
+const dayInsight = (metric: InsightMetric, data: DayData, locale: string) => {
+  if (!present(data.day) || !present(data.usual) || metric !== "steps") return null;
+  const where = band(data.day, data.usual, data.tolerance ?? DEFAULT_TOLERANCE);
+  const compared = {
+    below: "fewer than usual",
+    about: "about your usual",
+    above: "more than usual",
+  };
+  return `You took ${LEVELS.steps.value(data.day, locale)} on your last full day, ${compared[where]}.`;
+};
+
 const weeklyInsight = (metric: InsightMetric, data: WeeklyData, locale: string) => {
   if (!present(data.average) || metric === "bedtime") return null;
   if (metric === "steps") {
@@ -386,6 +409,8 @@ export const insight = <M extends InsightMetric>(
 ): string | null => {
   const input: AnyData = data;
   switch (input.template) {
+    case "day":
+      return dayInsight(metric, input, locale);
     case "today":
       return todayInsight(metric, input, locale);
     case "weekly":

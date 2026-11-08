@@ -15,7 +15,7 @@ import {
 import { DASHBOARD_TRENDS, type TrendSpec } from "./dashboard-cards";
 import { type WearableSource } from "./dashboard-headings";
 import type { ChartPoint } from "./interactive-chart";
-import { insight, type InsightMetric } from "./insight";
+import { formatDuration, insight, type InsightMetric } from "./insight";
 import { pointsByPrefix, scoreBand, type Metric } from "./metric-utils";
 
 /**
@@ -52,14 +52,32 @@ type Series = Readonly<{
 }>;
 
 /** Writes a value of a series; steps get their unit in words. */
-const show = (kind: MeasureKind, value: number | null): string =>
-  kind === "steps" ? `${formatNumber(value, 0)} steps` : formatMeasure(kind, value);
+/**
+ * Writes a value of a series. Durations read "7 hr 4 min", as in the insight
+ * sentences and the kit, not format-measure's shorter "7 h 4 min".
+ */
+const show = (kind: MeasureKind, value: number | null): string => {
+  if (kind === "steps") return `${formatNumber(value, 0)} steps`;
+  if (kind === "sleepMinutes" && value !== null && Number.isFinite(value)) {
+    return formatDuration(value);
+  }
+  return formatMeasure(kind, value);
+};
 
-/** A hero number; a step count keeps its unit beside it, as the kit draws units. */
-const hero = (label: string, kind: MeasureKind, value: number | null): HeroValue =>
-  kind === "steps"
-    ? { label, value: formatNumber(value, 0), unit: "steps" }
-    : { label, value: formatMeasure(kind, value) };
+/**
+ * A hero number with its unit beside it, as the kit draws units. A duration
+ * puts its hours in the number and its minutes beside them ("7 hr" and
+ * "49 min"), so it reads "7 hr 49 min" and fits on one line in a pair.
+ */
+const hero = (label: string, kind: MeasureKind, value: number | null): HeroValue => {
+  if (kind === "steps") return { label, value: formatNumber(value, 0), unit: "steps" };
+  const text = show(kind, value);
+  if (kind !== "sleepMinutes") return { label, value: text };
+  const hours = text.indexOf(" hr ");
+  return hours < 0
+    ? { label, value: text }
+    : { label, value: text.slice(0, hours + 3), unit: text.slice(hours + 4) };
+};
 
 /* --- dates ----------------------------------------------------------------- */
 
@@ -367,6 +385,12 @@ const say = (
         usual: number | null;
         tolerance?: number;
       }>
+    | Readonly<{
+        template: "day";
+        day: number;
+        usual: number | null;
+        tolerance?: number;
+      }>
     | Readonly<{ template: "weekly"; average: number | null }>
     | Readonly<{
         template: "monthly";
@@ -381,12 +405,18 @@ const UNTIL_USUAL = `once ${MIN_READINGS} earlier days with a reading are in vie
 const todayCard = (series: Series, points: readonly ChartPoint[]): KitCard | null => {
   const now = reading(points);
   if (!now) return null;
-  const sentence = say(series.metric, {
-    template: "today",
-    today: now.latest.value,
-    usual: now.usual,
-    tolerance: series.tolerance,
-  });
+  // Steps are daily totals here, so they are compared as a whole day, not by the hour.
+  const sentence = say(
+    series.metric,
+    series.metric === "steps"
+      ? { template: "day", day: now.latest.value, usual: now.usual }
+      : {
+          template: "today",
+          today: now.latest.value,
+          usual: now.usual,
+          tolerance: series.tolerance,
+        },
+  );
   return {
     id: `daily:${series.prefix}`,
     chart: "pair",

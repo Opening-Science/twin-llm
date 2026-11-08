@@ -457,3 +457,18 @@ describe("scores and nightly measures (#520)", () => {
     expect(INSIGHT_METRIC_BY_STEM["whoop.sleep.in_bed_min"]).toBe("timeInBed");
   });
 });
+
+describe("a whole day of steps (#521)", () => {
+  test("compares the last full day, not this time of day", () => {
+    expect(insight("steps", { template: "day", day: 12_000, usual: 8_000 })).toBe(
+      "You took 12,000 steps on your last full day, more than usual.",
+    );
+    expect(insight("steps", { template: "day", day: 8_100, usual: 8_000 })).toBe(
+      "You took 8,100 steps on your last full day, about your usual.",
+    );
+    expect(insight("steps", { template: "day", day: 1, usual: 8_000 })).toBe(
+      "You took 1 step on your last full day, fewer than usual.",
+    );
+    expect(insight("steps", { template: "day", day: null, usual: 8_000 })).toBeNull();
+  });
+});
