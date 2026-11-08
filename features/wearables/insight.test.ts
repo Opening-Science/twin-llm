@@ -11,7 +11,7 @@ describe("T1 today against usual", () => {
       "You're taking about as many steps as you usually do by now.",
     );
     expect(insight("steps", { template: "today", today: 7_000, usual: 5_000 })).toBe(
-      "You're ahead of your usual step count for this time of day.",
+      "You've taken more steps than usual by this time of day.",
     );
   });
 
@@ -400,5 +400,75 @@ describe("INSIGHT_METRIC_BY_STEM", () => {
     expect(INSIGHT_METRIC_BY_STEM["whoop.recovery.rhr"]).toBe("restingHeartRate");
     expect(INSIGHT_METRIC_BY_STEM["readiness.score"]).toBe("readiness");
     expect(INSIGHT_METRIC_BY_STEM["whoop.recovery.score"]).toBe("recovery");
+  });
+});
+
+describe("scores and nightly measures (#520)", () => {
+  test("a night's measure says last night", () => {
+    expect(insight("sleepScore", { template: "today", today: 82, usual: 80 })).toBe(
+      "Your sleep score last night was 82, about your usual.",
+    );
+    expect(
+      insight("sleepingHeartRate", { template: "today", today: 61, usual: 56 }),
+    ).toBe(
+      "Your heart rate during sleep last night was 61 beats per minute, above your usual.",
+    );
+    expect(insight("sleepPerformance", { template: "today", today: 70, usual: 84 })).toBe(
+      "Your sleep performance last night was 70 percent, below your usual.",
+    );
+    expect(insight("timeInBed", { template: "today", today: 480, usual: 470 })).toBe(
+      "Your time in bed last night was 8 hr, about your usual.",
+    );
+  });
+
+  test("a day's score says today", () => {
+    expect(insight("activityScore", { template: "today", today: 90, usual: 78 })).toBe(
+      "Your activity score today is 90, above your usual.",
+    );
+  });
+
+  test("monthly changes carry their own unit", () => {
+    expect(
+      insight("sleepScore", { template: "monthly", thisMonth: 81, lastMonth: 77 }),
+    ).toBe("Your sleep score this month is 4 points higher than last month.");
+    expect(
+      insight("sleepPerformance", { template: "monthly", thisMonth: 80, lastMonth: 83 }),
+    ).toBe(
+      "Your sleep performance this month is 3 percentage points lower than last month.",
+    );
+    expect(
+      insight("timeInBed", { template: "monthly", thisMonth: 470, lastMonth: 495 }),
+    ).toBe("Your time in bed this month is 25 min shorter than last month.");
+  });
+
+  test("a tighter tolerance moves a resting heart rate out of about", () => {
+    const data = { template: "today", today: 58, usual: 56 } as const;
+    expect(insight("restingHeartRate", data)).toBe(
+      "Your resting heart rate today is 58 beats per minute, about your usual.",
+    );
+    expect(insight("restingHeartRate", { ...data, tolerance: 0.03 })).toBe(
+      "Your resting heart rate today is 58 beats per minute, above your usual.",
+    );
+  });
+
+  test("their stems map", () => {
+    expect(INSIGHT_METRIC_BY_STEM["sleep.score"]).toBe("sleepScore");
+    expect(INSIGHT_METRIC_BY_STEM["sleep.hr"]).toBe("sleepingHeartRate");
+    expect(INSIGHT_METRIC_BY_STEM["whoop.sleep.in_bed_min"]).toBe("timeInBed");
+  });
+});
+
+describe("a whole day of steps (#521)", () => {
+  test("compares the last full day, not this time of day", () => {
+    expect(insight("steps", { template: "day", day: 12_000, usual: 8_000 })).toBe(
+      "You took 12,000 steps on your last full day, more than usual.",
+    );
+    expect(insight("steps", { template: "day", day: 8_100, usual: 8_000 })).toBe(
+      "You took 8,100 steps on your last full day, about your usual.",
+    );
+    expect(insight("steps", { template: "day", day: 1, usual: 8_000 })).toBe(
+      "You took 1 step on your last full day, fewer than usual.",
+    );
+    expect(insight("steps", { template: "day", day: null, usual: 8_000 })).toBeNull();
   });
 });
