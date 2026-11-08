@@ -12,7 +12,7 @@ import { rehypeHeadingIds } from "./heading-ids";
  * `.doc-prose` in `globals.css` styles the output.
  */
 
-const FRAME = "mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-10 sm:px-6";
+const FRAME = "page-reading page-stack";
 
 export const DocsIndex = ({ pages }: Readonly<{ pages: readonly DocPage[] }>) => (
   <div className={FRAME}>

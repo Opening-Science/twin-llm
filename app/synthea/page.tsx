@@ -10,7 +10,7 @@ export default async function SyntheaPage() {
   const env = syntheaEnv();
   const ready = (await syntheaJarStatus()) === "ready";
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8 sm:px-6">
+    <div className="page-reading page-stack">
       <div className="flex flex-col gap-3">
         <p className="text-eyebrow">Synthetic patients · Synthea {SYNTHEA_VERSION}</p>
         <h1 className="text-display">Generate synthetic patients</h1>

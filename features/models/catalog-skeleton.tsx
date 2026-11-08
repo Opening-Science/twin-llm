@@ -11,10 +11,7 @@ const Block = ({ className }: Readonly<{ className: string }>) => (
 const ROWS = 5;
 
 export const CatalogSkeleton = () => (
-  <div
-    aria-busy="true"
-    className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-10 sm:px-6"
-  >
+  <div aria-busy="true" className="page-wide page-stack">
     <h1 className="text-display">Models</h1>
     <p role="status" className="sr-only">
       Loading the model list

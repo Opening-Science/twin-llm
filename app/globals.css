@@ -280,6 +280,58 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+/* --- Page widths and spacing (#460) ---------------------------------------
+   Every page's column is one of three widths. A width is the column's text,
+   so the gutter sits outside it and two pages of one width line up exactly:
+   - form (34rem): one task on its own, such as the first-run card.
+   - reading (53rem): running text, such as the docs.
+   - wide (61rem): everything else: chat, Customize, the Lab, models, the
+     Body twin.
+   One spacing scale for the page frame: the gutter at the sides (1rem on a
+   phone, 1.5rem from 640px), the block above and below the page (2.5rem) and
+   the section gap between a page's parts (2rem). */
+:root {
+  --page-form: 34rem;
+  --page-reading: 53rem;
+  --page-wide: 61rem;
+  --page-gutter: 1rem;
+  --page-block: 2.5rem;
+  --page-section: 2rem;
+}
+
+@media (width >= 40rem) {
+  :root {
+    --page-gutter: 1.5rem;
+  }
+}
+
+@layer components {
+  .page-form,
+  .page-reading,
+  .page-wide {
+    @apply mx-auto w-full min-w-0 px-(--page-gutter) py-(--page-block);
+  }
+  .page-form {
+    max-width: calc(var(--page-form) + 2 * var(--page-gutter));
+  }
+  .page-reading {
+    max-width: calc(var(--page-reading) + 2 * var(--page-gutter));
+  }
+  .page-wide {
+    max-width: calc(var(--page-wide) + 2 * var(--page-gutter));
+  }
+  /* A page's parts, one under the other, a section gap apart. */
+  .page-stack {
+    @apply flex flex-col gap-(--page-section);
+  }
+  /* The wide column inside an area that already has the gutter, such as the
+     chat's answers and its prompt bar. */
+  .page-column {
+    @apply mx-auto max-w-(--page-wide);
+  }
+}
+/* --- end Page widths and spacing (#460) --- */
+
 /* --- Base ------------------------------------------------------------------ */
 
 @layer base {
@@ -454,12 +506,6 @@
 
   .chip[aria-pressed="true"] {
     @apply border-primary text-foreground bg-[color-mix(in_oklab,var(--primary)_12%,transparent)];
-  }
-
-  /* The Lab's pages (`features/lab/lab-detail.tsx`): one column, the same
-     width as Customize, so the hub and every experiment line up. */
-  .lab-page {
-    @apply mx-auto flex w-full max-w-5xl min-w-0 flex-col gap-8 px-4 py-10 sm:px-6;
   }
 
   .lab-back {
@@ -896,11 +942,11 @@
   /* The thread's Outputs panel: a block above the answers on narrow screens, a
      sticky column beside them from xl up. */
   .outputs-panel {
-    @apply bg-card border-border mx-auto mb-6 flex w-full max-w-5xl flex-col gap-2 rounded-xl border p-2 xl:sticky xl:top-4 xl:mb-0 xl:max-h-[calc(100dvh-8rem)];
+    @apply bg-card border-border mx-auto mb-6 flex w-full max-w-(--page-wide) flex-col gap-2 rounded-xl border p-2 xl:sticky xl:top-4 xl:mb-0 xl:max-h-[calc(100dvh-8rem)];
   }
 
   .outputs-reopen {
-    @apply mx-auto mb-4 flex w-full max-w-5xl justify-end xl:sticky xl:top-4 xl:mb-0;
+    @apply mx-auto mb-4 flex w-full max-w-(--page-wide) justify-end xl:sticky xl:top-4 xl:mb-0;
   }
 
   .output-entry {
