@@ -210,3 +210,43 @@ export const RANGE_DEMO = {
     axis: ["1 Nov", "30 Nov"] as const,
   },
 };
+
+/* --- Readouts for the tap-to-focus examples, all made up --------------------- */
+
+export const STREAK_READ = STREAK.map((d) => {
+  const day = new Date(`${d.date}T00:00:00Z`);
+  const date = `${day.getUTCDate()} ${day.getUTCMonth() === 9 ? "Oct" : "Nov"}`;
+  return { ...d, readout: `${date} · ${d.done ? "active" : "not active"}` };
+});
+
+const STAGE_WORD = { awake: "Awake", rem: "REM", core: "Core", deep: "Deep" } as const;
+
+/** Minutes after 11:04 PM as a clock time. */
+const nightClock = (minutes: number): string => {
+  const total = 23 * 60 + 4 + minutes;
+  const hour = Math.floor(total / 60) % 24;
+  const twelve = hour % 12 === 0 ? 12 : hour % 12;
+  return `${twelve}:${String(total % 60).padStart(2, "0")} ${hour < 12 ? "AM" : "PM"}`;
+};
+
+export const NIGHT_READ = NIGHT.map((s) => ({
+  ...s,
+  readout: `${STAGE_WORD[s.stage]} · ${nightClock(s.start)} to ${nightClock(s.end)}`,
+}));
+
+export const SLEEP_PARTS_READ = SLEEP_PARTS.map((p) => ({
+  ...p,
+  readout: `${p.label} · ${p.value} of ${p.max}`,
+}));
+
+const radarRead = <T extends { label: string; value: number | null; display: string }>(
+  axes: readonly T[],
+) =>
+  axes.map((a) => ({
+    ...a,
+    readout: a.value === null ? `${a.label} · not in yet` : `${a.label} · ${a.display}`,
+  }));
+
+export const RADAR_SLEEP_READ = radarRead(RADAR_SLEEP);
+export const RADAR_HEART_READ = radarRead(RADAR_HEART);
+export const RADAR_READINESS_READ = radarRead(RADAR_READINESS);

@@ -117,6 +117,7 @@ export type WeeklyBarsProps = Base &
 
 /** C07: done days filled, other days on the track, today outlined. */
 export type StreakGridProps = Base &
+  Interactive &
   Readonly<{ days: readonly StreakDay[]; today: string; weekStart?: 0 | 1 }>;
 
 /** C08: one bar from minimum to maximum per bucket, MIN and MAX written. */
@@ -132,6 +133,7 @@ export type RangeBarsProps = Base &
 
 /** C09: four lanes with a duration under each label. */
 export type HypnogramProps = Base &
+  Interactive &
   Readonly<{
     spans: readonly StageSpan[];
     /** Lane words; defaults to Awake, REM, Core, Deep. */
@@ -144,6 +146,7 @@ export type HypnogramProps = Base &
 
 /** C10: a segmented ring with the score inside and a breakdown beside it. */
 export type ScoreRingProps = Base &
+  Interactive &
   Readonly<{
     title: string;
     /** A describing word for the band, e.g. "High". */
@@ -210,4 +213,4 @@ export type LabResultCardProps = Base &
   }>;
 
 /** C18: three to about eight axes, each on its own 0 to max; today against the reference. */
-export type RadarProps = Base & Readonly<{ axes: readonly RadarAxis[] }>;
+export type RadarProps = Base & Interactive & Readonly<{ axes: readonly RadarAxis[] }>;

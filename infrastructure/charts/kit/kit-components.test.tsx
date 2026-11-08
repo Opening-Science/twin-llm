@@ -523,3 +523,221 @@ describe("insight card options", () => {
     expect(out).not.toContain(">Month<");
   });
 });
+
+describe("tap to focus", () => {
+  test.each([
+    [
+      "C07",
+      <StreakGrid
+        key="c07"
+        category="activity"
+        days={[
+          { date: "2026-11-01", done: true, readout: "1 Nov · active" },
+          { date: "2026-11-02", done: false, readout: "2 Nov · not active" },
+        ]}
+        today="2026-11-02"
+        defaultFocus={1}
+      />,
+      "2 Nov · not active",
+    ],
+    [
+      "C09",
+      <Hypnogram
+        key="c09"
+        category="sleep"
+        spans={[
+          { stage: "deep", start: 60, end: 90, readout: "Deep · 1:00 to 1:30" },
+          { stage: "core", start: 0, end: 60, readout: "Core · 0:00 to 1:00" },
+        ]}
+        defaultFocus={0}
+      />,
+      // Blocks are focused in time order, whatever order the spans came in.
+      "Core · 0:00 to 1:00",
+    ],
+    [
+      "C10",
+      <ScoreRing
+        key="c10"
+        category="sleep"
+        title="Sleep score"
+        band="High"
+        parts={[
+          { label: "Duration", value: 45, max: 50, readout: "Duration · 45 of 50" },
+          { label: "Bedtime", value: 25, max: 30, readout: "Bedtime · 25 of 30" },
+        ]}
+        defaultFocus={1}
+      />,
+      "Bedtime · 25 of 30",
+    ],
+    [
+      "C18",
+      <Radar
+        key="c18"
+        category="sleep"
+        axes={[
+          {
+            label: "REM",
+            value: 96,
+            display: "1 hr 36 min",
+            max: 150,
+            readout: "REM · 1 hr 36 min",
+          },
+          {
+            label: "Deep",
+            value: 70,
+            display: "1 hr 10 min",
+            max: 120,
+            readout: "Deep · 1 hr 10 min",
+          },
+          {
+            label: "Core",
+            value: 248,
+            display: "4 hr 8 min",
+            max: 330,
+            readout: "Core · 4 hr 8 min",
+          },
+        ]}
+        defaultFocus={2}
+      />,
+      "Core · 4 hr 8 min",
+    ],
+  ])("%s pins its focus, names it and marks every mark tappable", (_, node, readout) => {
+    const out = html(node);
+    expect(out.match(/role="group"/g)).toHaveLength(1);
+    expect(out).toContain('aria-live="polite"');
+    expect(out).toContain(readout);
+    expect(out).toContain('data-focus-index="0"');
+    expect(out).toContain('data-focus-index="1"');
+  });
+
+  test("without readouts the tap charts stay pictures", () => {
+    const out =
+      html(charts("default").hypnogram) +
+      html(charts("default").ring) +
+      html(charts("default").streak);
+    expect(out).not.toContain('role="group"');
+    expect(out).not.toContain("data-focus-index");
+  });
+
+  test("weekly bars take a tap as well as a scrub", () => {
+    const out = html(
+      <WeeklyBars
+        category="steps"
+        values={[6, 8]}
+        readouts={["Mon · 6", "Tue · 8"]}
+        average={7}
+        caption="x"
+        hero="x"
+        defaultFocus={0}
+      />,
+    );
+    expect(out).toContain("Mon · 6");
+  });
+});
+
+describe("text never fades below AA", () => {
+  /** Every text-carrying element that has an opacity of its own. */
+  const fadedText = (out: string): readonly string[] =>
+    out.match(/<(text|tspan|li|span|p)\b[^>]*(opacity|style="[^"]*opacity)[^>]*>/g) ?? [];
+
+  const focused = {
+    weekly: (
+      <WeeklyBars
+        category="steps"
+        values={[6, 8, 7]}
+        readouts={["Mon · 6", "Tue · 8", "Wed · 7"]}
+        average={7}
+        caption="x"
+        hero="x"
+        defaultFocus={1}
+      />
+    ),
+    streak: (
+      <StreakGrid
+        category="activity"
+        days={[
+          { date: "2026-11-01", done: true, readout: "1 Nov · active" },
+          { date: "2026-11-02", done: true, readout: "2 Nov · active" },
+        ]}
+        today="2026-11-02"
+        defaultFocus={1}
+      />
+    ),
+    ring: (
+      <ScoreRing
+        category="sleep"
+        title="Sleep score"
+        band="High"
+        parts={[
+          { label: "Duration", value: 45, max: 50, readout: "Duration · 45 of 50" },
+          { label: "Bedtime", value: 25, max: 30, readout: "Bedtime · 25 of 30" },
+        ]}
+        defaultFocus={0}
+      />
+    ),
+    radar: (
+      <Radar
+        category="heart"
+        axes={[
+          {
+            label: "Resting",
+            value: 58,
+            display: "58 bpm",
+            max: 100,
+            readout: "Resting · 58 bpm",
+          },
+          {
+            label: "Sleeping",
+            value: 52,
+            display: "52 bpm",
+            max: 100,
+            readout: "Sleeping · 52 bpm",
+          },
+          {
+            label: "Walking",
+            value: 96,
+            display: "96 bpm",
+            max: 160,
+            readout: "Walking · 96 bpm",
+          },
+        ]}
+        defaultFocus={2}
+      />
+    ),
+    research: (
+      <ResearchFigure
+        kind="estimates"
+        category="vitals"
+        estimates={[
+          { label: "Within person", estimate: 3, readout: "Within person · 3" },
+          { label: "Shuffled", estimate: 1, readout: "Shuffled · 1" },
+        ]}
+        defaultFocus={0}
+      />
+    ),
+  };
+
+  test.each(Object.entries(focused))("%s: no text carries an opacity", (_, node) => {
+    expect(fadedText(html(node))).toEqual([]);
+  });
+
+  test("dimmed labels take the muted colour, the focused one stays foreground", () => {
+    const radar = html(focused.radar);
+    expect(radar).toMatch(/fill-muted-foreground[^>]*>Resting</);
+    expect(radar).toMatch(/fill-foreground[^>]*>Walking</);
+    const research = html(focused.research);
+    expect(research).toMatch(/fill-muted-foreground[^>]*>Shuffled</);
+    expect(research).toMatch(/fill-foreground[^>]*>Within person</);
+  });
+
+  test("a done day that steps back is an outline with a muted number", () => {
+    const out = html(focused.streak);
+    expect(out).toContain("border-current");
+    expect(out).toMatch(/text-muted-foreground font-bold[^>]*>1</);
+  });
+
+  test("marks still step back", () => {
+    expect(html(focused.weekly)).toContain('fill-opacity="0.4"');
+    expect(html(focused.radar)).toContain('fill-opacity="0.4"');
+  });
+});

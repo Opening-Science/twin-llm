@@ -1,7 +1,13 @@
 "use client";
 
 import { conditionToken, tokenTextClass } from "../category-token";
-import { ChartFocusFrame, ChartReadout, dimmed, useChartFocus } from "./chart-focus";
+import {
+  ChartFocusFrame,
+  ChartReadout,
+  dimmed,
+  mutedUnlessFocused,
+  useChartFocus,
+} from "./chart-focus";
 import {
   edgeAnchor,
   estimateLayout,
@@ -72,22 +78,25 @@ const EstimatePlot = ({
         return (
           <g data-state={state}>
             {out.rows.map((row, i) => (
-              <g
-                key={row.label}
-                transform={`translate(0 ${top + row.y})`}
-                opacity={dimmed(focused, i)}
-              >
+              <g key={row.label} transform={`translate(0 ${top + row.y})`}>
                 <text
                   x={layout.stacked ? layout.left : 0}
                   y={layout.stacked ? -8 : 4}
                   // A card-coloured outline keeps the word clear of the reference line.
-                  className="fill-foreground stroke-card font-sans text-sm"
+                  className={
+                    mutedUnlessFocused(focused, i)
+                      ? "fill-muted-foreground stroke-card font-sans text-sm"
+                      : "fill-foreground stroke-card font-sans text-sm"
+                  }
                   strokeWidth={4}
                   paintOrder="stroke"
                 >
                   {row.label}
                 </text>
-                <g transform={`translate(${layout.left} ${markY})`}>
+                <g
+                  transform={`translate(${layout.left} ${markY})`}
+                  opacity={dimmed(focused, i)}
+                >
                   {state === "loading" ? (
                     <rect
                       x={0}

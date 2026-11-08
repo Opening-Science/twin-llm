@@ -142,7 +142,12 @@ export const barsWithLine = (
 
 /* --- C07 streak grid --------------------------------------------------------- */
 
-export type StreakDay = Readonly<{ date: string; done: boolean }>;
+export type StreakDay = Readonly<{
+  date: string;
+  done: boolean;
+  /** What the readout says when this day is focused. */
+  readout?: string;
+}>;
 
 export type StreakCell = Readonly<{
   date: string;
@@ -153,6 +158,7 @@ export type StreakCell = Readonly<{
   col: number;
   /** "OCT" on the first cell and on the first of each month. */
   month: string | null;
+  readout?: string;
 }>;
 
 const MONTHS = [
@@ -199,6 +205,7 @@ export const streakGrid = (
       row: Math.floor(offset / 7),
       col: offset % 7,
       month: i === 0 || day === 1 ? MONTHS[when.getUTCMonth()]! : null,
+      readout: d.readout,
     };
   });
 };
@@ -280,10 +287,17 @@ export type SleepStage = "awake" | "rem" | "core" | "deep";
 /** Lanes top to bottom, as the board draws them. */
 export const STAGE_LANES: readonly SleepStage[] = ["awake", "rem", "core", "deep"];
 
-export type StageSpan = Readonly<{ stage: SleepStage; start: number; end: number }>;
+export type StageSpan = Readonly<{
+  stage: SleepStage;
+  start: number;
+  end: number;
+  /** What the readout says when this block is focused. */
+  readout?: string;
+}>;
 
 export type Hypnogram = Readonly<{
-  blocks: readonly (Bar & { stage: SleepStage })[];
+  /** In time order, each with its span's readout. */
+  blocks: readonly (Bar & { stage: SleepStage; readout?: string })[];
   /** Thin verticals where one stage hands over to the next. */
   steps: string;
   laneY: Readonly<Record<SleepStage, number>>;
@@ -315,6 +329,7 @@ export const hypnogram = (spans: readonly StageSpan[], box: Box, gap = 6): Hypno
   const x = (t: number): number => ((t - start) / span) * box.width;
   const blocks = valid.map((s) => ({
     stage: s.stage,
+    readout: s.readout,
     x: x(s.start),
     y: laneY[s.stage],
     width: Math.max(1, x(s.end) - x(s.start)),
@@ -334,7 +349,12 @@ export const hypnogram = (spans: readonly StageSpan[], box: Box, gap = 6): Hypno
 
 /* --- C10 score ring ---------------------------------------------------------- */
 
-export type RingPart = Readonly<{ value: number; max: number }>;
+export type RingPart = Readonly<{
+  value: number;
+  max: number;
+  /** What the readout says when this part is focused. */
+  readout?: string;
+}>;
 
 export type RingArc = Readonly<{ track: string; value: string }>;
 
@@ -525,6 +545,8 @@ export type RadarAxis = Readonly<{
   display: string;
   reference?: number | null;
   max: number;
+  /** What the readout says when this axis is focused. */
+  readout?: string;
 }>;
 
 export type RadarAnchor = Readonly<{
@@ -719,4 +741,43 @@ export const stepKey = (
 export const slotIndex = (x: number, width: number, count: number): number | null => {
   if (count <= 0 || width <= 0 || x < 0 || x > width) return null;
   return Math.min(count - 1, Math.floor((x / width) * count));
+};
+
+/**
+ * The radar axis nearest a pointer at (dx, dy) from the centre, with `n`
+ * axes clockwise from the top. Null at the very centre, where no direction
+ * is meant.
+ */
+export const radarAxisAt = (
+  dx: number,
+  dy: number,
+  n: number,
+  dead = 4,
+): number | null => {
+  if (n < 1 || Math.hypot(dx, dy) < dead) return null;
+  // Clockwise from the top, 0 to 2π.
+  const angle = (Math.atan2(dx, -dy) + 2 * Math.PI) % (2 * Math.PI);
+  return Math.round(angle / ((2 * Math.PI) / n)) % n;
+};
+
+/**
+ * The ring part in the direction of a pointer at (dx, dy) from the centre:
+ * parts run clockwise from the top, each as wide as its share of the
+ * maximum (the small gaps are left out). Null at the very centre.
+ */
+export const ringPartAt = (
+  dx: number,
+  dy: number,
+  parts: readonly RingPart[],
+  dead = 4,
+): number | null => {
+  const total = parts.reduce((sum, p) => sum + Math.max(0, p.max), 0);
+  if (total === 0 || Math.hypot(dx, dy) < dead) return null;
+  const turn = ((Math.atan2(dx, -dy) + 2 * Math.PI) % (2 * Math.PI)) / (2 * Math.PI);
+  let edge = 0;
+  for (const [i, p] of parts.entries()) {
+    edge += Math.max(0, p.max) / total;
+    if (turn < edge) return i;
+  }
+  return parts.length - 1;
 };
