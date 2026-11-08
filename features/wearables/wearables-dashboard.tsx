@@ -23,6 +23,7 @@ import { type DateRangeValue } from "./date-range-bar";
 import { InteractiveChart } from "./interactive-chart";
 import { kitSections } from "./kit-cards";
 import { KitDashboard } from "./kit-dashboard";
+import { useWearableDetail } from "./use-wearable-detail";
 import {
   COMPARE_ROWS,
   filterMetricsByRange,
@@ -39,7 +40,8 @@ import {
  * The wearables dashboard under the connector cards: one source at a time, or
  * Oura and Whoop side by side. One source reads as Daily, Weekly and Monthly
  * sections of chart-kit cards (`kit-cards.ts`), then every metric in view by
- * group. It owns no connection state; the screen passes the summaries, the
+ * group. The cards that need more than a value a day (steps by the hour,
+ * sleep stages, bedtimes) read the detail route (`use-wearable-detail.ts`). It owns no connection state; the screen passes the summaries, the
  * window and the sync action down.
  */
 
@@ -287,10 +289,22 @@ export const WearablesDashboard = ({
     [metrics, source],
   );
 
-  const kit = useMemo(
-    () => kitSections({ source, metrics, today: isoLocalDate() }),
-    [metrics, source],
+  const detail = useWearableDetail(
+    source,
+    range,
+    activeConnected && view === "single" ? activeSummary : null,
   );
+
+  const kit = useMemo(() => {
+    const now = new Date();
+    return kitSections({
+      source,
+      metrics,
+      today: isoLocalDate(now),
+      detail,
+      nowMinutes: now.getHours() * 60 + now.getMinutes(),
+    });
+  }, [metrics, source, detail]);
 
   if (view === "compare" && ouraSummary && whoopSummary) {
     return <ComparePanel oura={ouraSummary} whoop={whoopSummary} range={range} />;

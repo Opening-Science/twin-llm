@@ -1,11 +1,15 @@
 import type {
   Category,
   ChartRange,
+  DaySample,
   HeroValue,
   Range,
   RadarAxis,
+  SleepStage,
+  StageSpan,
 } from "@/infrastructure/charts/kit";
 import {
+  formatClock,
   formatDate,
   formatMeasure,
   formatNumber,
@@ -16,7 +20,14 @@ import { DASHBOARD_TRENDS, type TrendSpec } from "./dashboard-cards";
 import { type WearableSource } from "./dashboard-headings";
 import type { ChartPoint } from "./interactive-chart";
 import { formatDuration, insight, type InsightMetric } from "./insight";
+import { EVENING_MINUTES } from "./local-clock";
 import { pointsByPrefix, scoreBand, type Metric } from "./metric-utils";
+import type {
+  BedtimeNight,
+  NightDetail,
+  StepsDetail,
+  WearableDetail,
+} from "./wearable-detail";
 
 /**
  * The wearables dashboard as chart-kit cards, in three sections: the latest
@@ -308,8 +319,11 @@ type CardBase = Readonly<{
   label: string;
   category: Category;
   sentence: string;
-  /** `empty` draws the chart's outline under a sentence saying what comes and when. */
-  state: "default" | "empty";
+  /**
+   * `empty` draws the chart's outline under a sentence saying what comes and
+   * when; `loading` draws its shape while the detail route answers.
+   */
+  state: "default" | "empty" | "loading";
 }>;
 
 export type KitCard =
@@ -357,6 +371,22 @@ export type KitCard =
       }>)
   | (CardBase &
       Readonly<{
+        chart: "cumulative";
+        today: readonly DaySample[];
+        average: readonly DaySample[];
+        /** Where the day stops, 0 to 1: the viewer's time for today, 1 for a past day. */
+        now: number;
+        axis: readonly [string, string, string];
+      }>)
+  | (CardBase &
+      Readonly<{
+        chart: "hypnogram";
+        spans: readonly StageSpan[];
+        labels: Readonly<Partial<Record<SleepStage, string>>>;
+        axis: readonly [string, string] | undefined;
+      }>)
+  | (CardBase &
+      Readonly<{
         chart: "radar";
         /** One view per range; the card's switch picks one. A range with too little data is null. */
         views: Readonly<
@@ -387,7 +417,7 @@ const say = (
       }>
     | Readonly<{
         template: "day";
-        day: number;
+        day: number | null;
         usual: number | null;
         tolerance?: number;
       }>
@@ -396,6 +426,12 @@ const say = (
         template: "monthly";
         thisMonth: number | null;
         lastMonth: number | null;
+      }>
+    | Readonly<{
+        template: "target";
+        actual: number | null;
+        usual: number | null;
+        windowMinutes: number;
       }>,
 ): string | null =>
   (insight as (m: InsightMetric, d: typeof data) => string | null)(metric, data);
@@ -693,6 +729,265 @@ const radarCard = (
   };
 };
 
+/* --- the detail route's cards ------------------------------------------------ */
+
+/** Minutes either side of the usual bedtime that read as "within". */
+const BEDTIME_WINDOW = 30;
+/** Earlier days a usual day of steps needs (as the route counts them). */
+const USUAL_STEP_DAYS = 7;
+const DAY_AXIS = ["00:00", "12:00", "24:00"] as const;
+const STAGE_WORD: Readonly<Record<SleepStage, string>> = {
+  awake: "Awake",
+  rem: "REM",
+  core: "Light",
+  deep: "Deep",
+};
+/**
+ * Which sources can ever send steps by the hour and stage segments. A card a
+ * source can never fill is left out; an empty state means "none yet".
+ */
+const SENDS_HOURLY_STEPS: ReadonlySet<WearableSource> = new Set(["google-health"]);
+const SENDS_STAGES: ReadonlySet<WearableSource> = new Set(["oura", "google-health"]);
+/** Oura and Google Health both call it light sleep. */
+const STAGE_LABELS = { core: "Light" } as const;
+
+/** A time of the night from minutes after 6 PM. */
+const nightClock = (minutes: number): string => formatClock(minutes + EVENING_MINUTES);
+
+const loading = <C extends KitCard["chart"]>(chart: C) =>
+  ({ sentence: "", state: "loading", chart }) as const;
+
+/** A running total's value at `at` (0 to 1), read along the line between its samples. */
+const valueAt = (samples: readonly DaySample[], at: number): number => {
+  const after = samples.findIndex((s) => s.at >= at);
+  if (after < 0) return samples.at(-1)?.value ?? 0;
+  if (after === 0) return samples[0]!.value;
+  const a = samples[after - 1]!;
+  const b = samples[after]!;
+  return a.value + ((at - a.at) / (b.at - a.at)) * (b.value - a.value);
+};
+
+/** Midnight at 0, then each hour's running total at its end. */
+const daySamples = (hourly: readonly number[], readouts: boolean): DaySample[] => [
+  { at: 0, value: 0 },
+  ...hourly.map((value, h) => ({
+    at: (h + 1) / 24,
+    value,
+    readout: readouts
+      ? `By ${h === 23 ? "24:00" : formatClock((h + 1) * 60)} · ${show("steps", value)}`
+      : undefined,
+  })),
+];
+
+/** C05: the latest day's steps by the hour against the usual day; today stops at now. */
+const cumulativeCard = (
+  source: WearableSource,
+  steps: StepsDetail | "loading",
+  today: string,
+  nowMinutes: number,
+): KitCard | null => {
+  const base = {
+    id: "day:steps",
+    label: "Activity: Steps by the hour",
+    category: "steps",
+    axis: DAY_AXIS,
+  } as const;
+  const empty = (sentence: string): KitCard => ({
+    ...base,
+    chart: "cumulative",
+    sentence,
+    state: "empty",
+    today: [],
+    average: [],
+    now: 0,
+  });
+  // A source that never sends hourly steps gets no card, not even while loading.
+  if (!SENDS_HOURLY_STEPS.has(source) || steps === "loading") {
+    return SENDS_HOURLY_STEPS.has(source)
+      ? { ...base, ...loading("cumulative"), today: [], average: [], now: 0 }
+      : null;
+  }
+  if (steps.status === "not-provided") return null;
+  if (steps.status === "missing") {
+    return empty("Your day by the hour appears here once a sync brings in hourly steps.");
+  }
+  const isToday = steps.day === today;
+  const now = isToday ? Math.min(1, Math.max(0, nowMinutes / 1440)) : 1;
+  const hours = daySamples(steps.hourly, true);
+  const current = steps.hourly[Math.min(23, Math.floor(now * 24))] ?? 0;
+  const todaySamples = isToday
+    ? [
+        ...hours.filter((s) => s.at < now),
+        { at: now, value: current, readout: `Now · ${show("steps", current)}` },
+      ]
+    : hours;
+  const average = steps.usual ? daySamples(steps.usual, false) : [];
+  const sentence = !steps.usual
+    ? null
+    : isToday
+      ? say("steps", {
+          template: "today",
+          today: current,
+          usual: valueAt(average, now),
+        })
+      : say("steps", {
+          template: "day",
+          day: steps.hourly.at(-1) ?? null,
+          usual: steps.usual.at(-1) ?? null,
+        });
+  return {
+    ...base,
+    chart: "cumulative",
+    sentence:
+      sentence ??
+      `Your day is compared with your usual day once ${USUAL_STEP_DAYS} earlier days with hourly steps are in view.`,
+    state: sentence ? "default" : "empty",
+    today: todaySamples,
+    average,
+    now,
+  };
+};
+
+/** The mean of up to 7 nights' values before the last, or null with fewer than 3. */
+const usualNight = (
+  nights: readonly BedtimeNight[],
+  value: (night: BedtimeNight) => number | null,
+): number | null => {
+  const before = nights
+    .slice(-1 - USUAL_DAYS, -1)
+    .map(value)
+    .filter((v): v is number => v !== null);
+  return before.length < MIN_READINGS
+    ? null
+    : before.reduce((sum, v) => sum + v, 0) / before.length;
+};
+
+/** C09: last night's stages; a source that never sends them (WHOOP) gets no card. */
+const hypnogramCard = (
+  source: WearableSource,
+  night: NightDetail | "loading",
+  nights: WearableDetail["nights"] | "loading",
+): KitCard | null => {
+  const base = {
+    id: "night:stages",
+    label: "Sleep: Stages",
+    category: "sleep",
+    labels: STAGE_LABELS,
+    axis: undefined,
+  } as const;
+  const empty = (sentence: string): KitCard => ({
+    ...base,
+    chart: "hypnogram",
+    sentence,
+    state: "empty",
+    spans: [],
+  });
+  if (!SENDS_STAGES.has(source)) return null;
+  if (night === "loading") return { ...base, ...loading("hypnogram"), spans: [] };
+  if (night.status === "not-provided" || night.status === "totals-only") return null;
+  if (night.status === "missing") {
+    return empty(
+      "Last night's sleep stages appear here once a sync brings in a night with stages.",
+    );
+  }
+  const first = night.segments[0]!;
+  const last = night.segments.at(-1)!;
+  const list = nights !== "loading" && nights.status === "ok" ? nights.nights : [];
+  const tonight = list.at(-1);
+  const asleep =
+    tonight?.day === night.day && tonight.asleep !== null
+      ? tonight.asleep
+      : night.segments
+          .filter((s) => s.stage !== "awake")
+          .reduce((sum, s) => sum + s.end - s.start, 0);
+  const sentence = say("sleepDuration", {
+    template: "today",
+    today: asleep,
+    usual: usualNight(list, (n) => n.asleep),
+  });
+  return {
+    ...base,
+    chart: "hypnogram",
+    label: `Sleep: Stages, ${formatDate(night.day, "short")}`,
+    sentence:
+      sentence ??
+      `Your sleep stages last night, from ${nightClock(first.start)} to ${nightClock(last.end)}.`,
+    state: "default",
+    spans: night.segments.map((s) => ({
+      stage: s.stage,
+      start: s.start,
+      end: s.end,
+      readout: `${STAGE_WORD[s.stage]} · ${nightClock(s.start)} to ${nightClock(s.end)} · ${formatDuration(s.end - s.start)}`,
+    })),
+    axis: [nightClock(first.start), nightClock(last.end)],
+  };
+};
+
+/** "Night of Mon 3 Nov": a night named by its evening, as people say it. */
+const nightName = (day: string): string => `Night of ${dayName(addDays(day, -1))}`;
+
+/** C13 for bedtimes: 14 nights against the usual bedtime of the 7 before the last. */
+const bedtimeCard = (nights: WearableDetail["nights"] | "loading"): KitCard | null => {
+  const base = {
+    id: "nights:bedtime",
+    label: "Sleep: Bedtime",
+    category: "sleep",
+  } as const;
+  const shape = {
+    values: [],
+    readouts: [],
+    target: null,
+    reference: { label: "Usual (7 nights)", value: "–" },
+    last: { label: "Last night", value: "–" },
+    axis: ["", ""],
+  } as const;
+  if (nights === "loading") return { ...base, ...loading("consistency"), ...shape };
+  if (nights.status === "missing") {
+    return {
+      ...base,
+      ...shape,
+      chart: "consistency",
+      sentence: "Your bedtimes appear here once a sync brings in nights with a bedtime.",
+      state: "empty",
+    };
+  }
+  const list = nights.nights;
+  const latest = list.at(-1)!;
+  const usual = usualNight(list, (n) => n.bedtime);
+  const clock = (m: number | null) => (m === null ? null : (m + EVENING_MINUTES) % 1440);
+  const sentence = say("bedtime", {
+    template: "target",
+    actual: clock(latest.bedtime),
+    usual: clock(usual),
+    windowMinutes: BEDTIME_WINDOW,
+  });
+  return {
+    ...base,
+    chart: "consistency",
+    sentence:
+      sentence ??
+      `Last night's bedtime is compared with your usual one once ${MIN_READINGS} earlier nights with a bedtime are in view.`,
+    state: sentence ? "default" : "empty",
+    values: list.map((n) => n.bedtime),
+    readouts: list.map((n) =>
+      n.bedtime === null ? null : `${nightName(n.day)} · ${nightClock(n.bedtime)}`,
+    ),
+    target: usual,
+    reference: {
+      label: "Usual (7 nights)",
+      value: usual === null ? "–" : nightClock(usual),
+    },
+    last: {
+      label: "Last night",
+      value: latest.bedtime === null ? "–" : nightClock(latest.bedtime),
+    },
+    axis: [
+      formatDate(addDays(list[0]!.day, -1), "short"),
+      formatDate(addDays(latest.day, -1), "short"),
+    ],
+  };
+};
+
 const present = (cards: readonly (KitCard | null)[]): KitCard[] =>
   cards.filter((card): card is KitCard => card !== null);
 
@@ -701,12 +996,22 @@ export type KitDashboardInput = Readonly<{
   metrics: readonly Metric[];
   /** The viewer's calendar day: a step count for today is not finished yet. */
   today: string;
+  /**
+   * Hourly steps, stages and bedtimes from the detail route; "loading" while
+   * it answers. Left out (or null when it could not answer), the cards that
+   * need it are left out too.
+   */
+  detail?: WearableDetail | "loading" | null;
+  /** The viewer's time, minutes after midnight: where today's steps stop. */
+  nowMinutes?: number;
 }>;
 
 export const kitSections = ({
   source,
   metrics,
   today,
+  detail = null,
+  nowMinutes = 0,
 }: KitDashboardInput): readonly KitSection[] => {
   const spec = SOURCE_SERIES[source];
   const points = (series: Series): readonly ChartPoint[] => {
@@ -723,13 +1028,26 @@ export const kitSections = ({
     card: (series: Series, points: readonly ChartPoint[]) => KitCard | null,
   ) => present(list.map((series) => (series ? card(series, points(series)) : null)));
 
+  const part = <K extends keyof WearableDetail>(key: K) =>
+    detail === "loading" ? "loading" : (detail?.[key] ?? null);
+  const steps = part("steps");
+  const night = part("night");
+  const nights = part("nights");
+
   const daily = [
     ...each(spec.scores, ringCard),
     ...each([spec.sleep], consistencyCard),
+    ...present([
+      night ? hypnogramCard(source, night, nights ?? "loading") : null,
+      steps ? cumulativeCard(source, steps, today, nowMinutes) : null,
+    ]),
     ...each([spec.steps, spec.heart, spec.hrv], todayCard),
     ...present([radarCard(spec.radar, points)]),
   ];
-  const weekly = each([spec.steps, spec.sleep, spec.hrv, spec.heart], weeklyCard);
+  const weekly = [
+    ...each([spec.steps, spec.sleep, spec.hrv, spec.heart], weeklyCard),
+    ...present([nights ? bedtimeCard(nights) : null]),
+  ];
   const monthly = [
     ...each([spec.steps, spec.sleep, spec.hrv], monthCard),
     ...each([spec.heart], weekRangeCard),
