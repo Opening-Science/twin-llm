@@ -5,8 +5,10 @@ import {
   type WhoopSyncPayload,
   type WhoopWindow,
 } from "@open-twin/provider-whoop";
+import { SYSTEMS } from "@open-twin/fhir-core";
 import type { Bundle } from "fhir/r4";
 
+import { personSubject, withPersonPatient } from "./person-subject";
 import {
   fetchWhoopWorkouts,
   withWhoopWorkouts,
@@ -69,15 +71,21 @@ export const fetchWhoopWindow = async (
   return { ...data, workouts: workoutResult.workouts };
 };
 
+/** Every Observation names the person's shared subject (person-subject.ts), not a WHOOP-only one. */
 export const buildWhoopFhirBundle = (
   payload: WhoopHostPayload,
   options: { readonly subjectKey: string; readonly timestamp: string },
-): Bundle =>
-  withWhoopWorkouts(
-    buildWhoopBundleFromPayload(
-      { recovery: payload.recovery, cycles: payload.cycles, sleep: payload.sleep },
-      { subjectKey: options.subjectKey, timestamp: options.timestamp },
+): Bundle => {
+  const subject = personSubject(options.subjectKey);
+  return withPersonPatient(
+    withWhoopWorkouts(
+      buildWhoopBundleFromPayload(
+        { recovery: payload.recovery, cycles: payload.cycles, sleep: payload.sleep },
+        { subject, subjectKey: options.subjectKey, timestamp: options.timestamp },
+      ),
+      payload.workouts,
+      { ...options, subject },
     ),
-    payload.workouts,
-    options,
+    { subjectKey: options.subjectKey, identifierSystem: SYSTEMS.WHOOP_IDENTIFIER },
   );
+};
