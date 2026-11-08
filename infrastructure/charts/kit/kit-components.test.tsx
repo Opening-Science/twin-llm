@@ -523,3 +523,114 @@ describe("insight card options", () => {
     expect(out).not.toContain(">Month<");
   });
 });
+
+describe("tap to focus", () => {
+  test.each([
+    [
+      "C07",
+      <StreakGrid
+        key="c07"
+        category="activity"
+        days={[
+          { date: "2026-11-01", done: true, readout: "1 Nov · active" },
+          { date: "2026-11-02", done: false, readout: "2 Nov · not active" },
+        ]}
+        today="2026-11-02"
+        defaultFocus={1}
+      />,
+      "2 Nov · not active",
+    ],
+    [
+      "C09",
+      <Hypnogram
+        key="c09"
+        category="sleep"
+        spans={[
+          { stage: "deep", start: 60, end: 90, readout: "Deep · 1:00 to 1:30" },
+          { stage: "core", start: 0, end: 60, readout: "Core · 0:00 to 1:00" },
+        ]}
+        defaultFocus={0}
+      />,
+      // Blocks are focused in time order, whatever order the spans came in.
+      "Core · 0:00 to 1:00",
+    ],
+    [
+      "C10",
+      <ScoreRing
+        key="c10"
+        category="sleep"
+        title="Sleep score"
+        band="High"
+        parts={[
+          { label: "Duration", value: 45, max: 50, readout: "Duration · 45 of 50" },
+          { label: "Bedtime", value: 25, max: 30, readout: "Bedtime · 25 of 30" },
+        ]}
+        defaultFocus={1}
+      />,
+      "Bedtime · 25 of 30",
+    ],
+    [
+      "C18",
+      <Radar
+        key="c18"
+        category="sleep"
+        axes={[
+          {
+            label: "REM",
+            value: 96,
+            display: "1 hr 36 min",
+            max: 150,
+            readout: "REM · 1 hr 36 min",
+          },
+          {
+            label: "Deep",
+            value: 70,
+            display: "1 hr 10 min",
+            max: 120,
+            readout: "Deep · 1 hr 10 min",
+          },
+          {
+            label: "Core",
+            value: 248,
+            display: "4 hr 8 min",
+            max: 330,
+            readout: "Core · 4 hr 8 min",
+          },
+        ]}
+        defaultFocus={2}
+      />,
+      "Core · 4 hr 8 min",
+    ],
+  ])("%s pins its focus, names it and marks every mark tappable", (_, node, readout) => {
+    const out = html(node);
+    expect(out.match(/role="group"/g)).toHaveLength(1);
+    expect(out).toContain('aria-live="polite"');
+    expect(out).toContain(readout);
+    expect(out).toContain('data-focus-index="0"');
+    expect(out).toContain('data-focus-index="1"');
+  });
+
+  test("without readouts the tap charts stay pictures", () => {
+    const out =
+      html(charts("default").hypnogram) +
+      html(charts("default").ring) +
+      html(charts("default").streak);
+    expect(out).not.toContain('role="group"');
+    expect(out).not.toContain("data-focus-index");
+  });
+
+  test("weekly bars take a tap as well as a scrub", () => {
+    const out = html(
+      <WeeklyBars
+        category="steps"
+        values={[6, 8]}
+        readouts={["Mon · 6", "Tue · 8"]}
+        average={7}
+        caption="x"
+        hero="x"
+        defaultFocus={0}
+      />,
+    );
+    expect(out).toContain("Mon · 6");
+  });
+});

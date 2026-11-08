@@ -20,7 +20,8 @@ const LOADING_SHAPE = [0.5, 0.7, 0.4, 0.8, 0.6, 0.9, 0.55];
 /**
  * C06: the caption and hero value, then a bar per day and the average as a
  * line across the whole width, so it reads as a baseline, not a data point.
- * With readouts, a day is focused by hover, a finger or the arrow keys: its
+ * With readouts, hover previews a day and a click or tap pins it (again to
+ * clear); a finger drags across days and the arrow keys step. The focused
  * bar stays full, the others step back, and the readout names it.
  */
 export const WeeklyBars = ({
@@ -43,6 +44,7 @@ export const WeeklyBars = ({
     count: values.length,
     pick: (x, _y, width) => slotIndex(x, width, values.length),
     defaultFocus,
+    tap: true,
   });
   const focused = live ? focus.index : null;
   const chart = (

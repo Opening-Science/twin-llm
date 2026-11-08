@@ -29,16 +29,17 @@ import {
   DAY_NOW,
   DAY_TODAY_READ,
   HEART_RANGES_READ,
-  NIGHT,
+  NIGHT_READ,
   NULL_DRAWS,
   NULL_OBSERVED,
   P2_GROUPS_READ,
   P3_ESTIMATES_READ,
-  RADAR_HEART,
-  RADAR_READINESS,
+  RADAR_HEART_READ,
+  RADAR_READINESS_READ,
   RADAR_SLEEP,
-  SLEEP_PARTS,
-  STREAK,
+  RADAR_SLEEP_READ,
+  SLEEP_PARTS_READ,
+  STREAK_READ,
   STREAK_TODAY,
   WEEK_STEPS,
   WEEK_STEPS_AVERAGE,
@@ -247,12 +248,13 @@ export const GalleryScreen = () => (
 
     <Row
       name="C07 Streak grid"
-      note="Done days filled, other days on the track, today outlined."
+      note="Done days filled, other days on the track, today outlined. Try: click or tap a mark (again to clear), arrow keys, Escape."
       render={(state) => (
         <InsightCard
           category="activity"
           state={state}
           label="Activity: Streak"
+          interactive={state === "default"}
           sentence={
             state === "empty"
               ? "Your active days fill in here as they are recorded."
@@ -263,8 +265,10 @@ export const GalleryScreen = () => (
           <StreakGrid
             category="activity"
             state={state}
-            days={STREAK}
+            days={STREAK_READ}
             today={STREAK_TODAY}
+            label="Activity: Streak"
+            defaultFocus={27}
           />
         </InsightCard>
       )}
@@ -313,12 +317,13 @@ export const GalleryScreen = () => (
 
     <Row
       name="C09 Hypnogram"
-      note="Lightness steps of the sleep violet; every lane carries its word."
+      note="Lightness steps of the sleep violet; every lane carries its word. Try: click or tap a mark (again to clear), arrow keys, Escape."
       render={(state) => (
         <InsightCard
           category="sleep"
           state={state}
           label="Sleep: Stages"
+          interactive={state === "default"}
           sentence={
             state === "empty"
               ? "Your sleep stages appear after a night with your device on."
@@ -329,7 +334,9 @@ export const GalleryScreen = () => (
           <Hypnogram
             category="sleep"
             state={state}
-            spans={NIGHT}
+            spans={NIGHT_READ}
+            label="Sleep: Stages"
+            defaultFocus={2}
             axis={["11:04 PM", "6:23 AM"]}
           />
         </InsightCard>
@@ -338,12 +345,13 @@ export const GalleryScreen = () => (
 
     <Row
       name="C10 Score ring"
-      note="Each part's arc is its share of the score, filled to its value."
+      note="Each part's arc is its share of the score, filled to its value. Try: click or tap a mark (again to clear), arrow keys, Escape."
       render={(state) => (
         <InsightCard
           category="sleep"
           state={state}
           label="Sleep: Score"
+          interactive={state === "default"}
           sentence={
             state === "empty"
               ? "Your sleep score appears after a night with your device on."
@@ -356,7 +364,9 @@ export const GalleryScreen = () => (
             state={state}
             title="Sleep score"
             band="High"
-            parts={SLEEP_PARTS}
+            parts={SLEEP_PARTS_READ}
+            label="Sleep: Score"
+            defaultFocus={1}
           />
         </InsightCard>
       )}
@@ -424,32 +434,41 @@ export const GalleryScreen = () => (
         <h2 className="text-foreground font-sans text-lg">C18 Radar</h2>
         <p className="text-muted-foreground text-sm">
           How each part compares with the others, each on its own scale. Today in colour,
-          the usual in a grey outline; every vertex carries its word and value.
+          the usual in a grey outline; every vertex carries its word and value. Try: click
+          or tap a mark (again to clear), arrow keys, Escape.
         </p>
       </header>
       <div className="grid gap-4 lg:grid-cols-2">
         <InsightCard
           category="sleep"
           label="Sleep: Stages"
+          interactive
           sentence="Last night you had more REM and deep sleep than your usual over 7 nights."
         >
-          <Radar category="sleep" axes={RADAR_SLEEP} />
+          <Radar
+            category="sleep"
+            axes={RADAR_SLEEP_READ}
+            label="Sleep: Stages"
+            defaultFocus={0}
+          />
         </InsightCard>
         <InsightCard
           category="heart"
           label="Heart rate"
+          interactive
           sentence="Your resting and sleeping heart rates were a little below usual today."
         >
-          <Radar category="heart" axes={RADAR_HEART} />
+          <Radar category="heart" axes={RADAR_HEART_READ} label="Heart rate" />
         </InsightCard>
         {/* The odd one out spans the row rather than leaving half of it empty. */}
         <div className="lg:col-span-2">
           <InsightCard
             category="readiness"
             label="Readiness"
+            interactive
             sentence="Sleep was above usual and recovery a little below; HRV is not in yet."
           >
-            <Radar category="readiness" axes={RADAR_READINESS} />
+            <Radar category="readiness" axes={RADAR_READINESS_READ} label="Readiness" />
           </InsightCard>
         </div>
       </div>

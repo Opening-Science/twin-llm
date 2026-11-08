@@ -2,6 +2,7 @@
 
 import {
   type KeyboardEvent,
+  type MouseEvent,
   type PointerEvent,
   type ReactNode,
   type RefObject,
@@ -21,6 +22,12 @@ import { type StepAxis, stepKey } from "./kit-geometry";
  * A finger scrubs while it drags; lifting it keeps the last point until a
  * tap elsewhere on the page. The index maths is pure (`stepKey`, and each
  * chart's own `pick`), so this hook only holds the state and the events.
+ *
+ * With `tap`, a click or a tap pins a mark: hover still previews another,
+ * leaving goes back to the pinned one, and clicking the pinned mark again
+ * (or Escape) clears it. The arrow keys pin as they step. A mark can name
+ * its own index with `data-focus-index`, so a tap lands on exactly the day,
+ * block or segment under the finger; `pick` covers the space between.
  */
 
 /** The point under a pointer at (x, y) inside a chart `width` by `height`. */
@@ -34,6 +41,7 @@ export type ChartFocus = Readonly<{
     onPointerMove: (event: PointerEvent<HTMLDivElement>) => void;
     onPointerDown: (event: PointerEvent<HTMLDivElement>) => void;
     onPointerLeave: (event: PointerEvent<HTMLDivElement>) => void;
+    onClick: (event: MouseEvent<HTMLDivElement>) => void;
     onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
   }>;
   readoutId: string;
@@ -44,17 +52,20 @@ export const useChartFocus = ({
   pick,
   axis = "x",
   defaultFocus,
+  tap = false,
 }: Readonly<{
   count: number;
-  pick: Pick;
+  pick?: Pick;
   axis?: StepAxis;
   defaultFocus?: number;
+  tap?: boolean;
 }>): ChartFocus => {
-  const [index, setIndex] = useState<number | null>(
+  const initial =
     defaultFocus !== undefined && defaultFocus >= 0 && defaultFocus < count
       ? defaultFocus
-      : null,
-  );
+      : null;
+  const [index, setIndex] = useState<number | null>(initial);
+  const [pinned, setPinned] = useState<number | null>(tap ? initial : null);
   const ref = useRef<HTMLDivElement>(null);
   const touched = useRef(false);
   const readoutId = useId();
@@ -72,20 +83,30 @@ export const useChartFocus = ({
       }
       touched.current = false;
       setIndex(null);
+      setPinned(null);
     };
     document.addEventListener("pointerdown", onDown);
     return () => document.removeEventListener("pointerdown", onDown);
   }, []);
 
-  const at = (event: PointerEvent<HTMLDivElement>) => {
+  /** The mark under a pointer: its own `data-focus-index`, else `pick`. */
+  const under = (event: MouseEvent<HTMLDivElement>): number | null => {
+    const marked =
+      event.target instanceof Element ? event.target.closest("[data-focus-index]") : null;
+    if (marked && event.currentTarget.contains(marked)) {
+      const own = Number(marked.getAttribute("data-focus-index"));
+      if (Number.isInteger(own) && own >= 0 && own < count) return own;
+    }
+    if (!pick) return null;
     const box = event.currentTarget.getBoundingClientRect();
-    const next = pick(
-      event.clientX - box.left,
-      event.clientY - box.top,
-      box.width,
-      box.height,
-    );
+    return pick(event.clientX - box.left, event.clientY - box.top, box.width, box.height);
+  };
+
+  const at = (event: PointerEvent<HTMLDivElement>) => {
+    const next = under(event);
+    // Between marks, a tap chart goes back to its pinned mark.
     if (next !== null) setIndex(next);
+    else if (tap) setIndex(pinned);
   };
 
   return {
@@ -98,17 +119,28 @@ export const useChartFocus = ({
       onPointerDown: (event) => {
         if (event.pointerType !== "touch") return;
         touched.current = true;
-        event.currentTarget.setPointerCapture(event.pointerId);
+        // A tap chart reads the mark under the finger, so it is not captured.
+        if (!tap) event.currentTarget.setPointerCapture(event.pointerId);
         at(event);
       },
       onPointerLeave: (event) => {
-        if (event.pointerType !== "touch") setIndex(null);
+        if (event.pointerType !== "touch") setIndex(tap ? pinned : null);
+      },
+      onClick: (event) => {
+        if (!tap) return;
+        const hit = under(event);
+        if (hit === null) return;
+        const next = hit === pinned ? null : hit;
+        setPinned(next);
+        setIndex(next);
       },
       onKeyDown: (event) => {
         const step = stepKey(event.key, index, count, axis);
         if (step.kind === "ignore") return;
         event.preventDefault();
-        setIndex(step.kind === "move" ? step.index : null);
+        const next = step.kind === "move" ? step.index : null;
+        setIndex(next);
+        if (tap) setPinned(next);
       },
     },
   };

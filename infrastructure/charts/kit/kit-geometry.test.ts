@@ -11,7 +11,9 @@ import {
   monthShares,
   nullFigure,
   radar,
+  radarAxisAt,
   rangeBars,
+  ringPartAt,
   scoreRing,
   slotIndex,
   spacedTicks,
@@ -409,5 +411,44 @@ describe("slot index", () => {
     expect(slotIndex(-1, 280, 7)).toBeNull();
     expect(slotIndex(281, 280, 7)).toBeNull();
     expect(slotIndex(10, 280, 0)).toBeNull();
+  });
+});
+
+describe("radar axis at", () => {
+  test("the nearest axis clockwise from the top", () => {
+    expect(radarAxisAt(0, -50, 4)).toBe(0);
+    expect(radarAxisAt(50, 0, 4)).toBe(1);
+    expect(radarAxisAt(0, 50, 4)).toBe(2);
+    expect(radarAxisAt(-50, 0, 4)).toBe(3);
+    expect(radarAxisAt(-10, -50, 4)).toBe(0);
+  });
+
+  test("a triangle and an octagon", () => {
+    expect(radarAxisAt(40, 25, 3)).toBe(1);
+    expect(radarAxisAt(-40, 25, 3)).toBe(2);
+    expect(radarAxisAt(35, -35, 8)).toBe(1);
+  });
+
+  test("no direction at the centre", () => {
+    expect(radarAxisAt(1, 1, 5)).toBeNull();
+  });
+});
+
+describe("ring part at", () => {
+  const parts = [
+    { value: 1, max: 50 },
+    { value: 1, max: 30 },
+    { value: 1, max: 20 },
+  ];
+
+  test("each part covers its share, clockwise from the top", () => {
+    expect(ringPartAt(10, -50, parts)).toBe(0);
+    expect(ringPartAt(0, 50, parts)).toBe(1);
+    expect(ringPartAt(-50, -30, parts)).toBe(2);
+  });
+
+  test("no part at the centre or without a maximum", () => {
+    expect(ringPartAt(1, 0, parts)).toBeNull();
+    expect(ringPartAt(10, 10, [{ value: 1, max: 0 }])).toBeNull();
   });
 });
