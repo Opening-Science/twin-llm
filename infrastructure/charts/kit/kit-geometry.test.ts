@@ -8,7 +8,9 @@ import {
   estimateRows,
   exactDecimals,
   hypnogram,
+  log2Ticks,
   monthShares,
+  nullBand,
   nullFigure,
   radar,
   radarAxisAt,
@@ -450,5 +452,88 @@ describe("ring part at", () => {
   test("no part at the centre or without a maximum", () => {
     expect(ringPartAt(1, 0, parts)).toBeNull();
     expect(ringPartAt(10, 10, [{ value: 1, max: 0 }])).toBeNull();
+  });
+});
+
+describe("estimate rows, extended", () => {
+  const box = { width: 300, height: 60 };
+
+  test("a log axis has even powers of two and spreads ratios near 1", () => {
+    expect(log2Ticks(0.6, 7.2)).toEqual([0.5, 1, 2, 4, 8]);
+    expect(log2Ticks(1, 1)).toEqual([1, 2]);
+    expect(log2Ticks(0, 4)).toEqual([1]);
+    const out = estimateRows(
+      [
+        { label: "A", estimate: 1.91, low: 1.0, high: 7.2 },
+        { label: "B", estimate: 1.1 },
+      ],
+      box,
+      1,
+      undefined,
+      "log",
+    );
+    const xs = out.ticks.map((t) => t.x);
+    // Even spacing: every doubling takes the same width.
+    const steps = xs.slice(1).map((x, i) => x - xs[i]!);
+    expect(Math.max(...steps) - Math.min(...steps)).toBeLessThan(1e-9);
+    expect(out.referenceX).toBe(out.ticks.find((t) => t.value === 1)!.x);
+  });
+
+  test("a log axis leaves off values at or below zero", () => {
+    const out = estimateRows(
+      [{ label: "A", estimate: 0, low: -1, high: 2 }],
+      box,
+      null,
+      undefined,
+      "log",
+    );
+    expect(out.rows[0]!.low).toBeNull();
+    expect(out.ticks.length).toBeGreaterThan(0);
+  });
+
+  test("padding keeps a dot at 0 off the plot's edge", () => {
+    const out = estimateRows(
+      [{ label: "A", estimate: 0 }],
+      box,
+      null,
+      [0, 1],
+      "linear",
+      8,
+    );
+    expect(out.rows[0]!.x).toBe(8);
+    expect(out.ticks.at(-1)!.x).toBe(292);
+  });
+
+  test("an expected value is placed on its row and widens the axis", () => {
+    const out = estimateRows([{ label: "A", estimate: 1.91, expected: 3.93 }], box);
+    expect(out.rows[0]!.expected).not.toBeNull();
+    expect(out.ticks.at(-1)!.value).toBeGreaterThanOrEqual(3.93);
+  });
+
+  test("rows of one series share an index, in the order they first appear", () => {
+    const out = estimateRows(
+      [
+        { label: "General 8b", estimate: 1, series: "qwen3:8b" },
+        { label: "General 4b", estimate: 1, series: "qwen3:4b" },
+        { label: "Heart 8b", estimate: 1, series: "qwen3:8b" },
+        { label: "Other", estimate: 1 },
+      ],
+      box,
+    );
+    expect(out.series).toEqual(["qwen3:8b", "qwen3:4b"]);
+    expect(out.rows.map((r) => r.series)).toEqual([0, 1, 0, null]);
+  });
+});
+
+describe("null band", () => {
+  test("the interval, mean and observed value on one padded axis", () => {
+    const out = nullBand({ mean: 0.5, low: 0.45, high: 0.55, runs: 200 }, 0.61, {
+      width: 216,
+      height: 40,
+    });
+    expect(out.low).toBe(8);
+    expect(out.observedX).toBe(208);
+    expect(out.mean).toBeGreaterThan(out.low);
+    expect(out.mean).toBeLessThan(out.high);
   });
 });

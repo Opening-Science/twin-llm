@@ -94,9 +94,26 @@ describe.each([":root", ".dark"])("chart kit tokens in %s", (scope) => {
   });
 });
 
+describe.each([":root", ".dark"])("the flagged-window band in %s", (scope) => {
+  const band = token(scope, "chart-band");
+
+  test("stands out from the card more than the track does", () => {
+    expect(inGamut(band)).toBe(true);
+    const card = token(scope, "card");
+    expect(contrast(band, card)).toBeGreaterThanOrEqual(1.3);
+    expect(contrast(band, card)).toBeGreaterThan(
+      contrast(token(scope, "chart-track"), card),
+    );
+  });
+
+  test.each([...CHART])("%s clears 3:1 on the band", (name) => {
+    expect(contrast(token(scope, name), band)).toBeGreaterThanOrEqual(3);
+  });
+});
+
 test("the kit's roles are mapped into the Tailwind theme", () => {
   const theme = block("@theme inline");
-  const roles = ["chart-track", ...STAGES];
+  const roles = ["chart-track", "chart-band", ...STAGES];
   expect(roles.filter((n) => !theme.includes(`--color-${n}: var(--${n});`))).toEqual([]);
   expect(theme).toContain("--color-chart-reference: var(--chart-5);");
 });

@@ -866,3 +866,98 @@ describe("device list", () => {
     expect(empty).toContain("No device linked yet");
   });
 });
+
+describe("research figure options", () => {
+  test("rows of one series share a colour, and a legend names each series", () => {
+    const out = html(
+      <ResearchFigure
+        kind="estimates"
+        category="vitals"
+        estimates={[
+          { label: "General", estimate: 0.6, series: "qwen3:8b" },
+          { label: "General ", estimate: 0.5, series: "qwen3:4b" },
+          { label: "Heart", estimate: 0.7, series: "qwen3:8b" },
+        ]}
+      />,
+    );
+    expect(out).toContain("qwen3:8b");
+    expect(out).toContain("qwen3:4b");
+    // Two 8b rows in chart-1, one 4b row in chart-2.
+    expect(out.match(/<g class="text-chart-1">/g)).toHaveLength(2);
+    expect(out.match(/<g class="text-chart-2">/g)).toHaveLength(1);
+  });
+
+  test("a log axis reads as ratios", () => {
+    const out = html(
+      <ResearchFigure
+        kind="estimates"
+        category="vitals"
+        scale="log"
+        estimates={[{ label: "Within person", estimate: 3.09, low: 2.07, high: 4.63 }]}
+        reference={{ value: 1, label: "1 = no difference" }}
+      />,
+    );
+    for (const tick of [">1<", ">2<", ">4<", ">8<"]) expect(out).toContain(tick);
+    expect(out).not.toContain(">1.0<");
+  });
+
+  test("an expected value is a tick on its row, named in the legend", () => {
+    const out = html(
+      <ResearchFigure
+        kind="estimates"
+        category="vitals"
+        estimates={[{ label: "Rule change", estimate: 3.95, expected: 3.93 }]}
+      />,
+    );
+    expect(out).toContain("Expected");
+    expect(out).toMatch(/stroke-chart-reference" stroke-width="2"/);
+  });
+
+  test("the reference label carries the card outline", () => {
+    const out = html(
+      <ResearchFigure
+        kind="estimates"
+        category="vitals"
+        estimates={[{ label: "A", estimate: 2 }]}
+        reference={{ value: 1, label: "1 = no difference" }}
+      />,
+    );
+    expect(out).toMatch(/stroke-card"[^>]*paint-order="stroke"[^>]*>1 = no difference/);
+  });
+
+  test("a null from its summary is a band with its mean and words", () => {
+    const out = html(
+      <ResearchFigure
+        kind="null"
+        category="vitals"
+        summary={{ mean: 0.5, low: 0.46, high: 0.54, runs: 200 }}
+        nullLabel="Shuffled, 200 runs"
+        observed={0.61}
+        observedLabel="AUC"
+      />,
+    );
+    expect(out).toContain("Shuffled, 200 runs");
+    expect(out).toContain("AUC 0.61");
+    expect(out).toContain('fill-opacity="0.35"');
+  });
+
+  test("a series colour replaces the category's on the figure and its card", () => {
+    const figure = html(
+      <ResearchFigure
+        kind="estimates"
+        category="vitals"
+        series="chart-3"
+        estimates={[
+          { label: "A", estimate: 1 },
+          { label: "B", estimate: 2 },
+        ]}
+      />,
+    );
+    expect(figure.match(/<g class="text-chart-3">/g)).toHaveLength(2);
+    const card = html(
+      <InsightCard category="vitals" series="chart-4" label="P2" sentence="x" />,
+    );
+    expect(card).toContain("text-chart-4");
+    expect(card).not.toContain("text-chart-1");
+  });
+});
