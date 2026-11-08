@@ -22,6 +22,11 @@ export type InsightMetric =
   | "hrv"
   | "readiness"
   | "recovery"
+  | "sleepScore"
+  | "activityScore"
+  | "sleepPerformance"
+  | "sleepingHeartRate"
+  | "timeInBed"
   | "bedtime";
 
 /** Stored metric stems (as in `infrastructure/format-measure.ts`) and the insight metric they read as. */
@@ -37,6 +42,11 @@ export const INSIGHT_METRIC_BY_STEM: Readonly<Record<string, InsightMetric>> = {
   "google.daily-heart-rate-variability": "hrv",
   "readiness.score": "readiness",
   "whoop.recovery.score": "recovery",
+  "sleep.score": "sleepScore",
+  "activity.score": "activityScore",
+  "whoop.sleep.performance": "sleepPerformance",
+  "sleep.hr": "sleepingHeartRate",
+  "whoop.sleep.in_bed_min": "timeInBed",
 };
 
 type Value = number | null | undefined;
@@ -106,6 +116,11 @@ export type InsightDataFor = {
   hrv: TodayData | WeeklyData | MonthlyData | RangeData<"sleep">;
   readiness: TodayData | WeeklyData | MonthlyData;
   recovery: TodayData | WeeklyData | MonthlyData;
+  sleepScore: TodayData | WeeklyData | MonthlyData;
+  activityScore: TodayData | WeeklyData | MonthlyData;
+  sleepPerformance: TodayData | WeeklyData | MonthlyData;
+  sleepingHeartRate: TodayData | WeeklyData | MonthlyData;
+  timeInBed: TodayData | WeeklyData | MonthlyData;
   bedtime: TargetData;
 };
 
@@ -177,6 +192,8 @@ type Level = Readonly<{
 const UNITS = {
   bpm: ["beat per minute", "beats per minute"],
   ms: ["millisecond", "milliseconds"],
+  percent: ["percent", "percent"],
+  percentagePoints: ["percentage point", "percentage points"],
   points: ["point", "points"],
   steps: ["step", "steps"],
 } as const;
@@ -196,13 +213,35 @@ const LEVELS: Readonly<Record<Exclude<InsightMetric, "bedtime">, Level>> = {
   hrv: { noun: "heart rate variability", value: rate(UNITS.ms) },
   readiness: { noun: "readiness score", value: score },
   recovery: { noun: "recovery score", value: score },
+  sleepScore: { noun: "sleep score", value: score },
+  activityScore: { noun: "activity score", value: score },
+  sleepPerformance: { noun: "sleep performance", value: rate(UNITS.percent) },
+  sleepingHeartRate: { noun: "heart rate during sleep", value: rate(UNITS.bpm) },
+  timeInBed: { noun: "time in bed", value: (v, l) => formatDuration(v, l) },
 };
+
+/** Measures of one night: their today sentence says "last night", not "today". */
+const NIGHTLY: ReadonlySet<InsightMetric> = new Set<InsightMetric>([
+  "sleepScore",
+  "sleepPerformance",
+  "sleepingHeartRate",
+  "timeInBed",
+]);
+
+const SCORES: ReadonlySet<InsightMetric> = new Set<InsightMetric>([
+  "readiness",
+  "recovery",
+  "sleepScore",
+  "activityScore",
+]);
 
 /** A month-to-month change, stated with its size: scores move in points. */
 const deltaText = (metric: InsightMetric, delta: number, locale: string): string => {
-  if (metric === "readiness" || metric === "recovery") {
-    return counted(delta, 0, UNITS.points, locale);
+  if (SCORES.has(metric)) return counted(delta, 0, UNITS.points, locale);
+  if (metric === "sleepPerformance") {
+    return counted(delta, 0, UNITS.percentagePoints, locale);
   }
+  if (metric === "timeInBed") return formatDuration(delta, locale);
   if (metric === "hrv") return counted(delta, 0, UNITS.ms, locale);
   return counted(delta, 0, UNITS.bpm, locale);
 };
@@ -216,7 +255,7 @@ const todayInsight = (metric: InsightMetric, data: TodayData, locale: string) =>
       return "You've taken fewer steps than usual by this time of day.";
     if (where === "about")
       return "You're taking about as many steps as you usually do by now.";
-    return "You're ahead of your usual step count for this time of day.";
+    return "You've taken more steps than usual by this time of day.";
   }
   const level = LEVELS[metric];
   if (metric === "sleepDuration") {
@@ -232,6 +271,9 @@ const todayInsight = (metric: InsightMetric, data: TodayData, locale: string) =>
     about: "about your usual",
     above: "above your usual",
   };
+  if (NIGHTLY.has(metric)) {
+    return `Your ${level.noun} last night was ${level.value(data.today, locale)}, ${compared[where]}.`;
+  }
   return `Your ${level.noun} today is ${level.value(data.today, locale)}, ${compared[where]}.`;
 };
 
@@ -273,7 +315,14 @@ const monthlyInsight = (metric: InsightMetric, data: MonthlyData, locale: string
   // The sentence states the change, so only a change that rounds to nothing is "the same".
   const delta = roundTo(data.thisMonth - data.lastMonth, 0);
   if (delta === 0) return same;
-  const direction = delta < 0 ? "lower" : "higher";
+  const direction =
+    metric === "timeInBed"
+      ? delta < 0
+        ? "shorter"
+        : "longer"
+      : delta < 0
+        ? "lower"
+        : "higher";
   return `Your ${level.noun} this month is ${deltaText(metric, Math.abs(delta), locale)} ${direction} than last month.`;
 };
 
