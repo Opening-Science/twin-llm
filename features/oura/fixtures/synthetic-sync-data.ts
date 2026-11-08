@@ -97,3 +97,44 @@ export const SYNTHETIC_OURA_DATA: readonly OuraTypedData[] = [
     },
   },
 ];
+
+/**
+ * Made-up Oura sleep periods for the detail charts, kept apart from the list
+ * above so its goldens stay as they are. The night of 2 Jan starts before
+ * midnight and has a hypnogram ("4" awake, "2" light, "1" deep, "3" REM, one
+ * character per 5 minutes); the night of 3 Jan starts after midnight and has
+ * none; the afternoon nap is shorter than that night's sleep.
+ */
+export const SYNTHETIC_OURA_SLEEP: OuraTypedData = {
+  type: "sleep",
+  data: {
+    next_token: null,
+    data: [
+      {
+        id: "sleep-synthetic-1",
+        day: "2026-01-02",
+        type: "long_sleep",
+        bedtime_start: "2026-01-01T23:40:00+01:00",
+        bedtime_end: "2026-01-02T07:05:00+01:00",
+        sleep_phase_5_min: "442222111334",
+        total_sleep_duration: 24_900,
+      },
+      {
+        id: "sleep-synthetic-2",
+        day: "2026-01-03",
+        type: "long_sleep",
+        bedtime_start: "2026-01-03T00:25:00+01:00",
+        bedtime_end: "2026-01-03T07:25:00+01:00",
+        total_sleep_duration: 23_400,
+      },
+      {
+        id: "sleep-synthetic-3",
+        day: "2026-01-03",
+        type: "late_nap",
+        bedtime_start: "2026-01-03T14:00:00+01:00",
+        bedtime_end: "2026-01-03T14:30:00+01:00",
+        sleep_phase_5_min: "222222",
+      },
+    ],
+  },
+};

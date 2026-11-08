@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import {
   formatZonedMoment,
+  formatClock,
   formatBytes,
   formatDate,
   formatElapsed,
@@ -420,6 +421,16 @@ describe("formatElapsed", () => {
   ];
   test.each(cases)("%p ms reads %p", (ms, expected) => {
     expect(formatElapsed(ms)).toBe(expected);
+  });
+});
+
+describe("formatClock", () => {
+  test("minutes after midnight read as a 24-hour clock, wrapping past midnight", () => {
+    expect(formatClock(0)).toBe("00:00");
+    expect(formatClock(23 * 60 + 48)).toBe("23:48");
+    expect(formatClock(1_500)).toBe("01:00");
+    expect(formatClock(-30)).toBe("23:30");
+    expect(formatClock(null)).toBe("—");
   });
 });
 

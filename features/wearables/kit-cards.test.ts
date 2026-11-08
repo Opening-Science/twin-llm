@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import { kitSections, type KitCard, type KitSection } from "./kit-cards";
 import type { Metric } from "./metric-utils";
+import type { WearableDetail } from "./wearable-detail";
 
 /** One made-up reading a day ending 7 Nov 2026; `value` gets the day's index from the end. */
 const series = (
@@ -212,5 +213,172 @@ describe("band words", () => {
       "daily",
     );
     expect(daily.cards[0]).toMatchObject({ band: "Low" });
+  });
+});
+
+/* --- detail cards ------------------------------------------------------------ */
+
+const flatDay = (rate: number) =>
+  Array.from({ length: 24 }, (_, h) => (h < 8 ? 0 : (h - 7) * rate));
+
+/** 14 nights ending 7 Nov: bedtimes in minutes after 6 PM, asleep minutes. */
+const NIGHTS = Array.from({ length: 14 }, (_, i) => {
+  const day = new Date(Date.UTC(2026, 10, 7 - 13 + i)).toISOString().slice(0, 10);
+  return { day, bedtime: i === 13 ? 360 : 300, asleep: i === 13 ? 400 : 450 };
+});
+
+const STEPS_OK = {
+  status: "ok",
+  day: TODAY,
+  hourly: flatDay(500),
+  usual: flatDay(400),
+  usualDays: 14,
+} as const;
+
+const DETAIL: WearableDetail = {
+  steps: STEPS_OK,
+  night: {
+    status: "ok",
+    day: "2026-11-07",
+    segments: [
+      { stage: "core", start: 300, end: 330 },
+      { stage: "deep", start: 330, end: 400 },
+      { stage: "awake", start: 400, end: 405 },
+    ],
+  },
+  nights: { status: "ok", nights: NIGHTS },
+};
+
+describe("kitSections, detail cards", () => {
+  const sections = kitSections({
+    source: "google-health",
+    metrics: [],
+    today: TODAY,
+    detail: DETAIL,
+    nowMinutes: 10 * 60 + 30,
+  });
+  const daily = section(sections, "daily").cards;
+
+  test("stages and steps by the hour join the daily section; bedtimes the weekly one", () => {
+    expect(daily.map((c) => c.id)).toEqual(["night:stages", "day:steps"]);
+    expect(section(sections, "weekly").cards.map((c) => c.id)).toEqual([
+      "nights:bedtime",
+    ]);
+  });
+
+  test("today's steps stop at now and are compared by this time of day", () => {
+    const steps = card(daily, "day:steps");
+    if (steps.chart !== "cumulative") throw new Error("not a cumulative card");
+    expect(steps.sentence).toBe(
+      "You've taken more steps than usual by this time of day.",
+    );
+    expect(steps.now).toBe(630 / 1440);
+    expect(steps.today.at(-1)).toEqual({
+      at: 630 / 1440,
+      value: 1_500,
+      readout: "Now · 1,500 steps",
+    });
+    expect(steps.today.at(-2)?.readout).toBe("By 10:00 · 1,000 steps");
+    expect(steps.average.length).toBe(25);
+    expect(steps.axis).toEqual(["00:00", "12:00", "24:00"]);
+  });
+
+  test("a finished day is compared as a whole day", () => {
+    const past = kitSections({
+      source: "google-health",
+      metrics: [],
+      today: "2026-11-09",
+      detail: DETAIL,
+      nowMinutes: 600,
+    });
+    const steps = card(section(past, "daily").cards, "day:steps");
+    if (steps.chart !== "cumulative") throw new Error("not a cumulative card");
+    expect(steps.now).toBe(1);
+    expect(steps.today.length).toBe(25);
+    expect(steps.sentence).toBe(
+      "You took 8,000 steps on your last full day, more than usual.",
+    );
+  });
+
+  test("the hypnogram names each block and says last night's sleep against usual", () => {
+    const night = card(daily, "night:stages");
+    if (night.chart !== "hypnogram") throw new Error("not a hypnogram card");
+    expect(night.sentence).toBe("You slept 6 hr 40 min last night, less than usual.");
+    expect(night.label).toBe("Sleep: Stages, 7 Nov");
+    expect(night.axis).toEqual(["23:00", "00:45"]);
+    expect(night.spans.map((s) => s.readout)).toEqual([
+      "Light · 23:00 to 23:30 · 30 min",
+      "Deep · 23:30 to 00:40 · 1 hr 10 min",
+      "Awake · 00:40 to 00:45 · 5 min",
+    ]);
+  });
+
+  test("bedtimes across midnight read as clock times against the usual", () => {
+    const bed = card(section(sections, "weekly").cards, "nights:bedtime");
+    if (bed.chart !== "consistency") throw new Error("not a consistency card");
+    expect(bed.sentence).toBe("Your bedtime was 60 minutes later than usual last night.");
+    expect(bed.values.at(-1)).toBe(360);
+    expect(bed.target).toBe(300);
+    expect(bed.reference).toEqual({ label: "Usual (7 nights)", value: "23:00" });
+    expect(bed.last).toEqual({ label: "Last night", value: "00:00" });
+    expect(bed.readouts.at(-1)).toBe("Night of Fri 6 Nov · 00:00");
+    expect(bed.axis).toEqual(["24 Oct", "6 Nov"]);
+  });
+
+  test("while the route answers, the three cards draw their loading shape", () => {
+    const loading = kitSections({
+      source: "oura",
+      metrics: [],
+      today: TODAY,
+      detail: "loading",
+    });
+    expect(
+      [...section(loading, "daily").cards, ...section(loading, "weekly").cards].map(
+        (c) => `${c.id} ${c.state}`,
+      ),
+    ).toEqual(["night:stages loading", "day:steps loading", "nights:bedtime loading"]);
+  });
+
+  test("what a source never sends is said plainly, or left out", () => {
+    const oura = kitSections({
+      source: "oura",
+      metrics: [],
+      today: TODAY,
+      detail: { ...DETAIL, steps: { status: "not-provided" } },
+    });
+    expect(card(section(oura, "daily").cards, "day:steps")).toMatchObject({
+      state: "empty",
+      sentence:
+        "Oura sends steps as one total a day, so your day cannot be drawn by the hour.",
+    });
+    const whoop = kitSections({
+      source: "whoop",
+      metrics: [],
+      today: TODAY,
+      detail: {
+        steps: { status: "not-provided" },
+        night: { status: "totals-only" },
+        nights: { status: "missing" },
+      },
+    });
+    expect(
+      section(whoop, "daily").cards.map((c) => `${c.id} ${c.state}: ${c.sentence}`),
+    ).toEqual([
+      "night:stages empty: Whoop sends how long each sleep stage lasted, not when, so the night cannot be drawn stage by stage.",
+    ]);
+  });
+
+  test("with no usual day yet, the steps card waits in its empty state", () => {
+    const thin = kitSections({
+      source: "google-health",
+      metrics: [],
+      today: TODAY,
+      detail: { ...DETAIL, steps: { ...STEPS_OK, usual: null } },
+    });
+    expect(card(section(thin, "daily").cards, "day:steps")).toMatchObject({
+      state: "empty",
+      sentence:
+        "Your day is compared with your usual day once 7 earlier days with hourly steps are in view.",
+    });
   });
 });
