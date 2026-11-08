@@ -590,3 +590,53 @@ export const radar = (
     }),
   };
 };
+
+/**
+ * Every k-th tick, so neighbours sit at least `minGap` pixels apart. The
+ * first is always kept; ticks are evenly spaced, so the rest follow.
+ */
+export const spacedTicks = <T extends Readonly<{ x: number }>>(
+  ticks: readonly T[],
+  minGap = 36,
+): readonly T[] => {
+  if (ticks.length < 3) return ticks;
+  const gap = Math.abs(ticks[1]!.x - ticks[0]!.x);
+  const step = gap >= minGap || gap === 0 ? 1 : Math.ceil(minGap / gap);
+  return ticks.filter((_, i) => i % step === 0);
+};
+
+export type EstimateLayout = Readonly<{
+  /** Labels on their own line above each row, the plot at full width. */
+  stacked: boolean;
+  /** Where the plot starts and how wide it is. */
+  left: number;
+  plot: number;
+  /** Height of one row. */
+  row: number;
+}>;
+
+/**
+ * Labels beside the plot while it keeps at least `minPlot` pixels; in a
+ * narrower card each label moves above its row so the plot keeps the width.
+ */
+export const estimateLayout = (
+  width: number,
+  labels = 176,
+  minPlot = 200,
+  pad = 12,
+): EstimateLayout =>
+  width - labels - pad >= minPlot
+    ? { stacked: false, left: labels, plot: width - labels - pad, row: 32 }
+    : { stacked: true, left: pad, plot: Math.max(60, width - 2 * pad), row: 48 };
+
+/**
+ * How to anchor a label at `x` on a plot `width` wide so it stays inside:
+ * from its start near the left edge, from its end near the right, centred
+ * otherwise. `margin` is about half the widest label.
+ */
+export const edgeAnchor = (
+  x: number,
+  width: number,
+  margin = 48,
+): "start" | "middle" | "end" =>
+  x < margin ? "start" : x > width - margin ? "end" : "middle";

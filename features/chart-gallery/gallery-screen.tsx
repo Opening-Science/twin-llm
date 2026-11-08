@@ -91,7 +91,7 @@ const Row = ({
  * for judging the kit, not a product screen.
  */
 export const GalleryScreen = () => (
-  <div className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-4 py-8">
+  <div className="page-wide page-stack">
     <header className="flex flex-col gap-2">
       <h1 className="text-display">Chart kit</h1>
       <p className="text-muted-foreground max-w-prose leading-relaxed">
