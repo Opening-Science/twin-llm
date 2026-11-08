@@ -6,7 +6,9 @@ import {
   type Category,
   type ChartRange,
   type ChartState,
+  type DeviceRow,
   ComparisonPair,
+  DeviceList,
   Consistency,
   CumulativeDay,
   Hypnogram,
@@ -18,6 +20,7 @@ import {
   ResearchFigure,
   ScoreRing,
   StreakGrid,
+  VENDOR_LOGOS,
   WeeklyBars,
 } from "@/infrastructure/charts/kit";
 
@@ -117,6 +120,28 @@ const RangeDemo = () => {
     </InsightCard>
   );
 };
+
+/** Made-up sources with the vendors' own logos, where the rules allow one. */
+const SOURCES: readonly DeviceRow[] = [
+  {
+    // Oura's only official mark is its wordmark, not in the repository yet.
+    name: "Oura",
+    detail: "Made-up: synced 4 min ago",
+    status: { word: "Linked", tone: "ok" },
+  },
+  {
+    name: "WHOOP",
+    detail: "Made-up: synced 2 hours ago",
+    status: { word: "Linked", tone: "ok" },
+    logo: VENDOR_LOGOS.whoop,
+  },
+  {
+    name: "Google Health",
+    detail: "Connected to Google Health · made-up: synced 12 minutes ago",
+    status: { word: "Linked", tone: "ok" },
+    logo: VENDOR_LOGOS.googleHealth,
+  },
+];
 
 /**
  * The chart kit, every component in every state, on made-up data. A page
@@ -428,6 +453,50 @@ export const GalleryScreen = () => (
         </InsightCard>
       )}
     />
+
+    <Row
+      name="C15 Device rows"
+      note="One row per source, with a status word; a row can link on. A logo, when given, is the vendor's own file, unmodified and sized by height. This example has none."
+      render={(state) => (
+        <DeviceList
+          category="vitals"
+          state={state}
+          title="Sources"
+          emptyNote="No source linked yet"
+          rows={[
+            {
+              name: "Oura",
+              detail: "Made-up: synced 4 minutes ago",
+              status: { word: "Linked", tone: "ok" },
+              href: "/lab/design",
+            },
+            {
+              name: "WHOOP",
+              detail: "Made-up: last sync 3 days ago",
+              status: { word: "Stale", tone: "warn" },
+              href: "/lab/design",
+            },
+            { name: "Google Health", status: { word: "Not linked", tone: "neutral" } },
+          ]}
+        />
+      )}
+    />
+
+    <section className="flex flex-col gap-3">
+      <header>
+        <h2 className="text-foreground font-sans text-lg">C15 Device rows with logos</h2>
+        <p className="text-muted-foreground text-sm">
+          Each row leads with a tile holding the vendor&apos;s own file, unchanged:
+          WHOOP&apos;s outline circle at 30px, black on the light tile and white on the
+          dark one, with &ldquo;Data by WHOOP&rdquo; in its detail line; Google
+          Health&apos;s colour heart on both. Oura&apos;s tile stays empty until its
+          wordmark is in. Switch the theme to see the other WHOOP file.
+        </p>
+      </header>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <DeviceList category="vitals" title="Sources" rows={SOURCES} />
+      </div>
+    </section>
 
     <section className="flex flex-col gap-3">
       <header>

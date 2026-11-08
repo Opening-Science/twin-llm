@@ -1177,6 +1177,7 @@ const PAGES: Readonly<Record<string, "gated" | Readonly<{ open: string }>>> = {
   },
   "app/(shell)/lab/benchmark/page.tsx": { open: "the rhythm benchmark's result file" },
   "app/(shell)/lab/jobs/page.tsx": { open: "file times of command-line jobs" },
+  "app/(shell)/lab/results/page.tsx": { open: "committed research summaries" },
   "app/(shell)/lab/design/page.tsx": { open: "made-up chart examples; reads no data" },
   "app/(shell)/lab/rate/page.tsx": { open: "answers of synthetic evaluation runs" },
   "app/(shell)/models/page.tsx": { open: "the model list" },

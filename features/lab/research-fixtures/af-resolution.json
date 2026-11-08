@@ -1,0 +1,69 @@
+{
+  "generatedAt": "2026-10-31T20:04:36.571Z",
+  "dayAurocs": [
+    {
+      "noise": "none",
+      "feature": "beat.flag_share",
+      "variant": "change",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 1,
+        "ci95": {
+          "low": 1,
+          "high": 1
+        }
+      }
+    },
+    {
+      "noise": "none",
+      "feature": "day.hrv_rmssd",
+      "variant": "change",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.50875,
+        "ci95": {
+          "low": 0.40873046875,
+          "high": 0.60147265625
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "beat.flag_share",
+      "variant": "change",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.8203125,
+        "ci95": {
+          "low": 0.73761328125,
+          "high": 0.90062890625
+        }
+      }
+    },
+    {
+      "noise": "light",
+      "feature": "day.hrv_rmssd",
+      "variant": "change",
+      "burden": 0.02,
+      "positives": 40,
+      "negatives": 160,
+      "clusters": 40,
+      "auroc": {
+        "value": 0.4615625,
+        "ci95": {
+          "low": 0.37858203125,
+          "high": 0.54672265625
+        }
+      }
+    }
+  ]
+}

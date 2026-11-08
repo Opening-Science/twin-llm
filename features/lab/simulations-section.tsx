@@ -1,3 +1,4 @@
+import { categoryTextClass } from "@/infrastructure/charts/category-token";
 import { Card } from "@/infrastructure/ui-kit/card";
 import { Field } from "@/infrastructure/ui-kit/field";
 import { Button } from "@/infrastructure/ui-kit/button";
@@ -53,13 +54,18 @@ const Recording = ({ recording }: Readonly<{ recording: MadeRecording }>) => (
         <SubHeading>RR tachogram</SubHeading>
         <Legend
           items={[
-            { id: "rr", label: "RR interval", swatchClassName: "text-chart-1" },
+            {
+              id: "rr",
+              label: "RR interval",
+              swatchClassName: categoryTextClass("heart"),
+            },
             ...(recording.flagged.length > 0
               ? [
                   {
                     id: "flag",
                     label: "Window marked by the research flag",
-                    swatchClassName: "text-chart-3",
+                    // The band's track tone is close to the card, so the swatch gets an edge.
+                    swatchClassName: "text-chart-track ring-1 ring-chart-reference",
                   },
                 ]
               : []),
