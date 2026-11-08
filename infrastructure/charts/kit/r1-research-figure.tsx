@@ -2,6 +2,13 @@
 
 import { conditionToken, tokenTextClass } from "../category-token";
 import {
+  ChartFocusFrame,
+  ChartReadout,
+  dimmed,
+  mutedUnlessFocused,
+  useChartFocus,
+} from "./chart-focus";
+import {
   edgeAnchor,
   estimateLayout,
   estimateRows,
@@ -17,24 +24,43 @@ const AXIS = 22;
 
 const fixed = (value: number, decimals: number): string => value.toFixed(decimals);
 
-/** Rows of estimates with whiskers on one axis; colour per row from `tone`. */
+/**
+ * Rows of estimates with whiskers on one axis; colour per row from `tone`.
+ * With readouts, the row under the pointer or the keys stays full, the
+ * others step back, and the readout names it.
+ */
 const EstimatePlot = ({
   estimates,
   reference,
   domain,
   tone,
   state,
+  label,
+  defaultFocus,
 }: {
   readonly estimates: readonly Estimate[];
   readonly reference?: Readonly<{ value: number; label: string }>;
   readonly domain?: readonly [number, number];
   readonly tone: (index: number) => string;
   readonly state: "default" | "loading" | "empty";
+  readonly label?: string;
+  readonly defaultFocus?: number;
 }) => {
   const top = reference ? 16 : 0;
   const heightFor = (width: number): number =>
     Math.max(1, estimates.length) * estimateLayout(width).row + AXIS + top;
-  return (
+  const live = state === "default" && estimates.some((e) => e.readout);
+  const focus = useChartFocus({
+    count: estimates.length,
+    axis: "both",
+    pick: (_x, y, width) => {
+      const index = Math.floor((y - top) / estimateLayout(width).row);
+      return index >= 0 && index < estimates.length ? index : null;
+    },
+    defaultFocus,
+  });
+  const focused = live ? focus.index : null;
+  const chart = (
     <ChartSvg height={heightFor}>
       {(width) => {
         const layout = estimateLayout(width);
@@ -57,13 +83,20 @@ const EstimatePlot = ({
                   x={layout.stacked ? layout.left : 0}
                   y={layout.stacked ? -8 : 4}
                   // A card-coloured outline keeps the word clear of the reference line.
-                  className="fill-foreground stroke-card font-sans text-sm"
+                  className={
+                    mutedUnlessFocused(focused, i)
+                      ? "fill-muted-foreground stroke-card font-sans text-sm"
+                      : "fill-foreground stroke-card font-sans text-sm"
+                  }
                   strokeWidth={4}
                   paintOrder="stroke"
                 >
                   {row.label}
                 </text>
-                <g transform={`translate(${layout.left} ${markY})`}>
+                <g
+                  transform={`translate(${layout.left} ${markY})`}
+                  opacity={dimmed(focused, i)}
+                >
                   {state === "loading" ? (
                     <rect
                       x={0}
@@ -91,7 +124,8 @@ const EstimatePlot = ({
                           x2={row.high}
                           y1={0}
                           y2={0}
-                          className="stroke-current"
+                          pathLength={1}
+                          className="kit-draw stroke-current"
                           strokeWidth={2}
                           strokeLinecap="round"
                         />
@@ -147,6 +181,18 @@ const EstimatePlot = ({
       }}
     </ChartSvg>
   );
+  if (!live) return chart;
+  return (
+    <div className="flex flex-col gap-2">
+      <ChartReadout
+        id={focus.readoutId}
+        text={focused === null ? null : estimates[focused]?.readout}
+      />
+      <ChartFocusFrame focus={focus} label={label ?? "Estimates"}>
+        {chart}
+      </ChartFocusFrame>
+    </div>
+  );
 };
 
 /**
@@ -165,6 +211,8 @@ export const ResearchFigure = (props: ResearchFigureProps) => {
         domain={props.domain}
         tone={(i) => tokenTextClass(conditionToken(i))}
         state={state}
+        label={props.label}
+        defaultFocus={props.defaultFocus}
       />
     );
   }
@@ -179,6 +227,8 @@ export const ResearchFigure = (props: ResearchFigureProps) => {
         domain={[0, 1]}
         tone={(i) => tokenTextClass(conditionToken(i % 2))}
         state={state}
+        label={props.label}
+        defaultFocus={props.defaultFocus}
       />
     );
   }

@@ -11,9 +11,13 @@ import {
   monthShares,
   nullFigure,
   radar,
+  radarAxisAt,
   rangeBars,
+  ringPartAt,
   scoreRing,
+  slotIndex,
   spacedTicks,
+  stepKey,
   streakGrid,
   weekdayLetters,
 } from "./kit-geometry";
@@ -361,5 +365,90 @@ describe("edge anchor", () => {
   test("the margin is adjustable", () => {
     expect(edgeAnchor(60, 300, 80)).toBe("start");
     expect(edgeAnchor(60, 300, 40)).toBe("middle");
+  });
+});
+
+describe("step key", () => {
+  test("arrows step and stop at the ends", () => {
+    expect(stepKey("ArrowRight", 2, 7)).toEqual({ kind: "move", index: 3 });
+    expect(stepKey("ArrowRight", 6, 7)).toEqual({ kind: "move", index: 6 });
+    expect(stepKey("ArrowLeft", 0, 7)).toEqual({ kind: "move", index: 0 });
+  });
+
+  test("from no focus, next is the first point and previous the last", () => {
+    expect(stepKey("ArrowRight", null, 7)).toEqual({ kind: "move", index: 0 });
+    expect(stepKey("ArrowLeft", null, 7)).toEqual({ kind: "move", index: 6 });
+  });
+
+  test("Home and End jump, Escape clears only a focus", () => {
+    expect(stepKey("Home", 4, 7)).toEqual({ kind: "move", index: 0 });
+    expect(stepKey("End", null, 7)).toEqual({ kind: "move", index: 6 });
+    expect(stepKey("Escape", 3, 7)).toEqual({ kind: "clear" });
+    expect(stepKey("Escape", null, 7)).toEqual({ kind: "ignore" });
+  });
+
+  test("the axis decides which arrows step", () => {
+    expect(stepKey("ArrowDown", 1, 4)).toEqual({ kind: "ignore" });
+    expect(stepKey("ArrowDown", 1, 4, "y")).toEqual({ kind: "move", index: 2 });
+    expect(stepKey("ArrowUp", 1, 4, "both")).toEqual({ kind: "move", index: 0 });
+    expect(stepKey("ArrowRight", 1, 4, "y")).toEqual({ kind: "ignore" });
+  });
+
+  test("other keys and empty charts are ignored", () => {
+    expect(stepKey("a", 1, 4)).toEqual({ kind: "ignore" });
+    expect(stepKey("ArrowRight", null, 0)).toEqual({ kind: "ignore" });
+  });
+});
+
+describe("slot index", () => {
+  test("the slot under a pointer", () => {
+    expect(slotIndex(0, 280, 7)).toBe(0);
+    expect(slotIndex(139, 280, 7)).toBe(3);
+    expect(slotIndex(280, 280, 7)).toBe(6);
+  });
+
+  test("outside the chart, nothing", () => {
+    expect(slotIndex(-1, 280, 7)).toBeNull();
+    expect(slotIndex(281, 280, 7)).toBeNull();
+    expect(slotIndex(10, 280, 0)).toBeNull();
+  });
+});
+
+describe("radar axis at", () => {
+  test("the nearest axis clockwise from the top", () => {
+    expect(radarAxisAt(0, -50, 4)).toBe(0);
+    expect(radarAxisAt(50, 0, 4)).toBe(1);
+    expect(radarAxisAt(0, 50, 4)).toBe(2);
+    expect(radarAxisAt(-50, 0, 4)).toBe(3);
+    expect(radarAxisAt(-10, -50, 4)).toBe(0);
+  });
+
+  test("a triangle and an octagon", () => {
+    expect(radarAxisAt(40, 25, 3)).toBe(1);
+    expect(radarAxisAt(-40, 25, 3)).toBe(2);
+    expect(radarAxisAt(35, -35, 8)).toBe(1);
+  });
+
+  test("no direction at the centre", () => {
+    expect(radarAxisAt(1, 1, 5)).toBeNull();
+  });
+});
+
+describe("ring part at", () => {
+  const parts = [
+    { value: 1, max: 50 },
+    { value: 1, max: 30 },
+    { value: 1, max: 20 },
+  ];
+
+  test("each part covers its share, clockwise from the top", () => {
+    expect(ringPartAt(10, -50, parts)).toBe(0);
+    expect(ringPartAt(0, 50, parts)).toBe(1);
+    expect(ringPartAt(-50, -30, parts)).toBe(2);
+  });
+
+  test("no part at the centre or without a maximum", () => {
+    expect(ringPartAt(1, 0, parts)).toBeNull();
+    expect(ringPartAt(10, 10, [{ value: 1, max: 0 }])).toBeNull();
   });
 });

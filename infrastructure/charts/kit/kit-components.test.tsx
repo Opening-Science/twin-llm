@@ -16,6 +16,7 @@ import {
   ScoreRing,
   StreakGrid,
   WeeklyBars,
+  dimmed,
   hoursMinutes,
   radar,
   radarHeight,
@@ -330,4 +331,413 @@ test("durations read as hours and minutes", () => {
   expect(hoursMinutes(439)).toBe("7 hr 19 min");
   expect(hoursMinutes(45)).toBe("45 min");
   expect(hoursMinutes(-3)).toBe("0 min");
+});
+
+describe("interactive charts", () => {
+  const weekly = (readouts?: readonly (string | null)[], defaultFocus?: number) =>
+    html(
+      <WeeklyBars
+        category="steps"
+        values={[6, 8, 7]}
+        average={7}
+        caption="Average steps"
+        hero="7"
+        readouts={readouts}
+        label="Steps: Weekly"
+        defaultFocus={defaultFocus}
+      />,
+    );
+
+  test("without readouts a chart stays a picture: no tab stop, no readout", () => {
+    const out = weekly();
+    expect(out).not.toContain('role="group"');
+    expect(out).not.toContain("aria-live");
+    expect(out).not.toContain("tabindex");
+  });
+
+  test("with readouts it is one named tab stop with a live readout", () => {
+    const out = weekly(["Mon · 6", "Tue · 8", "Wed · 7"]);
+    expect(out.match(/role="group"/g)).toHaveLength(1);
+    expect(out).toContain('tabindex="0"');
+    expect(out).toContain('aria-label="Steps: Weekly"');
+    expect(out).toContain('aria-live="polite"');
+    expect(out).not.toContain("Tue · 8");
+  });
+
+  test("a focused point is named and the rest step back", () => {
+    const out = weekly(["Mon · 6", "Tue · 8", "Wed · 7"], 1);
+    expect(out).toContain("Tue · 8");
+    expect(out.match(/fill-opacity="0.4"/g)?.length).toBeGreaterThanOrEqual(2);
+  });
+
+  test("a focus outside the data is ignored", () => {
+    expect(weekly(["Mon · 6", "Tue · 8", "Wed · 7"], 9)).not.toContain("fill-opacity");
+  });
+
+  test("loading and empty charts are never interactive", () => {
+    const out = html(
+      <WeeklyBars
+        category="steps"
+        state="loading"
+        values={[6, 8, 7]}
+        average={7}
+        caption="Average steps"
+        hero="7"
+        readouts={["a", "b", "c"]}
+      />,
+    );
+    expect(out).not.toContain('role="group"');
+  });
+
+  test.each([
+    [
+      "C05",
+      <CumulativeDay
+        key="c05"
+        category="steps"
+        today={[
+          { at: 0, value: 0, readout: "12 AM · 0 steps" },
+          { at: 0.5, value: 4100, readout: "12 PM · 4,100 steps" },
+        ]}
+        average={[
+          { at: 0, value: 0 },
+          { at: 1, value: 8000 },
+        ]}
+        now={0.5}
+        defaultFocus={1}
+      />,
+      "12 PM · 4,100 steps",
+    ],
+    [
+      "C08",
+      <RangeBars
+        key="c08"
+        category="heart"
+        buckets={[
+          { min: 58, max: 92, readout: "8 AM · 58 to 92 bpm" },
+          { min: 61, max: 114, readout: "9 AM · 61 to 114 bpm" },
+        ]}
+        defaultFocus={0}
+      />,
+      "8 AM · 58 to 92 bpm",
+    ],
+    [
+      "C13",
+      <Consistency
+        key="c13"
+        category="sleep"
+        values={[30, 40]}
+        readouts={["2 Nov · 11:30 PM", "3 Nov · 11:40 PM"]}
+        target={30}
+        reference={{ label: "Average bedtime", value: "11:12 PM" }}
+        last={{ label: "Last night", value: "11:40 PM" }}
+        defaultFocus={1}
+      />,
+      "3 Nov · 11:40 PM",
+    ],
+    [
+      "R1",
+      <ResearchFigure
+        key="r1"
+        kind="estimates"
+        category="vitals"
+        estimates={[
+          {
+            label: "A",
+            estimate: 2,
+            low: 1,
+            high: 3,
+            readout: "A · 2.00 (1.00 to 3.00)",
+          },
+          { label: "B", estimate: 1, readout: "B · 1.00" },
+        ]}
+        defaultFocus={0}
+      />,
+      "A · 2.00 (1.00 to 3.00)",
+    ],
+  ])("%s becomes interactive with readouts and names its focus", (_, node, readout) => {
+    const out = html(node);
+    expect(out).toContain('role="group"');
+    expect(out).toContain('aria-live="polite"');
+    expect(out).toContain(readout);
+  });
+
+  test("lines and bars carry the draw-in, empty outlines do not", () => {
+    const out = weekly(["a", "b", "c"]);
+    expect(out).toContain("kit-grow");
+    expect(out).toContain("kit-draw");
+    const empty = html(
+      <WeeklyBars
+        category="steps"
+        state="empty"
+        values={[1, 2]}
+        average={1}
+        caption="x"
+        hero="x"
+      />,
+    );
+    expect(empty).not.toContain("kit-grow");
+  });
+
+  test("dimmed steps back every mark but the focused one", () => {
+    expect(dimmed(null, 2)).toBeUndefined();
+    expect(dimmed(2, 2)).toBeUndefined();
+    expect(dimmed(2, 1)).toBe(0.4);
+  });
+});
+
+describe("insight card options", () => {
+  test("an interactive body is not hidden", () => {
+    const out = html(
+      <InsightCard category="steps" label="Steps" sentence="x" interactive>
+        <span>chart</span>
+      </InsightCard>,
+    );
+    expect(out).not.toContain('aria-hidden="true"><span>chart');
+    expect(out).toContain("<span>chart</span>");
+  });
+
+  test("ranges render a Day / Week / Month switch with the choice pressed", () => {
+    const out = html(
+      <InsightCard
+        category="steps"
+        label="Steps"
+        sentence="x"
+        ranges={{ value: "week", onChange: () => undefined }}
+      />,
+    );
+    expect(out).toContain('aria-label="Steps: range"');
+    for (const word of ["Day", "Week", "Month"]) expect(out).toContain(`>${word}<`);
+    expect(out).toMatch(/aria-pressed="true"[^>]*>Week</);
+  });
+
+  test("ranges can offer fewer choices", () => {
+    const out = html(
+      <InsightCard
+        category="steps"
+        label="Steps"
+        sentence="x"
+        ranges={{ value: "day", onChange: () => undefined, options: ["day", "week"] }}
+      />,
+    );
+    expect(out).not.toContain(">Month<");
+  });
+});
+
+describe("tap to focus", () => {
+  test.each([
+    [
+      "C07",
+      <StreakGrid
+        key="c07"
+        category="activity"
+        days={[
+          { date: "2026-11-01", done: true, readout: "1 Nov · active" },
+          { date: "2026-11-02", done: false, readout: "2 Nov · not active" },
+        ]}
+        today="2026-11-02"
+        defaultFocus={1}
+      />,
+      "2 Nov · not active",
+    ],
+    [
+      "C09",
+      <Hypnogram
+        key="c09"
+        category="sleep"
+        spans={[
+          { stage: "deep", start: 60, end: 90, readout: "Deep · 1:00 to 1:30" },
+          { stage: "core", start: 0, end: 60, readout: "Core · 0:00 to 1:00" },
+        ]}
+        defaultFocus={0}
+      />,
+      // Blocks are focused in time order, whatever order the spans came in.
+      "Core · 0:00 to 1:00",
+    ],
+    [
+      "C10",
+      <ScoreRing
+        key="c10"
+        category="sleep"
+        title="Sleep score"
+        band="High"
+        parts={[
+          { label: "Duration", value: 45, max: 50, readout: "Duration · 45 of 50" },
+          { label: "Bedtime", value: 25, max: 30, readout: "Bedtime · 25 of 30" },
+        ]}
+        defaultFocus={1}
+      />,
+      "Bedtime · 25 of 30",
+    ],
+    [
+      "C18",
+      <Radar
+        key="c18"
+        category="sleep"
+        axes={[
+          {
+            label: "REM",
+            value: 96,
+            display: "1 hr 36 min",
+            max: 150,
+            readout: "REM · 1 hr 36 min",
+          },
+          {
+            label: "Deep",
+            value: 70,
+            display: "1 hr 10 min",
+            max: 120,
+            readout: "Deep · 1 hr 10 min",
+          },
+          {
+            label: "Core",
+            value: 248,
+            display: "4 hr 8 min",
+            max: 330,
+            readout: "Core · 4 hr 8 min",
+          },
+        ]}
+        defaultFocus={2}
+      />,
+      "Core · 4 hr 8 min",
+    ],
+  ])("%s pins its focus, names it and marks every mark tappable", (_, node, readout) => {
+    const out = html(node);
+    expect(out.match(/role="group"/g)).toHaveLength(1);
+    expect(out).toContain('aria-live="polite"');
+    expect(out).toContain(readout);
+    expect(out).toContain('data-focus-index="0"');
+    expect(out).toContain('data-focus-index="1"');
+  });
+
+  test("without readouts the tap charts stay pictures", () => {
+    const out =
+      html(charts("default").hypnogram) +
+      html(charts("default").ring) +
+      html(charts("default").streak);
+    expect(out).not.toContain('role="group"');
+    expect(out).not.toContain("data-focus-index");
+  });
+
+  test("weekly bars take a tap as well as a scrub", () => {
+    const out = html(
+      <WeeklyBars
+        category="steps"
+        values={[6, 8]}
+        readouts={["Mon · 6", "Tue · 8"]}
+        average={7}
+        caption="x"
+        hero="x"
+        defaultFocus={0}
+      />,
+    );
+    expect(out).toContain("Mon · 6");
+  });
+});
+
+describe("text never fades below AA", () => {
+  /** Every text-carrying element that has an opacity of its own. */
+  const fadedText = (out: string): readonly string[] =>
+    out.match(/<(text|tspan|li|span|p)\b[^>]*(opacity|style="[^"]*opacity)[^>]*>/g) ?? [];
+
+  const focused = {
+    weekly: (
+      <WeeklyBars
+        category="steps"
+        values={[6, 8, 7]}
+        readouts={["Mon · 6", "Tue · 8", "Wed · 7"]}
+        average={7}
+        caption="x"
+        hero="x"
+        defaultFocus={1}
+      />
+    ),
+    streak: (
+      <StreakGrid
+        category="activity"
+        days={[
+          { date: "2026-11-01", done: true, readout: "1 Nov · active" },
+          { date: "2026-11-02", done: true, readout: "2 Nov · active" },
+        ]}
+        today="2026-11-02"
+        defaultFocus={1}
+      />
+    ),
+    ring: (
+      <ScoreRing
+        category="sleep"
+        title="Sleep score"
+        band="High"
+        parts={[
+          { label: "Duration", value: 45, max: 50, readout: "Duration · 45 of 50" },
+          { label: "Bedtime", value: 25, max: 30, readout: "Bedtime · 25 of 30" },
+        ]}
+        defaultFocus={0}
+      />
+    ),
+    radar: (
+      <Radar
+        category="heart"
+        axes={[
+          {
+            label: "Resting",
+            value: 58,
+            display: "58 bpm",
+            max: 100,
+            readout: "Resting · 58 bpm",
+          },
+          {
+            label: "Sleeping",
+            value: 52,
+            display: "52 bpm",
+            max: 100,
+            readout: "Sleeping · 52 bpm",
+          },
+          {
+            label: "Walking",
+            value: 96,
+            display: "96 bpm",
+            max: 160,
+            readout: "Walking · 96 bpm",
+          },
+        ]}
+        defaultFocus={2}
+      />
+    ),
+    research: (
+      <ResearchFigure
+        kind="estimates"
+        category="vitals"
+        estimates={[
+          { label: "Within person", estimate: 3, readout: "Within person · 3" },
+          { label: "Shuffled", estimate: 1, readout: "Shuffled · 1" },
+        ]}
+        defaultFocus={0}
+      />
+    ),
+  };
+
+  test.each(Object.entries(focused))("%s: no text carries an opacity", (_, node) => {
+    expect(fadedText(html(node))).toEqual([]);
+  });
+
+  test("dimmed labels take the muted colour, the focused one stays foreground", () => {
+    const radar = html(focused.radar);
+    expect(radar).toMatch(/fill-muted-foreground[^>]*>Resting</);
+    expect(radar).toMatch(/fill-foreground[^>]*>Walking</);
+    const research = html(focused.research);
+    expect(research).toMatch(/fill-muted-foreground[^>]*>Shuffled</);
+    expect(research).toMatch(/fill-foreground[^>]*>Within person</);
+  });
+
+  test("a done day that steps back is an outline with a muted number", () => {
+    const out = html(focused.streak);
+    expect(out).toContain("border-current");
+    expect(out).toMatch(/text-muted-foreground font-bold[^>]*>1</);
+  });
+
+  test("marks still step back", () => {
+    expect(html(focused.weekly)).toContain('fill-opacity="0.4"');
+    expect(html(focused.radar)).toContain('fill-opacity="0.4"');
+  });
 });

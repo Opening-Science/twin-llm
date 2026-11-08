@@ -44,6 +44,22 @@ type Base = Readonly<{
   state?: ChartState;
 }>;
 
+/**
+ * A chart given readouts becomes interactive: one tab stop, scrubbed by
+ * hover, a finger or the arrow keys, with a readout line above it saying
+ * the focused point. Without readouts it stays a picture under the
+ * sentence. Put such a chart in an `InsightCard` with `interactive`.
+ */
+export type Interactive = Readonly<{
+  /** Names the chart for a keyboard or screen-reader user; use the card's label. */
+  label?: string;
+  /** A point focused from the start, for example in the gallery. */
+  defaultFocus?: number;
+}>;
+
+/** The ranges a card can switch between; the card only reports the choice. */
+export type ChartRange = "day" | "week" | "month";
+
 /** C03: label row, one sentence, a hairline, one body. */
 export type InsightCardProps = Base &
   Readonly<{
@@ -53,6 +69,17 @@ export type InsightCardProps = Base &
     sentence: string;
     /** Shown under the chart when state is empty, e.g. "7 nights needed". */
     emptyNote?: string;
+    /**
+     * The body holds an interactive chart: it is not hidden, since the
+     * chart's group and readout are its accessible layer.
+     */
+    interactive?: boolean;
+    /** A Day / Week / Month switch in the card's header; the caller swaps the data. */
+    ranges?: Readonly<{
+      value: ChartRange;
+      onChange: (range: ChartRange) => void;
+      options?: readonly ChartRange[];
+    }>;
     children?: ReactNode;
   }>;
 
@@ -65,6 +92,7 @@ export type ComparisonPairProps = Base &
 
 /** C05: today's running total against the usual one, `now` from 0 to 1. */
 export type CumulativeDayProps = Base &
+  Interactive &
   Readonly<{
     today: readonly DaySample[];
     average: readonly DaySample[];
@@ -75,8 +103,11 @@ export type CumulativeDayProps = Base &
 
 /** C06: seven bars and an average line spanning the card. */
 export type WeeklyBarsProps = Base &
+  Interactive &
   Readonly<{
     values: readonly (number | null)[];
+    /** One readout per value, e.g. "Tue · 9,140 steps"; makes the chart interactive. */
+    readouts?: readonly (string | null)[];
     average: number | null;
     caption: string;
     hero: string;
@@ -86,10 +117,12 @@ export type WeeklyBarsProps = Base &
 
 /** C07: done days filled, other days on the track, today outlined. */
 export type StreakGridProps = Base &
+  Interactive &
   Readonly<{ days: readonly StreakDay[]; today: string; weekStart?: 0 | 1 }>;
 
 /** C08: one bar from minimum to maximum per bucket, MIN and MAX written. */
 export type RangeBarsProps = Base &
+  Interactive &
   Readonly<{
     buckets: readonly (Range | null)[];
     /** Start and end words for the axis, e.g. ["6 AM", "Now"]. */
@@ -100,6 +133,7 @@ export type RangeBarsProps = Base &
 
 /** C09: four lanes with a duration under each label. */
 export type HypnogramProps = Base &
+  Interactive &
   Readonly<{
     spans: readonly StageSpan[];
     /** Lane words; defaults to Awake, REM, Core, Deep. */
@@ -112,6 +146,7 @@ export type HypnogramProps = Base &
 
 /** C10: a segmented ring with the score inside and a breakdown beside it. */
 export type ScoreRingProps = Base &
+  Interactive &
   Readonly<{
     title: string;
     /** A describing word for the band, e.g. "High". */
@@ -128,8 +163,11 @@ export type MonthComparisonProps = Base &
 
 /** C13: daily bars in grey, the last one highlighted, and a target line. */
 export type ConsistencyProps = Base &
+  Interactive &
   Readonly<{
     values: readonly (number | null)[];
+    /** One readout per night, e.g. "3 Nov · 11:48 PM"; makes the chart interactive. */
+    readouts?: readonly (string | null)[];
     target: number | null;
     reference: HeroValue;
     last: HeroValue;
@@ -138,6 +176,7 @@ export type ConsistencyProps = Base &
 
 /** R1: a research figure. */
 export type ResearchFigureProps = Base &
+  Interactive &
   (
     | Readonly<{
         kind: "estimates";
@@ -174,4 +213,4 @@ export type LabResultCardProps = Base &
   }>;
 
 /** C18: three to about eight axes, each on its own 0 to max; today against the reference. */
-export type RadarProps = Base & Readonly<{ axes: readonly RadarAxis[] }>;
+export type RadarProps = Base & Interactive & Readonly<{ axes: readonly RadarAxis[] }>;
