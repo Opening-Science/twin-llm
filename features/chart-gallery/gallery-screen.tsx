@@ -369,7 +369,7 @@ export const GalleryScreen = () => (
           the usual in a grey outline; every vertex carries its word and value.
         </p>
       </header>
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-2">
         <InsightCard
           category="sleep"
           label="Sleep: Stages"

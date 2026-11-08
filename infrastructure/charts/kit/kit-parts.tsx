@@ -14,17 +14,21 @@ import type { HeroValue } from "./types";
 
 /** Pieces every kit chart shares: the measured svg, the axis word, the hero number and the loading pulse. */
 
-/** Charts draw at their real width; `height` is fixed per chart. */
+/**
+ * Charts draw at their real width. `height` is fixed per chart, or a
+ * function of the width for a chart that grows in a wide card.
+ */
 export const ChartSvg = ({
-  height,
+  height: heightFor,
   fallback = 320,
   children,
 }: {
-  readonly height: number;
+  readonly height: number | ((width: number) => number);
   readonly fallback?: number;
   readonly children: (width: number) => ReactNode;
 }) => {
   const [ref, width] = useMeasuredWidth(fallback);
+  const height = typeof heightFor === "number" ? heightFor : heightFor(width);
   return (
     <div ref={ref} className="w-full">
       <svg

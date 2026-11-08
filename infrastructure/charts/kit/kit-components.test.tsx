@@ -17,6 +17,8 @@ import {
   StreakGrid,
   WeeklyBars,
   hoursMinutes,
+  radar,
+  radarHeight,
   type ChartState,
 } from ".";
 
@@ -276,6 +278,20 @@ test("radar vertices carry their word and value; a missing value is a dash", () 
   const empty = html(charts("empty").radar);
   expect(empty).toContain("Deep");
   expect(empty).not.toContain("1 hr 36 min");
+});
+
+test("the radar grows by about a third in a wide card and keeps its phone size", () => {
+  const axes = [1, 2, 3].map((v) => ({
+    label: String(v),
+    value: v,
+    display: "",
+    max: 3,
+  }));
+  const size = (width: number) =>
+    radar(axes, { width, height: radarHeight(width) }, { x: 80, y: 40 }).radius;
+  expect(size(318)).toBe(79);
+  expect(size(560) / size(318)).toBeGreaterThan(1.25);
+  expect(size(560) / size(318)).toBeLessThan(1.45);
 });
 
 describe("lab result card", () => {
