@@ -7,12 +7,13 @@ import { readableTitle } from "@/infrastructure/readable-title";
 
 import type { ResponseState, TurnState } from "./conversation";
 import { stoppedAnswerText } from "./streaming-view";
-import type { ToolCard } from "./tool-cards";
+import { type ToolCard, toolOutcome } from "./tool-cards";
 
 /**
  * A thread as Markdown, for an issue, a lab notebook or a paper's appendix:
- * each prompt, then each model's lookups (with their arguments, row counts
- * and refusals) and its answer as the page shows it. Withheld and refused
+ * each prompt, then each model's lookups (with their arguments, row counts,
+ * and "no data" for a call that ran and found nothing or "refused" for one a
+ * gate turned away before it ran) and its answer as the page shows it. Withheld and refused
  * answers say so instead of showing text. A GBD profile's answer keeps the
  * app's header and footer around it (#417), as on the page.
  *
@@ -29,9 +30,10 @@ const lookupLine = (card: ToolCard): string => {
     .slice(0, 4)
     .map((arg) => `${arg.label.toLowerCase()} ${arg.value}`)
     .join(", ");
+  const ended = toolOutcome(card);
   const outcome =
-    card.state === "refused"
-      ? `refused${card.note ? `: ${card.note}` : ""}`
+    ended === "refused" || ended === "no-data"
+      ? `${ended === "refused" ? "refused" : "no data"}${card.note ? `: ${card.note}` : ""}`
       : card.rowCount === null
         ? card.state
         : `${card.rowCount} ${card.rowCount === 1 ? "row" : "rows"}`;

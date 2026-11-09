@@ -9,7 +9,7 @@ import { StepTrace } from "@/infrastructure/ui-kit/step-trace";
 
 import type { AnswerStatus, ToolActivity } from "./conversation";
 import { cardNumbers, sourceCallIds } from "./number-links";
-import { rowsLabel, STATE_LABELS, type ToolCardState } from "./tool-cards";
+import { OUTCOME_LABELS, rowsLabel, type ToolOutcome, toolOutcome } from "./tool-cards";
 import {
   answerTraceState,
   type ReviewStep,
@@ -39,9 +39,10 @@ export type ActiveNumber = Readonly<{ text: string; key: number }>;
 export const toolCardTitleId = (idPrefix: string, toolCallId: string): string =>
   `${idPrefix}-tool-${toolCallId}`;
 
-const TONE: Readonly<Record<ToolCardState, StatusTone>> = {
+const TONE: Readonly<Record<ToolOutcome, StatusTone>> = {
   running: "neutral",
   done: "ok",
+  "no-data": "off",
   refused: "off",
   error: "warn",
 };
@@ -83,6 +84,7 @@ const ToolCallCard = ({
   }, [focusKey]);
 
   const rows = rowsLabel(card.rowCount);
+  const outcome = toolOutcome(card);
   const held = cardNumbers(numbers, card.id);
   return (
     <div className="tool-card" data-highlight={highlight === null ? undefined : ""}>
@@ -104,7 +106,7 @@ const ToolCallCard = ({
           {rows !== null && (
             <span className="text-muted-foreground tabular-nums">{rows}</span>
           )}
-          <StatusBadge tone={TONE[card.state]}>{STATE_LABELS[card.state]}</StatusBadge>
+          <StatusBadge tone={TONE[outcome]}>{OUTCOME_LABELS[outcome]}</StatusBadge>
         </span>
       </button>
       <div id={panelId} hidden={!open} className="tool-card-body">

@@ -1,11 +1,12 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  STEP_STATE_WORDS,
   traceAnnouncement,
   traceHeadline,
 } from "@/infrastructure/ui-kit/step-trace-model";
 
-import { measureNameOf, toolCard } from "./tool-cards";
+import { measureNameOf, OUTCOME_LABELS, toolCard, toolOutcome } from "./tool-cards";
 import {
   answerTraceState,
   measureNames,
@@ -157,6 +158,30 @@ describe("measure names from the answer's own data", () => {
     ]);
     expect(toolStepLabel(gated)).toBe("Refused: VIEW_NOT_ALLOWED");
     expect(toolStepLabel(empty)).toBe("No data: NO_ROWS");
+  });
+});
+
+describe("the card's badge says what the step says (#492)", () => {
+  test("a gated call reads Refused, a call that found nothing No data, on both", () => {
+    const gated = done(
+      "show_view",
+      { kind: "chart.timeseries", measure: "8867-4" },
+      { code: "VIEW_NOT_ALLOWED", error: "synthetic" },
+    );
+    const empty = done("trend", { measure: "8867-4" }, { code: "NO_ROWS", error: "x" });
+    const read = done("trend", { measure: "8867-4" });
+    const cards = [gated, empty, read];
+    const badges = cards.map((card) => OUTCOME_LABELS[toolOutcome(card)]);
+    expect(badges).toEqual(["Refused", "No data", "Done"]);
+    expect(cards.map((card) => STEP_STATE_WORDS[toolStepState(card)])).toEqual(badges);
+    const steps = cards.map((card, index) => ({
+      id: String(index),
+      label: toolStepLabel(card),
+      state: toolStepState(card),
+    }));
+    expect(traceHeadline({ state: "done", steps, elapsedMs: null })).toBe(
+      "Used 2 tools; 1 call was refused",
+    );
   });
 });
 
