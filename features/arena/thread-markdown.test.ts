@@ -156,6 +156,51 @@ describe("threadMarkdown", () => {
     expect(thread({})).not.toContain("Evidence:");
   });
 
+  test("the export says whether each stated value matches its reading (#545)", () => {
+    const markdown = threadMarkdown(
+      {
+        title: "Sleep",
+        turns: [
+          {
+            id: "t1",
+            prompt: "Sleep",
+            answers: [
+              answer({
+                text: "## Answer\nSynthetic.",
+                attribution: [
+                  {
+                    metricKey: "sleep.score.2026-01-01",
+                    label: "Sleep score",
+                    value: 82,
+                    source: "oura",
+                    day: "2026-01-01",
+                    valueCheck: { status: "matched", stated: "82" },
+                  },
+                  {
+                    metricKey: "sleep.score.2026-01-02",
+                    label: "Sleep score",
+                    value: 79,
+                    source: "oura",
+                    day: "2026-01-02",
+                    valueCheck: { status: "not_matched", stated: "71" },
+                  },
+                ],
+              }),
+            ],
+          },
+        ],
+      },
+      "9 Nov 2026",
+    );
+    expect(markdown).toContain(
+      [
+        "Evidence:",
+        "- Sleep score 82 · Matches the Oura reading, 1 Jan 2026 (`sleep.score.2026-01-01`)",
+        "- Sleep score 79 · Doesn't match the cited reading: the answer says 71 (`sleep.score.2026-01-02`)",
+      ].join("\n"),
+    );
+  });
+
   test("a GBD profile keeps the app's header and footer in Markdown and print (#417)", () => {
     const frame = {
       title: "Location profile: Switzerland, 2023",

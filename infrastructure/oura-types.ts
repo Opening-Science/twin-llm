@@ -3,6 +3,7 @@
  * parsing / evidence UI (client). Lives in infrastructure so features do not
  * import each other for types alone.
  */
+import type { ValueCheck } from "./cited-value-check";
 import type { WearableSourceId } from "./wearable-provenance";
 
 export type OuraMetric = Readonly<{
@@ -29,4 +30,10 @@ export type EvidenceAttribution = Readonly<{
   source?: WearableSourceId;
   /** The day the value belongs to, `YYYY-MM-DD`; absent when not known. */
   day?: string;
+  /**
+   * Whether the number the answer states for this value is the stored reading
+   * (#545, `cited-value-check.ts`); absent on answers stored before and on a
+   * value that is not a number.
+   */
+  valueCheck?: ValueCheck;
 }>;

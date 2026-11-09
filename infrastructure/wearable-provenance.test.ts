@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import {
   attributionProvenanceLine,
+  citedValueLine,
   metricDay,
   pickedSourceLine,
   provenanceLine,
@@ -75,5 +76,44 @@ describe("attributionProvenanceLine", () => {
     expect(attributionProvenanceLine({ source: "whoop", day: "soon" })).toBe(
       "From WHOOP",
     );
+  });
+});
+
+describe("citedValueLine (#545)", () => {
+  const chip = { source: "oura", day: "2026-01-02" };
+
+  test("a match names the reading's source and day", () => {
+    expect(
+      citedValueLine({ ...chip, valueCheck: { status: "matched", stated: "82" } }),
+    ).toBe("Matches the Oura reading, 2 Jan 2026");
+    expect(
+      citedValueLine({
+        source: "whoop",
+        valueCheck: { status: "matched", stated: "52" },
+      }),
+    ).toBe("Matches the WHOOP reading");
+    expect(citedValueLine({ valueCheck: { status: "matched", stated: "52" } })).toBe(
+      "Matches the cited reading",
+    );
+  });
+
+  test("a mismatch gets no source, only what the answer said", () => {
+    expect(
+      citedValueLine({ ...chip, valueCheck: { status: "not_matched", stated: "75" } }),
+    ).toBe("Doesn't match the cited reading: the answer says 75");
+    expect(citedValueLine({ ...chip, valueCheck: { status: "not_matched" } })).toBe(
+      "Doesn't match the cited reading",
+    );
+  });
+
+  test("no number stated, no check stored, or a check it does not know: as before", () => {
+    expect(citedValueLine({ ...chip, valueCheck: { status: "unstated" } })).toBe(
+      "From Oura, 2 Jan 2026",
+    );
+    expect(citedValueLine(chip)).toBe("From Oura, 2 Jan 2026");
+    expect(citedValueLine({ ...chip, valueCheck: { status: "maybe" } })).toBe(
+      "From Oura, 2 Jan 2026",
+    );
+    expect(citedValueLine({})).toBeNull();
   });
 });

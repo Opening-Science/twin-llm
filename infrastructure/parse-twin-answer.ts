@@ -1,3 +1,4 @@
+import { checkCitedValues } from "@/infrastructure/cited-value-check";
 import { classifyCompletion } from "@/infrastructure/classify-completion";
 import {
   matchOfferedMetric,
@@ -250,6 +251,29 @@ export const resolveAttribution = (
   return out;
 };
 
+/**
+ * Each cited value with the check of the number the reply states for it
+ * against its stored reading (#545). A value that is not a number keeps no check.
+ */
+export const withValueChecks = (
+  attribution: readonly EvidenceAttribution[],
+  reply: string,
+): EvidenceAttribution[] => {
+  const checks = checkCitedValues(
+    reply,
+    attribution.map((item) => ({
+      key: item.metricKey,
+      label: item.label,
+      value: item.value,
+      ...(item.unit === undefined ? {} : { unit: item.unit }),
+    })),
+  );
+  return attribution.map((item, index) => {
+    const valueCheck = checks[index];
+    return valueCheck == null ? item : { ...item, valueCheck };
+  });
+};
+
 export const citedKeysForDataBasis = (citedKeys: readonly string[]): string[] =>
   citedKeys.filter((key) => key !== "none");
 
@@ -309,7 +333,10 @@ export const parseTwinAnswer = (
     citedKeys,
     evidenceKeys: realKeys.filter((key) => matchOfferedMetric(key, offered) !== null),
     hallucinatedKeys: realKeys.filter((key) => matchOfferedMetric(key, offered) === null),
-    attribution: resolveAttribution(citedKeys, offered, evidenceSection),
+    attribution: withValueChecks(
+      resolveAttribution(citedKeys, offered, evidenceSection),
+      text,
+    ),
     declined: classifyCompletion(text) === "REFUSE",
     offeredKeyCount: offered.length,
   };

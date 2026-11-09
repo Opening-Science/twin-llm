@@ -406,6 +406,33 @@ describe("explainability panel evidence provenance (#464)", () => {
     expect(markup).not.toContain("sleep.hrv.2026-01-01");
   });
 
+  test("a checked value says whether the answer's number matches its reading (#545)", () => {
+    const markup = render([
+      {
+        metricKey: "sleep.score.2026-01-01",
+        label: "Sleep score",
+        value: 82,
+        source: "oura",
+        day: "2026-01-01",
+        valueCheck: { status: "matched", stated: "82" },
+      },
+      {
+        metricKey: "whoop.recovery.rhr.2026-01-02",
+        label: "Resting HR",
+        value: 52,
+        unit: "bpm",
+        source: "whoop",
+        day: "2026-01-02",
+        valueCheck: { status: "not_matched", stated: "58 bpm" },
+      },
+    ]);
+    expect(markup).toContain("Matches the Oura reading, 1 Jan 2026");
+    expect(markup).toContain(
+      "Doesn&#x27;t match the cited reading: the answer says 58 bpm",
+    );
+    expect(markup).not.toContain("From WHOOP");
+  });
+
   test("an answer stored before #464 shows its values without a source line", () => {
     const markup = render([
       { metricKey: "sleep.hrv.2026-01-01", label: "Sleep HRV", value: 41, unit: "ms" },

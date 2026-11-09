@@ -28,7 +28,7 @@ import {
 } from "@/infrastructure/response-document/copy";
 import type { ResponseDocumentV1 } from "@/infrastructure/response-document/document-v1";
 import { uiContextLines } from "@/infrastructure/ui-context";
-import { attributionProvenanceLine } from "@/infrastructure/wearable-provenance";
+import { citedValueLine } from "@/infrastructure/wearable-provenance";
 import {
   formatGbdRow,
   gbdAttributionFor,
@@ -66,7 +66,9 @@ const EvidencePanel = ({
   return (
     <ul className="flex flex-wrap gap-1.5">
       {attribution.map((item) => {
-        const provenance = attributionProvenanceLine(item);
+        // The words carry the check (#545); the colour only repeats them.
+        const provenance = citedValueLine(item);
+        const mismatch = item.valueCheck?.status === "not_matched";
         return (
           <li
             key={item.metricKey}
@@ -78,7 +80,13 @@ const EvidencePanel = ({
               {item.unit ? ` ${item.unit}` : ""}
             </span>
             {provenance && (
-              <span className="text-muted-foreground block">{provenance}</span>
+              <span
+                className={
+                  mismatch ? "text-destructive block" : "text-muted-foreground block"
+                }
+              >
+                {provenance}
+              </span>
             )}
           </li>
         );
