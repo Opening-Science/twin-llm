@@ -2,7 +2,12 @@
 
 import { nearestIndex } from "../chart-geometry";
 import { ChartFocusFrame, ChartReadout, useChartFocus } from "./chart-focus";
-import { cumulativeDay, emptyDayOutline, samplesUpTo } from "./kit-geometry";
+import {
+  cumulativeDay,
+  emptyDayOutline,
+  PLACEHOLDER_DAY,
+  samplesUpTo,
+} from "./kit-geometry";
 import { AXIS_TEXT, ChartSvg, EMPTY_STROKE, LOADING_FILL, toneClass } from "./kit-parts";
 import type { CumulativeDayProps } from "./types";
 
@@ -61,9 +66,13 @@ export const CumulativeDay = ({
             ) : state === "empty" ? (
               <path
                 // The usual day as a dotted outline, or a placeholder shape when
-                // there is no usual day yet: never a blank card.
+                // there is no usual day yet: never a blank card. The placeholder
+                // is half as strong, so it never passes for the person's own day.
                 d={cumulativeDay([], emptyDayOutline(average), 0, box).averageFuture}
                 className={EMPTY_STROKE}
+                strokeOpacity={
+                  emptyDayOutline(average) === PLACEHOLDER_DAY ? 0.5 : undefined
+                }
                 strokeWidth={3}
                 strokeDasharray="2 6"
                 strokeLinecap="round"

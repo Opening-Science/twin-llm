@@ -968,4 +968,19 @@ test("an empty day with no usual day yet still outlines a day, never a blank", (
   );
   const outline = /<path d="(M[^"]+)"[^>]*stroke-dasharray="2 6"/.exec(out);
   expect(outline?.[1]?.split("L").length).toBeGreaterThan(20);
+  // The placeholder is half as strong as a real usual day's outline.
+  expect(out).toContain('stroke-opacity="0.5"');
+  const usual = html(
+    <CumulativeDay
+      category="steps"
+      state="empty"
+      today={[]}
+      average={[
+        { at: 0, value: 0 },
+        { at: 1, value: 8000 },
+      ]}
+      now={0}
+    />,
+  );
+  expect(usual).not.toContain('stroke-opacity="0.5"');
 });
