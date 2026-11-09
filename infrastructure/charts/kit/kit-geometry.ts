@@ -109,12 +109,26 @@ export type BarsWithLine = Readonly<{
   centres: readonly number[];
   /** The average or target line's height; null when there is none. */
   lineY: number | null;
+  /** The usual range as a band, top and bottom; null when there is none. */
+  band: Readonly<{ top: number; bottom: number }> | null;
+}>;
+
+export type BarScale = Readonly<{
+  /**
+   * Where bars start, instead of zero: a bedtime near 23:00 is about 1,380
+   * minutes, so from zero a 30-minute shift is invisible. A bar at or below
+   * the floor is a 2px stub, so the day still shows.
+   */
+  floor?: number;
+  /** The usual range, drawn as a band behind the bars. */
+  band?: Readonly<{ low: number; high: number }>;
 }>;
 
 /**
- * Bars from zero up to each value, and a reference line (an average or a
- * target), on one scale so the line is never drawn off the chart. Bars are
- * at most `maxBar` wide and centred in their slot.
+ * Bars from the floor (zero unless given) up to each value, and a
+ * reference line (an average or a target) and a usual band, all on one
+ * scale so nothing is drawn off the chart. Bars are at most `maxBar` wide
+ * and centred in their slot.
  */
 export const barsWithLine = (
   values: readonly (number | null)[],
@@ -122,21 +136,45 @@ export const barsWithLine = (
   box: Box,
   maxBar = 28,
   gap = 6,
+  scale: BarScale = {},
 ): BarsWithLine => {
-  const present = values.filter(finite).filter((v) => v > 0);
-  const top = Math.max(...present, finite(line) ? line : 0, 0);
+  const floor = scale.floor ?? 0;
+  const band =
+    scale.band && finite(scale.band.low) && finite(scale.band.high) ? scale.band : null;
+  const present = values
+    .filter(finite)
+    .filter((v) => (scale.floor === undefined ? v > 0 : true));
+  const top = Math.max(
+    ...present,
+    finite(line) ? line : floor,
+    band ? Math.max(band.low, band.high) : floor,
+    floor,
+  );
+  const span = top - floor;
+  // All at the floor still draws stubs; without a floor, nothing to draw.
+  const scaleSpan = span > 0 ? span : 1;
+  const y = (v: number): number =>
+    box.height - (Math.max(0, v - floor) / scaleSpan) * box.height;
   const slot = values.length === 0 ? 0 : box.width / values.length;
   const width = Math.max(2, Math.min(maxBar, slot - gap));
   const centres = values.map((_, i) => i * slot + slot / 2);
   const bars = values.map((value, i) => {
-    if (!finite(value) || value <= 0 || top === 0) return null;
-    const height = (value / top) * box.height;
+    if (!finite(value)) return null;
+    if (scale.floor === undefined && (value <= 0 || span <= 0)) return null;
+    const height = Math.max(2, box.height - y(value));
     return { x: centres[i]! - width / 2, y: box.height - height, width, height };
   });
   return {
     bars,
     centres,
-    lineY: finite(line) && top > 0 ? box.height - (line / top) * box.height : null,
+    lineY: finite(line) && span > 0 ? y(line) : null,
+    band:
+      band && span > 0
+        ? {
+            top: y(Math.max(band.low, band.high)),
+            bottom: y(Math.min(band.low, band.high)),
+          }
+        : null,
   };
 };
 
@@ -652,9 +690,34 @@ export type RadarAxis = Readonly<{
   display: string;
   reference?: number | null;
   max: number;
+  /**
+   * Where the axis starts instead of 0, so similar values (a resting heart
+   * rate of 52 against 58) do not all sit at the rim.
+   */
+  min?: number;
+  /**
+   * Lower values sit further out: for a measure where less is the good or
+   * usual direction, such as resting heart rate. The radar then writes a
+   * plain note under itself naming these axes (`invertedNote`).
+   */
+  inverted?: boolean;
   /** What the readout says when this axis is focused. */
   readout?: string;
 }>;
+
+/**
+ * How far out a value sits on its axis, 0 (centre) to 1 (rim), between the
+ * axis's `min` (0 unless given) and `max`, turned round when `inverted`. A
+ * missing value sits at the centre either way.
+ */
+export const axisShare = (value: number | null | undefined, axis: RadarAxis): number => {
+  if (!finite(value)) return 0;
+  const lo = axis.min ?? 0;
+  const span = axis.max - lo;
+  if (!(span > 0)) return 0;
+  const share = clamp01((value - lo) / span);
+  return axis.inverted ? 1 - share : share;
+};
 
 export type RadarAnchor = Readonly<{
   x: number;
@@ -705,8 +768,6 @@ export const radar = (
     x: centre.x + Math.cos(angle(i)) * radius * share,
     y: centre.y + Math.sin(angle(i)) * radius * share,
   });
-  const share = (v: number | null | undefined, max: number): number =>
-    finite(v) && max > 0 ? clamp01(v / max) : 0;
   if (n < 3) {
     return {
       centre,
@@ -719,7 +780,7 @@ export const radar = (
       anchors: [],
     };
   }
-  const points = axes.map((a, i) => at(i, share(a.value, a.max)));
+  const points = axes.map((a, i) => at(i, axisShare(a.value, a)));
   const hasReference = axes.some((a) => finite(a.reference));
   return {
     centre,
@@ -729,7 +790,7 @@ export const radar = (
     value: closed(points),
     points,
     reference: hasReference
-      ? closed(axes.map((a, i) => at(i, share(a.reference, a.max))))
+      ? closed(axes.map((a, i) => at(i, axisShare(a.reference, a))))
       : "",
     anchors: axes.map((_, i) => {
       const cos = Math.cos(angle(i));
@@ -887,4 +948,44 @@ export const ringPartAt = (
     if (turn < edge) return i;
   }
   return parts.length - 1;
+};
+
+/**
+ * Stage totals as bar widths on one scale, the longest stage at full width,
+ * for a source that reports totals but not the night's order (WHOOP).
+ * Missing or negative totals are 0.
+ */
+export const stageTotalWidths = (
+  totals: Readonly<Partial<Record<SleepStage, number>>>,
+  width: number,
+): Readonly<Record<SleepStage, number>> => {
+  const minutes = (stage: SleepStage): number => {
+    const v = totals[stage];
+    return finite(v) && v > 0 ? v : 0;
+  };
+  const longest = Math.max(0, ...STAGE_LANES.map(minutes));
+  return Object.fromEntries(
+    STAGE_LANES.map((stage) => [
+      stage,
+      longest === 0 ? 0 : (minutes(stage) / longest) * width,
+    ]),
+  ) as Record<SleepStage, number>;
+};
+
+/**
+ * The plain note a radar with inverted axes carries under it, so a reader
+ * never takes further out as higher: "For resting and sleeping, further out
+ * means lower." Labels keep their own case when they are all capitals
+ * (HRV); null when no axis is inverted.
+ */
+export const invertedNote = (axes: readonly RadarAxis[]): string | null => {
+  const names = axes
+    .filter((a) => a.inverted)
+    .map((a) => (a.label === a.label.toUpperCase() ? a.label : a.label.toLowerCase()));
+  if (names.length === 0) return null;
+  const list =
+    names.length === 1
+      ? names[0]!
+      : `${names.slice(0, -1).join(", ")} and ${names.at(-1)!}`;
+  return `For ${list}, further out means lower.`;
 };

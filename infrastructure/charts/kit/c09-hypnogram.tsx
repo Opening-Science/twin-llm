@@ -1,7 +1,13 @@
 "use client";
 
 import { ChartFocusFrame, ChartReadout, dimmed, useChartFocus } from "./chart-focus";
-import { hypnogram, STAGE_LANES, type SleepStage } from "./kit-geometry";
+import { formatDuration } from "./format";
+import {
+  hypnogram,
+  STAGE_LANES,
+  stageTotalWidths,
+  type SleepStage,
+} from "./kit-geometry";
 import { AXIS_TEXT, ChartSvg, EMPTY_STROKE, LOADING_FILL } from "./kit-parts";
 import type { HypnogramProps } from "./types";
 
@@ -20,12 +26,9 @@ const STAGE_FILL: Readonly<Record<SleepStage, string>> = {
   deep: "fill-stage-deep",
 };
 
-export const hoursMinutes = (minutes: number): string => {
-  const total = Math.max(0, Math.round(minutes));
-  const h = Math.floor(total / 60);
-  const m = total % 60;
-  return h > 0 ? `${h} hr ${m} min` : `${m} min`;
-};
+/** A stage's length, the kit's way ("7 hr 4 min"); a negative total counts as none. */
+export const hoursMinutes = (minutes: number): string =>
+  formatDuration(Math.max(0, minutes));
 
 const HEIGHT = 200;
 const PLOT = 176;
@@ -37,10 +40,15 @@ const LABELS = 84;
  * colour alone: every lane is labelled. With readouts, a click or tap pins
  * a block (again to clear), hover previews the block at that time, and the
  * arrow keys step through the night; the readout names the focused block.
+ *
+ * With `totals` instead of spans (a source that reports stage totals only),
+ * each lane shows one bar, the longest stage at full width, and no times.
  */
 export const Hypnogram = ({
   state = "default",
-  spans,
+  spans = [],
+  totals,
+  coreWord = "Core",
   labels,
   axis,
   duration = hoursMinutes,
@@ -49,7 +57,9 @@ export const Hypnogram = ({
 }: HypnogramProps) => {
   // The blocks in time order; their order does not depend on the width.
   const order = hypnogram(spans, { width: 1, height: 1 }).blocks;
-  const live = state === "default" && order.some((b) => b.readout);
+  const live = state === "default" && !totals && order.some((b) => b.readout);
+  const word = (stage: SleepStage): string =>
+    labels?.[stage] ?? (stage === "core" ? coreWord : LANE_WORDS[stage]);
   const focus = useChartFocus({
     count: order.length,
     axis: "both",
@@ -71,20 +81,23 @@ export const Hypnogram = ({
     <ChartSvg height={HEIGHT}>
       {(width) => {
         const plotWidth = Math.max(40, width - LABELS);
-        const out = hypnogram(state === "default" ? spans : [], {
+        const out = hypnogram(state === "default" && !totals ? spans : [], {
           width: plotWidth,
           height: PLOT,
         });
+        const widths = totals ? stageTotalWidths(totals, plotWidth) : null;
+        const minutesOf = (stage: SleepStage): number =>
+          totals ? Math.max(0, totals[stage] ?? 0) : out.minutes[stage];
         return (
           <g data-state={state}>
             {STAGE_LANES.map((stage) => (
               <g key={stage} transform={`translate(0 ${out.laneY[stage]})`}>
                 <text y={14} className="fill-foreground font-sans text-sm">
-                  {labels?.[stage] ?? LANE_WORDS[stage]}
+                  {word(stage)}
                 </text>
                 {state === "default" ? (
                   <text y={30} className={AXIS_TEXT}>
-                    {duration(out.minutes[stage])}
+                    {duration(minutesOf(stage))}
                   </text>
                 ) : null}
                 {state !== "default" ? (
@@ -96,6 +109,16 @@ export const Hypnogram = ({
                     rx={(out.laneHeight - 4) / 2}
                     className={state === "loading" ? LOADING_FILL : EMPTY_STROKE}
                     strokeDasharray={state === "empty" ? "2 6" : undefined}
+                  />
+                ) : null}
+                {state === "default" && widths ? (
+                  <rect
+                    x={LABELS}
+                    y={4}
+                    width={Math.max(widths[stage] > 0 ? 4 : 0, widths[stage])}
+                    height={out.laneHeight - 8}
+                    rx={4}
+                    className={STAGE_FILL[stage]}
                   />
                 ) : null}
               </g>
@@ -116,7 +139,7 @@ export const Hypnogram = ({
                 />
               ))}
             </g>
-            {axis ? (
+            {axis && !totals ? (
               <>
                 <text x={LABELS} y={HEIGHT - 2} className={AXIS_TEXT}>
                   {axis[0]}
