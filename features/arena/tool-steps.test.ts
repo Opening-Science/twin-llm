@@ -53,7 +53,7 @@ describe("toolStepLabel", () => {
     );
   });
 
-  test("a refusal reads No data with its code", () => {
+  test("a refusal reads its code's plain sentence, not the code (#529)", () => {
     expect(
       toolStepLabel(
         done(
@@ -62,7 +62,7 @@ describe("toolStepLabel", () => {
           { code: "NO_ROWS", error: "synthetic" },
         ),
       ),
-    ).toBe("No data: NO_ROWS");
+    ).toBe("No readings in this range");
   });
 
   test("an unknown tool falls back to its card title", () => {
@@ -156,8 +156,8 @@ describe("measure names from the answer's own data", () => {
       "refused",
       "skipped",
     ]);
-    expect(toolStepLabel(gated)).toBe("Refused: VIEW_NOT_ALLOWED");
-    expect(toolStepLabel(empty)).toBe("No data: NO_ROWS");
+    expect(toolStepLabel(gated)).toBe("This view isn't allowed for this question");
+    expect(toolStepLabel(empty)).toBe("No readings in this range");
   });
 });
 
@@ -296,7 +296,7 @@ describe("a show_view call refused with VIEW_NOT_ALLOWED (#492)", () => {
     const steps = stepsOf([gated]);
     expect(gated.notRun).toBe(true);
     expect(steps[0]).toMatchObject({
-      label: "Refused: VIEW_NOT_ALLOWED",
+      label: "This view isn't allowed for this question",
       state: "refused",
     });
     expect(traceHeadline({ state: "done", steps, elapsedMs: 3_000 })).toBe(
@@ -310,8 +310,8 @@ describe("a show_view call refused with VIEW_NOT_ALLOWED (#492)", () => {
     const steps = stepsOf([empty, gated]);
     expect(empty.notRun).toBeUndefined();
     expect(steps.map((step) => step.label)).toEqual([
-      "No data: NO_ROWS",
-      "Refused: VIEW_NOT_ALLOWED",
+      "No readings in this range",
+      "This view isn't allowed for this question",
     ]);
     expect(traceHeadline({ state: "done", steps, elapsedMs: 3_000 })).toBe(
       "Used 1 tool in 3.0s; 1 call was refused",

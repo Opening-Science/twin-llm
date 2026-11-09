@@ -10,6 +10,8 @@ import { EMPTY_VALUE, formatDate, formatNumber } from "@/infrastructure/format-m
 import { toolTitle } from "@/infrastructure/tool-titles";
 import { DNA_ASK_TOOL, GENOME_REPORT_TOOL } from "@/packages/carbon-x/constants";
 
+import { toolCodeSentence } from "./tool-code-sentences";
+
 export { toolTitle };
 
 /**
@@ -19,7 +21,8 @@ export { toolTitle };
  *
  * Only named arguments are kept, each as display text. Tool outputs never
  * reach a card: the row count is the one thing read from them, and a refusal
- * shows a fixed sentence by its code, never the tool's own words.
+ * shows a fixed sentence by its code (`tool-code-sentences.ts`), never the
+ * tool's own words.
  */
 
 export type ToolCardState = "running" | "done" | "refused" | "error";
@@ -36,9 +39,9 @@ export type ToolCard = Readonly<{
   state: ToolCardState;
   /** Rows the call read; null while it runs, after an error or when unknown. */
   rowCount: number | null;
-  /** Why a refused call has no rows, in a fixed sentence. */
+  /** Why a refused call has no rows, in a fixed plain sentence: the step's title. */
   note: string | null;
-  /** A refused call's code (`NO_ROWS`), for the step line; absent otherwise. */
+  /** A refused call's code (`NO_ROWS`), for the fold-out; absent otherwise. */
   refusalCode?: string;
   /**
    * True when a gate turned the call away before it read anything or wrote
@@ -53,71 +56,6 @@ export type ToolCard = Readonly<{
    */
   measureName?: string;
 }>;
-
-const REFUSAL_NOTES: Readonly<Record<string, string>> = {
-  SUBJECT_SCOPE_VIOLATION: "That subject is outside this session's scope.",
-  ROW_CAP_EXCEEDED: "Too many rows in this window; nothing was read.",
-  MIXED_UNITS: "The readings use more than one unit, so they were not combined.",
-  UNSUPPORTED_CONVERSION: "The conversion table has no rule for that pair of units.",
-  SOURCE_NOT_CONNECTED: "That wearable source is not linked here, so nothing was read.",
-  WINDOW_TOO_SHORT: "Too few daily readings in this window for a trend.",
-  COHORT_TOOLS_OFF: "The cohort record tools are turned off.",
-  SUBJECT_REQUIRED: "A cohort measure needs a subject.",
-  NOT_AUDITED: "The read was not recorded, so nothing was drawn.",
-  UNKNOWN_MEASURE: "That measure is not a LOINC code or a known wearable key.",
-  VIEW_NOT_FOUND: "No chart with that id in this thread.",
-  VIEW_NOT_ALLOWED: "This skill does not draw that kind of view.",
-  WINDOW_REQUIRED: "This kind of view needs a time window.",
-  RECORDS_NOT_IN_SKILL: "This skill reads no subject records, so none were read.",
-  GENOME_NOT_PERMITTED: "Genome tools run only in personal mode on this machine.",
-  NO_REPORT: "No genome report has been released yet.",
-  IMPORTED_DATA_NOT_PERMITTED:
-    "Imported data is read only in personal mode, by a model on this machine.",
-  DATASET_NOT_FOUND: "No imported dataset with that id.",
-  SERIES_NOT_COMBINED: "A coded series and one stored by name were not combined.",
-  PARTIAL_DATES: "Some rows are dated only to a month or a year, so no trend was fitted.",
-  WRONG_DATASET_KIND: "That dataset is not the kind this tool reads.",
-  UNKNOWN_COLUMNS: "Those columns are not in the table, so nothing was read.",
-  RSID_NOT_IN_REPORT: "That variant is not in the released report.",
-  NO_CALL: "The report has no call at that variant, so nothing was asked.",
-  INCOMPLETE_ROW: "The report has no position for that variant.",
-  BUILD_MISMATCH: "The report is not on GRCh38, so no reference window was built.",
-  BUILD_UNKNOWN: "The report's build is unknown, so no reference window was built.",
-  REF_MISMATCH:
-    "The reported reference allele does not match GRCh38, so nothing was asked.",
-  REF_STRAND_MISMATCH: "The report is on the other strand, so nothing was asked.",
-  OUT_OF_RANGE: "That position is outside the reference chromosome.",
-  REFERENCE_NOT_CONFIGURED: "No local GRCh38 reference is set up.",
-  REFERENCE_MISSING: "The local GRCh38 reference lacks that chromosome.",
-  REFERENCE_UNREADABLE: "The local GRCh38 reference could not be read.",
-  CARBON_X_NOT_LOCAL: "Carbon-X is not on this machine, so nothing was sent.",
-  CARBON_X_UNREACHABLE: "The local Carbon-X sidecar is not running.",
-  CARBON_X_TIMEOUT: "The local Carbon-X sidecar did not answer in time.",
-  CARBON_X_FAILED: "The local Carbon-X sidecar did not return an answer.",
-  NO_ROWS: "No reading for that measure in this window.",
-  NO_PUBLISHED_RANGE: "Anchor v3 has no published range to place that measure against.",
-  UNIT_MISMATCH: "The reading's unit is not the published range's, so it was not placed.",
-  COHORT_TOO_SMALL:
-    "Fewer than 10 synthetic people have a value, so no percentile was given.",
-  COHORT_ROW_CAP_EXCEEDED: "Too many cohort rows in this window; nothing was ranked.",
-};
-
-/** Notes for a code whose usual sentence would be wrong for this tool (it lists records, not readings). */
-const TOOL_REFUSAL_NOTES: Readonly<Record<string, Readonly<Record<string, string>>>> = {
-  list_subjects: {
-    SUBJECT_SCOPE_VIOLATION: "That cohort is not one this session can read.",
-  },
-  conditions_timeline: {
-    NO_ROWS: "No recorded condition matches in this window.",
-    ROW_CAP_EXCEEDED: "Too many records in this window; nothing was read.",
-  },
-  medications_timeline: {
-    NO_ROWS: "No recorded medication request matches in this window.",
-    ROW_CAP_EXCEEDED: "Too many records in this window; nothing was read.",
-  },
-};
-
-const REFUSED = "The tool declined this call.";
 
 /**
  * Codes a tool returns before it runs: no read, no audit row. Every other
@@ -325,10 +263,7 @@ export const toolCard = (
       state === "done" || state === "refused"
         ? (storedRowCount ?? rowCountOf(part.output))
         : null,
-    note:
-      code === null
-        ? null
-        : (TOOL_REFUSAL_NOTES[part.tool]?.[code] ?? REFUSAL_NOTES[code] ?? REFUSED),
+    note: code === null ? null : toolCodeSentence(part.tool, code),
     ...(code === null ? {} : { refusalCode: code }),
     ...(code !== null && refusedBeforeRun(part.tool, code) ? { notRun: true } : {}),
     ...measureField(state === "done" ? measureNameOf(part.input, part.output) : null),

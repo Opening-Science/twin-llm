@@ -9,6 +9,7 @@ import type { StepState, TraceState } from "@/infrastructure/ui-kit/step-trace-m
 
 import type { AnswerStatus } from "./conversation";
 import { RANGE_DASH, type ToolCard, type ToolOutcome, toolOutcome } from "./tool-cards";
+import { GENERIC_CODE_SENTENCE } from "./tool-code-sentences";
 
 /**
  * An answer's tool calls as steps of a step trace: what each call is doing,
@@ -17,11 +18,12 @@ import { RANGE_DASH, type ToolCard, type ToolOutcome, toolOutcome } from "./tool
  * display a call's output gave it (`measureNameOf`), shared by every call of
  * the answer that asked for the same code, with the code in brackets; with no
  * name known the code stands alone. A wearable key gets its metric label. A
- * call that ran and was refused (`NO_ROWS`) reads "No data: <code>"; one a
- * gate turned away before it ran (`VIEW_NOT_ALLOWED`) reads "Refused: <code>"
- * and is not counted as a tool used. The card under it keeps the fixed
- * sentence for the code. Built from the same cards a saved answer stores, so a
- * reload says the same thing.
+ * refused call reads its code's plain sentence ("No readings in this range"
+ * for `NO_ROWS`, `tool-code-sentences.ts`); its badge says whether it ran and
+ * found nothing (No data) or a gate turned it away first (Refused, not
+ * counted as a tool used). The code itself shows only in the card's fold-out.
+ * Built from the same cards a saved answer stores, so a reload says the same
+ * thing.
  */
 
 type Phrase = (measure: string | null) => string;
@@ -111,10 +113,7 @@ export const toolStepLabel = (
   card: ToolCard,
   names: ReadonlyMap<string, string> = measureNames([card]),
 ): string => {
-  if (card.state === "refused") {
-    const code = card.refusalCode ?? "REFUSED";
-    return card.notRun === true ? `Refused: ${code}` : `No data: ${code}`;
-  }
+  if (card.state === "refused") return card.note ?? GENERIC_CODE_SENTENCE;
   const phrase = PHRASES[card.tool];
   const code = arg(card, "Measure");
   const what = phrase
