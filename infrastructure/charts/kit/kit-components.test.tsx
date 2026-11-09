@@ -961,3 +961,11 @@ describe("research figure options", () => {
     expect(card).not.toContain("text-chart-1");
   });
 });
+
+test("an empty day with no usual day yet still outlines a day, never a blank", () => {
+  const out = html(
+    <CumulativeDay category="steps" state="empty" today={[]} average={[]} now={0} />,
+  );
+  const outline = /<path d="(M[^"]+)"[^>]*stroke-dasharray="2 6"/.exec(out);
+  expect(outline?.[1]?.split("L").length).toBeGreaterThan(20);
+});

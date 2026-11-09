@@ -243,6 +243,27 @@ export const GalleryScreen = () => (
       )}
     />
 
+    <section className="flex flex-col gap-3">
+      <header>
+        <h2 className="text-foreground font-sans text-lg">C05 empty, no usual day yet</h2>
+        <p className="text-muted-foreground text-sm">
+          With no usual day to outline yet, the empty chart draws the shape of a typical
+          day as a dotted placeholder: never a blank card.
+        </p>
+      </header>
+      <div className="grid gap-4 lg:grid-cols-3">
+        <InsightCard
+          category="steps"
+          state="empty"
+          label="Steps"
+          sentence="Your steps through the day appear here once your device syncs."
+          emptyNote="No steps recorded yet"
+        >
+          <CumulativeDay category="steps" state="empty" today={[]} average={[]} now={0} />
+        </InsightCard>
+      </div>
+    </section>
+
     <Row
       name="C06 Weekly bars"
       note="The average line spans the whole width, as a baseline. Try: hover or drag, tap, arrow keys."

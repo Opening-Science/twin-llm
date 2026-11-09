@@ -4,6 +4,7 @@ import {
   barsWithLine,
   cumulativeDay,
   edgeAnchor,
+  emptyDayOutline,
   estimateLayout,
   estimateRows,
   exactDecimals,
@@ -12,6 +13,7 @@ import {
   monthShares,
   nullBand,
   nullFigure,
+  PLACEHOLDER_DAY,
   radar,
   radarAxisAt,
   rangeBars,
@@ -535,5 +537,27 @@ describe("null band", () => {
     expect(out.observedX).toBe(208);
     expect(out.mean).toBeGreaterThan(out.low);
     expect(out.mean).toBeLessThan(out.high);
+  });
+});
+
+describe("empty day outline", () => {
+  const usual = [
+    { at: 0, value: 0 },
+    { at: 1, value: 8000 },
+  ];
+
+  test("the usual day when there is one", () => {
+    expect(emptyDayOutline(usual)).toBe(usual);
+  });
+
+  test("a placeholder shape when there is none, rising from 0 to 1 over the day", () => {
+    for (const none of [[], [{ at: 0.5, value: 3 }]]) {
+      const out = emptyDayOutline(none);
+      expect(out).toBe(PLACEHOLDER_DAY);
+    }
+    expect(PLACEHOLDER_DAY[0]!.value).toBeCloseTo(0);
+    expect(PLACEHOLDER_DAY.at(-1)!.value).toBeCloseTo(1);
+    const values = PLACEHOLDER_DAY.map((s) => s.value);
+    expect(values.every((v, i) => i === 0 || v >= values[i - 1]!)).toBe(true);
   });
 });
