@@ -45,8 +45,10 @@ export const Consistency = ({
     defaultFocus,
   });
   const focused = live ? focus.index : null;
+  // A usual band is named on a line of its own above the plot, clear of the bars.
+  const key = state === "default" && usual ? 18 : 0;
   const chart = (
-    <ChartSvg height={HEIGHT}>
+    <ChartSvg height={HEIGHT + key}>
       {(width) => {
         const shape =
           state === "default"
@@ -66,59 +68,79 @@ export const Consistency = ({
         return (
           <>
             {out.band ? (
-              <>
-                {/* The usual range behind the bars, named so it is never colour alone. */}
+              <g aria-hidden="true">
                 <rect
                   x={0}
-                  y={out.band.top}
-                  width={width}
-                  height={Math.max(2, out.band.bottom - out.band.top)}
-                  rx={4}
+                  y={2}
+                  width={12}
+                  height={8}
+                  rx={2}
                   className="fill-chart-reference"
-                  fillOpacity={0.18}
+                  fillOpacity={0.35}
                 />
-                <text x={0} y={Math.max(10, out.band.top - 4)} className={AXIS_TEXT}>
+                <text x={18} y={10} className={AXIS_TEXT}>
                   {usual?.label ?? "Usual"}
                 </text>
-              </>
+              </g>
             ) : null}
-            {out.bars.map((bar, i) =>
-              bar ? (
-                <rect
-                  key={i}
-                  {...bar}
-                  rx={bar.width / 2}
-                  className={
-                    state === "loading"
-                      ? LOADING_FILL
-                      : state === "empty"
-                        ? EMPTY_STROKE
-                        : i === lastIndex
-                          ? `kit-grow fill-current ${toneClass(category, false)}`
-                          : "kit-grow fill-chart-reference"
-                  }
-                  fillOpacity={dimmed(focused, i)}
-                  strokeWidth={state === "empty" ? 1.5 : undefined}
+            <g transform={`translate(0 ${key})`}>
+              {out.band ? (
+                <>
+                  {/* The usual range behind the bars, named above so it is never colour alone. */}
+                  <rect
+                    x={0}
+                    y={out.band.top}
+                    width={width}
+                    height={Math.max(2, out.band.bottom - out.band.top)}
+                    rx={4}
+                    className="fill-chart-reference"
+                    fillOpacity={0.18}
+                  />
+                </>
+              ) : null}
+              {out.bars.map((bar, i) =>
+                bar ? (
+                  <rect
+                    key={i}
+                    {...bar}
+                    rx={bar.width / 2}
+                    className={
+                      state === "loading"
+                        ? LOADING_FILL
+                        : state === "empty"
+                          ? EMPTY_STROKE
+                          : i === lastIndex
+                            ? `kit-grow fill-current ${toneClass(category, false)}`
+                            : "kit-grow fill-chart-reference"
+                    }
+                    fillOpacity={dimmed(focused, i)}
+                    strokeWidth={state === "empty" ? 1.5 : undefined}
+                  />
+                ) : null,
+              )}
+              {out.lineY !== null ? (
+                <line
+                  x1={0}
+                  x2={width}
+                  y1={out.lineY}
+                  y2={out.lineY}
+                  className={`stroke-current ${toneClass(category, false)}`}
+                  strokeWidth={2}
+                  strokeDasharray="4 4"
                 />
-              ) : null,
-            )}
-            {out.lineY !== null ? (
-              <line
-                x1={0}
-                x2={width}
-                y1={out.lineY}
-                y2={out.lineY}
-                className={`stroke-current ${toneClass(category, false)}`}
-                strokeWidth={2}
-                strokeDasharray="4 4"
-              />
-            ) : null}
+              ) : null}
+            </g>
             {axis ? (
               <>
-                <text x={0} y={HEIGHT - 2} className={AXIS_TEXT}>
+                <text x={0} y={HEIGHT + key - 2} className={AXIS_TEXT}>
                   {axis[0]}
                 </text>
-                <text x={width} y={HEIGHT - 2} textAnchor="end" className={AXIS_TEXT}>
+                <text
+                  x={width}
+                  y={HEIGHT + key - 2}
+                  textAnchor="end"
+                  className={AXIS_TEXT}
+                >
                   {axis[1]}
                 </text>
               </>

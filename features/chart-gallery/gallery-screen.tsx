@@ -515,7 +515,7 @@ export const GalleryScreen = () => (
         <InsightCard
           category="sleep"
           label="Sleep: Bedtime"
-          sentence="Your bedtime was 48 minutes later than your target last night."
+          sentence="Your bedtime was 44 minutes later than usual last night."
         >
           <Consistency
             category="sleep"
