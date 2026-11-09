@@ -18,7 +18,8 @@ export type ConnectorNotice = Readonly<{ text: string; tone: "info" | "warn" }>;
 type ConnectorCardProps = Readonly<{
   name: string;
   purpose: string;
-  badge: ConnectorBadge;
+  /** Left out where the status is shown elsewhere, e.g. in a C15 row above. */
+  badge?: ConnectorBadge;
   /** Small line under the purpose, e.g. "Synced 3 h ago". */
   detail?: string | null;
   notice?: ConnectorNotice | null;
@@ -55,7 +56,7 @@ export const ConnectorCard = ({
         <h3 className="text-sm font-medium">{name}</h3>
         <span className="flex shrink-0 items-center gap-2">
           {aside}
-          <StatusBadge tone={badge.tone}>{badge.label}</StatusBadge>
+          {badge && <StatusBadge tone={badge.tone}>{badge.label}</StatusBadge>}
         </span>
       </div>
       <p className="text-muted-foreground mt-1.5 text-sm leading-relaxed">{purpose}</p>

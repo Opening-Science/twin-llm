@@ -327,7 +327,7 @@ describe("answer body while streaming", () => {
     ] as const;
     const markup = render({ status: "STREAMING", text: "", tools });
     expect(markup).toContain('<p role="status" class="sr-only">Working.</p>');
-    expect(markup).toContain('step-trace-working">Summarising 8867-4</span>');
+    expect(markup).toContain('step-trace-working">Summarising heart rate</span>');
     expect(markup).toContain('aria-label="Tool calls"');
     expect(markup).toContain('<span class="sr-only">In progress: </span>');
     // The card under the step keeps its arguments, title and tool name.
@@ -383,7 +383,7 @@ describe("answer body while streaming", () => {
         args: [],
         state: "refused",
         rowCount: 0,
-        note: "No reading for that measure in this window.",
+        note: "No readings in this range",
         refusalCode: "NO_ROWS",
       },
     ] as const;
@@ -392,8 +392,9 @@ describe("answer body while streaming", () => {
     expect(markup).toContain('<span class="min-w-0 flex-1 truncate">Used 2 tools</span>');
     expect(markup).toMatch(/<ol id="[^"]+" hidden="" aria-label="Tool calls"/);
     expect(markup).toContain("Reading resting heart rate, 4 Jul 2026 to 1 Oct 2026");
-    expect(markup).toContain(">No data: NO_ROWS</span>");
-    expect(markup).toContain("No reading for that measure in this window.");
+    expect(markup).toContain(">No readings in this range</span>");
+    expect(markup).not.toContain("No data: NO_ROWS");
+    expect(markup).toContain('<dd class="font-mono">NO_ROWS</dd>');
   });
 });
 

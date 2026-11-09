@@ -7,6 +7,7 @@ import { toolActivity } from "./answer-stream";
 import { toSavedResponseState } from "./saved-response-state";
 import {
   refusedBeforeRun,
+  toolOutcome,
   rowCountOf,
   rowsLabel,
   toolArgs,
@@ -103,7 +104,7 @@ describe("toolArgs", () => {
       "Fitted an HRV trend",
       "refused",
       0,
-      "That wearable source is not linked here, so nothing was read.",
+      "That wearable is not connected, so nothing was read",
     ]);
   });
 
@@ -148,6 +149,30 @@ describe("rowCountOf", () => {
   });
 });
 
+describe("toolOutcome", () => {
+  test("names a gated call refused and a call that ran with a code no data (#492)", () => {
+    const ended = (tool: string, output: unknown) =>
+      toolOutcome(
+        toolCard({ toolCallId: "c", tool, state: "output-available", input: {}, output }),
+      );
+    expect(ended("show_view", { code: "VIEW_NOT_ALLOWED", error: "x" })).toBe("refused");
+    expect(ended("genome_report", { code: "GENOME_NOT_PERMITTED", error: "x" })).toBe(
+      "refused",
+    );
+    expect(ended("show_view", { code: "NO_ROWS", error: "x" })).toBe("no-data");
+    expect(ended("genome_variants", { code: "GENOME_NOT_PERMITTED", error: "x" })).toBe(
+      "no-data",
+    );
+    expect(ended("trend", { n: 3 })).toBe("done");
+    expect(
+      toolOutcome(toolCard({ toolCallId: "c", tool: "trend", state: "output-error" })),
+    ).toBe("error");
+    expect(
+      toolOutcome(toolCard({ toolCallId: "c", tool: "trend", state: "input-available" })),
+    ).toBe("running");
+  });
+});
+
 describe("toolCard", () => {
   test("a refusal is refused with a fixed sentence, never the tool's words", () => {
     const card = toolCard({
@@ -164,7 +189,7 @@ describe("toolCard", () => {
       args: [{ label: "Measure", value: "8867-4" }],
       state: "refused",
       rowCount: 0,
-      note: "A cohort measure needs a subject.",
+      note: "A cohort measure needs a person to read it for",
       refusalCode: "SUBJECT_REQUIRED",
       notRun: true,
     });
@@ -218,7 +243,7 @@ describe("toolCard", () => {
         input,
         output: none,
       }).note,
-    ).toBe("No recorded medication request matches in this window.");
+    ).toBe("No recorded medication request in this range");
     expect(
       toolCard({
         toolCallId: "t3",
@@ -226,7 +251,7 @@ describe("toolCard", () => {
         state: "output-available",
         output: none,
       }).note,
-    ).toBe("No reading for that measure in this window.");
+    ).toBe("No readings in this range");
   });
 
   test("a stored audit count wins over the output's", () => {
@@ -426,11 +451,11 @@ describe("view tool cards", () => {
       args: [{ label: "Chart", value: "view-9" }],
       state: "refused",
       rowCount: 0,
-      note: "No chart with that id in this thread.",
+      note: "No chart like that in this conversation",
       refusalCode: "VIEW_NOT_FOUND",
     });
     expect(refused("UNKNOWN_MEASURE").note).toBe(
-      "That measure is not a LOINC code or a known wearable key.",
+      "That measure is not one this app knows",
     );
   });
 });

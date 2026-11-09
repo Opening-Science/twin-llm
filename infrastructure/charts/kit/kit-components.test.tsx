@@ -23,6 +23,7 @@ import {
   radar,
   radarHeight,
   type ChartState,
+  withUnit,
 } from ".";
 
 const STATES: readonly ChartState[] = ["default", "loading", "empty"];
@@ -867,6 +868,22 @@ describe("device list", () => {
   });
 });
 
+test("seriesOrder puts a series first and gives it the first colour", () => {
+  const out = html(
+    <ResearchFigure
+      kind="estimates"
+      category="vitals"
+      seriesOrder={["qwen3:8b"]}
+      estimates={[
+        { label: "A", estimate: 0.6, series: "qwen3:4b" },
+        { label: "B", estimate: 0.7, series: "qwen3:8b" },
+      ]}
+    />,
+  );
+  expect(out.indexOf("qwen3:8b</li>")).toBeLessThan(out.indexOf("qwen3:4b</li>"));
+  expect(out.match(/<g class="text-chart-1">/g)).toHaveLength(1);
+});
+
 describe("research figure options", () => {
   test("rows of one series share a colour, and a legend names each series", () => {
     const out = html(
@@ -882,9 +899,9 @@ describe("research figure options", () => {
     );
     expect(out).toContain("qwen3:8b");
     expect(out).toContain("qwen3:4b");
-    // Two 8b rows in chart-1, one 4b row in chart-2.
-    expect(out.match(/<g class="text-chart-1">/g)).toHaveLength(2);
-    expect(out.match(/<g class="text-chart-2">/g)).toHaveLength(1);
+    // In natural order 4b comes first: one 4b row in chart-1, two 8b rows in chart-2.
+    expect(out.match(/<g class="text-chart-1">/g)).toHaveLength(1);
+    expect(out.match(/<g class="text-chart-2">/g)).toHaveLength(2);
   });
 
   test("a log axis reads as ratios", () => {
@@ -960,4 +977,244 @@ describe("research figure options", () => {
     expect(card).toContain("text-chart-4");
     expect(card).not.toContain("text-chart-1");
   });
+});
+
+describe("device list options", () => {
+  const logo = {
+    src: "/brand/vendors/example.svg",
+    alt: "Example",
+    width: 30,
+    height: 30,
+    attribution: "Data by",
+  };
+
+  test("a row can end in actions; with a link, only the name links", () => {
+    const out = html(
+      <DeviceList
+        category="vitals"
+        title="Devices"
+        rows={[
+          {
+            name: "Band",
+            href: "/wearables/band",
+            actions: (
+              <>
+                <button type="button">Refresh</button>
+                <button type="button">Unlink</button>
+              </>
+            ),
+          },
+        ]}
+      />,
+    );
+    expect(out).toContain(">Refresh</button>");
+    expect(out).toContain(">Unlink</button>");
+    // The link holds the name only, never the buttons.
+    expect(out).toMatch(/<a [^>]*href="\/wearables\/band"[^>]*>Band<\/a>/);
+    const link = /<a [^>]*>(.*?)<\/a>/.exec(out)?.[1] ?? "";
+    expect(link).toBe("Band");
+    expect(out).not.toContain("<svg");
+  });
+
+  test("a row can leave out the logo's attribution word, keeping the logo", () => {
+    const out = html(
+      <DeviceList
+        category="vitals"
+        title="Devices"
+        rows={[{ name: "WHOOP", detail: "Not linked", logo, hideAttribution: true }]}
+      />,
+    );
+    expect(out).not.toContain("Data by");
+    expect(out).toContain("<img");
+    expect(out).toContain("Not linked");
+    expect(detailLine({ name: "WHOOP", logo })).toBe("Data by WHOOP");
+  });
+
+  test("without a title and a frame the rows sit on their parent", () => {
+    const out = html(
+      <DeviceList
+        category="vitals"
+        framed={false}
+        rows={[{ name: "Ring" }, { name: "Band" }]}
+      />,
+    );
+    expect(out).not.toContain("<h3");
+    expect(out).not.toContain("surface rounded-card");
+    expect(out).toContain("border-border border-t");
+  });
+});
+
+test("the consistency chart draws its usual band, named", () => {
+  const out = html(
+    <Consistency
+      category="sleep"
+      values={[1380, 1410, 1395]}
+      target={1395}
+      floor={1320}
+      usual={{ low: 1370, high: 1420 }}
+      reference={{ label: "Usual bedtime", value: "23:04" }}
+      last={{ label: "Last night", value: "23:15" }}
+    />,
+  );
+  expect(out).toContain(">Usual<");
+  expect(out).toContain('fill-opacity="0.18"');
+});
+
+describe("hypnogram options", () => {
+  test("totals only: one bar per lane, its total, no times and no keys", () => {
+    const out = html(
+      <Hypnogram
+        category="sleep"
+        totals={{ awake: 25, rem: 96, core: 248, deep: 70 }}
+        axis={["23:04", "06:23"]}
+      />,
+    );
+    for (const word of ["Awake", "REM", "Core", "Deep"]) expect(out).toContain(word);
+    expect(out).toContain("4 hr 8 min");
+    expect(out).toContain("1 hr 10 min");
+    expect(out.match(/fill-stage-/g)).toHaveLength(4);
+    expect(out).not.toContain("23:04");
+    expect(out).not.toContain('role="group"');
+  });
+
+  test("the core lane can say Light, and labels still win", () => {
+    const light = html(
+      <Hypnogram category="sleep" coreWord="Light" totals={{ core: 200 }} />,
+    );
+    expect(light).toContain(">Light<");
+    expect(light).not.toContain(">Core<");
+    const custom = html(
+      <Hypnogram
+        category="sleep"
+        coreWord="Light"
+        labels={{ core: "Light sleep" }}
+        totals={{ core: 200 }}
+      />,
+    );
+    expect(custom).toContain(">Light sleep<");
+  });
+});
+
+test("a radar with inverted axes says so under itself, and only then", () => {
+  const axes = [
+    { label: "Resting", value: 58, display: "58 bpm", min: 50, max: 66, inverted: true },
+    { label: "Walking", value: 96, display: "96 bpm", min: 80, max: 110 },
+    { label: "HRV", value: 47, display: "47 ms", min: 30, max: 60 },
+  ];
+  expect(html(<Radar category="heart" axes={axes} />)).toContain(
+    "For resting, further out means lower.",
+  );
+  expect(
+    html(<Radar category="heart" axes={axes.map((a) => ({ ...a, inverted: false }))} />),
+  ).not.toContain("further out");
+});
+
+describe("units and durations", () => {
+  test("MIN and MAX carry the unit when given", () => {
+    const out = html(
+      <RangeBars
+        category="heart"
+        unit="bpm"
+        buckets={[
+          { min: 56, max: 92 },
+          { min: 61, max: 114 },
+        ]}
+      />,
+    );
+    expect(out).toContain("MAX 114 bpm");
+    expect(out).toContain("MIN 56 bpm");
+    expect(withUnit("114", undefined)).toBe("114");
+  });
+
+  test("stage totals use the shared duration: a whole hour reads 7 hr", () => {
+    expect(hoursMinutes(420)).toBe("7 hr");
+    expect(hoursMinutes(424)).toBe("7 hr 4 min");
+  });
+});
+
+describe("heading levels", () => {
+  test("cards head with h3 unless told to sit deeper or higher", () => {
+    expect(html(<InsightCard category="sleep" label="Sleep" sentence="x" />)).toContain(
+      "<h3",
+    );
+    const deeper = html(
+      <InsightCard category="sleep" label="Sleep" sentence="x" headingLevel={4} />,
+    );
+    expect(deeper).toContain("<h4");
+    expect(deeper).not.toContain("<h3");
+    const lab = html(
+      <LabResultCard
+        category="vitals"
+        headingLevel={2}
+        title="Audit chain"
+        outcome={{ word: "Intact", tone: "pass" }}
+        sentence="x"
+        rows={[]}
+      />,
+    );
+    expect(lab).toContain("<h2");
+  });
+});
+
+describe("research figure axes", () => {
+  test("an axis title is written inside the figure, under the ticks", () => {
+    const out = html(
+      <ResearchFigure
+        kind="estimates"
+        category="vitals"
+        axisTitle="Rate ratio"
+        estimates={[{ label: "A", estimate: 2, low: 1, high: 3 }]}
+      />,
+    );
+    expect(out).toContain(">Rate ratio<");
+    expect(out.indexOf(">Rate ratio<")).toBeLessThan(out.indexOf("</svg>"));
+  });
+
+  test("the null kind has ticks, from draws or a summary", () => {
+    const draws = html(
+      <ResearchFigure
+        kind="null"
+        category="vitals"
+        draws={[0.48, 0.5, 0.52, 0.49, 0.51]}
+        observed={0.6}
+        observedLabel="AUC"
+        axisTitle="AUC"
+      />,
+    );
+    expect(draws).toContain(">0.50<");
+    expect(draws).toContain(">0.60<");
+    const summary = html(
+      <ResearchFigure
+        kind="null"
+        category="vitals"
+        summary={{ mean: 0.5, low: 0.46, high: 0.54, runs: 200 }}
+        observed={0.61}
+        observedLabel="AUC"
+      />,
+    );
+    expect(summary).toMatch(/>0\.\d0</);
+  });
+});
+
+test("an empty day with no usual day yet still outlines a day, never a blank", () => {
+  const out = html(
+    <CumulativeDay category="steps" state="empty" today={[]} average={[]} now={0} />,
+  );
+  const outline = /<path d="(M[^"]+)"[^>]*stroke-dasharray="2 6"/.exec(out);
+  expect(outline?.[1]?.split("L").length).toBeGreaterThan(20);
+  // The placeholder is half as strong as a real usual day's outline.
+  expect(out).toContain('stroke-opacity="0.5"');
+  const usual = html(
+    <CumulativeDay
+      category="steps"
+      state="empty"
+      today={[]}
+      average={[
+        { at: 0, value: 0 },
+        { at: 1, value: 8000 },
+      ]}
+      now={0}
+    />,
+  );
+  expect(usual).not.toContain('stroke-opacity="0.5"');
 });
