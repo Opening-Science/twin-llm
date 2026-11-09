@@ -335,7 +335,7 @@ export const WearablesDashboard = ({
       </p>
 
       <div className="mt-8">
-        <KitDashboard sections={kit} />
+        <KitDashboard sections={kit} source={source} />
       </div>
 
       {linkedSources.length > 0 && (
