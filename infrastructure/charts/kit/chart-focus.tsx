@@ -12,7 +12,7 @@ import {
   useState,
 } from "react";
 
-import { type StepAxis, stepKey } from "./kit-geometry";
+import { type KeyStep, type StepAxis, stepKey } from "./kit-geometry";
 
 /**
  * Focus for an interactive chart: one point at a time, moved by a pointer,
@@ -53,12 +53,15 @@ export const useChartFocus = ({
   axis = "x",
   defaultFocus,
   tap = false,
+  step,
 }: Readonly<{
   count: number;
   pick?: Pick;
   axis?: StepAxis;
   defaultFocus?: number;
   tap?: boolean;
+  /** A chart's own rule for some keys (a grid's Up and Down); null leaves the key to `stepKey`. */
+  step?: (key: string, current: number | null) => KeyStep | null;
 }>): ChartFocus => {
   const initial =
     defaultFocus !== undefined && defaultFocus >= 0 && defaultFocus < count
@@ -135,10 +138,10 @@ export const useChartFocus = ({
         setIndex(next);
       },
       onKeyDown: (event) => {
-        const step = stepKey(event.key, index, count, axis);
-        if (step.kind === "ignore") return;
+        const move = step?.(event.key, index) ?? stepKey(event.key, index, count, axis);
+        if (move.kind === "ignore") return;
         event.preventDefault();
-        const next = step.kind === "move" ? step.index : null;
+        const next = move.kind === "move" ? move.index : null;
         setIndex(next);
         if (tap) setPinned(next);
       },

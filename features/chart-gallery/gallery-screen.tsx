@@ -23,6 +23,7 @@ import {
   VENDOR_LOGOS,
   WeeklyBars,
 } from "@/infrastructure/charts/kit";
+import { Button } from "@/infrastructure/ui-kit/button";
 
 import {
   BEDTIME_TARGET,
@@ -37,6 +38,7 @@ import {
   NULL_OBSERVED,
   P2_GROUPS_READ,
   P3_ESTIMATES_READ,
+  RADAR_HEART,
   RADAR_HEART_READ,
   RADAR_READINESS_READ,
   RADAR_SLEEP,
@@ -51,6 +53,7 @@ import {
   P3_RATIOS,
   P3_RULE_CHANGE,
   SPECIALISTS_BY_MODEL,
+  RADAR_HEART_SCALED,
 } from "./sample-data";
 
 const STATES: readonly ChartState[] = ["default", "loading", "empty"];
@@ -297,7 +300,7 @@ export const GalleryScreen = () => (
 
     <Row
       name="C07 Streak grid"
-      note="Done days filled, other days on the track, today outlined. Try: click or tap a mark (again to clear), arrow keys, Escape."
+      note="Done days filled, other days on the track, today outlined. Try: click or tap a day (again to clear), Left and Right for a day, Up and Down for a week, Escape."
       render={(state) => (
         <InsightCard
           category="activity"
@@ -343,6 +346,7 @@ export const GalleryScreen = () => (
             category="heart"
             state={state}
             buckets={HEART_RANGES_READ}
+            unit="bpm"
             axis={["8 AM", "5 PM"]}
             label="Heart rate"
             defaultFocus={4}
@@ -524,6 +528,135 @@ export const GalleryScreen = () => (
 
     <section className="flex flex-col gap-3">
       <header>
+        <h2 className="text-foreground font-sans text-lg">C15 options</h2>
+        <p className="text-muted-foreground text-sm">
+          Rows can end in actions, then only the name links. A row can leave out the
+          logo&apos;s attribution word, as on a source that is not linked. Without a title
+          or frame the rows sit inside a card of their own.
+        </p>
+      </header>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <DeviceList
+          category="vitals"
+          title="Sources"
+          rows={[
+            {
+              name: "Google Health",
+              detail: "Connected to Google Health · made-up: synced 12 minutes ago",
+              logo: VENDOR_LOGOS.googleHealth,
+              href: "/lab/design",
+              actions: (
+                <>
+                  <Button size="sm">Refresh</Button>
+                  <Button size="sm" variant="ghost">
+                    Unlink
+                  </Button>
+                </>
+              ),
+            },
+            {
+              name: "WHOOP",
+              detail: "Not linked",
+              logo: VENDOR_LOGOS.whoop,
+              hideAttribution: true,
+              actions: <Button size="sm">Link</Button>,
+            },
+          ]}
+        />
+        <InsightCard
+          category="vitals"
+          label="Sources"
+          sentence="Two sources linked, one not."
+        >
+          <DeviceList
+            category="vitals"
+            framed={false}
+            rows={[
+              { name: "Oura", detail: "Made-up: synced 4 min ago" },
+              {
+                name: "Google Health",
+                detail: "Made-up: synced 12 minutes ago",
+                logo: VENDOR_LOGOS.googleHealth,
+              },
+              {
+                name: "WHOOP",
+                detail: "Not linked",
+                logo: VENDOR_LOGOS.whoop,
+                hideAttribution: true,
+              },
+            ]}
+          />
+        </InsightCard>
+      </div>
+    </section>
+
+    <section className="flex flex-col gap-3">
+      <header>
+        <h2 className="text-foreground font-sans text-lg">
+          C13 from a floor, with the usual
+        </h2>
+        <p className="text-muted-foreground text-sm">
+          Bedtimes as minutes of the day: from zero a 30-minute shift near 23:00 is flat,
+          so the bars start at 22:00 and the usual range is a grey band.
+        </p>
+      </header>
+      <div className="grid gap-4 lg:grid-cols-3">
+        <InsightCard
+          category="sleep"
+          label="Sleep: Bedtime"
+          sentence="Your bedtime was 44 minutes later than usual last night."
+        >
+          <Consistency
+            category="sleep"
+            values={BEDTIMES.map((m) => 22 * 60 + m)}
+            target={22 * 60 + BEDTIME_TARGET}
+            floor={22 * 60}
+            usual={{ low: 22 * 60 + 45, high: 22 * 60 + 75 }}
+            reference={{ label: "Usual bedtime", value: "23:04" }}
+            last={{ label: "Last night", value: "23:48" }}
+            axis={["25 Oct", "7 Nov"]}
+          />
+        </InsightCard>
+      </div>
+    </section>
+
+    <section className="flex flex-col gap-3">
+      <header>
+        <h2 className="text-foreground font-sans text-lg">C09 options</h2>
+        <p className="text-muted-foreground text-sm">
+          A source that reports stage totals but not the night&apos;s order gets one bar
+          per lane, the longest stage full width. The core lane can say Light, as Oura
+          does, or Core, as Apple does.
+        </p>
+      </header>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <InsightCard
+          category="sleep"
+          label="Sleep: Stages"
+          sentence="You slept 6 hr 54 min, with 1 hr 10 min of deep sleep."
+        >
+          <Hypnogram
+            category="sleep"
+            totals={{ awake: 25, rem: 96, core: 248, deep: 70 }}
+          />
+        </InsightCard>
+        <InsightCard
+          category="sleep"
+          label="Sleep: Stages"
+          sentence="You spent 1 hr 10 min in deep sleep last night."
+        >
+          <Hypnogram
+            category="sleep"
+            coreWord="Light"
+            spans={NIGHT_READ}
+            axis={["23:04", "06:23"]}
+          />
+        </InsightCard>
+      </div>
+    </section>
+
+    <section className="flex flex-col gap-3">
+      <header>
         <h2 className="text-foreground font-sans text-lg">C18 Radar</h2>
         <p className="text-muted-foreground text-sm">
           How each part compares with the others, each on its own scale. Today in colour,
@@ -564,6 +697,33 @@ export const GalleryScreen = () => (
             <Radar category="readiness" axes={RADAR_READINESS_READ} label="Readiness" />
           </InsightCard>
         </div>
+      </div>
+    </section>
+
+    <section className="flex flex-col gap-3">
+      <header>
+        <h2 className="text-foreground font-sans text-lg">C18 with its own scales</h2>
+        <p className="text-muted-foreground text-sm">
+          The same heart radar with each axis on its own range, so similar rates spread
+          out, and resting and sleeping inverted: lower sits further out, and the radar
+          says so in a note under itself.
+        </p>
+      </header>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <InsightCard
+          category="heart"
+          label="Heart rate"
+          sentence="Your resting and sleeping heart rates were a little below usual today."
+        >
+          <Radar category="heart" axes={RADAR_HEART} />
+        </InsightCard>
+        <InsightCard
+          category="heart"
+          label="Heart rate"
+          sentence="Your resting and sleeping heart rates were a little below usual today."
+        >
+          <Radar category="heart" axes={RADAR_HEART_SCALED} />
+        </InsightCard>
       </div>
     </section>
 
@@ -677,6 +837,7 @@ export const GalleryScreen = () => (
             category="vitals"
             series="chart-3"
             scale="log"
+            axisTitle="Rate ratio"
             estimates={P3_RATIOS}
             reference={{ value: 1, label: "1 = no difference" }}
           />
@@ -719,6 +880,7 @@ export const GalleryScreen = () => (
             draws={NULL_DRAWS}
             observed={NULL_OBSERVED}
             observedLabel="AUC"
+            axisTitle="Area under the curve"
           />
         </InsightCard>
       )}
@@ -747,6 +909,7 @@ export const GalleryScreen = () => (
             nullLabel="Shuffled, 200 runs"
             observed={0.61}
             observedLabel="AUC"
+            axisTitle="Area under the curve"
           />
         </InsightCard>
       </div>

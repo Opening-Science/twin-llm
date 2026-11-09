@@ -7,6 +7,11 @@ import { vaultRefusalForAction } from "@/infrastructure/vault-runtime";
 import { ensureAppUser } from "@/infrastructure/current-user";
 import { database } from "@/infrastructure/database";
 import {
+  SETTING_NOT_SAVED,
+  saveAuditedSetting,
+  type SettingSave,
+} from "@/infrastructure/setting-save";
+import {
   noteAuditEvent,
   noteLineCount,
   splitLines,
@@ -111,10 +116,34 @@ export const removeNote = async (form: FormData): Promise<void> => {
   revalidatePath("/customize/memory");
 };
 
+/**
+ * Whether new chats and skill runs load twin notes, from Settings (#507) or
+ * Customize · Memory. Audited first (`settings.set`); if that fails nothing
+ * changes.
+ */
+export const saveNotesLoading = async (on: unknown): Promise<SettingSave> => {
+  if (typeof on !== "boolean") {
+    return { ok: false, code: "INVALID", error: SETTING_NOT_SAVED };
+  }
+  const locked = await vaultRefusalForAction();
+  if (locked !== null) return { ok: false, code: "LOCKED", error: locked };
+  const actor = await resolveActorId();
+  if (actor === null) return { ok: false, code: "SIGNED_OUT", error: COPY.signIn };
+  const result = await saveAuditedSetting(
+    {
+      audit: (event) => append(database(), event),
+      store: async (value) => setNotesOff((await ensureAppUser(actor)).id, !value),
+      logError: console.error,
+    },
+    { actor, setting: "twin-notes-loading", value: on },
+  );
+  if (result.ok) {
+    revalidatePath("/customize/memory");
+    revalidatePath("/customize/settings");
+  }
+  return result;
+};
+
 export const setNotesLoading = async (form: FormData): Promise<void> => {
-  if ((await vaultRefusalForAction()) !== null) return;
-  const who = await owner();
-  if (who === null) return;
-  await setNotesOff(who.userId, text(form, "load") !== "on");
-  revalidatePath("/customize/memory");
+  await saveNotesLoading(text(form, "load") === "on");
 };

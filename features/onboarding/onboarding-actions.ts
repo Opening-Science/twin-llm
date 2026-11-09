@@ -4,10 +4,18 @@ import { z } from "zod";
 
 import { resolveActorId } from "@/infrastructure/auth-actor";
 import { ensureAppUser } from "@/infrastructure/current-user";
+import { database } from "@/infrastructure/database";
 import { isLocalOnly } from "@/infrastructure/env";
+import { loadLiveSources } from "@/infrastructure/live-source-store";
+import { changedLists, saveAuditedSettings } from "@/infrastructure/setting-save";
 import { vaultRefusalForAction } from "@/infrastructure/vault-runtime";
+import { append } from "@/packages/audit/append";
 
-import { completeOnboarding, saveOnboarding } from "./onboarding-store";
+import {
+  completeOnboarding,
+  loadDisabledSources,
+  saveOnboarding,
+} from "./onboarding-store";
 import { MAX_INTEREST_LENGTH, normaliseAnswers } from "./onboarding-steps";
 
 /**
@@ -46,16 +54,41 @@ export const saveOnboardingAnswers = async (
   const locked = await vaultRefusalForAction();
   if (locked !== null) return { ok: false, error: locked };
   try {
-    const userId = await actorUserId();
-    if (!userId) return { ok: false, error: "Sign in to keep your choices." };
-    const answers = normaliseAnswers(parsed.data.answers);
-    await saveOnboarding(userId, {
-      // Local-only mode sends nothing to public databases (#6): no live source is kept on.
-      answers: isLocalOnly() ? { ...answers, liveSources: [] } : answers,
-      step: parsed.data.step,
-      complete: parsed.data.complete,
-    });
-    return { ok: true };
+    const actor = await resolveActorId();
+    if (!actor) return { ok: false, error: "Sign in to keep your choices." };
+    const userId = (await ensureAppUser(actor)).id;
+    const cleaned = normaliseAnswers(parsed.data.answers);
+    // Local-only mode sends nothing to public databases (#6): no live source is kept on.
+    const answers = isLocalOnly() ? { ...cleaned, liveSources: [] } : cleaned;
+    const [disabledBefore, liveBefore] = await Promise.all([
+      loadDisabledSources(userId),
+      loadLiveSources(userId),
+    ]);
+    // Sources and live lookups are audited first, as on Settings (#507).
+    const result = await saveAuditedSettings(
+      {
+        audit: (event) => append(database(), event),
+        store: () =>
+          saveOnboarding(userId, {
+            answers,
+            step: parsed.data.step,
+            complete: parsed.data.complete,
+          }),
+        logError: console.error,
+      },
+      {
+        actor,
+        changes: changedLists([
+          {
+            setting: "knowledge-sources",
+            before: disabledBefore,
+            after: answers.disabledSources,
+          },
+          { setting: "live-sources", before: liveBefore, after: answers.liveSources },
+        ]),
+      },
+    );
+    return result.ok ? { ok: true } : { ok: false, error: NOT_SAVED };
   } catch (error) {
     console.error(
       "[onboarding] save failed",
