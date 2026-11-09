@@ -239,18 +239,19 @@ export const groundingCard = (
 const runLabel = (run: SpecialistRun): string =>
   `${AGENT_NAME[run.agent] ?? run.agent} agent, ${SET_NAME[run.set] ?? run.set}`;
 
-const modelHeadline = (model: string, runs: readonly SpecialistRun[]): string => {
+/** One sentence across every model: the lowest and highest share among scored runs. */
+const specialistHeadline = (runs: readonly SpecialistRun[]): string => {
   // A run with no scored answers has no share, so it never ranks lowest or highest.
   const scored = runs.filter((r) => r.cell.n > 0);
-  if (scored.length === 0) return `On ${model}, no answers were scored.`;
+  if (scored.length === 0) return "No answers were scored.";
   const byShare = [...scored].sort(
     (a, b) => a.cell.passes / a.cell.n - b.cell.passes / b.cell.n,
   );
   const lowest = byShare[0]!;
   const highest = byShare.at(-1)!;
   return scored.length === 1
-    ? `On ${model}, the ${runLabel(lowest)} gave the right value in ${ofAnswers(lowest.cell)} scored answers.`
-    : `On ${model}, the share of right values ran from ${ofAnswers(lowest.cell)} for the ${runLabel(lowest)} to ${ofAnswers(highest.cell)} for the ${runLabel(highest)}.`;
+    ? `On ${lowest.model}, the ${runLabel(lowest)} gave the right value in ${ofAnswers(lowest.cell)} scored answers.`
+    : `The share of right values ran from ${ofAnswers(lowest.cell)} for the ${runLabel(lowest)}, on ${lowest.model}, to ${ofAnswers(highest.cell)} for the ${runLabel(highest)}, on ${highest.model}.`;
 };
 
 /**
@@ -274,14 +275,7 @@ export const specialistCards = (
       id: "grounding-specialists",
       study: "grounding",
       label: "Specialist agents by model",
-      headline: models
-        .map((model) =>
-          modelHeadline(
-            model,
-            data.runs.filter((r) => r.model === model),
-          ),
-        )
-        .join(" "),
+      headline: specialistHeadline(data.runs),
       caption: `Share of scored answers with the right value for each specialist agent and question set, with the agent's rules run on ${models.join(" and ")}. Lines are Wilson 95 % intervals.`,
       axis: AXIS_SHARE,
       source: RESEARCH_SOURCES.specialists,

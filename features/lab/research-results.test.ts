@@ -147,11 +147,11 @@ describe("P1 grounding", () => {
     ]);
     expect(c.runDate).toBe("2026-11-02");
     expect(c.headline).toBe(
-      "On qwen3:4b, the Heart rhythm agent, rhythm set (s7) gave the right value in 15 of 31 (48\u00a0%) scored answers. On qwen3:8b, the Heart rhythm agent, rhythm set (s7) gave the right value in 10 of 20 (50\u00a0%) scored answers.",
+      "The share of right values ran from 15 of 31 (48\u00a0%) for the Heart rhythm agent, rhythm set (s7), on qwen3:4b, to 10 of 20 (50\u00a0%) for the Heart rhythm agent, rhythm set (s7), on qwen3:8b.",
     );
   });
 
-  test("specialists: a run with no scored answers never ranks lowest or highest", () => {
+  test("specialists: a run with no scored answers never ranks lowest or highest, across models", () => {
     const cell = (passes: number, n: number) => ({ passes, n, lowPct: 0, highPct: 100 });
     const [c] = specialistCards({
       date: null,
@@ -164,9 +164,28 @@ describe("P1 grounding", () => {
       ],
     });
     expect(c!.headline).toBe(
-      "On qwen3:4b, the share of right values ran from 5 of 10 (50\u00a0%) for the Brain agent, rhythm set (s7) to 9 of 10 (90\u00a0%) for the General agent, main set (v1). On qwen3:8b, no answers were scored.",
+      "The share of right values ran from 5 of 10 (50\u00a0%) for the Brain agent, rhythm set (s7), on qwen3:4b, to 9 of 10 (90\u00a0%) for the General agent, main set (v1), on qwen3:4b.",
     );
     expect(c!.headline).not.toContain("NaN");
+  });
+
+  test("specialists: one scored run names its model; none gives no figures", () => {
+    const cell = (passes: number, n: number) => ({ passes, n, lowPct: 0, highPct: 100 });
+    const one = specialistCards({
+      date: null,
+      runs: [
+        { agent: "brain", set: "s7", model: "qwen3:8b", cell: cell(3, 12) },
+        { agent: "gp", set: "v1", model: "qwen3:4b", cell: cell(0, 0) },
+      ],
+    });
+    expect(one[0]!.headline).toBe(
+      "On qwen3:8b, the Brain agent, rhythm set (s7) gave the right value in 3 of 12 (25\u00a0%) scored answers.",
+    );
+    const none = specialistCards({
+      date: null,
+      runs: [{ agent: "gp", set: "v1", model: "qwen3:4b", cell: cell(0, 0) }],
+    });
+    expect(none[0]!.headline).toBe("No answers were scored.");
   });
 });
 
@@ -429,7 +448,7 @@ describe("researchCards", () => {
       ].flatMap((run) => [`${run}, 4b`, `${run}, 8b`]),
     );
     expect(byId.get("grounding-specialists")?.headline).toBe(
-      "On qwen3:4b, the share of right values ran from 5 of 31 (16\u00a0%) for the Brain agent, rhythm set (s7) to 21 of 32 (66\u00a0%) for the Heart rhythm agent, held-out rhythm set (s7h). On qwen3:8b, the share of right values ran from 16 of 109 (15\u00a0%) for the General agent, main set (v1) to 11 of 21 (52\u00a0%) for the Heart rhythm agent, held-out rhythm set (s7h).",
+      "The share of right values ran from 16 of 109 (15\u00a0%) for the General agent, main set (v1), on qwen3:8b, to 21 of 32 (66\u00a0%) for the Heart rhythm agent, held-out rhythm set (s7h), on qwen3:4b.",
     );
     expect(
       estimatesOf(byId.get("arrhythmia-rr-grid")?.figure).estimates.map((e) => e.series),
