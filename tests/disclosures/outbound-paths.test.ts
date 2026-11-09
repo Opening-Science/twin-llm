@@ -180,6 +180,7 @@ const OUTBOUND: Readonly<Record<string, Entry>> = {
   // The browser calling this app.
   "features/arena/suggestion-chips.tsx": { exempt: SAME_ORIGIN },
   "features/connectors/use-connector-status.ts": { exempt: SAME_ORIGIN },
+  "features/shell/export-notice-dialog.tsx": { exempt: SAME_ORIGIN },
   "features/personal-data/dataset-list.tsx": { exempt: SAME_ORIGIN },
   "features/personal-data/import-panel.tsx": { exempt: SAME_ORIGIN },
   "features/synthea/synthea-generator.tsx": { exempt: SAME_ORIGIN },

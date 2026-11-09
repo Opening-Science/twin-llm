@@ -4,6 +4,7 @@ import { Prisma } from "@/generated/prisma/client";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { database } from "@/infrastructure/database";
 import { recordDisclosure } from "@/infrastructure/disclosure-ledger-runtime";
+import { freeTextCheckerFor } from "@/infrastructure/free-text-check-runtime";
 import { append } from "@/packages/audit/append";
 import type { SessionScope } from "@/packages/query-tools/scope";
 
@@ -158,7 +159,10 @@ export const toGuidelineCitation = (hit: GuidelineHit): GuidelineCitation => ({
   page: hit.page,
 });
 
-/** The query embedding goes through the disclosure ledger when Ollama is elsewhere (#140). */
+/**
+ * The query embedding goes through the disclosure ledger when Ollama is
+ * elsewhere (#140), with the check of its text for stored values (#531).
+ */
 export const defaultGuidelineSearchPorts = (
   scope: SessionScope,
 ): GuidelineSearchPorts => ({
@@ -172,6 +176,7 @@ export const defaultGuidelineSearchPorts = (
         synthetic: scope.mode === "synthetic",
         purpose: "guideline search",
         record: recordDisclosure,
+        checkText: freeTextCheckerFor(scope.actor),
       }),
     ),
   search: (embedding, k) =>
