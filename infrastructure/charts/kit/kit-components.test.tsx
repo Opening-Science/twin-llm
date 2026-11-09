@@ -961,3 +961,38 @@ describe("research figure options", () => {
     expect(card).not.toContain("text-chart-1");
   });
 });
+
+describe("hypnogram options", () => {
+  test("totals only: one bar per lane, its total, no times and no keys", () => {
+    const out = html(
+      <Hypnogram
+        category="sleep"
+        totals={{ awake: 25, rem: 96, core: 248, deep: 70 }}
+        axis={["23:04", "06:23"]}
+      />,
+    );
+    for (const word of ["Awake", "REM", "Core", "Deep"]) expect(out).toContain(word);
+    expect(out).toContain("4 hr 8 min");
+    expect(out).toContain("1 hr 10 min");
+    expect(out.match(/fill-stage-/g)).toHaveLength(4);
+    expect(out).not.toContain("23:04");
+    expect(out).not.toContain('role="group"');
+  });
+
+  test("the core lane can say Light, and labels still win", () => {
+    const light = html(
+      <Hypnogram category="sleep" coreWord="Light" totals={{ core: 200 }} />,
+    );
+    expect(light).toContain(">Light<");
+    expect(light).not.toContain(">Core<");
+    const custom = html(
+      <Hypnogram
+        category="sleep"
+        coreWord="Light"
+        labels={{ core: "Light sleep" }}
+        totals={{ core: 200 }}
+      />,
+    );
+    expect(custom).toContain(">Light sleep<");
+  });
+});
