@@ -64,9 +64,10 @@ TwinLLM-only behaviour lives under `infrastructure/open-twin-adapters/`. Code ou
 - `oura-bundle.ts` — `buildOuraFhirBundle` over `buildOuraBundle` from `.open-twin/packages/provider-oura/src/fhir/bundleBuilder`, so a sync builds the bundle from the data it already fetched instead of calling every endpoint twice
 - `whoop.ts` — `fetchWhoopWindow` / `buildWhoopFhirBundle` over the public barrel (`getWhoopData`, `buildWhoopBundleFromPayload`); no longer needs `fetchWhoopSyncPayload` or any `.open-twin/.../src` import
 - `whoop-workout.ts` — workout schema, paginated `GET /v2/activity/workout` fetch and `mapWhoopWorkoutsToFHIR`, appended to the upstream bundle by `withWhoopWorkouts`; uses only the public `@open-twin/fhir-core` barrel. Belongs upstream (request 7)
-- `google-health.ts` — `setGoogleHealthCredentials` / `getGoogleHealthCredentials` / `ensureGoogleHealthAccessToken`
-- `aggregate.ts` — `aggregateWearableBundles` over `aggregate` from `@open-twin/aggregate`: one subject's Oura and WHOOP bundles as one, overlaps reconciled on published evidence. No screen reads it yet: the app combines Oura and WHOOP only as summary keys (`latestVitals`, first source in a fixed order), and the stored bundles are not read back. Aggregate refuses Observations under more than one subject, so the person's Patient is carried once, with each connector's identifier (`mergePersonPatients`)
-- `person-subject.ts` — one subject per person (#476). Upstream keeps the connector in its patient id (`patientUuid(connector, subjectKey)`), so the host passes the Oura and WHOOP builders their `subject` option: `urn:uuid:` UUIDv5 of the host's subject key under the host namespace `uuidv5("twin-llm/person")`, never a connector or vendor id. `withPersonPatient` adds the Patient it points at, with the connector's identifier, and links a Patient the connector built itself (Oura `personal_info`, still under its per-connector id); Observation ids and bundle tags still carry the connector
+- `google-health.ts` — `setGoogleHealthCredentials` / `getGoogleHealthCredentials` / `ensureGoogleHealthAccessToken`; re-exports `buildGoogleHealthFhirBundle`
+- `google-health-bundle.ts` — `buildGoogleHealthFhirBundle` over `buildBundleFromResponses` from the public barrel, with the person's shared subject (`person-subject.ts`) and the Patient it points at; the sync fetches with `getDataTypes` and builds from those responses
+- `aggregate.ts` — `aggregateWearableBundles` over `aggregate` from `@open-twin/aggregate`: one subject's Oura, WHOOP and Google Health bundles as one, overlaps reconciled on published evidence. No screen reads it yet: the screens combine the sources only as summary keys, by the fixed order in `VITAL_ANATOMY` (Oura, then WHOOP, then Google Health; first source with data wins, sources never mixed), and aggregate takes no caller order. At this pin it also finds no overlap between the three connectors (request 8). Aggregate refuses Observations under more than one subject, so the person's Patient is carried once, with each connector's identifier (`mergePersonPatients`)
+- `person-subject.ts` — one subject per person (#476). Upstream keeps the connector in its patient id (`patientUuid(connector, subjectKey)`), so the host passes the Oura, WHOOP and Google Health builders their `subject` option: `urn:uuid:` UUIDv5 of the host's subject key under the host namespace `uuidv5("twin-llm/person")`, never a connector or vendor id. `withPersonPatient` adds the Patient it points at, with the connector's identifier, and links a Patient the connector built itself (Oura `personal_info`, still under its per-connector id); Observation ids and bundle tags still carry the connector
 - BodyLoop — host Bearer client in `packages/vitronic/` plus `buildBundleFromVitronicResponse` from the public barrel. The mapper now binds D15 SI units (`m` / `m2` / `m3` / `kg` / `kg/m2`); TwinLLM still does not persist `fhirBundle` and does not call `createBodyLoopClient` (password grant + `/probands`).
 
 ## Upstream issues to file
@@ -115,6 +116,13 @@ TwinLLM-only behaviour lives under `infrastructure/open-twin-adapters/`. Code ou
 - **Out of scope:** Host summary keys and display.
 - **Minimal diff:** port `infrastructure/open-twin-adapters/whoop-workout.ts` (schema, fetch, mapper) into the package, with LOINC `41981-2` added to the terminology allowlist for this connector.
 - **Status:** host fetches and maps workouts itself until it lands; drop `whoop-workout.ts` then.
+
+### 8. aggregate: see the overlaps the connectors actually emit
+
+- **In scope:** `measureOf` reads `Observation.code` only. Oura and Google Health put sleep duration (LOINC 93832-4) in a sleep panel's components, Oura puts steps (41950-7), lowest heart rate (103222-6) and SpO2 in components too, and WHOOP's HRV and SpO2 use WHOOP-local codes, so one night or day from two connectors is never grouped; with today's builders `reconciliations` is always empty. Read components, or map the panels and local codes, and add WHOOP findings to `reliability.ts`.
+- **Also wanted:** an optional caller order for ties and abstentions, so a host can keep a fixed source order on screen while recording aggregate's evidence choice beside it.
+- **Out of scope:** Host display.
+- **Status:** host aggregates all three without selecting anything; `features/wearables/aggregate-bundles.test.ts` fails on purpose once a same-night overlap is found.
 
 ## Verify
 
