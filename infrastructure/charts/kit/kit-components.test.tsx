@@ -1115,3 +1115,27 @@ describe("units and durations", () => {
     expect(hoursMinutes(424)).toBe("7 hr 4 min");
   });
 });
+
+describe("heading levels", () => {
+  test("cards head with h3 unless told to sit deeper or higher", () => {
+    expect(html(<InsightCard category="sleep" label="Sleep" sentence="x" />)).toContain(
+      "<h3",
+    );
+    const deeper = html(
+      <InsightCard category="sleep" label="Sleep" sentence="x" headingLevel={4} />,
+    );
+    expect(deeper).toContain("<h4");
+    expect(deeper).not.toContain("<h3");
+    const lab = html(
+      <LabResultCard
+        category="vitals"
+        headingLevel={2}
+        title="Audit chain"
+        outcome={{ word: "Intact", tone: "pass" }}
+        sentence="x"
+        rows={[]}
+      />,
+    );
+    expect(lab).toContain("<h2");
+  });
+});

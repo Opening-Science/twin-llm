@@ -59,6 +59,12 @@ export type Interactive = Readonly<{
   defaultFocus?: number;
 }>;
 
+/**
+ * The heading level of a card's label, so cards nest under the page's own
+ * section headings: h3 under an h2 section (the default), h4 under an h3.
+ */
+export type HeadingLevel = 2 | 3 | 4;
+
 /** The ranges a card can switch between; the card only reports the choice. */
 export type ChartRange = "day" | "week" | "month";
 
@@ -69,6 +75,8 @@ export type InsightCardProps = Base &
     series?: SeriesToken;
     /** A noun, optionally scoped: "Sleep: Stages". */
     label: string;
+    /** The label's heading level; 3 unless the card sits deeper in the page's outline. */
+    headingLevel?: HeadingLevel;
     /** The one insight sentence; also what a screen reader reads for the chart. */
     sentence: string;
     /** Shown under the chart when state is empty, e.g. "7 nights needed". */
@@ -239,6 +247,8 @@ export type ResearchFigureProps = Base &
 export type LabResultCardProps = Base &
   Readonly<{
     title: string;
+    /** The title's heading level; 3 unless the card sits deeper in the page's outline. */
+    headingLevel?: HeadingLevel;
     /** The outcome is always a word; colour only follows it. */
     outcome: Readonly<{ word: string; tone: "pass" | "fail" | "neutral" }>;
     sentence: string;
