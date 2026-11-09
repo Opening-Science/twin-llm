@@ -514,7 +514,7 @@ export const GalleryScreen = () => (
         <InsightCard
           category="sleep"
           label="Sleep: Stages"
-          sentence="You slept 7 hr 19 min, with 1 hr 10 min of deep sleep."
+          sentence="You slept 6 hr 54 min, with 1 hr 10 min of deep sleep."
         >
           <Hypnogram
             category="sleep"
