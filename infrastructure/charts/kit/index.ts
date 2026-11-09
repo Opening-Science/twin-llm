@@ -30,7 +30,7 @@ export { CumulativeDay } from "./c05-cumulative-day";
 export { WeeklyBars } from "./c06-weekly-bars";
 export { StreakGrid } from "./c07-streak-grid";
 export { RangeBars, withUnit } from "./c08-range-bars";
-export { formatClock, formatDuration } from "./format";
+export { dayAxis, formatClock, formatDuration } from "./format";
 export { Hypnogram, hoursMinutes } from "./c09-hypnogram";
 export { ScoreRing } from "./c10-score-ring";
 export { DeviceList, detailLine } from "./c15-device-list";

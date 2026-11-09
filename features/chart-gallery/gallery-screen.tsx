@@ -326,7 +326,7 @@ export const GalleryScreen = () => (
             state={state}
             buckets={HEART_RANGES_READ}
             unit="bpm"
-            axis={["8 AM", "5 PM"]}
+            axis={["08:00", "17:00"]}
             label="Heart rate"
             defaultFocus={4}
           />
@@ -369,7 +369,7 @@ export const GalleryScreen = () => (
             spans={NIGHT_READ}
             label="Sleep: Stages"
             defaultFocus={2}
-            axis={["11:04 PM", "6:23 AM"]}
+            axis={["23:04", "06:23"]}
           />
         </InsightCard>
       )}
@@ -453,8 +453,8 @@ export const GalleryScreen = () => (
             label="Sleep: Bedtime"
             defaultFocus={13}
             target={BEDTIME_TARGET}
-            reference={{ label: "Average bedtime", value: "11:04 PM" }}
-            last={{ label: "Last night", value: "11:48 PM" }}
+            reference={{ label: "Average bedtime", value: "23:04" }}
+            last={{ label: "Last night", value: "23:48" }}
             axis={["25 Oct", "7 Nov"]}
           />
         </InsightCard>

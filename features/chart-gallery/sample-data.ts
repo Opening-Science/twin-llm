@@ -4,6 +4,7 @@
  * use the published summary values from docs/research, not any subject.
  */
 
+import { formatClock } from "@/infrastructure/charts/kit";
 import type { DaySample, Range, StageSpan, StreakDay } from "@/infrastructure/charts/kit";
 
 /** A smooth running total over the day, `total` by midnight. */
@@ -68,7 +69,7 @@ export const SLEEP_PARTS = [
   { label: "Interruptions", value: 14, max: 20 },
 ];
 
-/** Minutes after 10 PM, 14 nights. */
+/** Minutes after 22:00, 14 nights. */
 export const BEDTIMES = [62, 48, 81, 55, 70, 44, 90, 58, 66, 52, 75, 61, 49, 108];
 export const BEDTIME_TARGET = 60;
 
@@ -133,12 +134,8 @@ export const RADAR_READINESS = [
 
 const steps = (n: number): string => `${n.toLocaleString("en-US")} steps`;
 
-/** "2 PM" for a share of the day. */
-const clock = (at: number): string => {
-  const hour = Math.round(at * 24) % 24;
-  const twelve = hour % 12 === 0 ? 12 : hour % 12;
-  return `${twelve} ${hour < 12 ? "AM" : "PM"}`;
-};
+/** The hour nearest a share of the day, "14:00", in the display locale. */
+const clock = (at: number): string => formatClock(Math.round(at * 24) * 60);
 
 export const DAY_TODAY_READ = DAY_TODAY.map((s) => ({
   ...s,
@@ -154,13 +151,8 @@ export const HEART_RANGES_READ: readonly (Range | null)[] = HEART_RANGES.map((r,
   r ? { ...r, readout: `${clock((8 + i) / 24)} · ${r.min} to ${r.max} bpm` } : null,
 );
 
-/** Minutes after 10 PM as a clock time, "11:02 PM". */
-const bedtime = (minutes: number): string => {
-  const total = 22 * 60 + minutes;
-  const hour = Math.floor(total / 60) % 24;
-  const twelve = hour % 12 === 0 ? 12 : hour % 12;
-  return `${twelve}:${String(total % 60).padStart(2, "0")} ${hour < 12 ? "AM" : "PM"}`;
-};
+/** Minutes after 22:00 as a clock time, "23:02". */
+const bedtime = (minutes: number): string => formatClock(22 * 60 + minutes);
 
 export const BEDTIME_READOUTS = BEDTIMES.map((m, i) => {
   const day = new Date(Date.UTC(2026, 9, 25 + i));
@@ -192,7 +184,10 @@ export const P2_GROUPS_READ = P2_GROUPS.map((g) => ({
 
 /** Made-up heart rate ranges for the range switch: by hour, by day, by week. */
 export const RANGE_DEMO = {
-  day: { buckets: HEART_RANGES_READ, axis: ["8 AM", "5 PM"] as const },
+  day: {
+    buckets: HEART_RANGES_READ,
+    axis: [formatClock(8 * 60), formatClock(17 * 60)] as const,
+  },
   week: {
     buckets: WEEKDAYS.map((d, i) => ({
       min: 52 + (i % 3) * 2,
@@ -221,13 +216,8 @@ export const STREAK_READ = STREAK.map((d) => {
 
 const STAGE_WORD = { awake: "Awake", rem: "REM", core: "Core", deep: "Deep" } as const;
 
-/** Minutes after 11:04 PM as a clock time. */
-const nightClock = (minutes: number): string => {
-  const total = 23 * 60 + 4 + minutes;
-  const hour = Math.floor(total / 60) % 24;
-  const twelve = hour % 12 === 0 ? 12 : hour % 12;
-  return `${twelve}:${String(total % 60).padStart(2, "0")} ${hour < 12 ? "AM" : "PM"}`;
-};
+/** Minutes after 23:04 as a clock time. */
+const nightClock = (minutes: number): string => formatClock(23 * 60 + 4 + minutes);
 
 export const NIGHT_READ = NIGHT.map((s) => ({
   ...s,
