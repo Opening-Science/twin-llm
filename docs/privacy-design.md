@@ -656,8 +656,11 @@ recipient.
   their account id when it is not a plain word. Then the person's stored values, opened
   once per model call because none of these stores keeps a keyed hash of a value
   (`storedValueMatches`): a **lab value** is a stored reading's number followed by its own
-  stored unit (`195 mg/dL`, `5.40mmol/L`; numbers compared as numbers, units ignoring
-  case); a **coded value** is a stored reading's code (four characters or more, with a
+  stored unit (`195 mg/dL`, `5.40mmol/L`, `5,4 mmol/l`, `1'234 µmol/L`; numbers compared as
+  numbers, in their locale spellings too: a decimal comma, and thousands marked with a
+  comma, a point, an apostrophe or a no-break or thin space in groups of three, where
+  `1,234` reads as both 1234 and 1.234; units ignoring case, the micro sign (`µ`, `μ`, `u`,
+  `mcg`) and spaces around a slash, #346); a **coded value** is a stored reading's code (four characters or more, with a
   digit) as a whole token with that reading's own number within 80 characters, not
   counting the code's own digits; a **clinical record** is a stored Condition or
   MedicationRequest whose code stands as a whole token or whose name, 24 characters or
@@ -679,7 +682,7 @@ recipient.
   lookups and the cap stays as it was. A body
   that cannot be read up front, or a check that fails (a locked vault), is recorded as
   not checked, with the error's name in the log. _Limits:_ approximate. A value written another way (a unit
-  conversion, a rounded number, a decimal comma, another spelling) is missed, a value
+  conversion, a rounded number, thousands split by a plain space, another spelling) is missed, a value
   the person typed and a reply repeats is not counted, and wearable numbers are not
   searched; wearable and twin note values are recorded as references above. Exports, embeddings and live lookups are not
   checked (live lookups have their own query check).
