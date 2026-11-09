@@ -202,16 +202,21 @@ export const useConversation = (
       skill: string | null = null,
       uiContext: UiContext | null = null,
       effort: EffortLevel | null = null,
+      label: string | null = null,
     ) => {
       setSending(true);
       setError(null);
-      setTurns((all) => [...all, pendingTurn(prompt, models, skill, uiContext, effort)]);
+      setTurns((all) => [
+        ...all,
+        pendingTurn(prompt, models, skill, uiContext, effort, label),
+      ]);
 
       const started = await beginTurn(mode, BEGIN_TURN, {
         threadId,
         prompt,
         models,
         skill,
+        label,
       }).catch((thrown: unknown) => {
         console.error(
           "[arena] could not start the turn",
