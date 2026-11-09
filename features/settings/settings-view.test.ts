@@ -42,7 +42,11 @@ const row = (f: SettingsFacts, state: SettingsState, key: string): SettingRow =>
 
 describe("safe defaults", () => {
   test("are the same, and the safe ones, in both data modes", () => {
-    const expected = { notesOn: true, disabledSources: [], liveSources: [] };
+    const expected: SettingsState = {
+      notesOn: true,
+      disabledSources: ["ark-genome", "vcf-variants", "imported-data"],
+      liveSources: [],
+    };
     expect(SETTING_DEFAULTS.personal).toEqual(expected);
     expect(SETTING_DEFAULTS.synthetic).toEqual(expected);
   });
@@ -85,11 +89,17 @@ describe("safe defaults", () => {
 });
 
 describe("riskier choices", () => {
-  test("turning a live lookup on asks first; the other switches do not", () => {
+  test("turning a lookup or a personal-data source on asks first; the rest do not", () => {
     const switches = rows(facts(), SETTING_DEFAULTS.personal).flatMap((item) =>
       item.control.kind === "switch" && item.control.confirmOn !== null ? [item.key] : [],
     );
-    expect(switches).toEqual(["live-pubmed", "live-ensembl"]);
+    expect(switches).toEqual([
+      "source-ark-genome",
+      "source-vcf-variants",
+      "source-imported-data",
+      "live-pubmed",
+      "live-ensembl",
+    ]);
   });
 
   test("a live lookup that is on reads as changed from the default", () => {
@@ -137,7 +147,8 @@ describe("the data mode caps every choice", () => {
       kind: "switch",
       target: { setting: "source", id: "imported-data" },
       on: false,
-      confirmOn: null,
+      confirmOn:
+        "Turn on Imported records and wearable exports? A model on this machine may then read it in your chats and skill runs. It is never sent to a hosted model, and you can turn it off here at any time.",
       locked: "Personal mode and a local model only",
     });
   });
@@ -177,9 +188,15 @@ describe("withSwitch", () => {
       { setting: "source", id: "cohort-records" },
       false,
     );
-    expect(off.disabledSources).toEqual(["cohort-records", "cohort-analytics"]);
+    expect(off.disabledSources).toEqual([
+      "cohort-records",
+      "cohort-analytics",
+      "ark-genome",
+      "vcf-variants",
+      "imported-data",
+    ]);
     const on = withSwitch(off, { setting: "source", id: "cohort-analytics" }, true);
-    expect(on.disabledSources).toEqual([]);
+    expect(on.disabledSources).toEqual(["ark-genome", "vcf-variants", "imported-data"]);
   });
 });
 
@@ -213,7 +230,8 @@ describe("rows this server cannot use", () => {
   test("are left out of the summary, whatever is stored for them", () => {
     const state = {
       ...SETTING_DEFAULTS.personal,
-      disabledSources: ["imported-data"] as const,
+      // Imported data stored on, on a server that cannot use it.
+      disabledSources: ["ark-genome", "vcf-variants"] as const,
     };
     expect(row(unusable, state, "source-imported-data").isDefault).toBe(false);
     expect(changedFromDefault(settingsSections(unusable, state))).toBe(0);
@@ -230,5 +248,29 @@ describe("rows this server cannot use", () => {
         (item) => item.unavailable !== null,
       ),
     ).toEqual([]);
+  });
+});
+
+describe("personal-data sources", () => {
+  test("start off and read as the safe default", () => {
+    for (const id of ["ark-genome", "vcf-variants", "imported-data"] as const) {
+      const item = row(facts(), SETTING_DEFAULTS.personal, `source-${id}`);
+      expect([
+        item.safeDefault,
+        item.isDefault,
+        item.control.kind === "switch" && item.control.on,
+      ]).toEqual(["Off", true, false]);
+    }
+  });
+
+  test("turned on, one reads as changed", () => {
+    const state = withSwitch(
+      SETTING_DEFAULTS.personal,
+      { setting: "source", id: "vcf-variants" },
+      true,
+    );
+    expect(state.disabledSources).toEqual(["ark-genome", "imported-data"]);
+    expect(row(facts(), state, "source-vcf-variants").isDefault).toBe(false);
+    expect(changedFromDefault(settingsSections(facts(), state))).toBe(1);
   });
 });

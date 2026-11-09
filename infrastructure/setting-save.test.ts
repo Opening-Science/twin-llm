@@ -2,7 +2,67 @@ import { describe, expect, test } from "bun:test";
 
 import type { AppendInput } from "@/packages/audit/append";
 
-import { saveAuditedSetting, settingAuditEvent } from "./setting-save";
+import {
+  changedLists,
+  saveAuditedSetting,
+  saveAuditedSettings,
+  settingAuditEvent,
+} from "./setting-save";
+
+describe("saveAuditedSettings (the first-run flow)", () => {
+  test("writes one audit row per change before the one store", async () => {
+    const writes: string[] = [];
+    const result = await saveAuditedSettings(
+      {
+        audit: async (event) => {
+          writes.push(`audit ${String(event.tool)}`);
+        },
+        store: async () => {
+          writes.push("store");
+        },
+        logError: () => undefined,
+      },
+      {
+        actor: "local",
+        changes: [
+          { setting: "knowledge-sources", value: ["gbd"] },
+          { setting: "live-sources", value: ["pubmed"] },
+        ],
+      },
+    );
+    expect(result).toEqual({ ok: true });
+    expect(writes).toEqual(["audit settings.set", "audit settings.set", "store"]);
+  });
+
+  test("stores nothing when an audit row cannot be written", async () => {
+    const writes: string[] = [];
+    const result = await saveAuditedSettings(
+      {
+        audit: async () => {
+          throw new Error("audit down");
+        },
+        store: async () => {
+          writes.push("store");
+        },
+        logError: (message, name) => writes.push(`${message}: ${name}`),
+      },
+      { actor: "local", changes: [{ setting: "live-sources", value: [] }] },
+    );
+    expect(result.ok).toBe(false);
+    expect(writes).toEqual(["[settings] live-sources not saved: Error"]);
+  });
+});
+
+describe("changedLists", () => {
+  test("keeps only the lists that differ from what was stored", () => {
+    expect(
+      changedLists([
+        { setting: "knowledge-sources", before: ["gbd"], after: ["gbd"] },
+        { setting: "live-sources", before: [], after: ["pubmed"] },
+      ]),
+    ).toEqual([{ setting: "live-sources", value: ["pubmed"] }]);
+  });
+});
 
 /** An in-memory store and audit chain, in the order they were written. */
 const fakePorts = <V extends boolean | readonly string[]>(

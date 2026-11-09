@@ -1,7 +1,9 @@
 import {
   KNOWLEDGE_SOURCE_GROUPS,
   type KnowledgeSourceId,
+  isOptInSource,
   normaliseDisabledSources,
+  OPT_IN_SOURCES,
   setSourceEnabled,
 } from "@/infrastructure/knowledge-sources";
 import {
@@ -49,12 +51,14 @@ export type SettingsFacts = Readonly<{
 /**
  * Safe defaults per data mode. They are the same for both modes today: twin
  * notes load (their own permit still filters them per turn), every knowledge
- * source is on (each source's gate decides per turn and per mode), and every
- * live public lookup is off. Kept per mode so a mode can tighten one later.
+ * source is on except those that read personal data kept only on this
+ * machine (genome, VCF, imported data), which stay off until the person turns
+ * them on, and every live public lookup is off. Kept per mode so a mode can
+ * tighten one later.
  */
 export const SETTING_DEFAULTS: Readonly<Record<DataMode, SettingsState>> = {
-  personal: { notesOn: true, disabledSources: [], liveSources: [] },
-  synthetic: { notesOn: true, disabledSources: [], liveSources: [] },
+  personal: { notesOn: true, disabledSources: OPT_IN_SOURCES, liveSources: [] },
+  synthetic: { notesOn: true, disabledSources: OPT_IN_SOURCES, liveSources: [] },
 };
 
 export type SwitchTarget =
@@ -160,7 +164,9 @@ const sourceRows = (
           target: { setting: "source", id: source.id },
           // A source this server cannot use answers nothing, whatever is stored.
           on: usable.available && on,
-          confirmOn: null,
+          confirmOn: isOptInSource(source.id)
+            ? `Turn on ${source.label}? A model on this machine may then read it in your chats and skill runs. It is never sent to a hosted model, and you can turn it off here at any time.`
+            : null,
           locked: !usable.available
             ? (usable.note ?? "Not available on this server.")
             : facts.signedIn
@@ -289,7 +295,7 @@ export const settingsSections = (
     id: "reads",
     title: "What a chat may read",
     intro:
-      "A source that is off is left out of every chat answer and skill run. A skill can only narrow these, never widen them.",
+      "A source that is off is left out of every chat answer and skill run. A skill can only narrow these, never widen them. Your genome and imported data stay off until you turn them on, and turning one on asks you to confirm first.",
     rows: [notesRow(facts, state), ...sourceRows(facts, state)],
   },
   {
