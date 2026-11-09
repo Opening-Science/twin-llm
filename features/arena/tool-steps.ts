@@ -8,7 +8,7 @@ import {
 import type { StepState, TraceState } from "@/infrastructure/ui-kit/step-trace-model";
 
 import type { AnswerStatus } from "./conversation";
-import { RANGE_DASH, type ToolCard, type ToolCardState } from "./tool-cards";
+import { RANGE_DASH, type ToolCard, type ToolOutcome, toolOutcome } from "./tool-cards";
 
 /**
  * An answer's tool calls as steps of a step trace: what each call is doing,
@@ -130,16 +130,17 @@ export const toolStepLabels = (cards: readonly ToolCard[]): string[] => {
   return cards.map((card) => toolStepLabel(card, names));
 };
 
-const STEP_STATES: Readonly<Record<ToolCardState, StepState>> = {
+const STEP_STATES: Readonly<Record<ToolOutcome, StepState>> = {
   running: "current",
   done: "done",
-  refused: "skipped",
+  "no-data": "skipped",
+  refused: "refused",
   error: "failed",
 };
 
 /** A call refused before it ran is `refused`; one that ran and found nothing, `skipped`. */
 export const toolStepState = (card: ToolCard): StepState =>
-  card.notRun === true ? "refused" : STEP_STATES[card.state];
+  STEP_STATES[toolOutcome(card)];
 
 /** The trace settles when the answer does; a failed answer stops it. */
 export const answerTraceState = (status: AnswerStatus): TraceState =>

@@ -7,6 +7,7 @@ import { toolActivity } from "./answer-stream";
 import { toSavedResponseState } from "./saved-response-state";
 import {
   refusedBeforeRun,
+  toolOutcome,
   rowCountOf,
   rowsLabel,
   toolArgs,
@@ -145,6 +146,30 @@ describe("rowCountOf", () => {
     expect(rowCountOf({ code: "ROW_CAP_EXCEEDED", error: "synthetic" })).toBe(0);
     expect(rowCountOf({ something: true })).toBeNull();
     expect(rowCountOf(undefined)).toBeNull();
+  });
+});
+
+describe("toolOutcome", () => {
+  test("names a gated call refused and a call that ran with a code no data (#492)", () => {
+    const ended = (tool: string, output: unknown) =>
+      toolOutcome(
+        toolCard({ toolCallId: "c", tool, state: "output-available", input: {}, output }),
+      );
+    expect(ended("show_view", { code: "VIEW_NOT_ALLOWED", error: "x" })).toBe("refused");
+    expect(ended("genome_report", { code: "GENOME_NOT_PERMITTED", error: "x" })).toBe(
+      "refused",
+    );
+    expect(ended("show_view", { code: "NO_ROWS", error: "x" })).toBe("no-data");
+    expect(ended("genome_variants", { code: "GENOME_NOT_PERMITTED", error: "x" })).toBe(
+      "no-data",
+    );
+    expect(ended("trend", { n: 3 })).toBe("done");
+    expect(
+      toolOutcome(toolCard({ toolCallId: "c", tool: "trend", state: "output-error" })),
+    ).toBe("error");
+    expect(
+      toolOutcome(toolCard({ toolCallId: "c", tool: "trend", state: "input-available" })),
+    ).toBe("running");
   });
 });
 

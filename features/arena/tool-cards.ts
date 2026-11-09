@@ -335,9 +335,21 @@ export const toolCard = (
   };
 };
 
-export const STATE_LABELS: Readonly<Record<ToolCardState, string>> = {
+/**
+ * How a call ended, as every place that shows it names it: the card's badge,
+ * the step trace and the Markdown export. A call refused before it ran
+ * (`notRun`) is `refused`; one that ran and came back with a code (`NO_ROWS`,
+ * audited with 0 rows) is `no-data`, so it is never called refused.
+ */
+export type ToolOutcome = "running" | "done" | "no-data" | "refused" | "error";
+
+export const toolOutcome = (card: ToolCard): ToolOutcome =>
+  card.state === "refused" ? (card.notRun === true ? "refused" : "no-data") : card.state;
+
+export const OUTCOME_LABELS: Readonly<Record<ToolOutcome, string>> = {
   running: "Running",
   done: "Done",
+  "no-data": "No data",
   refused: "Refused",
   error: "Failed",
 };
