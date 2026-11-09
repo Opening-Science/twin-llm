@@ -15,6 +15,10 @@ const LOADING_SHAPE = Array.from({ length: 12 }, (_, i) => ({
 
 const whole = (value: number): string => String(Math.round(value));
 
+/** "114 bpm" when the bars have a unit, "114" when not. */
+export const withUnit = (value: string, unit: string | undefined): string =>
+  unit ? `${value} ${unit}` : value;
+
 /**
  * C08: one rounded bar from each bucket's minimum to its maximum, with MIN
  * and MAX written as words beside the extreme bars rather than in a tooltip.
@@ -27,6 +31,7 @@ export const RangeBars = ({
   buckets,
   axis,
   format = whole,
+  unit,
   label,
   defaultFocus,
 }: RangeBarsProps) => {
@@ -78,7 +83,7 @@ export const RangeBars = ({
                   textAnchor="middle"
                   className="text-axis fill-current font-mono tabular-nums"
                 >
-                  MAX {format(out.max)}
+                  MAX {withUnit(format(out.max), unit)}
                 </text>
               ) : null}
               {state === "default" && low ? (
@@ -88,7 +93,7 @@ export const RangeBars = ({
                   textAnchor="middle"
                   className="text-axis fill-current font-mono tabular-nums"
                 >
-                  MIN {format(out.min)}
+                  MIN {withUnit(format(out.min), unit)}
                 </text>
               ) : null}
             </g>

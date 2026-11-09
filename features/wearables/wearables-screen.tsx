@@ -18,17 +18,15 @@ import {
   type ConnectorId,
   type ConnectorSetupView,
 } from "@/features/connectors/connector-setup";
-import {
-  connectorBadge,
-  loopbackHostHint,
-  syncDetail,
-} from "@/features/connectors/connector-status";
+import { loopbackHostHint } from "@/features/connectors/connector-status";
+import { deviceRow } from "@/features/connectors/device-rows";
 import { GbdCard } from "@/features/connectors/gbd-card";
 import { GuidelinesCard } from "@/features/connectors/guidelines-card";
 import { LiveSourceCards } from "@/features/connectors/live-sources-card";
 import type { GuidelineCorpusStatus } from "@/features/connectors/guideline-status-view";
 import { SetupDisclosure } from "@/features/connectors/setup-disclosure";
 import { VitronicCard } from "@/features/vitronic/vitronic-card";
+import { DeviceList, type DeviceRow } from "@/infrastructure/charts/kit";
 import { Button, buttonClassName } from "@/infrastructure/ui-kit/button";
 import { SegmentedControl } from "@/infrastructure/ui-kit/segmented-control";
 
@@ -87,12 +85,12 @@ const WEARABLES: readonly Readonly<{
 }>[] = [
   {
     id: "oura",
-    name: "Oura Ring",
+    name: "Oura",
     purpose: "Sleep, readiness and activity for personalised answers.",
   },
   {
     id: "whoop",
-    name: "Whoop",
+    name: "WHOOP",
     purpose: "Recovery, strain and sleep for personalised answers.",
   },
   {
@@ -179,18 +177,6 @@ const WearableCard = ({
     <ConnectorCard
       name={name}
       purpose={purpose}
-      badge={connectorBadge({
-        configured: status.configured,
-        connected: status.connected,
-        failed: notice?.failed ?? false,
-      })}
-      detail={
-        !status.configured
-          ? setupGap(setup)
-          : status.connected
-            ? syncDetail(status.lastSyncAt)
-            : null
-      }
       notice={
         notice ? { text: notice.text, tone: notice.failed ? "warn" : "info" } : null
       }
@@ -371,6 +357,19 @@ export const WearablesScreen = ({
     "google-health": googleHealthStatus,
   };
 
+  // One C15 row per wearable, from the same state the actions below change.
+  const rowFor = (id: WearableSource): DeviceRow => {
+    const status = statuses[id];
+    return deviceRow({
+      source: id,
+      configured: status.configured,
+      connected: status.connected,
+      lastSyncAt: status.lastSyncAt,
+      failed: cardNotice?.source === id && cardNotice.failed,
+      idleDetail: status.configured ? null : setupGap(setups[id]),
+    });
+  };
+
   const activeSummary =
     source === "oura"
       ? ouraSummary
@@ -403,30 +402,40 @@ export const WearablesScreen = ({
         </p>
       )}
 
-      <Group title="Wearables">
-        {WEARABLES.map((wearable) => {
-          const status = statuses[wearable.id];
-          return (
-            <WearableCard
-              key={wearable.id}
-              id={wearable.id}
-              name={wearable.name}
-              purpose={wearable.purpose}
-              status={status}
-              setup={setups[wearable.id]}
-              notice={cardNotice?.source === wearable.id ? cardNotice : null}
-              selected={view === "single" && source === wearable.id && status.connected}
-              busy={busy === wearable.id || busy === "both"}
-              onSelect={() => {
-                setView("single");
-                setSource(wearable.id);
-              }}
-              onSync={() => void sync(wearable.id)}
-              onDisconnect={() => void disconnect(wearable.id)}
-            />
-          );
-        })}
-      </Group>
+      <section className="mt-8" aria-label="Wearables">
+        <h2 className="text-eyebrow">Wearables</h2>
+        <div className="mt-3 max-w-2xl">
+          <DeviceList
+            category="vitals"
+            title="Sources"
+            rows={WEARABLES.map((wearable) => rowFor(wearable.id))}
+          />
+        </div>
+        <div className="mt-3 grid items-start gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {WEARABLES.map((wearable) => {
+            const status = statuses[wearable.id];
+            return (
+              <WearableCard
+                key={wearable.id}
+                id={wearable.id}
+                name={wearable.name}
+                purpose={wearable.purpose}
+                status={status}
+                setup={setups[wearable.id]}
+                notice={cardNotice?.source === wearable.id ? cardNotice : null}
+                selected={view === "single" && source === wearable.id && status.connected}
+                busy={busy === wearable.id || busy === "both"}
+                onSelect={() => {
+                  setView("single");
+                  setSource(wearable.id);
+                }}
+                onSync={() => void sync(wearable.id)}
+                onDisconnect={() => void disconnect(wearable.id)}
+              />
+            );
+          })}
+        </div>
+      </section>
 
       <Group title="Body scan">
         <VitronicCard setup={setups.bodyloop} />
@@ -484,11 +493,7 @@ export const WearablesScreen = ({
           onSync={() => void sync(source)}
           linkedSources={WEARABLES.filter(
             (wearable) => statuses[wearable.id].connected,
-          ).map((wearable) => ({
-            id: wearable.id,
-            name: wearable.name,
-            detail: syncDetail(statuses[wearable.id].lastSyncAt),
-          }))}
+          ).map((wearable) => rowFor(wearable.id))}
         />
       </div>
 

@@ -19,7 +19,8 @@ type QueryToolName = (typeof TOOL_DEFINITIONS)[number]["name"];
  * source a user turned off. Pure, so the client and the server share it.
  *
  * Preferences are stored as the *disabled* ids, so a source added later starts
- * on for everyone, and an id that no longer exists is dropped on read.
+ * on for everyone, and an id that no longer exists is dropped on read. The
+ * opt-in sources below are the exception: they start off.
  */
 
 export const KNOWLEDGE_SOURCE_IDS = [
@@ -220,6 +221,50 @@ const isRequirementOff = (
 ): boolean => {
   const required = ALL_KNOWLEDGE_SOURCES.find((source) => source.id === id)?.requires;
   return required !== undefined && disabled.has(required);
+};
+
+/**
+ * Sources that read personal data held only on this machine (your genome, a
+ * VCF, imported datasets). They start off and stay off until the person turns
+ * them on (#507), so they are stored as an opt-in list (`optedInSources`)
+ * beside the opt-out list every other source uses. Code outside the store
+ * only ever sees the effective disabled list.
+ */
+export const OPT_IN_SOURCES = [
+  "ark-genome",
+  "vcf-variants",
+  "imported-data",
+] as const satisfies readonly KnowledgeSourceId[];
+
+export const isOptInSource = (id: KnowledgeSourceId): boolean =>
+  (OPT_IN_SOURCES as readonly KnowledgeSourceId[]).includes(id);
+
+const asIds = (raw: unknown): readonly KnowledgeSourceId[] =>
+  Array.isArray(raw) ? raw.filter(isKnowledgeSourceId) : [];
+
+/** The effective disabled list from the two stored columns; nothing stored means opt-in sources off. */
+export const disabledFromStored = (
+  stored: Readonly<{ disabledSources?: unknown; optedInSources?: unknown }>,
+): readonly KnowledgeSourceId[] => {
+  const optedIn = asIds(stored.optedInSources);
+  return normaliseDisabledSources([
+    ...asIds(stored.disabledSources).filter((id) => !isOptInSource(id)),
+    ...OPT_IN_SOURCES.filter((id) => !optedIn.includes(id)),
+  ]);
+};
+
+/** The two stored columns for an effective disabled list. */
+export const storedFromDisabled = (
+  disabled: readonly KnowledgeSourceId[],
+): Readonly<{
+  disabledSources: KnowledgeSourceId[];
+  optedInSources: KnowledgeSourceId[];
+}> => {
+  const off = normaliseDisabledSources(disabled);
+  return {
+    disabledSources: off.filter((id) => !isOptInSource(id)),
+    optedInSources: OPT_IN_SOURCES.filter((id) => !off.includes(id)),
+  };
 };
 
 /** Every chat tool name owned by a disabled source, dependents included. */

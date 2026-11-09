@@ -8,16 +8,19 @@ import {
   estimateRows,
   exactDecimals,
   hypnogram,
+  invertedNote,
   log2Ticks,
   monthShares,
   nullBand,
   nullFigure,
+  axisShare,
   radar,
   radarAxisAt,
   rangeBars,
   ringPartAt,
   scoreRing,
   slotIndex,
+  stageTotalWidths,
   spacedTicks,
   stepKey,
   streakGrid,
@@ -535,5 +538,132 @@ describe("null band", () => {
     expect(out.observedX).toBe(208);
     expect(out.mean).toBeGreaterThan(out.low);
     expect(out.mean).toBeLessThan(out.high);
+  });
+});
+
+describe("bars from a floor, with a usual band", () => {
+  const box = { width: 140, height: 100 };
+
+  test("from zero, a 30-minute shift near 23:00 barely moves a bar", () => {
+    const out = barsWithLine([1380, 1410], null, box, 14, 4);
+    expect(out.bars[1]!.height - out.bars[0]!.height).toBeLessThan(3);
+  });
+
+  test("from a floor the same shift spans the chart", () => {
+    const out = barsWithLine([1380, 1410], null, box, 14, 4, { floor: 1320 });
+    expect(out.bars[1]!.height).toBe(100);
+    expect(out.bars[0]!.height).toBeCloseTo(200 / 3);
+  });
+
+  test("a value at or below the floor is a stub, not nothing", () => {
+    const out = barsWithLine([1320, 1300], null, box, 14, 4, { floor: 1320 });
+    expect(out.bars.map((b) => b?.height)).toEqual([2, 2]);
+  });
+
+  test("the usual band shares the scale and widens it when it reaches higher", () => {
+    const out = barsWithLine([1380], 1395, box, 14, 4, {
+      floor: 1320,
+      band: { low: 1370, high: 1440 },
+    });
+    expect(out.band).toEqual({ top: 0, bottom: 100 - (50 / 120) * 100 });
+    expect(out.lineY).toBe(100 - (75 / 120) * 100);
+  });
+
+  test("without a floor, missing and zero values still draw nothing", () => {
+    expect(barsWithLine([0, null, 5], null, box).bars.slice(0, 2)).toEqual([null, null]);
+  });
+});
+
+describe("stage totals", () => {
+  test("the longest stage spans the width, the rest in proportion", () => {
+    expect(stageTotalWidths({ awake: 20, rem: 96, core: 248, deep: 62 }, 248)).toEqual({
+      awake: 20,
+      rem: 96,
+      core: 248,
+      deep: 62,
+    });
+  });
+
+  test("missing or negative totals are zero, and no totals draw nothing", () => {
+    expect(stageTotalWidths({ core: 100, awake: -5 }, 50)).toEqual({
+      awake: 0,
+      rem: 0,
+      core: 50,
+      deep: 0,
+    });
+    expect(stageTotalWidths({}, 50)).toEqual({ awake: 0, rem: 0, core: 0, deep: 0 });
+  });
+});
+
+describe("radar axis share", () => {
+  const axis = { label: "Resting", value: null, display: "", max: 70 };
+
+  test("from 0 by default, from a minimum when given", () => {
+    expect(axisShare(56, axis)).toBeCloseTo(0.8);
+    expect(axisShare(56, { ...axis, min: 50 })).toBeCloseTo(0.3);
+    expect(
+      axisShare(58, { ...axis, min: 50 }) - axisShare(52, { ...axis, min: 50 }),
+    ).toBeCloseTo(0.3);
+  });
+
+  test("inverted: lower sits further out", () => {
+    expect(axisShare(52, { ...axis, min: 50, inverted: true })).toBeCloseTo(0.9);
+    expect(axisShare(70, { ...axis, min: 50, inverted: true })).toBe(0);
+  });
+
+  test("clamped to the axis, and a missing value sits at the centre even when inverted", () => {
+    expect(axisShare(40, { ...axis, min: 50 })).toBe(0);
+    expect(axisShare(90, axis)).toBe(1);
+    expect(axisShare(null, { ...axis, inverted: true })).toBe(0);
+    expect(axisShare(60, { ...axis, min: 70 })).toBe(0);
+  });
+
+  test("the radar places points and the reference by it", () => {
+    const out = radar(
+      [
+        {
+          label: "A",
+          value: 52,
+          display: "",
+          reference: 58,
+          max: 70,
+          min: 50,
+          inverted: true,
+        },
+        { label: "B", value: 10, display: "", max: 10 },
+        { label: "C", value: 10, display: "", max: 10 },
+      ],
+      { width: 200, height: 200 },
+      { x: 0, y: 0 },
+    );
+    // Axis A points up: 52 inverted on 50..70 sits 0.9 of the way out.
+    expect(out.points[0]!.y).toBeCloseTo(100 - 0.9 * 100);
+    expect(out.reference).toMatch(/^M100,40 /);
+  });
+});
+
+describe("inverted note", () => {
+  const axis = (label: string, inverted?: boolean) => ({
+    label,
+    value: 1,
+    display: "",
+    max: 2,
+    inverted,
+  });
+
+  test("names every inverted axis in plain words", () => {
+    expect(
+      invertedNote([axis("Resting", true), axis("Sleeping", true), axis("Walking")]),
+    ).toBe("For resting and sleeping, further out means lower.");
+    expect(invertedNote([axis("Resting", true)])).toBe(
+      "For resting, further out means lower.",
+    );
+    expect(
+      invertedNote([axis("Resting", true), axis("HRV", true), axis("Sleeping", true)]),
+    ).toBe("For resting, HRV and sleeping, further out means lower.");
+  });
+
+  test("no inverted axis, no note", () => {
+    expect(invertedNote([axis("Walking"), axis("HRV")])).toBeNull();
   });
 });
