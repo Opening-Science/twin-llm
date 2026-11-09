@@ -27,26 +27,46 @@ import {
 } from "@/packages/vitronic/geometry";
 import { presentMeasure } from "@/packages/vitronic/present-measure";
 
+import { type TwinToken } from "./twin-palette";
+import { useTwinPalette } from "./use-twin-palette";
+
+type ChartToken = Extract<TwinToken, `chart-${number}`>;
+
 /**
- * Overlay colours are drawn on the scan viewport, so they are fixed hex values
- * rather than theme tokens. The legend reads the same constants, so a swatch
- * cannot drift from the dot or line it names.
+ * Overlay colours are chart tokens, so they follow the theme and stay legible
+ * on the viewer's backdrop. Seven overlays share five chart hues: markers are
+ * dots, measurements are lines, and the legend always writes the word. The
+ * canvas resolves a token through the twin palette and the legend draws the
+ * same token as a class, so a swatch cannot drift from the dot or line it names.
  */
-export const SOURCE_COLORS: Readonly<Record<MarkerSource, string>> = {
-  auto: "#8ec5ff",
-  palpation: "#f4c95d",
-  custom: "#ef7b6a",
+export const SOURCE_TOKENS: Readonly<Record<MarkerSource, ChartToken>> = {
+  auto: "chart-1",
+  palpation: "chart-2",
+  custom: "chart-3",
 };
 
-export const MEASURE_COLORS: Readonly<Record<MeasureKind, string>> = {
-  height: "#d8e7ff",
-  distance: "#9fd8c8",
-  crosssection: "#e2c37a",
-  angle: "#d4a5ff",
+/** Height is a reference line down to the floor, so it takes the reference grey. */
+export const MEASURE_TOKENS: Readonly<Record<MeasureKind, ChartToken>> = {
+  height: "chart-5",
+  distance: "chart-4",
+  crosssection: "chart-2",
+  angle: "chart-3",
 };
 
-/** A highlighted measurement line, whatever its kind. */
-export const HIGHLIGHT_COLOR = "#ffffff";
+/** A highlighted measurement line, whatever its kind: the focus colour. */
+export const HIGHLIGHT_TOKEN = "ring" satisfies TwinToken;
+
+/** Black emissive means no glow; nobody sees it as a colour. */
+const NO_GLOW = "#000000";
+
+/** Written out so Tailwind finds every class in the source. */
+const SWATCH_CLASS: Readonly<Record<ChartToken, string>> = {
+  "chart-1": "text-chart-1",
+  "chart-2": "text-chart-2",
+  "chart-3": "text-chart-3",
+  "chart-4": "text-chart-4",
+  "chart-5": "text-chart-5",
+};
 
 export type OverlayToggles = Readonly<{
   auto: boolean;
@@ -72,22 +92,22 @@ export const DEFAULT_OVERLAYS: OverlayToggles = {
 export const OVERLAY_OPTIONS: readonly Readonly<{
   key: keyof OverlayToggles;
   label: string;
-  color: string;
+  token: ChartToken;
 }>[] = [
-  { key: "auto", label: "Markers · Auto", color: SOURCE_COLORS.auto },
-  { key: "palpation", label: "Markers · Palpation", color: SOURCE_COLORS.palpation },
-  { key: "custom", label: "Markers · Custom", color: SOURCE_COLORS.custom },
-  { key: "heights", label: "Heights", color: MEASURE_COLORS.height },
-  { key: "distances", label: "Distances", color: MEASURE_COLORS.distance },
-  { key: "crosssections", label: "Crosssections", color: MEASURE_COLORS.crosssection },
-  { key: "angles", label: "Angles", color: MEASURE_COLORS.angle },
+  { key: "auto", label: "Markers · Auto", token: SOURCE_TOKENS.auto },
+  { key: "palpation", label: "Markers · Palpation", token: SOURCE_TOKENS.palpation },
+  { key: "custom", label: "Markers · Custom", token: SOURCE_TOKENS.custom },
+  { key: "heights", label: "Heights", token: MEASURE_TOKENS.height },
+  { key: "distances", label: "Distances", token: MEASURE_TOKENS.distance },
+  { key: "crosssections", label: "Crosssections", token: MEASURE_TOKENS.crosssection },
+  { key: "angles", label: "Angles", token: MEASURE_TOKENS.angle },
 ];
 
 export const overlayLegendItems = (): readonly LegendItem[] =>
   OVERLAY_OPTIONS.map((option) => ({
     id: option.key,
     label: option.label,
-    swatchColor: option.color,
+    swatchClassName: SWATCH_CLASS[option.token],
   }));
 
 export type OverlayLabel = Readonly<{
@@ -167,11 +187,14 @@ export const OverlayPrimitives = ({
   readonly highlightId: string | null;
   readonly onHover: (id: string | null) => void;
 }) => {
+  const palette = useTwinPalette();
   const lines = useMemo(() => {
     const items: Line[] = [];
     for (const measure of measures) {
       const color =
-        highlightId === measure.path ? HIGHLIGHT_COLOR : MEASURE_COLORS[measure.kind];
+        palette[
+          highlightId === measure.path ? HIGHLIGHT_TOKEN : MEASURE_TOKENS[measure.kind]
+        ];
       if (measure.kind === "height" && measure.positions[0]) {
         const top = measure.positions[0];
         items.push(lineFrom([[top[0], top[1], 0], top], color));
@@ -203,13 +226,14 @@ export const OverlayPrimitives = ({
       }
     }
     return items;
-  }, [measures, highlightId]);
+  }, [measures, highlightId, palette]);
 
   return (
     <group>
       {markers.map((marker) => {
         const hot = highlightId === marker.path;
         const scale = hot ? 1.8 : 1;
+        const color = palette[SOURCE_TOKENS[marker.source]];
         return (
           <mesh
             key={marker.path}
@@ -220,10 +244,10 @@ export const OverlayPrimitives = ({
           >
             <sphereGeometry args={[0.012, 12, 12]} />
             <meshStandardMaterial
-              color={SOURCE_COLORS[marker.source]}
+              color={color}
               roughness={0.4}
               metalness={0}
-              emissive={hot ? SOURCE_COLORS[marker.source] : "#000000"}
+              emissive={hot ? color : NO_GLOW}
               emissiveIntensity={hot ? 0.4 : 0}
             />
           </mesh>
