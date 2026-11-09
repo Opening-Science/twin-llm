@@ -327,7 +327,7 @@ describe("answer body while streaming", () => {
     ] as const;
     const markup = render({ status: "STREAMING", text: "", tools });
     expect(markup).toContain('<p role="status" class="sr-only">Working.</p>');
-    expect(markup).toContain('step-trace-working">Summarising 8867-4</span>');
+    expect(markup).toContain('step-trace-working">Summarising heart rate</span>');
     expect(markup).toContain('aria-label="Tool calls"');
     expect(markup).toContain('<span class="sr-only">In progress: </span>');
     // The card under the step keeps its arguments, title and tool name.
