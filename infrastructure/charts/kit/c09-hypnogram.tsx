@@ -1,6 +1,7 @@
 "use client";
 
 import { ChartFocusFrame, ChartReadout, dimmed, useChartFocus } from "./chart-focus";
+import { formatDuration } from "./format";
 import {
   hypnogram,
   STAGE_LANES,
@@ -25,12 +26,9 @@ const STAGE_FILL: Readonly<Record<SleepStage, string>> = {
   deep: "fill-stage-deep",
 };
 
-export const hoursMinutes = (minutes: number): string => {
-  const total = Math.max(0, Math.round(minutes));
-  const h = Math.floor(total / 60);
-  const m = total % 60;
-  return h > 0 ? `${h} hr ${m} min` : `${m} min`;
-};
+/** A stage's length, the kit's way ("7 hr 4 min"); a negative total counts as none. */
+export const hoursMinutes = (minutes: number): string =>
+  formatDuration(Math.max(0, minutes));
 
 const HEIGHT = 200;
 const PLOT = 176;

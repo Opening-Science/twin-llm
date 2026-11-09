@@ -325,6 +325,7 @@ export const GalleryScreen = () => (
             category="heart"
             state={state}
             buckets={HEART_RANGES_READ}
+            unit="bpm"
             axis={["8 AM", "5 PM"]}
             label="Heart rate"
             defaultFocus={4}

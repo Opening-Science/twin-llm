@@ -133,6 +133,8 @@ export type RangeBarsProps = Base &
     axis?: readonly [string, string];
     /** How a MIN/MAX number is written; defaults to whole numbers. */
     format?: (value: number) => string;
+    /** The unit after MIN and MAX numbers, e.g. "bpm": "MAX 114 bpm". */
+    unit?: string;
   }>;
 
 /** C09: four lanes with a duration under each label. */
