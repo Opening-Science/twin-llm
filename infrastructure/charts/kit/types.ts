@@ -209,6 +209,8 @@ export type ResearchFigureProps = Base &
   Readonly<{
     /** A study series colour in place of the category's; rows with their own `series` keep theirs. */
     series?: SeriesToken;
+    /** What the axis measures, written under its ticks inside the figure, e.g. "Rate ratio". */
+    axisTitle?: string;
   }> &
   (
     | Readonly<{
