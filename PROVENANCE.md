@@ -35,8 +35,8 @@ See `docs/open-twin-pins.md` and `scripts/sync-open-twin.sh`. Checkout lives in 
 
 - `infrastructure/open-twin-adapters/oura.ts` — `HostOuraTokenHandler.lastTokens()` (renamed from `getTokens()` because upstream now has its own); `getAuthorizationUrl` via `.open-twin` src path
 - `infrastructure/open-twin-adapters/whoop.ts` — `fetchWhoopWindow` / `buildWhoopFhirBundle` over the public barrel (`getWhoopData`, `buildWhoopBundleFromPayload`)
-- `infrastructure/open-twin-adapters/google-health.ts` — restore/persist credential helpers
-- `infrastructure/open-twin-adapters/aggregate.ts` — `aggregateWearableBundles` over `aggregate` from the public barrel; not read by any screen yet
+- `infrastructure/open-twin-adapters/google-health.ts` — restore/persist credential helpers; `buildGoogleHealthFhirBundle` (`google-health-bundle.ts`) over `buildBundleFromResponses` with the person's shared subject
+- `infrastructure/open-twin-adapters/aggregate.ts` — `aggregateWearableBundles` over `aggregate` from the public barrel, for Oura, WHOOP and Google Health; not read by any screen yet
 - Sync packaging only (no upstream `*.ts` edits): `workspace:*` → `file:../fhir-core`, then peer-pin for host install; flatten nested bun redirects
 - Upgrade: `bash scripts/sync-open-twin.sh <sha>` then `bun install` (see `docs/open-twin-pins.md`)
 
