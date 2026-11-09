@@ -1,9 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { Box3, Vector3 } from "three";
+import { Box3, Matrix4, Vector3 } from "three";
 
 import {
   atlasToScanRotation,
   fitAtlasToScan,
+  placeFittedAtlas,
   type AtlasFrame,
   type ScanFrame,
 } from "./fit";
@@ -91,5 +92,48 @@ describe("fitAtlasToScan", () => {
     expect(fitAtlasToScan(atlas(), scan({ height: 0.5 })).ok).toBe(false);
     expect(fitAtlasToScan(atlas(), scan({ height: 3.2 })).ok).toBe(false);
     expect(fitAtlasToScan(atlas({ box: new Box3() }), scan()).ok).toBe(false);
+  });
+});
+
+describe("placeFittedAtlas", () => {
+  // The male demo body as the viewer holds it: the atlas frame wrapped in
+  // Rx(+90°), 1.914 m tall, feet at z=0.
+  const bodyWorld = atlasToScanRotation();
+  const bodyFrame = scan({
+    box: new Box3(new Vector3(-0.3, -0.225, 0), new Vector3(0.3, 0.114, 1.914)),
+    height: 1.914,
+    hipMidpoint: null,
+  });
+  const fittedBox = new Box3(
+    new Vector3(-0.35, 0.003, -0.15),
+    new Vector3(0.35, 1.914, 0.21),
+  );
+
+  test("takes the body's own transform: no height scale, no centring", () => {
+    const fit = placeFittedAtlas(fittedBox, { matrixWorld: bodyWorld, frame: bodyFrame });
+    expect(fit.ok).toBe(true);
+    expect(fit.anchor).toBe("body");
+    expect(fit.scale).toBeCloseTo(1, 9);
+    expect(fit.matrix.equals(bodyWorld)).toBe(true);
+    // The fitted left knee in the body's frame lands where the body's knee is.
+    const knee = new Vector3(0.1, 0.5, 0.02).applyMatrix4(fit.matrix);
+    expect(round(knee)).toEqual([0.1, -0.02, 0.5]);
+  });
+
+  test("follows a moved or scaled body, unlike the scale-and-centre fit", () => {
+    const moved = new Matrix4().makeTranslation(1, 2, 0).multiply(bodyWorld);
+    const fit = placeFittedAtlas(fittedBox, { matrixWorld: moved, frame: bodyFrame });
+    expect(round(new Vector3(0, 0, 0).applyMatrix4(fit.matrix))).toEqual([1, 2, 0]);
+    expect(fit.matrix).not.toBe(moved);
+  });
+
+  test("refuses a file made for a body of another height", () => {
+    const female = new Box3(new Vector3(-0.3, 0, -0.15), new Vector3(0.3, 1.772, 0.2));
+    const fit = placeFittedAtlas(female, { matrixWorld: bodyWorld, frame: bodyFrame });
+    expect(fit.ok).toBe(false);
+    expect(fit.matrix.equals(new Matrix4())).toBe(true);
+    expect(
+      placeFittedAtlas(new Box3(), { matrixWorld: bodyWorld, frame: bodyFrame }).ok,
+    ).toBe(false);
   });
 });

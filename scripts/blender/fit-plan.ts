@@ -10,9 +10,10 @@ import { join } from "node:path";
 
 import { ATLASES, ATLAS_IDS, type AtlasId } from "../../packages/anatomy/manifest";
 import { DEMO_BODY_IDS, type DemoBodyId } from "../../packages/anatomy/demo-bodies";
+import { FITTED_DIR_NAME } from "../../packages/anatomy/paths";
 import { RIGGED_BODIES } from "../../packages/anatomy/rigged-bodies";
 
-export const FITTED_DIR_NAME = "fitted";
+export { FITTED_DIR_NAME };
 
 export type PinnedInput = Readonly<{ path: string; sha256: string; bytes: number }>;
 

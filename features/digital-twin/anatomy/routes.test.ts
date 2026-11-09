@@ -6,12 +6,19 @@ import {
   type DemoBodyId,
 } from "@/packages/anatomy/demo-bodies";
 import { ATLASES, atlasVersion, type AtlasId } from "@/packages/anatomy/manifest";
+import {
+  FITTED_ATLAS_IDS,
+  FITTED_ATLASES,
+  fittedAtlasApiUrl,
+  type FittedAtlasId,
+} from "@/packages/anatomy/fitted-atlases";
 import { RIGGED_BODIES, riggedBodyApiUrl } from "@/packages/anatomy/rigged-bodies";
 
-import { ANATOMY_NOT_INSTALLED_API } from "./anatomy-copy";
+import { ANATOMY_NOT_INSTALLED_API, FITTED_NOT_INSTALLED_API } from "./anatomy-copy";
 import {
   createAnatomyAtlasHandler,
   createDemoBodyHandler,
+  createFittedAtlasHandler,
   createRiggedBodyHandler,
 } from "./atlas-handler";
 import { DEMO_NOT_INSTALLED_API, RIGGED_NOT_INSTALLED_API } from "./demo-copy";
@@ -112,7 +119,23 @@ describe("GET /api/anatomy/status", () => {
         { id: "anny-adult-m", installed: false },
         { id: "anny-adult-f", installed: false },
       ],
+      fittedAtlases: FITTED_ATLAS_IDS.map((id) => ({ id, installed: false })),
+      fittedAtlasOn: false,
     });
+  });
+
+  test("lists the fitted atlases made here and whether the toggle starts on", async () => {
+    const GET = createAnatomyStatusHandler({
+      statAtlas: async () => true,
+      statFittedAtlas: async (id) => id === "anny-adult-f.hra-f",
+      fittedAtlasOn: () => true,
+    });
+    const body = await (await GET()).json();
+    expect(body.fittedAtlases).toHaveLength(6);
+    expect(
+      body.fittedAtlases.filter((row: { installed: boolean }) => row.installed),
+    ).toEqual([{ id: "anny-adult-f.hra-f", installed: true }]);
+    expect(body.fittedAtlasOn).toBe(true);
   });
 
   test("lists which demo bodies have a baked rigged variant", async () => {
@@ -215,5 +238,58 @@ describe("GET /api/anatomy/rigged/:bodyId", () => {
       error: RIGGED_NOT_INSTALLED_API,
       installed: false,
     });
+  });
+});
+
+describe("GET /api/anatomy/fitted/:fittedId", () => {
+  const fittedGet = (installed: readonly FittedAtlasId[]) => {
+    const opened: FittedAtlasId[] = [];
+    const GET = createFittedAtlasHandler({
+      openFittedAtlas: async (id) => {
+        opened.push(id);
+        return installed.includes(id) ? BYTES : null;
+      },
+    });
+    const call = (id: string, query = "") =>
+      GET(new Request(`http://local/api/anatomy/fitted/${id}${query}`), {
+        params: Promise.resolve({ fittedId: id }),
+      });
+    return { call, opened };
+  };
+
+  test("serves a fitted atlas under its own pin, cached for its version", async () => {
+    const pin = FITTED_ATLASES["anny-adult-m"]["hra-m"];
+    const url = fittedAtlasApiUrl("anny-adult-m", "hra-m");
+    expect(url).toBe(
+      `/api/anatomy/fitted/anny-adult-m.hra-m?v=${pin.sha256.slice(0, 16)}`,
+    );
+    const { call } = fittedGet(["anny-adult-m.hra-m"]);
+    const res = await call("anny-adult-m.hra-m", url.slice(url.indexOf("?")));
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("model/gltf-binary");
+    expect(res.headers.get("cache-control")).toBe("public, max-age=31536000, immutable");
+    expect(res.headers.get("etag")).toBe(`"${pin.sha256}"`);
+  });
+
+  test("a fitted atlas not made here is a 404 naming the commands", async () => {
+    const res = await fittedGet([]).call("anny-adult-f.bodyparts3d");
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({
+      error: FITTED_NOT_INSTALLED_API,
+      installed: false,
+    });
+  });
+
+  test("ids outside the closed list are 404 and never reach the store", async () => {
+    const { call, opened } = fittedGet([...FITTED_ATLAS_IDS]);
+    for (const id of [
+      "hra-m",
+      "anny-adult-m",
+      "anny-adult-m.hra-x",
+      "../anny-adult-m.hra-m",
+    ]) {
+      expect((await call(id)).status).toBe(404);
+    }
+    expect(opened).toEqual([]);
   });
 });
