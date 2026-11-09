@@ -5,10 +5,12 @@ import {
   DEFAULT_OVERLAYS,
   groupedMarkerRows,
   groupedMeasureRows,
-  MEASURE_COLORS,
+  MEASURE_TOKENS,
   measureLabel,
+  OVERLAY_OPTIONS,
   overlayLegendItems,
   shouldProjectLabels,
+  SOURCE_TOKENS,
   visibleMarkers,
   visibleMeasures,
 } from "./scan-overlays";
@@ -105,21 +107,36 @@ describe("scan overlays", () => {
     expect(shouldProjectLabels(false, [])).toBe(false);
   });
 
-  test("legend swatches use the same colours as the overlays", () => {
-    expect(MEASURE_COLORS).toEqual({
-      height: "#d8e7ff",
-      distance: "#9fd8c8",
-      crosssection: "#e2c37a",
-      angle: "#d4a5ff",
+  test("overlays draw in chart tokens, not fixed colours", () => {
+    expect(SOURCE_TOKENS).toEqual({
+      auto: "chart-1",
+      palpation: "chart-2",
+      custom: "chart-3",
     });
-    expect(overlayLegendItems()).toEqual([
-      { id: "auto", label: "Markers · Auto", swatchColor: "#8ec5ff" },
-      { id: "palpation", label: "Markers · Palpation", swatchColor: "#f4c95d" },
-      { id: "custom", label: "Markers · Custom", swatchColor: "#ef7b6a" },
-      { id: "heights", label: "Heights", swatchColor: "#d8e7ff" },
-      { id: "distances", label: "Distances", swatchColor: "#9fd8c8" },
-      { id: "crosssections", label: "Crosssections", swatchColor: "#e2c37a" },
-      { id: "angles", label: "Angles", swatchColor: "#d4a5ff" },
+    expect(MEASURE_TOKENS).toEqual({
+      height: "chart-5",
+      distance: "chart-4",
+      crosssection: "chart-2",
+      angle: "chart-3",
+    });
+  });
+
+  test("each legend swatch draws the token its overlay draws, beside its word", () => {
+    const items = overlayLegendItems();
+    expect(items.map((item) => [item.id, item.label])).toEqual([
+      ["auto", "Markers · Auto"],
+      ["palpation", "Markers · Palpation"],
+      ["custom", "Markers · Custom"],
+      ["heights", "Heights"],
+      ["distances", "Distances"],
+      ["crosssections", "Crosssections"],
+      ["angles", "Angles"],
     ]);
+    expect(items.map((item) => item.swatchColor)).toEqual(items.map(() => undefined));
+    expect(
+      items.map((item, index) =>
+        item.swatchClassName?.endsWith(OVERLAY_OPTIONS[index]!.token),
+      ),
+    ).toEqual(items.map(() => true));
   });
 });

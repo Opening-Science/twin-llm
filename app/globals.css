@@ -430,6 +430,20 @@
     @apply border-border rounded border px-1 py-px font-mono text-[11px];
   }
 
+  /* --- Export notice (#531, features/shell/export-notice-dialog.tsx) ---
+     The one line a thread export shows before its file is made, with
+     Download and Cancel: a small centred modal like search's. */
+  .export-notice {
+    @apply bg-background border-border text-foreground fixed inset-x-0 top-[20vh] mx-auto w-[min(28rem,calc(100vw-2rem))] max-w-none rounded-2xl border p-5 shadow-2xl backdrop:bg-black/40;
+  }
+  .export-notice-line {
+    @apply text-sm leading-relaxed;
+  }
+  .export-notice-actions {
+    @apply mt-4 flex justify-end gap-2;
+  }
+  /* --- end Export notice (#531) --- */
+
   /* A saved thread's title row; it leaves room for the floating button. */
   /* 10px off the top, centred on the same line as .shell-toggle (top-3 + size-9 / 2 = 30px). */
   .thread-bar {

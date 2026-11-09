@@ -8,12 +8,15 @@ import { citedValueLine } from "@/infrastructure/wearable-provenance";
 
 import type { ResponseState, TurnState } from "./conversation";
 import { stoppedAnswerText } from "./streaming-view";
-import type { ToolCard } from "./tool-cards";
+import { type ToolCard, toolOutcome } from "./tool-cards";
+import { measureNames, namedMeasure } from "./tool-steps";
 
 /**
  * A thread as Markdown, for an issue, a lab notebook or a paper's appendix:
- * each prompt, then each model's lookups (with their arguments, row counts
- * and refusals) and its answer as the page shows it. Withheld and refused
+ * each prompt, then each model's lookups (the measure in words, as the step
+ * trace names it, then their arguments with any code, row counts,
+ * and "no data" for a call that ran and found nothing or "refused" for one a
+ * gate turned away before it ran) and its answer as the page shows it. Withheld and refused
  * answers say so instead of showing text. A GBD profile's answer keeps the
  * app's header and footer around it (#417), as on the page.
  *
@@ -25,18 +28,26 @@ export type ExportableThread = Readonly<{
   turns: readonly TurnState[];
 }>;
 
-const lookupLine = (card: ToolCard): string => {
+/** `Fitted a trend: heart rate`; the title alone when no call named the measure. */
+const lookupTitle = (card: ToolCard, names: ReadonlyMap<string, string>): string => {
+  const measure = card.args.find((arg) => arg.label === "Measure")?.value;
+  const words = measure === undefined ? null : namedMeasure(measure, names);
+  return words === null ? card.title : `${card.title}: ${words}`;
+};
+
+const lookupLine = (card: ToolCard, names: ReadonlyMap<string, string>): string => {
   const args = card.args
     .slice(0, 4)
     .map((arg) => `${arg.label.toLowerCase()} ${arg.value}`)
     .join(", ");
+  const ended = toolOutcome(card);
   const outcome =
-    card.state === "refused"
-      ? `refused${card.note ? `: ${card.note}` : ""}`
+    ended === "refused" || ended === "no-data"
+      ? `${ended === "refused" ? "refused" : "no data"}${card.note ? `: ${card.note}` : ""}`
       : card.rowCount === null
         ? card.state
         : `${card.rowCount} ${card.rowCount === 1 ? "row" : "rows"}`;
-  return `- ${card.title}${args ? ` (${args})` : ""} · ${outcome}`;
+  return `- ${lookupTitle(card, names)}${args ? ` (${args})` : ""} · ${outcome}`;
 };
 
 const STOPPED_LINE = "_Stopped before it finished._";
@@ -88,10 +99,13 @@ const answerBody = (answer: ResponseState): string[] => {
 
 const answerSection = (answer: ResponseState): string[] => {
   const tools = answer.tools ?? [];
+  const names = measureNames(tools);
   return [
     `### ${answer.modelName}`,
     "",
-    ...(tools.length === 0 ? [] : ["Lookups:", ...tools.map(lookupLine), ""]),
+    ...(tools.length === 0
+      ? []
+      : ["Lookups:", ...tools.map((card) => lookupLine(card, names)), ""]),
     ...answerBody(answer),
     "",
   ];

@@ -161,6 +161,25 @@ describe("vitals", () => {
     );
   });
 
+  test("one day from all three: Oura, then WHOOP, then Google Health, never mixed", () => {
+    const hrv = [
+      {
+        key: "google.daily-heart-rate-variability.2026-10-15",
+        label: "HRV",
+        value: 52,
+        unit: "ms",
+      },
+      { key: "whoop.recovery.hrv.2026-10-15", label: "HRV", value: 48, unit: "ms" },
+      { key: "sleep.hrv.2026-10-15", label: "HRV", value: 45, unit: "ms" },
+    ];
+    const picked = (metrics: typeof hrv) => latestVitals(metrics)[0]?.metric.key;
+    expect(picked(hrv)).toBe("sleep.hrv.2026-10-15");
+    expect(picked(hrv.slice(0, 2))).toBe("whoop.recovery.hrv.2026-10-15");
+    expect(picked(hrv.slice(0, 1))).toBe(
+      "google.daily-heart-rate-variability.2026-10-15",
+    );
+  });
+
   test("rows under Vitals with the source's own label, its name and day (#464)", () => {
     const [heart, steps] = vitalRows(latestVitals(METRICS));
     expect(heart).toMatchObject({

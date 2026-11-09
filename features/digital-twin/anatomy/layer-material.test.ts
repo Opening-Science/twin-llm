@@ -3,6 +3,8 @@ import {
   Color,
   DoubleSide,
   FrontSide,
+  LessEqualDepth,
+  NeverDepth,
   MeshBasicMaterial,
   MeshStandardMaterial,
   ShaderLib,
@@ -15,15 +17,19 @@ import {
   blendModeFor,
   createLayerMaterial,
   createLayerUniforms,
-  HIGHLIGHT_COLOUR,
   HIGHLIGHT_INTENSITY,
   HIGHLIGHT_TINT,
   isHighlighted,
   LAYER_FADE_CACHE_KEY,
   patchLayerFragment,
+  RIM_ONLY_FADE,
   setBlendMode,
   setHighlighted,
 } from "./layer-material";
+import { BRAND_PALETTE } from "../twin-palette";
+
+/** The dark theme's ring, as the twin palette hands it to the highlight. */
+const HIGHLIGHT_COLOUR = BRAND_PALETTE.dark.ring;
 
 const count = (haystack: string, needle: string): number =>
   haystack.split(needle).length - 1;
@@ -61,6 +67,16 @@ describe("patchLayerFragment", () => {
     );
   });
 
+  test("a rim-only layer gets a sharper rim and drops near-empty fragments", () => {
+    const patched = patchLayerFragment(ShaderLib.standard.fragmentShader);
+    const rimOnly = patched.indexOf("#ifdef TWIN_RIM_ONLY");
+    expect(rimOnly).toBeGreaterThan(-1);
+    expect(patched.slice(rimOnly)).toContain("pow( twinEdge, 3.0 )");
+    expect(patched).toContain("pow( twinEdge, 2.2 )");
+    const rimDiscard = patched.indexOf("if ( diffuseColor.a < 0.01 ) discard;");
+    expect(rimDiscard).toBeGreaterThan(rimOnly);
+  });
+
   test("throws by name when a chunk is missing", () => {
     expect(() => patchLayerFragment("#include <common>\nvoid main(){}")).toThrow(
       "layer-fade-anchor-missing:alphahash",
@@ -86,10 +102,51 @@ describe("attachLayerFade", () => {
 });
 
 describe("blend modes", () => {
-  test("solid only when fully opaque and not faded; scan blends, atlas hashes", () => {
+  test("solid only when fully opaque and not faded; scan blends, atlas fades", () => {
     expect(blendModeFor({ alpha: 1, fade: 0, visible: true }, "atlas")).toBe("solid");
-    expect(blendModeFor({ alpha: 1, fade: 0.5, visible: true }, "atlas")).toBe("hash");
+    expect(blendModeFor({ alpha: 1, fade: 0.5, visible: true }, "atlas")).toBe("fade");
+    // A layer fading in (organs) blends too.
+    expect(blendModeFor({ alpha: 0.4, fade: 0, visible: true }, "atlas")).toBe("fade");
     expect(blendModeFor({ alpha: 0.4, fade: 0, visible: true }, "scan")).toBe("blend");
+  });
+
+  test("a fully faded atlas layer is rim-only", () => {
+    expect(blendModeFor({ alpha: 1, fade: 1, visible: true }, "atlas")).toBe("rim");
+    expect(blendModeFor({ alpha: 0.3, fade: 1, visible: true }, "atlas")).toBe("rim");
+    expect(blendModeFor({ alpha: 1, fade: RIM_ONLY_FADE, visible: true }, "atlas")).toBe(
+      "rim",
+    );
+    expect(
+      blendModeFor({ alpha: 1, fade: RIM_ONLY_FADE - 0.01, visible: true }, "atlas"),
+    ).toBe("fade");
+    // The scan keeps its own blended glass at every fade.
+    expect(blendModeFor({ alpha: 1, fade: 1, visible: true }, "scan")).toBe("blend");
+  });
+
+  test("rim mode blends after the opaque layers and compiles the rim-only shader", () => {
+    const material = createLayerMaterial({
+      colour: "#b5584e",
+      vertexColors: true,
+      uniforms: createLayerUniforms(0),
+    });
+    const start = material.version;
+    expect(setBlendMode(material, "rim")).toBe(true);
+    expect(material.version).toBe(start + 1);
+    expect(material.transparent).toBe(true);
+    expect(material.depthWrite).toBe(false);
+    expect(material.side).toBe(FrontSide);
+    expect(material.depthFunc).toBe(LessEqualDepth);
+    expect(material.defines).toHaveProperty("TWIN_RIM_ONLY");
+    expect(material.defines).toHaveProperty("STANDARD");
+
+    expect(setBlendMode(material, "fade")).toBe(true);
+    expect(material.defines).not.toHaveProperty("TWIN_RIM_ONLY");
+
+    setBlendMode(material, "rim");
+    expect(setBlendMode(material, "solid")).toBe(true);
+    expect(material.defines).not.toHaveProperty("TWIN_RIM_ONLY");
+    expect(material.transparent).toBe(false);
+    expect(material.depthWrite).toBe(true);
   });
 
   test("setBlendMode recompiles only on a change and restores the original side", () => {
@@ -114,17 +171,44 @@ describe("blend modes", () => {
     expect(material.side).toBe(DoubleSide);
   });
 
-  test("hash mode turns on alphaHash and keeps depth writes", () => {
+  test("fade mode blends at the real alpha over its pre-pass depth, never dithers", () => {
     const material = createLayerMaterial({
       colour: "#b5584e",
       vertexColors: true,
       uniforms: createLayerUniforms(0),
     });
-    setBlendMode(material, "hash");
-    expect(material.alphaHash).toBe(true);
+    setBlendMode(material, "fade");
+    expect(material.alphaHash).toBe(false);
+    expect(material.transparent).toBe(true);
+    expect(material.depthWrite).toBe(false);
+    // LessEqual lets the colour pass through where its own pre-pass wrote depth.
+    expect(material.depthFunc).toBe(LessEqualDepth);
+    expect(material.vertexColors).toBe(true);
+
+    setBlendMode(material, "solid");
     expect(material.transparent).toBe(false);
     expect(material.depthWrite).toBe(true);
-    expect(material.vertexColors).toBe(true);
+  });
+
+  test("solid restores the depth test the material arrived with", () => {
+    const material = new MeshStandardMaterial({ depthFunc: NeverDepth });
+    attachLayerFade(material, createLayerUniforms(0));
+    setBlendMode(material, "fade");
+    expect(material.depthFunc).toBe(LessEqualDepth);
+    setBlendMode(material, "solid");
+    expect(material.depthFunc).toBe(NeverDepth);
+  });
+
+  test("no mode turns on alpha-hash dithering", () => {
+    const material = createLayerMaterial({
+      colour: "#e8dfcc",
+      vertexColors: false,
+      uniforms: createLayerUniforms(0),
+    });
+    for (const mode of ["fade", "rim", "blend", "solid"] as const) {
+      setBlendMode(material, mode);
+      expect(material.alphaHash).toBe(false);
+    }
   });
 
   test("solid restores a material that arrived transparent", () => {
@@ -154,7 +238,7 @@ describe("setHighlighted", () => {
     const version = material.version;
     const { color, emissive } = material;
 
-    expect(setHighlighted(material, true)).toBe(true);
+    expect(setHighlighted(material, new Color(HIGHLIGHT_COLOUR))).toBe(true);
     expect(isHighlighted(material)).toBe(true);
     expect(material.emissive.getHexString()).toBe(HIGHLIGHT_COLOUR.slice(1));
     expect(material.emissiveIntensity).toBe(HIGHLIGHT_INTENSITY);
@@ -163,22 +247,41 @@ describe("setHighlighted", () => {
     expect(material.customProgramCacheKey()).toBe(key);
     expect(material.version).toBe(version);
 
-    expect(setHighlighted(material, true)).toBe(false);
+    expect(setHighlighted(material, new Color(HIGHLIGHT_COLOUR))).toBe(false);
 
-    expect(setHighlighted(material, false)).toBe(true);
+    expect(setHighlighted(material, null)).toBe(true);
     expect(isHighlighted(material)).toBe(false);
     expect(material.emissive.getHexString()).toBe("102030");
     expect(material.emissiveIntensity).toBe(0.2);
     expect(material.color.getHexString()).toBe("d6a06a");
-    expect(setHighlighted(material, false)).toBe(false);
+    expect(setHighlighted(material, null)).toBe(false);
     // Copied into, never swapped: the material keeps its own Color objects.
     expect(material.color).toBe(color);
     expect(material.emissive).toBe(emissive);
   });
 
+  test("a theme change clears the old highlight colour and lights in the new one", () => {
+    const material = createLayerMaterial({
+      colour: "#d6a06a",
+      vertexColors: false,
+      uniforms: createLayerUniforms(0),
+    });
+    setHighlighted(material, new Color(BRAND_PALETTE.dark.ring));
+    expect(setHighlighted(material, null)).toBe(true);
+    expect(setHighlighted(material, new Color(BRAND_PALETTE.light.ring))).toBe(true);
+    expect(material.emissive.getHexString()).toBe("1c4e8f");
+    expect(
+      material.color.equals(
+        new Color("#d6a06a").lerp(new Color(BRAND_PALETTE.light.ring), HIGHLIGHT_TINT),
+      ),
+    ).toBe(true);
+    setHighlighted(material, null);
+    expect(material.color.getHexString()).toBe("d6a06a");
+  });
+
   test("leaves materials without an emissive term alone", () => {
     const basic = new MeshBasicMaterial();
-    expect(setHighlighted(basic, true)).toBe(false);
+    expect(setHighlighted(basic, new Color(HIGHLIGHT_COLOUR))).toBe(false);
     expect(isHighlighted(basic)).toBe(false);
   });
 
@@ -189,9 +292,9 @@ describe("setHighlighted", () => {
       vertexColors: false,
       uniforms,
     });
-    setHighlighted(material, true);
-    expect(setBlendMode(material, "hash")).toBe(true);
-    expect(material.alphaHash).toBe(true);
+    setHighlighted(material, new Color(HIGHLIGHT_COLOUR));
+    expect(setBlendMode(material, "fade")).toBe(true);
+    expect(material.transparent).toBe(true);
     expect(material.emissive.getHexString()).toBe(HIGHLIGHT_COLOUR.slice(1));
   });
 });

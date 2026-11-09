@@ -5,7 +5,6 @@ import { usePathname, useRouter } from "next/navigation";
 import posthog from "posthog-js";
 import { type KeyboardEvent, type ReactNode, useEffect, useState } from "react";
 
-import { threadExportHref } from "@/infrastructure/shell-links";
 import { useThreadHistory } from "@/infrastructure/thread-history-store";
 import { Button, buttonClassName } from "@/infrastructure/ui-kit/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/infrastructure/ui-kit/popover";
@@ -13,6 +12,11 @@ import { isSoftHidden } from "@/infrastructure/ui-kit/soft-delete";
 import { UndoButton } from "@/infrastructure/ui-kit/undo-button";
 import { useSoftDelete } from "@/infrastructure/ui-kit/use-soft-delete";
 
+import {
+  type ExportPick,
+  ExportNoticeDialog,
+  useExportNotice,
+} from "./export-notice-dialog";
 import { CopyGlyph, DownloadGlyph, MoreGlyph, TickGlyph } from "./glyphs";
 import { menuFocusIndex } from "./menu-focus";
 import { threadCrumb, threadSection } from "./thread-crumb";
@@ -21,7 +25,7 @@ import { useThreadTitle } from "./thread-title";
 /**
  * The slim row at the top of a saved thread: where it belongs and its title
  * ("Chat / …", "Twin / …"), a button that copies
- * its address, a link that downloads it as Markdown and Delete. Other pages
+ * its address, PDF and Download (each behind the export notice, #531) and Delete. Other pages
  * have no bar; their own heading leads.
  *
  * Below the `md` breakpoint the four actions fold into one menu (#378).
@@ -79,32 +83,34 @@ const CopyLinkButton = ({ className = PILL }: Readonly<{ className?: string }>) 
   );
 };
 
+/**
+ * PDF and Download open the export notice first (#531,
+ * `export-notice-dialog.tsx`); the file is made only after its Download.
+ */
 const ExportLinks = ({
-  threadId,
   className = PILL,
   onPick,
-}: Readonly<{ threadId: string; className?: string; onPick?: () => void }>) => (
+}: Readonly<{ className?: string; onPick: (pick: ExportPick) => void }>) => (
   <>
-    <a
-      href={threadExportHref(threadId, "print")}
-      target="_blank"
-      rel="noopener"
-      title="Open this thread for printing or saving as PDF."
-      className={buttonClassName({ variant: "pill", size: "sm", className })}
-      onClick={onPick}
+    <Button
+      variant="pill"
+      size="sm"
+      title="Open this thread for printing or saving as PDF, after a check of what it holds."
+      className={className}
+      onClick={() => onPick("print")}
     >
       <span>PDF</span>
-    </a>
-    <a
-      href={threadExportHref(threadId)}
-      download
-      title="Download this thread as Markdown: prompts, lookups and answers."
-      className={buttonClassName({ variant: "pill", size: "sm", className })}
-      onClick={onPick}
+    </Button>
+    <Button
+      variant="pill"
+      size="sm"
+      title="Download this thread as Markdown (prompts, lookups and answers), after a check of what it holds."
+      className={className}
+      onClick={() => onPick("markdown")}
     >
       <DownloadGlyph className="size-3.5" />
       <span>Download</span>
-    </a>
+    </Button>
   </>
 );
 
@@ -144,6 +150,7 @@ const ThreadActions = ({
   const [open, setOpen] = useState(false);
   const busy = remove?.busy ?? false;
   const close = () => setOpen(false);
+  const notice = useExportNotice(threadId);
 
   const moveFocus = (event: KeyboardEvent<HTMLDivElement>) => {
     const items = focusables(event.currentTarget);
@@ -157,7 +164,7 @@ const ThreadActions = ({
   return (
     <>
       <div className="hidden shrink-0 items-center gap-3 md:flex">
-        <ExportLinks threadId={threadId} />
+        <ExportLinks onPick={notice.pick} />
         <CopyLinkButton />
         {remove?.button(PILL)}
         {remove?.error}
@@ -183,13 +190,24 @@ const ThreadActions = ({
               focusables(event.currentTarget)[0]?.focus();
             }}
           >
-            <ExportLinks threadId={threadId} className={MENU_ITEM} onPick={close} />
+            <ExportLinks
+              className={MENU_ITEM}
+              onPick={(pick) => {
+                close();
+                notice.pick(pick);
+              }}
+            />
             <CopyLinkButton className={MENU_ITEM} />
             {remove?.button(MENU_ITEM)}
             {remove?.error}
           </PopoverContent>
         </Popover>
       </div>
+      <ExportNoticeDialog
+        threadId={threadId}
+        state={notice.state}
+        onClose={notice.close}
+      />
     </>
   );
 };
