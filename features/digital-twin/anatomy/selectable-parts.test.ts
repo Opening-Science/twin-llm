@@ -15,6 +15,7 @@ import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.j
 import { ATLAS_IDS, ATLASES, type AtlasId } from "@/packages/anatomy/manifest";
 
 import { isSelectable } from "../environment/pick-part";
+import { depthPrepassOf, isDepthPrepass } from "./depth-prepass";
 import { prepareAtlas, type PreparedAtlas } from "./prepare-atlas";
 
 /**
@@ -43,7 +44,8 @@ const node = (extras: Record<string, unknown>, name: string): Mesh => {
 const meshesIn = (root: Object3D): readonly Mesh[] => {
   const found: Mesh[] = [];
   root.traverse((object) => {
-    if ((object as Mesh).isMesh) found.push(object as Mesh);
+    // A part's depth-only twin draws no colour and takes no pick.
+    if ((object as Mesh).isMesh && !isDepthPrepass(object)) found.push(object as Mesh);
   });
   return found;
 };
@@ -57,6 +59,9 @@ const audit = (prepared: PreparedAtlas) => {
       .map((mesh) => mesh.name),
     notSelectable: prepared.parts
       .filter((part) => !isSelectable(part, prepared.groups))
+      .map((part) => part.name),
+    withoutPrepass: prepared.parts
+      .filter((part) => depthPrepassOf(part.mesh) === null)
       .map((part) => part.name),
   };
 };
@@ -88,7 +93,11 @@ describe("every atlas mesh is selectable", () => {
       ["VH_M_minor_calyx_R_a", "minorcalyx", "metabolic"],
       ["VH_M_new", "somethingnew", "unassigned"],
     ]);
-    expect(audit(prepared)).toEqual({ notRegistered: [], notSelectable: [] });
+    expect(audit(prepared)).toEqual({
+      notRegistered: [],
+      notSelectable: [],
+      withoutPrepass: [],
+    });
   });
 
   test("BodyParts3D: every system mesh, and an unknown one by its name", () => {
@@ -107,7 +116,11 @@ describe("every atlas mesh is selectable", () => {
       "nervousorgan",
       "mystery",
     ]);
-    expect(audit(prepared)).toEqual({ notRegistered: [], notSelectable: [] });
+    expect(audit(prepared)).toEqual({
+      notRegistered: [],
+      notSelectable: [],
+      withoutPrepass: [],
+    });
   });
 });
 
@@ -133,7 +146,11 @@ describe("every mesh of the installed atlases is selectable", () => {
       id,
       async () => {
         const prepared = prepareAtlas(await loadPinned(id), ATLASES[id]);
-        expect(audit(prepared)).toEqual({ notRegistered: [], notSelectable: [] });
+        expect(audit(prepared)).toEqual({
+          notRegistered: [],
+          notSelectable: [],
+          withoutPrepass: [],
+        });
       },
       60_000,
     );

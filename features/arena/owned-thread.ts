@@ -35,6 +35,8 @@ export type StoredThread = Readonly<{
     scheduled?: boolean;
     /** The skill the person sent the turn with; null for Auto, agents and plain prompts. */
     skill?: string | null;
+    /** A starter question's short text, shown instead of the prompt (#506). */
+    label?: string | null;
     responses: readonly SavedResponseRow[];
   }>[];
 }>;
@@ -89,6 +91,8 @@ export const loadOwnedThread = async (
         // Only what the person chose; a skill Auto or an agent ran under is
         // named on its answer, not on the prompt (#479).
         skill: turn.skill ?? null,
+        // The bubble shows the starter's short text; the model got the prompt (#506).
+        ...(turn.label ? { label: turn.label } : {}),
         ...(turn.scheduled === true ? { scheduled: true } : {}),
         answers,
       };
