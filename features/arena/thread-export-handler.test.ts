@@ -9,7 +9,9 @@ import {
   EXPORT_GENOME_IDS_BLOCKED,
   EXPORT_NOT_RECORDED,
   exportFormat,
+  type ExportFormat,
 } from "./thread-export-handler";
+import { EXPORT_UNCONFIRMED, type ExportStep, parseExportNotice } from "./export-notice";
 import type { ExportableThread } from "./thread-markdown";
 
 const THREAD: ExportableThread = { title: "What was their latest HbA1c?", turns: [] };
@@ -30,7 +32,7 @@ const handler = (
   const audits: AppendInput[] = [];
   const disclosures: Disclosure[] = [];
   const checked: { actor: string; typed: readonly string[]; text: string }[] = [];
-  const run = createThreadExportHandler({
+  const exportThread = createThreadExportHandler({
     freeTextChecker: (actor, typed) => async (text) => {
       checked.push({ actor, typed, text });
       return options.check === undefined ? NOTHING_FOUND : options.check(text);
@@ -51,6 +53,12 @@ const handler = (
     dataMode: () => "personal",
     today: () => "2026-10-28",
   });
+  /** The confirmed request unless a test asks for another step. */
+  const run = (
+    threadId: string,
+    format: ExportFormat = "markdown",
+    step: ExportStep = "confirmed",
+  ) => exportThread(threadId, format, step);
   return { run, audits, disclosures, checked };
 };
 
@@ -283,18 +291,18 @@ describe("the free text check of an export (#531)", () => {
     expect(audits).toEqual([]);
   });
 
-  test("on a local-only app the same file is made and the find is recorded", async () => {
+  test("on a local-only app the person's own rsIDs withhold the file too", async () => {
     const { run, disclosures } = handler(LAB_THREAD, {
       local: true,
       check: found({ kind: "rsID", count: 1 }),
     });
-    expect((await run("t1")).status).toBe(200);
+    expect((await run("t1")).status).toBe(403);
     expect(disclosures.map((row) => [row.direction, row.freeText])).toEqual([
-      [undefined, { matches: [{ kind: "rsID", count: 1 }] }],
+      ["blocked", { matches: [{ kind: "rsID", count: 1 }] }],
     ]);
   });
 
-  test("a failed check is recorded as not checked; genome-shaped text is withheld off this machine", async () => {
+  test("a failed check is recorded as not checked; genome-shaped text is withheld", async () => {
     const fails = async (): Promise<FreeTextCheck> => {
       throw new Error("vault locked");
     };
@@ -318,5 +326,72 @@ describe("the free text check of an export (#531)", () => {
     const response = await run("t1");
     expect(response.status).toBe(403);
     expect(await response.text()).toBe(EXPORT_GENOME_IDS_BLOCKED);
+  });
+});
+
+describe("the notice before an export (#531)", () => {
+  test("a request that skipped the notice reads nothing and makes nothing", async () => {
+    const { run, audits, disclosures, checked } = handler(LAB_THREAD);
+    const response = await run("t1", "markdown", "unconfirmed");
+    expect(response.status).toBe(428);
+    expect(response.headers.get("Content-Disposition")).toBe(null);
+    expect(await response.text()).toBe(EXPORT_UNCONFIRMED);
+    expect([audits.length, disclosures.length, checked.length]).toEqual([0, 0, 0]);
+  });
+
+  test("the check answers one line of kinds and counts; nothing leaves, so no ledger row", async () => {
+    const { run, audits, disclosures } = handler(LAB_THREAD, {
+      check: found(
+        { kind: "lab value", count: 2 },
+        { kind: "clinical record", count: 1 },
+      ),
+    });
+    const response = await run("t1", "markdown", "check");
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Content-Disposition")).toBe(null);
+    expect(parseExportNotice(await response.json())).toEqual({
+      status: "ready",
+      line: "This export contains: 2 lab values, 1 clinical record. Download anyway?",
+    });
+    expect(disclosures).toEqual([]);
+    expect(audits.map((audit) => [audit.tool, audit.args, audit.result])).toEqual([
+      [
+        "thread.export.check",
+        { format: "markdown" },
+        {
+          checked: true,
+          freeText: [
+            { kind: "lab value", count: 2 },
+            { kind: "clinical record", count: 1 },
+          ],
+        },
+      ],
+    ]);
+    expect(JSON.stringify(audits)).not.toContain("195");
+  });
+
+  test("the check of a print export says the same; nothing found says so", async () => {
+    const { run } = handler(THREAD);
+    expect(parseExportNotice(await (await run("t1", "print", "check")).json())).toEqual({
+      status: "ready",
+      line: "No stored values were found in this export. Download it?",
+    });
+  });
+
+  test("a check that finds the person's own rsIDs is refused with the sentence and recorded blocked", async () => {
+    const { run, disclosures } = handler(LAB_THREAD, {
+      local: true,
+      check: found({ kind: "rsID", count: 1 }),
+    });
+    expect(
+      parseExportNotice(await (await run("t1", "markdown", "check")).json()),
+    ).toEqual({ status: "refused", line: EXPORT_GENOME_IDS_BLOCKED });
+    expect(disclosures.map((row) => row.direction)).toEqual(["blocked"]);
+  });
+
+  test("a genome thread off this machine is refused at the check", async () => {
+    const { run } = handler(GENOME_THREAD, { local: false });
+    const notice = parseExportNotice(await (await run("t1", "markdown", "check")).json());
+    expect(notice?.status).toBe("refused");
   });
 });

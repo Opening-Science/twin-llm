@@ -688,16 +688,24 @@ recipient.
   are not checked (they have their own query check).
 - **Exports and remote embeddings** (#531). A thread export (Markdown, FHIR or print)
   checks the thread's Markdown, the same text in every format, with the person's own
-  questions as `typed`; the `export-file` row and its paired `thread.export` audit row
-  record kinds and counts. A guideline or knowledge search query sent to an Ollama on
-  another machine is checked as a hosted-model request is (`recordCheckedRequest` in
-  `infrastructure/disclosure-ledger.ts`, which `modelCallFetch` uses too). Thread search
+  questions as `typed`. The person sees what was found before any file is made: PDF and
+  Download first ask for `?check=1`, which answers one line ("This export contains: 2
+  lab values. Download anyway?") with Download and Cancel, audited as
+  `thread.export.check` with kinds and counts; nothing leaves, so it writes no ledger
+  row. Only Download sends `?confirm=1`, which checks again, writes the `export-file` row
+  and its paired `thread.export` audit row with kinds and counts, and makes the file; a
+  request with neither is refused before anything is read. Cancel writes nothing, since
+  nothing left. The person's own rsIDs and genome sites (#356) give no file on a
+  local-only app too: the notice shows the fixed sentence with Close only and the row is
+  `blocked`. A guideline or knowledge search query sent to an Ollama on another machine
+  is checked as a hosted-model request is (`recordCheckedRequest` in
+  `infrastructure/disclosure-ledger.ts`, which `modelCallFetch` uses too). The query is
+  written by the model, so no text counts as typed: a value the person typed and the
+  query repeats is counted, the more conservative choice. Thread search
   embeds on loopback only (`requireLoopback`), and the document embeddings of guideline,
   knowledge and literature ingest are of public or shipped texts run by hand, so neither
   is checked. The Lab's CSV and FHIR downloads, the rating export and the Synthea zip
-  hold synthetic or evaluation data and are not checked. _Not built:_ a notice on the
-  export of what the check found; the row records it, the person does not see it before
-  the download.
+  hold synthetic or evaluation data and are not checked.
 - **Blocking genome identifiers** (#356, option C). When the check finds an rsID or a
   genome site that the person's VCFs hold, the request is not sent: `modelCallFetch`
   writes the row with direction `blocked` (the paired audit row's result says `blocked`

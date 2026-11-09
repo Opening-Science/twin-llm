@@ -20,6 +20,12 @@ import { readableTitle } from "@/infrastructure/readable-title";
 import type { AppendInput } from "@/packages/audit/append";
 
 import {
+  EXPORT_UNCONFIRMED,
+  type ExportNotice,
+  exportNoticeLine,
+  type ExportStep,
+} from "./export-notice";
+import {
   exportFileName,
   type ExportableThread,
   threadDocumentReference,
@@ -44,13 +50,18 @@ import { threadPrintHtml } from "./thread-print";
  * transaction, before the file is returned. If that write fails there is no
  * file.
  *
- * The thread's Markdown (the same text in every format) is checked for the
- * person's stored values first, as a hosted model's request is (#531): the
- * row and its audit row record kinds and counts, never values. The questions
- * the person typed are theirs to share and their values are not counted
- * (`freeTextCheckerFor`). When the check finds their own rsIDs or genome
- * sites and the app is not served to this machine only, there is no file:
- * the row is written as `blocked` and the person reads a fixed sentence.
+ * Two requests make an export (#531). `?check=1` checks the thread's Markdown
+ * (the same text in every format) for the person's stored values, as a hosted
+ * model's request is, and answers one line for the notice
+ * (`export-notice.ts`), audited as `thread.export.check` with kinds and
+ * counts; nothing leaves. `?confirm=1`, sent when the person chooses
+ * Download, checks again and makes the file, its ledger row and audit row
+ * recording kinds and counts, never values. A request with neither is refused
+ * before anything is read. The questions the person typed are theirs to share
+ * and their values are not counted (`freeTextCheckerFor`). When the check
+ * finds their own rsIDs or genome sites (#356), on a local-only app too,
+ * there is no file: the row is written as `blocked` and the person reads a
+ * fixed sentence.
  */
 export type ThreadExportDeps = Readonly<{
   /** The thread when the signed-in viewer owns it, else null. */
@@ -67,6 +78,7 @@ export type ThreadExportDeps = Readonly<{
 }>;
 
 export const THREAD_EXPORT_AUDIT_TOOL = "thread.export" as const;
+export const THREAD_EXPORT_CHECK_AUDIT_TOOL = "thread.export.check" as const;
 
 export type ExportFormat = "markdown" | "fhir" | "print";
 
@@ -80,7 +92,7 @@ export const EXPORT_NOT_RECORDED =
 
 /** What the person reads when an export held their own genome identifiers (#531). Fixed text. */
 export const EXPORT_GENOME_IDS_BLOCKED =
-  "This thread holds identifiers from your genome, so no file was made. It can be exported while the app is served to this machine only.";
+  "This thread holds identifiers from your genome, so no file was made.";
 
 /** What an export file holds: the questions and answers, and tool results when any ran. */
 export const exportDisclosure = (
@@ -123,28 +135,161 @@ const usesGenome = (thread: ExportableThread): boolean =>
       turn.answers.some((answer) => toolPartsUseGenome(answer.tools ?? [])),
   );
 
-/**
- * The free text check of an export (#531): what it found, and whether the
- * file is withheld. Withheld only by the hosted-model rule (#356), and only
- * when the file can leave this machine; on a local-only app it is recorded.
- */
-const exportCheck = async (
+const errorName = (error: unknown): string =>
+  error instanceof Error ? error.name : "unknown";
+
+const freeTextResult = (freeText: FreeTextCheck | undefined) =>
+  freeText === undefined
+    ? {}
+    : { freeText: freeText.matches.map((match) => ({ ...match })) };
+
+const noticeResponse = (notice: ExportNotice): Response =>
+  Response.json(notice, { headers: NO_STORE });
+
+const fileResponse = (
+  thread: ExportableThread,
+  format: ExportFormat,
+  body: string,
+): Response => {
+  if (format === "print") {
+    return new Response(body, {
+      headers: { "Content-Type": "text/html; charset=utf-8", ...NO_STORE },
+    });
+  }
+  const fileName = exportFileName(thread.title);
+  return new Response(body, {
+    headers: {
+      "Content-Type":
+        format === "fhir"
+          ? "application/fhir+json; charset=utf-8"
+          : "text/markdown; charset=utf-8",
+      "Content-Disposition": `attachment; filename="${
+        format === "fhir" ? fileName.replace(/\.md$/, ".fhir.json") : fileName
+      }"`,
+      ...NO_STORE,
+    },
+  });
+};
+
+/** One export, made and checked, before anything is recorded or returned. */
+type Prepared = Readonly<{
+  thread: ExportableThread;
+  actor: string;
+  threadId: string;
+  format: ExportFormat;
+  body: string;
+  row: Disclosure;
+  blocked: boolean;
+  freeText?: FreeTextCheck;
+}>;
+
+const prepare = async (
   deps: ThreadExportDeps,
   thread: ExportableThread,
-  actor: string,
-  markdown: string,
-): Promise<Readonly<{ blocked: boolean; freeText?: FreeTextCheck }>> => {
+  call: Readonly<{ actor: string; threadId: string; format: ExportFormat }>,
+): Promise<Prepared> => {
+  const markdown = threadMarkdown(thread, formatDate(deps.today()));
+  const body =
+    call.format === "fhir"
+      ? JSON.stringify(threadDocumentReference(thread, markdown, deps.today()), null, 2)
+      : call.format === "print"
+        ? threadPrintHtml(markdown, readableTitle(thread.title))
+        : markdown;
   const checker = deps.freeTextChecker(
-    actor,
+    call.actor,
     thread.turns.map((turn) => turn.prompt),
   );
-  const decision = sendDecision(await checkRequestText(checker, markdown));
-  return { ...decision, blocked: decision.blocked && !deps.recipientIsLocal() };
+  // Withheld by the hosted-model rule (#356) only, on a local-only app too.
+  const { blocked, freeText } = sendDecision(await checkRequestText(checker, markdown));
+  const checked = freeText === undefined ? {} : { freeText };
+  const row: Disclosure = {
+    ...exportDisclosure(thread, {
+      ...call,
+      bytes: Buffer.byteLength(body, "utf8"),
+      mode: deps.dataMode(),
+    }),
+    ...checked,
+  };
+  return { ...call, thread, body, row, blocked, ...checked };
+};
+
+/** A blocked export: its row is written as `blocked`; nothing is made (#356). */
+const blockedExport = async (
+  deps: ThreadExportDeps,
+  prepared: Prepared,
+  step: "check" | "confirmed",
+): Promise<Response> => {
+  // No file either way; a row that cannot be written is only logged.
+  await deps
+    .recordDisclosure({ ...prepared.row, direction: "blocked" })
+    .catch((error: unknown) => {
+      console.error("[export] blocked export not recorded", errorName(error));
+    });
+  return step === "check"
+    ? noticeResponse({ status: "refused", line: EXPORT_GENOME_IDS_BLOCKED })
+    : new Response(EXPORT_GENOME_IDS_BLOCKED, { status: 403, headers: NO_STORE });
+};
+
+/** The check before the file (#531): one line, audited with kinds and counts. Nothing leaves. */
+const checkedNotice = async (
+  deps: ThreadExportDeps,
+  prepared: Prepared,
+): Promise<Response> => {
+  await deps.appendAudit({
+    actor: prepared.actor,
+    sessionId: prepared.threadId,
+    subjectRef: null,
+    tool: THREAD_EXPORT_CHECK_AUDIT_TOOL,
+    args: { format: prepared.format },
+    result: {
+      checked: prepared.freeText !== undefined,
+      ...freeTextResult(prepared.freeText),
+    },
+    rowCount: prepared.thread.turns.length,
+  });
+  return noticeResponse({ status: "ready", line: exportNoticeLine(prepared.freeText) });
+};
+
+/** The confirmed export: its row and `thread.export` audit row, then the file. */
+const confirmedExport = async (
+  deps: ThreadExportDeps,
+  prepared: Prepared,
+): Promise<Response> => {
+  const { thread, actor, threadId, format, body, row, freeText } = prepared;
+  const recorded = await deps
+    .recordDisclosure(row, {
+      actor,
+      sessionId: threadId,
+      subjectRef: null,
+      tool: THREAD_EXPORT_AUDIT_TOOL,
+      // The audit log keeps only hashes of these; the content itself is never logged.
+      args: { format },
+      result: { bytes: body.length, ...freeTextResult(freeText) },
+      rowCount: thread.turns.reduce((sum, turn) => sum + turn.answers.length, 0),
+    })
+    .then(
+      () => true,
+      (error: unknown) => {
+        console.error(
+          "[export] the disclosure ledger could not be written",
+          errorName(error),
+        );
+        return false;
+      },
+    );
+  if (!recorded) {
+    return new Response(EXPORT_NOT_RECORDED, { status: 500, headers: NO_STORE });
+  }
+  return fileResponse(thread, format, body);
 };
 
 export const createThreadExportHandler =
   (deps: ThreadExportDeps) =>
-  async (threadId: string, format: ExportFormat = "markdown"): Promise<Response> => {
+  async (threadId: string, format: ExportFormat, step: ExportStep): Promise<Response> => {
+    // Nothing is read for a request that skipped the notice.
+    if (step === "unconfirmed") {
+      return new Response(EXPORT_UNCONFIRMED, { status: 428, headers: NO_STORE });
+    }
     const thread = await deps.loadOwnedThread(threadId);
     const actor = await deps.actorId();
     if (thread === null || actor === null) {
@@ -164,84 +309,13 @@ export const createThreadExportHandler =
           tool: GENOME_THREAD_EXPORT_REFUSED_AUDIT_TOOL,
         }),
       );
-      return new Response(GENOME_THREAD_SENTENCE, { status: 403, headers: NO_STORE });
+      return step === "check"
+        ? noticeResponse({ status: "refused", line: GENOME_THREAD_SENTENCE })
+        : new Response(GENOME_THREAD_SENTENCE, { status: 403, headers: NO_STORE });
     }
-
-    const markdown = threadMarkdown(thread, formatDate(deps.today()));
-    const body =
-      format === "fhir"
-        ? JSON.stringify(threadDocumentReference(thread, markdown, deps.today()), null, 2)
-        : format === "print"
-          ? threadPrintHtml(markdown, readableTitle(thread.title))
-          : markdown;
-    const { blocked, freeText } = await exportCheck(deps, thread, actor, markdown);
-    const row: Disclosure = {
-      ...exportDisclosure(thread, {
-        actor,
-        threadId,
-        format,
-        bytes: Buffer.byteLength(body, "utf8"),
-        mode: deps.dataMode(),
-      }),
-      ...(freeText === undefined ? {} : { freeText }),
-    };
-    if (blocked) {
-      // No file either way; a row that cannot be written is only logged.
-      await deps
-        .recordDisclosure({ ...row, direction: "blocked" })
-        .catch((error: unknown) => {
-          console.error(
-            "[export] blocked export not recorded",
-            error instanceof Error ? error.name : "unknown",
-          );
-        });
-      return new Response(EXPORT_GENOME_IDS_BLOCKED, { status: 403, headers: NO_STORE });
-    }
-    const recorded = await deps
-      .recordDisclosure(row, {
-        actor,
-        sessionId: threadId,
-        subjectRef: null,
-        tool: THREAD_EXPORT_AUDIT_TOOL,
-        // The audit log keeps only hashes of these; the content itself is never logged.
-        args: { format },
-        result: {
-          bytes: body.length,
-          ...(freeText === undefined
-            ? {}
-            : { freeText: freeText.matches.map((match) => ({ ...match })) }),
-        },
-        rowCount: thread.turns.reduce((sum, turn) => sum + turn.answers.length, 0),
-      })
-      .then(
-        () => true,
-        (error: unknown) => {
-          console.error(
-            "[export] the disclosure ledger could not be written",
-            error instanceof Error ? error.name : "unknown",
-          );
-          return false;
-        },
-      );
-    if (!recorded) {
-      return new Response(EXPORT_NOT_RECORDED, { status: 500, headers: NO_STORE });
-    }
-    if (format === "print") {
-      return new Response(body, {
-        headers: { "Content-Type": "text/html; charset=utf-8", ...NO_STORE },
-      });
-    }
-    const fileName = exportFileName(thread.title);
-    return new Response(body, {
-      headers: {
-        "Content-Type":
-          format === "fhir"
-            ? "application/fhir+json; charset=utf-8"
-            : "text/markdown; charset=utf-8",
-        "Content-Disposition": `attachment; filename="${
-          format === "fhir" ? fileName.replace(/\.md$/, ".fhir.json") : fileName
-        }"`,
-        ...NO_STORE,
-      },
-    });
+    const prepared = await prepare(deps, thread, { actor, threadId, format });
+    if (prepared.blocked) return blockedExport(deps, prepared, step);
+    return step === "check"
+      ? checkedNotice(deps, prepared)
+      : confirmedExport(deps, prepared);
   };

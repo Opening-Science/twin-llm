@@ -461,7 +461,7 @@ const PERSONAL_READ_ROUTES: Readonly<Record<string, Entry>> = {
         freeTextChecker: () => async () => ({ matches: [] }),
         dataMode: () => "personal",
         today: () => "2026-10-28",
-      })("thread-synthetic-1"),
+      })("thread-synthetic-1", "markdown", "confirmed"),
   },
   "DELETE /api/threads/[threadId]": { kind: "exempt", why: WRITE },
   "POST /api/memory/compact": {
