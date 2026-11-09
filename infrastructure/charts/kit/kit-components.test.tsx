@@ -1077,3 +1077,17 @@ describe("hypnogram options", () => {
     expect(custom).toContain(">Light sleep<");
   });
 });
+
+test("a radar with inverted axes says so under itself, and only then", () => {
+  const axes = [
+    { label: "Resting", value: 58, display: "58 bpm", min: 50, max: 66, inverted: true },
+    { label: "Walking", value: 96, display: "96 bpm", min: 80, max: 110 },
+    { label: "HRV", value: 47, display: "47 ms", min: 30, max: 60 },
+  ];
+  expect(html(<Radar category="heart" axes={axes} />)).toContain(
+    "For resting, further out means lower.",
+  );
+  expect(
+    html(<Radar category="heart" axes={axes.map((a) => ({ ...a, inverted: false }))} />),
+  ).not.toContain("further out");
+});
