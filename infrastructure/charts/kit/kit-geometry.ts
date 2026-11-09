@@ -1018,3 +1018,21 @@ export const weekStep = (
     .sort((a, b) => (down ? a.c.row - b.c.row : b.c.row - a.c.row));
   return { kind: "move", index: candidates[0]?.i ?? current };
 };
+
+/**
+ * The shape of a typical day's running total, for an empty C05 with no
+ * usual day to outline yet: little at night, most in the day. A shape, not
+ * data: it has no scale and is never drawn as a value.
+ */
+export const PLACEHOLDER_DAY: readonly DaySample[] = Array.from(
+  { length: 25 },
+  (_, i) => {
+    const at = i / 24;
+    const share = (x: number): number => 1 / (1 + Math.exp(-10 * (x - 0.55)));
+    return { at, value: (share(at) - share(0)) / (share(1) - share(0)) };
+  },
+);
+
+/** The curve an empty C05 outlines: the usual day when there is one, else the placeholder. */
+export const emptyDayOutline = (average: readonly DaySample[]): readonly DaySample[] =>
+  average.filter((s) => finite(s.value)).length >= 2 ? average : PLACEHOLDER_DAY;

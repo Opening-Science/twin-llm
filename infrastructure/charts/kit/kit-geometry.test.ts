@@ -4,6 +4,7 @@ import {
   barsWithLine,
   cumulativeDay,
   edgeAnchor,
+  emptyDayOutline,
   estimateLayout,
   estimateRows,
   exactDecimals,
@@ -12,6 +13,7 @@ import {
   log2Ticks,
   monthShares,
   nullBand,
+  PLACEHOLDER_DAY,
   nullFigure,
   axisShare,
   radar,
@@ -748,5 +750,27 @@ describe("week step", () => {
     expect(weekStep("ArrowDown", null, cells)).toEqual({ kind: "move", index: 0 });
     expect(weekStep("ArrowUp", null, cells)).toEqual({ kind: "move", index: 27 });
     expect(weekStep("ArrowRight", 2, cells)).toBeNull();
+  });
+});
+
+describe("empty day outline", () => {
+  const usual = [
+    { at: 0, value: 0 },
+    { at: 1, value: 8000 },
+  ];
+
+  test("the usual day when there is one", () => {
+    expect(emptyDayOutline(usual)).toBe(usual);
+  });
+
+  test("a placeholder shape when there is none, rising from 0 to 1 over the day", () => {
+    for (const none of [[], [{ at: 0.5, value: 3 }]]) {
+      const out = emptyDayOutline(none);
+      expect(out).toBe(PLACEHOLDER_DAY);
+    }
+    expect(PLACEHOLDER_DAY[0]!.value).toBeCloseTo(0);
+    expect(PLACEHOLDER_DAY.at(-1)!.value).toBeCloseTo(1);
+    const values = PLACEHOLDER_DAY.map((s) => s.value);
+    expect(values.every((v, i) => i === 0 || v >= values[i - 1]!)).toBe(true);
   });
 });

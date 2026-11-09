@@ -1179,3 +1179,26 @@ describe("research figure axes", () => {
     expect(summary).toMatch(/>0\.\d0</);
   });
 });
+
+test("an empty day with no usual day yet still outlines a day, never a blank", () => {
+  const out = html(
+    <CumulativeDay category="steps" state="empty" today={[]} average={[]} now={0} />,
+  );
+  const outline = /<path d="(M[^"]+)"[^>]*stroke-dasharray="2 6"/.exec(out);
+  expect(outline?.[1]?.split("L").length).toBeGreaterThan(20);
+  // The placeholder is half as strong as a real usual day's outline.
+  expect(out).toContain('stroke-opacity="0.5"');
+  const usual = html(
+    <CumulativeDay
+      category="steps"
+      state="empty"
+      today={[]}
+      average={[
+        { at: 0, value: 0 },
+        { at: 1, value: 8000 },
+      ]}
+      now={0}
+    />,
+  );
+  expect(usual).not.toContain('stroke-opacity="0.5"');
+});
