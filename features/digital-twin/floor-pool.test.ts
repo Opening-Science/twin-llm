@@ -18,8 +18,8 @@ describe("floor pool", () => {
     expect(floorPoolPlacement(new Box3())).toBeNull();
   });
 
-  test("tint follows the theme", () => {
+  test("the shadow is black in both themes; only its strength follows the theme", () => {
     expect(floorPoolTint(true)).toEqual({ color: 0x000000, opacity: 0.55 });
-    expect(floorPoolTint(false)).toEqual({ color: 0x334155, opacity: 0.22 });
+    expect(floorPoolTint(false)).toEqual({ color: 0x000000, opacity: 0.22 });
   });
 });

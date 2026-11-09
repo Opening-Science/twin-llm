@@ -38,7 +38,6 @@ To bump a pin: download the new file, record its bytes and SHA-256 in `packages/
 
 - `GET /api/anatomy/status`: `{ atlases: [{ id, installed }] }`, `no-store`. Installed means present at exactly the pinned size.
 - `GET /api/anatomy/demo/:bodyId`: a demo body GLB, same caching, ETag and 404 rules as the atlas route.
-- `GET /api/anatomy/fitted/:fittedId` (`<body>.<atlas>`, e.g. `anny-adult-f.hra-f`): an atlas refitted to a rigged demo body in Blender, same rules, its own pins (see "Fitted atlas in the viewer"). The status also lists `fittedAtlases: [{ id, installed }]` and `fittedAtlasOn`.
 - `GET /api/anatomy/atlas/:atlasId`: the GLB. With `?v=<first 16 hex of the SHA-256>` it is `public, max-age=31536000, immutable`; otherwise `public, max-age=0, must-revalidate`. ETag is the SHA-256; a matching `If-None-Match` returns 304. A missing or partial file is a JSON 404 that says how to install it. Unknown ids are 404 and never reach the file system.
 
 Atlases are public CC BY files from a closed list, not personal data, so the routes need no audit row. They are not served from `public/`, which Next serves with `max-age=0`.
@@ -76,7 +75,7 @@ Measured on the pinned files (2026-10-13):
 
 - BodyParts3D nodes are classified by `extras.system` / `extras.layer` (bone and connective tissue count as skeleton). HRA nodes are classified by their organ-group key with a port of open-twin-xr's `hraGroups.ts` (MIT, `third_party/open-twin-xr/LICENSE`); the full-term placenta and the liver's duplicate Couinaud segments are hidden (HRA male spells one of them `left_superiomedial_segment`; it is hidden too).
 - The atlas skin is dropped: the scan is the envelope.
-- "Glass" is a Fresnel fade: faces turned towards the camera go nearly transparent, the silhouette stays. Atlas layers use alpha-hash dithering so nested layers keep correct depth; the scan uses real alpha blending.
+- "Glass" is a Fresnel fade: faces turned towards the camera go nearly transparent, the silhouette stays. Nothing is dithered. A glass atlas layer draws twice, after the opaque layers: first its meshes to depth only (`depth-prepass.ts`), then its colour, alpha-blended at the real alpha with depth test LessEqual and no depth writes, so each pixel shows only that layer's front-most surface. Glass layers draw inside out (organs, skeleton, muscle), each pre-pass right before its colour, and the scan's glass last. From fade 0.9 an atlas layer is rim-only: a sharper rim (exponent 3), so the faded muscle at Skeleton and the faded skeleton at Organs show as outlines. The scan uses plain alpha blending.
 - Per-layer toggles only hide; the slider alone decides solid versus glass. Organ-system chips filter the organ layer by system.
 - `prefers-reduced-motion` makes depth changes instant.
 
@@ -221,7 +220,6 @@ Blender is a build tool here, never part of the app. `scripts/blender/` holds Py
 bun run blender:self-check                 # both scripts on tiny synthetic meshes
 bun run blender:fit-atlas                  # every rigged demo body × atlas
 bun run blender:fit-atlas --body anny-adult-f --atlas hra-f --render-dir <dir> [--stretch]
-bun run anatomy:quantise-fitted            # the fitted files the viewer serves (below)
 bun run blender:cleanup                    # the damaged-ANNY demo below
 bun run blender:cleanup --in <glb> --out-dir <dir> [--lods 0.5,0.25] [--voxel 0.01]
 ```
@@ -276,27 +274,7 @@ Elbows and wrists (BodyParts3D only) land within 2.4 cm; shoulders are not moved
 - `--stretch` (opt-in) also scales each limb segment along its own axis so knee and ankle land on ANNY's: every knee and ankle then lands within 0.5 cm, with thighs 8 to 17 % shorter and shins 9 to 22 % longer (HRA female most) and forearms changed by −6 to +11 %. Each report lists its factors (`stretch`, all 1 by default).
 - `--render-dir` writes front renders (1440 × 1080, Eevee) before and after per pair: bones ivory, vessels red, ANNY as blue glass, ANNY's joints green, the atlas's magenta.
 
-### Fitted atlas in the viewer
-
-The Digital Twin can show the fitted atlas on the rigged demo bodies, behind an opt-in. By default it loads the pinned atlases with #518's stance, as before.
-
-- **Quantise.** Blender writes float positions without `KHR_mesh_quantization`. `bun run anatomy:quantise-fitted` (`scripts/blender/quantise-fitted.ts`, glTF-Transform and meshoptimizer, both MIT, dev dependencies) stores positions as 14-bit integers per mesh and colours as 8 bits, reorders vertices for meshopt and compresses with `EXT_meshopt_compression` without lossy filters; node names and extras are kept. It measures every vertex against Blender's: the worst moved 0.11 to 0.12 mm (it refuses anything over 1 mm). It reads Blender's output only when it matches the pinned `sourceSha256`, and writes `<body>.<atlas>.fitted.quantised.glb` (`.partial`, then rename) only when the bytes match the pin, so another Blender or encoder never shows silently. A second Blender fit (female × HRA male) and a second quantise of all six gave the same SHA-256.
-- **Pins** in `packages/anatomy/fitted-atlases.ts`, served by `GET /api/anatomy/fitted/:fittedId` with the other anatomy files' rules. Installed means present at exactly the pinned size, as for the atlases.
-
-| Body   | Atlas       | Blender (bytes) | Quantised (bytes) | Pinned atlas (bytes) | Quantised SHA-256                                                  |
-| ------ | ----------- | --------------- | ----------------- | -------------------- | ------------------------------------------------------------------ |
-| Male   | BodyParts3D | 15,936,512      | 9,726,548         | 10,333,316           | `65e803e0097fb977b7b089dd362e54a2168cfa79d8347ead2248de649d7368b7` |
-| Male   | HRA female  | 23,559,348      | 13,597,576        | 15,388,344           | `bc758cc2a933bcb05127264fb559cb935039e0e6dae082db82105f58af3a79ee` |
-| Male   | HRA male    | 12,284,868      | 7,630,324         | 8,489,716            | `f16bfdbea9e8ad88ebd236802732b4fd6a8f81f992eb3fb2ac970e5ff5d2be86` |
-| Female | BodyParts3D | 15,920,240      | 9,690,896         | 10,333,316           | `fc4174d8c1c6035e634d587cb11b6e374669dde7bfce73585d217fe5ef5f7b23` |
-| Female | HRA female  | 23,535,304      | 13,553,344        | 15,388,344           | `0fd52020d138c6b466e62e1f15bfc27fbcb1da17eb20f5f6a148a231ba593839` |
-| Female | HRA male    | 12,269,252      | 7,491,840         | 8,489,716            | `bc42a4a79fc872d2e2488882bed0ad48ef1008fc4e2f681f9e5a35d10430b23e` |
-
-- **Opt-in.** "Fit atlas to body" in the Anatomy panel, off by default; `ANATOMY_FITTED_ATLAS=true` starts it on. It shows only for a rigged demo body whose fitted file for the atlas shown is installed; otherwise it is hidden and nothing else changes. Ticked, with another atlas that has no fitted file, the usual fit shows. When to offer it is pure (`features/digital-twin/anatomy/fitted-option.ts`).
-- **Placement.** The file is in the rigged body's own frame, so it takes the body's world transform (the demo body's Rx(+90°)) instead of `fitAtlasToScan`'s scale and centring (`placeFittedAtlas`, `packages/anatomy/fit.ts`). It is refused, and the panel says the anatomy could not be fitted, when the file's height is not within 3% of the body's.
-- **Stance.** The fit was made on the unposed body, so `DEMO_STANCE` is 0° while it shows; unticking puts #518's stance back.
-- **Copy.** The fit note says the atlas was refitted to the demo body limb by limb in Blender, bones keeping their length, with the measured ankle and knee figures above, and that the body stands unposed. The credit keeps the atlas's own attribution and says "refitted limb by limb to this body in Blender by TwinLLM, bone lengths kept". The licence notes under "Licences" below apply to these files.
-- Not done: the scans are never refitted, and the fitted atlas does not follow the bones while a clip plays (it fades out like the pinned one).
+The app still loads the pinned atlases with #518's stance; the fitted files are not wired in. Wiring them in would need: a `fitted` variant per body and atlas in the anatomy store and routes, pinned by the SHA-256 in the report (or rebuilt with a fixed Blender and checked); placing the atlas with the body's own transform instead of `fitAtlasToScan`; no stance (`DEMO_STANCE` 0°) while it shows, since it is fitted to the bind pose; credits saying the atlas was refitted; and smaller files: Blender writes float positions without `KHR_mesh_quantization`, so the fitted files are 12 to 24 MB against 8 to 15 MB pinned.
 
 ### Mesh cleanup
 

@@ -71,6 +71,53 @@ describe("queryEmbedPorts (#140)", () => {
     ]);
   });
 
+  test("the query is checked for stored values; the row has kinds and counts (#531)", async () => {
+    const sent: string[] = [];
+    const rows: Disclosure[] = [];
+    const checked: string[] = [];
+    const wrapped = queryEmbedPorts(ports("http://gpu.internal.invalid:11434", sent), {
+      ...call(async (row) => rows.push(row)),
+      checkText: async (text) => {
+        checked.push(text);
+        return { matches: [{ kind: "lab value", count: 1 }] };
+      },
+    });
+    expect(await embedText("synthetic 195 mg/dL", "query", wrapped)).toEqual(VECTOR);
+    expect(checked.some((text) => text.includes("synthetic 195 mg/dL"))).toBe(true);
+    expect(rows.map((row) => [row.direction, row.freeText])).toEqual([
+      [undefined, { matches: [{ kind: "lab value", count: 1 }] }],
+    ]);
+    expect(JSON.stringify(rows)).not.toContain("195");
+  });
+
+  test("a query with the person's own rsIDs is not sent: the row is blocked, no vector (#531)", async () => {
+    const sent: string[] = [];
+    const rows: Disclosure[] = [];
+    const wrapped = queryEmbedPorts(ports("http://gpu.internal.invalid:11434", sent), {
+      ...call(async (row) => rows.push(row)),
+      checkText: async () => ({ matches: [{ kind: "rsID", count: 1 }] }),
+    });
+    expect(await embedText("synthetic rs0000001", "query", wrapped)).toBe(null);
+    expect(sent).toEqual([]);
+    expect(rows.map((row) => [row.direction, row.freeText])).toEqual([
+      ["blocked", { matches: [{ kind: "rsID", count: 1 }] }],
+    ]);
+  });
+
+  test("an Ollama on this machine is not checked", async () => {
+    const checked: string[] = [];
+    const base = ports("http://127.0.0.1:11434", []);
+    const wrapped = queryEmbedPorts(base, {
+      ...call(async () => undefined),
+      checkText: async (text) => {
+        checked.push(text);
+        return { matches: [] };
+      },
+    });
+    await embedText("synthetic rs0000001", "query", wrapped);
+    expect(checked).toEqual([]);
+  });
+
   test("a failing ledger means the query is never sent and there is no vector", async () => {
     const sent: string[] = [];
     const wrapped = queryEmbedPorts(

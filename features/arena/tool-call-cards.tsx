@@ -9,7 +9,7 @@ import { StepTrace } from "@/infrastructure/ui-kit/step-trace";
 
 import type { AnswerStatus, ToolActivity } from "./conversation";
 import { cardNumbers, sourceCallIds } from "./number-links";
-import { rowsLabel, STATE_LABELS, type ToolCardState } from "./tool-cards";
+import { OUTCOME_LABELS, rowsLabel, type ToolOutcome, toolOutcome } from "./tool-cards";
 import {
   answerTraceState,
   type ReviewStep,
@@ -23,9 +23,10 @@ import {
  * it; once it settles the line reads "Used N tools in X.Xs" and the list
  * folds. Each step is a compact card, folded by default: its header says
  * what the call did in plain words (`tool-steps.ts`), with its rows and
- * state; the fold-out lists every named argument, the call's title and the
- * tool's own name, for a refusal why, and the answer's numbers the call
- * holds with their rows. The same steps show while the answer streams and
+ * state (a refused call's header is its code's plain sentence); the fold-out
+ * lists every named argument, the call's title and the tool's own name, for
+ * a refusal its result code, and the answer's numbers the call holds with
+ * their rows. The same steps show while the answer streams and
  * after a reload (`tool-cards.ts`).
  *
  * A number pressed in the answer (`ActiveNumber`) opens the trace and every
@@ -39,9 +40,10 @@ export type ActiveNumber = Readonly<{ text: string; key: number }>;
 export const toolCardTitleId = (idPrefix: string, toolCallId: string): string =>
   `${idPrefix}-tool-${toolCallId}`;
 
-const TONE: Readonly<Record<ToolCardState, StatusTone>> = {
+const TONE: Readonly<Record<ToolOutcome, StatusTone>> = {
   running: "neutral",
   done: "ok",
+  "no-data": "off",
   refused: "off",
   error: "warn",
 };
@@ -83,6 +85,7 @@ const ToolCallCard = ({
   }, [focusKey]);
 
   const rows = rowsLabel(card.rowCount);
+  const outcome = toolOutcome(card);
   const held = cardNumbers(numbers, card.id);
   return (
     <div className="tool-card" data-highlight={highlight === null ? undefined : ""}>
@@ -104,7 +107,7 @@ const ToolCallCard = ({
           {rows !== null && (
             <span className="text-muted-foreground tabular-nums">{rows}</span>
           )}
-          <StatusBadge tone={TONE[card.state]}>{STATE_LABELS[card.state]}</StatusBadge>
+          <StatusBadge tone={TONE[outcome]}>{OUTCOME_LABELS[outcome]}</StatusBadge>
         </span>
       </button>
       <div id={panelId} hidden={!open} className="tool-card-body">
@@ -125,8 +128,13 @@ const ToolCallCard = ({
               <dd>{rows}</dd>
             </>
           )}
+          {card.refusalCode !== undefined && (
+            <>
+              <dt className="text-muted-foreground">Result code</dt>
+              <dd className="font-mono">{card.refusalCode}</dd>
+            </>
+          )}
         </dl>
-        {card.note !== null && <p className="text-muted-foreground mt-2">{card.note}</p>}
         {held.length > 0 && (
           <div className="mt-2">
             <p className="text-muted-foreground">Numbers in the answer from this call</p>

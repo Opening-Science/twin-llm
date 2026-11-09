@@ -9,7 +9,11 @@ import {
   mixHex,
   OUTDOOR_KEYFRAMES,
   outdoorsLook,
+  studioLook,
 } from "./environment-look";
+import { BRAND_PALETTE } from "../twin-palette";
+
+const { dark: DARK, light: LIGHT } = BRAND_PALETTE;
 
 const NIGHT_WORLD = {
   skyTop: 0x1c2c4c,
@@ -113,27 +117,35 @@ describe("environment look", () => {
     expect(outdoorsLook(19).world.dark).toBe(true);
   });
 
-  test("the studio follows the site theme and ignores the clock", () => {
-    expect(lookFor("studio", true, 3)).toEqual(lookFor("studio", true, 15));
-    expect(lookFor("studio", true, null).world).toEqual({
-      skyTop: 0x262c38,
-      horizon: 0x161a21,
-      ground: 0x161a21,
-      grid: 0x161a21,
+  test("the studio is drawn in the theme's brand tokens and ignores the clock", () => {
+    expect(lookFor("studio", DARK, 3)).toEqual(lookFor("studio", DARK, 15));
+    expect(lookFor("studio", DARK, null).world).toEqual({
+      skyTop: 0x242424,
+      horizon: 0x1d1d1d,
+      ground: 0x1d1d1d,
+      grid: 0x1d1d1d,
       gridAlpha: 0,
       fogNear: 4,
       fogFar: 22,
       dark: true,
     });
-    expect(lookFor("studio", false, null).world.skyTop).toBe(0xf6f7f9);
-    expect(lookFor("studio", false, null).world.dark).toBe(false);
-    expect(lookFor("studio", false, null).light).toEqual(INLINE_LIGHT);
+    expect(lookFor("studio", LIGHT, null).world.skyTop).toBe(0xffffff);
+    expect(lookFor("studio", LIGHT, null).world.ground).toBe(0xf8f8f4);
+    expect(lookFor("studio", LIGHT, null).world.dark).toBe(false);
+    expect(lookFor("studio", LIGHT, null).light).toEqual(INLINE_LIGHT);
   });
 
-  test("outdoors without the clock is fixed at midday", () => {
+  test("the studio takes whatever the tokens resolve to", () => {
+    const custom = { ...LIGHT, background: "#102030", card: "#405060" };
+    expect(studioLook(custom).world.skyTop).toBe(0x405060);
+    expect(studioLook(custom).world.ground).toBe(0x102030);
+    expect(studioLook(custom).world.dark).toBe(true);
+  });
+
+  test("outdoors without the clock is fixed at midday, whatever the theme", () => {
     expect(MIDDAY_HOUR).toBe(13);
-    expect(lookFor("outdoors", true, null)).toEqual(outdoorsLook(13));
-    expect(lookFor("outdoors", false, 3)).toEqual(outdoorsLook(3));
+    expect(lookFor("outdoors", DARK, null)).toEqual(outdoorsLook(13));
+    expect(lookFor("outdoors", LIGHT, 3)).toEqual(outdoorsLook(3));
   });
 
   test("inline lights are the viewer's original values", () => {

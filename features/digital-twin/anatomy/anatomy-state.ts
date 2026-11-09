@@ -1,4 +1,3 @@
-import { type AtlasAnchor } from "@/packages/anatomy/fit";
 import {
   DEPTH_MAX,
   DEPTH_MIN,
@@ -35,7 +34,7 @@ export type AnatomyLoad =
       groups: readonly AtlasGroup[];
       /** The parts without meshes, so the controls can tell a lit part is toggled off. */
       parts: readonly PartView[];
-      anchor: AtlasAnchor;
+      anchor: "hips" | "bbox";
       fitOk: boolean;
     }>
   | Readonly<{ kind: "error" }>;
@@ -51,11 +50,6 @@ export type AnatomyState = Readonly<{
   bodySex: BodySex | null;
   /** The person picked an atlas for this body; it stays until the body changes. */
   atlasChosen: boolean;
-  /**
-   * "Fit atlas to body": show the atlas refitted to the demo body in Blender
-   * where one is made here (`fitted-option.ts` decides). Off by default.
-   */
-  fitAtlas: boolean;
   layers: Readonly<Record<AtlasLayerId, boolean>>;
   hiddenSystems: readonly OrganSystem[];
   /** What glows, if anything. Group keys are atlas-specific, so an atlas switch clears it. */
@@ -81,7 +75,6 @@ export type AnatomyAction =
   | Readonly<{ type: "atlas"; atlasId: AtlasId }>
   | Readonly<{ type: "installed"; installed: Readonly<Record<AtlasId, boolean>> | null }>
   | Readonly<{ type: "bodySex"; sex: BodySex | null }>
-  | Readonly<{ type: "fitAtlas"; on: boolean }>
   | Readonly<{ type: "toggleLayer"; layer: AtlasLayerId }>
   | Readonly<{ type: "toggleSystem"; system: OrganSystem }>
   | Readonly<{ type: "highlight"; highlight: Highlight | null; from?: HighlightFrom }>
@@ -95,7 +88,6 @@ export const initialAnatomyState: AnatomyState = {
   installed: null,
   bodySex: null,
   atlasChosen: false,
-  fitAtlas: false,
   layers: { muscle: true, skeleton: true, organs: true },
   hiddenSystems: [],
   highlight: null,
@@ -163,9 +155,6 @@ export const anatomyReducer = (
         { ...state, bodySex: action.sex, atlasChosen: false },
         atlasForBody(action.sex, state.atlasId, state.installed),
       );
-    case "fitAtlas":
-      // The same atlas, placed another way: highlight, layers and depth stay.
-      return action.on === state.fitAtlas ? state : { ...state, fitAtlas: action.on };
     case "toggleLayer":
       // A toggle only hides or shows; the atlas loads when someone moves past the scan.
       return {

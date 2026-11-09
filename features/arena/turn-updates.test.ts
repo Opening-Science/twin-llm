@@ -12,6 +12,7 @@ import {
   stopResponse,
   updateResponse,
 } from "./turn-updates";
+import { historyFor } from "./turn-history";
 
 const saved: TurnState = {
   id: "turn-1",
@@ -126,6 +127,30 @@ describe("turn updates", () => {
       },
       saved.answers[1]!,
     ]);
+  });
+});
+
+describe("a starter's short text (#506)", () => {
+  test("a turn keeps its label from pending to confirmed, and its answers get the prompt", () => {
+    const grounded =
+      "For synthetic subject synthetic-subject-1, what was their latest BMI?";
+    const sent = pendingTurn(
+      grounded,
+      [{ id: "model-a", name: "A" }],
+      null,
+      null,
+      null,
+      "What was their latest BMI?",
+    );
+    const [confirmed] = confirmTurn([sent], "turn-9", [
+      { id: "r-9", modelId: "model-a", modelName: "A" },
+    ]);
+    expect(confirmed?.label).toBe("What was their latest BMI?");
+    expect(confirmed?.prompt).toBe(grounded);
+    expect(historyFor(confirmed ? [confirmed] : [], 0, "model-a")).toEqual([
+      { role: "user", content: grounded },
+    ]);
+    expect(pendingTurn("Q", []).label).toBeUndefined();
   });
 });
 

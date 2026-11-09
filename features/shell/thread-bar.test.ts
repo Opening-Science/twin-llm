@@ -15,14 +15,14 @@ describe("ThreadBarView", () => {
     expect(html).toContain(
       'title="Copy this thread&#x27;s address. Only you can open it."',
     );
-    expect(html).toContain('href="/api/threads/f3a9c1/export" download=""');
-    expect(html).toContain(
-      'href="/api/threads/f3a9c1/export?format=print" target="_blank"',
-    );
+    // PDF and Download are buttons that open the export notice (#531), not links.
+    expect(html).toContain(">PDF</span></button>");
+    expect(html).toContain(">Download</span></button>");
+    expect(html).not.toContain("/export");
     expect(html).toContain(
       '<a class="text-muted-foreground hover:text-foreground shrink-0" href="/">Chat</a>',
     );
-    // The id is only ever in the download address, never in what is shown.
+    // The id is never in what is shown.
     expect(html.replace(/href="[^"]*"/g, "")).not.toContain("f3a9c1");
   });
 

@@ -41,5 +41,14 @@ export const draftHref = (name: string): string =>
   `/?draft=${encodeURIComponent(`/${name} `)}`;
 
 /** A saved thread as a Markdown file; the route serves it to its owner only. */
-export const threadExportHref = (threadId: string, format?: "fhir" | "print"): string =>
-  `/api/threads/${encodeURIComponent(threadId)}/export${format ? `?format=${format}` : ""}`;
+export const threadExportHref = (
+  threadId: string,
+  format?: "fhir" | "print",
+  step?: "check" | "confirm",
+): string => {
+  const query = [
+    ...(format ? [`format=${format}`] : []),
+    ...(step ? [`${step}=1`] : []),
+  ].join("&");
+  return `/api/threads/${encodeURIComponent(threadId)}/export${query ? `?${query}` : ""}`;
+};

@@ -42,10 +42,3 @@ export const DEMO_FIT_NOTE =
   "Reference anatomy from a donor atlas, scaled to the demo body's height and centred on its outline. The demo body is posed to the atlas's stance, its feet over the atlas's feet. The hips are not aligned.";
 export const DEMO_FIT_NOTE_UNPOSED =
   "Reference anatomy from a donor atlas, scaled to the demo body's height and centred on its outline. The hips are not aligned.";
-/**
- * "Fit atlas to body" (#525's Blender fit): the atlas is refitted to the
- * rigged body at its bind pose, so the body stands unposed. The figures are
- * the measured ones in docs/anatomy.md, "Per-limb atlas fit".
- */
-export const DEMO_FITTED_NOTE =
-  "Reference anatomy from a donor atlas, refitted to the demo body limb by limb in Blender: each thigh and shin, and each arm where the atlas has arm bones, is turned toward the body's knee and ankle, or elbow and wrist, keeping its length. Ankles land within 1.2 cm; knees sit 3.5 to 7.6 cm low. The trunk and organs are only shifted to meet the hips. The demo body stands unposed.";

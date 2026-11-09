@@ -161,7 +161,26 @@ describe("vitals", () => {
     );
   });
 
-  test("rows under Vitals with the source's own label and day", () => {
+  test("one day from all three: Oura, then WHOOP, then Google Health, never mixed", () => {
+    const hrv = [
+      {
+        key: "google.daily-heart-rate-variability.2026-10-15",
+        label: "HRV",
+        value: 52,
+        unit: "ms",
+      },
+      { key: "whoop.recovery.hrv.2026-10-15", label: "HRV", value: 48, unit: "ms" },
+      { key: "sleep.hrv.2026-10-15", label: "HRV", value: 45, unit: "ms" },
+    ];
+    const picked = (metrics: typeof hrv) => latestVitals(metrics)[0]?.metric.key;
+    expect(picked(hrv)).toBe("sleep.hrv.2026-10-15");
+    expect(picked(hrv.slice(0, 2))).toBe("whoop.recovery.hrv.2026-10-15");
+    expect(picked(hrv.slice(0, 1))).toBe(
+      "google.daily-heart-rate-variability.2026-10-15",
+    );
+  });
+
+  test("rows under Vitals with the source's own label, its name and day (#464)", () => {
     const [heart, steps] = vitalRows(latestVitals(METRICS));
     expect(heart).toMatchObject({
       id: "vital:heartRate",
@@ -169,13 +188,31 @@ describe("vitals", () => {
       english: "Average heart rate during sleep",
       group: VITALS_GROUP,
       value: "61 bpm",
-      details: ["15 Oct 2026"],
+      details: [
+        "From Oura, 15 Oct 2026",
+        "WHOOP also records this; Oura comes first in a fixed order, so its reading is shown.",
+      ],
     });
     expect(steps).toMatchObject({
       id: "vital:steps",
       label: "Steps",
-      details: ["Steps; the whole system is shown", "15 Oct 2026"],
+      details: ["Steps; the whole system is shown", "From Google Health, 15 Oct 2026"],
     });
+  });
+
+  test("the sources passed over are named, the shown one never among them", () => {
+    expect(latestVitals(METRICS).map((reading) => reading.alsoRecordedBy)).toEqual([
+      ["whoop"],
+      [],
+    ]);
+    const rhr = latestVitals([
+      { key: "google.daily-resting-heart-rate.2026-10-16", label: "RHR", value: 55 },
+      { key: "whoop.recovery.rhr.2026-10-15", label: "RHR", value: 54, unit: "bpm" },
+    ]);
+    expect(vitalRows(rhr)[0]?.details).toEqual([
+      "From WHOOP, 15 Oct 2026",
+      "Google Health also records this; WHOOP comes first in a fixed order, so its reading is shown.",
+    ]);
   });
 
   test("a day's main sleep wins over a short rest listed first", () => {
@@ -203,7 +240,7 @@ describe("vitals", () => {
       value: "7 h 12 min",
       details: [
         "Sleep; open-twin files sleep and recovery under the nervous system",
-        "15 Oct 2026",
+        "From Oura, 15 Oct 2026",
       ],
       search: "sleep.duration.long_sleep.2026-10-15",
     });

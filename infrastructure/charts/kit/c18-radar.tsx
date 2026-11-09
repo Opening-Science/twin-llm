@@ -7,7 +7,7 @@ import {
   mutedUnlessFocused,
   useChartFocus,
 } from "./chart-focus";
-import { radar, radarAxisAt } from "./kit-geometry";
+import { invertedNote, radar, radarAxisAt } from "./kit-geometry";
 import { ChartSvg, EMPTY_STROKE, LOADING_FILL, toneClass } from "./kit-parts";
 import type { RadarProps } from "./types";
 
@@ -155,7 +155,19 @@ export const Radar = ({
       }}
     </ChartSvg>
   );
-  if (!live) return chart;
+  // Inverted axes always come with a plain note, so further out is never read as higher.
+  const note = state === "default" ? invertedNote(axes) : null;
+  const noted = note ? <p className="text-muted-foreground text-xs">{note}</p> : null;
+  if (!live) {
+    return noted ? (
+      <div className="flex flex-col gap-2">
+        {chart}
+        {noted}
+      </div>
+    ) : (
+      chart
+    );
+  }
   return (
     <div className="flex flex-col gap-2">
       <ChartReadout
@@ -165,6 +177,7 @@ export const Radar = ({
       <ChartFocusFrame focus={focus} label={label ?? "Parts compared"}>
         {chart}
       </ChartFocusFrame>
+      {noted}
     </div>
   );
 };
