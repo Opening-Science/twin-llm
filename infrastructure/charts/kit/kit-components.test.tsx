@@ -961,3 +961,43 @@ describe("research figure options", () => {
     expect(card).not.toContain("text-chart-1");
   });
 });
+
+describe("research figure axes", () => {
+  test("an axis title is written inside the figure, under the ticks", () => {
+    const out = html(
+      <ResearchFigure
+        kind="estimates"
+        category="vitals"
+        axisTitle="Rate ratio"
+        estimates={[{ label: "A", estimate: 2, low: 1, high: 3 }]}
+      />,
+    );
+    expect(out).toContain(">Rate ratio<");
+    expect(out.indexOf(">Rate ratio<")).toBeLessThan(out.indexOf("</svg>"));
+  });
+
+  test("the null kind has ticks, from draws or a summary", () => {
+    const draws = html(
+      <ResearchFigure
+        kind="null"
+        category="vitals"
+        draws={[0.48, 0.5, 0.52, 0.49, 0.51]}
+        observed={0.6}
+        observedLabel="AUC"
+        axisTitle="AUC"
+      />,
+    );
+    expect(draws).toContain(">0.50<");
+    expect(draws).toContain(">0.60<");
+    const summary = html(
+      <ResearchFigure
+        kind="null"
+        category="vitals"
+        summary={{ mean: 0.5, low: 0.46, high: 0.54, runs: 200 }}
+        observed={0.61}
+        observedLabel="AUC"
+      />,
+    );
+    expect(summary).toMatch(/>0\.\d0</);
+  });
+});

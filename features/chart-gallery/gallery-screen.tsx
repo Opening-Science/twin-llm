@@ -656,6 +656,7 @@ export const GalleryScreen = () => (
             category="vitals"
             series="chart-3"
             scale="log"
+            axisTitle="Rate ratio"
             estimates={P3_RATIOS}
             reference={{ value: 1, label: "1 = no difference" }}
           />
@@ -726,6 +727,7 @@ export const GalleryScreen = () => (
             nullLabel="Shuffled, 200 runs"
             observed={0.61}
             observedLabel="AUC"
+            axisTitle="Area under the curve"
           />
         </InsightCard>
       </div>

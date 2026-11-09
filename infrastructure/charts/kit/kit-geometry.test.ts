@@ -537,3 +537,26 @@ describe("null band", () => {
     expect(out.mean).toBeLessThan(out.high);
   });
 });
+
+describe("null figure ticks", () => {
+  test("round ticks inside the drawn range, on the bars' scale", () => {
+    const draws = Array.from({ length: 100 }, (_, i) => 0.4 + i / 1000);
+    const out = nullFigure(draws, 0.6, { width: 200, height: 50 }, 10);
+    expect(out.ticks.map((t) => t.value)).toEqual([0.4, 0.45, 0.5, 0.55, 0.6]);
+    expect(out.ticks[0]!.x).toBe(0);
+    expect(out.ticks.at(-1)!.x).toBeCloseTo(out.observedX);
+  });
+
+  test("a summary's ticks share its padded axis", () => {
+    const out = nullBand({ mean: 0.5, low: 0.46, high: 0.54, runs: 200 }, 0.61, {
+      width: 216,
+      height: 40,
+    });
+    expect(out.ticks.length).toBeGreaterThan(1);
+    expect(out.ticks.every((t) => t.x >= 8 && t.x <= 208)).toBe(true);
+  });
+
+  test("no draws, no ticks", () => {
+    expect(nullFigure([], 1, { width: 100, height: 10 }).ticks).toEqual([]);
+  });
+});

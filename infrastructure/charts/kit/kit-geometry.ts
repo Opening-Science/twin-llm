@@ -536,6 +536,7 @@ export type NullFigure = Readonly<{
   observedX: number;
   /** The share of the null at or beyond the observed value, 0 to 1. */
   atOrBeyond: number;
+  ticks: readonly AxisTick[];
 }>;
 
 /** A null distribution given as its summary rather than its draws. */
@@ -546,12 +547,28 @@ export type NullSummary = Readonly<{
   runs: number;
 }>;
 
+/** A labelled tick on a null figure's axis. */
+export type AxisTick = Readonly<{ value: number; x: number }>;
+
+/** Round ticks inside [lo, hi], placed by `x`; none for an empty range. */
+const ticksWithin = (
+  lo: number,
+  hi: number,
+  x: (v: number) => number,
+): readonly AxisTick[] =>
+  hi > lo
+    ? niceTicks(lo, hi)
+        .filter((t) => t >= lo && t <= hi)
+        .map((value) => ({ value, x: x(value) }))
+    : [];
+
 export type NullBand = Readonly<{
   /** The null's interval as a band, and its mean as a tick. */
   low: number;
   high: number;
   mean: number;
   observedX: number;
+  ticks: readonly AxisTick[];
 }>;
 
 /**
@@ -574,6 +591,7 @@ export const nullBand = (
     high: x(Math.max(summary.low, summary.high)),
     mean: x(summary.mean),
     observedX: x(observed),
+    ticks: ticksWithin(lo, hi, x),
   };
 };
 
@@ -588,7 +606,9 @@ export const nullFigure = (
   bins = 24,
 ): NullFigure => {
   const values = draws.filter(finite);
-  if (values.length === 0) return { bars: [], observedX: box.width / 2, atOrBeyond: 0 };
+  if (values.length === 0) {
+    return { bars: [], observedX: box.width / 2, atOrBeyond: 0, ticks: [] };
+  }
   const lo = Math.min(...values, observed);
   const hi = Math.max(...values, observed);
   const span = hi - lo || 1;
@@ -609,6 +629,7 @@ export const nullFigure = (
     }),
     observedX: ((observed - lo) / span) * box.width,
     atOrBeyond: values.filter((v) => v >= observed).length / values.length,
+    ticks: ticksWithin(lo, hi, (v) => ((v - lo) / span) * box.width),
   };
 };
 
