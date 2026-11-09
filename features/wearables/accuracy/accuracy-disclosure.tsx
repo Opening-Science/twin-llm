@@ -1,8 +1,10 @@
 "use client";
 
-import { useId, useState } from "react";
+import { Dialog } from "radix-ui";
+import { useState, useSyncExternalStore } from "react";
 
 import { formatDate } from "@/infrastructure/format-measure";
+import { Popover, PopoverContent, PopoverTrigger } from "@/infrastructure/ui-kit/popover";
 
 import { VERIFIED_ON } from "./accuracy-notes";
 import {
@@ -15,11 +17,14 @@ import {
 /**
  * "How accurate is this?" under a dashboard card: what published validation
  * studies found for the measure on this device, the evidence level as a word,
- * any vendor funding, and the papers. Closed by default, so the card keeps
- * its height; the body stays mounted while hidden.
+ * any vendor funding, and the papers.
  *
- * It sits under the card, not inside it: the kit card hides a picture
- * chart's body from screen readers, and this text must stay readable.
+ * The toggle sits under the card, not inside it: the kit card hides a
+ * picture chart's body from screen readers, and this text must stay
+ * readable. The note opens over the page, never in the grid, so no card
+ * moves: a popover anchored to the toggle from `md` up, a bottom sheet on a
+ * phone. Both are Radix: the toggle stays a button with `aria-expanded`,
+ * Escape closes, and focus goes back to the toggle.
  */
 
 const Citation = ({ source }: { readonly source: CitedSource }) => (
@@ -57,7 +62,7 @@ const Entry = ({ entry }: { readonly entry: CardAccuracyEntry }) => (
 );
 
 export const AccuracyDetails = ({ accuracy }: { readonly accuracy: CardAccuracy }) => (
-  <div className="text-muted-foreground space-y-3 px-3 pt-1 pb-3 text-xs leading-relaxed">
+  <div className="text-muted-foreground space-y-3 text-xs leading-relaxed">
     {accuracy.deviceRemark ? <p>{accuracy.deviceRemark}</p> : null}
     {accuracy.entries.map((entry) => (
       <Entry key={`${entry.part ?? ""}${entry.measure}`} entry={entry} />
@@ -70,6 +75,34 @@ export const AccuracyDetails = ({ accuracy }: { readonly accuracy: CardAccuracy 
   </div>
 );
 
+/** Below `md`, where the dashboard is one column and the note opens as a sheet. */
+const PHONE = "(max-width: 47.99rem)";
+
+const subscribe = (listener: () => void) => {
+  const media = window.matchMedia(PHONE);
+  media.addEventListener("change", listener);
+  return () => media.removeEventListener("change", listener);
+};
+
+const usePhone = (): boolean =>
+  useSyncExternalStore(
+    subscribe,
+    () => window.matchMedia(PHONE).matches,
+    () => false,
+  );
+
+const TITLE = "How accurate is this?";
+
+const Toggle = ({ label }: { readonly label: string }) => (
+  <>
+    {TITLE}
+    <span className="sr-only"> {label}</span>
+  </>
+);
+
+const TOGGLE_CLASS =
+  "text-muted-foreground hover:text-foreground hover:bg-muted/60 mt-1 rounded-md px-3 py-1.5 text-left text-xs font-medium";
+
 export const AccuracyDisclosure = ({
   accuracy,
   label,
@@ -79,24 +112,49 @@ export const AccuracyDisclosure = ({
   readonly label: string;
 }) => {
   const [open, setOpen] = useState(false);
-  const bodyId = useId();
+  const phone = usePhone();
+  if (phone) {
+    return (
+      <Dialog.Root open={open} onOpenChange={setOpen}>
+        <Dialog.Trigger type="button" className={TOGGLE_CLASS}>
+          <Toggle label={label} />
+        </Dialog.Trigger>
+        <Dialog.Portal>
+          <Dialog.Overlay className="bg-background/70 fixed inset-0 z-50" />
+          <Dialog.Content
+            aria-describedby={undefined}
+            className="border-border bg-popover text-popover-foreground fixed inset-x-0 bottom-0 z-50 max-h-[80dvh] overflow-y-auto rounded-t-xl border-t p-4 pb-[max(1rem,env(safe-area-inset-bottom))] outline-hidden"
+          >
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <Dialog.Title className="font-sans text-sm font-medium">
+                {TITLE} <span className="text-muted-foreground font-normal">{label}</span>
+              </Dialog.Title>
+              <Dialog.Close
+                type="button"
+                className="text-muted-foreground hover:text-foreground -mt-1 rounded-md px-2 py-1 text-xs font-medium"
+              >
+                Close
+              </Dialog.Close>
+            </div>
+            <AccuracyDetails accuracy={accuracy} />
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+    );
+  }
   return (
-    <div className="collapsible-panel mt-1" data-open={open ? "" : undefined}>
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-controls={bodyId}
-        onClick={() => setOpen((was) => !was)}
-        className="collapsible-panel-toggle text-muted-foreground hover:text-foreground"
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger type="button" className={TOGGLE_CLASS}>
+        <Toggle label={label} />
+      </PopoverTrigger>
+      <PopoverContent
+        side="bottom"
+        collisionPadding={16}
+        aria-label={`${TITLE} ${label}`}
+        className="max-h-[var(--radix-popover-content-available-height)] w-[min(26rem,calc(100vw-2rem))] overflow-y-auto p-4"
       >
-        <span>
-          How accurate is this?<span className="sr-only"> {label}</span>
-        </span>
-        <span aria-hidden="true">{open ? "−" : "+"}</span>
-      </button>
-      <div id={bodyId} hidden={!open}>
         <AccuracyDetails accuracy={accuracy} />
-      </div>
-    </div>
+      </PopoverContent>
+    </Popover>
   );
 };

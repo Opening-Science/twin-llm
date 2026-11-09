@@ -30,21 +30,16 @@ describe("AccuracyDisclosure", () => {
     <AccuracyDisclosure accuracy={ouraSleep} label="Sleep: Duration" />,
   );
 
-  test("is a closed button that names its card and the panel it opens", () => {
+  test("is a closed button that names its card and opens a dialog", () => {
     const button = html.match(/<button[^>]*>/)![0];
     expect(button).toContain('type="button"');
     expect(button).toContain('aria-expanded="false"');
-    const controls = button.match(/aria-controls="([^"]+)"/)![1];
-    expect(html).toContain(`<div id="${controls}" hidden="">`);
-    expect(text(html.match(/<button.*?<\/button>/)![0])).toBe(
-      "How accurate is this? Sleep: Duration+",
-    );
+    expect(button).toContain('aria-haspopup="dialog"');
+    expect(text(html)).toBe("How accurate is this? Sleep: Duration");
   });
 
-  test("keeps the note in the page while closed, so opening it does not load anything", () => {
-    expect(text(html)).toContain(
-      "Oura Gen3 total sleep time was on average within about 10 minutes of laboratory polysomnography in healthy adults (Robbins 2024; Svensson 2024).",
-    );
+  test("puts nothing in the card's grid cell but the toggle while closed", () => {
+    expect(html.match(/<[a-z]+/g)).toEqual(["<button", "<span"]);
   });
 });
 
