@@ -31,6 +31,8 @@ export type StartTurnInput = Readonly<{
   models: readonly ChosenModel[];
   /** The skill the prompt was sent with; only names the thread title. */
   skill?: string | null;
+  /** What the bubble shows when it is not the prompt: a starter's short text (#506). */
+  label?: string | null;
 }>;
 
 export type { StartedTurn, StartTurnResult } from "./write-turn";
@@ -47,6 +49,7 @@ export const startTurn = async (input: StartTurnInput): Promise<StartTurnResult>
       prompt: input.prompt,
       modelIds: input.models.map(({ id }) => id),
       skill: input.skill ?? null,
+      label: input.label ?? null,
     },
     await fetchChatCatalog(runnableSkills()),
     serverEnv().LLM_PROVIDER,

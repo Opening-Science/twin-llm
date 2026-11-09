@@ -72,7 +72,7 @@ export const variantIdsOf = (variantId: string | null): readonly string[] =>
 
 export const PERSONAL_TABLES: readonly PersonalTable[] = [
   { table: "threads", idColumn: "id", owner: ownerByUserId("userId"), sealed: ["title"] },
-  { table: "turns", idColumn: "id", owner: OWNER_OF_TURN, sealed: ["prompt"] },
+  { table: "turns", idColumn: "id", owner: OWNER_OF_TURN, sealed: ["prompt", "label"] },
   {
     table: "model_responses",
     idColumn: "id",
