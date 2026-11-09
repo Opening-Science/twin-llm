@@ -15,6 +15,7 @@ import {
   exactDecimals,
   nullBand,
   nullFigure,
+  seriesKeys,
   spacedTicks,
   type AxisScale,
   type Estimate,
@@ -80,6 +81,7 @@ const EstimatePlot = ({
   reference,
   domain,
   scale = "linear",
+  seriesOrder,
   axisTitle,
   tone,
   state,
@@ -94,15 +96,16 @@ const EstimatePlot = ({
   readonly state: "default" | "loading" | "empty";
   readonly label?: string;
   readonly defaultFocus?: number;
+  readonly seriesOrder?: readonly string[];
   readonly axisTitle?: string;
 }) => {
-  const seriesKeys = [...new Set(estimates.flatMap((e) => (e.series ? [e.series] : [])))];
+  const keys = seriesKeys(estimates, seriesOrder);
   const hasExpected = estimates.some(
     (e) => e.expected !== undefined && e.expected !== null,
   );
   const rowTone = (i: number): string => {
     const key = estimates[i]?.series;
-    return key ? tokenTextClass(conditionToken(seriesKeys.indexOf(key))) : tone(i);
+    return key ? tokenTextClass(conditionToken(keys.indexOf(key))) : tone(i);
   };
   const top = reference ? 16 : 0;
   // The axis title has a line of its own under the ticks.
@@ -133,6 +136,7 @@ const EstimatePlot = ({
           domain,
           scale,
           PAD,
+          seriesOrder,
         );
         const decimals = exactDecimals(out.ticks.map((t) => t.value));
         const tickLabel = (value: number): string =>
@@ -279,7 +283,7 @@ const EstimatePlot = ({
     </ChartSvg>
   );
   const legend =
-    state === "default" ? <Legend series={seriesKeys} expected={hasExpected} /> : null;
+    state === "default" ? <Legend series={keys} expected={hasExpected} /> : null;
   if (!live) {
     return legend ? (
       <div className="flex flex-col gap-2">
@@ -322,6 +326,7 @@ export const ResearchFigure = (props: ResearchFigureProps) => {
         reference={props.reference}
         domain={props.domain}
         scale={props.scale}
+        seriesOrder={props.seriesOrder}
         axisTitle={props.axisTitle}
         tone={(i) => tokenTextClass(single ?? conditionToken(i))}
         state={state}

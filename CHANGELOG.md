@@ -7,6 +7,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- A research figure's series keep one colour on every screen. Series keys were coloured in the order rows first named them, so qwen3:8b was teal in the gallery and ochre on the Lab results. They now take colours in natural order (qwen3:4b, qwen3:8b, qwen3:14b) whatever the row order, and `seriesOrder` can put chosen series first (`seriesKeys`, pure and tested).
 - An empty C05 day is never blank. With a usual day it outlines that, as before; with none yet it outlines the shape of a typical day as a dotted placeholder at half strength, a shape with no scale that is never drawn as a value or mistaken for the person's own day (`PLACEHOLDER_DAY`, `emptyDayOutline`, pure and tested). The gallery shows it.
 - On the C07 streak grid Up and Down move a week, to the same weekday one row up or down, found by row and column so a missing day never shifts the step and a week without that weekday is passed over; Left and Right still step a day (`weekStep`, pure and tested). `useChartFocus` takes a chart's own `step` rule for keys it wants to handle.
 - Research figure (R1) axes. `axisTitle` writes what the axis measures under its ticks, inside the figure, so a legend below sits under the axis rather than between it and its name. The null kind now has round ticks on its axis, from its draws or its summary (`nullFigure` and `nullBand` return them; pure and tested). The gallery's log-ratio and null figures carry titles.

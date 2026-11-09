@@ -868,6 +868,22 @@ describe("device list", () => {
   });
 });
 
+test("seriesOrder puts a series first and gives it the first colour", () => {
+  const out = html(
+    <ResearchFigure
+      kind="estimates"
+      category="vitals"
+      seriesOrder={["qwen3:8b"]}
+      estimates={[
+        { label: "A", estimate: 0.6, series: "qwen3:4b" },
+        { label: "B", estimate: 0.7, series: "qwen3:8b" },
+      ]}
+    />,
+  );
+  expect(out.indexOf("qwen3:8b</li>")).toBeLessThan(out.indexOf("qwen3:4b</li>"));
+  expect(out.match(/<g class="text-chart-1">/g)).toHaveLength(1);
+});
+
 describe("research figure options", () => {
   test("rows of one series share a colour, and a legend names each series", () => {
     const out = html(
@@ -883,9 +899,9 @@ describe("research figure options", () => {
     );
     expect(out).toContain("qwen3:8b");
     expect(out).toContain("qwen3:4b");
-    // Two 8b rows in chart-1, one 4b row in chart-2.
-    expect(out.match(/<g class="text-chart-1">/g)).toHaveLength(2);
-    expect(out.match(/<g class="text-chart-2">/g)).toHaveLength(1);
+    // In natural order 4b comes first: one 4b row in chart-1, two 8b rows in chart-2.
+    expect(out.match(/<g class="text-chart-1">/g)).toHaveLength(1);
+    expect(out.match(/<g class="text-chart-2">/g)).toHaveLength(2);
   });
 
   test("a log axis reads as ratios", () => {
