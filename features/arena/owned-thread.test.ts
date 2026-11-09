@@ -8,6 +8,8 @@ import {
   type ThreadReads,
 } from "./owned-thread";
 import { makeResponseDocument } from "./response-document-fixture";
+import { shownPrompt } from "./suggested-questions";
+import { historyFor } from "./turn-history";
 
 /** Synthetic thread: a question about a synthetic subject's HRV, answered once and withheld once. */
 const stored: StoredThread = {
@@ -205,6 +207,41 @@ describe("a turn sent with a skill, after a reload", () => {
       reads("clerk-owner", owner, withSkillDocument),
     );
     expect(thread?.turns[0]?.skill).toBeNull();
+  });
+});
+
+describe("a turn sent from a starter question, after a reload (#506)", () => {
+  const owner = { "clerk-owner": "user-owner" };
+  const grounded =
+    "For synthetic subject synthetic-subject-1, using LOINC 8867-4, what was their latest heart rate?";
+  const fromStarter: StoredThread = {
+    ...stored,
+    turns: stored.turns.map((turn) => ({
+      ...turn,
+      prompt: grounded,
+      label: "What was their latest heart rate?",
+    })),
+  };
+
+  test("the turn keeps the short text to show and the grounded prompt for the model", async () => {
+    const thread = await loadOwnedThread(
+      "thread-1",
+      reads("clerk-owner", owner, fromStarter),
+    );
+    const turn = thread?.turns[0];
+    expect(turn?.prompt).toBe(grounded);
+    expect(turn?.label).toBe("What was their latest heart rate?");
+    expect(turn && shownPrompt(turn)).toBe("What was their latest heart rate?");
+    expect(turn && historyFor([turn], 0, "qwen3:4b")).toEqual([
+      { role: "user", content: grounded },
+    ]);
+  });
+
+  test("a typed turn has no label and shows its prompt", async () => {
+    const thread = await loadOwnedThread("thread-1", reads("clerk-owner", owner));
+    const turn = thread?.turns[0];
+    expect(turn?.label).toBeUndefined();
+    expect(turn && shownPrompt(turn)).toBe(turn?.prompt);
   });
 });
 
