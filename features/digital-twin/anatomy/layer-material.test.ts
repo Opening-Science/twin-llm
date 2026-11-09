@@ -17,7 +17,6 @@ import {
   blendModeFor,
   createLayerMaterial,
   createLayerUniforms,
-  HIGHLIGHT_COLOUR,
   HIGHLIGHT_INTENSITY,
   HIGHLIGHT_TINT,
   isHighlighted,
@@ -27,6 +26,10 @@ import {
   setBlendMode,
   setHighlighted,
 } from "./layer-material";
+import { BRAND_PALETTE } from "../twin-palette";
+
+/** The dark theme's ring, as the twin palette hands it to the highlight. */
+const HIGHLIGHT_COLOUR = BRAND_PALETTE.dark.ring;
 
 const count = (haystack: string, needle: string): number =>
   haystack.split(needle).length - 1;
@@ -235,7 +238,7 @@ describe("setHighlighted", () => {
     const version = material.version;
     const { color, emissive } = material;
 
-    expect(setHighlighted(material, true)).toBe(true);
+    expect(setHighlighted(material, new Color(HIGHLIGHT_COLOUR))).toBe(true);
     expect(isHighlighted(material)).toBe(true);
     expect(material.emissive.getHexString()).toBe(HIGHLIGHT_COLOUR.slice(1));
     expect(material.emissiveIntensity).toBe(HIGHLIGHT_INTENSITY);
@@ -244,22 +247,41 @@ describe("setHighlighted", () => {
     expect(material.customProgramCacheKey()).toBe(key);
     expect(material.version).toBe(version);
 
-    expect(setHighlighted(material, true)).toBe(false);
+    expect(setHighlighted(material, new Color(HIGHLIGHT_COLOUR))).toBe(false);
 
-    expect(setHighlighted(material, false)).toBe(true);
+    expect(setHighlighted(material, null)).toBe(true);
     expect(isHighlighted(material)).toBe(false);
     expect(material.emissive.getHexString()).toBe("102030");
     expect(material.emissiveIntensity).toBe(0.2);
     expect(material.color.getHexString()).toBe("d6a06a");
-    expect(setHighlighted(material, false)).toBe(false);
+    expect(setHighlighted(material, null)).toBe(false);
     // Copied into, never swapped: the material keeps its own Color objects.
     expect(material.color).toBe(color);
     expect(material.emissive).toBe(emissive);
   });
 
+  test("a theme change clears the old highlight colour and lights in the new one", () => {
+    const material = createLayerMaterial({
+      colour: "#d6a06a",
+      vertexColors: false,
+      uniforms: createLayerUniforms(0),
+    });
+    setHighlighted(material, new Color(BRAND_PALETTE.dark.ring));
+    expect(setHighlighted(material, null)).toBe(true);
+    expect(setHighlighted(material, new Color(BRAND_PALETTE.light.ring))).toBe(true);
+    expect(material.emissive.getHexString()).toBe("1c4e8f");
+    expect(
+      material.color.equals(
+        new Color("#d6a06a").lerp(new Color(BRAND_PALETTE.light.ring), HIGHLIGHT_TINT),
+      ),
+    ).toBe(true);
+    setHighlighted(material, null);
+    expect(material.color.getHexString()).toBe("d6a06a");
+  });
+
   test("leaves materials without an emissive term alone", () => {
     const basic = new MeshBasicMaterial();
-    expect(setHighlighted(basic, true)).toBe(false);
+    expect(setHighlighted(basic, new Color(HIGHLIGHT_COLOUR))).toBe(false);
     expect(isHighlighted(basic)).toBe(false);
   });
 
@@ -270,7 +292,7 @@ describe("setHighlighted", () => {
       vertexColors: false,
       uniforms,
     });
-    setHighlighted(material, true);
+    setHighlighted(material, new Color(HIGHLIGHT_COLOUR));
     expect(setBlendMode(material, "fade")).toBe(true);
     expect(material.transparent).toBe(true);
     expect(material.emissive.getHexString()).toBe(HIGHLIGHT_COLOUR.slice(1));

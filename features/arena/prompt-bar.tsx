@@ -52,6 +52,7 @@ import {
 import { promptToken, withMention } from "./prompt-tokens";
 import { SourceMenu, sourceOptionId } from "./source-menu";
 import {
+  labelForDraft,
   promptForDraft,
   type SuggestedQuestion,
   type SuggestedQuestions,
@@ -147,6 +148,8 @@ export const PromptBar = ({
     models: readonly ChosenModel[],
     skill: string | null,
     effort: EffortLevel,
+    /** What the bubble shows when it is not the prompt (#506), or null. */
+    label: string | null,
   ) => void;
   /** Stop: ends this tab's open answers, on the server too in a saved thread (#373). */
   onStop?: () => void;
@@ -238,6 +241,7 @@ export const PromptBar = ({
       send: () => {
         if (!ready || catalog === null) return;
         const prompt = skillTurn?.prompt ?? promptForDraft(draft, pickedChip);
+        const label = skillTurn === null ? labelForDraft(draft, pickedChip) : null;
         onSubmit(
           prompt,
           chosen.map((model) => ({
@@ -246,6 +250,7 @@ export const PromptBar = ({
           })),
           skillTurn?.skill.name ?? null,
           effort,
+          label,
         );
         setDraft("");
         reset();
