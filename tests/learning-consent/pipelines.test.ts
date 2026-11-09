@@ -166,6 +166,10 @@ const NOT_LEARNING: Readonly<Record<string, string>> = {
   "vitronic:cycle": "drives a test scan cycle against the scanner; no learning",
   "anatomy:fetch": PUBLIC,
   "anatomy:bake-rigged": "bakes shipped anatomy meshes; no data rows",
+  "blender:fit-atlas":
+    "fits pinned atlases to synthetic demo bodies in Blender; no data rows",
+  "blender:cleanup": "cleans the synthetic demo body in Blender; refuses BodyLoop paths",
+  "blender:self-check": "runs the Blender scripts on synthetic meshes; no data rows",
   "fonts:install": TOOLING,
   "synthea:generate": GENERATOR,
   "synthea:s7": GENERATOR,

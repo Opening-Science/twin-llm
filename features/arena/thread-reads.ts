@@ -10,6 +10,7 @@ import {
   openPrompt,
   openResponse,
   openThreadTitle,
+  openTurnLabel,
 } from "@/infrastructure/thread-fields";
 
 import {
@@ -36,6 +37,7 @@ const findThread = async (
     turns: row.turns.map((turn) => ({
       ...turn,
       prompt: openPrompt(cipher, turn.id, turn.prompt),
+      label: openTurnLabel(cipher, turn.id, turn.label),
       responses: turn.responses.map((response) => openResponse(cipher, response)),
     })),
   };
@@ -55,6 +57,7 @@ const readThread = (threadId: string) =>
           prompt: true,
           scheduled: true,
           skill: true,
+          label: true,
           responses: {
             select: {
               id: true,

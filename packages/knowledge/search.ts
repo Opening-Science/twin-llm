@@ -3,6 +3,7 @@ import "server-only";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { database } from "@/infrastructure/database";
 import { recordDisclosure } from "@/infrastructure/disclosure-ledger-runtime";
+import { freeTextCheckerFor } from "@/infrastructure/free-text-check-runtime";
 import { append } from "@/packages/audit/append";
 import {
   defaultEmbedPorts,
@@ -66,7 +67,10 @@ export const toKnowledgeCitation = (hit: KnowledgeHit): KnowledgeCitation => ({
   licence: hit.licence,
 });
 
-/** The query embedding goes through the disclosure ledger when Ollama is elsewhere (#140). */
+/**
+ * The query embedding goes through the disclosure ledger when Ollama is
+ * elsewhere (#140), with the check of its text for stored values (#531).
+ */
 export const defaultKnowledgeSearchPorts = (
   scope: SessionScope,
 ): KnowledgeSearchPorts => ({
@@ -80,6 +84,7 @@ export const defaultKnowledgeSearchPorts = (
         synthetic: scope.mode === "synthetic",
         purpose: "knowledge search",
         record: recordDisclosure,
+        checkText: freeTextCheckerFor(scope.actor),
       }),
     ),
   search: (embedding, k, sources) =>

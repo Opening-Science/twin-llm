@@ -3,6 +3,7 @@ import type { OuraSummary } from "@/infrastructure/oura-types";
 import type { VitronicSummary } from "@/infrastructure/vitronic-types";
 import type { WhoopSummary } from "@/infrastructure/whoop-types";
 import { selectPromptMetrics } from "@/infrastructure/prompt-key-selection";
+import type { WearableSourceId } from "@/infrastructure/wearable-provenance";
 import { toChatVitronicSummary } from "@/packages/vitronic/summary";
 
 /**
@@ -20,11 +21,14 @@ export type WearableSummaries = Readonly<{
   vitronic: VitronicSummary | null;
 }>;
 
-export type OfferedMetric =
+export type OfferedMetric = (
   | OuraSummary["metrics"][number]
   | WhoopSummary["metrics"][number]
   | GoogleHealthSummary["metrics"][number]
-  | VitronicSummary["metrics"][number];
+  | VitronicSummary["metrics"][number]
+) &
+  /** The summary the metric was offered from (#464); `offeredMetrics` always sets it. */
+  Readonly<{ source?: WearableSourceId }>;
 
 export const OFFERED_KEYS_PER_SOURCE = 40;
 
@@ -53,11 +57,15 @@ export const offeredMetrics = (
   summaries: WearableSummaries,
 ): readonly OfferedMetric[] => {
   const offered = offeredSummaries(summaries);
+  const from = (
+    metrics: readonly OfferedMetric[] | undefined,
+    source: WearableSourceId,
+  ): readonly OfferedMetric[] => (metrics ?? []).map((metric) => ({ ...metric, source }));
   return [
-    ...(offered.oura?.metrics ?? []),
-    ...(offered.whoop?.metrics ?? []),
-    ...(offered.googleHealth?.metrics ?? []),
-    ...(offered.vitronic?.metrics ?? []),
+    ...from(offered.oura?.metrics, "oura"),
+    ...from(offered.whoop?.metrics, "whoop"),
+    ...from(offered.googleHealth?.metrics, "google_health"),
+    ...from(offered.vitronic?.metrics, "bodyloop"),
   ];
 };
 

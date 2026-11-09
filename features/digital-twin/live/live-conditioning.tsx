@@ -12,6 +12,7 @@ import {
   Vector3,
 } from "three";
 
+import { CATEGORY_TOKEN } from "@/infrastructure/charts/category-token";
 import { partsFor, type Highlight } from "@/packages/anatomy/highlight";
 import { type AtlasScheme } from "@/packages/anatomy/manifest";
 import { type OrganSystem, type SystemId } from "@/packages/anatomy/systems";
@@ -19,6 +20,8 @@ import { VITAL_ANATOMY } from "@/packages/biomarkers/vitals";
 
 import { setLiveGlow } from "../anatomy/layer-material";
 import { nextAutoRotateDelay } from "../frame-pacing";
+import { type TwinPalette } from "../twin-palette";
+import { useTwinPalette } from "../use-twin-palette";
 import { setHeartChambers } from "./heart-chambers";
 import {
   advanceClock,
@@ -66,9 +69,18 @@ export const IDLE_STATUS: LiveStatus = {
 /** Frames asked for while the heart chambers beat: an atrial beat lasts about 0.1 s. */
 export const HEART_CHAMBERS_FPS = 60;
 
-const PULSE_COLOUR = new Color("#ffd9cf");
-const HRV_COLOUR = new Color("#9cc2ff");
-const BREATH_COLOUR = new Color("#cfe6ff");
+/**
+ * Each glow takes its measure's chart colour, as the same measure's chart
+ * does elsewhere in the app: heart rate and HRV chart-3, breathing (a vital)
+ * chart-1. They come from the twin palette, so they follow the theme.
+ */
+type GlowColours = Readonly<{ pulse: Color; hrv: Color; breath: Color }>;
+
+const glowColours = (palette: TwinPalette): GlowColours => ({
+  pulse: new Color(palette[CATEGORY_TOKEN.heart]),
+  hrv: new Color(palette[CATEGORY_TOKEN.hrv]),
+  breath: new Color(palette[CATEGORY_TOKEN.vitals]),
+});
 
 /** HRA lights organ groups; BodyParts3D, one mesh per system, only whole systems. */
 const targetFor = (
@@ -165,14 +177,16 @@ export const LiveConditioning = ({
   const gl = useThree((state) => state.gl);
   const invalidate = useThree((state) => state.invalidate);
   const targets = useMemo(() => liveTargets(scheme, parts), [scheme, parts]);
+  const palette = useTwinPalette();
+  const colours = useMemo(() => glowColours(palette), [palette]);
   const visibleRef = useRef(true);
   const timerRef = useRef<number | null>(null);
   const statusRef = useRef<LiveStatus>(IDLE_STATUS);
   const clockRef = useRef<BeatClock | null>(null);
   const lastFrameRef = useRef<number | null>(null);
-  const live = useRef({ enabled, vitals, targets, onStatus, chambers, root });
+  const live = useRef({ enabled, vitals, targets, onStatus, chambers, root, colours });
   useEffect(() => {
-    live.current = { enabled, vitals, targets, onStatus, chambers, root };
+    live.current = { enabled, vitals, targets, onStatus, chambers, root, colours };
   });
   // Another beat pattern (person, day) starts its own clock.
   useEffect(() => {
@@ -217,7 +231,7 @@ export const LiveConditioning = ({
   // Any change of input gets one frame, which starts or stops the loop.
   useEffect(() => {
     invalidate();
-  }, [enabled, vitals, targets, chambers.on, invalidate]);
+  }, [enabled, vitals, targets, chambers.on, colours, invalidate]);
 
   // Leaving (atlas switch, unmount) puts every part back.
   useEffect(
@@ -228,7 +242,7 @@ export const LiveConditioning = ({
         // Scale, chambers and glow, whichever this atlas used.
         setPartScale(part.mesh, 1);
         setHeartChambers(part.mesh, root, null);
-        setLiveGlow(part.mesh.material as Material, 0, PULSE_COLOUR);
+        setLiveGlow(part.mesh.material as Material, 0, live.current.colours.pulse);
       }
       statusRef.current = IDLE_STATUS;
       live.current.onStatus(IDLE_STATUS);
@@ -243,6 +257,7 @@ export const LiveConditioning = ({
       targets: now,
       chambers: chamberSetting,
       root: atlasRoot,
+      colours: tint,
     } = live.current;
     const heart = on && rates.heart !== null && drawn(now.heart);
     const lungs = on && rates.breath !== null && drawn(now.lungs);
@@ -280,7 +295,7 @@ export const LiveConditioning = ({
       // BodyParts3D's cardiovascular mesh is the whole system: glow only, softer.
       setPartScale(part.mesh, scheme === "hra" && beat > 0 ? 1 + HEART_SCALE * beat : 1);
       setHeartChambers(part.mesh, atlasRoot, contraction);
-      setLiveGlow(part.mesh.material as Material, glow, PULSE_COLOUR);
+      setLiveGlow(part.mesh.material as Material, glow, tint.pulse);
     }
     const breath = lungs && rates.breath ? breathAt(t, rates.breath.perMinute) : 0;
     for (const part of now.lungs) {
@@ -292,12 +307,12 @@ export const LiveConditioning = ({
         setLiveGlow(
           part.mesh.material as Material,
           breath * BREATH_GLOW_BODYPARTS3D,
-          BREATH_COLOUR,
+          tint.breath,
         );
       }
     }
     for (const part of now.hrv) {
-      setLiveGlow(part.mesh.material as Material, glowing ? HRV_GLOW : 0, HRV_COLOUR);
+      setLiveGlow(part.mesh.material as Material, glowing ? HRV_GLOW : 0, tint.hrv);
     }
     report({
       pulsing: heart,

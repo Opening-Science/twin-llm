@@ -24,6 +24,10 @@
  * A match of the person's own rsIDs or genome sites stops a request to a
  * hosted model (#356, `blocksSend`); every other kind is only recorded.
  *
+ * A number is found in its locale spellings too (a decimal comma, thousands
+ * marks such as `1'234` or `1.234,5`), and a unit ignores case, the micro
+ * sign and spaces around a slash.
+ *
  * Approximate: a value written differently (another spelling, a unit
  * conversion, a rounded number) is not found, and wearable numbers are not
  * searched. Pure; the runtime is `free-text-check-runtime.ts`.
@@ -278,14 +282,82 @@ export const canonicalNumber = (text: string): string | null => {
   return String(Number(trimmed));
 };
 
-const numbersIn = (text: string): readonly Readonly<{ value: string; end: number }>[] =>
-  [...text.matchAll(NUMBER)].map((match) => ({
+/**
+ * A run of digits joined by the marks people group thousands or write
+ * decimals with: `1,234.5`, `1.234,5`, `1'234.5` (Swiss), `1 234,5` with a
+ * no-break or thin space. A plain space is not one: "3 195" is two numbers.
+ */
+const SEPARATED =
+  /(?<![\p{L}\p{N}_.,'’   ])\d+(?:[.,'’   ]\d+)+(?![\p{N}]|[.,'’   ]\d)/gu;
+
+const isDecimalMark = (char: string | undefined): boolean => char === "." || char === ",";
+
+/** Groups after the first are three digits, one mark throughout, and the first is not 0. */
+const isGrouped = (groups: readonly string[], marks: readonly string[]): boolean => {
+  const head = groups[0] ?? "";
+  return (
+    head.length >= 1 &&
+    head.length <= 3 &&
+    !head.startsWith("0") &&
+    groups.slice(1).every((group) => group.length === 3) &&
+    marks.every((mark) => mark === marks[0])
+  );
+};
+
+/**
+ * Every number a separated token can mean, in the canonical spelling. `5,4`
+ * is 5.4; `1,234` is 1234 or 1.234 (the locale is not known, so both);
+ * `1'234.5` and `1.234,5` are 1234.5. Groups after the first must be three
+ * digits, so a date such as `12.03.2024` or a version such as `2.0.1` means
+ * no number.
+ */
+export const separatedReadings = (token: string): readonly string[] => {
+  const groups = token.split(/\D/);
+  const marks = token.replace(/\d/g, "").split("");
+  const last = marks[marks.length - 1];
+  const thousands = isGrouped(groups, marks) ? [groups.join("")] : [];
+  const whole = groups.slice(0, -1);
+  const decimal =
+    isDecimalMark(last) &&
+    (marks.length === 1 || (last !== marks[0] && isGrouped(whole, marks.slice(0, -1))))
+      ? [`${whole.join("")}.${groups[groups.length - 1] ?? ""}`]
+      : [];
+  return unique(
+    [...thousands, ...decimal].flatMap((reading) => canonicalNumber(reading) ?? []),
+  );
+};
+
+/**
+ * The numbers in a text and where each ends. A number written with a decimal
+ * comma or thousands marks gives each number it can mean, besides its plain
+ * digit runs, so a locale spelling is found and nothing found before is lost.
+ */
+const numbersIn = (text: string): readonly Readonly<{ value: string; end: number }>[] => [
+  ...[...text.matchAll(NUMBER)].map((match) => ({
     value: String(Number(match[0])),
     end: (match.index ?? 0) + match[0].length,
-  }));
+  })),
+  ...[...text.matchAll(SEPARATED)].flatMap((match) =>
+    separatedReadings(match[0]).map((value) => ({
+      value,
+      end: (match.index ?? 0) + match[0].length,
+    })),
+  ),
+];
 
 const isDistinctiveCode = (code: string): boolean =>
   code.length >= MIN_CODE_LENGTH && /\p{N}/u.test(code);
+
+/**
+ * One spelling per unit: case, the micro sign (`µ`, `μ`, `u`, `mcg`) and
+ * spaces around a slash do not matter, so `µmol/L`, `umol / l` and `mcg/dL`
+ * meet a stored `umol/L` and `ug/dL`.
+ */
+export const unitSpelling = (unit: string): string =>
+  normalized(unit)
+    .replace(/[µμ]/g, "u")
+    .replace(/mcg(?!\p{L})/gu, "ug")
+    .replace(/\s*\/\s*/g, "/");
 
 /** A unit worth matching after a number: it has a letter or is `%`. */
 const isUnit = (unit: string): boolean => /[\p{L}%]/u.test(unit);
@@ -298,19 +370,28 @@ const groupBy = (
     return map;
   }, new Map<string, Set<string>>());
 
-/** `195 mg/dL`, `5.4mmol/L`: a stored number followed by its own unit, ignoring case. */
+/** How many characters after a number are read for its unit. */
+const UNIT_LOOKAHEAD = 64;
+
+/**
+ * `195 mg/dL`, `5.4mmol/L`, `5,4 mmol/l`, `1'234 \u00b5mol/L`: a stored number
+ * followed by its own unit, in any of the spellings above of either.
+ */
 const labKeysIn = (text: string, readings: readonly StoredReading[]): Set<string> => {
   const unitsOf = groupBy(
     readings.flatMap((reading) => {
       const value = canonicalNumber(reading.value);
-      const unit = normalized(reading.unit);
+      const unit = unitSpelling(reading.unit);
       return value === null || !isUnit(unit) ? [] : [[value, unit] as const];
     }),
   );
   const lower = text.toLocaleLowerCase("en-GB");
   return new Set(
     numbersIn(lower).flatMap(({ value, end }) => {
-      const rest = lower.slice(end).replace(/^[ \u00a0]/, "");
+      if (!unitsOf.has(value)) return [];
+      const rest = unitSpelling(
+        lower.slice(end, end + UNIT_LOOKAHEAD).replace(/^[ \u00a0\u2009\u202f]/, ""),
+      );
       return [...(unitsOf.get(value) ?? [])]
         .filter((unit) => rest.startsWith(unit) && !isWordChar(rest[unit.length]))
         .map((unit) => `${value}|${unit}`);

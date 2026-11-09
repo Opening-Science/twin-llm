@@ -36,6 +36,8 @@ The Markdown notes in `knowledge/opentwin/` are © 2026 Open Science Foundation,
 
 The files were merged, simplified and shaded (ambient occlusion) by the Open Science Foundation's open-twin-xr; TwinLLM only positions them. Pins and details: `docs/anatomy.md`.
 
+`bun run blender:fit-atlas` makes fitted copies of these atlases on the local machine (`data/anatomy/fitted/`, gitignored): the limbs are turned toward a demo body's joints (and, only with `--stretch`, lengthened or shortened along their own axes). They are derivatives and keep the credit above. BodyParts3D derivatives carry the BodyParts3D credit; until DBCLS confirms the relicence in writing, the worst case is share-alike under CC BY-SA 2.1 JP on those model files, never on this code. HRA derivatives are CC BY 4.0; cite the HRA 3D reference organs (Browne et al. 2022) and add "Courtesy of the U.S. National Library of Medicine", since the HRA organs come from the Visible Human data. The scripts in `scripts/blender/` are this repository's code; they run inside Blender (GPL) as plain scripts and are not Blender add-ons.
+
 ## Synthetic demo bodies
 
 `bun run anatomy:fetch` also downloads two synthetic demo bodies into the gitignored `data/anatomy/`. They are not part of this repository and are licensed separately (Apache-2.0 code over CC0-1.0 shape assets); the viewer shows this credit whenever the demo body is displayed:

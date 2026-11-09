@@ -45,7 +45,19 @@ describe("threadMarkdown", () => {
                     args: [],
                     state: "refused",
                     rowCount: 0,
-                    note: "A cohort measure needs a subject.",
+                    note: "A cohort measure needs a person to read it for",
+                    refusalCode: "SUBJECT_REQUIRED",
+                    notRun: true,
+                  },
+                  {
+                    id: "3",
+                    tool: "trend",
+                    title: "Fitted a trend",
+                    args: [{ label: "Measure", value: "2339-0" }],
+                    state: "refused",
+                    rowCount: 0,
+                    note: "No readings in this range",
+                    refusalCode: "NO_ROWS",
                   },
                 ],
               }),
@@ -76,8 +88,9 @@ describe("threadMarkdown", () => {
         "### qwen3:4b",
         "",
         "Lookups:",
-        "- Fitted a trend (measure 8867-4) · 13 rows",
-        "- Showed a view · refused: A cohort measure needs a subject.",
+        "- Fitted a trend: heart rate (measure 8867-4) · 13 rows",
+        "- Showed a view · refused: A cohort measure needs a person to read it for",
+        "- Fitted a trend: blood glucose (measure 2339-0) · no data: No readings in this range",
         "",
         "Up from 79 to 87 /min.",
         "",
@@ -91,6 +104,99 @@ describe("threadMarkdown", () => {
         "",
         "_Refused or failed: Model unavailable._",
         "",
+      ].join("\n"),
+    );
+  });
+
+  test("cited values keep their source, day and stored key in the export (#464)", () => {
+    const thread = (overrides: Partial<ResponseState>) =>
+      threadMarkdown(
+        {
+          title: "HRV",
+          turns: [
+            {
+              id: "t1",
+              prompt: "HRV",
+              answers: [answer({ text: "## Answer\nSynthetic.", ...overrides })],
+            },
+          ],
+        },
+        "9 Nov 2026",
+      );
+    expect(
+      thread({
+        attribution: [
+          {
+            metricKey: "whoop.recovery.hrv.2026-01-02",
+            label: "Recovery HRV",
+            value: 48,
+            unit: "ms",
+            source: "whoop",
+            day: "2026-01-02",
+          },
+          { metricKey: "sleep.hrv.2026-01-01", label: "Sleep HRV", value: 41 },
+        ],
+      }),
+    ).toContain(
+      [
+        "Synthetic.",
+        "",
+        "Evidence:",
+        "- Recovery HRV 48 ms · From WHOOP, 2 Jan 2026 (`whoop.recovery.hrv.2026-01-02`)",
+        "- Sleep HRV 41 (`sleep.hrv.2026-01-01`)",
+      ].join("\n"),
+    );
+    expect(
+      thread({
+        document: {
+          data_basis: { evidence_keys: ["sleep.hrv.2026-01-01"] },
+        } as ResponseState["document"],
+      }),
+    ).toContain("Evidence:\n- `sleep.hrv.2026-01-01`");
+    expect(thread({})).not.toContain("Evidence:");
+  });
+
+  test("the export says whether each stated value matches its reading (#545)", () => {
+    const markdown = threadMarkdown(
+      {
+        title: "Sleep",
+        turns: [
+          {
+            id: "t1",
+            prompt: "Sleep",
+            answers: [
+              answer({
+                text: "## Answer\nSynthetic.",
+                attribution: [
+                  {
+                    metricKey: "sleep.score.2026-01-01",
+                    label: "Sleep score",
+                    value: 82,
+                    source: "oura",
+                    day: "2026-01-01",
+                    valueCheck: { status: "matched", stated: "82" },
+                  },
+                  {
+                    metricKey: "sleep.score.2026-01-02",
+                    label: "Sleep score",
+                    value: 79,
+                    source: "oura",
+                    day: "2026-01-02",
+                    valueCheck: { status: "not_matched", stated: "71" },
+                  },
+                ],
+              }),
+            ],
+          },
+        ],
+      },
+      "9 Nov 2026",
+    );
+    expect(markdown).toContain(
+      [
+        "Evidence:",
+        "- Sleep score 82 · Matches the Oura reading, 1 Jan 2026 (`sleep.score.2026-01-01`)",
+        "- Sleep score 79 · Doesn't match the cited reading: the answer says 71 (`sleep.score.2026-01-02`)",
       ].join("\n"),
     );
   });

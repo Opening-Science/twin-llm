@@ -59,6 +59,12 @@ export type Interactive = Readonly<{
   defaultFocus?: number;
 }>;
 
+/**
+ * The heading level of a card's label, so cards nest under the page's own
+ * section headings: h3 under an h2 section (the default), h4 under an h3.
+ */
+export type HeadingLevel = 2 | 3 | 4;
+
 /** The ranges a card can switch between; the card only reports the choice. */
 export type ChartRange = "day" | "week" | "month";
 
@@ -69,6 +75,8 @@ export type InsightCardProps = Base &
     series?: SeriesToken;
     /** A noun, optionally scoped: "Sleep: Stages". */
     label: string;
+    /** The label's heading level; 3 unless the card sits deeper in the page's outline. */
+    headingLevel?: HeadingLevel;
     /** The one insight sentence; also what a screen reader reads for the chart. */
     sentence: string;
     /** Shown under the chart when state is empty, e.g. "7 nights needed". */
@@ -133,14 +141,24 @@ export type RangeBarsProps = Base &
     axis?: readonly [string, string];
     /** How a MIN/MAX number is written; defaults to whole numbers. */
     format?: (value: number) => string;
+    /** The unit after MIN and MAX numbers, e.g. "bpm": "MAX 114 bpm". */
+    unit?: string;
   }>;
 
 /** C09: four lanes with a duration under each label. */
 export type HypnogramProps = Base &
   Interactive &
   Readonly<{
-    spans: readonly StageSpan[];
-    /** Lane words; defaults to Awake, REM, Core, Deep. */
+    /** The night's stages in order. */
+    spans?: readonly StageSpan[];
+    /**
+     * Minutes per stage, for a source that gives totals but not the order
+     * (WHOOP). Each lane then shows one bar, the longest stage full width.
+     */
+    totals?: Readonly<Partial<Record<SleepStage, number>>>;
+    /** The vendor's word for the core lane: Apple's "Core" or Oura's "Light". Defaults to "Core". */
+    coreWord?: "Core" | "Light";
+    /** Lane words; defaults to Awake, REM, Core (or `coreWord`), Deep. Overrides `coreWord`. */
     labels?: Readonly<Partial<Record<SleepStage, string>>>;
     /** Start and end words for the axis, e.g. ["11:04 PM", "6:31 AM"]. */
     axis?: readonly [string, string];
@@ -176,6 +194,13 @@ export type ConsistencyProps = Base &
     reference: HeroValue;
     last: HeroValue;
     axis?: readonly [string, string];
+    /**
+     * Where the bars start instead of zero, e.g. 22:00 as 1,320 minutes, so a
+     * 30-minute shift near 23:00 is visible.
+     */
+    floor?: number;
+    /** The usual range, drawn as a grey band behind the bars and named "Usual". */
+    usual?: Readonly<{ low: number; high: number; label?: string }>;
   }>;
 
 /** R1: a research figure. */
@@ -184,6 +209,8 @@ export type ResearchFigureProps = Base &
   Readonly<{
     /** A study series colour in place of the category's; rows with their own `series` keep theirs. */
     series?: SeriesToken;
+    /** What the axis measures, written under its ticks inside the figure, e.g. "Rate ratio". */
+    axisTitle?: string;
   }> &
   (
     | Readonly<{
@@ -195,6 +222,11 @@ export type ResearchFigureProps = Base &
         domain?: readonly [number, number];
         /** "log" for ratios: ticks at 0.5, 1, 2, 4, 8. */
         scale?: AxisScale;
+        /**
+         * Series keys to colour first, in this order; the rest follow in
+         * natural order. Without it a series keeps one colour on every screen.
+         */
+        seriesOrder?: readonly string[];
       }>
     | Readonly<{
         kind: "pairs";
@@ -222,6 +254,8 @@ export type ResearchFigureProps = Base &
 export type LabResultCardProps = Base &
   Readonly<{
     title: string;
+    /** The title's heading level; 3 unless the card sits deeper in the page's outline. */
+    headingLevel?: HeadingLevel;
     /** The outcome is always a word; colour only follows it. */
     outcome: Readonly<{ word: string; tone: "pass" | "fail" | "neutral" }>;
     sentence: string;
@@ -257,14 +291,30 @@ export type DeviceRow = Readonly<{
   /** A word on the right; colour follows the word, never replaces it. */
   status?: Readonly<{ word: string; tone: "ok" | "warn" | "neutral" }>;
   logo?: VendorLogo;
-  /** Makes the row a link with a chevron. */
+  /**
+   * Leave out the logo's attribution word on this row, e.g. no "Data by" on
+   * a WHOOP row that is not linked. The logo itself stays.
+   */
+  hideAttribution?: boolean;
+  /**
+   * Makes the row a link with a chevron. With `actions` only the name is the
+   * link, since a link cannot hold buttons.
+   */
   href?: string;
+  /** Buttons at the end of the row, such as Refresh, View or Unlink. */
+  actions?: ReactNode;
 }>;
 
-/** C15: a titled group of rows, one per device or source. */
+/** C15: a group of rows, one per device or source. */
 export type DeviceListProps = Base &
   Readonly<{
-    title: string;
+    /** The group's heading; leave it out when the list sits under a heading of its own. */
+    title?: string;
+    /**
+     * Without a frame the rows sit straight on their parent, such as a card
+     * that already frames them; hairlines between rows stay.
+     */
+    framed?: boolean;
     rows: readonly DeviceRow[];
     /** Shown in place of the rows when state is empty, e.g. "No device linked yet". */
     emptyNote?: string;

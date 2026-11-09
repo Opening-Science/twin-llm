@@ -2,6 +2,7 @@ import { cn } from "@/infrastructure/ui";
 import { SegmentedControl } from "@/infrastructure/ui-kit/segmented-control";
 
 import { categoryTextClass, tokenTextClass } from "../category-token";
+import { HEADING } from "./heading";
 import type { ChartRange, InsightCardProps } from "./types";
 
 const RANGE_WORD: Readonly<Record<ChartRange, string>> = {
@@ -28,52 +29,58 @@ export const InsightCard = ({
   emptyNote,
   interactive = false,
   ranges,
+  headingLevel = 3,
   children,
-}: InsightCardProps) => (
-  <article
-    className="surface rounded-card flex flex-col gap-3 p-5"
-    aria-busy={state === "loading" ? true : undefined}
-    data-state={state}
-  >
-    <header className="flex items-center gap-2 text-sm">
-      <span
-        aria-hidden="true"
-        className={cn(
-          "inline-block size-2.5 rounded-full bg-current",
-          series ? tokenTextClass(series) : categoryTextClass(category),
-        )}
-      />
-      <h3 className="text-foreground font-sans">{label}</h3>
-      {ranges ? (
-        <SegmentedControl
-          label={`${label}: range`}
-          size="sm"
-          className="ml-auto"
-          options={(ranges.options ?? ["day", "week", "month"]).map((value) => ({
-            value,
-            label: RANGE_WORD[value],
-          }))}
-          value={ranges.value}
-          onChange={ranges.onChange}
+}: InsightCardProps) => {
+  const Heading = HEADING[headingLevel];
+  return (
+    <article
+      className="surface rounded-card flex flex-col gap-3 p-5"
+      aria-busy={state === "loading" ? true : undefined}
+      data-state={state}
+    >
+      <header className="flex items-center gap-2 text-sm">
+        <span
+          aria-hidden="true"
+          className={cn(
+            "inline-block size-2.5 rounded-full bg-current",
+            series ? tokenTextClass(series) : categoryTextClass(category),
+          )}
         />
+        <Heading className="text-foreground font-sans">{label}</Heading>
+        {ranges ? (
+          <SegmentedControl
+            label={`${label}: range`}
+            size="sm"
+            className="ml-auto"
+            options={(ranges.options ?? ["day", "week", "month"]).map((value) => ({
+              value,
+              label: RANGE_WORD[value],
+            }))}
+            value={ranges.value}
+            onChange={ranges.onChange}
+          />
+        ) : null}
+      </header>
+      {state === "loading" ? (
+        <div className="space-y-2" role="status" aria-label="Loading">
+          <div className="bg-chart-track h-5 w-full rounded-full motion-safe:animate-pulse" />
+          <div className="bg-chart-track h-5 w-2/3 rounded-full motion-safe:animate-pulse" />
+        </div>
+      ) : (
+        <p className="text-insight text-foreground font-sans">{sentence}</p>
+      )}
+      {children ? (
+        <>
+          <hr className="border-border" />
+          <div aria-hidden={interactive ? undefined : true}>{children}</div>
+        </>
       ) : null}
-    </header>
-    {state === "loading" ? (
-      <div className="space-y-2" role="status" aria-label="Loading">
-        <div className="bg-chart-track h-5 w-full rounded-full motion-safe:animate-pulse" />
-        <div className="bg-chart-track h-5 w-2/3 rounded-full motion-safe:animate-pulse" />
-      </div>
-    ) : (
-      <p className="text-insight text-foreground font-sans">{sentence}</p>
-    )}
-    {children ? (
-      <>
-        <hr className="border-border" />
-        <div aria-hidden={interactive ? undefined : true}>{children}</div>
-      </>
-    ) : null}
-    {state === "empty" && emptyNote ? (
-      <p className="text-muted-foreground font-mono text-xs tabular-nums">{emptyNote}</p>
-    ) : null}
-  </article>
-);
+      {state === "empty" && emptyNote ? (
+        <p className="text-muted-foreground font-mono text-xs tabular-nums">
+          {emptyNote}
+        </p>
+      ) : null}
+    </article>
+  );
+};

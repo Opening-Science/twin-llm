@@ -35,8 +35,8 @@ See `docs/open-twin-pins.md` and `scripts/sync-open-twin.sh`. Checkout lives in 
 
 - `infrastructure/open-twin-adapters/oura.ts` — `HostOuraTokenHandler.lastTokens()` (renamed from `getTokens()` because upstream now has its own); `getAuthorizationUrl` via `.open-twin` src path
 - `infrastructure/open-twin-adapters/whoop.ts` — `fetchWhoopWindow` / `buildWhoopFhirBundle` over the public barrel (`getWhoopData`, `buildWhoopBundleFromPayload`)
-- `infrastructure/open-twin-adapters/google-health.ts` — restore/persist credential helpers
-- `infrastructure/open-twin-adapters/aggregate.ts` — `aggregateWearableBundles` over `aggregate` from the public barrel; not read by any screen yet
+- `infrastructure/open-twin-adapters/google-health.ts` — restore/persist credential helpers; `buildGoogleHealthFhirBundle` (`google-health-bundle.ts`) over `buildBundleFromResponses` with the person's shared subject
+- `infrastructure/open-twin-adapters/aggregate.ts` — `aggregateWearableBundles` over `aggregate` from the public barrel, for Oura, WHOOP and Google Health; not read by any screen yet
 - Sync packaging only (no upstream `*.ts` edits): `workspace:*` → `file:../fhir-core`, then peer-pin for host install; flatten nested bun redirects
 - Upgrade: `bash scripts/sync-open-twin.sh <sha>` then `bun install` (see `docs/open-twin-pins.md`)
 
@@ -67,6 +67,10 @@ Downloaded by `bun run anatomy:fetch` from the [`anatomy-rigged-v1`](https://git
 | ------------------- | ------------------------- | ------- | ------------------------------------------------------------------ |
 | ANNY adult (male)   | `anny-adult-m.rigged.glb` | 464,852 | `16d101090af7719069cd78d0a091d7d9c4975bc45df44201f23761ea89553589` |
 | ANNY adult (female) | `anny-adult-f.rigged.glb` | 464,816 | `9032bfeb29ba4be8aeb0eb38a81e72c5dd5420a38005913d907c83c4f87fdbe1` |
+
+## Fitted atlases and cleaned meshes (made locally by Blender, not committed)
+
+`bun run blender:fit-atlas` runs `scripts/blender/fit_atlas.py` in Blender 5.2.x LTS (GPL; the scripts drive it as plain scripts, they are not add-ons and ship no Blender code) on the pinned atlases and rigged demo bodies above, after checking each file's SHA-256. It writes fitted atlases and their reports to gitignored `data/anatomy/fitted/`: derivatives of BodyParts3D and HRA under those atlases' licences (`NOTICE`, `docs/anatomy.md`), never committed. `bun run blender:cleanup` writes cleaned copies of the synthetic ANNY demo body to gitignored `data/anatomy/cleanup-demo/`. No scan of any person, no SMPL or SMPL-X asset and no ANNY SMPL-X topology are used.
 
 ## Motion from video (local tool, nothing committed)
 

@@ -18,6 +18,8 @@ import {
   type StoredValues,
   storedValueMatches,
   requestText,
+  separatedReadings,
+  unitSpelling,
   variantCandidates,
 } from "./free-text-check";
 
@@ -323,6 +325,100 @@ describe("storedValueMatches", () => {
         freeTextCheckOf(storedValueMatches("195 mg/dL and 2093-3: 195", stored)),
       ),
     ).toBe(false);
+  });
+});
+
+describe("storedValueMatches: locale and unit spellings", () => {
+  /** A synthetic person: readings whose numbers and units have several spellings. */
+  const stored: StoredValues = {
+    ...NO_STORED_VALUES,
+    readings: [
+      { code: null, value: "5.4", unit: "mmol/L" },
+      { code: null, value: "1234", unit: "U/L" },
+      { code: null, value: "1234.5", unit: "pmol/L" },
+      { code: null, value: "88", unit: "µmol/L" },
+      { code: null, value: "0.25", unit: "mcg/dL" },
+      { code: "2345-7", value: "6.1", unit: "mmol/L" },
+    ],
+  };
+
+  const labs = (text: string, typed = "") =>
+    storedValueMatches(text, stored, typed).find(
+      (match) => match.kind === FREE_TEXT_KIND.lab,
+    )?.count;
+
+  test("a decimal comma is the same number", () => {
+    expect(labs("Glukose 5,4 mmol/l")).toBe(1);
+    expect(labs("Glukose 5,40 mmol/L")).toBe(1);
+  });
+
+  test("thousands marks in English, Swiss, German and French spellings", () => {
+    expect(labs("CK 1,234 U/L")).toBe(1);
+    expect(labs("CK 1'234 U/L")).toBe(1);
+    expect(labs("CK 1’234 U/L")).toBe(1);
+    expect(labs("CK 1.234 U/L")).toBe(1);
+    expect(labs("CK 1 234 U/L")).toBe(1);
+    expect(labs("BNP 1.234,5 pmol/L")).toBe(1);
+    expect(labs("BNP 1'234.5 pmol/L")).toBe(1);
+    expect(labs("BNP 1 234,5 pmol/L")).toBe(1);
+  });
+
+  test("the micro sign, mcg and spaces around a slash are one unit", () => {
+    expect(labs("Kreatinin 88 µmol/L")).toBe(1);
+    expect(labs("Kreatinin 88 μmol/L")).toBe(1);
+    expect(labs("Kreatinin 88 umol / l")).toBe(1);
+    expect(labs("B12 0.25 µg/dL")).toBe(1);
+    expect(labs("B12 0,25 ug/dl")).toBe(1);
+    expect(labs("B12 0.25 mcg/dL")).toBe(1);
+  });
+
+  test("ordinary numbers are not lab values", () => {
+    // Dates, versions, times, lists and other units.
+    expect(labs("Seen 12.03.2024, app 2.0.1, at 10:30, doses [5,4] mmol")).toBe(0);
+    expect(labs("Steps 1,234 today; 5,4 km run; 88 mmol/L; 1234 mmol/L")).toBe(0);
+    // Grouping must be in threes, and a leading 0 is a decimal, not a group.
+    expect(labs("12,34 U/L, 1,2345 U/L, 0.234 U/L")).toBe(0);
+    // A plain space separates two numbers: 1 and 234, neither stored with U/L.
+    expect(labs("1 234 U/L")).toBe(0);
+    // A longer unit or number is not this one.
+    expect(labs("5,4 mmol/Lx, 15,4 mmol/L, 5,45 mmol/L")).toBe(0);
+  });
+
+  test("a code with a decimal-comma number nearby is a coded value", () => {
+    const coded = storedValueMatches('{"code":"2345-7","value":"6,1"}', stored).find(
+      (match) => match.kind === FREE_TEXT_KIND.coded,
+    )?.count;
+    expect(coded).toBe(1);
+  });
+
+  test("a value the person typed in one spelling is theirs in another spelling too", () => {
+    expect(labs("Your glucose of 5.4 mmol/L is noted.", "Glukose 5,4 mmol/l?")).toBe(0);
+  });
+});
+
+describe("separatedReadings", () => {
+  test("each number a token can mean, canonical", () => {
+    expect(separatedReadings("5,4")).toEqual(["5.4"]);
+    expect(separatedReadings("1,234")).toEqual(["1234", "1.234"]);
+    expect(separatedReadings("1'234")).toEqual(["1234"]);
+    expect(separatedReadings("1.234,50")).toEqual(["1234.5"]);
+    expect(separatedReadings("12,345,678")).toEqual(["12345678"]);
+  });
+
+  test("dates, versions and mixed groups mean no number", () => {
+    expect(separatedReadings("12.03.2024")).toEqual([]);
+    expect(separatedReadings("2.0.1")).toEqual([]);
+    expect(separatedReadings("1,234'567")).toEqual([]);
+    expect(separatedReadings("1'5")).toEqual([]);
+  });
+});
+
+describe("unitSpelling", () => {
+  test("case, micro sign, mcg and slash spacing", () => {
+    expect(unitSpelling("µmol/L")).toBe("umol/l");
+    expect(unitSpelling("μg / dL")).toBe("ug/dl");
+    expect(unitSpelling("mcg/dL")).toBe("ug/dl");
+    expect(unitSpelling("mcgx")).toBe("mcgx");
   });
 });
 
