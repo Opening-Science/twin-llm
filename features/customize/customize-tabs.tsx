@@ -8,7 +8,7 @@ import { centredScrollLeft, type RowOverflow, rowOverflow } from "./row-overflow
 
 /**
  * Customize's parts: the skills you can run, the agents built on them
- * (#221), your twin notes (#43), scheduled skill runs (#54), the data you bring, the services you link, and consent to learn from your data (#145). Links, not buttons, so each part has its own address
+ * (#221), your twin notes (#43), scheduled skill runs (#54), the data you bring, the services you link, consent to learn from your data (#145), and every keep or withhold choice in one list (#507). Links, not buttons, so each part has its own address
  * and the browser's back button works.
  */
 export const CUSTOMIZE_TABS = [
@@ -19,6 +19,7 @@ export const CUSTOMIZE_TABS = [
   { href: "/customize/data", label: "Data" },
   { href: "/customize/connectors", label: "Connectors" },
   { href: "/customize/privacy", label: "Privacy" },
+  { href: "/customize/settings", label: "Settings" },
 ] as const;
 
 export const currentTab = (path: string): string =>
