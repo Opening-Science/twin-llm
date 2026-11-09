@@ -6,6 +6,7 @@ import {
 } from "@/infrastructure/knowledge-sources";
 
 import {
+  changedFromDefault,
   isAtDefaults,
   SETTING_DEFAULTS,
   type SettingRow,
@@ -179,5 +180,55 @@ describe("withSwitch", () => {
     expect(off.disabledSources).toEqual(["cohort-records", "cohort-analytics"]);
     const on = withSwitch(off, { setting: "source", id: "cohort-analytics" }, true);
     expect(on.disabledSources).toEqual([]);
+  });
+});
+
+describe("rows this server cannot use", () => {
+  const unusable = facts({
+    localOnly: true,
+    availability: {
+      ...allAvailable,
+      "imported-data": { available: false, note: "Personal mode and a local model only" },
+    },
+  });
+
+  test("say Unavailable and why, instead of a default badge", () => {
+    expect(
+      rows(unusable, SETTING_DEFAULTS.personal).flatMap((item) =>
+        item.unavailable === null ? [] : [[item.key, item.unavailable]],
+      ),
+    ).toEqual([
+      ["source-imported-data", "Personal mode and a local model only"],
+      [
+        "live-pubmed",
+        "Off on this server: local-only mode sends nothing to public databases.",
+      ],
+      [
+        "live-ensembl",
+        "Off on this server: local-only mode sends nothing to public databases.",
+      ],
+    ]);
+  });
+
+  test("are left out of the summary, whatever is stored for them", () => {
+    const state = {
+      ...SETTING_DEFAULTS.personal,
+      disabledSources: ["imported-data"] as const,
+    };
+    expect(row(unusable, state, "source-imported-data").isDefault).toBe(false);
+    expect(changedFromDefault(settingsSections(unusable, state))).toBe(0);
+  });
+
+  test("a usable choice away from its default is still counted", () => {
+    const state = { ...SETTING_DEFAULTS.personal, notesOn: false };
+    expect(changedFromDefault(settingsSections(unusable, state))).toBe(1);
+  });
+
+  test("signing out locks switches but does not make them unavailable", () => {
+    expect(
+      rows(facts({ signedIn: false }), SETTING_DEFAULTS.personal).filter(
+        (item) => item.unavailable !== null,
+      ),
+    ).toEqual([]);
   });
 });

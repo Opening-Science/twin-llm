@@ -9,6 +9,7 @@ import { StatusBadge } from "@/infrastructure/ui-kit/status-badge";
 import { Switch } from "@/infrastructure/ui-kit/switch";
 
 import {
+  changedFromDefault,
   type SettingRow,
   type SettingsFacts,
   settingsSections,
@@ -47,9 +48,6 @@ const save = (
   }
 };
 
-const changedCount = (rows: readonly SettingRow[]): number =>
-  rows.filter((row) => !row.isDefault).length;
-
 export const SettingsScreen = ({
   facts,
   initialState,
@@ -64,7 +62,7 @@ export const SettingsScreen = ({
   const [errors, setErrors] = useState<Readonly<Record<string, string>>>({});
   const [pending, startTransition] = useTransition();
   const sections = settingsSections(facts, state);
-  const changed = changedCount(sections.flatMap((section) => section.rows));
+  const changed = changedFromDefault(sections);
 
   const apply = (row: SettingRow, target: SwitchTarget, on: boolean) => {
     const previous = state;
@@ -100,7 +98,7 @@ export const SettingsScreen = ({
         </p>
         <p className="mt-3 text-sm" aria-live="polite">
           {changed === 0
-            ? "Every choice is at its safe default."
+            ? "Every choice this server allows is at its safe default."
             : `${String(changed)} ${changed === 1 ? "choice differs" : "choices differ"} from the safe default.`}
         </p>
       </section>
@@ -160,7 +158,12 @@ const SettingItem = ({
           </p>
           <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
             <span className="metric">Safe default: {row.safeDefault}</span>
-            {row.isDefault ? (
+            {row.unavailable !== null ? (
+              <>
+                <StatusBadge tone="off">Unavailable</StatusBadge>
+                <span className="text-muted-foreground text-xs">{row.unavailable}</span>
+              </>
+            ) : row.isDefault ? (
               <StatusBadge tone="ok">Default</StatusBadge>
             ) : (
               <StatusBadge tone="neutral">Changed</StatusBadge>
@@ -168,7 +171,7 @@ const SettingItem = ({
           </p>
         </div>
         <div className="flex shrink-0 flex-col items-start gap-1 sm:items-end sm:text-right">
-          {control.kind === "switch" ? (
+          {row.unavailable !== null ? null : control.kind === "switch" ? (
             control.locked === null ? (
               <span className="flex items-center gap-2 text-sm">
                 <span className="text-muted-foreground text-xs">

@@ -83,6 +83,13 @@ export type SettingRow = Readonly<{
   /** The safe default, in words. */
   safeDefault: string;
   isDefault: boolean;
+  /**
+   * Why this server cannot use the choice at all (the data mode, local-only
+   * mode or a missing service); null when it can. Such a row shows
+   * "Unavailable" and its reason instead of a default badge, and is left out
+   * of the summary.
+   */
+  unavailable: string | null;
   control: SettingControl;
 }>;
 
@@ -92,6 +99,9 @@ export type SettingsSection = Readonly<{
   intro: string;
   rows: readonly SettingRow[];
 }>;
+
+const LOCAL_ONLY_REASON =
+  "Off on this server: local-only mode sends nothing to public databases.";
 
 const onOff = (on: boolean): string => (on ? "On" : "Off");
 
@@ -115,6 +125,7 @@ const notesRow = (facts: SettingsFacts, state: SettingsState): SettingRow => {
     does: "Loads the notes you saved with /compact into a new chat or skill run, newest first; incognito chats never load them.",
     safeDefault: onOff(safe),
     isDefault: state.notesOn === safe,
+    unavailable: null,
     control: {
       kind: "switch",
       target: { setting: "notes" },
@@ -141,6 +152,9 @@ const sourceRows = (
         does: source.description,
         safeDefault: onOff(!safe.includes(source.id)),
         isDefault: on === !safe.includes(source.id),
+        unavailable: usable.available
+          ? null
+          : (usable.note ?? "Not available on this server."),
         control: {
           kind: "switch",
           target: { setting: "source", id: source.id },
@@ -169,13 +183,14 @@ const liveRows = (facts: SettingsFacts, state: SettingsState): readonly SettingR
       does: `${source.description} Each lookup goes to ${source.recipient} and is listed under Customize · Privacy first.`,
       safeDefault: onOff(safe.includes(source.id)),
       isDefault: on === safe.includes(source.id),
+      unavailable: facts.localOnly ? LOCAL_ONLY_REASON : null,
       control: {
         kind: "switch",
         target: { setting: "live", id: source.id },
         on,
         confirmOn: `Turn on live ${source.label} lookups? Sent to ${source.recipient}: ${source.sends}`,
         locked: facts.localOnly
-          ? "Off on this server: local-only mode sends nothing to public databases."
+          ? LOCAL_ONLY_REASON
           : facts.signedIn
             ? null
             : "Sign in to change this.",
@@ -191,6 +206,7 @@ const fixedRows = (facts: SettingsFacts): readonly SettingRow[] => [
     does: "A skill you write may run on a hosted model, and your wearable data is withheld from it unless the skill reads wearables and lists only models allowed personal data.",
     safeDefault: "Wearables withheld",
     isDefault: true,
+    unavailable: null,
     control: { kind: "fixed", value: "Wearables withheld" },
   },
   {
@@ -199,6 +215,7 @@ const fixedRows = (facts: SettingsFacts): readonly SettingRow[] => [
     does: "Imported records, wearable exports, VCF variants and genome reports are read only by a model on this machine, never sent to a hosted one.",
     safeDefault: "This machine only",
     isDefault: true,
+    unavailable: null,
     control: {
       kind: "fixed",
       value: facts.mode === "personal" ? "This machine only" : "Off in synthetic mode",
@@ -210,6 +227,7 @@ const fixedRows = (facts: SettingsFacts): readonly SettingRow[] => [
     does: "Everything sent off this machine is written to the disclosure ledger before it is sent, or not sent at all.",
     safeDefault: "Always on",
     isDefault: true,
+    unavailable: null,
     control: {
       kind: "link",
       value: "Always on",
@@ -225,6 +243,7 @@ const consentRow = (facts: SettingsFacts): SettingRow => ({
   does: "Lets TwinLLM's training, answer-key or evaluation pipelines read your own data, per use and per kind of data, until you withdraw.",
   safeDefault: "Off",
   isDefault: facts.activeConsents === 0,
+  unavailable: null,
   control: {
     kind: "link",
     value:
@@ -245,6 +264,7 @@ const serverRows = (facts: SettingsFacts): readonly SettingRow[] => [
     does: `${facts.dataModeSentence} ${facts.howToSwitch}`,
     safeDefault: "Set by whoever runs TwinLLM",
     isDefault: true,
+    unavailable: null,
     control: {
       kind: "fixed",
       value: facts.mode === "personal" ? "Personal" : "Synthetic",
@@ -256,6 +276,7 @@ const serverRows = (facts: SettingsFacts): readonly SettingRow[] => [
     does: "Keeps every model on this machine and sends nothing to public databases or analytics.",
     safeDefault: "Set by whoever runs TwinLLM",
     isDefault: true,
+    unavailable: null,
     control: { kind: "fixed", value: onOff(facts.localOnly) },
   },
 ];
@@ -291,6 +312,15 @@ export const settingsSections = (
     rows: serverRows(facts),
   },
 ];
+
+/**
+ * How many choices differ from their safe default, counting only the ones
+ * this server can use: an unavailable row is neither at nor away from it.
+ */
+export const changedFromDefault = (sections: readonly SettingsSection[]): number =>
+  sections
+    .flatMap((section) => section.rows)
+    .filter((row) => row.unavailable === null && !row.isDefault).length;
 
 /** The state after one switch, before it is saved. */
 export const withSwitch = (
