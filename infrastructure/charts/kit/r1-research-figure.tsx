@@ -23,6 +23,11 @@ import { AXIS_TEXT, ChartSvg, EMPTY_STROKE, LOADING_FILL, toneClass } from "./ki
 import type { ResearchFigureProps } from "./types";
 
 const AXIS = 22;
+/** Room for an axis title under the ticks. */
+const TITLE = 18;
+/** The null figure: its height, and where its ticks sit inside the plot group. */
+const NULL_HEIGHT = 158;
+const NULL_TICKS = 132;
 /** Room at either end of the plot, so a dot at 0 or 1 clears its row label. */
 const PAD = 8;
 
@@ -75,6 +80,7 @@ const EstimatePlot = ({
   reference,
   domain,
   scale = "linear",
+  axisTitle,
   tone,
   state,
   label,
@@ -88,6 +94,7 @@ const EstimatePlot = ({
   readonly state: "default" | "loading" | "empty";
   readonly label?: string;
   readonly defaultFocus?: number;
+  readonly axisTitle?: string;
 }) => {
   const seriesKeys = [...new Set(estimates.flatMap((e) => (e.series ? [e.series] : [])))];
   const hasExpected = estimates.some(
@@ -98,8 +105,10 @@ const EstimatePlot = ({
     return key ? tokenTextClass(conditionToken(seriesKeys.indexOf(key))) : tone(i);
   };
   const top = reference ? 16 : 0;
+  // The axis title has a line of its own under the ticks.
+  const titled = axisTitle ? TITLE : 0;
   const heightFor = (width: number): number =>
-    Math.max(1, estimates.length) * estimateLayout(width).row + AXIS + top;
+    Math.max(1, estimates.length) * estimateLayout(width).row + AXIS + top + titled;
   const live = state === "default" && estimates.some((e) => e.readout);
   const focus = useChartFocus({
     count: estimates.length,
@@ -246,13 +255,23 @@ const EstimatePlot = ({
                 <text
                   key={t.value}
                   x={t.x}
-                  y={height - 2}
+                  y={height - titled - 2}
                   textAnchor="middle"
                   className={AXIS_TEXT}
                 >
                   {tickLabel(t.value)}
                 </text>
               ))}
+              {axisTitle && state === "default" ? (
+                <text
+                  x={plotWidth / 2}
+                  y={height - 2}
+                  textAnchor="middle"
+                  className="fill-muted-foreground font-sans text-xs"
+                >
+                  {axisTitle}
+                </text>
+              ) : null}
             </g>
           </g>
         );
@@ -303,6 +322,7 @@ export const ResearchFigure = (props: ResearchFigureProps) => {
         reference={props.reference}
         domain={props.domain}
         scale={props.scale}
+        axisTitle={props.axisTitle}
         tone={(i) => tokenTextClass(single ?? conditionToken(i))}
         state={state}
         label={props.label}
@@ -319,6 +339,7 @@ export const ResearchFigure = (props: ResearchFigureProps) => {
       <EstimatePlot
         estimates={rows}
         domain={[0, 1]}
+        axisTitle={props.axisTitle}
         tone={(i) => tokenTextClass(conditionToken(i % 2))}
         state={state}
         label={props.label}
@@ -330,7 +351,7 @@ export const ResearchFigure = (props: ResearchFigureProps) => {
   const observedTone = single ? tokenTextClass(single) : toneClass(props.category, false);
   const { summary } = props;
   return (
-    <ChartSvg height={140}>
+    <ChartSvg height={NULL_HEIGHT + (props.axisTitle ? TITLE : 0)}>
       {(width) => {
         const draws = state === "default" && !summary ? (props.draws ?? []) : [];
         const out = nullFigure(draws, props.observed, { width, height: 96 }, 24);
@@ -338,6 +359,8 @@ export const ResearchFigure = (props: ResearchFigureProps) => {
           ? nullBand(summary, props.observed, { width, height: 96 })
           : null;
         const observedX = band ? band.observedX : out.observedX;
+        const ticks = spacedTicks(band ? band.ticks : out.ticks);
+        const decimals = exactDecimals(ticks.map((t) => t.value));
         return (
           <g data-state={state} transform="translate(0 20)">
             {state === "loading" ? (
@@ -418,6 +441,29 @@ export const ResearchFigure = (props: ResearchFigureProps) => {
                 </g>
               </>
             )}
+            {state === "default"
+              ? ticks.map((t) => (
+                  <text
+                    key={t.value}
+                    x={t.x}
+                    y={NULL_TICKS}
+                    textAnchor={edgeAnchor(t.x, width, 16)}
+                    className={AXIS_TEXT}
+                  >
+                    {fixed(t.value, decimals)}
+                  </text>
+                ))
+              : null}
+            {props.axisTitle && state === "default" ? (
+              <text
+                x={width / 2}
+                y={NULL_TICKS + TITLE}
+                textAnchor="middle"
+                className="fill-muted-foreground font-sans text-xs"
+              >
+                {props.axisTitle}
+              </text>
+            ) : null}
           </g>
         );
       }}

@@ -42,9 +42,16 @@ export const floorPoolPlacement = (box: Box3): FloorPoolPlacement | null => {
 
 export type FloorPoolTint = Readonly<{ color: number; opacity: number }>;
 
-/** Black reads as contact on the dark hero; on light, black at that strength looks like a hole. */
+/**
+ * A contact shadow is missing light, not a brand colour, so it is black in
+ * both themes and only its strength changes: black at the dark hero's
+ * strength looks like a hole in a light floor. Over the cream floor a light
+ * black reads as a warm grey, with no cool cast of its own.
+ */
+const SHADOW = 0x000000;
+
 export const floorPoolTint = (dark: boolean): FloorPoolTint =>
-  dark ? { color: 0x000000, opacity: 0.55 } : { color: 0x334155, opacity: 0.22 };
+  dark ? { color: SHADOW, opacity: 0.55 } : { color: SHADOW, opacity: 0.22 };
 
 const VERTEX = /* glsl */ `
 varying vec2 vUv;
