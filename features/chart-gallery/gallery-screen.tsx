@@ -552,9 +552,9 @@ export const GalleryScreen = () => (
       <header>
         <h2 className="text-foreground font-sans text-lg">C18 with its own scales</h2>
         <p className="text-muted-foreground text-sm">
-          The same heart radar with each axis from its own minimum, so similar rates
-          spread out, and resting and sleeping inverted: lower sits further out, and their
-          labels say so.
+          The same heart radar with each axis on its own range, so similar rates spread
+          out, and resting and sleeping inverted: lower sits further out, and the radar
+          says so in a note under itself.
         </p>
       </header>
       <div className="grid gap-4 lg:grid-cols-2">

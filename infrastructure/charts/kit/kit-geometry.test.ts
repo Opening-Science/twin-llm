@@ -8,6 +8,7 @@ import {
   estimateRows,
   exactDecimals,
   hypnogram,
+  invertedNote,
   log2Ticks,
   monthShares,
   nullBand,
@@ -583,5 +584,31 @@ describe("radar axis share", () => {
     // Axis A points up: 52 inverted on 50..70 sits 0.9 of the way out.
     expect(out.points[0]!.y).toBeCloseTo(100 - 0.9 * 100);
     expect(out.reference).toMatch(/^M100,40 /);
+  });
+});
+
+describe("inverted note", () => {
+  const axis = (label: string, inverted?: boolean) => ({
+    label,
+    value: 1,
+    display: "",
+    max: 2,
+    inverted,
+  });
+
+  test("names every inverted axis in plain words", () => {
+    expect(
+      invertedNote([axis("Resting", true), axis("Sleeping", true), axis("Walking")]),
+    ).toBe("For resting and sleeping, further out means lower.");
+    expect(invertedNote([axis("Resting", true)])).toBe(
+      "For resting, further out means lower.",
+    );
+    expect(
+      invertedNote([axis("Resting", true), axis("HRV", true), axis("Sleeping", true)]),
+    ).toBe("For resting, HRV and sleeping, further out means lower.");
+  });
+
+  test("no inverted axis, no note", () => {
+    expect(invertedNote([axis("Walking"), axis("HRV")])).toBeNull();
   });
 });

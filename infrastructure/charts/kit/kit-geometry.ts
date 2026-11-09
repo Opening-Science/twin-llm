@@ -638,7 +638,8 @@ export type RadarAxis = Readonly<{
   min?: number;
   /**
    * Lower values sit further out: for a measure where less is the good or
-   * usual direction, such as resting heart rate.
+   * usual direction, such as resting heart rate. The radar then writes a
+   * plain note under itself naming these axes (`invertedNote`).
    */
   inverted?: boolean;
   /** What the readout says when this axis is focused. */
@@ -888,4 +889,22 @@ export const ringPartAt = (
     if (turn < edge) return i;
   }
   return parts.length - 1;
+};
+
+/**
+ * The plain note a radar with inverted axes carries under it, so a reader
+ * never takes further out as higher: "For resting and sleeping, further out
+ * means lower." Labels keep their own case when they are all capitals
+ * (HRV); null when no axis is inverted.
+ */
+export const invertedNote = (axes: readonly RadarAxis[]): string | null => {
+  const names = axes
+    .filter((a) => a.inverted)
+    .map((a) => (a.label === a.label.toUpperCase() ? a.label : a.label.toLowerCase()));
+  if (names.length === 0) return null;
+  const list =
+    names.length === 1
+      ? names[0]!
+      : `${names.slice(0, -1).join(", ")} and ${names.at(-1)!}`;
+  return `For ${list}, further out means lower.`;
 };
