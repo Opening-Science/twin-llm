@@ -699,6 +699,7 @@ export const GalleryScreen = () => (
             draws={NULL_DRAWS}
             observed={NULL_OBSERVED}
             observedLabel="AUC"
+            axisTitle="Area under the curve"
           />
         </InsightCard>
       )}
