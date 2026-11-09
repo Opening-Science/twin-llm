@@ -12,6 +12,7 @@ import {
   monthShares,
   nullBand,
   nullFigure,
+  axisShare,
   radar,
   radarAxisAt,
   rangeBars,
@@ -535,5 +536,52 @@ describe("null band", () => {
     expect(out.observedX).toBe(208);
     expect(out.mean).toBeGreaterThan(out.low);
     expect(out.mean).toBeLessThan(out.high);
+  });
+});
+
+describe("radar axis share", () => {
+  const axis = { label: "Resting", value: null, display: "", max: 70 };
+
+  test("from 0 by default, from a minimum when given", () => {
+    expect(axisShare(56, axis)).toBeCloseTo(0.8);
+    expect(axisShare(56, { ...axis, min: 50 })).toBeCloseTo(0.3);
+    expect(
+      axisShare(58, { ...axis, min: 50 }) - axisShare(52, { ...axis, min: 50 }),
+    ).toBeCloseTo(0.3);
+  });
+
+  test("inverted: lower sits further out", () => {
+    expect(axisShare(52, { ...axis, min: 50, inverted: true })).toBeCloseTo(0.9);
+    expect(axisShare(70, { ...axis, min: 50, inverted: true })).toBe(0);
+  });
+
+  test("clamped to the axis, and a missing value sits at the centre even when inverted", () => {
+    expect(axisShare(40, { ...axis, min: 50 })).toBe(0);
+    expect(axisShare(90, axis)).toBe(1);
+    expect(axisShare(null, { ...axis, inverted: true })).toBe(0);
+    expect(axisShare(60, { ...axis, min: 70 })).toBe(0);
+  });
+
+  test("the radar places points and the reference by it", () => {
+    const out = radar(
+      [
+        {
+          label: "A",
+          value: 52,
+          display: "",
+          reference: 58,
+          max: 70,
+          min: 50,
+          inverted: true,
+        },
+        { label: "B", value: 10, display: "", max: 10 },
+        { label: "C", value: 10, display: "", max: 10 },
+      ],
+      { width: 200, height: 200 },
+      { x: 0, y: 0 },
+    );
+    // Axis A points up: 52 inverted on 50..70 sits 0.9 of the way out.
+    expect(out.points[0]!.y).toBeCloseTo(100 - 0.9 * 100);
+    expect(out.reference).toMatch(/^M100,40 /);
   });
 });

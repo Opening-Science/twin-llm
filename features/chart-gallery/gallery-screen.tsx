@@ -37,6 +37,7 @@ import {
   NULL_OBSERVED,
   P2_GROUPS_READ,
   P3_ESTIMATES_READ,
+  RADAR_HEART,
   RADAR_HEART_READ,
   RADAR_READINESS_READ,
   RADAR_SLEEP,
@@ -51,6 +52,7 @@ import {
   P3_RATIOS,
   P3_RULE_CHANGE,
   SPECIALISTS_BY_MODEL,
+  RADAR_HEART_SCALED,
 } from "./sample-data";
 
 const STATES: readonly ChartState[] = ["default", "loading", "empty"];
@@ -543,6 +545,33 @@ export const GalleryScreen = () => (
             <Radar category="readiness" axes={RADAR_READINESS_READ} label="Readiness" />
           </InsightCard>
         </div>
+      </div>
+    </section>
+
+    <section className="flex flex-col gap-3">
+      <header>
+        <h2 className="text-foreground font-sans text-lg">C18 with its own scales</h2>
+        <p className="text-muted-foreground text-sm">
+          The same heart radar with each axis from its own minimum, so similar rates
+          spread out, and resting and sleeping inverted: lower sits further out, and their
+          labels say so.
+        </p>
+      </header>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <InsightCard
+          category="heart"
+          label="Heart rate"
+          sentence="Your resting and sleeping heart rates were a little below usual today."
+        >
+          <Radar category="heart" axes={RADAR_HEART} />
+        </InsightCard>
+        <InsightCard
+          category="heart"
+          label="Heart rate"
+          sentence="Your resting and sleeping heart rates were a little below usual today."
+        >
+          <Radar category="heart" axes={RADAR_HEART_SCALED} />
+        </InsightCard>
       </div>
     </section>
 

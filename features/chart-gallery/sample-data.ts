@@ -275,3 +275,35 @@ export const P3_RULE_CHANGE = [
   { label: "Before the change", estimate: 1.91 },
   { label: "After the change", estimate: 3.95, expected: 3.93 },
 ];
+
+/** The heart radar with its own scales: heart rates from 40, and resting and sleeping inverted. */
+export const RADAR_HEART_SCALED = [
+  {
+    label: "Resting, lower out",
+    value: 58,
+    display: "58 bpm",
+    reference: 61,
+    min: 40,
+    max: 80,
+    inverted: true,
+  },
+  {
+    label: "Sleeping, lower out",
+    value: 52,
+    display: "52 bpm",
+    reference: 54,
+    min: 40,
+    max: 80,
+    inverted: true,
+  },
+  { label: "Walking", value: 96, display: "96 bpm", reference: 92, min: 60, max: 140 },
+  {
+    label: "Workout",
+    value: 138,
+    display: "138 bpm",
+    reference: 131,
+    min: 100,
+    max: 180,
+  },
+  { label: "HRV", value: 47, display: "47 ms", reference: 42, min: 20, max: 80 },
+];
