@@ -9,6 +9,7 @@ import {
   isoLocalDate,
   measureKindFor,
 } from "@/infrastructure/format-measure";
+import { DeviceList, type DeviceRow } from "@/infrastructure/charts/kit";
 import { BentoCard, BentoGrid } from "@/infrastructure/ui-kit/bento-grid";
 import { Button } from "@/infrastructure/ui-kit/button";
 
@@ -246,13 +247,6 @@ const ComparePanel = ({
   );
 };
 
-export type DashboardSource = Readonly<{
-  id: WearableSource;
-  name: string;
-  /** "Synced 3 h ago", from the connector status. */
-  detail: string;
-}>;
-
 type WearablesDashboardProps = {
   readonly view: "single" | "compare";
   readonly source: WearableSource;
@@ -263,8 +257,8 @@ type WearablesDashboardProps = {
   readonly whoopSummary: WhoopSummary | null;
   readonly busy: boolean;
   readonly onSync: () => void;
-  /** Linked sources for the data sources card. */
-  readonly linkedSources: readonly DashboardSource[];
+  /** Linked sources as C15 rows, for the data sources list. */
+  readonly linkedSources: readonly DeviceRow[];
 };
 
 export const WearablesDashboard = ({
@@ -344,39 +338,17 @@ export const WearablesDashboard = ({
         <KitDashboard sections={kit} source={source} />
       </div>
 
-      <BentoGrid label={`${SOURCE_LABEL[source]} sources and privacy`} className="mt-10">
-        {linkedSources.length > 0 && (
-          <BentoCard span={{ cols: 2, rows: 1 }}>
-            <p className="text-eyebrow">Data sources</p>
-            <ul className="mt-3 flex flex-col">
-              {linkedSources.map((linked) => (
-                <li
-                  key={linked.id}
-                  className="border-border flex items-baseline justify-between gap-3 border-t py-2.5 first:border-t-0"
-                >
-                  <span className="text-sm font-medium">
-                    {linked.name}
-                    {linked.id === source && (
-                      <span className="text-muted-foreground ml-2 text-xs font-normal">
-                        Viewing
-                      </span>
-                    )}
-                  </span>
-                  <span className="text-muted-foreground font-mono text-xs">
-                    {linked.detail}
-                  </span>
-                </li>
-              ))}
-            </ul>
-            <p className="text-muted-foreground mt-auto pt-3 text-xs">
-              {`Snapshot window ${formatDate(activeSummary.window.startDate)} → ${formatDate(activeSummary.window.endDate)}`}
-            </p>
-          </BentoCard>
-        )}
-        <BentoCard
-          span={{ cols: linkedSources.length > 0 ? 2 : 4, rows: 1 }}
-          href="/customize/privacy"
-        >
+      {linkedSources.length > 0 && (
+        <div className="mt-10 max-w-2xl">
+          <DeviceList category="vitals" title="Data sources" rows={linkedSources} />
+          <p className="text-muted-foreground mt-2 text-xs">
+            {`Snapshot window ${formatDate(activeSummary.window.startDate)} → ${formatDate(activeSummary.window.endDate)}`}
+          </p>
+        </div>
+      )}
+
+      <BentoGrid label={`${SOURCE_LABEL[source]} privacy`} className="mt-6">
+        <BentoCard span={{ cols: 4, rows: 1 }} href="/customize/privacy">
           <p className="text-eyebrow">Privacy and audit</p>
           <p className="text-muted-foreground mt-3 text-sm leading-relaxed">
             Consent to learn from your data, and a ledger of what left this machine. In
