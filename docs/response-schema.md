@@ -305,6 +305,12 @@ never repeated. Codes (`answer_class`, reasons, `next_step`) are never shown.
 - Hallucinated keys: `The model cited N keys that were not in its context.`
   (`1 key` for one). A count only; the key strings are never shown.
 - Tool-call count: `N data lookups recorded for this answer.` (`1 data lookup …` for one)
+- Cited wearable value (#464): each evidence chip names its source and day under the
+  value, `From Oura, 2 Jan 2026` (`From Oura` when the value has no day). The source is
+  the summary the prompt offered the metric from (`offeredMetrics`), stored with the
+  answer's attribution as `source` and `day`; a stored key or vendor id is never
+  shown. An answer stored before has no source and shows its chips as before. This is
+  on the stored attribution, not in the response document.
 
 Panel order: reasoning, evidence used (then the hallucinated-key line), guideline references, population
 context (GBD rows and attribution line), uncertainty (level, reasons, then the model's statement), next

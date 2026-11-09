@@ -19,6 +19,7 @@ import {
   type NextStep,
   UNCERTAINTY_REASONS,
 } from "@/infrastructure/response-document/document-v1";
+import type { EvidenceAttribution } from "@/infrastructure/oura-types";
 import { GBD_ATTRIBUTION_LINE } from "@/packages/gbd-mcp/constants";
 
 import { ExplainabilityPanel } from "./explainability-panel";
@@ -323,5 +324,46 @@ describe("explainability panel declined answer", () => {
     expect(markup).toContain("The request was declined.");
     expect(markup).toContain("A clinician is the right person to ask about this.");
     expect(markup).not.toContain("declined_decision_support");
+  });
+});
+
+describe("explainability panel evidence provenance (#464)", () => {
+  const render = (attribution: readonly EvidenceAttribution[]) =>
+    renderToStaticMarkup(
+      createElement(ExplainabilityPanel, {
+        document: makeResponseDocument(),
+        attribution,
+      }),
+    );
+
+  test("each cited wearable value names its source and day", () => {
+    const markup = render([
+      {
+        metricKey: "sleep.hrv.2026-01-01",
+        label: "Sleep HRV",
+        value: 41,
+        unit: "ms",
+        source: "oura",
+        day: "2026-01-01",
+      },
+      {
+        metricKey: "whoop.recovery.hrv.2026-01-02",
+        label: "Recovery HRV",
+        value: 48,
+        unit: "ms",
+        source: "whoop",
+        day: "2026-01-02",
+      },
+    ]);
+    expect(markup).toContain("From Oura, 1 Jan 2026");
+    expect(markup).toContain("From Whoop, 2 Jan 2026");
+  });
+
+  test("an answer stored before #464 shows its values without a source line", () => {
+    const markup = render([
+      { metricKey: "sleep.hrv.2026-01-01", label: "Sleep HRV", value: 41, unit: "ms" },
+    ]);
+    expect(markup).toContain("Sleep HRV");
+    expect(markup).not.toContain("From ");
   });
 });

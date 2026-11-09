@@ -8,6 +8,7 @@ import {
 import type { EvidenceAttribution, OuraSummary } from "@/infrastructure/oura-types";
 import { splitThinking } from "@/infrastructure/think-block";
 import { withoutGuidanceEcho } from "@/infrastructure/twin-section-guidance";
+import { metricDay } from "@/infrastructure/wearable-provenance";
 import { sectionLines } from "@/infrastructure/twin-section-lines";
 
 export type { EvidenceAttribution } from "@/infrastructure/oura-types";
@@ -221,11 +222,14 @@ export const resolveAttribution = (
   const add = (metric: OfferedMetric) => {
     if (used.has(metric.key)) return;
     used.add(metric.key);
+    const day = metricDay(metric);
     out.push({
       metricKey: metric.key,
       label: metric.label,
       value: metric.value,
       unit: metric.unit,
+      ...(metric.source ? { source: metric.source } : {}),
+      ...(metric.source && day ? { day } : {}),
     });
   };
 

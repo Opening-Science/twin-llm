@@ -10,6 +10,13 @@ import {
   type FormattableMetric,
 } from "@/infrastructure/format-measure";
 import {
+  metricDay,
+  pickedSourceLine,
+  provenanceLine,
+  sourceOfMetricKey,
+  type WearableSourceId,
+} from "@/infrastructure/wearable-provenance";
+import {
   type Biomarker,
   type ReferenceInterval,
 } from "@/packages/biomarkers/anchor-layer";
@@ -157,39 +164,51 @@ export const markerRows = (
     .map((marker) => markerRow(marker, byLoinc.get(marker.loincCode), context));
 };
 
-export type VitalReading = Readonly<{ vital: VitalId; metric: FormattableMetric }>;
+export type VitalReading = Readonly<{
+  vital: VitalId;
+  metric: FormattableMetric;
+  /** Later sources in the vitals table that also had a reading (#464). */
+  alsoRecordedBy: readonly WearableSourceId[];
+}>;
 
-const metricDay = (metric: FormattableMetric): string =>
+const sortDay = (metric: FormattableMetric): string =>
   metric.date ?? /\d{4}-\d{2}-\d{2}$/.exec(metric.key)?.[0] ?? "";
 
 /**
  * One reading per vital: the first source in the vitals table that has data,
  * newest day first. Sources are not mixed, so a value and its label agree.
  * Of a day's sleep periods the main sleep wins, so a short rest or a nap is
- * never shown as the night; the key breaks a remaining tie.
+ * never shown as the night; the key breaks a remaining tie. The sources passed
+ * over are kept, so the row can say which one it took and by what rule.
  */
 export const latestVitals = (
   metrics: readonly FormattableMetric[],
 ): readonly VitalReading[] =>
   VITAL_IDS.flatMap((vital) => {
-    const found = VITAL_ANATOMY[vital].sources
+    const withData = VITAL_ANATOMY[vital].sources
       .map((source) => metrics.filter((metric) => metricStem(metric.key) === source))
-      .find((list) => list.length > 0);
+      .filter((list) => list.length > 0);
+    const found = withData[0];
     if (!found) return [];
     const newest = [...found].sort(
       (a, b) =>
-        metricDay(b).localeCompare(metricDay(a)) ||
+        sortDay(b).localeCompare(sortDay(a)) ||
         Number(isMainSleepKey(b.key)) - Number(isMainSleepKey(a.key)) ||
         a.key.localeCompare(b.key),
     )[0]!;
-    return [{ vital, metric: newest }];
+    const chosen = sourceOfMetricKey(newest.key);
+    const alsoRecordedBy = [
+      ...new Set(withData.slice(1).map((list) => sourceOfMetricKey(list[0]!.key))),
+    ].filter((source) => source !== chosen);
+    return [{ vital, metric: newest, alsoRecordedBy }];
   });
 
 export const vitalRows = (readings: readonly VitalReading[]): readonly BiomarkerRow[] =>
-  readings.map(({ vital, metric }) => {
+  readings.map(({ vital, metric, alsoRecordedBy }) => {
     const anatomy = VITAL_ANATOMY[vital];
     const label = VITAL_LABEL[vital];
-    const day = metricDay(metric);
+    const source = sourceOfMetricKey(metric.key);
+    const picked = pickedSourceLine(source, alsoRecordedBy);
     return {
       id: `vital:${vital}`,
       label,
@@ -198,7 +217,8 @@ export const vitalRows = (readings: readonly VitalReading[]): readonly Biomarker
       value: formatMetricValue(metric),
       details: [
         ...(anatomy.note === label ? [] : [anatomy.note]),
-        ...(day ? [formatDate(day)] : []),
+        provenanceLine({ source, day: metricDay(metric) }),
+        ...(picked ? [picked] : []),
       ],
       search: metric.key,
       source: { kind: "vital", anatomy },

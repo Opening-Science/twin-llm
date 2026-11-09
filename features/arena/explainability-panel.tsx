@@ -28,6 +28,7 @@ import {
 } from "@/infrastructure/response-document/copy";
 import type { ResponseDocumentV1 } from "@/infrastructure/response-document/document-v1";
 import { uiContextLines } from "@/infrastructure/ui-context";
+import { attributionProvenanceLine } from "@/infrastructure/wearable-provenance";
 import {
   formatGbdRow,
   gbdAttributionFor,
@@ -59,19 +60,25 @@ const EvidencePanel = ({
       )}
       {attribution.length > 0 && (
         <ul className="flex flex-wrap gap-1.5">
-          {attribution.map((item) => (
-            <li
-              key={item.metricKey}
-              className="border-input bg-muted/40 rounded-md border px-2 py-1 text-xs"
-              title={item.metricKey}
-            >
-              <span className="font-medium">{item.label}</span>
-              <span className="text-muted-foreground ml-1">
-                {item.value}
-                {item.unit ? ` ${item.unit}` : ""}
-              </span>
-            </li>
-          ))}
+          {attribution.map((item) => {
+            const provenance = attributionProvenanceLine(item);
+            return (
+              <li
+                key={item.metricKey}
+                className="border-input bg-muted/40 rounded-md border px-2 py-1 text-xs"
+                title={item.metricKey}
+              >
+                <span className="font-medium">{item.label}</span>
+                <span className="text-muted-foreground ml-1">
+                  {item.value}
+                  {item.unit ? ` ${item.unit}` : ""}
+                </span>
+                {provenance && (
+                  <span className="text-muted-foreground block">{provenance}</span>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

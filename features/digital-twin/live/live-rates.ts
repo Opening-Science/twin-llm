@@ -1,4 +1,8 @@
 import { metricStem, type FormattableMetric } from "@/infrastructure/format-measure";
+import {
+  sourceOfMetricKey,
+  WEARABLE_SOURCE_LABEL,
+} from "@/infrastructure/wearable-provenance";
 import { VITAL_ANATOMY, type VitalId } from "@/packages/biomarkers/vitals";
 
 /**
@@ -102,11 +106,7 @@ export const cohortLiveVitals = (
 
 /** Stored stems by vendor prefix; Oura's carry no prefix of their own. */
 export const metricSource = (stem: string): string =>
-  stem.startsWith("whoop.")
-    ? "Whoop"
-    : stem.startsWith("google.")
-      ? "Google Health"
-      : "Oura";
+  WEARABLE_SOURCE_LABEL[sourceOfMetricKey(stem)];
 
 /** Only a real calendar day counts; Whoop writes "unknown" when it has none. */
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
