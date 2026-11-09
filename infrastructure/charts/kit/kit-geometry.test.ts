@@ -23,6 +23,7 @@ import {
   stageTotalWidths,
   spacedTicks,
   stepKey,
+  weekStep,
   streakGrid,
   weekdayLetters,
 } from "./kit-geometry";
@@ -688,5 +689,64 @@ describe("null figure ticks", () => {
 
   test("no draws, no ticks", () => {
     expect(nullFigure([], 1, { width: 100, height: 10 }).ticks).toEqual([]);
+  });
+});
+
+describe("week step", () => {
+  // 28 days from Monday 2 Nov 2026: four full weeks.
+  const days = Array.from({ length: 28 }, (_, i) => ({
+    date: new Date(Date.UTC(2026, 10, 2 + i)).toISOString().slice(0, 10),
+    done: true,
+  }));
+  const cells = streakGrid(days, "x", 1);
+
+  test("down and up move a week on the same weekday", () => {
+    expect(weekStep("ArrowDown", 2, cells)).toEqual({ kind: "move", index: 9 });
+    expect(weekStep("ArrowUp", 9, cells)).toEqual({ kind: "move", index: 2 });
+  });
+
+  test("past the first or last week the focus stays", () => {
+    expect(weekStep("ArrowUp", 2, cells)).toEqual({ kind: "move", index: 2 });
+    expect(weekStep("ArrowDown", 25, cells)).toEqual({ kind: "move", index: 25 });
+  });
+
+  test("a missing day does not shift the step", () => {
+    const gappy = streakGrid(
+      days.filter((_, i) => i !== 4),
+      "x",
+      1,
+    );
+    // Wednesday 4 Nov (index 2) down to Wednesday 11 Nov, now index 8.
+    expect(weekStep("ArrowDown", 2, gappy)).toEqual({ kind: "move", index: 8 });
+    // Friday 6 Nov is missing and it is the first week: from Friday 13 Nov up, the focus stays.
+    const friday13 = gappy.findIndex((c) => c.date === "2026-11-13");
+    expect(weekStep("ArrowUp", friday13, gappy)).toEqual({
+      kind: "move",
+      index: friday13,
+    });
+  });
+
+  test("a week without that weekday is passed over", () => {
+    // Wednesday 11 Nov is missing: Up from Wednesday 18 Nov goes on to 4 Nov.
+    const noWed11 = streakGrid(
+      days.filter((d) => d.date !== "2026-11-11"),
+      "x",
+      1,
+    );
+    const at = (date: string) => noWed11.findIndex((c) => c.date === date);
+    expect(weekStep("ArrowUp", at("2026-11-18"), noWed11)).toEqual({
+      kind: "move",
+      index: at("2026-11-04"),
+    });
+    expect(weekStep("ArrowDown", at("2026-11-04"), noWed11)).toEqual({
+      kind: "move",
+      index: at("2026-11-18"),
+    });
+  });
+
+  test("from no focus, and other keys left to stepKey", () => {
+    expect(weekStep("ArrowDown", null, cells)).toEqual({ kind: "move", index: 0 });
+    expect(weekStep("ArrowUp", null, cells)).toEqual({ kind: "move", index: 27 });
+    expect(weekStep("ArrowRight", 2, cells)).toBeNull();
   });
 });

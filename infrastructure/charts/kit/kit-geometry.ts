@@ -989,3 +989,32 @@ export const invertedNote = (axes: readonly RadarAxis[]): string | null => {
       : `${names.slice(0, -1).join(", ")} and ${names.at(-1)!}`;
   return `For ${list}, further out means lower.`;
 };
+
+/**
+ * Up and Down on a streak grid: the same weekday a week earlier or later,
+ * found by row and column so a missing day never shifts the step, and
+ * passed over when that week has no such day. From no focus, Down lands on
+ * the first day and Up on the last; past the first or last week the focus
+ * stays. Other keys are left to `stepKey`.
+ */
+export const weekStep = (
+  key: string,
+  current: number | null,
+  cells: readonly Readonly<{ row: number; col: number }>[],
+): KeyStep | null => {
+  if (key !== "ArrowUp" && key !== "ArrowDown") return null;
+  if (cells.length === 0) return { kind: "ignore" };
+  if (current === null) {
+    return { kind: "move", index: key === "ArrowDown" ? 0 : cells.length - 1 };
+  }
+  const here = cells[current];
+  if (!here) return { kind: "ignore" };
+  // The nearest week in that direction with a cell on the same weekday, so a
+  // missing day is passed over rather than stopping the step.
+  const down = key === "ArrowDown";
+  const candidates = cells
+    .map((c, i) => ({ c, i }))
+    .filter(({ c }) => c.col === here.col && (down ? c.row > here.row : c.row < here.row))
+    .sort((a, b) => (down ? a.c.row - b.c.row : b.c.row - a.c.row));
+  return { kind: "move", index: candidates[0]?.i ?? current };
+};

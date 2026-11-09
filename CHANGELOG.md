@@ -7,6 +7,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- On the C07 streak grid Up and Down move a week, to the same weekday one row up or down, found by row and column so a missing day never shifts the step and a week without that weekday is passed over; Left and Right still step a day (`weekStep`, pure and tested). `useChartFocus` takes a chart's own `step` rule for keys it wants to handle.
 - Research figure (R1) axes. `axisTitle` writes what the axis measures under its ticks, inside the figure, so a legend below sits under the axis rather than between it and its name. The null kind now has round ticks on its axis, from its draws or its summary (`nullFigure` and `nullBand` return them; pure and tested). The gallery's log-ratio and null figures carry titles.
 - `headingLevel` on `InsightCard` and `LabResultCard` (2, 3 or 4; 3 by default), so a card's label sits at the right level of the page's outline under its section headings, for screen-reader navigation. The element map lives in a plain module so cards rendered on the server can use it.
 - One way to write durations and times in the chart kit. `formatDuration` writes minutes as the wearables insight sentences do ("7 hr 4 min", "7 hr", "45 min"), and `formatClock` writes minutes after midnight as a clock time in the display locale, 24-hour "23:48" for en-GB, wrapping round midnight; both pure and tested. The hypnogram's stage totals use it, so a whole hour reads "7 hr" rather than "7 hr 0 min". `RangeBars` takes a `unit`, so MIN and MAX read "MAX 114 bpm".
