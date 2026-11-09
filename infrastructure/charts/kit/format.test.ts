@@ -26,5 +26,8 @@ describe("clock times", () => {
 
   test("another locale writes its own clock", () => {
     expect(formatClock(23 * 60 + 48, "en-US")).toBe("11:48 PM");
+    // A 12-hour clock does not pad the hour; a 24-hour one does.
+    expect(formatClock(545, "en-US")).toBe("9:05 AM");
+    expect(formatClock(545)).toBe("09:05");
   });
 });

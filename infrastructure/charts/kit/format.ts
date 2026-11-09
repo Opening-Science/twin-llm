@@ -24,16 +24,20 @@ export const formatDuration = (
 };
 
 /**
- * Minutes after midnight as a clock time in the locale: "23:48" for en-GB,
- * "11:48 PM" for en-US. Values past a day or below zero wrap round midnight,
- * so 1,470 is "00:30".
+ * Minutes after midnight as a clock time in the locale: "23:48" and
+ * "09:05" for en-GB, "11:48 PM" and "9:05 AM" for en-US. Values past a
+ * day or below zero wrap round midnight, so 1,470 is "00:30".
  */
 export const formatClock = (minutes: number, locale: string = DISPLAY_LOCALE): string => {
   const total =
     ((Math.round(minutes) % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY;
   const at = new Date(Date.UTC(1970, 0, 1, Math.floor(total / 60), total % 60));
+  // A 24-hour clock pads the hour ("09:05"); a 12-hour one does not ("9:05 AM").
+  const cycle = new Intl.DateTimeFormat(locale, { hour: "numeric" }).resolvedOptions()
+    .hourCycle;
+  const padded = cycle === "h23" || cycle === "h24";
   return new Intl.DateTimeFormat(locale, {
-    hour: "2-digit",
+    hour: padded ? "2-digit" : "numeric",
     minute: "2-digit",
     timeZone: "UTC",
   }).format(at);
