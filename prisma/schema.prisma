@@ -67,6 +67,9 @@ model OnboardingProfile {
   /// Knowledge sources this user switched off. Stored as an opt-out list so a
   /// source added later is on by default.
   disabledSources String[]  @default([])
+  /// Personal-data sources (genome, VCF, imported data) this user switched on
+  /// (#507). Stored as an opt-in list, so they are off until chosen.
+  optedInSources  String[]  @default([])
   /// Set when the person turned off loading their twin notes into new chats (#43).
   twinNotesOff    Boolean   @default(false)
   /// Live public lookups this user switched on (#6). Stored as an opt-in list,
