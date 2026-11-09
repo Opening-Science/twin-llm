@@ -4,7 +4,7 @@ import {
 } from "@/infrastructure/gbd-profile-frame";
 import { parseTwinAnswer } from "@/infrastructure/parse-twin-answer";
 import { readableTitle } from "@/infrastructure/readable-title";
-import { attributionProvenanceLine } from "@/infrastructure/wearable-provenance";
+import { citedValueLine } from "@/infrastructure/wearable-provenance";
 
 import type { ResponseState, TurnState } from "./conversation";
 import { stoppedAnswerText } from "./streaming-view";
@@ -52,7 +52,7 @@ const evidenceLines = (answer: ResponseState): string[] => {
     chips.length > 0
       ? chips.map((chip) => {
           const value = `${chip.value}${chip.unit ? ` ${chip.unit}` : ""}`;
-          const provenance = attributionProvenanceLine(chip);
+          const provenance = citedValueLine(chip);
           return `- ${chip.label} ${value}${provenance ? ` · ${provenance}` : ""} (\`${chip.metricKey}\`)`;
         })
       : (answer.document?.data_basis?.evidence_keys ?? []).map((key) => `- \`${key}\``);

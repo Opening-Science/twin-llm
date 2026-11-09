@@ -9,6 +9,7 @@
  * by one source; the open-twin aggregate (`open-twin-adapters/aggregate.ts`)
  * is not read on screen yet.
  */
+import { VALUE_CHECK_STATUSES, type ValueCheckStatus } from "./cited-value-check";
 import { formatDate } from "./format-measure";
 
 export const WEARABLE_SOURCE_IDS = [
@@ -58,6 +59,9 @@ export type WearableProvenance = Readonly<{
   day: string | null;
 }>;
 
+const storedDay = (day: unknown): string | null =>
+  typeof day === "string" && ISO_DAY.test(day) ? day : null;
+
 /** "From Oura, 15 Oct 2026"; "From Oura" when the day is not known. */
 export const provenanceLine = ({ source, day }: WearableProvenance): string => {
   const label = WEARABLE_SOURCE_LABEL[source];
@@ -73,14 +77,42 @@ export const attributionProvenanceLine = (
   attribution: Readonly<{ source?: unknown; day?: unknown }>,
 ): string | null =>
   isWearableSourceId(attribution.source)
-    ? provenanceLine({
-        source: attribution.source,
-        day:
-          typeof attribution.day === "string" && ISO_DAY.test(attribution.day)
-            ? attribution.day
-            : null,
-      })
+    ? provenanceLine({ source: attribution.source, day: storedDay(attribution.day) })
     : null;
+
+const isValueCheck = (
+  value: unknown,
+): value is Readonly<{ status: ValueCheckStatus; stated?: unknown }> =>
+  typeof value === "object" &&
+  value !== null &&
+  "status" in value &&
+  (VALUE_CHECK_STATUSES as readonly unknown[]).includes(value.status);
+
+/**
+ * The line under a cited value once the number the answer states for it has
+ * been checked against the stored reading (#545). A match names the reading's
+ * source and day ("Matches the Oura reading, 2 Jan 2026"); a number that does
+ * not match gets no source, only what the answer said ("Doesn't match the cited
+ * reading: the answer says 75"). A value the answer states no number for, or an
+ * answer stored before the check, keeps its provenance line.
+ */
+export const citedValueLine = (
+  attribution: Readonly<{ source?: unknown; day?: unknown; valueCheck?: unknown }>,
+): string | null => {
+  const check = attribution.valueCheck;
+  if (!isValueCheck(check) || check.status === "unstated") {
+    return attributionProvenanceLine(attribution);
+  }
+  if (check.status === "not_matched") {
+    return typeof check.stated === "string" && check.stated !== ""
+      ? `Doesn't match the cited reading: the answer says ${check.stated}`
+      : "Doesn't match the cited reading";
+  }
+  if (!isWearableSourceId(attribution.source)) return "Matches the cited reading";
+  const reading = `Matches the ${WEARABLE_SOURCE_LABEL[attribution.source]} reading`;
+  const day = storedDay(attribution.day);
+  return day === null ? reading : `${reading}, ${formatDate(day)}`;
+};
 
 const joinNames = (names: readonly string[]): string =>
   names.length <= 1

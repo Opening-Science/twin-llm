@@ -98,6 +98,7 @@ describe("resolveAttribution", () => {
         unit: undefined,
         source: "oura",
         day: "2026-01-01",
+        valueCheck: { status: "unstated" },
       },
       {
         metricKey: "whoop.recovery.hrv.2026-01-02",
@@ -106,8 +107,15 @@ describe("resolveAttribution", () => {
         unit: "ms",
         source: "whoop",
         day: "2026-01-02",
+        valueCheck: { status: "unstated" },
       },
-      { metricKey: "personal.age", label: "Age", value: 40, source: "oura" },
+      {
+        metricKey: "personal.age",
+        label: "Age",
+        value: 40,
+        source: "oura",
+        valueCheck: { status: "unstated" },
+      },
     ]);
     expect(parsed.attribution[2]).not.toHaveProperty("day");
   });
