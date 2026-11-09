@@ -1,6 +1,7 @@
 import {
   type KnowledgeSourceId,
   normaliseDisabledSources,
+  OPT_IN_SOURCES,
 } from "@/infrastructure/knowledge-sources";
 import { type LiveSourceId, normaliseLiveSources } from "@/infrastructure/live-sources";
 
@@ -89,7 +90,8 @@ export const EMPTY_ANSWERS: OnboardingAnswers = {
   roles: [],
   dataChoice: null,
   interest: "",
-  disabledSources: [],
+  // The personal-data sources start off until the person turns them on (#507).
+  disabledSources: OPT_IN_SOURCES,
   liveSources: [],
 };
 

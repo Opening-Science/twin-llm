@@ -23,7 +23,7 @@ import { OutputsPanel } from "./outputs-panel";
 import { composerInsetClass, threadGridClass } from "./panel-layout";
 import { PromptBar } from "./prompt-bar";
 import { NO_SOURCE_FACTS, type PromptSourceFacts } from "./prompt-sources";
-import { startersShown } from "./suggested-questions";
+import { shownPrompt, startersShown } from "./suggested-questions";
 import { useSuggestedQuestions } from "./suggestion-chips";
 import { threadOutputs } from "./thread-outputs";
 import { conversationItems } from "./twin-card-state";
@@ -139,6 +139,7 @@ export const CompareScreen = ({
       models: Parameters<typeof send>[1],
       skill: string | null,
       effort: Parameters<typeof send>[4],
+      label: string | null,
     ) => {
       const uiContext = incognito
         ? null
@@ -149,7 +150,7 @@ export const CompareScreen = ({
             largeView: withPanel ? outputsShown.large : null,
             views: outputs.map((entry) => entry.view),
           });
-      void send(prompt, models, skill, uiContext, effort);
+      void send(prompt, models, skill, uiContext, effort, label);
     },
     [send, incognito, withPanel, outputsShown, twin.card, organ, outputs],
   );
@@ -180,7 +181,9 @@ export const CompareScreen = ({
                 />
               ) : (
                 <>
-                  <h1 className="sr-only">{turns[0]?.prompt ?? "TwinLLM"}</h1>
+                  <h1 className="sr-only">
+                    {turns[0] ? shownPrompt(turns[0]) : "TwinLLM"}
+                  </h1>
                   {incognito ? (
                     <div className="page-column mb-6">
                       <IncognitoBanner />
@@ -232,7 +235,7 @@ export const CompareScreen = ({
                               </span>
                             ) : null}
                             <p className="text-[15px] leading-relaxed whitespace-pre-wrap">
-                              {item.turn.prompt}
+                              {shownPrompt(item.turn)}
                             </p>
                           </div>
                           <div

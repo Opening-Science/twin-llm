@@ -11,7 +11,15 @@
  * The key light keeps its front-top direction at every hour. A sun that moves
  * behind the body would light it from the back at dusk, and the body has to
  * stay readable; the time of day shows in colour and brightness instead.
+ *
+ * The studio is part of the page, so it is drawn in the brand tokens and
+ * follows the theme. The outdoor sky, ground and light colours depict
+ * daylight at an hour (dawn peach, noon blue, night indigo), not interface,
+ * so they stay named keyframe constants outside the brand palette, as do the
+ * white key light and the hemisphere light below.
  */
+
+import { hexNumber, type TwinPalette } from "../twin-palette";
 
 export type EnvironmentPreset = "studio" | "outdoors";
 
@@ -51,6 +59,10 @@ export const INLINE_LIGHT: LightLook = {
   environment: 1,
 };
 
+/** The hemisphere light: a faintly cool sky above and a grey bounce from the floor. */
+export const HEMISPHERE_SKY = 0xf2f6ff;
+export const HEMISPHERE_GROUND = 0x3a3a3a;
+
 export const GROUND_RADIUS_M = 24;
 const FOG_NEAR_M = 4;
 const FOG_FAR_M = 22;
@@ -78,22 +90,19 @@ const world = (
   dark: luminance(colours.ground) < DARK_FLOOR,
 });
 
-/** The studio follows the site theme: a seamless floor that fades into a soft backdrop. */
-const STUDIO: Readonly<Record<"dark" | "light", EnvironmentLook>> = {
-  dark: {
+/**
+ * The studio follows the site theme: a seamless floor in the page background
+ * that fades up into the card colour, so the body stands in the page itself.
+ */
+export const studioLook = (palette: TwinPalette): EnvironmentLook => {
+  const floor = hexNumber(palette.background);
+  return {
     world: world(
-      { skyTop: 0x262c38, horizon: 0x161a21, ground: 0x161a21, grid: 0x161a21 },
+      { skyTop: hexNumber(palette.card), horizon: floor, ground: floor, grid: floor },
       0,
     ),
     light: INLINE_LIGHT,
-  },
-  light: {
-    world: world(
-      { skyTop: 0xf6f7f9, horizon: 0xdde1e7, ground: 0xdde1e7, grid: 0xdde1e7 },
-      0,
-    ),
-    light: INLINE_LIGHT,
-  },
+  };
 };
 
 type Keyframe = Readonly<{
@@ -194,12 +203,13 @@ export const outdoorsLook = (hour: number): EnvironmentLook => {
   };
 };
 
-/** The look for a preset. `hour` is null when the outdoor light should not follow the clock. */
+/**
+ * The look for a preset; the studio takes the theme's palette. `hour` is null
+ * when the outdoor light should not follow the clock.
+ */
 export const lookFor = (
   preset: EnvironmentPreset,
-  dark: boolean,
+  palette: TwinPalette,
   hour: number | null,
 ): EnvironmentLook =>
-  preset === "studio"
-    ? STUDIO[dark ? "dark" : "light"]
-    : outdoorsLook(hour ?? MIDDAY_HOUR);
+  preset === "studio" ? studioLook(palette) : outdoorsLook(hour ?? MIDDAY_HOUR);
