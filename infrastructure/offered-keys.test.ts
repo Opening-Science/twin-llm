@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { matchOfferedMetric } from "./offered-keys";
-import { resolveAttribution } from "./parse-twin-answer";
+import { parseTwinAnswer, resolveAttribution } from "./parse-twin-answer";
 
 const metric = (key: string, label = key) => ({ key, label, value: 1 });
 
@@ -57,6 +57,59 @@ describe("resolveAttribution", () => {
     expect(resolveAttribution(["oura.synthetic.m41.2026-01-01"], OFFERED, null)).toEqual(
       [],
     );
+  });
+
+  test("a cited value carries the source it was offered from and its day (#464)", () => {
+    const window = { startDate: "2026-01-01", endDate: "2026-01-02" };
+    const parsed = parseTwinAnswer(
+      [
+        "## Evidence Used",
+        "- [sleep.hrv.2026-01-01]",
+        "- [whoop.recovery.hrv.2026-01-02]",
+        "- [personal.age]",
+      ].join("\n"),
+      {
+        oura: {
+          window,
+          narrative: "",
+          metrics: [SLEEP_HRV, { key: "personal.age", label: "Age", value: 40 }],
+        },
+        whoop: {
+          window,
+          narrative: "",
+          metrics: [
+            {
+              key: "whoop.recovery.hrv.2026-01-02",
+              label: "Recovery HRV",
+              value: 48,
+              unit: "ms",
+            },
+          ],
+        },
+        googleHealth: null,
+        vitronic: null,
+      },
+    );
+    expect(parsed.attribution).toEqual([
+      {
+        metricKey: "sleep.hrv.2026-01-01",
+        label: "Sleep HRV",
+        value: 1,
+        unit: undefined,
+        source: "oura",
+        day: "2026-01-01",
+      },
+      {
+        metricKey: "whoop.recovery.hrv.2026-01-02",
+        label: "Recovery HRV",
+        value: 48,
+        unit: "ms",
+        source: "whoop",
+        day: "2026-01-02",
+      },
+      { metricKey: "personal.age", label: "Age", value: 40, source: "oura" },
+    ]);
+    expect(parsed.attribution[2]).not.toHaveProperty("day");
   });
 
   test("label fallback runs over offered metrics when no key matched", () => {
