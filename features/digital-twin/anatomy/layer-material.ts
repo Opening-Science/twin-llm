@@ -9,6 +9,12 @@ import { type OrganSystem } from "@/packages/anatomy/systems";
  * only the silhouette stays opaque (a Fresnel rim), so you see into a layer
  * without losing its outline.
  *
+ * A faded atlas layer is drawn rim-only (`TWIN_RIM_ONLY`): a sharper rim,
+ * alpha-blended rather than dithered. Dithering a face at a few per cent alpha
+ * leaves isolated dots, the speckle once seen around the bones at the Skeleton
+ * and Organs stops. A harder cut-off (exponent 4, remapped) broke thin
+ * silhouettes into dashes on screen, so the rim stays soft.
+ *
  * In three 0.184 `<alphahash_fragment>` runs before `<normal_fragment_begin>`,
  * so the rim uses `vNormal` / `vViewPosition` directly. The anchors are checked
  * by a test; an upgrade that moves them fails loudly instead of rendering wrong.
@@ -42,12 +48,25 @@ uniform float uLayerFade;
 uniform float uGlassFloor;
 uniform vec3 uRimColor;`;
 
+/** Below this alpha a hashed fragment is dropped: sparse dither reads as dots, not glass. */
+export const HASH_ALPHA_FLOOR = 0.2;
+
 const ALPHA = `
 float twinRim = 0.0;
 #ifndef FLAT_SHADED
-  twinRim = pow( 1.0 - abs( dot( normalize( vNormal ), normalize( vViewPosition ) ) ), 2.2 );
+  float twinEdge = 1.0 - abs( dot( normalize( vNormal ), normalize( vViewPosition ) ) );
+  #ifdef TWIN_RIM_ONLY
+    twinRim = pow( twinEdge, 3.0 );
+  #else
+    twinRim = pow( twinEdge, 2.2 );
+  #endif
 #endif
-diffuseColor.a *= uLayerAlpha * mix( 1.0, mix( uGlassFloor, 0.92, twinRim ), uLayerFade );`;
+diffuseColor.a *= uLayerAlpha * mix( 1.0, mix( uGlassFloor, 0.92, twinRim ), uLayerFade );
+#ifdef TWIN_RIM_ONLY
+  if ( diffuseColor.a < 0.01 ) discard;
+#elif defined( USE_ALPHAHASH )
+  if ( diffuseColor.a < ${HASH_ALPHA_FLOOR.toFixed(2)} ) discard;
+#endif`;
 
 const RIM = `
 totalEmissiveRadiance += uRimColor * twinRim * uLayerFade * uLayerAlpha;`;
@@ -74,6 +93,7 @@ type FadeState = Readonly<{
   originalDepthWrite: boolean;
   originalTransparent: boolean;
   originalAlphaHash: boolean;
+  originalDefines: Material["defines"];
 }>;
 
 /**
@@ -104,6 +124,7 @@ export const attachLayerFade = (
     originalDepthWrite: material.depthWrite,
     originalTransparent: material.transparent,
     originalAlphaHash: material.alphaHash,
+    originalDefines: material.defines,
   });
   blendModes.set(material, "solid");
   const previous = material.onBeforeCompile.bind(material);
@@ -132,12 +153,31 @@ export const layerFadeUniforms = (material: Material): LayerUniforms | null =>
 /**
  * solid: opaque, early-z, no discard. hash: alphaHash dither, stays in the
  * opaque queue with correct depth (nested atlas layers have no valid blend
- * order). blend: real transparency for the single enclosing scan surface.
+ * order); used only while a layer turns to glass. rim: a fully faded atlas
+ * layer, only its silhouette, alpha-blended in the transparent queue after
+ * every opaque layer, no depth writes. blend: real transparency for the single
+ * enclosing scan surface.
  */
-export type BlendMode = "solid" | "hash" | "blend";
+export type BlendMode = "solid" | "hash" | "rim" | "blend";
 
-export const blendModeFor = (mix: LayerMix, kind: "scan" | "atlas"): BlendMode =>
-  mix.alpha >= 0.999 && mix.fade <= 0.001 ? "solid" : kind === "scan" ? "blend" : "hash";
+/** From this fade on an atlas layer is drawn rim-only instead of dithered. */
+export const RIM_ONLY_FADE = 0.9;
+
+export const blendModeFor = (mix: LayerMix, kind: "scan" | "atlas"): BlendMode => {
+  if (mix.alpha >= 0.999 && mix.fade <= 0.001) return "solid";
+  if (kind === "scan") return "blend";
+  return mix.fade >= RIM_ONLY_FADE ? "rim" : "hash";
+};
+
+const RIM_ONLY_DEFINE = "TWIN_RIM_ONLY";
+
+const definesFor = (
+  original: Material["defines"],
+  mode: BlendMode,
+): Material["defines"] => {
+  if (mode !== "rim") return original;
+  return { ...original, [RIM_ONLY_DEFINE]: "" };
+};
 
 /** Switches mode only on a change, so the program recompiles rarely. Returns true if changed. */
 export const setBlendMode = (material: Material, mode: BlendMode): boolean => {
@@ -145,11 +185,13 @@ export const setBlendMode = (material: Material, mode: BlendMode): boolean => {
   if (!state || blendModes.get(material) === mode) return false;
   blendModes.set(material, mode);
   // "solid" restores the material exactly as it arrived.
+  const blended = mode === "blend" || mode === "rim";
   Object.assign(material, {
     alphaHash: mode === "hash" || (mode === "solid" && state.originalAlphaHash),
-    transparent: mode === "blend" || (mode === "solid" && state.originalTransparent),
-    depthWrite: mode === "blend" ? false : state.originalDepthWrite,
-    side: mode === "blend" ? FrontSide : state.originalSide,
+    transparent: blended || (mode === "solid" && state.originalTransparent),
+    depthWrite: blended ? false : state.originalDepthWrite,
+    side: blended ? FrontSide : state.originalSide,
+    defines: definesFor(state.originalDefines, mode),
     needsUpdate: true,
   });
   return true;

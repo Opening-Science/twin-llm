@@ -15,12 +15,14 @@ import {
   blendModeFor,
   createLayerMaterial,
   createLayerUniforms,
+  HASH_ALPHA_FLOOR,
   HIGHLIGHT_COLOUR,
   HIGHLIGHT_INTENSITY,
   HIGHLIGHT_TINT,
   isHighlighted,
   LAYER_FADE_CACHE_KEY,
   patchLayerFragment,
+  RIM_ONLY_FADE,
   setBlendMode,
   setHighlighted,
 } from "./layer-material";
@@ -61,6 +63,24 @@ describe("patchLayerFragment", () => {
     );
   });
 
+  test("a rim-only layer gets a sharper rim and drops near-empty fragments", () => {
+    const patched = patchLayerFragment(ShaderLib.standard.fragmentShader);
+    const rimOnly = patched.indexOf("#ifdef TWIN_RIM_ONLY");
+    expect(rimOnly).toBeGreaterThan(-1);
+    expect(patched.slice(rimOnly)).toContain("pow( twinEdge, 3.0 )");
+    expect(patched).toContain("pow( twinEdge, 2.2 )");
+    // Both discards come before three's hash, so no dither dot survives at low alpha.
+    const hash = patched.indexOf("#include <alphahash_fragment>");
+    const rimDiscard = patched.indexOf("if ( diffuseColor.a < 0.01 ) discard;");
+    const hashDiscard = patched.indexOf(
+      `if ( diffuseColor.a < ${HASH_ALPHA_FLOOR.toFixed(2)} ) discard;`,
+    );
+    expect(rimDiscard).toBeGreaterThan(-1);
+    expect(hashDiscard).toBeGreaterThan(-1);
+    expect(rimDiscard).toBeLessThan(hash);
+    expect(hashDiscard).toBeLessThan(hash);
+  });
+
   test("throws by name when a chunk is missing", () => {
     expect(() => patchLayerFragment("#include <common>\nvoid main(){}")).toThrow(
       "layer-fade-anchor-missing:alphahash",
@@ -90,6 +110,47 @@ describe("blend modes", () => {
     expect(blendModeFor({ alpha: 1, fade: 0, visible: true }, "atlas")).toBe("solid");
     expect(blendModeFor({ alpha: 1, fade: 0.5, visible: true }, "atlas")).toBe("hash");
     expect(blendModeFor({ alpha: 0.4, fade: 0, visible: true }, "scan")).toBe("blend");
+  });
+
+  test("a fully faded atlas layer is rim-only, never dithered", () => {
+    expect(blendModeFor({ alpha: 1, fade: 1, visible: true }, "atlas")).toBe("rim");
+    expect(blendModeFor({ alpha: 0.3, fade: 1, visible: true }, "atlas")).toBe("rim");
+    expect(blendModeFor({ alpha: 1, fade: RIM_ONLY_FADE, visible: true }, "atlas")).toBe(
+      "rim",
+    );
+    expect(
+      blendModeFor({ alpha: 1, fade: RIM_ONLY_FADE - 0.01, visible: true }, "atlas"),
+    ).toBe("hash");
+    // The scan keeps its own blended glass at every fade.
+    expect(blendModeFor({ alpha: 1, fade: 1, visible: true }, "scan")).toBe("blend");
+  });
+
+  test("rim mode blends after the opaque layers and compiles the rim-only shader", () => {
+    const material = createLayerMaterial({
+      colour: "#b5584e",
+      vertexColors: true,
+      uniforms: createLayerUniforms(0),
+    });
+    const start = material.version;
+    expect(setBlendMode(material, "rim")).toBe(true);
+    expect(material.version).toBe(start + 1);
+    expect(material.transparent).toBe(true);
+    expect(material.alphaHash).toBe(false);
+    expect(material.depthWrite).toBe(false);
+    expect(material.side).toBe(FrontSide);
+    expect(material.defines).toHaveProperty("TWIN_RIM_ONLY");
+    expect(material.defines).toHaveProperty("STANDARD");
+
+    expect(setBlendMode(material, "hash")).toBe(true);
+    expect(material.defines).not.toHaveProperty("TWIN_RIM_ONLY");
+    expect(material.alphaHash).toBe(true);
+    expect(material.depthWrite).toBe(true);
+
+    setBlendMode(material, "rim");
+    expect(setBlendMode(material, "solid")).toBe(true);
+    expect(material.defines).not.toHaveProperty("TWIN_RIM_ONLY");
+    expect(material.transparent).toBe(false);
+    expect(material.depthWrite).toBe(true);
   });
 
   test("setBlendMode recompiles only on a change and restores the original side", () => {

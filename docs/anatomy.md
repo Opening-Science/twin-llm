@@ -75,7 +75,7 @@ Measured on the pinned files (2026-10-13):
 
 - BodyParts3D nodes are classified by `extras.system` / `extras.layer` (bone and connective tissue count as skeleton). HRA nodes are classified by their organ-group key with a port of open-twin-xr's `hraGroups.ts` (MIT, `third_party/open-twin-xr/LICENSE`); the full-term placenta and the liver's duplicate Couinaud segments are hidden (HRA male spells one of them `left_superiomedial_segment`; it is hidden too).
 - The atlas skin is dropped: the scan is the envelope.
-- "Glass" is a Fresnel fade: faces turned towards the camera go nearly transparent, the silhouette stays. Atlas layers use alpha-hash dithering so nested layers keep correct depth; the scan uses real alpha blending.
+- "Glass" is a Fresnel fade: faces turned towards the camera go nearly transparent, the silhouette stays. Atlas layers use alpha-hash dithering while they turn to glass, so nested layers keep correct depth, and drop hashed fragments below 20 % alpha. From fade 0.9 an atlas layer is drawn rim-only: a sharper rim (exponent 3), alpha-blended after the opaque layers without depth writes, so the faded muscle at Skeleton and the faded skeleton at Organs show as outlines, not as dithered dots. The scan uses real alpha blending.
 - Per-layer toggles only hide; the slider alone decides solid versus glass. Organ-system chips filter the organ layer by system.
 - `prefers-reduced-motion` makes depth changes instant.
 
