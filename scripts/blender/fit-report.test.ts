@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
 import {
-  endTable,
   jointTable,
   missedTargets,
   parseFitReport,
@@ -87,70 +86,4 @@ test("jointTable writes centimetres, left / right, in joint order", () => {
 
 test("stretchSummary reads the left side as signed percentages", () => {
   expect(stretchSummary(parsed)).toBe("thigh −16.6 %, shin +19.6 %");
-});
-
-describe("feet and hands", () => {
-  const ends = parseFitReport(
-    JSON.stringify({
-      ...report,
-      hasArms: true,
-      joints: [
-        row("toe.L", 0.09, 0.067),
-        row("toe.R", 0.089, 0.066),
-        row("finger.L", 0.109, 0.052),
-      ],
-      endTurnsDeg: { "foot.L": -23, "hand.L": 107.6 },
-      orientation: [
-        { part: "foot.L", measure: "pointing", beforeDeg: 23.2, afterDeg: 4.4 },
-        { part: "foot.R", measure: "pointing", beforeDeg: 23.9, afterDeg: 4.8 },
-        { part: "hand.L", measure: "palm", beforeDeg: 106.3, afterDeg: 9 },
-      ],
-      bonesInsideSkin: [
-        { part: "foot.L", beforeShare: 0.039, afterShare: 0.898 },
-        { part: "foot.R", beforeShare: 0.04, afterShare: 0.896 },
-      ],
-    }),
-  ) as FitReport;
-
-  test("a report written before the ends were turned reads as having none", () => {
-    expect(parsed.orientation).toEqual([]);
-    expect(parsed.bonesInsideSkin).toEqual([]);
-    expect(parsed.endTurnsDeg).toEqual({});
-  });
-
-  test("refuses a share of bones inside the skin above 1", () => {
-    const bad = {
-      ...report,
-      bonesInsideSkin: [{ part: "foot.L", beforeShare: 0.1, afterShare: 1.2 }],
-    };
-    expect(parseFitReport(JSON.stringify(bad))).toBeNull();
-  });
-
-  test("jointTable names the toe and fingertip rows, each after its limb", () => {
-    const lines = jointTable([
-      { body: "Male", atlas: "bodyparts3d", report: ends },
-    ]).split("\n");
-    expect(lines.slice(2).map((line) => line.split(" | ")[2])).toEqual([
-      "toe tip",
-      "middle fingertip",
-    ]);
-    expect(lines[2]).toContain("| 9.0 / 8.9 |");
-  });
-
-  test("endTable gives angles in degrees and the share inside the skin, left / right", () => {
-    expect(endTable([{ body: "Male", atlas: "bodyparts3d", report: ends }])).toBe(
-      [
-        "| Body | Atlas | End | Angle before (L / R) | Angle after | Bones inside skin before | After |",
-        "| ---- | ----- | --- | -------------------- | ----------- | ------------------------ | ----- |",
-        "| Male | bodyparts3d | foot points | 23° / 24° | 4° / 5° | 4 % / 4 % | 90 % / 90 % |",
-        "| Male | bodyparts3d | palm faces | 106° / — | 9° / — |  |  |",
-      ].join("\n"),
-    );
-  });
-
-  test("endTable has no rows for an atlas without foot or hand bones", () => {
-    expect(
-      endTable([{ body: "Male", atlas: "hra-m", report: parsed }]).split("\n"),
-    ).toHaveLength(2);
-  });
 });

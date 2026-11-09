@@ -48,6 +48,23 @@ export const promptForDraft = (
   return added === "" ? picked.prompt : `${picked.prompt} ${added}`;
 };
 
+/**
+ * What the person's bubble shows for a draft sent with a chip's grounded
+ * prompt (#506): the draft as they saw it, short question and any added text.
+ * Null when the draft is sent as typed, so the bubble shows the prompt.
+ */
+export const labelForDraft = (
+  draft: string,
+  picked: SuggestedQuestion | null,
+): string | null => {
+  const shown = draft.trim();
+  return promptForDraft(draft, picked).trim() === shown ? null : shown;
+};
+
+/** The text a turn's bubble shows: its short text, or else what was sent. */
+export const shownPrompt = (turn: Pick<TurnState, "prompt" | "label">): string =>
+  turn.label ?? turn.prompt;
+
 export type SuggestedQuestions = Readonly<{
   /** Whose data the questions come from, shown above the chips. */
   heading: string;

@@ -1,3 +1,4 @@
+import { checkCitedValues } from "@/infrastructure/cited-value-check";
 import { classifyCompletion } from "@/infrastructure/classify-completion";
 import {
   matchOfferedMetric,
@@ -8,6 +9,7 @@ import {
 import type { EvidenceAttribution, OuraSummary } from "@/infrastructure/oura-types";
 import { splitThinking } from "@/infrastructure/think-block";
 import { withoutGuidanceEcho } from "@/infrastructure/twin-section-guidance";
+import { metricDay } from "@/infrastructure/wearable-provenance";
 import { sectionLines } from "@/infrastructure/twin-section-lines";
 
 export type { EvidenceAttribution } from "@/infrastructure/oura-types";
@@ -221,11 +223,14 @@ export const resolveAttribution = (
   const add = (metric: OfferedMetric) => {
     if (used.has(metric.key)) return;
     used.add(metric.key);
+    const day = metricDay(metric);
     out.push({
       metricKey: metric.key,
       label: metric.label,
       value: metric.value,
       unit: metric.unit,
+      ...(metric.source ? { source: metric.source } : {}),
+      ...(metric.source && day ? { day } : {}),
     });
   };
 
@@ -244,6 +249,29 @@ export const resolveAttribution = (
   }
 
   return out;
+};
+
+/**
+ * Each cited value with the check of the number the reply states for it
+ * against its stored reading (#545). A value that is not a number keeps no check.
+ */
+export const withValueChecks = (
+  attribution: readonly EvidenceAttribution[],
+  reply: string,
+): EvidenceAttribution[] => {
+  const checks = checkCitedValues(
+    reply,
+    attribution.map((item) => ({
+      key: item.metricKey,
+      label: item.label,
+      value: item.value,
+      ...(item.unit === undefined ? {} : { unit: item.unit }),
+    })),
+  );
+  return attribution.map((item, index) => {
+    const valueCheck = checks[index];
+    return valueCheck == null ? item : { ...item, valueCheck };
+  });
 };
 
 export const citedKeysForDataBasis = (citedKeys: readonly string[]): string[] =>
@@ -305,7 +333,10 @@ export const parseTwinAnswer = (
     citedKeys,
     evidenceKeys: realKeys.filter((key) => matchOfferedMetric(key, offered) !== null),
     hallucinatedKeys: realKeys.filter((key) => matchOfferedMetric(key, offered) === null),
-    attribution: resolveAttribution(citedKeys, offered, evidenceSection),
+    attribution: withValueChecks(
+      resolveAttribution(citedKeys, offered, evidenceSection),
+      text,
+    ),
     declined: classifyCompletion(text) === "REFUSE",
     offeredKeyCount: offered.length,
   };

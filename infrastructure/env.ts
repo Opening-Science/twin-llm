@@ -500,7 +500,6 @@ const serverEnvSchema = z
     VITRONIC_DATA_DIR: maybeText(),
     VITRONIC_SCANNER_HOSTS: maybeText(),
     ANATOMY_DATA_DIR: maybeText(),
-    ANATOMY_FITTED_ATLAS: blankableFlag(),
     TWINLLM_STATE_DIR: z.preprocess(
       blankAsMissing,
       z.string().regex(/^\//, "TWINLLM_STATE_DIR must be an absolute path").optional(),
@@ -848,20 +847,10 @@ export const anchorEnv = (env: ServerEnv = serverEnv()): AnchorEnv =>
 export type AnatomyEnv = Readonly<{
   /** Where `bun run anatomy:fetch` put the atlas GLBs; null means data/anatomy. */
   dataDir: string | null;
-  /**
-   * Whether "Fit atlas to body" starts on for the demo bodies where the
-   * Blender-fitted atlases are installed. Off unless ANATOMY_FITTED_ATLAS=true.
-   */
-  fittedAtlasOn: boolean;
 }>;
 
-export const anatomyEnv = (): AnatomyEnv => {
-  const env = serverEnv();
-  return Object.freeze({
-    dataDir: env.ANATOMY_DATA_DIR ?? null,
-    fittedAtlasOn: env.ANATOMY_FITTED_ATLAS,
-  });
-};
+export const anatomyEnv = (): AnatomyEnv =>
+  Object.freeze({ dataDir: serverEnv().ANATOMY_DATA_DIR ?? null });
 
 export type GenomeEnv = Readonly<{
   source: "none" | "ark";

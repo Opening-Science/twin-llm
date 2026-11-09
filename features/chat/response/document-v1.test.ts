@@ -506,6 +506,9 @@ describe("ResponseDocument v1 offered keys", () => {
         label: "Sleep score",
         value: 82,
         unit: undefined,
+        source: "oura",
+        day: "2026-01-01",
+        valueCheck: { status: "matched", stated: "82" },
       },
     ]);
     const document = buildResponseDocumentV1({ parsed, toolCalls: [], mode: "personal" });

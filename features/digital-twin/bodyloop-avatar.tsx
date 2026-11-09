@@ -30,6 +30,7 @@ import {
 import { type Highlight } from "@/packages/anatomy/highlight";
 import { ATLASES, type AtlasScheme } from "@/packages/anatomy/manifest";
 import { RIGGED_ATTRIBUTION, riggedBodyApiUrl } from "@/packages/anatomy/rigged-bodies";
+import { DEMO_STANCE } from "@/packages/anatomy/stance";
 import { Button } from "@/infrastructure/ui-kit/button";
 import {
   CollapsiblePanel,
@@ -39,7 +40,6 @@ import { Field } from "@/infrastructure/ui-kit/field";
 import { Legend } from "@/infrastructure/ui-kit/legend";
 import { AnatomyControls } from "./anatomy/anatomy-controls";
 import { AnatomyLayers } from "./anatomy/anatomy-layers";
-import { demoStanceFor, fittedAvailable, fittedShown } from "./anatomy/fitted-option";
 import { highlightValue } from "./anatomy/highlight-options";
 import { BodyPanel, type BodyPanelProps, type PanelTab } from "./body-panel";
 import { useBiomarkerTab } from "./biomarkers/use-biomarker-tab";
@@ -82,7 +82,12 @@ import {
   pickVisible,
   type Picked,
 } from "./environment/pick-part";
-import { INLINE_LIGHT, lookFor } from "./environment/environment-look";
+import {
+  HEMISPHERE_GROUND,
+  HEMISPHERE_SKY,
+  INLINE_LIGHT,
+  lookFor,
+} from "./environment/environment-look";
 import { useEnvironment, useLocalHour } from "./environment/use-environment";
 import { WALK_SURFACE_ATTR } from "./environment/walk-controls";
 import { type BodySex } from "./anatomy/atlas-sex";
@@ -96,6 +101,7 @@ import {
 } from "./demo-subject";
 import { mergeScanRows, orderScans, pickDefaultScan } from "./scan-default";
 import { initialAutoRotate } from "./scan-materials";
+import { useTwinPalette } from "./use-twin-palette";
 import {
   DEFAULT_OVERLAYS,
   OVERLAY_OPTIONS,
@@ -308,12 +314,14 @@ export const BodyLoopAvatar = ({
   const { resolvedTheme } = useTheme();
   // Dark is this design's home; before next-themes resolves, assume it.
   const dark = resolvedTheme !== "light";
+  const palette = useTwinPalette();
   const environment = useEnvironment();
   const { preset, followTime } = environment.state;
   const hour = useLocalHour(environment.active && preset === "outdoors" && followTime);
   const look = useMemo(
-    () => (environment.active ? lookFor(preset, dark, followTime ? hour : null) : null),
-    [environment.active, preset, dark, followTime, hour],
+    () =>
+      environment.active ? lookFor(preset, palette, followTime ? hour : null) : null,
+    [environment.active, preset, palette, followTime, hour],
   );
   const light = look?.light ?? INLINE_LIGHT;
   const zoom = (direction: "in" | "out") => {
@@ -705,15 +713,6 @@ export const BodyLoopAvatar = ({
       : demoRigged
         ? riggedBodyApiUrl(demoBody.id)
         : demoBodyApiUrl(demoBody.id);
-  // "Fit atlas to body": the atlas refitted to this rigged demo body in
-  // Blender, where it is made here; the body then stands unposed.
-  const fittedContext = {
-    bodyId: isDemo ? demoBody.id : null,
-    rigged: demoRigged,
-    atlasId: anatomy.state.atlasId,
-    installed: anatomy.fitted,
-  };
-  const fittedOn = fittedShown(anatomy.state.fitAtlas, fittedContext);
 
   // One card for a picked part: inline over the canvas, in the environment in
   // the bottom stack. It describes one view, so entering or leaving closes it.
@@ -775,8 +774,8 @@ export const BodyLoopAvatar = ({
             The environment changes only colours and intensities, never the light count. */}
           <hemisphereLight
             position={[0, 0, 1]}
-            color={0xf2f6ff}
-            groundColor={0x3a3a3a}
+            color={HEMISPHERE_SKY}
+            groundColor={HEMISPHERE_GROUND}
             intensity={light.hemisphere}
           />
           <directionalLight
@@ -815,7 +814,7 @@ export const BodyLoopAvatar = ({
             rates={motion.rates}
             stance={
               body.kind === "demo"
-                ? demoStanceFor(demoBody.id, anatomy.state.atlasId, fittedOn)
+                ? DEMO_STANCE[demoBody.id][anatomy.state.atlasId]
                 : null
             }
           />
@@ -824,7 +823,6 @@ export const BodyLoopAvatar = ({
             scanRoot={scanScene}
             statureM={body.kind === "scan" ? snapshotStature(properties) : null}
             atlasId={anatomy.state.atlasId}
-            fittedBody={body.kind === "demo" && fittedOn ? demoBody.id : null}
             requested={anatomy.state.requested}
             retry={anatomy.state.retry}
             // The atlas cannot follow the bones, so it fades out while the body moves.
@@ -868,7 +866,7 @@ export const BodyLoopAvatar = ({
           ? labelScreen.map((row) => (
               <div
                 key={row.id}
-                className="pointer-events-none absolute z-10 rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-white"
+                className="bg-popover text-popover-foreground border-border pointer-events-none absolute z-10 rounded border px-1.5 py-0.5 text-[10px]"
                 style={{
                   left: row.x,
                   top: row.y,
@@ -1103,10 +1101,6 @@ export const BodyLoopAvatar = ({
                     envelope="demo"
                     // BodyMotion poses a body to its stance once it has a rig binding.
                     posed={motion.binding !== null}
-                    fitted={{
-                      available: fittedAvailable(fittedContext),
-                      shown: fittedOn,
-                    }}
                   />
                 ),
                 panel: {

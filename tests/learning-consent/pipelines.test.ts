@@ -170,8 +170,6 @@ const NOT_LEARNING: Readonly<Record<string, string>> = {
     "fits pinned atlases to synthetic demo bodies in Blender; no data rows",
   "blender:cleanup": "cleans the synthetic demo body in Blender; refuses BodyLoop paths",
   "blender:self-check": "runs the Blender scripts on synthetic meshes; no data rows",
-  "anatomy:quantise-fitted":
-    "quantises the atlases fitted to synthetic demo bodies; no data rows",
   "fonts:install": TOOLING,
   "synthea:generate": GENERATOR,
   "synthea:s7": GENERATOR,

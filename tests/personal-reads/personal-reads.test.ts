@@ -458,9 +458,10 @@ const PERSONAL_READ_ROUTES: Readonly<Record<string, Entry>> = {
         recipientIsLocal: () => true,
         appendAudit: record.append,
         recordDisclosure: ledger(record),
+        freeTextChecker: () => async () => ({ matches: [] }),
         dataMode: () => "personal",
         today: () => "2026-10-28",
-      })("thread-synthetic-1"),
+      })("thread-synthetic-1", "markdown", "confirmed"),
   },
   "DELETE /api/threads/[threadId]": { kind: "exempt", why: WRITE },
   "POST /api/memory/compact": {
@@ -640,11 +641,6 @@ const PERSONAL_READ_ROUTES: Readonly<Record<string, Entry>> = {
     why: NOT_PERSONAL,
   },
   "GET /api/anatomy/rigged/[bodyId]": {
-    whileLocked: OPEN_NOT_PERSONAL,
-    kind: "exempt",
-    why: NOT_PERSONAL,
-  },
-  "GET /api/anatomy/fitted/[fittedId]": {
     whileLocked: OPEN_NOT_PERSONAL,
     kind: "exempt",
     why: NOT_PERSONAL,
@@ -1133,6 +1129,7 @@ const PAGES: Readonly<Record<string, "gated" | Readonly<{ open: string }>>> = {
   "app/(shell)/customize/data/page.tsx": "gated",
   "app/(shell)/customize/memory/page.tsx": "gated",
   "app/(shell)/customize/privacy/page.tsx": "gated",
+  "app/(shell)/customize/settings/page.tsx": "gated",
   "app/(shell)/customize/tasks/page.tsx": "gated",
   "app/(focus)/start/page.tsx": "gated",
   "app/layout.tsx": { open: "the root frame" },
@@ -1214,8 +1211,12 @@ const SERVER_ACTIONS: Readonly<
     gated: {
       editNote: "vaultRefusalForAction()",
       removeNote: "vaultRefusalForAction()",
-      setNotesLoading: "vaultRefusalForAction()",
+      saveNotesLoading: "vaultRefusalForAction()",
+      setNotesLoading: "saveNotesLoading(",
     },
+  },
+  "features/onboarding/source-actions.ts": {
+    gated: { saveKnowledgeSourceChoice: "vaultRefusalForAction()" },
   },
   "features/privacy/consent-actions.ts": {
     gated: {

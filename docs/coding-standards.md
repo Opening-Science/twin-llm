@@ -228,9 +228,12 @@ both themes), and stops its motion under reduced motion.
   a button with `aria-expanded`. A live region speaks at the start and at the end
   only, never per step or tick. A step's `detail` replaces its label in the list. The
   chat answer uses it for tool calls (`features/arena/tool-call-cards.tsx`): each
-  step is the call in plain words with its measure (named from the data, code in
-  brackets) and window, "No data: <code>" for a lookup that ran and was refused, or
-  "Refused: <code>" for a call that never ran, and its card keeps the arguments, rows and the answer's numbers.
+  step is the call in plain words with its measure in words (named from the data,
+  else from `features/arena/measure-names.ts`, else "this measure"; never the code)
+  and window, or for a refused call one plain sentence for its result code
+  ("No readings in this range" for `NO_ROWS`, `features/arena/tool-code-sentences.ts`),
+  with a No data or Refused badge; its card keeps the arguments, rows, the result code
+  and the answer's numbers.
 - **`UndoButton`** for a delete that can wait. Pressing it runs the soft step and the
   button becomes Undo, with a line burning down along its bottom for `undoWindow` ms.
   Undo or Escape reverts; when the time runs out `onExpire` does the real delete. The

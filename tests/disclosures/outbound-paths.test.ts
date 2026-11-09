@@ -83,6 +83,10 @@ const OUTBOUND: Readonly<Record<string, Entry>> = {
   "infrastructure/open-twin-adapters/whoop-workout.ts": { ledger: VENDOR_SYNC },
   "infrastructure/open-twin-adapters/google-health.ts": { ledger: VENDOR_SYNC },
   "infrastructure/open-twin-adapters/oura-bundle.ts": { exempt: TYPES_ONLY },
+  "infrastructure/open-twin-adapters/google-health-bundle.ts": {
+    exempt:
+      "maps responses the sync already fetched into a FHIR bundle; it sends nothing",
+  },
   "features/oura/summary.ts": { exempt: TYPES_ONLY },
   "features/oura/fixtures/synthetic-sync-data.ts": { exempt: TYPES_ONLY },
   "features/google-health/fixtures/synthetic-sync-responses.ts": { exempt: TYPES_ONLY },
@@ -176,6 +180,7 @@ const OUTBOUND: Readonly<Record<string, Entry>> = {
   // The browser calling this app.
   "features/arena/suggestion-chips.tsx": { exempt: SAME_ORIGIN },
   "features/connectors/use-connector-status.ts": { exempt: SAME_ORIGIN },
+  "features/shell/export-notice-dialog.tsx": { exempt: SAME_ORIGIN },
   "features/personal-data/dataset-list.tsx": { exempt: SAME_ORIGIN },
   "features/personal-data/import-panel.tsx": { exempt: SAME_ORIGIN },
   "features/synthea/synthea-generator.tsx": { exempt: SAME_ORIGIN },
