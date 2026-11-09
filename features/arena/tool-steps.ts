@@ -8,22 +8,23 @@ import {
 import type { StepState, TraceState } from "@/infrastructure/ui-kit/step-trace-model";
 
 import type { AnswerStatus } from "./conversation";
+import { catalogueMeasureName } from "./measure-names";
 import { RANGE_DASH, type ToolCard, type ToolOutcome, toolOutcome } from "./tool-cards";
 import { GENERIC_CODE_SENTENCE } from "./tool-code-sentences";
 
 /**
  * An answer's tool calls as steps of a step trace: what each call is doing,
- * in plain words with its measure and window ("Drawing heart rate (8867-4),
- * 1 Jan 2024 to 31 Dec 2025"). A LOINC code is named by the data itself: the
- * display a call's output gave it (`measureNameOf`), shared by every call of
- * the answer that asked for the same code, with the code in brackets; with no
- * name known the code stands alone. A wearable key gets its metric label. A
- * refused call reads its code's plain sentence ("No readings in this range"
- * for `NO_ROWS`, `tool-code-sentences.ts`); its badge says whether it ran and
- * found nothing (No data) or a gate turned it away first (Refused, not
- * counted as a tool used). The code itself shows only in the card's fold-out.
- * Built from the same cards a saved answer stores, so a reload says the same
- * thing.
+ * in plain words with its measure and window ("Drawing heart rate, 1 Jan 2024
+ * to 31 Dec 2025"). A LOINC code is named in words, never shown as a number:
+ * first by the data itself, the display a call's output gave it
+ * (`measureNameOf`), shared by every call of the answer that asked for the
+ * same code; then by the app's own tables (`measure-names.ts`); a code
+ * neither names reads "this measure" (#537). A wearable key gets its metric
+ * label. A refused call reads its code's plain sentence ("No readings in this
+ * range" for `NO_ROWS`, `tool-code-sentences.ts`); its badge says whether it
+ * ran and found nothing (No data) or a gate turned it away first (Refused,
+ * not counted as a tool used). Codes show only in the card's fold-out. Built
+ * from the same cards a saved answer stores, so a reload says the same thing.
  */
 
 type Phrase = (measure: string | null) => string;
@@ -99,15 +100,50 @@ const sentenceCase = (name: string): string =>
     ? `${name.charAt(0).toLowerCase()}${name.slice(1)}`
     : name;
 
-/** `heart rate (8867-4)`; the code alone when no call named it; a key's label. */
-const measureText = (code: string, names: ReadonlyMap<string, string>): string => {
-  if (code.includes(",")) return code;
-  const name = names.get(code);
-  if (LOINC.test(code)) {
-    return name === undefined || name === code ? code : `${sentenceCase(name)} (${code})`;
-  }
-  return name ?? metricLabel(code);
+/** What a step says for a code nobody named, and for a list none of whose codes is named. */
+export const UNKNOWN_MEASURE = "this measure";
+const UNKNOWN_MEASURES = "these measures";
+
+/** One code or key in words: `heart rate`, `HbA1c`, a key's label; null when unknown. */
+const nameOf = (code: string, names: ReadonlyMap<string, string>): string | null => {
+  if (!LOINC.test(code)) return names.get(code) ?? metricLabel(code);
+  const name = names.get(code) ?? catalogueMeasureName(code);
+  return name === null || name === undefined || name === code || LOINC.test(name)
+    ? null
+    : sentenceCase(name);
 };
+
+const others = (count: number): string =>
+  count === 1 ? "one other measure" : `${String(count)} other measures`;
+
+const joined = (parts: readonly string[]): string =>
+  parts.length < 2
+    ? (parts[0] ?? "")
+    : `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]!}`;
+
+/**
+ * The asked measure in words, never its code: one name, or a list of names
+ * with the unnamed ones counted (`heart rate and one other measure`); null
+ * when none of its codes is named.
+ */
+export const namedMeasure = (
+  measure: string,
+  names: ReadonlyMap<string, string> = new Map(),
+): string | null => {
+  const codes = measure
+    .split(",")
+    .map((code) => code.trim())
+    .filter(Boolean);
+  const named = codes.flatMap((code) => nameOf(code, names) ?? []);
+  const unnamed = codes.length - named.length;
+  if (named.length === 0) return null;
+  return joined(unnamed === 0 ? named : [...named, others(unnamed)]);
+};
+
+/** `namedMeasure`, or "this measure" ("these measures") when nothing names it. */
+const measureText = (measure: string, names: ReadonlyMap<string, string>): string =>
+  namedMeasure(measure, names) ??
+  (measure.includes(",") ? UNKNOWN_MEASURES : UNKNOWN_MEASURE);
 
 export const toolStepLabel = (
   card: ToolCard,

@@ -10,6 +10,7 @@ import { measureNameOf, OUTCOME_LABELS, toolCard, toolOutcome } from "./tool-car
 import {
   answerTraceState,
   measureNames,
+  namedMeasure,
   toolStepLabel,
   toolStepLabels,
   toolStepState,
@@ -43,13 +44,13 @@ describe("toolStepLabel", () => {
           end: "2025-12-31",
         }),
       ),
-    ).toBe("Summarising 8867-4, 1 Jan 2025 to 31 Dec 2025");
+    ).toBe("Summarising heart rate, 1 Jan 2025 to 31 Dec 2025");
     expect(toolStepLabel(done("trend", { measure: "whoop.recovery.score" }))).toBe(
       "Fitting a trend of Whoop recovery score",
     );
     expect(toolStepLabel(done("trend", {}))).toBe("Fitting a trend");
     expect(toolStepLabel(done("range_position", { measure: "8867-4" }))).toBe(
-      "Placing 8867-4 against its published range",
+      "Placing heart rate against its published range",
     );
   });
 
@@ -105,7 +106,7 @@ describe("measure names from the answer's own data", () => {
     expect(measureNameOf({ measure: "8867-4" }, { n: 25, mean: 78.08 })).toBeNull();
   });
 
-  test("a code named by one call names it in every step, code in brackets", () => {
+  test("a code named by one call names it in every step, without the code (#537)", () => {
     const cards = [
       done("show_view", { measure: "8867-4", window }, chart),
       done("latest_by_loinc", { loinc: "8867-4" }, { rows: latest }),
@@ -113,20 +114,48 @@ describe("measure names from the answer's own data", () => {
     ];
     expect(measureNames(cards)).toEqual(new Map([["8867-4", "Heart rate"]]));
     expect(toolStepLabels(cards)).toEqual([
-      "Drawing heart rate (8867-4), 1 Jan 2024 to 31 Dec 2025",
-      "Reading the latest heart rate (8867-4)",
-      "Summarising heart rate (8867-4), 1 Jan 2024 to 31 Dec 2025",
+      "Drawing heart rate, 1 Jan 2024 to 31 Dec 2025",
+      "Reading the latest heart rate",
+      "Summarising heart rate, 1 Jan 2024 to 31 Dec 2025",
     ]);
   });
 
-  test("an acronym keeps its case; a code nobody named stands alone", () => {
+  test("an acronym keeps its case; the app's tables name a code the data did not", () => {
     const named = done("trend", { measure: "4548-4" }, [
       { loinc: "4548-4", display: "HbA1c" },
     ]);
-    expect(toolStepLabel(named)).toBe("Fitting a trend of HbA1c (4548-4)");
+    expect(toolStepLabel(named)).toBe("Fitting a trend of HbA1c");
     expect(toolStepLabels([done("trend", { measure: "2093-3" }, { n: 3 })])).toEqual([
-      "Fitting a trend of 2093-3",
+      "Fitting a trend of cholesterol",
     ]);
+    expect(toolStepLabel(done("trend", { measure: "4548-4" }))).toBe(
+      "Fitting a trend of HbA1c",
+    );
+  });
+
+  test("a code no call and no table names reads 'this measure', never the code (#537)", () => {
+    const unknown = done("trend", {
+      measure: "99999-9",
+      start: "2025-01-01",
+      end: "2025-12-31",
+    });
+    expect(toolStepLabel(unknown)).toBe(
+      "Fitting a trend of this measure, 1 Jan 2025 to 31 Dec 2025",
+    );
+    expect(unknown.args[0]).toEqual({ label: "Measure", value: "99999-9" });
+    expect(toolStepLabel(done("coverage", { loinc: ["8867-4", "99999-9"] }))).toBe(
+      "Checking coverage of heart rate and one other measure",
+    );
+    expect(toolStepLabel(done("coverage", { loinc: ["99999-8", "99999-9"] }))).toBe(
+      "Checking coverage of these measures",
+    );
+    expect(
+      toolStepLabel(
+        done("coverage", { loinc: ["8867-4", "2093-3", "99999-9", "99998-0"] }),
+      ),
+    ).toBe("Checking coverage of heart rate, cholesterol and 2 other measures");
+    expect(namedMeasure("99999-9")).toBeNull();
+    for (const label of toolStepLabels([unknown])) expect(label).not.toMatch(/\d+-\d/);
   });
 
   test("a call a gate turned away is refused; one that ran and found nothing is skipped", () => {
