@@ -95,6 +95,54 @@ describe("threadMarkdown", () => {
     );
   });
 
+  test("cited values keep their source, day and stored key in the export (#464)", () => {
+    const thread = (overrides: Partial<ResponseState>) =>
+      threadMarkdown(
+        {
+          title: "HRV",
+          turns: [
+            {
+              id: "t1",
+              prompt: "HRV",
+              answers: [answer({ text: "## Answer\nSynthetic.", ...overrides })],
+            },
+          ],
+        },
+        "9 Nov 2026",
+      );
+    expect(
+      thread({
+        attribution: [
+          {
+            metricKey: "whoop.recovery.hrv.2026-01-02",
+            label: "Recovery HRV",
+            value: 48,
+            unit: "ms",
+            source: "whoop",
+            day: "2026-01-02",
+          },
+          { metricKey: "sleep.hrv.2026-01-01", label: "Sleep HRV", value: 41 },
+        ],
+      }),
+    ).toContain(
+      [
+        "Synthetic.",
+        "",
+        "Evidence:",
+        "- Recovery HRV 48 ms · From WHOOP, 2 Jan 2026 (`whoop.recovery.hrv.2026-01-02`)",
+        "- Sleep HRV 41 (`sleep.hrv.2026-01-01`)",
+      ].join("\n"),
+    );
+    expect(
+      thread({
+        document: {
+          data_basis: { evidence_keys: ["sleep.hrv.2026-01-01"] },
+        } as ResponseState["document"],
+      }),
+    ).toContain("Evidence:\n- `sleep.hrv.2026-01-01`");
+    expect(thread({})).not.toContain("Evidence:");
+  });
+
   test("a GBD profile keeps the app's header and footer in Markdown and print (#417)", () => {
     const frame = {
       title: "Location profile: Switzerland, 2023",

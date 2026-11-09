@@ -310,7 +310,10 @@ never repeated. Codes (`answer_class`, reasons, `next_step`) are never shown.
   the summary the prompt offered the metric from (`offeredMetrics`), stored with the
   answer's attribution as `source` and `day`; a stored key or vendor id is never
   shown. An answer stored before has no source and shows its chips as before. This is
-  on the stored attribution, not in the response document.
+  on the stored attribution, not in the response document. The panel no longer prints
+  `evidence_keys`: the chips name each value, and the thread export lists every chip
+  with its source, day and key under "Evidence:" (keys alone when an answer has no
+  chips). With keys but no chips the panel says only how many values were cited.
 
 Panel order: reasoning, evidence used (then the hallucinated-key line), guideline references, population
 context (GBD rows and attribution line), uncertainty (level, reasons, then the model's statement), next

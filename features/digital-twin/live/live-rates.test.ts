@@ -79,7 +79,7 @@ describe("cohort rates (the Demo)", () => {
 
 describe("wearable rates (Self, synthetic objects only)", () => {
   test("vendor from the stem prefix", () => {
-    expect(metricSource("whoop.recovery.rhr")).toBe("Whoop");
+    expect(metricSource("whoop.recovery.rhr")).toBe("WHOOP");
     expect(metricSource("google.daily-respiratory-rate")).toBe("Google Health");
     expect(metricSource("sleep.hr")).toBe("Oura");
   });
@@ -105,7 +105,7 @@ describe("wearable rates (Self, synthetic objects only)", () => {
 
   test("resting heart rate when there is no heart rate; no breathing without a source", () => {
     expect(wearableLiveVitals([metric("whoop.recovery.rhr", "2026-10-18", 52)])).toEqual({
-      heart: { perMinute: 52, day: "2026-10-18", source: "Whoop", vital: "rhr" },
+      heart: { perMinute: 52, day: "2026-10-18", source: "WHOOP", vital: "rhr" },
       breath: null,
       hrvBelow: null,
     });
@@ -121,7 +121,7 @@ describe("wearable rates (Self, synthetic objects only)", () => {
     expect(wearableLiveVitals(metrics).heart).toEqual({
       perMinute: 55,
       day: "2026-10-12",
-      source: "Whoop",
+      source: "WHOOP",
       vital: "rhr",
     });
     expect(

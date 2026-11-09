@@ -40,7 +40,7 @@ Biomarkers). The Demo body shows Anatomy and this tab, since it has no scan.
   the catalogue and adds Vitals from its own wearable summaries: per vital, the
   first source in the vitals table that has data, newest day. Each vital names
   where it comes from ("From Oura, 15 Oct 2026") and, when a later source also
-  has a reading, says so and gives the rule ("Whoop also records this; Oura
+  has a reading, says so and gives the rule ("WHOOP also records this; Oura
   comes first in a fixed order, so its reading is shown.", #464). Other BodyLoop
   subjects list the catalogue only. The panel shows for every subject, scans or
   not, since the catalogue always has rows.

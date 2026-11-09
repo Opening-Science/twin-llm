@@ -30,7 +30,7 @@ export type LiveRate = Readonly<{
   perMinute: number;
   /** ISO day of the reading. */
   day: string;
-  /** Who measured it: "Synthetic person 3", "Oura", "Whoop", "Google Health". */
+  /** Who measured it: "Synthetic person 3", "Oura", "WHOOP", "Google Health". */
   source: string;
   /** Which reading: heart rate or resting heart rate. */
   vital: "heartRate" | "rhr" | "respiration";

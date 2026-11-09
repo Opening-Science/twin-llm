@@ -171,7 +171,7 @@ describe("vitals", () => {
       value: "61 bpm",
       details: [
         "From Oura, 15 Oct 2026",
-        "Whoop also records this; Oura comes first in a fixed order, so its reading is shown.",
+        "WHOOP also records this; Oura comes first in a fixed order, so its reading is shown.",
       ],
     });
     expect(steps).toMatchObject({
@@ -191,8 +191,8 @@ describe("vitals", () => {
       { key: "whoop.recovery.rhr.2026-10-15", label: "RHR", value: 54, unit: "bpm" },
     ]);
     expect(vitalRows(rhr)[0]?.details).toEqual([
-      "From Whoop, 15 Oct 2026",
-      "Google Health also records this; Whoop comes first in a fixed order, so its reading is shown.",
+      "From WHOOP, 15 Oct 2026",
+      "Google Health also records this; WHOOP comes first in a fixed order, so its reading is shown.",
     ]);
   });
 

@@ -121,10 +121,10 @@ describe("liveLines", () => {
   test("resting heart rate is named as such", () => {
     const rhr: LiveVitals = {
       ...VITALS,
-      heart: { perMinute: 52, day: "2026-10-18", source: "Whoop", vital: "rhr" },
+      heart: { perMinute: 52, day: "2026-10-18", source: "WHOOP", vital: "rhr" },
     };
     expect(liveLines(on(true, false, false), rhr, "hra", TODAY)[1]).toBe(
-      "Pulse at 52 bpm · last reading 18 Oct 2026 (2 days ago) · Whoop resting heart rate",
+      "Pulse at 52 bpm · last reading 18 Oct 2026 (2 days ago) · WHOOP resting heart rate",
     );
   });
 });

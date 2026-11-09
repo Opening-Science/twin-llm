@@ -37,7 +37,7 @@ describe("metricDay", () => {
 describe("provenanceLine", () => {
   test("source and day in plain words", () => {
     expect(provenanceLine({ source: "whoop", day: "2026-10-15" })).toBe(
-      "From Whoop, 15 Oct 2026",
+      "From WHOOP, 15 Oct 2026",
     );
     expect(provenanceLine({ source: "google_health", day: null })).toBe(
       "From Google Health",
@@ -48,10 +48,10 @@ describe("provenanceLine", () => {
 describe("pickedSourceLine", () => {
   test("names the sources passed over and the rule", () => {
     expect(pickedSourceLine("oura", ["whoop"])).toBe(
-      "Whoop also records this; Oura comes first in a fixed order, so its reading is shown.",
+      "WHOOP also records this; Oura comes first in a fixed order, so its reading is shown.",
     );
     expect(pickedSourceLine("oura", ["whoop", "google_health"])).toBe(
-      "Whoop and Google Health also record this; Oura comes first in a fixed order, so its reading is shown.",
+      "WHOOP and Google Health also record this; Oura comes first in a fixed order, so its reading is shown.",
     );
   });
 
@@ -73,7 +73,7 @@ describe("attributionProvenanceLine", () => {
     expect(attributionProvenanceLine({})).toBeNull();
     expect(attributionProvenanceLine({ source: "fitbit", day: "2026-01-02" })).toBeNull();
     expect(attributionProvenanceLine({ source: "whoop", day: "soon" })).toBe(
-      "From Whoop",
+      "From WHOOP",
     );
   });
 });

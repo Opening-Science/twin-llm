@@ -22,7 +22,7 @@ export type WearableSourceId = (typeof WEARABLE_SOURCE_IDS)[number];
 
 export const WEARABLE_SOURCE_LABEL: Readonly<Record<WearableSourceId, string>> = {
   oura: "Oura",
-  whoop: "Whoop",
+  whoop: "WHOOP",
   google_health: "Google Health",
   bodyloop: "BodyLoop",
 };
@@ -44,7 +44,7 @@ const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
  * The calendar day a reading belongs to: its own `date`, else the date its key
- * ends with. Null when neither is a real day (Whoop writes "unknown").
+ * ends with. Null when neither is a real day (WHOOP writes "unknown").
  */
 export const metricDay = (
   metric: Readonly<{ key: string; date?: string }>,
@@ -88,7 +88,7 @@ const joinNames = (names: readonly string[]): string =>
     : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
 
 /**
- * The rule behind a pick, when other sources also had a reading: "Whoop also
+ * The rule behind a pick, when other sources also had a reading: "WHOOP also
  * records this; Oura comes first in a fixed order, so its reading is shown."
  * Null when the chosen source was the only one.
  */

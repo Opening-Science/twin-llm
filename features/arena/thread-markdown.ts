@@ -4,6 +4,7 @@ import {
 } from "@/infrastructure/gbd-profile-frame";
 import { parseTwinAnswer } from "@/infrastructure/parse-twin-answer";
 import { readableTitle } from "@/infrastructure/readable-title";
+import { attributionProvenanceLine } from "@/infrastructure/wearable-provenance";
 
 import type { ResponseState, TurnState } from "./conversation";
 import { stoppedAnswerText } from "./streaming-view";
@@ -40,6 +41,24 @@ const lookupLine = (card: ToolCard): string => {
 
 const STOPPED_LINE = "_Stopped before it finished._";
 
+/**
+ * The cited wearable values with their stored keys, which the page no longer
+ * shows (#464): each chip as label, value, source and day, then the key. An
+ * answer with cited keys but no chips lists the keys alone.
+ */
+const evidenceLines = (answer: ResponseState): string[] => {
+  const chips = answer.attribution ?? [];
+  const lines =
+    chips.length > 0
+      ? chips.map((chip) => {
+          const value = `${chip.value}${chip.unit ? ` ${chip.unit}` : ""}`;
+          const provenance = attributionProvenanceLine(chip);
+          return `- ${chip.label} ${value}${provenance ? ` · ${provenance}` : ""} (\`${chip.metricKey}\`)`;
+        })
+      : (answer.document?.data_basis?.evidence_keys ?? []).map((key) => `- \`${key}\``);
+  return lines.length === 0 ? [] : ["", "Evidence:", ...lines];
+};
+
 const answerBody = (answer: ResponseState): string[] => {
   if (answer.status === "FAILED" && answer.stopped === true) {
     const written = stoppedAnswerText(answer.text).trim();
@@ -62,6 +81,7 @@ const answerBody = (answer: ResponseState): string[] => {
     ...(frame === null ? [] : frameHeaderMarkdown(frame)),
     body === "" ? "_No written answer._" : body,
     ...(parsed.uncertaintyText ? ["", `**Uncertainty.** ${parsed.uncertaintyText}`] : []),
+    ...evidenceLines(answer),
     ...(frame === null ? [] : frameFooterMarkdown(frame)),
   ];
 };

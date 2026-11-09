@@ -356,7 +356,54 @@ describe("explainability panel evidence provenance (#464)", () => {
       },
     ]);
     expect(markup).toContain("From Oura, 1 Jan 2026");
-    expect(markup).toContain("From Whoop, 2 Jan 2026");
+    expect(markup).toContain("From WHOOP, 2 Jan 2026");
+  });
+
+  test("stored keys are not shown; a chip names the value instead", () => {
+    const markup = renderToStaticMarkup(
+      createElement(ExplainabilityPanel, {
+        document: makeResponseDocument({
+          data_basis: {
+            evidence_keys: ["sleep.hrv.2026-01-01"],
+            hallucinated_keys: [],
+            tool_calls: [],
+            sources: { gbd: [], guidelines: [] },
+            gbd_rows: [],
+          },
+        }),
+        attribution: [
+          {
+            metricKey: "sleep.hrv.2026-01-01",
+            label: "Sleep HRV",
+            value: 41,
+            unit: "ms",
+            source: "oura",
+            day: "2026-01-01",
+          },
+        ],
+      }),
+    );
+    expect(markup).toContain("Sleep HRV");
+    expect(markup).toContain("From Oura, 1 Jan 2026");
+    expect(markup).not.toContain("sleep.hrv.2026-01-01");
+  });
+
+  test("cited keys without chips are counted, never printed", () => {
+    const markup = renderToStaticMarkup(
+      createElement(ExplainabilityPanel, {
+        document: makeResponseDocument({
+          data_basis: {
+            evidence_keys: ["sleep.hrv.2026-01-01", "whoop.recovery.hrv.2026-01-02"],
+            hallucinated_keys: [],
+            tool_calls: [],
+            sources: { gbd: [], guidelines: [] },
+            gbd_rows: [],
+          },
+        }),
+      }),
+    );
+    expect(markup).toContain("2 values were cited; the thread export lists them.");
+    expect(markup).not.toContain("sleep.hrv.2026-01-01");
   });
 
   test("an answer stored before #464 shows its values without a source line", () => {
