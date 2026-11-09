@@ -1,7 +1,7 @@
 import "server-only";
 
 import { database } from "@/infrastructure/database";
-import { type FieldCipher, newRowId } from "@/infrastructure/field-cipher";
+import { type FieldCipher, newRowId, sealNullable } from "@/infrastructure/field-cipher";
 import { cipherForUser } from "@/infrastructure/field-cipher-runtime";
 import {
   openThreadTitle,
@@ -59,6 +59,7 @@ const newTurn = (cipher: FieldCipher, plan: TurnPlan, scheduled: boolean) => {
       prompt: cipher.sealText(TURNS, "prompt", turnId, plan.prompt),
       scheduled,
       skill: plan.skill,
+      label: sealNullable(cipher, TURNS, "label", turnId, plan.label),
       responses: { createMany: { data: responses } },
     },
   };

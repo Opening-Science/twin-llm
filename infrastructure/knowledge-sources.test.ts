@@ -1,14 +1,55 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  disabledFromStored,
   disabledToolNames,
   groupOnCount,
   KNOWLEDGE_SOURCE_GROUPS,
   normaliseDisabledSources,
   setGroupEnabled,
   setSourceEnabled,
+  storedFromDisabled,
   withoutDisabledTools,
 } from "./knowledge-sources";
+
+describe("opt-in personal-data sources (#507)", () => {
+  test("nothing stored keeps genome, VCF and imported data off and the rest on", () => {
+    expect(disabledFromStored({})).toEqual([
+      "ark-genome",
+      "vcf-variants",
+      "imported-data",
+    ]);
+    expect(disabledFromStored({ disabledSources: [], optedInSources: [] })).toEqual([
+      "ark-genome",
+      "vcf-variants",
+      "imported-data",
+    ]);
+  });
+
+  test("an opt-in source is on only once opted in; an opt-out id for it is ignored", () => {
+    expect(
+      disabledFromStored({
+        disabledSources: ["gbd", "vcf-variants"],
+        optedInSources: ["vcf-variants", "imported-data", "nope"],
+      }),
+    ).toEqual(["gbd", "ark-genome"]);
+  });
+
+  test("an effective list round-trips through the two stored columns", () => {
+    const stored = storedFromDisabled(["guidelines", "ark-genome"]);
+    expect(stored).toEqual({
+      disabledSources: ["guidelines"],
+      optedInSources: ["vcf-variants", "imported-data"],
+    });
+    expect(disabledFromStored(stored)).toEqual(["guidelines", "ark-genome"]);
+  });
+
+  test("a source never opted in has its tools dropped from chat", () => {
+    const dropped = disabledToolNames(disabledFromStored({}));
+    expect(dropped.has("genome_variants")).toBe(true);
+    expect(dropped.has("list_subjects")).toBe(false);
+  });
+});
 
 const CHAT_TOOL_NAMES = [
   "list_subjects",

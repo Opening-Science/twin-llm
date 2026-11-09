@@ -23,6 +23,7 @@ import {
   VENDOR_LOGOS,
   WeeklyBars,
 } from "@/infrastructure/charts/kit";
+import { Button } from "@/infrastructure/ui-kit/button";
 
 import {
   BEDTIME_TARGET,
@@ -498,6 +499,70 @@ export const GalleryScreen = () => (
       </header>
       <div className="grid gap-4 lg:grid-cols-2">
         <DeviceList category="vitals" title="Sources" rows={SOURCES} />
+      </div>
+    </section>
+
+    <section className="flex flex-col gap-3">
+      <header>
+        <h2 className="text-foreground font-sans text-lg">C15 options</h2>
+        <p className="text-muted-foreground text-sm">
+          Rows can end in actions, then only the name links. A row can leave out the
+          logo&apos;s attribution word, as on a source that is not linked. Without a title
+          or frame the rows sit inside a card of their own.
+        </p>
+      </header>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <DeviceList
+          category="vitals"
+          title="Sources"
+          rows={[
+            {
+              name: "Google Health",
+              detail: "Connected to Google Health · made-up: synced 12 minutes ago",
+              logo: VENDOR_LOGOS.googleHealth,
+              href: "/lab/design",
+              actions: (
+                <>
+                  <Button size="sm">Refresh</Button>
+                  <Button size="sm" variant="ghost">
+                    Unlink
+                  </Button>
+                </>
+              ),
+            },
+            {
+              name: "WHOOP",
+              detail: "Not linked",
+              logo: VENDOR_LOGOS.whoop,
+              hideAttribution: true,
+              actions: <Button size="sm">Link</Button>,
+            },
+          ]}
+        />
+        <InsightCard
+          category="vitals"
+          label="Sources"
+          sentence="Two sources linked, one not."
+        >
+          <DeviceList
+            category="vitals"
+            framed={false}
+            rows={[
+              { name: "Oura", detail: "Made-up: synced 4 min ago" },
+              {
+                name: "Google Health",
+                detail: "Made-up: synced 12 minutes ago",
+                logo: VENDOR_LOGOS.googleHealth,
+              },
+              {
+                name: "WHOOP",
+                detail: "Not linked",
+                logo: VENDOR_LOGOS.whoop,
+                hideAttribution: true,
+              },
+            ]}
+          />
+        </InsightCard>
       </div>
     </section>
 

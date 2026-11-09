@@ -264,14 +264,30 @@ export type DeviceRow = Readonly<{
   /** A word on the right; colour follows the word, never replaces it. */
   status?: Readonly<{ word: string; tone: "ok" | "warn" | "neutral" }>;
   logo?: VendorLogo;
-  /** Makes the row a link with a chevron. */
+  /**
+   * Leave out the logo's attribution word on this row, e.g. no "Data by" on
+   * a WHOOP row that is not linked. The logo itself stays.
+   */
+  hideAttribution?: boolean;
+  /**
+   * Makes the row a link with a chevron. With `actions` only the name is the
+   * link, since a link cannot hold buttons.
+   */
   href?: string;
+  /** Buttons at the end of the row, such as Refresh, View or Unlink. */
+  actions?: ReactNode;
 }>;
 
-/** C15: a titled group of rows, one per device or source. */
+/** C15: a group of rows, one per device or source. */
 export type DeviceListProps = Base &
   Readonly<{
-    title: string;
+    /** The group's heading; leave it out when the list sits under a heading of its own. */
+    title?: string;
+    /**
+     * Without a frame the rows sit straight on their parent, such as a card
+     * that already frames them; hairlines between rows stay.
+     */
+    framed?: boolean;
     rows: readonly DeviceRow[];
     /** Shown in place of the rows when state is empty, e.g. "No device linked yet". */
     emptyNote?: string;
