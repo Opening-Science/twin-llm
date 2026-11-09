@@ -4,14 +4,18 @@ import {
   barsWithLine,
   cumulativeDay,
   edgeAnchor,
+  emptyDayOutline,
   estimateLayout,
   estimateRows,
   exactDecimals,
   hypnogram,
+  invertedNote,
   log2Ticks,
   monthShares,
   nullBand,
+  PLACEHOLDER_DAY,
   nullFigure,
+  axisShare,
   radar,
   radarAxisAt,
   rangeBars,
@@ -19,8 +23,10 @@ import {
   ringPartAt,
   scoreRing,
   slotIndex,
+  stageTotalWidths,
   spacedTicks,
   stepKey,
+  weekStep,
   streakGrid,
   weekdayLetters,
 } from "./kit-geometry";
@@ -536,6 +542,237 @@ describe("null band", () => {
     expect(out.observedX).toBe(208);
     expect(out.mean).toBeGreaterThan(out.low);
     expect(out.mean).toBeLessThan(out.high);
+  });
+});
+
+describe("bars from a floor, with a usual band", () => {
+  const box = { width: 140, height: 100 };
+
+  test("from zero, a 30-minute shift near 23:00 barely moves a bar", () => {
+    const out = barsWithLine([1380, 1410], null, box, 14, 4);
+    expect(out.bars[1]!.height - out.bars[0]!.height).toBeLessThan(3);
+  });
+
+  test("from a floor the same shift spans the chart", () => {
+    const out = barsWithLine([1380, 1410], null, box, 14, 4, { floor: 1320 });
+    expect(out.bars[1]!.height).toBe(100);
+    expect(out.bars[0]!.height).toBeCloseTo(200 / 3);
+  });
+
+  test("a value at or below the floor is a stub, not nothing", () => {
+    const out = barsWithLine([1320, 1300], null, box, 14, 4, { floor: 1320 });
+    expect(out.bars.map((b) => b?.height)).toEqual([2, 2]);
+  });
+
+  test("the usual band shares the scale and widens it when it reaches higher", () => {
+    const out = barsWithLine([1380], 1395, box, 14, 4, {
+      floor: 1320,
+      band: { low: 1370, high: 1440 },
+    });
+    expect(out.band).toEqual({ top: 0, bottom: 100 - (50 / 120) * 100 });
+    expect(out.lineY).toBe(100 - (75 / 120) * 100);
+  });
+
+  test("without a floor, missing and zero values still draw nothing", () => {
+    expect(barsWithLine([0, null, 5], null, box).bars.slice(0, 2)).toEqual([null, null]);
+  });
+});
+
+describe("stage totals", () => {
+  test("the longest stage spans the width, the rest in proportion", () => {
+    expect(stageTotalWidths({ awake: 20, rem: 96, core: 248, deep: 62 }, 248)).toEqual({
+      awake: 20,
+      rem: 96,
+      core: 248,
+      deep: 62,
+    });
+  });
+
+  test("missing or negative totals are zero, and no totals draw nothing", () => {
+    expect(stageTotalWidths({ core: 100, awake: -5 }, 50)).toEqual({
+      awake: 0,
+      rem: 0,
+      core: 50,
+      deep: 0,
+    });
+    expect(stageTotalWidths({}, 50)).toEqual({ awake: 0, rem: 0, core: 0, deep: 0 });
+  });
+});
+
+describe("radar axis share", () => {
+  const axis = { label: "Resting", value: null, display: "", max: 70 };
+
+  test("from 0 by default, from a minimum when given", () => {
+    expect(axisShare(56, axis)).toBeCloseTo(0.8);
+    expect(axisShare(56, { ...axis, min: 50 })).toBeCloseTo(0.3);
+    expect(
+      axisShare(58, { ...axis, min: 50 }) - axisShare(52, { ...axis, min: 50 }),
+    ).toBeCloseTo(0.3);
+  });
+
+  test("inverted: lower sits further out", () => {
+    expect(axisShare(52, { ...axis, min: 50, inverted: true })).toBeCloseTo(0.9);
+    expect(axisShare(70, { ...axis, min: 50, inverted: true })).toBe(0);
+  });
+
+  test("clamped to the axis, and a missing value sits at the centre even when inverted", () => {
+    expect(axisShare(40, { ...axis, min: 50 })).toBe(0);
+    expect(axisShare(90, axis)).toBe(1);
+    expect(axisShare(null, { ...axis, inverted: true })).toBe(0);
+    expect(axisShare(60, { ...axis, min: 70 })).toBe(0);
+  });
+
+  test("the radar places points and the reference by it", () => {
+    const out = radar(
+      [
+        {
+          label: "A",
+          value: 52,
+          display: "",
+          reference: 58,
+          max: 70,
+          min: 50,
+          inverted: true,
+        },
+        { label: "B", value: 10, display: "", max: 10 },
+        { label: "C", value: 10, display: "", max: 10 },
+      ],
+      { width: 200, height: 200 },
+      { x: 0, y: 0 },
+    );
+    // Axis A points up: 52 inverted on 50..70 sits 0.9 of the way out.
+    expect(out.points[0]!.y).toBeCloseTo(100 - 0.9 * 100);
+    expect(out.reference).toMatch(/^M100,40 /);
+  });
+});
+
+describe("inverted note", () => {
+  const axis = (label: string, inverted?: boolean) => ({
+    label,
+    value: 1,
+    display: "",
+    max: 2,
+    inverted,
+  });
+
+  test("names every inverted axis in plain words", () => {
+    expect(
+      invertedNote([axis("Resting", true), axis("Sleeping", true), axis("Walking")]),
+    ).toBe("For resting and sleeping, further out means lower.");
+    expect(invertedNote([axis("Resting", true)])).toBe(
+      "For resting, further out means lower.",
+    );
+    expect(
+      invertedNote([axis("Resting", true), axis("HRV", true), axis("Sleeping", true)]),
+    ).toBe("For resting, HRV and sleeping, further out means lower.");
+  });
+
+  test("no inverted axis, no note", () => {
+    expect(invertedNote([axis("Walking"), axis("HRV")])).toBeNull();
+  });
+});
+
+describe("null figure ticks", () => {
+  test("round ticks inside the drawn range, on the bars' scale", () => {
+    const draws = Array.from({ length: 100 }, (_, i) => 0.4 + i / 1000);
+    const out = nullFigure(draws, 0.6, { width: 200, height: 50 }, 10);
+    expect(out.ticks.map((t) => t.value)).toEqual([0.4, 0.45, 0.5, 0.55, 0.6]);
+    expect(out.ticks[0]!.x).toBe(0);
+    expect(out.ticks.at(-1)!.x).toBeCloseTo(out.observedX);
+  });
+
+  test("a summary's ticks share its padded axis", () => {
+    const out = nullBand({ mean: 0.5, low: 0.46, high: 0.54, runs: 200 }, 0.61, {
+      width: 216,
+      height: 40,
+    });
+    expect(out.ticks.length).toBeGreaterThan(1);
+    expect(out.ticks.every((t) => t.x >= 8 && t.x <= 208)).toBe(true);
+  });
+
+  test("no draws, no ticks", () => {
+    expect(nullFigure([], 1, { width: 100, height: 10 }).ticks).toEqual([]);
+  });
+});
+
+describe("week step", () => {
+  // 28 days from Monday 2 Nov 2026: four full weeks.
+  const days = Array.from({ length: 28 }, (_, i) => ({
+    date: new Date(Date.UTC(2026, 10, 2 + i)).toISOString().slice(0, 10),
+    done: true,
+  }));
+  const cells = streakGrid(days, "x", 1);
+
+  test("down and up move a week on the same weekday", () => {
+    expect(weekStep("ArrowDown", 2, cells)).toEqual({ kind: "move", index: 9 });
+    expect(weekStep("ArrowUp", 9, cells)).toEqual({ kind: "move", index: 2 });
+  });
+
+  test("past the first or last week the focus stays", () => {
+    expect(weekStep("ArrowUp", 2, cells)).toEqual({ kind: "move", index: 2 });
+    expect(weekStep("ArrowDown", 25, cells)).toEqual({ kind: "move", index: 25 });
+  });
+
+  test("a missing day does not shift the step", () => {
+    const gappy = streakGrid(
+      days.filter((_, i) => i !== 4),
+      "x",
+      1,
+    );
+    // Wednesday 4 Nov (index 2) down to Wednesday 11 Nov, now index 8.
+    expect(weekStep("ArrowDown", 2, gappy)).toEqual({ kind: "move", index: 8 });
+    // Friday 6 Nov is missing and it is the first week: from Friday 13 Nov up, the focus stays.
+    const friday13 = gappy.findIndex((c) => c.date === "2026-11-13");
+    expect(weekStep("ArrowUp", friday13, gappy)).toEqual({
+      kind: "move",
+      index: friday13,
+    });
+  });
+
+  test("a week without that weekday is passed over", () => {
+    // Wednesday 11 Nov is missing: Up from Wednesday 18 Nov goes on to 4 Nov.
+    const noWed11 = streakGrid(
+      days.filter((d) => d.date !== "2026-11-11"),
+      "x",
+      1,
+    );
+    const at = (date: string) => noWed11.findIndex((c) => c.date === date);
+    expect(weekStep("ArrowUp", at("2026-11-18"), noWed11)).toEqual({
+      kind: "move",
+      index: at("2026-11-04"),
+    });
+    expect(weekStep("ArrowDown", at("2026-11-04"), noWed11)).toEqual({
+      kind: "move",
+      index: at("2026-11-18"),
+    });
+  });
+
+  test("from no focus, and other keys left to stepKey", () => {
+    expect(weekStep("ArrowDown", null, cells)).toEqual({ kind: "move", index: 0 });
+    expect(weekStep("ArrowUp", null, cells)).toEqual({ kind: "move", index: 27 });
+    expect(weekStep("ArrowRight", 2, cells)).toBeNull();
+  });
+});
+
+describe("empty day outline", () => {
+  const usual = [
+    { at: 0, value: 0 },
+    { at: 1, value: 8000 },
+  ];
+
+  test("the usual day when there is one", () => {
+    expect(emptyDayOutline(usual)).toBe(usual);
+  });
+
+  test("a placeholder shape when there is none, rising from 0 to 1 over the day", () => {
+    for (const none of [[], [{ at: 0.5, value: 3 }]]) {
+      const out = emptyDayOutline(none);
+      expect(out).toBe(PLACEHOLDER_DAY);
+    }
+    expect(PLACEHOLDER_DAY[0]!.value).toBeCloseTo(0);
+    expect(PLACEHOLDER_DAY.at(-1)!.value).toBeCloseTo(1);
+    const values = PLACEHOLDER_DAY.map((s) => s.value);
+    expect(values.every((v, i) => i === 0 || v >= values[i - 1]!)).toBe(true);
   });
 });
 
