@@ -870,9 +870,10 @@ export const ringPartAt = (
 
 /**
  * Up and Down on a streak grid: the same weekday a week earlier or later,
- * found by row and column so a missing day never shifts the step. From no
- * focus, Down lands on the first day and Up on the last; past the first or
- * last week the focus stays. Other keys are left to `stepKey`.
+ * found by row and column so a missing day never shifts the step, and
+ * passed over when that week has no such day. From no focus, Down lands on
+ * the first day and Up on the last; past the first or last week the focus
+ * stays. Other keys are left to `stepKey`.
  */
 export const weekStep = (
   key: string,
@@ -886,7 +887,12 @@ export const weekStep = (
   }
   const here = cells[current];
   if (!here) return { kind: "ignore" };
-  const row = here.row + (key === "ArrowDown" ? 1 : -1);
-  const target = cells.findIndex((c) => c.row === row && c.col === here.col);
-  return { kind: "move", index: target < 0 ? current : target };
+  // The nearest week in that direction with a cell on the same weekday, so a
+  // missing day is passed over rather than stopping the step.
+  const down = key === "ArrowDown";
+  const candidates = cells
+    .map((c, i) => ({ c, i }))
+    .filter(({ c }) => c.col === here.col && (down ? c.row > here.row : c.row < here.row))
+    .sort((a, b) => (down ? a.c.row - b.c.row : b.c.row - a.c.row));
+  return { kind: "move", index: candidates[0]?.i ?? current };
 };

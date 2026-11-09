@@ -565,11 +565,29 @@ describe("week step", () => {
     );
     // Wednesday 4 Nov (index 2) down to Wednesday 11 Nov, now index 8.
     expect(weekStep("ArrowDown", 2, gappy)).toEqual({ kind: "move", index: 8 });
-    // Friday 6 Nov is missing: from Friday 13 Nov up, the focus stays.
+    // Friday 6 Nov is missing and it is the first week: from Friday 13 Nov up, the focus stays.
     const friday13 = gappy.findIndex((c) => c.date === "2026-11-13");
     expect(weekStep("ArrowUp", friday13, gappy)).toEqual({
       kind: "move",
       index: friday13,
+    });
+  });
+
+  test("a week without that weekday is passed over", () => {
+    // Wednesday 11 Nov is missing: Up from Wednesday 18 Nov goes on to 4 Nov.
+    const noWed11 = streakGrid(
+      days.filter((d) => d.date !== "2026-11-11"),
+      "x",
+      1,
+    );
+    const at = (date: string) => noWed11.findIndex((c) => c.date === date);
+    expect(weekStep("ArrowUp", at("2026-11-18"), noWed11)).toEqual({
+      kind: "move",
+      index: at("2026-11-04"),
+    });
+    expect(weekStep("ArrowDown", at("2026-11-04"), noWed11)).toEqual({
+      kind: "move",
+      index: at("2026-11-18"),
     });
   });
 
