@@ -8,7 +8,9 @@ import type {
 import {
   COHORT_SUGGESTION_LOINCS,
   cohortSuggestions,
+  labelForDraft,
   promptForDraft,
+  shownPrompt,
   startersShown,
   wearableSuggestionKeys,
   wearableSuggestions,
@@ -267,5 +269,44 @@ describe("promptForDraft (#480)", () => {
     expect(promptForDraft("What was their latest HbA1c?", null)).toBe(
       "What was their latest HbA1c?",
     );
+  });
+});
+
+describe("a sent starter shows its short text (#506)", () => {
+  const chip = {
+    label: "What was their latest HbA1c?",
+    prompt:
+      "For synthetic subject synthetic-subject-1, using LOINC 4548-4, what was their latest HbA1c?",
+  };
+  const models = [{ id: "qwen3:4b", name: "qwen3:4b" }];
+
+  /** What the prompt bar sends for a draft: the model's prompt and the bubble's text. */
+  const send = (draft: string, picked: typeof chip | null) => {
+    const prompt = promptForDraft(draft, picked);
+    const label = labelForDraft(draft, picked);
+    return { prompt, label, turn: pendingTurn(prompt, models, null, null, null, label) };
+  };
+
+  test("a chip sent unchanged: the bubble shows the question, the model gets the prompt", () => {
+    const sent = send(" What was their latest HbA1c? ", chip);
+    expect(sent.prompt).toBe(chip.prompt);
+    expect(sent.label).toBe(chip.label);
+    expect(shownPrompt(sent.turn)).toBe(chip.label);
+    expect(sent.turn.prompt).toBe(chip.prompt);
+  });
+
+  test("added text shows as typed and is sent after the grounded prompt", () => {
+    const sent = send("What was their latest HbA1c? And in 2020?", chip);
+    expect(sent.prompt).toBe(`${chip.prompt} And in 2020?`);
+    expect(shownPrompt(sent.turn)).toBe("What was their latest HbA1c? And in 2020?");
+  });
+
+  test("a typed draft, or a chip whose prompt is its question, has no label", () => {
+    expect(send("What was their HbA1c in 2020?", chip).label).toBeNull();
+    expect(send("What was their latest HbA1c?", null).label).toBeNull();
+    const own = { label: "What was my latest HRV?", prompt: "What was my latest HRV?" };
+    const sent = send("What was my latest HRV? ", own);
+    expect(sent.label).toBeNull();
+    expect(shownPrompt(sent.turn)).toBe("What was my latest HRV?");
   });
 });

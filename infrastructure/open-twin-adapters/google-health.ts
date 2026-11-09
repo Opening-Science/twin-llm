@@ -4,6 +4,8 @@ import { health } from "@googleapis/health";
 import type { GoogleHealthClient } from "@open-twin/provider-google-health";
 import type { Auth, health_v4 } from "googleapis";
 
+export { buildGoogleHealthFhirBundle } from "./google-health-bundle";
+
 /**
  * Upstream GoogleHealthClient keeps oauth2Client private and has no
  * setCredentials / getCredentials. TwinLLM restores DB tokens through these

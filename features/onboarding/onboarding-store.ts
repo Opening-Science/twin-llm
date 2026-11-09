@@ -4,8 +4,9 @@ import { database } from "@/infrastructure/database";
 import { newRowId, openNullable, sealNullable } from "@/infrastructure/field-cipher";
 import { cipherForUser } from "@/infrastructure/field-cipher-runtime";
 import {
+  disabledFromStored,
   type KnowledgeSourceId,
-  normaliseDisabledSources,
+  storedFromDisabled,
 } from "@/infrastructure/knowledge-sources";
 import { GUIDELINE_SOURCE } from "@/packages/guidelines/constants";
 import { KNOWLEDGE_SOURCE } from "@/packages/knowledge/constants";
@@ -41,6 +42,7 @@ export const loadOnboarding = async (userId: string): Promise<StoredOnboarding> 
       dataChoice: true,
       interest: true,
       disabledSources: true,
+      optedInSources: true,
       liveSources: true,
       step: true,
       completedAt: true,
@@ -51,6 +53,7 @@ export const loadOnboarding = async (userId: string): Promise<StoredOnboarding> 
   return {
     answers: normaliseAnswers({
       ...row,
+      disabledSources: disabledFromStored(row),
       interest: openNullable(cipher, TABLE, "interest", row.id, row.interest),
     }),
     step: clampStep(row.step),
@@ -82,7 +85,7 @@ export const saveOnboarding = async (
       id,
       answers.interest.trim() || null,
     ),
-    disabledSources: [...answers.disabledSources],
+    ...storedFromDisabled(answers.disabledSources),
     liveSources: [...answers.liveSources],
     step: clampStep(input.step),
     ...(input.complete ? { completedAt: new Date() } : {}),
@@ -186,8 +189,9 @@ export const loadOnboardingOrEmpty = async (
 };
 
 /**
- * The knowledge sources a user turned off; none when they never chose. A read
- * that fails sends every tool, as chat did before the choice existed.
+ * The knowledge sources that are off for a user: the ones they turned off,
+ * and the opt-in sources (genome, VCF, imported data) they never turned on.
+ * A read that fails keeps the opt-in sources off and the rest on.
  */
 export const loadDisabledSources = async (
   userId: string,
@@ -195,16 +199,29 @@ export const loadDisabledSources = async (
   try {
     const row = await database().onboardingProfile.findUnique({
       where: { userId },
-      select: { disabledSources: true },
+      select: { disabledSources: true, optedInSources: true },
     });
-    return normaliseDisabledSources(row?.disabledSources ?? []);
+    return disabledFromStored(row ?? {});
   } catch (error) {
     console.error(
       "[onboarding] could not read source choices",
       error instanceof Error ? error.name : "unknown",
     );
-    return [];
+    return disabledFromStored({});
   }
+};
+
+/** Stores the knowledge sources a person turned off (Settings, #507), and nothing else. */
+export const saveDisabledSources = async (
+  userId: string,
+  disabled: readonly KnowledgeSourceId[],
+): Promise<void> => {
+  const stored = storedFromDisabled(disabled);
+  await database().onboardingProfile.upsert({
+    where: { userId },
+    create: { userId, ...stored },
+    update: stored,
+  });
 };
 
 /** How many guideline and OpenTwin knowledge documents are indexed locally. */

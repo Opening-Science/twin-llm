@@ -963,6 +963,136 @@ describe("research figure options", () => {
   });
 });
 
+describe("device list options", () => {
+  const logo = {
+    src: "/brand/vendors/example.svg",
+    alt: "Example",
+    width: 30,
+    height: 30,
+    attribution: "Data by",
+  };
+
+  test("a row can end in actions; with a link, only the name links", () => {
+    const out = html(
+      <DeviceList
+        category="vitals"
+        title="Devices"
+        rows={[
+          {
+            name: "Band",
+            href: "/wearables/band",
+            actions: (
+              <>
+                <button type="button">Refresh</button>
+                <button type="button">Unlink</button>
+              </>
+            ),
+          },
+        ]}
+      />,
+    );
+    expect(out).toContain(">Refresh</button>");
+    expect(out).toContain(">Unlink</button>");
+    // The link holds the name only, never the buttons.
+    expect(out).toMatch(/<a [^>]*href="\/wearables\/band"[^>]*>Band<\/a>/);
+    const link = /<a [^>]*>(.*?)<\/a>/.exec(out)?.[1] ?? "";
+    expect(link).toBe("Band");
+    expect(out).not.toContain("<svg");
+  });
+
+  test("a row can leave out the logo's attribution word, keeping the logo", () => {
+    const out = html(
+      <DeviceList
+        category="vitals"
+        title="Devices"
+        rows={[{ name: "WHOOP", detail: "Not linked", logo, hideAttribution: true }]}
+      />,
+    );
+    expect(out).not.toContain("Data by");
+    expect(out).toContain("<img");
+    expect(out).toContain("Not linked");
+    expect(detailLine({ name: "WHOOP", logo })).toBe("Data by WHOOP");
+  });
+
+  test("without a title and a frame the rows sit on their parent", () => {
+    const out = html(
+      <DeviceList
+        category="vitals"
+        framed={false}
+        rows={[{ name: "Ring" }, { name: "Band" }]}
+      />,
+    );
+    expect(out).not.toContain("<h3");
+    expect(out).not.toContain("surface rounded-card");
+    expect(out).toContain("border-border border-t");
+  });
+});
+
+test("the consistency chart draws its usual band, named", () => {
+  const out = html(
+    <Consistency
+      category="sleep"
+      values={[1380, 1410, 1395]}
+      target={1395}
+      floor={1320}
+      usual={{ low: 1370, high: 1420 }}
+      reference={{ label: "Usual bedtime", value: "23:04" }}
+      last={{ label: "Last night", value: "23:15" }}
+    />,
+  );
+  expect(out).toContain(">Usual<");
+  expect(out).toContain('fill-opacity="0.18"');
+});
+
+describe("hypnogram options", () => {
+  test("totals only: one bar per lane, its total, no times and no keys", () => {
+    const out = html(
+      <Hypnogram
+        category="sleep"
+        totals={{ awake: 25, rem: 96, core: 248, deep: 70 }}
+        axis={["23:04", "06:23"]}
+      />,
+    );
+    for (const word of ["Awake", "REM", "Core", "Deep"]) expect(out).toContain(word);
+    expect(out).toContain("4 hr 8 min");
+    expect(out).toContain("1 hr 10 min");
+    expect(out.match(/fill-stage-/g)).toHaveLength(4);
+    expect(out).not.toContain("23:04");
+    expect(out).not.toContain('role="group"');
+  });
+
+  test("the core lane can say Light, and labels still win", () => {
+    const light = html(
+      <Hypnogram category="sleep" coreWord="Light" totals={{ core: 200 }} />,
+    );
+    expect(light).toContain(">Light<");
+    expect(light).not.toContain(">Core<");
+    const custom = html(
+      <Hypnogram
+        category="sleep"
+        coreWord="Light"
+        labels={{ core: "Light sleep" }}
+        totals={{ core: 200 }}
+      />,
+    );
+    expect(custom).toContain(">Light sleep<");
+  });
+});
+
+test("a radar with inverted axes says so under itself, and only then", () => {
+  const axes = [
+    { label: "Resting", value: 58, display: "58 bpm", min: 50, max: 66, inverted: true },
+    { label: "Walking", value: 96, display: "96 bpm", min: 80, max: 110 },
+    { label: "HRV", value: 47, display: "47 ms", min: 30, max: 60 },
+  ];
+  expect(html(<Radar category="heart" axes={axes} />)).toContain(
+    "For resting, further out means lower.",
+  );
+  expect(
+    html(<Radar category="heart" axes={axes.map((a) => ({ ...a, inverted: false }))} />),
+  ).not.toContain("further out");
+});
+
 describe("units and durations", () => {
   test("MIN and MAX carry the unit when given", () => {
     const out = html(

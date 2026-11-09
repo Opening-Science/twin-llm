@@ -42,6 +42,7 @@ export const saveLiveSourceChoice = async (input: unknown): Promise<LiveSourceSa
     await append(database(), liveSourceAuditEvent(actor, decision.enabled));
     await saveLiveSources(userId, decision.enabled);
     revalidatePath("/customize/connectors");
+    revalidatePath("/customize/settings");
     return decision;
   } catch (error) {
     console.error(
