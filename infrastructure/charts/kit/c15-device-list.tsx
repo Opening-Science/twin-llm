@@ -56,20 +56,35 @@ const Logo = ({ logo }: Readonly<{ logo: VendorLogo }>) => {
  * "Data by WHOOP · synced 2 hours ago".
  */
 export const detailLine = (row: DeviceRow): string | null => {
-  const credit = row.logo?.attribution ? `${row.logo.attribution} ${row.name}` : null;
+  const credit =
+    row.logo?.attribution && !row.hideAttribution
+      ? `${row.logo.attribution} ${row.name}`
+      : null;
   const parts = [credit, row.detail].filter((p): p is string => Boolean(p));
   return parts.length === 0 ? null : parts.join(" · ");
 };
 
-/** One row's content: tile, name and detail, status word, chevron. */
+/** One row's content: tile, name and detail, status word, actions, chevron. */
 const RowBody = ({ row }: Readonly<{ row: DeviceRow }>) => {
   const detail = detailLine(row);
+  // With actions the row is not one link (a link cannot hold buttons), so
+  // the name carries the link instead.
+  const nameLinks = Boolean(row.href && row.actions);
   return (
     <>
       {/* Every row has a tile, so names line up; empty without a logo, never a drawn glyph. */}
       <span className={TILE}>{row.logo ? <Logo logo={row.logo} /> : null}</span>
       <span className="min-w-0 flex-1">
-        <span className="text-foreground block truncate font-sans">{row.name}</span>
+        {nameLinks ? (
+          <Link
+            href={row.href!}
+            className="text-foreground block truncate font-sans underline-offset-4 hover:underline"
+          >
+            {row.name}
+          </Link>
+        ) : (
+          <span className="text-foreground block truncate font-sans">{row.name}</span>
+        )}
         {detail ? (
           // Wraps rather than cutting off on a phone.
           <span className="text-muted-foreground block text-xs leading-snug">
@@ -82,28 +97,39 @@ const RowBody = ({ row }: Readonly<{ row: DeviceRow }>) => {
           {row.status.word}
         </span>
       ) : null}
-      {row.href ? <ChevronIcon className="text-muted-foreground" /> : null}
+      {row.actions ? (
+        <span className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+          {row.actions}
+        </span>
+      ) : null}
+      {row.href && !row.actions ? (
+        <ChevronIcon className="text-muted-foreground" />
+      ) : null}
     </>
   );
 };
 
-const ROW = "flex min-h-16 items-center gap-3 px-5 py-2.5";
+const ROW_BASE = "flex min-h-16 items-center gap-3 py-2.5";
 
 /**
- * C15: a titled group of rows, one per device or source, with hairlines
+ * C15: a group of rows, one per device or source, with hairlines
  * between them. Each row leads with a 44px tile holding the vendor's own
  * logo, unmodified, at its size; the kit never draws a device glyph. A row
  * with `href` is a link with a chevron. The detail line wraps on a phone.
  * Loading shows row shapes; empty shows the outline of a row with what is
- * needed.
+ * needed. A row can end in `actions` (Refresh, View, Unlink); without
+ * `title` and with `framed={false}` the list sits inside a card of its own.
  */
 export const DeviceList = ({
   category,
   state = "default",
   title,
+  framed = true,
   rows,
   emptyNote,
 }: DeviceListProps) => {
+  // Framed rows keep the card's inset; frameless rows line up with their parent's content.
+  const ROW = cn(ROW_BASE, framed ? "px-5" : "px-0");
   const body: ReactNode =
     state === "loading" ? (
       <ul aria-hidden="true">
@@ -127,7 +153,7 @@ export const DeviceList = ({
       <ul>
         {rows.map((row, i) => (
           <li key={row.name} className={cn(i > 0 && "border-border border-t")}>
-            {row.href ? (
+            {row.href && !row.actions ? (
               <Link
                 href={row.href}
                 className={cn(
@@ -154,17 +180,19 @@ export const DeviceList = ({
       aria-busy={state === "loading" ? true : undefined}
       data-state={state}
     >
-      <h3 className="text-foreground flex items-center gap-2 font-sans font-bold">
-        <span
-          aria-hidden="true"
-          className={cn(
-            "inline-block size-2.5 rounded-full bg-current",
-            categoryTextClass(category),
-          )}
-        />
-        {title}
-      </h3>
-      <div className="surface rounded-card overflow-hidden">{body}</div>
+      {title ? (
+        <h3 className="text-foreground flex items-center gap-2 font-sans font-bold">
+          <span
+            aria-hidden="true"
+            className={cn(
+              "inline-block size-2.5 rounded-full bg-current",
+              categoryTextClass(category),
+            )}
+          />
+          {title}
+        </h3>
+      ) : null}
+      {framed ? <div className="surface rounded-card overflow-hidden">{body}</div> : body}
     </section>
   );
 };
