@@ -341,7 +341,7 @@ export const WearablesDashboard = ({
       </p>
 
       <div className="mt-8">
-        <KitDashboard sections={kit} />
+        <KitDashboard sections={kit} source={source} />
       </div>
 
       <BentoGrid label={`${SOURCE_LABEL[source]} sources and privacy`} className="mt-10">
