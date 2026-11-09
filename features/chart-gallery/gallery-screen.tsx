@@ -23,6 +23,7 @@ import {
   VENDOR_LOGOS,
   WeeklyBars,
 } from "@/infrastructure/charts/kit";
+import { Button } from "@/infrastructure/ui-kit/button";
 
 import {
   BEDTIME_TARGET,
@@ -500,6 +501,135 @@ export const GalleryScreen = () => (
       </header>
       <div className="grid gap-4 lg:grid-cols-2">
         <DeviceList category="vitals" title="Sources" rows={SOURCES} />
+      </div>
+    </section>
+
+    <section className="flex flex-col gap-3">
+      <header>
+        <h2 className="text-foreground font-sans text-lg">C15 options</h2>
+        <p className="text-muted-foreground text-sm">
+          Rows can end in actions, then only the name links. A row can leave out the
+          logo&apos;s attribution word, as on a source that is not linked. Without a title
+          or frame the rows sit inside a card of their own.
+        </p>
+      </header>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <DeviceList
+          category="vitals"
+          title="Sources"
+          rows={[
+            {
+              name: "Google Health",
+              detail: "Connected to Google Health · made-up: synced 12 minutes ago",
+              logo: VENDOR_LOGOS.googleHealth,
+              href: "/lab/design",
+              actions: (
+                <>
+                  <Button size="sm">Refresh</Button>
+                  <Button size="sm" variant="ghost">
+                    Unlink
+                  </Button>
+                </>
+              ),
+            },
+            {
+              name: "WHOOP",
+              detail: "Not linked",
+              logo: VENDOR_LOGOS.whoop,
+              hideAttribution: true,
+              actions: <Button size="sm">Link</Button>,
+            },
+          ]}
+        />
+        <InsightCard
+          category="vitals"
+          label="Sources"
+          sentence="Two sources linked, one not."
+        >
+          <DeviceList
+            category="vitals"
+            framed={false}
+            rows={[
+              { name: "Oura", detail: "Made-up: synced 4 min ago" },
+              {
+                name: "Google Health",
+                detail: "Made-up: synced 12 minutes ago",
+                logo: VENDOR_LOGOS.googleHealth,
+              },
+              {
+                name: "WHOOP",
+                detail: "Not linked",
+                logo: VENDOR_LOGOS.whoop,
+                hideAttribution: true,
+              },
+            ]}
+          />
+        </InsightCard>
+      </div>
+    </section>
+
+    <section className="flex flex-col gap-3">
+      <header>
+        <h2 className="text-foreground font-sans text-lg">
+          C13 from a floor, with the usual
+        </h2>
+        <p className="text-muted-foreground text-sm">
+          Bedtimes as minutes of the day: from zero a 30-minute shift near 23:00 is flat,
+          so the bars start at 22:00 and the usual range is a grey band.
+        </p>
+      </header>
+      <div className="grid gap-4 lg:grid-cols-3">
+        <InsightCard
+          category="sleep"
+          label="Sleep: Bedtime"
+          sentence="Your bedtime was 44 minutes later than usual last night."
+        >
+          <Consistency
+            category="sleep"
+            values={BEDTIMES.map((m) => 22 * 60 + m)}
+            target={22 * 60 + BEDTIME_TARGET}
+            floor={22 * 60}
+            usual={{ low: 22 * 60 + 45, high: 22 * 60 + 75 }}
+            reference={{ label: "Usual bedtime", value: "23:04" }}
+            last={{ label: "Last night", value: "23:48" }}
+            axis={["25 Oct", "7 Nov"]}
+          />
+        </InsightCard>
+      </div>
+    </section>
+
+    <section className="flex flex-col gap-3">
+      <header>
+        <h2 className="text-foreground font-sans text-lg">C09 options</h2>
+        <p className="text-muted-foreground text-sm">
+          A source that reports stage totals but not the night&apos;s order gets one bar
+          per lane, the longest stage full width. The core lane can say Light, as Oura
+          does, or Core, as Apple does.
+        </p>
+      </header>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <InsightCard
+          category="sleep"
+          label="Sleep: Stages"
+          sentence="You slept 6 hr 54 min, with 1 hr 10 min of deep sleep."
+        >
+          <Hypnogram
+            category="sleep"
+            totals={{ awake: 25, rem: 96, core: 248, deep: 70 }}
+          />
+        </InsightCard>
+        <InsightCard
+          category="sleep"
+          label="Sleep: Stages"
+          sentence="You spent 1 hr 10 min in deep sleep last night."
+        >
+          <Hypnogram
+            category="sleep"
+            coreWord="Light"
+            spans={NIGHT_READ}
+            axis={["23:04", "06:23"]}
+          />
+        </InsightCard>
       </div>
     </section>
 

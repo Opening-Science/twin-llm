@@ -16,6 +16,9 @@ import {
   type ChartRange,
 } from "@/infrastructure/charts/kit";
 
+import { AccuracyDisclosure } from "./accuracy/accuracy-disclosure";
+import { cardAccuracy } from "./accuracy/card-accuracy";
+import type { WearableSource } from "./dashboard-headings";
 import type { KitCard, KitSection } from "./kit-cards";
 
 /**
@@ -147,10 +150,29 @@ const Card = ({ card }: { readonly card: KitCard }) =>
     </InsightCard>
   );
 
+/** A card and, under it, what published studies say about its measure on this device. */
+const CardWithAccuracy = ({
+  card,
+  source,
+}: {
+  readonly card: KitCard;
+  readonly source: WearableSource;
+}) => {
+  const accuracy = cardAccuracy(source, card);
+  return (
+    <>
+      <Card card={card} />
+      {accuracy ? <AccuracyDisclosure accuracy={accuracy} label={card.label} /> : null}
+    </>
+  );
+};
+
 export const KitDashboard = ({
   sections,
+  source,
 }: {
   readonly sections: readonly KitSection[];
+  readonly source: WearableSource;
 }) => (
   <div className="flex flex-col gap-10">
     {sections.map((section) => (
@@ -168,7 +190,7 @@ export const KitDashboard = ({
               key={card.id}
               className={card.chart === "radar" ? "md:col-span-2" : undefined}
             >
-              <Card card={card} />
+              <CardWithAccuracy card={card} source={source} />
             </div>
           ))}
         </div>

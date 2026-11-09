@@ -10,11 +10,11 @@ import {
 } from "three";
 
 import {
-  HIGHLIGHT_COLOUR,
   HIGHLIGHT_INTENSITY,
   setHighlighted,
   setLiveGlow,
 } from "../anatomy/layer-material";
+import { BRAND_PALETTE } from "../twin-palette";
 import { liveTargets, setPartScale } from "./live-conditioning";
 import {
   breathAt,
@@ -26,6 +26,8 @@ import {
   scaleAbout,
   chamberGlow,
 } from "./live-motion";
+
+const HIGHLIGHT_COLOUR = BRAND_PALETTE.dark.ring;
 
 describe("pulseAt", () => {
   test("a strong first beat, a softer second, then rest", () => {
@@ -126,7 +128,7 @@ describe("setLiveGlow", () => {
       emissive: material.emissive.clone(),
       intensity: material.emissiveIntensity,
     };
-    setHighlighted(material, true);
+    setHighlighted(material, new Color(HIGHLIGHT_COLOUR));
     setLiveGlow(material, 0.5, red);
     const expected = new Color(HIGHLIGHT_COLOUR)
       .multiplyScalar(HIGHLIGHT_INTENSITY)
@@ -135,7 +137,7 @@ describe("setLiveGlow", () => {
     expect(material.emissive.g).toBeCloseTo(expected.g, 10);
     expect(material.emissive.b).toBeCloseTo(expected.b, 10);
     // The highlight ends while the glow runs: the glow stays, on the plain look.
-    setHighlighted(material, false);
+    setHighlighted(material, null);
     expect(material.emissive.toArray()).toEqual([0.5, 0, 0]);
     setLiveGlow(material, 0, red);
     expect(material.color.equals(plain.color)).toBe(true);
