@@ -83,6 +83,10 @@ const OUTBOUND: Readonly<Record<string, Entry>> = {
   "infrastructure/open-twin-adapters/whoop-workout.ts": { ledger: VENDOR_SYNC },
   "infrastructure/open-twin-adapters/google-health.ts": { ledger: VENDOR_SYNC },
   "infrastructure/open-twin-adapters/oura-bundle.ts": { exempt: TYPES_ONLY },
+  "infrastructure/open-twin-adapters/google-health-bundle.ts": {
+    exempt:
+      "maps responses the sync already fetched into a FHIR bundle; it sends nothing",
+  },
   "features/oura/summary.ts": { exempt: TYPES_ONLY },
   "features/oura/fixtures/synthetic-sync-data.ts": { exempt: TYPES_ONLY },
   "features/google-health/fixtures/synthetic-sync-responses.ts": { exempt: TYPES_ONLY },

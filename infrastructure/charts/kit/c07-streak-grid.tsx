@@ -9,15 +9,15 @@ import {
   mutedUnlessFocused,
   useChartFocus,
 } from "./chart-focus";
-import { streakGrid, weekdayLetters } from "./kit-geometry";
+import { streakGrid, weekdayLetters, weekStep } from "./kit-geometry";
 import type { StreakGridProps } from "./types";
 
 /**
  * C07: a seven-column month grid. Done days are filled in the category
  * colour, other days sit on the track, today is outlined, and each month's
  * first cell carries its short name. With readouts, a click or tap pins a
- * day (again to clear), hover previews one, and the arrow keys step day by
- * day; the other days step back and the readout names the focused one.
+ * day (again to clear), hover previews one, Left and Right step a day and
+ * Up and Down a week; the other days step back and the readout names the focused one.
  */
 export const StreakGrid = ({
   category,
@@ -32,7 +32,13 @@ export const StreakGrid = ({
   const rows = Math.max(4, ...cells.map((c) => c.row + 1));
   const tone = categoryTextClass(category);
   const live = state === "default" && cells.some((c) => c.readout);
-  const focus = useChartFocus({ count: cells.length, defaultFocus, tap: true });
+  const focus = useChartFocus({
+    count: cells.length,
+    defaultFocus,
+    tap: true,
+    // Left and Right step a day; Up and Down a week, on the same weekday.
+    step: (key, current) => weekStep(key, current, cells),
+  });
   const focused = live ? focus.index : null;
   const grid = (
     <div className="grid grid-cols-7 gap-1.5" data-state={state}>

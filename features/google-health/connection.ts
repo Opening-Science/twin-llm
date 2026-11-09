@@ -4,7 +4,7 @@ import { randomBytes } from "node:crypto";
 
 import {
   GoogleHealthClient,
-  getFhirBundleFromGoogleHealthData,
+  getDataTypes,
   getGoogleHealthAuthUrl,
   initializeGoogleHealthClient,
   type AllType,
@@ -24,6 +24,7 @@ import {
 import { cipherForUser } from "@/infrastructure/field-cipher-runtime";
 import { googleHealthEnv } from "@/infrastructure/env";
 import {
+  buildGoogleHealthFhirBundle,
   getGoogleHealthCredentials,
   setGoogleHealthCredentials,
 } from "@/infrastructure/open-twin-adapters/google-health";
@@ -222,13 +223,17 @@ export const syncGoogleHealthForUser = async (
   const endIso = `${endDate}T23:59:59Z`;
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 
-  const { bundle, issues } = await getFhirBundleFromGoogleHealthData({
+  const { responses, issues } = await getDataTypes({
     client,
     types: [...SYNC_TYPES],
     start_date: startIso,
     end_date: endIso,
     timeZone,
+  });
+  // Under the person's shared subject, as Oura and WHOOP are (#476).
+  const bundle = buildGoogleHealthFhirBundle(responses, {
     subjectKey: connection?.subjectKey ?? userId,
+    timestamp: new Date().toISOString(),
   });
 
   if (issues?.issue?.length) {

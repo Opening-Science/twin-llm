@@ -8,6 +8,7 @@ import { type AtlasEntry } from "@/packages/anatomy/manifest";
 import { isSystemId, type OrganSystem, type SystemId } from "@/packages/anatomy/systems";
 
 import { disposeObject3D } from "../dispose-object";
+import { attachDepthPrepass, createDepthPrepassMaterial } from "./depth-prepass";
 import {
   createLayerMaterial,
   createLayerUniforms,
@@ -81,6 +82,8 @@ export const prepareAtlas = (root: Object3D, entry: AtlasEntry): PreparedAtlas =
     organs: createLayerUniforms(0),
   };
 
+  const depthOnly = createDepthPrepassMaterial();
+
   const meshes: Mesh[] = [];
   root.traverse((object) => {
     if (isMesh(object)) meshes.push(object);
@@ -109,6 +112,7 @@ export const prepareAtlas = (root: Object3D, entry: AtlasEntry): PreparedAtlas =
       uniforms: uniforms[placement.layer],
     });
     disposeMaterials(previous);
+    attachDepthPrepass(mesh, depthOnly);
     triangles += (geometry.index?.count ?? geometry.getAttribute("position").count) / 3;
     if (placement.layer === "organs" && !systems.includes(placement.system)) {
       systems.push(placement.system);

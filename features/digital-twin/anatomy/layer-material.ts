@@ -1,4 +1,12 @@
-import { Color, FrontSide, type Material, MeshStandardMaterial, type Side } from "three";
+import {
+  Color,
+  type DepthModes,
+  FrontSide,
+  LessEqualDepth,
+  type Material,
+  MeshStandardMaterial,
+  type Side,
+} from "three";
 
 import { type LayerMix } from "@/packages/anatomy/layers";
 import { type OrganSystem } from "@/packages/anatomy/systems";
@@ -8,6 +16,13 @@ import { type OrganSystem } from "@/packages/anatomy/systems";
  * patch on MeshStandardMaterial. At fade 0 the surface is unchanged; at fade 1
  * only the silhouette stays opaque (a Fresnel rim), so you see into a layer
  * without losing its outline.
+ *
+ * Nothing is dithered: alpha-hash dither left isolated dots, the speckle once
+ * seen around the bones at the Skeleton and Organs stops and over a whole
+ * layer mid-slider. A layer turning to glass is alpha-blended behind its own
+ * depth pre-pass (`depth-prepass.ts`); a fully faded atlas layer is drawn
+ * rim-only (`TWIN_RIM_ONLY`), a sharper rim. A harder cut-off (exponent 4,
+ * remapped) broke thin silhouettes into dashes on screen, so the rim stays soft.
  *
  * In three 0.184 `<alphahash_fragment>` runs before `<normal_fragment_begin>`,
  * so the rim uses `vNormal` / `vViewPosition` directly. The anchors are checked
@@ -45,9 +60,17 @@ uniform vec3 uRimColor;`;
 const ALPHA = `
 float twinRim = 0.0;
 #ifndef FLAT_SHADED
-  twinRim = pow( 1.0 - abs( dot( normalize( vNormal ), normalize( vViewPosition ) ) ), 2.2 );
+  float twinEdge = 1.0 - abs( dot( normalize( vNormal ), normalize( vViewPosition ) ) );
+  #ifdef TWIN_RIM_ONLY
+    twinRim = pow( twinEdge, 3.0 );
+  #else
+    twinRim = pow( twinEdge, 2.2 );
+  #endif
 #endif
-diffuseColor.a *= uLayerAlpha * mix( 1.0, mix( uGlassFloor, 0.92, twinRim ), uLayerFade );`;
+diffuseColor.a *= uLayerAlpha * mix( 1.0, mix( uGlassFloor, 0.92, twinRim ), uLayerFade );
+#ifdef TWIN_RIM_ONLY
+  if ( diffuseColor.a < 0.01 ) discard;
+#endif`;
 
 const RIM = `
 totalEmissiveRadiance += uRimColor * twinRim * uLayerFade * uLayerAlpha;`;
@@ -73,7 +96,8 @@ type FadeState = Readonly<{
   originalSide: Side;
   originalDepthWrite: boolean;
   originalTransparent: boolean;
-  originalAlphaHash: boolean;
+  originalDepthFunc: DepthModes;
+  originalDefines: Material["defines"];
 }>;
 
 /**
@@ -103,7 +127,8 @@ export const attachLayerFade = (
     originalSide: material.side,
     originalDepthWrite: material.depthWrite,
     originalTransparent: material.transparent,
-    originalAlphaHash: material.alphaHash,
+    originalDepthFunc: material.depthFunc,
+    originalDefines: material.defines,
   });
   blendModes.set(material, "solid");
   const previous = material.onBeforeCompile.bind(material);
@@ -130,14 +155,34 @@ export const layerFadeUniforms = (material: Material): LayerUniforms | null =>
   fadeStates.get(material)?.uniforms ?? null;
 
 /**
- * solid: opaque, early-z, no discard. hash: alphaHash dither, stays in the
- * opaque queue with correct depth (nested atlas layers have no valid blend
- * order). blend: real transparency for the single enclosing scan surface.
+ * solid: opaque, early-z, no discard. fade: an atlas layer turning to glass,
+ * alpha-blended at its real alpha with depth test LessEqual and no depth
+ * writes, after its own depth pre-pass, so each pixel shows only the layer's
+ * front-most surface. rim: a fully faded atlas layer, only its silhouette,
+ * drawn the same way with the rim-only shader. blend: real transparency for the single enclosing
+ * scan surface. The transparent modes draw after every opaque layer; the order
+ * between layers is the mesh's renderOrder (`depth-prepass.ts`).
  */
-export type BlendMode = "solid" | "hash" | "blend";
+export type BlendMode = "solid" | "fade" | "rim" | "blend";
 
-export const blendModeFor = (mix: LayerMix, kind: "scan" | "atlas"): BlendMode =>
-  mix.alpha >= 0.999 && mix.fade <= 0.001 ? "solid" : kind === "scan" ? "blend" : "hash";
+/** From this fade on an atlas layer is drawn rim-only. */
+export const RIM_ONLY_FADE = 0.9;
+
+export const blendModeFor = (mix: LayerMix, kind: "scan" | "atlas"): BlendMode => {
+  if (mix.alpha >= 0.999 && mix.fade <= 0.001) return "solid";
+  if (kind === "scan") return "blend";
+  return mix.fade >= RIM_ONLY_FADE ? "rim" : "fade";
+};
+
+const RIM_ONLY_DEFINE = "TWIN_RIM_ONLY";
+
+const definesFor = (
+  original: Material["defines"],
+  mode: BlendMode,
+): Material["defines"] => {
+  if (mode !== "rim") return original;
+  return { ...original, [RIM_ONLY_DEFINE]: "" };
+};
 
 /** Switches mode only on a change, so the program recompiles rarely. Returns true if changed. */
 export const setBlendMode = (material: Material, mode: BlendMode): boolean => {
@@ -145,11 +190,14 @@ export const setBlendMode = (material: Material, mode: BlendMode): boolean => {
   if (!state || blendModes.get(material) === mode) return false;
   blendModes.set(material, mode);
   // "solid" restores the material exactly as it arrived.
+  const blended = mode !== "solid";
   Object.assign(material, {
-    alphaHash: mode === "hash" || (mode === "solid" && state.originalAlphaHash),
-    transparent: mode === "blend" || (mode === "solid" && state.originalTransparent),
-    depthWrite: mode === "blend" ? false : state.originalDepthWrite,
-    side: mode === "blend" ? FrontSide : state.originalSide,
+    transparent: blended || state.originalTransparent,
+    depthWrite: blended ? false : state.originalDepthWrite,
+    depthFunc:
+      mode === "fade" || mode === "rim" ? LessEqualDepth : state.originalDepthFunc,
+    side: blended ? FrontSide : state.originalSide,
+    defines: definesFor(state.originalDefines, mode),
     needsUpdate: true,
   });
   return true;
@@ -162,14 +210,15 @@ export const applyMixToUniforms = (uniforms: LayerUniforms, mix: LayerMix): void
 };
 
 /**
- * Highlight: a calm blue, not a warning colour. The base colour is tinted
- * toward it (the baked AO still shades it, so the shape stays readable) plus a
- * small glow; a glow alone clips to white on pale parts such as bone. Colour
- * and emissive are uniforms, so switching never recompiles the program, and
- * the fade's alpha still applies, so a highlighted part fades with its layer.
+ * Highlight: the theme's focus colour (`--ring`, a calm blue), not a warning
+ * colour. The caller passes it in from the twin palette, so it follows the
+ * theme. The base colour is tinted toward it (the baked AO still shades it,
+ * so the shape stays readable) plus a small glow; a glow alone clips to white
+ * on pale parts such as bone. Colour and emissive are uniforms, so switching
+ * never recompiles the program, and the fade's alpha still applies, so a
+ * highlighted part fades with its layer.
  */
-export const HIGHLIGHT_COLOUR = "#3a8ee0";
-/** How far the base colour moves toward HIGHLIGHT_COLOUR, 0..1. */
+/** How far the base colour moves toward the highlight colour, 0..1. */
 export const HIGHLIGHT_TINT = 0.6;
 export const HIGHLIGHT_INTENSITY = 0.25;
 
@@ -178,37 +227,37 @@ type Look = Readonly<{ color: Color; emissive: Color; emissiveIntensity: number 
 /** The look a material had before its first highlight, so clearing restores it exactly. */
 const unlitLooks = new WeakMap<Material, Look>();
 
-const HIGHLIGHT = new Color(HIGHLIGHT_COLOUR);
-
 /** Remembers how a material looks now and returns how it looks lit. */
-const lightUp = (material: MeshStandardMaterial): Look => {
+const lightUp = (material: MeshStandardMaterial, highlight: Color): Look => {
   unlitLooks.set(material, {
     color: material.color.clone(),
     emissive: material.emissive.clone(),
     emissiveIntensity: material.emissiveIntensity,
   });
   return {
-    color: material.color.clone().lerp(HIGHLIGHT, HIGHLIGHT_TINT),
-    emissive: HIGHLIGHT,
+    color: material.color.clone().lerp(highlight, HIGHLIGHT_TINT),
+    emissive: highlight,
     emissiveIntensity: HIGHLIGHT_INTENSITY,
   };
 };
 
 /**
- * Turns a material's highlight on or off. Returns true if anything changed.
- * Materials without the standard colour terms are left alone.
+ * Lights a material in `highlight`, or clears it with null. Returns true if
+ * anything changed. Materials without the standard colour terms are left
+ * alone. A lit material keeps its colour until cleared, so a new highlight
+ * colour (the theme changed) is a clear followed by a fresh highlight.
  *
  * Colours are copied into the material's own Color objects rather than
  * swapped for new ones, so anything holding a reference to them stays in step.
  */
-export const setHighlighted = (material: Material, on: boolean): boolean => {
+export const setHighlighted = (material: Material, highlight: Color | null): boolean => {
   if (!isStandard(material)) return false;
   const unlit = unlitLooks.get(material);
-  if (on === (unlit !== undefined)) return false;
+  if ((highlight !== null) === (unlit !== undefined)) return false;
   // A live glow sits on top; lift it so the highlight sees the plain look.
   const glow = liftGlow(material);
   if (unlit) unlitLooks.delete(material);
-  const next = unlit ?? lightUp(material);
+  const next = unlit ?? lightUp(material, highlight!);
   material.color.copy(next.color);
   material.emissive.copy(next.emissive);
   // three.js materials are configured by mutation; the one scalar goes through
@@ -289,22 +338,43 @@ export const setLiveGlow = (
 /** Whether a material currently carries the highlight glow. */
 export const isHighlighted = (material: Material): boolean => unlitLooks.has(material);
 
-/** Muted, distinguishable colours; the baked AO in COLOR_0 multiplies them. */
+/**
+ * Tissue colours, deliberately not brand tokens: they paint the body itself,
+ * not data or interface, and follow the muted hues of anatomical atlases
+ * (ivory bone, red-brown muscle, pink lung) so a part reads as what it is in
+ * either theme. Twelve systems would not fit five chart hues, and a chart hue
+ * on an organ would read as a data series. The baked AO in COLOR_0 multiplies
+ * them. Theme-dependent colour on the body comes only from the highlight and
+ * the live glows, which do use the tokens.
+ */
+const BONE = "#e8dfcc";
+const MUSCLE = "#b5584e";
+const BLOOD_VESSEL = "#c2453b";
+const LUNG = "#e6a5ad";
+const NERVE = "#efd08c";
+const GUT = "#d6a06a";
+const LIVER = "#8f5b3e";
+const GLAND = "#9b80cf";
+const REPRODUCTIVE_TISSUE = "#d78db1";
+const SKIN = "#d9b9a0";
+/** A part no system claims: plain grey, so it never passes for a tissue. */
+const UNASSIGNED = "#9a9a9a";
+
 export const LAYER_COLOURS: Readonly<
   Record<"muscle" | "skeleton" | OrganSystem, string>
 > = {
-  muscle: "#b5584e",
-  skeleton: "#e8dfcc",
-  musculoskeletal: "#e8dfcc",
-  cardiovascular: "#c2453b",
-  respiratory: "#e6a5ad",
-  nervous: "#efd08c",
-  digestive: "#d6a06a",
-  metabolic: "#8f5b3e",
-  endocrine: "#9b80cf",
-  reproductive: "#d78db1",
-  integumentary: "#d9b9a0",
-  unassigned: "#9a9a9a",
+  muscle: MUSCLE,
+  skeleton: BONE,
+  musculoskeletal: BONE,
+  cardiovascular: BLOOD_VESSEL,
+  respiratory: LUNG,
+  nervous: NERVE,
+  digestive: GUT,
+  metabolic: LIVER,
+  endocrine: GLAND,
+  reproductive: REPRODUCTIVE_TISSUE,
+  integumentary: SKIN,
+  unassigned: UNASSIGNED,
 };
 
 export const createLayerMaterial = ({

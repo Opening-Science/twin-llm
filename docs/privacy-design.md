@@ -384,7 +384,7 @@ async per call and slower for 200,000 rows.
 | Table                                        | Encrypted                                                               | Keyed hash                                                                                                    | Stays plaintext, and why                                             |
 | -------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
 | `threads`                                    | `title`                                                                 |                                                                                                               | ids, dates                                                           |
-| `turns`                                      | `prompt`                                                                |                                                                                                               | ids, dates                                                           |
+| `turns`                                      | `prompt`, `label`                                                       |                                                                                                               | ids, dates                                                           |
 | `model_responses`                            | `text`, `reasoningText`, `attribution`, `responseDocument`, `toolParts` |                                                                                                               | model id and name, status, timings, token counts                     |
 | `thread_search_embeddings`                   | `embedding_sealed` (the vector as JSON); `embedding` is null            |                                                                                                               | ids, kind                                                            |
 | `oura_`, `whoop_`, `google_health_snapshots` | `summary`, `fhirBundle`                                                 |                                                                                                               | `startDate`, `endDate`, `syncedAt` (to pick the newest window)       |
@@ -893,6 +893,34 @@ table truncated, and both `verify-cli --check` and the Lab card reported it
 ([runbook.md](runbook.md#signed-anchors)).
 
 **Effort.** About 3 days.
+
+### 2.7 #507 One Settings page for keep and withhold choices
+
+Customize · Settings (`app/(shell)/customize/settings/page.tsx`, view in
+`features/settings/settings-view.ts`) lists every keep and withhold choice with one
+sentence, its safe default for the data mode and a Default badge. It adds no data type:
+it reads `twinNotesOff`, `disabledSources`, `optedInSources` and `liveSources` on the
+onboarding profile and the learning consents, and saves through the actions those
+already had. Decisions (7 Nov and 9 Nov 2026):
+
+- Your own skill may run on a hosted provider with wearables withheld; this is the
+  default and stays fixed (`skillReadsWearables`, `skill-schema.ts`).
+- Twin notes keep loading into skill turns, under the same switch as new chats.
+- The sources that read personal data kept only on this machine (released Ark report
+  and Carbon-X, VCF variants, imported data) are off until the person turns them on.
+  They are stored as an opt-in list (`optedInSources`, `OPT_IN_SOURCES` in
+  `infrastructure/knowledge-sources.ts`) beside the opt-out list of the other sources,
+  so someone who never chose, or whose choice cannot be read, has them off.
+- A choice toward the riskier side (a live lookup or a personal-data source on) asks to
+  confirm first.
+- Nothing can be set looser than the data mode allows: a choice the server cannot use
+  reads Unavailable with its reason and is left out of the summary, and its gate still
+  refuses at every call. Data mode and local-only mode are shown, never switched, from
+  the browser.
+- Twin notes and knowledge sources on Settings, and the sources and live lookups the
+  first-run flow (/start) saves, go through `infrastructure/setting-save.ts`: a
+  `settings.set` audit row for each changed choice first, nothing stored if one fails.
+  Live lookups on Customize · Connectors keep their own `live.sources.set` row.
 
 ## 3. Order of work
 
