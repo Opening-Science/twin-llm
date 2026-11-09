@@ -176,6 +176,13 @@ export type ConsistencyProps = Base &
     reference: HeroValue;
     last: HeroValue;
     axis?: readonly [string, string];
+    /**
+     * Where the bars start instead of zero, e.g. 22:00 as 1,320 minutes, so a
+     * 30-minute shift near 23:00 is visible.
+     */
+    floor?: number;
+    /** The usual range, drawn as a grey band behind the bars and named "Usual". */
+    usual?: Readonly<{ low: number; high: number; label?: string }>;
   }>;
 
 /** R1: a research figure. */

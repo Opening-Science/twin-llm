@@ -20,7 +20,8 @@ const PLOT = 96;
  * C13: the usual value and the last value as heroes, then a bar per day in
  * grey with the last one in the category colour, and the target as a line.
  * With readouts, the night under the pointer or the keys stays full, the
- * others step back, and the readout names it.
+ * others step back, and the readout names it. `floor` starts the bars above
+ * zero, so a bedtime shift reads; `usual` draws the usual range as a band.
  */
 export const Consistency = ({
   category,
@@ -33,6 +34,8 @@ export const Consistency = ({
   readouts,
   label,
   defaultFocus,
+  floor,
+  usual,
 }: ConsistencyProps) => {
   const slots = values.length || 14;
   const live = state === "default" && (readouts?.some(Boolean) ?? false);
@@ -57,10 +60,28 @@ export const Consistency = ({
           { width, height: PLOT },
           14,
           4,
+          state === "default" ? { floor, band: usual } : {},
         );
         const lastIndex = out.bars.findLastIndex((b) => b !== null);
         return (
           <>
+            {out.band ? (
+              <>
+                {/* The usual range behind the bars, named so it is never colour alone. */}
+                <rect
+                  x={0}
+                  y={out.band.top}
+                  width={width}
+                  height={Math.max(2, out.band.bottom - out.band.top)}
+                  rx={4}
+                  className="fill-chart-reference"
+                  fillOpacity={0.18}
+                />
+                <text x={0} y={Math.max(10, out.band.top - 4)} className={AXIS_TEXT}>
+                  {usual?.label ?? "Usual"}
+                </text>
+              </>
+            ) : null}
             {out.bars.map((bar, i) =>
               bar ? (
                 <rect
