@@ -207,6 +207,19 @@ export const loadDisabledSources = async (
   }
 };
 
+/** Stores the knowledge sources a person turned off (Settings, #507), and nothing else. */
+export const saveDisabledSources = async (
+  userId: string,
+  disabled: readonly KnowledgeSourceId[],
+): Promise<void> => {
+  const disabledSources = [...normaliseDisabledSources(disabled)];
+  await database().onboardingProfile.upsert({
+    where: { userId },
+    create: { userId, disabledSources },
+    update: { disabledSources },
+  });
+};
+
 /** How many guideline and OpenTwin knowledge documents are indexed locally. */
 export const countIndexedDocuments = async (): Promise<
   Readonly<{ guidelines: number; knowledge: number }>

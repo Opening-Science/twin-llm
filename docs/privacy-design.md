@@ -871,6 +871,26 @@ table truncated, and both `verify-cli --check` and the Lab card reported it
 
 **Effort.** About 3 days.
 
+### 2.7 #507 One Settings page for keep and withhold choices
+
+Customize · Settings (`app/(shell)/customize/settings/page.tsx`, view in
+`features/settings/settings-view.ts`) lists every keep and withhold choice with one
+sentence, its safe default for the data mode and a Default badge. It adds no data type
+and no store: it reads `twinNotesOff`, `disabledSources` and `liveSources` on the
+onboarding profile and the learning consents, and saves through the actions those
+already had. Decisions (7 Nov 2026):
+
+- Your own skill may run on a hosted provider with wearables withheld; this is the
+  default and stays fixed (`skillReadsWearables`, `skill-schema.ts`).
+- Twin notes keep loading into skill turns, under the same switch as new chats.
+- A choice toward the riskier side (today, a live lookup on) asks to confirm first.
+- Nothing can be set looser than the data mode allows: a lookup in local-only mode and
+  a source the server cannot use are shown locked, and their gates still refuse at
+  every call. Data mode and local-only mode are shown, never switched, from the browser.
+- Twin notes and knowledge sources are saved through `saveAuditedSetting`
+  (`infrastructure/setting-save.ts`): the `settings.set` audit row first, nothing
+  stored if it fails. Live lookups keep their own `live.sources.set` row.
+
 ## 3. Order of work
 
 | Step | Issue | Depends on                                         | Touches                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
