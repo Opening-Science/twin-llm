@@ -38,6 +38,7 @@ describe("checkTurnRequest", () => {
         prompt: "Synthetic: sleep and resting heart rate?",
         title: "Synthetic: sleep and resting heart rate?",
         skill: null,
+        label: null,
         models: [
           { id: "medgemma:4b", name: "MedGemma 4B" },
           { id: "qwen3:8b", name: "qwen3:8b" },
@@ -80,6 +81,40 @@ describe("checkTurnRequest", () => {
     );
     expect(check.ok && check.plan.title).toBe("/sleep last 30 nights");
     expect(check.ok && check.plan.skill).toBe("sleep");
+  });
+
+  test("a starter's short text is kept for the bubble; the prompt is sent and names the title (#506)", () => {
+    const grounded =
+      "For synthetic subject 4f083ce3-f12b-bb4b-7353-e17f0cd55b0a, using LOINC 4548-4, what was their latest HbA1c?";
+    const check = checkTurnRequest(
+      {
+        prompt: grounded,
+        modelIds: ["qwen3:8b"],
+        label: " What was their latest HbA1c? ",
+      },
+      catalog,
+      "ollama",
+    );
+    expect(check.ok && check.plan.prompt).toBe(grounded);
+    expect(check.ok && check.plan.label).toBe("What was their latest HbA1c?");
+    expect(check.ok && check.plan.title).toBe(
+      "What was their latest HbA1c? · subject 4f083c",
+    );
+  });
+
+  test("a label that is empty or the prompt itself is not kept (#506)", () => {
+    const same = checkTurnRequest(
+      { prompt: "How did I sleep?", modelIds: ["qwen3:8b"], label: "How did I sleep?" },
+      catalog,
+      "ollama",
+    );
+    expect(same.ok && same.plan.label).toBeNull();
+    const blank = checkTurnRequest(
+      { prompt: "How did I sleep?", modelIds: ["qwen3:8b"], label: "  " },
+      catalog,
+      "ollama",
+    );
+    expect(blank.ok && blank.plan.label).toBeNull();
   });
 
   test("refuses in order: empty prompt, model count, catalog, unknown model", () => {

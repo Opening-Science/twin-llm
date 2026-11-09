@@ -33,6 +33,11 @@ export type TurnPlan = Readonly<{
   title: string;
   /** The skill the person sent the prompt with, stored on the turn (#479). */
   skill: string | null;
+  /**
+   * What the person's bubble shows, when it differs from the prompt the model
+   * gets: a starter question's short text (#506). Null shows the prompt.
+   */
+  label: string | null;
   models: readonly Readonly<{ id: string; name: string }>[];
 }>;
 
@@ -52,12 +57,16 @@ export const checkTurnRequest = (
     modelIds: readonly string[];
     /** A skill turn's title starts with its command, `/sleep last 30 nights`. */
     skill?: string | null;
+    /** A starter question's short text, sent as its grounded prompt (#506). */
+    label?: string | null;
   }>,
   catalog: readonly CatalogModel[] | null,
   provider: string,
 ): TurnCheck => {
   const prompt = request.prompt.trim();
   if (prompt === "") return refuse(TURN_COPY.emptyPrompt);
+  const label = request.label?.trim() ?? "";
+  const shown = label === "" || label === prompt ? null : label;
 
   const ids = [...new Set(request.modelIds)];
   if (ids.length < MIN_SELECTED_MODELS || ids.length > MAX_SELECTED_MODELS) {
@@ -77,6 +86,9 @@ export const checkTurnRequest = (
     plan: {
       prompt,
       skill: request.skill ?? null,
+      label: shown,
+      // Named from the prompt: `readableTitle` keeps a short subject tag, so two
+      // people's threads with the same starter still read apart.
       title: readableTitle(request.skill ? `/${request.skill} ${prompt}` : prompt).slice(
         0,
         TITLE_LENGTH,

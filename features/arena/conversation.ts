@@ -67,7 +67,13 @@ export type ResponseState = AnswerSource & AnswerProgress & AnswerFindings;
 /** One prompt and an answer per model it went to. */
 export type TurnState = Readonly<{
   id: string;
+  /** What the models were sent, and what history and the audit carry. */
   prompt: string;
+  /**
+   * What the person's bubble shows instead of the prompt: a starter question's
+   * short text, sent as its grounded prompt (#506). Left out, the prompt.
+   */
+  label?: string | null;
   answers: readonly ResponseState[];
   /** The skill the prompt was sent with (`sleep` for `/sleep`), or null. */
   skill?: string | null;

@@ -20,6 +20,13 @@ export const openThreadTitle = (
 export const openPrompt = (cipher: FieldCipher, turnId: string, stored: string): string =>
   cipher.openText(TURNS, "prompt", turnId, stored);
 
+/** A turn's short text for its bubble (#506), or null when it shows the prompt. */
+export const openTurnLabel = (
+  cipher: FieldCipher,
+  turnId: string,
+  stored: string | null,
+): string | null => openNullable(cipher, TURNS, "label", turnId, stored);
+
 type SealedResponse = Readonly<{
   id: string;
   text?: string;
