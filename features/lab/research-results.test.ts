@@ -130,21 +130,24 @@ describe("P1 grounding", () => {
     expect(groundingCard(readArms(undefined))).toBeNull();
   });
 
-  test("specialists: one figure per model size, rescored runs left out", () => {
+  test("specialists: one figure grouped by model size, rescored runs left out", () => {
     const cards = specialistCards(readSpecialists(fixture("eval-specialists.json")));
-    expect(cards.map((c) => [c.id, rows(c.figure)])).toEqual([
-      [
-        "grounding-specialists-qwen3:4b",
-        [["Heart rhythm agent, rhythm set (s7)", (15 / 31) * 100, 32, 65]],
-      ],
-      [
-        "grounding-specialists-qwen3:8b",
-        [["Heart rhythm agent, rhythm set (s7)", (10 / 20) * 100, 30, 70]],
-      ],
+    expect(cards.map((c) => c.id)).toEqual(["grounding-specialists"]);
+    const c = cards[0]!;
+    expect(rows(c.figure)).toEqual([
+      ["Heart rhythm, s7, 4b", (15 / 31) * 100, 32, 65],
+      ["Heart rhythm, s7, 8b", (10 / 20) * 100, 30, 70],
     ]);
-    expect(cards[0]!.runDate).toBe("2026-11-02");
-    expect(cards[1]!.headline).toBe(
-      "On qwen3:8b, the Heart rhythm agent, rhythm set (s7) gave the right value in 10 of 20 (50\u00a0%) scored answers.",
+    expect(estimatesOf(c.figure).estimates[1]!.readout).toBe(
+      "Heart rhythm agent, rhythm set (s7), qwen3:8b · 10/20 right (50 %), Wilson 95 % interval 30–70 %",
+    );
+    expect(estimatesOf(c.figure).estimates.map((e) => e.series)).toEqual([
+      "qwen3:4b",
+      "qwen3:8b",
+    ]);
+    expect(c.runDate).toBe("2026-11-02");
+    expect(c.headline).toBe(
+      "On qwen3:4b, the Heart rhythm agent, rhythm set (s7) gave the right value in 15 of 31 (48\u00a0%) scored answers. On qwen3:8b, the Heart rhythm agent, rhythm set (s7) gave the right value in 10 of 20 (50\u00a0%) scored answers.",
     );
   });
 });
@@ -183,6 +186,15 @@ describe("P2 in-silico arrhythmia", () => {
       "AFDB, heavy noise",
       "LTAFDB, heavy noise",
     ]);
+    // Grouped by database: both rows of a database share its series.
+    const series = (f: ResearchFigureData | undefined) => {
+      if (f === undefined || f.kind !== "pairs") throw new Error("no pairs");
+      return f.groups.map((g) => g.estimates.map((e) => e.series));
+    };
+    expect(series(c.figure)).toEqual([
+      ["AFDB", "AFDB"],
+      ["LTAFDB", "LTAFDB"],
+    ]);
     expect(c.headline).toBe(
       "With no added noise, the flag found AF windows with sensitivity 0.954 on AFDB and 0.947 on LTAFDB, at specificity 0.796 and 0.841; with light noise, specificity was 0.289 and 0.302.",
     );
@@ -220,6 +232,10 @@ describe("P2 in-silico arrhythmia", () => {
         0.6450187567349138,
       ],
     ]);
+    expect(estimatesOf(c.figure).estimates.map((e) => e.series)).toEqual([
+      "AFDB",
+      "Simulated",
+    ]);
     expect(c.more).toBeNull();
     expect(c.runDate).toBe("2026-11-02");
   });
@@ -238,18 +254,29 @@ describe("P3 heart–brain", () => {
       "In the same 8,144 synthetic people, the stroke rate after AF onset was 3.09 times the rate before it (95 % interval 2.07–4.63), age-adjusted.",
     );
     expect(c.axis).toBe("rate ratio (1 = no difference)");
+    expect(estimatesOf(c.figure).scale).toBe("log");
   });
 
-  test("rule change: estimate and expected for each rule", () => {
+  test("rule change: one row per rule, its expected value as the tick", () => {
     const c = card(
       ruleChangeCard(readRuleChange(fixture("heart-brain-full-history.json"))),
     );
-    expect(rows(c.figure)).toEqual([
-      ["Rule as shipped, estimate", 1.91, 1, 3.65],
-      ["Rule as shipped, expected", 2.15, undefined, undefined],
-      ["AF part doubled, estimate", 3.95, 2.17, 7.2],
-      ["AF part doubled, expected", 3.93, undefined, undefined],
+    expect(
+      estimatesOf(c.figure).estimates.map((e) => [
+        e.label,
+        e.estimate,
+        e.low,
+        e.high,
+        e.expected,
+      ]),
+    ).toEqual([
+      ["Rule as shipped", 1.91, 1, 3.65, 2.15],
+      ["AF part doubled", 3.95, 2.17, 7.2, 3.93],
     ]);
+    expect(estimatesOf(c.figure).estimates[0]!.readout).toBe(
+      "Rule as shipped · 1.91 (95 % interval 1.00–3.65); the generator's rules imply 2.15",
+    );
+    expect(estimatesOf(c.figure).scale).toBe("log");
     expect(c.headline).toBe(
       "With the stroke rule as shipped, the estimate was 1.91 where the rules imply 2.15; with the rule's AF part doubled, 3.95 where they imply 3.93.",
     );
@@ -258,15 +285,20 @@ describe("P3 heart–brain", () => {
   test("observed against shuffled onset, and the planted rules", () => {
     const data = readHeartBrain(fixture("heart-brain.json"));
     const shuffled = card(shuffledNullCard(data));
-    expect(rows(shuffled.figure)).toEqual([
-      ["Observed", 2.540863417276496, 1.9504620844291192, 3.3099781619921087],
-      [
-        "Shuffled onset, 50 runs",
-        2.3919549747233635,
-        2.0443953567950386,
-        2.7781390831577037,
-      ],
-    ]);
+    expect(shuffled.figure).toEqual({
+      kind: "null",
+      observed: 2.540863417276496,
+      observedLabel: "Observed",
+      summary: {
+        mean: 2.3919549747233635,
+        low: 2.0443953567950386,
+        high: 2.7781390831577037,
+        runs: 50,
+      },
+      nullLabel: "Shuffled onset, 50 runs",
+    });
+    // The observed ratio's own interval stays in the caption.
+    expect(shuffled.caption).toContain("(2.54, 95 % interval 1.95–3.31)");
     expect(shuffled.headline).toBe(
       "People with AF had 2.54 times the stroke rate of matched people without; with AF onset dates shuffled, the same ratio averaged 2.39 over 50 runs (range 2.04–2.78).",
     );
@@ -275,6 +307,7 @@ describe("P3 heart–brain", () => {
     // The anticoagulant pair has too few events and no ratio, so it is left out.
     expect(labels(planted.figure)).toEqual(["AF then stroke"]);
     expect(planted.more).toBeNull();
+    expect(estimatesOf(planted.figure).scale).toBe("log");
     expect(estimatesOf(planted.figure).estimates[0]!.readout).toBe(
       "AF then stroke · 2.54 (95 % interval 1.95–3.31); linked directly by a rule",
     );
@@ -348,8 +381,7 @@ describe("researchCards", () => {
     expect(read.unread).toEqual([]);
     expect(read.cards.map((c) => c.id)).toEqual([
       "grounding-arms",
-      "grounding-specialists-qwen3:4b",
-      "grounding-specialists-qwen3:8b",
+      "grounding-specialists",
       "arrhythmia-databases",
       "arrhythmia-resolution",
       "arrhythmia-rr-grid",
@@ -360,16 +392,22 @@ describe("researchCards", () => {
       "disclosure-membership",
     ]);
     const byId = new Map(read.cards.map((c) => [c.id, c]));
-    expect(labels(byId.get("grounding-specialists-qwen3:4b")?.figure)).toEqual([
-      "Heart rhythm agent, rhythm set (s7)",
-      "Heart rhythm agent, second rhythm set (s7b)",
-      "Heart rhythm agent, held-out rhythm set (s7h)",
-      "Brain agent, rhythm set (s7)",
-      "General agent, main set (v1)",
-    ]);
-    expect(byId.get("grounding-specialists-qwen3:4b")?.headline).toBe(
-      "On qwen3:4b, the share of right values ran from 5 of 31 (16\u00a0%) for the Brain agent, rhythm set (s7) to 21 of 32 (66\u00a0%) for the Heart rhythm agent, held-out rhythm set (s7h).",
+    // Each agent and set pair on both models, next to each other.
+    expect(labels(byId.get("grounding-specialists")?.figure)).toEqual(
+      [
+        "Heart rhythm, s7",
+        "Heart rhythm, s7b",
+        "Heart rhythm, s7h",
+        "Brain, s7",
+        "General, v1",
+      ].flatMap((run) => [`${run}, 4b`, `${run}, 8b`]),
     );
+    expect(byId.get("grounding-specialists")?.headline).toBe(
+      "On qwen3:4b, the share of right values ran from 5 of 31 (16\u00a0%) for the Brain agent, rhythm set (s7) to 21 of 32 (66\u00a0%) for the Heart rhythm agent, held-out rhythm set (s7h). On qwen3:8b, the share of right values ran from 16 of 109 (15\u00a0%) for the General agent, main set (v1) to 11 of 21 (52\u00a0%) for the Heart rhythm agent, held-out rhythm set (s7h).",
+    );
+    expect(
+      estimatesOf(byId.get("arrhythmia-rr-grid")?.figure).estimates.map((e) => e.series),
+    ).toEqual(["AFDB", "LTAFDB", "Simulated", "Simulated", "Simulated"]);
     expect(labels(byId.get("arrhythmia-rr-grid")?.figure)).toEqual([
       "AFDB, 23 records",
       "LTAFDB, 76 records",

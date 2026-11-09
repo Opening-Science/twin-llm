@@ -1,4 +1,8 @@
-import { type Estimate } from "@/infrastructure/charts/kit/kit-geometry";
+import {
+  type AxisScale,
+  type Estimate,
+  type NullSummary,
+} from "@/infrastructure/charts/kit/kit-geometry";
 
 import { type ScoreCell } from "./eval-runs";
 import { type Interval } from "./research-markdown";
@@ -68,6 +72,8 @@ export type ResearchFigureData =
       estimates: readonly Estimate[];
       reference?: Reference;
       domain?: readonly [number, number];
+      /** "log" for rate ratios, so 0.5 and 2 sit equally far from 1. */
+      scale?: AxisScale;
     }>
   | Readonly<{
       kind: "pairs";
@@ -75,6 +81,14 @@ export type ResearchFigureData =
         label: string;
         estimates: readonly [Estimate, Estimate];
       }>[];
+    }>
+  | Readonly<{
+      /** An observed value against the summary of a null, such as shuffled runs. */
+      kind: "null";
+      observed: number;
+      observedLabel: string;
+      summary: NullSummary;
+      nullLabel: string;
     }>;
 
 export type ResearchCard = Readonly<{
@@ -225,39 +239,63 @@ export const groundingCard = (
 const runLabel = (run: SpecialistRun): string =>
   `${AGENT_NAME[run.agent] ?? run.agent} agent, ${SET_NAME[run.set] ?? run.set}`;
 
-/** One figure per model size: the same five agent and set pairs on each. */
+const modelHeadline = (model: string, runs: readonly SpecialistRun[]): string => {
+  const byShare = [...runs].sort(
+    (a, b) => a.cell.passes / a.cell.n - b.cell.passes / b.cell.n,
+  );
+  const lowest = byShare[0]!;
+  const highest = byShare.at(-1)!;
+  return runs.length === 1
+    ? `On ${model}, the ${runLabel(lowest)} gave the right value in ${ofAnswers(lowest.cell)} scored answers.`
+    : `On ${model}, the share of right values ran from ${ofAnswers(lowest.cell)} for the ${runLabel(lowest)} to ${ofAnswers(highest.cell)} for the ${runLabel(highest)}.`;
+};
+
+/**
+ * One figure for every model size: each agent and set pair once per model,
+ * the models next to each other, a row's colour naming its model.
+ */
 export const specialistCards = (
   data: Readonly<{ date: string | null; runs: readonly SpecialistRun[] }> | null,
 ): readonly ResearchCard[] => {
   if (data === null) return [];
   const models = [...new Set(data.runs.map((r) => r.model))];
-  return models.map((model) => {
-    const runs = data.runs.filter((r) => r.model === model);
-    const byShare = [...runs].sort(
-      (a, b) => a.cell.passes / a.cell.n - b.cell.passes / b.cell.n,
-    );
-    const lowest = byShare[0]!;
-    const highest = byShare.at(-1)!;
-    return {
-      id: `grounding-specialists-${model}`,
+  const pairOf = (r: SpecialistRun): string => `${r.agent}|${r.set}`;
+  const pairs = [...new Set(data.runs.map(pairOf))];
+  const ordered = pairs.flatMap((pair) =>
+    models.flatMap((model) =>
+      data.runs.filter((r) => pairOf(r) === pair && r.model === model),
+    ),
+  );
+  return [
+    {
+      id: "grounding-specialists",
       study: "grounding",
-      label: `Specialist agents on ${model}`,
-      headline:
-        runs.length === 1
-          ? `On ${model}, the ${runLabel(lowest)} gave the right value in ${ofAnswers(lowest.cell)} scored answers.`
-          : `On ${model}, the share of right values ran from ${ofAnswers(lowest.cell)} for the ${runLabel(lowest)} to ${ofAnswers(highest.cell)} for the ${runLabel(highest)}.`,
-      caption: `Share of scored answers with the right value for each specialist agent and question set, with the agent's rules run on ${model}. Lines are Wilson 95 % intervals.`,
+      label: "Specialist agents by model",
+      headline: models
+        .map((model) =>
+          modelHeadline(
+            model,
+            data.runs.filter((r) => r.model === model),
+          ),
+        )
+        .join(" "),
+      caption: `Share of scored answers with the right value for each specialist agent and question set, with the agent's rules run on ${models.join(" and ")}. Lines are Wilson 95 % intervals.`,
       axis: AXIS_SHARE,
       source: RESEARCH_SOURCES.specialists,
       runDate: data.date,
       figure: {
         kind: "estimates",
-        estimates: runs.map((r) => shareEstimate(runLabel(r), r.cell)),
+        // A short row label that fits beside the plot; the readout keeps the full name.
+        estimates: ordered.map((r) => ({
+          ...shareEstimate(`${runLabel(r)}, ${r.model}`, r.cell),
+          label: `${AGENT_NAME[r.agent] ?? r.agent}, ${r.set}, ${r.model.split(":").at(-1)}`,
+          series: r.model,
+        })),
         domain: [0, 100],
       },
       more: null,
-    };
-  });
+    },
+  ];
 };
 
 /* --- P2 in-silico arrhythmia -------------------------------------------------- */
@@ -271,11 +309,12 @@ const noiseGroups = (rows: readonly NoiseRow[]) =>
       ] as const
     ).map(([db, r]) => {
       const label = `${db}, ${NOISE_NAME[row.noise] ?? row.noise}`;
+      // Grouped by database: both of a database's rows share its colour.
       return {
         label,
         estimates: [
-          intervalEstimate(label, "Sensitivity", r.sensitivity),
-          intervalEstimate(label, "Specificity", r.specificity),
+          { ...intervalEstimate(label, "Sensitivity", r.sensitivity), series: db },
+          { ...intervalEstimate(label, "Specificity", r.specificity), series: db },
         ] as const,
       };
     }),
@@ -377,19 +416,22 @@ const gridWords = (ms: number): string =>
 
 export const rrGridCard = (data: RrGrid | null): ResearchCard | null => {
   if (data === null) return null;
-  const real = data.real.map((r) =>
-    valueEstimate(
-      `${DB_NAME[r.database] ?? r.database}, ${r.records} records`,
-      "mean TPR",
-      r.tpr,
-    ),
-  );
-  const simRow = (s: RrGrid["sim"][number]) =>
-    valueEstimate(
+  // Grouped by database, the simulated recordings as a group of their own.
+  const real = data.real.map((r) => {
+    const db = DB_NAME[r.database] ?? r.database;
+    return {
+      ...valueEstimate(`${db}, ${r.records} records`, "mean TPR", r.tpr),
+      series: db,
+    };
+  });
+  const simRow = (s: RrGrid["sim"][number]) => ({
+    ...valueEstimate(
       `Simulated, ${MODE_NAME[s.mode] ?? s.mode}, ${gridWords(s.gridMs)}`,
       "mean TPR",
       s.tpr,
-    );
+    ),
+    series: "Simulated",
+  });
   const shortRange = data.sim.filter((s) => s.mode === "short_range");
   const main = [...real, ...shortRange.map(simRow)];
   const all = [...real, ...data.sim.map(simRow)];
@@ -450,15 +492,16 @@ export const withinPersonCard = (
         ratioEstimate(WINDOW_NAME[w.window] ?? w.window, w.ratio),
       ),
       reference: NO_EFFECT,
+      scale: "log",
     },
     more: null,
   };
 };
 
-const expectedRow = (label: string, value: number): Estimate => ({
-  label,
-  estimate: value,
-  readout: `${label} · ${fixed(value, 2)}, what the generator's rules imply`,
+/** A rule's estimate, with the ratio its rules imply as the row's expected tick. */
+const ruleRow = (label: string, r: RuleChange["base"]): Estimate => ({
+  ...ratioEstimate(label, r, `; the generator's rules imply ${fixed(r.expected, 2)}`),
+  expected: r.expected,
 });
 
 export const ruleChangeCard = (data: RuleChange | null): ResearchCard | null => {
@@ -470,19 +513,15 @@ export const ruleChangeCard = (data: RuleChange | null): ResearchCard | null => 
     label: "Changing a rule in the generator",
     headline: `With the stroke rule as shipped, the estimate was ${fixed(base.ratio, 2)} where the rules imply ${fixed(base.expected, 2)}; with the rule's AF part doubled, ${fixed(doubled.ratio, 2)} where they imply ${fixed(doubled.expected, 2)}.`,
     caption:
-      "Within-person, age-adjusted stroke rate ratio after AF onset with Synthea's stroke rule as shipped and with its AF part doubled, each next to the ratio the rules imply (a dot without a line). Lines are 95 % intervals.",
+      "Within-person, age-adjusted stroke rate ratio after AF onset with Synthea's stroke rule as shipped and with its AF part doubled; the grey tick on each row is the ratio the rules imply. Lines are 95 % intervals.",
     axis: AXIS_RATIO,
     source: RESEARCH_SOURCES.fullHistory,
     runDate: null,
     figure: {
       kind: "estimates",
-      estimates: [
-        ratioEstimate("Rule as shipped, estimate", base),
-        expectedRow("Rule as shipped, expected", base.expected),
-        ratioEstimate("AF part doubled, estimate", doubled),
-        expectedRow("AF part doubled, expected", doubled.expected),
-      ],
+      estimates: [ruleRow("Rule as shipped", base), ruleRow("AF part doubled", doubled)],
       reference: NO_EFFECT,
+      scale: "log",
     },
     more: null,
   };
@@ -496,21 +535,16 @@ export const shuffledNullCard = (data: HeartBrain | null): ResearchCard | null =
     study: "heart-brain",
     label: "Observed against shuffled onset",
     headline: `People with AF had ${fixed(observed.ratio, 2)} times the stroke rate of matched people without; with AF onset dates shuffled, the same ratio averaged ${fixed(shuffled.mean, 2)} over ${shuffled.runs} runs (range ${span(shuffled.low, shuffled.high, 2)}).`,
-    caption: `Matched between-person stroke rate ratio for AF then stroke, next to the mean and 95 % range of the same ratio over ${shuffled.runs} runs with AF onset dates shuffled. The summary keeps the range of the shuffled runs, not each run.`,
+    caption: `Matched between-person stroke rate ratio for AF then stroke (${fixed(observed.ratio, 2)}, 95 % interval ${span(observed.low, observed.high, 2)}), against the mean and 95 % range of the same ratio over ${shuffled.runs} runs with AF onset dates shuffled, drawn as a grey band. The summary keeps the range of the shuffled runs, not each run.`,
     axis: AXIS_RATIO,
     source: RESEARCH_SOURCES.heartBrain,
     runDate: data.date,
     figure: {
-      kind: "estimates",
-      estimates: [
-        ratioEstimate("Observed", observed),
-        ratioEstimate(
-          `Shuffled onset, ${shuffled.runs} runs`,
-          { ratio: shuffled.mean, low: shuffled.low, high: shuffled.high },
-          ", mean and range of the runs",
-        ),
-      ],
-      reference: NO_EFFECT,
+      kind: "null",
+      observed: observed.ratio,
+      observedLabel: "Observed",
+      summary: shuffled,
+      nullLabel: `Shuffled onset, ${shuffled.runs} runs`,
     },
     more: null,
   };
@@ -550,12 +584,18 @@ export const plantedRulesCard = (data: HeartBrain | null): ResearchCard | null =
       kind: "estimates",
       estimates: linked.length > 0 ? linked.map(row) : all,
       reference: NO_EFFECT,
+      scale: "log",
     },
     more:
       linked.length > 0 && unlinked.length > 0
         ? {
             label: "Show all pairs",
-            figure: { kind: "estimates", estimates: all, reference: NO_EFFECT },
+            figure: {
+              kind: "estimates",
+              estimates: all,
+              reference: NO_EFFECT,
+              scale: "log",
+            },
           }
         : null,
   };
