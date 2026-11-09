@@ -58,7 +58,7 @@ describe("loadOnboardingOrEmpty", () => {
         roles: [],
         dataChoice: null,
         interest: "",
-        disabledSources: [],
+        disabledSources: ["ark-genome", "vcf-variants", "imported-data"],
         liveSources: [],
       },
       step: 0,
