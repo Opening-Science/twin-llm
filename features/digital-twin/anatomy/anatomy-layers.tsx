@@ -36,6 +36,7 @@ import {
 } from "./layer-material";
 import { loadAtlasGltf } from "./load-atlas";
 import { prepareAtlas, type PreparedAtlas } from "./prepare-atlas";
+import { SCAN_RENDER_ORDER, setLayerPasses, setScanRenderOrder } from "./depth-prepass";
 import { collectScanMaterials, readScanFrame } from "./scan-frame";
 
 /** Dev-only nudge when a layer combination gets heavy for a low-power GPU. */
@@ -159,9 +160,11 @@ export const AnatomyLayers = ({
       return uniforms ? [{ material, uniforms }] : [];
     });
     scanSurfacesRef.current = surfaces;
+    setScanRenderOrder(scanRoot, SCAN_RENDER_ORDER);
     invalidate();
     return () => {
       scanSurfacesRef.current = [];
+      setScanRenderOrder(scanRoot, 0);
       for (const surface of surfaces) {
         applyMixToUniforms(surface.uniforms, { alpha: 1, fade: 0, visible: true });
         setBlendMode(surface.material, "solid");
@@ -255,8 +258,10 @@ export const AnatomyLayers = ({
       }
       for (const part of atlas.parts) {
         const mix = applyMask(layerMix(part.layer, next), partShown(part, shown, hidden));
+        const mode = blendModeFor(mix, "atlas");
         Object.assign(part.mesh, { visible: mix.visible });
-        setBlendMode(part.mesh.material as Material, blendModeFor(mix, "atlas"));
+        setBlendMode(part.mesh.material as Material, mode);
+        setLayerPasses(part.mesh, part.layer, mode);
       }
     }
     if (moving) invalidate();
