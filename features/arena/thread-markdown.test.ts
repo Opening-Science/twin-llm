@@ -90,7 +90,7 @@ describe("threadMarkdown", () => {
         "Lookups:",
         "- Fitted a trend: heart rate (measure 8867-4) · 13 rows",
         "- Showed a view · refused: A cohort measure needs a person to read it for",
-        "- Fitted a trend (measure 2339-0) · no data: No readings in this range",
+        "- Fitted a trend: blood glucose (measure 2339-0) · no data: No readings in this range",
         "",
         "Up from 79 to 87 /min.",
         "",

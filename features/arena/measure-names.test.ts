@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
+import cohortCodes from "@/evaluation/cohort-codes.v1.json";
 import { anchorLayer, type AnchorLayer } from "@/packages/biomarkers/anchor-layer";
 
 import { catalogueMeasureName, catalogueMeasureNames } from "./measure-names";
@@ -24,5 +25,19 @@ describe("catalogueMeasureName", () => {
       biomarkers: [{ ...marker, loincCode: "8867-4", loincDisplay: "Pulse [x] in y" }],
     };
     expect(catalogueMeasureNames(layer).get("8867-4")).toBe("Heart rate");
+  });
+
+  test("every code the synthetic cohort holds has a name (#542)", () => {
+    const unnamed = cohortCodes.codes.filter(
+      (code) => catalogueMeasureName(code) === null,
+    );
+    expect(unnamed).toEqual([]);
+    expect(cohortCodes.codes.length).toBeGreaterThan(100);
+  });
+
+  test("names the cohort's blood pressure and glucose in words (#542)", () => {
+    expect(catalogueMeasureName("8480-6")).toBe("Systolic blood pressure");
+    expect(catalogueMeasureName("8462-4")).toBe("Diastolic blood pressure");
+    expect(catalogueMeasureName("2339-0")).toBe("Blood glucose");
   });
 });
