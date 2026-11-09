@@ -36,10 +36,10 @@ test("fitJobs narrows to one body and one atlas", () => {
   );
 });
 
-test("fitArgs passes renders and the no-stretch switch only when asked", () => {
+test("fitArgs passes renders and the stretch opt-in only when asked", () => {
   const [job] = fitJobs("/a", ["anny-adult-f"], ["hra-f"]);
   if (!job) throw new Error("no job");
-  expect(fitArgs(job, { renderDir: null, stretch: true })).toEqual([
+  expect(fitArgs(job, { renderDir: null, stretch: false })).toEqual([
     "--atlas",
     "/a/hra.ao.glb",
     "--scheme",
@@ -51,12 +51,12 @@ test("fitArgs passes renders and the no-stretch switch only when asked", () => {
     "--report",
     "/a/fitted/anny-adult-f.hra-f.report.json",
   ]);
-  expect(fitArgs(job, { renderDir: "/shots", stretch: false }).slice(10)).toEqual([
+  expect(fitArgs(job, { renderDir: "/shots", stretch: true }).slice(10)).toEqual([
     "--render-dir",
     "/shots",
     "--render-name",
     "anny-adult-f.hra-f",
-    "--no-stretch",
+    "--stretch",
   ]);
 });
 

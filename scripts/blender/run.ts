@@ -3,7 +3,7 @@
  *
  * Usage (from the repo root; needs Blender 5.2.x, found through BLENDER_BIN or PATH):
  *   bun run blender:fit-atlas                         # every rigged demo body × atlas
- *   bun run blender:fit-atlas --body anny-adult-f --atlas hra-f --render-dir <dir> [--no-stretch]
+ *   bun run blender:fit-atlas --body anny-adult-f --atlas hra-f --render-dir <dir> [--stretch]
  *   bun run blender:cleanup                           # the damaged-ANNY demo
  *   bun run blender:cleanup --in <glb> --out-dir <dir> [--lods 0.5,0.25] [--voxel 0.005]
  *   bun run blender:self-check                        # both scripts on tiny synthetic meshes
@@ -101,7 +101,7 @@ const fitAtlas = async (
   const renderArg = valueOf(argv, "--render-dir");
   const options = {
     renderDir: renderArg ? resolve(renderArg) : null,
-    stretch: !argv.includes("--no-stretch"),
+    stretch: argv.includes("--stretch"),
   };
   const done: LabelledReport[] = [];
   for (const job of jobs) {
@@ -136,9 +136,14 @@ const fitAtlas = async (
   );
   console.log(`\n${jointTable(done)}\n`);
   for (const { body, atlas, report } of done) {
-    console.log(`${body} × ${atlas}: stretch ${stretchSummary(report)}.`);
+    console.log(
+      report.stretchLimbs
+        ? `${body} × ${atlas}: stretch ${stretchSummary(report)}.`
+        : `${body} × ${atlas}: bones keep their length, so knees can stand off ANNY's.`,
+    );
     for (const note of report.notes) console.log(`  ${note}`);
-    for (const row of missedTargets(report)) {
+    // Without --stretch a knee miss is the expected cost, not a failure.
+    for (const row of report.stretchLimbs ? missedTargets(report) : []) {
       console.warn(
         `  ${row.joint} is ${row.afterDistanceM} m from the body's joint after the fit.`,
       );

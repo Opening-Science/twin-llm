@@ -9,7 +9,8 @@ Inputs (after `--`):
   [--render-dir <dir> --render-name <stem> --render-show bone,vessel,muscle,skin]
                                            front renders before and after (1440x1080 PNG):
                                            ANNY's joints green, the atlas's magenta
-  [--no-stretch]                           turn limb segments only, keeping their lengths
+  [--stretch]                              also stretch limb segments along their axes so knee
+                                           and ankle meet ANNY's (off by default: bones keep length)
   --self-check                             runs on a tiny synthetic atlas and body instead
 
 Steps: scale the atlas to the body's height with the feet on its floor and the
@@ -17,10 +18,11 @@ boxes centred (the app's demo fit), find the atlas's joints from its bones
 (twinblend/atlas_rig.py), build an armature on them, weight every vertex
 (bones rigid to their segment, organs rigid to the trunk, soft tissue blended
 by distance to the nearest bones), then pose: the trunk moves sideways and
-forwards so the hip midpoints meet, each thigh and shin turns, and stretches
-along its own axis, so knee and ankle land on ANNY's, each foot follows its
-ankle without turning, and with arm bones the upper arm, forearm and hand do
-the same for elbow and wrist. The pose is applied and the joints are found
+forwards so the hip midpoints meet, each thigh and shin turns toward ANNY's
+knee and ankle and keeps its length (with `--stretch` it also stretches along
+its own axis so they land exactly), each foot follows its ankle without
+turning, and with arm bones the upper arm, forearm and hand do the same for
+elbow and wrist. The pose is applied and the joints are found
 again on the result, so the report measures the output itself.
 No randomness; the same inputs give the same file.
 """
@@ -278,12 +280,13 @@ def synthetic_foot(ankle: np.ndarray, floor: float, k: float) -> np.ndarray:
 
 
 def deforms(
-    rig: atlas_rig.AtlasRig, target: dict[str, np.ndarray], stretch_limbs: bool = True
+    rig: atlas_rig.AtlasRig, target: dict[str, np.ndarray], stretch_limbs: bool = False
 ) -> tuple[dict[str, np.ndarray], dict[str, float], np.ndarray]:
     """
     One 4x4 per segment, mapping the atlas at rest onto its fitted place.
-    Without `stretch_limbs` each segment only turns toward the body's next
-    joint and keeps its length, so the joint lands short or long of it.
+    By default each segment only turns toward the body's next joint and keeps
+    its length, so the joint lands short or long of it; `stretch_limbs` also
+    scales it along its own axis so the joint lands on the body's.
     """
     j = rig.joints
     hips = (j["hip.L"] + j["hip.R"]) / 2
@@ -413,7 +416,7 @@ def fit(
     target: dict[str, np.ndarray],
     body_points: np.ndarray,
     render: tuple[str, str, list[bpy.types.Object]] | None = None,
-    stretch_limbs: bool = True,
+    stretch_limbs: bool = False,
 ) -> dict:
     started = time.monotonic()
     body = frame(body_points)
@@ -548,7 +551,7 @@ def run(args: list[str]) -> None:
         show = set((option(args, "--render-show", "bone,vessel") or "").split(","))
         style_for_render(atlas, kinds, body_mesh, scheme, show)
         render = (render_dir, option(args, "--render-name", Path(out).stem), atlas)
-    result = fit(atlas, kinds, target, body_points, render, "--no-stretch" not in args)
+    result = fit(atlas, kinds, target, body_points, render, "--stretch" in args)
     export_glb(atlas, out)
     result.update(
         {
@@ -627,7 +630,16 @@ def self_check() -> int:
         target[f"knee.{side}"] = np.array([0.12 * s, -0.01, 0.47])
         target[f"ankle.{side}"] = np.array([0.15 * s, 0.0, 0.075])
     body_points = np.array([[-0.2, -0.1, 0.0], [0.2, 0.1, 1.734]])
-    result = fit(atlas, kinds, target, body_points)
+    # The default keeps bone lengths: every segment's stretch is exactly 1.
+    j = {}
+    for s, side in ((1, "L"), (-1, "R")):
+        j[f"hip.{side}"] = np.array([0.09 * s, 0.0, 0.88])
+        j[f"knee.{side}"] = np.array([0.1 * s, 0.0, 0.46])
+        j[f"ankle.{side}"] = np.array([0.1 * s, 0.0, 0.06])
+    _, kept, _ = deforms(atlas_rig.AtlasRig(joints=j), target)
+    if any(abs(v - 1.0) > 1e-12 for v in kept.values()):
+        failures.append(f"the default stretched a segment: {kept}")
+    result = fit(atlas, kinds, target, body_points, stretch_limbs=True)
     for row in result["joints"]:
         if row["joint"].split(".")[0] in ("knee", "ankle") and row["afterDistanceM"] > 0.004:
             failures.append(f"{row['joint']} off by {row['afterDistanceM']} m after the fit")

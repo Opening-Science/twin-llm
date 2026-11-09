@@ -80,7 +80,7 @@ export const fitArgs = (
   ...(options.renderDir
     ? ["--render-dir", options.renderDir, "--render-name", job.renderName]
     : []),
-  ...(options.stretch ? [] : ["--no-stretch"]),
+  ...(options.stretch ? ["--stretch"] : []),
 ];
 
 /**

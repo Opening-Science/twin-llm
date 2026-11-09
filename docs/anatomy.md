@@ -219,7 +219,7 @@ Blender is a build tool here, never part of the app. `scripts/blender/` holds Py
 ```bash
 bun run blender:self-check                 # both scripts on tiny synthetic meshes
 bun run blender:fit-atlas                  # every rigged demo body × atlas
-bun run blender:fit-atlas --body anny-adult-f --atlas hra-f --render-dir <dir> [--no-stretch]
+bun run blender:fit-atlas --body anny-adult-f --atlas hra-f --render-dir <dir> [--stretch]
 bun run blender:cleanup                    # the damaged-ANNY demo below
 bun run blender:cleanup --in <glb> --out-dir <dir> [--lods 0.5,0.25] [--voxel 0.01]
 ```
@@ -237,38 +237,41 @@ bun run blender:cleanup --in <glb> --out-dir <dir> [--lods 0.5,0.25] [--voxel 0.
 1. Scale to the body's height, feet on its floor, boxes centred: the app's demo fit ("before" below).
 2. Joints from the atlas's bones, split into loose parts (one per bone): hip and shoulder are spheres fitted to the femoral and humeral heads, knee is between the femur's lowest band and the tibia's highest, ankle between the lowest bands of tibia and fibula, elbow and wrist the same with humerus, radius and ulna (`twinblend/atlas_rig.py`). HRA has femur, tibia, fibula and patella in its knee meshes but no foot or arm bones, so its foot is a short synthetic segment from the ankle and its arms are not fitted: they move with the trunk.
 3. An armature on those joints, and weights for every vertex. Bones are rigid to their segment; organs (digestive, respiratory, metabolic, endocrine, reproductive, and HRA's unmapped groups) are rigid to the trunk. Muscles, vessels, nerves and connective tissue blend by distance to the nearest bones, each connected piece only between the segments it mostly lies along, so a thigh muscle never follows the hand beside it. The skin blends over every segment, counting a bone only when the line to it does not cross the skin again, then smoothed over its edges.
-4. Pose: the trunk moves sideways and forwards so the hip midpoints meet (never up or down). Each thigh and shin turns, and stretches along its own axis, so knee and ankle land on ANNY's (`upperleg01`, `lowerleg01`, `foot`); each foot follows its ankle without turning, so the sole stays level. With arm bones the upper arm and forearm do the same for elbow and wrist (`lowerarm01`, `wrist`) and the hand turns with the forearm. The pose is applied, and the joints are found again on the result: "after" measures the output file.
+4. Pose: the trunk moves sideways and forwards so the hip midpoints meet (never up or down). Each thigh and shin turns toward ANNY's knee and ankle (`lowerleg01`, `foot`) and keeps its length; each foot follows its ankle without turning, so the sole stays level. With arm bones the upper arm and forearm do the same toward elbow and wrist (`lowerarm01`, `wrist`) and the hand turns with the forearm. The pose is applied, and the joints are found again on the result: "after" measures the output file.
 
 Measured 2026-11-09 on the pinned files. Centimetres, left / right; "out" is side to side, positive when the atlas joint stands outside the body's; "up" is positive when it stands higher.
 
 | Body   | Atlas       | Joint | Before      | Out, up before             | After     | Out, up after            |
 | ------ | ----------- | ----- | ----------- | -------------------------- | --------- | ------------------------ |
-| Male   | BodyParts3D | hip   | 5.5 / 5.5   | −2.7 / −2.7, −3.4 / −3.4   | 4.4 / 4.4 | −2.8 / −2.8, −3.4 / −3.4 |
-| Male   | BodyParts3D | knee  | 10.7 / 10.7 | −9.2 / −9.2, −5.5 / −5.5   | 0.4 / 0.5 | −0.3 / −0.4, −0.2 / −0.2 |
-| Male   | BodyParts3D | ankle | 13.0 / 13.1 | −12.9 / −13.0, −0.4 / −0.5 | 0.3 / 0.2 | −0.2 / −0.1, −0.1 / −0.1 |
-| Male   | BodyParts3D | wrist | 3.5 / 3.4   | 0.7 / 0.8, 1.0 / 1.0       | 0.1 / 0.1 | 0.1 / 0.1, −0.1 / −0.1   |
-| Male   | HRA female  | hip   | 10.2 / 10.3 | −0.7 / −0.7, −9.1 / −9.1   | 9.2 / 9.2 | −0.9 / −0.9, −9.1 / −9.1 |
-| Male   | HRA female  | knee  | 8.6 / 8.6   | −2.9 / −2.9, −8.0 / −8.0   | 0.3 / 0.3 | −0.2 / −0.2, 0.0 / 0.0   |
-| Male   | HRA female  | ankle | 4.9 / 4.9   | −4.9 / −4.8, 0.2 / 0.2     | 0.2 / 0.2 | −0.1 / −0.1, −0.1 / −0.1 |
-| Male   | HRA male    | hip   | 6.2 / 6.4   | −2.7 / −2.7, −3.5 / −3.4   | 4.5 / 4.4 | −2.8 / −2.8, −3.5 / −3.4 |
-| Male   | HRA male    | knee  | 5.1 / 5.0   | −2.5 / −2.6, −4.2 / −4.1   | 0.5 / 0.5 | −0.5 / −0.4, −0.2 / −0.1 |
-| Male   | HRA male    | ankle | 4.7 / 4.4   | −0.1 / −0.1, 1.2 / 1.3     | 0.2 / 0.2 | 0.1 / 0.1, −0.1 / −0.1   |
-| Female | BodyParts3D | hip   | 2.9 / 2.9   | −1.5 / −1.5, −1.6 / −1.6   | 2.3 / 2.3 | −1.6 / −1.6, −1.7 / −1.7 |
-| Female | BodyParts3D | knee  | 7.6 / 7.6   | −5.7 / −5.7, −4.8 / −4.8   | 0.2 / 0.2 | −0.1 / −0.1, −0.1 / −0.1 |
-| Female | BodyParts3D | ankle | 8.9 / 8.9   | −8.8 / −8.9, −0.8 / −0.9   | 0.2 / 0.1 | −0.2 / −0.1, −0.1 / −0.1 |
-| Female | BodyParts3D | wrist | 5.5 / 5.5   | 0.5 / 0.6, −0.2 / −0.2     | 0.0 / 0.0 | 0.0 / 0.0, 0.0 / 0.0     |
-| Female | HRA female  | hip   | 7.5 / 7.7   | 0.4 / 0.4, −6.9 / −6.9     | 6.9 / 6.9 | 0.2 / 0.2, −6.9 / −6.9   |
-| Female | HRA female  | knee  | 7.5 / 7.4   | 0.1 / 0.1, −7.2 / −7.2     | 0.2 / 0.2 | 0.1 / 0.1, 0.1 / 0.1     |
-| Female | HRA female  | ankle | 1.6 / 1.4   | −1.4 / −1.4, −0.3 / −0.3   | 0.1 / 0.1 | −0.1 / −0.1, −0.1 / −0.1 |
-| Female | HRA male    | hip   | 3.6 / 3.8   | −1.5 / −1.5, −1.8 / −1.7   | 2.4 / 2.3 | −1.6 / −1.6, −1.8 / −1.7 |
-| Female | HRA male    | knee  | 4.5 / 4.2   | 0.5 / 0.4, −3.6 / −3.5     | 0.2 / 0.2 | −0.2 / −0.2, 0.0 / 0.0   |
-| Female | HRA male    | ankle | 6.2 / 5.9   | 3.0 / 3.0, 0.7 / 0.8       | 0.2 / 0.2 | 0.1 / 0.1, 0.0 / 0.0     |
+| Male   | BodyParts3D | hip   | 5.5 / 5.5   | −2.7 / −2.7, −3.4 / −3.4   | 4.3 / 4.3 | −2.7 / −2.7, −3.4 / −3.4 |
+| Male   | BodyParts3D | knee  | 10.7 / 10.7 | −9.2 / −9.2, −5.5 / −5.5   | 4.8 / 4.8 | 0.4 / 0.3, −4.8 / −4.8   |
+| Male   | BodyParts3D | ankle | 13.0 / 13.1 | −12.9 / −13.0, −0.4 / −0.5 | 0.7 / 0.7 | −0.2 / −0.2, 0.7 / 0.7   |
+| Male   | BodyParts3D | elbow | 2.4 / 2.4   | −1.9 / −1.9, −0.9 / −0.9   | 0.5 / 0.5 | 0.0 / 0.0, −0.5 / −0.5   |
+| Male   | BodyParts3D | wrist | 3.5 / 3.4   | 0.7 / 0.8, 1.0 / 1.0       | 2.4 / 2.3 | −0.1 / −0.1, 2.2 / 2.2   |
+| Male   | HRA female  | hip   | 10.2 / 10.3 | −0.7 / −0.7, −9.1 / −9.1   | 9.1 / 9.1 | −0.7 / −0.7, −9.1 / −9.1 |
+| Male   | HRA female  | knee  | 8.6 / 8.6   | −2.9 / −2.9, −8.0 / −8.0   | 7.5 / 7.6 | 0.9 / 0.9, −7.5 / −7.5   |
+| Male   | HRA female  | ankle | 4.9 / 4.9   | −4.9 / −4.8, 0.2 / 0.2     | 1.0 / 0.9 | −0.2 / −0.2, 1.0 / 0.9   |
+| Male   | HRA male    | hip   | 6.2 / 6.4   | −2.7 / −2.7, −3.5 / −3.4   | 4.4 / 4.3 | −2.7 / −2.7, −3.5 / −3.4 |
+| Male   | HRA male    | knee  | 5.1 / 5.0   | −2.5 / −2.5, −4.2 / −4.1   | 3.8 / 3.7 | 0.1 / 0.2, −3.8 / −3.7   |
+| Male   | HRA male    | ankle | 4.7 / 4.4   | −0.1 / −0.1, 1.2 / 1.3     | 1.1 / 1.2 | 0.1 / 0.1, 1.1 / 1.2     |
+| Female | BodyParts3D | hip   | 2.9 / 2.9   | −1.5 / −1.5, −1.6 / −1.6   | 2.2 / 2.2 | −1.5 / −1.5, −1.6 / −1.6 |
+| Female | BodyParts3D | knee  | 7.6 / 7.6   | −5.7 / −5.7, −4.8 / −4.8   | 4.6 / 4.5 | 0.3 / 0.3, −4.5 / −4.5   |
+| Female | BodyParts3D | ankle | 8.9 / 8.9   | −8.8 / −8.9, −0.8 / −0.9   | 0.3 / 0.2 | −0.1 / −0.1, −0.2 / −0.2 |
+| Female | BodyParts3D | elbow | 3.5 / 3.5   | −1.0 / −1.0, 1.8 / 1.8     | 2.2 / 2.2 | −0.5 / −0.5, 2.1 / 2.1   |
+| Female | BodyParts3D | wrist | 5.5 / 5.5   | 0.5 / 0.6, −0.2 / −0.2     | 0.8 / 0.7 | −0.1 / −0.1, 0.7 / 0.7   |
+| Female | HRA female  | hip   | 7.5 / 7.7   | 0.4 / 0.4, −6.9 / −6.9     | 7.0 / 6.9 | 0.4 / 0.4, −6.9 / −6.9   |
+| Female | HRA female  | knee  | 7.5 / 7.4   | 0.1 / 0.1, −7.2 / −7.2     | 7.0 / 7.0 | 0.5 / 0.6, −7.0 / −7.0   |
+| Female | HRA female  | ankle | 1.6 / 1.4   | −1.4 / −1.4, −0.3 / −0.3   | 0.2 / 0.2 | −0.1 / −0.1, 0.1 / 0.1   |
+| Female | HRA male    | hip   | 3.6 / 3.8   | −1.5 / −1.5, −1.8 / −1.7   | 2.3 / 2.2 | −1.5 / −1.5, −1.8 / −1.7 |
+| Female | HRA male    | knee  | 4.5 / 4.2   | 0.5 / 0.4, −3.6 / −3.5     | 3.6 / 3.5 | 0.2 / 0.2, −3.6 / −3.5   |
+| Female | HRA male    | ankle | 6.2 / 5.9   | 3.0 / 3.0, 0.7 / 0.8       | 0.3 / 0.3 | 0.1 / 0.1, 0.2 / 0.2     |
 
-Elbows land within 0.1 cm. Shoulders are not moved: 2.6 cm off on the male body, and on the female body 4.3 cm, up from 3.3, because the trunk's shift to the hips carries them.
+Elbows and wrists (BodyParts3D only) land within 2.4 cm; shoulders are not moved: 2.6 cm off on the male body, and on the female body 4.3 cm, up from 3.3, because the trunk's shift to the hips carries them.
 
-- Every knee and ankle lands within 0.5 cm. Hips are not moved, because the pelvis is rigid with the trunk: the atlases' femoral heads sit 1.6 to 9.1 cm below ANNY's `upperleg01` heads.
-- The cost is stretch: ANNY's knee sits 4 to 8 cm higher up the leg than the atlases' knee joint line, so thighs get 8 to 17 % shorter and shins 9 to 22 % longer (HRA female most). Forearms change by −6 to +11 %. Each report lists its factors.
-- `--no-stretch` keeps every bone's length and only turns it. The ankles then still land within 0.7 cm (the legs are about as long as ANNY's overall), and only the knees sit low: 4.8 cm on BodyParts3D male, 7.0 cm on HRA female. Which is better for the viewer is open: rigid bones with the knee a little low, or a knee on ANNY's with bones out of proportion.
+- Ankles land within 0.2 to 1.2 cm (the 1.0 to 1.2 cm are the HRA atlases on the male body): each leg turns toward ANNY's ankle, and the atlases' legs are about as long as ANNY's overall.
+- Knees sit 3.5 to 7.6 cm low, almost all vertically. Bones keep their length, and ANNY's rig puts the knee (`lowerleg01`) higher up the leg than the atlases' knee joint line, so a rigid thigh aimed at ANNY's knee falls short of it. Making it meet would mean shortening each thigh and lengthening each shin, which would put the bones out of proportion; the default does not.
+- Hips are not moved, because the pelvis is rigid with the trunk: the atlases' femoral heads sit 1.6 to 9.1 cm below ANNY's `upperleg01` heads.
+- `--stretch` (opt-in) also scales each limb segment along its own axis so knee and ankle land on ANNY's: every knee and ankle then lands within 0.5 cm, with thighs 8 to 17 % shorter and shins 9 to 22 % longer (HRA female most) and forearms changed by −6 to +11 %. Each report lists its factors (`stretch`, all 1 by default).
 - `--render-dir` writes front renders (1440 × 1080, Eevee) before and after per pair: bones ivory, vessels red, ANNY as blue glass, ANNY's joints green, the atlas's magenta.
 
 The app still loads the pinned atlases with #518's stance; the fitted files are not wired in. Wiring them in would need: a `fitted` variant per body and atlas in the anatomy store and routes, pinned by the SHA-256 in the report (or rebuilt with a fixed Blender and checked); placing the atlas with the body's own transform instead of `fitAtlasToScan`; no stance (`DEMO_STANCE` 0°) while it shows, since it is fitted to the bind pose; credits saying the atlas was refitted; and smaller files: Blender writes float positions without `KHR_mesh_quantization`, so the fitted files are 12 to 24 MB against 8 to 15 MB pinned.
