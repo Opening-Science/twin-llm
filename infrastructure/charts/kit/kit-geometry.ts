@@ -867,3 +867,26 @@ export const ringPartAt = (
   }
   return parts.length - 1;
 };
+
+/**
+ * Up and Down on a streak grid: the same weekday a week earlier or later,
+ * found by row and column so a missing day never shifts the step. From no
+ * focus, Down lands on the first day and Up on the last; past the first or
+ * last week the focus stays. Other keys are left to `stepKey`.
+ */
+export const weekStep = (
+  key: string,
+  current: number | null,
+  cells: readonly Readonly<{ row: number; col: number }>[],
+): KeyStep | null => {
+  if (key !== "ArrowUp" && key !== "ArrowDown") return null;
+  if (cells.length === 0) return { kind: "ignore" };
+  if (current === null) {
+    return { kind: "move", index: key === "ArrowDown" ? 0 : cells.length - 1 };
+  }
+  const here = cells[current];
+  if (!here) return { kind: "ignore" };
+  const row = here.row + (key === "ArrowDown" ? 1 : -1);
+  const target = cells.findIndex((c) => c.row === row && c.col === here.col);
+  return { kind: "move", index: target < 0 ? current : target };
+};

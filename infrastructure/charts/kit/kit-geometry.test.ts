@@ -20,6 +20,7 @@ import {
   slotIndex,
   spacedTicks,
   stepKey,
+  weekStep,
   streakGrid,
   weekdayLetters,
 } from "./kit-geometry";
@@ -535,5 +536,46 @@ describe("null band", () => {
     expect(out.observedX).toBe(208);
     expect(out.mean).toBeGreaterThan(out.low);
     expect(out.mean).toBeLessThan(out.high);
+  });
+});
+
+describe("week step", () => {
+  // 28 days from Monday 2 Nov 2026: four full weeks.
+  const days = Array.from({ length: 28 }, (_, i) => ({
+    date: new Date(Date.UTC(2026, 10, 2 + i)).toISOString().slice(0, 10),
+    done: true,
+  }));
+  const cells = streakGrid(days, "x", 1);
+
+  test("down and up move a week on the same weekday", () => {
+    expect(weekStep("ArrowDown", 2, cells)).toEqual({ kind: "move", index: 9 });
+    expect(weekStep("ArrowUp", 9, cells)).toEqual({ kind: "move", index: 2 });
+  });
+
+  test("past the first or last week the focus stays", () => {
+    expect(weekStep("ArrowUp", 2, cells)).toEqual({ kind: "move", index: 2 });
+    expect(weekStep("ArrowDown", 25, cells)).toEqual({ kind: "move", index: 25 });
+  });
+
+  test("a missing day does not shift the step", () => {
+    const gappy = streakGrid(
+      days.filter((_, i) => i !== 4),
+      "x",
+      1,
+    );
+    // Wednesday 4 Nov (index 2) down to Wednesday 11 Nov, now index 8.
+    expect(weekStep("ArrowDown", 2, gappy)).toEqual({ kind: "move", index: 8 });
+    // Friday 6 Nov is missing: from Friday 13 Nov up, the focus stays.
+    const friday13 = gappy.findIndex((c) => c.date === "2026-11-13");
+    expect(weekStep("ArrowUp", friday13, gappy)).toEqual({
+      kind: "move",
+      index: friday13,
+    });
+  });
+
+  test("from no focus, and other keys left to stepKey", () => {
+    expect(weekStep("ArrowDown", null, cells)).toEqual({ kind: "move", index: 0 });
+    expect(weekStep("ArrowUp", null, cells)).toEqual({ kind: "move", index: 27 });
+    expect(weekStep("ArrowRight", 2, cells)).toBeNull();
   });
 });

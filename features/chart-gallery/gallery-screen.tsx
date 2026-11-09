@@ -276,7 +276,7 @@ export const GalleryScreen = () => (
 
     <Row
       name="C07 Streak grid"
-      note="Done days filled, other days on the track, today outlined. Try: click or tap a mark (again to clear), arrow keys, Escape."
+      note="Done days filled, other days on the track, today outlined. Try: click or tap a day (again to clear), Left and Right for a day, Up and Down for a week, Escape."
       render={(state) => (
         <InsightCard
           category="activity"
