@@ -85,6 +85,7 @@ const OUTBOUND: Readonly<Record<string, Entry>> = {
   "infrastructure/open-twin-adapters/oura-bundle.ts": { exempt: TYPES_ONLY },
   "features/oura/summary.ts": { exempt: TYPES_ONLY },
   "features/oura/fixtures/synthetic-sync-data.ts": { exempt: TYPES_ONLY },
+  "features/google-health/fixtures/synthetic-sync-responses.ts": { exempt: TYPES_ONLY },
   "app/api/whoop/authorize/route.ts": {
     exempt:
       "builds the authorize redirect; the browser goes to Whoop, the server sends nothing",

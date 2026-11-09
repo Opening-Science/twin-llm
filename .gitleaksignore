@@ -3,3 +3,5 @@
 1662ed275a5768513060e311c345c7c16638eaaf:infrastructure/personal-columns.test.ts:generic-api-key:19
 # #476: "synthetic-wearer-2", a synthetic subject key in a test, moved to a constant in 1bafaca.
 03c0cf6d2f3d56b077d9571e712465f29a976fe4:features/wearables/aggregate-bundles.test.ts:generic-api-key:126
+# #523: "synthetic-wearer-1", a synthetic subject key in a test, moved to a constant.
+831f6ef0c696bc3da5216f9309279bc2ad659190:features/wearables/detail-route.test.ts:generic-api-key:16

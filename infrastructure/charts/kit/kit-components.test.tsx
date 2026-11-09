@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 import {
   ComparisonPair,
+  DeviceList,
   Consistency,
   CumulativeDay,
   Hypnogram,
@@ -18,6 +19,7 @@ import {
   WeeklyBars,
   dimmed,
   hoursMinutes,
+  detailLine,
   radar,
   radarHeight,
   type ChartState,
@@ -739,5 +741,223 @@ describe("text never fades below AA", () => {
   test("marks still step back", () => {
     expect(html(focused.weekly)).toContain('fill-opacity="0.4"');
     expect(html(focused.radar)).toContain('fill-opacity="0.4"');
+  });
+});
+
+describe("device list", () => {
+  const logo = {
+    src: "/brand/vendors/example.svg",
+    alt: "Example",
+    width: 120,
+    height: 30,
+  };
+
+  test("rows with names, details, status words and a link with a chevron", () => {
+    const out = html(
+      <DeviceList
+        category="vitals"
+        title="Devices"
+        rows={[
+          {
+            name: "Ring",
+            detail: "Synced 4 minutes ago",
+            status: { word: "Linked", tone: "ok" },
+            href: "/wearables",
+          },
+          { name: "Band", status: { word: "Not synced", tone: "warn" } },
+        ]}
+      />,
+    );
+    expect(out).toContain("Devices");
+    expect(out).toContain("Synced 4 minutes ago");
+    expect(out).toContain("Linked");
+    expect(out).toContain("Not synced");
+    expect(out).toContain('href="/wearables"');
+    expect(out.match(/<svg/g)).toHaveLength(1);
+  });
+
+  test("no logo anywhere, no tile column", () => {
+    const out = html(
+      <DeviceList category="vitals" title="Devices" rows={[{ name: "Ring" }]} />,
+    );
+    expect(out).not.toContain("<img");
+    expect(out).not.toContain("bg-muted size-10");
+  });
+
+  test("a logo is the vendor's file at 30px, in its own proportions, on a tile", () => {
+    const out = html(
+      <DeviceList
+        category="vitals"
+        title="Devices"
+        rows={[{ name: "Ring", logo }, { name: "Band" }]}
+      />,
+    );
+    expect(out.match(/<img/g)).toHaveLength(1);
+    expect(out).toContain('alt="Example"');
+    expect(out).toContain('src="/brand/vendors/example.svg"');
+    expect(out).toContain('width="120"');
+    expect(out).toContain('height="30"');
+    // Every row leads with a tile, logo or not, so the names line up.
+    expect(out.match(/bg-muted flex h-11/g)).toHaveLength(2);
+  });
+
+  test("the vendor's attribution leads the detail line, with its name", () => {
+    const row = {
+      name: "WHOOP",
+      detail: "synced 2 hours ago",
+      logo: { ...logo, attribution: "Data by" },
+    };
+    expect(detailLine(row)).toBe("Data by WHOOP · synced 2 hours ago");
+    expect(detailLine({ name: "Oura", detail: "synced 4 min ago" })).toBe(
+      "synced 4 min ago",
+    );
+    expect(detailLine({ name: "Oura" })).toBeNull();
+    const out = html(<DeviceList category="vitals" title="Devices" rows={[row]} />);
+    expect(out).toContain("Data by WHOOP · synced 2 hours ago");
+  });
+
+  test("the detail line wraps rather than cutting off", () => {
+    const out = html(
+      <DeviceList
+        category="vitals"
+        title="Devices"
+        rows={[{ name: "Ring", detail: "a long detail line" }]}
+      />,
+    );
+    expect(out).toMatch(
+      /text-muted-foreground block text-xs leading-snug">a long detail line/,
+    );
+  });
+
+  test("a dark version shows per theme", () => {
+    const out = html(
+      <DeviceList
+        category="vitals"
+        title="Devices"
+        rows={[
+          { name: "Ring", logo: { ...logo, darkSrc: "/brand/vendors/example-dark.svg" } },
+        ]}
+      />,
+    );
+    expect(out.match(/<img/g)).toHaveLength(2);
+    expect(out).toContain("example-dark.svg");
+  });
+
+  test("loading shows row shapes, empty says what is needed", () => {
+    const loading = html(
+      <DeviceList
+        category="vitals"
+        state="loading"
+        title="Devices"
+        rows={[{ name: "Ring" }]}
+      />,
+    );
+    expect(loading).toContain('aria-busy="true"');
+    expect(loading).not.toContain("Ring");
+    const empty = html(
+      <DeviceList
+        category="vitals"
+        state="empty"
+        title="Devices"
+        rows={[]}
+        emptyNote="No device linked yet"
+      />,
+    );
+    expect(empty).toContain("No device linked yet");
+  });
+});
+
+describe("research figure options", () => {
+  test("rows of one series share a colour, and a legend names each series", () => {
+    const out = html(
+      <ResearchFigure
+        kind="estimates"
+        category="vitals"
+        estimates={[
+          { label: "General", estimate: 0.6, series: "qwen3:8b" },
+          { label: "General ", estimate: 0.5, series: "qwen3:4b" },
+          { label: "Heart", estimate: 0.7, series: "qwen3:8b" },
+        ]}
+      />,
+    );
+    expect(out).toContain("qwen3:8b");
+    expect(out).toContain("qwen3:4b");
+    // Two 8b rows in chart-1, one 4b row in chart-2.
+    expect(out.match(/<g class="text-chart-1">/g)).toHaveLength(2);
+    expect(out.match(/<g class="text-chart-2">/g)).toHaveLength(1);
+  });
+
+  test("a log axis reads as ratios", () => {
+    const out = html(
+      <ResearchFigure
+        kind="estimates"
+        category="vitals"
+        scale="log"
+        estimates={[{ label: "Within person", estimate: 3.09, low: 2.07, high: 4.63 }]}
+        reference={{ value: 1, label: "1 = no difference" }}
+      />,
+    );
+    for (const tick of [">1<", ">2<", ">4<", ">8<"]) expect(out).toContain(tick);
+    expect(out).not.toContain(">1.0<");
+  });
+
+  test("an expected value is a tick on its row, named in the legend", () => {
+    const out = html(
+      <ResearchFigure
+        kind="estimates"
+        category="vitals"
+        estimates={[{ label: "Rule change", estimate: 3.95, expected: 3.93 }]}
+      />,
+    );
+    expect(out).toContain("Expected");
+    expect(out).toMatch(/stroke-chart-reference" stroke-width="2"/);
+  });
+
+  test("the reference label carries the card outline", () => {
+    const out = html(
+      <ResearchFigure
+        kind="estimates"
+        category="vitals"
+        estimates={[{ label: "A", estimate: 2 }]}
+        reference={{ value: 1, label: "1 = no difference" }}
+      />,
+    );
+    expect(out).toMatch(/stroke-card"[^>]*paint-order="stroke"[^>]*>1 = no difference/);
+  });
+
+  test("a null from its summary is a band with its mean and words", () => {
+    const out = html(
+      <ResearchFigure
+        kind="null"
+        category="vitals"
+        summary={{ mean: 0.5, low: 0.46, high: 0.54, runs: 200 }}
+        nullLabel="Shuffled, 200 runs"
+        observed={0.61}
+        observedLabel="AUC"
+      />,
+    );
+    expect(out).toContain("Shuffled, 200 runs");
+    expect(out).toContain("AUC 0.61");
+    expect(out).toContain('fill-opacity="0.35"');
+  });
+
+  test("a series colour replaces the category's on the figure and its card", () => {
+    const figure = html(
+      <ResearchFigure
+        kind="estimates"
+        category="vitals"
+        series="chart-3"
+        estimates={[
+          { label: "A", estimate: 1 },
+          { label: "B", estimate: 2 },
+        ]}
+      />,
+    );
+    expect(figure.match(/<g class="text-chart-3">/g)).toHaveLength(2);
+    const card = html(
+      <InsightCard category="vitals" series="chart-4" label="P2" sentence="x" />,
+    );
+    expect(card).toContain("text-chart-4");
+    expect(card).not.toContain("text-chart-1");
   });
 });

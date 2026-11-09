@@ -1,7 +1,7 @@
 import { cn } from "@/infrastructure/ui";
 import { SegmentedControl } from "@/infrastructure/ui-kit/segmented-control";
 
-import { categoryTextClass } from "../category-token";
+import { categoryTextClass, tokenTextClass } from "../category-token";
 import type { ChartRange, InsightCardProps } from "./types";
 
 const RANGE_WORD: Readonly<Record<ChartRange, string>> = {
@@ -21,6 +21,7 @@ const RANGE_WORD: Readonly<Record<ChartRange, string>> = {
  */
 export const InsightCard = ({
   category,
+  series,
   state = "default",
   label,
   sentence,
@@ -39,7 +40,7 @@ export const InsightCard = ({
         aria-hidden="true"
         className={cn(
           "inline-block size-2.5 rounded-full bg-current",
-          categoryTextClass(category),
+          series ? tokenTextClass(series) : categoryTextClass(category),
         )}
       />
       <h3 className="text-foreground font-sans">{label}</h3>

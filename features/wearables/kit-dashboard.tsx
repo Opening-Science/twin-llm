@@ -5,6 +5,8 @@ import { useState } from "react";
 import {
   ComparisonPair,
   Consistency,
+  CumulativeDay,
+  Hypnogram,
   InsightCard,
   MonthComparison,
   Radar,
@@ -101,6 +103,20 @@ const Chart = ({ card }: { readonly card: KitCard }) => {
       );
     case "range":
       return <RangeBars {...common} buckets={card.buckets} axis={card.axis} />;
+    case "cumulative":
+      return (
+        <CumulativeDay
+          {...common}
+          today={card.today}
+          average={card.average}
+          now={card.now}
+          axis={card.axis}
+        />
+      );
+    case "hypnogram":
+      return (
+        <Hypnogram {...common} spans={card.spans} labels={card.labels} axis={card.axis} />
+      );
     case "radar":
       return null;
   }
@@ -112,6 +128,8 @@ const INTERACTIVE: ReadonlySet<KitCard["chart"]> = new Set([
   "consistency",
   "weekly",
   "range",
+  "cumulative",
+  "hypnogram",
 ]);
 
 const Card = ({ card }: { readonly card: KitCard }) =>

@@ -14,6 +14,7 @@ import {
   type FieldCipher,
   newRowId,
   openJson,
+  openNullableJson,
   sealJson,
   sealNullableJson,
 } from "@/infrastructure/field-cipher";
@@ -206,6 +207,30 @@ export const getLatestWhoopSummary = async (
     snap.id,
     snap.summary,
   ) as WhoopSummary;
+};
+
+/**
+ * The FHIR bundle of the latest snapshot, opened, for the detail route only:
+ * it never leaves the server, and the route sends a few aggregates of it.
+ */
+export const getLatestWhoopBundle = async (
+  userId: string,
+  ports?: { readonly cipher?: (userId: string) => Promise<FieldCipher> },
+): Promise<unknown> => {
+  const snap = await database().whoopSnapshot.findFirst({
+    where: { userId },
+    orderBy: { syncedAt: "desc" },
+    select: { id: true, fhirBundle: true },
+  });
+
+  if (!snap) return null;
+  return openNullableJson(
+    await (ports?.cipher ?? cipherForUser)(userId),
+    "whoop_snapshots",
+    "fhirBundle",
+    snap.id,
+    snap.fhirBundle,
+  );
 };
 
 export const getWhoopConnectionStatus = async (userId: string) => {

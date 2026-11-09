@@ -12,10 +12,12 @@
 
 import type { ReactNode } from "react";
 
-import type { Category } from "../category-token";
+import type { Category, SeriesToken } from "../category-token";
 import type {
+  AxisScale,
   DaySample,
   Estimate,
+  NullSummary,
   RadarAxis,
   Range,
   RingPart,
@@ -63,6 +65,8 @@ export type ChartRange = "day" | "week" | "month";
 /** C03: label row, one sentence, a hairline, one body. */
 export type InsightCardProps = Base &
   Readonly<{
+    /** A study series colour in place of the category's: a study is not a wearable category. */
+    series?: SeriesToken;
     /** A noun, optionally scoped: "Sleep: Stages". */
     label: string;
     /** The one insight sentence; also what a screen reader reads for the chart. */
@@ -177,13 +181,20 @@ export type ConsistencyProps = Base &
 /** R1: a research figure. */
 export type ResearchFigureProps = Base &
   Interactive &
+  Readonly<{
+    /** A study series colour in place of the category's; rows with their own `series` keep theirs. */
+    series?: SeriesToken;
+  }> &
   (
     | Readonly<{
         kind: "estimates";
+        /** Rows may carry `series` (shared colour, named in a legend) and `expected` (a grey tick). */
         estimates: readonly Estimate[];
         /** A null, control or expected value, drawn as a grey rule. */
         reference?: Readonly<{ value: number; label: string }>;
         domain?: readonly [number, number];
+        /** "log" for ratios: ticks at 0.5, 1, 2, 4, 8. */
+        scale?: AxisScale;
       }>
     | Readonly<{
         kind: "pairs";
@@ -195,7 +206,12 @@ export type ResearchFigureProps = Base &
       }>
     | Readonly<{
         kind: "null";
-        draws: readonly number[];
+        /** The null's draws, drawn as a histogram… */
+        draws?: readonly number[];
+        /** …or its summary, drawn as a band with its mean. */
+        summary?: NullSummary;
+        /** Words under the null's mean when given as a summary, e.g. "Shuffled, 200 runs". */
+        nullLabel?: string;
         observed: number;
         observedLabel: string;
         format?: (value: number) => string;
@@ -214,3 +230,42 @@ export type LabResultCardProps = Base &
 
 /** C18: three to about eight axes, each on its own 0 to max; today against the reference. */
 export type RadarProps = Base & Interactive & Readonly<{ axes: readonly RadarAxis[] }>;
+
+/**
+ * A vendor's own logo file, shown unmodified: never recoloured, cropped or
+ * redrawn. `width` and `height` are the file's own proportions; the row
+ * draws it `size` pixels high (30 by default) centred on its tile. `darkSrc` is the vendor's version for dark
+ * backgrounds, when the guidelines give one. `attribution` is the word
+ * the vendor asks for with its data, such as "Data by"; the row leads its
+ * detail line with it and the vendor's name.
+ */
+export type VendorLogo = Readonly<{
+  src: string;
+  darkSrc?: string;
+  alt: string;
+  width: number;
+  height: number;
+  size?: number;
+  attribution?: string;
+}>;
+
+/** One device or source in a C15 list. */
+export type DeviceRow = Readonly<{
+  name: string;
+  /** A short line under the name, e.g. "Synced 4 minutes ago". */
+  detail?: string;
+  /** A word on the right; colour follows the word, never replaces it. */
+  status?: Readonly<{ word: string; tone: "ok" | "warn" | "neutral" }>;
+  logo?: VendorLogo;
+  /** Makes the row a link with a chevron. */
+  href?: string;
+}>;
+
+/** C15: a titled group of rows, one per device or source. */
+export type DeviceListProps = Base &
+  Readonly<{
+    title: string;
+    rows: readonly DeviceRow[];
+    /** Shown in place of the rows when state is empty, e.g. "No device linked yet". */
+    emptyNote?: string;
+  }>;

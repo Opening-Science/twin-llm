@@ -263,6 +263,18 @@ export const formatZonedMoment = (
   }
 };
 
+/**
+ * A time of day as `23:48`, from minutes after midnight. Past midnight wraps
+ * (1,500 reads `01:00`), so a night's clock can be counted from the evening.
+ */
+export const formatClock = (minutes: number | null | undefined): string => {
+  if (minutes === null || minutes === undefined || !Number.isFinite(minutes)) {
+    return EMPTY_VALUE;
+  }
+  const total = ((Math.round(minutes) % 1440) + 1440) % 1440;
+  return `${pad2(Math.floor(total / 60))}:${pad2(total % 60)}`;
+};
+
 const MS_PER_HOUR = 3_600_000;
 
 /** `just now`, `5 h ago`, `3 d ago`. Future timestamps (clock skew) read "just now". */

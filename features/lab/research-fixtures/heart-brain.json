@@ -1,0 +1,78 @@
+{
+  "generatedAt": "2026-10-29T23:45:16.952Z",
+  "study": {
+    "rules": [
+      {
+        "id": "af-stroke",
+        "label": "AF then stroke",
+        "planted": "direct",
+        "source": "Framingham stroke10Year adds AF points from age 55",
+        "result": {
+          "exposed": {
+            "events": 90,
+            "personYears": 15748.39972621492,
+            "per100": 0.5714866371481874,
+            "ci": {
+              "low": 0.4595427433216361,
+              "high": 0.702454101452344
+            }
+          },
+          "controls": {
+            "events": 141,
+            "personYears": 62689.43463381246,
+            "per100": 0.22491828299875846,
+            "ci": {
+              "low": 0.18932671472571366,
+              "high": 0.2652567042829227
+            }
+          },
+          "ratio": {
+            "ratio": 2.540863417276496,
+            "ci": {
+              "low": 1.9504620844291192,
+              "high": 3.3099781619921087
+            }
+          },
+          "exposedPeople": 2919,
+          "controlPeople": 11676,
+          "shortOfControls": 0
+        },
+        "ratio": {
+          "ratio": 2.540863417276496,
+          "ci": {
+            "low": 1.9504620844291192,
+            "high": 3.3099781619921087
+          }
+        },
+        "recovered": "raised",
+        "agreement": "recovered"
+      },
+      {
+        "id": "anticoagulant-stroke",
+        "label": "Oral anticoagulant after AF, then stroke",
+        "planted": "none",
+        "source": "no calculator reads a medication",
+        "result": null,
+        "ratio": null,
+        "recovered": "too few events",
+        "agreement": "undecided"
+      }
+    ],
+    "shuffled": {
+      "observedAfFirstShare": 0.912,
+      "afFirstShare": {
+        "mean": 0.9071999999999999,
+        "low": 0.864,
+        "high": 0.96,
+        "runs": 50
+      },
+      "observedRatio": 2.540863417276496,
+      "ratio": {
+        "mean": 2.3919549747233635,
+        "low": 2.0443953567950386,
+        "high": 2.7781390831577037,
+        "runs": 50
+      }
+    }
+  }
+}

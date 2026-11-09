@@ -12,8 +12,9 @@ import { mergePersonPatients } from "./person-subject";
  * with each connector's identifier.
  *
  * Nothing on screen reads this yet. The app combines Oura and WHOOP only as
- * summary keys (`latestVitals`, first source in a fixed order), and the stored
- * bundles are never read back.
+ * summary keys (`latestVitals`, first source in a fixed order). The stored
+ * bundles are read back only by the wearables detail route, one source at a
+ * time.
  */
 export const aggregateWearableBundles = (
   input: Readonly<{

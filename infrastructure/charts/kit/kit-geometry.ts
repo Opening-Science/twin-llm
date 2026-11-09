@@ -430,6 +430,10 @@ export type Estimate = Readonly<{
   high?: number | null;
   /** What the readout says when this row is focused. */
   readout?: string;
+  /** A group this row belongs to, e.g. "qwen3:4b"; rows of one series share a colour. */
+  series?: string;
+  /** An expected value for this row, drawn as a grey tick on it. */
+  expected?: number | null;
 }>;
 
 export type EstimateRow = Readonly<{
@@ -437,7 +441,10 @@ export type EstimateRow = Readonly<{
   x: number;
   low: number | null;
   high: number | null;
+  expected: number | null;
   y: number;
+  /** Index into `series`, or null for a row without one. */
+  series: number | null;
 }>;
 
 export type EstimateRows = Readonly<{
@@ -445,42 +452,82 @@ export type EstimateRows = Readonly<{
   ticks: readonly Readonly<{ value: number; x: number }>[];
   /** Where the reference (a null, a control, an expected value) sits. */
   referenceX: number | null;
+  /** The distinct series keys, in the order rows first name them. */
+  series: readonly string[];
 }>;
+
+export type AxisScale = "linear" | "log";
+
+/**
+ * Even ticks for a ratio on a log axis: powers of two that cover [min, max],
+ * such as 0.5, 1, 2, 4, 8. Values at or below zero have no place on it.
+ */
+export const log2Ticks = (min: number, max: number): readonly number[] => {
+  if (!(min > 0) || !(max > 0)) return [1];
+  const low = Math.floor(Math.log2(Math.min(min, max)));
+  const high = Math.ceil(Math.log2(Math.max(min, max)));
+  const top = high === low ? low + 1 : high;
+  return Array.from({ length: top - low + 1 }, (_, i) => 2 ** (low + i));
+};
 
 /**
  * Point estimates with interval whiskers, one row each, on a shared axis
- * with round ticks that cover every interval and the reference.
+ * with ticks that cover every interval, expected value and the reference.
+ * On a log axis (for ratios) the ticks are powers of two and values at or
+ * below zero are left off. `pad` keeps a dot at either end clear of the
+ * plot's edge, so a value of 0 never sits on its row's label.
  */
 export const estimateRows = (
   estimates: readonly Estimate[],
   box: Box,
   reference: number | null = null,
   domain?: readonly [number, number],
+  scale: AxisScale = "linear",
+  pad = 0,
 ): EstimateRows => {
-  const values = estimates.flatMap((e) => [e.estimate, e.low, e.high]).filter(finite);
-  if (finite(reference)) values.push(reference);
-  const ticks = domain
-    ? niceTicks(domain[0], domain[1])
-    : values.length === 0
-      ? [0, 1]
-      : niceTicks(Math.min(...values), Math.max(...values));
+  const values = estimates
+    .flatMap((e) => [e.estimate, e.low, e.high, e.expected])
+    .filter(finite)
+    .filter((v) => scale === "linear" || v > 0);
+  if (finite(reference) && (scale === "linear" || reference > 0)) values.push(reference);
+  const lowest = domain?.[0] ?? Math.min(...values);
+  const highest = domain?.[1] ?? Math.max(...values);
+  const ticks =
+    scale === "log"
+      ? values.length === 0
+        ? [1, 2]
+        : log2Ticks(lowest, highest)
+      : domain
+        ? niceTicks(domain[0], domain[1])
+        : values.length === 0
+          ? [0, 1]
+          : niceTicks(lowest, highest);
   const lo = domain?.[0] ?? ticks[0]!;
   const hi = domain?.[1] ?? ticks.at(-1)!;
-  const span = hi - lo || 1;
-  const x = (v: number): number => ((v - lo) / span) * box.width;
+  const at = (v: number): number => (scale === "log" ? Math.log2(v) : v);
+  const span = at(hi) - at(lo) || 1;
+  const inner = Math.max(1, box.width - 2 * pad);
+  const place = (v: number | null | undefined): number | null =>
+    finite(v) && (scale === "linear" || v > 0)
+      ? pad + ((at(v) - at(lo)) / span) * inner
+      : null;
   const slot = estimates.length === 0 ? 0 : box.height / estimates.length;
+  const series = [...new Set(estimates.flatMap((e) => (e.series ? [e.series] : [])))];
   return {
     rows: estimates.map((e, i) => ({
       label: e.label,
-      x: x(e.estimate),
-      low: finite(e.low) ? x(e.low) : null,
-      high: finite(e.high) ? x(e.high) : null,
+      x: place(e.estimate) ?? pad,
+      low: place(e.low),
+      high: place(e.high),
+      expected: place(e.expected),
       y: i * slot + slot / 2,
+      series: e.series ? series.indexOf(e.series) : null,
     })),
     ticks: ticks
       .filter((t) => t >= lo && t <= hi)
-      .map((value) => ({ value, x: x(value) })),
-    referenceX: finite(reference) ? x(reference) : null,
+      .map((value) => ({ value, x: place(value)! })),
+    referenceX: place(reference),
+    series,
   };
 };
 
@@ -490,6 +537,45 @@ export type NullFigure = Readonly<{
   /** The share of the null at or beyond the observed value, 0 to 1. */
   atOrBeyond: number;
 }>;
+
+/** A null distribution given as its summary rather than its draws. */
+export type NullSummary = Readonly<{
+  mean: number;
+  low: number;
+  high: number;
+  runs: number;
+}>;
+
+export type NullBand = Readonly<{
+  /** The null's interval as a band, and its mean as a tick. */
+  low: number;
+  high: number;
+  mean: number;
+  observedX: number;
+}>;
+
+/**
+ * A null given as a summary: its interval and mean, and the observed
+ * value, on one axis covering all of them with a little room either side.
+ */
+export const nullBand = (
+  summary: NullSummary,
+  observed: number,
+  box: Box,
+  pad = 8,
+): NullBand => {
+  const lo = Math.min(summary.low, summary.mean, observed);
+  const hi = Math.max(summary.high, summary.mean, observed);
+  const span = hi - lo || 1;
+  const inner = Math.max(1, box.width - 2 * pad);
+  const x = (v: number): number => pad + ((v - lo) / span) * inner;
+  return {
+    low: x(Math.min(summary.low, summary.high)),
+    high: x(Math.max(summary.low, summary.high)),
+    mean: x(summary.mean),
+    observedX: x(observed),
+  };
+};
 
 /**
  * A null distribution as a histogram of `bins` bars, and the observed value

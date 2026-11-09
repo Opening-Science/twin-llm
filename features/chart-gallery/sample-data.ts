@@ -250,3 +250,28 @@ const radarRead = <T extends { label: string; value: number | null; display: str
 export const RADAR_SLEEP_READ = radarRead(RADAR_SLEEP);
 export const RADAR_HEART_READ = radarRead(RADAR_HEART);
 export const RADAR_READINESS_READ = radarRead(RADAR_READINESS);
+
+/* --- Research figure options, made up except where marked ------------------- */
+
+/** Made-up correctness by specialist, grouped by model. */
+export const SPECIALISTS_BY_MODEL = [
+  { label: "General", estimate: 0.71, low: 0.62, high: 0.79, series: "qwen3:8b" },
+  { label: "General", estimate: 0.68, low: 0.58, high: 0.76, series: "qwen3:4b" },
+  { label: "Heart rhythm", estimate: 0.83, low: 0.75, high: 0.89, series: "qwen3:8b" },
+  { label: "Heart rhythm", estimate: 0.8, low: 0.71, high: 0.87, series: "qwen3:4b" },
+  { label: "Brain", estimate: 0.64, low: 0.54, high: 0.73, series: "qwen3:8b" },
+  { label: "Brain", estimate: 0.59, low: 0.49, high: 0.68, series: "qwen3:4b" },
+].map((e) => ({ ...e, label: `${e.label} · ${e.series.replace("qwen3:", "")}` }));
+
+/** P3's published ratios (docs/research): wide intervals near 1 read better on a log axis. */
+export const P3_RATIOS = [
+  { label: "Within person", estimate: 3.09, low: 2.07, high: 4.63 },
+  { label: "Made-up wide", estimate: 1.6, low: 1.0, high: 7.2 },
+  { label: "Made-up near 1", estimate: 1.12, low: 0.9, high: 1.4 },
+];
+
+/** P3's rule change (docs/research): observed against the expected value on its row. */
+export const P3_RULE_CHANGE = [
+  { label: "Before the change", estimate: 1.91 },
+  { label: "After the change", estimate: 3.95, expected: 3.93 },
+];
