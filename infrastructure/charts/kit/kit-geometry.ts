@@ -109,12 +109,26 @@ export type BarsWithLine = Readonly<{
   centres: readonly number[];
   /** The average or target line's height; null when there is none. */
   lineY: number | null;
+  /** The usual range as a band, top and bottom; null when there is none. */
+  band: Readonly<{ top: number; bottom: number }> | null;
+}>;
+
+export type BarScale = Readonly<{
+  /**
+   * Where bars start, instead of zero: a bedtime near 23:00 is about 1,380
+   * minutes, so from zero a 30-minute shift is invisible. A bar at or below
+   * the floor is a 2px stub, so the day still shows.
+   */
+  floor?: number;
+  /** The usual range, drawn as a band behind the bars. */
+  band?: Readonly<{ low: number; high: number }>;
 }>;
 
 /**
- * Bars from zero up to each value, and a reference line (an average or a
- * target), on one scale so the line is never drawn off the chart. Bars are
- * at most `maxBar` wide and centred in their slot.
+ * Bars from the floor (zero unless given) up to each value, and a
+ * reference line (an average or a target) and a usual band, all on one
+ * scale so nothing is drawn off the chart. Bars are at most `maxBar` wide
+ * and centred in their slot.
  */
 export const barsWithLine = (
   values: readonly (number | null)[],
@@ -122,21 +136,45 @@ export const barsWithLine = (
   box: Box,
   maxBar = 28,
   gap = 6,
+  scale: BarScale = {},
 ): BarsWithLine => {
-  const present = values.filter(finite).filter((v) => v > 0);
-  const top = Math.max(...present, finite(line) ? line : 0, 0);
+  const floor = scale.floor ?? 0;
+  const band =
+    scale.band && finite(scale.band.low) && finite(scale.band.high) ? scale.band : null;
+  const present = values
+    .filter(finite)
+    .filter((v) => (scale.floor === undefined ? v > 0 : true));
+  const top = Math.max(
+    ...present,
+    finite(line) ? line : floor,
+    band ? Math.max(band.low, band.high) : floor,
+    floor,
+  );
+  const span = top - floor;
+  // All at the floor still draws stubs; without a floor, nothing to draw.
+  const scaleSpan = span > 0 ? span : 1;
+  const y = (v: number): number =>
+    box.height - (Math.max(0, v - floor) / scaleSpan) * box.height;
   const slot = values.length === 0 ? 0 : box.width / values.length;
   const width = Math.max(2, Math.min(maxBar, slot - gap));
   const centres = values.map((_, i) => i * slot + slot / 2);
   const bars = values.map((value, i) => {
-    if (!finite(value) || value <= 0 || top === 0) return null;
-    const height = (value / top) * box.height;
+    if (!finite(value)) return null;
+    if (scale.floor === undefined && (value <= 0 || span <= 0)) return null;
+    const height = Math.max(2, box.height - y(value));
     return { x: centres[i]! - width / 2, y: box.height - height, width, height };
   });
   return {
     bars,
     centres,
-    lineY: finite(line) && top > 0 ? box.height - (line / top) * box.height : null,
+    lineY: finite(line) && span > 0 ? y(line) : null,
+    band:
+      band && span > 0
+        ? {
+            top: y(Math.max(band.low, band.high)),
+            bottom: y(Math.min(band.low, band.high)),
+          }
+        : null,
   };
 };
 

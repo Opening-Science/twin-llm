@@ -274,16 +274,22 @@ describe("BodyLoop avatar viewer", () => {
       markup.indexOf("<fieldset"),
       markup.indexOf("</fieldset>"),
     );
-    const swatch = (color: string, label: string) =>
-      '<li class="text-foreground flex items-center gap-1.5 text-xs">' +
-      `<span class="size-2 rounded-full bg-current ring-border ring-1" style="color:${color}" aria-hidden="true"></span>${label}</li>`;
-    expect(fieldset).toContain('<ul class="flex flex-wrap gap-4 mt-2 gap-y-1">');
-    expect(fieldset).toContain(swatch("#8ec5ff", "Markers · Auto"));
-    expect(fieldset).toContain(swatch("#d4a5ff", "Angles"));
-    expect(fieldset.split('style="color:').length - 1).toBe(7);
-    expect(fieldset.indexOf('type="checkbox"')).toBeLessThan(
-      fieldset.indexOf('<ul class="flex flex-wrap gap-4 mt-2 gap-y-1">'),
-    );
+    const legend = fieldset.slice(fieldset.indexOf("<ul"));
+    // Each swatch draws in a chart token, so it follows the theme; no fixed colour.
+    const swatches = [
+      ...legend.matchAll(/text-(chart-\d)"[^>]*><\/span>([^<]+)<\/li>/g),
+    ].map(([, token, label]) => [label, token]);
+    expect(swatches).toEqual([
+      ["Markers · Auto", "chart-1"],
+      ["Markers · Palpation", "chart-2"],
+      ["Markers · Custom", "chart-3"],
+      ["Heights", "chart-5"],
+      ["Distances", "chart-4"],
+      ["Crosssections", "chart-2"],
+      ["Angles", "chart-3"],
+    ]);
+    expect(legend).not.toContain("style=");
+    expect(fieldset.indexOf('type="checkbox"')).toBeLessThan(fieldset.indexOf("<ul"));
   });
 
   test("no scans empty state", () => {

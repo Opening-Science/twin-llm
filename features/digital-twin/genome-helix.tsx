@@ -5,6 +5,8 @@ import { useMemo, useRef } from "react";
 import { Color, type Group, Quaternion, Vector3 } from "three";
 
 import { GenomeHelixFallback } from "./genome-helix-fallback";
+import { type TwinToken } from "./twin-palette";
+import { useTwinPalette } from "./use-twin-palette";
 
 export { GenomeHelixFallback } from "./genome-helix-fallback";
 
@@ -21,12 +23,13 @@ const BACKBONE_RADIUS = 0.08;
 const RUNG_RADIUS = 0.04;
 const NODE_RADIUS = 0.15;
 
-const BACKBONE_A = "#6ea8ff";
-const BACKBONE_B = "#7d6bff";
+/** Chart tokens: the helix is decoration, so it borrows the series hues and never the accent. */
+const BACKBONE_A: TwinToken = "chart-4";
+const BACKBONE_B: TwinToken = "chart-1";
 const PAIR_CYCLE = [
-  { left: "#8ec5ff", right: "#f4c95d" },
-  { left: "#5fd0c8", right: "#ef7b6a" },
-] as const;
+  { left: "chart-1", right: "chart-2" },
+  { left: "chart-4", right: "chart-3" },
+] as const satisfies readonly Readonly<{ left: TwinToken; right: TwinToken }>[];
 
 type HelixProps = {
   readonly forceFallback?: boolean;
@@ -36,7 +39,7 @@ type SpherePart = {
   readonly kind: "sphere";
   readonly key: string;
   readonly position: readonly [number, number, number];
-  readonly color: string;
+  readonly color: TwinToken;
   readonly radius: number;
 };
 
@@ -46,7 +49,7 @@ type CylinderPart = {
   readonly position: readonly [number, number, number];
   readonly quaternion: readonly [number, number, number, number];
   readonly length: number;
-  readonly color: string;
+  readonly color: TwinToken;
   readonly radius: number;
 };
 
@@ -57,7 +60,7 @@ const yUp = new Vector3(0, 1, 0);
 const cylinderBetween = (
   start: readonly [number, number, number],
   end: readonly [number, number, number],
-  color: string,
+  color: TwinToken,
   radius: number,
   key: string,
 ): CylinderPart => {
@@ -147,8 +150,8 @@ const buildHelixParts = (): readonly HelixPart[] => {
   return parts;
 };
 
-const HelixMesh = ({ part }: { readonly part: HelixPart }) => {
-  const color = useMemo(() => new Color(part.color), [part.color]);
+const HelixMesh = ({ part, hex }: { readonly part: HelixPart; readonly hex: string }) => {
+  const color = useMemo(() => new Color(hex), [hex]);
   if (part.kind === "sphere") {
     return (
       <mesh position={part.position}>
@@ -168,6 +171,7 @@ const HelixMesh = ({ part }: { readonly part: HelixPart }) => {
 const HelixGroup = () => {
   const group = useRef<Group>(null);
   const parts = useMemo(() => buildHelixParts(), []);
+  const palette = useTwinPalette();
 
   useFrame((_, delta) => {
     const current = group.current;
@@ -178,7 +182,7 @@ const HelixGroup = () => {
   return (
     <group ref={group}>
       {parts.map((part) => (
-        <HelixMesh key={part.key} part={part} />
+        <HelixMesh key={part.key} part={part} hex={palette[part.color]} />
       ))}
     </group>
   );

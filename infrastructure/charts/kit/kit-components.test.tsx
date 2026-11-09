@@ -962,6 +962,87 @@ describe("research figure options", () => {
   });
 });
 
+describe("device list options", () => {
+  const logo = {
+    src: "/brand/vendors/example.svg",
+    alt: "Example",
+    width: 30,
+    height: 30,
+    attribution: "Data by",
+  };
+
+  test("a row can end in actions; with a link, only the name links", () => {
+    const out = html(
+      <DeviceList
+        category="vitals"
+        title="Devices"
+        rows={[
+          {
+            name: "Band",
+            href: "/wearables/band",
+            actions: (
+              <>
+                <button type="button">Refresh</button>
+                <button type="button">Unlink</button>
+              </>
+            ),
+          },
+        ]}
+      />,
+    );
+    expect(out).toContain(">Refresh</button>");
+    expect(out).toContain(">Unlink</button>");
+    // The link holds the name only, never the buttons.
+    expect(out).toMatch(/<a [^>]*href="\/wearables\/band"[^>]*>Band<\/a>/);
+    const link = /<a [^>]*>(.*?)<\/a>/.exec(out)?.[1] ?? "";
+    expect(link).toBe("Band");
+    expect(out).not.toContain("<svg");
+  });
+
+  test("a row can leave out the logo's attribution word, keeping the logo", () => {
+    const out = html(
+      <DeviceList
+        category="vitals"
+        title="Devices"
+        rows={[{ name: "WHOOP", detail: "Not linked", logo, hideAttribution: true }]}
+      />,
+    );
+    expect(out).not.toContain("Data by");
+    expect(out).toContain("<img");
+    expect(out).toContain("Not linked");
+    expect(detailLine({ name: "WHOOP", logo })).toBe("Data by WHOOP");
+  });
+
+  test("without a title and a frame the rows sit on their parent", () => {
+    const out = html(
+      <DeviceList
+        category="vitals"
+        framed={false}
+        rows={[{ name: "Ring" }, { name: "Band" }]}
+      />,
+    );
+    expect(out).not.toContain("<h3");
+    expect(out).not.toContain("surface rounded-card");
+    expect(out).toContain("border-border border-t");
+  });
+});
+
+test("the consistency chart draws its usual band, named", () => {
+  const out = html(
+    <Consistency
+      category="sleep"
+      values={[1380, 1410, 1395]}
+      target={1395}
+      floor={1320}
+      usual={{ low: 1370, high: 1420 }}
+      reference={{ label: "Usual bedtime", value: "23:04" }}
+      last={{ label: "Last night", value: "23:15" }}
+    />,
+  );
+  expect(out).toContain(">Usual<");
+  expect(out).toContain('fill-opacity="0.18"');
+});
+
 describe("hypnogram options", () => {
   test("totals only: one bar per lane, its total, no times and no keys", () => {
     const out = html(

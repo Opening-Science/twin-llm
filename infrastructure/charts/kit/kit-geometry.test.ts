@@ -539,6 +539,39 @@ describe("null band", () => {
   });
 });
 
+describe("bars from a floor, with a usual band", () => {
+  const box = { width: 140, height: 100 };
+
+  test("from zero, a 30-minute shift near 23:00 barely moves a bar", () => {
+    const out = barsWithLine([1380, 1410], null, box, 14, 4);
+    expect(out.bars[1]!.height - out.bars[0]!.height).toBeLessThan(3);
+  });
+
+  test("from a floor the same shift spans the chart", () => {
+    const out = barsWithLine([1380, 1410], null, box, 14, 4, { floor: 1320 });
+    expect(out.bars[1]!.height).toBe(100);
+    expect(out.bars[0]!.height).toBeCloseTo(200 / 3);
+  });
+
+  test("a value at or below the floor is a stub, not nothing", () => {
+    const out = barsWithLine([1320, 1300], null, box, 14, 4, { floor: 1320 });
+    expect(out.bars.map((b) => b?.height)).toEqual([2, 2]);
+  });
+
+  test("the usual band shares the scale and widens it when it reaches higher", () => {
+    const out = barsWithLine([1380], 1395, box, 14, 4, {
+      floor: 1320,
+      band: { low: 1370, high: 1440 },
+    });
+    expect(out.band).toEqual({ top: 0, bottom: 100 - (50 / 120) * 100 });
+    expect(out.lineY).toBe(100 - (75 / 120) * 100);
+  });
+
+  test("without a floor, missing and zero values still draw nothing", () => {
+    expect(barsWithLine([0, null, 5], null, box).bars.slice(0, 2)).toEqual([null, null]);
+  });
+});
+
 describe("stage totals", () => {
   test("the longest stage spans the width, the rest in proportion", () => {
     expect(stageTotalWidths({ awake: 20, rem: 96, core: 248, deep: 62 }, 248)).toEqual({
