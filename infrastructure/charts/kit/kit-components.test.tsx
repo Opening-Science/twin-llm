@@ -23,6 +23,7 @@ import {
   radar,
   radarHeight,
   type ChartState,
+  withUnit,
 } from ".";
 
 const STATES: readonly ChartState[] = ["default", "loading", "empty"];
@@ -959,5 +960,28 @@ describe("research figure options", () => {
     );
     expect(card).toContain("text-chart-4");
     expect(card).not.toContain("text-chart-1");
+  });
+});
+
+describe("units and durations", () => {
+  test("MIN and MAX carry the unit when given", () => {
+    const out = html(
+      <RangeBars
+        category="heart"
+        unit="bpm"
+        buckets={[
+          { min: 56, max: 92 },
+          { min: 61, max: 114 },
+        ]}
+      />,
+    );
+    expect(out).toContain("MAX 114 bpm");
+    expect(out).toContain("MIN 56 bpm");
+    expect(withUnit("114", undefined)).toBe("114");
+  });
+
+  test("stage totals use the shared duration: a whole hour reads 7 hr", () => {
+    expect(hoursMinutes(420)).toBe("7 hr");
+    expect(hoursMinutes(424)).toBe("7 hr 4 min");
   });
 });
