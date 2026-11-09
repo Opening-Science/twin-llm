@@ -1026,3 +1026,19 @@ describe("device list options", () => {
     expect(out).toContain("border-border border-t");
   });
 });
+
+test("the consistency chart draws its usual band, named", () => {
+  const out = html(
+    <Consistency
+      category="sleep"
+      values={[1380, 1410, 1395]}
+      target={1395}
+      floor={1320}
+      usual={{ low: 1370, high: 1420 }}
+      reference={{ label: "Usual bedtime", value: "23:04" }}
+      last={{ label: "Last night", value: "23:15" }}
+    />,
+  );
+  expect(out).toContain(">Usual<");
+  expect(out).toContain('fill-opacity="0.18"');
+});

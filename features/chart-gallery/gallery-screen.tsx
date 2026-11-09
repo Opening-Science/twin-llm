@@ -568,6 +568,36 @@ export const GalleryScreen = () => (
 
     <section className="flex flex-col gap-3">
       <header>
+        <h2 className="text-foreground font-sans text-lg">
+          C13 from a floor, with the usual
+        </h2>
+        <p className="text-muted-foreground text-sm">
+          Bedtimes as minutes of the day: from zero a 30-minute shift near 23:00 is flat,
+          so the bars start at 22:00 and the usual range is a grey band.
+        </p>
+      </header>
+      <div className="grid gap-4 lg:grid-cols-3">
+        <InsightCard
+          category="sleep"
+          label="Sleep: Bedtime"
+          sentence="Your bedtime was 44 minutes later than usual last night."
+        >
+          <Consistency
+            category="sleep"
+            values={BEDTIMES.map((m) => 22 * 60 + m)}
+            target={22 * 60 + BEDTIME_TARGET}
+            floor={22 * 60}
+            usual={{ low: 22 * 60 + 45, high: 22 * 60 + 75 }}
+            reference={{ label: "Usual bedtime", value: "23:04" }}
+            last={{ label: "Last night", value: "23:48" }}
+            axis={["25 Oct", "7 Nov"]}
+          />
+        </InsightCard>
+      </div>
+    </section>
+
+    <section className="flex flex-col gap-3">
+      <header>
         <h2 className="text-foreground font-sans text-lg">C18 Radar</h2>
         <p className="text-muted-foreground text-sm">
           How each part compares with the others, each on its own scale. Today in colour,
