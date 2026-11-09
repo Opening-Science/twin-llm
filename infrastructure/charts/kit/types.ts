@@ -195,6 +195,11 @@ export type ResearchFigureProps = Base &
         domain?: readonly [number, number];
         /** "log" for ratios: ticks at 0.5, 1, 2, 4, 8. */
         scale?: AxisScale;
+        /**
+         * Series keys to colour first, in this order; the rest follow in
+         * natural order. Without it a series keeps one colour on every screen.
+         */
+        seriesOrder?: readonly string[];
       }>
     | Readonly<{
         kind: "pairs";

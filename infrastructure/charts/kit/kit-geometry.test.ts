@@ -15,6 +15,7 @@ import {
   radar,
   radarAxisAt,
   rangeBars,
+  seriesKeys,
   ringPartAt,
   scoreRing,
   slotIndex,
@@ -510,7 +511,7 @@ describe("estimate rows, extended", () => {
     expect(out.ticks.at(-1)!.value).toBeGreaterThanOrEqual(3.93);
   });
 
-  test("rows of one series share an index, in the order they first appear", () => {
+  test("rows of one series share an index, in a stable order, not the rows' order", () => {
     const out = estimateRows(
       [
         { label: "General 8b", estimate: 1, series: "qwen3:8b" },
@@ -520,8 +521,8 @@ describe("estimate rows, extended", () => {
       ],
       box,
     );
-    expect(out.series).toEqual(["qwen3:8b", "qwen3:4b"]);
-    expect(out.rows.map((r) => r.series)).toEqual([0, 1, 0, null]);
+    expect(out.series).toEqual(["qwen3:4b", "qwen3:8b"]);
+    expect(out.rows.map((r) => r.series)).toEqual([1, 0, 1, null]);
   });
 });
 
@@ -535,5 +536,31 @@ describe("null band", () => {
     expect(out.observedX).toBe(208);
     expect(out.mean).toBeGreaterThan(out.low);
     expect(out.mean).toBeLessThan(out.high);
+  });
+});
+
+describe("series keys", () => {
+  const rows = (keys: readonly string[]) =>
+    keys.map((series) => ({ label: series, estimate: 1, series }));
+
+  test("natural order, so 8b comes before 14b, whatever order the rows are in", () => {
+    expect(seriesKeys(rows(["qwen3:14b", "qwen3:8b", "qwen3:4b", "qwen3:8b"]))).toEqual([
+      "qwen3:4b",
+      "qwen3:8b",
+      "qwen3:14b",
+    ]);
+    expect(seriesKeys(rows(["b", "A", "a2"]))).toEqual(["A", "a2", "b"]);
+  });
+
+  test("an explicit order goes first, the rest follow naturally, unknown names are ignored", () => {
+    expect(
+      seriesKeys(rows(["qwen3:4b", "qwen3:8b", "qwen3:14b"]), ["qwen3:14b", "gone"]),
+    ).toEqual(["qwen3:14b", "qwen3:4b", "qwen3:8b"]);
+  });
+
+  test("the same keys get the same order on any screen", () => {
+    const a = seriesKeys(rows(["qwen3:8b", "qwen3:4b"]));
+    const b = seriesKeys(rows(["qwen3:4b", "qwen3:8b"]));
+    expect(a).toEqual(b);
   });
 });
