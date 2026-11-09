@@ -226,7 +226,7 @@ describe("P2 in-silico arrhythmia", () => {
     expect(rows(c.figure)).toEqual([
       ["AFDB, 23 records", 0.6291998537061119, 0.6186825201429763, 0.6404113411440401],
       [
-        "Simulated, independent intervals, 7.8125 ms grid",
+        "Simulated independent, 7.8 ms grid",
         0.6409128289473685,
         0.6363196472515418,
         0.6450187567349138,
@@ -236,6 +236,10 @@ describe("P2 in-silico arrhythmia", () => {
       "AFDB",
       "Simulated",
     ]);
+    // A short label fits a phone's card; the readout keeps the long form.
+    expect(estimatesOf(c.figure).estimates[1]!.readout).toStartWith(
+      "Simulated, independent intervals, 7.8125 ms grid · mean TPR 0.641",
+    );
     expect(c.more).toBeNull();
     expect(c.runDate).toBe("2026-11-02");
   });
@@ -299,6 +303,10 @@ describe("P3 heart–brain", () => {
     });
     // The observed ratio's own interval stays in the caption.
     expect(shuffled.caption).toContain("(2.54, 95 % interval 1.95–3.31)");
+    // The null figure has no ticks, so the axis title gives its span.
+    expect(shuffled.axis).toBe(
+      "matched stroke rate ratio, 2.04 at the left to 2.78 at the right",
+    );
     expect(shuffled.headline).toBe(
       "People with AF had 2.54 times the stroke rate of matched people without; with AF onset dates shuffled, the same ratio averaged 2.39 over 50 runs (range 2.04–2.78).",
     );
@@ -411,19 +419,22 @@ describe("researchCards", () => {
     expect(labels(byId.get("arrhythmia-rr-grid")?.figure)).toEqual([
       "AFDB, 23 records",
       "LTAFDB, 76 records",
-      "Simulated, short-range dependence, exact beat times",
-      "Simulated, short-range dependence, 4 ms grid",
-      "Simulated, short-range dependence, 7.8125 ms grid",
+      "Simulated, exact beat times",
+      "Simulated, 4 ms grid",
+      "Simulated, 7.8 ms grid",
     ]);
+    expect(byId.get("arrhythmia-rr-grid")?.caption).toContain(
+      "simulated recordings with short-range dependence between intervals",
+    );
     expect(labels(byId.get("arrhythmia-rr-grid")?.more?.figure)).toEqual([
       "AFDB, 23 records",
       "LTAFDB, 76 records",
-      "Simulated, independent intervals, exact beat times",
-      "Simulated, independent intervals, 4 ms grid",
-      "Simulated, independent intervals, 7.8125 ms grid",
-      "Simulated, short-range dependence, exact beat times",
-      "Simulated, short-range dependence, 4 ms grid",
-      "Simulated, short-range dependence, 7.8125 ms grid",
+      "Simulated independent, exact beat times",
+      "Simulated independent, 4 ms grid",
+      "Simulated independent, 7.8 ms grid",
+      "Simulated short-range, exact beat times",
+      "Simulated short-range, 4 ms grid",
+      "Simulated short-range, 7.8 ms grid",
     ]);
     expect(labels(byId.get("arrhythmia-resolution")?.figure)).toEqual([
       "Beats: 128-beat windows flagged",

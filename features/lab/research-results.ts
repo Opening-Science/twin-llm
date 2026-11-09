@@ -414,6 +414,15 @@ export const afResolutionCard = (
 const gridWords = (ms: number): string =>
   ms === 0 ? "exact beat times" : `${ms} ms grid`;
 
+/** The grid as a row label says it, to one decimal: 7.8125 ms reads "7.8 ms grid". */
+const gridShort = (ms: number): string =>
+  ms === 0 ? "exact beat times" : `${Number(ms.toFixed(1))} ms grid`;
+
+const MODE_SHORT: Readonly<Record<string, string>> = {
+  independent: "independent",
+  short_range: "short-range",
+};
+
 export const rrGridCard = (data: RrGrid | null): ResearchCard | null => {
   if (data === null) return null;
   // Grouped by database, the simulated recordings as a group of their own.
@@ -424,17 +433,25 @@ export const rrGridCard = (data: RrGrid | null): ResearchCard | null => {
       series: db,
     };
   });
-  const simRow = (s: RrGrid["sim"][number]) => ({
-    ...valueEstimate(
-      `Simulated, ${MODE_NAME[s.mode] ?? s.mode}, ${gridWords(s.gridMs)}`,
-      "mean TPR",
-      s.tpr,
-    ),
-    series: "Simulated",
-  });
+  // Short row labels so none runs past a phone's card; the readout keeps the long form.
+  const simRow =
+    (withMode: boolean) =>
+    (s: RrGrid["sim"][number]): Estimate => ({
+      ...valueEstimate(
+        `Simulated, ${MODE_NAME[s.mode] ?? s.mode}, ${gridWords(s.gridMs)}`,
+        "mean TPR",
+        s.tpr,
+      ),
+      label: withMode
+        ? `Simulated ${MODE_SHORT[s.mode] ?? s.mode}, ${gridShort(s.gridMs)}`
+        : `Simulated, ${gridShort(s.gridMs)}`,
+      series: "Simulated",
+    });
   const shortRange = data.sim.filter((s) => s.mode === "short_range");
-  const main = [...real, ...shortRange.map(simRow)];
-  const all = [...real, ...data.sim.map(simRow)];
+  // The main figure shows only the short-range runs, so its labels need no mode.
+  const main = [...real, ...shortRange.map(simRow(false))];
+  const all = [...real, ...data.sim.map(simRow(true))];
+  const showsMain = main.length > real.length;
   const first = shortRange[0];
   const last = shortRange.at(-1);
   const afdb = data.real.find((r) => r.database === "afdb");
@@ -447,14 +464,15 @@ export const rrGridCard = (data: RrGrid | null): ResearchCard | null => {
       first && last && afdb && ltafdb
         ? `Real AF windows had a mean turning-point ratio of ${fixed(afdb.tpr.value, 3)} (AFDB) and ${fixed(ltafdb.tpr.value, 3)} (LTAFDB); simulated AF went from ${fixed(first.tpr.value, 3)} with exact beat times to ${fixed(last.tpr.value, 3)} with beats on a ${last.gridMs} ms grid.`
         : `Mean turning-point ratio of AF windows on ${all.length} sources.`,
-    caption:
-      "Mean turning-point ratio (TPR) of all-AF windows on the two databases and on simulated recordings with beat times put on a 0, 4 or 7.8125 ms grid, the databases' own sampling steps. Lines are 95 % bootstrap intervals.",
+    caption: showsMain
+      ? "Mean turning-point ratio (TPR) of all-AF windows on the two databases and on simulated recordings with short-range dependence between intervals, beat times put on a 0, 4 or 7.8125 ms grid, the databases' own sampling steps. The runs with independent intervals are under Show all runs. Lines are 95 % bootstrap intervals."
+      : "Mean turning-point ratio (TPR) of all-AF windows on the two databases and on simulated recordings with independent intervals or short-range dependence between them, beat times put on a 0, 4 or 7.8125 ms grid, the databases' own sampling steps. Lines are 95 % bootstrap intervals.",
     axis: "mean turning-point ratio (TPR)",
     source: RESEARCH_SOURCES.rrGrid,
     runDate: data.date,
-    figure: { kind: "estimates", estimates: main.length > real.length ? main : all },
+    figure: { kind: "estimates", estimates: showsMain ? main : all },
     more:
-      main.length > real.length && main.length < all.length
+      showsMain && main.length < all.length
         ? { label: "Show all runs", figure: { kind: "estimates", estimates: all } }
         : null,
   };
@@ -530,13 +548,17 @@ export const ruleChangeCard = (data: RuleChange | null): ResearchCard | null => 
 export const shuffledNullCard = (data: HeartBrain | null): ResearchCard | null => {
   if (data === null || data.observed === null) return null;
   const { observed, shuffled } = data;
+  // The kit's null figure draws no ticks, so the axis title says the span it
+  // covers: the shuffled range and the observed ratio, edge to edge.
+  const left = Math.min(shuffled.low, shuffled.mean, observed.ratio);
+  const right = Math.max(shuffled.high, shuffled.mean, observed.ratio);
   return {
     id: "heart-brain-shuffled",
     study: "heart-brain",
     label: "Observed against shuffled onset",
     headline: `People with AF had ${fixed(observed.ratio, 2)} times the stroke rate of matched people without; with AF onset dates shuffled, the same ratio averaged ${fixed(shuffled.mean, 2)} over ${shuffled.runs} runs (range ${span(shuffled.low, shuffled.high, 2)}).`,
     caption: `Matched between-person stroke rate ratio for AF then stroke (${fixed(observed.ratio, 2)}, 95 % interval ${span(observed.low, observed.high, 2)}), against the mean and 95 % range of the same ratio over ${shuffled.runs} runs with AF onset dates shuffled, drawn as a grey band. The summary keeps the range of the shuffled runs, not each run.`,
-    axis: AXIS_RATIO,
+    axis: `matched stroke rate ratio, ${fixed(left, 2)} at the left to ${fixed(right, 2)} at the right`,
     source: RESEARCH_SOURCES.heartBrain,
     runDate: data.date,
     figure: {
