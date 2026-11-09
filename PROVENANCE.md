@@ -68,6 +68,10 @@ Downloaded by `bun run anatomy:fetch` from the [`anatomy-rigged-v1`](https://git
 | ANNY adult (male)   | `anny-adult-m.rigged.glb` | 464,852 | `16d101090af7719069cd78d0a091d7d9c4975bc45df44201f23761ea89553589` |
 | ANNY adult (female) | `anny-adult-f.rigged.glb` | 464,816 | `9032bfeb29ba4be8aeb0eb38a81e72c5dd5420a38005913d907c83c4f87fdbe1` |
 
+## Fitted atlases and cleaned meshes (made locally by Blender, not committed)
+
+`bun run blender:fit-atlas` runs `scripts/blender/fit_atlas.py` in Blender 5.2.x LTS (GPL; the scripts drive it as plain scripts, they are not add-ons and ship no Blender code) on the pinned atlases and rigged demo bodies above, after checking each file's SHA-256. It writes fitted atlases and their reports to gitignored `data/anatomy/fitted/`: derivatives of BodyParts3D and HRA under those atlases' licences (`NOTICE`, `docs/anatomy.md`), never committed. `bun run blender:cleanup` writes cleaned copies of the synthetic ANNY demo body to gitignored `data/anatomy/cleanup-demo/`. No scan of any person, no SMPL or SMPL-X asset and no ANNY SMPL-X topology are used.
+
 ## Motion from video (local tool, nothing committed)
 
 `python/motion/` turns a video into a keyframe clip on the user's own machine (`docs/motion-from-video.md`). It runs the MediaPipe Pose Landmarker heavy model (Google, Apache-2.0), downloaded once by `python/motion/fetch_model.py` from `https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_heavy/float16/1/pose_landmarker_heavy.task` into gitignored `data/motion/models/` and checked against SHA-256 `64437af838a65d18e5ba7a0d39b465540069bc8aae8308de3e318aad31fcbc7b` (30,664,242 bytes). The model, any video, its frames and any clip made from it are not part of this repository; clips go to gitignored `data/motion/`. The committed test fixtures (`python/motion/fixtures/`, `features/digital-twin/motion/fixtures/`) are synthetic, made by `python/motion/synthetic.py` from chosen joint angles.
