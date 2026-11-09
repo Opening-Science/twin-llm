@@ -135,8 +135,8 @@ describe("P1 grounding", () => {
     expect(cards.map((c) => c.id)).toEqual(["grounding-specialists"]);
     const c = cards[0]!;
     expect(rows(c.figure)).toEqual([
-      ["Heart rhythm, s7, 4b", (15 / 31) * 100, 32, 65],
-      ["Heart rhythm, s7, 8b", (10 / 20) * 100, 30, 70],
+      ["Heart rhythm, rhythm set (s7), 4b", (15 / 31) * 100, 32, 65],
+      ["Heart rhythm, rhythm set (s7), 8b", (10 / 20) * 100, 30, 70],
     ]);
     expect(estimatesOf(c.figure).estimates[1]!.readout).toBe(
       "Heart rhythm agent, rhythm set (s7), qwen3:8b · 10/20 right (50 %), Wilson 95 % interval 30–70 %",
@@ -149,6 +149,24 @@ describe("P1 grounding", () => {
     expect(c.headline).toBe(
       "On qwen3:4b, the Heart rhythm agent, rhythm set (s7) gave the right value in 15 of 31 (48\u00a0%) scored answers. On qwen3:8b, the Heart rhythm agent, rhythm set (s7) gave the right value in 10 of 20 (50\u00a0%) scored answers.",
     );
+  });
+
+  test("specialists: a run with no scored answers never ranks lowest or highest", () => {
+    const cell = (passes: number, n: number) => ({ passes, n, lowPct: 0, highPct: 100 });
+    const [c] = specialistCards({
+      date: null,
+      runs: [
+        { agent: "rhythm", set: "s7", model: "qwen3:4b", cell: cell(0, 0) },
+        { agent: "brain", set: "s7", model: "qwen3:4b", cell: cell(5, 10) },
+        { agent: "gp", set: "v1", model: "qwen3:4b", cell: cell(9, 10) },
+        { agent: "rhythm", set: "s7b", model: "qwen3:4b", cell: cell(0, 0) },
+        { agent: "rhythm", set: "s7", model: "qwen3:8b", cell: cell(0, 0) },
+      ],
+    });
+    expect(c!.headline).toBe(
+      "On qwen3:4b, the share of right values ran from 5 of 10 (50\u00a0%) for the Brain agent, rhythm set (s7) to 9 of 10 (90\u00a0%) for the General agent, main set (v1). On qwen3:8b, no answers were scored.",
+    );
+    expect(c!.headline).not.toContain("NaN");
   });
 });
 
@@ -403,11 +421,11 @@ describe("researchCards", () => {
     // Each agent and set pair on both models, next to each other.
     expect(labels(byId.get("grounding-specialists")?.figure)).toEqual(
       [
-        "Heart rhythm, s7",
-        "Heart rhythm, s7b",
-        "Heart rhythm, s7h",
-        "Brain, s7",
-        "General, v1",
+        "Heart rhythm, rhythm set (s7)",
+        "Heart rhythm, second rhythm set (s7b)",
+        "Heart rhythm, held-out rhythm set (s7h)",
+        "Brain, rhythm set (s7)",
+        "General, main set (v1)",
       ].flatMap((run) => [`${run}, 4b`, `${run}, 8b`]),
     );
     expect(byId.get("grounding-specialists")?.headline).toBe(

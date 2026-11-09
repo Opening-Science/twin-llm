@@ -240,12 +240,15 @@ const runLabel = (run: SpecialistRun): string =>
   `${AGENT_NAME[run.agent] ?? run.agent} agent, ${SET_NAME[run.set] ?? run.set}`;
 
 const modelHeadline = (model: string, runs: readonly SpecialistRun[]): string => {
-  const byShare = [...runs].sort(
+  // A run with no scored answers has no share, so it never ranks lowest or highest.
+  const scored = runs.filter((r) => r.cell.n > 0);
+  if (scored.length === 0) return `On ${model}, no answers were scored.`;
+  const byShare = [...scored].sort(
     (a, b) => a.cell.passes / a.cell.n - b.cell.passes / b.cell.n,
   );
   const lowest = byShare[0]!;
   const highest = byShare.at(-1)!;
-  return runs.length === 1
+  return scored.length === 1
     ? `On ${model}, the ${runLabel(lowest)} gave the right value in ${ofAnswers(lowest.cell)} scored answers.`
     : `On ${model}, the share of right values ran from ${ofAnswers(lowest.cell)} for the ${runLabel(lowest)} to ${ofAnswers(highest.cell)} for the ${runLabel(highest)}.`;
 };
@@ -288,7 +291,7 @@ export const specialistCards = (
         // A short row label that fits beside the plot; the readout keeps the full name.
         estimates: ordered.map((r) => ({
           ...shareEstimate(`${runLabel(r)}, ${r.model}`, r.cell),
-          label: `${AGENT_NAME[r.agent] ?? r.agent}, ${r.set}, ${r.model.split(":").at(-1)}`,
+          label: `${AGENT_NAME[r.agent] ?? r.agent}, ${SET_NAME[r.set] ?? r.set}, ${r.model.split(":").at(-1)}`,
           series: r.model,
         })),
         domain: [0, 100],
