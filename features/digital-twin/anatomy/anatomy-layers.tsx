@@ -2,7 +2,7 @@
 
 import { useFrame, useThree } from "@react-three/fiber";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { type Material, type Object3D, Quaternion, Vector3 } from "three";
+import { Color, type Material, type Object3D, Quaternion, Vector3 } from "three";
 
 import { fitAtlasToScan } from "@/packages/anatomy/fit";
 import { partsFor, type Highlight } from "@/packages/anatomy/highlight";
@@ -23,6 +23,7 @@ import { PickSurface } from "../environment/pick-surface";
 import { LiveConditioning, type LiveStatus } from "../live/live-conditioning";
 import { type BeatPattern } from "../live/heart-cycle";
 import { type LiveVitals } from "../live/live-rates";
+import { useTwinPalette } from "../use-twin-palette";
 import { type AnatomyLoad } from "./anatomy-state";
 import {
   applyMixToUniforms,
@@ -91,6 +92,7 @@ export const AnatomyLayers = ({
   }>;
 }>) => {
   const invalidate = useThree((state) => state.invalidate);
+  const ring = useTwinPalette().ring;
   // State renders the atlas; the refs are what the frame loop mutates, since
   // three.js objects are configured in place every frame.
   const [prepared, setPrepared] = useState<PreparedAtlas | null>(null);
@@ -211,16 +213,17 @@ export const AnatomyLayers = ({
   useEffect(() => {
     if (!prepared) return;
     const lit = new Set(highlight ? partsFor(highlight, prepared.parts) : []);
+    const colour = new Color(ring);
     for (const part of prepared.parts) {
-      setHighlighted(part.mesh.material as Material, lit.has(part));
+      setHighlighted(part.mesh.material as Material, lit.has(part) ? colour : null);
     }
     invalidate();
     return () => {
       for (const part of prepared.parts) {
-        setHighlighted(part.mesh.material as Material, false);
+        setHighlighted(part.mesh.material as Material, null);
       }
     };
-  }, [prepared, highlight, invalidate]);
+  }, [prepared, highlight, ring, invalidate]);
 
   // Frames render on demand: kick one whenever an input changes.
   useEffect(() => {
