@@ -1,10 +1,12 @@
 import { describe, expect, test } from "bun:test";
 
 import type { Disclosure } from "@/infrastructure/disclosure-ledger";
+import type { FreeTextCheck } from "@/infrastructure/free-text-check";
 import type { AppendInput } from "@/packages/audit/append";
 
 import {
   createThreadExportHandler,
+  EXPORT_GENOME_IDS_BLOCKED,
   EXPORT_NOT_RECORDED,
   exportFormat,
 } from "./thread-export-handler";
@@ -19,11 +21,20 @@ const GENOME_THREAD: ExportableThread = {
 
 const handler = (
   thread: ExportableThread | null,
-  options: Readonly<{ local?: boolean; ledgerFails?: boolean }> = {},
+  options: Readonly<{
+    local?: boolean;
+    ledgerFails?: boolean;
+    check?: (text: string) => Promise<FreeTextCheck>;
+  }> = {},
 ) => {
   const audits: AppendInput[] = [];
   const disclosures: Disclosure[] = [];
+  const checked: { actor: string; typed: readonly string[]; text: string }[] = [];
   const run = createThreadExportHandler({
+    freeTextChecker: (actor, typed) => async (text) => {
+      checked.push({ actor, typed, text });
+      return options.check === undefined ? NOTHING_FOUND : options.check(text);
+    },
     loadOwnedThread: async () => thread,
     actorId: async () => "local",
     recipientIsLocal: () => options.local ?? true,
@@ -40,8 +51,38 @@ const handler = (
     dataMode: () => "personal",
     today: () => "2026-10-28",
   });
-  return { run, audits, disclosures };
+  return { run, audits, disclosures, checked };
 };
+
+const NOTHING_FOUND: FreeTextCheck = { matches: [] };
+
+/** A synthetic thread whose answer repeats a stored lab value and an rsID. */
+const LAB_THREAD: ExportableThread = {
+  title: "Synthetic cholesterol question",
+  turns: [
+    {
+      id: "t1",
+      prompt: "What does a synthetic total cholesterol mean?",
+      answers: [
+        {
+          id: "r",
+          modelId: "m",
+          modelName: "qwen3:4b",
+          status: "COMPLETE",
+          text: "Your stored 195 mg/dL is above 190 mg/dL. rs0000001 is synthetic.",
+          tools: [],
+          metrics: null,
+        },
+      ],
+    },
+  ],
+};
+
+const found =
+  (...matches: FreeTextCheck["matches"]) =>
+  async (): Promise<FreeTextCheck> => ({
+    matches,
+  });
 
 describe("createThreadExportHandler", () => {
   test("an export is in the disclosure ledger before the file is returned (#140)", async () => {
@@ -61,6 +102,7 @@ describe("createThreadExportHandler", () => {
         payloadBytes: Buffer.byteLength(body, "utf8"),
         threadId: "t1",
         synthetic: false,
+        freeText: { matches: [] },
       },
     ]);
   });
@@ -176,5 +218,105 @@ describe("createThreadExportHandler", () => {
     expect(html).toContain("<h1>What was their latest HbA1c?</h1>");
     expect(html).toContain("window.print()");
     expect(audits.map((audit) => audit.args)).toEqual([{ format: "print" }]);
+  });
+});
+
+describe("the free text check of an export (#531)", () => {
+  test("every format checks the thread's Markdown, with the person's questions as typed", async () => {
+    const markdown = handler(LAB_THREAD);
+    const text = await (await markdown.run("t1")).text();
+    for (const format of ["markdown", "fhir", "print"] as const) {
+      const each = handler(LAB_THREAD);
+      await each.run("t1", format);
+      expect(each.checked).toEqual([
+        {
+          actor: "local",
+          typed: ["What does a synthetic total cholesterol mean?"],
+          text,
+        },
+      ]);
+    }
+  });
+
+  test("the row and its audit row record kinds and counts, never the values", async () => {
+    const { run, disclosures, audits } = handler(LAB_THREAD, {
+      check: found({ kind: "lab value", count: 1 }),
+    });
+    const response = await run("t1");
+    expect(response.status).toBe(200);
+    expect(disclosures.map((row) => [row.direction, row.freeText])).toEqual([
+      [undefined, { matches: [{ kind: "lab value", count: 1 }] }],
+    ]);
+    expect(audits.map((audit) => [audit.tool, audit.result])).toEqual([
+      [
+        "thread.export",
+        {
+          bytes: expect.any(Number) as number,
+          freeText: [{ kind: "lab value", count: 1 }],
+        },
+      ],
+    ]);
+    expect(JSON.stringify([disclosures, audits])).not.toContain("195");
+  });
+
+  test("the person's own rsIDs withhold a file that could leave this machine", async () => {
+    const { run, disclosures, audits } = handler(LAB_THREAD, {
+      local: false,
+      check: found({ kind: "rsID", count: 1 }, { kind: "lab value", count: 1 }),
+    });
+    const response = await run("t1");
+    expect(response.status).toBe(403);
+    expect(response.headers.get("Content-Disposition")).toBe(null);
+    expect(await response.text()).toBe(EXPORT_GENOME_IDS_BLOCKED);
+    expect(disclosures.map((row) => [row.direction, row.freeText])).toEqual([
+      [
+        "blocked",
+        {
+          matches: [
+            { kind: "rsID", count: 1 },
+            { kind: "lab value", count: 1 },
+          ],
+        },
+      ],
+    ]);
+    // No thread.export row: nothing was exported.
+    expect(audits).toEqual([]);
+  });
+
+  test("on a local-only app the same file is made and the find is recorded", async () => {
+    const { run, disclosures } = handler(LAB_THREAD, {
+      local: true,
+      check: found({ kind: "rsID", count: 1 }),
+    });
+    expect((await run("t1")).status).toBe(200);
+    expect(disclosures.map((row) => [row.direction, row.freeText])).toEqual([
+      [undefined, { matches: [{ kind: "rsID", count: 1 }] }],
+    ]);
+  });
+
+  test("a failed check is recorded as not checked; genome-shaped text is withheld off this machine", async () => {
+    const fails = async (): Promise<FreeTextCheck> => {
+      throw new Error("vault locked");
+    };
+    const plain = handler(THREAD, { local: false, check: fails });
+    expect((await plain.run("t1")).status).toBe(200);
+    expect(plain.disclosures.map((row) => "freeText" in row)).toEqual([false]);
+
+    const shaped = handler(LAB_THREAD, { local: false, check: fails });
+    expect((await shaped.run("t1")).status).toBe(403);
+    expect(shaped.disclosures.map((row) => [row.direction, "freeText" in row])).toEqual([
+      ["blocked", false],
+    ]);
+  });
+
+  test("a blocked export whose row cannot be written still makes no file", async () => {
+    const { run } = handler(LAB_THREAD, {
+      local: false,
+      ledgerFails: true,
+      check: found({ kind: "genome site", count: 2 }),
+    });
+    const response = await run("t1");
+    expect(response.status).toBe(403);
+    expect(await response.text()).toBe(EXPORT_GENOME_IDS_BLOCKED);
   });
 });

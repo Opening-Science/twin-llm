@@ -684,8 +684,20 @@ recipient.
   not checked, with the error's name in the log. _Limits:_ approximate. A value written another way (a unit
   conversion, a rounded number, thousands split by a plain space, another spelling) is missed, a value
   the person typed and a reply repeats is not counted, and wearable numbers are not
-  searched; wearable and twin note values are recorded as references above. Exports, embeddings and live lookups are not
-  checked (live lookups have their own query check).
+  searched; wearable and twin note values are recorded as references above. Live lookups
+  are not checked (they have their own query check).
+- **Exports and remote embeddings** (#531). A thread export (Markdown, FHIR or print)
+  checks the thread's Markdown, the same text in every format, with the person's own
+  questions as `typed`; the `export-file` row and its paired `thread.export` audit row
+  record kinds and counts. A guideline or knowledge search query sent to an Ollama on
+  another machine is checked as a hosted-model request is (`recordCheckedRequest` in
+  `infrastructure/disclosure-ledger.ts`, which `modelCallFetch` uses too). Thread search
+  embeds on loopback only (`requireLoopback`), and the document embeddings of guideline,
+  knowledge and literature ingest are of public or shipped texts run by hand, so neither
+  is checked. The Lab's CSV and FHIR downloads, the rating export and the Synthea zip
+  hold synthetic or evaluation data and are not checked. _Not built:_ a notice on the
+  export of what the check found; the row records it, the person does not see it before
+  the download.
 - **Blocking genome identifiers** (#356, option C). When the check finds an rsID or a
   genome site that the person's VCFs hold, the request is not sent: `modelCallFetch`
   writes the row with direction `blocked` (the paired audit row's result says `blocked`

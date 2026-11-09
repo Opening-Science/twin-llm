@@ -458,6 +458,7 @@ const PERSONAL_READ_ROUTES: Readonly<Record<string, Entry>> = {
         recipientIsLocal: () => true,
         appendAudit: record.append,
         recordDisclosure: ledger(record),
+        freeTextChecker: () => async () => ({ matches: [] }),
         dataMode: () => "personal",
         today: () => "2026-10-28",
       })("thread-synthetic-1"),

@@ -8,6 +8,7 @@ import { resolveActorId } from "@/infrastructure/auth-actor";
 import { utcDay } from "@/infrastructure/day-key";
 import { recordDisclosure } from "@/infrastructure/disclosure-ledger-runtime";
 import { serverEnv } from "@/infrastructure/env";
+import { freeTextCheckerFor } from "@/infrastructure/free-text-check-runtime";
 import { database } from "@/infrastructure/database";
 import { append } from "@/packages/audit/append";
 import { withUnlocked } from "@/infrastructure/vault-runtime";
@@ -20,6 +21,7 @@ const exportThread = createThreadExportHandler({
   recipientIsLocal: () => serverEnv().LOCAL_ONLY,
   appendAudit: (input) => append(database(), input),
   recordDisclosure,
+  freeTextChecker: freeTextCheckerFor,
   dataMode: () => serverEnv().DATA_MODE,
   today: () => utcDay(new Date()),
 });

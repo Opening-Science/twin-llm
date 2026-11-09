@@ -320,13 +320,41 @@ export const isGenomeIdsBlocked = (error: unknown, depth = 0): boolean => {
 };
 
 /**
+ * Records one request whose text leaves this machine, after checking that
+ * text (#346): the row gets what the check found, kinds and counts only. A
+ * request that carries the person's own genome identifiers is not sent
+ * (#356, `sendDecision`): its row is written as `blocked` and this rejects
+ * with `GenomeIdsBlockedError`. Hosted models and remote embeddings (#531)
+ * both record through it.
+ */
+export const recordCheckedRequest = async (
+  row: Omit<Disclosure, "direction" | "freeText">,
+  call: Readonly<{ record: RecordDisclosure; checkText?: CheckFreeText; body: unknown }>,
+): Promise<DisclosureReceipt> => {
+  const { blocked, freeText } = sendDecision(
+    await checkRequestText(call.checkText, call.body),
+  );
+  const checked: Disclosure = {
+    ...row,
+    ...(blocked ? { direction: "blocked" } : {}),
+    ...(freeText === undefined ? {} : { freeText }),
+  };
+  if (!blocked) return call.record(checked);
+  // Nothing is sent either way; a row that cannot be written is only logged.
+  await call.record(checked).catch((error: unknown) => {
+    console.error("blocked request not recorded", errorName(error));
+  });
+  throw new GenomeIdsBlockedError();
+};
+
+/**
  * The fetch a model call sends through: the plain one for a model on this
  * machine (`recipient` null) or a call the caller states is not recorded,
  * else one that records a `hosted-model` row per HTTP request, with the
  * request's size and, given `checkText`, what the check of its free text
  * found (#346), before it goes out. A request that carries the person's own
- * genome identifiers is not sent (#356, `sendDecision`): its row is written
- * as `blocked` and the fetch rejects with `GenomeIdsBlockedError`.
+ * genome identifiers is not sent (#356): `recordCheckedRequest` writes its
+ * row as `blocked` and the fetch rejects with `GenomeIdsBlockedError`.
  */
 export const modelCallFetch = (
   fetchFn: typeof fetch,
@@ -340,26 +368,18 @@ export const modelCallFetch = (
 ): typeof fetch => {
   const { recipient, disclosure } = call;
   if (recipient === null || "notRecorded" in disclosure) return fetchFn;
-  return ledgeredFetch(fetchFn, async (payloadBytes, body) => {
-    const { blocked, freeText } = sendDecision(
-      await checkRequestText(call.checkText, body),
-    );
-    const row: Disclosure = {
-      ...disclosure,
-      kind: "hosted-model",
-      ...(blocked ? { direction: "blocked" } : {}),
-      recipient,
-      target: call.modelId,
-      payloadBytes,
-      ...(freeText === undefined ? {} : { freeText }),
-    };
-    if (!blocked) return call.record(row);
-    // Nothing is sent either way; a row that cannot be written is only logged.
-    await call.record(row).catch((error: unknown) => {
-      console.error("blocked model request not recorded", errorName(error));
-    });
-    throw new GenomeIdsBlockedError();
-  });
+  return ledgeredFetch(fetchFn, (payloadBytes, body) =>
+    recordCheckedRequest(
+      {
+        ...disclosure,
+        kind: "hosted-model",
+        recipient,
+        target: call.modelId,
+        payloadBytes,
+      },
+      { record: call.record, checkText: call.checkText, body },
+    ),
+  );
 };
 
 /**

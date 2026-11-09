@@ -1,9 +1,12 @@
 import {
   CATEGORY,
+  checkRequestText,
   type Disclosure,
   type DisclosureCategory,
   type RecordDisclosure,
+  sendDecision,
 } from "@/infrastructure/disclosure-ledger";
+import type { CheckFreeText, FreeTextCheck } from "@/infrastructure/free-text-check";
 import { formatDate } from "@/infrastructure/format-measure";
 import { genomeThreadRefusedEvent } from "@/infrastructure/genome-thread-audit";
 import {
@@ -40,6 +43,14 @@ import { threadPrintHtml } from "./thread-print";
  * the disclosure ledger, paired with its `thread.export` audit row in one
  * transaction, before the file is returned. If that write fails there is no
  * file.
+ *
+ * The thread's Markdown (the same text in every format) is checked for the
+ * person's stored values first, as a hosted model's request is (#531): the
+ * row and its audit row record kinds and counts, never values. The questions
+ * the person typed are theirs to share and their values are not counted
+ * (`freeTextCheckerFor`). When the check finds their own rsIDs or genome
+ * sites and the app is not served to this machine only, there is no file:
+ * the row is written as `blocked` and the person reads a fixed sentence.
  */
 export type ThreadExportDeps = Readonly<{
   /** The thread when the signed-in viewer owns it, else null. */
@@ -49,6 +60,8 @@ export type ThreadExportDeps = Readonly<{
   recipientIsLocal: () => boolean;
   appendAudit: (input: AppendInput) => Promise<unknown>;
   recordDisclosure: RecordDisclosure;
+  /** The free text check for one person; `typed` is what they typed (#531). */
+  freeTextChecker: (actor: string, typed: readonly string[]) => CheckFreeText;
   dataMode: () => "synthetic" | "personal";
   today: () => string;
 }>;
@@ -64,6 +77,10 @@ const NO_STORE = { "Cache-Control": "no-store" };
 
 export const EXPORT_NOT_RECORDED =
   "The export could not be recorded, so no file was made. Try again.";
+
+/** What the person reads when an export held their own genome identifiers (#531). Fixed text. */
+export const EXPORT_GENOME_IDS_BLOCKED =
+  "This thread holds identifiers from your genome, so no file was made. It can be exported while the app is served to this machine only.";
 
 /** What an export file holds: the questions and answers, and tool results when any ran. */
 export const exportDisclosure = (
@@ -106,6 +123,25 @@ const usesGenome = (thread: ExportableThread): boolean =>
       turn.answers.some((answer) => toolPartsUseGenome(answer.tools ?? [])),
   );
 
+/**
+ * The free text check of an export (#531): what it found, and whether the
+ * file is withheld. Withheld only by the hosted-model rule (#356), and only
+ * when the file can leave this machine; on a local-only app it is recorded.
+ */
+const exportCheck = async (
+  deps: ThreadExportDeps,
+  thread: ExportableThread,
+  actor: string,
+  markdown: string,
+): Promise<Readonly<{ blocked: boolean; freeText?: FreeTextCheck }>> => {
+  const checker = deps.freeTextChecker(
+    actor,
+    thread.turns.map((turn) => turn.prompt),
+  );
+  const decision = sendDecision(await checkRequestText(checker, markdown));
+  return { ...decision, blocked: decision.blocked && !deps.recipientIsLocal() };
+};
+
 export const createThreadExportHandler =
   (deps: ThreadExportDeps) =>
   async (threadId: string, format: ExportFormat = "markdown"): Promise<Response> => {
@@ -138,26 +174,45 @@ export const createThreadExportHandler =
         : format === "print"
           ? threadPrintHtml(markdown, readableTitle(thread.title))
           : markdown;
+    const { blocked, freeText } = await exportCheck(deps, thread, actor, markdown);
+    const row: Disclosure = {
+      ...exportDisclosure(thread, {
+        actor,
+        threadId,
+        format,
+        bytes: Buffer.byteLength(body, "utf8"),
+        mode: deps.dataMode(),
+      }),
+      ...(freeText === undefined ? {} : { freeText }),
+    };
+    if (blocked) {
+      // No file either way; a row that cannot be written is only logged.
+      await deps
+        .recordDisclosure({ ...row, direction: "blocked" })
+        .catch((error: unknown) => {
+          console.error(
+            "[export] blocked export not recorded",
+            error instanceof Error ? error.name : "unknown",
+          );
+        });
+      return new Response(EXPORT_GENOME_IDS_BLOCKED, { status: 403, headers: NO_STORE });
+    }
     const recorded = await deps
-      .recordDisclosure(
-        exportDisclosure(thread, {
-          actor,
-          threadId,
-          format,
-          bytes: Buffer.byteLength(body, "utf8"),
-          mode: deps.dataMode(),
-        }),
-        {
-          actor,
-          sessionId: threadId,
-          subjectRef: null,
-          tool: THREAD_EXPORT_AUDIT_TOOL,
-          // The audit log keeps only hashes of these; the content itself is never logged.
-          args: { format },
-          result: { bytes: body.length },
-          rowCount: thread.turns.reduce((sum, turn) => sum + turn.answers.length, 0),
+      .recordDisclosure(row, {
+        actor,
+        sessionId: threadId,
+        subjectRef: null,
+        tool: THREAD_EXPORT_AUDIT_TOOL,
+        // The audit log keeps only hashes of these; the content itself is never logged.
+        args: { format },
+        result: {
+          bytes: body.length,
+          ...(freeText === undefined
+            ? {}
+            : { freeText: freeText.matches.map((match) => ({ ...match })) }),
         },
-      )
+        rowCount: thread.turns.reduce((sum, turn) => sum + turn.answers.length, 0),
+      })
       .then(
         () => true,
         (error: unknown) => {
