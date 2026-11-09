@@ -83,12 +83,12 @@ export const FITTED_ATLASES: Readonly<
       "anny-adult-m",
       "bodyparts3d",
       {
-        bytes: 9_726_548,
-        sha256: "65e803e0097fb977b7b089dd362e54a2168cfa79d8347ead2248de649d7368b7",
+        bytes: 9_726_192,
+        sha256: "f295abd39072c0180e2f1ed5fe822c2d51b7aa474abbddf3d51d806f5fc88375",
       },
       {
-        bytes: 15_936_512,
-        sha256: "81e75dcc8401850f1f5520f1483f444d99a434d0718921b5483e9cd51e4a9eb8",
+        bytes: 15_935_920,
+        sha256: "9585da761681368ae87cfe7c8b3dcb924a27f1f2d90276bfc2bf42a13f47b11c",
       },
     ),
     "hra-f": entry(
@@ -121,12 +121,12 @@ export const FITTED_ATLASES: Readonly<
       "anny-adult-f",
       "bodyparts3d",
       {
-        bytes: 9_690_896,
-        sha256: "fc4174d8c1c6035e634d587cb11b6e374669dde7bfce73585d217fe5ef5f7b23",
+        bytes: 9_690_972,
+        sha256: "2556fcb885f637fc41b2f9746d9552cfd187203c3ab4c614c5bca7300feab1df",
       },
       {
-        bytes: 15_920_240,
-        sha256: "671c4f2ee858ab981f361791ec232f9c5bd3b39b846014f4abcf126ce54caa5b",
+        bytes: 15_917_972,
+        sha256: "1a9561b4e61d8f01dc7739a17d60831bcd5ea8ce0444486027452acc19f67ee5",
       },
     ),
     "hra-f": entry(

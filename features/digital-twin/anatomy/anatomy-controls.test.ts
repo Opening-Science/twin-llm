@@ -251,6 +251,7 @@ describe("AnatomyControls", () => {
     expect(DEMO_FITTED_NOTE).toContain("limb by limb in Blender");
     expect(DEMO_FITTED_NOTE).toContain("keeping its length");
     expect(DEMO_FITTED_NOTE).toContain("unposed");
+    expect(DEMO_FITTED_NOTE).toContain("each palm to face the same way");
     expect(ANATOMY_FITTED_CHANGES_NOTE).toContain("bone lengths kept");
   });
 });
