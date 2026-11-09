@@ -3,6 +3,8 @@ import {
   Color,
   DoubleSide,
   FrontSide,
+  LessEqualDepth,
+  NeverDepth,
   MeshBasicMaterial,
   MeshStandardMaterial,
   ShaderLib,
@@ -15,7 +17,6 @@ import {
   blendModeFor,
   createLayerMaterial,
   createLayerUniforms,
-  HASH_ALPHA_FLOOR,
   HIGHLIGHT_COLOUR,
   HIGHLIGHT_INTENSITY,
   HIGHLIGHT_TINT,
@@ -69,16 +70,8 @@ describe("patchLayerFragment", () => {
     expect(rimOnly).toBeGreaterThan(-1);
     expect(patched.slice(rimOnly)).toContain("pow( twinEdge, 3.0 )");
     expect(patched).toContain("pow( twinEdge, 2.2 )");
-    // Both discards come before three's hash, so no dither dot survives at low alpha.
-    const hash = patched.indexOf("#include <alphahash_fragment>");
     const rimDiscard = patched.indexOf("if ( diffuseColor.a < 0.01 ) discard;");
-    const hashDiscard = patched.indexOf(
-      `if ( diffuseColor.a < ${HASH_ALPHA_FLOOR.toFixed(2)} ) discard;`,
-    );
-    expect(rimDiscard).toBeGreaterThan(-1);
-    expect(hashDiscard).toBeGreaterThan(-1);
-    expect(rimDiscard).toBeLessThan(hash);
-    expect(hashDiscard).toBeLessThan(hash);
+    expect(rimDiscard).toBeGreaterThan(rimOnly);
   });
 
   test("throws by name when a chunk is missing", () => {
@@ -106,13 +99,15 @@ describe("attachLayerFade", () => {
 });
 
 describe("blend modes", () => {
-  test("solid only when fully opaque and not faded; scan blends, atlas hashes", () => {
+  test("solid only when fully opaque and not faded; scan blends, atlas fades", () => {
     expect(blendModeFor({ alpha: 1, fade: 0, visible: true }, "atlas")).toBe("solid");
-    expect(blendModeFor({ alpha: 1, fade: 0.5, visible: true }, "atlas")).toBe("hash");
+    expect(blendModeFor({ alpha: 1, fade: 0.5, visible: true }, "atlas")).toBe("fade");
+    // A layer fading in (organs) blends too.
+    expect(blendModeFor({ alpha: 0.4, fade: 0, visible: true }, "atlas")).toBe("fade");
     expect(blendModeFor({ alpha: 0.4, fade: 0, visible: true }, "scan")).toBe("blend");
   });
 
-  test("a fully faded atlas layer is rim-only, never dithered", () => {
+  test("a fully faded atlas layer is rim-only", () => {
     expect(blendModeFor({ alpha: 1, fade: 1, visible: true }, "atlas")).toBe("rim");
     expect(blendModeFor({ alpha: 0.3, fade: 1, visible: true }, "atlas")).toBe("rim");
     expect(blendModeFor({ alpha: 1, fade: RIM_ONLY_FADE, visible: true }, "atlas")).toBe(
@@ -120,7 +115,7 @@ describe("blend modes", () => {
     );
     expect(
       blendModeFor({ alpha: 1, fade: RIM_ONLY_FADE - 0.01, visible: true }, "atlas"),
-    ).toBe("hash");
+    ).toBe("fade");
     // The scan keeps its own blended glass at every fade.
     expect(blendModeFor({ alpha: 1, fade: 1, visible: true }, "scan")).toBe("blend");
   });
@@ -135,16 +130,14 @@ describe("blend modes", () => {
     expect(setBlendMode(material, "rim")).toBe(true);
     expect(material.version).toBe(start + 1);
     expect(material.transparent).toBe(true);
-    expect(material.alphaHash).toBe(false);
     expect(material.depthWrite).toBe(false);
     expect(material.side).toBe(FrontSide);
+    expect(material.depthFunc).toBe(LessEqualDepth);
     expect(material.defines).toHaveProperty("TWIN_RIM_ONLY");
     expect(material.defines).toHaveProperty("STANDARD");
 
-    expect(setBlendMode(material, "hash")).toBe(true);
+    expect(setBlendMode(material, "fade")).toBe(true);
     expect(material.defines).not.toHaveProperty("TWIN_RIM_ONLY");
-    expect(material.alphaHash).toBe(true);
-    expect(material.depthWrite).toBe(true);
 
     setBlendMode(material, "rim");
     expect(setBlendMode(material, "solid")).toBe(true);
@@ -175,17 +168,44 @@ describe("blend modes", () => {
     expect(material.side).toBe(DoubleSide);
   });
 
-  test("hash mode turns on alphaHash and keeps depth writes", () => {
+  test("fade mode blends at the real alpha over its pre-pass depth, never dithers", () => {
     const material = createLayerMaterial({
       colour: "#b5584e",
       vertexColors: true,
       uniforms: createLayerUniforms(0),
     });
-    setBlendMode(material, "hash");
-    expect(material.alphaHash).toBe(true);
+    setBlendMode(material, "fade");
+    expect(material.alphaHash).toBe(false);
+    expect(material.transparent).toBe(true);
+    expect(material.depthWrite).toBe(false);
+    // LessEqual lets the colour pass through where its own pre-pass wrote depth.
+    expect(material.depthFunc).toBe(LessEqualDepth);
+    expect(material.vertexColors).toBe(true);
+
+    setBlendMode(material, "solid");
     expect(material.transparent).toBe(false);
     expect(material.depthWrite).toBe(true);
-    expect(material.vertexColors).toBe(true);
+  });
+
+  test("solid restores the depth test the material arrived with", () => {
+    const material = new MeshStandardMaterial({ depthFunc: NeverDepth });
+    attachLayerFade(material, createLayerUniforms(0));
+    setBlendMode(material, "fade");
+    expect(material.depthFunc).toBe(LessEqualDepth);
+    setBlendMode(material, "solid");
+    expect(material.depthFunc).toBe(NeverDepth);
+  });
+
+  test("no mode turns on alpha-hash dithering", () => {
+    const material = createLayerMaterial({
+      colour: "#e8dfcc",
+      vertexColors: false,
+      uniforms: createLayerUniforms(0),
+    });
+    for (const mode of ["fade", "rim", "blend", "solid"] as const) {
+      setBlendMode(material, mode);
+      expect(material.alphaHash).toBe(false);
+    }
   });
 
   test("solid restores a material that arrived transparent", () => {
@@ -251,8 +271,8 @@ describe("setHighlighted", () => {
       uniforms,
     });
     setHighlighted(material, true);
-    expect(setBlendMode(material, "hash")).toBe(true);
-    expect(material.alphaHash).toBe(true);
+    expect(setBlendMode(material, "fade")).toBe(true);
+    expect(material.transparent).toBe(true);
     expect(material.emissive.getHexString()).toBe(HIGHLIGHT_COLOUR.slice(1));
   });
 });

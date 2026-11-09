@@ -1,4 +1,12 @@
-import { Color, FrontSide, type Material, MeshStandardMaterial, type Side } from "three";
+import {
+  Color,
+  type DepthModes,
+  FrontSide,
+  LessEqualDepth,
+  type Material,
+  MeshStandardMaterial,
+  type Side,
+} from "three";
 
 import { type LayerMix } from "@/packages/anatomy/layers";
 import { type OrganSystem } from "@/packages/anatomy/systems";
@@ -9,11 +17,12 @@ import { type OrganSystem } from "@/packages/anatomy/systems";
  * only the silhouette stays opaque (a Fresnel rim), so you see into a layer
  * without losing its outline.
  *
- * A faded atlas layer is drawn rim-only (`TWIN_RIM_ONLY`): a sharper rim,
- * alpha-blended rather than dithered. Dithering a face at a few per cent alpha
- * leaves isolated dots, the speckle once seen around the bones at the Skeleton
- * and Organs stops. A harder cut-off (exponent 4, remapped) broke thin
- * silhouettes into dashes on screen, so the rim stays soft.
+ * Nothing is dithered: alpha-hash dither left isolated dots, the speckle once
+ * seen around the bones at the Skeleton and Organs stops and over a whole
+ * layer mid-slider. A layer turning to glass is alpha-blended behind its own
+ * depth pre-pass (`depth-prepass.ts`); a fully faded atlas layer is drawn
+ * rim-only (`TWIN_RIM_ONLY`), a sharper rim. A harder cut-off (exponent 4,
+ * remapped) broke thin silhouettes into dashes on screen, so the rim stays soft.
  *
  * In three 0.184 `<alphahash_fragment>` runs before `<normal_fragment_begin>`,
  * so the rim uses `vNormal` / `vViewPosition` directly. The anchors are checked
@@ -48,9 +57,6 @@ uniform float uLayerFade;
 uniform float uGlassFloor;
 uniform vec3 uRimColor;`;
 
-/** Below this alpha a hashed fragment is dropped: sparse dither reads as dots, not glass. */
-export const HASH_ALPHA_FLOOR = 0.2;
-
 const ALPHA = `
 float twinRim = 0.0;
 #ifndef FLAT_SHADED
@@ -64,8 +70,6 @@ float twinRim = 0.0;
 diffuseColor.a *= uLayerAlpha * mix( 1.0, mix( uGlassFloor, 0.92, twinRim ), uLayerFade );
 #ifdef TWIN_RIM_ONLY
   if ( diffuseColor.a < 0.01 ) discard;
-#elif defined( USE_ALPHAHASH )
-  if ( diffuseColor.a < ${HASH_ALPHA_FLOOR.toFixed(2)} ) discard;
 #endif`;
 
 const RIM = `
@@ -92,7 +96,7 @@ type FadeState = Readonly<{
   originalSide: Side;
   originalDepthWrite: boolean;
   originalTransparent: boolean;
-  originalAlphaHash: boolean;
+  originalDepthFunc: DepthModes;
   originalDefines: Material["defines"];
 }>;
 
@@ -123,7 +127,7 @@ export const attachLayerFade = (
     originalSide: material.side,
     originalDepthWrite: material.depthWrite,
     originalTransparent: material.transparent,
-    originalAlphaHash: material.alphaHash,
+    originalDepthFunc: material.depthFunc,
     originalDefines: material.defines,
   });
   blendModes.set(material, "solid");
@@ -151,22 +155,23 @@ export const layerFadeUniforms = (material: Material): LayerUniforms | null =>
   fadeStates.get(material)?.uniforms ?? null;
 
 /**
- * solid: opaque, early-z, no discard. hash: alphaHash dither, stays in the
- * opaque queue with correct depth (nested atlas layers have no valid blend
- * order); used only while a layer turns to glass. rim: a fully faded atlas
- * layer, only its silhouette, alpha-blended in the transparent queue after
- * every opaque layer, no depth writes. blend: real transparency for the single
- * enclosing scan surface.
+ * solid: opaque, early-z, no discard. fade: an atlas layer turning to glass,
+ * alpha-blended at its real alpha with depth test LessEqual and no depth
+ * writes, after its own depth pre-pass, so each pixel shows only the layer's
+ * front-most surface. rim: a fully faded atlas layer, only its silhouette,
+ * drawn the same way with the rim-only shader. blend: real transparency for the single enclosing
+ * scan surface. The transparent modes draw after every opaque layer; the order
+ * between layers is the mesh's renderOrder (`depth-prepass.ts`).
  */
-export type BlendMode = "solid" | "hash" | "rim" | "blend";
+export type BlendMode = "solid" | "fade" | "rim" | "blend";
 
-/** From this fade on an atlas layer is drawn rim-only instead of dithered. */
+/** From this fade on an atlas layer is drawn rim-only. */
 export const RIM_ONLY_FADE = 0.9;
 
 export const blendModeFor = (mix: LayerMix, kind: "scan" | "atlas"): BlendMode => {
   if (mix.alpha >= 0.999 && mix.fade <= 0.001) return "solid";
   if (kind === "scan") return "blend";
-  return mix.fade >= RIM_ONLY_FADE ? "rim" : "hash";
+  return mix.fade >= RIM_ONLY_FADE ? "rim" : "fade";
 };
 
 const RIM_ONLY_DEFINE = "TWIN_RIM_ONLY";
@@ -185,11 +190,12 @@ export const setBlendMode = (material: Material, mode: BlendMode): boolean => {
   if (!state || blendModes.get(material) === mode) return false;
   blendModes.set(material, mode);
   // "solid" restores the material exactly as it arrived.
-  const blended = mode === "blend" || mode === "rim";
+  const blended = mode !== "solid";
   Object.assign(material, {
-    alphaHash: mode === "hash" || (mode === "solid" && state.originalAlphaHash),
-    transparent: blended || (mode === "solid" && state.originalTransparent),
+    transparent: blended || state.originalTransparent,
     depthWrite: blended ? false : state.originalDepthWrite,
+    depthFunc:
+      mode === "fade" || mode === "rim" ? LessEqualDepth : state.originalDepthFunc,
     side: blended ? FrontSide : state.originalSide,
     defines: definesFor(state.originalDefines, mode),
     needsUpdate: true,
