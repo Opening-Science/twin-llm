@@ -598,6 +598,41 @@ export const GalleryScreen = () => (
 
     <section className="flex flex-col gap-3">
       <header>
+        <h2 className="text-foreground font-sans text-lg">C09 options</h2>
+        <p className="text-muted-foreground text-sm">
+          A source that reports stage totals but not the night&apos;s order gets one bar
+          per lane, the longest stage full width. The core lane can say Light, as Oura
+          does, or Core, as Apple does.
+        </p>
+      </header>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <InsightCard
+          category="sleep"
+          label="Sleep: Stages"
+          sentence="You slept 6 hr 54 min, with 1 hr 10 min of deep sleep."
+        >
+          <Hypnogram
+            category="sleep"
+            totals={{ awake: 25, rem: 96, core: 248, deep: 70 }}
+          />
+        </InsightCard>
+        <InsightCard
+          category="sleep"
+          label="Sleep: Stages"
+          sentence="You spent 1 hr 10 min in deep sleep last night."
+        >
+          <Hypnogram
+            category="sleep"
+            coreWord="Light"
+            spans={NIGHT_READ}
+            axis={["23:04", "06:23"]}
+          />
+        </InsightCard>
+      </div>
+    </section>
+
+    <section className="flex flex-col gap-3">
+      <header>
         <h2 className="text-foreground font-sans text-lg">C18 Radar</h2>
         <p className="text-muted-foreground text-sm">
           How each part compares with the others, each on its own scale. Today in colour,

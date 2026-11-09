@@ -18,6 +18,7 @@ import {
   ringPartAt,
   scoreRing,
   slotIndex,
+  stageTotalWidths,
   spacedTicks,
   stepKey,
   streakGrid,
@@ -568,5 +569,26 @@ describe("bars from a floor, with a usual band", () => {
 
   test("without a floor, missing and zero values still draw nothing", () => {
     expect(barsWithLine([0, null, 5], null, box).bars.slice(0, 2)).toEqual([null, null]);
+  });
+});
+
+describe("stage totals", () => {
+  test("the longest stage spans the width, the rest in proportion", () => {
+    expect(stageTotalWidths({ awake: 20, rem: 96, core: 248, deep: 62 }, 248)).toEqual({
+      awake: 20,
+      rem: 96,
+      core: 248,
+      deep: 62,
+    });
+  });
+
+  test("missing or negative totals are zero, and no totals draw nothing", () => {
+    expect(stageTotalWidths({ core: 100, awake: -5 }, 50)).toEqual({
+      awake: 0,
+      rem: 0,
+      core: 50,
+      deep: 0,
+    });
+    expect(stageTotalWidths({}, 50)).toEqual({ awake: 0, rem: 0, core: 0, deep: 0 });
   });
 });

@@ -905,3 +905,25 @@ export const ringPartAt = (
   }
   return parts.length - 1;
 };
+
+/**
+ * Stage totals as bar widths on one scale, the longest stage at full width,
+ * for a source that reports totals but not the night's order (WHOOP).
+ * Missing or negative totals are 0.
+ */
+export const stageTotalWidths = (
+  totals: Readonly<Partial<Record<SleepStage, number>>>,
+  width: number,
+): Readonly<Record<SleepStage, number>> => {
+  const minutes = (stage: SleepStage): number => {
+    const v = totals[stage];
+    return finite(v) && v > 0 ? v : 0;
+  };
+  const longest = Math.max(0, ...STAGE_LANES.map(minutes));
+  return Object.fromEntries(
+    STAGE_LANES.map((stage) => [
+      stage,
+      longest === 0 ? 0 : (minutes(stage) / longest) * width,
+    ]),
+  ) as Record<SleepStage, number>;
+};

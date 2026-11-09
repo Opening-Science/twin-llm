@@ -139,8 +139,16 @@ export type RangeBarsProps = Base &
 export type HypnogramProps = Base &
   Interactive &
   Readonly<{
-    spans: readonly StageSpan[];
-    /** Lane words; defaults to Awake, REM, Core, Deep. */
+    /** The night's stages in order. */
+    spans?: readonly StageSpan[];
+    /**
+     * Minutes per stage, for a source that gives totals but not the order
+     * (WHOOP). Each lane then shows one bar, the longest stage full width.
+     */
+    totals?: Readonly<Partial<Record<SleepStage, number>>>;
+    /** The vendor's word for the core lane: Apple's "Core" or Oura's "Light". Defaults to "Core". */
+    coreWord?: "Core" | "Light";
+    /** Lane words; defaults to Awake, REM, Core (or `coreWord`), Deep. Overrides `coreWord`. */
     labels?: Readonly<Partial<Record<SleepStage, string>>>;
     /** Start and end words for the axis, e.g. ["11:04 PM", "6:31 AM"]. */
     axis?: readonly [string, string];
