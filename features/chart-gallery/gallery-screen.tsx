@@ -462,7 +462,7 @@ export const GalleryScreen = () => (
           sentence={
             state === "empty"
               ? "Your bedtime pattern appears after 14 nights."
-              : "Your bedtime was 48 minutes later than usual last night."
+              : "Your bedtime was 44 minutes later than usual last night."
           }
           emptyNote="14 nights needed"
         >
