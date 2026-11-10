@@ -2,6 +2,7 @@
 
 import { nearestIndex } from "../chart-geometry";
 import { ChartFocusFrame, ChartReadout, useChartFocus } from "./chart-focus";
+import { dayAxis } from "./format";
 import {
   cumulativeDay,
   emptyDayOutline,
@@ -27,7 +28,7 @@ export const CumulativeDay = ({
   today,
   average,
   now,
-  axis = ["12 AM", "12 PM", "12 AM"],
+  axis = dayAxis(),
   label,
   defaultFocus,
 }: CumulativeDayProps) => {

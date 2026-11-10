@@ -42,3 +42,17 @@ export const formatClock = (minutes: number, locale: string = DISPLAY_LOCALE): s
     timeZone: "UTC",
   }).format(at);
 };
+
+/**
+ * The three words under a whole day: midnight, midday, midnight. On a
+ * 24-hour clock the day ends at "24:00", so its two ends never read the
+ * same; a 12-hour clock writes them as it does any time.
+ */
+export const dayAxis = (
+  locale: string = DISPLAY_LOCALE,
+): readonly [string, string, string] => {
+  const cycle = new Intl.DateTimeFormat(locale, { hour: "numeric" }).resolvedOptions()
+    .hourCycle;
+  const end = cycle === "h23" || cycle === "h24" ? "24:00" : formatClock(0, locale);
+  return [formatClock(0, locale), formatClock(12 * 60, locale), end];
+};

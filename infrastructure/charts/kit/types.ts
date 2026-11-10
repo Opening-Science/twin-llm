@@ -109,7 +109,7 @@ export type CumulativeDayProps = Base &
     today: readonly DaySample[];
     average: readonly DaySample[];
     now: number;
-    /** Three axis words, e.g. ["12 AM", "12 PM", "12 AM"]. */
+    /** Three axis words; defaults to the day in the display locale, "00:00", "12:00", "24:00". */
     axis?: readonly [string, string, string];
   }>;
 
@@ -137,7 +137,7 @@ export type RangeBarsProps = Base &
   Interactive &
   Readonly<{
     buckets: readonly (Range | null)[];
-    /** Start and end words for the axis, e.g. ["6 AM", "Now"]. */
+    /** Start and end words for the axis, e.g. ["06:00", "Now"]. */
     axis?: readonly [string, string];
     /** How a MIN/MAX number is written; defaults to whole numbers. */
     format?: (value: number) => string;
@@ -160,7 +160,7 @@ export type HypnogramProps = Base &
     coreWord?: "Core" | "Light";
     /** Lane words; defaults to Awake, REM, Core (or `coreWord`), Deep. Overrides `coreWord`. */
     labels?: Readonly<Partial<Record<SleepStage, string>>>;
-    /** Start and end words for the axis, e.g. ["11:04 PM", "6:31 AM"]. */
+    /** Start and end words for the axis, e.g. ["23:04", "06:31"]. */
     axis?: readonly [string, string];
     /** How a duration in the spans' unit is written; defaults to "1 hr 5 min" from minutes. */
     duration?: (amount: number) => string;
@@ -188,7 +188,7 @@ export type ConsistencyProps = Base &
   Interactive &
   Readonly<{
     values: readonly (number | null)[];
-    /** One readout per night, e.g. "3 Nov · 11:48 PM"; makes the chart interactive. */
+    /** One readout per night, e.g. "3 Nov · 23:48"; makes the chart interactive. */
     readouts?: readonly (string | null)[];
     target: number | null;
     reference: HeroValue;
