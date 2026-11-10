@@ -868,6 +868,22 @@ describe("device list", () => {
   });
 });
 
+test("seriesOrder puts a series first and gives it the first colour", () => {
+  const out = html(
+    <ResearchFigure
+      kind="estimates"
+      category="vitals"
+      seriesOrder={["qwen3:8b"]}
+      estimates={[
+        { label: "A", estimate: 0.6, series: "qwen3:4b" },
+        { label: "B", estimate: 0.7, series: "qwen3:8b" },
+      ]}
+    />,
+  );
+  expect(out.indexOf("qwen3:8b</li>")).toBeLessThan(out.indexOf("qwen3:4b</li>"));
+  expect(out.match(/<g class="text-chart-1">/g)).toHaveLength(1);
+});
+
 describe("research figure options", () => {
   test("rows of one series share a colour, and a legend names each series", () => {
     const out = html(
@@ -883,9 +899,9 @@ describe("research figure options", () => {
     );
     expect(out).toContain("qwen3:8b");
     expect(out).toContain("qwen3:4b");
-    // Two 8b rows in chart-1, one 4b row in chart-2.
-    expect(out.match(/<g class="text-chart-1">/g)).toHaveLength(2);
-    expect(out.match(/<g class="text-chart-2">/g)).toHaveLength(1);
+    // In natural order 4b comes first: one 4b row in chart-1, two 8b rows in chart-2.
+    expect(out.match(/<g class="text-chart-1">/g)).toHaveLength(1);
+    expect(out.match(/<g class="text-chart-2">/g)).toHaveLength(2);
   });
 
   test("a log axis reads as ratios", () => {
@@ -1178,4 +1194,27 @@ describe("research figure axes", () => {
     );
     expect(summary).toMatch(/>0\.\d0</);
   });
+});
+
+test("an empty day with no usual day yet still outlines a day, never a blank", () => {
+  const out = html(
+    <CumulativeDay category="steps" state="empty" today={[]} average={[]} now={0} />,
+  );
+  const outline = /<path d="(M[^"]+)"[^>]*stroke-dasharray="2 6"/.exec(out);
+  expect(outline?.[1]?.split("L").length).toBeGreaterThan(20);
+  // The placeholder is half as strong as a real usual day's outline.
+  expect(out).toContain('stroke-opacity="0.5"');
+  const usual = html(
+    <CumulativeDay
+      category="steps"
+      state="empty"
+      today={[]}
+      average={[
+        { at: 0, value: 0 },
+        { at: 1, value: 8000 },
+      ]}
+      now={0}
+    />,
+  );
+  expect(usual).not.toContain('stroke-opacity="0.5"');
 });

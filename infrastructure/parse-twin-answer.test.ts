@@ -439,3 +439,39 @@ describe("a section that repeats the prompt's guidance", () => {
     expect(parsed.answerText).toBe("");
   });
 });
+
+describe("cited value check (#545)", () => {
+  const reply = (answer: string) =>
+    [
+      "## Reasoning",
+      "Synthetic reasoning.",
+      "",
+      "## Evidence Used",
+      "- [oura.sleep.score.2026-01-01]",
+      "",
+      "## Answer",
+      answer,
+      "",
+      "## Uncertainty",
+      "Synthetic uncertainty.",
+    ].join("\n");
+
+  test("the stated number is checked against the reading behind the cited key", () => {
+    expect(
+      parseTwinAnswer(reply("Your sleep score was 82."), syntheticOura).attribution[0]
+        ?.valueCheck,
+    ).toEqual({ status: "matched", stated: "82" });
+    expect(
+      parseTwinAnswer(reply("Your sleep score was 74."), syntheticOura).attribution[0]
+        ?.valueCheck,
+    ).toEqual({ status: "not_matched", stated: "74" });
+  });
+
+  test("thinking is not read; no number for the value is unstated", () => {
+    const parsed = parseTwinAnswer(
+      `<think>sleep score 50</think>\n${reply("Your sleep was steady.")}`,
+      syntheticOura,
+    );
+    expect(parsed.attribution[0]?.valueCheck).toEqual({ status: "unstated" });
+  });
+});

@@ -64,8 +64,8 @@ const Recording = ({ recording }: Readonly<{ recording: MadeRecording }>) => (
                   {
                     id: "flag",
                     label: "Window marked by the research flag",
-                    // The band's track tone is close to the card, so the swatch gets an edge.
-                    swatchClassName: "text-chart-track ring-1 ring-chart-reference",
+                    // The band's tint is close to the card, so the swatch gets an edge.
+                    swatchClassName: "text-chart-band ring-1 ring-chart-reference",
                   },
                 ]
               : []),

@@ -17,7 +17,7 @@ import { type ChartPoint, type Span } from "./simulation-view";
 /**
  * One simulated signal against seconds from the first beat: the RR
  * tachogram (interval per beat, with the windows the research flag marks as
- * bands in the track tone) or the pulse-wave proxy strip. Drawn as the chart
+ * bands in the chart-band tint) or the pulse-wave proxy strip. Drawn as the chart
  * kit draws: the line in the heart category's colour, no gridlines and no Y
  * axis; the highest and lowest value are grey rules with MAX and MIN written
  * beside them, and seconds stay as axis words. A crosshair and tooltip follow
@@ -83,7 +83,7 @@ export const SignalChart = ({
             width={band.width}
             height={plot.height}
             rx={4}
-            className="fill-chart-track"
+            className="fill-chart-band"
           />
         ))}
         {[

@@ -656,8 +656,11 @@ recipient.
   their account id when it is not a plain word. Then the person's stored values, opened
   once per model call because none of these stores keeps a keyed hash of a value
   (`storedValueMatches`): a **lab value** is a stored reading's number followed by its own
-  stored unit (`195 mg/dL`, `5.40mmol/L`; numbers compared as numbers, units ignoring
-  case); a **coded value** is a stored reading's code (four characters or more, with a
+  stored unit (`195 mg/dL`, `5.40mmol/L`, `5,4 mmol/l`, `1'234 µmol/L`; numbers compared as
+  numbers, in their locale spellings too: a decimal comma, and thousands marked with a
+  comma, a point, an apostrophe or a no-break or thin space in groups of three, where
+  `1,234` reads as both 1234 and 1.234; units ignoring case, the micro sign (`µ`, `μ`, `u`,
+  `mcg`) and spaces around a slash, #346); a **coded value** is a stored reading's code (four characters or more, with a
   digit) as a whole token with that reading's own number within 80 characters, not
   counting the code's own digits; a **clinical record** is a stored Condition or
   MedicationRequest whose code stands as a whole token or whose name, 24 characters or
@@ -679,10 +682,30 @@ recipient.
   lookups and the cap stays as it was. A body
   that cannot be read up front, or a check that fails (a locked vault), is recorded as
   not checked, with the error's name in the log. _Limits:_ approximate. A value written another way (a unit
-  conversion, a rounded number, a decimal comma, another spelling) is missed, a value
+  conversion, a rounded number, thousands split by a plain space, another spelling) is missed, a value
   the person typed and a reply repeats is not counted, and wearable numbers are not
-  searched; wearable and twin note values are recorded as references above. Exports, embeddings and live lookups are not
-  checked (live lookups have their own query check).
+  searched; wearable and twin note values are recorded as references above. Live lookups
+  are not checked (they have their own query check).
+- **Exports and remote embeddings** (#531). A thread export (Markdown, FHIR or print)
+  checks the thread's Markdown, the same text in every format, with the person's own
+  questions as `typed`. The person sees what was found before any file is made: PDF and
+  Download first ask for `?check=1`, which answers one line ("This export contains: 2
+  lab values. Download anyway?") with Download and Cancel, audited as
+  `thread.export.check` with kinds and counts; nothing leaves, so it writes no ledger
+  row. Only Download sends `?confirm=1`, which checks again, writes the `export-file` row
+  and its paired `thread.export` audit row with kinds and counts, and makes the file; a
+  request with neither is refused before anything is read. Cancel writes nothing, since
+  nothing left. The person's own rsIDs and genome sites (#356) give no file on a
+  local-only app too: the notice shows the fixed sentence with Close only and the row is
+  `blocked`. A guideline or knowledge search query sent to an Ollama on another machine
+  is checked as a hosted-model request is (`recordCheckedRequest` in
+  `infrastructure/disclosure-ledger.ts`, which `modelCallFetch` uses too). The query is
+  written by the model, so no text counts as typed: a value the person typed and the
+  query repeats is counted, the more conservative choice. Thread search
+  embeds on loopback only (`requireLoopback`), and the document embeddings of guideline,
+  knowledge and literature ingest are of public or shipped texts run by hand, so neither
+  is checked. The Lab's CSV and FHIR downloads, the rating export and the Synthea zip
+  hold synthetic or evaluation data and are not checked.
 - **Blocking genome identifiers** (#356, option C). When the check finds an rsID or a
   genome site that the person's VCFs hold, the request is not sent: `modelCallFetch`
   writes the row with direction `blocked` (the paired audit row's result says `blocked`

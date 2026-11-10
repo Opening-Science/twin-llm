@@ -1,8 +1,10 @@
 import {
   CATEGORY,
   ledgeredFetch,
+  recordCheckedRequest,
   type RecordDisclosure,
 } from "@/infrastructure/disclosure-ledger";
+import type { CheckFreeText } from "@/infrastructure/free-text-check";
 import { serverEnv } from "@/infrastructure/env";
 import { isLoopbackUrl } from "@/infrastructure/loopback";
 
@@ -86,6 +88,10 @@ export const defaultEmbedPorts = (
  * nothing leaves, so the ports are unchanged. An Ollama elsewhere receives
  * the query text, so each request is written to the disclosure ledger (#140)
  * first and is not sent when that fails (the search then has no vector).
+ * Given `checkText`, the query is checked for the person's stored values
+ * first, as a hosted model's request is (#531): the row records kinds and
+ * counts, and a query that holds their own rsIDs or genome sites is not sent
+ * (its row is `blocked`, and the search has no vector).
  */
 export const queryEmbedPorts = (
   base: EmbedPorts,
@@ -95,26 +101,30 @@ export const queryEmbedPorts = (
     synthetic: boolean;
     purpose: string;
     record: RecordDisclosure;
+    checkText?: CheckFreeText;
   }>,
 ): EmbedPorts =>
   isLoopbackUrl(base.origin)
     ? base
     : {
         ...base,
-        fetch: ledgeredFetch(base.fetch, (payloadBytes) =>
-          call.record({
-            actor: call.actor,
-            sessionId: call.sessionId,
-            kind: "embedding",
-            recipient: "ollama on another machine",
-            target: base.model,
-            purpose: call.purpose,
-            categories: [CATEGORY.searchText],
-            refs: [],
-            payloadBytes,
-            threadId: null,
-            synthetic: call.synthetic,
-          }),
+        fetch: ledgeredFetch(base.fetch, (payloadBytes, body) =>
+          recordCheckedRequest(
+            {
+              actor: call.actor,
+              sessionId: call.sessionId,
+              kind: "embedding",
+              recipient: "ollama on another machine",
+              target: base.model,
+              purpose: call.purpose,
+              categories: [CATEGORY.searchText],
+              refs: [],
+              payloadBytes,
+              threadId: null,
+              synthetic: call.synthetic,
+            },
+            { record: call.record, checkText: call.checkText, body },
+          ),
         ),
       };
 

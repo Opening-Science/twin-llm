@@ -1,14 +1,16 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  STEP_STATE_WORDS,
   traceAnnouncement,
   traceHeadline,
 } from "@/infrastructure/ui-kit/step-trace-model";
 
-import { measureNameOf, toolCard } from "./tool-cards";
+import { measureNameOf, OUTCOME_LABELS, toolCard, toolOutcome } from "./tool-cards";
 import {
   answerTraceState,
   measureNames,
+  namedMeasure,
   toolStepLabel,
   toolStepLabels,
   toolStepState,
@@ -42,17 +44,17 @@ describe("toolStepLabel", () => {
           end: "2025-12-31",
         }),
       ),
-    ).toBe("Summarising 8867-4, 1 Jan 2025 to 31 Dec 2025");
+    ).toBe("Summarising heart rate, 1 Jan 2025 to 31 Dec 2025");
     expect(toolStepLabel(done("trend", { measure: "whoop.recovery.score" }))).toBe(
       "Fitting a trend of Whoop recovery score",
     );
     expect(toolStepLabel(done("trend", {}))).toBe("Fitting a trend");
     expect(toolStepLabel(done("range_position", { measure: "8867-4" }))).toBe(
-      "Placing 8867-4 against its published range",
+      "Placing heart rate against its published range",
     );
   });
 
-  test("a refusal reads No data with its code", () => {
+  test("a refusal reads its code's plain sentence, not the code (#529)", () => {
     expect(
       toolStepLabel(
         done(
@@ -61,7 +63,7 @@ describe("toolStepLabel", () => {
           { code: "NO_ROWS", error: "synthetic" },
         ),
       ),
-    ).toBe("No data: NO_ROWS");
+    ).toBe("No readings in this range");
   });
 
   test("an unknown tool falls back to its card title", () => {
@@ -104,7 +106,7 @@ describe("measure names from the answer's own data", () => {
     expect(measureNameOf({ measure: "8867-4" }, { n: 25, mean: 78.08 })).toBeNull();
   });
 
-  test("a code named by one call names it in every step, code in brackets", () => {
+  test("a code named by one call names it in every step, without the code (#537)", () => {
     const cards = [
       done("show_view", { measure: "8867-4", window }, chart),
       done("latest_by_loinc", { loinc: "8867-4" }, { rows: latest }),
@@ -112,20 +114,48 @@ describe("measure names from the answer's own data", () => {
     ];
     expect(measureNames(cards)).toEqual(new Map([["8867-4", "Heart rate"]]));
     expect(toolStepLabels(cards)).toEqual([
-      "Drawing heart rate (8867-4), 1 Jan 2024 to 31 Dec 2025",
-      "Reading the latest heart rate (8867-4)",
-      "Summarising heart rate (8867-4), 1 Jan 2024 to 31 Dec 2025",
+      "Drawing heart rate, 1 Jan 2024 to 31 Dec 2025",
+      "Reading the latest heart rate",
+      "Summarising heart rate, 1 Jan 2024 to 31 Dec 2025",
     ]);
   });
 
-  test("an acronym keeps its case; a code nobody named stands alone", () => {
+  test("an acronym keeps its case; the app's tables name a code the data did not", () => {
     const named = done("trend", { measure: "4548-4" }, [
       { loinc: "4548-4", display: "HbA1c" },
     ]);
-    expect(toolStepLabel(named)).toBe("Fitting a trend of HbA1c (4548-4)");
+    expect(toolStepLabel(named)).toBe("Fitting a trend of HbA1c");
     expect(toolStepLabels([done("trend", { measure: "2093-3" }, { n: 3 })])).toEqual([
-      "Fitting a trend of 2093-3",
+      "Fitting a trend of cholesterol",
     ]);
+    expect(toolStepLabel(done("trend", { measure: "4548-4" }))).toBe(
+      "Fitting a trend of HbA1c",
+    );
+  });
+
+  test("a code no call and no table names reads 'this measure', never the code (#537)", () => {
+    const unknown = done("trend", {
+      measure: "99999-9",
+      start: "2025-01-01",
+      end: "2025-12-31",
+    });
+    expect(toolStepLabel(unknown)).toBe(
+      "Fitting a trend of this measure, 1 Jan 2025 to 31 Dec 2025",
+    );
+    expect(unknown.args[0]).toEqual({ label: "Measure", value: "99999-9" });
+    expect(toolStepLabel(done("coverage", { loinc: ["8867-4", "99999-9"] }))).toBe(
+      "Checking coverage of heart rate and one other measure",
+    );
+    expect(toolStepLabel(done("coverage", { loinc: ["99999-8", "99999-9"] }))).toBe(
+      "Checking coverage of these measures",
+    );
+    expect(
+      toolStepLabel(
+        done("coverage", { loinc: ["8867-4", "2093-3", "99999-9", "99998-0"] }),
+      ),
+    ).toBe("Checking coverage of heart rate, cholesterol and 2 other measures");
+    expect(namedMeasure("99999-9")).toBeNull();
+    for (const label of toolStepLabels([unknown])) expect(label).not.toMatch(/\d+-\d/);
   });
 
   test("a call a gate turned away is refused; one that ran and found nothing is skipped", () => {
@@ -155,8 +185,32 @@ describe("measure names from the answer's own data", () => {
       "refused",
       "skipped",
     ]);
-    expect(toolStepLabel(gated)).toBe("Refused: VIEW_NOT_ALLOWED");
-    expect(toolStepLabel(empty)).toBe("No data: NO_ROWS");
+    expect(toolStepLabel(gated)).toBe("This view isn't allowed for this question");
+    expect(toolStepLabel(empty)).toBe("No readings in this range");
+  });
+});
+
+describe("the card's badge says what the step says (#492)", () => {
+  test("a gated call reads Refused, a call that found nothing No data, on both", () => {
+    const gated = done(
+      "show_view",
+      { kind: "chart.timeseries", measure: "8867-4" },
+      { code: "VIEW_NOT_ALLOWED", error: "synthetic" },
+    );
+    const empty = done("trend", { measure: "8867-4" }, { code: "NO_ROWS", error: "x" });
+    const read = done("trend", { measure: "8867-4" });
+    const cards = [gated, empty, read];
+    const badges = cards.map((card) => OUTCOME_LABELS[toolOutcome(card)]);
+    expect(badges).toEqual(["Refused", "No data", "Done"]);
+    expect(cards.map((card) => STEP_STATE_WORDS[toolStepState(card)])).toEqual(badges);
+    const steps = cards.map((card, index) => ({
+      id: String(index),
+      label: toolStepLabel(card),
+      state: toolStepState(card),
+    }));
+    expect(traceHeadline({ state: "done", steps, elapsedMs: null })).toBe(
+      "Used 2 tools; 1 call was refused",
+    );
   });
 });
 
@@ -271,7 +325,7 @@ describe("a show_view call refused with VIEW_NOT_ALLOWED (#492)", () => {
     const steps = stepsOf([gated]);
     expect(gated.notRun).toBe(true);
     expect(steps[0]).toMatchObject({
-      label: "Refused: VIEW_NOT_ALLOWED",
+      label: "This view isn't allowed for this question",
       state: "refused",
     });
     expect(traceHeadline({ state: "done", steps, elapsedMs: 3_000 })).toBe(
@@ -285,8 +339,8 @@ describe("a show_view call refused with VIEW_NOT_ALLOWED (#492)", () => {
     const steps = stepsOf([empty, gated]);
     expect(empty.notRun).toBeUndefined();
     expect(steps.map((step) => step.label)).toEqual([
-      "No data: NO_ROWS",
-      "Refused: VIEW_NOT_ALLOWED",
+      "No readings in this range",
+      "This view isn't allowed for this question",
     ]);
     expect(traceHeadline({ state: "done", steps, elapsedMs: 3_000 })).toBe(
       "Used 1 tool in 3.0s; 1 call was refused",

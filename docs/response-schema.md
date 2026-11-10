@@ -305,6 +305,25 @@ never repeated. Codes (`answer_class`, reasons, `next_step`) are never shown.
 - Hallucinated keys: `The model cited N keys that were not in its context.`
   (`1 key` for one). A count only; the key strings are never shown.
 - Tool-call count: `N data lookups recorded for this answer.` (`1 data lookup …` for one)
+- Cited wearable value (#464): each evidence chip names its source and day under the
+  value, `From Oura, 2 Jan 2026` (`From Oura` when the value has no day). The source is
+  the summary the prompt offered the metric from (`offeredMetrics`), stored with the
+  answer's attribution as `source` and `day`; a stored key or vendor id is never
+  shown. An answer stored before has no source and shows its chips as before. This is
+  on the stored attribution, not in the response document. The panel no longer prints
+  `evidence_keys`: the chips name each value, and the thread export lists every chip
+  with its source, day and key under "Evidence:" (keys alone when an answer has no
+  chips). With keys but no chips the panel says only how many values were cited.
+- Cited value check (#545): the number the reply states for each cited value is checked
+  against the stored reading behind its key (`infrastructure/cited-value-check.ts`, rules
+  in its header: units and their spellings, durations such as `7 h 32 min` or `7:32`,
+  decimal commas, rounding only to the precision the app shows). Stored with the
+  attribution as optional `valueCheck`, with a `status` of `matched`, `not_matched` or
+  `unstated`, and `stated`, the number as the reply wrote it. The chip then reads
+  "Matches the Oura reading, 2 Jan 2026", or "Doesn't match the cited reading: the
+  answer says 75" with no source line; `unstated` (no number for the value) and answers
+  stored before keep the source line. The thread export carries the same words. A value
+  that is not a number gets no check.
 
 Panel order: reasoning, evidence used (then the hallucinated-key line), guideline references, population
 context (GBD rows and attribution line), uncertainty (level, reasons, then the model's statement), next

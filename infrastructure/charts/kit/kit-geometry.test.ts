@@ -4,6 +4,7 @@ import {
   barsWithLine,
   cumulativeDay,
   edgeAnchor,
+  emptyDayOutline,
   estimateLayout,
   estimateRows,
   exactDecimals,
@@ -12,11 +13,13 @@ import {
   log2Ticks,
   monthShares,
   nullBand,
+  PLACEHOLDER_DAY,
   nullFigure,
   axisShare,
   radar,
   radarAxisAt,
   rangeBars,
+  seriesKeys,
   ringPartAt,
   scoreRing,
   slotIndex,
@@ -514,7 +517,7 @@ describe("estimate rows, extended", () => {
     expect(out.ticks.at(-1)!.value).toBeGreaterThanOrEqual(3.93);
   });
 
-  test("rows of one series share an index, in the order they first appear", () => {
+  test("rows of one series share an index, in a stable order, not the rows' order", () => {
     const out = estimateRows(
       [
         { label: "General 8b", estimate: 1, series: "qwen3:8b" },
@@ -524,8 +527,8 @@ describe("estimate rows, extended", () => {
       ],
       box,
     );
-    expect(out.series).toEqual(["qwen3:8b", "qwen3:4b"]);
-    expect(out.rows.map((r) => r.series)).toEqual([0, 1, 0, null]);
+    expect(out.series).toEqual(["qwen3:4b", "qwen3:8b"]);
+    expect(out.rows.map((r) => r.series)).toEqual([1, 0, 1, null]);
   });
 });
 
@@ -748,5 +751,53 @@ describe("week step", () => {
     expect(weekStep("ArrowDown", null, cells)).toEqual({ kind: "move", index: 0 });
     expect(weekStep("ArrowUp", null, cells)).toEqual({ kind: "move", index: 27 });
     expect(weekStep("ArrowRight", 2, cells)).toBeNull();
+  });
+});
+
+describe("empty day outline", () => {
+  const usual = [
+    { at: 0, value: 0 },
+    { at: 1, value: 8000 },
+  ];
+
+  test("the usual day when there is one", () => {
+    expect(emptyDayOutline(usual)).toBe(usual);
+  });
+
+  test("a placeholder shape when there is none, rising from 0 to 1 over the day", () => {
+    for (const none of [[], [{ at: 0.5, value: 3 }]]) {
+      const out = emptyDayOutline(none);
+      expect(out).toBe(PLACEHOLDER_DAY);
+    }
+    expect(PLACEHOLDER_DAY[0]!.value).toBeCloseTo(0);
+    expect(PLACEHOLDER_DAY.at(-1)!.value).toBeCloseTo(1);
+    const values = PLACEHOLDER_DAY.map((s) => s.value);
+    expect(values.every((v, i) => i === 0 || v >= values[i - 1]!)).toBe(true);
+  });
+});
+
+describe("series keys", () => {
+  const rows = (keys: readonly string[]) =>
+    keys.map((series) => ({ label: series, estimate: 1, series }));
+
+  test("natural order, so 8b comes before 14b, whatever order the rows are in", () => {
+    expect(seriesKeys(rows(["qwen3:14b", "qwen3:8b", "qwen3:4b", "qwen3:8b"]))).toEqual([
+      "qwen3:4b",
+      "qwen3:8b",
+      "qwen3:14b",
+    ]);
+    expect(seriesKeys(rows(["b", "A", "a2"]))).toEqual(["A", "a2", "b"]);
+  });
+
+  test("an explicit order goes first, the rest follow naturally, unknown names are ignored", () => {
+    expect(
+      seriesKeys(rows(["qwen3:4b", "qwen3:8b", "qwen3:14b"]), ["qwen3:14b", "gone"]),
+    ).toEqual(["qwen3:14b", "qwen3:4b", "qwen3:8b"]);
+  });
+
+  test("the same keys get the same order on any screen", () => {
+    const a = seriesKeys(rows(["qwen3:8b", "qwen3:4b"]));
+    const b = seriesKeys(rows(["qwen3:4b", "qwen3:8b"]));
+    expect(a).toEqual(b);
   });
 });

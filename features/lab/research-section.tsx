@@ -1,4 +1,5 @@
-import { type Category, InsightCard, ResearchFigure } from "@/infrastructure/charts/kit";
+import type { SeriesToken } from "@/infrastructure/charts/category-token";
+import { InsightCard, ResearchFigure } from "@/infrastructure/charts/kit";
 import { Card } from "@/infrastructure/ui-kit/card";
 import { StatusBadge } from "@/infrastructure/ui-kit/status-badge";
 
@@ -23,16 +24,19 @@ import { STUDY_STATUS } from "./research-summary";
  */
 
 /**
- * The kit colours a card by category; the studies are not categories, so
- * each takes one of the four series in study order. The heading carries the
- * word; the colour only tells the studies apart.
+ * A study is not a wearable category, so each has a fixed series colour of
+ * its own, in study order. The heading carries the word; the colour only
+ * tells the studies apart. Rows grouped within a figure take their own.
  */
-const STUDY_CATEGORY: Readonly<Record<ResearchStudy, Category>> = {
-  grounding: "vitals",
-  arrhythmia: "activity",
-  "heart-brain": "heart",
-  disclosure: "sleep",
+const STUDY_SERIES: Readonly<Record<ResearchStudy, SeriesToken>> = {
+  grounding: "chart-1",
+  arrhythmia: "chart-2",
+  "heart-brain": "chart-3",
+  disclosure: "chart-4",
 };
+
+/** The kit asks every chart for a category; the study's series replaces its colour. */
+const CATEGORY = "vitals";
 
 const SOURCES: readonly (readonly [string, string])[] = [
   [
@@ -71,8 +75,15 @@ const HowToRead = () => (
       </li>
       <li>
         <span className="text-foreground">Dotted line</span>: the reference, such as 1 =
-        no difference or 0.5 = chance.
+        no difference or 0.5 = chance. Ratios sit on a log axis, so 0.5 and 2 are equally
+        far from 1.
       </li>
+      <li>
+        <span className="text-foreground">Grey tick on a row</span>: the value expected
+        for it. <span className="text-foreground">Grey band</span>: the range of a null,
+        such as runs with the dates shuffled.
+      </li>
+      <li>Where a figure has a legend, the colours name its groups.</li>
       <li>Hover a figure, or tab to it and use the arrow keys, to read each row.</li>
     </ul>
     <dl className="grid gap-x-4 gap-y-2 text-sm sm:grid-cols-[minmax(0,14rem)_1fr]">
@@ -88,44 +99,67 @@ const HowToRead = () => (
 
 const Figure = ({
   figure,
-  category,
+  series,
   label,
-}: Readonly<{ figure: ResearchFigureData; category: Category; label: string }>) =>
-  figure.kind === "pairs" ? (
-    <ResearchFigure
-      kind="pairs"
-      category={category}
-      label={label}
-      groups={figure.groups}
-    />
-  ) : (
-    <ResearchFigure
-      kind="estimates"
-      category={category}
-      label={label}
-      estimates={figure.estimates}
-      reference={figure.reference}
-      domain={figure.domain}
-    />
-  );
+}: Readonly<{ figure: ResearchFigureData; series: SeriesToken; label: string }>) => {
+  switch (figure.kind) {
+    case "pairs":
+      return (
+        <ResearchFigure
+          kind="pairs"
+          category={CATEGORY}
+          series={series}
+          label={label}
+          groups={figure.groups}
+        />
+      );
+    case "null":
+      return (
+        <ResearchFigure
+          kind="null"
+          category={CATEGORY}
+          series={series}
+          observed={figure.observed}
+          observedLabel={figure.observedLabel}
+          summary={figure.summary}
+          nullLabel={figure.nullLabel}
+        />
+      );
+    case "estimates":
+      return (
+        <ResearchFigure
+          kind="estimates"
+          category={CATEGORY}
+          series={series}
+          label={label}
+          estimates={figure.estimates}
+          reference={figure.reference}
+          domain={figure.domain}
+          scale={figure.scale}
+        />
+      );
+  }
+};
 
 const AxisTitle = ({ children }: Readonly<{ children: string }>) => (
   <p className="text-muted-foreground text-center font-mono text-xs">{children}</p>
 );
 
 const FigureCard = ({ card }: Readonly<{ card: ResearchCard }>) => {
-  const category = STUDY_CATEGORY[card.study];
+  const series = STUDY_SERIES[card.study];
   return (
     <InsightCard
-      category={category}
+      category={CATEGORY}
+      series={series}
       label={card.label}
       sentence={card.headline}
-      interactive
+      // A null figure is a picture under its sentence; the others have readouts.
+      interactive={card.figure.kind !== "null"}
     >
       <div className="flex flex-col gap-4">
         <p className="text-muted-foreground text-sm leading-relaxed">{card.caption}</p>
         <div className="flex flex-col gap-1">
-          <Figure figure={card.figure} category={category} label={card.label} />
+          <Figure figure={card.figure} series={series} label={card.label} />
           <AxisTitle>{card.axis}</AxisTitle>
         </div>
         {card.more === null ? null : (
@@ -134,7 +168,7 @@ const FigureCard = ({ card }: Readonly<{ card: ResearchCard }>) => {
             <div className="mt-3 flex flex-col gap-1">
               <Figure
                 figure={card.more.figure}
-                category={category}
+                series={series}
                 label={`${card.label}, all rows`}
               />
               <AxisTitle>{card.axis}</AxisTitle>

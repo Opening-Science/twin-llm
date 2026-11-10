@@ -490,11 +490,29 @@ export type EstimateRows = Readonly<{
   ticks: readonly Readonly<{ value: number; x: number }>[];
   /** Where the reference (a null, a control, an expected value) sits. */
   referenceX: number | null;
-  /** The distinct series keys, in the order rows first name them. */
+  /** The distinct series keys in their stable order (`seriesKeys`). */
   series: readonly string[];
 }>;
 
 export type AxisScale = "linear" | "log";
+
+const NATURAL = new Intl.Collator("en", { numeric: true, sensitivity: "base" });
+
+/**
+ * The series keys of a figure in a stable order, so a series keeps its
+ * colour wherever it is drawn: those named in `order` first, in that order,
+ * then the rest in natural order (qwen3:4b, qwen3:8b, qwen3:14b), never in
+ * the order the rows happen to come in.
+ */
+export const seriesKeys = (
+  estimates: readonly Estimate[],
+  order: readonly string[] = [],
+): readonly string[] => {
+  const present = new Set(estimates.flatMap((e) => (e.series ? [e.series] : [])));
+  const named = order.filter((key) => present.has(key));
+  const rest = [...present].filter((key) => !named.includes(key)).sort(NATURAL.compare);
+  return [...named, ...rest];
+};
 
 /**
  * Even ticks for a ratio on a log axis: powers of two that cover [min, max],
@@ -522,6 +540,7 @@ export const estimateRows = (
   domain?: readonly [number, number],
   scale: AxisScale = "linear",
   pad = 0,
+  order: readonly string[] = [],
 ): EstimateRows => {
   const values = estimates
     .flatMap((e) => [e.estimate, e.low, e.high, e.expected])
@@ -550,7 +569,7 @@ export const estimateRows = (
       ? pad + ((at(v) - at(lo)) / span) * inner
       : null;
   const slot = estimates.length === 0 ? 0 : box.height / estimates.length;
-  const series = [...new Set(estimates.flatMap((e) => (e.series ? [e.series] : [])))];
+  const series = seriesKeys(estimates, order);
   return {
     rows: estimates.map((e, i) => ({
       label: e.label,
@@ -1018,3 +1037,21 @@ export const weekStep = (
     .sort((a, b) => (down ? a.c.row - b.c.row : b.c.row - a.c.row));
   return { kind: "move", index: candidates[0]?.i ?? current };
 };
+
+/**
+ * The shape of a typical day's running total, for an empty C05 with no
+ * usual day to outline yet: little at night, most in the day. A shape, not
+ * data: it has no scale and is never drawn as a value.
+ */
+export const PLACEHOLDER_DAY: readonly DaySample[] = Array.from(
+  { length: 25 },
+  (_, i) => {
+    const at = i / 24;
+    const share = (x: number): number => 1 / (1 + Math.exp(-10 * (x - 0.55)));
+    return { at, value: (share(at) - share(0)) / (share(1) - share(0)) };
+  },
+);
+
+/** The curve an empty C05 outlines: the usual day when there is one, else the placeholder. */
+export const emptyDayOutline = (average: readonly DaySample[]): readonly DaySample[] =>
+  average.filter((s) => finite(s.value)).length >= 2 ? average : PLACEHOLDER_DAY;
