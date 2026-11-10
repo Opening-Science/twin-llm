@@ -18,7 +18,7 @@ const PLOT = 96;
 
 /**
  * C13: the usual value and the last value as heroes, then a bar per day in
- * grey with the last one in the category colour, and the target as a line.
+ * grey with the last one in the category colour, and the usual value as a line.
  * With readouts, the night under the pointer or the keys stays full, the
  * others step back, and the readout names it. `floor` starts the bars above
  * zero, so a bedtime shift reads; `usual` draws the usual range as a band.

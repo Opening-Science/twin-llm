@@ -71,7 +71,8 @@ export const SLEEP_PARTS = [
 
 /** Minutes after 22:00, 14 nights. */
 export const BEDTIMES = [62, 48, 81, 55, 70, 44, 90, 58, 66, 52, 75, 61, 49, 108];
-export const BEDTIME_TARGET = 60;
+/** The usual bedtime the heroes show, 23:04. */
+export const BEDTIME_USUAL = 64;
 
 /** P3 within-person effect, docs/research: 3.09 (2.07 to 4.63) against a shuffled null. */
 export const P3_ESTIMATES = [

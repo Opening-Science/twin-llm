@@ -183,7 +183,7 @@ export type MonthComparisonProps = Base &
     previous: Readonly<{ month: string; value: number | null; display: string }>;
   }>;
 
-/** C13: daily bars in grey, the last one highlighted, and a target line. */
+/** C13: daily bars in grey, the last one highlighted, and the usual value as a line. */
 export type ConsistencyProps = Base &
   Interactive &
   Readonly<{

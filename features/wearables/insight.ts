@@ -1,3 +1,4 @@
+import { formatDuration } from "@/infrastructure/charts/kit/format";
 import { DISPLAY_LOCALE, roundTo } from "@/infrastructure/format-measure";
 
 /**
@@ -160,19 +161,6 @@ const counted = (
 ): string => {
   const text = formatNumber(value, decimals, locale);
   return `${text} ${roundTo(value, decimals) === 1 ? one : many}`;
-};
-
-/** Minutes as "7 hr 24 min", "7 hr" or "45 min". */
-export const formatDuration = (
-  minutes: number,
-  locale: string = DISPLAY_LOCALE,
-): string => {
-  const total = roundTo(Math.abs(minutes), 0);
-  const hours = Math.floor(total / 60);
-  const rest = total % 60;
-  if (hours === 0) return `${rest} min`;
-  const hr = `${formatNumber(hours, 0, locale)} hr`;
-  return rest === 0 ? hr : `${hr} ${rest} min`;
 };
 
 /** A threshold in words: "7 hours", "1 hour", or "7 hr 30 min" when it is not whole. */

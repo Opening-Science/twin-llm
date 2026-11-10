@@ -26,7 +26,7 @@ import {
 import { Button } from "@/infrastructure/ui-kit/button";
 
 import {
-  BEDTIME_TARGET,
+  BEDTIME_USUAL,
   BEDTIME_READOUTS,
   BEDTIMES,
   DAY_AVERAGE,
@@ -452,7 +452,7 @@ export const GalleryScreen = () => (
 
     <Row
       name="C13 Consistency"
-      note="Nights in grey, the last one in colour, the target dashed. Try: hover or drag, tap, arrow keys."
+      note="Nights in grey, the last one in colour, the usual dashed. Try: hover or drag, tap, arrow keys."
       render={(state) => (
         <InsightCard
           category="sleep"
@@ -462,7 +462,7 @@ export const GalleryScreen = () => (
           sentence={
             state === "empty"
               ? "Your bedtime pattern appears after 14 nights."
-              : "Your bedtime was 48 minutes later than your target last night."
+              : "Your bedtime was 44 minutes later than usual last night."
           }
           emptyNote="14 nights needed"
         >
@@ -473,8 +473,8 @@ export const GalleryScreen = () => (
             readouts={BEDTIME_READOUTS}
             label="Sleep: Bedtime"
             defaultFocus={13}
-            target={BEDTIME_TARGET}
-            reference={{ label: "Average bedtime", value: "23:04" }}
+            target={BEDTIME_USUAL}
+            reference={{ label: "Usual bedtime", value: "23:04" }}
             last={{ label: "Last night", value: "23:48" }}
             axis={["25 Oct", "7 Nov"]}
           />
@@ -609,7 +609,7 @@ export const GalleryScreen = () => (
           <Consistency
             category="sleep"
             values={BEDTIMES.map((m) => 22 * 60 + m)}
-            target={22 * 60 + BEDTIME_TARGET}
+            target={22 * 60 + BEDTIME_USUAL}
             floor={22 * 60}
             usual={{ low: 22 * 60 + 45, high: 22 * 60 + 75 }}
             reference={{ label: "Usual bedtime", value: "23:04" }}

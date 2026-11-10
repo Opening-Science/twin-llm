@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { formatDuration, INSIGHT_METRIC_BY_STEM, insight } from "./insight";
+import { INSIGHT_METRIC_BY_STEM, insight } from "./insight";
 
 describe("T1 today against usual", () => {
   test("steps below, about and above", () => {
@@ -348,13 +348,6 @@ describe("locale", () => {
     ).toBe(
       "In the last 4 weeks, you've taken 1,00,000 steps or more on 12 different days.",
     );
-  });
-
-  test("durations read as hours and minutes", () => {
-    expect(formatDuration(444)).toBe("7 hr 24 min");
-    expect(formatDuration(420)).toBe("7 hr");
-    expect(formatDuration(45)).toBe("45 min");
-    expect(formatDuration(59.6)).toBe("1 hr");
   });
 });
 
