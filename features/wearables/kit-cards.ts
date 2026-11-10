@@ -8,6 +8,7 @@ import type {
   SleepStage,
   StageSpan,
 } from "@/infrastructure/charts/kit";
+import { formatDuration } from "@/infrastructure/charts/kit/format";
 import {
   formatClock,
   formatDate,
@@ -19,7 +20,7 @@ import {
 import { DASHBOARD_TRENDS, type TrendSpec } from "./dashboard-cards";
 import { type WearableSource } from "./dashboard-headings";
 import type { ChartPoint } from "./interactive-chart";
-import { formatDuration, insight, type InsightMetric } from "./insight";
+import { insight, type InsightMetric } from "./insight";
 import { EVENING_MINUTES } from "./local-clock";
 import { pointsByPrefix, scoreBand, type Metric } from "./metric-utils";
 import type {

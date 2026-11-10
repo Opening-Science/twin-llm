@@ -1,6 +1,6 @@
 /**
- * How the kit writes a duration and a time of day, the same way as the
- * wearables insight sentences (features/wearables/insight.ts): "7 hr 4 min",
+ * How the kit writes a duration and a time of day; the wearables insight
+ * sentences (features/wearables/insight.ts) use the same `formatDuration`: "7 hr 4 min",
  * "7 hr" or "45 min", and the clock in the display locale, which is 24-hour
  * "23:48" for en-GB. Pure; the locale is a parameter for the tests, and the
  * app passes nothing and gets the display locale.
