@@ -4,17 +4,18 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Color, type Material, type Object3D, Quaternion, Vector3 } from "three";
 
-import { fitAtlasToScan } from "@/packages/anatomy/fit";
+import { fitAtlasToScan, fitSkeletonToScan } from "@/packages/anatomy/fit";
 import { partsFor, type Highlight } from "@/packages/anatomy/highlight";
 import {
   applyMask,
   ATLAS_LAYER_IDS,
   dampDepth,
-  layerMix,
   partShown,
+  viewMix,
   type AtlasLayerId,
 } from "@/packages/anatomy/layers";
 import { ATLASES, atlasApiUrl, type AtlasId } from "@/packages/anatomy/manifest";
+import { type SkeletonAtlas } from "@/packages/anatomy/open-skeleton";
 import { type OrganSystem } from "@/packages/anatomy/systems";
 
 import { disposeObject3D } from "../dispose-object";
@@ -24,7 +25,7 @@ import { LiveConditioning, type LiveStatus } from "../live/live-conditioning";
 import { type BeatPattern } from "../live/heart-cycle";
 import { type LiveVitals } from "../live/live-rates";
 import { useTwinPalette } from "../use-twin-palette";
-import { type AnatomyLoad } from "./anatomy-state";
+import { type AnatomyLoad, type SkeletonLoad } from "./anatomy-state";
 import {
   applyMixToUniforms,
   attachLayerFade,
@@ -36,6 +37,7 @@ import {
 } from "./layer-material";
 import { loadAtlasGltf } from "./load-atlas";
 import { prepareAtlas, type PreparedAtlas } from "./prepare-atlas";
+import { applyExplode, prepareSkeleton, type PreparedSkeleton } from "./prepare-skeleton";
 import { SCAN_RENDER_ORDER, setLayerPasses, setScanRenderOrder } from "./depth-prepass";
 import { collectScanMaterials, readScanFrame } from "./scan-frame";
 
@@ -43,6 +45,9 @@ import { collectScanMaterials, readScanFrame } from "./scan-frame";
 const TRIANGLE_WARNING = 2_500_000;
 
 type ScanSurface = Readonly<{ material: Material; uniforms: LayerUniforms }>;
+
+/** The open-anatomy skeleton route; it answers 404 when none is configured. */
+export const SKELETON_API_URL = "/api/anatomy/skeleton";
 
 const NO_PARTS: PreparedAtlas["parts"] = [];
 const NO_GROUPS: PreparedAtlas["groups"] = [];
@@ -53,6 +58,11 @@ const ignorePick = (): void => undefined;
  * first time it is asked for, fits it to the scan, and every frame eases the
  * depth toward the slider and writes the resulting fade into shared uniforms.
  * Visibility and blend mode are set here so fully faded layers cost nothing.
+ *
+ * When an open-anatomy CT skeleton is configured and switched on, it is the
+ * Skeleton layer: the atlas's own bones are hidden (so nothing the CT build
+ * left out is drawn from another donor), and the CT bones fade, isolate and
+ * spread apart on the same uniforms and passes as the atlas layers.
  */
 export const AnatomyLayers = ({
   scanRoot,
@@ -68,6 +78,10 @@ export const AnatomyLayers = ({
   onLoad,
   onPick,
   liveVitals,
+  isolate = null,
+  explode = 0,
+  skeleton = null,
+  onSkeletonLoad,
 }: Readonly<{
   scanRoot: Object3D | null;
   /** The scan's measured stature in metres, when it has one; the fit prefers it. */
@@ -91,6 +105,13 @@ export const AnatomyLayers = ({
     chambers: Readonly<{ on: boolean; pattern: BeatPattern }>;
     onStatus: (status: LiveStatus) => void;
   }>;
+  /** The layer shown alone and solid, if any. */
+  isolate?: AtlasLayerId | null;
+  /** How far the CT bones are spread apart, 0..1. */
+  explode?: number;
+  /** The configured CT skeleton's atlas.json, when it is on; null draws the atlas's bones. */
+  skeleton?: SkeletonAtlas | null;
+  onSkeletonLoad?: (load: SkeletonLoad) => void;
 }>) => {
   const invalidate = useThree((state) => state.invalidate);
   const ring = useTwinPalette().ring;
@@ -101,9 +122,27 @@ export const AnatomyLayers = ({
   const scanSurfacesRef = useRef<readonly ScanSurface[]>([]);
   const fitOkRef = useRef(false);
   const depthRef = useRef(0);
-  const live = useRef({ targetDepth, layers, hiddenSystems, reducedMotion });
+  const [bones, setBones] = useState<PreparedSkeleton | null>(null);
+  const bonesRef = useRef<PreparedSkeleton | null>(null);
+  const bonesFitOkRef = useRef(false);
+  const explodeRef = useRef(0);
+  const live = useRef({
+    targetDepth,
+    layers,
+    hiddenSystems,
+    reducedMotion,
+    isolate,
+    explode,
+  });
   useEffect(() => {
-    live.current = { targetDepth, layers, hiddenSystems, reducedMotion };
+    live.current = {
+      targetDepth,
+      layers,
+      hiddenSystems,
+      reducedMotion,
+      isolate,
+      explode,
+    };
   });
 
   useEffect(() => {
@@ -153,6 +192,47 @@ export const AnatomyLayers = ({
     };
   }, [requested, atlasId, retry, onLoad]);
 
+  // The CT skeleton loads beside the atlas, the first time anyone moves past
+  // the scan with one configured and on; switched off, it is disposed.
+  useEffect(() => {
+    if (!requested || !skeleton) return;
+    let cancelled = false;
+    let loaded: PreparedSkeleton | null = null;
+    const report = onSkeletonLoad ?? (() => undefined);
+    report({ kind: "loading" });
+    loadAtlasGltf(SKELETON_API_URL, () => undefined)
+      .then((gltf) => {
+        if (cancelled) {
+          disposeObject3D(gltf.scene);
+          return;
+        }
+        let ready: PreparedSkeleton;
+        try {
+          ready = prepareSkeleton(gltf.scene, skeleton);
+        } catch {
+          disposeObject3D(gltf.scene);
+          report({ kind: "error" });
+          return;
+        }
+        loaded = ready;
+        bonesRef.current = ready;
+        setBones(ready);
+      })
+      .catch(() => {
+        if (!cancelled) report({ kind: "error" });
+      });
+    return () => {
+      cancelled = true;
+      bonesRef.current = null;
+      setBones(null);
+      report({ kind: "idle" });
+      if (loaded) {
+        loaded.root.removeFromParent();
+        disposeObject3D(loaded.root);
+      }
+    };
+  }, [requested, skeleton, retry, onSkeletonLoad]);
+
   useEffect(() => {
     if (!scanRoot || !requested) return;
     const surfaces = collectScanMaterials(scanRoot).flatMap((material) => {
@@ -190,6 +270,39 @@ export const AnatomyLayers = ({
     return { position, quaternion, scale };
   }, [fit]);
 
+  const bonesFit = useMemo(
+    () =>
+      bones && scanRoot
+        ? fitSkeletonToScan(
+            { box: bones.box, hipBox: bones.hipBox },
+            readScanFrame(scanRoot, statureM),
+          )
+        : null,
+    [bones, scanRoot, statureM],
+  );
+
+  const bonesTransform = useMemo(() => {
+    if (!bonesFit?.ok) return null;
+    const position = new Vector3();
+    const quaternion = new Quaternion();
+    const scale = new Vector3();
+    bonesFit.matrix.decompose(position, quaternion, scale);
+    return { position, quaternion, scale };
+  }, [bonesFit]);
+
+  useEffect(() => {
+    bonesFitOkRef.current = bonesFit?.ok === true;
+    if (!bones || !bonesFit) return;
+    onSkeletonLoad?.({
+      kind: "ready",
+      anchor: bonesFit.anchor,
+      fitOk: bonesFit.ok,
+      bones: bones.parts.length,
+      modelled: bones.parts.filter((part) => part.modelled).length,
+    });
+    invalidate();
+  }, [bones, bonesFit, onSkeletonLoad, invalidate]);
+
   useEffect(() => {
     fitOkRef.current = fit?.ok === true;
     if (!prepared || !fit) return;
@@ -214,24 +327,25 @@ export const AnatomyLayers = ({
   // The glow is per material and set only when the highlight or the atlas
   // changes; the frame loop never touches it.
   useEffect(() => {
-    if (!prepared) return;
-    const lit = new Set(highlight ? partsFor(highlight, prepared.parts) : []);
+    const all = [...(prepared?.parts ?? []), ...(bones?.parts ?? [])];
+    if (all.length === 0) return;
+    const lit = new Set(highlight ? partsFor(highlight, all) : []);
     const colour = new Color(ring);
-    for (const part of prepared.parts) {
+    for (const part of all) {
       setHighlighted(part.mesh.material as Material, lit.has(part) ? colour : null);
     }
     invalidate();
     return () => {
-      for (const part of prepared.parts) {
+      for (const part of all) {
         setHighlighted(part.mesh.material as Material, null);
       }
     };
-  }, [prepared, highlight, ring, invalidate]);
+  }, [prepared, bones, highlight, ring, invalidate]);
 
   // Frames render on demand: kick one whenever an input changes.
   useEffect(() => {
     invalidate();
-  }, [targetDepth, layers, hiddenSystems, invalidate]);
+  }, [targetDepth, layers, hiddenSystems, isolate, explode, invalidate]);
 
   useFrame((_, delta) => {
     const {
@@ -239,30 +353,57 @@ export const AnatomyLayers = ({
       layers: shown,
       hiddenSystems: hidden,
       reducedMotion: reduced,
+      isolate: alone,
+      explode: spread,
     } = live.current;
     const atlas = preparedRef.current;
-    const ready = atlas !== null && fitOkRef.current;
+    const ct = bonesRef.current;
+    const ctReady = ct !== null && bonesFitOkRef.current;
+    const ready = (atlas !== null && fitOkRef.current) || ctReady;
     const next = dampDepth(depthRef.current, ready ? wanted : 0, delta, reduced);
-    const moving = next !== depthRef.current;
+    const nextSpread = dampDepth(
+      explodeRef.current,
+      ctReady ? spread : 0,
+      delta,
+      reduced,
+    );
+    const moving = next !== depthRef.current || nextSpread !== explodeRef.current;
     depthRef.current = next;
+    explodeRef.current = nextSpread;
 
-    const scanMix = layerMix("scan", next);
+    const scanMix = viewMix("scan", next, alone);
     for (const surface of scanSurfacesRef.current) {
       applyMixToUniforms(surface.uniforms, scanMix);
       setBlendMode(surface.material, blendModeFor(scanMix, "scan"));
     }
 
     if (atlas) {
+      // With the CT skeleton in place the atlas draws no bones of its own.
+      const atlasShown = ctReady ? { ...shown, skeleton: false } : shown;
       for (const layer of ATLAS_LAYER_IDS) {
-        applyMixToUniforms(atlas.uniforms[layer], layerMix(layer, next));
+        applyMixToUniforms(atlas.uniforms[layer], viewMix(layer, next, alone));
       }
       for (const part of atlas.parts) {
-        const mix = applyMask(layerMix(part.layer, next), partShown(part, shown, hidden));
+        const mix = applyMask(
+          viewMix(part.layer, next, alone),
+          partShown(part, atlasShown, hidden),
+        );
         const mode = blendModeFor(mix, "atlas");
         Object.assign(part.mesh, { visible: mix.visible });
         setBlendMode(part.mesh.material as Material, mode);
         setLayerPasses(part.mesh, part.layer, mode);
       }
+    }
+    if (ct) {
+      const mix = applyMask(viewMix("skeleton", next, alone), shown.skeleton && ctReady);
+      const mode = blendModeFor(mix, "atlas");
+      applyMixToUniforms(ct.uniforms, mix);
+      for (const part of ct.parts) {
+        Object.assign(part.mesh, { visible: mix.visible });
+        setBlendMode(part.mesh.material as Material, mode);
+        setLayerPasses(part.mesh, "skeleton", mode);
+      }
+      applyExplode(ct.parts, nextSpread);
     }
     if (moving) invalidate();
   });
@@ -270,22 +411,50 @@ export const AnatomyLayers = ({
   // Picks the body outline before any atlas is loaded, and atlas parts once one is.
   const readDepth = useCallback(() => depthRef.current, []);
   const ready = prepared !== null && transform !== null;
+  const bonesReady = bones !== null && bonesTransform !== null;
+  const pickParts = useMemo(
+    () => [
+      ...(ready
+        ? prepared.parts.filter((part) => !(bonesReady && part.layer === "skeleton"))
+        : NO_PARTS),
+      ...(bonesReady ? bones.parts : NO_PARTS),
+    ],
+    [ready, prepared, bonesReady, bones],
+  );
   const pick = (
     <PickSurface
       enabled={onPick !== undefined}
       scanRoot={scanRoot}
-      parts={ready ? prepared.parts : NO_PARTS}
+      parts={pickParts}
       groups={ready ? prepared.groups : NO_GROUPS}
       getDepth={readDepth}
       layers={layers}
       hiddenSystems={hiddenSystems}
+      isolate={isolate}
       onPick={onPick ?? ignorePick}
     />
   );
-  if (!ready) return pick;
+  const ctGroup = bonesReady ? (
+    <group
+      position={bonesTransform.position}
+      quaternion={bonesTransform.quaternion}
+      scale={bonesTransform.scale}
+    >
+      <primitive object={bones.root} />
+    </group>
+  ) : null;
+  if (!ready) {
+    return (
+      <>
+        {pick}
+        {ctGroup}
+      </>
+    );
+  }
   return (
     <>
       {pick}
+      {ctGroup}
       {liveVitals ? (
         <LiveConditioning
           enabled={liveVitals.enabled}

@@ -10,7 +10,12 @@ import {
 import { ATLAS_IDS, isAtlasId, type AtlasId } from "@/packages/anatomy/manifest";
 import { parseSkeletonAtlas, type SkeletonAtlas } from "@/packages/anatomy/open-skeleton";
 
-import { anatomyReducer, initialAnatomyState, type AnatomyLoad } from "./anatomy-state";
+import {
+  anatomyReducer,
+  initialAnatomyState,
+  type AnatomyLoad,
+  type SkeletonLoad,
+} from "./anatomy-state";
 
 type StatusRow = { readonly id?: unknown; readonly installed?: unknown };
 
@@ -71,6 +76,7 @@ export const useAnatomyView = (enabled: boolean) => {
   const [state, dispatch] = useReducer(anatomyReducer, initialAnatomyState);
   const [rigged, setRigged] = useState<Record<DemoBodyId, boolean> | null>(null);
   const [skeleton, setSkeleton] = useState<SkeletonAtlas | null>(null);
+  const [skeletonLoad, setSkeletonLoad] = useState<SkeletonLoad>({ kind: "idle" });
 
   useEffect(() => {
     if (!enabled) return;
@@ -95,5 +101,16 @@ export const useAnatomyView = (enabled: boolean) => {
 
   const onLoad = useCallback((load: AnatomyLoad) => dispatch({ type: "load", load }), []);
 
-  return { state, dispatch, installed: state.installed, rigged, skeleton, onLoad };
+  const onSkeletonLoad = useCallback((load: SkeletonLoad) => setSkeletonLoad(load), []);
+
+  return {
+    state,
+    dispatch,
+    installed: state.installed,
+    rigged,
+    skeleton,
+    skeletonLoad,
+    onLoad,
+    onSkeletonLoad,
+  };
 };

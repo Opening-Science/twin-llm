@@ -39,6 +39,21 @@ export type AnatomyLoad =
     }>
   | Readonly<{ kind: "error" }>;
 
+/** Where the open-anatomy CT skeleton's load stands; idle when none is on. */
+export type SkeletonLoad =
+  | Readonly<{ kind: "idle" }>
+  | Readonly<{ kind: "loading" }>
+  | Readonly<{
+      kind: "ready";
+      anchor: "hips" | "bbox";
+      fitOk: boolean;
+      /** Bones drawn, after the ones atlas.json leaves out. */
+      bones: number;
+      /** How many of them open-anatomy built rather than segmented. */
+      modelled: number;
+    }>
+  | Readonly<{ kind: "error" }>;
+
 export type AnatomyState = Readonly<{
   /** Latches true the first time anyone slides past the scan or opens a layer. */
   requested: boolean;
