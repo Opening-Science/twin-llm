@@ -2,7 +2,14 @@ import { type AtlasId } from "@/packages/anatomy/manifest";
 import { depthPosition, type LayerId } from "@/packages/anatomy/layers";
 import { type OrganSystem } from "@/packages/anatomy/systems";
 
-import { DEMO_FIT_NOTE, DEMO_FIT_NOTE_UNPOSED, DEMO_TYPICAL_NOTE } from "./demo-copy";
+import { type AtlasAnchor } from "@/packages/anatomy/fit";
+
+import {
+  DEMO_FIT_NOTE,
+  DEMO_FIT_NOTE_UNPOSED,
+  DEMO_FITTED_NOTE,
+  DEMO_TYPICAL_NOTE,
+} from "./demo-copy";
 
 /**
  * Every user-facing string for the anatomy layers, in one place so lint:claims
@@ -29,8 +36,16 @@ export const NO_FEMALE_ATLAS =
 export const FEMALE_ATLAS_ON_MALE = "Female reference anatomy shown on a male body.";
 export const ANATOMY_CHANGES_NOTE =
   "Merged, simplified and shaded by the Open Science Foundation's open-twin-xr; positioned by TwinLLM.";
+/** The credit's note while the Blender-fitted atlas shows. */
+export const ANATOMY_FITTED_CHANGES_NOTE =
+  "Merged, simplified and shaded by the Open Science Foundation's open-twin-xr; refitted limb by limb to this body in Blender by TwinLLM, bone lengths kept.";
 export const ANATOMY_NOT_IN_ATLAS = "Not in this atlas.";
 
+/** The Anatomy panel's opt-in, shown only where a fitted atlas is made here. */
+export const FIT_ATLAS_TOGGLE = "Fit atlas to body";
+/** API response, read by developers, so it may name the commands. */
+export const FITTED_NOT_INSTALLED_API =
+  "Fitted atlas not made here. Run bun run blender:fit-atlas, then bun run anatomy:quantise-fitted.";
 /** API response, read by developers, so it may name the variable. */
 export const SKELETON_NOT_CONFIGURED_API =
   "No open-anatomy skeleton here. Set ANATOMY_SKELETON_GLB to a skeleton GLB.";
@@ -80,17 +95,19 @@ export const anatomyTypicalNote = (envelope: AnatomyEnvelope = "scan"): string =
 
 /** `posed`: the demo body stands in the atlas's stance (a rigged body); scans ignore it. */
 export const anatomyFitNote = (
-  anchor: "hips" | "bbox",
+  anchor: AtlasAnchor,
   envelope: AnatomyEnvelope = "scan",
   posed = false,
 ): string =>
-  envelope === "demo"
-    ? posed
-      ? DEMO_FIT_NOTE
-      : DEMO_FIT_NOTE_UNPOSED
-    : anchor === "hips"
-      ? "Reference anatomy from a donor atlas, scaled to this scan's height and aligned at the hips. Not the scanned person's anatomy."
-      : "Reference anatomy from a donor atlas, scaled to this scan's height and centred on the scan outline. Not the scanned person's anatomy.";
+  anchor === "body"
+    ? DEMO_FITTED_NOTE
+    : envelope === "demo"
+      ? posed
+        ? DEMO_FIT_NOTE
+        : DEMO_FIT_NOTE_UNPOSED
+      : anchor === "hips"
+        ? "Reference anatomy from a donor atlas, scaled to this scan's height and aligned at the hips. Not the scanned person's anatomy."
+        : "Reference anatomy from a donor atlas, scaled to this scan's height and centred on the scan outline. Not the scanned person's anatomy.";
 
 export const LAYER_LABEL: Readonly<Record<LayerId, string>> = {
   scan: "Scan",

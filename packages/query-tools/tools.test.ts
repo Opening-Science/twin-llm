@@ -221,7 +221,6 @@ const mockDb = (): MockDb => ({
 });
 
 const mockModuleForFile = moduleMocker({ mock, afterAll });
-mock.module("server-only", () => ({}));
 await mockModuleForFile("@/infrastructure/database", {
   database: () => mockDb(),
 });

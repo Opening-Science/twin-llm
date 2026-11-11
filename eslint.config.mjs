@@ -19,6 +19,8 @@ const NOT_OURS = [
   ".open-twin/**", // synced checkout, linted where it lives
   "python/.venv/**", // uv's environment (matplotlib ships JavaScript)
   "data/**", // local, gitignored data and scratch files
+  ".claude/**", // local agent worktrees and settings, untracked
+  ".plans/**", // local planning notes, untracked
 ];
 
 /**
@@ -103,7 +105,7 @@ const BOUNDARY_DEBT_FEATURES = [
   "wearables",
   "whoop",
 ];
-const INFRASTRUCTURE_SOURCES = "infrastructure/**/*.ts";
+const INFRASTRUCTURE_SOURCES = "infrastructure/**/*.{ts,tsx}";
 
 // --- Config -----------------------------------------------------------------
 
@@ -209,7 +211,6 @@ export default defineConfig([
       ...["env.ts", "public-env.ts", "**/*.test.ts"].map(
         (file) => `infrastructure/${file}`,
       ),
-      "features/leaderboard/leaderboard-screen.tsx",
       "*.config.{ts,mjs}",
       "scripts/**/*.{ts,mjs}",
     ],

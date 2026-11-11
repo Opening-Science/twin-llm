@@ -315,7 +315,7 @@ export const SearchDialog = ({
               const Glyph = GLYPHS[item.kind];
               const selected = item === current;
               return (
-                // eslint-disable-next-line jsx-a11y/click-events-have-key-events
+                // eslint-disable-next-line jsx-a11y/click-events-have-key-events -- keys are handled on the search input, which points here with aria-activedescendant
                 <div
                   key={optionId(item)}
                   id={optionId(item)}

@@ -16,6 +16,7 @@ import {
   ANATOMY_CHANGES_NOTE,
   ANATOMY_DONOR_NOTE,
   ANATOMY_FIT_FAILED,
+  ANATOMY_FITTED_CHANGES_NOTE,
   ANATOMY_LOAD_ERROR,
   ANATOMY_NOT_IN_ATLAS,
   ANATOMY_NOT_INSTALLED,
@@ -26,6 +27,7 @@ import {
   ATLAS_COVERAGE_NOTE,
   ATLAS_OPTION_LABEL,
   depthValueText,
+  FIT_ATLAS_TOGGLE,
   HIGHLIGHT_GROUPS,
   HIGHLIGHT_HIDDEN,
   HIGHLIGHT_LABEL,
@@ -89,6 +91,10 @@ export const skeletonLines = (
 /** The loading line's progress, shown only while bytes arrive; parsing shows none. */
 export const loadingPercent = (percent: number | null): number | null =>
   percent !== null && percent < 100 ? Math.round(percent) : null;
+
+export type FittedControl = Readonly<{ available: boolean; shown: boolean }>;
+
+const NOT_FITTED: FittedControl = { available: false, shown: false };
 const STEP_DOWN = new Set(["ArrowLeft", "ArrowDown", "PageDown"]);
 
 /**
@@ -103,6 +109,7 @@ export const AnatomyControls = ({
   onInteract,
   envelope = "scan",
   posed = false,
+  fitted = NOT_FITTED,
   skeleton = null,
   skeletonLoad = IDLE,
 }: Readonly<{
@@ -115,6 +122,11 @@ export const AnatomyControls = ({
   envelope?: AnatomyEnvelope;
   /** The demo body is posed to the atlas's stance: only a rigged body is. */
   posed?: boolean;
+  /**
+   * "Fit atlas to body": offered only where the Blender-fitted atlas for this
+   * body and atlas is made here (`fitted-option.ts`); hidden otherwise.
+   */
+  fitted?: FittedControl;
   /** The open-anatomy skeleton the server has; null: the layer is absent. */
   skeleton?: SkeletonAtlas | null;
   skeletonLoad?: SkeletonLoad;
@@ -249,6 +261,18 @@ export const AnatomyControls = ({
           </label>
         ) : null}
       </div>
+
+      {fitted.available ? (
+        <label className="mt-2 flex items-center gap-1.5 text-xs">
+          <input
+            type="checkbox"
+            checked={state.fitAtlas}
+            disabled={notInstalled}
+            onChange={(event) => dispatch({ type: "fitAtlas", on: event.target.checked })}
+          />
+          {FIT_ATLAS_TOGGLE}
+        </label>
+      ) : null}
 
       <div aria-live="polite" className="text-muted-foreground mt-2 space-y-1 text-xs">
         {notInstalled ? <p>{ANATOMY_NOT_INSTALLED}</p> : null}
@@ -431,7 +455,8 @@ export const AnatomyControls = ({
       ) : null}
       {state.requested && !(ctReady && state.isolate === "skeleton") ? (
         <p className="text-muted-foreground mt-3 text-[11px] leading-relaxed">
-          {entry.attribution} {ANATOMY_CHANGES_NOTE}{" "}
+          {entry.attribution}{" "}
+          {fitted.shown ? ANATOMY_FITTED_CHANGES_NOTE : ANATOMY_CHANGES_NOTE}{" "}
           <a
             href={entry.licenceUrl}
             target="_blank"

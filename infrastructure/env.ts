@@ -500,6 +500,7 @@ const serverEnvSchema = z
     VITRONIC_DATA_DIR: maybeText(),
     VITRONIC_SCANNER_HOSTS: maybeText(),
     ANATOMY_DATA_DIR: maybeText(),
+    ANATOMY_FITTED_ATLAS: blankableFlag(),
     ANATOMY_SKELETON_GLB: z.preprocess(
       blankAsMissing,
       z
@@ -858,17 +859,25 @@ export type AnatomyEnv = Readonly<{
   /** Where `bun run anatomy:fetch` put the atlas GLBs; null means data/anatomy. */
   dataDir: string | null;
   /**
+   * Whether "Fit atlas to body" starts on for the demo bodies where the
+   * Blender-fitted atlases are installed. Off unless ANATOMY_FITTED_ATLAS=true.
+   */
+  fittedAtlasOn: boolean;
+  /**
    * An open-anatomy skeleton GLB (atlas.json beside it); null means no
    * skeleton layer. Public CC BY CT data, never committed.
    */
   skeletonGlb: string | null;
 }>;
 
-export const anatomyEnv = (): AnatomyEnv =>
-  Object.freeze({
-    dataDir: serverEnv().ANATOMY_DATA_DIR ?? null,
-    skeletonGlb: serverEnv().ANATOMY_SKELETON_GLB ?? null,
+export const anatomyEnv = (): AnatomyEnv => {
+  const env = serverEnv();
+  return Object.freeze({
+    dataDir: env.ANATOMY_DATA_DIR ?? null,
+    fittedAtlasOn: env.ANATOMY_FITTED_ATLAS,
+    skeletonGlb: env.ANATOMY_SKELETON_GLB ?? null,
   });
+};
 
 export type GenomeEnv = Readonly<{
   source: "none" | "ark";
