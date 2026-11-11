@@ -381,8 +381,9 @@ describe("P4 disclosure", () => {
       "Positive control, loss attack",
       "Positive control, pilot 1 as reference",
     ]);
+    // 0.7825 is a half: it rounds away from zero to 0.783 (docs/coding-standards.md).
     expect(c.headline).toBe(
-      "Against the pilot 1 fine-tune the attacks scored AUROC 0.500 to 0.519; against a deliberately overfit positive control, 0.708 to 0.782. 0.5 is chance.",
+      "Against the pilot 1 fine-tune the attacks scored AUROC 0.500 to 0.519; against a deliberately overfit positive control, 0.708 to 0.783. 0.5 is chance.",
     );
     expect(c.axis).toBe("AUROC (0.5 = chance)");
   });
@@ -505,7 +506,7 @@ describe("researchCards", () => {
       },
       disclosure: {
         found:
-          "Membership attacks on the pilot 1 fine-tune scored AUROC 0.500 to 0.519 per record, and every interval included 0.5, the value for chance. On a deliberately overfit positive control the same attacks scored 0.708 to 0.782.",
+          "Membership attacks on the pilot 1 fine-tune scored AUROC 0.500 to 0.519 per record, and every interval included 0.5, the value for chance. On a deliberately overfit positive control the same attacks scored 0.708 to 0.783.",
       },
     });
   });

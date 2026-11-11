@@ -1,5 +1,6 @@
 "use client";
 
+import { formatMeasureNumber, formatNumber } from "@/infrastructure/format-measure";
 import { cn } from "@/infrastructure/ui";
 
 import { categoryTextClass } from "../category-token";
@@ -75,7 +76,7 @@ export const ScoreRing = ({
           dominantBaseline="central"
           className="fill-foreground font-mono text-3xl font-bold tabular-nums"
         >
-          {ring.score}
+          {formatMeasureNumber("percent", ring.score)}
         </text>
       ) : null}
     </svg>
@@ -96,7 +97,7 @@ export const ScoreRing = ({
                   // The focused part reads in foreground; the list is muted already.
                   className={focused === parts.indexOf(p) ? "text-foreground" : undefined}
                 >
-                  {p.label}: {Math.round(p.value)}/{Math.round(p.max)}
+                  {p.label}: {formatNumber(p.value, 0)}/{formatNumber(p.max, 0)}
                 </li>
               ))}
             </ul>
