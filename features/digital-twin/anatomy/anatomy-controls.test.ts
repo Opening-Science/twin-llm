@@ -4,7 +4,9 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 import { ATLASES } from "@/packages/anatomy/manifest";
 
-import { AnatomyControls } from "./anatomy-controls";
+import { parseSkeletonAtlas, type SkeletonAtlas } from "@/packages/anatomy/open-skeleton";
+
+import { AnatomyControls, skeletonLines } from "./anatomy-controls";
 import {
   ANATOMY_CHANGES_NOTE,
   ANATOMY_FIT_FAILED,
@@ -15,8 +17,17 @@ import {
   depthValueText,
   HIGHLIGHT_HIDDEN,
   HIGHLIGHT_SYSTEMS_ONLY,
+  SKELETON_CREDIT_FALLBACK,
+  SKELETON_LOAD_ERROR,
+  SKELETON_LOADING,
+  SKELETON_MODELLED_NOTE,
+  skeletonFitNote,
 } from "./anatomy-copy";
-import { initialAnatomyState, type AnatomyState } from "./anatomy-state";
+import {
+  initialAnatomyState,
+  type AnatomyState,
+  type SkeletonLoad,
+} from "./anatomy-state";
 import { DEMO_FIT_NOTE, DEMO_FIT_NOTE_UNPOSED, DEMO_TYPICAL_NOTE } from "./demo-copy";
 import { highlightOptions, highlightValue } from "./highlight-options";
 
@@ -336,5 +347,107 @@ describe("highlight picker", () => {
       '<option value="system:musculoskeletal">Musculoskeletal</option>',
     );
     expect(html).toContain(HIGHLIGHT_SYSTEMS_ONLY);
+  });
+});
+
+describe("Skeleton layer controls", () => {
+  const S0086: SkeletonAtlas = parseSkeletonAtlas({
+    case: "s0086",
+    girdleLeftOut: [
+      { label: "clavicula_left" },
+      { label: "clavicula_right" },
+      { label: "scapula_left" },
+      { label: "scapula_right" },
+      { label: "humerus_left" },
+      { label: "humerus_right" },
+    ],
+  });
+  const READY: SkeletonLoad = {
+    kind: "ready",
+    anchor: "hips",
+    fitOk: true,
+    bones: 46,
+    modelled: 1,
+  };
+  const renderSkeleton = (
+    state: AnatomyState,
+    skeleton: SkeletonAtlas | null,
+    skeletonLoad: SkeletonLoad = { kind: "idle" },
+  ): string =>
+    renderToStaticMarkup(
+      createElement(AnatomyControls, {
+        state,
+        installed: ALL_INSTALLED,
+        dispatch: () => undefined,
+        onInteract: () => undefined,
+        skeleton,
+        skeletonLoad,
+      }),
+    ).replaceAll("&#x27;", "'");
+
+  test("without a configured skeleton there is no CT option and no spread slider", () => {
+    const html = renderSkeleton(initialAnatomyState, null);
+    expect(html).not.toContain("CT skeleton");
+    expect(html).not.toContain("Spread the bones");
+    // Isolate works on the atlas's own bones too.
+    expect(html).toContain('aria-pressed="false">Only the skeleton</button>');
+  });
+
+  test("a configured skeleton names its case; the spread slider waits for the bones", () => {
+    const html = renderSkeleton(initialAnatomyState, S0086, { kind: "loading" });
+    expect(html).toContain("CT skeleton · open-anatomy s0086");
+    expect(html).not.toContain("Spread the bones");
+  });
+
+  test("once placed: the spread slider, what was left out, the modelled note and credit", () => {
+    const html = renderSkeleton(
+      { ...initialAnatomyState, requested: true, isolate: "skeleton", explode: 0.25 },
+      S0086,
+      READY,
+    );
+    expect(html).toContain("Spread the bones");
+    expect(html).toContain('aria-valuetext="25% apart"');
+    expect(html).toContain('aria-pressed="true">Only the skeleton</button>');
+    expect(html).toContain(skeletonFitNote("hips"));
+    expect(html).toContain("Left out of this build: clavicles, scapulae and humeri.");
+    expect(html).toContain(SKELETON_MODELLED_NOTE);
+    expect(html).toContain(SKELETON_CREDIT_FALLBACK);
+  });
+
+  test("switched off, the CT skeleton says nothing and the atlas credit stays", () => {
+    const html = renderSkeleton(
+      { ...initialAnatomyState, requested: true, ctSkeleton: false },
+      S0086,
+      READY,
+    );
+    expect(html).not.toContain("Left out of this build");
+    expect(html).not.toContain(SKELETON_CREDIT_FALLBACK);
+    expect(html).toContain(ANATOMY_CHANGES_NOTE);
+  });
+
+  test("an atlas.json attribution replaces the fallback credit", () => {
+    const credited = {
+      ...S0086,
+      attribution: "Derived from case s0086 of TotalSegmentator.",
+    };
+    const html = renderSkeleton(
+      { ...initialAnatomyState, requested: true },
+      credited,
+      READY,
+    );
+    expect(html).toContain("Derived from case s0086 of TotalSegmentator.");
+    expect(html).not.toContain(SKELETON_CREDIT_FALLBACK);
+  });
+
+  test("skeletonLines follows the load", () => {
+    expect(skeletonLines(S0086, { kind: "idle" })).toEqual([]);
+    expect(skeletonLines(S0086, { kind: "loading" })).toEqual([SKELETON_LOADING]);
+    expect(skeletonLines(S0086, { kind: "error" })).toEqual([SKELETON_LOAD_ERROR]);
+    expect(skeletonLines(S0086, { ...READY, fitOk: false })).toEqual([
+      "The CT skeleton could not be placed in this body.",
+    ]);
+    expect(
+      skeletonLines(parseSkeletonAtlas({ case: "s0086" }), { ...READY, modelled: 0 }),
+    ).toEqual([skeletonFitNote("hips")]);
   });
 });

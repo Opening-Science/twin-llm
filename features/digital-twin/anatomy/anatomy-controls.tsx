@@ -10,6 +10,7 @@ import {
   DEPTH_STOPS,
 } from "@/packages/anatomy/layers";
 import { ATLAS_IDS, ATLASES, type AtlasId } from "@/packages/anatomy/manifest";
+import { leftOutSummary, type SkeletonAtlas } from "@/packages/anatomy/open-skeleton";
 
 import {
   ANATOMY_CHANGES_NOTE,
@@ -31,14 +32,57 @@ import {
   HIGHLIGHT_SYSTEMS,
   HIGHLIGHT_SYSTEMS_ONLY,
   LAYER_LABEL,
+  SKELETON_CREDIT_FALLBACK,
+  SKELETON_EXPLODE,
+  SKELETON_FIT_FAILED,
+  SKELETON_HEADING,
+  SKELETON_ISOLATE,
+  SKELETON_LOAD_ERROR,
+  SKELETON_LOADING,
+  SKELETON_MODELLED_NOTE,
+  skeletonExplodeText,
+  skeletonFitNote,
+  skeletonLeftOutNote,
+  skeletonSourceLabel,
   SYSTEM_LABEL,
   type AnatomyEnvelope,
 } from "./anatomy-copy";
-import { type AnatomyAction, type AnatomyState } from "./anatomy-state";
+import {
+  type AnatomyAction,
+  type AnatomyState,
+  type SkeletonLoad,
+} from "./anatomy-state";
 import { atlasSexNote } from "./atlas-sex";
 import { highlightOptions, selectedHighlightValue } from "./highlight-options";
 
 const STEP_UP = new Set(["ArrowRight", "ArrowUp", "PageUp"]);
+const IDLE: SkeletonLoad = { kind: "idle" };
+
+/**
+ * What the panel says about the CT skeleton: its load, how it is placed, what
+ * its build left out and, when it has any, that some parts are modelled.
+ */
+export const skeletonLines = (
+  skeleton: SkeletonAtlas,
+  load: SkeletonLoad,
+): readonly string[] => {
+  const leftOut = skeletonLeftOutNote(leftOutSummary(skeleton.excluded));
+  switch (load.kind) {
+    case "idle":
+      return [];
+    case "loading":
+      return [SKELETON_LOADING];
+    case "error":
+      return [SKELETON_LOAD_ERROR];
+    case "ready":
+      if (!load.fitOk) return [SKELETON_FIT_FAILED];
+      return [
+        skeletonFitNote(load.anchor),
+        ...(leftOut ? [leftOut] : []),
+        ...(load.modelled > 0 ? [SKELETON_MODELLED_NOTE] : []),
+      ];
+  }
+};
 const STEP_DOWN = new Set(["ArrowLeft", "ArrowDown", "PageDown"]);
 
 /**
@@ -53,6 +97,8 @@ export const AnatomyControls = ({
   onInteract,
   envelope = "scan",
   posed = false,
+  skeleton = null,
+  skeletonLoad = IDLE,
 }: Readonly<{
   state: AnatomyState;
   /** null until /api/anatomy/status answers (or if it cannot be reached). */
@@ -63,8 +109,12 @@ export const AnatomyControls = ({
   envelope?: AnatomyEnvelope;
   /** The demo body is posed to the atlas's stance: only a rigged body is. */
   posed?: boolean;
+  /** The open-anatomy skeleton the server has; null: the layer is absent. */
+  skeleton?: SkeletonAtlas | null;
+  skeletonLoad?: SkeletonLoad;
 }>) => {
   const sliderId = useId();
+  const explodeId = useId();
   const listId = useId();
   const pickerId = useId();
   const highlightId = useId();
@@ -85,9 +135,16 @@ export const AnatomyControls = ({
       ? HIGHLIGHT_HIDDEN
       : null,
   ].filter((note) => note !== null);
+  // The CT skeleton is the Skeleton layer when it is on; the atlas has none then.
+  const ct = skeleton !== null && state.ctSkeleton ? skeleton : null;
+  const ctReady = ct && skeletonLoad.kind === "ready" ? skeletonLoad : null;
   const absentLayers = ready
-    ? ATLAS_LAYER_IDS.filter((layer) => !ready.presentLayers.includes(layer))
+    ? ATLAS_LAYER_IDS.filter(
+        (layer) =>
+          !ready.presentLayers.includes(layer) && !(layer === "skeleton" && ctReady),
+      )
     : [];
+  const skeletonNotes = ct && state.requested ? skeletonLines(ct, skeletonLoad) : [];
 
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     const direction = STEP_UP.has(event.key) ? 1 : STEP_DOWN.has(event.key) ? -1 : 0;
@@ -184,6 +241,9 @@ export const AnatomyControls = ({
             {LAYER_LABEL[layer]}: {ANATOMY_NOT_IN_ATLAS}
           </p>
         ))}
+        {skeletonNotes.map((line) => (
+          <p key={line}>{line}</p>
+        ))}
       </div>
 
       <details className="mt-3">
@@ -203,6 +263,61 @@ export const AnatomyControls = ({
             </label>
           ))}
         </div>
+        <fieldset className="mt-3 space-y-2 text-xs">
+          <legend className="text-muted-foreground">{SKELETON_HEADING}</legend>
+          {skeleton ? (
+            <label className="flex items-center gap-1">
+              <input
+                type="checkbox"
+                checked={state.ctSkeleton}
+                disabled={notInstalled}
+                onChange={(event) =>
+                  dispatch({ type: "ctSkeleton", on: event.target.checked })
+                }
+              />
+              {skeletonSourceLabel(skeleton.caseId)}
+            </label>
+          ) : null}
+          <button
+            type="button"
+            className="chip"
+            aria-pressed={state.isolate === "skeleton"}
+            disabled={notInstalled}
+            onClick={() => {
+              dispatch({
+                type: "isolate",
+                layer: state.isolate === "skeleton" ? null : "skeleton",
+              });
+              onInteract();
+            }}
+          >
+            {SKELETON_ISOLATE}
+          </button>
+          {ctReady && ctReady.fitOk ? (
+            <div>
+              <div className="flex items-baseline justify-between gap-3">
+                <label htmlFor={explodeId} className="text-muted-foreground">
+                  {SKELETON_EXPLODE}
+                </label>
+                <span>{skeletonExplodeText(state.explode)}</span>
+              </div>
+              <input
+                id={explodeId}
+                type="range"
+                min={0}
+                max={1}
+                step={0.01}
+                value={state.explode}
+                aria-valuetext={skeletonExplodeText(state.explode)}
+                onChange={(event) => {
+                  dispatch({ type: "explode", amount: Number(event.target.value) });
+                  onInteract();
+                }}
+                className="mt-1 w-full accent-[var(--primary)]"
+              />
+            </div>
+          ) : null}
+        </fieldset>
         {ready && ready.systems.length > 0 ? (
           <div
             className="mt-2 flex flex-wrap gap-1"
@@ -294,6 +409,19 @@ export const AnatomyControls = ({
         <p className="text-muted-foreground mt-1 text-xs">{ANATOMY_DONOR_NOTE}</p>
       </details>
 
+      {ctReady ? (
+        <p className="text-muted-foreground mt-3 text-[11px] leading-relaxed">
+          {ct?.attribution ?? SKELETON_CREDIT_FALLBACK}{" "}
+          <a
+            href="https://creativecommons.org/licenses/by/4.0/"
+            target="_blank"
+            rel="noreferrer"
+            className="underline"
+          >
+            CC BY 4.0
+          </a>
+        </p>
+      ) : null}
       {state.requested ? (
         <p className="text-muted-foreground mt-3 text-[11px] leading-relaxed">
           {entry.attribution} {ANATOMY_CHANGES_NOTE}{" "}

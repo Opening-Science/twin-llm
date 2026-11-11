@@ -660,10 +660,10 @@ export const BodyLoopAvatar = ({
     onPanel({ type: "query", query: "" });
   }, [subjectId, bodyKey]);
   // A part a toggle or the slider has hidden has no card either.
-  const { targetDepth, layers: shownLayers, hiddenSystems } = anatomy.state;
+  const { targetDepth, layers: shownLayers, hiddenSystems, isolate } = anatomy.state;
   const pickedShown =
     picked === null ||
-    pickVisible(picked.target, targetDepth, shownLayers, hiddenSystems);
+    pickVisible(picked.target, targetDepth, shownLayers, hiddenSystems, isolate);
   useEffect(() => {
     if (!pickedShown) setPicked(null);
   }, [pickedShown]);
@@ -833,6 +833,11 @@ export const BodyLoopAvatar = ({
             reducedMotion={reducedMotion}
             onLoad={anatomy.onLoad}
             onPick={onPick}
+            // Like the depth, isolate gives way while the body moves.
+            isolate={motion.clip ? null : anatomy.state.isolate}
+            explode={anatomy.state.explode}
+            skeleton={anatomy.state.ctSkeleton ? anatomy.skeleton : null}
+            onSkeletonLoad={anatomy.onSkeletonLoad}
             liveVitals={{
               enabled: liveOn,
               vitals: liveVitals,
@@ -1098,6 +1103,8 @@ export const BodyLoopAvatar = ({
                     installed={anatomy.installed}
                     dispatch={anatomy.dispatch}
                     onInteract={onUserRotate}
+                    skeleton={anatomy.skeleton}
+                    skeletonLoad={anatomy.skeletonLoad}
                     envelope="demo"
                     // BodyMotion poses a body to its stance once it has a rig binding.
                     posed={motion.binding !== null}
@@ -1247,6 +1254,8 @@ export const BodyLoopAvatar = ({
                             installed={anatomy.installed}
                             dispatch={anatomy.dispatch}
                             onInteract={onUserRotate}
+                            skeleton={anatomy.skeleton}
+                            skeletonLoad={anatomy.skeletonLoad}
                           />
                         ),
                         panel: scanPanel,
