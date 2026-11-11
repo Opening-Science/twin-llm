@@ -236,6 +236,3 @@ export const fetchChatCatalog = async (
         skills,
       });
 };
-
-/** @deprecated Use fetchActiveModelCatalog; kept for existing imports. */
-export const fetchFreeModelCatalog = fetchActiveModelCatalog;

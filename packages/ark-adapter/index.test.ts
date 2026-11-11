@@ -1,6 +1,4 @@
-import { describe, expect, mock, test } from "bun:test";
-
-mock.module("server-only", () => ({}));
+import { describe, expect, test } from "bun:test";
 
 export const ARK_ADAPTER_BARREL_KEYS = [
   "ARK_CLI_VERSION",

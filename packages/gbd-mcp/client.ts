@@ -14,10 +14,6 @@ export type { McpTool };
 
 let client: McpHttpClient | null = null;
 
-export const resetGbdClientForTests = (): void => {
-  client = null;
-};
-
 const gbdClient = (): McpHttpClient => {
   const env = gbdEnv();
   const server = findServer("gbd");

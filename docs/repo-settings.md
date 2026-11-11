@@ -12,57 +12,51 @@ R=Opening-Science/twin-llm
 
 ## Order
 
-1. Merge the hardening PR first, so `.github/CODEOWNERS` exists before the ruleset
-   requires code-owner review.
-2. Make sure every CODEOWNERS path has **at least two owners**. GitHub never lets a pull
+1. Make sure every CODEOWNERS path has **at least two owners**. GitHub never lets a pull
    request's author approve it, so a path owned by one person blocks that person's own
    PRs. Today `*` is owned by `@CPD9` alone and nearly every PR is his.
-3. Apply the rulesets, check that a test PR merges, then delete the classic branch
-   protection.
-4. Apply the rest in any order. Items under "Before going public" come last.
+2. Apply the rest in any order. Items under "Before going public" come last.
 
 ## Rulesets
 
-The JSON files in `.github/rulesets/` use GitHub's import format: Settings → Rules →
-Rulesets → New ruleset → Import a ruleset, or the API.
+`main` is protected by the repository ruleset **Protect main** (id `25821137`), not by
+classic branch protection: `gh api "repos/$R/branches/main/protection"` answers 404. Release
+tags have their own ruleset, **Protect release tags** (id `25821138`). The JSON files in
+`.github/rulesets/` use GitHub's import format (Settings → Rules → Rulesets → Import a
+ruleset, or the API) and hold the target versions; where a file and the live ruleset
+differ, the item below says so.
 
-### `main` — `.github/rulesets/main.json`
+### `main` — Protect main (`25821137`)
 
-Builds on open-twin's "Protect main" ruleset (one approval, signed commits, no deletion,
-no force push) and adds:
+Active on the default branch (`~DEFAULT_BRANCH`). As
+`gh api repos/Opening-Science/twin-llm/rulesets/25821137` reports it:
 
-- [ ] Squash merge only; linear history.
-- [ ] Code-owner approval; stale approvals dismissed on push; the last push approved by
-      someone other than its author.
-- [ ] Review threads resolved before merge.
-- [ ] Required checks, up to date with `main`: `typecheck`, `typecheck-tests`, `build`,
-      `lint`, `lint-claims`, `test`, `test-isolation`, `prisma`, `gitleaks`, `ark-app`. The classic protection
-      lacks `build`, `test-isolation` and `ark-app`.
-- [ ] Signed commits on `main`. Squash merges made on GitHub are signed by GitHub; 24 of
-      the last 30 commits on `main` already verify.
-- [x] Repository admins may bypass only through a pull request (`bypass_mode:
-pull_request`), so a maintainer can merge their own green change while they are the
-      only code owner, but nobody pushes to `main` directly.
+- [x] **done** No deletion; no force push (`non_fast_forward`); linear history.
+- [x] **done** Signed commits. Squash merges made on GitHub are signed by GitHub.
+- [x] **done** Pull request required: one approval, code-owner review, stale approvals
+      dismissed on push, the last push approved by someone other than its author, review
+      threads resolved before merge. Squash is the only merge method.
+- [x] **done** Required checks, up to date with `main` (strict): `typecheck`, `lint`,
+      `lint-claims`, `test`, `test-isolation`, `prisma`, `gitleaks`, `ark-app`.
+- [x] **done** Repository admins may bypass only through a pull request
+      (`bypass_mode: pull_request`), so a maintainer can merge their own green change
+      while they are the only code owner, but nobody pushes to `main` directly.
+- [ ] `build` and `typecheck-tests` run in CI but are not yet required checks. Adding them
+      is a maintainer setting (Settings → Rules → Protect main → Require status checks);
+      `.github/rulesets/main.json` already lists `build` but not `typecheck-tests`.
 
-```sh
-gh api -X POST "repos/$R/rulesets" --input .github/rulesets/main.json
-```
-
-### Release tags — `.github/rulesets/tags.json`
-
-- [ ] `v*` tags cannot be deleted, moved or force-updated. Creating them stays allowed.
-
-```sh
-gh api -X POST "repos/$R/rulesets" --input .github/rulesets/tags.json
-```
-
-### Retire the classic branch protection
-
-- [ ] After a test PR merges under the new ruleset:
+Check:
 
 ```sh
-gh api -X DELETE "repos/$R/branches/main/protection"
+gh api "repos/$R/rulesets/25821137" \
+  --jq '.rules[] | select(.type == "required_status_checks")
+        | .parameters.required_status_checks[].context'
 ```
+
+### Release tags — Protect release tags (`25821138`)
+
+- [x] **done** `v*` tags cannot be deleted, moved or force-updated. Creating them stays
+      allowed.
 
 Check: `gh api "repos/$R/rulesets" --jq '.[].name'` lists both rulesets.
 

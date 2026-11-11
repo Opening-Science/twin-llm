@@ -23,7 +23,8 @@ export const meshContext = (userId: string, sha: string): string =>
 export const meshFileName = (sha: string, sealed: boolean): string =>
   sealed ? `${sha}.glb.enc` : `${sha}.glb`;
 
-const sha256Hex = (bytes: Uint8Array): string =>
+/** SHA-256 of a mesh's bytes, lower-case hex: the name its file is stored under. */
+export const sha256Hex = (bytes: Uint8Array): string =>
   createHash("sha256").update(bytes).digest("hex");
 
 /** Writes owner-only through a temporary file and a rename, so a crash never leaves half a file. */

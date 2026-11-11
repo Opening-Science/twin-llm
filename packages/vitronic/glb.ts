@@ -1,13 +1,17 @@
 import "server-only";
 
-import { createHash } from "node:crypto";
 import { mkdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { vitronicEnv } from "@/infrastructure/env";
 import type { FieldCipher } from "@/infrastructure/field-cipher";
 import { FieldDecryptError } from "@/infrastructure/field-crypto";
-import { meshContext, meshFileName, writeOwnerOnly } from "@/infrastructure/mesh-files";
+import {
+  meshContext,
+  meshFileName,
+  sha256Hex,
+  writeOwnerOnly,
+} from "@/infrastructure/mesh-files";
 
 export const MAX_GLB_BYTES = 100 * 1024 * 1024;
 
@@ -18,9 +22,6 @@ export class GlbTooLargeError extends Error {
     this.name = "GlbTooLargeError";
   }
 }
-
-export const sha256Hex = (bytes: Uint8Array): string =>
-  createHash("sha256").update(bytes).digest("hex");
 
 export const assertGlbSize = (bytes: Uint8Array): void => {
   if (bytes.byteLength > MAX_GLB_BYTES) throw new GlbTooLargeError();

@@ -16,8 +16,6 @@ import { ANATOMY_NOT_INSTALLED_API } from "./anatomy-copy";
 import { DEMO_NOT_INSTALLED_API, RIGGED_NOT_INSTALLED_API } from "./demo-copy";
 import { createPinnedGlbHandler } from "./pinned-glb-handler";
 
-export { matchesEtag } from "./pinned-glb-handler";
-
 /**
  * GET /api/anatomy/atlas/:atlasId. Atlases are public CC BY files from a closed
  * list; caching and 404 rules live in the shared pinned-GLB handler.

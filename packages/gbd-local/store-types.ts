@@ -1,17 +1,7 @@
-import type { GbdCsvRow } from "./results-csv";
-
 /**
  * Types and the batch size of the local GBD store, apart from `store.ts`
  * (server only), so the import code and its tests can use them.
  */
-
-export type GbdFileImport = Readonly<{
-  sha256: string;
-  fileName: string;
-  rows: readonly GbdCsvRow[];
-  /** From the download's citation.txt (#417); left out when there was none. */
-  citation?: string;
-}>;
 
 export type GbdImportOutcome =
   | Readonly<{ kind: "already-imported"; sha256: string }>

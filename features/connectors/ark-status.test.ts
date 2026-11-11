@@ -1,11 +1,9 @@
-import { describe, expect, mock, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 
 import dataListOk from "@/packages/ark-adapter/fixtures/data-list-ok.json";
 import dataPathsOk from "@/packages/ark-adapter/fixtures/data-paths-ok.json";
 import statusRealShape from "@/packages/ark-adapter/fixtures/status-real-shape.json";
 import type { ArkResult } from "@/packages/ark-adapter";
-
-mock.module("server-only", () => ({}));
 
 const { getArkStatusResponse } = await import("./ark-status");
 

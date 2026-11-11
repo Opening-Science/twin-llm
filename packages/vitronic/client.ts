@@ -55,11 +55,6 @@ const COLLECTION_TO_SCOPE: Record<MeasurementCollection, keyof VitronicMeasureme
     properties: "properties",
   };
 
-const jsonHeaders = (token: string): HeadersInit => ({
-  Authorization: `Bearer ${token}`,
-  Accept: "application/json",
-});
-
 const pinMode = (config: VitronicBearerConfig): TlsPinMode => {
   const fp = config.tlsFingerprintSha256;
   if (!fp) throw new Error("vitronic-tls-pin-required");
@@ -210,6 +205,3 @@ export const captureTlsFingerprint = async (
   }
   return handshakeFp;
 };
-
-/** Exported for tests that assert the wrapper never mints JSON headers for writes. */
-export const bearerJsonHeaders = jsonHeaders;
