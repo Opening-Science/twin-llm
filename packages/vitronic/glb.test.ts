@@ -1,6 +1,4 @@
-import { describe, expect, mock, test } from "bun:test";
-
-mock.module("server-only", () => ({}));
+import { describe, expect, test } from "bun:test";
 
 import { GlbTooLargeError, MAX_GLB_BYTES, readBoundedBytes } from "./glb";
 

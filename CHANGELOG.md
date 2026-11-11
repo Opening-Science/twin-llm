@@ -235,6 +235,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Removed
 
+- More code nothing used: `importGbdFile` and its `GbdFileImport` type (`importGbdChunks` replaced it), the deprecated `fetchFreeModelCatalog` alias, `resetGbdClientForTests` and `bearerJsonHeaders` (their tests were never written) with the `jsonHeaders` helper behind it, the `GenomeHelixFallback` and `matchesEtag` re-exports, and the per-file `server-only` mocks in 19 test files that the `bunfig.toml` preload already stubs. The Vitronic GLB code hashes with the mesh store's `sha256Hex` instead of its own copy. `@types/hast` (3.0.5, the version already locked) is a direct dev dependency, since `features/docs/heading-ids.ts` imports from `hast`. `.env.example` lists the eleven optional variables `infrastructure/env.ts` reads that it lacked (NCBI, Synthea, vault idle lock, anchor interval), and says the `BODYLOOP_*` and scanner `VITRONIC_*` lines are read by CLIs and the live test, never by the app. `docs/repo-settings.md` describes the `Protect main` ruleset as it is, and notes that `build` and `typecheck-tests` are not yet required checks.
+
 - Code nothing used: the Data and menu glyphs (the Data nav item is gone), `RichInline`, `seriesByPrefix`, `LAYER_IDS`, an unused BodyLoop message, `ensureGoogleHealthAccessToken`, the `IngestBody` type, and five re-exports and `isRealDataMode` from `infrastructure/data-mode.ts`. Each was checked with a search across app, features, infrastructure, packages, scripts and tests.
 
 - The schematic four-chamber heart panel beside the live twin (#53): it looked crude and could not be closed. Live vitals still pulse the atlas heart.

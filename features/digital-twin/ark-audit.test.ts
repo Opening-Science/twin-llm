@@ -1,6 +1,4 @@
-import { describe, expect, mock, test } from "bun:test";
-
-mock.module("server-only", () => ({}));
+import { describe, expect, test } from "bun:test";
 
 const { getArkAuditResponse } = await import("./ark-audit");
 

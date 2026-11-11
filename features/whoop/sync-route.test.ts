@@ -42,7 +42,6 @@ const recorded = {
 let connectionRow: Record<string, unknown> | null = null;
 
 const mockModuleForFile = moduleMocker({ mock, afterAll });
-mock.module("server-only", () => ({}));
 await mockModuleForFile("@/infrastructure/auth-actor", {
   resolveActorId: async () => "local",
 });
