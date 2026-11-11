@@ -61,6 +61,43 @@ def rotation_between(a: np.ndarray, b: np.ndarray) -> np.ndarray:
     return np.eye(3) + vx + vx @ vx * ((1 - c) / (s * s))
 
 
+def axis_angle(axis: np.ndarray, angle: float) -> np.ndarray:
+    """Rotation (3x3) by `angle` radians about `axis`, right-handed (Rodrigues)."""
+    u = axis / np.linalg.norm(axis)
+    ux = np.array([[0, -u[2], u[1]], [u[2], 0, -u[0]], [-u[1], u[0], 0]])
+    return np.eye(3) + np.sin(angle) * ux + (1 - np.cos(angle)) * ux @ ux
+
+
+def flat(v: np.ndarray, normal: np.ndarray) -> np.ndarray:
+    """`v` with its component along `normal` removed."""
+    n = normal / np.linalg.norm(normal)
+    return v - (v @ n) * n
+
+
+def roll_angle(axis: np.ndarray, start: np.ndarray, end: np.ndarray) -> float:
+    """
+    Signed angle (radians, right-handed about `axis`) from `start` to `end`,
+    both seen in the plane perpendicular to `axis`. 0 when either lies along it.
+    """
+    u = np.asarray(axis, float) / np.linalg.norm(axis)
+    a, b = flat(np.asarray(start, float), u), flat(np.asarray(end, float), u)
+    if np.linalg.norm(a) < 1e-12 or np.linalg.norm(b) < 1e-12:
+        return 0.0
+    return float(np.arctan2(np.cross(a, b) @ u, a @ b))
+
+
+def aim_twist(a_dir: np.ndarray, a_up: np.ndarray, b_dir: np.ndarray, b_up: np.ndarray) -> np.ndarray:
+    """
+    The rotation (3x3) that points a_dir along b_dir (the smallest swing) and
+    then rolls about b_dir until a_up, seen across b_dir, lies along b_up.
+    The up vectors need not be perpendicular to their directions; only
+    their parts across them count.
+    """
+    swing = rotation_between(a_dir, b_dir)
+    roll = roll_angle(b_dir, swing @ a_up, b_up)
+    return axis_angle(b_dir, roll) @ swing
+
+
 def translation(offset: np.ndarray) -> np.ndarray:
     m = np.eye(4)
     m[:3, 3] = offset
@@ -169,6 +206,25 @@ def self_check() -> list[str]:
     r = rotation_between(a, b)
     if np.linalg.norm(r @ a - b / np.linalg.norm(b)) > 1e-12 or abs(np.linalg.det(r) - 1) > 1e-12:
         failures.append("rotation_between")
+    # aim_twist: a hand hanging down, palm forward, turned to point forward and down
+    # with its palm inward; the direction lands exactly and the palm follows.
+    a_dir, a_up = np.array([0.0, 0.0, -1.0]), np.array([0.0, -1.0, 0.0])
+    b_dir, b_up = np.array([0.0, -0.4, -0.9]), np.array([-1.0, 0.0, 0.0])
+    r = aim_twist(a_dir, a_up, b_dir, b_up)
+    if np.linalg.norm(r @ a_dir - b_dir / np.linalg.norm(b_dir)) > 1e-12 or abs(np.linalg.det(r) - 1) > 1e-12:
+        failures.append("aim_twist: direction")
+    if abs(roll_angle(b_dir, r @ a_up, b_up)) > 1e-12 or (r @ a_up) @ b_up <= 0.99:
+        failures.append(f"aim_twist: up {r @ a_up}")
+    # Same direction: a pure roll about it, a quarter turn here.
+    r = aim_twist(a_dir, a_up, a_dir, b_up)
+    if np.linalg.norm(r @ a_dir - a_dir) > 1e-12 or abs(abs(roll_angle(a_dir, a_up, r @ a_up)) - np.pi / 2) > 1e-12:
+        failures.append("aim_twist: roll only")
+    # A foot turned about the vertical only: floor-up stays up.
+    r = aim_twist(np.array([0.3, -1.0, 0.0]), np.array([0.0, 0.0, 1.0]), np.array([0.0, -1.0, 0.0]), np.array([0.0, 0.0, 1.0]))
+    if np.linalg.norm(r @ [0.0, 0.0, 1.0] - [0.0, 0.0, 1.0]) > 1e-12:
+        failures.append("aim_twist: yaw tilted the sole")
+    if abs(roll_angle([0, 0, 1], [1, 0, 0], [0, 1, 0]) - np.pi / 2) > 1e-12:
+        failures.append("roll_angle sign")
     # A segment lands on its target, stretched along its axis.
     m, k = segment_deform(
         np.array([0.1, 0, 1.0]), np.array([0.1, 0, 0.5]), np.array([0.1, 0, 1.0]), np.array([0.15, 0.0, 0.45]), True

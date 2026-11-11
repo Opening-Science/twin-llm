@@ -8,16 +8,23 @@ import { AnatomyControls } from "./anatomy-controls";
 import {
   ANATOMY_CHANGES_NOTE,
   ANATOMY_FIT_FAILED,
+  ANATOMY_FITTED_CHANGES_NOTE,
   ANATOMY_LOAD_ERROR,
   ANATOMY_NOT_INSTALLED,
   ANATOMY_TYPICAL_NOTE,
   anatomyFitNote,
   depthValueText,
+  FIT_ATLAS_TOGGLE,
   HIGHLIGHT_HIDDEN,
   HIGHLIGHT_SYSTEMS_ONLY,
 } from "./anatomy-copy";
 import { initialAnatomyState, type AnatomyState } from "./anatomy-state";
-import { DEMO_FIT_NOTE, DEMO_FIT_NOTE_UNPOSED, DEMO_TYPICAL_NOTE } from "./demo-copy";
+import {
+  DEMO_FIT_NOTE,
+  DEMO_FIT_NOTE_UNPOSED,
+  DEMO_FITTED_NOTE,
+  DEMO_TYPICAL_NOTE,
+} from "./demo-copy";
 import { highlightOptions, highlightValue } from "./highlight-options";
 
 const ALL_INSTALLED = { bodyparts3d: true, "hra-f": true, "hra-m": true } as const;
@@ -191,6 +198,61 @@ describe("AnatomyControls", () => {
       expect(html).toContain(DEMO_FIT_NOTE_UNPOSED);
       expect(html).not.toContain("stance");
     }
+  });
+
+  const fittedHtml = (
+    fitted: Readonly<{ available: boolean; shown: boolean }> | undefined,
+    fitAtlas = false,
+  ) =>
+    renderToStaticMarkup(
+      createElement(AnatomyControls, {
+        state: {
+          ...initialAnatomyState,
+          requested: true,
+          targetDepth: 2,
+          atlasId: "hra-f",
+          fitAtlas,
+          load: ready({ anchor: fitted?.shown ? "body" : "bbox" }),
+        },
+        installed: ALL_INSTALLED,
+        dispatch: () => undefined,
+        onInteract: () => undefined,
+        envelope: "demo",
+        posed: !fitted?.shown,
+        ...(fitted === undefined ? {} : { fitted }),
+      }),
+    ).replaceAll("&#x27;", "'");
+
+  test("'Fit atlas to body' is hidden, with no error, where no fitted file is made", () => {
+    for (const html of [
+      fittedHtml(undefined),
+      fittedHtml({ available: false, shown: false }),
+    ]) {
+      expect(html).not.toContain(FIT_ATLAS_TOGGLE);
+      expect(html).not.toContain("Blender");
+      expect(html).toContain(DEMO_FIT_NOTE);
+    }
+  });
+
+  test("offered unticked by default; ticked, the notes say how it was refitted", () => {
+    const off = fittedHtml({ available: true, shown: false });
+    expect(off).toContain(FIT_ATLAS_TOGGLE);
+    const toggle = (html: string) =>
+      /<input[^>]*>Fit atlas to body/.exec(html)?.[0] ?? "";
+    expect(toggle(off)).not.toContain("checked");
+    expect(off).toContain(ANATOMY_CHANGES_NOTE);
+
+    const on = fittedHtml({ available: true, shown: true }, true);
+    expect(toggle(on)).toContain("checked");
+    expect(on).toContain(DEMO_FITTED_NOTE);
+    expect(on).not.toContain(DEMO_FIT_NOTE);
+    expect(on).toContain(ANATOMY_FITTED_CHANGES_NOTE);
+    expect(on).toContain(ATLASES["hra-f"].attribution);
+    expect(DEMO_FITTED_NOTE).toContain("limb by limb in Blender");
+    expect(DEMO_FITTED_NOTE).toContain("keeping its length");
+    expect(DEMO_FITTED_NOTE).toContain("unposed");
+    expect(DEMO_FITTED_NOTE).toContain("each palm to face the same way");
+    expect(ANATOMY_FITTED_CHANGES_NOTE).toContain("bone lengths kept");
   });
 });
 

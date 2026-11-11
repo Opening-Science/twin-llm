@@ -4,7 +4,9 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Color, type Material, type Object3D, Quaternion, Vector3 } from "three";
 
-import { fitAtlasToScan } from "@/packages/anatomy/fit";
+import { type DemoBodyId } from "@/packages/anatomy/demo-bodies";
+import { fitAtlasToScan, placeFittedAtlas } from "@/packages/anatomy/fit";
+import { fittedAtlasApiUrl } from "@/packages/anatomy/fitted-atlases";
 import { partsFor, type Highlight } from "@/packages/anatomy/highlight";
 import {
   applyMask,
@@ -58,6 +60,7 @@ export const AnatomyLayers = ({
   scanRoot,
   statureM,
   atlasId,
+  fittedBody = null,
   requested,
   retry,
   targetDepth,
@@ -73,6 +76,11 @@ export const AnatomyLayers = ({
   /** The scan's measured stature in metres, when it has one; the fit prefers it. */
   statureM: number | null;
   atlasId: AtlasId;
+  /**
+   * The demo body the atlas was refitted to in Blender, when "Fit atlas to
+   * body" shows it: that file loads and takes the body's own transform.
+   */
+  fittedBody?: DemoBodyId | null;
   requested: boolean;
   retry: number;
   targetDepth: number;
@@ -94,6 +102,8 @@ export const AnatomyLayers = ({
 }>) => {
   const invalidate = useThree((state) => state.invalidate);
   const ring = useTwinPalette().ring;
+  const url =
+    fittedBody === null ? atlasApiUrl(atlasId) : fittedAtlasApiUrl(fittedBody, atlasId);
   // State renders the atlas; the refs are what the frame loop mutates, since
   // three.js objects are configured in place every frame.
   const [prepared, setPrepared] = useState<PreparedAtlas | null>(null);
@@ -112,7 +122,7 @@ export const AnatomyLayers = ({
     let loaded: PreparedAtlas | null = null;
     let lastPercent = -1;
     onLoad({ kind: "loading", percent: null });
-    loadAtlasGltf(atlasApiUrl(atlasId), (fraction) => {
+    loadAtlasGltf(url, (fraction) => {
       const percent = fraction === null ? null : Math.round(fraction * 100);
       if (cancelled || percent === lastPercent) return;
       lastPercent = percent ?? -1;
@@ -151,7 +161,7 @@ export const AnatomyLayers = ({
         disposeObject3D(loaded.root);
       }
     };
-  }, [requested, atlasId, retry, onLoad]);
+  }, [requested, atlasId, url, retry, onLoad]);
 
   useEffect(() => {
     if (!scanRoot || !requested) return;
@@ -175,11 +185,16 @@ export const AnatomyLayers = ({
   const fit = useMemo(() => {
     if (!prepared || !scanRoot) return null;
     const entry = ATLASES[atlasId];
+    if (fittedBody !== null) {
+      // Blender fitted it in the body's own frame at its bind pose.
+      const frame = readScanFrame(scanRoot, null);
+      return placeFittedAtlas(prepared.box, { matrixWorld: scanRoot.matrixWorld, frame });
+    }
     return fitAtlasToScan(
       { box: prepared.box, hipAnchor: entry.hipAnchor, mirrorX: entry.mirrorX },
       readScanFrame(scanRoot, statureM),
     );
-  }, [prepared, scanRoot, statureM, atlasId]);
+  }, [prepared, scanRoot, statureM, atlasId, fittedBody]);
 
   const transform = useMemo(() => {
     if (!fit?.ok) return null;

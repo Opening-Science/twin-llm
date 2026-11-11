@@ -10,6 +10,11 @@ import {
 import { ATLAS_IDS, isAtlasId, type AtlasId } from "@/packages/anatomy/manifest";
 
 import { anatomyReducer, initialAnatomyState, type AnatomyLoad } from "./anatomy-state";
+import {
+  parseFittedDefault,
+  parseFittedStatus,
+  type FittedInstalled,
+} from "./fitted-option";
 
 type StatusRow = { readonly id?: unknown; readonly installed?: unknown };
 
@@ -56,6 +61,7 @@ export const parseRiggedStatus = (value: unknown): Record<DemoBodyId, boolean> =
 export const useAnatomyView = (enabled: boolean) => {
   const [state, dispatch] = useReducer(anatomyReducer, initialAnatomyState);
   const [rigged, setRigged] = useState<Record<DemoBodyId, boolean> | null>(null);
+  const [fitted, setFitted] = useState<FittedInstalled | null>(null);
 
   useEffect(() => {
     if (!enabled) return;
@@ -65,6 +71,10 @@ export const useAnatomyView = (enabled: boolean) => {
       .then((value: unknown) => {
         if (cancelled) return;
         setRigged(parseRiggedStatus(value));
+        setFitted(parseFittedStatus(value));
+        // ANATOMY_FITTED_ATLAS starts "Fit atlas to body" on; the toggle is
+        // not shown before the status answers, so this never undoes a choice.
+        if (parseFittedDefault(value)) dispatch({ type: "fitAtlas", on: true });
         // A missing atlas should not leave the slider stuck when another one is
         // here; the reducer keeps the status, so a later body sex can use it.
         dispatch({ type: "installed", installed: parseAnatomyStatus(value) });
@@ -79,5 +89,5 @@ export const useAnatomyView = (enabled: boolean) => {
 
   const onLoad = useCallback((load: AnatomyLoad) => dispatch({ type: "load", load }), []);
 
-  return { state, dispatch, installed: state.installed, rigged, onLoad };
+  return { state, dispatch, installed: state.installed, rigged, fitted, onLoad };
 };

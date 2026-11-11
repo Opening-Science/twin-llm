@@ -5,10 +5,16 @@ import { readFile, stat } from "node:fs/promises";
 import { anatomyEnv } from "@/infrastructure/env";
 
 import { DEMO_BODIES, type DemoBodyId } from "./demo-bodies";
+import {
+  fittedAtlasEntry,
+  splitFittedAtlasId,
+  type FittedAtlasId,
+} from "./fitted-atlases";
 import { ATLASES, type AtlasId } from "./manifest";
 import {
   atlasFilePath,
   demoBodyFilePath,
+  fittedAtlasFilePath,
   resolveAnatomyDir,
   riggedBodyFilePath,
 } from "./paths";
@@ -57,3 +63,18 @@ export const statRiggedBody = (id: DemoBodyId): Promise<boolean> =>
 /** The rigged demo body's bytes, or null when it is not installed. */
 export const openRiggedBody = (id: DemoBodyId): Promise<Uint8Array<ArrayBuffer> | null> =>
   openPinned(riggedBodyFilePath(anatomyDir(), id), RIGGED_BODIES[id].bytes);
+
+const fittedPath = (id: FittedAtlasId): string => {
+  const { bodyId, atlasId } = splitFittedAtlasId(id);
+  return fittedAtlasFilePath(anatomyDir(), bodyId, atlasId);
+};
+
+/** Whether the quantised fitted atlas has been made here and matches its pin size. */
+export const statFittedAtlas = (id: FittedAtlasId): Promise<boolean> =>
+  statPinned(fittedPath(id), fittedAtlasEntry(id).bytes);
+
+/** The fitted atlas's bytes, or null when it is not installed. */
+export const openFittedAtlas = (
+  id: FittedAtlasId,
+): Promise<Uint8Array<ArrayBuffer> | null> =>
+  openPinned(fittedPath(id), fittedAtlasEntry(id).bytes);

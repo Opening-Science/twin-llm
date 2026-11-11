@@ -39,6 +39,7 @@ import {
   type PinnedInput,
 } from "./fit-plan";
 import {
+  endTable,
   jointTable,
   missedTargets,
   parseFitReport,
@@ -134,7 +135,7 @@ const fitAtlas = async (
       2,
     )}\n`,
   );
-  console.log(`\n${jointTable(done)}\n`);
+  console.log(`\n${jointTable(done)}\n\n${endTable(done)}\n`);
   for (const { body, atlas, report } of done) {
     console.log(
       report.stretchLimbs
@@ -151,6 +152,9 @@ const fitAtlas = async (
   }
   console.log(
     `\nWrote ${summaryPath}. The fitted files carry the atlases' CC BY 4.0 attribution (docs/anatomy.md).`,
+  );
+  console.log(
+    "bun run anatomy:quantise-fitted makes the copies the viewer shows behind Fit atlas to body.",
   );
   return 0;
 };

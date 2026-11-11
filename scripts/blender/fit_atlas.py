@@ -20,9 +20,13 @@ boxes centred (the app's demo fit), find the atlas's joints from its bones
 by distance to the nearest bones), then pose: the trunk moves sideways and
 forwards so the hip midpoints meet, each thigh and shin turns toward ANNY's
 knee and ankle and keeps its length (with `--stretch` it also stretches along
-its own axis so they land exactly), each foot follows its ankle without
-turning, and with arm bones the upper arm, forearm and hand do the same for
-elbow and wrist. The pose is applied and the joints are found
+its own axis so they land exactly), and with arm bones the upper arm and
+forearm do the same for elbow and wrist. Each foot follows its ankle and,
+with foot bones, turns about the vertical until it points at ANNY's second
+toe, the sole staying level; each hand follows its wrist and, with hand
+bones, turns to point at ANNY's middle fingertip and rolls until its palm
+faces like ANNY's, the forearm and upper arm taking part of that roll.
+The pose is applied and the joints are found
 again on the result, so the report measures the output itself.
 No randomness; the same inputs give the same file.
 """
@@ -66,6 +70,17 @@ ANNY_JOINTS = {
     "elbow": "lowerarm01",
     "wrist": "wrist",
 }
+# Ends of the feet and hands, as tails of ANNY's bones: the second toe's tip
+# (the foot's long axis) and the middle fingertip.
+ANNY_TIPS = {"toe": "toe2-3", "finger": "finger3-3"}
+# The palm: the middle metacarpal's z axis, signed with the index and little
+# fingers' knuckles (index on the thumb's side).
+ANNY_PALM, ANNY_INDEX, ANNY_LITTLE = "metacarpal2", "finger2-1", "finger5-1"
+# Of the hand's roll about the forearm, the forearm takes this share and the
+# upper arm this, so the skin between them twists in steps, not all at the wrist.
+FOREARM_ROLL = 0.5
+UPPERARM_ROLL = 0.15
+FLOOR_UP = np.array([0.0, 0.0, 1.0])
 TAU = 0.010  # softmin blend width, metres
 FAR = 0.15  # soft tissue further than this from every allowed bone keeps its main segment
 SHARE = 0.03  # a segment joins a soft part's blend when it is nearest for this share of its vertices
@@ -145,17 +160,30 @@ def loose_parts(obj: bpy.types.Object) -> np.ndarray:
     return part
 
 
-def body_targets(objects: list[bpy.types.Object]) -> tuple[dict[str, np.ndarray], np.ndarray, bpy.types.Object]:
-    """ANNY's joints (bone heads at the bind pose) and its mesh's points."""
+def body_targets(
+    objects: list[bpy.types.Object],
+) -> tuple[dict[str, np.ndarray], dict[str, np.ndarray], np.ndarray, bpy.types.Object]:
+    """ANNY's joints (bone heads at the bind pose), toe and fingertips, palm normals and its mesh's points."""
     arm = next(o for o in objects if o.type == "ARMATURE")
     mesh = next(o for o in objects if o.type == "MESH" and o.parent == arm)
-    joints = {}
-    for name, bone in ANNY_JOINTS.items():
-        for side in atlas_rig.SIDES:
-            head = arm.matrix_world @ arm.data.bones[f"{bone}.{side}"].head_local
-            joints[f"{name}.{side}"] = np.array(head[:])
+    world = np.array(arm.matrix_world)
+
+    def at(local) -> np.ndarray:
+        return world[:3, :3] @ np.array(local[:]) + world[:3, 3]
+
+    bones = arm.data.bones
+    joints: dict[str, np.ndarray] = {}
+    palm: dict[str, np.ndarray] = {}
+    for side in atlas_rig.SIDES:
+        for name, bone in ANNY_JOINTS.items():
+            joints[f"{name}.{side}"] = at(bones[f"{bone}.{side}"].head_local)
+        for name, bone in ANNY_TIPS.items():
+            joints[f"{name}.{side}"] = at(bones[f"{bone}.{side}"].tail_local)
+        z_axis = world[:3, :3] @ np.array(bones[f"{ANNY_PALM}.{side}"].matrix_local)[:3, 2]
+        thumb_side = at(bones[f"{ANNY_INDEX}.{side}"].head_local) - at(bones[f"{ANNY_LITTLE}.{side}"].head_local)
+        palm[side] = atlas_rig.palm_side(z_axis, joints[f"finger.{side}"] - joints[f"wrist.{side}"], thumb_side)
     points = coords(mesh) @ np.array(mesh.matrix_world)[:3, :3].T + np.array(mesh.matrix_world)[:3, 3]
-    return joints, points, mesh
+    return joints, palm, points, mesh
 
 
 def frame(points: np.ndarray) -> dict[str, float]:
@@ -279,14 +307,32 @@ def synthetic_foot(ankle: np.ndarray, floor: float, k: float) -> np.ndarray:
     return np.vstack([ankle + t * (toe - ankle), ankle + t * (heel - ankle)])
 
 
+def about(point: np.ndarray, turn: np.ndarray) -> np.ndarray:
+    """The 4x4 turning by `turn` (3x3) about `point`."""
+    return geometry.translation(point) @ geometry.linear(turn) @ geometry.translation(-point)
+
+
 def deforms(
-    rig: atlas_rig.AtlasRig, target: dict[str, np.ndarray], stretch_limbs: bool = False
-) -> tuple[dict[str, np.ndarray], dict[str, float], np.ndarray]:
+    rig: atlas_rig.AtlasRig,
+    target: dict[str, np.ndarray],
+    stretch_limbs: bool = False,
+    palm: dict[str, np.ndarray] | None = None,
+) -> tuple[dict[str, np.ndarray], dict[str, float], np.ndarray, dict[str, float]]:
     """
     One 4x4 per segment, mapping the atlas at rest onto its fitted place.
     By default each segment only turns toward the body's next joint and keeps
     its length, so the joint lands short or long of it; `stretch_limbs` also
     scales it along its own axis so the joint lands on the body's.
+
+    The ends: a foot with a toe point turns about the vertical through its
+    new ankle until its toe points at the body's (yaw only, so the sole stays
+    level). A hand with a fingertip and a palm normal turns at its new wrist
+    to point at the body's fingertip, then rolls until the palms face the
+    same way; the forearm takes FOREARM_ROLL of that roll about its own axis
+    and the upper arm UPPERARM_ROLL, so the skin between them does not twist
+    all at the wrist. Without those points the foot only follows its ankle
+    and the hand keeps its angle to the forearm. Also returns each end's
+    turn in degrees (the foot's yaw, the hand's roll about the forearm).
     """
     j = rig.joints
     hips = (j["hip.L"] + j["hip.R"]) / 2
@@ -295,6 +341,7 @@ def deforms(
     trunk = geometry.translation(shift)
     mats = {"trunk": trunk}
     stretch: dict[str, float] = {}
+    turns: dict[str, float] = {}
     chains = [("thigh", "shin", "foot", "hip", "knee", "ankle", False)]
     if rig.has_arms:
         chains.append(("upperarm", "forearm", "hand", "shoulder", "elbow", "wrist", True))
@@ -307,20 +354,32 @@ def deforms(
             new_mid = target[f"{mid}.{side}"] if stretch_limbs else geometry.transform_points(m_up, m[None])[0]
             m_lo, k_lo = geometry.segment_deform(m, t, new_mid, target[f"{tip}.{side}"], stretch_limbs)
             new_tip = target[f"{tip}.{side}"] if stretch_limbs else geometry.transform_points(m_lo, t[None])[0]
-            mats[f"{upper}.{side}"] = m_up @ trunk
-            mats[f"{lower}.{side}"] = m_lo @ trunk
             stretch[f"{upper}.{side}"] = k_up
             stretch[f"{lower}.{side}"] = k_lo
-            if end_turns:
+            point = f"{'finger' if end_turns else 'toe'}.{side}"
+            aimed = point in j and point in target
+            if end_turns and aimed and palm is not None and side in rig.palm and side in palm:
+                turn = geometry.aim_twist(j[point] + shift - t, rig.palm[side], target[point] - new_tip, palm[side])
+                axis = new_tip - new_mid
+                roll = geometry.roll_angle(axis, m_lo[:3, :3] @ rig.palm[side], turn @ rig.palm[side])
+                m_lo = about(new_mid, geometry.axis_angle(axis, FOREARM_ROLL * roll)) @ m_lo
+                m_up = about(r, geometry.axis_angle(new_mid - r, UPPERARM_ROLL * roll)) @ m_up
+                turns[f"{end}.{side}"] = round(float(np.degrees(roll)), 1)
+            elif end_turns:
                 # The hand keeps its angle to the forearm (rotation only, no stretch).
                 turn = geometry.rotation_between(t - m, new_tip - new_mid)
-                mats[f"{end}.{side}"] = (
-                    geometry.translation(new_tip) @ geometry.linear(turn) @ geometry.translation(-t) @ trunk
-                )
+            elif aimed:
+                a_dir = geometry.flat(j[point] + shift - t, FLOOR_UP)
+                b_dir = geometry.flat(target[point] - new_tip, FLOOR_UP)
+                turn = geometry.aim_twist(a_dir, FLOOR_UP, b_dir, FLOOR_UP)
+                turns[f"{end}.{side}"] = round(float(np.degrees(geometry.roll_angle(FLOOR_UP, a_dir, b_dir))), 1)
             else:
-                # The foot keeps its orientation, so the sole stays level.
-                mats[f"{end}.{side}"] = geometry.translation(new_tip - t) @ trunk
-    return mats, stretch, shift
+                # No foot bones: the foot keeps its orientation, so the sole stays level.
+                turn = np.eye(3)
+            mats[f"{upper}.{side}"] = m_up @ trunk
+            mats[f"{lower}.{side}"] = m_lo @ trunk
+            mats[f"{end}.{side}"] = about(new_tip, turn) @ geometry.translation(new_tip - t) @ trunk
+    return mats, stretch, shift, turns
 
 
 def rest_bones(rig: atlas_rig.AtlasRig, k: float) -> dict[str, tuple[np.ndarray, np.ndarray]]:
@@ -388,7 +447,7 @@ def apply_armature(obj: bpy.types.Object) -> None:
 def joint_table(before: dict, after: dict, target: dict) -> list[dict]:
     rows = []
     for name in sorted(target):
-        if name not in before:
+        if name not in before or name not in after:
             continue
         b, a, t = before[name], after[name], target[name]
         sign = 1.0 if name.endswith(".L") else -1.0
@@ -410,6 +469,60 @@ def joint_table(before: dict, after: dict, target: dict) -> list[dict]:
     return rows
 
 
+def degrees_between(a: np.ndarray, b: np.ndarray) -> float:
+    cos = float(a @ b / (np.linalg.norm(a) * np.linalg.norm(b)))
+    return round(float(np.degrees(np.arccos(np.clip(cos, -1.0, 1.0)))), 1)
+
+
+def orientation_rows(
+    before: atlas_rig.AtlasRig, after: atlas_rig.AtlasRig, target: dict[str, np.ndarray], palm: dict[str, np.ndarray]
+) -> list[dict]:
+    """
+    Angles in degrees between the atlas's ends and the body's, before and
+    after: where each foot points (ankle to toe, seen from above), where each
+    hand points (wrist to middle fingertip) and which way its palm faces.
+    """
+
+    def pointing(j: dict[str, np.ndarray], base: str, tip: str, top_view: bool) -> np.ndarray:
+        v = j[tip] - j[base]
+        return geometry.flat(v, FLOOR_UP) if top_view else v
+
+    rows = []
+    for side in atlas_rig.SIDES:
+        for end, base, tip, top_view in (("foot", "ankle", "toe", True), ("hand", "wrist", "finger", False)):
+            keys = (f"{base}.{side}", f"{tip}.{side}")
+            if not all(key in r.joints for r in (before, after) for key in keys) or not all(k in target for k in keys):
+                continue
+            body = pointing(target, *keys, top_view)
+            rows.append(
+                {
+                    "part": f"{end}.{side}",
+                    "measure": "pointing",
+                    "beforeDeg": degrees_between(pointing(before.joints, *keys, top_view), body),
+                    "afterDeg": degrees_between(pointing(after.joints, *keys, top_view), body),
+                }
+            )
+            if end == "hand" and side in before.palm and side in after.palm and side in palm:
+                rows.append(
+                    {
+                        "part": f"{end}.{side}",
+                        "measure": "palm",
+                        "beforeDeg": degrees_between(before.palm[side], palm[side]),
+                        "afterDeg": degrees_between(after.palm[side], palm[side]),
+                    }
+                )
+    return rows
+
+
+def inside_share(points: np.ndarray, skin: BVHTree) -> float:
+    """Share of the points inside the body's skin (behind the nearest face)."""
+    inside = 0
+    for p in points:
+        co, normal, _, _ = skin.find_nearest(Vector(p))
+        inside += co is not None and (Vector(p) - co).dot(normal) < 0
+    return round(inside / max(len(points), 1), 3)
+
+
 def fit(
     atlas: list[bpy.types.Object],
     kinds: dict[str, str],
@@ -417,6 +530,8 @@ def fit(
     body_points: np.ndarray,
     render: tuple[str, str, list[bpy.types.Object]] | None = None,
     stretch_limbs: bool = False,
+    palm: dict[str, np.ndarray] | None = None,
+    skin: BVHTree | None = None,
 ) -> dict:
     started = time.monotonic()
     body = frame(body_points)
@@ -434,7 +549,14 @@ def fit(
     if render:
         render_state(render, "before", before, target, body)
 
-    mats, stretch, shift = deforms(rig, target, stretch_limbs)
+    mats, stretch, shift, turns = deforms(rig, target, stretch_limbs, palm)
+    ends = [f"{e}.{side}" for side in atlas_rig.SIDES for e in ("foot", "hand")]
+
+    def end_points(seg: str) -> np.ndarray | None:
+        found = [coords(o)[idx] for (o, idx), s in zip(bone_parts, rig.part_segment) if s == seg]
+        return np.vstack(found) if found else None
+
+    inside_before = {seg: inside_share(p, skin) for seg in ends if skin and (p := end_points(seg)) is not None}
     bones = rest_bones(rig, k)
     by_segment: dict[str, list[np.ndarray]] = {}
     for (obj, idx), seg in zip(bone_parts, rig.part_segment):
@@ -475,6 +597,10 @@ def fit(
 
     moved = [coords(o)[idx] for o, idx in bone_parts]
     after_rig = atlas_rig.build_rig(moved, body["floor"], body["height"], body["cx"])
+    inside = [
+        {"part": seg, "beforeShare": share, "afterShare": inside_share(end_points(seg), skin)}
+        for seg, share in inside_before.items()
+    ]
     if render:
         render_state(render, "after", after_rig.joints, target, body)
     bpy.data.objects.remove(arm)
@@ -488,6 +614,9 @@ def fit(
         "segmentsAssigned": sorted({s for s in rig.part_segment}),
         "vertices": counts,
         "joints": joint_table(before, after_rig.joints, target),
+        "endTurnsDeg": dict(sorted(turns.items())),
+        "orientation": orientation_rows(rig, after_rig, target, palm or {}),
+        "bonesInsideSkin": inside,
         "seconds": round(time.monotonic() - started, 1),
     }
 
@@ -541,7 +670,8 @@ def run(args: list[str]) -> None:
         sys.exit(2)
     empty_scene()
     body_objs = import_glb(body_path)
-    target, body_points, body_mesh = body_targets(body_objs)
+    target, palm, body_points, body_mesh = body_targets(body_objs)
+    skin = BVHTree.FromPolygons(body_points.tolist(), [tuple(p.vertices) for p in body_mesh.data.polygons])
     atlas = [o for o in import_glb(atlas_path) if o.type == "MESH"]
     bake_world(atlas)
     kinds = {o.name: classify(o, scheme) for o in atlas}
@@ -551,7 +681,7 @@ def run(args: list[str]) -> None:
         show = set((option(args, "--render-show", "bone,vessel") or "").split(","))
         style_for_render(atlas, kinds, body_mesh, scheme, show)
         render = (render_dir, option(args, "--render-name", Path(out).stem), atlas)
-    result = fit(atlas, kinds, target, body_points, render, "--stretch" in args)
+    result = fit(atlas, kinds, target, body_points, render, "--stretch" in args, palm, skin)
     export_glb(atlas, out)
     result.update(
         {
@@ -568,6 +698,58 @@ def run(args: list[str]) -> None:
     )
     write_json(report_path, result)
     print(f"fit_atlas: wrote {out} and {report_path}")
+
+
+def plan_check(legs: dict[str, np.ndarray], legs_target: dict[str, np.ndarray]) -> list[str]:
+    """
+    The ends' plan on exact values: an atlas foot turned 20° outward and a
+    hand hanging straight down, palm forward (thumb outward), against a body
+    whose feet point straight ahead and whose hands point forward and down
+    with the palms inward. Returns failures.
+    """
+    failures: list[str] = []
+    j, target = dict(legs), dict(legs_target)
+    out = np.array([np.sin(np.radians(20)), -np.cos(np.radians(20)), 0.0])
+    for s, side in ((1, "L"), (-1, "R")):
+        x = np.array([s, 1.0, 1.0])
+        j[f"toe.{side}"] = (legs["ankle.L"] + 0.15 * out - [0, 0, 0.04]) * x
+        j |= {f"{n}.{side}": np.array(p) * x for n, p in (("shoulder", [0.18, 0, 1.4]), ("elbow", [0.2, 0, 1.1]), ("wrist", [0.22, 0, 0.84]), ("finger", [0.22, 0, 0.66]))}
+        target[f"toe.{side}"] = np.array([0.15 * s, -0.2, 0.02])
+        target |= {f"{n}.{side}": np.array(p) * x for n, p in (("shoulder", [0.18, 0, 1.4]), ("elbow", [0.21, -0.02, 1.11]), ("wrist", [0.23, -0.1, 0.85]), ("finger", [0.23, -0.2, 0.68]))}
+    # Signed by handedness (atlas_rig.palm_side): the left palm's side, the right hand's back.
+    rig = atlas_rig.AtlasRig(joints=j, has_arms=True, palm={"L": np.array([0.0, -1, 0]), "R": np.array([0.0, 1, 0])})
+    body_palm = {"L": np.array([-1.0, 0, 0]), "R": np.array([-1.0, 0, 0])}
+    mats, _, shift, turns = deforms(rig, target, palm=body_palm)
+
+    def moved(seg: str, p: np.ndarray) -> np.ndarray:
+        return geometry.transform_points(mats[seg], p[None])[0]
+
+    for side in atlas_rig.SIDES:
+        ankle = moved(f"shin.{side}", j[f"ankle.{side}"])
+        toe = moved(f"foot.{side}", j[f"toe.{side}"])
+        if np.linalg.norm(moved(f"foot.{side}", j[f"ankle.{side}"]) - ankle) > 1e-12:
+            failures.append(f"foot.{side} left its ankle")
+        if degrees_between(geometry.flat(toe - ankle, FLOOR_UP), geometry.flat(target[f"toe.{side}"] - ankle, FLOOR_UP)) > 1e-6:
+            failures.append(f"foot.{side} does not point at the body's toe")
+        if np.linalg.norm(mats[f"foot.{side}"][:3, :3] @ FLOOR_UP - FLOOR_UP) > 1e-12 or abs(abs(turns[f"foot.{side}"]) - 20) > 0.5:
+            failures.append(f"foot.{side} tilted or turned {turns.get(f'foot.{side}')}°, not 20° about the vertical")
+        elbow, wrist = moved(f"upperarm.{side}", j[f"elbow.{side}"]), moved(f"forearm.{side}", j[f"wrist.{side}"])
+        if np.linalg.norm(moved(f"forearm.{side}", j[f"elbow.{side}"]) - elbow) > 1e-12 or np.linalg.norm(moved(f"hand.{side}", j[f"wrist.{side}"]) - wrist) > 1e-12:
+            failures.append(f"the {side} arm's rolls moved a joint")
+        hand = mats[f"hand.{side}"][:3, :3]
+        if degrees_between(moved(f"hand.{side}", j[f"finger.{side}"]) - wrist, target[f"finger.{side}"] - wrist) > 1e-6:
+            failures.append(f"hand.{side} does not point at the body's fingertip")
+        if (hand @ rig.palm[side]) @ body_palm[side] < 0.999 or abs(abs(turns[f"hand.{side}"]) - 90) > 15:
+            failures.append(f"hand.{side} palm {hand @ rig.palm[side]}, roll {turns.get(f'hand.{side}')}°")
+        # The forearm takes about half the roll: the hand turns about half as far again from it.
+        fore = mats[f"forearm.{side}"][:3, :3]
+        axis = wrist - elbow
+        left = np.degrees(geometry.roll_angle(axis, fore @ rig.palm[side], hand @ rig.palm[side]))
+        if abs(abs(left) - (1 - FOREARM_ROLL) * abs(turns[f"hand.{side}"])) > 3.0:
+            failures.append(f"forearm.{side} leaves {left}° of the roll to the wrist")
+    if np.abs(shift[2]) > 1e-12:
+        failures.append("the plan moved the trunk vertically")
+    return failures
 
 
 def self_check() -> int:
@@ -636,9 +818,10 @@ def self_check() -> int:
         j[f"hip.{side}"] = np.array([0.09 * s, 0.0, 0.88])
         j[f"knee.{side}"] = np.array([0.1 * s, 0.0, 0.46])
         j[f"ankle.{side}"] = np.array([0.1 * s, 0.0, 0.06])
-    _, kept, _ = deforms(atlas_rig.AtlasRig(joints=j), target)
+    _, kept, _, _ = deforms(atlas_rig.AtlasRig(joints=j), target)
     if any(abs(v - 1.0) > 1e-12 for v in kept.values()):
         failures.append(f"the default stretched a segment: {kept}")
+    failures += plan_check(j, target)
     result = fit(atlas, kinds, target, body_points, stretch_limbs=True)
     for row in result["joints"]:
         if row["joint"].split(".")[0] in ("knee", "ankle") and row["afterDistanceM"] > 0.004:
