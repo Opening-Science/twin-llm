@@ -24,7 +24,7 @@ const IMMUTABLE = "public, max-age=31536000, immutable";
 const REVALIDATE = "public, max-age=0, must-revalidate";
 
 /** RFC 9110 If-None-Match: a list, weak validators compare equal, `*` matches. */
-export const matchesEtag = (header: string | null, etag: string): boolean =>
+const matchesEtag = (header: string | null, etag: string): boolean =>
   header !== null &&
   header
     .split(",")

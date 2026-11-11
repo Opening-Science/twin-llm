@@ -37,7 +37,6 @@ const storeCipher = () =>
     : plainCipher;
 
 const mockModuleForFile = moduleMocker({ mock, afterAll });
-mock.module("server-only", () => ({}));
 await mockModuleForFile("@/infrastructure/auth-actor", {
   resolveActorId: async () => "local",
 });

@@ -10,13 +10,17 @@ import {
   isAtlasId,
   type AtlasId,
 } from "@/packages/anatomy/manifest";
+import {
+  fittedAtlasEntry,
+  fittedAtlasVersion,
+  isFittedAtlasId,
+  type FittedAtlasId,
+} from "@/packages/anatomy/fitted-atlases";
 import { RIGGED_BODIES, riggedBodyVersion } from "@/packages/anatomy/rigged-bodies";
 
-import { ANATOMY_NOT_INSTALLED_API } from "./anatomy-copy";
+import { ANATOMY_NOT_INSTALLED_API, FITTED_NOT_INSTALLED_API } from "./anatomy-copy";
 import { DEMO_NOT_INSTALLED_API, RIGGED_NOT_INSTALLED_API } from "./demo-copy";
 import { createPinnedGlbHandler } from "./pinned-glb-handler";
-
-export { matchesEtag } from "./pinned-glb-handler";
 
 /**
  * GET /api/anatomy/atlas/:atlasId. Atlases are public CC BY files from a closed
@@ -70,4 +74,23 @@ export const createRiggedBodyHandler = (deps: RiggedBodyDeps) =>
     version: riggedBodyVersion,
     open: deps.openRiggedBody,
     notInstalled: RIGGED_NOT_INSTALLED_API,
+  });
+
+/**
+ * GET /api/anatomy/fitted/:fittedId (`<body>.<atlas>`). An atlas refitted to a
+ * rigged demo body in Blender and quantised on this machine; same rules, its
+ * own pins. Ids outside the closed list are 404 and never reach the disk.
+ */
+export type FittedAtlasDeps = Readonly<{
+  openFittedAtlas: (id: FittedAtlasId) => Promise<Uint8Array<ArrayBuffer> | null>;
+}>;
+
+export const createFittedAtlasHandler = (deps: FittedAtlasDeps) =>
+  createPinnedGlbHandler<FittedAtlasId>({
+    param: "fittedId",
+    isId: isFittedAtlasId,
+    sha256: (id) => fittedAtlasEntry(id).sha256,
+    version: fittedAtlasVersion,
+    open: deps.openFittedAtlas,
+    notInstalled: FITTED_NOT_INSTALLED_API,
   });

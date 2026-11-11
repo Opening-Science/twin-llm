@@ -30,7 +30,6 @@ import {
 import { type Highlight } from "@/packages/anatomy/highlight";
 import { ATLASES, type AtlasScheme } from "@/packages/anatomy/manifest";
 import { RIGGED_ATTRIBUTION, riggedBodyApiUrl } from "@/packages/anatomy/rigged-bodies";
-import { DEMO_STANCE } from "@/packages/anatomy/stance";
 import { Button } from "@/infrastructure/ui-kit/button";
 import {
   CollapsiblePanel,
@@ -40,6 +39,7 @@ import { Field } from "@/infrastructure/ui-kit/field";
 import { Legend } from "@/infrastructure/ui-kit/legend";
 import { AnatomyControls } from "./anatomy/anatomy-controls";
 import { AnatomyLayers } from "./anatomy/anatomy-layers";
+import { demoStanceFor, fittedAvailable, fittedShown } from "./anatomy/fitted-option";
 import { highlightValue } from "./anatomy/highlight-options";
 import { BodyPanel, type BodyPanelProps, type PanelTab } from "./body-panel";
 import { useBiomarkerTab } from "./biomarkers/use-biomarker-tab";
@@ -713,6 +713,15 @@ export const BodyLoopAvatar = ({
       : demoRigged
         ? riggedBodyApiUrl(demoBody.id)
         : demoBodyApiUrl(demoBody.id);
+  // "Fit atlas to body": the atlas refitted to this rigged demo body in
+  // Blender, where it is made here; the body then stands unposed.
+  const fittedContext = {
+    bodyId: isDemo ? demoBody.id : null,
+    rigged: demoRigged,
+    atlasId: anatomy.state.atlasId,
+    installed: anatomy.fitted,
+  };
+  const fittedOn = fittedShown(anatomy.state.fitAtlas, fittedContext);
 
   // One card for a picked part: inline over the canvas, in the environment in
   // the bottom stack. It describes one view, so entering or leaving closes it.
@@ -814,7 +823,7 @@ export const BodyLoopAvatar = ({
             rates={motion.rates}
             stance={
               body.kind === "demo"
-                ? DEMO_STANCE[demoBody.id][anatomy.state.atlasId]
+                ? demoStanceFor(demoBody.id, anatomy.state.atlasId, fittedOn)
                 : null
             }
           />
@@ -823,6 +832,7 @@ export const BodyLoopAvatar = ({
             scanRoot={scanScene}
             statureM={body.kind === "scan" ? snapshotStature(properties) : null}
             atlasId={anatomy.state.atlasId}
+            fittedBody={body.kind === "demo" && fittedOn ? demoBody.id : null}
             requested={anatomy.state.requested}
             retry={anatomy.state.retry}
             // The atlas cannot follow the bones, so it fades out while the body moves.
@@ -1101,6 +1111,10 @@ export const BodyLoopAvatar = ({
                     envelope="demo"
                     // BodyMotion poses a body to its stance once it has a rig binding.
                     posed={motion.binding !== null}
+                    fitted={{
+                      available: fittedAvailable(fittedContext),
+                      shown: fittedOn,
+                    }}
                   />
                 ),
                 panel: {

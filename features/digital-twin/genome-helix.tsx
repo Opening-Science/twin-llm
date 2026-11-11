@@ -8,8 +8,6 @@ import { GenomeHelixFallback } from "./genome-helix-fallback";
 import { type TwinToken } from "./twin-palette";
 import { useTwinPalette } from "./use-twin-palette";
 
-export { GenomeHelixFallback } from "./genome-helix-fallback";
-
 /**
  * Decorative double helix. Original geometry — not a sequence renderer and
  * not seeded from VCF, FASTA, or any Ark slot. WebGL missing → static fallback.
