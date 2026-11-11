@@ -8,13 +8,14 @@ import {
 import { ATLASES, atlasVersion, type AtlasId } from "@/packages/anatomy/manifest";
 import { RIGGED_BODIES, riggedBodyApiUrl } from "@/packages/anatomy/rigged-bodies";
 
-import { ANATOMY_NOT_INSTALLED_API } from "./anatomy-copy";
+import { ANATOMY_NOT_INSTALLED_API, SKELETON_NOT_CONFIGURED_API } from "./anatomy-copy";
 import {
   createAnatomyAtlasHandler,
   createDemoBodyHandler,
   createRiggedBodyHandler,
 } from "./atlas-handler";
 import { DEMO_NOT_INSTALLED_API, RIGGED_NOT_INSTALLED_API } from "./demo-copy";
+import { createSkeletonHandler } from "./skeleton-handler";
 import { createAnatomyStatusHandler } from "./status-handler";
 
 const BYTES = new Uint8Array([103, 108, 84, 70, 2, 0, 0, 0]);
@@ -112,7 +113,23 @@ describe("GET /api/anatomy/status", () => {
         { id: "anny-adult-m", installed: false },
         { id: "anny-adult-f", installed: false },
       ],
+      skeleton: null,
     });
+  });
+
+  test("names the configured skeleton's case and what its build left out", async () => {
+    const skeleton = {
+      caseId: "s0086",
+      scope: "Stage 1, thorax only.",
+      attribution: null,
+      excluded: [{ label: "clavicula_left", reason: "cut by the scan's edge" }],
+      modelled: [],
+    };
+    const GET = createAnatomyStatusHandler({
+      statAtlas: async () => true,
+      readSkeleton: async () => skeleton,
+    });
+    expect((await (await GET()).json()).skeleton).toEqual(skeleton);
   });
 
   test("lists which demo bodies have a baked rigged variant", async () => {
@@ -215,5 +232,50 @@ describe("GET /api/anatomy/rigged/:bodyId", () => {
       error: RIGGED_NOT_INSTALLED_API,
       installed: false,
     });
+  });
+});
+
+describe("GET /api/anatomy/skeleton", () => {
+  const ETAG = '"1aee2cc-19a6f"';
+  const skeletonGet = (configured: boolean) => {
+    const opened: string[] = [];
+    const GET = createSkeletonHandler({
+      statSkeleton: async () => (configured ? { etag: ETAG } : null),
+      openSkeleton: async () => {
+        opened.push("skeleton");
+        return configured ? BYTES : null;
+      },
+    });
+    const call = (headers: Record<string, string> = {}) =>
+      GET(new Request("http://local/api/anatomy/skeleton", { headers }));
+    return { call, opened };
+  };
+
+  test("serves the configured GLB, always revalidated", async () => {
+    const res = await skeletonGet(true).call();
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("model/gltf-binary");
+    expect(res.headers.get("cache-control")).toBe("private, max-age=0, must-revalidate");
+    expect(res.headers.get("etag")).toBe(ETAG);
+    expect(new Uint8Array(await res.arrayBuffer())).toEqual(BYTES);
+  });
+
+  test("answers 304 for a matching ETag without reading the file", async () => {
+    const { call, opened } = skeletonGet(true);
+    const res = await call({ "if-none-match": ETAG });
+    expect(res.status).toBe(304);
+    expect(opened).toEqual([]);
+  });
+
+  test("no skeleton configured is a plain JSON 404 naming the variable", async () => {
+    const { call, opened } = skeletonGet(false);
+    const res = await call();
+    expect(res.status).toBe(404);
+    expect(res.headers.get("cache-control")).toBe("no-store");
+    expect(await res.json()).toEqual({
+      error: SKELETON_NOT_CONFIGURED_API,
+      installed: false,
+    });
+    expect(opened).toEqual([]);
   });
 });

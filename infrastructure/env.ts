@@ -500,6 +500,16 @@ const serverEnvSchema = z
     VITRONIC_DATA_DIR: maybeText(),
     VITRONIC_SCANNER_HOSTS: maybeText(),
     ANATOMY_DATA_DIR: maybeText(),
+    ANATOMY_SKELETON_GLB: z.preprocess(
+      blankAsMissing,
+      z
+        .string()
+        .regex(
+          /^\/.+\.glb$/i,
+          "ANATOMY_SKELETON_GLB must be an absolute path to a .glb file",
+        )
+        .optional(),
+    ),
     TWINLLM_STATE_DIR: z.preprocess(
       blankAsMissing,
       z.string().regex(/^\//, "TWINLLM_STATE_DIR must be an absolute path").optional(),
@@ -847,10 +857,18 @@ export const anchorEnv = (env: ServerEnv = serverEnv()): AnchorEnv =>
 export type AnatomyEnv = Readonly<{
   /** Where `bun run anatomy:fetch` put the atlas GLBs; null means data/anatomy. */
   dataDir: string | null;
+  /**
+   * An open-anatomy skeleton GLB (atlas.json beside it); null means no
+   * skeleton layer. Public CC BY CT data, never committed.
+   */
+  skeletonGlb: string | null;
 }>;
 
 export const anatomyEnv = (): AnatomyEnv =>
-  Object.freeze({ dataDir: serverEnv().ANATOMY_DATA_DIR ?? null });
+  Object.freeze({
+    dataDir: serverEnv().ANATOMY_DATA_DIR ?? null,
+    skeletonGlb: serverEnv().ANATOMY_SKELETON_GLB ?? null,
+  });
 
 export type GenomeEnv = Readonly<{
   source: "none" | "ark";
