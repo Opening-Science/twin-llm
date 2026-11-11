@@ -6,7 +6,11 @@ import {
   preferredAtlas,
   type AnatomyState,
 } from "./anatomy-state";
-import { parseAnatomyStatus, parseRiggedStatus } from "./use-anatomy-view";
+import {
+  parseAnatomyStatus,
+  parseRiggedStatus,
+  parseSkeletonStatus,
+} from "./use-anatomy-view";
 
 const run = (state: AnatomyState, ...actions: Parameters<typeof anatomyReducer>[1][]) =>
   actions.reduce(anatomyReducer, state);
@@ -266,5 +270,78 @@ describe("installed status", () => {
     expect(run(initialAnatomyState, { type: "installed", installed: null })).toBe(
       initialAnatomyState,
     );
+  });
+});
+
+describe("skeleton layer state", () => {
+  test("starts with nothing isolated, bones together and the CT skeleton preferred", () => {
+    expect(initialAnatomyState.isolate).toBeNull();
+    expect(initialAnatomyState.explode).toBe(0);
+    expect(initialAnatomyState.ctSkeleton).toBe(true);
+  });
+
+  test("isolating the skeleton loads the anatomy and turns its toggle back on", () => {
+    const state = run(
+      initialAnatomyState,
+      { type: "toggleLayer", layer: "skeleton" },
+      { type: "isolate", layer: "skeleton" },
+    );
+    expect(state.isolate).toBe("skeleton");
+    expect(state.requested).toBe(true);
+    expect(state.layers).toEqual({ muscle: true, skeleton: true, organs: true });
+    expect(state.targetDepth).toBe(0);
+  });
+
+  test("clearing isolate keeps the depth, toggles and request", () => {
+    const isolated = run(
+      initialAnatomyState,
+      { type: "depth", depth: 2 },
+      { type: "isolate", layer: "skeleton" },
+    );
+    const cleared = run(isolated, { type: "isolate", layer: null });
+    expect(cleared).toEqual({ ...isolated, isolate: null });
+  });
+
+  test("explode is clamped to 0..1 and a bad value is 0", () => {
+    expect(run(initialAnatomyState, { type: "explode", amount: 0.4 }).explode).toBe(0.4);
+    expect(run(initialAnatomyState, { type: "explode", amount: 3 }).explode).toBe(1);
+    expect(run(initialAnatomyState, { type: "explode", amount: -1 }).explode).toBe(0);
+    expect(
+      run(initialAnatomyState, { type: "explode", amount: Number.NaN }).explode,
+    ).toBe(0);
+  });
+
+  test("the CT skeleton can be switched off and on", () => {
+    const off = run(initialAnatomyState, { type: "ctSkeleton", on: false });
+    expect(off.ctSkeleton).toBe(false);
+    expect(run(off, { type: "ctSkeleton", on: true }).ctSkeleton).toBe(true);
+  });
+});
+
+describe("parseSkeletonStatus", () => {
+  test("a configured skeleton comes back parsed", () => {
+    const status = {
+      atlases: [],
+      skeleton: {
+        caseId: "s0086",
+        scope: null,
+        attribution: null,
+        excluded: [{ label: "clavicula_left", reason: "cut by the scan's edge" }],
+        modelled: [],
+      },
+    };
+    expect(parseSkeletonStatus(status)).toEqual({
+      caseId: "s0086",
+      scope: null,
+      attribution: null,
+      excluded: [{ label: "clavicula_left", reason: "cut by the scan's edge" }],
+      modelled: [],
+    });
+  });
+
+  test("no skeleton, an older server or a failed status is no layer", () => {
+    expect(parseSkeletonStatus({ atlases: [], skeleton: null })).toBeNull();
+    expect(parseSkeletonStatus({ atlases: [] })).toBeNull();
+    expect(parseSkeletonStatus(null)).toBeNull();
   });
 });

@@ -51,6 +51,12 @@ export type AnatomyState = Readonly<{
   /** The person picked an atlas for this body; it stays until the body changes. */
   atlasChosen: boolean;
   layers: Readonly<Record<AtlasLayerId, boolean>>;
+  /** One layer shown alone and solid, the scan and the rest hidden; null shows all. */
+  isolate: AtlasLayerId | null;
+  /** How far the CT skeleton's bones are spread apart, 0 (as built) to 1. */
+  explode: number;
+  /** The Skeleton layer draws the open-anatomy CT skeleton when one is configured. */
+  ctSkeleton: boolean;
   hiddenSystems: readonly OrganSystem[];
   /** What glows, if anything. Group keys are atlas-specific, so an atlas switch clears it. */
   highlight: Highlight | null;
@@ -76,6 +82,9 @@ export type AnatomyAction =
   | Readonly<{ type: "installed"; installed: Readonly<Record<AtlasId, boolean>> | null }>
   | Readonly<{ type: "bodySex"; sex: BodySex | null }>
   | Readonly<{ type: "toggleLayer"; layer: AtlasLayerId }>
+  | Readonly<{ type: "isolate"; layer: AtlasLayerId | null }>
+  | Readonly<{ type: "explode"; amount: number }>
+  | Readonly<{ type: "ctSkeleton"; on: boolean }>
   | Readonly<{ type: "toggleSystem"; system: OrganSystem }>
   | Readonly<{ type: "highlight"; highlight: Highlight | null; from?: HighlightFrom }>
   | Readonly<{ type: "load"; load: AnatomyLoad }>
@@ -89,6 +98,9 @@ export const initialAnatomyState: AnatomyState = {
   bodySex: null,
   atlasChosen: false,
   layers: { muscle: true, skeleton: true, organs: true },
+  isolate: null,
+  explode: 0,
+  ctSkeleton: true,
   hiddenSystems: [],
   highlight: null,
   highlightFrom: null,
@@ -161,6 +173,26 @@ export const anatomyReducer = (
         ...state,
         layers: { ...state.layers, [action.layer]: !state.layers[action.layer] },
       };
+    case "isolate":
+      // Isolating a layer loads the anatomy and turns that layer's toggle on,
+      // so the one layer left is never a hidden one.
+      return action.layer === null
+        ? { ...state, isolate: null }
+        : {
+            ...state,
+            isolate: action.layer,
+            requested: true,
+            layers: { ...state.layers, [action.layer]: true },
+          };
+    case "explode":
+      return {
+        ...state,
+        explode: Number.isFinite(action.amount)
+          ? Math.min(1, Math.max(0, action.amount))
+          : 0,
+      };
+    case "ctSkeleton":
+      return { ...state, ctSkeleton: action.on };
     case "toggleSystem":
       return {
         ...state,
