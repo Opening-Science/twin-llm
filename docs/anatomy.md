@@ -36,7 +36,8 @@ To bump a pin: download the new file, record its bytes and SHA-256 in `packages/
 
 ## Routes
 
-- `GET /api/anatomy/status`: `{ atlases: [{ id, installed }] }`, `no-store`. Installed means present at exactly the pinned size.
+- `GET /api/anatomy/status`: `{ atlases: [{ id, installed }], riggedBodies, skeleton }`, `no-store`. Installed means present at exactly the pinned size. `skeleton` is the parsed atlas.json of the configured open-anatomy skeleton, or `null` (see [CT skeleton](#ct-skeleton-open-anatomy)).
+- `GET /api/anatomy/skeleton`: the open-anatomy skeleton GLB, `private, max-age=0, must-revalidate` with an ETag from its size and modification time (it is a local build, not a pinned file). JSON 404 when none is configured.
 - `GET /api/anatomy/demo/:bodyId`: a demo body GLB, same caching, ETag and 404 rules as the atlas route.
 - `GET /api/anatomy/atlas/:atlasId`: the GLB. With `?v=<first 16 hex of the SHA-256>` it is `public, max-age=31536000, immutable`; otherwise `public, max-age=0, must-revalidate`. ETag is the SHA-256; a matching `If-None-Match` returns 304. A missing or partial file is a JSON 404 that says how to install it. Unknown ids are 404 and never reach the file system.
 
@@ -78,6 +79,18 @@ Measured on the pinned files (2026-10-13):
 - "Glass" is a Fresnel fade: faces turned towards the camera go nearly transparent, the silhouette stays. Nothing is dithered. A glass atlas layer draws twice, after the opaque layers: first its meshes to depth only (`depth-prepass.ts`), then its colour, alpha-blended at the real alpha with depth test LessEqual and no depth writes, so each pixel shows only that layer's front-most surface. Glass layers draw inside out (organs, skeleton, muscle), each pre-pass right before its colour, and the scan's glass last. From fade 0.9 an atlas layer is rim-only: a sharper rim (exponent 3), so the faded muscle at Skeleton and the faded skeleton at Organs show as outlines. The scan uses plain alpha blending.
 - Per-layer toggles only hide; the slider alone decides solid versus glass. Organ-system chips filter the organ layer by system.
 - `prefers-reduced-motion` makes depth changes instant.
+- Isolate ("Only the skeleton") draws one layer alone and solid at any depth, the scan and every other layer hidden (`viewMix` in `packages/anatomy/layers.ts`); a tap reaches only that layer. Like the depth, isolate gives way while the body moves.
+
+### CT skeleton (open-anatomy)
+
+The Skeleton layer can draw an open-anatomy skeleton instead of the atlas's bones: one public CT case (Stage 1: s0086, TotalSegmentator, CC BY 4.0), one node per bone. Nothing is committed here. Set `ANATOMY_SKELETON_GLB` in `.env.local` to the absolute path of a build, for example `/path/to/open-anatomy/data/atlas/s0086/s0086.skeleton.glb`; `atlas.json` is read from the same folder. Unset, or the file missing, the status says `skeleton: null` and the layer is absent, never an error. A new build drops in with no code change.
+
+- Node names are ontology ids (`FMA_7485`); the pick card shows `extras.name` (or the explode contract's `extras.label`), the ontology term and, for `extras.modelled` or a structure atlas.json lists as modelled, "Modelled, not segmented from the CT" (Stage 1: the costal cartilages).
+- Structures atlas.json leaves out (`excluded`, and Stage 1's `girdleLeftOut`: clavicles, scapulae and humeri, open-anatomy issue 45) are dropped if a node has them, and the panel says what this build left out. With the CT skeleton on the atlas's own bones are hidden, so no left-out bone is drawn from another donor.
+- Fit: at CT size (metres, not scaled to the body), with the hip joints, estimated at 0.35 of the hip bones' height, on the body's `LeftUpLeg`/`RightUpLeg` midpoint; without a rig, the box middle at 0.53 of the body's height (`fitSkeletonToScan`).
+- Fade and rim: the bones share one set of skeleton uniforms and the depth passes, so they turn to glass and rim exactly like the atlas layers.
+- Spread ("Spread the bones", 0 to 1): each bone moves out from the middle of the skeleton's extent, along the line from there to its own centre, by 0.8 of that distance plus 2 cm; one at the centre takes the others' mean direction, or forward when left and right cancel (`packages/anatomy/explode.ts`). Moving in proportion separates neighbours: at full spread the distance between any two bone centres grows by 0.8 of itself, so neighbouring vertebrae come apart too. open-anatomy's draft explode contract (bounding radius plus 2 cm from a volume-weighted centre) moved T1 to T11 up by one and the same 7 cm on s0086, so they never separated. A file's own `extras.explode` wins over either rule.
+- The credit line uses atlas.json's `attribution` when it has one, else says the skeleton was built by open-anatomy from a public CT case, CC BY 4.0.
 
 ## Highlight
 
