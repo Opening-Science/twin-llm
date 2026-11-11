@@ -10,13 +10,9 @@ import {
 } from "@/packages/anatomy/open-skeleton";
 
 import { disposeObject3D } from "../dispose-object";
+import { createCtMaterial } from "./ct-bone-material";
 import { attachDepthPrepass, createDepthPrepassMaterial } from "./depth-prepass";
-import {
-  createLayerMaterial,
-  createLayerUniforms,
-  LAYER_COLOURS,
-  type LayerUniforms,
-} from "./layer-material";
+import { createLayerUniforms, type LayerUniforms } from "./layer-material";
 import { type AtlasPart } from "./prepare-atlas";
 
 /** One CT bone: an atlas part on the skeleton layer, plus its name and explode path. */
@@ -105,11 +101,12 @@ export const prepareSkeleton = (
     const geometry = mesh.geometry;
     if (!geometry.getAttribute("normal")) geometry.computeVertexNormals();
     const previous = mesh.material;
-    mesh.material = createLayerMaterial({
-      colour: LAYER_COLOURS.skeleton,
-      vertexColors: geometry.getAttribute("color") !== undefined,
+    // One material per bone, so a pick lights only that bone; open-anatomy's
+    // bone and cartilage tones (ct-bone-material.ts).
+    mesh.material = createCtMaterial(
+      isModelled(node, atlas) ? "cartilage" : "bone",
       uniforms,
-    });
+    );
     disposeMaterials(previous);
     attachDepthPrepass(mesh, depthOnly);
     // The box in the file's frame, whatever the root's own transform.

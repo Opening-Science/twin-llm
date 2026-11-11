@@ -81,6 +81,17 @@ describe("prepareSkeleton", () => {
     }
   });
 
+  test("modelled parts take the cartilage tone, the rest bone", () => {
+    const prepared = prepareSkeleton(skeleton(), ATLAS);
+    const tone = (label: string) => {
+      const part = prepared.parts.find((item) => item.label === label)!;
+      return (part.mesh.material as MeshStandardMaterial).customProgramCacheKey();
+    };
+    expect(tone("Set of costal cartilages")).toContain("|cartilage");
+    expect(tone("Sternum")).toContain("|bone");
+    expect(tone("Left first rib")).toContain("|bone");
+  });
+
   test("the hip box spans both hip bones and anchors the fit", () => {
     const prepared = prepareSkeleton(skeleton(), ATLAS);
     const round = (values: readonly number[] = []) =>
