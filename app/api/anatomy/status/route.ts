@@ -1,4 +1,14 @@
 import { createAnatomyStatusHandler } from "@/features/digital-twin/anatomy/status-handler";
-import { statAtlas, statRiggedBody } from "@/packages/anatomy/atlas-store";
+import { anatomyEnv } from "@/infrastructure/env";
+import {
+  statAtlas,
+  statFittedAtlas,
+  statRiggedBody,
+} from "@/packages/anatomy/atlas-store";
 
-export const GET = createAnatomyStatusHandler({ statAtlas, statRiggedBody });
+export const GET = createAnatomyStatusHandler({
+  statAtlas,
+  statRiggedBody,
+  statFittedAtlas,
+  fittedAtlasOn: () => anatomyEnv().fittedAtlasOn,
+});

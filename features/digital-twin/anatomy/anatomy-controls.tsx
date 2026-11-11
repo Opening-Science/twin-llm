@@ -15,6 +15,7 @@ import {
   ANATOMY_CHANGES_NOTE,
   ANATOMY_DONOR_NOTE,
   ANATOMY_FIT_FAILED,
+  ANATOMY_FITTED_CHANGES_NOTE,
   ANATOMY_LOAD_ERROR,
   ANATOMY_NOT_IN_ATLAS,
   ANATOMY_NOT_INSTALLED,
@@ -25,6 +26,7 @@ import {
   ATLAS_COVERAGE_NOTE,
   ATLAS_OPTION_LABEL,
   depthValueText,
+  FIT_ATLAS_TOGGLE,
   HIGHLIGHT_GROUPS,
   HIGHLIGHT_HIDDEN,
   HIGHLIGHT_LABEL,
@@ -39,6 +41,10 @@ import { atlasSexNote } from "./atlas-sex";
 import { highlightOptions, selectedHighlightValue } from "./highlight-options";
 
 const STEP_UP = new Set(["ArrowRight", "ArrowUp", "PageUp"]);
+
+export type FittedControl = Readonly<{ available: boolean; shown: boolean }>;
+
+const NOT_FITTED: FittedControl = { available: false, shown: false };
 const STEP_DOWN = new Set(["ArrowLeft", "ArrowDown", "PageDown"]);
 
 /**
@@ -53,6 +59,7 @@ export const AnatomyControls = ({
   onInteract,
   envelope = "scan",
   posed = false,
+  fitted = NOT_FITTED,
 }: Readonly<{
   state: AnatomyState;
   /** null until /api/anatomy/status answers (or if it cannot be reached). */
@@ -63,6 +70,11 @@ export const AnatomyControls = ({
   envelope?: AnatomyEnvelope;
   /** The demo body is posed to the atlas's stance: only a rigged body is. */
   posed?: boolean;
+  /**
+   * "Fit atlas to body": offered only where the Blender-fitted atlas for this
+   * body and atlas is made here (`fitted-option.ts`); hidden otherwise.
+   */
+  fitted?: FittedControl;
 }>) => {
   const sliderId = useId();
   const listId = useId();
@@ -148,6 +160,18 @@ export const AnatomyControls = ({
           </button>
         ))}
       </div>
+
+      {fitted.available ? (
+        <label className="mt-2 flex items-center gap-1.5 text-xs">
+          <input
+            type="checkbox"
+            checked={state.fitAtlas}
+            disabled={notInstalled}
+            onChange={(event) => dispatch({ type: "fitAtlas", on: event.target.checked })}
+          />
+          {FIT_ATLAS_TOGGLE}
+        </label>
+      ) : null}
 
       <div aria-live="polite" className="text-muted-foreground mt-2 space-y-1 text-xs">
         {notInstalled ? <p>{ANATOMY_NOT_INSTALLED}</p> : null}
@@ -296,7 +320,8 @@ export const AnatomyControls = ({
 
       {state.requested ? (
         <p className="text-muted-foreground mt-3 text-[11px] leading-relaxed">
-          {entry.attribution} {ANATOMY_CHANGES_NOTE}{" "}
+          {entry.attribution}{" "}
+          {fitted.shown ? ANATOMY_FITTED_CHANGES_NOTE : ANATOMY_CHANGES_NOTE}{" "}
           <a
             href={entry.licenceUrl}
             target="_blank"
