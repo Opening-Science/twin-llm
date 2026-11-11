@@ -11,7 +11,13 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { ACESFilmicToneMapping, type Group, PerspectiveCamera } from "three";
+import {
+  ACESFilmicToneMapping,
+  Box3,
+  type Group,
+  PerspectiveCamera,
+  Vector3,
+} from "three";
 import { type OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 import type { VitronicPropertyRow } from "@/features/vitronic/vitronic-status-view";
@@ -30,6 +36,7 @@ import {
 import { type Highlight } from "@/packages/anatomy/highlight";
 import { ATLASES, type AtlasScheme } from "@/packages/anatomy/manifest";
 import { RIGGED_ATTRIBUTION, riggedBodyApiUrl } from "@/packages/anatomy/rigged-bodies";
+import { spreadBox } from "@/packages/anatomy/framing";
 import { DEMO_STANCE } from "@/packages/anatomy/stance";
 import { Button } from "@/infrastructure/ui-kit/button";
 import {
@@ -40,6 +47,7 @@ import { Field } from "@/infrastructure/ui-kit/field";
 import { Legend } from "@/infrastructure/ui-kit/legend";
 import { AnatomyControls } from "./anatomy/anatomy-controls";
 import { AnatomyLayers } from "./anatomy/anatomy-layers";
+import { skeletonInView } from "./anatomy/anatomy-state";
 import { highlightValue } from "./anatomy/highlight-options";
 import { BodyPanel, type BodyPanelProps, type PanelTab } from "./body-panel";
 import { useBiomarkerTab } from "./biomarkers/use-biomarker-tab";
@@ -661,6 +669,28 @@ export const BodyLoopAvatar = ({
   }, [subjectId, bodyKey]);
   // A part a toggle or the slider has hidden has no card either.
   const { targetDepth, layers: shownLayers, hiddenSystems, isolate } = anatomy.state;
+  // The CT skeleton, when it is what the view is about, is what the camera frames.
+  const skeletonView = skeletonInView(
+    anatomy.state,
+    anatomy.skeleton,
+    anatomy.skeletonLoad,
+  );
+  const skeletonBox =
+    anatomy.skeletonLoad.kind === "ready" ? anatomy.skeletonLoad.box : null;
+  const spread = anatomy.state.explode;
+  const skeletonFocus = useMemo(
+    () =>
+      skeletonView && skeletonBox
+        ? spreadBox(
+            new Box3(
+              new Vector3().fromArray(skeletonBox.min),
+              new Vector3().fromArray(skeletonBox.max),
+            ),
+            spread,
+          )
+        : null,
+    [skeletonView, skeletonBox, spread],
+  );
   const pickedShown =
     picked === null ||
     pickVisible(picked.target, targetDepth, shownLayers, hiddenSystems, isolate);
@@ -793,6 +823,7 @@ export const BodyLoopAvatar = ({
             camera={camera}
             showLandmarks={body.kind === "scan" && showLandmarks}
             resetKey={resetKey}
+            focus={motion.clip ? null : skeletonFocus}
             autoRotate={autoRotate}
             onUserRotate={onUserRotate}
             markers={body.kind === "scan" ? shownMarkers : NO_MARKERS}

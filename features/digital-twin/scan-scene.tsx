@@ -22,6 +22,8 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
+import { threeQuarterFraming } from "@/packages/anatomy/framing";
+
 import { loadAtlasGltf } from "./anatomy/load-atlas";
 import { prepareDemoBody } from "./demo-body";
 import { type WorldLook } from "./environment/environment-look";
@@ -89,23 +91,57 @@ export const fitCameraToBox = (camera: PerspectiveCamera, box: Box3): Vector3 =>
   return center;
 };
 
+/** A three-quarter front view on one box (the CT skeleton); null when it cannot frame it. */
+export const frameCameraOn = (
+  camera: PerspectiveCamera,
+  box: Box3,
+  direction: Vector3 | null = null,
+): Vector3 | null => {
+  const framing = threeQuarterFraming(box, camera.fov, camera.aspect, direction);
+  if (!framing) return null;
+  Object.assign(camera, { near: framing.near, far: framing.far });
+  camera.up.set(0, 0, 1);
+  camera.position.copy(framing.position);
+  camera.lookAt(framing.target);
+  camera.updateProjectionMatrix();
+  return framing.target;
+};
+
+/**
+ * Fits the camera to the body, or, when `focus` is set, frames that box from
+ * three-quarter front. Reset view (a new `resetKey`) frames the same way.
+ */
 export const FitZUpCamera = ({
   object,
   camera,
   resetKey,
   onTarget,
+  focus = null,
 }: {
   readonly object: Object3D;
   readonly camera: PerspectiveCamera;
   readonly resetKey: number;
   readonly onTarget: (center: Vector3) => void;
+  readonly focus?: Box3 | null;
 }) => {
   const invalidate = useThree((state) => state.invalidate);
+  // The last framing on a focus box: a new box for the same view (the bones
+  // spreading) keeps the person's turn and only moves the camera in or out.
+  const last = useRef<{ resetKey: number; object: Object3D; target: Vector3 } | null>(
+    null,
+  );
   useLayoutEffect(() => {
-    const center = fitCameraToBox(camera, new Box3().setFromObject(object));
+    const previous = last.current;
+    const keep =
+      focus && previous && previous.resetKey === resetKey && previous.object === object
+        ? camera.position.clone().sub(previous.target)
+        : null;
+    const framed = focus ? frameCameraOn(camera, focus, keep) : null;
+    last.current = framed ? { resetKey, object, target: framed } : null;
+    const center = framed ?? fitCameraToBox(camera, new Box3().setFromObject(object));
     onTarget(center);
     invalidate();
-  }, [object, camera, invalidate, resetKey, onTarget]);
+  }, [object, camera, invalidate, resetKey, onTarget, focus]);
   return null;
 };
 
@@ -314,6 +350,7 @@ export const BodyScan = ({
   world,
   walk,
   getControls,
+  focus = null,
 }: {
   readonly url: string;
   /** "demo" is a meshopt-compressed ANNY body in the atlas frame; "scan" a BodyLoop GLB. */
@@ -333,6 +370,8 @@ export const BodyScan = ({
   /** The environment: pans slide along the ground and stay within the walk radius. */
   readonly walk: boolean;
   readonly getControls: () => OrbitControls | null;
+  /** A box to frame instead of the whole body (the CT skeleton when it is the view). */
+  readonly focus?: Box3 | null;
   readonly markers: ReturnType<typeof visibleMarkers>;
   readonly measures: ReturnType<typeof visibleMeasures>;
   readonly highlightId: string | null;
@@ -426,6 +465,7 @@ export const BodyScan = ({
         camera={camera}
         resetKey={resetKey}
         onTarget={setTarget}
+        focus={focus}
       />
       {target ? (
         <ScanOrbitControls
