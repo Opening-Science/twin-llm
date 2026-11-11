@@ -192,7 +192,9 @@ export const loadJobs = async (benchmark: BenchmarkData): Promise<readonly LabJo
   const [evaluation, synthea, written] = await Promise.all([
     newestEvalRun(root),
     newestSynthea(root),
-    benchmark.path === null ? null : timesOf(join(root, benchmark.path)),
+    benchmark.path === null
+      ? null
+      : timesOf(join(/* turbopackIgnore: true */ root, benchmark.path)),
   ]);
   const now = Date.now();
   return [

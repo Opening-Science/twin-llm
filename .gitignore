@@ -34,6 +34,8 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 bun-debug.log*
+*.pid
+*.rej
 
 # env files — keep only the example
 .env
@@ -52,7 +54,7 @@ next-env.d.ts
 /generated
 
 # Pinned open-twin checkout (see scripts/sync-open-twin.sh)
-.open-twin/
+.open-twin
 
 # Local Synthea output (scripts/synthea/generate-local.sh)
 .synthea/
