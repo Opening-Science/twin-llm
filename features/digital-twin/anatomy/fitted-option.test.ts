@@ -104,3 +104,31 @@ describe("the fitAtlas action", () => {
     expect(anatomyReducer(on, { type: "fitAtlas", on: false }).fitAtlas).toBe(false);
   });
 });
+
+describe("flag on, nothing made here", () => {
+  // ANATOMY_FITTED_ATLAS=true with no fitted file: the status as the server sends it.
+  const status = {
+    atlases: [{ id: "bodyparts3d", installed: true }],
+    fittedAtlases: FITTED_ATLAS_IDS.map((id) => ({ id, installed: false })),
+    fittedAtlasOn: true,
+  };
+
+  test("the toggle starts ticked but is never offered; the usual fit and stance stay", () => {
+    const state = anatomyReducer(initialAnatomyState, {
+      type: "fitAtlas",
+      on: parseFittedDefault(status),
+    });
+    expect(state.fitAtlas).toBe(true);
+    const installed = parseFittedStatus(status);
+    for (const atlasId of ["bodyparts3d", "hra-f", "hra-m"] as const) {
+      for (const bodyId of ["anny-adult-m", "anny-adult-f"] as const) {
+        const here = context({ installed, atlasId, bodyId });
+        expect(fittedAvailable(here)).toBe(false);
+        expect(fittedShown(state.fitAtlas, here)).toBe(false);
+        expect(demoStanceFor(bodyId, atlasId, fittedShown(state.fitAtlas, here))).toBe(
+          DEMO_STANCE[bodyId][atlasId],
+        );
+      }
+    }
+  });
+});
