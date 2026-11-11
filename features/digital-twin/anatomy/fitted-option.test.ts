@@ -9,6 +9,7 @@ import {
   fittedAvailable,
   fittedShown,
   parseFittedDefault,
+  segmentFitShown,
   parseFittedStatus,
   type FittedContext,
   type FittedInstalled,
@@ -25,11 +26,12 @@ const context = (overrides: Partial<FittedContext> = {}): FittedContext => ({
   rigged: true,
   atlasId: "hra-f",
   installed: only("anny-adult-f.hra-f"),
+  skeleton: false,
   ...overrides,
 });
 
 describe("fittedAvailable", () => {
-  test("only for a rigged demo body whose fitted file for this atlas is made here", () => {
+  test("without a skeleton, only for a rigged demo body whose fitted file is made here", () => {
     expect(fittedAvailable(context())).toBe(true);
     expect(fittedAvailable(context({ atlasId: "hra-m" }))).toBe(false);
     expect(fittedAvailable(context({ bodyId: "anny-adult-m" }))).toBe(false);
@@ -37,6 +39,26 @@ describe("fittedAvailable", () => {
     expect(fittedAvailable(context({ bodyId: null }))).toBe(false);
     expect(fittedAvailable(context({ installed: null }))).toBe(false);
     expect(fittedAvailable(context({ installed: only() }))).toBe(false);
+  });
+});
+
+describe("the segment fit", () => {
+  const scan = context({ bodyId: null, rigged: false, installed: null, skeleton: true });
+
+  test("is offered for any body with a skeleton, a scan included", () => {
+    expect(fittedAvailable(scan)).toBe(true);
+    expect(fittedAvailable(context({ installed: only(), skeleton: true }))).toBe(true);
+    expect(fittedAvailable({ ...scan, skeleton: false })).toBe(false);
+  });
+
+  test("shows when ticked, unless a fitted file takes its place", () => {
+    expect(segmentFitShown(false, scan)).toBe(false);
+    expect(segmentFitShown(true, scan)).toBe(true);
+    expect(segmentFitShown(true, { ...scan, skeleton: false })).toBe(false);
+    const both = context({ skeleton: true });
+    expect(fittedShown(true, both)).toBe(true);
+    expect(segmentFitShown(true, both)).toBe(false);
+    expect(segmentFitShown(true, { ...both, atlasId: "bodyparts3d" })).toBe(true);
   });
 });
 

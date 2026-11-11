@@ -8,6 +8,7 @@ import {
   DEMO_FIT_NOTE,
   DEMO_FIT_NOTE_UNPOSED,
   DEMO_FITTED_NOTE,
+  DEMO_SEGMENT_FIT_NOTE,
   DEMO_TYPICAL_NOTE,
 } from "./demo-copy";
 
@@ -64,6 +65,9 @@ export const anatomyLoading = (percent: number | null): string =>
 /** What the layers sit inside: a BodyLoop scan, or the synthetic demo body. */
 export type AnatomyEnvelope = "scan" | "demo";
 
+const SCAN_SEGMENT_FIT_NOTE =
+  "Reference anatomy from a donor atlas, fitted to this scan part by part: head, neck, trunk, each arm and each leg are placed and scaled from the scan's joints and outline, and move with it. Not the scanned person's anatomy.";
+
 export const anatomyTypicalNote = (envelope: AnatomyEnvelope = "scan"): string =>
   envelope === "demo" ? DEMO_TYPICAL_NOTE : ANATOMY_TYPICAL_NOTE;
 
@@ -75,13 +79,17 @@ export const anatomyFitNote = (
 ): string =>
   anchor === "body"
     ? DEMO_FITTED_NOTE
-    : envelope === "demo"
-      ? posed
-        ? DEMO_FIT_NOTE
-        : DEMO_FIT_NOTE_UNPOSED
-      : anchor === "hips"
-        ? "Reference anatomy from a donor atlas, scaled to this scan's height and aligned at the hips. Not the scanned person's anatomy."
-        : "Reference anatomy from a donor atlas, scaled to this scan's height and centred on the scan outline. Not the scanned person's anatomy.";
+    : anchor === "segments"
+      ? envelope === "demo"
+        ? DEMO_SEGMENT_FIT_NOTE
+        : SCAN_SEGMENT_FIT_NOTE
+      : envelope === "demo"
+        ? posed
+          ? DEMO_FIT_NOTE
+          : DEMO_FIT_NOTE_UNPOSED
+        : anchor === "hips"
+          ? "Reference anatomy from a donor atlas, scaled to this scan's height and aligned at the hips. Not the scanned person's anatomy."
+          : "Reference anatomy from a donor atlas, scaled to this scan's height and centred on the scan outline. Not the scanned person's anatomy.";
 
 export const LAYER_LABEL: Readonly<Record<LayerId, string>> = {
   scan: "Scan",

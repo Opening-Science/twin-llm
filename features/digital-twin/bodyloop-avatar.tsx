@@ -39,7 +39,12 @@ import { Field } from "@/infrastructure/ui-kit/field";
 import { Legend } from "@/infrastructure/ui-kit/legend";
 import { AnatomyControls } from "./anatomy/anatomy-controls";
 import { AnatomyLayers } from "./anatomy/anatomy-layers";
-import { demoStanceFor, fittedAvailable, fittedShown } from "./anatomy/fitted-option";
+import {
+  demoStanceFor,
+  fittedAvailable,
+  fittedShown,
+  segmentFitShown,
+} from "./anatomy/fitted-option";
 import { highlightValue } from "./anatomy/highlight-options";
 import { BodyPanel, type BodyPanelProps, type PanelTab } from "./body-panel";
 import { useBiomarkerTab } from "./biomarkers/use-biomarker-tab";
@@ -713,15 +718,25 @@ export const BodyLoopAvatar = ({
       : demoRigged
         ? riggedBodyApiUrl(demoBody.id)
         : demoBodyApiUrl(demoBody.id);
-  // "Fit atlas to body": the atlas refitted to this rigged demo body in
-  // Blender, where it is made here; the body then stands unposed.
+  // "Fit atlas to body": the atlas laid on the body segment by segment, or,
+  // where it is made here, the atlas refitted to this rigged demo body in
+  // Blender; a demo body then stands unposed.
   const fittedContext = {
     bodyId: isDemo ? demoBody.id : null,
     rigged: demoRigged,
     atlasId: anatomy.state.atlasId,
     installed: anatomy.fitted,
+    skeleton: motion.binding !== null,
   };
   const fittedOn = fittedShown(anatomy.state.fitAtlas, fittedContext);
+  const segmentFitOn = segmentFitShown(anatomy.state.fitAtlas, fittedContext);
+  const fittedControl = {
+    available: fittedAvailable(fittedContext),
+    shown: fittedOn,
+  };
+  // The segment fit moves with the body's bones; the other fits cannot.
+  const { load } = anatomy.state;
+  const atlasFollows = load.kind === "ready" && load.anchor === "segments";
 
   // One card for a picked part: inline over the canvas, in the environment in
   // the bottom stack. It describes one view, so entering or leaving closes it.
@@ -823,7 +838,11 @@ export const BodyLoopAvatar = ({
             rates={motion.rates}
             stance={
               body.kind === "demo"
-                ? demoStanceFor(demoBody.id, anatomy.state.atlasId, fittedOn)
+                ? demoStanceFor(
+                    demoBody.id,
+                    anatomy.state.atlasId,
+                    fittedOn || segmentFitOn,
+                  )
                 : null
             }
           />
@@ -833,10 +852,12 @@ export const BodyLoopAvatar = ({
             statureM={body.kind === "scan" ? snapshotStature(properties) : null}
             atlasId={anatomy.state.atlasId}
             fittedBody={body.kind === "demo" && fittedOn ? demoBody.id : null}
+            segmentFit={segmentFitOn}
+            binding={motion.binding}
             requested={anatomy.state.requested}
             retry={anatomy.state.retry}
-            // The atlas cannot follow the bones, so it fades out while the body moves.
-            targetDepth={motion.clip ? 0 : anatomy.state.targetDepth}
+            // Unless the atlas follows the bones, it fades out while the body moves.
+            targetDepth={motion.clip && !atlasFollows ? 0 : anatomy.state.targetDepth}
             layers={anatomy.state.layers}
             hiddenSystems={anatomy.state.hiddenSystems}
             highlight={anatomy.state.highlight}
@@ -996,7 +1017,10 @@ export const BodyLoopAvatar = ({
             inEnvironment: environment.active,
             reducedMotion,
           }}
-          extra={motionLines(motion.control, anatomy.state.targetDepth > 0)}
+          extra={motionLines(
+            motion.control,
+            anatomy.state.targetDepth > 0 && !atlasFollows,
+          )}
         />
         {environment.active || !motion.control ? null : (
           <DayMotionBar
@@ -1110,11 +1134,8 @@ export const BodyLoopAvatar = ({
                     onInteract={onUserRotate}
                     envelope="demo"
                     // BodyMotion poses a body to its stance once it has a rig binding.
-                    posed={motion.binding !== null}
-                    fitted={{
-                      available: fittedAvailable(fittedContext),
-                      shown: fittedOn,
-                    }}
+                    posed={motion.binding !== null && !segmentFitOn}
+                    fitted={fittedControl}
                   />
                 ),
                 panel: {
@@ -1261,6 +1282,7 @@ export const BodyLoopAvatar = ({
                             installed={anatomy.installed}
                             dispatch={anatomy.dispatch}
                             onInteract={onUserRotate}
+                            fitted={fittedControl}
                           />
                         ),
                         panel: scanPanel,

@@ -44,10 +44,16 @@ const neverHit = (): void => undefined;
  * scales and hides with the mesh). It never takes a pick. Hidden until the
  * mesh's layer is glass. Idempotent.
  */
-export const attachDepthPrepass = (mesh: Mesh, material: Material): Mesh => {
+export const attachDepthPrepass = (
+  mesh: Mesh,
+  material: Material,
+  /** A skinned mesh needs a skinned twin; by default the twin is a plain mesh. */
+  make: (mesh: Mesh, material: Material) => Mesh = (source, depthOnly) =>
+    new Mesh(source.geometry, depthOnly),
+): Mesh => {
   const existing = prepasses.get(mesh);
   if (existing) return existing;
-  const prepass = new Mesh(mesh.geometry, material);
+  const prepass = make(mesh, material);
   // three.js objects are configured by mutation; the writes go through one
   // explicit Object.assign so they are easy to find.
   Object.assign(prepass, {

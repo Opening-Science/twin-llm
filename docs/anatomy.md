@@ -1,6 +1,6 @@
 # Reference anatomy layers
 
-The Body twin viewer can slide from the BodyLoop scan into stacked reference anatomy: **Scan → Muscle → Skeleton → Organs**. The anatomy is a donor atlas fitted to the scan's height and hips. It is not the scanned person's anatomy, and the viewer says so next to the slider.
+The Body twin viewer can slide from the BodyLoop scan into stacked reference anatomy: **Scan → Muscle → Skeleton → Organs**. The anatomy is a donor atlas fitted to the scan's height and hips, or, with "Fit atlas to body", to each part of the body. It is not the scanned person's anatomy, and the viewer says so next to the slider.
 
 ## Atlases
 
@@ -315,7 +315,33 @@ The Digital Twin can show the fitted atlas on the rigged demo bodies, behind an 
 - **Placement.** The file is in the rigged body's own frame, so it takes the body's world transform (the demo body's Rx(+90°)) instead of `fitAtlasToScan`'s scale and centring (`placeFittedAtlas`, `packages/anatomy/fit.ts`). It is refused, and the panel says the anatomy could not be fitted, when the file's height is not within 3% of the body's.
 - **Stance.** The fit was made on the unposed body, so `DEMO_STANCE` is 0° while it shows; unticking puts #518's stance back.
 - **Copy.** The fit note says the atlas was refitted to the demo body limb by limb in Blender, bones keeping their length, that feet and hands, where the atlas has their bones, point and face like the body's, with the measured ankle and knee figures above, and that the body stands unposed. The credit keeps the atlas's own attribution and says "refitted limb by limb to this body in Blender by TwinLLM, bone lengths kept". The licence notes under "Licences" below apply to these files.
-- Not done: the scans are never refitted, and the fitted atlas does not follow the bones while a clip plays (it fades out like the pinned one).
+- Not done: the Blender-fitted atlas does not follow the bones while a clip plays (it fades out like the pinned one). The segment fit below does, and it is what a scan gets.
+
+### Segment fit in the browser
+
+"Fit atlas to body" also fits the atlas to any body with a known skeleton, a BodyLoop scan included, where no Blender-fitted file takes its place. It runs in the browser when the atlas loads. The body's mesh and skeleton are already there, so nothing about a scan is sent, stored or precomputed, and a moving body needs its bones at run time anyway.
+
+- **Segments.** Atlas and body are each cut into seventeen segments: pelvis, abdomen, chest, neck, head, and per side thigh, shin, foot, upper arm, forearm and hand (`packages/anatomy/segments.ts`). The joints say where a segment begins and ends. The skin says where its centre line runs and how wide and deep it is: a long limb is measured near both ends, its girth at the far end, where the bones lie closest under the skin; a trunk slab between fixed shares of the line from the hips to the neck, without the arms; the head above the jaw; a hand by the direction it is thinnest in, which is the way its palm faces. So a segment sits in the middle of the skin even where a skeleton's joints do not (ANNY's hip joints stand 25 cm apart, BodyParts3D's femoral heads 17 cm).
+- **Body.** Joints are the skeleton's bones (`rig-map.ts`, ANNY or the scans' Mixamo-style names, now with the hand bones). Each skin vertex belongs to the segment whose bone moves it most, so an arm resting against the trunk is still an arm (`features/digital-twin/anatomy/read-body.ts`). The body is read in the pose it stands in.
+- **Atlas.** Joints are measured once from each pinned atlas's bones by `bun run anatomy:measure-joints` and kept in `packages/anatomy/atlas-joints.ts`: hip and shoulder are spheres fitted to the femoral and humeral heads, knee, ankle, elbow and wrist lie between the long bones' ends, the neck is the first cervical vertebra. A test fails when an atlas pin moves. The atlas's outline is measured at load on its own skin, which was only dropped before; each skin point belongs to the segment it is nearest to. HRA has no arm bones and no anatomy in its arms, so its arm joints are placed along the arm's skin and its arms are not held to the scale limits.
+- **Map.** Per segment one affine map lays the atlas's box on the body's: centre line on centre line, stretched to the body's length, scaled to its width and depth. A hand scales evenly; the head hangs from the crown. A fit that would scale a segment below 0.4 or above 2.5 is refused.
+- **Skinning.** Every atlas vertex follows its nearest segment, blended with the next one near a joint (`skinWeights`), and the atlas meshes become skinned meshes on one seventeen-bone skeleton (`skinned-atlas.ts`). Each bone is the segment's map carried by the body bone it follows, so the GPU places the atlas and moves it with the body: the depth no longer eases to the scan while a clip plays. The atlas's bytes are not changed. Skin weights cost 8 bytes a vertex; a pick is tested against vertices posed on the CPU, kept until the body moves.
+- **Fallback.** A body with no known skeleton, no head or hand bones, no skinned mesh, or a refused fit keeps the one-scale fit above, and the note under the slider says which fit shows. Unticked, nothing changes. A demo body stands unposed while the segment fit shows.
+
+Measured 2026-11-11 on the pinned files: the share of atlas vertices enclosed by the body's skin (skin on both sides along all three axes, so the demo body's modelled mouth does not count as outside), at rest.
+
+| Body   | Atlas       | Skeleton, one scale → segments | Organs, one scale → segments |
+| ------ | ----------- | ------------------------------ | ---------------------------- |
+| Male   | BodyParts3D | 81.9 → 97.7 %                  | 83.7 → 95.5 %                |
+| Male   | HRA male    | 97.7 → 99.6 %                  | 65.4 → 99.9 %                |
+| Male   | HRA female  | 96.6 → 99.8 %                  | 61.0 → 99.2 %                |
+| Female | BodyParts3D | 77.9 → 95.5 %                  | 81.1 → 95.6 %                |
+| Female | HRA male    | 96.5 → 99.6 %                  | 97.6 → 100.0 %               |
+| Female | HRA female  | 90.5 → 99.1 %                  | 82.9 → 98.3 %                |
+
+- Walk, run, idle and sleep frames stay within 0.6 points of the rest figures (male body, BodyParts3D: skeleton 97.3 to 97.8 %, organs 94.9 to 95.5 %). The one-scale column is the unposed body, without the stance.
+- A synthetic scan (a heavy tube figure on a Mixamo-named skeleton, turned 20° and 15 cm off centre; `anatomy/fixtures/synthetic-scan.ts`) was loaded through the scan path: the atlas sits in its trunk and limbs at rest and while it runs. No real scan was used.
+- Limits. What still stands out on BodyParts3D: a fifth of the hand bones (the atlas's fingers are straight, ANNY's curled), a tenth of the foot bones, and the knee end of the thigh bone on thick thighs, since one scale serves a whole segment. Bones are scaled with the skin, so a heavy body gets wider bones and organs: they are inside, not measured. A bone near a joint bends with it a little, because weights go by place, not by bone. Hair raises the crown, and the skull with it. The head keeps the trunk's directions, so a tilted head is not followed at rest. A palm is taken to face the midline or forward; a hand turned fully back is fitted the wrong way round.
 
 ### Mesh cleanup
 

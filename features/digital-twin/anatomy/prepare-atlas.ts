@@ -48,6 +48,11 @@ export type PreparedAtlas = Readonly<{
   /** Each distinct layer, system and group once: what the UI needs without the meshes. */
   views: readonly PartView[];
   triangles: number;
+  /**
+   * Points of the atlas's own skin (x, y, z triples in the atlas frame), kept
+   * when the skin is dropped: the segment fit measures the atlas's outline on them.
+   */
+  hull: Float32Array;
   uniforms: Readonly<Record<AtlasLayerId, LayerUniforms>>;
 }>;
 
@@ -65,6 +70,22 @@ const taggedAncestor = (mesh: Mesh, root: Object3D): Object3D => {
 
 const disposeMaterials = (material: Material | Material[]): void => {
   for (const item of Array.isArray(material) ? material : [material]) item.dispose();
+};
+
+/** About this many skin points are kept: plenty for an outline. */
+const HULL_POINTS = 100_000;
+
+/** A mesh's vertices in the root's frame, thinned to about `HULL_POINTS`. */
+const worldPoints = (mesh: Mesh): number[] => {
+  const position = mesh.geometry.getAttribute("position");
+  const step = Math.max(1, Math.ceil(position.count / HULL_POINTS));
+  const point = new Vector3();
+  const points: number[] = [];
+  for (let i = 0; i < position.count; i += step) {
+    point.fromBufferAttribute(position, i).applyMatrix4(mesh.matrixWorld);
+    points.push(point.x, point.y, point.z);
+  }
+  return points;
 };
 
 /**
@@ -93,11 +114,15 @@ export const prepareAtlas = (root: Object3D, entry: AtlasEntry): PreparedAtlas =
   const systems: OrganSystem[] = [];
   const groups: AtlasGroup[] = [];
   const partSystems: SystemId[] = [];
+  const hull: number[] = [];
   let triangles = 0;
   for (const mesh of meshes) {
     const tagged = taggedAncestor(mesh, root);
     const placement = classifyAtlasNode(entry.scheme, tagged.userData, tagged.name);
     if (placement.kind !== "layer") {
+      // Not spread into one push: a skin has more points than a call takes arguments.
+      if (placement.kind === "hull")
+        for (const value of worldPoints(mesh)) hull.push(value);
       mesh.removeFromParent();
       disposeObject3D(mesh);
       continue;
@@ -175,6 +200,7 @@ export const prepareAtlas = (root: Object3D, entry: AtlasEntry): PreparedAtlas =
     groups,
     views,
     triangles,
+    hull: Float32Array.from(hull),
     uniforms,
   };
 };

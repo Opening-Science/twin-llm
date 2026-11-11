@@ -42,10 +42,11 @@ export type ScanFrame = Readonly<{
 
 /**
  * How the atlas was placed: at the hips or the box centre by the scale-and-
- * centre fit, or with the body's own transform when it was refitted to the
- * body in Blender (`placeFittedAtlas`).
+ * centre fit, with the body's own transform when it was refitted to the
+ * body in Blender (`placeFittedAtlas`), or segment by segment on the body's
+ * joints and outline (`segments.ts`).
  */
-export type AtlasAnchor = "hips" | "bbox" | "body";
+export type AtlasAnchor = "hips" | "bbox" | "body" | "segments";
 
 export type AtlasFit = Readonly<{
   matrix: Matrix4;
