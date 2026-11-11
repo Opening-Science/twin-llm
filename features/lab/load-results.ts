@@ -95,7 +95,9 @@ const loadRuns = async (
 export const countRuns = async (): Promise<
   Readonly<{ count: number; failed: boolean }>
 > => {
-  const { ids, failed } = await runFolders(join(process.cwd(), EVAL_RUNS_DIR));
+  const { ids, failed } = await runFolders(
+    join(/* turbopackIgnore: true */ process.cwd(), EVAL_RUNS_DIR),
+  );
   return { count: ids.length, failed };
 };
 
@@ -111,7 +113,7 @@ const benchmarkFolders = (dir: string): Promise<string[]> =>
 
 /** For the hub: benchmark runs with a result.json, from one readdir and a stat each; none is read. */
 export const countBenchmarkRuns = async (): Promise<number> => {
-  const dir = join(process.cwd(), RHYTHM_BENCH_DIR);
+  const dir = join(/* turbopackIgnore: true */ process.cwd(), RHYTHM_BENCH_DIR);
   const found = await Promise.all(
     (await benchmarkFolders(dir)).map((name) =>
       stat(join(dir, name, "result.json"))

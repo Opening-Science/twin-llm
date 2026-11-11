@@ -1,11 +1,9 @@
-import { afterAll, afterEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, afterEach, describe, expect, test } from "bun:test";
 import { EventEmitter } from "node:events";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { PassThrough } from "node:stream";
 import { fileURLToPath } from "node:url";
-
-mock.module("server-only", () => ({}));
 
 const spawnSource = readFileSync(
   join(dirname(fileURLToPath(import.meta.url)), "spawn.ts"),

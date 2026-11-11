@@ -1,6 +1,4 @@
-import { describe, expect, mock, test } from "bun:test";
-
-mock.module("server-only", () => ({}));
+import { describe, expect, test } from "bun:test";
 
 type CitationRow = readonly [string, string, string | number, string | undefined];
 

@@ -1,8 +1,6 @@
-import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 
 import { asFetch } from "./as-fetch";
-
-mock.module("server-only", () => ({}));
 
 const originalEnv = { ...process.env };
 const originalFetch = globalThis.fetch;

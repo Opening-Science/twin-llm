@@ -1,10 +1,8 @@
-import { afterAll, afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { EventEmitter } from "node:events";
 import { PassThrough } from "node:stream";
 
 import type { AppendInput } from "@/packages/audit/append";
-
-mock.module("server-only", () => ({}));
 
 import type { ArkAuditFn } from "./hooks";
 import appRunFailed from "./fixtures/app-run-failed.json";

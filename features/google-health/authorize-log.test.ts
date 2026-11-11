@@ -39,7 +39,6 @@ const jar = {
 const originalEnv = { ...process.env };
 
 const mockModuleForFile = moduleMocker({ mock, afterAll });
-mock.module("server-only", () => ({}));
 await mockModuleForFile("next/headers", {
   cookies: async () => jar,
 });

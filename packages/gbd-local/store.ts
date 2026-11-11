@@ -13,19 +13,7 @@ import type {
 import { GBD_LOCAL_RELEASE } from "./constants";
 import type { GbdImportStore } from "./import-chunks";
 import { gbdRowKey } from "./results-csv";
-import {
-  GBD_STORE_BATCH,
-  type GbdFileImport,
-  type GbdImportOutcome,
-  type GbdImportView,
-} from "./store-types";
-
-export {
-  GBD_STORE_BATCH,
-  type GbdFileImport,
-  type GbdImportOutcome,
-  type GbdImportView,
-} from "./store-types";
+import { GBD_STORE_BATCH, type GbdImportView } from "./store-types";
 
 /**
  * The local GBD store in Postgres (`gbd_imports`, `gbd_estimates`). Reads for
@@ -188,31 +176,6 @@ export const gbdImportStore = (db: PrismaClient): GbdImportStore => ({
     await removeGbdImport(db, sha256);
   },
 });
-
-/**
- * Stores one parsed file. A file whose checksum is already recorded is
- * skipped. An estimate another file already brought is kept as it was,
- * linked to this file too, and not counted as new. If a write fails, the
- * file's record goes, with the rows no other file has.
- */
-export const importGbdFile = async (
-  db: PrismaClient,
-  file: GbdFileImport,
-): Promise<GbdImportOutcome> => {
-  const store = gbdImportStore(db);
-  if (await store.known(file.sha256)) {
-    return { kind: "already-imported", sha256: file.sha256 };
-  }
-  await store.begin(file);
-  try {
-    const newRows = await store.addRows(file.sha256, file.rows);
-    await store.finish(file.sha256, { rowCount: file.rows.length, newRows });
-    return { kind: "imported", sha256: file.sha256, rowCount: file.rows.length, newRows };
-  } catch (error: unknown) {
-    await store.abort(file.sha256);
-    throw error;
-  }
-};
 
 /** Every imported file, newest first, with the estimates each has. */
 export const listGbdImports = async (

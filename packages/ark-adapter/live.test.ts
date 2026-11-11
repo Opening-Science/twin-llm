@@ -1,11 +1,9 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { afterAll, describe, expect, mock, test } from "bun:test";
+import { afterAll, describe, expect, test } from "bun:test";
 
 import type { ArkResult } from "./codes";
-
-mock.module("server-only", () => ({}));
 
 const runLive = Reflect.get(process.env, "RUN_ARK") === "1";
 const configured = Reflect.get(process.env, "ARK_DEVICE");

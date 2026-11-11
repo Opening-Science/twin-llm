@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, mock, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
 
 import {
   permitProviderForRequest,
@@ -7,8 +7,6 @@ import {
   type DataMode,
   type LlmProvider,
 } from "@/infrastructure/data-mode-policy";
-
-mock.module("server-only", () => ({}));
 
 const originalEnv = { ...process.env };
 

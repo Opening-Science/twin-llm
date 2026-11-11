@@ -1,6 +1,4 @@
-import { describe, expect, mock, test } from "bun:test";
-
-mock.module("server-only", () => ({}));
+import { describe, expect, test } from "bun:test";
 
 import { GLB_MODEL_PREFERENCE } from "./models";
 import { buildVitronicSummary } from "./summary";

@@ -1,6 +1,4 @@
-import { describe, expect, mock, test } from "bun:test";
-
-mock.module("server-only", () => ({}));
+import { describe, expect, test } from "bun:test";
 
 import { CHAT_RESPONSE_DOCUMENT } from "@/features/chat/response-document";
 import { buildTwinSystemPrompt, DECLINE_RULE } from "@/features/chat/twin-system-prompt";
