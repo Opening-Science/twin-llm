@@ -1,17 +1,23 @@
 /**
  * Explode view: every structure moves outward from the body's centre along its
- * own direction, so neighbouring bones come apart without changing shape. The
- * rule is open-anatomy's explode contract (docs/explode-view.md there), so a
- * file that already carries `extras.explode` and one that does not move alike:
+ * own direction, so neighbouring bones come apart without changing shape.
  *
- * - direction: from the body centre (the centres of all structures, weighted by
- *   volume) to the structure's centre, unit length. A structure within 1 cm of
- *   the body centre takes the mean of the others' directions instead; when that
- *   mean is shorter than 0.1 (left and right cancel), it moves forward (+Z).
- * - distance: the structure's bounding radius plus 2 cm, so neighbours clear.
+ * - centre: the middle of the structures' extent (of their centres, per axis),
+ *   so a heavy pelvis does not pull it down to the lumbar spine.
+ * - direction: from that centre to the structure's centre, unit length. A
+ *   structure within 1 cm of it takes the mean of the others' directions
+ *   instead; when that mean is shorter than 0.1 (left and right cancel), it
+ *   moves forward (+Z).
+ * - distance: 0.8 of its distance from the centre, plus 2 cm. Moving in
+ *   proportion keeps the order: neighbouring vertebrae, which point almost the
+ *   same way, still come apart, and left and right move alike.
  *
- * At slider value t the offset is t × distance × direction. Pure numbers only,
- * in the file's own frame (metres, +Y up, +Z forward, +X the body's left).
+ * open-anatomy's draft explode contract moves every structure by its bounding
+ * radius plus 2 cm instead; on the Stage 1 trunk that moved T1 to T11 up by
+ * one and the same 7 cm, so they never separated. A file that carries its own
+ * `extras.explode` still wins. At slider value t the offset is
+ * t × distance × direction. Pure numbers only, in the file's own frame
+ * (metres, +Y up, +Z forward, +X the body's left).
  */
 export type Vec3 = readonly [number, number, number];
 
@@ -19,10 +25,6 @@ export type ExplodeVector = Readonly<{ direction: Vec3; distance: number }>;
 
 export type ExplodeInput = Readonly<{
   centre: Vec3;
-  /** Bounding radius in metres. */
-  radius: number;
-  /** Volume or another positive weight for the body centre. */
-  weight: number;
   /** What the file says, when it says it; it wins over the rule. */
   given: ExplodeVector | null;
 }>;
@@ -31,7 +33,9 @@ export type ExplodeInput = Readonly<{
 export const AT_CENTRE_M = 0.01;
 /** A mean direction shorter than this has cancelled out. */
 export const MIN_MEAN_LENGTH = 0.1;
-/** Clearance added to the bounding radius. */
+/** How far a structure moves at t = 1, as a share of its distance from the centre. */
+export const SPREAD = 0.8;
+/** Added to every distance, so structures at the centre clear each other too. */
 export const CLEARANCE_M = 0.02;
 export const FORWARD: Vec3 = [0, 0, 1];
 
@@ -39,23 +43,14 @@ const sub = (a: Vec3, b: Vec3): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 const length = (v: Vec3): number => Math.hypot(v[0], v[1], v[2]);
 const scale = (v: Vec3, s: number): Vec3 => [v[0] * s, v[1] * s, v[2] * s];
 
-/** Volume-weighted centre; an unweighted mean when no weight is positive. */
+/** The middle of the centres' extent on each axis. */
 export const bodyCentre = (parts: readonly ExplodeInput[]): Vec3 => {
   if (parts.length === 0) return [0, 0, 0];
-  const weights = parts.map((part) =>
-    Number.isFinite(part.weight) && part.weight > 0 ? part.weight : 0,
-  );
-  const total = weights.reduce((sum, w) => sum + w, 0);
-  const share =
-    total > 0 ? weights.map((w) => w / total) : parts.map(() => 1 / parts.length);
-  return parts.reduce<Vec3>(
-    (sum, part, index) => [
-      sum[0] + part.centre[0] * share[index]!,
-      sum[1] + part.centre[1] * share[index]!,
-      sum[2] + part.centre[2] * share[index]!,
-    ],
-    [0, 0, 0],
-  );
+  const axis = (i: 0 | 1 | 2): number => {
+    const values = parts.map((part) => part.centre[i]);
+    return (Math.min(...values) + Math.max(...values)) / 2;
+  };
+  return [axis(0), axis(1), axis(2)];
 };
 
 /** One vector per input, in the same order. */
@@ -63,10 +58,10 @@ export const explodeVectors = (
   parts: readonly ExplodeInput[],
 ): readonly ExplodeVector[] => {
   const centre = bodyCentre(parts);
-  const own = parts.map((part): Vec3 | null => {
-    const away = sub(part.centre, centre);
-    const len = length(away);
-    return len < AT_CENTRE_M ? null : scale(away, 1 / len);
+  const away = parts.map((part) => sub(part.centre, centre));
+  const own = away.map((v): Vec3 | null => {
+    const len = length(v);
+    return len < AT_CENTRE_M ? null : scale(v, 1 / len);
   });
   const known = own.filter((dir): dir is Vec3 => dir !== null);
   const sum = known.reduce<Vec3>(
@@ -80,7 +75,7 @@ export const explodeVectors = (
     (part, index): ExplodeVector =>
       part.given ?? {
         direction: own[index] ?? fallback,
-        distance: Math.max(0, part.radius) + CLEARANCE_M,
+        distance: SPREAD * length(away[index]!) + CLEARANCE_M,
       },
   );
 };
@@ -104,26 +99,4 @@ export const parseExplode = (value: unknown): ExplodeVector | null => {
   const len = length(direction);
   if (len < 1e-6 || !Number.isFinite(distance)) return null;
   return { direction: scale(direction, 1 / len), distance };
-};
-
-/**
- * Enclosed volume of a closed triangle mesh (signed tetrahedra from the
- * origin), in cubic metres. `index` null means consecutive vertex triples.
- */
-export const meshVolume = (
-  positions: ArrayLike<number>,
-  index: ArrayLike<number> | null,
-): number => {
-  const count = index ? index.length : positions.length / 3;
-  let sum = 0;
-  for (let i = 0; i + 2 < count; i += 3) {
-    const a = (index ? index[i]! : i) * 3;
-    const b = (index ? index[i + 1]! : i + 1) * 3;
-    const c = (index ? index[i + 2]! : i + 2) * 3;
-    const [ax, ay, az] = [positions[a]!, positions[a + 1]!, positions[a + 2]!];
-    const [bx, by, bz] = [positions[b]!, positions[b + 1]!, positions[b + 2]!];
-    const [cx, cy, cz] = [positions[c]!, positions[c + 1]!, positions[c + 2]!];
-    sum += ax * (by * cz - bz * cy) - ay * (bx * cz - bz * cx) + az * (bx * cy - by * cx);
-  }
-  return Math.abs(sum / 6);
 };

@@ -1,14 +1,6 @@
-import {
-  Box3,
-  type Material,
-  type Mesh,
-  Matrix4,
-  type Object3D,
-  Sphere,
-  Vector3,
-} from "three";
+import { Box3, type Material, type Mesh, Matrix4, type Object3D, Vector3 } from "three";
 
-import { explodeVectors, meshVolume, type Vec3 } from "@/packages/anatomy/explode";
+import { explodeVectors, type Vec3 } from "@/packages/anatomy/explode";
 import { normaliseGroup } from "@/packages/anatomy/hra-groups";
 import {
   isExcluded,
@@ -96,7 +88,6 @@ export const prepareSkeleton = (
     mesh: Mesh;
     node: ReturnType<typeof readSkeletonNode>;
     box: Box3;
-    weight: number;
   }>;
   const kept: Kept[] = [];
   for (const mesh of meshes) {
@@ -119,24 +110,14 @@ export const prepareSkeleton = (
     attachDepthPrepass(mesh, depthOnly);
     // The box in the file's frame, whatever the root's own transform.
     const box = new Box3().setFromObject(mesh).applyMatrix4(rootInverse);
-    const position = geometry.getAttribute("position");
-    const scale = new Vector3().setFromMatrixScale(mesh.matrixWorld);
-    const weight =
-      meshVolume(position.array, geometry.index?.array ?? null) *
-      Math.abs(scale.x * scale.y * scale.z);
-    kept.push({ mesh, node, box, weight });
+    kept.push({ mesh, node, box });
   }
 
   const vectors = explodeVectors(
-    kept.map((item) => {
-      const sphere = item.box.getBoundingSphere(new Sphere());
-      return {
-        centre: toVec3(item.box.getCenter(new Vector3())),
-        radius: sphere.radius,
-        weight: item.weight,
-        given: item.node.explode,
-      };
-    }),
+    kept.map((item) => ({
+      centre: toVec3(item.box.getCenter(new Vector3())),
+      given: item.node.explode,
+    })),
   );
 
   let triangles = 0;
