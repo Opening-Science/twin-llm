@@ -4,7 +4,9 @@ import {
   anatomyReducer,
   initialAnatomyState,
   preferredAtlas,
+  skeletonInView,
   type AnatomyState,
+  type SkeletonLoad,
 } from "./anatomy-state";
 import {
   parseAnatomyStatus,
@@ -343,5 +345,35 @@ describe("parseSkeletonStatus", () => {
     expect(parseSkeletonStatus({ atlases: [], skeleton: null })).toBeNull();
     expect(parseSkeletonStatus({ atlases: [] })).toBeNull();
     expect(parseSkeletonStatus(null)).toBeNull();
+  });
+});
+
+describe("skeletonInView", () => {
+  const READY: SkeletonLoad = {
+    kind: "ready",
+    anchor: "hips",
+    fitOk: true,
+    bones: 46,
+    modelled: 1,
+    box: null,
+  };
+  const S = { caseId: "s0086" };
+
+  test("the Skeleton stop or isolate, with the CT skeleton on and placed", () => {
+    const atSkeleton = { ...initialAnatomyState, targetDepth: 2 };
+    expect(skeletonInView(atSkeleton, S, READY)).toBe(true);
+    expect(
+      skeletonInView({ ...initialAnatomyState, isolate: "skeleton" }, S, READY),
+    ).toBe(true);
+  });
+
+  test("not between stops, at other stops, off, unplaced or unconfigured", () => {
+    const atSkeleton = { ...initialAnatomyState, targetDepth: 2 };
+    expect(skeletonInView({ ...atSkeleton, targetDepth: 1.7 }, S, READY)).toBe(false);
+    expect(skeletonInView({ ...atSkeleton, targetDepth: 3 }, S, READY)).toBe(false);
+    expect(skeletonInView({ ...atSkeleton, ctSkeleton: false }, S, READY)).toBe(false);
+    expect(skeletonInView(atSkeleton, S, { ...READY, fitOk: false })).toBe(false);
+    expect(skeletonInView(atSkeleton, S, { kind: "loading" })).toBe(false);
+    expect(skeletonInView(atSkeleton, null, READY)).toBe(false);
   });
 });

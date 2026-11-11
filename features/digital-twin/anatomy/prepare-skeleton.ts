@@ -40,6 +40,8 @@ export type PreparedSkeleton = Readonly<{
   box: Box3;
   /** The hip bones' box, when the file has them; the fit anchors there. */
   hipBox: Box3 | null;
+  /** T1's centre over L5's (or the sacrum's), when the file has them; the fit stands it upright. */
+  spine: Readonly<{ top: Vector3; bottom: Vector3 }> | null;
   uniforms: LayerUniforms;
   triangles: number;
 }>;
@@ -57,6 +59,8 @@ const taggedAncestor = (mesh: Mesh, root: Object3D): Object3D => {
 };
 
 const HIP_BONE = /\bhip bone\b/i;
+const SPINE_TOP = /^first thoracic vertebra$/i;
+const SPINE_BOTTOM = [/^fifth lumbar vertebra$/i, /^sacrum$/i];
 
 const disposeMaterials = (material: Material | Material[]): void => {
   for (const item of Array.isArray(material) ? material : [material]) item.dispose();
@@ -157,11 +161,20 @@ export const prepareSkeleton = (
     box.union(item.box);
     if (HIP_BONE.test(item.node.label)) hips.union(item.box);
   }
+  const centreOf = (pattern: RegExp): Vector3 | null => {
+    const found = kept.find((item) => pattern.test(item.node.label));
+    return found ? found.box.getCenter(new Vector3()) : null;
+  };
+  const top = centreOf(SPINE_TOP);
+  const bottom =
+    SPINE_BOTTOM.map(centreOf).find((centre): centre is Vector3 => centre !== null) ??
+    null;
   return {
     root,
     parts,
     box,
     hipBox: hips.isEmpty() ? null : hips,
+    spine: top && bottom ? { top, bottom } : null,
     uniforms,
     triangles,
   };

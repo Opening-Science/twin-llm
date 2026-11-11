@@ -1,4 +1,4 @@
-import { type Box3, Matrix4, type Vector3 } from "three";
+import { type Box3, Matrix4, Quaternion, Vector3 } from "three";
 
 import { type HorizontalPoint } from "./manifest";
 
@@ -103,6 +103,11 @@ export type SkeletonFrame = Readonly<{
   box: Box3;
   /** The two hip bones' box, when the file has them. */
   hipBox: Box3 | null;
+  /**
+   * The spine's axis in the file's frame, top (T1) and bottom (L5, else the
+   * sacrum) centroids, when the file has them; the fit stands it upright.
+   */
+  spine: Readonly<{ top: Vector3; bottom: Vector3 }> | null;
 }>;
 
 export type SkeletonFit = Readonly<{
@@ -112,10 +117,26 @@ export type SkeletonFit = Readonly<{
 }>;
 
 /**
+ * The turn that stands a spine upright: its bottom-to-top axis onto +Y, the
+ * smallest turn that does it, so the front keeps facing +Z. A CT is taken
+ * lying down, and on s0086 the T1 to L5 axis leans back from the scanner's
+ * own head-foot axis, so the rib cage tilted and the pelvis came forward.
+ */
+export const uprightRotation = (
+  spine: Readonly<{ top: Vector3; bottom: Vector3 }> | null,
+): Quaternion => {
+  if (!spine) return new Quaternion();
+  const axis = new Vector3().subVectors(spine.top, spine.bottom);
+  if (axis.lengthSq() < 1e-8) return new Quaternion();
+  return new Quaternion().setFromUnitVectors(axis.normalize(), new Vector3(0, 1, 0));
+};
+
+/**
  * Places a CT skeleton at its own size: CT is measured in metres, so it is not
- * scaled to the body. Its hip joints (estimated from the hip bones) go to the
- * scan's hip joints, or to 0.53 of the body's height in the middle of its box
- * when the scan has no rig. A trunk-only skeleton has no feet for the floor.
+ * scaled to the body. Its spine stands upright (T1 over L5), and its hip
+ * joints (estimated from the hip bones) go to the scan's hip joints, or to
+ * 0.53 of the body's height in the middle of its box when the scan has no rig.
+ * A trunk-only skeleton has no feet for the floor.
  */
 export const fitSkeletonToScan = (
   skeleton: SkeletonFrame,
@@ -125,13 +146,14 @@ export const fitSkeletonToScan = (
   const anchor = skeleton.hipBox && scan.hipMidpoint ? "hips" : "bbox";
   if (!ok) return { matrix: new Matrix4(), anchor, ok };
   const from = skeleton.hipBox ?? skeleton.box;
-  const point = {
-    x: (from.min.x + from.max.x) / 2,
-    y: skeleton.hipBox
+  const upright = uprightRotation(skeleton.spine);
+  const point = new Vector3(
+    (from.min.x + from.max.x) / 2,
+    skeleton.hipBox
       ? from.min.y + ACETABULUM_SHARE * (from.max.y - from.min.y)
       : (from.min.y + from.max.y) / 2,
-    z: (from.min.z + from.max.z) / 2,
-  };
+    (from.min.z + from.max.z) / 2,
+  ).applyQuaternion(upright);
   const target =
     anchor === "hips" && scan.hipMidpoint
       ? { x: scan.hipMidpoint.x, y: scan.hipMidpoint.y, z: scan.hipMidpoint.z }
@@ -143,6 +165,7 @@ export const fitSkeletonToScan = (
   // Rx(+90°) takes a file point (x, y, z) to (x, -z, y).
   const matrix = new Matrix4()
     .makeTranslation(target.x - point.x, target.y + point.z, target.z - point.y)
-    .multiply(atlasToScanRotation());
+    .multiply(atlasToScanRotation())
+    .multiply(new Matrix4().makeRotationFromQuaternion(upright));
   return { matrix, anchor, ok };
 };

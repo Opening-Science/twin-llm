@@ -39,7 +39,7 @@ import { loadAtlasGltf } from "./load-atlas";
 import { prepareAtlas, type PreparedAtlas } from "./prepare-atlas";
 import { applyExplode, prepareSkeleton, type PreparedSkeleton } from "./prepare-skeleton";
 import { SCAN_RENDER_ORDER, setLayerPasses, setScanRenderOrder } from "./depth-prepass";
-import { collectScanMaterials, readScanFrame } from "./scan-frame";
+import { collectScanMaterials, readScanFrame, readSkeletonScanFrame } from "./scan-frame";
 
 /** Dev-only nudge when a layer combination gets heavy for a low-power GPU. */
 const TRIANGLE_WARNING = 2_500_000;
@@ -274,8 +274,8 @@ export const AnatomyLayers = ({
     () =>
       bones && scanRoot
         ? fitSkeletonToScan(
-            { box: bones.box, hipBox: bones.hipBox },
-            readScanFrame(scanRoot, statureM),
+            { box: bones.box, hipBox: bones.hipBox, spine: bones.spine },
+            readSkeletonScanFrame(scanRoot, statureM),
           )
         : null,
     [bones, scanRoot, statureM],
@@ -299,6 +299,12 @@ export const AnatomyLayers = ({
       fitOk: bonesFit.ok,
       bones: bones.parts.length,
       modelled: bones.parts.filter((part) => part.modelled).length,
+      box: bonesFit.ok
+        ? (() => {
+            const placed = bones.box.clone().applyMatrix4(bonesFit.matrix);
+            return { min: placed.min.toArray(), max: placed.max.toArray() };
+          })()
+        : null,
     });
     invalidate();
   }, [bones, bonesFit, onSkeletonLoad, invalidate]);

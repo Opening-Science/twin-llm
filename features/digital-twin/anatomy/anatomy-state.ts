@@ -51,8 +51,29 @@ export type SkeletonLoad =
       bones: number;
       /** How many of them open-anatomy built rather than segmented. */
       modelled: number;
+      /** The placed bones' box in world space, for the camera; null when not placed. */
+      box: Readonly<{ min: readonly number[]; max: readonly number[] }> | null;
     }>
   | Readonly<{ kind: "error" }>;
+
+/** The depth of the Skeleton stop. */
+export const SKELETON_STOP = 2;
+
+/**
+ * Whether the CT skeleton is what the view is about: it is on, placed, and the
+ * Skeleton stop or "Only the skeleton" is chosen. The camera frames it then,
+ * and the panel speaks only of it.
+ */
+export const skeletonInView = (
+  state: Pick<AnatomyState, "ctSkeleton" | "isolate" | "targetDepth">,
+  skeleton: unknown,
+  load: SkeletonLoad,
+): boolean =>
+  skeleton !== null &&
+  state.ctSkeleton &&
+  load.kind === "ready" &&
+  load.fitOk &&
+  (state.isolate === "skeleton" || Math.abs(state.targetDepth - SKELETON_STOP) < 0.02);
 
 export type AnatomyState = Readonly<{
   /** Latches true the first time anyone slides past the scan or opens a layer. */
