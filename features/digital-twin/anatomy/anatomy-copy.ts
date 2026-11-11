@@ -39,22 +39,22 @@ export const SKELETON_HEADING = "Skeleton";
 export const skeletonSourceLabel = (caseId: string | null): string =>
   caseId ? `CT skeleton · open-anatomy ${caseId}` : "CT skeleton · open-anatomy";
 export const SKELETON_ISOLATE = "Only the skeleton";
-export const SKELETON_EXPLODE = "Spread the bones";
+export const SKELETON_EXPLODE = "Spread bones";
 export const skeletonExplodeText = (amount: number): string =>
   amount <= 0 ? "Together" : `${Math.round(amount * 100)}% apart`;
 export const SKELETON_LOADING = "Loading the CT skeleton…";
 export const SKELETON_LOAD_ERROR = "Could not load the CT skeleton.";
 export const SKELETON_FIT_FAILED = "The CT skeleton could not be placed in this body.";
-/** Says how the bones are placed, and that they are not this body's. */
+/** Says how the bones are placed, and that they are not this body's, in one short sentence. */
 export const skeletonFitNote = (anchor: "hips" | "bbox"): string =>
   anchor === "hips"
-    ? "Bones from one public CT case, shown at their CT size with the hip joints placed at this body's by estimate. Not this body's skeleton."
-    : "Bones from one public CT case, shown at their CT size and placed by this body's outline. Not this body's skeleton.";
+    ? "Bones from one public CT case, set at this body's hips by estimate, not this body's skeleton."
+    : "Bones from one public CT case, set in this body by estimate, not this body's skeleton.";
 /** What the build left out, from atlas.json; never drawn and never drawn from another atlas. */
 export const skeletonLeftOutNote = (summary: string): string | null =>
-  summary.length > 0 ? `Left out of this build: ${summary}.` : null;
+  summary.length > 0 ? `Left out: ${summary}.` : null;
 export const SKELETON_MODELLED_NOTE =
-  "Parts marked modelled were built by open-anatomy, not segmented from the CT.";
+  "Parts marked modelled were built, not segmented from the CT.";
 export const SKELETON_CREDIT_FALLBACK =
   "Skeleton built by open-anatomy from a public CT case, CC BY 4.0.";
 
