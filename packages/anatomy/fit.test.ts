@@ -1,9 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { Box3, Vector3 } from "three";
+import { Box3, Quaternion, Vector3 } from "three";
 
 import {
   atlasToScanRotation,
   fitAtlasToScan,
+  fitSkeletonToScan,
   type AtlasFrame,
   type ScanFrame,
 } from "./fit";
@@ -91,5 +92,55 @@ describe("fitAtlasToScan", () => {
     expect(fitAtlasToScan(atlas(), scan({ height: 0.5 })).ok).toBe(false);
     expect(fitAtlasToScan(atlas(), scan({ height: 3.2 })).ok).toBe(false);
     expect(fitAtlasToScan(atlas({ box: new Box3() }), scan()).ok).toBe(false);
+  });
+});
+
+describe("fitSkeletonToScan", () => {
+  /** A CT trunk: T1 to the pelvis, hip bones from y=-0.35 to -0.13, centred. */
+  const trunk = new Box3(new Vector3(-0.18, -0.35, -0.15), new Vector3(0.18, 0.33, 0.14));
+  const hips = new Box3(new Vector3(-0.15, -0.35, -0.12), new Vector3(0.15, -0.13, 0.08));
+
+  test("the estimated hip joints land on the scan's hip joints, at CT size", () => {
+    const fit = fitSkeletonToScan({ box: trunk, hipBox: hips }, scan());
+    expect(fit.ok).toBe(true);
+    expect(fit.anchor).toBe("hips");
+    // Acetabulum estimate: (0, -0.35 + 0.35 × 0.22, -0.02).
+    const joint = new Vector3(0, -0.273, -0.02).applyMatrix4(fit.matrix);
+    expect(round(joint)).toEqual([0.01, 0.02, 0.97]);
+    const scale = new Vector3();
+    fit.matrix.decompose(new Vector3(), new Quaternion(), scale);
+    expect(round(scale)).toEqual([1, 1, 1]);
+  });
+
+  test("the top of the trunk points up and its front faces -Y", () => {
+    const fit = fitSkeletonToScan({ box: trunk, hipBox: hips }, scan());
+    const top = new Vector3(0, 0.33, -0.02).applyMatrix4(fit.matrix);
+    const front = new Vector3(0, -0.273, 0.1).applyMatrix4(fit.matrix);
+    expect(round(top)).toEqual([0.01, 0.02, 1.573]);
+    expect(round(front)).toEqual([0.01, -0.1, 0.97]);
+  });
+
+  test("without a rig: the box middle at 0.53 of the height", () => {
+    const fit = fitSkeletonToScan(
+      { box: trunk, hipBox: hips },
+      scan({ hipMidpoint: null }),
+    );
+    expect(fit.anchor).toBe("bbox");
+    const joint = new Vector3(0, -0.273, -0.02).applyMatrix4(fit.matrix);
+    expect(round(joint)).toEqual([0, 0.01, 0.9911]);
+  });
+
+  test("without hip bones the skeleton's own box centre is the anchor", () => {
+    const fit = fitSkeletonToScan({ box: trunk, hipBox: null }, scan());
+    expect(fit.anchor).toBe("bbox");
+    const middle = new Vector3(0, -0.01, -0.005).applyMatrix4(fit.matrix);
+    expect(round(middle)).toEqual([0, 0.01, 0.9911]);
+  });
+
+  test("an empty skeleton or scan does not fit", () => {
+    expect(fitSkeletonToScan({ box: new Box3(), hipBox: null }, scan()).ok).toBe(false);
+    expect(
+      fitSkeletonToScan({ box: trunk, hipBox: hips }, scan({ box: new Box3() })).ok,
+    ).toBe(false);
   });
 });
