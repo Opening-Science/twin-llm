@@ -47,17 +47,26 @@ type Base = Readonly<{
 }>;
 
 /**
+ * Every chart is one named group, so a screen reader says what it is even
+ * outside a card. Each chart has a default name; pass the card's label to
+ * use that instead.
+ */
+export type Named = Readonly<{
+  /** The chart's accessible name; use the card's label. */
+  label?: string;
+}>;
+
+/**
  * A chart given readouts becomes interactive: one tab stop, scrubbed by
  * hover, a finger or the arrow keys, with a readout line above it saying
  * the focused point. Without readouts it stays a picture under the
  * sentence. Put such a chart in an `InsightCard` with `interactive`.
  */
-export type Interactive = Readonly<{
-  /** Names the chart for a keyboard or screen-reader user; use the card's label. */
-  label?: string;
-  /** A point focused from the start, for example in the gallery. */
-  defaultFocus?: number;
-}>;
+export type Interactive = Named &
+  Readonly<{
+    /** A point focused from the start, for example in the gallery. */
+    defaultFocus?: number;
+  }>;
 
 /**
  * The heading level of a card's label, so cards nest under the page's own
@@ -100,6 +109,7 @@ export type HeroValue = Readonly<{ label: string; value: string; unit?: string }
 
 /** C04: today in the category colour, the reference in grey. */
 export type ComparisonPairProps = Base &
+  Named &
   Readonly<{ today: HeroValue; reference: HeroValue }>;
 
 /** C05: today's running total against the usual one, `now` from 0 to 1. */
@@ -178,6 +188,7 @@ export type ScoreRingProps = Base &
 
 /** C12: this month in the category colour, last month on the track. */
 export type MonthComparisonProps = Base &
+  Named &
   Readonly<{
     current: Readonly<{ month: string; value: number | null; display: string }>;
     previous: Readonly<{ month: string; value: number | null; display: string }>;
@@ -307,6 +318,7 @@ export type DeviceRow = Readonly<{
 
 /** C15: a group of rows, one per device or source. */
 export type DeviceListProps = Base &
+  Named &
   Readonly<{
     /** The group's heading; leave it out when the list sits under a heading of its own. */
     title?: string;
