@@ -544,6 +544,20 @@ running on it, and only between their batches.
 - The questions were written alongside the cohort they are scored against,
   so the results lean optimistic.
 - The number finder is a heuristic. A miss goes to the human count, so a pass
-  rate is only as strong as its human share is small.
+  rate is only as strong as its human share is small. Against a
+  hand-labelled gold set of 163 synthetic snippets
+  (`scripts/evaluation/fixtures/narrated-numbers.gold.jsonl`, asserted by
+  `number-finder-gold.test.ts`), the finder (`answerNumbers`) finds 182 of
+  198 labelled numbers, with 16 extra: precision 0.919, recall 0.919. Its
+  misses are decimal commas (`45,3`), a space or a dot as thousands mark
+  (`10 000`, `8.432`), clock times, an en dash used as a minus, the scale in
+  `82/100` and numbers written as words.
+- The cited-value check, on the 149 readings in that set: `matched`
+  precision 1.000, recall 0.871 (108 of 124); `not_matched` precision 0.737,
+  recall 1.000 (14 of 14, with 5 false flags). It misses a number in another
+  sentence, clause or line from its label, a label written short
+  (`readiness` for "Readiness score"), and a second day under one label; it
+  takes a range bound, a threshold (`below 90 %`) or a clock time as the
+  stated value.
 - Quantisation is not in `meta.json` and vLLM does not report it; pass it to
   `eval:report` with `--quantisation`.
