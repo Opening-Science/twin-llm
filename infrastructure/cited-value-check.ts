@@ -236,12 +236,16 @@ const HOURS_MINUTES =
 
 const CLOCK = /(?<![\d:.])(\d{1,2}):([0-5]\d)(?![\d:])/g;
 
-const MONTH = String.raw`(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?`;
+/**
+ * A month as a reply writes it, capitalised and whole or cut short (`Jan`,
+ * `January`, `Sept`), so `74 marks`, `68 may` and `48 declined` are no dates.
+ */
+const MONTH = String.raw`(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|June?|July?|Aug(?:ust)?|Sep(?:t|tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?`;
 
 /** Day and month without a year (`2 Jan`, `Jan 2nd`); `DATE_PATTERN` has the rest. */
 const DAY_MONTH = new RegExp(
   String.raw`\b\d{1,2}(?:st|nd|rd|th)?\s+${MONTH}(?![a-z])|\b${MONTH}\s+\d{1,2}(?:st|nd|rd|th)?\b`,
-  "gi",
+  "g",
 );
 
 /** A stored key as the answer may write it, bracketed or bare. */

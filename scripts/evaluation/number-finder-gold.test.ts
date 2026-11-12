@@ -172,9 +172,9 @@ describe("number finder against the gold set", () => {
   });
 
   test("precision and recall", () => {
-    expect(total).toEqual({ tp: 160, fp: 16, fn: 16 });
-    expect(precision(total)).toBeCloseTo(0.909, 3);
-    expect(recall(total)).toBeCloseTo(0.909, 3);
+    expect(total).toEqual({ tp: 167, fp: 16, fn: 16 });
+    expect(precision(total)).toBeCloseTo(0.913, 3);
+    expect(recall(total)).toBeCloseTo(0.913, 3);
   });
 });
 
@@ -188,9 +188,9 @@ describe("cited-value check against the gold set", () => {
 
   test("matched: precision and recall", () => {
     const counts = statusCounts("matched");
-    expect(counts).toEqual({ tp: 91, fp: 0, fn: 16 });
+    expect(counts).toEqual({ tp: 96, fp: 0, fn: 16 });
     expect(precision(counts)).toBeCloseTo(1, 3);
-    expect(recall(counts)).toBeCloseTo(0.85, 3);
+    expect(recall(counts)).toBeCloseTo(0.857, 3);
   });
 
   test("not_matched: precision and recall", () => {
