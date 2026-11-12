@@ -304,7 +304,11 @@ const OPEN_VAULT = "the unlock routes themselves";
 const PERSONAL_READ_ROUTES: Readonly<Record<string, Entry>> = {
   "GET /api/wearables/summary": {
     kind: "audited",
-    tools: ["vitronic.wearables.summary", "personal.read.wearables-summary"],
+    tools: [
+      "vitronic.wearables.summary",
+      "personal.read.wearables-summary",
+      "wearable.sources.oura+google_health+bodyloop",
+    ],
     call: (record) =>
       createWearablesSummaryHandler({
         ...signedIn,
@@ -314,6 +318,7 @@ const PERSONAL_READ_ROUTES: Readonly<Record<string, Entry>> = {
         getLatestVitronicSummary: (userId, opts) =>
           getLatestVitronicSummary(userId, { ...opts, ports: vitronicPorts(record) }),
         auditPersonalRead: auditPersonalRead(record.append),
+        appendAudit: record.append,
       })(),
   },
   "GET /api/wearables/detail": {

@@ -14,6 +14,7 @@ import type { LiveSourceId } from "@/infrastructure/live-sources";
 import type { CatalogAgent } from "@/infrastructure/model-catalog";
 import type { TurnSkill } from "@/infrastructure/skill-gate";
 import type { WhoopSummary } from "@/infrastructure/whoop-types";
+import { WEARABLE_SOURCES_TOOL_PREFIX } from "@/infrastructure/wearable-source-audit";
 import type { AppendInput } from "@/packages/audit/append";
 import { sha256Hex } from "@/packages/audit/hash";
 
@@ -70,6 +71,7 @@ const harness = (
   const calls: string[] = [];
   const audits: AppendInput[] = [];
   const efforts: AppendInput[] = [];
+  const sources: AppendInput[] = [];
   const applied: (AppliedEffort | null)[] = [];
   const streamed: StreamContext[] = [];
   const refused: RefusedRow[] = [];
@@ -100,6 +102,11 @@ const harness = (
         efforts.push(input);
         return {};
       }
+      // The wearable sources row (#464) is on every turn with a summary; its own tests read `sources`.
+      if (input.tool.startsWith(WEARABLE_SOURCES_TOOL_PREFIX)) {
+        sources.push(input);
+        return {};
+      }
       calls.push("audit");
       audits.push(input);
       return {};
@@ -121,6 +128,7 @@ const harness = (
     calls,
     audits,
     efforts,
+    sources,
     applied,
     streamed,
     refused,

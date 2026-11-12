@@ -38,6 +38,10 @@ const okDeps = {
     appended.push(input);
     return undefined;
   }),
+  appendAudit: async (input: AppendInput) => {
+    appended.push(input);
+    return undefined;
+  },
 };
 
 describe("GET /api/wearables/summary", () => {
@@ -86,9 +90,9 @@ describe("GET /api/wearables/summary", () => {
       getLatestWhoopSummary: async () => null,
     });
     expect((await GET()).status).toBe(200);
-    expect(appended).toEqual([
+    expect(appended[0]).toEqual(
       personalReadEvent({ actor: "local", purpose: "wearables-summary", rowCount: 2 }),
-    ]);
+    );
     expect(JSON.stringify(appended)).not.toContain(WHOOP_NARRATIVE);
   });
 
