@@ -552,6 +552,12 @@ running on it, and only between their batches.
   misses are decimal commas (`45,3`), a space or a dot as thousands mark
   (`10 000`, `8.432`), clock times, an en dash used as a minus, the scale in
   `82/100` and numbers written as words.
+- The finder does not read a decimal comma, on purpose: model answers are
+  written in en-GB, where `3,4` is more often a list than 3.4. The disclosure
+  ledger's free-text check (`infrastructure/free-text-check.ts`, #346, see
+  [privacy design 2.5](../privacy-design.md#25-140-disclosure-ledger)) does
+  read one, since it looks for a person's stored values in any spelling
+  before they leave the machine. The two differ by design.
 - The cited-value check, on the 149 readings in that set: `matched`
   precision 1.000, recall 0.871 (108 of 124); `not_matched` precision 0.737,
   recall 1.000 (14 of 14, with 5 false flags). It misses a number in another
