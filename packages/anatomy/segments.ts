@@ -492,8 +492,24 @@ export const measureSkin = (
     return left && right ? { L: left.point, R: right.point } : null;
   };
   const toe = tip("foot");
-  const finger = tip("hand");
-  if (!toe || !finger || top <= 0) return null;
+  const reached = tip("hand");
+  if (!toe || !reached || top <= 0) return null;
+  // A hand points from the wrist through its middle, as far as its farthest
+  // fingertip reaches: the farthest point alone may be the thumb or any finger,
+  // whichever a pose spreads furthest, and turns the hand with it.
+  const middle = { L: new Vector3(), R: new Vector3() };
+  const count = { L: 0, R: 0 };
+  each((id) => {
+    if (limbOf(id) !== "hand") return;
+    middle[sideOf(id)].add(p);
+    count[sideOf(id)] += 1;
+  });
+  const fingerOf = (side: Side): Vector3 => {
+    const wrist = joints.wrist[side];
+    const way = middle[side].divideScalar(count[side]).sub(wrist).normalize();
+    return wrist.clone().addScaledVector(way, reached[side].distanceTo(wrist));
+  };
+  const finger = { L: fingerOf("L"), R: fingerOf("R") };
 
   // Then the way each palm faces: across the hand, the direction it is thinnest in.
   const unturned = jointLines(joints, { top, toe, finger, palm: null });

@@ -101,6 +101,28 @@ describe("measureSkin", () => {
     expect(Math.hypot(...section.shinL.near, ...section.shinL.far)).toBeLessThan(0.005);
   });
 
+  test("points a hand through its middle, not at a thumb spread further", () => {
+    const hand = SEGMENT_IDS.indexOf("handR");
+    const wrist = heavy.joints.wrist.R;
+    const way = heavy.finger.R.clone().sub(wrist);
+    const across = new Vector3(0, 0, 1).cross(way).normalize();
+    // A thumb of a few points, reaching 20 % further than the fingers, 40° off.
+    const thumb = [0.6, 0.8, 1, 1.2].map((share) =>
+      wrist
+        .clone()
+        .addScaledVector(way, share * Math.cos(0.7))
+        .addScaledVector(across, share * way.length() * Math.sin(0.7)),
+    );
+    const withThumb = measureSkin(
+      Float32Array.from([...points, ...thumb.flatMap((point) => point.toArray())]),
+      Uint8Array.from([...labels, ...thumb.map(() => hand)]),
+      heavy.joints,
+    );
+    const pointing = withThumb!.finger.R.clone().sub(wrist);
+    expect(pointing.angleTo(way)).toBeLessThan((3 * Math.PI) / 180);
+    expect(pointing.length()).toBeCloseTo(1.2 * way.length(), 6);
+  });
+
   test("is null when a part has no skin", () => {
     const noHands = labels.map((label) =>
       SEGMENT_IDS[label]!.startsWith("hand") ? SEGMENT_IDS.indexOf("chest") : label,
