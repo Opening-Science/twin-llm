@@ -48,7 +48,7 @@ export const DisclosureSection = ({ view }: Readonly<{ view: LedgerView }>) => (
       </p>
     ) : (
       <>
-        <div className="lab-table-wrap mt-4">
+        <div className="lab-table-wrap lab-table-fit mt-4">
           <table className="lab-table">
             <caption className="sr-only">Running totals per recipient</caption>
             <thead>

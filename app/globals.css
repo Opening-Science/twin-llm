@@ -1054,6 +1054,14 @@
   .lab-table td {
     @apply font-mono text-xs;
   }
+  /* A wide table that must fit its column at desktop widths with every column
+     kept (Customize · Privacy totals): cells and headings wrap between words,
+     never inside one, so the columns share the width. A phone still scrolls
+     it inside .lab-table-wrap. */
+  .lab-table-fit .lab-table th,
+  .lab-table-fit .lab-table td {
+    @apply whitespace-normal;
+  }
 
   /* --- Lab checks that fit (#483, features/lab/check-*.tsx, lab-table.tsx) ---
      An Unknown check says why in one muted line: under the title on the
