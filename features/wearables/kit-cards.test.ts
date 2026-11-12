@@ -140,7 +140,7 @@ describe("kitSections, Oura", () => {
   test("the heart range has one bucket per week with a readout", () => {
     const range = card(section(sections, "monthly").cards, "weeks:sleep.hr.");
     if (range.chart !== "range") throw new Error("not a range card");
-    // 29 Sept is a Tuesday: the weeks of 28 Sept to 2 Nov.
+    // 29 Sep is a Tuesday: the weeks of 28 Sep to 2 Nov.
     expect(range.buckets.length).toBe(6);
     expect(range.buckets.at(-1)).toEqual({
       min: 56,

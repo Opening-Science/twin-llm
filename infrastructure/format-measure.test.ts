@@ -213,6 +213,30 @@ describe("formatDate", () => {
     expect(formatDate(iso, style)).toBe(expected);
   });
 
+  test("every month is three letters, September too, as the chart axes write it", () => {
+    expect(formatDate("2026-09-28")).toBe("28 Sep 2026");
+    expect(formatTimestamp(new Date(Date.UTC(2026, 8, 27, 12, 0)))).toBe(
+      "27 Sep 2026, 12:00 UTC",
+    );
+    const months = Array.from({ length: 12 }, (_, m) =>
+      formatDate(`2026-${String(m + 1).padStart(2, "0")}-01`, "short").slice(2),
+    );
+    expect(months).toEqual([
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ]);
+  });
+
   test("null and undefined", () => {
     expect(formatDate(null)).toBe("—");
     expect(formatDate(undefined)).toBe("—");

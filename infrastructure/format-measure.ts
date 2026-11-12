@@ -170,7 +170,8 @@ export const isoLocalDate = (date: Date = new Date()): string =>
  * read from ICU, so a locale change updates both. bun on macOS uses the
  * system ICU and bun on Linux its own, and CLDR 48 renamed September from
  * `Sept` to `Sep`, so the same code printed two spellings. A fixed table
- * keeps every build byte for byte the same.
+ * keeps every build byte for byte the same. Every month is three letters,
+ * `Sep` included, as the chart axes and the docs write it.
  */
 const EN_GB_MONTHS = [
   "Jan",
@@ -181,7 +182,7 @@ const EN_GB_MONTHS = [
   "Jun",
   "Jul",
   "Aug",
-  "Sept",
+  "Sep",
   "Oct",
   "Nov",
   "Dec",
