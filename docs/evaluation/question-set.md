@@ -1055,7 +1055,11 @@ and entries, and the probes' keyed values. With `RUN_LIVE=1` and
 files and both must match.
 
 Running it: `bun run eval -- --set v1h --models …`, with the cohort ingested
-in the eval database as for v1. No model has been run on v1h yet.
+in the eval database as for v1.
+
+Correction, 12 Nov 2026 (#304): this section said no model had been run on
+v1h. The first run is `2026-11-01-qwen3-4b-v1h` (#380), qwen3:4b with tools
+at `4b58ef5`; its results are in `docs/research/eval-runs-2026-10.md`.
 
 ### Human review (protocol)
 
