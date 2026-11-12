@@ -14,6 +14,7 @@ import {
   formatNumber,
   formatRelative,
   formatTimestamp,
+  formatUcumUnit,
   formatUnit,
   isMainSleepKey,
   isoLocalDate,
@@ -23,6 +24,7 @@ import {
   propertyLabel,
   roundTo,
   toolsText,
+  withUnit,
   type MeasureKind,
 } from "./format-measure";
 
@@ -290,6 +292,27 @@ describe("formatUnit", () => {
     ["", ""],
   ] as const)("%p → %p", (unit, expected) => {
     expect(formatUnit(unit)).toBe(expected);
+  });
+});
+
+describe("formatUcumUnit", () => {
+  test.each([
+    ["{score}", "Pain severity - 0-10 verbal numeric rating [Score] - Reported", ""],
+    ["/min", "Heart rate", "bpm"],
+    ["/min", "Pulse rate", "bpm"],
+    ["{beats}/min", "Heart rate", "bpm"],
+    ["/min", "Respiratory rate", "per min"],
+    ["kg/m2", "Body mass index (BMI) [Ratio]", "kg/m²"],
+    ["mm[Hg]", "Systolic blood pressure", "mm[Hg]"],
+    ["%", "Hemoglobin A1c/Hemoglobin.total in Blood", "%"],
+  ] as const)("%p for %p → %p", (unit, label, expected) => {
+    expect(formatUcumUnit(unit, label)).toBe(expected);
+  });
+
+  test("with withUnit: a score stands alone, a rate reads per min", () => {
+    expect(withUnit("0", formatUcumUnit("{score}"))).toBe("0");
+    expect(withUnit("86", formatUcumUnit("/min", "Heart rate"))).toBe("86 bpm");
+    expect(withUnit("16", formatUcumUnit("/min", "Respiratory rate"))).toBe("16 per min");
   });
 });
 

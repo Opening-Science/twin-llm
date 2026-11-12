@@ -535,6 +535,25 @@ const UNIT_TEXT: Readonly<Record<string, string>> = {
 export const formatUnit = (unit: string): string =>
   UNIT_TEXT[unit] ?? normaliseUnit(unit);
 
+/** UCUM annotations such as `{score}` or `{beats}`: a note for machines, not a unit. */
+const UCUM_ANNOTATION = /\{[^}]*\}/g;
+
+/** Heart rate and pulse are counted in beats, so their `/min` reads `bpm`. */
+const BEATS_LABEL = /\b(heart rate|pulse)\b/i;
+
+/**
+ * A UCUM unit code as a reader reads it, for records that carry raw codes
+ * (Synthea, FHIR): annotations go (`{score}` → no unit, `{beats}/min` →
+ * `/min`), and `/min` reads `per min`, or `bpm` (the `heartRate` unit) when
+ * the label names a heart rate. Anything else is shown as `formatUnit` does.
+ */
+export const formatUcumUnit = (unit: string, label = ""): string => {
+  const bare = unit.replace(UCUM_ANNOTATION, "").trim();
+  if (bare === "/min")
+    return BEATS_LABEL.test(label) ? MEASURES.heartRate.unit : "per min";
+  return formatUnit(bare);
+};
+
 /** A formatted number and its stored unit: `%` and `°` attach, others take a space. */
 export const withUnit = (number: string, unit: string): string => {
   const shown = formatUnit(unit);
