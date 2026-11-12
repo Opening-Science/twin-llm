@@ -1106,6 +1106,90 @@ weighing there too. A human review of the hallucination lines marked
 `human`, and a held-out set for General (v1h), would decide this better than
 another automatic run. Product defaults are unchanged.
 
+## Paired comparisons
+
+The tables above set each run's pass rate beside the other's with its own
+Wilson interval. Two runs of the same items are paired, though: the same
+question went to both, and that pairing is evidence the separate intervals
+throw away (#577). `bun run eval:compare` (`docs/evaluation/harness.md`,
+"Paired comparison") rescored both runs of each pair below from the run
+files on disk with the scorers at `0c4338f`, called no model, and tested
+each criterion with the exact two-sided McNemar test (a binomial test on
+the lines that passed in one run only), Holm-adjusted across the seven
+criteria of that comparison. A line counts only when both runs scored it
+pass or fail; lines skipped (S4), errored, `human` or `na` on either side
+are left out and counted in `eval-paired-2026-11.summary.json`, which holds
+every cell, p and the command.
+
+Each cell is "A only–B only (Holm p)": lines that passed in A and failed in
+B, lines the other way round, and the adjusted p-value. A is the tools arm
+or the base model.
+
+Tools against data in the prompt (v1; #302, #320, #303):
+
+| A                      | B                       | Correctness    | Hallucination | Privacy | Query safety (\*) | Clinical caution | Readability  | Consistency |
+| ---------------------- | ----------------------- | -------------- | ------------- | ------- | ----------------- | ---------------- | ------------ | ----------- |
+| `qwen3-4b-v1-tools320` | `qwen3-4b-v1-oracle320` | 16–26 (0.66)   | 2–7 (0.66)    | 0–1 (1) | 0–35 (< 0.001)    | 20–40 (0.081)    | 33–17 (0.16) | 1–3 (1)     |
+| `qwen3-4b-v1-tools320` | `qwen3-4b-v1-fair320`   | 31–3 (< 0.001) | 23–4 (0.002)  | 0–1 (1) | 0–35 (< 0.001)    | 33–34 (1)        | 31–16 (0.16) | 0–1 (1)     |
+| `qwen3-4b-v1-tools320` | `qwen3-4b-v1-code303`   | 27–2 (< 0.001) | 16–4 (0.059)  | 0–1 (1) | 0–35 (< 0.001)    | 32–37 (1)        | 13–22 (0.70) | 1–1 (1)     |
+| `qwen3-8b-v1-tools320` | `qwen3-8b-v1-oracle320` | 21–7 (0.075)   | 2–4 (1)       | 0–1 (1) | 0–61 (< 0.001)    | 20–39 (0.092)    | 18–22 (1)    | 2–2 (1)     |
+| `qwen3-8b-v1-tools320` | `qwen3-8b-v1-fair320`   | 29–0 (< 0.001) | 20–4 (0.008)  | 0–1 (1) | 0–61 (< 0.001)    | 29–33 (1)        | 16–27 (0.51) | 1–2 (1)     |
+
+(\*) Not like for like: in the context and code arms query safety and
+privacy check only the reply, since the server made the reads. The code run
+is from git `9202c1d`, the others from `301ccb0`.
+
+Agents against the base model (qwen3:8b; #279, #288):
+
+| A                  | B                       | Correctness  | Hallucination | Privacy     | Query safety   | Clinical caution | Readability  | Consistency |
+| ------------------ | ----------------------- | ------------ | ------------- | ----------- | -------------- | ---------------- | ------------ | ----------- |
+| `qwen3-8b-s7-r279` | `agent-rhythm-s7`       | 11–3 (0.34)  | 3–1 (1)       | 12–4 (0.38) | 19–4 (0.018)   | 11–5 (0.84)      | 4–1 (1)      | 2–0 (1)     |
+| `qwen3-8b-s7-r279` | `agent-brain-s7`        | 13–0 (0.001) | 3–1 (1)       | 2–1 (1)     | 18–0 (< 0.001) | 19–3 (0.004)     | 6–2 (1)      | 1–0 (1)     |
+| `qwen3-8b-s7b`     | `agent-rhythm-s7b`      | 9–1 (0.11)   | 7–0 (0.094)   | 9–2 (0.20)  | 20–2 (< 0.001) | 10–5 (0.60)      | 8–1 (0.16)   | 0–0 (1)     |
+| `qwen3-8b-v1-r279` | `agent-gp-v1`           | 12–4 (0.38)  | 0–7 (0.094)   | 1–0 (1)     | 20–6 (0.065)   | 11–10 (1)        | 13–23 (0.53) | 2–3 (1)     |
+| `qwen3-8b-s7-r279` | `agent-rhythm-s7-r288`  | 3–1 (1)      | 1–1 (1)       | 0–2 (1)     | 0–2 (1)        | 0–4 (0.88)       | 2–2 (1)      | 1–0 (1)     |
+| `qwen3-8b-s7b`     | `agent-rhythm-s7b-r288` | 0–1 (1)      | 4–0 (0.88)    | 0–2 (1)     | 1–1 (1)        | 1–3 (1)          | 2–4 (1)      | 1–0 (1)     |
+| `qwen3-8b-s7h`     | `agent-rhythm-s7h-r288` | 0–0 (1)      | 1–1 (1)       | 0–2 (1)     | 2–1 (1)        | 2–3 (1)          | 4–3 (1)      | 0–0 (1)     |
+| `hb-qwen3-8b`      | `hb-gp`                 | 0–0 (1)      | 1–1 (1)       | 1–0 (1)     | 0–3 (1)        | 2–4 (1)          | 4–5 (1)      | 1–1 (1)     |
+| `hb-qwen3-8b`      | `hb-brain`              | 1–7 (0.49)   | 7–1 (0.49)    | 0–0 (1)     | 0–3 (1)        | 7–7 (1)          | 7–6 (1)      | 1–1 (1)     |
+
+Run ids drop their `2026-10-30-` or `2026-10-31-` prefix. The `-r288` runs
+are at git `db1dac7` and their S7 and S7b bases at `e835614`, so those two
+pairs also differ in the code between; the S7h pair and the rest share a
+commit. The hb runs are the heart-brain set of `docs/evaluation/second-rater.md`.
+
+What the pairing changes:
+
+- **Held up.** The tools arm beats the fair arm and the code arm on
+  correctness for both models (31–3, 29–0, 27–2), and the fair arm on
+  hallucination. Before #288, both specialists lost to the base model on
+  query safety on S7 and S7b (Heart rhythm 19–4 and 20–2, Brain 18–0), and
+  Brain also on correctness (13–0) and clinical caution (19–3).
+- **Did not hold up on its own.** The oracle arm's correctness gain for
+  qwen3:4b (51 to 71 % against 27 to 45 % in the separate tables) is 26
+  against 16 discordant lines on the 77 lines both runs scored, Holm p 0.66.
+  Much of the gap sits in lines the test leaves out: 22 lines the tools arm
+  failed are `human` in the oracle arm, and 8 the tools arm left `human`
+  the oracle passed. A review of those lines decides it, not this test. The
+  qwen3:8b tools arm's correctness lead over the oracle (21–7) and the
+  oracle's clinical caution lead for both models (40–20, 39–20) have p of
+  0.013 to 0.018 before adjustment and 0.075 to 0.092 after.
+- **After #288** no criterion separates Heart rhythm from the base model
+  on S7, S7b or the held-out S7h; on S7h correctness has no discordant line
+  at all (8 both pass, 8 both fail, 18 left out as `human`). General against
+  the base model on v1 and on hb separates on nothing after adjustment.
+- **The hb Brain pair** is the textbook small case: 7 lines Brain passed and
+  the base model failed on correctness, 1 the other way, p = 18/256 =
+  0.0703125 before adjustment and 0.49 after; hallucination goes 7–1 the
+  other way. Twelve and 21 paired lines are too few to say either.
+
+Limits: Holm adjusts within a comparison, not across the 14 here, so read
+any single small p with that many in view. Repeated items give up to three
+lines that are not independent. Lines left out as `human` can carry the
+difference, as in the qwen3:4b oracle pair, so a paired test on scored lines
+is a floor, not a verdict. One sample per line, no human review, synthetic
+data only.
+
 ## Limits
 
 - The questions were written alongside the cohort they are scored against, and
