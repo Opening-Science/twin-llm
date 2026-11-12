@@ -4,6 +4,7 @@ import {
   blocksSend,
   BLOCKING_KINDS,
   describeFreeTextCheck,
+  foldedName,
   FREE_TEXT_KIND,
   freeTextCheckOf,
   hasGenomeShapedText,
@@ -161,6 +162,39 @@ describe("knownValueMatches", () => {
         (match) => match.kind === "account id",
       ),
     ).toEqual({ kind: "account id", count: 1 });
+  });
+});
+
+describe("names: case and diacritics folded", () => {
+  /** Synthetic labels and file names with accents, as an operator might type them. */
+  const known: readonly KnownValue[] = [
+    { kind: FREE_TEXT_KIND.label, value: "Zoë Demo" },
+    { kind: FREE_TEXT_KIND.label, value: "Straße Probe" },
+    { kind: FREE_TEXT_KIND.file, value: "befund-müller-synthetic.csv" },
+  ];
+
+  const found = (text: string) =>
+    knownValueMatches(text, known)
+      .filter((match) => match.count > 0)
+      .map((match) => [match.kind, match.count]);
+
+  test("one spelling per name", () => {
+    expect(foldedName("  ZOË   Demo ")).toBe("zoe demo");
+    expect(foldedName("Zoe\u0308")).toBe("zoe");
+    expect(foldedName("STRASSE")).toBe(foldedName("Straße"));
+    expect(foldedName("Ｍüller")).toBe("muller");
+  });
+
+  test("agreement: the same name with or without accents, in any case", () => {
+    expect(found("Compare zoe demo with ZOË DEMO")).toEqual([["body scan label", 1]]);
+    expect(found("strasse probe and BEFUND-MULLER-SYNTHETIC.CSV")).toEqual([
+      ["file name", 1],
+      ["body scan label", 1],
+    ]);
+  });
+
+  test("near miss: a name inside a longer word, or one letter off, is not found", () => {
+    expect(found("zoe demos, zoey demo, strassen probe")).toEqual([]);
   });
 });
 

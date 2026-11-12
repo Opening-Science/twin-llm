@@ -12,8 +12,8 @@
  *   what to look up; `lookupMatches` counts what was found.
  * - **Known values.** A short list of names the person stored (the names of
  *   imported files, body scan labels other than their own, the account id),
- *   opened once and searched for as whole words, ignoring case
- *   (`knownValueMatches`).
+ *   opened once and searched for as whole words, ignoring case and
+ *   diacritics (`knownValueMatches`, `foldedName`).
  * - **Stored values.** The person's imported readings, clinical records and
  *   twin notes, opened once per model call and matched in memory
  *   (`storedValueMatches`): a reading's number written with its own unit, a
@@ -186,8 +186,23 @@ export const hasGenomeShapedText = (text: string): boolean => {
 /** One stored name to search for, with its kind. */
 export type KnownValue = Readonly<{ kind: FreeTextKind; value: string }>;
 
-const normalized = (text: string): string =>
-  text.normalize("NFKC").toLocaleLowerCase("en-GB").replace(/\s+/g, " ").trim();
+/**
+ * One spelling for a name: compatibility forms, case and diacritics folded
+ * (`José` and `JOSE`, `Müller` and `muller`, `ß` as `ss`), runs of space as
+ * one. Only names and phrases are folded this way; units and numbers have
+ * their own spellings (`unitSpelling`, `separatedReadings`).
+ */
+export const foldedName = (text: string): string =>
+  text
+    .normalize("NFKD")
+    .replace(/\p{M}/gu, "")
+    .toLocaleLowerCase("en-GB")
+    .replace(/ß/g, "ss")
+    .normalize("NFKC")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const normalized = foldedName;
 
 const isWordChar = (char: string | undefined): boolean =>
   char !== undefined && /[\p{L}\p{N}_]/u.test(char);
