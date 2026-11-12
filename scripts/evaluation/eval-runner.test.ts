@@ -19,6 +19,7 @@ import { questionsSha256, runKeyedTool } from "./build-answer-key";
 import { DECLINE_WORDINGS, declineWordingMeta } from "./decline-wordings";
 import { type FairRecordPorts, readFairRecord } from "./fair-record-read";
 import { metaSchema, resultLineSchema, TIMING_FIELDS } from "./eval-results";
+import { withLocalGbd } from "./gbd-local-route";
 import {
   type CodeSandbox,
   DEFAULT_SANDBOX_LIMITS,
@@ -353,6 +354,7 @@ const harness = (
     dataMode: "synthetic",
     llmProvider: "ollama",
     hasEnv: () => false,
+    gbdLocalProbeRows: null,
     readText: async (path) =>
       path === "evaluation/questions.v1.json"
         ? (shared.questionsText ?? QUESTIONS_TEXT)
@@ -553,6 +555,80 @@ describe("parseEvalArgs", () => {
   });
 });
 
+describe("S4 on a local GBD store that holds a probe's place or year (#273)", () => {
+  const onStore = (rows: Readonly<{ germany: boolean; year2015: boolean }>) => {
+    const reads: string[] = [];
+    const built = harness({
+      hasEnv: withLocalGbd(() => false, true),
+      gbdLocalProbeRows: async () => {
+        reads.push("probe");
+        return rows;
+      },
+    });
+    return { ...built, reads };
+  };
+  const runS4 = async (built: ReturnType<typeof onStore>) => {
+    const out = capture();
+    const code = await runEval(
+      [...MODELS, "--items", "Q-S4-01", "--run-id", "s4"],
+      out.io,
+      built.deps,
+    );
+    return { code, err: out.err() };
+  };
+
+  test("one Germany row refuses the run before any model call", async () => {
+    const built = onStore({ germany: true, year2015: false });
+    const { code, err } = await runS4(built);
+    expect(code).toBe(1);
+    expect(err).toBe(
+      'GBD_PROBE_ROWS: S4 not run: the local GBD store holds Germany rows, which make the out-of-catalogue probes Q-S4-09 and Q-S4-10 answerable; import into a fresh eval database without Germany and 2015 (docs/evaluation/question-set.md, "Refresh").\n',
+    );
+    expect(built.files.size).toBe(0);
+    expect(built.model.doStreamCalls.length).toBe(0);
+  });
+
+  test("one 2015 row refuses the run", async () => {
+    const built = onStore({ germany: false, year2015: true });
+    const { code, err } = await runS4(built);
+    expect(code).toBe(1);
+    expect(err).toContain(
+      "GBD_PROBE_ROWS: S4 not run: the local GBD store holds 2015 rows",
+    );
+    expect(built.files.size).toBe(0);
+  });
+
+  test("a clean store runs the S4 item", async () => {
+    const built = onStore({ germany: false, year2015: false });
+    const { err } = await runS4(built);
+    expect(err).not.toContain("GBD_PROBE_ROWS");
+    expect(built.reads).toEqual(["probe"]);
+    const lines = linesOf(built.files.get("s4/results.jsonl"));
+    expect(lines.map((line) => [line.item_id, line.skipped])).toEqual([
+      ["Q-S4-01", null],
+    ]);
+  });
+
+  test("a run without S4 items, or on the remote route, never reads the store", async () => {
+    const built = onStore({ germany: true, year2015: true });
+    await runEval(
+      [...MODELS, "--items", "Q-S1-01", "--run-id", "s1"],
+      capture().io,
+      built.deps,
+    );
+    expect(built.reads).toEqual([]);
+    expect(built.files.has("s1/results.jsonl")).toBe(true);
+
+    const remote = harness({ hasEnv: () => true, gbdLocalProbeRows: null });
+    await runEval(
+      [...MODELS, "--items", "Q-S4-01", "--run-id", "remote"],
+      capture().io,
+      remote.deps,
+    );
+    expect(remote.files.has("remote/results.jsonl")).toBe(true);
+  });
+});
+
 describe("runEval on fakes", () => {
   test("a tool call, a decline, a refusal and a skipped item give the exact lines", async () => {
     const { deps, files, model, warehouse } = harness();
@@ -573,6 +649,10 @@ describe("runEval on fakes", () => {
       ["Q-S6-03", 1, null, null],
       ["Q-S4-01", 1, null, "MISSING_ENV"],
     ]);
+    // The run names the unset variables before it writes the skipped line (#273).
+    expect(out.err()).toContain(
+      "S4: 1 item will be skipped as MISSING_ENV; unset: GBD_MCP_URL, GBD_MCP_TOKEN.",
+    );
     // Two steps (tool call, answer) per trend turn, one for the decline.
     expect(model.doStreamCalls.length).toBe(2 + 2 + 1 + 2);
 

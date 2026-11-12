@@ -93,6 +93,7 @@ import {
   RESULTS_SCHEMA_VERSION,
   type RunMeta,
 } from "./eval-results";
+import { gbdProbeRefusal, type GbdProbeRows, missingEnvNotice } from "./gbd-local-route";
 import { type CacheStore, createCachedModel, findCacheError } from "./model-cache";
 import {
   answerKeySchema,
@@ -148,6 +149,11 @@ export type EvalDeps = Readonly<{
   dataMode: string;
   llmProvider: string;
   hasEnv: (name: string) => boolean;
+  /**
+   * The local GBD store's probe check (#273), or null when nothing is
+   * imported and S4 runs on the remote route or not at all.
+   */
+  gbdLocalProbeRows: (() => Promise<GbdProbeRows>) | null;
   readText: (path: string) => Promise<string>;
   /**
    * The chat catalog right now: the provider's models (`/v1/models` on the
@@ -956,6 +962,11 @@ const setup = async (
   }
   const items = selectItems(loaded.items, options);
   if (items.length === 0) throw new EvalSetupError("NO_ITEMS", "the selection is empty");
+  // #273: on the local GBD store, S4's out-of-catalogue probes must stay out of it.
+  if (deps.gbdLocalProbeRows !== null && items.some((item) => item.scenario === "S4")) {
+    const refusal = gbdProbeRefusal(await deps.gbdLocalProbeRows());
+    if (refusal !== null) throw new EvalSetupError("GBD_PROBE_ROWS", refusal);
+  }
   // Every model is checked before anything runs, so an unlisted id fails in seconds.
   // A replay reaches no model; it reads the catalog only to resolve an agent.
   const hasAgent = models.some((spec) => isAgentModelId(spec.modelId));
@@ -1056,6 +1067,9 @@ export const runEval = async (
       throw new EvalSetupError("RUN_EXISTS", `evaluation/runs/${runId} already exists`);
     }
     if (resolved.some((model) => model.mock)) io.stderr.write(`${MOCK_BANNER}\n`);
+    for (const notice of missingEnvNotice(items, deps.hasEnv)) {
+      io.stderr.write(`${notice}\n`);
+    }
     io.stdout.write(
       `Run ${runId}: ${items.length} items × ${models.length} models, arm ${options.arm}${options.replay ? " (replay)" : ""}\n`,
     );

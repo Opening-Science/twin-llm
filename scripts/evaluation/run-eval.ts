@@ -87,6 +87,7 @@ if (isMain) {
   const { readFairRecord } = await import("./fair-record-read");
   const { gbdLocalPortsIfImported } =
     await import("../../features/chat/gbd-local-tool-deps");
+  const { gbdProbeRows } = await import("../../packages/gbd-local/store");
   const { createHostSandbox } = await import("./code-sandbox-host");
   /** Every dated record of a subject (#320); the cap only guards a runaway read. */
   const WHOLE_RECORD = {
@@ -129,6 +130,7 @@ if (isMain) {
       (name) => Boolean(Reflect.get(env, name)),
       gbdLocal !== undefined,
     ),
+    gbdLocalProbeRows: gbdLocal === undefined ? null : () => gbdProbeRows(database()),
     readText: (path) => readFile(path, "utf8"),
     // Read at run time: vLLM providers route each id to the server that lists it.
     // The same catalog the chat route checks, agents included.
