@@ -10,7 +10,9 @@
  *   decimals; a decimal comma ("1,5") is not parsed. A minus counts only after
  *   a space or bracket, so `2024-01-01` reads as 2024, 1, 1 on both sides of a
  *   comparison. Subject refs (UUIDs) and LOINC codes (`8867-4`) are removed
- *   first, so a code the model cites is never read as a stated value.
+ *   first, so a code the model cites is never read as a stated value. A whole
+ *   number with an ordinal suffix (`14th`) is a position, not a number; a
+ *   decimal one (`32.7th percentile`) keeps its value.
  * - A narrated number matches a source when the source rounded to the narrated
  *   number's decimals equals it, or within 1 %. The rounding only counts when
  *   the narrated number has at least the value's display decimals
@@ -38,7 +40,7 @@ export const UUID_PATTERN =
 export const LOINC_PATTERN = /(?<![\w.-])\d{3,5}-\d(?![\w-]|\.\d)/g;
 
 const NUMBER_PATTERN =
-  /(?<![\w.])(?:(?<=^|[\s(=:~≈<>±])-)?(?:\d{1,3}(?:[,'’]\d{3})+|\d+)(?:\.\d+)?(?!\d)/g;
+  /(?<![\w.])(?:(?<=^|[\s(=:~≈<>±])-)?(?:\d{1,3}(?:[,'’]\d{3})+|\d+)(?:\.\d+(?!\d)|(?!\d|\.\d|(?:st|nd|rd|th)(?![a-z])))/g;
 
 /** Words that give an unsigned number a direction, looked for just before it. */
 const RISING =
@@ -77,12 +79,13 @@ const MONTH = String.raw`(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec
 
 /**
  * Dates and years in a reply: `2024-01-01` (with any time), `3 Mar 2026`,
- * `March 3, 2026`, and a lone year 1900 to 2099. Values are checked, not the
- * dates a reply mentions.
+ * `March 3, 2026`, `12/01/2026`, and a lone year 1900 to 2099. Values are
+ * checked, not the dates a reply mentions.
  */
 export const DATE_PATTERN = new RegExp(
   [
     String.raw`\b\d{4}-\d{2}-\d{2}(?:T[\d:.]+Z?)?`,
+    String.raw`\b\d{1,2}/\d{1,2}/\d{4}\b`,
     String.raw`\b\d{1,2}\s+${MONTH}\s+\d{4}\b`,
     String.raw`\b${MONTH}\s+\d{1,2},?\s+\d{4}\b`,
     String.raw`(?<![\d.])\b(?:19|20)\d{2}\b(?!\.\d)`,
@@ -90,8 +93,21 @@ export const DATE_PATTERN = new RegExp(
   "gi",
 );
 
+/**
+ * A month as a reply writes it, capitalised and whole or cut short (`Jan`,
+ * `January`, `Sept`), so `74 marks`, `68 may` and `48 declined` are no dates.
+ */
+const MONTH_NAME = String.raw`(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|June?|July?|Aug(?:ust)?|Sep(?:t|tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?`;
+
+/** Day and month without a year (`2 Jan`, `Jan 2nd`); `DATE_PATTERN` has the rest. */
+export const DAY_MONTH_PATTERN = new RegExp(
+  String.raw`\b\d{1,2}(?:st|nd|rd|th)?\s+${MONTH_NAME}(?![a-z])|\b${MONTH_NAME}\s+\d{1,2}(?:st|nd|rd|th)?\b`,
+  "g",
+);
+
 /** The text with every date blanked out, positions kept. */
-export const withoutDates = (text: string): string => blankOut(text, DATE_PATTERN);
+export const withoutDates = (text: string): string =>
+  blankOut(blankOut(text, DATE_PATTERN), DAY_MONTH_PATTERN);
 
 export const narratedNumbers = (text: string): NarratedNumber[] => {
   const cleaned = blankOut(

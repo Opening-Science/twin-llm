@@ -1,5 +1,6 @@
 "use client";
 
+import { formatNumber } from "@/infrastructure/format-measure";
 import { conditionToken, type SeriesToken, tokenTextClass } from "../category-token";
 import {
   ChartFocusFrame,
@@ -32,8 +33,6 @@ const NULL_HEIGHT = 158;
 const NULL_TICKS = 132;
 /** Room at either end of the plot, so a dot at 0 or 1 clears its row label. */
 const PAD = 8;
-
-const fixed = (value: number, decimals: number): string => value.toFixed(decimals);
 
 /** A tick on a log axis reads as the ratio itself: 0.5, 1, 2, 4. */
 const ratio = (value: number): string => String(Number(value.toPrecision(3)));
@@ -141,7 +140,7 @@ const EstimatePlot = ({
         );
         const decimals = exactDecimals(out.ticks.map((t) => t.value));
         const tickLabel = (value: number): string =>
-          scale === "log" ? ratio(value) : fixed(value, decimals);
+          scale === "log" ? ratio(value) : formatNumber(value, decimals);
         // Stacked: the label sits above its row and the marks a little below it.
         const markY = layout.stacked ? 8 : 0;
         return (
@@ -352,7 +351,7 @@ export const ResearchFigure = (props: ResearchFigureProps) => {
       />
     );
   }
-  const format = props.format ?? ((v: number) => v.toFixed(2));
+  const format = props.format ?? ((v: number) => formatNumber(v, 2));
   const observedTone = single ? tokenTextClass(single) : toneClass(props.category, false);
   const { summary } = props;
   const figure = (
@@ -455,7 +454,7 @@ export const ResearchFigure = (props: ResearchFigureProps) => {
                     textAnchor={edgeAnchor(t.x, width, 16)}
                     className={AXIS_TEXT}
                   >
-                    {fixed(t.value, decimals)}
+                    {formatNumber(t.value, decimals)}
                   </text>
                 ))
               : null}

@@ -23,6 +23,7 @@ import {
   VENDOR_LOGOS,
   WeeklyBars,
 } from "@/infrastructure/charts/kit";
+import { formatMeasure } from "@/infrastructure/format-measure";
 import { Button } from "@/infrastructure/ui-kit/button";
 
 import {
@@ -71,8 +72,6 @@ const HUES: readonly Readonly<{ category: Category; label: string; token: string
   { category: "heart", label: "Heart and HRV", token: "chart-3 plum" },
   { category: "sleep", label: "Sleep", token: "chart-4 violet" },
 ];
-
-const fmt = (value: number): string => value.toLocaleString("en-US");
 
 /** A component shown in all three states, side by side on a wide screen. */
 const Row = ({
@@ -184,7 +183,7 @@ export const GalleryScreen = () => (
               values={WEEK_STEPS}
               average={WEEK_STEPS_AVERAGE}
               caption="Average"
-              hero={fmt(WEEK_STEPS_AVERAGE)}
+              hero={formatMeasure("steps", WEEK_STEPS_AVERAGE)}
             />
           </InsightCard>
         ))}
@@ -290,7 +289,7 @@ export const GalleryScreen = () => (
             readouts={WEEK_STEPS_READOUTS}
             average={WEEK_STEPS_AVERAGE}
             caption="Average steps"
-            hero={fmt(WEEK_STEPS_AVERAGE)}
+            hero={formatMeasure("steps", WEEK_STEPS_AVERAGE)}
             label="Steps: Weekly"
             defaultFocus={3}
           />

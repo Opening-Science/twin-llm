@@ -149,8 +149,13 @@ jobs:
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: 1.4.2
+      # The runner image ships psql; apt is only the fallback, so a mirror
+      # outage does not fail the job.
       - name: Install psql
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+        run: |
+          command -v psql >/dev/null ||
+            (sudo apt-get update && sudo apt-get install -y postgresql-client)
+          psql --version
       - name: Create shadow database
         run: |
           PGPASSWORD=scratch psql -h 127.0.0.1 -U postgres -d twin_llm \

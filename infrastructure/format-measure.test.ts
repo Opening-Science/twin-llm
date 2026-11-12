@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
 
 import {
   formatZonedMoment,
@@ -214,6 +214,41 @@ describe("formatDate", () => {
   test("null and undefined", () => {
     expect(formatDate(null)).toBe("—");
     expect(formatDate(undefined)).toBe("—");
+  });
+
+  test("a Date shows the local calendar day either side of midnight", () => {
+    expect(formatDate(new Date(2026, 9, 16, 23, 59, 59))).toBe("16 Oct 2026");
+    expect(formatDate(new Date(2026, 9, 17, 0, 0))).toBe("17 Oct 2026");
+    expect(formatDate(new Date(2026, 9, 17, 0, 30), "short")).toBe("17 Oct");
+  });
+
+  test("an invalid Date is a dash", () => {
+    expect(formatDate(new Date(Number.NaN))).toBe("—");
+  });
+
+  describe("away from UTC", () => {
+    const zone = process.env.TZ;
+    afterEach(() => {
+      if (zone === undefined) delete process.env.TZ;
+      else process.env.TZ = zone;
+    });
+
+    test("00:30 in Auckland is that day, though UTC is still the day before", () => {
+      process.env.TZ = "Pacific/Auckland";
+      // 11:30 UTC on 16 Oct is 00:30 NZDT on 17 Oct.
+      expect(formatDate(new Date("2026-10-16T11:30:00Z"))).toBe("17 Oct 2026");
+    });
+
+    test("22:30 in Los Angeles is that day, though UTC is already the next", () => {
+      process.env.TZ = "America/Los_Angeles";
+      // 05:30 UTC on 16 Oct is 22:30 PDT on 15 Oct.
+      expect(formatDate(new Date("2026-10-16T05:30:00Z"))).toBe("15 Oct 2026");
+    });
+
+    test("an ISO day string never moves with the zone", () => {
+      process.env.TZ = "Pacific/Auckland";
+      expect(formatDate("2026-10-16")).toBe("16 Oct 2026");
+    });
   });
 });
 
