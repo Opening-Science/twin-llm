@@ -12,13 +12,21 @@ import {
 import { type BiomarkerRow } from "./biomarker-rows";
 import { type BiomarkerTabModel } from "./use-biomarker-tab";
 
-/** The lines under a biomarker row's name: English name, range, position, notes. */
+/**
+ * The lines under a biomarker row's name: English name, how overlapping
+ * wearable sources were resolved (#464), range, position, notes.
+ */
 export const BiomarkerDetail = ({
   row,
   notes,
 }: Readonly<{ row: BiomarkerRow; notes: readonly string[] }>) => (
   <span className="text-muted-foreground flex flex-col text-[11px] leading-snug font-normal">
     {row.english ? <span>{row.english}</span> : null}
+    {row.sourceStatus ? (
+      <StatusBadge tone={row.sourceStatus.tone} className="text-[11px]">
+        {row.sourceStatus.label}
+      </StatusBadge>
+    ) : null}
     {row.details.map((line) => (
       <span key={line}>{line}</span>
     ))}

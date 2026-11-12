@@ -6,6 +6,7 @@ import type { ReviewSummary } from "@/packages/personal-data/review-summary";
 import { kindLabel } from "./import-formats";
 import {
   byteSizeLabel,
+  codesFoundLabel,
   countLabel,
   dateRangeLabel,
   previewCellLabel,
@@ -127,13 +128,7 @@ const Genome = ({ review }: Readonly<{ review: ReviewSummary }>) => {
 
 const Codes = ({ review }: Readonly<{ review: ReviewSummary }>) =>
   review.codes.length === 0 ? null : (
-    <Section
-      title={
-        review.codesTotal > review.codes.length
-          ? `Codes found (first ${review.codes.length} of ${review.codesTotal})`
-          : "Codes found"
-      }
-    >
+    <Section title={codesFoundLabel(review.codes.length, review.codesTotal)}>
       <div className="overflow-x-auto">
         <table className={TABLE}>
           <thead>
@@ -203,7 +198,7 @@ const Unmapped = ({ review }: Readonly<{ review: ReviewSummary }>) =>
       <details className="mt-2 text-xs">
         <summary className="text-muted-foreground cursor-pointer">
           {review.unmapped.listed.length < review.unmapped.listedOf
-            ? `First ${review.unmapped.listed.length} entries`
+            ? `First ${formatNumber(review.unmapped.listed.length, 0)} entries`
             : "Each entry"}
         </summary>
         <ul className="mt-1 grid gap-0.5">
@@ -225,7 +220,9 @@ const Unmapped = ({ review }: Readonly<{ review: ReviewSummary }>) =>
 
 const Preview = ({ review }: Readonly<{ review: ReviewSummary }>) =>
   review.preview.rows.length === 0 ? null : (
-    <Section title={`First ${review.preview.rows.length} rows as they will be stored`}>
+    <Section
+      title={`First ${formatNumber(review.preview.rows.length, 0)} rows as they will be stored`}
+    >
       <div className="overflow-x-auto">
         <table className={TABLE}>
           <thead>

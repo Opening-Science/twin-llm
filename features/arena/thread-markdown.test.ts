@@ -154,6 +154,23 @@ describe("threadMarkdown", () => {
       }),
     ).toContain("Evidence:\n- `sleep.hrv.2026-01-01`");
     expect(thread({})).not.toContain("Evidence:");
+    expect(
+      thread({
+        attribution: [
+          {
+            metricKey: "sleep.hrv.long_sleep.2026-01-02",
+            label: "Sleep HRV",
+            value: 52,
+            unit: "ms",
+            source: "oura",
+            day: "2026-01-02",
+            sourceRule: { kind: "agree", line: "WHOOP agrees within 5 ms or 10%." },
+          },
+        ],
+      }),
+    ).toContain(
+      "- Sleep HRV 52 ms · From Oura, 2 Jan 2026 · WHOOP agrees within 5 ms or 10%. (`sleep.hrv.long_sleep.2026-01-02`)",
+    );
   });
 
   test("the export says whether each stated value matches its reading (#545)", () => {

@@ -304,7 +304,11 @@ const OPEN_VAULT = "the unlock routes themselves";
 const PERSONAL_READ_ROUTES: Readonly<Record<string, Entry>> = {
   "GET /api/wearables/summary": {
     kind: "audited",
-    tools: ["vitronic.wearables.summary", "personal.read.wearables-summary"],
+    tools: [
+      "vitronic.wearables.summary",
+      "personal.read.wearables-summary",
+      "wearable.sources.oura+google_health+bodyloop",
+    ],
     call: (record) =>
       createWearablesSummaryHandler({
         ...signedIn,
@@ -314,6 +318,7 @@ const PERSONAL_READ_ROUTES: Readonly<Record<string, Entry>> = {
         getLatestVitronicSummary: (userId, opts) =>
           getLatestVitronicSummary(userId, { ...opts, ports: vitronicPorts(record) }),
         auditPersonalRead: auditPersonalRead(record.append),
+        appendAudit: record.append,
       })(),
   },
   "GET /api/wearables/detail": {
@@ -1167,9 +1172,7 @@ const PAGES: Readonly<Record<string, "gated" | Readonly<{ open: string }>>> = {
   "app/(shell)/customize/data/cohort/training/[set]/[number]/page.tsx": {
     open: "synthetic cohort",
   },
-  "app/(shell)/digital-twin/page.tsx": {
-    open: "the Demo bodies are synthetic; BodyLoop reads go through gated routes",
-  },
+  "app/(shell)/digital-twin/page.tsx": "gated",
   "app/(shell)/docs/[[...slug]]/page.tsx": { open: "the docs" },
   "app/(shell)/lab/page.tsx": {
     open: "the Lab hub: this machine's self-checks and file counts",

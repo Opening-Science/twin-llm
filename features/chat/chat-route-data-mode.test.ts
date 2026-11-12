@@ -353,6 +353,8 @@ describe("POST /api/chat in a thread that used genome tools (#151)", () => {
     expect(auditedTools).toEqual([
       "vitronic.chat.summary",
       "provider.personal_data_sent",
+      // Every turn with a summary records its wearable sources (#464).
+      "wearable.sources.whoop",
       // Every answer records its effort (#366); Balanced when none was sent.
       "chat.effort",
     ]);
