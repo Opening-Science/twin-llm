@@ -3,7 +3,7 @@ import {
   type Estimate,
   type NullSummary,
 } from "@/infrastructure/charts/kit/kit-geometry";
-import { formatNumber, roundTo } from "@/infrastructure/format-measure";
+import { formatDate, formatNumber, roundTo } from "@/infrastructure/format-measure";
 
 import { type ScoreCell } from "./eval-runs";
 import { type Interval } from "./research-markdown";
@@ -110,6 +110,12 @@ export type ResearchCard = Readonly<{
   /** Every row, behind a disclosure, when the figure shows only the main comparison. */
   more: Readonly<{ label: string; figure: ResearchFigureData }> | null;
 }>;
+
+/** The card's last line: its source file, then the run's day as people read it ("run 2 Nov 2026"). */
+export const sourceLine = (card: Pick<ResearchCard, "source" | "runDate">): string =>
+  card.runDate === null
+    ? card.source
+    : `${card.source} · run ${formatDate(card.runDate)}`;
 
 export type ResearchRead = Readonly<{
   cards: readonly ResearchCard[];

@@ -29,6 +29,7 @@ import {
   rrGridCard,
   ruleChangeCard,
   shuffledNullCard,
+  sourceLine,
   specialistCards,
   withinPersonCard,
 } from "./research-results";
@@ -279,6 +280,12 @@ describe("P2 in-silico arrhythmia", () => {
     );
     expect(c.more).toBeNull();
     expect(c.runDate).toBe("2026-11-02");
+  });
+
+  test("the source line names the run's day as a reader writes it, not as ISO", () => {
+    const c = card(rrGridCard(readRrGrid(fixture("rr-grid.json"))));
+    expect(sourceLine(c)).toBe(`${RESEARCH_SOURCES.rrGrid} · run 2 Nov 2026`);
+    expect(sourceLine({ ...c, runDate: null })).toBe(RESEARCH_SOURCES.rrGrid);
   });
 });
 
