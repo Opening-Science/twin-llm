@@ -35,20 +35,12 @@ export const DisclosureSection = ({ view }: Readonly<{ view: LedgerView }>) => (
       metric and its day.
     </p>
     <p className="text-muted-foreground mt-2 max-w-2xl text-sm">
-      Before a request to a model goes out, its text (your own words, answers and tool
-      results) is checked for values stored here: rsIDs and genome sites of your imported
-      files, their file names, body scan labels and your account id (ignoring case and
-      accents); lab values with their unit, measure codes next to your own value, clinical
-      record codes and long names, lines of your twin notes, and a reading or record next
-      to its own date (written 2026-03-14, 14/03/2026 or 14 March 2026). A value you typed
-      yourself is not counted. Each entry says what kinds were found and how many, never
-      the values, and the totals say how many checked requests held any. The check is
-      approximate: a value written another way is missed, and wearable numbers are not
-      checked. Matches do not stop a request, except for genome identifiers below. A
-      request that holds rsIDs or genome sites from your imported files is not sent, and
-      its entry says Blocked. So is one with rsID- or site-shaped text when the check
-      itself fails. Other matches are recorded and the request still goes. Entries from
-      before the check say not checked. A model on this machine is not a recipient.
+      Before a request to a model goes out, its text is checked for values stored here:
+      genome identifiers, file and body scan names, lab values, codes, clinical records,
+      twin note lines and readings next to their date. Each entry records the kinds found
+      and how many, never the values. A match does not stop the request, except your own
+      rsIDs or genome sites: then nothing is sent and the entry says Blocked. The check is
+      approximate and can miss a value written another way.
     </p>
     {view.recipients.length === 0 ? (
       <p className="mt-4 text-sm">
