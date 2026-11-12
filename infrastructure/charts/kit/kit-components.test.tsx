@@ -196,6 +196,116 @@ describe.each([...STATES])("every chart in the %s state", (state) => {
   );
 });
 
+/** The accessible name on a component's root element: every kit component names its root. */
+const rootName = (out: string): string | null => {
+  const root = out.match(/^<[a-z]+\b[^>]*>/)?.[0] ?? "";
+  const named = /role="group"/.test(root) || /^<(article|section)\b/.test(root);
+  return named ? (root.match(/aria-label="([^"]*)"/)?.[1] ?? null) : null;
+};
+
+/** What a screen reader can reach: the svgs and the aria-hidden spans dropped. */
+const spoken = (out: string): string =>
+  out
+    .replace(/<svg[\s\S]*?<\/svg>/g, "")
+    .replace(/<span aria-hidden="true">[^<]*<\/span>/g, "");
+
+/**
+ * Every kit component, its exact accessible name, and whether its empty
+ * state has a value that goes missing (and so must read "no data").
+ */
+const NAMED: readonly (readonly [
+  string,
+  (state: ChartState) => ReactElement,
+  string,
+  boolean,
+])[] = [
+  [
+    "C03 insight card",
+    (state) => (
+      <InsightCard category="sleep" state={state} label="Sleep: Stages" sentence="x" />
+    ),
+    "Sleep: Stages",
+    false,
+  ],
+  ["C04 comparison pair", (state) => charts(state).comparison, "Today and Average", true],
+  [
+    "C05 cumulative day",
+    (state) => charts(state).day,
+    "Today against a usual day",
+    false,
+  ],
+  ["C06 weekly bars", (state) => charts(state).weekly, "Average steps", true],
+  ["C07 streak grid", (state) => charts(state).streak, "Days", false],
+  ["C08 range bars", (state) => charts(state).range, "Range per hour", false],
+  ["C09 hypnogram", (state) => charts(state).hypnogram, "Sleep stages", false],
+  ["C10 score ring", (state) => charts(state).ring, "Sleep score", false],
+  ["C12 month comparison", (state) => charts(state).month, "November and October", true],
+  ["C13 consistency", (state) => charts(state).consistency, "Average bedtime", true],
+  [
+    "C15 device list",
+    (state) => (
+      <DeviceList
+        category="vitals"
+        state={state}
+        title="Sources"
+        rows={[{ name: "Ring" }]}
+      />
+    ),
+    "Sources",
+    false,
+  ],
+  ["C18 radar", (state) => charts(state).radar, "Parts compared", false],
+  ["R1 estimates", (state) => charts(state).estimates, "Estimates", false],
+  ["R1 pairs", (state) => charts(state).pairs, "Estimates", false],
+  ["R1 null", (state) => charts(state).null, "AUC against the null", false],
+  [
+    "R2 lab result card",
+    (state) => (
+      <LabResultCard
+        category="vitals"
+        state={state}
+        title="Audit chain"
+        outcome={{ word: "Intact", tone: "pass" }}
+        sentence="x"
+        rows={[{ label: "Rows", value: "1,204" }]}
+      />
+    ),
+    "Audit chain",
+    true,
+  ],
+];
+
+describe("every kit component has an accessible name", () => {
+  test.each(NAMED)("%s", (_, render, name, missing) => {
+    for (const state of ["default", "empty"] as const) {
+      expect(rootName(html(render(state)))).toBe(name);
+    }
+    // A missing value is a dash to the eye and words to a screen reader.
+    if (missing) {
+      expect(html(render("empty"))).toContain('<span class="sr-only">no data</span>');
+    }
+    for (const state of STATES) expect(spoken(html(render(state)))).not.toContain("–");
+  });
+
+  test("a label given by the screen wins over the default name", () => {
+    const pair = html(
+      <ComparisonPair
+        category="steps"
+        label="Steps: Today"
+        today={{ label: "Today", value: "1" }}
+        reference={{ label: "Average", value: "2" }}
+      />,
+    );
+    expect(rootName(pair)).toBe("Steps: Today");
+  });
+
+  test("a value still loading reads as loading, not as a dash", () => {
+    expect(html(charts("loading").month)).toContain(
+      '<span class="sr-only">loading</span>',
+    );
+  });
+});
+
 describe("insight card", () => {
   const card = (state: ChartState) =>
     html(
