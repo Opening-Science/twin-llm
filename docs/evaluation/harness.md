@@ -349,7 +349,7 @@ reads as 1 and 5. A minus counts only after a space or bracket, so
 `2024-01-01` reads as 2024, 1, 1 on both sides of a comparison. Subject refs
 and LOINC codes (3–5 digits, a hyphen, one check digit, e.g. `8867-4`) are
 removed first (also at a sentence end, `8867-4.`), so a cited code is never scored as a stated value. A digit right after a letter (`S1`, `qwen3`) is not a
-number.
+number, nor is an ordinal (`14th`, `21st`).
 
 - A narrated number matches a keyed value when it is within the item's
   tolerance (`exact`, `abs`, `rel`), or when the value rounded to the narrated
@@ -408,8 +408,8 @@ blood pressure, `8480-6`).
   "over", "to", "and", "with", "during", "through" or "for", and ranges
   ("2004–2008"). "The 2019 guideline" names no window; "last Tuesday" is not
   resolved. A call's years are those of the ISO dates in its input and output.
-- Only values are checked: dates in the reply (`2026-03-03`, `3 Mar 2026`, a
-  lone year) are left out, and 0 to 10 count only when written without
+- Only values are checked: dates in the reply (`2026-03-03`, `3 Mar 2026`,
+  `12/01/2026`, `14 Jan`, `Jan 12th`, a lone year) are left out, and 0 to 10 count only when written without
   decimals ("7.0 %" is a value).
 
 ### Call accuracy and answers without a tool
@@ -607,6 +607,26 @@ running on it, and only between their batches.
 - The questions were written alongside the cohort they are scored against,
   so the results lean optimistic.
 - The number finder is a heuristic. A miss goes to the human count, so a pass
-  rate is only as strong as its human share is small.
+  rate is only as strong as its human share is small. Against a
+  hand-labelled gold set of 164 synthetic snippets
+  (`scripts/evaluation/fixtures/narrated-numbers.gold.jsonl`, asserted by
+  `number-finder-gold.test.ts`), the finder (`answerNumbers`) finds 183 of
+  199 labelled numbers, with 16 extra: precision 0.920, recall 0.920. Its
+  misses are decimal commas (`45,3`), a space or a dot as thousands mark
+  (`10 000`, `8.432`), clock times, an en dash used as a minus, the scale in
+  `82/100` and numbers written as words.
+- The finder does not read a decimal comma, on purpose: model answers are
+  written in en-GB, where `3,4` is more often a list than 3.4. The disclosure
+  ledger's free-text check (`infrastructure/free-text-check.ts`, #346, see
+  [privacy design 2.5](../privacy-design.md#25-140-disclosure-ledger)) does
+  read one, since it looks for a person's stored values in any spelling
+  before they leave the machine. The two differ by design.
+- The cited-value check, on the 149 readings in that set: `matched`
+  precision 1.000, recall 0.871 (108 of 124); `not_matched` precision 0.737,
+  recall 1.000 (14 of 14, with 5 false flags). It misses a number in another
+  sentence, clause or line from its label, a label written short
+  (`readiness` for "Readiness score"), and a second day under one label; it
+  takes a range bound, a threshold (`below 90 %`) or a clock time as the
+  stated value.
 - Quantisation is not in `meta.json` and vLLM does not report it; pass it to
   `eval:report` with `--quantisation`.
