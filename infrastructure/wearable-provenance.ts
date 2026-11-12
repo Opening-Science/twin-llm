@@ -5,9 +5,9 @@
  * vitals share it on server and client. It names a source by its product
  * name only: never a stored key, a vendor id or a subject id.
  *
- * Nothing here combines sources. Every value the app shows today was recorded
- * by one source; the open-twin aggregate (`open-twin-adapters/aggregate.ts`)
- * is not read on screen yet.
+ * Nothing here combines sources. Where sources overlap on a measure and day,
+ * `wearable-source-rules.ts` decides which reading is used, or holds it back;
+ * every value shown was still recorded by one source.
  */
 import { VALUE_CHECK_STATUSES, type ValueCheckStatus } from "./cited-value-check";
 import { formatDate } from "./format-measure";

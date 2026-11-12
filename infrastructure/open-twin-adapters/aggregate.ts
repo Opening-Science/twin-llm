@@ -20,10 +20,10 @@ import { mergePersonPatients } from "./person-subject";
  * person's shared subject (person-subject.ts), and the person's Patient is
  * carried once, with each connector's identifier.
  *
- * Nothing on screen reads this yet. The screens combine the sources only as
- * summary keys, by the fixed order in `VITAL_ANATOMY` (Oura, then WHOOP, then
- * Google Health; the first source with data wins and sources are never mixed).
- * Aggregate takes no caller order, and at the pinned open-twin it finds no
+ * Nothing on screen reads this bundle yet. The screens resolve overlapping
+ * summary keys with the wearable source rules (#464, `judgeByEvidence` below,
+ * docs/wearable-sources.md). Aggregate takes no caller order, and at the
+ * pinned open-twin it finds no
  * overlap between these connectors: sleep duration, steps and Oura's heart
  * rates sit in Observation components, which it does not read.
  */
