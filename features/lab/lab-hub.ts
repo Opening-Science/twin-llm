@@ -1,3 +1,4 @@
+import { formatNumber } from "@/infrastructure/format-measure";
 import { type StatusTone } from "@/infrastructure/ui-kit/status-badge";
 
 import { type JobState } from "./lab-jobs";
@@ -85,7 +86,7 @@ export type LabHubCard = Readonly<{
 }>;
 
 const count = (n: number, one: string, many = `${one}s`): string =>
-  `${n.toLocaleString("en")} ${n === 1 ? one : many}`;
+  `${formatNumber(n, 0)} ${n === 1 ? one : many}`;
 
 /** The checks are counted, never run, on the hub; their page runs them. */
 export const checksMeta = (
