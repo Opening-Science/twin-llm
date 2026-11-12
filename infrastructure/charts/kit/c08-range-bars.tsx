@@ -2,7 +2,13 @@
 
 import { EMPTY_VALUE, formatNumber } from "@/infrastructure/format-measure";
 
-import { ChartFocusFrame, ChartReadout, dimmed, useChartFocus } from "./chart-focus";
+import {
+  ChartFocusFrame,
+  ChartGroup,
+  ChartReadout,
+  dimmed,
+  useChartFocus,
+} from "./chart-focus";
 import { rangeBars, slotIndex } from "./kit-geometry";
 import { AXIS_TEXT, ChartSvg, EMPTY_STROKE, LOADING_FILL, toneClass } from "./kit-parts";
 import type { RangeBarsProps } from "./types";
@@ -115,7 +121,7 @@ export const RangeBars = ({
       }}
     </ChartSvg>
   );
-  if (!live) return chart;
+  if (!live) return <ChartGroup label={label ?? "Range per hour"}>{chart}</ChartGroup>;
   return (
     <div className="flex flex-col gap-2">
       <ChartReadout

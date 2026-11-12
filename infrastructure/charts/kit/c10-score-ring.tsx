@@ -4,7 +4,13 @@ import { formatMeasureNumber, formatNumber } from "@/infrastructure/format-measu
 import { cn } from "@/infrastructure/ui";
 
 import { categoryTextClass } from "../category-token";
-import { ChartFocusFrame, ChartReadout, dimmed, useChartFocus } from "./chart-focus";
+import {
+  ChartFocusFrame,
+  ChartGroup,
+  ChartReadout,
+  dimmed,
+  useChartFocus,
+} from "./chart-focus";
 import { ringPartAt, scoreRing } from "./kit-geometry";
 import type { ScoreRingProps } from "./types";
 
@@ -115,7 +121,7 @@ export const ScoreRing = ({
       )}
     </div>
   );
-  if (!live) return body;
+  if (!live) return <ChartGroup label={label ?? title}>{body}</ChartGroup>;
   return (
     <div className="flex flex-col gap-2">
       <ChartReadout
