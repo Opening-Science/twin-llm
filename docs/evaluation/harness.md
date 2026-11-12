@@ -36,6 +36,15 @@ bun run eval:cohort-codes -- --in .synthea   # after a cohort change only
 | `--arm code`                                            | Model-written code in a sandbox ([below](#the-code-arm-303))             |
 | `--context-cap <tokens>`                                | Context and code arms: estimated tokens per data block, default 6000     |
 | `--decline-wording w1` / `w2` / `w3`                    | Decline line for a wording comparison (#274); default the chat's         |
+| `--repeats <n>`                                         | Every item at least n times, 2 to 10 (#304); default the set's own       |
+
+`--repeats` raises each item's `repeat` to at least n for one run and
+records n in `meta.json` (`repeats`). An item raised above one repeat is
+scored on consistency too, as the set's own consistency items are; the
+report and `eval:agreement` apply the same raise when they score the run.
+The report gives a Repeats row in its run table and a "Repeats per item"
+column in the overview ("1–3" when items differ). Each repeat is its own
+recording in the cache, so a replay needs every repeat recorded.
 
 `bun run eval` refuses unless `DATA_MODE=synthetic`, stops when the questions'
 sha256 is not the key's `questions_sha256`, refuses a cohort with a subject
@@ -258,21 +267,28 @@ has a column per v1 scenario, and an S7 column when the run scored S7 lines.
 `bun run eval:report` reads no env and no database. It refuses a MOCK run, a
 run with results v1 lines, and a run whose questions sha256 differs from the
 questions and the key. It writes `report.md`, `review.csv` and
-`review-key.json` next to the run.
+`review-key.json` next to the run, and for a one-model run of a rated set
+(hb or v1h) that run's blinded rater sheet `rater-sheet.csv` with its
+`rater-sheet-key.json`. The sheet for raters is the pooled one,
+`bun run eval:rater-sheet -- --runs a,b,…` (`second-rater.md`, "The rater
+sheet").
 
 ## Files
 
 Everything under `evaluation/runs/` and `evaluation/cache/` is gitignored.
 
-| File                                   | What                                                                           |
-| -------------------------------------- | ------------------------------------------------------------------------------ |
-| `evaluation/runs/<id>/results.jsonl`   | One line per item × repeat × model (schema `twin-llm.eval.results.v2`)         |
-| `evaluation/runs/<id>/meta.json`       | Git SHA, questions and key sha256, cohort, open-twin pin, models, host, counts |
-| `evaluation/runs/<id>/report.md`       | Scores, intervals, latency, limits                                             |
-| `evaluation/runs/<id>/review.csv`      | The human sheet, blinded                                                       |
-| `evaluation/runs/<id>/review-key.json` | Which blinded label is which model; keep it from reviewers                     |
-| `evaluation/cache/<sha256>.json`       | One recorded model call                                                        |
-| `evaluation/cohort-codes.v1.json`      | Committed: the LOINC codes the pinned cohort holds, for call accuracy          |
+| File                                        | What                                                                           |
+| ------------------------------------------- | ------------------------------------------------------------------------------ |
+| `evaluation/runs/<id>/results.jsonl`        | One line per item × repeat × model (schema `twin-llm.eval.results.v2`)         |
+| `evaluation/runs/<id>/meta.json`            | Git SHA, questions and key sha256, cohort, open-twin pin, models, host, counts |
+| `evaluation/runs/<id>/report.md`            | Scores, intervals, latency, limits                                             |
+| `evaluation/runs/<id>/review.csv`           | The human sheet, blinded                                                       |
+| `evaluation/runs/<id>/review-key.json`      | Which blinded label is which model; keep it from reviewers                     |
+| `evaluation/runs/<id>/rater-sheet.csv`      | hb and v1h: the second raters' sheet, blind to model, item and score           |
+| `evaluation/runs/<id>/rater-sheet-key.json` | The sheet's salt and which id is which line; keep it from raters               |
+| `evaluation/rater-sheets/<pool>/`           | A pooled rater sheet and its key across runs (`eval:rater-sheet`)              |
+| `evaluation/cache/<sha256>.json`            | One recorded model call                                                        |
+| `evaluation/cohort-codes.v1.json`           | Committed: the LOINC codes the pinned cohort holds, for call accuracy          |
 
 A results line holds the response document v1.1, the reply, the audit rows
 (tool, args sha256, row count, refusal code, subject), the tool results, the
@@ -333,7 +349,7 @@ reads as 1 and 5. A minus counts only after a space or bracket, so
 `2024-01-01` reads as 2024, 1, 1 on both sides of a comparison. Subject refs
 and LOINC codes (3–5 digits, a hyphen, one check digit, e.g. `8867-4`) are
 removed first (also at a sentence end, `8867-4.`), so a cited code is never scored as a stated value. A digit right after a letter (`S1`, `qwen3`) is not a
-number.
+number, nor is an ordinal (`14th`, `21st`).
 
 - A narrated number matches a keyed value when it is within the item's
   tolerance (`exact`, `abs`, `rel`), or when the value rounded to the narrated
@@ -392,8 +408,8 @@ blood pressure, `8480-6`).
   "over", "to", "and", "with", "during", "through" or "for", and ranges
   ("2004–2008"). "The 2019 guideline" names no window; "last Tuesday" is not
   resolved. A call's years are those of the ISO dates in its input and output.
-- Only values are checked: dates in the reply (`2026-03-03`, `3 Mar 2026`, a
-  lone year) are left out, and 0 to 10 count only when written without
+- Only values are checked: dates in the reply (`2026-03-03`, `3 Mar 2026`,
+  `12/01/2026`, `14 Jan`, `Jan 12th`, a lone year) are left out, and 0 to 10 count only when written without
   decimals ("7.0 %" is a value).
 
 ### Call accuracy and answers without a tool
@@ -494,6 +510,53 @@ eight criteria do not change.
 
 `verifyChain()` needs the database, so it is a run step, not a scorer.
 
+## Paired comparison
+
+```sh
+bun run eval:compare -- <run-a> <run-b> [<run-a> <run-b> …] [--unit item|line] [--json]
+```
+
+Two runs of the same items (an arm against another, an agent against its
+base model) answer the same questions, so their outcomes are paired, and a
+test on two independent proportions throws that pairing away.
+`scripts/evaluation/compare.ts` scores both runs with the current scorers,
+as `eval:report` does, and pairs them per criterion.
+
+- `--unit item` (the default, the primary analysis): one pair per item.
+  Its repeats are folded by majority: passes on more than half of the
+  repeats not skipped is a pass; too few for a majority even if every
+  `error` or `human` repeat passed is a fail, so a tie is not a pass; any
+  other mix leaves the item undecided (`error` if a repeat errored, else
+  `human`). `--unit line` pairs each repeat as its own line, a sensitivity
+  analysis. Consistency is per item either way.
+
+- A pair counts only when both sides are `pass` or `fail`. A unit only one
+  run has, or where either side is skipped (`MISSING_ENV`), `error`,
+  `human` or `na`, is left out and counted in "Left out" under the first of
+  those reasons that fits.
+- Each criterion gets the exact two-sided McNemar test: with b units that
+  passed in A only and c in B only, p = min(1, 2 · P(X ≤ min(b, c))) for
+  X ~ Binomial(b + c, 1/2). 7 against 1 gives 18/256 = 0.0703125; no
+  discordant pair gives 1.
+- Holm's step-down adjustment runs across the criteria of one comparison
+  that have at least one pair ("p (Holm)"). As a sensitivity column, "p
+  (Holm, all)" (`pHolmFamily` in the JSON) adjusts across every criterion
+  of every pair given in one call, so give a re-analysis's pairs together;
+  with one pair the two columns are equal.
+
+It refuses a pair when a run is MOCK, has more than one model, named
+consents, or does not share one questions sha256 with the current questions
+and key, and when the two runs did not ask the same set. Reads no env and
+no database, calls no model and writes nothing; `--json` prints every pair
+as one JSON document.
+
+Limits: with `--unit line` the few repeated items give up to three lines
+each, which are not independent, so the test leans liberal there; the item
+unit avoids that at the cost of folding a split item to fail. Query safety and
+privacy check only the reply in a context or code arm (the server made the
+reads), so a tools arm against one of those is not a like-for-like test on
+them. Runs from different commits differ in more than the arm or agent.
+
 ## What stays human
 
 - The `must_not` lines: they describe behaviours (judging a value good or bad,
@@ -544,6 +607,26 @@ running on it, and only between their batches.
 - The questions were written alongside the cohort they are scored against,
   so the results lean optimistic.
 - The number finder is a heuristic. A miss goes to the human count, so a pass
-  rate is only as strong as its human share is small.
+  rate is only as strong as its human share is small. Against a
+  hand-labelled gold set of 164 synthetic snippets
+  (`scripts/evaluation/fixtures/narrated-numbers.gold.jsonl`, asserted by
+  `number-finder-gold.test.ts`), the finder (`answerNumbers`) finds 183 of
+  199 labelled numbers, with 16 extra: precision 0.920, recall 0.920. Its
+  misses are decimal commas (`45,3`), a space or a dot as thousands mark
+  (`10 000`, `8.432`), clock times, an en dash used as a minus, the scale in
+  `82/100` and numbers written as words.
+- The finder does not read a decimal comma, on purpose: model answers are
+  written in en-GB, where `3,4` is more often a list than 3.4. The disclosure
+  ledger's free-text check (`infrastructure/free-text-check.ts`, #346, see
+  [privacy design 2.5](../privacy-design.md#25-140-disclosure-ledger)) does
+  read one, since it looks for a person's stored values in any spelling
+  before they leave the machine. The two differ by design.
+- The cited-value check, on the 149 readings in that set: `matched`
+  precision 1.000, recall 0.871 (108 of 124); `not_matched` precision 0.737,
+  recall 1.000 (14 of 14, with 5 false flags). It misses a number in another
+  sentence, clause or line from its label, a label written short
+  (`readiness` for "Readiness score"), and a second day under one label; it
+  takes a range bound, a threshold (`below 90 %`) or a clock time as the
+  stated value.
 - Quantisation is not in `meta.json` and vLLM does not report it; pass it to
   `eval:report` with `--quantisation`.
