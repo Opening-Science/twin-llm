@@ -14,7 +14,9 @@ import {
   formatNumber,
   formatRelative,
   formatTimestamp,
+  formatUcumUnit,
   formatUnit,
+  formatUtcCell,
   isMainSleepKey,
   isoLocalDate,
   measureKindFor,
@@ -23,6 +25,7 @@ import {
   propertyLabel,
   roundTo,
   toolsText,
+  withUnit,
   type MeasureKind,
 } from "./format-measure";
 
@@ -199,6 +202,20 @@ describe("formatTimestamp", () => {
   });
 });
 
+describe("formatUtcCell", () => {
+  test("the UTC day and minute with no comma and no zone, for a column that names it", () => {
+    expect(formatUtcCell(new Date(Date.UTC(2026, 10, 12, 15, 58, 40)))).toBe(
+      "12 Nov 2026 15:58",
+    );
+    expect(formatUtcCell(new Date(Date.UTC(2026, 0, 1, 0, 5)))).toBe("1 Jan 2026 00:05");
+  });
+
+  test("missing or invalid is a dash", () => {
+    expect(formatUtcCell(undefined)).toBe("—");
+    expect(formatUtcCell(new Date(Number.NaN))).toBe("—");
+  });
+});
+
 describe("formatDate", () => {
   test.each([
     ["2026-10-16", "long", "16 Oct 2026"],
@@ -209,6 +226,30 @@ describe("formatDate", () => {
     ["", "long", "—"],
   ] as const)("%p (%s) → %p", (iso, style, expected) => {
     expect(formatDate(iso, style)).toBe(expected);
+  });
+
+  test("every month is three letters, September too, as the chart axes write it", () => {
+    expect(formatDate("2026-09-28")).toBe("28 Sep 2026");
+    expect(formatTimestamp(new Date(Date.UTC(2026, 8, 27, 12, 0)))).toBe(
+      "27 Sep 2026, 12:00 UTC",
+    );
+    const months = Array.from({ length: 12 }, (_, m) =>
+      formatDate(`2026-${String(m + 1).padStart(2, "0")}-01`, "short").slice(2),
+    );
+    expect(months).toEqual([
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ]);
   });
 
   test("null and undefined", () => {
@@ -290,6 +331,27 @@ describe("formatUnit", () => {
     ["", ""],
   ] as const)("%p → %p", (unit, expected) => {
     expect(formatUnit(unit)).toBe(expected);
+  });
+});
+
+describe("formatUcumUnit", () => {
+  test.each([
+    ["{score}", "Pain severity - 0-10 verbal numeric rating [Score] - Reported", ""],
+    ["/min", "Heart rate", "bpm"],
+    ["/min", "Pulse rate", "bpm"],
+    ["{beats}/min", "Heart rate", "bpm"],
+    ["/min", "Respiratory rate", "per min"],
+    ["kg/m2", "Body mass index (BMI) [Ratio]", "kg/m²"],
+    ["mm[Hg]", "Systolic blood pressure", "mm[Hg]"],
+    ["%", "Hemoglobin A1c/Hemoglobin.total in Blood", "%"],
+  ] as const)("%p for %p → %p", (unit, label, expected) => {
+    expect(formatUcumUnit(unit, label)).toBe(expected);
+  });
+
+  test("with withUnit: a score stands alone, a rate reads per min", () => {
+    expect(withUnit("0", formatUcumUnit("{score}"))).toBe("0");
+    expect(withUnit("86", formatUcumUnit("/min", "Heart rate"))).toBe("86 bpm");
+    expect(withUnit("16", formatUcumUnit("/min", "Respiratory rate"))).toBe("16 per min");
   });
 });
 

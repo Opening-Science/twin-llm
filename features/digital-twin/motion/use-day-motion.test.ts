@@ -67,7 +67,7 @@ describe("dayLines", () => {
       ),
     ).toEqual([
       "Visual cue, not a physiological simulation.",
-      "28 Sept 2026: Running, 40 min (Synthetic person 3, synthetic series). Running in place at 168 steps a minute, 0.99× the generic run: synthetic workouts record no cadence or pace, so 11.1 km/h is assumed from the workout's length.",
+      "28 Sep 2026: Running, 40 min (Synthetic person 3, synthetic series). Running in place at 168 steps a minute, 0.99× the generic run: synthetic workouts record no cadence or pace, so 11.1 km/h is assumed from the workout's length.",
     ]);
   });
 
@@ -86,7 +86,7 @@ describe("dayLines", () => {
         RUN_DAY,
       ),
     ).toBe(
-      "28 Sept 2026: Running, 40 min (linked wearables). Running in place at 165 steps a minute, 0.97× the generic run: estimated from the recorded pace, 10.1 km/h.",
+      "28 Sep 2026: Running, 40 min (linked wearables). Running in place at 165 steps a minute, 0.97× the generic run: estimated from the recorded pace, 10.1 km/h.",
     );
     const ride: MotionDay = {
       ...RUN_DAY,
@@ -106,7 +106,7 @@ describe("dayLines", () => {
       ),
     ).toEqual([
       DAY_VISUAL_CUE,
-      "28 Sept 2026: Cycling, 60 min (linked wearables). Pedalling in place at 80 turns a minute, 1.00× the generic pedalling: no cadence or pace recorded, so the generic rate.",
+      "28 Sep 2026: Cycling, 60 min (linked wearables). Pedalling in place at 80 turns a minute, 1.00× the generic pedalling: no cadence or pace recorded, so the generic rate.",
       "No bike is drawn.",
     ]);
   });
@@ -121,7 +121,7 @@ describe("dayLines", () => {
     } as const;
     expect(dayLines(rest, REST_DAY, SOURCE)).toEqual([
       DAY_VISUAL_CUE,
-      "27 Sept 2026: no workout recorded, so the body stands at rest.",
+      "27 Sep 2026: no workout recorded, so the body stands at rest.",
     ]);
     expect(
       dayLines(
@@ -133,7 +133,7 @@ describe("dayLines", () => {
         SOURCE,
       )[1],
     ).toBe(
-      "28 Sept 2026: Strength, 45 min (Synthetic person 3, synthetic series). There is no clip for it, so the body stands at rest.",
+      "28 Sep 2026: Strength, 45 min (Synthetic person 3, synthetic series). There is no clip for it, so the body stands at rest.",
     );
   });
 
@@ -147,17 +147,17 @@ describe("dayLines", () => {
     } as const;
     expect(dayLines(sleep, RUN_DAY, SOURCE)).toEqual([
       DAY_VISUAL_CUE,
-      "Night ending on 28 Sept 2026: lying on the back. Breathing 14.2 times a minute, the night's respiratory rate (Synthetic person 3, synthetic series).",
+      "Night ending on 28 Sep 2026: lying on the back. Breathing 14.2 times a minute, the night's respiratory rate (Synthetic person 3, synthetic series).",
       "There is no lying clip: the body is turned at the hips to lie on its back in a resting pose.",
     ]);
     expect(dayLines({ ...sleep, breathsPerMinute: null }, REST_DAY, SOURCE)[1]).toBe(
-      "Night ending on 27 Sept 2026: lying on the back. No respiratory rate is recorded for this night, so it lies still.",
+      "Night ending on 27 Sep 2026: lying on the back. No respiratory rate is recorded for this night, so it lies still.",
     );
   });
 
   test("the day select names the workout", () => {
-    expect(dayOption(RUN_DAY)).toBe("28 Sept 2026 · Running, 40 min");
-    expect(dayOption(REST_DAY)).toBe("27 Sept 2026 · no workout");
+    expect(dayOption(RUN_DAY)).toBe("28 Sep 2026 · Running, 40 min");
+    expect(dayOption(REST_DAY)).toBe("27 Sep 2026 · no workout");
   });
 
   test("motion lines use the day's lines while following", () => {

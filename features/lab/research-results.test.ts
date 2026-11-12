@@ -29,6 +29,7 @@ import {
   rrGridCard,
   ruleChangeCard,
   shuffledNullCard,
+  sourceLine,
   specialistCards,
   withinPersonCard,
 } from "./research-results";
@@ -279,6 +280,36 @@ describe("P2 in-silico arrhythmia", () => {
     );
     expect(c.more).toBeNull();
     expect(c.runDate).toBe("2026-11-02");
+  });
+
+  test("the source line names the run's day as a reader writes it, not as ISO", () => {
+    const c = card(rrGridCard(readRrGrid(fixture("rr-grid.json"))));
+    expect(sourceLine(c)).toBe(`${RESEARCH_SOURCES.rrGrid} · run 2 Nov 2026`);
+    expect(sourceLine({ ...c, runDate: null })).toBe(RESEARCH_SOURCES.rrGrid);
+  });
+
+  test("RR grid headline: the grid to one decimal, as the row labels give it", () => {
+    const tpr = (value: number) => ({
+      mean: { tpr: { value, ci95: { low: value - 0.01, high: value + 0.01 } } },
+    });
+    const grid = readRrGrid(
+      JSON.stringify({
+        generatedAt: "2026-11-02T01:31:33.139Z",
+        real: [
+          { database: "afdb", records: 23, centres: tpr(0.629) },
+          { database: "ltafdb", records: 76, centres: tpr(0.625) },
+        ],
+        sim: [
+          { mode: "short_range", gridMs: 0, centres: tpr(0.648) },
+          { mode: "short_range", gridMs: 7.8125, centres: tpr(0.63) },
+        ],
+      }),
+    );
+    const c = card(rrGridCard(grid));
+    expect(c.headline).toEndWith(
+      "simulated AF went from 0.648 with exact beat times to 0.630 with beats on a 7.8 ms grid.",
+    );
+    expect(c.headline).not.toContain("7.8125");
   });
 });
 

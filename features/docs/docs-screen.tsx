@@ -3,6 +3,7 @@ import type { ReactElement } from "react";
 import Markdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+import { rehypeDocTables } from "./doc-tables";
 import { renderedByText } from "./docs-cache";
 import { type DocPage, rewriteDocUrl } from "./docs-pages";
 import { rehypeHeadingIds } from "./heading-ids";
@@ -29,7 +30,7 @@ const renderMarkdown =
     Markdown({
       children: markdown,
       remarkPlugins: [remarkGfm],
-      rehypePlugins: [rehypeHeadingIds],
+      rehypePlugins: [rehypeHeadingIds, rehypeDocTables],
       urlTransform: (url) => defaultUrlTransform(rewriteDocUrl(url, path, pages)),
     });
 

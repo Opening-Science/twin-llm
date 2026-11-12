@@ -36,8 +36,8 @@ describe("GenomeAudit", () => {
         preview: [...events, { seq: "39", tool: "ark.status", ts: "soon", hash8: "0" }],
       }),
     );
-    expect(markup).toContain("27 Sept 2026, 12:00 UTC");
-    expect(markup).toContain("27 Sept 2026, 11:59 UTC");
+    expect(markup).toContain("27 Sep 2026, 12:00 UTC");
+    expect(markup).toContain("27 Sep 2026, 11:59 UTC");
     expect(markup).not.toContain("2026-09-27");
     expect(markup).not.toContain("soon");
     expect(markup).toContain("—");

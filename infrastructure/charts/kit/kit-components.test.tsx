@@ -1377,3 +1377,18 @@ test("an empty day with no usual day yet still outlines a day, never a blank", (
   );
   expect(usual).not.toContain('stroke-opacity="0.5"');
 });
+
+test("a hero handed EMPTY_VALUE reads no data, even when the chart has values", () => {
+  const out = html(
+    <Consistency
+      category="sleep"
+      values={[30, 40, 20, 50]}
+      target={null}
+      reference={{ label: "Usual (7 nights)", value: EMPTY_VALUE }}
+      last={{ label: "Last night", value: "23:48" }}
+    />,
+  );
+  expect(out).toContain('<span class="sr-only">no data</span>');
+  expect(spoken(out)).not.toContain(EMPTY_VALUE);
+  expect(spoken(out)).toContain("23:48");
+});

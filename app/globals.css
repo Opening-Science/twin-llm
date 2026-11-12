@@ -406,9 +406,18 @@
   .shell-edge {
     @apply fixed inset-y-0 left-0 z-30 hidden w-2 lg:block;
   }
-  /* Pages without a thread bar start below the floating button. */
+  /* Pages without a thread bar start below the floating button. Below lg the
+     page runs under the button, so they start behind a band as tall as the
+     button's corner (top-3 + size-9 = 48px) that stays at the top while the
+     page scrolls: a scrolled line slides under it, never behind the button
+     alone. From lg the page sits clear of the button, and its own sticky
+     columns (lg:top-6) stay uncovered, so a top padding is enough. */
+  .shell-main:not(:has(.thread-bar))::before {
+    @apply bg-background/85 sticky top-0 z-30 h-12 shrink-0 backdrop-blur lg:hidden;
+    content: "";
+  }
   .shell-main:not(:has(.thread-bar)) {
-    @apply pt-10;
+    @apply lg:pt-10;
   }
   [data-sidebar="pinned"] .shell-main:not(:has(.thread-bar)) {
     @apply lg:pt-0;
@@ -1054,6 +1063,16 @@
   .lab-table td {
     @apply font-mono text-xs;
   }
+  /* A wide table that must fit its column at desktop widths with every column
+     kept (Customize · Privacy totals): cells and headings wrap between words,
+     never inside one, on a tighter gutter, so the columns share the width. A
+     cell marked whitespace-nowrap (a date) keeps one line, and the row's name
+     takes the wrapping, at the <wbr> after each dot of a host name. A phone
+     still scrolls it inside .lab-table-wrap. */
+  .lab-table-fit .lab-table th,
+  .lab-table-fit .lab-table td {
+    @apply px-2 whitespace-normal;
+  }
 
   /* --- Lab checks that fit (#483, features/lab/check-*.tsx, lab-table.tsx) ---
      An Unknown check says why in one muted line: under the title on the
@@ -1174,8 +1193,20 @@
     @apply border-border;
   }
 
+  /* A table scrolls inside its own box, never the page; code in its cells
+     breaks only at the <wbr> after a dot or a slash (features/docs/doc-tables.ts),
+     never inside a word. */
+  .doc-table-wrap {
+    @apply overflow-x-auto;
+  }
+
   .doc-prose table {
     @apply w-full text-sm;
+  }
+
+  .doc-prose td code,
+  .doc-prose th code {
+    overflow-wrap: normal;
   }
 
   .doc-prose th,

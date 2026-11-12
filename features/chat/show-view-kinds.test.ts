@@ -96,7 +96,7 @@ describe("chart.compare", () => {
     expect(view).toEqual({
       id: "view-41-42-43",
       kind: "chart.compare",
-      title: "Sleep duration, 28 Sept 2026 – 4 Oct 2026 vs 31 Aug 2026 – 27 Sept 2026",
+      title: "Sleep duration, 28 Sep 2026 – 4 Oct 2026 vs 31 Aug 2026 – 27 Sep 2026",
       spec: {
         measure: "93832-4",
         label: "Sleep duration",
@@ -136,7 +136,7 @@ describe("chart.compare", () => {
     expect(modelNoteOf(view)).toEqual({
       shown: true,
       view_id: "view-41-42-43",
-      title: "Sleep duration, 28 Sept 2026 – 4 Oct 2026 vs 31 Aug 2026 – 27 Sept 2026",
+      title: "Sleep duration, 28 Sep 2026 – 4 Oct 2026 vs 31 Aug 2026 – 27 Sep 2026",
       readings: 5,
       unit: "h",
     });

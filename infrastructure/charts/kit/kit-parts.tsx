@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 
+import { EMPTY_VALUE } from "@/infrastructure/format-measure";
 import { cn } from "@/infrastructure/ui";
 
 import { useMeasuredWidth } from "../chart-frame";
@@ -62,7 +63,9 @@ export const toneClass = (category: Category, reference: boolean): string =>
 /**
  * A hero number with its label and unit; today in colour, the reference grey.
  * `pair` is for two heroes side by side: a smaller step, and the unit wraps
- * under the number rather than running into the next column.
+ * under the number rather than running into the next column. A value of
+ * `EMPTY_VALUE` is missing too, so a card that has no number yet never
+ * hands a screen reader a bare dash.
  */
 export const Hero = ({
   hero,
@@ -99,10 +102,10 @@ export const Hero = ({
         toneClass(category, reference),
       )}
     >
-      <span>{missing ? <NoValue /> : hero.value}</span>
+      <span>{missing || hero.value === EMPTY_VALUE ? <NoValue /> : hero.value}</span>
       {hero.unit ? (
         <span
-          aria-hidden={missing ? true : undefined}
+          aria-hidden={missing || hero.value === EMPTY_VALUE ? true : undefined}
           className="text-muted-foreground font-sans text-base font-normal"
         >
           {hero.unit}

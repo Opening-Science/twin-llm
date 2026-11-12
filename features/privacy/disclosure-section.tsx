@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 import { StatusBadge } from "@/infrastructure/ui-kit/status-badge";
 
@@ -10,6 +11,15 @@ import type { LedgerView } from "./disclosure-view";
  * unlock like the rest of the page. Server-rendered.
  */
 
+/**
+ * A recipient name that may break after a dot or a slash, so a host name
+ * (`api.ouraring.com`) wraps between its parts, never inside one.
+ */
+const breakable = (name: string): ReactNode[] =>
+  name
+    .split(/(?<=[./])(?=.)/)
+    .flatMap((part, index) => (index === 0 ? [part] : [<wbr key={index} />, part]));
+
 const RECIPIENT_COLUMNS = [
   "Recipient",
   "Direction",
@@ -17,8 +27,8 @@ const RECIPIENT_COLUMNS = [
   "Values",
   "Size",
   "Stored values in text",
-  "First",
-  "Last",
+  "First (UTC)",
+  "Last (UTC)",
 ] as const;
 
 export const DisclosureSection = ({ view }: Readonly<{ view: LedgerView }>) => (
@@ -48,7 +58,7 @@ export const DisclosureSection = ({ view }: Readonly<{ view: LedgerView }>) => (
       </p>
     ) : (
       <>
-        <div className="lab-table-wrap mt-4">
+        <div className="lab-table-wrap lab-table-fit mt-4">
           <table className="lab-table">
             <caption className="sr-only">Running totals per recipient</caption>
             <thead>
@@ -63,7 +73,7 @@ export const DisclosureSection = ({ view }: Readonly<{ view: LedgerView }>) => (
             <tbody>
               {view.recipients.map((row) => (
                 <tr key={row.key}>
-                  <th scope="row">{row.recipient}</th>
+                  <th scope="row">{breakable(row.recipient)}</th>
                   <td>{row.direction}</td>
                   <td>{row.events}</td>
                   <td>{row.values}</td>
@@ -75,8 +85,8 @@ export const DisclosureSection = ({ view }: Readonly<{ view: LedgerView }>) => (
                       row.freeText
                     )}
                   </td>
-                  <td>{row.since}</td>
-                  <td>{row.last}</td>
+                  <td className="whitespace-nowrap">{row.since}</td>
+                  <td className="whitespace-nowrap">{row.last}</td>
                 </tr>
               ))}
             </tbody>
