@@ -10,6 +10,7 @@
  *   bun run eval -- --models ollama:qwen3:4b --arm context-oracle
  *   bun run eval -- --models ollama:qwen3:4b --arm context-fair
  *   bun run eval -- --models ollama:qwen3:4b --arm code
+ *   bun run eval -- --models ollama:qwen3:4b --set v1h --repeats 3
  *
  * The package script passes `--env-file=.env.eval`, a copy of
  * `.env.synthetic.example` pointed at a throwaway database holding only

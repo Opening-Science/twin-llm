@@ -104,6 +104,7 @@ import {
   questionSetSchema,
   SCENARIOS,
 } from "./question-set";
+import { MAX_REPEATS, MIN_REPEATS, withRepeats } from "./repeats";
 
 export const EVAL_ACTOR_PREFIX = "eval-harness";
 export const DEFAULT_TIMEOUT_S = 300;
@@ -233,6 +234,8 @@ export type EvalOptions = Readonly<{
   arm: EvalArm;
   /** Context arm: estimated tokens each item's data block may use. */
   contextCapTokens: number;
+  /** `--repeats` (#304): every item runs at least this often; null keeps the set's. */
+  repeats: number | null;
 }>;
 
 const flagValue = (argv: readonly string[], flag: string): string | null => {
@@ -272,8 +275,10 @@ const KNOWN_FLAGS = new Set([
   "--decline-wording",
   "--arm",
   "--context-cap",
+  "--repeats",
 ]);
 const VALUE_FLAGS = new Set([
+  "--repeats",
   "--set",
   "--models",
   "--items",
@@ -347,6 +352,17 @@ export const parseEvalArgs = (argv: readonly string[]): EvalOptions => {
   if (!Number.isInteger(contextCapTokens) || contextCapTokens <= 0) {
     throw new EvalSetupError("USAGE", "--context-cap takes a whole number of tokens");
   }
+  const repeatsFlag = flagValue(args, "--repeats");
+  const repeats = repeatsFlag === null ? null : Number(repeatsFlag);
+  if (
+    repeats !== null &&
+    (!Number.isInteger(repeats) || repeats < MIN_REPEATS || repeats > MAX_REPEATS)
+  ) {
+    throw new EvalSetupError(
+      "USAGE",
+      `--repeats takes a whole number from ${MIN_REPEATS} to ${MAX_REPEATS}`,
+    );
+  }
   return {
     set,
     models: list(models).map(parseModelSpec),
@@ -359,6 +375,7 @@ export const parseEvalArgs = (argv: readonly string[]): EvalOptions => {
     declineWording,
     arm,
     contextCapTokens,
+    repeats,
   };
 };
 
@@ -960,7 +977,7 @@ const setup = async (
   if (!permit.ok) {
     throw new EvalSetupError(permit.code, `${permit.message} Nothing was read.`);
   }
-  const items = selectItems(loaded.items, options);
+  const items = withRepeats(selectItems(loaded.items, options), options.repeats);
   if (items.length === 0) throw new EvalSetupError("NO_ITEMS", "the selection is empty");
   // #273: on the local GBD store, S4's out-of-catalogue probes must stay out of it.
   if (deps.gbdLocalProbeRows !== null && items.some((item) => item.scenario === "S4")) {
@@ -1161,6 +1178,7 @@ export const runEval = async (
       sampling: "none set",
       platform: deps.platform,
       timeout_ms: options.timeoutMs,
+      ...(options.repeats === null ? {} : { repeats: options.repeats }),
       ...(options.declineWording === null
         ? {}
         : { decline_wording: declineWordingMeta(options.declineWording) }),

@@ -3,7 +3,8 @@
  *
  * For each run: reads `evaluation/runs/<run-id>/meta.json`, `results.jsonl`
  * and every `ratings/<rater>.json` the rating view wrote, scores the run as
- * `eval:report` does, and prints Cohen's kappa with a 95 % interval for each
+ * `eval:report` does, and prints Cohen's kappa with a 95 % interval (large
+ * sample and bootstrap) and Krippendorff's alpha with a bootstrap interval for each
  * rater against the correctness scorer and for each pair of raters, pooled
  * over the runs of each question set given (#304: runs of hb and v1h are
  * reported apart, each on its own rubric, and a ratings file whose rubric is
@@ -37,8 +38,12 @@ import {
   requireLearningConsent,
 } from "../../infrastructure/learning-consent";
 import {
+  type AgreementRow,
   agreementRows,
   type AnswerIdRow,
+  BOOTSTRAP_RESAMPLES,
+  BOOTSTRAP_SEED,
+  type BootstrapInterval,
   answerIdRows,
   type Kappa,
   groupBySet,
@@ -53,6 +58,7 @@ import {
 } from "./agreement";
 import { metaSchema, QUESTION_SETS, resultLineSchema } from "./eval-results";
 import { answerKeySchema, questionSetSchema } from "./question-set";
+import { withRepeats } from "./repeats";
 import { reportRows, RUNS_DIR } from "./run-report";
 import { scoreRun } from "./score/score-run";
 
@@ -92,7 +98,7 @@ const loadRun = async (runId: string): Promise<LoadedRun> => {
       provider: model.provider,
       modelId: model.model_id,
     })),
-    items: questions.items,
+    items: withRepeats(questions.items, meta.repeats),
     entries: key.entries,
     lines,
   });
@@ -216,6 +222,18 @@ const kappaText = (result: Kappa | null): string[] =>
             : `${number(result.kappa)} (${number(result.low)} to ${number(result.high)})`,
       ];
 
+const intervalText = (interval: BootstrapInterval | null): string =>
+  interval === null
+    ? EMPTY_VALUE
+    : `${number(interval.low)} to ${number(interval.high)}${interval.used < interval.resamples ? ` (${interval.used} of ${interval.resamples} resamples defined)` : ""}`;
+
+const alphaText = (row: AgreementRow): string =>
+  row.alpha === null
+    ? EMPTY_VALUE
+    : row.alpha.alpha === null
+      ? `not defined (one value only), ${row.metric}`
+      : `${number(row.alpha.alpha)} (${intervalText(row.alphaBootstrap)}), ${row.metric}`;
+
 /** The comparison of one run: on its review sample, or on every line with `--all` or no sample. */
 const compared = (run: LoadedRun, everyLine: boolean): RunAgreementInput =>
   run.sampled === null || everyLine
@@ -276,13 +294,16 @@ const main = async (argv: readonly string[]): Promise<number> => {
     }
     if (rated !== null) process.stdout.write(`Rubric: ${rubricOf(rated).version}\n\n`);
     process.stdout.write(
-      "| Comparison | Lines | Observed agreement | Kappa (95 % CI) |\n| --- | --- | --- | --- |\n",
+      "| Comparison | Lines | Observed agreement | Kappa (95 % CI) | Kappa, bootstrap 95 % CI | Krippendorff's alpha (bootstrap 95 % CI), metric |\n| --- | --- | --- | --- | --- | --- |\n",
     );
     for (const row of rows) {
       process.stdout.write(
-        `| ${[row.comparison, ...kappaText(row.result)].join(" | ")} |\n`,
+        `| ${[row.comparison, ...kappaText(row.result), intervalText(row.kappaBootstrap), alphaText(row)].join(" | ")} |\n`,
       );
     }
+    process.stdout.write(
+      `\nBootstrap: ${formatNumber(BOOTSTRAP_RESAMPLES, 0)} resamples of the lines, seed ${BOOTSTRAP_SEED}, percentile interval; resamples where the statistic is not defined are dropped and counted.\n`,
+    );
     if (withIds && rated !== null) {
       const ids = await answerIds(rated, runs);
       process.stdout.write(

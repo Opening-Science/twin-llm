@@ -97,6 +97,11 @@ const GATED: Readonly<Record<string, Gated>> = {
     gate: "scripts/evaluation/heldout-v1h.ts",
     scope: "evaluation",
   },
+  "eval:rater-sheet": {
+    entry: "scripts/evaluation/rater-sheet-run.ts",
+    gate: "scripts/evaluation/rater-sheet-run.ts",
+    scope: "evaluation",
+  },
 };
 
 const APP = "the app or its dev server; personal reads are gated by tests/personal-reads";

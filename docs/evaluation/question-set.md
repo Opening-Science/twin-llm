@@ -1067,7 +1067,11 @@ and entries, and the probes' keyed values. With `RUN_LIVE=1` and
 files and both must match.
 
 Running it: `bun run eval -- --set v1h --models …`, with the cohort ingested
-in the eval database as for v1. No model has been run on v1h yet.
+in the eval database as for v1.
+
+Correction, 12 Nov 2026 (#304): this section said no model had been run on
+v1h. The first run is `2026-11-01-qwen3-4b-v1h` (#380), qwen3:4b with tools
+at `4b58ef5`; its results are in `docs/research/eval-runs-2026-10.md`.
 
 ### Human review (protocol)
 
@@ -1088,6 +1092,27 @@ Two raters, blind, on a stratified sample, with agreement statistics:
    scorer (levels 4 and 5 as a pass) and the two raters against each other,
    Cohen's kappa with its 95 % interval, reported next to the observed
    agreement.
+
+Amendment, 12 Nov 2026 (#304), written before any v1h rating and without
+looking at any v1h output; the sample of step 2 and the rubric are unchanged:
+
+- Step 1: `review.csv` shows the scorers' flags, so it is blind to the model
+  but not to the score. For the two raters,
+  `bun run eval:rater-sheet -- --runs <run-id>,…` writes one sheet pooled
+  across the runs and models: the step-2 sample of each run with question,
+  reference, note and reply under an opaque id, in one salted order, and
+  nothing else. A rater uses either the pooled sheet or the Lab view, and
+  `eval:rater-sheet` turns a filled sheet into the same ratings files the
+  view writes (`second-rater.md`, "The rater sheet").
+- Step 4: beside kappa and its large-sample interval, Krippendorff's alpha
+  (ordinal on the five levels, nominal on pass or fail) and percentile
+  bootstrap 95 % intervals over lines for both, 2,000 resamples, seed 304.
+  Kappa stays the primary statistic; alpha and the bootstrap are reported
+  with it, not in its place.
+- Repeats: a run may use `--repeats n` (`harness.md`), which raises every
+  item to at least n repeats. The step-2 sample then counts each repeat as a
+  line, so every repeat of S5 and S6 is rated. The six v1h consistency
+  items already run three times.
 
 The Lab's rating view reads v1h runs with `?set=v1h` (#304), on a rubric
 version of its own (the hb anchors speak of verdicts, and S3 and S4 items
