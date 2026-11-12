@@ -3,9 +3,13 @@ import { describe, expect, test } from "bun:test";
 import { lineToken } from "../../features/lab/rater-lines";
 
 import {
+  agreementRow,
   agreementRows,
   answerIdRows,
+  BOOTSTRAP_RESAMPLES,
+  bootstrapInterval,
   cohenKappa,
+  krippendorffAlpha,
   groupBySet,
   pairsFromTable,
   ratedSetForFile,
@@ -106,6 +110,170 @@ describe("cohenKappa", () => {
       ["1", "0"],
       ["1", "1"],
     ]);
+  });
+});
+
+/**
+ * Krippendorff's worked examples (Krippendorff 2011, "Computing
+ * Krippendorff's Alpha-Reliability"). Example C: four observers, twelve
+ * units, values 1 to 5 with gaps; alpha is .743 nominal, .815 ordinal and
+ * .849 interval. Unit 12 has one value and is not pairable. Example A: two
+ * observers, ten units, binary; alpha .095.
+ */
+const _ = null;
+const EXAMPLE_C: readonly (readonly (number | null)[])[] = [
+  [1, 1, _, 1],
+  [2, 2, 3, 2],
+  [3, 3, 3, 3],
+  [3, 3, 3, 3],
+  [2, 2, 2, 2],
+  [1, 2, 3, 4],
+  [4, 4, 4, 4],
+  [1, 1, 2, 1],
+  [2, 2, 2, 2],
+  [_, 5, 5, 5],
+  [_, _, 1, 1],
+  [_, 3, _, _],
+];
+
+describe("krippendorffAlpha", () => {
+  test("example C: nominal, ordinal and interval", () => {
+    const nominal = krippendorffAlpha(EXAMPLE_C, "nominal");
+    expect(nominal?.units).toBe(11);
+    expect(nominal?.values).toBe(40);
+    expect(nominal?.alpha).toBeCloseTo(0.743, 3);
+    expect(krippendorffAlpha(EXAMPLE_C, "ordinal")?.alpha).toBeCloseTo(0.815, 3);
+    expect(krippendorffAlpha(EXAMPLE_C, "interval")?.alpha).toBeCloseTo(0.849, 3);
+  });
+
+  test("example A: two observers, binary", () => {
+    const first = [0, 1, 0, 0, 0, 0, 0, 0, 1, 0];
+    const second = [1, 1, 1, 0, 0, 1, 0, 0, 0, 0];
+    const units = first.map((value, i) => [value, second[i] ?? null]);
+    expect(krippendorffAlpha(units, "nominal")?.alpha).toBeCloseTo(0.095, 3);
+  });
+
+  test("perfect agreement is 1; one value only is not defined; nothing pairable is null", () => {
+    expect(
+      krippendorffAlpha(
+        [
+          [1, 1],
+          [5, 5],
+          [3, 3],
+        ],
+        "ordinal",
+      )?.alpha,
+    ).toBe(1);
+    expect(
+      krippendorffAlpha(
+        [
+          [4, 4],
+          [4, 4],
+        ],
+        "ordinal",
+      )?.alpha,
+    ).toBeNull();
+    expect(krippendorffAlpha([[1, null], [null]], "nominal")).toBeNull();
+  });
+
+  test("ordinal counts a 5 against a 1 as worse than a 5 against a 4; nominal does not", () => {
+    const near = [
+      [5, 4],
+      [1, 1],
+      [3, 3],
+      [5, 5],
+      [2, 2],
+    ] as const;
+    const far = [
+      [5, 1],
+      [1, 1],
+      [3, 3],
+      [5, 5],
+      [2, 2],
+    ] as const;
+    const ordinal = (units: typeof near | typeof far) =>
+      krippendorffAlpha(units, "ordinal")?.alpha ?? Number.NaN;
+    expect(ordinal(near)).toBeGreaterThan(ordinal(far));
+  });
+
+  test("two coders on pass and fail: close to Cohen's kappa for many lines", () => {
+    const pairs = pairsFromTable([
+      [40, 5],
+      [8, 27],
+    ]);
+    const units = pairs.map(([a, b]) => [Number(a), Number(b)]);
+    const alpha = krippendorffAlpha(units, "nominal")?.alpha ?? Number.NaN;
+    const kappa = cohenKappa(pairs)?.kappa ?? Number.NaN;
+    expect(Math.abs(alpha - kappa)).toBeLessThan(0.01);
+  });
+});
+
+describe("bootstrapInterval", () => {
+  const pairs = pairsFromTable(COHEN_TABLE);
+  const kappaOf = (sample: readonly (readonly [string, string])[]) =>
+    cohenKappa(sample)?.kappa ?? null;
+
+  test("on Cohen's example it is near the large-sample interval (.392 to .591)", () => {
+    const interval = bootstrapInterval(pairs, kappaOf);
+    expect(interval?.resamples).toBe(BOOTSTRAP_RESAMPLES);
+    expect(interval?.used).toBe(BOOTSTRAP_RESAMPLES);
+    expect(interval?.low).toBeGreaterThan(0.36);
+    expect(interval?.low).toBeLessThan(0.42);
+    expect(interval?.high).toBeGreaterThan(0.56);
+    expect(interval?.high).toBeLessThan(0.62);
+  });
+
+  test("the same seed gives the same interval; another seed another", () => {
+    const a = bootstrapInterval(pairs, kappaOf, 500, 1);
+    expect(bootstrapInterval(pairs, kappaOf, 500, 1)).toEqual(a);
+    expect(bootstrapInterval(pairs, kappaOf, 500, 2)).not.toEqual(a);
+  });
+
+  test("resamples where the statistic is not defined are dropped and counted", () => {
+    const lopsided: [string, string][] = [
+      ...Array.from({ length: 9 }, (): [string, string] => ["pass", "pass"]),
+      ["fail", "fail"],
+    ];
+    const interval = bootstrapInterval(lopsided, kappaOf, 1000);
+    expect(interval?.used).toBeLessThan(1000);
+    expect(interval?.used).toBeGreaterThan(0);
+    expect(interval?.high).toBe(1);
+  });
+
+  test("no units, or never defined: null", () => {
+    expect(bootstrapInterval([], kappaOf)).toBeNull();
+    expect(
+      bootstrapInterval(
+        [
+          ["pass", "pass"],
+          ["pass", "pass"],
+        ],
+        kappaOf,
+        100,
+      ),
+    ).toBeNull();
+  });
+});
+
+describe("agreementRow", () => {
+  test("kappa, alpha and both bootstrap intervals for one comparison", () => {
+    const pairs: [string, string][] = [
+      ["5", "5"],
+      ["4", "5"],
+      ["1", "2"],
+      ["3", "3"],
+      ["2", "1"],
+      ["5", "4"],
+      ["4", "4"],
+      ["1", "1"],
+    ];
+    const row = agreementRow("a vs b (five levels)", pairs, "ordinal");
+    expect(row.result?.n).toBe(8);
+    expect(row.metric).toBe("ordinal");
+    expect(row.alpha?.alpha).toBeGreaterThan(0.8);
+    expect(row.alphaBootstrap?.low).toBeLessThanOrEqual(row.alpha?.alpha ?? Number.NaN);
+    expect(row.alphaBootstrap?.high).toBeLessThanOrEqual(1);
+    expect(row.kappaBootstrap?.high).toBeLessThanOrEqual(1);
   });
 });
 

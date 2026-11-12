@@ -14,6 +14,7 @@ import { sha256Hex } from "../../packages/audit/hash";
 import { isContextArm } from "./context-arm";
 import type { RunMeta } from "./eval-results";
 import { SCENARIOS, type Scenario, V1_SCENARIOS } from "./question-set";
+import { repeatsCell } from "./repeats";
 import {
   type LatencyFigures,
   type ModelKey,
@@ -98,9 +99,13 @@ const overview = (all: readonly ModelScores[]): string =>
       "Error rate",
       "Skipped (MISSING_ENV)",
       "Cache hits",
+      "Repeats per item",
     ],
     all.map((scores) => {
       const ran = scores.lines - scores.skipped;
+      const items = [
+        ...new Map(scores.scored.map((entry) => [entry.item.id, entry.item])).values(),
+      ];
       return [
         modelName(scores.model),
         String(scores.lines),
@@ -109,6 +114,7 @@ const overview = (all: readonly ModelScores[]): string =>
         ran === 0 ? DASH : percent(scores.errors / ran),
         String(scores.skipped),
         String(scores.cacheHits),
+        repeatsCell(items),
       ];
     }),
   );
@@ -491,6 +497,12 @@ export const renderReport = ({
         ["Replay", meta.replay ? "yes" : "no"],
         ...armRows(meta),
         ["Sampling", meta.sampling],
+        [
+          "Repeats",
+          meta.repeats === undefined
+            ? "as in the question set"
+            : `at least ${meta.repeats} per item (--repeats); raised items are scored on consistency`,
+        ],
         ["Platform", meta.platform],
         ...agentRows(meta),
         ...declineWordingRows(meta),
