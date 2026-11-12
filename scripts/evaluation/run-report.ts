@@ -49,6 +49,7 @@ import {
   questionSetSchema,
 } from "./question-set";
 import { parseRaterSheetKey, renderRaterSheet } from "./rater-sheet";
+import { withRepeats } from "./repeats";
 import { renderReport, renderReviewKey, renderReviewSheet } from "./report";
 import { scoreRun } from "./score/score-run";
 
@@ -274,7 +275,7 @@ export const runReport = async (
         provider: model.provider,
         modelId: model.model_id,
       })),
-      items: questions.items,
+      items: withRepeats(questions.items, meta.repeats),
       entries: key.entries,
       lines,
       cohortCodes,

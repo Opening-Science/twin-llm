@@ -509,7 +509,17 @@ describe("parseEvalArgs", () => {
       declineWording: null,
       arm: "tools",
       contextCapTokens: 6000,
+      repeats: null,
     });
+  });
+
+  test("--repeats takes a whole number from 2 to 10 (#304)", () => {
+    expect(parseEvalArgs([...MODELS, "--repeats", "3"])).toMatchObject({ repeats: 3 });
+    for (const bad of ["1", "11", "2.5", "x"]) {
+      expect(() => parseEvalArgs([...MODELS, "--repeats", bad])).toThrow(
+        "USAGE: --repeats takes a whole number from 2 to 10",
+      );
+    }
   });
 
   test("--arm takes the four arms and `context`; --context-cap only with a context arm", () => {
@@ -740,6 +750,31 @@ describe("runEval on fakes", () => {
     await runEval([...MODELS, "--items", "Q-S1-01", "--run-id", "r"], capture().io, deps);
     // Two repeats × two steps, none shared.
     expect(cache.entries.size).toBe(4);
+  });
+
+  test("--repeats raises every item and is recorded in meta.json (#304)", async () => {
+    const { deps, files } = harness();
+    await runEval(
+      [...MODELS, "--items", "Q-S1-01,Q-S5-01", "--repeats", "3", "--run-id", "rep3"],
+      capture().io,
+      deps,
+    );
+    expect(
+      linesOf(files.get("rep3/results.jsonl")).map(
+        (line) => `${line.item_id}#${line.repeat}`,
+      ),
+    ).toEqual([
+      "Q-S1-01#1",
+      "Q-S1-01#2",
+      "Q-S1-01#3",
+      "Q-S5-01#1",
+      "Q-S5-01#2",
+      "Q-S5-01#3",
+    ]);
+    expect(JSON.parse(files.get("rep3/meta.json") ?? "")).toMatchObject({
+      repeats: 3,
+      counts: { items: 2, lines: 6 },
+    });
   });
 
   test("a replay calls no model and gives the same file apart from timings", async () => {

@@ -58,6 +58,7 @@ import {
 } from "./agreement";
 import { metaSchema, QUESTION_SETS, resultLineSchema } from "./eval-results";
 import { answerKeySchema, questionSetSchema } from "./question-set";
+import { withRepeats } from "./repeats";
 import { reportRows, RUNS_DIR } from "./run-report";
 import { scoreRun } from "./score/score-run";
 
@@ -97,7 +98,7 @@ const loadRun = async (runId: string): Promise<LoadedRun> => {
       provider: model.provider,
       modelId: model.model_id,
     })),
-    items: questions.items,
+    items: withRepeats(questions.items, meta.repeats),
     entries: key.entries,
     lines,
   });
