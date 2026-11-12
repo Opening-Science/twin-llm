@@ -1113,9 +1113,16 @@ Wilson interval. Two runs of the same items are paired, though: the same
 question went to both, and that pairing is evidence the separate intervals
 throw away (#577). `bun run eval:compare` (`docs/evaluation/harness.md`,
 "Paired comparison") rescored both runs of each pair below from the run
-files on disk with the scorers at `0c4338f`, called no model, and tested
+files on disk with the scorers at `ef1f051`, called no model, and tested
 each criterion with the exact two-sided McNemar test (a binomial test on
 the units that passed in one run only).
+
+12 Nov 2026: rerun with the scorer after the #576 fixes (was `0c4338f`).
+One `qwen3-4b-v1-oracle320` correctness line moves fail to pass, so
+tools against oracle on qwen3:4b goes from 15–24 to 15–25 items (Holm p
+0.80 to 0.68) and from 16–26 to 16–27 lines, which also moves that row's
+line hallucination Holm p (0.66 to 0.54). No other cell or conclusion
+changes.
 
 The primary unit is the item: its repeats are folded into one outcome by
 majority, a tie counting as not passed, so the few repeated items count
@@ -1136,8 +1143,8 @@ Tools against data in the prompt (v1; #302, #320, #303):
 
 | A                      | B                       | Unit | Correctness             | Hallucination         | Privacy (\*) | Query safety (\*)       | Clinical caution | Readability     | Consistency |
 | ---------------------- | ----------------------- | ---- | ----------------------- | --------------------- | ------------ | ----------------------- | ---------------- | --------------- | ----------- |
-| `qwen3-4b-v1-tools320` | `qwen3-4b-v1-oracle320` | item | 15–24 (0.80; 1)         | 2–6 (0.87; 1)         | 0–0 (1; 1)   | 0–32 (< 0.001; < 0.001) | 19–35 (0.24; 1)  | 28–17 (0.68; 1) | 1–3 (1; 1)  |
-|                        |                         | line | 16–26 (0.66; 1)         | 2–7 (0.66; 1)         | 0–1 (1; 1)   | 0–35 (< 0.001; < 0.001) | 20–40 (0.081; 1) | 33–17 (0.16; 1) | 1–3 (1; 1)  |
+| `qwen3-4b-v1-tools320` | `qwen3-4b-v1-oracle320` | item | 15–25 (0.68; 1)         | 2–6 (0.87; 1)         | 0–0 (1; 1)   | 0–32 (< 0.001; < 0.001) | 19–35 (0.24; 1)  | 28–17 (0.68; 1) | 1–3 (1; 1)  |
+|                        |                         | line | 16–27 (0.51; 1)         | 2–7 (0.54; 1)         | 0–1 (1; 1)   | 0–35 (< 0.001; < 0.001) | 20–40 (0.081; 1) | 33–17 (0.16; 1) | 1–3 (1; 1)  |
 | `qwen3-4b-v1-tools320` | `qwen3-4b-v1-fair320`   | item | 29–3 (< 0.001; < 0.001) | 22–3 (< 0.001; 0.019) | 0–0 (1; 1)   | 0–32 (< 0.001; < 0.001) | 32–29 (1; 1)     | 25–16 (0.84; 1) | 0–1 (1; 1)  |
 |                        |                         | line | 31–3 (< 0.001; < 0.001) | 23–4 (0.002; 0.038)   | 0–1 (1; 1)   | 0–35 (< 0.001; < 0.001) | 33–34 (1; 1)     | 31–16 (0.16; 1) | 0–1 (1; 1)  |
 | `qwen3-8b-v1-tools320` | `qwen3-8b-v1-oracle320` | item | 18–7 (0.26; 1)          | 2–4 (1; 1)            | 0–0 (1; 1)   | 0–56 (< 0.001; < 0.001) | 17–31 (0.30; 1)  | 16–20 (1; 1)    | 2–2 (1; 1)  |
@@ -1204,8 +1211,8 @@ What the pairing changes:
   (Heart rhythm 18–2) and S7 (Brain 14–0), both surviving the family
   adjustment.
 - **Did not hold up.** The oracle arm's correctness gain for qwen3:4b
-  (51 to 71 % against 27 to 45 % in the separate tables) is 24 against 15
-  discordant items on the 71 items both runs scored, Holm p 0.80. Much of
+  (51 to 71 % against 27 to 45 % in the separate tables) is 25 against 15
+  discordant items on the 71 items both runs scored, Holm p 0.68. Much of
   the gap sits in units the test leaves out: on the line level, 22 lines the
   tools arm failed are `human` in the oracle arm. A review of those lines
   decides it, not this test. The qwen3:8b tools arm's correctness lead over

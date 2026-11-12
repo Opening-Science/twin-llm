@@ -5,7 +5,7 @@
     "bun run eval:compare -- 2026-10-30-qwen3-4b-v1-tools320 2026-10-30-qwen3-4b-v1-oracle320 2026-10-30-qwen3-4b-v1-tools320 2026-10-30-qwen3-4b-v1-fair320 2026-10-30-qwen3-8b-v1-tools320 2026-10-30-qwen3-8b-v1-oracle320 2026-10-30-qwen3-8b-v1-tools320 2026-10-30-qwen3-8b-v1-fair320 2026-10-30-qwen3-4b-v1-tools320 2026-10-31-qwen3-4b-v1-code303 2026-10-30-qwen3-8b-s7-r279 2026-10-30-agent-rhythm-s7 2026-10-30-qwen3-8b-s7-r279 2026-10-30-agent-brain-s7 2026-10-30-qwen3-8b-s7b 2026-10-30-agent-rhythm-s7b 2026-10-30-qwen3-8b-v1-r279 2026-10-30-agent-gp-v1 2026-10-30-qwen3-8b-s7-r279 2026-10-30-agent-rhythm-s7-r288 2026-10-30-qwen3-8b-s7b 2026-10-30-agent-rhythm-s7b-r288 2026-10-30-qwen3-8b-s7h 2026-10-30-agent-rhythm-s7h-r288 2026-10-30-hb-qwen3-8b 2026-10-30-hb-gp 2026-10-30-hb-qwen3-8b 2026-10-30-hb-brain 2026-11-02-agent-rhythm-s7-8b 2026-11-02-agent-rhythm-s7-4b 2026-11-02-agent-rhythm-s7b-8b 2026-11-02-agent-rhythm-s7b-4b 2026-11-02-agent-rhythm-s7h-8b 2026-11-02-agent-rhythm-s7h-4b 2026-11-02-agent-brain-s7-8b 2026-11-02-agent-brain-s7-4b 2026-11-02-agent-gp-v1-8b 2026-11-02-agent-gp-v1-4b --json",
     "bun run eval:compare -- 2026-10-30-qwen3-4b-v1-tools320 2026-10-30-qwen3-4b-v1-oracle320 2026-10-30-qwen3-4b-v1-tools320 2026-10-30-qwen3-4b-v1-fair320 2026-10-30-qwen3-8b-v1-tools320 2026-10-30-qwen3-8b-v1-oracle320 2026-10-30-qwen3-8b-v1-tools320 2026-10-30-qwen3-8b-v1-fair320 2026-10-30-qwen3-4b-v1-tools320 2026-10-31-qwen3-4b-v1-code303 2026-10-30-qwen3-8b-s7-r279 2026-10-30-agent-rhythm-s7 2026-10-30-qwen3-8b-s7-r279 2026-10-30-agent-brain-s7 2026-10-30-qwen3-8b-s7b 2026-10-30-agent-rhythm-s7b 2026-10-30-qwen3-8b-v1-r279 2026-10-30-agent-gp-v1 2026-10-30-qwen3-8b-s7-r279 2026-10-30-agent-rhythm-s7-r288 2026-10-30-qwen3-8b-s7b 2026-10-30-agent-rhythm-s7b-r288 2026-10-30-qwen3-8b-s7h 2026-10-30-agent-rhythm-s7h-r288 2026-10-30-hb-qwen3-8b 2026-10-30-hb-gp 2026-10-30-hb-qwen3-8b 2026-10-30-hb-brain 2026-11-02-agent-rhythm-s7-8b 2026-11-02-agent-rhythm-s7-4b 2026-11-02-agent-rhythm-s7b-8b 2026-11-02-agent-rhythm-s7b-4b 2026-11-02-agent-rhythm-s7h-8b 2026-11-02-agent-rhythm-s7h-4b 2026-11-02-agent-brain-s7-8b 2026-11-02-agent-brain-s7-4b 2026-11-02-agent-gp-v1-8b 2026-11-02-agent-gp-v1-4b --unit line --json"
   ],
-  "scored_at": "0c4338f7906c298d8466236d0f243a8490bae5af",
+  "scored_at": "ef1f0519e3831884ffffbfb2514f4c089afaddb2",
   "note": "Paired re-analysis of the October runs and the 2 November specialist runs already on disk under the ignored evaluation/runs/; no model was called. Both runs of each pair rescored with the scorers at scored_at. Primary unit (criteria): one pair per item, its repeats folded by majority, a tie counting as not passed and an item undecided (error or human) when its undecided repeats could swing the majority. Sensitivity (line_criteria): one pair per line (item and repeat). Consistency is per item in both. A pair counts only when both sides are pass or fail; units in one run only, or skipped, error, human or na on either side, are left out and counted in excluded. p is the exact two-sided McNemar test (binomial on discordant pairs); pHolm is Holm-adjusted across the seven criteria of that comparison; pHolmFamily is Holm-adjusted across every criterion of all 19 comparisons of the same unit, a sensitivity column. aOnly: passed in A, failed in B; bOnly the reverse. Query safety and privacy check only the reply in context and code arms, so they are not like for like against tools. Synthetic data only; one sample per line, no human review.",
   "comparisons": [
     {
@@ -32,8 +32,8 @@
           "pairs": 71,
           "bothPass": 16,
           "aOnly": 15,
-          "bOnly": 24,
-          "bothFail": 16,
+          "bOnly": 25,
+          "bothFail": 15,
           "excluded": {
             "unpaired": 0,
             "skipped": 10,
@@ -41,8 +41,8 @@
             "human": 31,
             "na": 18
           },
-          "p": 0.19959086691960692,
-          "pHolm": 0.7983634676784277,
+          "p": 0.1538599441628321,
+          "pHolm": 0.675782254228352,
           "pHolmFamily": 1
         },
         {
@@ -160,8 +160,8 @@
           "pairs": 77,
           "bothPass": 18,
           "aOnly": 16,
-          "bOnly": 26,
-          "bothFail": 17,
+          "bOnly": 27,
+          "bothFail": 16,
           "excluded": {
             "unpaired": 0,
             "skipped": 12,
@@ -169,8 +169,8 @@
             "human": 37,
             "na": 20
           },
-          "p": 0.16414940178310644,
-          "pHolm": 0.6565976071324258,
+          "p": 0.12628947438543037,
+          "pHolm": 0.5051578975417215,
           "pHolmFamily": 1
         },
         {
@@ -188,7 +188,7 @@
             "na": 0
           },
           "p": 0.1796875,
-          "pHolm": 0.6565976071324258,
+          "pHolm": 0.5390625,
           "pHolmFamily": 1
         },
         {
