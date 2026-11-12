@@ -122,4 +122,47 @@ describe("GET /api/wearables/summary", () => {
     expect(res.status).toBe(502);
     expect(await res.json()).toEqual({ error: "Could not load wearable summaries." });
   });
+
+  test("overlapping readings go out resolved, with a sources row (#464)", async () => {
+    appended.length = 0;
+    const day = "2026-01-02";
+    const reading = (key: string, value: number) => ({
+      key,
+      label: "HRV",
+      value,
+      unit: "ms",
+      date: day,
+    });
+    const GET = createWearablesSummaryHandler({
+      ...okDeps,
+      getLatestOuraSummary: async () => ({
+        ...dummySummary,
+        metrics: [reading(`sleep.hrv.long_sleep.${day}`, 52)],
+      }),
+      getLatestWhoopSummary: async () => ({
+        ...dummySummary,
+        metrics: [reading(`whoop.recovery.hrv.${day}`, 54)],
+      }),
+      getLatestGoogleHealthSummary: async () => null,
+      getLatestVitronicSummary: async () => null,
+    });
+    const body = (await (await GET()).json()) as {
+      oura: { metrics: readonly unknown[] };
+      whoop: { metrics: readonly unknown[] };
+    };
+    expect(body.oura.metrics).toEqual([
+      {
+        ...reading(`sleep.hrv.long_sleep.${day}`, 52),
+        sourceRule: {
+          kind: "agree",
+          line: "WHOOP agrees within 5 ms or 10% (WHOOP 54 ms); Oura's reading is shown.",
+        },
+      },
+    ]);
+    expect(body.whoop.metrics).toEqual([]);
+    expect(appended.map((row) => [row.tool, row.rowCount])).toEqual([
+      ["personal.read.wearables-summary", 2],
+      ["wearable.sources.oura+whoop", 1],
+    ]);
+  });
 });

@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import { type ReferenceInterval } from "@/packages/biomarkers/anchor-layer";
 import { biomarkerById } from "@/packages/biomarkers/catalogue";
+import { VITAL_ANATOMY } from "@/packages/biomarkers/vitals";
 
 import {
   D11_NO_POSITION,
@@ -246,6 +247,89 @@ describe("vitals", () => {
       search: "sleep.duration.long_sleep.2026-10-15",
     });
     expect(vitalRows(latestVitals([sleep[0]!, sleep[2]!]))[0]?.value).toBe("25 min");
+  });
+});
+
+describe("vitals: how overlapping sources were resolved (#464)", () => {
+  // Synthetic readings as the server leaves them after the source rules.
+  const AGREE = "WHOOP agrees within 5 ms or 10% (WHOOP 54 ms); Oura's reading is shown.";
+  const EVIDENCE =
+    "Sources disagree (WHOOP 61 ms). Oura is used: published validation grades it good for HRV (WHOOP no published grade).";
+  const HELD =
+    "Held back: WHOOP and Google Health disagree on resting heart rate, and no published validation covers these sources for it.";
+  const hrv = (line: string, kind: "agree" | "evidence") => ({
+    key: "sleep.hrv.long_sleep.2026-10-15",
+    label: "HRV",
+    value: 52,
+    unit: "ms",
+    sourceRule: { kind, line },
+  });
+  const heldRhr = {
+    measure: "resting-heart-rate" as const,
+    day: "2026-10-16",
+    keys: ["whoop.recovery.rhr.2026-10-16", "google.daily-resting-heart-rate.2026-10-16"],
+    sources: ["whoop" as const, "google_health" as const],
+    reason: "no_evidence" as const,
+    line: HELD,
+  };
+
+  test("agreement: the rule line and the Sources agree status", () => {
+    expect(vitalRows(latestVitals([hrv(AGREE, "agree")]))[0]).toMatchObject({
+      value: "52 ms",
+      details: [
+        "Reflects autonomic regulation, measured from beat-to-beat timing at the heart",
+        "From Oura, 15 Oct 2026",
+        AGREE,
+      ],
+      sourceStatus: { tone: "ok", label: "Sources agree" },
+    });
+  });
+
+  test("disagreement: the source used, the rule, and its status", () => {
+    expect(vitalRows(latestVitals([hrv(EVIDENCE, "evidence")]))[0]).toMatchObject({
+      value: "52 ms",
+      details: [
+        "Reflects autonomic regulation, measured from beat-to-beat timing at the heart",
+        "From Oura, 15 Oct 2026",
+        EVIDENCE,
+      ],
+      sourceStatus: { tone: "neutral", label: "Source chosen on published evidence" },
+    });
+  });
+
+  test("no decision: a newer day held back shows Held back, not an older number", () => {
+    const older = {
+      key: "whoop.recovery.rhr.2026-10-15",
+      label: "RHR",
+      value: 54,
+      unit: "bpm",
+    };
+    expect(vitalRows(latestVitals([older], [heldRhr]))[0]).toEqual({
+      id: "vital:rhr",
+      label: "Resting heart rate",
+      english: null,
+      group: VITALS_GROUP,
+      value: "Held back",
+      details: [HELD],
+      search: "rhr",
+      source: { kind: "vital", anatomy: VITAL_ANATOMY.rhr },
+      sourceStatus: { tone: "warn", label: "No source chosen" },
+    });
+    const newer = { ...older, key: "whoop.recovery.rhr.2026-10-17" };
+    expect(vitalRows(latestVitals([newer], [heldRhr]))[0]?.value).toBe("54 bpm");
+  });
+
+  test("a stored rule that is not well formed is not shown", () => {
+    const malformed = {
+      ...hrv(AGREE, "agree"),
+      sourceRule: { kind: "other", line: "x" },
+    };
+    const [row] = vitalRows(latestVitals([malformed]));
+    expect(row?.details).toEqual([
+      "Reflects autonomic regulation, measured from beat-to-beat timing at the heart",
+      "From Oura, 15 Oct 2026",
+    ]);
+    expect(row?.sourceStatus).toBeNull();
   });
 });
 
