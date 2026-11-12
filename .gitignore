@@ -89,6 +89,8 @@ evaluation/runs/
 evaluation/cache/
 # second-rater salts (#355): never committed, never sent to the browser
 evaluation/rater-sets/
+# pooled rater sheets and their keys (#304): the key unblinds every row
+evaluation/rater-sheets/
 
 # Licensed brand fonts (bun run fonts:install); never commit the files
 /public/fonts/*
