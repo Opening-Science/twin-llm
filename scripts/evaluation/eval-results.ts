@@ -330,6 +330,11 @@ export const metaSchema = z
     platform: z.string(),
     timeout_ms: z.number().int().positive(),
     /**
+     * Set when `--repeats` (#304) raised every item to at least this many
+     * repeats; such items are scored on consistency too. Absent: the set's own.
+     */
+    repeats: z.number().int().min(2).max(10).optional(),
+    /**
      * Set when `--decline-wording` replaced the chat route's decline line
      * (#274): the wording's id and the sha256 of its text. Absent: the product's.
      */
