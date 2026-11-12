@@ -77,6 +77,11 @@ const GATED: Readonly<Record<string, Gated>> = {
     gate: "scripts/evaluation/agreement-run.ts",
     scope: "evaluation",
   },
+  "eval:compare": {
+    entry: "scripts/evaluation/compare-run.ts",
+    gate: "scripts/evaluation/compare-run.ts",
+    scope: "evaluation",
+  },
   "eval:spread-subjects": {
     entry: "scripts/evaluation/spread-subjects.ts",
     gate: "scripts/evaluation/spread-subjects.ts",
