@@ -6,6 +6,8 @@ import { SHOW_VIEW_TOOL } from "@/infrastructure/chat-view";
 import { formatForPrompt } from "@/infrastructure/format-measure";
 import type { GoogleHealthSummary } from "@/infrastructure/google-health-types";
 import { offeredSummaries } from "@/infrastructure/offered-keys";
+import { heldBackNotes } from "@/infrastructure/wearable-source-resolve";
+import { sourceRuleLine } from "@/infrastructure/wearable-source-rules";
 import type { TurnSkill } from "@/infrastructure/skill-gate";
 import { type UiContext, uiContextBlock } from "@/infrastructure/ui-context";
 import type { OuraSummary } from "@/infrastructure/oura-types";
@@ -47,9 +49,44 @@ export const narrativeHeader = (narrative: string): string =>
     .filter((line) => !line.startsWith("- ["))
     .join("\n");
 
+/** A reading used over another source's says so on its line (#464). */
+const keyLine = (
+  metric: WearableSummary["metrics"][number] & Readonly<{ sourceRule?: unknown }>,
+): string => {
+  const rule = sourceRuleLine(metric.sourceRule);
+  return `- ${formatForPrompt(metric)}${rule === null ? "" : ` (source rule: ${rule})`}`;
+};
+
 const keyList = (summary: WearableSummary | null): string => {
   if (!summary || summary.metrics.length === 0) return "(none)";
-  return summary.metrics.map((metric) => `- ${formatForPrompt(metric)}`).join("\n");
+  return summary.metrics.map(keyLine).join("\n");
+};
+
+/**
+ * Where two wearables recorded the same measure on the same day, the keys
+ * above hold only the reading used, and its line gives the rule (#464). A
+ * measure held back has no key at all; this block says which and why, so the
+ * answer can say so instead of guessing a number.
+ */
+export const sourceRulesSection = (
+  summaries: Parameters<typeof heldBackNotes>[0],
+): readonly string[] => {
+  const held = heldBackNotes(summaries);
+  const ruled = [summaries.oura, summaries.whoop, summaries.googleHealth].some(
+    (summary) => summary?.metrics.some((metric) => metric.sourceRule !== undefined),
+  );
+  if (held.length === 0 && !ruled) return [];
+  return [
+    "",
+    "## Where the wearable numbers come from",
+    "When two wearables recorded the same measure on the same day, only the reading TwinLLM uses is listed; its line says which source it is and the rule. When you use such a value, name its source and the rule in Answer.",
+    ...(held.length === 0
+      ? []
+      : [
+          "These readings are held back: the sources disagree and nothing says which is right. Do not estimate them; if the question needs one, say it is held back and why.",
+          ...held.map((note) => `- ${note.day ?? "No day"}: ${note.line}`),
+        ]),
+  ];
 };
 
 type QueryToolName = (typeof TOOL_DEFINITIONS)[number]["name"];
@@ -435,6 +472,7 @@ export const buildTwinSystemPrompt = (params: {
     googleHealthBlock,
     "",
     vitronicBlock,
+    ...sourceRulesSection(offered),
     hasAny
       ? "If a question needs a metric you do not have in Available keys, say so under Uncertainty."
       : "Under Evidence Used write `- none` until a wearable is connected and synced.",

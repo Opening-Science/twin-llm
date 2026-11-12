@@ -5,6 +5,7 @@ import {
 import { parseTwinAnswer } from "@/infrastructure/parse-twin-answer";
 import { readableTitle } from "@/infrastructure/readable-title";
 import { citedValueLine } from "@/infrastructure/wearable-provenance";
+import { sourceRuleLine } from "@/infrastructure/wearable-source-rules";
 
 import type { ResponseState, TurnState } from "./conversation";
 import { stoppedAnswerText } from "./streaming-view";
@@ -64,7 +65,8 @@ const evidenceLines = (answer: ResponseState): string[] => {
       ? chips.map((chip) => {
           const value = `${chip.value}${chip.unit ? ` ${chip.unit}` : ""}`;
           const provenance = citedValueLine(chip);
-          return `- ${chip.label} ${value}${provenance ? ` · ${provenance}` : ""} (\`${chip.metricKey}\`)`;
+          const rule = sourceRuleLine(chip.sourceRule);
+          return `- ${chip.label} ${value}${provenance ? ` · ${provenance}` : ""}${rule ? ` · ${rule}` : ""} (\`${chip.metricKey}\`)`;
         })
       : (answer.document?.data_basis?.evidence_keys ?? []).map((key) => `- \`${key}\``);
   return lines.length === 0 ? [] : ["", "Evidence:", ...lines];
