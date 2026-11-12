@@ -381,10 +381,49 @@ describe("P4 disclosure", () => {
       "Positive control, loss attack",
       "Positive control, pilot 1 as reference",
     ]);
+    // 0.7825 is a half: it rounds away from zero to 0.783 (docs/coding-standards.md).
     expect(c.headline).toBe(
-      "Against the pilot 1 fine-tune the attacks scored AUROC 0.500 to 0.519; against a deliberately overfit positive control, 0.708 to 0.782. 0.5 is chance.",
+      "Against the pilot 1 fine-tune the attacks scored AUROC 0.500 to 0.519; against a deliberately overfit positive control, 0.708 to 0.783. 0.5 is chance.",
     );
     expect(c.axis).toBe("AUROC (0.5 = chance)");
+  });
+
+  test("the screen and the write-up's control table carry the same AUROC", () => {
+    // The committed summary and write-up, not fixtures: 0.7825 is exactly
+    // 1,252 of 1,600 pairs, a half, and both must round it the same way.
+    const root = join(import.meta.dir, "..", "..");
+    const doc = readFileSync(join(root, "docs/research/disclosure-2026-10.md"), "utf8");
+    const table = markdownTable(
+      doc,
+      ["Reference model", "Attack", "Level", "AUROC (95% CI)", "TPR at 1% FPR (95% CI)"],
+      "### Membership inference: positive control",
+    );
+    const docCell = (reference: string, attack: string): string => {
+      const row = table?.find(
+        (r) => r[0] === reference && r[1] === attack && r[2] === "record",
+      );
+      if (!row?.[3]) throw new Error(`no ${reference} ${attack} row`);
+      return row[3];
+    };
+    const c = card(
+      disclosureCard(
+        readDisclosure(readFileSync(join(root, RESEARCH_SOURCES.disclosure), "utf8")),
+      ),
+    );
+    const screen = (label: string): string => {
+      const readout = estimatesOf(c.figure).estimates.find(
+        (e) => e.label === label,
+      )?.readout;
+      const match = readout?.match(/AUROC (\S+) \(95 % interval (\S+)–(\S+)\)/);
+      if (!match) throw new Error(`no readout for ${label}`);
+      return `${match[1]} (${match[2]} to ${match[3]})`;
+    };
+    expect(screen("Positive control, pilot 1 as reference")).toBe(
+      docCell("pilot 1", "Reference"),
+    );
+    expect(screen("Positive control, loss attack")).toBe(docCell("none", "Loss"));
+    expect(docCell("pilot 1", "Reference")).toBe("0.783 (0.676 to 0.870)");
+    expect(c.headline).toContain("0.708 to 0.783");
   });
 
   test("a summary of another shape gives no figure", () => {
@@ -505,7 +544,7 @@ describe("researchCards", () => {
       },
       disclosure: {
         found:
-          "Membership attacks on the pilot 1 fine-tune scored AUROC 0.500 to 0.519 per record, and every interval included 0.5, the value for chance. On a deliberately overfit positive control the same attacks scored 0.708 to 0.782.",
+          "Membership attacks on the pilot 1 fine-tune scored AUROC 0.500 to 0.519 per record, and every interval included 0.5, the value for chance. On a deliberately overfit positive control the same attacks scored 0.708 to 0.783.",
       },
     });
   });

@@ -3,6 +3,7 @@ import {
   analyseModel,
   analyseProbes,
   attackTable,
+  f3,
   pearson,
   probeTable,
   tokenScores,
@@ -90,5 +91,14 @@ describe("pearson", () => {
     expect(pearson([1, 2, 3], [3, 2, 1])).toBeCloseTo(-1, 12);
     expect(pearson([1, 1], [1, 2])).toBeNull();
     expect(pearson([1], [1])).toBeNull();
+  });
+});
+
+describe("f3", () => {
+  test("an exact half rounds away from zero, as on the Lab screen", () => {
+    // 1,252 of 1,600 pairs: the control's reference AUROC in the write-up.
+    expect(f3(1252 / 1600)).toBe("0.783");
+    expect(f3(852 / 1600)).toBe("0.533");
+    expect(f3(null)).toBe("n/a");
   });
 });
