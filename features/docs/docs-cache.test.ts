@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { cachedDocsFiles, type DocsDisk } from "./docs-cache";
+import { cachedDocsFiles, type DocsDisk, renderedByText } from "./docs-cache";
 import { listDocPages, readDocPage } from "./docs-pages";
 
 type FakeFile = { text: string; modifiedAt: number };
@@ -119,5 +119,55 @@ describe("cachedDocsFiles in development", () => {
     );
     expect(await files.readText("missing.md")).toBeNull();
     expect(counts.reads).toBe(3);
+  });
+});
+
+describe("renderedByText", () => {
+  /** Reads a page through the cache and renders it, counting renders. */
+  const renderer = (files: ReturnType<typeof cachedDocsFiles>) => {
+    const rendered = renderedByText<string>();
+    const counts = { renders: 0 };
+    const render = (text: string) => {
+      counts.renders += 1;
+      return text.toUpperCase();
+    };
+    const show = async (slug: readonly string[]) => {
+      const page = await readDocPage(files, slug);
+      return page && rendered(`app:${page.path}`, page.markdown, render);
+    };
+    return { show, counts };
+  };
+
+  test("in production a second request does no render", async () => {
+    const { disk } = fakeDisk(FIXTURE);
+    const { show, counts } = renderer(cachedDocsFiles(disk, { revalidate: false }));
+    expect(await show(["runbook"])).toBe("# RUNBOOK\n");
+    expect(await show(["runbook"])).toBe("# RUNBOOK\n");
+    expect(counts.renders).toBe(1);
+  });
+
+  test("in development an mtime change gives exactly one re-render", async () => {
+    const { disk, write } = fakeDisk(FIXTURE);
+    const { show, counts } = renderer(cachedDocsFiles(disk, { revalidate: true }));
+    await show(["runbook"]);
+    await show(["runbook"]);
+    expect(counts.renders).toBe(1);
+
+    write("runbook.md", "# Runbook, revised\n");
+    expect(await show(["runbook"])).toBe("# RUNBOOK, REVISED\n");
+    await show(["runbook"]);
+    expect(counts.renders).toBe(2);
+  });
+
+  test("keys apart the same page in two link styles", () => {
+    const rendered = renderedByText<string>();
+    const counts = { renders: 0 };
+    const render = (text: string) => {
+      counts.renders += 1;
+      return text;
+    };
+    rendered("app:runbook.md", "# Runbook\n", render);
+    rendered("github:runbook.md", "# Runbook\n", render);
+    expect(counts.renders).toBe(2);
   });
 });

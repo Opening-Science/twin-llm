@@ -61,3 +61,20 @@ export const cachedDocsFiles = (
 
   return { listFiles, readText };
 };
+
+/**
+ * Keeps one rendered value per key, rendered again only when the text changes.
+ * The text comes from `cachedDocsFiles`, which hands back the same read until
+ * the file's mtime changes, so in production a page renders once per process
+ * and in development once per edit.
+ */
+export const renderedByText = <T>() => {
+  const entries = new Map<string, Readonly<{ text: string; value: T }>>();
+  return (key: string, text: string, render: (text: string) => T): T => {
+    const cached = entries.get(key);
+    if (cached?.text === text) return cached.value;
+    const value = render(text);
+    entries.set(key, { text, value });
+    return value;
+  };
+};
