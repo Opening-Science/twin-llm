@@ -41,15 +41,37 @@ describe("the totals per recipient fit the page (Customize · Privacy)", () => {
       "Values",
       "Size",
       "Stored values in text",
-      "First",
-      "Last",
+      "First (UTC)",
+      "Last (UTC)",
     ]);
+  });
+
+  test("the zone is in the heading, and a date cell stays on one line", () => {
+    const dates = [...out.matchAll(/<td class="whitespace-nowrap">([^<]*)<\/td>/g)].map(
+      (m) => m[1],
+    );
+    expect(dates).toEqual(["31 Oct 2026 14:00", "31 Oct 2026 14:00"]);
+    // The table drops the zone; the event list below keeps its full timestamp.
+    const table = out.slice(out.indexOf("<table"), out.indexOf("</table>"));
+    expect(table).not.toContain("UTC</td>");
+  });
+
+  test("the recipient takes the wrapping, at the dots of a host name", () => {
+    const host = renderToStaticMarkup(
+      <DisclosureSection
+        view={ledgerView(
+          [{ ...ENTRY, recipient: "api.ouraring.com" }],
+          [{ ...ENTRY, recipient: "api.ouraring.com", refs: [] }],
+        )}
+      />,
+    );
+    expect(host).toContain('<th scope="row">api.<wbr/>ouraring.<wbr/>com</th>');
   });
 
   test("the table wraps between words instead of scrolling sideways", () => {
     expect(out).toContain('class="lab-table-wrap lab-table-fit mt-4"');
     expect(css).toMatch(
-      /\.lab-table-fit \.lab-table th,\s*\.lab-table-fit \.lab-table td \{\s*@apply whitespace-normal;/,
+      /\.lab-table-fit \.lab-table th,\s*\.lab-table-fit \.lab-table td \{\s*@apply px-2 whitespace-normal;/,
     );
     // Wrapping inside a word would let the columns shrink to a letter each.
     const rule = css.slice(css.indexOf(".lab-table-fit"));

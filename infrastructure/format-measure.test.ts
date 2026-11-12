@@ -16,6 +16,7 @@ import {
   formatTimestamp,
   formatUcumUnit,
   formatUnit,
+  formatUtcCell,
   isMainSleepKey,
   isoLocalDate,
   measureKindFor,
@@ -198,6 +199,20 @@ describe("formatTimestamp", () => {
   test("missing or invalid is a dash", () => {
     expect(formatTimestamp(null)).toBe("—");
     expect(formatTimestamp(new Date(Number.NaN))).toBe("—");
+  });
+});
+
+describe("formatUtcCell", () => {
+  test("the UTC day and minute with no comma and no zone, for a column that names it", () => {
+    expect(formatUtcCell(new Date(Date.UTC(2026, 10, 12, 15, 58, 40)))).toBe(
+      "12 Nov 2026 15:58",
+    );
+    expect(formatUtcCell(new Date(Date.UTC(2026, 0, 1, 0, 5)))).toBe("1 Jan 2026 00:05");
+  });
+
+  test("missing or invalid is a dash", () => {
+    expect(formatUtcCell(undefined)).toBe("—");
+    expect(formatUtcCell(new Date(Number.NaN))).toBe("—");
   });
 });
 

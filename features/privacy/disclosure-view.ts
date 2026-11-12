@@ -13,6 +13,7 @@ import {
   formatBytes,
   formatNumber,
   formatTimestamp,
+  formatUtcCell,
 } from "@/infrastructure/format-measure";
 
 /**
@@ -27,7 +28,9 @@ export type RecipientView = Readonly<{
   recipient: string;
   direction: "Sent" | "Received" | "Blocked";
   events: string;
+  /** UTC, without the zone: the column heading names it ("First (UTC)"). */
   since: string;
+  /** UTC, without the zone, like `since`. */
   last: string;
   values: string;
   size: string;
@@ -104,8 +107,8 @@ const recipientView = (total: RecipientTotal): RecipientView => ({
     total.syntheticEvents === 0
       ? formatNumber(total.events, 0)
       : `${formatNumber(total.events, 0)}, ${formatNumber(total.syntheticEvents, 0)} synthetic`,
-  since: formatTimestamp(total.first),
-  last: formatTimestamp(total.last),
+  since: formatUtcCell(total.first),
+  last: formatUtcCell(total.last),
   values: formatNumber(total.refs, 0),
   size:
     total.unmeasured === total.events

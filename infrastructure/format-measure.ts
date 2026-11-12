@@ -219,18 +219,37 @@ export const formatDate = (
   return style === "long" ? dayLabel(d!, m!, y!) : dayLabel(d!, m!);
 };
 
+/** A moment's UTC day and clock, or null when it is missing or invalid. */
+const utcParts = (
+  moment: Date | null | undefined,
+): Readonly<{ day: string; clock: string }> | null =>
+  !moment || Number.isNaN(moment.getTime())
+    ? null
+    : {
+        day: dayLabel(
+          moment.getUTCDate(),
+          moment.getUTCMonth() + 1,
+          moment.getUTCFullYear(),
+        ),
+        clock: `${pad2(moment.getUTCHours())}:${pad2(moment.getUTCMinutes())}`,
+      };
+
 /**
  * A moment as `16 Oct 2026, 09:12 UTC`, for event logs such as the
  * disclosure ledger. UTC, so a row reads the same for every viewer.
  */
 export const formatTimestamp = (moment: Date | null | undefined): string => {
-  if (!moment || Number.isNaN(moment.getTime())) return EMPTY_VALUE;
-  const day = dayLabel(
-    moment.getUTCDate(),
-    moment.getUTCMonth() + 1,
-    moment.getUTCFullYear(),
-  );
-  return `${day}, ${pad2(moment.getUTCHours())}:${pad2(moment.getUTCMinutes())} UTC`;
+  const parts = utcParts(moment);
+  return parts === null ? EMPTY_VALUE : `${parts.day}, ${parts.clock} UTC`;
+};
+
+/**
+ * The same UTC moment as `16 Oct 2026 09:12`, without the zone: for a table
+ * column whose heading names the zone ("First (UTC)"), so the cell stays short.
+ */
+export const formatUtcCell = (moment: Date | null | undefined): string => {
+  const parts = utcParts(moment);
+  return parts === null ? EMPTY_VALUE : `${parts.day} ${parts.clock}`;
 };
 
 const zonedFormats = new Map<string, Intl.DateTimeFormat>();
