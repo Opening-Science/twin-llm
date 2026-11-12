@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { runnableSkillsIn } from "./load-skills";
+import { runnableSkillsIn, skillsReader } from "./load-skills";
 
 /**
  * Which skills the app offers: only folders that validate and whose eval
@@ -139,5 +139,32 @@ describe("runnableSkillsIn", () => {
     ]);
     expect(skills[6]?.views).toEqual(["chart.timeseries", "chart.compare"]);
     expect(skills[7]?.views).toEqual(["chart.timeseries"]);
+  });
+});
+
+describe("skillsReader", () => {
+  const counting = () => {
+    const counts = { loads: 0 };
+    const load = () => {
+      counts.loads += 1;
+      return [];
+    };
+    return { counts, load };
+  };
+
+  test("reads once in production", () => {
+    const { counts, load } = counting();
+    const read = skillsReader(load, () => true);
+    read();
+    read();
+    expect(counts.loads).toBe(1);
+  });
+
+  test("reads on every call in development", () => {
+    const { counts, load } = counting();
+    const read = skillsReader(load, () => false);
+    read();
+    read();
+    expect(counts.loads).toBe(2);
   });
 });

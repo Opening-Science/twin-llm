@@ -1,7 +1,12 @@
 import "server-only";
 
-import { readdir, readFile } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
 import { join, posix, relative, resolve, sep } from "node:path";
+
+import { isProductionRuntime } from "@/infrastructure/env";
+import { processSingleton } from "@/infrastructure/process-singleton";
+
+import { cachedDocsFiles, type DocsDisk } from "./docs-cache";
 
 /**
  * The reference pages under `docs/`, served in the app. A slug is the file
@@ -109,7 +114,7 @@ const inDocs = (path: string): string | null => {
   return full.startsWith(`${root}${sep}`) ? full : null;
 };
 
-export const docsFiles: DocsFiles = {
+const docsDisk: DocsDisk = {
   listFiles: async () => {
     const entries = await readdir(docsRoot(), { recursive: true, withFileTypes: true });
     return entries
@@ -117,6 +122,16 @@ export const docsFiles: DocsFiles = {
       .map((entry) =>
         relative(docsRoot(), join(entry.parentPath, entry.name)).split(sep).join("/"),
       );
+  },
+  modifiedAt: async (path) => {
+    const full = inDocs(path);
+    if (full === null) return null;
+    try {
+      return (await stat(full)).mtimeMs;
+    } catch (error) {
+      if (isMissing(error)) return null;
+      throw error;
+    }
   },
   readText: async (path) => {
     const full = inDocs(path);
@@ -128,6 +143,17 @@ export const docsFiles: DocsFiles = {
       throw error;
     }
   },
+};
+
+/** Kept on `globalThis`, so a hot reload in development keeps what it read. */
+const cachedDocs = processSingleton("twinllm.docsFiles", () =>
+  cachedDocsFiles(docsDisk, { revalidate: !isProductionRuntime() }),
+);
+
+/** The `docs/` folder through the per-process cache in `docs-cache.ts`. */
+export const docsFiles: DocsFiles = {
+  listFiles: () => cachedDocs().listFiles(),
+  readText: (path) => cachedDocs().readText(path),
 };
 
 export const readDocImage = async (
