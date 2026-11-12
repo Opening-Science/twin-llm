@@ -196,12 +196,20 @@ const dayLabel = (day: number, month: number, year?: number): string =>
 /**
  * A calendar day as `16 Oct 2026` (or `16 Oct`). Takes YYYY-MM-DD, which is
  * how every metric date is stored, and reads it as that day in UTC so the
- * label never shifts with the viewer's time zone.
+ * label never shifts with the viewer's time zone. A `Date` is a moment, so
+ * it shows the viewer's own calendar day (`isoLocalDate`): a consent given
+ * at 00:30 local time is that day, not the UTC day before.
  */
 export const formatDate = (
-  isoDay: string | null | undefined,
+  day: string | Date | null | undefined,
   style: "long" | "short" = "long",
 ): string => {
+  if (day instanceof Date) {
+    return Number.isNaN(day.getTime())
+      ? EMPTY_VALUE
+      : formatDate(isoLocalDate(day), style);
+  }
+  const isoDay = day;
   if (!isoDay || !ISO_DATE_ONLY.test(isoDay)) return EMPTY_VALUE;
   const [y, m, d] = isoDay.split("-").map(Number);
   const date = new Date(Date.UTC(y!, m! - 1, d!));

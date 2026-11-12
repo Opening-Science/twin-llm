@@ -1126,6 +1126,39 @@ describe("units and durations", () => {
     expect(withUnit("114", undefined)).toBe("114");
   });
 
+  test("MIN and MAX go through the shared formatter: halves up, thousands grouped", () => {
+    const out = html(
+      <RangeBars
+        category="steps"
+        buckets={[
+          { min: 55.5, max: 92 },
+          { min: 61, max: 1250.5 },
+        ]}
+      />,
+    );
+    expect(out).toContain("MAX 1,251");
+    expect(out).toContain("MIN 56");
+    expect(withUnit("—", "bpm")).toBe("—");
+  });
+
+  test("ring parts and score read a dash for a missing value, not NaN", () => {
+    const out = html(
+      <ScoreRing
+        category="sleep"
+        title="Sleep score"
+        band="High"
+        parts={[
+          { label: "Duration", value: Number.NaN, max: 50 },
+          { label: "Bedtime", value: 24.5, max: 30 },
+        ]}
+      />,
+    );
+    expect(out).toContain("Duration: —/50");
+    expect(out).toContain("Bedtime: 25/30");
+    // The score in the middle of the ring.
+    expect(out).toContain(">—</text>");
+  });
+
   test("stage totals use the shared duration: a whole hour reads 7 hr", () => {
     expect(hoursMinutes(420)).toBe("7 hr");
     expect(hoursMinutes(424)).toBe("7 hr 4 min");
