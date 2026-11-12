@@ -259,13 +259,15 @@ export const isDistinctiveId = (id: string): boolean =>
 
 /**
  * One imported reading, opened: its code (null without one), number and unit
- * as stored, and its day (`2026-03-14`) when the file gave one.
+ * as stored, and its UTC day (`2026-03-14`) when the file gave one. `instant`
+ * when the file gave a time: the person's own day may be the one either side.
  */
 export type StoredReading = Readonly<{
   code: string | null;
   value: string;
   unit: string;
   date?: string | null;
+  instant?: boolean;
 }>;
 
 /**
@@ -540,6 +542,20 @@ const isoDay = (year: number, month: number, day: number): string | null => {
     : null;
 };
 
+/**
+ * The days a stored UTC day may be written as: itself, or for a time
+ * (`instant`) also the day before and after, since no time zone is stored
+ * and a night reading at 23:30 UTC is the next day in Zurich.
+ */
+export const daysAround = (day: string, instant: boolean): readonly string[] => {
+  if (!instant) return [day];
+  const at = Date.parse(`${day}T00:00:00Z`);
+  if (Number.isNaN(at)) return [day];
+  const shifted = (days: number): string =>
+    new Date(at + days * 86_400_000).toISOString().slice(0, 10);
+  return [shifted(-1), day, shifted(1)];
+};
+
 /** A day written in the text: its ISO spelling and where it stands. */
 export type DateInText = Readonly<{ day: string; start: number; end: number }>;
 
@@ -602,9 +618,11 @@ const datedKeysIn = (text: string, stored: StoredValues): Set<string> => {
     const value = canonicalNumber(reading.value);
     const day = reading.date ?? null;
     if (value === null || day === null) return [];
+    const days = daysAround(day, reading.instant === true);
     return dates.some(
       (date) =>
-        date.day === day && numbersIn(around(date)).some((each) => each.value === value),
+        days.includes(date.day) &&
+        numbersIn(around(date)).some((each) => each.value === value),
     )
       ? [`reading|${day}|${value}`]
       : [];

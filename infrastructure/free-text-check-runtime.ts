@@ -85,6 +85,7 @@ const storedValuesOf = async (actor: string, userId: string): Promise<StoredValu
       value: cipher.openText(OBSERVATIONS, "value", row.id, row.value),
       unit: cipher.openText(OBSERVATIONS, "unit", row.id, row.unit),
       date: DAY_PRECISIONS.has(row.effectivePrecision) ? dayOf(row.effectiveAt) : null,
+      instant: row.effectivePrecision === "instant",
     })),
     records: records.map((row) => ({
       code: openOrNull(cipher, CLINICAL, "code", row.id, row.code),

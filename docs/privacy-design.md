@@ -671,8 +671,10 @@ recipient.
   number, or a clinical record's name (four characters or more) or code, within 80
   characters of that same row's own day, written in ISO (`2026-03-14`, also before a
   time) or en-GB (`14/03/2026`, `14.3.2026`, `14-03-2026`, `14 March 2026`, `14th Mar
-2026`). A reading has a day when its file gave a whole day (`day` or `instant`
-  precision, read as its UTC day); a record's day is its onset or authored day. A day's
+2026`). A reading has a day when its file gave a whole day (`day` precision) or a time
+  (`instant`, read as its UTC day); since no time zone is stored, an `instant` reading
+  also matches the day before and after its UTC day (a night reading at 23:30 UTC is
+  the next day in Zurich), never further. A record's day is its onset or authored day. A day's
   own digits are not read as a number, a day alone never counts (too many texts name
   one), and month-first days and two-digit years are not read. A dated value may also
   be a lab value: the kinds are counted separately. A stored value that also stands in what the

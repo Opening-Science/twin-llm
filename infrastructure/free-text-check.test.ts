@@ -15,6 +15,7 @@ import {
   MAX_LOOKUPS,
   canonicalNumber,
   datesIn,
+  daysAround,
   NO_STORED_VALUES,
   parseFreeTextMatches,
   type StoredValues,
@@ -492,6 +493,43 @@ describe("storedValueMatches: dated values", () => {
     expect(dated("14/03/2026 heart rate 72")).toBe(0);
     // Too far apart.
     expect(dated(`14/03/2026 ${"x".repeat(100)} 5.4`)).toBe(0);
+  });
+
+  test("an instant reading: its UTC day or the day either side, no further", () => {
+    const night: StoredValues = {
+      ...NO_STORED_VALUES,
+      readings: [
+        // 2026-03-13T23:30Z, 00:30 on 14 March in Zurich.
+        { code: null, value: "48", unit: "ms", date: "2026-03-13", instant: true },
+        // 2026-03-12T12:00Z: two days before 14 March anywhere.
+        { code: null, value: "61", unit: "ms", date: "2026-03-12", instant: true },
+      ],
+    };
+    const count = (text: string) =>
+      storedValueMatches(text, night).find((match) => match.kind === FREE_TEXT_KIND.dated)
+        ?.count;
+    expect(count("On 14 March 2026 my overnight HRV was 48.")).toBe(1);
+    expect(count("On 14 March 2026 my overnight HRV was 61.")).toBe(0);
+    // A day alone, or the day's own digits, still never count.
+    expect(count("14 March 2026, 13/03/2026")).toBe(0);
+    expect(daysAround("2026-03-01", true)).toEqual([
+      "2026-02-28",
+      "2026-03-01",
+      "2026-03-02",
+    ]);
+    expect(daysAround("2026-03-01", false)).toEqual(["2026-03-01"]);
+  });
+
+  test("a whole-day reading is not shifted", () => {
+    const day: StoredValues = {
+      ...NO_STORED_VALUES,
+      readings: [{ code: null, value: "48", unit: "ms", date: "2026-03-13" }],
+    };
+    expect(
+      storedValueMatches("On 14 March 2026 it was 48.", day).find(
+        (match) => match.kind === FREE_TEXT_KIND.dated,
+      )?.count,
+    ).toBe(0);
   });
 
   test("a dated value the person typed is theirs", () => {
