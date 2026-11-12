@@ -6,12 +6,22 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
 import { prepareSkeleton } from "@/features/digital-twin/anatomy/prepare-skeleton";
 import { fitSkeletonToScan, type ScanFrame } from "@/packages/anatomy/fit";
-import { parseSkeletonAtlas } from "@/packages/anatomy/open-skeleton";
+import { skeletonFromAtlasJson } from "@/packages/anatomy/open-skeleton";
 
 /**
- * Checks the placement on a real open-anatomy build. The GLB is public CC BY
- * CT data but never committed, so this runs only where ANATOMY_SKELETON_GLB
- * names one (e.g. open-anatomy's data/atlas/s0086/s0086.skeleton.glb).
+ * Checks the placement on a real open-anatomy build, with atlas.json beside it.
+ *
+ * This is skipped in CI, on purpose. It needs a real CT case, and this
+ * repository commits synthetic or demo data only: the build is derived from
+ * one person's (anonymised, CC BY 4.0) CT, is 28 MB for s0086, and changes
+ * with every open-anatomy build, so no copy or cut-down fixture of it is
+ * committed. CI covers the same placement rules on synthetic bones instead
+ * (`packages/anatomy/fit.test.ts`, "fitSkeletonToScan": hips on the joints,
+ * a leaning spine stood upright, front facing -Y; `prepare-skeleton.test.ts`
+ * for the hip box and spine ends). What only this test catches is a real
+ * file's own frame or labels differing from what those assume. Run it
+ * locally, before a new build or a change to the fit, with
+ * ANATOMY_SKELETON_GLB=/path/to/open-anatomy/data/atlas/s0086/s0086.skeleton.glb.
  */
 const GLB = process.env.ANATOMY_SKELETON_GLB ?? "";
 const present = GLB.length > 0 && existsSync(GLB);
@@ -31,9 +41,13 @@ describe.skipIf(!present)("a real CT skeleton, placed in a body", () => {
   const load = async () => {
     const bytes = readFileSync(GLB);
     const atlasPath = join(dirname(GLB), "atlas.json");
-    const atlas = parseSkeletonAtlas(
-      existsSync(atlasPath) ? JSON.parse(readFileSync(atlasPath, "utf8")) : {},
+    // The same fail-closed reading as the status route.
+    const status = skeletonFromAtlasJson(
+      existsSync(atlasPath) ? readFileSync(atlasPath, "utf8") : null,
+      null,
     );
+    if (!status.skeleton) throw new Error(`atlas.json beside the GLB: ${status.problem}`);
+    const atlas = status.skeleton;
     const gltf = await new GLTFLoader().parseAsync(
       bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
       "",
