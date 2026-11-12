@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
 import {
+  gbdProbeRefusal,
   missingEnvByScenario,
   missingEnvNotice,
   REMOTE_GBD_ENV,
@@ -91,5 +92,20 @@ describe("S4's env check (#273)", () => {
     expect(missingEnvNotice([item], () => false)).toEqual([
       "SX: 1 item will be skipped as MISSING_ENV; unset: OTHER_KEY.",
     ]);
+  });
+});
+
+describe("S4 probe rows on the local store (#273)", () => {
+  test("a clean store has no refusal; Germany, 2015 or both name what they hold", () => {
+    expect(gbdProbeRefusal({ germany: false, year2015: false })).toBeNull();
+    expect(gbdProbeRefusal({ germany: true, year2015: false })).toContain(
+      "holds Germany rows,",
+    );
+    expect(gbdProbeRefusal({ germany: false, year2015: true })).toContain(
+      "holds 2015 rows,",
+    );
+    const both = gbdProbeRefusal({ germany: true, year2015: true }) ?? "";
+    expect(both).toContain("holds Germany and 2015 rows,");
+    expect(both.includes("\n")).toBe(false);
   });
 });

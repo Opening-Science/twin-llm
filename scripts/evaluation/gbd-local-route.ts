@@ -11,6 +11,22 @@ export const withLocalGbd =
   (name: string): boolean =>
     hasEnv(name) || (localGbd && REMOTE_GBD_ENV.includes(name));
 
+/** What the local store holds of the S4 probes' place and year (`gbdProbeRows`). */
+export type GbdProbeRows = Readonly<{ germany: boolean; year2015: boolean }>;
+
+/**
+ * Q-S4-09 (Germany) and Q-S4-10 (2015) expect no estimate. A local store
+ * holding either turns them into answerable questions, so an S4 run on it is
+ * refused with one line: the reason and the fix. Null when the store is clean.
+ */
+export const gbdProbeRefusal = (rows: GbdProbeRows): string | null => {
+  const held = [rows.germany ? "Germany" : null, rows.year2015 ? "2015" : null].filter(
+    (part): part is string => part !== null,
+  );
+  if (held.length === 0) return null;
+  return `S4 not run: the local GBD store holds ${held.join(" and ")} rows, which make the out-of-catalogue probes Q-S4-09 and Q-S4-10 answerable; import into a fresh eval database without Germany and 2015 (docs/evaluation/question-set.md, "Refresh").`;
+};
+
 type EnvItem = Readonly<{
   id: string;
   scenario: string;

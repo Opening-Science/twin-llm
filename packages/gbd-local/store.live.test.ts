@@ -6,11 +6,12 @@ import {
   liveDatabase,
   OVERLAP_FILE_A,
   OVERLAP_FILE_B,
+  PROBE_YEAR_FILE,
   requireEmptyGbdStore,
   runLive,
   storedEstimates,
 } from "./made-up-overlap.test-helpers";
-import { deleteGbdImport, gbdImportStore, listGbdImports } from "./store";
+import { deleteGbdImport, gbdImportStore, gbdProbeRows, listGbdImports } from "./store";
 
 /**
  * The GBD store against a real Postgres (#428): two overlapping MADE-UP
@@ -120,5 +121,15 @@ describe.skipIf(!runLive)("GBD store with shared estimates (RUN_LIVE=1)", () => 
     ).rejects.toThrow("finish failed");
     expect(await storedEstimates(db)).toEqual(["Switzerland 2021", "Switzerland 2023"]);
     expect(await held()).toEqual([["a.csv", 2]]);
+  });
+
+  test("the S4 probe check sees one Germany row and one 2015 row (#273)", async () => {
+    await load(OVERLAP_FILE_A, "a.csv");
+    expect(await gbdProbeRows(db)).toEqual({ germany: false, year2015: false });
+    await load(OVERLAP_FILE_B, "b.csv");
+    expect(await gbdProbeRows(db)).toEqual({ germany: true, year2015: false });
+    await clearGbdStore(db);
+    await load(PROBE_YEAR_FILE, "2015.csv");
+    expect(await gbdProbeRows(db)).toEqual({ germany: false, year2015: true });
   });
 });

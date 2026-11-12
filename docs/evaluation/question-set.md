@@ -177,7 +177,11 @@ no token; `LOCAL_ONLY=true` can stay. Import GBD 2023 Results Tool CSVs into
 the eval database covering the measures, causes, locations, sexes, ages and
 years Q-S4-01 to Q-S4-08 ask. Leave Germany and the year 2015 out: Q-S4-09
 and Q-S4-10 are out-of-catalogue probes, and an import that holds them turns
-the probes into answerable questions their expectations do not fit.
+the probes into answerable questions their expectations do not fit. The
+harness checks this: before a run with any S4 item on the local route it looks
+for a Germany row or a 2015 row and, if either is stored, stops with
+`GBD_PROBE_ROWS` and one line naming the rows and the fix. The remote route is
+not checked.
 
 ```sh
 bun --env-file=.env.eval --preload ./features/chat/response/preload-server-only.mjs \
