@@ -153,7 +153,7 @@ export const AnatomyLayers = ({
   useEffect(() => {
     if (!requested) return;
     let cancelled = false;
-    let shown: PreparedAtlas | null = null;
+    let shown: Loaded | null = null;
     let lastPercent = -1;
     onLoad({ kind: "loading", percent: null });
     loadAtlasGltf(url, (fraction) => {
@@ -187,7 +187,7 @@ export const AnatomyLayers = ({
           disposeObject3D(ready.atlas.root);
           return;
         }
-        shown = ready.atlas;
+        shown = ready;
         preparedRef.current = ready.atlas;
         setLoaded(ready);
       })
@@ -199,8 +199,10 @@ export const AnatomyLayers = ({
       preparedRef.current = null;
       setLoaded(null);
       if (shown) {
-        shown.root.removeFromParent();
-        disposeObject3D(shown.root);
+        shown.atlas.root.removeFromParent();
+        disposeObject3D(shown.atlas.root);
+        // The skeleton's bone texture is not part of any mesh.
+        shown.skin?.skeleton.dispose();
       }
     };
   }, [requested, atlasId, url, retry, segmentFit, onLoad]);

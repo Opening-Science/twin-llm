@@ -163,10 +163,23 @@ export const trunkFrame = (joints: Joints): TrunkFrame => {
 /** A segment's line and directions, before its outline is known. */
 type Line = Pick<Segment, "origin" | "axis" | "left" | "front" | "length">;
 
-const lineBetween = (from: Vector3, to: Vector3, side: Vector3): Line => {
+/** A reference shorter than this across a limb cannot say which way the limb's side faces. */
+const MIN_ACROSS = 0.2;
+
+/**
+ * `side` is the direction the line's "left" keeps. A limb may point along
+ * it (a forearm held forward points along the trunk's front), where it says
+ * nothing. With `up` (the trunk's axis, opposite to how a limb hangs), the
+ * reference turns with the limb instead: a limb swung from hanging to
+ * pointing along `side` has its left along `up`, as the swing itself would
+ * leave it. Where even that lies along the limb, `up` alone is used.
+ */
+const lineBetween = (from: Vector3, to: Vector3, side: Vector3, up?: Vector3): Line => {
   const along = to.clone().sub(from);
   const axis = along.clone().normalize();
-  const left = across(side, axis);
+  const turned = up ? side.clone().addScaledVector(up, axis.dot(side)) : side;
+  const flat = turned.clone().addScaledVector(axis, -turned.dot(axis));
+  const left = up && flat.length() < MIN_ACROSS ? across(up, axis) : flat.normalize();
   return {
     origin: from.clone(),
     axis,
@@ -217,14 +230,19 @@ const jointLines = (
       joints.wrist[side].clone().addScaledVector(forearm, NOMINAL_END.hand * unit);
     const { hip, knee, ankle, shoulder, elbow, wrist } = joints;
     return [
-      [`thigh${side}`, lineBetween(hip[side], knee[side], trunk.left)],
-      [`shin${side}`, lineBetween(knee[side], ankle[side], trunk.left)],
-      [`foot${side}`, lineBetween(ankle[side], toe, trunk.left)],
-      [`upperArm${side}`, lineBetween(shoulder[side], elbow[side], trunk.front)],
-      [`forearm${side}`, lineBetween(elbow[side], wrist[side], trunk.front)],
+      [`thigh${side}`, lineBetween(hip[side], knee[side], trunk.left, trunk.axis)],
+      [`shin${side}`, lineBetween(knee[side], ankle[side], trunk.left, trunk.axis)],
+      [`foot${side}`, lineBetween(ankle[side], toe, trunk.left, trunk.axis)],
+      [
+        `upperArm${side}`,
+        lineBetween(shoulder[side], elbow[side], trunk.front, trunk.axis),
+      ],
+      [`forearm${side}`, lineBetween(elbow[side], wrist[side], trunk.front, trunk.axis)],
       [
         `hand${side}`,
-        lineBetween(wrist[side], finger, ends?.palm?.[side] ?? trunk.front),
+        ends?.palm
+          ? lineBetween(wrist[side], finger, ends.palm[side])
+          : lineBetween(wrist[side], finger, trunk.front, trunk.axis),
       ],
     ] as const;
   });

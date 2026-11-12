@@ -7,6 +7,7 @@ import {
   Mesh,
   MeshStandardMaterial,
   type Object3D,
+  Quaternion,
   Raycaster,
   Vector3,
 } from "three";
@@ -17,7 +18,7 @@ import {
   HEAVY_FIGURE,
   syntheticFigure,
 } from "@/packages/anatomy/fixtures/synthetic-figure";
-import { SEGMENT_IDS, segmentsFromSkin } from "@/packages/anatomy/segments";
+import { fitMatrices, SEGMENT_IDS, segmentsFromSkin } from "@/packages/anatomy/segments";
 
 import { clipPose } from "../motion/clip-pose";
 import { applyPose, bindRig } from "../motion/rig-map";
@@ -210,6 +211,28 @@ describe("the segment fit on a synthetic scan", () => {
     expect(
       shown(mesh, 0).distanceTo(MARKS.kneeL.clone().applyMatrix4(matrix)),
     ).toBeLessThan(1e-5);
+  });
+
+  test("reads a scan whose forearm points straight forward", () => {
+    const bentScan = syntheticScan(AVERAGE_FIGURE);
+    const forearm = bentScan.root.getObjectByName("mixamorigLeftForeArm")!;
+    const hand = bentScan.root.getObjectByName("mixamorigLeftHand")!;
+    // Turn the forearm onto the scan's front (-Y), the elbow where it was.
+    const from = hand
+      .getWorldPosition(new Vector3())
+      .sub(forearm.getWorldPosition(new Vector3()));
+    forearm.applyQuaternion(
+      new Quaternion().setFromUnitVectors(from.normalize(), new Vector3(0, -1, 0)),
+    );
+    const read = readBody(bentScan.root, bindRig(bentScan.root)!)!;
+    const segment = read.segments.forearmL;
+    expect(segment.axis.y).toBeLessThan(-0.95);
+    expect(segment.left.length()).toBeCloseTo(1, 6);
+    expect(Math.abs(segment.left.z)).toBeGreaterThan(0.9);
+    expect(segment.halfWidth).toBeCloseTo(AVERAGE_FIGURE.radius.forearm, 2);
+    expect(segment.halfDepth).toBeCloseTo(AVERAGE_FIGURE.radius.forearm, 2);
+    const { ok } = fitMatrices(segments, read.segments, (index) => held.has(index));
+    expect(ok).toBe(true);
   });
 
   test("a scan without hand bones is not read", () => {

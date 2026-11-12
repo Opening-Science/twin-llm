@@ -127,6 +127,47 @@ describe("a limb whose joint line is off centre", () => {
   });
 });
 
+describe("a limb pointing along the trunk's front or left", () => {
+  const frameOf = (joints: Joints, id: "forearmL" | "thighL") =>
+    buildSegments(joints, null)[id];
+  const bent = (wrist: Vector3): Joints => ({
+    ...average.joints,
+    wrist: { ...average.joints.wrist, L: wrist },
+  });
+  const elbow = average.joints.elbow.L;
+
+  test("a forearm held straight forward keeps a whole frame, its side turned up", () => {
+    const forearm = frameOf(bent(elbow.clone().add(new Vector3(0, 0, 0.25))), "forearmL");
+    expect(forearm.axis.z).toBeCloseTo(1, 9);
+    expect(forearm.left.length()).toBeCloseTo(1, 9);
+    expect(forearm.left.y).toBeCloseTo(1, 9);
+    expect(forearm.front.length()).toBeCloseTo(1, 9);
+  });
+
+  test("the frame turns smoothly as the forearm swings from hanging to forward", () => {
+    const at = (degrees: number): Vector3 => {
+      const angle = (degrees * Math.PI) / 180;
+      const wrist = elbow.clone().add(new Vector3(0, -Math.cos(angle), Math.sin(angle)));
+      return frameOf(bent(wrist), "forearmL").left;
+    };
+    expect(at(0).z).toBeCloseTo(1, 9);
+    for (let degrees = 0; degrees < 90; degrees += 5) {
+      expect(at(degrees).angleTo(at(degrees + 5))).toBeLessThan(0.2);
+    }
+  });
+
+  test("a leg held out sideways keeps a whole frame too", () => {
+    const hip = average.joints.hip.L;
+    const split: Joints = {
+      ...average.joints,
+      knee: { ...average.joints.knee, L: hip.clone().add(new Vector3(0.4, 0, 0)) },
+    };
+    const thigh = frameOf(split, "thighL");
+    expect(thigh.left.length()).toBeCloseTo(1, 9);
+    expect(Math.abs(thigh.left.dot(thigh.axis))).toBeLessThan(1e-9);
+  });
+});
+
 describe("segmentsFromSkin", () => {
   test("tells the segments apart by distance alone, as for an atlas", () => {
     const { points } = skinOf(average);
