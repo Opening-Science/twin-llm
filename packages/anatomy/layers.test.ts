@@ -4,6 +4,7 @@ import {
   applyMask,
   dampDepth,
   depthPosition,
+  drawnIsolate,
   layerMix,
   snapDepth,
   stepStop,
@@ -127,5 +128,19 @@ describe("viewMix", () => {
         });
       }
     }
+  });
+});
+
+describe("drawnIsolate", () => {
+  test("isolate hides the scan only once the isolated layer is showing", () => {
+    const nothing = () => false;
+    const skeleton = (layer: string) => layer === "skeleton";
+    // Loading, or after a failed load or fit: the scan stays.
+    expect(drawnIsolate("skeleton", nothing)).toBeNull();
+    expect(viewMix("scan", 0, drawnIsolate("skeleton", nothing)).visible).toBe(true);
+    // Placed and showing: the skeleton alone.
+    expect(drawnIsolate("skeleton", skeleton)).toBe("skeleton");
+    expect(viewMix("scan", 0, drawnIsolate("skeleton", skeleton)).visible).toBe(false);
+    expect(drawnIsolate(null, skeleton)).toBeNull();
   });
 });

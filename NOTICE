@@ -38,6 +38,15 @@ The files were merged, simplified and shaded (ambient occlusion) by the Open Sci
 
 `bun run blender:fit-atlas` makes fitted copies of these atlases on the local machine (`data/anatomy/fitted/`, gitignored): the limbs are turned toward a demo body's joints (and, only with `--stretch`, lengthened or shortened along their own axes). They are derivatives and keep the credit above. BodyParts3D derivatives carry the BodyParts3D credit; until DBCLS confirms the relicence in writing, the worst case is share-alike under CC BY-SA 2.1 JP on those model files, never on this code. HRA derivatives are CC BY 4.0; cite the HRA 3D reference organs (Browne et al. 2022) and add "Courtesy of the U.S. National Library of Medicine", since the HRA organs come from the Visible Human data. `bun run anatomy:quantise-fitted` stores them with quantised positions (`*.fitted.quantised.glb`), and the Digital Twin shows them on the demo bodies only when "Fit atlas to body" is ticked, with the atlas's own credit and a note that it was refitted limb by limb in Blender. The scripts in `scripts/blender/` are this repository's code; they run inside Blender (GPL) as plain scripts and are not Blender add-ons.
 
+## open-anatomy CT skeleton
+
+With `ANATOMY_SKELETON_GLB` set, the Skeleton layer draws a skeleton built by [Opening-Science/open-anatomy](https://github.com/Opening-Science/open-anatomy) (code Apache-2.0, Copyright (c) 2026 Open Science Foundation; assets derived from CC BY sources are under CC BY). The build is a local file and is not part of this repository; the viewer shows its credit whenever the CT skeleton is displayed, from its `atlas.json` when it carries one.
+
+- Bones segmented from one CT case (Stage 1: s0086) of the TotalSegmentator dataset v2.0.1, Jakob Wasserthal, Zenodo 2023, doi:10.5281/zenodo.10047292, licensed CC BY 4.0. Please also cite Wasserthal J. et al., TotalSegmentator: Robust Segmentation of 104 Anatomic Structures in CT Images, Radiology: Artificial Intelligence 2023, doi:10.1148/ryai.230024.
+- Segmented with [TotalSegmentator](https://github.com/wasserth/TotalSegmentator) (code and the "total" task weights, Apache-2.0). Parts marked modelled (the costal cartilages) were built by open-anatomy, not segmented.
+
+TwinLLM only places, shades and spreads the bones. Details: `docs/anatomy.md`.
+
 ## Synthetic demo bodies
 
 `bun run anatomy:fetch` also downloads two synthetic demo bodies into the gitignored `data/anatomy/`. They are not part of this repository and are licensed separately (Apache-2.0 code over CC0-1.0 shape assets); the viewer shows this credit whenever the demo body is displayed:

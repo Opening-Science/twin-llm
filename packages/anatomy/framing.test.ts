@@ -41,6 +41,15 @@ describe("threeQuarterFraming", () => {
     expect(framing.far).toBeGreaterThan(framing.position.distanceTo(framing.target));
   });
 
+  test("zooming in to 5 cm from the front ribs still draws them", () => {
+    const framing = threeQuarterFraming(TRUNK, 40, 1.4)!;
+    // The near plane does not depend on how far back the framing starts.
+    expect(framing.near).toBeCloseTo(0.61 / 80, 6);
+    expect(framing.near).toBeLessThan(0.05);
+    const apart = threeQuarterFraming(spreadBox(TRUNK, 1), 40, 1.4)!;
+    expect(apart.near).toBeLessThan(0.05);
+  });
+
   test("a kept direction only moves the camera in or out", () => {
     const side = new Vector3(1, 0, 0);
     const framing = threeQuarterFraming(TRUNK, 40, 1.4, side)!;

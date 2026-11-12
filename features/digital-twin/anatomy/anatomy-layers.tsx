@@ -17,6 +17,7 @@ import {
   ATLAS_LAYER_IDS,
   dampDepth,
   partShown,
+  drawnIsolate,
   viewMix,
   type AtlasLayerId,
 } from "@/packages/anatomy/layers";
@@ -378,13 +379,19 @@ export const AnatomyLayers = ({
       layers: shown,
       hiddenSystems: hidden,
       reducedMotion: reduced,
-      isolate: alone,
+      isolate: chosen,
       explode: spread,
     } = live.current;
     const atlas = preparedRef.current;
     const ct = bonesRef.current;
     const ctReady = ct !== null && bonesFitOkRef.current;
-    const ready = (atlas !== null && fitOkRef.current) || ctReady;
+    const atlasReady = atlas !== null && fitOkRef.current;
+    const ready = atlasReady || ctReady;
+    // The scan hides for an isolated layer only once that layer is showing.
+    const alone = drawnIsolate(
+      chosen,
+      (layer) => shown[layer] && (atlasReady || (layer === "skeleton" && ctReady)),
+    );
     const next = dampDepth(depthRef.current, ready ? wanted : 0, delta, reduced);
     const nextSpread = dampDepth(
       explodeRef.current,
@@ -455,7 +462,10 @@ export const AnatomyLayers = ({
       getDepth={readDepth}
       layers={layers}
       hiddenSystems={hiddenSystems}
-      isolate={isolate}
+      isolate={drawnIsolate(
+        isolate,
+        (layer) => layers[layer] && (ready || (layer === "skeleton" && bonesReady)),
+      )}
       onPick={onPick ?? ignorePick}
     />
   );

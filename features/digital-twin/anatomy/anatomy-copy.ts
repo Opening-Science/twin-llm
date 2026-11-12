@@ -71,7 +71,7 @@ export const skeletonLeftOutNote = (summary: string): string | null =>
 export const SKELETON_MODELLED_NOTE =
   "Parts marked modelled were built, not segmented from the CT.";
 export const SKELETON_CREDIT_FALLBACK =
-  "Skeleton built by open-anatomy from a public CT case, CC BY 4.0.";
+  "Skeleton built by open-anatomy from a public CT case of the TotalSegmentator dataset (Wasserthal et al.), CC BY 4.0.";
 
 export const HIGHLIGHT_LABEL = "Highlight";
 export const HIGHLIGHT_NONE = "None";

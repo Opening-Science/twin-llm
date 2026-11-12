@@ -94,6 +94,17 @@ export const viewMix = (
   return layer === isolate ? SOLID : HIDDEN;
 };
 
+/**
+ * The isolate the scene draws: the chosen one only once that layer is
+ * actually showing. While it loads, after a failed load or fit, or with its
+ * toggle off, the view stays as it was, so the scan never vanishes into an
+ * empty canvas.
+ */
+export const drawnIsolate = (
+  isolate: AtlasLayerId | null,
+  showing: (layer: AtlasLayerId) => boolean,
+): AtlasLayerId | null => (isolate !== null && showing(isolate) ? isolate : null);
+
 /** Toggles only ever hide; the slider alone decides solid versus glass. */
 export const applyMask = (mix: LayerMix, shown: boolean): LayerMix =>
   shown ? mix : { ...mix, visible: false };

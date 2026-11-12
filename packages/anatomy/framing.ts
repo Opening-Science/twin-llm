@@ -33,7 +33,11 @@ export const threeQuarterFraming = (
 ): Framing | null => {
   if (box.isEmpty() || !(fovDeg > 0) || !(aspect > 0)) return null;
   const target = box.getCenter(new Vector3());
-  const radius = Math.max(box.getSize(new Vector3()).length() / 2, 0.05);
+  const size = box.getSize(new Vector3());
+  const radius = Math.max(size.length() / 2, 0.05);
+  // Like the body fit, the near plane is a small fixed share of the box, not
+  // the gap in front of it, so zooming in never clips the front ribs.
+  const span = Math.max(size.x, size.y, size.z, 0.05);
   const vertical = radians(fovDeg);
   const horizontal = 2 * Math.atan(Math.tan(vertical / 2) * aspect);
   const half = Math.min(vertical, horizontal) / 2;
@@ -51,7 +55,7 @@ export const threeQuarterFraming = (
   return {
     position: target.clone().addScaledVector(view, distance),
     target,
-    near: Math.max(distance - radius * 2, 0.01),
+    near: span / 80,
     far: distance + radius * 20,
   };
 };
