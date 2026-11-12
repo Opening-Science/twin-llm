@@ -1182,8 +1182,20 @@
     @apply border-border;
   }
 
+  /* A table scrolls inside its own box, never the page; code in its cells
+     breaks only at the <wbr> after a dot or a slash (features/docs/doc-tables.ts),
+     never inside a word. */
+  .doc-table-wrap {
+    @apply overflow-x-auto;
+  }
+
   .doc-prose table {
     @apply w-full text-sm;
+  }
+
+  .doc-prose td code,
+  .doc-prose th code {
+    overflow-wrap: normal;
   }
 
   .doc-prose th,
