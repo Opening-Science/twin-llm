@@ -28,7 +28,7 @@ import {
 } from "@/infrastructure/response-document/copy";
 import type { ResponseDocumentV1 } from "@/infrastructure/response-document/document-v1";
 import { uiContextLines } from "@/infrastructure/ui-context";
-import { citedValueLine } from "@/infrastructure/wearable-provenance";
+import { citedValueLine, citedValueText } from "@/infrastructure/wearable-provenance";
 import { sourceRuleLine } from "@/infrastructure/wearable-source-rules";
 import {
   formatGbdRow,
@@ -70,17 +70,15 @@ const EvidencePanel = ({
         // The words carry the check (#545); the colour only repeats them.
         const provenance = citedValueLine(item);
         const rule = sourceRuleLine(item.sourceRule);
+        const text = citedValueText(item);
         const mismatch = item.valueCheck?.status === "not_matched";
         return (
           <li
             key={item.metricKey}
             className="border-input bg-muted/40 rounded-md border px-2 py-1 text-xs"
           >
-            <span className="font-medium">{item.label}</span>
-            <span className="text-muted-foreground ml-1">
-              {item.value}
-              {item.unit ? ` ${item.unit}` : ""}
-            </span>
+            <span className="font-medium">{`${text.heading}: `}</span>
+            <span className="text-muted-foreground">{text.value}</span>
             {provenance && (
               <span
                 className={
