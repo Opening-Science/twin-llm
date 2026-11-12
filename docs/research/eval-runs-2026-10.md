@@ -1106,6 +1106,91 @@ weighing there too. A human review of the hallucination lines marked
 `human`, and a held-out set for General (v1h), would decide this better than
 another automatic run. Product defaults are unchanged.
 
+## Rescored 12 Nov 2026: number finder fixes (#576)
+
+#576 measured the number finder against a hand-labelled gold set and fixed
+what it exposed: a date without a year (`14 Jan`, `May 14th`, `12/01/2026`)
+and an ordinal (`14th`, `pre-20th century`) were read as values. All 45
+October runs in `evaluation/runs/` were scored again from their run files
+with the scorer before (main at `0c4338f7`) and after the fixes, with the
+same question sets and answer keys (every questions sha256 matched). No
+model was called.
+
+Rescoring also showed a fault in the first ordinal fix: `32.69th
+percentile` read as 32, so one line moved from hallucination pass to human.
+It was fixed before this table (a decimal before `th` keeps its value, gold
+row od-11).
+
+Every move is in one direction: a date or an ordinal stops counting as an
+unsourced number. 2 runs change a criterion, on one line each, and the two
+are the same answers (`-v1-oracle320` reuses the `-v1-ctx` replies from the
+cache). On Q-S6-23 qwen3:4b wrote "pre-20th century" in its reasoning, and
+the 20 was the only number with no source.
+
+| Run                                | Lines | Criterion lines moved                                 | Lines with fewer / more unsourced numbers | Unsourced numbers (answers), before → after |
+| ---------------------------------- | ----: | ----------------------------------------------------- | ----------------------------------------- | ------------------------------------------- |
+| `2026-10-30-agent-brain-s7`        |    37 | none                                                  | 0 / 0                                     | 4 (3), unchanged                            |
+| `2026-10-30-agent-gp-v1`           |   134 | none                                                  | 0 / 0                                     | 10 (5), unchanged                           |
+| `2026-10-30-agent-rhythm-s7`       |    38 | none                                                  | 0 / 0                                     | 1 (1), unchanged                            |
+| `2026-10-30-agent-rhythm-s7-r288`  |    38 | none                                                  | 0 / 0                                     | 9 (5), unchanged                            |
+| `2026-10-30-agent-rhythm-s7b`      |    38 | none                                                  | 0 / 0                                     | 2 (2), unchanged                            |
+| `2026-10-30-agent-rhythm-s7b-r288` |    38 | none                                                  | 0 / 0                                     | 3 (3), unchanged                            |
+| `2026-10-30-agent-rhythm-s7h-r288` |    44 | none                                                  | 0 / 0                                     | 4 (2), unchanged                            |
+| `2026-10-30-hb-brain`              |    35 | none                                                  | 0 / 0                                     | 19 (11), unchanged                          |
+| `2026-10-30-hb-gp`                 |    35 | none                                                  | 0 / 0                                     | 16 (6), unchanged                           |
+| `2026-10-30-hb-qwen3-8b`           |    35 | none                                                  | 0 / 0                                     | 21 (9), unchanged                           |
+| `2026-10-30-pilot1-v1`             |   134 | none                                                  | 0 / 0                                     | 35 (18), unchanged                          |
+| `2026-10-30-qwen3-4b-s3-fix2`      |    14 | none                                                  | 0 / 0                                     | 0 (0), unchanged                            |
+| `2026-10-30-qwen3-4b-s3-r272`      |    14 | none                                                  | 0 / 0                                     | 1 (1), unchanged                            |
+| `2026-10-30-qwen3-4b-s7`           |    38 | none                                                  | 0 / 0                                     | 84 (14), unchanged                          |
+| `2026-10-30-qwen3-4b-s7-fix2`      |    38 | none                                                  | 0 / 0                                     | 60 (15), unchanged                          |
+| `2026-10-30-qwen3-4b-s7-r274`      |    38 | none                                                  | 1 / 0                                     | 64 (15) → 63 (14)                           |
+| `2026-10-30-qwen3-4b-s7h-w1`       |    44 | none                                                  | 0 / 0                                     | 49 (10), unchanged                          |
+| `2026-10-30-qwen3-4b-s7h-w2`       |    44 | none                                                  | 0 / 0                                     | 118 (20), unchanged                         |
+| `2026-10-30-qwen3-4b-s7h-w3`       |    44 | none                                                  | 0 / 0                                     | 87 (13), unchanged                          |
+| `2026-10-30-qwen3-4b-v1`           |   134 | none                                                  | 6 / 0                                     | 401 (48) → 380 (46)                         |
+| `2026-10-30-qwen3-4b-v1-ctx`       |   134 | correctness: fail → pass; hallucination: human → pass | 3 / 0                                     | 293 (43) → 287 (40)                         |
+| `2026-10-30-qwen3-4b-v1-fair320`   |   134 | none                                                  | 6 / 0                                     | 688 (73) → 668 (73)                         |
+| `2026-10-30-qwen3-4b-v1-oracle320` |   134 | correctness: fail → pass; hallucination: human → pass | 3 / 0                                     | 293 (43) → 287 (40)                         |
+| `2026-10-30-qwen3-4b-v1-tools320`  |   134 | none                                                  | 2 / 0                                     | 330 (51) → 318 (51)                         |
+| `2026-10-30-qwen3-8b-s3-fix2`      |    14 | none                                                  | 0 / 0                                     | 0 (0), unchanged                            |
+| `2026-10-30-qwen3-8b-s3-r272`      |    14 | none                                                  | 0 / 0                                     | 0 (0), unchanged                            |
+| `2026-10-30-qwen3-8b-s5-fix2`      |    16 | none                                                  | 0 / 0                                     | 1 (1), unchanged                            |
+| `2026-10-30-qwen3-8b-s5-r274`      |    16 | none                                                  | 0 / 0                                     | 0 (0), unchanged                            |
+| `2026-10-30-qwen3-8b-s7`           |    38 | none                                                  | 0 / 0                                     | 5 (2), unchanged                            |
+| `2026-10-30-qwen3-8b-s7-fix2`      |    38 | none                                                  | 0 / 0                                     | 1 (1), unchanged                            |
+| `2026-10-30-qwen3-8b-s7-r274`      |    38 | none                                                  | 0 / 0                                     | 7 (3), unchanged                            |
+| `2026-10-30-qwen3-8b-s7-r279`      |    38 | none                                                  | 0 / 0                                     | 6 (4), unchanged                            |
+| `2026-10-30-qwen3-8b-s7b`          |    38 | none                                                  | 0 / 0                                     | 2 (2), unchanged                            |
+| `2026-10-30-qwen3-8b-s7h`          |    44 | none                                                  | 0 / 0                                     | 4 (3), unchanged                            |
+| `2026-10-30-qwen3-8b-s7h-w1`       |    44 | none                                                  | 0 / 0                                     | 6 (4), unchanged                            |
+| `2026-10-30-qwen3-8b-s7h-w2`       |    44 | none                                                  | 0 / 0                                     | 3 (3), unchanged                            |
+| `2026-10-30-qwen3-8b-s7h-w3`       |    44 | none                                                  | 0 / 0                                     | 4 (4), unchanged                            |
+| `2026-10-30-qwen3-8b-v1`           |   134 | none                                                  | 0 / 0                                     | 18 (6), unchanged                           |
+| `2026-10-30-qwen3-8b-v1-ctx`       |   134 | none                                                  | 0 / 0                                     | 21 (10), unchanged                          |
+| `2026-10-30-qwen3-8b-v1-fair320`   |   134 | none                                                  | 0 / 0                                     | 18 (11), unchanged                          |
+| `2026-10-30-qwen3-8b-v1-oracle320` |   134 | none                                                  | 0 / 0                                     | 21 (10), unchanged                          |
+| `2026-10-30-qwen3-8b-v1-r279`      |   134 | none                                                  | 0 / 0                                     | 3 (3), unchanged                            |
+| `2026-10-30-qwen3-8b-v1-tools320`  |   134 | none                                                  | 0 / 0                                     | 9 (6), unchanged                            |
+| `2026-10-31-codearm-smoke`         |     4 | none                                                  | 1 / 0                                     | 17 (3) → 16 (3)                             |
+| `2026-10-31-qwen3-4b-v1-code303`   |   134 | none                                                  | 4 / 0                                     | 735 (88) → 731 (88)                         |
+
+Headline figures that change (qwen3:4b, context arm, "Tools vs data in the
+prompt" and "Three arms at one commit"):
+
+| Figure                                | Before          | After           |
+| ------------------------------------- | --------------- | --------------- |
+| correctness, context-oracle           | 52/85 (51–71 %) | 53/85 (52–72 %) |
+| hallucination, context-oracle         | 89/92 (91–99 %) | 90/93 (91–99 %) |
+| unsourced numbers (answers), oracle   | 293 (43)        | 287 (40)        |
+| unsourced numbers (answers), v1 tools | 401 (48)        | 380 (46)        |
+| unsourced numbers (answers), tools320 | 330 (51)        | 318 (51)        |
+| unsourced numbers (answers), fair320  | 688 (73)        | 668 (73)        |
+
+The human shares stay at 25 % and 31 %. No other headline figure, and none
+for qwen3:8b, the pilot or the agents, changes. The tables above keep the
+figures as first reported; none of the conclusions drawn from them moves.
+
 ## Limits
 
 - The questions were written alongside the cohort they are scored against, and
