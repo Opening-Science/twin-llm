@@ -93,6 +93,7 @@ import {
   RESULTS_SCHEMA_VERSION,
   type RunMeta,
 } from "./eval-results";
+import { missingEnvNotice } from "./gbd-local-route";
 import { type CacheStore, createCachedModel, findCacheError } from "./model-cache";
 import {
   answerKeySchema,
@@ -1056,6 +1057,9 @@ export const runEval = async (
       throw new EvalSetupError("RUN_EXISTS", `evaluation/runs/${runId} already exists`);
     }
     if (resolved.some((model) => model.mock)) io.stderr.write(`${MOCK_BANNER}\n`);
+    for (const notice of missingEnvNotice(items, deps.hasEnv)) {
+      io.stderr.write(`${notice}\n`);
+    }
     io.stdout.write(
       `Run ${runId}: ${items.length} items × ${models.length} models, arm ${options.arm}${options.replay ? " (replay)" : ""}\n`,
     );

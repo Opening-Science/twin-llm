@@ -573,6 +573,10 @@ describe("runEval on fakes", () => {
       ["Q-S6-03", 1, null, null],
       ["Q-S4-01", 1, null, "MISSING_ENV"],
     ]);
+    // The run names the unset variables before it writes the skipped line (#273).
+    expect(out.err()).toContain(
+      "S4: 1 item will be skipped as MISSING_ENV; unset: GBD_MCP_URL, GBD_MCP_TOKEN.",
+    );
     // Two steps (tool call, answer) per trend turn, one for the decline.
     expect(model.doStreamCalls.length).toBe(2 + 2 + 1 + 2);
 
