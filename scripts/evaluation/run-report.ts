@@ -187,37 +187,37 @@ const writeRaterSheet = async ({
   dir: string;
   runId: string;
   set: string;
-  models: number;
+  models: readonly string[];
   questions: QuestionSet;
   key: AnswerKey;
   lines: readonly ResultLine[];
 }>): Promise<void> => {
   const set = ratedSetOf(setId);
   if (set === null) return;
-  if (models !== 1) {
+  const [model] = models;
+  if (model === undefined || models.length !== 1) {
     io.stdout.write(
       "No rater-sheet.csv: ratings are keyed by item and repeat, so a rater sheet needs one model per run.\n",
     );
     return;
   }
   const keyPath = join(dir, "rater-sheet-key.json");
-  const earlier = parseRaterSheetKey(
-    await deps.readText(keyPath).catch(() => null),
+  const earlier = parseRaterSheetKey(await deps.readText(keyPath).catch(() => null), [
     runId,
-  );
+  ]);
   const newSalt = deps.newSalt ?? (() => randomBytes(32).toString("hex"));
   const sheet = renderRaterSheet({
     set,
-    runId,
+    runs: [{ runId, model, lines }],
     items: questions.items,
     entries: key.entries,
-    lines,
     salt: earlier?.salt ?? newSalt(),
   });
   await deps.writeText(join(dir, "rater-sheet.csv"), sheet.csv);
   await deps.writeText(keyPath, sheet.key);
   io.stdout.write(
-    `Wrote ${dir}/rater-sheet.csv (${sheet.rows} lines, ${set}) and rater-sheet-key.json; give raters the sheet only\n`,
+    `Wrote ${dir}/rater-sheet.csv (${sheet.rows} lines, ${set}) and rater-sheet-key.json; give raters the sheet only\n` +
+      `Note: one model's sheet; a pooled sheet blinds better: bun run eval:rater-sheet -- --runs ${runId},<run-id>,…\n`,
   );
 };
 
@@ -309,7 +309,7 @@ export const runReport = async (
       dir,
       runId,
       set: meta.question_set ?? "v1",
-      models: meta.models.length,
+      models: meta.models.map((model) => `${model.provider}:${model.model_id}`),
       questions,
       key,
       lines,

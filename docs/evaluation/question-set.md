@@ -1081,12 +1081,13 @@ Amendment, 12 Nov 2026 (#304), written before any v1h rating and without
 looking at any v1h output; the sample of step 2 and the rubric are unchanged:
 
 - Step 1: `review.csv` shows the scorers' flags, so it is blind to the model
-  but not to the score. For the two raters, `eval:report` now also writes
-  `rater-sheet.csv` (one model per run): the step-2 sample with question,
-  reference, note and reply under an opaque id, and nothing else. A rater
-  uses either the sheet or the Lab view, and `bun run eval:rater-sheet`
-  turns a filled sheet into the same ratings files the view writes
-  (`second-rater.md`, "The rater sheet").
+  but not to the score. For the two raters,
+  `bun run eval:rater-sheet -- --runs <run-id>,…` writes one sheet pooled
+  across the runs and models: the step-2 sample of each run with question,
+  reference, note and reply under an opaque id, in one salted order, and
+  nothing else. A rater uses either the pooled sheet or the Lab view, and
+  `eval:rater-sheet` turns a filled sheet into the same ratings files the
+  view writes (`second-rater.md`, "The rater sheet").
 - Step 4: beside kappa and its large-sample interval, Krippendorff's alpha
   (ordinal on the five levels, nominal on pass or fail) and percentile
   bootstrap 95 % intervals over lines for both, 2,000 resamples, seed 304.

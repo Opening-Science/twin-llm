@@ -1,21 +1,22 @@
 /**
- * The blinded rater sheet (#304): the lines of one run of a rated set (hb or
- * v1h) as a spreadsheet two raters can fill in apart, without the Lab view,
- * and the way back from a filled sheet to ratings files that
- * `eval:agreement` reads. Pure; `run-report.ts` writes the sheet and
- * `rater-sheet-run.ts` imports it.
+ * The blinded rater sheet (#304): the lines of one or more runs of a rated
+ * set (hb or v1h) as a spreadsheet two raters can fill in apart, without the
+ * Lab view, and the way back from a filled sheet to the ratings files
+ * `eval:agreement` reads. Pure; `run-report.ts` writes a one-run sheet and
+ * `rater-sheet-run.ts` pools runs and imports filled sheets.
  *
  * Blind as the Lab view is (`features/lab/rater-lines.ts`): a row carries the
  * question, the reference, the item's note and the reply, and an opaque
  * `sheet_id` (HMAC-SHA256 of run, item and repeat under a random salt kept
- * in `rater-sheet-key.json`). No run, model, item id, scenario or automatic
- * score. For v1h the rows are the protocol's review sample (`reviewSample`,
- * #413), so the sheet and the view rate the same lines. Rows are in an order
- * fixed by the salt; ids are random hex, so sheets of several runs pooled and
- * sorted by `sheet_id` interleave the models.
+ * in the key). No run, model, item id, scenario or automatic score. For v1h
+ * the rows are the protocol's review sample of each run (`reviewSample`,
+ * #413), so the sheet and the view rate the same lines. The rows of every
+ * run are pooled and put in one order fixed by the salt, so models are
+ * interleaved; a pool of one run is the single-run sheet.
  */
 import { z } from "zod";
 
+import { noReferenceText } from "../../features/lab/rated-set-copy";
 import {
   raterLines,
   type RaterKeyEntry,
@@ -23,7 +24,6 @@ import {
   SALT_PATTERN,
   seededOrder,
 } from "../../features/lab/rater-lines";
-import { noReferenceText } from "../../features/lab/rated-set-copy";
 import { isRubricLevel, type RatedSet, rubricOf } from "../../features/lab/rater-rubric";
 import { linesInScope, REVIEW_SAMPLE_VERSION } from "../../features/lab/rater-sample";
 import {
@@ -54,6 +54,8 @@ const MAX_COMMENT = 2000;
 const keyLineSchema = z
   .object({
     sheet_id: z.string().regex(/^[0-9a-f]{16}$/),
+    run_id: z.string().min(1),
+    model: z.string().min(1),
     item_id: z.string().min(1),
     repeat: z.number().int().positive(),
   })
@@ -62,54 +64,70 @@ const keyLineSchema = z
 export const raterSheetKeySchema = z
   .object({
     schema_version: z.literal(RATER_SHEET_VERSION),
-    run_id: z.string().min(1),
     set: z.enum(["hb", "v1h"]),
     rubric: z.string().min(1),
     sample: z.string().min(1),
     note: z.string(),
     salt: z.string().regex(SALT_PATTERN),
+    runs: z.array(
+      z.object({ run_id: z.string().min(1), model: z.string().min(1) }).strict(),
+    ),
     lines: z.array(keyLineSchema),
   })
   .strict();
 
 export type RaterSheetKey = z.infer<typeof raterSheetKeySchema>;
 
-/** The key file, or null when it is missing, does not parse or names another run. */
+/**
+ * The key file, or null when it is missing or does not parse. With `runIds`,
+ * also null unless the key pools exactly those runs (in any order).
+ */
 export const parseRaterSheetKey = (
   text: string | null,
-  runId: string,
+  runIds?: readonly string[],
 ): RaterSheetKey | null => {
   if (text === null) return null;
   try {
     const parsed = raterSheetKeySchema.safeParse(JSON.parse(text));
-    return parsed.success && parsed.data.run_id === runId ? parsed.data : null;
+    if (!parsed.success) return null;
+    const same =
+      runIds === undefined ||
+      [...parsed.data.runs.map((run) => run.run_id)].sort().join("\n") ===
+        [...runIds].sort().join("\n");
+    return same ? parsed.data : null;
   } catch {
     return null;
   }
 };
 
+/** One run of the pool: its id, the one model that answered, and its lines. */
+export type SheetRun = Readonly<{
+  runId: string;
+  model: string;
+  lines: readonly RunLine[];
+}>;
+
 export type RaterSheetInput = Readonly<{
   set: RatedSet;
-  runId: string;
+  runs: readonly SheetRun[];
   items: readonly Question[];
   entries: Readonly<Record<string, readonly RaterKeyEntry[]>>;
-  lines: readonly RunLine[];
   salt: string;
 }>;
 
-const orderSeed = (runId: string): string => `${RATER_SHEET_VERSION}:${runId}`;
+const orderSeed = (runIds: readonly string[]): string =>
+  `${RATER_SHEET_VERSION}:${[...runIds].sort().join(",")}`;
 
 /** The sheet (CSV) and its key (JSON), both ending in a newline. */
 export const renderRaterSheet = ({
   set,
-  runId,
+  runs,
   items,
   entries,
-  lines,
   salt,
 }: RaterSheetInput): Readonly<{ csv: string; key: string; rows: number }> => {
   const all = raterLines(
-    [{ runId, lines }],
+    runs.map((run) => ({ runId: run.runId, lines: run.lines })),
     items.map((item) => ({
       id: item.id,
       question: item.question,
@@ -120,7 +138,12 @@ export const renderRaterSheet = ({
     entries,
     salt,
   );
-  const ordered = seededOrder(linesInScope(set, all, "sample"), orderSeed(runId), salt);
+  const modelOf = new Map(runs.map((run) => [run.runId, run.model]));
+  const ordered = seededOrder(
+    linesInScope(set, all, "sample"),
+    orderSeed(runs.map((run) => run.runId)),
+    salt,
+  );
   const rows = ordered.map((line) =>
     [
       line.token,
@@ -138,14 +161,16 @@ export const renderRaterSheet = ({
   );
   const key: RaterSheetKey = {
     schema_version: RATER_SHEET_VERSION,
-    run_id: runId,
     set,
     rubric: rubricOf(set).version,
     sample: set === "v1h" ? REVIEW_SAMPLE_VERSION : "every answered line",
-    note: "Keep this file away from raters: its salt and lines map every sheet_id back to the run.",
+    note: "Keep this file away from raters: its salt and lines map every sheet_id back to its run and model.",
     salt,
+    runs: runs.map((run) => ({ run_id: run.runId, model: run.model })),
     lines: ordered.map((line) => ({
       sheet_id: line.token,
+      run_id: line.runId,
+      model: modelOf.get(line.runId) ?? "",
       item_id: line.itemId,
       repeat: line.repeat,
     })),
@@ -200,14 +225,14 @@ export type SheetImport = Readonly<{
 }>;
 
 /**
- * Ratings files from a filled sheet (one run's, or several pooled) and the
- * keys of its runs. A row whose `sheet_id` no key holds, a level that is not
- * a whole number from 1 to 5, a comment over 2,000 characters or a line rated
- * twice is a problem; blank levels are left unrated.
+ * Ratings files, one per run, from a filled sheet and its key. A row whose
+ * `sheet_id` the key does not hold, a level that is not a whole number from
+ * 1 to 5, a comment over 2,000 characters or a line rated twice is a
+ * problem; blank levels are left unrated.
  */
 export const ratingsFromSheet = (
   text: string,
-  keys: readonly RaterSheetKey[],
+  key: RaterSheetKey,
   rater: string,
   now: string,
 ): SheetImport => {
@@ -219,26 +244,23 @@ export const ratingsFromSheet = (
       problems: [`the header is not ${RATER_SHEET_COLUMNS.join(",")}`],
     };
   }
-  const lineOf = new Map(
-    keys.flatMap((key) =>
-      key.lines.map((line) => [line.sheet_id, { key, line }] as const),
-    ),
-  );
+  const lineOf = new Map(key.lines.map((line) => [line.sheet_id, line]));
+  const seed = orderSeed(key.runs.map((run) => run.run_id));
   const problems: string[] = [];
   const seen = new Set<string>();
   let blank = 0;
   const files = new Map<string, RatingFile>(
-    keys.map((key) => [
-      key.run_id,
-      emptyRatingFile(key.run_id, rater, orderSeed(key.run_id), now, key.rubric),
+    key.runs.map((run) => [
+      run.run_id,
+      emptyRatingFile(run.run_id, rater, seed, now, key.rubric),
     ]),
   );
   for (const [index, row] of body.entries()) {
     if (row.every((cell) => cell.trim() === "")) continue;
     const id = (row[0] ?? "").trim();
-    const found = lineOf.get(id);
-    if (found === undefined) {
-      problems.push(`row ${index + 2}: sheet_id ${id || "(empty)"} is in no key given`);
+    const line = lineOf.get(id);
+    if (line === undefined) {
+      problems.push(`row ${index + 2}: sheet_id ${id || "(empty)"} is not in the key`);
       continue;
     }
     if (seen.has(id)) {
@@ -263,13 +285,16 @@ export const ratingsFromSheet = (
       problems.push(`row ${index + 2}: the comment is over ${MAX_COMMENT} characters`);
       continue;
     }
-    const file = files.get(found.key.run_id);
-    if (file === undefined) continue;
+    const file = files.get(line.run_id);
+    if (file === undefined) {
+      problems.push(`row ${index + 2}: run ${line.run_id} is not among the key's runs`);
+      continue;
+    }
     files.set(
-      found.key.run_id,
+      line.run_id,
       withRating(
         file,
-        { itemId: found.line.item_id, repeat: found.line.repeat },
+        { itemId: line.item_id, repeat: line.repeat },
         level,
         comment,
         now,

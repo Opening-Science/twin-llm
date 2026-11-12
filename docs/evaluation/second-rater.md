@@ -51,42 +51,60 @@ A rater without the app uses the rater sheet instead of steps 2 to 6 (see
 
 ## The rater sheet
 
-Written 2026-11-12 (#304). For a run of hb or v1h with one model,
-`bun run eval:report -- <run-id>` also writes:
+Written 2026-11-12 (#304). The sheet to give raters is the pooled one, a
+single sheet across the runs (and so the models) of one set:
 
-- `rater-sheet.csv`: one row per line the view would show (for v1h the
-  review sample, for hb every answered line), with the columns `sheet_id`,
-  `question`, `reference` (the key's values, or why there is none, worded as
-  in the view), `note`, `answer`, and empty `level_1_5` and `comment`.
-  Nothing else: no run, model, item id, scenario, tool call or score.
-- `rater-sheet-key.json`: the rubric, the sample, a 32-byte random salt and
-  the line (item and repeat) behind each `sheet_id`. Keep it from raters.
+```sh
+bun run eval:rater-sheet -- --runs <run-id>,<run-id>[,…] [--out <dir>]
+```
 
-The `sheet_id` is the first 64 bits of HMAC-SHA256 under that salt over the
-run, item and repeat, as the view's answer ids are, so knowing the run id
-and the public item ids is not enough to map rows back. The rows are in an
-order fixed by the same salt. Making the report again keeps the salt from
-the existing key, so a sheet being filled keeps its ids. A run with more
-than one model gets no sheet, because ratings are keyed by item and repeat.
+It writes, in `--out` or `evaluation/rater-sheets/pool-<12 hex of the run
+ids>/` (gitignored):
+
+- `rater-sheet.csv`: one row per line the view would show (for v1h each
+  run's review sample, for hb every answered line), with the columns
+  `sheet_id`, `question`, `reference` (the key's values, or why there is
+  none, worded as in the view), `note`, `answer`, and empty `level_1_5` and
+  `comment`. Nothing else: no run, model, item id, scenario, tool call or
+  score. The rows of all runs are in one order fixed by the salt, so the
+  models are interleaved.
+- `rater-sheet-key.json`: the rubric, the sample, a 32-byte random salt, the
+  runs with their models, and for each `sheet_id` its run, model, item and
+  repeat. Keep it from raters.
+
+Every run must be of the same rated set (hb or v1h), answered by one model
+(ratings are keyed by item and repeat), not MOCK, and on the set's current
+questions; each passes the learning-consent gate as in `eval:report`.
+Otherwise nothing is written.
+
+`bun run eval:report -- <run-id>` still writes a sheet of its own run,
+`rater-sheet.csv` and `rater-sheet-key.json` beside the run (one model per
+run; a run with more than one model gets none), and prints a note that a
+pooled sheet blinds better: a rater with a one-run sheet knows every row is
+from one model, though not which.
+
+The `sheet_id` is the first 64 bits of HMAC-SHA256 under the salt over the
+run, item and repeat, as the view's answer ids are, so knowing the run ids
+and the public item ids is not enough to map rows back. Writing the same
+sheet again (the same pool, or the report of the same run) keeps the salt
+from the existing key, so a sheet being filled keeps its ids.
 
 Each rater gets a copy of the sheet under their pseudonym and fills in a
 level from 1 to 5 on the rubric of the set, and a comment if it helps; a row
-left blank is not rated. To mix models, put the sheets of several runs in
-one file, one header, and sort the rows by `sheet_id`: ids are random hex,
-so the runs interleave.
+left blank is not rated. Then
 
 ```sh
-bun run eval:rater-sheet -- --rater rater-b filled-rater-b.csv <run-id> [<run-id> …]
+bun run eval:rater-sheet -- --rater rater-b --key <dir>/rater-sheet-key.json filled-rater-b.csv
 ```
 
-reads each run's key, matches every row by `sheet_id`, and writes
+matches every row to the key by `sheet_id` and writes
 `evaluation/runs/<run-id>/ratings/rater-b.json` for each run with a rated
 row, the format the view writes, with `order_seed`
-`twin-llm.eval.rater-sheet.v1:<run-id>`. It stops and writes nothing when a
-row's id is in no key, a level is not a whole number from 1 to 5, a line
-appears twice, a comment is over 2,000 characters, or the rater already has
-a ratings file in one of the runs. `eval:agreement` then reads the files as
-it reads the view's.
+`twin-llm.eval.rater-sheet.v1:<the run ids, sorted>`. It stops and writes
+nothing when a row's id is not in the key, a level is not a whole number
+from 1 to 5, a line appears twice, a comment is over 2,000 characters, or
+the rater already has a ratings file in one of the runs. `eval:agreement`
+then reads the files as it reads the view's.
 
 ## What the rater sees
 
@@ -338,9 +356,10 @@ are reported beside it.
   item, and the same item across runs, are not, so with repeats or several
   runs the intervals are somewhat too narrow. With about 30 lines a
   percentile interval can also sit unevenly around the estimate.
-- A rater sheet holds one model's answers; a rater who fills it alone, not
-  pooled with other runs, knows every row is from one model, though not
-  which. Pool the sheets, or use the view, which mixes runs.
+- The one-run sheet from `eval:report` holds one model's answers; a rater
+  who fills it knows every row is from one model, though not which. Give
+  raters the pooled sheet (`eval:rater-sheet -- --runs …`), or use the view;
+  both mix runs.
 - The reference is shown, so the rating is of agreement with the scripted
   pipeline, not of medical truth. The scripted verdicts equal the planted
   ones on every hb item.

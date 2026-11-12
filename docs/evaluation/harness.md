@@ -268,8 +268,10 @@ has a column per v1 scenario, and an S7 column when the run scored S7 lines.
 run with results v1 lines, and a run whose questions sha256 differs from the
 questions and the key. It writes `report.md`, `review.csv` and
 `review-key.json` next to the run, and for a one-model run of a rated set
-(hb or v1h) the blinded rater sheet `rater-sheet.csv` with its
-`rater-sheet-key.json` (`second-rater.md`, "The rater sheet").
+(hb or v1h) that run's blinded rater sheet `rater-sheet.csv` with its
+`rater-sheet-key.json`. The sheet for raters is the pooled one,
+`bun run eval:rater-sheet -- --runs a,b,…` (`second-rater.md`, "The rater
+sheet").
 
 ## Files
 
@@ -284,6 +286,7 @@ Everything under `evaluation/runs/` and `evaluation/cache/` is gitignored.
 | `evaluation/runs/<id>/review-key.json`      | Which blinded label is which model; keep it from reviewers                     |
 | `evaluation/runs/<id>/rater-sheet.csv`      | hb and v1h: the second raters' sheet, blind to model, item and score           |
 | `evaluation/runs/<id>/rater-sheet-key.json` | The sheet's salt and which id is which line; keep it from raters               |
+| `evaluation/rater-sheets/<pool>/`           | A pooled rater sheet and its key across runs (`eval:rater-sheet`)              |
 | `evaluation/cache/<sha256>.json`            | One recorded model call                                                        |
 | `evaluation/cohort-codes.v1.json`           | Committed: the LOINC codes the pinned cohort holds, for call accuracy          |
 

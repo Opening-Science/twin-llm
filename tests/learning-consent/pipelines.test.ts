@@ -97,6 +97,11 @@ const GATED: Readonly<Record<string, Gated>> = {
     gate: "scripts/evaluation/heldout-v1h.ts",
     scope: "evaluation",
   },
+  "eval:rater-sheet": {
+    entry: "scripts/evaluation/rater-sheet-run.ts",
+    gate: "scripts/evaluation/rater-sheet-run.ts",
+    scope: "evaluation",
+  },
 };
 
 const APP = "the app or its dev server; personal reads are gated by tests/personal-reads";
@@ -203,8 +208,6 @@ const NOT_LEARNING: Readonly<Record<string, string>> = {
     "scores the files the GPU steps wrote from the sets disclosure:prepare made under the gate; reads no subject row",
   "eval:hb-verdicts":
     "tallies verdict phrases in eval runs, each gated when it ran; reads no subject row",
-  "eval:rater-sheet":
-    "turns a rater's filled sheet into ratings files using the run's sheet key (#304); reads no run line or subject row",
   "gbd:import":
     "imports IHME GBD population estimates from files a person downloaded (#387); reads no subject row",
   "warehouse:ingest":
@@ -230,7 +233,6 @@ const OTHER_ENTRIES: Readonly<Record<string, string>> = {
   "scripts/heart-brain/excess-run.ts": NOT_LEARNING["heart-brain:excess"] ?? "",
   "scripts/disclosure/analyze.ts": NOT_LEARNING["disclosure:analyze"] ?? "",
   "scripts/evaluation/hb-verdicts-run.ts": NOT_LEARNING["eval:hb-verdicts"] ?? "",
-  "scripts/evaluation/rater-sheet-run.ts": NOT_LEARNING["eval:rater-sheet"] ?? "",
   "scripts/heart-brain/timing-run.ts": NOT_LEARNING["heart-brain:timing"] ?? "",
   "scripts/heart-brain/wearable-recovery-run.ts":
     NOT_LEARNING["heart-brain:wearables"] ?? "",
