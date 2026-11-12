@@ -36,6 +36,15 @@ bun run eval:cohort-codes -- --in .synthea   # after a cohort change only
 | `--arm code`                                            | Model-written code in a sandbox ([below](#the-code-arm-303))             |
 | `--context-cap <tokens>`                                | Context and code arms: estimated tokens per data block, default 6000     |
 | `--decline-wording w1` / `w2` / `w3`                    | Decline line for a wording comparison (#274); default the chat's         |
+| `--repeats <n>`                                         | Every item at least n times, 2 to 10 (#304); default the set's own       |
+
+`--repeats` raises each item's `repeat` to at least n for one run and
+records n in `meta.json` (`repeats`). An item raised above one repeat is
+scored on consistency too, as the set's own consistency items are; the
+report and `eval:agreement` apply the same raise when they score the run.
+The report gives a Repeats row in its run table and a "Repeats per item"
+column in the overview ("1–3" when items differ). Each repeat is its own
+recording in the cache, so a replay needs every repeat recorded.
 
 `bun run eval` refuses unless `DATA_MODE=synthetic`, stops when the questions'
 sha256 is not the key's `questions_sha256`, refuses a cohort with a subject
@@ -258,21 +267,25 @@ has a column per v1 scenario, and an S7 column when the run scored S7 lines.
 `bun run eval:report` reads no env and no database. It refuses a MOCK run, a
 run with results v1 lines, and a run whose questions sha256 differs from the
 questions and the key. It writes `report.md`, `review.csv` and
-`review-key.json` next to the run.
+`review-key.json` next to the run, and for a one-model run of a rated set
+(hb or v1h) the blinded rater sheet `rater-sheet.csv` with its
+`rater-sheet-key.json` (`second-rater.md`, "The rater sheet").
 
 ## Files
 
 Everything under `evaluation/runs/` and `evaluation/cache/` is gitignored.
 
-| File                                   | What                                                                           |
-| -------------------------------------- | ------------------------------------------------------------------------------ |
-| `evaluation/runs/<id>/results.jsonl`   | One line per item × repeat × model (schema `twin-llm.eval.results.v2`)         |
-| `evaluation/runs/<id>/meta.json`       | Git SHA, questions and key sha256, cohort, open-twin pin, models, host, counts |
-| `evaluation/runs/<id>/report.md`       | Scores, intervals, latency, limits                                             |
-| `evaluation/runs/<id>/review.csv`      | The human sheet, blinded                                                       |
-| `evaluation/runs/<id>/review-key.json` | Which blinded label is which model; keep it from reviewers                     |
-| `evaluation/cache/<sha256>.json`       | One recorded model call                                                        |
-| `evaluation/cohort-codes.v1.json`      | Committed: the LOINC codes the pinned cohort holds, for call accuracy          |
+| File                                        | What                                                                           |
+| ------------------------------------------- | ------------------------------------------------------------------------------ |
+| `evaluation/runs/<id>/results.jsonl`        | One line per item × repeat × model (schema `twin-llm.eval.results.v2`)         |
+| `evaluation/runs/<id>/meta.json`            | Git SHA, questions and key sha256, cohort, open-twin pin, models, host, counts |
+| `evaluation/runs/<id>/report.md`            | Scores, intervals, latency, limits                                             |
+| `evaluation/runs/<id>/review.csv`           | The human sheet, blinded                                                       |
+| `evaluation/runs/<id>/review-key.json`      | Which blinded label is which model; keep it from reviewers                     |
+| `evaluation/runs/<id>/rater-sheet.csv`      | hb and v1h: the second raters' sheet, blind to model, item and score           |
+| `evaluation/runs/<id>/rater-sheet-key.json` | The sheet's salt and which id is which line; keep it from raters               |
+| `evaluation/cache/<sha256>.json`            | One recorded model call                                                        |
+| `evaluation/cohort-codes.v1.json`           | Committed: the LOINC codes the pinned cohort holds, for call accuracy          |
 
 A results line holds the response document v1.1, the reply, the audit rows
 (tool, args sha256, row count, refusal code, subject), the tool results, the

@@ -1077,6 +1077,26 @@ Two raters, blind, on a stratified sample, with agreement statistics:
    Cohen's kappa with its 95 % interval, reported next to the observed
    agreement.
 
+Amendment, 12 Nov 2026 (#304), written before any v1h rating and without
+looking at any v1h output; the sample of step 2 and the rubric are unchanged:
+
+- Step 1: `review.csv` shows the scorers' flags, so it is blind to the model
+  but not to the score. For the two raters, `eval:report` now also writes
+  `rater-sheet.csv` (one model per run): the step-2 sample with question,
+  reference, note and reply under an opaque id, and nothing else. A rater
+  uses either the sheet or the Lab view, and `bun run eval:rater-sheet`
+  turns a filled sheet into the same ratings files the view writes
+  (`second-rater.md`, "The rater sheet").
+- Step 4: beside kappa and its large-sample interval, Krippendorff's alpha
+  (ordinal on the five levels, nominal on pass or fail) and percentile
+  bootstrap 95 % intervals over lines for both, 2,000 resamples, seed 304.
+  Kappa stays the primary statistic; alpha and the bootstrap are reported
+  with it, not in its place.
+- Repeats: a run may use `--repeats n` (`harness.md`), which raises every
+  item to at least n repeats. The step-2 sample then counts each repeat as a
+  line, so every repeat of S5 and S6 is rated. The six v1h consistency
+  items already run three times.
+
 The Lab's rating view reads v1h runs with `?set=v1h` (#304), on a rubric
 version of its own (the hb anchors speak of verdicts, and S3 and S4 items
 have no keyed reference), which the ratings file and the order seed carry.

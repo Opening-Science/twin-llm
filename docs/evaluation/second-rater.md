@@ -46,6 +46,48 @@ reader and the scorer agree, and how far two readers do.
    rated line, and `--ids` to also map each rater's answer ids back to
    their runs.
 
+A rater without the app uses the rater sheet instead of steps 2 to 6 (see
+"The rater sheet").
+
+## The rater sheet
+
+Written 2026-11-12 (#304). For a run of hb or v1h with one model,
+`bun run eval:report -- <run-id>` also writes:
+
+- `rater-sheet.csv`: one row per line the view would show (for v1h the
+  review sample, for hb every answered line), with the columns `sheet_id`,
+  `question`, `reference` (the key's values, or why there is none, worded as
+  in the view), `note`, `answer`, and empty `level_1_5` and `comment`.
+  Nothing else: no run, model, item id, scenario, tool call or score.
+- `rater-sheet-key.json`: the rubric, the sample, a 32-byte random salt and
+  the line (item and repeat) behind each `sheet_id`. Keep it from raters.
+
+The `sheet_id` is the first 64 bits of HMAC-SHA256 under that salt over the
+run, item and repeat, as the view's answer ids are, so knowing the run id
+and the public item ids is not enough to map rows back. The rows are in an
+order fixed by the same salt. Making the report again keeps the salt from
+the existing key, so a sheet being filled keeps its ids. A run with more
+than one model gets no sheet, because ratings are keyed by item and repeat.
+
+Each rater gets a copy of the sheet under their pseudonym and fills in a
+level from 1 to 5 on the rubric of the set, and a comment if it helps; a row
+left blank is not rated. To mix models, put the sheets of several runs in
+one file, one header, and sort the rows by `sheet_id`: ids are random hex,
+so the runs interleave.
+
+```sh
+bun run eval:rater-sheet -- --rater rater-b filled-rater-b.csv <run-id> [<run-id> …]
+```
+
+reads each run's key, matches every row by `sheet_id`, and writes
+`evaluation/runs/<run-id>/ratings/rater-b.json` for each run with a rated
+row, the format the view writes, with `order_seed`
+`twin-llm.eval.rater-sheet.v1:<run-id>`. It stops and writes nothing when a
+row's id is in no key, a level is not a whole number from 1 to 5, a line
+appears twice, a comment is over 2,000 characters, or the rater already has
+a ratings file in one of the runs. `eval:agreement` then reads the files as
+it reads the view's.
+
 ## What the rater sees
 
 One answer at a time: the question, the reference (the answer key's values
@@ -256,6 +298,29 @@ function is `cohenKappa` in `scripts/evaluation/agreement.ts`; its test
 reproduces Cohen's worked example (Cohen 1968, Table 1: 200 cases, three
 categories, kappa .492, standard error 0.051, interval 0.392 to 0.591).
 
+Since 12 Nov 2026 (#304) each row also gives:
+
+- a percentile bootstrap 95 % interval for kappa (Efron and Tibshirani
+  1993): the row's lines resampled with replacement 2,000 times, seed 304,
+  kappa recomputed each time, and the 2.5th and 97.5th percentiles taken.
+  Resamples where kappa is not defined (every line in one category) are
+  dropped, and the row says how many of the 2,000 were used when any were.
+  On Cohen's example it gives 0.389 to 0.591, next to the large-sample
+  0.392 to 0.591.
+- Krippendorff's alpha (Krippendorff 2011, "Computing Krippendorff's
+  Alpha-Reliability"), ordinal on the five levels, so a 5 against a 4 counts
+  as less disagreement than a 5 against a 1, and nominal on pass or fail
+  and against the scorer, with a bootstrap interval made the same way over
+  lines (Zapf et al. 2016, BMC Medical Research Methodology 16:93). The
+  function is `krippendorffAlpha`, from the coincidence matrix, any number
+  of coders, missing values allowed; its test reproduces Krippendorff's
+  examples (four coders, twelve units: .743 nominal, .815 ordinal, .849
+  interval; two coders, binary: .095).
+
+The seed is fixed so the same ratings print the same intervals on any
+machine. Kappa is the protocol's primary statistic; alpha and the bootstrap
+are reported beside it.
+
 ## Limits
 
 - About 30 lines per run (29 in the v1h sample): the interval is wide,
@@ -269,6 +334,13 @@ categories, kappa .492, standard error 0.051, interval 0.392 to 0.591).
   in one category, the script says kappa is not defined. When only one side used
   one category (a rater who gave every answer a 5, say), kappa is 0 and the
   script gives no interval.
+- The bootstrap resamples lines as if they were independent. Repeats of one
+  item, and the same item across runs, are not, so with repeats or several
+  runs the intervals are somewhat too narrow. With about 30 lines a
+  percentile interval can also sit unevenly around the estimate.
+- A rater sheet holds one model's answers; a rater who fills it alone, not
+  pooled with other runs, knows every row is from one model, though not
+  which. Pool the sheets, or use the view, which mixes runs.
 - The reference is shown, so the rating is of agreement with the scripted
   pipeline, not of medical truth. The scripted verdicts equal the planted
   ones on every hb item.
