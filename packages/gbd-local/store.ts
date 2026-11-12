@@ -102,7 +102,29 @@ export const gbdImportSource = async (db: PrismaClient): Promise<GbdImportSource
 export const hasGbdEstimates = async (db: PrismaClient): Promise<boolean> =>
   (await db.gbdEstimate.findFirst({ select: { key: true } })) !== null;
 
-export const gbdEstimatePorts = (db: () => PrismaClient): GbdEstimatePorts => ({
+/** GBD location id of Germany, the place of the out-of-catalogue S4 probe. */
+const GERMANY_LOCATION_ID = 81;
+/** The year of the out-of-catalogue S4 probe. */
+const PROBE_YEAR = 2015;
+
+/**
+ * Whether any Germany row or any 2015 row is stored (#273): the eval's S4
+ * probes Q-S4-09 and Q-S4-10 ask for them and expect no estimate.
+ */
+export const gbdProbeRows = async (
+  db: PrismaClient,
+): Promise<Readonly<{ germany: boolean; year2015: boolean }>> => {
+  const [germany, year2015] = await Promise.all([
+    db.gbdEstimate.findFirst({
+      where: { OR: [{ locationId: GERMANY_LOCATION_ID }, { locationName: "Germany" }] },
+      select: { key: true },
+    }),
+    db.gbdEstimate.findFirst({ where: { year: PROBE_YEAR }, select: { key: true } }),
+  ]);
+  return { germany: germany !== null, year2015: year2015 !== null };
+};
+
+export const gbdEstimatePorts =(db: () => PrismaClient): GbdEstimatePorts => ({
   catalog: () => gbdCatalog(db()),
   findEstimates: (query) => findGbdEstimates(db(), query),
   appendAudit: (input) => append(db(), input),

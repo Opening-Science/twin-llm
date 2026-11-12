@@ -108,8 +108,8 @@ data is in a question, the key or the logs.
 - `tags` marks probes and the latency set. `human` is the note for the review
   sheet.
 - `context.requires` lists env an item needs (S4 needs `GBD_MCP_URL` and
-  `GBD_MCP_TOKEN`); C3 skips such an item when the env is missing, it does not
-  fail it.
+  `GBD_MCP_TOKEN`, met by the local GBD store too); C3 skips such an item when
+  the env is missing, it does not fail it, and prints the unset names first.
 
 ## Answer key
 
@@ -161,9 +161,37 @@ bun run eval:answer-key          # uses --env-file=.env.eval
 bun run eval:answer-key:live     # RUN_LIVE=1 drift check, same env
 ```
 
-S4 needs the IHME GBD MCP server (`docs/gbd.md`). It is a remote service
-over HTTPS, not a local process or a cache, so an S4 run needs network access.
-Add two names to `.env.eval` (placeholders in `.env.synthetic.example`):
+S4 runs by one of two routes (#273). Pick one before an S4 run; with neither,
+the run prints, before any model call, the scenario, the number of items and
+the exact unset names, for example
+
+```text
+S4: 10 items will be skipped as MISSING_ENV; unset: GBD_MCP_URL, GBD_MCP_TOKEN. ...
+```
+
+and writes every S4 item as `MISSING_ENV` (the items list both names in
+`context.requires`), counted as skipped, not failed.
+
+**Local route (preferred, #387, `docs/gbd.md`).** No variables, no network and
+no token; `LOCAL_ONLY=true` can stay. Import GBD 2023 Results Tool CSVs into
+the eval database covering the measures, causes, locations, sexes, ages and
+years Q-S4-01 to Q-S4-08 ask. Leave Germany and the year 2015 out: Q-S4-09
+and Q-S4-10 are out-of-catalogue probes, and an import that holds them turns
+the probes into answerable questions their expectations do not fit. The
+harness checks this: before a run with any S4 item on the local route it looks
+for a Germany row or a 2015 row and, if either is stored, stops with
+`GBD_PROBE_ROWS` and one line naming the rows and the fix. The remote route is
+not checked.
+
+```sh
+bun --env-file=.env.eval --preload ./features/chat/response/preload-server-only.mjs \
+  scripts/gbd/import.ts ~/Downloads/IHME-GBD_2023_DATA-*.csv
+bun run eval -- --models ollama:qwen3:8b --scenario S4 --run-id <date>-qwen3-8b-s4-local
+```
+
+**Remote route.** The IHME GBD MCP server, a remote service over HTTPS, so
+the run needs network access. Add two names to `.env.eval` (placeholders in
+`.env.synthetic.example`):
 
 - `GBD_MCP_URL`: the https URL of the GBD MCP endpoint (JSON-RPC over HTTP).
 - `GBD_MCP_TOKEN`: the bearer token for that endpoint. It is a secret from the
@@ -177,22 +205,6 @@ Check the connection before a run:
 ```sh
 RUN_LIVE=1 bun --env-file=.env.eval test packages/gbd-mcp/live.test.ts
 bun run eval -- --models ollama:qwen3:8b --scenario S4 --run-id <date>-qwen3-8b-s4
-```
-
-Without both names every S4 item is written as `MISSING_ENV` (the items list
-them in `context.requires`) and counted as skipped, not failed.
-
-S4 can instead run on the local GBD store (#387, `docs/gbd.md`), with no
-network and no token. Import GBD 2023 Results Tool CSVs into the eval
-database covering the measures, causes, locations, sexes, ages and years
-Q-S4-01 to Q-S4-08 ask. Leave Germany and the year 2015 out: Q-S4-09 and
-Q-S4-10 are out-of-catalogue probes, and an import that holds them turns the
-probes into answerable questions their expectations do not fit.
-
-```sh
-bun --env-file=.env.eval --preload ./features/chat/response/preload-server-only.mjs \
-  scripts/gbd/import.ts ~/Downloads/IHME-GBD_2023_DATA-*.csv
-bun run eval -- --models ollama:qwen3:8b --scenario S4 --run-id <date>-qwen3-8b-s4-local
 ```
 
 When the eval database holds any GBD estimate, the harness offers
