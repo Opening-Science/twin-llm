@@ -50,6 +50,9 @@ export const FITTED_NOT_INSTALLED_API =
 export const SKELETON_NOT_CONFIGURED_API =
   "No open-anatomy skeleton here. Set ANATOMY_SKELETON_GLB to a skeleton GLB.";
 
+export const SKELETON_NOT_PINNED_API =
+  "The open-anatomy skeleton is missing or does not match ANATOMY_SKELETON_SHA256.";
+
 export const SKELETON_HEADING = "Skeleton";
 export const skeletonSourceLabel = (caseId: string | null): string =>
   caseId ? `CT skeleton · open-anatomy ${caseId}` : "CT skeleton · open-anatomy";

@@ -37,7 +37,7 @@ To bump a pin: download the new file, record its bytes and SHA-256 in `packages/
 ## Routes
 
 - `GET /api/anatomy/status`: `{ atlases: [{ id, installed }], riggedBodies, skeleton }`, `no-store`. Installed means present at exactly the pinned size. `skeleton` is the parsed atlas.json of the configured open-anatomy skeleton, or `null` (see [CT skeleton](#ct-skeleton-open-anatomy)).
-- `GET /api/anatomy/skeleton`: the open-anatomy skeleton GLB, `private, max-age=0, must-revalidate` with an ETag from its size and modification time (it is a local build, not a pinned file). JSON 404 when none is configured.
+- `GET /api/anatomy/skeleton`: the open-anatomy skeleton GLB, pinned by `ANATOMY_SKELETON_SHA256` and served by the same handler as the atlases (`servePinnedGlb`): the ETag is the pin, `public, max-age=0, must-revalidate`, and a file whose SHA-256 is not the pin is never served (JSON 404). JSON 404 when none is configured.
 - `GET /api/anatomy/demo/:bodyId`: a demo body GLB, same caching, ETag and 404 rules as the atlas route.
 - `GET /api/anatomy/fitted/:fittedId` (`<body>.<atlas>`, e.g. `anny-adult-f.hra-f`): an atlas refitted to a rigged demo body in Blender, same rules, its own pins (see "Fitted atlas in the viewer"). The status also lists `fittedAtlases: [{ id, installed }]` and `fittedAtlasOn`.
 - `GET /api/anatomy/atlas/:atlasId`: the GLB. With `?v=<first 16 hex of the SHA-256>` it is `public, max-age=31536000, immutable`; otherwise `public, max-age=0, must-revalidate`. ETag is the SHA-256; a matching `If-None-Match` returns 304. A missing or partial file is a JSON 404 that says how to install it. Unknown ids are 404 and never reach the file system.
@@ -84,7 +84,7 @@ Measured on the pinned files (2026-10-13):
 
 ### CT skeleton (open-anatomy)
 
-The Skeleton layer can draw an open-anatomy skeleton instead of the atlas's bones: one public CT case (Stage 1: s0086, TotalSegmentator, CC BY 4.0), one node per bone. Nothing is committed here. Set `ANATOMY_SKELETON_GLB` in `.env.local` to the absolute path of a build, for example `/path/to/open-anatomy/data/atlas/s0086/s0086.skeleton.glb`; `atlas.json` is read from the same folder. Unset, or the file missing, the status says `skeleton: null` and the layer is absent, never an error. A new build drops in with no code change.
+The Skeleton layer can draw an open-anatomy skeleton instead of the atlas's bones: one public CT case (Stage 1: s0086, TotalSegmentator, CC BY 4.0), one node per bone. Nothing is committed here. Set `ANATOMY_SKELETON_GLB` in `.env.local` to the absolute path of a build, for example `/path/to/open-anatomy/data/atlas/s0086/s0086.skeleton.glb`, and `ANATOMY_SKELETON_SHA256` to its `sha256sum` (startup fails without it); `atlas.json` is read from the same folder. Unset, the file missing or not the pinned file, the status says `skeleton: null` and the CT skeleton is not shown. A new build drops in with a new pin and no code change.
 
 - Node names are ontology ids (`FMA_7485`); the pick card shows `extras.name` (or the explode contract's `extras.label`), the ontology term and, for `extras.modelled` or a structure atlas.json lists as modelled, "Modelled, not segmented from the CT" (Stage 1: the costal cartilages).
 - Structures atlas.json leaves out (`excluded`, and Stage 1's `girdleLeftOut`: clavicles, scapulae and humeri, open-anatomy issue 45) are dropped if a node has them, and the panel says what this build left out. With the CT skeleton on the atlas's own bones are hidden, so no left-out bone is drawn from another donor.
