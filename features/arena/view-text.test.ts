@@ -60,6 +60,9 @@ describe("biomarker card words", () => {
         trend: { n: 2, direction: null, slopePerDay: null, slopeUnit: null },
       }),
     ).toBe("No trend: too few readings · n = 2");
+    expect(trendText({ ...card, trend: { ...card.trend, n: 1_500 } })).toBe(
+      "↑ Rising · n = 1,500",
+    );
   });
 
   test("a range that depends on facts names them; open bounds read as ≤ and ≥", () => {
@@ -149,6 +152,10 @@ describe("table words", () => {
   test("a cut table says how much it shows", () => {
     expect(tableNote(spec)).toBe("Showing first 2 of 120");
     expect(tableNote({ ...spec, total: 2 })).toBeNull();
+  });
+
+  test("counts are grouped the en-GB way", () => {
+    expect(tableNote({ ...spec, total: 12_345 })).toBe("Showing first 2 of 12,345");
   });
 
   test("cells: days, numbers at the column's decimals, a dash when empty", () => {
