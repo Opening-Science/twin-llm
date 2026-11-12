@@ -466,7 +466,7 @@ export const rrGridCard = (data: RrGrid | null): ResearchCard | null => {
     label: "Recording resolution",
     headline:
       first && last && afdb && ltafdb
-        ? `Real AF windows had a mean turning-point ratio of ${formatNumber(afdb.tpr.value, 3)} (AFDB) and ${formatNumber(ltafdb.tpr.value, 3)} (LTAFDB); simulated AF went from ${formatNumber(first.tpr.value, 3)} with exact beat times to ${formatNumber(last.tpr.value, 3)} with beats on a ${last.gridMs} ms grid.`
+        ? `Real AF windows had a mean turning-point ratio of ${formatNumber(afdb.tpr.value, 3)} (AFDB) and ${formatNumber(ltafdb.tpr.value, 3)} (LTAFDB); simulated AF went from ${formatNumber(first.tpr.value, 3)} with exact beat times to ${formatNumber(last.tpr.value, 3)} ${last.gridMs === 0 ? "with exact beat times" : `with beats on a ${gridShort(last.gridMs)}`}.`
         : `Mean turning-point ratio of AF windows on ${all.length} sources.`,
     caption: showsMain
       ? "Mean turning-point ratio (TPR) of all-AF windows on the two databases and on simulated recordings with short-range dependence between intervals, beat times put on a 0, 4 or 7.8125 ms grid, the databases' own sampling steps. The runs with independent intervals are under Show all runs. Lines are 95 % bootstrap intervals."
