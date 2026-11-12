@@ -108,8 +108,8 @@ data is in a question, the key or the logs.
 - `tags` marks probes and the latency set. `human` is the note for the review
   sheet.
 - `context.requires` lists env an item needs (S4 needs `GBD_MCP_URL` and
-  `GBD_MCP_TOKEN`); C3 skips such an item when the env is missing, it does not
-  fail it.
+  `GBD_MCP_TOKEN`, met by the local GBD store too); C3 skips such an item when
+  the env is missing, it does not fail it, and prints the unset names first.
 
 ## Answer key
 
@@ -161,9 +161,37 @@ bun run eval:answer-key          # uses --env-file=.env.eval
 bun run eval:answer-key:live     # RUN_LIVE=1 drift check, same env
 ```
 
-S4 needs the IHME GBD MCP server (`docs/gbd.md`). It is a remote service
-over HTTPS, not a local process or a cache, so an S4 run needs network access.
-Add two names to `.env.eval` (placeholders in `.env.synthetic.example`):
+S4 runs by one of two routes (#273). Pick one before an S4 run; with neither,
+the run prints, before any model call, the scenario, the number of items and
+the exact unset names, for example
+
+```text
+S4: 10 items will be skipped as MISSING_ENV; unset: GBD_MCP_URL, GBD_MCP_TOKEN. ...
+```
+
+and writes every S4 item as `MISSING_ENV` (the items list both names in
+`context.requires`), counted as skipped, not failed.
+
+**Local route (preferred, #387, `docs/gbd.md`).** No variables, no network and
+no token; `LOCAL_ONLY=true` can stay. Import GBD 2023 Results Tool CSVs into
+the eval database covering the measures, causes, locations, sexes, ages and
+years Q-S4-01 to Q-S4-08 ask. Leave Germany and the year 2015 out: Q-S4-09
+and Q-S4-10 are out-of-catalogue probes, and an import that holds them turns
+the probes into answerable questions their expectations do not fit. The
+harness checks this: before a run with any S4 item on the local route it looks
+for a Germany row or a 2015 row and, if either is stored, stops with
+`GBD_PROBE_ROWS` and one line naming the rows and the fix. The remote route is
+not checked.
+
+```sh
+bun --env-file=.env.eval --preload ./features/chat/response/preload-server-only.mjs \
+  scripts/gbd/import.ts ~/Downloads/IHME-GBD_2023_DATA-*.csv
+bun run eval -- --models ollama:qwen3:8b --scenario S4 --run-id <date>-qwen3-8b-s4-local
+```
+
+**Remote route.** The IHME GBD MCP server, a remote service over HTTPS, so
+the run needs network access. Add two names to `.env.eval` (placeholders in
+`.env.synthetic.example`):
 
 - `GBD_MCP_URL`: the https URL of the GBD MCP endpoint (JSON-RPC over HTTP).
 - `GBD_MCP_TOKEN`: the bearer token for that endpoint. It is a secret from the
@@ -177,22 +205,6 @@ Check the connection before a run:
 ```sh
 RUN_LIVE=1 bun --env-file=.env.eval test packages/gbd-mcp/live.test.ts
 bun run eval -- --models ollama:qwen3:8b --scenario S4 --run-id <date>-qwen3-8b-s4
-```
-
-Without both names every S4 item is written as `MISSING_ENV` (the items list
-them in `context.requires`) and counted as skipped, not failed.
-
-S4 can instead run on the local GBD store (#387, `docs/gbd.md`), with no
-network and no token. Import GBD 2023 Results Tool CSVs into the eval
-database covering the measures, causes, locations, sexes, ages and years
-Q-S4-01 to Q-S4-08 ask. Leave Germany and the year 2015 out: Q-S4-09 and
-Q-S4-10 are out-of-catalogue probes, and an import that holds them turns the
-probes into answerable questions their expectations do not fit.
-
-```sh
-bun --env-file=.env.eval --preload ./features/chat/response/preload-server-only.mjs \
-  scripts/gbd/import.ts ~/Downloads/IHME-GBD_2023_DATA-*.csv
-bun run eval -- --models ollama:qwen3:8b --scenario S4 --run-id <date>-qwen3-8b-s4-local
 ```
 
 When the eval database holds any GBD estimate, the harness offers
@@ -1055,7 +1067,11 @@ and entries, and the probes' keyed values. With `RUN_LIVE=1` and
 files and both must match.
 
 Running it: `bun run eval -- --set v1h --models …`, with the cohort ingested
-in the eval database as for v1. No model has been run on v1h yet.
+in the eval database as for v1.
+
+Correction, 12 Nov 2026 (#304): this section said no model had been run on
+v1h. The first run is `2026-11-01-qwen3-4b-v1h` (#380), qwen3:4b with tools
+at `4b58ef5`; its results are in `docs/research/eval-runs-2026-10.md`.
 
 ### Human review (protocol)
 
@@ -1076,6 +1092,27 @@ Two raters, blind, on a stratified sample, with agreement statistics:
    scorer (levels 4 and 5 as a pass) and the two raters against each other,
    Cohen's kappa with its 95 % interval, reported next to the observed
    agreement.
+
+Amendment, 12 Nov 2026 (#304), written before any v1h rating and without
+looking at any v1h output; the sample of step 2 and the rubric are unchanged:
+
+- Step 1: `review.csv` shows the scorers' flags, so it is blind to the model
+  but not to the score. For the two raters,
+  `bun run eval:rater-sheet -- --runs <run-id>,…` writes one sheet pooled
+  across the runs and models: the step-2 sample of each run with question,
+  reference, note and reply under an opaque id, in one salted order, and
+  nothing else. A rater uses either the pooled sheet or the Lab view, and
+  `eval:rater-sheet` turns a filled sheet into the same ratings files the
+  view writes (`second-rater.md`, "The rater sheet").
+- Step 4: beside kappa and its large-sample interval, Krippendorff's alpha
+  (ordinal on the five levels, nominal on pass or fail) and percentile
+  bootstrap 95 % intervals over lines for both, 2,000 resamples, seed 304.
+  Kappa stays the primary statistic; alpha and the bootstrap are reported
+  with it, not in its place.
+- Repeats: a run may use `--repeats n` (`harness.md`), which raises every
+  item to at least n repeats. The step-2 sample then counts each repeat as a
+  line, so every repeat of S5 and S6 is rated. The six v1h consistency
+  items already run three times.
 
 The Lab's rating view reads v1h runs with `?set=v1h` (#304), on a rubric
 version of its own (the hb anchors speak of verdicts, and S3 and S4 items

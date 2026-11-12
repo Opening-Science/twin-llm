@@ -36,6 +36,15 @@ bun run eval:cohort-codes -- --in .synthea   # after a cohort change only
 | `--arm code`                                            | Model-written code in a sandbox ([below](#the-code-arm-303))             |
 | `--context-cap <tokens>`                                | Context and code arms: estimated tokens per data block, default 6000     |
 | `--decline-wording w1` / `w2` / `w3`                    | Decline line for a wording comparison (#274); default the chat's         |
+| `--repeats <n>`                                         | Every item at least n times, 2 to 10 (#304); default the set's own       |
+
+`--repeats` raises each item's `repeat` to at least n for one run and
+records n in `meta.json` (`repeats`). An item raised above one repeat is
+scored on consistency too, as the set's own consistency items are; the
+report and `eval:agreement` apply the same raise when they score the run.
+The report gives a Repeats row in its run table and a "Repeats per item"
+column in the overview ("1–3" when items differ). Each repeat is its own
+recording in the cache, so a replay needs every repeat recorded.
 
 `bun run eval` refuses unless `DATA_MODE=synthetic`, stops when the questions'
 sha256 is not the key's `questions_sha256`, refuses a cohort with a subject
@@ -258,21 +267,28 @@ has a column per v1 scenario, and an S7 column when the run scored S7 lines.
 `bun run eval:report` reads no env and no database. It refuses a MOCK run, a
 run with results v1 lines, and a run whose questions sha256 differs from the
 questions and the key. It writes `report.md`, `review.csv` and
-`review-key.json` next to the run.
+`review-key.json` next to the run, and for a one-model run of a rated set
+(hb or v1h) that run's blinded rater sheet `rater-sheet.csv` with its
+`rater-sheet-key.json`. The sheet for raters is the pooled one,
+`bun run eval:rater-sheet -- --runs a,b,…` (`second-rater.md`, "The rater
+sheet").
 
 ## Files
 
 Everything under `evaluation/runs/` and `evaluation/cache/` is gitignored.
 
-| File                                   | What                                                                           |
-| -------------------------------------- | ------------------------------------------------------------------------------ |
-| `evaluation/runs/<id>/results.jsonl`   | One line per item × repeat × model (schema `twin-llm.eval.results.v2`)         |
-| `evaluation/runs/<id>/meta.json`       | Git SHA, questions and key sha256, cohort, open-twin pin, models, host, counts |
-| `evaluation/runs/<id>/report.md`       | Scores, intervals, latency, limits                                             |
-| `evaluation/runs/<id>/review.csv`      | The human sheet, blinded                                                       |
-| `evaluation/runs/<id>/review-key.json` | Which blinded label is which model; keep it from reviewers                     |
-| `evaluation/cache/<sha256>.json`       | One recorded model call                                                        |
-| `evaluation/cohort-codes.v1.json`      | Committed: the LOINC codes the pinned cohort holds, for call accuracy          |
+| File                                        | What                                                                           |
+| ------------------------------------------- | ------------------------------------------------------------------------------ |
+| `evaluation/runs/<id>/results.jsonl`        | One line per item × repeat × model (schema `twin-llm.eval.results.v2`)         |
+| `evaluation/runs/<id>/meta.json`            | Git SHA, questions and key sha256, cohort, open-twin pin, models, host, counts |
+| `evaluation/runs/<id>/report.md`            | Scores, intervals, latency, limits                                             |
+| `evaluation/runs/<id>/review.csv`           | The human sheet, blinded                                                       |
+| `evaluation/runs/<id>/review-key.json`      | Which blinded label is which model; keep it from reviewers                     |
+| `evaluation/runs/<id>/rater-sheet.csv`      | hb and v1h: the second raters' sheet, blind to model, item and score           |
+| `evaluation/runs/<id>/rater-sheet-key.json` | The sheet's salt and which id is which line; keep it from raters               |
+| `evaluation/rater-sheets/<pool>/`           | A pooled rater sheet and its key across runs (`eval:rater-sheet`)              |
+| `evaluation/cache/<sha256>.json`            | One recorded model call                                                        |
+| `evaluation/cohort-codes.v1.json`           | Committed: the LOINC codes the pinned cohort holds, for call accuracy          |
 
 A results line holds the response document v1.1, the reply, the audit rows
 (tool, args sha256, row count, refusal code, subject), the tool results, the
@@ -493,6 +509,53 @@ eight criteria do not change.
 | latency          | Not pass/fail: p50, p90 and p95 (nearest rank) of TTFT and total time per model, for the latency set and all items. Cache hits and errors are left out.                                                                                                                                                                                                                                                                                                                          | —                                                                                                                                                                                                                                                                                                                                            |
 
 `verifyChain()` needs the database, so it is a run step, not a scorer.
+
+## Paired comparison
+
+```sh
+bun run eval:compare -- <run-a> <run-b> [<run-a> <run-b> …] [--unit item|line] [--json]
+```
+
+Two runs of the same items (an arm against another, an agent against its
+base model) answer the same questions, so their outcomes are paired, and a
+test on two independent proportions throws that pairing away.
+`scripts/evaluation/compare.ts` scores both runs with the current scorers,
+as `eval:report` does, and pairs them per criterion.
+
+- `--unit item` (the default, the primary analysis): one pair per item.
+  Its repeats are folded by majority: passes on more than half of the
+  repeats not skipped is a pass; too few for a majority even if every
+  `error` or `human` repeat passed is a fail, so a tie is not a pass; any
+  other mix leaves the item undecided (`error` if a repeat errored, else
+  `human`). `--unit line` pairs each repeat as its own line, a sensitivity
+  analysis. Consistency is per item either way.
+
+- A pair counts only when both sides are `pass` or `fail`. A unit only one
+  run has, or where either side is skipped (`MISSING_ENV`), `error`,
+  `human` or `na`, is left out and counted in "Left out" under the first of
+  those reasons that fits.
+- Each criterion gets the exact two-sided McNemar test: with b units that
+  passed in A only and c in B only, p = min(1, 2 · P(X ≤ min(b, c))) for
+  X ~ Binomial(b + c, 1/2). 7 against 1 gives 18/256 = 0.0703125; no
+  discordant pair gives 1.
+- Holm's step-down adjustment runs across the criteria of one comparison
+  that have at least one pair ("p (Holm)"). As a sensitivity column, "p
+  (Holm, all)" (`pHolmFamily` in the JSON) adjusts across every criterion
+  of every pair given in one call, so give a re-analysis's pairs together;
+  with one pair the two columns are equal.
+
+It refuses a pair when a run is MOCK, has more than one model, named
+consents, or does not share one questions sha256 with the current questions
+and key, and when the two runs did not ask the same set. Reads no env and
+no database, calls no model and writes nothing; `--json` prints every pair
+as one JSON document.
+
+Limits: with `--unit line` the few repeated items give up to three lines
+each, which are not independent, so the test leans liberal there; the item
+unit avoids that at the cost of folding a split item to fail. Query safety and
+privacy check only the reply in a context or code arm (the server made the
+reads), so a tools arm against one of those is not a like-for-like test on
+them. Runs from different commits differ in more than the arm or agent.
 
 ## What stays human
 
