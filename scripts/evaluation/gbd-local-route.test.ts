@@ -54,7 +54,11 @@ describe("S4's env check (#273)", () => {
       const items = itemsOf(path);
       const s4 = items.filter((item) => item.scenario === "S4");
       expect(s4.length).toBeGreaterThan(0);
-      for (const item of s4) expect(item.context.requires).toEqual([...REMOTE_GBD_ENV]);
+      for (const item of s4) {
+        expect<readonly string[] | undefined>(item.context.requires).toEqual(
+          REMOTE_GBD_ENV,
+        );
+      }
       const others = items.filter(
         (item) => item.scenario !== "S4" && (item.context.requires ?? []).length > 0,
       );
