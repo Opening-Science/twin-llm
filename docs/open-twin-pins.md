@@ -9,7 +9,7 @@ of `@open-twin/anchor-layer` from a **gitignored** checkout at a pinned SHA. `@o
 ## Pin
 
 - Repo: https://github.com/Opening-Science/open-twin
-- SHA: `c37d8004d93d5accb9b91bebcbd89376837776bd` (open-twin `main`, 2026-11-05; was `a9e126c952c91e19e064a962dda7d815a43564e5`). From the old pin to this one the synced packages' `src/` is unchanged: READMEs, and dev tooling (tsup 9, vitest 5.0.5) and dependency bumps in their `package.json` (`@lhncbc/ucum-lhc` 8.0.1, `@googleapis/health` 7.0.1, `googleapis` 188.0.0). The host keeps the resolutions already in `bun.lock` (see Lockfile note), so the app runs on the same dependency versions as before.
+- SHA: `4b42ef944db0b461ca414b8066a5f7aa2594a9ce` (open-twin `main`, 2026-11-08; was `c37d8004d93d5accb9b91bebcbd89376837776bd`). From the old pin to this one the synced packages' `src/` is unchanged: only `package.json` bumps (`@types/node` 26.6.6, vitest 5.1.0, and `googleapis` 189.0.0 in provider-google-health). The new upstream package `reader-core` is not synced. The host keeps the resolutions already in `bun.lock` (see Lockfile note), so the app runs on the same dependency versions as before.
 - Local tree: `.open-twin/` (created by `scripts/sync-open-twin.sh`)
 - App deps: `file:.open-twin/packages/<name>` in `package.json`
 - `anchor-layer`: only `data/anchor-layer.v1.json` is imported (its loader uses `node:fs`); see `docs/biomarkers.md`
