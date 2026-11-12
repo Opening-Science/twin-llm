@@ -16,6 +16,7 @@ const RECIPIENT_COLUMNS = [
   "Events",
   "Values",
   "Size",
+  "Stored values in text",
   "First",
   "Last",
 ] as const;
@@ -34,17 +35,12 @@ export const DisclosureSection = ({ view }: Readonly<{ view: LedgerView }>) => (
       metric and its day.
     </p>
     <p className="text-muted-foreground mt-2 max-w-2xl text-sm">
-      Before a request to a model goes out, its text (your own words, answers and tool
-      results) is checked for values stored here: rsIDs and genome sites of your imported
-      files, their file names, body scan labels and your account id; lab values with their
-      unit, measure codes next to your own value, clinical record codes and long names,
-      and lines of your twin notes. A value you typed yourself is not counted. Each entry
-      says what kinds were found and how many, never the values. The check is approximate:
-      a value written another way is missed, and wearable numbers are not checked. A
-      request that holds rsIDs or genome sites from your imported files is not sent, and
-      its entry says Blocked. So is one with rsID- or site-shaped text when the check
-      itself fails. Other matches are recorded and the request still goes. Entries from
-      before the check say not checked. A model on this machine is not a recipient.
+      Before a request to a model goes out, its text is checked for values stored here:
+      genome identifiers, file and body scan names, lab values, codes, clinical records,
+      twin note lines and readings next to their date. Each entry records the kinds found
+      and how many, never the values. A match does not stop the request, except your own
+      rsIDs or genome sites: then nothing is sent and the entry says Blocked. The check is
+      approximate and can miss a value written another way.
     </p>
     {view.recipients.length === 0 ? (
       <p className="mt-4 text-sm">
@@ -72,6 +68,13 @@ export const DisclosureSection = ({ view }: Readonly<{ view: LedgerView }>) => (
                   <td>{row.events}</td>
                   <td>{row.values}</td>
                   <td>{row.size}</td>
+                  <td>
+                    {row.freeTextFound ? (
+                      <StatusBadge tone="warn">{row.freeText}</StatusBadge>
+                    ) : (
+                      row.freeText
+                    )}
+                  </td>
                   <td>{row.since}</td>
                   <td>{row.last}</td>
                 </tr>
