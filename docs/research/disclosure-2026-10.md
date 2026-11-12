@@ -134,15 +134,18 @@ chance, at either level, on either set of weights.
 | none            | Loss                   | record  | 0.708 (0.591 to 0.806) | 10.0% (2.8% to 23.7%)  |
 | none            | zlib ratio             | record  | 0.709 (0.591 to 0.815) | 12.5% (4.2% to 26.8%)  |
 | base            | Reference              | record  | 0.516 (0.386 to 0.640) | 2.5% (0.1% to 13.2%)   |
-| pilot 1         | Reference              | record  | 0.782 (0.676 to 0.870) | 17.5% (7.3% to 32.8%)  |
+| pilot 1         | Reference              | record  | 0.783 (0.676 to 0.870) | 17.5% (7.3% to 32.8%)  |
 | pilot 1         | Reference, digits only | record  | 0.694 (0.583 to 0.810) | 12.5% (4.2% to 26.8%)  |
-| none            | Loss                   | subject | 0.532 (0.404 to 0.659) | 2.5% (0.1% to 13.2%)   |
-| pilot 1         | Reference              | subject | 0.542 (0.410 to 0.666) | 2.5% (0.1% to 13.2%)   |
+| none            | Loss                   | subject | 0.533 (0.404 to 0.659) | 2.5% (0.1% to 13.2%)   |
+| pilot 1         | Reference              | subject | 0.543 (0.410 to 0.666) | 2.5% (0.1% to 13.2%)   |
 | pilot 1         | Reference, digits only | subject | 0.568 (0.433 to 0.690) | 0.0% (0.0% to 8.8%)    |
 
-40 members and 40 non-members per level. The attacks do detect the control's
-training conversations: the loss attack reaches 0.71 and the reference attack
-with pilot 1 as reference 0.78, both with lower bounds well above 0.5. So the
+40 members and 40 non-members per level. An AUROC here is a count over
+1,600 pairs, so it can fall exactly on a half (1,252 of 1,600 is 0.7825);
+halves round away from zero, as on the Lab results page. The attacks do detect
+the control's training conversations: the loss attack reaches 0.71 and the
+reference attack with pilot 1 as reference 0.78, both with lower bounds well
+above 0.5. So the
 pilot's null is not only a sign of a blind attack. The signal is modest even
 after 10 epochs, because most trained tokens are template the base model
 already predicts after one pass over the templates; the base model is a poor

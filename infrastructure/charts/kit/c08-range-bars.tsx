@@ -1,6 +1,14 @@
 "use client";
 
-import { ChartFocusFrame, ChartReadout, dimmed, useChartFocus } from "./chart-focus";
+import { EMPTY_VALUE, formatNumber } from "@/infrastructure/format-measure";
+
+import {
+  ChartFocusFrame,
+  ChartGroup,
+  ChartReadout,
+  dimmed,
+  useChartFocus,
+} from "./chart-focus";
 import { rangeBars, slotIndex } from "./kit-geometry";
 import { AXIS_TEXT, ChartSvg, EMPTY_STROKE, LOADING_FILL, toneClass } from "./kit-parts";
 import type { RangeBarsProps } from "./types";
@@ -13,11 +21,12 @@ const LOADING_SHAPE = Array.from({ length: 12 }, (_, i) => ({
   max: 70 + (i % 3) * 8,
 }));
 
-const whole = (value: number): string => String(Math.round(value));
+/** Whole numbers through the shared formatter: a missing value reads "—". */
+const whole = (value: number): string => formatNumber(value, 0);
 
-/** "114 bpm" when the bars have a unit, "114" when not. */
+/** "114 bpm" when the bars have a unit, "114" when not; a missing value is "—" alone. */
 export const withUnit = (value: string, unit: string | undefined): string =>
-  unit ? `${value} ${unit}` : value;
+  unit && value !== EMPTY_VALUE ? `${value} ${unit}` : value;
 
 /**
  * C08: one rounded bar from each bucket's minimum to its maximum, with MIN
@@ -112,7 +121,7 @@ export const RangeBars = ({
       }}
     </ChartSvg>
   );
-  if (!live) return chart;
+  if (!live) return <ChartGroup label={label ?? "Range per hour"}>{chart}</ChartGroup>;
   return (
     <div className="flex flex-col gap-2">
       <ChartReadout

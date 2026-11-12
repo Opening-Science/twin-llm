@@ -1,6 +1,12 @@
 "use client";
 
-import { ChartFocusFrame, ChartReadout, dimmed, useChartFocus } from "./chart-focus";
+import {
+  ChartFocusFrame,
+  ChartGroup,
+  ChartReadout,
+  dimmed,
+  useChartFocus,
+} from "./chart-focus";
 import { formatDuration } from "./format";
 import {
   hypnogram,
@@ -154,7 +160,7 @@ export const Hypnogram = ({
       }}
     </ChartSvg>
   );
-  if (!live) return chart;
+  if (!live) return <ChartGroup label={label ?? "Sleep stages"}>{chart}</ChartGroup>;
   return (
     <div className="flex flex-col gap-2">
       <ChartReadout

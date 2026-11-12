@@ -1,7 +1,9 @@
 import Link from "next/link";
+import type { ReactElement } from "react";
 import Markdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+import { renderedByText } from "./docs-cache";
 import { type DocPage, rewriteDocUrl } from "./docs-pages";
 import { rehypeHeadingIds } from "./heading-ids";
 
@@ -13,6 +15,35 @@ import { rehypeHeadingIds } from "./heading-ids";
  */
 
 const FRAME = "page-reading page-stack";
+
+/**
+ * Rendered Markdown per page and link style, kept for the life of the module:
+ * one process in production, and until the next hot reload in development, so
+ * an edit to this file still shows.
+ */
+const rendered = renderedByText<ReactElement>();
+
+const renderMarkdown =
+  (path: string, pages: "app" | "github") =>
+  (markdown: string): ReactElement =>
+    Markdown({
+      children: markdown,
+      remarkPlugins: [remarkGfm],
+      rehypePlugins: [rehypeHeadingIds],
+      urlTransform: (url) => defaultUrlTransform(rewriteDocUrl(url, path, pages)),
+    });
+
+const pageMarkdown = (
+  page: DocPage & Readonly<{ markdown: string }>,
+  standalone: boolean,
+) => {
+  const pages = standalone ? "github" : "app";
+  return rendered(
+    `${pages}:${page.path}`,
+    page.markdown,
+    renderMarkdown(page.path, pages),
+  );
+};
 
 export const DocsIndex = ({ pages }: Readonly<{ pages: readonly DocPage[] }>) => (
   <div className={FRAME}>
@@ -60,14 +91,6 @@ export const DocScreen = ({
         / {page.path}
       </p>
     )}
-    <Markdown
-      remarkPlugins={[remarkGfm]}
-      rehypePlugins={[rehypeHeadingIds]}
-      urlTransform={(url) =>
-        defaultUrlTransform(rewriteDocUrl(url, page.path, standalone ? "github" : "app"))
-      }
-    >
-      {page.markdown}
-    </Markdown>
+    {pageMarkdown(page, standalone)}
   </article>
 );

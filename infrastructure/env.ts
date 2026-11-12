@@ -646,6 +646,12 @@ export const envValueLooksEmpty = (source: NodeJS.ProcessEnv, name: string): boo
 export const envLooksEmpty = (name: string): boolean =>
   process.env.NODE_ENV !== "production" && envValueLooksEmpty(process.env, name);
 
+/**
+ * True under `next start` and other production runs, where files shipped with
+ * the build do not change, so they can be read once per process.
+ */
+export const isProductionRuntime = (): boolean => process.env.NODE_ENV === "production";
+
 export const isLocalOnly = (): boolean => serverEnv().LOCAL_ONLY;
 
 export const isAuthDisabled = (): boolean => {

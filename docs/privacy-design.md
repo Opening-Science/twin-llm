@@ -685,7 +685,10 @@ recipient.
   conversion, a rounded number, thousands split by a plain space, another spelling) is missed, a value
   the person typed and a reply repeats is not counted, and wearable numbers are not
   searched; wearable and twin note values are recorded as references above. Live lookups
-  are not checked (they have their own query check).
+  are not checked (they have their own query check). This check reads a decimal comma
+  because outgoing text may be in any locale; the evaluation's number finder
+  (`infrastructure/narrated-numbers.ts`) deliberately does not, since model answers are
+  en-GB (`docs/evaluation/harness.md`, "Limits").
 - **Exports and remote embeddings** (#531). A thread export (Markdown, FHIR or print)
   checks the thread's Markdown, the same text in every format, with the person's own
   questions as `typed`. The person sees what was found before any file is made: PDF and

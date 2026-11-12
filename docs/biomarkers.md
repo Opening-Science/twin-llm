@@ -37,11 +37,17 @@ Biomarkers). The Demo body shows Anatomy and this tab, since it has no scan.
   from the range's says so instead of a position.
 - **Where values come from:** the Demo borrows a synthetic cohort person's labs
   (below), Synthetic person 1 by default. Self has no lab source yet, so it lists
-  the catalogue and adds Vitals from its own wearable summaries: per vital, the
-  first source in the vitals table that has data, newest day. Each vital names
-  where it comes from ("From Oura, 15 Oct 2026") and, when a later source also
-  has a reading, says so and gives the rule ("WHOOP also records this; Oura
-  comes first in a fixed order, so its reading is shown.", #464). Other BodyLoop
+  the catalogue and adds Vitals from its own wearable summaries. Each vital names
+  where it comes from ("From Oura, 15 Oct 2026", #464). For HRV, resting heart
+  rate, blood oxygen and steps the sources are compared under the wearable
+  source rules ([wearable-sources.md](wearable-sources.md)): the row shows the
+  newest reading the rules kept with its rule and a status ("Sources agree",
+  "Source chosen on published evidence"), or "Held back" ("No source chosen")
+  with the reason when the newest day's readings disagree and nothing decides.
+  The other vitals show
+  the first source in the vitals table that has data, newest day, and name a
+  later source with a related measure ("WHOOP also records this; Oura comes
+  first in a fixed order, so its reading is shown."). Other BodyLoop
   subjects list the catalogue only. The panel shows for every subject, scans or
   not, since the catalogue always has rows.
 - **A failed read says so:** when the cohort list or a person's values cannot be

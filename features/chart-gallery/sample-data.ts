@@ -6,6 +6,7 @@
 
 import { formatClock } from "@/infrastructure/charts/kit";
 import type { DaySample, Range, StageSpan, StreakDay } from "@/infrastructure/charts/kit";
+import { formatMeasure } from "@/infrastructure/format-measure";
 
 /** A smooth running total over the day, `total` by midnight. */
 const curve = (total: number, steps = 24): readonly DaySample[] =>
@@ -133,7 +134,7 @@ export const RADAR_READINESS = [
 
 /* --- Readouts for the interactive examples, all made up ---------------------- */
 
-const steps = (n: number): string => `${n.toLocaleString("en-US")} steps`;
+const steps = (n: number): string => `${formatMeasure("steps", n)} steps`;
 
 /** The hour nearest a share of the day, "14:00", in the display locale. */
 const clock = (at: number): string => formatClock(Math.round(at * 24) * 60);

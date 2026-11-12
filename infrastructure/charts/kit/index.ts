@@ -14,8 +14,10 @@ export {
   type SeriesToken,
 } from "../category-token";
 export * from "./kit-geometry";
+export { NoValue } from "./no-value";
 export {
   ChartFocusFrame,
+  ChartGroup,
   ChartReadout,
   dimmed,
   mutedUnlessFocused,

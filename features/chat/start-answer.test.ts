@@ -14,6 +14,7 @@ import type { LiveSourceId } from "@/infrastructure/live-sources";
 import type { CatalogAgent } from "@/infrastructure/model-catalog";
 import type { TurnSkill } from "@/infrastructure/skill-gate";
 import type { WhoopSummary } from "@/infrastructure/whoop-types";
+import { WEARABLE_SOURCES_TOOL_PREFIX } from "@/infrastructure/wearable-source-audit";
 import type { AppendInput } from "@/packages/audit/append";
 import { sha256Hex } from "@/packages/audit/hash";
 
@@ -70,6 +71,7 @@ const harness = (
   const calls: string[] = [];
   const audits: AppendInput[] = [];
   const efforts: AppendInput[] = [];
+  const sources: AppendInput[] = [];
   const applied: (AppliedEffort | null)[] = [];
   const streamed: StreamContext[] = [];
   const refused: RefusedRow[] = [];
@@ -100,6 +102,11 @@ const harness = (
         efforts.push(input);
         return {};
       }
+      // The wearable sources row (#464) is on every turn with a summary; its own tests read `sources`.
+      if (input.tool.startsWith(WEARABLE_SOURCES_TOOL_PREFIX)) {
+        sources.push(input);
+        return {};
+      }
       calls.push("audit");
       audits.push(input);
       return {};
@@ -121,6 +128,7 @@ const harness = (
     calls,
     audits,
     efforts,
+    sources,
     applied,
     streamed,
     refused,
@@ -883,5 +891,45 @@ describe("chat start: effort (#366)", () => {
     const { startAnswer, calls } = harness(OLLAMA, NO_WEARABLES, { auditFails: true });
     await expect(startAnswer(ACTOR, APP_USER, CALL)).rejects.toThrow("audit-down");
     expect(calls).toEqual([`wearables synthetic ${APP_USER}`, "audit"]);
+  });
+});
+
+describe("chat start: wearable sources row (#464)", () => {
+  const LOCAL_PERSONAL: ChatProviderSettings = {
+    dataMode: "personal",
+    provider: "ollama",
+    exoscalePersonalData: "off",
+  };
+
+  test("a turn with a summary records its sources; the stream gets the summaries only", async () => {
+    const { startAnswer, sources, streamed } = harness(LOCAL_PERSONAL, {
+      ...WITH_WHOOP,
+      sourceDecisions: [],
+    });
+    expect((await startAnswer(ACTOR, APP_USER, CALL)).status).toBe(200);
+    expect(sources).toEqual([
+      {
+        actor: ACTOR,
+        sessionId: CALL.turnId,
+        subjectRef: null,
+        tool: "wearable.sources.whoop",
+        args: { rules: "wearable-source-rules/1", decisions: [] },
+        result: { only_source: 0, agree: 0, evidence: 0, held_back: 0 },
+        rowCount: 0,
+      },
+    ]);
+    expect(Object.keys(streamed[0] ?? {})).not.toContain("sourceDecisions");
+  });
+
+  test("no summary, no row; a refused turn writes none either", async () => {
+    const none = harness(LOCAL_PERSONAL, NO_WEARABLES);
+    await none.startAnswer(ACTOR, APP_USER, CALL);
+    expect(none.sources).toEqual([]);
+    const refusedTurn = harness(
+      { dataMode: "personal", provider: "openrouter", exoscalePersonalData: "off" },
+      WITH_WHOOP,
+    );
+    expect((await refusedTurn.startAnswer(ACTOR, APP_USER, CALL)).status).toBe(400);
+    expect(refusedTurn.sources).toEqual([]);
   });
 });
