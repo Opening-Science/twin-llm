@@ -172,9 +172,9 @@ describe("number finder against the gold set", () => {
   });
 
   test("precision and recall", () => {
-    expect(total).toEqual({ tp: 182, fp: 16, fn: 16 });
-    expect(precision(total)).toBeCloseTo(0.919, 3);
-    expect(recall(total)).toBeCloseTo(0.919, 3);
+    expect(total).toEqual({ tp: 183, fp: 16, fn: 16 });
+    expect(precision(total)).toBeCloseTo(0.92, 3);
+    expect(recall(total)).toBeCloseTo(0.92, 3);
   });
 });
 

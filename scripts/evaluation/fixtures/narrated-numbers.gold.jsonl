@@ -110,6 +110,7 @@
 {"id":"od-08","kind":"ordinal","text":"Sleep efficiency in the 90th percentile at 94%.","numbers":[{"value":94,"label":"sleep efficiency"}],"readings":[{"key":"sleep.efficiency.2026-01-02","label":"Sleep efficiency (2026-01-02)","value":94,"unit":"%","expect":"matched"}]}
 {"id":"od-09","kind":"ordinal","text":"The 1st and 2nd nights had total sleep of 6 h 50 min.","numbers":[{"value":6,"label":"total sleep, hours"},{"value":50,"label":"total sleep, minutes"}],"readings":[{"key":"sleep.duration.long_sleep.2026-01-02","label":"Total sleep duration (2026-01-02)","value":410,"unit":"min","expect":"matched"}]}
 {"id":"od-10","kind":"ordinal","text":"Your 3rd workout this week covered a workout distance of 5,400 m.","numbers":[{"value":5400,"label":"workout distance"}],"readings":[{"key":"workout.distance.2026-01-02","label":"Workout distance, running (2026-01-02)","value":5400,"unit":"m","expect":"matched"}]}
+{"id":"od-11","kind":"ordinal","text":"Your HbA1c sits at the 32.7th percentile of the synthetic cohort.","numbers":[{"value":32.7,"label":"percentile rank"}],"readings":[]}
 {"id":"ng-01","kind":"negative","text":"Your HRV changed by -6 ms against your baseline.","numbers":[{"value":-6,"label":"HRV change"}],"readings":[]}
 {"id":"ng-02","kind":"negative","text":"Resting heart rate trend: −2.5 bpm per month.","numbers":[{"value":-2.5,"label":"resting heart rate trend"}],"readings":[]}
 {"id":"ng-03","kind":"negative","text":"The slope was -0.12 ms per day.","numbers":[{"value":-0.12,"label":"HRV slope"}],"readings":[]}

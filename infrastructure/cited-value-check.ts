@@ -235,7 +235,7 @@ const DIFFERENCE_AFTER =
 const DIFFERENCE_BEFORE = /(?:\bby|\+)\s*$/i;
 
 const NUMBER =
-  /(?<![\w.,'’+])(?:(?<=^|[\s(=:~≈<>±])-)?(?:\d{1,3}(?:[,'’]\d{3})+(?:\.\d+)?|\d+(?:[.,]\d+)?)(?!\d|(?:st|nd|rd|th)(?![a-z]))/g;
+  /(?<![\w.,'’+])(?:(?<=^|[\s(=:~≈<>±])-)?(?:\d{1,3}(?:[,'’]\d{3})+(?:\.\d+(?!\d)|(?!\d|\.\d|(?:st|nd|rd|th)(?![a-z])))|\d+(?:[.,]\d+(?!\d)|(?!\d|[.,]\d|(?:st|nd|rd|th)(?![a-z]))))/g;
 
 const HOURS_MINUTES =
   /(?<![\w.,])(\d+) ?(?:h|hr|hrs|hours?)(?:,? and |,? | ?)(\d{1,2}) ?(?:m|min|mins|minutes?)(?![a-z])/gi;

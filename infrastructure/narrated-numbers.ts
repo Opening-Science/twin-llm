@@ -10,8 +10,9 @@
  *   decimals; a decimal comma ("1,5") is not parsed. A minus counts only after
  *   a space or bracket, so `2024-01-01` reads as 2024, 1, 1 on both sides of a
  *   comparison. Subject refs (UUIDs) and LOINC codes (`8867-4`) are removed
- *   first, so a code the model cites is never read as a stated value. An
- *   ordinal (`14th`, `21st`) is a position, not a number.
+ *   first, so a code the model cites is never read as a stated value. A whole
+ *   number with an ordinal suffix (`14th`) is a position, not a number; a
+ *   decimal one (`32.7th percentile`) keeps its value.
  * - A narrated number matches a source when the source rounded to the narrated
  *   number's decimals equals it, or within 1 %. The rounding only counts when
  *   the narrated number has at least the value's display decimals
@@ -39,7 +40,7 @@ export const UUID_PATTERN =
 export const LOINC_PATTERN = /(?<![\w.-])\d{3,5}-\d(?![\w-]|\.\d)/g;
 
 const NUMBER_PATTERN =
-  /(?<![\w.])(?:(?<=^|[\s(=:~≈<>±])-)?(?:\d{1,3}(?:[,'’]\d{3})+|\d+)(?:\.\d+)?(?!\d|(?:st|nd|rd|th)(?![a-z]))/g;
+  /(?<![\w.])(?:(?<=^|[\s(=:~≈<>±])-)?(?:\d{1,3}(?:[,'’]\d{3})+|\d+)(?:\.\d+(?!\d)|(?!\d|\.\d|(?:st|nd|rd|th)(?![a-z])))/g;
 
 /** Words that give an unsigned number a direction, looked for just before it. */
 const RISING =

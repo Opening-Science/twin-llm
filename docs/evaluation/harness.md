@@ -545,10 +545,10 @@ running on it, and only between their batches.
   so the results lean optimistic.
 - The number finder is a heuristic. A miss goes to the human count, so a pass
   rate is only as strong as its human share is small. Against a
-  hand-labelled gold set of 163 synthetic snippets
+  hand-labelled gold set of 164 synthetic snippets
   (`scripts/evaluation/fixtures/narrated-numbers.gold.jsonl`, asserted by
-  `number-finder-gold.test.ts`), the finder (`answerNumbers`) finds 182 of
-  198 labelled numbers, with 16 extra: precision 0.919, recall 0.919. Its
+  `number-finder-gold.test.ts`), the finder (`answerNumbers`) finds 183 of
+  199 labelled numbers, with 16 extra: precision 0.920, recall 0.920. Its
   misses are decimal commas (`45,3`), a space or a dot as thousands mark
   (`10 000`, `8.432`), clock times, an en dash used as a minus, the scale in
   `82/100` and numbers written as words.
