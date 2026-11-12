@@ -199,7 +199,7 @@ describe.each([...STATES])("every chart in the %s state", (state) => {
 /** The accessible name on a component's root element: every kit component names its root. */
 const rootName = (out: string): string | null => {
   const root = out.match(/^<[a-z]+\b[^>]*>/)?.[0] ?? "";
-  const named = /role="group"/.test(root) || /^<(article|section)\b/.test(root);
+  const named = /role="group"/.test(root) || /^<article\b/.test(root);
   return named ? (root.match(/aria-label="([^"]*)"/)?.[1] ?? null) : null;
 };
 
@@ -285,6 +285,17 @@ describe("every kit component has an accessible name", () => {
       expect(html(render("empty"))).toContain('<span class="sr-only">no data</span>');
     }
     for (const state of STATES) expect(spoken(html(render(state)))).not.toContain("–");
+  });
+
+  test("device lists are named groups, never one region landmark each", () => {
+    const out = html(
+      <>
+        <DeviceList category="vitals" rows={[{ name: "Ring" }]} />
+        <DeviceList category="vitals" title="Sources" rows={[{ name: "Band" }]} />
+      </>,
+    );
+    expect(out).not.toMatch(/<section[^>]*aria-label/);
+    expect(out.match(/role="group" aria-label="Devices"/g)).toHaveLength(1);
   });
 
   test("a label given by the screen wins over the default name", () => {

@@ -174,7 +174,10 @@ export const DeviceList = ({
       </ul>
     );
   return (
-    <section
+    // A named group, not a named section: a section with a name is a region
+    // landmark, and a page with several lists would gain one landmark each.
+    <div
+      role="group"
       aria-label={label ?? title ?? "Devices"}
       // Inline-size containment: long, truncated detail lines never widen a
       // grid or flex parent; the list takes the width it is given.
@@ -195,6 +198,6 @@ export const DeviceList = ({
         </h3>
       ) : null}
       {framed ? <div className="surface rounded-card overflow-hidden">{body}</div> : body}
-    </section>
+    </div>
   );
 };
