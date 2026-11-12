@@ -18,7 +18,8 @@
  *   twin notes, opened once per model call and matched in memory
  *   (`storedValueMatches`): a reading's number written with its own unit, a
  *   reading's code with its own number nearby, a clinical record's code or
- *   long name, a twin note line. A value the person typed in their own
+ *   long name, a twin note line, a reading's number or a record's name
+ *   next to that row's own date. A value the person typed in their own
  *   messages is not counted: they sent it themselves.
  *
  * A match of the person's own rsIDs or genome sites stops a request to a
@@ -27,6 +28,10 @@
  * A number is found in its locale spellings too (a decimal comma, thousands
  * marks such as `1'234` or `1.234,5`), and a unit ignores case, the micro
  * sign and spaces around a slash.
+ *
+ * A day is found in ISO and en-GB spellings (`2026-03-14`, `14/03/2026`,
+ * `14 March 2026`), and counts only next to the reading or record it
+ * belongs to (`datesIn`, a dated value).
  *
  * Approximate: a value written differently (another spelling, a unit
  * conversion, a rounded number) is not found, and wearable numbers are not
@@ -43,6 +48,7 @@ export const FREE_TEXT_KIND = {
   coded: "coded value",
   clinical: "clinical record",
   note: "twin note line",
+  dated: "dated value",
 } as const;
 
 export type FreeTextKind = (typeof FREE_TEXT_KIND)[keyof typeof FREE_TEXT_KIND];
@@ -251,15 +257,26 @@ export const isDistinctiveId = (id: string): boolean =>
 
 // ─── Stored values ──────────────────────────────────────────────────────────
 
-/** One imported reading, opened: its code (null without one), number and unit as stored. */
+/**
+ * One imported reading, opened: its code (null without one), number and unit
+ * as stored, and its day (`2026-03-14`) when the file gave one.
+ */
 export type StoredReading = Readonly<{
   code: string | null;
   value: string;
   unit: string;
+  date?: string | null;
 }>;
 
-/** One imported clinical record, opened: its code (null without one) and name. */
-export type StoredRecord = Readonly<{ code: string | null; display: string }>;
+/**
+ * One imported clinical record, opened: its code (null without one), name,
+ * and its day (onset or authored) when the file gave one.
+ */
+export type StoredRecord = Readonly<{
+  code: string | null;
+  display: string;
+  date?: string | null;
+}>;
 
 /** The person's stored values to search for, opened once per model call. */
 export type StoredValues = Readonly<{
@@ -485,6 +502,132 @@ const noteKeysIn = (text: string, lines: readonly string[]): Set<string> => {
   );
 };
 
+// ─── Dates ──────────────────────────────────────────────────────────────────
+
+const MONTHS = [
+  "jan",
+  "feb",
+  "mar",
+  "apr",
+  "may",
+  "jun",
+  "jul",
+  "aug",
+  "sep",
+  "oct",
+  "nov",
+  "dec",
+] as const;
+
+/** `2026-03-14`, also before a time (`2026-03-14T08:00`). */
+const ISO_DATE = /(?<![\p{L}\p{N}-])(\d{4})-(\d{2})-(\d{2})(?![\p{N}])(?!(?!T\d)\p{L})/gu;
+/** `14/03/2026`, `14.3.2026`, `14-03-2026`: day first, a four-digit year. */
+const GB_NUMERIC_DATE =
+  /(?<![\p{L}\p{N}./-])(\d{1,2})([./-])(\d{1,2})\2(\d{4})(?![\p{L}\p{N}])/gu;
+/** `14 March 2026`, `14th Mar. 2026`, `3 Sept 2026`. */
+const GB_LONG_DATE =
+  /(?<![\p{L}\p{N}])(\d{1,2})(?:st|nd|rd|th)?\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)(?![\p{L}])\.?,?\s+(\d{4})(?![\p{L}\p{N}])/giu;
+
+const pad = (value: number): string => String(value).padStart(2, "0");
+
+/** The ISO day for a year, month and day, or null when there is no such day. */
+const isoDay = (year: number, month: number, day: number): string | null => {
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+    ? `${year}-${pad(month)}-${pad(day)}`
+    : null;
+};
+
+/** A day written in the text: its ISO spelling and where it stands. */
+export type DateInText = Readonly<{ day: string; start: number; end: number }>;
+
+const monthOf = (name: string | undefined): number =>
+  MONTHS.findIndex((month) => month === (name ?? "").slice(0, 3).toLowerCase()) + 1;
+
+const daysMatching = (
+  text: string,
+  pattern: RegExp,
+  parts: (match: RegExpMatchArray) => readonly [number, number, number],
+): readonly DateInText[] =>
+  [...text.matchAll(pattern)].flatMap((match) => {
+    const [year, month, day] = parts(match);
+    const iso = isoDay(year, month, day);
+    const start = match.index ?? 0;
+    return iso === null ? [] : [{ day: iso, start, end: start + match[0].length }];
+  });
+
+/**
+ * The days a text names, in ISO (`2026-03-14`) and en-GB spellings
+ * (`14/03/2026`, `14.03.2026`, `14 March 2026`, `14th Mar 2026`). Day first
+ * only: `03/14/2026` is no day, and a two-digit year is not read.
+ */
+export const datesIn = (text: string): readonly DateInText[] => [
+  ...daysMatching(text, ISO_DATE, (m) => [Number(m[1]), Number(m[2]), Number(m[3])]),
+  ...daysMatching(text, GB_NUMERIC_DATE, (m) => [
+    Number(m[4]),
+    Number(m[3]),
+    Number(m[1]),
+  ]),
+  ...daysMatching(text, GB_LONG_DATE, (m) => [Number(m[3]), monthOf(m[2]), Number(m[1])]),
+];
+
+/** The text with every day it names blanked, so a day's digits are not read as a number. */
+const withoutDates = (text: string, dates: readonly DateInText[]): string =>
+  dates.reduce(
+    (masked, date) =>
+      `${masked.slice(0, date.start)}${" ".repeat(date.end - date.start)}${masked.slice(date.end)}`,
+    text,
+  );
+
+/**
+ * A stored reading's number, or a clinical record's name (four characters
+ * or more) or code, within `CODE_WINDOW` of that same row's own day. A day
+ * alone, or a number next to another day, is not one: a day is too common
+ * to count by itself.
+ */
+const datedKeysIn = (text: string, stored: StoredValues): Set<string> => {
+  // Positions are taken in the lowercased text: lowercasing can change length.
+  const lower = text.toLocaleLowerCase("en-GB");
+  const dates = datesIn(lower);
+  if (dates.length === 0) return new Set();
+  const masked = withoutDates(lower, dates);
+  const around = (date: DateInText): string =>
+    `${masked.slice(Math.max(0, date.start - CODE_WINDOW), date.start)} ${masked.slice(
+      date.end,
+      date.end + CODE_WINDOW,
+    )}`;
+  const readingKeys = stored.readings.flatMap((reading) => {
+    const value = canonicalNumber(reading.value);
+    const day = reading.date ?? null;
+    if (value === null || day === null) return [];
+    return dates.some(
+      (date) =>
+        date.day === day && numbersIn(around(date)).some((each) => each.value === value),
+    )
+      ? [`reading|${day}|${value}`]
+      : [];
+  });
+  const recordKeys = stored.records.flatMap((record) => {
+    const day = record.date ?? null;
+    if (day === null) return [];
+    const name = normalized(record.display);
+    const code = record.code === null ? "" : normalized(record.code);
+    return dates.some((date) => {
+      if (date.day !== day) return false;
+      const nearby = normalized(around(date));
+      return (
+        (name.length >= MIN_KNOWN_LENGTH && containsWord(nearby, name)) ||
+        (isDistinctiveCode(code) && tokenIndexes(nearby, code).length > 0)
+      );
+    })
+      ? [`record|${day}|${code}|${name}`]
+      : [];
+  });
+  return new Set([...readingKeys, ...recordKeys]);
+};
+
 /**
  * Counts the distinct stored values the text holds, per kind, leaving out
  * those that also stand in `typed`, the person's own messages: a value they
@@ -500,6 +643,7 @@ export const storedValueMatches = (
     [FREE_TEXT_KIND.coded, (each) => codedKeysIn(each, stored.readings)],
     [FREE_TEXT_KIND.clinical, (each) => recordKeysIn(each, stored.records)],
     [FREE_TEXT_KIND.note, (each) => noteKeysIn(each, stored.noteLines)],
+    [FREE_TEXT_KIND.dated, (each) => datedKeysIn(each, stored)],
   ];
   return kinds.map(([kind, keysIn]) => {
     const own = typed === "" ? new Set<string>() : keysIn(typed);
