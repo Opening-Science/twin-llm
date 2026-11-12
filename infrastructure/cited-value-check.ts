@@ -13,9 +13,9 @@
  *   `.`, `;`, `!`, `?`, a line end or the next mention) whose unit fits the
  *   reading, or one written just before it (`8,432 steps`, `45 ms HRV`) when no
  *   other mention comes first in that clause.
- * - Dates, keys, subject refs and LOINC codes are never read as values, nor is a
- *   difference (`7 ms below`, `by 5`). A whole number from 0 to 10 written
- *   without a unit counts only for a reading below 11.
+ * - Dates, keys, subject refs, LOINC codes and ordinals (`21st`) are never read
+ *   as values, nor is a difference (`7 ms below`, `by 5`). A whole number from
+ *   0 to 10 written without a unit counts only for a reading below 11.
  * - A label mention stands for every cited reading with that label (several
  *   days of one score); a key mention, and the label after it in the same
  *   clause, for that key's reading alone.
@@ -235,7 +235,7 @@ const DIFFERENCE_AFTER =
 const DIFFERENCE_BEFORE = /(?:\bby|\+)\s*$/i;
 
 const NUMBER =
-  /(?<![\w.,'’+])(?:(?<=^|[\s(=:~≈<>±])-)?(?:\d{1,3}(?:[,'’]\d{3})+(?:\.\d+)?|\d+(?:[.,]\d+)?)(?!\d)/g;
+  /(?<![\w.,'’+])(?:(?<=^|[\s(=:~≈<>±])-)?(?:\d{1,3}(?:[,'’]\d{3})+(?:\.\d+)?|\d+(?:[.,]\d+)?)(?!\d|(?:st|nd|rd|th)(?![a-z]))/g;
 
 const HOURS_MINUTES =
   /(?<![\w.,])(\d+) ?(?:h|hr|hrs|hours?)(?:,? and |,? | ?)(\d{1,2}) ?(?:m|min|mins|minutes?)(?![a-z])/gi;

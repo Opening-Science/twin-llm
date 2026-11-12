@@ -333,7 +333,7 @@ reads as 1 and 5. A minus counts only after a space or bracket, so
 `2024-01-01` reads as 2024, 1, 1 on both sides of a comparison. Subject refs
 and LOINC codes (3–5 digits, a hyphen, one check digit, e.g. `8867-4`) are
 removed first (also at a sentence end, `8867-4.`), so a cited code is never scored as a stated value. A digit right after a letter (`S1`, `qwen3`) is not a
-number.
+number, nor is an ordinal (`14th`, `21st`).
 
 - A narrated number matches a keyed value when it is within the item's
   tolerance (`exact`, `abs`, `rel`), or when the value rounded to the narrated
