@@ -7,7 +7,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-OPEN_TWIN_SHA="${1:-${OPEN_TWIN_SHA:-c37d8004d93d5accb9b91bebcbd89376837776bd}}"
+OPEN_TWIN_SHA="${1:-${OPEN_TWIN_SHA:-4b42ef944db0b461ca414b8066a5f7aa2594a9ce}}"
 OPEN_TWIN_REPO="${OPEN_TWIN_REPO:-https://github.com/Opening-Science/open-twin.git}"
 DEST="${ROOT}/.open-twin"
 PACKAGES=(fhir-core fhir-r4 aggregate provider-oura provider-google-health provider-whoop provider-vitronic interpretation-contract anchor-layer)

@@ -19,21 +19,21 @@ The ui-kit's `StepTrace`, `UndoButton`, `HoldToConfirm`, `StatusLattice` and `Ra
 
 Synced (not vendored) at SHA:
 
-- `c37d8004d93d5accb9b91bebcbd89376837776bd`
+- `4b42ef944db0b461ca414b8066a5f7aa2594a9ce`
 
 See `docs/open-twin-pins.md` and `scripts/sync-open-twin.sh`. Checkout lives in gitignored `.open-twin/`.
 
 | Package                              | Path                                          | Pin                                        |
 | ------------------------------------ | --------------------------------------------- | ------------------------------------------ |
-| `@open-twin/fhir-core`               | `.open-twin/packages/fhir-core`               | `c37d8004d93d5accb9b91bebcbd89376837776bd` |
-| `@open-twin/fhir-r4`                 | `.open-twin/packages/fhir-r4`                 | `c37d8004d93d5accb9b91bebcbd89376837776bd` |
-| `@open-twin/aggregate`               | `.open-twin/packages/aggregate`               | `c37d8004d93d5accb9b91bebcbd89376837776bd` |
-| `@open-twin/interpretation-contract` | `.open-twin/packages/interpretation-contract` | `c37d8004d93d5accb9b91bebcbd89376837776bd` |
-| `@open-twin/provider-oura`           | `.open-twin/packages/provider-oura`           | `c37d8004d93d5accb9b91bebcbd89376837776bd` |
-| `@open-twin/provider-google-health`  | `.open-twin/packages/provider-google-health`  | `c37d8004d93d5accb9b91bebcbd89376837776bd` |
-| `@open-twin/provider-whoop`          | `.open-twin/packages/provider-whoop`          | `c37d8004d93d5accb9b91bebcbd89376837776bd` |
-| `@open-twin/provider-vitronic`       | `.open-twin/packages/provider-vitronic`       | `c37d8004d93d5accb9b91bebcbd89376837776bd` |
-| `@open-twin/anchor-layer`            | `.open-twin/packages/anchor-layer`            | `c37d8004d93d5accb9b91bebcbd89376837776bd` |
+| `@open-twin/fhir-core`               | `.open-twin/packages/fhir-core`               | `4b42ef944db0b461ca414b8066a5f7aa2594a9ce` |
+| `@open-twin/fhir-r4`                 | `.open-twin/packages/fhir-r4`                 | `4b42ef944db0b461ca414b8066a5f7aa2594a9ce` |
+| `@open-twin/aggregate`               | `.open-twin/packages/aggregate`               | `4b42ef944db0b461ca414b8066a5f7aa2594a9ce` |
+| `@open-twin/interpretation-contract` | `.open-twin/packages/interpretation-contract` | `4b42ef944db0b461ca414b8066a5f7aa2594a9ce` |
+| `@open-twin/provider-oura`           | `.open-twin/packages/provider-oura`           | `4b42ef944db0b461ca414b8066a5f7aa2594a9ce` |
+| `@open-twin/provider-google-health`  | `.open-twin/packages/provider-google-health`  | `4b42ef944db0b461ca414b8066a5f7aa2594a9ce` |
+| `@open-twin/provider-whoop`          | `.open-twin/packages/provider-whoop`          | `4b42ef944db0b461ca414b8066a5f7aa2594a9ce` |
+| `@open-twin/provider-vitronic`       | `.open-twin/packages/provider-vitronic`       | `4b42ef944db0b461ca414b8066a5f7aa2594a9ce` |
+| `@open-twin/anchor-layer`            | `.open-twin/packages/anchor-layer`            | `4b42ef944db0b461ca414b8066a5f7aa2594a9ce` |
 
 `@open-twin/anchor-layer` is used for its data only (`data/anchor-layer.v1.json`, sha256 `7adc42afaa03ee568a9f8eea5b451a8b51c9851e116f90951009d1b31894682e`, checked against its sidecar by `bun run sync:verify`). Upstream compiled it from the Anchor workbook `2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx` (source sha256 `42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e`). What TwinLLM adds on top is listed in `docs/biomarkers.md`.
 
