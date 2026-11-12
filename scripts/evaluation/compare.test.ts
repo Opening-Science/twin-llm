@@ -5,9 +5,12 @@ import { noConsentStore } from "../../infrastructure/learning-consent";
 import {
   compareRuns,
   exactMcNemarP,
+  familyHolm,
   holm,
+  itemOutcome,
   renderComparison,
   runOutcomes,
+  toItemOutcomes,
   type RunOutcomes,
   type UnitOutcome,
   unitKey,
@@ -80,6 +83,82 @@ describe("holm", () => {
     const adjusted = holm([null, 0.01]);
     expect(adjusted[0]).toBeNull();
     expect(adjusted[1]).toBeCloseTo(0.01, 12);
+  });
+});
+
+describe("itemOutcome", () => {
+  test("a majority of passes passes", () => {
+    expect(itemOutcome(["pass"])).toBe("pass");
+    expect(itemOutcome(["pass", "pass", "fail"])).toBe("pass");
+    expect(itemOutcome(["pass", "pass", "human"])).toBe("pass");
+  });
+
+  test("a tie counts as not passed", () => {
+    expect(itemOutcome(["pass", "fail"])).toBe("fail");
+    expect(itemOutcome(["pass", "fail", "skipped"])).toBe("fail");
+  });
+
+  test("no majority possible even if every undecided repeat passed: fail", () => {
+    expect(itemOutcome(["fail", "fail", "human"])).toBe("fail");
+    expect(itemOutcome(["fail", "error"])).toBe("fail");
+  });
+
+  test("undecided when the undecided repeats could swing it", () => {
+    expect(itemOutcome(["pass", "fail", "human"])).toBe("human");
+    expect(itemOutcome(["pass", "fail", "error"])).toBe("error");
+    expect(itemOutcome(["human"])).toBe("human");
+  });
+
+  test("skipped repeats do not count; all skipped is skipped; all na is na", () => {
+    expect(itemOutcome(["skipped", "skipped"])).toBe("skipped");
+    expect(itemOutcome(["na", "na", "na"])).toBe("na");
+    expect(itemOutcome(["skipped", "pass"])).toBe("pass");
+  });
+});
+
+describe("toItemOutcomes", () => {
+  test("folds repeats per item and keeps consistency as it is", () => {
+    const lines = new Map<string, UnitOutcome>([
+      [unitKey("Q-1", 1), "pass"],
+      [unitKey("Q-1", 2), "fail"],
+      [unitKey("Q-1", 3), "pass"],
+      [unitKey("Q-2", 1), "pass"],
+      [unitKey("Q-2", 2), "fail"],
+    ]);
+    const consistency = new Map<string, UnitOutcome>([["Q-1", "fail"]]);
+    const folded = toItemOutcomes(
+      new Map([
+        ["correctness", lines],
+        ["consistency", consistency],
+      ]),
+    );
+    expect([...(folded.get("correctness") ?? [])]).toEqual([
+      ["Q-1", "pass"],
+      ["Q-2", "fail"],
+    ]);
+    expect(folded.get("consistency")).toBe(consistency);
+  });
+});
+
+describe("familyHolm", () => {
+  test("adjusts across every criterion of every comparison", () => {
+    const one = compareRuns(outcomes({ x: "pass" }), outcomes({ x: "fail" }));
+    const many = Object.fromEntries(
+      Array.from({ length: 6 }, (_, i) => [`u${i}`, "pass" as const]),
+    );
+    const none = Object.fromEntries(
+      Array.from({ length: 6 }, (_, i) => [`u${i}`, "fail" as const]),
+    );
+    const two = compareRuns(outcomes(many), outcomes(none));
+    const [first, second] = familyHolm([one, two]);
+    // Within: seven tests at 2/64, so 7 · 2/64. Family: 14 tests, seven at
+    // 2/64 and seven at 1, so the smallest gets 14 · 2/64 and the rest keep it.
+    expect(second?.[0]?.p).toBe(2 / 64);
+    expect(second?.[0]?.pHolm).toBeCloseTo(14 / 64, 12);
+    expect(second?.[0]?.pHolmFamily).toBeCloseTo(28 / 64, 12);
+    expect(second?.[6]?.pHolmFamily).toBeCloseTo(28 / 64, 12);
+    expect(first?.[0]?.pHolmFamily).toBe(1);
+    expect(first).toHaveLength(SCORED_CRITERIA.length);
   });
 });
 
@@ -167,13 +246,18 @@ describe("compareRuns", () => {
     expect(row(rows, "correctness").pHolm).toBeCloseTo(12 / 64, 12);
   });
 
+  test("a comparison alone has the family p of its own Holm", () => {
+    const rows = compareRuns(outcomes({ x: "pass" }), outcomes({ x: "fail" }));
+    expect(rows.every((each) => each.pHolmFamily === each.pHolm)).toBe(true);
+  });
+
   test("renders one Markdown row per criterion", () => {
     const table = renderComparison(
       compareRuns(outcomes({ x: "pass" }), outcomes({ x: "fail" })),
     );
     expect(table.split("\n")).toHaveLength(2 + SCORED_CRITERIA.length);
     expect(table).toContain(
-      "| correctness | 1 | 1 | 0 | 0 | 1 | 0 | 0 | 1.0000 | 1.0000 | none |",
+      "| correctness | 1 | 1 | 0 | 0 | 1 | 0 | 0 | 1.0000 | 1.0000 | 1.0000 | none |",
     );
   });
 });
@@ -322,24 +406,69 @@ describe("runCompare", () => {
   /** The right numbers with the wrong answer class: correctness fails. */
   const FAILING = document({ answer_class: "information", narration: PASSING_ANSWER });
 
-  test("pairs two runs line by line and prints JSON", async () => {
+  const TWO_RUNS = {
+    ...SET_FILES,
+    ...runFiles("run-a", [line({ repeat: 1 }), line({ repeat: 2 })]),
+    ...runFiles("run-b", [line({ repeat: 1, document: FAILING }), line({ repeat: 2 })]),
+  };
+  type PairJson = {
+    a: { run_id: string };
+    unit: string;
+    criteria: { criterion: string; pairs: number; aOnly: number; bothFail: number }[];
+  };
+  const correctnessOf = (pair: PairJson | undefined) =>
+    pair?.criteria.find((each) => each.criterion === "correctness");
+
+  test("pairs items by default: a 1–1 tie over two repeats is not a pass", async () => {
     const { out, io: streams } = io();
-    const files = {
-      ...SET_FILES,
-      ...runFiles("run-a", [line({ repeat: 1 }), line({ repeat: 2 })]),
-      ...runFiles("run-b", [line({ repeat: 1, document: FAILING }), line({ repeat: 2 })]),
-    };
-    expect(await runCompare(["run-a", "run-b", "--json"], streams, deps(files))).toBe(0);
-    const [pair] = JSON.parse(out.join("")) as [
-      {
-        a: { run_id: string };
-        criteria: { criterion: string; pairs: number; aOnly: number }[];
-      },
-    ];
-    expect(pair.a.run_id).toBe("run-a");
-    const correctness = pair.criteria.find((each) => each.criterion === "correctness");
-    expect(correctness?.pairs).toBe(2);
-    expect(correctness?.aOnly).toBe(1);
+    expect(await runCompare(["run-a", "run-b", "--json"], streams, deps(TWO_RUNS))).toBe(
+      0,
+    );
+    const [pair] = JSON.parse(out.join("")) as PairJson[];
+    expect(pair?.a.run_id).toBe("run-a");
+    expect(pair?.unit).toBe("item");
+    expect(correctnessOf(pair)).toMatchObject({ pairs: 1, aOnly: 1, bothFail: 0 });
+  });
+
+  test("--unit line pairs each repeat", async () => {
+    const { out, io: streams } = io();
+    expect(
+      await runCompare(
+        ["run-a", "--unit", "line", "run-b", "--json"],
+        streams,
+        deps(TWO_RUNS),
+      ),
+    ).toBe(0);
+    const [pair] = JSON.parse(out.join("")) as PairJson[];
+    expect(pair?.unit).toBe("line");
+    expect(correctnessOf(pair)).toMatchObject({ pairs: 2, aOnly: 1 });
+  });
+
+  test("refuses an unknown unit", async () => {
+    const { err, io: streams } = io();
+    expect(
+      await runCompare(["run-a", "run-b", "--unit", "repeat"], streams, deps(TWO_RUNS)),
+    ).toBe(1);
+    expect(err.join("")).toContain("USAGE");
+  });
+
+  test("two pairs share one family Holm", async () => {
+    const { out, io: streams } = io();
+    expect(
+      await runCompare(
+        ["run-a", "run-b", "run-a", "run-b", "--json"],
+        streams,
+        deps(TWO_RUNS),
+      ),
+    ).toBe(0);
+    const pairs = JSON.parse(out.join("")) as {
+      criteria: { p: number | null; pHolm: number | null; pHolmFamily: number | null }[];
+    }[];
+    expect(pairs).toHaveLength(2);
+    const tested = pairs.flatMap((pair) => pair.criteria).filter((row) => row.p !== null);
+    for (const row of tested) {
+      expect(row.pHolmFamily).toBeGreaterThanOrEqual(row.pHolm ?? 0);
+    }
   });
 
   test("refuses a MOCK run, a run with two models and a stale questions sha256", async () => {

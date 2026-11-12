@@ -2,11 +2,13 @@
  * A paired comparison of two runs on the same items. Pure; `compare-run.ts`
  * reads the files.
  *
- * The unit is a line, an item and repeat present in both runs, for the six
- * line criteria, and an item for consistency, which is scored once per item.
- * A pair counts only when both sides are pass or fail. A unit in one run only,
- * or one where either side is skipped (`MISSING_ENV`), an error, `human` or
- * `na`, is left out and counted under the first of those reasons that fits.
+ * The unit is an item by default: its repeats are folded into one outcome
+ * by majority (`itemOutcome`), a tie counting as not passed. With the line
+ * unit, a sensitivity analysis, each repeat is its own pair. Consistency is
+ * scored once per item either way. A pair counts only when both sides are
+ * pass or fail. A unit in one run only, or one where either side is skipped
+ * (`MISSING_ENV`), an error, `human` or `na`, is left out and counted under
+ * the first of those reasons that fits.
  *
  * Each criterion gets the exact two-sided McNemar test: under the null, a
  * discordant pair is equally likely to go either way, so the smaller of the
@@ -19,8 +21,10 @@
  *
  * Holm's step-down adjustment (Holm 1979, Scandinavian Journal of Statistics
  * 6:65-70) runs across the criteria of one comparison that have at least one
- * pair. Repeats of an item are not independent, so for the few repeated items
- * the test leans slightly liberal; the harness doc says so.
+ * pair. `familyHolm` adjusts again across every criterion of every
+ * comparison read together, as a sensitivity column. Repeats of an item are
+ * not independent, so the line unit leans slightly liberal on the few
+ * repeated items; the item unit does not.
  */
 import type { ResultLine } from "./eval-results";
 import type { Question } from "./question-set";
@@ -33,6 +37,13 @@ import {
 import { applies, isAnswered } from "./score/types";
 
 export type UnitOutcome = Outcome | "skipped";
+
+export const UNITS = ["item", "line"] as const;
+
+export type Unit = (typeof UNITS)[number];
+
+export const isUnit = (value: string): value is Unit =>
+  (UNITS as readonly string[]).includes(value);
 
 /** criterion → unit key → outcome. Line criteria use `<item>#<repeat>`, consistency `<item>`. */
 export type RunOutcomes = ReadonlyMap<ScoredCriterion, ReadonlyMap<string, UnitOutcome>>;
@@ -94,6 +105,47 @@ export const runOutcomes = ({ items, lines, scored }: OutcomesInput): RunOutcome
     ]),
   );
 };
+
+/**
+ * One outcome for an item from its repeats' outcomes on a criterion. Skipped
+ * repeats do not count. Passes on more than half of the rest: pass. Too few
+ * passes for a majority even if every undecided repeat (error, `human`)
+ * passed: fail, so a tie counts as not passed. Otherwise the item stays
+ * undecided, as `error` when a repeat errored and `human` when not.
+ */
+export const itemOutcome = (repeats: readonly UnitOutcome[]): UnitOutcome => {
+  const counted = repeats.filter((outcome) => outcome !== "skipped");
+  if (counted.length === 0) return "skipped";
+  if (counted.every((outcome) => outcome === "na")) return "na";
+  const n = counted.length;
+  const passes = counted.filter((outcome) => outcome === "pass").length;
+  const fails = counted.filter((outcome) => outcome === "fail").length;
+  if (2 * passes > n) return "pass";
+  if (2 * (n - fails) <= n) return "fail";
+  if (counted.includes("error")) return "error";
+  return counted.includes("human") ? "human" : "na";
+};
+
+const itemOf = (key: string): string => {
+  const hash = key.lastIndexOf("#");
+  return hash === -1 ? key : key.slice(0, hash);
+};
+
+/** Line outcomes folded into item outcomes; consistency, already per item, is kept. */
+export const toItemOutcomes = (outcomes: RunOutcomes): RunOutcomes =>
+  new Map(
+    [...outcomes].map(([criterion, units]) => {
+      if (criterion === "consistency") return [criterion, units] as const;
+      const grouped = [...units].reduce((acc, [key, outcome]) => {
+        const item = itemOf(key);
+        return acc.set(item, [...(acc.get(item) ?? []), outcome]);
+      }, new Map<string, UnitOutcome[]>());
+      return [
+        criterion,
+        new Map([...grouped].map(([item, repeats]) => [item, itemOutcome(repeats)])),
+      ] as const;
+    }),
+  );
 
 /** Exact two-sided McNemar p-value from the two discordant counts. */
 export const exactMcNemarP = (b: number, c: number): number => {
@@ -157,7 +209,10 @@ export type CriterionComparison = Readonly<{
   excluded: Readonly<Record<ExclusionReason, number>>;
   /** Null when there is no pair. */
   p: number | null;
+  /** Holm across the criteria of this comparison. */
   pHolm: number | null;
+  /** Holm across every comparison read together (`familyHolm`); equals `pHolm` alone. */
+  pHolmFamily: number | null;
 }>;
 
 const reasonOf = (
@@ -179,7 +234,7 @@ const compareCriterion = (
   criterion: ScoredCriterion,
   a: ReadonlyMap<string, UnitOutcome>,
   b: ReadonlyMap<string, UnitOutcome>,
-): Omit<CriterionComparison, "pHolm"> => {
+): Omit<CriterionComparison, "pHolm" | "pHolmFamily"> => {
   const classes = [...new Set([...a.keys(), ...b.keys()])].map((key): Cell => {
     const left = a.get(key);
     const right = b.get(key);
@@ -218,7 +273,26 @@ export const compareRuns = (a: RunOutcomes, b: RunOutcomes): CriterionComparison
     ),
   );
   const adjusted = holm(rows.map((row) => row.p));
-  return rows.map((row, index) => ({ ...row, pHolm: adjusted[index] ?? null }));
+  return rows.map((row, index) => {
+    const pHolm = adjusted[index] ?? null;
+    return { ...row, pHolm, pHolmFamily: pHolm };
+  });
+};
+
+/** Holm across every criterion of every comparison given, kept in their shape. */
+export const familyHolm = (
+  comparisons: readonly (readonly CriterionComparison[])[],
+): CriterionComparison[][] => {
+  const adjusted = holm(comparisons.flatMap((rows) => rows.map((row) => row.p)));
+  const offsets = comparisons.map((_, index) =>
+    comparisons.slice(0, index).reduce((sum, rows) => sum + rows.length, 0),
+  );
+  return comparisons.map((rows, index) =>
+    rows.map((row, at) => ({
+      ...row,
+      pHolmFamily: adjusted[(offsets[index] ?? 0) + at] ?? null,
+    })),
+  );
 };
 
 const formatP = (p: number | null): string =>
@@ -234,8 +308,8 @@ const excludedText = (excluded: Readonly<Record<ExclusionReason, number>>): stri
 /** A Markdown table of one comparison; the caller titles it. */
 export const renderComparison = (rows: readonly CriterionComparison[]): string =>
   [
-    "| Criterion | Pairs | A pass | B pass | Both pass | A only | B only | Both fail | p | p (Holm) | Left out |",
-    "| --- | --: | --: | --: | --: | --: | --: | --: | --: | --: | --- |",
+    "| Criterion | Pairs | A pass | B pass | Both pass | A only | B only | Both fail | p | p (Holm) | p (Holm, all) | Left out |",
+    "| --- | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --- |",
     ...rows.map(
       (row) =>
         `| ${[
@@ -249,6 +323,7 @@ export const renderComparison = (rows: readonly CriterionComparison[]): string =
           row.bothFail,
           formatP(row.p),
           formatP(row.pHolm),
+          formatP(row.pHolmFamily),
           excludedText(row.excluded),
         ].join(" | ")} |`,
     ),

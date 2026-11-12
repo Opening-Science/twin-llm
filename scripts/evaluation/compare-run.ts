@@ -1,10 +1,12 @@
 /**
- * `bun run eval:compare -- <run-a> <run-b> [<run-a> <run-b> …] [--json]`.
+ * `bun run eval:compare -- <run-a> <run-b> [<run-a> <run-b> …] [--unit item|line] [--json]`.
  *
  * For each pair of runs: reads `evaluation/runs/<run-id>/meta.json` and
  * `results.jsonl`, scores both with the current scorers as `eval:report`
- * does, pairs their lines item by item and repeat by repeat, and prints the
- * exact McNemar test per criterion with Holm's adjustment (`compare.ts`).
+ * does, pairs them item by item (repeats folded by majority; `--unit line`
+ * pairs each repeat instead, a sensitivity analysis), and prints the exact
+ * McNemar test per criterion with Holm's adjustment within the pair and,
+ * as a sensitivity column, across every pair given (`compare.ts`).
  * Markdown by default; `--json` prints one JSON document for every pair.
  * Reads no env and no database, calls no model and writes nothing.
  *
@@ -26,8 +28,12 @@ import { questionsSha256 } from "./build-answer-key";
 import {
   compareRuns,
   type CriterionComparison,
+  familyHolm,
+  isUnit,
   renderComparison,
   runOutcomes,
+  toItemOutcomes,
+  type Unit,
 } from "./compare";
 import {
   metaSchema,
@@ -42,7 +48,8 @@ import { scoreRun } from "./score/score-run";
 
 const RUN_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$/;
 
-const USAGE = "bun run eval:compare -- <run-a> <run-b> [<run-a> <run-b> …] [--json]";
+const USAGE =
+  "bun run eval:compare -- <run-a> <run-b> [<run-a> <run-b> …] [--unit item|line] [--json]";
 
 export type CompareDeps = Readonly<{
   readText: (path: string) => Promise<string>;
@@ -67,6 +74,7 @@ export type PairResult = Readonly<{
   b: RunSide;
   question_set: QuestionSetId;
   questions_sha256: string;
+  unit: Unit;
   criteria: readonly CriterionComparison[];
 }>;
 
@@ -79,7 +87,15 @@ type LoadedRun = Readonly<{
 const parseArgs = (argv: readonly string[]) => {
   const args = argv.filter((arg) => arg !== "--");
   const json = args.includes("--json");
-  const runs = args.filter((arg) => arg !== "--json");
+  const flag = args.indexOf("--unit");
+  const unitArg = flag === -1 ? "item" : args[flag + 1];
+  if (unitArg === undefined || !isUnit(unitArg)) {
+    throw new ReportError("USAGE", USAGE);
+  }
+  const runs = args.filter(
+    (arg, index) =>
+      arg !== "--json" && (flag === -1 || (index !== flag && index !== flag + 1)),
+  );
   if (
     runs.length === 0 ||
     runs.length % 2 !== 0 ||
@@ -90,7 +106,7 @@ const parseArgs = (argv: readonly string[]) => {
   const pairs = runs.flatMap((run, index) =>
     index % 2 === 0 ? [[run, runs[index + 1] ?? ""] as const] : [],
   );
-  return { json, pairs };
+  return { json, unit: unitArg, pairs };
 };
 
 const loadRun = async (deps: CompareDeps, runId: string): Promise<LoadedRun> => {
@@ -161,6 +177,7 @@ export const comparePair = async (
   deps: CompareDeps,
   runA: string,
   runB: string,
+  unit: Unit = "item",
 ): Promise<PairResult> => {
   const [a, b] = await Promise.all([loadRun(deps, runA), loadRun(deps, runB)]);
   if (a.set !== b.set || a.meta.questions_sha256 !== b.meta.questions_sha256) {
@@ -174,7 +191,11 @@ export const comparePair = async (
     b: sideOf(b.meta),
     question_set: a.set,
     questions_sha256: a.meta.questions_sha256,
-    criteria: compareRuns(a.outcomes, b.outcomes),
+    unit,
+    criteria:
+      unit === "item"
+        ? compareRuns(toItemOutcomes(a.outcomes), toItemOutcomes(b.outcomes))
+        : compareRuns(a.outcomes, b.outcomes),
   };
 };
 
@@ -182,7 +203,7 @@ const renderPair = (pair: PairResult): string =>
   [
     `## ${pair.a.run_id} (A) against ${pair.b.run_id} (B)`,
     "",
-    `Set ${pair.question_set}. A: ${pair.a.model_id}, ${pair.a.arm}, git ${pair.a.git_sha.slice(0, 7)}. B: ${pair.b.model_id}, ${pair.b.arm}, git ${pair.b.git_sha.slice(0, 7)}.`,
+    `Set ${pair.question_set}, unit ${pair.unit}. A: ${pair.a.model_id}, ${pair.a.arm}, git ${pair.a.git_sha.slice(0, 7)}. B: ${pair.b.model_id}, ${pair.b.arm}, git ${pair.b.git_sha.slice(0, 7)}.`,
     "",
     renderComparison(pair.criteria),
     "",
@@ -194,11 +215,16 @@ export const runCompare = async (
   deps: CompareDeps,
 ): Promise<number> => {
   try {
-    const { json, pairs } = parseArgs(argv);
-    const results: PairResult[] = [];
+    const { json, unit, pairs } = parseArgs(argv);
+    const compared: PairResult[] = [];
     for (const [runA, runB] of pairs) {
-      results.push(await comparePair(deps, runA, runB));
+      compared.push(await comparePair(deps, runA, runB, unit));
     }
+    const family = familyHolm(compared.map((pair) => pair.criteria));
+    const results = compared.map((pair, index) => ({
+      ...pair,
+      criteria: family[index] ?? pair.criteria,
+    }));
     io.stdout.write(
       json
         ? `${JSON.stringify(results, null, 2)}\n`
