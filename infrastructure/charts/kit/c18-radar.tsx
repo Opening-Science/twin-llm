@@ -1,5 +1,7 @@
 "use client";
 
+import { EMPTY_VALUE } from "@/infrastructure/format-measure";
+
 import {
   ChartFocusFrame,
   ChartGroup,
@@ -114,7 +116,7 @@ export const Radar = ({
             {out.anchors.map((a, i) => {
               const axis = axes[i]!;
               const shown =
-                state === "default" && axis.value !== null ? axis.display : "–";
+                state === "default" && axis.value !== null ? axis.display : EMPTY_VALUE;
               // Two lines: the word, then the value; above the anchor at the top.
               const first = a.above ? a.y - 18 : a.y + 4;
               return (

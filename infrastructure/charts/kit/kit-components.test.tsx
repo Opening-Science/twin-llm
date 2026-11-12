@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 import type { ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
+import { EMPTY_VALUE } from "@/infrastructure/format-measure";
+
 import {
   ComparisonPair,
   DeviceList,
@@ -284,7 +286,8 @@ describe("every kit component has an accessible name", () => {
     if (missing) {
       expect(html(render("empty"))).toContain('<span class="sr-only">no data</span>');
     }
-    for (const state of STATES) expect(spoken(html(render(state)))).not.toContain("–");
+    for (const state of STATES)
+      expect(spoken(html(render(state)))).not.toContain(EMPTY_VALUE);
   });
 
   test("device lists are named groups, never one region landmark each", () => {
@@ -399,7 +402,7 @@ test("radar vertices carry their word and value; a missing value is a dash", () 
   expect(out).toContain("REM");
   expect(out).toContain("1 hr 36 min");
   expect(out).not.toContain("4 hr 8 min");
-  expect(out).toContain("–");
+  expect(out).toContain(EMPTY_VALUE);
   const empty = html(charts("empty").radar);
   expect(empty).toContain("Deep");
   expect(empty).not.toContain("1 hr 36 min");
