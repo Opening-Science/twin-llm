@@ -127,6 +127,7 @@ export const DeviceList = ({
   framed = true,
   rows,
   emptyNote,
+  label,
 }: DeviceListProps) => {
   // Framed rows keep the card's inset; frameless rows line up with their parent's content.
   const ROW = cn(ROW_BASE, framed ? "px-5" : "px-0");
@@ -174,6 +175,7 @@ export const DeviceList = ({
     );
   return (
     <section
+      aria-label={label ?? title ?? "Devices"}
       // Inline-size containment: long, truncated detail lines never widen a
       // grid or flex parent; the list takes the width it is given.
       className="flex flex-col gap-2 [contain:inline-size]"

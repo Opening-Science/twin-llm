@@ -2,6 +2,7 @@
 
 import {
   ChartFocusFrame,
+  ChartGroup,
   ChartReadout,
   dimmed,
   mutedUnlessFocused,
@@ -157,15 +158,14 @@ export const Radar = ({
   );
   // Inverted axes always come with a plain note, so further out is never read as higher.
   const note = state === "default" ? invertedNote(axes) : null;
+  const name = label ?? "Parts compared";
   const noted = note ? <p className="text-muted-foreground text-xs">{note}</p> : null;
   if (!live) {
-    return noted ? (
-      <div className="flex flex-col gap-2">
+    return (
+      <ChartGroup label={name} className={noted ? "flex flex-col gap-2" : undefined}>
         {chart}
         {noted}
-      </div>
-    ) : (
-      chart
+      </ChartGroup>
     );
   }
   return (
@@ -174,7 +174,7 @@ export const Radar = ({
         id={focus.readoutId}
         text={focused === null ? null : axes[focused]?.readout}
       />
-      <ChartFocusFrame focus={focus} label={label ?? "Parts compared"}>
+      <ChartFocusFrame focus={focus} label={name}>
         {chart}
       </ChartFocusFrame>
       {noted}

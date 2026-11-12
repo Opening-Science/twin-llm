@@ -1,6 +1,12 @@
 "use client";
 
-import { ChartFocusFrame, ChartReadout, dimmed, useChartFocus } from "./chart-focus";
+import {
+  ChartFocusFrame,
+  ChartGroup,
+  ChartReadout,
+  dimmed,
+  useChartFocus,
+} from "./chart-focus";
 import { barsWithLine, slotIndex } from "./kit-geometry";
 import {
   AXIS_TEXT,
@@ -150,8 +156,14 @@ export const Consistency = ({
       }}
     </ChartSvg>
   );
+  const name = label ?? reference.label;
   return (
-    <div className="flex flex-col gap-3" data-state={state}>
+    // A picture is named here; an interactive chart by its focus frame.
+    <ChartGroup
+      label={live ? undefined : name}
+      className="flex flex-col gap-3"
+      data-state={state}
+    >
       <div className="grid grid-cols-2 gap-4">
         {state === "loading" ? (
           <>
@@ -161,11 +173,7 @@ export const Consistency = ({
         ) : (
           <>
             <Hero pair hero={reference} category={category} reference />
-            <Hero
-              pair
-              hero={state === "empty" ? { ...last, value: "–" } : last}
-              category={category}
-            />
+            <Hero pair hero={last} missing={state === "empty"} category={category} />
           </>
         )}
       </div>
@@ -175,13 +183,13 @@ export const Consistency = ({
             id={focus.readoutId}
             text={focused === null ? null : readouts?.[focused]}
           />
-          <ChartFocusFrame focus={focus} label={label ?? reference.label}>
+          <ChartFocusFrame focus={focus} label={name}>
             {chart}
           </ChartFocusFrame>
         </>
       ) : (
         chart
       )}
-    </div>
+    </ChartGroup>
   );
 };

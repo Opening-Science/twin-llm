@@ -351,9 +351,10 @@ describe("interactive charts", () => {
       />,
     );
 
-  test("without readouts a chart stays a picture: no tab stop, no readout", () => {
+  test("without readouts a chart stays a picture: named, but no tab stop or readout", () => {
     const out = weekly();
-    expect(out).not.toContain('role="group"');
+    expect(out.match(/role="group"/g)).toHaveLength(1);
+    expect(out).toContain('aria-label="Steps: Weekly"');
     expect(out).not.toContain("aria-live");
     expect(out).not.toContain("tabindex");
   });
@@ -389,7 +390,8 @@ describe("interactive charts", () => {
         readouts={["a", "b", "c"]}
       />,
     );
-    expect(out).not.toContain('role="group"');
+    expect(out).not.toContain("tabindex");
+    expect(out).not.toContain("aria-live");
   });
 
   test.each([
@@ -618,7 +620,7 @@ describe("tap to focus", () => {
       html(charts("default").hypnogram) +
       html(charts("default").ring) +
       html(charts("default").streak);
-    expect(out).not.toContain('role="group"');
+    expect(out).not.toContain("tabindex");
     expect(out).not.toContain("data-focus-index");
   });
 
@@ -1074,7 +1076,7 @@ describe("hypnogram options", () => {
     expect(out).toContain("1 hr 10 min");
     expect(out.match(/fill-stage-/g)).toHaveLength(4);
     expect(out).not.toContain("23:04");
-    expect(out).not.toContain('role="group"');
+    expect(out).not.toContain("tabindex");
   });
 
   test("the core lane can say Light, and labels still win", () => {

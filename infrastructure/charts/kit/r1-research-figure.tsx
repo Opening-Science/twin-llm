@@ -3,6 +3,7 @@
 import { conditionToken, type SeriesToken, tokenTextClass } from "../category-token";
 import {
   ChartFocusFrame,
+  ChartGroup,
   ChartReadout,
   dimmed,
   mutedUnlessFocused,
@@ -282,16 +283,15 @@ const EstimatePlot = ({
       }}
     </ChartSvg>
   );
+  const name = label ?? "Estimates";
   const legend =
     state === "default" ? <Legend series={keys} expected={hasExpected} /> : null;
   if (!live) {
-    return legend ? (
-      <div className="flex flex-col gap-2">
+    return (
+      <ChartGroup label={name} className={legend ? "flex flex-col gap-2" : undefined}>
         {chart}
         {legend}
-      </div>
-    ) : (
-      chart
+      </ChartGroup>
     );
   }
   return (
@@ -300,7 +300,7 @@ const EstimatePlot = ({
         id={focus.readoutId}
         text={focused === null ? null : estimates[focused]?.readout}
       />
-      <ChartFocusFrame focus={focus} label={label ?? "Estimates"}>
+      <ChartFocusFrame focus={focus} label={name}>
         {chart}
       </ChartFocusFrame>
       {legend}
@@ -355,7 +355,7 @@ export const ResearchFigure = (props: ResearchFigureProps) => {
   const format = props.format ?? ((v: number) => v.toFixed(2));
   const observedTone = single ? tokenTextClass(single) : toneClass(props.category, false);
   const { summary } = props;
-  return (
+  const figure = (
     <ChartSvg height={NULL_HEIGHT + (props.axisTitle ? TITLE : 0)}>
       {(width) => {
         const draws = state === "default" && !summary ? (props.draws ?? []) : [];
@@ -473,5 +473,10 @@ export const ResearchFigure = (props: ResearchFigureProps) => {
         );
       }}
     </ChartSvg>
+  );
+  return (
+    <ChartGroup label={props.label ?? `${props.observedLabel} against the null`}>
+      {figure}
+    </ChartGroup>
   );
 };
