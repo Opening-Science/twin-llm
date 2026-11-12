@@ -20,9 +20,11 @@
  * The Markdown goes through Prettier, so a report committed under docs/ passes
  * `format:check` and the pre-commit hook leaves it byte for byte as written.
  */
+import { randomBytes } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
+import { ratedSetOf } from "../../features/lab/rater-rubric";
 import {
   type LearningGateDeps,
   type LearningRow,
@@ -40,7 +42,13 @@ import {
   type ResultLine,
   resultLineSchema,
 } from "./eval-results";
-import { answerKeySchema, questionSetSchema } from "./question-set";
+import {
+  type AnswerKey,
+  answerKeySchema,
+  type QuestionSet,
+  questionSetSchema,
+} from "./question-set";
+import { parseRaterSheetKey, renderRaterSheet } from "./rater-sheet";
 import { renderReport, renderReviewKey, renderReviewSheet } from "./report";
 import { scoreRun } from "./score/score-run";
 
@@ -61,6 +69,8 @@ export type ReportDeps = Readonly<{
   writeText: (path: string, text: string) => Promise<void>;
   /** The consent gate (#145); the report reads files only, so it has no consent store. */
   learning: LearningGateDeps;
+  /** A rater sheet's salt (#304), 64 hex characters; by default from the OS random source. */
+  newSalt?: () => string;
 }>;
 
 /**
@@ -154,6 +164,62 @@ const loadCohortCodes = async (
   return parsed.data.content_sha256 === contentSha256 ? new Set(parsed.data.codes) : null;
 };
 
+/**
+ * The blinded rater sheet of a run of a rated set (#304), one model per run
+ * as the rating view assumes. The salt is kept from an earlier
+ * `rater-sheet-key.json` of the run, so a sheet being filled keeps its ids
+ * when the report is made again.
+ */
+const writeRaterSheet = async ({
+  deps,
+  io,
+  dir,
+  runId,
+  set: setId,
+  models,
+  questions,
+  key,
+  lines,
+}: Readonly<{
+  deps: ReportDeps;
+  io: ReportIo;
+  dir: string;
+  runId: string;
+  set: string;
+  models: number;
+  questions: QuestionSet;
+  key: AnswerKey;
+  lines: readonly ResultLine[];
+}>): Promise<void> => {
+  const set = ratedSetOf(setId);
+  if (set === null) return;
+  if (models !== 1) {
+    io.stdout.write(
+      "No rater-sheet.csv: ratings are keyed by item and repeat, so a rater sheet needs one model per run.\n",
+    );
+    return;
+  }
+  const keyPath = join(dir, "rater-sheet-key.json");
+  const earlier = parseRaterSheetKey(
+    await deps.readText(keyPath).catch(() => null),
+    runId,
+  );
+  const newSalt = deps.newSalt ?? (() => randomBytes(32).toString("hex"));
+  const sheet = renderRaterSheet({
+    set,
+    runId,
+    items: questions.items,
+    entries: key.entries,
+    lines,
+    salt: earlier?.salt ?? newSalt(),
+  });
+  await deps.writeText(join(dir, "rater-sheet.csv"), sheet.csv);
+  await deps.writeText(keyPath, sheet.key);
+  io.stdout.write(
+    `Wrote ${dir}/rater-sheet.csv (${sheet.rows} lines, ${set}) and rater-sheet-key.json; give raters the sheet only\n`,
+  );
+};
+
 export const runReport = async (
   argv: readonly string[],
   io: ReportIo,
@@ -236,6 +302,17 @@ export const runReport = async (
     io.stdout.write(
       `Wrote ${dir}/report.md, review.csv and review-key.json (${lines.length} lines, ${scores.length} models)\n`,
     );
+    await writeRaterSheet({
+      deps,
+      io,
+      dir,
+      runId,
+      set: meta.question_set ?? "v1",
+      models: meta.models.length,
+      questions,
+      key,
+      lines,
+    });
     return 0;
   } catch (error) {
     if (error instanceof ReportError) {
