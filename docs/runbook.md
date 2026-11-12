@@ -389,7 +389,7 @@ bunx prisma migrate status
 
 `scripts/db/verify-migrations.sh` runs `migrate deploy`, diffs the migrations against the schema, probes pgvector (`scripts/db/verify-pgvector.sh`), probes the warehouse `source` CHECKs with `prisma db execute --stdin`, then seeds two audit events, tampers `seq = 1`, and expects `verifyChain` to fail at that seq.
 
-`db:verify` needs the `psql` client on PATH. On macOS install it with Homebrew libpq (`brew install libpq`, then add `/opt/homebrew/opt/libpq/bin` to PATH in `~/.zshrc`). CI installs `postgresql-client`.
+`db:verify` needs the `psql` client on PATH. On macOS install it with Homebrew libpq (`brew install libpq`, then add `/opt/homebrew/opt/libpq/bin` to PATH in `~/.zshrc`). CI uses the psql on the runner and installs `postgresql-client` only when it is missing.
 
 Reset scratch first: `docker rm -f twinllm-scratch twinllm-shadow`; start both again (above); then `db:verify`. A scratch that still has the migration history from before the 2026-10-25 baseline will not deploy cleanly.
 
