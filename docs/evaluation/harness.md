@@ -392,8 +392,8 @@ blood pressure, `8480-6`).
   "over", "to", "and", "with", "during", "through" or "for", and ranges
   ("2004–2008"). "The 2019 guideline" names no window; "last Tuesday" is not
   resolved. A call's years are those of the ISO dates in its input and output.
-- Only values are checked: dates in the reply (`2026-03-03`, `3 Mar 2026`, a
-  lone year) are left out, and 0 to 10 count only when written without
+- Only values are checked: dates in the reply (`2026-03-03`, `3 Mar 2026`,
+  `12/01/2026`, `14 Jan`, `Jan 12th`, a lone year) are left out, and 0 to 10 count only when written without
   decimals ("7.0 %" is a value).
 
 ### Call accuracy and answers without a tool

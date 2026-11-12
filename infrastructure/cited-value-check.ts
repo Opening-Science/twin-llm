@@ -41,7 +41,13 @@
  * not checked (null).
  */
 import { MEASURES, measureKindFor } from "./format-measure";
-import { blankOut, DATE_PATTERN, LOINC_PATTERN, UUID_PATTERN } from "./narrated-numbers";
+import {
+  blankOut,
+  DATE_PATTERN,
+  DAY_MONTH_PATTERN,
+  LOINC_PATTERN,
+  UUID_PATTERN,
+} from "./narrated-numbers";
 
 export const VALUE_CHECK_STATUSES = ["matched", "not_matched", "unstated"] as const;
 
@@ -236,28 +242,20 @@ const HOURS_MINUTES =
 
 const CLOCK = /(?<![\d:.])(\d{1,2}):([0-5]\d)(?![\d:])/g;
 
-/**
- * A month as a reply writes it, capitalised and whole or cut short (`Jan`,
- * `January`, `Sept`), so `74 marks`, `68 may` and `48 declined` are no dates.
- */
-const MONTH = String.raw`(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|June?|July?|Aug(?:ust)?|Sep(?:t|tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?`;
-
-/** Day and month without a year (`2 Jan`, `Jan 2nd`); `DATE_PATTERN` has the rest. */
-const DAY_MONTH = new RegExp(
-  String.raw`\b\d{1,2}(?:st|nd|rd|th)?\s+${MONTH}(?![a-z])|\b${MONTH}\s+\d{1,2}(?:st|nd|rd|th)?\b`,
-  "g",
-);
-
 /** A stored key as the answer may write it, bracketed or bare. */
 const BRACKETED = /\[[^\]\n]*\]/g;
 const BARE_KEY = /\b[a-z][a-z0-9_-]*(?:\.[a-z0-9_-]+)+/gi;
 
 /** The text with everything that is never a stated value blanked out, positions kept. */
 const valueText = (text: string): string =>
-  [UUID_PATTERN, BRACKETED, BARE_KEY, DATE_PATTERN, DAY_MONTH, LOINC_PATTERN].reduce(
-    (out, pattern) => blankOut(out, pattern),
-    text.replace(/−/g, "-"),
-  );
+  [
+    UUID_PATTERN,
+    BRACKETED,
+    BARE_KEY,
+    DATE_PATTERN,
+    DAY_MONTH_PATTERN,
+    LOINC_PATTERN,
+  ].reduce((out, pattern) => blankOut(out, pattern), text.replace(/−/g, "-"));
 
 /** A number the answer wrote, read in one reading's dimension. */
 type StatedNumber = Readonly<{
