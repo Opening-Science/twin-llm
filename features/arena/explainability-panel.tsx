@@ -29,6 +29,7 @@ import {
 import type { ResponseDocumentV1 } from "@/infrastructure/response-document/document-v1";
 import { uiContextLines } from "@/infrastructure/ui-context";
 import { citedValueLine } from "@/infrastructure/wearable-provenance";
+import { sourceRuleLine } from "@/infrastructure/wearable-source-rules";
 import {
   formatGbdRow,
   gbdAttributionFor,
@@ -68,6 +69,7 @@ const EvidencePanel = ({
       {attribution.map((item) => {
         // The words carry the check (#545); the colour only repeats them.
         const provenance = citedValueLine(item);
+        const rule = sourceRuleLine(item.sourceRule);
         const mismatch = item.valueCheck?.status === "not_matched";
         return (
           <li
@@ -88,6 +90,7 @@ const EvidencePanel = ({
                 {provenance}
               </span>
             )}
+            {rule && <span className="text-muted-foreground block">{rule}</span>}
           </li>
         );
       })}
