@@ -41,9 +41,10 @@ export type SourceMeasure = (typeof SOURCE_MEASURES)[number];
 export type EvidenceGrade = "good" | "fair" | "poor" | "unknown";
 
 /**
- * Readings agree when the largest and smallest differ by no more than
- * `absolute`, or by no more than `relative` of the largest. TwinLLM's own
- * display tolerances, not published agreement limits.
+ * Readings agree when the largest and smallest differ by no more than the
+ * larger of `absolute` and `relative` of the largest reading: 200 steps at
+ * 4,000 steps, 600 at 12,000. TwinLLM's own display tolerances, not
+ * published agreement limits.
  */
 export type Tolerance = Readonly<{ absolute: number; relative: number; unit: string }>;
 
@@ -181,13 +182,16 @@ const readingOf = (
 const unitFits = (reading: SourceReading, measure: SourceMeasure): boolean =>
   reading.unit === null || SOURCE_UNITS[measure].includes(reading.unit.toLowerCase());
 
+/** The bound that applies to readings whose largest is `high`: the larger of the two. */
+export const appliedTolerance = (tolerance: Tolerance, high: number): number =>
+  Math.max(tolerance.absolute, tolerance.relative * Math.abs(high));
+
 export const withinTolerance = (
   values: readonly number[],
   tolerance: Tolerance,
 ): boolean => {
   const high = Math.max(...values);
-  const spread = high - Math.min(...values);
-  return spread <= Math.max(tolerance.absolute, tolerance.relative * Math.abs(high));
+  return high - Math.min(...values) <= appliedTolerance(tolerance, high);
 };
 
 /** The decision for one measure on one day, from one reading per source. */
@@ -287,16 +291,23 @@ const joinNames = (names: readonly string[]): string =>
     ? (names[0] ?? "")
     : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
 
-const toleranceText = (tolerance: Tolerance): string => {
-  const number = tolerance.absolute.toLocaleString("en-GB");
+const amount = (value: number, unit: string): string => {
+  const number = value.toLocaleString("en-GB", { maximumFractionDigits: 1 });
   // A tolerance on a percentage is in points: 96% and 97% are one point apart.
-  const absolute =
-    tolerance.unit === "%"
-      ? `${number} percentage point${tolerance.absolute === 1 ? "" : "s"}`
-      : `${number} ${tolerance.unit}`;
+  return unit === "%"
+    ? `${number} percentage point${value === 1 ? "" : "s"}`
+    : `${number} ${unit}`;
+};
+
+/**
+ * The bound that applied, and how it was set when there are two: "600
+ * steps, the larger of 200 steps and 5% of the highest reading".
+ */
+const toleranceText = (tolerance: Tolerance, high: number): string => {
+  const applied = amount(appliedTolerance(tolerance, high), tolerance.unit);
   return tolerance.relative > 0
-    ? `${absolute} or ${Math.round(tolerance.relative * 100)}%`
-    : absolute;
+    ? `${applied}, the larger of ${amount(tolerance.absolute, tolerance.unit)} and ${Math.round(tolerance.relative * 100)}% of the highest reading`
+    : applied;
 };
 
 const GRADE_WORDS: Readonly<Record<EvidenceGrade, string>> = {
@@ -325,6 +336,9 @@ const HOLD_WORDS: Readonly<Record<HoldReason, (measure: string) => string>> = {
     `record ${measure} without a day, so the app cannot tell they describe the same one`,
 };
 
+const highest = (readings: readonly SourceReading[]): number =>
+  Math.max(...readings.map((reading) => reading.value));
+
 const readingsText = (readings: readonly SourceReading[]): string =>
   joinNames(readings.map((reading) => `${label(reading.source)} ${reading.shown}`));
 
@@ -340,7 +354,10 @@ export const decisionLine = (decision: SourceDecision): string | null => {
     case "agree":
       return `${joinNames(decision.others.map((reading) => label(reading.source)))} ${
         decision.others.length === 1 ? "agrees" : "agree"
-      } within ${toleranceText(SOURCE_TOLERANCE[decision.measure])} (${readingsText(decision.others)}); ${label(decision.chosen.source)}'s reading is shown.`;
+      } (${readingsText(decision.others)}): within ${toleranceText(
+        SOURCE_TOLERANCE[decision.measure],
+        highest([decision.chosen, ...decision.others]),
+      )}. ${label(decision.chosen.source)}'s reading is shown.`;
     case "evidence": {
       const chosen = decision.chosen.source;
       const others = decision.others

@@ -17,18 +17,23 @@ and `infrastructure/wearable-source-audit.ts` (the audit row).
 Only readings that measure the same thing, on the same calendar day. A related measure
 from another source is not a disagreement and is never compared.
 
-| Measure                | Stored stems                                                             | Agree within       |
-| ---------------------- | ------------------------------------------------------------------------ | ------------------ |
-| Heart rate variability | `sleep.hrv`, `whoop.recovery.hrv`, `google.daily-heart-rate-variability` | 5 ms or 10%        |
-| Resting heart rate     | `whoop.recovery.rhr`, `google.daily-resting-heart-rate`                  | 3 bpm              |
-| Blood oxygen           | `whoop.recovery.spo2`, `google.daily-oxygen-saturation`                  | 1 percentage point |
-| Steps                  | `activity.steps`, `google.steps`                                         | 200 steps or 5%    |
+| Measure                | Stored stems                                                             | Agree within                                          |
+| ---------------------- | ------------------------------------------------------------------------ | ----------------------------------------------------- |
+| Heart rate variability | `sleep.hrv`, `whoop.recovery.hrv`, `google.daily-heart-rate-variability` | The larger of 5 ms and 10% of the highest reading     |
+| Resting heart rate     | `whoop.recovery.rhr`, `google.daily-resting-heart-rate`                  | 3 bpm                                                 |
+| Blood oxygen           | `whoop.recovery.spo2`, `google.daily-oxygen-saturation`                  | 1 percentage point                                    |
+| Steps                  | `activity.steps`, `google.steps`                                         | The larger of 200 steps and 5% of the highest reading |
 
 Oura's overnight HRV and WHOOP's recovery HRV are both RMSSD in ms over the night and
 count as one measure. Oura's sleeping heart rate and WHOOP's day average are not, nor
 are Oura's sleep score and WHOOP's sleep performance. Oura's naps and rests are left out:
 only the main sleep stands for the night. The measure names are open-twin's
 (`@open-twin/aggregate`, `Measure`).
+
+Where there are two bounds, the larger applies: 200 steps up to 4,000 steps, then 5%
+(600 at 12,000); 5 ms up to 50 ms of HRV, then 10% (8 ms at 80 ms). The line shown to
+people says which bound applied ("within 600 steps, the larger of 200 steps and 5% of the
+highest reading").
 
 The tolerances are TwinLLM's own display tolerances, chosen so a rounding or a sync
 difference does not read as a disagreement. They are not published agreement limits; the
@@ -47,8 +52,9 @@ For each measure and day where at least one source has a reading:
    say): held back, because the readings cannot be compared. A reading stored without a
    unit is taken to be in the measure's unit.
 4. **Agree.** The largest and smallest reading differ by no more than the tolerance
-   above. One reading is shown and the others are named as agreeing ("WHOOP agrees within
-   5 ms or 10% (WHOOP 54 ms); Oura's reading is shown."). Oura, then WHOOP, then Google
+   above. One reading is shown and the others are named as agreeing ("WHOOP agrees (WHOOP
+   54 ms): within 5.4 ms, the larger of 5 ms and 10% of the highest reading. Oura's
+   reading is shown."). Oura, then WHOOP, then Google
    Health picks which agreeing reading is printed; since they agree, that choice says
    nothing about which device is better.
 5. **Published evidence.** They disagree. open-twin's validation table (`reliabilityFor`

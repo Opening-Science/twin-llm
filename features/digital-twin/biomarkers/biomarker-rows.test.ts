@@ -252,7 +252,8 @@ describe("vitals", () => {
 
 describe("vitals: how overlapping sources were resolved (#464)", () => {
   // Synthetic readings as the server leaves them after the source rules.
-  const AGREE = "WHOOP agrees within 5 ms or 10% (WHOOP 54 ms); Oura's reading is shown.";
+  const AGREE =
+    "WHOOP agrees (WHOOP 54 ms): within 5.4 ms, the larger of 5 ms and 10% of the highest reading. Oura's reading is shown.";
   const EVIDENCE =
     "Sources disagree (WHOOP 61 ms). Oura is used: published validation grades it good for HRV (WHOOP no published grade).";
   const HELD =

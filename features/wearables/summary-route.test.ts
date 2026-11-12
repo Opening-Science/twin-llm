@@ -155,7 +155,7 @@ describe("GET /api/wearables/summary", () => {
         ...reading(`sleep.hrv.long_sleep.${day}`, 52),
         sourceRule: {
           kind: "agree",
-          line: "WHOOP agrees within 5 ms or 10% (WHOOP 54 ms); Oura's reading is shown.",
+          line: "WHOOP agrees (WHOOP 54 ms): within 5.4 ms, the larger of 5 ms and 10% of the highest reading. Oura's reading is shown.",
         },
       },
     ]);

@@ -2,8 +2,10 @@ import { describe, expect, test } from "bun:test";
 
 import { judgeByEvidence } from "./open-twin-adapters/aggregate";
 import {
+  appliedTolerance,
   decideSources,
   decisionLine,
+  SOURCE_TOLERANCE,
   sourceRuleLine,
   withinTolerance,
   type EvidenceJudge,
@@ -29,6 +31,50 @@ describe("withinTolerance", () => {
     expect(withinTolerance([50, 56], hrv)).toBe(false);
     expect(withinTolerance([90, 99], hrv)).toBe(true);
     expect(withinTolerance([90, 100.5], hrv)).toBe(false);
+  });
+
+  const steps = SOURCE_TOLERANCE["step-count"];
+  const hrv = SOURCE_TOLERANCE["heart-rate-variability"];
+
+  test("steps: 200 applies at 4,000, 5% (600) at 12,000", () => {
+    expect(appliedTolerance(steps, 4000)).toBe(200);
+    expect(withinTolerance([3800, 4000], steps)).toBe(true);
+    expect(withinTolerance([3799, 4000], steps)).toBe(false);
+    expect(appliedTolerance(steps, 3000)).toBe(200);
+    expect(withinTolerance([2800, 3000], steps)).toBe(true);
+    expect(appliedTolerance(steps, 12000)).toBe(600);
+    expect(withinTolerance([11400, 12000], steps)).toBe(true);
+    expect(withinTolerance([11399, 12000], steps)).toBe(false);
+  });
+
+  test("HRV: 5 ms applies at 40 ms, 10% (8 ms) at 80 ms", () => {
+    expect(appliedTolerance(hrv, 40)).toBe(5);
+    expect(withinTolerance([35, 40], hrv)).toBe(true);
+    expect(withinTolerance([34.9, 40], hrv)).toBe(false);
+    expect(appliedTolerance(hrv, 80)).toBe(8);
+    expect(withinTolerance([72, 80], hrv)).toBe(true);
+    expect(withinTolerance([71.9, 80], hrv)).toBe(false);
+  });
+
+  test("the line says which bound applied", () => {
+    const agree = (low: number, high: number) =>
+      decisionLine(
+        only(
+          decideSources(
+            [
+              { key: `activity.steps.${DAY}`, value: high, date: DAY },
+              { key: `google.steps.${DAY}`, value: low, unit: "steps", date: DAY },
+            ],
+            neverCalled,
+          ),
+        ),
+      );
+    expect(agree(3800, 4000)).toBe(
+      "Google Health agrees (Google Health 3,800 steps): within 200 steps, the larger of 200 steps and 5% of the highest reading. Oura's reading is shown.",
+    );
+    expect(agree(11400, 12000)).toBe(
+      "Google Health agrees (Google Health 11,400 steps): within 600 steps, the larger of 200 steps and 5% of the highest reading. Oura's reading is shown.",
+    );
   });
 });
 
@@ -62,7 +108,7 @@ describe("decideSources: agreement", () => {
       others: [{ key: `whoop.recovery.hrv.${DAY}`, source: "whoop", value: 54 }],
     });
     expect(decisionLine(decision)).toBe(
-      "WHOOP agrees within 5 ms or 10% (WHOOP 54 ms); Oura's reading is shown.",
+      "WHOOP agrees (WHOOP 54 ms): within 5.4 ms, the larger of 5 ms and 10% of the highest reading. Oura's reading is shown.",
     );
   });
 
@@ -82,7 +128,7 @@ describe("decideSources: agreement", () => {
       ),
     );
     expect(decisionLine(decision)).toBe(
-      "Google Health agrees within 1 percentage point (Google Health 97.0%); WHOOP's reading is shown.",
+      "Google Health agrees (Google Health 97.0%): within 1 percentage point. WHOOP's reading is shown.",
     );
   });
 
