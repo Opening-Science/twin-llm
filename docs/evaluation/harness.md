@@ -494,6 +494,43 @@ eight criteria do not change.
 
 `verifyChain()` needs the database, so it is a run step, not a scorer.
 
+## Paired comparison
+
+```sh
+bun run eval:compare -- <run-a> <run-b> [<run-a> <run-b> …] [--json]
+```
+
+Two runs of the same items (an arm against another, an agent against its
+base model) answer the same questions, so their outcomes are paired, and a
+test on two independent proportions throws that pairing away.
+`scripts/evaluation/compare.ts` scores both runs with the current scorers,
+as `eval:report` does, and pairs them per criterion: a line (item and
+repeat) for the six line criteria, an item for consistency.
+
+- A pair counts only when both sides are `pass` or `fail`. A unit only one
+  run has, or where either side is skipped (`MISSING_ENV`), `error`,
+  `human` or `na`, is left out and counted in "Left out" under the first of
+  those reasons that fits.
+- Each criterion gets the exact two-sided McNemar test: with b lines that
+  passed in A only and c in B only, p = min(1, 2 · P(X ≤ min(b, c))) for
+  X ~ Binomial(b + c, 1/2). 7 against 1 gives 18/256 = 0.0703125; no
+  discordant pair gives 1.
+- Holm's step-down adjustment runs across the criteria of one comparison
+  that have at least one pair. Nothing adjusts across comparisons; when
+  several are read together, say how many.
+
+It refuses a pair when a run is MOCK, has more than one model, named
+consents, or does not share one questions sha256 with the current questions
+and key, and when the two runs did not ask the same set. Reads no env and
+no database, calls no model and writes nothing; `--json` prints every pair
+as one JSON document.
+
+Limits: the few repeated items give up to three lines each, which are not
+independent, so on those the test leans slightly liberal. Query safety and
+privacy check only the reply in a context or code arm (the server made the
+reads), so a tools arm against one of those is not a like-for-like test on
+them. Runs from different commits differ in more than the arm or agent.
+
 ## What stays human
 
 - The `must_not` lines: they describe behaviours (judging a value good or bad,
