@@ -5,6 +5,12 @@
 - Repository: https://github.com/Opening-Science/twin-llm
 - License: Apache-2.0 for TwinLLM original work — see `LICENSE` and `NOTICE`
 
+## LLM Arena shell
+
+- Upstream: https://github.com/adrianhajdin/llm-arena @ package 0.1.0
+- License identifier: NOASSERTION (no upstream LICENSE file)
+- The multi-model chat shell (`features/arena/`) began from it; the leaderboard and vote data model derived from it were removed in October 2026. Attribution: `NOTICE`.
+
 ## Interaction patterns
 
 The ui-kit's `StepTrace`, `UndoButton`, `HoldToConfirm`, `StatusLattice` and `Rating` were written from scratch in this repository. No third-party UI component code is included.
