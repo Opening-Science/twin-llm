@@ -138,6 +138,51 @@ export const parseSkeletonAtlas = (value: unknown): SkeletonAtlas => {
   };
 };
 
+/**
+ * Why a configured skeleton is not shown: its file is missing or is not the
+ * pinned build, or atlas.json beside it is missing or cannot be read.
+ */
+export const SKELETON_PROBLEMS = ["file", "atlas-missing", "atlas-invalid"] as const;
+export type SkeletonProblem = (typeof SKELETON_PROBLEMS)[number];
+
+export const isSkeletonProblem = (value: unknown): value is SkeletonProblem =>
+  typeof value === "string" && (SKELETON_PROBLEMS as readonly string[]).includes(value);
+
+/** What the status says about the skeleton: one of the two is always null. */
+export type SkeletonStatus = Readonly<{
+  skeleton: SkeletonAtlas | null;
+  problem: SkeletonProblem | null;
+}>;
+
+export const NO_SKELETON: SkeletonStatus = { skeleton: null, problem: null };
+
+/**
+ * The skeleton from atlas.json's text (null: no such file), failing closed:
+ * without a readable atlas.json nobody can say what the build left out or
+ * who to credit, so the CT skeleton is not shown and the problem is named.
+ * The case comes from the GLB's file name when atlas.json has none.
+ */
+export const skeletonFromAtlasJson = (
+  raw: string | null,
+  caseFromFile: string | null,
+): SkeletonStatus => {
+  if (raw === null) return { skeleton: null, problem: "atlas-missing" };
+  let value: unknown;
+  try {
+    value = JSON.parse(raw);
+  } catch {
+    return { skeleton: null, problem: "atlas-invalid" };
+  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return { skeleton: null, problem: "atlas-invalid" };
+  }
+  const atlas = parseSkeletonAtlas(value);
+  return {
+    skeleton: atlas.caseId ? atlas : { ...atlas, caseId: caseFromFile },
+    problem: null,
+  };
+};
+
 const capitalise = (value: string): string =>
   value.length > 0 ? value.charAt(0).toUpperCase() + value.slice(1) : value;
 

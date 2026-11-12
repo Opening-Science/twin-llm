@@ -6,7 +6,11 @@ import { basename, dirname, join } from "node:path";
 
 import { anatomyEnv } from "@/infrastructure/env";
 
-import { parseSkeletonAtlas, type SkeletonAtlas } from "./open-skeleton";
+import {
+  NO_SKELETON,
+  skeletonFromAtlasJson,
+  type SkeletonStatus,
+} from "./open-skeleton";
 
 /**
  * The open-anatomy skeleton named by ANATOMY_SKELETON_GLB, with atlas.json
@@ -57,20 +61,18 @@ const caseFromFile = (path: string): string | null =>
   basename(path).split(".")[0] || null;
 
 /**
- * What atlas.json says about the configured skeleton, or null when there is no
- * skeleton. A missing or unreadable atlas.json leaves nothing out and marks
- * nothing modelled beyond the GLB's own extras; the case comes from the file name.
+ * What atlas.json says about the configured skeleton. Fails closed: a file
+ * that is missing or not the pinned build, or a missing or unreadable
+ * atlas.json, means no CT skeleton and a named problem (`skeletonFromAtlasJson`).
  */
-export const readSkeletonAtlas = async (): Promise<SkeletonAtlas | null> => {
+export const readSkeletonStatus = async (): Promise<SkeletonStatus> => {
   const path = configured()?.path;
-  if (!path || !(await statSkeleton())) return null;
+  if (!path) return NO_SKELETON;
+  if (!(await statSkeleton())) return { skeleton: null, problem: "file" };
   const raw = await readFile(join(dirname(path), "atlas.json"), "utf8").catch(() => null);
-  let value: unknown = {};
-  try {
-    value = raw === null ? {} : JSON.parse(raw);
-  } catch {
-    console.error("[anatomy] atlas.json beside the skeleton is not valid JSON");
+  const status = skeletonFromAtlasJson(raw, caseFromFile(path));
+  if (status.problem !== null) {
+    console.error(`[anatomy] skeleton not shown: ${status.problem} (atlas.json beside it)`);
   }
-  const atlas = parseSkeletonAtlas(value);
-  return atlas.caseId ? atlas : { ...atlas, caseId: caseFromFile(path) };
+  return status;
 };

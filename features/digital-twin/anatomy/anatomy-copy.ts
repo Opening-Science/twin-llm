@@ -1,3 +1,4 @@
+import { type SkeletonProblem } from "@/packages/anatomy/open-skeleton";
 import { type AtlasId } from "@/packages/anatomy/manifest";
 import { depthPosition, type LayerId } from "@/packages/anatomy/layers";
 import { type OrganSystem } from "@/packages/anatomy/systems";
@@ -52,6 +53,14 @@ export const SKELETON_NOT_CONFIGURED_API =
 
 export const SKELETON_NOT_PINNED_API =
   "The open-anatomy skeleton is missing or does not match ANATOMY_SKELETON_SHA256.";
+
+/** Why a configured CT skeleton is not shown; the atlas's own bones stay. */
+export const SKELETON_PROBLEM_TEXT: Readonly<Record<SkeletonProblem, string>> = {
+  file: "The CT skeleton is not shown: its file is missing or is not the pinned build.",
+  "atlas-missing":
+    "The CT skeleton is not shown: atlas.json is missing beside it, so what it leaves out and its credit are unknown.",
+  "atlas-invalid": "The CT skeleton is not shown: its atlas.json could not be read.",
+};
 
 export const SKELETON_HEADING = "Skeleton";
 export const skeletonSourceLabel = (caseId: string | null): string =>

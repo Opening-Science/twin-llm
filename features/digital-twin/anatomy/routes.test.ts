@@ -128,6 +128,7 @@ describe("GET /api/anatomy/status", () => {
       fittedAtlases: FITTED_ATLAS_IDS.map((id) => ({ id, installed: false })),
       fittedAtlasOn: false,
       skeleton: null,
+      skeletonProblem: null,
     });
   });
 
@@ -141,9 +142,21 @@ describe("GET /api/anatomy/status", () => {
     };
     const GET = createAnatomyStatusHandler({
       statAtlas: async () => true,
-      readSkeleton: async () => skeleton,
+      readSkeleton: async () => ({ skeleton, problem: null }),
     });
-    expect((await (await GET()).json()).skeleton).toEqual(skeleton);
+    const body = await (await GET()).json();
+    expect(body.skeleton).toEqual(skeleton);
+    expect(body.skeletonProblem).toBeNull();
+  });
+
+  test("a configured skeleton that cannot be shown says why, with no skeleton", async () => {
+    const GET = createAnatomyStatusHandler({
+      statAtlas: async () => true,
+      readSkeleton: async () => ({ skeleton: null, problem: "atlas-missing" }),
+    });
+    const body = await (await GET()).json();
+    expect(body.skeleton).toBeNull();
+    expect(body.skeletonProblem).toBe("atlas-missing");
   });
 
   test("lists the fitted atlases made here and whether the toggle starts on", async () => {

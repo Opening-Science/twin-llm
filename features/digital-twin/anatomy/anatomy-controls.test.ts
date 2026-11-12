@@ -20,6 +20,7 @@ import {
   HIGHLIGHT_HIDDEN,
   HIGHLIGHT_SYSTEMS_ONLY,
   SKELETON_CREDIT_FALLBACK,
+  SKELETON_PROBLEM_TEXT,
   SKELETON_LOAD_ERROR,
   SKELETON_LOADING,
   SKELETON_MODELLED_NOTE,
@@ -536,6 +537,24 @@ describe("Skeleton layer controls", () => {
     expect(html).not.toContain("Left out:");
     expect(html).not.toContain(SKELETON_CREDIT_FALLBACK);
     expect(html).toContain(ANATOMY_CHANGES_NOTE);
+  });
+
+  test("a skeleton that fails closed says why once anyone looks inside", () => {
+    const failed = (requested: boolean) =>
+      renderToStaticMarkup(
+        createElement(AnatomyControls, {
+          state: { ...initialAnatomyState, requested, load: ready() },
+          installed: ALL_INSTALLED,
+          dispatch: () => undefined,
+          onInteract: () => undefined,
+          skeleton: null,
+          skeletonProblem: "atlas-missing",
+          envelope: "demo",
+        }),
+      );
+    expect(notes(failed(true))).toContain(SKELETON_PROBLEM_TEXT["atlas-missing"]);
+    expect(failed(true)).not.toContain(SKELETON_CREDIT_FALLBACK);
+    expect(notes(failed(false))).not.toContain(SKELETON_PROBLEM_TEXT["atlas-missing"]);
   });
 
   test("an atlas.json attribution replaces the fallback credit", () => {

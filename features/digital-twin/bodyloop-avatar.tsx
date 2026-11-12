@@ -1145,6 +1145,7 @@ export const BodyLoopAvatar = ({
                     dispatch={anatomy.dispatch}
                     onInteract={onUserRotate}
                     skeleton={anatomy.skeleton}
+                    skeletonProblem={anatomy.skeletonProblem}
                     skeletonLoad={anatomy.skeletonLoad}
                     envelope="demo"
                     // BodyMotion poses a body to its stance once it has a rig binding.
@@ -1300,6 +1301,7 @@ export const BodyLoopAvatar = ({
                             dispatch={anatomy.dispatch}
                             onInteract={onUserRotate}
                             skeleton={anatomy.skeleton}
+                            skeletonProblem={anatomy.skeletonProblem}
                             skeletonLoad={anatomy.skeletonLoad}
                           />
                         ),

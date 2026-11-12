@@ -10,7 +10,11 @@ import {
   DEPTH_STOPS,
 } from "@/packages/anatomy/layers";
 import { ATLAS_IDS, ATLASES, type AtlasId } from "@/packages/anatomy/manifest";
-import { leftOutSummary, type SkeletonAtlas } from "@/packages/anatomy/open-skeleton";
+import {
+  leftOutSummary,
+  type SkeletonAtlas,
+  type SkeletonProblem,
+} from "@/packages/anatomy/open-skeleton";
 
 import {
   ANATOMY_CHANGES_NOTE,
@@ -39,6 +43,7 @@ import {
   SKELETON_FIT_FAILED,
   SKELETON_HEADING,
   SKELETON_ISOLATE,
+  SKELETON_PROBLEM_TEXT,
   SKELETON_LOAD_ERROR,
   SKELETON_LOADING,
   SKELETON_MODELLED_NOTE,
@@ -111,6 +116,7 @@ export const AnatomyControls = ({
   posed = false,
   fitted = NOT_FITTED,
   skeleton = null,
+  skeletonProblem = null,
   skeletonLoad = IDLE,
 }: Readonly<{
   state: AnatomyState;
@@ -129,6 +135,8 @@ export const AnatomyControls = ({
   fitted?: FittedControl;
   /** The open-anatomy skeleton the server has; null: the layer is absent. */
   skeleton?: SkeletonAtlas | null;
+  /** Why a configured skeleton is not shown (it fails closed); null otherwise. */
+  skeletonProblem?: SkeletonProblem | null;
   skeletonLoad?: SkeletonLoad;
 }>) => {
   const sliderId = useId();
@@ -162,6 +170,11 @@ export const AnatomyControls = ({
       )
     : [];
   const skeletonNotes = ct && state.requested ? skeletonLines(ct, skeletonLoad) : [];
+  // A configured skeleton that fails closed says why, once anyone looks inside.
+  const problemNote =
+    skeleton === null && skeletonProblem !== null && state.requested
+      ? SKELETON_PROBLEM_TEXT[skeletonProblem]
+      : null;
   // With the CT skeleton in view the donor atlas's notes do not apply to it.
   const ctView = skeletonInView(state, skeleton, skeletonLoad);
   const percent = load.kind === "loading" ? loadingPercent(load.percent) : null;
@@ -314,6 +327,7 @@ export const AnatomyControls = ({
         {skeletonNotes.map((line) => (
           <p key={line}>{line}</p>
         ))}
+        {problemNote ? <p>{problemNote}</p> : null}
       </div>
 
       <details className="mt-3">

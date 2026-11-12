@@ -8,7 +8,12 @@ import {
   type DemoBodyId,
 } from "@/packages/anatomy/demo-bodies";
 import { ATLAS_IDS, isAtlasId, type AtlasId } from "@/packages/anatomy/manifest";
-import { parseSkeletonAtlas, type SkeletonAtlas } from "@/packages/anatomy/open-skeleton";
+import {
+  isSkeletonProblem,
+  parseSkeletonAtlas,
+  type SkeletonAtlas,
+  type SkeletonProblem,
+} from "@/packages/anatomy/open-skeleton";
 
 import {
   anatomyReducer,
@@ -72,6 +77,15 @@ export const parseSkeletonStatus = (value: unknown): SkeletonAtlas | null => {
   return raw && typeof raw === "object" ? parseSkeletonAtlas(raw) : null;
 };
 
+/** Why the configured skeleton is not shown, or null: shown, none, or an older server. */
+export const parseSkeletonProblem = (value: unknown): SkeletonProblem | null => {
+  const raw: unknown =
+    value && typeof value === "object"
+      ? (value as { skeletonProblem?: unknown }).skeletonProblem
+      : null;
+  return isSkeletonProblem(raw) ? raw : null;
+};
+
 /**
  * Anatomy UI state plus which atlases and rigged demo bodies are installed
  * (fetched once, skipped in previews). `rigged` stays null until the status
@@ -82,6 +96,7 @@ export const useAnatomyView = (enabled: boolean) => {
   const [rigged, setRigged] = useState<Record<DemoBodyId, boolean> | null>(null);
   const [fitted, setFitted] = useState<FittedInstalled | null>(null);
   const [skeleton, setSkeleton] = useState<SkeletonAtlas | null>(null);
+  const [skeletonProblem, setSkeletonProblem] = useState<SkeletonProblem | null>(null);
   const [skeletonLoad, setSkeletonLoad] = useState<SkeletonLoad>({ kind: "idle" });
 
   useEffect(() => {
@@ -94,6 +109,7 @@ export const useAnatomyView = (enabled: boolean) => {
         setRigged(parseRiggedStatus(value));
         setFitted(parseFittedStatus(value));
         setSkeleton(parseSkeletonStatus(value));
+        setSkeletonProblem(parseSkeletonProblem(value));
         // ANATOMY_FITTED_ATLAS starts "Fit atlas to body" on; the toggle is
         // not shown before the status answers, so this never undoes a choice.
         if (parseFittedDefault(value)) dispatch({ type: "fitAtlas", on: true });
@@ -120,6 +136,7 @@ export const useAnatomyView = (enabled: boolean) => {
     rigged,
     fitted,
     skeleton,
+    skeletonProblem,
     skeletonLoad,
     onLoad,
     onSkeletonLoad,

@@ -8,6 +8,7 @@ import {
   matchKey,
   parseSkeletonAtlas,
   readSkeletonNode,
+  skeletonFromAtlasJson,
 } from "./open-skeleton";
 
 /** The shape open-anatomy's Stage 1 writes (scripts/atlas.py), trimmed. */
@@ -192,5 +193,32 @@ describe("left-out wording", () => {
   test("matchKey joins ids, terms and names", () => {
     expect(matchKey("FMA:7485")).toBe(matchKey("FMA_7485"));
     expect(matchKey("Left clavicle")).toBe("left_clavicle");
+  });
+});
+
+describe("skeletonFromAtlasJson fails closed", () => {
+  test("a missing atlas.json shows no CT skeleton and says so", () => {
+    expect(skeletonFromAtlasJson(null, "s0086")).toEqual({
+      skeleton: null,
+      problem: "atlas-missing",
+    });
+  });
+
+  test("an atlas.json that is not a JSON object shows no CT skeleton", () => {
+    for (const raw of ["{", "[]", "null", '"s0086"']) {
+      expect(skeletonFromAtlasJson(raw, "s0086")).toEqual({
+        skeleton: null,
+        problem: "atlas-invalid",
+      });
+    }
+  });
+
+  test("a readable atlas.json gives the skeleton, the case from the file name if needed", () => {
+    expect(skeletonFromAtlasJson(JSON.stringify(STAGE_1), null).skeleton?.caseId).toBe(
+      "s0086",
+    );
+    const status = skeletonFromAtlasJson("{}", "s0197");
+    expect(status.problem).toBeNull();
+    expect(status.skeleton?.caseId).toBe("s0197");
   });
 });

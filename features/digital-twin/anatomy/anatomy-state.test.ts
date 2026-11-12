@@ -11,6 +11,7 @@ import {
 import {
   parseAnatomyStatus,
   parseRiggedStatus,
+  parseSkeletonProblem,
   parseSkeletonStatus,
 } from "./use-anatomy-view";
 
@@ -375,5 +376,22 @@ describe("skeletonInView", () => {
     expect(skeletonInView(atSkeleton, S, { ...READY, fitOk: false })).toBe(false);
     expect(skeletonInView(atSkeleton, S, { kind: "loading" })).toBe(false);
     expect(skeletonInView(atSkeleton, null, READY)).toBe(false);
+  });
+});
+
+describe("parseSkeletonProblem", () => {
+  test("names why a configured skeleton is not shown", () => {
+    expect(
+      parseSkeletonProblem({ skeleton: null, skeletonProblem: "atlas-missing" }),
+    ).toBe("atlas-missing");
+    expect(parseSkeletonProblem({ skeleton: null, skeletonProblem: "file" })).toBe(
+      "file",
+    );
+  });
+
+  test("an unknown reason, an older server or a failed status is none", () => {
+    expect(parseSkeletonProblem({ skeletonProblem: "other" })).toBeNull();
+    expect(parseSkeletonProblem({ skeleton: null })).toBeNull();
+    expect(parseSkeletonProblem(null)).toBeNull();
   });
 });
