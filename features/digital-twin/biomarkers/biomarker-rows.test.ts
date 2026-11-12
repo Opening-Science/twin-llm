@@ -153,12 +153,12 @@ describe("vitals", () => {
   ];
 
   test("first source in the table that has data, newest day; composite scores ignored", () => {
-    expect(latestVitals(METRICS).map(({ vital, metric }) => [vital, metric.key])).toEqual(
-      [
-        ["heartRate", "sleep.hr.2026-10-15"],
-        ["steps", "google.steps.2026-10-15"],
-      ],
-    );
+    expect(
+      latestVitals(METRICS).map(({ vital, metric }) => [vital, metric?.key]),
+    ).toEqual([
+      ["heartRate", "sleep.hr.2026-10-15"],
+      ["steps", "google.steps.2026-10-15"],
+    ]);
   });
 
   test("one day from all three: Oura, then WHOOP, then Google Health, never mixed", () => {
@@ -172,7 +172,7 @@ describe("vitals", () => {
       { key: "whoop.recovery.hrv.2026-10-15", label: "HRV", value: 48, unit: "ms" },
       { key: "sleep.hrv.2026-10-15", label: "HRV", value: 45, unit: "ms" },
     ];
-    const picked = (metrics: typeof hrv) => latestVitals(metrics)[0]?.metric.key;
+    const picked = (metrics: typeof hrv) => latestVitals(metrics)[0]?.metric?.key;
     expect(picked(hrv)).toBe("sleep.hrv.2026-10-15");
     expect(picked(hrv.slice(0, 2))).toBe("whoop.recovery.hrv.2026-10-15");
     expect(picked(hrv.slice(0, 1))).toBe(
@@ -200,19 +200,20 @@ describe("vitals", () => {
     });
   });
 
-  test("the sources passed over are named, the shown one never among them", () => {
+  test("a related measure from another source is named, the shown one never among them", () => {
     expect(latestVitals(METRICS).map((reading) => reading.alsoRecordedBy)).toEqual([
       ["whoop"],
       [],
     ]);
+  });
+
+  test("the same measure from two sources: the newest day, whichever source (#464)", () => {
     const rhr = latestVitals([
       { key: "google.daily-resting-heart-rate.2026-10-16", label: "RHR", value: 55 },
       { key: "whoop.recovery.rhr.2026-10-15", label: "RHR", value: 54, unit: "bpm" },
     ]);
-    expect(vitalRows(rhr)[0]?.details).toEqual([
-      "From WHOOP, 15 Oct 2026",
-      "Google Health also records this; WHOOP comes first in a fixed order, so its reading is shown.",
-    ]);
+    expect(vitalRows(rhr)[0]?.details).toEqual(["From Google Health, 16 Oct 2026"]);
+    expect(vitalRows(rhr)[0]?.sourceStatus).toBeNull();
   });
 
   test("a day's main sleep wins over a short rest listed first", () => {

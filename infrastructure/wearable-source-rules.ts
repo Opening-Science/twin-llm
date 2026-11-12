@@ -386,17 +386,48 @@ export const heldBackNote = (
 const isSourceRuleKind = (value: unknown): value is SourceRuleNote["kind"] =>
   value === "agree" || value === "evidence";
 
-/**
- * The rule line under a cited value, or null. A stored answer is JSON, so the
- * note is checked, not trusted.
- */
-export const sourceRuleLine = (note: unknown): string | null =>
-  typeof note === "object" &&
-  note !== null &&
-  "kind" in note &&
+const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
+  typeof value === "object" && value !== null;
+
+/** A note read back from JSON (a stored answer, an API body), or null. Checked, not trusted. */
+export const parseSourceRule = (note: unknown): SourceRuleNote | null =>
+  isRecord(note) &&
   isSourceRuleKind(note.kind) &&
-  "line" in note &&
   typeof note.line === "string" &&
   note.line !== ""
-    ? note.line
+    ? { kind: note.kind, line: note.line }
     : null;
+
+/** The rule line under a cited value, or null. */
+export const sourceRuleLine = (note: unknown): string | null =>
+  parseSourceRule(note)?.line ?? null;
+
+const isOneOf = <T extends string>(list: readonly T[], value: unknown): value is T =>
+  typeof value === "string" && (list as readonly string[]).includes(value);
+
+const isStringList = (value: unknown): value is readonly string[] =>
+  Array.isArray(value) && value.every((item: unknown) => typeof item === "string");
+
+const isSourceList = (value: unknown): value is readonly WearableSourceId[] =>
+  Array.isArray(value) &&
+  value.every((item: unknown) => isOneOf(WEARABLE_SOURCE_IDS, item));
+
+/** Held-back notes read back from an API body; anything malformed is dropped. */
+export const parseHeldBackNotes = (value: unknown): readonly HeldBackNote[] =>
+  Array.isArray(value)
+    ? value.flatMap((note: unknown): readonly HeldBackNote[] => {
+        if (!isRecord(note)) return [];
+        const { measure, day, keys, sources, reason, line } = note;
+        if (
+          !isOneOf(SOURCE_MEASURES, measure) ||
+          !(day === null || typeof day === "string") ||
+          !isStringList(keys) ||
+          !isSourceList(sources) ||
+          !isOneOf(HOLD_REASONS, reason) ||
+          typeof line !== "string"
+        ) {
+          return [];
+        }
+        return [{ measure, day, keys, sources, reason, line }];
+      })
+    : [];
