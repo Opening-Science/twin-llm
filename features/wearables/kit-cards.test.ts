@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
+import { EMPTY_VALUE } from "@/infrastructure/format-measure";
+
 import { kitSections, type KitCard, type KitSection } from "./kit-cards";
 import type { Metric } from "./metric-utils";
 import type { WearableDetail } from "./wearable-detail";
@@ -392,5 +394,39 @@ describe("kitSections, detail cards", () => {
       sentence:
         "Your day is compared with your usual day once 7 earlier days with hourly steps are in view.",
     });
+  });
+});
+
+describe("empty cards pass the app's one dash, so the kit reads it as no data", () => {
+  test("bedtimes with no nights yet, and a month with no readings", () => {
+    const none = kitSections({
+      source: "oura",
+      metrics: [],
+      today: TODAY,
+      detail: { ...DETAIL, nights: { status: "missing" } },
+    });
+    expect(card(section(none, "weekly").cards, "nights:bedtime")).toMatchObject({
+      state: "empty",
+      reference: { value: EMPTY_VALUE },
+      last: { value: EMPTY_VALUE },
+    });
+    expect(section(none, "monthly").cards[0]).toMatchObject({
+      id: "empty:monthly",
+      current: { display: EMPTY_VALUE },
+      previous: { display: EMPTY_VALUE },
+    });
+  });
+
+  test("a night without a bedtime shows the dash, never an en dash", () => {
+    const gaps = NIGHTS.map((n, i) => (i === 13 ? { ...n, bedtime: null } : n));
+    const weekly = kitSections({
+      source: "oura",
+      metrics: [],
+      today: TODAY,
+      detail: { ...DETAIL, nights: { status: "ok", nights: gaps } },
+    });
+    const bed = card(section(weekly, "weekly").cards, "nights:bedtime");
+    expect(bed).toMatchObject({ last: { value: EMPTY_VALUE } });
+    expect(JSON.stringify(bed)).not.toContain("–");
   });
 });
