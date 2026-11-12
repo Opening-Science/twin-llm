@@ -510,6 +510,53 @@ eight criteria do not change.
 
 `verifyChain()` needs the database, so it is a run step, not a scorer.
 
+## Paired comparison
+
+```sh
+bun run eval:compare -- <run-a> <run-b> [<run-a> <run-b> …] [--unit item|line] [--json]
+```
+
+Two runs of the same items (an arm against another, an agent against its
+base model) answer the same questions, so their outcomes are paired, and a
+test on two independent proportions throws that pairing away.
+`scripts/evaluation/compare.ts` scores both runs with the current scorers,
+as `eval:report` does, and pairs them per criterion.
+
+- `--unit item` (the default, the primary analysis): one pair per item.
+  Its repeats are folded by majority: passes on more than half of the
+  repeats not skipped is a pass; too few for a majority even if every
+  `error` or `human` repeat passed is a fail, so a tie is not a pass; any
+  other mix leaves the item undecided (`error` if a repeat errored, else
+  `human`). `--unit line` pairs each repeat as its own line, a sensitivity
+  analysis. Consistency is per item either way.
+
+- A pair counts only when both sides are `pass` or `fail`. A unit only one
+  run has, or where either side is skipped (`MISSING_ENV`), `error`,
+  `human` or `na`, is left out and counted in "Left out" under the first of
+  those reasons that fits.
+- Each criterion gets the exact two-sided McNemar test: with b units that
+  passed in A only and c in B only, p = min(1, 2 · P(X ≤ min(b, c))) for
+  X ~ Binomial(b + c, 1/2). 7 against 1 gives 18/256 = 0.0703125; no
+  discordant pair gives 1.
+- Holm's step-down adjustment runs across the criteria of one comparison
+  that have at least one pair ("p (Holm)"). As a sensitivity column, "p
+  (Holm, all)" (`pHolmFamily` in the JSON) adjusts across every criterion
+  of every pair given in one call, so give a re-analysis's pairs together;
+  with one pair the two columns are equal.
+
+It refuses a pair when a run is MOCK, has more than one model, named
+consents, or does not share one questions sha256 with the current questions
+and key, and when the two runs did not ask the same set. Reads no env and
+no database, calls no model and writes nothing; `--json` prints every pair
+as one JSON document.
+
+Limits: with `--unit line` the few repeated items give up to three lines
+each, which are not independent, so the test leans liberal there; the item
+unit avoids that at the cost of folding a split item to fail. Query safety and
+privacy check only the reply in a context or code arm (the server made the
+reads), so a tools arm against one of those is not a like-for-like test on
+them. Runs from different commits differ in more than the arm or agent.
+
 ## What stays human
 
 - The `must_not` lines: they describe behaviours (judging a value good or bad,

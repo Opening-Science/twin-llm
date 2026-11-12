@@ -1106,6 +1106,143 @@ weighing there too. A human review of the hallucination lines marked
 `human`, and a held-out set for General (v1h), would decide this better than
 another automatic run. Product defaults are unchanged.
 
+## Paired comparisons
+
+The tables above set each run's pass rate beside the other's with its own
+Wilson interval. Two runs of the same items are paired, though: the same
+question went to both, and that pairing is evidence the separate intervals
+throw away (#577). `bun run eval:compare` (`docs/evaluation/harness.md`,
+"Paired comparison") rescored both runs of each pair below from the run
+files on disk with the scorers at `0c4338f`, called no model, and tested
+each criterion with the exact two-sided McNemar test (a binomial test on
+the units that passed in one run only).
+
+The primary unit is the item: its repeats are folded into one outcome by
+majority, a tie counting as not passed, so the few repeated items count
+once. Pairing each repeat as its own line is kept as a sensitivity row. A
+unit counts only when both runs scored it pass or fail; units skipped (S4),
+errored, `human` or `na` on either side are left out and counted in
+`eval-paired-2026-11.summary.json`, which holds every cell, p and both
+commands.
+
+Each cell is "A only–B only (Holm p; family Holm p)": units that passed in
+A and failed in B, units the other way round, the p-value adjusted across
+the seven criteria of that comparison, and, as a sensitivity column, the
+p-value adjusted across all 133 criterion tests of the 19 comparisons here
+(same unit). A is the tools arm, the base model, or the specialist on
+qwen3:8b.
+
+Tools against data in the prompt (v1; #302, #320, #303):
+
+| A                      | B                       | Unit | Correctness             | Hallucination         | Privacy (\*) | Query safety (\*)       | Clinical caution | Readability     | Consistency |
+| ---------------------- | ----------------------- | ---- | ----------------------- | --------------------- | ------------ | ----------------------- | ---------------- | --------------- | ----------- |
+| `qwen3-4b-v1-tools320` | `qwen3-4b-v1-oracle320` | item | 15–24 (0.80; 1)         | 2–6 (0.87; 1)         | 0–0 (1; 1)   | 0–32 (< 0.001; < 0.001) | 19–35 (0.24; 1)  | 28–17 (0.68; 1) | 1–3 (1; 1)  |
+|                        |                         | line | 16–26 (0.66; 1)         | 2–7 (0.66; 1)         | 0–1 (1; 1)   | 0–35 (< 0.001; < 0.001) | 20–40 (0.081; 1) | 33–17 (0.16; 1) | 1–3 (1; 1)  |
+| `qwen3-4b-v1-tools320` | `qwen3-4b-v1-fair320`   | item | 29–3 (< 0.001; < 0.001) | 22–3 (< 0.001; 0.019) | 0–0 (1; 1)   | 0–32 (< 0.001; < 0.001) | 32–29 (1; 1)     | 25–16 (0.84; 1) | 0–1 (1; 1)  |
+|                        |                         | line | 31–3 (< 0.001; < 0.001) | 23–4 (0.002; 0.038)   | 0–1 (1; 1)   | 0–35 (< 0.001; < 0.001) | 33–34 (1; 1)     | 31–16 (0.16; 1) | 0–1 (1; 1)  |
+| `qwen3-8b-v1-tools320` | `qwen3-8b-v1-oracle320` | item | 18–7 (0.26; 1)          | 2–4 (1; 1)            | 0–0 (1; 1)   | 0–56 (< 0.001; < 0.001) | 17–31 (0.30; 1)  | 16–20 (1; 1)    | 2–2 (1; 1)  |
+|                        |                         | line | 21–7 (0.075; 1)         | 2–4 (1; 1)            | 0–1 (1; 1)   | 0–61 (< 0.001; < 0.001) | 20–39 (0.092; 1) | 18–22 (1; 1)    | 2–2 (1; 1)  |
+| `qwen3-8b-v1-tools320` | `qwen3-8b-v1-fair320`   | item | 26–0 (< 0.001; < 0.001) | 17–2 (0.004; 0.087)   | 0–0 (1; 1)   | 0–56 (< 0.001; < 0.001) | 26–25 (1; 1)     | 13–25 (0.29; 1) | 1–2 (1; 1)  |
+|                        |                         | line | 29–0 (< 0.001; < 0.001) | 20–4 (0.008; 0.18)    | 0–1 (1; 1)   | 0–61 (< 0.001; < 0.001) | 29–33 (1; 1)     | 16–27 (0.51; 1) | 1–2 (1; 1)  |
+| `qwen3-4b-v1-tools320` | `qwen3-4b-v1-code303`   | item | 25–2 (< 0.001; < 0.001) | 15–3 (0.038; 0.88)    | 0–0 (1; 1)   | 0–32 (< 0.001; < 0.001) | 30–32 (1; 1)     | 11–21 (0.44; 1) | 1–1 (1; 1)  |
+|                        |                         | line | 27–2 (< 0.001; < 0.001) | 16–4 (0.059; 1)       | 0–1 (1; 1)   | 0–35 (< 0.001; < 0.001) | 32–37 (1; 1)     | 13–22 (0.70; 1) | 1–1 (1; 1)  |
+
+(\*) In the context and code arms query safety and privacy check only the
+reply, since the server made the reads, so those two columns are not like
+for like. The code run is from git `9202c1d`, the others from `301ccb0`.
+
+Agents against the base model (qwen3:8b; #279, #288):
+
+| A                  | B                       | Unit | Correctness         | Hallucination  | Privacy        | Query safety            | Clinical caution   | Readability     | Consistency |
+| ------------------ | ----------------------- | ---- | ------------------- | -------------- | -------------- | ----------------------- | ------------------ | --------------- | ----------- |
+| `qwen3-8b-s7-r279` | `agent-rhythm-s7`       | item | 9–3 (0.88; 1)       | 3–1 (1; 1)     | 10–4 (0.90; 1) | 15–4 (0.13; 1)          | 10–5 (1; 1)        | 4–1 (1; 1)      | 2–0 (1; 1)  |
+|                    |                         | line | 11–3 (0.34; 1)      | 3–1 (1; 1)     | 12–4 (0.38; 1) | 19–4 (0.018; 0.30)      | 11–5 (0.84; 1)     | 4–1 (1; 1)      | 2–0 (1; 1)  |
+| `qwen3-8b-s7-r279` | `agent-brain-s7`        | item | 11–0 (0.006; 0.12)  | 3–1 (1; 1)     | 2–1 (1; 1)     | 14–0 (< 0.001; 0.015)   | 16–3 (0.022; 0.52) | 6–2 (1; 1)      | 1–0 (1; 1)  |
+|                    |                         | line | 13–0 (0.001; 0.030) | 3–1 (1; 1)     | 2–1 (1; 1)     | 18–0 (< 0.001; < 0.001) | 19–3 (0.004; 0.10) | 6–2 (1; 1)      | 1–0 (1; 1)  |
+| `qwen3-8b-s7b`     | `agent-rhythm-s7b`      | item | 7–1 (0.35; 1)       | 7–0 (0.094; 1) | 7–2 (0.54; 1)  | 18–2 (0.003; 0.049)     | 8–5 (1; 1)         | 7–1 (0.35; 1)   | 0–0 (1; 1)  |
+|                    |                         | line | 9–1 (0.11; 1)       | 7–0 (0.094; 1) | 9–2 (0.20; 1)  | 20–2 (< 0.001; 0.015)   | 10–5 (0.60; 1)     | 8–1 (0.16; 1)   | 0–0 (1; 1)  |
+| `qwen3-8b-v1-r279` | `agent-gp-v1`           | item | 10–4 (0.72; 1)      | 0–5 (0.44; 1)  | 1–0 (1; 1)     | 15–6 (0.47; 1)          | 10–8 (1; 1)        | 12–23 (0.47; 1) | 2–3 (1; 1)  |
+|                    |                         | line | 12–4 (0.38; 1)      | 0–7 (0.094; 1) | 1–0 (1; 1)     | 20–6 (0.065; 1)         | 11–10 (1; 1)       | 13–23 (0.53; 1) | 2–3 (1; 1)  |
+| `qwen3-8b-s7-r279` | `agent-rhythm-s7-r288`  | item | 2–1 (1; 1)          | 1–1 (1; 1)     | 0–2 (1; 1)     | 0–2 (1; 1)              | 0–4 (0.88; 1)      | 2–2 (1; 1)      | 1–0 (1; 1)  |
+|                    |                         | line | 3–1 (1; 1)          | 1–1 (1; 1)     | 0–2 (1; 1)     | 0–2 (1; 1)              | 0–4 (0.88; 1)      | 2–2 (1; 1)      | 1–0 (1; 1)  |
+| `qwen3-8b-s7b`     | `agent-rhythm-s7b-r288` | item | 0–1 (1; 1)          | 4–0 (0.88; 1)  | 0–2 (1; 1)     | 1–1 (1; 1)              | 1–3 (1; 1)         | 2–4 (1; 1)      | 1–0 (1; 1)  |
+|                    |                         | line | 0–1 (1; 1)          | 4–0 (0.88; 1)  | 0–2 (1; 1)     | 1–1 (1; 1)              | 1–3 (1; 1)         | 2–4 (1; 1)      | 1–0 (1; 1)  |
+| `qwen3-8b-s7h`     | `agent-rhythm-s7h-r288` | item | 0–0 (1; 1)          | 1–1 (1; 1)     | 0–2 (1; 1)     | 2–1 (1; 1)              | 2–3 (1; 1)         | 4–3 (1; 1)      | 0–0 (1; 1)  |
+|                    |                         | line | 0–0 (1; 1)          | 1–1 (1; 1)     | 0–2 (1; 1)     | 2–1 (1; 1)              | 2–3 (1; 1)         | 4–3 (1; 1)      | 0–0 (1; 1)  |
+| `hb-qwen3-8b`      | `hb-gp`                 | item | 0–0 (1; 1)          | 0–0 (1; 1)     | 1–0 (1; 1)     | 0–2 (1; 1)              | 1–2 (1; 1)         | 2–3 (1; 1)      | 1–1 (1; 1)  |
+|                    |                         | line | 0–0 (1; 1)          | 1–1 (1; 1)     | 1–0 (1; 1)     | 0–3 (1; 1)              | 2–4 (1; 1)         | 4–5 (1; 1)      | 1–1 (1; 1)  |
+| `hb-qwen3-8b`      | `hb-brain`              | item | 1–3 (1; 1)          | 2–0 (1; 1)     | 0–0 (1; 1)     | 0–2 (1; 1)              | 3–3 (1; 1)         | 3–3 (1; 1)      | 1–1 (1; 1)  |
+|                    |                         | line | 1–7 (0.49; 1)       | 7–1 (0.49; 1)  | 0–0 (1; 1)     | 0–3 (1; 1)              | 7–7 (1; 1)         | 7–6 (1; 1)      | 1–1 (1; 1)  |
+
+Run ids drop their date prefix. The `-r288` runs are at git `db1dac7` and
+their S7 and S7b bases at `e835614`, so those two pairs also differ in the
+code between; the S7h pair and the rest share a commit. The hb runs are the
+heart-brain set of `docs/evaluation/second-rater.md`.
+
+Specialists on qwen3:8b against qwen3:4b (2 November, git `f7a101e`; see
+"Specialists on qwen3:4b" above):
+
+| A                     | B                     | Unit | Correctness     | Hallucination           | Privacy    | Query safety            | Clinical caution | Readability  | Consistency |
+| --------------------- | --------------------- | ---- | --------------- | ----------------------- | ---------- | ----------------------- | ---------------- | ------------ | ----------- |
+| `agent-rhythm-s7-8b`  | `agent-rhythm-s7-4b`  | item | 2–2 (1; 1)      | 6–1 (0.88; 1)           | 0–2 (1; 1) | 0–4 (0.88; 1)           | 2–1 (1; 1)       | 2–1 (1; 1)   | 2–0 (1; 1)  |
+|                       |                       | line | 2–2 (1; 1)      | 8–1 (0.27; 1)           | 1–2 (1; 1) | 0–4 (0.75; 1)           | 3–1 (1; 1)       | 2–1 (1; 1)   | 2–0 (1; 1)  |
+| `agent-rhythm-s7b-8b` | `agent-rhythm-s7b-4b` | item | 2–3 (1; 1)      | 8–2 (0.66; 1)           | 0–2 (1; 1) | 0–6 (0.22; 1)           | 2–4 (1; 1)       | 3–4 (1; 1)   | 0–0 (1; 1)  |
+|                       |                       | line | 2–3 (1; 1)      | 9–2 (0.39; 1)           | 0–2 (1; 1) | 0–6 (0.22; 1)           | 2–4 (1; 1)       | 3–4 (1; 1)   | 0–0 (1; 1)  |
+| `agent-rhythm-s7h-8b` | `agent-rhythm-s7h-4b` | item | 1–0 (1; 1)      | 7–0 (0.11; 1)           | 1–0 (1; 1) | 1–6 (0.75; 1)           | 1–5 (1; 1)       | 7–3 (1; 1)   | 0–1 (1; 1)  |
+|                       |                       | line | 1–0 (1; 1)      | 7–0 (0.11; 1)           | 1–0 (1; 1) | 1–6 (0.75; 1)           | 1–5 (1; 1)       | 7–3 (1; 1)   | 0–1 (1; 1)  |
+| `agent-brain-s7-8b`   | `agent-brain-s7-4b`   | item | 3–2 (1; 1)      | 1–4 (1; 1)              | 4–5 (1; 1) | 1–0 (1; 1)              | 7–1 (0.49; 1)    | 2–4 (1; 1)   | 2–0 (1; 1)  |
+|                       |                       | line | 3–2 (1; 1)      | 2–4 (1; 1)              | 5–8 (1; 1) | 1–0 (1; 1)              | 9–1 (0.15; 1)    | 2–5 (1; 1)   | 2–0 (1; 1)  |
+| `agent-gp-v1-8b`      | `agent-gp-v1-4b`      | item | 5–15 (0.21; 1)  | 25–2 (< 0.001; < 0.001) | 1–2 (1; 1) | 2–52 (< 0.001; < 0.001) | 12–18 (1; 1)     | 12–10 (1; 1) | 2–2 (1; 1)  |
+|                       |                       | line | 5–17 (0.085; 1) | 25–5 (0.002; 0.039)     | 2–5 (1; 1) | 3–59 (< 0.001; < 0.001) | 17–21 (1; 1)     | 12–11 (1; 1) | 2–2 (1; 1)  |
+
+What the pairing changes:
+
+- **Held up.** The tools arm beats the fair and code arms on correctness
+  for both models (items 29–3, 26–0, 25–2; family Holm p < 0.001), and the
+  fair arm on hallucination for qwen3:4b (22–3, family p 0.019). Before
+  #288, both specialists lost to the base model on query safety on S7b
+  (Heart rhythm 18–2) and S7 (Brain 14–0), both surviving the family
+  adjustment.
+- **Did not hold up.** The oracle arm's correctness gain for qwen3:4b
+  (51 to 71 % against 27 to 45 % in the separate tables) is 24 against 15
+  discordant items on the 71 items both runs scored, Holm p 0.80. Much of
+  the gap sits in units the test leaves out: on the line level, 22 lines the
+  tools arm failed are `human` in the oracle arm. A review of those lines
+  decides it, not this test. The qwen3:8b tools arm's correctness lead over
+  the oracle (18–7) and the oracle's clinical caution lead for both models
+  (35–19, 31–17) have unadjusted p of 0.04 to 0.06 and Holm p of 0.24 or more.
+- **After #288** no criterion separates Heart rhythm from the base model on
+  S7, S7b or the held-out S7h; on S7h correctness has no discordant item at
+  all (8 both pass, 8 both fail, 16 left out as `human`). General against
+  the base model on v1 and on hb separates on nothing.
+- **Specialists on qwen3:4b.** Only General on v1 separates: qwen3:8b passes
+  hallucination on 25 items qwen3:4b fails and the reverse on 2, and
+  qwen3:4b passes query safety on 52 items qwen3:8b fails, against 2 (both
+  family p < 0.001), the latter mostly the items where qwen3:8b called no
+  tool. Correctness goes 15–5 for qwen3:4b, unadjusted p 0.041, Holm 0.21.
+  Heart rhythm and Brain separate on nothing; Heart rhythm's hallucination
+  leans to qwen3:8b on all three sets (6–1, 8–2, 7–0) without reaching Holm
+  0.05 on any.
+
+Changed by the item unit and the family adjustment (the line-level
+readings were in the first version of this section):
+
+- Heart rhythm before #288 on S7 query safety: 19–4 lines, Holm p 0.018,
+  becomes 15–4 items, Holm 0.13. It no longer separates.
+- Brain before #288 on S7: correctness (11–0 items, Holm 0.006) and
+  clinical caution (16–3, Holm 0.022) still separate within the comparison
+  but not after the family adjustment (0.12 and 0.52).
+- hb Brain correctness was 7–1 on lines (p 0.0703125, the worked example);
+  on items it is 1–3 (p 0.63). The hb set repeats many items, so the line
+  count mostly counted the same items again. The code arm's hallucination
+  loss for qwen3:4b crosses Holm 0.05 on items (15–3, 0.038) but not after
+  the family adjustment (0.88).
+
+Limits: the family adjustment covers these 19 comparisons only; any further
+comparison widens it. Lines left out as `human` can carry the difference,
+as in the qwen3:4b oracle pair, so a paired test on scored units is a floor,
+not a verdict. One sample per line, no human review, synthetic data only.
+
 ## Limits
 
 - The questions were written alongside the cohort they are scored against, and
