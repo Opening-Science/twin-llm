@@ -39,7 +39,7 @@ export const compareWindowText = (
 ): string =>
   window.n === 0 || window.mean === null
     ? "n = 0 · no readings"
-    : `n = ${window.n} · mean ${unitText(formatNumber(window.mean, decimals), unit)}`;
+    : `n = ${formatNumber(window.n, 0)} · mean ${unitText(formatNumber(window.mean, decimals), unit)}`;
 
 /** `Mean 0.4 h higher than before`, `… lower …`, or `Same mean as before`. */
 export const compareDeltaText = (spec: CompareSpec, decimals: number): string | null => {
@@ -97,15 +97,16 @@ const TREND_WORDS = { up: "Rising", down: "Falling", level: "Level" } as const;
 /** `↑ Rising · n = 12`, or why there is no direction. */
 export const trendText = (spec: BiomarkerCardSpec): string => {
   const { direction, n } = spec.trend;
+  const count = formatNumber(n, 0);
   return direction === null
-    ? `No trend: too few readings · n = ${n}`
-    : `${ARROWS[direction]} ${TREND_WORDS[direction]} · n = ${n}`;
+    ? `No trend: too few readings · n = ${count}`
+    : `${ARROWS[direction]} ${TREND_WORDS[direction]} · n = ${count}`;
 };
 
-/** `Showing first 50 of 120`; null when every row is shown. */
+/** `Showing first 50 of 1,200`; null when every row is shown. */
 export const tableNote = (spec: TableSpec): string | null =>
   spec.total > spec.rows.length
-    ? `Showing first ${spec.rows.length} of ${spec.total}`
+    ? `Showing first ${formatNumber(spec.rows.length, 0)} of ${formatNumber(spec.total, 0)}`
     : null;
 
 /** A cell as the table shows it: dates as days, numbers at the column's decimals. */

@@ -400,7 +400,7 @@ const COUNT_LABELS: Readonly<Record<keyof PatientPreview["counts"], string>> = {
   encounters: "Encounters",
   medicationRequests: "Medication requests",
   procedures: "Procedures",
-  immunizations: "Immunizations",
+  immunizations: "Immunisations",
 };
 
 const SEX_WORDS: Readonly<Record<string, string>> = {

@@ -83,6 +83,6 @@ describe("GBD import labels (#426)", () => {
     expect(gbdImportCountsLabel(VIEW)).toBe(
       "1,234 rows, 1,200 new when imported, 1 held now",
     );
-    expect(gbdImportedOn(VIEW)).toBe("2026-11-02");
+    expect(gbdImportedOn(VIEW)).toBe("2 Nov 2026");
   });
 });

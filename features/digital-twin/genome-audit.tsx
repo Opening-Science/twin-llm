@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import { formatTimestamp } from "@/infrastructure/format-measure";
+
 /**
  * Recent Ark audit rows for this actor. Sequence, tool, time, and an 8-char
  * hash prefix — no args, result, or subject fields.
@@ -37,12 +39,6 @@ const isPayload = (value: unknown): value is AuditPayload => {
   if (typeof value !== "object" || value === null || !("events" in value)) return false;
   const { events } = value as { events: unknown };
   return Array.isArray(events) && events.every(isEvent);
-};
-
-const formatTs = (iso: string): string => {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso;
-  return date.toISOString().replace("T", " ").replace(".000Z", " UTC");
 };
 
 export const GenomeAudit = ({ preview }: GenomeAuditProps) => {
@@ -81,7 +77,9 @@ export const GenomeAudit = ({ preview }: GenomeAuditProps) => {
             >
               <span className="font-mono">{event.seq}</span>
               <span>{event.tool}</span>
-              <span className="text-muted-foreground">{formatTs(event.ts)}</span>
+              <span className="text-muted-foreground">
+                {formatTimestamp(new Date(event.ts))}
+              </span>
               <span className="font-mono">{event.hash8}</span>
             </li>
           ))}
