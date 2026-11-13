@@ -7,15 +7,25 @@ import type { GoogleHealthSummary } from "@/infrastructure/google-health-types";
 import type { OuraSummary } from "@/infrastructure/oura-types";
 import { resolveWearableSources } from "@/infrastructure/wearable-source-resolve";
 import {
+  appliedTolerance,
+  COMPARABLE_STEMS,
+  decideOccasion,
+  SOURCE_MEASURES,
   SOURCE_RULES_VERSION,
+  SOURCE_TOLERANCE,
   SOURCE_UNITS,
   type SourceDecision,
+  type SourceMeasure,
 } from "@/infrastructure/wearable-source-rules";
 import type { WhoopSummary } from "@/infrastructure/whoop-types";
 
 import {
   casePlans,
+  caseQuotas,
+  DEFAULT_CASE_SHARES,
   FOREIGN_UNITS,
+  PLANTED_CASES,
+  SOURCE_DECIMALS,
   generateTwoSource,
   parseTwoSourceArgs,
   type PlantedLabel,
@@ -24,7 +34,13 @@ import {
 } from "./two-source";
 
 /** The study's default run: seed 508, ten synthetic people, thirty days. */
-const OPTIONS = { seed: 508, people: 10, days: 30, endDay: "2026-10-01" } as const;
+const OPTIONS = {
+  seed: 508,
+  people: 10,
+  days: 30,
+  endDay: "2026-10-01",
+  shares: DEFAULT_CASE_SHARES,
+} as const;
 const files = renderTwoSource(generateTwoSource(OPTIONS, judgeByEvidence));
 
 type PersonFile = Readonly<{
@@ -64,45 +80,50 @@ const sourcesOf = (decision: SourceDecision) =>
   ).map((reading) => reading.source);
 
 describe("two-source synthetic wearables (#508)", () => {
-  test("seed 508 plants exact counts of each case", () => {
-    const manifest = parsed<{ counts: unknown }>("manifest.json");
+  test("seed 508 plants exact counts of each case, with the shares used", () => {
+    const manifest = parsed<{ shares: unknown; counts: unknown }>("manifest.json");
+    expect(manifest.shares).toEqual(DEFAULT_CASE_SHARES);
     expect(manifest.counts).toEqual({
       byCase: {
-        agree: 310,
-        evidence: 160,
-        no_evidence: 135,
-        evidence_tie: 75,
+        agree: 376,
+        evidence: 182,
+        no_evidence: 113,
+        evidence_tie: 65,
         no_dependable_source: 0,
-        units_differ: 210,
-        only_source: 310,
+        units_differ: 176,
+        no_day: 40,
+        only_source: 248,
       },
       byGroup: {
-        agree: 310,
-        disagree_with_winner: 160,
-        no_decision: 420,
-        one_source_missing: 310,
+        agree: 376,
+        disagree_with_winner: 182,
+        no_decision: 394,
+        one_source_missing: 248,
       },
       byMeasure: {
         "heart-rate-variability": {
-          agree: 60,
-          evidence: 60,
-          no_evidence: 60,
-          units_differ: 60,
-          only_source: 60,
+          agree: 73,
+          evidence: 73,
+          no_evidence: 48,
+          units_differ: 48,
+          no_day: 10,
+          only_source: 48,
         },
         "resting-heart-rate": {
-          agree: 75,
-          no_evidence: 75,
-          units_differ: 75,
-          only_source: 75,
+          agree: 97,
+          no_evidence: 65,
+          units_differ: 64,
+          no_day: 10,
+          only_source: 64,
         },
         "oxygen-saturation": {
-          agree: 75,
-          evidence_tie: 75,
-          units_differ: 75,
-          only_source: 75,
+          agree: 97,
+          evidence_tie: 65,
+          units_differ: 64,
+          no_day: 10,
+          only_source: 64,
         },
-        "step-count": { agree: 100, evidence: 100, only_source: 100 },
+        "step-count": { agree: 109, evidence: 109, no_day: 10, only_source: 72 },
       },
     });
     const labels = people.flatMap(({ planted }) => planted.planted);
@@ -221,5 +242,168 @@ describe("two-source synthetic wearables (#508)", () => {
       seed: 508,
       output: ".synthetic-wearables/two-source-seed508",
     });
+  });
+
+  test("readings just inside a tolerance agree and just outside do not (±0.1)", () => {
+    const highs: Readonly<Record<SourceMeasure, readonly number[]>> = {
+      "heart-rate-variability": [21.3, 50, 72.5, 118.4],
+      "resting-heart-rate": [44, 61, 87],
+      "oxygen-saturation": [93.2, 97, 100],
+      "step-count": [1200, 4000, 8123, 21_000],
+    };
+    const round = (value: number) => Math.round(value * 1000) / 1000;
+    for (const measure of SOURCE_MEASURES) {
+      for (const high of highs[measure]) {
+        const bound = appliedTolerance(SOURCE_TOLERANCE[measure], high);
+        for (const [offset, kind] of [
+          [-0.1, "agree"],
+          [0.1, "held_back"],
+        ] as const) {
+          const decision = decideOccasion(
+            { measure, day: "2026-10-01" },
+            [
+              { key: "whoop.a", source: "whoop", value: high, unit: null, shown: "" },
+              {
+                key: "google.b",
+                source: "google_health",
+                value: round(high - bound - offset),
+                unit: null,
+                shown: "",
+              },
+            ],
+            () => ({ kind: "abstained", reason: "no_evidence", grades: {} }),
+          );
+          expect([measure, high, offset, decision.kind]).toEqual([
+            measure,
+            high,
+            offset,
+            kind,
+          ]);
+        }
+      }
+    }
+  });
+
+  test("planted pairs sit a tenth or more from the bound, and some sit right at that edge", () => {
+    let insideEdge = 0;
+    let outsideEdge = 0;
+    for (const { person, planted } of people) {
+      const values = new Map(
+        [person.oura, person.whoop, person.googleHealth].flatMap((summary) =>
+          summary.metrics.map((metric) => [metric.key, Number(metric.value)] as const),
+        ),
+      );
+      for (const label of planted.planted) {
+        if (!["agree", "evidence", "no_evidence", "evidence_tie"].includes(label.case)) {
+          continue;
+        }
+        const pair = label.keys.map((key) => values.get(key) ?? Number.NaN);
+        const high = Math.max(...pair);
+        const gap =
+          high -
+          Math.min(...pair) -
+          appliedTolerance(SOURCE_TOLERANCE[label.measure], high);
+        if (pair.every(Number.isInteger)) continue;
+        expect(Math.abs(gap)).toBeGreaterThanOrEqual(0.1 - 1e-9);
+        if (gap < 0 && gap > -0.2) insideEdge += 1;
+        if (gap > 0 && gap < 0.2) outsideEdge += 1;
+      }
+    }
+    expect(insideEdge).toBeGreaterThan(0);
+    expect(outsideEdge).toBeGreaterThan(0);
+  });
+
+  test("values carry each source's own precision", () => {
+    for (const { person } of people) {
+      for (const [source, summary] of [
+        ["oura", person.oura],
+        ["whoop", person.whoop],
+        ["google_health", person.googleHealth],
+      ] as const) {
+        for (const metric of summary.metrics) {
+          const measure = Object.entries(COMPARABLE_STEMS).find(([stem]) =>
+            metric.key.startsWith(`${stem}.`),
+          )?.[1];
+          if (measure === undefined || metric.unit === FOREIGN_UNITS[measure]?.unit)
+            continue;
+          const tenths = Number(metric.value) * 10;
+          expect([metric.key, Math.abs(tenths - Math.round(tenths)) < 1e-9]).toEqual([
+            metric.key,
+            true,
+          ]);
+          if (SOURCE_DECIMALS[source][measure] === 0) {
+            expect([metric.key, Number.isInteger(metric.value)]).toEqual([
+              metric.key,
+              true,
+            ]);
+          }
+        }
+      }
+    }
+    const whoopDecimals = people
+      .flatMap(({ person }) => person.whoop.metrics)
+      .filter((metric) => /whoop\.recovery\.(hrv|spo2)/.test(metric.key))
+      .filter((metric) => !Number.isInteger(metric.value));
+    expect(whoopDecimals.length).toBeGreaterThan(0);
+  });
+
+  test("the dateless case is held back as no_day, once per person and measure", () => {
+    const dateless = people.flatMap(({ planted }) =>
+      planted.planted.filter((label) => label.case === "no_day"),
+    );
+    expect(dateless.every((label) => label.day === null)).toBe(true);
+    expect(
+      dateless.every((label) => label.keys.every((key) => key.endsWith(".unknown"))),
+    ).toBe(true);
+    const seen = new Set(dateless.map((label) => `${label.personId}|${label.measure}`));
+    expect(seen.size).toBe(dateless.length);
+  });
+
+  test("shares are a config: a share of 0 drops a case, no_day stays capped per person", () => {
+    const plans = casePlans(judgeByEvidence);
+    const withoutDateless = { ...DEFAULT_CASE_SHARES, no_day: 0 };
+    expect(caseQuotas(plans["step-count"], withoutDateless, 10, 30)).toEqual(
+      new Map([
+        ["agree", 113],
+        ["evidence", 112],
+        ["only_source", 75],
+      ]),
+    );
+    const heavy = { ...DEFAULT_CASE_SHARES, no_day: 100 };
+    expect(caseQuotas(plans["step-count"], heavy, 10, 30).get("no_day")).toBe(10);
+    const output = generateTwoSource(
+      { ...OPTIONS, shares: withoutDateless },
+      judgeByEvidence,
+    );
+    expect(output.counts.byCase.no_day).toBe(0);
+    expect(parseTwoSourceArgs(["--shares", "agree=2,no_day=0"])).toMatchObject({
+      shares: { ...DEFAULT_CASE_SHARES, agree: 2, no_day: 0 },
+    });
+    expect(parseTwoSourceArgs(["--shares", "agreed=2"])).toStartWith("--shares takes");
+    expect(
+      parseTwoSourceArgs([
+        "--shares",
+        PLANTED_CASES.map((kind) => `${kind}=0`).join(","),
+      ]),
+    ).toStartWith("--shares leaves no case");
+  });
+
+  test("the doc's table of possible cases matches what the judge and rules allow", () => {
+    const doc = readFileSync(
+      join(import.meta.dir, "../../docs/evaluation/synthetic-wearables.md"),
+      "utf8",
+    );
+    const plans = casePlans(judgeByEvidence);
+    for (const measure of SOURCE_MEASURES) {
+      const row = doc.split("\n").find((line) => line.startsWith(`| \`${measure}\``));
+      const cells = (row ?? "")
+        .split("|")
+        .slice(2, -1)
+        .map((cell) => cell.trim());
+      expect([measure, cells]).toEqual([
+        measure,
+        PLANTED_CASES.map((kind) => (plans[measure].has(kind) ? "yes" : "no")),
+      ]);
+    }
   });
 });
