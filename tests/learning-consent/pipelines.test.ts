@@ -161,6 +161,8 @@ const NOT_LEARNING: Readonly<Record<string, string>> = {
   "anchor:rotate": SETUP,
   "anchor:export": "prints the newest anchors and the public key (#300); no learning",
   "vault:rotate": "reseals the person's own rows under a new key (#141); no learning",
+  "vault:ci-migrate":
+    "runs vault:migrate twice on a throwaway database seeded with made-up fixtures; no learning",
   "skills:check": "runs skill evals over shipped synthetic fixtures; no person's rows",
   "new:tool": TOOLING,
   "new:tool:prove": TOOLING,
@@ -193,6 +195,8 @@ const NOT_LEARNING: Readonly<Record<string, string>> = {
   "rhythm-bench:rr-grid":
     "compares simulated rhythm windows with the public PhysioNet AF databases; never the app's rows",
   "wearables:generate": GENERATOR,
+  "wearables:two-source":
+    "writes synthetic two-source summaries and their planted labels to files from a seed (#508); no database, no person's rows",
   "genome:synth": GENERATOR,
   "genome:ingest": "loads synthetic genotypes (genome-synth) into a training database",
   "genome:ingest:db": "loads synthetic genotypes (genome-synth) into a training database",

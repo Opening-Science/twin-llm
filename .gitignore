@@ -110,3 +110,6 @@ data/motion/
 
 # Rhythm benchmark output (bun run rhythm-bench -- --out .rhythm-bench/<run>); summaries go in docs/research
 /.rhythm-bench/
+
+# Synthetic wearable test data (bun run wearables:two-source, #508); rebuilt from a seed, never committed
+/.synthetic-wearables/

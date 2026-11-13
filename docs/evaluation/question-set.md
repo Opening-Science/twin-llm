@@ -1210,3 +1210,10 @@ the questions' hash and the manifest, and every keyed verdict against the
 planted tag (11 of 11 agree). The subject count comes from `cohort_event_rates`
 (`list_subjects` stops at 200) and the checksum from
 `evaluation/cohorts/synthea-v4-1m-af.manifest.json`.
+
+## Two-source wearable test data (#508)
+
+For the attribution study, `bun run wearables:two-source` writes synthetic Oura,
+WHOOP and Google Health summaries with the source rules' decision planted for every
+measure and day: [synthetic-wearables.md](synthetic-wearables.md). Files only; no
+question here reads them yet.
