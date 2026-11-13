@@ -6,6 +6,7 @@ import {
   decideSources,
   decisionLine,
   SOURCE_TOLERANCE,
+  sourceUnit,
   sourceRuleLine,
   withinTolerance,
   type EvidenceJudge,
@@ -195,7 +196,7 @@ describe("decideSources: no decision", () => {
           {
             key: `google.daily-resting-heart-rate.${DAY}`,
             value: 58,
-            unit: "bpm",
+            unit: "per minute",
             date: DAY,
           },
         ],
@@ -237,6 +238,35 @@ describe("decideSources: no decision", () => {
       ),
     );
     expect(decision).toMatchObject({ kind: "held_back", reason: "units_differ" });
+  });
+
+  test("spellings of one unit are that unit, and nothing else is", () => {
+    expect(sourceUnit("per minute")).toBe("/min");
+    expect(sourceUnit(" Beats  per minute ")).toBe("/min");
+    expect(sourceUnit("bpm")).toBe("/min");
+    expect(sourceUnit("millisecond")).toBe("ms");
+    expect(sourceUnit("steps")).toBe("{steps}");
+    expect(sourceUnit("percent")).toBe("%");
+    expect(sourceUnit("s")).toBe("s");
+    expect(sourceUnit("per hour")).toBe("per hour");
+  });
+
+  test("HRV in open-twin's `millisecond` agrees with `ms`", () => {
+    const decision = only(
+      decideSources(
+        [
+          { key: `whoop.recovery.hrv.${DAY}`, value: 50, unit: "ms", date: DAY },
+          {
+            key: `google.daily-heart-rate-variability.${DAY}`,
+            value: 52,
+            unit: "millisecond",
+            date: DAY,
+          },
+        ],
+        neverCalled,
+      ),
+    );
+    expect(decision).toMatchObject({ kind: "agree" });
   });
 
   test("undated readings from two sources cannot be placed on one day", () => {

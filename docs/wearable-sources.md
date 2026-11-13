@@ -2,7 +2,7 @@
 
 When Oura, WHOOP and Google Health record the same measure on the same day, TwinLLM uses
 one reading, says which and why, or holds the measure back and says that (#464). The
-rules are fixed in code, versioned (`wearable-source-rules/1`) and written to the audit
+rules are fixed in code, versioned (`wearable-source-rules/2`) and written to the audit
 log with every turn and every read of the summaries, so the attribution study (#508) can
 tell which rules produced an answer. Research use only: nothing here says which device is
 right about a person.
@@ -50,7 +50,10 @@ For each measure and day where at least one source has a reading:
    day.
 3. **Different units.** A reading in a unit the measure does not take (seconds for HRV,
    say): held back, because the readings cannot be compared. A reading stored without a
-   unit is taken to be in the measure's unit.
+   unit is taken to be in the measure's unit. Spellings of one unit count as that unit:
+   WHOOP's `bpm` and Google Health's `per minute` are both `/min`, `millisecond` is `ms`
+   (rules version 2; version 1 held back every WHOOP and Google Health resting heart rate
+   pair for this).
 4. **Agree.** The largest and smallest reading differ by no more than the tolerance
    above. One reading is shown and the others are named as agreeing ("WHOOP agrees (WHOOP
    54 ms): within 5.4 ms, the larger of 5 ms and 10% of the highest reading. Oura's
