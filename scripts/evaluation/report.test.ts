@@ -8,6 +8,7 @@ import { questionsSha256 } from "./build-answer-key";
 import { type ResultLine, type RunMeta } from "./eval-results";
 import {
   armRows,
+  attributionFigures,
   callFigures,
   CONTEXT_CALLS_NA,
   csvCell,
@@ -473,6 +474,63 @@ describe("call accuracy and answers without a tool in the report (#276)", () => 
       withoutTool: 1,
       kinds: { "no call": 0, "no rows": 1, "not in rows": 1 },
     });
+  });
+});
+
+describe("wearable source attribution in the report (#508)", () => {
+  const counts = (correct: number, misattributed: number) => ({
+    correct,
+    misattributed,
+    stated_withheld: 0,
+    unsourced: 0,
+  });
+  const scored = (
+    correct: number,
+    misattributed: number,
+    retrieval: { needed: number; fetched: number; hits: number } | null,
+  ) => ({
+    attribution: {
+      rules: "wearable-source-rules/1",
+      aligned: true,
+      numbers: Array.from({ length: correct + misattributed }, () => ({
+        stated: "52 ms",
+        measure: "heart-rate-variability" as const,
+        named: "whoop" as const,
+        label: "correct" as const,
+        key: null,
+      })),
+      counts: counts(correct, misattributed),
+      retrieval:
+        retrieval === null
+          ? null
+          : {
+              ...retrieval,
+              recall: retrieval.hits / retrieval.needed,
+              precision: retrieval.hits / retrieval.fetched,
+            },
+    },
+  });
+
+  test("pools labels and retrieval across lines, and shares carry Wilson intervals", () => {
+    const figures = attributionFigures({
+      scored: [
+        scored(2, 1, { needed: 3, fetched: 2, hits: 2 }),
+        scored(1, 0, null),
+        { attribution: null },
+      ],
+    });
+    expect(figures).toEqual({
+      answers: 2,
+      numbers: 4,
+      labels: counts(3, 1),
+      unaligned: 0,
+      retrieval: { lines: 1, needed: 3, fetched: 2, hits: 2 },
+    });
+    expect(shareCell(figures.labels.correct, figures.numbers)).toBe("3/4 (30–95 %)");
+  });
+
+  test("the fixture run has no wearable rows, so the report has no attribution section", () => {
+    expect(EXPECTED).not.toContain("Wearable source attribution");
   });
 });
 
