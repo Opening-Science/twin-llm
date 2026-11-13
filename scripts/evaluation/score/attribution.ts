@@ -11,10 +11,12 @@
  *   else the day the key ends with (`metricDay`); its measure is the one the
  *   source rules compare (`COMPARABLE_STEMS`), or none.
  * - **Source decisions**: the `wearable.sources.*` audit row's decisions
- *   (`audit[].source_decisions`). They carry no day, so they are lined up with
- *   the fetched rows in the order the rules write them (newest day first, per
- *   measure). A measure whose decisions do not line up (another count, other
- *   sources) is scored without them, and `aligned` is false.
+ *   (`audit[].source_decisions`), each with its measure and day. A row's
+ *   decision is the one for its measure and day; their order never matters.
+ *   They are used only when, without their days, they hash to the audit
+ *   row's `args_sha256` (`verifiedSourceDecisions`); else every number is
+ *   labelled without them and `verified` is false. Two decisions for one
+ *   measure and day that differ are both left out.
  * - **Rows needed**: `expect.wearable_rows`, stored keys.
  *
  * A wearable number is the number `checkCitedValues` reads as stated for a
@@ -29,10 +31,10 @@
  * - `stated_withheld`: it matches a reading of a measure and day the rules
  *   held back, or it matches none and every day of its measure in view was
  *   held back. The rules hold a value back so that no answer states it.
- * - `correct`: it matches a reading of the source it names. With no source
- *   named it is correct only when that reading is the one the app shows (the
- *   only source, or the rules' choice), since the reader is then told the
- *   source by the app.
+ * - `correct`: it matches a reading of the source it names.
+ * - `unnamed`: it names no source and matches the reading the app shows (the
+ *   only source that day, or the rules' choice): the right reading, but the
+ *   answer leaves the source to the app's chip.
  * - `misattributed`: it matches a reading, but of another source than the
  *   one named, or (none named) not the reading the app shows.
  * - `unsourced`: it matches no reading in view.
@@ -50,7 +52,6 @@ import {
   sourceOfMetricKey,
   type WearableSourceId,
 } from "../../../infrastructure/wearable-provenance";
-import type { AuditedDecision } from "../../../infrastructure/wearable-source-audit";
 import {
   COMPARABLE_STEMS,
   SOURCE_MEASURES,
@@ -59,13 +60,18 @@ import {
   type SourceMeasure,
 } from "../../../infrastructure/wearable-source-rules";
 
-import type { ResultLine, SourceDecisions } from "../eval-results";
+import {
+  type ResultLine,
+  type SourceDecisions,
+  verifiedSourceDecisions,
+} from "../eval-results";
 import type { Question } from "../question-set";
 
 import type { AnsweredLine } from "./types";
 
 export const ATTRIBUTION_LABELS = [
   "correct",
+  "unnamed",
   "misattributed",
   "stated_withheld",
   "unsourced",
@@ -114,8 +120,8 @@ export type Retrieval = Readonly<{
 export type AttributionScore = Readonly<{
   /** The rule set the decisions came from; null when the turn recorded none. */
   rules: string | null;
-  /** Every measure's decisions lined up with the rows fetched. */
-  aligned: boolean;
+  /** The turn recorded decisions and they hash to its audit row. */
+  verified: boolean;
   numbers: readonly LabelledNumber[];
   counts: Readonly<Record<AttributionLabel, number>>;
   /** Null when the item lists no `wearable_rows`. */
@@ -172,79 +178,46 @@ export const fetchedRows = (
     });
 };
 
-/** The decisions of the turn's `wearable.sources.*` row; null when it has none. */
-export const recordedDecisions = (audit: ResultLine["audit"]): SourceDecisions | null =>
-  audit.find((row) => row.source_decisions !== undefined)?.source_decisions ?? null;
-
-type Occasion = Readonly<{
-  measure: SourceMeasure;
-  day: string | null;
-  sources: ReadonlySet<WearableSourceId>;
-}>;
+/**
+ * The decisions the line keeps for its `wearable.sources.*` row and whether
+ * they hash to it; null when the turn has no such row with decisions.
+ */
+export const recordedDecisions = (
+  audit: ResultLine["audit"],
+): Readonly<{ recorded: SourceDecisions; verified: boolean }> | null => {
+  const row = audit.find((line) => line.source_decisions !== undefined);
+  if (row?.source_decisions === undefined) return null;
+  return {
+    recorded: row.source_decisions,
+    verified: verifiedSourceDecisions(row) !== null,
+  };
+};
 
 const occasionId = (measure: SourceMeasure, day: string | null): string =>
   `${measure}|${day ?? ""}`;
 
-const sameSources = (
-  a: ReadonlySet<WearableSourceId>,
-  b: readonly WearableSourceId[],
-): boolean => a.size === new Set(b).size && b.every((source) => a.has(source));
-
 /**
- * Each decision placed on the measure and day it was made for. Per measure,
- * the rows' days newest first meet the decisions in their recorded order; a
- * measure where the count or any day's sources differ gets none.
+ * Each decision by its measure and day. Where two for one measure and day
+ * differ, neither is kept: the line cannot say which the turn used.
  */
 export const placeDecisions = (
-  rows: readonly WearableRow[],
-  decisions: readonly AuditedDecision[],
-): Readonly<{ placed: ReadonlyMap<string, OccasionDecision>; aligned: boolean }> => {
-  const occasions = new Map<string, Occasion & { sources: Set<WearableSourceId> }>();
-  for (const row of rows) {
-    if (row.measure === null) continue;
-    const id = occasionId(row.measure, row.day);
-    const found = occasions.get(id) ?? {
-      measure: row.measure,
-      day: row.day,
-      sources: new Set<WearableSourceId>(),
-    };
-    found.sources.add(row.source);
-    occasions.set(id, found);
-  }
+  decisions: SourceDecisions["decisions"],
+): ReadonlyMap<string, OccasionDecision> => {
   const placed = new Map<string, OccasionDecision>();
-  let aligned = true;
-  for (const measure of SOURCE_MEASURES) {
-    const days = [...occasions.values()]
-      .filter((occasion) => occasion.measure === measure)
-      .sort((a, b) => (b.day ?? "").localeCompare(a.day ?? ""));
-    const made = decisions.filter((decision) => decision.measure === measure);
-    if (days.length === 0 && made.length === 0) continue;
-    const fits =
-      days.length === made.length &&
-      days.every((occasion, index) => {
-        const decision = made[index];
-        return (
-          decision !== undefined &&
-          sameSources(occasion.sources, [
-            ...(decision.used === null ? [] : [decision.used]),
-            ...decision.others,
-          ])
-        );
-      });
-    if (!fits) {
-      aligned = false;
-      continue;
+  const clashing = new Set<string>();
+  for (const decision of decisions) {
+    const id = occasionId(decision.measure, decision.day);
+    const held = placed.get(id);
+    if (
+      held !== undefined &&
+      (held.outcome !== decision.outcome || held.used !== decision.used)
+    ) {
+      clashing.add(id);
     }
-    days.forEach((occasion, index) => {
-      const decision = made[index];
-      if (decision === undefined) return;
-      placed.set(occasionId(occasion.measure, occasion.day), {
-        outcome: decision.outcome,
-        used: decision.used,
-      });
-    });
+    placed.set(id, { outcome: decision.outcome, used: decision.used });
   }
-  return { placed, aligned };
+  for (const id of clashing) placed.delete(id);
+  return placed;
 };
 
 /** Ways an answer names each measure; `checkCitedValues` reads its label aliases. */
@@ -399,9 +372,10 @@ export const labelNumbers = (
             ? isShown(row, decisionOf(row), sourcesOn(row))
             : row.source === named,
         );
-        return right === undefined
-          ? { ...base, label: "misattributed", key: claim.matched[0]?.key ?? null }
-          : { ...base, label: "correct", key: right.key };
+        if (right === undefined) {
+          return { ...base, label: "misattributed", key: claim.matched[0]?.key ?? null };
+        }
+        return { ...base, label: named === null ? "unnamed" : "correct", key: right.key };
       });
     }),
   );
@@ -439,18 +413,17 @@ export const attributionScore = (
   input: Readonly<{
     text: string;
     rows: readonly WearableRow[];
+    /** The decisions the line keeps; scored only when `verified`. */
     decisions: SourceDecisions | null;
+    verified: boolean;
     needed: readonly string[] | null;
   }>,
 ): AttributionScore => {
-  const { placed, aligned } = placeDecisions(
-    input.rows,
-    input.decisions?.decisions ?? [],
-  );
-  const numbers = labelNumbers(input.text, input.rows, placed);
+  const used = input.verified ? (input.decisions?.decisions ?? []) : [];
+  const numbers = labelNumbers(input.text, input.rows, placeDecisions(used));
   return {
     rules: input.decisions?.rules ?? null,
-    aligned: input.decisions !== null && aligned,
+    verified: input.decisions !== null && input.verified,
     numbers,
     counts: countLabels(numbers),
     retrieval:
@@ -473,10 +446,12 @@ export const scoreAttribution = (
   const rows = fetchedRows(input.line.tool_results);
   const needed = input.item.expect.wearable_rows ?? null;
   if (needed === null && !rows.some((row) => row.measure !== null)) return null;
+  const recorded = recordedDecisions(input.line.audit);
   return attributionScore({
     text: input.line.answer_text ?? input.line.text ?? "",
     rows,
-    decisions: recordedDecisions(input.line.audit),
+    decisions: recorded?.recorded ?? null,
+    verified: recorded?.verified ?? false,
     needed,
   });
 };

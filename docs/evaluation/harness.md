@@ -486,10 +486,12 @@ section only when some line had wearable rows to attribute.
 - **Source decisions**: the turn's `wearable.sources.*` audit row records the
   rule set's version and, per measure, the outcome, the source used and the
   others, never a value or a day. A results line keeps them in
-  `audit[].source_decisions`. They are lined up with the fetched rows per
-  measure, newest day first, as the rules write them; a measure whose count
-  or sources do not line up is labelled without them and the report counts
-  those lines.
+  `audit[].source_decisions`, each with the day it was made for, and a row's
+  decision is the one for its measure and day: their order never matters.
+  Without their days they must hash to the audit row's `args_sha256`
+  (`verifiedSourceDecisions`); a line whose decisions do not is labelled
+  without them, and the report counts those lines. Two different decisions
+  for one measure and day are both left out.
 - **Rows needed**: `expect.wearable_rows` on the item, as stored keys. An item
   without it is not scored on retrieval.
 
@@ -499,15 +501,16 @@ Each wearable number gets one label, the first that holds:
 | ----------------- | ------------------------------------------------------------------------------------------------------------ |
 | `stated_withheld` | it matches a reading the rules held back, or matches none and every day of its measure in view was held back |
 | `correct`         | it matches a reading of the source it names (and the day, when the clause writes one)                        |
-| `misattributed`   | it matches a reading, but of another source than the one named                                               |
+| `unnamed`         | it names no source and matches the reading the app shows (the only source that day, or the rules' choice)    |
+| `misattributed`   | it matches a reading, but of another source than the one named (or, none named, not the reading shown)       |
 | `unsourced`       | it matches no reading fetched                                                                                |
 
 The named source is a vendor written after the number with `from`, `by`,
 `on`, `per`, `via`, `according to` or `(` (`52 ms from WHOOP`), else the
-nearest one before it (`WHOOP's HRV was 52 ms`). An answer that names no
-source is correct only for the reading the app shows (the only source that
-day, or the rules' choice), since the app's chip then names it; any other
-reading is misattributed. Clauses end at `.`, `;`, `!`, `?` or a line end,
+nearest one before it (`WHOOP's HRV was 52 ms`). A number with no source
+named is `unnamed`, never `correct`, even when it is the reading the app
+shows: the answer itself does not say where it came from, and the report
+gives that share on its own. Clauses end at `.`, `;`, `!`, `?` or a line end,
 and one clause gives at most one number per measure.
 
 Retrieval recall is the needed rows fetched over the rows needed; precision

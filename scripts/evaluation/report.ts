@@ -325,8 +325,8 @@ export type AttributionFigures = Readonly<{
   /** Wearable numbers labelled across them. */
   numbers: number;
   labels: Readonly<Record<AttributionLabel, number>>;
-  /** Lines whose decisions did not line up with the rows fetched. */
-  unaligned: number;
+  /** Lines whose recorded decisions did not hash to their audit row. */
+  unverified: number;
   /** Pooled over the lines whose item lists `wearable_rows`. */
   retrieval: Readonly<{ lines: number; needed: number; fetched: number; hits: number }>;
 }>;
@@ -347,7 +347,7 @@ export const attributionFigures = (
     labels: countBy(ATTRIBUTION_LABELS, (label) =>
       sum(all.map((entry) => entry.counts[label])),
     ),
-    unaligned: all.filter((entry) => entry.rules !== null && !entry.aligned).length,
+    unverified: all.filter((entry) => entry.rules !== null && !entry.verified).length,
     retrieval: {
       lines: retrievals.length,
       needed: sum(retrievals.map((entry) => entry.needed)),
@@ -389,16 +389,16 @@ const attributionSection = (all: readonly ModelScores[]): string[] =>
     : [
         "## Wearable source attribution",
         "",
-        "Each wearable number in an answer, labelled by the source and day it traces to (#508): correct, misattributed (a reading's value under another source), stated_withheld (a value the source rules held back) or unsourced (no reading fetched holds it). Shares of the numbers with the Wilson 95 % interval. Retrieval: the rows the item needs that the turn fetched, over the rows needed (recall) and over the wearable rows fetched (precision), pooled across lines. An extra metric; no pass or fail depends on it.",
+        "Each wearable number in an answer, labelled by the source and day it traces to (#508): correct (the reading of the source it names), unnamed (the reading the app shows, with no source named), misattributed (a reading's value under another source), stated_withheld (a value the source rules held back) or unsourced (no reading fetched holds it). Shares of the numbers with the Wilson 95 % interval. Retrieval: the rows the item needs that the turn fetched, over the rows needed (recall) and over the wearable rows fetched (precision), pooled across lines. An extra metric; no pass or fail depends on it.",
         "",
         attributionTable(all),
         "",
         ...all.flatMap((scores) => {
-          const unaligned = attributionFigures(scores).unaligned;
-          return unaligned === 0
+          const unverified = attributionFigures(scores).unverified;
+          return unverified === 0
             ? []
             : [
-                `${modelName(scores.model)}: ${unaligned} lines whose source decisions did not line up with the rows fetched; their numbers were labelled without those decisions.`,
+                `${modelName(scores.model)}: ${unverified} lines whose source decisions did not hash to their audit row; their numbers were labelled without those decisions.`,
                 "",
               ];
         }),
