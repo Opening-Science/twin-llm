@@ -7,7 +7,8 @@
  * the tool results (synthetic data; they stay in these gitignored files and
  * never reach report.md or review.csv), and timings.
  *
- * v2 (C3b) added `tool_results` and `audit[].subject_ref`. A v1 run is
+ * v2 (C3b) added `tool_results` and `audit[].subject_ref`; #508 added the
+ * optional `audit[].source_decisions`, so v2 lines before it still parse. A v1 run is
  * upgraded by replaying it (`bun run eval -- … --replay`), which calls no model.
  * `error` is a fixed marker, never provider text, which can echo prompts or
  * row values. Pure module, no I/O.
@@ -15,6 +16,8 @@
 import { z } from "zod";
 
 import { responseDocumentV1Schema } from "../../infrastructure/response-document/document-v1";
+import { WEARABLE_SOURCE_IDS } from "../../infrastructure/wearable-provenance";
+import { SOURCE_MEASURES } from "../../infrastructure/wearable-source-rules";
 
 import { CODE_RUN_ERRORS } from "./code-sandbox";
 import { RECORDED_ARMS } from "./context-arm";
@@ -91,6 +94,27 @@ export type ResultError = (typeof RESULT_ERRORS)[number];
 /** An item that needs env this run lacks (S4 needs the GBD server): skipped, never scored. */
 export const MISSING_ENV = "MISSING_ENV";
 
+/** One decision of a `wearable.sources.*` audit row, as `auditedDecision` writes it. */
+export const auditedDecisionSchema = z
+  .object({
+    measure: z.enum(SOURCE_MEASURES),
+    outcome: z.enum(["only_source", "agree", "evidence", "held_back"]),
+    used: z.enum(WEARABLE_SOURCE_IDS).nullable(),
+    others: z.array(z.enum(WEARABLE_SOURCE_IDS)),
+    reason: z.string().nullable(),
+  })
+  .strict();
+
+export const sourceDecisionsSchema = z
+  .object({
+    /** `wearable-source-rules/1`. */
+    rules: z.string(),
+    decisions: z.array(auditedDecisionSchema),
+  })
+  .strict();
+
+export type SourceDecisions = z.infer<typeof sourceDecisionsSchema>;
+
 export const auditLineSchema = z
   .object({
     tool: z.string(),
@@ -100,6 +124,14 @@ export const auditLineSchema = z
     refusal: z.string().nullable(),
     /** The subject the call asked for, from its input; null for cohort and reference tools. */
     subject_ref: z.string().nullable(),
+    /**
+     * On a `wearable.sources.*` row (#464) only: the rule set's version and its
+     * decisions, as the row's args record them (`wearableSourcesEvent`): per
+     * measure the outcome, the source used and the others, never a value, a
+     * unit or a day. The attribution score (#508) reads them. Absent on every
+     * other row and on runs before #508.
+     */
+    source_decisions: sourceDecisionsSchema.optional(),
   })
   .strict();
 
