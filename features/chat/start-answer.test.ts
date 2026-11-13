@@ -913,7 +913,7 @@ describe("chat start: wearable sources row (#464)", () => {
         sessionId: CALL.turnId,
         subjectRef: null,
         tool: "wearable.sources.whoop",
-        args: { rules: "wearable-source-rules/1", decisions: [] },
+        args: { rules: "wearable-source-rules/2", decisions: [] },
         result: { only_source: 0, agree: 0, evidence: 0, held_back: 0 },
         rowCount: 0,
       },

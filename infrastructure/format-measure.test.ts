@@ -462,6 +462,27 @@ describe("formatMetricValue and formatForPrompt", () => {
     [{ key: "google.weight.2026-10-16", value: 154.24, unit: "lb" }, "154.2 lb"],
     [{ key: "google.weight.2026-10-16", value: 70.05, unit: "kg" }, "70.1 kg"],
     [{ key: "sleep.hr.2026-10-16", value: 52.4, unit: "" }, "52 bpm"],
+    [
+      {
+        key: "google.daily-resting-heart-rate.2026-10-16",
+        value: 54,
+        unit: "per minute",
+      },
+      "54 bpm",
+    ],
+    [{ key: "google.heart-rate.2026-10-16", value: 71.6, unit: "/min" }, "72 bpm"],
+    [
+      {
+        key: "google.daily-heart-rate-variability.2026-10-16",
+        value: 48.2,
+        unit: "millisecond",
+      },
+      "48 ms",
+    ],
+    [
+      { key: "google.daily-respiratory-rate.2026-10-16", value: 14, unit: "per minute" },
+      "14 per minute",
+    ],
     [{ key: "whoop.recovery.score.2026-10-16", value: 78.6, unit: "%" }, "79%"],
     [{ key: "vitronic.angle.x.2026-10-16", value: 12.25, unit: "°" }, "12.3°"],
     [{ key: "google.unknown.2026-10-16", value: 3, unit: "" }, "3"],

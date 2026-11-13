@@ -26,7 +26,7 @@ import {
   type WearableSourceId,
 } from "./wearable-provenance";
 
-export const SOURCE_RULES_VERSION = "wearable-source-rules/1";
+export const SOURCE_RULES_VERSION = "wearable-source-rules/2";
 
 /** The measures compared across sources, named as open-twin's reliability table names them. */
 export const SOURCE_MEASURES = [
@@ -55,12 +55,40 @@ export const SOURCE_TOLERANCE: Readonly<Record<SourceMeasure, Tolerance>> = {
   "step-count": { absolute: 200, relative: 0.05, unit: "steps" },
 };
 
-/** Units a reading may carry; a stored reading without one is taken to be in the first. */
+/**
+ * Units a reading may carry, spelt as `sourceUnit` spells them; a stored
+ * reading without one is taken to be in the first.
+ */
 export const SOURCE_UNITS: Readonly<Record<SourceMeasure, readonly string[]>> = {
   "heart-rate-variability": ["ms"],
-  "resting-heart-rate": ["bpm", "/min", "beats/min", "{beats}/min"],
+  "resting-heart-rate": ["/min"],
   "oxygen-saturation": ["%"],
-  "step-count": ["steps", "{steps}", "/d", "{steps}/d", "1"],
+  "step-count": ["{steps}", "/d", "{steps}/d", "1"],
+};
+
+/**
+ * Other spellings of one unit, as the sources store them. Oura and WHOOP
+ * write `bpm` and `ms`; Google Health readings keep the display name of
+ * open-twin's UCUM unit (`per minute` for `/min`, `millisecond` for `ms`,
+ * `steps` for `{steps}`). Names for the same unit only: nothing is converted.
+ */
+const UNIT_SPELLINGS: Readonly<Record<string, string>> = {
+  bpm: "/min",
+  "per minute": "/min",
+  "beats per minute": "/min",
+  "beats/min": "/min",
+  "{beats}/min": "/min",
+  millisecond: "ms",
+  milliseconds: "ms",
+  percent: "%",
+  "per cent": "%",
+  steps: "{steps}",
+};
+
+/** A stored unit in the one spelling the rules compare: `per minute` and `bpm` → `/min`. */
+export const sourceUnit = (unit: string): string => {
+  const plain = unit.trim().toLowerCase().replace(/\s+/g, " ");
+  return UNIT_SPELLINGS[plain] ?? plain;
 };
 
 /**
@@ -180,7 +208,7 @@ const readingOf = (
 };
 
 const unitFits = (reading: SourceReading, measure: SourceMeasure): boolean =>
-  reading.unit === null || SOURCE_UNITS[measure].includes(reading.unit.toLowerCase());
+  reading.unit === null || SOURCE_UNITS[measure].includes(sourceUnit(reading.unit));
 
 /** The bound that applies to readings whose largest is `high`: the larger of the two. */
 export const appliedTolerance = (tolerance: Tolerance, high: number): number =>

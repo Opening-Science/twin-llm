@@ -33,7 +33,7 @@ describe("wearableSourcesEvent", () => {
       subjectRef: null,
       tool: "wearable.sources.oura+whoop+google_health",
       args: {
-        rules: "wearable-source-rules/1",
+        rules: "wearable-source-rules/2",
         decisions: [
           {
             measure: "heart-rate-variability",
