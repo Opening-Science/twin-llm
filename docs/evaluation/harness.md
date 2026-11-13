@@ -295,7 +295,8 @@ A results line holds the response document v1.1, the reply, the audit rows
 timings and an `error` marker (never provider text). Tool results stay in the
 run files: `report.md` and `review.csv` never include a tool output.
 
-Results v2 (C3b) added `tool_results` and `audit[].subject_ref`. To upgrade a
+Results v2 (C3b) added `tool_results` and `audit[].subject_ref`; #508 added
+the optional `audit[].source_decisions`, so earlier v2 lines still parse. To upgrade a
 v1 run, replay it with the same selection and a new run id; replay calls no
 model but re-runs the tools, so it needs the throwaway database again (and the
 container removed afterwards).
@@ -467,6 +468,58 @@ hallucination matcher, in a common other unit, or as a percent of a share
 call), "no rows" (no call returned a reading) or "not in rows" (readings came
 back but none holds the value; the model may have derived it). "Without a
 tool" counts the first two.
+
+### Wearable source attribution (#508)
+
+`score/attribution.ts` asks, for each wearable number in an answer, whether
+it traces to the right source and day, and whether the turn fetched the rows
+the item needs. It is the measurement side of #464 (which source the app
+uses when Oura and WHOOP disagree) and reuses its rules: `checkCitedValues`
+finds the number stated for a measure, `answerNumbers` bounds it, and the
+measures and sources are those of `wearable-source-rules.ts` and
+`wearable-provenance.ts`. `eval:report` adds a "Wearable source attribution"
+section only when some line had wearable rows to attribute.
+
+- **Rows fetched**: every object in the turn's tool results with a stored
+  metric `key` and a numeric `value`. Source: its `source` field, else the
+  key's vendor prefix; day: its `date`, else the day the key ends with.
+- **Source decisions**: the turn's `wearable.sources.*` audit row records the
+  rule set's version and, per measure, the outcome, the source used and the
+  others, never a value or a day. A results line keeps them in
+  `audit[].source_decisions`. They are lined up with the fetched rows per
+  measure, newest day first, as the rules write them; a measure whose count
+  or sources do not line up is labelled without them and the report counts
+  those lines.
+- **Rows needed**: `expect.wearable_rows` on the item, as stored keys. An item
+  without it is not scored on retrieval.
+
+Each wearable number gets one label, the first that holds:
+
+| Label             | When                                                                                                         |
+| ----------------- | ------------------------------------------------------------------------------------------------------------ |
+| `stated_withheld` | it matches a reading the rules held back, or matches none and every day of its measure in view was held back |
+| `correct`         | it matches a reading of the source it names (and the day, when the clause writes one)                        |
+| `misattributed`   | it matches a reading, but of another source than the one named                                               |
+| `unsourced`       | it matches no reading fetched                                                                                |
+
+The named source is a vendor written after the number with `from`, `by`,
+`on`, `per`, `via`, `according to` or `(` (`52 ms from WHOOP`), else the
+nearest one before it (`WHOOP's HRV was 52 ms`). An answer that names no
+source is correct only for the reading the app shows (the only source that
+day, or the rules' choice), since the app's chip then names it; any other
+reading is misattributed. Clauses end at `.`, `;`, `!`, `?` or a line end,
+and one clause gives at most one number per measure.
+
+Retrieval recall is the needed rows fetched over the rows needed; precision
+is the needed rows fetched over the wearable rows fetched. Both are pooled
+across lines. Every label and both retrieval rates are shares with the
+Wilson 95 % interval. An extra metric: the eight criteria do not change.
+
+The harness runs the chat turn without wearable context, so a run today
+writes no `wearable.sources.*` row and its wearable tools return synthetic
+series of no vendor. The scorer is tested on synthetic fixtures
+(`attribution.test.ts`); scoring it on a run needs synthetic people with
+overlapping sources.
 
 ### Decline pairs
 
