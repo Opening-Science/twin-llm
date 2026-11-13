@@ -51,6 +51,7 @@
     "anchor:rotate": "bun scripts/anchor/anchor.ts rotate",
     "anchor:export": "bun scripts/anchor/anchor.ts export",
     "vault:rotate": "bun --preload ./features/chat/response/preload-server-only.mjs scripts/vault/rotate.ts",
+    "vault:ci-migrate": "bun scripts/vault/ci-migrate.ts",
     "skills:check": "bun scripts/skills/check.ts",
     "new:tool": "bun scripts/new-tool/new-tool.ts",
     "new:tool:prove": "bun scripts/new-tool/prove-typecheck.ts",

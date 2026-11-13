@@ -993,7 +993,16 @@ Total about 27 working days.
 - **Tests.** The walk over an in-memory table: batches, a stop mid-way, resume, a second
   run, rotation. The whole migration was run by hand on a throwaway owner cluster seeded
   from the made-up fixtures in `tests/fixtures/personal-import/` and a genome-synth VCF
-  ([runbook.md](runbook.md#encryption-at-rest)); a CI job with a Postgres is still open.
+  ([runbook.md](runbook.md#encryption-at-rest)). CI runs it end to end in the
+  `vault-migrate` job (`bun run vault:ci-migrate`, `scripts/vault/ci-migrate.ts`) on a
+  Postgres service with synthetic rows only: it imports seven of those fixtures through
+  the import store in synthetic mode, so every listed column is stored plain as before
+  #141; runs `vault:migrate --backup-confirmed` in personal mode with a passphrase made
+  inside the run and given on stdin only (never an argument, the environment, a file or
+  the log; the recovery code is hidden in the log); checks that no plain value is left
+  and no row was lost; then runs it again and checks that it sealed nothing and every
+  personal table is stored exactly as before (an MD5 of each row). Mesh files and the
+  search vectors are not in that seed; they stay covered by the hand run.
 
 ## 5. Open questions for Peter
 
