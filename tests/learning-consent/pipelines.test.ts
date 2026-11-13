@@ -195,6 +195,8 @@ const NOT_LEARNING: Readonly<Record<string, string>> = {
   "rhythm-bench:rr-grid":
     "compares simulated rhythm windows with the public PhysioNet AF databases; never the app's rows",
   "wearables:generate": GENERATOR,
+  "wearables:two-source":
+    "writes synthetic two-source summaries and their planted labels to files from a seed (#508); no database, no person's rows",
   "genome:synth": GENERATOR,
   "genome:ingest": "loads synthetic genotypes (genome-synth) into a training database",
   "genome:ingest:db": "loads synthetic genotypes (genome-synth) into a training database",
