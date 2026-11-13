@@ -204,4 +204,9 @@ describe("the Digital Twin vitals after the rules", () => {
     expect(rhr?.value).toBe("52 bpm");
     expect(rhr?.sourceStatus).toMatchObject({ tone: "ok", label: "Sources agree" });
   });
+
+  test("Google Health's resting heart rate on its own reads in bpm, not per minute", () => {
+    const rhr = vitalRows(latestVitals(google)).find((row) => row.id === "vital:rhr");
+    expect(rhr?.value).toBe("54 bpm");
+  });
 });

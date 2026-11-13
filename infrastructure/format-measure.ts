@@ -581,9 +581,29 @@ export const withUnit = (number: string, unit: string): string => {
   return shown === "%" || shown === "°" ? `${number}${shown}` : `${number} ${shown}`;
 };
 
+/**
+ * Other names a source stores for a kind's unit. Google Health readings keep
+ * open-twin's UCUM display name: a resting heart rate in `per minute` reads
+ * `bpm`. Only for a kind the key already pins, so a breathing rate in
+ * `per minute` never becomes `bpm`.
+ */
+const KIND_UNIT_SPELLINGS: Readonly<Partial<Record<MeasureKind, ReadonlySet<string>>>> = {
+  heartRate: new Set([
+    "/min",
+    "per minute",
+    "beats per minute",
+    "beats/min",
+    "{beats}/min",
+  ]),
+  hrv: new Set(["millisecond", "milliseconds"]),
+};
+
 /** The key's kind applies only when the stored unit is empty or is that kind's unit. */
 const unitMatches = (kind: MeasureKind, unit: string): boolean =>
-  unit === "" || normaliseUnit(unit) === MEASURES[kind].unit;
+  unit === "" ||
+  normaliseUnit(unit) === MEASURES[kind].unit ||
+  (KIND_UNIT_SPELLINGS[kind]?.has(unit.trim().toLowerCase().replace(/\s+/g, " ")) ??
+    false);
 
 export type FormattableMetric = Readonly<{
   key: string;
