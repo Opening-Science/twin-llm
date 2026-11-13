@@ -44,6 +44,9 @@ Active on the default branch (`~DEFAULT_BRANCH`). As
 - [ ] `build` and `typecheck-tests` run in CI but are not yet required checks. Adding them
       is a maintainer setting (Settings → Rules → Protect main → Require status checks);
       `.github/rulesets/main.json` already lists `build` but not `typecheck-tests`.
+- [ ] `vault-migrate` (`vault:migrate` end to end on synthetic rows) runs in CI but is not
+      yet a required check, in the live ruleset or in `.github/rulesets/main.json`. The
+      check name is the job name, `vault-migrate`.
 
 Check:
 
