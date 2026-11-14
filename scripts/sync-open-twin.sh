@@ -10,7 +10,7 @@ cd "$ROOT"
 OPEN_TWIN_SHA="${1:-${OPEN_TWIN_SHA:-4b42ef944db0b461ca414b8066a5f7aa2594a9ce}}"
 OPEN_TWIN_REPO="${OPEN_TWIN_REPO:-https://github.com/Opening-Science/open-twin.git}"
 DEST="${ROOT}/.open-twin"
-PACKAGES=(fhir-core fhir-r4 aggregate provider-oura provider-google-health provider-whoop provider-vitronic interpretation-contract anchor-layer)
+PACKAGES=(fhir-core fhir-r4 aggregate provider-oura provider-google-health provider-whoop anchor-layer)
 
 echo "sync-open-twin: pinning ${OPEN_TWIN_SHA}"
 
@@ -24,8 +24,6 @@ git sparse-checkout set \
   packages/provider-oura \
   packages/provider-google-health \
   packages/provider-whoop \
-  packages/provider-vitronic \
-  packages/interpretation-contract \
   packages/anchor-layer
 git fetch --depth 1 origin "${OPEN_TWIN_SHA}"
 git checkout "${OPEN_TWIN_SHA}"
@@ -36,7 +34,7 @@ if [[ "${GOT}" != "${OPEN_TWIN_SHA}" ]]; then
 fi
 
 # Standalone installs cannot resolve monorepo workspace:* protocol.
-for pkg in fhir-r4 aggregate provider-oura provider-google-health provider-whoop provider-vitronic; do
+for pkg in fhir-r4 aggregate provider-oura provider-google-health provider-whoop; do
   python3 - <<PY
 from pathlib import Path
 p = Path("packages/${pkg}/package.json")
@@ -47,18 +45,6 @@ p.write_text(text.replace('"workspace:*"', '"file:../fhir-core"'))
 print(f"rewrote workspace:* -> file:../fhir-core in {p}")
 PY
 done
-
-# generate lives at the monorepo root (not in this sparse checkout);
-# src/generated is already committed. Rewrite build to tsup only.
-python3 - <<'PY'
-import json
-from pathlib import Path
-p = Path("packages/interpretation-contract/package.json")
-data = json.loads(p.read_text())
-data.setdefault("scripts", {})["build"] = "tsup src/index.ts --format esm --dts"
-p.write_text(json.dumps(data, indent=2) + "\n")
-print(f"rewrote build to tsup-only in {p}")
-PY
 
 build_pkg() {
   local name="$1"
@@ -76,8 +62,6 @@ build_pkg aggregate
 build_pkg provider-oura
 build_pkg provider-google-health
 build_pkg provider-whoop
-build_pkg provider-vitronic
-build_pkg interpretation-contract
 # anchor-layer: TwinLLM imports only its data/ JSON export (the loader uses node:fs).
 build_pkg anchor-layer
 
@@ -87,8 +71,8 @@ build_pkg anchor-layer
 # so they are not copied into the host tree.
 FHIR_VERSION="$(python3 -c "import json; print(json.load(open('${DEST}/packages/fhir-core/package.json'))['version'])")"
 # fhir-r4 keeps file:../fhir-core — @open-twin/fhir-core@0.1.0 is not on npm.
-# provider-vitronic and aggregate keep file:../fhir-core in dependencies so the
-# first host bun install can resolve them without hitting registry.npmjs.org (404).
+# aggregate keeps file:../fhir-core in dependencies so the first host bun
+# install can resolve it without hitting registry.npmjs.org (404).
 for pkg in provider-oura provider-google-health provider-whoop; do
   python3 - <<PY
 import json
