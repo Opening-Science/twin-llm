@@ -10,6 +10,11 @@
     "reason": "the footer's disclaimer, carried in an exported thread"
   },
   {
+    "file": "features/compare/thread-markdown.ts",
+    "line-pattern": "model output, not medical advice",
+    "reason": "the footer's disclaimer, carried in an exported thread"
+  },
+  {
     "file": "features/chat/twin-system-prompt.ts",
     "line-pattern": "Do not diagnose or prescribe",
     "reason": "model instruction, not user-facing copy"

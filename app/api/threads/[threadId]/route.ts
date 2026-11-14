@@ -1,4 +1,4 @@
-import { createThreadDeleteHandler } from "@/features/arena/thread-delete-handler";
+import { createThreadDeleteHandler } from "@/features/compare/thread-delete-handler";
 import { resolveActorId } from "@/infrastructure/auth-actor";
 import { findAppUserId } from "@/infrastructure/current-user";
 import { database } from "@/infrastructure/database";

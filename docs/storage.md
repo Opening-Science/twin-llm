@@ -79,7 +79,7 @@ rowCount, at }]`. The hashes are the audit row's (`packages/audit/hash.ts`),
 so a stored part can be checked against the chain; `rowCount` is copied from
 the audit row with the same hashes and is null when none matched. An answer
 that used no tool stores null. `/t/[threadId]` replays the column as the
-stream's `tool-<name>` parts (`features/arena/saved-tool-parts.ts`); the
+stream's `tool-<name>` parts (`features/compare/saved-answer.ts`); the
 browser still receives only each tool's name and state.
 
 ## Two-layer personal data

@@ -7,14 +7,14 @@ effort). Issue #366. Research use only: neither changes what TwinLLM is for
 ## Modes
 
 The mode is chosen on its own, apart from the model list. The server never sees a mode:
-the prompt bar turns it into the row ids a turn goes to (`features/arena/chat-mode.ts`),
+the prompt bar turns it into the row ids a turn goes to (`features/compare/chat-modes.ts`),
 and those go through the same checks as before (`checkTurnRequest`, `/api/chat`).
 
 | Mode    | Answers      | What it sends                                                                                                                                     |
 | ------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Auto    | one          | `agent:auto`. The router picks the specialist for each question ([agents.md](agents.md#auto-219)) and the specialist runs on its preferred model. |
 | Manual  | one to three | Each chosen specialist on each chosen model, at most three answers in all. No specialist sends the models as themselves.                          |
-| Compare | two or three | The rows picked, models or specialists, side by side, as the arena has always worked.                                                             |
+| Compare | two or three | The rows picked, models or specialists, side by side, as Compare has always worked.                                                               |
 
 ### Compare's defaults (#493)
 
@@ -147,7 +147,7 @@ as `number_review`.
 
 ## The prompt bar
 
-Under the text box, from left to right (`features/arena/prompt-bar.tsx`):
+Under the text box, from left to right (`features/compare/prompt-bar.tsx`):
 
 - **Sources** (the `@` button, or `@` and a word in the text): the sources this person
   can point a question at here (`prompt-sources.ts`): linked Oura, Whoop and Google

@@ -1,4 +1,4 @@
-import { createSuggestionsHandler } from "@/features/arena/suggestions-handler";
+import { createSuggestionsHandler } from "@/features/compare/suggestions-handler";
 import { wearableReadings } from "@/features/chat/show-view-tool";
 import { personLabel } from "@/features/digital-twin/biomarkers/cohort-handler";
 import { getLatestGoogleHealthSummary } from "@/features/google-health/connection";

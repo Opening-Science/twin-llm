@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { ownedThread } from "@/features/arena/thread-reads";
+import { ownedThread } from "@/features/compare/thread-reads";
 import { lockedScreen } from "@/features/vault/page-gate";
 
 /**

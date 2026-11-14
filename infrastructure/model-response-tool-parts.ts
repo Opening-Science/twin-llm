@@ -1,6 +1,6 @@
 /**
  * One tool call of an answer as `model_responses."toolParts"` stores it.
- * `features/chat` writes the column and `features/arena` reads it back, so the
+ * `features/chat` writes the column and `features/compare` reads it back, so the
  * shape lives here. The hashes are the audit row's (`packages/audit/hash.ts`),
  * so a stored part can be checked against the chain.
  */

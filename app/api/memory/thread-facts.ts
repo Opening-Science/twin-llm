@@ -1,5 +1,5 @@
-import { loadOwnedThread } from "@/features/arena/owned-thread";
-import { threadReads } from "@/features/arena/thread-reads";
+import { loadOwnedThread } from "@/features/compare/owned-thread";
+import { threadReads } from "@/features/compare/thread-reads";
 import { loadGenomeThread } from "@/features/chat/load-genome-thread";
 import type { CompactThread } from "@/features/memory/compact-draft";
 

@@ -260,7 +260,7 @@ themselves are stored next to it in `model_responses."toolParts"`
 (`docs/storage.md`, "Tool parts of an answer").
 
 The schema, copy and parser live in `infrastructure/response-document/` so
-the arena feature can import them. `features/chat/response/{document-v1,copy}.ts`
+the chat view can import them. `features/chat/response/{document-v1,copy}.ts`
 re-export them.
 
 ## UI copy
