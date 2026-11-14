@@ -1200,9 +1200,6 @@ const PAGES: Readonly<Record<string, "gated" | Readonly<{ open: string }>>> = {
 const SERVER_ACTIONS: Readonly<
   Record<string, Readonly<{ gated: Readonly<Record<string, string>> } | { open: string }>>
 > = {
-  "features/arena/start-turn.ts": {
-    gated: { startTurn: "vaultRefusalForAction()" },
-  },
   "features/compare/start-turn.ts": {
     gated: { startTurn: "vaultRefusalForAction()" },
   },
