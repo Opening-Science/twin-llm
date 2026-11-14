@@ -1,8 +1,8 @@
 import { partsFor, type AtlasGroup, type Highlight } from "@/packages/anatomy/highlight";
 import {
   applyMask,
-  layerMix,
   partShown,
+  viewMix,
   type AtlasLayerId,
   type LayerMix,
 } from "@/packages/anatomy/layers";
@@ -28,6 +28,12 @@ export type PickablePart = Readonly<{
   /** Normalised HRA group key; null on BodyParts3D. */
   group: string | null;
   ontologyId: string | null;
+  /** A CT skeleton bone's own name ("Left first rib"); atlas parts have none. */
+  label?: string;
+  /** Built by open-anatomy rather than segmented from the CT. */
+  modelled?: boolean;
+  /** Part of the open-anatomy CT skeleton, not the donor atlas. */
+  ct?: boolean;
 }>;
 
 export type PickHit<P extends PickablePart> = Readonly<{
@@ -49,12 +55,14 @@ export const choosePick = <P extends PickablePart>(
   depth: number,
   layers: Readonly<Record<AtlasLayerId, boolean>>,
   hiddenSystems: readonly OrganSystem[],
+  /** An isolated layer is the only thing drawn, so the only thing a tap can hit. */
+  isolate: AtlasLayerId | null = null,
 ): number | null => {
-  const envelope = layerMix("scan", depth);
+  const envelope = viewMix("scan", depth, isolate);
   const mixOf = (hit: PickHit<P>): LayerMix =>
     hit.part
       ? applyMask(
-          layerMix(hit.part.layer, depth),
+          viewMix(hit.part.layer, depth, isolate),
           partShown(hit.part, layers, hiddenSystems),
         )
       : envelope;
@@ -88,6 +96,10 @@ export type PickTarget =
       system: OrganSystem;
       group: string | null;
       ontologyId: string | null;
+      /** True for a CT skeleton part built by open-anatomy, not segmented. */
+      modelled?: boolean;
+      /** True for a part of the open-anatomy CT skeleton. */
+      ct?: boolean;
     }>
   | Readonly<{ kind: "body" }>;
 
@@ -97,7 +109,10 @@ export type Picked = Readonly<{
   point: readonly [number, number, number];
 }>;
 
-/** HRA parts read as their organ group ("Liver"); BodyParts3D parts as their system. */
+/**
+ * A CT skeleton bone reads as its own name ("Left first rib"); HRA parts as
+ * their organ group ("Liver"); BodyParts3D parts as their system.
+ */
 export const pickTarget = (
   part: PickablePart | null,
   groups: readonly AtlasGroup[],
@@ -106,11 +121,12 @@ export const pickTarget = (
   const group = part.group ? groups.find((known) => known.key === part.group) : undefined;
   return {
     kind: "part",
-    label: group?.label ?? SYSTEM_LABEL[part.system],
+    label: part.label ?? group?.label ?? SYSTEM_LABEL[part.system],
     layer: part.layer,
     system: part.system,
     group: part.group,
     ontologyId: part.ontologyId,
+    ...(part.ct ? { ct: true, modelled: part.modelled === true } : {}),
   };
 };
 
@@ -160,10 +176,13 @@ export const pickVisible = (
   depth: number,
   layers: Readonly<Record<AtlasLayerId, boolean>>,
   hiddenSystems: readonly OrganSystem[],
+  isolate: AtlasLayerId | null = null,
 ): boolean =>
   target.kind !== "part" ||
-  applyMask(layerMix(target.layer, depth), partShown(target, layers, hiddenSystems))
-    .visible;
+  applyMask(
+    viewMix(target.layer, depth, isolate),
+    partShown(target, layers, hiddenSystems),
+  ).visible;
 
 /**
  * Biomarker rows whose own highlight (G2) would light the picked part. The

@@ -20,6 +20,9 @@ export const VIEW_LABEL =
   "3D view. With the pointer over it or focus on it, W A S D or arrow keys walk; Enter or Space selects what is in the middle.";
 export const pickedLabel = (name: string): string => `Picked: ${name}`;
 export const CARD_ATLAS_NOTE = "Reference anatomy from a donor atlas, not this body.";
+export const CARD_CT_NOTE = "A bone from one public CT case, not this body.";
+/** A CT skeleton part open-anatomy built rather than segmented (the costal cartilages). */
+export const CARD_MODELLED = "Modelled, not segmented from the CT";
 export const BODY_CARD_TITLE = "Body outline";
 export const BODY_CARD_NOTE = "Move the depth slider to see muscle, skeleton and organs.";
 export const LINKED_BIOMARKERS = "Linked biomarkers";

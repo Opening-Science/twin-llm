@@ -1,3 +1,4 @@
+import { type SkeletonProblem } from "@/packages/anatomy/open-skeleton";
 import { type AtlasId } from "@/packages/anatomy/manifest";
 import { depthPosition, type LayerId } from "@/packages/anatomy/layers";
 import { type OrganSystem } from "@/packages/anatomy/systems";
@@ -46,6 +47,43 @@ export const FIT_ATLAS_TOGGLE = "Fit atlas to body";
 /** API response, read by developers, so it may name the commands. */
 export const FITTED_NOT_INSTALLED_API =
   "Fitted atlas not made here. Run bun run blender:fit-atlas, then bun run anatomy:quantise-fitted.";
+/** API response, read by developers, so it may name the variable. */
+export const SKELETON_NOT_CONFIGURED_API =
+  "No open-anatomy skeleton here. Set ANATOMY_SKELETON_GLB to a skeleton GLB.";
+
+export const SKELETON_NOT_PINNED_API =
+  "The open-anatomy skeleton is missing or does not match ANATOMY_SKELETON_SHA256.";
+
+/** Why a configured CT skeleton is not shown; the atlas's own bones stay. */
+export const SKELETON_PROBLEM_TEXT: Readonly<Record<SkeletonProblem, string>> = {
+  file: "The CT skeleton is not shown: its file is missing or is not the pinned build.",
+  "atlas-missing":
+    "The CT skeleton is not shown: atlas.json is missing beside it, so what it leaves out and its credit are unknown.",
+  "atlas-invalid": "The CT skeleton is not shown: its atlas.json could not be read.",
+};
+
+export const SKELETON_HEADING = "Skeleton";
+export const skeletonSourceLabel = (caseId: string | null): string =>
+  caseId ? `CT skeleton · open-anatomy ${caseId}` : "CT skeleton · open-anatomy";
+export const SKELETON_ISOLATE = "Only the skeleton";
+export const SKELETON_EXPLODE = "Spread bones";
+export const skeletonExplodeText = (amount: number): string =>
+  amount <= 0 ? "Together" : `${Math.round(amount * 100)}% apart`;
+export const SKELETON_LOADING = "Loading the CT skeleton…";
+export const SKELETON_LOAD_ERROR = "Could not load the CT skeleton.";
+export const SKELETON_FIT_FAILED = "The CT skeleton could not be placed in this body.";
+/** Says how the bones are placed, and that they are not this body's, in one short sentence. */
+export const skeletonFitNote = (anchor: "hips" | "bbox"): string =>
+  anchor === "hips"
+    ? "Bones from one public CT case, set at this body's hips by estimate, not this body's skeleton."
+    : "Bones from one public CT case, set in this body by estimate, not this body's skeleton.";
+/** What the build left out, from atlas.json; never drawn and never drawn from another atlas. */
+export const skeletonLeftOutNote = (summary: string): string | null =>
+  summary.length > 0 ? `Left out: ${summary}.` : null;
+export const SKELETON_MODELLED_NOTE =
+  "Parts marked modelled were built, not segmented from the CT.";
+export const SKELETON_CREDIT_FALLBACK =
+  "Skeleton built by open-anatomy from a public CT case of the TotalSegmentator dataset (Wasserthal et al.), CC BY 4.0.";
 
 export const HIGHLIGHT_LABEL = "Highlight";
 export const HIGHLIGHT_NONE = "None";

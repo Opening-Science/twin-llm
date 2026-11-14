@@ -8,8 +8,19 @@ import {
   type DemoBodyId,
 } from "@/packages/anatomy/demo-bodies";
 import { ATLAS_IDS, isAtlasId, type AtlasId } from "@/packages/anatomy/manifest";
+import {
+  isSkeletonProblem,
+  parseSkeletonAtlas,
+  type SkeletonAtlas,
+  type SkeletonProblem,
+} from "@/packages/anatomy/open-skeleton";
 
-import { anatomyReducer, initialAnatomyState, type AnatomyLoad } from "./anatomy-state";
+import {
+  anatomyReducer,
+  initialAnatomyState,
+  type AnatomyLoad,
+  type SkeletonLoad,
+} from "./anatomy-state";
 import {
   parseFittedDefault,
   parseFittedStatus,
@@ -54,6 +65,28 @@ export const parseRiggedStatus = (value: unknown): Record<DemoBodyId, boolean> =
 };
 
 /**
+ * The open-anatomy skeleton the server has, or null: no skeleton configured,
+ * an older server, or a status that could not be read. Null means the layer
+ * is simply absent, never an error.
+ */
+export const parseSkeletonStatus = (value: unknown): SkeletonAtlas | null => {
+  const raw: unknown =
+    value && typeof value === "object"
+      ? (value as { skeleton?: unknown }).skeleton
+      : null;
+  return raw && typeof raw === "object" ? parseSkeletonAtlas(raw) : null;
+};
+
+/** Why the configured skeleton is not shown, or null: shown, none, or an older server. */
+export const parseSkeletonProblem = (value: unknown): SkeletonProblem | null => {
+  const raw: unknown =
+    value && typeof value === "object"
+      ? (value as { skeletonProblem?: unknown }).skeletonProblem
+      : null;
+  return isSkeletonProblem(raw) ? raw : null;
+};
+
+/**
  * Anatomy UI state plus which atlases and rigged demo bodies are installed
  * (fetched once, skipped in previews). `rigged` stays null until the status
  * answers, so the demo body is not loaded twice; a failed status counts as none.
@@ -62,6 +95,9 @@ export const useAnatomyView = (enabled: boolean) => {
   const [state, dispatch] = useReducer(anatomyReducer, initialAnatomyState);
   const [rigged, setRigged] = useState<Record<DemoBodyId, boolean> | null>(null);
   const [fitted, setFitted] = useState<FittedInstalled | null>(null);
+  const [skeleton, setSkeleton] = useState<SkeletonAtlas | null>(null);
+  const [skeletonProblem, setSkeletonProblem] = useState<SkeletonProblem | null>(null);
+  const [skeletonLoad, setSkeletonLoad] = useState<SkeletonLoad>({ kind: "idle" });
 
   useEffect(() => {
     if (!enabled) return;
@@ -72,6 +108,8 @@ export const useAnatomyView = (enabled: boolean) => {
         if (cancelled) return;
         setRigged(parseRiggedStatus(value));
         setFitted(parseFittedStatus(value));
+        setSkeleton(parseSkeletonStatus(value));
+        setSkeletonProblem(parseSkeletonProblem(value));
         // ANATOMY_FITTED_ATLAS starts "Fit atlas to body" on; the toggle is
         // not shown before the status answers, so this never undoes a choice.
         if (parseFittedDefault(value)) dispatch({ type: "fitAtlas", on: true });
@@ -89,5 +127,18 @@ export const useAnatomyView = (enabled: boolean) => {
 
   const onLoad = useCallback((load: AnatomyLoad) => dispatch({ type: "load", load }), []);
 
-  return { state, dispatch, installed: state.installed, rigged, fitted, onLoad };
+  const onSkeletonLoad = useCallback((load: SkeletonLoad) => setSkeletonLoad(load), []);
+
+  return {
+    state,
+    dispatch,
+    installed: state.installed,
+    rigged,
+    fitted,
+    skeleton,
+    skeletonProblem,
+    skeletonLoad,
+    onLoad,
+    onSkeletonLoad,
+  };
 };

@@ -11,7 +11,13 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { ACESFilmicToneMapping, type Group, PerspectiveCamera } from "three";
+import {
+  ACESFilmicToneMapping,
+  Box3,
+  type Group,
+  PerspectiveCamera,
+  Vector3,
+} from "three";
 import { type OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 import type { VitronicPropertyRow } from "@/features/vitronic/vitronic-status-view";
@@ -30,6 +36,7 @@ import {
 import { type Highlight } from "@/packages/anatomy/highlight";
 import { ATLASES, type AtlasScheme } from "@/packages/anatomy/manifest";
 import { RIGGED_ATTRIBUTION, riggedBodyApiUrl } from "@/packages/anatomy/rigged-bodies";
+import { spreadBox } from "@/packages/anatomy/framing";
 import { Button } from "@/infrastructure/ui-kit/button";
 import {
   CollapsiblePanel,
@@ -39,6 +46,7 @@ import { Field } from "@/infrastructure/ui-kit/field";
 import { Legend } from "@/infrastructure/ui-kit/legend";
 import { AnatomyControls } from "./anatomy/anatomy-controls";
 import { AnatomyLayers } from "./anatomy/anatomy-layers";
+import { skeletonInView } from "./anatomy/anatomy-state";
 import { demoStanceFor, fittedAvailable, fittedShown } from "./anatomy/fitted-option";
 import { highlightValue } from "./anatomy/highlight-options";
 import { BodyPanel, type BodyPanelProps, type PanelTab } from "./body-panel";
@@ -660,10 +668,32 @@ export const BodyLoopAvatar = ({
     onPanel({ type: "query", query: "" });
   }, [subjectId, bodyKey]);
   // A part a toggle or the slider has hidden has no card either.
-  const { targetDepth, layers: shownLayers, hiddenSystems } = anatomy.state;
+  const { targetDepth, layers: shownLayers, hiddenSystems, isolate } = anatomy.state;
+  // The CT skeleton, when it is what the view is about, is what the camera frames.
+  const skeletonView = skeletonInView(
+    anatomy.state,
+    anatomy.skeleton,
+    anatomy.skeletonLoad,
+  );
+  const skeletonBox =
+    anatomy.skeletonLoad.kind === "ready" ? anatomy.skeletonLoad.box : null;
+  const spread = anatomy.state.explode;
+  const skeletonFocus = useMemo(
+    () =>
+      skeletonView && skeletonBox
+        ? spreadBox(
+            new Box3(
+              new Vector3().fromArray(skeletonBox.min),
+              new Vector3().fromArray(skeletonBox.max),
+            ),
+            spread,
+          )
+        : null,
+    [skeletonView, skeletonBox, spread],
+  );
   const pickedShown =
     picked === null ||
-    pickVisible(picked.target, targetDepth, shownLayers, hiddenSystems);
+    pickVisible(picked.target, targetDepth, shownLayers, hiddenSystems, isolate);
   useEffect(() => {
     if (!pickedShown) setPicked(null);
   }, [pickedShown]);
@@ -802,6 +832,7 @@ export const BodyLoopAvatar = ({
             camera={camera}
             showLandmarks={body.kind === "scan" && showLandmarks}
             resetKey={resetKey}
+            focus={motion.clip ? null : skeletonFocus}
             autoRotate={autoRotate}
             onUserRotate={onUserRotate}
             markers={body.kind === "scan" ? shownMarkers : NO_MARKERS}
@@ -843,6 +874,11 @@ export const BodyLoopAvatar = ({
             reducedMotion={reducedMotion}
             onLoad={anatomy.onLoad}
             onPick={onPick}
+            // Like the depth, isolate gives way while the body moves.
+            isolate={motion.clip ? null : anatomy.state.isolate}
+            explode={anatomy.state.explode}
+            skeleton={anatomy.state.ctSkeleton ? anatomy.skeleton : null}
+            onSkeletonLoad={anatomy.onSkeletonLoad}
             liveVitals={{
               enabled: liveOn,
               vitals: liveVitals,
@@ -1108,6 +1144,9 @@ export const BodyLoopAvatar = ({
                     installed={anatomy.installed}
                     dispatch={anatomy.dispatch}
                     onInteract={onUserRotate}
+                    skeleton={anatomy.skeleton}
+                    skeletonProblem={anatomy.skeletonProblem}
+                    skeletonLoad={anatomy.skeletonLoad}
                     envelope="demo"
                     // BodyMotion poses a body to its stance once it has a rig binding.
                     posed={motion.binding !== null}
@@ -1261,6 +1300,9 @@ export const BodyLoopAvatar = ({
                             installed={anatomy.installed}
                             dispatch={anatomy.dispatch}
                             onInteract={onUserRotate}
+                            skeleton={anatomy.skeleton}
+                            skeletonProblem={anatomy.skeletonProblem}
+                            skeletonLoad={anatomy.skeletonLoad}
                           />
                         ),
                         panel: scanPanel,

@@ -4,9 +4,11 @@ import {
   applyMask,
   dampDepth,
   depthPosition,
+  drawnIsolate,
   layerMix,
   snapDepth,
   stepStop,
+  viewMix,
   type LayerId,
 } from "./layers";
 
@@ -99,5 +101,46 @@ describe("stops", () => {
     expect(depthPosition(2)).toEqual({ exact: "skeleton" });
     expect(depthPosition(1.5)).toEqual({ between: ["muscle", "skeleton"] });
     expect(depthPosition(0.3)).toEqual({ between: ["scan", "muscle"] });
+  });
+});
+
+describe("viewMix", () => {
+  test("without isolate it is layerMix", () => {
+    for (const depth of [0, 0.7, 1.5, 2, 3]) {
+      for (const layer of ["scan", "muscle", "skeleton", "organs"] as const) {
+        expect(viewMix(layer, depth, null)).toEqual(layerMix(layer, depth));
+      }
+    }
+  });
+
+  test("isolate draws one layer solid at any depth and hides the rest, scan included", () => {
+    for (const depth of [0, 2, 3]) {
+      expect(viewMix("skeleton", depth, "skeleton")).toEqual({
+        alpha: 1,
+        fade: 0,
+        visible: true,
+      });
+      for (const layer of ["scan", "muscle", "organs"] as const) {
+        expect(viewMix(layer, depth, "skeleton")).toEqual({
+          alpha: 0,
+          fade: 0,
+          visible: false,
+        });
+      }
+    }
+  });
+});
+
+describe("drawnIsolate", () => {
+  test("isolate hides the scan only once the isolated layer is showing", () => {
+    const nothing = () => false;
+    const skeleton = (layer: string) => layer === "skeleton";
+    // Loading, or after a failed load or fit: the scan stays.
+    expect(drawnIsolate("skeleton", nothing)).toBeNull();
+    expect(viewMix("scan", 0, drawnIsolate("skeleton", nothing)).visible).toBe(true);
+    // Placed and showing: the skeleton alone.
+    expect(drawnIsolate("skeleton", skeleton)).toBe("skeleton");
+    expect(viewMix("scan", 0, drawnIsolate("skeleton", skeleton)).visible).toBe(false);
+    expect(drawnIsolate(null, skeleton)).toBeNull();
   });
 });

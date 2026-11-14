@@ -199,3 +199,72 @@ describe("pickVisible", () => {
     ).toBe(true);
   });
 });
+
+describe("CT skeleton parts", () => {
+  const RIB: PickablePart = {
+    layer: "skeleton",
+    system: "musculoskeletal",
+    group: "fma_7987",
+    ontologyId: "FMA:7987",
+    label: "Left first rib",
+    modelled: false,
+    ct: true,
+  };
+  const CARTILAGES: PickablePart = {
+    ...RIB,
+    group: "fma_85213",
+    ontologyId: "FMA:85213",
+    label: "Set of costal cartilages",
+    modelled: true,
+  };
+
+  test("a bone reads as its own name and lights only itself", () => {
+    const target = pickTarget(RIB, []);
+    expect(target).toEqual({
+      kind: "part",
+      label: "Left first rib",
+      layer: "skeleton",
+      system: "musculoskeletal",
+      group: "fma_7987",
+      ontologyId: "FMA:7987",
+      ct: true,
+      modelled: false,
+    });
+    expect(pickHighlight(target)).toEqual({ kind: "groups", ids: ["fma_7987"] });
+  });
+
+  test("a modelled part says so", () => {
+    expect(pickTarget(CARTILAGES, [])).toMatchObject({ modelled: true, ct: true });
+  });
+
+  test("atlas parts carry no CT fields", () => {
+    expect(pickTarget(PELVIS, [])).not.toHaveProperty("ct");
+    expect(pickTarget(PELVIS, [])).not.toHaveProperty("modelled");
+  });
+});
+
+describe("isolate", () => {
+  test("with the skeleton isolated a tap goes straight to the bone, not the outline", () => {
+    expect(
+      choosePick(
+        [OUTLINE, { part: BICEPS }, { part: PELVIS }],
+        0,
+        LAYERS,
+        [],
+        "skeleton",
+      ),
+    ).toBe(2);
+  });
+
+  test("with the skeleton isolated nothing else can be picked", () => {
+    expect(choosePick([OUTLINE, { part: LIVER }], 3, LAYERS, [], "skeleton")).toBeNull();
+  });
+
+  test("an isolated bone's card stays open at any depth; an organ's closes", () => {
+    const bone = pickTarget(PELVIS, []);
+    const liver = pickTarget(LIVER, []);
+    expect(pickVisible(bone, 0, LAYERS, [], "skeleton")).toBe(true);
+    expect(pickVisible(liver, 3, LAYERS, [], "skeleton")).toBe(false);
+    expect(pickVisible(liver, 3, LAYERS, [], null)).toBe(true);
+  });
+});

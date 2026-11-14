@@ -40,6 +40,42 @@ export type AnatomyLoad =
     }>
   | Readonly<{ kind: "error" }>;
 
+/** Where the open-anatomy CT skeleton's load stands; idle when none is on. */
+export type SkeletonLoad =
+  | Readonly<{ kind: "idle" }>
+  | Readonly<{ kind: "loading" }>
+  | Readonly<{
+      kind: "ready";
+      anchor: "hips" | "bbox";
+      fitOk: boolean;
+      /** Bones drawn, after the ones atlas.json leaves out. */
+      bones: number;
+      /** How many of them open-anatomy built rather than segmented. */
+      modelled: number;
+      /** The placed bones' box in world space, for the camera; null when not placed. */
+      box: Readonly<{ min: readonly number[]; max: readonly number[] }> | null;
+    }>
+  | Readonly<{ kind: "error" }>;
+
+/** The depth of the Skeleton stop. */
+export const SKELETON_STOP = 2;
+
+/**
+ * Whether the CT skeleton is what the view is about: it is on, placed, and the
+ * Skeleton stop or "Only the skeleton" is chosen. The camera frames it then,
+ * and the panel speaks only of it.
+ */
+export const skeletonInView = (
+  state: Pick<AnatomyState, "ctSkeleton" | "isolate" | "targetDepth">,
+  skeleton: unknown,
+  load: SkeletonLoad,
+): boolean =>
+  skeleton !== null &&
+  state.ctSkeleton &&
+  load.kind === "ready" &&
+  load.fitOk &&
+  (state.isolate === "skeleton" || Math.abs(state.targetDepth - SKELETON_STOP) < 0.02);
+
 export type AnatomyState = Readonly<{
   /** Latches true the first time anyone slides past the scan or opens a layer. */
   requested: boolean;
@@ -57,6 +93,12 @@ export type AnatomyState = Readonly<{
    */
   fitAtlas: boolean;
   layers: Readonly<Record<AtlasLayerId, boolean>>;
+  /** One layer shown alone and solid, the scan and the rest hidden; null shows all. */
+  isolate: AtlasLayerId | null;
+  /** How far the CT skeleton's bones are spread apart, 0 (as built) to 1. */
+  explode: number;
+  /** The Skeleton layer draws the open-anatomy CT skeleton when one is configured. */
+  ctSkeleton: boolean;
   hiddenSystems: readonly OrganSystem[];
   /** What glows, if anything. Group keys are atlas-specific, so an atlas switch clears it. */
   highlight: Highlight | null;
@@ -83,6 +125,9 @@ export type AnatomyAction =
   | Readonly<{ type: "bodySex"; sex: BodySex | null }>
   | Readonly<{ type: "fitAtlas"; on: boolean }>
   | Readonly<{ type: "toggleLayer"; layer: AtlasLayerId }>
+  | Readonly<{ type: "isolate"; layer: AtlasLayerId | null }>
+  | Readonly<{ type: "explode"; amount: number }>
+  | Readonly<{ type: "ctSkeleton"; on: boolean }>
   | Readonly<{ type: "toggleSystem"; system: OrganSystem }>
   | Readonly<{ type: "highlight"; highlight: Highlight | null; from?: HighlightFrom }>
   | Readonly<{ type: "load"; load: AnatomyLoad }>
@@ -97,6 +142,9 @@ export const initialAnatomyState: AnatomyState = {
   atlasChosen: false,
   fitAtlas: false,
   layers: { muscle: true, skeleton: true, organs: true },
+  isolate: null,
+  explode: 0,
+  ctSkeleton: true,
   hiddenSystems: [],
   highlight: null,
   highlightFrom: null,
@@ -172,6 +220,26 @@ export const anatomyReducer = (
         ...state,
         layers: { ...state.layers, [action.layer]: !state.layers[action.layer] },
       };
+    case "isolate":
+      // Isolating a layer loads the anatomy and turns that layer's toggle on,
+      // so the one layer left is never a hidden one.
+      return action.layer === null
+        ? { ...state, isolate: null }
+        : {
+            ...state,
+            isolate: action.layer,
+            requested: true,
+            layers: { ...state.layers, [action.layer]: true },
+          };
+    case "explode":
+      return {
+        ...state,
+        explode: Number.isFinite(action.amount)
+          ? Math.min(1, Math.max(0, action.amount))
+          : 0,
+      };
+    case "ctSkeleton":
+      return { ...state, ctSkeleton: action.on };
     case "toggleSystem":
       return {
         ...state,

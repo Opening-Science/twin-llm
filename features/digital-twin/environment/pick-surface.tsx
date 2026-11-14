@@ -51,6 +51,7 @@ export const PickSurface = ({
   getDepth,
   layers,
   hiddenSystems,
+  isolate = null,
   onPick,
 }: Readonly<{
   enabled: boolean;
@@ -61,6 +62,8 @@ export const PickSurface = ({
   getDepth: () => number;
   layers: Readonly<Record<AtlasLayerId, boolean>>;
   hiddenSystems: readonly OrganSystem[];
+  /** The layer shown alone, if any. */
+  isolate?: AtlasLayerId | null;
   /** null: the tap hit nothing that draws. */
   onPick: (picked: Picked | null) => void;
 }>) => {
@@ -76,6 +79,7 @@ export const PickSurface = ({
     getDepth,
     layers,
     hiddenSystems,
+    isolate,
     onPick,
   });
   useEffect(() => {
@@ -87,6 +91,7 @@ export const PickSurface = ({
       getDepth,
       layers,
       hiddenSystems,
+      isolate,
       onPick,
     };
   });
@@ -113,7 +118,13 @@ export const PickSurface = ({
         part: now.byMesh.get(hit.object as Mesh) ?? null,
         point: hit.point,
       }));
-      const index = choosePick(mapped, now.getDepth(), now.layers, now.hiddenSystems);
+      const index = choosePick(
+        mapped,
+        now.getDepth(),
+        now.layers,
+        now.hiddenSystems,
+        now.isolate,
+      );
       const chosen = index === null ? null : mapped[index]!;
       now.onPick(
         chosen

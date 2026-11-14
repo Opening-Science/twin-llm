@@ -501,6 +501,17 @@ const serverEnvSchema = z
     VITRONIC_SCANNER_HOSTS: maybeText(),
     ANATOMY_DATA_DIR: maybeText(),
     ANATOMY_FITTED_ATLAS: blankableFlag(),
+    ANATOMY_SKELETON_GLB: z.preprocess(
+      blankAsMissing,
+      z
+        .string()
+        .regex(
+          /^\/.+\.glb$/i,
+          "ANATOMY_SKELETON_GLB must be an absolute path to a .glb file",
+        )
+        .optional(),
+    ),
+    ANATOMY_SKELETON_SHA256: hexKey("ANATOMY_SKELETON_SHA256"),
     TWINLLM_STATE_DIR: z.preprocess(
       blankAsMissing,
       z.string().regex(/^\//, "TWINLLM_STATE_DIR must be an absolute path").optional(),
@@ -527,6 +538,18 @@ const serverEnvSchema = z
     if (env.LOCAL_ONLY) checkLocalOnly(env, authOff, report);
     checkRemoteGpu(env, report);
     checkExoscale(env, report);
+
+    // The skeleton route serves only the file it was pinned to, like the atlases.
+    if (
+      env.ANATOMY_SKELETON_GLB !== undefined &&
+      env.ANATOMY_SKELETON_SHA256 === undefined
+    ) {
+      report({
+        path: "ANATOMY_SKELETON_SHA256",
+        message:
+          "ANATOMY_SKELETON_SHA256 must be set with ANATOMY_SKELETON_GLB (sha256sum of the .glb)",
+      });
+    }
 
     // Carbon-X reads genotypes, so it may only ever be the sidecar on this machine.
     if (env.CARBON_X_URL !== undefined && !isLoopbackUrl(env.CARBON_X_URL)) {
@@ -859,15 +882,22 @@ export type AnatomyEnv = Readonly<{
    * Blender-fitted atlases are installed. Off unless ANATOMY_FITTED_ATLAS=true.
    */
   fittedAtlasOn: boolean;
+  /**
+   * An open-anatomy skeleton GLB (atlas.json beside it); null means no
+   * skeleton layer. Public CC BY CT data, never committed.
+   */
+  skeletonGlb: string | null;
+  /** The SHA-256 the skeleton GLB must have, lower case; set whenever skeletonGlb is. */
+  skeletonSha256: string | null;
 }>;
 
-export const anatomyEnv = (): AnatomyEnv => {
-  const env = serverEnv();
-  return Object.freeze({
+export const anatomyEnv = (env: ServerEnv = serverEnv()): AnatomyEnv =>
+  Object.freeze({
     dataDir: env.ANATOMY_DATA_DIR ?? null,
     fittedAtlasOn: env.ANATOMY_FITTED_ATLAS,
+    skeletonGlb: env.ANATOMY_SKELETON_GLB ?? null,
+    skeletonSha256: env.ANATOMY_SKELETON_SHA256?.toLowerCase() ?? null,
   });
-};
 
 export type GenomeEnv = Readonly<{
   source: "none" | "ark";
