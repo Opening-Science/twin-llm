@@ -86,7 +86,7 @@ Downloaded by `bun run anatomy:fetch` from the [`anatomy-rigged-v1`](https://git
 
 ## Open Science Foundation logo (committed, not Apache-2.0)
 
-Copied unchanged from [Opening-Science/Open-Science-Foundation-brand-guide](https://github.com/Opening-Science/Open-Science-Foundation-brand-guide) `assets/logo/` @ `0395ce4e33a175b118f3faa9bad7d0769c2ec689`. The hashes match that repository's `assets/logo/manifest.json`, and `features/shell/brand-attribution.test.ts` checks them. Licence: `LICENSES/LicenseRef-OSF-Brand-Assets.txt` (the foundation's Brand Assets Permission), with a `.license` file beside each asset. Scope and provenance upstream: `assets/logo/PROVENANCE.md`.
+Copied unchanged from [Opening-Science/Open-Science-Foundation-brand-guide](https://github.com/Opening-Science/Open-Science-Foundation-brand-guide) `assets/logo/` @ `0395ce4e33a175b118f3faa9bad7d0769c2ec689`. The hashes match that repository's `assets/logo/manifest.json`, and `features/app-shell/brand-line.test.ts` checks them. Licence: `LICENSES/LicenseRef-OSF-Brand-Assets.txt` (the foundation's Brand Assets Permission), with a `.license` file beside each asset. Scope and provenance upstream: `assets/logo/PROVENANCE.md`.
 
 | File                                                              | SHA-256                                                            |
 | ----------------------------------------------------------------- | ------------------------------------------------------------------ |

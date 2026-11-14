@@ -1,5 +1,5 @@
-import { CatalogSkeleton } from "@/features/models/catalog-skeleton";
+import { ModelsSkeleton } from "@/features/models-screen/models-skeleton";
 
 export default function ModelsLoading() {
-  return <CatalogSkeleton />;
+  return <ModelsSkeleton />;
 }

@@ -18,7 +18,7 @@ import {
   WALK_HINT,
 } from "./environment-copy";
 import { GROUND_DROP_M, groundPlacement } from "./environment-world";
-import { RESEARCH_FOOTER_TEXT } from "@/features/shell/research-footer";
+import { RESEARCH_FOOTER_TEXT } from "@/features/app-shell/research-footer";
 
 const noop = () => undefined;
 const BAR: EnvironmentBarProps = {

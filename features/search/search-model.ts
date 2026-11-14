@@ -28,6 +28,8 @@ export type SearchItem = Readonly<{
   title: string;
   /** A line under the title: a matching passage, a description, a path. */
   detail?: string;
+  /** More words that find it without being shown ("sleep" finds the agents page). */
+  keywords?: string;
   /** Where Enter goes. A command has none: it fills the prompt instead. */
   href?: string;
   /** How the thread matched, said in words beside it. */
@@ -80,6 +82,7 @@ export const matchItems = (
       score: Math.max(
         wordScore(query, item.title),
         item.detail ? wordScore(query, item.detail) - 1 : 0,
+        item.keywords ? wordScore(query, item.keywords) - 1 : 0,
       ),
     }))
     .filter(({ score }) => score > 0)

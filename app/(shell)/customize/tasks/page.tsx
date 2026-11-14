@@ -1,6 +1,6 @@
 import { runnableSkills } from "@/features/skills/load-skills";
 import { listUserSkills } from "@/features/skills/user-skill-store";
-import { listThreadHistory } from "@/features/shell/load-threads";
+import { threadsForViewer } from "@/features/app-shell/load-threads";
 import { listTasks } from "@/features/tasks/task-store";
 import { TasksPanel } from "@/features/tasks/tasks-panel";
 import { lockedScreen } from "@/features/vault/page-gate";
@@ -26,7 +26,7 @@ export default async function CustomizeTasksPage() {
   const [tasks, yours, threads, catalog] = await Promise.all([
     userId === null ? [] : listTasks(userId),
     userId === null ? [] : listUserSkills(userId),
-    userId === null ? [] : listThreadHistory(userId),
+    threadsForViewer(userId),
     fetchChatCatalog(shipped),
   ]);
   return (
@@ -39,7 +39,6 @@ export default async function CustomizeTasksPage() {
       ]}
       models={(catalog ?? []).map((model) => ({ id: model.id, label: model.name }))}
       threads={threads
-        .flatMap((group) => group.threads)
         .slice(0, 50)
         .map((thread) => ({ id: thread.id, label: thread.title }))}
       actions={{
