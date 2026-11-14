@@ -1,0 +1,85 @@
+{
+  "_readme": [
+    "Recorded output of the HL7 FHIR validator over this package fixtures.",
+    "Regenerate with: OT_HL7_VALIDATOR_JAR=... pnpm --filter @open-twin/fhir-r4 oracle",
+    "Flags: -version 4.0.1 -ig verify/conformance/generated -tx n/a -best-practice ignore",
+    "       -jurisdiction uv -output-style compact -level errors",
+    "An empty errors array means the validator considers the bundle conformant."
+  ],
+  "verdicts": {
+    "valid-baseline": {
+      "errors": []
+    },
+    "normalised-hl7-vitals": {
+      "errors": []
+    },
+    "normalised-hl7-lipids": {
+      "errors": [
+        "Bundle.entry[0].resource/*DiagnosticReport/987d3dc5-adfd-544f-a04a-f76b82b09592*/.identifier[0].system: Example URLs are not allowed in this context (http://acme.com/lab/reports)"
+      ]
+    },
+    "fullurl-not-a-uuid": {
+      "errors": ["Bundle.entry[1].fullUrl: UUIDs must be valid and lowercase (oura-activity-123)"]
+    },
+    "fullurl-uppercase-uuid": {
+      "errors": ["Bundle.entry[1].fullUrl: UUIDs must be valid and lowercase (7F5C1A0E-4D63-4A2B-9C18-8E3B6F4A1D92)"]
+    },
+    "fullurl-duplicate": {
+      "errors": [
+        "Bundle: Constraint failed: bdl-7: 'FullUrl must be unique in a bundle, or else entries with the same fullUrl must have different meta.versionId (except in history bundles)'"
+      ]
+    },
+    "fullurl-version-specific": {
+      "errors": [
+        "Bundle.entry[0]: The fullUrl 'https://example.org/fhir/Observation/hr1/_history/2' looks like a RESTful server URL, so it must end with the correct type and id (/Observation/7f5c1a0e-4d63-4a2b-9c18-8e3b6f4a1d92)",
+        "Bundle.entry[1]: Constraint failed: bdl-8: 'fullUrl cannot be a version specific reference'"
+      ]
+    },
+    "fullurl-addresses-another-resource": {
+      "errors": [
+        "Bundle.entry[0]: The fullUrl 'https://example.org/fhir/Observation/some-other-observation' looks like a RESTful server URL, so it must end with the correct type and id (/Observation/7f5c1a0e-4d63-4a2b-9c18-8e3b6f4a1d92)"
+      ]
+    },
+    "fullurl-relative": {
+      "errors": ["Bundle.entry[0]: The fullUrl must be an absolute URL (not 'Observation/hr1')"]
+    },
+    "obs-6-value-and-data-absent-reason": {
+      "errors": [
+        "Bundle.entry[1].resource/*Observation/7f5c1a0e-4d63-4a2b-9c18-8e3b6f4a1d92*/: Constraint failed: obs-6: 'dataAbsentReason SHALL only be present if Observation.value[x] is not present' (defined in http://hl7.org/fhir/StructureDefinition/Observation)"
+      ]
+    },
+    "observation-two-values": {
+      "errors": ["Bundle.entry[1].resource: Unrecognized property 'valueString'"]
+    },
+    "observation-missing-status": {
+      "errors": [
+        "Bundle.entry[1].resource/*Observation/7f5c1a0e-4d63-4a2b-9c18-8e3b6f4a1d92*/: Observation.status: minimum required = 1, but only found 0 (from http://hl7.org/fhir/StructureDefinition/Observation|4.0.1)",
+        "Bundle.entry[1].resource/*Observation/7f5c1a0e-4d63-4a2b-9c18-8e3b6f4a1d92*/: Observation.status: minimum required = 1, but only found 0 (from http://hl7.org/fhir/StructureDefinition/heartrate|4.0.1)"
+      ]
+    },
+    "unknown-resource-type": {
+      "errors": [
+        "Bundle.entry[1]: Constraint failed: bdl-5: 'must be a resource unless there's a request or response'",
+        "Bundle.entry[1].resource: Contained resource does not appear to be a FHIR resource (unknown name 'Scan')"
+      ]
+    },
+    "dangling-urn-reference": {
+      "errors": []
+    },
+    "ucum-bare-steps": {
+      "errors": []
+    },
+    "unit-policy-seconds-under-a-minutes-code": {
+      "errors": []
+    },
+    "unit-policy-height-in-inches": {
+      "errors": []
+    },
+    "unit-dimension-mismatch": {
+      "errors": []
+    },
+    "quantity-without-a-system": {
+      "errors": []
+    }
+  }
+}

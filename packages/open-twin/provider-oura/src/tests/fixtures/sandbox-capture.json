@@ -1,0 +1,1294 @@
+{
+  "daily_activity": {
+    "data": [
+      {
+        "active_calories": 200,
+        "average_met_minutes": 10,
+        "class_5_min": "3241312341234123",
+        "contributors": {
+          "meet_daily_targets": 64,
+          "move_every_hour": 83,
+          "recovery_time": 56,
+          "stay_active": 99,
+          "training_frequency": 70,
+          "training_volume": 60
+        },
+        "day": "2024-01-01",
+        "equivalent_walking_distance": 2000,
+        "high_activity_met_minutes": 200,
+        "high_activity_time": 200,
+        "id": "daily_activity-1-2024-1-1",
+        "inactivity_alerts": 20,
+        "low_activity_met_minutes": 20,
+        "low_activity_time": 20,
+        "medium_activity_met_minutes": 20,
+        "medium_activity_time": 40,
+        "met": {
+          "interval": 60,
+          "items": [54, 73, 82, 90, 100, 110, 120, 130, 140, 150],
+          "timestamp": "2021-01-01T00:00:00.000+00:00"
+        },
+        "meters_to_target": 2000,
+        "non_wear_time": 20,
+        "resting_time": 20,
+        "score": 74,
+        "sedentary_met_minutes": 20,
+        "sedentary_time": 20,
+        "steps": 20000,
+        "target_calories": 2400,
+        "target_meters": 2000,
+        "timestamp": "2024-01-01T00:00:00.000+00:00",
+        "total_calories": 3000
+      },
+      {
+        "active_calories": 100,
+        "average_met_minutes": 10,
+        "class_5_min": "12341231231234",
+        "contributors": {
+          "meet_daily_targets": 74,
+          "move_every_hour": 90,
+          "recovery_time": 70,
+          "stay_active": 80,
+          "training_frequency": 60,
+          "training_volume": 50
+        },
+        "day": "2024-01-02",
+        "equivalent_walking_distance": 1000,
+        "high_activity_met_minutes": 100,
+        "high_activity_time": 100,
+        "id": "daily_activity-0-2024-1-2",
+        "inactivity_alerts": 10,
+        "low_activity_met_minutes": 10,
+        "low_activity_time": 10,
+        "medium_activity_met_minutes": 50,
+        "medium_activity_time": 50,
+        "met": {
+          "interval": 60,
+          "items": [54, 73, 82, 90, 100, 110, 120, 130, 140, 150],
+          "timestamp": "2021-01-01T00:00:00.000+00:00"
+        },
+        "meters_to_target": 1000,
+        "non_wear_time": 10,
+        "resting_time": 10,
+        "score": 84,
+        "sedentary_met_minutes": 10,
+        "sedentary_time": 10,
+        "steps": 10000,
+        "target_calories": 2000,
+        "target_meters": 1000,
+        "timestamp": "2024-01-02T00:00:00.000+00:00",
+        "total_calories": 2000
+      },
+      {
+        "active_calories": 200,
+        "average_met_minutes": 10,
+        "class_5_min": "3241312341234123",
+        "contributors": {
+          "meet_daily_targets": 64,
+          "move_every_hour": 83,
+          "recovery_time": 56,
+          "stay_active": 99,
+          "training_frequency": 70,
+          "training_volume": 60
+        },
+        "day": "2024-01-03",
+        "equivalent_walking_distance": 2000,
+        "high_activity_met_minutes": 200,
+        "high_activity_time": 200,
+        "id": "daily_activity-1-2024-1-3",
+        "inactivity_alerts": 20,
+        "low_activity_met_minutes": 20,
+        "low_activity_time": 20,
+        "medium_activity_met_minutes": 20,
+        "medium_activity_time": 40,
+        "met": {
+          "interval": 60,
+          "items": [54, 73, 82, 90, 100, 110, 120, 130, 140, 150],
+          "timestamp": "2021-01-01T00:00:00.000+00:00"
+        },
+        "meters_to_target": 2000,
+        "non_wear_time": 20,
+        "resting_time": 20,
+        "score": 74,
+        "sedentary_met_minutes": 20,
+        "sedentary_time": 20,
+        "steps": 20000,
+        "target_calories": 2400,
+        "target_meters": 2000,
+        "timestamp": "2024-01-03T00:00:00.000+00:00",
+        "total_calories": 3000
+      },
+      {
+        "active_calories": 100,
+        "average_met_minutes": 10,
+        "class_5_min": "12341231231234",
+        "contributors": {
+          "meet_daily_targets": 74,
+          "move_every_hour": 90,
+          "recovery_time": 70,
+          "stay_active": 80,
+          "training_frequency": 60,
+          "training_volume": 50
+        },
+        "day": "2024-01-04",
+        "equivalent_walking_distance": 1000,
+        "high_activity_met_minutes": 100,
+        "high_activity_time": 100,
+        "id": "daily_activity-0-2024-1-4",
+        "inactivity_alerts": 10,
+        "low_activity_met_minutes": 10,
+        "low_activity_time": 10,
+        "medium_activity_met_minutes": 50,
+        "medium_activity_time": 50,
+        "met": {
+          "interval": 60,
+          "items": [54, 73, 82, 90, 100, 110, 120, 130, 140, 150],
+          "timestamp": "2021-01-01T00:00:00.000+00:00"
+        },
+        "meters_to_target": 1000,
+        "non_wear_time": 10,
+        "resting_time": 10,
+        "score": 84,
+        "sedentary_met_minutes": 10,
+        "sedentary_time": 10,
+        "steps": 10000,
+        "target_calories": 2000,
+        "target_meters": 1000,
+        "timestamp": "2024-01-04T00:00:00.000+00:00",
+        "total_calories": 2000
+      },
+      {
+        "active_calories": 200,
+        "average_met_minutes": 10,
+        "class_5_min": "3241312341234123",
+        "contributors": {
+          "meet_daily_targets": 64,
+          "move_every_hour": 83,
+          "recovery_time": 56,
+          "stay_active": 99,
+          "training_frequency": 70,
+          "training_volume": 60
+        },
+        "day": "2024-01-05",
+        "equivalent_walking_distance": 2000,
+        "high_activity_met_minutes": 200,
+        "high_activity_time": 200,
+        "id": "daily_activity-1-2024-1-5",
+        "inactivity_alerts": 20,
+        "low_activity_met_minutes": 20,
+        "low_activity_time": 20,
+        "medium_activity_met_minutes": 20,
+        "medium_activity_time": 40,
+        "met": {
+          "interval": 60,
+          "items": [54, 73, 82, 90, 100, 110, 120, 130, 140, 150],
+          "timestamp": "2021-01-01T00:00:00.000+00:00"
+        },
+        "meters_to_target": 2000,
+        "non_wear_time": 20,
+        "resting_time": 20,
+        "score": 74,
+        "sedentary_met_minutes": 20,
+        "sedentary_time": 20,
+        "steps": 20000,
+        "target_calories": 2400,
+        "target_meters": 2000,
+        "timestamp": "2024-01-05T00:00:00.000+00:00",
+        "total_calories": 3000
+      },
+      {
+        "active_calories": 100,
+        "average_met_minutes": 10,
+        "class_5_min": "12341231231234",
+        "contributors": {
+          "meet_daily_targets": 74,
+          "move_every_hour": 90,
+          "recovery_time": 70,
+          "stay_active": 80,
+          "training_frequency": 60,
+          "training_volume": 50
+        },
+        "day": "2024-01-06",
+        "equivalent_walking_distance": 1000,
+        "high_activity_met_minutes": 100,
+        "high_activity_time": 100,
+        "id": "daily_activity-0-2024-1-6",
+        "inactivity_alerts": 10,
+        "low_activity_met_minutes": 10,
+        "low_activity_time": 10,
+        "medium_activity_met_minutes": 50,
+        "medium_activity_time": 50,
+        "met": {
+          "interval": 60,
+          "items": [54, 73, 82, 90, 100, 110, 120, 130, 140, 150],
+          "timestamp": "2021-01-01T00:00:00.000+00:00"
+        },
+        "meters_to_target": 1000,
+        "non_wear_time": 10,
+        "resting_time": 10,
+        "score": 84,
+        "sedentary_met_minutes": 10,
+        "sedentary_time": 10,
+        "steps": 10000,
+        "target_calories": 2000,
+        "target_meters": 1000,
+        "timestamp": "2024-01-06T00:00:00.000+00:00",
+        "total_calories": 2000
+      }
+    ],
+    "next_token": null
+  },
+  "daily_cardiovascular_age": {
+    "data": [
+      {
+        "day": "2021-01-01",
+        "id": "daily_cardiovascular_age-1-2024-1-1",
+        "pulse_wave_velocity": null,
+        "vascular_age": 47
+      },
+      {
+        "day": "2021-01-01",
+        "id": "daily_cardiovascular_age-2-2024-1-2",
+        "pulse_wave_velocity": null,
+        "vascular_age": 45
+      },
+      {
+        "day": "2021-01-01",
+        "id": "daily_cardiovascular_age-0-2024-1-3",
+        "pulse_wave_velocity": null,
+        "vascular_age": 50
+      },
+      {
+        "day": "2021-01-01",
+        "id": "daily_cardiovascular_age-1-2024-1-4",
+        "pulse_wave_velocity": null,
+        "vascular_age": 47
+      },
+      {
+        "day": "2021-01-01",
+        "id": "daily_cardiovascular_age-2-2024-1-5",
+        "pulse_wave_velocity": null,
+        "vascular_age": 45
+      },
+      {
+        "day": "2021-01-01",
+        "id": "daily_cardiovascular_age-0-2024-1-6",
+        "pulse_wave_velocity": null,
+        "vascular_age": 50
+      }
+    ],
+    "next_token": null
+  },
+  "daily_readiness": {
+    "data": [
+      {
+        "contributors": {
+          "activity_balance": 70,
+          "body_temperature": 70,
+          "hrv_balance": 80,
+          "previous_day_activity": 90,
+          "previous_night": 60,
+          "recovery_index": 90,
+          "resting_heart_rate": 60,
+          "sleep_balance": 70,
+          "sleep_regularity": null
+        },
+        "day": "2024-01-01",
+        "id": "daily_readiness-0-2024-1-1",
+        "score": 80,
+        "temperature_deviation": 0.5,
+        "temperature_trend_deviation": 0.2,
+        "timestamp": "2024-01-01T00:00:00.000+00:00"
+      },
+      {
+        "contributors": {
+          "activity_balance": 70,
+          "body_temperature": 70,
+          "hrv_balance": 80,
+          "previous_day_activity": 90,
+          "previous_night": 60,
+          "recovery_index": 90,
+          "resting_heart_rate": 60,
+          "sleep_balance": 70,
+          "sleep_regularity": null
+        },
+        "day": "2024-01-02",
+        "id": "daily_readiness-0-2024-1-2",
+        "score": 80,
+        "temperature_deviation": 0.5,
+        "temperature_trend_deviation": 0.2,
+        "timestamp": "2024-01-02T00:00:00.000+00:00"
+      },
+      {
+        "contributors": {
+          "activity_balance": 70,
+          "body_temperature": 70,
+          "hrv_balance": 80,
+          "previous_day_activity": 90,
+          "previous_night": 60,
+          "recovery_index": 90,
+          "resting_heart_rate": 60,
+          "sleep_balance": 70,
+          "sleep_regularity": null
+        },
+        "day": "2024-01-03",
+        "id": "daily_readiness-0-2024-1-3",
+        "score": 80,
+        "temperature_deviation": 0.5,
+        "temperature_trend_deviation": 0.2,
+        "timestamp": "2024-01-03T00:00:00.000+00:00"
+      },
+      {
+        "contributors": {
+          "activity_balance": 70,
+          "body_temperature": 70,
+          "hrv_balance": 80,
+          "previous_day_activity": 90,
+          "previous_night": 60,
+          "recovery_index": 90,
+          "resting_heart_rate": 60,
+          "sleep_balance": 70,
+          "sleep_regularity": null
+        },
+        "day": "2024-01-04",
+        "id": "daily_readiness-0-2024-1-4",
+        "score": 80,
+        "temperature_deviation": 0.5,
+        "temperature_trend_deviation": 0.2,
+        "timestamp": "2024-01-04T00:00:00.000+00:00"
+      },
+      {
+        "contributors": {
+          "activity_balance": 70,
+          "body_temperature": 70,
+          "hrv_balance": 80,
+          "previous_day_activity": 90,
+          "previous_night": 60,
+          "recovery_index": 90,
+          "resting_heart_rate": 60,
+          "sleep_balance": 70,
+          "sleep_regularity": null
+        },
+        "day": "2024-01-05",
+        "id": "daily_readiness-0-2024-1-5",
+        "score": 80,
+        "temperature_deviation": 0.5,
+        "temperature_trend_deviation": 0.2,
+        "timestamp": "2024-01-05T00:00:00.000+00:00"
+      },
+      {
+        "contributors": {
+          "activity_balance": 70,
+          "body_temperature": 70,
+          "hrv_balance": 80,
+          "previous_day_activity": 90,
+          "previous_night": 60,
+          "recovery_index": 90,
+          "resting_heart_rate": 60,
+          "sleep_balance": 70,
+          "sleep_regularity": null
+        },
+        "day": "2024-01-06",
+        "id": "daily_readiness-0-2024-1-6",
+        "score": 80,
+        "temperature_deviation": 0.5,
+        "temperature_trend_deviation": 0.2,
+        "timestamp": "2024-01-06T00:00:00.000+00:00"
+      }
+    ],
+    "next_token": null
+  },
+  "daily_resilience": {
+    "data": [
+      {
+        "contributors": {
+          "daytime_recovery": 90,
+          "sleep_recovery": 90,
+          "stress": 90
+        },
+        "day": "2024-01-01",
+        "id": "daily_resilience-1-2024-1-1",
+        "level": "solid"
+      },
+      {
+        "contributors": {
+          "daytime_recovery": 70,
+          "sleep_recovery": 80,
+          "stress": 90
+        },
+        "day": "2024-01-02",
+        "id": "daily_resilience-0-2024-1-2",
+        "level": "limited"
+      },
+      {
+        "contributors": {
+          "daytime_recovery": 90,
+          "sleep_recovery": 90,
+          "stress": 90
+        },
+        "day": "2024-01-03",
+        "id": "daily_resilience-1-2024-1-3",
+        "level": "solid"
+      },
+      {
+        "contributors": {
+          "daytime_recovery": 70,
+          "sleep_recovery": 80,
+          "stress": 90
+        },
+        "day": "2024-01-04",
+        "id": "daily_resilience-0-2024-1-4",
+        "level": "limited"
+      },
+      {
+        "contributors": {
+          "daytime_recovery": 90,
+          "sleep_recovery": 90,
+          "stress": 90
+        },
+        "day": "2024-01-05",
+        "id": "daily_resilience-1-2024-1-5",
+        "level": "solid"
+      },
+      {
+        "contributors": {
+          "daytime_recovery": 70,
+          "sleep_recovery": 80,
+          "stress": 90
+        },
+        "day": "2024-01-06",
+        "id": "daily_resilience-0-2024-1-6",
+        "level": "limited"
+      }
+    ],
+    "next_token": null
+  },
+  "daily_spo2": {
+    "data": [
+      {
+        "breathing_disturbance_index": 1,
+        "day": "2024-01-01",
+        "id": "daily_spo2-1-2024-1-1",
+        "spo2_percentage": {
+          "average": 93
+        }
+      },
+      {
+        "breathing_disturbance_index": 1,
+        "day": "2024-01-02",
+        "id": "daily_spo2-0-2024-1-2",
+        "spo2_percentage": {
+          "average": 97
+        }
+      },
+      {
+        "breathing_disturbance_index": 1,
+        "day": "2024-01-03",
+        "id": "daily_spo2-1-2024-1-3",
+        "spo2_percentage": {
+          "average": 93
+        }
+      },
+      {
+        "breathing_disturbance_index": 1,
+        "day": "2024-01-04",
+        "id": "daily_spo2-0-2024-1-4",
+        "spo2_percentage": {
+          "average": 97
+        }
+      },
+      {
+        "breathing_disturbance_index": 1,
+        "day": "2024-01-05",
+        "id": "daily_spo2-1-2024-1-5",
+        "spo2_percentage": {
+          "average": 93
+        }
+      },
+      {
+        "breathing_disturbance_index": 1,
+        "day": "2024-01-06",
+        "id": "daily_spo2-0-2024-1-6",
+        "spo2_percentage": {
+          "average": 97
+        }
+      }
+    ],
+    "next_token": null
+  },
+  "daily_stress": {
+    "data": [
+      {
+        "day": "2024-01-01",
+        "day_summary": "stressful",
+        "id": "daily_stress-1-2024-1-1",
+        "recovery_high": 12,
+        "stress_high": 340
+      },
+      {
+        "day": "2024-01-02",
+        "day_summary": "restored",
+        "id": "daily_stress-2-2024-1-2",
+        "recovery_high": 278,
+        "stress_high": 30
+      },
+      {
+        "day": "2024-01-03",
+        "day_summary": "normal",
+        "id": "daily_stress-0-2024-1-3",
+        "recovery_high": 80,
+        "stress_high": 15
+      },
+      {
+        "day": "2024-01-04",
+        "day_summary": "stressful",
+        "id": "daily_stress-1-2024-1-4",
+        "recovery_high": 12,
+        "stress_high": 340
+      },
+      {
+        "day": "2024-01-05",
+        "day_summary": "restored",
+        "id": "daily_stress-2-2024-1-5",
+        "recovery_high": 278,
+        "stress_high": 30
+      },
+      {
+        "day": "2024-01-06",
+        "day_summary": "normal",
+        "id": "daily_stress-0-2024-1-6",
+        "recovery_high": 80,
+        "stress_high": 15
+      }
+    ],
+    "next_token": null
+  },
+  "heartrate": {
+    "data": [
+      {
+        "bpm": 144,
+        "producer_timestamp": null,
+        "source": "workout",
+        "timestamp": "2024-01-01T00:00:00.000Z"
+      },
+      {
+        "bpm": 60,
+        "producer_timestamp": null,
+        "source": "awake",
+        "timestamp": "2024-01-02T00:00:00.000Z"
+      },
+      {
+        "bpm": 144,
+        "producer_timestamp": null,
+        "source": "workout",
+        "timestamp": "2024-01-03T00:00:00.000Z"
+      },
+      {
+        "bpm": 60,
+        "producer_timestamp": null,
+        "source": "awake",
+        "timestamp": "2024-01-04T00:00:00.000Z"
+      },
+      {
+        "bpm": 144,
+        "producer_timestamp": null,
+        "source": "workout",
+        "timestamp": "2024-01-05T00:00:00.000Z"
+      },
+      {
+        "bpm": 60,
+        "producer_timestamp": null,
+        "source": "awake",
+        "timestamp": "2024-01-06T00:00:00.000Z"
+      }
+    ],
+    "next_token": null
+  },
+  "rest_mode_period": {
+    "data": [
+      {
+        "end_day": "2024-01-01",
+        "end_time": "2024-01-01T00:00:00.000+00:00",
+        "episodes": [
+          {
+            "tags": ["generic_excited", "generic_happy"],
+            "timestamp": "2021-01-01T02:00:00.000+02:00"
+          },
+          {
+            "tags": ["generic_airplane"],
+            "timestamp": "2021-01-01T02:00:00.000+02:00"
+          }
+        ],
+        "id": "rest_mode_period-1-2024-1-1",
+        "start_day": "2024-01-01",
+        "start_time": "2024-01-01T00:00:00.000+00:00"
+      },
+      {
+        "end_day": "2024-01-02",
+        "end_time": "2024-01-02T00:00:00.000+00:00",
+        "episodes": [
+          {
+            "tags": ["generic_happy"],
+            "timestamp": "2021-01-01T02:00:00.000+02:00"
+          }
+        ],
+        "id": "rest_mode_period-0-2024-1-2",
+        "start_day": "2024-01-02",
+        "start_time": "2024-01-02T00:00:00.000+00:00"
+      },
+      {
+        "end_day": "2024-01-03",
+        "end_time": "2024-01-03T00:00:00.000+00:00",
+        "episodes": [
+          {
+            "tags": ["generic_excited", "generic_happy"],
+            "timestamp": "2021-01-01T02:00:00.000+02:00"
+          },
+          {
+            "tags": ["generic_airplane"],
+            "timestamp": "2021-01-01T02:00:00.000+02:00"
+          }
+        ],
+        "id": "rest_mode_period-1-2024-1-3",
+        "start_day": "2024-01-03",
+        "start_time": "2024-01-03T00:00:00.000+00:00"
+      },
+      {
+        "end_day": "2024-01-04",
+        "end_time": "2024-01-04T00:00:00.000+00:00",
+        "episodes": [
+          {
+            "tags": ["generic_happy"],
+            "timestamp": "2021-01-01T02:00:00.000+02:00"
+          }
+        ],
+        "id": "rest_mode_period-0-2024-1-4",
+        "start_day": "2024-01-04",
+        "start_time": "2024-01-04T00:00:00.000+00:00"
+      },
+      {
+        "end_day": "2024-01-05",
+        "end_time": "2024-01-05T00:00:00.000+00:00",
+        "episodes": [
+          {
+            "tags": ["generic_excited", "generic_happy"],
+            "timestamp": "2021-01-01T02:00:00.000+02:00"
+          },
+          {
+            "tags": ["generic_airplane"],
+            "timestamp": "2021-01-01T02:00:00.000+02:00"
+          }
+        ],
+        "id": "rest_mode_period-1-2024-1-5",
+        "start_day": "2024-01-05",
+        "start_time": "2024-01-05T00:00:00.000+00:00"
+      },
+      {
+        "end_day": "2024-01-06",
+        "end_time": "2024-01-06T00:00:00.000+00:00",
+        "episodes": [
+          {
+            "tags": ["generic_happy"],
+            "timestamp": "2021-01-01T02:00:00.000+02:00"
+          }
+        ],
+        "id": "rest_mode_period-0-2024-1-6",
+        "start_day": "2024-01-06",
+        "start_time": "2024-01-06T00:00:00.000+00:00"
+      }
+    ],
+    "next_token": null
+  },
+  "ring_configuration": {
+    "data": [
+      {
+        "color": "glossy_black",
+        "design": "horizon",
+        "firmware_version": null,
+        "hardware_type": "gen3",
+        "id": "ring_configuration-0-2026-7-25",
+        "set_up_at": "2026-07-25T00:00:00.000+00:00",
+        "size": 12
+      }
+    ],
+    "next_token": null
+  },
+  "session": {
+    "data": [
+      {
+        "day": "2024-01-01",
+        "end_datetime": "2024-01-01T00:00:00.000+00:00",
+        "heart_rate": {
+          "interval": 60,
+          "items": [54, 73, 82, 90, 73, 53, 43, 33, 23, 13],
+          "timestamp": "2021-01-01T00:00:00.000+00:00"
+        },
+        "heart_rate_variability": {
+          "interval": 60,
+          "items": [182, 185, 185, 186, 186, 188, 186, 184, 188, 187, 185, 187],
+          "timestamp": "2021-01-01T00:00:00.000+00:00"
+        },
+        "id": "session-1-2024-1-1",
+        "mood": "good",
+        "motion_count": {
+          "interval": 60,
+          "items": [0, 0, 18, 9, 0, 0, 32, 0, 0, 0],
+          "timestamp": "2021-01-01T00:00:00.000+00:00"
+        },
+        "start_datetime": "2024-01-01T00:00:00.000+00:00",
+        "type": "breathing"
+      },
+      {
+        "day": "2024-01-02",
+        "end_datetime": "2024-01-02T00:00:00.000+00:00",
+        "heart_rate": null,
+        "heart_rate_variability": null,
+        "id": "session-2-2024-1-2",
+        "mood": null,
+        "motion_count": null,
+        "start_datetime": "2024-01-02T00:00:00.000+00:00",
+        "type": "meditation"
+      },
+      {
+        "day": "2024-01-03",
+        "end_datetime": "2024-01-03T00:00:00.000+00:00",
+        "heart_rate": {
+          "interval": 60,
+          "items": [54, 73, 82, 90, 100, 110, 120, 130, 140, 150],
+          "timestamp": "2021-01-01T00:00:00.000+00:00"
+        },
+        "heart_rate_variability": {
+          "interval": 60,
+          "items": [54, 73, 82, 90, 100, 110, 120, 130, 140, 150],
+          "timestamp": "2021-01-01T00:00:00.000+00:00"
+        },
+        "id": "session-0-2024-1-3",
+        "mood": "good",
+        "motion_count": {
+          "interval": 60,
+          "items": [0, 0, 18, 9, 0, 0, 32, 0, 0, 0],
+          "timestamp": "2021-01-01T00:00:00.000+00:00"
+        },
+        "start_datetime": "2024-01-03T00:00:00.000+00:00",
+        "type": "breathing"
+      },
+      {
+        "day": "2024-01-04",
+        "end_datetime": "2024-01-04T00:00:00.000+00:00",
+        "heart_rate": {
+          "interval": 60,
+          "items": [54, 73, 82, 90, 73, 53, 43, 33, 23, 13],
+          "timestamp": "2021-01-01T00:00:00.000+00:00"
+        },
+        "heart_rate_variability": {
+          "interval": 60,
+          "items": [182, 185, 185, 186, 186, 188, 186, 184, 188, 187, 185, 187],
+          "timestamp": "2021-01-01T00:00:00.000+00:00"
+        },
+        "id": "session-1-2024-1-4",
+        "mood": "good",
+        "motion_count": {
+          "interval": 60,
+          "items": [0, 0, 18, 9, 0, 0, 32, 0, 0, 0],
+          "timestamp": "2021-01-01T00:00:00.000+00:00"
+        },
+        "start_datetime": "2024-01-04T00:00:00.000+00:00",
+        "type": "breathing"
+      },
+      {
+        "day": "2024-01-05",
+        "end_datetime": "2024-01-05T00:00:00.000+00:00",
+        "heart_rate": null,
+        "heart_rate_variability": null,
+        "id": "session-2-2024-1-5",
+        "mood": null,
+        "motion_count": null,
+        "start_datetime": "2024-01-05T00:00:00.000+00:00",
+        "type": "meditation"
+      },
+      {
+        "day": "2024-01-06",
+        "end_datetime": "2024-01-06T00:00:00.000+00:00",
+        "heart_rate": {
+          "interval": 60,
+          "items": [54, 73, 82, 90, 100, 110, 120, 130, 140, 150],
+          "timestamp": "2021-01-01T00:00:00.000+00:00"
+        },
+        "heart_rate_variability": {
+          "interval": 60,
+          "items": [54, 73, 82, 90, 100, 110, 120, 130, 140, 150],
+          "timestamp": "2021-01-01T00:00:00.000+00:00"
+        },
+        "id": "session-0-2024-1-6",
+        "mood": "good",
+        "motion_count": {
+          "interval": 60,
+          "items": [0, 0, 18, 9, 0, 0, 32, 0, 0, 0],
+          "timestamp": "2021-01-01T00:00:00.000+00:00"
+        },
+        "start_datetime": "2024-01-06T00:00:00.000+00:00",
+        "type": "breathing"
+      }
+    ],
+    "next_token": null
+  },
+  "sleep": {
+    "data": [
+      {
+        "app_sleep_phase_5_min": null,
+        "average_breath": 13,
+        "average_heart_rate": 64,
+        "average_hrv": 56,
+        "awake_time": 24,
+        "bedtime_end": "2024-01-01T00:00:00.000+00:00",
+        "bedtime_start": "2024-01-01T00:00:00.000+00:00",
+        "day": "2024-01-01",
+        "deep_sleep_duration": 30,
+        "efficiency": 70,
+        "heart_rate": {
+          "interval": 60,
+          "items": [73, 84, 64, 54, 44, 45, 55, 77],
+          "timestamp": "2021-01-01T00:00:00.000+00:00"
+        },
+        "hrv": {
+          "interval": 60,
+          "items": [73, 84, 64, 54, 44, 45, 55, 77],
+          "timestamp": "2021-01-01T00:00:00.000+00:00"
+        },
+        "id": "sleep-1-2024-1-1",
+        "latency": 50,
+        "light_sleep_duration": 200,
+        "low_battery_alert": false,
+        "lowest_heart_rate": 54,
+        "movement_30_sec": "123142341232",
+        "period": 1,
+        "readiness": {
+          "contributors": {
+            "activity_balance": 80,
+            "body_temperature": 80,
+            "hrv_balance": 90,
+            "previous_day_activity": 70,
+            "previous_night": 50,
+            "recovery_index": 70,
+            "resting_heart_rate": 60,
+            "sleep_balance": 80
+          },
+          "score": 73,
+          "temperature_deviation": 0.3,
+          "temperature_trend_deviation": 0.1
+        },
+        "readiness_score_delta": 7,
+        "rem_sleep_duration": 58,
+        "restless_periods": 5,
+        "ring_id": null,
+        "sleep_algorithm_version": "v2",
+        "sleep_analysis_reason": null,
+        "sleep_phase_30_sec": null,
+        "sleep_phase_5_min": null,
+        "sleep_score_delta": 12,
+        "time_in_bed": 3000,
+        "total_sleep_duration": 2370,
+        "type": "late_nap"
+      },
+      {
+        "app_sleep_phase_5_min": "12341231231234",
+        "average_breath": 10,
+        "average_heart_rate": 60,
+        "average_hrv": 70,
+        "awake_time": 10,
+        "bedtime_end": "2024-01-02T00:00:00.000+00:00",
+        "bedtime_start": "2024-01-02T00:00:00.000+00:00",
+        "day": "2024-01-02",
+        "deep_sleep_duration": 60,
+        "efficiency": 80,
+        "heart_rate": {
+          "interval": 60,
+          "items": [54, 73, 82, 90, 100, 110, 120, 130, 140, 150],
+          "timestamp": "2021-01-01T00:00:00.000+00:00"
+        },
+        "hrv": {
+          "interval": 60,
+          "items": [54, 73, 82, 90, 100, 110, 120, 130, 140, 150],
+          "timestamp": "2021-01-01T00:00:00.000+00:00"
+        },
+        "id": "sleep-0-2024-1-2",
+        "latency": 90,
+        "light_sleep_duration": 300,
+        "low_battery_alert": false,
+        "lowest_heart_rate": 54,
+        "movement_30_sec": "123124312341234",
+        "period": 1,
+        "readiness": {
+          "contributors": {
+            "activity_balance": 70,
+            "body_temperature": 70,
+            "hrv_balance": 80,
+            "previous_day_activity": 90,
+            "previous_night": 60,
+            "recovery_index": 90,
+            "resting_heart_rate": 60,
+            "sleep_balance": 70
+          },
+          "score": 80,
+          "temperature_deviation": 0.5,
+          "temperature_trend_deviation": 0.2
+        },
+        "readiness_score_delta": 10,
+        "rem_sleep_duration": 60,
+        "restless_periods": 10,
+        "ring_id": null,
+        "sleep_algorithm_version": "v2",
+        "sleep_analysis_reason": null,
+        "sleep_phase_30_sec": null,
+        "sleep_phase_5_min": null,
+        "sleep_score_delta": 10,
+        "time_in_bed": 300,
+        "total_sleep_duration": 360,
+        "type": "long_sleep"
+      },
+      {
+        "app_sleep_phase_5_min": null,
+        "average_breath": 13,
+        "average_heart_rate": 64,
+        "average_hrv": 56,
+        "awake_time": 24,
+        "bedtime_end": "2024-01-03T00:00:00.000+00:00",
+        "bedtime_start": "2024-01-03T00:00:00.000+00:00",
+        "day": "2024-01-03",
+        "deep_sleep_duration": 30,
+        "efficiency": 70,
+        "heart_rate": {
+          "interval": 60,
+          "items": [73, 84, 64, 54, 44, 45, 55, 77],
+          "timestamp": "2021-01-01T00:00:00.000+00:00"
+        },
+        "hrv": {
+          "interval": 60,
+          "items": [73, 84, 64, 54, 44, 45, 55, 77],
+          "timestamp": "2021-01-01T00:00:00.000+00:00"
+        },
+        "id": "sleep-1-2024-1-3",
+        "latency": 50,
+        "light_sleep_duration": 200,
+        "low_battery_alert": false,
+        "lowest_heart_rate": 54,
+        "movement_30_sec": "123142341232",
+        "period": 1,
+        "readiness": {
+          "contributors": {
+            "activity_balance": 80,
+            "body_temperature": 80,
+            "hrv_balance": 90,
+            "previous_day_activity": 70,
+            "previous_night": 50,
+            "recovery_index": 70,
+            "resting_heart_rate": 60,
+            "sleep_balance": 80
+          },
+          "score": 73,
+          "temperature_deviation": 0.3,
+          "temperature_trend_deviation": 0.1
+        },
+        "readiness_score_delta": 7,
+        "rem_sleep_duration": 58,
+        "restless_periods": 5,
+        "ring_id": null,
+        "sleep_algorithm_version": "v2",
+        "sleep_analysis_reason": null,
+        "sleep_phase_30_sec": null,
+        "sleep_phase_5_min": null,
+        "sleep_score_delta": 12,
+        "time_in_bed": 3000,
+        "total_sleep_duration": 2370,
+        "type": "late_nap"
+      },
+      {
+        "app_sleep_phase_5_min": "12341231231234",
+        "average_breath": 10,
+        "average_heart_rate": 60,
+        "average_hrv": 70,
+        "awake_time": 10,
+        "bedtime_end": "2024-01-04T00:00:00.000+00:00",
+        "bedtime_start": "2024-01-04T00:00:00.000+00:00",
+        "day": "2024-01-04",
+        "deep_sleep_duration": 60,
+        "efficiency": 80,
+        "heart_rate": {
+          "interval": 60,
+          "items": [54, 73, 82, 90, 100, 110, 120, 130, 140, 150],
+          "timestamp": "2021-01-01T00:00:00.000+00:00"
+        },
+        "hrv": {
+          "interval": 60,
+          "items": [54, 73, 82, 90, 100, 110, 120, 130, 140, 150],
+          "timestamp": "2021-01-01T00:00:00.000+00:00"
+        },
+        "id": "sleep-0-2024-1-4",
+        "latency": 90,
+        "light_sleep_duration": 300,
+        "low_battery_alert": false,
+        "lowest_heart_rate": 54,
+        "movement_30_sec": "123124312341234",
+        "period": 1,
+        "readiness": {
+          "contributors": {
+            "activity_balance": 70,
+            "body_temperature": 70,
+            "hrv_balance": 80,
+            "previous_day_activity": 90,
+            "previous_night": 60,
+            "recovery_index": 90,
+            "resting_heart_rate": 60,
+            "sleep_balance": 70
+          },
+          "score": 80,
+          "temperature_deviation": 0.5,
+          "temperature_trend_deviation": 0.2
+        },
+        "readiness_score_delta": 10,
+        "rem_sleep_duration": 60,
+        "restless_periods": 10,
+        "ring_id": null,
+        "sleep_algorithm_version": "v2",
+        "sleep_analysis_reason": null,
+        "sleep_phase_30_sec": null,
+        "sleep_phase_5_min": null,
+        "sleep_score_delta": 10,
+        "time_in_bed": 300,
+        "total_sleep_duration": 360,
+        "type": "long_sleep"
+      },
+      {
+        "app_sleep_phase_5_min": null,
+        "average_breath": 13,
+        "average_heart_rate": 64,
+        "average_hrv": 56,
+        "awake_time": 24,
+        "bedtime_end": "2024-01-05T00:00:00.000+00:00",
+        "bedtime_start": "2024-01-05T00:00:00.000+00:00",
+        "day": "2024-01-05",
+        "deep_sleep_duration": 30,
+        "efficiency": 70,
+        "heart_rate": {
+          "interval": 60,
+          "items": [73, 84, 64, 54, 44, 45, 55, 77],
+          "timestamp": "2021-01-01T00:00:00.000+00:00"
+        },
+        "hrv": {
+          "interval": 60,
+          "items": [73, 84, 64, 54, 44, 45, 55, 77],
+          "timestamp": "2021-01-01T00:00:00.000+00:00"
+        },
+        "id": "sleep-1-2024-1-5",
+        "latency": 50,
+        "light_sleep_duration": 200,
+        "low_battery_alert": false,
+        "lowest_heart_rate": 54,
+        "movement_30_sec": "123142341232",
+        "period": 1,
+        "readiness": {
+          "contributors": {
+            "activity_balance": 80,
+            "body_temperature": 80,
+            "hrv_balance": 90,
+            "previous_day_activity": 70,
+            "previous_night": 50,
+            "recovery_index": 70,
+            "resting_heart_rate": 60,
+            "sleep_balance": 80
+          },
+          "score": 73,
+          "temperature_deviation": 0.3,
+          "temperature_trend_deviation": 0.1
+        },
+        "readiness_score_delta": 7,
+        "rem_sleep_duration": 58,
+        "restless_periods": 5,
+        "ring_id": null,
+        "sleep_algorithm_version": "v2",
+        "sleep_analysis_reason": null,
+        "sleep_phase_30_sec": null,
+        "sleep_phase_5_min": null,
+        "sleep_score_delta": 12,
+        "time_in_bed": 3000,
+        "total_sleep_duration": 2370,
+        "type": "late_nap"
+      },
+      {
+        "app_sleep_phase_5_min": "12341231231234",
+        "average_breath": 10,
+        "average_heart_rate": 60,
+        "average_hrv": 70,
+        "awake_time": 10,
+        "bedtime_end": "2024-01-06T00:00:00.000+00:00",
+        "bedtime_start": "2024-01-06T00:00:00.000+00:00",
+        "day": "2024-01-06",
+        "deep_sleep_duration": 60,
+        "efficiency": 80,
+        "heart_rate": {
+          "interval": 60,
+          "items": [54, 73, 82, 90, 100, 110, 120, 130, 140, 150],
+          "timestamp": "2021-01-01T00:00:00.000+00:00"
+        },
+        "hrv": {
+          "interval": 60,
+          "items": [54, 73, 82, 90, 100, 110, 120, 130, 140, 150],
+          "timestamp": "2021-01-01T00:00:00.000+00:00"
+        },
+        "id": "sleep-0-2024-1-6",
+        "latency": 90,
+        "light_sleep_duration": 300,
+        "low_battery_alert": false,
+        "lowest_heart_rate": 54,
+        "movement_30_sec": "123124312341234",
+        "period": 1,
+        "readiness": {
+          "contributors": {
+            "activity_balance": 70,
+            "body_temperature": 70,
+            "hrv_balance": 80,
+            "previous_day_activity": 90,
+            "previous_night": 60,
+            "recovery_index": 90,
+            "resting_heart_rate": 60,
+            "sleep_balance": 70
+          },
+          "score": 80,
+          "temperature_deviation": 0.5,
+          "temperature_trend_deviation": 0.2
+        },
+        "readiness_score_delta": 10,
+        "rem_sleep_duration": 60,
+        "restless_periods": 10,
+        "ring_id": null,
+        "sleep_algorithm_version": "v2",
+        "sleep_analysis_reason": null,
+        "sleep_phase_30_sec": null,
+        "sleep_phase_5_min": null,
+        "sleep_score_delta": 10,
+        "time_in_bed": 300,
+        "total_sleep_duration": 360,
+        "type": "long_sleep"
+      }
+    ],
+    "next_token": null
+  },
+  "vO2_max": {
+    "data": [
+      {
+        "day": "2021-01-01",
+        "id": "vO2_max-1-2024-1-1",
+        "timestamp": "2021-01-01T00:00:00.000+00:00",
+        "vo2_max": 47
+      },
+      {
+        "day": "2021-01-01",
+        "id": "vO2_max-2-2024-1-2",
+        "timestamp": "2021-01-01T00:00:00.000+00:00",
+        "vo2_max": 45
+      },
+      {
+        "day": "2021-01-01",
+        "id": "vO2_max-0-2024-1-3",
+        "timestamp": "2021-01-01T00:00:00.000+00:00",
+        "vo2_max": 50
+      },
+      {
+        "day": "2021-01-01",
+        "id": "vO2_max-1-2024-1-4",
+        "timestamp": "2021-01-01T00:00:00.000+00:00",
+        "vo2_max": 47
+      },
+      {
+        "day": "2021-01-01",
+        "id": "vO2_max-2-2024-1-5",
+        "timestamp": "2021-01-01T00:00:00.000+00:00",
+        "vo2_max": 45
+      },
+      {
+        "day": "2021-01-01",
+        "id": "vO2_max-0-2024-1-6",
+        "timestamp": "2021-01-01T00:00:00.000+00:00",
+        "vo2_max": 50
+      }
+    ],
+    "next_token": null
+  },
+  "workout": {
+    "data": [
+      {
+        "activity": "walking",
+        "calories": 10,
+        "day": "2024-01-01",
+        "distance": 1,
+        "end_datetime": "2024-01-01T00:00:00.000+00:00",
+        "id": "workout-1-2024-1-1",
+        "intensity": "easy",
+        "label": "My Workout",
+        "source": "confirmed",
+        "start_datetime": "2024-01-01T00:00:00.000+00:00"
+      },
+      {
+        "activity": "swimming",
+        "calories": 1000,
+        "day": "2024-01-02",
+        "distance": 200,
+        "end_datetime": "2024-01-02T00:00:00.000+00:00",
+        "id": "workout-2-2024-1-2",
+        "intensity": "moderate",
+        "label": null,
+        "source": "manual",
+        "start_datetime": "2024-01-02T00:00:00.000+00:00"
+      },
+      {
+        "activity": "running",
+        "calories": 100,
+        "day": "2024-01-03",
+        "distance": 10,
+        "end_datetime": "2024-01-03T00:00:00.000+00:00",
+        "id": "workout-0-2024-1-3",
+        "intensity": "hard",
+        "label": "None",
+        "source": "workout_heart_rate",
+        "start_datetime": "2024-01-03T00:00:00.000+00:00"
+      },
+      {
+        "activity": "walking",
+        "calories": 10,
+        "day": "2024-01-04",
+        "distance": 1,
+        "end_datetime": "2024-01-04T00:00:00.000+00:00",
+        "id": "workout-1-2024-1-4",
+        "intensity": "easy",
+        "label": "My Workout",
+        "source": "confirmed",
+        "start_datetime": "2024-01-04T00:00:00.000+00:00"
+      },
+      {
+        "activity": "swimming",
+        "calories": 1000,
+        "day": "2024-01-05",
+        "distance": 200,
+        "end_datetime": "2024-01-05T00:00:00.000+00:00",
+        "id": "workout-2-2024-1-5",
+        "intensity": "moderate",
+        "label": null,
+        "source": "manual",
+        "start_datetime": "2024-01-05T00:00:00.000+00:00"
+      },
+      {
+        "activity": "running",
+        "calories": 100,
+        "day": "2024-01-06",
+        "distance": 10,
+        "end_datetime": "2024-01-06T00:00:00.000+00:00",
+        "id": "workout-0-2024-1-6",
+        "intensity": "hard",
+        "label": "None",
+        "source": "workout_heart_rate",
+        "start_datetime": "2024-01-06T00:00:00.000+00:00"
+      }
+    ],
+    "next_token": null
+  }
+}

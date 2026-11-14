@@ -1,0 +1,2598 @@
+{
+  "schema_version": "anchor-layer.v1",
+  "compiled_at_source_sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+  "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+  "decisions": [
+    "D-a",
+    "D-b",
+    "D-c",
+    "D-d",
+    "D-e"
+  ],
+  "biomarkers": [
+    {
+      "biomarker_id": "BM-001",
+      "name_de": "17-Beta-Östradiol",
+      "loinc_code": "14715-7",
+      "loinc_display": "Estradiol (E2) [Moles/volume] in Serum or Plasma",
+      "tier": "core_tier1",
+      "unit_source": "pmol/l",
+      "unit_ucum": "pmol/L",
+      "system_id": "reproductive",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "gonads"
+      ],
+      "organ_mapping_source": "Reproductive, Endocrine",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 2
+      }
+    },
+    {
+      "biomarker_id": "BM-014",
+      "name_de": "Anti-Müller-Hormon (AMH)",
+      "loinc_code": "83104-0",
+      "loinc_display": "Mullerian inhibiting substance [Mass/volume] in Serum or Plasma by Immunoassay",
+      "tier": "core_tier2",
+      "unit_source": "ng/ml",
+      "unit_ucum": "ng/mL",
+      "system_id": "reproductive",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "gonads"
+      ],
+      "organ_mapping_source": "Reproductive, Endocrine",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 3
+      }
+    },
+    {
+      "biomarker_id": "BM-057",
+      "name_de": "Biotin (Vitamin B7)",
+      "loinc_code": "1980-2",
+      "loinc_display": "Biotin [Mass/volume] in Serum or Plasma",
+      "tier": "core_tier2",
+      "unit_source": "ng/l",
+      "unit_ucum": "ng/L",
+      "system_id": "metabolic",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "micronutrient_status"
+      ],
+      "organ_mapping_source": "Nutritional, Systemic",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 4
+      }
+    },
+    {
+      "biomarker_id": "BM-060",
+      "name_de": "Bor",
+      "loinc_code": "52914-9",
+      "loinc_display": "Boron [Moles/volume] in Serum or Plasma",
+      "tier": "core_tier1",
+      "unit_source": "µg/l",
+      "unit_ucum": "ug/L",
+      "system_id": "metabolic",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "micronutrient_status"
+      ],
+      "organ_mapping_source": "Micronutrient, Systemic",
+      "blocking_flags": "BLOCKING: LOINC property is molar, unit is mass",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 5
+      }
+    },
+    {
+      "biomarker_id": "BM-063",
+      "name_de": "Calcium",
+      "loinc_code": "2000-8",
+      "loinc_display": "Calcium [Moles/volume] in Serum or Plasma",
+      "tier": "core_tier1",
+      "unit_source": "mmol/l",
+      "unit_ucum": "mmol/L",
+      "system_id": "musculoskeletal",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "bone",
+        "electrolyte_balance"
+      ],
+      "organ_mapping_source": "Bone, Mineral Metabolism",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 6
+      }
+    },
+    {
+      "biomarker_id": "BM-064",
+      "name_de": "Calprotectin",
+      "loinc_code": "38445-3",
+      "loinc_display": "Calprotectin [Mass/mass] in Stool",
+      "tier": "core_tier2",
+      "unit_source": "µg/g",
+      "unit_ucum": "ug/g",
+      "system_id": "digestive",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "gut"
+      ],
+      "organ_mapping_source": "Gastrointestinal",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 7
+      }
+    },
+    {
+      "biomarker_id": "BM-072",
+      "name_de": "Cholesterin (gesamt)",
+      "loinc_code": "2093-3",
+      "loinc_display": "Cholesterol [Mass/volume] in Serum or Plasma",
+      "tier": "core_tier1",
+      "unit_source": "mg/dl",
+      "unit_ucum": "mg/dL",
+      "system_id": "cardiovascular",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "lipid_transport",
+        "vasculature",
+        "liver"
+      ],
+      "organ_mapping_source": "Cardiometabolic, Hepatic",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 8
+      }
+    },
+    {
+      "biomarker_id": "BM-077",
+      "name_de": "Cortisol",
+      "loinc_code": "2143-6",
+      "loinc_display": "Cortisol [Mass/volume] in Serum or Plasma",
+      "tier": "core_tier1",
+      "unit_source": "ng/ml",
+      "unit_ucum": "ng/mL",
+      "system_id": "endocrine",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "adrenal"
+      ],
+      "organ_mapping_source": "Adrenal, Endocrine",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 9
+      }
+    },
+    {
+      "biomarker_id": "BM-078",
+      "name_de": "Creatinkinase (CK)",
+      "loinc_code": "2157-6",
+      "loinc_display": "Creatine kinase [Enzymatic activity/volume] in Serum or Plasma",
+      "tier": "core_tier2",
+      "unit_source": "U/l",
+      "unit_ucum": "U/L",
+      "system_id": "musculoskeletal",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "skeletal_muscle"
+      ],
+      "organ_mapping_source": "Musculoskeletal",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 10
+      }
+    },
+    {
+      "biomarker_id": "BM-079",
+      "name_de": "CRP (hochsensitiv)",
+      "loinc_code": "30522-7",
+      "loinc_display": "C reactive protein [Mass/volume] in Serum or Plasma by High sensitivity method",
+      "tier": "core_tier1",
+      "unit_source": "mg/l",
+      "unit_ucum": "mg/L",
+      "system_id": "metabolic",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "systemic_inflammation"
+      ],
+      "organ_mapping_source": "Systemic Inflammation",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 11
+      }
+    },
+    {
+      "biomarker_id": "BM-087",
+      "name_de": "DHEA-S",
+      "loinc_code": "2191-5",
+      "loinc_display": "Dehydroepiandrosterone sulfate [Mass/volume] in Serum or Plasma",
+      "tier": "core_tier1",
+      "unit_source": "ng/ml",
+      "unit_ucum": "ng/mL",
+      "system_id": "endocrine",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "adrenal"
+      ],
+      "organ_mapping_source": "Adrenal",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 12
+      }
+    },
+    {
+      "biomarker_id": "BM-107",
+      "name_de": "Ferritin",
+      "loinc_code": "2276-4",
+      "loinc_display": "Ferritin [Mass/volume] in Serum or Plasma",
+      "tier": "core_tier1",
+      "unit_source": "ng/ml",
+      "unit_ucum": "ng/mL",
+      "system_id": "metabolic",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "bone_marrow_blood",
+        "micronutrient_status"
+      ],
+      "organ_mapping_source": "Hematologic, Nutritional",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 13
+      }
+    },
+    {
+      "biomarker_id": "BM-111",
+      "name_de": "Folsäure (Vitamin B9)",
+      "loinc_code": "2284-8",
+      "loinc_display": "Folate [Mass/volume] in Serum or Plasma",
+      "tier": "core_tier1",
+      "unit_source": "ng/ml",
+      "unit_ucum": "ng/mL",
+      "system_id": "metabolic",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "micronutrient_status"
+      ],
+      "organ_mapping_source": "Nutritional, Systemic",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 14
+      }
+    },
+    {
+      "biomarker_id": "BM-114",
+      "name_de": "freies T3 (FT3)",
+      "loinc_code": "3051-0",
+      "loinc_display": "Triiodothyronine (T3) Free [Mass/volume] in Serum or Plasma",
+      "tier": "core_tier1",
+      "unit_source": "pg/ml",
+      "unit_ucum": "pg/mL",
+      "system_id": "endocrine",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "thyroid"
+      ],
+      "organ_mapping_source": "Thyroid",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 15
+      }
+    },
+    {
+      "biomarker_id": "BM-115",
+      "name_de": "freies T4 (FT4)",
+      "loinc_code": "3024-7",
+      "loinc_display": "Thyroxine (T4) free [Mass/volume] in Serum or Plasma",
+      "tier": "core_tier1",
+      "unit_source": "pg/ml",
+      "unit_ucum": "pg/mL",
+      "system_id": "endocrine",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "thyroid"
+      ],
+      "organ_mapping_source": "Thyroid",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 16
+      }
+    },
+    {
+      "biomarker_id": "BM-119",
+      "name_de": "FSH",
+      "loinc_code": "15067-2",
+      "loinc_display": "Follitropin [Units/volume] in Serum or Plasma",
+      "tier": "core_tier2",
+      "unit_source": "U/l",
+      "unit_ucum": "U/L",
+      "system_id": "endocrine",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "pituitary",
+        "gonads"
+      ],
+      "organ_mapping_source": "Pituitary, Reproductive",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 17
+      }
+    },
+    {
+      "biomarker_id": "BM-123",
+      "name_de": "Gamma-GT (GGT)",
+      "loinc_code": "2324-2",
+      "loinc_display": "Gamma glutamyl transferase [Enzymatic activity/volume] in Serum or Plasma",
+      "tier": "core_tier1",
+      "unit_source": "U/l",
+      "unit_ucum": "U/L",
+      "system_id": "digestive",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "liver",
+        "biliary"
+      ],
+      "organ_mapping_source": "Hepatobiliary",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 18
+      }
+    },
+    {
+      "biomarker_id": "BM-125",
+      "name_de": "Gesamteiweiß",
+      "loinc_code": "2885-2",
+      "loinc_display": "Protein [Mass/volume] in Serum or Plasma",
+      "tier": "core_tier2",
+      "unit_source": "g/l",
+      "unit_ucum": "g/L",
+      "system_id": "digestive",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "liver"
+      ],
+      "organ_mapping_source": "Systemic",
+      "blocking_flags": "NOTE: region assigned by override, confirm",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 19
+      }
+    },
+    {
+      "biomarker_id": "BM-128",
+      "name_de": "Glukose",
+      "loinc_code": "1558-6",
+      "loinc_display": "Fasting glucose [Mass/volume] in Serum or Plasma",
+      "tier": "core_tier1",
+      "unit_source": "mg/dl",
+      "unit_ucum": "mg/dL",
+      "system_id": "metabolic",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "metabolic_glycemic"
+      ],
+      "organ_mapping_source": "Metabolic",
+      "blocking_flags": "NOTE: region assigned by override, confirm",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 20
+      }
+    },
+    {
+      "biomarker_id": "BM-130",
+      "name_de": "GOT (ASAT)",
+      "loinc_code": "1920-8",
+      "loinc_display": "Aspartate aminotransferase [Enzymatic activity/volume] in Serum or Plasma",
+      "tier": "core_tier1",
+      "unit_source": "U/l",
+      "unit_ucum": "U/L",
+      "system_id": "digestive",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "liver",
+        "skeletal_muscle"
+      ],
+      "organ_mapping_source": "Hepatic, Musculoskeletal",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 21
+      }
+    },
+    {
+      "biomarker_id": "BM-132",
+      "name_de": "GPT (ALAT)",
+      "loinc_code": "1742-6",
+      "loinc_display": "Alanine aminotransferase [Enzymatic activity/volume] in Serum or Plasma",
+      "tier": "core_tier1",
+      "unit_source": "U/l",
+      "unit_ucum": "U/L",
+      "system_id": "digestive",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "liver"
+      ],
+      "organ_mapping_source": "Hepatic",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 22
+      }
+    },
+    {
+      "biomarker_id": "BM-136",
+      "name_de": "Harnsäure",
+      "loinc_code": "3084-1",
+      "loinc_display": "Urate [Mass/volume] in Serum or Plasma",
+      "tier": "core_tier2",
+      "unit_source": "mg/dl",
+      "unit_ucum": "mg/dL",
+      "system_id": "metabolic",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "kidney"
+      ],
+      "organ_mapping_source": "Renal, Metabolic",
+      "blocking_flags": "OPEN: region assignment needs a decision",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 23
+      }
+    },
+    {
+      "biomarker_id": "BM-139",
+      "name_de": "HbA1c",
+      "loinc_code": "4548-4",
+      "loinc_display": "Hemoglobin A1c/Hemoglobin.total in Blood",
+      "tier": "core_tier1",
+      "unit_source": "%",
+      "unit_ucum": "%",
+      "system_id": "metabolic",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "metabolic_glycemic"
+      ],
+      "organ_mapping_source": "Metabolic, Pancreatic",
+      "blocking_flags": "NOTE: region assigned by override, confirm",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 24
+      }
+    },
+    {
+      "biomarker_id": "BM-140",
+      "name_de": "HDL-Cholesterin",
+      "loinc_code": "2085-9",
+      "loinc_display": "Cholesterol in HDL [Mass/volume] in Serum or Plasma",
+      "tier": "core_tier1",
+      "unit_source": "mg/dl",
+      "unit_ucum": "mg/dL",
+      "system_id": "cardiovascular",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "lipid_transport",
+        "vasculature",
+        "liver"
+      ],
+      "organ_mapping_source": "Cardiometabolic, Hepatic",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 25
+      }
+    },
+    {
+      "biomarker_id": "BM-154",
+      "name_de": "Holotranscobalamin (aktives B12)",
+      "loinc_code": "72160-5",
+      "loinc_display": "Holo-transcobalamin II [Moles/volume] in Serum",
+      "tier": "core_tier1",
+      "unit_source": "pmol/l",
+      "unit_ucum": "pmol/L",
+      "system_id": "metabolic",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "bone_marrow_blood",
+        "micronutrient_status"
+      ],
+      "organ_mapping_source": "Hematologic, Nutritional",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 26
+      }
+    },
+    {
+      "biomarker_id": "BM-156",
+      "name_de": "Homocystein",
+      "loinc_code": "13965-9",
+      "loinc_display": "Homocysteine [Moles/volume] in Serum or Plasma",
+      "tier": "core_tier2",
+      "unit_source": "µmol/l",
+      "unit_ucum": "umol/L",
+      "system_id": "metabolic",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "micronutrient_status"
+      ],
+      "organ_mapping_source": "Metabolic",
+      "blocking_flags": "NOTE: region assigned by override, confirm",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 27
+      }
+    },
+    {
+      "biomarker_id": "BM-176",
+      "name_de": "Jod",
+      "loinc_code": "2494-3",
+      "loinc_display": "Iodine [Mass/volume] in Serum or Plasma",
+      "tier": "core_tier1",
+      "unit_source": "µg/l",
+      "unit_ucum": "ug/L",
+      "system_id": "metabolic",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "micronutrient_status"
+      ],
+      "organ_mapping_source": "Micronutrient, Systemic",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 28
+      }
+    },
+    {
+      "biomarker_id": "BM-177",
+      "name_de": "Kalium",
+      "loinc_code": "2823-3",
+      "loinc_display": "Potassium [Moles/volume] in Serum or Plasma",
+      "tier": "core_tier1",
+      "unit_source": "mmol/l",
+      "unit_ucum": "mmol/L",
+      "system_id": "metabolic",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "kidney",
+        "electrolyte_balance"
+      ],
+      "organ_mapping_source": "Renal, Electrolyte Balance",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 29
+      }
+    },
+    {
+      "biomarker_id": "BM-186",
+      "name_de": "Kupfer",
+      "loinc_code": "14665-4",
+      "loinc_display": "Copper [Moles/volume] in Serum or Plasma",
+      "tier": "core_tier1",
+      "unit_source": "µg/l",
+      "unit_ucum": "ug/L",
+      "system_id": "metabolic",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "micronutrient_status"
+      ],
+      "organ_mapping_source": "Micronutrient, Systemic",
+      "blocking_flags": "BLOCKING: LOINC property is molar, unit is mass",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 30
+      }
+    },
+    {
+      "biomarker_id": "BM-190",
+      "name_de": "LDL-Cholesterin",
+      "loinc_code": "2089-1",
+      "loinc_display": "Cholesterol in LDL [Mass/volume] in Serum or Plasma",
+      "tier": "core_tier1",
+      "unit_source": "mg/dl",
+      "unit_ucum": "mg/dL",
+      "system_id": "cardiovascular",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "lipid_transport",
+        "vasculature",
+        "liver"
+      ],
+      "organ_mapping_source": "Cardiometabolic, Hepatic",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 31
+      }
+    },
+    {
+      "biomarker_id": "BM-197",
+      "name_de": "LH",
+      "loinc_code": "10501-5",
+      "loinc_display": "Lutropin [Units/volume] in Serum or Plasma",
+      "tier": "core_tier2",
+      "unit_source": "U/l",
+      "unit_ucum": "U/L",
+      "system_id": "endocrine",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "pituitary",
+        "gonads"
+      ],
+      "organ_mapping_source": "Pituitary, Reproductive",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 32
+      }
+    },
+    {
+      "biomarker_id": "BM-200",
+      "name_de": "Lipoprotein (a)",
+      "loinc_code": "10835-7",
+      "loinc_display": "Lipoprotein a [Mass/volume] in Serum or Plasma",
+      "tier": "core_tier1",
+      "unit_source": "mg/dl",
+      "unit_ucum": "mg/dL",
+      "system_id": "cardiovascular",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "lipid_transport",
+        "vasculature",
+        "liver"
+      ],
+      "organ_mapping_source": "Cardiometabolic, Hepatic",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 33
+      }
+    },
+    {
+      "biomarker_id": "BM-258",
+      "name_de": "Magnesium",
+      "loinc_code": "2601-3",
+      "loinc_display": "Magnesium [Moles/volume] in Serum or Plasma",
+      "tier": "core_tier1",
+      "unit_source": "mmol/l",
+      "unit_ucum": "mmol/L",
+      "system_id": "metabolic",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "electrolyte_balance"
+      ],
+      "organ_mapping_source": "Metabolic, Neuromuscular",
+      "blocking_flags": "NOTE: region assigned by override, confirm",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 34
+      }
+    },
+    {
+      "biomarker_id": "BM-286",
+      "name_de": "Natrium",
+      "loinc_code": "2951-2",
+      "loinc_display": "Sodium [Moles/volume] in Serum or Plasma",
+      "tier": "core_tier1",
+      "unit_source": "mmol/l",
+      "unit_ucum": "mmol/L",
+      "system_id": "metabolic",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "kidney",
+        "electrolyte_balance"
+      ],
+      "organ_mapping_source": "Renal, Electrolyte Balance",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 35
+      }
+    },
+    {
+      "biomarker_id": "BM-299",
+      "name_de": "Parathormon (PTH)",
+      "loinc_code": "2731-8",
+      "loinc_display": "Parathyrin.intact [Mass/volume] in Serum or Plasma",
+      "tier": "core_tier1",
+      "unit_source": "pg/ml",
+      "unit_ucum": "pg/mL",
+      "system_id": "endocrine",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "parathyroid",
+        "bone"
+      ],
+      "organ_mapping_source": "Parathyroid, Bone",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 36
+      }
+    },
+    {
+      "biomarker_id": "BM-311",
+      "name_de": "Progesteron",
+      "loinc_code": "14890-8",
+      "loinc_display": "Progesterone [Moles/volume] in Serum or Plasma",
+      "tier": "core_tier1",
+      "unit_source": "nmol/l",
+      "unit_ucum": "nmol/L",
+      "system_id": "reproductive",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "gonads"
+      ],
+      "organ_mapping_source": "Reproductive, Endocrine",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 37
+      }
+    },
+    {
+      "biomarker_id": "BM-312",
+      "name_de": "Prolaktin",
+      "loinc_code": "2842-3",
+      "loinc_display": "Prolactin [Mass/volume] in Serum or Plasma",
+      "tier": "core_tier2",
+      "unit_source": "µg/l",
+      "unit_ucum": "ug/L",
+      "system_id": "endocrine",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "pituitary",
+        "gonads"
+      ],
+      "organ_mapping_source": "Pituitary, Reproductive",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 38
+      }
+    },
+    {
+      "biomarker_id": "BM-315",
+      "name_de": "PSA",
+      "loinc_code": "2857-1",
+      "loinc_display": "Prostate specific Ag [Mass/volume] in Serum or Plasma",
+      "tier": "core_tier2",
+      "unit_source": "ng/ml",
+      "unit_ucum": "ng/mL",
+      "system_id": "reproductive",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "prostate"
+      ],
+      "organ_mapping_source": "Prostate",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 39
+      }
+    },
+    {
+      "biomarker_id": "BM-341",
+      "name_de": "Selen",
+      "loinc_code": "5724-0",
+      "loinc_display": "Selenium [Mass/volume] in Serum or Plasma",
+      "tier": "core_tier1",
+      "unit_source": "µg/l",
+      "unit_ucum": "ug/L",
+      "system_id": "metabolic",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "micronutrient_status"
+      ],
+      "organ_mapping_source": "Micronutrient, Systemic",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 40
+      }
+    },
+    {
+      "biomarker_id": "BM-346",
+      "name_de": "SHBG",
+      "loinc_code": "13967-5",
+      "loinc_display": "Sex hormone binding globulin [Moles/volume] in Serum or Plasma",
+      "tier": "core_tier1",
+      "unit_source": "nmol/l",
+      "unit_ucum": "nmol/L",
+      "system_id": "digestive",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "liver"
+      ],
+      "organ_mapping_source": "Hepatic, Endocrine",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 41
+      }
+    },
+    {
+      "biomarker_id": "BM-358",
+      "name_de": "Testosteron (gesamt)",
+      "loinc_code": "14913-8",
+      "loinc_display": "Testosterone [Moles/volume] in Serum or Plasma",
+      "tier": "core_tier1",
+      "unit_source": "nmol/l",
+      "unit_ucum": "nmol/L",
+      "system_id": "reproductive",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "gonads"
+      ],
+      "organ_mapping_source": "Reproductive, Endocrine",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 42
+      }
+    },
+    {
+      "biomarker_id": "BM-383",
+      "name_de": "Triglyceride",
+      "loinc_code": "2571-8",
+      "loinc_display": "Triglyceride [Mass/volume] in Serum or Plasma",
+      "tier": "core_tier1",
+      "unit_source": "mg/dl",
+      "unit_ucum": "mg/dL",
+      "system_id": "cardiovascular",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "lipid_transport",
+        "vasculature",
+        "liver"
+      ],
+      "organ_mapping_source": "Cardiometabolic, Hepatic",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 43
+      }
+    },
+    {
+      "biomarker_id": "BM-386",
+      "name_de": "TSH",
+      "loinc_code": "3016-3",
+      "loinc_display": "Thyrotropin [Units/volume] in Serum or Plasma",
+      "tier": "core_tier1",
+      "unit_source": "mIU/l",
+      "unit_ucum": "m[IU]/L",
+      "system_id": "endocrine",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "pituitary",
+        "thyroid"
+      ],
+      "organ_mapping_source": "Pituitary, Thyroid Axis",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 44
+      }
+    },
+    {
+      "biomarker_id": "BM-392",
+      "name_de": "Vitamin A",
+      "loinc_code": "2923-1",
+      "loinc_display": "Retinol [Mass/volume] in Serum or Plasma",
+      "tier": "core_tier2",
+      "unit_source": "µg/l",
+      "unit_ucum": "ug/L",
+      "system_id": "metabolic",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "micronutrient_status"
+      ],
+      "organ_mapping_source": "Nutritional, Systemic",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 45
+      }
+    },
+    {
+      "biomarker_id": "BM-393",
+      "name_de": "Vitamin B1 (Thiamin)",
+      "loinc_code": "2998-3",
+      "loinc_display": "Thiamine [Mass/volume] in Blood",
+      "tier": "core_tier2",
+      "unit_source": "µg/l",
+      "unit_ucum": "ug/L",
+      "system_id": "metabolic",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "micronutrient_status"
+      ],
+      "organ_mapping_source": "Nutritional, Systemic",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 46
+      }
+    },
+    {
+      "biomarker_id": "BM-394",
+      "name_de": "Vitamin B12",
+      "loinc_code": "2132-9",
+      "loinc_display": "Cobalamins [Mass/volume] in Serum or Plasma",
+      "tier": "core_tier2",
+      "unit_source": "pg/ml",
+      "unit_ucum": "pg/mL",
+      "system_id": "metabolic",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "micronutrient_status"
+      ],
+      "organ_mapping_source": "Nutritional, Systemic",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 47
+      }
+    },
+    {
+      "biomarker_id": "BM-395",
+      "name_de": "Vitamin B2 (Riboflavin)",
+      "loinc_code": "2924-9",
+      "loinc_display": "Riboflavin [Mass/volume] in Serum or Plasma",
+      "tier": "core_tier1",
+      "unit_source": "µg/l",
+      "unit_ucum": "ug/L",
+      "system_id": "metabolic",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "micronutrient_status"
+      ],
+      "organ_mapping_source": "Nutritional, Systemic",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 48
+      }
+    },
+    {
+      "biomarker_id": "BM-397",
+      "name_de": "Vitamin B5 (Pantothensäure)",
+      "loinc_code": "2722-7",
+      "loinc_display": "Pantothenate [Mass/volume] in Serum or Plasma or Blood",
+      "tier": "core_tier2",
+      "unit_source": "µg/l",
+      "unit_ucum": "ug/L",
+      "system_id": "metabolic",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "micronutrient_status"
+      ],
+      "organ_mapping_source": "Nutritional, Systemic",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 49
+      }
+    },
+    {
+      "biomarker_id": "BM-398",
+      "name_de": "Vitamin B6",
+      "loinc_code": "30552-4",
+      "loinc_display": "Pyridoxal phosphate [Mass/volume] in Serum or Plasma",
+      "tier": "core_tier2",
+      "unit_source": "µg/l",
+      "unit_ucum": "ug/L",
+      "system_id": "metabolic",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "micronutrient_status"
+      ],
+      "organ_mapping_source": "Nutritional, Systemic",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 50
+      }
+    },
+    {
+      "biomarker_id": "BM-401",
+      "name_de": "Vitamin D (25-OH)",
+      "loinc_code": "1989-3",
+      "loinc_display": "Calcidiol [Mass/volume] in Serum or Plasma",
+      "tier": "core_tier1",
+      "unit_source": "ng/ml",
+      "unit_ucum": "ng/mL",
+      "system_id": "musculoskeletal",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "bone"
+      ],
+      "organ_mapping_source": "Bone, Endocrine",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 51
+      }
+    },
+    {
+      "biomarker_id": "BM-404",
+      "name_de": "Vitamin E",
+      "loinc_code": "1823-4",
+      "loinc_display": "Alpha tocopherol [Mass/volume] in Serum or Plasma",
+      "tier": "core_tier2",
+      "unit_source": "mg/l",
+      "unit_ucum": "mg/L",
+      "system_id": "metabolic",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "micronutrient_status"
+      ],
+      "organ_mapping_source": "Nutritional, Systemic",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 52
+      }
+    },
+    {
+      "biomarker_id": "BM-405",
+      "name_de": "Vitamin K",
+      "loinc_code": "58793-1",
+      "loinc_display": "Phytonadione [Moles/volume] in Serum or Plasma",
+      "tier": "core_tier2",
+      "unit_source": "ng/l",
+      "unit_ucum": "ng/L",
+      "system_id": "metabolic",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "micronutrient_status"
+      ],
+      "organ_mapping_source": "Nutritional, Systemic",
+      "blocking_flags": "BLOCKING: LOINC property is molar, unit is mass",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 53
+      }
+    },
+    {
+      "biomarker_id": "BM-411",
+      "name_de": "Zink",
+      "loinc_code": "5763-8",
+      "loinc_display": "Zinc [Mass/volume] in Serum or Plasma",
+      "tier": "core_tier1",
+      "unit_source": "µg/l",
+      "unit_ucum": "ug/L",
+      "system_id": "metabolic",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "micronutrient_status"
+      ],
+      "organ_mapping_source": "Micronutrient, Systemic",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 54
+      }
+    },
+    {
+      "biomarker_id": "BM-423",
+      "name_de": "Hämoglobin",
+      "loinc_code": "718-7",
+      "loinc_display": "Hemoglobin [Mass/volume] in Blood",
+      "tier": "core_tier1_decomposed",
+      "unit_source": "g/dl",
+      "unit_ucum": "g/dL",
+      "system_id": "metabolic",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "bone_marrow_blood"
+      ],
+      "organ_mapping_source": "Hematologic",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 55
+      }
+    },
+    {
+      "biomarker_id": "BM-424",
+      "name_de": "Hämatokrit",
+      "loinc_code": "4544-3",
+      "loinc_display": "Hematocrit [Volume Fraction] of Blood by Automated count",
+      "tier": "core_tier1_decomposed",
+      "unit_source": "%",
+      "unit_ucum": "%",
+      "system_id": "metabolic",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "bone_marrow_blood"
+      ],
+      "organ_mapping_source": "Hematologic",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 56
+      }
+    },
+    {
+      "biomarker_id": "BM-425",
+      "name_de": "Erythrozyten",
+      "loinc_code": "789-8",
+      "loinc_display": "Erythrocytes [#/volume] in Blood by Automated count",
+      "tier": "core_tier1_decomposed",
+      "unit_source": "T/l",
+      "unit_ucum": "10*12/L",
+      "system_id": "metabolic",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "bone_marrow_blood"
+      ],
+      "organ_mapping_source": "Hematologic",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 57
+      }
+    },
+    {
+      "biomarker_id": "BM-426",
+      "name_de": "Leukozyten",
+      "loinc_code": "6690-2",
+      "loinc_display": "Leukocytes [#/volume] in Blood by Automated count",
+      "tier": "core_tier1_decomposed",
+      "unit_source": "G/l",
+      "unit_ucum": "10*9/L",
+      "system_id": "metabolic",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "immune",
+        "bone_marrow_blood"
+      ],
+      "organ_mapping_source": "Immune, Hematologic",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 58
+      }
+    },
+    {
+      "biomarker_id": "BM-427",
+      "name_de": "Thrombozyten",
+      "loinc_code": "777-3",
+      "loinc_display": "Platelets [#/volume] in Blood by Automated count",
+      "tier": "core_tier1_decomposed",
+      "unit_source": "G/l",
+      "unit_ucum": "10*9/L",
+      "system_id": "metabolic",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "bone_marrow_blood"
+      ],
+      "organ_mapping_source": "Hematologic",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 59
+      }
+    },
+    {
+      "biomarker_id": "BM-428",
+      "name_de": "MCV",
+      "loinc_code": "787-2",
+      "loinc_display": "Erythrocyte mean corpuscular volume [Entitic volume] by Automated count",
+      "tier": "core_tier1_decomposed",
+      "unit_source": "fl",
+      "unit_ucum": "fL",
+      "system_id": "metabolic",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "bone_marrow_blood"
+      ],
+      "organ_mapping_source": "Hematologic",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 60
+      }
+    },
+    {
+      "biomarker_id": "BM-429",
+      "name_de": "MCH",
+      "loinc_code": "785-6",
+      "loinc_display": "Erythrocyte mean corpuscular hemoglobin [Entitic mass] by Automated count",
+      "tier": "core_tier1_decomposed",
+      "unit_source": "pg",
+      "unit_ucum": "pg",
+      "system_id": "metabolic",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "bone_marrow_blood"
+      ],
+      "organ_mapping_source": "Hematologic",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 61
+      }
+    },
+    {
+      "biomarker_id": "BM-430",
+      "name_de": "MCHC",
+      "loinc_code": "786-4",
+      "loinc_display": "Erythrocyte mean corpuscular hemoglobin concentration [Mass/volume] by Automated count",
+      "tier": "core_tier1_decomposed",
+      "unit_source": "g/dl",
+      "unit_ucum": "g/dL",
+      "system_id": "metabolic",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "bone_marrow_blood"
+      ],
+      "organ_mapping_source": "Hematologic",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 62
+      }
+    },
+    {
+      "biomarker_id": "BM-431",
+      "name_de": "IgA",
+      "loinc_code": "2458-8",
+      "loinc_display": "IgA [Mass/volume] in Serum or Plasma",
+      "tier": "core_tier1_decomposed",
+      "unit_source": "g/l",
+      "unit_ucum": "g/L",
+      "system_id": "metabolic",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "immune"
+      ],
+      "organ_mapping_source": "Immune",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 63
+      }
+    },
+    {
+      "biomarker_id": "BM-432",
+      "name_de": "IgG",
+      "loinc_code": "2465-3",
+      "loinc_display": "IgG [Mass/volume] in Serum or Plasma",
+      "tier": "core_tier1_decomposed",
+      "unit_source": "g/l",
+      "unit_ucum": "g/L",
+      "system_id": "metabolic",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "immune"
+      ],
+      "organ_mapping_source": "Immune",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 64
+      }
+    },
+    {
+      "biomarker_id": "BM-433",
+      "name_de": "IgM",
+      "loinc_code": "2472-9",
+      "loinc_display": "IgM [Mass/volume] in Serum or Plasma",
+      "tier": "core_tier1_decomposed",
+      "unit_source": "g/l",
+      "unit_ucum": "g/L",
+      "system_id": "metabolic",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "immune"
+      ],
+      "organ_mapping_source": "Immune",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 65
+      }
+    },
+    {
+      "biomarker_id": "BM-434",
+      "name_de": "CTX (Beta-Crosslaps)",
+      "loinc_code": "41171-0",
+      "loinc_display": "Collagen crosslinked C-telopeptide [Mass/volume] in Serum or Plasma",
+      "tier": "core_tier1_decomposed",
+      "unit_source": "ng/ml",
+      "unit_ucum": "ng/mL",
+      "system_id": "musculoskeletal",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "bone"
+      ],
+      "organ_mapping_source": "Bone",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 66
+      }
+    },
+    {
+      "biomarker_id": "BM-435",
+      "name_de": "Desoxypyridinolin (DPD)",
+      "loinc_code": "25095-1",
+      "loinc_display": "Deoxypyridinoline/Creatinine [Molar ratio] in Urine",
+      "tier": "core_tier1_decomposed",
+      "unit_source": "nmol/mmol Krea",
+      "unit_ucum": "nmol/mmol",
+      "system_id": "musculoskeletal",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "bone"
+      ],
+      "organ_mapping_source": "Bone",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 67
+      }
+    },
+    {
+      "biomarker_id": "BM-436",
+      "name_de": "Kreatinin",
+      "loinc_code": "2160-0",
+      "loinc_display": "Creatinine [Mass/volume] in Serum or Plasma",
+      "tier": "core_tier1_decomposed",
+      "unit_source": "mg/dl",
+      "unit_ucum": "mg/dL",
+      "system_id": "metabolic",
+      "interpretive_anatomy_source": "curated_table",
+      "region_ids": [
+        "kidney"
+      ],
+      "organ_mapping_source": "Renal",
+      "blocking_flags": "none",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Anchor_Core_Set",
+        "row": 68
+      }
+    }
+  ],
+  "reference_intervals": [
+    {
+      "interval_id": "RI-001",
+      "biomarker_id": "BM-001",
+      "issuer": "IMD Labor Berlin-Potsdam",
+      "issuer_kind": "LAB",
+      "assay": "Referenzbereiche Standort Potsdam, Stand 28.09.2015",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/09a_Referenzbereiche_Standort_Potsdam.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "male",
+      "low": 40,
+      "high": 161,
+      "unit_ucum": "pmol/L",
+      "unit_source": "pmol/l",
+      "reference_range_text": "m 40-161 · w Follikelphase 77-921 · Zyklusmitte 139-2382 · Lutealphase 77-1145 · Postmenopause < 103",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 2
+      },
+      "record_kind": "reference_interval"
+    },
+    {
+      "interval_id": "RI-002",
+      "biomarker_id": "BM-001",
+      "issuer": "IMD Labor Berlin-Potsdam",
+      "issuer_kind": "LAB",
+      "assay": "Referenzbereiche Standort Potsdam, Stand 28.09.2015",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/09a_Referenzbereiche_Standort_Potsdam.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "female_Follikelphase",
+      "low": 77,
+      "high": 921,
+      "unit_ucum": "pmol/L",
+      "unit_source": "pmol/l",
+      "reference_range_text": "m 40-161 · w Follikelphase 77-921 · Zyklusmitte 139-2382 · Lutealphase 77-1145 · Postmenopause < 103",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 3
+      },
+      "record_kind": "reference_interval"
+    },
+    {
+      "interval_id": "RI-017",
+      "biomarker_id": "BM-060",
+      "issuer": "IMD Berlin",
+      "issuer_kind": "LAB",
+      "assay": "Leistungsverzeichnis, Stand 12.02.2025",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/imd_leistungsverzeichnis_2025-03-06.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "general_adult",
+      "low": 37.4,
+      "high": 101,
+      "unit_ucum": "ug/L",
+      "unit_source": "µg/l",
+      "reference_range_text": "37,4-101",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 18
+      },
+      "record_kind": "reference_interval"
+    },
+    {
+      "interval_id": "RI-019",
+      "biomarker_id": "BM-063",
+      "issuer": "IMD Berlin",
+      "issuer_kind": "LAB",
+      "assay": "Leistungsverzeichnis, Stand 12.02.2025",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/imd_leistungsverzeichnis_2025-03-06.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "age_12-60J",
+      "low": 2.2,
+      "high": 2.6,
+      "unit_ucum": "mmol/L",
+      "unit_source": "mmol/l",
+      "reference_range_text": "12-60 J: 2,20-2,60 · m > 60 J: 2,20-2,55",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 20
+      },
+      "record_kind": "reference_interval"
+    },
+    {
+      "interval_id": "RI-020",
+      "biomarker_id": "BM-064",
+      "issuer": "IMD Berlin",
+      "issuer_kind": "LAB",
+      "assay": "Leistungsverzeichnis, Stand 12.02.2025",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/imd_leistungsverzeichnis_2025-03-06.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "general_adult",
+      "low": null,
+      "high": 50,
+      "unit_ucum": "ug/g",
+      "unit_source": "µg/g",
+      "reference_range_text": "< 50",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 21
+      },
+      "record_kind": "reference_interval"
+    },
+    {
+      "interval_id": "RI-026",
+      "biomarker_id": "BM-072",
+      "issuer": "IMD Berlin",
+      "issuer_kind": "LAB",
+      "assay": "Leistungsverzeichnis, Stand 12.02.2025",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/imd_leistungsverzeichnis_2025-03-06.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "age_>18J",
+      "low": null,
+      "high": 190,
+      "unit_ucum": "mg/dL",
+      "unit_source": "mg/dl",
+      "reference_range_text": "> 18 J: < 190",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 27
+      },
+      "record_kind": "reference_interval"
+    },
+    {
+      "interval_id": "RI-029",
+      "biomarker_id": "BM-077",
+      "issuer": "IMD Berlin",
+      "issuer_kind": "LAB",
+      "assay": "Leistungsverzeichnis, Stand 12.02.2025",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/imd_leistungsverzeichnis_2025-03-06.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "time_vor_10h",
+      "low": 37,
+      "high": 194,
+      "unit_ucum": "ng/mL",
+      "unit_source": "ng/ml",
+      "reference_range_text": "vor 10 Uhr 37-194 · nach 17 Uhr 29-173",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 30
+      },
+      "record_kind": "reference_interval"
+    },
+    {
+      "interval_id": "RI-030",
+      "biomarker_id": "BM-077",
+      "issuer": "IMD Berlin",
+      "issuer_kind": "LAB",
+      "assay": "Leistungsverzeichnis, Stand 12.02.2025",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/imd_leistungsverzeichnis_2025-03-06.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "time_nach_17h",
+      "low": 29,
+      "high": 173,
+      "unit_ucum": "ng/mL",
+      "unit_source": "ng/ml",
+      "reference_range_text": "vor 10 Uhr 37-194 · nach 17 Uhr 29-173",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 31
+      },
+      "record_kind": "reference_interval"
+    },
+    {
+      "interval_id": "RI-031",
+      "biomarker_id": "BM-079",
+      "issuer": "IMD Berlin",
+      "issuer_kind": "LAB",
+      "assay": "Leistungsverzeichnis, Stand 12.02.2025",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/imd_leistungsverzeichnis_2025-03-06.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "general_adult",
+      "low": null,
+      "high": 5,
+      "unit_ucum": "mg/L",
+      "unit_source": "mg/l",
+      "reference_range_text": "< 5",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 32
+      },
+      "record_kind": "reference_interval"
+    },
+    {
+      "interval_id": "RI-036",
+      "biomarker_id": "BM-087",
+      "issuer": "IMD Berlin",
+      "issuer_kind": "LAB",
+      "assay": "Leistungsverzeichnis, Stand 12.02.2025",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/imd_leistungsverzeichnis_2025-03-06.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "age_24-34J_male",
+      "low": 1600,
+      "high": 4490,
+      "unit_ucum": "ng/mL",
+      "unit_source": "ng/ml",
+      "reference_range_text": "24-34 J: m 1600-4490 · w 988-3400 · 34-44 J: m 889-4720 · w 609-3370 (altersgestaffelt)",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 37
+      },
+      "record_kind": "reference_interval"
+    },
+    {
+      "interval_id": "RI-037",
+      "biomarker_id": "BM-087",
+      "issuer": "IMD Berlin",
+      "issuer_kind": "LAB",
+      "assay": "Leistungsverzeichnis, Stand 12.02.2025",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/imd_leistungsverzeichnis_2025-03-06.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "female",
+      "low": 988,
+      "high": 3400,
+      "unit_ucum": "ng/mL",
+      "unit_source": "ng/ml",
+      "reference_range_text": "24-34 J: m 1600-4490 · w 988-3400 · 34-44 J: m 889-4720 · w 609-3370 (altersgestaffelt)",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 38
+      },
+      "record_kind": "reference_interval"
+    },
+    {
+      "interval_id": "RI-038",
+      "biomarker_id": "BM-087",
+      "issuer": "IMD Berlin",
+      "issuer_kind": "LAB",
+      "assay": "Leistungsverzeichnis, Stand 12.02.2025",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/imd_leistungsverzeichnis_2025-03-06.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "age_34-44J_male",
+      "low": 889,
+      "high": 4720,
+      "unit_ucum": "ng/mL",
+      "unit_source": "ng/ml",
+      "reference_range_text": "24-34 J: m 1600-4490 · w 988-3400 · 34-44 J: m 889-4720 · w 609-3370 (altersgestaffelt)",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 39
+      },
+      "record_kind": "reference_interval"
+    },
+    {
+      "interval_id": "RI-044",
+      "biomarker_id": "BM-107",
+      "issuer": "IMD Berlin",
+      "issuer_kind": "LAB",
+      "assay": "Leistungsverzeichnis, Stand 12.02.2025",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/imd_leistungsverzeichnis_2025-03-06.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "age_>18J_male",
+      "low": 21.8,
+      "high": 275,
+      "unit_ucum": "ng/mL",
+      "unit_source": "ng/ml",
+      "reference_range_text": "> 18 J: m 21,8-275 · w 4,63-204",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 45
+      },
+      "record_kind": "reference_interval"
+    },
+    {
+      "interval_id": "RI-045",
+      "biomarker_id": "BM-107",
+      "issuer": "IMD Berlin",
+      "issuer_kind": "LAB",
+      "assay": "Leistungsverzeichnis, Stand 12.02.2025",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/imd_leistungsverzeichnis_2025-03-06.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "female",
+      "low": 4.63,
+      "high": 204,
+      "unit_ucum": "ng/mL",
+      "unit_source": "ng/ml",
+      "reference_range_text": "> 18 J: m 21,8-275 · w 4,63-204",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 46
+      },
+      "record_kind": "reference_interval"
+    },
+    {
+      "interval_id": "RI-046",
+      "biomarker_id": "BM-111",
+      "issuer": "IMD Berlin",
+      "issuer_kind": "LAB",
+      "assay": "Leistungsverzeichnis, Stand 12.02.2025",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/imd_leistungsverzeichnis_2025-03-06.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "general_adult",
+      "low": 3,
+      "high": null,
+      "unit_ucum": "ng/mL",
+      "unit_source": "ng/ml",
+      "reference_range_text": "> 3,0",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 47
+      },
+      "record_kind": "reference_interval"
+    },
+    {
+      "interval_id": "RI-051",
+      "biomarker_id": "BM-114",
+      "issuer": "IMD Berlin",
+      "issuer_kind": "LAB",
+      "assay": "Leistungsverzeichnis, Stand 12.02.2025",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/imd_leistungsverzeichnis_2025-03-06.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "age_>19J",
+      "low": 1.58,
+      "high": 3.91,
+      "unit_ucum": "pg/mL",
+      "unit_source": "pg/ml",
+      "reference_range_text": "> 19 J: 1,58-3,91",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 52
+      },
+      "record_kind": "reference_interval"
+    },
+    {
+      "interval_id": "RI-052",
+      "biomarker_id": "BM-115",
+      "issuer": "IMD Berlin",
+      "issuer_kind": "LAB",
+      "assay": "Leistungsverzeichnis, Stand 12.02.2025",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/imd_leistungsverzeichnis_2025-03-06.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "age_>19J",
+      "low": 7,
+      "high": 14.8,
+      "unit_ucum": "pg/mL",
+      "unit_source": "pg/ml",
+      "reference_range_text": "> 19 J: 7,00-14,8",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 53
+      },
+      "record_kind": "reference_interval"
+    },
+    {
+      "interval_id": "RI-054",
+      "biomarker_id": "BM-119",
+      "issuer": "IMD Labor Berlin-Potsdam",
+      "issuer_kind": "LAB",
+      "assay": "Referenzbereiche Standort Potsdam, Stand 28.09.2015",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/09a_Referenzbereiche_Standort_Potsdam.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "male",
+      "low": 0.95,
+      "high": 11.95,
+      "unit_ucum": "U/L",
+      "unit_source": "U/l",
+      "reference_range_text": "m 0,95-11,95 · w Follikelphase 3,03-8,08 · Zyklusmitte 2,55-16,69 · Lutealphase 1,38-5,47 · Postmenopause 26,7-133,4",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 55
+      },
+      "record_kind": "reference_interval"
+    },
+    {
+      "interval_id": "RI-055",
+      "biomarker_id": "BM-119",
+      "issuer": "IMD Labor Berlin-Potsdam",
+      "issuer_kind": "LAB",
+      "assay": "Referenzbereiche Standort Potsdam, Stand 28.09.2015",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/09a_Referenzbereiche_Standort_Potsdam.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "female_Follikelphase",
+      "low": 3.03,
+      "high": 8.08,
+      "unit_ucum": "U/L",
+      "unit_source": "U/l",
+      "reference_range_text": "m 0,95-11,95 · w Follikelphase 3,03-8,08 · Zyklusmitte 2,55-16,69 · Lutealphase 1,38-5,47 · Postmenopause 26,7-133,4",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 56
+      },
+      "record_kind": "reference_interval"
+    },
+    {
+      "interval_id": "RI-057",
+      "biomarker_id": "BM-123",
+      "issuer": "IMD Berlin",
+      "issuer_kind": "LAB",
+      "assay": "Leistungsverzeichnis, Stand 12.02.2025",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/imd_leistungsverzeichnis_2025-03-06.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "age_>18J_male",
+      "low": 11,
+      "high": 59,
+      "unit_ucum": "U/L",
+      "unit_source": "U/l",
+      "reference_range_text": "> 18 J: m 11-59 · w 8-33",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 58
+      },
+      "record_kind": "reference_interval"
+    },
+    {
+      "interval_id": "RI-058",
+      "biomarker_id": "BM-123",
+      "issuer": "IMD Berlin",
+      "issuer_kind": "LAB",
+      "assay": "Leistungsverzeichnis, Stand 12.02.2025",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/imd_leistungsverzeichnis_2025-03-06.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "female",
+      "low": 8,
+      "high": 33,
+      "unit_ucum": "U/L",
+      "unit_source": "U/l",
+      "reference_range_text": "> 18 J: m 11-59 · w 8-33",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 59
+      },
+      "record_kind": "reference_interval"
+    },
+    {
+      "interval_id": "RI-060",
+      "biomarker_id": "BM-125",
+      "issuer": "IMD Berlin",
+      "issuer_kind": "LAB",
+      "assay": "Leistungsverzeichnis, Stand 12.02.2025",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/imd_leistungsverzeichnis_2025-03-06.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "age_18-60J",
+      "low": 64,
+      "high": 83,
+      "unit_ucum": "g/L",
+      "unit_source": "g/l",
+      "reference_range_text": "18-60 J: 64,0-83,0 · > 60 J: 62,0-81,0",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 61
+      },
+      "record_kind": "reference_interval"
+    },
+    {
+      "interval_id": "RI-061",
+      "biomarker_id": "BM-125",
+      "issuer": "IMD Berlin",
+      "issuer_kind": "LAB",
+      "assay": "Leistungsverzeichnis, Stand 12.02.2025",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/imd_leistungsverzeichnis_2025-03-06.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "age_>60J",
+      "low": 62,
+      "high": 81,
+      "unit_ucum": "g/L",
+      "unit_source": "g/l",
+      "reference_range_text": "18-60 J: 64,0-83,0 · > 60 J: 62,0-81,0",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 62
+      },
+      "record_kind": "reference_interval"
+    },
+    {
+      "interval_id": "RI-062",
+      "biomarker_id": "BM-128",
+      "issuer": "IMD Berlin",
+      "issuer_kind": "LAB",
+      "assay": "Leistungsverzeichnis, Stand 12.02.2025",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/imd_leistungsverzeichnis_2025-03-06.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "fasting_adult",
+      "low": null,
+      "high": 100,
+      "unit_ucum": "mg/dL",
+      "unit_source": "mg/dl",
+      "reference_range_text": "nuechtern < 100",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 63
+      },
+      "record_kind": "reference_interval"
+    },
+    {
+      "interval_id": "RI-064",
+      "biomarker_id": "BM-132",
+      "issuer": "IMD Berlin",
+      "issuer_kind": "LAB",
+      "assay": "Leistungsverzeichnis, Stand 12.02.2025",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/imd_leistungsverzeichnis_2025-03-06.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "age_>18J_male",
+      "low": null,
+      "high": 50,
+      "unit_ucum": "U/L",
+      "unit_source": "U/l",
+      "reference_range_text": "> 18 J: m < 50 · w < 35",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 65
+      },
+      "record_kind": "reference_interval"
+    },
+    {
+      "interval_id": "RI-065",
+      "biomarker_id": "BM-132",
+      "issuer": "IMD Berlin",
+      "issuer_kind": "LAB",
+      "assay": "Leistungsverzeichnis, Stand 12.02.2025",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/imd_leistungsverzeichnis_2025-03-06.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "female",
+      "low": null,
+      "high": 35,
+      "unit_ucum": "U/L",
+      "unit_source": "U/l",
+      "reference_range_text": "> 18 J: m < 50 · w < 35",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 66
+      },
+      "record_kind": "reference_interval"
+    },
+    {
+      "interval_id": "RI-066",
+      "biomarker_id": "BM-136",
+      "issuer": "IMD Berlin",
+      "issuer_kind": "LAB",
+      "assay": "Leistungsverzeichnis, Stand 12.02.2025",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/imd_leistungsverzeichnis_2025-03-06.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "age_>18J_male",
+      "low": 3.6,
+      "high": 8.2,
+      "unit_ucum": "mg/dL",
+      "unit_source": "mg/dl",
+      "reference_range_text": "> 18 J: m 3,6-8,2 · w 2,3-6,1",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 67
+      },
+      "record_kind": "reference_interval"
+    },
+    {
+      "interval_id": "RI-067",
+      "biomarker_id": "BM-136",
+      "issuer": "IMD Berlin",
+      "issuer_kind": "LAB",
+      "assay": "Leistungsverzeichnis, Stand 12.02.2025",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/imd_leistungsverzeichnis_2025-03-06.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "female",
+      "low": 2.3,
+      "high": 6.1,
+      "unit_ucum": "mg/dL",
+      "unit_source": "mg/dl",
+      "reference_range_text": "> 18 J: m 3,6-8,2 · w 2,3-6,1",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 68
+      },
+      "record_kind": "reference_interval"
+    },
+    {
+      "interval_id": "RI-070",
+      "biomarker_id": "BM-139",
+      "issuer": "IMD Berlin",
+      "issuer_kind": "LAB",
+      "assay": "Leistungsverzeichnis, Stand 12.02.2025",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/imd_leistungsverzeichnis_2025-03-06.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "general_adult",
+      "low": null,
+      "high": 5.7,
+      "unit_ucum": "%",
+      "unit_source": "%",
+      "reference_range_text": "< 5,7 (< 39 mmol/mol)",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 71
+      },
+      "record_kind": "reference_interval"
+    },
+    {
+      "interval_id": "RI-071",
+      "biomarker_id": "BM-140",
+      "issuer": "IMD Berlin",
+      "issuer_kind": "LAB",
+      "assay": "Leistungsverzeichnis, Stand 12.02.2025",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/imd_leistungsverzeichnis_2025-03-06.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "age_>18J_female",
+      "low": 45,
+      "high": null,
+      "unit_ucum": "mg/dL",
+      "unit_source": "mg/dl",
+      "reference_range_text": "> 18 J: w > 45 · m > 40",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 72
+      },
+      "record_kind": "reference_interval"
+    },
+    {
+      "interval_id": "RI-072",
+      "biomarker_id": "BM-140",
+      "issuer": "IMD Berlin",
+      "issuer_kind": "LAB",
+      "assay": "Leistungsverzeichnis, Stand 12.02.2025",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/imd_leistungsverzeichnis_2025-03-06.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "male",
+      "low": 40,
+      "high": null,
+      "unit_ucum": "mg/dL",
+      "unit_source": "mg/dl",
+      "reference_range_text": "> 18 J: w > 45 · m > 40",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 73
+      },
+      "record_kind": "reference_interval"
+    },
+    {
+      "interval_id": "RI-075",
+      "biomarker_id": "BM-177",
+      "issuer": "IMD Labor Berlin-Potsdam",
+      "issuer_kind": "LAB",
+      "assay": "Referenzbereiche Standort Potsdam, Stand 28.09.2015",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/09a_Referenzbereiche_Standort_Potsdam.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "general_adult",
+      "low": 3.6,
+      "high": 5.5,
+      "unit_ucum": "mmol/L",
+      "unit_source": "mmol/l",
+      "reference_range_text": "3,6-5,5",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 76
+      },
+      "record_kind": "reference_interval"
+    },
+    {
+      "interval_id": "RI-082",
+      "biomarker_id": "BM-197",
+      "issuer": "IMD Labor Berlin-Potsdam",
+      "issuer_kind": "LAB",
+      "assay": "Referenzbereiche Standort Potsdam, Stand 28.09.2015",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/09a_Referenzbereiche_Standort_Potsdam.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "male",
+      "low": 1.14,
+      "high": 8.75,
+      "unit_ucum": "U/L",
+      "unit_source": "U/l",
+      "reference_range_text": "m 1,14-8,75 · w Follikelphase 2,39-6,60 · Zyklusmitte 9,06-74,24 · Lutealphase 0,90-9,33 · Postmenopause 10,39-64,57",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 83
+      },
+      "record_kind": "reference_interval"
+    },
+    {
+      "interval_id": "RI-083",
+      "biomarker_id": "BM-197",
+      "issuer": "IMD Labor Berlin-Potsdam",
+      "issuer_kind": "LAB",
+      "assay": "Referenzbereiche Standort Potsdam, Stand 28.09.2015",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/09a_Referenzbereiche_Standort_Potsdam.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "female_Follikelphase",
+      "low": 2.39,
+      "high": 6.6,
+      "unit_ucum": "U/L",
+      "unit_source": "U/l",
+      "reference_range_text": "m 1,14-8,75 · w Follikelphase 2,39-6,60 · Zyklusmitte 9,06-74,24 · Lutealphase 0,90-9,33 · Postmenopause 10,39-64,57",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 84
+      },
+      "record_kind": "reference_interval"
+    },
+    {
+      "interval_id": "RI-084",
+      "biomarker_id": "BM-258",
+      "issuer": "IMD Labor Berlin-Potsdam",
+      "issuer_kind": "LAB",
+      "assay": "Referenzbereiche Standort Potsdam, Stand 28.09.2015",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/09a_Referenzbereiche_Standort_Potsdam.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "general_adult",
+      "low": 0.75,
+      "high": 1.1,
+      "unit_ucum": "mmol/L",
+      "unit_source": "mmol/l",
+      "reference_range_text": "0,75-1,10",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 85
+      },
+      "record_kind": "reference_interval"
+    },
+    {
+      "interval_id": "RI-085",
+      "biomarker_id": "BM-286",
+      "issuer": "IMD Labor Berlin-Potsdam",
+      "issuer_kind": "LAB",
+      "assay": "Referenzbereiche Standort Potsdam, Stand 28.09.2015",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/09a_Referenzbereiche_Standort_Potsdam.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "general_adult",
+      "low": 135,
+      "high": 145,
+      "unit_ucum": "mmol/L",
+      "unit_source": "mmol/l",
+      "reference_range_text": "135-145",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 86
+      },
+      "record_kind": "reference_interval"
+    },
+    {
+      "interval_id": "RI-091",
+      "biomarker_id": "BM-311",
+      "issuer": "IMD Labor Berlin-Potsdam",
+      "issuer_kind": "LAB",
+      "assay": "Referenzbereiche Standort Potsdam, Stand 28.09.2015",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/09a_Referenzbereiche_Standort_Potsdam.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "female_Follikelphase",
+      "low": null,
+      "high": 0.96,
+      "unit_ucum": "nmol/L",
+      "unit_source": "nmol/l",
+      "reference_range_text": "w Follikelphase < 0,96 · Zyklusmitte 0,0-70,1 · Lutealphase 3,8-50,6 · Postmenopause < 0,64",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 92
+      },
+      "record_kind": "reference_interval"
+    },
+    {
+      "interval_id": "RI-092",
+      "biomarker_id": "BM-312",
+      "issuer": "IMD Labor Berlin-Potsdam",
+      "issuer_kind": "LAB",
+      "assay": "Referenzbereiche Standort Potsdam, Stand 28.09.2015",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/09a_Referenzbereiche_Standort_Potsdam.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "male",
+      "low": 3.46,
+      "high": 19.4,
+      "unit_ucum": "ug/L",
+      "unit_source": "µg/l",
+      "reference_range_text": "m 3,46-19,4 · w 5,18-26,53",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 93
+      },
+      "record_kind": "reference_interval"
+    },
+    {
+      "interval_id": "RI-093",
+      "biomarker_id": "BM-312",
+      "issuer": "IMD Labor Berlin-Potsdam",
+      "issuer_kind": "LAB",
+      "assay": "Referenzbereiche Standort Potsdam, Stand 28.09.2015",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/09a_Referenzbereiche_Standort_Potsdam.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "female",
+      "low": 5.18,
+      "high": 26.53,
+      "unit_ucum": "ug/L",
+      "unit_source": "µg/l",
+      "reference_range_text": "m 3,46-19,4 · w 5,18-26,53",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 94
+      },
+      "record_kind": "reference_interval"
+    },
+    {
+      "interval_id": "RI-094",
+      "biomarker_id": "BM-358",
+      "issuer": "IMD Labor Berlin-Potsdam",
+      "issuer_kind": "LAB",
+      "assay": "Referenzbereiche Standort Potsdam, Stand 28.09.2015",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/09a_Referenzbereiche_Standort_Potsdam.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "male",
+      "low": 7.09,
+      "high": 32.9,
+      "unit_ucum": "nmol/L",
+      "unit_source": "nmol/l",
+      "reference_range_text": "m 7,09-32,9 · w 0,94-4,75",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 95
+      },
+      "record_kind": "reference_interval"
+    },
+    {
+      "interval_id": "RI-095",
+      "biomarker_id": "BM-358",
+      "issuer": "IMD Labor Berlin-Potsdam",
+      "issuer_kind": "LAB",
+      "assay": "Referenzbereiche Standort Potsdam, Stand 28.09.2015",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/09a_Referenzbereiche_Standort_Potsdam.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "female",
+      "low": 0.94,
+      "high": 4.75,
+      "unit_ucum": "nmol/L",
+      "unit_source": "nmol/l",
+      "reference_range_text": "m 7,09-32,9 · w 0,94-4,75",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 96
+      },
+      "record_kind": "reference_interval"
+    },
+    {
+      "interval_id": "RI-096",
+      "biomarker_id": "BM-383",
+      "issuer": "IMD Labor Berlin-Potsdam",
+      "issuer_kind": "LAB",
+      "assay": "Referenzbereiche Standort Potsdam, Stand 28.09.2015",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/09a_Referenzbereiche_Standort_Potsdam.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "general_adult",
+      "low": 44,
+      "high": 150,
+      "unit_ucum": "mg/dL",
+      "unit_source": "mg/dl",
+      "reference_range_text": "44-150",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 97
+      },
+      "record_kind": "reference_interval"
+    },
+    {
+      "interval_id": "RI-097",
+      "biomarker_id": "BM-386",
+      "issuer": "IMD Labor Berlin-Potsdam",
+      "issuer_kind": "LAB",
+      "assay": "Referenzbereiche Standort Potsdam, Stand 28.09.2015",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/09a_Referenzbereiche_Standort_Potsdam.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "general_adult",
+      "low": 0.35,
+      "high": 4.94,
+      "unit_ucum": "m[IU]/L",
+      "unit_source": "mIU/l",
+      "reference_range_text": "0,35-4,94 (Graubereich 2,5-4,94)",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 98
+      },
+      "record_kind": "reference_interval"
+    },
+    {
+      "interval_id": "RI-098",
+      "biomarker_id": "BM-394",
+      "issuer": "IMD Berlin",
+      "issuer_kind": "LAB",
+      "assay": "Leistungsverzeichnis, Stand 12.02.2025",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/imd_leistungsverzeichnis_2025-03-06.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "age_>18J",
+      "low": 187,
+      "high": 883,
+      "unit_ucum": "pg/mL",
+      "unit_source": "pg/ml",
+      "reference_range_text": "> 18 J: 187-883",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 99
+      },
+      "record_kind": "reference_interval"
+    }
+  ],
+  "interpretive_bands": [
+    {
+      "interval_id": "RI-077",
+      "biomarker_id": "BM-190",
+      "issuer": "IMD Labor Berlin-Potsdam",
+      "issuer_kind": "LAB",
+      "assay": "Referenzbereiche Standort Potsdam, Stand 28.09.2015",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/09a_Referenzbereiche_Standort_Potsdam.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "interpretive_optimal",
+      "low": null,
+      "high": 100,
+      "unit_ucum": "mg/dL",
+      "unit_source": "mg/dl",
+      "reference_range_text": "optimal < 100 · gut 100-129 · grenzwertig 130-159 · erhoeht 160-189 · pathologisch > 190",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 78
+      },
+      "record_kind": "interpretive_band"
+    },
+    {
+      "interval_id": "RI-078",
+      "biomarker_id": "BM-190",
+      "issuer": "IMD Labor Berlin-Potsdam",
+      "issuer_kind": "LAB",
+      "assay": "Referenzbereiche Standort Potsdam, Stand 28.09.2015",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/09a_Referenzbereiche_Standort_Potsdam.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "interpretive_gut",
+      "low": 100,
+      "high": 129,
+      "unit_ucum": "mg/dL",
+      "unit_source": "mg/dl",
+      "reference_range_text": "optimal < 100 · gut 100-129 · grenzwertig 130-159 · erhoeht 160-189 · pathologisch > 190",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 79
+      },
+      "record_kind": "interpretive_band"
+    },
+    {
+      "interval_id": "RI-079",
+      "biomarker_id": "BM-190",
+      "issuer": "IMD Labor Berlin-Potsdam",
+      "issuer_kind": "LAB",
+      "assay": "Referenzbereiche Standort Potsdam, Stand 28.09.2015",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/09a_Referenzbereiche_Standort_Potsdam.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "interpretive_grenzwertig",
+      "low": 130,
+      "high": 159,
+      "unit_ucum": "mg/dL",
+      "unit_source": "mg/dl",
+      "reference_range_text": "optimal < 100 · gut 100-129 · grenzwertig 130-159 · erhoeht 160-189 · pathologisch > 190",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 80
+      },
+      "record_kind": "interpretive_band"
+    },
+    {
+      "interval_id": "RI-080",
+      "biomarker_id": "BM-190",
+      "issuer": "IMD Labor Berlin-Potsdam",
+      "issuer_kind": "LAB",
+      "assay": "Referenzbereiche Standort Potsdam, Stand 28.09.2015",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/09a_Referenzbereiche_Standort_Potsdam.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "interpretive_erhoeht",
+      "low": 160,
+      "high": 189,
+      "unit_ucum": "mg/dL",
+      "unit_source": "mg/dl",
+      "reference_range_text": "optimal < 100 · gut 100-129 · grenzwertig 130-159 · erhoeht 160-189 · pathologisch > 190",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 81
+      },
+      "record_kind": "interpretive_band"
+    },
+    {
+      "interval_id": "RI-081",
+      "biomarker_id": "BM-190",
+      "issuer": "IMD Labor Berlin-Potsdam",
+      "issuer_kind": "LAB",
+      "assay": "Referenzbereiche Standort Potsdam, Stand 28.09.2015",
+      "source_url": "https://www.imd-berlin.de/fileadmin/user_upload/leistungsverzeichnis_druck/09a_Referenzbereiche_Standort_Potsdam.pdf",
+      "retrieved_at": "2026-07-12",
+      "population": "interpretive_pathologisch",
+      "low": 190,
+      "high": null,
+      "unit_ucum": "mg/dL",
+      "unit_source": "mg/dl",
+      "reference_range_text": "optimal < 100 · gut 100-129 · grenzwertig 130-159 · erhoeht 160-189 · pathologisch > 190",
+      "provenance": {
+        "source_file": "docs/evidence/source/2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx",
+        "sha256": "42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e",
+        "sheet": "Reference_Intervals",
+        "row": 82
+      },
+      "record_kind": "interpretive_band"
+    }
+  ],
+  "counts": {
+    "markers_with_reference_interval": 30,
+    "markers_with_interpretive_band_only": 1,
+    "markers_with_neither": 36
+  }
+}

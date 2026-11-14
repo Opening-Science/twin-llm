@@ -1,0 +1,61 @@
+{
+  "name": "@open-twin/provider-whoop",
+  "version": "0.1.0",
+  "description": "WHOOP Developer API v2 to FHIR mapper",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts",
+    "dev": "tsup src/index.ts --format esm --watch --dts",
+    "format": "biome check --write",
+    "lint": "biome ci",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run build",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "whoop",
+    "fhir",
+    "connector"
+  ],
+  "author": "Open Science Foundation",
+  "license": "MIT",
+  "dependencies": {
+    "@open-twin/fhir-core": "workspace:*",
+    "@types/fhir": "0.0.44",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@lhncbc/ucum-lhc": "8.0.1",
+    "@rollup/plugin-swc": "0.4.1",
+    "@types/node": "26.6.6",
+    "jest-extended": "7.0.0",
+    "reflect-metadata": "0.2.2",
+    "tsup": "9.0.0",
+    "typescript": "5.9.3",
+    "vitest": "5.1.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Opening-Science/open-twin.git",
+    "directory": "packages/provider-whoop"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "sideEffects": false
+}

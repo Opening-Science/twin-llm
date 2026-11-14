@@ -1,0 +1,33 @@
+{
+  "repo": "https://github.com/Opening-Science/open-twin",
+  "packages": {
+    "fhir-core": {
+      "base": "4b42ef944db0b461ca414b8066a5f7aa2594a9ce",
+      "imported": "2026-11-14"
+    },
+    "fhir-r4": {
+      "base": "4b42ef944db0b461ca414b8066a5f7aa2594a9ce",
+      "imported": "2026-11-14"
+    },
+    "aggregate": {
+      "base": "4b42ef944db0b461ca414b8066a5f7aa2594a9ce",
+      "imported": "2026-11-14"
+    },
+    "provider-oura": {
+      "base": "4b42ef944db0b461ca414b8066a5f7aa2594a9ce",
+      "imported": "2026-11-14"
+    },
+    "provider-google-health": {
+      "base": "4b42ef944db0b461ca414b8066a5f7aa2594a9ce",
+      "imported": "2026-11-14"
+    },
+    "provider-whoop": {
+      "base": "4b42ef944db0b461ca414b8066a5f7aa2594a9ce",
+      "imported": "2026-11-14"
+    },
+    "anchor-layer": {
+      "base": "4b42ef944db0b461ca414b8066a5f7aa2594a9ce",
+      "imported": "2026-11-14"
+    }
+  }
+}
