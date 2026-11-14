@@ -2,7 +2,7 @@ import { type Metadata } from "next";
 import { headers } from "next/headers";
 import { type ReactNode } from "react";
 
-import { ResearchFooter } from "@/features/shell/research-footer";
+import { ResearchFooter } from "@/features/app-shell/research-footer";
 import { SYNTHEA_HOST_HEADER, syntheaPaths } from "@/features/synthea/synthea-paths";
 import { ThemeToggle } from "@/features/theme/theme-toggle";
 

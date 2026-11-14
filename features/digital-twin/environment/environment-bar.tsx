@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useState, type ReactNode } from "react";
 
-import { RESEARCH_FOOTER_TEXT } from "@/features/shell/research-footer";
+import { RESEARCH_FOOTER_TEXT } from "@/features/app-shell/research-footer";
 import { CollapsiblePanel } from "@/infrastructure/ui-kit/collapsible-panel";
 import { SegmentedControl } from "@/infrastructure/ui-kit/segmented-control";
 

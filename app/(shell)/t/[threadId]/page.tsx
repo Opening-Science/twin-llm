@@ -6,7 +6,7 @@ import { loadPromptSourceFacts } from "@/features/compare/prompt-source-facts";
 import { skillCommand } from "@/features/commands/registry";
 import { ownedThread } from "@/features/compare/thread-reads";
 import { scheduledStillWriting } from "@/features/compare/turn-updates";
-import { ThreadTitle } from "@/features/shell/thread-title";
+import { ThreadTitle } from "@/features/app-shell/open-thread";
 import { skillsFor } from "@/features/skills/user-skill-store";
 import { runnableSkills } from "@/features/skills/load-skills";
 import { resolveActorId } from "@/infrastructure/auth-actor";

@@ -1,5 +1,10 @@
 [
   {
+    "file": "features/app-shell/research-footer.tsx",
+    "line-pattern": "does not provide medical advice",
+    "reason": "required C4 footer"
+  },
+  {
     "file": "features/shell/research-footer.tsx",
     "line-pattern": "does not provide medical advice",
     "reason": "required C4 footer"

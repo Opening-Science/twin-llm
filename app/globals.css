@@ -377,10 +377,44 @@
 /* --- Shared text and surface classes --------------------------------------- */
 
 @layer components {
-  /* The shell (shell-frame.tsx). Wide screens: the sidebar is a pinned column
-     or tucked away behind a floating button that shows it on hover. Narrow
-     screens: always tucked; the button opens the menu dialog. No header bar:
-     each page's own heading leads. */
+  /* The shell (features/app-shell/app-frame.tsx). It fills the viewport and
+     only the main region scrolls. Wide screens: the sidebar is a pinned
+     column or tucked away behind a floating button that shows it on hover.
+     Narrow screens: always tucked; the button opens the menu dialog. No
+     header bar: each page's own heading leads. The research footer is the
+     last row, under the main column. */
+  .shell-frame {
+    @apply grid h-dvh grid-cols-1 grid-rows-[minmax(0,1fr)_auto] overflow-hidden;
+  }
+  .shell-frame[data-sidebar="pinned"] {
+    @apply lg:grid-cols-[16rem_minmax(0,1fr)];
+  }
+  .shell-pinned {
+    @apply border-border bg-muted/30 row-span-2 hidden min-h-0 border-r lg:flex;
+  }
+  .shell-main {
+    @apply relative flex min-h-0 min-w-0 flex-col overflow-x-hidden overflow-y-auto outline-none;
+  }
+  [data-sidebar="pinned"] > .shell-main,
+  [data-sidebar="pinned"] > .research-footer {
+    @apply lg:col-start-2;
+  }
+  /* The phone menu: the sidebar as a modal down the left edge. */
+  .shell-menu {
+    @apply bg-background border-border text-foreground fixed inset-y-0 left-0 m-0 h-dvh max-h-none w-72 max-w-[85vw] overscroll-contain border-r p-0 backdrop:bg-black/40;
+  }
+  /* Off-screen until focused, then above everything at the top left. */
+  .skip-link {
+    @apply bg-background border-border sr-only rounded-md border px-3 py-2 text-sm focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[60];
+  }
+  /* A sidebar row: a section, the Search row or a thread. The highlight is
+     drawn from aria-current, so what is heard and what is seen agree. */
+  .nav-link {
+    @apply text-muted-foreground hover:bg-muted hover:text-foreground flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left text-sm;
+  }
+  .nav-link[aria-current="page"] {
+    @apply bg-muted text-foreground;
+  }
   .shell-toggle {
     @apply text-muted-foreground hover:text-foreground hover:bg-muted bg-background/80 fixed top-3 left-3 z-40 inline-flex size-9 items-center justify-center rounded-lg backdrop-blur;
   }
@@ -422,7 +456,8 @@
   [data-sidebar="pinned"] .shell-main:not(:has(.thread-bar)) {
     @apply lg:pt-0;
   }
-  /* The search box (search-dialog.tsx): a centred modal like a chat app's. */
+  /* The search box (features/search/search-box.tsx): a centred modal like a
+     chat app's. */
   .search-dialog {
     @apply bg-background border-border text-foreground fixed inset-x-0 top-[12vh] mx-auto w-[min(40rem,calc(100vw-2rem))] max-w-none overflow-hidden rounded-2xl border p-0 shadow-2xl backdrop:bg-black/40;
   }
@@ -439,7 +474,7 @@
     @apply border-border rounded border px-1 py-px font-mono text-[11px];
   }
 
-  /* --- Export notice (#531, features/shell/export-notice-dialog.tsx) ---
+  /* --- Export notice (#531, features/app-shell/export-notice.tsx) ---
      The one line a thread export shows before its file is made, with
      Download and Cancel: a small centred modal like search's. */
   .export-notice {
@@ -460,6 +495,40 @@
   }
   [data-sidebar="pinned"] .thread-bar {
     @apply lg:pl-6;
+  }
+  /* A row of the thread bar's "…" menu. */
+  .thread-menu-item {
+    @apply hover:bg-muted w-full justify-start;
+  }
+
+  /* The research footer (features/app-shell/research-footer.tsx). From 640px
+     both sentences, each kept whole; the dot only where both fit on one line.
+     On a phone one line that opens in place. */
+  .research-footer {
+    @apply border-border text-muted-foreground border-t px-4 py-1.5 text-center text-xs leading-snug;
+  }
+  .research-footer-half {
+    @apply inline-block;
+  }
+  .research-footer-dot {
+    @apply hidden min-[100rem]:inline;
+  }
+  .research-footer-phone > summary {
+    @apply cursor-pointer list-none;
+  }
+  .research-footer-phone > summary::-webkit-details-marker {
+    display: none;
+  }
+  .research-footer-more,
+  .research-footer-less {
+    @apply underline underline-offset-2;
+  }
+  .research-footer-less,
+  .research-footer-phone[open] .research-footer-more {
+    @apply hidden;
+  }
+  .research-footer-phone[open] .research-footer-less {
+    @apply inline;
   }
 
   /* Page titles: Selecta Regular, large and tight. */
@@ -1457,6 +1526,11 @@
     height: 100%;
     border-radius: 9999px;
     background-color: color-mix(in oklab, var(--color-muted-foreground) 70%, transparent);
+  }
+
+  /* The tag beside a model a new chat starts with (features/models-screen). */
+  .model-default-tag {
+    @apply border-input text-muted-foreground rounded-sm border px-1.5 py-px font-mono text-[10px] tracking-[0.12em] uppercase;
   }
 
   /* Placeholder for content that is still loading. The instance sets size and

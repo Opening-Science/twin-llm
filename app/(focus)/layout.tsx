@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { ResearchFooter } from "@/features/shell/research-footer";
+import { ResearchFooter } from "@/features/app-shell/research-footer";
 import { ThemeToggle } from "@/features/theme/theme-toggle";
 import { serverEnv } from "@/infrastructure/env";
 

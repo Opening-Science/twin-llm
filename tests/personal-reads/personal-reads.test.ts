@@ -1299,7 +1299,7 @@ describe("pages and server actions while locked (#142)", () => {
 
   test("the sidebar reads thread titles only when unlocked", () => {
     const source = readFileSync(join(ROOT, "app/(shell)/layout.tsx"), "utf8");
-    expect(source).toContain("vault.unlocked\n    ? await threadsForViewer(");
+    expect(source).toContain("vault.unlocked ? await threadsForViewer(");
   });
 
   test("every server action file is listed, and each gated action asks the gate", () => {
