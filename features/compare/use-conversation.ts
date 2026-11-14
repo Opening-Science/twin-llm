@@ -10,6 +10,7 @@ import { buildUiContext, type UiState } from "@/infrastructure/ui-context";
 import { type AnswerRequest, streamAnswer } from "./answer-stream";
 import type { AnswerState, PromptSend, TurnState } from "./conversation";
 import { historyForTurn } from "./model-history";
+import { showThreadAddress } from "./screen-rules";
 import { startTurn } from "./start-turn";
 import { stopAnswer } from "./stop-answers";
 import {
@@ -211,7 +212,7 @@ export const useConversation = ({
       if (threadId === null) {
         setThreadId(result.threadId);
         // No navigation: the open streams must survive.
-        window.history.replaceState(window.history.state, "", `/t/${result.threadId}`);
+        showThreadAddress(result.threadId);
       }
       history.noteThreadTouched({
         id: result.threadId,

@@ -9,7 +9,20 @@ import {
   lastTurnModelIds,
   nextGeneration,
   pageHeading,
+  showThreadAddress,
 } from "./screen-rules";
+
+describe("the address after a first send (review of #596)", () => {
+  test("replaces the entry with no state, so the router syncs and the thread bar renders", () => {
+    const calls: unknown[][] = [];
+    showThreadAddress("thread-synthetic-1", {
+      replaceState: (...args: unknown[]) => {
+        calls.push(args);
+      },
+    });
+    expect(calls).toEqual([[null, "", "/t/thread-synthetic-1"]]);
+  });
+});
 
 /** Screen-level rules from SPEC 3.2, 7.2, 7.9 and 11, with synthetic turns. */
 

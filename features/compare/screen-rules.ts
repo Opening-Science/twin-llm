@@ -4,6 +4,19 @@ import type { TurnState } from "./conversation";
 
 /** Screen-level rules without React (SPEC 3.2, 7.2, 7.9, 11). */
 
+/**
+ * After the first send of a saved chat the address becomes `/t/<id>` without
+ * a navigation, so the open streams survive (SPEC 2.3). The state is `null`
+ * on purpose: Next.js skips syncing its router with a history entry that
+ * carries its own state, and the thread bar would then wait for a reload.
+ */
+export const showThreadAddress = (
+  threadId: string,
+  history: Pick<History, "replaceState"> = window.history,
+): void => {
+  history.replaceState(null, "", `/t/${threadId}`);
+};
+
 /** The bubble's text: a starter question's short text, else the prompt. */
 export const displayText = (turn: Pick<TurnState, "prompt" | "label">): string =>
   turn.label ?? turn.prompt;
