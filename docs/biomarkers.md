@@ -129,7 +129,7 @@ What drives the live twin, and the one rule that is a judgement (`features/digit
 
 ## From Anchor, unchanged
 
-From `@open-twin/anchor-layer` at the pin in `docs/open-twin-pins.md`
+From `@open-twin/anchor-layer` at the commit in `docs/open-twin.md`
 (`data/anchor-layer.v1.json`, compiled by open-twin from
 `2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx`):
 

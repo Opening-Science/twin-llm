@@ -98,7 +98,8 @@ export type DetectedState = Readonly<{
   database: DatabaseProbe;
   /** Migration folders in `prisma/migrations`. */
   migrations: readonly string[];
-  openTwin: Readonly<{ pinned: string; synced: string | null }>;
+  /** A `.open-twin/` left over from the old sync (the packages live in packages/open-twin/ now). */
+  leftoverOpenTwin: boolean;
   /** Atlas and demo-body files not yet installed (by file name). */
   anatomyMissing: readonly string[];
   /** Rigged demo bodies not yet installed (by file name). */
@@ -136,7 +137,6 @@ export type EvalSource =
 
 export type StepId =
   | "env-file"
-  | "open-twin"
   | "install"
   | "database"
   | "migrate"
@@ -294,31 +294,6 @@ const databaseProblem = (state: DetectedState): string | null => {
         ? null
         : `pgvector is not installed in this Postgres: ${pgvectorInstall(state.platform, db.serverMajor)}`;
   }
-};
-
-const openTwinStep = (state: DetectedState): Step => {
-  const base = {
-    id: "open-twin",
-    title: "open-twin packages (sync:open-twin)",
-    after: [],
-  } as const;
-  if (state.openTwin.synced === state.openTwin.pinned) {
-    return {
-      ...base,
-      status: "skip",
-      reason: `already at ${state.openTwin.pinned.slice(0, 7)}`,
-    };
-  }
-  const missing = (["git", "python3"] as const)
-    .map((id) => fixFor(state, id))
-    .filter((fix) => fix !== null);
-  return missing.length > 0
-    ? { ...base, status: "blocked", reason: missing.join("; ") }
-    : {
-        ...base,
-        status: "run",
-        action: { kind: "command", argv: ["bun", "run", "sync:open-twin"] },
-      };
 };
 
 const databaseStep = (state: DetectedState): Step => {
@@ -679,7 +654,7 @@ export const planSetup = (
   const install: Step = {
     id: "install",
     title: "Dependencies (bun install)",
-    after: ["open-twin"],
+    after: [],
     status: "run",
     action: { kind: "command", argv: ["bun", "install"] },
   };
@@ -712,7 +687,6 @@ export const planSetup = (
       : cohortStep(state, options);
   return [
     envFile,
-    openTwinStep(state),
     install,
     database,
     migrate,

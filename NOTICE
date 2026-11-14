@@ -26,13 +26,13 @@ The multi-model chat shell (side-by-side answers, `features/arena/`) began from:
 
 The leaderboard, benchmarks page and turn/vote data model derived from it were removed in October 2026; the shell that remains has been extended since. This NOTICE retains attribution. It does **not** claim that the Arena upstream granted MIT or Apache-2.0 terms. Do not describe the whole tree as "all Apache-2.0".
 
-## open-twin connectors
+## open-twin packages
 
-Packages synced at a pinned SHA into the gitignored `.open-twin/` are from [Opening-Science/open-twin](https://github.com/Opening-Science/open-twin) (MIT). See `PROVENANCE.md` for the exact SHA and TwinLLM-only host patches.
+The packages in `packages/open-twin/` (fhir-core, fhir-r4, aggregate, provider-oura, provider-google-health, provider-whoop, and the data of anchor-layer) were copied from [Opening-Science/open-twin](https://github.com/Opening-Science/open-twin) at commit `4b42ef944db0b461ca414b8066a5f7aa2594a9ce`. They are under the MIT License (Copyright (c) 2026 Open Science Foundation (Opening Science)), not the Apache License. A copy of the licence is beside each package. Their source files are unchanged but for one line listed in `PROVENANCE.md`; their package.json files were adapted to this repository. Details: `PROVENANCE.md`.
 
 ## Anchor biomarker catalogue
 
-The 67 Anchor biomarkers, their LOINC codes, UCUM units, body systems, regions and published reference intervals come from `@open-twin/anchor-layer` (MIT), compiled by open-twin from the Anchor workbook `2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx`. Each reference interval keeps its issuer and source URL. LOINC codes and names are © Regenstrief Institute, Inc., used under the LOINC licence (https://loinc.org/license/). Details and what TwinLLM adds: `docs/biomarkers.md`.
+The 67 Anchor biomarkers, their LOINC codes, UCUM units, body systems, regions and published reference intervals come from `@open-twin/anchor-layer` (`packages/open-twin/anchor-layer/data/`), compiled by open-twin from the Anchor workbook `2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx`. Each reference interval keeps its issuer and source URL. LOINC codes and names are © Regenstrief Institute, Inc., used under the LOINC licence (https://loinc.org/license/). Upstream's anchor-layer package.json has no licence field; the package is covered by open-twin's root MIT licence, a copy of which is in `packages/open-twin/anchor-layer/LICENSE`. Details and what TwinLLM adds: `docs/biomarkers.md`.
 
 ## OpenTwin knowledge notes
 

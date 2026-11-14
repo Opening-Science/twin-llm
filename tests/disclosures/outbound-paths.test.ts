@@ -251,6 +251,9 @@ describe("every outbound path goes through the disclosure ledger (#140)", () => 
       "proxy.ts",
       "instrumentation.ts",
     ]
+      // The providers copied from open-twin send only when app code calls them,
+      // and every app file that imports one (@open-twin/provider-*) is listed.
+      .filter((file) => !file.startsWith("packages/open-twin/"))
       .filter((file) => reachesOut(file, CLIENT_IMPORT))
       .sort();
     expect(found).toEqual(Object.keys(OUTBOUND).sort());

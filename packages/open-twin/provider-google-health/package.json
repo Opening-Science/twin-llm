@@ -1,0 +1,16 @@
+{
+  "name": "@open-twin/provider-google-health",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@googleapis/health": "6.0.0",
+    "@open-twin/fhir-core": "workspace:*",
+    "@types/fhir": "0.0.44",
+    "googleapis": "181.0.0"
+  }
+}

@@ -191,32 +191,27 @@ bun run anchor:rotate -- --without-old-key   # the old key is lost or exposed
 - **Limits.** Rows added since the latest anchor can still be removed unseen. Anyone who can write as your OS user can replace the key and the file; a copy of `anchor:export` kept elsewhere is what guards against that.
 - Last run: 2026-10-31, Linux, `next start` in synthetic mode against a throwaway owner cluster (Postgres 18.6 with pgvector, `TWINLLM_STATE_DIR` a new folder, deleted afterwards) with made-up rows only: audit rows from `verify-cli --seed-ok` and one synthetic ledger row. Before `anchor:init` the check said UNKNOWN (exit 2). `anchor:init` and `anchor:write` left the key 600 in a 700 folder and anchored both chains; both checks and both Lab cards said OK with the key id and public key. `anchor:rotate` and a new anchor still verified, the old public key in `retired/`. After `TRUNCATE audit_events` in that database `verify-cli --check` printed "The audit chain is shorter than its latest signed anchor (row 5)" and exited 1, the Audit chain card said Not OK, and `anchor:write` refused. Rows seeded again from row 1 gave "Row 5 of the audit chain has a different hash from its signed anchor" and the server logged its refusal once. With a 2 minute interval, a ledger row added after the last write was anchored when the server was stopped with SIGTERM. Screenshots light and dark.
 
-## open-twin sync
+## open-twin packages
 
-### `bash scripts/sync-open-twin.sh <sha>`
+The open-twin packages are copied into `packages/open-twin/` at one commit (`docs/open-twin.md`); there is nothing to sync.
 
-Checks out open-twin at `<sha>` into the gitignored `.open-twin/`, builds `fhir-core`, `fhir-r4`, `aggregate`, `anchor-layer` and the three providers, and pins their `fhir-core` peer. It never edits upstream `*.ts`. `@open-twin/interpreter` is not synced. Upgrade procedure: `docs/open-twin-pins.md`.
+### `bun run open-twin:verify`
 
-```sh
-bash scripts/sync-open-twin.sh 4b42ef944db0b461ca414b8066a5f7aa2594a9ce
-git -C .open-twin rev-parse HEAD
-git -C .open-twin status --porcelain -- '*.ts' | wc -l
-```
+Checks that every file in `packages/open-twin/` matches `MANIFEST.sha256`, that `UPSTREAM.json` names a base commit per package, and that the packages export what the host uses, including `normaliseBundle` from `@open-twin/fhir-r4` and the anchor-layer JSON against its sha256 sidecar.
 
-- Good: `sync-open-twin OK: … @ c37d800…`, `rev-parse` prints the same SHA, and porcelain prints `0`.
-- Then run `bun install` and `bun run sync:verify`, as in the upgrade procedure in `docs/open-twin-pins.md`.
-- Last run: 2026-10-17 21:36 CEST (default SHA `a9e126c`; `rev-parse` matches; `anchor-layer` dist present; porcelain `*.ts` 0). Package.json rewrites for `workspace:*` → peer-pin are expected and are not `*.ts` edits.
+- Good: 0 fail.
+- Last run: 2026-11-14, 9 pass / 0 fail (base `4b42ef9`).
 
-### `bun run sync:verify`
+### `bun run test:open-twin`
 
-Smoke tests that the synced packages resolve and export what the host pins, including `normaliseBundle` from `@open-twin/fhir-r4`.
+Upstream's own tests, under vitest, one process per package (`scripts/open-twin/test.ts`).
 
-- Good: 6 pass, 0 fail (the sixth checks the anchor-layer JSON against its sha256 sidecar).
-- Last run: 2026-11-14, 6 pass / 0 fail (pin `4b42ef9`).
+- Good: `test:open-twin: every package passed`.
+- Last run: 2026-11-14, every package passed (base `4b42ef9`).
 
-### Operator: cycle through `@open-twin/provider-vitronic` (never CI)
+### Operator: cycle through open-twin's `provider-vitronic` (never CI)
 
-TwinLLM no longer syncs `provider-vitronic`, so the library half of this check runs in an open-twin checkout. Dry-run first, then `--execute` with `BODYLOOP_TLS_FINGERPRINT`, host Sync on that scan, then count FHIR `bundle.entry` via `createBodyLoopClient({ apiToken, tlsFingerprintSha256 })` → `getAvailableViatars(client, probandId)` → `getFhirBundleFromVitronicData`. Do not use `packages/vitronic/client.ts` for this check. Fail if the eval hits `/probands` or the password grant.
+TwinLLM does not copy `provider-vitronic`, so the library half of this check runs in an open-twin checkout. Dry-run first, then `--execute` with `BODYLOOP_TLS_FINGERPRINT`, host Sync on that scan, then count FHIR `bundle.entry` via `createBodyLoopClient({ apiToken, tlsFingerprintSha256 })` → `getAvailableViatars(client, probandId)` → `getFhirBundleFromVitronicData`. Do not use `packages/vitronic/client.ts` for this check. Fail if the eval hits `/probands` or the password grant.
 
 ```sh
 bun run vitronic:cycle create-scan --proband-id <n>

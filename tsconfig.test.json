@@ -9,16 +9,20 @@
   // Bun's own types (bun:test, Bun, import.meta.dir) for the test runner,
   // listed here only so app code does not see them.
   "files": ["node_modules/bun-types/index.d.ts"],
-  // Test files and whatever they import. The vendored open-twin tests run
-  // under their own vitest setup and stay out, as in tsconfig.json.
-  "include": ["next-env.d.ts", "**/*.test.ts", "**/*.test.tsx"],
+  // Test files and whatever they import, plus the module declarations the
+  // open-twin packages keep beside their source. The tests copied from
+  // open-twin import vitest and run under scripts/open-twin/test.ts, so they
+  // stay out.
+  "include": [
+    "next-env.d.ts",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "packages/open-twin/*/src/types/*.d.ts"
+  ],
   "exclude": [
     "node_modules",
-    ".open-twin/**/tests",
-    ".open-twin/**/*.test.ts",
-    ".open-twin/**/vitest.config.ts",
-    ".open-twin/**/testSetup.ts",
-    ".open-twin/**/verification/**",
-    ".open-twin/**/scripts/**"
+    "packages/open-twin/**/*.test.ts",
+    "packages/open-twin/**/src/tests/**",
+    ".open-twin"
   ]
 }

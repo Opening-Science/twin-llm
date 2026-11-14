@@ -8,7 +8,8 @@
     "bun": ">=1.4.2"
   },
   "workspaces": [
-    "."
+    ".",
+    "packages/open-twin/*"
   ],
   "scripts": {
     "setup:local": "bun scripts/setup/local.ts",
@@ -32,7 +33,7 @@
     "test": "bun test proxy.test.ts infrastructure features tests/guardrails tests/guidelines tests/knowledge tests/personal-reads tests/learning-consent tests/disclosures tests/support scripts/lint-claims.test.ts scripts/docs packages/warehouse packages/personal-data packages/query-tools packages/audit packages/ark-adapter packages/genome-reference packages/carbon-x packages/gbd-mcp packages/gbd-local scripts/gbd packages/mcp-client packages/guidelines packages/knowledge packages/literature packages/live-sources packages/vitronic scripts/vitronic packages/anatomy packages/biomarkers packages/rhythm-sim scripts/anatomy scripts/blender scripts/geo scripts/fonts scripts/warehouse scripts/evaluation scripts/synthea scripts/synthetic-wearables scripts/rhythm-bench scripts/genome-synth scripts/heart-brain scripts/disclosure scripts/vault scripts/training-data scripts/setup scripts/db scripts/new-tool scripts/anchor evaluation",
     "test:live-db": "bun scripts/db/run-live-db-tests.ts",
     "test:isolation": "bun test features/wearables features/vitronic features/oura features/whoop/oauth-route.test.ts features/google-health/oauth-route.test.ts",
-    "postinstall": "prisma generate && bash scripts/flatten-open-twin.sh",
+    "postinstall": "prisma generate",
     "prepare": "husky",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
@@ -56,9 +57,8 @@
     "new:tool": "bun scripts/new-tool/new-tool.ts",
     "new:tool:prove": "bun scripts/new-tool/prove-typecheck.ts",
     "tools:snapshots": "bun scripts/new-tool/write-snapshots.ts",
-    "sync:open-twin": "bash scripts/sync-open-twin.sh",
-    "sync:verify": "bun test infrastructure/open-twin-pins.test.ts",
-    "flatten:open-twin": "bash scripts/flatten-open-twin.sh",
+    "open-twin:verify": "bun test infrastructure/open-twin.test.ts",
+    "test:open-twin": "bun scripts/open-twin/test.ts",
     "oura:proxy": "bun scripts/oura-oauth-proxy.mjs",
     "whoop:proxy": "bun scripts/whoop-oauth-proxy.mjs",
     "google-health:setup": "bun scripts/google-health-setup.mjs",
@@ -130,13 +130,13 @@
     "@clerk/nextjs": "7.6.4",
     "@googleapis/health": "2.0.0",
     "@modelcontextprotocol/sdk": "1.32.2",
-    "@open-twin/aggregate": "file:.open-twin/packages/aggregate",
-    "@open-twin/anchor-layer": "file:.open-twin/packages/anchor-layer",
-    "@open-twin/fhir-core": "file:.open-twin/packages/fhir-core",
-    "@open-twin/fhir-r4": "file:.open-twin/packages/fhir-r4",
-    "@open-twin/provider-google-health": "file:.open-twin/packages/provider-google-health",
-    "@open-twin/provider-oura": "file:.open-twin/packages/provider-oura",
-    "@open-twin/provider-whoop": "file:.open-twin/packages/provider-whoop",
+    "@open-twin/aggregate": "workspace:*",
+    "@open-twin/anchor-layer": "workspace:*",
+    "@open-twin/fhir-core": "workspace:*",
+    "@open-twin/fhir-r4": "workspace:*",
+    "@open-twin/provider-google-health": "workspace:*",
+    "@open-twin/provider-oura": "workspace:*",
+    "@open-twin/provider-whoop": "workspace:*",
     "@openrouter/ai-sdk-provider": "3.0.0",
     "@posthog/ai": "8.6.0",
     "@prisma/adapter-pg": "7.9.1",
@@ -183,7 +183,8 @@
     "prettier-plugin-tailwindcss": "0.8.1",
     "prisma": "7.9.1",
     "tailwindcss": "4.3.3",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "vitest": "5.1.0"
   },
   "overrides": {
     "zod": "4.6.6"

@@ -1,6 +1,6 @@
 // The pinned provider-whoop fetches and maps recovery, cycles and sleep only.
 // Workouts (GET /v2/activity/workout, scope read:workout) are fetched and mapped
-// here until upstream has them (docs/open-twin-pins.md). Only the public
+// here until upstream has them (docs/open-twin.md). Only the public
 // fhir-core barrel is used. No server-only so tests can map a fixture.
 import {
   buildBundle,

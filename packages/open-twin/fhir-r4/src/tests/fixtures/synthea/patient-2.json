@@ -1,0 +1,351 @@
+{
+  "resourceType": "Bundle",
+  "type": "collection",
+  "entry": [
+    {
+      "fullUrl": "urn:uuid:4f083ce3-f12b-bb4b-7353-e17f0cd55b0a",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "4f083ce3-f12b-bb4b-7353-e17f0cd55b0a",
+        "meta": {
+          "profile": ["http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"]
+        },
+        "extension": [
+          {
+            "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+            "extension": [
+              {
+                "url": "ombCategory",
+                "valueCoding": {
+                  "system": "urn:oid:2.16.840.1.113883.6.238",
+                  "code": "2106-3",
+                  "display": "White"
+                }
+              },
+              {
+                "url": "text",
+                "valueString": "White"
+              }
+            ]
+          },
+          {
+            "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+            "extension": [
+              {
+                "url": "ombCategory",
+                "valueCoding": {
+                  "system": "urn:oid:2.16.840.1.113883.6.238",
+                  "code": "2186-5",
+                  "display": "Not Hispanic or Latino"
+                }
+              },
+              {
+                "url": "text",
+                "valueString": "Not Hispanic or Latino"
+              }
+            ]
+          },
+          {
+            "url": "http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName",
+            "valueString": "Rosella686 Nitzsche158"
+          },
+          {
+            "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-birthsex",
+            "valueCode": "M"
+          },
+          {
+            "url": "http://hl7.org/fhir/StructureDefinition/patient-birthPlace",
+            "valueAddress": {
+              "city": "Onset",
+              "state": "Massachusetts",
+              "country": "US"
+            }
+          },
+          {
+            "url": "http://synthetichealth.github.io/synthea/disability-adjusted-life-years",
+            "valueDecimal": 0.0006122107609236168
+          },
+          {
+            "url": "http://synthetichealth.github.io/synthea/quality-adjusted-life-years",
+            "valueDecimal": 26.999387789239076
+          }
+        ],
+        "identifier": [
+          {
+            "system": "https://github.com/synthetichealth/synthea",
+            "value": "4f083ce3-f12b-bb4b-7353-e17f0cd55b0a"
+          }
+        ],
+        "name": [
+          {
+            "use": "official",
+            "family": "Walter473",
+            "given": ["Ezekiel373", "Leslie90"],
+            "prefix": ["Mr."]
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "555-154-3309",
+            "use": "home"
+          }
+        ],
+        "gender": "male",
+        "birthDate": "1998-12-19",
+        "maritalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus",
+              "code": "S",
+              "display": "Never Married"
+            }
+          ],
+          "text": "Never Married"
+        },
+        "multipleBirthBoolean": false,
+        "communication": [
+          {
+            "language": {
+              "coding": [
+                {
+                  "system": "urn:ietf:bcp:47",
+                  "code": "en-US",
+                  "display": "English (United States)"
+                }
+              ],
+              "text": "English (United States)"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:4f083ce3-f12b-bb4b-c1c7-160cc37081e4",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "4f083ce3-f12b-bb4b-c1c7-160cc37081e4",
+        "meta": {
+          "profile": ["http://hl7.org/fhir/us/core/StructureDefinition/us-core-body-height"]
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "vital-signs",
+                "display": "Vital signs"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8302-2",
+              "display": "Body Height"
+            }
+          ],
+          "text": "Body Height"
+        },
+        "subject": {
+          "reference": "urn:uuid:4f083ce3-f12b-bb4b-7353-e17f0cd55b0a"
+        },
+        "encounter": {
+          "reference": "urn:uuid:4f083ce3-f12b-bb4b-51a7-85063adb2c65"
+        },
+        "effectiveDateTime": "2017-02-11T04:29:26+01:00",
+        "issued": "2017-02-11T04:29:26.338+01:00",
+        "valueQuantity": {
+          "value": 175.3,
+          "unit": "cm",
+          "system": "http://unitsofmeasure.org",
+          "code": "cm"
+        }
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:4f083ce3-f12b-bb4b-1a54-543f8a07b264",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "4f083ce3-f12b-bb4b-1a54-543f8a07b264",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "vital-signs",
+                "display": "Vital signs"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "72514-3",
+              "display": "Pain severity - 0-10 verbal numeric rating [Score] - Reported"
+            }
+          ],
+          "text": "Pain severity - 0-10 verbal numeric rating [Score] - Reported"
+        },
+        "subject": {
+          "reference": "urn:uuid:4f083ce3-f12b-bb4b-7353-e17f0cd55b0a"
+        },
+        "encounter": {
+          "reference": "urn:uuid:4f083ce3-f12b-bb4b-51a7-85063adb2c65"
+        },
+        "effectiveDateTime": "2017-02-11T04:29:26+01:00",
+        "issued": "2017-02-11T04:29:26.338+01:00",
+        "valueQuantity": {
+          "value": 1,
+          "unit": "{score}",
+          "system": "http://unitsofmeasure.org",
+          "code": "{score}"
+        }
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:4f083ce3-f12b-bb4b-8d47-61a73e6e4f2a",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "4f083ce3-f12b-bb4b-8d47-61a73e6e4f2a",
+        "meta": {
+          "profile": ["http://hl7.org/fhir/us/core/StructureDefinition/us-core-body-weight"]
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "vital-signs",
+                "display": "Vital signs"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "29463-7",
+              "display": "Body Weight"
+            }
+          ],
+          "text": "Body Weight"
+        },
+        "subject": {
+          "reference": "urn:uuid:4f083ce3-f12b-bb4b-7353-e17f0cd55b0a"
+        },
+        "encounter": {
+          "reference": "urn:uuid:4f083ce3-f12b-bb4b-51a7-85063adb2c65"
+        },
+        "effectiveDateTime": "2017-02-11T04:29:26+01:00",
+        "issued": "2017-02-11T04:29:26.338+01:00",
+        "valueQuantity": {
+          "value": 85.2,
+          "unit": "kg",
+          "system": "http://unitsofmeasure.org",
+          "code": "kg"
+        }
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:4f083ce3-f12b-bb4b-96e3-67782d088376",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "4f083ce3-f12b-bb4b-96e3-67782d088376",
+        "meta": {
+          "profile": ["http://hl7.org/fhir/us/core/StructureDefinition/us-core-bmi"]
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "vital-signs",
+                "display": "Vital signs"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "39156-5",
+              "display": "Body mass index (BMI) [Ratio]"
+            }
+          ],
+          "text": "Body mass index (BMI) [Ratio]"
+        },
+        "subject": {
+          "reference": "urn:uuid:4f083ce3-f12b-bb4b-7353-e17f0cd55b0a"
+        },
+        "encounter": {
+          "reference": "urn:uuid:4f083ce3-f12b-bb4b-51a7-85063adb2c65"
+        },
+        "effectiveDateTime": "2017-02-11T04:29:26+01:00",
+        "issued": "2017-02-11T04:29:26.338+01:00",
+        "valueQuantity": {
+          "value": 27.72,
+          "unit": "kg/m2",
+          "system": "http://unitsofmeasure.org",
+          "code": "kg/m2"
+        }
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:4f083ce3-f12b-bb4b-9591-360c0952723f",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "4f083ce3-f12b-bb4b-9591-360c0952723f",
+        "meta": {
+          "profile": ["http://hl7.org/fhir/us/core/StructureDefinition/pediatric-bmi-for-age"]
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "vital-signs",
+                "display": "Vital signs"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "59576-9",
+              "display": "Body mass index (BMI) [Percentile] Per age and sex"
+            }
+          ],
+          "text": "Body mass index (BMI) [Percentile] Per age and sex"
+        },
+        "subject": {
+          "reference": "urn:uuid:4f083ce3-f12b-bb4b-7353-e17f0cd55b0a"
+        },
+        "encounter": {
+          "reference": "urn:uuid:4f083ce3-f12b-bb4b-51a7-85063adb2c65"
+        },
+        "effectiveDateTime": "2017-02-11T04:29:26+01:00",
+        "issued": "2017-02-11T04:29:26.338+01:00",
+        "valueQuantity": {
+          "value": 92.377,
+          "unit": "%",
+          "system": "http://unitsofmeasure.org",
+          "code": "%"
+        }
+      }
+    }
+  ]
+}

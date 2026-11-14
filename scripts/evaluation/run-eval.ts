@@ -32,6 +32,7 @@ import { join } from "node:path";
 import { type EvalDeps, type ModelSpec, EvalSetupError, runEval } from "./eval-runner";
 import { DEFAULT_OLLAMA_BASE_URL } from "../../infrastructure/ollama-context";
 import { withLocalGbd } from "./gbd-local-route";
+import { openTwinBase } from "./open-twin-base";
 import { type CacheStore } from "./model-cache";
 
 const RUNS_DIR = "evaluation/runs";
@@ -232,10 +233,7 @@ if (isMain) {
     today: isoLocalDate,
     newRunId: () => `${isoLocalDate()}-${env.LLM_PROVIDER}-${Date.now().toString(36)}`,
     gitSha: () => execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
-    openTwinSha: () =>
-      execFileSync("git", ["-C", ".open-twin", "rev-parse", "HEAD"], {
-        encoding: "utf8",
-      }).trim(),
+    openTwinSha: () => openTwinBase(),
     platform: `${process.platform}-${process.arch}`,
     logError: (message, detail) => {
       console.error(message, detail);

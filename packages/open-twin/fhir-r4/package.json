@@ -1,0 +1,16 @@
+{
+  "name": "@open-twin/fhir-r4",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@lhncbc/ucum-lhc": "7.1.9",
+    "@open-twin/fhir-core": "workspace:*",
+    "@types/fhir": "0.0.44",
+    "zod": "4.6.6"
+  }
+}

@@ -10,6 +10,9 @@ next-env.d.ts
 tsconfig.tsbuildinfo
 public
 
+# Copied from open-twin and kept as written (packages/open-twin/MANIFEST.sha256).
+packages/open-twin/
+
 # Byte-identical copies of open-twin Synthea fixtures (see tests/fixtures/synthea/PROVENANCE)
 tests/fixtures/synthea/*.json
 

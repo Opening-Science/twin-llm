@@ -1,3 +1,10 @@
 [test]
 # Stub "server-only" for every bun test run so results do not depend on file order (#150).
 preload = ["./features/chat/response/preload-server-only.mjs"]
+# The tests copied with the open-twin packages need vitest: `bun run test:open-twin`.
+pathIgnorePatterns = ["packages/open-twin/**"]
+
+[install]
+# Keep one hoisted node_modules, as before the open-twin workspaces:
+# Bun picks the isolated layout for a project with workspaces otherwise.
+linker = "hoisted"
