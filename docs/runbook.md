@@ -154,6 +154,18 @@ The backup holds your data in plain text, so `bun run doctor` warns while it is 
 - **Backups from now on.** A database dump holds ciphertext; it opens only with the key file `$TWINLLM_STATE_DIR/vault/<hash>.json` and your passphrase or recovery code. Back up the dump, the key file and `VITRONIC_DATA_DIR` together.
 - **"Your data is locked"** on a page that worked before: the vault locked (idle, restart, Lock). **"personal value did not decrypt"** in the server log (error name `FieldDecryptError`): a value was edited, moved between rows, or written under a key this key file does not hold (a restore of an older dump next to a newer key file). The request fails rather than showing an empty value; restore the dump and key file from the same backup.
 - **Tokens (#341).** Oura, Whoop, Google Health and BodyLoop tokens are listed columns too. An install from before #341 runs `bun run vault:migrate` once more, with the app stopped; until then a sync answers that it failed, and the doctor names the four `*_connections` tables. The env keys stay: each token is sealed on top of its `*_TOKEN_ENCRYPTION_KEY` ciphertext. A provider return or a scanner upload while locked stores nothing and writes a `vault.locked.skip.<step>` audit row; unlock and link again.
+- **CI (`vault-migrate` job).** `bun run vault:ci-migrate` runs the migration end to end on a throwaway, migrated database: it seeds seven made-up fixtures from `tests/fixtures/personal-import/` plain (as before #141), runs `vault:migrate --backup-confirmed` with a passphrase it makes itself and types on stdin (never printed; the recovery code shows as `[hidden]`), checks that no plain value is left and no row was lost, then runs it again and checks that it sealed nothing and every personal table is stored byte for byte as before. It prints table names and counts only. It refuses a database where the local person already has datasets.
+
+  ```sh
+  DATABASE_URL=postgresql://<user>@127.0.0.1:<port>/<throwaway, migrated> \
+  LOCAL_MVP=true AUTH_DISABLED=true LLM_PROVIDER=ollama \
+  TWINLLM_STATE_DIR=<new folder> VITRONIC_DATA_DIR=<new folder> \
+  bun run vault:ci-migrate
+  ```
+
+  - Good: `vault:ci-migrate OK: 46 row(s) sealed, 0 plain left over 46 row(s); the second run changed nothing`.
+  - Last run: 2026-11-13, Linux, Postgres 18.6 with pgvector, a throwaway cluster outside the repository after `db:deploy`: 7 datasets, 35 observations, 2 clinical records, a table and a chunk seeded with 246 plain values; the first run sealed 46 rows, the second 0, digests unchanged. A second `vault:ci-migrate` on the same database refused at the seed.
+
 - **Doctor and Lab.** `bun run doctor` counts plain values per listed column (names and counts only) and lists leftover backups; the Lab card "Encryption at rest" shows the same counts while locked.
 - Last run: 2026-10-31, Linux, Postgres 18.6 with pgvector, throwaway owner cluster in a new folder (deleted afterwards). A database at the schema before #141 was filled from the synthetic fixtures (lab CSV, FHIR bundle, Apple Health zip, a genome-synth VCF, a research table, a thread with a tool answer, a twin note, an Oura snapshot, a BodyLoop scan with a made-up mesh, an onboarding answer, a user genome report and a synthetic subject's report). Before: `pg_dump` held every fixture marker and the doctor listed 45 columns. `db:deploy`, then `vault:migrate`: refused without the typed confirmation; with it, 133 rows and 1 mesh file sealed in batches of 10; a second run sealed 0. After: no fixture text in `pg_dump --data-only` (only the synthetic subject's report stayed plain), the doctor `[ok]`, the mesh folder held only `.glb.enc`. Read back through the stores and the chat tools (`imported_datasets`, `imported_latest`, `imported_trend`, `imported_table`, `imported_conditions`, `imported_medications`, `genome_variants`), the sidebar, the thread, notes, Oura summary, scan and mesh: the same values; while locked every read refused. `vault:rotate`: every value under the new key id, the old key gone from the key file, reads unchanged. Then `next dev` in personal mode on a fresh database of the same cluster: unlock, the five fixtures imported through Customize · Data (a second lab CSV refused as a duplicate), a chat question answered by a local model through `imported_latest` (HbA1c 5.4 % on 2024-02-10), a twin note saved, search by words and by meaning (sealed vectors) found the threads; `pg_dump` again held no fixture or prompt text.
 
@@ -186,7 +198,7 @@ bun run anchor:rotate -- --without-old-key   # the old key is lost or exposed
 Checks out open-twin at `<sha>` into the gitignored `.open-twin/`, builds `fhir-core`, `fhir-r4`, `aggregate`, `interpretation-contract`, `anchor-layer` and the four providers, and pins their `fhir-core` peer. It never edits upstream `*.ts`. `@open-twin/interpreter` is not synced. Upgrade procedure: `docs/open-twin-pins.md`.
 
 ```sh
-bash scripts/sync-open-twin.sh c37d8004d93d5accb9b91bebcbd89376837776bd
+bash scripts/sync-open-twin.sh 4b42ef944db0b461ca414b8066a5f7aa2594a9ce
 git -C .open-twin rev-parse HEAD
 git -C .open-twin status --porcelain -- '*.ts' | wc -l
 ```
@@ -389,7 +401,7 @@ bunx prisma migrate status
 
 `scripts/db/verify-migrations.sh` runs `migrate deploy`, diffs the migrations against the schema, probes pgvector (`scripts/db/verify-pgvector.sh`), probes the warehouse `source` CHECKs with `prisma db execute --stdin`, then seeds two audit events, tampers `seq = 1`, and expects `verifyChain` to fail at that seq.
 
-`db:verify` needs the `psql` client on PATH. On macOS install it with Homebrew libpq (`brew install libpq`, then add `/opt/homebrew/opt/libpq/bin` to PATH in `~/.zshrc`). CI installs `postgresql-client`.
+`db:verify` needs the `psql` client on PATH. On macOS install it with Homebrew libpq (`brew install libpq`, then add `/opt/homebrew/opt/libpq/bin` to PATH in `~/.zshrc`). CI uses the psql on the runner and installs `postgresql-client` only when it is missing.
 
 Reset scratch first: `docker rm -f twinllm-scratch twinllm-shadow`; start both again (above); then `db:verify`. A scratch that still has the migration history from before the 2026-10-25 baseline will not deploy cleanly.
 

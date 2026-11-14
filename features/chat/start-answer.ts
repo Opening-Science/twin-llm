@@ -28,6 +28,10 @@ import {
   type TurnSkill,
 } from "@/infrastructure/skill-gate";
 import { uiContextEvent } from "@/infrastructure/ui-context";
+import {
+  summarySources,
+  wearableSourcesEvent,
+} from "@/infrastructure/wearable-source-audit";
 import type { AppendInput } from "@/packages/audit/append";
 
 import type { ChatRequest } from "./chat-request";
@@ -228,6 +232,19 @@ export const createStartAnswer =
       modelId,
     });
     if (event !== null) await deps.appendAudit(event);
+    const { sourceDecisions, ...summaries } = wearables;
+    const sourcesEvent = wearableSourcesEvent({
+      actor: actorId,
+      sessionId: call.turnId,
+      sources: summarySources({
+        oura: summaries.ouraSummary,
+        whoop: summaries.whoopSummary,
+        googleHealth: summaries.googleHealthSummary,
+        vitronic: summaries.vitronicSummary,
+      }),
+      decisions: sourceDecisions ?? [],
+    });
+    if (sourcesEvent !== null) await deps.appendAudit(sourcesEvent);
     if (skill !== null) {
       await deps.appendAudit(
         skillRunEvent(skill, {
@@ -302,6 +319,6 @@ export const createStartAnswer =
       ...(twinNotes === null ? {} : { twinNotes }),
       ...(stop === null ? {} : { stop }),
       effort,
-      ...wearables,
+      ...summaries,
     });
   };

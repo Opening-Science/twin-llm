@@ -230,6 +230,12 @@ export const expectSchema = z
       )
       .min(1)
       .optional(),
+    /**
+     * The wearable rows a right answer needs, as stored metric keys
+     * (`whoop.recovery.hrv.2026-10-01`): the truth retrieval recall and
+     * precision are measured against (#508). Left out, retrieval is not scored.
+     */
+    wearable_rows: z.array(z.string().min(1)).min(1).optional(),
     /** Phrases or behaviours that fail the item when present. */
     must_not: z.array(z.string().min(1)).min(1),
   })

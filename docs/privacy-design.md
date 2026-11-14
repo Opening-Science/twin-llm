@@ -651,7 +651,8 @@ recipient.
   (the person's words, earlier answers, tool results) and looks for values stored here:
   rsIDs and genome sites (`chr7:117559590` or `7:117559590`, positions of four digits or
   more), hashed with the person's index key and looked up in the keyed hash columns of
-  their imported VCFs, so no variant is opened; and, as whole words ignoring case, the
+  their imported VCFs, so no variant is opened; and, as whole words ignoring case and
+  diacritics (`foldedName`: `Zoë` and `ZOE`, `Müller` and `muller`, `ß` as `ss`), the
   file names of their imports, their body scan labels other than their own subject, and
   their account id when it is not a plain word. Then the person's stored values, opened
   once per model call because none of these stores keeps a keyed hash of a value
@@ -666,11 +667,21 @@ recipient.
   MedicationRequest whose code stands as a whole token or whose name, 24 characters or
   more, stands as a whole phrase (shorter names such as "Asthma" are words anyone
   writes); a **twin note line** is a note title or list line of 24 characters or more as
-  a whole phrase, ignoring case and spacing. A stored value that also stands in what the
+  a whole phrase, ignoring case and spacing; a **dated value** is a stored reading's
+  number, or a clinical record's name (four characters or more) or code, within 80
+  characters of that same row's own day, written in ISO (`2026-03-14`, also before a
+  time) or en-GB (`14/03/2026`, `14.3.2026`, `14-03-2026`, `14 March 2026`, `14th Mar
+2026`). A reading has a day when its file gave a whole day (`day` precision) or a time
+  (`instant`, read as its UTC day); since no time zone is stored, an `instant` reading
+  also matches the day before and after its UTC day (a night reading at 23:30 UTC is
+  the next day in Zurich), never further. A record's day is its onset or authored day. A day's
+  own digits are not read as a number, a day alone never counts (too many texts name
+  one), and month-first days and two-digit years are not read. A dated value may also
+  be a lab value: the kinds are counted separately. A stored value that also stands in what the
   person typed in the call's messages (`typed`: the `user` messages of a chat turn and of
   its Ultra number check, and the questions of a thread a `/compact` draft summarises;
   starter questions the interest the person wrote, #414) is not counted: they sent it themselves, even where an answer repeats it. Names, file
-  names and genome identifiers are counted wherever they stand, as before. These four
+  names and genome identifiers are counted wherever they stand, as before. These five
   kinds are record-only: they are the person's values, not identifiers, so option C
   (#356) does not apply. Wearable numbers are not searched: a bare number such as a
   heart rate matches too much ordinary text, and wearable summaries are sent on purpose
@@ -682,10 +693,14 @@ recipient.
   lookups and the cap stays as it was. A body
   that cannot be read up front, or a check that fails (a locked vault), is recorded as
   not checked, with the error's name in the log. _Limits:_ approximate. A value written another way (a unit
-  conversion, a rounded number, thousands split by a plain space, another spelling) is missed, a value
+  conversion, a rounded number, thousands split by a plain space, another spelling, a
+  US or two-digit-year date, a day more than 80 characters from its value) is missed, a value
   the person typed and a reply repeats is not counted, and wearable numbers are not
   searched; wearable and twin note values are recorded as references above. Live lookups
-  are not checked (they have their own query check).
+  are not checked (they have their own query check). This check reads a decimal comma
+  because outgoing text may be in any locale; the evaluation's number finder
+  (`infrastructure/narrated-numbers.ts`) deliberately does not, since model answers are
+  en-GB (`docs/evaluation/harness.md`, "Limits").
 - **Exports and remote embeddings** (#531). A thread export (Markdown, FHIR or print)
   checks the thread's Markdown, the same text in every format, with the person's own
   questions as `typed`. The person sees what was found before any file is made: PDF and
@@ -752,7 +767,9 @@ recipient.
 
 **What the UI shows.** Customize · Privacy, "What left this machine" (behind the unlock,
 like the page): one line per recipient and direction with events (and how many were
-synthetic), values, size, first and last time; then the latest 100 events, each with
+synthetic), values, size, how many of its checked requests held stored values in their
+free text ("2 of 9 checked", a warning badge when any did; "not checked" when none was
+checked, #346), first and last time; then the latest 100 events, each with
 recipient, purpose, what it carried, size, a Synthetic badge where it applies, a link to
 the thread, its stored values as references under "Which stored values", and "Free
 text": the kinds and counts the check found (a warning badge when there are any), "no
@@ -976,7 +993,16 @@ Total about 27 working days.
 - **Tests.** The walk over an in-memory table: batches, a stop mid-way, resume, a second
   run, rotation. The whole migration was run by hand on a throwaway owner cluster seeded
   from the made-up fixtures in `tests/fixtures/personal-import/` and a genome-synth VCF
-  ([runbook.md](runbook.md#encryption-at-rest)); a CI job with a Postgres is still open.
+  ([runbook.md](runbook.md#encryption-at-rest)). CI runs it end to end in the
+  `vault-migrate` job (`bun run vault:ci-migrate`, `scripts/vault/ci-migrate.ts`) on a
+  Postgres service with synthetic rows only: it imports seven of those fixtures through
+  the import store in synthetic mode, so every listed column is stored plain as before
+  #141; runs `vault:migrate --backup-confirmed` in personal mode with a passphrase made
+  inside the run and given on stdin only (never an argument, the environment, a file or
+  the log; the recovery code is hidden in the log); checks that no plain value is left
+  and no row was lost; then runs it again and checks that it sealed nothing and every
+  personal table is stored exactly as before (an MD5 of each row). Mesh files and the
+  search vectors are not in that seed; they stay covered by the hand run.
 
 ## 5. Open questions for Peter
 

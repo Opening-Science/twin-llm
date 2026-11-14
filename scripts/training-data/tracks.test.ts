@@ -270,7 +270,8 @@ describe("parseBuildArgs --track", () => {
 describe("default output", () => {
   // sha256 over every file a run writes, recorded on main before tracks
   // existed (ec4d3de). A run without --track must stay byte for byte the same.
-  // Update a hash only for a deliberate change to the default set.
+  // Update a hash only for a deliberate change to the default set. Seeds 1 to 7
+  // moved when short dates wrote September as Sep, not Sept.
   const GOLDEN: ReadonlyArray<readonly [readonly string[], string]> = [
     [[], "437735ddc76c6ba7af69c99f3981459762dd60e5760f6e061cf541864886d6f4"],
     [["--genome"], "ff15137d5dcf90cc0fb19743ac6ffa3251ff3bd202cb106b722d6042caee64d4"],
@@ -278,13 +279,13 @@ describe("default output", () => {
       ["--inline-tools"],
       "9ec4e1655e80930afbc195f00324fe340fc74d2f4edc70635190478a12ef6eb5",
     ],
-    [["--seed", "1"], "9d1ee4b6884c0e303951567472cf68fe27f69d785edbc0dcda0b3473ca5d5724"],
-    [["--seed", "2"], "1a84d5b43be3b02e8e4d2c952bf5eeff73215c58ab3f939fe04cb62b6447a1aa"],
-    [["--seed", "3"], "cea65843839d36d54c9457e69b41f4e76b0181d6b02fa7aca4d62c9965cc053e"],
-    [["--seed", "4"], "ace6c653b2793389d8593866324807edb69b17bd79e5b2ebbc14bda6ab3ed154"],
-    [["--seed", "5"], "8e52452678453f71d2452f8796574c654a51857903704578e3fd62ee1590daeb"],
-    [["--seed", "6"], "7c68cb83908ab903be99ffefc035929070043ef0bc591497e61eb62a9b7c40b5"],
-    [["--seed", "7"], "f4a919324e4699fc475470b1b1f7b296a7bfe31914aa0d39970faf08452884c9"],
+    [["--seed", "1"], "970d478a146021586efe03854d167c1fc28069c84f2d0b01694401b12cc5194f"],
+    [["--seed", "2"], "813b838a1b0d5a849ca306a19fb222c433abbcbc702be426e38266d362e997dc"],
+    [["--seed", "3"], "3174070657a66c33d7a14fdc038e7c31339602c9ad5a9002e15974ffbee4f5f5"],
+    [["--seed", "4"], "a1e474006613e294647f1e35ce212ad0a94ed7ed48703ea6026b05079c9305a4"],
+    [["--seed", "5"], "f50b904c87aba4e097817c81ec8ad1692c4e7a7925d3a35a10a0be1265df20a0"],
+    [["--seed", "6"], "2648e77c12b1269f22529589356534015bbd8095d6efdde1c73f852bb0477217"],
+    [["--seed", "7"], "115a75e901655432a635c73fcb3849724aa275fa8bc8d1421fe85c02fbc44e20"],
     [["--seed", "8"], "981cffc7d2200f929d722c049e174b3cbd088b2e5bf8170dc604532541dcb034"],
   ];
 

@@ -8,6 +8,7 @@ import { questionsSha256 } from "./build-answer-key";
 import { type ResultLine, type RunMeta } from "./eval-results";
 import {
   armRows,
+  attributionFigures,
   callFigures,
   CONTEXT_CALLS_NA,
   csvCell,
@@ -473,6 +474,68 @@ describe("call accuracy and answers without a tool in the report (#276)", () => 
       withoutTool: 1,
       kinds: { "no call": 0, "no rows": 1, "not in rows": 1 },
     });
+  });
+});
+
+describe("wearable source attribution in the report (#508)", () => {
+  const counts = (correct: number, misattributed: number, unnamed = 0) => ({
+    correct,
+    unnamed,
+    misattributed,
+    stated_withheld: 0,
+    unsourced: 0,
+  });
+  const scored = (
+    correct: number,
+    misattributed: number,
+    retrieval: { needed: number; fetched: number; hits: number } | null,
+    unnamed = 0,
+    verified = true,
+  ) => ({
+    attribution: {
+      rules: "wearable-source-rules/1",
+      verified,
+      numbers: Array.from({ length: correct + misattributed + unnamed }, () => ({
+        stated: "52 ms",
+        measure: "heart-rate-variability" as const,
+        named: "whoop" as const,
+        label: "correct" as const,
+        key: null,
+      })),
+      counts: counts(correct, misattributed, unnamed),
+      retrieval:
+        retrieval === null
+          ? null
+          : {
+              ...retrieval,
+              recall: retrieval.hits / retrieval.needed,
+              precision: retrieval.hits / retrieval.fetched,
+            },
+    },
+  });
+
+  test("pools labels and retrieval across lines, and shares carry Wilson intervals", () => {
+    const figures = attributionFigures({
+      scored: [
+        scored(2, 1, { needed: 3, fetched: 2, hits: 2 }),
+        scored(1, 0, null, 2, false),
+        { attribution: null },
+      ],
+    });
+    expect(figures).toEqual({
+      answers: 2,
+      numbers: 6,
+      labels: counts(3, 1, 2),
+      unverified: 1,
+      retrieval: { lines: 1, needed: 3, fetched: 2, hits: 2 },
+    });
+    // Unnamed is its own share, apart from correct.
+    expect(shareCell(figures.labels.correct, figures.numbers)).toBe("3/6 (19–81 %)");
+    expect(shareCell(figures.labels.unnamed, figures.numbers)).toBe("2/6 (10–70 %)");
+  });
+
+  test("the fixture run has no wearable rows, so the report has no attribution section", () => {
+    expect(EXPECTED).not.toContain("Wearable source attribution");
   });
 });
 

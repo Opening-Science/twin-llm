@@ -433,6 +433,27 @@ describe("explainability panel evidence provenance (#464)", () => {
     expect(markup).not.toContain("From WHOOP");
   });
 
+  test("a cited value reads as on the Digital Twin: its day and number formatted", () => {
+    const text = render([
+      {
+        metricKey: "activity.steps.2026-11-11",
+        label: "Steps (2026-11-11)",
+        value: 8120,
+        source: "oura",
+        day: "2026-11-11",
+      },
+      {
+        metricKey: "sleep.hrv.long_sleep.2026-11-11",
+        label: "Average HRV during sleep (2026-11-11)",
+        value: 52,
+        unit: "ms",
+      },
+    ]).replace(/<[^>]+>/g, "");
+    expect(text).toContain("Steps, 11 Nov 2026: 8,120");
+    expect(text).toContain("Average HRV during sleep, 11 Nov 2026: 52 ms");
+    expect(text).not.toContain("2026-11-11");
+  });
+
   test("an answer stored before #464 shows its values without a source line", () => {
     const markup = render([
       { metricKey: "sleep.hrv.2026-01-01", label: "Sleep HRV", value: 41, unit: "ms" },

@@ -231,6 +231,9 @@ export const resolveAttribution = (
       unit: metric.unit,
       ...(metric.source ? { source: metric.source } : {}),
       ...(metric.source && day ? { day } : {}),
+      ...("sourceRule" in metric && metric.sourceRule !== undefined
+        ? { sourceRule: metric.sourceRule }
+        : {}),
     });
   };
 

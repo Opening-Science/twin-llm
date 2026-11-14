@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
+import { EMPTY_VALUE } from "@/infrastructure/format-measure";
+
 import { kitSections, type KitCard, type KitSection } from "./kit-cards";
 import type { Metric } from "./metric-utils";
 import type { WearableDetail } from "./wearable-detail";
@@ -138,7 +140,7 @@ describe("kitSections, Oura", () => {
   test("the heart range has one bucket per week with a readout", () => {
     const range = card(section(sections, "monthly").cards, "weeks:sleep.hr.");
     if (range.chart !== "range") throw new Error("not a range card");
-    // 29 Sept is a Tuesday: the weeks of 28 Sept to 2 Nov.
+    // 29 Sep is a Tuesday: the weeks of 28 Sep to 2 Nov.
     expect(range.buckets.length).toBe(6);
     expect(range.buckets.at(-1)).toEqual({
       min: 56,
@@ -392,5 +394,39 @@ describe("kitSections, detail cards", () => {
       sentence:
         "Your day is compared with your usual day once 7 earlier days with hourly steps are in view.",
     });
+  });
+});
+
+describe("empty cards pass the app's one dash, so the kit reads it as no data", () => {
+  test("bedtimes with no nights yet, and a month with no readings", () => {
+    const none = kitSections({
+      source: "oura",
+      metrics: [],
+      today: TODAY,
+      detail: { ...DETAIL, nights: { status: "missing" } },
+    });
+    expect(card(section(none, "weekly").cards, "nights:bedtime")).toMatchObject({
+      state: "empty",
+      reference: { value: EMPTY_VALUE },
+      last: { value: EMPTY_VALUE },
+    });
+    expect(section(none, "monthly").cards[0]).toMatchObject({
+      id: "empty:monthly",
+      current: { display: EMPTY_VALUE },
+      previous: { display: EMPTY_VALUE },
+    });
+  });
+
+  test("a night without a bedtime shows the dash, never an en dash", () => {
+    const gaps = NIGHTS.map((n, i) => (i === 13 ? { ...n, bedtime: null } : n));
+    const weekly = kitSections({
+      source: "oura",
+      metrics: [],
+      today: TODAY,
+      detail: { ...DETAIL, nights: { status: "ok", nights: gaps } },
+    });
+    const bed = card(section(weekly, "weekly").cards, "nights:bedtime");
+    expect(bed).toMatchObject({ last: { value: EMPTY_VALUE } });
+    expect(JSON.stringify(bed)).not.toContain("–");
   });
 });

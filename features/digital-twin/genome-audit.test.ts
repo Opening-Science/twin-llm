@@ -30,6 +30,19 @@ describe("GenomeAudit", () => {
     expect(markup).not.toContain("No recent Ark reads");
   });
 
+  test("times read as en-GB UTC timestamps, a bad one as a dash", () => {
+    const markup = renderToStaticMarkup(
+      createElement(GenomeAudit, {
+        preview: [...events, { seq: "39", tool: "ark.status", ts: "soon", hash8: "0" }],
+      }),
+    );
+    expect(markup).toContain("27 Sep 2026, 12:00 UTC");
+    expect(markup).toContain("27 Sep 2026, 11:59 UTC");
+    expect(markup).not.toContain("2026-09-27");
+    expect(markup).not.toContain("soon");
+    expect(markup).toContain("—");
+  });
+
   test("renders the empty state", () => {
     const markup = renderToStaticMarkup(createElement(GenomeAudit, { preview: [] }));
     expect(markup).toContain("No recent Ark reads");

@@ -3,6 +3,7 @@ import {
   type Estimate,
   type NullSummary,
 } from "@/infrastructure/charts/kit/kit-geometry";
+import { formatDate, formatNumber, roundTo } from "@/infrastructure/format-measure";
 
 import { type ScoreCell } from "./eval-runs";
 import { type Interval } from "./research-markdown";
@@ -110,6 +111,12 @@ export type ResearchCard = Readonly<{
   more: Readonly<{ label: string; figure: ResearchFigureData }> | null;
 }>;
 
+/** The card's last line: its source file, then the run's day as people read it ("run 2 Nov 2026"). */
+export const sourceLine = (card: Pick<ResearchCard, "source" | "runDate">): string =>
+  card.runDate === null
+    ? card.source
+    : `${card.source} · run ${formatDate(card.runDate)}`;
+
 export type ResearchRead = Readonly<{
   cards: readonly ResearchCard[];
   summaries: Readonly<Partial<Record<ResearchStudy, StudySummary>>>;
@@ -119,10 +126,8 @@ export type ResearchRead = Readonly<{
 
 /* --- words and numbers --------------------------------------------------------- */
 
-const fixed = (value: number, decimals: number): string => value.toFixed(decimals);
-
 const span = (low: number, high: number, decimals: number): string =>
-  `${fixed(low, decimals)}–${fixed(high, decimals)}`;
+  `${formatNumber(low, decimals)}–${formatNumber(high, decimals)}`;
 
 /** A share of answers in whole per cent, from the file's counts. */
 export const percent = (cell: ScoreCell): number =>
@@ -184,7 +189,7 @@ const ratioEstimate = (label: string, r: Ratio, note = ""): Estimate => ({
   estimate: r.ratio,
   low: r.low,
   high: r.high,
-  readout: `${label} · ${fixed(r.ratio, 2)} (95 % interval ${span(r.low, r.high, 2)})${note}`,
+  readout: `${label} · ${formatNumber(r.ratio, 2)} (95 % interval ${span(r.low, r.high, 2)})${note}`,
 });
 
 const valueEstimate = (label: string, measure: string, v: ValueCi): Estimate => ({
@@ -192,7 +197,7 @@ const valueEstimate = (label: string, measure: string, v: ValueCi): Estimate => 
   estimate: v.value,
   low: v.ci95.low,
   high: v.ci95.high,
-  readout: `${label} · ${measure} ${fixed(v.value, 3)} (95 % interval ${span(v.ci95.low, v.ci95.high, 3)})`,
+  readout: `${label} · ${measure} ${formatNumber(v.value, 3)} (95 % interval ${span(v.ci95.low, v.ci95.high, 3)})`,
 });
 
 const intervalEstimate = (group: string, measure: string, i: Interval): Estimate => ({
@@ -200,7 +205,7 @@ const intervalEstimate = (group: string, measure: string, i: Interval): Estimate
   estimate: i.value,
   low: i.low,
   high: i.high,
-  readout: `${group} · ${measure.toLowerCase()} ${fixed(i.value, 3)} (95 % interval ${span(i.low, i.high, 3)})`,
+  readout: `${group} · ${measure.toLowerCase()} ${formatNumber(i.value, 3)} (95 % interval ${span(i.low, i.high, 3)})`,
 });
 
 /* --- P1 grounding ------------------------------------------------------------- */
@@ -324,7 +329,7 @@ export const afDatabasesCard = (
   const clean = rows.find((r) => r.noise === "none");
   const light = rows.find((r) => r.noise === "light");
   const headline = clean
-    ? `With no added noise, the flag found AF windows with sensitivity ${fixed(clean.afdb.sensitivity.value, 3)} on AFDB and ${fixed(clean.ltafdb.sensitivity.value, 3)} on LTAFDB, at specificity ${fixed(clean.afdb.specificity.value, 3)} and ${fixed(clean.ltafdb.specificity.value, 3)}${light ? `; with light noise, specificity was ${fixed(light.afdb.specificity.value, 3)} and ${fixed(light.ltafdb.specificity.value, 3)}` : ""}.`
+    ? `With no added noise, the flag found AF windows with sensitivity ${formatNumber(clean.afdb.sensitivity.value, 3)} on AFDB and ${formatNumber(clean.ltafdb.sensitivity.value, 3)} on LTAFDB, at specificity ${formatNumber(clean.afdb.specificity.value, 3)} and ${formatNumber(clean.ltafdb.specificity.value, 3)}${light ? `; with light noise, specificity was ${formatNumber(light.afdb.specificity.value, 3)} and ${formatNumber(light.ltafdb.specificity.value, 3)}` : ""}.`
     : `The flag's sensitivity and specificity on AFDB and LTAFDB at ${rows.length} noise levels.`;
   return {
     id: "arrhythmia-databases",
@@ -382,7 +387,7 @@ export const afResolutionCard = (
     label: "From beats to daily values",
     headline:
       beats && night
-        ? `On simulated days with 2 % of the time in AF, beat windows told AF days from sinus days with AUROC ${fixed(beats.v.value, 3)}; night heart rate variability, a daily wearable value, with ${fixed(night.v.value, 3)}, where 0.5 is chance.`
+        ? `On simulated days with 2 % of the time in AF, beat windows told AF days from sinus days with AUROC ${formatNumber(beats.v.value, 3)}; night heart rate variability, a daily wearable value, with ${formatNumber(night.v.value, 3)}, where 0.5 is chance.`
         : `AUROC of AF days against sinus days at 2 % AF burden for ${rows.length} levels from beats to daily values.`,
     caption:
       "AUROC of simulated AF days against sinus days at 2 % AF burden, clean beats, as a change from each subject's own baseline, for each level from beat windows to the daily wearable values. Irregular means nRMSSD over 0.1. Lines are 95 % intervals over subjects.",
@@ -413,7 +418,9 @@ const gridWords = (ms: number): string =>
 
 /** The grid as a row label says it, to one decimal: 7.8125 ms reads "7.8 ms grid". */
 const gridShort = (ms: number): string =>
-  ms === 0 ? "exact beat times" : `${Number(ms.toFixed(1))} ms grid`;
+  ms === 0
+    ? "exact beat times"
+    : `${formatNumber(ms, Number.isInteger(roundTo(ms, 1)) ? 0 : 1)} ms grid`;
 
 const MODE_SHORT: Readonly<Record<string, string>> = {
   independent: "independent",
@@ -459,7 +466,7 @@ export const rrGridCard = (data: RrGrid | null): ResearchCard | null => {
     label: "Recording resolution",
     headline:
       first && last && afdb && ltafdb
-        ? `Real AF windows had a mean turning-point ratio of ${fixed(afdb.tpr.value, 3)} (AFDB) and ${fixed(ltafdb.tpr.value, 3)} (LTAFDB); simulated AF went from ${fixed(first.tpr.value, 3)} with exact beat times to ${fixed(last.tpr.value, 3)} with beats on a ${last.gridMs} ms grid.`
+        ? `Real AF windows had a mean turning-point ratio of ${formatNumber(afdb.tpr.value, 3)} (AFDB) and ${formatNumber(ltafdb.tpr.value, 3)} (LTAFDB); simulated AF went from ${formatNumber(first.tpr.value, 3)} with exact beat times to ${formatNumber(last.tpr.value, 3)} ${last.gridMs === 0 ? "with exact beat times" : `with beats on a ${gridShort(last.gridMs)}`}.`
         : `Mean turning-point ratio of AF windows on ${all.length} sources.`,
     caption: showsMain
       ? "Mean turning-point ratio (TPR) of all-AF windows on the two databases and on simulated recordings with short-range dependence between intervals, beat times put on a 0, 4 or 7.8125 ms grid, the databases' own sampling steps. The runs with independent intervals are under Show all runs. Lines are 95 % bootstrap intervals."
@@ -489,13 +496,13 @@ export const withinPersonCard = (
 ): ResearchCard | null => {
   if (data === null) return null;
   const after = data.windows.find((w) => w.window === "after");
-  const people = data.people.toLocaleString("en");
+  const people = formatNumber(data.people, 0);
   return {
     id: "heart-brain-within",
     study: "heart-brain",
     label: "Stroke after AF onset, within person",
     headline: after
-      ? `In the same ${people} synthetic people, the stroke rate after AF onset was ${fixed(after.ratio.ratio, 2)} times the rate before it (95 % interval ${span(after.ratio.low, after.ratio.high, 2)}), age-adjusted.`
+      ? `In the same ${people} synthetic people, the stroke rate after AF onset was ${formatNumber(after.ratio.ratio, 2)} times the rate before it (95 % interval ${span(after.ratio.low, after.ratio.high, 2)}), age-adjusted.`
       : `Stroke rate after AF onset against before it in ${people} synthetic people, by time since onset.`,
     caption: `Age-adjusted (Mantel–Haenszel) stroke rate ratio after AF onset against before it in the same ${people} synthetic people, 100 Synthea batches, by time since onset. Lines are 95 % intervals.`,
     axis: AXIS_RATIO,
@@ -515,7 +522,11 @@ export const withinPersonCard = (
 
 /** A rule's estimate, with the ratio its rules imply as the row's expected tick. */
 const ruleRow = (label: string, r: RuleChange["base"]): Estimate => ({
-  ...ratioEstimate(label, r, `; the generator's rules imply ${fixed(r.expected, 2)}`),
+  ...ratioEstimate(
+    label,
+    r,
+    `; the generator's rules imply ${formatNumber(r.expected, 2)}`,
+  ),
   expected: r.expected,
 });
 
@@ -526,7 +537,7 @@ export const ruleChangeCard = (data: RuleChange | null): ResearchCard | null => 
     id: "heart-brain-rule-change",
     study: "heart-brain",
     label: "Changing a rule in the generator",
-    headline: `With the stroke rule as shipped, the estimate was ${fixed(base.ratio, 2)} where the rules imply ${fixed(base.expected, 2)}; with the rule's AF part doubled, ${fixed(doubled.ratio, 2)} where they imply ${fixed(doubled.expected, 2)}.`,
+    headline: `With the stroke rule as shipped, the estimate was ${formatNumber(base.ratio, 2)} where the rules imply ${formatNumber(base.expected, 2)}; with the rule's AF part doubled, ${formatNumber(doubled.ratio, 2)} where they imply ${formatNumber(doubled.expected, 2)}.`,
     caption:
       "Within-person, age-adjusted stroke rate ratio after AF onset with Synthea's stroke rule as shipped and with its AF part doubled; the grey tick on each row is the ratio the rules imply. Lines are 95 % intervals.",
     axis: AXIS_RATIO,
@@ -553,9 +564,9 @@ export const shuffledNullCard = (data: HeartBrain | null): ResearchCard | null =
     id: "heart-brain-shuffled",
     study: "heart-brain",
     label: "Observed against shuffled onset",
-    headline: `People with AF had ${fixed(observed.ratio, 2)} times the stroke rate of matched people without; with AF onset dates shuffled, the same ratio averaged ${fixed(shuffled.mean, 2)} over ${shuffled.runs} runs (range ${span(shuffled.low, shuffled.high, 2)}).`,
-    caption: `Matched between-person stroke rate ratio for AF then stroke (${fixed(observed.ratio, 2)}, 95 % interval ${span(observed.low, observed.high, 2)}), against the mean and 95 % range of the same ratio over ${shuffled.runs} runs with AF onset dates shuffled, drawn as a grey band. The summary keeps the range of the shuffled runs, not each run.`,
-    axis: `matched stroke rate ratio, ${fixed(left, 2)} at the left to ${fixed(right, 2)} at the right`,
+    headline: `People with AF had ${formatNumber(observed.ratio, 2)} times the stroke rate of matched people without; with AF onset dates shuffled, the same ratio averaged ${formatNumber(shuffled.mean, 2)} over ${shuffled.runs} runs (range ${span(shuffled.low, shuffled.high, 2)}).`,
+    caption: `Matched between-person stroke rate ratio for AF then stroke (${formatNumber(observed.ratio, 2)}, 95 % interval ${span(observed.low, observed.high, 2)}), against the mean and 95 % range of the same ratio over ${shuffled.runs} runs with AF onset dates shuffled, drawn as a grey band. The summary keeps the range of the shuffled runs, not each run.`,
+    axis: `matched stroke rate ratio, ${formatNumber(left, 2)} at the left to ${formatNumber(right, 2)} at the right`,
     source: RESEARCH_SOURCES.heartBrain,
     runDate: data.date,
     figure: {
@@ -577,7 +588,7 @@ const PLANTED_WORD: Readonly<Record<string, string>> = {
 
 /** Lowest and highest ratio among some pairs, as "a to b". */
 const ratioRange = (ratios: readonly number[]): string =>
-  `${fixed(Math.min(...ratios), 2)} to ${fixed(Math.max(...ratios), 2)}`;
+  `${formatNumber(Math.min(...ratios), 2)} to ${formatNumber(Math.max(...ratios), 2)}`;
 
 export const plantedRulesCard = (data: HeartBrain | null): ResearchCard | null => {
   if (data === null || data.rules.length === 0) return null;
@@ -624,7 +635,7 @@ export const plantedRulesCard = (data: HeartBrain | null): ResearchCard | null =
 
 const attackRow = (label: string, a: Attack): Estimate => ({
   ...valueEstimate(label, "AUROC", a.auroc),
-  readout: `${label} · AUROC ${fixed(a.auroc.value, 3)} (95 % interval ${span(a.auroc.ci95.low, a.auroc.ci95.high, 3)}), ${a.members} training and ${a.nonMembers} other records`,
+  readout: `${label} · AUROC ${formatNumber(a.auroc.value, 3)} (95 % interval ${span(a.auroc.ci95.low, a.auroc.ci95.high, 3)}), ${a.members} training and ${a.nonMembers} other records`,
 });
 
 /** The pilot rows and the control rows, as the figure and the summary both name them. */
@@ -650,7 +661,7 @@ export const disclosureRows = (attacks: Attacks) => ({
 });
 
 const aurocRange = (rows: readonly Estimate[]): string =>
-  `${fixed(Math.min(...rows.map((r) => r.estimate)), 3)} to ${fixed(Math.max(...rows.map((r) => r.estimate)), 3)}`;
+  `${formatNumber(Math.min(...rows.map((r) => r.estimate)), 3)} to ${formatNumber(Math.max(...rows.map((r) => r.estimate)), 3)}`;
 
 export const disclosureCard = (attacks: Attacks | null): ResearchCard | null => {
   if (attacks === null) return null;

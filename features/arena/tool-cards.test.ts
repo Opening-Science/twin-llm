@@ -88,7 +88,7 @@ describe("toolArgs", () => {
       { label: "Source", value: "all" },
       { label: "Sport", value: "running" },
       { label: "Per", value: "week" },
-      { label: "Window", value: "1 Sept 2026 – 30 Sept 2026" },
+      { label: "Window", value: "1 Sep 2026 – 30 Sep 2026" },
     ]);
   });
 

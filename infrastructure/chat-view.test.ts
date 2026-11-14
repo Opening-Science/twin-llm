@@ -137,7 +137,7 @@ describe("the other kinds", () => {
   test("a compare view is titled by both windows and counts both", () => {
     expect(compare.id).toBe("view-7-8");
     expect(compare.title).toBe(
-      "Sleep duration, 28 Sept 2026 – 4 Oct 2026 vs 1 Sept 2026 – 27 Sept 2026",
+      "Sleep duration, 28 Sep 2026 – 4 Oct 2026 vs 1 Sep 2026 – 27 Sep 2026",
     );
     expect(viewReadings(compare)).toBe(3);
     expect(viewReadings(view)).toBe(2);

@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
 
 import {
   formatZonedMoment,
@@ -14,7 +14,9 @@ import {
   formatNumber,
   formatRelative,
   formatTimestamp,
+  formatUcumUnit,
   formatUnit,
+  formatUtcCell,
   isMainSleepKey,
   isoLocalDate,
   measureKindFor,
@@ -23,6 +25,7 @@ import {
   propertyLabel,
   roundTo,
   toolsText,
+  withUnit,
   type MeasureKind,
 } from "./format-measure";
 
@@ -199,6 +202,20 @@ describe("formatTimestamp", () => {
   });
 });
 
+describe("formatUtcCell", () => {
+  test("the UTC day and minute with no comma and no zone, for a column that names it", () => {
+    expect(formatUtcCell(new Date(Date.UTC(2026, 10, 12, 15, 58, 40)))).toBe(
+      "12 Nov 2026 15:58",
+    );
+    expect(formatUtcCell(new Date(Date.UTC(2026, 0, 1, 0, 5)))).toBe("1 Jan 2026 00:05");
+  });
+
+  test("missing or invalid is a dash", () => {
+    expect(formatUtcCell(undefined)).toBe("—");
+    expect(formatUtcCell(new Date(Number.NaN))).toBe("—");
+  });
+});
+
 describe("formatDate", () => {
   test.each([
     ["2026-10-16", "long", "16 Oct 2026"],
@@ -211,9 +228,68 @@ describe("formatDate", () => {
     expect(formatDate(iso, style)).toBe(expected);
   });
 
+  test("every month is three letters, September too, as the chart axes write it", () => {
+    expect(formatDate("2026-09-28")).toBe("28 Sep 2026");
+    expect(formatTimestamp(new Date(Date.UTC(2026, 8, 27, 12, 0)))).toBe(
+      "27 Sep 2026, 12:00 UTC",
+    );
+    const months = Array.from({ length: 12 }, (_, m) =>
+      formatDate(`2026-${String(m + 1).padStart(2, "0")}-01`, "short").slice(2),
+    );
+    expect(months).toEqual([
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ]);
+  });
+
   test("null and undefined", () => {
     expect(formatDate(null)).toBe("—");
     expect(formatDate(undefined)).toBe("—");
+  });
+
+  test("a Date shows the local calendar day either side of midnight", () => {
+    expect(formatDate(new Date(2026, 9, 16, 23, 59, 59))).toBe("16 Oct 2026");
+    expect(formatDate(new Date(2026, 9, 17, 0, 0))).toBe("17 Oct 2026");
+    expect(formatDate(new Date(2026, 9, 17, 0, 30), "short")).toBe("17 Oct");
+  });
+
+  test("an invalid Date is a dash", () => {
+    expect(formatDate(new Date(Number.NaN))).toBe("—");
+  });
+
+  describe("away from UTC", () => {
+    const zone = process.env.TZ;
+    afterEach(() => {
+      if (zone === undefined) delete process.env.TZ;
+      else process.env.TZ = zone;
+    });
+
+    test("00:30 in Auckland is that day, though UTC is still the day before", () => {
+      process.env.TZ = "Pacific/Auckland";
+      // 11:30 UTC on 16 Oct is 00:30 NZDT on 17 Oct.
+      expect(formatDate(new Date("2026-10-16T11:30:00Z"))).toBe("17 Oct 2026");
+    });
+
+    test("22:30 in Los Angeles is that day, though UTC is already the next", () => {
+      process.env.TZ = "America/Los_Angeles";
+      // 05:30 UTC on 16 Oct is 22:30 PDT on 15 Oct.
+      expect(formatDate(new Date("2026-10-16T05:30:00Z"))).toBe("15 Oct 2026");
+    });
+
+    test("an ISO day string never moves with the zone", () => {
+      process.env.TZ = "Pacific/Auckland";
+      expect(formatDate("2026-10-16")).toBe("16 Oct 2026");
+    });
   });
 });
 
@@ -255,6 +331,27 @@ describe("formatUnit", () => {
     ["", ""],
   ] as const)("%p → %p", (unit, expected) => {
     expect(formatUnit(unit)).toBe(expected);
+  });
+});
+
+describe("formatUcumUnit", () => {
+  test.each([
+    ["{score}", "Pain severity - 0-10 verbal numeric rating [Score] - Reported", ""],
+    ["/min", "Heart rate", "bpm"],
+    ["/min", "Pulse rate", "bpm"],
+    ["{beats}/min", "Heart rate", "bpm"],
+    ["/min", "Respiratory rate", "per min"],
+    ["kg/m2", "Body mass index (BMI) [Ratio]", "kg/m²"],
+    ["mm[Hg]", "Systolic blood pressure", "mm[Hg]"],
+    ["%", "Hemoglobin A1c/Hemoglobin.total in Blood", "%"],
+  ] as const)("%p for %p → %p", (unit, label, expected) => {
+    expect(formatUcumUnit(unit, label)).toBe(expected);
+  });
+
+  test("with withUnit: a score stands alone, a rate reads per min", () => {
+    expect(withUnit("0", formatUcumUnit("{score}"))).toBe("0");
+    expect(withUnit("86", formatUcumUnit("/min", "Heart rate"))).toBe("86 bpm");
+    expect(withUnit("16", formatUcumUnit("/min", "Respiratory rate"))).toBe("16 per min");
   });
 });
 
@@ -365,6 +462,27 @@ describe("formatMetricValue and formatForPrompt", () => {
     [{ key: "google.weight.2026-10-16", value: 154.24, unit: "lb" }, "154.2 lb"],
     [{ key: "google.weight.2026-10-16", value: 70.05, unit: "kg" }, "70.1 kg"],
     [{ key: "sleep.hr.2026-10-16", value: 52.4, unit: "" }, "52 bpm"],
+    [
+      {
+        key: "google.daily-resting-heart-rate.2026-10-16",
+        value: 54,
+        unit: "per minute",
+      },
+      "54 bpm",
+    ],
+    [{ key: "google.heart-rate.2026-10-16", value: 71.6, unit: "/min" }, "72 bpm"],
+    [
+      {
+        key: "google.daily-heart-rate-variability.2026-10-16",
+        value: 48.2,
+        unit: "millisecond",
+      },
+      "48 ms",
+    ],
+    [
+      { key: "google.daily-respiratory-rate.2026-10-16", value: 14, unit: "per minute" },
+      "14 per minute",
+    ],
     [{ key: "whoop.recovery.score.2026-10-16", value: 78.6, unit: "%" }, "79%"],
     [{ key: "vitronic.angle.x.2026-10-16", value: 12.25, unit: "°" }, "12.3°"],
     [{ key: "google.unknown.2026-10-16", value: 3, unit: "" }, "3"],

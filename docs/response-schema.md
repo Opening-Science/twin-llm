@@ -314,6 +314,11 @@ never repeated. Codes (`answer_class`, reasons, `next_step`) are never shown.
   `evidence_keys`: the chips name each value, and the thread export lists every chip
   with its source, day and key under "Evidence:" (keys alone when an answer has no
   chips). With keys but no chips the panel says only how many values were cited.
+- Source rule (#464): a cited value that was used over another source's reading for the
+  same measure and day carries the rule as `sourceRule` (`{ kind: "agree" | "evidence",
+line }`) on the stored attribution, and the chip and the export print the line after
+  the source. A held-back measure is never offered, so it is never cited. Rules:
+  [wearable-sources.md](wearable-sources.md).
 - Cited value check (#545): the number the reply states for each cited value is checked
   against the stored reading behind its key (`infrastructure/cited-value-check.ts`, rules
   in its header: units and their spellings, durations such as `7 h 32 min` or `7:32`,

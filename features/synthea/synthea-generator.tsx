@@ -2,7 +2,12 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 
-import { formatDate, formatNumber, withUnit } from "@/infrastructure/format-measure";
+import {
+  formatDate,
+  formatNumber,
+  formatUcumUnit,
+  withUnit,
+} from "@/infrastructure/format-measure";
 import { Button, buttonClassName } from "@/infrastructure/ui-kit/button";
 import { Card } from "@/infrastructure/ui-kit/card";
 import { Field } from "@/infrastructure/ui-kit/field";
@@ -400,7 +405,7 @@ const COUNT_LABELS: Readonly<Record<keyof PatientPreview["counts"], string>> = {
   encounters: "Encounters",
   medicationRequests: "Medication requests",
   procedures: "Procedures",
-  immunizations: "Immunizations",
+  immunizations: "Immunisations",
 };
 
 const SEX_WORDS: Readonly<Record<string, string>> = {
@@ -455,7 +460,7 @@ const PreviewCard = ({ preview }: Readonly<{ preview: PatientPreview }>) => (
             <li key={`${line.label}-${index}`} className="flex justify-between gap-3">
               <span className="min-w-0 break-words">{line.label}</span>
               <span className="text-muted-foreground shrink-0 font-mono text-xs">
-                {withUnit(formatValue(line.value), line.unit)}
+                {withUnit(formatValue(line.value), formatUcumUnit(line.unit, line.label))}
               </span>
             </li>
           ))}
