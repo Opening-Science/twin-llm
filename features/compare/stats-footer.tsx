@@ -1,4 +1,4 @@
-import { EMPTY_VALUE } from "@/infrastructure/format-measure";
+import { EMPTY_VALUE, formatNumber } from "@/infrastructure/format-measure";
 import type { ModelResponseMetrics } from "@/infrastructure/model-response-metrics";
 
 /**
@@ -9,31 +9,32 @@ import type { ModelResponseMetrics } from "@/infrastructure/model-response-metri
 
 type Figure = Readonly<{ label: string; value: string | null }>;
 
-const figures = (metrics: ModelResponseMetrics): readonly Figure[] => [
+/** The figures in the display locale: "7,503 ms", "45.2 tok/s", "19,589", "$0.0000". */
+export const statFigures = (metrics: ModelResponseMetrics): readonly Figure[] => [
   {
     label: "first token",
     value:
       metrics.timeToFirstTokenMs === null
         ? null
-        : `${String(Math.round(metrics.timeToFirstTokenMs))} ms`,
+        : `${formatNumber(metrics.timeToFirstTokenMs, 0)} ms`,
   },
   {
     label: "speed",
     value:
       metrics.tokensPerSecond === null
         ? null
-        : `${metrics.tokensPerSecond.toFixed(1)} tok/s`,
+        : `${formatNumber(metrics.tokensPerSecond, 1)} tok/s`,
   },
   {
     label: "tokens",
-    value: metrics.totalTokens === null ? null : metrics.totalTokens.toFixed(0),
+    value: metrics.totalTokens === null ? null : formatNumber(metrics.totalTokens, 0),
   },
-  { label: "cost", value: `$${metrics.costUsd.toFixed(4)}` },
+  { label: "cost", value: `$${formatNumber(metrics.costUsd, 4)}` },
 ];
 
 export const StatsFooter = ({ metrics }: Readonly<{ metrics: ModelResponseMetrics }>) => (
   <dl className="border-border flex flex-wrap gap-x-4 gap-y-1 border-t pt-3">
-    {figures(metrics).map((figure) => (
+    {statFigures(metrics).map((figure) => (
       <div key={figure.label} className="metric flex items-baseline gap-1.5">
         <dt>{figure.label}</dt>
         <dd className={figure.value === null ? "metric-pending" : "metric-value"}>
