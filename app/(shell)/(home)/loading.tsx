@@ -1,4 +1,4 @@
-import { HomeSkeleton } from "@/features/arena/compare-skeleton";
+import { HomeSkeleton } from "@/features/compare/compare-skeleton";
 
 /**
  * Only the home page lives in this group, so this fallback never wraps

@@ -94,8 +94,8 @@ const FEATURE_SOURCES = "features/**/*.{ts,tsx}";
 
 /** Features that still compose pieces from sibling features (see boundary-debt). */
 const BOUNDARY_DEBT_FEATURES = [
-  "arena",
   "auth",
+  "compare",
   "digital-twin",
   "google-health",
   "leaderboard",

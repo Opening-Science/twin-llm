@@ -11,7 +11,7 @@ import { toChatVitronicSummary } from "@/packages/vitronic/summary";
  *
  * The prompt builder and the answer parser both read this, so the keys the
  * model is shown and the keys a citation is checked against cannot drift. It
- * lives in infrastructure (not features/chat) because the arena re-parses
+ * lives in infrastructure (not features/chat) because the chat view re-parses
  * answers on the client, and features may not import each other.
  */
 export type WearableSummaries = Readonly<{

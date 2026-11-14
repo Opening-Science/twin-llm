@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 
-import { CompareScreen } from "@/features/arena/compare-screen";
-import { arenaSettings } from "@/features/arena/arena-settings";
-import { loadPromptSourceFacts } from "@/features/arena/prompt-source-facts";
+import { CompareScreen } from "@/features/compare/compare-screen";
+import { chatSettings } from "@/features/compare/chat-settings";
+import { loadPromptSourceFacts } from "@/features/compare/prompt-source-facts";
 import { skillCommand } from "@/features/commands/registry";
-import { ownedThread } from "@/features/arena/thread-reads";
-import { scheduledStillWriting } from "@/features/arena/turn-updates";
+import { ownedThread } from "@/features/compare/thread-reads";
+import { scheduledStillWriting } from "@/features/compare/turn-updates";
 import { ThreadTitle } from "@/features/shell/thread-title";
 import { skillsFor } from "@/features/skills/user-skill-store";
 import { runnableSkills } from "@/features/skills/load-skills";
@@ -50,7 +50,7 @@ export default async function ThreadPage({
         initialTurns={thread.turns}
         skills={skills.map(skillCommand)}
         sourceFacts={sourceFacts}
-        {...arenaSettings()}
+        {...chatSettings()}
       />
     </>
   );

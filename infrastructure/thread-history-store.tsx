@@ -6,7 +6,7 @@ import { createContext, type ReactNode, useContext, useMemo, useReducer } from "
  * Threads this browser has sent prompts to since the page was rendered, so the
  * sidebar can list a new thread before the next server render knows about it.
  *
- * `features/arena` records a thread when its prompt is accepted and
+ * `features/compare` records a thread when its prompt is accepted and
  * `features/shell` reads the list; features cannot import each other, so the
  * store sits in `infrastructure/`. It is a short-lived note, not a cache: the
  * server's thread list stays the source of truth, and the sidebar prefers it

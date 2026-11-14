@@ -158,7 +158,7 @@ const OUTBOUND: Readonly<Record<string, Entry>> = {
   "app/(shell)/layout.tsx": { exempt: CLERK },
   "features/auth/app-auth.tsx": { exempt: CLERK },
   "features/shell/nav-panel.tsx": { exempt: CLERK },
-  "features/arena/prompt-bar.tsx": { exempt: `${SAME_ORIGIN}; ${CLERK}` },
+  "features/compare/prompt-bar.tsx": { exempt: `${SAME_ORIGIN}; ${CLERK}` },
 
   // On this machine or the local network.
   "packages/carbon-x/client.ts": {
@@ -181,7 +181,6 @@ const OUTBOUND: Readonly<Record<string, Entry>> = {
   },
 
   // The browser calling this app.
-  "features/arena/suggestion-chips.tsx": { exempt: SAME_ORIGIN },
   "features/connectors/use-connector-status.ts": { exempt: SAME_ORIGIN },
   "features/shell/export-notice-dialog.tsx": { exempt: SAME_ORIGIN },
   "features/personal-data/dataset-list.tsx": { exempt: SAME_ORIGIN },

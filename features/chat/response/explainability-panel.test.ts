@@ -18,7 +18,7 @@ import {
 import fixture from "./fixtures/contract-nine-systems.json";
 
 const panelSource = readFileSync(
-  join(import.meta.dir, "../../arena/explainability-panel.tsx"),
+  join(import.meta.dir, "../../compare/evidence-panel.tsx"),
   "utf8",
 );
 

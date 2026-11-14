@@ -4,7 +4,7 @@ import { join, relative, sep } from "node:path";
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
-import { createThreadExportHandler } from "@/features/arena/thread-export-handler";
+import { createThreadExportHandler } from "@/features/compare/thread-export-handler";
 import { readConnectorSummaries } from "@/features/connectors/connector-summaries";
 import { getGenomeReportResponse } from "@/features/digital-twin/genome-run";
 import { createGoogleHealthCallbackHandler } from "@/features/google-health/oauth-handlers";
@@ -1200,7 +1200,7 @@ const PAGES: Readonly<Record<string, "gated" | Readonly<{ open: string }>>> = {
 const SERVER_ACTIONS: Readonly<
   Record<string, Readonly<{ gated: Readonly<Record<string, string>> } | { open: string }>>
 > = {
-  "features/arena/start-turn.ts": {
+  "features/compare/start-turn.ts": {
     gated: { startTurn: "vaultRefusalForAction()" },
   },
   "app/(focus)/start/actions.ts": {
