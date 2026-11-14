@@ -1,72 +1,71 @@
-# open-twin pins
+# open-twin packages
 
-TwinLLM consumes `@open-twin/fhir-core`, `@open-twin/fhir-r4`, `@open-twin/aggregate`,
-`provider-oura`, `provider-google-health`, `provider-whoop`, and the data
-of `@open-twin/anchor-layer` from a **gitignored** checkout at a pinned SHA. `@open-twin/interpreter` is not pinned
-(no Anchor mapper yet). `interpretation-contract` and `provider-vitronic` are not synced: nothing in the app imports them.
+TwinLLM carries copies of `@open-twin/fhir-core`, `@open-twin/fhir-r4`, `@open-twin/aggregate`,
+`provider-oura`, `provider-google-health`, `provider-whoop`, and the data of
+`@open-twin/anchor-layer` in `packages/open-twin/`, taken from
+[open-twin](https://github.com/Opening-Science/open-twin) at one commit and kept as
+upstream wrote them (MIT; licence, what was copied and what was changed: `PROVENANCE.md`).
+`@open-twin/interpreter`, `interpretation-contract`, `provider-vitronic` and `reader-core`
+are not copied: nothing in the app imports them.
 
-## Pin
+## Where it lives
 
-- Repo: https://github.com/Opening-Science/open-twin
-- SHA: `4b42ef944db0b461ca414b8066a5f7aa2594a9ce` (open-twin `main`, 2026-11-08; was `c37d8004d93d5accb9b91bebcbd89376837776bd`). From the old pin to this one the synced packages' `src/` is unchanged: only `package.json` bumps (`@types/node` 26.6.6, vitest 5.1.0, and `googleapis` 189.0.0 in provider-google-health). The new upstream package `reader-core` is not synced. The host keeps the resolutions already in `bun.lock` (see Lockfile note), so the app runs on the same dependency versions as before.
-- Local tree: `.open-twin/` (created by `scripts/sync-open-twin.sh`)
-- App deps: `file:.open-twin/packages/<name>` in `package.json`
-- `anchor-layer`: only `data/anchor-layer.v1.json` is imported (its loader uses `node:fs`); see `docs/biomarkers.md`
+- Base commit: `4b42ef944db0b461ca414b8066a5f7aa2594a9ce` (open-twin `main`, 2026-11-08), per package in `packages/open-twin/UPSTREAM.json`
+- `packages/open-twin/<name>/`: upstream's `src/` and `README.md`, its `LICENSE`, and a `package.json` adapted to this repository (`private`, `exports` pointing at `src/index.ts`, dependencies pinned to what `bun.lock` already resolved)
+- `packages/open-twin/MANIFEST.sha256`: sha256 of every file kept as upstream wrote it
+- Bun workspaces (`packages/open-twin/*`) under their `@open-twin/*` names, so the 48 upstream files that import `@open-twin/fhir-core` and the host imports stay as they are. Each package keeps its own dependencies: provider-google-health runs on `googleapis` 181.0.0 and `@googleapis/health` 6.0.0 while the app uses 173.0.0 and 2.0.0. `bunfig.toml` keeps Bun's hoisted `node_modules` layout.
+- Next compiles the six code packages from source (`transpilePackages` in `next.config.ts`)
+- `anchor-layer`: only `data/anchor-layer.v1.json` is imported; see `docs/biomarkers.md`
 
-## Route (chosen)
+## Rules
 
-**C — sync + build + `file:`** (not `github:` root, not `git+…#SHA&path:…`, not tsconfig `paths` → src).
+- Do not edit `packages/open-twin/`. Fixes go to open-twin first and come back by merge. ESLint and Prettier leave the folder alone; upstream formats with biome.
+- Host-only behaviour stays in `infrastructure/open-twin-adapters/`.
+- An urgent local fix is allowed only with a line in the PROVENANCE "Changes since import" log and the manifest updated in the same commit.
 
-1. Shallow clone open-twin at the pin into `.open-twin/`
-2. Rewrite `workspace:*` → `file:../fhir-core`, build each package `dist/`
-3. Peer-pin `@open-twin/fhir-core` on the Oura, Google Health and WHOOP providers; leave fhir-r4 and aggregate on `file:../fhir-core` because `@open-twin/fhir-core` is unpublished on npm; strip package-local `node_modules`
-4. Host `package.json` uses `file:.open-twin/packages/…`; `postinstall` flattens nested bun symlink redirects (Turbopack)
-
-## Sync / upgrade
-
-Default pin (matches the default SHA in `scripts/sync-open-twin.sh`):
-
-```bash
-bun run sync:open-twin
-# equivalent:
-bash scripts/sync-open-twin.sh
-bun install
-bun run sync:verify
-```
-
-Upgrade to a new upstream SHA (also updates the checkout; then bump the default in
-`scripts/sync-open-twin.sh` and the tables in this file + `PROVENANCE.md`):
+## Checks
 
 ```bash
-bash scripts/sync-open-twin.sh <sha>
-bun install
-bun run sync:verify
-bun run typecheck && bun run lint && bun run test && bun run build
+bun run open-twin:verify   # manifest, UPSTREAM.json, LOINC codes, provider symbols, anchor-layer sha256 sidecar
+bun run test:open-twin     # upstream's own tests, under vitest, one process per package
 ```
 
-CI runs `bun run sync:open-twin` before `bun install` (github.com only).
+Upstream's tests use `vi.mocked`, `vi.setSystemTime` and `vi.stubGlobal`, which Bun's
+test runner does not have, so they run under vitest (`scripts/open-twin/test.ts`, one
+shared config in `scripts/open-twin/vitest.config.ts`). Bare `bun test` skips the folder
+(`pathIgnorePatterns` in `bunfig.toml`); CI runs `test:open-twin` as its own job.
 
-Clone-only packaging adjustments (not upstream `*.ts` edits):
+## Taking in later upstream changes
 
-- `workspace:*` → `file:../fhir-core` for the sync-time build, then `@open-twin/fhir-core` moved to `peerDependencies` for the host install
-- Package-local `node_modules` / `bun.lock` removed after build
-- `postinstall` runs `scripts/flatten-open-twin.sh` so Turbopack never sees bun symlink redirects under fhir-r4 or the providers
+In an open-twin clone, for each package to bring forward from its base in `UPSTREAM.json`:
 
-Missing package exports are reached from `infrastructure/open-twin-adapters/` via relative imports into `.open-twin/.../src/` (see host adapters). File upstream issues below rather than patching the clone.
+```bash
+git diff <base> <new> --relative=packages/<name> -- src README.md \
+  | git -C ../twin-llm apply --3way --directory=packages/open-twin/<name>
+```
+
+Then update that package's `base` and `imported` in `UPSTREAM.json`, rewrite
+`MANIFEST.sha256` (`cd packages/open-twin && find . -type f ! -name package.json ! -name UPSTREAM.json ! -name MANIFEST.sha256 ! -path '*/node_modules/*' | sed 's|^\./||' | LC_ALL=C sort | xargs sha256sum > MANIFEST.sha256`), add a line to the PROVENANCE log, compare the upstream `package.json` dependencies with ours, and run `typecheck`, `test:open-twin`, `test` and `build`.
+
+The first likely merge is the Google Health reader branch (`257-google-health-reader`, with the new `reader-core`); `reader-core` comes in only when a host import needs it.
+
+## Leftover `.open-twin/` checkouts
+
+Before this, the packages were synced into a gitignored `.open-twin/`. `bun run doctor` flags one that is left over. Remove it with `rm -rf .open-twin node_modules/@open-twin && bun install`; where `.open-twin` is a symlink, run `rm .open-twin` with no trailing slash, since `rm -rf .open-twin/` follows the link.
 
 ## Host adapters
 
 TwinLLM-only behaviour lives under `infrastructure/open-twin-adapters/`. Code outside the folder imports one entry per vendor (`oura.ts`, `whoop.ts`, `google-health.ts`, `aggregate.ts` under `@/infrastructure/open-twin-adapters/`), never a file behind them, so an Oura route does not load Google's auth library; lint (`twin-llm/wearable-entry` and the layer rules) enforces this, so replacing the adapters touches this folder only:
 
 - `oura.ts` / `oura-authorize.ts` — `HostOuraTokenHandler.lastTokens()`; `getAuthorizationUrl` over the public barrel, adding `state`
-- `oura-bundle.ts` — `buildOuraFhirBundle` over `buildOuraBundle` from `.open-twin/packages/provider-oura/src/fhir/bundleBuilder`, so a sync builds the bundle from the data it already fetched instead of calling every endpoint twice
-- `whoop.ts` — `fetchWhoopWindow` / `buildWhoopFhirBundle` over the public barrel (`getWhoopData`, `buildWhoopBundleFromPayload`); no longer needs `fetchWhoopSyncPayload` or any `.open-twin/.../src` import
+- `oura-bundle.ts` — `buildOuraFhirBundle` over `buildOuraBundle` from `packages/open-twin/provider-oura/src/fhir/bundleBuilder`, so a sync builds the bundle from the data it already fetched instead of calling every endpoint twice
+- `whoop.ts` — `fetchWhoopWindow` / `buildWhoopFhirBundle` over the public barrel (`getWhoopData`, `buildWhoopBundleFromPayload`); no longer needs `fetchWhoopSyncPayload` or any import from a package's `src/`
 - `whoop-workout.ts` — workout schema, paginated `GET /v2/activity/workout` fetch and `mapWhoopWorkoutsToFHIR`, appended to the upstream bundle by `withWhoopWorkouts`; uses only the public `@open-twin/fhir-core` barrel. Belongs upstream (request 7)
 - `google-health.ts` — `setGoogleHealthCredentials` / `getGoogleHealthCredentials` / `ensureGoogleHealthAccessToken`; re-exports `buildGoogleHealthFhirBundle`
 - `google-health-bundle.ts` — `buildGoogleHealthFhirBundle` over `buildBundleFromResponses` from the public barrel, with the person's shared subject (`person-subject.ts`) and the Patient it points at; the sync fetches with `getDataTypes` and builds from those responses
 - `aggregate.ts` — `aggregateWearableBundles` over `aggregate` from `@open-twin/aggregate`: one subject's Oura, WHOOP and Google Health bundles as one, overlaps reconciled on published evidence. No screen reads the bundle yet. The same file's `judgeByEvidence` reads aggregate's `selectSource` and fhir-core's `reliabilityFor` for the wearable source rules (#464, [wearable-sources.md](wearable-sources.md)), which resolve overlapping summary keys per measure and day; vitals the rules do not compare still take the first source in `VITAL_ANATOMY`. At this pin it also finds no overlap between the three connectors (request 8). Aggregate refuses Observations under more than one subject, so the person's Patient is carried once, with each connector's identifier (`mergePersonPatients`)
 - `person-subject.ts` — one subject per person (#476). Upstream keeps the connector in its patient id (`patientUuid(connector, subjectKey)`), so the host passes the Oura, WHOOP and Google Health builders their `subject` option: `urn:uuid:` UUIDv5 of the host's subject key under the host namespace `uuidv5("twin-llm/person")`, never a connector or vendor id. `withPersonPatient` adds the Patient it points at, with the connector's identifier, and links a Patient the connector built itself (Oura `personal_info`, still under its per-connector id); Observation ids and bundle tags still carry the connector
-- BodyLoop — host Bearer client in `packages/vitronic/`. `provider-vitronic` is not synced; TwinLLM does not persist `fhirBundle` and does not call `createBodyLoopClient` (password grant + `/probands`).
+- BodyLoop — host Bearer client in `packages/vitronic/`. `provider-vitronic` is not copied; TwinLLM does not persist `fhirBundle` and does not call `createBodyLoopClient` (password grant + `/probands`).
 
 ## Upstream issues to file
 
@@ -121,17 +120,3 @@ TwinLLM-only behaviour lives under `infrastructure/open-twin-adapters/`. Code ou
 - **Also wanted:** an optional caller order for ties and abstentions, so a host can keep a fixed source order on screen while recording aggregate's evidence choice beside it.
 - **Out of scope:** Host display.
 - **Status:** host aggregates all three without selecting anything; `features/wearables/aggregate-bundles.test.ts` fails on purpose once a same-night overlap is found.
-
-## Verify
-
-```bash
-bun run sync:verify   # LOINC codes, provider symbols, anchor-layer sha256 sidecar
-```
-
-## Lockfile note
-
-A fresh resolve of the `file:` providers fails: their peer `@open-twin/fhir-core@0.1.0`
-is looked up on npm (404). `bun install` therefore keeps the providers' nested
-dependency resolutions already in `bun.lock` (zod 4.6.5, ucum-lhc 7.1.9 at this pin,
-while upstream package.json files ask for 4.6.7 / 7.1.10, patch releases).
-Deleting the `@open-twin/*` lock entries to force a refresh breaks the install.

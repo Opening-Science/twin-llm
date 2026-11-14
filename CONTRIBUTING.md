@@ -64,9 +64,10 @@ that publish no licence.
   because its replacements leak into later files in the same bun process. Pass fakes into
   a handler factory (see `createWearablesSummaryHandler`). `bunfig.toml` preloads the
   `server-only` stub; do not stub it in a test file.
-- Do not edit `.open-twin/`. Those packages are synced from
-  [open-twin](https://github.com/Opening-Science/open-twin) at the SHA in `OPEN_TWIN_SHA`
-  (`bun run sync:open-twin`); send fixes upstream. Do not invent LOINC or UCUM codes.
+- Do not edit `packages/open-twin/`. Those packages are copied from
+  [open-twin](https://github.com/Opening-Science/open-twin) at the commit in
+  `packages/open-twin/UPSTREAM.json`; send fixes upstream and bring them back by merge
+  (`docs/open-twin.md`). Do not invent LOINC or UCUM codes.
 - Database migrations are additive and nullable unless the issue agrees otherwise.
   Maintainers run every `prisma migrate` and deploy command.
 - Update every doc your change makes wrong.
@@ -144,7 +145,7 @@ paths. Reviews check, with file and line evidence:
 4. **Secrets and data**: none, anywhere: code, tests, fixtures, logs, errors or docs.
 5. **Privacy posture**: personal data paths as above; subject data reads audited; missing
    is not zero.
-6. **Interop**: no edits under `.open-twin/`; no invented LOINC or UCUM.
+6. **Interop**: no edits under `packages/open-twin/`; no invented LOINC or UCUM.
 7. **Migrations**: additive and nullable; `bun run db:verify` passes.
 8. **Docs**: updated where the change invalidates them.
 9. **Commits**: signed off, one concern each.

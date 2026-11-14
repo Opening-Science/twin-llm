@@ -55,13 +55,13 @@ export const TOOLS: Readonly<Record<ToolId, ToolSpec>> = {
   },
   git: {
     label: "git",
-    neededFor: "sync:open-twin",
+    neededFor: "the commit on the Lab provenance card",
     minimum: null,
     install: { darwin: "xcode-select --install", linux: "sudo apt install git" },
   },
   python3: {
     label: "Python 3",
-    neededFor: "sync:open-twin (rewrites package.json files)",
+    neededFor: "the evaluation code sandbox",
     minimum: null,
     install: { darwin: "xcode-select --install", linux: "sudo apt install python3" },
   },

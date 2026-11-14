@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync, realpathSync } from "node:fs";
+import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { LOINC_CODINGS } from "@open-twin/fhir-core";
@@ -33,7 +34,72 @@ const ANCHOR_JSON = fileURLToPath(
   import.meta.resolve("@open-twin/anchor-layer/data/anchor-layer.v1.json"),
 );
 
-describe("open-twin pin smoke", () => {
+const OPEN_TWIN = join(import.meta.dir, "../packages/open-twin");
+/** Adapted to this repository, or this repository's own records: not in the manifest. */
+const NOT_AS_WRITTEN = new Set(["package.json", "UPSTREAM.json", "MANIFEST.sha256"]);
+
+const sha256 = (path: string): string =>
+  createHash("sha256").update(readFileSync(path)).digest("hex");
+
+const filesUnder = (dir: string): readonly string[] =>
+  readdirSync(dir, { withFileTypes: true, recursive: true })
+    .filter((entry) => entry.isFile() && !NOT_AS_WRITTEN.has(entry.name))
+    .map((entry) => relative(dir, join(entry.parentPath, entry.name)))
+    .filter((path) => !path.split("/").includes("node_modules"))
+    .sort();
+
+/** MANIFEST.sha256 as path → sha256, in `sha256sum` format. */
+const manifest = (): ReadonlyMap<string, string> =>
+  new Map(
+    readFileSync(join(OPEN_TWIN, "MANIFEST.sha256"), "utf8")
+      .split("\n")
+      .filter((line) => line.trim() !== "")
+      .map((line) => {
+        const [hash = "", path = ""] = line.split(/\s+/);
+        return [path, hash] as const;
+      }),
+  );
+
+describe("packages/open-twin is the copy MANIFEST.sha256 records", () => {
+  test("every file is listed, and none changed without the manifest", () => {
+    const listed = manifest();
+    const files = filesUnder(OPEN_TWIN);
+    expect(files).toEqual([...listed.keys()].sort());
+    const changed = files.filter(
+      (path) => sha256(join(OPEN_TWIN, path)) !== listed.get(path),
+    );
+    expect(changed).toEqual([]);
+  });
+
+  test("UPSTREAM.json names a base commit for each package", () => {
+    const upstream = JSON.parse(
+      readFileSync(join(OPEN_TWIN, "UPSTREAM.json"), "utf8"),
+    ) as {
+      repo: string;
+      packages: Readonly<Record<string, { base: string; imported: string }>>;
+    };
+    const dirs = readdirSync(OPEN_TWIN, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+      .sort();
+    expect(Object.keys(upstream.packages).sort()).toEqual(dirs);
+    for (const { base, imported } of Object.values(upstream.packages)) {
+      expect(base).toMatch(/^[0-9a-f]{40}$/);
+      expect(imported).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    }
+  });
+
+  test("the workspace name resolves to the copied source, one module instance", () => {
+    const viaWorkspace = realpathSync(
+      fileURLToPath(import.meta.resolve("@open-twin/provider-oura")),
+    );
+    expect(viaWorkspace).toBe(
+      realpathSync(join(OPEN_TWIN, "provider-oura/src/index.ts")),
+    );
+  });
+});
+
+describe("open-twin package exports", () => {
   test("fhir-r4 exports normaliseBundle", () => {
     expect(typeof normaliseBundle).toBe("function");
   });

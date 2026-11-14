@@ -1,6 +1,6 @@
 /**
  * The Anchor biomarker catalogue, read from the pinned open-twin artefact
- * (`@open-twin/anchor-layer`, see docs/open-twin-pins.md and docs/biomarkers.md).
+ * (`@open-twin/anchor-layer`, see docs/open-twin.md and docs/biomarkers.md).
  *
  * Only the package's JSON export is imported: its loader reads the file with
  * `node:fs`, and this module has to work in the browser too. The guard below

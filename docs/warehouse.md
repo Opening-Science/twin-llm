@@ -5,8 +5,7 @@ Local research store for a Synthea cohort. Numeric rows come from `@open-twin/fh
 ## Pin
 
 - open-twin `24179d8de0e38ca579adde55db65d13926ac6bac`
-- Host dep: `@open-twin/fhir-r4` via `file:.open-twin/packages/fhir-r4`
-- Sync: `bash scripts/sync-open-twin.sh` (see `docs/open-twin-pins.md`)
+- Host dep: `@open-twin/fhir-r4`, copied into `packages/open-twin/fhir-r4` (see `docs/open-twin.md`)
 
 ## Schema
 

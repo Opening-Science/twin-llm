@@ -68,10 +68,11 @@ export const formatDoctor = (
   const database = databaseSummary(state);
   const example = exampleSummary(state);
   const context = ollamaContextSummary(state.ollama);
-  const openTwin =
-    state.openTwin.synced === state.openTwin.pinned
-      ? `  [ok]      open-twin packages at ${state.openTwin.pinned.slice(0, 7)}`
-      : `  [missing] open-twin packages not at ${state.openTwin.pinned.slice(0, 7)}: bun run sync:open-twin`;
+  const openTwin = state.leftoverOpenTwin
+    ? [
+        "  [stale]   .open-twin is left over from the old sync; the packages are in packages/open-twin/ now. Delete it: rm -rf .open-twin node_modules/@open-twin && bun install (if .open-twin is a link, rm .open-twin with no trailing slash)",
+      ]
+    : [];
   const pages = pageReadiness(state).map(
     (page) => `  ${readinessMark(page)} ${page.page}: ${page.detail}`,
   );
@@ -90,7 +91,7 @@ export const formatDoctor = (
     "Project",
     `  ${state.envFile ? "[ok]     " : "[missing]"} .env.local${state.envFile ? ` (DATA_MODE=${state.dataMode ?? "unset"})` : `: ${SETUP_COMMAND} creates it`}`,
     `  ${database.ok ? "[ok]     " : "[missing]"} Postgres: ${database.detail}`,
-    openTwin,
+    ...openTwin,
     packages.length === 0
       ? "  [ok]      node_modules matches package.json"
       : `  [stale]   node_modules: ${describeProblems(packages)}. Run: bun install`,

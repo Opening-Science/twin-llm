@@ -1,6 +1,6 @@
 /**
  * Markers open-twin says have no single body location (DECISIONS.md#d12 at the
- * pin, see docs/open-twin-pins.md). Upstream emits them under `unrenderable[]`
+ * pin, see docs/open-twin.md). Upstream emits them under `unrenderable[]`
  * and forbids rerouting them into a neighbouring system, so the twin never
  * lights anything for them, even where one of their regions has a mesh
  * (Kreatinin and Harnsäure list `kidney`).

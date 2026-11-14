@@ -1,8 +1,8 @@
 // Upstream exports only the fetch-and-build entry points from the barrel. The host
 // already holds the parsed data from `getOuraData`, so the pure builder is imported
-// from the synced checkout (sync must not patch upstream *.ts). No server-only so
-// tests can build a bundle from a fixture.
-import { buildOuraBundle } from "../../.open-twin/packages/provider-oura/src/fhir/bundleBuilder";
+// from the copied package's source (request 6 in docs/open-twin.md). No server-only
+// so tests can build a bundle from a fixture.
+import { buildOuraBundle } from "@/packages/open-twin/provider-oura/src/fhir/bundleBuilder";
 import { SYSTEMS } from "@open-twin/fhir-core";
 import type { OuraTypedData, SupportedScope } from "@open-twin/provider-oura";
 import type { Bundle } from "fhir/r4";

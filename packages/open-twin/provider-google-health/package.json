@@ -1,66 +1,16 @@
 {
   "name": "@open-twin/provider-google-health",
   "version": "0.1.0",
-  "description": "Google Health API to FHIR mapper",
-  "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "default": "./dist/index.js"
-    }
-  },
-  "files": [
-    "dist"
-  ],
-  "scripts": {
-    "build": "tsup src/index.ts --format esm --dts",
-    "dev": "tsup src/index.ts --format esm --watch --dts",
-    "format": "biome check --write",
-    "lint": "biome ci",
-    "clean": "rm -rf dist",
-    "prepublishOnly": "npm run build",
-    "test": "vitest run"
-  },
-  "keywords": [
-    "google-health",
-    "fhir",
-    "connector"
-  ],
-  "author": "Open Science Foundation",
+  "private": true,
   "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "dependencies": {
-    "@googleapis/health": "7.0.1",
+    "@googleapis/health": "6.0.0",
     "@open-twin/fhir-core": "workspace:*",
     "@types/fhir": "0.0.44",
-    "googleapis": "189.0.0"
-  },
-  "devDependencies": {
-    "@lhncbc/ucum-lhc": "8.0.1",
-    "@rollup/plugin-swc": "0.4.1",
-    "@types/node": "26.6.6",
-    "jest-extended": "7.0.0",
-    "reflect-metadata": "0.2.2",
-    "tsup": "9.0.0",
-    "typescript": "5.9.3",
-    "vitest": "5.1.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/etzm/open-twin.git",
-    "directory": "packages/provider-google-health"
-  },
-  "homepage": "https://github.com/etzm/open-twin#readme",
-  "bugs": {
-    "url": "https://github.com/etzm/open-twin/issues"
-  },
-  "engines": {
-    "node": ">=20"
-  },
-  "publishConfig": {
-    "access": "public"
-  },
-  "sideEffects": false
+    "googleapis": "181.0.0"
+  }
 }

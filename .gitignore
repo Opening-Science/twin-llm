@@ -53,7 +53,8 @@ next-env.d.ts
 # generated prisma client (postinstall / db:generate)
 /generated
 
-# Pinned open-twin checkout (see scripts/sync-open-twin.sh)
+# Left over from the old open-twin sync (the packages are in packages/open-twin/
+# now); delete yours: docs/open-twin.md. This line goes once the worktrees are clean.
 .open-twin
 
 # Local Synthea output (scripts/synthea/generate-local.sh)

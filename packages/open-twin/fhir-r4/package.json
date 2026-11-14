@@ -1,67 +1,16 @@
 {
   "name": "@open-twin/fhir-r4",
   "version": "0.1.0",
-  "description": "Generic FHIR R4 ingest: structural validation, conformance checks, UCUM unit policy and normalisation of foreign bundles into open-twin conventions",
-  "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "default": "./dist/index.js"
-    }
-  },
-  "files": [
-    "dist"
-  ],
-  "scripts": {
-    "build": "tsup src/index.ts --format esm --dts",
-    "dev": "tsup src/index.ts --format esm --watch --dts",
-    "format": "biome check --write",
-    "lint": "biome ci",
-    "clean": "rm -rf dist",
-    "prepublishOnly": "npm run build",
-    "test": "vitest run",
-    "oracle": "tsx tools/hl7-oracle.ts"
-  },
-  "keywords": [
-    "fhir",
-    "r4",
-    "validation",
-    "ucum",
-    "conformance",
-    "open-twin"
-  ],
-  "author": "Open Science Foundation",
+  "private": true,
   "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "dependencies": {
-    "@lhncbc/ucum-lhc": "8.0.1",
+    "@lhncbc/ucum-lhc": "7.1.9",
     "@open-twin/fhir-core": "workspace:*",
     "@types/fhir": "0.0.44",
-    "zod": "4.6.7"
-  },
-  "devDependencies": {
-    "@types/node": "26.6.6",
-    "tsup": "9.0.0",
-    "tsx": "4.23.15",
-    "typescript": "5.9.3",
-    "vitest": "5.1.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/etzm/open-twin.git",
-    "directory": "packages/fhir-r4"
-  },
-  "homepage": "https://github.com/etzm/open-twin#readme",
-  "bugs": {
-    "url": "https://github.com/etzm/open-twin/issues"
-  },
-  "engines": {
-    "node": ">=20"
-  },
-  "publishConfig": {
-    "access": "public"
-  },
-  "sideEffects": false
+    "zod": "4.6.6"
+  }
 }

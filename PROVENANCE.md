@@ -15,34 +15,43 @@
 
 The ui-kit's `StepTrace`, `UndoButton`, `HoldToConfirm`, `StatusLattice` and `Rating` were written from scratch in this repository. No third-party UI component code is included.
 
-## open-twin pins
+## open-twin (copied code)
 
-Synced (not vendored) at SHA:
+- Repository: https://github.com/Opening-Science/open-twin
+- Commit: `4b42ef944db0b461ca414b8066a5f7aa2594a9ce` (open-twin `main`, 2026-11-08)
+- Imported: 2026-11-14, with `git archive` at that commit (not from a working tree)
+- Licence: MIT, "Copyright (c) 2026 Open Science Foundation (Opening Science)", not Apache-2.0. A byte-identical copy of open-twin's root `LICENSE` is beside each package. Upstream's anchor-layer `package.json` has no licence field; the root licence covers it.
 
-- `4b42ef944db0b461ca414b8066a5f7aa2594a9ce`
+| Package                             | Path                                        | Copied                                    |
+| ----------------------------------- | ------------------------------------------- | ----------------------------------------- |
+| `@open-twin/fhir-core`              | `packages/open-twin/fhir-core`              | `src/`, `README.md`                       |
+| `@open-twin/fhir-r4`                | `packages/open-twin/fhir-r4`                | `src/`, `README.md`                       |
+| `@open-twin/aggregate`              | `packages/open-twin/aggregate`              | `src/`, `README.md`                       |
+| `@open-twin/provider-oura`          | `packages/open-twin/provider-oura`          | `src/`, `README.md`                       |
+| `@open-twin/provider-google-health` | `packages/open-twin/provider-google-health` | `src/`, `README.md`                       |
+| `@open-twin/provider-whoop`         | `packages/open-twin/provider-whoop`         | `src/`, `README.md`                       |
+| `@open-twin/anchor-layer`           | `packages/open-twin/anchor-layer`           | `data/` (the JSON and its sha256 sidecar) |
 
-See `docs/open-twin-pins.md` and `scripts/sync-open-twin.sh`. Checkout lives in gitignored `.open-twin/`.
+- **Copied unchanged:** each package's `src/` (with its tests, fixtures and `verification/`), `README.md`, and for anchor-layer only `data/`. `packages/open-twin/MANIFEST.sha256` lists the sha256 of every one of these files and of each `LICENSE`; `infrastructure/open-twin.test.ts` fails when a file changes without it.
+- **Left out:** `dist/`, the tsup builds, `vitest.config.ts`, `testSetup.ts`, `tsconfig.json`, the biome config, `fhir-r4/tools/`, `provider-oura/scripts/`, anchor-layer's `src/` (a `node:fs` loader nothing imports), and the packages TwinLLM does not use (provider-vitronic, interpretation-contract, interpreter, reader-core and the rest).
+- **Changed:** only the `package.json` files: `"private": true`, `"license": "MIT"`, `exports` pointing at the TypeScript source, dependencies pinned to the versions `bun.lock` already resolved, `workspace:*` for fhir-core, no scripts or devDependencies.
+- **Base per package:** `packages/open-twin/UPSTREAM.json`. Taking in later upstream changes by hand: `docs/open-twin.md`.
 
-| Package                             | Path                                         | Pin                                        |
-| ----------------------------------- | -------------------------------------------- | ------------------------------------------ |
-| `@open-twin/fhir-core`              | `.open-twin/packages/fhir-core`              | `4b42ef944db0b461ca414b8066a5f7aa2594a9ce` |
-| `@open-twin/fhir-r4`                | `.open-twin/packages/fhir-r4`                | `4b42ef944db0b461ca414b8066a5f7aa2594a9ce` |
-| `@open-twin/aggregate`              | `.open-twin/packages/aggregate`              | `4b42ef944db0b461ca414b8066a5f7aa2594a9ce` |
-| `@open-twin/provider-oura`          | `.open-twin/packages/provider-oura`          | `4b42ef944db0b461ca414b8066a5f7aa2594a9ce` |
-| `@open-twin/provider-google-health` | `.open-twin/packages/provider-google-health` | `4b42ef944db0b461ca414b8066a5f7aa2594a9ce` |
-| `@open-twin/provider-whoop`         | `.open-twin/packages/provider-whoop`         | `4b42ef944db0b461ca414b8066a5f7aa2594a9ce` |
-| `@open-twin/anchor-layer`           | `.open-twin/packages/anchor-layer`           | `4b42ef944db0b461ca414b8066a5f7aa2594a9ce` |
+`@open-twin/anchor-layer` is used for its data only (`data/anchor-layer.v1.json`, sha256 `7adc42afaa03ee568a9f8eea5b451a8b51c9851e116f90951009d1b31894682e`, checked against its sidecar by `bun run open-twin:verify`). Upstream compiled it from the Anchor workbook `2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx` (source sha256 `42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e`). What TwinLLM adds on top is listed in `docs/biomarkers.md`.
 
-`@open-twin/anchor-layer` is used for its data only (`data/anchor-layer.v1.json`, sha256 `7adc42afaa03ee568a9f8eea5b451a8b51c9851e116f90951009d1b31894682e`, checked against its sidecar by `bun run sync:verify`). Upstream compiled it from the Anchor workbook `2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx` (source sha256 `42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e`). What TwinLLM adds on top is listed in `docs/biomarkers.md`.
+### Changes since import
+
+One line per hand merge from upstream or local edit, with the date and the files.
+
+- None.
 
 ### TwinLLM-only host adapters (contribute upstream when possible)
 
 - `infrastructure/open-twin-adapters/oura.ts` — `HostOuraTokenHandler.lastTokens()` (renamed from `getTokens()` because upstream now has its own); `getAuthorizationUrl` over the public barrel, adding `state`
+- `infrastructure/open-twin-adapters/oura-bundle.ts` — `buildOuraFhirBundle` over `buildOuraBundle`, imported from the copied source until the barrel exports it
 - `infrastructure/open-twin-adapters/whoop.ts` — `fetchWhoopWindow` / `buildWhoopFhirBundle` over the public barrel (`getWhoopData`, `buildWhoopBundleFromPayload`)
 - `infrastructure/open-twin-adapters/google-health.ts` — restore/persist credential helpers; `buildGoogleHealthFhirBundle` (`google-health-bundle.ts`) over `buildBundleFromResponses` with the person's shared subject
 - `infrastructure/open-twin-adapters/aggregate.ts` — `aggregateWearableBundles` over `aggregate` from the public barrel, for Oura, WHOOP and Google Health; not read by any screen yet
-- Sync packaging only (no upstream `*.ts` edits): `workspace:*` → `file:../fhir-core`, then peer-pin for host install; flatten nested bun redirects
-- Upgrade: `bash scripts/sync-open-twin.sh <sha>` then `bun install` (see `docs/open-twin-pins.md`)
 
 ## Reference anatomy atlases (fetched, not committed)
 

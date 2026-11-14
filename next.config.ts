@@ -11,15 +11,17 @@ import {
 } from "./infrastructure/build-stamp";
 
 /**
- * The open-twin provider packages ship TypeScript sources, so Next compiles
- * them along with the app.
+ * The packages copied from open-twin (packages/open-twin/) ship TypeScript
+ * sources, so Next compiles them along with the app.
  *
  * There is deliberately no analytics proxy route here: when browser analytics
  * are enabled the PostHog client talks to its own host, so requests to it
  * never carry this app's cookies.
  */
 const OPEN_TWIN_SOURCE_PACKAGES = [
+  "@open-twin/aggregate",
   "@open-twin/fhir-core",
+  "@open-twin/fhir-r4",
   "@open-twin/provider-google-health",
   "@open-twin/provider-oura",
   "@open-twin/provider-whoop",

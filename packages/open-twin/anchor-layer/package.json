@@ -2,33 +2,9 @@
   "name": "@open-twin/anchor-layer",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "type": "module",
-  "description": "Versioned, checksummed Anchor-layer biomarker artefact compiled from the consolidated workbook",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "default": "./dist/index.js"
-    },
     "./data/anchor-layer.v1.json": "./data/anchor-layer.v1.json"
-  },
-  "files": [
-    "dist",
-    "data"
-  ],
-  "scripts": {
-    "build": "tsup src/index.ts --format esm --dts",
-    "test": "vitest run",
-    "lint": "biome ci src",
-    "clean": "rm -rf dist",
-    "compile": "tsx ../../scripts/compile-anchor-layer.ts"
-  },
-  "devDependencies": {
-    "@types/node": "26.6.6",
-    "typescript": "5.9.3",
-    "vitest": "5.1.0",
-    "tsup": "9.0.0"
   }
 }

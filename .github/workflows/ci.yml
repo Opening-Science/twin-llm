@@ -23,7 +23,6 @@ jobs:
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: 1.4.2
-      - run: bun run sync:open-twin
       - run: bun install --frozen-lockfile
       - run: bun run typecheck
         env:
@@ -44,7 +43,6 @@ jobs:
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: 1.4.2
-      - run: bun run sync:open-twin
       - run: bun install --frozen-lockfile
       - run: bun run typecheck:tests
         env:
@@ -59,7 +57,6 @@ jobs:
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: 1.4.2
-      - run: bun run sync:open-twin
       - run: bun install --frozen-lockfile
       # Placeholder values, not secrets: the build reads no config at module top level.
       - run: bun run build
@@ -79,7 +76,6 @@ jobs:
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: 1.4.2
-      - run: bun run sync:open-twin
       - run: bun install --frozen-lockfile
       - run: bun run lint
 
@@ -92,7 +88,6 @@ jobs:
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: 1.4.2
-      - run: bun run sync:open-twin
       - run: bun install --frozen-lockfile
       - run: bun run lint:claims
       - run: bun run lint:links
@@ -106,7 +101,6 @@ jobs:
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: 1.4.2
-      - run: bun run sync:open-twin
       - run: bun install --frozen-lockfile
       - run: bun test
 
@@ -119,9 +113,22 @@ jobs:
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: 1.4.2
-      - run: bun run sync:open-twin
       - run: bun install --frozen-lockfile
       - run: bun run test:isolation
+
+  # The packages copied from open-twin keep their own vitest tests, run as
+  # upstream runs them; bare `bun test` skips them (bunfig.toml).
+  open-twin-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.4.2
+      - run: bun install --frozen-lockfile
+      - run: bun run test:open-twin
 
   prisma:
     runs-on: ubuntu-latest
@@ -160,7 +167,6 @@ jobs:
         run: |
           PGPASSWORD=scratch psql -h 127.0.0.1 -U postgres -d twin_llm \
             -c "CREATE DATABASE twin_llm_shadow;"
-      - run: bun run sync:open-twin
       - run: bun install --frozen-lockfile
       - run: bun run db:generate
       - run: bun run db:verify
@@ -205,7 +211,6 @@ jobs:
           command -v pg_dump >/dev/null ||
             (sudo apt-get update && sudo apt-get install -y postgresql-client)
           pg_dump --version
-      - run: bun run sync:open-twin
       - run: bun install --frozen-lockfile
       - run: bun run db:generate
       - run: bun run db:deploy
