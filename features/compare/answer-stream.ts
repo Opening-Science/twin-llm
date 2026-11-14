@@ -163,10 +163,14 @@ type Metadata = Readonly<{
   document: ResponseDocumentV1 | null;
 }>;
 
-/** `{ metrics, document }` as the server sends it; an invalid document is dropped. */
+/**
+ * The message metadata as the server sends it (`chatResponseMetadata` in
+ * `features/chat/response-document.ts`): the metrics flat, with `document`
+ * beside them. An invalid document is dropped; the metrics still count.
+ */
 export const metadataOf = (value: unknown): Metadata | null =>
   isRecord(value)
-    ? { metrics: metricsOf(value.metrics), document: toResponseDocument(value.document) }
+    ? { metrics: metricsOf(value), document: toResponseDocument(value.document) }
     : null;
 
 type Part = UIMessage["parts"][number];

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
+import { chatResponseMetadata } from "@/features/chat/response-document";
 import {
   PROVIDER_NOT_PERMITTED_FOR_DATA_MODE,
   PROVIDER_NOT_PERMITTED_SENTENCE,
@@ -105,7 +106,7 @@ describe("streamAnswer (SPEC 8.2)", () => {
           ...TEXT,
           {
             type: "message-metadata",
-            messageMetadata: { metrics: METRICS, document: DOCUMENT },
+            messageMetadata: chatResponseMetadata(METRICS, DOCUMENT),
           },
           { type: "finish" },
         ],
@@ -129,7 +130,7 @@ describe("streamAnswer (SPEC 8.2)", () => {
         ...TEXT,
         {
           type: "message-metadata",
-          messageMetadata: { metrics: METRICS, document: { abstained: "maybe" } },
+          messageMetadata: chatResponseMetadata(METRICS, { abstained: "maybe" }),
         },
         { type: "finish" },
       ]),
@@ -216,7 +217,7 @@ describe("streamAnswer (SPEC 8.2)", () => {
         ...TEXT.slice(1),
         {
           type: "message-metadata",
-          messageMetadata: { metrics: METRICS, document: DOCUMENT },
+          messageMetadata: chatResponseMetadata(METRICS, DOCUMENT),
         },
         { type: "finish" },
       ]),
