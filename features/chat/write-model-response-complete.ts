@@ -12,7 +12,8 @@ import { storedToolParts, type ToolResultLike } from "./tool-parts";
  * STOPPED with what the model had written when the person pressed Stop (#373).
  *
  * The numbers stored are the same measured values the browser received in
- * the stream's metadata, so the card and the leaderboard can never disagree.
+ * the stream's metadata, so the answer card, the export and the agents
+ * roster's summed cost can never disagree.
  * Prisma is reached through a one-method port so tests pass a fake.
  */
 export type ModelResponseCompleteParams = Readonly<{
@@ -68,10 +69,9 @@ export type ModelResponseRefusedUpdate = Readonly<{
 
 export type ModelResponseStoppedUpdate = Readonly<{
   where: RowKey;
-  data: Omit<
-    ModelResponseCompleteUpdate["data"],
-    keyof MetricColumns | "status"
-  > & { status: "STOPPED" };
+  data: Omit<ModelResponseCompleteUpdate["data"], keyof MetricColumns | "status"> & {
+    status: "STOPPED";
+  };
 }>;
 
 export type ModelResponseWritePort = Readonly<{

@@ -5,8 +5,8 @@ import {
 
 /**
  * The notice before a thread export (SERVER-SPEC 3.7): which step a request
- * is, the one line the check answers, and the client's reading of it. Pure,
- * so the route and the shell's dialog share it.
+ * is and the one line the check answers. The client's reading of that answer
+ * is `infrastructure/export-notice.ts`, shared with the thread bar.
  */
 
 export type ExportStep = "check" | "confirmed" | "unconfirmed";
@@ -17,17 +17,6 @@ export const exportStep = (search: URLSearchParams): ExportStep =>
     : search.get("confirm") === "1"
       ? "confirmed"
       : "unconfirmed";
-
-export type ExportNotice = Readonly<{ status: "ready" | "refused"; line: string }>;
-
-/** The check's answer, or null for anything that is not a notice. */
-export const parseExportNotice = (body: unknown): ExportNotice | null => {
-  if (typeof body !== "object" || body === null) return null;
-  const { status, line } = body as Record<string, unknown>;
-  return (status === "ready" || status === "refused") && typeof line === "string"
-    ? { status, line }
-    : null;
-};
 
 export const NOT_CHECKED_LINE =
   "This export could not be checked for stored values. Download anyway?";
