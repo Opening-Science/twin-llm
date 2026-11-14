@@ -1203,6 +1203,9 @@ const SERVER_ACTIONS: Readonly<
   "features/arena/start-turn.ts": {
     gated: { startTurn: "vaultRefusalForAction()" },
   },
+  "features/compare/start-turn.ts": {
+    gated: { startTurn: "vaultRefusalForAction()" },
+  },
   "app/(focus)/start/actions.ts": {
     gated: { startStarterThread: "startTurn(" },
   },

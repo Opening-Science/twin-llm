@@ -96,6 +96,7 @@ const FEATURE_SOURCES = "features/**/*.{ts,tsx}";
 const BOUNDARY_DEBT_FEATURES = [
   "arena",
   "auth",
+  "compare",
   "digital-twin",
   "google-health",
   "leaderboard",
