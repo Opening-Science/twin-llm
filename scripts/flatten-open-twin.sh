@@ -8,7 +8,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BASE="${ROOT}/node_modules/@open-twin"
 [[ -d "${BASE}" ]] || exit 0
 
-for pkg in fhir-r4 aggregate provider-oura provider-google-health provider-whoop provider-vitronic interpretation-contract; do
+for pkg in fhir-r4 aggregate provider-oura provider-google-health provider-whoop; do
   nested="${BASE}/${pkg}/node_modules/@open-twin"
   if [[ -d "${nested}" ]]; then
     rm -rf "${nested}"

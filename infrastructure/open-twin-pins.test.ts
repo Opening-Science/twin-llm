@@ -6,10 +6,6 @@ import { fileURLToPath } from "node:url";
 import { LOINC_CODINGS } from "@open-twin/fhir-core";
 import { normaliseBundle } from "@open-twin/fhir-r4";
 import {
-  SYSTEM_IDS,
-  validateInterpretationDocument,
-} from "@open-twin/interpretation-contract";
-import {
   GoogleHealthClient,
   getFhirBundleFromGoogleHealthData,
   getGoogleHealthAuthUrl,
@@ -29,10 +25,6 @@ import {
   TokenHandler as WhoopTokenHandler,
   WHOOP_SCOPES,
 } from "@open-twin/provider-whoop";
-import {
-  buildBundleFromVitronicResponse,
-  createBodyLoopClient,
-} from "@open-twin/provider-vitronic";
 
 import { getAuthorizationUrl } from "@/infrastructure/open-twin-adapters/oura";
 
@@ -44,21 +36,6 @@ const ANCHOR_JSON = fileURLToPath(
 describe("open-twin pin smoke", () => {
   test("fhir-r4 exports normaliseBundle", () => {
     expect(typeof normaliseBundle).toBe("function");
-  });
-
-  test("interpretation-contract exports validateInterpretationDocument and nine SystemIds", () => {
-    expect(typeof validateInterpretationDocument).toBe("function");
-    expect(SYSTEM_IDS).toEqual([
-      "musculoskeletal",
-      "cardiovascular",
-      "nervous",
-      "respiratory",
-      "metabolic",
-      "digestive",
-      "endocrine",
-      "integumentary",
-      "reproductive",
-    ]);
   });
 
   test("fhir-core LOINC_CODINGS includes heart-rate, SpO2, time-in-bed codes", () => {
@@ -105,10 +82,5 @@ describe("open-twin pin smoke", () => {
     };
     expect(layer.schema_version).toBe("anchor-layer.v1");
     expect(layer.biomarkers).toHaveLength(67);
-  });
-
-  test("provider-vitronic exports mapping and the password client (host must not call the latter)", () => {
-    expect(typeof buildBundleFromVitronicResponse).toBe("function");
-    expect(typeof createBodyLoopClient).toBe("function");
   });
 });

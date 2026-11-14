@@ -1,10 +1,9 @@
 # open-twin pins
 
 TwinLLM consumes `@open-twin/fhir-core`, `@open-twin/fhir-r4`, `@open-twin/aggregate`,
-`@open-twin/interpretation-contract`, `provider-oura`,
-`provider-google-health`, `provider-whoop`, `provider-vitronic`, and the data
+`provider-oura`, `provider-google-health`, `provider-whoop`, and the data
 of `@open-twin/anchor-layer` from a **gitignored** checkout at a pinned SHA. `@open-twin/interpreter` is not pinned
-(no Anchor mapper yet).
+(no Anchor mapper yet). `interpretation-contract` and `provider-vitronic` are not synced: nothing in the app imports them.
 
 ## Pin
 
@@ -20,7 +19,7 @@ of `@open-twin/anchor-layer` from a **gitignored** checkout at a pinned SHA. `@o
 
 1. Shallow clone open-twin at the pin into `.open-twin/`
 2. Rewrite `workspace:*` → `file:../fhir-core`, build each package `dist/`
-3. Peer-pin `@open-twin/fhir-core` on the Oura, Google Health and WHOOP providers; leave fhir-r4, provider-vitronic and aggregate on `file:../fhir-core` because `@open-twin/fhir-core` is unpublished on npm; strip package-local `node_modules`
+3. Peer-pin `@open-twin/fhir-core` on the Oura, Google Health and WHOOP providers; leave fhir-r4 and aggregate on `file:../fhir-core` because `@open-twin/fhir-core` is unpublished on npm; strip package-local `node_modules`
 4. Host `package.json` uses `file:.open-twin/packages/…`; `postinstall` flattens nested bun symlink redirects (Turbopack)
 
 ## Sync / upgrade
@@ -50,9 +49,8 @@ CI runs `bun run sync:open-twin` before `bun install` (github.com only).
 Clone-only packaging adjustments (not upstream `*.ts` edits):
 
 - `workspace:*` → `file:../fhir-core` for the sync-time build, then `@open-twin/fhir-core` moved to `peerDependencies` for the host install
-- `interpretation-contract` `build` rewritten to `tsup` only (generate script is outside the sparse checkout; `src/generated` is already committed)
 - Package-local `node_modules` / `bun.lock` removed after build
-- `postinstall` runs `scripts/flatten-open-twin.sh` so Turbopack never sees bun symlink redirects under fhir-r4, interpretation-contract, or the providers
+- `postinstall` runs `scripts/flatten-open-twin.sh` so Turbopack never sees bun symlink redirects under fhir-r4 or the providers
 
 Missing package exports are reached from `infrastructure/open-twin-adapters/` via relative imports into `.open-twin/.../src/` (see host adapters). File upstream issues below rather than patching the clone.
 
@@ -60,7 +58,7 @@ Missing package exports are reached from `infrastructure/open-twin-adapters/` vi
 
 TwinLLM-only behaviour lives under `infrastructure/open-twin-adapters/`. Code outside the folder imports one entry per vendor (`oura.ts`, `whoop.ts`, `google-health.ts`, `aggregate.ts` under `@/infrastructure/open-twin-adapters/`), never a file behind them, so an Oura route does not load Google's auth library; lint (`twin-llm/wearable-entry` and the layer rules) enforces this, so replacing the adapters touches this folder only:
 
-- `oura.ts` / `oura-authorize.ts` — `HostOuraTokenHandler.lastTokens()`; re-export `getAuthorizationUrl` from `.open-twin/packages/provider-oura/src/api/client`
+- `oura.ts` / `oura-authorize.ts` — `HostOuraTokenHandler.lastTokens()`; `getAuthorizationUrl` over the public barrel, adding `state`
 - `oura-bundle.ts` — `buildOuraFhirBundle` over `buildOuraBundle` from `.open-twin/packages/provider-oura/src/fhir/bundleBuilder`, so a sync builds the bundle from the data it already fetched instead of calling every endpoint twice
 - `whoop.ts` — `fetchWhoopWindow` / `buildWhoopFhirBundle` over the public barrel (`getWhoopData`, `buildWhoopBundleFromPayload`); no longer needs `fetchWhoopSyncPayload` or any `.open-twin/.../src` import
 - `whoop-workout.ts` — workout schema, paginated `GET /v2/activity/workout` fetch and `mapWhoopWorkoutsToFHIR`, appended to the upstream bundle by `withWhoopWorkouts`; uses only the public `@open-twin/fhir-core` barrel. Belongs upstream (request 7)
@@ -68,7 +66,7 @@ TwinLLM-only behaviour lives under `infrastructure/open-twin-adapters/`. Code ou
 - `google-health-bundle.ts` — `buildGoogleHealthFhirBundle` over `buildBundleFromResponses` from the public barrel, with the person's shared subject (`person-subject.ts`) and the Patient it points at; the sync fetches with `getDataTypes` and builds from those responses
 - `aggregate.ts` — `aggregateWearableBundles` over `aggregate` from `@open-twin/aggregate`: one subject's Oura, WHOOP and Google Health bundles as one, overlaps reconciled on published evidence. No screen reads the bundle yet. The same file's `judgeByEvidence` reads aggregate's `selectSource` and fhir-core's `reliabilityFor` for the wearable source rules (#464, [wearable-sources.md](wearable-sources.md)), which resolve overlapping summary keys per measure and day; vitals the rules do not compare still take the first source in `VITAL_ANATOMY`. At this pin it also finds no overlap between the three connectors (request 8). Aggregate refuses Observations under more than one subject, so the person's Patient is carried once, with each connector's identifier (`mergePersonPatients`)
 - `person-subject.ts` — one subject per person (#476). Upstream keeps the connector in its patient id (`patientUuid(connector, subjectKey)`), so the host passes the Oura, WHOOP and Google Health builders their `subject` option: `urn:uuid:` UUIDv5 of the host's subject key under the host namespace `uuidv5("twin-llm/person")`, never a connector or vendor id. `withPersonPatient` adds the Patient it points at, with the connector's identifier, and links a Patient the connector built itself (Oura `personal_info`, still under its per-connector id); Observation ids and bundle tags still carry the connector
-- BodyLoop — host Bearer client in `packages/vitronic/` plus `buildBundleFromVitronicResponse` from the public barrel. The mapper now binds D15 SI units (`m` / `m2` / `m3` / `kg` / `kg/m2`); TwinLLM still does not persist `fhirBundle` and does not call `createBodyLoopClient` (password grant + `/probands`).
+- BodyLoop — host Bearer client in `packages/vitronic/`. `provider-vitronic` is not synced; TwinLLM does not persist `fhirBundle` and does not call `createBodyLoopClient` (password grant + `/probands`).
 
 ## Upstream issues to file
 
@@ -90,7 +88,7 @@ TwinLLM-only behaviour lives under `infrastructure/open-twin-adapters/`. Code ou
 - **In scope:** Add `./api/client` to `exports` and the tsup build entry (or re-export from the barrel) so hosts can import `getAuthorizationUrl` without reaching into `src/`.
 - **Out of scope:** OAuth UX / redirect URI policy.
 - **Minimal diff:** `package.json` exports + build script; optional barrel re-export.
-- **Status:** landed in this pin (`getAuthorizationUrl(config, state?)` on the public barrel). The host adapter still imports `.open-twin/packages/provider-oura/src/api/client` and appends `state`; switching to the barrel is a follow-up.
+- **Status:** landed in this pin (`getAuthorizationUrl(config, state?)` on the public barrel). The host adapter imports it from the barrel and appends `state`.
 
 ### 4. provider-whoop: export fetchWhoopSyncPayload from package barrel ([open-twin#172](https://github.com/Opening-Science/open-twin/issues/172))
 

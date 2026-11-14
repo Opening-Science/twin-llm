@@ -23,23 +23,21 @@ Synced (not vendored) at SHA:
 
 See `docs/open-twin-pins.md` and `scripts/sync-open-twin.sh`. Checkout lives in gitignored `.open-twin/`.
 
-| Package                              | Path                                          | Pin                                        |
-| ------------------------------------ | --------------------------------------------- | ------------------------------------------ |
-| `@open-twin/fhir-core`               | `.open-twin/packages/fhir-core`               | `4b42ef944db0b461ca414b8066a5f7aa2594a9ce` |
-| `@open-twin/fhir-r4`                 | `.open-twin/packages/fhir-r4`                 | `4b42ef944db0b461ca414b8066a5f7aa2594a9ce` |
-| `@open-twin/aggregate`               | `.open-twin/packages/aggregate`               | `4b42ef944db0b461ca414b8066a5f7aa2594a9ce` |
-| `@open-twin/interpretation-contract` | `.open-twin/packages/interpretation-contract` | `4b42ef944db0b461ca414b8066a5f7aa2594a9ce` |
-| `@open-twin/provider-oura`           | `.open-twin/packages/provider-oura`           | `4b42ef944db0b461ca414b8066a5f7aa2594a9ce` |
-| `@open-twin/provider-google-health`  | `.open-twin/packages/provider-google-health`  | `4b42ef944db0b461ca414b8066a5f7aa2594a9ce` |
-| `@open-twin/provider-whoop`          | `.open-twin/packages/provider-whoop`          | `4b42ef944db0b461ca414b8066a5f7aa2594a9ce` |
-| `@open-twin/provider-vitronic`       | `.open-twin/packages/provider-vitronic`       | `4b42ef944db0b461ca414b8066a5f7aa2594a9ce` |
-| `@open-twin/anchor-layer`            | `.open-twin/packages/anchor-layer`            | `4b42ef944db0b461ca414b8066a5f7aa2594a9ce` |
+| Package                             | Path                                         | Pin                                        |
+| ----------------------------------- | -------------------------------------------- | ------------------------------------------ |
+| `@open-twin/fhir-core`              | `.open-twin/packages/fhir-core`              | `4b42ef944db0b461ca414b8066a5f7aa2594a9ce` |
+| `@open-twin/fhir-r4`                | `.open-twin/packages/fhir-r4`                | `4b42ef944db0b461ca414b8066a5f7aa2594a9ce` |
+| `@open-twin/aggregate`              | `.open-twin/packages/aggregate`              | `4b42ef944db0b461ca414b8066a5f7aa2594a9ce` |
+| `@open-twin/provider-oura`          | `.open-twin/packages/provider-oura`          | `4b42ef944db0b461ca414b8066a5f7aa2594a9ce` |
+| `@open-twin/provider-google-health` | `.open-twin/packages/provider-google-health` | `4b42ef944db0b461ca414b8066a5f7aa2594a9ce` |
+| `@open-twin/provider-whoop`         | `.open-twin/packages/provider-whoop`         | `4b42ef944db0b461ca414b8066a5f7aa2594a9ce` |
+| `@open-twin/anchor-layer`           | `.open-twin/packages/anchor-layer`           | `4b42ef944db0b461ca414b8066a5f7aa2594a9ce` |
 
 `@open-twin/anchor-layer` is used for its data only (`data/anchor-layer.v1.json`, sha256 `7adc42afaa03ee568a9f8eea5b451a8b51c9851e116f90951009d1b31894682e`, checked against its sidecar by `bun run sync:verify`). Upstream compiled it from the Anchor workbook `2026_07_28_OpenTwin_AnchorLayer_v3_Consolidated.xlsx` (source sha256 `42c027317bad0511ae3faed46f3ae49c2fb86f175fe8c58982d403c32d8f987e`). What TwinLLM adds on top is listed in `docs/biomarkers.md`.
 
 ### TwinLLM-only host adapters (contribute upstream when possible)
 
-- `infrastructure/open-twin-adapters/oura.ts` — `HostOuraTokenHandler.lastTokens()` (renamed from `getTokens()` because upstream now has its own); `getAuthorizationUrl` via `.open-twin` src path
+- `infrastructure/open-twin-adapters/oura.ts` — `HostOuraTokenHandler.lastTokens()` (renamed from `getTokens()` because upstream now has its own); `getAuthorizationUrl` over the public barrel, adding `state`
 - `infrastructure/open-twin-adapters/whoop.ts` — `fetchWhoopWindow` / `buildWhoopFhirBundle` over the public barrel (`getWhoopData`, `buildWhoopBundleFromPayload`)
 - `infrastructure/open-twin-adapters/google-health.ts` — restore/persist credential helpers; `buildGoogleHealthFhirBundle` (`google-health-bundle.ts`) over `buildBundleFromResponses` with the person's shared subject
 - `infrastructure/open-twin-adapters/aggregate.ts` — `aggregateWearableBundles` over `aggregate` from the public barrel, for Oura, WHOOP and Google Health; not read by any screen yet
