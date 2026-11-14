@@ -49,11 +49,13 @@ describe("Infomaniak allowlist", () => {
       });
     }, originalFetch);
 
-    const { fetchActiveModelCatalog } = await import("./fetch-model-catalog");
+    const { fetchActiveModelCatalog, isFallbackCatalog } =
+      await import("./fetch-model-catalog");
     const first = await fetchActiveModelCatalog();
     const second = await fetchActiveModelCatalog();
 
     expect(first?.map((m) => m.id)).toEqual(["qwen3", "llama3"]);
+    expect(first === null ? null : isFallbackCatalog(first)).toBe(false);
     expect(second?.map((m) => m.id)).toEqual(["qwen3", "llama3"]);
     expect(fetchCalls).toBe(1);
   });
@@ -71,10 +73,12 @@ describe("Infomaniak allowlist", () => {
         });
       }, originalFetch);
 
-      const { fetchActiveModelCatalog } = await import("./fetch-model-catalog");
+      const { fetchActiveModelCatalog, isFallbackCatalog } =
+        await import("./fetch-model-catalog");
       const catalog = await fetchActiveModelCatalog();
 
       expect(catalog?.map((m) => m.id)).toEqual(["llama3", "mixtral", "qwen3"]);
+      expect(catalog === null ? null : isFallbackCatalog(catalog)).toBe(true);
       expect(fetchCalls).toBe(1);
       expect(warnings).toEqual([
         ["[model-catalog] infomaniak allowlist source=static", 500],
@@ -82,5 +86,48 @@ describe("Infomaniak allowlist", () => {
     } finally {
       warnSpy.mockRestore();
     }
+  });
+});
+
+describe("Ollama fallback", () => {
+  test("an unreachable daemon gives the built-in list, marked as the fallback", async () => {
+    Object.assign(process.env, { LLM_PROVIDER: "ollama" });
+    const { resetServerEnvCacheForTests } = await import("./env");
+    resetServerEnvCacheForTests();
+    globalThis.fetch = asFetch(async () => {
+      fetchCalls += 1;
+      throw new TypeError("fetch failed");
+    }, originalFetch);
+
+    const { fetchActiveModelCatalog, isFallbackCatalog } =
+      await import("./fetch-model-catalog");
+    const catalog = await fetchActiveModelCatalog();
+
+    expect(catalog?.map((m) => m.id)).toEqual(["llama3.2", "mistral"]);
+    expect(catalog === null ? null : isFallbackCatalog(catalog)).toBe(true);
+    expect(fetchCalls).toBe(1);
+  });
+
+  test("a listed daemon is not the fallback", async () => {
+    Object.assign(process.env, { LLM_PROVIDER: "ollama" });
+    const { resetServerEnvCacheForTests } = await import("./env");
+    resetServerEnvCacheForTests();
+    globalThis.fetch = asFetch(
+      async () =>
+        new Response(
+          JSON.stringify({
+            models: [{ name: "qwen3:4b", capabilities: ["completion"] }],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      originalFetch,
+    );
+
+    const { fetchActiveModelCatalog, isFallbackCatalog } =
+      await import("./fetch-model-catalog");
+    const catalog = await fetchActiveModelCatalog();
+
+    expect(catalog?.map((m) => m.id)).toEqual(["qwen3:4b"]);
+    expect(catalog === null ? null : isFallbackCatalog(catalog)).toBe(false);
   });
 });

@@ -1,15 +1,23 @@
-import { CatalogScreen } from "@/features/models/catalog-screen";
+import { ModelsScreen } from "@/features/models-screen/models-screen";
 import { serverEnv } from "@/infrastructure/env";
-import { fetchActiveModelCatalog } from "@/infrastructure/fetch-model-catalog";
+import {
+  fetchActiveModelCatalog,
+  isFallbackCatalog,
+} from "@/infrastructure/fetch-model-catalog";
 import { defaultModelSelection } from "@/infrastructure/model-catalog";
 
+/** The provider is asked on every request; nothing personal is read. */
+export const dynamic = "force-dynamic";
+
 export default async function ModelsPage() {
-  const catalog = await fetchActiveModelCatalog();
+  const env = serverEnv();
+  const models = await fetchActiveModelCatalog();
   return (
-    <CatalogScreen
-      catalog={catalog}
-      defaultModelIds={catalog ? defaultModelSelection(catalog) : []}
-      provider={serverEnv().LLM_PROVIDER}
+    <ModelsScreen
+      models={models}
+      offline={models !== null && isFallbackCatalog(models)}
+      defaults={models === null ? [] : defaultModelSelection(models)}
+      provider={env.LLM_PROVIDER}
     />
   );
 }
