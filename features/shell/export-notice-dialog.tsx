@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { parseExportNotice } from "@/features/arena/export-notice";
+import { parseExportNotice } from "@/features/compare/export-notice";
 import { threadExportHref } from "@/infrastructure/shell-links";
 import { Button } from "@/infrastructure/ui-kit/button";
 

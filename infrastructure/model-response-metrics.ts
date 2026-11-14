@@ -29,7 +29,7 @@ export type ModelResponseMetrics = TokenCounts<Measured> &
 
 /**
  * The streamed message type, with metrics as its metadata. It lives here
- * because both `features/chat` (writes it) and `features/arena` (reads it)
+ * because both `features/chat` (writes it) and `features/compare` (reads it)
  * need it, and features may not import each other.
  */
 export type ChatUIMessage = UIMessage<ModelResponseMetrics>;

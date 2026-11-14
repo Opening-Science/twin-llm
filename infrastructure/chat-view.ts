@@ -17,7 +17,7 @@ import {
  * A view in an answer: a chart, card or table the server drew from audited
  * rows. The model asks for one with `show_view`; it never writes a number.
  * `features/chat` builds views and streams them as `data-view` parts,
- * `features/arena` reads them back from the stream or from the stored
+ * `features/compare` reads them back from the stream or from the stored
  * `show_view` tool parts, so the shape lives here (the specs in
  * `view-specs.ts`). Pure, so the browser and the server share it.
  */

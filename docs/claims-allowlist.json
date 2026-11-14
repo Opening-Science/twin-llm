@@ -5,7 +5,7 @@
     "reason": "required C4 footer"
   },
   {
-    "file": "features/arena/thread-markdown.ts",
+    "file": "features/compare/thread-markdown.ts",
     "line-pattern": "model output, not medical advice",
     "reason": "the footer's disclaimer, carried in an exported thread"
   },

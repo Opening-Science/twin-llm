@@ -1,10 +1,10 @@
-import { exportStep } from "@/features/arena/export-notice";
-import { loadOwnedThread } from "@/features/arena/owned-thread";
+import { exportStep } from "@/features/compare/export-notice";
+import { loadOwnedThread } from "@/features/compare/owned-thread";
 import {
   createThreadExportHandler,
   exportFormat,
-} from "@/features/arena/thread-export-handler";
-import { threadReads } from "@/features/arena/thread-reads";
+} from "@/features/compare/thread-export-handler";
+import { threadReads } from "@/features/compare/thread-reads";
 import { resolveActorId } from "@/infrastructure/auth-actor";
 import { utcDay } from "@/infrastructure/day-key";
 import { recordDisclosure } from "@/infrastructure/disclosure-ledger-runtime";

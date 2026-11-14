@@ -29,7 +29,7 @@ export const register = async (): Promise<void> => {
     const anchors = await import("./infrastructure/anchor-runtime");
     anchors.startAnchorWriter();
     const tasks = await import("./features/tasks/scheduler-runtime");
-    const turns = await import("./features/arena/scheduled-turn-runtime");
+    const turns = await import("./features/compare/scheduled-turn-runtime");
     tasks.startTaskScheduler(turns.runScheduledTurn);
   }
 };

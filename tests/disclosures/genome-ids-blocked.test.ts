@@ -21,7 +21,7 @@ import {
 } from "@/infrastructure/free-text-check";
 import type { QueryToolPorts } from "@/packages/query-tools/ports";
 
-import { streamAnswer } from "@/features/arena/answer-stream";
+import { streamAnswer } from "@/features/compare/answer-stream";
 import { chatDisclosure } from "@/features/chat/chat-disclosure";
 import { createStreamModelResponse } from "@/features/chat/create-stream-model-response";
 

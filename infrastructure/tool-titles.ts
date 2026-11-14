@@ -18,7 +18,7 @@ import {
  * (#503). `done` titles a step the answer took ("Checked data coverage");
  * `does` says what the tool does before it runs ("checks data coverage"), as
  * the `/` palette, a skill's page and an agent's page list it (#480). A person
- * never reads a model-facing tool id. Shared here because the arena, commands,
+ * never reads a model-facing tool id. Shared here because the chat, commands,
  * customize and agents all need it.
  */
 export type ToolWords = { readonly done: string; readonly does: string };

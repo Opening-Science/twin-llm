@@ -472,10 +472,10 @@
   }
 
   /* A GBD profile's fixed header and footer around the model's text (#417). */
-  .profile-frame-header {
+  .compare-profile-header {
     @apply border-border flex flex-col gap-1 border-b pb-2;
   }
-  .profile-frame-footer {
+  .compare-profile-footer {
     @apply border-border text-muted-foreground flex flex-col gap-1 border-t pt-2 text-xs leading-relaxed;
   }
 
@@ -663,11 +663,11 @@
 
   /* Incognito chat: a calm banner and a dashed prompt bar, in the neutral
      tokens only, so the mode is plain to see without reading as a warning. */
-  .incognito-banner {
+  .compare-incognito-banner {
     @apply border-input text-foreground bg-muted mx-auto flex w-full max-w-2xl items-start gap-2 rounded-lg border border-dashed px-3 py-2 text-left text-sm leading-snug;
   }
 
-  .incognito-toggle[aria-pressed="true"] {
+  .compare-incognito-toggle[aria-pressed="true"] {
     @apply bg-muted text-foreground;
   }
 
@@ -691,20 +691,20 @@
   }
 
   /* A tool call in an answer: one quiet row that folds out to its arguments. */
-  .tool-card {
+  .compare-tool-card {
     @apply border-border rounded-md border text-xs;
   }
 
-  .tool-card-header {
+  .compare-tool-card-header {
     @apply hover:bg-muted/60 flex w-full min-w-0 items-center gap-2 rounded-md px-2.5 py-1.5 text-left;
   }
 
-  .tool-card-body {
+  .compare-tool-card-body {
     @apply border-border border-t px-3 py-2;
   }
 
   /* A card a number in the answer was opened from. */
-  .tool-card[data-highlight] {
+  .compare-tool-card[data-highlight] {
     @apply border-primary/60;
   }
 
@@ -740,7 +740,7 @@
   }
 
   /* A step whose detail is a tool card lines its marker up with the card's header. */
-  .step-trace-step:has(.tool-card) > .step-trace-marker {
+  .step-trace-step:has(.compare-tool-card) > .step-trace-marker {
     @apply h-7;
   }
 
@@ -965,7 +965,7 @@
 
   /* A number in the answer that a tool call holds: a quiet dotted underline,
      no colour of its own, so it reads as text first and a link second. */
-  .number-link {
+  .compare-number-link {
     @apply decoration-muted-foreground/70 hover:decoration-primary cursor-pointer rounded-sm underline decoration-dotted underline-offset-[3px];
     font: inherit;
     color: inherit;
@@ -973,25 +973,25 @@
 
   /* The thread's Outputs panel: a block above the answers on narrow screens, a
      sticky column beside them from xl up. */
-  .outputs-panel {
+  .compare-outputs-panel {
     @apply bg-card border-border mx-auto mb-6 flex w-full max-w-(--page-wide) flex-col gap-2 rounded-xl border p-2 xl:sticky xl:top-4 xl:mb-0 xl:max-h-[calc(100dvh-8rem)];
   }
 
-  .outputs-reopen {
+  .compare-outputs-reopen {
     @apply mx-auto mb-4 flex w-full max-w-(--page-wide) justify-end xl:sticky xl:top-4 xl:mb-0;
   }
 
-  .output-entry {
+  .compare-output-entry {
     @apply border-border flex items-start gap-1 border-t py-1 first:border-t-0;
   }
 
-  .output-entry-main {
+  .compare-output-entry-main {
     @apply hover:bg-muted flex min-w-0 flex-1 flex-col gap-0.5 rounded-md px-1.5 py-1 text-left text-xs;
   }
 
   /* A chart scrolled to from the Outputs panel takes focus; show where. */
-  .view-figure:focus-visible,
-  .view-figure:focus {
+  .compare-view-figure:focus-visible,
+  .compare-view-figure:focus {
     @apply outline-primary outline-2 outline-offset-2;
   }
 
@@ -1469,25 +1469,25 @@
     animation: placeholder-pulse 1.6s ease-in-out infinite;
   }
 
-  /* The `/twin` card in the chat (features/arena/twin-chat-card.tsx): the Body
+  /* The `/twin` card in the chat (features/compare/twin-card.tsx): the Body
      twin viewer in a compact, scrollable body. Collapsed, a one-line chip. */
-  .twin-chat-card {
+  .compare-twin-card {
     @apply overflow-hidden;
   }
 
-  .twin-chat-body {
+  .compare-twin-body {
     @apply h-[min(440px,75vh)] overflow-y-auto overscroll-contain px-4 pb-4;
   }
 
-  .twin-chat-chip {
+  .compare-twin-chip {
     @apply border-border bg-card inline-flex max-w-full items-center gap-1 rounded-full border py-0.5 pr-0.5 pl-1;
   }
 
-  .twin-chat-chip-open {
+  .compare-twin-chip-open {
     @apply hover:bg-muted focus-visible:ring-ring inline-flex min-w-0 items-center gap-1.5 rounded-full px-2 py-1 text-sm outline-none focus-visible:ring-2;
   }
 
-  .twin-chat-status {
+  .compare-twin-status {
     @apply text-muted-foreground pt-4 text-sm;
   }
 
@@ -1623,7 +1623,7 @@
 
 /* Unlayered, so it wins over the viewer's own height utility: inside the
    chat card the 3D view is shorter than on the Digital Twin page. */
-.twin-chat-body .wearables-hero {
+.compare-twin-body .wearables-hero {
   height: 270px;
   min-height: 0;
 }
