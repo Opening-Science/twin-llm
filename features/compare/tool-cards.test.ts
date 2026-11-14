@@ -8,6 +8,7 @@ import {
   lookupLine,
   measureWords,
   midSentence,
+  rowCountOfOutput,
   stepLine,
   storedToolCards,
   toolArgs,
@@ -89,7 +90,7 @@ describe("cards from tool parts (SPEC 5.3, 10.5)", () => {
     });
     expect(done?.rowCount).toBe(3);
     expect(done === null ? "" : stepLine(done)).toBe(
-      "Fitted a trend of heart rate, 1 Jan 2024 to 31 Dec 2025",
+      "Fitting a trend of heart rate, 1 Jan 2024 to 31 Dec 2025",
     );
     expect(done === null ? "" : cardOutcome(done)).toBe("Done");
   });
@@ -180,5 +181,33 @@ describe("cards from tool parts (SPEC 5.3, 10.5)", () => {
     expect(card === null ? "" : lookupLine(card)).toBe(
       "- Fitted a trend: heart rate (measure 8867-4, window 1 Jan 2024 – 31 Dec 2025, subject 29bbf012) · 1 row",
     );
+  });
+});
+
+describe("a summary call, live (review of #596)", () => {
+  const summary = toolCardOf({
+    type: "tool-summary_stats",
+    toolCallId: "call-2",
+    state: "output-available",
+    input: { subject_ref: "29bbf012", loinc: "8867-4" },
+    output: { n: 2, min: 70, max: 74, mean: 72, unit: "/min" },
+  });
+
+  test("its own count gives the rows", () => {
+    expect(summary?.rowCount).toBe(2);
+  });
+
+  test("the step reads naturally: the measure takes the place of 'a measure'", () => {
+    expect(summary === null ? "" : stepLine(summary)).toBe("Summarising heart rate");
+  });
+
+  test("counts follow the query tools' audit rules", () => {
+    expect(rowCountOfOutput({ n_observations: 12, codes: [{}] })).toBe(12);
+    expect(rowCountOfOutput({ rows_read: 40 })).toBe(40);
+    expect(rowCountOfOutput({ baseline: { n: 3 }, target: { n: 4 } })).toBe(7);
+    expect(rowCountOfOutput({ window_a: { n: 5 }, window_b: { n: 1 } })).toBe(6);
+    expect(rowCountOfOutput({ measures: [{ n: 2 }, { n: 3 }] })).toBe(5);
+    expect(rowCountOfOutput({ rows: [{}, {}, {}], n: 9 })).toBe(3);
+    expect(rowCountOfOutput({ mean: 72 })).toBeNull();
   });
 });

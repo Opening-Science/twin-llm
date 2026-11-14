@@ -387,22 +387,28 @@ const windowWords = (card: Pick<ToolCard, "args">): string | null => {
   return null;
 };
 
+/** A title whose object is only "a measure" takes the measure's name in its place. */
+const GENERIC_OBJECT = / a measure$/;
+
 /**
- * What a step did, in plain words: "Fitting a trend of heart rate, 1 Jan
- * 2024 to 31 Dec 2025" while it runs, the past tense once done; a refusal
- * or an empty result reads its sentence.
+ * What a step does, in plain words, as the trace lists it: "Fitting a trend
+ * of heart rate, 1 Jan 2024 to 31 Dec 2025", "Summarising heart rate". A
+ * refusal or an empty result reads its sentence instead.
  */
 export const stepLine = (
   card: ToolCard,
   names: Readonly<Record<string, string>> = sharedMeasureNames([card]),
 ): string => {
   if (card.state === "refused" && card.note !== undefined) return card.note;
-  const title = card.state === "running" ? runningTitle(card.title) : card.title;
+  const title = runningTitle(card.title);
   const measure = measureWords(card, { ...names, ...card.measureNames });
-  const window = windowWords(card);
-  return [measure === null ? title : `${title} of ${measure}`, window]
-    .filter((part) => part !== null)
-    .join(", ");
+  const head =
+    measure === null
+      ? title
+      : GENERIC_OBJECT.test(title)
+        ? title.replace(GENERIC_OBJECT, ` ${measure}`)
+        : `${title} of ${measure}`;
+  return [head, windowWords(card)].filter((part) => part !== null).join(", ");
 };
 
 /** "1 row", "12 rows"; null when unknown. */
@@ -450,9 +456,49 @@ export const lookupLine = (
 
 const ROW_KEYS = ["rows", "subjects", "codes", "points", "views", "records", "variants"];
 
-const rowCountOfOutput = (output: unknown): number | null => {
+const countOf = (value: unknown): number | null =>
+  typeof value === "number" && Number.isInteger(value) && value >= 0 ? value : null;
+
+const countIn = (value: unknown): number | null =>
+  isRecord(value) ? countOf(value.n) : null;
+
+const pairCount = (a: unknown, b: unknown): number | null => {
+  const first = countIn(a);
+  const second = countIn(b);
+  return first === null || second === null ? null : first + second;
+};
+
+/**
+ * Rows a finished call read, from its output, by the rules the query tools
+ * count their audit rows with: a list of rows, or a summary's own count
+ * (`n`, `n_observations`, `rows_read`, two windows' `n`, each measure's
+ * `n`). Null when the output names none.
+ */
+export const rowCountOfOutput = (output: unknown): number | null => {
   if (Array.isArray(output)) return output.length;
   if (!isRecord(output)) return null;
+  for (const key of ["rows", "subjects"]) {
+    const list = output[key];
+    if (Array.isArray(list)) return list.length;
+  }
+  const counted =
+    countOf(output.n_observations) ??
+    countOf(output.rows_read) ??
+    countOf(output.n) ??
+    pairCount(output.baseline, output.target) ??
+    pairCount(output.window_a, output.window_b);
+  if (counted !== null) return counted;
+  const measures = output.measures;
+  if (
+    Array.isArray(measures) &&
+    measures.length > 0 &&
+    measures.every((m) => countIn(m) !== null)
+  ) {
+    return measures.reduce<number>(
+      (total, measure) => total + (countIn(measure) ?? 0),
+      0,
+    );
+  }
   for (const key of ROW_KEYS) {
     const list = output[key];
     if (Array.isArray(list)) return list.length;
