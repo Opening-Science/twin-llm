@@ -120,3 +120,9 @@ TwinLLM-only behaviour lives under `infrastructure/open-twin-adapters/`. Code ou
 - **Also wanted:** an optional caller order for ties and abstentions, so a host can keep a fixed source order on screen while recording aggregate's evidence choice beside it.
 - **Out of scope:** Host display.
 - **Status:** host aggregates all three without selecting anything; `features/wearables/aggregate-bundles.test.ts` fails on purpose once a same-night overlap is found.
+
+### 9. provider-oura: re-export OuraRingAppConfig as a type
+
+- **In scope:** `src/index.ts` line 20, `export { OuraRingAppConfig }` → `export type { OuraRingAppConfig }`. It is an interface, so a consumer that compiles the source one file at a time (Bun, Next, `tsc` with `isolatedModules`) sees a re-export of a name that does not exist, and the barrel fails to load.
+- **Minimal diff:** one keyword.
+- **Status:** made locally (PROVENANCE "Changes since import"); drop it at the next merge once upstream has it.

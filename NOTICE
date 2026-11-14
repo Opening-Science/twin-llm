@@ -28,7 +28,7 @@ The leaderboard, benchmarks page and turn/vote data model derived from it were r
 
 ## open-twin packages
 
-The packages in `packages/open-twin/` (fhir-core, fhir-r4, aggregate, provider-oura, provider-google-health, provider-whoop, and the data of anchor-layer) were copied from [Opening-Science/open-twin](https://github.com/Opening-Science/open-twin) at commit `4b42ef944db0b461ca414b8066a5f7aa2594a9ce`. They are under the MIT License (Copyright (c) 2026 Open Science Foundation (Opening Science)), not the Apache License. A copy of the licence is beside each package. Their source files are unchanged; only their package.json files were adapted to this repository. Details: `PROVENANCE.md`.
+The packages in `packages/open-twin/` (fhir-core, fhir-r4, aggregate, provider-oura, provider-google-health, provider-whoop, and the data of anchor-layer) were copied from [Opening-Science/open-twin](https://github.com/Opening-Science/open-twin) at commit `4b42ef944db0b461ca414b8066a5f7aa2594a9ce`. They are under the MIT License (Copyright (c) 2026 Open Science Foundation (Opening Science)), not the Apache License. A copy of the licence is beside each package. Their source files are unchanged but for one line listed in `PROVENANCE.md`; their package.json files were adapted to this repository. Details: `PROVENANCE.md`.
 
 ## Anchor biomarker catalogue
 

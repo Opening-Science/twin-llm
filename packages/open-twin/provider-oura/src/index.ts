@@ -17,7 +17,7 @@ import type { TokenHandler } from './utils/tokenUtils';
 
 export { getAuthorizationUrl } from './api/client';
 export type { TokenResponse } from './api/schemas/auth';
-export { OuraRingAppConfig } from './config/config';
+export type { OuraRingAppConfig } from './config/config';
 export type { SupportedScope } from './config/constants';
 export type { OuraBundleResult, OuraDataResult, OuraRequestOptions } from './fhir/bundleBuilder';
 export type { OuraMapperContext } from './fhir/mappers/shared';

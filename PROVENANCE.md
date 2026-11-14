@@ -32,7 +32,7 @@ The ui-kit's `StepTrace`, `UndoButton`, `HoldToConfirm`, `StatusLattice` and `Ra
 | `@open-twin/provider-whoop`         | `packages/open-twin/provider-whoop`         | `src/`, `README.md`                       |
 | `@open-twin/anchor-layer`           | `packages/open-twin/anchor-layer`           | `data/` (the JSON and its sha256 sidecar) |
 
-- **Copied unchanged:** each package's `src/` (with its tests, fixtures and `verification/`), `README.md`, and for anchor-layer only `data/`. `packages/open-twin/MANIFEST.sha256` lists the sha256 of every one of these files and of each `LICENSE`; `infrastructure/open-twin.test.ts` fails when a file changes without it.
+- **Copied unchanged:** each package's `src/` (with its tests, fixtures and `verification/`), `README.md`, and for anchor-layer only `data/`. `packages/open-twin/MANIFEST.sha256` lists the sha256 of every one of these files and of each `LICENSE`; `infrastructure/open-twin.test.ts` fails when a file changes without it. Local edits since are listed below.
 - **Left out:** `dist/`, the tsup builds, `vitest.config.ts`, `testSetup.ts`, `tsconfig.json`, the biome config, `fhir-r4/tools/`, `provider-oura/scripts/`, anchor-layer's `src/` (a `node:fs` loader nothing imports), and the packages TwinLLM does not use (provider-vitronic, interpretation-contract, interpreter, reader-core and the rest).
 - **Changed:** only the `package.json` files: `"private": true`, `"license": "MIT"`, `exports` pointing at the TypeScript source, dependencies pinned to the versions `bun.lock` already resolved, `workspace:*` for fhir-core, no scripts or devDependencies.
 - **Base per package:** `packages/open-twin/UPSTREAM.json`. Taking in later upstream changes by hand: `docs/open-twin.md`.
@@ -43,7 +43,7 @@ The ui-kit's `StepTrace`, `UndoButton`, `HoldToConfirm`, `StatusLattice` and `Ra
 
 One line per hand merge from upstream or local edit, with the date and the files.
 
-- None.
+- 2026-11-14, local edit, `provider-oura/src/index.ts` line 20: `export { OuraRingAppConfig }` became `export type { OuraRingAppConfig }`. `OuraRingAppConfig` is an interface, so compiled one file at a time (Bun, Next, `tsc` with `isolatedModules`) the barrel re-exported a name that does not exist and failed to load; upstream's tsup build hid this. To be fixed upstream, then dropped by the next merge.
 
 ### TwinLLM-only host adapters (contribute upstream when possible)
 

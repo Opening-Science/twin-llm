@@ -123,7 +123,7 @@ f9f0d499eb63d462c5ab4a0d8e3ab5d8f6f2a44e113a2cba794cad3cdb3af828  provider-oura/
 a117b9af03d030a7eca15e942201df56fa987976db366b2551af66618e305a26  provider-oura/src/fhir/mappers/stress.ts
 5a53f7a79b0641575862590817001a6ae41245f5484d5a0c7a3256cc81a8990c  provider-oura/src/fhir/mappers/vo2max.ts
 492b0300e89be814bff34c1d187d8179e3beb2964b8678176f805cd5a3ee92ce  provider-oura/src/fhir/mappers/workout.ts
-36d4caa520530e0f610bab9e332ddb6ad50ac87b5df23765519c4f2f1bbe64ea  provider-oura/src/index.ts
+1e13d566e9b8aa9561d03153c32379a9547efdd0d86b6df81e716f8e5e0a2d22  provider-oura/src/index.ts
 bc9c459b2c4c5f6b1b92310220144abd6fcc74a9eb63cda69fb882cf5505431b  provider-oura/src/tests/api/client.unit.test.ts
 092df0fc374a21dc92cf6f57517646e397232f7469832639376cc6bae5204780  provider-oura/src/tests/api/tokenHandler.unit.test.ts
 ed75303cfe46f36a2654c840f55d70522f58aee621c9edba03b242922b6ccfd7  provider-oura/src/tests/fixtures/PROVENANCE.md
