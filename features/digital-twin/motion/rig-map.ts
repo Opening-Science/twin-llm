@@ -84,6 +84,12 @@ const TOE_NAMES: Readonly<Record<RigKind, readonly string[]>> = {
   mixamo: ["lefttoebase", "righttoebase"],
 };
 
+/** Hand bones, optional: the atlas fit ends the forearm and starts the hand there. */
+const HAND_NAMES: Readonly<Record<RigKind, readonly [string, string]>> = {
+  anny: ["wristl", "wristr"],
+  mixamo: ["lefthand", "righthand"],
+};
+
 export const normaliseJointName = (name: string): string =>
   name.toLowerCase().replace(/[^a-z0-9]/g, "");
 
@@ -142,6 +148,8 @@ export type RigBinding = Readonly<{
   feet: readonly Bone[];
   /** The same per side: the ankle first, then the toe when there is one. */
   soles: Readonly<Record<"L" | "R", readonly Bone[]>>;
+  /** The hand bone per side, when the rig has one. */
+  hands: Readonly<Record<"L" | "R", Bone | null>>;
   /** Per side, the rest slope (radians, up positive) from the ankle to the toe; null without a toe. */
   soleSlope: Readonly<Record<"L" | "R", number | null>>;
   up: Vector3;
@@ -207,11 +215,15 @@ export const bindRig = (root: Object3D): RigBinding | null => {
     });
   }
   const pelvis = need("pelvis");
-  const toeOf = (wanted: string | undefined): Bone[] => {
+  const named = (wanted: string | undefined): Bone | null => {
     const index = wanted === undefined ? null : findName(names, wanted);
-    const toe = index === null ? undefined : bones[index];
+    return index === null ? null : (bones[index] ?? null);
+  };
+  const toeOf = (wanted: string | undefined): Bone[] => {
+    const toe = named(wanted);
     return toe ? [toe] : [];
   };
+  const [handL, handR] = HAND_NAMES[resolved.kind];
   const [toeL, toeR] = TOE_NAMES[resolved.kind];
   const soles = {
     L: [need("footL"), ...toeOf(toeL)],
@@ -234,6 +246,7 @@ export const bindRig = (root: Object3D): RigBinding | null => {
     },
     feet,
     soles,
+    hands: { L: named(handL), R: named(handR) },
     soleSlope: { L: slopeOf(soles.L), R: slopeOf(soles.R) },
     up,
     left,

@@ -67,6 +67,7 @@
     "vitronic:cycle": "bun scripts/vitronic/cycle.ts",
     "anatomy:fetch": "bun scripts/anatomy/fetch.ts",
     "anatomy:bake-rigged": "bun scripts/anatomy/bake-rigged.ts",
+    "anatomy:measure-joints": "bun scripts/anatomy/measure-joints.ts",
     "blender:fit-atlas": "bun scripts/blender/run.ts fit-atlas",
     "blender:cleanup": "bun scripts/blender/run.ts cleanup",
     "blender:self-check": "bun scripts/blender/run.ts self-check",
