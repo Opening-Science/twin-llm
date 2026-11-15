@@ -110,9 +110,9 @@ Tokens, authorization codes, the state value, cookie values, response bodies and
 
 ## BodyLoop (Vitronic)
 
-Host HTTP with a per-user API token. FHIR mapping lives in
-`@open-twin/provider-vitronic` (`buildBundleFromVitronicResponse`) but TwinLLM
-does **not persist** that bundle. BodyLoop `properties` and measure lists are
+Host HTTP with a per-user API token. open-twin's `provider-vitronic` has the
+FHIR mapping (`buildBundleFromVitronicResponse`); TwinLLM does not copy that
+package and does **not build or persist** that bundle. BodyLoop `properties` and measure lists are
 SI (m / rad for lists). TwinLLM stores API payloads as received and converts
 lists to cm/deg only for display and chat. See [vitronic.md](./vitronic.md).
 

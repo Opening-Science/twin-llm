@@ -113,4 +113,4 @@ Exoscale: set `EXOSCALE_BASE_URLS` (one vLLM `/v1` URL per GPU); without it, sta
 | Live lookups                 | `packages/live-sources/`                                                                |
 | Docs (`/docs`)               | `features/docs/`: these pages rendered from `docs/*.md`                                 |
 | Lab (`/lab`)                 | `features/lab/`: a hub of cards, one page per experiment ([lab.md](lab.md))             |
-| open-twin pins               | `.open-twin/` via `bun run sync:open-twin` (`PROVENANCE.md`)                            |
+| open-twin packages           | `packages/open-twin/`, copied at one commit ([open-twin.md](open-twin.md))              |
