@@ -145,6 +145,7 @@ const OUTBOUND: Readonly<Record<string, Entry>> = {
   "features/analytics/analytics-privacy.ts": { exempt: BROWSER_POSTHOG },
   "features/analytics/posthog-provider.tsx": { exempt: BROWSER_POSTHOG },
   "features/shell/thread-bar.tsx": { exempt: BROWSER_POSTHOG },
+  "features/app-shell/thread-bar.tsx": { exempt: BROWSER_POSTHOG },
   "infrastructure/arcjet.ts": { exempt: ARCJET },
   "infrastructure/protection-verdict.ts": { exempt: ARCJET },
   "features/chat/chat-protection.ts": { exempt: ARCJET },
@@ -180,6 +181,7 @@ const OUTBOUND: Readonly<Record<string, Entry>> = {
   // The browser calling this app.
   "features/connectors/use-connector-status.ts": { exempt: SAME_ORIGIN },
   "features/shell/export-notice-dialog.tsx": { exempt: SAME_ORIGIN },
+  "features/app-shell/export-notice.tsx": { exempt: SAME_ORIGIN },
   "features/personal-data/dataset-list.tsx": { exempt: SAME_ORIGIN },
   "features/personal-data/import-panel.tsx": { exempt: SAME_ORIGIN },
   "features/synthea/synthea-generator.tsx": { exempt: SAME_ORIGIN },
