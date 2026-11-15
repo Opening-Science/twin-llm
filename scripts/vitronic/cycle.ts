@@ -5,8 +5,8 @@
  *
  * Scan-create parameters: the example scan request in BodyLoop API 0.13.7
  * (endpoints: docs/vitronic-endpoints.md). Shape:
- * .open-twin/packages/provider-vitronic/src/api/schemas/viatars.ts
- * ViatarRequestSchema lines 50–106. open-twin pin 130e3f64 has no
+ * open-twin's packages/provider-vitronic/src/api/schemas/viatars.ts
+ * ViatarRequestSchema lines 50–106. open-twin commit 130e3f64 has no
  * exampleViatarRequest.
  *
  * Usage:
