@@ -16,9 +16,9 @@ import { cn } from "@/infrastructure/ui";
  * one is pressed would be a lie.
  *
  * The look lives in `.segmented` / `.segmented-item` in `globals.css`, so a
- * server-rendered group of links (the leaderboard view toggle, which marks
- * its current link with `aria-current`) can share it without becoming a
- * client component.
+ * server-rendered group of links (the Customize tabs, the data explorer
+ * header and the Lab rater screen, which mark their current link with
+ * `aria-current`) can share it without becoming a client component.
  */
 
 export type SegmentedOption<T extends string> = Readonly<{

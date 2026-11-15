@@ -144,7 +144,6 @@ const OUTBOUND: Readonly<Record<string, Entry>> = {
   "features/chat/generation-analytics.ts": { exempt: TYPES_ONLY },
   "features/analytics/analytics-privacy.ts": { exempt: BROWSER_POSTHOG },
   "features/analytics/posthog-provider.tsx": { exempt: BROWSER_POSTHOG },
-  "features/shell/thread-bar.tsx": { exempt: BROWSER_POSTHOG },
   "features/app-shell/thread-bar.tsx": { exempt: BROWSER_POSTHOG },
   "infrastructure/arcjet.ts": { exempt: ARCJET },
   "infrastructure/protection-verdict.ts": { exempt: ARCJET },
@@ -155,7 +154,6 @@ const OUTBOUND: Readonly<Record<string, Entry>> = {
   "app/layout.tsx": { exempt: CLERK },
   "app/(shell)/layout.tsx": { exempt: CLERK },
   "features/auth/app-auth.tsx": { exempt: CLERK },
-  "features/shell/nav-panel.tsx": { exempt: CLERK },
   "features/compare/prompt-bar.tsx": { exempt: `${SAME_ORIGIN}; ${CLERK}` },
 
   // On this machine or the local network.
@@ -180,7 +178,6 @@ const OUTBOUND: Readonly<Record<string, Entry>> = {
 
   // The browser calling this app.
   "features/connectors/use-connector-status.ts": { exempt: SAME_ORIGIN },
-  "features/shell/export-notice-dialog.tsx": { exempt: SAME_ORIGIN },
   "features/app-shell/export-notice.tsx": { exempt: SAME_ORIGIN },
   "features/personal-data/dataset-list.tsx": { exempt: SAME_ORIGIN },
   "features/personal-data/import-panel.tsx": { exempt: SAME_ORIGIN },
