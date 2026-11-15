@@ -44,6 +44,45 @@ const SUM_BY_DAY = new Set([
   "floors",
 ]);
 
+const LOINC = "http://loinc.org";
+
+/**
+ * Readings whose LOINC code alone would land on a measure no other source is
+ * compared with. Each becomes the named measure only when the LOINC code and the
+ * record type in Google's own DataPoint name both say so.
+ */
+const NAMED_RECORDS: ReadonlyArray<{
+  loinc: string;
+  recordType: string;
+  measure: string;
+}> = [
+  {
+    loinc: "59408-5",
+    recordType: "daily-oxygen-saturation",
+    measure: "daily-oxygen-saturation",
+  },
+];
+
+/** `users/{user}/dataTypes/{record type}/dataPoints/{id}` → the record type. */
+const recordTypeFromName = (name: string): string | undefined =>
+  /^users\/[^/]+\/dataTypes\/([^/]+)\/dataPoints\/[^/]+$/.exec(name)?.[1];
+
+const namedRecordMeasure = (
+  observation: Observation,
+  name: string,
+): string | undefined => {
+  const recordType = recordTypeFromName(name);
+  if (!recordType) return undefined;
+  const loincCodes = new Set(
+    (observation.code?.coding ?? [])
+      .filter((coding) => coding.system === LOINC)
+      .map((coding) => coding.code),
+  );
+  return NAMED_RECORDS.find(
+    (record) => record.recordType === recordType && loincCodes.has(record.loinc),
+  )?.measure;
+};
+
 const measureFromObservation = (observation: Observation): string => {
   const identifier = observation.identifier?.find(
     (id) => id.system === GOOGLE_HEALTH_ID,
@@ -51,6 +90,10 @@ const measureFromObservation = (observation: Observation): string => {
   if (identifier?.includes("|")) {
     const slug = identifier.split("|")[0]?.trim();
     if (slug) return CODE_TO_MEASURE[slug] ?? slug;
+  }
+  if (identifier) {
+    const named = namedRecordMeasure(observation, identifier);
+    if (named) return named;
   }
 
   const code = observation.code?.coding?.[0]?.code;
