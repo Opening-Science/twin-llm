@@ -16,7 +16,7 @@ const LOCK = `{
     "zod": ["zod@4.6.6", "", {}, "sha512-AAEC"],
     "@ai-sdk/openai": ["@ai-sdk/openai@4.0.60", "", { "dependencies": {} }, "sha512-/w=="],
     "other/zod": ["zod@4.6.6", "", {}, "sha512-AAEC"],
-    "@open-twin/fhir-core": ["@open-twin/fhir-core@file:.open-twin/packages/fhir-core", {}],
+    "@open-twin/fhir-core": ["@open-twin/fhir-core@workspace:packages/open-twin/fhir-core"],
     "odd": [42],
   },
 }`;
@@ -79,10 +79,12 @@ describe("buildBom", () => {
       },
       {
         type: "library",
-        "bom-ref": "@open-twin/fhir-core@file:.open-twin/packages/fhir-core",
+        "bom-ref": "@open-twin/fhir-core@workspace:packages/open-twin/fhir-core",
         name: "@open-twin/fhir-core",
-        version: "file:.open-twin/packages/fhir-core",
-        properties: [{ name: "bun:source", value: "file:.open-twin/packages/fhir-core" }],
+        version: "workspace:packages/open-twin/fhir-core",
+        properties: [
+          { name: "bun:source", value: "workspace:packages/open-twin/fhir-core" },
+        ],
       },
       {
         type: "library",
