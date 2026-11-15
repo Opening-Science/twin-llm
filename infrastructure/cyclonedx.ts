@@ -6,8 +6,9 @@
  *
  * Every package the lockfile resolves is listed once by name and version,
  * with its npm integrity hash as hex SHA-512 where the lockfile has one.
- * Local `file:` packages (the open-twin pins) have no registry hash; their
- * source path is kept as a property instead. There is no timestamp or serial
+ * Local `workspace:`, `file:` and `link:` packages (the open-twin packages in
+ * packages/open-twin/) have no registry hash; their source path is kept as a
+ * property instead. There is no timestamp or serial
  * number, so the same lockfile always gives the same bytes and the same
  * SHA-256.
  */
