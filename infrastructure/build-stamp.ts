@@ -6,18 +6,6 @@
 
 const SHA = /^[0-9a-f]{40}$/;
 
-/** The open-twin SHA under "Synced (not vendored) at SHA:" in PROVENANCE.md. */
-export const parseOpenTwinPin = (provenance: string): string | null => {
-  const match = /Synced \(not vendored\) at SHA:\s*-\s*`([0-9a-f]{40})`/.exec(provenance);
-  return match ? match[1] : null;
-};
-
-/** `.open-twin/OPEN_TWIN_SHA`: one SHA, maybe with a newline. */
-export const parseOpenTwinShaFile = (text: string): string | null => {
-  const sha = text.trim().toLowerCase();
-  return SHA.test(sha) ? sha : null;
-};
-
 /** `git rev-parse HEAD` output as a commit, or null. */
 export const parseCommit = (text: string | null): string | null => {
   const sha = text?.trim().toLowerCase() ?? "";
