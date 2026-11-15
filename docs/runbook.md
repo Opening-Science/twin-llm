@@ -22,7 +22,7 @@ bun run doctor                         # read-only: the same checks, what each p
 
 1. Checks bun, Node.js, git, Python 3, Java 21+, shasum, curl, uv, zstd and Ollama, and whether Postgres answers at `DATABASE_URL` with pgvector available. Anything missing is printed with its Homebrew or apt line; nothing is installed.
 2. Writes `.env.local` from `.env.synthetic.example` when there is none (`DATABASE_URL` from the shell; on macOS without one, `postgresql://$USER@127.0.0.1:5432/twin_llm_synthetic`). An existing `.env.local` is never touched.
-3. `sync:open-twin` (skipped when `.open-twin/OPEN_TWIN_SHA` is the pin), `bun install`, creates the database when the server has none of that name, `prisma migrate deploy`.
+3. `bun install`, creates the database when the server has none of that name, `prisma migrate deploy`. `bun run doctor` lists a `.open-twin` left over from the old sync as `[stale]`, with the command that removes it (see "Worktrees made before `packages/open-twin/`").
 4. `anatomy:fetch --skip-rigged` when an atlas or demo body is missing. When a rigged body is missing, `anatomy:fetch --rigged <id>` downloads it from the `anatomy-rigged-v1` release; only if that fails, `anatomy:bake-rigged` bakes it (needs uv; without uv the step is skipped with the install line). Walk/Idle/Dance say that whoever runs TwinLLM here can install it until then.
 5. When the warehouse has `synthea-v4-seed42` but not the pinned copy (subjects other than 37, ingested bundles whose fingerprint is not `bundleSetSha256` in `scripts/setup/cohort-pins.ts`: the SHA-256 of the sorted bundle hashes, computed in SQL from `bundles`, or condition and medication request counts other than `conditionCount` and `medicationRequestCount`, as when the pinned bundles were ingested before those tables existed), the step is `[stale]` with the fix and nothing is loaded. `--reload-cohort` downloads (or generates) and verifies the pinned cohort first, then deletes that cohort's rows from `observations`, `observation_non_numeric`, `conditions`, `medication_requests`, `bundles` and `subjects` (each scoped by the cohort id, in one transaction that rolls back if any other cohort's counts move or a row of this cohort is left), then ingests. Only `synthea-v4-seed42` can be reloaded, and only it and `open-twin-synthea-trimmed-3` can be deleted. When no allowlisted cohort other than the trimmed fixtures has subjects: downloads `eval-cohort-synthea-v4-seed42-20260101.tar.zst` (4,911,581 bytes) from release `eval-cohort-v1` to `.synthea/downloads/` (kept for re-runs; redirects only to GitHub's asset hosts), checks its SHA-256, unpacks it with zstd, checks 37 files, `contentSha256` `f4941fab7a56e17f9dd66b6b6e0fbed379dab8c564c6024831c5fd4aa0ba09eb` and the manifest's cohort id, puts it in `.synthea/fhir`, then `warehouse:ingest`. When the release is not published yet or cannot be reached, setup says so and runs `synthea:generate -- --preset eval` instead (needs Java); `--generate-cohort` does that on purpose. A generated cohort is checked against the same pin; a mismatch ingests nothing, and on arm64 (Apple Silicon) the checklist says it is a platform difference (floating point) and to use the download (`docs/warehouse.md`, "Other CPU architectures"). Without zstd setup generates; without zstd and Java, an empty warehouse gets the three trimmed fixtures instead and the checklist says what to install.
 6. `--cohort-10k`: checks the release's `SHA256SUMS` against the pinned archive hash, downloads `synthea-v4-seed42-10k-fhir.tar.zst` (925,850,184 bytes) to `.synthea/downloads/` (kept for re-runs), checks its sha256, unpacks with zstd (about 41 GB), checks 11,551 files and the release's content checksum, ingests as `synthea-v4-seed42-10k` (rejected bundles are counted, not fatal), then deletes the unpacked files. Refused with less than 45 GB free.
@@ -456,7 +456,6 @@ git fetch origin
 git worktree add ../twin-llm-<issue> -b <issue>-<slug> origin/main
 cd ../twin-llm-<issue>
 cp .env.synthetic.example .env.local   # synthetic settings; never commit
-bun run sync:open-twin                 # the pinned open-twin packages, before bun install
 bun install
 ```
 
@@ -494,6 +493,29 @@ git worktree remove ../twin-llm-<issue>
 
 - Good: `git worktree list` shows the main checkout plus one entry per open lane; each lane's dev server answers on its own port.
 - Last run: 2026-11-05 and 06, Linux, three worktrees, each with its own throwaway Postgres (ports 5451, 5461, 5462); migrations applied and all gates passed in each.
+
+### Worktrees made before `packages/open-twin/`
+
+A worktree made before the open-twin packages were copied in may still hold a `.open-twin`
+from the old sync: a folder, or in a few cases a symlink to the main checkout's. It is
+gitignored; `bun run doctor` lists it `[stale]`. In each such
+worktree, after rebasing onto `origin/main`:
+
+```sh
+ls -ld .open-twin                                             # folder (d) or link (l)
+rm -rf .open-twin node_modules/@open-twin && bun install      # a folder
+rm .open-twin && rm -rf node_modules/@open-twin && bun install # a link: no trailing slash
+```
+
+`rm -rf .open-twin/` with a trailing slash follows a link and deletes the main checkout's
+copy, so clean the main checkout's `.open-twin` last. To list what is left:
+
+```sh
+git worktree list --porcelain | sed -n 's/^worktree //p' \
+  | while read -r tree; do ls -ld "$tree/.open-twin" 2>/dev/null; done
+```
+
+- Good: `bun run doctor` no longer lists `.open-twin`, and `bun run typecheck` and `bun test` pass.
 
 ## Onboarding
 
@@ -602,7 +624,7 @@ bun run knowledge:ingest
 
 - Good: one line per file, then `pruned=<n>` (knowledge rows whose file is gone). A second run prints the same chunk counts and `pruned=0`.
 - Last run: 2026-10-17, throwaway pgvector DB: `biomarker-catalogue` 15, `metric-glossary` 12, `provenance-and-audit` 7, `system-limits` 7, `units-and-codes` 8 chunks (49), `pruned=1` (a seeded stale row) then `pruned=0`. Chunk hash identical across both runs; the one `source = 'guideline'` row was untouched.
-- After an open-twin pin bump: `bun run knowledge:biomarkers`, then re-ingest.
+- After an open-twin merge that touches `packages/open-twin/anchor-layer/`: `bun run knowledge:biomarkers`, then re-ingest.
 
 ### Specialty literature
 

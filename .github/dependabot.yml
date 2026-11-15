@@ -2,9 +2,13 @@
 # merged by a maintainer only when CI is green; it never merges on its own.
 version: 2
 updates:
-  # bun.lock at the root; .open-twin/ and third_party/ are pinned by SHA, not here.
+  # bun.lock at the root. packages/open-twin/ keeps the dependencies of the
+  # open-twin commit it was copied from and moves with an open-twin merge
+  # (docs/open-twin.md); third_party/ is pinned by SHA. Neither is bumped here.
   - package-ecosystem: bun
     directory: /
+    exclude-paths:
+      - "packages/open-twin/**"
     schedule:
       interval: monthly
     open-pull-requests-limit: 2
