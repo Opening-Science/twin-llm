@@ -926,10 +926,6 @@ export type BuildInfo = Readonly<{
   commit: string | null;
   /** True when the build's working tree had changes not in that commit; null when git could not say. */
   dirty: boolean | null;
-  /** The open-twin pin in PROVENANCE.md when the app was built. */
-  openTwinPinned: string | null;
-  /** `.open-twin/OPEN_TWIN_SHA` when the app was built. */
-  openTwinFound: string | null;
   /**
    * "dev" under `next dev`, which serves edits as they are saved, so nothing
    * recorded at startup describes the code it runs.
@@ -947,7 +943,5 @@ export const buildInfo = (): BuildInfo =>
     appVersion: process.env.TWINLLM_APP_VERSION || null,
     commit: process.env.TWINLLM_BUILD_COMMIT || null,
     dirty: parseDirtyFlag(process.env.TWINLLM_BUILD_DIRTY),
-    openTwinPinned: process.env.TWINLLM_BUILD_OPEN_TWIN_PIN || null,
-    openTwinFound: process.env.TWINLLM_BUILD_OPEN_TWIN_CHECKOUT || null,
     mode: process.env.NODE_ENV === "development" ? "dev" : "build",
   });

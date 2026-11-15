@@ -6,11 +6,7 @@ import { readFile } from "node:fs/promises";
 import { isAbsolute, relative, resolve } from "node:path";
 import { setImmediate as nextTurn } from "node:timers/promises";
 
-import {
-  parseCommit,
-  parseOpenTwinPin,
-  parseOpenTwinShaFile,
-} from "@/infrastructure/build-stamp";
+import { parseCommit } from "@/infrastructure/build-stamp";
 import { anchorViewFor } from "@/infrastructure/anchor-runtime";
 import { bomText, buildBom, parseBunLock } from "@/infrastructure/cyclonedx";
 import { database } from "@/infrastructure/database";
@@ -269,20 +265,8 @@ const gitHead = (cwd: string): Promise<string | null> =>
   });
 
 const checkProvenance = async (): Promise<LabCheck> => {
-  const cwd = process.cwd();
-  const [provenance, shaFile, commit] = await Promise.all([
-    readTextOrNull(resolve(/* turbopackIgnore: true */ cwd, "PROVENANCE.md")),
-    readTextOrNull(resolve(/* turbopackIgnore: true */ cwd, ".open-twin/OPEN_TWIN_SHA")),
-    gitHead(cwd),
-  ]);
-  return provenanceCheck({
-    build: buildInfo(),
-    disk: {
-      commit,
-      openTwinPinned: provenance === null ? null : parseOpenTwinPin(provenance),
-      openTwinFound: shaFile === null ? null : parseOpenTwinShaFile(shaFile),
-    },
-  });
+  const commit = await gitHead(process.cwd());
+  return provenanceCheck({ build: buildInfo(), disk: { commit } });
 };
 
 // --- SBOM ---------------------------------------------------------------------
