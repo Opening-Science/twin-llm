@@ -212,33 +212,36 @@ describe("the Digital Twin vitals after the rules", () => {
   });
 });
 
+// Readings that carry Google's own DataPoint name. Envelope and name shapes from
+// open-twin's google-health fixtures (provider-google-health bundleBuilder
+// integration test); synthetic ids.
+const DATA_SOURCE: health_v4.Schema$DataSource = {
+  recordingMethod: "UNKNOWN",
+  device: {},
+  application: { packageName: "com.sec.android.app.shealth" },
+  platform: "HEALTH_CONNECT",
+};
+const nameFor = (recordType: string): string =>
+  `users/8338456149191909237/dataTypes/${recordType}/dataPoints/233475372306809440`;
+const keysOf = (dataPoint: health_v4.Schema$DataPoint) => {
+  const bundle = buildGoogleHealthFhirBundle([{ dataPoints: [dataPoint] }], {
+    subjectKey: SYNTHETIC_SUBJECT,
+    timestamp: `${DAY}T12:00:00Z`,
+  });
+  const identifier = bundle.entry
+    ?.map((entry) => entry.resource)
+    .filter(
+      (resource): resource is Observation => resource?.resourceType === "Observation",
+    )
+    .flatMap((observation) => observation.identifier ?? [])[0]?.value;
+  const metrics = buildGoogleHealthSummary(bundle, WINDOW).metrics;
+  return { identifier, metrics, keys: metrics.map((metric) => metric.key) };
+};
+const whoopMetric = (stem: string) =>
+  whoop.filter((metric) => metric.key === `${stem}.${DAY}`);
+
 describe("Google Health readings that carry Google's own DataPoint name (#594)", () => {
-  // Envelope and name shapes from open-twin's google-health fixtures
-  // (provider-google-health bundleBuilder integration test); synthetic ids.
-  const DATA_SOURCE: health_v4.Schema$DataSource = {
-    recordingMethod: "UNKNOWN",
-    device: {},
-    application: { packageName: "com.sec.android.app.shealth" },
-    platform: "HEALTH_CONNECT",
-  };
-  const nameFor = (recordType: string): string =>
-    `users/8338456149191909237/dataTypes/${recordType}/dataPoints/233475372306809440`;
-  const keysOf = (dataPoint: health_v4.Schema$DataPoint) => {
-    const bundle = buildGoogleHealthFhirBundle([{ dataPoints: [dataPoint] }], {
-      subjectKey: SYNTHETIC_SUBJECT,
-      timestamp: `${DAY}T12:00:00Z`,
-    });
-    const identifier = bundle.entry
-      ?.map((entry) => entry.resource)
-      .filter(
-        (resource): resource is Observation => resource?.resourceType === "Observation",
-      )
-      .flatMap((observation) => observation.identifier ?? [])[0]?.value;
-    const metrics = buildGoogleHealthSummary(bundle, WINDOW).metrics;
-    return { identifier, metrics, keys: metrics.map((metric) => metric.key) };
-  };
-  const whoopRhr = () =>
-    whoop.filter((metric) => metric.key === `whoop.recovery.rhr.${DAY}`);
+  const whoopRhr = () => whoopMetric("whoop.recovery.rhr");
 
   const restingNamed = keysOf({
     name: nameFor("daily-resting-heart-rate"),
@@ -289,5 +292,53 @@ describe("Google Health readings that carry Google's own DataPoint name (#594)",
       dailyRestingHeartRate: { date: DATE, beatsPerMinute: "52" },
     });
     expect(mismatched.keys).toEqual([`google.heart-rate.${DAY}`]);
+  });
+});
+
+describe("Google Health daily SpO2 that carries Google's own DataPoint name (#601)", () => {
+  const whoopSpo2 = () => whoopMetric("whoop.recovery.spo2");
+
+  const dailyNamed = keysOf({
+    name: nameFor("daily-oxygen-saturation"),
+    dataSource: DATA_SOURCE,
+    dailyOxygenSaturation: { date: DATE, averagePercentage: 96 },
+  });
+
+  test("a named daily SpO2 keeps the comparable daily-oxygen-saturation key", () => {
+    expect(dailyNamed.identifier).toBe(nameFor("daily-oxygen-saturation"));
+    expect(dailyNamed.keys).toEqual([`google.daily-oxygen-saturation.${DAY}`]);
+  });
+
+  test("an agreeing named Google and WHOOP SpO2 is decided, not skipped", () => {
+    const decisions = decideSources([...dailyNamed.metrics, ...whoopSpo2()], neverCalled);
+    expect(decisions).toHaveLength(1);
+    expect(decisions[0]).toMatchObject({ measure: "oxygen-saturation", kind: "agree" });
+  });
+
+  test("a named spot SpO2 stays a spot reading and leaves WHOOP on its own", () => {
+    const spot = keysOf({
+      name: nameFor("oxygen-saturation"),
+      dataSource: DATA_SOURCE,
+      oxygenSaturation: {
+        sampleTime: { physicalTime: `${DAY}T05:40:29.354Z`, utcOffset: "0s" },
+        percentage: 96,
+      },
+    });
+    expect(spot.keys).toEqual([`google.oxygen-saturation.${DAY}`]);
+    const decisions = decideSources([...spot.metrics, ...whoopSpo2()], neverCalled);
+    expect(decisions).toHaveLength(1);
+    expect(decisions[0]).toMatchObject({
+      measure: "oxygen-saturation",
+      kind: "only_source",
+    });
+  });
+
+  test("a daily SpO2 under another record type's name is not guessed", () => {
+    const mismatched = keysOf({
+      name: nameFor("oxygen-saturation"),
+      dataSource: DATA_SOURCE,
+      dailyOxygenSaturation: { date: DATE, averagePercentage: 96 },
+    });
+    expect(mismatched.keys).toEqual([`google.oxygen-saturation.${DAY}`]);
   });
 });

@@ -61,6 +61,11 @@ const NAMED_RECORDS: ReadonlyArray<{
     recordType: "daily-resting-heart-rate",
     measure: "daily-resting-heart-rate",
   },
+  {
+    loinc: "59408-5",
+    recordType: "daily-oxygen-saturation",
+    measure: "daily-oxygen-saturation",
+  },
 ];
 
 /** `users/{user}/dataTypes/{record type}/dataPoints/{id}` → the record type. */
