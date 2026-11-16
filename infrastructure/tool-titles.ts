@@ -89,6 +89,10 @@ const TITLES: Readonly<Record<string, ToolWords>> = {
     done: "Laid out a synthetic day as beats",
     does: "lays out a synthetic day of heart rate and glucose as beats",
   },
+  show_my_period: {
+    done: "Summarised a synthetic week or month",
+    does: "summarises a synthetic week or month of glucose, resting heart rate and HRV",
+  },
   [GUIDELINE_MODEL_TOOL]: { done: "Searched guidelines", does: "searches guidelines" },
   [GBD_MODEL_TOOL]: {
     done: "Looked up population data",
