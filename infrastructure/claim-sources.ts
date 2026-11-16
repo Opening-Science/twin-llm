@@ -104,6 +104,12 @@ export const referenceSources = (
   return sources;
 };
 
+/** Sources by the lower-case id an answer may write, as `referenceSources` keys them. */
+export const sourcesByLabel = (
+  sources: readonly ReferenceSource[],
+): ReadonlyMap<string, ReferenceSource> =>
+  new Map(sources.map((source) => [source.label.toLowerCase(), source] as const));
+
 export const UNSUPPORTED_MARK = "unsupported" as const;
 
 /**
@@ -196,6 +202,56 @@ const statusOf = (
   return marked ? "unsupported" : "uncited";
 };
 
+/** One id of a bracketed group, read against the turn's sources. */
+export type CiteToken =
+  | Readonly<{ kind: "source"; label: string; source: ReferenceSource }>
+  | Readonly<{ kind: "invented"; label: string }>
+  | Readonly<{ kind: "unsupported"; label: string }>;
+
+/**
+ * The ids inside one bracketed group (`a` or `a, b`). Null when none reads as
+ * a citation, so the group stays text; tokens of no id's shape are dropped.
+ */
+export const readCites = (
+  inner: string,
+  sources: ReadonlyMap<string, ReferenceSource>,
+): readonly CiteToken[] | null => {
+  const tokens = inner
+    .split(/[,;]\s*/)
+    .map((token) => token.trim())
+    .flatMap((label): CiteToken[] => {
+      if (label.toLowerCase() === UNSUPPORTED_MARK)
+        return [{ kind: "unsupported", label }];
+      const source = sources.get(label.toLowerCase());
+      if (source !== undefined) return [{ kind: "source", label, source }];
+      return looksLikeId(label) ? [{ kind: "invented", label }] : [];
+    });
+  return tokens.length === 0 ? null : tokens;
+};
+
+export type CitePiece =
+  | Readonly<{ kind: "text"; text: string }>
+  | Readonly<{ kind: "cites"; text: string; tokens: readonly CiteToken[] }>;
+
+/** A run of answer text cut into plain text and bracketed citations. */
+export const splitCites = (
+  run: string,
+  sources: ReadonlyMap<string, ReferenceSource>,
+): CitePiece[] => {
+  const pieces: CitePiece[] = [];
+  let last = 0;
+  for (const match of run.matchAll(BRACKET)) {
+    const tokens = readCites(match[1] ?? "", sources);
+    if (tokens === null) continue;
+    if (match.index > last)
+      pieces.push({ kind: "text", text: run.slice(last, match.index) });
+    pieces.push({ kind: "cites", text: match[0], tokens });
+    last = match.index + match[0].length;
+  }
+  if (last < run.length) pieces.push({ kind: "text", text: run.slice(last) });
+  return pieces;
+};
+
 const toClaim = (
   sentence: string,
   sources: ReadonlyMap<string, ReferenceSource>,
@@ -203,27 +259,18 @@ const toClaim = (
   const cited: ReferenceSource[] = [];
   const unknown: string[] = [];
   let marked = false;
-  const text = sentence
-    .replace(BRACKET, (whole, inner: string) => {
-      const tokens = inner.split(/[,;]\s*/).map((token) => token.trim());
-      let read = false;
-      for (const token of tokens) {
-        if (token.toLowerCase() === UNSUPPORTED_MARK) {
-          marked = true;
-          read = true;
-          continue;
-        }
-        const source = sources.get(token.toLowerCase());
-        if (source !== undefined) {
-          if (!cited.includes(source)) cited.push(source);
-          read = true;
-        } else if (looksLikeId(token)) {
-          if (!unknown.includes(token)) unknown.push(token);
-          read = true;
-        }
+  const text = splitCites(sentence, sources)
+    .map((piece) => {
+      if (piece.kind === "text") return piece.text;
+      for (const token of piece.tokens) {
+        if (token.kind === "unsupported") marked = true;
+        else if (token.kind === "source") {
+          if (!cited.includes(token.source)) cited.push(token.source);
+        } else if (!unknown.includes(token.label)) unknown.push(token.label);
       }
-      return read ? "" : whole;
+      return "";
     })
+    .join("")
     .replace(/\s+([.,;:!?])/g, "$1")
     .replace(/\s{2,}/g, " ")
     .trim();

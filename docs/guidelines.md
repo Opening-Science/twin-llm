@@ -183,3 +183,10 @@ Each claim is then:
 A bracketed token of another shape, such as a wearable key, is left as text.
 Sentences under three words are not claims. Pure: it reads what an answer
 says about its sources, never whether a claim is true.
+
+In a finished answer, each cited id the turn's searches returned is a link to
+its source's web address (new tab, `noopener noreferrer`), titled with its
+kind, title and year; a note without an address is a plain label with the
+same title. An id no search returned has a wavy red underline and says so to
+a screen reader, and is never a link. Ids are read from the answer's stored
+tool parts, so a reloaded thread shows the same links.
