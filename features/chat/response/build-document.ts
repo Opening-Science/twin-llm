@@ -9,6 +9,7 @@ import {
   GBD_ESTIMATE_TOOL,
   GBD_PROFILE_MAP_AUDIT_TOOL,
 } from "@/packages/gbd-local/constants";
+import { sha256Hex, toCanonicalJson } from "@/packages/audit/hash";
 import type { GbdSource } from "@/packages/gbd-mcp/collector";
 import { GBD_AUDIT_TOOL } from "@/packages/gbd-mcp/constants";
 import type { GbdRow } from "@/packages/gbd-mcp/normalize";
@@ -62,6 +63,12 @@ const NOT_READABLE_TOOLS: ReadonlySet<string> = new Set([
  * observed (parser output, audit rows, collectors, DATA_MODE), never a claim
  * in the model's prose, so the same turn always gets the same class.
  */
+/**
+ * The audit hash of a search that ran and found nothing (`[]`). A failed
+ * guideline search stores `{ error }` instead, so it never reads as "no passage".
+ */
+const EMPTY_SEARCH_RESULT = sha256Hex(toCanonicalJson([]));
+
 type Basis = Readonly<{
   declined: boolean;
   sufficient: boolean;
@@ -70,6 +77,8 @@ type Basis = Readonly<{
   hasGbdRows: boolean;
   hasKnowledge: boolean;
   hasLiterature: boolean;
+  /** A guideline search ran this turn and returned no passage (#612). */
+  searchedGuidelines: boolean;
   hallucinatedCount: number;
   toolCalls: readonly ResponseToolCall[];
   modelStatement: string | null;
@@ -91,6 +100,10 @@ const deriveUncertaintyReasons = (basis: Basis): UncertaintyReason[] => {
     ["population_only", !basis.sufficient && basis.hasGbdRows],
     ["knowledge_only", !basis.sufficient && basis.hasKnowledge],
     ["literature_only", !basis.sufficient && basis.hasLiterature],
+    [
+      "literature_not_found",
+      basis.searchedGuidelines && !basis.hasGuidelines && !basis.hasLiterature,
+    ],
     ["hallucinated_keys", basis.hallucinatedCount > 0],
     ["tool_returned_no_rows", basis.toolCalls.some((row) => row.row_count === 0)],
     ["no_model_statement", !basis.modelStatement?.trim()],
@@ -183,6 +196,10 @@ export const buildResponseDocumentV1 = (input: {
     hasGbdRows: gbdRows.length > 0,
     hasKnowledge: knowledgeSources.length > 0,
     hasLiterature: literatureSources.length > 0,
+    searchedGuidelines: input.toolCalls.some(
+      (row) =>
+        row.tool === GUIDELINE_AUDIT_TOOL && row.result_sha256 === EMPTY_SEARCH_RESULT,
+    ),
     hallucinatedCount: hallucinated_keys.length,
     toolCalls: input.toolCalls,
     modelStatement: input.parsed.uncertaintyText,

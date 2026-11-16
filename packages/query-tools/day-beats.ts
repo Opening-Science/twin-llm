@@ -242,11 +242,17 @@ export const redWindows = (
   return [...heart, ...glucose].sort((a, b) => a.from.localeCompare(b.from));
 };
 
+/**
+ * The event a red window's beat shows: a moment worth a look, never a judgement
+ * about the person. "Red window" stays the name in code only.
+ */
+export const WINDOW_EVENT = "Worth a look";
+
 const windowBeat = (window: RedWindow): DayBeat => {
   if (window.measure === "heart_rate") {
     return {
       time: window.from,
-      event: "Red window",
+      event: WINDOW_EVENT,
       source: "derived",
       signal: {
         measure: "heart_rate",
@@ -263,7 +269,7 @@ const windowBeat = (window: RedWindow): DayBeat => {
   }
   return {
     time: window.from,
-    event: "Red window",
+    event: WINDOW_EVENT,
     source: "derived",
     signal: { measure: "glucose", direction: "up", value: window.extreme, unit: "mg/dL" },
     body: {

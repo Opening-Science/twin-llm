@@ -216,6 +216,7 @@ export const AnswerColumn = ({
         <NumberText
           text={text}
           sources={answer.numberSources ?? []}
+          citeSources={answer.citeSources ?? []}
           prefix={prefix}
           cardIds={tools.map((card) => card.id)}
           onPress={(link) =>
