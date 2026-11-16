@@ -1217,3 +1217,17 @@ For the attribution study, `bun run wearables:two-source` writes synthetic Oura,
 WHOOP and Google Health summaries with the source rules' decision planted for every
 measure and day: [synthetic-wearables.md](synthetic-wearables.md). Files only; no
 question here reads them yet.
+
+## Mock day: show_my_day items
+
+Six items (`D-01` to `D-06`) about the illustrative mock day
+(`packages/query-tools/fixtures/mock-day.json`), in `evaluation/mock-day.items.v1.json`
+(schema `twin-llm.eval.mock-day.v1`, `scripts/evaluation/mock-day-items.ts`). Each
+expected value is a dotted path into the day as `show_my_day` lays it out (`beats`,
+`red_windows`); `evaluation/mock-day.items.test.ts` recomputes every one from the
+fixture, so the set cannot drift from the code. They cover the one window worth a look,
+the diabetes profile with none, a run that is not a window, insulin with no amount, a
+question that asks for a judgement about the person, and a measured glucose peak.
+
+The C3 harness reads the warehouse and the mock day is not in it, so these items are
+scored once a run can load the mock day.
