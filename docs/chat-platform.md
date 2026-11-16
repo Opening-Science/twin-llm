@@ -73,7 +73,7 @@ The eval harness builds the same prompt, so runs before and after #393 differ by
 
 ## Modes and effort
 
-Auto, Manual and Compare, and five effort steps from Quick to Ultra (#366): see
+Auto, Basic, Manual and Compare, and five effort steps from Quick to Ultra (#366): see
 [chat-modes.md](chat-modes.md).
 
 ## 2. Skills and the command palette
