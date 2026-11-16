@@ -95,9 +95,9 @@ const ExportLinks = ({
     <Button
       variant="pill"
       size="sm"
-      title="Open this thread for printing or saving as PDF, after a check of what it holds."
+      title="Download this thread as a PDF (prompts, lookups, answers and their sources), after a check of what it holds."
       className={className}
-      onClick={() => onPick("print")}
+      onClick={() => onPick("pdf")}
     >
       <span>PDF</span>
     </Button>
