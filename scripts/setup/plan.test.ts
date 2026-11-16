@@ -22,6 +22,8 @@ import {
 } from "./plan";
 import { TOOL_IDS, type ToolId, type ToolProbe } from "./prerequisites";
 
+const PIN = "a9e126c952c91e19e064a962dda7d815a43564e5";
+
 const VERSIONS: Readonly<Record<ToolId, string>> = {
   bun: "1.4.2",
   node: "v26.7.0",
@@ -79,7 +81,7 @@ const ready: DetectedState = {
   localUserId: "local",
   database: okDatabase([cohortRows("synthea-v4-seed42", 37)], PINNED_BUNDLES),
   migrations: ["20261025000000_baseline"],
-  leftoverOpenTwin: false,
+  openTwin: { pinned: PIN, synced: PIN },
   anatomyMissing: [],
   riggedMissing: [],
   trainingSets: ["sample-synthea-v4-seed42"],
@@ -103,6 +105,7 @@ const fresh: DetectedState = {
     pgvector: true,
     serverMajor: 18,
   },
+  openTwin: { pinned: PIN, synced: null },
   anatomyMissing: ["bodyparts3d.ao.glb"],
   riggedMissing: ["anny-adult-m.rigged.glb", "anny-adult-f.rigged.glb"],
   trainingSets: [],
@@ -122,6 +125,7 @@ describe("planSetup", () => {
   test("a machine that is already set up only reinstalls and migrates (both idempotent)", () => {
     expect(summary(planSetup(ready, { cohort: "eval" }))).toEqual([
       "env-file: skip present (left as it is)",
+      "open-twin: skip already at a9e126c",
       "install: run command",
       "database: skip reachable, pgvector available",
       "migrate: run command",
@@ -137,6 +141,7 @@ describe("planSetup", () => {
   test("a fresh clone runs every step and generates the eval cohort", () => {
     expect(summary(planSetup(fresh, { cohort: "eval" }))).toEqual([
       "env-file: run create-env-file",
+      "open-twin: run command",
       "install: run command",
       "database: run create-database",
       "migrate: run command",
@@ -384,7 +389,7 @@ describe("planSetup", () => {
         { cohort: "eval" },
       ),
     );
-    expect(steps.slice(2, 4)).toEqual([
+    expect(steps.slice(3, 5)).toEqual([
       "database: blocked Postgres is not reachable at DATABASE_URL (ECONNREFUSED): brew install postgresql@18 && brew services start postgresql@18",
       "migrate: blocked needs the database",
     ]);
@@ -405,7 +410,7 @@ describe("planSetup", () => {
       },
       { cohort: "eval" },
     );
-    expect(summary(steps)[2]).toBe(
+    expect(summary(steps)[3]).toBe(
       "database: blocked pgvector is not installed in this Postgres: sudo apt install postgresql-17-pgvector (PGDG apt repository)",
     );
   });
@@ -483,6 +488,17 @@ describe("planSetup", () => {
     ).toBe(
       "cohort: blocked zstd not found: brew install zstd; Java not found: brew install openjdk@21 && echo 'export PATH=\"$(brew --prefix openjdk@21)/bin:$PATH\"' >> ~/.zshrc. --reload-cohort loads synthea-v4-seed42 first; nothing was deleted.",
     );
+  });
+
+  test("open-twin sync waits for git", () => {
+    expect(
+      summary(
+        planSetup(
+          { ...fresh, platform: "linux", tools: tools(["git"]) },
+          { cohort: "eval" },
+        ),
+      )[1],
+    ).toBe("open-twin: blocked git not found: sudo apt install git");
   });
 });
 

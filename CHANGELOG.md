@@ -5,6 +5,10 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Removed
+
+- Dependabot version updates: `.github/dependabot.yml` is gone, and `docs/repo-settings.md` keeps vulnerability alerts with automatic fix pull requests off. Dependencies and action pins are moved by hand.
+
 ### Added
 
 - The free text check of outgoing model requests reads dates and folds names (#346). A stored reading's number, or a clinical record's name or code, within 80 characters of that row's own day is a **dated value**; days are read in ISO (`2026-03-14`) and en-GB (`14/03/2026`, `14.03.2026`, `14 March 2026`) spellings, day first only, and a day alone never counts. File names, body scan labels, clinical record names and twin note lines now match ignoring diacritics as well as case (`Zoë` and `ZOE`, `ß` as `ss`). Customize · Privacy's running totals gain a column: how many of a recipient's checked requests held stored values. Still record only: kinds and counts, never a value, and only rsIDs and genome sites block (#356). No migration. Limits: approximate; US or two-digit-year dates, and a day far from its value, are missed. Synthetic test data only.
@@ -184,6 +188,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- open-twin is consumed from its own repository again, synced at the pin `4b42ef944db0b461ca414b8066a5f7aa2594a9ce` into the gitignored `.open-twin/` (`bun run sync:open-twin`), as before #597. `packages/open-twin/`, its workspaces, `test:open-twin` and its CI job, and the bunfig hoisting are gone. The packages are not on npm yet and Bun cannot install a package from a subfolder of a git repository. The Lab Provenance card still shows no open-twin pin, so the build commit does not cover the open-twin code.
 - The Lab Provenance card no longer shows an open-twin pin or checkout. The open-twin packages are in `packages/open-twin/`, so the build's git commit covers them; `next.config.ts` drops `TWINLLM_BUILD_OPEN_TWIN_PIN` and `TWINLLM_BUILD_OPEN_TWIN_CHECKOUT`, and `BuildInfo` its two pin fields.
 - The side-by-side chat view and its server half are rebuilt as `features/compare/`, and `features/arena/` is gone. Screens, routes, tables and stored rows are as before, with three decisions: `POST /api/chat` refuses an answer that has already finished (409; a failed, refused or stopped answer can still be asked again), an audit row that cannot be written before the model call now ends the answer as failed instead of leaving it streaming, and the reasoning and evidence toggle exposes its expanded state. The view's shared classes in `globals.css` are prefixed `compare-`.
 - open-twin pinned at `4b42ef944db0b461ca414b8066a5f7aa2594a9ce`, open-twin `main` of 8 Nov 2026 (was `c37d8004d93d5accb9b91bebcbd89376837776bd`) (#462). The synced packages' `src/` is unchanged between the two pins, only dependency bumps in their `package.json`; `bun.lock` keeps the host's resolutions, so the app and its wearable screens are unchanged. The screens still combine Oura, WHOOP and Google Health by the fixed source order rather than through `@open-twin/aggregate`, which takes no caller order and at this pin finds no overlap between them (open-twin request 8).
