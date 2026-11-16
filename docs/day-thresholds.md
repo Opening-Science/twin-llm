@@ -59,11 +59,12 @@ Body sentences, one per beat:
 
 Window labels and rules (the event reads `Worth a look`; "red window" is the name in code only):
 
-| Window                    | Sentence                                                                                                                           |
-| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| Heart rate                | The heart beats fast while the body is still. Heart rate above 100 /min while still (placeholder).                                 |
-| Glucose, without diabetes | Blood sugar stays past the threshold for a while. Blood glucose above 140 mg/dL (placeholder, without diabetes).                   |
-| Glucose, with diabetes    | Blood sugar stays past the threshold for a while. Blood glucose outside 70–180 mg/dL (placeholder consensus range, with diabetes). |
+| Window                      | Sentence                                                                                                                           |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Heart rate                  | The heart beats fast while the body is still. Heart rate above 100 /min while still (placeholder).                                 |
+| Glucose, without diabetes   | Blood sugar stays past the threshold for a while. Blood glucose above 140 mg/dL (placeholder, without diabetes).                   |
+| Glucose high, with diabetes | Blood sugar stays past the threshold for a while. Blood glucose outside 70–180 mg/dL (placeholder consensus range, with diabetes). |
+| Glucose low, with diabetes  | Blood sugar stays below the range for a while. Blood glucose outside 70–180 mg/dL (placeholder consensus range, with diabetes).    |
 
 How a value line reads (`signalText`):
 

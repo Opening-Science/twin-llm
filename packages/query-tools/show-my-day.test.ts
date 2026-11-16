@@ -140,6 +140,7 @@ describe("show_my_day", () => {
           to: "20:30",
           measure: "glucose",
           extreme: 175,
+          side: "above",
           rule: "Blood glucose above 140 mg/dL (placeholder, without diabetes)",
           thresholds: "placeholder",
         },
