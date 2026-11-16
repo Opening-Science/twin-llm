@@ -50,6 +50,8 @@ export const UNCERTAINTY_REASON_LINES: Readonly<Record<UncertaintyReason, string
   population_only: "Only population figures support this answer.",
   knowledge_only: "Only OpenTwin notes about TwinLLM itself support this answer.",
   literature_only: "Only published articles support this answer.",
+  literature_not_found:
+    "The guideline library had no passage on this question, so the literature here does not cover it.",
   hallucinated_keys: "Some cited keys were not in the model's context.",
   tool_returned_no_rows: "A data lookup returned no rows.",
   no_model_statement: "The model wrote no uncertainty statement.",
