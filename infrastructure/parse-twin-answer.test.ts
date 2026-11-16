@@ -262,6 +262,7 @@ describe("qwen3-style goldens", () => {
       "- [oura.sleep.score.2026-01-01]",
       "- [ean-als-2024]",
       "- [PMC1234567] [unsupported]",
+      "- [lit-sleep-PMC1234567.1]",
       "- [sleep-2024.made.up]",
       "",
       "## Answer",

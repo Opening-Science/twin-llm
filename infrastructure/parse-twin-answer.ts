@@ -10,6 +10,7 @@ import type { EvidenceAttribution, OuraSummary } from "@/infrastructure/oura-typ
 import { splitThinking } from "@/infrastructure/think-block";
 import { withoutGuidanceEcho } from "@/infrastructure/twin-section-guidance";
 import { metricDay } from "@/infrastructure/wearable-provenance";
+import { isCitationToken } from "@/infrastructure/source-ids";
 import { sectionLines } from "@/infrastructure/twin-section-lines";
 
 export type { EvidenceAttribution } from "@/infrastructure/oura-types";
@@ -154,15 +155,6 @@ export const sectionText = (
 export const hasCanonicalHeading = (text: string): boolean =>
   headingLines(text).some((line) => line.canonical);
 
-/**
- * A literature citation, not a wearable key (#612): a PMC id, a guideline id
- * ending in its year (`ean-als-2024`) or `unsupported`. The search tools ask
- * for these after a sentence in Answer; a model that also lists them under
- * Evidence Used has not invented a key, so they are left out of the keys.
- */
-const SOURCE_ID =
-  /^(?:PMC\d+|[a-z][a-z0-9]*(?:-[a-z0-9]+)*-(?:19|20)\d{2}|unsupported)$/i;
-
 /** A bare token that reads as a key: dotted, at least two segments. */
 const KEY_LIKE = /^[a-z0-9_-]{2,}(?:\.[a-z0-9_-]+)+$/i;
 
@@ -190,7 +182,10 @@ const parseCitedKeys = (evidenceSection: string | null): string[] => {
     if (!trimmed || trimmed.startsWith("#")) continue;
 
     for (const match of trimmed.matchAll(/\[([a-z0-9_.-]+)\]/gi)) {
-      if (!SOURCE_ID.test(match[1] ?? "")) push(match[1]);
+      // A literature citation is not a key (#612): the search tools ask for
+      // these, and a model that also lists them under Evidence Used has not
+      // invented a key.
+      if (!isCitationToken(match[1] ?? "")) push(match[1]);
     }
 
     if (trimmed.startsWith("-") || trimmed.startsWith("*")) {

@@ -118,8 +118,9 @@ A match is exact, case-insensitive exact, or a dotted prefix on whole segments
 exactly one segment apart (`a.b` ↔ `a.b.c`, a dropped date; the shorter side
 at least two segments). A cited key is a `[bracketed]` token, or a bullet
 whose first word is dotted and key-like; other bullet words are prose. A
-bracketed literature citation (a PMC id, a guideline id ending in its year
-such as `[ean-als-2024]`, or `[unsupported]`) is not a key (#612): the
+bracketed literature citation (a PMC id, an article's document id, a
+guideline id ending in its year such as `[ean-als-2024]`, or `[unsupported]`;
+`infrastructure/source-ids.ts`) is not a key (#612): the
 search tools ask for these, and the 2 November General agent run listed
 `[ean-ms-palliative-2020]` under Evidence Used, where it counted as a
 hallucinated key. A

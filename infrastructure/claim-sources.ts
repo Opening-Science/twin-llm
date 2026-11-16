@@ -16,6 +16,7 @@
 import { z } from "zod";
 
 import { sectionSpans, sectionText } from "./parse-twin-answer";
+import { looksLikeId, UNSUPPORTED_MARK } from "./source-ids";
 
 export type ReferenceKind = "guideline" | "article" | "note";
 
@@ -104,20 +105,7 @@ export const referenceSources = (
   return sources;
 };
 
-export const UNSUPPORTED_MARK = "unsupported" as const;
-
-/**
- * Shapes of the ids a search can return: a PMC id, a literature document id,
- * a guideline id ending in its year. A bracketed token of another shape (a
- * wearable key, a footnote number) is not read as a citation at all.
- */
-const ID_SHAPES: readonly RegExp[] = [
-  /^PMC\d+$/i,
-  /^lit-[a-z]+-PMC\d+\.\d+$/i,
-  /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*-(?:19|20)\d{2}$/i,
-];
-
-const looksLikeId = (token: string): boolean => ID_SHAPES.some((re) => re.test(token));
+export { UNSUPPORTED_MARK };
 
 /** One bracketed group, `[a]` or `[a, b]`, not a markdown link `[a](…)`. */
 const BRACKET = /\[([^\][\n]{1,200})\](?!\()/g;
