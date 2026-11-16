@@ -83,11 +83,11 @@ gh api -X PATCH "repos/$R" \
 gh api -X PUT "repos/$R/private-vulnerability-reporting"
 ```
 
-- [ ] Dependabot alerts and security updates.
+- [ ] Vulnerability alerts on, automatic fix pull requests off (no Dependabot update PRs in this repository).
 
 ```sh
 gh api -X PUT "repos/$R/vulnerability-alerts"
-gh api -X PUT "repos/$R/automated-security-fixes"
+gh api -X DELETE "repos/$R/automated-security-fixes"
 ```
 
 - [ ] Secret scanning and push protection. Free on public repositories; on a private
@@ -114,7 +114,7 @@ Check: `gh api "repos/$R" --jq .security_and_analysis`.
 ## Actions
 
 - [ ] Only GitHub-made actions plus the two third-party actions CI uses, pinned to full
-      commit SHAs (CI pins them; Dependabot keeps the pins current).
+      commit SHAs (CI pins them; a maintainer moves the pins by hand).
 
 ```sh
 gh api -X PUT "repos/$R/actions/permissions" \

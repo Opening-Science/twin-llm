@@ -1,11 +1,12 @@
 # Warehouse
 
-Local research store for a Synthea cohort. Numeric rows come from `@open-twin/fhir-r4` `normaliseBundle`. Personal wearable snapshots (Oura, Whoop, Google Health) and the files a person imports on Customize · Data ([personal-data.md](personal-data.md)) never write these tables.
+Local research store for a Synthea cohort. Numeric rows come from `@open-twin/fhir-r4` `normaliseBundle` at pin `24179d8`. Personal wearable snapshots (Oura, Whoop, Google Health) and the files a person imports on Customize · Data ([personal-data.md](personal-data.md)) never write these tables.
 
-## Source
+## Pin
 
-- `@open-twin/fhir-r4` in `packages/open-twin/fhir-r4`, copied from open-twin `4b42ef944db0b461ca414b8066a5f7aa2594a9ce` (`docs/open-twin.md`)
-- The trimmed fixtures in `tests/fixtures/synthea/` are from open-twin `24179d8de0e38ca579adde55db65d13926ac6bac`. `normaliseBundle` reads them the same at both commits; its only change between them is one null check written with optional chaining.
+- open-twin `24179d8de0e38ca579adde55db65d13926ac6bac`
+- Host dep: `@open-twin/fhir-r4` via `file:.open-twin/packages/fhir-r4`
+- Sync: `bash scripts/sync-open-twin.sh` (see `docs/open-twin-pins.md`)
 
 ## Schema
 

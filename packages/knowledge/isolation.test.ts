@@ -48,7 +48,7 @@ describe("knowledge tool isolation", () => {
         " Also searches open-access articles from PubMed Central for this agent's " +
         "specialty: each such hit gives the article title, PMC id and licence. Quote " +
         "an article only word for word with its attribution line; it is reference " +
-        "material, never evidence about this person.",
+        "material, never evidence about this person. Cite an article as [PMC1234567].",
     );
   });
 });
