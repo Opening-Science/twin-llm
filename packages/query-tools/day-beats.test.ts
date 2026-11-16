@@ -112,6 +112,7 @@ describe("redWindows", () => {
         to: "20:30",
         measure: "glucose",
         extreme: 175,
+        side: "above",
         rule: "Blood glucose above 140 mg/dL (placeholder, without diabetes)",
         thresholds: "placeholder",
       },
@@ -144,6 +145,7 @@ describe("redWindows", () => {
         to: "10:05",
         measure: "heart_rate",
         extreme: 110,
+        side: "above",
         rule: "Heart rate above 100 /min while still (placeholder)",
         thresholds: "placeholder",
       },
@@ -162,9 +164,26 @@ describe("redWindows", () => {
         to: "02:30",
         measure: "glucose",
         extreme: 62,
+        side: "below",
         rule: "Blood glucose outside 70–180 mg/dL (placeholder consensus range, with diabetes)",
         thresholds: "placeholder",
       },
     ]);
+  });
+
+  test("a low window's beat goes down and says below the range", () => {
+    const low = dayBeats(
+      [reading("02:00", 55, 66), reading("02:30", 55, 62)],
+      "with_diabetes",
+    ).find((beat) => beat.source === "derived");
+    expect(low?.signal).toEqual({
+      measure: "glucose",
+      direction: "down",
+      value: 62,
+      unit: "mg/dL",
+    });
+    expect(low?.body.text).toBe(
+      "Blood sugar stays below the range for a while. Blood glucose outside 70–180 mg/dL (placeholder consensus range, with diabetes).",
+    );
   });
 });

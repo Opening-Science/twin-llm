@@ -36,6 +36,8 @@ const READINGS: readonly DayReading[] = [
   })),
   reading("23:00", 110, 60, false),
   reading("23:10", 111, 61, false),
+  reading("23:20", 70, 100, false),
+  reading("23:30", 70, 200, false),
 ];
 
 /** A table row naming a key and its value, whatever the column padding. */
@@ -67,8 +69,8 @@ describe("docs/day-thresholds.md", () => {
     const beats = GLUCOSE_PROFILES.flatMap((profile) => dayBeats(READINGS, profile));
     const windows = GLUCOSE_PROFILES.flatMap((profile) => redWindows(READINGS, profile));
     const texts = new Set(beats.map((beat) => beat.body.text));
-    // Seven sentences and three window texts: each direction of both signals, insulin, each window kind.
-    expect(texts.size).toBe(10);
+    // Seven sentences and four window texts: each direction of both signals, insulin, each window kind.
+    expect(texts.size).toBe(11);
     for (const text of texts) expect(DOC).toContain(text);
     for (const window of windows) expect(DOC).toContain(window.rule);
     expect(new Set(windows.map((window) => window.rule)).size).toBe(3);
