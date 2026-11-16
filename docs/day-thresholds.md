@@ -20,9 +20,16 @@ Status `placeholder`, reviewer Robin.
 | `heartRateStillAbovePerMin`       | 100 /min     | Heart rate above this while the person is still. Readings while moving, or with activity unknown, are never marked. |
 | `glucoseWithoutDiabetesAboveMgDl` | 140 mg/dL    | Profile `without_diabetes`: blood glucose above this.                                                               |
 | `glucoseWithDiabetesRangeMgDl`    | 70–180 mg/dL | Profile `with_diabetes`: blood glucose below 70 or above 180 (the usual consensus target range).                    |
+| `recoveryWithinPerMin`            | 10 /min      | After a workout: heart rate counts as back once a still reading is within this of the still rate before.            |
 
 Consecutive readings past a threshold form one window. The window's beat carries the
 highest value (or, below the range, the lowest).
+
+After a workout (consecutive readings while moving), heart rate is "back" at the first
+still reading within `recoveryWithinPerMin` of the last still rate before it
+(`day-recovery.ts`). The minutes count from the last moving reading, so with readings
+far apart they are an upper bound. The warehouse stores no workout times, so only a day
+with recorded activity (the mock day) has recoveries.
 
 ## Rules in code (not yet in the JSON)
 
@@ -67,7 +74,8 @@ A reading with no recorded event shows the event `Reading`.
 
 ## Questions for Robin
 
-1. Are 100 /min (still), 140 mg/dL and 70–180 mg/dL the right first thresholds?
+1. Are 100 /min (still), 140 mg/dL, 70–180 mg/dL and 10 /min (recovery) the right first
+   thresholds?
 2. Should a heart-rate window need a minimum length (say two readings) before it is
    marked?
 3. Should the rules in code (weights, steady bands, the 20 mg/dL insulin rise) move

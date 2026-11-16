@@ -61,6 +61,9 @@ describe("docs/day-thresholds.md", () => {
       ),
     );
     expect(DOC).toMatch(row("glucoseWithDiabetesRangeMgDl", `${low}–${high} mg/dL`));
+    expect(DOC).toMatch(
+      row("recoveryWithinPerMin", `${DAY_THRESHOLDS.recoveryWithinPerMin} /min`),
+    );
   });
 
   test("holds every body sentence, window rule and event the beats can show", () => {
