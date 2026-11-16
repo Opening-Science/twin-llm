@@ -5,6 +5,7 @@ import { type ReactNode, useId, useState } from "react";
 import type { EvidenceAttribution } from "@/infrastructure/oura-types";
 import {
   GUIDELINE_ATTRIBUTION_LINE,
+  GUIDELINE_HEADING,
   KNOWLEDGE_ATTRIBUTION_LINE,
   KNOWLEDGE_HEADING,
   LITERATURE_ATTRIBUTION_LINE,
@@ -127,7 +128,7 @@ export const EvidencePanel = ({
               )}
             </Section>
             {content.guidelines.length === 0 ? null : (
-              <Section heading="Guideline references">
+              <Section heading={GUIDELINE_HEADING}>
                 <Lines lines={content.guidelines} />
                 <p>{GUIDELINE_ATTRIBUTION_LINE}</p>
               </Section>
