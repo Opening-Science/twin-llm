@@ -10,13 +10,13 @@ The mode is chosen on its own, apart from the model list. The server never sees 
 the prompt bar turns it into the row ids a turn goes to (`features/compare/chat-modes.ts`),
 and those go through the same checks as before (`checkTurnRequest`, `/api/chat`).
 
-| Mode        | Answers      | What it sends                                                                                                                                     |
-| ----------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Auto        | one          | `agent:auto`. The router picks the specialist for each question ([agents.md](agents.md#auto-219)) and the specialist runs on its preferred model. |
-| Basic       | one          | One plain model, picked from the models, with no specialist and no skill: the chat's own tools and the sources the person turned on.              |
-| Specialists | one to three | Specialists only, each as its own row: its preferred model, its skill's tools and its specialty literature.                                       |
-| Manual      | one to three | Each chosen specialist on each chosen model, at most three answers in all. No specialist sends the models as themselves.                          |
-| Compare     | two or three | The rows picked, models or specialists, side by side, as Compare has always worked.                                                               |
+| Mode        | Answers          | What it sends                                                                                                                                     |
+| ----------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Auto        | one              | `agent:auto`. The router picks the specialist for each question ([agents.md](agents.md#auto-219)) and the specialist runs on its preferred model. |
+| Basic       | one              | One plain model, picked from the models, with no specialist and no skill: the chat's own tools and the sources the person turned on.              |
+| Specialists | one, up to three | One specialist picked for the question, more added by hand; each on its own model with its own tools and literature.                              |
+| Manual      | one to three     | Each chosen specialist on each chosen model, at most three answers in all. No specialist sends the models as themselves.                          |
+| Compare     | two or three     | The rows picked, models or specialists, side by side, as Compare has always worked.                                                               |
 
 ### Basic (#610)
 
@@ -30,24 +30,28 @@ chat a model that does not run on this machine stays listed, greyed.
 
 ### Specialists (#610)
 
-The Specialists mode is the specialists only: one to three of them, each as its own `agent:<id>` row,
-so each runs on its own preferred model with its own skill's tools and its specialty
-literature ([agents.md](agents.md)). No plain model and no Auto. Until the person ticks
-or unticks a specialist, the rows follow the question the way Compare's defaults do
-(`specialistDefaults` in `chat-modes.ts`, the same `defaultModelSelection` over the
-specialist rows): General first, then the specialists the router ranks for the
-question, then the default specialists, at most three. "How long did I sleep last
-night?" goes to General, Sleep and the Diet specialist. Once changed, the rows
-are the person's. It needs at least one specialist; the last one cannot be
-unticked. On a hosted provider only General is offered, so it sends General
-alone. The pill names the one specialist ("Specialists · Sleep") or counts them ("Specialists · 2").
+The Specialists mode sends specialists only, each as its own `agent:<id>` row, so each
+runs on its own preferred model with its own skill's tools and its specialty literature
+([agents.md](agents.md)). No plain model and no Auto.
 
-Measured on the router fixtures ([agents.md](agents.md#measuring-the-router)) with every
-agent offered, the Specialists default rows hold the agent each question is labelled with on
-all 36 hand-written prompts and all 130 scored questions; Auto's single pick matches the
-label on 36 and 126. They always hold Auto's pick. Only 89 of the 166 put the labelled
-agent first, since General leads. `features/compare/specialists-router.test.ts` keeps both
-rules.
+It starts with one answer, to spare the GPU: the specialist Auto would pick for the
+question (`routeAgent`, General when nothing matches), on that specialist's own model
+rather than Auto's (`specialistDefaults` in `chat-modes.ts`). In an incognito chat it is
+the first specialist that runs on this machine when the routed one does not. Until the
+person changes the list it follows the question as it is typed: "How long did I sleep
+last night?" goes to Sleep, "Is my BMI going up?" to the Diet specialist.
+
+The panel lists the specialists answering, then an **Add a specialist** button that
+opens the others. At three the button stays, disabled, and reads "Three specialists at
+most" (`canAddSpecialist`). Once a specialist is added or removed the list is the
+person's. The last one cannot be unticked. On a hosted provider only General is
+offered, so the mode sends General alone. The pill names a lone specialist
+("Specialists · Sleep") or counts several ("Specialists · 2").
+
+On the router fixtures ([agents.md](agents.md#measuring-the-router)), with every agent
+offered, the default names the labelled agent on all 36 hand-written prompts and on 126
+of the 130 scored questions, exactly as Auto does
+(`features/compare/specialists-router.test.ts`).
 
 ### Compare's defaults (#493)
 
@@ -195,7 +199,7 @@ Under the text box, from left to right (`features/compare/prompt-bar.tsx`):
   text: it does not switch a tool on or off, and every permit applies as it would
   without it.
 - **Mode** (`mode-picker.tsx`): Auto, Basic, Specialists, Manual or Compare; for Basic the
-  models as one choice, for Specialists the specialists as checkboxes, for Manual and
+  models as one choice, for Specialists the ones answering and an Add a specialist button, for Manual and
   Compare the specialists and models as checkboxes. Each specialist names its model and
   tools under its name ("on Qwen3 8B · /sleep tools", "chat tools" for General), and
   Auto's panel names the model Auto runs its pick on (`rowSubline`, `autoModelName`). A
