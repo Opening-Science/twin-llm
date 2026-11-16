@@ -24,3 +24,13 @@ export const GUIDELINE_SEARCH_MAX_K = 8 as const;
 
 export const GUIDELINE_ATTRIBUTION_LINE =
   "Published guideline passage as reference material, not a statement about this person." as const;
+
+/**
+ * How an answer cites what `guideline_search` returned (#612): a sentence that
+ * rests on a passage ends with its id, a claim no passage supports is marked.
+ * In the tool text, so a turn pays for it only when the tool is offered; kept
+ * short because the General agent's 16k prompt has little room left
+ * (`bun run prompt:size`).
+ */
+export const GUIDELINE_CITE_RULE =
+  "In Answer, end a sentence resting on a passage with its id, e.g. [ean-als-2024], or a claim none supports with [unsupported]." as const;

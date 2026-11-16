@@ -183,6 +183,25 @@ for a Germany row or a 2015 row and, if either is stored, stops with
 `GBD_PROBE_ROWS` and one line naming the rows and the fix. The remote route is
 not checked.
 
+One Results Tool query ("Cause of death or injury", steps in
+[gbd.md](../gbd.md#exporting-from-the-gbd-results-tool)) covers the v1 and
+v1h S4 items:
+
+| Field    | Tick                                                              |
+| -------- | ----------------------------------------------------------------- |
+| Measure  | Deaths, DALYs, YLDs, YLLs, Prevalence, Incidence                  |
+| Metric   | Number, Rate                                                      |
+| Cause    | All causes, Cardiovascular diseases, Neoplasms, Diabetes mellitus |
+| Location | Global, Switzerland, United Kingdom, United States of America     |
+| Age      | All ages, Age-standardized                                        |
+| Sex      | Both, Male, Female                                                |
+| Year     | 2019, 2020, 2021                                                  |
+
+Not Germany and not 2015. `gbd_estimate` offers no age band, so Q-S4-08 (a
+60-year-old woman) can only be answered with an all-ages or age-standardised
+figure. The query is about 3,500 rows, one file; an export made in parts
+imports as one.
+
 ```sh
 bun --env-file=.env.eval --preload ./features/chat/response/preload-server-only.mjs \
   scripts/gbd/import.ts ~/Downloads/IHME-GBD_2023_DATA-*.csv

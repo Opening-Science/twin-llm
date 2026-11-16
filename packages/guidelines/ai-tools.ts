@@ -3,7 +3,11 @@ import { tool } from "ai";
 import { modelInputSchema } from "@/packages/query-tools/model-schema";
 import type { SessionScope } from "@/packages/query-tools/scope";
 
-import { GUIDELINE_ATTRIBUTION_LINE, GUIDELINE_MODEL_TOOL } from "./constants";
+import {
+  GUIDELINE_ATTRIBUTION_LINE,
+  GUIDELINE_CITE_RULE,
+  GUIDELINE_MODEL_TOOL,
+} from "./constants";
 import { guidelineSearchInput } from "./input";
 import {
   defaultGuidelineSearchPorts,
@@ -18,7 +22,9 @@ export const createGuidelineTools = (
   [GUIDELINE_MODEL_TOOL]: tool({
     description:
       "Search locally stored clinical-guideline passages as reference material. " +
-      GUIDELINE_ATTRIBUTION_LINE,
+      GUIDELINE_ATTRIBUTION_LINE +
+      " " +
+      GUIDELINE_CITE_RULE,
     inputSchema: modelInputSchema(guidelineSearchInput),
     execute: async (input) =>
       runGuidelineSearch(scope, input, {
