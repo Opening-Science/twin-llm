@@ -33,6 +33,7 @@ import {
   rhythmIrregularityInput,
   cohortEventRatesInput,
   showMyDayInput,
+  showMyPeriodInput,
 } from "../../packages/query-tools/schemas";
 
 import { AF_SUBSET_COHORT } from "../../packages/query-tools/event-rates/cohort-rates";
@@ -98,6 +99,7 @@ export const KEYED_TOOLS = {
   rhythm_irregularity: rhythmIrregularityInput,
   cohort_event_rates: cohortEventRatesInput,
   show_my_day: showMyDayInput,
+  show_my_period: showMyPeriodInput,
 } as const;
 
 export type KeyedTool = keyof typeof KEYED_TOOLS;
@@ -129,6 +131,7 @@ export const AUDIT_TOOL_NAMES = [
   "rhythm_irregularity",
   "cohort_event_rates",
   "show_my_day",
+  "show_my_period",
   "guidelines.guideline_search",
   "knowledge.knowledge_search",
   "gbd.gbd_query",

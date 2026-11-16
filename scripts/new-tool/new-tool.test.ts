@@ -121,7 +121,7 @@ describe("scaffoldTool", () => {
       "| `resting_hr_drift` | `subject_ref`, `loinc`, `start`, `end` | TODO: the output fields | 5000 |",
     );
     expect(after[PATHS.knowledgeSources]).toContain(
-      '  "show_my_day",\n  "resting_hr_drift",\n] as const satisfies',
+      '  "show_my_period",\n  "resting_hr_drift",\n] as const satisfies',
     );
     expect(after[PATHS.knowledgeSourcesTest]).toContain(
       [
@@ -139,13 +139,14 @@ describe("scaffoldTool", () => {
         '      "resting_hr_drift",',
         '      "rhythm_irregularity",',
         '      "show_my_day",',
+        '      "show_my_period",',
         '      "trend",',
         '      "values_around_event",',
         "    ]);",
       ].join("\n"),
     );
     expect(after[PATHS.trainingToolList]).toContain(
-      '      "show_my_day",\n      "resting_hr_drift",\n      "show_view",',
+      '      "show_my_period",\n      "resting_hr_drift",\n      "show_view",',
     );
     expect(after[PATHS.questionSet]).toContain(
       "  resting_hr_drift: restingHrDriftInput,\n",
