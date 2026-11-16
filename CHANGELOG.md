@@ -5,6 +5,10 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Removed
+
+- Dependabot version updates: `.github/dependabot.yml` is gone, and `docs/repo-settings.md` keeps vulnerability alerts with automatic fix pull requests off. Dependencies and action pins are moved by hand.
+
 ### Added
 
 - The free text check of outgoing model requests reads dates and folds names (#346). A stored reading's number, or a clinical record's name or code, within 80 characters of that row's own day is a **dated value**; days are read in ISO (`2026-03-14`) and en-GB (`14/03/2026`, `14.03.2026`, `14 March 2026`) spellings, day first only, and a day alone never counts. File names, body scan labels, clinical record names and twin note lines now match ignoring diacritics as well as case (`Zoë` and `ZOE`, `ß` as `ss`). Customize · Privacy's running totals gain a column: how many of a recipient's checked requests held stored values. Still record only: kinds and counts, never a value, and only rsIDs and genome sites block (#356). No migration. Limits: approximate; US or two-digit-year dates, and a day far from its value, are missed. Synthetic test data only.
