@@ -197,7 +197,10 @@ const unique = (ids: readonly (string | null)[]): string[] => [
 
 /**
  * Where the picker starts (SPEC 7.2): a new chat on Auto when offered, else
- * Compare; a reopened thread in the mode and rows of its last turn.
+ * Compare; a reopened thread in the mode and rows of its last turn. No mode
+ * is stored, so it is read from the ids: Auto's one row is Auto, a pair is
+ * Manual, one plain model is Basic, specialists only are Medical, anything
+ * else is Compare.
  */
 export const initialModeState = (
   context: ModeContext,
@@ -221,7 +224,21 @@ export const initialModeState = (
     };
   };
   if (live.some((id) => parsePairedModelId(id) !== null)) return manual(live);
-  if (ids.length === 1 && live.length === 1) return manual(live);
+  const isSpecialist = (id: string) =>
+    specialistRows(context.catalog).some((row) => row.id === id);
+  const [only] = live;
+  if (ids.length === 1 && only !== undefined && !isSpecialist(only)) {
+    return { ...base, mode: "basic", basic: only, fromThread: true };
+  }
+  if (live.length > 0 && live.every(isSpecialist)) {
+    return {
+      ...base,
+      mode: "medical",
+      medical: live.slice(0, MAX_SELECTED_MODELS),
+      medicalChosen: true,
+      fromThread: true,
+    };
+  }
   if (live.length > 0) {
     return {
       ...base,

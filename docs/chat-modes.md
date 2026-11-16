@@ -62,11 +62,15 @@ The interface calls the agents "specialists", never doctors, and keeps their res
 labels, such as Heart rhythm (research).
 
 A new chat starts in Auto at Balanced when the catalog offers the specialists, else in
-Compare. A saved thread reopens in the mode its last ids show: Auto's one row is Auto, a
-pair or a single row is Manual, anything else is Compare (every thread from before
-modes). A thread with no turn yet opens like a new chat. Both read the thread's last
-turn (`initialModelIds` and `initialEffort` in `chat-mode.ts`); the pages pass no
-default ids, since a list of two or three ids reads as Compare (#386). In an incognito
+Compare. No mode is stored, so a saved thread reopens in the mode its last ids show
+(`initialModeState` in `chat-modes.ts`, #610): Auto's one row is Auto, any pair is
+Manual, one plain model is Basic, specialists only are Medical with those rows kept as
+chosen, and anything else, such as specialists beside models, is Compare. Rows the
+catalog no longer offers are left out first, and the hint counts them. Before #610 a
+single row reopened in Manual and a list of specialists in Compare; both send the same
+rows as before. A thread with no turn yet opens like a new chat. Both read the thread's
+last turn (`lastTurnEffort` reads its effort); the pages pass no default ids, since a
+list of two or three ids would read as a mode of its own (#386). In an incognito
 chat Auto is offered only when its model runs on this machine.
 
 ### Specialist on a chosen model
