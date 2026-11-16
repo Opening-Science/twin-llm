@@ -207,7 +207,7 @@ collectors and `DATA_MODE`. Nothing is read from the model's prose.
 | `population_only`       | not sufficient and `gbd_rows` is non-empty           |
 | `knowledge_only`        | not sufficient and `sources.knowledge` is non-empty  |
 | `literature_only`       | not sufficient and `sources.literature` is non-empty |
-| `literature_not_found`  | guideline search ran, no passage or article back     |
+| `literature_not_found`  | guideline search returned `[]`, no article either    |
 | `hallucinated_keys`     | `hallucinated_keys` is non-empty                     |
 | `tool_returned_no_rows` | any `tool_calls` row has `row_count` 0               |
 | `no_model_statement`    | the Uncertainty section is missing or blank          |

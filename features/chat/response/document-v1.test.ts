@@ -764,6 +764,8 @@ describe("ResponseDocument v1.1 answer_class", () => {
     const empty: ResponseToolCall = {
       ...KNOWLEDGE_ONLY,
       tool: "guidelines.guideline_search",
+      // The audit hash of `[]`: the search ran and found nothing.
+      result_sha256: "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
       row_count: 0,
     };
     const nothing = buildResponseDocumentV1({
@@ -784,6 +786,13 @@ describe("ResponseDocument v1.1 answer_class", () => {
       toolCalls: [KNOWLEDGE_ONLY],
       mode: "personal",
     });
+    // A search that failed (its audit row holds `{ error }`) never says so either.
+    const failed = buildResponseDocumentV1({
+      parsed: parseTwinAnswer(KNOWLEDGE_TEXT, emptySummaries),
+      toolCalls: [{ ...empty, result_sha256: HASH_D }],
+      mode: "personal",
+    });
+    expect(failed.uncertainty.reasons).not.toContain("literature_not_found");
     expect(found.uncertainty.reasons).not.toContain("literature_not_found");
     expect(none.uncertainty.reasons).not.toContain("literature_not_found");
   });
