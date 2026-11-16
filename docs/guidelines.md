@@ -164,3 +164,22 @@ and:
 Offline eval: `bun test tests/guidelines` (CITE for “what does the guideline
 say”, REFUSE when the question applies it to a person). Live hook:
 `GUIDELINE_EVAL=1` — never set in CI.
+
+## Claim sources (#612)
+
+`answerClaims` (`infrastructure/claim-sources.ts`) cuts an answer's Answer
+section into sentences and reads the bracketed ids each one writes. An id
+resolves only against hits the turn's searches returned: a guideline by its
+`id`, an article by its PMC id or document id, an OpenTwin note by its `id`.
+Each claim is then:
+
+| Status        | When                                                 |
+| ------------- | ---------------------------------------------------- |
+| `cited`       | it names at least one source a search returned       |
+| `invented`    | it names only ids of a source's shape no search gave |
+| `unsupported` | it ends with `[unsupported]`                         |
+| `uncited`     | none of these                                        |
+
+A bracketed token of another shape, such as a wearable key, is left as text.
+Sentences under three words are not claims. Pure: it reads what an answer
+says about its sources, never whether a claim is true.
