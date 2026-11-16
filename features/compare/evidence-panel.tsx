@@ -4,6 +4,7 @@ import { type ReactNode, useId, useState } from "react";
 
 import type { EvidenceAttribution } from "@/infrastructure/oura-types";
 import {
+  GBD_HEADING,
   GUIDELINE_ATTRIBUTION_LINE,
   GUIDELINE_HEADING,
   KNOWLEDGE_ATTRIBUTION_LINE,
@@ -146,7 +147,7 @@ export const EvidencePanel = ({
               </Section>
             )}
             {content.gbd.length === 0 ? null : (
-              <Section heading="Population context">
+              <Section heading={GBD_HEADING}>
                 <Lines lines={content.gbd} />
                 {content.gbdAttribution === null ? null : <p>{content.gbdAttribution}</p>}
               </Section>

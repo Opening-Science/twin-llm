@@ -625,7 +625,7 @@ recipient.
 | `hosted-model`  | Each HTTP request to a model not on this machine: chat answers (every step of the tool loop), `/compact` drafts, starter questions | The provider (`exoscale`, `openrouter`, ...) and the model id     | Purpose, categories, the injected value references, the request's exact size                    |
 | `vendor-sync`   | An Oura, Whoop or Google Health sync (a token refresh happens inside it)                                                           | The vendor                                                        | Access token and date window; no health value is uploaded. Oura's sandbox is labelled synthetic |
 | `vendor-auth`   | The OAuth code exchange on the return from the vendor (only while the vault is open, #341)                                         | The vendor                                                        | The authorization code                                                                          |
-| `export-file`   | A thread export (`/api/threads/<id>/export`, Markdown, FHIR or print), paired with its existing `thread.export` audit row          | `export file` and the format                                      | Categories and the file's size                                                                  |
+| `export-file`   | A thread export (`/api/threads/<id>/export`, Markdown, FHIR, PDF or print), paired with its existing `thread.export` audit row     | `export file` and the format                                      | Categories and the file's size                                                                  |
 | `ark-release`   | A genome report released from the person's Ark, after it parses and before it is stored                                            | `this machine, from the Ark`; direction `received`                | The panel sites as references (rsIDs of the app's fixed panel, never a genotype)                |
 | `remote-tool`   | A question to the remote GBD server (synthetic requests only)                                                                      | `GBD server`                                                      | The question's size                                                                             |
 | `embedding`     | A guideline or knowledge search query embedded by an Ollama that is not on this machine                                            | `ollama on another machine`                                       | The request's size                                                                              |
@@ -701,7 +701,7 @@ recipient.
   because outgoing text may be in any locale; the evaluation's number finder
   (`infrastructure/narrated-numbers.ts`) deliberately does not, since model answers are
   en-GB (`docs/evaluation/harness.md`, "Limits").
-- **Exports and remote embeddings** (#531). A thread export (Markdown, FHIR or print)
+- **Exports and remote embeddings** (#531). A thread export (Markdown, FHIR, PDF or print)
   checks the thread's Markdown, the same text in every format, with the person's own
   questions as `typed`. The person sees what was found before any file is made: PDF and
   Download first ask for `?check=1`, which answers one line ("This export contains: 2
