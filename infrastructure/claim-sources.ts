@@ -295,9 +295,14 @@ const toClaim = (
 export const answerClaims = (
   reply: string,
   parts: readonly ClaimSourcePart[],
+): readonly Claim[] => claimsAgainst(reply, referenceSources(parts));
+
+/** `answerClaims` against sources already read (`referenceSources`, `sourcesByLabel`). */
+export const claimsAgainst = (
+  reply: string,
+  sources: ReadonlyMap<string, ReferenceSource>,
 ): readonly Claim[] => {
   const answer = sectionText(sectionSpans(reply), reply, "answer") ?? reply;
-  const sources = referenceSources(parts);
   return answerSentences(answer).flatMap((sentence) => {
     const claim = toClaim(sentence, sources);
     return claim === null ? [] : [claim];

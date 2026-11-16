@@ -208,3 +208,10 @@ kind, title and year; a note without an address is a plain label with the
 same title. An id no search returned has a wavy red underline and says so to
 a screen reader, and is never a link. Ids are read from the answer's stored
 tool parts, so a reloaded thread shows the same links.
+
+`[unsupported]` shows muted in the same mono face, titled "The answer marks
+this claim as resting on no passage its searches returned". When the turn's
+searches returned a guideline passage or an article, one muted line under the
+answer counts its claims (`claimSummaryLine`), for example "2 of 5 claims
+cite a source the searches returned; 1 marked unsupported; 1 cites a source
+no search returned; 1 cites nothing." A turn with no literature shows no line.
