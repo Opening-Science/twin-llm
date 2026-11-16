@@ -101,6 +101,29 @@ describe("the Markdown export (SPEC 9.1, 9.2)", () => {
     );
   });
 
+  test("each turn is headed by its bubble: skill, short text, scheduled mark", () => {
+    const bubble = threadMarkdown(
+      {
+        title: "t",
+        turns: [
+          {
+            ...TURN,
+            prompt:
+              "Using subject synthea-0001 (LOINC 8867-4), how did resting heart rate change?",
+            label: "How did my resting heart rate change?",
+            skill: "sleep",
+            scheduled: true,
+          },
+        ],
+      },
+      "2026-10-28",
+    );
+    expect(bubble).toContain(
+      "## 1. /sleep How did my resting heart rate change?\n\n_Asked by a scheduled task._\n",
+    );
+    expect(bubble).not.toContain("synthea-0001");
+  });
+
   test("refused, stopped and streaming answers each get their italic line", () => {
     expect(markdown).toContain("_Refused or failed: This skill is not offered._");
     expect(markdown).toContain("Partly written\n\n_Stopped before it finished._");
@@ -255,6 +278,28 @@ describe("the export route (SERVER-SPEC 3.7)", () => {
     expect(run.ledger).toEqual(["sent"]);
     expect(run.audit.map((row) => row.tool)).toEqual(["thread.export"]);
     expect(run.audit[0]?.rowCount).toBe(4);
+  });
+
+  test("the stored-value check counts the bubble's short text as typed", async () => {
+    const seen: string[][] = [];
+    const exportThread = createThreadExportHandler({
+      loadOwnedThread: async () => ({
+        title: "t",
+        turns: [{ ...TURN, label: "How did my heart rate change?" }],
+      }),
+      actorId: async () => "actor-1",
+      recipientIsLocal: () => true,
+      appendAudit: async () => {},
+      recordDisclosure: async () => ({ seq: 1n, auditSeq: 1n }),
+      freeTextChecker: (_actor, typed) => {
+        seen.push([...typed]);
+        return async () => ({ matches: [] });
+      },
+      dataMode: () => "synthetic",
+      today: () => "2026-10-28",
+    });
+    await exportThread("t", "markdown", "check");
+    expect(seen).toEqual([[TURN.prompt, "How did my heart rate change?"]]);
   });
 
   test("a failed ledger write makes no file", async () => {
