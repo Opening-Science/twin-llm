@@ -436,10 +436,28 @@ export const showMyDayInput = z
     day: z.iso.date().describe("The UTC day, YYYY-MM-DD"),
     profile: z
       .enum(["without_diabetes", "with_diabetes"])
-      .describe("Which glucose thresholds the red windows use"),
+      .describe("Which glucose thresholds flag a window"),
   })
   .strict()
   .describe("One synthetic subject's day of heart rate and glucose, as beats");
+
+export const showMyPeriodInput = z
+  .object({
+    subject_ref: subjectRefSchema,
+    period: z
+      .enum(["week", "month"])
+      .describe(
+        "week: the 7 UTC days ending on end; month: the 30 UTC days ending on end",
+      ),
+    end: z.iso.date().describe("The last UTC day, YYYY-MM-DD"),
+    profile: z
+      .enum(["without_diabetes", "with_diabetes"])
+      .describe("Which glucose range time in range uses"),
+  })
+  .strict()
+  .describe(
+    "One synthetic subject's week or month of glucose, resting heart rate and HRV",
+  );
 
 export const TOOL_DEFINITIONS = [
   {
@@ -576,7 +594,13 @@ export const TOOL_DEFINITIONS = [
   {
     name: "show_my_day",
     description:
-      "One synthetic subject's UTC day of heart rate (8867-4) and blood glucose (2339-0, 2345-7) as time-ordered beats. Each beat has a time, an event, a signal (direction and approximate value), a body note with an organ, a twin view, and a source: measured (a stored reading), derived (computed from readings) or narrated (described, never measured, with no value). Insulin is always narrated. red_windows mark readings past placeholder thresholds still to be confirmed: heart rate above 100 /min while still, glucose above 140 mg/dL without diabetes, or outside 70–180 mg/dL with diabetes. The warehouse records no events or activity, so events read 'Reading' and the still rule is not applied. More than 5000 rows is refused; heart rate not in /min or glucose not in mg/dL is refused. For a week or a month use hrv_trend, resting_hr_trend, and trend with HbA1c (4548-4).",
+      "One synthetic subject's UTC day of heart rate (8867-4) and blood glucose (2339-0, 2345-7) as time-ordered beats. Each beat has a time, an event, a signal (direction and approximate value), a body note with an organ, a twin view, and a source: measured (a stored reading), derived (computed from readings) or narrated (described, never measured, with no value). Insulin is always narrated. red_windows mark readings past placeholder thresholds still to be confirmed: heart rate above 100 /min while still, glucose above 140 mg/dL without diabetes, or outside 70–180 mg/dL with diabetes. The warehouse records no events or activity, so events read 'Reading' and the still rule is not applied. More than 5000 rows is refused; heart rate not in /min or glucose not in mg/dL is refused. For a week or a month use show_my_period, and trend with HbA1c (4548-4).",
     input: showMyDayInput,
+  },
+  {
+    name: "show_my_period",
+    description:
+      "One synthetic subject's week (7 UTC days) or month (30 UTC days) ending on end. glucose: average in mg/dL and the share of readings below, within and above a placeholder range still to be confirmed (above 140 mg/dL without diabetes; 70–180 mg/dL with diabetes), per day and pooled; the share is of readings, not of time, and below is null without diabetes. resting_hr and hrv: the same trend resting_hr_trend and hrv_trend return over the period, or their refusal. recovery after workouts is 'not recorded': the warehouse stores no workout times. More than 5000 rows is refused; glucose not in mg/dL is refused.",
+    input: showMyPeriodInput,
   },
 ] as const;

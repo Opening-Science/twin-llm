@@ -22,16 +22,19 @@ import type { AppendInput } from "@/packages/audit/append";
 import {
   type ExportStep,
   GENOME_IDS_EXPORT_SENTENCE,
+  NOT_MADE_SENTENCE,
   NOT_RECORDED_SENTENCE,
   noticeLine,
   UNCONFIRMED_SENTENCE,
 } from "./export-notice";
 import { fhirDocument, fhirFileName } from "./thread-fhir";
 import {
+  EXPORT_DISCLAIMER,
   type ExportableThread,
   markdownFileName,
   threadMarkdown,
 } from "./thread-markdown";
+import { pdfFileName, threadPdf } from "./thread-pdf";
 import { printPage } from "./thread-print";
 
 /**
@@ -43,10 +46,10 @@ import { printPage } from "./thread-print";
  * identifiers is never made.
  */
 
-export type ExportFormat = "markdown" | "fhir" | "print";
+export type ExportFormat = "markdown" | "fhir" | "print" | "pdf";
 
 export const exportFormat = (value: string | null): ExportFormat =>
-  value === "fhir" || value === "print" ? value : "markdown";
+  value === "fhir" || value === "print" || value === "pdf" ? value : "markdown";
 
 export type ThreadExportDeps = Readonly<{
   loadOwnedThread: (threadId: string) => Promise<ExportableThread | null>;
@@ -57,6 +60,8 @@ export type ThreadExportDeps = Readonly<{
   freeTextChecker: (actor: string, typed: readonly string[]) => CheckFreeText;
   dataMode: () => "synthetic" | "personal";
   today: () => string;
+  /** Writes the PDF; `threadPdf` unless a test hands in another. */
+  writePdf?: typeof threadPdf;
 }>;
 
 const NO_STORE = { "cache-control": "no-store" } as const;
@@ -92,12 +97,23 @@ const ranTools = (thread: ExportableThread): boolean =>
 const kindsAndCounts = (check: FreeTextCheck | undefined) =>
   check?.matches.map((match) => ({ ...match })) ?? null;
 
-const fileOf = (
+const fileOf = async (
   format: ExportFormat,
   title: string,
   markdown: string,
   today: string,
-): Response => {
+  writePdf: typeof threadPdf,
+): Promise<Response> => {
+  if (format === "pdf") {
+    const pdf = await writePdf(title, markdown, EXPORT_DISCLAIMER, today);
+    return new Response(new Uint8Array(pdf), {
+      headers: {
+        "content-type": "application/pdf",
+        "content-disposition": `attachment; filename="${pdfFileName(title)}"`,
+        ...NO_STORE,
+      },
+    });
+  }
   if (format === "print") {
     return new Response(printPage(title, markdown), {
       headers: { "content-type": "text/html; charset=utf-8", ...NO_STORE },
@@ -212,6 +228,16 @@ export const createThreadExportHandler =
       );
     }
 
+    // The file first: the ledger records only an export that exists.
+    const file = await fileOf(
+      format,
+      thread.title,
+      markdown,
+      today,
+      deps.writePdf ?? threadPdf,
+    ).catch(() => null);
+    if (file === null) return plain(500, NOT_MADE_SENTENCE);
+
     try {
       await deps.recordDisclosure(disclosure, {
         actor,
@@ -229,5 +255,5 @@ export const createThreadExportHandler =
     } catch {
       return plain(500, NOT_RECORDED_SENTENCE);
     }
-    return fileOf(format, thread.title, markdown, today);
+    return file;
   };

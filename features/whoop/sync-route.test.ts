@@ -283,7 +283,7 @@ describe("POST /api/whoop/sync error surface", () => {
     ).toEqual([
       "Patient",
       "http://opentwin.ch/fhir/CodeSystem/whoop|day-strain",
-      "http://loinc.org|8867-4",
+      "http://loinc.org|8867-4,http://opentwin.ch/fhir/CodeSystem/whoop|cycle-average-heart-rate",
       "http://opentwin.ch/fhir/CodeSystem/whoop|sleep-performance",
       "http://opentwin.ch/fhir/CodeSystem/whoop|sleep-efficiency",
       "http://loinc.org|103213-5",
