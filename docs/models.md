@@ -85,9 +85,9 @@ and not gated.
 
 ### Calling them locally through Ollama
 
-The question for issue #618: what do these licences ask of TwinLLM's Apache-2.0 and
-MIT code when it only calls a model that the user pulled into their own Ollama? Plain
-reading of the pages checked on 2026-11-16, not legal advice:
+What these licences ask of TwinLLM's Apache-2.0 and MIT code when it only calls a
+model the user pulled into their own Ollama. Plain reading of the pages checked on
+2026-11-16, not legal advice:
 
 - **The code is not affected.** TwinLLM sends prompts to `OLLAMA_BASE_URL` and stores
   no weights; the repository has no model files or Modelfiles. Neither licence covers
@@ -107,6 +107,9 @@ reading of the pages checked on 2026-11-16, not legal advice:
 - **Apertus asks nothing of the code.** The acceptable use policy binds the person who
   accepted it at download, not code or later users. A community GGUF for Ollama comes
   from a third party; the policy applies to the weights however they were fetched.
+  A hosted instance changes that: whoever runs TwinLLM on Apertus for others is the
+  one indemnifying ETH Zurich and EPFL and acting as controller for personal data in
+  outputs, and the SNAI output filter becomes a question for that instance.
 
 Open decision (#618): add both to the local lineup as documented here, and add the HAI-DEF
 notice to `NOTICE` (with a terms page for users) only before a hosted instance serves
