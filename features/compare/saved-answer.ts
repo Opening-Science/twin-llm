@@ -2,6 +2,7 @@ import { viewsOf } from "@/infrastructure/chat-view";
 import { profileFrameOf } from "@/infrastructure/gbd-profile-frame";
 import type { ModelResponseMetrics } from "@/infrastructure/model-response-metrics";
 import { toStoredToolParts } from "@/infrastructure/model-response-tool-parts";
+import { referenceSources } from "@/infrastructure/claim-sources";
 import { numberSources } from "@/infrastructure/number-sources";
 import type { EvidenceAttribution } from "@/infrastructure/oura-types";
 import { toResponseDocument } from "@/infrastructure/response-document/parse";
@@ -109,6 +110,7 @@ export const savedAnswer = (row: StoredAnswerRow): AnswerState => {
     views: withheld ? [] : viewsOf(parts),
     ...(frame === null ? {} : { profileFrame: frame }),
     numberSources: complete && !withheld ? numberSources(text, parts) : [],
+    citeSources: complete && !withheld ? [...referenceSources(parts).values()] : [],
     metrics: complete ? metricsOf(row) : null,
   };
 };

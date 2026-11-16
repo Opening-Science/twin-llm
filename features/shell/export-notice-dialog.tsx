@@ -17,7 +17,7 @@ import { Button } from "@/infrastructure/ui-kit/button";
  * browser keeps focus inside and Escape cancels.
  */
 
-export type ExportPick = "markdown" | "print";
+export type ExportPick = "markdown" | "pdf";
 
 export type ExportNoticeState =
   | Readonly<{ pick: ExportPick; phase: "checking" }>
@@ -29,7 +29,7 @@ export const EXPORT_CHECK_FAILED =
   "This export could not be checked just now, so nothing was made. Try again.";
 
 const hrefOf = (threadId: string, pick: ExportPick, step: "check" | "confirm") =>
-  threadExportHref(threadId, pick === "print" ? "print" : undefined, step);
+  threadExportHref(threadId, pick === "pdf" ? "pdf" : undefined, step);
 
 /** Asks for the check; the state the dialog shows next. */
 export const checkExport = async (
@@ -48,13 +48,9 @@ export const checkExport = async (
   }
 };
 
-/** Makes the confirmed export: a file for Markdown, a print page in a new tab for PDF. */
+/** Makes the confirmed export: the route answers with the file as an attachment. */
 const confirmExport = (threadId: string, pick: ExportPick): void => {
   const href = hrefOf(threadId, pick, "confirm");
-  if (pick === "print") {
-    window.open(href, "_blank", "noopener");
-    return;
-  }
   Object.assign(document.createElement("a"), { href, download: "" }).click();
 };
 
@@ -90,7 +86,7 @@ export const ExportNoticeDialog = ({
   return (
     <dialog
       ref={dialog}
-      aria-label={state?.pick === "print" ? "Export as PDF" : "Download thread"}
+      aria-label={state?.pick === "pdf" ? "Export as PDF" : "Download thread"}
       className="export-notice"
       onClose={onClose}
     >
