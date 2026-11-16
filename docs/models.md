@@ -36,7 +36,7 @@ these has been run through the live test yet, except `qwen3:4b` (see
 | HuatuoGPT-o1-7B                            | 7.6B  | Qwen2.5-7B-Instruct       | Apache-2.0       | vLLM; community GGUF Q4_K_M (4.7 GB)                                 | not verified (Qwen2.5 template has tools; `hermes` likely)                                    | 32K     | tight (Q4)  | yes (BF16)                      | none on card                                     |
 | II-Medical-8B                              | 8.2B  | Qwen3-8B                  | Apache-2.0       | vLLM; community GGUF                                                 | none (no tools section in its chat template)                                                  | 40K     | tight (Q4)  | yes (BF16)                      | MedQA 87.8, HealthBench 40                       |
 | Baichuan-M2-32B                            | 32.8B | Qwen2.5-32B               | Apache-2.0       | vLLM 0.9.0+ or SGLang; GPTQ 4-bit version                            | not verified (template has tools; card does not mention it)                                   | 128K    | no          | 4-bit only (card: one RTX 4090) | HealthBench 60.1, HealthBench-Hard 34.7          |
-| Apertus-8B-Instruct-2509 (Swiss AI)        | 8.1B  | Apertus-8B-2509           | Apache-2.0       | vLLM                                                                 | native, `apertus`                                                                             | 64K     | not planned | yes (BF16)                      | none on card                                     |
+| Apertus-8B-Instruct-2509 (Swiss AI)        | 8.1B  | Apertus-8B-2509           | Apache-2.0 + AUP | vLLM                                                                 | native, `apertus`                                                                             | 64K     | not planned | yes (BF16)                      | none on card                                     |
 | Apertus-v1.5-8B (Swiss AI)                 | 8B    | Apertus 1.0 (continued)   | Apache-2.0 + AUP | Swiss AI vLLM fork (`ghcr.io/swiss-ai/vllm_apertus_1.5_release`)     | native, `apertus`; not in thinking mode                                                       | 256K    | not planned | yes (BF16)                      | none on card                                     |
 
 Notes on the table:
@@ -73,9 +73,44 @@ advice:
   are not for clinical decisions (our reading of section 4.3 and of TwinLLM's scope; the
   terms do not say it in those words).
 
-**Apertus v1.5.** Apache-2.0, but the repository is gated: downloading means accepting
-the Swiss AI Acceptable Use Policy (`USAGE_POLICY.pdf` in the repository) and sharing
-name and email with the authors. Read the policy before hosting it.
+**Apertus.** The weights are Apache-2.0, but the Swiss AI repositories are gated.
+Apertus-8B and 70B-Instruct-2509 ask you to accept the Apertus LLM Acceptable Use
+Policy (1.0, 1 September 2025) and give name, country and affiliation. The policy
+asks two things: you indemnify ETH Zurich and EPFL against third-party claims from your
+use, and you process any personal data in outputs as an independent controller. It
+strongly advises applying the SNAI hash file as an output filter, refreshed every six
+months; the card says no filter is published yet. Apertus v1.5 has its own policy
+(`USAGE_POLICY.pdf` in the repository). EPFLiGHT's MeditronFO models are Apache-2.0
+and not gated.
+
+### Calling them locally through Ollama
+
+The question for issue #618: what do these licences ask of TwinLLM's Apache-2.0 and
+MIT code when it only calls a model that the user pulled into their own Ollama? Plain
+reading of the pages checked on 2026-11-16, not legal advice:
+
+- **The code is not affected.** TwinLLM sends prompts to `OLLAMA_BASE_URL` and stores
+  no weights; the repository has no model files or Modelfiles. Neither licence covers
+  code that calls the model, so `LICENSE`, `NOTICE` and `PROVENANCE.md` need no change
+  for local use.
+- **MedGemma binds whoever runs it.** `ollama pull medgemma:4b` ships the HAI-DEF terms
+  as the tag's licence layer, and use means acceptance. The obligations in section 3.1
+  (copy of the terms, section 3.2 restrictions, the "HAI-DEF is provided under..."
+  notice) start only at Distribution, and Distribution includes a Hosted Service. A
+  local run is not Distribution; a TwinLLM instance others reach over the network that
+  answers with MedGemma is.
+- **MedGemma's Prohibited Use Policy fits TwinLLM's scope only as research.** It bars
+  unlicensed practice of medicine, misleading claims of health expertise and automated
+  decisions affecting healthcare. Synthetic data, the "not clinical advice" framing and
+  no Clinical Use keep TwinLLM outside these; a feature that acts on a real person's
+  care would not be.
+- **Apertus asks nothing of the code.** The acceptable use policy binds the person who
+  accepted it at download, not code or later users. A community GGUF for Ollama comes
+  from a third party; the policy applies to the weights however they were fetched.
+
+Open decision (#618): add both to the local lineup as documented here, and add the HAI-DEF
+notice to `NOTICE` (with a terms page for users) only before a hosted instance serves
+MedGemma.
 
 **II-Medical-8B.** Apache-2.0, and its card says it is not suitable for medical use. We
 use it only as a comparison point on synthetic data.
@@ -118,6 +153,7 @@ Four candidates for three GPUs, so three run at a time:
 - Ollama MedGemma tags: https://ollama.com/library/medgemma/tags
 - Ollama Qwen3 tags: https://ollama.com/library/qwen3/tags
 - HAI-DEF terms: https://developers.google.com/health-ai-developer-foundations/terms
+- HAI-DEF Prohibited Use Policy: https://developers.google.com/health-ai-developer-foundations/prohibited-use-policy
 - Apertus-8B-MeditronFO: https://huggingface.co/EPFLiGHT/Apertus-8B-MeditronFO
 - Apertus-70B-MeditronFO: https://huggingface.co/EPFLiGHT/Apertus-70B-MeditronFO
 - Fully Open Meditron (MeditronFO paper): https://arxiv.org/abs/2605.16215
