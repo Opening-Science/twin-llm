@@ -71,13 +71,21 @@ describe("scoreClaimSources", () => {
 });
 
 describe("claimFigures", () => {
-  test("pools claims and counts answers with every claim cited or marked", () => {
+  test("pools claims and counts answers with every claim cited or marked, never an empty one", () => {
     const covered = { claims: 2, cited: 1, unsupported: 1, invented: 0, uncited: 0 };
     const open = { claims: 3, cited: 1, unsupported: 0, invented: 1, uncited: 1 };
+    const empty = { claims: 0, cited: 0, unsupported: 0, invented: 0, uncited: 0 };
     expect(
-      claimFigures({ scored: [{ claims: covered }, { claims: open }, { claims: null }] }),
+      claimFigures({
+        scored: [
+          { claims: covered },
+          { claims: open },
+          { claims: empty },
+          { claims: null },
+        ],
+      }),
     ).toEqual({
-      answers: 2,
+      answers: 3,
       claims: 5,
       cited: 2,
       unsupported: 1,

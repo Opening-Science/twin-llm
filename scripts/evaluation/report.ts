@@ -412,7 +412,7 @@ export type ClaimFigures = Readonly<{
   unsupported: number;
   invented: number;
   uncited: number;
-  /** Answers whose every claim is cited or marked unsupported (#612's bar). */
+  /** Answers with at least one claim, every one cited or marked unsupported (#612's bar). */
   covered: number;
 }>;
 
@@ -431,7 +431,9 @@ export const claimFigures = (
     unsupported: sum((entry) => entry.unsupported),
     invented: sum((entry) => entry.invented),
     uncited: sum((entry) => entry.uncited),
-    covered: all.filter((entry) => entry.invented === 0 && entry.uncited === 0).length,
+    covered: all.filter(
+      (entry) => entry.claims > 0 && entry.invented === 0 && entry.uncited === 0,
+    ).length,
   };
 };
 
@@ -469,7 +471,7 @@ const claimSection = (all: readonly ModelScores[]): string[] =>
     : [
         "## Claim sources",
         "",
-        "Each sentence of the Answer section, over the answers whose turn returned a guideline passage or an article (#612): cited (it names a source a search returned), marked unsupported, invented id (it names only ids no search returned) or uncited. Fully covered: every claim cited or marked unsupported. Shares with the Wilson 95 % interval. An extra metric; no pass or fail depends on it.",
+        "Each sentence of the Answer section, over the answers whose turn returned a guideline passage or an article (#612): cited (it names a source a search returned), marked unsupported, invented id (it names only ids no search returned) or uncited. Fully covered: at least one claim, every one cited or marked unsupported. Shares with the Wilson 95 % interval. An extra metric; no pass or fail depends on it.",
         "",
         claimTable(all),
         "",

@@ -526,7 +526,7 @@ on each line whose turn returned a guideline passage or an article: every
 sentence of the Answer section is cited, marked unsupported, invented id or
 uncited. `eval:report` adds a "Claim sources" section only when some line
 returned literature, with each status's share of the claims and the share of
-answers whose every claim is cited or marked unsupported, the bar #612 sets.
+answers with at least one claim and every claim cited or marked unsupported, the bar #612 sets.
 Wilson 95 % intervals. An extra metric: the eight criteria do not change.
 
 The harness runs the chat turn without wearable context, so a run today
