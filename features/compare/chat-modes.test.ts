@@ -7,6 +7,7 @@ import {
   compareRows,
   droppedModels,
   initialModeState,
+  medicalRows,
   type ModeContext,
   type ModeState,
   modeProblem,
@@ -106,18 +107,34 @@ describe("a reopened thread starts where its last turn stopped (SPEC 7.2)", () =
     ]);
   });
 
-  test("one offered id: Manual with its specialist and base model, or the model", () => {
-    const specialist = initialModeState(ctx(), ["agent:sleep"]);
-    expect([specialist.mode, specialist.specialists, specialist.models]).toEqual([
-      "manual",
-      ["agent:sleep"],
-      ["qwen3:8b"],
-    ]);
+  test("one plain model: Basic on that model (#610)", () => {
     const plain = initialModeState(ctx(), ["llama3:8b"]);
-    expect([plain.mode, plain.specialists, plain.models]).toEqual([
-      "manual",
-      [],
-      ["llama3:8b"],
+    expect([plain.mode, plain.basic, plain.fromThread]).toEqual([
+      "basic",
+      "llama3:8b",
+      true,
+    ]);
+    expect(pickedModels(plain, ctx(), "").map(({ id }) => id)).toEqual(["llama3:8b"]);
+  });
+
+  test("specialists only: Medical with those rows, kept as chosen (#610)", () => {
+    const one = initialModeState(ctx(), ["agent:sleep"]);
+    expect([one.mode, medicalRows(one, ctx(), "Is my BMI going up?")]).toEqual([
+      "medical",
+      ["agent:sleep"],
+    ]);
+    const two = initialModeState(ctx(), ["agent:gp", "agent:diet", "agent:gone"]);
+    expect([two.mode, medicalRows(two, ctx(), "How did I sleep?")]).toEqual([
+      "medical",
+      ["agent:gp", "agent:diet"],
+    ]);
+  });
+
+  test("specialists and models together: Compare", () => {
+    const state = initialModeState(ctx(), ["agent:gp", "llama3:8b"]);
+    expect([state.mode, compareRows(state, ctx(), "")]).toEqual([
+      "compare",
+      ["agent:gp", "llama3:8b"],
     ]);
   });
 
