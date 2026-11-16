@@ -8,10 +8,10 @@ import type { CatalogModel } from "@/infrastructure/model-catalog";
 import { type ModeContext, specialistDefaults } from "./chat-modes";
 
 /**
- * Specialists's default specialists measured on the router fixtures (#610): for
- * each labelled question, does Specialists's default list hold the agent the
- * question should go to? Every agent offered, as on local Ollama. Committed
- * fixtures only; no person's data.
+ * The Specialists mode's default measured on the router fixtures (#610):
+ * one specialist, the one Auto would pick, so it is right exactly as often
+ * as Auto. Every agent offered, as on local Ollama. Committed fixtures
+ * only; no person's data.
  */
 
 const BASE: CatalogModel = {
@@ -46,29 +46,22 @@ const CONTEXT: ModeContext = {
 const AGENT_IDS = AGENTS.map(({ id }) => id);
 
 describe.each([
-  ["hand-written prompts", HAND_WRITTEN_ITEMS],
-  ["scored questions", QUESTION_ITEMS],
-])("Specialists's defaults on the %s", (_name, items) => {
-  const covered = items.filter(({ prompt, expected }) =>
-    specialistDefaults(CONTEXT, prompt).includes(`agent:${expected}`),
-  );
-  const routed = items.filter(
-    ({ prompt, expected }) => routeAgent(prompt, AGENT_IDS).agentId === expected,
-  );
-
-  test("hold the expected specialist for every item, Auto's alone on fewer or as many", () => {
+  ["hand-written prompts", HAND_WRITTEN_ITEMS, 36],
+  ["scored questions", QUESTION_ITEMS, 126],
+])("the Specialists default on the %s", (_name, items, right) => {
+  test("is one specialist, Auto's pick, for every item", () => {
     expect(items.length).toBeGreaterThan(0);
-    expect(covered.map(({ prompt }) => prompt)).toEqual(
-      items.map(({ prompt }) => prompt),
-    );
-    expect(routed.length).toBeLessThanOrEqual(covered.length);
+    items.forEach(({ prompt }) => {
+      expect(specialistDefaults(CONTEXT, prompt)).toEqual([
+        `agent:${routeAgent(prompt, AGENT_IDS).agentId}`,
+      ]);
+    });
   });
 
-  test("always hold Auto's pick, at most three specialists", () => {
-    items.forEach(({ prompt }) => {
-      const rows = specialistDefaults(CONTEXT, prompt);
-      expect(rows.length).toBeLessThanOrEqual(3);
-      expect(rows).toContain(`agent:${routeAgent(prompt, AGENT_IDS).agentId}`);
-    });
+  test("names the labelled agent as often as Auto does", () => {
+    const covered = items.filter(({ prompt, expected }) =>
+      specialistDefaults(CONTEXT, prompt).includes(`agent:${expected}`),
+    );
+    expect(covered.length).toBe(right);
   });
 });

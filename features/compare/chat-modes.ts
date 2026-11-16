@@ -1,3 +1,4 @@
+import { routeAgent } from "@/infrastructure/agent-router";
 import { AGENT_ID_PREFIX } from "@/infrastructure/agents";
 import {
   AUTO_MODEL_ID,
@@ -44,7 +45,7 @@ export const MODE_COPY: Readonly<
   },
   specialists: {
     label: "Specialists",
-    line: "One to three specialists, each on its own model with its own tools and literature.",
+    line: "One specialist answers, picked for the question; add up to two more. Each runs on its own model with its own tools and literature.",
   },
   manual: {
     label: "Manual",
@@ -150,19 +151,27 @@ export const compareDefaults = (context: ModeContext, prompt = ""): readonly str
 };
 
 /**
- * Specialists' default specialists, fitted to the question the same way:
- * General first, then the specialists the router ranks for it, then the
- * default specialists, as many as fit in three. Specialists only, each on
- * its own preferred model.
+ * The Specialists mode's default: one answer, to spare the GPU. It is the
+ * specialist Auto would pick for the question (`routeAgent`, General when
+ * nothing matches), on that specialist's own model; else the first
+ * specialist that runs here. The person adds up to two more by hand.
  */
 export const specialistDefaults = (
   context: ModeContext,
   prompt = "",
-): readonly string[] =>
-  defaultModelSelection(
-    specialistRows(context.catalog).filter((row) => rowRunsHere(row.id, context)),
-    prompt,
-  ).slice(0, MAX_SELECTED_MODELS);
+): readonly string[] => {
+  const rows = specialistRows(context.catalog).filter((row) =>
+    rowRunsHere(row.id, context),
+  );
+  const routed = `${AGENT_ID_PREFIX}${
+    routeAgent(
+      prompt,
+      rows.flatMap((row) => (row.agent === undefined ? [] : [row.agent.id])),
+    ).agentId
+  }`;
+  const pick = rows.find((row) => row.id === routed) ?? rows[0];
+  return pick === undefined ? [] : [pick.id];
+};
 
 const firstOf = (rows: readonly CatalogModel[], context: ModeContext): string[] => {
   const first = rows.find((row) => rowRunsHere(row.id, context));
@@ -298,6 +307,13 @@ const specialistIds = (
   prompt: string,
 ): string[] =>
   specialistPicks(state, context, prompt).filter((id) => offered(id, context));
+
+/** Room for one more specialist in the Specialists mode (at most three). */
+export const canAddSpecialist = (
+  state: ModeState,
+  context: ModeContext,
+  prompt: string,
+): boolean => specialistIds(state, context, prompt).length < MAX_SELECTED_MODELS;
 
 /** The ids Manual sends, before the at-most-three rule. */
 export const manualIds = (state: ModeState, context: ModeContext): string[] => {

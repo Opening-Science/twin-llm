@@ -5,6 +5,7 @@ import type { CatalogModel } from "@/infrastructure/model-catalog";
 import {
   autoModelName,
   boxDisabled,
+  canAddSpecialist,
   compareRows,
   droppedModels,
   initialModeState,
@@ -279,13 +280,20 @@ describe("Specialists sends specialists on their own models (#610)", () => {
   const ids = (state: ModeState, prompt = "", context = ctx()) =>
     pickedModels(state, context, prompt).map(({ id }) => id);
 
-  test("defaults follow the question: General, then the ranked specialist", () => {
+  test("one answer by default: the specialist Auto would pick, else General", () => {
     const state = specialists();
-    expect(ids(state)).toEqual(["agent:gp", "agent:diet"]);
-    expect(modeSummary(state, ctx(), "")).toBe("Specialists · 2");
-    expect(ids(state, "How long did I sleep last night?")[0]).toBe("agent:gp");
-    expect(ids(state, "How long did I sleep last night?")).toContain("agent:sleep");
-    expect(ids(state, "Is my BMI going up?")).toContain("agent:diet");
+    expect(ids(state)).toEqual(["agent:gp"]);
+    expect(modeSummary(state, ctx(), "")).toBe("Specialists · General");
+    expect(pickerFooter(state, ctx(), "")).toBe("1 of at most 3 answers.");
+    expect(ids(state, "How long did I sleep last night?")).toEqual(["agent:sleep"]);
+    expect(ids(state, "Is my BMI going up?")).toEqual(["agent:diet"]);
+  });
+
+  test("in incognito, the first specialist that runs here", () => {
+    const local = ctx({ incognito: true, localModelIds: ["agent:diet"] });
+    expect(ids(specialists(local), "How long did I sleep?", local)).toEqual([
+      "agent:diet",
+    ]);
   });
 
   test("never a plain model, never Auto", () => {
@@ -293,22 +301,25 @@ describe("Specialists sends specialists on their own models (#610)", () => {
     expect(sent.every((id) => id.startsWith("agent:") && id !== "agent:auto")).toBe(true);
   });
 
-  test("once a row is changed the rows stay, one to three", () => {
-    const one = toggleRow(specialists(), "specialists", "agent:diet", ctx(), "");
-    expect(ids(one, "Is my BMI going up?")).toEqual(["agent:gp"]);
-    expect(modeSummary(one, ctx(), "")).toBe("Specialists · General");
-    expect(boxDisabled(one, "specialists", "agent:gp", ctx(), "")).toBe(
-      "Keep at least one specialist.",
-    );
+  test("adding: up to three, then no room; the last one stays", () => {
+    const start = specialists();
+    expect(canAddSpecialist(start, ctx(), "")).toBe(true);
+    const two = toggleRow(start, "specialists", "agent:sleep", ctx(), "");
+    expect(ids(two, "Is my BMI going up?")).toEqual(["agent:gp", "agent:sleep"]);
+    expect(modeSummary(two, ctx(), "")).toBe("Specialists · 2");
+    const three = toggleRow(two, "specialists", "agent:diet", ctx(), "");
+    expect(ids(three)).toEqual(["agent:gp", "agent:sleep", "agent:diet"]);
+    expect(canAddSpecialist(three, ctx(), "")).toBe(false);
     const four = ctx({
       catalog: [...CATALOG, agent("anatomy", "Anatomy specialist", LARGE)],
     });
-    const three = specialists(four);
-    expect(ids(three, "", four)).toEqual(["agent:gp", "agent:diet", "agent:anatomy"]);
-    expect(boxDisabled(three, "specialists", "agent:sleep", four, "")).toBe(
+    expect(boxDisabled(three, "specialists", "agent:anatomy", four, "")).toBe(
       "Three answers at most.",
     );
-    expect(modeProblem({ ...one, specialists: [] }, ctx(), "")).toBe(
+    expect(boxDisabled(start, "specialists", "agent:gp", ctx(), "")).toBe(
+      "Keep at least one specialist.",
+    );
+    expect(modeProblem({ ...two, specialists: [] }, ctx(), "")).toBe(
       "Pick one to three specialists.",
     );
   });
