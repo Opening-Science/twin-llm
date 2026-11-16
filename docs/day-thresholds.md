@@ -26,9 +26,9 @@ Consecutive readings past a threshold form one window. The window's beat carries
 highest value (or, below the range, the lowest).
 
 After a workout (consecutive readings while moving), heart rate is "back" at the first
-still reading within `recoveryWithinPerMin` of the last still rate before it
-(`day-recovery.ts`). The minutes count from the last moving reading, so with readings
-far apart they are an upper bound. The warehouse stores no workout times, so only a day
+still reading within `recoveryWithinPerMin` of the last still rate before it, and
+before the next workout (`day-recovery.ts`). The minutes count from the last moving
+reading, so with readings far apart they are an upper bound. The warehouse stores no workout times, so only a day
 with recorded activity (the mock day) has recoveries.
 
 ## Rules in code (not yet in the JSON)

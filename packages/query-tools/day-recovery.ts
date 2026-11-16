@@ -5,7 +5,8 @@ import { DAY_THRESHOLDS, type DayReading, type DayThresholds } from "./day-beats
  *
  * A workout is a run of consecutive readings while moving. Its baseline is the
  * last still heart rate before it. It has recovered at the first still reading
- * after it whose heart rate is within `recoveryWithinPerMin` of that baseline
+ * after it, and before the next workout, whose heart rate is within
+ * `recoveryWithinPerMin` of that baseline
  * (`day-thresholds.json`, a placeholder for Robin). The minutes count from the
  * workout's last moving reading, so with readings far apart they are an upper
  * bound: "back by", never "back after exactly".
@@ -57,7 +58,8 @@ export const recoveries = (
 ): readonly Recovery[] => {
   const sorted = [...readings].sort((a, b) => a.time.localeCompare(b.time));
   const band = thresholds.recoveryWithinPerMin;
-  return movingRuns(sorted).map((run): Recovery => {
+  const runs = movingRuns(sorted);
+  return runs.map((run, index): Recovery => {
     const workout = sorted.slice(run.start, run.end + 1);
     const baseline =
       sorted
@@ -69,7 +71,8 @@ export const recoveries = (
     const back =
       baseline === null
         ? undefined
-        : sorted.slice(run.end + 1).find((reading) => {
+        : // Only up to the next workout: a later recovery belongs to that one.
+          sorted.slice(run.end + 1, runs[index + 1]?.start).find((reading) => {
             const value = stillHeartRate(reading);
             return value !== null && value <= baseline + band;
           });

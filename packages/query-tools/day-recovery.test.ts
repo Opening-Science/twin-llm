@@ -65,6 +65,19 @@ describe("recoveries", () => {
     expect(one?.back_within_min).toBeNull();
   });
 
+  test("not back before the next workout: the later recovery is the next one's", () => {
+    const [walk, run] = recoveries([
+      heart("07:00", 60, false),
+      heart("07:30", 110, true),
+      heart("08:00", 120, false),
+      heart("08:30", 160, true),
+      heart("09:00", 65, false),
+    ]);
+    expect(walk?.back_at).toBeNull();
+    expect(walk?.back_within_min).toBeNull();
+    expect(run?.back_at).toBe("09:00");
+  });
+
   test("no still reading before: no baseline, so no recovery time", () => {
     const [one] = recoveries([heart("06:00", 140, true), heart("06:30", 60, false)]);
     expect(one?.baseline_per_min).toBeNull();
