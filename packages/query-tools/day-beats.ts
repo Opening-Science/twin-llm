@@ -54,6 +54,7 @@ const thresholdsSchema = z
     heartRateStillAbovePerMin: z.number().positive(),
     glucoseWithoutDiabetesAboveMgDl: z.number().positive(),
     glucoseWithDiabetesRangeMgDl: z.tuple([z.number().positive(), z.number().positive()]),
+    recoveryWithinPerMin: z.number().positive(),
   })
   .strict();
 

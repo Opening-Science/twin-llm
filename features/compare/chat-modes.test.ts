@@ -7,7 +7,9 @@ import {
   compareRows,
   droppedModels,
   initialModeState,
+  medicalRows,
   type ModeContext,
+  type ModeState,
   modeProblem,
   modeSummary,
   offeredModes,
@@ -64,7 +66,13 @@ describe("modes offered and the new chat (SPEC 7.1, 7.2)", () => {
   test("a new chat starts on Auto when the catalog has it", () => {
     const state = initialModeState(ctx(), null);
     expect(state.mode).toBe("auto");
-    expect(offeredModes(ctx())).toEqual(["auto", "basic", "manual", "compare"]);
+    expect(offeredModes(ctx())).toEqual([
+      "auto",
+      "basic",
+      "medical",
+      "manual",
+      "compare",
+    ]);
     expect(pickedModels(state, ctx(), "How did I sleep?")).toEqual([
       { id: "agent:auto", name: "Auto → Sleep" },
     ]);
@@ -73,7 +81,7 @@ describe("modes offered and the new chat (SPEC 7.1, 7.2)", () => {
   test("without the Auto row it starts on Compare, and Auto is not offered", () => {
     const context = ctx({ catalog: CATALOG.slice(1) });
     expect(initialModeState(context, null).mode).toBe("compare");
-    expect(offeredModes(context)).toEqual(["basic", "manual", "compare"]);
+    expect(offeredModes(context)).toEqual(["basic", "medical", "manual", "compare"]);
   });
 
   test("the other modes open on sensible picks, never an empty list", () => {
@@ -99,18 +107,34 @@ describe("a reopened thread starts where its last turn stopped (SPEC 7.2)", () =
     ]);
   });
 
-  test("one offered id: Manual with its specialist and base model, or the model", () => {
-    const specialist = initialModeState(ctx(), ["agent:sleep"]);
-    expect([specialist.mode, specialist.specialists, specialist.models]).toEqual([
-      "manual",
-      ["agent:sleep"],
-      ["qwen3:8b"],
-    ]);
+  test("one plain model: Basic on that model (#610)", () => {
     const plain = initialModeState(ctx(), ["llama3:8b"]);
-    expect([plain.mode, plain.specialists, plain.models]).toEqual([
-      "manual",
-      [],
-      ["llama3:8b"],
+    expect([plain.mode, plain.basic, plain.fromThread]).toEqual([
+      "basic",
+      "llama3:8b",
+      true,
+    ]);
+    expect(pickedModels(plain, ctx(), "").map(({ id }) => id)).toEqual(["llama3:8b"]);
+  });
+
+  test("specialists only: Medical with those rows, kept as chosen (#610)", () => {
+    const one = initialModeState(ctx(), ["agent:sleep"]);
+    expect([one.mode, medicalRows(one, ctx(), "Is my BMI going up?")]).toEqual([
+      "medical",
+      ["agent:sleep"],
+    ]);
+    const two = initialModeState(ctx(), ["agent:gp", "agent:diet", "agent:gone"]);
+    expect([two.mode, medicalRows(two, ctx(), "How did I sleep?")]).toEqual([
+      "medical",
+      ["agent:gp", "agent:diet"],
+    ]);
+  });
+
+  test("specialists and models together: Compare", () => {
+    const state = initialModeState(ctx(), ["agent:gp", "llama3:8b"]);
+    expect([state.mode, compareRows(state, ctx(), "")]).toEqual([
+      "compare",
+      ["agent:gp", "llama3:8b"],
     ]);
   });
 
@@ -233,7 +257,53 @@ describe("Basic sends one plain model (#610)", () => {
 
   test("offered only when the catalog has a plain model", () => {
     const agentsOnly = ctx({ catalog: CATALOG.slice(0, 4) });
-    expect(offeredModes(agentsOnly)).toEqual(["auto", "manual", "compare"]);
+    expect(offeredModes(agentsOnly)).toEqual(["auto", "medical", "manual", "compare"]);
+  });
+});
+
+describe("Medical sends specialists on their own models (#610)", () => {
+  const medical = (context = ctx()) =>
+    setMode(initialModeState(context, null), "medical");
+  const ids = (state: ModeState, prompt = "", context = ctx()) =>
+    pickedModels(state, context, prompt).map(({ id }) => id);
+
+  test("defaults follow the question: General, then the ranked specialist", () => {
+    const state = medical();
+    expect(ids(state)).toEqual(["agent:gp", "agent:diet"]);
+    expect(modeSummary(state, ctx(), "")).toBe("Medical · 2 specialists");
+    expect(ids(state, "How long did I sleep last night?")[0]).toBe("agent:gp");
+    expect(ids(state, "How long did I sleep last night?")).toContain("agent:sleep");
+    expect(ids(state, "Is my BMI going up?")).toContain("agent:diet");
+  });
+
+  test("never a plain model, never Auto", () => {
+    const sent = ids(medical(), "How did I sleep?");
+    expect(sent.every((id) => id.startsWith("agent:") && id !== "agent:auto")).toBe(true);
+  });
+
+  test("once a row is changed the rows stay, one to three", () => {
+    const one = toggleRow(medical(), "medical", "agent:diet", ctx(), "");
+    expect(ids(one, "Is my BMI going up?")).toEqual(["agent:gp"]);
+    expect(modeSummary(one, ctx(), "")).toBe("Medical · 1 specialist");
+    expect(boxDisabled(one, "medical", "agent:gp", ctx(), "")).toBe(
+      "Medical needs at least one specialist.",
+    );
+    const four = ctx({
+      catalog: [...CATALOG, agent("anatomy", "Anatomy specialist", LARGE)],
+    });
+    const three = medical(four);
+    expect(ids(three, "", four)).toEqual(["agent:gp", "agent:diet", "agent:anatomy"]);
+    expect(boxDisabled(three, "medical", "agent:sleep", four, "")).toBe(
+      "Three answers at most.",
+    );
+    expect(modeProblem({ ...one, medical: [] }, ctx(), "")).toBe(
+      "Pick one to three specialists.",
+    );
+  });
+
+  test("offered only when the catalog has a specialist", () => {
+    const modelsOnly = ctx({ catalog: CATALOG.slice(4) });
+    expect(offeredModes(modelsOnly)).toEqual(["basic", "manual", "compare"]);
   });
 });
 
@@ -328,6 +398,7 @@ describe("incognito offers local models only (SPEC 7.4, 7.8)", () => {
   test("Auto is offered only when its model runs here", () => {
     expect(offeredModes(ctx({ incognito: true, localModelIds: [] }))).toEqual([
       "basic",
+      "medical",
       "manual",
       "compare",
     ]);

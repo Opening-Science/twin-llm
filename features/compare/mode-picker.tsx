@@ -30,7 +30,8 @@ import {
 /**
  * The mode and models picker (SPEC 7.4): opens upward from the mode pill.
  * A segmented "Mode" control, the mode's line, then for Basic one radio
- * group of models and for Manual and Compare two checkbox groups. A box
+ * group of models, for Medical one checkbox group of specialists and for
+ * Manual and Compare two checkbox groups. A box
  * whose change would break the rule is disabled and says why; in
  * incognito, rows not on this machine stay listed, greyed.
  */
@@ -173,6 +174,15 @@ export const ModePicker = ({
               legend="Model"
               rows={plainModelRows(context.catalog)}
               list="basic"
+              {...shared}
+            />
+          </div>
+        ) : state.mode === "medical" ? (
+          <div className="flex max-h-[18rem] flex-col gap-3 overflow-y-auto overscroll-contain">
+            <RowGroup
+              legend="Specialists"
+              rows={specialistRows(context.catalog)}
+              list="medical"
               {...shared}
             />
           </div>
