@@ -81,21 +81,42 @@ const STAND_INS: Readonly<Record<string, string>> = {
   "₇": "7",
   "₈": "8",
   "₉": "9",
+};
+
+const SUPERSCRIPT: Readonly<Record<string, string>> = {
   "⁰": "0",
+  "¹": "1",
+  "²": "2",
+  "³": "3",
   "⁴": "4",
   "⁵": "5",
   "⁶": "6",
   "⁷": "7",
   "⁸": "8",
   "⁹": "9",
+  "⁺": "+",
+  "⁻": "-",
 };
 
 /**
- * Text the standard fonts can draw: stand-ins first, then accents dropped
- * from letters outside Latin-1 (č → c), then "?" for anything left.
+ * A raised run the fonts cannot draw whole becomes "^" and its digits, so an
+ * exponent stays an exponent: "10⁹/L" is "10^9/L", not "109/L". A run of
+ * only ¹ ² ³ is Latin-1 and stays as it is.
+ */
+const exponents = (text: string): string =>
+  text.replace(/[⁰¹²³⁴-⁹⁺⁻]+/g, (run) =>
+    [...run].every(drawable)
+      ? run
+      : `^${[...run].map((char) => SUPERSCRIPT[char] ?? char).join("")}`,
+  );
+
+/**
+ * Text the standard fonts can draw: exponents and stand-ins first, then
+ * accents dropped from letters outside Latin-1 (č → c), then "?" for
+ * anything left.
  */
 export const pdfText = (text: string): string =>
-  [...text.normalize("NFC")]
+  [...exponents(text.normalize("NFC"))]
     .map((char) => {
       if (drawable(char)) return char;
       const stand = STAND_INS[char];

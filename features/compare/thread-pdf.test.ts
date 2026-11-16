@@ -27,6 +27,12 @@ describe("characters the standard fonts draw", () => {
     expect(pdfText("Dvořák")).toBe("Dvorák");
     expect(pdfText("心 🫀")).toBe("? ?");
   });
+
+  test("an exponent stays an exponent", () => {
+    expect(pdfText("4.5 × 10⁹/L")).toBe("4.5 × 10^9/L");
+    expect(pdfText("10⁻⁶ and 10¹⁰")).toBe("10^-6 and 10^10");
+    expect(pdfText("2.1 m²")).toBe("2.1 m²");
+  });
 });
 
 describe("inline marks", () => {
