@@ -22,8 +22,8 @@ October: "non-personal OpenTwin knowledge/RAG layer").
 added there, add it to the glossary.
 
 `biomarker-catalogue.md` is generated from the pinned Anchor catalogue
-(`packages/biomarkers`); do not edit it by hand. After an open-twin merge that
-touches `packages/open-twin/anchor-layer/` run `bun run knowledge:biomarkers`. `packages/knowledge/biomarker-catalogue.test.ts`
+(`packages/biomarkers`); do not edit it by hand. After an open-twin pin bump run
+`bun run knowledge:biomarkers`. `packages/knowledge/biomarker-catalogue.test.ts`
 fails when the committed file no longer matches the pin.
 
 ## File format
