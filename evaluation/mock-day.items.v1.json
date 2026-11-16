@@ -45,6 +45,11 @@
         "must_call": ["show_my_day"],
         "values": [
           { "name": "run_time", "path": "beats.11.time", "value": "18:00" },
+          {
+            "name": "run_measure",
+            "path": "beats.11.signal.measure",
+            "value": "heart_rate"
+          },
           { "name": "run_heart_rate", "path": "beats.11.signal.value", "value": 160 },
           { "name": "windows", "path": "red_windows.length", "value": 1 }
         ],

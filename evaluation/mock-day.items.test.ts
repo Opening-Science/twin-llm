@@ -69,7 +69,7 @@ describe("mock-day item set", () => {
         };
       }),
     );
-    expect(rows.length).toBe(14);
+    expect(rows.length).toBe(15);
     expect(rows.map((row) => [row.id, row.name, row.actual])).toEqual(
       rows.map((row) => [row.id, row.name, row.expected]),
     );
