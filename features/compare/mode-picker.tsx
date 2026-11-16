@@ -222,7 +222,7 @@ const SpecialistsPanel = (props: PanelProps) => {
           <legend className="text-eyebrow px-2 pb-1">Answering</legend>
           <ul className="flex flex-col">
             {answering.map(({ pick, row }) => (
-              <AnsweringRow key={pick} pick={pick} row={row} {...props} />
+              <AnsweringRow key={row.id} pick={pick} row={row} {...props} />
             ))}
           </ul>
         </fieldset>

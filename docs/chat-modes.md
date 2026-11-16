@@ -92,15 +92,15 @@ default and any plain model the catalog offers (`setSpecialistModel`,
 `specialistModelChoices`); in an incognito chat a model the pair cannot run on here is
 greyed. This was the Manual mode until #610 folded it in; Manual's other use, models
 answering as themselves, is Basic for one and Compare for several. A specialist on
-another model is still one specialist: its box stays ticked, and unticking it removes
-it on whichever model it was. That row's id is
-`agent:<specialist>@<model id>`, such as `agent:diet@llama3.2`, and its column reads
-"Diet specialist · llama3.2". The catalog does not list such rows. `findCatalogRow`
-(`infrastructure/model-catalog.ts`) builds one from the specialist's row and the model's
-row, so a pair is offered exactly when both halves are, and every place that checked an
-id against the catalog (the turn check, `/api/chat`, the incognito route, scheduled
-tasks, `/compact`) now goes through it. Auto cannot be paired, and a specialist on its
-own preferred model keeps its plain `agent:<id>` row.
+another model is still one specialist: its box stays ticked, and unticking it removes it
+on whichever model it was. That row's id is `agent:<specialist>@<model id>`, such as
+`agent:diet@llama3.2`, and its column reads "Diet specialist · llama3.2". The catalog
+does not list such rows. `findCatalogRow` (`infrastructure/model-catalog.ts`) builds one
+from the specialist's row and the model's row, so a pair is offered exactly when both
+halves are, and every place that checked an id against the catalog (the turn check,
+`/api/chat`, the incognito route, scheduled tasks, `/compact`) now goes through it. Auto
+cannot be paired, and a specialist on its own preferred model keeps its plain
+`agent:<id>` row.
 
 ### Why Auto chose
 

@@ -84,11 +84,12 @@ ranks for it come after General and before Diet and Anatomy (#493); the first qu
 `/start` gets these too.
 
 Since #366 the prompt bar picks a mode first ([chat-modes.md](chat-modes.md)): Auto
-sends `agent:auto`, Specialists runs chosen specialists, each on its own model or a chosen one (a specialist on a
-model other than its own is the row `agent:<id>@<model id>`), and Compare keeps the one to
-three picks described here, with at least two. Compare's defaults put the specialists the
-router ranks for the question after General, before Diet and Anatomy, until the person
-changes a row ([chat-modes.md](chat-modes.md#compares-defaults-493), #493).
+sends `agent:auto`, Specialists runs chosen specialists, each on its own model or a
+chosen one (a specialist on a model other than its own is the row
+`agent:<id>@<model id>`), and Compare keeps the one to three picks described here, with
+at least two. Compare's defaults put the specialists the router ranks for the question
+after General, before Diet and Anatomy, until the person changes a row
+([chat-modes.md](chat-modes.md#compares-defaults-493), #493).
 
 ## In a turn
 
