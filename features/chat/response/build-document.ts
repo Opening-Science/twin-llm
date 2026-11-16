@@ -70,6 +70,8 @@ type Basis = Readonly<{
   hasGbdRows: boolean;
   hasKnowledge: boolean;
   hasLiterature: boolean;
+  /** A guideline search ran this turn (#612). */
+  searchedGuidelines: boolean;
   hallucinatedCount: number;
   toolCalls: readonly ResponseToolCall[];
   modelStatement: string | null;
@@ -91,6 +93,10 @@ const deriveUncertaintyReasons = (basis: Basis): UncertaintyReason[] => {
     ["population_only", !basis.sufficient && basis.hasGbdRows],
     ["knowledge_only", !basis.sufficient && basis.hasKnowledge],
     ["literature_only", !basis.sufficient && basis.hasLiterature],
+    [
+      "literature_not_found",
+      basis.searchedGuidelines && !basis.hasGuidelines && !basis.hasLiterature,
+    ],
     ["hallucinated_keys", basis.hallucinatedCount > 0],
     ["tool_returned_no_rows", basis.toolCalls.some((row) => row.row_count === 0)],
     ["no_model_statement", !basis.modelStatement?.trim()],
@@ -183,6 +189,7 @@ export const buildResponseDocumentV1 = (input: {
     hasGbdRows: gbdRows.length > 0,
     hasKnowledge: knowledgeSources.length > 0,
     hasLiterature: literatureSources.length > 0,
+    searchedGuidelines: input.toolCalls.some((row) => row.tool === GUIDELINE_AUDIT_TOOL),
     hallucinatedCount: hallucinated_keys.length,
     toolCalls: input.toolCalls,
     modelStatement: input.parsed.uncertaintyText,

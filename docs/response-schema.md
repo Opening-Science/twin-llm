@@ -69,6 +69,9 @@ v1 without a version bump, with parse defaults `[]` and `true`.
 together with the uncertainty reason `knowledge_only`.
 `sources.literature` (#236) was added the same way, with default `[]`,
 together with the reason `literature_only`.
+The reason `literature_not_found` (#612) was added the same way. An unknown
+reason drops a document, so a build from before it would drop a newer
+document that carries it.
 `skill` (#42) names the skill a turn ran under, such as `sleep`. It is set by
 the host from the request, never from model text, and is absent on ordinary
 turns and on older documents. The skill-run audit row (`skill.<name>`) stays on
@@ -204,6 +207,7 @@ collectors and `DATA_MODE`. Nothing is read from the model's prose.
 | `population_only`       | not sufficient and `gbd_rows` is non-empty           |
 | `knowledge_only`        | not sufficient and `sources.knowledge` is non-empty  |
 | `literature_only`       | not sufficient and `sources.literature` is non-empty |
+| `literature_not_found`  | guideline search ran, no passage or article back     |
 | `hallucinated_keys`     | `hallucinated_keys` is non-empty                     |
 | `tool_returned_no_rows` | any `tool_calls` row has `row_count` 0               |
 | `no_model_statement`    | the Uncertainty section is missing or blank          |
@@ -292,6 +296,7 @@ never repeated. Codes (`answer_class`, reasons, `next_step`) are never shown.
   - `population_only`: `Only population figures support this answer.`
   - `knowledge_only`: `Only OpenTwin notes about TwinLLM itself support this answer.`
   - `literature_only`: `Only published articles support this answer.`
+  - `literature_not_found`: `The guideline library had no passage on this question, so the literature here does not cover it.`
   - `hallucinated_keys`: `Some cited keys were not in the model's context.`
   - `tool_returned_no_rows`: `A data lookup returned no rows.`
   - `no_model_statement`: `The model wrote no uncertainty statement.`

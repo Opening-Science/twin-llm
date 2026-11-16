@@ -760,6 +760,34 @@ describe("ResponseDocument v1.1 answer_class", () => {
     });
   });
 
+  test("a guideline search that found nothing says the literature does not cover it (#612)", () => {
+    const empty: ResponseToolCall = {
+      ...KNOWLEDGE_ONLY,
+      tool: "guidelines.guideline_search",
+      row_count: 0,
+    };
+    const nothing = buildResponseDocumentV1({
+      parsed: parseTwinAnswer(KNOWLEDGE_TEXT, emptySummaries),
+      toolCalls: [empty],
+      mode: "personal",
+    });
+    expect(nothing.uncertainty.reasons).toContain("literature_not_found");
+    // A passage found, or no guideline search at all, says nothing of the kind.
+    const found = buildResponseDocumentV1({
+      parsed: parseTwinAnswer(KNOWLEDGE_TEXT, emptySummaries),
+      toolCalls: [{ ...empty, row_count: 1 }],
+      mode: "personal",
+      guidelineSources: [citation],
+    });
+    const none = buildResponseDocumentV1({
+      parsed: parseTwinAnswer(KNOWLEDGE_TEXT, emptySummaries),
+      toolCalls: [KNOWLEDGE_ONLY],
+      mode: "personal",
+    });
+    expect(found.uncertainty.reasons).not.toContain("literature_not_found");
+    expect(none.uncertainty.reasons).not.toContain("literature_not_found");
+  });
+
   test("analytics: an answer citing an offered key", () => {
     expect(documentOf(WEARABLE_TEXT).answer_class).toBe("analytics");
   });
