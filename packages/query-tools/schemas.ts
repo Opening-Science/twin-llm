@@ -436,7 +436,7 @@ export const showMyDayInput = z
     day: z.iso.date().describe("The UTC day, YYYY-MM-DD"),
     profile: z
       .enum(["without_diabetes", "with_diabetes"])
-      .describe("Which glucose thresholds the red windows use"),
+      .describe("Which glucose thresholds flag a window"),
   })
   .strict()
   .describe("One synthetic subject's day of heart rate and glucose, as beats");

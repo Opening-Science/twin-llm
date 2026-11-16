@@ -1396,7 +1396,7 @@
           "profile": {
             "type": "string",
             "enum": ["without_diabetes", "with_diabetes"],
-            "description": "Which glucose thresholds the red windows use"
+            "description": "Which glucose thresholds flag a window"
           }
         },
         "required": ["subject_ref", "day", "profile"],
