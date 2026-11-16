@@ -5,11 +5,11 @@ import { routeAgent } from "@/infrastructure/agent-router";
 import { AGENTS } from "@/infrastructure/agents";
 import type { CatalogModel } from "@/infrastructure/model-catalog";
 
-import { type ModeContext, medicalDefaults } from "./chat-modes";
+import { type ModeContext, specialistDefaults } from "./chat-modes";
 
 /**
- * Medical's default specialists measured on the router fixtures (#610): for
- * each labelled question, does Medical's default list hold the agent the
+ * Specialists's default specialists measured on the router fixtures (#610): for
+ * each labelled question, does Specialists's default list hold the agent the
  * question should go to? Every agent offered, as on local Ollama. Committed
  * fixtures only; no person's data.
  */
@@ -48,9 +48,9 @@ const AGENT_IDS = AGENTS.map(({ id }) => id);
 describe.each([
   ["hand-written prompts", HAND_WRITTEN_ITEMS],
   ["scored questions", QUESTION_ITEMS],
-])("Medical's defaults on the %s", (_name, items) => {
+])("Specialists's defaults on the %s", (_name, items) => {
   const covered = items.filter(({ prompt, expected }) =>
-    medicalDefaults(CONTEXT, prompt).includes(`agent:${expected}`),
+    specialistDefaults(CONTEXT, prompt).includes(`agent:${expected}`),
   );
   const routed = items.filter(
     ({ prompt, expected }) => routeAgent(prompt, AGENT_IDS).agentId === expected,
@@ -66,7 +66,7 @@ describe.each([
 
   test("always hold Auto's pick, at most three specialists", () => {
     items.forEach(({ prompt }) => {
-      const rows = medicalDefaults(CONTEXT, prompt);
+      const rows = specialistDefaults(CONTEXT, prompt);
       expect(rows.length).toBeLessThanOrEqual(3);
       expect(rows).toContain(`agent:${routeAgent(prompt, AGENT_IDS).agentId}`);
     });
