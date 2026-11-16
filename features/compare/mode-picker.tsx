@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useId } from "react";
+import { useId, useState } from "react";
 
 import type { CatalogModel } from "@/infrastructure/model-catalog";
+import { Button } from "@/infrastructure/ui-kit/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/infrastructure/ui-kit/popover";
 import { SegmentedControl } from "@/infrastructure/ui-kit/segmented-control";
 import { cn } from "@/infrastructure/ui";
@@ -12,6 +13,7 @@ import {
   autoModelName,
   boxChecked,
   boxDisabled,
+  canAddSpecialist,
   type ChatMode,
   MODE_COPY,
   type ModeContext,
@@ -24,6 +26,7 @@ import {
   rowRunsHere,
   rowSubline,
   setMode,
+  specialistPicks,
   specialistRows,
   toggleRow,
 } from "./chat-modes";
@@ -119,6 +122,60 @@ const RowGroup = ({
     </fieldset>
   );
 
+/**
+ * The Specialists panel: the chosen specialists (one by default), then
+ * "Add a specialist", which opens the others while there is room for one
+ * more. At three the button stays, disabled, and says why.
+ */
+const SpecialistsPanel = (
+  props: Readonly<{
+    state: ModeState;
+    context: ModeContext;
+    prompt: string;
+    onChange: (state: ModeState) => void;
+  }>,
+) => {
+  const { state, context, prompt } = props;
+  const [adding, setAdding] = useState(false);
+  const listId = useId();
+  const picked = specialistPicks(state, context, prompt);
+  const rows = specialistRows(context.catalog);
+  const room = canAddSpecialist(state, context, prompt);
+  const others = rows.filter((row) => !picked.includes(row.id));
+  return (
+    <div className="flex max-h-[18rem] flex-col gap-2 overflow-y-auto overscroll-contain">
+      <RowGroup
+        legend="Answering"
+        rows={rows.filter((row) => picked.includes(row.id))}
+        list="specialists"
+        {...props}
+      />
+      {others.length === 0 ? null : (
+        <Button
+          variant="secondary"
+          size="sm"
+          className="self-start"
+          disabled={!room}
+          aria-expanded={room && adding}
+          aria-controls={listId}
+          onClick={() => setAdding(!adding)}
+        >
+          {room
+            ? adding
+              ? "Hide the other specialists"
+              : "Add a specialist"
+            : "Three specialists at most"}
+        </Button>
+      )}
+      {room && adding ? (
+        <div id={listId}>
+          <RowGroup legend="Add" rows={others} list="specialists" {...props} />
+        </div>
+      ) : null}
+    </div>
+  );
+};
+
 export const ModePicker = ({
   state,
   context,
@@ -180,14 +237,7 @@ export const ModePicker = ({
             />
           </div>
         ) : state.mode === "specialists" ? (
-          <div className="flex max-h-[18rem] flex-col gap-3 overflow-y-auto overscroll-contain">
-            <RowGroup
-              legend="Specialists"
-              rows={specialistRows(context.catalog)}
-              list="specialists"
-              {...shared}
-            />
-          </div>
+          <SpecialistsPanel {...shared} />
         ) : (
           <div className="flex max-h-[18rem] flex-col gap-3 overflow-y-auto overscroll-contain">
             <RowGroup
