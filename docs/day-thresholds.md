@@ -57,7 +57,7 @@ Body sentences, one per beat:
 | Glucose steady     | Blood sugar holds near its usual level.                                                                                                 |
 | Insulin (narrated) | The pancreas releases insulin, which helps cells take up sugar. Insulin is not measured here; this beat describes what usually happens. |
 
-Window labels and rules (the event reads `Red window`):
+Window labels and rules (the event reads `Worth a look`; "red window" is the name in code only):
 
 | Window                    | Sentence                                                                                                                           |
 | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |

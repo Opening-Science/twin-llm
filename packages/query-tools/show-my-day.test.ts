@@ -167,7 +167,7 @@ describe("show_my_day", () => {
       ["19:30", "Reading", "measured", 100],
       ["20:30", "Reading", "measured", 175],
       ["20:30", "Reading", "narrated", null],
-      ["20:30", "Red window", "derived", 175],
+      ["20:30", "Worth a look", "derived", 175],
       ["22:30", "Reading", "measured", 105],
     ]);
     expect(audits).toEqual([
