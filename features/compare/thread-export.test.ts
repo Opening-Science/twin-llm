@@ -215,6 +215,50 @@ describe("the Markdown export (SPEC 9.1, 9.2)", () => {
     expect(markdown).not.toContain("Guideline references:");
   });
 
+  test("population values with their interval and the GBD attribution", () => {
+    const row = {
+      measure: "Prevalence",
+      cause: "Synthetic cause",
+      location: "Switzerland",
+      year: "2023",
+      sex: "Both",
+      age: "All ages",
+      value: 12.5,
+      lower: 10.1,
+      upper: 14.9,
+      unit: "%",
+      source: "IHME GBD 2023",
+    };
+    const gbd = threadMarkdown(
+      {
+        title: "t",
+        turns: [
+          {
+            ...TURN,
+            answers: [
+              answer({
+                text: REPLY,
+                document: {
+                  ...SOURCED,
+                  data_basis: { ...SOURCED.data_basis, gbd_rows: [row] },
+                },
+              }),
+            ],
+          },
+        ],
+      },
+      "2026-10-28",
+    );
+    const section = gbd.slice(gbd.indexOf("Population context:"));
+    expect(section).toMatch(
+      /^Population context:\n- .*Synthetic cause.*Switzerland.*2023/,
+    );
+    expect(section).toContain("(uncertainty interval 10.1–14.9)");
+    expect(section).toContain("GBD 2023");
+    expect(gbd.indexOf("Literature:")).toBeLessThan(gbd.indexOf("Population context:"));
+    expect(markdown).not.toContain("Population context:");
+  });
+
   test("runs of blank lines collapse and the file ends with one newline", () => {
     expect(markdown).not.toMatch(/\n{3,}/);
     expect(markdown.endsWith("\n")).toBe(true);

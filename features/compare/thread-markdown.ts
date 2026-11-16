@@ -1,5 +1,6 @@
 import { formatDate } from "@/infrastructure/format-measure";
 import {
+  GBD_HEADING,
   GUIDELINE_ATTRIBUTION_LINE,
   GUIDELINE_HEADING,
   KNOWLEDGE_ATTRIBUTION_LINE,
@@ -67,7 +68,7 @@ const listSection = (
     ? []
     : ["", `${heading}:`, ...lines.map((line) => `- ${line}`), "", `_${note}_`];
 
-/** The references the evidence panel lists, in its order and words. */
+/** The references and population values the evidence panel lists, in its order and words. */
 const referenceLines = (answer: AnswerState): string[] => {
   const content = panelContent({
     reasoning: null,
@@ -79,6 +80,9 @@ const referenceLines = (answer: AnswerState): string[] => {
     ...listSection(GUIDELINE_HEADING, content.guidelines, GUIDELINE_ATTRIBUTION_LINE),
     ...listSection(KNOWLEDGE_HEADING, content.knowledge, KNOWLEDGE_ATTRIBUTION_LINE),
     ...listSection(LITERATURE_HEADING, content.literature, LITERATURE_ATTRIBUTION_LINE),
+    ...(content.gbdAttribution === null
+      ? []
+      : listSection(GBD_HEADING, content.gbd, content.gbdAttribution)),
   ];
 };
 
