@@ -31,9 +31,8 @@ and Prettier is not run through ESLint, so a lint failure always means a real pr
 `prettier.config.mjs` sets a print width of 90 and loads `prettier-plugin-tailwindcss`, which
 puts Tailwind classes in a fixed order. Everything else is Prettier's default.
 `.prettierignore` keeps Prettier away from files we do not author or that must stay
-byte-exact: `generated/`, `prisma/migrations/`, `public/`, `third_party/`,
-`packages/open-twin/`, lockfiles, the Synthea fixtures and the Ark goldens. ESLint
-ignores `generated/` and `packages/open-twin/` (and a leftover `.open-twin/`).
+byte-exact: `generated/`, `prisma/migrations/`, `public/`, `third_party/`, lockfiles,
+the Synthea fixtures and the Ark goldens. ESLint ignores `generated/` and `.open-twin/`.
 
 ## Git hooks
 

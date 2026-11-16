@@ -1,6 +1,7 @@
 import { formatDate } from "@/infrastructure/format-measure";
 import {
   GUIDELINE_ATTRIBUTION_LINE,
+  GUIDELINE_HEADING,
   KNOWLEDGE_ATTRIBUTION_LINE,
   KNOWLEDGE_HEADING,
   LITERATURE_ATTRIBUTION_LINE,
@@ -75,11 +76,7 @@ const referenceLines = (answer: AnswerState): string[] => {
     withheld: false,
   });
   return [
-    ...listSection(
-      "Guideline references",
-      content.guidelines,
-      GUIDELINE_ATTRIBUTION_LINE,
-    ),
+    ...listSection(GUIDELINE_HEADING, content.guidelines, GUIDELINE_ATTRIBUTION_LINE),
     ...listSection(KNOWLEDGE_HEADING, content.knowledge, KNOWLEDGE_ATTRIBUTION_LINE),
     ...listSection(LITERATURE_HEADING, content.literature, LITERATURE_ATTRIBUTION_LINE),
     ...(content.gbdAttribution === null
