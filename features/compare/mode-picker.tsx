@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { useId } from "react";
 
-import { AUTO_MODEL_ID, type CatalogModel } from "@/infrastructure/model-catalog";
-import { friendlyModelName } from "@/infrastructure/model-names";
+import type { CatalogModel } from "@/infrastructure/model-catalog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/infrastructure/ui-kit/popover";
 import { SegmentedControl } from "@/infrastructure/ui-kit/segmented-control";
 import { cn } from "@/infrastructure/ui";
 
 import {
+  autoModelName,
   boxChecked,
   boxDisabled,
   type ChatMode,
@@ -22,6 +22,7 @@ import {
   type PickerList,
   plainModelRows,
   rowRunsHere,
+  rowSubline,
   setMode,
   specialistRows,
   toggleRow,
@@ -40,13 +41,6 @@ export const AGENTS_HREF = "/customize/agents";
 
 const PILL =
   "border-input hover:bg-muted text-foreground inline-flex max-w-full items-center gap-1 truncate rounded-full border px-2.5 py-1 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50";
-
-/** The small line under a row's name. */
-export const rowSubline = (row: CatalogModel): string => {
-  if (row.id === AUTO_MODEL_ID) return "Picks an agent for each question.";
-  if (row.agent !== undefined) return `on ${row.agent.baseModelName}`;
-  return friendlyModelName(row.id) === null ? row.provider : row.id;
-};
 
 const RowBox = ({
   row,
@@ -140,6 +134,7 @@ export const ModePicker = ({
 }>) => {
   const summary = modeSummary(state, context, prompt);
   const modes = offeredModes(context);
+  const autoModel = autoModelName(context);
   const shared = { state, context, prompt, onChange };
   return (
     <Popover>
@@ -165,9 +160,16 @@ export const ModePicker = ({
           {MODE_COPY[state.mode].line}
         </p>
         {state.mode === "auto" ? (
-          <Link href={AGENTS_HREF} className="text-xs underline underline-offset-2">
-            The specialists Auto picks from
-          </Link>
+          <p className="text-xs">
+            {autoModel === null ? null : (
+              <span className="text-muted-foreground">
+                Runs its pick on {autoModel}, with that specialist&rsquo;s tools.{" "}
+              </span>
+            )}
+            <Link href={AGENTS_HREF} className="underline underline-offset-2">
+              The specialists Auto picks from
+            </Link>
+          </p>
         ) : state.mode === "basic" ? (
           <div className="flex max-h-[18rem] flex-col gap-3 overflow-y-auto overscroll-contain">
             <RowGroup

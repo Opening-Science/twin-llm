@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import type { CatalogModel } from "@/infrastructure/model-catalog";
 
 import {
+  autoModelName,
   boxDisabled,
   compareRows,
   droppedModels,
@@ -15,6 +16,7 @@ import {
   offeredModes,
   pickedModels,
   pickerFooter,
+  rowSubline,
   setMode,
   toggleRow,
 } from "./chat-modes";
@@ -27,7 +29,12 @@ const model = (id: string, name: string, providerId = "ollama"): CatalogModel =>
   contextTokens: 32_000,
 });
 
-const agent = (id: string, name: string, base: CatalogModel): CatalogModel => ({
+const agent = (
+  id: string,
+  name: string,
+  base: CatalogModel,
+  skill: string | null = null,
+): CatalogModel => ({
   ...base,
   id: `agent:${id}`,
   name,
@@ -35,7 +42,7 @@ const agent = (id: string, name: string, base: CatalogModel): CatalogModel => ({
     id,
     name,
     role: "A synthetic role.",
-    skill: null,
+    skill,
     baseModelId: base.id,
     baseModelName: base.name,
   },
@@ -304,6 +311,30 @@ describe("Medical sends specialists on their own models (#610)", () => {
   test("offered only when the catalog has a specialist", () => {
     const modelsOnly = ctx({ catalog: CATALOG.slice(4) });
     expect(offeredModes(modelsOnly)).toEqual(["basic", "manual", "compare"]);
+  });
+});
+
+describe("each row names its model and tools (#610)", () => {
+  test("a specialist names its model and its skill's tools", () => {
+    expect(rowSubline(agent("sleep", "Sleep", LARGE, "sleep"))).toBe(
+      "on Qwen3 8B · /sleep tools",
+    );
+  });
+
+  test("General has no skill, so the chat's own tools", () => {
+    expect(rowSubline(agent("gp", "General", LARGE))).toBe("on Qwen3 8B · chat tools");
+  });
+
+  test("a model names its id, Auto what it does", () => {
+    expect(rowSubline(SMALL)).toBe("Ollama");
+    expect(rowSubline(agent("auto", "Auto", SMALL))).toBe(
+      "Picks an agent for each question.",
+    );
+  });
+
+  test("Auto's panel names the model Auto runs its pick on", () => {
+    expect(autoModelName(ctx())).toBe("Qwen3 4B");
+    expect(autoModelName(ctx({ catalog: CATALOG.slice(1) }))).toBeNull();
   });
 });
 
