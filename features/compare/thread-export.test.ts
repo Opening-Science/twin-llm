@@ -166,6 +166,29 @@ describe("the Markdown export (SPEC 9.1, 9.2)", () => {
     );
   });
 
+  test("each turn is headed by its bubble: skill, short text, scheduled mark", () => {
+    const bubble = threadMarkdown(
+      {
+        title: "t",
+        turns: [
+          {
+            ...TURN,
+            prompt:
+              "Using subject synthea-0001 (LOINC 8867-4), how did resting heart rate change?",
+            label: "How did my resting heart rate change?",
+            skill: "sleep",
+            scheduled: true,
+          },
+        ],
+      },
+      "2026-10-28",
+    );
+    expect(bubble).toContain(
+      "## 1. /sleep How did my resting heart rate change?\n\n_Asked by a scheduled task._\n",
+    );
+    expect(bubble).not.toContain("synthea-0001");
+  });
+
   test("refused, stopped and streaming answers each get their italic line", () => {
     expect(markdown).toContain("_Refused or failed: This skill is not offered._");
     expect(markdown).toContain("Partly written\n\n_Stopped before it finished._");
