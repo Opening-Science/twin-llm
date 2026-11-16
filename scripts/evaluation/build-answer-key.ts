@@ -27,6 +27,7 @@
  * fakes. The learning-consent gate (#145) is asked before the first call and
  * again before the key is written. Prints counts only, never observation values.
  */
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 
@@ -59,7 +60,6 @@ import {
   readPath,
   type ValueSpec,
 } from "./question-set";
-import { openTwinBase } from "./open-twin-base";
 import { isVerdict } from "./score/verdict-match";
 
 export const GENERATOR_VERSION = "2";
@@ -251,6 +251,8 @@ export const rowCountOf = (tool: KeyedTool, result: unknown): number => {
       return numberAt(result, "n");
     case "cohort_event_rates":
       return numberAt(result, "rows_read");
+    case "show_my_day":
+      return numberAt(result, "n");
     case "latest_by_loinc":
       return lengthAt(result, "rows");
     case "coverage": {
@@ -630,6 +632,8 @@ export const runKeyedTool = (
         KEYED_TOOLS.cohort_event_rates.parse(args),
         ports,
       );
+    case "show_my_day":
+      return tools.runShowMyDay(scope, KEYED_TOOLS.show_my_day.parse(args), ports);
     // These two read the database directly (no ports), so they cannot be keyed from files.
     case "latest_by_loinc":
       return ports === undefined
@@ -647,6 +651,11 @@ const scopeFor = (today: string, mode: KeyMode): SessionScope => ({
   sessionId: `${ANSWER_KEY_ACTOR}-${today}`,
   mode,
 });
+
+const openTwinHead = (): string =>
+  execFileSync("git", ["-C", ".open-twin", "rev-parse", "HEAD"], {
+    encoding: "utf8",
+  }).trim();
 
 /** The real tools, audited as `eval-answer-key`. Imported lazily: they need the server-only preload. */
 export const realPorts = async (
@@ -675,7 +684,7 @@ export const realPorts = async (
       cohortId === AF_SUBSET_COHORT
         ? manifestContentSha256(await readFile(HB_MANIFEST_PATH, "utf8"))
         : cohortContentSha256(fhirDirOf(cohortId)),
-    openTwinSha: () => openTwinBase(),
+    openTwinSha: openTwinHead,
     today: () => today,
     learningRows: async () =>
       (await import("../../infrastructure/learning-consent-store")).warehouseSubjectRows([
@@ -713,7 +722,7 @@ export const cohortFilePorts = async (
     // `list_subjects` reads the database only; here the subjects are the bundles ingest would keep.
     countSubjects: () => Promise.resolve(subjects.length),
     cohortSha256: () => cohortContentSha256(fhir),
-    openTwinSha: () => openTwinBase(),
+    openTwinSha: openTwinHead,
     today: () => today,
     // Only Synthea bundles become subjects here (`cohortSubjectFrom`).
     learningRows: async () =>

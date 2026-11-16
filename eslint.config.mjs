@@ -16,8 +16,7 @@ const NOT_OURS = [
   ...[".next", "out", "build"].map((dir) => `${dir}/**`), // build output
   "next-env.d.ts", // written by Next
   "generated/**", // Prisma client output
-  "packages/open-twin/**", // copied from open-twin, kept as written (MIT)
-  ".open-twin/**", // left over from the old sync in some checkouts
+  ".open-twin/**", // synced checkout, linted where it lives
   "python/.venv/**", // uv's environment (matplotlib ships JavaScript)
   "data/**", // local, gitignored data and scratch files
   ".claude/**", // local agent worktrees and settings, untracked

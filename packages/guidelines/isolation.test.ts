@@ -26,6 +26,16 @@ describe("guideline tool isolation", () => {
     expect(Object.keys(personal)).toEqual(["guideline_search"]);
   });
 
+  test("the tool text says how to cite a passage or mark a claim (#612)", () => {
+    const { description } = createGuidelineTools({
+      actor: "a",
+      sessionId: "s-cite",
+      mode: "synthetic",
+    }).guideline_search;
+    expect(description).toContain("with its id, e.g. [ean-als-2024]");
+    expect(description).toContain("with [unsupported]");
+  });
+
   // Which factory gets the turn's wearable snapshots is checked by spying on
   // the factories in features/chat/chat-tools-wearables.test.ts.
   test("the shared turn drains the guideline collector", () => {
