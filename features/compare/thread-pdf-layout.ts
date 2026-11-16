@@ -164,6 +164,15 @@ const cutWord = (
   return parts;
 };
 
+/** Neighbouring pieces in one style as one span, so a line draws as few runs. */
+const joinPieces = (pieces: readonly Piece[]): Span[] =>
+  pieces.reduce<Span[]>((spans, { text, style }) => {
+    const last = spans.at(-1);
+    return last?.style === style
+      ? [...spans.slice(0, -1), { text: last.text + text, style }]
+      : [...spans, { text, style }];
+  }, []);
+
 /** Lines of spans no wider than `width`; spaces at a break are dropped. */
 export const wrapSpans = (
   spans: readonly Span[],
@@ -176,7 +185,7 @@ export const wrapSpans = (
   let used = 0;
   const flush = () => {
     while (line.at(-1)?.space === true) line.pop();
-    lines.push(line.map(({ text, style }) => ({ text, style })));
+    lines.push(joinPieces(line));
     line = [];
     used = 0;
   };

@@ -14,6 +14,14 @@ import { blocksOf } from "./thread-print";
  * export day, with no author, subject or keywords.
  */
 
+/**
+ * The width `drawText` draws: glyph by glyph. pdf-lib's own width takes off
+ * kerning pairs that its text operators never apply, so a run measured that
+ * way is drawn wider than measured and overlaps the run after it.
+ */
+export const drawnWidth = (font: PDFFont, text: string, size: number): number =>
+  [...text].reduce((sum, char) => sum + font.widthOfTextAtSize(char, size), 0);
+
 const INK = rgb(0.07, 0.07, 0.07);
 const MUTED = rgb(0.4, 0.4, 0.4);
 
@@ -31,7 +39,7 @@ export const threadPdf = async (
     mono: await doc.embedFont(StandardFonts.Courier),
   };
   const pages = layoutPdf(blocksOf(markdown), footer, (text, style, size) =>
-    fonts[style].widthOfTextAtSize(text, size),
+    drawnWidth(fonts[style], text, size),
   );
   for (const runs of pages) {
     const page = doc.addPage([PAGE.width, PAGE.height]);

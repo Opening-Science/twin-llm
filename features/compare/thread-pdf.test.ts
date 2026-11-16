@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { PDFDocument } from "pdf-lib";
+import { PDFDocument, StandardFonts } from "pdf-lib";
 
 import { EXPORT_DISCLAIMER } from "./thread-markdown";
-import { pdfFileName, threadPdf } from "./thread-pdf";
+import { drawnWidth, pdfFileName, threadPdf } from "./thread-pdf";
 import {
   layoutPdf,
   type Measure,
@@ -61,6 +61,19 @@ describe("wrapping", () => {
     expect(
       lines.map((line) => line.map((span) => span.text).join("")).join(""),
     ).toContain("x".repeat(20));
+  });
+});
+
+describe("runs", () => {
+  test("a line draws one run per style, words and spaces kept together", () => {
+    const [runs] = layoutPdf(
+      blocksOf("Plain words **bold words** more plain"),
+      "f",
+      half,
+    );
+    expect(
+      (runs ?? []).filter((run) => run.muted !== true).map((run) => run.text),
+    ).toEqual(["Plain words ", "bold words", " more plain"]);
   });
 });
 
@@ -126,6 +139,21 @@ describe("the PDF file", () => {
     expect(doc.getAuthor()).toBeUndefined();
     expect(doc.getSubject()).toBeUndefined();
     expect(doc.getKeywords()).toBeUndefined();
+  });
+
+  test("runs are measured as drawn, without the kerning pdf-lib's width takes off", async () => {
+    const doc = await PDFDocument.create();
+    const font = await doc.embedFont(StandardFonts.Helvetica);
+    // Helvetica kerns "Va" and "To"; Tj draws them unkerned.
+    expect(drawnWidth(font, "Va To", 10)).toBeCloseTo(
+      ["V", "a", " ", "T", "o"].reduce(
+        (sum, c) => sum + font.widthOfTextAtSize(c, 10),
+        0,
+      ),
+    );
+    expect(drawnWidth(font, "Va To", 10)).toBeGreaterThan(
+      font.widthOfTextAtSize("Va To", 10),
+    );
   });
 
   test("the file name follows the other formats", () => {
