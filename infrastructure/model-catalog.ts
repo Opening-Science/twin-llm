@@ -358,7 +358,7 @@ export const AUTO_MODEL_ID = agentModelId(AUTO_AGENT);
 type AgentRow = Readonly<{ id: string; name?: string; agent?: CatalogAgent }>;
 
 /**
- * Manual mode (#366) runs a chosen specialist on a chosen model: the row id
+ * The Specialists mode (#366, #610) can run a specialist on a chosen model: the row id
  * `agent:<specialist>@<model id>`, such as `agent:diet@qwen3:4b`. Such a row
  * is not listed in the catalog; `findCatalogRow` builds it from the
  * specialist's row and the model's row, so a pair is offered exactly when
