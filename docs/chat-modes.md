@@ -187,10 +187,14 @@ Under the text box, from left to right (`features/compare/prompt-bar.tsx`):
   Picking a source writes `@Name` into the question. A mention is part of the question
   text: it does not switch a tool on or off, and every permit applies as it would
   without it.
-- **Mode** (`mode-picker.tsx`): Auto, Basic, Medical, Manual or Compare; for Basic the models as
-  one choice, for Medical the specialists as checkboxes, for Manual and Compare the specialists and models as checkboxes. A box that would break the mode's rule is
-  disabled and the line under the lists says why. In an incognito chat the models that
-  do not run on this machine stay in the lists, greyed out with the reason.
+- **Mode** (`mode-picker.tsx`): Auto, Basic, Medical, Manual or Compare; for Basic the
+  models as one choice, for Medical the specialists as checkboxes, for Manual and
+  Compare the specialists and models as checkboxes. Each specialist names its model and
+  tools under its name ("on Qwen3 8B · /sleep tools", "chat tools" for General), and
+  Auto's panel names the model Auto runs its pick on (`rowSubline`, `autoModelName`). A
+  box that would break the mode's rule is disabled and the line under the lists says
+  why. In an incognito chat the models that do not run on this machine stay in the
+  lists, greyed out with the reason.
 - **Effort** (`effort-menu.tsx`): a slider over the five steps with what the chosen
   step does. At Ultra the step name and the box take a faint tint (`--effort-ultra` in
   `globals.css`, light and dark); nothing moves.

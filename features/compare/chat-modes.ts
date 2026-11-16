@@ -10,6 +10,7 @@ import {
   parsePairedModelId,
   turnModelName,
 } from "@/infrastructure/model-catalog";
+import { friendlyModelName } from "@/infrastructure/model-names";
 
 import type { PickedModel } from "./conversation";
 
@@ -94,6 +95,24 @@ export const specialistRows = (catalog: readonly CatalogModel[]): CatalogModel[]
 
 export const plainModelRows = (catalog: readonly CatalogModel[]): CatalogModel[] =>
   catalog.filter((row) => row.agent === undefined);
+
+/**
+ * The small line under a picker row: what a specialist runs on and with
+ * which tools ("on Qwen3 8B · /sleep tools"; General has no skill, so the
+ * chat's own tools), and a model's id or vendor.
+ */
+export const rowSubline = (row: CatalogModel): string => {
+  if (row.id === AUTO_MODEL_ID) return "Picks an agent for each question.";
+  if (row.agent !== undefined) {
+    const tools = row.agent.skill === null ? "chat tools" : `/${row.agent.skill} tools`;
+    return `on ${row.agent.baseModelName} · ${tools}`;
+  }
+  return friendlyModelName(row.id) === null ? row.provider : row.id;
+};
+
+/** What Auto runs its pick on, for the Auto panel, or null without Auto. */
+export const autoModelName = (context: ModeContext): string | null =>
+  findCatalogRow(AUTO_MODEL_ID, context.catalog)?.agent?.baseModelName ?? null;
 
 export const autoOffered = (context: ModeContext): boolean =>
   context.catalog.some((row) => row.id === AUTO_MODEL_ID) &&
