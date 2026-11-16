@@ -60,10 +60,20 @@ export type DayThresholds = z.infer<typeof thresholdsSchema>;
 
 export const DAY_THRESHOLDS: DayThresholds = thresholdsSchema.parse(THRESHOLDS_JSON);
 
-/** How much change counts as one unit of "moved", per signal. */
-const SCALE = { heart_rate: 20, glucose: 15 } as const;
-const INSULIN_RISE = 20;
-const STEADY = { heart_rate: 5, glucose: 10 } as const;
+/**
+ * Rules in code, not yet in the JSON: how much change counts as one unit of
+ * "moved" per signal, the change under which a signal is steady, and the
+ * glucose rise that adds a narrated insulin beat. Exported for the review page.
+ */
+export const DAY_RULES = {
+  scale: { heart_rate: 20, glucose: 15 },
+  steady: { heart_rate: 5, glucose: 10 },
+  insulinRise: 20,
+} as const;
+
+const SCALE = DAY_RULES.scale;
+const INSULIN_RISE = DAY_RULES.insulinRise;
+const STEADY = DAY_RULES.steady;
 
 const directionOf = (
   measure: "heart_rate" | "glucose",

@@ -22,12 +22,13 @@ const inline = (escaped: string): string =>
     .replace(/(^|[\s(])_([^_]+)_(?=$|[\s).,;:!?])/g, "$1<em>$2</em>")
     .replace(/(^|[\s(])\*([^*]+)\*(?=$|[\s).,;:!?])/g, "$1<em>$2</em>");
 
-type Block =
+export type Block =
   | Readonly<{ kind: "heading"; level: number; text: string }>
   | Readonly<{ kind: "list"; items: string[] }>
   | Readonly<{ kind: "paragraph"; lines: string[] }>;
 
-const blocksOf = (markdown: string): Block[] => {
+/** The export Markdown as headings, lists and paragraphs; the PDF reads the same blocks. */
+export const blocksOf = (markdown: string): Block[] => {
   const blocks: Block[] = [];
   for (const line of markdown.split("\n")) {
     const heading = /^(#{1,4})\s+(.*)$/.exec(line);

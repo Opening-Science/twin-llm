@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 
 import { signalText } from "./day-beat";
 import {
+  DAY_RULES,
   DAY_THRESHOLDS,
   type DayReading,
   dayBeats,
@@ -63,6 +64,18 @@ describe("docs/day-thresholds.md", () => {
     expect(DOC).toMatch(row("glucoseWithDiabetesRangeMgDl", `${low}–${high} mg/dL`));
     expect(DOC).toMatch(
       row("recoveryWithinPerMin", `${DAY_THRESHOLDS.recoveryWithinPerMin} /min`),
+    );
+  });
+
+  test("states every rule in code at its value", () => {
+    const { scale, steady, insulinRise } = DAY_RULES;
+    expect(DOC).toContain(
+      `| ${scale.heart_rate} /min of heart rate = ${scale.glucose} mg/dL of glucose `,
+    );
+    expect(DOC).toContain(`| change under ${steady.heart_rate} /min `);
+    expect(DOC).toContain(`| change under ${steady.glucose} mg/dL `);
+    expect(DOC).toContain(
+      `| glucose rise of ${insulinRise} mg/dL or more since the reading before `,
     );
   });
 
