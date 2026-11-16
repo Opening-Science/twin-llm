@@ -53,10 +53,7 @@ next-env.d.ts
 # generated prisma client (postinstall / db:generate)
 /generated
 
-# Left over from the old open-twin sync; the packages are in packages/open-twin/.
-# Delete yours (docs/runbook.md, "Worktrees made before packages/open-twin/").
-# Kept for now so tsc, ESLint and bun test skip stale copies and none is
-# committed; this line goes once no worktree has one.
+# Pinned open-twin checkout (see scripts/sync-open-twin.sh)
 .open-twin
 
 # Local Synthea output (scripts/synthea/generate-local.sh)

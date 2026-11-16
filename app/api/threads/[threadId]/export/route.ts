@@ -28,8 +28,9 @@ const exportThread = createThreadExportHandler({
 });
 
 /**
- * The signed-in person's own thread as Markdown, or `?format=fhir` as a
- * DocumentReference: `?check=1` answers the notice, `?confirm=1` makes the file (#531).
+ * The signed-in person's own thread as Markdown, `?format=fhir` as a
+ * DocumentReference, `?format=pdf` as a PDF file or `?format=print` as a print
+ * page: `?check=1` answers the notice, `?confirm=1` makes the file (#531).
  */
 export const GET = withUnlocked(async (request: Request, { params }: RouteContext) => {
   const search = new URL(request.url).searchParams;

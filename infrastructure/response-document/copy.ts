@@ -2,6 +2,7 @@ import type { NextStep, UncertaintyLevel, UncertaintyReason } from "./document-v
 
 export const UNVERIFIED_NARRATION = "Unverified narration";
 export const ABSTAIN_BANNER = "Not enough data — this reply is withheld.";
+export const GUIDELINE_HEADING = "Guideline references";
 export const GUIDELINE_ATTRIBUTION_LINE =
   "Published guideline passage as reference material, not a statement about this person.";
 export const KNOWLEDGE_HEADING = "OpenTwin knowledge";
@@ -13,6 +14,7 @@ export const UI_CONTEXT_NOTE =
 export const KNOWLEDGE_ATTRIBUTION_LINE =
   "OpenTwin knowledge notes, Open Science Foundation, CC BY 4.0. They describe TwinLLM itself, not this person.";
 export const LITERATURE_HEADING = "Literature";
+export const GBD_HEADING = "Population context";
 export const LITERATURE_ATTRIBUTION_LINE =
   "Open-access articles from PubMed Central (NLM), each under its own licence. Reference material, not a statement about this person.";
 export const GUIDELINE_ONLY_BANNER =

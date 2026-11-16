@@ -6,7 +6,7 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { createReadStream, existsSync } from "node:fs";
-import { lstat, readdir, readFile, statfs } from "node:fs/promises";
+import { readdir, readFile, statfs } from "node:fs/promises";
 import { homedir, userInfo } from "node:os";
 import { join } from "node:path";
 
@@ -399,12 +399,10 @@ const missingPinned = async (
   return checks.filter((name) => name !== null);
 };
 
-/** A `.open-twin` file, folder or link left over from the old sync. */
-const leftoverOpenTwin = async (root: string): Promise<boolean> =>
-  lstat(join(root, ".open-twin")).then(
-    () => true,
-    () => false,
-  );
+const pinnedOpenTwinSha = async (root: string): Promise<string> => {
+  const script = (await readText(join(root, "scripts", "sync-open-twin.sh"))) ?? "";
+  return /OPEN_TWIN_SHA:-([0-9a-f]{40})/.exec(script)?.[1] ?? "unknown";
+};
 
 const freeDisk = async (root: string): Promise<number | null> => {
   try {
@@ -441,7 +439,8 @@ export const detectState = async (root: string): Promise<DetectedState> => {
     ollama,
     anatomyMissing,
     riggedMissing,
-    leftover,
+    pinned,
+    synced,
     freeDiskBytes,
     trainingSets,
   ] = await Promise.all([
@@ -455,7 +454,8 @@ export const detectState = async (root: string): Promise<DetectedState> => {
       anatomyDir,
       DEMO_BODY_IDS.map((id) => RIGGED_BODIES[id]),
     ),
-    leftoverOpenTwin(root),
+    pinnedOpenTwinSha(root),
+    readText(join(root, ".open-twin", "OPEN_TWIN_SHA")),
     freeDisk(root),
     trainingSetNames(root),
   ]);
@@ -471,7 +471,7 @@ export const detectState = async (root: string): Promise<DetectedState> => {
     localUserId,
     database,
     migrations,
-    leftoverOpenTwin: leftover,
+    openTwin: { pinned, synced: synced?.trim() ?? null },
     anatomyMissing,
     riggedMissing,
     trainingSets,
