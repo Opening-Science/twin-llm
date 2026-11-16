@@ -8,9 +8,9 @@ import type { CatalogModel } from "@/infrastructure/model-catalog";
 import { type ModeContext, specialistDefaults } from "./chat-modes";
 
 /**
- * Specialists's default specialists measured on the router fixtures (#610): for
- * each labelled question, does Specialists's default list hold the agent the
- * question should go to? Every agent offered, as on local Ollama. Committed
+ * The Specialists mode's default rows measured on the router fixtures
+ * (#610): for each labelled question, does the default list hold the agent
+ * the question should go to? Every agent offered, as on local Ollama. Committed
  * fixtures only; no person's data.
  */
 
@@ -48,7 +48,7 @@ const AGENT_IDS = AGENTS.map(({ id }) => id);
 describe.each([
   ["hand-written prompts", HAND_WRITTEN_ITEMS],
   ["scored questions", QUESTION_ITEMS],
-])("Specialists's defaults on the %s", (_name, items) => {
+])("The Specialists mode's defaults on the %s", (_name, items) => {
   const covered = items.filter(({ prompt, expected }) =>
     specialistDefaults(CONTEXT, prompt).includes(`agent:${expected}`),
   );

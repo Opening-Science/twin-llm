@@ -30,24 +30,24 @@ chat a model that does not run on this machine stays listed, greyed.
 
 ### Specialists (#610)
 
-The Specialists mode is the specialists only: one to three of them, each as its own `agent:<id>` row,
-so each runs on its own preferred model with its own skill's tools and its specialty
-literature ([agents.md](agents.md)). No plain model and no Auto. Until the person ticks
-or unticks a specialist, the rows follow the question the way Compare's defaults do
-(`specialistDefaults` in `chat-modes.ts`, the same `defaultModelSelection` over the
-specialist rows): General first, then the specialists the router ranks for the
+The Specialists mode is the specialists only: one to three of them, each as its own
+`agent:<id>` row, so each runs on its own preferred model with its own skill's tools and
+its specialty literature ([agents.md](agents.md)). No plain model and no Auto. Until the
+person ticks or unticks a specialist, the rows follow the question the way Compare's
+defaults do (`specialistDefaults` in `chat-modes.ts`, the same `defaultModelSelection`
+over the specialist rows): General first, then the specialists the router ranks for the
 question, then the default specialists, at most three. "How long did I sleep last
-night?" goes to General, Sleep and the Diet specialist. Once changed, the rows
-are the person's. It needs at least one specialist; the last one cannot be
-unticked. On a hosted provider only General is offered, so it sends General
-alone. The pill names the one specialist ("Specialists · Sleep") or counts them ("Specialists · 2").
+night?" goes to General, Sleep and the Diet specialist. Once changed, the rows are the
+person's. It needs at least one specialist; the last one cannot be unticked. On a hosted
+provider only General is offered, so it sends General alone. The pill names the one
+specialist ("Specialists · Sleep") or counts them ("Specialists · 2").
 
 Measured on the router fixtures ([agents.md](agents.md#measuring-the-router)) with every
-agent offered, the Specialists default rows hold the agent each question is labelled with on
-all 36 hand-written prompts and all 130 scored questions; Auto's single pick matches the
-label on 36 and 126. They always hold Auto's pick. Only 89 of the 166 put the labelled
-agent first, since General leads. `features/compare/specialists-router.test.ts` keeps both
-rules.
+agent offered, the Specialists default rows hold the agent each question is labelled
+with on all 36 hand-written prompts and all 130 scored questions; Auto's single pick
+matches the label on 36 and 126. They always hold Auto's pick. Only 89 of the 166 put
+the labelled agent first, since General leads.
+`features/compare/specialists-router.test.ts` keeps both rules.
 
 ### Compare's defaults (#493)
 
