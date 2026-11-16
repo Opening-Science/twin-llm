@@ -28,10 +28,12 @@ import {
 } from "./export-notice";
 import { fhirDocument, fhirFileName } from "./thread-fhir";
 import {
+  EXPORT_DISCLAIMER,
   type ExportableThread,
   markdownFileName,
   threadMarkdown,
 } from "./thread-markdown";
+import { pdfFileName, threadPdf } from "./thread-pdf";
 import { printPage } from "./thread-print";
 
 /**
@@ -43,10 +45,10 @@ import { printPage } from "./thread-print";
  * identifiers is never made.
  */
 
-export type ExportFormat = "markdown" | "fhir" | "print";
+export type ExportFormat = "markdown" | "fhir" | "print" | "pdf";
 
 export const exportFormat = (value: string | null): ExportFormat =>
-  value === "fhir" || value === "print" ? value : "markdown";
+  value === "fhir" || value === "print" || value === "pdf" ? value : "markdown";
 
 export type ThreadExportDeps = Readonly<{
   loadOwnedThread: (threadId: string) => Promise<ExportableThread | null>;
@@ -92,12 +94,22 @@ const ranTools = (thread: ExportableThread): boolean =>
 const kindsAndCounts = (check: FreeTextCheck | undefined) =>
   check?.matches.map((match) => ({ ...match })) ?? null;
 
-const fileOf = (
+const fileOf = async (
   format: ExportFormat,
   title: string,
   markdown: string,
   today: string,
-): Response => {
+): Promise<Response> => {
+  if (format === "pdf") {
+    const pdf = await threadPdf(title, markdown, EXPORT_DISCLAIMER, today);
+    return new Response(new Uint8Array(pdf), {
+      headers: {
+        "content-type": "application/pdf",
+        "content-disposition": `attachment; filename="${pdfFileName(title)}"`,
+        ...NO_STORE,
+      },
+    });
+  }
   if (format === "print") {
     return new Response(printPage(title, markdown), {
       headers: { "content-type": "text/html; charset=utf-8", ...NO_STORE },

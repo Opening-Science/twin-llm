@@ -174,7 +174,8 @@ describe("the notice helpers (SERVER-SPEC 3.7)", () => {
     expect(exportStep(new URLSearchParams("confirm=1"))).toBe("confirmed");
     expect(exportStep(new URLSearchParams(""))).toBe("unconfirmed");
     expect(exportFormat("fhir")).toBe("fhir");
-    expect(exportFormat("pdf")).toBe("markdown");
+    expect(exportFormat("pdf")).toBe("pdf");
+    expect(exportFormat("docx")).toBe("markdown");
     expect(noticeLine(null)).toBe(NOT_CHECKED_LINE);
     expect(noticeLine({ matches: [] })).toBe(NOTHING_FOUND_LINE);
     expect(noticeLine({ matches: [{ kind: "lab value", count: 2 }] })).toBe(
@@ -255,6 +256,20 @@ describe("the export route (SERVER-SPEC 3.7)", () => {
     expect(run.ledger).toEqual(["sent"]);
     expect(run.audit.map((row) => row.tool)).toEqual(["thread.export"]);
     expect(run.audit[0]?.rowCount).toBe(4);
+  });
+
+  test("confirmed PDF: an attachment named like the Markdown, recorded the same way", async () => {
+    const { run, exportThread } = handler();
+    const response = await exportThread("t", "pdf", "confirmed");
+    expect(response.headers.get("content-type")).toBe("application/pdf");
+    expect(response.headers.get("content-disposition")).toBe(
+      'attachment; filename="synthetic-thread.pdf"',
+    );
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    expect(new TextDecoder().decode(bytes.slice(0, 5))).toBe("%PDF-");
+    expect(run.ledger).toEqual(["sent"]);
+    expect(run.audit[0]?.args).toEqual({ format: "pdf" });
   });
 
   test("a failed ledger write makes no file", async () => {
