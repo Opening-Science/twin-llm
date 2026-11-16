@@ -9,6 +9,7 @@ import type { AnswerState, TurnState } from "./conversation";
 import {
   exportStep,
   NOT_CHECKED_LINE,
+  NOT_MADE_SENTENCE,
   NOTHING_FOUND_LINE,
   noticeLine,
   parseExportNotice,
@@ -75,6 +76,70 @@ const TURN: TurnState = {
   ],
 };
 
+const SOURCED: ResponseDocumentV1 = {
+  schema_version: "twin-llm.response.v1.1",
+  intended_use: "research_hypothesis_generation_n_of_1",
+  not_for_diagnostic_use: true,
+  sufficient_data: true,
+  abstained: false,
+  answer_class: "analytics",
+  data_basis: {
+    evidence_keys: [],
+    hallucinated_keys: [],
+    tool_calls: [],
+    sources: {
+      gbd: [],
+      guidelines: [
+        {
+          tool: "guidelines",
+          id: "g1",
+          title: "Synthetic guideline",
+          year: 2024,
+          society: "Synthetic society",
+          doi: "10.0000/synthetic",
+          url: "https://example.org/g1",
+          licence: "CC BY 4.0",
+          ingestMode: "full",
+          sectionHeading: null,
+          recommendationId: null,
+          recClass: null,
+          evidenceLevel: null,
+          page: null,
+        },
+      ],
+      knowledge: [
+        {
+          tool: "knowledge",
+          id: "k1",
+          title: "Synthetic note",
+          file: "notes/synthetic.md",
+          sectionHeading: "Overview",
+          licence: "CC BY 4.0",
+        },
+      ],
+      literature: [
+        {
+          tool: "literature",
+          id: "a1",
+          title: "Synthetic article",
+          journal: "J",
+          year: 2025,
+          pmcid: "PMC000001",
+          url: "https://example.org",
+          doi: "",
+          licence: "cc-by",
+          licenceLabel: "CC BY 4.0",
+          sectionHeading: "Results",
+        },
+      ],
+    },
+    gbd_rows: [],
+  },
+  uncertainty: { model_statement: null, level: "unknown", reasons: [] },
+  next_step: "none",
+  interpretation: { kind: "none" },
+};
+
 describe("the Markdown export (SPEC 9.1, 9.2)", () => {
   const markdown = threadMarkdown({ title: "Heart rate", turns: [TURN] }, "2026-10-28");
 
@@ -99,6 +164,29 @@ describe("the Markdown export (SPEC 9.1, 9.2)", () => {
     expect(markdown).toContain(
       "Evidence:\n- Sleep 7.1 h · From Oura, 1 Oct 2026 (`oura.sleep.total_hours`)",
     );
+  });
+
+  test("each turn is headed by its bubble: skill, short text, scheduled mark", () => {
+    const bubble = threadMarkdown(
+      {
+        title: "t",
+        turns: [
+          {
+            ...TURN,
+            prompt:
+              "Using subject synthea-0001 (LOINC 8867-4), how did resting heart rate change?",
+            label: "How did my resting heart rate change?",
+            skill: "sleep",
+            scheduled: true,
+          },
+        ],
+      },
+      "2026-10-28",
+    );
+    expect(bubble).toContain(
+      "## 1. /sleep How did my resting heart rate change?\n\n_Asked by a scheduled task._\n",
+    );
+    expect(bubble).not.toContain("synthea-0001");
   });
 
   test("refused, stopped and streaming answers each get their italic line", () => {
@@ -128,6 +216,70 @@ describe("the Markdown export (SPEC 9.1, 9.2)", () => {
     );
     expect(withheld).not.toContain("72.5");
     expect(withheld).toContain("_Withheld: it did not rest on enough data._");
+  });
+
+  test("references the panel lists, in its words, each with its note", () => {
+    const sourced = threadMarkdown(
+      {
+        title: "t",
+        turns: [{ ...TURN, answers: [answer({ text: REPLY, document: SOURCED })] }],
+      },
+      "2026-10-28",
+    );
+    expect(sourced).toContain(
+      "Guideline references:\n- Synthetic guideline · 2024 · 10.0000/synthetic\n\n_Published guideline passage",
+    );
+    expect(sourced).toContain(
+      "OpenTwin knowledge:\n- Synthetic note · Overview · notes/synthetic.md\n\n_OpenTwin knowledge notes",
+    );
+    expect(sourced).toContain(
+      "Literature:\n- Synthetic article · PMC000001 · CC BY 4.0\n\n_Open-access articles",
+    );
+    expect(markdown).not.toContain("Guideline references:");
+  });
+
+  test("population values with their interval and the GBD attribution", () => {
+    const row = {
+      measure: "Prevalence",
+      cause: "Synthetic cause",
+      location: "Switzerland",
+      year: "2023",
+      sex: "Both",
+      age: "All ages",
+      value: 12.5,
+      lower: 10.1,
+      upper: 14.9,
+      unit: "%",
+      source: "IHME GBD 2023",
+    };
+    const gbd = threadMarkdown(
+      {
+        title: "t",
+        turns: [
+          {
+            ...TURN,
+            answers: [
+              answer({
+                text: REPLY,
+                document: {
+                  ...SOURCED,
+                  data_basis: { ...SOURCED.data_basis, gbd_rows: [row] },
+                },
+              }),
+            ],
+          },
+        ],
+      },
+      "2026-10-28",
+    );
+    const section = gbd.slice(gbd.indexOf("Population context:"));
+    expect(section).toMatch(
+      /^Population context:\n- .*Synthetic cause.*Switzerland.*2023/,
+    );
+    expect(section).toContain("(uncertainty interval 10.1–14.9)");
+    expect(section).toContain("GBD 2023");
+    expect(gbd.indexOf("Literature:")).toBeLessThan(gbd.indexOf("Population context:"));
+    expect(markdown).not.toContain("Population context:");
   });
 
   test("runs of blank lines collapse and the file ends with one newline", () => {
@@ -174,7 +326,8 @@ describe("the notice helpers (SERVER-SPEC 3.7)", () => {
     expect(exportStep(new URLSearchParams("confirm=1"))).toBe("confirmed");
     expect(exportStep(new URLSearchParams(""))).toBe("unconfirmed");
     expect(exportFormat("fhir")).toBe("fhir");
-    expect(exportFormat("pdf")).toBe("markdown");
+    expect(exportFormat("pdf")).toBe("pdf");
+    expect(exportFormat("docx")).toBe("markdown");
     expect(noticeLine(null)).toBe(NOT_CHECKED_LINE);
     expect(noticeLine({ matches: [] })).toBe(NOTHING_FOUND_LINE);
     expect(noticeLine({ matches: [{ kind: "lab value", count: 2 }] })).toBe(
@@ -201,6 +354,7 @@ const handler = (
     check: () => Promise<FreeTextCheck>;
     local: boolean;
     record: RecordDisclosure;
+    writePdf: () => Promise<Uint8Array>;
   }> = {},
 ) => {
   const run: Run = { audit: [], ledger: [] };
@@ -225,6 +379,7 @@ const handler = (
     freeTextChecker: () => over.check ?? (async () => ({ matches: [] })),
     dataMode: () => "synthetic",
     today: () => "2026-10-28",
+    ...(over.writePdf === undefined ? {} : { writePdf: over.writePdf }),
   });
   return { run, exportThread };
 };
@@ -257,6 +412,20 @@ describe("the export route (SERVER-SPEC 3.7)", () => {
     expect(run.audit[0]?.rowCount).toBe(4);
   });
 
+  test("confirmed PDF: an attachment named like the Markdown, recorded the same way", async () => {
+    const { run, exportThread } = handler();
+    const response = await exportThread("t", "pdf", "confirmed");
+    expect(response.headers.get("content-type")).toBe("application/pdf");
+    expect(response.headers.get("content-disposition")).toBe(
+      'attachment; filename="synthetic-thread.pdf"',
+    );
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    expect(new TextDecoder().decode(bytes.slice(0, 5))).toBe("%PDF-");
+    expect(run.ledger).toEqual(["sent"]);
+    expect(run.audit[0]?.args).toEqual({ format: "pdf" });
+  });
+
   test("a failed ledger write makes no file", async () => {
     const { exportThread } = handler({
       record: async () => {
@@ -264,6 +433,19 @@ describe("the export route (SERVER-SPEC 3.7)", () => {
       },
     });
     expect((await exportThread("t", "fhir", "confirmed")).status).toBe(500);
+  });
+
+  test("a PDF that cannot be written records nothing", async () => {
+    const { run, exportThread } = handler({
+      writePdf: async () => {
+        throw new Error("font");
+      },
+    });
+    const response = await exportThread("t", "pdf", "confirmed");
+    expect(response.status).toBe(500);
+    expect(await response.text()).toBe(NOT_MADE_SENTENCE);
+    expect(run.ledger).toEqual([]);
+    expect(run.audit).toEqual([]);
   });
 
   test("the person's genome identifiers: blocked, no file, refused notice", async () => {

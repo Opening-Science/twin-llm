@@ -161,6 +161,57 @@ and:
 
 `Published guideline passage as reference material, not a statement about this person.`
 
+## Citing in answers (#612)
+
+Every claim in an answer should link to a passage a search returned, or say
+it has none. The tool texts ask for that, so a turn pays for the rule only
+when it carries the tool:
+
+- `guideline_search`: end a sentence that rests on a passage with the hit's
+  `id` in brackets, such as `[ean-als-2024]`, and a claim no passage supports
+  with `[unsupported]` (`GUIDELINE_CITE_RULE`).
+- `knowledge_search` on an agent's turn: cite an article by its PMC id, such
+  as `[PMC1234567]`. There is no `[unsupported]` mark here; an article claim
+  without a PMC id simply goes uncited.
+
+The rule is one short sentence each because the General agent's 16k prompt
+has little room left. `bun run prompt:size` requires 500 tokens free before
+twin notes; the tightest 16k case (personal, Oura, GBD and VCF imported,
+`agent:gp`) has 526, so 26 above that floor.
+
 Offline eval: `bun test tests/guidelines` (CITE for “what does the guideline
 say”, REFUSE when the question applies it to a person). Live hook:
 `GUIDELINE_EVAL=1` — never set in CI.
+
+## Claim sources (#612)
+
+`answerClaims` (`infrastructure/claim-sources.ts`) cuts an answer's Answer
+section into sentences and reads the bracketed ids each one writes. An id
+resolves only against hits the turn's searches returned: a guideline by its
+`id`, an article by its PMC id or document id, an OpenTwin note by its `id`.
+Each claim is then:
+
+| Status        | When                                                 |
+| ------------- | ---------------------------------------------------- |
+| `cited`       | it names at least one source a search returned       |
+| `invented`    | it names only ids of a source's shape no search gave |
+| `unsupported` | it carries `[unsupported]`                           |
+| `uncited`     | none of these                                        |
+
+A bracketed token of another shape, such as a wearable key, is left as text.
+Sentences under three words are not claims. Pure: it reads what an answer
+says about its sources, never whether a claim is true.
+
+In a finished answer, each cited id the turn's searches returned is a link to
+its source's web address (new tab, `noopener noreferrer`), titled with its
+kind, title and year; a note without an address is a plain label with the
+same title. An id no search returned has a wavy red underline and says so to
+a screen reader, and is never a link. Ids are read from the answer's stored
+tool parts, so a reloaded thread shows the same links.
+
+`[unsupported]` shows muted in the same mono face, titled "The answer marks
+this claim as resting on no passage its searches returned". When the turn's
+searches returned a guideline passage or an article, one muted line under the
+answer counts its claims (`claimSummaryLine`), for example "2 of 5 claims
+cite a source the searches returned; 1 marked unsupported; 1 cites a source
+no search returned; 1 cites nothing." A turn with no literature shows no line.

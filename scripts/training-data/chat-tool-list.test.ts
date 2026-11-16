@@ -42,6 +42,8 @@ describe("openAiToolsFrom", () => {
       "values_around_event",
       "rhythm_irregularity",
       "cohort_event_rates",
+      "show_my_day",
+      "show_my_period",
       "show_view",
       "list_views",
       "open_view",
