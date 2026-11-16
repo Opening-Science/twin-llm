@@ -26,6 +26,7 @@ import { numbersByCall } from "./number-links";
 import { NumberText } from "./number-text";
 import { ProfileFooter, ProfileHeader } from "./profile-frame";
 import { StatsFooter } from "./stats-footer";
+import { ClaimSummary } from "./claim-summary";
 import { type Reveal, ToolSteps } from "./tool-steps";
 
 /**
@@ -227,6 +228,7 @@ export const AnswerColumn = ({
             }))
           }
         />
+        <ClaimSummary text={text} sources={answer.citeSources ?? []} />
         <AnswerViews {...viewProps} />
         {frame === null ? null : <ProfileFooter frame={frame} />}
       </>

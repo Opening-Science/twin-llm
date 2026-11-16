@@ -31,6 +31,8 @@ export const UNCERTAINTY_REASONS = [
   "knowledge_only",
   // Additive (#236): only published articles support the answer.
   "literature_only",
+  // Additive (#612): a guideline search ran and nothing it or an article search returned covers the question.
+  "literature_not_found",
   "hallucinated_keys",
   "tool_returned_no_rows",
   "no_model_statement",

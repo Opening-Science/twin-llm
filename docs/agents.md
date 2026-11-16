@@ -69,8 +69,9 @@ the skill must be one the server offers, the active provider must be in its `pro
 model ([genome.md](genome.md)). The shipped skills list local Ollama only, so on a hosted
 provider only Auto and the General agent are offered.
 
-The picker lists the agents under "Agents", Auto first, each with its base model in small
-text (Auto says it picks an agent for each question), and the models under "Models". An
+The picker lists the agents under "Specialists", each with its base model and its tools in
+small text ("on Qwen3 8B · /sleep tools"; General, with no skill, "chat tools"), and the
+models under "Models". Auto's panel names the model Auto runs its pick on (#610). An
 agent counts as one of the one to three picks.
 
 A new chat, an incognito chat and the first question on `/start` start with the General

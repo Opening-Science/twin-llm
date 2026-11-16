@@ -39,6 +39,8 @@ export type RedWindow = Readonly<{
   measure: "heart_rate" | "glucose";
   /** The highest (or, below a range, lowest) value in the window. */
   extreme: number;
+  /** Which side of the threshold the window is on; only glucose with diabetes can be below. */
+  side: "above" | "below";
   rule: string;
   /** The thresholds are placeholders until reviewed. */
   thresholds: "placeholder";
@@ -52,6 +54,7 @@ const thresholdsSchema = z
     heartRateStillAbovePerMin: z.number().positive(),
     glucoseWithoutDiabetesAboveMgDl: z.number().positive(),
     glucoseWithDiabetesRangeMgDl: z.tuple([z.number().positive(), z.number().positive()]),
+    recoveryWithinPerMin: z.number().positive(),
   })
   .strict();
 
@@ -222,31 +225,45 @@ export const redWindows = (
     to: run[run.length - 1]?.time ?? "",
     measure: "heart_rate",
     extreme: extremeOf(run, false),
+    side: "above",
     rule: `Heart rate above ${thresholds.heartRateStillAbovePerMin} /min while still (placeholder)`,
     thresholds: "placeholder",
   }));
   const low =
     profile === "with_diabetes" ? thresholds.glucoseWithDiabetesRangeMgDl[0] : -Infinity;
-  const glucose = runsOf(
-    sorted,
-    (reading) => glucoseBreach(reading, profile, thresholds),
-    (reading) => reading.glucoseMgDl ?? 0,
-  ).map((run): RedWindow => ({
-    from: run[0]?.time ?? "",
-    to: run[run.length - 1]?.time ?? "",
-    measure: "glucose",
-    extreme: extremeOf(run, (run[0]?.value ?? 0) < low),
-    rule: glucoseRule(profile, thresholds),
-    thresholds: "placeholder",
-  }));
+  // One pass per side, so a run that jumps from below the range to above it
+  // is two windows, each with its own extreme.
+  const glucose = (["below", "above"] as const).flatMap((side) =>
+    runsOf(
+      sorted,
+      (reading) =>
+        glucoseBreach(reading, profile, thresholds) &&
+        (reading.glucoseMgDl ?? 0) < low === (side === "below"),
+      (reading) => reading.glucoseMgDl ?? 0,
+    ).map((run): RedWindow => ({
+      from: run[0]?.time ?? "",
+      to: run[run.length - 1]?.time ?? "",
+      measure: "glucose",
+      extreme: extremeOf(run, side === "below"),
+      side,
+      rule: glucoseRule(profile, thresholds),
+      thresholds: "placeholder",
+    })),
+  );
   return [...heart, ...glucose].sort((a, b) => a.from.localeCompare(b.from));
 };
+
+/**
+ * The event a red window's beat shows: a moment worth a look, never a judgement
+ * about the person. "Red window" stays the name in code only.
+ */
+export const WINDOW_EVENT = "Worth a look";
 
 const windowBeat = (window: RedWindow): DayBeat => {
   if (window.measure === "heart_rate") {
     return {
       time: window.from,
-      event: "Red window",
+      event: WINDOW_EVENT,
       source: "derived",
       signal: {
         measure: "heart_rate",
@@ -263,11 +280,19 @@ const windowBeat = (window: RedWindow): DayBeat => {
   }
   return {
     time: window.from,
-    event: "Red window",
+    event: WINDOW_EVENT,
     source: "derived",
-    signal: { measure: "glucose", direction: "up", value: window.extreme, unit: "mg/dL" },
+    signal: {
+      measure: "glucose",
+      direction: window.side === "below" ? "down" : "up",
+      value: window.extreme,
+      unit: "mg/dL",
+    },
     body: {
-      text: `Blood sugar stays past the threshold for a while. ${window.rule}.`,
+      text:
+        window.side === "below"
+          ? `Blood sugar stays below the range for a while. ${window.rule}.`
+          : `Blood sugar stays past the threshold for a while. ${window.rule}.`,
       organ: "bloodvasculature",
     },
     view: { focus: "bloodvasculature", depth: "organs" },
