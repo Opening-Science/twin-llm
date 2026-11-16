@@ -85,6 +85,36 @@ describe("readingsFromRows", () => {
   });
 });
 
+describe("readingsFromRows, several rows in one minute", () => {
+  test("keeps the last heart-rate row of the minute", () => {
+    const rows: readonly FakeRow[] = [
+      {
+        subjectRef: SUBJECT,
+        loinc: "8867-4",
+        value: 60,
+        unitUcum: "/min",
+        effectiveAt: new Date(`${DAY}T08:00:05.000Z`),
+      },
+      {
+        subjectRef: SUBJECT,
+        loinc: "8867-4",
+        value: 64,
+        unitUcum: "/min",
+        effectiveAt: new Date(`${DAY}T08:00:40.000Z`),
+      },
+    ];
+    expect(readingsFromRows(rows)).toEqual([
+      {
+        time: "08:00",
+        event: null,
+        heartRatePerMin: 64,
+        glucoseMgDl: null,
+        moving: null,
+      },
+    ]);
+  });
+});
+
 describe("show_my_day", () => {
   test("the mock day: beats, one red window, audited with 28 rows", async () => {
     const { ports, audits, queries } = fakePorts();
@@ -116,6 +146,7 @@ describe("show_my_day", () => {
       ],
       thresholds: { status: "placeholder", reviewer: "Robin" },
       activity: "not recorded",
+      timezone: "UTC",
     });
     expect(
       result.beats.map((beat) => [beat.time, beat.event, beat.source, beat.signal.value]),
@@ -174,6 +205,7 @@ describe("show_my_day", () => {
         red_windows: [],
         thresholds: { status: "placeholder", reviewer: "Robin" },
         activity: "not recorded",
+        timezone: "UTC",
       },
     );
     expect(audits.map((audit) => audit.rowCount)).toEqual([0]);

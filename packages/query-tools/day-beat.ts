@@ -50,7 +50,7 @@ export type NarratedSignal = Readonly<{
 }>;
 
 type BeatBase = Readonly<{
-  /** Local wall-clock time, "HH:MM". */
+  /** Wall-clock time, "HH:MM", in the time zone the result names (UTC for now). */
   time: string;
   /** What the person was doing, or "Reading" when nothing is recorded. */
   event: string;

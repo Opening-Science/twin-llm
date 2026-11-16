@@ -47,12 +47,18 @@ export type ShowMyDayResult = Readonly<{
   /** The thresholds behind the red windows, and who still has to confirm them. */
   thresholds: Readonly<{ status: "placeholder"; reviewer: string }>;
   activity: "not recorded";
+  /** Beat and red-window times are UTC wall-clock times. */
+  timezone: "UTC";
 }>;
 
 const isGlucose = (loinc: string): boolean =>
   (GLUCOSE_LOINCS as readonly string[]).includes(loinc);
 
-/** Rows to readings, one per UTC minute, heart rate and glucose side by side. */
+/**
+ * Rows to readings, one per UTC minute, heart rate and glucose side by side.
+ * Rows come sorted by time, so when a measure has several rows in one minute
+ * the last one is kept.
+ */
 export const readingsFromRows = (
   rows: readonly ObservationRecord[],
 ): readonly DayReading[] => {
@@ -125,6 +131,7 @@ export const runShowMyDay = (
         red_windows: redWindows(readings, input.profile),
         thresholds: { status: DAY_THRESHOLDS.status, reviewer: DAY_THRESHOLDS.reviewer },
         activity: "not recorded",
+        timezone: "UTC",
       };
     },
     (result) => ("n" in result ? result.n : 0),
