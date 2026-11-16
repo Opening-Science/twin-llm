@@ -131,6 +131,7 @@ describe("the PDF of one chat (#611)", () => {
   test("holds no other subject's data: no cohort rows, no other thread", async () => {
     const response = await exportThread("thread-own", "pdf", "confirmed");
     const text = await drawnText(new Uint8Array(await response.arrayBuffer()));
+    expect(text).toContain("Resting heart rate fell from 64 to 59 bpm in October.");
     for (const foreign of ["synthea-0077", "synthea-0078", "188", "177"]) {
       expect(text).not.toContain(foreign);
     }
