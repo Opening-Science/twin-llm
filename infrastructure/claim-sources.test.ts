@@ -211,6 +211,25 @@ describe("splitCites", () => {
     expect(pieces[3]).toMatchObject({ tokens: [{ kind: "unsupported" }] });
   });
 
+  test("keeps words that are no id inside a citation group", () => {
+    const [, cites] = splitCites(
+      "Ventilation helps [ean-als-2024, table 2].",
+      referenceSources(parts),
+    );
+    expect(cites).toMatchObject({
+      kind: "cites",
+      tokens: [
+        { kind: "source", label: "ean-als-2024" },
+        { kind: "text", label: "table 2" },
+      ],
+    });
+    const [claim] = answerClaims(
+      reply("Ventilation helps in most cases [ean-als-2024, table 2]."),
+      parts,
+    );
+    expect(claim).toMatchObject({ status: "cited", unknown: [] });
+  });
+
   test("sourcesByLabel keys a stored list as referenceSources does", () => {
     const stored = [...referenceSources(parts).values()];
     expect([...sourcesByLabel(stored).keys()]).toEqual([

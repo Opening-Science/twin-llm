@@ -17,7 +17,7 @@ import { cardTitleId } from "./tool-steps";
 
 /** One cited id: a link to its source, a label without one, or an id no search gave. */
 const Cite = ({ token }: Readonly<{ token: CiteToken }>) => {
-  if (token.kind === "unsupported") return <>{token.label}</>;
+  if (token.kind === "unsupported" || token.kind === "text") return <>{token.label}</>;
   if (token.kind === "invented") {
     return (
       <span className="compare-cite-missing" title={INVENTED_CITE_LINE}>
