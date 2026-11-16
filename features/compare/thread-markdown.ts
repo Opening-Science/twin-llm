@@ -1,5 +1,6 @@
 import { formatDate } from "@/infrastructure/format-measure";
 import {
+  GBD_HEADING,
   GUIDELINE_ATTRIBUTION_LINE,
   GUIDELINE_HEADING,
   KNOWLEDGE_ATTRIBUTION_LINE,
@@ -17,6 +18,7 @@ import { citedValueLine } from "@/infrastructure/wearable-provenance";
 import { finishedAnswer, isWithheld, stoppedAnswerText } from "./answer-text";
 import type { AnswerState, TurnState } from "./conversation";
 import { panelContent } from "./evidence-lines";
+import { displayText } from "./screen-rules";
 import { lookupLine, sharedMeasureNames } from "./tool-cards";
 
 /**
@@ -34,6 +36,7 @@ const STOPPED_LINE = "_Stopped before it finished._";
 const STREAMING_LINE = "_Still being written when this was exported._";
 const WITHHELD_LINE = "_Withheld: it did not rest on enough data._";
 const NO_ANSWER_LINE = "_No written answer._";
+const SCHEDULED_LINE = "_Asked by a scheduled task._";
 
 const oneLine = (text: string): string => text.replace(/\s+/g, " ").trim();
 
@@ -67,7 +70,7 @@ const listSection = (
     ? []
     : ["", `${heading}:`, ...lines.map((line) => `- ${line}`), "", `_${note}_`];
 
-/** The references the evidence panel lists, in its order and words. */
+/** The references and population values the evidence panel lists, in its order and words. */
 const referenceLines = (answer: AnswerState): string[] => {
   const content = panelContent({
     reasoning: null,
@@ -79,6 +82,9 @@ const referenceLines = (answer: AnswerState): string[] => {
     ...listSection(GUIDELINE_HEADING, content.guidelines, GUIDELINE_ATTRIBUTION_LINE),
     ...listSection(KNOWLEDGE_HEADING, content.knowledge, KNOWLEDGE_ATTRIBUTION_LINE),
     ...listSection(LITERATURE_HEADING, content.literature, LITERATURE_ATTRIBUTION_LINE),
+    ...(content.gbdAttribution === null
+      ? []
+      : listSection(GBD_HEADING, content.gbd, content.gbdAttribution)),
   ];
 };
 
@@ -120,6 +126,13 @@ const answerBlock = (answer: AnswerState): string[] => {
   ];
 };
 
+/** The person's bubble: its skill, then its text (a starter's short text, else the prompt). */
+const turnHeading = (turn: TurnState, index: number): string[] => [
+  `## ${String(index + 1)}. ${turn.skill ? `/${turn.skill} ` : ""}${oneLine(displayText(turn))}`,
+  "",
+  ...(turn.scheduled === true ? [SCHEDULED_LINE, ""] : []),
+];
+
 export type ExportableThread = Readonly<{ title: string; turns: readonly TurnState[] }>;
 
 export const threadMarkdown = (thread: ExportableThread, today: string): string => {
@@ -129,8 +142,7 @@ export const threadMarkdown = (thread: ExportableThread, today: string): string 
     `Exported from TwinLLM on ${exportDay(today)}. ${EXPORT_DISCLAIMER}`,
     "",
     ...thread.turns.flatMap((turn, index) => [
-      `## ${String(index + 1)}. ${oneLine(turn.prompt)}`,
-      "",
+      ...turnHeading(turn, index),
       ...turn.answers.flatMap(answerBlock),
     ]),
   ];
