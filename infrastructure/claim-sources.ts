@@ -140,7 +140,8 @@ export type Claim = Readonly<{
   status: ClaimStatus;
 }>;
 
-const ABBREVIATIONS = /(?:\be\.g|\bi\.e|\bet al|\bvs|\bapprox|\bcf|\bDr|\bFig|\bNo)\.$/i;
+/** Case-sensitive, so a sentence ending "… says no." still ends there. */
+const ABBREVIATIONS = /(?:\be\.g|\bi\.e|\bet al|\bvs|\bapprox|\bcf|\bDr|\bFig|\bNo)\.$/;
 
 /** A stop, the bracketed ids right after it, then a space or the line's end. */
 const BOUNDARY = /[.!?](?:\s*\[[^\][\n]{1,200}\](?!\())*(?=\s|$)/g;

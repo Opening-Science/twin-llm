@@ -159,6 +159,19 @@ describe("answerClaims", () => {
     ]);
   });
 
+  test("a sentence ending in the word no still ends there", () => {
+    const claims = answerClaims(
+      reply(
+        "The evidence for magnesium says no. Coffee late in the day delays sleep [PMC1234567].",
+      ),
+      parts,
+    );
+    expect(claims.map((claim) => [claim.text, claim.status])).toEqual([
+      ["The evidence for magnesium says no.", "uncited"],
+      ["Coffee late in the day delays sleep.", "cited"],
+    ]);
+  });
+
   test("a reply without headings is read whole", () => {
     expect(
       answerClaims("The guideline covers ventilation [ean-als-2024].", parts),
