@@ -101,7 +101,7 @@ TwinLLM-only behaviour lives under `infrastructure/open-twin-adapters/`. Code ou
 
 - **Status:** landed in this pin (open-twin #181). Exact `property_path` keys emit UCUM `m` / `m2` / `m3` / `kg` / `kg/m2`; unknown paths stay unitless. Host HTTP, TLS pinning, and display conversion stay on TwinLLM. TwinLLM still does not persist `fhirBundle` for Vitronic snapshots.
 
-### 6. provider-oura: export buildOuraBundle from the barrel
+### 6. provider-oura: export buildOuraBundle from the barrel ([open-twin#273](https://github.com/Opening-Science/open-twin/issues/273))
 
 - **In scope:** Re-export `buildOuraBundle` (`src/fhir/bundleBuilder.ts`) from `src/index.ts`, so a host that already called `getOuraData` can map without a second fetch.
 - **Out of scope:** Mapper or schema changes.
