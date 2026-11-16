@@ -40,10 +40,10 @@ export const askAboutSubjectHref = (subjectRef: string): string =>
 export const draftHref = (name: string): string =>
   `/?draft=${encodeURIComponent(`/${name} `)}`;
 
-/** A saved thread as a Markdown file; the route serves it to its owner only. */
+/** A saved thread as a Markdown file (or FHIR, print page, PDF); the route serves it to its owner only. */
 export const threadExportHref = (
   threadId: string,
-  format?: "fhir" | "print",
+  format?: "fhir" | "print" | "pdf",
   step?: "check" | "confirm",
 ): string => {
   const query = [
