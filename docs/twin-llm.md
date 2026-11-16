@@ -10,7 +10,7 @@ Each line links to the page with the detail; this page does not repeat it.
 
 | Area                  | What it does                                                                                                                                                            | Read                                                                                                  |
 | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| Chat modes and effort | Auto, Manual and Compare; five effort steps from Quick to Ultra that set thinking, model calls and a number check (#366)                                                | [chat-modes.md](chat-modes.md)                                                                        |
+| Chat modes and effort | Auto, Basic, Manual and Compare; five effort steps from Quick to Ultra that set thinking, model calls and a number check (#366)                                         | [chat-modes.md](chat-modes.md)                                                                        |
 | Wearable sources      | Where Oura, WHOOP and Google Health overlap on a day: one reading and the rule, or held back; versioned, audited (#464)                                                 | [wearable-sources.md](wearable-sources.md)                                                            |
 | Query tools           | Closed, audited reads over the Synthea warehouse and the turn's wearable snapshots                                                                                      | [query-layer.md](query-layer.md)                                                                      |
 | Privacy               | Owner-only storage, passphrase unlock, encryption at rest, consent before learning, a disclosure ledger that blocks genome identifiers to hosted models, signed anchors | [privacy-design.md](privacy-design.md), [providers.md](providers.md#what-leaves-the-host)             |
@@ -113,4 +113,4 @@ Exoscale: set `EXOSCALE_BASE_URLS` (one vLLM `/v1` URL per GPU); without it, sta
 | Live lookups                 | `packages/live-sources/`                                                                |
 | Docs (`/docs`)               | `features/docs/`: these pages rendered from `docs/*.md`                                 |
 | Lab (`/lab`)                 | `features/lab/`: a hub of cards, one page per experiment ([lab.md](lab.md))             |
-| open-twin packages           | `packages/open-twin/`, copied at one commit ([open-twin.md](open-twin.md))              |
+| open-twin pins               | `.open-twin/` via `bun run sync:open-twin` (`PROVENANCE.md`)                            |

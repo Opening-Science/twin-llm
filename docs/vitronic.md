@@ -1,9 +1,9 @@
 # Vitronic BodyLoop
 
 Host connector for BodyLoop scan measurements and a hashed `.glb` avatar. TwinLLM
-owns HTTP. open-twin's `provider-vitronic` has the FHIR mapping
-(`buildBundleFromVitronicResponse`); TwinLLM does not copy that package and
-**does not build or persist** that bundle. `properties` and height/distance/circumference/angle **lists** are SI
+owns HTTP. `@open-twin/provider-vitronic` owns FHIR mapping
+(`buildBundleFromVitronicResponse`), but the host **does not persist** that
+bundle. `properties` and height/distance/circumference/angle **lists** are SI
 (m, m2, m3, kg, kg/m2, rad) as received from the BodyLoop 0.13.7 API. The
 BodyLoop UI shows cm/deg; TwinLLM stores the API payloads and converts only for
 display and chat. `VitronicSnapshot.fhirBundle` stays null in this change. The
@@ -200,8 +200,8 @@ Writes log as method + path only. `create-proband` sends `{ key_external }` only
 and prints only `proband_id`. `create-scan` POSTs `proband_id` plus the default
 parameters in `DEFAULT_VIATAR_PARAMETERS` (taken from the example scan request in the
 vendor's API 0.13.7 description); shape is
-`ViatarRequestSchema` in open-twin's `packages/provider-vitronic/src/api/schemas/viatars.ts`
-lines 50–106 (open-twin commit `130e3f64` has no `exampleViatarRequest`).
+`ViatarRequestSchema` in `.open-twin/packages/provider-vitronic/src/api/schemas/viatars.ts`
+lines 50–106 (open-twin pin `130e3f64` has no `exampleViatarRequest`).
 `start` requires `--viatar-id` ≥ 1, the typed line `yes, the person is in position`,
 a 10 s countdown, then `POST /api/v2/viatars/{id}/targets/` for
 `analyzed_avatar_3d`, and polls GET viatar every 5 s (target name + progress

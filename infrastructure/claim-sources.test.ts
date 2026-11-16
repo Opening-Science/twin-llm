@@ -161,6 +161,19 @@ describe("answerClaims", () => {
     ]);
   });
 
+  test("a sentence ending in the word no still ends there", () => {
+    const claims = answerClaims(
+      reply(
+        "The evidence for magnesium says no. Coffee late in the day delays sleep [PMC1234567].",
+      ),
+      parts,
+    );
+    expect(claims.map((claim) => [claim.text, claim.status])).toEqual([
+      ["The evidence for magnesium says no.", "uncited"],
+      ["Coffee late in the day delays sleep.", "cited"],
+    ]);
+  });
+
   test("a reply without headings is read whole", () => {
     expect(
       answerClaims("The guideline covers ventilation [ean-als-2024].", parts),
@@ -209,6 +222,25 @@ describe("splitCites", () => {
     });
     expect(pieces[2]).toEqual({ kind: "text", text: " and [hrv.daily] " });
     expect(pieces[3]).toMatchObject({ tokens: [{ kind: "unsupported" }] });
+  });
+
+  test("keeps words that are no id inside a citation group", () => {
+    const [, cites] = splitCites(
+      "Ventilation helps [ean-als-2024, table 2].",
+      referenceSources(parts),
+    );
+    expect(cites).toMatchObject({
+      kind: "cites",
+      tokens: [
+        { kind: "source", label: "ean-als-2024" },
+        { kind: "text", label: "table 2" },
+      ],
+    });
+    const [claim] = answerClaims(
+      reply("Ventilation helps in most cases [ean-als-2024, table 2]."),
+      parts,
+    );
+    expect(claim).toMatchObject({ status: "cited", unknown: [] });
   });
 
   test("sourcesByLabel keys a stored list as referenceSources does", () => {

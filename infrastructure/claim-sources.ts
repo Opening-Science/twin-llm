@@ -146,7 +146,8 @@ export type Claim = Readonly<{
   status: ClaimStatus;
 }>;
 
-const ABBREVIATIONS = /(?:\be\.g|\bi\.e|\bet al|\bvs|\bapprox|\bcf|\bDr|\bFig|\bNo)\.$/i;
+/** Case-sensitive, so a sentence ending "… says no." still ends there. */
+const ABBREVIATIONS = /(?:\be\.g|\bi\.e|\bet al|\bvs|\bapprox|\bcf|\bDr|\bFig|\bNo)\.$/;
 
 /** A stop, the bracketed ids right after it, then a space or the line's end. */
 const BOUNDARY = /[.!?](?:\s*\[[^\][\n]{1,200}\](?!\())*(?=\s|$)/g;
@@ -206,11 +207,13 @@ const statusOf = (
 export type CiteToken =
   | Readonly<{ kind: "source"; label: string; source: ReferenceSource }>
   | Readonly<{ kind: "invented"; label: string }>
-  | Readonly<{ kind: "unsupported"; label: string }>;
+  | Readonly<{ kind: "unsupported"; label: string }>
+  /** Words in the group that are no id, such as "table 2": kept as written. */
+  | Readonly<{ kind: "text"; label: string }>;
 
 /**
  * The ids inside one bracketed group (`a` or `a, b`). Null when none reads as
- * a citation, so the group stays text; tokens of no id's shape are dropped.
+ * a citation, so the group stays text; a token of no id's shape stays as text.
  */
 export const readCites = (
   inner: string,
@@ -224,9 +227,9 @@ export const readCites = (
         return [{ kind: "unsupported", label }];
       const source = sources.get(label.toLowerCase());
       if (source !== undefined) return [{ kind: "source", label, source }];
-      return looksLikeId(label) ? [{ kind: "invented", label }] : [];
+      return [looksLikeId(label) ? { kind: "invented", label } : { kind: "text", label }];
     });
-  return tokens.length === 0 ? null : tokens;
+  return tokens.every((token) => token.kind === "text") ? null : tokens;
 };
 
 export type CitePiece =
@@ -266,7 +269,8 @@ const toClaim = (
         if (token.kind === "unsupported") marked = true;
         else if (token.kind === "source") {
           if (!cited.includes(token.source)) cited.push(token.source);
-        } else if (!unknown.includes(token.label)) unknown.push(token.label);
+        } else if (token.kind === "invented" && !unknown.includes(token.label))
+          unknown.push(token.label);
       }
       return "";
     })
