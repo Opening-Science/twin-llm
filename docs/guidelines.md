@@ -171,10 +171,13 @@ when it carries the tool:
   `id` in brackets, such as `[ean-als-2024]`, and a claim no passage supports
   with `[unsupported]` (`GUIDELINE_CITE_RULE`).
 - `knowledge_search` on an agent's turn: cite an article by its PMC id, such
-  as `[PMC1234567]`.
+  as `[PMC1234567]`. There is no `[unsupported]` mark here; an article claim
+  without a PMC id simply goes uncited.
 
 The rule is one short sentence each because the General agent's 16k prompt
-has little room left (`bun run prompt:size`, 500 tokens of headroom).
+has little room left. `bun run prompt:size` requires 500 tokens free before
+twin notes; the tightest 16k case (personal, Oura, GBD and VCF imported,
+`agent:gp`) has 526, so 26 above that floor.
 
 Offline eval: `bun test tests/guidelines` (CITE for “what does the guideline
 say”, REFUSE when the question applies it to a person). Live hook:
