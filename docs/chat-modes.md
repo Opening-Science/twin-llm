@@ -42,6 +42,13 @@ are the person's. Medical needs at least one specialist; the last one cannot be
 unticked. On a hosted provider only General is offered, so Medical sends General
 alone. The pill reads "Medical · 2 specialists".
 
+Measured on the router fixtures ([agents.md](agents.md#measuring-the-router)) with every
+agent offered, Medical's default rows hold the agent each question is labelled with on
+all 36 hand-written prompts and all 130 scored questions; Auto's single pick matches the
+label on 36 and 126. They always hold Auto's pick. Only 89 of the 166 put the labelled
+agent first, since General leads. `features/compare/medical-router.test.ts` keeps both
+rules.
+
 ### Compare's defaults (#493)
 
 Until the person ticks or unticks a Compare row, Compare's rows are defaults and follow
