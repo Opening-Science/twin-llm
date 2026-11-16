@@ -171,6 +171,17 @@ describe("redWindows", () => {
     ]);
   });
 
+  test("with diabetes, low then high in a row is two windows, one each side", () => {
+    const windows = redWindows(
+      [reading("02:00", 55, 60), reading("02:30", 55, 200)],
+      "with_diabetes",
+    );
+    expect(windows.map((window) => [window.from, window.side, window.extreme])).toEqual([
+      ["02:00", "below", 60],
+      ["02:30", "above", 200],
+    ]);
+  });
+
   test("a low window's beat goes down and says below the range", () => {
     const low = dayBeats(
       [reading("02:00", 55, 66), reading("02:30", 55, 62)],

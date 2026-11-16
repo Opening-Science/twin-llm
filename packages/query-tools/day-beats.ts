@@ -220,22 +220,25 @@ export const redWindows = (
   }));
   const low =
     profile === "with_diabetes" ? thresholds.glucoseWithDiabetesRangeMgDl[0] : -Infinity;
-  const glucose = runsOf(
-    sorted,
-    (reading) => glucoseBreach(reading, profile, thresholds),
-    (reading) => reading.glucoseMgDl ?? 0,
-  ).map((run): RedWindow => {
-    const below = (run[0]?.value ?? 0) < low;
-    return {
+  // One pass per side, so a run that jumps from below the range to above it
+  // is two windows, each with its own extreme.
+  const glucose = (["below", "above"] as const).flatMap((side) =>
+    runsOf(
+      sorted,
+      (reading) =>
+        glucoseBreach(reading, profile, thresholds) &&
+        (reading.glucoseMgDl ?? 0) < low === (side === "below"),
+      (reading) => reading.glucoseMgDl ?? 0,
+    ).map((run): RedWindow => ({
       from: run[0]?.time ?? "",
       to: run[run.length - 1]?.time ?? "",
       measure: "glucose",
-      extreme: extremeOf(run, below),
-      side: below ? "below" : "above",
+      extreme: extremeOf(run, side === "below"),
+      side,
       rule: glucoseRule(profile, thresholds),
       thresholds: "placeholder",
-    };
-  });
+    })),
+  );
   return [...heart, ...glucose].sort((a, b) => a.from.localeCompare(b.from));
 };
 
