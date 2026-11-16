@@ -280,28 +280,6 @@ describe("the export route (SERVER-SPEC 3.7)", () => {
     expect(run.audit[0]?.rowCount).toBe(4);
   });
 
-  test("the stored-value check counts the bubble's short text as typed", async () => {
-    const seen: string[][] = [];
-    const exportThread = createThreadExportHandler({
-      loadOwnedThread: async () => ({
-        title: "t",
-        turns: [{ ...TURN, label: "How did my heart rate change?" }],
-      }),
-      actorId: async () => "actor-1",
-      recipientIsLocal: () => true,
-      appendAudit: async () => {},
-      recordDisclosure: async () => ({ seq: 1n, auditSeq: 1n }),
-      freeTextChecker: (_actor, typed) => {
-        seen.push([...typed]);
-        return async () => ({ matches: [] });
-      },
-      dataMode: () => "synthetic",
-      today: () => "2026-10-28",
-    });
-    await exportThread("t", "markdown", "check");
-    expect(seen).toEqual([[TURN.prompt, "How did my heart rate change?"]]);
-  });
-
   test("a failed ledger write makes no file", async () => {
     const { exportThread } = handler({
       record: async () => {

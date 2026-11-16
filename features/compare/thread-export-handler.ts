@@ -149,10 +149,7 @@ export const createThreadExportHandler =
 
     const today = deps.today();
     const markdown = threadMarkdown(thread, today);
-    // The bubble's short text is the person's message as much as the prompt.
-    const typed = thread.turns.flatMap((turn) =>
-      turn.label === undefined ? [turn.prompt] : [turn.prompt, turn.label],
-    );
+    const typed = thread.turns.map((turn) => turn.prompt);
     const checked = await deps
       .freeTextChecker(
         actor,
