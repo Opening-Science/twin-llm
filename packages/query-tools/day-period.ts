@@ -21,7 +21,8 @@ export type GlucoseDayRow = Readonly<{
   day: string;
   n: number;
   average_mg_dl: number;
-  below: number;
+  /** Null when no low bound is set (without diabetes). */
+  below: number | null;
   above: number;
 }>;
 
@@ -107,7 +108,7 @@ export const glucosePeriod = (
       day: one.day,
       n: one.values.length,
       average_mg_dl: round(mean(one.values), 1),
-      below: one.values.filter(isBelow).length,
+      below: low === null ? null : one.values.filter(isBelow).length,
       above: one.values.filter(isAbove).length,
     })),
   };

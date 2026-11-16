@@ -126,7 +126,7 @@ describe("show_my_period over a week", () => {
       day: END,
       n: 3,
       average_mg_dl: 116.7,
-      below: 0,
+      below: null,
       above: 1,
     });
     expect(result.recovery).toBe("not recorded");

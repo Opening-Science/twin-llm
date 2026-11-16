@@ -8,7 +8,7 @@ of `@open-twin/anchor-layer` from a **gitignored** checkout at a pinned SHA. `@o
 ## Pin
 
 - Repo: https://github.com/Opening-Science/open-twin
-- SHA: `4b42ef944db0b461ca414b8066a5f7aa2594a9ce` (open-twin `main`, 2026-11-08; was `c37d8004d93d5accb9b91bebcbd89376837776bd`). From the old pin to this one the synced packages' `src/` is unchanged: only `package.json` bumps (`@types/node` 26.6.6, vitest 5.1.0, and `googleapis` 189.0.0 in provider-google-health). The new upstream package `reader-core` is not synced. The host keeps the resolutions already in `bun.lock` (see Lockfile note), so the app runs on the same dependency versions as before.
+- SHA: `2fd26911c43c3007c8b87a88bf8a3647fa90ded0` (open-twin `main`, 2026-11-16; was `4b42ef944db0b461ca414b8066a5f7aa2594a9ce`). Upstream added a measurement catalogue (`measurements.ts` in fhir-core, fhir-r4, aggregate and each provider) and exports it from the barrels. One change reaches the bundles TwinLLM stores: provider-whoop now gives resting heart rate (recovery) and average heart rate (cycle) a second, WHOOP-local coding (`recovery-resting-heart-rate`, `cycle-average-heart-rate`) after LOINC 8867-4. The warehouse reads the LOINC coding first, so stored rows and what the app shows are unchanged. Upstream's other packages (genomics-vcf, hl7v2, interpretation-contract, interpreter, provider-anchor, provider-open-wearables, provider-vitronic and reader-core) are not synced. The host keeps the resolutions already in `bun.lock`.
 - Local tree: `.open-twin/` (created by `scripts/sync-open-twin.sh`)
 - App deps: `file:.open-twin/packages/<name>` in `package.json`
 - `anchor-layer`: only `data/anchor-layer.v1.json` is imported (its loader uses `node:fs`); see `docs/biomarkers.md`
@@ -101,7 +101,7 @@ TwinLLM-only behaviour lives under `infrastructure/open-twin-adapters/`. Code ou
 
 - **Status:** landed in this pin (open-twin #181). Exact `property_path` keys emit UCUM `m` / `m2` / `m3` / `kg` / `kg/m2`; unknown paths stay unitless. Host HTTP, TLS pinning, and display conversion stay on TwinLLM. TwinLLM still does not persist `fhirBundle` for Vitronic snapshots.
 
-### 6. provider-oura: export buildOuraBundle from the barrel
+### 6. provider-oura: export buildOuraBundle from the barrel ([open-twin#273](https://github.com/Opening-Science/open-twin/issues/273))
 
 - **In scope:** Re-export `buildOuraBundle` (`src/fhir/bundleBuilder.ts`) from `src/index.ts`, so a host that already called `getOuraData` can map without a second fetch.
 - **Out of scope:** Mapper or schema changes.

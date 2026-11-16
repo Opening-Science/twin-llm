@@ -35,7 +35,7 @@ describe("glucosePeriod on the mock day", () => {
       range: { low: null, high: 140, unit: "mg/dL", thresholds: "placeholder" },
       share_of_readings: { below: null, within: 0.929, above: 0.071 },
       basis: "share of readings",
-      by_day: [{ day: "2026-11-16", n: 14, average_mg_dl: 105.7, below: 0, above: 1 }],
+      by_day: [{ day: "2026-11-16", n: 14, average_mg_dl: 105.7, below: null, above: 1 }],
     });
   });
 
