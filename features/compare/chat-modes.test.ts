@@ -64,7 +64,7 @@ describe("modes offered and the new chat (SPEC 7.1, 7.2)", () => {
   test("a new chat starts on Auto when the catalog has it", () => {
     const state = initialModeState(ctx(), null);
     expect(state.mode).toBe("auto");
-    expect(offeredModes(ctx())).toEqual(["auto", "manual", "compare"]);
+    expect(offeredModes(ctx())).toEqual(["auto", "basic", "manual", "compare"]);
     expect(pickedModels(state, ctx(), "How did I sleep?")).toEqual([
       { id: "agent:auto", name: "Auto → Sleep" },
     ]);
@@ -73,7 +73,7 @@ describe("modes offered and the new chat (SPEC 7.1, 7.2)", () => {
   test("without the Auto row it starts on Compare, and Auto is not offered", () => {
     const context = ctx({ catalog: CATALOG.slice(1) });
     expect(initialModeState(context, null).mode).toBe("compare");
-    expect(offeredModes(context)).toEqual(["manual", "compare"]);
+    expect(offeredModes(context)).toEqual(["basic", "manual", "compare"]);
   });
 
   test("the other modes open on sensible picks, never an empty list", () => {
@@ -195,6 +195,48 @@ describe("Manual sends each specialist on each model (SPEC 7.1)", () => {
   });
 });
 
+describe("Basic sends one plain model (#610)", () => {
+  const basic = (context = ctx()) => setMode(initialModeState(context, null), "basic");
+
+  test("it starts on Auto's model, with no specialist", () => {
+    const state = basic();
+    expect(state.basic).toBe("qwen3:4b");
+    expect(pickedModels(state, ctx(), "How did I sleep?")).toEqual([
+      { id: "qwen3:4b", name: "Qwen3 4B" },
+    ]);
+    expect(modeSummary(state, ctx(), "")).toBe("Basic · Qwen3 4B");
+    expect(pickerFooter(state, ctx(), "")).toBe("One answer per prompt.");
+  });
+
+  test("without Auto, the first plain model that runs here", () => {
+    const noAuto = ctx({ catalog: CATALOG.slice(1) });
+    expect(basic(noAuto).basic).toBe("qwen3:4b");
+    const incognito = ctx({ incognito: true, localModelIds: ["llama3:8b"] });
+    expect(basic(incognito).basic).toBe("llama3:8b");
+  });
+
+  test("picking a model replaces the last; a specialist is never sent", () => {
+    const state = toggleRow(basic(), "basic", "llama3:8b", ctx(), "");
+    expect(pickedModels(state, ctx(), "").map(({ id }) => id)).toEqual(["llama3:8b"]);
+    expect(boxDisabled(state, "basic", "qwen3:8b", ctx(), "")).toBeNull();
+  });
+
+  test("a model that is gone or not on this machine cannot be sent", () => {
+    expect(modeProblem({ ...basic(), basic: "gone:1b" }, ctx(), "")).toBe(
+      "Pick a model.",
+    );
+    const incognito = ctx({ incognito: true, localModelIds: ["qwen3:4b"] });
+    expect(boxDisabled(basic(incognito), "basic", "llama3:8b", incognito, "")).toBe(
+      "Not on this machine, so not for incognito chats.",
+    );
+  });
+
+  test("offered only when the catalog has a plain model", () => {
+    const agentsOnly = ctx({ catalog: CATALOG.slice(0, 4) });
+    expect(offeredModes(agentsOnly)).toEqual(["auto", "manual", "compare"]);
+  });
+});
+
 describe("summary, footer and problems", () => {
   test("the pill names the mode and count", () => {
     const base = initialModeState(ctx(), null);
@@ -285,6 +327,7 @@ describe("incognito offers local models only (SPEC 7.4, 7.8)", () => {
 
   test("Auto is offered only when its model runs here", () => {
     expect(offeredModes(ctx({ incognito: true, localModelIds: [] }))).toEqual([
+      "basic",
       "manual",
       "compare",
     ]);

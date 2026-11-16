@@ -3,6 +3,7 @@ import type { ChatView } from "@/infrastructure/chat-view";
 import type { GbdProfileFrame } from "@/infrastructure/gbd-profile-frame";
 import type { LiveSourceId } from "@/infrastructure/live-sources";
 import type { ModelResponseMetrics } from "@/infrastructure/model-response-metrics";
+import type { ReferenceSource } from "@/infrastructure/claim-sources";
 import type { NumberSource } from "@/infrastructure/number-sources";
 import type { EvidenceAttribution } from "@/infrastructure/oura-types";
 import type { ResponseDocumentV1 } from "@/infrastructure/response-document/document-v1";
@@ -70,6 +71,8 @@ export type AnswerState = Readonly<{
   /** ISO 8601. */
   completedAt?: string | null;
   numberSources?: readonly NumberSource[];
+  /** What the turn's literature searches returned, by each id an answer may cite (#612). */
+  citeSources?: readonly ReferenceSource[];
 }>;
 
 /** One prompt and its answers. */

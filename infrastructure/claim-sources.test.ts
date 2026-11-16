@@ -4,6 +4,8 @@ import {
   answerClaims,
   claimCoverage,
   referenceSources,
+  sourcesByLabel,
+  splitCites,
   type ClaimSourcePart,
 } from "./claim-sources";
 
@@ -194,5 +196,57 @@ describe("claimCoverage", () => {
       invented: 1,
       uncited: 1,
     });
+  });
+});
+
+describe("splitCites", () => {
+  test("cuts a run into text and bracketed citations, leaving other brackets as text", () => {
+    const sources = referenceSources(parts);
+    const pieces = splitCites(
+      "Ventilation helps [ean-als-2024, PMC7654321] and [hrv.daily] [unsupported].",
+      sources,
+    );
+    expect(pieces.map((piece) => piece.kind)).toEqual([
+      "text",
+      "cites",
+      "text",
+      "cites",
+      "text",
+    ]);
+    expect(pieces[1]).toMatchObject({
+      kind: "cites",
+      tokens: [
+        { kind: "source", label: "ean-als-2024" },
+        { kind: "invented", label: "PMC7654321" },
+      ],
+    });
+    expect(pieces[2]).toEqual({ kind: "text", text: " and [hrv.daily] " });
+    expect(pieces[3]).toMatchObject({ tokens: [{ kind: "unsupported" }] });
+  });
+
+  test("keeps words that are no id inside a citation group", () => {
+    const [, cites] = splitCites(
+      "Ventilation helps [ean-als-2024, table 2].",
+      referenceSources(parts),
+    );
+    expect(cites).toMatchObject({
+      kind: "cites",
+      tokens: [
+        { kind: "source", label: "ean-als-2024" },
+        { kind: "text", label: "table 2" },
+      ],
+    });
+    const [claim] = answerClaims(
+      reply("Ventilation helps in most cases [ean-als-2024, table 2]."),
+      parts,
+    );
+    expect(claim).toMatchObject({ status: "cited", unknown: [] });
+  });
+
+  test("sourcesByLabel keys a stored list as referenceSources does", () => {
+    const stored = [...referenceSources(parts).values()];
+    expect([...sourcesByLabel(stored).keys()]).toEqual([
+      ...referenceSources(parts).keys(),
+    ]);
   });
 });

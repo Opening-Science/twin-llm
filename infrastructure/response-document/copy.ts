@@ -2,6 +2,7 @@ import type { NextStep, UncertaintyLevel, UncertaintyReason } from "./document-v
 
 export const UNVERIFIED_NARRATION = "Unverified narration";
 export const ABSTAIN_BANNER = "Not enough data — this reply is withheld.";
+export const GUIDELINE_HEADING = "Guideline references";
 export const GUIDELINE_ATTRIBUTION_LINE =
   "Published guideline passage as reference material, not a statement about this person.";
 export const KNOWLEDGE_HEADING = "OpenTwin knowledge";
