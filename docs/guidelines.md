@@ -161,6 +161,21 @@ and:
 
 `Published guideline passage as reference material, not a statement about this person.`
 
+## Citing in answers (#612)
+
+Every claim in an answer should link to a passage a search returned, or say
+it has none. The tool texts ask for that, so a turn pays for the rule only
+when it carries the tool:
+
+- `guideline_search`: end a sentence that rests on a passage with the hit's
+  `id` in brackets, such as `[ean-als-2024]`, and a claim no passage supports
+  with `[unsupported]` (`GUIDELINE_CITE_RULE`).
+- `knowledge_search` on an agent's turn: cite an article by its PMC id, such
+  as `[PMC1234567]`.
+
+The rule is one short sentence each because the General agent's 16k prompt
+has little room left (`bun run prompt:size`, 500 tokens of headroom).
+
 Offline eval: `bun test tests/guidelines` (CITE for “what does the guideline
 say”, REFUSE when the question applies it to a person). Live hook:
 `GUIDELINE_EVAL=1` — never set in CI.
