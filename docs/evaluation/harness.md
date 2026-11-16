@@ -518,6 +518,17 @@ is the needed rows fetched over the wearable rows fetched. Both are pooled
 across lines. Every label and both retrieval rates are shares with the
 Wilson 95 % interval. An extra metric: the eight criteria do not change.
 
+### Claim sources (#612)
+
+`score/claim-sources.ts` runs the matcher the answer view uses
+(`infrastructure/claim-sources.ts`, [guidelines.md](../guidelines.md#claim-sources-612))
+on each line whose turn returned a guideline passage or an article: every
+sentence of the Answer section is cited, marked unsupported, invented id or
+uncited. `eval:report` adds a "Claim sources" section only when some line
+returned literature, with each status's share of the claims and the share of
+answers whose every claim is cited or marked unsupported, the bar #612 sets.
+Wilson 95 % intervals. An extra metric: the eight criteria do not change.
+
 The harness runs the chat turn without wearable context, so a run today
 writes no `wearable.sources.*` row and its wearable tools return synthetic
 series of no vendor. The scorer is tested on synthetic fixtures
