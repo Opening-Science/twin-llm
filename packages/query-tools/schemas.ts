@@ -430,6 +430,17 @@ export const cohortEventRatesInput = z
     "Outcome rates after an exposure in one loaded synthetic cohort: events, person-years and a rate ratio",
   );
 
+export const showMyDayInput = z
+  .object({
+    subject_ref: subjectRefSchema,
+    day: z.iso.date().describe("The UTC day, YYYY-MM-DD"),
+    profile: z
+      .enum(["without_diabetes", "with_diabetes"])
+      .describe("Which glucose thresholds the red windows use"),
+  })
+  .strict()
+  .describe("One synthetic subject's day of heart rate and glucose, as beats");
+
 export const TOOL_DEFINITIONS = [
   {
     name: "list_subjects",
@@ -561,5 +572,11 @@ export const TOOL_DEFINITIONS = [
     description:
       "Rates of one recorded condition (outcome) around another (exposure) in one loaded synthetic cohort; counts only. within: the same people before and after their own exposure onset (crude and age-adjusted rate ratio). between: exposed against 4 age- and sex-matched people without it. Events, person-years, exact Poisson intervals; verdict reads the ratio's 95% interval against 1. About this synthetic cohort only, never people in general or a cause. Synthetic mode only. Refuses SUBJECT_SCOPE_VIOLATION, COHORT_NOT_SUPPORTED, DESIGN_NOT_SUPPORTED, COHORT_RECORD_CAP_EXCEEDED.",
     input: cohortEventRatesInput,
+  },
+  {
+    name: "show_my_day",
+    description:
+      "One synthetic subject's UTC day of heart rate (8867-4) and blood glucose (2339-0, 2345-7) as time-ordered beats. Each beat has a time, an event, a signal (direction and approximate value), a body note with an organ, a twin view, and a source: measured (a stored reading), derived (computed from readings) or narrated (described, never measured, with no value). Insulin is always narrated. red_windows mark readings past placeholder thresholds still to be confirmed: heart rate above 100 /min while still, glucose above 140 mg/dL without diabetes, or outside 70–180 mg/dL with diabetes. The warehouse records no events or activity, so events read 'Reading' and the still rule is not applied. More than 5000 rows is refused; heart rate not in /min or glucose not in mg/dL is refused. For a week or a month use hrv_trend, resting_hr_trend, and trend with HbA1c (4548-4).",
+    input: showMyDayInput,
   },
 ] as const;
