@@ -81,11 +81,12 @@ different agent per question, so one run would mix agents. The harness writes
 no `skill.<name>` audit row; the response document still names the skill.
 
 `--models agent:rhythm@qwen3:4b` runs the agent on a model other than its
-own, as Manual mode's pair does (#366): the row comes from `findCatalogRow`,
-so it runs only when the catalog offers both the agent and the model. The
-skill, role line and literature are the agent's; only the base model
-changes. Its `rules_sha256` is the agent's own, so a pair run and a run of
-the agent on its own model can be checked for the same rules (#425).
+own, as a specialist moved to another model in the Specialists mode does
+(#366, #610): the row comes from `findCatalogRow`, so it runs only when the
+catalog offers both the agent and the model. The skill, role line and
+literature are the agent's; only the base model changes. Its `rules_sha256`
+is the agent's own, so a pair run and a run of the agent on its own model
+can be checked for the same rules (#425).
 
 Results lines keep `agent:<id>` (or the pair id) as `model_id`, as the answer row does.
 `meta.json` adds `agent` to that model's entry: `id`, `name`,

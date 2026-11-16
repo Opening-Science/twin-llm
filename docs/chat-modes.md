@@ -15,7 +15,6 @@ and those go through the same checks as before (`checkTurnRequest`, `/api/chat`)
 | Auto        | one              | `agent:auto`. The router picks the specialist for each question ([agents.md](agents.md#auto-219)) and the specialist runs on its preferred model. |
 | Basic       | one              | One plain model, picked from the models, with no specialist and no skill: the chat's own tools and the sources the person turned on.              |
 | Specialists | one, up to three | One specialist picked for the question, more added by hand; each on its own model with its own tools and literature.                              |
-| Manual      | one to three     | Each chosen specialist on each chosen model, at most three answers in all. No specialist sends the models as themselves.                          |
 | Compare     | two or three     | The rows picked, models or specialists, side by side, as Compare has always worked.                                                               |
 
 ### Basic (#610)
@@ -74,26 +73,34 @@ labels, such as Heart rhythm (research).
 
 A new chat starts in Auto at Balanced when the catalog offers the specialists, else in
 Compare. No mode is stored, so a saved thread reopens in the mode its last ids show
-(`initialModeState` in `chat-modes.ts`, #610): Auto's one row is Auto, any pair is
-Manual, one plain model is Basic, specialists only are Specialists with those rows kept as
-chosen, and anything else, such as specialists beside models, is Compare. Rows the
-catalog no longer offers are left out first, and the hint counts them. Before #610 a
-single row reopened in Manual and a list of specialists in Compare; both send the same
-rows as before. A thread with no turn yet opens like a new chat. Both read the thread's
+(`initialModeState` in `chat-modes.ts`, #610): Auto's one row is Auto, one plain model
+is Basic, specialists only, each once and on its own model or a picked one, are
+Specialists with those rows kept as chosen, and anything else, such as specialists
+beside models or one specialist on two models, is Compare, which keeps every row. Rows
+the catalog no longer offers are left out first, and the hint counts them. A thread
+saved in Manual, before it was folded into Specialists, reopens in Specialists when each
+specialist ran once and in Compare otherwise; either way it sends the same rows as
+before. A thread with no turn yet opens like a new chat. Both read the thread's
 last turn (`lastTurnEffort` reads its effort); the pages pass no default ids, since a
 list of two or three ids would read as a mode of its own (#386). In an incognito
 chat Auto is offered only when its model runs on this machine.
 
 ### Specialist on a chosen model
 
-Manual can run a specialist on a model other than the one it prefers. That row's id is
-`agent:<specialist>@<model id>`, such as `agent:diet@llama3.2`, and its column reads
-"Diet specialist · llama3.2". The catalog does not list such rows. `findCatalogRow`
-(`infrastructure/model-catalog.ts`) builds one from the specialist's row and the model's
-row, so a pair is offered exactly when both halves are, and every place that checked an
-id against the catalog (the turn check, `/api/chat`, the incognito route, scheduled
-tasks, `/compact`) now goes through it. Auto cannot be paired, and a specialist on its
-own preferred model keeps its plain `agent:<id>` row.
+In the Specialists mode each specialist answering has its model as a choice, its own by
+default and any plain model the catalog offers (`setSpecialistModel`,
+`specialistModelChoices`); in an incognito chat a model the pair cannot run on here is
+greyed. This was the Manual mode until #610 folded it in; Manual's other use, models
+answering as themselves, is Basic for one and Compare for several. A specialist on
+another model is still one specialist: its box stays ticked, and unticking it removes it
+on whichever model it was. That row's id is `agent:<specialist>@<model id>`, such as
+`agent:diet@llama3.2`, and its column reads "Diet specialist · llama3.2". The catalog
+does not list such rows. `findCatalogRow` (`infrastructure/model-catalog.ts`) builds one
+from the specialist's row and the model's row, so a pair is offered exactly when both
+halves are, and every place that checked an id against the catalog (the turn check,
+`/api/chat`, the incognito route, scheduled tasks, `/compact`) now goes through it. Auto
+cannot be paired, and a specialist on its own preferred model keeps its plain
+`agent:<id>` row.
 
 ### Why Auto chose
 
@@ -106,7 +113,7 @@ about body weight." The rules are in [agents.md](agents.md#auto-219).
 Auto runs the specialist it picks on Auto's own model, not on the specialist's
 preference: qwen3:4b first, then qwen3:8b, else the catalog's first model
 (`AUTO_AGENT.modelPreference` in `infrastructure/agents.ts`). A specialist picked by
-hand in Manual or Compare keeps its own preference (qwen3:8b first).
+hand in Specialists or Compare keeps its own preference (qwen3:8b first).
 
 The rule comes from the committed eval runs
 ([eval-runs-2026-10.md](research/eval-runs-2026-10.md), "Tool calls and answers without
@@ -198,14 +205,14 @@ Under the text box, from left to right (`features/compare/prompt-bar.tsx`):
   Picking a source writes `@Name` into the question. A mention is part of the question
   text: it does not switch a tool on or off, and every permit applies as it would
   without it.
-- **Mode** (`mode-picker.tsx`): Auto, Basic, Specialists, Manual or Compare; for Basic
-  the models as one choice, for Specialists the ones answering and an Add a specialist
-  button, for Manual and Compare the specialists and models as checkboxes. Each
-  specialist names its model and tools under its name ("on Qwen3 8B · /sleep tools",
-  "chat tools" for General), and Auto's panel names the model Auto runs its pick on
-  (`rowSubline`, `autoModelName`). A box that would break the mode's rule is disabled
-  and the line under the lists says why. In an incognito chat the models that do not run
-  on this machine stay in the lists, greyed out with the reason.
+- **Mode** (`mode-picker.tsx`): Auto, Basic, Specialists or Compare; for Basic the
+  models as one choice, for Specialists the ones answering, each with its model as a
+  choice, and an Add a specialist button, for Compare the specialists and models as
+  checkboxes. Each specialist names its model and tools under its name ("on Qwen3 8B ·
+  /sleep tools", "chat tools" for General), and Auto's panel names the model Auto runs
+  its pick on (`rowSubline`, `autoModelName`). A box that would break the mode's rule is
+  disabled and the line under the lists says why. In an incognito chat the models that
+  do not run on this machine stay in the lists, greyed out with the reason.
 - **Effort** (`effort-menu.tsx`): a slider over the five steps with what the chosen
   step does. At Ultra the step name and the box take a faint tint (`--effort-ultra` in
   `globals.css`, light and dark); nothing moves.
