@@ -1,5 +1,12 @@
 import { formatDate } from "@/infrastructure/format-measure";
 import {
+  GUIDELINE_ATTRIBUTION_LINE,
+  KNOWLEDGE_ATTRIBUTION_LINE,
+  KNOWLEDGE_HEADING,
+  LITERATURE_ATTRIBUTION_LINE,
+  LITERATURE_HEADING,
+} from "@/infrastructure/response-document/copy";
+import {
   frameFooterMarkdown,
   frameHeaderMarkdown,
 } from "@/infrastructure/gbd-profile-frame";
@@ -8,6 +15,7 @@ import { citedValueLine } from "@/infrastructure/wearable-provenance";
 
 import { finishedAnswer, isWithheld, stoppedAnswerText } from "./answer-text";
 import type { AnswerState, TurnState } from "./conversation";
+import { panelContent } from "./evidence-lines";
 import { lookupLine, sharedMeasureNames } from "./tool-cards";
 
 /**
@@ -48,6 +56,35 @@ const evidenceLines = (answer: AnswerState): string[] => {
   return keys.length === 0 ? [] : ["", "Evidence:", ...keys.map((key) => `- \`${key}\``)];
 };
 
+/** One titled list with the note the panel prints under it; nothing when empty. */
+const listSection = (
+  heading: string,
+  lines: readonly string[],
+  note: string,
+): string[] =>
+  lines.length === 0
+    ? []
+    : ["", `${heading}:`, ...lines.map((line) => `- ${line}`), "", `_${note}_`];
+
+/** The references the evidence panel lists, in its order and words. */
+const referenceLines = (answer: AnswerState): string[] => {
+  const content = panelContent({
+    reasoning: null,
+    attribution: [],
+    document: answer.document ?? null,
+    withheld: false,
+  });
+  return [
+    ...listSection(
+      "Guideline references",
+      content.guidelines,
+      GUIDELINE_ATTRIBUTION_LINE,
+    ),
+    ...listSection(KNOWLEDGE_HEADING, content.knowledge, KNOWLEDGE_ATTRIBUTION_LINE),
+    ...listSection(LITERATURE_HEADING, content.literature, LITERATURE_ATTRIBUTION_LINE),
+  ];
+};
+
 const answerBody = (answer: AnswerState): string[] => {
   if (answer.stopped === true) {
     const written = stoppedAnswerText(answer.text);
@@ -67,6 +104,7 @@ const answerBody = (answer: AnswerState): string[] => {
       ? []
       : ["", `**Uncertainty.** ${finished.uncertainty}`]),
     ...evidenceLines(answer),
+    ...referenceLines(answer),
     ...(frame === null ? [] : frameFooterMarkdown(frame)),
   ];
 };
