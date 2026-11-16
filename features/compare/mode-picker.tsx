@@ -29,9 +29,10 @@ import {
 
 /**
  * The mode and models picker (SPEC 7.4): opens upward from the mode pill.
- * A segmented "Mode" control, the mode's line, then for Manual and Compare
- * two checkbox groups. A box whose change would break the rule is disabled
- * and says why; in incognito, rows not on this machine stay listed, greyed.
+ * A segmented "Mode" control, the mode's line, then for Basic one radio
+ * group of models and for Manual and Compare two checkbox groups. A box
+ * whose change would break the rule is disabled and says why; in
+ * incognito, rows not on this machine stay listed, greyed.
  */
 
 export const AGENTS_HREF = "/customize/agents";
@@ -74,7 +75,8 @@ const RowBox = ({
         )}
       >
         <input
-          type="checkbox"
+          type={list === "basic" ? "radio" : "checkbox"}
+          name={list === "basic" ? "basic-model" : undefined}
           className="accent-foreground mt-0.5"
           checked={boxChecked(state, list, row.id, context, prompt)}
           disabled={reason !== null}
@@ -165,6 +167,15 @@ export const ModePicker = ({
           <Link href={AGENTS_HREF} className="text-xs underline underline-offset-2">
             The specialists Auto picks from
           </Link>
+        ) : state.mode === "basic" ? (
+          <div className="flex max-h-[18rem] flex-col gap-3 overflow-y-auto overscroll-contain">
+            <RowGroup
+              legend="Model"
+              rows={plainModelRows(context.catalog)}
+              list="basic"
+              {...shared}
+            />
+          </div>
         ) : (
           <div className="flex max-h-[18rem] flex-col gap-3 overflow-y-auto overscroll-contain">
             <RowGroup

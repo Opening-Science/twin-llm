@@ -30,6 +30,16 @@ are Oura's sleep score and WHOOP's sleep performance. Oura's naps and rests are 
 only the main sleep stands for the night. The measure names are open-twin's
 (`@open-twin/aggregate`, `Measure`).
 
+open-twin's measurement catalogue (`createMeasurementCatalogue`, pin of 16 Nov 2026)
+does not yet list any of these four as shared. Google Health alone declares
+`resting-heart-rate`, `oxygen-saturation` and `step-count`; Oura and WHOOP declare their
+readings under their own keys (`oura:sleep.average-hrv`, `daily-step-count`,
+`whoop:recovery.hrv-rmssd`, `whoop:recovery.resting-heart-rate`,
+`whoop:recovery.spo2-percentage`), and WHOOP's resting heart rate is described as
+measured asleep, so not the daily resting heart rate. The rules here compare them
+regardless; whether they should follow the catalogue is open (#647).
+`infrastructure/open-twin-adapters/catalogue.test.ts` fails when a sync changes this.
+
 Where there are two bounds, the larger applies: 200 steps up to 4,000 steps, then 5%
 (600 at 12,000); 5 ms up to 50 ms of HRV, then 10% (8 ms at 80 ms). The line shown to
 people says which bound applied ("within 600 steps, the larger of 200 steps and 5% of the
