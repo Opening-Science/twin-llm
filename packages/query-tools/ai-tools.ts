@@ -26,6 +26,7 @@ import {
   valuesAroundEventInput,
   rhythmIrregularityInput,
   cohortEventRatesInput,
+  showMyDayInput,
 } from "./schemas";
 import {
   IMPORTED_CONDITIONS_TOOL,
@@ -80,6 +81,7 @@ import {
   runValuesAroundEvent,
   runRhythmIrregularity,
   runCohortEventRates,
+  runShowMyDay,
 } from "./tools";
 import { NO_WEARABLE_SNAPSHOTS } from "./wearable-readings";
 
@@ -204,14 +206,19 @@ export const createQueryTools = (
     inputSchema: modelInputSchema(rhythmIrregularityInput),
     execute: async (input) => runRhythmIrregularity(scope, input, ports),
   }),
-  // Synthetic mode only: a personal turn would always be refused, so it is not
-  // offered there and its schema stays out of the personal prompt budget (#293).
+  // Synthetic mode only: a personal turn would always be refused, so they are not
+  // offered there and their schemas stay out of the personal prompt budget (#293).
   ...(scope.mode === "synthetic"
     ? {
         cohort_event_rates: tool({
           description: description("cohort_event_rates"),
           inputSchema: modelInputSchema(cohortEventRatesInput),
           execute: async (input) => runCohortEventRates(scope, input, ports),
+        }),
+        show_my_day: tool({
+          description: description("show_my_day"),
+          inputSchema: modelInputSchema(showMyDayInput),
+          execute: async (input) => runShowMyDay(scope, input, ports),
         }),
       }
     : {}),
