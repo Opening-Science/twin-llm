@@ -27,6 +27,7 @@ import {
   rhythmIrregularityInput,
   cohortEventRatesInput,
   showMyDayInput,
+  showMyPeriodInput,
 } from "./schemas";
 import {
   IMPORTED_CONDITIONS_TOOL,
@@ -82,6 +83,7 @@ import {
   runRhythmIrregularity,
   runCohortEventRates,
   runShowMyDay,
+  runShowMyPeriod,
 } from "./tools";
 import { NO_WEARABLE_SNAPSHOTS } from "./wearable-readings";
 
@@ -219,6 +221,11 @@ export const createQueryTools = (
           description: description("show_my_day"),
           inputSchema: modelInputSchema(showMyDayInput),
           execute: async (input) => runShowMyDay(scope, input, ports),
+        }),
+        show_my_period: tool({
+          description: description("show_my_period"),
+          inputSchema: modelInputSchema(showMyPeriodInput),
+          execute: async (input) => runShowMyPeriod(scope, input, ports),
         }),
       }
     : {}),
