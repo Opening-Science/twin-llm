@@ -119,6 +119,30 @@ describe("one column at a time (SPEC 2.7, 8)", () => {
     expect(done.status).toBe("COMPLETE");
     expect(done.completedAt).toBe(NOW.toISOString());
     expect(done.numberSources?.map((source) => source.text)).toContain("72.5");
+    expect(done.citeSources).toEqual([]);
+    const cited = finishedAnswer(
+      first as AnswerState,
+      result({
+        toolParts: [
+          {
+            toolCallId: "call-2",
+            output: [
+              {
+                id: "ean-als-2024",
+                title: "Synthetic guideline",
+                year: 2024,
+                society: "EAN",
+                url: "https://example.org/g",
+                ingestMode: "full_text",
+              },
+            ],
+          },
+        ],
+      }),
+      null,
+      NOW,
+    );
+    expect(cited.citeSources?.map((source) => source.label)).toEqual(["ean-als-2024"]);
     const lost = finishedAnswer(
       first as AnswerState,
       result({ ending: "LOST" }),

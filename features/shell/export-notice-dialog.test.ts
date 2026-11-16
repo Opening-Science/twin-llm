@@ -34,14 +34,14 @@ describe("the export notice (#531)", () => {
     });
   });
 
-  test("PDF asks for the print check", async () => {
+  test("PDF asks for the PDF check", async () => {
     const asked: string[] = [];
     await checkExport(
       "t1",
-      "print",
+      "pdf",
       answering(asked, () => Response.json({ status: "ready", line: "x" })),
     );
-    expect(asked).toEqual(["/api/threads/t1/export?format=print&check=1"]);
+    expect(asked).toEqual(["/api/threads/t1/export?format=pdf&check=1"]);
   });
 
   test("a refusal keeps its sentence; a failure or an odd answer offers no Download", async () => {
@@ -71,8 +71,6 @@ describe("the export notice (#531)", () => {
   test("each state reads one plain line", () => {
     expect(noticeText({ pick: "markdown", phase: "checking" })).toBe(EXPORT_CHECKING);
     expect(noticeText({ pick: "markdown", phase: "failed" })).toBe(EXPORT_CHECK_FAILED);
-    expect(noticeText({ pick: "print", phase: "ready", line: "A line." })).toBe(
-      "A line.",
-    );
+    expect(noticeText({ pick: "pdf", phase: "ready", line: "A line." })).toBe("A line.");
   });
 });

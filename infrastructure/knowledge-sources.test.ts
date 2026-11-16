@@ -96,6 +96,8 @@ describe("knowledge source preferences", () => {
       "gbd_profile",
       "range_position",
       "rhythm_irregularity",
+      "show_my_day",
+      "show_my_period",
       "trend",
       "values_around_event",
     ]);
@@ -171,6 +173,8 @@ describe("knowledge source preferences", () => {
       "observations_for_subject",
       "range_position",
       "rhythm_irregularity",
+      "show_my_day",
+      "show_my_period",
       "subject_window",
       "summary_stats",
       "trend",

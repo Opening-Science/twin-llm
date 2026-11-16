@@ -54,7 +54,7 @@ describe("provider-whoop FHIR bundle golden", () => {
         value: { value: 48.27, unit: "millisecond", system: UCUM, code: "ms" },
       },
       {
-        code: [`${LOINC}|8867-4`],
+        code: [`${LOINC}|8867-4`, `${WHOOP}|recovery-resting-heart-rate`],
         effective: "2026-01-02T07:00:00.000Z",
         value: { value: 52, unit: "per minute", system: UCUM, code: "/min" },
       },
@@ -74,7 +74,7 @@ describe("provider-whoop FHIR bundle golden", () => {
         value: { value: 11.46, unit: "score", system: UCUM, code: "{score}" },
       },
       {
-        code: [`${LOINC}|8867-4`],
+        code: [`${LOINC}|8867-4`, `${WHOOP}|cycle-average-heart-rate`],
         effective: "2026-01-01T06:30:00.000Z",
         value: { value: 71, unit: "per minute", system: UCUM, code: "/min" },
       },
