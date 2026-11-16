@@ -22,6 +22,7 @@ import type { AppendInput } from "@/packages/audit/append";
 import {
   type ExportStep,
   GENOME_IDS_EXPORT_SENTENCE,
+  NOT_MADE_SENTENCE,
   NOT_RECORDED_SENTENCE,
   noticeLine,
   UNCONFIRMED_SENTENCE,
@@ -59,6 +60,8 @@ export type ThreadExportDeps = Readonly<{
   freeTextChecker: (actor: string, typed: readonly string[]) => CheckFreeText;
   dataMode: () => "synthetic" | "personal";
   today: () => string;
+  /** Writes the PDF; `threadPdf` unless a test hands in another. */
+  writePdf?: typeof threadPdf;
 }>;
 
 const NO_STORE = { "cache-control": "no-store" } as const;
@@ -99,9 +102,10 @@ const fileOf = async (
   title: string,
   markdown: string,
   today: string,
+  writePdf: typeof threadPdf,
 ): Promise<Response> => {
   if (format === "pdf") {
-    const pdf = await threadPdf(title, markdown, EXPORT_DISCLAIMER, today);
+    const pdf = await writePdf(title, markdown, EXPORT_DISCLAIMER, today);
     return new Response(new Uint8Array(pdf), {
       headers: {
         "content-type": "application/pdf",
@@ -224,6 +228,16 @@ export const createThreadExportHandler =
       );
     }
 
+    // The file first: the ledger records only an export that exists.
+    const file = await fileOf(
+      format,
+      thread.title,
+      markdown,
+      today,
+      deps.writePdf ?? threadPdf,
+    ).catch(() => null);
+    if (file === null) return plain(500, NOT_MADE_SENTENCE);
+
     try {
       await deps.recordDisclosure(disclosure, {
         actor,
@@ -241,5 +255,5 @@ export const createThreadExportHandler =
     } catch {
       return plain(500, NOT_RECORDED_SENTENCE);
     }
-    return fileOf(format, thread.title, markdown, today);
+    return file;
   };

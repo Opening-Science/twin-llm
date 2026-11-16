@@ -9,6 +9,7 @@ import type { AnswerState, TurnState } from "./conversation";
 import {
   exportStep,
   NOT_CHECKED_LINE,
+  NOT_MADE_SENTENCE,
   NOTHING_FOUND_LINE,
   noticeLine,
   parseExportNotice,
@@ -202,6 +203,7 @@ const handler = (
     check: () => Promise<FreeTextCheck>;
     local: boolean;
     record: RecordDisclosure;
+    writePdf: () => Promise<Uint8Array>;
   }> = {},
 ) => {
   const run: Run = { audit: [], ledger: [] };
@@ -226,6 +228,7 @@ const handler = (
     freeTextChecker: () => over.check ?? (async () => ({ matches: [] })),
     dataMode: () => "synthetic",
     today: () => "2026-10-28",
+    ...(over.writePdf === undefined ? {} : { writePdf: over.writePdf }),
   });
   return { run, exportThread };
 };
@@ -279,6 +282,19 @@ describe("the export route (SERVER-SPEC 3.7)", () => {
       },
     });
     expect((await exportThread("t", "fhir", "confirmed")).status).toBe(500);
+  });
+
+  test("a PDF that cannot be written records nothing", async () => {
+    const { run, exportThread } = handler({
+      writePdf: async () => {
+        throw new Error("font");
+      },
+    });
+    const response = await exportThread("t", "pdf", "confirmed");
+    expect(response.status).toBe(500);
+    expect(await response.text()).toBe(NOT_MADE_SENTENCE);
+    expect(run.ledger).toEqual([]);
+    expect(run.audit).toEqual([]);
   });
 
   test("the person's genome identifiers: blocked, no file, refused notice", async () => {

@@ -46,5 +46,6 @@ export const UNCONFIRMED_SENTENCE =
   "An export is made only after its notice is confirmed. Use Download or PDF on the thread.";
 export const GENOME_IDS_EXPORT_SENTENCE =
   "This thread holds identifiers from your genome, so no file was made.";
+export const NOT_MADE_SENTENCE = "The file could not be made, so nothing was recorded. Try again.";
 export const NOT_RECORDED_SENTENCE =
   "The export could not be recorded, so no file was made. Try again.";
