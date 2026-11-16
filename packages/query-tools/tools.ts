@@ -31,6 +31,7 @@ export {
   type CohortPositionResult,
   runCohortPosition,
 } from "./warehouse-tools";
+export { type ShowMyDayResult, runShowMyDay } from "./show-my-day";
 export {
   type ConditionsTimelineResult,
   type MedicationsTimelineResult,

@@ -75,6 +75,70 @@ const TURN: TurnState = {
   ],
 };
 
+const SOURCED: ResponseDocumentV1 = {
+  schema_version: "twin-llm.response.v1.1",
+  intended_use: "research_hypothesis_generation_n_of_1",
+  not_for_diagnostic_use: true,
+  sufficient_data: true,
+  abstained: false,
+  answer_class: "analytics",
+  data_basis: {
+    evidence_keys: [],
+    hallucinated_keys: [],
+    tool_calls: [],
+    sources: {
+      gbd: [],
+      guidelines: [
+        {
+          tool: "guidelines",
+          id: "g1",
+          title: "Synthetic guideline",
+          year: 2024,
+          society: "Synthetic society",
+          doi: "10.0000/synthetic",
+          url: "https://example.org/g1",
+          licence: "CC BY 4.0",
+          ingestMode: "full",
+          sectionHeading: null,
+          recommendationId: null,
+          recClass: null,
+          evidenceLevel: null,
+          page: null,
+        },
+      ],
+      knowledge: [
+        {
+          tool: "knowledge",
+          id: "k1",
+          title: "Synthetic note",
+          file: "notes/synthetic.md",
+          sectionHeading: "Overview",
+          licence: "CC BY 4.0",
+        },
+      ],
+      literature: [
+        {
+          tool: "literature",
+          id: "a1",
+          title: "Synthetic article",
+          journal: "J",
+          year: 2025,
+          pmcid: "PMC000001",
+          url: "https://example.org",
+          doi: "",
+          licence: "cc-by",
+          licenceLabel: "CC BY 4.0",
+          sectionHeading: "Results",
+        },
+      ],
+    },
+    gbd_rows: [],
+  },
+  uncertainty: { model_statement: null, level: "unknown", reasons: [] },
+  next_step: "none",
+  interpretation: { kind: "none" },
+};
+
 describe("the Markdown export (SPEC 9.1, 9.2)", () => {
   const markdown = threadMarkdown({ title: "Heart rate", turns: [TURN] }, "2026-10-28");
 
@@ -128,6 +192,26 @@ describe("the Markdown export (SPEC 9.1, 9.2)", () => {
     );
     expect(withheld).not.toContain("72.5");
     expect(withheld).toContain("_Withheld: it did not rest on enough data._");
+  });
+
+  test("references the panel lists, in its words, each with its note", () => {
+    const sourced = threadMarkdown(
+      {
+        title: "t",
+        turns: [{ ...TURN, answers: [answer({ text: REPLY, document: SOURCED })] }],
+      },
+      "2026-10-28",
+    );
+    expect(sourced).toContain(
+      "Guideline references:\n- Synthetic guideline · 2024 · 10.0000/synthetic\n\n_Published guideline passage",
+    );
+    expect(sourced).toContain(
+      "OpenTwin knowledge:\n- Synthetic note · Overview · notes/synthetic.md\n\n_OpenTwin knowledge notes",
+    );
+    expect(sourced).toContain(
+      "Literature:\n- Synthetic article · PMC000001 · CC BY 4.0\n\n_Open-access articles",
+    );
+    expect(markdown).not.toContain("Guideline references:");
   });
 
   test("runs of blank lines collapse and the file ends with one newline", () => {
