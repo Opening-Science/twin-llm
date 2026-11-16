@@ -199,8 +199,8 @@ v1h S4 items:
 
 Not Germany and not 2015. `gbd_estimate` offers no age band, so Q-S4-08 (a
 60-year-old woman) can only be answered with an all-ages or age-standardised
-figure. If the download leaves out ages or years, split it by year; several
-files import as one.
+figure. The query is about 3,500 rows, one file; an export made in parts
+imports as one.
 
 ```sh
 bun --env-file=.env.eval --preload ./features/chat/response/preload-server-only.mjs \
