@@ -22,13 +22,12 @@ import type { PickedModel } from "./conversation";
  * rules are tested without a screen.
  */
 
-export type ChatMode = "auto" | "basic" | "specialists" | "manual" | "compare";
+export type ChatMode = "auto" | "basic" | "specialists" | "compare";
 
 export const CHAT_MODES: readonly ChatMode[] = [
   "auto",
   "basic",
   "specialists",
-  "manual",
   "compare",
 ];
 
@@ -45,11 +44,7 @@ export const MODE_COPY: Readonly<
   },
   specialists: {
     label: "Specialists",
-    line: "One specialist answers, picked for the question; add up to two more. Each runs on its own model with its own tools and literature.",
-  },
-  manual: {
-    label: "Manual",
-    line: "Pick specialists and models: each specialist runs on each model, up to three answers.",
+    line: "One specialist answers, picked for the question; add up to two more. Each runs with its own tools and literature, on its own model or one you pick.",
   },
   compare: {
     label: "Compare",
@@ -69,14 +64,13 @@ export type ModeState = Readonly<{
   mode: ChatMode;
   /** The one plain model Basic sends, or null when none is offered. */
   basic: string | null;
-  /** Specialist rows chosen in the Specialists mode. */
+  /**
+   * Rows chosen in the Specialists mode: `agent:<id>` on the specialist's
+   * own model, or `agent:<id>@<model>` on a model the person picked.
+   */
   specialists: readonly string[];
   /** False while Specialists' rows are defaults that follow the question. */
   specialistsChosen: boolean;
-  /** Specialist rows (`agent:<id>`) chosen in Manual. */
-  manualSpecialists: readonly string[];
-  /** Plain model ids chosen in Manual. */
-  manualModels: readonly string[];
   /** Rows chosen in Compare. */
   compare: readonly string[];
   /** False while Compare's rows are defaults that follow the question. */
@@ -97,6 +91,12 @@ export const specialistRows = (catalog: readonly CatalogModel[]): CatalogModel[]
 export const plainModelRows = (catalog: readonly CatalogModel[]): CatalogModel[] =>
   catalog.filter((row) => row.agent === undefined);
 
+/** The specialist's own row for a row or a pair: `agent:diet@llama3.2` → `agent:diet`. */
+export const specialistOf = (id: string): string => {
+  const pair = parsePairedModelId(id);
+  return pair === null ? id : `${AGENT_ID_PREFIX}${pair.agentId}`;
+};
+
 /**
  * The small line under a picker row: what a specialist runs on and with
  * which tools ("on Qwen3 8B · /sleep tools"; General has no skill, so the
@@ -105,11 +105,18 @@ export const plainModelRows = (catalog: readonly CatalogModel[]): CatalogModel[]
 export const rowSubline = (row: CatalogModel): string => {
   if (row.id === AUTO_MODEL_ID) return "Picks an agent for each question.";
   if (row.agent !== undefined) {
-    const tools = row.agent.skill === null ? "chat tools" : `/${row.agent.skill} tools`;
-    return `on ${row.agent.baseModelName} · ${tools}`;
+    return `on ${row.agent.baseModelName} · ${specialistTools(row) ?? ""}`;
   }
   return friendlyModelName(row.id) === null ? row.provider : row.id;
 };
+
+/** A specialist's tools as the picker names them, or null for a plain model. */
+export const specialistTools = (row: CatalogModel): string | null =>
+  row.agent === undefined
+    ? null
+    : row.agent.skill === null
+      ? "chat tools"
+      : `/${row.agent.skill} tools`;
 
 /** What Auto runs its pick on, for the Auto panel, or null without Auto. */
 export const autoModelName = (context: ModeContext): string | null =>
@@ -199,39 +206,18 @@ const baseState = (context: ModeContext): ModeState => ({
   basic: basicDefault(context),
   specialists: specialistDefaults(context),
   specialistsChosen: false,
-  manualSpecialists: firstOf(specialistRows(context.catalog), context),
-  manualModels: firstOf(plainModelRows(context.catalog), context),
   compare: compareDefaults(context),
   compareChosen: false,
   fromThread: false,
 });
 
-/** A row as Manual's two lists hold it: its specialist and its model. */
-const manualParts = (
-  id: string,
-  context: ModeContext,
-): Readonly<{ specialist: string | null; model: string | null }> => {
-  const pair = parsePairedModelId(id);
-  if (pair !== null) {
-    return { specialist: `${AGENT_ID_PREFIX}${pair.agentId}`, model: pair.modelId };
-  }
-  const row = findCatalogRow(id, context.catalog);
-  if (row === null) return { specialist: null, model: null };
-  return row.agent === undefined
-    ? { specialist: null, model: row.id }
-    : { specialist: row.id, model: row.agent.baseModelId };
-};
-
-const unique = (ids: readonly (string | null)[]): string[] => [
-  ...new Set(ids.filter((id): id is string => id !== null)),
-];
-
 /**
  * Where the picker starts (SPEC 7.2): a new chat on Auto when offered, else
  * Compare; a reopened thread in the mode and rows of its last turn. No mode
- * is stored, so it is read from the ids: Auto's one row is Auto, a pair is
- * Manual, one plain model is Basic, specialists only are Specialists, anything
- * else is Compare.
+ * is stored, so it is read from the ids: Auto's one row is Auto, one plain
+ * model is Basic, specialists only (on their own model or a picked one, as a
+ * saved Manual thread has), each once, are Specialists, anything else is
+ * Compare, which keeps every row (one specialist on two models, say).
  */
 export const initialModeState = (
   context: ModeContext,
@@ -244,24 +230,14 @@ export const initialModeState = (
     return autoOffered(context) ? { ...base, mode: "auto", fromThread: true } : base;
   }
   const live = ids.filter((id) => id !== AUTO_MODEL_ID && offered(id, context));
-  const manual = (rows: readonly string[]): ModeState => {
-    const parts = rows.map((id) => manualParts(id, context));
-    return {
-      ...base,
-      mode: "manual",
-      manualSpecialists: unique(parts.map((part) => part.specialist)),
-      manualModels: unique(parts.map((part) => part.model)),
-      fromThread: true,
-    };
-  };
-  if (live.some((id) => parsePairedModelId(id) !== null)) return manual(live);
   const isSpecialist = (id: string) =>
-    specialistRows(context.catalog).some((row) => row.id === id);
+    findCatalogRow(id, context.catalog)?.agent !== undefined;
   const [only] = live;
   if (ids.length === 1 && only !== undefined && !isSpecialist(only)) {
     return { ...base, mode: "basic", basic: only, fromThread: true };
   }
-  if (live.length > 0 && live.every(isSpecialist)) {
+  const oncePerSpecialist = new Set(live.map(specialistOf)).size === live.length;
+  if (live.length > 0 && live.every(isSpecialist) && oncePerSpecialist) {
     return {
       ...base,
       mode: "specialists",
@@ -315,18 +291,38 @@ export const canAddSpecialist = (
   prompt: string,
 ): boolean => specialistIds(state, context, prompt).length < MAX_SELECTED_MODELS;
 
-/** The ids Manual sends, before the at-most-three rule. */
-export const manualIds = (state: ModeState, context: ModeContext): string[] => {
-  const models = state.manualModels.filter((id) => offered(id, context));
-  const specialists = state.manualSpecialists.filter((id) => offered(id, context));
-  if (specialists.length === 0) return models;
-  return specialists.flatMap((specialist) => {
-    const row = findCatalogRow(specialist, context.catalog);
-    const agentId = specialist.slice(AGENT_ID_PREFIX.length);
-    return models.map((model) =>
-      row?.agent?.baseModelId === model ? specialist : pairedModelId(agentId, model),
-    );
-  });
+/** The model a Specialists row runs on: the picked one, else its own. */
+export const specialistModel = (id: string, context: ModeContext): string | null => {
+  const pair = parsePairedModelId(id);
+  if (pair !== null) return pair.modelId;
+  return findCatalogRow(id, context.catalog)?.agent?.baseModelId ?? null;
+};
+
+/**
+ * The state with one Specialists row moved to another model: its plain
+ * `agent:<id>` row on its own model, else the pair `agent:<id>@<model>`.
+ */
+export const setSpecialistModel = (
+  state: ModeState,
+  context: ModeContext,
+  prompt: string,
+  id: string,
+  modelId: string,
+): ModeState => {
+  const specialist = specialistOf(id);
+  const own = findCatalogRow(specialist, context.catalog)?.agent?.baseModelId;
+  const next =
+    own === modelId
+      ? specialist
+      : pairedModelId(specialist.slice(AGENT_ID_PREFIX.length), modelId);
+  return {
+    ...state,
+    specialists: specialistPicks(state, context, prompt).map((each) =>
+      each === id ? next : each,
+    ),
+    specialistsChosen: true,
+    fromThread: false,
+  };
 };
 
 /** The model Basic sends: its pick while offered here, else none. */
@@ -345,10 +341,7 @@ export const answerCount = (
       ? basicIds(state, context).length
       : state.mode === "specialists"
         ? specialistIds(state, context, prompt).length
-        : state.mode === "manual"
-          ? manualIds(state, context).length
-          : compareRows(state, context, prompt).filter((id) => offered(id, context))
-              .length;
+        : compareRows(state, context, prompt).filter((id) => offered(id, context)).length;
 
 /** What the current mode is missing, or null when it can send. */
 export const modeProblem = (
@@ -362,21 +355,12 @@ export const modeProblem = (
   if (state.mode === "basic") {
     return basicIds(state, context).length === 0 ? "Pick a model." : null;
   }
+  const count = answerCount(state, context, prompt);
   if (state.mode === "specialists") {
-    const count = answerCount(state, context, prompt);
     return count < MIN_SELECTED_MODELS || count > MAX_SELECTED_MODELS
       ? "Pick one to three specialists."
       : null;
   }
-  if (state.mode === "manual") {
-    if (state.manualModels.filter((id) => offered(id, context)).length === 0) {
-      return "Pick at least one model.";
-    }
-    return manualIds(state, context).length > MAX_SELECTED_MODELS
-      ? "Three answers at most."
-      : null;
-  }
-  const count = answerCount(state, context, prompt);
   return count < 2 || count > MAX_SELECTED_MODELS
     ? "Compare needs two or three models or specialists."
     : null;
@@ -397,9 +381,7 @@ export const pickedModels = (
         ? basicIds(state, context)
         : state.mode === "specialists"
           ? specialistIds(state, context, prompt)
-          : state.mode === "manual"
-            ? manualIds(state, context)
-            : compareRows(state, context, prompt);
+          : compareRows(state, context, prompt);
   return [...new Set(ids)]
     .filter((id) => offered(id, context))
     .slice(0, MAX_SELECTED_MODELS)
@@ -414,7 +396,7 @@ export const pickedModels = (
 
 /**
  * The mode pill: "Auto", "Basic · Qwen3 4B", "Specialists · Sleep",
- * "Manual · 2 answers", "Compare · 3 models".
+ * "Specialists · 2", "Compare · 3 models".
  */
 export const modeSummary = (
   state: ModeState,
@@ -439,9 +421,7 @@ export const modeSummary = (
       : `${MODE_COPY.specialists.label} · ${row.name}`;
   }
   const count = answerCount(state, context, prompt);
-  return state.mode === "manual"
-    ? `Manual · ${String(count)} ${count === 1 ? "answer" : "answers"}`
-    : `Compare · ${String(count)} ${count === 1 ? "model" : "models"}`;
+  return `Compare · ${String(count)} ${count === 1 ? "model" : "models"}`;
 };
 
 /** The picker's footer: what is missing, else the count. */
@@ -470,9 +450,12 @@ export const droppedModels = (
 
 // --- changes ----------------------------------------------------------------------
 
-export type PickerList =
-  "basic" | "specialists" | "manualSpecialists" | "manualModels" | "compare";
+export type PickerList = "basic" | "specialists" | "compare";
 
+/**
+ * The ids a list's boxes are checked against. The Specialists boxes stand
+ * for specialists, so a pair counts as its specialist.
+ */
 const listOf = (
   state: ModeState,
   list: PickerList,
@@ -483,11 +466,7 @@ const listOf = (
     case "basic":
       return state.basic === null ? [] : [state.basic];
     case "specialists":
-      return specialistPicks(state, context, prompt);
-    case "manualSpecialists":
-      return state.manualSpecialists;
-    case "manualModels":
-      return state.manualModels;
+      return specialistPicks(state, context, prompt).map(specialistOf);
     case "compare":
       return compareRows(state, context, prompt);
   }
@@ -498,7 +477,9 @@ const toggled = (ids: readonly string[], id: string): string[] =>
 
 /**
  * The state with one box ticked or unticked; the rule is checked by
- * `boxDisabled`. Basic's list is one choice, so a pick replaces the last.
+ * `boxDisabled`. Basic's list is one choice, so a pick replaces the last. A
+ * specialist unticked goes with whichever model it was on; one ticked joins
+ * on its own model.
  */
 export const toggleRow = (
   state: ModeState,
@@ -507,17 +488,23 @@ export const toggleRow = (
   context: ModeContext,
   prompt: string,
 ): ModeState => {
-  if (list === "basic") return { ...state, basic: id, fromThread: false };
-  const next = toggled(listOf(state, list, context, prompt), id);
   switch (list) {
-    case "specialists":
+    case "basic":
+      return { ...state, basic: id, fromThread: false };
+    case "specialists": {
+      const picks = specialistPicks(state, context, prompt);
+      const next = picks.some((each) => specialistOf(each) === id)
+        ? picks.filter((each) => specialistOf(each) !== id)
+        : [...picks, id];
       return { ...state, specialists: next, specialistsChosen: true, fromThread: false };
-    case "manualSpecialists":
-      return { ...state, manualSpecialists: next, fromThread: false };
-    case "manualModels":
-      return { ...state, manualModels: next, fromThread: false };
+    }
     case "compare":
-      return { ...state, compare: next, compareChosen: true, fromThread: false };
+      return {
+        ...state,
+        compare: toggled(compareRows(state, context, prompt), id),
+        compareChosen: true,
+        fromThread: false,
+      };
   }
 };
 
@@ -529,9 +516,8 @@ export const setMode = (state: ModeState, mode: ChatMode): ModeState => ({
 
 /**
  * Why a box may not change, or null when it may: one more would break the
- * at-most-three rule, one fewer would leave Manual without a model, Specialists
- * without a specialist or Compare without a row, or the row does not run on
- * this machine.
+ * at-most-three rule, one fewer would leave Specialists without a specialist
+ * or Compare without a row, or the row does not run on this machine.
  */
 export const boxDisabled = (
   state: ModeState,
@@ -546,9 +532,6 @@ export const boxDisabled = (
   const checked = listOf(state, list, context, prompt).includes(id);
   const next = toggleRow(state, list, id, context, prompt);
   if (checked) {
-    if (list === "manualModels" && next.manualModels.length < MIN_SELECTED_MODELS) {
-      return "Manual needs at least one model.";
-    }
     if (list === "specialists" && next.specialists.length < MIN_SELECTED_MODELS) {
       return "Keep at least one specialist.";
     }
@@ -570,3 +553,29 @@ export const boxChecked = (
   context: ModeContext,
   prompt: string,
 ): boolean => listOf(state, list, context, prompt).includes(id);
+
+/**
+ * The models a Specialists row may move to, with why one may not: every
+ * plain model, a model this incognito chat cannot run greyed out.
+ */
+export const specialistModelChoices = (
+  id: string,
+  context: ModeContext,
+): readonly Readonly<{ id: string; name: string; reason: string | null }>[] => {
+  const specialist = specialistOf(id);
+  const own = findCatalogRow(specialist, context.catalog)?.agent?.baseModelId;
+  return plainModelRows(context.catalog).map((row) => {
+    const runs =
+      row.id === own
+        ? rowRunsHere(specialist, context)
+        : rowRunsHere(
+            pairedModelId(specialist.slice(AGENT_ID_PREFIX.length), row.id),
+            context,
+          );
+    return {
+      id: row.id,
+      name: row.name,
+      reason: runs ? null : "Not on this machine, so not for incognito chats.",
+    };
+  });
+};
