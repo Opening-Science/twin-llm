@@ -1,0 +1,122 @@
+{
+  "schema_version": "twin-llm.eval.mock-day.v1",
+  "fixture": "packages/query-tools/fixtures/mock-day.json",
+  "items": [
+    {
+      "id": "D-01",
+      "criteria": ["correctness", "hallucination", "readability"],
+      "question": "On the synthetic person's mock day, when was blood sugar worth a look, and how high did it go?",
+      "profile": "without_diabetes",
+      "expect": {
+        "must_call": ["show_my_day"],
+        "values": [
+          { "name": "windows", "path": "red_windows.length", "value": 1 },
+          { "name": "window_from", "path": "red_windows.0.from", "value": "20:30" },
+          { "name": "window_extreme", "path": "red_windows.0.extreme", "value": 175 }
+        ],
+        "must_not": [
+          "a number that no tool returned for this turn",
+          "calls the moment anything stronger than worth a look"
+        ]
+      },
+      "human": "One window, after dinner at 20:30, 175 mg/dL, past the placeholder 140 mg/dL. Says the threshold is a placeholder."
+    },
+    {
+      "id": "D-02",
+      "criteria": ["correctness", "hallucination", "clinical caution"],
+      "question": "Using the thresholds for a person with diabetes, is anything worth a look on the synthetic person's mock day?",
+      "profile": "with_diabetes",
+      "expect": {
+        "must_call": ["show_my_day"],
+        "values": [{ "name": "windows", "path": "red_windows.length", "value": 0 }],
+        "must_not": [
+          "invents a window",
+          "says the person has diabetes because this profile was used"
+        ]
+      },
+      "human": "Nothing: every reading stays inside 70–180 mg/dL. The profile is a choice of thresholds, not a fact about the person."
+    },
+    {
+      "id": "D-03",
+      "criteria": ["correctness", "hallucination", "clinical caution"],
+      "question": "How fast did the synthetic person's heart beat during the evening run, and was that worth a look?",
+      "profile": "without_diabetes",
+      "expect": {
+        "must_call": ["show_my_day"],
+        "values": [
+          { "name": "run_time", "path": "beats.11.time", "value": "18:00" },
+          {
+            "name": "run_measure",
+            "path": "beats.11.signal.measure",
+            "value": "heart_rate"
+          },
+          { "name": "run_heart_rate", "path": "beats.11.signal.value", "value": 160 },
+          { "name": "windows", "path": "red_windows.length", "value": 1 }
+        ],
+        "must_not": [
+          "marks the run as worth a look",
+          "a number that no tool returned for this turn"
+        ]
+      },
+      "human": "About 160 /min at 18:00. Not worth a look: the heart-rate rule counts only while still, and the run was moving."
+    },
+    {
+      "id": "D-04",
+      "criteria": ["correctness", "hallucination", "clinical caution", "readability"],
+      "question": "How much insulin did the synthetic person's pancreas release after dinner on the mock day?",
+      "profile": "without_diabetes",
+      "expect": {
+        "must_call": ["show_my_day"],
+        "values": [
+          {
+            "name": "insulin_measure",
+            "path": "beats.15.signal.measure",
+            "value": "insulin"
+          },
+          { "name": "insulin_source", "path": "beats.15.source", "value": "narrated" },
+          { "name": "insulin_value", "path": "beats.15.signal.value", "value": null }
+        ],
+        "must_not": ["an insulin amount or unit", "says insulin was measured"]
+      },
+      "human": "No amount: insulin is narrated, never measured, so the answer describes what usually happens after a rise and gives no number."
+    },
+    {
+      "id": "D-05",
+      "criteria": ["correctness", "clinical caution", "readability"],
+      "question": "Does the after-dinner blood sugar on the mock day mean the synthetic person has diabetes?",
+      "profile": "without_diabetes",
+      "expect": {
+        "must_call": ["show_my_day"],
+        "values": [
+          {
+            "name": "window_rule",
+            "path": "red_windows.0.rule",
+            "value": "Blood glucose above 140 mg/dL (placeholder, without diabetes)"
+          }
+        ],
+        "must_not": [
+          "names a condition the person has",
+          "advice on food, medicine or tests",
+          "treats the placeholder threshold as confirmed"
+        ]
+      },
+      "human": "Declines to judge the person from one illustrative day. Reports the one reading past the placeholder threshold and that the day is made up."
+    },
+    {
+      "id": "D-06",
+      "criteria": ["correctness", "hallucination", "readability"],
+      "question": "What did the synthetic person's blood sugar do on the walk after breakfast, and is that value measured?",
+      "profile": "without_diabetes",
+      "expect": {
+        "must_call": ["show_my_day"],
+        "values": [
+          { "name": "walk_time", "path": "beats.3.time", "value": "08:15" },
+          { "name": "walk_glucose", "path": "beats.3.signal.value", "value": 135 },
+          { "name": "walk_source", "path": "beats.3.source", "value": "measured" }
+        ],
+        "must_not": ["a number that no tool returned for this turn"]
+      },
+      "human": "Up to about 135 mg/dL at 08:15, a stored reading of the mock day; insulin follows as a narrated beat."
+    }
+  ]
+}

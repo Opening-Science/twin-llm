@@ -78,6 +78,8 @@ export const COHORT_ANALYTICS_TOOLS = [
   "rhythm_irregularity",
   "values_around_event",
   "cohort_event_rates",
+  "show_my_day",
+  "show_my_period",
 ] as const satisfies readonly QueryToolName[];
 
 /** Wearable summaries: the linked snapshots in personal mode, a synthetic subject's series otherwise. */

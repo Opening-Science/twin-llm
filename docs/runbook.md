@@ -22,7 +22,7 @@ bun run doctor                         # read-only: the same checks, what each p
 
 1. Checks bun, Node.js, git, Python 3, Java 21+, shasum, curl, uv, zstd and Ollama, and whether Postgres answers at `DATABASE_URL` with pgvector available. Anything missing is printed with its Homebrew or apt line; nothing is installed.
 2. Writes `.env.local` from `.env.synthetic.example` when there is none (`DATABASE_URL` from the shell; on macOS without one, `postgresql://$USER@127.0.0.1:5432/twin_llm_synthetic`). An existing `.env.local` is never touched.
-3. `bun install`, creates the database when the server has none of that name, `prisma migrate deploy`. `bun run doctor` lists a `.open-twin` left over from the old sync as `[stale]`, with the command that removes it (see "Worktrees made before `packages/open-twin/`").
+3. `sync:open-twin` (skipped when `.open-twin/OPEN_TWIN_SHA` is the pin), `bun install`, creates the database when the server has none of that name, `prisma migrate deploy`.
 4. `anatomy:fetch --skip-rigged` when an atlas or demo body is missing. When a rigged body is missing, `anatomy:fetch --rigged <id>` downloads it from the `anatomy-rigged-v1` release; only if that fails, `anatomy:bake-rigged` bakes it (needs uv; without uv the step is skipped with the install line). Walk/Idle/Dance say that whoever runs TwinLLM here can install it until then.
 5. When the warehouse has `synthea-v4-seed42` but not the pinned copy (subjects other than 37, ingested bundles whose fingerprint is not `bundleSetSha256` in `scripts/setup/cohort-pins.ts`: the SHA-256 of the sorted bundle hashes, computed in SQL from `bundles`, or condition and medication request counts other than `conditionCount` and `medicationRequestCount`, as when the pinned bundles were ingested before those tables existed), the step is `[stale]` with the fix and nothing is loaded. `--reload-cohort` downloads (or generates) and verifies the pinned cohort first, then deletes that cohort's rows from `observations`, `observation_non_numeric`, `conditions`, `medication_requests`, `bundles` and `subjects` (each scoped by the cohort id, in one transaction that rolls back if any other cohort's counts move or a row of this cohort is left), then ingests. Only `synthea-v4-seed42` can be reloaded, and only it and `open-twin-synthea-trimmed-3` can be deleted. When no allowlisted cohort other than the trimmed fixtures has subjects: downloads `eval-cohort-synthea-v4-seed42-20260101.tar.zst` (4,911,581 bytes) from release `eval-cohort-v1` to `.synthea/downloads/` (kept for re-runs; redirects only to GitHub's asset hosts), checks its SHA-256, unpacks it with zstd, checks 37 files, `contentSha256` `f4941fab7a56e17f9dd66b6b6e0fbed379dab8c564c6024831c5fd4aa0ba09eb` and the manifest's cohort id, puts it in `.synthea/fhir`, then `warehouse:ingest`. When the release is not published yet or cannot be reached, setup says so and runs `synthea:generate -- --preset eval` instead (needs Java); `--generate-cohort` does that on purpose. A generated cohort is checked against the same pin; a mismatch ingests nothing, and on arm64 (Apple Silicon) the checklist says it is a platform difference (floating point) and to use the download (`docs/warehouse.md`, "Other CPU architectures"). Without zstd setup generates; without zstd and Java, an empty warehouse gets the three trimmed fixtures instead and the checklist says what to install.
 6. `--cohort-10k`: checks the release's `SHA256SUMS` against the pinned archive hash, downloads `synthea-v4-seed42-10k-fhir.tar.zst` (925,850,184 bytes) to `.synthea/downloads/` (kept for re-runs), checks its sha256, unpacks with zstd (about 41 GB), checks 11,551 files and the release's content checksum, ingests as `synthea-v4-seed42-10k` (rejected bundles are counted, not fatal), then deletes the unpacked files. Refused with less than 45 GB free.
@@ -191,27 +191,32 @@ bun run anchor:rotate -- --without-old-key   # the old key is lost or exposed
 - **Limits.** Rows added since the latest anchor can still be removed unseen. Anyone who can write as your OS user can replace the key and the file; a copy of `anchor:export` kept elsewhere is what guards against that.
 - Last run: 2026-10-31, Linux, `next start` in synthetic mode against a throwaway owner cluster (Postgres 18.6 with pgvector, `TWINLLM_STATE_DIR` a new folder, deleted afterwards) with made-up rows only: audit rows from `verify-cli --seed-ok` and one synthetic ledger row. Before `anchor:init` the check said UNKNOWN (exit 2). `anchor:init` and `anchor:write` left the key 600 in a 700 folder and anchored both chains; both checks and both Lab cards said OK with the key id and public key. `anchor:rotate` and a new anchor still verified, the old public key in `retired/`. After `TRUNCATE audit_events` in that database `verify-cli --check` printed "The audit chain is shorter than its latest signed anchor (row 5)" and exited 1, the Audit chain card said Not OK, and `anchor:write` refused. Rows seeded again from row 1 gave "Row 5 of the audit chain has a different hash from its signed anchor" and the server logged its refusal once. With a 2 minute interval, a ledger row added after the last write was anchored when the server was stopped with SIGTERM. Screenshots light and dark.
 
-## open-twin packages
+## open-twin sync
 
-The open-twin packages are copied into `packages/open-twin/` at one commit (`docs/open-twin.md`); there is nothing to sync.
+### `bash scripts/sync-open-twin.sh <sha>`
 
-### `bun run open-twin:verify`
+Checks out open-twin at `<sha>` into the gitignored `.open-twin/`, builds `fhir-core`, `fhir-r4`, `aggregate`, `anchor-layer` and the three providers, and pins their `fhir-core` peer. It never edits upstream `*.ts`. `@open-twin/interpreter` is not synced. Upgrade procedure: `docs/open-twin-pins.md`.
 
-Checks that every file in `packages/open-twin/` matches `MANIFEST.sha256`, that `UPSTREAM.json` names a base commit per package, and that the packages export what the host uses, including `normaliseBundle` from `@open-twin/fhir-r4` and the anchor-layer JSON against its sha256 sidecar.
+```sh
+bash scripts/sync-open-twin.sh 2fd26911c43c3007c8b87a88bf8a3647fa90ded0
+git -C .open-twin rev-parse HEAD
+git -C .open-twin status --porcelain -- '*.ts' | wc -l
+```
 
-- Good: 0 fail.
-- Last run: 2026-11-14, 9 pass / 0 fail (base `4b42ef9`).
+- Good: `sync-open-twin OK: … @ c37d800…`, `rev-parse` prints the same SHA, and porcelain prints `0`.
+- Then run `bun install` and `bun run sync:verify`, as in the upgrade procedure in `docs/open-twin-pins.md`.
+- Last run: 2026-10-17 21:36 CEST (default SHA `a9e126c`; `rev-parse` matches; `anchor-layer` dist present; porcelain `*.ts` 0). Package.json rewrites for `workspace:*` → peer-pin are expected and are not `*.ts` edits.
 
-### `bun run test:open-twin`
+### `bun run sync:verify`
 
-Upstream's own tests, under vitest, one process per package (`scripts/open-twin/test.ts`).
+Smoke tests that the synced packages resolve and export what the host pins, including `normaliseBundle` from `@open-twin/fhir-r4`.
 
-- Good: `test:open-twin: every package passed`.
-- Last run: 2026-11-14, every package passed (base `4b42ef9`).
+- Good: 6 pass, 0 fail (the sixth checks the anchor-layer JSON against its sha256 sidecar).
+- Last run: 2026-11-14, 6 pass / 0 fail (pin `4b42ef9`).
 
-### Operator: cycle through open-twin's `provider-vitronic` (never CI)
+### Operator: cycle through `@open-twin/provider-vitronic` (never CI)
 
-TwinLLM does not copy `provider-vitronic`, so the library half of this check runs in an open-twin checkout. Dry-run first, then `--execute` with `BODYLOOP_TLS_FINGERPRINT`, host Sync on that scan, then count FHIR `bundle.entry` via `createBodyLoopClient({ apiToken, tlsFingerprintSha256 })` → `getAvailableViatars(client, probandId)` → `getFhirBundleFromVitronicData`. Do not use `packages/vitronic/client.ts` for this check. Fail if the eval hits `/probands` or the password grant.
+TwinLLM no longer syncs `provider-vitronic`, so the library half of this check runs in an open-twin checkout. Dry-run first, then `--execute` with `BODYLOOP_TLS_FINGERPRINT`, host Sync on that scan, then count FHIR `bundle.entry` via `createBodyLoopClient({ apiToken, tlsFingerprintSha256 })` → `getAvailableViatars(client, probandId)` → `getFhirBundleFromVitronicData`. Do not use `packages/vitronic/client.ts` for this check. Fail if the eval hits `/probands` or the password grant.
 
 ```sh
 bun run vitronic:cycle create-scan --proband-id <n>
@@ -456,6 +461,7 @@ git fetch origin
 git worktree add ../twin-llm-<issue> -b <issue>-<slug> origin/main
 cd ../twin-llm-<issue>
 cp .env.synthetic.example .env.local   # synthetic settings; never commit
+bun run sync:open-twin                 # the pinned open-twin packages, before bun install
 bun install
 ```
 
@@ -493,29 +499,6 @@ git worktree remove ../twin-llm-<issue>
 
 - Good: `git worktree list` shows the main checkout plus one entry per open lane; each lane's dev server answers on its own port.
 - Last run: 2026-11-05 and 06, Linux, three worktrees, each with its own throwaway Postgres (ports 5451, 5461, 5462); migrations applied and all gates passed in each.
-
-### Worktrees made before `packages/open-twin/`
-
-A worktree made before the open-twin packages were copied in may still hold a `.open-twin`
-from the old sync: a folder, or in a few cases a symlink to the main checkout's. It is
-gitignored; `bun run doctor` lists it `[stale]`. In each such
-worktree, after rebasing onto `origin/main`:
-
-```sh
-ls -ld .open-twin                                             # folder (d) or link (l)
-rm -rf .open-twin node_modules/@open-twin && bun install      # a folder
-rm .open-twin && rm -rf node_modules/@open-twin && bun install # a link: no trailing slash
-```
-
-`rm -rf .open-twin/` with a trailing slash follows a link and deletes the main checkout's
-copy, so clean the main checkout's `.open-twin` last. To list what is left:
-
-```sh
-git worktree list --porcelain | sed -n 's/^worktree //p' \
-  | while read -r tree; do ls -ld "$tree/.open-twin" 2>/dev/null; done
-```
-
-- Good: `bun run doctor` no longer lists `.open-twin`, and `bun run typecheck` and `bun test` pass.
 
 ## Onboarding
 
@@ -624,7 +607,7 @@ bun run knowledge:ingest
 
 - Good: one line per file, then `pruned=<n>` (knowledge rows whose file is gone). A second run prints the same chunk counts and `pruned=0`.
 - Last run: 2026-10-17, throwaway pgvector DB: `biomarker-catalogue` 15, `metric-glossary` 12, `provenance-and-audit` 7, `system-limits` 7, `units-and-codes` 8 chunks (49), `pruned=1` (a seeded stale row) then `pruned=0`. Chunk hash identical across both runs; the one `source = 'guideline'` row was untouched.
-- After an open-twin merge that touches `packages/open-twin/anchor-layer/`: `bun run knowledge:biomarkers`, then re-ingest.
+- After an open-twin pin bump: `bun run knowledge:biomarkers`, then re-ingest.
 
 ### Specialty literature
 

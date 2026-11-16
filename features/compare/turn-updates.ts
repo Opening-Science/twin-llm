@@ -1,3 +1,4 @@
+import { referenceSources } from "@/infrastructure/claim-sources";
 import { numberSources } from "@/infrastructure/number-sources";
 import {
   parseTwinAnswer,
@@ -178,6 +179,7 @@ export const finishedAnswer = (
     ...(complete
       ? {
           numberSources: numberSources(result.text, result.toolParts),
+          citeSources: [...referenceSources(result.toolParts).values()],
           completedAt: now.toISOString(),
         }
       : {}),

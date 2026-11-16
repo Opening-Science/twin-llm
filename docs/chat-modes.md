@@ -36,9 +36,9 @@ runs on its own preferred model with its own skill's tools and its specialty lit
 It starts with one answer, to spare the GPU: the specialist Auto would pick for the
 question (`routeAgent`, General when nothing matches), on that specialist's own model
 rather than Auto's (`specialistDefaults` in `chat-modes.ts`). In an incognito chat it is
-the first specialist that runs on this machine when the routed one does not. Until the
-person changes the list it follows the question as it is typed: "How long did I sleep
-last night?" goes to Sleep, "Is my BMI going up?" to the Diet specialist.
+the router's pick among the specialists on this machine, else the first of them. Until
+the person changes the list it follows the question as it is typed: "How long did I
+sleep last night?" goes to Sleep, "Is my BMI going up?" to the Diet specialist.
 
 The panel lists the specialists answering, then an **Add a specialist** button that
 opens the others. At three the button stays, disabled, and reads "Three specialists at
@@ -210,10 +210,9 @@ Under the text box, from left to right (`features/compare/prompt-bar.tsx`):
   choice, and an Add a specialist button, for Compare the specialists and models as
   checkboxes. Each specialist names its model and tools under its name ("on Qwen3 8B ·
   /sleep tools", "chat tools" for General), and Auto's panel names the model Auto runs
-  its pick on (`rowSubline`, `autoModelName`). A
-  box that would break the mode's rule is disabled and the line under the lists says
-  why. In an incognito chat the models that do not run on this machine stay in the
-  lists, greyed out with the reason.
+  its pick on (`rowSubline`, `autoModelName`). A box that would break the mode's rule is
+  disabled and the line under the lists says why. In an incognito chat the models that
+  do not run on this machine stay in the lists, greyed out with the reason.
 - **Effort** (`effort-menu.tsx`): a slider over the five steps with what the chosen
   step does. At Ultra the step name and the box take a faint tint (`--effort-ultra` in
   `globals.css`, light and dark); nothing moves.
