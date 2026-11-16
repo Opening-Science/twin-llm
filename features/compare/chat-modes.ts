@@ -21,12 +21,12 @@ import type { PickedModel } from "./conversation";
  * rules are tested without a screen.
  */
 
-export type ChatMode = "auto" | "basic" | "medical" | "manual" | "compare";
+export type ChatMode = "auto" | "basic" | "specialists" | "manual" | "compare";
 
 export const CHAT_MODES: readonly ChatMode[] = [
   "auto",
   "basic",
-  "medical",
+  "specialists",
   "manual",
   "compare",
 ];
@@ -42,8 +42,8 @@ export const MODE_COPY: Readonly<
     label: "Basic",
     line: "One answer from one model, with no specialist: the chat's own tools and the sources you turned on.",
   },
-  medical: {
-    label: "Medical",
+  specialists: {
+    label: "Specialists",
     line: "One to three specialists, each on its own model with its own tools and literature.",
   },
   manual: {
@@ -68,14 +68,14 @@ export type ModeState = Readonly<{
   mode: ChatMode;
   /** The one plain model Basic sends, or null when none is offered. */
   basic: string | null;
-  /** Specialist rows chosen in Medical. */
-  medical: readonly string[];
-  /** False while Medical's rows are defaults that follow the question. */
-  medicalChosen: boolean;
-  /** Specialist rows (`agent:<id>`) chosen in Manual. */
+  /** Specialist rows chosen in the Specialists mode. */
   specialists: readonly string[];
+  /** False while Specialists' rows are defaults that follow the question. */
+  specialistsChosen: boolean;
+  /** Specialist rows (`agent:<id>`) chosen in Manual. */
+  manualSpecialists: readonly string[];
   /** Plain model ids chosen in Manual. */
-  models: readonly string[];
+  manualModels: readonly string[];
   /** Rows chosen in Compare. */
   compare: readonly string[];
   /** False while Compare's rows are defaults that follow the question. */
@@ -122,20 +122,20 @@ export const autoOffered = (context: ModeContext): boolean =>
 const basicOffered = (context: ModeContext): boolean =>
   plainModelRows(context.catalog).length > 0;
 
-/** Medical needs a specialist row; on a hosted provider that is General alone. */
-const medicalOffered = (context: ModeContext): boolean =>
+/** Specialists needs a specialist row; on a hosted provider that is General alone. */
+const specialistsOffered = (context: ModeContext): boolean =>
   specialistRows(context.catalog).length > 0;
 
 /**
  * The modes the picker offers: Auto only when the catalog has its row, Basic
- * only when it has a plain model, Medical only when it has a specialist.
+ * only when it has a plain model, Specialists only when it has a specialist.
  */
 export const offeredModes = (context: ModeContext): readonly ChatMode[] =>
   CHAT_MODES.filter(
     (mode) =>
       (mode !== "auto" || autoOffered(context)) &&
       (mode !== "basic" || basicOffered(context)) &&
-      (mode !== "medical" || medicalOffered(context)),
+      (mode !== "specialists" || specialistsOffered(context)),
   );
 
 const offered = (id: string, context: ModeContext): boolean =>
@@ -150,12 +150,15 @@ export const compareDefaults = (context: ModeContext, prompt = ""): readonly str
 };
 
 /**
- * Medical's default specialists, fitted to the question the same way:
+ * Specialists' default specialists, fitted to the question the same way:
  * General first, then the specialists the router ranks for it, then the
  * default specialists, as many as fit in three. Specialists only, each on
  * its own preferred model.
  */
-export const medicalDefaults = (context: ModeContext, prompt = ""): readonly string[] =>
+export const specialistDefaults = (
+  context: ModeContext,
+  prompt = "",
+): readonly string[] =>
   defaultModelSelection(
     specialistRows(context.catalog).filter((row) => rowRunsHere(row.id, context)),
     prompt,
@@ -185,10 +188,10 @@ export const basicDefault = (context: ModeContext): string | null => {
 const baseState = (context: ModeContext): ModeState => ({
   mode: autoOffered(context) ? "auto" : "compare",
   basic: basicDefault(context),
-  medical: medicalDefaults(context),
-  medicalChosen: false,
-  specialists: firstOf(specialistRows(context.catalog), context),
-  models: firstOf(plainModelRows(context.catalog), context),
+  specialists: specialistDefaults(context),
+  specialistsChosen: false,
+  manualSpecialists: firstOf(specialistRows(context.catalog), context),
+  manualModels: firstOf(plainModelRows(context.catalog), context),
   compare: compareDefaults(context),
   compareChosen: false,
   fromThread: false,
@@ -218,7 +221,7 @@ const unique = (ids: readonly (string | null)[]): string[] => [
  * Where the picker starts (SPEC 7.2): a new chat on Auto when offered, else
  * Compare; a reopened thread in the mode and rows of its last turn. No mode
  * is stored, so it is read from the ids: Auto's one row is Auto, a pair is
- * Manual, one plain model is Basic, specialists only are Medical, anything
+ * Manual, one plain model is Basic, specialists only are Specialists, anything
  * else is Compare.
  */
 export const initialModeState = (
@@ -237,8 +240,8 @@ export const initialModeState = (
     return {
       ...base,
       mode: "manual",
-      specialists: unique(parts.map((part) => part.specialist)),
-      models: unique(parts.map((part) => part.model)),
+      manualSpecialists: unique(parts.map((part) => part.specialist)),
+      manualModels: unique(parts.map((part) => part.model)),
       fromThread: true,
     };
   };
@@ -252,9 +255,9 @@ export const initialModeState = (
   if (live.length > 0 && live.every(isSpecialist)) {
     return {
       ...base,
-      mode: "medical",
-      medical: live.slice(0, MAX_SELECTED_MODELS),
-      medicalChosen: true,
+      mode: "specialists",
+      specialists: live.slice(0, MAX_SELECTED_MODELS),
+      specialistsChosen: true,
       fromThread: true,
     };
   }
@@ -280,22 +283,26 @@ export const compareRows = (
 ): readonly string[] =>
   state.compareChosen ? state.compare : compareDefaults(context, prompt);
 
-/** Medical's rows as shown: refitted to the question until chosen. */
-export const medicalRows = (
+/** Specialists' rows as shown: refitted to the question until chosen. */
+export const specialistPicks = (
   state: ModeState,
   context: ModeContext,
   prompt: string,
 ): readonly string[] =>
-  state.medicalChosen ? state.medical : medicalDefaults(context, prompt);
+  state.specialistsChosen ? state.specialists : specialistDefaults(context, prompt);
 
-/** The specialists Medical sends: its rows the catalog offers here. */
-const medicalIds = (state: ModeState, context: ModeContext, prompt: string): string[] =>
-  medicalRows(state, context, prompt).filter((id) => offered(id, context));
+/** The specialists the Specialists mode sends: its rows the catalog offers here. */
+const specialistIds = (
+  state: ModeState,
+  context: ModeContext,
+  prompt: string,
+): string[] =>
+  specialistPicks(state, context, prompt).filter((id) => offered(id, context));
 
 /** The ids Manual sends, before the at-most-three rule. */
 export const manualIds = (state: ModeState, context: ModeContext): string[] => {
-  const models = state.models.filter((id) => offered(id, context));
-  const specialists = state.specialists.filter((id) => offered(id, context));
+  const models = state.manualModels.filter((id) => offered(id, context));
+  const specialists = state.manualSpecialists.filter((id) => offered(id, context));
   if (specialists.length === 0) return models;
   return specialists.flatMap((specialist) => {
     const row = findCatalogRow(specialist, context.catalog);
@@ -320,8 +327,8 @@ export const answerCount = (
     ? 1
     : state.mode === "basic"
       ? basicIds(state, context).length
-      : state.mode === "medical"
-        ? medicalIds(state, context, prompt).length
+      : state.mode === "specialists"
+        ? specialistIds(state, context, prompt).length
         : state.mode === "manual"
           ? manualIds(state, context).length
           : compareRows(state, context, prompt).filter((id) => offered(id, context))
@@ -339,14 +346,14 @@ export const modeProblem = (
   if (state.mode === "basic") {
     return basicIds(state, context).length === 0 ? "Pick a model." : null;
   }
-  if (state.mode === "medical") {
+  if (state.mode === "specialists") {
     const count = answerCount(state, context, prompt);
     return count < MIN_SELECTED_MODELS || count > MAX_SELECTED_MODELS
       ? "Pick one to three specialists."
       : null;
   }
   if (state.mode === "manual") {
-    if (state.models.filter((id) => offered(id, context)).length === 0) {
+    if (state.manualModels.filter((id) => offered(id, context)).length === 0) {
       return "Pick at least one model.";
     }
     return manualIds(state, context).length > MAX_SELECTED_MODELS
@@ -372,8 +379,8 @@ export const pickedModels = (
         : []
       : state.mode === "basic"
         ? basicIds(state, context)
-        : state.mode === "medical"
-          ? medicalIds(state, context, prompt)
+        : state.mode === "specialists"
+          ? specialistIds(state, context, prompt)
           : state.mode === "manual"
             ? manualIds(state, context)
             : compareRows(state, context, prompt);
@@ -390,7 +397,7 @@ export const pickedModels = (
 };
 
 /**
- * The mode pill: "Auto", "Basic · Qwen3 4B", "Medical · 2 specialists",
+ * The mode pill: "Auto", "Basic · Qwen3 4B", "Specialists · Sleep",
  * "Manual · 2 answers", "Compare · 3 models".
  */
 export const modeSummary = (
@@ -406,10 +413,16 @@ export const modeSummary = (
       ? MODE_COPY.basic.label
       : `${MODE_COPY.basic.label} · ${row.name}`;
   }
-  const count = answerCount(state, context, prompt);
-  if (state.mode === "medical") {
-    return `Medical · ${String(count)} ${count === 1 ? "specialist" : "specialists"}`;
+  if (state.mode === "specialists") {
+    const ids = specialistIds(state, context, prompt);
+    const [one] = ids;
+    const row =
+      ids.length === 1 && one !== undefined ? findCatalogRow(one, context.catalog) : null;
+    return row === null
+      ? `${MODE_COPY.specialists.label} · ${String(ids.length)}`
+      : `${MODE_COPY.specialists.label} · ${row.name}`;
   }
+  const count = answerCount(state, context, prompt);
   return state.mode === "manual"
     ? `Manual · ${String(count)} ${count === 1 ? "answer" : "answers"}`
     : `Compare · ${String(count)} ${count === 1 ? "model" : "models"}`;
@@ -441,7 +454,8 @@ export const droppedModels = (
 
 // --- changes ----------------------------------------------------------------------
 
-export type PickerList = "basic" | "medical" | "specialists" | "models" | "compare";
+export type PickerList =
+  "basic" | "specialists" | "manualSpecialists" | "manualModels" | "compare";
 
 const listOf = (
   state: ModeState,
@@ -452,12 +466,12 @@ const listOf = (
   switch (list) {
     case "basic":
       return state.basic === null ? [] : [state.basic];
-    case "medical":
-      return medicalRows(state, context, prompt);
     case "specialists":
-      return state.specialists;
-    case "models":
-      return state.models;
+      return specialistPicks(state, context, prompt);
+    case "manualSpecialists":
+      return state.manualSpecialists;
+    case "manualModels":
+      return state.manualModels;
     case "compare":
       return compareRows(state, context, prompt);
   }
@@ -480,12 +494,12 @@ export const toggleRow = (
   if (list === "basic") return { ...state, basic: id, fromThread: false };
   const next = toggled(listOf(state, list, context, prompt), id);
   switch (list) {
-    case "medical":
-      return { ...state, medical: next, medicalChosen: true, fromThread: false };
     case "specialists":
-      return { ...state, specialists: next, fromThread: false };
-    case "models":
-      return { ...state, models: next, fromThread: false };
+      return { ...state, specialists: next, specialistsChosen: true, fromThread: false };
+    case "manualSpecialists":
+      return { ...state, manualSpecialists: next, fromThread: false };
+    case "manualModels":
+      return { ...state, manualModels: next, fromThread: false };
     case "compare":
       return { ...state, compare: next, compareChosen: true, fromThread: false };
   }
@@ -499,7 +513,7 @@ export const setMode = (state: ModeState, mode: ChatMode): ModeState => ({
 
 /**
  * Why a box may not change, or null when it may: one more would break the
- * at-most-three rule, one fewer would leave Manual without a model, Medical
+ * at-most-three rule, one fewer would leave Manual without a model, Specialists
  * without a specialist or Compare without a row, or the row does not run on
  * this machine.
  */
@@ -516,11 +530,11 @@ export const boxDisabled = (
   const checked = listOf(state, list, context, prompt).includes(id);
   const next = toggleRow(state, list, id, context, prompt);
   if (checked) {
-    if (list === "models" && next.models.length < MIN_SELECTED_MODELS) {
+    if (list === "manualModels" && next.manualModels.length < MIN_SELECTED_MODELS) {
       return "Manual needs at least one model.";
     }
-    if (list === "medical" && next.medical.length < MIN_SELECTED_MODELS) {
-      return "Medical needs at least one specialist.";
+    if (list === "specialists" && next.specialists.length < MIN_SELECTED_MODELS) {
+      return "Keep at least one specialist.";
     }
     if (list === "compare" && next.compare.length < MIN_SELECTED_MODELS) {
       return "Compare needs at least one row.";
