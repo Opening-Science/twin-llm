@@ -1,7 +1,6 @@
 /**
  * Writes knowledge/opentwin/biomarker-catalogue.md from the pinned Anchor
- * catalogue. Run after an open-twin merge that touches
- * packages/open-twin/anchor-layer: bun run knowledge:biomarkers
+ * catalogue. Run after an open-twin pin bump: bun run knowledge:biomarkers
  */
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";

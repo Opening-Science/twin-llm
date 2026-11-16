@@ -35,8 +35,11 @@
     "node_modules",
     "**/*.test.ts",
     "**/*.test.tsx",
-    // The copied open-twin tests import vitest; scripts/open-twin/test.ts runs them.
-    "packages/open-twin/**/src/tests/**",
-    ".open-twin" // left over from the old sync in some checkouts
+    ".open-twin/**/tests",
+    ".open-twin/**/*.test.ts",
+    ".open-twin/**/vitest.config.ts",
+    ".open-twin/**/testSetup.ts",
+    ".open-twin/**/verification/**",
+    ".open-twin/**/scripts/**"
   ]
 }
