@@ -1,5 +1,6 @@
 import { formatDate } from "@/infrastructure/format-measure";
 import {
+  GBD_HEADING,
   GUIDELINE_ATTRIBUTION_LINE,
   GUIDELINE_HEADING,
   KNOWLEDGE_ATTRIBUTION_LINE,
@@ -81,7 +82,7 @@ const referenceLines = (answer: AnswerState): string[] => {
     ...listSection(LITERATURE_HEADING, content.literature, LITERATURE_ATTRIBUTION_LINE),
     ...(content.gbdAttribution === null
       ? []
-      : listSection("Population context", content.gbd, content.gbdAttribution)),
+      : listSection(GBD_HEADING, content.gbd, content.gbdAttribution)),
   ];
 };
 
