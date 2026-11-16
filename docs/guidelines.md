@@ -177,7 +177,7 @@ Each claim is then:
 | ------------- | ---------------------------------------------------- |
 | `cited`       | it names at least one source a search returned       |
 | `invented`    | it names only ids of a source's shape no search gave |
-| `unsupported` | it ends with `[unsupported]`                         |
+| `unsupported` | it carries `[unsupported]`                           |
 | `uncited`     | none of these                                        |
 
 A bracketed token of another shape, such as a wearable key, is left as text.
