@@ -1,7 +1,7 @@
 # Modes and effort
 
 How a prompt picks what answers it (the mode) and how hard each answer works (the
-effort). Issue #366. Research use only: neither changes what TwinLLM is for
+effort). Issues #366 and #610. Research use only: neither changes what TwinLLM is for
 ([clinical-research.md](clinical-research.md)).
 
 ## Modes
@@ -13,8 +13,19 @@ and those go through the same checks as before (`checkTurnRequest`, `/api/chat`)
 | Mode    | Answers      | What it sends                                                                                                                                     |
 | ------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Auto    | one          | `agent:auto`. The router picks the specialist for each question ([agents.md](agents.md#auto-219)) and the specialist runs on its preferred model. |
+| Basic   | one          | One plain model, picked from the models, with no specialist and no skill: the chat's own tools and the sources the person turned on.              |
 | Manual  | one to three | Each chosen specialist on each chosen model, at most three answers in all. No specialist sends the models as themselves.                          |
 | Compare | two or three | The rows picked, models or specialists, side by side, as Compare has always worked.                                                               |
+
+### Basic (#610)
+
+Basic is the chat without the specialists: one answer from one model. It starts on the
+model Auto runs its pick on when that runs here (qwen3:4b first, [below](#which-model-auto-uses-379)),
+else the first model that runs here, and the picker lists the models as one choice. The
+model has no skill, so the turn gets the tools a plain model always gets and the
+sources the person turned on, as a model picked in Compare does. The pill reads
+"Basic · Qwen3 4B". Basic is offered whenever the catalog lists a model; in an incognito
+chat a model that does not run on this machine stays listed, greyed.
 
 ### Compare's defaults (#493)
 
@@ -157,8 +168,8 @@ Under the text box, from left to right (`features/compare/prompt-bar.tsx`):
   Picking a source writes `@Name` into the question. A mention is part of the question
   text: it does not switch a tool on or off, and every permit applies as it would
   without it.
-- **Mode** (`mode-menu.tsx`): Auto, Manual or Compare, and for the latter two the
-  specialists and models as checkboxes. A box that would break the mode's rule is
+- **Mode** (`mode-picker.tsx`): Auto, Basic, Manual or Compare; for Basic the models as
+  one choice, for Manual and Compare the specialists and models as checkboxes. A box that would break the mode's rule is
   disabled and the line under the lists says why. In an incognito chat the models that
   do not run on this machine stay in the lists, greyed out with the reason.
 - **Effort** (`effort-menu.tsx`): a slider over the five steps with what the chosen
