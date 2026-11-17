@@ -670,6 +670,16 @@ const PERSONAL_READ_ROUTES: Readonly<Record<string, Entry>> = {
     kind: "exempt",
     why: "synthetic Demo cohort only (its handler still writes motion.days)",
   },
+  "GET /api/digital-twin/days/[subjectRef]": {
+    whileLocked: OPEN_NOT_PERSONAL,
+    kind: "exempt",
+    why: "synthetic Demo cohort only (its handler still writes digital-twin.day.list)",
+  },
+  "GET /api/digital-twin/day/[subjectRef]": {
+    whileLocked: OPEN_NOT_PERSONAL,
+    kind: "exempt",
+    why: "synthetic Demo cohort only (its handler still writes digital-twin.day)",
+  },
   "GET /api/tasks/notice": {
     kind: "exempt",
     why: "counts unseen scheduled runs (#54): skill names and thread ids, no question or answer",
