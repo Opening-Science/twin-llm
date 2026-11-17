@@ -73,6 +73,18 @@ describe.skipIf(!runLive)("chat tables after the expand migration (RUN_LIVE=1)",
     );
   });
 
+  test("the chat move is marked in progress, and only a known phase is accepted", async () => {
+    const marker = await db.schemaMove.findUnique({ where: { move: "chat-tables" } });
+    expect(["expanded", "backfilled"]).toContain(marker?.phase ?? "missing");
+    const unknownPhase = await db.schemaMove
+      .update({ where: { move: "chat-tables" }, data: { phase: "switched" } })
+      .then(
+        () => "accepted",
+        () => "refused",
+      );
+    expect(unknownPhase).toBe("refused");
+  });
+
   test("the new tables have no foreign keys yet", async () => {
     const keys = await db.$queryRaw<{ name: string }[]>`
       SELECT conname AS name FROM pg_constraint

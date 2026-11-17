@@ -82,6 +82,24 @@ that used no tool stores null. `/t/[threadId]` replays the column as the
 stream's `tool-<name>` parts (`features/compare/saved-answer.ts`); the
 browser still receives only each tool's name and state.
 
+## Chat tables move
+
+`threads`, `turns` and `model_responses` are being replaced by
+`conversations`, `exchanges` and `answers` (plan and column map:
+`.plans/compare-rewrite/DATA-MODEL.md`; the map in code:
+`scripts/db/chat-move/tables.ts`). The move is expand, backfill, switch,
+contract. Only the expand step is in the schema so far: the new tables
+exist, empty, with no foreign keys, and nothing reads them.
+
+Each new row keeps its old row's id, and each `*_sealed` column holds the
+old column's stored value byte for byte. A sealed value's context stays the
+old `<table>.<column>.<id>` string, so copying needs no keys and a locked
+vault does not stop it.
+
+`schema_moves` has one row, `chat-tables`, from the expand migration until
+the contract step. Its `phase` is `expanded`, then `backfilled`.
+`schema_move_cursors` holds the backfill's position per table.
+
 ## Two-layer personal data
 
 | Layer            | What lives there                                                                                                                                                                                          | What does not                                                                           |
