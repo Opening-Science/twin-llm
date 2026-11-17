@@ -49,3 +49,26 @@ holds the asked day and the day before and after, per source.
   permutation drawn apart from the rule.
 - **Expected answer.** `state` (the reading, its source and day, the other
   sources), `withhold`, `abstain` or, for a probe, `distinguish`.
+
+## Conditions
+
+`scripts/evaluation/attribution-study/contexts.ts` writes the prompt. Its
+headings and Evidence Used rules are the chat's, so `parseTwinAnswer` reads
+the answer as the app would.
+
+| Id  | Each reading in the prompt                                                             |
+| --- | -------------------------------------------------------------------------------------- |
+| C0  | `[key] label: value`, as before #464                                                   |
+| C1  | C0 plus `(source: WHOOP; day: 2 Jan 2026)`, and the selection rule in words            |
+| C2  | C1 plus one accuracy note per source from `features/wearables/accuracy` with its level |
+
+Google Health's note says the device behind a reading is not known and gives
+both the Fitbit and the Pixel Watch note, at the lower evidence level.
+
+## Counterfactual reruns
+
+`counterfactual.ts`, under C1 on agree and disagree items:
+`perturb_cited` moves the expected reading by one display unit (two if one
+breaks the stratum or identifiability), `perturb_other` moves another
+source's reading of that day, and `rule_swap` reverses Oura and WHOOP in the
+fixed order (or turns `hold_back` into `fixed_order`).
