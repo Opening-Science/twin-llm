@@ -8,13 +8,15 @@
  * vital, as `infrastructure/format-measure.ts` knows them. The one exception is
  * `google.daily-respiratory-rate`, which is stored but has no label or kind yet.
  *
- * Decisions: HRV → nervous system (brain), with the heart
+ * Decisions: HRV → nervous system (the brain: `allenbrain` and the optic chiasm,
+ * `BRAIN_GROUPS`), with the heart
  * as a secondary link because it is measured there; strain → cardiovascular,
  * because Whoop computes it from heart rate. No wearable here reports stress,
  * so there is no stress row. Composite scores (readiness, recovery, activity)
  * get no system.
  */
 import { type SystemId } from "@/packages/anatomy/systems";
+import { BRAIN_GROUPS } from "@/packages/anatomy/twin-focus";
 
 export const VITAL_IDS = [
   "heartRate",
@@ -56,7 +58,7 @@ export const VITAL_ANATOMY: Readonly<Record<VitalId, VitalAnatomy>> = {
   },
   hrv: {
     system: "nervous",
-    hraGroups: ["brain"],
+    hraGroups: BRAIN_GROUPS,
     secondaryHraGroups: ["heart"],
     sources: ["sleep.hrv", "whoop.recovery.hrv", "google.daily-heart-rate-variability"],
     note: "Reflects autonomic regulation, measured from beat-to-beat timing at the heart",
@@ -81,7 +83,7 @@ export const VITAL_ANATOMY: Readonly<Record<VitalId, VitalAnatomy>> = {
   },
   sleep: {
     system: "nervous",
-    hraGroups: ["brain"],
+    hraGroups: BRAIN_GROUPS,
     secondaryHraGroups: [],
     sources: [
       "sleep.score",
