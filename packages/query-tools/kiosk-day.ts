@@ -17,7 +17,8 @@ import { GLUCOSE_PROFILES, type RedWindow, WINDOW_EVENT } from "./day-beats";
  * twin. A flat, display-ready form of a `show_my_day` result: each beat
  * carries the line to show (`signalText`), whether it is worth a look, and
  * where the twin turns. The contract is `docs/kiosk-day.md`; this schema is
- * its source of truth and `docs/kiosk-day.example.json` is its example.
+ * its source of truth and `docs/kiosk-day.example.json` and
+ * `docs/kiosk-day.sensor.example.json` are its examples.
  *
  * Rules the kiosk relies on, held by the schema:
  * - a narrated beat has `value` and `unit` null, and insulin is always narrated;
