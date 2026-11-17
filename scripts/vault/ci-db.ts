@@ -19,10 +19,7 @@ import { fileURLToPath } from "node:url";
 import { ensureAppUser } from "../../infrastructure/current-user";
 import { database } from "../../infrastructure/database";
 import { serverEnv, storageEnv } from "../../infrastructure/env";
-import {
-  PERSONAL_TABLES,
-  plaintextCountSql,
-} from "../../infrastructure/personal-columns";
+import { CHECKED_TABLES, plaintextCountSql } from "../../infrastructure/personal-columns";
 import { personalDataStore } from "../../infrastructure/personal-data-store";
 import { parseImport } from "../../packages/personal-data/parse-import";
 import { savePlan } from "../../packages/personal-data/save-plan";
@@ -84,7 +81,7 @@ const seed = async (): Promise<void> => {
 
 const state = async (): Promise<DatabaseState> => {
   const entries = await Promise.all(
-    PERSONAL_TABLES.map(async (entry) => {
+    CHECKED_TABLES.map(async (entry) => {
       const [plain] = await rows(plaintextCountSql(entry));
       const [digest] = await rows(
         `SELECT count(*)::int AS n, coalesce(md5(string_agg(md5(t::text), '' ORDER BY md5(t::text))), '') AS d FROM ${quote(entry.table)} t`,
