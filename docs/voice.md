@@ -70,8 +70,44 @@ per code:
 | `SPEECH_BAD_AUDIO`     | That recording could not be read. Try again.                       |
 | `SPEECH_NOTHING_HEARD` | Nothing was heard. Hold the button while you speak.                |
 
+## Set up and start the sidecar
+
+The sidecar is `scripts/voice/serve.ts` over two engines that run as child processes on
+the CPU: [whisper.cpp](https://github.com/ggml-org/whisper.cpp) (MIT) for speech to text
+and [Piper](https://github.com/OHF-Voice/piper1-gpl) (GPL-3.0, run as a separate program,
+never linked) for text to speech. Nothing is downloaded until you run the setup yourself:
+
+```sh
+bun run voice:setup  # asks before it downloads about 400 MB
+bun run voice:serve  # http://127.0.0.1:8095
+```
+
+Then set `VOICE_SIDECAR_URL=http://127.0.0.1:8095` in `.env.local` and restart the app.
+
+`voice:setup` writes into `~/.local/share/twinllm-voice` (`--home` or `VOICE_HOME` to
+change it) and needs git, cmake, a C++ compiler, curl and uv. Everything it fetches is
+pinned, and a file that does not match is deleted and the setup stops:
+
+| Part          | Pin                                                                         | Licence   |
+| ------------- | --------------------------------------------------------------------------- | --------- |
+| whisper.cpp   | v1.9.5, commit `d1be6fde`, built with `GGML_CUDA=OFF`                       | MIT       |
+| Speech model  | `ggml-small-q5_1.bin` (190 MB), SHA-256; `--model base` for the 60 MB model | MIT       |
+| Piper         | `piper-tts==1.8.0` in its own Python environment                            | GPL-3.0   |
+| English voice | `en_GB-alba-medium` at piper-voices `0ca208af`, SHA-256                     | CC BY 4.0 |
+| German voice  | `de_DE-thorsten-medium` at piper-voices `0ca208af`, SHA-256                 | CC0       |
+
+The small model is the default because the base model's German is noticeably weaker. The
+threads are the machine's cores, at most eight.
+
+`voice:serve` listens on 127.0.0.1 only; the host is fixed and only `--port` changes. Each
+request gets its own folder under the setup's `work/` for its audio, removed when the
+request ends. The log has the call, the language and the timings, never the text or the
+audio.
+
 ## Tests
 
 `infrastructure/speech/fake-speech-sidecar.ts` serves the same contract on `127.0.0.1`
 with fixed sentences ("Show me my heart." and "Zeig mir mein Herz.") and a short tone, and
-records what it received. Tests and screenshots use it; nothing in them needs a model.
+records what it received. Tests and screenshots use it; nothing in them needs a model. The
+sidecar itself is tested with stand-in engines (`scripts/voice/speech-sidecar.test.ts`)
+and with shell scripts in place of `whisper-cli` and `piper` (`scripts/voice/engines.test.ts`).
