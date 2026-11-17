@@ -41,6 +41,21 @@ const READINGS: readonly DayReading[] = [
   reading("23:30", 70, 200, false),
 ];
 
+const sensor = (time: string, sensorGlucoseMgDl: number): DayReading => ({
+  ...reading(time, null, null, null),
+  sensorGlucoseMgDl,
+});
+
+/** Sensor readings that reach every direction and every sensor window. */
+const SENSOR_READINGS: readonly DayReading[] = [
+  sensor("01:00", 100),
+  sensor("01:05", 130),
+  sensor("01:10", 100),
+  sensor("01:15", 101),
+  sensor("01:20", 60),
+  sensor("01:25", 200),
+];
+
 /** A table row naming a key and its value, whatever the column padding. */
 const row = (key: string, value: string): RegExp =>
   new RegExp(String.raw`\|\s*\x60${key}\x60\s*\|\s*${value}\s*\|`);
@@ -82,14 +97,16 @@ describe("docs/day-thresholds.md", () => {
   });
 
   test("holds every body sentence, window rule and event the beats can show", () => {
-    const beats = GLUCOSE_PROFILES.flatMap((profile) => dayBeats(READINGS, profile));
-    const windows = GLUCOSE_PROFILES.flatMap((profile) => redWindows(READINGS, profile));
+    const all = [...READINGS, ...SENSOR_READINGS];
+    const beats = GLUCOSE_PROFILES.flatMap((profile) => dayBeats(all, profile));
+    const windows = GLUCOSE_PROFILES.flatMap((profile) => redWindows(all, profile));
     const texts = new Set(beats.map((beat) => beat.body.text));
-    // Seven sentences and four window texts: each direction of both signals, insulin, each window kind.
-    expect(texts.size).toBe(11);
+    // Ten sentences and seven window texts: each direction of the three signals,
+    // insulin, the heart-rate window, and each glucose window for blood and sensor.
+    expect(texts.size).toBe(17);
     for (const text of texts) expect(DOC).toContain(text);
     for (const window of windows) expect(DOC).toContain(window.rule);
-    expect(new Set(windows.map((window) => window.rule)).size).toBe(3);
+    expect(new Set(windows.map((window) => window.rule)).size).toBe(5);
     const events = new Set(
       beats.filter((beat) => beat.source === "derived").map((beat) => beat.event),
     );
@@ -106,6 +123,11 @@ describe("docs/day-thresholds.md", () => {
       "Blood glucose up · about 135 mg/dL · measured",
     );
     expect(DOC).toContain(`\`${walk && signalText(walk)}\``);
+    const rise = dayBeats(SENSOR_READINGS, "without_diabetes")[1];
+    expect(rise && signalText(rise)).toBe(
+      "Sensor glucose up · about 130 mg/dL · measured",
+    );
+    expect(DOC).toContain(`\`${rise && signalText(rise)}\``);
     expect(insulin && signalText(insulin)).toBe("Insulin up · narrated, not measured");
     expect(DOC).toContain(`\`${insulin && signalText(insulin)}\``);
   });

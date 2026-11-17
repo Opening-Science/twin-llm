@@ -112,6 +112,7 @@ describe("redWindows", () => {
         from: "20:30",
         to: "20:30",
         measure: "glucose",
+        specimen: "blood",
         extreme: 175,
         side: "above",
         rule: "Blood glucose above 140 mg/dL (placeholder, without diabetes)",
@@ -145,6 +146,7 @@ describe("redWindows", () => {
         from: "10:00",
         to: "10:05",
         measure: "heart_rate",
+        specimen: null,
         extreme: 110,
         side: "above",
         rule: "Heart rate above 100 /min while still (placeholder)",
@@ -164,6 +166,7 @@ describe("redWindows", () => {
         from: "02:00",
         to: "02:30",
         measure: "glucose",
+        specimen: "blood",
         extreme: 62,
         side: "below",
         rule: "Blood glucose outside 70–180 mg/dL (placeholder consensus range, with diabetes)",
@@ -190,6 +193,7 @@ describe("redWindows", () => {
     ).find((beat) => beat.source === "derived");
     expect(low?.signal).toEqual({
       measure: "glucose",
+      specimen: "blood",
       direction: "down",
       value: 62,
       unit: "mg/dL",
@@ -197,5 +201,147 @@ describe("redWindows", () => {
     expect(low?.body.text).toBe(
       "Blood sugar stays below the range for a while. Blood glucose outside 70–180 mg/dL (placeholder consensus range, with diabetes).",
     );
+  });
+});
+
+describe("sensor glucose", () => {
+  const sensor = (
+    time: string,
+    sensorGlucoseMgDl: number,
+    glucoseMgDl: number | null = null,
+  ): DayReading => ({
+    time,
+    event: null,
+    heartRatePerMin: null,
+    glucoseMgDl,
+    sensorGlucoseMgDl,
+    moving: null,
+  });
+
+  test("a sensor reading is a sensor beat, and its sentence notes the lag", () => {
+    const beats = dayBeats(
+      [sensor("07:00", 95), sensor("07:05", 112)],
+      "without_diabetes",
+    );
+    expect(beats[1]).toEqual({
+      time: "07:05",
+      event: "Reading",
+      source: "measured",
+      signal: {
+        measure: "glucose",
+        specimen: "sensor",
+        direction: "up",
+        value: 112,
+        unit: "mg/dL",
+      },
+      body: {
+        text: "Sugar from food passes into the blood and on into the fluid between cells. The sensor reads the fluid between cells, several minutes behind the blood.",
+        organ: "bloodvasculature",
+      },
+      view: { focus: "bloodvasculature", depth: "organs" },
+    });
+  });
+
+  test("a sensor change is taken against the sensor before, never against blood", () => {
+    // Blood 135 then sensor 110: mixed, that would read as a fall of 25.
+    const beats = dayBeats(
+      [sensor("07:00", 108, 135), sensor("07:05", 110)],
+      "without_diabetes",
+    );
+    expect(beats.map((beat) => [beat.time, beat.signal])).toEqual([
+      [
+        "07:00",
+        {
+          measure: "glucose",
+          specimen: "blood",
+          direction: "steady",
+          value: 135,
+          unit: "mg/dL",
+        },
+      ],
+      [
+        "07:05",
+        {
+          measure: "glucose",
+          specimen: "sensor",
+          direction: "steady",
+          value: 110,
+          unit: "mg/dL",
+        },
+      ],
+    ]);
+  });
+
+  test("a sensor change skips the heart-rate minutes between sensor readings", () => {
+    const minute = (time: string, sensorGlucoseMgDl: number | null): DayReading => ({
+      time,
+      event: null,
+      heartRatePerMin: 62,
+      glucoseMgDl: null,
+      sensorGlucoseMgDl,
+      moving: null,
+    });
+    const readings = [
+      minute("07:00", 95),
+      minute("07:01", null),
+      minute("07:02", null),
+      minute("07:03", null),
+      minute("07:04", null),
+      minute("07:05", 125),
+    ];
+    const at0705 = dayBeats(readings, "without_diabetes").filter(
+      (beat) => beat.time === "07:05",
+    );
+    expect(at0705.map((beat) => [beat.source, beat.signal.measure])).toEqual([
+      ["measured", "glucose"],
+      ["narrated", "insulin"],
+    ]);
+    expect(at0705[0]?.signal).toEqual({
+      measure: "glucose",
+      specimen: "sensor",
+      direction: "up",
+      value: 125,
+      unit: "mg/dL",
+    });
+  });
+
+  test("a sensor rise of 20 mg/dL adds the narrated insulin beat", () => {
+    const beats = dayBeats(
+      [sensor("07:00", 95), sensor("07:15", 120)],
+      "without_diabetes",
+    );
+    expect(beats.map((beat) => [beat.time, beat.source, beat.signal.measure])).toEqual([
+      ["07:00", "measured", "glucose"],
+      ["07:15", "measured", "glucose"],
+      ["07:15", "narrated", "insulin"],
+    ]);
+  });
+
+  test("sensor windows are their own, named sensor, and a blood reading between does not split one", () => {
+    const readings = [
+      sensor("20:00", 150),
+      { ...reading("20:02", null, 120), sensorGlucoseMgDl: null },
+      sensor("20:05", 165),
+      sensor("20:10", 130),
+    ];
+    expect(redWindows(readings, "without_diabetes")).toEqual([
+      {
+        from: "20:00",
+        to: "20:05",
+        measure: "glucose",
+        specimen: "sensor",
+        extreme: 165,
+        side: "above",
+        rule: "Sensor glucose above 140 mg/dL (placeholder, without diabetes)",
+        thresholds: "placeholder",
+      },
+    ]);
+    const derived = dayBeats(readings, "without_diabetes").find(
+      (beat) => beat.source === "derived",
+    );
+    expect(derived?.body.text).toBe(
+      "Sensor glucose stays past the threshold for a while. Sensor glucose above 140 mg/dL (placeholder, without diabetes).",
+    );
+    expect(derived && dayBeatSchema.parse(derived)).toEqual(derived);
   });
 });
