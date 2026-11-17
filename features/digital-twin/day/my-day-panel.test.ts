@@ -119,6 +119,16 @@ describe("MyDayPanel", () => {
     expect(out).not.toContain('data-worth="true"');
   });
 
+  test("the step bar says where the step is, and stops at the ends", () => {
+    const count = DAY.beats.length;
+    expect(html(STATE)).toContain(`${count} beats. Next beat starts at the first.`);
+    const first = html({ ...STATE, selected: 0 });
+    expect(first).toContain(`Beat 1 of ${count}, ${DAY.beats[0]!.time}.`);
+    expect(first).toMatch(/disabled=""[^>]*>Previous beat/);
+    const last = html({ ...STATE, selected: count - 1 });
+    expect(last).toMatch(/disabled=""[^>]*>Next beat/);
+  });
+
   test("shows the route's sentence instead of beats on a refusal", () => {
     const out = html({ ...STATE, day: undefined, error: DAY_REFUSED["no-readings"] });
     expect(out).toContain(DAY_REFUSED["no-readings"]);

@@ -92,3 +92,18 @@ export const PERIOD_OPTIONS = [
 export const PERIOD_MOCK =
   "The illustrative mock is a single day. Pick one of the person's days for a week or month ending on it.";
 export const PERIOD_LOADING = "Loading the period…";
+
+/** Stepping through the day. */
+export const STEP_PREVIOUS = "Previous beat";
+export const STEP_NEXT = "Next beat";
+export const STEP_LABEL = "Step through the day";
+
+/** Where the step is: "Beat 3 of 26, 08:15." or the hint before any beat is pressed. */
+export const stepStatus = (
+  selected: number | null,
+  count: number,
+  time: string | null,
+): string =>
+  selected === null || time === null
+    ? `${count} ${count === 1 ? "beat" : "beats"}. Next beat starts at the first.`
+    : `Beat ${selected + 1} of ${count}, ${time}.`;

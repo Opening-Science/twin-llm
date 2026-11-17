@@ -21,6 +21,10 @@ import {
   MY_DAY_UTC,
   myDayOption,
   myDayShows,
+  STEP_LABEL,
+  STEP_NEXT,
+  STEP_PREVIOUS,
+  stepStatus,
   WORTH_A_LOOK,
   WORTH_A_LOOK_NONE,
   WORTH_A_LOOK_NOTE,
@@ -28,6 +32,7 @@ import {
   worthALookShow,
   myDayPlaceholder,
 } from "./day-copy";
+import { stepBeat } from "./beat-step";
 import { MOCK_CHOICE } from "./day-view";
 import { PeriodCard } from "./period-card";
 import { type MyDayState } from "./use-my-day";
@@ -43,50 +48,87 @@ import { type MyDayState } from "./use-my-day";
 const TITLE_ID = "twin-my-day-title";
 
 /**
+ * Above the beats: Previous and Next
+ * step through the day one beat at a time, and a line says where the step is.
+ */
+const StepBar = ({ state, day }: Readonly<{ state: MyDayState; day: KioskDay }>) => {
+  const count = day.beats.length;
+  const time = state.selected === null ? null : (day.beats[state.selected]?.time ?? null);
+  return (
+    <div className="twin-step" role="group" aria-label={STEP_LABEL}>
+      <Button
+        size="sm"
+        variant="pill"
+        disabled={state.selected === 0}
+        onClick={() => state.onBeat(stepBeat(state.selected, count, "previous"))}
+      >
+        {STEP_PREVIOUS}
+      </Button>
+      <Button
+        size="sm"
+        variant="pill"
+        disabled={state.selected === count - 1}
+        onClick={() => state.onBeat(stepBeat(state.selected, count, "next"))}
+      >
+        {STEP_NEXT}
+      </Button>
+      <p className="text-muted-foreground text-xs" aria-live="polite">
+        {stepStatus(state.selected, count, time)}
+      </p>
+    </div>
+  );
+};
+
+/**
  * Each beat is a toggle: pressed, the twin turns to the beat's organ at its
  * layer, and a line says what it shows; pressed again, the twin lets go.
  */
-const BeatList = ({ state, day }: Readonly<{ state: MyDayState; day: KioskDay }>) =>
-  day.beats.length === 0 ? (
-    <p className="text-muted-foreground text-sm">{MY_DAY_NO_BEATS}</p>
-  ) : (
-    <ol className="twin-beats" aria-label={MY_DAY_BEATS}>
-      {day.beats.map((beat, index) => {
-        const pressed = state.selected === index;
-        return (
-          <li
-            key={`${beat.time}-${index}`}
-            className="twin-beat"
-            data-worth={beat.worth_a_look ? "true" : undefined}
-          >
-            <button
-              type="button"
-              aria-pressed={pressed}
-              onClick={() => state.onBeat(pressed ? null : index)}
-              className="twin-beat-button"
+const BeatList = ({ state, day }: Readonly<{ state: MyDayState; day: KioskDay }>) => {
+  if (day.beats.length === 0) {
+    return <p className="text-muted-foreground text-sm">{MY_DAY_NO_BEATS}</p>;
+  }
+  return (
+    <>
+      <StepBar state={state} day={day} />
+      <ol className="twin-beats" aria-label={MY_DAY_BEATS}>
+        {day.beats.map((beat, index) => {
+          const pressed = state.selected === index;
+          return (
+            <li
+              key={`${beat.time}-${index}`}
+              className="twin-beat"
+              data-worth={beat.worth_a_look ? "true" : undefined}
             >
-              <time className="twin-beat-time">{beat.time}</time>
-              <span className="flex min-w-0 flex-col">
-                <span className="flex items-center gap-1 text-sm font-medium">
-                  {beat.worth_a_look ? <EyeIcon /> : null}
-                  {beat.event}
-                </span>
-                <span className="text-sm">{beat.line}</span>
-                <span className="text-muted-foreground text-xs leading-relaxed">
-                  {beat.body.text}
-                </span>
-                {pressed && state.focus ? (
-                  <span className="text-xs font-medium">
-                    {myDayShows(state.focus.label)}
+              <button
+                type="button"
+                aria-pressed={pressed}
+                onClick={() => state.onBeat(pressed ? null : index)}
+                className="twin-beat-button"
+              >
+                <time className="twin-beat-time">{beat.time}</time>
+                <span className="flex min-w-0 flex-col">
+                  <span className="flex items-center gap-1 text-sm font-medium">
+                    {beat.worth_a_look ? <EyeIcon /> : null}
+                    {beat.event}
                   </span>
-                ) : null}
-              </span>
-            </button>
-          </li>
-        );
-      })}
-    </ol>
+                  <span className="text-sm">{beat.line}</span>
+                  <span className="text-muted-foreground text-xs leading-relaxed">
+                    {beat.body.text}
+                  </span>
+                  {pressed && state.focus ? (
+                    <span className="text-xs font-medium">
+                      {myDayShows(state.focus.label)}
+                    </span>
+                  ) : null}
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+    </>
   );
+};
 
 const WORTH_ID = "twin-worth-title";
 
