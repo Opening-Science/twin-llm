@@ -25,15 +25,38 @@ export const EXPORT_COPY = {
   failed: "This export could not be checked, so nothing was made. Try again.",
 } as const;
 
-type Check =
-  | Readonly<{ status: "checking" }>
-  | Readonly<{ status: "ready" | "refused" | "failed"; line: string }>;
+export type CheckAnswer = Readonly<{
+  status: "ready" | "refused" | "failed";
+  line: string;
+}>;
 
-const checkHref = (threadId: string, format: ExportFormat): string =>
-  threadExportHref(threadId, format === "pdf" ? "pdf" : undefined, "check");
+type Check = Readonly<{ status: "checking" }> | CheckAnswer;
 
-const confirmHref = (threadId: string, format: ExportFormat): string =>
-  threadExportHref(threadId, format === "pdf" ? "pdf" : undefined, "confirm");
+const exportHref = (
+  threadId: string,
+  format: ExportFormat,
+  step: "check" | "confirm",
+): string => threadExportHref(threadId, format === "pdf" ? "pdf" : undefined, step);
+
+/**
+ * Asks the server what the export holds. Only a well-formed notice can be
+ * ready or refused; a failed request or any other answer is a failure, which
+ * offers no Download.
+ */
+export const checkExport = async (
+  threadId: string,
+  format: ExportFormat,
+  ask: (href: string, init: RequestInit) => Promise<Response>,
+  signal?: AbortSignal,
+): Promise<CheckAnswer> => {
+  const failed: CheckAnswer = { status: "failed", line: EXPORT_COPY.failed };
+  const response = await ask(exportHref(threadId, format, "check"), {
+    credentials: "same-origin",
+    signal,
+  });
+  if (!response.ok) return failed;
+  return parseExportNotice(await response.json().catch(() => null)) ?? failed;
+};
 
 export const ExportNotice = ({
   threadId,
@@ -47,16 +70,8 @@ export const ExportNotice = ({
     const element = dialog.current;
     if (element !== null && !element.open) element.showModal();
     const abort = new AbortController();
-    fetch(checkHref(threadId, format), {
-      credentials: "same-origin",
-      signal: abort.signal,
-    })
-      .then(async (response) => {
-        const notice = response.ok
-          ? parseExportNotice(await response.json().catch(() => null))
-          : null;
-        setCheck(notice ?? { status: "failed", line: EXPORT_COPY.failed });
-      })
+    checkExport(threadId, format, (href, init) => fetch(href, init), abort.signal)
+      .then(setCheck)
       .catch(() => {
         if (!abort.signal.aborted)
           setCheck({ status: "failed", line: EXPORT_COPY.failed });
@@ -69,7 +84,7 @@ export const ExportNotice = ({
   const download = () => {
     // The route answers with the file as an attachment, Markdown or PDF.
     const link = document.createElement("a");
-    link.href = confirmHref(threadId, format);
+    link.href = exportHref(threadId, format, "confirm");
     link.download = "";
     link.click();
     close();

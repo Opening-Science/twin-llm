@@ -41,7 +41,7 @@ export const PEEK_GRACE_MS = 250;
 /** Further than this from the left edge counts as away, even without a leave event. */
 export const PEEK_REACH_PX = 288;
 
-/** Kept so choices made before this cookie's reader was rewritten still hold. */
+/** The cookie the layout reads; its name stays, so a choice already made still holds. */
 export const SIDEBAR_COOKIE = "twinllm-sidebar";
 
 const ONE_YEAR_S = 60 * 60 * 24 * 365;

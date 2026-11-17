@@ -102,13 +102,6 @@ export const DotsIcon = (props: IconProps) => (
   </Line>
 );
 
-export const PrinterIcon = (props: IconProps) => (
-  <Line {...props}>
-    <path d="M5.5 7.5v-4h9v4M5.5 14H4a1.5 1.5 0 0 1-1.5-1.5V9A1.5 1.5 0 0 1 4 7.5h12A1.5 1.5 0 0 1 17.5 9v3.5A1.5 1.5 0 0 1 16 14h-1.5" />
-    <path d="M5.5 11.5h9v5h-9z" />
-  </Line>
-);
-
 export const DownloadIcon = (props: IconProps) => (
   <Line {...props}>
     <path d="M10 3v9.5M6 9l4 4 4-4M3.5 16.5h13" />
@@ -119,12 +112,6 @@ export const LinkIcon = (props: IconProps) => (
   <Line {...props}>
     <path d="M8.5 11.5a3.5 3.5 0 0 0 5 0l2.5-2.5a3.5 3.5 0 0 0-5-5L10 5" />
     <path d="M11.5 8.5a3.5 3.5 0 0 0-5 0L4 11a3.5 3.5 0 0 0 5 5l1-1" />
-  </Line>
-);
-
-export const TrashIcon = (props: IconProps) => (
-  <Line {...props}>
-    <path d="M3.5 5.5h13M8 5.5V3.5h4v2M5 5.5l.75 11h8.5L15 5.5" />
   </Line>
 );
 
@@ -146,11 +133,5 @@ export const SlashIcon = (props: IconProps) => (
   <Line {...props}>
     <rect x="2.5" y="2.5" width="15" height="15" rx="3" />
     <path d="m12 6-4 8" />
-  </Line>
-);
-
-export const BoltIcon = (props: IconProps) => (
-  <Line {...props}>
-    <path d="M11 2.5 4.5 11H10l-1 6.5L15.5 9H10l1-6.5Z" />
   </Line>
 );

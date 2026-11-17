@@ -134,7 +134,7 @@ const ModelList = ({
                     </span>
                     <span className="flex min-w-0 flex-col">
                       <span className="flex flex-wrap items-center gap-2">
-                        <span className="font-display text-lg leading-snug break-all">
+                        <span className="font-display text-lg leading-snug break-words">
                           {model.name}
                         </span>
                         {defaults.includes(model.id) && (
