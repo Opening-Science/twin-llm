@@ -268,6 +268,33 @@ Decisions and open points:
 - **Stress:** no wearable here reports it, so there is no row.
 - **Composite scores** (readiness, recovery, activity) get no system.
 
+### Male and female twin targets (`twin-targets.ts`, `atlas-groups.ts`)
+
+open-twin stops at the nine body systems (D14); the mesh to light belongs here, with
+the atlases. `twinTargetRows()` is the marker list with a `target3d` column per donor:
+one row per Anchor marker keyed by its LOINC code, then one per open-twin measurement
+key that feeds a vital (`MEASUREMENT_VITALS`, checked against open-twin's catalogue at
+the current pin).
+
+- A target is a list of HRA group keys, exactly as the atlas's
+  `anatomical_structure_of` writes them: `#VHMHeart` on the male atlas,
+  `#VHFHeartV1.1` on the female. Node names are not used, because a loader rewrites
+  them.
+- The organ groups are the ones the Biomarkers tab already lights (the region table
+  and the vitals table above). `target3d()` keeps the keys of one donor's atlas that
+  match them, the same match the twin makes.
+- Empty where that atlas has no mesh, never a neighbour: the male atlas has no
+  testis, sternum or manubrium, the female none for the prostate, and neither has the
+  glands. D12 markers, steps and strain are empty on both.
+- `atlas-groups.ts` pins the keys of `hra-m.ao.glb` (50) and `hra.ao.glb` (61). A test
+  reads the installed atlases, when present, and fails when they differ.
+
+26 of the 67 markers have a target on at least one donor.
+
+Open point: the `brain` group on both atlases is the optic chiasm only; the whole
+brain is the separate `allenbrain` group. HRV and sleep therefore point at the optic
+chiasm, as the twin lights them today.
+
 ## open-twin decisions this follows
 
 - **D11:** BLOCKING unit mismatches are not fixed or converted here; such
