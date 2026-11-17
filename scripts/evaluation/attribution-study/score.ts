@@ -125,21 +125,26 @@ const escape = (text: string): string => text.replace(/[.*+?^${}()|[\]\\/]/g, "\
 /** The number with the unit written after it, cut before the next number. */
 const statedSpans = (
   text: string,
-): readonly Readonly<{ stated: string; tail: string }>[] => {
+): readonly Readonly<{ stated: string; number: string; tail: string }>[] => {
   const numbers = answerNumbers(text);
   return numbers.map((number, index) => {
     const next = numbers[index + 1]?.start ?? text.length;
     const end = Math.min(next, number.end + 24);
     const clause = text.slice(number.start, end).split(/[;!?\n]|\.(?=\s|$)/)[0] ?? "";
-    return { stated: clause.trimEnd(), tail: text.slice(number.end, end) };
+    return {
+      stated: clause.trimEnd(),
+      number: number.text,
+      tail: text.slice(number.end, end),
+    };
   });
 };
 
-const hasUnit = (tail: string, measure: SourceMeasure): boolean =>
+/** The measure's unit written right after a number, as written; null when none. */
+const unitOf = (tail: string, measure: SourceMeasure): string | null =>
   new RegExp(
     `^\\s?(?:${[...UNIT_SPELLINGS[measure], ...SOURCE_UNITS[measure]].map(escape).join("|")})(?![a-z])`,
     "i",
-  ).test(tail);
+  ).exec(tail)?.[0] ?? null;
 
 const nearestCited = (
   cell: WearableCell,
@@ -190,13 +195,14 @@ export const scoreStudyAnswer = (item: W1Item, text: string): StudyScore => {
   const numbers: ScoredNumber[] =
     item.measure === null
       ? []
-      : statedSpans(answer).flatMap(({ stated, tail }): ScoredNumber[] => {
+      : statedSpans(answer).flatMap(({ stated, number, tail }): ScoredNumber[] => {
           const trace = traceStated(stated, item.measure!, cells);
-          if (trace.kind === "none" && !hasUnit(tail, item.measure!)) return [];
+          const unit = unitOf(tail, item.measure!);
+          if (trace.kind === "none" && unit === null) return [];
           const cell = trace.kind === "one" ? trace.cell : null;
           return [
             {
-              stated,
+              stated: `${number}${unit ?? ""}`,
               verdict: verdictFor(trace, cited),
               key: cell?.key ?? null,
               source: cell?.source ?? null,
