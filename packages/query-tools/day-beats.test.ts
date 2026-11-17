@@ -1,7 +1,13 @@
 import { describe, expect, test } from "bun:test";
 
 import { dayBeatSchema } from "./day-beat";
-import { DAY_THRESHOLDS, type DayReading, dayBeats, redWindows } from "./day-beats";
+import {
+  DAY_THRESHOLDS,
+  type DayReading,
+  dayBeats,
+  type GlucoseProfile,
+  redWindows,
+} from "./day-beats";
 import MOCK_DAY from "./fixtures/mock-day.json";
 import { mockDayReadings } from "./mock-day";
 
@@ -305,5 +311,68 @@ describe("sensor glucose", () => {
       "Sensor glucose stays past the threshold for a while. Sensor glucose above 140 mg/dL (placeholder, without diabetes).",
     );
     expect(derived && dayBeatSchema.parse(derived)).toEqual(derived);
+  });
+});
+
+describe("the mock day with its sensor", () => {
+  const summary = (readings: readonly DayReading[], profile: GlucoseProfile) =>
+    dayBeats(readings, profile).map((beat) => [
+      beat.time,
+      beat.source,
+      beat.signal.measure === "glucose" && beat.source !== "narrated"
+        ? `${beat.signal.specimen} glucose`
+        : beat.signal.measure,
+      beat.signal.value,
+    ]);
+
+  test("a monitor wearer's day: glucose beats are sensor beats", () => {
+    // Hand-checked: the sensor's smaller rises leave heart rate leading until the evening.
+    expect(summary(mockDayReadings("sensor"), "without_diabetes")).toEqual([
+      ["03:00", "measured", "heart_rate", 52],
+      ["06:30", "measured", "heart_rate", 70],
+      ["07:30", "measured", "heart_rate", 64],
+      ["08:15", "measured", "heart_rate", 95],
+      ["08:15", "narrated", "insulin", null],
+      ["10:00", "measured", "heart_rate", 66],
+      ["10:30", "measured", "heart_rate", 88],
+      ["12:30", "measured", "heart_rate", 68],
+      ["13:00", "measured", "heart_rate", 100],
+      ["15:30", "measured", "heart_rate", 68],
+      ["18:00", "measured", "heart_rate", 160],
+      ["18:45", "measured", "heart_rate", 85],
+      ["19:30", "measured", "sensor glucose", 98],
+      ["20:30", "measured", "sensor glucose", 152],
+      ["20:30", "narrated", "insulin", null],
+      ["20:30", "derived", "sensor glucose", 152],
+      ["22:30", "measured", "sensor glucose", 112],
+    ]);
+    expect(redWindows(mockDayReadings("sensor"), "with_diabetes")).toEqual([]);
+  });
+
+  test("with both, blood leads each glucose beat and each specimen has its own window", () => {
+    const both = mockDayReadings("both");
+    expect(
+      summary(both, "without_diabetes").filter(([, , measure]) =>
+        String(measure).endsWith("glucose"),
+      ),
+    ).toEqual([
+      ["08:15", "measured", "blood glucose", 135],
+      ["10:00", "measured", "blood glucose", 92],
+      ["19:30", "measured", "blood glucose", 100],
+      ["20:30", "measured", "blood glucose", 175],
+      ["20:30", "derived", "blood glucose", 175],
+      ["20:30", "derived", "sensor glucose", 152],
+      ["22:30", "measured", "blood glucose", 105],
+    ]);
+    expect(
+      redWindows(both, "without_diabetes").map((window) => [
+        window.from,
+        window.specimen,
+        window.extreme,
+      ]),
+    ).toEqual([
+      ["20:30", "blood", 175],
+      ["20:30", "sensor", 152],
+    ]);
   });
 });
