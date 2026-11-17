@@ -197,6 +197,8 @@ const NOT_LEARNING: Readonly<Record<string, string>> = {
   "wearables:generate": GENERATOR,
   "wearables:two-source":
     "writes synthetic two-source summaries and their planted labels to files from a seed (#508); no database, no person's rows",
+  "attribution:w1":
+    "writes the source-attribution study's synthetic items to files from a seed (P6, #508); no database, no person's rows",
   "genome:synth": GENERATOR,
   "genome:ingest": "loads synthetic genotypes (genome-synth) into a training database",
   "genome:ingest:db": "loads synthetic genotypes (genome-synth) into a training database",
