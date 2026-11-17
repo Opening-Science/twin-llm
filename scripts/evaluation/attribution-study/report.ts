@@ -10,6 +10,7 @@
  * run on the same records by the analysis scripts.
  */
 import { wilson95 } from "../score/stats";
+import { type AnalysisOptions, contrastsMarkdown, partA } from "./analysis";
 import type { Condition } from "./contexts";
 import type { StudyRecord } from "./run";
 import { NUMBER_VERDICTS, type NumberVerdict, type StudyScore } from "./score";
@@ -197,7 +198,13 @@ const group = <K extends string>(
 
 export const studyReport = (
   records: readonly StudyRecord[],
-  meta: Readonly<{ title: string; items: string; note?: string }>,
+  meta: Readonly<{
+    title: string;
+    items: string;
+    note?: string;
+    /** The registered contrasts' bootstrap settings; false leaves the section out. */
+    analysis?: AnalysisOptions | false;
+  }>,
 ): string => {
   const base = records.filter((record) => record.variant === "base");
   const errors = records.filter((record) => record.error !== null).length;
@@ -261,6 +268,9 @@ export const studyReport = (
       `| Number follows the cited reading | ${shareCell(faithful.valueFollows)} |`,
       `| Number stays when another source moves | ${shareCell(faithful.valueStays)} |`,
     );
+  }
+  if (meta.analysis !== false) {
+    lines.push("", ...contrastsMarkdown(partA(records, meta.analysis)));
   }
   return `${lines.join("\n")}\n`;
 };
