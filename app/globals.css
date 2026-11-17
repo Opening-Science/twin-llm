@@ -1785,7 +1785,8 @@
    On a landscape screen the same column stands in the centre. */
 .kiosk {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  position: relative;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
   min-height: 100dvh;
   height: 100dvh;
   overflow: hidden;
@@ -1859,5 +1860,87 @@
   color: var(--muted-foreground);
   font-size: clamp(0.8rem, 1.15vh, 1.5rem);
   line-height: 1.45;
+}
+
+/* The day's beat, under the twin. */
+.kiosk-panel {
+  width: min(100%, calc(100dvh * 0.75));
+  min-height: clamp(9rem, 22vh, 26rem);
+  padding-bottom: clamp(0.75rem, 2.5vh, 3.5rem);
+  margin-inline: auto;
+  padding-inline: clamp(1rem, 4vw, 4rem);
+}
+
+.kiosk-beat {
+  display: grid;
+  gap: 0.45em;
+  font-size: clamp(0.9rem, 1.45vh, 1.9rem);
+  line-height: 1.4;
+}
+
+.kiosk-beat-count,
+.kiosk-beat-shows,
+.kiosk-day-notes {
+  color: var(--muted-foreground);
+}
+
+.kiosk-beat-count {
+  font-size: 0.85em;
+  font-variant-numeric: tabular-nums;
+}
+
+.kiosk-beat-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.6em;
+  font-family: var(--font-display);
+  font-size: 1.6em;
+  line-height: 1.15;
+}
+
+.kiosk-beat-time {
+  font-variant-numeric: tabular-nums;
+}
+
+.kiosk-beat-line {
+  font-size: 1.25em;
+  font-weight: 600;
+}
+
+.kiosk-worth {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  width: fit-content;
+  padding: 0.25em 0.75em 0.25em 0.5em;
+  border: 2px solid currentColor;
+  border-radius: 999px;
+}
+
+.kiosk-worth-mark {
+  width: 1.2em;
+  height: 1.2em;
+  flex: none;
+}
+
+.kiosk-day-notes {
+  display: grid;
+  gap: 0.2em;
+  margin-top: 0.4em;
+  font-size: 0.8em;
+}
+
+/* The whole screen is the one control. It sits over everything and draws nothing. */
+.kiosk-press {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  background: transparent;
+  cursor: pointer;
+}
+
+.kiosk-press:focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: -6px;
 }
 /* --- Kiosk (end) ------------------------------------------------------------- */
