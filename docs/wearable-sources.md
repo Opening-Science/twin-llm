@@ -109,6 +109,27 @@ every source).
   query tool reads the snapshots as stored. Synthetic mode reads no wearable snapshot,
   so the rules only run in personal mode.
 
+## Glucose by specimen
+
+Google Health sends every glucose reading as LOINC 2339-0, glucose in blood, and says in
+a `specimen` component (system `http://opentwin.ch/fhir/CodeSystem/google-health`) where
+it was read. A continuous glucose monitor's reading says `INTERSTITIAL_FLUID`. When the
+warehouse stores a bundle (`packages/warehouse/map-observation.ts`), a 2339-0 reading
+with that specimen is stored as sensor glucose, LOINC 99504-3 "Glucose [Mass/volume] in
+Interstitial fluid", so `show_my_day` reads it as its own measure, labelled sensor, with
+the lag note, and never next to blood glucose ([query-layer.md](query-layer.md)). Any
+other specimen (`CAPILLARY_BLOOD`, ...), or none, stays blood glucose; only 2339-0 moves.
+The specimen is read when a reading is stored, not when it is read: rows stored before
+this came in keep 2339-0 until their bundle is ingested again. Test from a synthetic
+bundle built by open-twin's Google Health mapper:
+`packages/warehouse/fixtures/google-health-glucose.json`, which its test builds again.
+
+Upstream open-twin still sends 2339-0 "in Blood" whatever the specimen, and declares one
+`blood-glucose` measurement for both (TODO in `provider-google-health`
+`src/fhir/measurements.ts`: whether interstitial readings get their own code and key waits
+on clinical sign-off). This works either way: if upstream starts sending 99504-3 itself,
+the reading is stored under it as it comes.
+
 ## The audit row
 
 A chat turn with any wearable summary, and every read of `/api/wearables/summary` (the
