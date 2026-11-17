@@ -144,5 +144,9 @@ describe("the PDF of one chat (#611)", () => {
     const response = await exportThread("thread-other", "pdf", "confirmed");
     expect(response.status).toBe(404);
     expect(response.headers.get("content-type")).not.toBe("application/pdf");
+    const body = (await response.text()).toLowerCase();
+    for (const foreign of ["synthea-0099", "glucose", "142"]) {
+      expect(body).not.toContain(foreign);
+    }
   });
 });
