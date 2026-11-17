@@ -32,7 +32,8 @@ export const residencySentence = ({ localOnly, provider }: Residency): string | 
 export const ResearchFooter = ({ residency }: Readonly<{ residency?: Residency }>) => {
   const where = residency === undefined ? null : residencySentence(residency);
   return (
-    <footer className="research-footer">
+    // English in every interface language, so it is read as English.
+    <footer className="research-footer" lang="en-GB">
       <p className="hidden sm:block">
         <span className="research-footer-half">{RESEARCH_FOOTER_TEXT}</span>
         {where !== null && (

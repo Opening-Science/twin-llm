@@ -10,6 +10,7 @@ import {
   useSyncExternalStore,
 } from "react";
 
+import { htmlLang } from "@/infrastructure/locale/locale";
 import { useCopy } from "@/infrastructure/locale/locale-provider";
 import { CrossIcon } from "@/infrastructure/ui-kit/icons";
 import { SidebarIcon } from "@/infrastructure/ui-kit/nav-icons";
@@ -33,6 +34,9 @@ import { ThreadBar } from "./thread-bar";
  */
 
 const WIDE = "(min-width: 64rem)";
+
+/** The language of the pages' own words, so a screen reader in German mode reads them as English. */
+const PAGES_LANG = htmlLang("en");
 
 const subscribeWide = (onChange: () => void) => {
   const query = window.matchMedia(WIDE);
@@ -187,7 +191,8 @@ export const AppFrame = ({
         </aside>
       )}
 
-      <main id="main" tabIndex={-1} className="shell-main">
+      {/* A page with German words of its own sets its own lang. */}
+      <main id="main" tabIndex={-1} lang={PAGES_LANG} className="shell-main">
         <ThreadBar />
         {children}
       </main>
