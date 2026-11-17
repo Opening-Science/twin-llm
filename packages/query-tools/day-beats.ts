@@ -122,18 +122,32 @@ const SENSOR_BODY: Readonly<Record<Direction, string>> = {
 const sensorOf = (reading: DayReading | null): number | null =>
   reading?.sensorGlucoseMgDl ?? null;
 
+/** Each measure's last value before a reading; null when it has none yet that day. */
+type Previous = Readonly<{
+  heartRate: number | null;
+  glucose: number | null;
+  sensor: number | null;
+}>;
+
+const NOTHING_BEFORE: Previous = { heartRate: null, glucose: null, sensor: null };
+
 /**
- * For each reading, the last sensor value before it. Heart rate often comes
- * every minute and the sensor every few, so the reading just before is
- * rarely a sensor one.
+ * For each reading, each measure's last value before it. Readings are paired
+ * by minute and the measures come at their own pace (heart rate often every
+ * minute, glucose every few), so the reading just before may hold only
+ * another measure. Each change is taken against the measure's own last value.
  */
-const lastSensorBefore = (sorted: readonly DayReading[]): readonly (number | null)[] =>
-  sorted.reduce<{ last: number | null; out: readonly (number | null)[] }>(
+const previousValues = (sorted: readonly DayReading[]): readonly Previous[] =>
+  sorted.reduce<{ last: Previous; out: readonly Previous[] }>(
     (acc, reading) => ({
-      last: sensorOf(reading) ?? acc.last,
+      last: {
+        heartRate: reading.heartRatePerMin ?? acc.last.heartRate,
+        glucose: reading.glucoseMgDl ?? acc.last.glucose,
+        sensor: sensorOf(reading) ?? acc.last.sensor,
+      },
       out: [...acc.out, acc.last],
     }),
-    { last: null, out: [] },
+    { last: NOTHING_BEFORE, out: [] },
   ).out;
 
 const INSULIN_BODY =
@@ -147,29 +161,25 @@ type Candidate = Readonly<{
 }>;
 
 /** The signals a reading holds, in tie order: heart rate, blood glucose, sensor glucose. */
-const candidatesOf = (
-  reading: DayReading,
-  before: DayReading | null,
-  sensorBefore: number | null,
-): readonly Candidate[] => {
+const candidatesOf = (reading: DayReading, before: Previous): readonly Candidate[] => {
   const all: readonly (Omit<Candidate, "value"> & { value: number | null })[] = [
     {
       measure: "heart_rate",
       specimen: null,
       value: reading.heartRatePerMin,
-      change: change(reading.heartRatePerMin, before?.heartRatePerMin ?? null),
+      change: change(reading.heartRatePerMin, before.heartRate),
     },
     {
       measure: "glucose",
       specimen: "blood",
       value: reading.glucoseMgDl,
-      change: change(reading.glucoseMgDl, before?.glucoseMgDl ?? null),
+      change: change(reading.glucoseMgDl, before.glucose),
     },
     {
       measure: "glucose",
       specimen: "sensor",
       value: sensorOf(reading),
-      change: change(sensorOf(reading), sensorBefore),
+      change: change(sensorOf(reading), before.sensor),
     },
   ];
   return all.filter((one): one is Candidate => one.value !== null);
@@ -181,13 +191,9 @@ const moved = (candidate: Candidate): number =>
     : Math.abs(candidate.change) /
       (candidate.measure === "heart_rate" ? SCALE.heart_rate : SCALE.glucose);
 
-const measuredBeat = (
-  reading: DayReading,
-  before: DayReading | null,
-  sensorBefore: number | null,
-): DayBeat | null => {
+const measuredBeat = (reading: DayReading, before: Previous): DayBeat | null => {
   const event = reading.event ?? "Reading";
-  const chosen = candidatesOf(reading, before, sensorBefore).reduce<Candidate | null>(
+  const chosen = candidatesOf(reading, before).reduce<Candidate | null>(
     (best, candidate) =>
       best === null || moved(candidate) > moved(best) ? candidate : best,
     null,
@@ -225,15 +231,11 @@ const measuredBeat = (
   };
 };
 
-const insulinBeat = (
-  reading: DayReading,
-  before: DayReading | null,
-  sensorBefore: number | null,
-): DayBeat | null => {
+const insulinBeat = (reading: DayReading, before: Previous): DayBeat | null => {
   const rise =
     reading.glucoseMgDl !== null
-      ? change(reading.glucoseMgDl, before?.glucoseMgDl ?? null)
-      : change(sensorOf(reading), sensorBefore);
+      ? change(reading.glucoseMgDl, before.glucose)
+      : change(sensorOf(reading), before.sensor);
   if (rise === null || rise < INSULIN_RISE) return null;
   return {
     time: reading.time,
@@ -423,12 +425,12 @@ export const dayBeats = (
 ): readonly DayBeat[] => {
   const sorted = [...readings].sort((a, b) => a.time.localeCompare(b.time));
   const windows = redWindows(sorted, profile, thresholds);
-  const sensorBefore = lastSensorBefore(sorted);
+  const previous = previousValues(sorted);
   return sorted.flatMap((reading, index) => {
-    const before = sorted[index - 1] ?? null;
+    const before = previous[index] ?? NOTHING_BEFORE;
     return [
-      measuredBeat(reading, before, sensorBefore[index] ?? null),
-      insulinBeat(reading, before, sensorBefore[index] ?? null),
+      measuredBeat(reading, before),
+      insulinBeat(reading, before),
       ...windows.filter((window) => window.from === reading.time).map(windowBeat),
     ].filter((beat): beat is DayBeat => beat !== null);
   });
