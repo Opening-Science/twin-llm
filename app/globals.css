@@ -755,6 +755,14 @@
     );
   }
 
+  /* The prompt field draws no ring of its own (a ring inside the box would sit
+     on the text), so the box around it carries the focus ring while it has
+     the keyboard. */
+  .surface:has(> textarea:focus-visible) {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+
   .effort-ultra-text {
     color: var(--effort-ultra);
   }
