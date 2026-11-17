@@ -1,4 +1,4 @@
-import { PERSONAL_TABLES } from "@/infrastructure/personal-columns";
+import { CHECKED_TABLES } from "@/infrastructure/personal-columns";
 import { type PlaintextFinding } from "@/infrastructure/reseal";
 
 import { type LabCheck, plural, STATUS_LABEL } from "./lab-check";
@@ -15,7 +15,7 @@ import { type LabCheck, plural, STATUS_LABEL } from "./lab-check";
 const ID = "encryption-at-rest";
 const TITLE = "Encryption at rest";
 
-const COLUMN_COUNT = PERSONAL_TABLES.reduce((sum, entry) => sum + entry.sealed.length, 0);
+const COLUMN_COUNT = CHECKED_TABLES.reduce((sum, entry) => sum + entry.sealed.length, 0);
 
 /** One column's count by hand, as an example; the doctor runs all of them. */
 export const ENCRYPTION_HOW_TO = [

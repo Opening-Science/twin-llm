@@ -276,6 +276,10 @@ export const PERSONAL_COPIES: readonly PersonalTable[] = [
   },
 ];
 
+/** True for a copy table: a reseal never writes it, so its fix is a fresh copy. */
+export const isChatCopy = (table: string): boolean =>
+  PERSONAL_COPIES.some((entry) => entry.table === table);
+
 /** Every table whose sealed values the checks look at: the resealed ones and the copies. */
 export const CHECKED_TABLES: readonly PersonalTable[] = [
   ...PERSONAL_TABLES,

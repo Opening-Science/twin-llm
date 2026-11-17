@@ -1,6 +1,8 @@
 import { type FieldCipher } from "./field-cipher";
 import { isSealedText, sealedTextKeyId } from "./field-crypto";
 import {
+  CHECKED_TABLES,
+  isChatCopy,
   PERSONAL_TABLES,
   type PersonalTable,
   pendingRowsSql,
@@ -151,7 +153,7 @@ export const rowsWithKey = async (
   keyId: string,
 ): Promise<number> => {
   let total = 0;
-  for (const entry of PERSONAL_TABLES) {
+  for (const entry of CHECKED_TABLES) {
     const [row] = await query(rowsWithKeySql(entry, keyId), [ownerId]);
     total += Number(row?.n ?? 0);
   }
@@ -168,7 +170,7 @@ export const plaintextFindings = async (
   query: SqlRun,
 ): Promise<readonly PlaintextFinding[]> => {
   const findings: PlaintextFinding[] = [];
-  for (const entry of PERSONAL_TABLES) {
+  for (const entry of CHECKED_TABLES) {
     const [row] = await query(plaintextCountSql(entry), []);
     for (const [column, count] of Object.entries(row ?? {})) {
       const rows = Number(count);
@@ -184,7 +186,8 @@ export const formatPlaintextFindings = (
 ): readonly string[] =>
   findings.length === 0
     ? ["  [ok] every listed personal column holds sealed values (tlenc1.)"]
-    : findings.map(
-        (finding) =>
-          `  [!!] ${finding.table}.${finding.column}: ${finding.rows} row(s) not sealed; run bun run vault:migrate (docs/runbook.md)`,
+    : findings.map((finding) =>
+        isChatCopy(finding.table)
+          ? `  [!!] ${finding.table}.${finding.column}: ${finding.rows} copied row(s) not sealed; run bun run db:chat-parity (docs/storage.md, Chat tables move)`
+          : `  [!!] ${finding.table}.${finding.column}: ${finding.rows} row(s) not sealed; run bun run vault:migrate (docs/runbook.md)`,
       );
